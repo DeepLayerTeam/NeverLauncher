@@ -167,7 +167,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		store, ok := any(s.Repo).(interface{ CompleteMinimalInstallation0375(context.Context) error })
 		if !ok {
-			return errors.New("missing SQLite installation writer")
+			return errors.New("Отсутствует: «SQLite installation writer»")
 		}
 		return store.CompleteMinimalInstallation0375(ctx)
 	}
@@ -191,7 +191,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 	}
 	n, _ := res.RowsAffected()
 	if n != 1 {
-		return fmt.Errorf("installation state cannot be completed before bootstrap token is consumed")
+		return fmt.Errorf("«installation state»: запрещено «be completed before bootstrap token is consumed»")
 	}
 	return nil
 }
@@ -212,10 +212,10 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	displayName = strings.TrimSpace(displayName)
 	password = strings.TrimSpace(password)
 	if email == "" || password == "" {
-		return model.User{}, errors.New("email and password are required")
+		return model.User{}, errors.New("Требуется: «email and password are»")
 	}
 	if len(password) < 12 {
-		return model.User{}, errors.New("bootstrap admin password must be at least 12 characters")
+		return model.User{}, errors.New("Для «bootstrap admin password» требуется: «at least 12 characters»")
 	}
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()

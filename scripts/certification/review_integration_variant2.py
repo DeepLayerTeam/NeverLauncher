@@ -44,13 +44,13 @@ def review(paths: list[Path], revision: str) -> dict:
     digests = {}
     for path in paths:
         if path.is_symlink() or not path.is_file():
-            raise ValueError(f"invalid evidence file: {path}")
+            raise ValueError(f"Некорректное значение: файл подтверждающих данных: {path}")
         if path.stat().st_size > 512_000:
-            raise ValueError(f"oversized evidence file: {path}")
+            raise ValueError(f"Слишком большой файл подтверждающих данных: {path}")
         raw = json.loads(path.read_text(encoding="utf-8"))
         platform = raw.get("platform")
         if platform not in REQUIRED or platform in found:
-            raise ValueError(f"unknown or duplicate platform: {platform}")
+            raise ValueError(f"Неизвестное значение: «or duplicate platform»: {platform}")
         if (
             raw.get("schemaVersion") != "1.0"
             or raw.get("release") != "0.31.0"
@@ -80,7 +80,7 @@ def review(paths: list[Path], revision: str) -> dict:
             for step, expected in zip(case["steps"], expected_commands):
                 command = step.get("command")
                 if not isinstance(command, list) or len(command) != len(expected):
-                    raise ValueError(f"unexpected E2E command shape for {case['case']}")
+                    raise ValueError(f"Неожиданное значение: «E2E command shape for» {case['case']}")
                 for actual, required in zip(command, expected):
                     if required in ("{cli}", "{root}", "{parity}", "{maven}"):
                         if (
@@ -98,9 +98,9 @@ def review(paths: list[Path], revision: str) -> dict:
                             .name.lower()
                             .startswith("python")
                         ):
-                            raise ValueError("E2E Python interpreter mismatch")
+                            raise ValueError("Несовпадение: «E2E Python interpreter»")
                     elif actual != required:
-                        raise ValueError(f"unexpected E2E command for {case['case']}")
+                        raise ValueError(f"Неожиданное значение: «E2E command for» {case['case']}")
                 if (
                     step.get("status") != "passed"
                     or step.get("exitCode") != 0
@@ -140,7 +140,7 @@ def main():
     args = p.parse_args()
     # Не переходите по символьным ссылкам внутри собираемого дерева доказательств.
     if args.evidence.is_symlink():
-        p.error("symlink evidence directory forbidden")
+        p.error("Запрещено: «symlink evidence directory»")
     paths = sorted(args.evidence.rglob("integration-0310.json"))
     try:
         result = review(paths, args.revision)

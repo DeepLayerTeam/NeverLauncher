@@ -124,7 +124,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	parsed, err := url.Parse(cfg.BaseURL)
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: baseUrl must be an absolute HTTPS URL", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Для «HTTP connector %q: baseUrl» требуется: «an absolute HTTPS URL»", cfg.ID)
 	}
 	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: baseUrl не должен содержать учётные данные, параметры запроса или фрагмент", cfg.ID)

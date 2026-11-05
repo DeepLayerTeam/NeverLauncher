@@ -38,18 +38,18 @@ func ParseRoots(raw string) (map[string]string, error) {
 	}
 	var extra any
 	if dec.Decode(&extra) != io.EOF {
-		return nil, errors.New("invalid roots JSON tail")
+		return nil, errors.New("Некорректное значение: «roots JSON tail»")
 	}
 	if len(roots) > 64 {
 		return nil, ErrDenied
 	}
 	for name, path := range roots {
 		if !resource.MatchString(name) || !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.ContainsRune(path, 0) || path == "/" {
-			return nil, fmt.Errorf("invalid shared root %q: %w", name, ErrDenied)
+			return nil, fmt.Errorf("Некорректное значение: «shared root» %q: %w", name, ErrDenied)
 		}
 		f, err := openDirectory(path)
 		if err != nil {
-			return nil, fmt.Errorf("shared root %q unavailable: %w", name, err)
+			return nil, fmt.Errorf("Недоступно: «shared root» %q: %w", name, err)
 		}
 		_ = f.Close()
 	}

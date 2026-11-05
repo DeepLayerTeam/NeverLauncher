@@ -72,14 +72,14 @@ func normalizeDurableJob0213(job model.DurableJob) (model.DurableJob, error) {
 	job.ResourceID = strings.TrimSpace(job.ResourceID)
 	job.IdempotencyKey = strings.TrimSpace(job.IdempotencyKey)
 	if job.Kind == "" || job.ActorType == "" || job.ActorID == "" || job.Action == "" || job.ResourceType == "" || job.ResourceID == "" || job.IdempotencyKey == "" {
-		return model.DurableJob{}, errors.New("durable job identity/action/resource/idempotency fields are required")
+		return model.DurableJob{}, errors.New("Требуется: «durable job identity/action/resource/idempotency fields are»")
 	}
 	if len(job.Payload) == 0 {
 		job.Payload = json.RawMessage(`{}`)
 	}
 	var canonical any
 	if err := json.Unmarshal(job.Payload, &canonical); err != nil {
-		return model.DurableJob{}, fmt.Errorf("invalid durable job payload: %w", err)
+		return model.DurableJob{}, fmt.Errorf("Некорректное значение: «durable job payload»: %w", err)
 	}
 	payload, err := json.Marshal(canonical)
 	if err != nil {
@@ -224,7 +224,7 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 	if id != "" {
 		current, err = scanDurableJob0213(tx.QueryRowContext(ctx, `SELECT `+durableJobColumns0213+` FROM durable_jobs WHERE id=$1 FOR UPDATE`, id))
 	} else {
-		return model.DurableJob{}, errors.New("job id required")
+		return model.DurableJob{}, errors.New("Требуется: идентификатор задания")
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.DurableJob{}, ErrNotFound
@@ -495,7 +495,7 @@ func (r *SQLRepository) AcquireDurableScopeLease(ctx context.Context, scopeKey, 
 	}
 	scopeKey, owner = strings.TrimSpace(scopeKey), strings.TrimSpace(owner)
 	if scopeKey == "" || owner == "" {
-		return model.DurableScopeLease{}, errors.New("scope key and owner required")
+		return model.DurableScopeLease{}, errors.New("Требуется: «scope key and owner»")
 	}
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
@@ -861,7 +861,7 @@ func (r *SQLRepository) ConsumeDurableNonce(ctx context.Context, namespace, nonc
 	namespace = strings.TrimSpace(namespace)
 	nonceHash = strings.ToLower(strings.TrimSpace(nonceHash))
 	if namespace == "" || len(nonceHash) != 64 {
-		return errors.New("invalid durable nonce")
+		return errors.New("Некорректное значение: «durable nonce»")
 	}
 	if expiresAt.IsZero() || !expiresAt.After(time.Now().UTC()) {
 		expiresAt = time.Now().UTC().Add(24 * time.Hour)

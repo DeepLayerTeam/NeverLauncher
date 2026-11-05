@@ -21,11 +21,11 @@ from review_integration_0310 import review, REVISION
 
 def verify(evidence: Path, revision: str, public_key: Path, signature: Path) -> dict:
     if not REVISION.fullmatch(revision):
-        raise ValueError("revision must be a full lowercase Git SHA")
+        raise ValueError("Для «revision» требуется: «a full lowercase Git SHA»")
     if (ROOT / "VERSION").read_text(encoding="utf8").strip() != "0.31.0":
         raise ValueError("GA approval only applies to VERSION 0.31.0")
     if not evidence.is_dir() or evidence.is_symlink():
-        raise ValueError("invalid evidence directory")
+        raise ValueError("Некорректное значение: каталог подтверждающих данных")
     for p in (public_key, signature):
         if p.is_symlink() or not p.is_file() or p.stat().st_size > 65536:
             raise ValueError(f"absent/invalid release approval input: {p}")
@@ -57,7 +57,7 @@ def verify(evidence: Path, revision: str, public_key: Path, signature: Path) -> 
             stderr=subprocess.PIPE,
         )
         if result.returncode != 0:
-            raise ValueError("release approval signature invalid")
+            raise ValueError("Некорректное значение: «release approval signature»")
     return summary
 
 

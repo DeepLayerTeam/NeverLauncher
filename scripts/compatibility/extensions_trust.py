@@ -25,7 +25,7 @@ def validate_targets(path: Path):
         or len(ids) != len(set(ids))
         or not checks
     ):
-        raise SystemExit("invalid Extensions trust/recovery target definition")
+        raise SystemExit("Некорректное значение: «Extensions trust/recovery target definition»")
     required = {r.get("os") for r in rows if r.get("required")}
     if required != {"linux", "windows", "macos"}:
         raise SystemExit(
@@ -42,7 +42,7 @@ def aggregate(targets: Path, evidence_dir: Path, out_json: Path, out_md: Path):
     for target in doc["targets"]:
         p = evidence_dir / f"{target['id']}.json"
         if not p.is_file():
-            raise SystemExit(f"missing evidence: {p}")
+            raise SystemExit(f"Отсутствует: подтверждающие данные: {p}")
         e = load(p)
         if (
             e.get("targetId") != target["id"]

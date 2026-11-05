@@ -41,19 +41,19 @@ fn validate_guard_identity_0438(
     if status.process_policy_version != runtime::GUARD_WINDOWS_PROCESS_POLICY_VERSION
         || status.hardening_version != runtime::GUARD_WINDOWS_HARDENING_VERSION
         || policy.windows.is_none() {
-        return Err("Windows Guard process protection policy invalid".into());
+        return Err("Некорректное значение: «Windows Guard process protection policy»".into());
     }
     #[cfg(target_os = "linux")]
     if status.process_policy_version != runtime::GUARD_LINUX_PROCESS_POLICY_VERSION
         || status.hardening_version != runtime::GUARD_LINUX_HARDENING_VERSION
         || policy.linux.is_none() {
-        return Err("Linux Guard process protection policy invalid".into());
+        return Err("Некорректное значение: «Linux Guard process protection policy»".into());
     }
     #[cfg(target_os = "macos")]
     if status.process_policy_version != runtime::GUARD_MACOS_PROCESS_POLICY_VERSION
         || status.hardening_version != runtime::GUARD_MACOS_HARDENING_VERSION
         || policy.macos.is_none() {
-        return Err("macOS Guard process protection policy invalid".into());
+        return Err("Некорректное значение: «macOS Guard process protection policy»".into());
     }
     if !evidence.boundary.parent_matches
         || evidence.boundary.expected_parent_pid != status.parent_pid
@@ -148,7 +148,7 @@ async fn probe_live_game_0438(
         return Ok(());
     }
     if after.pid != before.pid || after.started_at != before.started_at {
-        return Err("Game process identity changed".into());
+        return Err("Обнаружено изменение: «Game process identity»".into());
     }
     #[cfg(windows)]
     check_windows_game_sensor_0438(&after)?;

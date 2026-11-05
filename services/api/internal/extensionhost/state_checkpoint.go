@@ -123,7 +123,7 @@ func checkpointWrite04810(path string, body []byte) error {
 
 func (s *Supervisor) SnapshotRuntimeState04810(ctx context.Context, key Key, txID string) error {
 	if s == nil {
-		return errors.New("extension supervisor is unavailable")
+		return errors.New("Супервизор расширений недоступен")
 	}
 	s.runtimeMu0303.Lock()
 	defer s.runtimeMu0303.Unlock()
@@ -167,7 +167,7 @@ func snapshotRuntime04810(ctx context.Context, root string, key Key, txID string
 	} else if err != nil {
 		return err
 	} else if !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return errors.New("unsafe runtime state directory")
+		return errors.New("Небезопасное значение: каталог состояния среды выполнения")
 	} else {
 		entries, err := os.ReadDir(source)
 		if err != nil {
@@ -223,7 +223,7 @@ func snapshotRuntime04810(ctx context.Context, root string, key Key, txID string
 
 func (s *Supervisor) RestoreRuntimeState04810(ctx context.Context, key Key, txID string) error {
 	if s == nil {
-		return errors.New("extension supervisor is unavailable")
+		return errors.New("Супервизор расширений недоступен")
 	}
 	s.runtimeMu0303.Lock()
 	defer s.runtimeMu0303.Unlock()
@@ -271,7 +271,7 @@ func restoreRuntime04810(ctx context.Context, root string, key Key, txID string)
 	}
 	if oldExists {
 		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-			return errors.New("unsafe runtime state directory")
+			return errors.New("Небезопасное значение: каталог состояния среды выполнения")
 		}
 		if err = os.Rename(dest, old); err != nil {
 			return err
@@ -294,7 +294,7 @@ func restoreRuntime04810(ctx context.Context, root string, key Key, txID string)
 
 func (s *Supervisor) DiscardRuntimeState04810(ctx context.Context, key Key, txID string) error {
 	if s == nil {
-		return errors.New("extension supervisor is unavailable")
+		return errors.New("Супервизор расширений недоступен")
 	}
 	path, err := checkpointPath04810(s.cfg.ExtensionRoot, key, txID)
 	if err != nil {

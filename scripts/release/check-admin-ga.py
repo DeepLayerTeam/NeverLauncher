@@ -39,7 +39,7 @@ def digest(path: Path) -> str:
 def audit() -> None:
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     if not legacy_admin_supported(version):
-        raise RuntimeError(f"Admin GA audit requires version >=0.22.0, got {version}")
+        raise RuntimeError(f"Для «Admin GA audit» требуется «version >=0.22.0, got» {version}")
     run(sys.executable, "scripts/version/manage.py", "check")
     run(sys.executable, "scripts/contracts/validate-openapi.py")
     run(sys.executable, "scripts/smoke/offline/repository-policy.py")
@@ -64,7 +64,7 @@ def audit() -> None:
     if drift:
         raise RuntimeError("SDK generation drift: " + ", ".join(drift))
     if not (ROOT / "docs/administration/ga.md").is_file():
-        raise RuntimeError("GA operations and rollback documentation missing")
+        raise RuntimeError("Отсутствует: «GA operations and rollback documentation»")
     print(f"Admin GA source audit PASS: {version}, {len(a)} identical migrations, {len(generated)} reproducible SDK artifacts")
 
 

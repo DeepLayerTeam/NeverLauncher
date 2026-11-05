@@ -43,7 +43,7 @@ type trustedPlugin0306 struct {
 func trustedPath0306(root, rel string) (string, error) { return secureClientDestination(root, rel) }
 func trustedBytes0306(z *zip.File, capBytes int64) ([]byte, error) {
 	if z.UncompressedSize64 > uint64(capBytes) || !z.Mode().IsRegular() {
-		return nil, errors.New("trusted package entry exceeds size or is not regular")
+		return nil, errors.New("«trusted package entry exceeds size or»: требуется обычный файл")
 	}
 	r, err := z.Open()
 	if err != nil {
@@ -55,7 +55,7 @@ func trustedBytes0306(z *zip.File, capBytes int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(b)) > capBytes {
-		return nil, errors.New("trusted entry too large")
+		return nil, errors.New("Превышен допустимый размер: «trusted entry»")
 	}
 	return b, nil
 }
@@ -64,7 +64,7 @@ func trustedDigest0306(b []byte) string { sum := sha256.Sum256(b); return hex.En
 // Никогда не доверяйте ключу издателя, поставленному вместе с клиентом.
 func trustedAnchor0306(root, key string) error {
 	if key == "" {
-		return fmt.Errorf("external %s trust anchor required", trustedPublicKeyEnv0306)
+		return fmt.Errorf("Требуется: «external %s trust anchor»", trustedPublicKeyEnv0306)
 	}
 	if err := trustedRegular0306(key); err != nil {
 		return err
@@ -86,7 +86,7 @@ func trustedAnchor0306(root, key string) error {
 		return err
 	}
 	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-		return errors.New("trusted JVM public key must be outside the Minecraft client root")
+		return errors.New("Для «trusted JVM public key» требуется: «outside the Minecraft client root»")
 	}
 	return nil
 }
@@ -136,7 +136,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		return record, nil, err
 	}
 	if result["signed"] != true {
-		return record, nil, errors.New("trusted JVM requires signed .nlext")
+		return record, nil, errors.New("Для «trusted JVM» требуется «signed .nlext»")
 	}
 	analysis, err := analyzeExtensionPackage0202(archive)
 	if err != nil {
@@ -154,7 +154,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		}
 		rel := strings.TrimPrefix(name, prefix)
 		if rel != "agent.jar" && !(strings.HasPrefix(rel, "plugins/") && strings.HasSuffix(rel, ".jar") && len(strings.Split(rel, "/")) == 2) {
-			return record, nil, fmt.Errorf("unsupported trusted payload: %q", name)
+			return record, nil, fmt.Errorf("Не поддерживается: «trusted payload»: %q", name)
 		}
 		if count++; count > 17 {
 			return record, nil, errors.New("Превышено число доверенных JAR")
@@ -286,7 +286,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 		return nil, "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 8192 {
-		return nil, "", errors.New("invalid trusted active record")
+		return nil, "", errors.New("Некорректное значение: «trusted active record»")
 	}
 	raw, err := os.ReadFile(active)
 	if err != nil {
@@ -302,7 +302,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 		return nil, "", errors.New("extra trusted record data")
 	}
 	if rec.Schema != trustedSchema0306 || rec.ApprovedAccess != "full-minecraft-jvm" || !isSHA256Hex0271(rec.PackageSHA256) {
-		return nil, "", errors.New("invalid trusted record")
+		return nil, "", errors.New("Некорректное значение: «trusted record»")
 	}
 	if err := trustedAnchor0306(root, key); err != nil {
 		return nil, "", err
@@ -335,7 +335,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 			return nil, "", err
 		}
 		if trustedDigest0306(actual) != trustedDigest0306(b) {
-			return nil, "", fmt.Errorf("trusted JAR changed: %s", name)
+			return nil, "", fmt.Errorf("Обнаружено изменение: «trusted JAR»: %s", name)
 		}
 	}
 	return &rec, release, nil
@@ -358,7 +358,7 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 		return nil, "", nil, err
 	}
 	if originalMain == "" || strings.ContainsAny(originalMain, "\r\n\x00") {
-		return nil, "", nil, errors.New("invalid Minecraft main class")
+		return nil, "", nil, errors.New("Некорректное значение: «Minecraft main class»")
 	}
 	var config strings.Builder
 	fmt.Fprintf(&config, "main=%s\n", base64.StdEncoding.EncodeToString([]byte(originalMain)))
@@ -429,7 +429,7 @@ func handleTrustedJVM0306(args []string) error {
 		}
 		archive := flagValue(args[1:], "--package", "")
 		if archive == "" || key == "" {
-			return errors.New("signed --package and external --public-key required")
+			return errors.New("Требуется: «signed --package and external --public-key»")
 		}
 		rec, err := trustedInstall0306(root, archive, key)
 		if err != nil {
@@ -458,6 +458,6 @@ func handleTrustedJVM0306(args []string) error {
 		printJSON(map[string]any{"disabled": true})
 		return nil
 	default:
-		return fmt.Errorf("unknown trusted JVM command %q", args[0])
+		return fmt.Errorf("Неизвестное значение: «trusted JVM command» %q", args[0])
 	}
 }

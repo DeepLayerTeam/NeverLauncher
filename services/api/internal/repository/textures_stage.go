@@ -24,21 +24,21 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 		return err
 	}
 	if input.ExpectedRevision < 0 || input.Size < 1 || input.Size > 4<<20 || input.Width < 64 || input.Height < 32 || input.Width > 1024 || input.Height > 1024 {
-		return errors.New("invalid texture staging dimensions")
+		return errors.New("Некорректное значение: «texture staging dimensions»")
 	}
 	if input.Driver != "local" && input.Driver != "s3" {
-		return errors.New("invalid texture staging driver")
+		return errors.New("Некорректное значение: «texture staging driver»")
 	}
 	if len(input.Digest) != 64 {
-		return errors.New("invalid digest")
+		return errors.New("Некорректное значение: хеш")
 	}
 	for _, c := range input.Digest {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return errors.New("invalid digest")
+			return errors.New("Некорректное значение: хеш")
 		}
 	}
 	if input.ObjectKey != "texture-blobs/sha256/"+input.Digest[:2]+"/"+input.Digest+".png" {
-		return errors.New("invalid staging object key")
+		return errors.New("Некорректное значение: «staging object key»")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

@@ -126,7 +126,7 @@ async fn perform(root: &Path, job: SavedJob, sink: Option<ProgressSink>,
     file_ownership::validate_download_targets(&job.manifest)?;
     let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
     if let Some(ref pinned)=job.resolved_plan_sha256 {
-        if *pinned!=plan.sha256 {return Err("saved download resolved plan has changed".into())}
+        if *pinned!=plan.sha256 {return Err("Обнаружено изменение: сохранённый план скачивания".into())}
     }
     let outcome = crate::transactional_release::install(&job.manifest, root, &job.pinned_public_key, sink,
         job.operation_id.clone(), rx.clone(), job.preset.clone()).await;
@@ -152,7 +152,7 @@ pub async fn start(manifest:&Manifest,root:&Path,key:&str,mode:&str,sink:Option<
 }
 pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode: &str,
     sink: Option<ProgressSink>, preset:Option<String>) -> Result<DownloadResult, String> {
-    if !matches!(mode, "download" | "repair") { return Err("invalid operation mode".into()); }
+    if !matches!(mode, "download" | "repair") { return Err("Некорректное значение: «operation mode»".into()); }
     verify_manifest_signature(manifest, key)?;
     file_ownership::validate_download_targets(manifest)?;
     let resolved=crate::resolved_download_0246::resolve(manifest,preset.as_deref())?;
@@ -195,7 +195,7 @@ pub async fn pending(root: &Path, expected_pinned_key: &str) -> Result<Option<Pe
     }
     verify_manifest_signature(&job.manifest, expected_pinned_key)?;
     let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
-    if job.resolved_plan_sha256.as_ref().is_some_and(|d|d!=&plan.sha256){return Err("saved download resolved plan has changed".into())}
+    if job.resolved_plan_sha256.as_ref().is_some_and(|d|d!=&plan.sha256){return Err("Обнаружено изменение: сохранённый план скачивания".into())}
     Ok(Some(PendingDownload { operation_id: job.operation_id, mode: job.mode, status: job.status,
         project_id: job.manifest.project_id, profile_id: job.manifest.profile_id,
         version: job.manifest.version, total_files: plan.files.len() }))
@@ -212,7 +212,7 @@ pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<Progres
     file_ownership::validate_download_targets(&job.manifest)?;
     let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
     if job.resolved_plan_sha256.as_ref().is_some_and(|saved|saved!=&plan.sha256){
-        return Err("saved download resolved plan has changed".into());
+        return Err("Обнаружено изменение: сохранённый план скачивания".into());
     }
     job.generation += 1;
     job.status = "running".into();
@@ -221,7 +221,7 @@ pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<Progres
 }
 
 pub async fn control(root: &Path, action: &str) -> Result<(), String> {
-    if !matches!(action, "pause" | "cancel") { return Err("invalid download control action".into()); }
+    if !matches!(action, "pause" | "cancel") { return Err("Некорректное значение: «download control action»".into()); }
     let root = normalized(root).await?;
     let sender = active().lock().map_err(|_| "active download registry poisoned")?
         .get(&root).cloned();

@@ -13,14 +13,14 @@ def version_tuple(value: str) -> tuple[int, int, int]:
     core = value.split("-", 1)[0].split("+", 1)[0]
     parts = core.split(".")
     if len(parts) != 3:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"Некорректное значение VERSION: {value}")
     return tuple(int(part) for part in parts)  # type: ignore[return-value]
 
 
 def read(path: str) -> str:
     p = ROOT / path
     if not p.is_file():
-        raise SystemExit(f"missing required file: {path}")
+        raise SystemExit(f"Отсутствует обязательный файл: {path}")
     return p.read_text(encoding="utf-8")
 
 

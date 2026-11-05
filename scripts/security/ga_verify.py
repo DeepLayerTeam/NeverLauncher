@@ -98,13 +98,13 @@ def unique_json(raw: bytes) -> dict:
         d = {}
         for k, v in pairs:
             if k in d:
-                raise ValueError(f"duplicate JSON key: {k}")
+                raise ValueError(f"Обнаружен дубликат: ключ JSON: {k}")
             d[k] = v
         return d
 
     value = json.loads(raw, object_pairs_hook=unique)
     if not isinstance(value, dict):
-        raise ValueError("evidence must be object")
+        raise ValueError("Для подтверждающие данные требуется: «object»")
     return value
 
 
@@ -115,19 +115,19 @@ def verify_evidence(
         raise ValueError(f"evidence not ordinary/small: {path}")
     sig_path = Path(str(path) + ".sig")
     if sig_path.is_symlink() or not sig_path.is_file() or sig_path.stat().st_size > 512:
-        raise ValueError(f"missing detached signature: {path}")
+        raise ValueError(f"Отсутствует: «detached signature»: {path}")
     raw = path.read_bytes()
     try:
         signature = bytes.fromhex(sig_path.read_text("ascii").strip())
         if len(signature) != 64:
-            raise ValueError("invalid signature size")
+            raise ValueError("Некорректное значение: «signature size»")
         key.verify(signature, DOMAIN + raw)
     except (InvalidSignature, ValueError) as e:
-        raise ValueError(f"invalid evidence signature: {path}") from e
+        raise ValueError(f"Некорректное значение: «evidence signature»: {path}") from e
     doc = unique_json(raw)
     tier = doc.get("tier")
     if tier not in TIERS:
-        raise ValueError(f"unexpected tier: {tier}")
+        raise ValueError(f"Неожиданное значение: «tier»: {tier}")
     if doc.get("schema") != SCHEMA:
         raise ValueError(f"{tier}: invalid evidence schema")
     if doc.get("status") != "PASS" or doc.get("sourceSha256") != source_sha:
@@ -225,7 +225,7 @@ def verify_all(
             "32-byte trusted Ed25519 key, exact 40-digit git SHA and source fingerprint required"
         )
     if len(paths) != len(TIERS):
-        raise ValueError("seven independent signed tiers required")
+        raise ValueError("Требуется: «seven independent signed tiers»")
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(key_hex))
     now = now or dt.datetime.now(dt.timezone.utc)
     results = [
@@ -234,7 +234,7 @@ def verify_all(
     ]
     tiers = [r["tier"] for r in results]
     if set(tiers) != TIERS or len(set(tiers)) != len(tiers):
-        raise ValueError("missing or duplicated mandatory tiers")
+        raise ValueError("Отсутствует: «or duplicated mandatory tiers»")
     return {
         "schema": "launcher.ga.device-guard-isolation.v1",
         "version": "0.32.0",

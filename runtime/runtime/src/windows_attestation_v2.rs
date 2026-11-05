@@ -161,13 +161,13 @@ pub fn validate_continuous_evidence_v2(
         || evidence.process_id.trim().is_empty()
         || evidence.runtime_pid == 0
     {
-        return Err("Guard Attestation v2 continuous evidence schema/identity mismatch".to_string());
+        return Err("Несовпадение: «Guard Attestation v2 continuous evidence schema/identity»".to_string());
     }
     if evidence.sensor_protocol_version != crate::GUARD_SENSOR_PROTOCOL_VERSION
         || evidence.module_guard_version != crate::GUARD_MODULE_GUARD_VERSION
         || evidence.continuous_guard_version != crate::GUARD_CONTINUOUS_GUARD_VERSION
     {
-        return Err("Guard Attestation v2 continuous component version mismatch".to_string());
+        return Err("Несовпадение: «Guard Attestation v2 continuous component version»".to_string());
     }
     if !evidence.sensor_authenticated
         || !evidence.sensor_loaded_before_main
@@ -231,7 +231,7 @@ pub fn validate_continuous_evidence_v2(
     }
     let expected = recompute_continuous_evidence_sha256(evidence);
     if !expected.eq_ignore_ascii_case(&evidence.evidence_sha256) {
-        return Err("Guard Attestation v2 continuous evidence digest mismatch".to_string());
+        return Err("Несовпадение: «Guard Attestation v2 continuous evidence digest»".to_string());
     }
     Ok(())
 }
@@ -241,14 +241,14 @@ pub fn collect_windows_continuous_evidence_v2(
     status: &ProcessStatus,
 ) -> Result<WindowsContinuousEvidenceV2, String> {
     if status.id != process_id || status.state != "running" {
-        return Err("Guard Attestation v2 requires the requested running runtime process".to_string());
+        return Err("Для «Guard Attestation v2» требуется «the requested running runtime process»".to_string());
     }
     let runtime_pid = status.pid.ok_or_else(|| "Guard Attestation v2 runtime PID unavailable".to_string())?;
     let sensor: &WindowsSensorReport = status.windows_sensor.as_ref().ok_or_else(|| {
         "Guard Attestation v2 requires authenticated Windows Sensor evidence".to_string()
     })?;
     if sensor.pid != runtime_pid {
-        return Err("Guard Attestation v2 Sensor/runtime PID mismatch".to_string());
+        return Err("Несовпадение: «Guard Attestation v2 Sensor/runtime PID»".to_string());
     }
     let module = &sensor.module_guard;
     let hook = &module.hook_engine;
@@ -354,7 +354,7 @@ pub fn build_windows_attestation_v2(
     if base_attestation.challenge_id != challenge_id
         || base_attestation.challenge_sha256 != crate::attestation::challenge_sha256(challenge)
     {
-        return Err("Guard Attestation v2 base attestation challenge mismatch".to_string());
+        return Err("Несовпадение: «Guard Attestation v2 base attestation challenge»".to_string());
     }
     validate_continuous_evidence_v2(&continuous_evidence, continuous_evidence.collected_at_unix_ms)?;
     let mut attestation = GuardRemoteAttestationV2 {

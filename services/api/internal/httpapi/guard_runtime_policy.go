@@ -53,23 +53,23 @@ func normalizeGuardRuntimeProfiles0317(input []guardRuntimeProfile0317) ([]guard
 		switch profile.JavaMajor {
 		case 8, 16, 17, 21, 25:
 		default:
-			return nil, errors.New("unsupported Java major in Guard runtime policy")
+			return nil, errors.New("Не поддерживается: «Java major in Guard runtime policy»")
 		}
 		profile.ModuleSetSHA256 = strings.ToLower(strings.TrimSpace(profile.ModuleSetSHA256))
 		profile.CodeSetSHA256 = strings.ToLower(strings.TrimSpace(profile.CodeSetSHA256))
 		profile.HookSetSHA256 = strings.ToLower(strings.TrimSpace(profile.HookSetSHA256))
 		if !isSHA256Hex0134(profile.ModuleSetSHA256) {
-			return nil, errors.New("moduleSetSha256 must be a SHA-256 digest")
+			return nil, errors.New("Для «moduleSetSha256» требуется: хеш SHA-256")
 		}
 		if profile.CodeSetSHA256 != "" && !isSHA256Hex0134(profile.CodeSetSHA256) {
-			return nil, errors.New("codeSetSha256 must be a SHA-256 digest")
+			return nil, errors.New("Для «codeSetSha256» требуется: хеш SHA-256")
 		}
 		if profile.HookSetSHA256 != "" && !isSHA256Hex0134(profile.HookSetSHA256) {
-			return nil, errors.New("hookSetSha256 must be a SHA-256 digest")
+			return nil, errors.New("Для «hookSetSha256» требуется: хеш SHA-256")
 		}
 		key := fmt.Sprintf("%d:%s:%s:%s", profile.JavaMajor, profile.ModuleSetSHA256, profile.CodeSetSHA256, profile.HookSetSHA256)
 		if seen[key] {
-			return nil, errors.New("duplicate runtime profile")
+			return nil, errors.New("Обнаружен дубликат: «runtime profile»")
 		}
 		seen[key] = true
 		out = append(out, profile)
@@ -114,11 +114,11 @@ func verifyGuardRuntimePolicy0317(policy guardReleasePolicy0134, platform string
 		return "", err
 	}
 	if kind != "windows" {
-		return "", errors.New("continuous Guard runtime verification requires Windows")
+		return "", errors.New("Для «continuous Guard runtime verification» требуется Windows")
 	}
 	profiles := policy.RuntimeProfiles[kind]
 	if len(profiles) == 0 {
-		return "", errors.New("Windows Guard runtime allowlist is not configured")
+		return "", errors.New("«Windows Guard runtime allowlist»: не настроено")
 	}
 	if !guardRuntimeMatches0317(profiles, evidence.JavaMajor, evidence.ModuleSetSHA256, evidence.CodeSetSHA256, evidence.HookSetSHA256) {
 		return "", errors.New("Java version or runtime module/code/hook set is not approved")
@@ -153,15 +153,15 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	}
 	major, err := strconv.ParseUint(metadataString0121(ticket.Metadata, "javaMajor"), 10, 32)
 	if err != nil || major == 0 {
-		return errors.New("Continuous Guard ticket Java version invalid")
+		return errors.New("Некорректное значение: «Continuous Guard ticket Java version»")
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, claims.TrustedDeviceID)
 	if err != nil || device.Status != "active" || device.TrustState != "verified" {
-		return errors.New("Continuous Guard trusted device revoked or unavailable")
+		return errors.New("Недоступно: «Continuous Guard trusted device revoked or»")
 	}
 	state, _ := effectiveDeviceAttestation0124(device, now)
 	if state != "verified" {
-		return errors.New("Continuous Guard device attestation expired")
+		return errors.New("Истёк срок действия: «Continuous Guard device attestation»")
 	}
 	// Не допускайте, чтобы устаревшие или ранее проверенные ключи устройств
 	// переживали восстановление.
@@ -171,7 +171,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	version := metadataString0121(ticket.Metadata, "launcherVersion")
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		return errors.New("Continuous Guard release policy unavailable")
+		return errors.New("Недоступно: «Continuous Guard release policy»")
 	}
 	policy, ok := policies[version]
 	if !ok {

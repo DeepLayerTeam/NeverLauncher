@@ -170,16 +170,16 @@ func (r *SQLRepository) ListTextureAssignments0251(ctx context.Context, profile 
 
 func validateTextureSelection0251(kind, skinModel, visibility string) error {
 	if kind != "skin" && kind != "cape" {
-		return fmt.Errorf("unsupported texture kind")
+		return fmt.Errorf("Не поддерживается: «texture kind»")
 	}
 	if skinModel != "classic" && skinModel != "slim" {
 		return fmt.Errorf("Не поддерживается: модель скина")
 	}
 	if kind == "cape" && skinModel != "classic" {
-		return fmt.Errorf("cape cannot use slim model")
+		return fmt.Errorf("«cape»: запрещено «use slim model»")
 	}
 	if visibility != "public" && visibility != "private" && visibility != "unlisted" {
-		return fmt.Errorf("unsupported visibility")
+		return fmt.Errorf("Не поддерживается: «visibility»")
 	}
 	return nil
 }
@@ -197,7 +197,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 		return model.TextureAssignment0251{}, ErrTextureRevisionConflict0251
 	}
 	if profile.Realm != "local" || profile.Issuer != "launcher" {
-		return model.TextureAssignment0251{}, fmt.Errorf("official identity cannot be changed via local texture service")
+		return model.TextureAssignment0251{}, fmt.Errorf("«official identity»: запрещено «be changed via local texture service»")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

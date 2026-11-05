@@ -1938,7 +1938,7 @@ mod tests {
         m.runtime.launch.environment_allowlist = vec!["LANG".into()];
         assert!(validate_runtime_constraints_0223(&m).is_ok());
         m.runtime.jvm_args.push("-Xmx2048M".into());
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "duplicate heap override");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Обнаружен дубликат: «heap override»");
         m.runtime.jvm_args.clear();
         m.runtime.jvm_args.push("-Xmx1024M".into());
         assert!(validate_runtime_constraints_0223(&m).is_err(), "heap beyond max");
@@ -1950,7 +1950,7 @@ mod tests {
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Java env injection");
         m.runtime.launch.environment_allowlist.clear();
         m.runtime.java.maximum_major_version = 16;
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "Java constraint mismatch");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Несовпадение: «Java constraint»");
     }
 
     #[tokio::test]

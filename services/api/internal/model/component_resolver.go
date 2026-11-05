@@ -79,31 +79,31 @@ type semver0243 struct {
 func parseSemver0243(source string) (semver0243, error) {
 	var result semver0243
 	if len(source) == 0 || len(source) > 128 || strings.ContainsAny(source, " \t\r\n") {
-		return result, fmt.Errorf("invalid semantic version %q", source)
+		return result, fmt.Errorf("Некорректная семантическая версия: %q", source)
 	}
 	raw := strings.SplitN(source, "+", 2)
 	if len(raw) == 2 && !semverIdentifiers0243(raw[1], false) {
-		return result, fmt.Errorf("invalid semver build metadata %q", source)
+		return result, fmt.Errorf("Некорректное значение: «semver build metadata» %q", source)
 	}
 	pre := strings.SplitN(raw[0], "-", 2)
 	if len(pre) == 2 {
 		if !semverIdentifiers0243(pre[1], true) {
-			return result, fmt.Errorf("invalid semver prerelease %q", source)
+			return result, fmt.Errorf("Некорректное значение: «semver prerelease» %q", source)
 		}
 		result.pre = strings.Split(pre[1], ".")
 	}
 	parts := strings.Split(pre[0], ".")
 	if len(parts) != 3 {
-		return result, fmt.Errorf("semantic version must be MAJOR.MINOR.PATCH: %q", source)
+		return result, fmt.Errorf("Для семантическая версия требуется: «MAJOR.MINOR.PATCH:» %q", source)
 	}
 	nums := []*uint64{&result.major, &result.minor, &result.patch}
 	for i, part := range parts {
 		if part == "" || (len(part) > 1 && part[0] == '0') {
-			return result, fmt.Errorf("invalid semantic version %q", source)
+			return result, fmt.Errorf("Некорректная семантическая версия: %q", source)
 		}
 		for _, b := range []byte(part) {
 			if b < '0' || b > '9' {
-				return result, fmt.Errorf("invalid semantic version %q", source)
+				return result, fmt.Errorf("Некорректная семантическая версия: %q", source)
 			}
 		}
 		v, e := strconv.ParseUint(part, 10, 64)
@@ -207,7 +207,7 @@ func matchRange0243(actual, expr string) (bool, error) {
 	for _, alternative := range strings.Split(expr, "||") {
 		tokens := strings.Fields(alternative)
 		if len(tokens) == 0 || len(tokens) > 16 {
-			return false, fmt.Errorf("invalid version range %q", expr)
+			return false, fmt.Errorf("Некорректное значение: «version range» %q", expr)
 		}
 		ok := true
 		for _, token := range tokens {
@@ -244,26 +244,26 @@ func matchRange0243(actual, expr string) (bool, error) {
 				upper.pre = nil
 				if op == "~" {
 					if upper.minor == ^uint64(0) {
-						return false, fmt.Errorf("range overflow")
+						return false, fmt.Errorf("Переполнение диапазона")
 					}
 					upper.minor++
 					upper.patch = 0
 				} else if upper.major > 0 {
 					if upper.major == ^uint64(0) {
-						return false, fmt.Errorf("range overflow")
+						return false, fmt.Errorf("Переполнение диапазона")
 					}
 					upper.major++
 					upper.minor = 0
 					upper.patch = 0
 				} else if upper.minor > 0 {
 					if upper.minor == ^uint64(0) {
-						return false, fmt.Errorf("range overflow")
+						return false, fmt.Errorf("Переполнение диапазона")
 					}
 					upper.minor++
 					upper.patch = 0
 				} else {
 					if upper.patch == ^uint64(0) {
-						return false, fmt.Errorf("range overflow")
+						return false, fmt.Errorf("Переполнение диапазона")
 					}
 					upper.patch++
 				}

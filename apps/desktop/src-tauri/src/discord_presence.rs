@@ -40,13 +40,13 @@ pub struct PresenceRequest {
 fn validate(req: &PresenceRequest) -> Result<(), String> {
     if !(17..=20).contains(&req.application_id.len())
         || !req.application_id.bytes().all(|c| c.is_ascii_digit()) {
-        return Err("Discord application ID must be a decimal snowflake".into());
+        return Err("Для «Discord application ID» требуется: «a decimal snowflake»".into());
     }
     if req.details.chars().count() > 128 || req.state.chars().count() > 128 {
         return Err("Discord activity fields exceed 128 characters".into());
     }
     if let Some(url) = req.action_url.as_deref().filter(|s| !s.is_empty()) {
-        let parsed = reqwest::Url::parse(url).map_err(|_| "Invalid Discord action URL")?;
+        let parsed = reqwest::Url::parse(url).map_err(|_| "Некорректное значение: «Discord action URL»")?;
         if parsed.scheme() != "https" || parsed.host_str().is_none()
             || !parsed.username().is_empty() || parsed.password().is_some() {
             return Err("Discord activity actions require public HTTPS URLs".into());
@@ -85,7 +85,7 @@ async fn connect() -> Result<Box<dyn Socket>, String> {
             }
         }
     }
-    Err("Discord desktop client IPC is unavailable".into())
+    Err("Недоступно: «Discord desktop client IPC»".into())
 }
 
 impl Connection {
@@ -108,7 +108,7 @@ impl Connection {
             .map_err(|e| format!("Discord IPC header: {e}"))?;
         let opcode = u32::from_le_bytes(header[0..4].try_into().unwrap());
         let length = u32::from_le_bytes(header[4..8].try_into().unwrap()) as usize;
-        if length > MAX_FRAME { return Err("Discord IPC frame too large".into()); }
+        if length > MAX_FRAME { return Err("Превышен допустимый размер: кадр IPC Discord".into()); }
         let mut body = vec![0u8; length];
         timeout(IO_TIMEOUT, self.socket.read_exact(&mut body)).await
             .map_err(|_| "Discord IPC response timed out")?

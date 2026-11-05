@@ -183,7 +183,7 @@ def command_sync() -> int:
 def command_set(value: str) -> int:
     value = value.strip()
     if not SEMVER_RE.fullmatch(value):
-        raise VersionError(f"invalid SemVer: {value!r}")
+        raise VersionError(f"Некорректное значение: SemVer: {value!r}")
     VERSION_FILE.write_text(value + "\n", encoding="utf-8")
     sync(value, check_only=False)
     subprocess.run(

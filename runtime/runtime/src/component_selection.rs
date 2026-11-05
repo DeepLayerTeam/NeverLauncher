@@ -43,7 +43,7 @@ fn checked_id(value:&str)->bool{
 fn sorted_ids(values:Vec<String>)->Result<Vec<String>,String>{
     if values.len()>4096 {return Err("too many component IDs in selection".into())}
     let mut unique=BTreeSet::new();
-    for id in values {if !checked_id(&id)||!unique.insert(id.clone()){return Err(format!("invalid or duplicate component ID: {id}"))}}
+    for id in values {if !checked_id(&id)||!unique.insert(id.clone()){return Err(format!("Некорректное значение: «or duplicate component ID»: {id}"))}}
     Ok(unique.into_iter().collect())
 }
 
@@ -63,23 +63,23 @@ pub fn export_from_installed_02410(manifest:&Manifest,preset:Option<&str>)->Resu
 }
 
 pub fn parse_import_02410(data:&str)->Result<PortableSelection02410,String>{
-    if data.len()>MAX_SELECTION_BYTES || data.is_empty(){return Err("selection JSON exceeds size limit or is empty".into())}
-    let mut portable:PortableSelection02410=serde_json::from_str(data).map_err(|e|format!("invalid selection JSON: {e}"))?;
-    if portable.schema_version!="1.0" {return Err("unsupported selection format".into())}
+    if data.len()>MAX_SELECTION_BYTES || data.is_empty(){return Err("Пустое значение: «selection JSON exceeds size limit or»".into())}
+    let mut portable:PortableSelection02410=serde_json::from_str(data).map_err(|e|format!("Некорректное значение: «selection JSON»: {e}"))?;
+    if portable.schema_version!="1.0" {return Err("Не поддерживается: «selection format»".into())}
     for s in [&portable.project_id,&portable.profile_id,&portable.channel] {
-        if s.is_empty()||s.len()>128||s.bytes().any(|b|b<32||b==127){return Err("invalid selection profile identity".into())}
+        if s.is_empty()||s.len()>128||s.bytes().any(|b|b<32||b==127){return Err("Некорректное значение: «selection profile identity»".into())}
     }
     if portable.source_version.len()>128||portable.source_catalog_digest.len()!=64||
        !portable.source_catalog_digest.bytes().all(|b|b.is_ascii_hexdigit())||
        portable.source_preset.len()>MAX_CHOICE_BYTES || portable.source_preset.bytes().any(|b|b<32||b==127) {
-        return Err("invalid selection provenance".into());
+        return Err("Некорректное значение: «selection provenance»".into());
     }
     portable.selected_ids=sorted_ids(portable.selected_ids)?;
     Ok(portable)
 }
 
 pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<SelectionMigration02410,String>{
-    if source.schema_version!="1.0" {return Err("invalid portable selection".into())}
+    if source.schema_version!="1.0" {return Err("Некорректное значение: «portable selection»".into())}
     let canonical=sorted_ids(source.selected_ids.clone())?;
     if (source.project_id.as_str(),source.profile_id.as_str(),source.channel.as_str()) !=
        (target.project_id.as_str(),target.profile_id.as_str(),target.channel.as_str()){

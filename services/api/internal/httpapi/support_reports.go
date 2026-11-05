@@ -58,7 +58,7 @@ func validateSupport03510(v playerSupportReport03510) error {
 		return errors.New("Неподдерживаемая версия диагностики")
 	}
 	if !allowedSupportStages03510[v.Stage] || len(v.Events) > 10 {
-		return errors.New("invalid diagnostic stage/events")
+		return errors.New("Некорректное значение: «diagnostic stage/events»")
 	}
 	if !map[string]bool{"windows": true, "linux": true, "macos": true, "android": true, "ios": true, "unknown": true}[v.OS] {
 		return errors.New("Некорректная операционная система")

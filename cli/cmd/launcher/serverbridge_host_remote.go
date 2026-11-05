@@ -198,7 +198,7 @@ func remoteSecureDir0284(dir string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("remote state directory must be a private real directory: %s", dir)
+		return fmt.Errorf("Для каталог состояния удалённого сервиса требуется: «a private real directory:» %s", dir)
 	}
 	return nil
 }
@@ -208,7 +208,7 @@ func remoteCheckFile0284(path string) error {
 		return err
 	}
 	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("remote secret/state must be a private regular file: %s", path)
+		return fmt.Errorf("Для «remote secret/state» требуется: «a private regular file:» %s", path)
 	}
 	return nil
 }
@@ -297,20 +297,20 @@ func remoteLoad0284(root string) (remoteIdentity0284, error) {
 		return i, err
 	}
 	if i.Version != 1 || len(i.Key) != 32 || len(i.NodeID) != 32 {
-		return i, errors.New("invalid remote node identity")
+		return i, errors.New("Некорректное значение: «remote node identity»")
 	}
 	return i, nil
 }
 func remoteParseSources0284(values []string) ([]*net.IPNet, error) {
 	if len(values) == 0 {
-		return nil, errors.New("source CIDR allowlist required")
+		return nil, errors.New("Требуется: «source CIDR allowlist»")
 	}
 	networks := make([]*net.IPNet, 0, len(values))
 	for _, v := range values {
 		for _, part := range strings.Split(v, ",") {
 			s := strings.TrimSpace(part)
 			if s == "" {
-				return nil, errors.New("empty source CIDR")
+				return nil, errors.New("Пустое значение: «source CIDR»")
 			}
 			_, n, err := net.ParseCIDR(s)
 			if err != nil {
@@ -350,27 +350,27 @@ func remoteTokenSign0284(id remoteIdentity0284, claims remoteClaims0284) (string
 func remoteTokenDecode0284(id remoteIdentity0284, token string, now time.Time) (remoteClaims0284, error) {
 	var c remoteClaims0284
 	if len(token) > 4096 {
-		return c, errors.New("invalid token")
+		return c, errors.New("Некорректный токен")
 	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {
-		return c, errors.New("invalid token")
+		return c, errors.New("Некорректный токен")
 	}
 	signature, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return c, errors.New("invalid token")
+		return c, errors.New("Некорректный токен")
 	}
 	mac := hmac.New(sha256.New, id.Key)
 	_, _ = mac.Write([]byte(parts[0]))
 	if !hmac.Equal(signature, mac.Sum(nil)) {
-		return c, errors.New("invalid token")
+		return c, errors.New("Некорректный токен")
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return c, errors.New("invalid token")
+		return c, errors.New("Некорректный токен")
 	}
 	if err = json.Unmarshal(raw, &c); err != nil {
-		return c, errors.New("invalid token")
+		return c, errors.New("Некорректный токен")
 	}
 	ts := now.Unix()
 	if c.Audience != remoteAudience0284 || c.NodeID != id.NodeID || c.Subject == "" || c.ID == "" || c.Issued > ts+10 || c.Expires <= ts || c.Expires-c.Issued > int64(remoteMaxTTL0284.Seconds()) || c.Issued <= 0 || len(c.Scopes) == 0 || len(c.Sources) == 0 {
@@ -378,7 +378,7 @@ func remoteTokenDecode0284(id remoteIdentity0284, token string, now time.Time) (
 	}
 	for _, scope := range c.Scopes {
 		if !remoteScopes0284[scope] {
-			return c, errors.New("unknown token scope")
+			return c, errors.New("Неизвестное значение: «token scope»")
 		}
 	}
 	if _, err = remoteParseSources0284(c.Sources); err != nil {
@@ -388,14 +388,14 @@ func remoteTokenDecode0284(id remoteIdentity0284, token string, now time.Time) (
 }
 func remoteIssue0284(id remoteIdentity0284, subject string, scopes, sources []string, ttl time.Duration, now time.Time) (string, error) {
 	if subject == "" || len(subject) > 128 || strings.ContainsAny(subject, "\n\r\t") {
-		return "", errors.New("invalid token subject")
+		return "", errors.New("Некорректное значение: «token subject»")
 	}
 	if ttl < time.Second || ttl > remoteMaxTTL0284 || len(scopes) == 0 {
 		return "", errors.New("token must have scopes and TTL between 1 second and 15 minutes")
 	}
 	for _, s := range scopes {
 		if !remoteScopes0284[s] {
-			return "", fmt.Errorf("unknown host-level scope %q", s)
+			return "", fmt.Errorf("Неизвестное значение: «host-level scope» %q", s)
 		}
 	}
 	if _, err := remoteParseSources0284(sources); err != nil {
@@ -486,7 +486,7 @@ func remoteUnresolvedCommand04112(dir string) (bool, error) {
 	}
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") || len(entry.Name()) != 69 {
-			return false, fmt.Errorf("unexpected command journal entry: %s", entry.Name())
+			return false, fmt.Errorf("Неожиданное значение: «command journal entry»: %s", entry.Name())
 		}
 		path := filepath.Join(dir, "commands", entry.Name())
 		receipt, err := remoteReadReceipt0284(path)
@@ -496,7 +496,7 @@ func remoteUnresolvedCommand04112(dir string) (bool, error) {
 		if receipt.KeyHash != strings.TrimSuffix(entry.Name(), ".json") || receipt.Digest == "" || receipt.Subject == "" ||
 			(receipt.Action != "start" && receipt.Action != "stop" && receipt.Action != "restart") ||
 			(receipt.State != "succeeded" && receipt.State != "indeterminate") {
-			return false, errors.New("invalid command journal entry; manual recovery required")
+			return false, errors.New("Некорректное значение: «command journal entry; manual recovery required»")
 		}
 		if receipt.State == "indeterminate" {
 			return true, nil
@@ -573,7 +573,7 @@ func remoteHostExecute0284(root, dir, action string) (json.RawMessage, error) {
 	case "restart":
 		err = restartServerBridgeHost01910(args)
 	default:
-		return nil, errors.New("unsupported remote operation")
+		return nil, errors.New("Не поддерживается: «remote operation»")
 	}
 	if err != nil {
 		return nil, err
@@ -1017,7 +1017,7 @@ func remoteHandle0284(args []string) error {
 		defer cancel()
 		return remoteServeManaged0428(ctx, server, listener)
 	default:
-		return fmt.Errorf("unknown remote subcommand: %s", args[0])
+		return fmt.Errorf("Неизвестное значение: «remote subcommand»: %s", args[0])
 	}
 }
 func remoteReadTokenFile0284(path string) (string, error) {
@@ -1082,7 +1082,7 @@ func remoteCall0284(args []string) error {
 		// другим хостом либо с новым ключом идемпотентности после неопределённого результата ввода-вывода.
 		key := flagValue(args, "--idempotency-key", "")
 		if !remoteIdempotency0284.MatchString(key) {
-			return errors.New("receipt recovery requires the original --idempotency-key (16-128 safe characters)")
+			return errors.New("Для «receipt recovery» требуется «the original --idempotency-key (16-128 safe characters)»")
 		}
 		method = http.MethodGet
 		path = "/v1/host/receipts/" + key
@@ -1095,7 +1095,7 @@ func remoteCall0284(args []string) error {
 			return errors.New("mutations require --idempotency-key (16-128 safe characters)")
 		}
 	} else {
-		return errors.New("unsupported remote action (status, start, stop, restart, receipt)")
+		return errors.New("Не поддерживается: «remote action (status, start, stop, restart, receipt)»")
 	}
 	request, err := http.NewRequest(method, url+path, body)
 	if err != nil {
@@ -1136,7 +1136,7 @@ func remoteServeManaged0428(ctx context.Context, server *http.Server, listener n
 	if err := remoteServiceReady0498(); err != nil {
 		_ = server.Close()
 		<-finished
-		return fmt.Errorf("remote systemd readiness failed: %w", err)
+		return fmt.Errorf("Ошибка: «remote systemd readiness»: %w", err)
 	}
 	watchdogCtx, stopWatchdog := context.WithCancel(context.Background())
 	defer stopWatchdog()

@@ -137,7 +137,7 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
 	if device.Status != "active" || device.TrustState != "verified" {
-		return model.TrustedDevice{}, fmt.Errorf("%w: device enrollment must be active", ErrConflict)
+		return model.TrustedDevice{}, fmt.Errorf("Для «%w: device enrollment» требуется: «active»", ErrConflict)
 	}
 	for _, existing := range r.trustedDevices {
 		if existing.KeyFingerprint == device.KeyFingerprint && existing.ID != device.ID {
@@ -353,7 +353,7 @@ func (r *MemoryRepository) RevokeOtherTrustedDevices(ctx context.Context, userID
 	userID = strings.TrimSpace(userID)
 	exceptDeviceID = strings.TrimSpace(exceptDeviceID)
 	if userID == "" || exceptDeviceID == "" {
-		return model.DeviceRevocationBatch{}, errors.New("user id and preserved device id are required")
+		return model.DeviceRevocationBatch{}, errors.New("Требуется: «user id and preserved device id are»")
 	}
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
@@ -503,7 +503,7 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 		return model.TrustedDevice{}, err
 	}
 	if device.Status != "active" || device.TrustState != "verified" {
-		return model.TrustedDevice{}, fmt.Errorf("%w: device enrollment must be active", ErrConflict)
+		return model.TrustedDevice{}, fmt.Errorf("Для «%w: device enrollment» требуется: «active»", ErrConflict)
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -722,7 +722,7 @@ func (r *SQLRepository) RevokeOtherTrustedDevices(ctx context.Context, userID, e
 	userID = strings.TrimSpace(userID)
 	exceptDeviceID = strings.TrimSpace(exceptDeviceID)
 	if userID == "" || exceptDeviceID == "" {
-		return model.DeviceRevocationBatch{}, errors.New("user id and preserved device id are required")
+		return model.DeviceRevocationBatch{}, errors.New("Требуется: «user id and preserved device id are»")
 	}
 	if ctx == nil {
 		ctx = context.Background()

@@ -59,10 +59,10 @@ func windowsProtectionGARequired0190(ver string) bool {
 
 func windowsProtectionGAStableVersion0190(ver string) error {
 	if !windowsProtectionGARequired0190(ver) {
-		return fmt.Errorf("Windows Protection GA requires 0.19.0+, got %s", ver)
+		return fmt.Errorf("Для «Windows Protection GA» требуется «0.19.0+, got» %s", ver)
 	}
 	if strings.ContainsAny(strings.TrimSpace(ver), "-+") {
-		return fmt.Errorf("Windows Protection GA requires stable immutable SemVer without prerelease/build suffix: %q", ver)
+		return fmt.Errorf("Для «Windows Protection GA» требуется «stable immutable SemVer without prerelease/build suffix:» %q", ver)
 	}
 	return nil
 }
@@ -158,7 +158,7 @@ func buildWindowsProtectionGADocument0190(dir, ver string) (windowsProtectionGAC
 		return windowsProtectionGACertificate0190{}, err
 	}
 	if rc.Status != windowsProtectionReleaseStatus01812 || rc.ProtectionProfile != "aggressive" || rc.ScenarioExecutions != 55 {
-		return windowsProtectionGACertificate0190{}, errors.New("Windows Protection GA requires a complete aggressive RC certificate")
+		return windowsProtectionGACertificate0190{}, errors.New("Для «Windows Protection GA» требуется «a complete aggressive RC certificate»")
 	}
 	if err := verifyWindowsUserModeOnlyPackages0190(dir, ver); err != nil {
 		return windowsProtectionGACertificate0190{}, err
@@ -245,19 +245,19 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 		return err
 	}
 	if cert.SchemaVersion != expected.SchemaVersion || cert.Product != expected.Product || cert.Version != expected.Version || cert.Status != windowsProtectionGAStatus0190 || cert.ReleaseStage != windowsProtectionGAStage0190 || cert.ProtectionModel != windowsProtectionGAModel0190 || cert.ProtectionProfile != "aggressive" || cert.EnforcementMode != windowsProtectionGAEnforcement0190 {
-		return errors.New("Windows Protection GA metadata mismatch")
+		return errors.New("Несовпадение: «Windows Protection GA metadata»")
 	}
 	if !strings.EqualFold(cert.SourceCommit, expected.SourceCommit) || !strings.EqualFold(cert.Repository, expected.Repository) || !strings.EqualFold(cert.RCCertificateSHA256, expected.RCCertificateSHA256) || !strings.EqualFold(cert.RCBoundarySHA256, expected.RCBoundarySHA256) || cert.RCCertificateID != expected.RCCertificateID {
-		return errors.New("Windows Protection GA RC/source binding mismatch")
+		return errors.New("Несовпадение: «Windows Protection GA RC/source binding»")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, cert.CreatedAt); err != nil {
-		return fmt.Errorf("Windows Protection GA createdAt invalid: %w", err)
+		return fmt.Errorf("Некорректное значение: «Windows Protection GA createdAt»: %w", err)
 	}
 	if !strings.EqualFold(cert.AdversarialCertificateSHA256, expected.AdversarialCertificateSHA256) || !strings.EqualFold(cert.AdversarialEvidenceRootSHA256, expected.AdversarialEvidenceRootSHA256) || cert.ScenarioExecutions != 55 {
-		return errors.New("Windows Protection GA adversarial evidence mismatch")
+		return errors.New("Несовпадение: «Windows Protection GA adversarial evidence»")
 	}
 	if len(cert.JavaMajors) != len(expected.JavaMajors) || len(cert.RequiredCapabilities) != len(expected.RequiredCapabilities) || len(cert.Artifacts) != len(expected.Artifacts) {
-		return errors.New("Windows Protection GA cohort size mismatch")
+		return errors.New("Несовпадение: «Windows Protection GA cohort size»")
 	}
 	for i := range expected.JavaMajors {
 		if cert.JavaMajors[i] != expected.JavaMajors[i] {
@@ -266,13 +266,13 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	}
 	for i := range expected.RequiredCapabilities {
 		if cert.RequiredCapabilities[i] != expected.RequiredCapabilities[i] {
-			return fmt.Errorf("Windows Protection GA capability #%d mismatch", i+1)
+			return fmt.Errorf("Несовпадение: «Windows Protection GA capability #%d»", i+1)
 		}
 	}
 	for i := range expected.Artifacts {
 		a, b := cert.Artifacts[i], expected.Artifacts[i]
 		if a.Name != b.Name || a.Size != b.Size || !strings.EqualFold(a.SHA256, b.SHA256) {
-			return fmt.Errorf("Windows Protection GA artifact mismatch: %s", b.Name)
+			return fmt.Errorf("Несовпадение: «Windows Protection GA artifact»: %s", b.Name)
 		}
 	}
 	for key := range expected.Invariants {

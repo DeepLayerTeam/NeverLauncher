@@ -53,10 +53,10 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			low := strings.ToLower(key)
 			switch low {
 			case "dsn", "password", "secret", "clientsecret", "clientsecretfile", "secretfile", "keyfile", "certfile", "cafile", "privatekey", "accesstoken", "refreshtoken", "token", "hmacsecret", "connectionstring":
-				return fmt.Errorf("inline secrets or secret file paths are forbidden: %s", key)
+				return fmt.Errorf("Запрещено: «inline secrets or secret file paths are»: %s", key)
 			}
 			if strings.Contains(low, "secret") && !strings.HasSuffix(low, "secretenv") {
-				return fmt.Errorf("secret field forbidden: %s", key)
+				return fmt.Errorf("Запрещено: «secret field»: %s", key)
 			}
 			var nested map[string]json.RawMessage
 			if len(raw) > 0 && raw[0] == '{' && json.Unmarshal(raw, &nested) == nil {
@@ -90,7 +90,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.DSNEnv == "" || cfg.DSN != "" {
-			return errors.New("SQL requires dsnEnv only")
+			return errors.New("Для SQL требуется «dsnEnv only»")
 		}
 	case "http":
 		var cfg httpconnector.Config
@@ -98,7 +98,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.HMAC.SecretEnv == "" || cfg.HMAC.SecretFile != "" {
-			return errors.New("HTTP requires hmac.secretEnv only")
+			return errors.New("Для HTTP требуется «hmac.secretEnv only»")
 		}
 	case "oidc":
 		var cfg oidcconnector.Config
@@ -106,7 +106,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.ClientSecretFile != "" {
-			return errors.New("OIDC secret files are unsupported")
+			return errors.New("Не поддерживается: «OIDC secret files are»")
 		}
 	case "java":
 		var cfg javaauthconnector.Config
@@ -122,7 +122,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.ClientSecretFile != "" {
-			return errors.New("Microsoft secret files are unsupported")
+			return errors.New("Не поддерживается: «Microsoft secret files are»")
 		}
 	}
 	return nil
@@ -209,7 +209,7 @@ func createManagedProvider02910(ctx context.Context, v repository.ManagedProvide
 		conn = c
 		policy = federation.ProviderPolicy{AutoProvision: c.ProvisioningMode() == "jit", DefaultRole: c.DefaultRole(), RoleMappings: c.RoleMappings()}
 	default:
-		return out, errors.New("unsupported provider kind")
+		return out, errors.New("Не поддерживается: «provider kind»")
 	}
 	report := conformance.Run(ctx, conn)
 	if !report.Passed {
@@ -237,12 +237,12 @@ func (s Server) syncManagedProviders02910(ctx context.Context) error {
 		return nil
 	}
 	if s.Federation == nil {
-		return errors.New("federation unavailable")
+		return errors.New("Недоступно: «federation»")
 	}
 	return s.Federation.WithManagedSync(func() error {
 		reader, ok := store.(repository.ActiveManagedProviderReader02910)
 		if !ok {
-			return errors.New("active provider reader unavailable")
+			return errors.New("Недоступно: «active provider reader»")
 		}
 		active, err := reader.ListActiveManagedProviders02910(ctx)
 		if err != nil {

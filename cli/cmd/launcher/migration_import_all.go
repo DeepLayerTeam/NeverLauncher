@@ -76,7 +76,7 @@ func migrationURL0493(raw string) (*url.URL, error) {
 		return nil, err
 	}
 	if u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Host == "" || u.Hostname() == "" || (u.Scheme != "https" && !(u.Scheme == "http" && net.ParseIP(u.Hostname()) != nil && net.ParseIP(u.Hostname()).IsLoopback())) {
-		return nil, errors.New("Backend must be HTTPS or an IP-loopback HTTP origin without credentials/query")
+		return nil, errors.New("Для серверная часть требуется: «HTTPS or an IP-loopback HTTP origin without credentials/query»")
 	}
 	return u, nil
 }
@@ -138,7 +138,7 @@ func migrationJSON0493(client *http.Client, method, endpoint, token, source stri
 		Data json.RawMessage `json:"data"`
 	}{}
 	if err = json.Unmarshal(body, &wrapper); err != nil || len(wrapper.Data) == 0 {
-		return false, errors.New("missing Backend migration data")
+		return false, errors.New("Отсутствует: «Backend migration data»")
 	}
 	if err = json.Unmarshal(wrapper.Data, target); err != nil {
 		return false, err
@@ -166,7 +166,7 @@ func migrationImportAll0493(args []string) error {
 	run, confirm := strings.TrimSpace(flagValue(args, "--run", "")), strings.TrimSpace(flagValue(args, "--confirm", ""))
 	source, mapping, report := flagValue(args, "--source", ""), flagValue(args, "--mapping", ""), flagValue(args, "--report", "")
 	if backend == "" || token == "" || run == "" || confirm != run || source == "" || mapping == "" || report == "" {
-		return errors.New("import-content-all requires --backend --token --run --confirm (same run) --source --mapping --report")
+		return errors.New("Для «import-content-all» требуется «--backend --token --run --confirm (same run) --source --mapping --report»")
 	}
 	if _, err := migrationURL0493(backend); err != nil {
 		return err
@@ -199,7 +199,7 @@ func migrationImportAll0493(args []string) error {
 		return err
 	}
 	if !stat.Mode().IsRegular() || stat.Size() > 12288 {
-		return errors.New("invalid mapping file")
+		return errors.New("Некорректное значение: «mapping file»")
 	}
 	d := json.NewDecoder(io.LimitReader(mf, 12289))
 	d.DisallowUnknownFields()
@@ -212,7 +212,7 @@ func migrationImportAll0493(args []string) error {
 		return errors.New("mapping has trailing content")
 	}
 	if len(mapped) != batch.ProfileCount {
-		return errors.New("mapping profile count changed")
+		return errors.New("Обнаружено изменение: «mapping profile count»")
 	}
 	expected := append([]gravDest0492(nil), mapped...)
 	sort.Slice(expected, func(i, j int) bool { return expected[i].ProfilePath < expected[j].ProfilePath })
@@ -231,7 +231,7 @@ func migrationImportAll0493(args []string) error {
 		return err
 	}
 	if !ss.Mode().IsRegular() || ss.Size() < 1 || ss.Size() > 512<<20 {
-		return errors.New("source must be a regular 1..512 MiB ZIP")
+		return errors.New("Для источник требуется: «a regular 1..512 MiB ZIP»")
 	}
 	h := sha256.New()
 	if _, err = io.Copy(h, sf); err != nil {
@@ -266,7 +266,7 @@ func migrationImportAll0493(args []string) error {
 		var plan migrationLivePlan0493
 		if exists {
 			if !resume {
-				return errors.New("partially imported workspace requires --resume=true")
+				return errors.New("Для «partially imported workspace» требуется --resume=true")
 			}
 			_, err = migrationJSON0493(client, "GET", base+"/dry-run", token, "", nil, &plan, false)
 		} else {

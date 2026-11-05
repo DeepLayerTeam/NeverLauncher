@@ -57,7 +57,7 @@ fn valid_relative(path: &str) -> Result<&Path, String> {
     let p = Path::new(path);
     if p.as_os_str().is_empty() || p.is_absolute() || path.contains('\\') || path.contains(':') ||
         !p.components().all(|x| matches!(x, Component::Normal(_))) {
-        return Err("unsafe signed path for source lookup".into());
+        return Err("Небезопасное значение: «signed path for source lookup»".into());
     }
     Ok(p)
 }
@@ -66,7 +66,7 @@ fn safe_source(source: &Path) -> Result<PathBuf, String> {
     // Выбранный вручную корневой каталог должен существовать. Не создавайте его незаметно и не проходите по симлинку.
     let meta = fs::symlink_metadata(source).map_err(|e| format!("legacy directory: {e}"))?;
     if !meta.is_dir() || meta.file_type().is_symlink() {
-        return Err("legacy root must be an existing real directory".into());
+        return Err("Для «legacy root» требуется: «an existing real directory»".into());
     }
     let root = fs::canonicalize(source).map_err(|e| e.to_string())?;
     if !root.is_absolute() { return Err("legacy root is not absolute".into()); }
@@ -77,7 +77,7 @@ fn candidate_roots(source: &Path, profile_id: &str) -> Result<Vec<PathBuf>, Stri
     // Только известные структуры каталогов; никаких рекурсивных glob и неограниченного обхода недоверенного дерева.
     if profile_id.is_empty() || profile_id.contains('/') || profile_id.contains('\\') ||
         profile_id == "." || profile_id == ".." || profile_id.contains(':') {
-        return Err("unsafe profile identifier".into());
+        return Err("Небезопасное значение: «profile identifier»".into());
     }
     Ok(vec![source.to_path_buf(), source.join(".minecraft"),
         source.join("updates").join(profile_id), source.join("clients").join(profile_id),

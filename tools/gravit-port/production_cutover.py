@@ -340,7 +340,7 @@ def auth_canary(cfg: dict, *, public: bool = False):
             require(response.status == 200, "auth canary denied")
             data = response.read(8193)
     except (HTTPError, URLError, TimeoutError) as exc:
-        raise Blocked("authenticated target login canary failed") from exc
+        raise Blocked("Ошибка: «authenticated target login canary»") from exc
     require(len(data) <= 8192, "oversized auth canary result")
     result = json.loads(data)
     require(isinstance(result, dict) and result.get(canary["uuidJSONField"]) == canary["expectedPlayerUuid"],

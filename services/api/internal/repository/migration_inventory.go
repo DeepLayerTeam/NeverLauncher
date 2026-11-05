@@ -41,7 +41,7 @@ func (r *SQLRepository) SaveMigrationInventory0333(ctx context.Context, id strin
 		return inv.Inventory{}, e
 	}
 	if report.Format != inv.Format || len(report.SourceSHA256) != 64 || len(report.Files) > inv.MaxFiles {
-		return inv.Inventory{}, errors.New("invalid inventory")
+		return inv.Inventory{}, errors.New("Некорректное значение: инвентаризация")
 	}
 	if _, e := report.Manifest(); e != nil {
 		return inv.Inventory{}, e

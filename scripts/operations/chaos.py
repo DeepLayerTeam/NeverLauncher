@@ -41,23 +41,23 @@ def stamp() -> str:
 def check_scope(project: str, confirm: str, env_file: Path, ready_url: str, s3_url: str, bucket: str) -> None:
     dr.ensure_isolated(project, confirm)
     if not env_file.is_file() or env_file.is_symlink():
-        raise dr.DrillError("regular Compose env-file required")
+        raise dr.DrillError("Требуется: «regular Compose env-file»")
     if (env_file.stat().st_mode & 0o077) != 0:
-        raise dr.DrillError("Compose env-file must be mode 0600 or more restrictive")
+        raise dr.DrillError("Для «Compose env-file» требуется: «mode 0600 or more restrictive»")
     if not re.fullmatch(r"nl-dr-[a-z0-9][a-z0-9-]{0,50}", bucket):
-        raise dr.DrillError("S3 bucket must be isolated nl-dr-* bucket")
+        raise dr.DrillError("Для «S3 bucket» требуется: «isolated nl-dr-* bucket»")
     parsed = urlsplit(s3_url)
     if (parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or not parsed.port
             or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/")):
-        raise dr.DrillError("S3 test endpoint must be explicit IPv4 loopback HTTP port")
+        raise dr.DrillError("Для «S3 test endpoint» требуется: «explicit IPv4 loopback HTTP port»")
     dr.validate_ready_url(ready_url)
     # Публичная HTTPS-точка может быть не loopback. Не принимайте производственный DNS как
     # доказательство: локальный вход лаборатории должен явно привязываться к loopback.
     rp = urlsplit(ready_url)
     if rp.hostname not in ("127.0.0.1", "localhost", "::1"):
-        raise dr.DrillError("chaos public readiness endpoint must be loopback")
+        raise dr.DrillError("Для «chaos public readiness endpoint» требуется: «loopback»")
     if rp.scheme != "https":
-        raise dr.DrillError("HA readiness must be HTTPS with trusted certificate")
+        raise dr.DrillError("Для «HA readiness» требуется: «HTTPS with trusted certificate»")
     if not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"):
         raise dr.DrillError("set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for isolated S3")
     if dotenv_value(env_file, "LAUNCHER_STORAGE_S3_BUCKET") != bucket:
@@ -76,7 +76,7 @@ def dotenv_value(path: Path, key: str) -> str | None:
         name, raw = line.split("=", 1)
         if name.strip() == key:
             if value is not None:
-                raise dr.DrillError("duplicate required laboratory env key: " + key)
+                raise dr.DrillError("Обнаружен дубликат: «required laboratory env key:»" + key)
             value = raw.strip().strip("\"").strip("'")
     return value
 
@@ -102,7 +102,7 @@ def check_services(project: str, env_file: Path) -> None:
     states = dr.compose_states(project, env_file)
     for service in SERVICES:
         if states.get(service) != "running":
-            raise dr.DrillError(f"required isolated lab service not running: {service}")
+            raise dr.DrillError(f"Не запущена обязательная изолированная лабораторная служба: {service}")
     for service in REPLICA:
         dr.check_restored_backend(project, env_file, version=None, storage="s3", service=service,
                                   timeout=5) if service.startswith("api") else dr.check_restored_worker_0455(project, env_file, service, timeout=5)
@@ -119,7 +119,7 @@ def pg_sql(project: str, env_file: Path, statement: str) -> str:
 
 def pg_write(project: str, env_file: Path, token: str, payload_hash: str) -> None:
     if not (re.fullmatch(r"[0-9a-f]{32}", token) and re.fullmatch(r"[0-9a-f]{64}", payload_hash)):
-        raise dr.DrillError("invalid internally generated PostgreSQL canary")
+        raise dr.DrillError("Некорректное значение: «internally generated PostgreSQL canary»")
     sql = ("CREATE TABLE IF NOT EXISTS launcher_chaos_canaries_0456 "
            "(token text PRIMARY KEY, payload_sha256 text NOT NULL, acknowledged_at timestamptz NOT NULL DEFAULT clock_timestamp());\n"
            f"INSERT INTO launcher_chaos_canaries_0456(token,payload_sha256) VALUES ('{token}','{payload_hash}');\n")
@@ -131,7 +131,7 @@ def pg_verify(project: str, env_file: Path, token: str, payload_hash: str) -> No
     result = pg_sql(project, env_file,
                     f"SELECT payload_sha256 FROM launcher_chaos_canaries_0456 WHERE token='{token}';\n")
     if result != payload_hash:
-        raise dr.DrillError("acknowledged PostgreSQL canary is missing or changed")
+        raise dr.DrillError("Обнаружено изменение: «acknowledged PostgreSQL canary is missing or»")
 
 
 def s3_call(endpoint: str, *args: str, timeout: int = 20) -> bytes:
@@ -153,7 +153,7 @@ def s3_verify(endpoint: str, bucket: str, key: str, expected_hash: str) -> str:
         s3_call(endpoint, "get-object", "--bucket", bucket, "--key", key, str(dest), timeout=30)
         received = dr.sha256_file(dest)
         if received != expected_hash:
-            raise dr.DrillError("acknowledged S3 object is missing or changed")
+            raise dr.DrillError("Обнаружено изменение: «acknowledged S3 object is missing or»")
         return received
 
 
@@ -274,9 +274,9 @@ def network_fault(project: str, env_file: Path, url: str, limit: float) -> dict:
 def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bucket: str,
                    limit: float, report: Path) -> dict:
     if report.exists() or report.is_symlink():
-        raise dr.DrillError("report file already exists; will not overwrite")
+        raise dr.DrillError("Файл отчёта уже существует; перезапись запрещена")
     if not report.parent.is_dir() or report.parent.is_symlink():
-        raise dr.DrillError("report parent must be existing real directory")
+        raise dr.DrillError("Для «report parent» требуется: «existing real directory»")
     check_services(project, env_file)
     check_lab_endpoint(project, env_file, s3_url)
     poll(lambda: public_ready(ready_url), True, limit, "initial HA readiness")
@@ -346,7 +346,7 @@ def main() -> int:
     try:
         check_scope(args.project, args.confirm, args.env_file, args.ready_url, args.s3_endpoint, args.s3_bucket)
         if not 20 <= args.timeout <= 300:
-            raise dr.DrillError("timeout must be 20..300 seconds")
+            raise dr.DrillError("Тайм-аут должен составлять от 20 до 300 секунд")
         configure_compose()
         result = run_experiment(args.project, args.env_file, args.ready_url, args.s3_endpoint,
                                 args.s3_bucket, args.timeout, args.report)

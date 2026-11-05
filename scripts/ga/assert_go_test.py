@@ -18,7 +18,7 @@ def verify(path: Path, required: list[str]) -> None:
         raise ValueError("at least one required test is mandatory")
     wanted = set(required)
     if len(wanted) != len(required):
-        raise ValueError("duplicate --require names are not allowed")
+        raise ValueError("«duplicate --require names»: не разрешено")
     observed: dict[str, str] = {}
     packages: dict[str, str] = {}
     count = 0
@@ -27,12 +27,12 @@ def verify(path: Path, required: list[str]) -> None:
             continue
         obj = json.loads(line)
         if not isinstance(obj, dict):
-            raise ValueError("go test JSON line must be object")
+            raise ValueError("Для «go test JSON line» требуется: «object»")
         action = obj.get("Action")
         test = obj.get("Test")
         pkg = obj.get("Package")
         if not isinstance(action, str) or not isinstance(pkg, str):
-            raise ValueError("invalid or truncated Go test event")
+            raise ValueError("Некорректное значение: «or truncated Go test event»")
         count += 1
         if action in {"fail", "skip", "pass"}:
             if isinstance(test, str) and test in wanted:
@@ -45,13 +45,13 @@ def verify(path: Path, required: list[str]) -> None:
             if test is None:
                 packages[pkg] = action
     if not count:
-        raise ValueError("empty Go test evidence")
+        raise ValueError("Пустое значение: «Go test evidence»")
     incomplete = sorted(name for name in wanted if observed.get(name) != "pass")
     failed_packages = sorted(pkg for pkg, action in packages.items() if action != "pass")
     if incomplete or failed_packages:
         raise ValueError(f"GA not certified: tests without PASS={incomplete}, failed/skipped packages={failed_packages}")
     if not packages or not any(v == "pass" for v in packages.values()):
-        raise ValueError("no successful Go package result")
+        raise ValueError("Отсутствует: «successful Go package result»")
     print(f"verified {len(wanted)} mandatory Go tests passed; packages={len(packages)}")
 
 
@@ -63,7 +63,7 @@ def main() -> int:
     try:
         verify(args.report, args.require)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"GA gate denied: {exc}", file=sys.stderr)
+        print(f"Доступ запрещён: «GA gate»: {exc}", file=sys.stderr)
         return 1
     return 0
 

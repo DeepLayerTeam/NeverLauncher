@@ -29,17 +29,17 @@ def sign_attestation(
     folder: Path, expected_public: str, seed_hex: str, commit: str
 ) -> None:
     if not GITSHA.fullmatch(commit):
-        raise GateError("exact source commit required")
+        raise GateError("Требуется: точный коммит исходников")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", seed_hex):
         raise GateError("protected Ed25519 seed is missing/invalid")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", expected_public):
-        raise GateError("pinned operator public key invalid")
+        raise GateError("Некорректное значение: «pinned operator public key»")
     if (
         folder.is_symlink()
         or not folder.is_dir()
         or (folder / "attestation.json").is_symlink()
     ):
-        raise GateError("unsafe evidence directory")
+        raise GateError("Небезопасное значение: каталог подтверждающих данных")
     private = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(seed_hex))
     actual_public = (
         private.public_key()
@@ -53,7 +53,7 @@ def sign_attestation(
     attestation = folder / "attestation.json"
     raw = attestation.read_bytes()
     if len(raw) > 64 * 1024:
-        raise GateError("oversized attestation")
+        raise GateError("Превышен допустимый размер: аттестация")
     data = strict_json(raw)
     if data.get("commit") != commit or data.get("productVersion") != "0.27.0":
         raise GateError("attestation does not describe requested exact source")

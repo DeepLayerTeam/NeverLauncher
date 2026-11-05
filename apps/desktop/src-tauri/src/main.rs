@@ -1011,7 +1011,7 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
     let empty=||VerifiedComponentScope0392{project_id:manifest.project_id.clone(),profile_id:manifest.profile_id.clone(),
        channel:manifest.channel.clone(),catalog_digest:digest.clone(),valid_until:0,permissions:Default::default()};
     if !needs_grant {return Ok(empty());}
-    let cat=catalog.ok_or("missing conditional component catalog")?;
+    let cat=catalog.ok_or("Отсутствует: «conditional component catalog»")?;
     let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"Недопустимый URL Backend")?;
     if origin.scheme()!="https" || origin.username()!="" || origin.password().is_some() ||
        origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
@@ -1149,7 +1149,7 @@ async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)-
         }
         // verified_active_selection проверяет SHA-256 каждого установленного управляемого файла.
         let plan=runtime::resolved_download_0246::resolve(&manifest,preset.as_deref())?;
-        let catalog_digest=manifest.component_catalog.as_ref().ok_or("v3 catalog required")?.digest.clone();
+        let catalog_digest=manifest.component_catalog.as_ref().ok_or("Требуется: «v3 catalog»")?.digest.clone();
         let release_signature=manifest.signature.as_ref().ok_or("unsigned installed release")?.signature.to_ascii_lowercase();
         if catalog_digest.len()!=64||release_signature.len()!=128{return Err("Неверно сформированные измерения подписанного выпуска".into());}
         let canonical=format!("Launcher-Verified-Component-Plan-v1\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
@@ -1980,7 +1980,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
         return Err(format!("component journal check failed: {}", String::from_utf8_lossy(&status.stderr)));
     }
     let report: serde_json::Value = serde_json::from_slice(&status.stdout)
-        .map_err(|e| format!("invalid component update status: {e}"))?;
+        .map_err(|e| format!("Некорректное значение: «component update status»: {e}"))?;
     if report.get("status").and_then(serde_json::Value::as_str) != Some("recovery-required") { return Ok(()); }
     let staged = create_staged_updater_helper02310(&helper, bin_dir)?;
     std::process::Command::new(staged)
@@ -1989,7 +1989,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
         .args(["--wait-pid", &std::process::id().to_string(), "--restart-desktop"])
         .arg(&exe)
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-        .spawn().map_err(|e| format!("could not start component recovery: {e}"))?;
+        .spawn().map_err(|e| format!("Не удалось запустить «component recovery:» {e}"))?;
     std::process::exit(0);
 }
 
@@ -2007,7 +2007,7 @@ async fn player_migration_preview_0339(
 ) -> Result<runtime::player_migration_0339::PlayerMigrationPreview0339, String> {
     tokio::task::spawn_blocking(move || runtime::player_migration_0339::preview(
         &manifest, &pinned_public_key, std::path::Path::new(&legacy_root), component_preset.as_deref(),
-    )).await.map_err(|e| format!("migration preview worker failed: {e}"))?
+    )).await.map_err(|e| format!("Ошибка: «migration preview worker»: {e}"))?
 }
 
 #[tauri::command]
@@ -2033,39 +2033,39 @@ fn benchmark_ui_ready_03511() -> Result<(), String> {
     };
     let path = std::path::PathBuf::from(filename);
     if !path.is_absolute() {
-        return Err("benchmark marker requires an absolute path".into());
+        return Err("Для «benchmark marker» требуется «an absolute path»".into());
     }
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH)
-        .map_err(|_| "system clock unavailable".to_string())?.as_nanos();
+        .map_err(|_| "Недоступно: системные часы".to_string())?.as_nanos();
     let mut file = std::fs::OpenOptions::new().write(true).create_new(true)
-        .open(&path).map_err(|_| "benchmark marker cannot be created".to_string())?;
+        .open(&path).map_err(|_| "«benchmark marker»: запрещено «be created»".to_string())?;
     write!(file, "{{\"wallClockUnixNs\":{nanos},\"stage\":\"react-first-paint\"}}")
-        .map_err(|_| "benchmark marker write failed".to_string())?;
-    file.sync_all().map_err(|_| "benchmark marker sync failed".to_string())?;
+        .map_err(|_| "Ошибка: «benchmark marker write»".to_string())?;
+    file.sync_all().map_err(|_| "Ошибка: «benchmark marker sync»".to_string())?;
     Ok(())
 }
 
 fn main() {
     sentry_diagnostics_0309::install_panic_hook();
     if let Err(err) = recover_components_before_desktop02310() {
-        eprintln!("Launcher component-set recovery gate failed: {err}");
+        eprintln!("Ошибка: «Launcher component-set recovery gate»: {err}");
         std::process::exit(71);
     }
     #[cfg(windows)]
     if let Err(err) = runtime::ensure_windows_production_hardening() {
-        eprintln!("Launcher Desktop Windows production hardening failed: {err}");
+        eprintln!("Ошибка: «Launcher Desktop Windows production hardening»: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "linux")]
     if let Err(err) = runtime::linux_policy::ensure_linux_production_hardening() {
-        eprintln!("Launcher Desktop Linux production hardening failed: {err}");
+        eprintln!("Ошибка: «Launcher Desktop Linux production hardening»: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "macos")]
     if let Err(err) = runtime::macos_policy::ensure_macos_production_hardening() {
-        eprintln!("Launcher Desktop macOS production hardening failed: {err}");
+        eprintln!("Ошибка: «Launcher Desktop macOS production hardening»: {err}");
         std::process::exit(70);
     }
 

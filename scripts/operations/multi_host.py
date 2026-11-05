@@ -64,11 +64,11 @@ def url_host(value, scheme):
     try:
         parsed = urlsplit(value)
     except ValueError as exc:
-        raise DeploymentError("invalid external endpoint URL") from exc
+        raise DeploymentError("Некорректный URL внешней конечной точки") from exc
     if parsed.scheme not in scheme or not parsed.hostname or parsed.fragment:
         raise DeploymentError("external dependency must use the required TLS URL scheme")
     if parsed.hostname.lower() in ("localhost", "127.0.0.1", "::1", "postgres", "redis", "minio", "s3"):
-        raise DeploymentError("external dependency cannot resolve to a localhost or embedded Compose service")
+        raise DeploymentError("«external dependency»: запрещено «resolve to a localhost or embedded Compose service»")
     return parsed.hostname.lower()
 
 
@@ -82,7 +82,7 @@ def check_secure_file(path, *, strict=False):
 
 def resolved_compose(directory, project, *, env_file=None):
     if not PROJECT_REGEX.fullmatch(project):
-        raise DeploymentError("invalid Compose project name")
+        raise DeploymentError("Некорректное имя проекта Docker Compose")
     check_secure_file(env_file if env_file is not None else directory / ".env", strict=True)
     check_secure_file(directory / "docker-compose.multi-host.yml")
     check_secure_file(directory / "nginx.multi-host-0512.conf")
@@ -95,7 +95,7 @@ def resolved_compose(directory, project, *, env_file=None):
         raise DeploymentError("Docker Compose configuration missing services")
     services = data["services"]
     if set(services) != set(ALL_SERVICES):
-        raise DeploymentError("unexpected Compose services; embedded database or other processes are prohibited")
+        raise DeploymentError("Неожиданное значение: «Compose services; embedded database or other processes are prohibited»")
     api = services["api"]["environment"]
     worker = services["worker"]["environment"]
     for name, env in (("api", api), ("worker", worker)):
@@ -113,22 +113,22 @@ def resolved_compose(directory, project, *, env_file=None):
             if str(env.get(key, "")).lower() != expected:
                 raise DeploymentError(name + " has unsafe " + key)
         if env.get("LAUNCHER_STORAGE_S3_BUCKET", "") == "":
-            raise DeploymentError("S3 bucket missing")
+            raise DeploymentError("Отсутствует: «S3 bucket»")
     ids = (api.get("LAUNCHER_REPLICA_ID"), worker.get("LAUNCHER_REPLICA_ID"))
     if not isinstance(ids[0], str) or not ids[0].endswith("-api") or not LABEL_REGEX.fullmatch(ids[0][:-4]):
-        raise DeploymentError("LAUNCHER_NODE_ID must be a stable lowercase hostname-compatible identifier")
+        raise DeploymentError("Для LAUNCHER_NODE_ID требуется: «a stable lowercase hostname-compatible identifier»")
     node_id = ids[0][:-4]
     if ids[1] != node_id + "-worker":
         raise DeploymentError("API and worker must share one node prefix but use different replica IDs")
     pg = url_host(api.get("LAUNCHER_DATABASE_DSN", ""), ("postgres", "postgresql"))
     if parse_qs(urlsplit(api["LAUNCHER_DATABASE_DSN"]).query).get("sslmode") != ["verify-full"]:
-        raise DeploymentError("PostgreSQL requires TLS sslmode=verify-full on multi-host network")
+        raise DeploymentError("Для PostgreSQL требуется «TLS sslmode=verify-full on multi-host network»")
     redis = url_host(api.get("LAUNCHER_REDIS_URL", ""), ("rediss",))
     s3 = url_host(api.get("LAUNCHER_STORAGE_S3_ENDPOINT", ""), ("https",))
     public = api.get("LAUNCHER_PUBLIC_URL", "")
     public_host = url_host(public, ("https",))
     if urlsplit(public).username or urlsplit(public).password:
-        raise DeploymentError("public URL must not contain credentials")
+        raise DeploymentError("публичный URL: запрещено «contain credentials»")
     for key in ("LAUNCHER_DATABASE_DSN", "LAUNCHER_REDIS_URL", "LAUNCHER_STORAGE_S3_ENDPOINT",
                 "LAUNCHER_STORAGE_S3_BUCKET", "LAUNCHER_STORAGE_S3_REGION", "LAUNCHER_PUBLIC_URL"):
         if api.get(key) != worker.get(key):
@@ -142,7 +142,7 @@ def resolved_compose(directory, project, *, env_file=None):
     if refs["api"] != refs["worker"]:
         raise DeploymentError("API and worker must use exactly the same binary/image")
     if "ports" in services["api"] or "ports" in services["worker"]:
-        raise DeploymentError("API/worker must not publish host ports")
+        raise DeploymentError("«API/worker»: запрещено «publish host ports»")
     ingress_ports = services["ingress"].get("ports", [])
     if len(ingress_ports) != 1:
         raise DeploymentError("ingress must publish exactly one restricted HTTPS port")
@@ -151,24 +151,24 @@ def resolved_compose(directory, project, *, env_file=None):
             raise DeploymentError("only port 443 of local ingress may be published")
         host_ip = str(bind.get("host_ip", ""))
         if not host_ip or host_ip in ("0.0.0.0", "::", "127.0.0.1"):
-            raise DeploymentError("ingress requires an explicit reachable, restricted interface IP")
+            raise DeploymentError("Для «ingress» требуется «an explicit reachable, restricted interface IP»")
     for name in ("api", "worker"):
         if not services[name].get("healthcheck"):
-            raise DeploymentError("missing readiness healthcheck for " + name)
+            raise DeploymentError("Отсутствует: «readiness healthcheck for»" + name)
     # Проверяйте ключ и сертификат TLS на хосте по разобранным томам Docker, а не
     # через недоверенную подстановку содержимого env-файла или журналирование
     # конфигурации Docker.
     tls_targets = ("/etc/launcher/tls/fullchain.pem", "/etc/launcher/tls/privkey.pem")
     tls_volumes = [v for v in services["ingress"].get("volumes", []) if v.get("target") in tls_targets]
     if sorted(v["target"] for v in tls_volumes) != sorted(tls_targets):
-        raise DeploymentError("both host TLS certificate and key must be bind-mounted")
+        raise DeploymentError("Для «both host TLS certificate and key» требуется: «bind-mounted»")
     for volume in tls_volumes:
         if volume.get("type") != "bind" or volume.get("read_only") is not True:
-            raise DeploymentError("host TLS credentials must be read-only file binds")
+            raise DeploymentError("Для «host TLS credentials» требуется: «read-only file binds»")
         check_secure_file(Path(volume["source"]), strict=volume["target"].endswith("privkey.pem"))
     machine = inventory.machine_identity()
     if not machine:
-        raise DeploymentError("OS machine-id missing; cannot prove independent Docker hosts")
+        raise DeploymentError("«OS machine-id missing;»: запрещено «prove independent Docker hosts»")
     try:
         pgport = urlsplit(api["LAUNCHER_DATABASE_DSN"]).port or 5432
         redisport = urlsplit(api["LAUNCHER_REDIS_URL"]).port or 6379
@@ -243,7 +243,7 @@ def local_compat_observe_0516(directory, project):
     for role in ("api", "worker"):
         ready = (running.get(role) or {}).get("readiness") or {}
         if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6", "0.51.7")):
-            raise DeploymentError("unsupported or unverified live /ready version for " + role)
+            raise DeploymentError("Не поддерживается: «or unverified live /ready version for»" + role)
     if running["api"]["readiness"]["version"] != running["worker"]["readiness"]["version"]:
         raise DeploymentError("API/worker live version mismatch on the same host")
     container = running["api"]["containerId"]
@@ -251,13 +251,13 @@ def local_compat_observe_0516(directory, project):
         raw = inventory.execute(["docker", "exec", container, "wget", "-qO-", "-T", "5",
                                  "http://127.0.0.1:8080" + path], timeout=9)
         if len(raw) > 512_000:
-            raise DeploymentError("HTTP API compatibility response too large")
+            raise DeploymentError("Превышен допустимый размер: «HTTP API compatibility response»")
         try:
             data = json.loads(raw)
         except ValueError as exc:
-            raise DeploymentError("HTTP API compatibility response invalid") from exc
+            raise DeploymentError("Некорректное значение: «HTTP API compatibility response»") from exc
         if not isinstance(data, dict):
-            raise DeploymentError("HTTP API compatibility response must be a JSON object")
+            raise DeploymentError("Для «HTTP API compatibility response» требуется: объект JSON")
         return data
     v = running["api"]["readiness"]["version"]
     status = get("/api/v1/status")
@@ -304,17 +304,17 @@ def local_up(directory, project):
         cwd=directory, timeout=230)
     report = live_observe(directory, project)
     if not report["ready"]:
-        raise DeploymentError("containers started but live readiness or dependency round trips failed")
+        raise DeploymentError("Ошибка: «containers started but live readiness or dependency round trips»")
     return report
 
 
 def remote_call(target, installed_script, directory, project, mode, *, growth=True, timeout=150):
     if not HOST_REGEX.fullmatch(target) or target.startswith("-"):
-        raise DeploymentError("invalid SSH target")
+        raise DeploymentError("Некорректное значение: «SSH target»")
     if not installed_script.startswith("/") or not directory.startswith("/"):
-        raise DeploymentError("installed script and deployment directory must be absolute paths")
+        raise DeploymentError("Для «installed script and deployment directory» требуется: «absolute paths»")
     if any("\n" in s or "\r" in s for s in (installed_script, directory)):
-        raise DeploymentError("invalid remote path")
+        raise DeploymentError("Некорректное значение: «remote path»")
     args = ["python3", installed_script, mode, "--directory", directory, "--project", project,
             "--output", "-"]
     if not growth:
@@ -334,7 +334,7 @@ def remote_call(target, installed_script, directory, project, mode, *, growth=Tr
 
 def remote_stop_start(target, installed_script, directory, project, action):
     if action not in ("stop", "start"):
-        raise DeploymentError("unsupported disruption action")
+        raise DeploymentError("Не поддерживается: «disruption action»")
     return remote_call(target, installed_script, directory, project, "local-" + action,
                        growth=False, timeout=(260 if action == "start" else 120))
 
@@ -344,12 +344,12 @@ def parse_nodes(specs):
     for spec in specs:
         name, sep, host = spec.partition("=")
         if not sep or not LABEL_REGEX.fullmatch(name) or not HOST_REGEX.fullmatch(host) or host.startswith("-") or name in nodes:
-            raise DeploymentError("each --node must be a unique label=trusted-ssh-host")
+            raise DeploymentError("Для «each --node» требуется: «a unique label=trusted-ssh-host»")
         if host in nodes.values():
             raise DeploymentError("same SSH target specified more than once")
         nodes[name] = host
     if len(nodes) < 2:
-        raise DeploymentError("at least two independent SSH hosts are required")
+        raise DeploymentError("Требуется: «at least two independent SSH hosts are»")
     return nodes
 
 
@@ -363,7 +363,7 @@ def assert_peer_config(reports):
         machine = report.get("machineIdentity")
         node_id = report.get("nodeId")
         if not machine or machine in seen_machine or not node_id or node_id in seen_node:
-            raise DeploymentError("duplicate/missing machine ID or node ID; cannot treat as distinct hosts")
+            raise DeploymentError("«duplicate/missing machine ID or node ID;»: запрещено «treat as distinct hosts»")
         seen_machine.add(machine)
         seen_node.add(node_id)
         if report.get("imageDigestRefs") != first.get("imageDigestRefs"):
@@ -383,9 +383,9 @@ def validate_edge_url(url):
     try:
         parsed = urlsplit(url)
     except ValueError as exc:
-        raise DeploymentError("invalid external load balancer URL") from exc
+        raise DeploymentError("Некорректное значение: «external load balancer URL»") from exc
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment or parsed.query or parsed.path not in ("", "/", "/ready"):
-        raise DeploymentError("external load balancer URL must be an HTTPS origin or /ready without credentials")
+        raise DeploymentError("Для «external load balancer URL» требуется: «an HTTPS origin or /ready without credentials»")
     return url
 
 
@@ -502,7 +502,7 @@ def main(argv=None):
     try:
         directory = Path(args.directory)
         if not directory.is_absolute() or not PROJECT_REGEX.fullmatch(args.project):
-            raise DeploymentError("invalid absolute directory/project")
+            raise DeploymentError("Некорректное значение: «absolute directory/project»")
         if args.mode.startswith("local-"):
             if args.mode == "local-check":
                 report = resolved_compose(directory, args.project)
@@ -549,7 +549,7 @@ def main(argv=None):
                                                      "local-observe", growth=not args.skip_growth), args.edge_url)
         else:
             if not args.allow_disruption or not args.edge_url or not args.failed_node:
-                raise DeploymentError("cluster-drill requires --allow-disruption --failed-node and --edge-url")
+                raise DeploymentError("Для «cluster-drill» требуется «--allow-disruption --failed-node and --edge-url»")
             validate_edge_url(args.edge_url)
             report = outage_drill(nodes, args.remote_script, args.directory, args.project,
                                   args.edge_url, args.failed_node)

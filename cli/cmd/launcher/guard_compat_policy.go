@@ -126,7 +126,7 @@ func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, 
 	if b, err = hex.DecodeString(text); err != nil || len(b) != ed25519.PublicKeySize {
 		b, err = base64.StdEncoding.DecodeString(text)
 		if err != nil {
-			return nil, "", errors.New("Guard compatibility key must be 32-byte hex or base64")
+			return nil, "", errors.New("Для «Guard compatibility key» требуется: «32-byte hex or base64»")
 		}
 	}
 	if len(b) != ed25519.PublicKeySize {
@@ -287,7 +287,7 @@ func guardCompatExternalNativeHash05010(path string) (string, error) {
 }
 func guardCompatPath0502(root, rel string) (string, error) {
 	if !guardCompatRel0502(rel) {
-		return "", errors.New("Guard compatibility relative path invalid")
+		return "", errors.New("Некорректное значение: «Guard compatibility relative path»")
 	}
 	return secureClientDestination(root, rel)
 }
@@ -391,7 +391,7 @@ func guardCompatLoad0502(root, keyFile string) (*guardCompatVerified0502, error)
 			return nil, ferr
 		}
 		if floor != nil || os.Getenv(guardCompatRequiredEnv0502) == "1" {
-			return nil, errors.New("required Guard compatibility policy missing")
+			return nil, errors.New("Отсутствует: обязательная политика совместимости Guard")
 		}
 		return nil, nil
 	}
@@ -407,7 +407,7 @@ func guardCompatLoad0502(root, keyFile string) (*guardCompatVerified0502, error)
 		return nil, err
 	}
 	if floor == nil {
-		return nil, errors.New("Guard compatibility accepted epoch state missing")
+		return nil, errors.New("Отсутствует: состояние принятой эпохи совместимости Guard")
 	}
 	if err = guardCompatAgainstFloor0502(root, v); err != nil {
 		return nil, err
@@ -494,7 +494,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 			return fmt.Errorf("Guard compatibility missing %s: %w", a.Path, err)
 		}
 		if actual != a.SHA256 {
-			return fmt.Errorf("Guard compatibility digest mismatch: %s", a.Path)
+			return fmt.Errorf("Несовпадение: «Guard compatibility digest»: %s", a.Path)
 		}
 		authorized[a.Kind+":"+strings.ToLower(a.Path)] = a
 	}
@@ -504,10 +504,10 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 		}
 		actual, err := guardCompatExternalNativeHash05010(ext.Path)
 		if err != nil {
-			return fmt.Errorf("Guard external native module unavailable: %w", err)
+			return fmt.Errorf("Недоступно: внешний нативный модуль Guard: %w", err)
 		}
 		if actual != ext.SHA256 {
-			return fmt.Errorf("Guard external native module changed: %s", ext.Path)
+			return fmt.Errorf("Обнаружено изменение: внешний нативный модуль Guard: %s", ext.Path)
 		}
 	}
 	for _, tr := range p.Transformations {
@@ -548,7 +548,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 				return walkErr
 			}
 			if entry.Type()&os.ModeSymlink != 0 {
-				return fmt.Errorf("Guard compatibility symlink forbidden: %s", path)
+				return fmt.Errorf("Запрещено: «Guard compatibility symlink»: %s", path)
 			}
 			if entry.IsDir() {
 				return nil
@@ -592,7 +592,7 @@ func guardCompatInspect0502(root, key string) (map[string]any, error) {
 }
 func handleGuardCompat0502(args []string) error {
 	if len(args) == 0 {
-		return errors.New("guard-policy-install|guard-policy-verify|guard-policy-status|guard-policy-history|guard-policy-diagnose|guard-policy-rollback required")
+		return errors.New("Требуется: guard-policy-install|guard-policy-verify|guard-policy-status|guard-policy-history|guard-policy-diagnose|guard-policy-rollback")
 	}
 	root := flagValue(args[1:], "--client-dir", "")
 	if root == "" {

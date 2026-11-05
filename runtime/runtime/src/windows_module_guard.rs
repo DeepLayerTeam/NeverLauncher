@@ -265,7 +265,7 @@ mod imp {
                 }
             }
             if trusted_roots.is_empty() {
-                return Err("Guard Module Guard trusted root set is empty".to_string());
+                return Err("Набор доверенных корневых путей модуля Guard пуст".to_string());
             }
             let java_home = java_executable.parent().and_then(|bin|bin.parent())
                 .map(|home|canonical_or_absolute(home).map(|p|normalize_path(&p))).transpose()?;
@@ -284,7 +284,7 @@ mod imp {
             for (path,sha) in pins {
                 let canonical_path=canonical_or_absolute(&path)?;
                 if !canonical_path.starts_with(&canonical) || sha.len()!=64 || !sha.bytes().all(|b|b.is_ascii_hexdigit()) {
-                    return Err("Guard Windows native pinned identity invalid".into());
+                    return Err("Некорректное значение: «Guard Windows native pinned identity»".into());
                 }
                 let normalized=normalize_path(&canonical_path);
                 if self.signed_game_natives.insert(normalized,sha).is_some() {
@@ -386,7 +386,7 @@ mod imp {
         ack[8..12].copy_from_slice(&SENSOR_PROTOCOL_VERSION.to_le_bytes());
         ack[12..16].copy_from_slice(&pid.to_le_bytes());
         let mut mac = HmacSha256::new_from_slice(&secret)
-            .map_err(|_| "Module Guard arm HMAC initialization failed".to_string())?;
+            .map_err(|_| "Ошибка: «Module Guard arm HMAC initialization»".to_string())?;
         mac.update(MODULE_GUARD_ARM_DOMAIN);
         mac.update(&SENSOR_PROTOCOL_VERSION.to_le_bytes());
         mac.update(&pid.to_le_bytes());
@@ -394,11 +394,11 @@ mod imp {
         server
             .write_all(&ack)
             .await
-            .map_err(|err| format!("Module Guard arm acknowledgement write failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Module Guard arm acknowledgement write»: {err}"))?;
         server
             .flush()
             .await
-            .map_err(|err| format!("Module Guard arm acknowledgement flush failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Module Guard arm acknowledgement flush»: {err}"))?;
         ack.zeroize();
 
         // Agent_OnLoad не может вернуться, пока внутрипроцессный
@@ -408,7 +408,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut ready_packet))
             .await
             .map_err(|_| "Guard Hook Engine ready proof timed out".to_string())?
-            .map_err(|err| format!("Guard Hook Engine ready proof read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard Hook Engine ready proof read»: {err}"))?;
         let ready_event = parse_event_packet(&ready_packet, &secret, pid, 1)?;
         if ready_event.reason != MODULE_EVENT_REASON_HOOK_READY {
             return Err(format!(
@@ -449,7 +449,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut memory_ready_packet))
             .await
             .map_err(|_| "Guard Memory Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("Guard Memory Integrity ready proof read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard Memory Integrity ready proof read»: {err}"))?;
         let memory_ready_event = parse_event_packet(&memory_ready_packet, &secret, pid, 2)?;
         if memory_ready_event.reason != MODULE_EVENT_REASON_MEMORY_READY {
             return Err(format!(
@@ -482,7 +482,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut thread_ready_packet))
             .await
             .map_err(|_| "Guard Thread & Process Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("Guard Thread & Process Integrity ready proof read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard Thread & Process Integrity ready proof read»: {err}"))?;
         let thread_ready_event = parse_event_packet(&thread_ready_packet, &secret, pid, 3)?;
         if thread_ready_event.reason != MODULE_EVENT_REASON_THREAD_PROCESS_READY {
             return Err(format!(
@@ -525,7 +525,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut debug_ready_packet))
             .await
             .map_err(|_| "Guard Debug & Instrumentation Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("Guard Debug & Instrumentation Guard ready proof read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard Debug & Instrumentation Guard ready proof read»: {err}"))?;
         let debug_ready_event = parse_event_packet(&debug_ready_packet, &secret, pid, 4)?;
         if debug_ready_event.reason != MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY {
             return Err(format!(
@@ -565,7 +565,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut jvm_ready_packet))
             .await
             .map_err(|_| "Guard JVM-Aware Protection ready proof timed out".to_string())?
-            .map_err(|err| format!("Guard JVM-Aware Protection ready proof read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard JVM-Aware Protection ready proof read»: {err}"))?;
         let jvm_ready_event = parse_event_packet(&jvm_ready_packet, &secret, pid, 5)?;
         if jvm_ready_event.reason != MODULE_EVENT_REASON_JVM_AWARE_READY {
             return Err(format!(
@@ -602,7 +602,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut continuous_ready_packet))
             .await
             .map_err(|_| "Guard Continuous Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("Guard Continuous Guard ready proof read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard Continuous Guard ready proof read»: {err}"))?;
         let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
         if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
             return Err(format!(
@@ -614,11 +614,11 @@ mod imp {
             || continuous_ready_event.base_address != 0
             || continuous_ready_event.size_of_image != 0
         {
-            return Err("Guard Continuous Guard ready metadata mismatch".to_string());
+            return Err("Несовпадение: «Guard Continuous Guard ready metadata»".to_string());
         }
         let continuous_pre_digest = continuous_digest_from_event(&continuous_ready_event)?;
         if continuous_pre_digest != hex::encode(continuous_chain) {
-            return Err("Guard Continuous Guard startup event-chain mismatch".to_string());
+            return Err("Несовпадение: «Guard Continuous Guard startup event-chain»".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &continuous_ready_packet);
         ready_chain = advance_event_chain(
@@ -996,7 +996,7 @@ mod imp {
                 }
                 MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT => {
                     if event.flags != CONTINUOUS_GUARD_VERSION || event.size_of_image != 0 {
-                        Err("Guard Continuous Guard heartbeat metadata mismatch".to_string())
+                        Err("Несовпадение: «Guard Continuous Guard heartbeat metadata»".to_string())
                     } else if event.base_address != guard_sequence {
                         Err(format!(
                             "Guard Continuous Guard guard-sequence mismatch: expected {guard_sequence}, got {}",
@@ -1006,7 +1006,7 @@ mod imp {
                         match continuous_digest_from_event(&event) {
                             Err(err) => Err(err),
                             Ok(digest) if digest != hex::encode(continuous_chain_before) => {
-                                Err("Guard Continuous Guard event-chain cross-check mismatch".to_string())
+                                Err("Несовпадение: «Guard Continuous Guard event-chain cross-check»".to_string())
                             }
                             Ok(digest) => {
                                 module_hash = digest;
@@ -1369,13 +1369,13 @@ mod imp {
         expected_sequence: u64,
     ) -> Result<ParsedEvent, String> {
         if &packet[..8] != MODULE_EVENT_MAGIC {
-            return Err("Module Guard event magic mismatch".to_string());
+            return Err("Несовпадение: «Module Guard event magic»".to_string());
         }
         let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("fixed packet"));
         let pid = u32::from_le_bytes(packet[12..16].try_into().expect("fixed packet"));
         let sequence = u64::from_le_bytes(packet[16..24].try_into().expect("fixed packet"));
         if protocol != SENSOR_PROTOCOL_VERSION || pid != expected_pid {
-            return Err("Module Guard event protocol/PID mismatch".to_string());
+            return Err("Несовпадение: «Module Guard event protocol/PID»".to_string());
         }
         if sequence != expected_sequence {
             return Err(format!(
@@ -1383,12 +1383,12 @@ mod imp {
             ));
         }
         let mut mac = HmacSha256::new_from_slice(secret)
-            .map_err(|_| "Module Guard event HMAC initialization failed".to_string())?;
+            .map_err(|_| "Ошибка: «Module Guard event HMAC initialization»".to_string())?;
         mac.update(MODULE_EVENT_DOMAIN);
         mac.update(&packet[..MODULE_EVENT_PREFIX_LEN]);
         let expected = mac.finalize().into_bytes();
         if !bool::from(expected[..].ct_eq(&packet[MODULE_EVENT_PREFIX_LEN..])) {
-            return Err("Module Guard event HMAC mismatch".to_string());
+            return Err("Несовпадение: «Module Guard event HMAC»".to_string());
         }
 
         if packet[46] != 0 || packet[47] != 0 {
@@ -1611,7 +1611,7 @@ mod imp {
         packet[24..32].copy_from_slice(&sensor_sequence.to_le_bytes());
         packet[32..64].copy_from_slice(&event_chain);
         let mut mac = HmacSha256::new_from_slice(secret)
-            .map_err(|_| "Continuous Guard ACK HMAC initialization failed".to_string())?;
+            .map_err(|_| "Ошибка: «Continuous Guard ACK HMAC initialization»".to_string())?;
         mac.update(CONTINUOUS_GUARD_ACK_DOMAIN);
         mac.update(&packet[..CONTINUOUS_GUARD_ACK_PREFIX_LEN]);
         packet[CONTINUOUS_GUARD_ACK_PREFIX_LEN..]
@@ -1619,11 +1619,11 @@ mod imp {
         server
             .write_all(&packet)
             .await
-            .map_err(|err| format!("Continuous Guard ACK write failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Continuous Guard ACK write»: {err}"))?;
         server
             .flush()
             .await
-            .map_err(|err| format!("Continuous Guard ACK flush failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Continuous Guard ACK flush»: {err}"))?;
         packet.zeroize();
         Ok(())
     }
@@ -1772,14 +1772,14 @@ mod imp {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("Module Guard cannot open {} for hashing: {err}", path.display()))?;
+            .map_err(|err| format!("модуль защиты Guard: запрещено «open {} for hashing:» {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("Module Guard cannot hash {}: {err}", path.display()))?;
+                .map_err(|err| format!("модуль защиты Guard: запрещено «hash {}:» {err}", path.display()))?;
             if read == 0 {
                 break;
             }
@@ -1817,7 +1817,7 @@ mod imp {
         }
         std::env::current_dir()
             .map(|current| current.join(&loader_path))
-            .map_err(|err| format!("Module Guard cannot resolve {}: {err}", path.display()))
+            .map_err(|err| format!("модуль защиты Guard: запрещено «resolve {}:» {err}", path.display()))
     }
 
     fn resolve_loader_path(path: &Path) -> PathBuf {

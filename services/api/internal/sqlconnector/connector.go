@@ -47,7 +47,7 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	// настоящего входа.
 	if _, err := InspectMapping(ctx, db, cfg); err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("SQL connector %q mapping validation failed: %w", cfg.ID, err)
+		return nil, fmt.Errorf("Ошибка: «SQL connector %q mapping validation»: %w", cfg.ID, err)
 	}
 	connector, err := newWithDB(ctx, cfg, db)
 	if err != nil {
@@ -110,7 +110,7 @@ func (c *Connector) Metadata() authconnector.Metadata {
 
 func (c *Connector) Health(ctx context.Context) error {
 	if c == nil || c.db == nil {
-		return errors.New("SQL connector database is unavailable")
+		return errors.New("Недоступно: «SQL connector database»")
 	}
 	healthCtx, cancel := context.WithTimeout(ctx, c.cfg.ConnectTimeoutDuration)
 	defer cancel()
@@ -422,12 +422,12 @@ func parsePostgresArray(raw string) ([]string, error) {
 			continue
 		}
 		if (ch == '{' || ch == '}') && !inQuotes {
-			return nil, errors.New("nested PostgreSQL arrays are not supported")
+			return nil, errors.New("«nested PostgreSQL arrays»: не поддерживается")
 		}
 		current.WriteByte(ch)
 	}
 	if escaped || inQuotes {
-		return nil, errors.New("malformed PostgreSQL array quoting")
+		return nil, errors.New("Некорректный формат: «PostgreSQL array quoting»")
 	}
 	flush()
 	return values, nil

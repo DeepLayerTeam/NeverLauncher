@@ -74,7 +74,7 @@ def check_args(
             "fresh snapshot destination required; refusing overwrite"
         )
     if os.environ.get("LAUNCHER_RC_DR_ISOLATED") != "YES":
-        raise OperationsBlocked("explicit staging-only acknowledgment required")
+        raise OperationsBlocked("Требуется: «explicit staging-only acknowledgment»")
 
 
 def actual(*args: str, timeout: int = 3600) -> dict:
@@ -119,7 +119,7 @@ def run(
 ) -> dict:
     check_args(source, target, source_ready, target_ready, env_file, snapshot)
     if network_ha and (not s3_source or not s3_target or s3_source == s3_target):
-        raise OperationsBlocked("network-ha requires distinct source/target S3 buckets")
+        raise OperationsBlocked("Для «network-ha» требуется «distinct source/target S3 buckets»")
     common = ["--env-file", str(env_file)] + (["--network-ha"] if network_ha else [])
     backup = [
         "backup",
@@ -151,7 +151,7 @@ def run(
         v.get("status") != "verified"
         or v.get("manifest", {}).get("sourceProject") != source
     ):
-        raise OperationsBlocked("snapshot verification failed")
+        raise OperationsBlocked("Ошибка: «snapshot verification»")
     restore = [
         "restore-fresh",
         "--project",
@@ -198,7 +198,7 @@ def run(
     ):
         raise OperationsBlocked("actual isolated service failure checks incomplete")
     if not isinstance(r.get("rtoSeconds"), (int, float)) or r["rtoSeconds"] <= 0:
-        raise OperationsBlocked("missing measured restore duration")
+        raise OperationsBlocked("Отсутствует: «measured restore duration»")
     return {
         "schemaVersion": "launcher.rc.operations.v1",
         "status": "recovery-exercised",

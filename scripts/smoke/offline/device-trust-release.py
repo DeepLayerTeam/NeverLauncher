@@ -21,9 +21,9 @@ core = version.split("-", 1)[0].split("+", 1)[0]
 try:
     version_tuple = tuple(int(x) for x in core.split("."))
 except ValueError:
-    raise SystemExit(f"invalid VERSION: {version}")
+    raise SystemExit(f"Некорректное значение VERSION: {version}")
 if len(version_tuple) != 3 or version_tuple < (0, 13, 0):
-    raise SystemExit(f"Device Trust Release gate requires >=0.13.0, got {version}")
+    raise SystemExit(f"Для «Device Trust Release gate» требуется «>=0.13.0, got» {version}")
 api_migs = sorted((ROOT / "services/api/internal/dbmigrate/sql").glob("*.sql"))
 cli_migs = migration_catalog(ROOT)
 if [p.name for p in api_migs] != sorted(cli_migs):

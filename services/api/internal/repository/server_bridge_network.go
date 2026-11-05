@@ -120,7 +120,7 @@ func (r *SQLRepository) SetServerBridgeNetworkCapacity(ctx context.Context, serv
 		return 0, err
 	}
 	if !isBackendBridgeKind0148(kind) || status != "active" || !strings.EqualFold(actualRuntimeID, runtimeID) || actualEpoch != runtimeEpoch || revision != expectedRevision {
-		return 0, fmt.Errorf("%w: network capacity runtime or revision changed", ErrConflict)
+		return 0, fmt.Errorf("Обнаружено изменение: «%w: network capacity runtime or revision»", ErrConflict)
 	}
 	var value any
 	if limit != nil {

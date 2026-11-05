@@ -44,7 +44,7 @@ def deterministic_jar(target: Path, entries: list[tuple[str, bytes]]) -> None:
                 or "\\" in name
                 or ".." in name.split("/")
             ):
-                raise ValueError("unsafe jar entry")
+                raise ValueError("Небезопасное значение: «jar entry»")
             info = zipfile.ZipInfo(name, EPOCH)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
@@ -55,7 +55,7 @@ def deterministic_jar(target: Path, entries: list[tuple[str, bytes]]) -> None:
 
 def from_directory(base: Path, suffix: str) -> list[tuple[str, bytes]]:
     if not base.is_dir():
-        raise RuntimeError(f"missing compiled Java classes/sources: {base}")
+        raise RuntimeError(f"Отсутствует: «compiled Java classes/sources»: {base}")
     result = []
     for f in sorted(base.rglob("*")):
         if f.is_symlink():
@@ -63,7 +63,7 @@ def from_directory(base: Path, suffix: str) -> list[tuple[str, bytes]]:
         if f.is_file() and f.name.endswith(suffix):
             result.append((f.relative_to(base).as_posix(), f.read_bytes()))
     if not result:
-        raise RuntimeError(f"empty Java publication input: {base}")
+        raise RuntimeError(f"Пустое значение: «Java publication input»: {base}")
     return result
 
 

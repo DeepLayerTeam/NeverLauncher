@@ -88,11 +88,11 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 	var record pgAudit0491
 	exe, err := exec.LookPath(opts.PSQL)
 	if err != nil {
-		return record, "", fmt.Errorf("psql executable missing: %w", err)
+		return record, "", fmt.Errorf("Отсутствует: «psql executable»: %w", err)
 	}
 	executableSHA, err := shaFile(exe, 256<<20)
 	if err != nil {
-		return record, "", fmt.Errorf("cannot authenticate psql executable: %w", err)
+		return record, "", fmt.Errorf("Не удалось выполнить аутентификацию «psql executable:» %w", err)
 	}
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 	sql := `BEGIN READ ONLY;\nSELECT json_build_object(\n` +
@@ -114,10 +114,10 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 		return record, "", fmt.Errorf("read-only PostgreSQL transaction failed (psql exit: %v)", err)
 	} // redact stderr: may include DSN
 	if stdout.Len() > 16<<10 {
-		return record, "", errors.New("oversized PostgreSQL audit response")
+		return record, "", errors.New("Превышен допустимый размер: «PostgreSQL audit response»")
 	}
 	if err = json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &record); err != nil {
-		return record, "", errors.New("invalid PostgreSQL JSON readback")
+		return record, "", errors.New("Некорректное значение: «PostgreSQL JSON readback»")
 	}
 	if record.ReadOnly != "on" || record.Project != opts.Project || record.Migration == nil || record.Extension == nil {
 		return record, "", errors.New("PostgreSQL missing project/migration/extension or transaction not read-only")
@@ -194,7 +194,7 @@ func auditGet0491(ctx context.Context, client *http.Client, endpoint, token stri
 		return err
 	}
 	if len(raw) == 0 || string(raw) == "null" {
-		return errors.New("empty Backend projection")
+		return errors.New("Пустое значение: «Backend projection»")
 	}
 	return json.Unmarshal(raw, out)
 }
@@ -207,7 +207,7 @@ func auditProbe0491(ctx context.Context, client *http.Client, endpoint, token st
 	request.Header.Set("Authorization", "Bearer "+token)
 	response, err := client.Do(request)
 	if err != nil {
-		return result, fmt.Errorf("Java probe request failed: %w", err)
+		return result, fmt.Errorf("Ошибка: «Java probe request»: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
@@ -227,7 +227,7 @@ func auditProbe0491(ctx context.Context, client *http.Client, endpoint, token st
 		return result, err
 	}
 	if len(envelope.Data) == 0 || string(envelope.Data) == "null" {
-		return result, errors.New("missing Java probe payload")
+		return result, errors.New("Отсутствует: «Java probe payload»")
 	}
 	if err = json.Unmarshal(envelope.Data, &result); err != nil {
 		return result, err
@@ -241,11 +241,11 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	for _, s := range []string{opts.Project, opts.Run, opts.Extension} {
 		if !auditIdentifier0491.MatchString(s) {
-			return errors.New("invalid project/run/extension identifier")
+			return errors.New("Некорректное значение: «project/run/extension identifier»")
 		}
 	}
 	if !validAuditScope0491(opts.Scope, opts.ScopeID, opts.Project) || opts.DSN == "" || opts.Token == "" {
-		return errors.New("invalid scope, PostgreSQL DSN or admin token")
+		return errors.New("Некорректное значение: «scope, PostgreSQL DSN or admin token»")
 	}
 	client := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	// Backend readiness must include a live PostgreSQL ping and schema status.
@@ -261,7 +261,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Backend readiness failed: %w", err)
+		return fmt.Errorf("Ошибка: «Backend readiness»: %w", err)
 	}
 	if res.StatusCode != 200 {
 		res.Body.Close()
@@ -282,7 +282,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	run, err := readRun()
 	if err != nil {
-		return fmt.Errorf("Backend migration read failed: %w", err)
+		return fmt.Errorf("Ошибка: «Backend migration read»: %w", err)
 	}
 	if run.ID != opts.Run || run.ProjectID != opts.Project || run.SourceKind != "gravit" {
 		return errors.New("Backend migration belongs to a different project/source")

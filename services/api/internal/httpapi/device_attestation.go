@@ -66,7 +66,7 @@ func attestationEligibleDevice0124(device model.TrustedDevice) error {
 		return errors.New("device is not active")
 	}
 	if device.KeyBinding != "hardware" || device.KeyAlgorithm != "p256" || strings.TrimSpace(device.HardwareProvider) == "" {
-		return errors.New("challenge-response attestation requires a registered hardware-bound P-256 device identity")
+		return errors.New("Для «challenge-response attestation» требуется «a registered hardware-bound P-256 device identity»")
 	}
 	if strings.TrimSpace(device.PublicKey) == "" || strings.TrimSpace(device.KeyFingerprint) == "" {
 		return errors.New("device key material is incomplete")

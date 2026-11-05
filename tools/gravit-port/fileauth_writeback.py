@@ -39,7 +39,7 @@ def no_duplicate_pairs(pairs):
 def read_regular(path, max_bytes=MAX_BYTES, private=True):
     meta = path.lstat()
     if not stat.S_ISREG(meta.st_mode) or (private and meta.st_mode & 0o077):
-        raise WritebackError("source must be a private regular file without symlinks")
+        raise WritebackError("Для источник требуется: «a private regular file without symlinks»")
     if meta.st_size > max_bytes:
         raise WritebackError("file exceeds size limit")
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
@@ -62,19 +62,19 @@ def parse_database(data):
     try:
         root = json.loads(data, object_pairs_hook=no_duplicate_pairs)
     except (UnicodeError, ValueError) as e:
-        raise WritebackError("invalid FileAuth JSON") from e
+        raise WritebackError("Некорректное значение: «FileAuth JSON»") from e
     if not isinstance(root, dict) or len(root) > 20000 or not root:
-        raise WritebackError("FileAuth UUID database is empty or too large")
+        raise WritebackError("Превышен допустимый размер: «FileAuth UUID database is empty or»")
     usernames = set()
     for uuid, entry in root.items():
         if not isinstance(uuid, str) or not UUID.fullmatch(uuid) or not isinstance(entry, dict):
-            raise WritebackError("invalid FileAuth identity")
+            raise WritebackError("Некорректное значение: «FileAuth identity»")
         username = entry.get("username")
         if not isinstance(username, str) or not USERNAME.fullmatch(username) or username.lower() in usernames:
-            raise WritebackError("invalid or duplicate username")
+            raise WritebackError("Некорректное значение: «or duplicate username»")
         usernames.add(username.lower())
         if not isinstance(entry.get("uuid", uuid), str) or entry.get("uuid", uuid).lower() != uuid or not isinstance(entry.get("password"), str):
-            raise WritebackError("invalid FileAuth UUID/password mapping")
+            raise WritebackError("Некорректное значение: «FileAuth UUID/password mapping»")
     return root
 
 
@@ -85,7 +85,7 @@ def change(data, *, operation, user_uuid, username="", secret=b"", allow_legacy=
     account = accounts[user_uuid]
     if operation == "rename":
         if not USERNAME.fullmatch(username):
-            raise WritebackError("invalid new Minecraft username")
+            raise WritebackError("Некорректное значение: «new Minecraft username»")
         if any(a["username"].lower() == username.lower() for k, a in accounts.items() if k != user_uuid):
             raise WritebackError("username already exists")
         account["username"] = username
@@ -97,12 +97,12 @@ def change(data, *, operation, user_uuid, username="", secret=b"", allow_legacy=
         # Strict, explicit compat-only legacy hash to avoid any silent format
         # change which might lock all users out of the upstream Gravit server.
         if not allow_legacy or password_format != "sha256-hex":
-            raise WritebackError("SHA-256 legacy write requires --password-format sha256-hex and --allow-weak-legacy-hash")
+            raise WritebackError("Для «SHA-256 legacy write» требуется «--password-format sha256-hex and --allow-weak-legacy-hash»")
         if not 1 <= len(secret) <= 4096 or not DIGEST.fullmatch(account["password"].lower()):
-            raise WritebackError("source is not SHA256-hex or password is invalid")
+            raise WritebackError("Некорректное значение: «source is not SHA256-hex or password»")
         account["password"] = hashlib.sha256(secret).hexdigest()
     else:
-        raise WritebackError("unsupported offline FileAuth operation")
+        raise WritebackError("Не поддерживается: «offline FileAuth operation»")
     encoded = (json.dumps(accounts, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
     if len(encoded) > MAX_BYTES:
         raise WritebackError("updated FileAuth database exceeds limit")
@@ -125,17 +125,17 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
     if not stopped_writers:
         raise WritebackError("stop Gravit and other writers, then specify --writers-stopped")
     if source.name != "Database.json" or not source.is_absolute():
-        raise WritebackError("source must be an absolute Database.json path")
+        raise WritebackError("Для источник требуется: «an absolute Database.json path»")
     if not DIGEST.fullmatch(expected_sha256):
         raise WritebackError("expected source SHA-256 is mandatory")
     if backup.parent.resolve() != source.parent.resolve() or backup == source or backup.exists() or backup.is_symlink():
-        raise WritebackError("backup must be a new file in Database.json directory")
+        raise WritebackError("Для резервная копия требуется: «a new file in Database.json directory»")
     if not UUID.fullmatch(user_uuid):
-        raise WritebackError("invalid UUID")
+        raise WritebackError("Некорректное значение: UUID")
     secret = b""
     if operation == "set-password":
         if password_file is None:
-            raise WritebackError("private password file is required")
+            raise WritebackError("Требуется: «private password file»")
         secret = read_regular(Path(password_file), max_bytes=4096)
     elif password_file is not None:
         raise WritebackError("password file not accepted for this operation")
@@ -145,7 +145,7 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
     lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(lock_fd, "a+b") as lock:
         if not stat.S_ISREG(os.fstat(lock.fileno()).st_mode) or os.fstat(lock.fileno()).st_nlink != 1:
-            raise WritebackError("unsafe lock file")
+            raise WritebackError("Небезопасное значение: «lock file»")
         os.fchmod(lock.fileno(), 0o600)
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         before = read_regular(source)
@@ -155,7 +155,7 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
         after = change(before, operation=operation, user_uuid=user_uuid, username=username,
                        secret=secret, allow_legacy=allow_legacy, password_format=password_format)
         if before == after:
-            raise WritebackError("no content change")
+            raise WritebackError("Отсутствует: «content change»")
         name = None
         try:
             fd, name = tempfile.mkstemp(dir=source.parent, prefix=".fileauth-")

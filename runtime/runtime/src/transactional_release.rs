@@ -48,7 +48,7 @@ fn state_path(root: &Path, kind: &str, slot: usize) -> PathBuf {
     base(root).join(format!("{kind}-{slot}.json"))
 }
 fn validate_id(id: &str) -> Result<(), String> {
-    if id.len() != 32 || !id.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("invalid release transaction id".into()); }
+    if id.len() != 32 || !id.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("Некорректное значение: идентификатор транзакции релиза".into()); }
     Ok(())
 }
 fn io_err(context: &str, err: std::io::Error) -> String { format!("{context}: {err}") }
@@ -138,12 +138,12 @@ fn validate_release(release: &Release, key: &str) -> Result<(), String> {
     file_ownership::validate_download_targets(&release.manifest)?;
     let plan=resolved_download_0246::resolve(&release.manifest,release.preset.as_deref())?;
     if let Some(digest)=&release.plan_sha256 {
-        if digest!=&plan.sha256 { return Err("installed resolved plan identity mismatch".into()); }
+        if digest!=&plan.sha256 { return Err("Несовпадение: «installed resolved plan identity»".into()); }
     }
     let mut seen = BTreeSet::new();
     for p in &release.installed {
         if !plan.selected_paths.contains(p) || !seen.insert(p) {
-            return Err(format!("invalid release ownership record: {p}"));
+            return Err(format!("Некорректное значение: «release ownership record»: {p}"));
         }
     }
     // Manifest v3 требует полного выбранного набора, включая необязательные
@@ -195,16 +195,16 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
     let old: BTreeSet<_> = j.previous.as_ref().map(|p| p.installed.iter().map(String::as_str).collect()).unwrap_or_default();
     let new: BTreeSet<_> = j.next.installed.iter().map(String::as_str).collect();
     let all: BTreeSet<_> = old.union(&new).copied().collect();
-    if j.entries.len() != all.len() { return Err("release journal path count mismatch".into()); }
+    if j.entries.len() != all.len() { return Err("Несовпадение: «release journal path count»".into()); }
     for (entry, signed_path) in j.entries.iter().zip(all) {
         if entry.path != signed_path || entry.new_sha256.is_some() != new.contains(signed_path) {
             return Err("release journal contains unsigned paths".into());
         }
         if let Some(ref digest) = entry.old_sha256 {
-            if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("invalid backup digest".into()); }
+            if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("Некорректное значение: «backup digest»".into()); }
         }
         if let Some(ref digest) = entry.new_sha256 {
-            if expected(&j.next, &entry.path).is_none_or(|(sha, _)| !sha.eq_ignore_ascii_case(digest)) { return Err("journal target digest mismatch".into()); }
+            if expected(&j.next, &entry.path).is_none_or(|(sha, _)| !sha.eq_ignore_ascii_case(digest)) { return Err("Несовпадение: «journal target digest»".into()); }
         }
         let path = safe_join(root, &entry.path)?;
         file_ownership::ensure_no_symlinks(root, &path)?;
@@ -218,7 +218,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
 // ранее активный релиз точно совпадает с релизом, установленным этой точкой.
 fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Option<Journal>, String> {
     if completed.state != "complete" {
-        return Err("rollback checkpoint requires a completed switch".into());
+        return Err("Для «rollback checkpoint» требуется «a completed switch»".into());
     }
     let Some(previous) = completed.previous.as_ref() else {
         // При чистой установке откатываться не к чему.
@@ -452,7 +452,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
             return Err("selected resolved plan differs from installed plan; install selected preset first".into());
         }
     }
-    if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("active client release does not match signed manifest".into())}
+    if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("«active client release» не совпадает с «signed manifest»".into())}
     let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
     if wanted!=actual {return Err("selected component preset is not installed: install selected preset first".into())}
     // Два набора могут содержать одинаковые файлы, но разные подписанные действия
@@ -472,10 +472,10 @@ pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Opti
     let active=pointer(root)?.active.ok_or("signed component actions require installed active release")?;
     let expected=manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     let actual=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
-    if expected!=actual{return Err("signed component actions do not match installed release".into())}
+    if expected!=actual{return Err("«signed component actions» не совпадает с «installed release»".into())}
     if let Some(ref digest)=active.plan_sha256 {
         if resolved_download_0246::resolve(manifest,active.preset.as_deref())?.sha256!=*digest {
-            return Err("installed signed action plan identity mismatch".into());
+            return Err("Несовпадение: «installed signed action plan identity»".into());
         }
     }
     Ok(active.preset)
@@ -551,7 +551,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
            (next.manifest.game_release_generation < old.manifest.game_release_generation ||
             (next.manifest.game_release_generation == old.manifest.game_release_generation &&
              next.manifest.signature.as_ref().map(|s| &s.signature) != old.manifest.signature.as_ref().map(|s| &s.signature))) {
-            return Err("signed gameReleaseGeneration cannot replace the active release with older/different content".into());
+            return Err("«signed gameReleaseGeneration»: запрещено «replace the active release with older/different content»".into());
         }
         if !verify_installed(root, old)? && old.manifest.signature.as_ref().map(|s| &s.signature) != next.manifest.signature.as_ref().map(|s| &s.signature) {
             return Err("active release is damaged; recover last-known-good before upgrading to a different release".into());
@@ -600,7 +600,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 file_ownership::ensure_no_symlinks(root, &destination)?;
                 copy_durable(&live, &destination)?;
                 let old_hash = hash(&live)?;
-                if hash(&destination)? != old_hash { return Err(format!("backup verification failed: {p}")); }
+                if hash(&destination)? != old_hash { return Err(format!("Ошибка: «backup verification»: {p}")); }
                 Some(old_hash)
             },
             Ok(_) => return Err(format!("managed target is not a regular file: {p}")),
@@ -659,7 +659,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         // резервные копии без изменений. Следующий запуск повторит восстановление до выполнения игры.
         match recover_locked(root, key) {
             Ok(()) => Err(format!("client release switch failed and previous installation recovered: {err}")),
-            Err(recovery) => Err(format!("client switch failed: {err}; recovery pending: {recovery}")),
+            Err(recovery) => Err(format!("Ошибка: «client switch»: {err}; recovery pending: {recovery}")),
         }
     } else { Ok(()) }
 }
@@ -814,17 +814,17 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     file_ownership::validate_download_targets(manifest)?;
     let plan=resolved_download_0246::resolve(manifest,preset.as_deref())?;
     if plan.files.is_empty() {return Err("staged selection has no installable files".into())}
-    let source=source.canonicalize().map_err(|e|format!("verified source unavailable: {e}"))?;
+    let source=source.canonicalize().map_err(|e|format!("Недоступно: «verified source»: {e}"))?;
     fs::create_dir_all(root).map_err(|e|format!("create runtime root: {e}"))?;
-    let root=root.canonicalize().map_err(|e|format!("runtime root unavailable: {e}"))?;
+    let root=root.canonicalize().map_err(|e|format!("Недоступно: «runtime root»: {e}"))?;
     if root.starts_with(&source) || source.starts_with(&root) {
-        return Err("source and transactional runtime root must be disjoint".into());
+        return Err("Для «source and transactional runtime root» требуется: «disjoint»".into());
     }
     recover(&root,key).await?;
     release_generations::check(&root,manifest)?;
     crate::trust_policy::check(&root,manifest,key)?;
     if pointer(&root)?.active.is_some() {
-        return Err("offline staged adoption requires a new, empty runtime release root".into());
+        return Err("Для «offline staged adoption» требуется «a new, empty runtime release root»".into());
     }
     // Эксклюзивная блокировка переключения удерживается при фиксации; ни неучтённый
     // рабочий файл, ни изменённый подготовленный файл нельзя незаметно принять.
@@ -872,7 +872,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         let mut j = last_known_good(&root)?.ok_or("no last-known-good client release")?;
         verify_journal(&root, &j, &key)?;
         if j.previous.is_none() {
-            return Err("no previous working client release to roll back to".into());
+            return Err("Отсутствует: «previous working client release to roll back to»".into());
         }
         // Во время восстановления повреждённые управляемые байты могли быть сохранены в резервную копию,
         // чтобы пережить сбой неудачной попытки исправления. Эти байты НЕ подходят как
@@ -888,7 +888,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
             }
         }
         let active = pointer(&root)?.active.ok_or("no active release")?;
-        if active.manifest.game_release_generation > 0 { return Err("game rollback requires a NEW signed gameReleaseGeneration; publish the old content as a new release".into()); }
+        if active.manifest.game_release_generation > 0 { return Err("Для «game rollback» требуется «a NEW signed gameReleaseGeneration; publish the old content as a new release»".into()); }
         if active.id != j.next.id { return Err("last-known-good is not the previous active release".into()); }
         if !verify_installed(&root, &active)? { return Err("current release was modified; refusing to overwrite local changes".into()); }
         // Публикуйте намерение переключения до первого восстановления, чтобы отключение
@@ -1573,7 +1573,7 @@ mod tests {
         sign_manifest(&mut two,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
         let second=Release{manifest:two.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",101),preset:None,plan_sha256:None };
         commit(&root,second,&key,&staged(&root,&two,&[("mods/main.jar",b"NEW")])).unwrap();
-        assert!(rollback(&root,&key).await.is_err(),"unsigned local rollback must not downgrade a protected release");
+        assert!(rollback(&root,&key).await.is_err(),"«unsigned local rollback»: запрещено «downgrade a protected release»");
         assert_eq!(fs::read(root.join("mods/main.jar")).unwrap(),b"NEW");
         let previous=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",102),preset:None,plan_sha256:None };
         assert!(commit(&root,previous,&key,&staged(&root,&one,&[("mods/main.jar",b"OLD")])).is_err());
@@ -1650,7 +1650,7 @@ fn find_player_conflicts_0359(root:&Path,manifest:&Manifest,key:&str,preset:Opti
         file_ownership::ensure_no_symlinks(root,&live)?;
         match fs::symlink_metadata(&live){
             Ok(meta)=>{
-                if !meta.is_file() || meta.file_type().is_symlink(){return Err(format!("unsafe user file collision: {}",f.path))}
+                if !meta.is_file() || meta.file_type().is_symlink(){return Err(format!("Небезопасное значение: «user file collision: {}»",f.path))}
                 if files.len()>=4096 {return Err("too many conflicting user files".into());}
                 bytes=bytes.checked_add(meta.len()).ok_or("conflict archive size overflow")?;
                 if bytes>20*1024*1024*1024 {return Err("conflict archive exceeds 20 GiB; use manual export".into());}
@@ -1689,7 +1689,7 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
         "schemaVersion":"1.0","projectId":&manifest.project_id,"profileId":&manifest.profile_id,
         "channel":&manifest.channel,"release":&manifest.version,"files":&files
     })).map_err(|e|e.to_string())?;
-    if index.len()>1024*1024{return Err("user conflict index too large".into());}
+    if index.len()>1024*1024{return Err("Превышен допустимый размер: «user conflict index»".into());}
     let index_path=archive.join("index.json");
     let mut file=fs::OpenOptions::new().write(true).create_new(true).open(&index_path).map_err(|e|e.to_string())?;
     file.write_all(&index).and_then(|_|file.sync_all()).map_err(|e|e.to_string())?;

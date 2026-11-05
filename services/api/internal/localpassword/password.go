@@ -24,7 +24,7 @@ const parallelism = 1
 
 func Hash(password string) (string, error) {
 	if password == "" {
-		return "", errors.New("password is empty")
+		return "", errors.New("Пустое значение: пароль")
 	}
 	salt := make([]byte, saltSize)
 	if _, err := rand.Read(salt); err != nil {

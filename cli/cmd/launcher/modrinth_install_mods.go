@@ -45,11 +45,11 @@ type modrinthProject0274 struct {
 
 func modrinthID0274(v string) error {
 	if len(v) < 1 || len(v) > 64 {
-		return errors.New("invalid Modrinth id length")
+		return errors.New("Некорректное значение: «Modrinth id length»")
 	}
 	for _, r := range v {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
-			return fmt.Errorf("invalid Modrinth id %q", v)
+			return fmt.Errorf("Некорректное значение: «Modrinth id» %q", v)
 		}
 	}
 	return nil
@@ -87,7 +87,7 @@ func modrinthFetch0274(ctx context.Context, client *http.Client, base, endpoint 
 		return err
 	}
 	if err = dec.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return errors.New("unexpected extra Modrinth metadata")
+		return errors.New("Неожиданное значение: «extra Modrinth metadata»")
 	}
 	return nil
 }
@@ -113,7 +113,7 @@ func modrinthSelectProjectVersion0274(ctx context.Context, client *http.Client, 
 		return "", err
 	}
 	if len(versions) > 3000 {
-		return "", errors.New("Modrinth project version list too large")
+		return "", errors.New("Превышен допустимый размер: «Modrinth project version list»")
 	}
 	eligible := make([]modrinthVersion0274, 0, len(versions))
 	for _, v := range versions {
@@ -125,7 +125,7 @@ func modrinthSelectProjectVersion0274(ctx context.Context, client *http.Client, 
 		}
 	}
 	if len(eligible) == 0 {
-		return "", fmt.Errorf("no compatible pinned Modrinth version for %s", project)
+		return "", fmt.Errorf("Отсутствует: «compatible pinned Modrinth version for» %s", project)
 	}
 	sort.Slice(eligible, func(i, j int) bool {
 		if eligible[i].DatePublished == eligible[j].DatePublished {
@@ -137,7 +137,7 @@ func modrinthSelectProjectVersion0274(ctx context.Context, client *http.Client, 
 }
 func resolveModrinthMods0274(ctx context.Context, base string, rootVersion string, plan factoryPlan0271) ([]mirrorArtifact0274, error) {
 	if plan.Loader == "vanilla" {
-		return nil, errors.New("Modrinth mod installation requires a mod loader")
+		return nil, errors.New("Для «Modrinth mod installation» требуется «a mod loader»")
 	}
 	if err := modrinthID0274(rootVersion); err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 			return err
 		}
 		if v.ID != id || modrinthID0274(v.ProjectID) != nil {
-			return fmt.Errorf("invalid Modrinth version/project identity: %s", id)
+			return fmt.Errorf("Некорректное значение: «Modrinth version/project identity»: %s", id)
 		}
 		if !modrinthContains0274(v.GameVersions, plan.MinecraftVersion) || !modrinthContains0274(v.Loaders, plan.Loader) {
 			return fmt.Errorf("Modrinth version %s incompatible with pinned %s/%s", id, plan.MinecraftVersion, plan.Loader)
@@ -224,7 +224,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 		}
 		if selected < 0 {
 			if len(v.Files) != 1 {
-				return fmt.Errorf("Modrinth version %s requires manual selection among files", id)
+				return fmt.Errorf("Для «Modrinth version» %s требуется «manual selection among files»", id)
 			}
 			selected = 0
 		}

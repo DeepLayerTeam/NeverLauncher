@@ -1268,7 +1268,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
                     .to_string_lossy().replace('\\', "/");
                 if relative == ".runtime.json" { continue; }
                 if !(meta.is_file() || meta.file_type().is_symlink()) {
-                    return Err(format!("unsupported Java runtime entry: {relative}"));
+                    return Err(format!("Не поддерживается: «Java runtime entry»: {relative}"));
                 }
                 if meta.file_type().is_symlink() {
                     let resolved = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
@@ -1292,7 +1292,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
                 files.insert(relative, hex::encode(digest.finalize()));
             }
         }
-        if files.is_empty() { return Err("Java runtime is empty".into()); }
+        if files.is_empty() { return Err("Пустое значение: среда выполнения Java".into()); }
         Ok(files)
     }).await.map_err(|e| format!("Java inventory worker: {e}"))?
 }
@@ -1312,7 +1312,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
     use std::io::{Read, Seek, SeekFrom};
     let expected_arch = normalize_adoptium_arch(arch);
     if expected_arch != "x86_64" && expected_arch != "aarch64" {
-        return Err(format!("unsupported native Java architecture {arch}"));
+        return Err(format!("Не поддерживается: «native Java architecture» {arch}"));
     }
     let mut file = std::fs::File::open(java).map_err(|e| format!("Java executable open: {e}"))?;
     let len = file.metadata().map_err(|e| e.to_string())?.len();
@@ -1379,7 +1379,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
                 }
             } else { false }
         },
-        _ => return Err(format!("unsupported native Java OS {os}")),
+        _ => return Err(format!("Не поддерживается: «native Java OS» {os}")),
     };
     if valid { Ok(()) } else {
         Err(format!("Managed Java executable machine mismatch: expected {os}/{expected_arch}"))
@@ -1390,7 +1390,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
 async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result<(), String> {
     let meta = std::fs::symlink_metadata(java).map_err(|e| format!("Java executable metadata: {e}"))?;
     if !meta.is_file() || meta.file_type().is_symlink() {
-        return Err("Managed Java executable is not a regular file".into());
+        return Err("«Managed Java executable»: требуется обычный файл".into());
     }
     #[cfg(unix)] {
         use std::os::unix::fs::PermissionsExt;
@@ -1406,14 +1406,14 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     }
     let output = tokio::time::timeout(Duration::from_secs(20), command.output())
         .await.map_err(|_| "Managed Java self-test exceeded 20 seconds".to_string())?
-        .map_err(|e| format!("Managed Java self-test failed: {e}"))?;
-    if !output.status.success() { return Err("Managed Java JVM self-test failed".into()); }
+        .map_err(|e| format!("Ошибка: «Managed Java self-test»: {e}"))?;
+    if !output.status.success() { return Err("Ошибка: «Managed Java JVM self-test»".into()); }
     let details = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
     let detected = crate::parse_java_major_version(&details);
     if detected != Some(major) { return Err(format!("Managed Java major mismatch: expected {major}, got {detected:?}")); }
     let reported_arch = java_property(&details, "os.arch").ok_or("Managed Java missing os.arch")?;
     if normalize_adoptium_arch(reported_arch) != normalize_adoptium_arch(arch) {
-        return Err(format!("Managed Java architecture mismatch: {reported_arch}, expected {arch}"));
+        return Err(format!("Несовпадение: «Managed Java architecture»: {reported_arch}, expected {arch}"));
     }
     let reported_os = java_property(&details, "os.name").ok_or("Managed Java missing os.name")?.to_ascii_lowercase();
     let expected_os = normalize_adoptium_os(os);
@@ -1423,7 +1423,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
         "osx" => reported_os.contains("mac"),
         _ => false,
     };
-    if !os_ok { return Err(format!("Managed Java OS mismatch: {reported_os}, expected {os}")); }
+    if !os_ok { return Err(format!("Несовпадение: «Managed Java OS»: {reported_os}, expected {os}")); }
     // Одного `java -version` недостаточно, чтобы доказать способность скачанного пакета выполнять классы Java: оболочечная заглушка может имитировать этот вывод. Запустите байткод Java 8 в установленной JVM и докажите, что java.home находится внутри распакованного пакета, а не у системной JDK.
     verify_java_bytecode_execution(java, major).await?;
     Ok(())
@@ -1448,7 +1448,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     }
     let output = tokio::time::timeout(Duration::from_secs(20), command.output())
         .await.map_err(|_| "Managed Java bytecode execution exceeded 20 seconds".to_string())?
-        .map_err(|e| format!("Managed Java bytecode execution failed: {e}"))?;
+        .map_err(|e| format!("Ошибка: «Managed Java bytecode execution»: {e}"))?;
     if !output.status.success() {
         return Err(format!("Managed Java failed to run Java 8-compatible bytecode: {}",
             String::from_utf8_lossy(&output.stderr)));
@@ -1463,7 +1463,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
         parts[2].parse::<u32>().map_err(|_| "Managed Java probe returned invalid specification version".to_string())?
     };
     if probed_major != major {
-        return Err(format!("Managed Java bytecode major mismatch: {probed_major} vs {major}"));
+        return Err(format!("Несовпадение: «Managed Java bytecode major»: {probed_major} vs {major}"));
     }
     // JVM должна использовать собственные библиотеки среды выполнения образа. Обёртка, запускающая постороннюю системную Java, не является управляемой установкой.
     let packaged_home = java.parent().and_then(Path::parent)
@@ -1738,7 +1738,7 @@ mod tests {
             assert!(validate_managed_java_major(major).is_ok(), "Java {major} must be managed");
         }
         for major in [7, 11, 22, 26] {
-            assert!(validate_managed_java_major(major).is_err(), "Java {major} must be rejected");
+            assert!(validate_managed_java_major(major).is_err(), "Для Java {major} требуется: «rejected»");
         }
     }
 

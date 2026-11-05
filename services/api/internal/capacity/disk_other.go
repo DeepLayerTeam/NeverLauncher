@@ -5,5 +5,5 @@ package capacity
 import "errors"
 
 func measureDisk(name, path string) (Disk, error) {
-	return Disk{Name: name}, errors.New("disk capacity probe unsupported on this OS; cannot certify")
+	return Disk{Name: name}, errors.New("«disk capacity probe unsupported on this OS;»: запрещено «certify»")
 }

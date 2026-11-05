@@ -48,7 +48,7 @@ func Detect(cfg config.Config) (Plan, error) {
 	switch requested {
 	case "auto", string(SingleNode), string(Standard), string(NetworkHA):
 	default:
-		return p, fmt.Errorf("unsupported LAUNCHER_DEPLOYMENT_MODE=%q (auto|single-node|standard|network-ha)", requested)
+		return p, fmt.Errorf("Не поддерживается: «LAUNCHER_DEPLOYMENT_MODE=%q (auto|single-node|standard|network-ha)»", requested)
 	}
 	if p.Storage == "" {
 		p.Storage = "local"
@@ -87,7 +87,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.Mode = Standard
 		p.Reasons = append(p.Reasons, "PostgreSQL repository; HA topology is incomplete or disabled")
 	default:
-		return p, fmt.Errorf("unsupported repository driver %q: no fallback to memory", p.Repository)
+		return p, fmt.Errorf("Не поддерживается: «repository driver %q: no fallback to memory»", p.Repository)
 	}
 
 	switch p.Mode {

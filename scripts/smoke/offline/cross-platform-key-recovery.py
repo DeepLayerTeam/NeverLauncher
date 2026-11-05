@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def read(path):
     p = ROOT / path
     if not p.is_file():
-        raise SystemExit(f"missing required file: {path}")
+        raise SystemExit(f"Отсутствует обязательный файл: {path}")
     return p.read_text(encoding="utf-8")
 
 
@@ -23,9 +23,9 @@ version = (ROOT / "VERSION").read_text().strip()
 try:
     version_tuple = tuple(int(part) for part in version.split("."))
 except ValueError as exc:
-    raise SystemExit(f"invalid VERSION: {version}") from exc
+    raise SystemExit(f"Некорректное значение VERSION: {version}") from exc
 if version_tuple < (0, 12, 8):
-    raise SystemExit(f"VERSION must be >= 0.12.8, got {version}")
+    raise SystemExit(f"Для версия требуется: «>= 0.12.8, got» {version}")
 
 handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
 repo = read("services/api/internal/repository/devices_0121.go")

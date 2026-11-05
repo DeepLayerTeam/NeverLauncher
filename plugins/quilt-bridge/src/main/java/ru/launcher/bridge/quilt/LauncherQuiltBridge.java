@@ -507,7 +507,7 @@ public final class LauncherQuiltBridge implements ModInitializer {
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            LOGGER.error("Launcher Quilt bridge {} worker failed", role, error);
+            LOGGER.error("Ошибка: «Launcher Quilt bridge {} worker»", role, error);
         });
         return thread;
     }

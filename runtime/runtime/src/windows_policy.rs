@@ -85,7 +85,7 @@ pub fn validate_windows_guard_policy_report(
         || policy.policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
         || !policy.enforced
     {
-        return Err("Guard Windows process policy schema/version/enforcement mismatch".to_string());
+        return Err("Несовпадение: «Guard Windows process policy schema/version/enforcement»".to_string());
     }
     let details = policy
         .windows
@@ -101,7 +101,7 @@ pub fn validate_windows_guard_policy_report(
         || !details.requirements_satisfied
         || !details.capabilities.requirements_satisfied()
     {
-        return Err("Guard Windows Protection Core profile/capability verification failed".to_string());
+        return Err("Ошибка: «Guard Windows Protection Core profile/capability verification»".to_string());
     }
 
     let requirements = details.requirements;
@@ -254,7 +254,7 @@ mod windows_impl {
                 ));
             }
             if self.report.breakaway_allowed || !self.report.assigned_to_job {
-                return Err("Guard process-tree verification requires a non-breakaway Job Object".to_string());
+                return Err("Для «Guard process-tree verification» требуется «a non-breakaway Job Object»".to_string());
             }
             verify_process_tree_for_job(self._job.raw(), root_pid)
         }
@@ -608,7 +608,7 @@ mod windows_impl {
             ));
         }
         if in_job == 0 {
-            return Err("Guard Windows Protection Core requires launcher Job Object lifetime binding".to_string());
+            return Err("Для «Guard Windows Protection Core» требуется «launcher Job Object lifetime binding»".to_string());
         }
         Ok(true)
     }

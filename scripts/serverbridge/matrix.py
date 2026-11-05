@@ -42,21 +42,21 @@ ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,31}$")
 def load(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("schemaVersion") != "1.0":
-        raise SystemExit("ServerBridge targets schemaVersion must be 1.0")
+        raise SystemExit("Для «ServerBridge targets schemaVersion» требуется: «1.0»")
     if str(data.get("productVersion", "")) != VERSION:
         raise SystemExit(
             f"ServerBridge targets productVersion must equal VERSION={VERSION}"
         )
     if data.get("protocolVersion") != 3:
-        raise SystemExit("ServerBridge targets protocolVersion must be 3")
+        raise SystemExit("Для «ServerBridge targets protocolVersion» требуется: «3»")
     rows = data.get("targets")
     if not isinstance(rows, list) or not rows:
-        raise SystemExit("ServerBridge targets must be a non-empty array")
+        raise SystemExit("Для «ServerBridge targets» требуется: «a non-empty array»")
     allowed = {"id", "family", "role", "minecraft", "coverage", "required"}
     ids: list[str] = []
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
-            raise SystemExit(f"target #{i} must be an object")
+            raise SystemExit(f"Для «target #{i}» требуется: объект")
         unknown = set(row) - allowed
         if unknown:
             raise SystemExit(f"target #{i} has unknown fields: {sorted(unknown)}")
@@ -64,7 +64,7 @@ def load(path: Path) -> dict[str, Any]:
         if not ID_RE.fullmatch(tid):
             raise SystemExit(f"target #{i}: invalid id {tid!r}")
         if tid in ids:
-            raise SystemExit(f"duplicate target {tid}")
+            raise SystemExit(f"Обнаружен дубликат: цель {tid}")
         ids.append(tid)
         if (
             row.get("family") not in ALLOWED_FAMILIES
@@ -92,7 +92,7 @@ def load(path: Path) -> dict[str, Any]:
                 f"{tid}: expected coverage {expected_coverage}, got {row.get('coverage')}"
             )
     if ids != EXPECTED:
-        raise SystemExit(f"ServerBridge target ordering/set mismatch: {ids!r}")
+        raise SystemExit(f"Несовпадение: «ServerBridge target ordering/set»: {ids!r}")
     return data
 
 

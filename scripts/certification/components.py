@@ -40,7 +40,7 @@ def current_target() -> tuple[str, str]:
         "aarch64": "aarch64",
     }.get(platform.machine().lower())
     if system is None or arch is None:
-        raise RuntimeError(f"unsupported certification target: {platform.platform()}")
+        raise RuntimeError(f"Не поддерживается: «certification target»: {platform.platform()}")
     return system, arch
 
 
@@ -68,7 +68,7 @@ def build_fixture(
     doc.pop("signature", None)
     doc["projectId"] = "certification"
     if version not in ("0.24.13", "0.25.0"):
-        raise ValueError("unsupported component certification release")
+        raise ValueError("Не поддерживается: «component certification release»")
     doc["version"] = version
     spec = doc["profileSnapshot"]["spec"]
     spec["projectId"] = "certification"
@@ -195,7 +195,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 runtime, ["verify", *base, "--preset", "minimal"], cache=cache
             )
             if verify.get("status") != "ready":
-                raise AssertionError("minimal installed plan verification failed")
+                raise AssertionError("Ошибка: «minimal installed plan verification»")
             permitted = os_name in ("linux", "windows") and arch == "x86_64"
             if permitted:
                 install("optimized")
@@ -241,7 +241,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     success=False,
                 )
                 if len(server.metrics()["requests"]) != request_count:
-                    raise AssertionError("invalid signature triggered network traffic")
+                    raise AssertionError("Некорректное значение: «signature triggered network traffic»")
                 # Существующий посторонний файл должен пережить переключение пресетов.
                 install("minimal")
                 assert_bytes(installation, doc, core)
@@ -338,7 +338,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 raise AssertionError("incorrect public key reached network")
             # Сама проверка не считается успешным тестом, пока файлы действительно не просмотрены.
             if minimal_requests < 1:
-                raise AssertionError("no real HTTP payload was transferred")
+                raise AssertionError("Отсутствует: «real HTTP payload was transferred»")
             metrics = server.metrics()
         return {
             "status": "passed",

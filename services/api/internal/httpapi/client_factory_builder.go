@@ -94,19 +94,19 @@ func factoryConfig02710() (string, string, error) {
 	}
 	stat, err := os.Stat(binary)
 	if err != nil || stat.IsDir() || stat.Mode()&0111 == 0 {
-		return "", "", errors.New("Client Factory CLI executable unavailable")
+		return "", "", errors.New("Недоступно: «Client Factory CLI executable»")
 	}
 	if err = os.MkdirAll(root, 0700); err != nil {
 		return "", "", err
 	}
 	if stat, err = os.Lstat(root); err != nil || !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 || stat.Mode().Perm()&0022 != 0 {
-		return "", "", errors.New("Client Factory root must be a private directory, not a symlink")
+		return "", "", errors.New("Для «Client Factory root» требуется: «a private directory, not a symlink»")
 	}
 	return binary, root, nil
 }
 func factoryJobPath02710(root, id string) (string, error) {
 	if !factoryID02710.MatchString(id) {
-		return "", errors.New("invalid job ID")
+		return "", errors.New("Некорректное значение: идентификатор задания")
 	}
 	return filepath.Join(root, "jobs", id), nil
 }
@@ -137,7 +137,7 @@ func factoryRead02710(root, id string) (factoryBuilderJob02710, string, error) {
 		return job, "", err
 	}
 	if job.ID != id {
-		return job, "", errors.New("job identity mismatch")
+		return job, "", errors.New("Несовпадение: «job identity»")
 	}
 	// Сбой процесса не должен навсегда оставлять задачу в состоянии «выполняется»
 	// в интерфейсе.
@@ -299,7 +299,7 @@ func factoryRun02710(binary, root string, job factoryBuilderJob02710) {
 		p, err = factoryLoadPlan02710(dir)
 		if err == nil {
 			if p.MinecraftVersion != job.Request.Minecraft || p.Loader != job.Request.Loader || (job.Request.LoaderVersion != "" && p.LoaderVersion != job.Request.LoaderVersion) {
-				err = errors.New("imported modpack does not match pinned Minecraft/loader workspace identity")
+				err = errors.New("«imported modpack» не совпадает с «pinned Minecraft/loader workspace identity»")
 			} else {
 				job.PlanDigest = p.ReproducibilitySHA256
 				job.Files = len(p.Outputs)
@@ -511,11 +511,11 @@ func (s Server) factoryDiff02710(w http.ResponseWriter, r *http.Request) {
 }
 func factoryVerifyArtifact02710(root, path, digest string) (string, error) {
 	if path == "" || filepath.IsAbs(path) || strings.Contains(path, "\\") || strings.Contains(path, "\x00") {
-		return "", errors.New("invalid artifact path")
+		return "", errors.New("Некорректное значение: путь к артефакту")
 	}
 	for _, part := range strings.Split(path, "/") {
 		if part == "" || part == "." || part == ".." {
-			return "", errors.New("unsafe artifact path")
+			return "", errors.New("Небезопасное значение: путь к артефакту")
 		}
 	}
 	full := filepath.Join(root, filepath.FromSlash(path))
@@ -536,7 +536,7 @@ func factoryVerifyArtifact02710(root, path, digest string) (string, error) {
 		return "", err
 	}
 	if hex.EncodeToString(hash.Sum(nil)) != digest {
-		return "", fmt.Errorf("artifact %s checksum mismatch", path)
+		return "", fmt.Errorf("Несовпадение: «artifact %s checksum»", path)
 	}
 	return full, nil
 }
@@ -557,7 +557,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 			return "", errors.New("export exceeds verified size budget or invalid file")
 		}
 		if _, exists := expected[f.Path]; exists {
-			return "", errors.New("duplicate export entry")
+			return "", errors.New("Обнаружен дубликат: «export entry»")
 		}
 		expected[f.Path] = struct {
 			digest string
@@ -585,12 +585,12 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 		// Ни файл, ни один каталог на пути к нему не могут быть символическими
 		// ссылками.
 		if path == "" || filepath.IsAbs(path) || strings.Contains(path, "\\") {
-			return "", errors.New("unsafe output path")
+			return "", errors.New("Небезопасное значение: путь вывода")
 		}
 		full := client
 		for _, part := range strings.Split(path, "/") {
 			if part == "" || part == "." || part == ".." {
-				return "", errors.New("unsafe output component")
+				return "", errors.New("Небезопасное значение: «output component»")
 			}
 			full = filepath.Join(full, part)
 			st, e := os.Lstat(full)
@@ -612,7 +612,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 		}
 		if exp, ok := expected[path]; ok && stat.Size() != exp.size {
 			file.Close()
-			return "", errors.New("export file size changed")
+			return "", errors.New("Обнаружено изменение: «export file size»")
 		}
 		if path == ".launcher/install-plan.json" && (stat.Size() > 8<<20 || total+stat.Size() > maxExportBytes) {
 			file.Close()

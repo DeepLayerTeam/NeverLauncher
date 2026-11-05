@@ -84,36 +84,36 @@ func validateManifestFilePolicy0224(m Manifest) error {
 		switch manifestOwnership0224(f) {
 		case "required", "managed", "optional", "user-owned", "generated":
 		default:
-			return fmt.Errorf("unknown ownership %q", f.Ownership)
+			return fmt.Errorf("Неизвестное значение: «ownership» %q", f.Ownership)
 		}
 		if (f.Ownership == "user-owned" || f.Ownership == "generated") && f.Required {
-			return fmt.Errorf("protected file cannot be required %q", f.Path)
+			return fmt.Errorf("«protected file»: запрещено «be required» %q", f.Path)
 		}
 		if f.Ownership == "required" && !f.Required || f.Ownership == "optional" && f.Required {
 			return fmt.Errorf("required/ownership conflict at %q", f.Path)
 		}
 		if protectedUpdatePath0224(f.Path) && manifestOwnership0224(f) != "user-owned" && manifestOwnership0224(f) != "generated" {
-			return fmt.Errorf("protected file cannot be updated %q", f.Path)
+			return fmt.Errorf("«protected file»: запрещено «be updated» %q", f.Path)
 		}
 	}
 	for i, r := range m.FileRules {
 		if !validFilePolicyPattern0224(r.Pattern) {
-			return fmt.Errorf("unsafe rule pattern %q", r.Pattern)
+			return fmt.Errorf("Небезопасное значение: «rule pattern» %q", r.Pattern)
 		}
 		if r.Action != "include" && r.Action != "exclude" && r.Action != "verify" {
-			return fmt.Errorf("unknown rule action %q", r.Action)
+			return fmt.Errorf("Неизвестное значение: «rule action» %q", r.Action)
 		}
 		if r.Ownership != "managed" && r.Ownership != "required" && r.Ownership != "optional" && r.Ownership != "user-owned" && r.Ownership != "generated" {
-			return fmt.Errorf("unknown rule ownership %q", r.Ownership)
+			return fmt.Errorf("Неизвестное значение: «rule ownership» %q", r.Ownership)
 		}
 		if r.Action == "include" && (r.Ownership != "managed" && r.Ownership != "required" || protectedUpdatePath0224(strings.TrimSuffix(r.Pattern, "/**"))) {
-			return fmt.Errorf("invalid include rule %q", r.Pattern)
+			return fmt.Errorf("Некорректное значение: «include rule» %q", r.Pattern)
 		}
 		if r.Action == "verify" && (r.Ownership == "user-owned" || r.Ownership == "generated") {
 			return fmt.Errorf("Не удалось проверить пользовательские или сгенерированные данные %q", r.Pattern)
 		}
 		if r.Action == "exclude" && r.Ownership != "user-owned" && r.Ownership != "generated" {
-			return fmt.Errorf("invalid exclude rule %q", r.Pattern)
+			return fmt.Errorf("Некорректное значение: «exclude rule» %q", r.Pattern)
 		}
 		for j := 0; j < i; j++ {
 			prev := m.FileRules[j].Pattern

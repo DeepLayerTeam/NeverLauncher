@@ -80,7 +80,7 @@ func BuildApplyScript() (string, error) {
 		return "", err
 	}
 	if len(ms) == 0 {
-		return "", fmt.Errorf("migration catalog is empty")
+		return "", fmt.Errorf("Пустое значение: каталог миграций")
 	}
 	var b strings.Builder
 	b.WriteString("\\set ON_ERROR_STOP on\nSELECT pg_advisory_lock(718033100100);\n")
@@ -113,7 +113,7 @@ func BuildVerifyScript() (string, error) {
 		return "", err
 	}
 	if len(ms) == 0 {
-		return "", fmt.Errorf("migration catalog is empty")
+		return "", fmt.Errorf("Пустое значение: каталог миграций")
 	}
 	var b strings.Builder
 	b.WriteString("\\set ON_ERROR_STOP on\n")

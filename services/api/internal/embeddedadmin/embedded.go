@@ -31,7 +31,7 @@ func Handler() http.Handler {
 		}
 		b, err := assets.ReadFile(name)
 		if err != nil {
-			http.Error(w, "embedded admin resource unavailable", http.StatusInternalServerError)
+			http.Error(w, "Недоступно: «embedded admin resource»", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store, max-age=0")

@@ -47,7 +47,7 @@ func operationsGARead0460(dir, name string, max int64) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > max {
-		return nil, fmt.Errorf("unsafe operations GA file: %s", name)
+		return nil, fmt.Errorf("Небезопасное значение: «operations GA file»: %s", name)
 	}
 	return os.ReadFile(p)
 }
@@ -61,7 +61,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	keyPath := strings.TrimSpace(os.Getenv("LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE"))
 	if keyPath == "" {
-		return errors.New("0.46.0 GA BLOCKED: independent operator trust anchor is required")
+		return errors.New("Требуется: «0.46.0 GA BLOCKED: independent operator trust anchor»")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, keyPath); err != nil {
 		return err
@@ -83,7 +83,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
 	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(pub, append([]byte(operationsGADomain0460), raw...), sig) {
-		return errors.New("independent operations GA signature failed")
+		return errors.New("Ошибка: «independent operations GA signature»")
 	}
 	var a operationsGAApproval0460
 	if err := json.Unmarshal(raw, &a); err != nil {
@@ -108,7 +108,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 		return err
 	}
 	if a.Schema != "neverlauncher.operations-ga.0460.v1" || a.Version != version || m.Version != version || a.SourceCommit != m.SourceCommit || !regexp.MustCompile(`^[a-f0-9]{40}([a-f0-9]{24})?$`).MatchString(a.SourceCommit) {
-		return errors.New("operations GA does not match exact source commit and version")
+		return errors.New("«operations GA» не совпадает с «exact source commit and version»")
 	}
 	issued, err := time.Parse(time.RFC3339Nano, a.IssuedAt)
 	if err != nil || time.Since(issued) > 14*24*time.Hour || time.Until(issued) > 5*time.Minute {
@@ -116,7 +116,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	hex64 := regexp.MustCompile(`^[0-9a-f]{64}$`)
 	if a.Operator == "" || a.SourceMachine == a.RestoreMachine || !hex64.MatchString(a.SourceMachine) || !hex64.MatchString(a.RestoreMachine) || !hex64.MatchString(a.OpenApiV1Sha256) {
-		return errors.New("independent operator, hosts or frozen API fingerprint invalid")
+		return errors.New("Некорректное значение: «independent operator, hosts or frozen API fingerprint»")
 	}
 	// Байты утверждённого API v1 должны совпадать с исходными байтами, закреплёнными в BOM выпуска;
 	// произвольного отдельного дайджеста API в утверждении недостаточно.
@@ -146,15 +146,15 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 		return errors.New("release BOM must pin exactly one canonical API contract")
 	}
 	if a.Scope != "actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO" {
-		return errors.New("unsupported operations GA evidence scope")
+		return errors.New("Не поддерживается: «operations GA evidence scope»")
 	}
 	requiredStages := []string{"install-standard", "upgrade-standard", "restore-standard", "failover-network-ha"}
 	if len(a.StageReceipts) != len(requiredStages) {
-		return errors.New("all four independent operational receipts required")
+		return errors.New("Требуется: «all four independent operational receipts»")
 	}
 	for _, stage := range requiredStages {
 		if !hex64.MatchString(a.StageReceipts[stage]) {
-			return fmt.Errorf("invalid operational receipt hash: %s", stage)
+			return fmt.Errorf("Некорректное значение: «operational receipt hash»: %s", stage)
 		}
 	}
 	if len(a.Targets) != 6 {
@@ -163,14 +163,14 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	for _, t := range distributionTargets04511(version) {
 		r, ok := a.Targets[t.target]
 		if !ok || r.Name != t.packageFile || !hex64.MatchString(r.SHA256) {
-			return fmt.Errorf("operations GA target missing: %s", t.target)
+			return fmt.Errorf("Отсутствует: «operations GA target»: %s", t.target)
 		}
 		h, e := distributionHash04511(dir, t.packageFile)
 		if e != nil {
 			return e
 		}
 		if h != r.SHA256 {
-			return fmt.Errorf("operations GA final package changed: %s", t.target)
+			return fmt.Errorf("Обнаружено изменение: «operations GA final package»: %s", t.target)
 		}
 	}
 	for _, name := range []string{operationsGAFile0460, operationsGASig0460} {

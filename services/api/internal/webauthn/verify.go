@@ -234,7 +234,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 	switch kty {
 	case 2: // EC2
 		if alg != -7 {
-			return 0, nil, fmt.Errorf("unsupported EC algorithm %d", alg)
+			return 0, nil, fmt.Errorf("Не поддерживается: «EC algorithm» %d", alg)
 		}
 		crv, _ := intValue(m[int64(-1)])
 		if crv != 1 {
@@ -252,7 +252,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		return alg, pub, nil
 	case 3: // RSA
 		if alg != -257 {
-			return 0, nil, fmt.Errorf("unsupported RSA algorithm %d", alg)
+			return 0, nil, fmt.Errorf("Не поддерживается: «RSA algorithm» %d", alg)
 		}
 		n, _ := m[int64(-1)].([]byte)
 		eBytes, _ := m[int64(-2)].([]byte)
@@ -264,12 +264,12 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 			e = e<<8 | int(b)
 		}
 		if e < 3 {
-			return 0, nil, errors.New("invalid RSA exponent")
+			return 0, nil, errors.New("Некорректное значение: «RSA exponent»")
 		}
 		return alg, &rsa.PublicKey{N: new(big.Int).SetBytes(n), E: e}, nil
 	case 1: // OKP / Ed25519
 		if alg != -8 {
-			return 0, nil, fmt.Errorf("unsupported OKP algorithm %d", alg)
+			return 0, nil, fmt.Errorf("Не поддерживается: «OKP algorithm» %d", alg)
 		}
 		crv, _ := intValue(m[int64(-1)])
 		x, _ := m[int64(-2)].([]byte)

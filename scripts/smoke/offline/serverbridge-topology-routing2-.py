@@ -18,7 +18,7 @@ required = [
 ]
 for rel in required:
     if not resource_exists(ROOT, rel):
-        raise SystemExit(f"missing 0.19.6 production file: {rel}")
+        raise SystemExit(f"Отсутствует: «0.19.6 production file»: {rel}")
 proto = (
     ROOT / "services/api/internal/httpapi/server_bridge_protocol_0191.go"
 ).read_text()
@@ -82,5 +82,5 @@ for text, want, label in [
     if want not in text:
         raise SystemExit(f"{label} missing {want!r}")
 if any(x in client for x in ["ProcessBuilder(", "Runtime.getRuntime().exec"]):
-    raise SystemExit("routing/control client must not execute OS shell")
+    raise SystemExit("«routing/control client»: запрещено «execute OS shell»")
 print("ServerBridge 0.19.6 Topology & Routing 2 production gate: PASS")

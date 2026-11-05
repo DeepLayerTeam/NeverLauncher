@@ -82,7 +82,7 @@ class GitHubAPI:
     def __init__(self, token: str) -> None:
         token = token.strip()
         if not token:
-            raise ValueError("GitHub token is required")
+            raise ValueError("Требуется: «GitHub token»")
         self.token = token
 
     def _request(self, url: str) -> bytes:
@@ -272,7 +272,7 @@ def fetch_matrix(
             stamp = datetime.fromisoformat(started.replace("Z", "+00:00"))
             attempt = run.get("run_attempt")
             if not started.endswith("Z") or type(attempt) is not int or attempt < 1:
-                raise ValueError("missing run attempt or UTC start time")
+                raise ValueError("Отсутствует: «run attempt or UTC start time»")
         except (ValueError, TypeError) as exc:
             raise RuntimeError(f"{label} run lacks fresh execution provenance") from exc
         delta = datetime.now(timezone.utc) - stamp

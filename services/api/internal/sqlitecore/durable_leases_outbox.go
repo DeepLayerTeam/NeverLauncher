@@ -23,7 +23,7 @@ func scanScope(s interface{ Scan(...any) error }) (v model.DurableScopeLease, e 
 }
 func (r *Repository) AcquireDurableScopeLease(ctx context.Context, scope, owner string, ttl time.Duration) (out model.DurableScopeLease, err error) {
 	if !durableFieldsNonempty(scope, owner) || !validDurableTTL(ttl) {
-		return out, errors.New("invalid scope lease")
+		return out, errors.New("Некорректное значение: «scope lease»")
 	}
 	token, e := newLeaseToken()
 	if e != nil {
@@ -55,7 +55,7 @@ func (r *Repository) AcquireDurableScopeLease(ctx context.Context, scope, owner 
 }
 func (r *Repository) RenewDurableScopeLease(ctx context.Context, scope, token string, ttl time.Duration) (out model.DurableScopeLease, err error) {
 	if !validDurableTTL(ttl) || !durableFieldsNonempty(scope, token) {
-		return out, errors.New("invalid renewal")
+		return out, errors.New("Некорректное значение: «renewal»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()
@@ -108,7 +108,7 @@ func (r *Repository) CommitFencedJob(ctx context.Context, jobID, jobToken, scope
 		return
 	}
 	if apply == nil || fence <= 0 {
-		return out, errors.New("fenced commit requires nonnil DB mutation and epoch")
+		return out, errors.New("Для «fenced commit» требуется «nonnil DB mutation and epoch»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()
@@ -178,13 +178,13 @@ func (r *Repository) GetOutboxEvent(ctx context.Context, id string) (out model.D
 }
 func enqueueOutbox(ctx context.Context, q sqlitedurable.Executor, v model.DurableOutboxEvent, now int64) (out model.DurableOutboxEvent, created bool, err error) {
 	if !durableFieldsNonempty(v.EventType, v.AggregateType, v.AggregateID, v.IdempotencyKey) || (v.ProjectID != "" && !durableFieldsNonempty(v.ProjectID)) || (v.ActorID != "" && !durableFieldsNonempty(v.ActorID)) {
-		return out, false, errors.New("invalid outbox identity")
+		return out, false, errors.New("Некорректное значение: «outbox identity»")
 	}
 	if v.MaxAttempts == 0 {
 		v.MaxAttempts = 8
 	}
 	if v.MaxAttempts < 1 || v.MaxAttempts > 100 {
-		return out, false, errors.New("maxAttempts must be 1..100")
+		return out, false, errors.New("Для «maxAttempts» требуется: «1..100»")
 	}
 	if len(v.Payload) == 0 {
 		v.Payload = []byte(`{}`)
@@ -211,7 +211,7 @@ func enqueueOutbox(ctx context.Context, q sqlitedurable.Executor, v model.Durabl
 		}
 	}
 	if !durableFieldsNonempty(v.ID) {
-		return out, false, errors.New("invalid outbox id")
+		return out, false, errors.New("Некорректное значение: «outbox id»")
 	}
 	available := now
 	if !v.AvailableAt.IsZero() {
@@ -236,7 +236,7 @@ func (r *Repository) EnqueueOutboxEvent(ctx context.Context, v model.DurableOutb
 // Транзакция допускает доставку как минимум один раз, но НЕ гарантирует внешнюю доставку ровно один раз.
 func (r *Repository) ClaimOutboxEvents(ctx context.Context, worker string, limit int, ttl time.Duration) (out []model.DurableOutboxEvent, err error) {
 	if !durableFieldsNonempty(worker) || limit < 1 || limit > 100 || !validDurableTTL(ttl) {
-		return nil, errors.New("invalid outbox claim")
+		return nil, errors.New("Некорректное значение: «outbox claim»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()
@@ -294,7 +294,7 @@ func (r *Repository) ClaimOutboxEvents(ctx context.Context, worker string, limit
 }
 func (r *Repository) RenewOutboxEvent(ctx context.Context, id, token string, ttl time.Duration) (out model.DurableOutboxEvent, err error) {
 	if !validDurableTTL(ttl) {
-		return out, errors.New("invalid outbox renewal")
+		return out, errors.New("Некорректное значение: «outbox renewal»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()

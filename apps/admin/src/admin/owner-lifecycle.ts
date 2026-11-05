@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 /** Реальные операции владельца в Admin: сначала сохраните намерение изменения, затем
  * независимо считайте устойчивое задание и активный релиз канала. Ни HTTP 202, ни
  * локально кэшированный черновик не доказывают завершение публикации. */
@@ -162,14 +163,14 @@ export async function observeOwnerOperation(
     return {
       phase: "failed",
       job,
-      message: `Job ${job.id}: ${job.status}. Проверьте причину и журнал перед повтором.`,
+      message: `Задание ${job.id}: ${statusRu(job.status)}. Проверьте причину и журнал перед повтором.`,
     };
   }
   if (job.status !== "succeeded")
     return {
       phase: "waiting",
       job,
-      message: `Job ${job.id}: ${job.status}. Ожидается подтверждение Backend.`,
+      message: `Задание ${job.id}: ${statusRu(job.status)}. Ожидается подтверждение Backend.`,
     };
   if (
     pending.intent.kind === "channel-rollback" &&

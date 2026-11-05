@@ -98,7 +98,7 @@ func Verify(v Report) error {
 // подтверждение — доказательством.
 func Finalize(v Report) (Report, error) {
 	if v.RunID == "" || v.ProjectID == "" {
-		return Report{}, errors.New("missing migration scope")
+		return Report{}, errors.New("Отсутствует: «migration scope»")
 	}
 	v.Format = Format
 	v.ReportSHA256 = ""
@@ -122,17 +122,17 @@ func Finalize(v Report) (Report, error) {
 	seenItem := map[string]bool{}
 	for _, item := range v.Items {
 		if item.Kind == "" || item.Source == "" {
-			return Report{}, errors.New("invalid inventory item")
+			return Report{}, errors.New("Некорректное значение: «inventory item»")
 		}
 		if item.SHA256 != "" && !validDigest(item.SHA256) {
-			return Report{}, errors.New("invalid inventory checksum")
+			return Report{}, errors.New("Некорректное значение: «inventory checksum»")
 		}
 		if item.Status != "transferred" && item.Status != "transformed" && item.Status != "manual" && item.Status != "blocked" {
-			return Report{}, fmt.Errorf("invalid item status %q", item.Status)
+			return Report{}, fmt.Errorf("Некорректное значение: «item status» %q", item.Status)
 		}
 		k := item.Kind + "\x00" + item.Source + "\x00" + item.Target
 		if seenItem[k] {
-			return Report{}, errors.New("duplicate report item")
+			return Report{}, errors.New("Обнаружен дубликат: «report item»")
 		}
 		seenItem[k] = true
 		v.Counts[item.Status]++
@@ -168,20 +168,20 @@ func Finalize(v Report) (Report, error) {
 	stages := map[string]string{}
 	for _, ev := range v.Evidence {
 		if ev.Stage == "" {
-			return Report{}, errors.New("invalid evidence stage")
+			return Report{}, errors.New("Некорректное значение: этап подтверждения")
 		}
 		if _, ok := stages[ev.Stage]; ok {
-			return Report{}, errors.New("duplicate evidence stage")
+			return Report{}, errors.New("Обнаружен дубликат: этап подтверждения")
 		}
 		// Никогда не трактуйте новое или неизвестное состояние как успешную проверку.
 		switch ev.State {
 		case "verified", "missing", "blocked", "manual":
 		default:
-			return Report{}, fmt.Errorf("unknown evidence state %q", ev.State)
+			return Report{}, fmt.Errorf("Неизвестное значение: «evidence state» %q", ev.State)
 		}
 		stages[ev.Stage] = ev.State
 		if ev.SHA256 != "" && !validDigest(ev.SHA256) {
-			return Report{}, errors.New("invalid evidence checksum")
+			return Report{}, errors.New("Некорректное значение: «evidence checksum»")
 		}
 		if ev.State == "missing" || ev.State == "blocked" ||
 			(ev.State == "manual" && (ev.Stage == "cutover" || ev.Stage == "rollback" ||

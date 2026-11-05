@@ -69,7 +69,7 @@ func bindRO(from, to string, nodev bool) error {
 }
 func setupMounts(c childConfig) error {
 	if c.RootDir == "" || !strings.HasPrefix(c.RootDir, "/tmp/nl-sandbox-0319-") {
-		return errors.New("invalid private root")
+		return errors.New("Некорректное значение: «private root»")
 	}
 	if e := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); e != nil {
 		return fmt.Errorf("private mount tree: %w", e)

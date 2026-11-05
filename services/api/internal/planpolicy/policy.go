@@ -69,7 +69,7 @@ func Load(now time.Time) (Policy, error) {
 	}
 	key, e := hex.DecodeString(pin)
 	if e != nil || len(key) != ed25519.PublicKeySize {
-		return out, errors.New("invalid pinned ServerBridge policy public key")
+		return out, errors.New("Некорректное значение: «pinned ServerBridge policy public key»")
 	}
 	info, e := os.Lstat(path)
 	if e != nil {
@@ -87,21 +87,21 @@ func Load(now time.Time) (Policy, error) {
 		return out, e
 	}
 	if env.SchemaVersion != "1.0" {
-		return out, errors.New("unsupported plan policy envelope")
+		return out, errors.New("Не поддерживается: «plan policy envelope»")
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) == 0 || len(payload) > 192*1024 {
-		return out, errors.New("invalid plan policy payload")
+		return out, errors.New("Некорректное значение: «plan policy payload»")
 	}
 	sig, e := hex.DecodeString(env.Signature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(key, append([]byte(Domain), payload...), sig) {
-		return out, errors.New("ServerBridge policy signature invalid")
+		return out, errors.New("Некорректное значение: «ServerBridge policy signature»")
 	}
 	if e = json.Unmarshal(payload, &out); e != nil {
 		return out, e
 	}
 	if out.SchemaVersion != "1.0" || out.Epoch == 0 || !out.RequireContinuousGuard || len(out.AllowedPlans) == 0 || len(out.AllowedPlans) > 2048 {
-		return out, errors.New("invalid or unsafe plan policy")
+		return out, errors.New("Некорректное значение: «or unsafe plan policy»")
 	}
 	from, e := time.Parse(time.RFC3339, out.IssuedAt)
 	if e != nil {
@@ -117,11 +117,11 @@ func Load(now time.Time) (Policy, error) {
 	seen := make(map[string]struct{}, len(out.AllowedPlans))
 	for _, a := range out.AllowedPlans {
 		if !isHexLength(a.ReleaseSignature, 128) || !isHexLength(a.CatalogDigest, 64) || !isHexLength(a.PlanSHA256, 64) || a.ServerID == "" || a.ProjectID == "" || a.ProfileID == "" || a.Channel == "" || strings.ContainsAny(a.ServerID+a.ProjectID+a.ProfileID+a.Channel, "\n\r") {
-			return out, errors.New("invalid signed plan allowlist entry")
+			return out, errors.New("Некорректное значение: «signed plan allowlist entry»")
 		}
 		k := a.ServerID + "/" + a.ProjectID + "/" + a.ProfileID + "/" + a.Channel + "/" + a.PlanSHA256
 		if _, ok := seen[k]; ok {
-			return out, errors.New("duplicate signed plan allowlist entry")
+			return out, errors.New("Обнаружен дубликат: «signed plan allowlist entry»")
 		}
 		seen[k] = struct{}{}
 	}

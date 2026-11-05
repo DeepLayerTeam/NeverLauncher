@@ -74,17 +74,17 @@ pub fn validate_actions(cat:&ComponentCatalog)->Result<(),String> {
                         return Err(format!("{} {} references unsafe/unowned file {}",c.id,a.kind,a.path))
                     }
                     if !seen.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){
-                        return Err(format!("duplicate action on {}",c.id))
+                        return Err(format!("Обнаружен дубликат: «action on {}»",c.id))
                     }
                 },
                 "JvmArgs"|"ClientArgs"=>{
-                    if !a.path.is_empty()||a.args.is_empty()||a.args.len()>32{return Err(format!("invalid {} arguments in {}",a.kind,c.id))}
+                    if !a.path.is_empty()||a.args.is_empty()||a.args.len()>32{return Err(format!("Некорректное значение: «{} arguments in {}»",a.kind,c.id))}
                     for arg in &a.args {
-                        if !safe_argument(&a.kind,arg){return Err(format!("unsafe {} argument in {}: {}",a.kind,c.id,arg))}
-                        if !seen.insert(format!("{}:{}",a.kind,arg)){return Err(format!("duplicate {} argument in {}",a.kind,c.id))}
+                        if !safe_argument(&a.kind,arg){return Err(format!("Небезопасное значение: «{} argument in {}: {}»",a.kind,c.id,arg))}
+                        if !seen.insert(format!("{}:{}",a.kind,arg)){return Err(format!("Обнаружен дубликат: «{} argument in {}»",a.kind,c.id))}
                     }
                 },
-                _=>return Err(format!("unsupported optional action {} in {}",a.kind,c.id))
+                _=>return Err(format!("Не поддерживается: «optional action {} in {}»",a.kind,c.id))
             }
         }
     }
@@ -126,18 +126,18 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
                     if !plan.main_module.is_empty(){return Err(format!("component {} classpath action is incompatible with modular entrypoint",component.id))}
                     if !active.contains(&action.path){return Err(format!("component {} classpath file is not installed: {}",component.id,action.path))}
                     let joined=crate::safe_join(root,&action.path)?.to_string_lossy().to_string();
-                    if !seen_classpath.insert(joined.clone()){return Err(format!("duplicate optional classpath entry: {}",action.path))}
+                    if !seen_classpath.insert(joined.clone()){return Err(format!("Обнаружен дубликат: «optional classpath entry: {}»",action.path))}
                     plan.classpath_entries.push(joined);
                 },
                 "JvmArgs"=>{
                     for arg in &action.args {
-                        if !seen_jvm.insert(arg.clone()){return Err(format!("duplicate optional JVM argument in {}",component.id))}
+                        if !seen_jvm.insert(arg.clone()){return Err(format!("Обнаружен дубликат: «optional JVM argument in {}»",component.id))}
                         plan.jvm_args.push(arg.clone());
                     }
                 },
                 "ClientArgs"=>{
                     for arg in &action.args {
-                        if !seen_client.insert(arg.clone()){return Err(format!("duplicate optional client argument in {}",component.id))}
+                        if !seen_client.insert(arg.clone()){return Err(format!("Обнаружен дубликат: «optional client argument in {}»",component.id))}
                         plan.game_args.push(arg.clone());
                     }
                 },

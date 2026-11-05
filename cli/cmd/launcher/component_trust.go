@@ -34,10 +34,10 @@ func loadComponentPolicy02312(manifestPath string) (TrustPolicy, string, compone
 		return p, "", env, e
 	}
 	if len(sigRaw) > 4096 || decodeStrict(sigRaw, &env) != nil {
-		return p, "", env, errors.New("invalid component signature v2")
+		return p, "", env, errors.New("Некорректное значение: «component signature v2»")
 	}
 	if env.SchemaVersion != "2.0" || env.Algorithm != "ed25519" || env.TrustEpoch != p.Epoch || env.PolicySHA256 != digest {
-		return p, "", env, errors.New("component trust epoch/policy mismatch")
+		return p, "", env, errors.New("Несовпадение: «component trust epoch/policy»")
 	}
 	return p, digest, env, nil
 }
@@ -52,7 +52,7 @@ func verifyComponentTrust02312(manifestPath string) error {
 	}
 	h := sha256.Sum256(raw)
 	if !strings.EqualFold(env.ManifestSHA256, hex.EncodeToString(h[:])) {
-		return errors.New("component v2 digest mismatch")
+		return errors.New("Несовпадение: «component v2 digest»")
 	}
 	signedAt, e := strictTime02312(env.SignedAt)
 	if e != nil {
@@ -75,7 +75,7 @@ func verifyComponentTrust02312(manifestPath string) error {
 	}
 	sig, e := hex.DecodeString(env.Signature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(pub), componentTrustSignaturePayload02312(raw, env), sig) {
-		return errors.New("delegated component Ed25519 signature invalid")
+		return errors.New("Некорректное значение: «delegated component Ed25519 signature»")
 	}
 	return nil
 }

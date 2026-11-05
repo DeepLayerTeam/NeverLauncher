@@ -24,7 +24,7 @@ func (s Server) operationalStore02111(w http.ResponseWriter) (repository.Operati
 func (s Server) operationalSettings02111(r *http.Request) (repository.OperationalConfig, error) {
 	store, ok := s.Repo.(repository.OperationalConfigStore)
 	if !ok {
-		return repository.OperationalConfig{}, errors.New("config store unavailable")
+		return repository.OperationalConfig{}, errors.New("Недоступно: «config store»")
 	}
 	revision, err := store.GetOperationalConfig(r.Context())
 	return revision.Settings, err

@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   HostOperationsClient04111,
@@ -435,7 +436,7 @@ export function HostOperationsWorkspace04111({
           </p>
           <dl className="bridgeFacts">
             <dt>Состояние в PostgreSQL</dt>
-            <dd>{current.status}</dd>
+            <dd>{statusRu(current.status)}</dd>
             <dt>RemoteControl</dt>
             <dd>
               {current.remoteNodeId || "—"} ·{" "}

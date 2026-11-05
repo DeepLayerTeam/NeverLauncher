@@ -23,16 +23,16 @@ fn valid_token(token: &str) -> bool {
 pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<GameIdentity,String> {
     let Some(c) = credentials else { return Ok(GameIdentity::Offline) };
     if !valid_name(&c.username) || !valid_uuid(&c.uuid) || !valid_token(&c.access_token) {
-        return Err("invalid Minecraft player identity or session token".into());
+        return Err("Некорректное значение: «Minecraft player identity or session token»".into());
     }
     match c.user_type.as_str() {
         "msa" if c.auth_server_base_url.is_empty() => Ok(GameIdentity::Official),
         "mojang" if !c.auth_server_base_url.is_empty() => {
-            let url = reqwest::Url::parse(&c.auth_server_base_url).map_err(|_| "invalid Yggdrasil URL")?;
+            let url = reqwest::Url::parse(&c.auth_server_base_url).map_err(|_| "Некорректное значение: «Yggdrasil URL»")?;
             let loopback = url.host_str().is_some_and(|v| matches!(v,"localhost"|"127.0.0.1"|"[::1]"));
             if (url.scheme() != "https" && !(url.scheme()=="http" && loopback)) ||
                 url.username() != "" || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
-                return Err("Yggdrasil authentication requires HTTPS or loopback HTTP".into());
+                return Err("Для «Yggdrasil authentication» требуется «HTTPS or loopback HTTP»".into());
             }
             Ok(GameIdentity::Yggdrasil)
         }
@@ -54,7 +54,7 @@ fn remove_pair(args:&mut Vec<String>, key:&str) -> Result<(),String> {
     while i<args.len() {
         if args[i]==key {
             if args.get(i+1).is_none_or(|value|value.starts_with("--")) {
-                return Err(format!("malformed {key} in signed game arguments"));
+                return Err(format!("Некорректный формат: «{key} in signed game arguments»"));
             }
             args.remove(i);
             args.remove(i);
@@ -76,7 +76,7 @@ fn supports_user_type(version: &str) -> bool {
 pub fn pin_game_identity(plan:&mut LaunchPlan, version:&str, credentials:Option<&MinecraftLaunchCredentials>, offline_username:&str) -> Result<(),String> {
     let mode=identity(credentials)?;
     if mode != GameIdentity::Yggdrasil && forbidden_auth_agent(&plan.jvm_args) {
-        return Err("official/offline launches cannot redirect session authentication to Yggdrasil".into());
+        return Err("«official/offline launches»: запрещено «redirect session authentication to Yggdrasil»".into());
     }
     for key in ["--username","--uuid","--accessToken","--userType","--xuid"] {
         remove_pair(&mut plan.game_args,key)?;
@@ -87,7 +87,7 @@ pub fn pin_game_identity(plan:&mut LaunchPlan, version:&str, credentials:Option<
             if supports_user_type(version) {plan.game_args.extend(["--userType".into(),c.user_type.clone()]);}
         }
         None => {
-            if !valid_name(offline_username) {return Err("offline Minecraft username must be 3-16 ASCII letters/digits/underscore".into());}
+            if !valid_name(offline_username) {return Err("Для «offline Minecraft username» требуется: «3-16 ASCII letters/digits/underscore»".into());}
             // Офлайн-игра не получает учётных данных провайдера и не может сформировать
             // доказательство подключения sessionserver для сервера с online-mode.
             plan.game_args.extend(["--username".into(),offline_username.into(),"--accessToken".into(),"0".into()]);

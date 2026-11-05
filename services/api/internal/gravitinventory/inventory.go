@@ -60,7 +60,7 @@ func (v Inventory) canonical() ([]byte, error) {
 }
 func (v Inventory) Manifest() ([]byte, error) {
 	if v.Format != Format {
-		return nil, errors.New("unsupported source inventory format")
+		return nil, errors.New("Не поддерживается: «source inventory format»")
 	}
 	b, e := v.canonical()
 	if e != nil {
@@ -68,7 +68,7 @@ func (v Inventory) Manifest() ([]byte, error) {
 	}
 	d := sha256.Sum256(b)
 	if hex.EncodeToString(d[:]) != v.ManifestSHA256 {
-		return nil, errors.New("inventory manifest checksum mismatch")
+		return nil, errors.New("Несовпадение: «inventory manifest checksum»")
 	}
 	return append(b, '\n'), nil
 }
@@ -129,7 +129,7 @@ func validName(n string, isDir bool) error {
 		return fmt.Errorf("Небезопасный объект: ZIP путь %q", n)
 	}
 	if isDir != strings.HasSuffix(n, "/") {
-		return fmt.Errorf("invalid ZIP directory marker %q", n)
+		return fmt.Errorf("Некорректное значение: «ZIP directory marker» %q", n)
 	}
 	return nil
 }
@@ -147,7 +147,7 @@ func safeFiles(z *zip.Reader) ([]*zip.File, error) {
 			return nil, e
 		}
 		if f.Mode().Type() != 0 && !isDir {
-			return nil, fmt.Errorf("unsupported special file %q", f.Name)
+			return nil, fmt.Errorf("Не поддерживается: «special file» %q", f.Name)
 		}
 		n := strings.ToLower(strings.TrimSuffix(f.Name, "/"))
 		if _, ok := seen[n]; ok {
@@ -240,7 +240,7 @@ func readObject(data []byte) (map[string]json.RawMessage, error) {
 func uniqueJSON(d *json.Decoder) error {
 	tok, e := d.Token()
 	if e != nil {
-		return errors.New("invalid JSON")
+		return errors.New("Некорректное значение: JSON")
 	}
 	switch tok {
 	case json.Delim('{'):
@@ -365,7 +365,7 @@ func Inspect(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDige
 
 func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string, parseConfigs bool) (Inventory, error) {
 	if archiveSize < 1 || archiveSize > MaxSourceBytes || len(sourceDigest) != 64 {
-		return Inventory{}, errors.New("source archive size/digest invalid")
+		return Inventory{}, errors.New("Некорректное значение: «source archive size/digest»")
 	}
 	// Не доверяйте хешу, предоставленному вызывающей стороной. Источник может измениться между
 	// запросами или поступить от недоверенного обработчика; закрепляйте точные байты архива.
@@ -506,7 +506,7 @@ func Spool(ctx context.Context, source io.Reader) (*os.File, int64, string, erro
 		return cleanup(e)
 	}
 	if n == 0 {
-		return cleanup(errors.New("empty Gravit source ZIP"))
+		return cleanup(errors.New("Пустое значение: «Gravit source ZIP»"))
 	}
 	if e = f.Sync(); e != nil {
 		return cleanup(e)

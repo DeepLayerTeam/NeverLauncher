@@ -222,7 +222,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 // компонент по умолчанию исключается, а недоступный обязательный выбор вызывает ошибку.
 func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env ComponentEnvironment0244) ([]string, error) {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
-		return nil, fmt.Errorf("condition resolver requires catalog v4")
+		return nil, fmt.Errorf("Для «condition resolver» требуется «catalog v4»")
 	}
 	if err := ValidateCatalogConditions0244(cat); err != nil {
 		return nil, err

@@ -150,7 +150,7 @@ func decodeStoredEvidence03411(raw []byte, p *validationPayload0345) error {
 	}
 	var extra any
 	if err := decoder.Decode(&extra); err != io.EOF {
-		return errors.New("invalid attestation trailing data")
+		return errors.New("Некорректное значение: «attestation trailing data»")
 	}
 	return nil
 }
@@ -163,15 +163,15 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	if !coverage.Eligible {
 		if e := s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "blocked",
 			"required-targets-incomplete", safeValidationDecisionDigest03412(coverage.TargetBlockers)); e != nil {
-			return "", coverage, errors.New("stable runtime gate audit unavailable")
+			return "", coverage, errors.New("Недоступно: «stable runtime gate audit»")
 		}
-		return "", coverage, fmt.Errorf("stable runtime gate denied: %v", coverage.TargetBlockers)
+		return "", coverage, fmt.Errorf("Доступ запрещён: «stable runtime gate»: %v", coverage.TargetBlockers)
 	}
 	issuer, ok := s.Repo.(interface {
 		IssueStableRuntimePermit03411(context.Context, repository.StableRuntimePermit03411) (string, error)
 	})
 	if !ok {
-		return "", coverage, errors.New("stable durable permit issuer unavailable")
+		return "", coverage, errors.New("Недоступно: «stable durable permit issuer»")
 	}
 	md, _ := manifestDigest0212(lookup.Release.Manifest)
 	fd, _ := artifactDigest0212(lookup.Files)
@@ -189,7 +189,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	// Пригодность записывается, но один допуск НИКОГДА не доказывает публикацию.
 	if e = s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "eligible",
 		"checked-before-commit", safeValidationDecisionDigest03412(coverage.Runs)); e != nil {
-		return "", coverage, errors.New("stable runtime gate audit unavailable")
+		return "", coverage, errors.New("Недоступно: «stable runtime gate audit»")
 	}
 	return token, coverage, nil
 }

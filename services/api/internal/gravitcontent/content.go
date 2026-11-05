@@ -239,7 +239,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		return out, e
 	}
 	if !safeTarget(profilePath) || !strings.HasPrefix(strings.ToLower(profilePath), "profiles/") || !strings.HasSuffix(strings.ToLower(profilePath), ".json") {
-		return out, errors.New("explicit profiles/*.json source path required")
+		return out, errors.New("Требуется: «explicit profiles/*.json source path»")
 	}
 	meta := map[string]inv.File{}
 	for _, f := range saved.Files {
@@ -262,13 +262,13 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	// удалите обработанное поле из изолированной копии для преобразования.
 	var obj map[string]json.RawMessage
 	if e = json.Unmarshal(raw, &obj); e != nil || obj == nil {
-		return out, errors.New("profile must be a JSON object")
+		return out, errors.New("Для профиль требуется: объект JSON")
 	}
 	optionRaw := obj["updateOptional"]
 	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
 		var vals []json.RawMessage
 		if e = json.Unmarshal(optionRaw, &vals); e != nil || vals == nil {
-			return out, errors.New("invalid optional array")
+			return out, errors.New("Некорректное значение: «optional array»")
 		}
 		if len(vals) > 0 {
 			obj["updateOptional"] = json.RawMessage(`[]`)
@@ -322,7 +322,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	}
 	stem := strings.TrimSuffix(path.Base(profilePath), path.Ext(profilePath))
 	if stem == "" || stem == "." {
-		return out, errors.New("invalid profile basename")
+		return out, errors.New("Некорректное значение: «profile basename»")
 	}
 	// Поле `dir` профиля Gravit определяет клиентское дерево и не обязательно
 	// совпадает с именем JSON-файла (переименования распространены). Если `dir` указан
@@ -331,11 +331,11 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	sourceDirectory := stem
 	if dirRaw, exists := obj["dir"]; exists {
 		if e = json.Unmarshal(dirRaw, &sourceDirectory); e != nil || !safeSourceDirectory(sourceDirectory) {
-			return out, errors.New("invalid Gravit client dir")
+			return out, errors.New("Некорректное значение: «Gravit client dir»")
 		}
 	}
 	if !safeSourceDirectory(sourceDirectory) {
-		return out, errors.New("invalid Gravit client directory")
+		return out, errors.New("Некорректное значение: «Gravit client directory»")
 	}
 	out.SourceDirectory = sourceDirectory
 	prefixes := []string{"updates/" + sourceDirectory + "/", "clients/" + sourceDirectory + "/"}
@@ -478,7 +478,7 @@ func NewReader(src io.ReaderAt, size int64) (*Reader, error) {
 	entries := make(map[string]*zip.File, len(z.File))
 	for _, f := range z.File {
 		if _, duplicate := entries[f.Name]; duplicate {
-			return nil, errors.New("duplicate ZIP member")
+			return nil, errors.New("Обнаружен дубликат: «ZIP member»")
 		}
 		entries[f.Name] = f
 	}
@@ -496,7 +496,7 @@ func (r *Reader) ReadVerified(ctx context.Context, item File) ([]byte, error) {
 		return nil, errors.New("file absent from source ZIP")
 	}
 	if int64(f.UncompressedSize64) != item.Size {
-		return nil, errors.New("source file size changed")
+		return nil, errors.New("Обнаружено изменение: «source file size»")
 	}
 	stream, e := f.Open()
 	if e != nil {
@@ -512,7 +512,7 @@ func (r *Reader) ReadVerified(ctx context.Context, item File) ([]byte, error) {
 	}
 	h := sha256.Sum256(b)
 	if int64(len(b)) != item.Size || hex.EncodeToString(h[:]) != item.SHA256 {
-		return nil, fmt.Errorf("content checksum mismatch: %q", item.SourcePath)
+		return nil, fmt.Errorf("Несовпадение: «content checksum»: %q", item.SourcePath)
 	}
 	if e = ctx.Err(); e != nil {
 		return nil, e

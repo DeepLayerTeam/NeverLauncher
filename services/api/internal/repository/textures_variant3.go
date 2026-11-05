@@ -22,10 +22,10 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
 		return nil, err
 	}
 	if driver != "local" && driver != "s3" {
-		return nil, errors.New("invalid texture driver")
+		return nil, errors.New("Некорректное значение: «texture driver»")
 	}
 	if limit < 1 || limit > 100 {
-		return nil, errors.New("texture GC batch must be between 1 and 100")
+		return nil, errors.New("Для «texture GC batch» требуется: «between 1 and 100»")
 	}
 	rows, err := r.db.QueryContext(ctx, `WITH candidates AS (
    SELECT b.digest FROM texture_blobs b WHERE b.storage_driver=$1
@@ -95,7 +95,7 @@ func (r *SQLRepository) TextureBackupRows0253(ctx context.Context, driver string
 		return nil, err
 	}
 	if driver != "local" && driver != "s3" {
-		return nil, errors.New("invalid driver")
+		return nil, errors.New("Некорректное значение: «driver»")
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT digest,byte_size,storage_driver,object_key FROM texture_blobs
   WHERE status='verified' AND storage_driver=$1 ORDER BY digest`, driver)

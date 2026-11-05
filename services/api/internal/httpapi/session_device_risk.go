@@ -257,18 +257,18 @@ func (s Server) verifyRefreshDeviceProof0126(r *http.Request, refreshToken, devi
 		return nil
 	}
 	if session.DeviceTrustState != "verified" || strings.TrimSpace(deviceID) != session.TrustedDeviceID || strings.TrimSpace(signature) == "" {
-		return errors.New("device proof required")
+		return errors.New("Требуется: «device proof»")
 	}
 	device, err := s.Repo.GetTrustedDevice(session.UserID, session.TrustedDeviceID)
 	if err != nil || device.Status != "active" || device.TrustState != "verified" {
-		return errors.New("trusted device unavailable")
+		return errors.New("Недоступно: «trusted device»")
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		return errors.New("trusted device key invalid")
+		return errors.New("Некорректное значение: «trusted device key»")
 	}
 	if err := verifyDeviceSignature0123(pub, sessionRefreshProofPayload0126(refreshToken, session), signature); err != nil {
-		return errors.New("device refresh proof invalid")
+		return errors.New("Некорректное значение: «device refresh proof»")
 	}
 	_, err = s.Repo.TouchTrustedDevice(r.Context(), session.UserID, session.TrustedDeviceID, clientIP(r), r.UserAgent())
 	return err

@@ -175,7 +175,7 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 	}
 	if out != nil {
 		if len(b) == 0 {
-			return errors.New("empty official Minecraft response")
+			return errors.New("Пустой ответ официального сервиса Minecraft")
 		}
 		if err := json.Unmarshal(b, out); err != nil {
 			return fmt.Errorf("Некорректное значение: официальный Minecraft JSON: %w", err)
@@ -214,7 +214,7 @@ func (c *Client) Begin(ctx context.Context, clientID string) (DeviceCode, error)
 	}
 	u, err := url.Parse(code.VerificationURI)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Fragment != "" || (u.Hostname() != "microsoft.com" && !strings.HasSuffix(u.Hostname(), ".microsoft.com") && u.Hostname() != "microsoftonline.com" && !strings.HasSuffix(u.Hostname(), ".microsoftonline.com")) {
-		return DeviceCode{}, errors.New("untrusted Microsoft verification URI")
+		return DeviceCode{}, errors.New("Недоверенный URI проверки Microsoft")
 	}
 	return code, nil
 }
@@ -238,7 +238,7 @@ func (c *Client) Refresh(ctx context.Context, clientID, refresh string) (OAuthTo
 		return tokens, err
 	}
 	if tokens.AccessToken == "" || tokens.TokenType != "Bearer" {
-		return OAuthTokens{}, errors.New("invalid Microsoft refresh response")
+		return OAuthTokens{}, errors.New("Некорректное значение: «Microsoft refresh response»")
 	}
 	if tokens.RefreshToken == "" {
 		tokens.RefreshToken = refresh
@@ -272,7 +272,7 @@ func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, 
 		return MinecraftToken{}, err
 	}
 	if xbl.Token == "" || len(xbl.DisplayClaims.XUI) != 1 || xbl.DisplayClaims.XUI[0].UHS == "" {
-		return MinecraftToken{}, errors.New("invalid Xbox Live response")
+		return MinecraftToken{}, errors.New("Некорректное значение: «Xbox Live response»")
 	}
 	if stagePassed != nil {
 		stagePassed("xbox_live")
@@ -293,7 +293,7 @@ func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, 
 		return MinecraftToken{}, err
 	}
 	if xsts.Token == "" || len(xsts.DisplayClaims.XUI) != 1 || xsts.DisplayClaims.XUI[0].UHS != xbl.DisplayClaims.XUI[0].UHS {
-		return MinecraftToken{}, errors.New("Xbox identity mismatch")
+		return MinecraftToken{}, errors.New("Несовпадение: «Xbox identity»")
 	}
 	if stagePassed != nil {
 		stagePassed("xsts")
@@ -334,10 +334,10 @@ func (c *Client) Entitled(ctx context.Context, token string) error {
 }
 func (c *Client) UploadSkin(ctx context.Context, token, variant string, png []byte) (Profile, error) {
 	if variant != "classic" && variant != "slim" {
-		return Profile{}, errors.New("invalid Minecraft skin variant")
+		return Profile{}, errors.New("Некорректное значение: «Minecraft skin variant»")
 	}
 	if len(png) == 0 || len(png) > 4<<20 {
-		return Profile{}, errors.New("invalid Minecraft skin payload")
+		return Profile{}, errors.New("Некорректное значение: «Minecraft skin payload»")
 	}
 	var b bytes.Buffer
 	mw := multipart.NewWriter(&b)

@@ -35,7 +35,7 @@ func singleNodeReadBounded0330(dir, name string) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() <= 0 || st.Size() > 2*1024*1024 {
-		return nil, fmt.Errorf("GA evidence %s must be a nonempty ordinary file <= 2 MiB", name)
+		return nil, fmt.Errorf("Для «GA evidence» %s требуется: «a nonempty ordinary file <= 2 MiB»", name)
 	}
 	return os.ReadFile(path)
 }
@@ -53,7 +53,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		publicKeyFile = os.Getenv("LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE")
 	}
 	if strings.TrimSpace(publicKeyFile) == "" {
-		return errors.New("0.33.0 GA requires independent LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE")
+		return errors.New("Для «0.33.0 GA» требуется «independent LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE»")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, publicKeyFile); err != nil {
 		return err
@@ -80,7 +80,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	}
 	signature, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(sigRaw)))
 	if err != nil || len(signature) != ed25519.SignatureSize || !ed25519.Verify(pub, reportRaw, signature) {
-		return errors.New("independent operator Ed25519 GA signature invalid")
+		return errors.New("Некорректное значение: «independent operator Ed25519 GA signature»")
 	}
 	var report struct {
 		Schema      string `json:"schema"`
@@ -120,7 +120,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	}
 	for _, c := range expectedChecks {
 		if report.Checks[c] != "pass" {
-			return fmt.Errorf("missing passing GA scenario: %s", c)
+			return fmt.Errorf("Отсутствует: «passing GA scenario»: %s", c)
 		}
 	}
 	if len(report.TestedArtifacts) != 3 {
@@ -129,7 +129,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	for _, name := range []string{"launcher-api-linux-x64", "launcher-cli-linux-x64", "launcher-linux-x64-0.33.0.tar.gz"} {
 		digest, ok := report.TestedArtifacts[name]
 		if !ok || !bomSHA03214(digest) {
-			return fmt.Errorf("missing SHA-256 of tested artifact %s", name)
+			return fmt.Errorf("Отсутствует: «SHA-256 of tested artifact» %s", name)
 		}
 	}
 	var rc struct {
@@ -163,7 +163,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		seen := map[string]bool{}
 		for _, name := range suite.Passed {
 			if name == "" || seen[name] {
-				return errors.New("duplicate RC test result")
+				return errors.New("Обнаружен дубликат: «RC test result»")
 			}
 			seen[name] = true
 		}
@@ -269,7 +269,7 @@ func verifySingleNodeGATestedArtifacts0330(dir string) error {
 		}
 		actual, _, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return fmt.Errorf("GA tested artifact %s missing: %w", name, err)
+			return fmt.Errorf("Отсутствует: «GA tested artifact» %s: %w", name, err)
 		}
 		if actual != expected {
 			return fmt.Errorf("GA tested artifact %s differs from independently approved bytes", name)

@@ -276,7 +276,7 @@ def verify_10k(
     repetitions: int = 3,
 ) -> dict:
     if count < 1 or count > 100_000 or repetitions < 1:
-        raise ValueError("count and repetitions must be positive")
+        raise ValueError("Для «count and repetitions» требуется: «positive»")
     root = work / "files"
     (root / "libraries/benchmark").mkdir(parents=True, exist_ok=True)
     entries = []
@@ -336,7 +336,7 @@ class RepeatingRangeServer:
 
     def __init__(self, block: bytes, size: int):
         if not block or size < 1:
-            raise ValueError("invalid HTTP benchmark payload")
+            raise ValueError("Некорректное значение: «HTTP benchmark payload»")
         self.block, self.size = block, size
         self.transferred = 0
         self.requests: list[dict] = []
@@ -434,7 +434,7 @@ def benchmark_download(
     runtime: Path, signer: Path, work: Path, size_mib: int, repetitions: int = 3
 ) -> dict:
     if size_mib < 1 or repetitions < 1:
-        raise ValueError("invalid download size or repetitions")
+        raise ValueError("Некорректное значение: «download size or repetitions»")
     size = size_mib * MIB
     # Одна установленная копия может сосуществовать с нативным кэшем с адресацией
     # по содержимому. Отклоняйте опасную нагрузку на диск вместо заполнения
@@ -627,7 +627,7 @@ def benchmark_api(
         or parsed.query
         or parsed.fragment
     ):
-        raise ValueError("absolute HTTP(S) endpoint without credentials/query required")
+        raise ValueError("Требуется: «absolute HTTP(S) endpoint without credentials/query»")
     if (
         parsed.hostname not in ("127.0.0.1", "localhost", "::1")
         and os.getenv("LAUNCHER_BENCH_ALLOW_REMOTE") != "YES"
@@ -750,7 +750,7 @@ def main() -> int:
     if args.runtime and not args.signer:
         parser.error("--runtime requires --signer")
     if args.runtime and any(n < 1 or n > 10240 for n in args.download_mib):
-        parser.error("download sizes must be in 1..10240 MiB")
+        parser.error("Для «download sizes» требуется: «in 1..10240 MiB»")
     if (
         args.download_mib
         and args.runtime

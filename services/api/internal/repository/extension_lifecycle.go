@@ -27,10 +27,10 @@ func normalizeLifecycleScope0204(scope, scopeID string) (string, string, error) 
 		scopeID = ""
 	case "project":
 		if scopeID == "" {
-			return "", "", errors.New("project extension lifecycle requires scopeId")
+			return "", "", errors.New("Для «project extension lifecycle» требуется «scopeId»")
 		}
 	default:
-		return "", "", errors.New("extension lifecycle scope must be global or project")
+		return "", "", errors.New("Для «extension lifecycle scope» требуется: «global or project»")
 	}
 	return scope, scopeID, nil
 }
@@ -41,7 +41,7 @@ func normalizeLifecycleState0204(v string) (string, error) {
 	case model.ExtensionInstallStateAbsent, model.ExtensionInstallStateDisabled, model.ExtensionInstallStateEnabled, model.ExtensionInstallStateError:
 		return v, nil
 	default:
-		return "", fmt.Errorf("invalid extension lifecycle state %q", v)
+		return "", fmt.Errorf("Некорректное значение: «extension lifecycle state» %q", v)
 	}
 }
 
@@ -66,13 +66,13 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 	in.Operation = strings.ToLower(strings.TrimSpace(in.Operation))
 	in.BackupPath = strings.TrimSpace(in.BackupPath)
 	if _, ok := lifecycleOperation0204[in.Operation]; !ok {
-		return model.ExtensionLifecycleTransition{}, fmt.Errorf("invalid lifecycle operation %q", in.Operation)
+		return model.ExtensionLifecycleTransition{}, fmt.Errorf("Некорректное значение: «lifecycle operation» %q", in.Operation)
 	}
 	if in.DesiredVersion == "" || !extensionSemver0201.MatchString(in.DesiredVersion) {
-		return model.ExtensionLifecycleTransition{}, errors.New("desired lifecycle version must be semver")
+		return model.ExtensionLifecycleTransition{}, errors.New("Для «desired lifecycle version» требуется: «semver»")
 	}
 	if in.CurrentVersion != "" && !extensionSemver0201.MatchString(in.CurrentVersion) {
-		return model.ExtensionLifecycleTransition{}, errors.New("current lifecycle version must be semver or empty")
+		return model.ExtensionLifecycleTransition{}, errors.New("Для «current lifecycle version» требуется: «semver or empty»")
 	}
 	in.DesiredState, err = normalizeLifecycleState0204(in.DesiredState)
 	if err != nil {
@@ -84,28 +84,28 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 	}
 	if in.CurrentState == model.ExtensionInstallStateAbsent {
 		if in.CurrentVersion != "" || in.CurrentPackageIdentity != "" || in.Enabled {
-			return model.ExtensionLifecycleTransition{}, errors.New("absent current state cannot have version/package/enabled")
+			return model.ExtensionLifecycleTransition{}, errors.New("«absent current state»: запрещено «have version/package/enabled»")
 		}
 	} else if in.CurrentVersion == "" {
-		return model.ExtensionLifecycleTransition{}, errors.New("non-absent current state requires current version")
+		return model.ExtensionLifecycleTransition{}, errors.New("Для «non-absent current state» требуется «current version»")
 	}
 	if (in.CurrentState == model.ExtensionInstallStateEnabled) != in.Enabled {
 		return model.ExtensionLifecycleTransition{}, errors.New("enabled flag must match current state")
 	}
 	if in.PackageIdentity != "" && !registryIdentity0203.MatchString(in.PackageIdentity) {
-		return model.ExtensionLifecycleTransition{}, errors.New("invalid desired package identity")
+		return model.ExtensionLifecycleTransition{}, errors.New("Некорректное значение: «desired package identity»")
 	}
 	if in.CurrentPackageIdentity != "" && !registryIdentity0203.MatchString(in.CurrentPackageIdentity) {
-		return model.ExtensionLifecycleTransition{}, errors.New("invalid current package identity")
+		return model.ExtensionLifecycleTransition{}, errors.New("Некорректное значение: «current package identity»")
 	}
 	if in.PreviousPackageIdentity != "" && !registryIdentity0203.MatchString(in.PreviousPackageIdentity) {
-		return model.ExtensionLifecycleTransition{}, errors.New("invalid previous package identity")
+		return model.ExtensionLifecycleTransition{}, errors.New("Некорректное значение: «previous package identity»")
 	}
 	if in.Source == "" {
 		in.Source = "registry"
 	}
 	if in.ExpectedGeneration < 0 {
-		return model.ExtensionLifecycleTransition{}, errors.New("expected generation cannot be negative")
+		return model.ExtensionLifecycleTransition{}, errors.New("«expected generation»: запрещено «be negative»")
 	}
 	return in, nil
 }
@@ -192,7 +192,7 @@ func (r *MemoryRepository) TransitionExtensionInstall(ctx context.Context, trans
 	}
 	if idx < 0 {
 		if transition.ExpectedGeneration != 0 {
-			return model.ExtensionInstall{}, fmt.Errorf("%w: lifecycle generation changed", ErrConflict)
+			return model.ExtensionInstall{}, fmt.Errorf("Обнаружено изменение: «%w: lifecycle generation»", ErrConflict)
 		}
 		found := false
 		for _, v := range r.extensionVersions {

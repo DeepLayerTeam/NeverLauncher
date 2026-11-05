@@ -55,7 +55,7 @@ func isSafeRegular(p string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("unsafe SQLite file %q (require regular 0600)", p)
+		return fmt.Errorf("Небезопасное значение: «SQLite file %q (require regular 0600)»", p)
 	}
 	return nil
 }
@@ -116,7 +116,7 @@ func snapshotCheck(ctx context.Context, path string) (int, error) {
 		return 0, err
 	}
 	if hasForeignKeyError {
-		return 0, errors.New("snapshot foreign_key_check failed")
+		return 0, errors.New("Ошибка: «snapshot foreign_key_check»")
 	}
 	var version int
 	if err = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
@@ -180,7 +180,7 @@ func writeManifest(path string, m BackupManifest) error {
 }
 func requireNewBackupPath(source, dest string) (string, string, error) {
 	if source == "" || dest == "" || strings.ContainsAny(dest, "\x00\r\n") {
-		return "", "", errors.New("missing or invalid backup path")
+		return "", "", errors.New("Путь к резервной копии отсутствует или некорректен")
 	}
 	src, err := filepath.Abs(source)
 	if err != nil {
@@ -264,7 +264,7 @@ func OnlineBackup(ctx context.Context, source, destination string) (m BackupMani
 		return m, e
 	}
 	if size == 0 {
-		return m, errors.New("empty SQLite backup")
+		return m, errors.New("Пустое значение: резервная копия SQLite")
 	}
 	m = BackupManifest{Format: BackupFormat, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), SHA256: digest, Bytes: size, SchemaVersion: v, SQLiteVersion: EngineVersion}
 	// Публикуйте неизменяемые БД и манифест; неполная публикация копии отклоняется
@@ -327,7 +327,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 		return m, err
 	}
 	if m.Format != BackupFormat || m.SQLiteVersion != EngineVersion || m.Bytes <= 0 || len(m.SHA256) != 64 || m.CreatedAt == "" {
-		return m, errors.New("unsupported or invalid backup metadata")
+		return m, errors.New("Метаданные резервной копии не поддерживаются или некорректны")
 	}
 	if _, e := time.Parse(time.RFC3339Nano, m.CreatedAt); e != nil {
 		return m, e
@@ -337,7 +337,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 		return m, err
 	}
 	if n != m.Bytes || digest != m.SHA256 {
-		return m, errors.New("SQLite backup SHA-256 or length mismatch")
+		return m, errors.New("Несовпадение: «SQLite backup SHA-256 or length»")
 	}
 	v, err := snapshotCheck(ctx, abs)
 	if err != nil {
@@ -355,7 +355,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 // долговременную жёсткую ссылку в той же файловой системе для отката оператором.
 func RestoreBackup(ctx context.Context, backup, target string, replace bool) (rollback string, err error) {
 	if backup == "" || target == "" {
-		return "", errors.New("backup and target required")
+		return "", errors.New("Требуется: «backup and target»")
 	}
 	src, e := filepath.Abs(backup)
 	if e != nil {
@@ -366,7 +366,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 		return "", e
 	}
 	if src == dst || src == dst+".json" {
-		return "", errors.New("source and target overlap")
+		return "", errors.New("Исходный и целевой каталоги пересекаются")
 	}
 	if _, err = VerifyBackup(ctx, src); err != nil {
 		return "", err
@@ -393,10 +393,10 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 	old := false
 	if st, e := os.Lstat(dst); e == nil {
 		if !replace {
-			return "", errors.New("target already exists; explicit --replace required")
+			return "", errors.New("Целевой объект уже существует; необходимо явно указать --replace")
 		}
 		if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Mode()&os.ModeSymlink != 0 {
-			return "", errors.New("unsafe restore target")
+			return "", errors.New("Небезопасное значение: «restore target»")
 		}
 		old = true
 	} else if !os.IsNotExist(e) {
@@ -435,7 +435,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 		return "", e
 	}
 	if copied != manifest.SHA256 {
-		return "", errors.New("backup changed during restore copy")
+		return "", errors.New("Резервная копия изменилась во время копирования при восстановлении")
 	}
 	if _, err = snapshotCheck(ctx, temp); err != nil {
 		return "", err

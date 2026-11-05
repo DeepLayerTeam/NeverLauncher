@@ -23,7 +23,7 @@ func parseNetworkCapacity0288(data []byte) (*int, error) {
 		return nil, errors.New("trailing capacity JSON")
 	}
 	if n < 0 || n > 1000000 {
-		return nil, errors.New("capacityLimit must be 0..1000000")
+		return nil, errors.New("Для «capacityLimit» требуется: «0..1000000»")
 	}
 	return &n, nil
 }

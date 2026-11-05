@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 
@@ -1357,7 +1358,7 @@ export function MigrationCenter0331({
           <option value="">Выберите run</option>
           {runs.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.id} · {item.status} · {item.step}
+              {item.id} · {statusRu(item.status)} · {item.step}
             </option>
           ))}
         </select>
@@ -2539,7 +2540,7 @@ export function MigrationCenter0331({
       {run && (
         <article className="subcard" role="status">
           <p>
-            <strong>Статус:</strong> {run.status} ·{" "}
+            <strong>Статус:</strong> {statusRu(run.status)} ·{" "}
             <strong>Текущий шаг:</strong> {run.step} ·{" "}
             <strong>Редакция:</strong> {run.revision} · <strong>Барьер:</strong>{" "}
             {run.fence}

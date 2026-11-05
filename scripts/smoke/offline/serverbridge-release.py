@@ -75,7 +75,7 @@ import json
 
 targets = json.loads(read("serverbridge/targets.json"))
 if targets.get("productVersion") != version or targets.get("protocolVersion") != 3:
-    raise SystemExit("ServerBridge matrix version/protocol mismatch")
+    raise SystemExit("Несовпадение: «ServerBridge matrix version/protocol»")
 ids = [x.get("id") for x in targets.get("targets", [])]
 if ids != [
     "velocity",
@@ -93,7 +93,7 @@ if ids != [
     "sponge",
     "vanilla",
 ]:
-    raise SystemExit(f"ServerBridge 3 target cohort mismatch: {ids}")
+    raise SystemExit(f"Несовпадение: «ServerBridge 3 target cohort»: {ids}")
 print(
     f"Launcher {version} ServerBridge 3 release gate: OK (14-platform certified cohort)"
 )

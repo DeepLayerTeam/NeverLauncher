@@ -32,7 +32,7 @@ def evidence_files(version: str = "0.43.1") -> tuple[str, ...]:
 
 def package(evidence: Path, approval: dict, destination: Path, *, now=None) -> None:
     if not required(approval["version"]):
-        raise ValueError("security evidence bundling requires 0.43.1+")
+        raise ValueError("Для «security evidence bundling» требуется «0.43.1+»")
     verify_all(evidence, approval, now=now)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".tmp")
@@ -42,7 +42,7 @@ def package(evidence: Path, approval: dict, destination: Path, *, now=None) -> N
             for relative in evidence_files(approval["version"]):
                 path = evidence / relative
                 if path.is_symlink() or not path.is_file():
-                    raise ValueError("missing security evidence for archive: " + relative)
+                    raise ValueError("Отсутствует: «security evidence for archive:»" + relative)
                 info = ZipInfo(relative, (1980, 1, 1, 0, 0, 0))
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o100600 << 16

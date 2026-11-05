@@ -311,7 +311,7 @@ func Pack(source, version, privateKey, destination string) error {
 		}
 		rel = filepath.ToSlash(rel)
 		if !validRel(rel) || rel == "manifest.json" || rel == "manifest.sig" {
-			return errors.New("unsafe path")
+			return errors.New("Небезопасное значение: путь")
 		}
 		if info.Size() > maxFile {
 			return errors.New("Файл слишком большой")

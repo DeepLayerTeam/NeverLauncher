@@ -128,7 +128,7 @@ if {
 } != blocked:
     raise SystemExit("Upstream-unavailable target set or reason drift")
 if any((row.get("os"), row.get("arch")) != ("linux", "x86_64") for row in unavailable):
-    raise SystemExit("Unexpected unavailable platform")
+    raise SystemExit("Неожиданное значение: «unavailable platform»")
 family_counts = Counter(row.get("loader") for row in targets)
 expected_families = {
     "vanilla": 109,

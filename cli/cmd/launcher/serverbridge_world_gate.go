@@ -28,7 +28,7 @@ func worldBackupHostGatePath04110(root string) string {
 
 func worldBackupHostGateAcquire04110(root, purpose string) (func(), error) {
 	if purpose != "backup" && purpose != "start" {
-		return nil, errors.New("invalid host gate purpose")
+		return nil, errors.New("Некорректное значение: «host gate purpose»")
 	}
 	identity := hostOwnIdentity0282()
 	if identity == "" {
@@ -88,7 +88,7 @@ func worldBackupHostGateRecover04110(root string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
-		return errors.New("unsafe host gate entry")
+		return errors.New("Небезопасное значение: «host gate entry»")
 	}
 	var owner worldHostGate04110
 	if err = worldBackupReadJSON02810(filepath.Join(path, "owner.json"), &owner); err != nil {
@@ -115,7 +115,7 @@ func worldBackupHostGateRecover04110(root string) error {
 	}
 	lock, lockErr := readServerBridgeHostLock01910(paths["lock"])
 	if lockErr != nil && !errors.Is(lockErr, os.ErrNotExist) {
-		return fmt.Errorf("cannot verify host lock: %w", lockErr)
+		return fmt.Errorf("Не удалось проверить «host lock:» %w", lockErr)
 	}
 	if lockErr == nil && (hostIdentityMatches0282(lock.PID, lock.Identity) || (lock.Identity == "" && updaterProcessAlive0156(lock.PID))) {
 		return errors.New("host supervisor lock remains active")
@@ -125,7 +125,7 @@ func worldBackupHostGateRecover04110(root string) error {
 		return err
 	}
 	if len(entries) != 1 || entries[0].Name() != "owner.json" || !entries[0].Type().IsRegular() {
-		return errors.New("unexpected contents of maintenance gate")
+		return errors.New("Неожиданное значение: «contents of maintenance gate»")
 	}
 	if err := os.Remove(filepath.Join(path, "owner.json")); err != nil {
 		return err

@@ -686,12 +686,12 @@ export function RegistryWorkspace({
             onChange={setRegistryMaxLauncher}
           />
           <TextInput
-            label="OS (через запятую)"
+            label="Операционные системы (через запятую)"
             value={registryPublishOS}
             onChange={setRegistryPublishOS}
           />
           <TextInput
-            label="Architecture (через запятую)"
+            label="Архитектуры (через запятую)"
             value={registryPublishArch}
             onChange={setRegistryPublishArch}
           />

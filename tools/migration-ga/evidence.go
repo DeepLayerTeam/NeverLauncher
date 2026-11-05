@@ -26,7 +26,7 @@ func verifyExecutable(c Check) error {
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 || info.Size() <= 0 || info.Size() > 128<<20 {
-		return errors.New("GA check must be an executable, bounded, regular file (no symlink)")
+		return errors.New("Для «GA check» требуется: «an executable, bounded, regular file (no symlink)»")
 	}
 	actual, err := shaFile(c.Command[0], 128<<20)
 	if err != nil {
@@ -40,7 +40,7 @@ func verifyExecutable(c Check) error {
 
 func preserveEvidence(dir, name, source, expected string, receipt []byte) error {
 	if !referenceCheck(name) {
-		return errors.New("unknown GA check")
+		return errors.New("Неизвестное значение: «GA check»")
 	}
 	info, err := os.Lstat(source)
 	if err != nil {
@@ -110,21 +110,21 @@ func checkPrivateRegular(filename string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > limit {
-		return nil, errors.New("evidence must be a bounded regular file, not a symlink")
+		return nil, errors.New("Для подтверждающие данные требуется: «a bounded regular file, not a symlink»")
 	}
 	return os.ReadFile(filename)
 }
 
 func verifyEvidence(b Bundle, dir string) error {
 	if !filepath.IsAbs(dir) || dir == "" {
-		return errors.New("absolute evidence directory required")
+		return errors.New("Требуется: «absolute evidence directory»")
 	}
 	info, err := os.Lstat(dir)
 	if err != nil {
 		return err
 	}
 	if !info.IsDir() || info.Mode().Perm()&0077 != 0 {
-		return errors.New("evidence directory must be private (0700)")
+		return errors.New("Для каталог подтверждающих данных требуется: приватные права 0700")
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -140,7 +140,7 @@ func verifyEvidence(b Bundle, dir string) error {
 	}
 	for _, entry := range entries {
 		if !approved[entry.Name()] || !entry.Type().IsRegular() {
-			return fmt.Errorf("unexpected or nonregular evidence: %s", entry.Name())
+			return fmt.Errorf("Неожиданное значение: «or nonregular evidence»: %s", entry.Name())
 		}
 	}
 	for _, check := range b.Checks {
@@ -168,12 +168,12 @@ func verifyEvidence(b Bundle, dir string) error {
 		}
 		sum, err := shaFile(evidence, 128<<20)
 		if err != nil || sum != check.EvidenceSHA256 {
-			return fmt.Errorf("%s evidence SHA-256 mismatch", check.Name)
+			return fmt.Errorf("Несовпадение: «%s evidence SHA-256»", check.Name)
 		}
 		if check.Name == "uuid-world-plugin-data" {
 			auditRaw, readErr := os.ReadFile(evidence)
 			if readErr != nil || len(auditRaw) > maxDocument || validateStateAuditEvidence(auditRaw, probe) != nil {
-				return errors.New("retained state audit does not match signed receipt")
+				return errors.New("«retained state audit» не совпадает с «signed receipt»")
 			}
 			if len(probe.SourceUUIDs) == 0 || len(probe.SourceUUIDs) != len(probe.TargetUUIDs) || !digest(probe.SourceWorldSHA256) || probe.SourceWorldSHA256 != probe.TargetWorldSHA256 || !digest(probe.SourcePluginSHA256) || probe.SourcePluginSHA256 != probe.TargetPluginSHA256 {
 				return errors.New("incomplete world/identity cross-check")
@@ -183,11 +183,11 @@ func verifyEvidence(b Bundle, dir string) error {
 			sort.Strings(source)
 			sort.Strings(target)
 			if !bytes.Equal([]byte(strings.Join(source, "\n")), []byte(strings.Join(target, "\n"))) {
-				return errors.New("source/target UUID mismatch")
+				return errors.New("Несовпадение: «source/target UUID»")
 			}
 			for i, id := range source {
 				if id == "" || (i > 0 && id == source[i-1]) {
-					return errors.New("duplicate or empty player UUID")
+					return errors.New("Обнаружен дубликат: «or empty player UUID»")
 				}
 			}
 		}
@@ -215,7 +215,7 @@ func loadTrustedKey(filename string) (ed25519.PublicKey, error) {
 	}
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
-		return nil, errors.New("trusted key must be Ed25519")
+		return nil, errors.New("Для «trusted key» требуется: Ed25519")
 	}
 	return pub, nil
 }
@@ -239,14 +239,14 @@ func verifyCohort(keyFile string, cohort map[string]CohortInput) error {
 		return err
 	}
 	if len(cohort) != len(referenceClasses) {
-		return errors.New("all three migration reference classes required")
+		return errors.New("Требуется: «all three migration reference classes»")
 	}
 	seenProject, seenSource, seenRun := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	commit := ""
 	for _, class := range referenceClasses {
 		input, ok := cohort[class]
 		if !ok || input.Certificate == "" || input.EvidenceDir == "" {
-			return fmt.Errorf("missing reference class %s", class)
+			return fmt.Errorf("Отсутствует: «reference class» %s", class)
 		}
 		b, err := readCertificate(input.Certificate)
 		if err != nil {

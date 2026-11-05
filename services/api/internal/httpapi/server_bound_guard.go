@@ -17,11 +17,11 @@ const guardSessionBatchSize0507 = 32
 
 func (s Server) guardBoundStore0507() (repository.GuardBoundSessionStore0507, error) {
 	if s.State == nil || s.State.ServerBridge == nil {
-		return nil, errors.New("Guard Session backend unavailable")
+		return nil, errors.New("Недоступно: «Guard Session backend»")
 	}
 	store, ok := s.State.ServerBridge.backendV2().(repository.GuardBoundSessionStore0507)
 	if !ok {
-		return nil, errors.New("Guard Session requires durable PostgreSQL backend")
+		return nil, errors.New("Для сессия Guard требуется «durable PostgreSQL backend»")
 	}
 	return store, nil
 }
@@ -32,7 +32,7 @@ func (s Server) guardBoundStore0507() (repository.GuardBoundSessionStore0507, er
 // компонентов.
 func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPlanEvidence02412, verified model.DeviceChallenge) (repository.GuardBoundSession0507, error) {
 	if verifiedPlan == nil || verified.ID == "" || join.SessionCorrelationID == "" {
-		return repository.GuardBoundSession0507{}, errors.New("verified build and Guard evidence required")
+		return repository.GuardBoundSession0507{}, errors.New("Требуется: «verified build and Guard evidence»")
 	}
 	m := verified.Metadata
 	major, err := strconv.Atoi(metadataString0121(m, "javaMajor"))
@@ -61,7 +61,7 @@ func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPl
 		verifiedPlan.GuardAttestationSHA256 != metadataString0121(m, "attestationSha256") ||
 		metadataString0121(m, "sessionId") != b.SessionID || metadataString0121(m, "bindingEpoch") != strconv.FormatInt(b.BindingEpoch, 10) ||
 		metadataString0121(m, "minecraftSessionId") != b.MinecraftSessionID && b.IdentityRealm != "official" {
-		return repository.GuardBoundSession0507{}, errors.New("Guard / component plan session binding mismatch")
+		return repository.GuardBoundSession0507{}, errors.New("Несовпадение: «Guard / component plan session binding»")
 	}
 	if !isSHA256Hex0134(b.CorrelationID) || !isSHA256Hex0134(b.PlanSHA256) || !isSHA256Hex0134(b.CatalogSHA256) ||
 		!isHexLength02412(b.ReleaseSignature, 128) || !isSHA256Hex0134(b.GuardAttestationSHA256) || !isSHA256Hex0134(b.GuardEvidenceSHA256) ||
@@ -71,7 +71,7 @@ func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPl
 		return repository.GuardBoundSession0507{}, errors.New("Неправильный формат: сеанс Guard дайджест")
 	}
 	if join.IdentityRealm != "local" && join.IdentityRealm != "official" {
-		return repository.GuardBoundSession0507{}, errors.New("unknown Minecraft identity realm")
+		return repository.GuardBoundSession0507{}, errors.New("Неизвестное значение: «Minecraft identity realm»")
 	}
 	return b, nil
 }
@@ -105,14 +105,14 @@ func (s Server) requireGuardBoundJoin0507(r *http.Request, join bridgeJoinRecord
 	}
 	b, err := store.GetGuardBoundSession0507(r.Context(), join.SessionCorrelationID)
 	if err != nil {
-		return errors.New("Guard Session signed binding not found")
+		return errors.New("Не найдено: «Guard Session signed binding»")
 	}
 	if b.UserID != join.UserID || b.SessionID != join.SessionID || b.MinecraftSessionID != join.MinecraftSessionID ||
 		b.TrustedDeviceID != join.TrustedDeviceID || b.BindingEpoch != join.BindingEpoch || b.ProjectID != join.ProjectID ||
 		b.ProfileID != join.ProfileID || b.Channel != join.Channel || b.PlayerUUID != join.UUID ||
 		!strings.EqualFold(b.Username, join.Username) || b.IdentityRealm != join.IdentityRealm ||
 		(!handoff && (b.JoinID != join.ID || b.ServerID != join.ServerID)) {
-		return errors.New("Guard Session account/server/build binding mismatch")
+		return errors.New("Несовпадение: «Guard Session account/server/build binding»")
 	}
 	// Передача через прокси меняет целевой сервер, но не должна расширять
 	// разрешённое множество серверов подписанной сборки. Требуйте явного допуска

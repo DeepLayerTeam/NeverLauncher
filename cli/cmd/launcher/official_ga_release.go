@@ -22,12 +22,12 @@ func verifyOfficialGAReceipt0270(dir, version, expectedCommit string) error {
 		return nil
 	}
 	if !officialGACommit0270.MatchString(expectedCommit) {
-		return errors.New("official Minecraft GA requires exact source commit")
+		return errors.New("Для «official Minecraft GA» требуется точный коммит исходников")
 	}
 	path := filepath.Join(dir, officialGACertification0270)
 	fi, err := os.Lstat(path)
 	if err != nil || !fi.Mode().IsRegular() || fi.Size() > 32*1024 {
-		return errors.New("official Minecraft GA signed receipt missing or invalid")
+		return errors.New("Некорректное значение: «official Minecraft GA signed receipt missing or»")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {

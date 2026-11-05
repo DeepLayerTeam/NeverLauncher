@@ -67,16 +67,16 @@ fn validate_version_id(version: &str) -> Result<(), String> {
     if version.is_empty() || version.len() > 160 ||
        !version.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_' | b'+')) ||
        version == "." || version == ".." || version.starts_with('.') {
-        return Err("Minecraft version must be a single safe version ID".into());
+        return Err("Для версия Minecraft требуется: «a single safe version ID»".into());
     }
     Ok(())
 }
 
 fn inspect_installed_version(root: &Path, version: &str) -> Result<String, String> {
     validate_version_id(version)?;
-    let base = root.canonicalize().map_err(|err| format!("Minecraft root unavailable: {err}"))?;
+    let base = root.canonicalize().map_err(|err| format!("Недоступно: корневой каталог Minecraft: {err}"))?;
     let metadata = base.join("versions").join(version).join(format!("{version}.json"));
-    let resolved = metadata.canonicalize().map_err(|err| format!("Minecraft version JSON unavailable: {err}"))?;
+    let resolved = metadata.canonicalize().map_err(|err| format!("Недоступно: «Minecraft version JSON»: {err}"))?;
     if !resolved.starts_with(base.join("versions")) {
         return Err("Minecraft metadata escapes game root".into());
     }
@@ -85,7 +85,7 @@ fn inspect_installed_version(root: &Path, version: &str) -> Result<String, Strin
         return Err("Minecraft version JSON exceeds 2 MiB".into());
     }
     let metadata: serde_json::Value = serde_json::from_reader(file)
-        .map_err(|err| format!("Minecraft metadata invalid: {err}"))?;
+        .map_err(|err| format!("Некорректное значение: метаданные Minecraft: {err}"))?;
     let main = metadata.get("mainClass").and_then(|v| v.as_str())
         .ok_or("Minecraft metadata missing mainClass")?;
     // Имя загрузчика здесь обозначает только установленные метаданные, а НЕ

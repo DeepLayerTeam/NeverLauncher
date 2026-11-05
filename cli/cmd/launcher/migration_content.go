@@ -20,7 +20,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	}
 	if commit {
 		if len(planSHA) != 64 {
-			return errors.New("content import requires a pinned --plan-sha256 from dry-run")
+			return errors.New("Для «content import» требуется «a pinned --plan-sha256 from dry-run»")
 		}
 		if _, err := hex.DecodeString(planSHA); err != nil {
 			return errors.New("Некорректное значение: план миграции SHA-256")
@@ -33,7 +33,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Gravit content transfer requires HTTPS or local loopback IP")
+			return errors.New("Для «Gravit content transfer» требуется «HTTPS or local loopback IP»")
 		}
 	}
 	f, e := os.Open(source)
@@ -46,7 +46,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 		return e
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("ZIP must be a regular file of 1..512 MiB")
+		return errors.New("Для ZIP требуется: «a regular file of 1..512 MiB»")
 	}
 	r, e := http.NewRequest("POST", endpoint, f)
 	if e != nil {
@@ -119,7 +119,7 @@ func migrationApplyOptionalsCLI0337(endpoint, token, id, out string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("catalog mutation requires HTTPS")
+			return errors.New("Для «catalog mutation» требуется HTTPS")
 		}
 	}
 	r, e := http.NewRequest("POST", endpoint, nil)

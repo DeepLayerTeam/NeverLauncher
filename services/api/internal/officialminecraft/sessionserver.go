@@ -27,7 +27,7 @@ const sessionServerOrigin = "https://sessionserver.mojang.com"
 
 var (
 	ErrOnlineSessionRejected  = errors.New("official online-mode session rejected")
-	ErrOnlineIdentityMismatch = errors.New("online-mode session identity mismatch")
+	ErrOnlineIdentityMismatch = errors.New("Идентификатор онлайн-сессии не совпадает")
 )
 
 // SignedServerHash соответствует Java BigInteger(SHA1(serverId + sharedSecret + DER key)).toString(16).
@@ -66,11 +66,11 @@ func (c *Client) VerifyOnlineSession(ctx context.Context, token string, profile 
 	}
 	der, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return errors.New("invalid online-mode challenge")
+		return errors.New("Некорректный проверочный запрос онлайн-режима")
 	}
 	secret := make([]byte, 16)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		return errors.New("invalid online-mode challenge")
+		return errors.New("Некорректный проверочный запрос онлайн-режима")
 	}
 	hash := SignedServerHash("", secret, der)
 	endpoint := c.sessionserver
@@ -90,18 +90,18 @@ func (c *Client) VerifyOnlineSession(ctx context.Context, token string, profile 
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/session/minecraft/join", bytes.NewReader(join))
 	if err != nil {
-		return errors.New("sessionserver join unavailable")
+		return errors.New("Не удалось подключиться через Minecraft SessionServer")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return errors.New("sessionserver join unavailable")
+		return errors.New("Не удалось подключиться через Minecraft SessionServer")
 	}
 	_, readErr := io.Copy(io.Discard, io.LimitReader(resp.Body, 4097))
 	closeErr := resp.Body.Close()
 	if readErr != nil || closeErr != nil {
-		return errors.New("sessionserver join response invalid")
+		return errors.New("Некорректный ответ Minecraft SessionServer")
 	}
 	if resp.StatusCode != http.StatusNoContent {
 		return &ServiceError{Status: resp.StatusCode, Code: "online_mode_join_rejected"}
@@ -117,7 +117,7 @@ func (c *Client) VerifyOnlineSession(ctx context.Context, token string, profile 
 	verifyReq.Header.Set("Accept", "application/json")
 	checked, err := c.http.Do(verifyReq)
 	if err != nil {
-		return errors.New("sessionserver hasJoined unavailable")
+		return errors.New("Недоступно: «sessionserver hasJoined»")
 	}
 	defer checked.Body.Close()
 	if checked.StatusCode != http.StatusOK {

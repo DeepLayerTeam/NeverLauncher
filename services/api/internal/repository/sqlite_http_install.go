@@ -52,11 +52,11 @@ func (r *SQLiteHTTPRepository0372) InitializeMinimalInstallation0375(ctx context
 		}
 		if hash == "" && !used.Valid && !complete.Valid {
 			if len(r.mem.users) > 0 {
-				return errors.New("SQLite already contains users without installation state; manual recovery required")
+				return errors.New("Требуется: «SQLite already contains users without installation state; manual recovery»")
 			}
 			if token == "" {
 				if require {
-					return errors.New("fresh SQLite production install requires bootstrap token")
+					return errors.New("Для «fresh SQLite production install» требуется «bootstrap token»")
 				}
 				return nil
 			}
@@ -114,7 +114,7 @@ func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context
 		return model.User{}, err
 	}
 	if stored == "" || used.Valid || completed.Valid || subtle.ConstantTimeCompare([]byte(stored), []byte(minimalTokenDigest0375(token))) != 1 {
-		return model.User{}, errors.New("invalid or consumed bootstrap token")
+		return model.User{}, errors.New("Некорректное значение: «or consumed bootstrap token»")
 	}
 	created, err := r.mem.SaveUser(user)
 	if err != nil {
@@ -174,7 +174,7 @@ func (r *SQLiteHTTPRepository0372) CompleteMinimalInstallation0375(ctx context.C
 		return r.failed
 	}
 	if len(r.mem.users) == 0 || len(r.mem.projects) == 0 {
-		return errors.New("installation requires an administrator and project")
+		return errors.New("Для «installation» требуется «an administrator and project»")
 	}
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var used, completed sql.NullInt64
@@ -185,7 +185,7 @@ func (r *SQLiteHTTPRepository0372) CompleteMinimalInstallation0375(ctx context.C
 			return nil
 		}
 		if !used.Valid {
-			return errors.New("bootstrap administrator must be created before completion")
+			return errors.New("Для «bootstrap administrator» требуется: «created before completion»")
 		}
 		res, e := q.ExecContext(ctx, `UPDATE http_installation_0375 SET completed_at=?,token_hash='' WHERE singleton=1 AND token_used_at IS NOT NULL AND completed_at IS NULL`, time.Now().UTC().Unix())
 		if e != nil {

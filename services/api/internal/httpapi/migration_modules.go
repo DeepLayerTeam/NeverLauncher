@@ -415,7 +415,7 @@ func decodeMigrationEnrollment0446(r io.Reader, req *moduleEnrollmentRequest0338
 		return err
 	}
 	if req.WrapperPath == "" || req.ID == "" || req.ProfileID == "" || req.PublicKey == "" || req.Kind == "" {
-		return errors.New("missing enrollment fields")
+		return errors.New("Отсутствует: «enrollment fields»")
 	}
 	var other any
 	if err := dec.Decode(&other); err != io.EOF {

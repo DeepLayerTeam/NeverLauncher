@@ -56,7 +56,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		return result, err
 	}
 	if !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return result, errors.New("state snapshot tree must be a real directory")
+		return result, errors.New("Для «state snapshot tree» требуется: настоящий каталог")
 	}
 	paths := make([]string, 0, 128)
 	err = filepath.WalkDir(dir, func(p string, entry os.DirEntry, e error) error {
@@ -74,7 +74,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		}
 		rel, e := filepath.Rel(dir, p)
 		if e != nil || rel == "." || filepath.IsAbs(rel) {
-			return errors.New("invalid snapshot member")
+			return errors.New("Некорректное значение: «snapshot member»")
 		}
 		if child == "world" && rel == "session.lock" {
 			result.excluded = append(result.excluded, filepath.ToSlash(filepath.Join(child, rel)))
@@ -90,7 +90,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		return result, err
 	}
 	if len(paths) == 0 && child == "world" {
-		return result, errors.New("empty Minecraft world tree")
+		return result, errors.New("Пустое значение: «Minecraft world tree»")
 	}
 	sort.Strings(paths)
 	h := sha256.New()
@@ -102,7 +102,7 @@ func stateTree(root, child string) (treeDigest, error) {
 			return result, err
 		}
 		if !before.Mode().IsRegular() || before.Size() > stateMaxFile || before.Size() < 0 {
-			return result, fmt.Errorf("invalid snapshot file %s", rel)
+			return result, fmt.Errorf("Некорректное значение: файл снимка %s", rel)
 		}
 		total += before.Size()
 		if total > stateMaxBytes {
@@ -147,7 +147,7 @@ func stateRoster(root string) ([]string, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 8<<20 {
-		return nil, errors.New("invalid UUID roster")
+		return nil, errors.New("Некорректное значение: «UUID roster»")
 	}
 	f, err := os.Open(p)
 	if err != nil {
@@ -160,7 +160,7 @@ func stateRoster(root string) ([]string, error) {
 	for scanner.Scan() {
 		id := strings.TrimSpace(scanner.Text())
 		if !canonicalUUID.MatchString(id) || seen[id] {
-			return nil, errors.New("invalid or duplicated player UUID in roster")
+			return nil, errors.New("Некорректное значение: «or duplicated player UUID in roster»")
 		}
 		seen[id] = true
 		uuids = append(uuids, id)
@@ -172,7 +172,7 @@ func stateRoster(root string) ([]string, error) {
 		return nil, err
 	}
 	if len(uuids) == 0 {
-		return nil, errors.New("empty player UUID roster")
+		return nil, errors.New("Пустое значение: «player UUID roster»")
 	}
 	sort.Strings(uuids)
 	return uuids, nil
@@ -180,14 +180,14 @@ func stateRoster(root string) ([]string, error) {
 
 func inspectStateRoot(root string) error {
 	if !filepath.IsAbs(root) {
-		return errors.New("snapshot root must be absolute")
+		return errors.New("Для корневой каталог снимков требуется: «absolute»")
 	}
 	info, err := os.Lstat(root)
 	if err != nil {
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("snapshot root must be a real directory")
+		return errors.New("Для корневой каталог снимков требуется: настоящий каталог")
 	}
 	return nil
 }
@@ -209,7 +209,7 @@ func auditState(source, target string) (StateAudit, error) {
 		return a, err
 	}
 	if srcRoot == tgtRoot {
-		return a, errors.New("source and target snapshots must be separate")
+		return a, errors.New("Для «source and target snapshots» требуется: «separate»")
 	}
 	for _, pair := range [][2]string{{srcRoot, tgtRoot}, {tgtRoot, srcRoot}} {
 		rel, relErr := filepath.Rel(pair[0], pair[1])
@@ -217,7 +217,7 @@ func auditState(source, target string) (StateAudit, error) {
 			return a, relErr
 		}
 		if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-			return a, errors.New("source and target snapshot directories must not be nested")
+			return a, errors.New("«source and target snapshot directories»: запрещено «be nested»")
 		}
 	}
 	a.SourceUUIDs, err = stateRoster(source)
@@ -262,7 +262,7 @@ func auditState(source, target string) (StateAudit, error) {
 
 func executeStateAudit(source, target, output string) error {
 	if !filepath.IsAbs(output) {
-		return errors.New("absolute audit output path required")
+		return errors.New("Требуется: «absolute audit output path»")
 	}
 	result, err := auditState(source, target)
 	if err != nil {
@@ -290,7 +290,7 @@ func validateStateAuditEvidence(data []byte, probe Probe) error {
 		a.SourcePluginSHA256 != probe.SourcePluginSHA256 || a.TargetPluginSHA256 != probe.TargetPluginSHA256 ||
 		len(a.SourceUUIDs) == 0 || len(a.SourceUUIDs) != len(probe.SourceUUIDs) ||
 		len(a.TargetUUIDs) != len(probe.TargetUUIDs) {
-		return errors.New("invalid or unbound state audit evidence")
+		return errors.New("Некорректное значение: «or unbound state audit evidence»")
 	}
 	for _, pair := range [][2][]string{{a.SourceUUIDs, probe.SourceUUIDs}, {a.TargetUUIDs, probe.TargetUUIDs}} {
 		left := append([]string(nil), pair[0]...)

@@ -45,7 +45,7 @@ func readPrivateJSON(path string, out any) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() > 1048576 || st.Size() == 0 {
-		return errors.New("input must be private regular file (mode 0600; max 1 MiB)")
+		return errors.New("Для «input» требуется: «private regular file (mode 0600; max 1 MiB)»")
 	}
 	f, err := os.Open(abs)
 	if err != nil {
@@ -131,7 +131,7 @@ func runCoreAction(args []string) int {
 			}
 			err = readPrivateJSON(*input, &v)
 			if err == nil && (v.RoleID == "" || v.Status == "") {
-				err = errors.New("user JSON requires roleId and status")
+				err = errors.New("Для «user JSON» требуется «roleId and status»")
 			}
 			if err == nil && v.ID != "" {
 				var old model.User
@@ -163,7 +163,7 @@ func runCoreAction(args []string) int {
 				output = map[string]string{"status": "recorded"}
 			}
 		default:
-			err = errors.New("unsupported --kind for core-put")
+			err = errors.New("Не поддерживается: «--kind for core-put»")
 		}
 	case "core-draft":
 		output, err = repo.CreateDraft(ctx, *project, *profile, *channel, *version, *actor)
@@ -211,7 +211,7 @@ func runCoreAction(args []string) int {
 		case "counts":
 			output, err = repo.Count(ctx)
 		default:
-			err = errors.New("unsupported --kind for core-get")
+			err = errors.New("Не поддерживается: «--kind for core-get»")
 		}
 	}
 	if err != nil {

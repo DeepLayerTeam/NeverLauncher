@@ -688,7 +688,7 @@ func installVerify(args []string) error {
 	for id, endpoint := range map[string]string{"health": "/health", "ready": "/ready"} {
 		payload, err := httpJSON("GET", backend+endpoint, nil)
 		if err != nil {
-			return fmt.Errorf("install verify %s failed: %w", id, err)
+			return fmt.Errorf("Ошибка: «install verify» %s: %w", id, err)
 		}
 		checks[id] = payload
 	}
@@ -699,13 +699,13 @@ func installVerify(args []string) error {
 	} {
 		payload, err := httpJSONWithAuth("GET", backend+endpoint, nil, token)
 		if err != nil {
-			return fmt.Errorf("install verify %s failed: %w", id, err)
+			return fmt.Errorf("Ошибка: «install verify» %s: %w", id, err)
 		}
 		checks[id] = payload
 	}
 	projects, err := httpJSONWithAuth("GET", backend+"/api/v1/projects", nil, token)
 	if err != nil {
-		return fmt.Errorf("install verify projects failed: %w", err)
+		return fmt.Errorf("Ошибка: «install verify projects»: %w", err)
 	}
 	checks["projects"] = projects
 	return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "profile": flagValue(args, "--profile", "single-server-local"), "backend": backend, "status": "verified", "checks": checks})

@@ -37,7 +37,7 @@ func makeStorage(driver, path, endpoint, bucket, region, key, secret, pathStyle 
 	switch driver {
 	case "local":
 		if path == "" {
-			return nil, errors.New("local storage path required")
+			return nil, errors.New("Требуется: «local storage path»")
 		}
 		return storage.NewLocalStorage(path), nil
 	case "s3":
@@ -179,7 +179,7 @@ func run() error {
 	report, runErr := runner.Run(ctx, sourceRows)
 	if runErr == nil && !*dryRun {
 		if !isApprovedTexturePlan0445(*approved) || report.PlanSHA256 != *approved {
-			runErr = errors.New("live import requires --approved-plan-sha256 matching the current validated dry-run report")
+			runErr = errors.New("Для «live import» требуется «--approved-plan-sha256 matching the current validated dry-run report»")
 		} else if !texturePreviewClean0445(report) {
 			runErr = errors.New("source preflight is incomplete; resolve failed/unmatched/ambiguous textures before live import")
 		} else {

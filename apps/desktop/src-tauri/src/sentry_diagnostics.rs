@@ -12,16 +12,16 @@ static DIAGNOSTIC_DSN: OnceLock<Option<Destination>> = OnceLock::new();
 struct Destination { ingest: String, key: String, dsn: String }
 
 fn destination(dsn: &str) -> Result<Destination, String> {
-    let u = reqwest::Url::parse(dsn).map_err(|_| "invalid Sentry DSN".to_string())?;
+    let u = reqwest::Url::parse(dsn).map_err(|_| "Некорректное значение: DSN Sentry".to_string())?;
     let host = u.host_str().ok_or("Sentry DSN host missing")?;
     if u.scheme() != "https" && !(u.scheme() == "http" && (host == "localhost" || host == "127.0.0.1" || host == "[::1]")) {
-        return Err("Sentry ingest requires HTTPS".into());
+        return Err("Для «Sentry ingest» требуется HTTPS".into());
     }
     let key = u.username();
-    if key.is_empty() || u.password().is_some() || u.query().is_some() || u.fragment().is_some() { return Err("invalid Sentry DSN credentials".into()); }
+    if key.is_empty() || u.password().is_some() || u.query().is_some() || u.fragment().is_some() { return Err("Некорректное значение: учётные данные DSN Sentry".into()); }
     let segments: Vec<_> = u.path_segments().ok_or("invalid Sentry path")?.collect();
     let project = segments.last().ok_or("missing project ID")?;
-    if project.is_empty() || project.len() > 20 || !project.bytes().all(|c| c.is_ascii_digit()) { return Err("invalid Sentry project ID".into()); }
+    if project.is_empty() || project.len() > 20 || !project.bytes().all(|c| c.is_ascii_digit()) { return Err("Некорректное значение: идентификатор проекта Sentry".into()); }
     let prefix = if segments.len() > 1 { format!("/{}", segments[..segments.len()-1].join("/")) } else { String::new() };
     let port = u.port().map(|p| format!(":{p}")).unwrap_or_default();
     let ingest = format!("{}://{}{}{prefix}/api/{project}/envelope/", u.scheme(), host, port);
@@ -46,7 +46,7 @@ fn frames(input: Vec<BrowserFrame>) -> Vec<serde_json::Value> {
 async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>) -> Result<(), String> {
     let Some(dest) = configured() else {return Ok(())};
     if !CONSENT.load(Ordering::SeqCst) {return Ok(())}
-    let Some(category) = safe_code(category) else {return Err("invalid diagnostic category".into())};
+    let Some(category) = safe_code(category) else {return Err("Некорректное значение: категория диагностики".into())};
     let uuid = {
         // Два случайных UUID v4 избыточны; используйте криптографическую случайность ОС из rand.
         let mut bytes: [u8;16] = rand::random();bytes[6] = (bytes[6]&15)|64;bytes[8] = (bytes[8]&63)|128;
@@ -63,10 +63,10 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
       // Источник приёма настроен оператором. Ответ 30x не должен
       // перенаправлять конверт или заголовок X-Sentry-Auth другому источнику.
       .redirect(reqwest::redirect::Policy::none())
-      .timeout(Duration::from_secs(3)).build().map_err(|_|"cannot create diagnostics client")?
+      .timeout(Duration::from_secs(3)).build().map_err(|_|"Не удалось создать «diagnostics client»")?
       .post(&dest.ingest).header("Content-Type","application/x-sentry-envelope")
       .header("X-Sentry-Auth",format!("Sentry sentry_version=7,sentry_client=launcher.desktop/0.30.9,sentry_key={}",dest.key))
-      .body(envelope).send().await.map_err(|_|"diagnostic transport failed")?;
+      .body(envelope).send().await.map_err(|_|"Ошибка: «diagnostic transport»")?;
     if !response.status().is_success() {return Err(format!("Sentry HTTP {}",response.status().as_u16()))}
     Ok(())
 }

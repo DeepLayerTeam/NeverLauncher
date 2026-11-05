@@ -92,11 +92,11 @@ func (r *SQLRepository) MaterializedBuildForPackage0384(ctx context.Context, pac
 func validWorkspace0226(w BuildWorkspace) error {
 	for _, id := range []string{w.ID, w.ProjectID, w.OwnerID, w.ProfileID, w.Channel, w.Version} {
 		if id == "" || len(id) > 128 || strings.ContainsAny(id, "\x00\r\n") {
-			return errors.New("invalid workspace identity")
+			return errors.New("Некорректное значение: «workspace identity»")
 		}
 	}
 	if w.ProfileRevision < 1 || len(w.ProfileDigest) != 64 || len(w.Files) > 25000 {
-		return errors.New("invalid pinned profile or file count")
+		return errors.New("Некорректное значение: «pinned profile or file count»")
 	}
 	return nil
 }
@@ -120,21 +120,21 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 	switch next.State {
 	case "importing":
 		if next.BuildDigest != "" {
-			return errors.New("importing workspace must not retain build digest")
+			return errors.New("«importing workspace»: запрещено «retain build digest»")
 		}
 	case "staged":
 		if next.BuildDigest != "" {
-			return errors.New("staged workspace must not retain build digest")
+			return errors.New("«staged workspace»: запрещено «retain build digest»")
 		}
 	case "built":
 		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {
-			return errors.New("built workspace requires staged inputs, package and SHA-256 build digest")
+			return errors.New("Для «built workspace» требуется «staged inputs, package and SHA-256 build digest»")
 		}
 		if _, err := hex.DecodeString(next.BuildDigest); err != nil {
-			return errors.New("invalid build digest")
+			return errors.New("Некорректное значение: «build digest»")
 		}
 	default:
-		return errors.New("invalid workspace state transition")
+		return errors.New("Некорректное значение: «workspace state transition»")
 	}
 	if old.PackageID != "" && old.PackageID != next.PackageID {
 		return fmt.Errorf("%w: workspace package reservation is immutable", ErrConflict)
@@ -380,7 +380,7 @@ func (r *SQLRepository) saveBuildWorkspace0401(ctx context.Context, w BuildWorks
 		return w, e
 	}
 	if n != 1 {
-		return w, fmt.Errorf("%w: revision mismatch", ErrConflict)
+		return w, fmt.Errorf("Несовпадение: «%w: revision»", ErrConflict)
 	}
 	return w, tx.Commit()
 }

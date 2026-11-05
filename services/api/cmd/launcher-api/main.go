@@ -144,7 +144,7 @@ func main() {
 		var err error
 		diagnostics, err = sentrydiag.New(os.Getenv("LAUNCHER_SENTRY_BACKEND_DSN"), "launcher@"+version+"+"+commit, cfg.Environment)
 		if err != nil {
-			log.Fatalf("invalid backend Sentry configuration: %v", err)
+			log.Fatalf("Некорректное значение: «backend Sentry configuration»: %v", err)
 		}
 	}
 	defer diagnostics.Close()
@@ -154,7 +154,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if role.name == "migrate" && !cfg.DatabaseAutoMigrate {
-		log.Fatal("migration role requires LAUNCHER_DATABASE_AUTO_MIGRATE=true")
+		log.Fatal("Для «migration role» требуется «LAUNCHER_DATABASE_AUTO_MIGRATE=true»")
 	}
 	if err := httpapi.ValidatePersistenceConfig950(cfg); err != nil {
 		log.Fatal(err)
@@ -206,13 +206,13 @@ func main() {
 		if cfg.DatabaseAutoMigrate {
 			status, err := migrator.ApplyMigrations(ctx)
 			if err != nil {
-				log.Fatalf("database migration failed: %v", err)
+				log.Fatalf("Ошибка: «database migration»: %v", err)
 			}
 			log.Printf("database schema ready migration=%s applied=%d/%d", status.Current, status.Applied, status.Total)
 		} else {
 			status, err := migrator.MigrationStatus(ctx)
 			if err != nil {
-				log.Fatalf("database migration status failed: %v", err)
+				log.Fatalf("Ошибка: «database migration status»: %v", err)
 			}
 			if !status.Compatible || len(status.Pending) > 0 {
 				log.Fatalf("database schema incompatible/pending: current=%s pending=%v", status.Current, status.Pending)
@@ -240,7 +240,7 @@ func main() {
 				ctx, cancel := context.WithTimeout(maintenanceCtx, 20*time.Second)
 				defer cancel()
 				if err := janitor.PruneHWID0299(ctx, time.Now().UTC()); err != nil && ctx.Err() == nil {
-					log.Printf("HWID data retention cleanup failed: %v", err)
+					log.Printf("Ошибка: «HWID data retention cleanup»: %v", err)
 				}
 			}
 			prune()
@@ -281,7 +281,7 @@ func main() {
 	federationCore, err := httpapi.NewFederationCore(federationCtx, repo, cfg)
 	federationCancel()
 	if err != nil {
-		log.Fatalf("federation core initialization failed: %v", err)
+		log.Fatalf("Ошибка: «federation core initialization»: %v", err)
 	}
 	defer federationCore.Close()
 	if err := httpapi.ConfigureAuthCore111(cfg, state); err != nil {
@@ -315,13 +315,13 @@ func main() {
 	}
 	extSecurity, err := extensionsecurity.New(repo, secretKey)
 	if err != nil {
-		log.Fatalf("Extensions capability security initialization failed: %v", err)
+		log.Fatalf("Ошибка: «Extensions capability security initialization»: %v", err)
 	}
 	gaManager := extensionga.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
 	if !noExtensions {
 		report, reconcileErr := gaManager.Reconcile(context.Background())
 		if reconcileErr != nil {
-			log.Fatalf("Extensions GA reconciliation failed: %v", reconcileErr)
+			log.Fatalf("Ошибка: «Extensions GA reconciliation»: %v", reconcileErr)
 		}
 		if len(report.Issues) > 0 {
 			log.Printf("Extensions GA reconciliation checked=%d healthy=%d disabled=%d issues=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
@@ -340,12 +340,12 @@ func main() {
 			BatchSize:      cfg.ExtensionEventsBatchSize,
 		}, repo)
 		if err != nil {
-			log.Fatalf("Extensions event bus initialization failed: %v", err)
+			log.Fatalf("Ошибка: «Extensions event bus initialization»: %v", err)
 		}
 		if sinkRepo, ok := repo.(interface{ SetAuditEventSink(func(model.AuditEvent)) }); ok {
 			sinkRepo.SetAuditEventSink(func(a model.AuditEvent) {
 				if err := events.AuditCreated(context.Background(), a); err != nil {
-					log.Printf("Extensions audit event publish failed: %v", err)
+					log.Printf("Ошибка: «Extensions audit event publish»: %v", err)
 				}
 			})
 		}
@@ -354,7 +354,7 @@ func main() {
 	var host *extensionhost.Supervisor
 	if cfg.ExtensionHostEnabled && !noExtensions {
 		if err := extensionhost.HardenBackendProcess(); err != nil {
-			log.Fatalf("extension host backend memory hardening failed: %v", err)
+			log.Fatalf("Ошибка: «extension host backend memory hardening»: %v", err)
 		}
 		host = extensionhost.New(extensionhost.Config{
 			ExtensionRoot:        cfg.ExtensionRoot,
@@ -392,7 +392,7 @@ func main() {
 			events.SetDispatcher(host)
 		}
 		if err := host.Start(context.Background()); err != nil {
-			log.Fatalf("extension host initialization failed: %v", err)
+			log.Fatalf("Ошибка: «extension host initialization»: %v", err)
 		}
 		defer func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -434,7 +434,7 @@ func main() {
 		// очереди заданий в памяти нет.
 		durableCancel, durableErr := server.StartDurableControlPlaneWithReadiness0455(context.Background(), &workerLastSuccess)
 		if durableErr != nil {
-			log.Fatalf("durable control-plane initialization failed: %v", durableErr)
+			log.Fatalf("Ошибка: «durable control-plane initialization»: %v", durableErr)
 		}
 		defer durableCancel()
 		log.Printf("Durable control-plane worker active: publish, rollback and outbox (role=%s)", role.name)
@@ -444,7 +444,7 @@ func main() {
 		// маршрутов Admin/Auth. Для готовности обязателен успешный шаг обращения к
 		// БД.
 		if err := runWorkerProbe0455(cfg.HTTPAddr, &workerLastSuccess, server.Handler()); err != nil {
-			log.Fatalf("worker probe failed: %v", err)
+			log.Fatalf("Ошибка: «worker probe»: %v", err)
 		}
 		return
 	}
@@ -487,7 +487,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("graceful shutdown failed: %v; closing open connections", err)
+		log.Printf("Ошибка: «graceful shutdown»: %v; closing open connections", err)
 		_ = httpServer.Close()
 	}
 	// Успешное завершение здесь намеренно. Только внешний настроенный менеджер служб

@@ -53,21 +53,21 @@ mod imp {
     fn os_err(label: &str) -> String { format!("{label}: {}", io::Error::last_os_error()) }
 
     unsafe fn set_no_new_privs() -> Result<(), String> {
-        if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 { return Err(os_err("Linux PR_SET_NO_NEW_PRIVS failed")); }
+        if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 { return Err(os_err("Ошибка: «Linux PR_SET_NO_NEW_PRIVS»")); }
         Ok(())
     }
     unsafe fn disable_dumpable() -> Result<(), String> {
-        if libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 { return Err(os_err("Linux PR_SET_DUMPABLE failed")); }
+        if libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 { return Err(os_err("Ошибка: «Linux PR_SET_DUMPABLE»")); }
         Ok(())
     }
     unsafe fn disable_core_dumps() -> Result<(), String> {
         let lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
-        if libc::setrlimit(libc::RLIMIT_CORE, &lim) != 0 { return Err(os_err("Linux setrlimit(RLIMIT_CORE) failed")); }
+        if libc::setrlimit(libc::RLIMIT_CORE, &lim) != 0 { return Err(os_err("Ошибка: «Linux setrlimit(RLIMIT_CORE)»")); }
         Ok(())
     }
     unsafe fn restrict_ptrace() -> Result<(), String> {
         if libc::prctl(PR_SET_PTRACER, 0, 0, 0, 0) != 0 {
-            return Err(os_err("Linux PR_SET_PTRACER failed"));
+            return Err(os_err("Ошибка: «Linux PR_SET_PTRACER»"));
         }
         Ok(())
     }
@@ -83,7 +83,7 @@ mod imp {
             }
             let no_new_privs = unsafe { libc::prctl(libc::PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0) } == 1;
             let dumpable_disabled = unsafe { libc::prctl(libc::PR_GET_DUMPABLE, 0, 0, 0, 0) } == 0;
-            if !no_new_privs || !dumpable_disabled { return Err("Linux production hardening verification failed".into()); }
+            if !no_new_privs || !dumpable_disabled { return Err("Ошибка: «Linux production hardening verification»".into()); }
             Ok(LinuxProductionHardeningReport {
                 hardening_version: GUARD_LINUX_HARDENING_VERSION,
                 pid: std::process::id(), enforced: true, no_new_privs, dumpable_disabled,
@@ -96,7 +96,7 @@ mod imp {
         let hardening = ensure_linux_production_hardening()?;
         let mut sig = 0;
         if unsafe { libc::prctl(libc::PR_GET_PDEATHSIG, &mut sig as *mut libc::c_int) } != 0 {
-            return Err(os_err("Linux PR_GET_PDEATHSIG failed"));
+            return Err(os_err("Ошибка: «Linux PR_GET_PDEATHSIG»"));
         }
         Ok(LinuxGuardPolicyDetails {
             no_new_privs: hardening.no_new_privs,
@@ -130,7 +130,7 @@ mod imp {
 
     pub fn terminate_runtime_process_group(pid: u32) -> Result<(), String> {
         if pid == 0 || pid > i32::MAX as u32 {
-            return Err("Linux runtime process group PID is invalid".to_string());
+            return Err("Некорректное значение: «Linux runtime process group PID»".to_string());
         }
         let rc = unsafe { libc::kill(-(pid as libc::pid_t), libc::SIGKILL) };
         if rc == 0 {
@@ -140,17 +140,17 @@ mod imp {
         if err.raw_os_error() == Some(libc::ESRCH) {
             return Ok(());
         }
-        Err(format!("Linux kill process group {pid} failed: {err}"))
+        Err(format!("Ошибка: «Linux kill process group» {pid}: {err}"))
     }
 
     pub fn runtime_policy(child: &mut Child) -> Result<LinuxRuntimeProcessPolicyReport, String> {
         let pid = child.id().ok_or_else(|| "Linux runtime PID unavailable".to_string())?;
-        let status = std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("read /proc/{pid}/status failed: {e}"))?;
+        let status = std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("Ошибка: «read /proc/{pid}/status»: {e}"))?;
         let no_new_privs = status.lines().find_map(|l| l.strip_prefix("NoNewPrivs:\t")).map(str::trim) == Some("1");
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
-        if pgid < 0 { return Err(os_err("Linux getpgid failed")); }
+        if pgid < 0 { return Err(os_err("Ошибка: «Linux getpgid»")); }
         let own_process_group = pgid as u32 == pid;
-        if !no_new_privs || !own_process_group { return Err("Linux runtime process policy verification failed".into()); }
+        if !no_new_privs || !own_process_group { return Err("Ошибка: «Linux runtime process policy verification»".into()); }
         Ok(LinuxRuntimeProcessPolicyReport {
             schema: "runtime/linux-process-policy/v1".into(), policy_version: 1, pid,
             enforced: true, no_new_privs, parent_death_signal: true, own_process_group,

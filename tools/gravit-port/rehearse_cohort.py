@@ -41,7 +41,7 @@ def json_file(path: Path, limit: int = 1024 * 1024) -> dict:
     try:
         value = json.loads(data)
     except (UnicodeError, ValueError) as exc:
-        raise Blocked("invalid JSON file: " + str(path)) from exc
+        raise Blocked("Некорректное значение: «JSON file:»" + str(path)) from exc
     require(isinstance(value, dict), "expected JSON object: " + str(path))
     return value
 
@@ -66,7 +66,7 @@ def _checked_open(path: Path, limit: int):
             raise
         return stream, st
     except OSError as exc:
-        raise Blocked("cannot open checked migration file: " + str(path)) from exc
+        raise Blocked("Не удалось открыть «checked migration file:»" + str(path)) from exc
 
 
 def _checked_finish(path: Path, stream, st) -> None:

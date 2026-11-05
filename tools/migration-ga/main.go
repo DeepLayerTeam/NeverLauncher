@@ -230,7 +230,7 @@ func digest(s string) bool {
 }
 func decodeStrict(data []byte, v any) error {
 	if len(data) == 0 || len(data) > maxDocument {
-		return errors.New("empty or oversized JSON document")
+		return errors.New("Пустой или слишком большой документ JSON")
 	}
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.DisallowUnknownFields()
@@ -254,7 +254,7 @@ func shaFile(path string, limit int64) (string, error) {
 		return "", e
 	}
 	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > limit {
-		return "", errors.New("evidence must be a nonempty bounded regular file")
+		return "", errors.New("Для подтверждающие данные требуется: «a nonempty bounded regular file»")
 	}
 	h := sha256.New()
 	n, e := io.Copy(h, io.LimitReader(f, limit+1))
@@ -277,12 +277,12 @@ func reportVerified(r Report) error {
 		return e
 	}
 	if hash(b) != d {
-		return errors.New("migration report checksum mismatch")
+		return errors.New("Несовпадение: «migration report checksum»")
 	}
 	stages := map[string]string{}
 	for _, ev := range r.Evidence {
 		if _, ok := stages[ev.Stage]; ok {
-			return errors.New("duplicate report stage")
+			return errors.New("Обнаружен дубликат: «report stage»")
 		}
 		stages[ev.Stage] = ev.State
 	}
@@ -302,7 +302,7 @@ func reportVerified(r Report) error {
 		}
 	}
 	if !active {
-		return errors.New("no active validated migration cutover scope")
+		return errors.New("Отсутствует: «active validated migration cutover scope»")
 	}
 	for _, id := range r.Identities {
 		if id.Status != "imported" && id.Status != "matched" || id.TargetUserID == "" {
@@ -380,7 +380,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			return "", "", errors.New("multiple LaunchServer jars")
 		}
 		if f.UncompressedSize64 == 0 || f.UncompressedSize64 > 32<<20 || f.CompressedSize64 == 0 {
-			return "", "", errors.New("unsafe LaunchServer jar size")
+			return "", "", errors.New("Небезопасное значение: «LaunchServer jar size»")
 		}
 		reader, e := f.Open()
 		if e != nil {
@@ -413,12 +413,12 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			b, e := io.ReadAll(io.LimitReader(read, (64<<10)+1))
 			read.Close()
 			if e != nil || uint64(len(b)) != item.UncompressedSize64 {
-				return "", "", errors.New("invalid jar manifest")
+				return "", "", errors.New("Некорректное значение: «jar manifest»")
 			}
 			manifest = string(b)
 		}
 		if manifest == "" {
-			return "", "", errors.New("missing LaunchServer jar manifest")
+			return "", "", errors.New("Отсутствует: «LaunchServer jar manifest»")
 		}
 		product := ""
 		ver := ""
@@ -444,7 +444,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 		jarHash = hash(data)
 		ver = strings.TrimPrefix(ver, "v")
 		if !gravit57.MatchString(ver) {
-			return "", "", errors.New("unsupported JAR version")
+			return "", "", errors.New("Не поддерживается: «JAR version»")
 		}
 		found = ver
 	}
@@ -469,10 +469,10 @@ func validatePlan(p Plan) error {
 		patch, _ = strconv.Atoi(parts[2])
 	}
 	if !referenceClassValid(p.ReferenceClass) || len(p.RunID) < 8 || len(p.RunID) > 128 || p.ProjectID == "" || !commitHash(p.CommitSHA) || !gravit57.MatchString(p.SourceVersion) || patch < 0 || patch > 12 || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) || p.SigningKey == "" || p.SourceArchive == "" {
-		return errors.New("missing/invalid run, project, source, signing key or commit SHA-256")
+		return errors.New("Отсутствуют или некорректны идентификаторы запуска, проекта, источника, ключа подписи либо SHA-256 коммита")
 	}
 	if !filepath.IsAbs(p.SourceArchive) || !filepath.IsAbs(p.SigningKey) || !filepath.IsAbs(p.SnapshotSourceDir) || !filepath.IsAbs(p.SnapshotTargetDir) || filepath.Clean(p.SnapshotSourceDir) == filepath.Clean(p.SnapshotTargetDir) {
-		return errors.New("source archive and signer key paths must be absolute")
+		return errors.New("Для «source archive and signer key paths» требуется: «absolute»")
 	}
 	if githubSHA := os.Getenv("GITHUB_SHA"); githubSHA != "" && githubSHA != p.CommitSHA {
 		return errors.New("plan commit differs from checked-out CI commit")
@@ -489,7 +489,7 @@ func validatePlan(p Plan) error {
 	}
 	for _, n := range requiredForClass(p.ReferenceClass) {
 		if !seen[n] {
-			return fmt.Errorf("missing mandatory check: %s", n)
+			return fmt.Errorf("Отсутствует: «mandatory check»: %s", n)
 		}
 	}
 	return nil
@@ -504,7 +504,7 @@ type boundedOutput struct {
 
 func (b *boundedOutput) Write(p []byte) (int, error) {
 	if len(p) > b.limit-b.data.Len() {
-		return 0, errors.New("GA probe stdout exceeds 4 MiB")
+		return 0, errors.New("Вывод проверки GA превышает 4 МиБ")
 	}
 	return b.data.Write(p)
 }
@@ -536,14 +536,14 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	out := stdout.data.Bytes()
 	// A replaced test executable cannot contribute to a signed GA result.
 	if err := verifyExecutable(c); err != nil {
-		return result, fmt.Errorf("%s check executable changed: %w", c.Name, err)
+		return result, fmt.Errorf("Обнаружено изменение: «%s check executable»: %w", c.Name, err)
 	}
 	result.DurationMS = time.Since(started).Milliseconds()
 	if cctx.Err() != nil {
 		return result, fmt.Errorf("%s: %w", c.Name, cctx.Err())
 	}
 	if e != nil {
-		return result, fmt.Errorf("%s: independent check failed: %w", c.Name, e)
+		return result, fmt.Errorf("Ошибка: «%s: independent check»: %w", c.Name, e)
 	}
 	var probe Probe
 	if e = decodeStrict(out, &probe); e != nil {
@@ -553,7 +553,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 		return result, fmt.Errorf("%s: missing, false or unbound check evidence", c.Name)
 	}
 	if !filepath.IsAbs(probe.EvidenceFile) {
-		return result, fmt.Errorf("%s: evidence path must be absolute", c.Name)
+		return result, fmt.Errorf("Для «%s: evidence path» требуется: «absolute»", c.Name)
 	}
 	info, e := os.Stat(probe.EvidenceFile)
 	if e != nil || info.ModTime().Before(started.Add(-2*time.Second)) || info.ModTime().After(time.Now().Add(time.Minute)) {
@@ -561,12 +561,12 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	}
 	actual, e := shaFile(probe.EvidenceFile, 128<<20)
 	if e != nil || actual != probe.EvidenceSHA256 {
-		return result, fmt.Errorf("%s: evidence file checksum invalid: %v", c.Name, e)
+		return result, fmt.Errorf("Некорректное значение: «%s: evidence file checksum»: %v", c.Name, e)
 	}
 	if c.Name == "uuid-world-plugin-data" {
 		native, nativeErr := auditState(p.SnapshotSourceDir, p.SnapshotTargetDir)
 		if nativeErr != nil || !native.Matched || native.SourceWorldSHA256 != probe.SourceWorldSHA256 || native.SourcePluginSHA256 != probe.SourcePluginSHA256 || len(native.SourceUUIDs) != len(uuids) {
-			return result, errors.New("independent native source/target snapshot comparison failed")
+			return result, errors.New("Ошибка: «independent native source/target snapshot comparison»")
 		}
 		for i, id := range uuids {
 			if id != native.SourceUUIDs[i] {
@@ -608,7 +608,7 @@ func signingKey(filename string) (ed25519.PrivateKey, error) {
 		return nil, e
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("GA private key must be regular and owner-only (0600)")
+		return nil, errors.New("Для «GA private key» требуется: «regular and owner-only (0600)»")
 	}
 	b, e := os.ReadFile(filename)
 	if e != nil {
@@ -624,7 +624,7 @@ func signingKey(filename string) (ed25519.PrivateKey, error) {
 	}
 	k, ok := key.(ed25519.PrivateKey)
 	if !ok {
-		return nil, errors.New("signer must be independent Ed25519 key")
+		return nil, errors.New("Для «signer» требуется: «independent Ed25519 key»")
 	}
 	return k, nil
 }
@@ -655,7 +655,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 		return e
 	}
 	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.45.0\x00"), raw...), signature) {
-		return errors.New("invalid GA signature")
+		return errors.New("Некорректное значение: «GA signature»")
 	}
 	seen := map[string]bool{}
 	for _, c := range b.Checks {
@@ -681,7 +681,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 // publish operation on the destination filesystem.
 func writePrivate(path string, data []byte) error {
 	if path == "" {
-		return errors.New("output path is required")
+		return errors.New("Требуется: путь вывода")
 	}
 	dir := filepath.Dir(path)
 	f, e := os.CreateTemp(dir, ".migration-ga-*")
@@ -720,10 +720,10 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return err
 	}
 	if evidenceDir == "" || !filepath.IsAbs(evidenceDir) || evidenceDir == filepath.Dir(output) {
-		return errors.New("a separate absolute evidence directory is required")
+		return errors.New("Требуется: «a separate absolute evidence directory»")
 	}
 	if strings.TrimSpace(token) == "" {
-		return errors.New("missing LAUNCHER_MIGRATION_GA_TOKEN")
+		return errors.New("Отсутствует: LAUNCHER_MIGRATION_GA_TOKEN")
 	}
 	source, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
@@ -746,7 +746,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if r.RunID != p.RunID || r.ProjectID != p.ProjectID || r.SourceSHA256 != source {
-		return errors.New("source ZIP, project or run does not match database report")
+		return errors.New("«source ZIP, project or run» не совпадает с «database report»")
 	}
 	// Bind the tested release to an actually active cutover, not merely
 	// a release ID or digest invented by the operator's test scripts.
@@ -765,7 +765,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if review.Status != "rc_reviewed_not_ga_certified" || review.Report.ReportSHA256 != r.ReportSHA256 || review.ReviewedBy == "" || !digest(review.EvidenceSHA256) {
-		return errors.New("missing matching immutable MIG13 RC review")
+		return errors.New("Отсутствует: «matching immutable MIG13 RC review»")
 	}
 	if err := reportVerified(review.Report); err != nil {
 		return err
@@ -774,7 +774,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	seen := map[string]bool{}
 	for _, id := range r.Identities {
 		if seen[id.UUID] {
-			return errors.New("duplicate UUID in migration report")
+			return errors.New("Обнаружен дубликат: «UUID in migration report»")
 		}
 		seen[id.UUID] = true
 		uuids = append(uuids, id.UUID)
@@ -927,7 +927,7 @@ func runMain(args []string) error {
 		}
 		key, ok := anyKey.(ed25519.PublicKey)
 		if !ok {
-			return errors.New("trusted key must be Ed25519")
+			return errors.New("Для «trusted key» требуется: Ed25519")
 		}
 		if e = verifyBundle(b, key); e != nil {
 			return e
@@ -961,6 +961,6 @@ func runMain(args []string) error {
 		}
 		return verifyCohort(*key, cohort)
 	default:
-		return fmt.Errorf("unknown subcommand %q", cmd)
+		return fmt.Errorf("Неизвестное значение: «subcommand» %q", cmd)
 	}
 }

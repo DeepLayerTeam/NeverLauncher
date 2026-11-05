@@ -33,7 +33,7 @@ func runBackupAction(args []string) int {
 		return 2
 	}
 	if len(flags.Args()) != 0 || *timeout <= 0 {
-		fmt.Fprintln(os.Stderr, "invalid backup flags")
+		fmt.Fprintln(os.Stderr, "Некорректное значение: «backup flags»")
 		return 2
 	}
 	if *backup == "" {

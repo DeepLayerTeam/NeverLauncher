@@ -40,7 +40,7 @@ def evidence_files(version: str) -> tuple[str, ...]:
 def safe_member(path: Path) -> bytes:
     # Отклоняйте символьные ссылки в любых родительских каталогах доказательств, а не только конечную ссылку.
     if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
-        raise ValueError("unsafe symlink in GA evidence: " + str(path))
+        raise ValueError("Небезопасное значение: «symlink in GA evidence:»" + str(path))
     if not path.is_file() or not 0 < path.stat().st_size <= MAX_MEMBER:
         raise ValueError("missing, empty or oversized GA execution evidence: " + str(path))
     data = path.read_bytes()
@@ -84,7 +84,7 @@ def package(bundle: Path, evidence: Path, key: Path, version: str, commit: str, 
 def extract_verified(archive_path: Path, destination: Path, version: str) -> None:
     if (archive_path.is_symlink() or not archive_path.is_file()
             or not 0 < archive_path.stat().st_size <= MAX_TOTAL):
-        raise ValueError("missing or unsafe GA execution archive")
+        raise ValueError("Отсутствует: «or unsafe GA execution archive»")
     expected = set(evidence_files(version))
     with ZipFile(archive_path, "r") as archive:
         entries = archive.infolist()
@@ -95,7 +95,7 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
             mode = (entry.external_attr >> 16) & 0o170000
             if (entry.is_dir() or mode not in (0, 0o100000)
                     or not 0 < entry.file_size <= MAX_MEMBER):
-                raise ValueError("unsafe GA execution archive entry: " + entry.filename)
+                raise ValueError("Небезопасное значение: «GA execution archive entry:»" + entry.filename)
             total += entry.file_size
             if total > MAX_TOTAL:
                 raise ValueError("decompressed GA execution evidence exceeds size limit")
@@ -111,7 +111,7 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
                     out.write(chunk)
                     remaining -= len(chunk)
                 if stream.read(1):
-                    raise ValueError("oversized GA execution evidence")
+                    raise ValueError("Превышен допустимый размер: «GA execution evidence»")
 
 
 def main() -> int:

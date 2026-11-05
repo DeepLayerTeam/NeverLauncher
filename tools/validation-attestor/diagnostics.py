@@ -78,10 +78,10 @@ def retain(
     if not re.fullmatch(r"[0-9a-f]{48}", run_id):
         raise ValueError("invalid diagnostic run id")
     if not 1 <= ttl_hours <= 720:
-        raise ValueError("diagnostic ttl must be 1..720 hours")
+        raise ValueError("Для «diagnostic ttl» требуется: «1..720 hours»")
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     if directory.is_symlink() or directory.stat().st_mode & 0o077:
-        raise ValueError("diagnostic directory must be host-owner-only")
+        raise ValueError("Для «diagnostic directory» требуется: «host-owner-only»")
     now = datetime.now(timezone.utc)
     prune(directory, now)
     # Bound total retained log size to 2 MiB. Read past this limit.

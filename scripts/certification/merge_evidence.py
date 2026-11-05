@@ -21,7 +21,7 @@ def combine(paths: list[Path]) -> dict:
         evidence = json.loads(raw)
         os_name = evidence.get("platform", {}).get("system")
         if os_name not in REQUIRED_PLATFORMS or os_name in report["platforms"]:
-            raise ValueError(f"unknown or duplicate platform in {path}: {os_name}")
+            raise ValueError(f"Неизвестное значение: «or duplicate platform in» {path}: {os_name}")
         commit = evidence.get("commit")
         if not re.fullmatch(r"[a-f0-9]{40}", commit or "") or not evidence.get("gitTreeClean"):
             report["unmetGates"].append(f"{os_name}: missing exact clean commit")

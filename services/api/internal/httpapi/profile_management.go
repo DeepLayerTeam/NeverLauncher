@@ -50,14 +50,14 @@ func decodeProfileWrite0225(r *http.Request, out any) error {
 
 func (s Server) profileSnapshotAt0225(project, id string, revision int64) (model.ProfileSnapshot, error) {
 	if revision < 0 {
-		return model.ProfileSnapshot{}, errors.New("revision must be positive")
+		return model.ProfileSnapshot{}, errors.New("Для «revision» требуется: «positive»")
 	}
 	if revision == 0 {
 		return repository.ReadProfileSnapshot(s.Repo, project, id)
 	}
 	reader, ok := s.Repo.(profileRevisionReader0221)
 	if !ok {
-		return model.ProfileSnapshot{}, errors.New("profile revision history unavailable")
+		return model.ProfileSnapshot{}, errors.New("Недоступно: «profile revision history»")
 	}
 	history, err := reader.ListProfileRevisions(project, id)
 	if err != nil {
@@ -172,7 +172,7 @@ func readRevision0225(s string) (int64, error) {
 	}
 	n, err := strconv.ParseInt(s, 10, 64)
 	if err != nil || n < 1 {
-		return 0, errors.New("revision must be positive integer")
+		return 0, errors.New("Для «revision» требуется: «positive integer»")
 	}
 	return n, nil
 }

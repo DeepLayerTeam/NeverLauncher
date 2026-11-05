@@ -15,7 +15,7 @@ var forgeLikeVersion0272 = regexp.MustCompile(`^[0-9][A-Za-z0-9.+_-]*$`)
 
 func validateForgeLikeVersionToken0272(version string) error {
 	if len(version) > 128 || !forgeLikeVersion0272.MatchString(version) || strings.Contains(version, "..") || strings.Contains(version, "--") {
-		return fmt.Errorf("unsafe Forge/NeoForge artifact version %q", version)
+		return fmt.Errorf("Небезопасное значение: «Forge/NeoForge artifact version» %q", version)
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func compareModernVersions0272(a, b string) int {
 func selectModernMetaEntry0272(loader, minecraft, selector string, entries []loaderMetaEntry) (loaderMetaEntry, error) {
 	selector = strings.TrimSpace(selector)
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMetaEntry{}, fmt.Errorf("unknown modern meta adapter %q", loader)
+		return loaderMetaEntry{}, fmt.Errorf("Неизвестное значение: «modern meta adapter» %q", loader)
 	}
 	if len(entries) == 0 {
 		return loaderMetaEntry{}, fmt.Errorf("%s has no loader versions for Minecraft %s", loader, minecraft)

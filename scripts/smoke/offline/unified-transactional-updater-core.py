@@ -118,11 +118,11 @@ for required in [
     'launcher-cli-linux-${{ matrix.arch }}" update self-test',
 ]:
     if required not in ci:
-        raise SystemExit(f"CI updater gate missing: {required}")
+        raise SystemExit(f"Отсутствует: «CI updater gate»: {required}")
 
 preflight = read("scripts/release/preflight.sh")
 if "unified-transactional-updater-core-0156.py" not in preflight:
-    raise SystemExit("preflight updater gate missing")
+    raise SystemExit("Отсутствует: «preflight updater gate»")
 
 subprocess.run(
     [

@@ -428,7 +428,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 				}
 				signingMode, err := normalizeGuardReleaseSigningMode0140(platform, platformPolicy.SigningMode)
 				if err != nil {
-					return nil, fmt.Errorf("Guard release %s platform %s: %w", version, platform, err)
+					return nil, fmt.Errorf("Релиз Guard %s для платформы %s: %w", version, platform, err)
 				}
 				if config.IsProductionEnvironment(s.Config.Environment) {
 					if platform == "windows" && signingMode != "authenticode" {
@@ -446,7 +446,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 				for _, rawPair := range platformPolicy.Artifacts {
 					pair, err := normalizeGuardReleaseArtifactPair0140(rawPair, platform)
 					if err != nil {
-						return nil, fmt.Errorf("Guard release %s platform %s: %w", version, platform, err)
+						return nil, fmt.Errorf("Релиз Guard %s для платформы %s: %w", version, platform, err)
 					}
 					if platform == "windows" {
 						if signingMode == "authenticode" && !pair.RequireAuthenticode {
@@ -465,7 +465,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 				}
 				profiles, err := normalizeGuardRuntimeProfiles0317(platformPolicy.RuntimeProfiles)
 				if err != nil {
-					return nil, fmt.Errorf("Guard release %s platform %s: %w", version, platform, err)
+					return nil, fmt.Errorf("Релиз Guard %s для платформы %s: %w", version, platform, err)
 				}
 				// Windows Guard Attestation v2 содержит свидетельства Runtime. Начиная с
 				// 0.31.7 набор модулей/JVM без закреплённой версии не является

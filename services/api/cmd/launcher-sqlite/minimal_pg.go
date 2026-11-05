@@ -26,7 +26,7 @@ func runMinimalPG0377(command string, args []string) int {
 	}
 	dsn := os.Getenv(*env)
 	if dsn == "" {
-		fmt.Fprintln(os.Stderr, "PostgreSQL DSN environment variable is empty")
+		fmt.Fprintln(os.Stderr, "Пустое значение: переменная окружения DSN PostgreSQL")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)

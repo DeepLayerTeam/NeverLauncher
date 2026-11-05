@@ -63,13 +63,13 @@ func checkSourceFenced0448(ctx context.Context, unit string, run fenceRunner0448
 		return "", "", err
 	}
 	if state != "inactive" || (mask != "masked-runtime" && mask != "masked") {
-		return state, mask, fmt.Errorf("source writer not fenced: ActiveState=%q UnitFileState=%q", state, mask)
+		return state, mask, fmt.Errorf("Процесс записи источника не заблокирован: ActiveState=%q UnitFileState=%q", state, mask)
 	}
 	return state, mask, nil
 }
 func writeExclusiveFence0448(path string, data []byte) error {
 	if path == "" || !filepath.IsAbs(path) {
-		return errors.New("absolute output path required")
+		return errors.New("Необходимо указать абсолютный путь вывода")
 	}
 	// O_EXCL не позволяет повторной попытке перезаписать уже сохранённое свидетельство.
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
@@ -125,7 +125,7 @@ func readFenceFile0448(path string, max int64, dest any) error {
 }
 func validateFenceState0448(s sourceFenceState0448) error {
 	if s.Format != "never/gravit-source-stop/v1" || !fenceScope0448.MatchString(s.RunID) || !fenceScope0448.MatchString(s.ProfileID) || !fenceScope0448.MatchString(s.Channel) || len(s.StageID) < 16 || len(s.StageID) > 128 || !fenceUnit0448.MatchString(s.Unit) || s.StoppedAt.IsZero() {
-		return errors.New("invalid source fence scope")
+		return errors.New("Некорректная область блокировки источника")
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func stopSourceWriter0448(ctx context.Context, state sourceFenceState0448, outpu
 		return err
 	}
 	if output == "" || !filepath.IsAbs(output) {
-		return errors.New("absolute output required")
+		return errors.New("Необходимо указать абсолютный путь вывода")
 	}
 	if _, err := os.Lstat(output); err == nil {
 		return errors.New("Уже существует: результат")
@@ -170,7 +170,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, err
 	}
 	if !fenceDigest0448.MatchString(expected) {
-		return sourceFenceEvidence0448{}, errors.New("expected rehearsal snapshot SHA-256 required")
+		return sourceFenceEvidence0448{}, errors.New("Требуется: «expected rehearsal snapshot SHA-256»")
 	}
 	if time.Since(state.StoppedAt) > 15*time.Minute || time.Until(state.StoppedAt) > time.Minute {
 		return sourceFenceEvidence0448{}, errors.New("source stop evidence expired or future-dated")
@@ -200,7 +200,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 8<<20 || st.Size() == 0 || st.ModTime().Before(state.StoppedAt.Add(-time.Second)) {
-		return sourceFenceEvidence0448{}, errors.New("snapshot must be a fresh regular export after stopping source")
+		return sourceFenceEvidence0448{}, errors.New("Для «snapshot» требуется: «a fresh regular export after stopping source»")
 	}
 	if err := readFenceFile0448(snapshotPath, 8<<20, &snapshot); err != nil {
 		return sourceFenceEvidence0448{}, err
@@ -236,7 +236,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 }
 func handleMigrationFence0448(args []string) error {
 	if len(args) == 0 {
-		return errors.New("fence-source|verify-source-fence required")
+		return errors.New("Требуется: «fence-source|verify-source-fence»")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -244,13 +244,13 @@ func handleMigrationFence0448(args []string) error {
 	case "fence-source":
 		state := sourceFenceState0448{Format: "never/gravit-source-stop/v1", RunID: flagValue(args, "--run", ""), ProfileID: flagValue(args, "--profile-id", ""), Channel: flagValue(args, "--channel", ""), StageID: flagValue(args, "--stage-id", ""), Unit: flagValue(args, "--unit", "")}
 		if flagValue(args, "--confirm", "") != state.RunID {
-			return errors.New("exact migration run confirmation required")
+			return errors.New("Требуется: «exact migration run confirmation»")
 		}
 		return stopSourceWriter0448(ctx, state, flagValue(args, "--output", ""), fenceSystemctl0448)
 	case "verify-source-fence":
 		_, err := verifyStoppedSource0448(ctx, flagValue(args, "--state", ""), flagValue(args, "--snapshot", ""), flagValue(args, "--expected-snapshot-sha256", ""), flagValue(args, "--output", ""), fenceSystemctl0448)
 		return err
 	default:
-		return errors.New("unknown fence command")
+		return errors.New("Неизвестная команда блокировки источника")
 	}
 }

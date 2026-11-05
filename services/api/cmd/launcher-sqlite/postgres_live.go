@@ -38,7 +38,7 @@ func runPGLive0473(args []string) int {
 	}
 	dsn := os.Getenv(*dsnEnv)
 	if dsn == "" {
-		fmt.Fprintln(os.Stderr, "PostgreSQL DSN env is empty")
+		fmt.Fprintln(os.Stderr, "Пустое значение: «PostgreSQL DSN env»")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
@@ -55,18 +55,18 @@ func runPGLive0473(args []string) int {
 	var keys sqlitepg.MFASecrets0474
 	if *mfaFile != "" || *secretEnv != "" {
 		if *mfaFile == "" || *secretEnv == "" || strings.ContainsAny(*secretEnv, "=\x00 \r\n\t") {
-			fmt.Fprintln(os.Stderr, "both MFA key-file and PostgreSQL secret environment name are required")
+			fmt.Fprintln(os.Stderr, "Требуется: «both MFA key-file and PostgreSQL secret environment name are»")
 			return 2
 		}
 		var err error
 		keys.SQLiteMFAKey, err = readAuthKey(*mfaFile)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "cannot read private SQLite MFA key:", err)
+			fmt.Fprintln(os.Stderr, "Не удалось прочитать «private SQLite MFA key:»", err)
 			return 2
 		}
 		keys.PostgreSQLSecret = os.Getenv(*secretEnv)
 		if keys.PostgreSQLSecret == "" {
-			fmt.Fprintln(os.Stderr, "PostgreSQL API secret env is empty")
+			fmt.Fprintln(os.Stderr, "Пустое значение: «PostgreSQL API secret env»")
 			return 2
 		}
 		defer func() {

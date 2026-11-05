@@ -42,7 +42,7 @@ type Response struct {
 func safeURL(s string, remote bool) (string, error) {
 	u, e := url.Parse(s)
 	if e != nil || u == nil || u.Host == "" || u.Fragment != "" || u.User != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return "", errors.New("absolute http(s) URL without credentials/fragment required")
+		return "", errors.New("Требуется: «absolute http(s) URL without credentials/fragment»")
 	}
 	if u.RawQuery != "" {
 		return "", errors.New("query parameters are forbidden (avoid replaying tokens)")
@@ -57,7 +57,7 @@ func safeURL(s string, remote bool) (string, error) {
 		host := u.Hostname()
 		ip := net.ParseIP(host)
 		if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-			return "", errors.New("remote target requires --allow-remote")
+			return "", errors.New("Для «remote target» требуется --allow-remote")
 		}
 	}
 	return u.String(), nil

@@ -18,7 +18,7 @@ var publicClientID = regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4
 // регистрацию другого лаунчера. Client ID необходимо указывать явно.
 func ValidateClientID(clientID string) error {
 	if !publicClientID.MatchString(clientID) || strings.EqualFold(clientID, "00000000-0000-0000-0000-000000000000") {
-		return errors.New("a real application (client) ID UUID is required")
+		return errors.New("Требуется: «a real application (client) ID UUID»")
 	}
 	return nil
 }
@@ -44,7 +44,7 @@ func ValidateLoopbackRedirect(redirect string) error {
 
 func PKCEChallenge(verifier string) (string, error) {
 	if len(verifier) < 43 || len(verifier) > 128 || !regexp.MustCompile(`^[A-Za-z0-9._~-]+$`).MatchString(verifier) {
-		return "", errors.New("invalid PKCE verifier")
+		return "", errors.New("Некорректное значение: «PKCE verifier»")
 	}
 	hash := sha256.Sum256([]byte(verifier))
 	return base64.RawURLEncoding.EncodeToString(hash[:]), nil
@@ -79,7 +79,7 @@ func (c *Client) ExchangeAuthorizationCode(ctx context.Context, clientID, redire
 		return OAuthTokens{}, err
 	}
 	if len(code) == 0 || len(code) > 4096 || strings.ContainsAny(code, "\r\n") {
-		return OAuthTokens{}, errors.New("invalid OAuth code")
+		return OAuthTokens{}, errors.New("Некорректный код OAuth")
 	}
 	if _, err := PKCEChallenge(verifier); err != nil {
 		return OAuthTokens{}, err
@@ -114,7 +114,7 @@ func (c *Client) EntitlementCount(ctx context.Context, token string) (int, error
 		return 0, err
 	}
 	if reply.Items == nil {
-		return 0, errors.New("invalid entitlements response: missing items array")
+		return 0, errors.New("Некорректное значение: «entitlements response: missing items array»")
 	}
 	return len(reply.Items), nil
 }

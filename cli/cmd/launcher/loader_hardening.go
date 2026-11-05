@@ -219,7 +219,7 @@ func fetchLoaderProfileWithCache(ctx context.Context, client *http.Client, root,
 		if data, err := loadLoaderPayloadCacheBytes(root, loader, minecraft, source, pinned.PayloadSHA256, max); err == nil {
 			return data, true, cacheOnly, nil
 		} else if cacheOnly {
-			return nil, false, false, fmt.Errorf("loader cache-only recovery failed: %w", err)
+			return nil, false, false, fmt.Errorf("Ошибка: «loader cache-only recovery»: %w", err)
 		}
 	}
 	if cacheOnly {
@@ -255,7 +255,7 @@ func restorePinnedInstallerFromCache(root, loader, minecraft, source, expectedSH
 		return vanillaDownloadedFile{}, err
 	}
 	if actualSize != size || !strings.EqualFold(sha256sum, expectedSHA256) {
-		return vanillaDownloadedFile{}, errors.New("restored installer cache verification mismatch")
+		return vanillaDownloadedFile{}, errors.New("Несовпадение: «restored installer cache verification»")
 	}
 	rel, err := filepath.Rel(root, destination)
 	if err != nil {
@@ -269,7 +269,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 		return vanillaDownloadedFile{}, err
 	}
 	if !compatibilitySHA256RE.MatchString(strings.ToLower(strings.TrimSpace(expectedSHA256))) {
-		return vanillaDownloadedFile{}, errors.New("pinned artifact requires SHA-256")
+		return vanillaDownloadedFile{}, errors.New("Для «pinned artifact» требуется SHA-256")
 	}
 	if max <= 0 || max > maxCompatibilityArtifact {
 		max = maxCompatibilityArtifact
@@ -300,7 +300,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 	closeErr := out.Close()
 	if copyErr != nil || syncErr != nil || closeErr != nil {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("pinned artifact write failed: %v %v %v", copyErr, syncErr, closeErr)
+		return vanillaDownloadedFile{}, fmt.Errorf("Ошибка: «pinned artifact write»: %v %v %v", copyErr, syncErr, closeErr)
 	}
 	if written <= 0 || written > max {
 		_ = os.Remove(tmp)

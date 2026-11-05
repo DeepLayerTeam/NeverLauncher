@@ -203,11 +203,11 @@ func expectedGuardArtifactNames0139(osName, ver string) map[string]string {
 func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit string) (releaseGuardCICertification, error) {
 	var targets releaseGuardCITargets
 	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
-		return releaseGuardCICertification{}, fmt.Errorf("GUARD_CI_TARGETS invalid: %w", err)
+		return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: GUARD_CI_TARGETS: %w", err)
 	}
 	var matrix releaseGuardCIMatrix
 	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
-		return releaseGuardCICertification{}, fmt.Errorf("GUARD_CI_MATRIX invalid: %w", err)
+		return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: GUARD_CI_MATRIX: %w", err)
 	}
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
 		return releaseGuardCICertification{}, errors.New("Guard CI evidence требует schemaVersion=1.0")
@@ -245,10 +245,10 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		id := strings.TrimSpace(target.ID)
 		osName := strings.ToLower(strings.TrimSpace(target.OS))
 		if id == "" || targetByID[id].ID != "" {
-			return releaseGuardCICertification{}, fmt.Errorf("invalid or duplicate Guard CI target: %s", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: «or duplicate Guard CI target»: %s", id)
 		}
 		if osCheck[osName] == "" || target.Arch != expectedArch[osName] || strings.TrimSpace(target.Runner) == "" || target.CISigningMode != expectedSigning[osName] {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target identity/policy invalid: %s", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: «Guard CI target identity/policy»: %s", id)
 		}
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {
@@ -371,14 +371,14 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 func verifyGuardCIArtifactsInDir(dir string, artifacts []releaseGuardCertifiedArtifact) error {
 	for _, artifact := range artifacts {
 		if filepath.Base(artifact.Name) != artifact.Name {
-			return fmt.Errorf("unsafe certified Guard artifact path: %s", artifact.Name)
+			return fmt.Errorf("Небезопасное значение: «certified Guard artifact path»: %s", artifact.Name)
 		}
 		actual, size, err := hashFile(filepath.Join(dir, artifact.Name))
 		if err != nil {
-			return fmt.Errorf("certified Guard artifact %s missing: %w", artifact.Name, err)
+			return fmt.Errorf("Отсутствует: «certified Guard artifact» %s: %w", artifact.Name, err)
 		}
 		if size != artifact.Size || !strings.EqualFold(actual, artifact.SHA256) {
-			return fmt.Errorf("certified Guard artifact mismatch: %s", artifact.Name)
+			return fmt.Errorf("Несовпадение: «certified Guard artifact»: %s", artifact.Name)
 		}
 	}
 	return nil
@@ -409,7 +409,7 @@ func verifyGuardCICertificationInBundle(dir, ver string) error {
 		return errors.New("GUARD_CI_CERTIFICATION не соответствует embedded matrix/targets")
 	}
 	if !reflect.DeepEqual(stored.RequiredTargetIDs, expected.RequiredTargetIDs) || !reflect.DeepEqual(stored.PassedTargetIDs, expected.PassedTargetIDs) || !reflect.DeepEqual(stored.CertifiedArtifacts, expected.CertifiedArtifacts) {
-		return errors.New("GUARD_CI_CERTIFICATION target/artifact sets mismatch")
+		return errors.New("Несовпадение: «GUARD_CI_CERTIFICATION target/artifact sets»")
 	}
 	return verifyGuardCIArtifactsInDir(dir, stored.CertifiedArtifacts)
 }

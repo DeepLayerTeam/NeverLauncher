@@ -9,7 +9,7 @@ import (
 
 func parseAKChain(e Evidence) (*x509.Certificate, *x509.CertPool, error) {
 	if len(e.AKCertificatePEM) > 12000 || len(e.IntermediatesPEM) > 6 {
-		return nil, nil, errors.New("AK certificate chain too large")
+		return nil, nil, errors.New("Превышен допустимый размер: «AK certificate chain»")
 	}
 	decodeOne := func(s string) (*x509.Certificate, error) {
 		b, rest := pem.Decode([]byte(s))
@@ -25,14 +25,14 @@ func parseAKChain(e Evidence) (*x509.Certificate, *x509.CertPool, error) {
 	p := x509.NewCertPool()
 	for _, s := range e.IntermediatesPEM {
 		if len(s) > 12000 {
-			return nil, nil, errors.New("intermediate too large")
+			return nil, nil, errors.New("Превышен допустимый размер: «intermediate»")
 		}
 		c, err := decodeOne(s)
 		if err != nil {
 			return nil, nil, err
 		}
 		if !c.IsCA {
-			return nil, nil, errors.New("intermediate must be CA")
+			return nil, nil, errors.New("Для «intermediate» требуется: CA")
 		}
 		p.AddCert(c)
 	}

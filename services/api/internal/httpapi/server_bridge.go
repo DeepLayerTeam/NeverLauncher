@@ -1082,7 +1082,7 @@ func validBridgeServerKindV2(kind string) bool {
 func newPlayerSessionCorrelationID0197() (string, error) {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("player session correlation entropy unavailable: %w", err)
+		return "", fmt.Errorf("Недоступно: «player session correlation entropy»: %w", err)
 	}
 	return hex.EncodeToString(buf), nil
 }

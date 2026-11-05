@@ -90,11 +90,11 @@ func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (
 	var out BridgeNode
 	input.ID = strings.TrimSpace(input.ID)
 	if input.ID == "" || len(input.ID) > 128 || strings.ContainsAny(input.ID, "\x00\n\r") || input.Actor == "" || input.ProjectID == "" || input.ProfileID == "" || input.Channel == "" {
-		return out, errors.New("node identity, scope and operator required")
+		return out, errors.New("Требуется: «node identity, scope and operator»")
 	}
 	key, e := hex.DecodeString(input.PublicKeyHex)
 	if e != nil || len(key) != ed25519.PublicKeySize {
-		return out, errors.New("Ed25519 public key must be 32 bytes in hex")
+		return out, errors.New("Для «Ed25519 public key» требуется: «32 bytes in hex»")
 	}
 	digest := sha256.Sum256(key)
 	fingerprint := hex.EncodeToString(digest[:])
@@ -148,7 +148,7 @@ func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (
 }
 func (r *Repository) DisableNode(ctx context.Context, nodeID, actor string) error {
 	if nodeID == "" || actor == "" {
-		return errors.New("node and operator required")
+		return errors.New("Требуется: «node and operator»")
 	}
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var project, role, status string

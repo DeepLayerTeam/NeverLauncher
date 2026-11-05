@@ -45,7 +45,7 @@ func CanonicalAPIVersion(raw string) (string, error) {
 	case "":
 		return "", errors.New("Необходимо указать API расширения")
 	default:
-		return "", fmt.Errorf("unsupported extension api %q; expected %s (legacy %s is accepted only for 0.20 compatibility)", raw, ExtensionAPIVersion, LegacyExtensionAPIVersion)
+		return "", fmt.Errorf("Не поддерживается: «extension api %q; expected %s (legacy %s is accepted only for 0.20 compatibility)»", raw, ExtensionAPIVersion, LegacyExtensionAPIVersion)
 	}
 }
 

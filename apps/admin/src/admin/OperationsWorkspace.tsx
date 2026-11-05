@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useEffect, useRef, useState } from "react";
 import { requestJSON } from "../api/client";
 import { TextInput } from "../components/primitives";
@@ -420,7 +421,7 @@ export function OperationsWorkspace({
             />
           )}
           <TextInput
-            label="Idempotency key (повтор использует тот же job)"
+            label="Ключ идемпотентности (повтор использует то же задание)"
             value={idempotencyKey}
             onChange={(v) => {
               setIdempotencyKey(v);
@@ -562,7 +563,7 @@ export function OperationsWorkspace({
                 <strong>ID корреляции:</strong> <code>{job.id}</code>
               </p>
               <p>
-                <strong>Состояние:</strong> {job.status} · попыток:{" "}
+                <strong>Состояние:</strong> {statusRu(job.status)} · попыток:{" "}
                 {job.attemptCount}/{job.maxAttempts}
               </p>
               {job.lastError && <p className="error">{job.lastError}</p>}
@@ -592,7 +593,7 @@ export function OperationsWorkspace({
                     attempts.map((a) => (
                       <tr key={a.attempt}>
                         <td>{a.attempt}</td>
-                        <td>{a.status}</td>
+                        <td>{statusRu(a.status)}</td>
                         <td>{a.startedAt}</td>
                         <td>{a.error || "—"}</td>
                       </tr>

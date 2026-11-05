@@ -40,13 +40,13 @@ def validate_targets(path: Path):
         or len(ids) != len(set(ids))
         or not checks
     ):
-        raise SystemExit("invalid Extensions GA target definition")
+        raise SystemExit("Некорректное значение: «Extensions GA target definition»")
     if {r.get("os") for r in rows if r.get("required")} != {
         "linux",
         "windows",
         "macos",
     }:
-        raise SystemExit("required Extensions GA OS set must be linux/windows/macos")
+        raise SystemExit("Для «required Extensions GA OS set» требуется: «linux/windows/macos»")
     expected = {
         "packageFormatVersion": "1.0",
         "manifestSchemaVersion": "2.0",
@@ -56,7 +56,7 @@ def validate_targets(path: Path):
     if any(contract.get(k) != v for k, v in expected.items()) or contract.get(
         "legacyApiAliases"
     ) != ["3.7"]:
-        raise SystemExit("Extensions GA frozen contract mismatch")
+        raise SystemExit("Несовпадение: «Extensions GA frozen contract»")
     if semver(current_version()) < semver(BASELINE_VERSION):
         raise SystemExit(
             f"Extensions GA certification requires VERSION >= {BASELINE_VERSION}"
@@ -81,7 +81,7 @@ def aggregate(
     for target in doc["targets"]:
         p = evidence_dir / f"{target['id']}.json"
         if not p.is_file():
-            raise SystemExit(f"missing evidence: {p}")
+            raise SystemExit(f"Отсутствует: подтверждающие данные: {p}")
         e = load(p)
         if (
             e.get("targetId") != target["id"]

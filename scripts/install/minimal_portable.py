@@ -158,7 +158,7 @@ def _decrypt_to(archive_path, target, secret):
             try:
                 plaintext.write(decryptor.finalize())
             except InvalidTag as exc:
-                raise core.BackupError("portable archive authentication failed") from exc
+                raise core.BackupError("Ошибка: «portable archive authentication»") from exc
             plaintext.flush()
             os.fsync(plaintext.fileno())
         core.require(source.stat().st_size == st.st_size, "portable file changed during read")

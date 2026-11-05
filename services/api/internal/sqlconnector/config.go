@@ -142,7 +142,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 	}
 	if cfg.DSN == "" {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: dsn or dsnEnv is required", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Требуется: «SQL connector %q: dsn or dsnEnv»", cfg.ID)
 	}
 	if err := validateTableIdentifier(cfg.Table); err != nil {
 		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: %w", cfg.ID, err)
@@ -255,7 +255,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 func validateTableIdentifier(value string) error {
 	parts := strings.Split(value, ".")
 	if len(parts) == 0 || len(parts) > 2 {
-		return fmt.Errorf("table %q must be table or schema.table", value)
+		return fmt.Errorf("Для «table» %q требуется: «table or schema.table»", value)
 	}
 	for _, part := range parts {
 		// PostgreSQL молча обрезает идентификаторы длиннее 63 байтов. Отклоняйте их до

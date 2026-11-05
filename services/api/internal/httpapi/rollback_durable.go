@@ -134,7 +134,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, saveErr
 		}
 		if copied != size || copied != source.Size {
-			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback copy size mismatch")
+			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Несовпадение: «rollback copy size»")
 		}
 		if err = s.workerAuthorized0217(ctx, job); err != nil {
 			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
@@ -209,7 +209,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	check, err := s.runPackageIntegrityCheck0212(request, lookup)
 	if err != nil || check.Result != "passed" {
 		if err == nil {
-			err = errors.New("rollback integrity failed")
+			err = errors.New("Ошибка: «rollback integrity»")
 		}
 		return model.ReleaseVersion{}, check, err
 	}
@@ -344,7 +344,7 @@ func (s Server) executeRollbackJob0217(ctx context.Context, cp repository.Durabl
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
 	if !ok {
-		return model.DurableJob{}, errors.New("operation journal unavailable")
+		return model.DurableJob{}, errors.New("Недоступно: «operation journal»")
 	}
 	return journal.CompleteOperationJob(ctx, job.ID, job.LeaseToken, raw)
 }

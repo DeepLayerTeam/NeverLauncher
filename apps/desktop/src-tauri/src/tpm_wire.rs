@@ -11,7 +11,7 @@ fn be32(b: &[u8]) -> Result<u32, String> {
 }
 fn item(b: &[u8], offset: usize, max: usize) -> Result<(&[u8], usize), String> {
     let n = be16(b.get(offset..).ok_or("missing TPM2B")?)?;
-    if n > max { return Err("oversized TPM2B".into()); }
+    if n > max { return Err("Превышен допустимый размер: TPM2B".into()); }
     let end = offset.checked_add(2).and_then(|v| v.checked_add(n)).ok_or("TPM length overflow")?;
     Ok((b.get(offset..end).ok_or("truncated TPM2B data")?, end))
 }
@@ -51,9 +51,9 @@ pub fn certify_command(object: u32, ak: u32, extra: &[u8; 32]) -> Vec<u8> {
 }
 
 fn response_parameters(resp: &[u8], expected_sessions: bool) -> Result<&[u8], String> {
-    if resp.len() < 10 || resp.len() > 16384 { return Err("invalid TPM response size".into()); }
+    if resp.len() < 10 || resp.len() > 16384 { return Err("Некорректное значение: «TPM response size»".into()); }
     let tag = be16(resp)? as u16;
-    if be32(&resp[2..])? as usize != resp.len() { return Err("TPM response size mismatch".into()); }
+    if be32(&resp[2..])? as usize != resp.len() { return Err("Несовпадение: «TPM response size»".into()); }
     let rc = be32(&resp[6..])?;
     if rc != 0 { return Err(format!("TPM returned 0x{rc:08x} (key authorization/policy may be required)")); }
     if expected_sessions {
@@ -63,7 +63,7 @@ fn response_parameters(resp: &[u8], expected_sessions: bool) -> Result<&[u8], St
         if end > resp.len() { return Err("truncated TPM response parameters".into()); }
         Ok(&resp[14..end])
     } else {
-        if tag != 0x8001 { return Err("unexpected TPM no-session response".into()); }
+        if tag != 0x8001 { return Err("Неожиданное значение: «TPM no-session response»".into()); }
         Ok(&resp[10..])
     }
 }
@@ -77,25 +77,25 @@ pub fn parse_public_response(resp: &[u8]) -> Result<(Vec<u8>, [u8;65]), String> 
     // TPMT_PUBLIC: тип, nameAlg, objectAttrs, authPolicy, параметры и уникальное значение.
     let b = &public[2..];
     if b.len() < 14 || be16(b)? != 0x0023 || be16(&b[2..])? != 0x000b {
-        return Err("device TPM key must be ECC SHA-256".into());
+        return Err("Для «device TPM key» требуется: «ECC SHA-256»".into());
     }
     let attrs = be32(&b[4..])?;
     let required = (1<<1) | (1<<4) | (1<<5) | (1<<18);
     if attrs & required != required { return Err("TPM device key is not fixed TPM-origin signing key".into()); }
     let (_, policy_end) = item(b, 8, 64)?;
     if b.len() < policy_end + 8 { return Err("truncated TPM ECC parameters".into()); }
-    if be16(&b[policy_end..])? != 0x0010 {return Err("TPM ECC symmetric must be null".into());}
+    if be16(&b[policy_end..])? != 0x0010 {return Err("Для «TPM ECC symmetric» требуется: «null»".into());}
     let scheme=be16(&b[policy_end+2..])?;
     let curve_offset=if scheme==0x0010 {policy_end+4} else if scheme==0x0018 {
         if be16(&b[policy_end+4..])? != 0x000b {return Err("TPM ECDSA key must use SHA-256".into());}
         policy_end+6
-    } else {return Err("unsupported TPM ECC signing scheme".into());};
+    } else {return Err("Не поддерживается: «TPM ECC signing scheme»".into());};
     if be16(&b[curve_offset..])? != 0x0003 || be16(&b[curve_offset+2..])? != 0x0010 {
         return Err("TPM ECC curve/KDF not NIST P-256/null".into());
     }
     let (x, nx) = item(b, curve_offset+4, 32)?;
     let (y, ny) = item(b, nx, 32)?;
-    if x.len() != 34 || y.len() != 34 || ny != b.len() { return Err("invalid TPM P-256 coordinates".into()); }
+    if x.len() != 34 || y.len() != 34 || ny != b.len() { return Err("Некорректное значение: «TPM P-256 coordinates»".into()); }
     let mut sec1 = [0u8; 65]; sec1[0] = 4;
     sec1[1..33].copy_from_slice(&x[2..]); sec1[33..65].copy_from_slice(&y[2..]);
     Ok((public.to_vec(), sec1))
@@ -106,10 +106,10 @@ pub fn parse_certify_response(resp: &[u8], extra: &[u8;32]) -> Result<(Vec<u8>,V
     let (attest, offset) = item(params, 0, 4096)?;
     // TPMT_SIGNATURE состоит из схемы, хеша и специфичной для схемы подписи.
     let sig = params.get(offset..).ok_or("missing TPM signature")?;
-    if sig.len() < 6 || sig.len() > 1024 { return Err("invalid TPM signature size".into()); }
+    if sig.len() < 6 || sig.len() > 1024 { return Err("Некорректное значение: «TPM signature size»".into()); }
     let scheme = be16(sig)?;
     if !matches!(scheme, 0x0014 | 0x0016 | 0x0018) || be16(&sig[2..])? != 0x000b {
-        return Err("unsupported TPM signature scheme/hash".into());
+        return Err("Не поддерживается: «TPM signature scheme/hash»".into());
     }
     let (_, after) = item(sig, 4, 512)?;
     if scheme == 0x0018 {
@@ -122,10 +122,10 @@ pub fn parse_certify_response(resp: &[u8], extra: &[u8;32]) -> Result<(Vec<u8>,V
     }
     let (_, signer_end) = item(att, 6, 128)?;
     let (qualifier, offset) = item(att, signer_end, 64)?;
-    if qualifier.len() != 34 || qualifier[2..] != extra[..] { return Err("TPM certify challenge mismatch".into()); }
+    if qualifier.len() != 34 || qualifier[2..] != extra[..] { return Err("Несовпадение: «TPM certify challenge»".into()); }
     // TPMS_CLOCK_INFO.safe подписан AK. Небезопасное состояние TPM отклоняется.
     let clock=att.get(offset..offset+25).ok_or("truncated TPM Certify clock")?;
-    if clock[16]!=1 { return Err("unsafe TPM Certify clock".into()); }
+    if clock[16]!=1 { return Err("Небезопасное значение: «TPM Certify clock»".into()); }
     Ok((attest.to_vec(),sig.to_vec()))
 }
 
@@ -235,29 +235,29 @@ mod linux_signing_scheme_tests_0314 {
 // 32-байтовым nonce вызывающей стороны. Это локальный защитный парсер;
 // Backend отдельно проверяет подпись и дайджест PCR.
 pub fn validate_quote_0315(att: &[u8], sig: &[u8], extra: &[u8;32], indices: &[u8]) -> Result<(),String> {
-    if att.len()<2 || be16(att)?+2!=att.len() {return Err("invalid TPM2B Quote length".into());}
+    if att.len()<2 || be16(att)?+2!=att.len() {return Err("Некорректное значение: «TPM2B Quote length»".into());}
     let bytes=&att[2..];
     if bytes.len()<6 || be32(bytes)?!=0xff544347 || be16(&bytes[4..])?!=0x8018 {
-        return Err("invalid TPM Quote magic/type".into());
+        return Err("Некорректное значение: «TPM Quote magic/type»".into());
     }
     let (_,pos)=item(bytes,6,128)?;
     let (nonce,mut pos)=item(bytes,pos,64)?;
-    if nonce.len()!=34 || &nonce[2..]!=extra {return Err("TPM quote nonce mismatch".into());}
+    if nonce.len()!=34 || &nonce[2..]!=extra {return Err("Несовпадение: «TPM quote nonce»".into());}
     let clock=bytes.get(pos..pos+25).ok_or("truncated TPM Quote clock")?;
-    if clock[16]!=1 { return Err("unsafe TPM Quote clock".into()); }
+    if clock[16]!=1 { return Err("Небезопасное значение: «TPM Quote clock»".into()); }
     pos+=25;
-    if bytes.len()<pos+4 || be32(&bytes[pos..])?!=1 {return Err("exactly one PCR bank required".into());}
+    if bytes.len()<pos+4 || be32(&bytes[pos..])?!=1 {return Err("Требуется: «exactly one PCR bank»".into());}
     pos+=4;
     if bytes.len()<pos+6 || be16(&bytes[pos..])?!=0x000b || bytes[pos+2]!=3 {
         return Err("only SHA-256 PCR bank (size=3) supported".into());
     }
     let mut mask=[0u8;3];
-    for &i in indices {if i>23 {return Err("invalid PCR index".into());} mask[(i/8) as usize]|=1<<(i%8);}
+    for &i in indices {if i>23 {return Err("Недопустимый индекс PCR".into());} mask[(i/8) as usize]|=1<<(i%8);}
     if bytes[pos+3..pos+6]!=mask {return Err("quote PCR selection differs from requested selection".into());}
     pos+=6;
     let (digest,end)=item(bytes,pos,64)?;
     if digest.len()!=34 || end!=bytes.len(){return Err("Quote must contain exactly one SHA-256 PCR digest".into());}
-    if sig.len()<6 || sig.len()>2048 {return Err("invalid TPM Quote signature".into());}
+    if sig.len()<6 || sig.len()>2048 {return Err("Некорректное значение: «TPM Quote signature»".into());}
     Ok(())
 }
 
@@ -322,8 +322,8 @@ pub fn parse_pcr_selection_0315(selection:&str)->Result<Vec<u8>,String>{
     let mut out=Vec::new();
     for value in text.split(',') {
         if value.is_empty() || value.len()>2 || (value.starts_with('0') && value!="0") ||
-           !value.bytes().all(|b|b.is_ascii_digit()) {return Err("invalid PCR index".into());}
-        let index=value.parse::<u8>().map_err(|_|"invalid PCR index")?;
+           !value.bytes().all(|b|b.is_ascii_digit()) {return Err("Недопустимый индекс PCR".into());}
+        let index=value.parse::<u8>().map_err(|_|"Недопустимый индекс PCR")?;
         if index>23 || out.last().map_or(false,|previous|*previous>=index){return Err("PCR index not strictly increasing 0..23".into());}
         out.push(index);
     }

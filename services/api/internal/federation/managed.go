@@ -21,17 +21,17 @@ func (c *Core) SwapManaged(connector authconnector.Connector, policy ProviderPol
 		known[role.ID] = true
 	}
 	if policy.AutoProvision && !known[policy.DefaultRole] {
-		return fmt.Errorf("invalid default role %q", policy.DefaultRole)
+		return fmt.Errorf("Некорректное значение: «default role» %q", policy.DefaultRole)
 	}
 	for _, target := range policy.RoleMappings {
 		if !known[target] {
-			return fmt.Errorf("invalid mapped role %q", target)
+			return fmt.Errorf("Некорректное значение: «mapped role» %q", target)
 		}
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if id == "local" {
-		return errors.New("local provider cannot be replaced")
+		return errors.New("«local provider»: запрещено «be replaced»")
 	}
 	if _, exists := c.connectors[id]; exists {
 		if _, owned := c.managedRevisions[id]; !owned {

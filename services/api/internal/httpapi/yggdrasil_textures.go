@@ -69,11 +69,11 @@ func validDomainRule0256(domain string) bool {
 func (s Server) textureDomains0256() ([]string, error) {
 	u, err := url.Parse(s.Config.PublicURL)
 	if err != nil || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return nil, errors.New("invalid public texture origin")
+		return nil, errors.New("Некорректное значение: «public texture origin»")
 	}
 	host := strings.ToLower(u.Hostname())
 	if u.Path != "" && u.Path != "/" {
-		return nil, errors.New("public URL must be API origin without path")
+		return nil, errors.New("Для публичный URL требуется: «API origin without path»")
 	}
 	if u.Scheme != "https" && (config.IsProductionEnvironment(s.Config.Environment) || u.Scheme != "http") {
 		return nil, errors.New("texture origin must use HTTPS")
@@ -83,7 +83,7 @@ func (s Server) textureDomains0256() ([]string, error) {
 	for _, raw := range s.Config.YggdrasilTextureDomains {
 		rule := strings.ToLower(strings.TrimSpace(raw))
 		if !validDomainRule0256(rule) {
-			return nil, fmt.Errorf("invalid texture allowlist rule %q", raw)
+			return nil, fmt.Errorf("Некорректное значение: «texture allowlist rule» %q", raw)
 		}
 		if !seen[rule] {
 			seen[rule] = true
@@ -203,7 +203,7 @@ func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (
 		return record, nil
 	}
 	if s.State == nil || s.State.ServerBridge == nil {
-		return bridgeTextureRecord{}, errors.New("Yggdrasil texture state unavailable")
+		return bridgeTextureRecord{}, errors.New("Недоступно: «Yggdrasil texture state»")
 	}
 	record := s.State.ServerBridge.textureFor(uuid, name)
 	record.UUID, record.Username = uuid, name

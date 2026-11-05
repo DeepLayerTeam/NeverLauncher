@@ -67,7 +67,7 @@ def strict_json(raw: bytes) -> dict:
         result = {}
         for key, value in pairs:
             if key in result:
-                raise Blocked("duplicate JSON key: " + key)
+                raise Blocked("Обнаружен дубликат: «JSON key:»" + key)
             result[key] = value
         return result
 
@@ -87,7 +87,7 @@ def public_key(raw: bytes) -> Ed25519PublicKey:
     if raw.lstrip().startswith(b"-----BEGIN"):
         key = serialization.load_pem_public_key(raw)
         if not isinstance(key, Ed25519PublicKey):
-            raise Blocked("the independent key must be Ed25519")
+            raise Blocked("Для «the independent key» требуется: Ed25519")
         return key
     value = raw.strip().decode("ascii")
     try:
@@ -95,7 +95,7 @@ def public_key(raw: bytes) -> Ed25519PublicKey:
     except ValueError:
         key_raw = base64.b64decode(value, validate=True)
     if len(key_raw) != 32:
-        raise Blocked("independent Ed25519 public key must be 32 bytes")
+        raise Blocked("Для «independent Ed25519 public key» требуется: «32 bytes»")
     return Ed25519PublicKey.from_public_bytes(key_raw)
 
 
@@ -105,7 +105,7 @@ def validate_rc(rc: dict, commit: str):
         or rc.get("version") != VERSION
         or rc.get("commit") != commit
     ):
-        raise Blocked("RC evidence version/format/commit mismatch")
+        raise Blocked("Несовпадение: «RC evidence version/format/commit»")
     if not re.search(r"go1\.(?:2[7-9]|[3-9]\d)\.", str(rc.get("toolchain", ""))):
         raise Blocked("RC must have used Go 1.27+")
     suites = rc.get("suites")
@@ -114,10 +114,10 @@ def validate_rc(rc: dict, commit: str):
     seen = set()
     for suite in suites:
         if not isinstance(suite, dict):
-            raise Blocked("invalid RC suite")
+            raise Blocked("Некорректное значение: «RC suite»")
         name = suite.get("suite")
         if name not in SUITES or name in seen:
-            raise Blocked("duplicate or unknown RC suite")
+            raise Blocked("Обнаружен дубликат: «or unknown RC suite»")
         seen.add(name)
         tests = suite.get("passed")
         if (
@@ -128,7 +128,7 @@ def validate_rc(rc: dict, commit: str):
         ):
             raise Blocked("RC tests incomplete or duplicated: " + name)
     if seen != set(SUITES):
-        raise Blocked("missing required RC suites")
+        raise Blocked("Отсутствует: «required RC suites»")
 
 
 def validate_attestation(report: dict, commit: str, rc_hash: str):
@@ -137,7 +137,7 @@ def validate_attestation(report: dict, commit: str, rc_hash: str):
         or report.get("version") != VERSION
         or report.get("source_commit") != commit
     ):
-        raise Blocked("GA attestation version/commit mismatch")
+        raise Blocked("Несовпадение: «GA attestation version/commit»")
     if report.get("rc_receipt_sha256") != rc_hash:
         raise Blocked("GA attestation is not bound to RC test receipt")
     env = report.get("environment")
@@ -160,13 +160,13 @@ def validate_attestation(report: dict, commit: str, rc_hash: str):
         or set(checks) != set(CHECKS)
         or any(checks[c] != "pass" for c in CHECKS)
     ):
-        raise Blocked("GA acceptance scenarios missing or failed")
+        raise Blocked("Ошибка: «GA acceptance scenarios missing or»")
     if (
         report.get("operator") is None
         or not isinstance(report["operator"], str)
         or len(report["operator"].strip()) < 3
     ):
-        raise Blocked("independent operator identity required")
+        raise Blocked("Требуется: «independent operator identity»")
     tested = report.get("tested_artifacts")
     if (
         not isinstance(tested, dict)
@@ -192,11 +192,11 @@ def verify(evidence_dir: Path, pinned_public_key: Path, commit: str) -> dict:
     try:
         signature = base64.b64decode(sig_raw, validate=True)
         if len(signature) != 64:
-            raise Blocked("invalid detached Ed25519 signature length")
+            raise Blocked("Некорректное значение: «detached Ed25519 signature length»")
         key.verify(signature, report_raw)
     except Exception as err:
         # Не раскрывайте утверждения из непроверенных доказательств, контролируемых атакующим.
-        raise Blocked("independent GA attestation signature invalid") from err
+        raise Blocked("Некорректное значение: «independent GA attestation signature»") from err
     rc_sha = hashlib.sha256(rc_raw).hexdigest()
     validate_rc(strict_json(rc_raw), commit)
     validate_attestation(strict_json(report_raw), commit, rc_sha)

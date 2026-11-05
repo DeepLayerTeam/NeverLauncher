@@ -58,15 +58,15 @@ public final class Json {
         final String s; int i; int nodes;
         Reader(String s) { this.s=s; }
         void white() { while (i<s.length() && (s.charAt(i)==' '||s.charAt(i)=='\n'||s.charAt(i)=='\t'||s.charAt(i)=='\r')) i++; }
-        char next() { if (i>=s.length()) throw err("unexpected end"); return s.charAt(i++); }
+        char next() { if (i>=s.length()) throw err("Неожиданное значение: «end»"); return s.charAt(i++); }
         IllegalArgumentException err(String m) { return new IllegalArgumentException(m+" at " + i); }
         Object value(int depth) {
             if (depth>64 || ++nodes>100_000) throw err("JSON nesting/size limit");
-            white(); if(i>=s.length())throw err("missing value");
+            white(); if(i>=s.length())throw err("Отсутствует: «value»");
             char c=s.charAt(i);
             if(c=='{') { i++; white(); Map<String,Object> m=new LinkedHashMap<>(); if(i<s.length()&&s.charAt(i)=='}') {i++;return m;}
                 while(true) {white(); if(i>=s.length()||s.charAt(i)!='"')throw err("expected key"); String k=str(); white(); if(next()!=':')throw err("expected colon");
-                    Object v=value(depth+1); if(m.containsKey(k))throw err("duplicate key "+k);m.put(k,v);
+                    Object v=value(depth+1); if(m.containsKey(k))throw err("Обнаружен дубликат: ключ"+k);m.put(k,v);
                     white();char sep=next();if(sep=='}')break;if(sep!=',')throw err("expected comma");} return m; }
             if(c=='[') {i++;white();List<Object> a=new ArrayList<>();if(i<s.length()&&s.charAt(i)==']'){i++;return a;}
                 while(true){a.add(value(depth+1));white();char sep=next();if(sep==']')break;if(sep!=',')throw err("expected comma");}return a;}
@@ -78,13 +78,13 @@ public final class Json {
             if(i<s.length()&&s.charAt(i)=='.'){fraction=true;i++;if(i>=s.length()||!digit(s.charAt(i)))throw err("fraction");while(i<s.length()&&digit(s.charAt(i)))i++;}
             if(i<s.length()&&(s.charAt(i)=='e'||s.charAt(i)=='E')){fraction=true;i++;if(i<s.length()&&(s.charAt(i)=='+'||s.charAt(i)=='-'))i++;if(i>=s.length()||!digit(s.charAt(i)))throw err("exponent");while(i<s.length()&&digit(s.charAt(i)))i++;}
             try { if(fraction){double n=Double.parseDouble(s.substring(start,i));if(!Double.isFinite(n))throw err("nonfinite number");return n;}return Long.parseLong(s.substring(start,i)); }
-            catch(NumberFormatException e){throw err("invalid number");}
+            catch(NumberFormatException e){throw err("Некорректное значение: «number»");}
         }
         boolean digit(char c){return c>='0'&&c<='9';}
         String str(){if(next()!='"')throw err("expected quote");StringBuilder b=new StringBuilder();while(i<s.length()) {
             char c=next();if(c=='"')return b.toString();if(c<32)throw err("control in string");if(c!='\\'){b.append(c);continue;}
             switch(next()){case '"'->b.append('"');case '\\'->b.append('\\');case '/'->b.append('/');case 'b'->b.append('\b');case 'f'->b.append('\f');case 'n'->b.append('\n');case 'r'->b.append('\r');case 't'->b.append('\t');
-                case 'u'->{if(i+4>s.length())throw err("unicode escape");int cp;try{cp=Integer.parseInt(s.substring(i,i+4),16);}catch(NumberFormatException e){throw err("unicode escape");}i+=4;b.append((char)cp);}default->throw err("invalid escape");}
+                case 'u'->{if(i+4>s.length())throw err("unicode escape");int cp;try{cp=Integer.parseInt(s.substring(i,i+4),16);}catch(NumberFormatException e){throw err("unicode escape");}i+=4;b.append((char)cp);}default->throw err("Некорректное значение: «escape»");}
             }throw err("unterminated string");}
     }
 }

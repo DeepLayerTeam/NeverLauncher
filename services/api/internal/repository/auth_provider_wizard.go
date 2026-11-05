@@ -34,7 +34,7 @@ type ManagedProviderStore02910 interface {
 }
 
 var ErrManagedProviderConflict02910 = errors.New("managed auth provider revision conflict")
-var ErrManagedProviderMissing02910 = errors.New("managed auth provider revision not found")
+var ErrManagedProviderMissing02910 = errors.New("Не найдено: «managed auth provider revision»")
 
 // SQL-методы работают в транзакциях и сериализуют активации блокировкой строки head.
 func (r *SQLRepository) ListManagedProviders02910(ctx context.Context) ([]ManagedProviderHead02910, error) {
@@ -192,13 +192,13 @@ func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 	switch v.Kind {
 	case "sql", "http", "oidc", "microsoft", "java":
 	default:
-		return errors.New("invalid provider kind")
+		return errors.New("Некорректное значение: «provider kind»")
 	}
 	if len(v.Config) == 0 || len(v.Config) > 32768 || !json.Valid(v.Config) {
 		return errors.New("invalid configuration")
 	}
 	if len(v.Reason) < 3 || len(v.Reason) > 500 || strings.ContainsAny(v.Reason, "\r\n\x00") {
-		return errors.New("invalid reason")
+		return errors.New("Некорректное значение: «reason»")
 	}
 	return nil
 }

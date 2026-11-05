@@ -49,11 +49,11 @@ fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String>
     let mut current = root.to_path_buf();
     for part in format!("{release}/signed.nlext").split('/') {
         current.push(part);
-        let md = fs::symlink_metadata(&current).map_err(|e| format!("Guard Trusted JVM package missing: {e}"))?;
+        let md = fs::symlink_metadata(&current).map_err(|e| format!("Отсутствует: «Guard Trusted JVM package»: {e}"))?;
         if md.file_type().is_symlink() { return Err("Guard Trusted JVM package path symlink".into()) }
     }
     let md = fs::metadata(&current).map_err(|e| e.to_string())?;
-    if !md.is_file() || md.len() == 0 || md.len() > 256 * 1024 * 1024 { return Err("Guard Trusted JVM signed package size/type invalid".into()) }
+    if !md.is_file() || md.len() == 0 || md.len() > 256 * 1024 * 1024 { return Err("Некорректное значение: «Guard Trusted JVM signed package size/type»".into()) }
     let mut src = File::open(&current).map_err(|e| e.to_string())?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 65536];
@@ -72,7 +72,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     if plugins.len() > 32 || transforms.len() > 4096 { return Err("Guard Trusted JVM plugin/transform limit exceeded".into()) }
     let mut text = format!("main={}\nguard.policy.active=true\ntransform.count={}\n", STANDARD.encode(main), transforms.len());
     for (i, (class, owner)) in transforms.iter().enumerate() {
-        if !is_digest(owner) { return Err("Guard Trusted JVM transform owner digest invalid".into()) }
+        if !is_digest(owner) { return Err("Некорректное значение: «Guard Trusted JVM transform owner digest»".into()) }
         text.push_str(&format!("transform.{i}.owner={owner}\ntransform.{i}.class={}\n", STANDARD.encode(class)));
     }
     if !["vanilla","fabric","quilt","forge","neoforge","neo-forge","neo_forge"].contains(&loader.to_ascii_lowercase().as_str()) {
@@ -81,7 +81,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     if libraries.len()>128 {return Err("Guard Trusted JVM loader library limit exceeded".into())}
     text.push_str(&format!("loader.id={}\nloader.count={}\n", loader.to_ascii_lowercase().replace('-', "").replace('_', ""), libraries.len()));
     for (i, (path,digest)) in libraries.iter().enumerate() {
-        if !is_digest(digest) {return Err("Guard loader library digest invalid".into())}
+        if !is_digest(digest) {return Err("Некорректное значение: хеш библиотеки загрузчика Guard".into())}
         text.push_str(&format!("loader.{i}.path={}\nloader.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));
     }
     if class_bytes.len()>4096 {return Err("Guard too many loader class digests".into())}
@@ -92,7 +92,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     }
     text.push_str(&format!("count={}\n", plugins.len()));
     for (i, (path, digest)) in plugins.iter().enumerate() {
-        if !is_digest(digest) { return Err("Guard Trusted JVM plugin digest invalid".into()) }
+        if !is_digest(digest) { return Err("Некорректное значение: «Guard Trusted JVM plugin digest»".into()) }
         text.push_str(&format!("plugin.{i}={}\nplugin.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));
     }
     Ok(text)
@@ -122,7 +122,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 8192 {
         return Err("Guard Trusted JVM active record not a bounded regular file".into());
     }
-    let rec: Active = serde_json::from_slice(&fs::read(&active).map_err(|e| e.to_string())?).map_err(|e| format!("Guard Trusted JVM active record invalid: {e}"))?;
+    let rec: Active = serde_json::from_slice(&fs::read(&active).map_err(|e| e.to_string())?).map_err(|e| format!("Некорректное значение: «Guard Trusted JVM active record»: {e}"))?;
     if rec.schema_version != "launcher.trusted-jvm.v1" || rec.approved_access != "full-minecraft-jvm" ||
         !is_digest(&rec.package_sha256) || !is_digest(&rec.agent_sha256) || rec.plugins.len() > 16 {
         return Err("Guard Trusted JVM active record has invalid identity/permission".into());

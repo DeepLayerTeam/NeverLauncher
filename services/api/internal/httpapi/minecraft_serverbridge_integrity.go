@@ -73,7 +73,7 @@ func minecraftIntegrityAllow0135(required bool, reason string, session model.Min
 
 func snapshotFromGuardLaunchTicket0135(ticket model.DeviceChallenge) (minecraftIntegritySnapshot0135, error) {
 	if strings.TrimSpace(ticket.ID) == "" {
-		return minecraftIntegritySnapshot0135{}, errors.New("Guard launch ticket is missing")
+		return minecraftIntegritySnapshot0135{}, errors.New("Отсутствует: «Guard launch ticket»")
 	}
 	snapshot := minecraftIntegritySnapshot0135{
 		GuardAttestationSHA256: strings.ToLower(strings.TrimSpace(metadataString0121(ticket.Metadata, "attestationSha256"))),
@@ -212,7 +212,7 @@ func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessi
 	}
 	decision := s.evaluateMinecraftIntegrity0135(session)
 	if !decision.Allowed {
-		return model.MinecraftSession{}, fmt.Errorf("Minecraft integrity policy denied: %s", decision.Reason)
+		return model.MinecraftSession{}, fmt.Errorf("Доступ запрещён: «Minecraft integrity policy»: %s", decision.Reason)
 	}
 	return session, nil
 }

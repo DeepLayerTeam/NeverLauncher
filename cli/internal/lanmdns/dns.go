@@ -72,7 +72,7 @@ func getName(p []byte, pos *int) (string, error) {
 			continue
 		}
 		if n&0xc0 != 0 || n > 63 {
-			return "", errors.New("invalid DNS label length")
+			return "", errors.New("Некорректное значение: «DNS label length»")
 		}
 		cur++
 		if n == 0 {

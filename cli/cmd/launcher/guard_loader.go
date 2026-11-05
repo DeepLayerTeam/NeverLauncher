@@ -56,7 +56,7 @@ func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error)
 			return "", err
 		}
 		if hash != a.SHA256 {
-			return "", fmt.Errorf("Guard loader library digest changed: %s", a.Path)
+			return "", fmt.Errorf("Обнаружено изменение: хеш библиотеки загрузчика Guard: %s", a.Path)
 		}
 		library = append(library, a)
 	}

@@ -68,10 +68,10 @@ func Available() error {
 		return fmt.Errorf("AppContainer API: %w", err)
 	}
 	if err := initAttrs.Find(); err != nil {
-		return fmt.Errorf("STARTUPINFOEX unavailable: %w", err)
+		return fmt.Errorf("Недоступно: STARTUPINFOEX: %w", err)
 	}
 	if err := createJob.Find(); err != nil {
-		return fmt.Errorf("Job Objects unavailable: %w", err)
+		return fmt.Errorf("Недоступно: «Job Objects»: %w", err)
 	}
 	return nil
 }
@@ -354,7 +354,7 @@ func (h *Handle) Started() error {
 				return
 			}
 		}
-		ch <- fmt.Errorf("sandbox launch failed: %s", v)
+		ch <- fmt.Errorf("Ошибка: «sandbox launch»: %s", v)
 	}()
 	select {
 	case e := <-ch:
@@ -376,7 +376,7 @@ func Prepare(o Options) (*Handle, error) {
 	}
 	id := randomName()
 	if id == "" {
-		return nil, errors.New("secure random unavailable")
+		return nil, errors.New("Недоступно: «secure random»")
 	}
 	profile := "LauncherExt" + id
 	sidPtr, sid, e := newProfile(profile)

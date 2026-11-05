@@ -17,7 +17,7 @@ import (
 // ответы API. Автоматическое развёртывание не выполняется.
 func generateNeverMigrationKeys0336(path string) (err error) {
 	if path == "" {
-		return errors.New("generate-keys requires --output /secure/private/key-material.json")
+		return errors.New("Для «generate-keys» требуется «--output /secure/private/key-material.json»")
 	}
 	var token [32]byte
 	var seed [32]byte
@@ -51,7 +51,7 @@ func generateNeverMigrationKeys0336(path string) (err error) {
 		return err
 	}
 	if !dir.IsDir() || dir.Mode().Perm()&0077 != 0 {
-		return errors.New("key output directory must not grant access to group/others (mode 0700)")
+		return errors.New("«key output directory»: запрещено «grant access to group/others (mode 0700)»")
 	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {

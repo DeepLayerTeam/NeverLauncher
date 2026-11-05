@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Loader = "vanilla" | "fabric" | "quilt" | "forge" | "neoforge";
@@ -509,7 +510,7 @@ export function ClientFactoryBuilder02710({
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {new Date(j.createdAt).toLocaleString()} · {j.request.loader} ·{" "}
-                {j.state} · {j.id.slice(0, 8)}
+                {statusRu(j.state)} · {j.id.slice(0, 8)}
               </option>
             ))}
           </select>

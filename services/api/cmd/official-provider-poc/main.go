@@ -191,7 +191,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		if r.Method != "GET" || r.Host != expectedHost {
-			http.Error(w, "Invalid callback", http.StatusBadRequest)
+			http.Error(w, "Некорректное значение: «callback»", http.StatusBadRequest)
 			return
 		}
 		params := r.URL.Query()
@@ -199,12 +199,12 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 			(len(params["code"]) != 1 && len(params["error"]) != 1) ||
 			(len(params["code"]) > 0 && len(params["error"]) > 0) ||
 			len(params["code"]) > 1 || len(params["error"]) > 1 {
-			http.Error(w, "Invalid callback", http.StatusBadRequest)
+			http.Error(w, "Некорректное значение: «callback»", http.StatusBadRequest)
 			return
 		}
 		got := params.Get("state")
 		if subtle.ConstantTimeCompare([]byte(got), []byte(state)) != 1 {
-			http.Error(w, "Invalid state", http.StatusBadRequest)
+			http.Error(w, "Некорректное значение: состояние", http.StatusBadRequest)
 			return
 		}
 		var cb callbackResult
@@ -213,7 +213,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		} else {
 			cb.Code = r.URL.Query().Get("code")
 			if cb.Code == "" || len(cb.Code) > 4096 || strings.ContainsAny(cb.Code, "\r\n") {
-				cb.Err = errors.New("invalid authorization callback")
+				cb.Err = errors.New("Некорректное значение: «authorization callback»")
 			}
 		}
 		select {
@@ -239,7 +239,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 	fmt.Fprintln(output, "Redirect registration: http://localhost/minecraft-poc/callback (native/public client; loopback port is dynamic).")
 	if opt.OpenBrowser {
 		if err := openBrowser(authURL); err != nil {
-			fmt.Fprintln(output, "Could not open browser automatically; use the URL above.")
+			fmt.Fprintln(output, "Не удалось открыть «browser automatically; use the URL above.»")
 		}
 	}
 	select {
@@ -315,7 +315,7 @@ func verify(ctx context.Context, c providerClient, opt options, output io.Writer
 		return r
 	}
 	if opt.Flow != "browser" && opt.Flow != "device" {
-		r.fail("oauth_flow", errors.New("invalid flow"))
+		r.fail("oauth_flow", errors.New("Некорректное значение: «flow»"))
 		return r
 	}
 	r.pass("client_id_format_valid")

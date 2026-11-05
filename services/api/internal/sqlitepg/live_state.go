@@ -57,7 +57,7 @@ func jsonText0474(src map[string]any, name string) (string, error) {
 		return "", e
 	}
 	if !json.Valid([]byte(s)) {
-		return "", fmt.Errorf("invalid JSON in %s", name)
+		return "", fmt.Errorf("Некорректный JSON в %s", name)
 	}
 	return s, nil
 }
@@ -103,7 +103,7 @@ func session0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	}
 	sessionID, e := mustText0474(s, "id")
 	if e != nil || sessionID == "" {
-		return errors.New("invalid source session ID")
+		return errors.New("Некорректное значение: «source session ID»")
 	}
 	var email, role string
 	if e = tx.QueryRow(ctx, `SELECT email,role_id FROM users WHERE id=$1`, uid).Scan(&email, &role); e != nil {
@@ -121,7 +121,7 @@ func session0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if epoch < 1 {
-		return errors.New("invalid session auth epoch")
+		return errors.New("Некорректное значение: «session auth epoch»")
 	}
 	methods, e := jsonText0474(s, "auth_methods")
 	if e != nil {
@@ -148,7 +148,7 @@ func session0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if status != "active" && status != "revoked" {
-		return fmt.Errorf("invalid session status %s", status)
+		return fmt.Errorf("Некорректное значение: «session status» %s", status)
 	}
 	// Исходные учётные данные выпущены другим центром токенов.
 	if status == "active" {
@@ -177,7 +177,7 @@ func family0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if status != "active" && status != "revoked" && status != "compromised" {
-		return fmt.Errorf("invalid family status %s", status)
+		return fmt.Errorf("Некорректное значение: «family status» %s", status)
 	}
 	// Все старые refresh-токены отзываются, но их история сохраняется.
 	_, e = tx.Exec(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status,created_at,compromised_at,revoked_at,revoked_reason,core_original_status_0474)
@@ -226,7 +226,7 @@ type MFASecrets0474 struct {
 
 func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 	if len(keys.SQLiteMFAKey) != 32 || keys.PostgreSQLSecret == "" {
-		return "", errors.New("MFA migration needs --sqlite-mfa-key-file and --postgres-secret-env; TOTP cannot be disabled or copied as plaintext")
+		return "", errors.New("«MFA migration needs --sqlite-mfa-key-file and --postgres-secret-env; TOTP»: запрещено «be disabled or copied as plaintext»")
 	}
 	block, err := aes.NewCipher(keys.SQLiteMFAKey)
 	if err != nil {
@@ -273,7 +273,7 @@ func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 func totpWithSecrets0474(ctx context.Context, tx pgx.Tx, s map[string]any, keys MFASecrets0474) error {
 	raw, ok := s["secret_ciphertext"].([]byte)
 	if !ok || len(raw) < 28 {
-		return errors.New("invalid Core TOTP ciphertext")
+		return errors.New("Некорректное значение: «Core TOTP ciphertext»")
 	}
 	created, e := when0474(s, "created_at", false)
 	if e != nil {
@@ -295,7 +295,7 @@ func totpWithSecrets0474(ctx context.Context, tx pgx.Tx, s map[string]any, keys 
 		return e
 	}
 	if step < -1 {
-		return errors.New("invalid TOTP replay counter")
+		return errors.New("Некорректное значение: «TOTP replay counter»")
 	}
 	encrypted, e := rewrapTOTP0474(raw, keys)
 	if e != nil {
@@ -406,7 +406,7 @@ func job0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if fence < 0 || fence == int64(^uint64(0)>>1) {
-		return errors.New("invalid job fence")
+		return errors.New("Некорректное значение: «job fence»")
 	}
 	available, e := when0474(s, "available_at", false)
 	if e != nil {
@@ -469,7 +469,7 @@ func lease0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if fence < 1 || fence == int64(^uint64(0)>>1) {
-		return errors.New("invalid scope fencing token")
+		return errors.New("Некорректное значение: «scope fencing token»")
 	}
 	// Прежний владелец не может продлевать аренду; новый в PostgreSQL получает больший токен.
 	_, e = tx.Exec(ctx, `INSERT INTO durable_scope_leases(scope_key,owner,lease_token,fencing_token,expires_at,updated_at)
@@ -490,7 +490,7 @@ func outbox0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if fence < 0 || fence == int64(^uint64(0)>>1) {
-		return errors.New("invalid outbox fence")
+		return errors.New("Некорректное значение: «outbox fence»")
 	}
 	available, e := when0474(s, "available_at", false)
 	if e != nil {
@@ -524,7 +524,7 @@ func outbox0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 func bridgeNode0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	key, ok := s["public_key"].([]byte)
 	if !ok || len(key) != 32 {
-		return errors.New("invalid Ed25519 node key")
+		return errors.New("Некорректное значение: «Ed25519 node key»")
 	}
 	fingerprint, e := validatedHash0474(s, "fingerprint")
 	if e != nil {
@@ -532,14 +532,14 @@ func bridgeNode0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	}
 	sum := sha256.Sum256(key)
 	if hex.EncodeToString(sum[:]) != fingerprint {
-		return errors.New("bridge Ed25519 key fingerprint mismatch")
+		return errors.New("Несовпадение: «bridge Ed25519 key fingerprint»")
 	}
 	epoch, e := mustInt0474(s, "identity_epoch")
 	if e != nil {
 		return e
 	}
 	if epoch < 1 {
-		return errors.New("invalid bridge identity epoch")
+		return errors.New("Некорректное значение: «bridge identity epoch»")
 	}
 	created, e := when0474(s, "created_at", false)
 	if e != nil {
@@ -554,7 +554,7 @@ func bridgeNode0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if status != "active" && status != "disabled" {
-		return errors.New("invalid bridge node status")
+		return errors.New("Некорректное значение: «bridge node status»")
 	}
 	_, e = tx.Exec(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,created_at,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,core_channel_0474)
      VALUES($1,$1,'velocity',$2,$3,$4,'','',$5,2,$6,'ed25519',$7,$4,$8,$9,$10)`, s["id"], s["project_id"], s["profile_id"], fingerprint, status, created, base64.RawURLEncoding.EncodeToString(key), epoch, updated, s["channel"])
@@ -629,7 +629,7 @@ func bridgeTicket0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if status != "active" && status != "consumed" && status != "replaced" && status != "invalidated" {
-		return errors.New("unsupported join-ticket state")
+		return errors.New("Не поддерживается: «join-ticket state»")
 	}
 	original := status
 	var invalidated any
@@ -654,7 +654,7 @@ func bridgeRuntime0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if epoch <= 0 || epoch == int64(^uint64(0)>>1) {
-		return errors.New("runtime epoch invalid")
+		return errors.New("Некорректное значение: «runtime epoch»")
 	}
 	heartbeat, e := when0474(s, "last_heartbeat", false)
 	if e != nil {
@@ -668,7 +668,7 @@ func bridgeRuntime0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		return e
 	}
 	if updated != epoch+1 {
-		return errors.New("bridge runtime generation fence mismatch")
+		return errors.New("Несовпадение: «bridge runtime generation fence»")
 	}
 	return nil
 }
@@ -728,7 +728,7 @@ func bridgeCommand0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		completed = time.Now().UTC()
 	case "succeeded", "failed", "unsupported", "indeterminate", "expired":
 	default:
-		return errors.New("unsupported ServerBridge command state")
+		return errors.New("Не поддерживается: «ServerBridge command state»")
 	}
 	_, e = tx.Exec(ctx, `INSERT INTO server_bridge_control_commands_v3(id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,completed_at,result,error,core_original_status_0474,core_delivery_seq_0474)
       VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18,$19,$20)`, s["id"], s["node_id"], s["runtime_epoch"], s["runtime_id"], s["command_type"], payload, s["payload_digest"], request, s["actor"], s["idempotency_key"], status, s["attempt"], created, updated, expires, completed, result, s["failure"], s["status"], s["delivery_seq"])
@@ -741,7 +741,7 @@ func stateRules0474() []stateRule0474 {
 		{"access_tokens", "sqlite_access_token_tombstones_0474", accessToken0474},
 		{"refresh_families", "refresh_token_families", family0474},
 		{"refresh_tokens", "refresh_tokens", refresh0474},
-		{"mfa_totp", "mfa_methods", func(context.Context, pgx.Tx, map[string]any) error { return errors.New("MFA rewrap key missing") }},
+		{"mfa_totp", "mfa_methods", func(context.Context, pgx.Tx, map[string]any) error { return errors.New("Отсутствует: «MFA rewrap key»") }},
 		{"mfa_recovery", "recovery_codes", recovery0474},
 		{"minecraft_profiles", "minecraft_profiles", minecraftProfile0474},
 		{"minecraft_sessions", "minecraft_sessions", minecraftSession0474},
@@ -807,7 +807,7 @@ func moveState0474(ctx context.Context, tx pgx.Tx, receipt Report, report *LiveR
 	for _, r := range stateRules0474() {
 		expected, ok := tableReport0473(receipt, r.source)
 		if !ok {
-			return fmt.Errorf("missing Core table %s", r.source)
+			return fmt.Errorf("Отсутствует: «Core table» %s", r.source)
 		}
 		if e := sourceRows0473(ctx, tx, r.source, expected, func(s map[string]any) error {
 			if r.source == "mfa_totp" {
@@ -823,7 +823,7 @@ func moveState0474(ctx context.Context, tx pgx.Tx, receipt Report, report *LiveR
 				return e
 			}
 			if n != expected.Rows {
-				return fmt.Errorf("bridge runtime row count mismatch: %d != %d", n, expected.Rows)
+				return fmt.Errorf("Несовпадение: «bridge runtime row count»: %d != %d", n, expected.Rows)
 			}
 		} else if r.source != "auth_revocation_events" {
 			if e := verifyLive0473(ctx, tx, r.target, expected.Rows); e != nil {
@@ -835,7 +835,7 @@ func moveState0474(ctx context.Context, tx pgx.Tx, receipt Report, report *LiveR
 				return e
 			}
 			if n != expected.Rows {
-				return errors.New("revocation audit events count mismatch")
+				return errors.New("Несовпадение: «revocation audit events count»")
 			}
 		}
 		report.LiveTables = append(report.LiveTables, LiveTable0473{Source: r.source, Destination: r.target, Rows: expected.Rows})

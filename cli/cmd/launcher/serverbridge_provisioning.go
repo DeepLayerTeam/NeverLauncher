@@ -686,7 +686,7 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 			enrollArgs = append(enrollArgs, "--rotate")
 		}
 		if err := enrollServerBridge0199(enrollArgs); err != nil {
-			return fmt.Errorf("bridge installed but enrollment failed: %w", err)
+			return fmt.Errorf("Мост установлен, но его регистрация завершилась ошибкой: %w", err)
 		}
 		plan["enrollment"] = "completed"
 	}
@@ -760,7 +760,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		return bridgeArtifact0199{}, err
 	}
 	if !info.Mode().IsRegular() || info.Size() == 0 {
-		return bridgeArtifact0199{}, fmt.Errorf("invalid bridge artifact: %s", abs)
+		return bridgeArtifact0199{}, fmt.Errorf("Некорректное значение: «bridge artifact»: %s", abs)
 	}
 	file := filepath.Base(abs)
 	expectedPrefix := "launcher-" + platform + "-bridge-"
@@ -806,11 +806,11 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 		}
 		if serverBridgeSecurityCertificationRequired01912(artifactVersion) {
 			if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
-				return "", errors.New("ServerBridge 3 security certification metadata mismatch")
+				return "", errors.New("Несовпадение: «ServerBridge 3 security certification metadata»")
 			}
 		}
 		if serverBridgeGARequired0200(artifactVersion) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
-			return "", errors.New("ServerBridge 3 GA certification metadata mismatch")
+			return "", errors.New("Несовпадение: «ServerBridge 3 GA certification metadata»")
 		}
 		for _, item := range cert.Artifacts {
 			if item.ID != platform {
@@ -826,17 +826,17 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	allowPath := filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json")
 	raw, err := os.ReadFile(allowPath)
 	if err != nil {
-		return "", errors.New("production provisioning requires sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
+		return "", errors.New("Для «production provisioning» требуется sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
 	}
 	var document serverBridgeReleaseAllowlist01912
 	if err := json.Unmarshal(raw, &document); err != nil {
 		return "", fmt.Errorf("Некорректное значение: %s: %w", allowPath, err)
 	}
 	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-		return "", errors.New("ServerBridge 3 release allowlist security metadata mismatch")
+		return "", errors.New("Несовпадение: «ServerBridge 3 release allowlist security metadata»")
 	}
 	if serverBridgeGARequired0200(artifactVersion) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
-		return "", errors.New("ServerBridge 3 GA release allowlist metadata mismatch")
+		return "", errors.New("Несовпадение: «ServerBridge 3 GA release allowlist metadata»")
 	}
 	policy := document.Releases[artifactVersion]
 	if policy == nil {
@@ -845,7 +845,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	field := bridgeAllowlistField0199(platform)
 	values := policy[field]
 	if len(values) != 1 || !strings.EqualFold(strings.TrimSpace(values[0]), digest) {
-		return "", fmt.Errorf("release allowlist field %s does not match artifact SHA-256", field)
+		return "", fmt.Errorf("«release allowlist field» %s не совпадает с «artifact SHA-256»", field)
 	}
 	return "BRIDGE_RELEASE_ALLOWLIST.json", nil
 }
@@ -951,7 +951,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 			return err
 		}
 		if !strings.Contains(text, "Main-Class: ru.launcher.bridge.vanilla.LauncherVanillaBridge") {
-			return errors.New("Vanilla ServerBridge sidecar Main-Class is missing")
+			return errors.New("Отсутствует: «Vanilla ServerBridge sidecar Main-Class»")
 		}
 	}
 	return nil
@@ -1044,7 +1044,7 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		return bridgeIdentityMaterial0199{}, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity must be a regular non-symlink file: %s", path)
+		return bridgeIdentityMaterial0199{}, fmt.Errorf("Для «node identity» требуется: «a regular non-symlink file:» %s", path)
 	}
 	if err := verifyNodeIdentityPermissions0199(path, info); err != nil {
 		return bridgeIdentityMaterial0199{}, err
@@ -1064,29 +1064,29 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		}
 	}
 	if values["formatVersion"] != "1" || strings.ToLower(values["keyAlgorithm"]) != "ed25519" {
-		return bridgeIdentityMaterial0199{}, errors.New("unsupported node identity format")
+		return bridgeIdentityMaterial0199{}, errors.New("Не поддерживается: «node identity format»")
 	}
 	pub, err := base64.RawURLEncoding.DecodeString(values["publicKey"])
 	if err != nil || len(pub) != ed25519.PublicKeySize {
-		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity publicKey")
+		return bridgeIdentityMaterial0199{}, errors.New("Некорректное значение: «node identity publicKey»")
 	}
 	sum := sha256.Sum256(pub)
 	fp := hex.EncodeToString(sum[:])
 	if !strings.EqualFold(fp, values["keyFingerprint"]) {
-		return bridgeIdentityMaterial0199{}, errors.New("node identity fingerprint mismatch")
+		return bridgeIdentityMaterial0199{}, errors.New("Несовпадение: «node identity fingerprint»")
 	}
 	// До успешного завершения подготовки проверьте, что среда Java сможет разобрать материал закрытого ключа.
 	privDER, err := base64.RawURLEncoding.DecodeString(values["privateKeyPkcs8"])
 	if err != nil {
-		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity privateKeyPkcs8")
+		return bridgeIdentityMaterial0199{}, errors.New("Некорректное значение: «node identity privateKeyPkcs8»")
 	}
 	parsed, err := x509.ParsePKCS8PrivateKey(privDER)
 	if err != nil {
-		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity PKCS#8 private key")
+		return bridgeIdentityMaterial0199{}, errors.New("Некорректное значение: «node identity PKCS#8 private key»")
 	}
 	privateKey, ok := parsed.(ed25519.PrivateKey)
 	if !ok || !privateKey.Public().(ed25519.PublicKey).Equal(ed25519.PublicKey(pub)) {
-		return bridgeIdentityMaterial0199{}, errors.New("node identity keypair mismatch")
+		return bridgeIdentityMaterial0199{}, errors.New("Несовпадение: «node identity keypair»")
 	}
 	return bridgeIdentityMaterial0199{PublicKey: values["publicKey"], Fingerprint: fp}, nil
 }
@@ -1103,7 +1103,7 @@ func enrollServerBridge0199(args []string) error {
 	}
 	var req bridgeEnrollmentRequest0199
 	if err := json.Unmarshal(raw, &req); err != nil {
-		return fmt.Errorf("invalid enrollment request: %w", err)
+		return fmt.Errorf("Некорректное значение: «enrollment request»: %w", err)
 	}
 	if req.ID == "" || req.Kind == "" || req.PublicKey == "" || req.KeyFingerprint == "" {
 		return errors.New("enrollment request is incomplete")
@@ -1122,13 +1122,13 @@ func enrollServerBridge0199(args []string) error {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "backend": backend, "endpoint": endpoint, "request": body, "keyFingerprint": req.KeyFingerprint})
 	}
 	if backend == "" {
-		return errors.New("enroll requires --backend or backendUrl in enrollment-request.json")
+		return errors.New("Для «enroll» требуется «--backend or backendUrl in enrollment-request.json»")
 	}
 	if err := bridgeEndpointSecure02812(backend); err != nil {
 		return err
 	}
 	if token == "" {
-		return errors.New("enroll requires --token or LAUNCHER_TOKEN")
+		return errors.New("Для «enroll» требуется «--token or LAUNCHER_TOKEN»")
 	}
 	payload, err := httpJSONWithAuth("POST", backend+endpoint, body, token)
 	if err != nil && !rotate {
@@ -1162,14 +1162,14 @@ func serverBridgeMigrateV30200(args []string) error {
 	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	current, err := readBridgeProvisionState0199(statePath)
 	if err != nil {
-		return errors.New("server-bridge migrate-v3 requires an existing managed ServerBridge installation; run `nl server-bridge install` first")
+		return errors.New("Для «server-bridge migrate-v3» требуется «an existing managed ServerBridge installation; run `nl server-bridge install` first»")
 	}
 	if compareSemver0199(version, "0.20.0") < 0 {
-		return fmt.Errorf("server-bridge migrate-v3 requires nl >= 0.20.0; current CLI is %s", version)
+		return fmt.Errorf("Для «server-bridge migrate-v3» требуется «nl >= 0.20.0; current CLI is» %s", version)
 	}
 	targetVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
 	if compareSemver0199(targetVersion, "0.20.0") < 0 {
-		return fmt.Errorf("ServerBridge 3 GA migration target must be >= 0.20.0, got %s", targetVersion)
+		return fmt.Errorf("Для «ServerBridge 3 GA migration target» требуется: «>= 0.20.0, got» %s", targetVersion)
 	}
 
 	backend := strings.TrimRight(firstNonEmpty0199(flagValue(args, "--backend", ""), os.Getenv("LAUNCHER_BACKEND_URL")), "/")
@@ -1179,7 +1179,7 @@ func serverBridgeMigrateV30200(args []string) error {
 		}
 	}
 	if backend == "" {
-		return errors.New("server-bridge migrate-v3 requires a Backend URL to verify Protocol v3 GA capability before replacing the artifact")
+		return errors.New("Для «server-bridge migrate-v3» требуется «a Backend URL to verify Protocol v3 GA capability before replacing the artifact»")
 	}
 	capURL := backend + "/api/v1/server-bridge/capabilities?protocols=3&features=" + strings.Join([]string{
 		"protocol.capability-negotiation", "protocol.feature-flags", "protocol.rolling-upgrade-v2",
@@ -1190,7 +1190,7 @@ func serverBridgeMigrateV30200(args []string) error {
 	}, ",")
 	capabilities, err := httpJSONWithAuth("GET", capURL, nil, "")
 	if err != nil {
-		return fmt.Errorf("Protocol v3 GA Backend preflight failed: %w", err)
+		return fmt.Errorf("Ошибка: «Protocol v3 GA Backend preflight»: %w", err)
 	}
 	data, _ := capabilities["data"].(map[string]any)
 	if intFromJSON0200(data["negotiatedProtocolVersion"]) != 3 || data["protocolV3Frozen"] != true || fmt.Sprint(data["protocolV3Status"]) != "ga-frozen" || fmt.Sprint(data["protocolV3FeatureDigest"]) != "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc" {
@@ -1323,16 +1323,16 @@ func rollbackServerBridge0199(args []string) error {
 	if txID == "" {
 		state, err := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 		if err != nil {
-			return errors.New("rollback requires --transaction or an active managed ServerBridge state")
+			return errors.New("Для откат требуется «--transaction or an active managed ServerBridge state»")
 		}
 		txID = state.TransactionID
 	}
 	if !bridgeTxID02812.MatchString(txID) {
-		return errors.New("invalid transaction identifier")
+		return errors.New("Некорректное значение: «transaction identifier»")
 	}
 	current, currentErr := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 	if currentErr != nil || current.TransactionID != txID {
-		return errors.New("rollback requires the currently active transaction (reconcile changes before rollback)")
+		return errors.New("Для откат требуется «the currently active transaction (reconcile changes before rollback)»")
 	}
 	txPath := bridgeTransactionPath0199(root, txID)
 	raw, err := os.ReadFile(txPath)
@@ -1344,13 +1344,13 @@ func rollbackServerBridge0199(args []string) error {
 		return err
 	}
 	if tx.ID != txID {
-		return errors.New("transaction id mismatch")
+		return errors.New("Несовпадение: идентификатор транзакции")
 	}
 	if err := bridgeSafeTransaction02812(root, &tx); err != nil {
 		return err
 	}
 	if tx.CompletedAt == "" {
-		return errors.New("incomplete transaction requires manual reconciliation")
+		return errors.New("Для «incomplete transaction» требуется «manual reconciliation»")
 	}
 	if tx.RolledBackAt != "" {
 		return fmt.Errorf("transaction %s is already rolled back", tx.ID)
@@ -1557,10 +1557,10 @@ func replaceFile0199(tempName, dst string) error {
 		return err
 	}
 	if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-		return fmt.Errorf("replace %s: rename failed: %v; remove destination failed: %w", dst, err, removeErr)
+		return fmt.Errorf("Ошибка: «replace %s: rename»: %v; remove destination failed: %w", dst, err, removeErr)
 	}
 	if retryErr := os.Rename(tempName, dst); retryErr != nil {
-		return fmt.Errorf("replace %s: rename failed: %v; retry failed: %w", dst, err, retryErr)
+		return fmt.Errorf("Ошибка: «replace %s: rename»: %v; retry failed: %w", dst, err, retryErr)
 	}
 	return nil
 }
@@ -1584,7 +1584,7 @@ func readBridgeProvisionState0199(path string) (bridgeProvisionState0199, error)
 		return state, err
 	}
 	if state.SchemaVersion != "1.0" || state.Platform == "" || state.ArtifactPath == "" {
-		return state, errors.New("invalid managed ServerBridge state")
+		return state, errors.New("Некорректное значение: «managed ServerBridge state»")
 	}
 	return state, nil
 }

@@ -99,8 +99,8 @@ impl GuardSupervisor {
     pub async fn ensure_started(&self)->Result<GuardStatus,String>{
         let mut state=self.inner.lock().await;
         if let Some(handle)=state.as_mut(){
-            if handle.child.try_wait().map_err(|e|format!("Guard process check failed: {e}"))?.is_none(){
-                if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; if s.pid!=handle.child.id().ok_or("Guard child PID missing")?||s.parent_pid!=std::process::id(){return Err("Guard running process identity mismatch".into())} s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
+            if handle.child.try_wait().map_err(|e|format!("Ошибка проверки процесса Guard: {e}"))?.is_none(){
+                if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; if s.pid!=handle.child.id().ok_or("Guard child PID missing")?||s.parent_pid!=std::process::id(){return Err("Несовпадение: «Guard running process identity»".into())} s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
             }
         }
         if let Some(mut stale)=state.take(){ let _=stale.child.kill().await; }
@@ -113,7 +113,7 @@ impl GuardSupervisor {
         // inode через /proc/self/fd. Последующее переименование пути не
         // перенаправит spawn() на другой бинарник Guard.
         let pinned_image=if let Some(expected)=verified_guard_hash.as_ref() {
-            let image=File::open(&executable).map_err(|e|format!("open verified Guard image failed: {e}"))?;
+            let image=File::open(&executable).map_err(|e|format!("Ошибка: «open verified Guard image»: {e}"))?;
             let observed=sha256_open_file(&image)?;
             if !ct_eq(observed.as_bytes(),expected.as_bytes()) {
                 return Err("Guard image changed after package manifest verification".into());
@@ -143,7 +143,7 @@ impl GuardSupervisor {
         // Образ процесса уже привязан к проверенному открытому дескриптору.
         drop(pinned_image);
         let mut stdin=child.stdin.take().ok_or_else(||"Guard bootstrap stdin unavailable".to_string())?;
-        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("Guard bootstrap write failed: {e}")); }
+        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("Ошибка: «Guard bootstrap write»: {e}")); }
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
         let (stream,session_key,_handshake_status)=match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),client_authenticate(stream,&endpoint,parent_pid,guard_pid,&secret)).await {
@@ -151,12 +151,12 @@ impl GuardSupervisor {
         };
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
-        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("Guard release identity query failed: {e}"))?;
-        let mut status=parse_status(status_value)?; if status.pid!=guard_pid||status.parent_pid!=parent_pid||status.started_at_unix!=_handshake_status.started_at_unix{return Err("Guard status process identity mismatch".into())} status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
+        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("Ошибка: запрос идентичности релиза Guard: {e}"))?;
+        let mut status=parse_status(status_value)?; if status.pid!=guard_pid||status.parent_pid!=parent_pid||status.started_at_unix!=_handshake_status.started_at_unix{return Err("Несовпадение: «Guard status process identity»".into())} status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
         *state=Some(handle); Ok(status)
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
-    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid Guard ping".into())} }
+    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("Некорректное значение: «Guard ping»".into())} }
     /// Проверяет только уже аутентифицированный процесс Guard. Не
     /// перезапускайте его незаметно после допуска игры; разрыв IPC — нарушение.
     pub async fn ping_running(&self)->Result<(),String>{
@@ -188,12 +188,12 @@ fn runtime_dir()->Result<PathBuf,String>{
     let p = std::env::var_os("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(format!("/run/user/{uid}")));
-    let m=std::fs::metadata(&p).map_err(|e|format!("stat Linux runtime directory {} failed: {e}",p.display()))?;
-    if !m.is_dir()||m.uid()!=uid||(m.mode()&0o077)!=0{return Err("Linux runtime directory must be owned by current uid with no group/world access".into())}
-    let d=p.join("launcher"); std::fs::create_dir_all(&d).map_err(|e|format!("create runtime dir failed: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
+    let m=std::fs::metadata(&p).map_err(|e|format!("Ошибка: «stat Linux runtime directory {}»: {e}",p.display()))?;
+    if !m.is_dir()||m.uid()!=uid||(m.mode()&0o077)!=0{return Err("Для «Linux runtime directory» требуется: «owned by current uid with no group/world access»".into())}
+    let d=p.join("launcher"); std::fs::create_dir_all(&d).map_err(|e|format!("Ошибка: «create runtime dir»: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{ let mut r=[0u8;8];OsRng.fill_bytes(&mut r);Ok(runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)))) }
-fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("socket parent missing")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("Guard socket outside private runtime directory".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("socket filename invalid")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Guard socket name malformed".into())} Ok(()) }
+fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("Отсутствует: «socket parent»")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("Guard socket outside private runtime directory".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное значение: «socket filename»")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Guard socket name malformed".into())} Ok(()) }
 fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{ let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} failed: {e}",path.display()))?; if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} must be a regular non-symlink file",path.display()))}; let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}; if sm.mode()&0o022!=0{return Err(format!("{} must not be group/world writable",path.display()))}; if executable&&sm.mode()&0o111==0{return Err(format!("{} is not executable",path.display()))}; Ok(()) }
 fn sha256_file(path:&Path)->Result<String,String>{let f=File::open(path).map_err(|e|e.to_string())?;let mut r=BufReader::new(f);let mut h=Sha256::new();let mut b=[0u8;65536];loop{let n=r.read(&mut b).map_err(|e|e.to_string())?;if n==0{break}h.update(&b[..n]);}Ok(hex::encode(h.finalize()))}
 fn sha256_open_file(file:&File)->Result<String,String>{
@@ -210,36 +210,36 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
     // бы под контролем злоумышленника и никогда не принимается.
     let pinned=option_env!("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY")
         .ok_or("Linux production Guard requires a build-time pinned Ed25519 public key")?;
-    let key_bytes=hex::decode(pinned.trim()).map_err(|_|"invalid compiled Linux Guard public key")?;
-    let raw_key:[u8;32]=key_bytes.try_into().map_err(|_|"invalid compiled Linux Guard public key length")?;
-    let key=VerifyingKey::from_bytes(&raw_key).map_err(|_|"invalid compiled Linux Guard public key")?;
+    let key_bytes=hex::decode(pinned.trim()).map_err(|_|"Некорректное значение: «compiled Linux Guard public key»")?;
+    let raw_key:[u8;32]=key_bytes.try_into().map_err(|_|"Некорректное значение: «compiled Linux Guard public key length»")?;
+    let key=VerifyingKey::from_bytes(&raw_key).map_err(|_|"Некорректное значение: «compiled Linux Guard public key»")?;
     let detached=path.with_file_name(format!("{}.ed25519",
         path.file_name().and_then(|f|f.to_str()).ok_or("manifest filename invalid")?));
     validate_secure_file(&detached,false)?;
-    let bytes=std::fs::read(&detached).map_err(|e|format!("Linux manifest signature missing: {e}"))?;
+    let bytes=std::fs::read(&detached).map_err(|e|format!("Отсутствует: подпись манифеста Linux: {e}"))?;
     if bytes.len()!=129 || bytes.last()!=Some(&b'\n') {
-        return Err("Linux manifest detached signature format invalid".into());
+        return Err("Некорректное значение: «Linux manifest detached signature format»".into());
     }
-    let hex_text=std::str::from_utf8(&bytes[..128]).map_err(|_|"Linux manifest signature encoding invalid")?;
-    let sig_bytes=hex::decode(hex_text).map_err(|_|"Linux manifest signature hex invalid")?;
-    let signature=Signature::from_slice(&sig_bytes).map_err(|_|"Linux manifest signature length invalid")?;
+    let hex_text=std::str::from_utf8(&bytes[..128]).map_err(|_|"Некорректное значение: «Linux manifest signature encoding»")?;
+    let sig_bytes=hex::decode(hex_text).map_err(|_|"Некорректное значение: «Linux manifest signature hex»")?;
+    let signature=Signature::from_slice(&sig_bytes).map_err(|_|"Некорректное значение: «Linux manifest signature length»")?;
     let mut message=Vec::with_capacity(GUARD_MANIFEST_DOMAIN.len()+raw.len());
     message.extend_from_slice(GUARD_MANIFEST_DOMAIN);
     message.extend_from_slice(raw);
     key.verify(&message,&signature)
-        .map_err(|_|"Linux production package manifest signature verification failed".to_string())
+        .map_err(|_|"Ошибка: «Linux production package manifest signature verification»".to_string())
 }
 
 fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
-    let dd=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("guard parent missing")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and Guard must be in same package directory".into())}
+    let dd=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует: «guard parent»")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Для «Desktop and Guard» требуется: «in same package directory»".into())}
     let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?;
     verify_linux_manifest_signature(&mp,&raw)?;
-    let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Linux package manifest JSON invalid: {e}"))?;
+    let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Некорректное значение: «Linux package manifest JSON»: {e}"))?;
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
     let legacy=m.schema_version=="1.0"&&m.platform=="linux-amd64"&&m.guard_protocol_version==GUARD_PROTOCOL_VERSION&&m.authenticated_ipc=="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"&&m.linux_production_hardening_version==GUARD_LINUX_HARDENING_VERSION;
     let canonical=m.schema_version=="1.0"&&m.platform=="linux"&&m.architecture==canonical_arch;
-    if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Linux package manifest identity/hardening mismatch".into())}
+    if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Несовпадение: «Linux package manifest identity/hardening»".into())}
     let mut verified_guard_hash=None;
     for path in [&desktop,guard]{
         let name=path.file_name().and_then(|v|v.to_str()).ok_or("artifact name invalid")?;
@@ -247,17 +247,17 @@ fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
             if canonical&&!a.package_path.is_empty(){Path::new(&a.package_path).file_name().and_then(|v|v.to_str())==Some(name)}else{a.name==name}
         }).ok_or_else(||format!("artifact {name} missing from Linux package manifest"))?;
         let meta=std::fs::metadata(path).map_err(|e|e.to_string())?;
-        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Linux package artifact verification failed: {name}"))}
+        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Ошибка: «Linux package artifact verification»: {name}"))}
         if path == guard { verified_guard_hash=Some(a.sha256.to_ascii_lowercase()); }
     }
     // После запуска сравнивайте образ процесса с неизменным ожидаемым
     // дайджестом из исходного манифеста, а не с повторным чтением пути Guard.
     verified_guard_hash.ok_or_else(||"Guard hash missing in verified manifest".into())
 }
-fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("desktop parent missing")?.join("guard"))}
+fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("Отсутствует: «desktop parent»")?.join("guard"))}
 
 async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
-    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("Guard Unix socket connect failed: {e}"))}sleep(Duration::from_millis(40)).await}}
+    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("Не удалось подключиться к Unix-сокету Guard: {e}"))}sleep(Duration::from_millis(40)).await}}
     }
 }
 fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),String>{
@@ -273,11 +273,11 @@ fn ready_matches_challenge(ch:&ServerChallenge,ready:&ServerReady)->bool {
 
 async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guard_pid:u32,secret:&[u8;32])->Result<(UnixStream,[u8;32],GuardStatus),String>{
     let cn=random32(); write_frame(&mut s,&ClientHello{kind:"client-hello".into(),protocol_version:GUARD_PROTOCOL_VERSION,client_pid,client_nonce:hex::encode(cn)}).await?;
-    let ch:ServerChallenge=read_frame(&mut s).await?; if ch.kind!="server-challenge"||ch.protocol_version!=GUARD_PROTOCOL_VERSION||ch.guard_pid!=guard_pid{return Err("Guard server challenge mismatch".into())}
-    let sn=decode32(&ch.server_nonce,"serverNonce")?; let ep=endpoint.to_string_lossy(); let handshake=HandshakeContext{endpoint:&ep,client_pid,guard_pid,started:ch.started_at_unix,client_nonce:&cn,server_nonce:&sn}; let expected=proof(secret,b"server-proof",&handshake); if !ct_eq(&expected,&hex::decode(&ch.server_proof).map_err(|_|"invalid server proof")?){return Err("Guard server authentication failed".into())}
+    let ch:ServerChallenge=read_frame(&mut s).await?; if ch.kind!="server-challenge"||ch.protocol_version!=GUARD_PROTOCOL_VERSION||ch.guard_pid!=guard_pid{return Err("Не совпадает проверочный запрос сервера Guard".into())}
+    let sn=decode32(&ch.server_nonce,"serverNonce")?; let ep=endpoint.to_string_lossy(); let handshake=HandshakeContext{endpoint:&ep,client_pid,guard_pid,started:ch.started_at_unix,client_nonce:&cn,server_nonce:&sn}; let expected=proof(secret,b"server-proof",&handshake); if !ct_eq(&expected,&hex::decode(&ch.server_proof).map_err(|_|"Некорректное значение: «server proof»")?){return Err("Не удалось подтвердить подлинность сервера Guard".into())}
     let cp=proof(secret,b"client-proof",&handshake); write_frame(&mut s,&ClientAuthentication{kind:"client-auth".into(),client_proof:hex::encode(cp)}).await?;
-    let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if !ready_matches_challenge(&ch,&ready){return Err("Guard ready process identity mismatch".into())}
-    let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"invalid ready proof")?){return Err("Guard ready proof invalid".into())}
+    let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if !ready_matches_challenge(&ch,&ready){return Err("Несовпадение: «Guard ready process identity»".into())}
+    let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"Некорректное подтверждение готовности")?){return Err("Некорректное значение: «Guard ready proof»".into())}
     if ready.process_policy_version!=GUARD_LINUX_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=GUARD_LINUX_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Guard Linux policy/hardening not enforced".into())}
     Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:linux_platform().into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard Linux authenticated Unix IPC ready".into()}))
 }
@@ -287,31 +287,31 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"Guard IPC write timeout".to_string())??;
     let response_timeout = if matches!(command, "integrity-evidence" | "guard-attestation") { EVIDENCE_COMMAND_TIMEOUT_SECS } else { COMMAND_TIMEOUT_SECS };
     let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("Guard IPC read timeout for {command}"))??;
-    if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Guard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("Guard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Guard response JSON invalid: {e}"))
+    if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Несовпадение: «Guard response binding»".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"Некорректный MAC ответа")?){return Err("Некорректное значение: «Guard response MAC»".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Некорректное значение: «Guard response JSON»: {e}"))
 }
-fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Guard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
+fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Некорректное значение: состояние Guard: {e}"))?;validate_release_identity(&s)?;Ok(s)}
 fn linux_platform() -> &'static str {
     if cfg!(target_arch = "aarch64") { "linux-arm64" } else { "linux-amd64" }
 }
-fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Guard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!=linux_platform(){return Err(format!("Guard platform mismatch: expected {}, got {}",linux_platform(),s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Guard protocol mismatch: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Guard status failed mandatory runtime trust checks".into())}Ok(())}
+fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Несовпадение версий релиза Guard и Desktop: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!=linux_platform(){return Err(format!("Guard platform mismatch: expected {}, got {}",linux_platform(),s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Несовпадение протоколов Guard и Desktop: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Guard status failed mandatory runtime trust checks".into())}Ok(())}
 fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let l=p.linux.as_ref().ok_or("Linux process policy details missing")?;if p.schema!=GUARD_LINUX_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!l.no_new_privs||!l.dumpable_disabled||!l.core_dumps_disabled||!l.ptrace_restricted||!l.parent_death_signal||!l.private_umask{return Err("Guard Linux process policy rejected".into())}Ok(())}
-fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
-fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Linux Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
+fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"Некорректное значение: хеш подтверждающих данных")?){return Err("Несовпадение: хеш подтверждающих данных".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"Некорректное значение: «evidence proof»")?){return Err("Несовпадение: «evidence session proof»".into())}Ok(())}
+fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Несовпадение: «Linux Guard Attestation binding»".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"Некорректное значение: хеш аттестации")?){return Err("Несовпадение: хеш аттестации".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"Некорректное значение: «attestation proof»")?){return Err("Несовпадение: «attestation session proof»".into())}Ok(())}
 
 pub async fn run_linux_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
     validate_endpoint(&endpoint)?; let hard=ensure_linux_production_hardening()?; let policy=policy_report()?; let observed=crate::integrity::observed_linux_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("Guard Linux parent mismatch expected={parent_pid} observed={observed}"))}
-    let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("bootstrap secret read failed: {e}"))?; }
-    if endpoint.exists(){return Err("Guard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
-    let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("Guard Unix socket ACL verification failed".into())}
+    let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("Ошибка: «bootstrap secret read»: {e}"))?; }
+    if endpoint.exists(){return Err("Unix-сокет Guard уже существует".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
+    let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("Ошибка: «Guard Unix socket ACL verification»".into())}
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
-    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Guard startup authentication window expired".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Guard accept timeout".to_string())?.map_err(|e|e.to_string())?;
+    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Истёк срок ожидания аутентификации Guard при запуске".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Guard accept timeout".to_string())?.map_err(|e|e.to_string())?;
         if verify_peer(&stream,parent_pid,current_uid()).is_err(){continue}
         match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),server_authenticate(stream,&endpoint,parent_pid,started,&secret,&policy,&hard)).await {Ok(Ok((stream,key)))=>{secret.zeroize();let r=serve_commands(stream,key,parent_pid,started,policy,hard).await;let _=std::fs::remove_file(&endpoint);return r},_=>continue}
     }
 }
 fn policy_report()->Result<GuardProcessPolicyReport,String>{let l=guard_policy_report()?;Ok(GuardProcessPolicyReport{schema:GUARD_LINUX_PROCESS_POLICY_SCHEMA.into(),policy_version:1,pid:std::process::id(),enforced:true,dynamic_code_prohibited:false,extension_points_disabled:false,strict_handle_checks:false,remote_images_blocked:false,low_mandatory_label_images_blocked:false,prefer_system32_images:false,child_process_creation_blocked:false,linux:Some(l),macos:None,windows:None})}
 async fn server_authenticate(mut s:UnixStream,endpoint:&Path,parent_pid:u32,started:u64,secret:&[u8;32],policy:&GuardProcessPolicyReport,hard:&crate::linux_policy::LinuxProductionHardeningReport)->Result<(UnixStream,[u8;32]),String>{
-    let hello:ClientHello=timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),read_frame(&mut s)).await.map_err(|_|"client hello timeout".to_string())??; if hello.kind!="client-hello"||hello.protocol_version!=GUARD_PROTOCOL_VERSION||hello.client_pid!=parent_pid{return Err("client hello mismatch".into())}; let cn=decode32(&hello.client_nonce,"clientNonce")?;let sn=random32();let pid=std::process::id();let ep=endpoint.to_string_lossy();let handshake=HandshakeContext{endpoint:&ep,client_pid:parent_pid,guard_pid:pid,started,client_nonce:&cn,server_nonce:&sn};let sp=proof(secret,b"server-proof",&handshake);write_frame(&mut s,&ServerChallenge{kind:"server-challenge".into(),protocol_version:GUARD_PROTOCOL_VERSION,guard_pid:pid,started_at_unix:started,server_nonce:hex::encode(sn),server_proof:hex::encode(sp)}).await?;let auth:ClientAuthentication=read_frame(&mut s).await?;let expected=proof(secret,b"client-proof",&handshake);if auth.kind!="client-auth"||!ct_eq(&expected,&hex::decode(auth.client_proof).map_err(|_|"invalid client proof")?){return Err("client authentication failed".into())};let key=session_key(secret,&handshake);let rp=ready_proof(&key,ReadyProofState{pid,started,policy_version:policy.policy_version,policy_enforced:policy.enforced,hardening_version:hard.hardening_version,hardening_enforced:hard.enforced,secure_acl:true});write_frame(&mut s,&ServerReady{kind:"ready".into(),protocol_version:GUARD_PROTOCOL_VERSION,guard_pid:pid,started_at_unix:started,process_policy_version:policy.policy_version,process_policy_enforced:policy.enforced,hardening_version:hard.hardening_version,hardening_enforced:hard.enforced,secure_pipe_acl:true,ready_proof:hex::encode(rp)}).await?;Ok((s,key))
+    let hello:ClientHello=timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),read_frame(&mut s)).await.map_err(|_|"Превышено время ожидания приветствия клиента".to_string())??; if hello.kind!="client-hello"||hello.protocol_version!=GUARD_PROTOCOL_VERSION||hello.client_pid!=parent_pid{return Err("Несовпадение: приветствие клиента".into())}; let cn=decode32(&hello.client_nonce,"clientNonce")?;let sn=random32();let pid=std::process::id();let ep=endpoint.to_string_lossy();let handshake=HandshakeContext{endpoint:&ep,client_pid:parent_pid,guard_pid:pid,started,client_nonce:&cn,server_nonce:&sn};let sp=proof(secret,b"server-proof",&handshake);write_frame(&mut s,&ServerChallenge{kind:"server-challenge".into(),protocol_version:GUARD_PROTOCOL_VERSION,guard_pid:pid,started_at_unix:started,server_nonce:hex::encode(sn),server_proof:hex::encode(sp)}).await?;let auth:ClientAuthentication=read_frame(&mut s).await?;let expected=proof(secret,b"client-proof",&handshake);if auth.kind!="client-auth"||!ct_eq(&expected,&hex::decode(auth.client_proof).map_err(|_|"Некорректное подтверждение клиента")?){return Err("Ошибка: «client authentication»".into())};let key=session_key(secret,&handshake);let rp=ready_proof(&key,ReadyProofState{pid,started,policy_version:policy.policy_version,policy_enforced:policy.enforced,hardening_version:hard.hardening_version,hardening_enforced:hard.enforced,secure_acl:true});write_frame(&mut s,&ServerReady{kind:"ready".into(),protocol_version:GUARD_PROTOCOL_VERSION,guard_pid:pid,started_at_unix:started,process_policy_version:policy.policy_version,process_policy_enforced:policy.enforced,hardening_version:hard.hardening_version,hardening_enforced:hard.enforced,secure_pipe_acl:true,ready_proof:hex::encode(rp)}).await?;Ok((s,key))
 }
 async fn build_integrity_evidence(
     parent_pid: u32,
@@ -325,7 +325,7 @@ async fn build_integrity_evidence(
         .ok_or_else(|| "Linux process policy details missing".to_string())?;
     let mut evidence = tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid))
         .await
-        .map_err(|err| format!("Guard integrity worker failed: {err}"))??;
+        .map_err(|err| format!("Ошибка: «Guard integrity worker»: {err}"))??;
 
     // PR_GET_PDEATHSIG в Linux привязан к задаче или потоку. Отчёт политики
     // снимается из исходной задачи Guard до переноса тяжёлого сбора данных
@@ -354,7 +354,7 @@ async fn build_guard_attestation(
     payload: &str,
 ) -> Result<GuardRemoteAttestation, String> {
     let request: GuardAttestationRequest = serde_json::from_str(payload)
-        .map_err(|err| format!("attestation request invalid: {err}"))?;
+        .map_err(|err| format!("Некорректное значение: «attestation request»: {err}"))?;
     let evidence = build_integrity_evidence(parent_pid, key, policy).await?;
     let mut attestation = GuardRemoteAttestation {
         schema: GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA.into(),
@@ -386,7 +386,7 @@ async fn serve_commands(
     loop {
         let request: RequestEnvelope = read_frame(&mut stream).await?;
         if request.protocol_version != GUARD_PROTOCOL_VERSION || request.sequence != sequence {
-            return Err("request sequence mismatch".into());
+            return Err("Несовпадение: «request sequence»".into());
         }
         let expected = request_mac(
             &key,
@@ -397,9 +397,9 @@ async fn serve_commands(
         );
         if !ct_eq(
             &expected,
-            &hex::decode(&request.mac).map_err(|_| "invalid request mac")?,
+            &hex::decode(&request.mac).map_err(|_| "Некорректное значение: «request mac»")?,
         ) {
-            return Err("request MAC invalid".into());
+            return Err("Некорректное значение: «request MAC»".into());
         }
 
         let (ok, payload, shutdown) = match request.command.as_str() {
@@ -427,23 +427,23 @@ async fn serve_commands(
                     started_at_unix: started,
                     message: "Guard Linux production boundary ready".into(),
                 })
-                .map_err(|err| format!("Guard status serialization failed: {err}"))?,
+                .map_err(|err| format!("Ошибка: сериализация состояния Guard: {err}"))?,
                 false,
             ),
             "process-policy" => (
                 true,
                 serde_json::to_string(&policy)
-                    .map_err(|err| format!("Guard process policy serialization failed: {err}"))?,
+                    .map_err(|err| format!("Ошибка: «Guard process policy serialization»: {err}"))?,
                 false,
             ),
             "integrity-evidence" => match build_integrity_evidence(parent_pid, &key, &policy).await {
                 Ok(evidence) => (
                     true,
                     serde_json::to_string(&evidence)
-                        .map_err(|err| format!("Guard integrity serialization failed: {err}"))?,
+                        .map_err(|err| format!("Ошибка: «Guard integrity serialization»: {err}"))?,
                     false,
                 ),
-                Err(err) => (false, format!("Guard integrity evidence failed: {err}"), false),
+                Err(err) => (false, format!("Ошибка проверки целостности Guard: {err}"), false),
             },
             "guard-attestation" => {
                 match build_guard_attestation(parent_pid, &key, &policy, &request.payload).await {
@@ -454,7 +454,7 @@ async fn serve_commands(
                         })?,
                         false,
                     ),
-                    Err(err) => (false, format!("Guard attestation failed: {err}"), false),
+                    Err(err) => (false, format!("Ошибка: аттестация Guard: {err}"), false),
                 }
             }
             "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
@@ -481,8 +481,8 @@ async fn serve_commands(
     }
 }
 
-async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
-async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(one[0]);}if b.is_empty(){return Err("empty IPC frame".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
+async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
+async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(one[0]);}if b.is_empty(){return Err("Пустое значение: кадр IPC".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
 fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} invalid hex"))?;if b.len()!=32{return Err(format!("{n} invalid length"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
 #[derive(Clone, Copy)]
 struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,started:u64,client_nonce:&'a [u8;32],server_nonce:&'a [u8;32]}

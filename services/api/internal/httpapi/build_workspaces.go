@@ -217,7 +217,7 @@ func normalizeBuildFile0226(f repository.BuildFile) error {
 		return err
 	}
 	if len(f.SHA256) != 64 || f.Size < 0 || f.Size > 1<<32 {
-		return errors.New("invalid file hash or size")
+		return errors.New("Некорректное значение: «file hash or size»")
 	}
 	return nil
 }
@@ -271,7 +271,7 @@ func (s Server) readWorkspaceSource0226(ws repository.BuildWorkspace, f reposito
 		return nil, err
 	}
 	if int64(len(raw)) != max || !bytes.HasPrefix(raw, []byte("NLBW1")) {
-		return nil, errors.New("invalid source blob")
+		return nil, errors.New("Некорректное значение: «source blob»")
 	}
 	offset := len("NLBW1")
 	nonce := raw[offset : offset+aead.NonceSize()]

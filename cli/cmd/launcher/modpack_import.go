@@ -206,14 +206,14 @@ func loaderFromModrinth0275(deps map[string]string) (string, string, string, err
 	}
 	for key := range deps {
 		if key != "minecraft" && key != "fabric-loader" && key != "quilt-loader" && key != "forge" && key != "neoforge" {
-			return "", "", "", fmt.Errorf("unsupported required Modrinth dependency %q", key)
+			return "", "", "", fmt.Errorf("Не поддерживается: «required Modrinth dependency» %q", key)
 		}
 	}
 	if loader == "" {
 		loader = "vanilla"
 	}
 	if version != "" && isMutableLoaderSelector(version) {
-		return "", "", "", errors.New("loader version cannot be mutable")
+		return "", "", "", errors.New("версия загрузчика: запрещено «be mutable»")
 	}
 	return mc, loader, version, nil
 }
@@ -544,7 +544,7 @@ func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir stri
 		_ = os.Remove(name)
 		last = err
 	}
-	return "", "", 0, fmt.Errorf("all permitted sources failed: %w", last)
+	return "", "", 0, fmt.Errorf("Ошибка: «all permitted sources»: %w", last)
 }
 func curseFileMetadata0275(ctx context.Context, client *http.Client, api, key string, f *modpackFile0275) error {
 	endpoint := strings.TrimRight(api, "/") + "/v1/mods/" + strconv.FormatInt(f.ProjectID, 10) + "/files/" + strconv.FormatInt(f.FileID, 10)
@@ -663,7 +663,7 @@ func readZipOverride0275(z *zip.File, dir string) (string, string, int64, error)
 		return "", "", 0, e
 	}
 	if n > modpackMaxFile0275 || uint64(n) != z.UncompressedSize64 {
-		return "", "", 0, errors.New("override decompressed size mismatch")
+		return "", "", 0, errors.New("Несовпадение: «override decompressed size»")
 	}
 	if err = dest.Sync(); err != nil {
 		return "", "", 0, err

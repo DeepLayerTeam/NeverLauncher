@@ -83,7 +83,7 @@ func Digest(p Plan) (string, error) {
 }
 func Verify(p Plan) error {
 	if p.Format != Format || len(p.PlanSHA256) != 64 {
-		return errors.New("invalid migration plan format or digest")
+		return errors.New("Некорректное значение: «migration plan format or digest»")
 	}
 	d, e := Digest(p)
 	if e != nil {
@@ -96,7 +96,7 @@ func Verify(p Plan) error {
 }
 func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c gd.Report, m gm.Report, content gc.Plan, targetProfileExists bool, identities IdentityPreview) (Plan, error) {
 	if runID == "" || projectID == "" || len(targetSHA) != 64 || v.Format != inv.Format || c.Format != "launcher.gravit-compatibility.v1" || m.Format != gm.Format || v.SourceSHA256 != c.SourceSHA256 || v.SourceSHA256 != m.SourceSHA256 || v.ManifestSHA256 != m.InventorySHA256 || content.SourceSHA256 != v.SourceSHA256 || content.InventorySHA256 != v.ManifestSHA256 || content.ProfilePath != d.ProfilePath || content.Profile.Profile.ID != d.ProfileID || content.Profile.Profile.ProjectID != projectID || content.Profile.Settings.Minecraft.LoaderVersion != d.LoaderVersion {
-		return Plan{}, errors.New("source, target or content preview mismatch")
+		return Plan{}, errors.New("Несовпадение: «source, target or content preview»")
 	}
 	if _, e := v.Manifest(); e != nil {
 		return Plan{}, e

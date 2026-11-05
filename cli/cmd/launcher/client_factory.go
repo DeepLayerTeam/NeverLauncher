@@ -137,7 +137,7 @@ func (r *factoryRecorder0271) recordSource(s factorySource0271) error {
 		return err
 	}
 	if s.URL == "" || !isSHA256Hex0271(s.SHA256) || s.Size < 0 {
-		return fmt.Errorf("invalid recorded source %s", s.Path)
+		return fmt.Errorf("Некорректное значение: «recorded source» %s", s.Path)
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -286,7 +286,7 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 		return err
 	}
 	if digest != p.ReproducibilitySHA256 {
-		return fmt.Errorf("factory plan digest mismatch: %s != %s", p.ReproducibilitySHA256, digest)
+		return fmt.Errorf("Несовпадение: «factory plan digest»: %s != %s", p.ReproducibilitySHA256, digest)
 	}
 	return nil
 }
@@ -346,7 +346,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 			return fmt.Errorf("loader resolution lock: %w", err)
 		}
 		if sha256HexBytes(raw) != p.LoaderResolutionSHA256 {
-			return errors.New("loader resolution lock has changed")
+			return errors.New("Обнаружено изменение: блокировка выбора загрузчика")
 		}
 		var resolution loaderResolutionLock
 		if err := json.Unmarshal(raw, &resolution); err != nil {
@@ -369,7 +369,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 			return err
 		}
 		if sum != src.SHA256 || size != src.Size {
-			return fmt.Errorf("factory internal source has changed: %s", src.Path)
+			return fmt.Errorf("Обнаружено изменение: «factory internal source»: %s", src.Path)
 		}
 	}
 	actual, err := scanFactoryOutputs0271(root)
@@ -412,7 +412,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Для Client Factory необходимо указать --minecraft")
 	}
 	if !o.StrictUpstream {
-		return o, errors.New("Client Factory requires strict upstream checksum verification")
+		return o, errors.New("Для «Client Factory» требуется «strict upstream checksum verification»")
 	}
 	if o.Workers == 0 {
 		o.Workers = 12
@@ -460,7 +460,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Допустимый диапазон для тайм-аут процессора: 1s–1h")
 	}
 	if o.ProcessorSandbox != "" && o.ProcessorSandbox != "process" && o.ProcessorSandbox != "required" {
-		return o, errors.New("processor sandbox must be process or required")
+		return o, errors.New("Для «processor sandbox» требуется: «process or required»")
 	}
 	return o, nil
 }
@@ -626,7 +626,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 			return factoryPlan0271{}, err
 		}
 		if len(entries) > 0 {
-			return factoryPlan0271{}, errors.New("factory requires an empty destination or an existing verified install-plan; use a separate directory")
+			return factoryPlan0271{}, errors.New("Для «factory» требуется «an empty destination or an existing verified install-plan; use a separate directory»")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return factoryPlan0271{}, err
@@ -817,7 +817,7 @@ func rejectFactoryOutputPath0271(root, output string) error {
 
 func handleRuntimeFactory0271(args []string) error {
 	if len(args) < 1 {
-		return errors.New("runtime client-factory requires build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib")
+		return errors.New("Для «runtime client-factory» требуется build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib")
 	}
 	mode := args[0]
 	if mode == "certify-ga" || mode == "ga-sign-join" {

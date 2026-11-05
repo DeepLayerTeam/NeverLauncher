@@ -19,7 +19,7 @@ import (
 
 var (
 	ErrProviderNotFound      = errors.New("Провайдер авторизации не найден")
-	ErrCapabilityUnsupported = errors.New("auth provider capability unsupported")
+	ErrCapabilityUnsupported = errors.New("Не поддерживается: «auth provider capability»")
 	ErrIdentityNotLinked     = errors.New("external identity is not linked to a Never user")
 )
 

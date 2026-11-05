@@ -72,7 +72,7 @@ func certHashFile02712(path string) (string, error) {
 }
 func certResolveExecutable02712(name string) (string, error) {
 	if strings.TrimSpace(name) == "" {
-		return "", errors.New("executable is required")
+		return "", errors.New("Требуется: «executable»")
 	}
 	full, err := exec.LookPath(name)
 	if err != nil {
@@ -87,7 +87,7 @@ func certResolveExecutable02712(name string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() {
-		return "", errors.New("executable must be a regular file (no symlink)")
+		return "", errors.New("Для «executable» требуется: «a regular file (no symlink)»")
 	}
 	return full, nil
 }
@@ -167,11 +167,11 @@ func certProfileID02712(plan factoryPlan0271) (string, error) {
 		return "", err
 	}
 	if !strings.HasPrefix(profile, "versions/") || !strings.HasSuffix(profile, ".json") {
-		return "", errors.New("invalid profile path")
+		return "", errors.New("Некорректное значение: «profile path»")
 	}
 	id := strings.TrimSuffix(filepath.Base(profile), ".json")
 	if filepath.ToSlash(filepath.Join("versions", id, id+".json")) != profile {
-		return "", errors.New("unexpected profile path")
+		return "", errors.New("Неожиданное значение: «profile path»")
 	}
 	return id, nil
 }
@@ -246,7 +246,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if !ed25519.Verify(pub, digest, signature) {
-		return cert, errors.New("invalid runtime certification signature")
+		return cert, errors.New("Некорректное значение: «runtime certification signature»")
 	}
 	if err = certFiles02712(filepath.Dir(certificateFile), cert); err != nil {
 		return cert, err
@@ -297,7 +297,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if cert.RuntimeSeconds != probe.RuntimeSeconds {
-		return cert, errors.New("runtime duration changed")
+		return cert, errors.New("Обнаружено изменение: «runtime duration»")
 	}
 	return cert, nil
 }
@@ -313,7 +313,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if err := rejectFactoryOutputPath0271(clientDir, privateKeyPath); err != nil {
-		return cert, fmt.Errorf("signing key must be outside client: %w", err)
+		return cert, fmt.Errorf("Для ключ подписи требуется: «outside client:» %w", err)
 	}
 	plan, err := readFactoryPlan0271(clientDir)
 	if err != nil {
@@ -326,7 +326,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if len(plan.Targets) != 1 {
-		return cert, errors.New("certification requires a single OS/arch target; certify each target separately")
+		return cert, errors.New("Для «certification» требуется «a single OS/arch target; certify each target separately»")
 	}
 	target := plan.Targets[0]
 	if err = certHostTarget02712(target); err != nil {
@@ -349,7 +349,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if !isSHA256Hex0271(expectedRuntimeSHA) || rtSHA != expectedRuntimeSHA {
-		return cert, errors.New("Runtime executable does not match --runtime-sha256")
+		return cert, errors.New("«Runtime executable» не совпадает с --runtime-sha256")
 	}
 	javaSHA, err := certHashFile02712(java)
 	if err != nil {
@@ -390,7 +390,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	cmd.Stdout = &boundedWriter02712{w: &stdout, max: 2 << 20}
 	cmd.Stderr = &boundedWriter02712{w: &stderr, max: 2 << 20}
 	if err = cmd.Run(); err != nil {
-		return cert, fmt.Errorf("Runtime probe failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+		return cert, fmt.Errorf("Ошибка: «Runtime probe»: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	var probe factoryProbe02712
 	if err = json.Unmarshal(stdout.Bytes(), &probe); err != nil {
@@ -408,14 +408,14 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	// Запрещайте символьные ссылки на родительские каталоги, созданные проверяемой JVM. Синтаксически
 	// внутренний путь недостаточен, если logs/ указывает за пределы одноразового дерева.
 	if _, err := secureClientDestination(copyRoot, filepath.ToSlash(rel)); err != nil {
-		return cert, fmt.Errorf("unsafe runtime log path: %w", err)
+		return cert, fmt.Errorf("Небезопасное значение: «runtime log path»: %w", err)
 	}
 	st, err := os.Lstat(absLog)
 	if err != nil {
 		return cert, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 32<<20 {
-		return cert, errors.New("runtime log is not regular or too large")
+		return cert, errors.New("Превышен допустимый размер: «runtime log is not regular or»")
 	}
 	log, err := os.ReadFile(absLog)
 	if err != nil {
@@ -442,7 +442,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	}
 	prefix := strings.TrimSuffix(filepath.Base(absOut), filepath.Ext(absOut))
 	if prefix == "" || prefix == "." {
-		return cert, errors.New("invalid certificate name")
+		return cert, errors.New("Некорректное значение: «certificate name»")
 	}
 	probeFile := prefix + ".probe.json"
 	logFile := prefix + ".runtime.log"
@@ -497,7 +497,7 @@ func (b *boundedWriter02712) Write(p []byte) (int, error) {
 }
 func handleRuntimeCertification02712(args []string) error {
 	if len(args) == 0 {
-		return errors.New("certification requires certify-keygen|certify-run|certify-verify")
+		return errors.New("Для «certification» требуется «certify-keygen|certify-run|certify-verify»")
 	}
 	tail := args[1:]
 	switch args[0] {
@@ -553,7 +553,7 @@ func handleRuntimeCertification02712(args []string) error {
 		}
 		return writeOrPrintJSON(flagValue(tail, "--output", "-"), cert)
 	default:
-		return fmt.Errorf("unknown certification command %q", args[0])
+		return fmt.Errorf("Неизвестное значение: «certification command» %q", args[0])
 	}
 }
 

@@ -53,8 +53,8 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     if (!window.confirm(`НЕОБРАТИМО заменить ${parts} данными из ${selected}? Backend создаст safety backup до изменений. Текущие данные могут быть потеряны.`)) return;
     const result = await api<Restore>(`/api/v1/operations/backups/${encodeURIComponent(selected)}/restore`, { method: 'POST', body: JSON.stringify({ confirm: confirmId, database, storage }) });
     setRestore(result); setVerified(null); setConfirmId('');
-    setNotice(`Ответ Backend: ${result.status}; восстановлено: ${result.restored?.join(', ') || 'неизвестно'}. Safety backup: ${result.safetyBackupId || 'не указан'}.`);
-    try { await load(); } catch { setNotice(`Restore ответил ${result.status}; safety backup ${result.safetyBackupId || 'не указан'}. Не удалось обновить список — проверьте статус в аудите.`); }
+    setNotice(`Ответ Backend: ${result.status}; восстановлено: ${result.restored?.join(', ') || 'неизвестно'}. Страховочная копия: ${result.safetyBackupId || 'не указан'}.`);
+    try { await load(); } catch { setNotice(`Восстановление вернуло ответ ${result.status}; страховочная копия ${result.safetyBackupId || 'не указан'}. Не удалось обновить список — проверьте статус в аудите.`); }
   }); }
   const filtered = (data?.backups ?? []).filter(item => item.backupId.toLowerCase().includes(search.trim().toLowerCase()));
   const current = data?.backups?.find(item => item.backupId === selected);

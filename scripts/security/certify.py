@@ -199,7 +199,7 @@ def assemble_release(paths):
         obj = json.loads(pathlib.Path(path).read_text())
         tier = obj.get("tier")
         if tier not in tiers or tier in reports:
-            raise ValueError(f"unexpected or duplicated evidence tier: {tier}")
+            raise ValueError(f"Неожиданное значение: «or duplicated evidence tier»: {tier}")
         reports[tier] = obj
     if reports.keys() != tiers:
         return {

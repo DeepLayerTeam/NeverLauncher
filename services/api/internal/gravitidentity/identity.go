@@ -87,10 +87,10 @@ func strictRootMap(b []byte) (map[string]json.RawMessage, error) {
 		}
 		key, ok := token.(string)
 		if !ok {
-			return nil, errors.New("invalid key")
+			return nil, errors.New("Некорректное значение: ключ")
 		}
 		if _, exists := out[strings.ToLower(key)]; exists {
-			return nil, fmt.Errorf("duplicate source identity key %q", key)
+			return nil, fmt.Errorf("Обнаружен дубликат: «source identity key» %q", key)
 		}
 		var raw json.RawMessage
 		if e = d.Decode(&raw); e != nil {
@@ -115,7 +115,7 @@ func uniqueUserFields(raw []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	tok, err := dec.Token()
 	if err != nil || tok != json.Delim('{') {
-		return errors.New("FileAuth user must be a JSON object")
+		return errors.New("Для «FileAuth user» требуется: объект JSON")
 	}
 	seen := map[string]bool{}
 	for dec.More() {
@@ -125,14 +125,14 @@ func uniqueUserFields(raw []byte) error {
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return errors.New("invalid FileAuth user key")
+			return errors.New("Некорректное значение: «FileAuth user key»")
 		}
 		// encoding/json сопоставляет поля структур без учёта регистра. Отклоняйте
 		// псевдонимы вроде username/USERNAME вместо неявного доверия последнему
 		// значению, меняющему импортируемую идентичность.
 		folded := strings.ToLower(key)
 		if seen[folded] {
-			return fmt.Errorf("duplicate FileAuth user field %q", key)
+			return fmt.Errorf("Обнаружен дубликат: «FileAuth user field» %q", key)
 		}
 		seen[folded] = true
 		var value json.RawMessage
@@ -200,7 +200,7 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 	for i, c := range header {
 		c = strings.ToLower(strings.TrimSpace(strings.TrimPrefix(c, "\ufeff")))
 		if _, ok := cols[c]; ok {
-			return nil, errors.New("duplicate SQL CSV column")
+			return nil, errors.New("Обнаружен дубликат: «SQL CSV column»")
 		}
 		cols[c] = i
 	}
@@ -261,7 +261,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		}
 		selected++
 		if f.UncompressedSize64 > MaxIdentityFile {
-			return nil, fmt.Errorf("identity source %q too large", f.Name)
+			return nil, fmt.Errorf("Превышен допустимый размер: «identity source» %q", f.Name)
 		}
 		r, e := f.Open()
 		if e != nil {
@@ -293,7 +293,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		}
 	}
 	if selected == 0 {
-		return nil, errors.New("no supported FileAuthSystem/Database.json or sql-export/users.csv identity snapshot found")
+		return nil, errors.New("Отсутствует: «supported FileAuthSystem/Database.json or sql-export/users.csv identity snapshot found»")
 	}
 	if len(accounts) == 0 {
 		return nil, errors.New("source identity snapshot has no accounts")

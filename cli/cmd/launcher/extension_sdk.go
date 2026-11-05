@@ -60,7 +60,7 @@ func extensionTargets02010(args []string) ([]string, error) {
 		}
 	}
 	if len(out) == 0 {
-		return nil, errors.New("at least one target is required")
+		return nil, errors.New("Требуется: «at least one target»")
 	}
 	sort.Strings(out)
 	return out, nil
@@ -288,7 +288,7 @@ func buildTarget02010(root string, target CanonicalExtensionTarget0201, sdkRoot 
 		}
 		entry := filepath.Join(root, filepath.FromSlash(target.Entrypoint))
 		if st, err := os.Stat(entry); err != nil || !st.Mode().IsRegular() {
-			return fmt.Errorf("built entrypoint %s missing", target.Entrypoint)
+			return fmt.Errorf("Отсутствует: «built entrypoint» %s", target.Entrypoint)
 		}
 		return nil
 	default:
@@ -313,7 +313,7 @@ func runGo02010(dir, sdkRoot, target string, args ...string) error {
 		defer os.Remove(modfile)
 		defer os.Remove(strings.TrimSuffix(modfile, ".mod") + ".sum")
 		if len(args) == 0 {
-			return errors.New("go command missing")
+			return errors.New("Отсутствует: «go command»")
 		}
 		args = append([]string{args[0], "-modfile=" + filepath.Base(modfile)}, args[1:]...)
 	}
@@ -495,12 +495,12 @@ func (h *localDevHost02010) helloHandler(w http.ResponseWriter, r *http.Request)
 	}
 	var req map[string]any
 	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req) != nil {
-		http.Error(w, "invalid hello", 400)
+		http.Error(w, "Некорректное значение: «hello»", 400)
 		return
 	}
 	helloAPI, _ := req["extensionApiVersion"].(string)
 	if fmt.Sprint(req["protocolVersion"]) != ExtensionsHostVersion0210 || !supportsHostHello0210(h.manifest.API, helloAPI) || strings.ToLower(fmt.Sprint(req["extensionId"])) != h.manifest.ID || fmt.Sprint(req["instanceId"]) != h.instance {
-		http.Error(w, "host identity/protocol mismatch", 409)
+		http.Error(w, "Несовпадение: «host identity/protocol»", 409)
 		return
 	}
 	h.once.Do(func() { close(h.hello) })
@@ -516,7 +516,7 @@ func (h *localDevHost02010) logHandler(w http.ResponseWriter, r *http.Request) {
 		Fields         map[string]any
 	}
 	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req) != nil {
-		http.Error(w, "invalid log", 400)
+		http.Error(w, "Некорректное значение: «log»", 400)
 		return
 	}
 	fmt.Fprintf(os.Stderr, "[extension:%s] %s %s", h.manifest.ID, strings.ToUpper(req.Level), req.Message)

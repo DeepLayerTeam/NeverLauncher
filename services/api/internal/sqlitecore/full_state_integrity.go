@@ -39,7 +39,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			break
 		}
 		if packageDigest(raw) != digest {
-			e = errors.New("package blob checksum mismatch")
+			e = errors.New("Несовпадение: «package blob checksum»")
 			break
 		}
 	}
@@ -58,7 +58,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			break
 		}
 		if !ed25519.Verify(ed25519.PublicKey(key), extensionSignatureMessage(id, version, digest), signature) {
-			e = errors.New("signed extension package signature changed")
+			e = errors.New("Обнаружено изменение: «signed extension package signature»")
 			break
 		}
 	}
@@ -101,7 +101,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			break
 		}
 		if packageDigest([]byte(payload)) != digest {
-			e = errors.New("extension state digest mismatch")
+			e = errors.New("Несовпадение: «extension state digest»")
 			break
 		}
 	}

@@ -19,7 +19,7 @@ func normalizeTrustPolicy02012(p model.ExtensionTrustPolicy) (model.ExtensionTru
 		p.Mode = model.ExtensionTrustModeStrict
 	}
 	if p.Mode != model.ExtensionTrustModeStrict && p.Mode != model.ExtensionTrustModeAudit {
-		return model.ExtensionTrustPolicy{}, errors.New("extension trust policy mode must be strict or audit")
+		return model.ExtensionTrustPolicy{}, errors.New("Для «extension trust policy mode» требуется: «strict or audit»")
 	}
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(p.AllowedPublishers))
@@ -29,7 +29,7 @@ func normalizeTrustPolicy02012(p model.ExtensionTrustPolicy) (model.ExtensionTru
 			continue
 		}
 		if !registryPublisherID0203.MatchString(id) {
-			return model.ExtensionTrustPolicy{}, fmt.Errorf("invalid allowed publisher id %q", id)
+			return model.ExtensionTrustPolicy{}, fmt.Errorf("Некорректное значение: «allowed publisher id» %q", id)
 		}
 		if _, ok := seen[id]; ok {
 			continue
@@ -54,7 +54,7 @@ func normalizeEmergencyScope02012(scope, scopeID string) (string, string, error)
 	if scope == "project" && scopeID != "" {
 		return scope, scopeID, nil
 	}
-	return "", "", errors.New("scope must be global or project with scopeId")
+	return "", "", errors.New("Для «scope» требуется: «global or project with scopeId»")
 }
 
 func (r *MemoryRepository) GetExtensionTrustPolicy(ctx context.Context) (model.ExtensionTrustPolicy, error) {
@@ -108,10 +108,10 @@ func normalizeQuarantine02012(e model.ExtensionQuarantineEntry) (model.Extension
 	e.ArtifactSHA256 = strings.ToLower(strings.TrimSpace(e.ArtifactSHA256))
 	e.Reason = strings.TrimSpace(e.Reason)
 	if e.ID == "" || len(e.ID) > 200 {
-		return e, errors.New("quarantine id is required")
+		return e, errors.New("Требуется: «quarantine id»")
 	}
 	if !registryIdentity0203.MatchString(e.PackageIdentity) || !registrySHA0203.MatchString(e.ArtifactSHA256) {
-		return e, errors.New("quarantine package identity/SHA-256 is invalid")
+		return e, errors.New("Некорректное значение: «quarantine package identity/SHA-256»")
 	}
 	if e.Reason == "" || len(e.Reason) > 1000 {
 		return e, errors.New("quarantine reason is required and limited to 1000 chars")
@@ -224,7 +224,7 @@ func normalizeEmergency02012(e model.ExtensionEmergencyDisable) (model.Extension
 		return e, errors.New("Некорректное значение: ID расширения")
 	}
 	if e.Reason == "" || len(e.Reason) > 1000 {
-		return e, errors.New("emergency disable reason is required")
+		return e, errors.New("Требуется: «emergency disable reason»")
 	}
 	if e.Source == "" {
 		e.Source = "admin"

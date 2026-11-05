@@ -52,7 +52,7 @@ type liveRule0473 struct {
 func instant0473(v any, optional bool) (any, error) {
 	n, ok := v.(int64)
 	if !ok {
-		return nil, fmt.Errorf("timestamp must be SQLite integer, got %T", v)
+		return nil, fmt.Errorf("Для «timestamp» требуется: «SQLite integer, got» %T", v)
 	}
 	if n == 0 && optional {
 		return nil, nil
@@ -65,14 +65,14 @@ func instant0473(v any, optional bool) (any, error) {
 func bool0473(v any) (any, error) {
 	n, ok := v.(int64)
 	if !ok || (n != 0 && n != 1) {
-		return nil, fmt.Errorf("invalid SQLite boolean %v", v)
+		return nil, fmt.Errorf("Некорректное значение: «SQLite boolean» %v", v)
 	}
 	return n == 1, nil
 }
 func json0473(v any) (any, error) {
 	s, ok := v.(string)
 	if !ok || !json.Valid([]byte(s)) {
-		return nil, errors.New("invalid JSON in staging row")
+		return nil, errors.New("Некорректное значение: «JSON in staging row»")
 	}
 	return s, nil
 }
@@ -82,7 +82,7 @@ func copyFields0473(src map[string]any, names ...string) (map[string]any, error)
 	for _, name := range names {
 		v, ok := src[name]
 		if !ok {
-			return nil, fmt.Errorf("missing source column %q", name)
+			return nil, fmt.Errorf("Отсутствует: «source column» %q", name)
 		}
 		out[name] = v
 	}
@@ -164,7 +164,7 @@ func rowColumns0473(ctx context.Context, tx pgx.Tx, table string) ([]column, err
 		case "double precision":
 			c.Type = "REAL"
 		default:
-			return nil, fmt.Errorf("invalid staged type %s.%s: %s", table, c.Name, typ)
+			return nil, fmt.Errorf("Некорректное значение: «staged type %s.%s»: %s", table, c.Name, typ)
 		}
 		out = append(out, c)
 	}
@@ -172,7 +172,7 @@ func rowColumns0473(ctx context.Context, tx pgx.Tx, table string) ([]column, err
 		return nil, err
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("empty staged table %s", table)
+		return nil, fmt.Errorf("Пустое значение: «staged table» %s", table)
 	}
 	return out, nil
 }
@@ -183,7 +183,7 @@ func validateCatalog0473(ctx context.Context, tx pgx.Tx) error {
 	}
 	rows, err := tx.Query(ctx, `SELECT version,checksum FROM schema_migrations`)
 	if err != nil {
-		return fmt.Errorf("PostgreSQL migrations must be applied first: %w", err)
+		return fmt.Errorf("Для «PostgreSQL migrations» требуется: «applied first:» %w", err)
 	}
 	applied := map[string]string{}
 	for rows.Next() {
@@ -296,7 +296,7 @@ func sourceRows0473(ctx context.Context, tx pgx.Tx, name string, expected TableR
 				break
 			}
 			if len(vals) != len(cs)+2 {
-				e = fmt.Errorf("invalid staged row shape in %s", name)
+				e = fmt.Errorf("Некорректное значение: «staged row shape in» %s", name)
 				break
 			}
 			count++
@@ -346,7 +346,7 @@ func sourceRows0473(ctx context.Context, tx pgx.Tx, name string, expected TableR
 		}
 	}
 	if count != expected.Rows || hex.EncodeToString(h.Sum(nil)) != expected.SHA256 {
-		return fmt.Errorf("staged table %s count/SHA256 mismatch", name)
+		return fmt.Errorf("Несовпадение: «staged table %s count/SHA256»", name)
 	}
 	return nil
 }
@@ -365,7 +365,7 @@ func insert0473(ctx context.Context, tx pgx.Tx, table string, data map[string]an
 		}
 		v, ok := data[name]
 		if !ok {
-			return fmt.Errorf("missing mapped field %s.%s", table, name)
+			return fmt.Errorf("Отсутствует: «mapped field %s.%s»", table, name)
 		}
 		columns = append(columns, q)
 		param := fmt.Sprintf("$%d", i+1)
@@ -381,15 +381,15 @@ func insert0473(ctx context.Context, tx pgx.Tx, table string, data map[string]an
 func installLocalIdentity0473(ctx context.Context, tx pgx.Tx, u map[string]any) error {
 	id, ok := u["id"].(string)
 	if !ok || id == "" {
-		return errors.New("missing user identity")
+		return errors.New("Отсутствует: «user identity»")
 	}
 	email, ok := u["email"].(string)
 	if !ok || email == "" {
-		return errors.New("missing user email")
+		return errors.New("Отсутствует: «user email»")
 	}
 	display, ok := u["display_name"].(string)
 	if !ok {
-		return errors.New("missing user display name")
+		return errors.New("Отсутствует: «user display name»")
 	}
 	_, err := tx.Exec(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
         VALUES($1,$2,'local','launcher',$2,$3,$3,$4,'{}'::jsonb,$5,$6)`, "identity-local-"+id, id, email, display, u["created_at"], u["updated_at"])
@@ -416,7 +416,7 @@ func installRoles0473(ctx context.Context, tx pgx.Tx, expected TableResult) erro
 func checkManifest0473(src map[string]any) error {
 	s, ok := src["manifest"].(string)
 	if !ok {
-		return errors.New("missing signed release JSON")
+		return errors.New("Отсутствует: «signed release JSON»")
 	}
 	var m model.Manifest
 	if err := json.Unmarshal([]byte(s), &m); err != nil {
@@ -515,7 +515,7 @@ func verifyFK0473(ctx context.Context, tx pgx.Tx) error {
 			return err
 		}
 		if missing != 0 {
-			return fmt.Errorf("SQLRepository relation validation failed: %s (%d)", q, missing)
+			return fmt.Errorf("Ошибка: «SQLRepository relation validation»: %s (%d)", q, missing)
 		}
 	}
 	return nil
@@ -568,14 +568,14 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	}
 	var raw string
 	if err = tx.QueryRow(ctx, `SELECT report::text FROM `+qualified("migration_receipt")+` LIMIT 1`).Scan(&raw); err != nil {
-		return report, fmt.Errorf("verified staging receipt not found: %w", err)
+		return report, fmt.Errorf("Не найдено: «verified staging receipt»: %w", err)
 	}
 	var original Report
 	if err = json.Unmarshal([]byte(raw), &original); err != nil {
 		return report, err
 	}
 	if original.Format != importVersion || original.SQLiteSchema != sqlitecore.SchemaVersion || len(original.SnapshotSHA256) != 64 || original.PostgreSQLSchema != Schema {
-		return report, errors.New("invalid staging receipt/schema")
+		return report, errors.New("Некорректное значение: «staging receipt/schema»")
 	}
 	report.SourceSHA256 = original.SnapshotSHA256
 	report.SQLiteSchema = original.SQLiteSchema
@@ -604,7 +604,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 				return report, e
 			}
 			if n != table.Rows {
-				return report, fmt.Errorf("unsupported staging table %s count mismatch", table.Name)
+				return report, fmt.Errorf("Не поддерживается: «staging table %s count mismatch»", table.Name)
 			}
 			if n > 0 {
 				return report, fmt.Errorf("cannot live-import %d records in unsupported SQLite table %s", n, table.Name)
@@ -632,7 +632,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	}
 	for _, rule := range rules {
 		if _, found := tableReport0473(original, rule.source); !found {
-			return report, fmt.Errorf("missing required staging table %s", rule.source)
+			return report, fmt.Errorf("Отсутствует: «required staging table» %s", rule.source)
 		}
 	}
 	if err = prepareState0474(ctx, tx); err != nil {
@@ -738,7 +738,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 		return report, err
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return report, fmt.Errorf("live import commit outcome must be reconciled: %w", err)
+		return report, fmt.Errorf("Для «live import commit outcome» требуется: «reconciled:» %w", err)
 	}
 	return report, nil
 }

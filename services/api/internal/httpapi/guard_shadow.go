@@ -36,10 +36,10 @@ type guardShadowJournal05012 struct {
 
 func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShadowJournal05012, error) {
 	if len(version) > 48 || !guardShadowVersion05012.MatchString(version) {
-		return nil, errors.New("Guard shadow requires a valid running product version")
+		return nil, errors.New("Для «Guard shadow» требуется «a valid running product version»")
 	}
 	if !filepath.IsAbs(directory) || !filepath.IsAbs(keyFile) {
-		return nil, errors.New("Guard shadow directory/key must be absolute")
+		return nil, errors.New("Для «Guard shadow directory/key» требуется: «absolute»")
 	}
 	di, err := os.Lstat(directory)
 	if err != nil || !di.IsDir() || di.Mode()&os.ModeSymlink != 0 || di.Mode().Perm()&0077 != 0 {
@@ -47,7 +47,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	ki, err := os.Lstat(keyFile)
 	if err != nil || !ki.Mode().IsRegular() || ki.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Guard shadow key must be a private regular file")
+		return nil, errors.New("Для «Guard shadow key» требуется: «a private regular file»")
 	}
 	raw, err := os.ReadFile(keyFile)
 	if err != nil {
@@ -55,7 +55,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	key, err := hex.DecodeString(strings.TrimSpace(string(raw)))
 	if err != nil || len(key) != 32 {
-		return nil, errors.New("Guard shadow key must be exactly 32 random bytes in hex")
+		return nil, errors.New("Для «Guard shadow key» требуется: «exactly 32 random bytes in hex»")
 	}
 	var boot [16]byte
 	if _, err = rand.Read(boot[:]); err != nil {
@@ -88,7 +88,7 @@ func guardShadowMAC05012(key []byte, message string) string {
 
 func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason string, elapsed time.Duration) error {
 	if correlation == "" || nodeID == "" || (outcome != "allowed" && outcome != "revoked") {
-		return errors.New("invalid Guard shadow observation")
+		return errors.New("Некорректное значение: «Guard shadow observation»")
 	}
 	if !guardShadowReason05012.MatchString(reason) {
 		reason = "unspecified"
@@ -159,7 +159,7 @@ func recordGuardShadow05012(version, nodeID, correlation, outcome, reason string
 		return nil
 	}
 	if directory == "" || keyFile == "" {
-		return errors.New("Guard shadow requires both directory and key file")
+		return errors.New("Для «Guard shadow» требуется «both directory and key file»")
 	}
 	guardShadowGlobal05012.once.Do(func() {
 		guardShadowGlobal05012.journal, guardShadowGlobal05012.err = newGuardShadowJournal05012(directory, keyFile, version)
@@ -168,7 +168,7 @@ func recordGuardShadow05012(version, nodeID, correlation, outcome, reason string
 		return guardShadowGlobal05012.err
 	}
 	if guardShadowGlobal05012.journal.version != version {
-		return errors.New("Guard shadow active journal version mismatch")
+		return errors.New("Несовпадение: «Guard shadow active journal version»")
 	}
 	return guardShadowGlobal05012.journal.observe(nodeID, correlation, outcome, reason, elapsed)
 }

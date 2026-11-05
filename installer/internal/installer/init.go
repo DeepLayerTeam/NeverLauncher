@@ -24,7 +24,7 @@ func validEnvField(s string) bool { return s != "" && !strings.ContainsAny(s, "\
 func validatePublicURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" {
-		return errors.New("public URL must be an origin")
+		return errors.New("Публичный URL должен содержать только схему, хост и порт, без пути и параметров")
 	}
 	if u.Scheme == "https" {
 		return nil

@@ -32,18 +32,18 @@ func (r *SQLRepository) IssueStableRuntimePermit03411(ctx context.Context, p Sta
 	}
 	var targets []json.RawMessage
 	if json.Unmarshal(p.TargetsJSON, &targets) != nil || len(targets) == 0 || len(targets) > 128 || len(p.Runs) != len(targets) {
-		return "", errors.New("invalid required stable target coverage")
+		return "", errors.New("Некорректное значение: «required stable target coverage»")
 	}
 	for _, t := range targets {
 		var v struct {
 			ID string `json:"id"`
 		}
 		if json.Unmarshal(t, &v) != nil || v.ID == "" || p.Runs[v.ID] == "" {
-			return "", errors.New("missing run for stable target")
+			return "", errors.New("Отсутствует: «run for stable target»")
 		}
 	}
 	if len(p.ManifestSHA256) != 64 || len(p.ArtifactSHA256) != 64 || len(p.MatrixSHA256) != 64 {
-		return "", errors.New("invalid stable snapshot digest")
+		return "", errors.New("Некорректное значение: «stable snapshot digest»")
 	}
 	runs, e := json.Marshal(p.Runs)
 	if e != nil {

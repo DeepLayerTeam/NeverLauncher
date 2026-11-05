@@ -129,7 +129,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
     </fieldset>
     <fieldset disabled={busy}>
       <legend>Индивидуальные исключения</legend>
-      <label className="field">User ID (не Minecraft UUID)<input value={userId} onChange={e => setUserId(e.target.value)} placeholder="ID пользователя" /></label>
+      <label className="field">Идентификатор пользователя (не Minecraft UUID)<input value={userId} onChange={e => setUserId(e.target.value)} placeholder="ID пользователя" /></label>
       <label className="field">Тип<select value={kind} onChange={e => setKind(e.target.value as 'skin'|'cape')}><option value="skin">Скин</option><option value="cape">Плащ</option></select></label>
       <label className="field">Решение<select value={decision} onChange={e => setDecision(e.target.value as typeof decision)}><option value="allow">Разрешить</option><option value="deny">Запретить</option><option value="inherit">Наследовать политику</option></select></label>
       <label className="field">Причина<input value={exceptionReason} maxLength={500} onChange={e => setExceptionReason(e.target.value)}/></label>

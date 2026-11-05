@@ -36,7 +36,7 @@ func guardRuntimeInventory0505(root string, p guardCompatPolicy0502) (string, er
 			return "", err
 		}
 		if hash != a.SHA256 {
-			return "", fmt.Errorf("Guard runtime inventory changed: %s", a.Path)
+			return "", fmt.Errorf("Обнаружено изменение: «Guard runtime inventory»: %s", a.Path)
 		}
 		for _, revoked := range p.RevokedDigests {
 			if revoked == a.SHA256 {

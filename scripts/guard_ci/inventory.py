@@ -36,40 +36,40 @@ STATUSES = {"PASS", "BLOCKED", "UNSUPPORTED"}
 
 def validate_report(raw: object) -> dict:
     if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
-        raise ValueError("invalid Guard inventory schema")
+        raise ValueError("Некорректное значение: «Guard inventory schema»")
     if raw.get("productVersion") != EXPECTED_VERSION:
         raise ValueError(f"Guard inventory must use product version {EXPECTED_VERSION}")
     target = (raw.get("os"), raw.get("architecture"))
     if target not in TARGETS:
-        raise ValueError(f"unknown target {target}")
+        raise ValueError(f"Неизвестное значение: цель {target}")
     checks = raw.get("checks")
     if not isinstance(checks, list):
-        raise ValueError("missing Guard inventory checks")
+        raise ValueError("Отсутствует: «Guard inventory checks»")
     by_id = {}
     for item in checks:
         if not isinstance(item, dict) or not isinstance(item.get("id"), str):
-            raise ValueError("malformed Guard check")
+            raise ValueError("Некорректный формат: проверка Guard")
         if item["id"] in by_id:
-            raise ValueError(f"duplicate Guard check: {item['id']}")
+            raise ValueError(f"Обнаружен дубликат: проверка Guard: {item['id']}")
         if item.get("status") not in STATUSES or not isinstance(item.get("detail"), str):
-            raise ValueError(f"malformed Guard check status: {item['id']}")
+            raise ValueError(f"Некорректный формат: «Guard check status»: {item['id']}")
         by_id[item["id"]] = item
     if missing := REQUIRED - by_id.keys():
-        raise ValueError(f"missing Guard check(s): {sorted(missing)}")
+        raise ValueError(f"Отсутствует: «Guard check(s)»: {sorted(missing)}")
     # Это диагностика до игры: внутрипроцессные датчики ещё не задействованы.
     for sensor in ("sensor.windows.in-process", "sensor.jvm-awareness", "sensor.continuous"):
         required_status = "BLOCKED" if raw["os"] == "windows" else "UNSUPPORTED"
         if by_id[sensor]["status"] != required_status:
-            raise ValueError(f"in-process sensor cannot claim {by_id[sensor]['status']}: {sensor}")
+            raise ValueError(f"«in-process sensor»: запрещено «claim {by_id[sensor]['status']}:» {sensor}")
     for loader in ("vanilla", "fabric", "quilt", "forge", "neoforge"):
         key = f"loader.runtime.{loader}"
         if key not in by_id or by_id[key]["status"] != "BLOCKED":
-            raise ValueError(f"local inventory cannot certify {key}")
+            raise ValueError(f"«local inventory»: запрещено «certify» {key}")
     # Опись никогда не запускает игру. Этот инструмент не может сертифицировать
     # настоящий вход, работу загрузчика или разрешённого Java-агента.
     for item_id in ("minecraft.real-join", "minecraft.authorized-javaagent"):
         if by_id[item_id]["status"] != "BLOCKED":
-            raise ValueError(f"local inventory cannot certify {item_id}")
+            raise ValueError(f"«local inventory»: запрещено «certify» {item_id}")
     is_blocked = any(c["status"] == "BLOCKED" for c in checks)
     if raw.get("status") != ("BLOCKED" if is_blocked else "PASS"):
         raise ValueError("inventory summary is inconsistent with observed checks")
@@ -80,7 +80,7 @@ def run_local(args: argparse.Namespace) -> int:
     runtime = Path(args.runtime).resolve(strict=True)
     guard = Path(args.guard).resolve(strict=True)
     if not runtime.is_file() or not guard.is_file():
-        raise ValueError("native Runtime and Guard executables must be files")
+        raise ValueError("Для «native Runtime and Guard executables» требуется: файлы")
     command = [str(runtime), "guard-inventory", "--guard-executable", str(guard)]
     if args.java:
         command.extend(("--java", args.java))
@@ -103,7 +103,7 @@ def run_local(args: argparse.Namespace) -> int:
         {"linux": "linux", "win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform),
         {"AMD64": "x86_64", "ARM64": "aarch64", "x86_64": "x86_64", "arm64": "aarch64", "aarch64": "aarch64"}.get(platform.machine(), platform.machine()),
     ):
-        raise ValueError("native Guard target does not match executing machine")
+        raise ValueError("«native Guard target» не совпадает с «executing machine»")
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     # Операция без разрушений и атомарна; отчёт не содержит токенов и закрытых ключей.
@@ -127,7 +127,7 @@ def merge(args: argparse.Namespace) -> int:
         doc = validate_report(json.loads(Path(filename).read_text(encoding="utf-8")))
         key = (doc["os"], doc["architecture"])
         if key in reports:
-            raise ValueError(f"duplicate native target report {key}")
+            raise ValueError(f"Обнаружен дубликат: «native target report» {key}")
         reports[key] = doc
     if len({doc["productVersion"] for doc in reports.values()}) > 1:
         raise ValueError("different product versions in one Guard inventory matrix")

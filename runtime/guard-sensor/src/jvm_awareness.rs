@@ -229,10 +229,10 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
 
     let launch_root = std::env::current_dir()
         .and_then(std::fs::canonicalize)
-        .map_err(|err| format!("Guard JVM-Aware cannot resolve native launch root: {err}"))?;
+        .map_err(|err| format!("Guard для JVM: не удалось определить корневой каталог нативного запуска: {err}"))?;
     if let Some(existing) = VERIFIED_NATIVE_LAUNCH_ROOT.get() {
         if existing != &launch_root {
-            return Err("Guard JVM-Aware native launch root changed".to_string());
+            return Err("Обнаружено изменение: «Guard JVM-Aware native launch root»".to_string());
         }
     } else {
         VERIFIED_NATIVE_LAUNCH_ROOT.set(launch_root)
@@ -292,7 +292,7 @@ fn check_verified_lwjgl_image(native: &VerifiedNativeImage) -> Result<(), String
     let mut digest = [0u8; 32];
     digest.copy_from_slice(&Sha256::digest(&bytes));
     if digest != native.file_sha256 {
-        return Err("Guard JVM-Aware LWJGL image content changed".to_string());
+        return Err("Обнаружено изменение: «Guard JVM-Aware LWJGL image content»".to_string());
     }
     Ok(())
 }
@@ -384,7 +384,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     let mut directory = [0u16; MAX_MODULE_PATH];
     let len = unsafe { GetSystemDirectoryW(directory.as_mut_ptr(), directory.len() as u32) } as usize;
     if len == 0 || len >= directory.len() {
-        return Err("Guard JVM-Aware Protection cannot resolve System32".to_string());
+        return Err("защита Guard с учётом JVM: запрещено «resolve System32»".to_string());
     }
     let system_root = String::from_utf16_lossy(&directory[..len])
         .trim_end_matches('\\')
@@ -394,7 +394,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     // Диспетчеры OpenGL законно выделяют исполняемую память MEM_PRIVATE. В CI используется проверенная по SHA-256 Mesa opengl32.dll рядом с java.exe, а НЕ системная opengl32.dll Windows. Разрешайте только каталог bin уже сертифицированной JVM (либо запасной System32). Предварительная загрузка до установки перехватов не позволяет LoadLibrary внести неизвестный диспетчер посреди работы JIT.
     let jvm_module = unsafe { GetModuleHandleW(wide_null("jvm.dll").as_ptr()) };
     if jvm_module.is_null() {
-        return Err("Guard JVM-Aware Protection cannot locate jvm.dll for OpenGL provenance".to_string());
+        return Err("защита Guard с учётом JVM: запрещено «locate jvm.dll for OpenGL provenance»".to_string());
     }
     let jvm_path = module_path(jvm_module)?;
     let jvm_dir = std::path::Path::new(&jvm_path).parent()
@@ -415,7 +415,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         }
         Ok(_) => true,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => false,
-        Err(err) => return Err(format!("Guard JVM-Aware Protection cannot inspect Java runtime OpenGL image: {err}")),
+        Err(err) => return Err(format!("защита Guard с учётом JVM: запрещено «inspect Java runtime OpenGL image:» {err}")),
     };
     for name in ["ntdll.dll", "kernel32.dll", "kernelbase.dll", "ucrtbase.dll", "opengl32.dll"] {
         let wide = wide_null(name);
@@ -438,14 +438,14 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         };
         if module.is_null() {
             if name == "opengl32.dll" {
-                return Err(format!("Guard JVM-Aware Protection cannot load verified OpenGL dispatcher: {}", std::io::Error::last_os_error()));
+                return Err(format!("защита Guard с учётом JVM: запрещено «load verified OpenGL dispatcher: {}»", std::io::Error::last_os_error()));
             }
             continue;
         }
         let mut path = [0u16; MAX_MODULE_PATH];
         let count = unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
         if count == 0 || count >= path.len() {
-            return Err(format!("Guard JVM-Aware Protection cannot identify {name}"));
+            return Err(format!("защита Guard с учётом JVM: запрещено «identify» {name}"));
         }
         let loaded_path = String::from_utf16_lossy(&path[..count]).replace('/', "\\").to_ascii_lowercase();
         if loaded_path != expected_path {
@@ -456,7 +456,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
             K32GetModuleInformation(GetCurrentProcess(), module, &mut info, size_of::<ModuleInfo>() as u32)
         };
         if ok == 0 || info.size_of_image == 0 {
-            return Err(format!("Guard JVM-Aware Protection cannot inspect {name}"));
+            return Err(format!("защита Guard с учётом JVM: запрещено «inspect» {name}"));
         }
         let base = info.base_of_dll as usize;
         let end = base.checked_add(info.size_of_image as usize)
@@ -534,7 +534,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             extract_root.join("lwjgl.dll"),
         ];
         let canonical_path = std::fs::canonicalize(&loaded)
-            .map_err(|err| format!("Guard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
+            .map_err(|err| format!("Guard для JVM: запрещено «canonicalize LWJGL:» {err}"))?;
         // LWJGL 3 распаковывает библиотеку в <pinned-root>/<version>/<platform>/lwjgl.dll (например, 3.4.3+4/x64). Выводите только этот точный путь из фактического пути, сообщённого загрузчиком. Произвольным вложенным файлам доверять нельзя.
         let versioned_candidate = canonical_path.strip_prefix(&extract_root).ok()
             .and_then(|relative| {
@@ -570,14 +570,14 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                         safe = false;
                         break;
                     }
-                    Err(err) => return Err(format!("Guard JVM-Aware native path inspection failed: {err}")),
+                    Err(err) => return Err(format!("Ошибка: «Guard JVM-Aware native path inspection»: {err}")),
                 }
                 component = component.parent()
                     .ok_or_else(|| "Guard JVM-Aware invalid native directory ancestry".to_string())?;
             }
             if !safe { continue; }
             let expected_path = std::fs::canonicalize(expected)
-                .map_err(|err| format!("Guard JVM-Aware cannot find expected native: {err}"))?;
+                .map_err(|err| format!("Guard для JVM: запрещено «find expected native:» {err}"))?;
             if !expected_path.starts_with(launch_root) {
                 return Err("Guard JVM-Aware native path escapes the launch root".to_string());
             }
@@ -593,20 +593,20 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             format!("Guard JVM-Aware LWJGL loaded outside certified natives directory ({location})")
         })?;
         let metadata = std::fs::symlink_metadata(&loaded)
-            .map_err(|err| format!("Guard JVM-Aware cannot inspect LWJGL native: {err}"))?;
+            .map_err(|err| format!("Guard для JVM: запрещено «inspect LWJGL native:» {err}"))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
-            return Err("Guard JVM-Aware LWJGL native is not a regular file".to_string());
+            return Err("«Guard JVM-Aware LWJGL native»: требуется обычный файл".to_string());
         }
         let mut info = ModuleInfo::default();
         if unsafe { K32GetModuleInformation(GetCurrentProcess(), module, &mut info,
             size_of::<ModuleInfo>() as u32) } == 0 || info.size_of_image == 0 {
-            return Err("Guard JVM-Aware cannot inspect loaded LWJGL image".to_string());
+            return Err("Guard для JVM: запрещено «inspect loaded LWJGL image»".to_string());
         }
         let base = info.base_of_dll as usize;
         let end = base.checked_add(info.size_of_image as usize)
             .ok_or_else(|| "Guard JVM-Aware LWJGL module address overflow".to_string())?;
         let bytes = std::fs::read(&canonical_path)
-            .map_err(|err| format!("Guard JVM-Aware cannot hash LWJGL image: {err}"))?;
+            .map_err(|err| format!("Guard для JVM: запрещено «hash LWJGL image:» {err}"))?;
         let mut file_sha256 = [0u8; 32];
         file_sha256.copy_from_slice(&Sha256::digest(&bytes));
         if matched == 2 || matched == 3 {
@@ -615,7 +615,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             let mut current = certified.as_path();
             while current != launch_root.as_path() {
                 let metadata = std::fs::symlink_metadata(current)
-                    .map_err(|err| format!("Guard JVM-Aware cannot inspect certified LWJGL component: {err}"))?;
+                    .map_err(|err| format!("Guard для JVM: запрещено «inspect certified LWJGL component:» {err}"))?;
                 if metadata.file_type().is_symlink() {
                     return Err("Guard JVM-Aware certified LWJGL path contains reparse/symlink".to_string());
                 }
@@ -623,17 +623,17 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                     "Guard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
             }
             let canonical_certified = std::fs::canonicalize(certified)
-                .map_err(|err| format!("Guard JVM-Aware cannot canonicalize certified LWJGL: {err}"))?;
+                .map_err(|err| format!("Guard для JVM: запрещено «canonicalize certified LWJGL:» {err}"))?;
             if !canonical_certified.starts_with(launch_root) {
                 return Err("Guard JVM-Aware certified LWJGL escapes pinned client root".to_string());
             }
             let metadata = std::fs::metadata(&canonical_certified)
-                .map_err(|err| format!("Guard JVM-Aware certified LWJGL metadata failed: {err}"))?;
+                .map_err(|err| format!("Ошибка: «Guard JVM-Aware certified LWJGL metadata»: {err}"))?;
             if !metadata.is_file() || metadata.len() == 0 {
-                return Err("Guard JVM-Aware certified LWJGL is not a regular file".to_string());
+                return Err("«Guard JVM-Aware certified LWJGL»: требуется обычный файл".to_string());
             }
             let expected_digest = Sha256::digest(std::fs::read(&canonical_certified)
-                .map_err(|err| format!("Guard JVM-Aware cannot hash certified LWJGL: {err}"))?);
+                .map_err(|err| format!("Guard для JVM: запрещено «hash certified LWJGL:» {err}"))?);
             if file_sha256.as_slice() != expected_digest.as_slice() {
                 return Err("Guard JVM-Aware extracted LWJGL differs from certified package image".to_string());
             }
@@ -664,7 +664,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         let mut pinned = std::ptr::null_mut();
         if unsafe { GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             base as *const u16, &mut pinned) } == 0 || pinned != module {
-            return Err("Guard JVM-Aware cannot pin verified LWJGL module".to_string());
+            return Err("Guard для JVM: запрещено «pin verified LWJGL module»".to_string());
         }
         let verified = VerifiedNativeImage { base, end, canonical_path, file_sha256 };
         if VERIFIED_LWJGL_IMAGE.get().is_none() {
@@ -887,7 +887,7 @@ fn inspect_jvm_identity() -> Result<JvmIdentity, String> {
     let jvm_name = wide_null("jvm.dll");
     let module = unsafe { GetModuleHandleW(jvm_name.as_ptr()) };
     if module.is_null() {
-        return Err("Guard JVM-Aware Protection cannot locate loaded jvm.dll".to_string());
+        return Err("защита Guard с учётом JVM: запрещено «locate loaded jvm.dll»".to_string());
     }
 
     let mut info = ModuleInfo::default();
@@ -988,7 +988,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
         }
     }
     if major == 0 {
-        return Err("Guard JVM-Aware Protection cannot determine Java major from jvm.dll".to_string());
+        return Err("защита Guard с учётом JVM: запрещено «determine Java major from jvm.dll»".to_string());
     }
     Ok(major)
 }

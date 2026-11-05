@@ -623,7 +623,7 @@ func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return fmt.Errorf("server bridge node not found")
+		return fmt.Errorf("Не найдено: узел ServerBridge")
 	}
 	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) {
 		return fmt.Errorf("server bridge node identity/type is not active")

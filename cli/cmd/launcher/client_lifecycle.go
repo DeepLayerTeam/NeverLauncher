@@ -336,7 +336,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 			return nil, err
 		}
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("snapshot file must be regular: %s", rel)
+			return nil, fmt.Errorf("Для файл снимка требуется: «regular:» %s", rel)
 		}
 		files = append(files, updaterFileSpec0156{Path: rel, Source: src, Size: size, SHA256: sum, Executable: info.Mode().Perm()&0o111 != 0})
 		wanted[rel] = true
@@ -572,7 +572,7 @@ func clientPackageSourcePath(packagePath, storageDir string, manifest ClientPack
 func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 	sum, size, err := hashFile(src)
 	if err != nil {
-		return fmt.Errorf("%s: source unavailable: %w", file.Path, err)
+		return fmt.Errorf("Недоступно: «%s: source»: %w", file.Path, err)
 	}
 	if size != file.Size || !strings.EqualFold(sum, file.SHA256) {
 		return fmt.Errorf("Несоответствие: %s: контрольная сумма или размер источника", file.Path)
@@ -587,7 +587,7 @@ func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 	}
 	sum, size, err = hashFile(dst)
 	if err != nil || size != file.Size || !strings.EqualFold(sum, file.SHA256) {
-		return fmt.Errorf("%s: destination verification failed", file.Path)
+		return fmt.Errorf("Ошибка: «%s: destination verification»", file.Path)
 	}
 	return nil
 }

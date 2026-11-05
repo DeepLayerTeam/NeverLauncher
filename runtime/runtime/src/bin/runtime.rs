@@ -146,7 +146,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
         .map(|value| value.parse::<u64>().map_err(|_| "--max-runtime-seconds должен быть целым числом секунд".to_string()))
         .transpose()?;
     let server_port = optional_flag(args, "--matching-server-port")
-        .map(|value| value.parse::<u16>().map_err(|_| "invalid matching server port".to_string()))
+        .map(|value| value.parse::<u16>().map_err(|_| "Некорректное значение: «matching server port»".to_string()))
         .transpose()?;
     // При проверке Runtime необходимо запускать именно установленный подписанный
     // пресет, а не выбор, случайно оставшийся активным после предыдущего запуска.
@@ -159,22 +159,22 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
     // строки никогда не содержат токен.
     let creds = if let Some(path) = optional_flag(args, "--credentials-file") {
         let path = PathBuf::from(path);
-        let meta = std::fs::symlink_metadata(&path).map_err(|_| "authentication credential file unavailable")?;
+        let meta = std::fs::symlink_metadata(&path).map_err(|_| "Недоступно: файл учётных данных аутентификации")?;
         if !meta.file_type().is_file() || meta.len() > 16 * 1024 {
-            return Err("invalid authentication credential file".into());
+            return Err("Некорректное значение: файл учётных данных аутентификации".into());
         }
         #[cfg(unix)] {
             use std::os::unix::fs::PermissionsExt;
             if meta.permissions().mode() & 0o077 != 0 {
-                return Err("authentication credential file must be 0600".into());
+                return Err("Для файл учётных данных аутентификации требуется: «0600»".into());
             }
         }
         let raw = std::fs::read(&path).map_err(|_| "credential file unreadable")?;
         Some(serde_json::from_slice::<MinecraftLaunchCredentials>(&raw)
-             .map_err(|_| "invalid Minecraft credential identity")?)
+             .map_err(|_| "Некорректное значение: «Minecraft credential identity»")?)
     } else { None };
     if creds.is_some() && server_port.is_none() {
-        return Err("authenticated validation requires a matching server".into());
+        return Err("Для «authenticated validation» требуется «a matching server»".into());
     }
     let mut result = launch_with_timeout_matching_authenticated(
         &manifest, &root, optional_flag(args, "--java"), optional_flag(args, "--username"),

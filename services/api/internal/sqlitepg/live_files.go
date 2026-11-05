@@ -49,11 +49,11 @@ func (f fileObject0474) MarshalJSON() ([]byte, error) {
 func filePath0474(p, v, rel string) (string, error) {
 	for _, s := range []string{p, v} {
 		if s == "" || s == "." || s == ".." || strings.ContainsAny(s, "/\\\x00") || strings.Contains(s, "..") {
-			return "", errors.New("unsafe project/version segment")
+			return "", errors.New("Небезопасное значение: «project/version segment»")
 		}
 	}
 	if rel == "" || strings.HasPrefix(rel, "/") || strings.ContainsAny(rel, "\\\x00") || strings.Contains(rel, "//") {
-		return "", errors.New("unsafe file path")
+		return "", errors.New("Небезопасное значение: путь к файлу")
 	}
 	for _, part := range strings.Split(rel, "/") {
 		if part == "." || part == ".." || part == "" {
@@ -72,7 +72,7 @@ func noSymlinks0474(root, rel string) error {
 		return e
 	}
 	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-		return errors.New("unsafe storage root")
+		return errors.New("Небезопасное значение: «storage root»")
 	}
 	cur := abs
 	for _, s := range strings.Split(filepath.ToSlash(rel), "/") {
@@ -195,7 +195,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 		return e
 	}
 	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-		return errors.New("unsafe destination storage root")
+		return errors.New("Небезопасное значение: «destination storage root»")
 	}
 	parent := filepath.Dir(filepath.Join(root, rel))
 	// Создавать каталоги по одному, отклоняя переход по символьным ссылкам.
@@ -213,7 +213,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 			return e
 		}
 		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-			return errors.New("unsafe destination directory")
+			return errors.New("Небезопасное значение: «destination directory»")
 		}
 	}
 	tmp, e := os.CreateTemp(parent, ".sqlite-import-*")
@@ -236,7 +236,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 	}
 	target := filepath.Join(root, rel)
 	if e = os.Link(tempName, target); e != nil {
-		return fmt.Errorf("destination object must not already exist: %w", e)
+		return fmt.Errorf("«destination object»: запрещено «already exist:» %w", e)
 	}
 	dir, e := os.Open(parent)
 	if e != nil {
@@ -252,7 +252,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 // перезаписываются. Работает с LocalStorage и S3Storage и проверяет повторное чтение.
 func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Storage) (report FileCopyReport0474, err error) {
 	if src == nil || dst == nil || pgDSN == "" {
-		return report, errors.New("database and both storage drivers required")
+		return report, errors.New("Требуется: «database and both storage drivers»")
 	}
 	if l, ok := src.(*storage.LocalStorage); ok {
 		if d, ok := dst.(*storage.LocalStorage); ok {
@@ -273,7 +273,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 	var sourceSHA string
 	e = pg.QueryRow(ctx, `SELECT source_sha256 FROM sqlite_live_receipts_0473 ORDER BY created_at DESC LIMIT 1`).Scan(&sourceSHA)
 	if e != nil {
-		return report, fmt.Errorf("verified live import required: %w", e)
+		return report, fmt.Errorf("Требуется: «verified live import»: %w", e)
 	}
 	report.SourceSHA256 = sourceSHA
 	rows, e := pg.Query(ctx, `SELECT project_id,version_id,path,size,sha256 FROM files ORDER BY project_id,version_id,path`)
@@ -304,13 +304,13 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 			return report, e
 		}
 		if o.size < 0 {
-			return report, errors.New("invalid negative object size")
+			return report, errors.New("Некорректное значение: «negative object size»")
 		}
 		if _, e = filePath0474(o.project, o.version, o.path); e != nil {
 			return report, e
 		}
 		if len(o.hash) != 64 {
-			return report, errors.New("invalid SHA-256 in files table")
+			return report, errors.New("Некорректное значение: «SHA-256 in files table»")
 		}
 		if _, e = hex.DecodeString(o.hash); e != nil {
 			return report, e
@@ -338,7 +338,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 			}
 			if size != o.size {
 				r.Close()
-				return report, fmt.Errorf("source object %s size mismatch", o.path)
+				return report, fmt.Errorf("Несовпадение: «source object %s size»", o.path)
 			}
 			if local, ok := dst.(*storage.LocalStorage); ok {
 				er = atomicLocalSave0474(ctx, local, o, r)

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 2):
-    raise SystemExit(f"Quilt Compatibility II requires VERSION>=0.17.2, got {version}")
+    raise SystemExit(f"Для «Quilt Compatibility II» требуется «VERSION>=0.17.2, got» {version}")
 
 
 def read(rel: str) -> str:
@@ -67,7 +67,7 @@ for minecraft, java_major in expected.items():
             f"Quilt {minecraft} must be Java {java_major} scope={expected_scope}"
         )
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
-        raise SystemExit(f"Quilt {minecraft} must be certified on linux/x86_64")
+        raise SystemExit(f"Для Quilt {minecraft} требуется: «certified on linux/x86_64»")
     if row.get("loaderVersion") != "latest-stable":
         raise SystemExit(
             f"Quilt {minecraft} must resolve latest-stable at execution time"

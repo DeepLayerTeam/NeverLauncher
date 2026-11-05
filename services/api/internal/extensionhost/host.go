@@ -353,7 +353,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	go func() {
 		defer s.wg.Done()
 		if err := s.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("extension host protocol server failed: %v", err)
+			log.Printf("Ошибка: «extension host protocol server»: %v", err)
 		}
 	}()
 	go s.monitorLoop()
@@ -1775,7 +1775,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "project:read", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Политика разрешённых возможностей недоступна")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение project:read не предоставлено")}
@@ -1792,7 +1792,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "release:read", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Политика разрешённых возможностей недоступна")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение release:read не предоставлено")}
@@ -1809,7 +1809,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "storage:read", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Политика разрешённых возможностей недоступна")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение storage:read не предоставлено")}
@@ -1857,7 +1857,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "secrets:read", projectID)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Политика разрешённых возможностей недоступна")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение secrets:read не предоставлено")}
@@ -1882,7 +1882,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "telemetry:write", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Политика разрешённых возможностей недоступна")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение telemetry:write не предоставлено")}
@@ -1908,7 +1908,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "http:outbound", "")
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Политика разрешённых возможностей недоступна")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение http:outbound не предоставлено")}
@@ -1934,7 +1934,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 			}
 			security := s.securityValue0207()
 			if security == nil {
-				return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("secret broker unavailable")}
+				return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Недоступно: «secret broker»")}
 			}
 			plain, secretErr := security.GetSecret(ctx, st.key.ExtensionID, st.key.Scope, st.key.ScopeID, req.SecretName)
 			if secretErr != nil {
@@ -2121,7 +2121,7 @@ func (s *Supervisor) handleEventSubscriptions(w http.ResponseWriter, r *http.Req
 	}
 	bus := s.eventBusValue0206()
 	if bus == nil {
-		http.Error(w, "event bus unavailable", 503)
+		http.Error(w, "Недоступно: шина событий", 503)
 		return
 	}
 	items, err := bus.Subscriptions(r.Context(), st.key.ExtensionID, st.key.Scope, st.key.ScopeID)
@@ -2138,7 +2138,7 @@ func (s *Supervisor) handleEventSubscribe(w http.ResponseWriter, r *http.Request
 	}
 	bus := s.eventBusValue0206()
 	if bus == nil {
-		http.Error(w, "event bus unavailable", 503)
+		http.Error(w, "Недоступно: шина событий", 503)
 		return
 	}
 	var req eventSubscriptionRequest0206
@@ -2178,7 +2178,7 @@ func (s *Supervisor) handleEventUnsubscribe(w http.ResponseWriter, r *http.Reque
 	}
 	bus := s.eventBusValue0206()
 	if bus == nil {
-		http.Error(w, "event bus unavailable", 503)
+		http.Error(w, "Недоступно: шина событий", 503)
 		return
 	}
 	id, err := strconv.ParseInt(strings.TrimSpace(r.PathValue("subscriptionId")), 10, 64)

@@ -39,13 +39,13 @@ def review(paths: list[Path], revision: str) -> dict:
     found = {}
     for path in paths:
         if path.is_symlink() or not path.is_file():
-            raise ValueError(f"invalid evidence file: {path}")
+            raise ValueError(f"Некорректное значение: файл подтверждающих данных: {path}")
         if path.stat().st_size > 512_000:
-            raise ValueError(f"oversized evidence file: {path}")
+            raise ValueError(f"Слишком большой файл подтверждающих данных: {path}")
         raw = json.loads(path.read_text(encoding="utf-8"))
         platform = raw.get("platform")
         if platform not in REQUIRED or platform in found:
-            raise ValueError(f"unknown or duplicate platform: {platform}")
+            raise ValueError(f"Неизвестное значение: «or duplicate platform»: {platform}")
         if (
             raw.get("schemaVersion") != "1.0"
             or raw.get("release") != "0.30.12"
@@ -108,7 +108,7 @@ def main():
     args = p.parse_args()
     # Не переходите по символьным ссылкам внутри собираемого дерева доказательств.
     if args.evidence.is_symlink():
-        p.error("symlink evidence directory forbidden")
+        p.error("Запрещено: «symlink evidence directory»")
     paths = sorted(args.evidence.rglob("integration-03012.json"))
     try:
         result = review(paths, args.revision)

@@ -79,7 +79,7 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 func normalizeSourceCommit01511(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if !sourceCommitRE01511.MatchString(value) {
-		return "", fmt.Errorf("production release candidate requires exact 40/64-hex source commit, got %q", value)
+		return "", fmt.Errorf("Для «production release candidate» требуется «exact 40/64-hex source commit, got» %q", value)
 	}
 	return value, nil
 }
@@ -106,7 +106,7 @@ func productionReleaseCandidateCohort01511(dir string) ([]productionReleaseCandi
 		}
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("release candidate cohort path %q invalid", name)
+			return nil, fmt.Errorf("Некорректное значение: «release candidate cohort path» %q", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
@@ -169,7 +169,7 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	for _, file := range []string{compatibilityCertificationReleaseFile, deviceTrustCertificationReleaseFile, guardCICertificationReleaseFile} {
 		certCommit, err := readCertificationCommit01511(filepath.Join(dir, file))
 		if err != nil {
-			return fmt.Errorf("production release candidate requires %s with exact source commit: %w", file, err)
+			return fmt.Errorf("Для «production release candidate» требуется «%s with exact source commit:» %w", file, err)
 		}
 		if !strings.EqualFold(certCommit, commit) {
 			return fmt.Errorf("%s source commit mismatch: candidate=%s certification=%s", file, commit, certCommit)
@@ -238,7 +238,7 @@ func writeProductionReleaseCandidateDocument01511(dir, ver, sourceCommit string)
 		return err
 	}
 	if len(cohort) == 0 {
-		return errors.New("production release candidate cohort is empty")
+		return errors.New("Пустое значение: «production release candidate cohort»")
 	}
 	cert := productionReleaseCandidate01511{
 		SchemaVersion: "1.0",
@@ -282,14 +282,14 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 		return "", err
 	}
 	if cert.SchemaVersion != "1.0" || cert.Product != "Launcher" || cert.Version != ver || cert.Status != "production-release-candidate" {
-		return "", errors.New("production release candidate metadata mismatch")
+		return "", errors.New("Несовпадение: «production release candidate metadata»")
 	}
 	if _, err := time.Parse(time.RFC3339, cert.CreatedAt); err != nil {
-		return "", fmt.Errorf("production release candidate createdAt invalid: %w", err)
+		return "", fmt.Errorf("Некорректное значение: «production release candidate createdAt»: %w", err)
 	}
 	expectedGates := productionReleaseCandidateRequiredGates01511(ver)
 	if len(cert.RequiredGates) != len(expectedGates) {
-		return "", errors.New("production release candidate required gate set mismatch")
+		return "", errors.New("Несовпадение: «production release candidate required gate set»")
 	}
 	for i := range expectedGates {
 		if cert.RequiredGates[i] != expectedGates[i] {
@@ -311,7 +311,7 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 	}
 	digest := productionReleaseCandidateCohortDigest01511(actualCohort)
 	if !strings.EqualFold(digest, strings.TrimSpace(cert.CohortSHA256)) {
-		return "", errors.New("production release candidate cohortSha256 mismatch")
+		return "", errors.New("Несовпадение: «production release candidate cohortSha256»")
 	}
 	return commit, nil
 }

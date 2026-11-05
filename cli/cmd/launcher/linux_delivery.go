@@ -112,14 +112,14 @@ func inspectLinuxELFBytes0153(data []byte) (linuxELFInfo0153, error) {
 		return linuxELFInfo0153{}, errors.New("Файл не соответствует формату ELF")
 	}
 	if data[4] != 2 {
-		return linuxELFInfo0153{}, fmt.Errorf("unsupported ELF class %d; 64-bit required", data[4])
+		return linuxELFInfo0153{}, fmt.Errorf("Класс ELF %d не поддерживается; требуется 64-разрядный исполняемый файл", data[4])
 	}
 	if data[5] != 1 {
-		return linuxELFInfo0153{}, fmt.Errorf("unsupported ELF endianness %d; little-endian required", data[5])
+		return linuxELFInfo0153{}, fmt.Errorf("Не поддерживается: «ELF endianness %d; little-endian required»", data[5])
 	}
 	elfType := binary.LittleEndian.Uint16(data[16:18])
 	if elfType != 2 && elfType != 3 {
-		return linuxELFInfo0153{}, fmt.Errorf("unsupported ELF type %d; executable/PIE required", elfType)
+		return linuxELFInfo0153{}, fmt.Errorf("Не поддерживается: «ELF type %d; executable/PIE required»", elfType)
 	}
 	machine := binary.LittleEndian.Uint16(data[18:20])
 	info := linuxELFInfo0153{Machine: machine, Type: elfType}
@@ -173,7 +173,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 		return LinuxPackageManifest0153{}, "", err
 	}
 	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Platform != "linux" || manifest.Architecture != arch || manifest.ELFMachine != expectedMachine || manifest.PackageFormat != "tar.gz" || manifest.PackageArtifact != expectedPackage {
-		return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s package manifest identity/schema mismatch", arch)
+		return LinuxPackageManifest0153{}, "", fmt.Errorf("Несовпадение: «Linux %s package manifest identity/schema»", arch)
 	}
 	expected := expectedLinuxArtifacts0153(arch)
 	if len(manifest.Artifacts) != len(expected) {
@@ -183,7 +183,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 	for _, artifact := range manifest.Artifacts {
 		expectedName, ok := expected[artifact.Component]
 		if !ok || artifact.Name != expectedName || artifact.Architecture != arch || artifact.ELFMachine != expectedMachine || artifact.Mode != "0755" {
-			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s package artifact identity mismatch: %s", arch, artifact.Name)
+			return LinuxPackageManifest0153{}, "", fmt.Errorf("Несовпадение: «Linux %s package artifact identity»: %s", arch, artifact.Name)
 		}
 		if seen[artifact.Component] {
 			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s duplicate package component %s", arch, artifact.Component)
@@ -205,7 +205,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 		}
 		elf, err := inspectLinuxELFFile0153(path)
 		if err != nil || elf.Architecture != arch || elf.MachineText != expectedMachine {
-			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s artifact %s ELF validation failed: %v", arch, artifact.Name, err)
+			return LinuxPackageManifest0153{}, "", fmt.Errorf("Ошибка: «Linux %s artifact %s ELF validation»: %v", arch, artifact.Name, err)
 		}
 	}
 	return manifest, manifestHash, nil
@@ -235,23 +235,23 @@ func readTarGz0153(path string) (map[string][]byte, map[string]int64, error) {
 		}
 		clean := filepath.ToSlash(filepath.Clean(hdr.Name))
 		if strings.HasPrefix(clean, "../") || clean == ".." || strings.HasPrefix(hdr.Name, "/") {
-			return nil, nil, fmt.Errorf("unsafe tar entry %q", hdr.Name)
+			return nil, nil, fmt.Errorf("Небезопасное значение: «tar entry» %q", hdr.Name)
 		}
 		if hdr.Typeflag == tar.TypeDir {
 			continue
 		}
 		if hdr.Typeflag != tar.TypeReg && hdr.Typeflag != tar.TypeRegA {
-			return nil, nil, fmt.Errorf("unsupported tar entry type for %s", hdr.Name)
+			return nil, nil, fmt.Errorf("Не поддерживается: «tar entry type for» %s", hdr.Name)
 		}
 		if _, duplicate := files[clean]; duplicate {
-			return nil, nil, fmt.Errorf("duplicate tar entry %s", clean)
+			return nil, nil, fmt.Errorf("Обнаружен дубликат: «tar entry» %s", clean)
 		}
 		data, err := io.ReadAll(io.LimitReader(tr, 512*1024*1024+1))
 		if err != nil {
 			return nil, nil, err
 		}
 		if len(data) > 512*1024*1024 {
-			return nil, nil, fmt.Errorf("tar entry too large: %s", clean)
+			return nil, nil, fmt.Errorf("Превышен допустимый размер: «tar entry»: %s", clean)
 		}
 		files[clean] = data
 		modes[clean] = hdr.Mode & 0o777
@@ -274,7 +274,7 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 	}
 	files, modes, err := readTarGz0153(packagePath)
 	if err != nil {
-		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package read failed: %w", arch, err)
+		return LinuxProductionPackage0153{}, fmt.Errorf("Ошибка: «Linux %s package read»: %w", arch, err)
 	}
 	expectedFileCount := len(manifest.Artifacts) + 1
 	if componentTransactionalUpdateRequired0157(ver) {
@@ -301,10 +301,10 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 		}
 		var update componentUpdateManifest0157
 		if err := json.Unmarshal(updateRaw, &update); err != nil {
-			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update manifest invalid: %w", arch, err)
+			return LinuxProductionPackage0153{}, fmt.Errorf("Некорректное значение: «Linux %s component update manifest»: %w", arch, err)
 		}
 		if update.SchemaVersion != "1.0" || update.Product != "Launcher" || update.ProductVersion != ver || update.Platform != "linux" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != "sha256-delivery" || len(update.Components) != 3 {
-			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update manifest identity mismatch", arch)
+			return LinuxProductionPackage0153{}, fmt.Errorf("Несовпадение: «Linux %s component update manifest identity»", arch)
 		}
 		mainByComponent := map[string]LinuxPackageArtifact0153{}
 		for _, row := range manifest.Artifacts {
@@ -437,11 +437,11 @@ func verifyLinuxDeliveryAllowlist0153(dir, ver string, evidence LinuxProductionE
 	}
 	release, ok := doc.Releases[ver]
 	if doc.SchemaVersion != "3.0" || !ok || release.ProtocolVersion != 4 {
-		return errors.New("Linux delivery allowlist identity/schema mismatch")
+		return errors.New("Несовпадение: «Linux delivery allowlist identity/schema»")
 	}
 	linux, ok := release.Platforms["linux"]
 	if !ok || linux.SigningMode != "release-ed25519-sha256" || len(linux.Artifacts) != 2 {
-		return errors.New("Linux delivery allowlist platform metadata mismatch")
+		return errors.New("Несовпадение: «Linux delivery allowlist platform metadata»")
 	}
 	expected := map[string]string{}
 	for _, target := range evidence.Targets {
@@ -476,11 +476,11 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 		return err
 	}
 	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Platform != "linux" || evidence.IntegrityMode != "sha256+signed-release-bundle" {
-		return errors.New("Linux production evidence identity/schema mismatch")
+		return errors.New("Несовпадение: «Linux production evidence identity/schema»")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, evidence.GeneratedAt); err != nil {
 		if _, fallbackErr := time.Parse(time.RFC3339, evidence.GeneratedAt); fallbackErr != nil {
-			return errors.New("Linux production evidence generatedAt is invalid")
+			return errors.New("Некорректное значение: «Linux production evidence generatedAt»")
 		}
 	}
 	if len(evidence.Targets) != 2 {
@@ -490,7 +490,7 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 	if bindDelivery {
 		delivery, err := readDeliveryManifest0151(dir)
 		if err != nil {
-			return fmt.Errorf("Linux production evidence requires delivery manifest: %w", err)
+			return fmt.Errorf("Для «Linux production evidence» требуется «delivery manifest:» %w", err)
 		}
 		deliveryByName = map[string]DeliveryArtifact{}
 		for _, artifact := range delivery.Artifacts {
@@ -520,7 +520,7 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 		for _, artifact := range target.Artifacts {
 			expected, ok := expectedArtifacts[artifact.Component]
 			if !ok || artifact != expected {
-				return fmt.Errorf("Linux %s evidence artifact mismatch: %s", target.Architecture, artifact.Name)
+				return fmt.Errorf("Несовпадение: «Linux %s evidence artifact»: %s", target.Architecture, artifact.Name)
 			}
 			if bindDelivery {
 				deliveryArtifact, ok := deliveryByName[artifact.Name]
@@ -536,7 +536,7 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 					return fmt.Errorf("Linux production metadata/package %s is not bound to DELIVERY_MANIFEST.json", name)
 				}
 				if name == target.Package.Name && (artifact.Platform != "linux" || artifact.Architecture != target.Architecture || artifact.Size != target.Package.Size || !strings.EqualFold(artifact.SHA256, target.Package.SHA256)) {
-					return fmt.Errorf("Linux package %s delivery binding mismatch", name)
+					return fmt.Errorf("Несовпадение: «Linux package %s delivery binding»", name)
 				}
 			}
 		}

@@ -124,7 +124,7 @@ func (r *RedisCoordinator) AcquireCommandLease(ctx context.Context, serverID, co
 	}
 	n, ok := v.(int64)
 	if !ok {
-		return false, fmt.Errorf("unexpected Redis lease response: %v", v)
+		return false, fmt.Errorf("Неожиданное значение: «Redis lease response»: %v", v)
 	}
 	return n == 1, nil
 }
@@ -159,7 +159,7 @@ func (r *RedisCoordinator) ReleaseCommandLease(ctx context.Context, serverID, co
 func validateCommandLeaseIdentity0514(parts ...string) error {
 	for _, part := range parts {
 		if part == "" || len(part) > 256 || safePart(part) != part {
-			return errors.New("unsafe Redis command lease identity")
+			return errors.New("Небезопасное значение: «Redis command lease identity»")
 		}
 	}
 	return nil
@@ -199,7 +199,7 @@ func (r *RedisCoordinator) command(ctx context.Context, args ...string) (any, er
 		}
 		auth = append(auth, r.password)
 		if err := writeRESP(conn, auth...); err != nil {
-			return nil, fmt.Errorf("Redis AUTH write failed: %w", err)
+			return nil, fmt.Errorf("Ошибка: «Redis AUTH write»: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
 			return nil, fmt.Errorf("Ошибка: Redis AUTH: %w", err)
@@ -214,7 +214,7 @@ func (r *RedisCoordinator) command(ctx context.Context, args ...string) (any, er
 		}
 	}
 	if err := writeRESP(conn, args...); err != nil {
-		return nil, fmt.Errorf("Redis command write failed: %w", err)
+		return nil, fmt.Errorf("Ошибка: «Redis command write»: %w", err)
 	}
 	v, err := readRESP(reader)
 	if err != nil {
@@ -271,7 +271,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 			return nil, err
 		}
 		if string(buf[n:]) != "\r\n" {
-			return nil, errors.New("malformed Redis bulk string")
+			return nil, errors.New("Некорректный формат: «Redis bulk string»")
 		}
 		return string(buf[:n]), nil
 	case '*':

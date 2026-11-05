@@ -25,9 +25,9 @@ const (
 )
 
 var (
-	ErrAuthentication = errors.New("invalid or revoked credentials")
+	ErrAuthentication = errors.New("Некорректное значение: «or revoked credentials»")
 	ErrRefreshReuse   = errors.New("refresh-token reuse: entire session family revoked")
-	ErrMFARequired    = errors.New("second factor required or invalid")
+	ErrMFARequired    = errors.New("Некорректное значение: «second factor required or»")
 )
 
 // Auth работает с существующим постоянным Repository. Ключ шифрования
@@ -39,7 +39,7 @@ type Auth struct {
 
 func (r *Repository) Auth(key []byte) (*Auth, error) {
 	if len(key) != 32 {
-		return nil, errors.New("32-byte independent MFA encryption key required")
+		return nil, errors.New("Требуется: «32-byte independent MFA encryption key»")
 	}
 	a := &Auth{repo: r}
 	copy(a.key[:], key)
@@ -123,7 +123,7 @@ func (a *Auth) LoginLocal(ctx context.Context, email, password, factor, device s
 		device = "desktop"
 	}
 	if len(device) > 96 || strings.ContainsAny(device, "\x00\r\n") {
-		return Tokens{}, errors.New("invalid device name")
+		return Tokens{}, errors.New("Некорректное значение: «device name»")
 	}
 	var result Tokens
 	err = a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {

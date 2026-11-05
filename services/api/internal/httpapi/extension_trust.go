@@ -367,7 +367,7 @@ func (s Server) extensionRecoveryBackup02012(w http.ResponseWriter, r *http.Requ
 
 func (s Server) importExtensionRecoveryState02012(ctx context.Context, state model.ExtensionRecoveryExport, restoreInstalls bool) (map[string]int, error) {
 	if state.SchemaVersion != "1.0" {
-		return nil, errors.New("unsupported extension recovery schemaVersion")
+		return nil, errors.New("Не поддерживается: «extension recovery schemaVersion»")
 	}
 	counts := map[string]int{"publishers": 0, "keys": 0, "quarantine": 0, "pins": 0, "installs": 0, "emergencyDisables": 0}
 	// Импортируйте в монотонном безопасном для доверия порядке. Издатели

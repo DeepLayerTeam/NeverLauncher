@@ -44,7 +44,7 @@ def source_fingerprint():
         ]
     for p in sorted(paths):
         if not p.is_file():
-            raise ValueError(f"tracked source missing: {p}")
+            raise ValueError(f"Отсутствует: «tracked source»: {p}")
         rel = p.relative_to(ROOT).as_posix()
         sha.update(rel.encode() + b"\x00")
         sha.update(hashlib.sha256(p.read_bytes()).digest())
@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     if not __import__("re").fullmatch("[0-9a-f]{40}", args.commit):
-        parser.error("exact Git commit SHA required")
+        parser.error("Требуется: «exact Git commit SHA»")
     if (ROOT / "VERSION").read_text().strip() != "0.32.0":
         parser.error("source VERSION must equal 0.32.0")
     if (ROOT / ".git").exists():
@@ -71,7 +71,7 @@ def main():
             ["git", "status", "--porcelain"], cwd=ROOT, text=True
         )
         if dirty.strip():
-            parser.error("dirty source tree cannot generate GA evidence")
+            parser.error("«dirty source tree»: запрещено «generate GA evidence»")
     spec = {
         "offline": previous.OFFLINE,
         "backend-security": previous.BACKEND_SECURITY,

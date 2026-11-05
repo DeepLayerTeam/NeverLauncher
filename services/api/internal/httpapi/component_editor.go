@@ -74,7 +74,7 @@ func readCatalogRequest0248(w http.ResponseWriter, r *http.Request) (componentEd
 		return req, errors.New("Требуется: expectedRevision")
 	}
 	if req.Catalog.SchemaVersion != model.ComponentCatalogSchema0245 {
-		return req, errors.New("component editor requires signed catalog schema 5.0")
+		return req, errors.New("Для «component editor» требуется «signed catalog schema 5.0»")
 	}
 	return req, nil
 }

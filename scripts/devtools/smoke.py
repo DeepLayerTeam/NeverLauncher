@@ -129,7 +129,7 @@ def main(cli):
                 except json.JSONDecodeError:
                     continue
             else:
-                raise RuntimeError("invalid fixture startup JSON")
+                raise RuntimeError("Некорректное значение: «fixture startup JSON»")
             base = startup["baseUrl"]
             status, rejected = request(
                 base,

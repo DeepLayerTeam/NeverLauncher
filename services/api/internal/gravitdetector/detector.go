@@ -89,11 +89,11 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 // элементов до разбора конфигураций и никогда не выполняет переданные JAR.
 func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, claimedVersion string) (Report, error) {
 	if len(claimedVersion) > 40 || strings.ContainsAny(claimedVersion, "\n\r\t") {
-		return Report{}, errors.New("invalid claimed Gravit version")
+		return Report{}, errors.New("Некорректное значение: «claimed Gravit version»")
 	}
 	snapshot, err := inv.ValidateSource(ctx, src, size, digest)
 	if err != nil {
-		return Report{}, fmt.Errorf("invalid Gravit source ZIP: %w", err)
+		return Report{}, fmt.Errorf("Некорректное значение: «Gravit source ZIP»: %w", err)
 	}
 	fileList, err := json.Marshal(snapshot.Files)
 	if err != nil {
@@ -343,7 +343,7 @@ func readObject(f *zip.File) (map[string]json.RawMessage, error) {
 		return nil, errors.New("Некорректное значение: объект JSON")
 	}
 	if v == nil {
-		return nil, errors.New("JSON root must be an object")
+		return nil, errors.New("Для «JSON root» требуется: объект")
 	}
 	var trailing any
 	if e = dec.Decode(&trailing); e != io.EOF {
@@ -511,7 +511,7 @@ func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool,
 	for _, f := range z.File {
 		if strings.EqualFold(f.Name, "META-INF/MANIFEST.MF") {
 			if f.UncompressedSize64 > 64<<10 {
-				return "", false, errors.New("oversized JAR manifest")
+				return "", false, errors.New("Превышен допустимый размер: «JAR manifest»")
 			}
 			data, err := readBounded(f, 64<<10)
 			if err != nil {
@@ -612,7 +612,7 @@ func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 func rejectDuplicateJSON0332(d *json.Decoder) error {
 	token, err := d.Token()
 	if err != nil {
-		return errors.New("invalid JSON syntax")
+		return errors.New("Некорректное значение: «JSON syntax»")
 	}
 	open, ok := token.(json.Delim)
 	if !ok {

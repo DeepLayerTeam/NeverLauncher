@@ -184,7 +184,7 @@ func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
 func decodeRuntimeValidationKey0212(value string) (ed25519.PublicKey, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return nil, errors.New("empty runtime validation key")
+		return nil, errors.New("Пустое значение: «runtime validation key»")
 	}
 	if raw, err := hex.DecodeString(value); err == nil && len(raw) == ed25519.PublicKeySize {
 		return ed25519.PublicKey(raw), nil
@@ -194,23 +194,23 @@ func decodeRuntimeValidationKey0212(value string) (ed25519.PublicKey, error) {
 			return ed25519.PublicKey(raw), nil
 		}
 	}
-	return nil, errors.New("runtime validation public key must be raw Ed25519 hex/base64")
+	return nil, errors.New("Для «runtime validation public key» требуется: «raw Ed25519 hex/base64»")
 }
 
 func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error) {
 	raw := strings.TrimSpace(s.Config.RuntimeValidationKeysJSON)
 	if raw == "" {
-		return nil, errors.New("runtime validation trust set is not configured")
+		return nil, errors.New("набор доверия проверки среды выполнения: не настроено")
 	}
 	var cfg map[string]string
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		return nil, errors.New("LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON must be a JSON object")
+		return nil, errors.New("Для LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON требуется: объект JSON")
 	}
 	out := make(map[string]ed25519.PublicKey, len(cfg))
 	for id, val := range cfg {
 		id = strings.TrimSpace(id)
 		if id == "" {
-			return nil, errors.New("runtime validation key id is empty")
+			return nil, errors.New("Пустое значение: «runtime validation key id»")
 		}
 		key, err := decodeRuntimeValidationKey0212(val)
 		if err != nil {
@@ -219,7 +219,7 @@ func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error
 		out[id] = key
 	}
 	if len(out) == 0 {
-		return nil, errors.New("runtime validation trust set is empty")
+		return nil, errors.New("Пустое значение: набор доверия проверки среды выполнения")
 	}
 	return out, nil
 }
@@ -428,7 +428,7 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 	}
 	keys, err := s.runtimeValidationKeys0212()
 	if err != nil {
-		return fmt.Errorf("publish runtime trust set unavailable: %w", err)
+		return fmt.Errorf("Недоступно: «publish runtime trust set»: %w", err)
 	}
 	items, err := s.Repo.ListRuntimeValidations(ctx, lookup.Release.ID)
 	if err != nil {

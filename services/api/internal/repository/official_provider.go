@@ -40,13 +40,13 @@ func (v OfficialProviderSettings02611) Validate() error {
 		return errors.New("only personal Microsoft accounts (consumers) are supported")
 	}
 	if v.ClientID != "" && (!clientIDPattern02611.MatchString(v.ClientID) || strings.EqualFold(v.ClientID, "00000000-0000-0000-0000-000000000000")) {
-		return errors.New("clientId must be a registered public application UUID")
+		return errors.New("Для «clientId» требуется: «a registered public application UUID»")
 	}
 	if v.Enabled && v.ClientID == "" {
 		return errors.New("clientId is required for enabled provider")
 	}
 	if v.Enabled && !v.BrowserEnabled && !v.DeviceEnabled {
-		return errors.New("at least one authentication flow must be enabled")
+		return errors.New("Для «at least one authentication flow» требуется: «enabled»")
 	}
 	return nil
 }

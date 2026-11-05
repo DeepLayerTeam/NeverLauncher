@@ -594,7 +594,7 @@ func newIPCProxy(conn net.Conn) http.Handler {
 	reader := bufio.NewReader(conn)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Host != "" && r.URL.Host != r.Host {
-			http.Error(w, "invalid host", 400)
+			http.Error(w, "Некорректное значение: хост", 400)
 			return
 		}
 		mu.Lock()
@@ -604,7 +604,7 @@ func newIPCProxy(conn net.Conn) http.Handler {
 		clone.Close = false
 		clone.Header.Del("Connection")
 		if err := clone.Write(conn); err != nil {
-			http.Error(w, "host ipc unavailable", 502)
+			http.Error(w, "Недоступно: «host ipc»", 502)
 			return
 		}
 		resp, err := http.ReadResponse(reader, clone)

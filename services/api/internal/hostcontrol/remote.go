@@ -62,28 +62,28 @@ type Client struct {
 
 func privateFile(path string) ([]byte, error) {
 	if !filepath.IsAbs(path) {
-		return nil, errors.New("absolute secret/CA file path required")
+		return nil, errors.New("Требуется: «absolute secret/CA file path»")
 	}
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("host-control private file must not be accessible by group/others")
+		return nil, errors.New("«host-control private file»: запрещено «be accessible by group/others»")
 	}
 	return os.ReadFile(path)
 }
 func LoadTarget(path, serverID string) (Target, error) {
 	var empty Target
 	if path == "" {
-		return empty, errors.New("host control is not configured")
+		return empty, errors.New("«host control»: не настроено")
 	}
 	b, err := privateFile(path)
 	if err != nil {
 		return empty, err
 	}
 	if len(b) > 1<<20 {
-		return empty, errors.New("host target registry too large")
+		return empty, errors.New("Превышен допустимый размер: «host target registry»")
 	}
 	var targets map[string]Target
 	if err = json.Unmarshal(b, &targets); err != nil {
@@ -98,7 +98,7 @@ func LoadTarget(path, serverID string) (Target, error) {
 	}
 	u, err := url.Parse(t.URL)
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Path != "" && u.Path != "/" || u.RawQuery != "" || u.Fragment != "" {
-		return empty, errors.New("host target must be an HTTPS origin")
+		return empty, errors.New("Для «host target» требуется: «an HTTPS origin»")
 	}
 	return t, nil
 }
@@ -109,7 +109,7 @@ func NewClient(t Target) (*Client, error) {
 	}
 	pool := x509.NewCertPool()
 	if !pool.AppendCertsFromPEM(ca) {
-		return nil, errors.New("host-control CA is invalid")
+		return nil, errors.New("Некорректное значение: «host-control CA»")
 	}
 	token, err := privateFile(t.TokenFile)
 	if err != nil {
@@ -117,12 +117,12 @@ func NewClient(t Target) (*Client, error) {
 	}
 	secret := strings.TrimSpace(string(token))
 	if len(secret) < 32 || len(secret) > 4096 {
-		return nil, errors.New("invalid host-control token")
+		return nil, errors.New("Некорректное значение: «host-control token»")
 	}
 	tlsCfg := &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS13}
 	if t.ClientCert != "" || t.ClientKey != "" {
 		if t.ClientCert == "" || t.ClientKey == "" {
-			return nil, errors.New("both client certificate and key are required")
+			return nil, errors.New("Требуется: «both client certificate and key are»")
 		}
 		certPEM, err := privateFile(t.ClientCert)
 		if err != nil {
@@ -162,7 +162,7 @@ func (c *Client) request(ctx context.Context, method, path, key string, body []b
 		return 0, nil, err
 	}
 	if len(b) > 65536 || !json.Valid(b) {
-		return 0, nil, errors.New("invalid or oversized host response")
+		return 0, nil, errors.New("Некорректное значение: «or oversized host response»")
 	}
 	return resp.StatusCode, b, nil
 }
@@ -179,7 +179,7 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 		return Status{}, err
 	}
 	if s.NodeID != c.nodeID {
-		return Status{}, errors.New("host node identity mismatch")
+		return Status{}, errors.New("Несовпадение: «host node identity»")
 	}
 	return s, nil
 }
@@ -188,7 +188,7 @@ func (c *Client) Execute(ctx context.Context, action, key string) (Receipt, erro
 		return Receipt{}, errors.New("Некорректное значение: действие хоста")
 	}
 	if len(key) < 16 || len(key) > 128 {
-		return Receipt{}, errors.New("invalid host idempotency key")
+		return Receipt{}, errors.New("Некорректное значение: «host idempotency key»")
 	}
 	payload, _ := json.Marshal(map[string]string{"action": action})
 	code, b, err := c.request(ctx, http.MethodPost, "/v1/host/commands", key, payload)
@@ -204,21 +204,21 @@ func (c *Client) Execute(ctx context.Context, action, key string) (Receipt, erro
 	}
 	hash := sha256.Sum256([]byte(key))
 	if r.Action != action || (r.State != "succeeded" && r.State != "indeterminate") || r.KeyHash != hex.EncodeToString(hash[:]) {
-		return Receipt{}, errors.New("host command receipt does not match requested action")
+		return Receipt{}, errors.New("«host command receipt» не совпадает с «requested action»")
 	}
 	return r, nil
 }
 
 // ReadReceipt04112 получает лишь УЖЕ устойчивый ACK RemoteControl. Новое
 // действие не отправляется, даже при тайм-ауте исходного POST.
-var ErrReceiptNotFound04112 = errors.New("remote host receipt not found")
+var ErrReceiptNotFound04112 = errors.New("Не найдено: «remote host receipt»")
 
 func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Receipt, error) {
 	if action != "start" && action != "stop" && action != "restart" {
 		return Receipt{}, errors.New("Некорректное значение: действие хоста")
 	}
 	if len(key) < 16 || len(key) > 128 {
-		return Receipt{}, errors.New("invalid receipt key")
+		return Receipt{}, errors.New("Некорректное значение: «receipt key»")
 	}
 	code, b, err := c.request(ctx, http.MethodGet, "/v1/host/receipts/"+url.PathEscape(key), "", nil)
 	if err != nil {
@@ -237,7 +237,7 @@ func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Rece
 	hash := sha256.Sum256([]byte(key))
 	if receipt.Action != action || receipt.KeyHash != hex.EncodeToString(hash[:]) ||
 		(receipt.State != "indeterminate" && receipt.State != "succeeded") {
-		return Receipt{}, errors.New("host receipt identity or outcome mismatch")
+		return Receipt{}, errors.New("Несовпадение: «host receipt identity or outcome»")
 	}
 	return receipt, nil
 }

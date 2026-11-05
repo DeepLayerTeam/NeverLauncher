@@ -22,12 +22,12 @@ func normalizeSecurityScope0207(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("extension security scope must be global or project")
+		return "", "", errors.New("Для «extension security scope» требуется: «global or project»")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("project security scope requires scopeId")
+		return "", "", errors.New("Для «project security scope» требуется «scopeId»")
 	}
 	return scope, scopeID, nil
 }
@@ -73,19 +73,19 @@ func normalizeSecret0207(in model.ExtensionSecret) (model.ExtensionSecret, error
 		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: ID расширения %q", s.ExtensionID)
 	}
 	if !extensionSecretName0207.MatchString(s.Name) {
-		return model.ExtensionSecret{}, fmt.Errorf("invalid extension secret name %q", s.Name)
+		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: «extension secret name» %q", s.Name)
 	}
 	if len(s.Nonce) != 12 {
-		return model.ExtensionSecret{}, errors.New("extension secret nonce must be 12 bytes")
+		return model.ExtensionSecret{}, errors.New("Для «extension secret nonce» требуется: «12 bytes»")
 	}
 	if len(s.Ciphertext) < 16 || len(s.Ciphertext) > (1<<20)+16 {
-		return model.ExtensionSecret{}, errors.New("extension secret ciphertext size is invalid")
+		return model.ExtensionSecret{}, errors.New("Некорректное значение: «extension secret ciphertext size»")
 	}
 	if s.KeyVersion == "" || len(s.KeyVersion) > 64 {
-		return model.ExtensionSecret{}, errors.New("extension secret keyVersion is required")
+		return model.ExtensionSecret{}, errors.New("Требуется: «extension secret keyVersion»")
 	}
 	if s.UpdatedBy == "" || len(s.UpdatedBy) > 255 {
-		return model.ExtensionSecret{}, errors.New("extension secret updatedBy is required")
+		return model.ExtensionSecret{}, errors.New("Требуется: «extension secret updatedBy»")
 	}
 	return s, nil
 }

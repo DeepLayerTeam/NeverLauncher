@@ -312,7 +312,7 @@ impl GuardSupervisor {
                     validate_status_profile(&status, handle.protection_profile)?;
                     if status.pid != handle.child.id().ok_or("Guard running PID unavailable")?
                         || status.parent_pid != std::process::id() {
-                        return Err("Guard Windows running process identity mismatch".into());
+                        return Err("Идентичность запущенного процесса Guard в Windows не совпадает с ожидаемой".into());
                     }
                     status.lifetime_job_enforced = true;
                     status.package_manifest_verified = handle.package_manifest_verified;
@@ -427,18 +427,18 @@ impl GuardSupervisor {
             protection_profile,
         };
         let status_value = send_command(&mut handle, "status").await
-            .map_err(|err| format!("Guard release identity query failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: запрос идентичности релиза Guard: {err}"))?;
         let mut status = parse_status(status_value)?;
         validate_status_profile(&status, protection_profile)?;
         if status.pid != guard_pid || status.parent_pid != parent_pid
             || status.started_at_unix != _handshake_status.started_at_unix {
-            return Err("Guard Windows status process identity mismatch".into());
+            return Err("Несовпадение: «Guard Windows status process identity»".into());
         }
         status.lifetime_job_enforced = true;
         status.package_manifest_verified = package_manifest_verified;
         let policy_value = send_command(&mut handle, "process-policy")
             .await
-            .map_err(|err| format!("Guard Windows Protection Core query failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard Windows Protection Core query»: {err}"))?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(policy_value)
             .map_err(|err| format!("Guard Windows Protection Core payload повреждён: {err}"))?;
         validate_guard_process_policy(&handle, &policy)?;
@@ -537,7 +537,7 @@ impl GuardSupervisor {
             challenge: challenge.to_string(),
         };
         let request_payload = serde_json::to_string(&request)
-            .map_err(|err| format!("Guard attestation request serialization failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard attestation request serialization»: {err}"))?;
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
@@ -628,7 +628,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         )
     })?;
     if manifest_link_metadata.file_type().is_symlink() || !manifest_link_metadata.is_file() {
-        return Err("Windows package manifest must be a regular non-symlink file".to_string());
+        return Err("Для манифест пакета Windows требуется: обычный файл без символических ссылок".to_string());
     }
     let metadata = std::fs::metadata(&manifest_path).map_err(|err| {
         format!(
@@ -637,7 +637,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         )
     })?;
     if metadata.len() == 0 || metadata.len() > 256 * 1024 {
-        return Err("Windows package manifest size is invalid".to_string());
+        return Err("Некорректное значение: «Windows package manifest size»".to_string());
     }
     let raw = std::fs::read(&manifest_path)
         .map_err(|err| format!("не удалось прочитать Windows package manifest: {err}"))?;
@@ -652,7 +652,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         || manifest.guard_protocol_version != GUARD_PROTOCOL_VERSION
         || (!legacy_identity && !canonical_identity)
     {
-        return Err("Windows package manifest version/platform/protocol mismatch".to_string());
+        return Err("Несовпадение: «Windows package manifest version/platform/protocol»".to_string());
     }
 
     if !manifest.authenticode_required {
@@ -684,14 +684,14 @@ fn verify_package_artifact(manifest: &WindowsPackageManifest, path: &Path) -> Re
     let metadata = std::fs::metadata(path)
         .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
     if metadata.len() != artifact.size {
-        return Err(format!("Windows package artifact size mismatch: {name}"));
+        return Err(format!("Несовпадение: «Windows package artifact size»: {name}"));
     }
     let actual = sha256_file(path)?;
     if artifact.sha256.len() != 64
         || !artifact.sha256.bytes().all(|b| b.is_ascii_hexdigit())
         || !actual.eq_ignore_ascii_case(&artifact.sha256)
     {
-        return Err(format!("Windows package artifact SHA-256 mismatch: {name}"));
+        return Err(format!("Несовпадение: «Windows package artifact SHA-256»: {name}"));
     }
     Ok(())
 }
@@ -788,7 +788,7 @@ async fn client_authenticate(
     let expected_server_proof = handshake_proof(bootstrap_secret, b"server", &handshake);
     let actual_server_proof = decode_hex_32(&challenge.server_proof, "serverProof")?;
     if !constant_time_eq(&expected_server_proof, &actual_server_proof) {
-        return Err("Guard server authentication failed".to_string());
+        return Err("Не удалось подтвердить подлинность сервера Guard".to_string());
     }
 
     let client_proof = handshake_proof(bootstrap_secret, b"client", &handshake);
@@ -829,7 +829,7 @@ async fn client_authenticate(
     );
     let actual_ready = decode_hex_32(&ready.ready_proof, "readyProof")?;
     if !constant_time_eq(&expected_ready, &actual_ready) {
-        return Err("Guard ready authentication failed".to_string());
+        return Err("Ошибка: «Guard ready authentication»".to_string());
     }
 
     let status = GuardStatus {
@@ -906,7 +906,7 @@ async fn send_command_inner(
         || response.sequence != sequence
         || response.request_id != request_id
     {
-        return Err("Guard IPC response sequence/requestId mismatch".to_string());
+        return Err("Несовпадение: «Guard IPC response sequence/requestId»".to_string());
     }
     let expected = response_mac(
         &handle.session_key,
@@ -917,7 +917,7 @@ async fn send_command_inner(
     );
     let actual = decode_hex_32(&response.mac, "responseMac")?;
     if !constant_time_eq(&expected, &actual) {
-        return Err("Guard IPC response MAC verification failed".to_string());
+        return Err("Ошибка: «Guard IPC response MAC verification»".to_string());
     }
     handle.next_sequence = handle
         .next_sequence
@@ -977,7 +977,7 @@ fn validate_release_identity(status: &GuardStatus, expected_platform: &str) -> R
     }
     if status.state != "ready" || !status.authenticated || !status.process_policy_enforced
         || !status.hardening_enforced || !status.secure_pipe_acl {
-        return Err("Guard Windows mandatory runtime trust state failed".to_string());
+        return Err("Ошибка: «Guard Windows mandatory runtime trust state»".to_string());
     }
     if status.windows_protection_core_version != GUARD_WINDOWS_PROTECTION_CORE_VERSION
         || status.windows_capability_model_version != GUARD_WINDOWS_CAPABILITY_MODEL_VERSION
@@ -1018,18 +1018,18 @@ fn validate_integrity_evidence(
         || evidence.boundary.expected_parent_pid != launcher_pid
         || evidence.boundary.observed_parent_pid != launcher_pid
     {
-        return Err("Guard integrity evidence PID binding mismatch".to_string());
+        return Err("Несовпадение: «Guard integrity evidence PID binding»".to_string());
     }
 
     let expected_digest = recompute_evidence_sha256(evidence)?;
     let actual_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
     if !constant_time_eq(&expected_digest, &actual_digest) {
-        return Err("Guard integrity evidence digest verification failed".to_string());
+        return Err("Ошибка: «Guard integrity evidence digest verification»".to_string());
     }
     let expected_proof = integrity_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&evidence.session_proof, "integritySessionProof")?;
     if !constant_time_eq(&expected_proof, &actual_proof) {
-        return Err("Guard integrity evidence session proof verification failed".to_string());
+        return Err("Ошибка: «Guard integrity evidence session proof verification»".to_string());
     }
     Ok(())
 }
@@ -1045,19 +1045,19 @@ fn validate_remote_attestation(
     if attestation.challenge_id != challenge_id
         || attestation.challenge_sha256 != challenge_sha256(challenge)
     {
-        return Err("Guard remote attestation challenge binding mismatch".to_string());
+        return Err("Несовпадение: «Guard remote attestation challenge binding»".to_string());
     }
     validate_integrity_evidence(handle, &attestation.evidence)?;
     validate_guard_process_policy(handle, &attestation.process_policy)?;
     let expected_digest = recompute_attestation_sha256(attestation)?;
     let actual_digest = decode_hex_32(&attestation.attestation_sha256, "attestationSha256")?;
     if !constant_time_eq(&expected_digest, &actual_digest) {
-        return Err("Guard remote attestation digest verification failed".to_string());
+        return Err("Ошибка: «Guard remote attestation digest verification»".to_string());
     }
     let expected_proof = attestation_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&attestation.session_proof, "attestationSessionProof")?;
     if !constant_time_eq(&expected_proof, &actual_proof) {
-        return Err("Guard remote attestation session proof verification failed".to_string());
+        return Err("Ошибка: «Guard remote attestation session proof verification»".to_string());
     }
     Ok(())
 }
@@ -1072,7 +1072,7 @@ fn validate_guard_process_policy(
         .id()
         .ok_or_else(|| "Guard child PID unavailable during policy validation".to_string())?;
     if policy.pid != guard_pid {
-        return Err("Guard Windows process policy PID binding mismatch".to_string());
+        return Err("Несовпадение: «Guard Windows process policy PID binding»".to_string());
     }
     validate_windows_guard_policy_report(policy, handle.protection_profile)
 }
@@ -1263,7 +1263,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
                 bootstrap_secret.zeroize();
-                return Err(format!("Guard IPC connect failed: {err}"));
+                return Err(format!("Ошибка: «Guard IPC connect»: {err}"));
             }
             Err(_) => {
                 bootstrap_secret.zeroize();
@@ -1381,7 +1381,7 @@ async fn server_authenticate(
     let expected_client_proof = handshake_proof(bootstrap_secret, b"client", &handshake);
     let actual_client_proof = decode_hex_32(&authentication.client_proof, "clientProof")?;
     if !constant_time_eq(&expected_client_proof, &actual_client_proof) {
-        return Err("Guard client authentication failed".to_string());
+        return Err("Ошибка: «Guard client authentication»".to_string());
     }
 
     let session_key = derive_session_key(bootstrap_secret, &handshake);
@@ -1433,7 +1433,7 @@ async fn serve_authenticated_session(
             Err(err) => return Err(err),
         };
         if request.protocol_version != GUARD_PROTOCOL_VERSION {
-            return Err("Guard IPC request protocol mismatch".to_string());
+            return Err("Несовпадение: «Guard IPC request protocol»".to_string());
         }
         if request.sequence != expected_sequence {
             return Err(format!(
@@ -1453,7 +1453,7 @@ async fn serve_authenticated_session(
         );
         let actual_mac = decode_hex_32(&request.mac, "requestMac")?;
         if !constant_time_eq(&expected_mac, &actual_mac) {
-            return Err("Guard IPC request MAC verification failed".to_string());
+            return Err("Ошибка: «Guard IPC request MAC verification»".to_string());
         }
 
         let (ok, payload, shutdown) = match request.command.as_str() {
@@ -1493,7 +1493,7 @@ async fn serve_authenticated_session(
                     started_at_unix,
                     message: "Guard Windows process boundary authenticated; process policy and production hardening enforced".to_string(),
                 })
-                .map_err(|err| format!("Guard status serialization failed: {err}"))?,
+                .map_err(|err| format!("Ошибка: сериализация состояния Guard: {err}"))?,
                 false,
             ),
             "process-policy" => (
@@ -1508,7 +1508,7 @@ async fn serve_authenticated_session(
                     collect_windows_integrity_evidence(parent_pid)
                 })
                 .await
-                .map_err(|err| format!("Guard integrity evidence worker failed: {err}"))??;
+                .map_err(|err| format!("Ошибка: «Guard integrity evidence worker»: {err}"))??;
                 let digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
                 evidence.session_proof = hex::encode(integrity_session_proof(session_key, &digest));
                 (
@@ -1533,7 +1533,7 @@ async fn serve_authenticated_session(
                     collect_windows_integrity_evidence(parent_pid)
                 })
                 .await
-                .map_err(|err| format!("Guard remote attestation evidence worker failed: {err}"))??;
+                .map_err(|err| format!("Ошибка: «Guard remote attestation evidence worker»: {err}"))??;
                 let evidence_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
                 evidence.session_proof = hex::encode(integrity_session_proof(session_key, &evidence_digest));
                 let mut attestation = GuardRemoteAttestation {
@@ -1566,7 +1566,7 @@ async fn serve_authenticated_session(
             ),
         };
         let payload = serde_json::to_string(&payload)
-            .map_err(|err| format!("Guard response serialization failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard response serialization»: {err}"))?;
         let response = ResponseEnvelope {
             protocol_version: GUARD_PROTOCOL_VERSION,
             sequence: request.sequence,
@@ -1615,7 +1615,7 @@ where
     T: Serialize,
 {
     let mut bytes = serde_json::to_vec(value)
-        .map_err(|err| format!("Guard IPC serialization failed: {err}"))?;
+        .map_err(|err| format!("Ошибка: «Guard IPC serialization»: {err}"))?;
     if bytes.len() > MAX_FRAME_BYTES {
         return Err("Guard IPC frame exceeds limit".to_string());
     }
@@ -1623,11 +1623,11 @@ where
     writer
         .write_all(&bytes)
         .await
-        .map_err(|err| format!("Guard IPC write failed: {err}"))?;
+        .map_err(|err| format!("Ошибка: «Guard IPC write»: {err}"))?;
     writer
         .flush()
         .await
-        .map_err(|err| format!("Guard IPC flush failed: {err}"))
+        .map_err(|err| format!("Ошибка: «Guard IPC flush»: {err}"))
 }
 
 #[cfg(windows)]
@@ -1642,7 +1642,7 @@ where
         let read = reader
             .read(&mut one)
             .await
-            .map_err(|err| format!("Guard IPC read failed: {err}"))?;
+            .map_err(|err| format!("Ошибка: «Guard IPC read»: {err}"))?;
         if read == 0 {
             return Err("Guard IPC peer closed connection".to_string());
         }
@@ -1678,7 +1678,7 @@ fn random_id() -> String {
 fn decode_hex_32(value: &str, field: &str) -> Result<[u8; 32], String> {
     let raw = hex::decode(value).map_err(|_| format!("Guard IPC {field} is not valid hex"))?;
     if raw.len() != 32 {
-        return Err(format!("Guard IPC {field} must be 32 bytes"));
+        return Err(format!("Для «Guard IPC» {field} требуется: «32 bytes»"));
     }
     let mut out = [0u8; 32];
     out.copy_from_slice(&raw);

@@ -81,7 +81,7 @@ func privateFile0377(p string, directory bool) error {
 		return err
 	}
 	if st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("unsafe non-private file or directory %s", p)
+		return fmt.Errorf("Небезопасное значение: «non-private file or directory» %s", p)
 	}
 	if directory && !st.IsDir() {
 		return fmt.Errorf("Указанный путь не является каталогом: %s", p)
@@ -127,7 +127,7 @@ func checkSQLite0377(ctx context.Context, p string) error {
 		return err
 	}
 	if failed {
-		return errors.New("SQLite foreign_key_check failed")
+		return errors.New("Ошибка: «SQLite foreign_key_check»")
 	}
 	return nil
 }
@@ -148,7 +148,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 		return m, nil, err
 	}
 	if len(raw) > 32*1024*1024 {
-		return m, nil, errors.New("minimal manifest too large")
+		return m, nil, errors.New("Превышен допустимый размер: «minimal manifest»")
 	}
 	if err = privateFile0377(filepath.Join(bundle, "manifest.json"), false); err != nil {
 		return m, nil, err
@@ -163,7 +163,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	files := map[string]bool{}
 	for i, d := range m.Directories {
 		if i > 0 && (!legalPath0377(d) || d <= "." || d <= m.Directories[i-1]) {
-			return m, nil, errors.New("invalid or unordered directory in minimal bundle")
+			return m, nil, errors.New("Некорректное значение: «or unordered directory in minimal bundle»")
 		}
 		if d != "." {
 			if err = privateFile0377(filepath.Join(payload, filepath.FromSlash(d)), true); err != nil {
@@ -175,7 +175,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	foundHTTP, foundCoord, foundEnv := false, false, false
 	for i, f := range m.Files {
 		if !legalPath0377(f.Path) || (i > 0 && f.Path <= m.Files[i-1].Path) || (f.Kind != "sqlite" && f.Kind != "file") || f.Bytes < 0 || len(f.SHA256) != 64 || f.Mode > 0700 || f.Mode&0077 != 0 {
-			return m, nil, errors.New("unsafe or unordered minimal bundle file")
+			return m, nil, errors.New("Небезопасное значение: «or unordered minimal bundle file»")
 		}
 		file := filepath.Join(payload, filepath.FromSlash(f.Path))
 		if err = privateFile0377(file, false); err != nil {
@@ -186,14 +186,14 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 			return m, nil, err
 		}
 		if stat.Mode().Perm() != os.FileMode(f.Mode) {
-			return m, nil, fmt.Errorf("mode mismatch: %s", f.Path)
+			return m, nil, fmt.Errorf("Несовпадение: «mode»: %s", f.Path)
 		}
 		n, digest, e := digestFile0377(file)
 		if e != nil {
 			return m, nil, e
 		}
 		if n != f.Bytes || digest != f.SHA256 {
-			return m, nil, fmt.Errorf("minimal file digest mismatch: %s", f.Path)
+			return m, nil, fmt.Errorf("Несовпадение: «minimal file digest»: %s", f.Path)
 		}
 		if f.Kind == "sqlite" {
 			if err = checkSQLite0377(ctx, file); err != nil {
@@ -212,7 +212,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 		files[f.Path] = true
 	}
 	if !foundHTTP || !foundCoord || !foundEnv {
-		return m, nil, errors.New("required minimal databases or configuration missing")
+		return m, nil, errors.New("Отсутствует: «required minimal databases or configuration»")
 	}
 	actualDirs := []string{"."}
 	actualFiles := []string{}
@@ -241,7 +241,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	sort.Strings(actualDirs)
 	sort.Strings(actualFiles)
 	if len(actualDirs) != len(dirs) || len(actualFiles) != len(files) {
-		return m, nil, errors.New("missing or unexpected files in minimal backup")
+		return m, nil, errors.New("Отсутствует: «or unexpected files in minimal backup»")
 	}
 	for _, p := range actualDirs {
 		if !dirs[p] {
@@ -383,7 +383,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 // как рабочий PostgreSQL Backend.
 func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" || target == "" {
-		return report, errors.New("PostgreSQL DSN and target required")
+		return report, errors.New("Требуется: «PostgreSQL DSN and target»")
 	}
 	dest, e := filepath.Abs(target)
 	if e != nil {
@@ -418,14 +418,14 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 	}
 	sum := sha256.Sum256(raw)
 	if hex.EncodeToString(sum[:]) != receipt {
-		return report, errors.New("minimal manifest integrity mismatch")
+		return report, errors.New("Несовпадение: «minimal manifest integrity»")
 	}
 	var m MinimalBundleManifest0377
 	if err = json.Unmarshal(raw, &m); err != nil {
 		return report, err
 	}
 	if m.Format != minimalBundleFormat0377 {
-		return report, errors.New("unsupported backup format")
+		return report, errors.New("Не поддерживается: «backup format»")
 	}
 	report = MinimalBundleReport0377{Format: m.Format, ManifestSHA256: receipt, Files: len(m.Files)}
 	stage, e := os.MkdirTemp(parent, ".launcher-minimal-pg-*")
@@ -460,7 +460,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 			return report, err
 		}
 		if mode < 0 {
-			return report, fmt.Errorf("invalid stored file mode: %s", f.Path)
+			return report, fmt.Errorf("Некорректное значение: «stored file mode»: %s", f.Path)
 		}
 		saved.Mode = uint32(mode)
 		if saved != f {
@@ -510,7 +510,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		err = errors.Join(err, rows.Err())
 		rows.Close()
 		if err == nil && (n != f.Bytes || hex.EncodeToString(h.Sum(nil)) != f.SHA256) {
-			err = errors.New("PostgreSQL bundle file hash or size mismatch")
+			err = errors.New("Несовпадение: «PostgreSQL bundle file hash or size»")
 		}
 		if err == nil {
 			err = out.Sync()

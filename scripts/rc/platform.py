@@ -35,15 +35,15 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
     if not rc_extended(version) or not re.fullmatch("[0-9a-f]{40}", commit):
         raise ValueError("wrong RC version or source commit")
     if not binary.is_file() or binary.is_symlink() or binary.stat().st_size < 1_000_000:
-        raise ValueError("no real compiled Desktop binary")
+        raise ValueError("Отсутствует: «real compiled Desktop binary»")
     if os.name != "nt" and not os.access(binary, os.X_OK):
-        raise ValueError("compiled Desktop cannot be executed")
+        raise ValueError("«compiled Desktop»: запрещено «be executed»")
     if not frontend.is_dir() or frontend.is_symlink():
-        raise ValueError("compiled frontend directory missing")
+        raise ValueError("Отсутствует: «compiled frontend directory»")
     main = frontend / "index.html"
     js = list((frontend / "assets").glob("*.js"))
     if not main.is_file() or not js:
-        raise ValueError("no production HTML and JavaScript bundle")
+        raise ValueError("Отсутствует: «production HTML and JavaScript bundle»")
     # Используйте настоящие сгенерированные артефакты, а не свидетельство только
     # по исходникам или package.json.
     files = sorted([main, *js])
@@ -53,7 +53,7 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
             or path.stat().st_size == 0
             or not path.resolve().is_relative_to(frontend.resolve())
         ):
-            raise ValueError("unsafe or empty production asset")
+            raise ValueError("Небезопасное значение: «or empty production asset»")
     return {
         "schemaVersion": "launcher.rc.desktop-build.v1",
         "version": version,

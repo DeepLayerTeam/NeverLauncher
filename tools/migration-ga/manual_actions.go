@@ -81,7 +81,7 @@ This checklist is generated from an authoritative report, not proof of completed
 
 func exportManualWorklist(ctx context.Context, p Plan, token, output string) error {
 	if strings.TrimSpace(token) == "" {
-		return errors.New("missing GA backend token")
+		return errors.New("Отсутствует токен серверной части для приёмочных проверок GA")
 	}
 	if err := checkBackendURL(p.Backend); err != nil {
 		return err

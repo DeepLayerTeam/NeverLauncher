@@ -24,7 +24,7 @@ pub struct DiagnosticPreview03510 { pub review_token: String, pub report: Player
 struct PendingPreview { token: String, report: PlayerReport03510, created: u64 }
 #[derive(Default)]
 pub struct DiagnosticsSession03510(Mutex<Option<PendingPreview>>);
-fn now() -> Result<u64, String> { Ok(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_| "invalid system clock")?.as_secs()) }
+fn now() -> Result<u64, String> { Ok(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_| "Некорректное системное время")?.as_secs()) }
 fn stage(raw: &str) -> &'static str { match raw {
     "idle" => "idle", "ready" => "ready", "installing" => "installing",
     "checking" => "checking", "running" => "running", "failed" => "failed",
@@ -58,32 +58,32 @@ fn make_report(lines: Vec<String>, raw_stage: String, at: u64) -> PlayerReport03
 }
 #[tauri::command]
 pub fn preview_diagnostics_bundle_03510(stage: String, logs: Vec<String>, session: State<'_, DiagnosticsSession03510>) -> Result<DiagnosticPreview03510, String> {
-    if logs.len()>80 || logs.iter().any(|line|line.len()>8192) {return Err("diagnostics log input too large".into());}
+    if logs.len()>80 || logs.iter().any(|line|line.len()>8192) {return Err("Превышен допустимый размер: входной диагностический журнал".into());}
     let at = now()?;
     let report = make_report(logs, stage, at);
     let token = hex::encode(rand::random::<[u8; 24]>());
-    *session.0.lock().map_err(|_| "diagnostics preview unavailable")? = Some(PendingPreview {token: token.clone(), report: report.clone(), created: at});
+    *session.0.lock().map_err(|_| "Недоступно: «diagnostics preview»")? = Some(PendingPreview {token: token.clone(), report: report.clone(), created: at});
     Ok(DiagnosticPreview03510{review_token:token,report})
 }
 fn write_private_bundle(base: &Path, report: &PlayerReport03510) -> Result<String, String> {
     fs::create_dir_all(base).map_err(|_| "cannot prepare diagnostics directory")?;
     let meta = fs::symlink_metadata(base).map_err(|_| "diagnostics directory inaccessible")?;
-    if !meta.is_dir() || meta.file_type().is_symlink() { return Err("unsafe diagnostics directory".into()); }
+    if !meta.is_dir() || meta.file_type().is_symlink() { return Err("Небезопасное значение: каталог диагностики".into()); }
     #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(base,fs::Permissions::from_mode(0o700)).map_err(|_|"cannot restrict diagnostics directory")?; }
     let file_id = hex::encode(rand::random::<[u8; 16]>());
     let name = format!("launcher-player-{file_id}.json");
     let path = base.join(&name);
     let mut opts = OpenOptions::new(); opts.write(true).create_new(true);
     #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; opts.mode(0o600); }
-    let mut file = opts.open(&path).map_err(|_| "cannot create diagnostics file")?;
-    let content = serde_json::to_vec_pretty(report).map_err(|_| "diagnostics serialization failed")?;
+    let mut file = opts.open(&path).map_err(|_| "Не удалось создать «diagnostics file»")?;
+    let content = serde_json::to_vec_pretty(report).map_err(|_| "Ошибка: «diagnostics serialization»")?;
     let result = file.write_all(&content).and_then(|_| file.sync_all());
     if result.is_err() { let _ = fs::remove_file(&path); return Err("cannot safely save diagnostics".into()); }
     Ok(path.to_string_lossy().into_owned())
 }
 #[tauri::command]
 pub fn export_diagnostics_bundle_03510(review_token: String, session: State<'_, DiagnosticsSession03510>) -> Result<super::DiagnosticsExportResult, String> {
-    let mut guard=session.0.lock().map_err(|_|"diagnostics preview unavailable")?;
+    let mut guard=session.0.lock().map_err(|_|"Недоступно: «diagnostics preview»")?;
     let preview=guard.as_ref().ok_or("Create a new diagnostic preview first")?;
     if preview.token != review_token || now()?.saturating_sub(preview.created) > 600 {return Err("Diagnostic preview expired; review again".into());}
     let report=preview.report.clone();

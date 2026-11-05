@@ -43,14 +43,14 @@ type PCRPolicyFile0315 struct {
 func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, error) {
 	var out PCRPolicyFile0315
 	if !filepath.IsAbs(path) {
-		return out, "", errors.New("absolute operator PCR policy path required")
+		return out, "", errors.New("Требуется: «absolute operator PCR policy path»")
 	}
 	st, err := os.Lstat(path)
 	if err != nil {
 		return out, "", err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0022 != 0 || st.Size() <= 0 || st.Size() > 1<<20 {
-		return out, "", errors.New("PCR policy file must be regular and non-group/world-writable")
+		return out, "", errors.New("Для «PCR policy file» требуется: «regular and non-group/world-writable»")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -72,13 +72,13 @@ func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, e
 	for _, p := range out.Policies {
 		if p.ID == "" || len(p.ID) > 96 || seen[p.ID] || (p.Platform != "windows" && p.Platform != "linux") ||
 			p.NotBefore.IsZero() || !p.NotAfter.After(p.NotBefore) || len(p.PCRs) == 0 || len(p.PCRs) > 24 {
-			return out, "", errors.New("invalid or duplicate PCR policy")
+			return out, "", errors.New("Некорректное значение: «or duplicate PCR policy»")
 		}
 		seen[p.ID] = true
 		for k, v := range p.PCRs {
 			n, e := strconv.Atoi(k)
 			if e != nil || n < 0 || n > 23 || k != strconv.Itoa(n) || !isSHA256(v) {
-				return out, "", errors.New("invalid PCR selection/digest in policy")
+				return out, "", errors.New("Некорректное значение: «PCR selection/digest in policy»")
 			}
 		}
 	}

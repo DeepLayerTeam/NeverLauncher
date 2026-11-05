@@ -9,19 +9,19 @@ use std::{collections::BTreeMap,fs::{self,File},io::Read,path::{Component,Path}}
 fn pin_file(root:&Path, path:&Path, expected:&str)->Result<(),String>{
     let relative=path.strip_prefix(root).map_err(|_|format!("Guard runtime executable outside installation: {}",path.display()))?;
     if !expected.len().eq(&64) || !expected.bytes().all(|c|c.is_ascii_digit() || (b'a'..=b'f').contains(&c)) {
-        return Err("Guard runtime inventory invalid SHA-256".into());
+        return Err("Некорректный SHA-256 инвентаризации среды выполнения Guard".into());
     }
     let mut cursor=root.to_path_buf();
     for part in relative.components(){
         if let Component::Normal(segment)=part {cursor.push(segment);} else {return Err("Guard runtime inventory unsafe path".into());}
-        if fs::symlink_metadata(&cursor).map_err(|e|e.to_string())?.file_type().is_symlink(){return Err("Guard runtime inventory symlink refused".into())}
+        if fs::symlink_metadata(&cursor).map_err(|e|e.to_string())?.file_type().is_symlink(){return Err("Символическая ссылка в инвентаризации среды выполнения Guard отклонена".into())}
     }
     let meta=fs::metadata(path).map_err(|e|e.to_string())?;
     if !meta.is_file() || meta.len()>512*1024*1024 {return Err("Guard runtime inventory invalid file".into())}
     let mut f=File::open(path).map_err(|e|e.to_string())?;
     let mut sha=Sha256::new();let mut buf=[0u8;65536];
     loop {let n=f.read(&mut buf).map_err(|e|e.to_string())?;if n==0{break}sha.update(&buf[..n]);}
-    if hex::encode(sha.finalize())!=expected{return Err(format!("Guard runtime inventory SHA-256 changed: {}",path.display()))}
+    if hex::encode(sha.finalize())!=expected{return Err(format!("Изменился SHA-256 инвентаризации среды выполнения Guard: {}",path.display()))}
     Ok(())
 }
 fn native_file(path:&str)->bool {
@@ -34,7 +34,7 @@ fn insert_pin(pins:&mut BTreeMap<String,(String,&'static str)>,root:&Path,path:&
     if let Some(old)=pins.get(&key) {
         if old.0!=hash || old.1!=kind{return Err(format!("Guard runtime contradictory signed file identity: {key}"))}
     } else {pins.insert(key,(hash.to_owned(),kind));}
-    if pins.len()>8192{return Err("Guard runtime inventory exceeds 8192 files".into())}
+    if pins.len()>8192{return Err("Инвентаризация среды выполнения Guard превышает ограничение 8192 файлов".into())}
     Ok(())
 }
 /// Точные идентичности нативных библиотек для живого Windows Module Guard. Учитываются только
@@ -70,7 +70,7 @@ pub fn from_verified_launch(manifest:&Manifest,plan:&LaunchPlan,root:&Path,guard
     let selected=crate::component_catalog_0241::active_files(manifest,
         crate::transactional_release::active_preset_for_manifest(manifest,root).as_deref())?;
     for path in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
-        let absolute=fs::canonicalize(path).map_err(|e|format!("Guard runtime classpath missing: {e}"))?;
+        let absolute=fs::canonicalize(path).map_err(|e|format!("Отсутствует: «Guard runtime classpath»: {e}"))?;
         let rel=absolute.strip_prefix(root).map_err(|_|"Guard runtime classpath outside signed root")?;
         let name=rel.to_string_lossy().replace('\\',"/");
         let file=manifest.files.iter().find(|f|f.path.replace('\\',"/")==name && super::manifest_file_applies(f) &&
@@ -90,7 +90,7 @@ pub fn from_verified_launch(manifest:&Manifest,plan:&LaunchPlan,root:&Path,guard
         let tag=if kind=="native-library" {"native"} else {"code"};
         insert_pin(&mut pins,root,&path,&digest,tag)?;
     }
-    if pins.is_empty(){return Err("Guard runtime empty verified executable inventory".into())}
+    if pins.is_empty(){return Err("Не найдено проверенных исполняемых файлов среды выполнения Guard".into())}
     let mut result=format!("integrity.required=true\nintegrity.code.strict=true\nintegrity.root={}\nintegrity.count={}\n",STANDARD.encode(root.to_string_lossy().as_bytes()),pins.len());
     #[cfg(target_os = "linux")]
     {

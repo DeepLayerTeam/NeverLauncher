@@ -20,13 +20,13 @@ def require(text: str, path: str, needles: list[str]) -> None:
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"Некорректное значение VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 19, 0):
-    raise SystemExit(f"Windows Protection GA gate requires >=0.19.0, got {version}")
+    raise SystemExit(f"Для «Windows Protection GA gate» требуется «>=0.19.0, got» {version}")
 
 impl = read("cli/cmd/launcher/windows_protection_ga_0190.go")
 require(

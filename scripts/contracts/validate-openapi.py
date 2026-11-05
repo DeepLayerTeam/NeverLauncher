@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[2]
 SPEC=ROOT/'schemas/openapi.yaml'
 HTTP=ROOT/'services/api/internal/httpapi'
 try: spec=json.loads(SPEC.read_text(encoding="utf-8"))
-except Exception as exc: raise SystemExit(f"OpenAPI parse failed: {exc}")
+except Exception as exc: raise SystemExit(f"Ошибка: «OpenAPI parse»: {exc}")
 errors=[]
 if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
 if spec.get('info',{}).get('version')!='1.0.0': errors.append('info.version must be 1.0.0')

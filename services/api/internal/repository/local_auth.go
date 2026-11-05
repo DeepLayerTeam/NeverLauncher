@@ -19,7 +19,7 @@ type PasswordCAS0295 interface {
 
 func (r *MemoryRepository) ReplacePasswordIfMatch0295(_ context.Context, userID, priorHash, newHash string) (bool, error) {
 	if newHash == "" || !strings.HasPrefix(newHash, "$argon2id$") {
-		return false, errors.New("new local password hash must be Argon2id")
+		return false, errors.New("Для «new local password hash» требуется: Argon2id")
 	}
 	for i := range r.users {
 		if r.users[i].ID == userID {
@@ -40,7 +40,7 @@ func (r *SQLRepository) ReplacePasswordIfMatch0295(ctx context.Context, userID, 
 		return false, err
 	}
 	if priorHash == "" || !strings.HasPrefix(newHash, "$argon2id$") {
-		return false, errors.New("invalid CAS password upgrade")
+		return false, errors.New("Некорректное значение: «CAS password upgrade»")
 	}
 	result, err := r.db.ExecContext(ctx, `UPDATE users SET password_hash=$3,password_updated_at=now(),updated_at=now()
        WHERE id=$1 AND password_hash=$2 AND status='active'`, userID, priorHash, newHash)
@@ -62,7 +62,7 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 		return 0, err
 	}
 	if len(accounts) == 0 || len(accounts) > fileauth.MaxAccounts {
-		return 0, errors.New("invalid FileAuth account count")
+		return 0, errors.New("Некорректное значение: «FileAuth account count»")
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {

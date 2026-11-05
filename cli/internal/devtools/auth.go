@@ -78,11 +78,11 @@ func (f *FixtureServer) addEvent(typ, sub string) {
 }
 func (f *FixtureServer) Issue(sub string, scopes []string, ttl time.Duration) (string, error) {
 	if sub == "" || len(sub) > 128 || ttl <= 0 || ttl > 15*time.Minute {
-		return "", errors.New("invalid test identity or TTL")
+		return "", errors.New("Некорректное значение: «test identity or TTL»")
 	}
 	for _, s := range scopes {
 		if s == "" || len(s) > 64 || strings.ContainsAny(s, " \t\r\n") {
-			return "", errors.New("invalid test scope")
+			return "", errors.New("Некорректное значение: «test scope»")
 		}
 	}
 	if len(scopes) > 16 {

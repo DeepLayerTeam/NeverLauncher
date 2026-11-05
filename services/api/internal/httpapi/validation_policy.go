@@ -81,14 +81,14 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 	decoder.DisallowUnknownFields()
 	var all []validationTarget0346
 	if err := decoder.Decode(&all); err != nil {
-		return nil, "", fmt.Errorf("invalid target policy: %w", err)
+		return nil, "", fmt.Errorf("Некорректное значение: «target policy»: %w", err)
 	}
 	var trailing any
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		return nil, "", errors.New("trailing or invalid target policy JSON")
 	}
 	if len(all) == 0 || len(all) > 128 {
-		return nil, "", errors.New("invalid target policy size")
+		return nil, "", errors.New("Некорректное значение: «target policy size»")
 	}
 	relevant := make([]validationTarget0346, 0)
 	ids := map[string]bool{}
@@ -109,7 +109,7 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 		}
 	}
 	if len(relevant) == 0 {
-		return nil, "", errors.New("no required runtime targets for this package/version")
+		return nil, "", errors.New("Отсутствует: «required runtime targets for this package/version»")
 	}
 	if err := validateComponentMatrix0348(release.Manifest, relevant); err != nil {
 		return nil, "", err
@@ -128,7 +128,7 @@ func matchingTarget0346(p validationPayload0345, t validationTarget0346) bool {
 func validationKeyFingerprint0346(key string) (string, error) {
 	decoded, err := base64.RawURLEncoding.DecodeString(key)
 	if err != nil || len(decoded) != ed25519.PublicKeySize {
-		return "", errors.New("validation trust key unavailable")
+		return "", errors.New("Недоступно: «validation trust key»")
 	}
 	h := sha256.Sum256(decoded)
 	return hex.EncodeToString(h[:]), nil
@@ -150,7 +150,7 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 		return errors.New("Backend не выдал проверочный запрос для аттестации")
 	}
 	if p.RunNonce != challenge.Nonce || p.PackageID != challenge.PackageID || p.ManifestSHA256 != challenge.ManifestSHA256 || p.ArtifactSHA256 != challenge.ArtifactSHA256 || p.TargetMatrixSHA256 != challenge.TargetMatrixSHA256 {
-		return errors.New("attestation challenge/snapshot/target policy mismatch")
+		return errors.New("Несовпадение: «attestation challenge/snapshot/target policy»")
 	}
 	issued, err := time.Parse(time.RFC3339Nano, p.IssuedAt)
 	if err != nil || !issued.Equal(challenge.IssuedAt) {
@@ -173,7 +173,7 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 	}
 	revoked, err := store.IsValidationKeyRevoked0346(ctx, p.SignerKeyID)
 	if err != nil {
-		return fmt.Errorf("key revocation store unavailable: %w", err)
+		return fmt.Errorf("Недоступно: «key revocation store»: %w", err)
 	}
 	if revoked {
 		return errors.New("validation attestation signer revoked")

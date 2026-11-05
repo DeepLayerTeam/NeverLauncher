@@ -20,7 +20,7 @@ func readSecretFile(path string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 {
-		return "", errors.New("secret file must be regular 0600")
+		return "", errors.New("Файл секрета должен быть обычным файлом с правами доступа 0600")
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -28,7 +28,7 @@ func readSecretFile(path string) (string, error) {
 	}
 	s := strings.TrimSpace(string(b))
 	if len(s) < 12 || len(s) > 4096 {
-		return "", errors.New("invalid secret length")
+		return "", errors.New("Недопустимая длина секрета")
 	}
 	return s, nil
 }

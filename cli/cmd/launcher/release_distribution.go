@@ -54,7 +54,7 @@ func bindDistributionSBOM04511(document map[string]any, dir, ver string) error {
 	}
 	relationships, ok := document["relationships"].([]sbomRelationship)
 	if !ok {
-		return errors.New("SPDX relationships missing")
+		return errors.New("Отсутствует: «SPDX relationships»")
 	}
 	for _, t := range distributionTargets04511(ver) {
 		h, err := distributionHash04511(dir, t.packageFile)
@@ -133,12 +133,12 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 				return err
 			}
 			if found[target] || p.Name != t.packageFile || p.Version != ver || len(p.Checksums) != 1 || p.Checksums[0].Algorithm != "SHA256" || p.Checksums[0].ChecksumValue != hash {
-				return fmt.Errorf("SPDX shipped package checksum mismatch: %s", target)
+				return fmt.Errorf("Несовпадение: «SPDX shipped package checksum»: %s", target)
 			}
 			found[target] = true
 		}
 		if !match {
-			return fmt.Errorf("unexpected distribution SPDX target: %s", target)
+			return fmt.Errorf("Неожиданное значение: «distribution SPDX target»: %s", target)
 		}
 	}
 	if len(found) != 6 {
@@ -158,7 +158,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		}
 	}
 	if dependencyEdges == 0 {
-		return errors.New("SPDX dependency graph is empty")
+		return errors.New("Пустое значение: «SPDX dependency graph»")
 	}
 	for _, t := range distributionTargets04511(ver) {
 		linked := 0
@@ -202,12 +202,12 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		return err
 	}
 	if manifest.Version != ver || !(len(manifest.SourceCommit) == 40 || len(manifest.SourceCommit) == 64) || !regexp.MustCompile(`^[a-f0-9]+$`).MatchString(manifest.SourceCommit) || provenance.Type != "https://in-toto.io/Statement/v1" || provenance.PredicateType != "https://slsa.dev/provenance/v1" || provenance.Predicate.BuildDefinition.ExternalParameters.Version != ver || provenance.Predicate.BuildDefinition.ExternalParameters.SourceCommit != manifest.SourceCommit {
-		return errors.New("SLSA source commit or release identity mismatch")
+		return errors.New("Несовпадение: «SLSA source commit or release identity»")
 	}
 	subjects := map[string]bool{}
 	for _, s := range provenance.Subject {
 		if s.Name == "" || subjects[s.Name] || filepath.Base(s.Name) != s.Name {
-			return fmt.Errorf("unsafe or duplicate provenance subject %s", s.Name)
+			return fmt.Errorf("Небезопасное значение: «or duplicate provenance subject» %s", s.Name)
 		}
 		digest, err := distributionHash04511(dir, s.Name)
 		if err != nil {
@@ -250,7 +250,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 	for _, source := range []string{"cli/go.mod", "services/api/go.mod", "apps/admin/package-lock.json", "apps/desktop/package-lock.json"} {
 		uri := "file://" + source
 		if componentHashes[source] == "" || materials[uri] != componentHashes[source] {
-			return fmt.Errorf("SLSA mandatory material missing or changed: %s", source)
+			return fmt.Errorf("Обнаружено изменение: «SLSA mandatory material missing or»: %s", source)
 		}
 	}
 	for _, t := range distributionTargets04511(ver) {
@@ -272,7 +272,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		return fmt.Errorf("independent GA: %w", err)
 	}
 	if receipt.Version != ver || receipt.Commit != manifest.SourceCommit || receipt.Status != "approved-for-release-signing" || len(receipt.Targets) != 6 {
-		return errors.New("independent GA identity or number of targets mismatch")
+		return errors.New("Несовпадение: «independent GA identity or number of targets»")
 	}
 	seen := map[string]bool{}
 	for _, r := range receipt.Targets {

@@ -64,7 +64,7 @@ def verify_runtime(
     node_id, port = CORE[service]
     proof = read_json(runtime / f"live-{service}-04113.json")
     if proof.get("schemaVersion") != "1.0" or proof.get("productVersion") != version:
-        raise ValueError("product version mismatch")
+        raise ValueError("Несовпадение: «product version»")
     if (proof.get("service"), proof.get("nodeId"), proof.get("minecraftPort")) != (
         service,
         node_id,
@@ -75,9 +75,9 @@ def verify_runtime(
     jar = jar / "artifacts/plugins" / f"launcher-{service}-bridge-{version}.jar"
     observed_digest = proof.get("bridgeJarSha256")
     if not isinstance(observed_digest, str) or not HEX64.fullmatch(observed_digest):
-        raise ValueError("missing exact deployed ServerBridge JAR digest")
+        raise ValueError("Отсутствует: «exact deployed ServerBridge JAR digest»")
     if jar.is_symlink() or not jar.is_file() or jar.stat().st_size == 0:
-        raise ValueError("missing exact built ServerBridge JAR")
+        raise ValueError("Отсутствует: «exact built ServerBridge JAR»")
     checksum(jar, observed_digest)
     meta = proof.get("runtime") or {}
     if (
@@ -93,7 +93,7 @@ def verify_runtime(
         or not isinstance(meta.get("startedAt"), str)
         or not meta["startedAt"]
     ):
-        raise ValueError("missing real container / JVM process identity")
+        raise ValueError("Отсутствует: «real container / JVM process identity»")
     observations = proof.get("observations") or {}
     if not all(
         observations.get(field) is True
@@ -111,7 +111,7 @@ def verify_runtime(
     log_ref = proof.get("log") or {}
     log_file = log_ref.get("path")
     if log_file != f"live-{service}-04113.log":
-        raise ValueError("runtime log reference mismatch")
+        raise ValueError("Несовпадение: «runtime log reference»")
     checksum(runtime / log_file, log_ref.get("sha256"))
     log = (runtime / log_file).read_text(encoding="utf-8")
     allow = f"launcher.join.allowed username={player}"

@@ -114,7 +114,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 		return fmt.Errorf("%w: invalid player session correlation", ErrConflict)
 	}
 	if redemption.SessionCorrelationID != "" && !strings.EqualFold(redemption.SessionCorrelationID, correlationID) {
-		return fmt.Errorf("%w: player session correlation mismatch", ErrConflict)
+		return fmt.Errorf("Несовпадение: «%w: player session correlation»", ErrConflict)
 	}
 	var nodeKind, runtimeID string
 	var runtimeEpoch int64
@@ -127,7 +127,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 		if join.ProtocolVersion < 3 {
 			return nil
 		}
-		return fmt.Errorf("%w: player session runtime unavailable", ErrConflict)
+		return fmt.Errorf("Недоступно: «%w: player session runtime»", ErrConflict)
 	}
 	lockKey := join.SessionID + ":" + join.UUID
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1970, hashtext($1))`, lockKey); err != nil {
@@ -183,7 +183,7 @@ func (r *SQLRepository) issuePlayerTransferTx0197(ctx context.Context, tx *sql.T
 	}
 	correlationID := strings.ToLower(strings.TrimSpace(h.SessionCorrelationID))
 	if expectedCorrelation != "" && !strings.EqualFold(expectedCorrelation, correlationID) {
-		return fmt.Errorf("%w: session correlation proof mismatch", ErrConflict)
+		return fmt.Errorf("Несовпадение: «%w: session correlation proof»", ErrConflict)
 	}
 	var status, proxyNode, proxyRuntime string
 	var proxyEpoch, sequence int64
@@ -223,7 +223,7 @@ func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql
 		return nil
 	}
 	if redemption.SessionCorrelationID != "" && !strings.EqualFold(redemption.SessionCorrelationID, correlationID) {
-		return fmt.Errorf("%w: player transfer correlation mismatch", ErrConflict)
+		return fmt.Errorf("Несовпадение: «%w: player transfer correlation»", ErrConflict)
 	}
 	var status, username, proxyNode, oldBackend, oldBackendRuntime string
 	var sequence, oldBackendEpoch int64

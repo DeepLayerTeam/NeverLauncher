@@ -106,7 +106,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	etag := resp.Header.Get("ETag")
 	if len(etag) < 3 || len(etag) > 256 || !strings.HasPrefix(etag, "\"") || !strings.HasSuffix(etag, "\"") {
 		resp.Body.Close()
-		return errors.New("S3 GC requires a strong object ETag")
+		return errors.New("Для «S3 GC» требуется «a strong object ETag»")
 	}
 	dataHash := sha256.New()
 	n, readErr := io.Copy(dataHash, io.LimitReader(resp.Body, 4<<20+1))
@@ -137,7 +137,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	case http.StatusOK, http.StatusNoContent, http.StatusNotFound:
 		return nil
 	case http.StatusPreconditionFailed, http.StatusConflict:
-		return errors.New("S3 GC conditional delete failed: object changed")
+		return errors.New("Обнаружено изменение: «S3 GC conditional delete failed: object»")
 	default:
 		return fmt.Errorf("S3 GC delete HTTP %d", response.StatusCode)
 	}

@@ -26,7 +26,7 @@ func textureLeaseToken02511() (string, error) {
 
 func textureStorageDriver02511(driver string) error {
 	if driver != "local" && driver != "s3" {
-		return errors.New("invalid texture storage driver")
+		return errors.New("Некорректное значение: «texture storage driver»")
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (r *SQLRepository) EndTextureSnapshot02511(ctx context.Context, token strin
 		return err
 	}
 	if len(token) != 64 {
-		return errors.New("invalid backup lease token")
+		return errors.New("Некорректное значение: «backup lease token»")
 	}
 	_, err := r.db.ExecContext(ctx, `DELETE FROM texture_backup_pins WHERE lease_token=$1`, token)
 	return err
@@ -108,7 +108,7 @@ func (r *SQLRepository) ClaimTextureGarbage02511(ctx context.Context, driver str
 		return nil, err
 	}
 	if limit < 1 || limit > 100 {
-		return nil, errors.New("texture GC batch must be between 1 and 100")
+		return nil, errors.New("Для «texture GC batch» требуется: «between 1 and 100»")
 	}
 	// Каждая заявка получает уникальный токен, поэтому один воркер не может завершить чужую
 	// аренду.

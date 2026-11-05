@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     release = release_id(args.version, args.commit)
     if not any((args.js_dist, args.native_symbols, args.jvm_mapping)):
-        parser.error("at least one artifact is required")
+        parser.error("Требуется: «at least one artifact»")
     for env in ("SENTRY_AUTH_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT"):
         if not os.environ.get(env):
             parser.error(f"{env} is required for a real upload")
@@ -98,15 +98,15 @@ def main(argv: list[str] | None = None) -> int:
                     fields.get("io.sentry.proguard.uuid", "").lower()
                     != args.mapping_uuid.lower()
                 ):
-                    parser.error("mapping UUID does not match built JAR: refuse upload")
+                    parser.error("«mapping UUID» не совпадает с «built JAR: refuse upload»")
         except (OSError, zipfile.BadZipFile, UnicodeError) as exc:
-            parser.error(f"cannot validate JVM mapping/build pair: {exc}")
+            parser.error(f"Не удалось проверить «JVM mapping/build pair:» {exc}")
         sample = args.jvm_mapping.read_text(encoding="utf-8")[:8192]
         if " -> " not in sample:
             parser.error("JVM mapping file does not look like a ProGuard mapping")
     root = Path(__file__).resolve().parents[2]
     if args.version != (root / "VERSION").read_text().strip():
-        parser.error("version differs from VERSION; refusing artifact mismatch")
+        parser.error("Несовпадение: «version differs from VERSION; refusing artifact»")
     try:
         checked = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=root, text=True, stderr=subprocess.DEVNULL
@@ -114,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, subprocess.CalledProcessError):
         checked = ""
     if checked and not checked.startswith(args.commit):
-        parser.error("commit does not match the checkout used to build artifacts")
+        parser.error("«commit» не совпадает с «the checkout used to build artifacts»")
     js_maps = []
     if args.js_dist:
         dist = args.js_dist.resolve(strict=True)
@@ -133,13 +133,13 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 data = json.loads(sm.read_text())
             except (OSError, ValueError) as exc:
-                parser.error(f"invalid source map {sm}: {exc}")
+                parser.error(f"Некорректное значение: «source map» {sm}: {exc}")
             if (
                 data.get("version") != 3
                 or not data.get("sources")
                 or not data.get("mappings")
             ):
-                parser.error(f"invalid or empty source map {sm}")
+                parser.error(f"Некорректное значение: «or empty source map» {sm}")
     for name, path in (
         ("native debug symbols", args.native_symbols),
         ("JVM obfuscation mapping", args.jvm_mapping),

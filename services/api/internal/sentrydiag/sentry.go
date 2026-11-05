@@ -30,27 +30,27 @@ type destination struct {
 func parseDSN(raw string) (destination, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u == nil {
-		return destination{}, errors.New("invalid Sentry DSN")
+		return destination{}, errors.New("Некорректное значение: DSN Sentry")
 	}
 	if u.User == nil || u.User.Username() == "" || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" {
 		return destination{}, errors.New("Sentry DSN lacks public key or host")
 	}
 	if _, hasPassword := u.User.Password(); hasPassword {
-		return destination{}, errors.New("Sentry DSN secret key is unsupported")
+		return destination{}, errors.New("Не поддерживается: «Sentry DSN secret key»")
 	}
 	if u.Scheme != "https" { // HTTP допускается только через loopback, что удобно для локальных развёртываний.
 		if u.Scheme != "http" || (u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil || (net.ParseIP(u.Hostname()) != nil && !net.ParseIP(u.Hostname()).IsLoopback())) {
-			return destination{}, errors.New("Sentry DSN requires HTTPS")
+			return destination{}, errors.New("Для DSN Sentry требуется HTTPS")
 		}
 	}
 	segments := strings.Split(strings.Trim(u.EscapedPath(), "/"), "/")
 	project := segments[len(segments)-1]
 	if len(project) == 0 || len(project) > 20 {
-		return destination{}, errors.New("invalid Sentry project id")
+		return destination{}, errors.New("Некорректное значение: идентификатор проекта Sentry")
 	}
 	for _, r := range project {
 		if r < '0' || r > '9' {
-			return destination{}, errors.New("invalid Sentry project id")
+			return destination{}, errors.New("Некорректное значение: идентификатор проекта Sentry")
 		}
 	}
 	base := "/" + strings.Join(segments[:len(segments)-1], "/")

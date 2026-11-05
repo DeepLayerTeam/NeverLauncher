@@ -63,7 +63,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		return p, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 4<<20 {
-		return p, errors.New("permissions file must be a regular JSON file <= 4MiB")
+		return p, errors.New("Для «permissions file» требуется: «a regular JSON file <= 4MiB»")
 	}
 	b, err := os.ReadFile(file)
 	if err != nil {
@@ -78,7 +78,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		return p, errors.New("extra JSON after permissions")
 	}
 	if p.SchemaVersion != permissionSchema0276 || !validSHA2560276(p.PackSHA256) {
-		return p, errors.New("unsupported permission schema or invalid pack SHA256")
+		return p, errors.New("Не поддерживается: «permission schema or invalid pack SHA256»")
 	}
 	if len(p.Grants) > 4000 {
 		return p, errors.New("Превышено допустимое число предоставленных разрешений")
@@ -89,10 +89,10 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 			return p, err
 		}
 		if !validSHA2560276(g.SHA256) || g.Right != "redistribute" {
-			return p, fmt.Errorf("invalid right or SHA256 for %q", g.Path)
+			return p, fmt.Errorf("Некорректное значение: «right or SHA256 for» %q", g.Path)
 		}
 		if g.AuthorizedBy == "" || len(g.AuthorizedBy) > 256 || strings.TrimSpace(g.AuthorizedBy) != g.AuthorizedBy {
-			return p, fmt.Errorf("missing authorizing party for %q", g.Path)
+			return p, fmt.Errorf("Отсутствует: «authorizing party for» %q", g.Path)
 		}
 		if err = validateRemoteURL(g.EvidenceURL); err != nil {
 			return p, fmt.Errorf("%s: evidence URL: %w", g.Path, err)
@@ -102,7 +102,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 			return p, fmt.Errorf("Требуемый формат для %s: свидетельство URL: HTTPS", g.Path)
 		}
 		if unique[strings.ToLower(g.Path)] {
-			return p, fmt.Errorf("duplicate permission entry for %q", g.Path)
+			return p, fmt.Errorf("Обнаружен дубликат: «permission entry for» %q", g.Path)
 		}
 		unique[strings.ToLower(g.Path)] = true
 	}
@@ -143,7 +143,7 @@ func readModpackReceipt0276(dir string) (modpackReport0275, factoryPlan0271, err
 		return report, p, err
 	}
 	if err = requireCurrentFactoryAdapters02711(p); err != nil {
-		return report, p, fmt.Errorf("modpack publication requires current install adapters: %w", err)
+		return report, p, fmt.Errorf("Для «modpack publication» требуется «current install adapters:» %w", err)
 	}
 	receipt := filepath.Join(dir, filepath.FromSlash(modpackEvidencePath0275))
 	st, err := os.Lstat(receipt)
@@ -151,7 +151,7 @@ func readModpackReceipt0276(dir string) (modpackReport0275, factoryPlan0271, err
 		return report, p, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 4<<20 {
-		return report, p, errors.New("invalid modpack receipt")
+		return report, p, errors.New("Некорректное значение: «modpack receipt»")
 	}
 	b, err := os.ReadFile(receipt)
 	if err != nil {
@@ -178,12 +178,12 @@ func readModpackReceipt0276(dir string) (modpackReport0275, factoryPlan0271, err
 			return report, p, err
 		}
 		if !validSHA2560276(f.SHA256) || f.Source == "" || seen[strings.ToLower(f.Path)] {
-			return report, p, fmt.Errorf("invalid or duplicate receipt artifact %q", f.Path)
+			return report, p, fmt.Errorf("Некорректное значение: «or duplicate receipt artifact» %q", f.Path)
 		}
 		seen[strings.ToLower(f.Path)] = true
 		out, ok := found[f.Path]
 		if !ok || out.SHA256 != f.SHA256 || out.Size != f.Size {
-			return report, p, fmt.Errorf("import receipt does not match locked output %s", f.Path)
+			return report, p, fmt.Errorf("«import receipt» не совпадает с «locked output» %s", f.Path)
 		}
 	}
 	return report, p, nil
@@ -318,13 +318,13 @@ func handlePermissionGates0276(args []string) error {
 	case "export-modpack-artifacts":
 		report, err = exportModpackArtifacts0276(dir, permissions, flagValue(flags, "--file", ""))
 	default:
-		return errors.New("unknown permission gate command")
+		return errors.New("Неизвестное значение: «permission gate command»")
 	}
 	if err2 := writeOrPrintJSON(output, report); err2 != nil {
 		return err2
 	}
 	if report.Status == "blocked" {
-		return fmt.Errorf("%d redistribution permission gates failed", len(report.Missing))
+		return fmt.Errorf("Ошибка: «%d redistribution permission gates»", len(report.Missing))
 	}
 	return err
 }
@@ -369,7 +369,7 @@ func secureManualSource0276(root, rel string) (string, error) {
 			return "", e
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return "", errors.New("manual source symlink forbidden")
+			return "", errors.New("Запрещено: «manual source symlink»")
 		}
 		if i == len(parts)-2 {
 			if !st.Mode().IsRegular() {

@@ -30,7 +30,7 @@ func validateOfficialBrowserRequest0263(v officialBrowserRequest0263) error {
 		return err
 	}
 	if len(v.Code) < 8 || len(v.Code) > 4096 || strings.ContainsAny(v.Code, "\r\n\x00") {
-		return errors.New("invalid authorization code")
+		return errors.New("Некорректное значение: «authorization code»")
 	}
 	return nil
 }
@@ -73,14 +73,14 @@ func exchangeOfficialBrowser0263(ctx context.Context, provider officialBrowserPr
 		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, err
 	}
 	if tokens.AccessToken == "" || tokens.RefreshToken == "" {
-		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("missing Microsoft bearer/refresh token")
+		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Отсутствует: «Microsoft bearer/refresh token»")
 	}
 	mc, err := provider.Exchange(ctx, tokens.AccessToken)
 	if err != nil {
 		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, err
 	}
 	if mc.AccessToken == "" || mc.ExpiresIn <= 0 {
-		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("missing Minecraft bearer")
+		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Отсутствует: «Minecraft bearer»")
 	}
 	profile, err := provider.Profile(ctx, mc.AccessToken)
 	if err != nil {

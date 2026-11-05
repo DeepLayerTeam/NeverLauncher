@@ -38,10 +38,10 @@ func parseProcessRole0455(raw, deployment string) (processRole0455, error) {
 	case "migrate":
 		r = processRole0455{role, false, false}
 	default:
-		return r, fmt.Errorf("invalid LAUNCHER_PROCESS_ROLE=%q (all|api|worker|migrate)", raw)
+		return r, fmt.Errorf("Некорректное значение: «LAUNCHER_PROCESS_ROLE=%q (all|api|worker|migrate)»", raw)
 	}
 	if strings.EqualFold(strings.TrimSpace(deployment), "network-ha") && role == "all" {
-		return r, errors.New("network-ha requires explicit LAUNCHER_PROCESS_ROLE=api, worker or migrate")
+		return r, errors.New("Для «network-ha» требуется «explicit LAUNCHER_PROCESS_ROLE=api, worker or migrate»")
 	}
 	return r, nil
 }

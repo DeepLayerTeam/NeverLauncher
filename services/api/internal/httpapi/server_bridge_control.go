@@ -186,7 +186,7 @@ func (s Server) serverBridgeControlSigningPrivateKey0195() (ed25519.PrivateKey, 
 	}
 	seed, err := hex.DecodeString(seedHex)
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return nil, fmt.Errorf("serverbridge control signing key must be a 32-byte Ed25519 seed in hex")
+		return nil, fmt.Errorf("Для «serverbridge control signing key» требуется: «a 32-byte Ed25519 seed in hex»")
 	}
 	return ed25519.NewKeyFromSeed(seed), nil
 }

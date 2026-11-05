@@ -13,7 +13,7 @@ import (
 func (s Server) channelHead0228(ctx context.Context, projectID, profileID, channel string) (model.ChannelHead, error) {
 	reader, ok := s.Repo.(repository.ChannelHeadReader)
 	if !ok {
-		return model.ChannelHead{}, errors.New("channel head storage unavailable")
+		return model.ChannelHead{}, errors.New("Недоступно: «channel head storage»")
 	}
 	return reader.GetChannelHead(ctx, projectID, profileID, channel)
 }

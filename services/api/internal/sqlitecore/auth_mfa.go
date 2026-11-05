@@ -303,7 +303,7 @@ func totpAt(secretBase32 string, t time.Time) (string, error) {
 		}
 	}()
 	if len(seed) < 16 {
-		return "", errors.New("invalid TOTP seed length")
+		return "", errors.New("Некорректное значение: «TOTP seed length»")
 	}
 	return totpCode(seed, t.UTC().Unix()/30), nil
 }

@@ -163,13 +163,13 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	case err != nil:
 		return nil, fmt.Errorf("Чтение: SQLite HTTP состояние: %w", err)
 	case ver != 1:
-		return nil, fmt.Errorf("unsupported SQLite HTTP state format %d", ver)
+		return nil, fmt.Errorf("Не поддерживается: «SQLite HTTP state format» %d", ver)
 	case r.seq < 1:
-		return nil, errors.New("invalid SQLite HTTP sequence")
+		return nil, errors.New("Некорректное значение: «SQLite HTTP sequence»")
 	default:
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
-			return nil, errors.New("SQLite HTTP state integrity digest mismatch")
+			return nil, errors.New("Несовпадение: «SQLite HTTP state integrity digest»")
 		}
 		state, e := decodeSQLiteHTTPDocument0471(raw)
 		if e != nil {
@@ -239,7 +239,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		return state, err
 	}
 	if tok != json.Delim('{') {
-		return state, errors.New("SQLite HTTP snapshot must be an object")
+		return state, errors.New("Для «SQLite HTTP snapshot» требуется: объект")
 	}
 	seen := make(map[string]struct{}, len(expected))
 	for decoder.More() {
@@ -252,10 +252,10 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 			return state, errors.New("SQLite HTTP snapshot property is not a string")
 		}
 		if _, ok = expected[name]; !ok {
-			return state, fmt.Errorf("unknown SQLite HTTP snapshot field %q", name)
+			return state, fmt.Errorf("Неизвестное значение: «SQLite HTTP snapshot field» %q", name)
 		}
 		if _, ok = seen[name]; ok {
-			return state, fmt.Errorf("duplicate SQLite HTTP snapshot field %q", name)
+			return state, fmt.Errorf("Обнаружен дубликат: «SQLite HTTP snapshot field» %q", name)
 		}
 		seen[name] = struct{}{}
 		var value json.RawMessage
@@ -285,7 +285,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		return state, err
 	}
 	if !validPrivateSQLite0373(state) {
-		return state, errors.New("SQLite HTTP private state alignment mismatch")
+		return state, errors.New("Несовпадение: «SQLite HTTP private state alignment»")
 	}
 	return state, nil
 }
@@ -305,7 +305,7 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 		return err
 	}
 	if token != json.Delim('{') {
-		return errors.New("SQLite HTTP private state must be an object")
+		return errors.New("Для «SQLite HTTP private state» требуется: объект")
 	}
 	seen := map[string]struct{}{}
 	for d.More() {
@@ -318,10 +318,10 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 			return errors.New("SQLite HTTP private property is not a string")
 		}
 		if _, ok = expected[key]; !ok {
-			return fmt.Errorf("unknown SQLite HTTP private property %q", key)
+			return fmt.Errorf("Неизвестное значение: «SQLite HTTP private property» %q", key)
 		}
 		if _, ok = seen[key]; ok {
-			return fmt.Errorf("duplicate SQLite HTTP private property %q", key)
+			return fmt.Errorf("Обнаружен дубликат: «SQLite HTTP private property» %q", key)
 		}
 		seen[key] = struct{}{}
 		var value json.RawMessage
@@ -370,10 +370,10 @@ func (r *SQLiteHTTPRepository0372) Health(ctx context.Context) error {
 		}
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
-			return errors.New("SQLite HTTP state digest mismatch")
+			return errors.New("Несовпадение: «SQLite HTTP state digest»")
 		}
 		if _, e := decodeSQLiteHTTPDocument0471(raw); e != nil {
-			return fmt.Errorf("SQLite HTTP state invalid: %w", e)
+			return fmt.Errorf("Некорректное значение: «SQLite HTTP state»: %w", e)
 		}
 		return nil
 	})

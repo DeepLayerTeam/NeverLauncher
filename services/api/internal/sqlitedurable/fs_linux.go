@@ -20,7 +20,7 @@ const (
 
 func verifyLocalPath(path string) error {
 	if path == "/" {
-		return errors.New("sqlite database path cannot be root")
+		return errors.New("«sqlite database path»: запрещено «be root»")
 	}
 	dir := filepath.Dir(path)
 	if err := rejectSymlinkSegments(dir); err != nil {
@@ -35,14 +35,14 @@ func verifyLocalPath(path string) error {
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("sqlite directory must be a real directory")
+		return errors.New("Каталог SQLite должен существовать и не быть символической ссылкой")
 	}
 	if info.Mode().Perm()&0077 != 0 {
 		return fmt.Errorf("sqlite directory %s permissions %04o unsafe; use chmod 0700", dir, info.Mode().Perm())
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || st.Uid != uint32(os.Geteuid()) {
-		return errors.New("sqlite directory must be owned by service user")
+		return errors.New("Владельцем каталога SQLite должен быть пользователь службы")
 	}
 	if err = rejectSymlinkSegments(dir); err != nil {
 		return err
@@ -54,20 +54,20 @@ func verifyLocalPath(path string) error {
 	switch fs.Type {
 	case fsEXT4, fsXFS, fsBTRFS:
 	default:
-		return fmt.Errorf("unsupported SQLite filesystem 0x%x: only verified local ext4/xfs/btrfs; reject overlay/NFS/SMB/tmpfs", fs.Type)
+		return fmt.Errorf("Не поддерживается: «SQLite filesystem 0x%x: only verified local ext4/xfs/btrfs; reject overlay/NFS/SMB/tmpfs»", fs.Type)
 	}
 	if fs.Flags&1 /* ST_RDONLY on Linux */ != 0 {
-		return errors.New("sqlite filesystem is read-only")
+		return errors.New("Файловая система SQLite доступна только для чтения")
 	}
 	if f, e := os.Lstat(path); e == nil {
 		if !f.Mode().IsRegular() || f.Mode()&os.ModeSymlink != 0 {
-			return errors.New("sqlite file must be regular and a symlink")
+			return errors.New("Для «sqlite file» требуется: «regular and a symlink»")
 		}
 		if f.Mode().Perm()&0077 != 0 {
 			return fmt.Errorf("sqlite file permissions %04o unsafe", f.Mode().Perm())
 		}
 		if st, ok := f.Sys().(*syscall.Stat_t); !ok || st.Uid != uint32(os.Geteuid()) {
-			return errors.New("sqlite database ownership mismatch")
+			return errors.New("Несовпадение: «sqlite database ownership»")
 		}
 	} else if !os.IsNotExist(e) {
 		return e
@@ -112,7 +112,7 @@ func exclusiveLock(name string) (*os.File, error) {
 	f := os.NewFile(uintptr(fd), name)
 	info, err := f.Stat()
 	if err == nil && (!info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0) {
-		err = errors.New("sqlite owner lock must be regular and mode 0600")
+		err = errors.New("Для «sqlite owner lock» требуется: «regular and mode 0600»")
 	}
 	if err == nil {
 		st, ok := info.Sys().(*syscall.Stat_t)

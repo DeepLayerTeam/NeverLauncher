@@ -41,7 +41,7 @@ def request_live(url, payload=None, bearer="", form=False):
         MINECRAFT + "/authentication/login_with_xbox",
         MINECRAFT + "/minecraft/profile",
     ):
-        raise AccountRejected("untrusted provider endpoint")
+        raise AccountRejected("Недоверенное значение: «provider endpoint»")
     body = None
     headers = {"Accept": "application/json"}
     if bearer:
@@ -70,10 +70,10 @@ def request_live(url, payload=None, bearer="", form=False):
                 raise AccountRejected("real authentication returned non-success")
             raw = resp.read(1024 * 1024 + 1)
             if len(raw) > 1024 * 1024:
-                raise AccountRejected("oversized provider response")
+                raise AccountRejected("Превышен допустимый размер: «provider response»")
             out = json.loads(raw)
             if not isinstance(out, dict):
-                raise AccountRejected("invalid provider response")
+                raise AccountRejected("Некорректное значение: «provider response»")
             return out
     except urllib.error.HTTPError as exc:
         if exc.code in (408, 425, 429) or exc.code >= 500:
@@ -84,9 +84,9 @@ def request_live(url, payload=None, bearer="", form=False):
             "official provider denied dedicated test account"
         ) from None
     except (urllib.error.URLError, TimeoutError, OSError):
-        raise ExternalOutage("official provider transport unavailable") from None
+        raise ExternalOutage("Недоступно: «official provider transport»") from None
     except (UnicodeError, ValueError):
-        raise AccountRejected("malformed official provider response") from None
+        raise AccountRejected("Некорректный формат: «official provider response»") from None
 
 
 def require_token(response, name):
@@ -99,7 +99,7 @@ def require_token(response, name):
 def refresh_file_atomic(path, new_token):
     path = Path(path)
     if not path.is_file() or path.is_symlink() or path.stat().st_mode & 0o077:
-        raise AccountRejected("host refresh token file must be private regular file")
+        raise AccountRejected("Для «host refresh token file» требуется: «private regular file»")
     fd, tmp = tempfile.mkstemp(prefix=".nl-refresh-", dir=path.parent)
     try:
         os.fchmod(fd, 0o600)
@@ -120,14 +120,14 @@ def refresh_file_atomic(path, new_token):
 
 def issue_minecraft_credentials(client_id, refresh_token_file, output):
     if not re.fullmatch(r"[0-9a-fA-F-]{36}", client_id):
-        raise AccountRejected("dedicated Microsoft public-client ID is missing")
+        raise AccountRejected("Отсутствует: «dedicated Microsoft public-client ID»")
     token_file = Path(refresh_token_file)
     if (
         not token_file.is_file()
         or token_file.is_symlink()
         or token_file.stat().st_mode & 0o077
     ):
-        raise AccountRejected("refresh token file must be private host file")
+        raise AccountRejected("Для «refresh token file» требуется: «private host file»")
     refresh = token_file.read_text().strip()
     require_token({"t": refresh}, "t")
     oauth = request_live(

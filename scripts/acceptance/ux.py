@@ -184,7 +184,7 @@ def plan_test(path):
         # Для E2E shell-скриптов нужны явно подготовленные машины; их выполнение в
         # локальной приёмке не считается безопасным по умолчанию.
         return None
-    raise AuditError("unknown probe execution format: " + path)
+    raise AuditError("Неизвестное значение: «probe execution format:»" + path)
 
 
 def atomic_report(path, data):

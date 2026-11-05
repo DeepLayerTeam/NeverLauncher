@@ -68,7 +68,7 @@ type yggdrasilJoinRequest119 struct {
 func (s Server) minecraftRepo119() (repository.MinecraftRepository, error) {
 	repo, ok := s.Repo.(repository.MinecraftRepository)
 	if !ok {
-		return nil, errors.New("minecraft repository is unavailable")
+		return nil, errors.New("Недоступно: «minecraft repository»")
 	}
 	return repo, nil
 }

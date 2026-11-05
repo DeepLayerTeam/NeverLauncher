@@ -70,7 +70,7 @@ fn validate_name_collisions(paths: impl Iterator<Item = String>) -> Result<(), S
                 }
             } else {
                 if !files.insert(key.clone()) || directories.contains_key(&key) {
-                    return Err(format!("duplicate or file/directory collision: {p}"));
+                    return Err(format!("Обнаружен дубликат: «or file/directory collision»: {p}"));
                 }
             }
         }
@@ -100,17 +100,17 @@ pub fn validate_policy(m: &Manifest) -> Result<(), String> {
     for f in &m.files {
         if !valid_path(&f.path, false) || !seen.insert(f.path.to_ascii_lowercase()) { return Err(format!("duplicate/unsafe file path: {}", f.path)) }
         let ownership = effective_ownership(f);
-        if !valid_ownership(ownership) { return Err(format!("unknown ownership: {ownership}")) }
-        if matches!(ownership, "user-owned" | "generated") && f.required { return Err(format!("user-owned/generated file cannot be required: {}", f.path)) }
+        if !valid_ownership(ownership) { return Err(format!("Неизвестное значение: «ownership»: {ownership}")) }
+        if matches!(ownership, "user-owned" | "generated") && f.required { return Err(format!("«user-owned/generated file»: запрещено «be required: {}»", f.path)) }
         if !f.ownership.is_empty() && ((ownership == "required" && !f.required) || (ownership == "optional" && f.required)) { return Err(format!("conflicting required/ownership: {}",f.path)) }
         if protected(&f.path) && !matches!(ownership, "user-owned" | "generated") { return Err(format!("user data is protected: {}", f.path)) }
     }
     for (i, r) in m.file_rules.iter().enumerate() {
-        if !valid_path(&r.pattern, true) || !valid_ownership(&r.ownership) { return Err(format!("invalid file rule {i}")) }
-        if !matches!(r.action.as_str(), "include" | "exclude" | "verify") { return Err(format!("unknown file rule action: {}", r.action)) }
+        if !valid_path(&r.pattern, true) || !valid_ownership(&r.ownership) { return Err(format!("Некорректное значение: «file rule» {i}")) }
+        if !matches!(r.action.as_str(), "include" | "exclude" | "verify") { return Err(format!("Неизвестное значение: «file rule action: {}»", r.action)) }
         if (r.action == "include" && !matches!(r.ownership.as_str(), "managed" | "required")) ||
            (r.action == "verify" && matches!(r.ownership.as_str(), "user-owned" | "generated")) ||
-           (r.action == "exclude" && !matches!(r.ownership.as_str(), "user-owned" | "generated")) { return Err(format!("invalid rule ownership: {}",r.pattern)) }
+           (r.action == "exclude" && !matches!(r.ownership.as_str(), "user-owned" | "generated")) { return Err(format!("Некорректное значение: «rule ownership: {}»",r.pattern)) }
         if r.action == "include" && protected(r.pattern.strip_suffix("/**").unwrap_or(&r.pattern)) { return Err(format!("protected include rule: {}",r.pattern)) }
         if m.file_rules[..i].iter().any(|prev| overlap(&prev.pattern, &r.pattern)) { return Err(format!("overlapping rules: {}",r.pattern)) }
         for f in &m.files { if matches(&r.pattern,&f.path) {
@@ -255,13 +255,13 @@ mod tests {
 pub fn validate_download_targets(m: &Manifest) -> Result<(), String> {
     validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
     for f in &m.files {
-        if !valid_path(&f.path, false) { return Err(format!("unsafe managed file path: {}", f.path)); }
+        if !valid_path(&f.path, false) { return Err(format!("Небезопасное значение: «managed file path: {}»", f.path)); }
         if !matches!(effective_ownership(f), "required" | "managed" | "optional") { continue }
-        let decoded = hex::decode(&f.sha256).map_err(|_| format!("invalid SHA-256: {}",f.path))?;
-        if decoded.len() != 32 {return Err(format!("invalid SHA-256 length: {}",f.path))}
-        let url = reqwest::Url::parse(&f.url).map_err(|e| format!("invalid download URL {}: {e}",f.path))?;
+        let decoded = hex::decode(&f.sha256).map_err(|_| format!("Некорректное значение: «SHA-256: {}»",f.path))?;
+        if decoded.len() != 32 {return Err(format!("Некорректное значение: «SHA-256 length: {}»",f.path))}
+        let url = reqwest::Url::parse(&f.url).map_err(|e| format!("Некорректное значение: «download URL {}»: {e}",f.path))?;
         if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
-            return Err(format!("unsafe download URL: {}",f.path));
+            return Err(format!("Небезопасное значение: «download URL: {}»",f.path));
         }
     }
     Ok(())

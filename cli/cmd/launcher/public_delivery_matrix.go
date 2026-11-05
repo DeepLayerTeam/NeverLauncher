@@ -97,11 +97,11 @@ func defaultPublicReleaseBaseURL0159(ver string) string {
 func normalizePublicBaseURL0159(raw string, allowHTTP bool) (string, error) {
 	raw = strings.TrimSpace(strings.TrimRight(raw, "/"))
 	if raw == "" {
-		return "", errors.New("public delivery base URL is empty")
+		return "", errors.New("Пустое значение: базовый публичный URL доставки")
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return "", fmt.Errorf("invalid public delivery base URL %q", raw)
+		return "", fmt.Errorf("Некорректное значение: базовый публичный URL доставки %q", raw)
 	}
 	if u.Scheme != "https" {
 		if !(allowHTTP && u.Scheme == "http" && isLoopbackHost0159(u.Hostname())) {
@@ -149,7 +149,7 @@ func expectedPublicTarget0159(ver, platform, arch string) (PublicDeliveryTarget0
 			Guard: artifacts["guard"], Runtime: artifacts["runtime"], Package: pkg, ManagedJRE: jre,
 		}, nil
 	default:
-		return PublicDeliveryTarget0159{}, fmt.Errorf("unsupported public target platform %q", platform)
+		return PublicDeliveryTarget0159{}, fmt.Errorf("Не поддерживается: «public target platform» %q", platform)
 	}
 }
 
@@ -251,13 +251,13 @@ func readPublicProductionDeliveryMatrix0159(path string) (PublicProductionDelive
 
 func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProductionDeliveryMatrix0159, expectedVersion string, allowHTTP bool) error {
 	if matrix.SchemaVersion != publicProductionDeliverySchema0159 || matrix.Product != "Launcher" || matrix.Channel != publicProductionDeliveryChannel0159 {
-		return errors.New("public production delivery matrix header is invalid")
+		return errors.New("Некорректное значение: «public production delivery matrix header»")
 	}
 	if strings.TrimSpace(expectedVersion) != "" && matrix.Version != strings.TrimSpace(expectedVersion) {
 		return fmt.Errorf("public matrix version mismatch: matrix=%s expected=%s", matrix.Version, expectedVersion)
 	}
 	if _, err := time.Parse(time.RFC3339Nano, matrix.GeneratedAt); err != nil {
-		return errors.New("public matrix generatedAt is invalid")
+		return errors.New("Некорректное значение: «public matrix generatedAt»")
 	}
 	baseURL, err := normalizePublicBaseURL0159(matrix.BaseURL, allowHTTP)
 	if err != nil || baseURL != matrix.BaseURL {
@@ -268,7 +268,7 @@ func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProduct
 		return err
 	}
 	if !strings.EqualFold(actualManifestSHA, matrix.DeliveryManifestSHA256) || !validDeliverySHA256(matrix.DeliveryManifestSHA256) {
-		return errors.New("public matrix deliveryManifestSha256 mismatch")
+		return errors.New("Несовпадение: «public matrix deliveryManifestSha256»")
 	}
 	delivery, err := readDeliveryManifest0151(dir)
 	if err != nil {
@@ -281,7 +281,7 @@ func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProduct
 	matrixAssets := map[string]PublicDeliveryAsset0159{}
 	for _, asset := range matrix.Assets {
 		if _, duplicate := matrixAssets[asset.Name]; duplicate {
-			return fmt.Errorf("duplicate public asset %s", asset.Name)
+			return fmt.Errorf("Обнаружен дубликат: «public asset» %s", asset.Name)
 		}
 		expected, ok := manifestAssets[asset.Name]
 		if !ok {
@@ -322,7 +322,7 @@ func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProduct
 	for _, control := range matrix.Controls {
 		role, ok := expectedControls[control.Name]
 		if !ok || role != control.Role || seenControls[control.Name] || control.URL != publicAssetURL0159(baseURL, control.Name) {
-			return fmt.Errorf("public control entry invalid: %s", control.Name)
+			return fmt.Errorf("Некорректное значение: «public control entry»: %s", control.Name)
 		}
 		seenControls[control.Name] = true
 	}
@@ -337,23 +337,23 @@ func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProduct
 	for _, target := range matrix.Targets {
 		canonical, err := canonicalDeliveryTarget(target.Platform, target.Architecture)
 		if err != nil || canonical.Platform != target.Platform || canonical.Architecture != target.Architecture || target.Architecture == "universal" {
-			return fmt.Errorf("public target is invalid: %s/%s", target.Platform, target.Architecture)
+			return fmt.Errorf("Некорректное значение: «public target»: %s/%s", target.Platform, target.Architecture)
 		}
 		key := target.Platform + "/" + target.Architecture
 		if seenTargets[key] {
-			return fmt.Errorf("duplicate public target %s", key)
+			return fmt.Errorf("Обнаружен дубликат: «public target» %s", key)
 		}
 		expectedTarget, err := expectedPublicTarget0159(matrix.Version, target.Platform, target.Architecture)
 		if err != nil {
 			return err
 		}
 		if target != expectedTarget {
-			return fmt.Errorf("public target %s does not match canonical production artifact set", key)
+			return fmt.Errorf("«public target» %s не совпадает с «canonical production artifact set»", key)
 		}
 		for _, name := range publicTargetAssetNames0159(target) {
 			asset, ok := matrixAssets[name]
 			if !ok {
-				return fmt.Errorf("public target %s requires missing asset %s", key, name)
+				return fmt.Errorf("Для «public target» %s требуется «missing asset» %s", key, name)
 			}
 			if asset.Platform != target.Platform || asset.Architecture != target.Architecture {
 				return fmt.Errorf("public target %s asset %s has target %s/%s", key, name, asset.Platform, asset.Architecture)
@@ -483,7 +483,7 @@ func downloadPublicAsset0159(ctx context.Context, client *http.Client, rawURL, d
 func fetchPublicMatrix0159(ctx context.Context, matrixURL, downloadDir string, allowHTTP bool) (PublicProductionDeliveryMatrix0159, int64, error) {
 	u, err := url.Parse(strings.TrimSpace(matrixURL))
 	if err != nil || u.Host == "" {
-		return PublicProductionDeliveryMatrix0159{}, 0, errors.New("public E2E requires an absolute --matrix-url")
+		return PublicProductionDeliveryMatrix0159{}, 0, errors.New("Для «public E2E» требуется «an absolute --matrix-url»")
 	}
 	baseGuess := strings.TrimSuffix(matrixURL, "/"+url.PathEscape(publicProductionDeliveryMatrixFile0159))
 	baseGuess, err = normalizePublicBaseURL0159(baseGuess, allowHTTP)
@@ -519,7 +519,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	if st, err := os.Stat(downloadDir); err == nil && st.IsDir() {
 		items, _ := os.ReadDir(downloadDir)
 		if len(items) != 0 {
-			return report, errors.New("public E2E download directory must be empty")
+			return report, errors.New("Для «public E2E download directory» требуется: «empty»")
 		}
 	} else if err := os.MkdirAll(downloadDir, 0o755); err != nil {
 		return report, err
@@ -572,7 +572,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 		}
 		absCandidate, err := filepath.Abs(candidate)
 		if err == nil && (absCandidate == absDownload || strings.HasPrefix(absCandidate, absDownload+string(os.PathSeparator))) {
-			return report, fmt.Errorf("public E2E %s must be outside downloaded bundle", label)
+			return report, fmt.Errorf("Для «public E2E» %s требуется: «outside downloaded bundle»", label)
 		}
 	}
 	if err := verifyReleaseBundleWithTrust(downloadDir, rootPublicKey, trustState, currentTrustPolicy); err != nil {

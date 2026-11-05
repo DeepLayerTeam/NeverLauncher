@@ -23,7 +23,7 @@ func (r *MemoryRepository) CreateProfileExclusive0225(p model.Profile) (model.Pr
 		return model.Profile{}, err
 	}
 	if p.Revision != 0 {
-		return model.Profile{}, errors.New("new profile must not supply a revision")
+		return model.Profile{}, errors.New("«new profile»: запрещено «supply a revision»")
 	}
 	r.profileMu.Lock()
 	defer r.profileMu.Unlock()
@@ -53,7 +53,7 @@ func (r *SQLRepository) CreateProfileExclusive0225(p model.Profile) (model.Profi
 		return model.Profile{}, err
 	}
 	if p.Revision != 0 {
-		return model.Profile{}, errors.New("new profile must not supply a revision")
+		return model.Profile{}, errors.New("«new profile»: запрещено «supply a revision»")
 	}
 	tx, err := r.db.Begin()
 	if err != nil {

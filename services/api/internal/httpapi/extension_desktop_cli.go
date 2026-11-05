@@ -272,10 +272,10 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	allow := func(permission, projectID string) error {
 		ok, e := s.ExtensionSecurity.Allowed(r.Context(), install.ExtensionID, install.CurrentVersion, install.Scope, install.ScopeID, permission, projectID)
 		if e != nil {
-			return fmt.Errorf("policy unavailable: %w", e)
+			return fmt.Errorf("Недоступно: политика: %w", e)
 		}
 		if !ok {
-			return fmt.Errorf("extension capability %s denied", permission)
+			return fmt.Errorf("Доступ запрещён: «extension capability» %s", permission)
 		}
 		return nil
 	}
@@ -288,7 +288,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	switch req.Method {
 	case "java.action.invoke", "java.settings.get", "java.settings.put":
 		if !s.authorizeClaims(r, claims, "extension:manage", "", "extension", install.ExtensionID).Allowed {
-			respond(nil, errors.New("user extension:manage denied"))
+			respond(nil, errors.New("Доступ запрещён: «user extension:manage»"))
 			return
 		}
 		result, callErr := s.invokeJavaUI0489(r, install, req.Method, req.Params, claims.Sub, claims.Email)
@@ -358,7 +358,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		}
 		respond(items, e)
 	default:
-		respond(nil, errors.New("unsupported Desktop RPC method"))
+		respond(nil, errors.New("Не поддерживается: «Desktop RPC method»"))
 	}
 }
 

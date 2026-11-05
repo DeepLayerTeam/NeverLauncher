@@ -11,7 +11,7 @@ core = tuple(
     int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3]
 )
 if core < (0, 18, 0):
-    raise SystemExit(f"Loader Compatibility GA requires VERSION>=0.18.0, got {version}")
+    raise SystemExit(f"Для «Loader Compatibility GA» требуется «VERSION>=0.18.0, got» {version}")
 
 
 def read(rel: str) -> str:
@@ -148,7 +148,7 @@ if {
 } != blocked:
     raise SystemExit("Upstream-unavailable target set or reason drift")
 if any((row.get("os"), row.get("arch")) != ("linux", "x86_64") for row in unavailable):
-    raise SystemExit("Unexpected unavailable platform")
+    raise SystemExit("Неожиданное значение: «unavailable platform»")
 family_counts = Counter(row.get("loader") for row in targets)
 expected_families = {
     "vanilla": 109,

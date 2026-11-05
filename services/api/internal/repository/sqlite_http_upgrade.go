@@ -53,7 +53,7 @@ func strictObject0472(raw []byte) (map[string]json.RawMessage, error) {
 			return nil, errors.New("non-string JSON key")
 		}
 		if _, ok = out[name]; ok {
-			return nil, fmt.Errorf("duplicate JSON property %q", name)
+			return nil, fmt.Errorf("Обнаружен дубликат: «JSON property» %q", name)
 		}
 		var data json.RawMessage
 		if err = dec.Decode(&data); err != nil {
@@ -96,7 +96,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 	fields := fieldMap0472(reflect.TypeOf(sqliteHTTPState0372{}))
 	for key := range root {
 		if _, ok := fields[key]; !ok {
-			return nil, fmt.Errorf("unknown HTTP legacy field %q", key)
+			return nil, fmt.Errorf("Неизвестное значение: «HTTP legacy field» %q", key)
 		}
 	}
 	// Отсутствующий верхний счётчик можно синтезировать лишь при пустой старой
@@ -122,7 +122,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 			continue
 		}
 		if key != "private0373" && !httpOptionalLegacyFields0472[key] {
-			return nil, fmt.Errorf("missing required HTTP legacy field %q", key)
+			return nil, fmt.Errorf("Отсутствует: «required HTTP legacy field» %q", key)
 		}
 		deps := securitySources[key]
 		if counterSources[key] != "" {
@@ -132,7 +132,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 			if data, ok := root[source]; ok {
 				var items []json.RawMessage
 				if err := json.Unmarshal(data, &items); err != nil {
-					return nil, fmt.Errorf("legacy %s data invalid: %w", source, err)
+					return nil, fmt.Errorf("Некорректное значение: «legacy %s data»: %w", source, err)
 				}
 				if len(items) != 0 {
 					return nil, fmt.Errorf("cannot synthesize missing %s: populated %s", key, source)
@@ -161,7 +161,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 	}
 	for key := range priv {
 		if _, ok := privateFields[key]; !ok {
-			return nil, fmt.Errorf("unknown legacy authorization field %q", key)
+			return nil, fmt.Errorf("Неизвестное значение: «legacy authorization field» %q", key)
 		}
 	}
 	for key, t := range privateFields {
@@ -174,7 +174,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 			return nil, fmt.Errorf("legacy %s: %w", dep, err)
 		}
 		if len(arr) > 0 {
-			return nil, fmt.Errorf("missing private auth field %s for %d persisted %s records", key, len(arr), dep)
+			return nil, fmt.Errorf("Отсутствует: «private auth field %s for %d persisted %s records»", key, len(arr), dep)
 		}
 		val, e := zeroJSON0472(t)
 		if e != nil {
@@ -191,7 +191,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 	if _, err = decodeSQLiteHTTPDocument0471(updated); err != nil {
-		return nil, fmt.Errorf("converted HTTP snapshot invalid: %w", err)
+		return nil, fmt.Errorf("Некорректное значение: «converted HTTP snapshot»: %w", err)
 	}
 	return updated, nil
 }
@@ -255,7 +255,7 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 			return err
 		}
 		if !seen["http_repository_state_0372"] {
-			return errors.New("SQLite HTTP snapshot table missing")
+			return errors.New("Отсутствует: «SQLite HTTP snapshot table»")
 		}
 		for _, key := range []string{"http_runtime_components_0373", "http_stable_permits_0374", "http_stable_permits_package_0374"} {
 			if !seen[key] {
@@ -278,7 +278,7 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 		}
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
-			return errors.New("HTTP legacy state digest mismatch")
+			return errors.New("Несовпадение: «HTTP legacy state digest»")
 		}
 		if !legacy {
 			_, err = decodeSQLiteHTTPDocument0471(raw)

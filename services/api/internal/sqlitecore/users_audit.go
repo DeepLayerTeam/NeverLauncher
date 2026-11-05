@@ -137,7 +137,7 @@ func (r *Repository) AuthEpoch(ctx context.Context, userID string) (epoch int64,
 // управление пользователями — событие безопасности.
 func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (model.User, error) {
 	if strings.TrimSpace(actor) == "" {
-		return model.User{}, errors.New("security actor required")
+		return model.User{}, errors.New("Требуется: «security actor»")
 	}
 	u.ID = strings.TrimSpace(u.ID)
 	u.Email = strings.TrimSpace(strings.ToLower(u.Email))
@@ -149,7 +149,7 @@ func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (
 		u.ID = "user-" + id
 	}
 	if u.Email == "" || !strings.Contains(u.Email, "@") || strings.ContainsAny(u.Email, "\x00\r\n") {
-		return model.User{}, errors.New("valid email required")
+		return model.User{}, errors.New("Требуется: «valid email»")
 	}
 	if u.RoleID == "" {
 		u.RoleID = "viewer"
@@ -158,14 +158,14 @@ func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (
 		u.Status = "active"
 	}
 	if u.Status != "active" && u.Status != "disabled" {
-		return model.User{}, errors.New("invalid account status")
+		return model.User{}, errors.New("Некорректное значение: «account status»")
 	}
 	if u.ProjectRoles == nil {
 		u.ProjectRoles = map[string]string{}
 	}
 	for project, role := range u.ProjectRoles {
 		if project == "*" || strings.TrimSpace(project) == "" || strings.TrimSpace(role) == "" {
-			return model.User{}, errors.New("invalid project role binding")
+			return model.User{}, errors.New("Некорректное значение: «project role binding»")
 		}
 	}
 	err := r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -188,7 +188,7 @@ func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (
 				return e
 			}
 			if count == 0 && (u.RoleID != "owner" || u.Status != "active") {
-				return errors.New("first user must be an active owner")
+				return errors.New("Для «first user» требуется: «an active owner»")
 			}
 		}
 		now := nowNS()
@@ -327,7 +327,7 @@ func recordAudit(ctx context.Context, q sqlitedurable.Executor, event model.Audi
 		event.ID = "audit-" + id
 	}
 	if strings.TrimSpace(event.Actor) == "" || strings.TrimSpace(event.Action) == "" {
-		return errors.New("audit actor/action required")
+		return errors.New("Требуется: «audit actor/action»")
 	}
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = ts(nowNS())

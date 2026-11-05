@@ -129,7 +129,7 @@ func (s Server) stagedSnapshot0342(ctx context.Context, g stagedGrant0342) (pack
 		return lookup, err
 	}
 	if !manifestFilesMatch0212(lookup.Release.Manifest, lookup.Files) {
-		return lookup, errors.New("staged manifest does not match files")
+		return lookup, errors.New("«staged manifest» не совпадает с файлы")
 	}
 	check, err := s.Repo.LatestIntegrityCheck(ctx, g.PackageID)
 	if err != nil || check.Result != "passed" || check.ManifestDigest != md || check.ArtifactDigest != fd {
@@ -325,23 +325,23 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 }
 func validateStagedRunReport0342(g stagedGrant0342, p stagedRunReport0342) error {
 	if p.Schema != stagedRunSchema0342 || p.PackageID != g.PackageID || p.RunID != g.RunID || p.ManifestSHA256 != g.ManifestSHA256 || p.ArtifactSHA256 != g.ArtifactSHA256 {
-		return errors.New("run identity or snapshot mismatch")
+		return errors.New("Несовпадение: «run identity or snapshot»")
 	}
 	if p.StartedAt.IsZero() || p.FinishedAt.Before(p.StartedAt) || p.FinishedAt.After(time.Now().Add(5*time.Minute)) || p.StartedAt.Before(time.Unix(g.ExpiresAt, 0).Add(-95*time.Minute)) {
-		return errors.New("invalid execution times")
+		return errors.New("Некорректное значение: «execution times»")
 	}
 	if len(p.Stages) == 0 || len(p.Stages) > 10 {
-		return errors.New("missing or excessive stages")
+		return errors.New("Отсутствует: «or excessive stages»")
 	}
 	for k, v := range p.Stages {
 		if k != "manifest-files" && k != "materialization" && k != "startup" && k != "loader-readiness" && k != "authentication" && k != "server-readiness" && k != "matching-server" && k != "gameplay-smoke" && k != "update-recovery" {
-			return errors.New("invalid execution stage")
+			return errors.New("Некорректное значение: «execution stage»")
 		}
 		if v.Status != "passed" && v.Status != "failed" && v.Status != "blocked" && v.Status != "inconclusive" {
-			return errors.New("invalid execution status")
+			return errors.New("Некорректное значение: «execution status»")
 		}
 		if len(v.Detail) > 2048 || (v.EvidenceSHA256 != "" && (len(v.EvidenceSHA256) != 64 || !hexSHA0342(v.EvidenceSHA256))) {
-			return errors.New("invalid stage detail or digest")
+			return errors.New("Некорректное значение: «stage detail or digest»")
 		}
 	}
 	return nil

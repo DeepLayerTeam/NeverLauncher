@@ -145,7 +145,7 @@ pub fn wait_for_guard_ack(
     let mut packet = [0u8; CONTINUOUS_GUARD_ACK_PACKET_LEN];
     stream
         .read_exact(&mut packet)
-        .map_err(|err| format!("Continuous Guard Guard-ACK read failed: {err}"))?;
+        .map_err(|err| format!("Ошибка: «Continuous Guard Guard-ACK read»: {err}"))?;
     let result = verify_guard_ack_packet(
         &packet,
         secret,
@@ -167,14 +167,14 @@ fn verify_guard_ack_packet(
     expected_chain: [u8; 32],
 ) -> Result<(), String> {
     if &packet[..8] != CONTINUOUS_GUARD_ACK_MAGIC {
-        return Err("Continuous Guard Guard-ACK magic mismatch".to_string());
+        return Err("Несовпадение: «Continuous Guard Guard-ACK magic»".to_string());
     }
     let version = u32::from_le_bytes(packet[8..12].try_into().expect("fixed ACK packet"));
     let packet_pid = u32::from_le_bytes(packet[12..16].try_into().expect("fixed ACK packet"));
     let guard_sequence = u64::from_le_bytes(packet[16..24].try_into().expect("fixed ACK packet"));
     let sensor_sequence = u64::from_le_bytes(packet[24..32].try_into().expect("fixed ACK packet"));
     if version != CONTINUOUS_GUARD_VERSION || packet_pid != pid {
-        return Err("Continuous Guard Guard-ACK version/PID mismatch".to_string());
+        return Err("Несовпадение: «Continuous Guard Guard-ACK version/PID»".to_string());
     }
     if guard_sequence != expected_guard_sequence {
         return Err(format!(
@@ -187,12 +187,12 @@ fn verify_guard_ack_packet(
         ));
     }
     if packet[32..64] != expected_chain[..] {
-        return Err("Continuous Guard Guard-ACK event-chain mismatch".to_string());
+        return Err("Несовпадение: «Continuous Guard Guard-ACK event-chain»".to_string());
     }
     let mut mac = HmacSha256::new_from_slice(secret)
-        .map_err(|_| "Continuous Guard Guard-ACK HMAC initialization failed".to_string())?;
+        .map_err(|_| "Ошибка: «Continuous Guard Guard-ACK HMAC initialization»".to_string())?;
     mac.update(CONTINUOUS_GUARD_ACK_DOMAIN);
     mac.update(&packet[..CONTINUOUS_GUARD_ACK_PREFIX_LEN]);
     mac.verify_slice(&packet[CONTINUOUS_GUARD_ACK_PREFIX_LEN..])
-        .map_err(|_| "Continuous Guard Guard-ACK HMAC mismatch".to_string())
+        .map_err(|_| "Несовпадение: «Continuous Guard Guard-ACK HMAC»".to_string())
 }

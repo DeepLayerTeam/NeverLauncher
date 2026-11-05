@@ -232,7 +232,7 @@ func (b *serverBridgeStore) saveTelemetry0193(serverID string, runtimeEpoch int6
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return fmt.Errorf("server bridge node not found")
+		return fmt.Errorf("Не найдено: узел ServerBridge")
 	}
 	if server.Status != "active" || server.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(server.RuntimeID, telemetry.RuntimeID) {
 		return fmt.Errorf("%w: telemetry runtime is not active", repository.ErrConflict)

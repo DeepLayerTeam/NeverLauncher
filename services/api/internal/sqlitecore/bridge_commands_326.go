@@ -16,7 +16,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-var ErrBridgeUncertain = errors.New("bridge delivery outcome is indeterminate; manual reconciliation required")
+var ErrBridgeUncertain = errors.New("Требуется: «bridge delivery outcome is indeterminate; manual reconciliation»")
 
 // BridgeRuntimeHeartbeat аутентифицируется Ed25519-ключом зарегистрированного узла.
 // Другой JVM Runtime должен увеличить эпоху, а не незаметно использовать прежнюю.
@@ -145,7 +145,7 @@ func bridgePayload(payload map[string]string) (string, string, error) {
 	}
 	for k, v := range payload {
 		if k == "" || len(k) > 80 || len(v) > 2048 || strings.ContainsAny(k, "\x00\r\n") || strings.ContainsRune(v, '\x00') {
-			return "", "", errors.New("invalid command parameter")
+			return "", "", errors.New("Некорректное значение: «command parameter»")
 		}
 	}
 	raw, e := json.Marshal(payload)
@@ -153,7 +153,7 @@ func bridgePayload(payload map[string]string) (string, string, error) {
 		return "", "", e
 	}
 	if len(raw) > 8192 {
-		return "", "", errors.New("command payload too large")
+		return "", "", errors.New("Превышен допустимый размер: «command payload»")
 	}
 	sum := sha256.Sum256(raw)
 	return string(raw), hex.EncodeToString(sum[:]), nil
@@ -170,7 +170,7 @@ func (r *Repository) CreateBridgeCommand(ctx context.Context, c model.ServerBrid
 		}
 	}
 	if !durableFieldsNonempty(c.ID, c.ServerID, c.RequestedBy, c.IdempotencyKey) || len(c.IdempotencyKey) < 8 || !bridgeCommandTypes[c.Type] || !isHex256(c.RuntimeID) || c.RuntimeEpoch <= 0 || c.ExpiresAt.Before(time.Now()) || time.Until(c.ExpiresAt) > time.Hour {
-		err = errors.New("invalid bridge command identity/type/expiry")
+		err = errors.New("Некорректное значение: «bridge command identity/type/expiry»")
 		return
 	}
 	payload, digest, e := bridgePayload(c.Payload)
@@ -224,7 +224,7 @@ func (r *Repository) CreateBridgeCommand(ctx context.Context, c model.ServerBrid
 func (r *Repository) LeaseBridgeCommand(ctx context.Context, proof NodeProof, runtime string, epoch int64, worker string, after int64, ttl time.Duration) (out model.ServerBridgeControlCommand, err error) {
 	node := proof.NodeID
 	if !durableFieldsNonempty(node, worker) || !isHex256(runtime) || epoch < 1 || len(worker) < 8 || after < 0 || ttl < time.Second || ttl > time.Minute {
-		return out, errors.New("invalid bridge dispatch parameters")
+		return out, errors.New("Некорректное значение: «bridge dispatch parameters»")
 	}
 	noCommand := false
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -294,7 +294,7 @@ func (r *Repository) LeaseBridgeCommand(ctx context.Context, proof NodeProof, ru
 func (r *Repository) CompleteBridgeCommand(ctx context.Context, proof NodeProof, id, runtime, worker, token string, epoch, seq int64, status string, result map[string]string, failure string) (out model.ServerBridgeControlCommand, err error) {
 	node := proof.NodeID
 	if !map[string]bool{"succeeded": true, "failed": true, "unsupported": true}[status] || !isHex256(token) || !isHex256(runtime) || epoch < 1 || seq < 1 || worker == "" {
-		return out, errors.New("invalid bridge acknowledgement")
+		return out, errors.New("Некорректное значение: «bridge acknowledgement»")
 	}
 	encoded, _, e := bridgePayload(result)
 	if e != nil {

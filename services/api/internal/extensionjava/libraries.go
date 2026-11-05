@@ -33,7 +33,7 @@ type LibraryInfo0482 struct {
 
 func readBounded0482(file *zip.File, max int64) ([]byte, error) {
 	if file.UncompressedSize64 > uint64(max) {
-		return nil, errors.New("oversized library entry")
+		return nil, errors.New("Превышен допустимый размер: «library entry»")
 	}
 	r, err := file.Open()
 	if err != nil {
@@ -66,11 +66,11 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 			return nil, 0, 0, err
 		}
 		if !utf8.Valid(text) {
-			return nil, 0, 0, errors.New("library lock must be UTF-8")
+			return nil, 0, 0, errors.New("Для блокировка библиотек требуется: UTF-8")
 		}
 		lines = strings.Split(strings.TrimSuffix(string(text), "\n"), "\n")
 		if len(lines) == 0 || len(lines) == 1 && lines[0] == "" {
-			return nil, 0, 0, errors.New("empty library lock")
+			return nil, 0, 0, errors.New("Пустое значение: блокировка библиотек")
 		}
 		if len(lines) > 64 {
 			return nil, 0, 0, errors.New("more than 64 libraries")
@@ -88,17 +88,17 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 	for _, line := range lines {
 		fields := strings.Split(line, "\t")
 		if len(fields) != 5 {
-			return nil, 0, 0, errors.New("invalid library lock row")
+			return nil, 0, 0, errors.New("Некорректное значение: «library lock row»")
 		}
 		name, id, version, hash, api := fields[0], fields[1], fields[2], fields[3], fields[4]
 		if !libraryPath0482.MatchString(name) || !coordinate0482.MatchString(id) || !version0482.MatchString(version) || !digest0482.MatchString(hash) || api == "" || recorded[name] || coords[id] {
-			return nil, 0, 0, errors.New("invalid or duplicate dependency identity")
+			return nil, 0, 0, errors.New("Некорректное значение: «or duplicate dependency identity»")
 		}
 		recorded[name] = true
 		coords[id] = true
 		file := entries[name]
 		if file == nil || file.FileInfo().IsDir() {
-			return nil, 0, 0, fmt.Errorf("bundled library %s missing", name)
+			return nil, 0, 0, fmt.Errorf("Отсутствует: «bundled library» %s", name)
 		}
 		contents, err := readBounded0482(file, 16<<20)
 		if err != nil {
@@ -114,17 +114,17 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 		}
 		archive, err := zip.NewReader(bytes.NewReader(contents), int64(len(contents)))
 		if err != nil {
-			return nil, 0, 0, fmt.Errorf("invalid nested JAR %s: %w", name, err)
+			return nil, 0, 0, fmt.Errorf("Некорректное значение: «nested JAR» %s: %w", name, err)
 		}
 		if len(archive.File) == 0 || len(archive.File) > 4096 {
-			return nil, 0, 0, errors.New("invalid nested JAR entry count")
+			return nil, 0, 0, errors.New("Некорректное значение: «nested JAR entry count»")
 		}
 		names := map[string]bool{}
 		var expanded uint64
 		for _, part := range archive.File {
 			fn := part.Name
 			if fn == "" || strings.HasPrefix(fn, "/") || strings.ContainsAny(fn, "\\\x00") || strings.Contains(fn, "//") || path.Clean(fn) != strings.TrimSuffix(fn, "/") || strings.Contains("/"+fn, "/../") || fn == ".." || names[fn] || part.Mode()&os.ModeSymlink != 0 {
-				return nil, 0, 0, fmt.Errorf("invalid nested JAR entry %q", fn)
+				return nil, 0, 0, fmt.Errorf("Некорректное значение: «nested JAR entry» %q", fn)
 			}
 			names[fn] = true
 			if part.UncompressedSize64 > 16<<20 {
@@ -141,11 +141,11 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 				}
 				lower := strings.ToLower(strings.ReplaceAll(string(data), "\r\n", "\n"))
 				if strings.Contains("\n"+lower, "\nclass-path:") || strings.Contains("\n"+lower, "\nmulti-release: true") {
-					return nil, 0, 0, errors.New("nested library external classpath or multi-release forbidden")
+					return nil, 0, 0, errors.New("Запрещено: «nested library external classpath or multi-release»")
 				}
 			}
 			if strings.HasPrefix(fn, "META-INF/versions/") {
-				return nil, 0, 0, errors.New("versioned nested libraries are unsupported")
+				return nil, 0, 0, errors.New("Не поддерживается: «versioned nested libraries are»")
 			}
 			if !strings.HasSuffix(fn, ".class") {
 				if _, err := readBounded0482(part, 16<<20); err != nil {
@@ -166,11 +166,11 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 				return nil, 0, 0, err
 			}
 			if len(payload) < 8 || binary.BigEndian.Uint32(payload[:4]) != 0xcafebabe || binary.BigEndian.Uint16(payload[4:6]) == 65535 {
-				return nil, 0, 0, fmt.Errorf("invalid nested class %s", fn)
+				return nil, 0, 0, fmt.Errorf("Некорректное значение: «nested class» %s", fn)
 			}
 			major := int(binary.BigEndian.Uint16(payload[6:8]))
 			if major < 45 || major > 100 {
-				return nil, 0, 0, fmt.Errorf("unsupported nested class version %s", fn)
+				return nil, 0, 0, fmt.Errorf("Не поддерживается: «nested class version» %s", fn)
 			}
 			if major > maxMajor {
 				maxMajor = major

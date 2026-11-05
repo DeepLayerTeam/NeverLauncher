@@ -17,7 +17,7 @@ def require(text, needles, label):
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 11):
-    raise SystemExit(f"HA Control Plane gate requires VERSION>=0.19.11, got {version}")
+    raise SystemExit(f"Для «HA Control Plane gate» требуется «VERSION>=0.19.11, got» {version}")
 
 control = read("services/api/internal/httpapi/server_bridge_control_0195.go")
 repo = read("services/api/internal/repository/server_bridge_v2.go")
@@ -180,7 +180,7 @@ require(
 )
 for forbidden in ["status == 401 ||", "status == 403 ||"]:
     if forbidden in client:
-        raise SystemExit("authentication rejection must not trigger endpoint failover")
+        raise SystemExit("«authentication rejection»: запрещено «trigger endpoint failover»")
 for text, needle, label in [
     (preflight, "serverbridge-ha-control-plane-01911.py", "preflight"),
     (ci, "serverbridge-ha-control-plane-01911.py", "CI"),

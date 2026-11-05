@@ -44,7 +44,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		return e
 	}
 	if len(z.File) == 0 || len(z.File) > 30001 {
-		return errors.New("invalid export entry count")
+		return errors.New("Некорректное значение: «export entry count»")
 	}
 	seen := make(map[string]bool, len(z.File))
 	var manifest sourceManifest0333
@@ -54,7 +54,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 			continue
 		}
 		if entry.UncompressedSize64 > 16<<20 {
-			return errors.New("export manifest is too large")
+			return errors.New("Превышен допустимый размер: «export manifest»")
 		}
 		r, e := entry.Open()
 		if e != nil {
@@ -85,13 +85,13 @@ func verifyGravitExport0333(name, manifestHash string) error {
 	expected := make(map[string]exportedSourceFile0333, len(manifest.Files))
 	for _, v := range manifest.Files {
 		if _, ok := expected[v.Path]; ok {
-			return errors.New("duplicate path in export manifest")
+			return errors.New("Обнаружен дубликат: «path in export manifest»")
 		}
 		expected[v.Path] = v
 	}
 	for _, entry := range z.File {
 		if seen[entry.Name] {
-			return errors.New("duplicate export member")
+			return errors.New("Обнаружен дубликат: «export member»")
 		}
 		seen[entry.Name] = true
 		if entry.Name == ".migration/inventory.json" {
@@ -99,7 +99,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		}
 		meta, ok := expected[entry.Name]
 		if !ok {
-			return fmt.Errorf("unexpected export file %q", entry.Name)
+			return fmt.Errorf("Неожиданное значение: «export file» %q", entry.Name)
 		}
 		r, e := entry.Open()
 		if e != nil {
@@ -115,7 +115,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 			return closeErr
 		}
 		if n != meta.Size || hex.EncodeToString(h.Sum(nil)) != meta.SHA256 {
-			return fmt.Errorf("export file changed: %q", entry.Name)
+			return fmt.Errorf("Обнаружено изменение: «export file»: %q", entry.Name)
 		}
 	}
 	if len(seen) != len(expected)+1 {
@@ -125,10 +125,10 @@ func verifyGravitExport0333(name, manifestHash string) error {
 }
 func postGravitInventory0333(endpoint, token, sourcePath, out string, export bool) error {
 	if sourcePath == "" {
-		return errors.New("inventory/export requires --source /path/to/gravit.zip")
+		return errors.New("Для «inventory/export» требуется «--source /path/to/gravit.zip»")
 	}
 	if export && out == "" {
-		return errors.New("export requires --output /path/to/private-export.zip")
+		return errors.New("Для «export» требуется «--output /path/to/private-export.zip»")
 	}
 	st, e := os.Stat(sourcePath)
 	if e != nil {
@@ -144,7 +144,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("source export requires HTTPS except explicit loopback IP")
+			return errors.New("Для экспорт источника требуется «HTTPS except explicit loopback IP»")
 		}
 	}
 	source, e := os.Open(sourcePath)
@@ -213,7 +213,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	// Создание ссылки атомарно в пределах файловой системы и завершается ошибкой при существующей цели. Не
 	// затирайте предыдущие снимки восстановления и не переходите по символьным ссылкам назначения.
 	if e = os.Link(tmp.Name(), out); e != nil {
-		return fmt.Errorf("cannot safely publish export to %q (destination must not exist): %w", out, e)
+		return fmt.Errorf("«cannot safely publish export to %q (destination»: запрещено «exist):» %w", out, e)
 	}
 	fmt.Printf("Exported verified Gravit source: %s (manifest SHA-256 %s)\n", out, expected)
 	return nil

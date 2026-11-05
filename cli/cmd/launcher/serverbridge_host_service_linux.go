@@ -57,7 +57,7 @@ func hostServiceFile02811(scope, name string) (string, error) {
 
 func hostUnitValue02811(value string) (string, error) {
 	if value == "" || strings.ContainsAny(value, "\n\r\x00") {
-		return "", errors.New("empty or multiline value forbidden in systemd unit")
+		return "", errors.New("Пустое значение: «or multiline value forbidden in systemd unit»")
 	}
 	// Экранируйте и спецификаторы systemd, и синтаксис аргументов в кавычках; shell не участвует.
 	value = strings.ReplaceAll(value, "%", "%%")
@@ -68,13 +68,13 @@ func hostUnitValue02811(value string) (string, error) {
 
 func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	if !hostServiceName02811.MatchString(spec.Name) {
-		return "", errors.New("invalid service name")
+		return "", errors.New("Некорректное значение: «service name»")
 	}
 	if spec.Component != "host" && spec.Component != "remote" {
 		return "", errors.New("invalid component")
 	}
 	if !filepath.IsAbs(spec.Root) || !filepath.IsAbs(spec.Binary) {
-		return "", errors.New("service root and binary must be absolute")
+		return "", errors.New("Для «service root and binary» требуется: «absolute»")
 	}
 	root, err := hostUnitValue02811(spec.Root)
 	if err != nil {
@@ -142,7 +142,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	}
 	if spec.Scope == "system" {
 		if spec.User == "" || spec.User == "root" || spec.User == "0" || !hostServiceName02811.MatchString(spec.Group) {
-			return "", errors.New("system service requires an explicitly selected non-root --service-user")
+			return "", errors.New("Для «system service» требуется «an explicitly selected non-root --service-user»")
 		}
 		unit += "User=" + spec.User + "\nGroup=" + spec.Group + "\nProtectSystem=strict\nProtectHome=read-only\nPrivateTmp=yes\nProtectKernelTunables=yes\nProtectKernelModules=yes\nProtectControlGroups=yes\nCapabilityBoundingSet=\nAmbientCapabilities=\nReadWritePaths=" + root + "\n"
 	}
@@ -164,7 +164,7 @@ func hostServiceSystemctl02811(scope string, args ...string) error {
 
 func hostServiceAbsoluteFile02811(input string) (string, error) {
 	if input == "" {
-		return "", errors.New("required file path missing")
+		return "", errors.New("Отсутствует: «required file path»")
 	}
 	path, err := filepath.Abs(input)
 	if err != nil {
@@ -187,12 +187,12 @@ func hostServiceAbsoluteFile02811(input string) (string, error) {
 func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 	if spec.Scope != "system" {
 		if os.Geteuid() == 0 {
-			return errors.New("root must not install a user-scoped service")
+			return errors.New("корневой каталог: запрещено «install a user-scoped service»")
 		}
 		return nil
 	}
 	if os.Geteuid() != 0 {
-		return errors.New("system service installation requires root; no implicit privilege escalation")
+		return errors.New("Для «system service installation» требуется «root; no implicit privilege escalation»")
 	}
 	if !hostServiceName02811.MatchString(spec.User) {
 		return errors.New("--service-user must name an existing unprivileged account")
@@ -222,7 +222,7 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 	}
 	stat, ok := fi.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != uint32(uid) {
-		return errors.New("server root must be owned by the unprivileged service account")
+		return errors.New("Для корневой каталог сервера требуется: «owned by the unprivileged service account»")
 	}
 	return nil
 }
@@ -235,7 +235,7 @@ func hostServiceHandle02811(args []string) error {
 	switch action {
 	case "install", "uninstall", "start", "stop", "restart", "status":
 	default:
-		return fmt.Errorf("unknown service action %q", action)
+		return fmt.Errorf("Неизвестное значение: «service action» %q", action)
 	}
 	scope := flagValue(args, "--scope", "user")
 	name := flagValue(args, "--name", "host")
@@ -246,7 +246,7 @@ func hostServiceHandle02811(args []string) error {
 	unit := filepath.Base(path)
 	if action != "install" {
 		if action == "uninstall" && scope == "system" && os.Geteuid() != 0 {
-			return errors.New("system service removal requires root")
+			return errors.New("Для «system service removal» требуется корневой каталог")
 		}
 		if action == "uninstall" {
 			data, readErr := os.ReadFile(path)
@@ -368,7 +368,7 @@ func hostServiceHandle02811(args []string) error {
 		}
 		stat, ok := keyInfo.Sys().(*syscall.Stat_t)
 		if !ok || stat.Uid != uint32(uid) || keyInfo.Mode().Perm()&0400 == 0 {
-			return errors.New("remote TLS private key must be readable and owned by the selected non-root service account")
+			return errors.New("Для «remote TLS private key» требуется: «readable and owned by the selected non-root service account»")
 		}
 	}
 	if spec.Scope == "system" {

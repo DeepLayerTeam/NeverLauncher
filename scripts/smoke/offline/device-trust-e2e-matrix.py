@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def read(path: str) -> str:
     p = ROOT / path
     if not p.is_file():
-        raise SystemExit(f"missing required file: {path}")
+        raise SystemExit(f"Отсутствует обязательный файл: {path}")
     return p.read_text(encoding="utf-8")
 
 
@@ -27,21 +27,21 @@ version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 try:
     version_tuple = tuple(int(part) for part in version.split("."))
 except ValueError as exc:
-    raise SystemExit(f"invalid VERSION: {version}") from exc
+    raise SystemExit(f"Некорректное значение VERSION: {version}") from exc
 if version_tuple < (0, 12, 9):
-    raise SystemExit(f"VERSION must be >= 0.12.9, got {version}")
+    raise SystemExit(f"Для версия требуется: «>= 0.12.9, got» {version}")
 
 targets_path = ROOT / "device-trust/targets.json"
 targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version or targets.get("schemaVersion") != "1.0":
-    raise SystemExit("Device Trust target document version/schema mismatch")
+    raise SystemExit("Несовпадение: «Device Trust target document version/schema»")
 rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) < 4:
     raise SystemExit("public Device Trust matrix is missing mandatory baseline targets")
 if any(row.get("required") is not True for row in rows):
-    raise SystemExit("every Device Trust target must be required")
+    raise SystemExit("Для «every Device Trust target» требуется: «required»")
 if any("status" in row or "passed" in row for row in rows):
-    raise SystemExit("Device Trust targets must not contain editable pass/fail state")
+    raise SystemExit("«Device Trust targets»: запрещено «contain editable pass/fail state»")
 expected = {
     "postgres-protocol-linux-x64": ("protocol-e2e", "linux"),
     "native-linux-x64": ("native-tests", "linux"),
@@ -53,10 +53,10 @@ expected = {
 }
 actual = {str(row.get("id")): (row.get("kind"), row.get("os")) for row in rows}
 if len(actual) != len(rows):
-    raise SystemExit("duplicate Device Trust target ID")
+    raise SystemExit("Обнаружен дубликат: «Device Trust target ID»")
 for target_id, identity in expected.items():
     if actual.get(target_id) != identity:
-        raise SystemExit(f"missing or changed mandatory Device Trust baseline target: {target_id}")
+        raise SystemExit(f"Отсутствует: «or changed mandatory Device Trust baseline target»: {target_id}")
 # Новые обязательные платформы также проверяются scripts/device_trust/matrix.py;
 # исторический этап не должен отклонять законно расширенный охват защиты.
 

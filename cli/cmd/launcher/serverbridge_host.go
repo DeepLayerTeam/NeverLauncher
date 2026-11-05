@@ -227,14 +227,14 @@ func configureServerBridgeHost01910(args []string) error {
 			javaArgsFile = detectModernForgeArgsFile01910(root, detection.Platform)
 		}
 		if javaArgsFile == "" {
-			return errors.New("java-args-file mode requires --java-args-file or a detected Forge/NeoForge unix_args/win_args file")
+			return errors.New("Для «java-args-file mode» требуется «--java-args-file or a detected Forge/NeoForge unix_args/win_args file»")
 		}
 		javaArgsFile, err = hostResolveInsideRoot01910(root, javaArgsFile, true)
 		if err != nil {
 			return fmt.Errorf("java args file: %w", err)
 		}
 	default:
-		return fmt.Errorf("unsupported host launch mode %q (supported: java-jar, java-args-file, java-main-class, java-module)", launchMode)
+		return fmt.Errorf("Не поддерживается: «host launch mode %q (supported: java-jar, java-args-file, java-main-class, java-module)»", launchMode)
 	}
 
 	jvmArgs := multiFlagValues01910(args, "--jvm-arg")
@@ -284,7 +284,7 @@ func configureServerBridgeHost01910(args []string) error {
 			return err
 		}
 		if !hostAllowlisted0282(envAllowlist, parts[0]) {
-			return fmt.Errorf("environment variable %s requires --env-allow %s", parts[0], parts[0])
+			return fmt.Errorf("Для «environment variable» %s требуется --env-allow %s", parts[0], parts[0])
 		}
 		environment[parts[0]] = parts[1]
 	}
@@ -489,7 +489,7 @@ func hostResolveInsideRoot01910(root, raw string, mustExist bool) (string, error
 			return "", err
 		}
 		if !info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
-			return "", errors.New("path is not a regular file")
+			return "", errors.New("путь: требуется обычный файл")
 		}
 		realRoot, rootErr := filepath.EvalSymlinks(root)
 		realPath, pathErr := filepath.EvalSymlinks(path)
@@ -501,7 +501,7 @@ func hostResolveInsideRoot01910(root, raw string, mustExist bool) (string, error
 			return "", errors.New("resolved path escapes server root through symlink")
 		}
 		if resolvedInfo, statErr := os.Stat(realPath); statErr != nil || !resolvedInfo.Mode().IsRegular() {
-			return "", errors.New("resolved path is not a regular file")
+			return "", errors.New("«resolved path»: требуется обычный файл")
 		}
 	}
 	return path, nil
@@ -525,7 +525,7 @@ func startServerBridgeHost01910(args []string) error {
 			return fmt.Errorf("Minecraft process pid=%d remains alive; refusing to start another supervisor", state.ProcessPID)
 		}
 		if state.ProcessPID > 0 && state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID) {
-			return fmt.Errorf("unverified legacy Minecraft process pid=%d may be alive; manual reconciliation required", state.ProcessPID)
+			return fmt.Errorf("Требуется: «unverified legacy Minecraft process pid=%d may be alive; manual reconciliation»", state.ProcessPID)
 		}
 	}
 	if lock, readErr := readServerBridgeHostLock01910(paths["lock"]); readErr == nil && (hostIdentityMatches0282(lock.PID, lock.Identity) || (lock.Identity == "" && updaterProcessAlive0156(lock.PID))) {
@@ -604,7 +604,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		return err
 	}
 	if hostOwnIdentity0282() == "" {
-		return errors.New("Host Supervisor requires verifiable process identity on this OS")
+		return errors.New("Для «Host Supervisor» требуется «verifiable process identity on this OS»")
 	}
 	sessionID, err := randomHostSessionID01910()
 	if err != nil {
@@ -628,7 +628,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		return fmt.Errorf("orphan Minecraft pid=%d is still running: manual recovery needed", previousState.ProcessPID)
 	}
 	if previousState.ProcessPID > 0 && previousState.ProcessIdentity == "" && updaterProcessAlive0156(previousState.ProcessPID) {
-		return fmt.Errorf("legacy process pid=%d cannot be safely adopted or terminated", previousState.ProcessPID)
+		return fmt.Errorf("«legacy process pid=%d»: запрещено «be safely adopted or terminated»", previousState.ProcessPID)
 	}
 
 	command, err := serverBridgeHostCommand01910(config)
@@ -881,7 +881,7 @@ func serverBridgeHostCommand01910(config serverBridgeHostConfig01910) ([]string,
 
 func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) error {
 	if config.SchemaVersion != "1.0" || strings.TrimSpace(config.ServerRoot) == "" || !bridgeSupportedPlatform0199(config.Platform) {
-		return errors.New("invalid ServerBridge Host config")
+		return errors.New("Некорректное значение: «ServerBridge Host config»")
 	}
 	root, err := canonicalServerRoot0199(config.ServerRoot)
 	if err != nil {
@@ -891,7 +891,7 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 		return errors.New("host config serverRoot is not canonical")
 	}
 	if config.JavaPath == "" {
-		return errors.New("host config JavaPath is empty")
+		return errors.New("Пустое значение: «host config JavaPath»")
 	}
 	if err := hostValidateJavaExecutable0283(config.JavaPath, config.AllowCustomJavaExecutable); err != nil {
 		return err
@@ -914,24 +914,24 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 			return errors.New("configured Java args file is unavailable or outside server root")
 		}
 	} else if config.LaunchMode != "java-main-class" && config.LaunchMode != "java-module" {
-		return fmt.Errorf("unsupported launch mode %q", config.LaunchMode)
+		return fmt.Errorf("Не поддерживается: «launch mode» %q", config.LaunchMode)
 	}
 	if err := hostValidateJavaProfile0283(config); err != nil {
 		return err
 	}
 	if config.RestartPolicy != "never" && config.RestartPolicy != "on-failure" && config.RestartPolicy != "always" {
-		return errors.New("invalid restart policy")
+		return errors.New("Некорректное значение: «restart policy»")
 	}
 	if config.MaxRestarts < 0 || config.RestartBackoffMillis < 0 || config.StopTimeoutSeconds <= 0 {
-		return errors.New("invalid host supervision limits")
+		return errors.New("Некорректное значение: «host supervision limits»")
 	}
 	if config.WorkingDirectory != "" {
 		if dir, err := hostResolveDirectory0282(root, config.WorkingDirectory); err != nil || dir != config.WorkingDirectory {
-			return errors.New("invalid or escaping working directory")
+			return errors.New("Некорректное значение: «or escaping working directory»")
 		}
 	}
 	if config.LogMaxBytes < 0 || config.LogBackups < 0 || config.LogBackups > 32 || config.CrashWindowSeconds < 0 || config.StableRunSeconds < 0 {
-		return errors.New("invalid log or crash-loop limits")
+		return errors.New("Некорректное значение: «log or crash-loop limits»")
 	}
 	for _, key := range config.EnvAllowlist {
 		if err := validateHostEnvKey0282(key); err != nil {
@@ -957,7 +957,7 @@ func stopServerBridgeHost01910(args []string) error {
 	paths := hostPaths01910(root)
 	state, err := readServerBridgeHostRuntime01910(paths["runtime"])
 	if err != nil {
-		return fmt.Errorf("host runtime unavailable: %w", err)
+		return fmt.Errorf("Недоступно: «host runtime»: %w", err)
 	}
 	processAlive := hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity)
 	supervisorAlive := hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity)
@@ -979,7 +979,7 @@ func stopServerBridgeHost01910(args []string) error {
 	}
 	lock, err := readServerBridgeHostLock01910(paths["lock"])
 	if err != nil || lock.SessionID != state.SessionID || lock.PID != state.SupervisorPID || !hostIdentityMatches0282(lock.PID, lock.Identity) {
-		return fmt.Errorf("game process pid=%d is orphaned or supervisor identity is unverified; explicit operator reconciliation required", state.ProcessPID)
+		return fmt.Errorf("Требуется: «game process pid=%d is orphaned or supervisor identity is unverified; explicit operator reconciliation»", state.ProcessPID)
 	}
 	config, err := readServerBridgeHostConfig01910(paths["config"])
 	if err != nil {
@@ -1007,7 +1007,7 @@ func stopServerBridgeHost01910(args []string) error {
 		}
 		time.Sleep(70 * time.Millisecond)
 	}
-	return fmt.Errorf("stop not acknowledged: inspect host runtime; cannot safely signal process pid=%d outside supervisor", state.ProcessPID)
+	return fmt.Errorf("«stop not acknowledged: inspect host runtime;»: запрещено «safely signal process pid=%d outside supervisor»", state.ProcessPID)
 }
 
 func restartServerBridgeHost01910(args []string) error {
@@ -1190,13 +1190,13 @@ func acquireServerBridgeHostLock01910(path, sessionID string) error {
 		}
 		existing, readErr := readServerBridgeHostLock01910(path)
 		if readErr == nil && (hostIdentityMatches0282(existing.PID, existing.Identity) || (existing.Identity == "" && updaterProcessAlive0156(existing.PID))) {
-			return fmt.Errorf("ServerBridge Host is already supervised (or cannot be verified) by pid=%d", existing.PID)
+			return fmt.Errorf("«ServerBridge Host is already supervised (or»: запрещено «be verified) by pid=%d»", existing.PID)
 		}
 		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
 			return removeErr
 		}
 	}
-	return errors.New("could not acquire ServerBridge Host lock")
+	return errors.New("Не удалось получить «ServerBridge Host lock»")
 }
 
 func releaseServerBridgeHostLock01910(path, sessionID string) error {
@@ -1295,7 +1295,7 @@ func positiveIntFlag01910(args []string, name string, fallback int) (int, error)
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed <= 0 {
-		return 0, fmt.Errorf("%s must be a positive integer", name)
+		return 0, fmt.Errorf("Для «%s» требуется: «a positive integer»", name)
 	}
 	return parsed, nil
 }
@@ -1307,7 +1307,7 @@ func positiveOrZeroIntFlag01910(args []string, name string, fallback int) (int, 
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed < 0 {
-		return 0, fmt.Errorf("%s must be a non-negative integer", name)
+		return 0, fmt.Errorf("Для «%s» требуется: «a non-negative integer»", name)
 	}
 	return parsed, nil
 }

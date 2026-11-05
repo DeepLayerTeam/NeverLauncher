@@ -22,11 +22,11 @@ func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candida
 	}
 	if !validTextureDigest0255(candidate.Digest) || len(candidate.Token) != 64 || remove == nil ||
 		candidate.ObjectKey != "texture-blobs/sha256/"+candidate.Digest[:2]+"/"+candidate.Digest+".png" {
-		return errors.New("invalid fenced texture GC request")
+		return errors.New("Некорректное значение: «fenced texture GC request»")
 	}
 	for _, c := range candidate.Token {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return errors.New("invalid GC lease token")
+			return errors.New("Некорректное значение: «GC lease token»")
 		}
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})

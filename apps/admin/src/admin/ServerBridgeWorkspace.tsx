@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { HostOperationsWorkspace04111 } from "./HostOperationsWorkspace04111";
@@ -806,7 +807,7 @@ export function ServerBridgeWorkspace({
               </dd>
               <dt>Состояние</dt>
               <dd>
-                {node.status} · {node.runtimeTransition || "переход неизвестен"}
+                {statusRu(node.status)} · {node.runtimeTransition || "переход неизвестен"}
               </dd>
               <dt>Протокол</dt>
               <dd>
@@ -1161,7 +1162,7 @@ export function ServerBridgeWorkspace({
                   <thead>
                     <tr>
                       <th>Прокси</th>
-                      <th>Backend</th>
+                      <th>Серверная часть</th>
                       <th>Маршрут</th>
                       <th>Игроки / ёмкость</th>
                       <th>Наблюдение</th>

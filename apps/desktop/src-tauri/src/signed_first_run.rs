@@ -171,7 +171,7 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
     let mut signed_bytes=payload.clone();
     if env.schema_version=="2.0" {
         let policy=verified_policy(policy_dir,&root,now)?;
-        if env.key_id.is_empty()||env.trust_epoch!=policy.epoch{return Err("Bootstrap signer/epoch mismatch".into())}
+        if env.key_id.is_empty()||env.trust_epoch!=policy.epoch{return Err("Несовпадение: подписант и эпоха начальной настройки".into())}
         let signed_at=time_value(&env.signed_at)?;
         let key=policy.keys.iter().find(|k|k.id==env.key_id&&k.role=="bootstrap"&&k.status=="active")
             .ok_or("Bootstrap signer не активен в root-signed policy")?;

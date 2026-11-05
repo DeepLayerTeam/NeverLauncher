@@ -52,7 +52,7 @@ type SQLiteExtensionState struct {
 func packageDigest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
 func (r *Repository) PutPackage(ctx context.Context, data []byte, actor string) (out StoredPackage, created bool, err error) {
 	if len(data) == 0 || len(data) > maxPackageBytes {
-		return out, false, errors.New("package must be 1..16MiB")
+		return out, false, errors.New("Для пакет требуется: «1..16MiB»")
 	}
 	digest := packageDigest(data)
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -95,7 +95,7 @@ func (r *Repository) ReadPackage(ctx context.Context, digest string) (payload []
 			return notFound(e)
 		}
 		if packageDigest(payload) != digest {
-			return errors.New("persisted package SHA-256 mismatch")
+			return errors.New("Несовпадение: «persisted package SHA-256»")
 		}
 		return nil
 	})
@@ -103,11 +103,11 @@ func (r *Repository) ReadPackage(ctx context.Context, digest string) (payload []
 }
 func (r *Repository) RegisterExtensionPublisher(ctx context.Context, id, keyHex, actor string) error {
 	if !durableFieldsNonempty(id) || actor == "" {
-		return errors.New("publisher id and actor required")
+		return errors.New("Требуется: «publisher id and actor»")
 	}
 	key, e := hex.DecodeString(keyHex)
 	if e != nil || len(key) != ed25519.PublicKeySize {
-		return errors.New("publisher requires Ed25519 public key")
+		return errors.New("Для «publisher» требуется «Ed25519 public key»")
 	}
 	digest := packageDigest(key)
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -195,7 +195,7 @@ func extensionSignatureMessage(id, version, digest string) []byte {
 // подпись Ed25519 для кортежа ID/версия/дайджест расширения, а не только манифест вызывающего.
 func (r *Repository) PublishExtensionPackage(ctx context.Context, input ExtensionPackage, actor string) (out ExtensionPackage, err error) {
 	if !durableFieldsNonempty(input.ExtensionID, input.Version, input.Publisher) || !isHex256(input.Digest) {
-		return out, errors.New("invalid extension package tuple")
+		return out, errors.New("Некорректное значение: «extension package tuple»")
 	}
 	sig, e := hex.DecodeString(input.SignatureHex)
 	if e != nil || len(sig) != ed25519.SignatureSize {
@@ -218,7 +218,7 @@ func (r *Repository) PublishExtensionPackage(ctx context.Context, input Extensio
 			return notFound(e)
 		}
 		if packageDigest(data) != input.Digest {
-			return errors.New("package checksum mismatch")
+			return errors.New("Несовпадение: «package checksum»")
 		}
 		var existingDigest, existingPublisher string
 		var existingSig []byte
@@ -303,10 +303,10 @@ func (r *Repository) GetExtensionInstall326(ctx context.Context, id, scope, scop
 // Сохраняется только проверенный выбор пакета, а исполнение расширения — отдельный этап.
 func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExtensionInstall, expected int64) (out SQLiteExtensionInstall, err error) {
 	if !durableFieldsNonempty(v.ExtensionID, v.Actor) || (v.Scope != "global" && v.Scope != "project") || (v.Scope == "project" && v.ScopeID == "") || expected < 0 || !map[string]bool{"enabled": true, "disabled": true, "absent": true, "error": true}[v.State] {
-		return out, errors.New("invalid extension install operation")
+		return out, errors.New("Некорректное значение: «extension install operation»")
 	}
 	if v.State == "enabled" && (v.Version == "" || !isHex256(v.PackageDigest)) {
-		return out, errors.New("enabled extension requires verified package")
+		return out, errors.New("Для «enabled extension» требуется «verified package»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		if e := authorizedExtensionActor(ctx, q, v.Scope, v.ScopeID, v.Actor); e != nil {
@@ -356,7 +356,7 @@ func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExten
 // здесь открыто: используйте криптографическое хранилище секретов.
 func (r *Repository) PutExtensionState326(ctx context.Context, v SQLiteExtensionState, expected int64, actor string) (out SQLiteExtensionState, err error) {
 	if !durableFieldsNonempty(v.ExtensionID, v.Key) || len(v.Key) > 128 || v.Scope != "global" && v.Scope != "project" || v.Scope == "project" && v.ScopeID == "" || len(v.Value) == 0 || len(v.Value) > 65536 || expected < 0 {
-		return out, errors.New("invalid extension state key/value")
+		return out, errors.New("Некорректное значение: «extension state key/value»")
 	}
 	digest, e := durableHash([]byte(v.Value))
 	if e != nil {
@@ -413,7 +413,7 @@ func (r *Repository) GetExtensionState326(ctx context.Context, id, scope, scopeI
 			return notFound(e)
 		}
 		if packageDigest([]byte(out.Value)) != out.Digest {
-			return fmt.Errorf("extension state checksum mismatch")
+			return fmt.Errorf("Несовпадение: «extension state checksum»")
 		}
 		out.UpdatedAt = ts(timestamp)
 		return nil

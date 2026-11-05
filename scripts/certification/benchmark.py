@@ -38,7 +38,7 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
                 f"baseline/candidate version mismatch: expected {expected}, got {version}"
             )
     if repetitions < 3:
-        raise ValueError("at least 3 repetitions required")
+        raise ValueError("Требуется: «at least 3 repetitions»")
     rows = []
     with tempfile.TemporaryDirectory(prefix="nl-perf-02313-") as d:
         folder = Path(d)
@@ -159,7 +159,7 @@ def main():
         or clean.stdout.strip()
         or not re.fullmatch(r"[0-9a-f]{40}", rev.stdout.strip())
     ):
-        raise RuntimeError("benchmark publication requires a clean Git HEAD")
+        raise RuntimeError("Для «benchmark publication» требуется «a clean Git HEAD»")
     result.update(
         commit=rev.stdout.strip(),
         productVersion="0.24.0",

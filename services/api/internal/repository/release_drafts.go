@@ -38,7 +38,7 @@ type ReleaseDraftStore interface {
 
 func validateDraft0218(d ReleaseDraft) error {
 	if strings.TrimSpace(d.ID) == "" || strings.TrimSpace(d.ProjectID) == "" || strings.TrimSpace(d.OwnerID) == "" || len(d.ID) > 128 || len(d.ProjectID) > 128 || len(d.OwnerID) > 128 || len(d.ProfileID) > 128 || len(d.Channel) > 128 || len(d.Version) > 128 || len(d.MinecraftVersion) > 64 || len(d.Loader) > 64 || len(d.PackageID) > 128 || len(d.JobID) > 128 || len(d.Step) > 32 {
-		return errors.New("invalid draft identity or field length")
+		return errors.New("Некорректное значение: «draft identity or field length»")
 	}
 	return nil
 }

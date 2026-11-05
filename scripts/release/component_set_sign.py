@@ -35,7 +35,7 @@ def signed_set(
         ):
             value = os.environ["LAUNCHER_COMPONENT_SECURITY_GENERATION"].strip()
             if not value.isascii() or not value.isdigit():
-                raise ValueError("component security generation must be decimal")
+                raise ValueError("Для «component security generation» требуется: «decimal»")
             generation = int(value)
             manifest["securityGeneration"] = generation
         if type(generation) is not int or generation <= 0 or generation > 2**64 - 1:
@@ -49,12 +49,12 @@ def signed_set(
         if platform == "windows"
         else {"desktop", "guard", "runtime"}
     ):
-        raise ValueError("unexpected component role set")
+        raise ValueError("Неожиданное значение: «component role set»")
     helpers = [
         x for x in manifest.get("supportFiles", []) if x["component"] == "updater"
     ]
     if len(helpers) != 1 or not helpers[0]["executable"]:
-        raise ValueError("component update helper missing")
+        raise ValueError("Отсутствует: «component update helper»")
     rows = [
         {
             "component": "desktop",
@@ -112,7 +112,7 @@ def signed_set(
 
     seed_bytes = bytes.fromhex(seed)
     if len(seed_bytes) != 32:
-        raise ValueError("Ed25519 seed must be exactly 32 bytes in hexadecimal")
+        raise ValueError("Для «Ed25519 seed» требуется: «exactly 32 bytes in hexadecimal»")
     key = Ed25519PrivateKey.from_private_bytes(seed_bytes)
     expected_pub = (
         os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "").strip().lower()
@@ -162,10 +162,10 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
     root = Ed25519PublicKey.from_public_bytes(bytes.fromhex(root_hex))
     policy_raw = Path(policy_file).read_bytes()
     if len(policy_raw) > 128 * 1024:
-        raise ValueError("oversized trust policy")
+        raise ValueError("Превышен допустимый размер: политика доверия")
     envelope = json.loads(policy_raw)
     if envelope.get("schemaVersion") != "1.0":
-        raise ValueError("invalid trust policy envelope")
+        raise ValueError("Некорректное значение: конверт политики доверия")
     payload = base64.b64decode(envelope["payload"], validate=True)
     root.verify(
         bytes.fromhex(envelope["rootSignature"]),
@@ -177,7 +177,7 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
         or policy.get("domain") != "launcher.trust.v1"
         or policy.get("epoch", 0) < 1
     ):
-        raise ValueError("invalid delegated policy")
+        raise ValueError("Некорректное значение: «delegated policy»")
 
     def timestamp(s):
         return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(

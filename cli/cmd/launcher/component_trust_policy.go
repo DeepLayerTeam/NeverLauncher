@@ -63,7 +63,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	}
 	root, e := hex.DecodeString(strings.TrimSpace(rootHex))
 	if e != nil || len(root) != 32 {
-		return p, "", errors.New("trusted embedded root must be 32-byte Ed25519")
+		return p, "", errors.New("Для «trusted embedded root» требуется: «32-byte Ed25519»")
 	}
 	var env TrustPolicyEnvelope
 	if e = decodeStrict(raw, &env); e != nil {
@@ -101,28 +101,28 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	active := 0
 	for _, k := range p.Keys {
 		if k.ID == "" || len(k.ID) > 100 || !validTrustID02312(k.ID) || (k.Role != "bootstrap" && k.Role != "component" && k.Role != "game" && k.Role != "release") {
-			return p, "", errors.New("invalid delegated key id/role")
+			return p, "", errors.New("Некорректное значение: «delegated key id/role»")
 		}
 		key, e := hex.DecodeString(k.PublicKey)
 		if e != nil || len(key) != 32 {
-			return p, "", errors.New("delegated public key invalid")
+			return p, "", errors.New("Некорректное значение: «delegated public key»")
 		}
 		if ids[k.ID] || pubs[strings.ToLower(k.PublicKey)] {
-			return p, "", errors.New("duplicate delegated key")
+			return p, "", errors.New("Обнаружен дубликат: «delegated key»")
 		}
 		ids[k.ID] = true
 		pubs[strings.ToLower(k.PublicKey)] = true
 		if k.Status != "active" && k.Status != "verify-only" && k.Status != "revoked" {
-			return p, "", errors.New("invalid delegated key status")
+			return p, "", errors.New("Некорректное значение: «delegated key status»")
 		}
 		t, e := strictTime02312(k.NotBefore)
 		if e != nil || t.After(expiry) {
-			return p, "", errors.New("invalid delegated key activation")
+			return p, "", errors.New("Некорректное значение: «delegated key activation»")
 		}
 		if k.Status == "verify-only" {
 			u, e := strictTime02312(k.VerifyUntil)
 			if e != nil || !u.After(t) || u.Sub(t) > 90*24*time.Hour || u.After(expiry) {
-				return p, "", errors.New("invalid finite key overlap")
+				return p, "", errors.New("Некорректное значение: «finite key overlap»")
 			}
 		}
 		if k.Status == "active" {

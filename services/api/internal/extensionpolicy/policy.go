@@ -28,15 +28,15 @@ var hostname = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$`)
 
 func normalizedSet(values []string, check func(string) bool) ([]string, error) {
 	if len(values) > 128 {
-		return nil, errors.New("sandbox grant list too large")
+		return nil, errors.New("Превышен допустимый размер: «sandbox grant list»")
 	}
 	m := make(map[string]bool, len(values))
 	for _, v := range values {
 		if v == "" || strings.TrimSpace(v) != v || v != strings.ToLower(v) || !check(v) {
-			return nil, fmt.Errorf("invalid sandbox grant %q", v)
+			return nil, fmt.Errorf("Некорректное значение: «sandbox grant» %q", v)
 		}
 		if m[v] {
-			return nil, fmt.Errorf("duplicate sandbox grant %q", v)
+			return nil, fmt.Errorf("Обнаружен дубликат: «sandbox grant» %q", v)
 		}
 		m[v] = true
 	}
@@ -73,10 +73,10 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 	} // устаревшие пакеты сохраняют явно заданный режим без изоляции
 	p := *in
 	if p.Version != "1" {
-		return nil, errors.New("sandbox.version must be 1")
+		return nil, errors.New("Для «sandbox.version» требуется: «1»")
 	}
 	if p.Mode != "isolated" && p.Mode != "trusted" {
-		return nil, errors.New("sandbox.mode must be isolated or trusted")
+		return nil, errors.New("Для «sandbox.mode» требуется: «isolated or trusted»")
 	}
 	var err error
 	if p.FilesystemRead, err = normalizedSet(p.FilesystemRead, func(v string) bool { return v == "package" || fsGrant(v) && v != "scratch" }); err != nil {
@@ -92,13 +92,13 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, err
 	}
 	if p.MaxProcesses < 0 || p.MaxProcesses > 128 || p.MaxMemoryBytes < 0 || p.MaxMemoryBytes > 64<<30 || p.MaxCPUPercent < 0 || p.MaxCPUPercent > 100 || p.TimeoutSeconds < 0 || p.TimeoutSeconds > 86400 {
-		return nil, errors.New("invalid sandbox resource limit")
+		return nil, errors.New("Некорректное значение: «sandbox resource limit»")
 	}
 	if p.MaxRequestsPerSecond < 0 || p.MaxRequestsPerSecond > 64 || p.MaxOutputBytes < 0 || p.MaxOutputBytes > 8<<20 {
 		return nil, errors.New("sandbox IPC rate/output limit exceeds host maximum")
 	}
 	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
-		return nil, errors.New("isolated sandbox requires finite process, memory, CPU and time limits")
+		return nil, errors.New("Для «isolated sandbox» требуется «finite process, memory, CPU and time limits»")
 	}
 	return &p, nil
 }
@@ -183,7 +183,7 @@ func RequireReview(before, after model.ExtensionManifest, submittedDigest string
 	// расширения. Никогда не считайте смену ID при тех же разрешениях безопасным
 	// обновлением.
 	if before.ID == "" || after.ID == "" || before.ID != after.ID {
-		return errors.New("sandbox approval cannot cross extension identities")
+		return errors.New("«sandbox approval»: запрещено «cross extension identities»")
 	}
 	changed, err := ChangesRequireApproval(before, after)
 	if err != nil {

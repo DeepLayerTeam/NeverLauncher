@@ -25,16 +25,16 @@ struct Watermark { epoch: u64, digest: String, root_sha256: String }
 
 fn parse_utc(timestamp: &str) -> Result<i64,String> {
     let x=timestamp.as_bytes();
-    if x.len()!=20 || x[4]!=b'-' || x[7]!=b'-' || x[10]!=b'T' || x[13]!=b':' || x[16]!=b':' || x[19]!=b'Z' {return Err("trust timestamp must be canonical YYYY-MM-DDTHH:MM:SSZ".into())}
+    if x.len()!=20 || x[4]!=b'-' || x[7]!=b'-' || x[10]!=b'T' || x[13]!=b':' || x[16]!=b':' || x[19]!=b'Z' {return Err("Для метка времени доверия требуется: «canonical YYYY-MM-DDTHH:MM:SSZ»".into())}
     let num=|from:usize,to:usize| -> Result<i64,String> {
-        let b=&x[from..to];if !b.iter().all(u8::is_ascii_digit) {return Err("invalid trust timestamp digit".into())}
+        let b=&x[from..to];if !b.iter().all(u8::is_ascii_digit) {return Err("Некорректное значение: «trust timestamp digit»".into())}
         std::str::from_utf8(b).unwrap().parse::<i64>().map_err(|e|e.to_string())
     };
     let (y,m,d,h,min,sec)=(num(0,4)?,num(5,7)?,num(8,10)?,num(11,13)?,num(14,16)?,num(17,19)?);
-    if y<1970 || !(1..=12).contains(&m) || h>23 || min>59 || sec>59 {return Err("invalid trust timestamp fields".into())}
+    if y<1970 || !(1..=12).contains(&m) || h>23 || min>59 || sec>59 {return Err("Некорректное значение: «trust timestamp fields»".into())}
     let leap=y%4==0&&(y%100!=0||y%400==0);
     let days=[31,if leap {29}else{28},31,30,31,30,31,31,30,31,30,31];
-    if d<1 || d>days[(m-1) as usize] {return Err("invalid trust timestamp day".into())}
+    if d<1 || d>days[(m-1) as usize] {return Err("Некорректное значение: «trust timestamp day»".into())}
     // Количество дней от гражданской даты по пролептическому григорианскому календарю относительно эпохи Unix.
     let yy=y-i64::from(m<=2);let era=yy.div_euclid(400);let yoe=yy-era*400;
     let mp=m+if m>2 {-3}else{9};let doy=(153*mp+2)/5+d-1;
@@ -46,32 +46,32 @@ fn verify_signature(key_hex:&str,payload:&[u8],sig_hex:&str)->Result<(),String>{
     let bytes: [u8;32]=hex::decode(key_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Ed25519 public key length".to_string())?;
     let signature: [u8;64]=hex::decode(sig_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Ed25519 signature length".to_string())?;
     let key=VerifyingKey::from_bytes(&bytes).map_err(|e|e.to_string())?;
-    key.verify(payload,&Signature::from_bytes(&signature)).map_err(|_|"root-signed trust policy signature invalid".to_string())
+    key.verify(payload,&Signature::from_bytes(&signature)).map_err(|_|"Некорректное значение: «root-signed trust policy signature»".to_string())
 }
 fn read_policy(root_key:&str)->Result<(Policy,String),String>{
     // Выбор пути не выбирает корень доверия: он выбирает только байты, проверенные
     // отдельным закреплённым корневым ключом вызывающей стороны.
-    let path=std::env::var("LAUNCHER_GAME_TRUST_POLICY_FILE").map_err(|_|"delegated game trust policy path required".to_string())?;
+    let path=std::env::var("LAUNCHER_GAME_TRUST_POLICY_FILE").map_err(|_|"Требуется: «delegated game trust policy path»".to_string())?;
     let path=Path::new(&path);
     let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
-    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("unsafe game trust policy file".into())}
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("Небезопасное значение: «game trust policy file»".into())}
     let raw=fs::read(path).map_err(|e|e.to_string())?;
     let env:Envelope=serde_json::from_slice(&raw).map_err(|e|e.to_string())?;
-    if env.schema_version!="1.0" {return Err("unknown trust policy envelope".into())}
+    if env.schema_version!="1.0" {return Err("Неизвестное значение: конверт политики доверия".into())}
     let payload=STANDARD.decode(&env.payload).map_err(|e|e.to_string())?;
-    if payload.len()>96*1024 {return Err("trust policy payload too large".into())}
+    if payload.len()>96*1024 {return Err("Превышен допустимый размер: «trust policy payload»".into())}
     let mut signed=DOMAIN_SEPARATION.to_vec();signed.extend_from_slice(&payload);
     verify_signature(root_key,&signed,&env.root_signature)?;
     let p:Policy=serde_json::from_slice(&payload).map_err(|e|e.to_string())?;
-    if p.schema_version!="1.0" || p.domain!=DOMAIN || p.epoch==0 || p.keys.is_empty() || p.keys.len()>128 {return Err("trust policy domain/version/keys invalid".into())}
+    if p.schema_version!="1.0" || p.domain!=DOMAIN || p.epoch==0 || p.keys.is_empty() || p.keys.len()>128 {return Err("Некорректное значение: «trust policy domain/version/keys»".into())}
     let issued=parse_utc(&p.issued_at)?;let expires=parse_utc(&p.expires_at)?;let current=now()?;
     if issued>current+300 || expires<=current || expires<=issued || expires-issued>90*86400 {return Err("trust policy frozen/expired or invalid validity".into())}
     let mut seen=std::collections::HashSet::new();
     for k in &p.keys {
-        if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("trust role/key status invalid".into())}
+        if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("Некорректное значение: «trust role/key status»".into())}
         if hex::decode(&k.public_key).map_err(|e|e.to_string())?.len()!=32 || !seen.insert(k.public_key.to_ascii_lowercase()) {return Err("trust key duplicated/invalid".into())}
         let start=parse_utc(&k.not_before)?;if start>expires{return Err("trust key starts after policy expiry".into())}
-        if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("invalid finite key overlap".into())}}
+        if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректное значение: «finite key overlap»".into())}}
     }
     Ok((p,hex::encode(Sha256::digest(&payload))))
 }
@@ -93,7 +93,7 @@ pub fn verify_manifest(manifest:&Manifest,root_key:&str,signer_hex:&str,signed_a
         if signed<parse_utc(&k.not_before)? {return Err("game signature precedes delegation".into())}
         if k.status=="verify-only" {
             let end=parse_utc(&k.verify_until)?;
-            if signed>=end || current>=end {return Err("game signer overlap has expired".into())}
+            if signed>=end || current>=end {return Err("Истёк срок действия: «game signer overlap has»".into())}
         }
         return Ok(())
     }
@@ -108,7 +108,7 @@ fn floor(root:&Path)->Result<Option<Watermark>,String>{
         match fs::symlink_metadata(&f) {
             Ok(m)=>{if !m.is_file() || m.len()>4096 {return Err("corrupt game trust watermark".into())}
                 let current:Watermark=serde_json::from_slice(&fs::read(&f).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
-                if current.epoch==0 || current.digest.len()!=64 || current.root_sha256.len()!=64 {return Err("invalid game trust watermark".into())}
+                if current.epoch==0 || current.digest.len()!=64 || current.root_sha256.len()!=64 {return Err("Некорректное значение: «game trust watermark»".into())}
                 if let Some(ref prev)=best {if current.epoch==prev.epoch && current.digest!=prev.digest {return Err("game trust policy equivocation".into())}}
                 if best.as_ref().is_none_or(|v|current.epoch>v.epoch){best=Some(current)}
             },
@@ -128,7 +128,7 @@ pub fn check(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),String>{
     if policy.epoch!=manifest.trust_epoch {return Err("new game installation must use current root-signed trust epoch".into())}
     let signer=manifest.signature.as_ref().ok_or("game signature missing")?;
     if !policy.keys.iter().any(|k|k.role=="game" && k.status=="active" && k.public_key.eq_ignore_ascii_case(&signer.public_key)) {
-       return Err("retired or revoked game signer cannot install new release".into());
+       return Err("«retired or revoked game signer»: запрещено «install new release»".into());
     }
     if let Some(stored)=accepted {
         if stored.epoch>policy.epoch || (stored.epoch==policy.epoch && stored.digest!=digest) || stored.root_sha256!=hex::encode(Sha256::digest(hex::decode(root_key).map_err(|e|e.to_string())?)) {return Err("game trust rollback/equivocation/root change".into())}
@@ -145,7 +145,7 @@ pub fn check_launch(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),Stri
     if manifest.trust_epoch>p.epoch {return Err("game release references future trust policy".into())}
     if let Some(stored)=accepted {
        let pubkey=hex::decode(root_key).map_err(|e|e.to_string())?;
-       if stored.root_sha256!=hex::encode(Sha256::digest(pubkey)) {return Err("game trust root changed".into())}
+       if stored.root_sha256!=hex::encode(Sha256::digest(pubkey)) {return Err("Обнаружено изменение: «game trust root»".into())}
     }
     Ok(())
 }

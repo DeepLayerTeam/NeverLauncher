@@ -85,7 +85,7 @@ func handleDevTools03010(args []string) error {
 			return errors.New("usage: devtools component test --jar example.jar [--isolation sandbox|process] [--ack-unconfined] [-- args...]")
 		}
 		if *isolation == "process" && !*ack {
-			return errors.New("process mode is NOT an OS sandbox: --ack-unconfined is required")
+			return errors.New("Требуется: «process mode is NOT an OS sandbox: --ack-unconfined»")
 		}
 		r, e := devtools.RunComponent(context.Background(), devtools.ComponentOptions{Jar: *jar, Java: *java, Isolation: *isolation, Timeout: *timeout, HeapMB: *heap, Args: appArgs})
 		if p := devtoolsPrint03010(r); p != nil {
@@ -111,7 +111,7 @@ func handleDevTools03010(args []string) error {
 			return errors.New("test identity policy denied: set LAUNCHER_DEVTOOLS_TEST_MODE=1 and --ack-test-only")
 		}
 		if *duration < time.Second || *duration > 30*time.Minute {
-			return errors.New("fixture duration must be 1s..30m")
+			return errors.New("Для «fixture duration» требуется: «1s..30m»")
 		}
 		fixture, e := devtools.NewFixtureServer(*user)
 		if e != nil {
@@ -147,5 +147,5 @@ func handleDevTools03010(args []string) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("unknown devtools operation %q", strings.Join(args[:2], " "))
+	return fmt.Errorf("Неизвестное значение: «devtools operation» %q", strings.Join(args[:2], " "))
 }

@@ -66,7 +66,7 @@ func (s Server) StartDurableControlPlaneWithReadiness0455(parent context.Context
 		for {
 			if err := s.runDurableTick0213(ctx, cp, worker); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					log.Printf("durable control-plane tick failed: %v", err)
+					log.Printf("Ошибка: «durable control-plane tick»: %v", err)
 				}
 			} else if last != nil {
 				last.Store(time.Now().UnixNano())
@@ -235,7 +235,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 	}
 	if payload.PackageID != job.ResourceID || payload.ExpectedManifestDigest == "" || payload.ExpectedArtifactDigest == "" {
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job payload identity mismatch")
-		return model.ReleaseVersion{}, errors.New("publish job payload identity mismatch")
+		return model.ReleaseVersion{}, errors.New("Несовпадение: «publish job payload identity»")
 	}
 
 	decision := s.authorizationService().Authorize(ctx,
@@ -429,6 +429,6 @@ func (s Server) deliverOutboxEvent0213(ctx context.Context, out model.DurableOut
 		}
 		return s.EventBus.ReleasePublished(ctx, p.ActorID, lookup.Release)
 	default:
-		return fmt.Errorf("unsupported durable outbox event %q", out.EventType)
+		return fmt.Errorf("Не поддерживается: «durable outbox event» %q", out.EventType)
 	}
 }

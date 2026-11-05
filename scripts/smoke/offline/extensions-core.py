@@ -18,11 +18,11 @@ def require(rel, tokens):
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
 if version < (0, 20, 1):
-    raise SystemExit("VERSION must be >= 0.20.1")
+    raise SystemExit("Для версия требуется: «>= 0.20.1»")
 
 schema = json.loads(read("schemas/launcher-extension.schema.json"))
 if schema.get("properties", {}).get("schemaVersion", {}).get("const") != "2.0":
-    raise SystemExit("canonical extension schema must be 2.0")
+    raise SystemExit("Для «canonical extension schema» требуется: «2.0»")
 
 require(
     "services/api/internal/dbmigrate/sql/0042_extensions_core_0201.sql",

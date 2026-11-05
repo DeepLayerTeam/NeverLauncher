@@ -136,7 +136,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 	report := Report{SchemaVersion: "1.0", GeneratedAt: time.Now().UTC(), Contract: extensioncontract.Frozen(), Issues: []Issue{}}
 	if m == nil || m.Repo == nil || m.Lifecycle == nil {
-		return report, errors.New("Extensions GA manager is not configured")
+		return report, errors.New("«Extensions GA manager»: не настроено")
 	}
 	installs, err := m.Repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {

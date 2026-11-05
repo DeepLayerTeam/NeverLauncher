@@ -247,7 +247,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	defer os.Remove(tmpPath)
 	inspected, err := extensionpackage.InspectSignedFile(tmpPath)
 	if err != nil {
-		if _, qerr := s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "invalid signed .nlext: "+err.Error(), nil); qerr != nil {
+		if _, qerr := s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Некорректное значение: «signed .nlext:»"+err.Error(), nil); qerr != nil {
 			writeError(w, http.StatusInternalServerError, "artifact rejected; quarantine persistence failed: "+qerr.Error())
 			return
 		}
@@ -259,7 +259,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		publisherID = inspected.Manifest.Publisher
 	}
 	if publisherID != inspected.Manifest.Publisher {
-		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "publisher field does not match signed manifest publisher", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: inspected.Manifest.Publisher, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "«publisher field» не совпадает с «signed manifest publisher»", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: inspected.Manifest.Publisher, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
 		writeError(w, http.StatusBadRequest, "publisher field must match launcher-extension.json publisher")
 		return
 	}
@@ -433,7 +433,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 	}
 	defer reader.Close()
 	if size != item.Artifact.Size {
-		return "", errors.New("registry artifact storage size mismatch")
+		return "", errors.New("Несовпадение: «registry artifact storage size»")
 	}
 	tmp, err := os.CreateTemp("", "launcher-registry-install-*.nlext")
 	if err != nil {
@@ -453,7 +453,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 		return "", err
 	}
 	if written != item.Artifact.Size || hex.EncodeToString(h.Sum(nil)) != item.Artifact.SHA256 {
-		return "", errors.New("registry artifact bytes do not match immutable metadata")
+		return "", errors.New("«registry artifact bytes» не совпадает с «immutable metadata»")
 	}
 	if err := tmp.Sync(); err != nil {
 		return "", err
@@ -474,7 +474,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 		return "", err
 	}
 	if verified.PackageIdentity != item.Artifact.PackageIdentity || verified.SHA256 != item.Artifact.SHA256 || verified.Manifest.ID != item.ExtensionID || verified.Manifest.Version != item.Version || verified.Manifest.Publisher != item.PublisherID {
-		return "", errors.New("verified artifact identity does not match registry version")
+		return "", errors.New("«verified artifact identity» не совпадает с «registry version»")
 	}
 	ok = true
 	return path, nil

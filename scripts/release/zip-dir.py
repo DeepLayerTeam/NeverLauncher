@@ -11,10 +11,10 @@ ns = ap.parse_args()
 src = Path(ns.source).resolve()
 out = Path(ns.output).resolve()
 if not src.is_dir():
-    raise SystemExit(f"directory missing: {src}")
+    raise SystemExit(f"Отсутствует: каталог: {src}")
 out.parent.mkdir(parents=True, exist_ok=True)
 if out.is_relative_to(src):
-    raise SystemExit("release directory ZIP output must be outside source")
+    raise SystemExit("Для «release directory ZIP output» требуется: «outside source»")
 members = []
 for path in sorted(src.rglob("*")):
     if path.is_symlink():

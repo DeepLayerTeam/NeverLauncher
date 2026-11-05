@@ -457,7 +457,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 
 func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string, providerToken ...string) (map[string]any, error) {
 	if s.State.Passkeys.countByUser(user.ID) == 0 {
-		return nil, errors.New("MFA policy requires passkey but no passkey is registered")
+		return nil, errors.New("Для «MFA policy» требуется «passkey but no passkey is registered»")
 	}
 	challenge, err := newChallengeBytes117()
 	if err != nil {
@@ -492,7 +492,7 @@ func (s Server) verifyPasskeyAssertion117(input webauthnAssertionJSON117, challe
 		return passkeyCredential117{}, wa.AssertionResult{}, err
 	}
 	if expectedUser != "" && credential.UserID != expectedUser {
-		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("passkey user mismatch")
+		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("Несовпадение: «passkey user»")
 	}
 	if len(userHandle) > 0 && !hmac.Equal(userHandle, s.webauthnUserHandle117(credential.UserID)) {
 		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("Несоответствие: userHandle")
@@ -582,14 +582,14 @@ func decodeAssertionCredential117(c webauthnAssertionJSON117) ([]byte, []byte, [
 func decodeWebAuthnB64117(v string, max int) ([]byte, error) {
 	v = strings.TrimSpace(v)
 	if v == "" {
-		return nil, errors.New("empty base64url")
+		return nil, errors.New("Пустое значение: «base64url»")
 	}
 	b, err := base64.RawURLEncoding.DecodeString(v)
 	if err != nil {
 		return nil, err
 	}
 	if len(b) == 0 || len(b) > max {
-		return nil, errors.New("decoded value size invalid")
+		return nil, errors.New("Некорректное значение: «decoded value size»")
 	}
 	return b, nil
 }

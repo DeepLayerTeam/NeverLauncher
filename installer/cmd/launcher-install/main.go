@@ -42,7 +42,7 @@ func run() error {
 				return err
 			}
 		}
-		fmt.Printf("verified Launcher %s\n", v.Manifest.Version)
+		fmt.Printf("Проверен Launcher %s\n", v.Manifest.Version)
 		return nil
 	case "pack":
 		f := flag.NewFlagSet("pack", flag.ContinueOnError)

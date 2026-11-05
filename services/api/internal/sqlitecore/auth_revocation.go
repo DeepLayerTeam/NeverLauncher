@@ -41,7 +41,7 @@ func (a *Auth) revokeSessionTx(ctx context.Context, q sqlitedurable.Executor, id
 
 func (a *Auth) RevokeSession(ctx context.Context, userID, sessionID, reason string) error {
 	if userID == "" || sessionID == "" || strings.TrimSpace(reason) == "" {
-		return errors.New("revocation requires owner, session and reason")
+		return errors.New("Для «revocation» требуется «owner, session and reason»")
 	}
 	return a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var owner string
@@ -63,7 +63,7 @@ func (a *Auth) RevokeSession(ctx context.Context, userID, sessionID, reason stri
 // код.
 func (a *Auth) RevokeUserSessions(ctx context.Context, userID, reason string) (int, error) {
 	if userID == "" || strings.TrimSpace(reason) == "" {
-		return 0, errors.New("user and reason required")
+		return 0, errors.New("Требуется: «user and reason»")
 	}
 	count := 0
 	err := a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {

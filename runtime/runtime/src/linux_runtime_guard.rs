@@ -36,12 +36,12 @@ pub struct LinuxRuntimeGuard0508 {
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
-    let meta = fs::metadata(path).map_err(|e| format!("Linux Guard cannot stat {}: {e}", path.display()))?;
+    let meta = fs::metadata(path).map_err(|e| format!("Guard для Linux: не удалось получить сведения о файле {}: {e}", path.display()))?;
     if !meta.is_file() || meta.len() > MAX_HASH_FILE {
         return Err(format!("Linux Guard invalid executable file {}", path.display()));
     }
     let mut hasher = Sha256::new();
-    let mut f = File::open(path).map_err(|e| format!("Linux Guard cannot open {}: {e}", path.display()))?;
+    let mut f = File::open(path).map_err(|e| format!("«Linux Guard»: запрещено «open {}:» {e}", path.display()))?;
     let mut buf = [0u8; 64 * 1024];
     loop {
         let n = f.read(&mut buf).map_err(|e| e.to_string())?;
@@ -53,9 +53,9 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 
 fn read_proc(pid: u32, file: &str) -> Result<String, String> {
     let path = format!("/proc/{pid}/{file}");
-    let meta = fs::metadata(&path).map_err(|e| format!("Linux Guard cannot stat {path}: {e}"))?;
+    let meta = fs::metadata(&path).map_err(|e| format!("«Linux Guard»: запрещено «stat {path}:» {e}"))?;
     if meta.len() > MAX_PROC_BYTES { return Err(format!("Linux Guard oversized {path}")); }
-    let bytes = fs::read(&path).map_err(|e| format!("Linux Guard cannot read {path}: {e}"))?;
+    let bytes = fs::read(&path).map_err(|e| format!("«Linux Guard»: запрещено «read {path}:» {e}"))?;
     if bytes.len() as u64 > MAX_PROC_BYTES { return Err(format!("Linux Guard oversized {path}")); }
     String::from_utf8(bytes).map_err(|e| format!("Linux Guard invalid {path}: {e}"))
 }
@@ -135,7 +135,7 @@ fn check_process(pid: u32, start: u64) -> Result<(), String> {
     }
     let status = read_proc(pid, "status")?;
     if status_value(&status, "PPid:")? != std::process::id().to_string() {
-        return Err("Linux Guard JVM parent changed".into());
+        return Err("Обнаружено изменение: «Linux Guard JVM parent»".into());
     }
     if status_value(&status, "TracerPid:")? != "0" {
         return Err("Linux Guard JVM is being traced".into());
@@ -145,7 +145,7 @@ fn check_process(pid: u32, start: u64) -> Result<(), String> {
     }
     let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
     if pgid < 0 || pgid as u32 != pid {
-        return Err("Linux Guard JVM process group changed".into());
+        return Err("Обнаружено изменение: «Linux Guard JVM process group»".into());
     }
     Ok(())
 }
@@ -167,7 +167,7 @@ fn verify_inode(path: &Path, proc_object: &Path) -> Result<(), String> {
 
 impl LinuxRuntimeGuard0508 {
     pub fn attach(pid: u32, java: &Path, verified: &LiveGameGuard0506) -> Result<Self, String> {
-        if pid == 0 { return Err("Linux Guard JVM PID missing".into()); }
+        if pid == 0 { return Err("Отсутствует: «Linux Guard JVM PID»".into()); }
         let java = fs::canonicalize(java).map_err(|e| format!("Linux Guard Java executable: {e}"))?;
         let java_home = java.parent().and_then(Path::parent)
             .ok_or("Linux Guard Java home unavailable")?.to_path_buf();
@@ -190,10 +190,10 @@ impl LinuxRuntimeGuard0508 {
     pub fn verify(&self) -> Result<(), String> {
         check_process(self.pid, self.start_ticks)?;
         let proc_exe = PathBuf::from(format!("/proc/{}/exe", self.pid));
-        let running = fs::metadata(&proc_exe).map_err(|e| format!("Linux Guard cannot stat JVM image: {e}"))?;
+        let running = fs::metadata(&proc_exe).map_err(|e| format!("«Linux Guard»: запрещено «stat JVM image:» {e}"))?;
         if running.dev() != self.java_device || running.ino() != self.java_inode ||
             sha256_file(&proc_exe)? != self.java_sha256 {
-            return Err("Linux Guard actual JVM executable changed".into());
+            return Err("Обнаружено изменение: «Linux Guard actual JVM executable»".into());
         }
         self.verify_jvm_args()?;
         self.verify_maps()?;
@@ -203,7 +203,7 @@ impl LinuxRuntimeGuard0508 {
 
     fn verify_jvm_args(&self) -> Result<(), String> {
         let file = format!("/proc/{}/cmdline", self.pid);
-        let bytes = fs::read(&file).map_err(|e| format!("Linux Guard JVM argv unavailable: {e}"))?;
+        let bytes = fs::read(&file).map_err(|e| format!("Недоступно: «Linux Guard JVM argv»: {e}"))?;
         if bytes.is_empty() || bytes.len() > MAX_PROC_BYTES || bytes.last() != Some(&0) {
             return Err("Linux Guard JVM argv incomplete".into());
         }
@@ -213,7 +213,7 @@ impl LinuxRuntimeGuard0508 {
         }
         for (actual, expected) in argv.iter().skip(1).zip(&self.expected_jvm_args) {
             if *actual != expected.as_bytes() {
-                return Err("Linux Guard actual JVM startup options changed".into());
+                return Err("Обнаружено изменение: «Linux Guard actual JVM startup options»".into());
             }
         }
         Ok(())
@@ -259,7 +259,7 @@ impl LinuxRuntimeGuard0508 {
     }
 
     fn verify_maps(&self) -> Result<(), String> {
-        let maps = File::open(format!("/proc/{}/maps", self.pid)).map_err(|e| format!("Linux Guard maps unavailable: {e}"))?;
+        let maps = File::open(format!("/proc/{}/maps", self.pid)).map_err(|e| format!("Недоступно: «Linux Guard maps»: {e}"))?;
         let mut lines = 0usize;
         for line in BufReader::new(maps).lines() {
             lines += 1;
@@ -294,14 +294,14 @@ impl LinuxRuntimeGuard0508 {
 
     fn verify_fds(&self) -> Result<(), String> {
         let dir = format!("/proc/{}/fd", self.pid);
-        let entries = fs::read_dir(&dir).map_err(|e| format!("Linux Guard fd inventory unavailable: {e}"))?;
+        let entries = fs::read_dir(&dir).map_err(|e| format!("Недоступно: «Linux Guard fd inventory»: {e}"))?;
         for (i, entry) in entries.enumerate() {
             if i >= MAX_FDS { return Err("Linux Guard fd inventory limit exceeded".into()); }
             let entry = entry.map_err(|e| e.to_string())?;
             let opened = match fs::read_link(entry.path()) {
                 Ok(path) => path,
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue, // fd closed during iteration
-                Err(e) => return Err(format!("Linux Guard cannot inspect open fd: {e}")),
+                Err(e) => return Err(format!("«Linux Guard»: запрещено «inspect open fd:» {e}")),
             };
             let displayed = opened.to_string_lossy();
             let deleted = displayed.ends_with(" (deleted)");
@@ -367,7 +367,7 @@ mod tests {
         };
         assert!(guard.verify().is_ok(), "actual hardened child should pass");
         guard.expected_jvm_args = vec!["-javaagent:/injected.jar".into()];
-        assert!(guard.verify().unwrap_err().contains("startup options changed"));
+        assert!(guard.verify().unwrap_err().contains("Обнаружено изменение: «startup options»"));
         guard.expected_jvm_args = vec!["8".into()];
         guard.start_ticks += 1;
         assert!(guard.verify().unwrap_err().contains("PID reuse"));

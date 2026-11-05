@@ -21,7 +21,7 @@ func (a *Auth) SaveMinecraftIdentity(ctx context.Context, p model.MinecraftProfi
 	p.Name = strings.TrimSpace(p.Name)
 	p.UUID = strings.ToLower(strings.TrimSpace(p.UUID))
 	if !mcName.MatchString(p.Name) || !mcUUID.MatchString(p.UUID) || p.UserID == "" || actor == "" {
-		return p, errors.New("valid Minecraft name, UUID, user and actor required")
+		return p, errors.New("Требуется: «valid Minecraft name, UUID, user and actor»")
 	}
 	p.Issuer = strings.ToLower(strings.TrimSpace(p.Issuer))
 	p.Realm = strings.ToLower(strings.TrimSpace(p.Realm))
@@ -91,7 +91,7 @@ func (a *Auth) MinecraftIdentity(ctx context.Context, userID string) (p model.Mi
 // пользователя немедленно аннулирует токен через auth_epoch.
 func (a *Auth) IssueMinecraftSession(ctx context.Context, Access string, ttl time.Duration) (string, string, error) {
 	if ttl <= 0 || ttl > 24*time.Hour {
-		return "", "", errors.New("Minecraft token TTL must be <=24h")
+		return "", "", errors.New("Для «Minecraft token TTL» требуется: «<=24h»")
 	}
 	principal, e := a.ValidateAccess(ctx, Access)
 	if e != nil {

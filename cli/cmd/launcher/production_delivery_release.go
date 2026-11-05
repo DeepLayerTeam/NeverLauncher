@@ -56,7 +56,7 @@ func productionDeliveryReleaseRequired0160(ver string) bool {
 func stableProductionVersion0160(ver string) error {
 	ver = strings.TrimSpace(ver)
 	if !productionDeliveryReleaseRequired0160(ver) {
-		return fmt.Errorf("production delivery release requires version >=0.16.0, got %q", ver)
+		return fmt.Errorf("Для «production delivery release» требуется «version >=0.16.0, got» %q", ver)
 	}
 	if strings.ContainsAny(ver, "-+") {
 		return fmt.Errorf("production delivery release must use immutable GA SemVer without prerelease/build suffix: %q", ver)
@@ -128,7 +128,7 @@ func productionDeliveryReleaseAnchors0160(dir, ver string) ([]productionDelivery
 	for _, name := range names {
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("production delivery release anchor path invalid: %q", name)
+			return nil, fmt.Errorf("Некорректное значение: «production delivery release anchor path»: %q", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
@@ -203,7 +203,7 @@ func expectedProductionTargets0160() []DeliveryTarget {
 
 func validateProductionTargets0160(targets []DeliveryTarget) error {
 	if len(targets) != 6 {
-		return fmt.Errorf("production delivery release requires exactly six published targets, got %d", len(targets))
+		return fmt.Errorf("Для «production delivery release» требуется «exactly six published targets, got» %d", len(targets))
 	}
 	actual := append([]DeliveryTarget(nil), targets...)
 	sort.Slice(actual, func(i, j int) bool {
@@ -305,33 +305,33 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 		return "", err
 	}
 	if doc.SchemaVersion != productionDeliveryReleaseSchema0160 || doc.Product != "Launcher" || doc.Version != ver || doc.Status != productionDeliveryReleaseStatus0160 || doc.Channel != productionDeliveryReleaseChannel0160 || !doc.PostPublishE2E {
-		return "", errors.New("production delivery release metadata mismatch")
+		return "", errors.New("Несовпадение: «production delivery release metadata»")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, doc.CreatedAt); err != nil {
-		return "", fmt.Errorf("production delivery release createdAt invalid: %w", err)
+		return "", fmt.Errorf("Некорректное значение: «production delivery release createdAt»: %w", err)
 	}
 	baseURL, err := versionedPublicBaseURL0160(doc.PublicBaseURL, ver)
 	if err != nil || baseURL != doc.PublicBaseURL {
-		return "", errors.New("production delivery release publicBaseUrl is invalid")
+		return "", errors.New("Некорректное значение: «production delivery release publicBaseUrl»")
 	}
 	candidate, candidateCommit, err := readProductionCandidateForRelease0160(dir, ver)
 	if err != nil {
 		return "", err
 	}
 	if !strings.EqualFold(commit, candidateCommit) {
-		return "", errors.New("production delivery release source commit does not match candidate")
+		return "", errors.New("«production delivery release source commit» не совпадает с «candidate»")
 	}
 	candidateSHA, _, err := hashFile(filepath.Join(dir, productionReleaseCandidateFile01511))
 	if err != nil || !strings.EqualFold(candidateSHA, doc.CandidateSHA256) || !strings.EqualFold(candidate.CohortSHA256, doc.CandidateCohortSHA256) {
-		return "", errors.New("production delivery release candidate binding mismatch")
+		return "", errors.New("Несовпадение: «production delivery release candidate binding»")
 	}
 	expectedGates := productionDeliveryReleaseRequiredGates0160(ver)
 	if len(doc.RequiredGates) != len(expectedGates) {
-		return "", errors.New("production delivery release required gate set mismatch")
+		return "", errors.New("Несовпадение: «production delivery release required gate set»")
 	}
 	for i := range expectedGates {
 		if doc.RequiredGates[i] != expectedGates[i] {
-			return "", fmt.Errorf("production delivery release gate #%d mismatch", i+1)
+			return "", fmt.Errorf("Несовпадение: «production delivery release gate #%d»", i+1)
 		}
 	}
 	if err := validateProductionTargets0160(doc.PublishedTargets); err != nil {
@@ -342,7 +342,7 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 		return "", err
 	}
 	if len(anchors) != len(doc.Anchors) {
-		return "", errors.New("production delivery release anchor count mismatch")
+		return "", errors.New("Несовпадение: «production delivery release anchor count»")
 	}
 	for i := range anchors {
 		if anchors[i] != doc.Anchors[i] {
@@ -358,14 +358,14 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	})
 	expectedBoundary := productionDeliveryReleaseBoundaryDigest0160(anchors, targets, ver, commit, doc.PublicBaseURL)
 	if !strings.EqualFold(expectedBoundary, doc.BoundarySHA256) {
-		return "", errors.New("production delivery release boundarySha256 mismatch")
+		return "", errors.New("Несовпадение: «production delivery release boundarySha256»")
 	}
 	matrix, err := readPublicProductionDeliveryMatrix0159(filepath.Join(dir, publicProductionDeliveryMatrixFile0159))
 	if err != nil {
 		return "", err
 	}
 	if matrix.Version != ver || matrix.Channel != doc.Channel || matrix.BaseURL != doc.PublicBaseURL {
-		return "", errors.New("production delivery release/public matrix binding mismatch")
+		return "", errors.New("Несовпадение: «production delivery release/public matrix binding»")
 	}
 	return commit, nil
 }

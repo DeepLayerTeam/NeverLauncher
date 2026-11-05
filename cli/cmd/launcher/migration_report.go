@@ -17,26 +17,26 @@ import (
 // сертификации, сформированные вызывающей стороной, не принимаются.
 func handleMigrationReport03313(args []string) error {
 	if len(args) == 0 {
-		return errors.New("report requires report|report-review|report-review-status")
+		return errors.New("Для отчёт требуется «report|report-review|report-review-status»")
 	}
 	command := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	run := flagValue(args, "--run", "")
 	token := backendToken(args)
 	if backend == "" || run == "" || token == "" {
-		return errors.New("report requires --backend --run --token")
+		return errors.New("Для отчёт требуется «--backend --run --token»")
 	}
 	u, e := url.Parse(backend)
 	if e != nil {
 		return e
 	}
 	if u.User != nil || u.Fragment != "" || u.RawQuery != "" || u.Host == "" {
-		return errors.New("invalid backend URL")
+		return errors.New("Некорректное значение: URL серверной части")
 	}
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("report requires HTTPS or local loopback")
+			return errors.New("Для отчёт требуется «HTTPS or local loopback»")
 		}
 	}
 	endpoint := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run) + "/report"
@@ -48,13 +48,13 @@ func handleMigrationReport03313(args []string) error {
 		endpoint += "/review"
 	case "report-review":
 		if flagValue(args, "--confirm", "") != run {
-			return errors.New("review requires exact --confirm run ID")
+			return errors.New("Для «review» требуется «exact --confirm run ID»")
 		}
 		hash := flagValue(args, "--report-sha256", "")
 		evidence := flagValue(args, "--evidence-sha256", "")
 		ref := flagValue(args, "--evidence-reference", "")
 		if !reportDigest03313(hash) || !reportDigest03313(evidence) || len(ref) < 8 || len(ref) > 256 {
-			return errors.New("review requires SHA-256 of report and independent test evidence plus reference")
+			return errors.New("Для «review» требуется «SHA-256 of report and independent test evidence plus reference»")
 		}
 		body, e = json.Marshal(map[string]string{"reportSha256": hash, "evidenceSha256": evidence, "evidenceReference": ref})
 		if e != nil {
@@ -63,7 +63,7 @@ func handleMigrationReport03313(args []string) error {
 		endpoint += "/review"
 		method = "POST"
 	default:
-		return fmt.Errorf("unknown report command %q", command)
+		return fmt.Errorf("Неизвестное значение: «report command» %q", command)
 	}
 	req, e := http.NewRequest(method, endpoint, bytes.NewReader(body))
 	if e != nil {
@@ -85,11 +85,11 @@ func handleMigrationReport03313(args []string) error {
 		return e
 	}
 	if len(data) >= 32<<20 {
-		return errors.New("oversized report response")
+		return errors.New("Превышен допустимый размер: «report response»")
 	}
 	var result map[string]any
 	if e = json.Unmarshal(data, &result); e != nil {
-		return fmt.Errorf("invalid report JSON HTTP %d", res.StatusCode)
+		return fmt.Errorf("Некорректное значение: «report JSON HTTP» %d", res.StatusCode)
 	}
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		return fmt.Errorf("report HTTP %d: %v", res.StatusCode, result["error"])

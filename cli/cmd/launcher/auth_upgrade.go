@@ -19,7 +19,7 @@ import (
 // Проверка сумм миграций остаётся за существующим dbmigrate.
 func handleAuthUpgrade02911(args []string) error {
 	if len(args) == 0 {
-		return errors.New("db auth-upgrade requires preflight|apply|verify")
+		return errors.New("Для «db auth-upgrade» требуется «preflight|apply|verify»")
 	}
 	action := args[0]
 	if action != "preflight" && action != "apply" && action != "verify" {
@@ -43,7 +43,7 @@ func handleAuthUpgrade02911(args []string) error {
 		return errors.New("--snapshot must name an existing or new checkpoint file")
 	}
 	if action == "apply" && (!*backup || !*maintenance) {
-		return errors.New("apply requires --backup-confirmed and --maintenance-confirmed; Launcher cannot create or verify an off-host backup automatically")
+		return errors.New("Для «apply» требуется --backup-confirmed and --maintenance-confirmed; Launcher cannot create or verify an off-host backup automatically")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()

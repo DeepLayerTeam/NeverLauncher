@@ -18,7 +18,7 @@ const serverBridgeHandoffTTL0148 = 30 * time.Second
 func newServerBridgeHandoffID0148() (string, error) {
 	buf := make([]byte, 24)
 	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("secure handoff entropy unavailable: %w", err)
+		return "", fmt.Errorf("Недоступно: «secure handoff entropy»: %w", err)
 	}
 	return "ho_" + base64.RawURLEncoding.EncodeToString(buf), nil
 }
@@ -147,7 +147,7 @@ func (s Server) serverBridgeTopology0148(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		// Не раскрывайте внутренние сведения SQL в ответе клиенту, но
 		// сохраняйте первопричину в серверных журналах для CI и эксплуатации.
-		log.Printf("serverbridge topology PostgreSQL read failed: %v", err)
+		log.Printf("Ошибка: «serverbridge topology PostgreSQL read»: %v", err)
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL topology недоступна")
 		return
 	}

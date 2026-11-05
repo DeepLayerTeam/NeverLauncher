@@ -69,7 +69,7 @@ func (r *Repository) ListReleases(ctx context.Context, projectID string) (out []
 // параллельное изменение профиля не может изменить подписанную идентичность.
 func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, channel, version, actor string) (out model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return out, errors.New("draft mutation requires audit actor")
+		return out, errors.New("Для «draft mutation» требуется автор аудита")
 	}
 	projectID = strings.TrimSpace(projectID)
 	profileID = strings.TrimSpace(profileID)
@@ -108,7 +108,7 @@ func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, chan
 }
 func (r *Repository) UpdateDraftManifest(ctx context.Context, projectID, releaseID string, m model.Manifest, actor string) (v model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return v, errors.New("manifest mutation requires audit actor")
+		return v, errors.New("Для «manifest mutation» требуется автор аудита")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		current, e := scanRelease(q.QueryRowContext(ctx, "SELECT "+releaseFields+" FROM releases WHERE project_id=? AND id=?", projectID, releaseID))
@@ -149,7 +149,7 @@ func (r *Repository) UpdateDraftManifest(ctx context.Context, projectID, release
 
 func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	if len(roots) == 0 {
-		return errors.New("production release requires configured trusted Ed25519 root")
+		return errors.New("Для «production release» требуется «configured trusted Ed25519 root»")
 	}
 	// Подписанный черновик не является запускаемым промышленным релизом. Перед
 	// записью опубликованного head канала требуйте минимальные исполняемые
@@ -188,7 +188,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 		return e
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), raw, sig) {
-		return errors.New("manifest Ed25519 signature verification failed")
+		return errors.New("Ошибка: «manifest Ed25519 signature verification»")
 	}
 	return model.ValidateManifestSchema(m)
 }
@@ -199,7 +199,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 // и доверия; метод БД обеспечивает криптографические и хранилищные инварианты.
 func (r *Repository) PublishDraft(ctx context.Context, projectID, releaseID string, expectedHeadRevision int64, roots []ed25519.PublicKey, actor string) (out model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return out, errors.New("actor required")
+		return out, errors.New("Требуется: «actor»")
 	}
 	if expectedHeadRevision < 0 {
 		return out, ErrConflict
@@ -305,13 +305,13 @@ func (r *Repository) Published(ctx context.Context, projectID, profileID, channe
 		out.PublishedAt = ts(published)
 		sum := sha256.Sum256([]byte(raw))
 		if hex.EncodeToString(sum[:]) != digest {
-			return errors.New("published channel manifest digest mismatch")
+			return errors.New("Несовпадение: «published channel manifest digest»")
 		}
 		if e = json.Unmarshal([]byte(raw), &out.Manifest); e != nil {
 			return e
 		}
 		if out.Manifest.ProjectID != projectID || out.Manifest.ProfileID != profileID || out.Manifest.Channel != channel || out.Manifest.Version != out.Version {
-			return errors.New("published manifest identity mismatch")
+			return errors.New("Несовпадение: «published manifest identity»")
 		}
 		return verifyTrustedSignature(out.Manifest, roots)
 	})

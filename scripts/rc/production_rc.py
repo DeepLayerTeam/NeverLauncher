@@ -160,7 +160,7 @@ RC_03514_SUITES = (
 
 def suites_for_version(version: str) -> tuple[Suite, ...]:
     if not rc_supported(version):
-        raise GateError("unsupported RC exact version; no implicit GA carry-forward")
+        raise GateError("Не поддерживается: «RC exact version; no implicit GA carry-forward»")
     return SUITES + (RC_03514_SUITES if rc_extended(version) else ())
 
 
@@ -207,14 +207,14 @@ def validate_events(lines: str, suite: Suite, returncode: int) -> dict:
 def validate_preflight(env: dict[str, str]) -> str:
     missing = [k for k in REQUIRED_ENV if not env.get(k)]
     if missing:
-        raise GateError("missing live dependencies: " + ", ".join(missing))
+        raise GateError("Отсутствует: «live dependencies:»" + ", ".join(missing))
     if env.get("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1":
-        raise GateError("SQLite supported filesystem must be required, not skipped")
+        raise GateError("Для «SQLite supported filesystem» требуется: «required, not skipped»")
     root = Path(env["LAUNCHER_SQLITE_TEST_ROOT"])
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
-        raise GateError("SQLite test volume must be an existing absolute directory")
+        raise GateError("Для «SQLite test volume» требуется: «an existing absolute directory»")
     if root.stat().st_mode & 0o077:
-        raise GateError("SQLite test root must be private (0700)")
+        raise GateError("Для «SQLite test root» требуется: приватные права 0700")
     return str(root.resolve())
 
 
@@ -224,7 +224,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
     selected = suites_for_version(canonical)
     current_run = identity(canonical, env.get("GITHUB_SHA", ""), env, root=ROOT)
     if rc_extended(canonical) and not env.get("LAUNCHER_TEST_POSTGRES_DSN"):
-        raise GateError("real PostgreSQL immutable-stable certification DSN required")
+        raise GateError("Требуется: «real PostgreSQL immutable-stable certification DSN»")
     git_sha = env.get("GITHUB_SHA", "")
     if git_sha:
         git = subprocess.run(

@@ -55,13 +55,13 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 		in.SchemaVersion = 1
 	}
 	if in.ID == "" || in.Type == "" || in.AggregateType == "" || in.AggregateID == "" || in.OrderingKey == "" || in.IdempotencyKey == "" || in.Source == "" {
-		return model.ExtensionEvent{}, errors.New("extension event identity/type/aggregate/ordering/idempotency/source are required")
+		return model.ExtensionEvent{}, errors.New("Требуется: «extension event identity/type/aggregate/ordering/idempotency/source are»")
 	}
 	if len(in.ID) > 128 || len(in.Type) > 128 || len(in.OrderingKey) > 256 || len(in.IdempotencyKey) > 256 || len(in.AggregateID) > 256 || len(in.Source) > 128 {
 		return model.ExtensionEvent{}, errors.New("extension event metadata exceeds limits")
 	}
 	if in.SchemaVersion < 1 {
-		return model.ExtensionEvent{}, errors.New("extension event schemaVersion must be positive")
+		return model.ExtensionEvent{}, errors.New("Для «extension event schemaVersion» требуется: «positive»")
 	}
 	var payload any
 	if len(in.Payload) == 0 {
@@ -70,7 +70,7 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 	dec := json.NewDecoder(strings.NewReader(string(in.Payload)))
 	dec.UseNumber()
 	if err := dec.Decode(&payload); err != nil {
-		return model.ExtensionEvent{}, fmt.Errorf("invalid extension event payload: %w", err)
+		return model.ExtensionEvent{}, fmt.Errorf("Некорректное значение: «extension event payload»: %w", err)
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
@@ -109,16 +109,16 @@ func normalizeSubscription0206(in model.ExtensionEventSubscription) (model.Exten
 		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: ID расширения %q", in.ExtensionID)
 	}
 	if in.Scope != "global" && in.Scope != "project" {
-		return model.ExtensionEventSubscription{}, errors.New("subscription scope must be global or project")
+		return model.ExtensionEventSubscription{}, errors.New("Для «subscription scope» требуется: «global or project»")
 	}
 	if in.Scope == "project" && in.ScopeID == "" {
-		return model.ExtensionEventSubscription{}, errors.New("project subscription requires scopeId")
+		return model.ExtensionEventSubscription{}, errors.New("Для «project subscription» требуется «scopeId»")
 	}
 	if !extensionPermission0201.MatchString(in.EventType) {
-		return model.ExtensionEventSubscription{}, fmt.Errorf("invalid event type %q", in.EventType)
+		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: «event type» %q", in.EventType)
 	}
 	if in.Mode != model.ExtensionEventModeAsync && in.Mode != model.ExtensionEventModeSync {
-		return model.ExtensionEventSubscription{}, errors.New("subscription mode must be async or sync")
+		return model.ExtensionEventSubscription{}, errors.New("Для «subscription mode» требуется: «async or sync»")
 	}
 	return in, nil
 }

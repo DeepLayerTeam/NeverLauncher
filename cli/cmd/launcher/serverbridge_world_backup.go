@@ -66,14 +66,14 @@ func worldBackupHandle02810(args []string) error {
 		return err
 	}
 	if holdID := flagValue(args, "--hold-id", ""); holdID != "" && !worldCohortID0518.MatchString(holdID) {
-		return errors.New("invalid world-backup cohort hold ID")
+		return errors.New("Некорректное значение: идентификатор удержания группы резервных копий миров")
 	}
 	if action == "list" {
 		return worldBackupList02810(dir, flagValue(args, "--output", ""))
 	}
 	if action == "gate-recover" {
 		if flagValue(args, "--confirm", "") != "stale-gate" {
-			return errors.New("gate-recover requires --confirm stale-gate; reconcile Host Supervisor/JVM first")
+			return errors.New("Для «gate-recover» требуется «--confirm stale-gate; reconcile Host Supervisor/JVM first»")
 		}
 		return worldBackupHostGateRecover04110(root)
 	}
@@ -82,7 +82,7 @@ func worldBackupHandle02810(args []string) error {
 		return worldBackupReleaseCohortHold0518(root, holdID)
 	}
 	if action != "create" && action != "verify" && action != "restore" {
-		return fmt.Errorf("unknown world-backup operation %q", action)
+		return fmt.Errorf("Неизвестное значение: «world-backup operation» %q", action)
 	}
 	if err = worldBackupPrivateDir02810(dir); err != nil {
 		return err
@@ -145,10 +145,10 @@ func worldBackupHandle02810(args []string) error {
 		if action == "restore" {
 			dest := flagValue(args, "--destination", "")
 			if dest == "" {
-				return errors.New("restore requires --destination (new, non-existing directory)")
+				return errors.New("Для восстановление требуется «--destination (new, non-existing directory)»")
 			}
 			if flagValue(args, "--confirm", "") != id {
-				return errors.New("restore requires --confirm matching the backup ID")
+				return errors.New("Для восстановление требуется «--confirm matching the backup ID»")
 			}
 			if err = worldBackupRestore02810(root, dir, m, filepath.Join(dir, id), dest); err != nil {
 				return err
@@ -187,7 +187,7 @@ func worldBackupDisjoint02810(a, b string) error {
 			return err
 		}
 		if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
-			return errors.New("world backup paths must not overlap server root, backup store, or restore destination")
+			return errors.New("«world backup paths»: запрещено «overlap server root, backup store, or restore destination»")
 		}
 	}
 	return nil
@@ -224,7 +224,7 @@ func worldBackupPrivateDir02810(path string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
-		return errors.New("world backup directory must be a private non-symlink directory (0700)")
+		return errors.New("Для «world backup directory» требуется: «a private non-symlink directory (0700)»")
 	}
 	return nil
 }
@@ -238,7 +238,7 @@ func worldBackupRandom02810() (string, error) {
 func worldBackupLockAcquire02810(dir string) (func(), error) {
 	identity := hostOwnIdentity0282()
 	if identity == "" {
-		return nil, errors.New("backup requires verifiable host process identity")
+		return nil, errors.New("Для резервная копия требуется «verifiable host process identity»")
 	}
 	nonce, err := worldBackupRandom02810()
 	if err != nil {
@@ -277,7 +277,7 @@ func worldBackupLockAcquire02810(dir string) (func(), error) {
 			return nil, e
 		}
 		if !fi.Mode().IsRegular() {
-			return nil, errors.New("world backup lock is not a regular file")
+			return nil, errors.New("«world backup lock»: требуется обычный файл")
 		}
 		var existing worldBackupLock02810
 		if err := worldBackupReadJSON02810(path, &existing); err != nil {
@@ -300,7 +300,7 @@ func worldBackupReadJSON02810(path string, v any) error {
 		return err
 	}
 	if !check.Mode().IsRegular() {
-		return errors.New("backup metadata must be a real regular file")
+		return errors.New("Для «backup metadata» требуется: «a real regular file»")
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -339,7 +339,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 				return errors.New("Host supervisor lock exists without runtime; backup unsafe")
 			}
 		} else if !errors.Is(lockErr, os.ErrNotExist) {
-			return fmt.Errorf("cannot check Host supervisor lock: %w", lockErr)
+			return fmt.Errorf("Не удалось проверить «Host supervisor lock:» %w", lockErr)
 		}
 		return nil
 	}
@@ -377,10 +377,10 @@ func worldBackupQuiesce02810(root, policy string) error {
 		return errors.New("Minecraft process not confirmed stopped")
 	}
 	if current.Status == "starting" || current.Status == "running" || current.Status == "restarting" {
-		return fmt.Errorf("unsafe host runtime state %s", current.Status)
+		return fmt.Errorf("Небезопасное значение: «host runtime state» %s", current.Status)
 	}
 	if hostIdentityMatches0282(current.SupervisorPID, current.SupervisorIdentity) {
-		return errors.New("supervisor is still running; cannot guarantee no restart during backup")
+		return errors.New("«supervisor is still running;»: запрещено «guarantee no restart during backup»")
 	}
 	if current.Status == "crashed" || current.Status == "failed" || current.Status == "restarting" {
 		return errors.New("crashed/failed world is not a confirmed consistent backup source")
@@ -433,7 +433,7 @@ func worldBackupWorlds02810(root string, requested []string) ([]string, error) {
 	worlds := []string{}
 	for _, name := range requested {
 		if !worldBackupValidRelative02810(name) || strings.Contains(name, "/") || name == ".launcher" {
-			return nil, fmt.Errorf("invalid world directory %q", name)
+			return nil, fmt.Errorf("Некорректное значение: каталог мира %q", name)
 		}
 		if selected[name] {
 			continue
@@ -444,7 +444,7 @@ func worldBackupWorlds02810(root string, requested []string) ([]string, error) {
 			return nil, fmt.Errorf("world %s: %w", name, err)
 		}
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("world %s must be a real directory", name)
+			return nil, fmt.Errorf("Для «world» %s требуется: настоящий каталог", name)
 		}
 		worlds = append(worlds, name)
 	}
@@ -484,7 +484,7 @@ func worldBackupCollect02810(root string, sources []string) ([]worldBackupEntry0
 			}
 			rel = filepath.ToSlash(rel)
 			if !worldBackupValidRelative02810(rel) {
-				return fmt.Errorf("invalid relative source path %s", rel)
+				return fmt.Errorf("Некорректное значение: «relative source path» %s", rel)
 			}
 			info, err := os.Lstat(path)
 			if err != nil {
@@ -497,7 +497,7 @@ func worldBackupCollect02810(root string, sources []string) ([]worldBackupEntry0
 				ent.Type = "file"
 				ent.Size = info.Size()
 			} else {
-				return fmt.Errorf("unsafe world backup entry: %s (symlink or special file)", rel)
+				return fmt.Errorf("Небезопасное значение: «world backup entry»: %s (symlink or special file)", rel)
 			}
 			entries = append(entries, ent)
 			return nil
@@ -508,7 +508,7 @@ func worldBackupCollect02810(root string, sources []string) ([]worldBackupEntry0
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
 	if len(entries) == 0 {
-		return nil, errors.New("backup selection is empty")
+		return nil, errors.New("Пустое значение: «backup selection»")
 	}
 	return entries, nil
 }
@@ -518,7 +518,7 @@ func worldBackupCopy02810(src, dst string, expectedSize int64, mode fs.FileMode)
 		return "", err
 	}
 	if !info.Mode().IsRegular() || info.Size() != expectedSize {
-		return "", fmt.Errorf("source changed: %s", src)
+		return "", fmt.Errorf("Обнаружено изменение: источник: %s", src)
 	}
 	in, err := os.Open(src)
 	if err != nil {
@@ -667,22 +667,22 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 	var total int64
 	for _, w := range m.Worlds {
 		if !worldBackupValidRelative02810(w) || strings.Contains(w, "/") || worlds[w] {
-			return errors.New("invalid world selection")
+			return errors.New("Некорректное значение: «world selection»")
 		}
 		worlds[w] = true
 	}
 	for _, e := range m.Entries {
 		if !worldBackupValidRelative02810(e.Path) || found[e.Path] != "" || e.Mode > 0777 {
-			return fmt.Errorf("invalid or duplicate manifest entry: %q", e.Path)
+			return fmt.Errorf("Некорректное значение: «or duplicate manifest entry»: %q", e.Path)
 		}
 		if e.Type != "dir" && e.Type != "file" {
-			return errors.New("invalid backup entry type")
+			return errors.New("Некорректное значение: «backup entry type»")
 		}
 		if e.Type == "dir" && (e.Size != 0 || e.SHA256 != "") {
-			return errors.New("invalid directory metadata")
+			return errors.New("Некорректное значение: «directory metadata»")
 		}
 		if e.Type == "file" && (e.Size < 0 || len(e.SHA256) != 64) {
-			return errors.New("invalid file metadata")
+			return errors.New("Некорректное значение: «file metadata»")
 		}
 		if e.Type == "file" {
 			if _, err := hex.DecodeString(e.SHA256); err != nil {
@@ -703,11 +703,11 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 		found[e.Path] = e.Type
 	}
 	if total != m.TotalBytes {
-		return errors.New("manifest byte count mismatch")
+		return errors.New("Несовпадение: «manifest byte count»")
 	}
 	for w := range worlds {
 		if found[w] != "dir" {
-			return fmt.Errorf("missing world directory %s", w)
+			return fmt.Errorf("Отсутствует: каталог мира %s", w)
 		}
 	}
 	for path := range found {
@@ -762,7 +762,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		rel = filepath.ToSlash(rel)
 		e, ok := expected[rel]
 		if !ok {
-			return fmt.Errorf("unexpected backup payload entry %s", rel)
+			return fmt.Errorf("Неожиданное значение: «backup payload entry» %s", rel)
 		}
 		fi, err := os.Lstat(path)
 		if err != nil {
@@ -770,7 +770,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		}
 		if e.Type == "dir" {
 			if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("invalid backup directory %s", rel)
+				return fmt.Errorf("Некорректное значение: «backup directory» %s", rel)
 			}
 		} else {
 			if !fi.Mode().IsRegular() || fi.Size() != e.Size {
@@ -797,7 +797,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		return m, err
 	}
 	if count != len(expected) {
-		return m, errors.New("backup payload entries missing")
+		return m, errors.New("Отсутствует: «backup payload entries»")
 	}
 	return m, nil
 }
@@ -817,7 +817,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 		return err
 	}
 	if _, err = os.Lstat(abs); err == nil {
-		return errors.New("restore destination already exists; overwrite is forbidden")
+		return errors.New("Запрещено: «restore destination already exists; overwrite»")
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return err

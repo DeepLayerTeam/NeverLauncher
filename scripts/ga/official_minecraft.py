@@ -118,7 +118,7 @@ def checked_time(value: str, now: datetime) -> None:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as e:
-        raise GateError("invalid observed time") from e
+        raise GateError("Некорректное значение: «observed time»") from e
     require(
         parsed.tzinfo is not None
         and now - timedelta(days=14)
@@ -216,7 +216,7 @@ def verify_target(
         require(len(signature) == 64, "invalid Ed25519 signature length")
         key.verify(signature, DOMAIN + raw)
     except (ValueError, InvalidSignature) as e:
-        raise GateError("GA evidence attestation signature invalid") from e
+        raise GateError("Некорректное значение: «GA evidence attestation signature»") from e
     data = strict_json(raw)
     require(
         data.get("schemaVersion") == SCHEMA

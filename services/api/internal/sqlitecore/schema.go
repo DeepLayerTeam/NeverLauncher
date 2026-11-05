@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("sqlite core: record not found")
+	ErrNotFound  = errors.New("Не найдено: «sqlite core: record»")
 	ErrConflict  = errors.New("sqlite core: revision or unique constraint conflict")
 	ErrImmutable = errors.New("sqlite core: immutable published release or history")
 )
@@ -55,7 +55,7 @@ func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Reposito
 	if st, err := os.Lstat(options.Path); err != nil {
 		return nil, fmt.Errorf("sqlite core existing database: %w", err)
 	} else if !st.Mode().IsRegular() {
-		return nil, errors.New("sqlite core existing database is not a regular file")
+		return nil, errors.New("«sqlite core existing database»: требуется обычный файл")
 	}
 	store, err := sqlitedurable.Open(ctx, options)
 	if err != nil {
@@ -272,7 +272,7 @@ func (r *Repository) Check(ctx context.Context) error {
 			sum := sha256.Sum256([]byte(raw))
 			if hex.EncodeToString(sum[:]) != digest {
 				_ = heads.Close()
-				return errors.New("sqlite core channel manifest digest mismatch")
+				return errors.New("Несовпадение: «sqlite core channel manifest digest»")
 			}
 		}
 		if e = errors.Join(heads.Err(), heads.Close()); e != nil {
@@ -291,7 +291,7 @@ func (r *Repository) Check(ctx context.Context) error {
 				}
 				actual := sha256.Sum256([]byte(payload))
 				if hex.EncodeToString(actual[:]) != stored {
-					er = fmt.Errorf("sqlite durable %s payload digest mismatch", table)
+					er = fmt.Errorf("Несовпадение: «sqlite durable %s payload digest»", table)
 					break
 				}
 			}
@@ -318,7 +318,7 @@ func conflict(err error) error {
 	if err == nil {
 		return nil
 	}
-	if strings.Contains(err.Error(), "constraint failed") || strings.Contains(err.Error(), "UNIQUE constraint") {
+	if strings.Contains(err.Error(), "Ошибка: «constraint»") || strings.Contains(err.Error(), "UNIQUE constraint") {
 		return fmt.Errorf("%w: %v", ErrConflict, err)
 	}
 	return err

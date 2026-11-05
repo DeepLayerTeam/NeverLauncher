@@ -5940,7 +5940,7 @@ function Overview({
     <>
       <section className="grid">
         <article className="card">
-          <h3>Backend</h3>
+          <h3>Серверная часть</h3>
           <strong>{backendStatus}</strong>
           <p>Проверки health/readiness и готовность Desktop.</p>
         </article>

@@ -18,7 +18,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"Некорректное значение VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 

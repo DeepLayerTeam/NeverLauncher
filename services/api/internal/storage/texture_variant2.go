@@ -28,7 +28,7 @@ func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, 
 		return "", 0, errors.New("Несоответствие: текстура SHA-256")
 	}
 	if len(png) == 0 || len(png) > 4<<20 {
-		return "", 0, errors.New("invalid texture payload size")
+		return "", 0, errors.New("Некорректное значение: «texture payload size»")
 	}
 	if s3, ok := store.(*S3Storage); ok {
 		key, err := objectKey(textureProject0252, textureVersion0252, rel)
@@ -94,7 +94,7 @@ func DeleteTexture0253(ctx context.Context, store Storage, digest string) error 
 			return err
 		}
 		if !info.Mode().IsRegular() {
-			return errors.New("texture object is not a regular file")
+			return errors.New("«texture object»: требуется обычный файл")
 		}
 		f, err := os.Open(filePath)
 		if err != nil {
@@ -123,7 +123,7 @@ func DeleteTexture0253(ctx context.Context, store Storage, digest string) error 
 	}
 	s3, ok := store.(*S3Storage)
 	if !ok {
-		return errors.New("texture GC requires local or S3 storage")
+		return errors.New("Для «texture GC» требуется «local or S3 storage»")
 	}
 	key, err := objectKey(textureProject0252, textureVersion0252, rel)
 	if err != nil {

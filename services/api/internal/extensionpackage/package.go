@@ -290,7 +290,7 @@ func validateSBOM0203(data []byte, manifest model.ExtensionManifest, canonicalDi
 		return errors.New("Количество файлов или связей в SBOM.spdx.json не соответствует содержимому")
 	}
 	if doc.Relationships[0] != (spdxRelationship0203{SPDXElementID: "SPDXRef-DOCUMENT", RelationshipType: "DESCRIBES", RelatedSPDXElement: pkgID}) {
-		return errors.New("SBOM.spdx.json DESCRIBES relationship is invalid")
+		return errors.New("Некорректное значение: «SBOM.spdx.json DESCRIBES relationship»")
 	}
 	for i, file := range payload.Files {
 		pathDigest := sha256.Sum256([]byte(file.Path))
@@ -342,7 +342,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	var total uint64
 	for _, entry := range reader.File {
 		if err := validateArchivePath0203(entry.Name); err != nil {
-			return nil, fmt.Errorf("unsafe .nlext entry %q: %w", entry.Name, err)
+			return nil, fmt.Errorf("Небезопасное значение: «.nlext entry» %q: %w", entry.Name, err)
 		}
 		fold := strings.ToLower(entry.Name)
 		if previous, exists := caseFolded[fold]; exists {

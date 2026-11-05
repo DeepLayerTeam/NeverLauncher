@@ -18,20 +18,20 @@ func (p microsoftIssuerPolicy) ValidateDiscoveryIssuer(_ string, discoveredIssue
 	switch p.tenantMode {
 	case "common", "organizations":
 		if !strings.EqualFold(discoveredIssuer, template) {
-			return fmt.Errorf("Microsoft discovery issuer must be tenant-independent template %q", template)
+			return fmt.Errorf("Для «Microsoft discovery issuer» требуется: «tenant-independent template» %q", template)
 		}
 	case "consumers":
 		personal := p.authorityBase + "/" + personalMicrosoftTenantID + "/v2.0"
 		if !strings.EqualFold(discoveredIssuer, template) && !strings.EqualFold(discoveredIssuer, personal) {
-			return fmt.Errorf("Microsoft consumers discovery issuer is invalid")
+			return fmt.Errorf("Некорректное значение: «Microsoft consumers discovery issuer»")
 		}
 	case "tenant":
 		expected := p.authorityBase + "/" + p.tenant + "/v2.0"
 		if !strings.EqualFold(discoveredIssuer, expected) {
-			return fmt.Errorf("Microsoft single-tenant discovery issuer mismatch")
+			return fmt.Errorf("Несовпадение: «Microsoft single-tenant discovery issuer»")
 		}
 	default:
-		return fmt.Errorf("Microsoft tenant mode is invalid")
+		return fmt.Errorf("Некорректное значение: «Microsoft tenant mode»")
 	}
 	return nil
 }
@@ -39,12 +39,12 @@ func (p microsoftIssuerPolicy) ValidateDiscoveryIssuer(_ string, discoveredIssue
 func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, claims map[string]any, signingKeyIssuer string) error {
 	tid := strings.ToLower(strings.TrimSpace(stringClaim(claims, "tid")))
 	if !validGUID(tid) {
-		return fmt.Errorf("Microsoft ID token tid is missing or invalid")
+		return fmt.Errorf("Некорректное значение: «Microsoft ID token tid is missing or»")
 	}
 	issuer := strings.TrimSuffix(strings.TrimSpace(stringClaim(claims, "iss")), "/")
 	expected := p.authorityBase + "/" + tid + "/v2.0"
 	if !strings.EqualFold(issuer, expected) {
-		return fmt.Errorf("Microsoft ID token issuer does not match tid")
+		return fmt.Errorf("«Microsoft ID token issuer» не совпадает с «tid»")
 	}
 	switch p.tenantMode {
 	case "organizations":
@@ -57,7 +57,7 @@ func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, clai
 		}
 	case "tenant":
 		if tid != p.tenant {
-			return fmt.Errorf("Microsoft ID token tenant mismatch")
+			return fmt.Errorf("Несовпадение: «Microsoft ID token tenant»")
 		}
 	}
 	if len(p.allowedTenantIDs) > 0 {
@@ -74,7 +74,7 @@ func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, clai
 	}
 	instantiatedKeyIssuer := replaceTenantTemplate(strings.TrimSuffix(strings.TrimSpace(signingKeyIssuer), "/"), tid)
 	if !strings.EqualFold(instantiatedKeyIssuer, issuer) {
-		return fmt.Errorf("Microsoft signing key issuer does not match token issuer")
+		return fmt.Errorf("«Microsoft signing key issuer» не совпадает с «token issuer»")
 	}
 	return nil
 }

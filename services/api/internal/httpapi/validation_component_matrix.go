@@ -234,7 +234,7 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 	// Старые схемы манифеста/каталога не представляют нативный план выбранных файлов Runtime. Считайте их
 	// непроверенными, а не сертифицируйте фиктивные пресеты.
 	if manifest.SchemaVersion != "3.0" || cat.SchemaVersion == model.ComponentCatalogSchema0241 {
-		return fmt.Errorf("runtime component matrix requires executable manifest schema 3.0 and catalog schema >= 2.0")
+		return fmt.Errorf("Для «runtime component matrix» требуется «executable manifest schema 3.0 and catalog schema >= 2.0»")
 	}
 	// Настроенная цель обязана использовать выбор, полученный из каталога. Не допускайте, чтобы поддельная
 	// политика оператора незаметно подменяла именованный опубликованный пресет.
@@ -273,7 +273,7 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 	}
 	for _, t := range targets {
 		if !known[t.Preset] {
-			return fmt.Errorf("unknown or unplanned runtime preset %q", t.Preset)
+			return fmt.Errorf("Неизвестное значение: «or unplanned runtime preset» %q", t.Preset)
 		}
 		javaMajor, _ := strconv.Atoi(strings.SplitN(t.JavaVersion, ".", 2)[0])
 		// Для именованного пресета проверяйте настоящий граф и достижимые условия окружения. Пользовательские
@@ -303,7 +303,7 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 			_, err = model.ResolveCatalogPreset0242(*cat, chosen)
 		}
 		if err != nil {
-			return fmt.Errorf("runtime target %q selection %q invalid: %w", t.ID, t.Preset, err)
+			return fmt.Errorf("Некорректное значение: «runtime target %q selection» %q: %w", t.ID, t.Preset, err)
 		}
 	}
 	return nil

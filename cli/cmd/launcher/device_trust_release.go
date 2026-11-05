@@ -127,11 +127,11 @@ func embedDeviceTrustCertification(out, matrixPath, targetsPath, ver, expectedCo
 func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit string) (releaseDeviceTrustCertification, error) {
 	var targets releaseDeviceTrustTargets
 	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
-		return releaseDeviceTrustCertification{}, fmt.Errorf("DEVICE_TRUST_TARGETS invalid: %w", err)
+		return releaseDeviceTrustCertification{}, fmt.Errorf("Некорректное значение: DEVICE_TRUST_TARGETS: %w", err)
 	}
 	var matrix releaseDeviceTrustMatrix
 	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
-		return releaseDeviceTrustCertification{}, fmt.Errorf("DEVICE_TRUST_MATRIX invalid: %w", err)
+		return releaseDeviceTrustCertification{}, fmt.Errorf("Некорректное значение: DEVICE_TRUST_MATRIX: %w", err)
 	}
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
 		return releaseDeviceTrustCertification{}, errors.New("Device Trust evidence требует schemaVersion=1.0")
@@ -311,7 +311,7 @@ func verifyDeviceTrustCertificationInBundle(dir, ver string) error {
 		return errors.New("DEVICE_TRUST_CERTIFICATION не соответствует embedded matrix/targets")
 	}
 	if strings.Join(stored.RequiredTargetIDs, "\x00") != strings.Join(expected.RequiredTargetIDs, "\x00") || strings.Join(stored.PassedTargetIDs, "\x00") != strings.Join(expected.PassedTargetIDs, "\x00") {
-		return errors.New("DEVICE_TRUST_CERTIFICATION target sets mismatch")
+		return errors.New("Несовпадение: «DEVICE_TRUST_CERTIFICATION target sets»")
 	}
 	return nil
 }

@@ -186,7 +186,7 @@ var hostBaseEnvAllowlist0282 = []string{"PATH", "HOME", "USER", "LANG", "LC_ALL"
 
 func validateHostEnvKey0282(key string) error {
 	if !hostEnvKeyPattern0282.MatchString(key) {
-		return fmt.Errorf("invalid environment variable name %q", key)
+		return fmt.Errorf("Некорректное значение: «environment variable name» %q", key)
 	}
 	return nil
 }
@@ -265,7 +265,7 @@ func hostResolveDirectory0282(root, directory string) (string, error) {
 		return "", err
 	}
 	if !info.IsDir() {
-		return "", errors.New("working directory is not a directory")
+		return "", errors.New("рабочий каталог: требуется каталог")
 	}
 	realPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
@@ -295,7 +295,7 @@ func newHostRollingWriter0282(path string, max int64, backups int) (*hostRolling
 	}
 
 	if max < 1024 || backups < 0 || backups > 32 {
-		return nil, errors.New("invalid rolling log limits")
+		return nil, errors.New("Некорректное значение: «rolling log limits»")
 	}
 	writer := &hostRollingWriter0282{path: path, max: max, backups: backups}
 	err := writer.open()

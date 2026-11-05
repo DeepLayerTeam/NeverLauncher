@@ -20,13 +20,13 @@ def require(text: str, path: str, needles: list[str]) -> None:
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"Некорректное значение VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 11):
-    raise SystemExit(f"Windows Adversarial CI gate requires >=0.18.11, got {version}")
+    raise SystemExit(f"Для «Windows Adversarial CI gate» требуется «>=0.18.11, got» {version}")
 
 runner = read("scripts/guard_ci/windows_adversarial.py")
 # Объявления сценариев многострочные в промышленном раннере: сохраняйте точные ID,
@@ -58,7 +58,7 @@ require(runner, "scripts/guard_ci/windows_adversarial.py", [
     "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification",
 ])
 if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', runner):
-    raise SystemExit("Windows Adversarial CI: live Rust/Cargo test command missing")
+    raise SystemExit("Отсутствует: «Windows Adversarial CI: live Rust/Cargo test command»")
 
 unit_tests = read("scripts/guard_ci/test_windows_adversarial.py")
 require(

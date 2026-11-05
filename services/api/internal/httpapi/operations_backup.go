@@ -431,7 +431,7 @@ func (s Server) restoreStorageObjectsSequential880(root string) (int, error) {
 			return closeReadErr
 		}
 		if actualSize != wantSize || (size >= 0 && size != wantSize) || !strings.EqualFold(hex.EncodeToString(h.Sum(nil)), wantSHA) {
-			return fmt.Errorf("restored storage object checksum mismatch: %s", rel)
+			return fmt.Errorf("Несовпадение: «restored storage object checksum»: %s", rel)
 		}
 		count++
 		return nil

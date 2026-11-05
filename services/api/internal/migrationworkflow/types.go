@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("migration run not found")
+	ErrNotFound = errors.New("Не найдено: «migration run»")
 	ErrBusy     = errors.New("migration run is leased, paused or not executable")
 	ErrConflict = errors.New("migration run changed concurrently")
 )

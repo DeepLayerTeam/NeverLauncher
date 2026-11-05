@@ -96,7 +96,7 @@ def certify(
             "extension certificate does not match the six raw JVM run results"
         )
     if cert.get("schemaVersion") != "launcher.extensions.acceptance.v1":
-        raise ValueError("unsupported extension acceptance certificate")
+        raise ValueError("Не поддерживается: «extension acceptance certificate»")
     matrix_hash = verify_matrix(matrix)
     checked_file(cli)
     checked_file(publisher_key)

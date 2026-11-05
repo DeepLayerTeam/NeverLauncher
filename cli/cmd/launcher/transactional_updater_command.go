@@ -175,7 +175,7 @@ func runUpdaterSelfTest0156() (map[string]any, error) {
 		return nil, fmt.Errorf("commit self-test: %w", err)
 	}
 	if raw, _ := os.ReadFile(oldPath); string(raw) != "new-launcher" {
-		return nil, errors.New("commit self-test: launcher bytes mismatch")
+		return nil, errors.New("Несовпадение: «commit self-test: launcher bytes»")
 	}
 	if _, err := os.Stat(obsoletePath); !errors.Is(err, os.ErrNotExist) {
 		return nil, errors.New("commit self-test: obsolete file was not removed")

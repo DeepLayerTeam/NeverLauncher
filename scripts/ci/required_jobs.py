@@ -33,7 +33,7 @@ def declared_jobs(workflow: str) -> set[str]:
     for line in text.splitlines():
         if line == "jobs:":
             if seen_jobs:
-                raise GateFailure("duplicate jobs: section")
+                raise GateFailure("Обнаружен дубликат: «jobs: section»")
             in_jobs = True
             seen_jobs = True
             continue
@@ -48,10 +48,10 @@ def declared_jobs(workflow: str) -> set[str]:
         if match:
             name = match.group(1)
             if name in jobs:
-                raise GateFailure(f"duplicate job id: {name}")
+                raise GateFailure(f"Обнаружен дубликат: идентификатор задания: {name}")
             jobs.add(name)
     if not jobs:
-        raise GateFailure("no jobs found in workflow")
+        raise GateFailure("Отсутствует: «jobs found in workflow»")
     return jobs
 
 
@@ -65,13 +65,13 @@ def verify(
     checked_out_sha: str, run_id: str, run_attempt: str, version: str,
 ) -> dict:
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.+-]+)?", version):
-        raise GateFailure("missing or malformed current product version")
+        raise GateFailure("Отсутствует: «or malformed current product version»")
     if not SHA_RE.fullmatch(source_sha) or not SHA_RE.fullmatch(checked_out_sha):
-        raise GateFailure("missing or invalid 40-hex source SHA")
+        raise GateFailure("Отсутствует: «or invalid 40-hex source SHA»")
     if source_sha.lower() != checked_out_sha.lower():
         raise GateFailure("checked-out commit differs from workflow source SHA")
     if not run_id.isdigit() or int(run_id) <= 0 or not run_attempt.isdigit() or int(run_attempt) <= 0:
-        raise GateFailure("missing CI run id/attempt")
+        raise GateFailure("Отсутствует: «CI run id/attempt»")
     if not isinstance(needs, dict):
         raise GateFailure("GitHub needs context is missing or not an object")
     all_jobs = declared_jobs(workflow)
@@ -85,7 +85,7 @@ def verify(
             raise GateFailure('missing mandatory post-gate publication job')
     expected = all_jobs - {gate} - downstream
     if gate not in all_jobs or not expected:
-        raise GateFailure("gate job missing or required job set empty")
+        raise GateFailure("Пустое значение: «gate job missing or required job set»")
     actual = set(needs)
     missing = sorted(expected - actual)
     unexpected = sorted(actual - expected)

@@ -205,7 +205,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		return nil, err
 	}
 	if parent.ID != minecraft {
-		return nil, errors.New("legacy parent profile ID does not match Minecraft")
+		return nil, errors.New("«legacy parent profile ID» не совпадает с Minecraft")
 	}
 	if strings.TrimSpace(parent.MinecraftArgs) == "" && len(parent.Arguments.Game) == 0 {
 		return nil, errors.New("legacy parent profile has no game arguments")
@@ -221,7 +221,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 	if loader == "forge" {
 		childRel = profilePath
 		if childRel == "" || childRel == parentRel {
-			return nil, errors.New("Forge legacy child profile is missing")
+			return nil, errors.New("Отсутствует: «Forge legacy child profile»")
 		}
 		var child loaderVersionProfile
 		full, e := secureClientDestination(root, childRel)
@@ -246,7 +246,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 			expected = "cpw.mods.fml.common.launcher.FMLTweaker"
 		}
 		if !legacyMinecraftArgumentsContainTweaker(child.MinecraftArgs, expected) {
-			return nil, fmt.Errorf("missing verified Forge tweaker %s", expected)
+			return nil, fmt.Errorf("Отсутствует: «verified Forge tweaker» %s", expected)
 		}
 		childHash = sha256HexBytes(raw)
 		selected.MainClass = child.MainClass
@@ -363,7 +363,7 @@ func verifyLegacyLaunch0278(root string, p factoryPlan0271) error {
 	expected, _ := json.Marshal(p.Legacy)
 	resolved, _ := json.Marshal(actual)
 	if string(expected) != string(resolved) {
-		return errors.New("legacy launch recipe changed")
+		return errors.New("Обнаружено изменение: «legacy launch recipe»")
 	}
 	raw, err := os.ReadFile(legacyLaunchFile0278(root))
 	if err != nil {
@@ -375,7 +375,7 @@ func verifyLegacyLaunch0278(root string, p factoryPlan0271) error {
 	}
 	disk, _ := json.Marshal(fromDisk)
 	if string(expected) != string(disk) {
-		return errors.New("legacy launch file does not match install-plan")
+		return errors.New("«legacy launch file» не совпадает с «install-plan»")
 	}
 	return nil
 }
@@ -396,7 +396,7 @@ func expandLegacyArgs0278(args []string, variables map[string]string) ([]string,
 			return result
 		})
 		if unknown != "" || strings.Contains(value, "${") {
-			return nil, fmt.Errorf("unsupported legacy launch placeholder %s", unknown)
+			return nil, fmt.Errorf("Не поддерживается: «legacy launch placeholder» %s", unknown)
 		}
 		out = append(out, value)
 	}
@@ -474,7 +474,7 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		switch p.Compatibility.AuthMode {
 		case "official", "yggdrasil":
 			if token == "" || uuid == "" {
-				return errors.New("selected authenticated mode requires token and UUID")
+				return errors.New("Для «selected authenticated mode» требуется «token and UUID»")
 			}
 			variables["user_type"] = "msa"
 		case "offline":
@@ -550,13 +550,13 @@ func verifyLegacyJava0278(ctx context.Context, executable string) error {
 	}
 	// Разрешайте форматы версии Java 8: 1.8.0_*** и 8.0.*.
 	if !regexp.MustCompile(`(?m)(?:version|openjdk)\s+"(?:1\.8\.|8(?:[.+-]|"))`).Match(raw) {
-		return fmt.Errorf("legacy adapter requires Java 8, got %q", strings.TrimSpace(string(raw)))
+		return fmt.Errorf("Для «legacy adapter» требуется «Java 8, got» %q", strings.TrimSpace(string(raw)))
 	}
 	return nil
 }
 func handleRuntimeLegacy0278(args []string) error {
 	if len(args) < 1 {
-		return errors.New("legacy command requires inspect|run")
+		return errors.New("Для «legacy command» требуется «inspect|run»")
 	}
 	dir := flagValue(args[1:], "--client-dir", "")
 	if dir == "" {

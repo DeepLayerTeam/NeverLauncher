@@ -33,7 +33,7 @@ const (
 
 var (
 	ErrClosed        = errors.New("sqlite storage closed")
-	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome must be reconciled before replay")
+	ErrCommitUnknown = errors.New("Для «sqlite durable commit returned an error; outcome» требуется: «reconciled before replay»")
 	ErrPoisoned      = errors.New("sqlite transaction state uncertain; close store and reconcile with a fresh connection before serving requests")
 )
 
@@ -66,7 +66,7 @@ type WALStatus struct {
 
 func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	if strings.TrimSpace(opt.Path) == "" || strings.ContainsAny(opt.Path, "\x00?\n") || strings.HasPrefix(strings.ToLower(opt.Path), "file:") || strings.HasPrefix(opt.Path, ":") {
-		return nil, fmt.Errorf("sqlite requires a local filesystem path (no URI/in-memory DB)")
+		return nil, fmt.Errorf("Для «sqlite» требуется «a local filesystem path (no URI/in-memory DB)»")
 	}
 	path, err := filepath.Abs(opt.Path)
 	if err != nil {
@@ -76,13 +76,13 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 		opt.BusyTimeout = 5 * time.Second
 	}
 	if opt.BusyTimeout < time.Millisecond || opt.BusyTimeout > 60*time.Second {
-		return nil, fmt.Errorf("busy timeout must be in [1ms,60s]")
+		return nil, fmt.Errorf("Для «busy timeout» требуется: «in [1ms,60s]»")
 	}
 	if opt.Readers == 0 {
 		opt.Readers = DefaultReaders
 	}
 	if opt.Readers < 1 || opt.Readers > 16 {
-		return nil, fmt.Errorf("readers must be 1..16")
+		return nil, fmt.Errorf("Для «readers» требуется: «1..16»")
 	}
 	if err = verifyLocalPath(path); err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 		}
 	}()
 	if err = durableFileSystemProbe(filepath.Dir(path)); err != nil {
-		return nil, fmt.Errorf("sqlite durable filesystem probe failed: %w", err)
+		return nil, fmt.Errorf("Ошибка: «sqlite durable filesystem probe»: %w", err)
 	}
 	if err = checkSQLiteSidecars(path); err != nil {
 		return nil, err
@@ -208,7 +208,7 @@ func checkSQLiteSidecars(path string) error {
 			return err
 		}
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
-			return fmt.Errorf("unsafe SQLite sidecar %q (expected regular private file)", name)
+			return fmt.Errorf("Небезопасное значение: «SQLite sidecar %q (expected regular private file)»", name)
 		}
 	}
 	return nil
@@ -256,7 +256,7 @@ func verifyDatabaseIntegrity(ctx context.Context, q Executor) error {
 		return err
 	}
 	if hasViolation {
-		return errors.New("SQLite foreign_key_check found inconsistent records")
+		return errors.New("SQLite foreign_key_check обнаружил несогласованные записи")
 	}
 	return nil
 }
@@ -267,7 +267,7 @@ func pragmaInt(ctx context.Context, conn *sql.Conn, name string, want int) error
 		return err
 	}
 	if value != want {
-		return fmt.Errorf("unsafe sqlite PRAGMA %s=%d; expected %d", name, value, want)
+		return fmt.Errorf("Небезопасное значение: «sqlite PRAGMA %s=%d; expected» %d", name, value, want)
 	}
 	return nil
 }
@@ -285,7 +285,7 @@ func checkEngine(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 	if !strings.Contains(sourceID, "555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76") {
-		return fmt.Errorf("unsupported SQLite source revision: %s", sourceID)
+		return fmt.Errorf("Не поддерживается: «SQLite source revision»: %s", sourceID)
 	}
 	opts, err := conn.QueryContext(ctx, "PRAGMA compile_options")
 	if err != nil {
@@ -530,7 +530,7 @@ func ProbeDurability(ctx context.Context, opt Options) (WALStatus, error) {
 			return e
 		}
 		if id != token {
-			return fmt.Errorf("SQLite durability challenge mismatch")
+			return fmt.Errorf("Несовпадение: «SQLite durability challenge»")
 		}
 		return nil
 	})

@@ -64,7 +64,7 @@ type gravBatchResponse0492 struct {
 
 func verifyGravBatchDigest0492(b gravBatch0492) error {
 	if b.Format != "launcher.gravit-multi-profile-dry-run.v1" || len(b.BatchSHA256) != 64 || b.ProfileCount != len(b.Profiles) || b.ProfileCount < 1 || b.ProfileCount > 32 {
-		return errors.New("invalid multi-profile report")
+		return errors.New("Некорректное значение: отчёт по нескольким профилям")
 	}
 	expected := b.BatchSHA256
 	b.BatchSHA256 = ""
@@ -74,13 +74,13 @@ func verifyGravBatchDigest0492(b gravBatch0492) error {
 	}
 	sum := sha256.Sum256(raw)
 	if hex.EncodeToString(sum[:]) != expected {
-		return errors.New("multi-profile report integrity checksum mismatch")
+		return errors.New("Несовпадение: «multi-profile report integrity checksum»")
 	}
 	return nil
 }
 func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string) error {
 	if source == "" || mapping == "" {
-		return errors.New("dry-run-all requires --source and --mapping")
+		return errors.New("Для «dry-run-all» требуется «--source and --mapping»")
 	}
 	uri, err := url.Parse(endpoint)
 	if err != nil {
@@ -89,7 +89,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	if uri.Scheme != "https" {
 		ip := net.ParseIP(uri.Hostname())
 		if uri.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("migration source requires HTTPS except IP loopback")
+			return errors.New("Для «migration source» требуется «HTTPS except IP loopback»")
 		}
 	}
 	mf, err := os.Lstat(mapping)
@@ -97,7 +97,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if !mf.Mode().IsRegular() || mf.Size() < 2 || mf.Size() > 12288 {
-		return errors.New("mapping must be a regular JSON file at most 12 KiB")
+		return errors.New("Для «mapping» требуется: «a regular JSON file at most 12 KiB»")
 	}
 	raw, err := os.ReadFile(mapping)
 	if err != nil {
@@ -143,7 +143,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("source must be regular ZIP of 1..512 MiB")
+		return errors.New("Для источник требуется: «regular ZIP of 1..512 MiB»")
 	}
 	req, err := http.NewRequest("POST", endpoint, sourceFile)
 	if err != nil {
@@ -164,7 +164,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if len(body) > 16<<20 {
-		return errors.New("dry-run response too large")
+		return errors.New("Превышен допустимый размер: «dry-run response»")
 	}
 	if res.StatusCode != 200 {
 		return fmt.Errorf("dry-run-all HTTP %d: %s", res.StatusCode, string(body))
@@ -175,7 +175,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	}
 	current := value.Data
 	if current.Format != "launcher.gravit-multi-profile-dry-run.v1" || len(current.BatchSHA256) != 64 || len(current.SourceSHA256) != 64 || len(current.TargetSHA256) != 64 || current.ProfileCount != len(rows) || (current.Status != "blocked" && current.Status != "manual") {
-		return errors.New("invalid backend dry-run report")
+		return errors.New("Некорректное значение: «backend dry-run report»")
 	}
 	if err = verifyGravBatchDigest0492(current); err != nil {
 		return err
@@ -194,7 +194,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 			return err
 		}
 		if !stat.Mode().IsRegular() || stat.Size() > 16<<20 {
-			return errors.New("invalid prior dry-run report")
+			return errors.New("Некорректное значение: «prior dry-run report»")
 		}
 		existing, err := io.ReadAll(io.LimitReader(file, 16<<20+1))
 		if err != nil {
@@ -202,7 +202,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		}
 		var previous gravBatchResponse0492
 		if json.Unmarshal(existing, &previous) != nil || verifyGravBatchDigest0492(previous.Data) != nil || previous.Data.Format != current.Format || previous.Data.BatchSHA256 != current.BatchSHA256 || previous.Data.SourceSHA256 != current.SourceSHA256 || previous.Data.TargetSHA256 != current.TargetSHA256 || previous.Data.ProfileCount != current.ProfileCount {
-			return errors.New("STALE dry-run: source, profile mapping, target or dependencies changed")
+			return errors.New("Обнаружено изменение: «STALE dry-run: source, profile mapping, target or dependencies»")
 		}
 	}
 	// Сохраняйте полный отчёт по каждому профилю, а не только сводку, в закрытом хранилище.

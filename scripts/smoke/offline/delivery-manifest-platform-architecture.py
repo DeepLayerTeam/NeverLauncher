@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 1):
-    raise SystemExit(f"Delivery Manifest gate requires VERSION>=0.15.1, got {VERSION}")
+    raise SystemExit(f"Для «Delivery Manifest gate» требуется «VERSION>=0.15.1, got» {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -130,7 +130,7 @@ with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:
     )
     data = json.loads(resolved)
     if data.get("target") != {"platform": "windows", "architecture": "arm64"}:
-        raise SystemExit(f"canonical target mismatch: {data.get('target')}")
+        raise SystemExit(f"Несовпадение: «canonical target»: {data.get('target')}")
     artifacts = data.get("artifacts", [])
     if (
         len(artifacts) != 1

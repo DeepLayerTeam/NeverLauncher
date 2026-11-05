@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 5):
-    raise SystemExit(f"Forge Legacy 1.7.10 requires VERSION>=0.17.5, got {version}")
+    raise SystemExit(f"Для «Forge Legacy 1.7.10» требуется «VERSION>=0.17.5, got» {version}")
 
 
 def read(rel: str) -> str:
@@ -24,7 +24,7 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 if dict(matrix_globals["FORGE_LEGACY_1710_0175"]) != {"1.7.10": 8}:
-    raise SystemExit("Forge Legacy 1.7.10 canonical grid mismatch")
+    raise SystemExit("Несовпадение: «Forge Legacy 1.7.10 canonical grid»")
 
 rows = [
     row

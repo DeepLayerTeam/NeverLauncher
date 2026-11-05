@@ -20,14 +20,14 @@ import (
 // Gravit и не подменяет доказательство исходной системы квитанцией оператора.
 func handleMigrationCutover03311(args []string) error {
 	if len(args) == 0 {
-		return errors.New("cutover requires cutover-list|cutover-stage|cutover-activate|cutover-cancel")
+		return errors.New("Для «cutover» требуется «cutover-list|cutover-stage|cutover-activate|cutover-cancel»")
 	}
 	cmd := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	run := flagValue(args, "--run", "")
 	if backend == "" || token == "" || run == "" {
-		return errors.New("cutover requires --backend --token --run")
+		return errors.New("Для «cutover» требуется «--backend --token --run»")
 	}
 	u, e := url.Parse(backend)
 	if e != nil {
@@ -36,7 +36,7 @@ func handleMigrationCutover03311(args []string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("cutover requires HTTPS or local loopback")
+			return errors.New("Для «cutover» требуется «HTTPS or local loopback»")
 		}
 	}
 	endpoint := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run) + "/cutovers"
@@ -44,7 +44,7 @@ func handleMigrationCutover03311(args []string) error {
 		return cutoverRequest03311("GET", endpoint, token, run, nil, false, flagValue(args, "--output", ""))
 	}
 	if flagValue(args, "--confirm", "") != run {
-		return errors.New("cutover mutation requires --confirm with the exact migration run ID")
+		return errors.New("Для «cutover mutation» требуется «--confirm with the exact migration run ID»")
 	}
 	profile := flagValue(args, "--profile-id", "")
 	channel := flagValue(args, "--channel", "")
@@ -54,24 +54,24 @@ func handleMigrationCutover03311(args []string) error {
 	case "cutover-stage":
 		rev, e := strconv.ParseInt(flagValue(args, "--head-revision", ""), 10, 64)
 		if e != nil {
-			return errors.New("stage requires --head-revision (including 0)")
+			return errors.New("Для «stage» требуется «--head-revision (including 0)»")
 		}
 		body = map[string]any{"profileId": profile, "channel": channel, "releaseId": flagValue(args, "--release-id", ""), "stageId": flagValue(args, "--stage-id", ""), "expectedHeadRevision": rev}
 		endpoint += "/stage"
 	case "cutover-activate":
 		rev, e := strconv.ParseInt(flagValue(args, "--expected-revision", ""), 10, 64)
 		if e != nil {
-			return errors.New("activate requires --expected-revision")
+			return errors.New("Для «activate» требуется --expected-revision")
 		}
 		if flagValue(args, "--source-fenced", "") != "true" {
-			return errors.New("activate requires explicit --source-fenced true after stopping the external Gravit writer")
+			return errors.New("Для «activate» требуется «explicit --source-fenced true after stopping the external Gravit writer»")
 		}
 		// Читает подлинную квитанцию проверки на исходной системе. Произвольный
 		// 64-символьный хеш больше не проходит предварительную проверку CLI.
 		receiptPath := flagValue(args, "--fence-receipt", "")
 		var receipt sourceFenceEvidence0448
 		if receiptPath == "" {
-			return errors.New("activate requires --fence-receipt from verify-source-fence")
+			return errors.New("Для «activate» требуется «--fence-receipt from verify-source-fence»")
 		}
 		if e = readFenceFile0448(receiptPath, 8<<10, &receipt); e != nil {
 			return e
@@ -79,7 +79,7 @@ func handleMigrationCutover03311(args []string) error {
 		if receipt.Format != "never/gravit-source-stop/v1" || receipt.RunID != run || receipt.ProfileID != profile || receipt.Channel != channel ||
 			receipt.UnitState != "inactive" || (receipt.UnitFileState != "masked" && receipt.UnitFileState != "masked-runtime") ||
 			time.Since(receipt.CheckedAt) > 10*time.Minute || time.Until(receipt.CheckedAt) > time.Minute || !fenceDigest0448.MatchString(receipt.SnapshotSHA256) {
-			return errors.New("source fence receipt scope, status or freshness invalid")
+			return errors.New("Некорректное значение: «source fence receipt scope, status or freshness»")
 		}
 		canonical, hashErr := json.Marshal(receipt)
 		if hashErr != nil {
@@ -94,12 +94,12 @@ func handleMigrationCutover03311(args []string) error {
 	case "cutover-cancel":
 		rev, e := strconv.ParseInt(flagValue(args, "--expected-revision", ""), 10, 64)
 		if e != nil {
-			return errors.New("cancel requires --expected-revision")
+			return errors.New("Для «cancel» требуется --expected-revision")
 		}
 		body = map[string]any{"profileId": profile, "channel": channel, "expectedRevision": rev}
 		endpoint += "/cancel"
 	default:
-		return fmt.Errorf("unknown cutover command %s", cmd)
+		return fmt.Errorf("Неизвестное значение: «cutover command» %s", cmd)
 	}
 	return cutoverRequest03311("POST", endpoint, token, run, body, fenced, flagValue(args, "--output", ""))
 }

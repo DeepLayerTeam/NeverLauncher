@@ -21,7 +21,7 @@ required_files = [
 ]
 for rel in required_files:
     if not resource_exists(ROOT, rel):
-        raise SystemExit(f"missing ServerBridge event-stream production file: {rel}")
+        raise SystemExit(f"Отсутствует: «ServerBridge event-stream production file»: {rel}")
 
 checks = {
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java": [
@@ -136,6 +136,6 @@ event_source = (
 ).read_text(encoding="utf-8")
 for event_type in sorted(required_types):
     if f'"{event_type}"' not in event_source:
-        raise SystemExit(f"missing event type {event_type}")
+        raise SystemExit(f"Отсутствует: «event type» {event_type}")
 
 print("ServerBridge 0.19.4 ordered event-stream production gate: PASS")

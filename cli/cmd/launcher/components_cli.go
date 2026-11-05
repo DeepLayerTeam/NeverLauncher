@@ -100,7 +100,7 @@ func rejectDuplicateJSON0249(data []byte) error {
 				}
 			}
 		default:
-			return errors.New("unexpected JSON closing delimiter")
+			return errors.New("Неожиданное значение: «JSON closing delimiter»")
 		}
 		_, e = d.Token()
 		return e
@@ -149,7 +149,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		return out, fmt.Errorf("components require Manifest v3, got %q", out.Wire.SchemaVersion)
 	}
 	if len(out.Wire.ComponentCatalog) == 0 || len(out.Wire.Files) == 0 || len(out.Wire.ProfileSnapshot) == 0 {
-		return out, errors.New("v3 manifest requires catalog, files and profile snapshot")
+		return out, errors.New("Для «v3 manifest» требуется «catalog, files and profile snapshot»")
 	}
 	if e = json.Unmarshal(data, &out.Manifest); e != nil {
 		return out, e
@@ -172,7 +172,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		}
 		sig, e := hex.DecodeString(out.Wire.Signature.Signature)
 		if e != nil || len(sig) != ed25519.SignatureSize {
-			return out, errors.New("invalid Ed25519 manifest signature encoding")
+			return out, errors.New("Некорректное значение: «Ed25519 manifest signature encoding»")
 		}
 		unsigned := out.Wire
 		unsigned.Signature = nil
@@ -493,7 +493,7 @@ func executeComponents0249(args []string) error {
 	// CLI намеренно НЕ имеет параметра --permissions: утверждения из локального флага не являются серверными правами.
 	if cmd == "diff" {
 		if *old == "" || *newPath == "" {
-			return errors.New("components diff requires --old and --new")
+			return errors.New("Для «components diff» требуется «--old and --new»")
 		}
 		okOld := *oldPub
 		if okOld == "" {
@@ -609,7 +609,7 @@ func handleComponents0249(args []string) error {
 		Message       string `json:"message"`
 	}{"1.0", "error", code, component, related, err.Error()}
 	if e := writeComponentsJSON0249(output, report); e != nil {
-		return fmt.Errorf("%w; cannot write error JSON: %v", err, e)
+		return fmt.Errorf("«%w;»: запрещено «write error JSON:» %v", err, e)
 	}
 	return err
 }

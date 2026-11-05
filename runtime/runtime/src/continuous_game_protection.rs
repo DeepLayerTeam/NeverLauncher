@@ -86,12 +86,12 @@ impl LiveGameGuard0506 {
         // Артефакты точки входа JVM, созданные Launcher, должны входить
 // в подписанную инвентаризацию.
         for entry in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
-            let canonical = fs::canonicalize(entry).map_err(|e| format!("live Guard classpath missing: {e}"))?;
+            let canonical = fs::canonicalize(entry).map_err(|e| format!("Отсутствует: «live Guard classpath»: {e}"))?;
             if !pinned.contains_key(&canonical) {
                 return Err(format!("live Guard unsigned classpath: {}",canonical.display()));
             }
         }
-        if pinned.is_empty() {return Err("live Guard executable inventory empty".into())}
+        if pinned.is_empty() {return Err("Пустое значение: «live Guard executable inventory»".into())}
         if pinned.len() > LIMIT {return Err("live Guard inventory capacity exceeded".into())}
         #[cfg(target_os = "linux")]
         let linux_external = match signed.as_ref() {
@@ -223,7 +223,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         }
         if deadline.map(|d|Instant::now()>=d).unwrap_or(false) {continue}
         let check = tokio::task::spawn_blocking({let guard=guard.clone(); move ||guard.verify()}).await
-            .map_err(|e|format!("live Guard watcher failed: {e}"))?;
+            .map_err(|e|format!("Ошибка: «live Guard watcher»: {e}"))?;
         #[cfg(target_os = "linux")]
         let check = match check { Ok(()) => guard.verify_linux_daemon().await, err => err };
         #[cfg(target_os = "macos")]
@@ -271,7 +271,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
             #[cfg(target_os = "macos")] macos_daemon:None};
         assert!(live.verify().is_ok());
         fs::write(&jar,b"different game").unwrap();
-        assert!(live.verify().unwrap_err().contains("executable changed"));
+        assert!(live.verify().unwrap_err().contains("Обнаружено изменение: «executable»"));
         let _=fs::remove_dir_all(root);
     }
     #[cfg(unix)]

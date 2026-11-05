@@ -27,7 +27,7 @@ func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, o
 		return BuildWorkspace{}, mw.ErrConflict
 	}
 	if len(channel) > 128 || len(version) > 128 || channel == "" || version == "" || strings.ContainsAny(channel+version, "/\\\x00\r\n") {
-		return BuildWorkspace{}, errors.New("invalid destination release channel/version")
+		return BuildWorkspace{}, errors.New("Некорректное значение: «destination release channel/version»")
 	}
 	profile := plan.Profile.Profile
 	if profile.Revision != 0 || profile.ID == "" { // converter yields normalized revision zero

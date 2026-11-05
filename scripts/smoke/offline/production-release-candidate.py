@@ -86,7 +86,7 @@ require(
 
 layout_resolver = ROOT / "scripts/release/resolve-artifact-payload.sh"
 if not layout_resolver.is_file():
-    raise SystemExit("production candidate artifact layout resolver is missing")
+    raise SystemExit("Отсутствует: «production candidate artifact layout resolver»")
 require(
     build,
     [
@@ -135,7 +135,7 @@ def validate_native_layout(root: Path, marker: str) -> Path:
     if not nested.is_file() or nested.is_symlink():
         raise ValueError("artifact marker missing or symlink")
     if any(p.is_file() or p.is_symlink() for p in root.iterdir()):
-        raise ValueError("unexpected top-level artifact or symlink")
+        raise ValueError("Неожиданное значение: «top-level artifact or symlink»")
     if any(p.is_symlink() for p in expected.iterdir()):
         raise ValueError("nested artifact payload contains symlink")
     return expected

@@ -81,7 +81,7 @@ def strict_json(data: bytes) -> dict:
         out = {}
         for k, v in pairs:
             if k in out:
-                raise GateError(f"duplicate JSON key: {k}")
+                raise GateError(f"Обнаружен дубликат: ключ JSON: {k}")
             out[k] = v
         return out
 
@@ -106,14 +106,14 @@ def read_file(
         or "\\" in name
         or Path(name).name != name
     ):
-        raise GateError("unsafe evidence filename")
+        raise GateError("Небезопасное значение: «evidence filename»")
     if base.is_symlink():
         raise GateError("symlinked evidence directory")
     path = base / name
     if path.is_symlink() or not path.is_file():
-        raise GateError(f"missing or unsafe evidence file: {path}")
+        raise GateError(f"Отсутствует: «or unsafe evidence file»: {path}")
     if path.stat().st_size > limit:
-        raise GateError(f"oversized evidence file: {path}")
+        raise GateError(f"Слишком большой файл подтверждающих данных: {path}")
     hasher = hashlib.sha256()
     output = bytearray()
     size = 0
@@ -121,14 +121,14 @@ def read_file(
         while block := f.read(1024 * 1024):
             size += len(block)
             if size > limit:
-                raise GateError(f"oversized evidence file: {path}")
+                raise GateError(f"Слишком большой файл подтверждающих данных: {path}")
             hasher.update(block)
             if retain:
                 output.extend(block)
     if expected is not None and (
         not SHA.fullmatch(expected) or hasher.hexdigest() != expected
     ):
-        raise GateError(f"evidence SHA-256 mismatch: {path}")
+        raise GateError(f"Несовпадение: «evidence SHA-256»: {path}")
     return bytes(output)
 
 
@@ -228,9 +228,9 @@ def verify_target(
 
 def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
     if not COMMIT.fullmatch(commit):
-        raise GateError("expected Git commit must be 40 lowercase hex digits")
+        raise GateError("Для «expected Git commit» требуется: «40 lowercase hex digits»")
     if not re.fullmatch("[a-f0-9]{64}", trusted_public_key):
-        raise GateError("trusted independent Ed25519 public key must be 32-byte hex")
+        raise GateError("Для «trusted independent Ed25519 public key» требуется: «32-byte hex»")
     if evidence.is_symlink() or not evidence.is_dir():
         raise GateError("missing/unsafe evidence directory")
     found = {p.name for p in evidence.iterdir()}

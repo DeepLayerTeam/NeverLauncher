@@ -34,13 +34,13 @@ class CertificateError(Exception):
 
 def current_policy(path, expected_sha256, root_public):
     if not SHA256.fullmatch(expected_sha256) or path.is_symlink() or not path.is_file():
-        raise CertificateError("signed source and pinned SHA-256 required")
+        raise CertificateError("Требуется: «signed source and pinned SHA-256»")
     raw = path.read_bytes()
     if len(raw) > 128 * 1024 or hashlib.sha256(raw).hexdigest() != expected_sha256:
         raise CertificateError("signed policy changed since review")
     env = json.loads(raw, object_pairs_hook=root_signing._no_duplicate_keys)
     if env.get("schemaVersion") != "1.0":
-        raise CertificateError("unexpected signed trust envelope")
+        raise CertificateError("Неожиданное значение: «signed trust envelope»")
     payload = base64.b64decode(env['payload'], validate=True)
     root = Ed25519PublicKey.from_public_bytes(bytes.fromhex(root_public))
     root.verify(bytes.fromhex(env['rootSignature']), root_signing.PREFIX + payload)
@@ -55,7 +55,7 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
            key_id, private_key_output=None):
     signed_policy, output = Path(signed_policy), Path(output)
     if not ID.fullmatch(key_id):
-        raise CertificateError("invalid delegated key ID")
+        raise CertificateError("Некорректное значение: «delegated key ID»")
     existing = current_policy(signed_policy, expected_sha256, root_public)
     if existing['epoch'] >= 2**64 - 1:
         raise CertificateError("trust epoch overflow")
@@ -64,23 +64,23 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
     private = None
     if operation == 'issue':
         if key_id in ids or private_key_output is None:
-            raise CertificateError("duplicate key ID or no private key destination")
+            raise CertificateError("Обнаружен дубликат: «key ID or no private key destination»")
         private_key_output = Path(private_key_output)
         if private_key_output.exists() or private_key_output.is_symlink() or private_key_output == output:
-            raise CertificateError("private seed destination must be new")
+            raise CertificateError("Для «private seed destination» требуется: «new»")
         private = Ed25519PrivateKey.generate()
         pub = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
         existing['keys'].append({'id': key_id, 'role': 'component', 'status': 'active', 'publicKey': pub,
                                  'notBefore': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')})
     elif operation == 'revoke':
         if private_key_output is not None or key_id not in ids:
-            raise CertificateError("cannot revoke unknown key or write a private seed")
+            raise CertificateError("Не удалось отозвать «unknown key or write a private seed»")
         key = next(k for k in existing['keys'] if k['id'] == key_id)
         if key['status'] != 'active':
             raise CertificateError("delegation already revoked")
         key['status'] = 'revoked'
     else:
-        raise CertificateError("unknown certificate operation")
+        raise CertificateError("Неизвестное значение: «certificate operation»")
     # Новая эпоха выдачи и отзыва подписывается существующим закреплённым
     # автономным корнем; новый закрытый seed никогда не помещается в JSON
     # политики.

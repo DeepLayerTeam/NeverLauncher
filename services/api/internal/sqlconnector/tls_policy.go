@@ -55,15 +55,15 @@ func validateMySQLTLSMode(cfg RuntimeConfig, tlsMode string) error {
 		case "true", "skip-verify":
 			return nil
 		default:
-			return fmt.Errorf("MySQL/MariaDB TLS is required without plaintext fallback; tls=%s is not allowed", mode)
+			return fmt.Errorf("«MySQL/MariaDB TLS is required without plaintext fallback; tls=%s»: не разрешено", mode)
 		}
 	}
 	switch mode {
 	case "true":
 		return nil
 	case "skip-verify", "preferred":
-		return fmt.Errorf("MySQL/MariaDB TLS verification is required; tls=%s is not allowed", mode)
+		return fmt.Errorf("«MySQL/MariaDB TLS verification is required; tls=%s»: не разрешено", mode)
 	default:
-		return fmt.Errorf("MySQL/MariaDB TLS verification requires tls=true; custom TLS config %q is not registered by Launcher", mode)
+		return fmt.Errorf("Для «MySQL/MariaDB TLS verification» требуется «tls=true; custom TLS config %q is not registered by Launcher»", mode)
 	}
 }

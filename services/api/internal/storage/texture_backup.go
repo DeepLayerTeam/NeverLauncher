@@ -178,7 +178,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		return 0, err
 	}
 	if !info.Mode().IsRegular() || info.Size() > 16<<20 {
-		return 0, errors.New("unsafe or oversized backup manifest")
+		return 0, errors.New("Небезопасное значение: «or oversized backup manifest»")
 	}
 	f, err := os.Open(manifestPath)
 	if err != nil {
@@ -272,7 +272,7 @@ func checkRestoreFile0253(snapshot string, obj TextureBackupObject0253) error {
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Size() != obj.ByteSize {
-		return errors.New("backup object not regular or size mismatch")
+		return errors.New("Несовпадение: «backup object not regular or size»")
 	}
 	file, err := os.Open(path)
 	if err != nil {

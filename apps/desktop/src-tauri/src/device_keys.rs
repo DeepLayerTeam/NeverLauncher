@@ -346,11 +346,11 @@ fn now_unix() -> u64 {
 fn try_new_hardware_record_with_generation(backend_url: &str, user_id: &str, generation: &str) -> Result<SecureDeviceKeyRecord, String> {
     let label = hardware_key_label_generation(backend_url, user_id, generation)?;
     let (signer, provider) = hardware_signer(&label)?;
-    if signer.key_exists(&label).map_err(|e| format!("hardware key lookup failed: {e}"))? {
+    if signer.key_exists(&label).map_err(|e| format!("Ошибка: поиск аппаратного ключа: {e}"))? {
         return Err("generation-specific hardware label уже существует".into());
     }
-    signer.generate_key(&label, AccessPolicy::None).map_err(|e| format!("hardware key generation failed: {e}"))?;
-    let public = signer.public_key(&label).map_err(|e| format!("hardware public key read failed: {e}"))?;
+    signer.generate_key(&label, AccessPolicy::None).map_err(|e| format!("Ошибка: «hardware key generation»: {e}"))?;
+    let public = signer.public_key(&label).map_err(|e| format!("Ошибка: «hardware public key read»: {e}"))?;
     if public.len() != 65 || public[0] != 0x04 {
         let _ = signer.delete_key(&label);
         return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
@@ -540,7 +540,7 @@ pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<De
     let payload = guard_attestation_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
-        .map_err(|e| format!("hardware Guard Attestation signing failed: {e}"))?;
+        .map_err(|e| format!("Ошибка: «hardware Guard Attestation signing»: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
         fingerprint: record.fingerprint.clone(),
@@ -635,7 +635,7 @@ pub fn sign_guard_attestation_v2(request: GuardAttestationV2SignRequest) -> Resu
     let payload = guard_attestation_v2_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
-        .map_err(|e| format!("hardware Guard Attestation v2 signing failed: {e}"))?;
+        .map_err(|e| format!("Ошибка: «hardware Guard Attestation v2 signing»: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
         fingerprint: record.fingerprint.clone(),
@@ -665,7 +665,7 @@ pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> R
     let signature = if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(&record)?;
         let der = signer.sign(&record.hardware_label, payload.as_bytes())
-            .map_err(|e| format!("hardware device signing failed: {e}"))?;
+            .map_err(|e| format!("Ошибка: «hardware device signing»: {e}"))?;
         URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
     } else {
         let signing = validate_software_record(&mut record)?;
@@ -721,7 +721,7 @@ pub fn sign_session_refresh(
     let signature = if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(&record)?;
         let der = signer.sign(&record.hardware_label, payload.as_bytes())
-            .map_err(|e| format!("hardware session refresh signing failed: {e}"))?;
+            .map_err(|e| format!("Ошибка: «hardware session refresh signing»: {e}"))?;
         URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
     } else {
         let signing = validate_software_record(&mut record)?;
@@ -750,7 +750,7 @@ pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) ->
     // сохранённый неэкспортируемый аппаратный ключ, ранее зарегистрированный сервером.
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
-        .map_err(|e| format!("hardware device attestation signing failed: {e}"))?;
+        .map_err(|e| format!("Ошибка: «hardware device attestation signing»: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
         fingerprint: record.fingerprint.clone(),
@@ -788,7 +788,7 @@ fn validate_device_replacement_payload(payload: &str, user_id: &str) -> Result<V
 fn sign_with_record(record: &mut SecureDeviceKeyRecord, payload: &str) -> Result<String, String> {
     if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(record)?;
-        let der = signer.sign(&record.hardware_label, payload.as_bytes()).map_err(|e| format!("hardware device signing failed: {e}"))?;
+        let der = signer.sign(&record.hardware_label, payload.as_bytes()).map_err(|e| format!("Ошибка: «hardware device signing»: {e}"))?;
         Ok(URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?))
     } else {
         let signing = validate_software_record(record)?;
@@ -1076,12 +1076,12 @@ mod tests {
 pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
     if payload.len() > 4096 || !payload.starts_with("Launcher-Verified-Component-Plan-v1\n")
         || payload.contains('\r') || payload.split('\n').count() != 16 {
-        return Err("invalid native verified plan payload".into());
+        return Err("Некорректное значение: «native verified plan payload»".into());
     }
     let user = normalize_user_id(user_id)?;
     let mut record = load_record(backend_url, &user)?.ok_or("trusted device key missing")?;
     if record.key_binding != "hardware" || record.key_algorithm != "p256" || record.device_id.as_deref() != Some(device_id) {
-        return Err("verified plan requires bound hardware P-256 device key".into());
+        return Err("Для «verified plan» требуется «bound hardware P-256 device key»".into());
     }
     validate_record(&mut record)?;
     let signature = sign_with_record(&mut record, payload)?;
@@ -1110,7 +1110,7 @@ pub fn windows_tpm_certify_0313(
         if record.user_id != user || record.device_id.as_deref() != Some(device_id) ||
            record.key_binding != "hardware" || record.key_algorithm != "p256" ||
            !record.hardware_provider.to_ascii_lowercase().contains("tpm") {
-            return Err("registered Windows TPM P-256 identity required".into());
+            return Err("Требуется: «registered Windows TPM P-256 identity»".into());
         }
         let _ = validate_hardware_record(&record)?;
         let sec1 = URL_SAFE_NO_PAD.decode(&record.public_key)
@@ -1134,7 +1134,7 @@ pub fn linux_tpm_certify_0314(
     #[cfg(not(target_os="linux"))]
     {
         let _=(backend_url,user_id,device_id,tpm_extra_data_sha256,ak_handle,ak_certificate_pem,intermediates_pem);
-        Err("Native Linux TPM evidence requires Linux glibc and a TPM 2.0 device".into())
+        Err("Для «Native Linux TPM evidence» требуется «Linux glibc and a TPM 2.0 device»".into())
     }
     #[cfg(target_os="linux")]
     {
@@ -1165,25 +1165,25 @@ pub fn measured_boot_quote_0315(
  let user=normalize_user_id(user_id)?;
  let record=load_record(backend_url,&user)?.ok_or("Registered hardware device key missing")?;
  if record.user_id!=user || record.device_id.as_deref()!=Some(device_id) || record.key_algorithm!="p256" || record.key_binding!="hardware" {
-  return Err("TPM Quote requires bound hardware P-256 device".into());
+  return Err("Для «TPM Quote» требуется «bound hardware P-256 device»".into());
  }
  let _=validate_hardware_record(&record)?;
  #[cfg(target_os="windows")]
  {
-  if !record.hardware_provider.to_ascii_lowercase().contains("tpm") {return Err("Windows TPM key required".into());}
+  if !record.hardware_provider.to_ascii_lowercase().contains("tpm") {return Err("Требуется: «Windows TPM key»".into());}
   let proof=crate::tpm_windows_0313::quote0315(extra,selection,ak_key,certificate,intermediates)?;
   return serde_json::to_value(proof).map_err(|e|e.to_string());
  }
  #[cfg(target_os="linux")]
  {
-  if !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm"){return Err("Linux TPM key required".into());}
+  if !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm"){return Err("Требуется: «Linux TPM key»".into());}
   let proof=crate::tpm_linux_0314::quote0315(extra,selection,ak_key,certificate,intermediates)?;
   return serde_json::to_value(proof).map_err(|e|e.to_string());
  }
  #[cfg(not(any(target_os="windows",target_os="linux")))]
  {
   let _=(extra,selection,ak_key,certificate,intermediates);
-  Err("Measured Boot TPM Quote requires Windows or Linux TPM 2.0".into())
+  Err("Для «Measured Boot TPM Quote» требуется «Windows or Linux TPM 2.0»".into())
  }
 }
 

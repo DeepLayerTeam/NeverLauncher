@@ -26,10 +26,10 @@ var validID = regexp.MustCompile(`^[a-z][a-z0-9._-]{1,63}$`)
 
 func (cfg Config) Validate() error {
 	if !validID.MatchString(cfg.ID) || !validID.MatchString(cfg.ExtensionID) || strings.TrimSpace(cfg.DisplayName) == "" || len(cfg.DisplayName) > 120 {
-		return errors.New("invalid Java identity provider configuration")
+		return errors.New("Некорректное значение: «Java identity provider configuration»")
 	}
 	if cfg.ID == "local" {
-		return errors.New("built-in provider cannot be overridden")
+		return errors.New("«built-in provider»: запрещено «be overridden»")
 	}
 	return nil
 }

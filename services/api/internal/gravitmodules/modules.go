@@ -82,7 +82,7 @@ func readFile(ctx context.Context, f *zip.File, limit int64) ([]byte, error) {
 		n, err := r.Read(p)
 		if n > 0 {
 			if int64(b.Len()+n) > limit {
-				return nil, errors.New("oversized expanded file")
+				return nil, errors.New("Превышен допустимый размер: «expanded file»")
 			}
 			b.Write(p[:n])
 		}
@@ -112,11 +112,11 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 	for _, f := range z.File {
 		p := strings.TrimSuffix(f.Name, "/")
 		if !safePath(p) || f.Mode()&os.ModeSymlink != 0 || f.Flags&1 != 0 || (f.Method != zip.Store && f.Method != zip.Deflate) {
-			return "", false, false, errors.New("unsafe JAR member")
+			return "", false, false, errors.New("Небезопасное значение: «JAR member»")
 		}
 		k := strings.ToLower(p)
 		if seen[k] {
-			return "", false, false, errors.New("duplicate JAR member")
+			return "", false, false, errors.New("Обнаружен дубликат: «JAR member»")
 		}
 		seen[k] = true
 		if f.FileInfo().IsDir() {
@@ -153,7 +153,7 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 		// модуль безопасным.
 		if strings.HasSuffix(lower, ".class") || strings.HasPrefix(lower, "meta-inf/services/") {
 			if f.UncompressedSize64 > 4<<20 {
-				return "", false, false, errors.New("oversized class/service descriptor")
+				return "", false, false, errors.New("Превышен допустимый размер: «class/service descriptor»")
 			}
 			data, er := readFile(ctx, f, 4<<20)
 			if er != nil {

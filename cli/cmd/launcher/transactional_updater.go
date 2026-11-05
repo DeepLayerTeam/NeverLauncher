@@ -162,7 +162,7 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 	if err := u.commitLocked(journal, req.Verify); err != nil {
 		rollbackErr := u.rollbackLocked(journal, err)
 		if rollbackErr != nil {
-			return nil, fmt.Errorf("transaction %s failed: %v; rollback failed: %w", journal.ID, err, rollbackErr)
+			return nil, fmt.Errorf("Ошибка: транзакция %s: %v; rollback failed: %w", journal.ID, err, rollbackErr)
 		}
 		return nil, fmt.Errorf("transaction %s rolled back: %w", journal.ID, err)
 	}
@@ -804,11 +804,11 @@ func (u *transactionalUpdater0156) readJournal(id string) (*updaterJournal0156, 
 		return nil, err
 	}
 	if journal.SchemaVersion != updaterCoreSchema0156 || journal.ID != id {
-		return nil, fmt.Errorf("invalid updater journal %s", id)
+		return nil, fmt.Errorf("Некорректное значение: «updater journal» %s", id)
 	}
 	root, err := filepath.Abs(journal.Root)
 	if err != nil || filepath.Clean(root) != u.root {
-		return nil, fmt.Errorf("updater journal %s root mismatch", id)
+		return nil, fmt.Errorf("Несовпадение: «updater journal %s root»", id)
 	}
 	return &journal, nil
 }
@@ -863,13 +863,13 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 		}
 		key := pathKey(rel)
 		if previous, ok := seen[key]; ok {
-			return nil, nil, fmt.Errorf("duplicate updater path %s (%s)", rel, previous)
+			return nil, nil, fmt.Errorf("Обнаружен дубликат: «updater path %s (%s)»", rel, previous)
 		}
 		if file.Size < 0 || len(strings.TrimSpace(file.SHA256)) != 64 {
-			return nil, nil, fmt.Errorf("invalid updater metadata for %s", rel)
+			return nil, nil, fmt.Errorf("Некорректное значение: «updater metadata for» %s", rel)
 		}
 		if _, err := hex.DecodeString(file.SHA256); err != nil {
-			return nil, nil, fmt.Errorf("invalid updater SHA-256 for %s", rel)
+			return nil, nil, fmt.Errorf("Некорректное значение: «updater SHA-256 for» %s", rel)
 		}
 		if len(file.Data) == 0 && file.Data == nil && strings.TrimSpace(file.Source) == "" {
 			return nil, nil, fmt.Errorf("updater source отсутствует для %s", rel)

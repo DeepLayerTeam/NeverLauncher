@@ -19,13 +19,13 @@ def require(text: str, needles: list[str], label: str) -> None:
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"Некорректное значение VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 4):
-    raise SystemExit(f"Guard Guard Attestation gate requires >=0.13.4, got {version}")
+    raise SystemExit(f"Для «Guard Guard Attestation gate» требуется «>=0.13.4, got» {version}")
 
 attestation = read("runtime/runtime/src/attestation.rs")
 require(

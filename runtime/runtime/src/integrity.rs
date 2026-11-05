@@ -124,7 +124,7 @@ fn core_bytes(evidence: &GuardIntegrityEvidence) -> Result<Vec<u8>, String> {
         guard: &evidence.guard,
         launcher: &evidence.launcher,
     })
-    .map_err(|err| format!("Guard integrity evidence serialization failed: {err}"))
+    .map_err(|err| format!("Ошибка: «Guard integrity evidence serialization»: {err}"))
 }
 
 #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
@@ -143,7 +143,7 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         || evidence.schema == GUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA
         || evidence.schema == GUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA;
     if !schema_ok || evidence.evidence_version != GUARD_INTEGRITY_EVIDENCE_VERSION {
-        return Err("Guard integrity evidence schema/version mismatch".to_string());
+        return Err("Несовпадение: «Guard integrity evidence schema/version»".to_string());
     }
     if evidence.evidence_id.len() != 32
         || !evidence.evidence_id.bytes().all(|value| value.is_ascii_hexdigit())
@@ -175,7 +175,7 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         || evidence.boundary.expected_parent_pid != evidence.boundary.observed_parent_pid
         || evidence.launcher.pid != evidence.boundary.expected_parent_pid
     {
-        return Err("Guard integrity evidence process boundary mismatch".to_string());
+        return Err("Несовпадение: «Guard integrity evidence process boundary»".to_string());
     }
     if evidence.schema == GUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA {
         let guard = evidence.guard.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
@@ -184,7 +184,7 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
             return Err("Linux Guard security state is not enforced".to_string());
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
-            return Err("Linux Guard/launcher uid/gid boundary mismatch".to_string());
+            return Err("Несовпадение: «Linux Guard/launcher uid/gid boundary»".to_string());
         }
     }
     if evidence.schema == GUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA {
@@ -195,7 +195,7 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
             return Err("macOS code-signing/Hardened Runtime state is not enforced".to_string());
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
-            return Err("macOS Guard/launcher uid/gid boundary mismatch".to_string());
+            return Err("Несовпадение: «macOS Guard/launcher uid/gid boundary»".to_string());
         }
     }
     Ok(())
@@ -582,14 +582,14 @@ mod windows_impl {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("Guard cannot open {} for hashing: {err}", path.display()))?;
+            .map_err(|err| format!("Guard: запрещено «open {} for hashing:» {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("Guard cannot hash {}: {err}", path.display()))?;
+                .map_err(|err| format!("Guard: запрещено «hash {}:» {err}", path.display()))?;
             if read == 0 {
                 break;
             }
@@ -780,17 +780,17 @@ mod linux_impl {
     }
 
     fn proc_status(pid: u32) -> Result<String, String> {
-        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("read /proc/{pid}/status failed: {e}"))
+        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("Ошибка: «read /proc/{pid}/status»: {e}"))
     }
     fn status_u32(status: &str, key: &str) -> Option<u32> {
         status.lines().find_map(|l| l.strip_prefix(key)).and_then(|v| v.split_whitespace().next()).and_then(|v| v.parse().ok())
     }
     fn observed_parent_pid(pid: u32) -> Result<u32, String> { status_u32(&proc_status(pid)?, "PPid:").ok_or_else(|| "PPid missing in /proc status".into()) }
     fn process_start_ticks(pid: u32) -> Result<u64, String> {
-        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("read /proc/{pid}/stat failed: {e}"))?;
+        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("Ошибка: «read /proc/{pid}/stat»: {e}"))?;
         let end=stat.rfind(')').ok_or_else(|| "malformed /proc stat".to_string())?;
         let rest=stat.get(end+2..).ok_or_else(|| "malformed /proc stat".to_string())?;
-        rest.split_whitespace().nth(19).ok_or_else(|| "starttime missing".to_string())?.parse().map_err(|_| "invalid process starttime".to_string())
+        rest.split_whitespace().nth(19).ok_or_else(|| "starttime missing".to_string())?.parse().map_err(|_| "Некорректное значение: «process starttime»".to_string())
     }
     fn pdeathsig(pid: u32) -> bool {
         if pid != std::process::id() {
@@ -816,7 +816,7 @@ mod linux_impl {
         })
     }
     fn modules(pid: u32, primary: &Path) -> Result<ModuleSetEvidence,String> {
-        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("read maps failed: {e}"))?;
+        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("Ошибка: «read maps»: {e}"))?;
         let mut files=BTreeMap::<String,String>::new();
         for line in maps.lines() {
             let Some(raw)=line.split_whitespace().last() else { continue; };
@@ -833,7 +833,7 @@ mod linux_impl {
         Ok(ModuleSetEvidence { module_count: files.len() as u32, module_set_sha256: hex::encode(h.finalize()), non_system_module_names: non_system })
     }
     fn process(pid:u32)->Result<ProcessIntegrityEvidence,String>{
-        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("read exe link failed: {e}"))?;
+        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("Ошибка: «read exe link»: {e}"))?;
         let meta=std::fs::metadata(&image).map_err(|e|format!("metadata {} failed: {e}",image.display()))?;
         let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
         Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), macos:None, })
@@ -903,7 +903,7 @@ mod macos_impl {
     }
 
     fn bsd_info(pid: u32) -> Result<ProcBsdInfo, String> {
-        if pid == 0 || pid > i32::MAX as u32 { return Err("macOS process PID invalid".to_string()); }
+        if pid == 0 || pid > i32::MAX as u32 { return Err("Некорректное значение: «macOS process PID»".to_string()); }
         let mut info: ProcBsdInfo = unsafe { std::mem::zeroed() };
         let size = std::mem::size_of::<ProcBsdInfo>();
         let read = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0, &mut info as *mut _ as *mut c_void, size as libc::c_int) };
@@ -951,7 +951,7 @@ mod macos_impl {
         let info = bsd_info(pid)?;
         let path = image_path(pid)?;
         let metadata = std::fs::metadata(&path).map_err(|err| format!("metadata {} failed: {err}", path.display()))?;
-        if !metadata.is_file() { return Err(format!("macOS process image {} is not a regular file", path.display())); }
+        if !metadata.is_file() { return Err(format!("«macOS process image {}»: требуется обычный файл", path.display())); }
         let image_sha256 = sha256_file(&path)?;
         let modified = metadata.modified().ok().and_then(|value| value.duration_since(UNIX_EPOCH).ok()).map(|value| value.as_millis() as u64).unwrap_or(0);
         let signature = verify_macos_code_signature(&path)?;

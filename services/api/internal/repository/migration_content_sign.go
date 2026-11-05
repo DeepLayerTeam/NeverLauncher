@@ -70,7 +70,7 @@ func checkMigrationContentSign0337(p gc.Plan, m model.Manifest) error {
 		expected[f.TargetPath] = f
 	}
 	if len(expected) != len(p.Files) || len(m.Files) != len(expected) {
-		return errors.New("migration content file count mismatch")
+		return errors.New("Несовпадение: «migration content file count»")
 	}
 	for _, f := range m.Files {
 		actual, ok := expected[f.Path]

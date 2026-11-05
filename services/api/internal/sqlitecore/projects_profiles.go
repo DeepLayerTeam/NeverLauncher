@@ -65,7 +65,7 @@ func (r *Repository) ListProjects(ctx context.Context) (out []model.Project, err
 }
 func (r *Repository) SaveProject(ctx context.Context, p model.Project, actor string) (model.Project, error) {
 	if strings.TrimSpace(actor) == "" {
-		return model.Project{}, errors.New("project mutation requires audit actor")
+		return model.Project{}, errors.New("Для «project mutation» требуется автор аудита")
 	}
 	p.ID = strings.TrimSpace(p.ID)
 	p.Name = strings.TrimSpace(p.Name)
@@ -145,7 +145,7 @@ func (r *Repository) GetProfile(ctx context.Context, projectID, profileID string
 // с неизменяемой историей в одной BEGIN IMMEDIATE / FULL-sync COMMIT.
 func (r *Repository) SaveProfile(ctx context.Context, p model.Profile, actor string) (actual model.Profile, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return actual, errors.New("profile mutation requires audit actor")
+		return actual, errors.New("Для «profile mutation» требуется автор аудита")
 	}
 	p.Name = strings.TrimSpace(p.Name)
 	p.ID = strings.TrimSpace(p.ID)
@@ -262,7 +262,7 @@ func (r *Repository) ListProfileRevisions(ctx context.Context, projectID, profil
 
 func (r *Repository) SaveChannel(ctx context.Context, c model.ReleaseChannel, actor string) (model.ReleaseChannel, error) {
 	if strings.TrimSpace(actor) == "" {
-		return c, errors.New("channel mutation requires audit actor")
+		return c, errors.New("Для «channel mutation» требуется автор аудита")
 	}
 	c.ID = strings.TrimSpace(c.ID)
 	c.Name = strings.TrimSpace(c.Name)
@@ -273,7 +273,7 @@ func (r *Repository) SaveChannel(ctx context.Context, c model.ReleaseChannel, ac
 		c.Name = c.ID
 	}
 	if c.ID == "" || c.ProjectID == "" {
-		return c, errors.New("channel id/projectId required")
+		return c, errors.New("Требуется: «channel id/projectId»")
 	}
 	err := r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		_, e := q.ExecContext(ctx, `INSERT INTO channels(project_id,id,name,description,protected) VALUES(?,?,?,?,?) ON CONFLICT(project_id,id) DO UPDATE SET name=excluded.name,description=excluded.description,protected=excluded.protected`, c.ProjectID, c.ID, c.Name, c.Description, c.Protected)

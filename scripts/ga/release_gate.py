@@ -55,13 +55,13 @@ def strict_json(raw: bytes) -> dict:
         obj = {}
         for key, value in pairs:
             if key in obj:
-                raise ValueError(f"duplicate JSON field: {key}")
+                raise ValueError(f"Обнаружен дубликат: поле JSON: {key}")
             obj[key] = value
         return obj
 
     doc = json.loads(raw, object_pairs_hook=reject_duplicates)
     if not isinstance(doc, dict):
-        raise ValueError("evidence must be a JSON object")
+        raise ValueError("Для подтверждающие данные требуется: объект JSON")
     return doc
 
 
@@ -70,12 +70,12 @@ def load_attested_file(
 ) -> bytes:
     """Подходят только обычные файлы непосредственно в целевом каталоге."""
     if not name or Path(name).name != name or name in {".", ".."}:
-        raise ValueError(f"unsafe artifact path: {name!r}")
+        raise ValueError(f"Небезопасное значение: путь к артефакту: {name!r}")
     if not SHA256.fullmatch(digest):
-        raise ValueError(f"invalid SHA-256 for {name}")
+        raise ValueError(f"Некорректное значение: «SHA-256 for» {name}")
     path = folder / name
     if folder.is_symlink() or path.is_symlink() or not path.is_file():
-        raise ValueError(f"missing or symlinked file: {path}")
+        raise ValueError(f"Отсутствует: «or symlinked file»: {path}")
     hasher = hashlib.sha256()
     raw = bytearray()
     total = 0
@@ -89,10 +89,10 @@ def load_attested_file(
             # небольшими; не держите многогигабайтные входы в памяти.
             if not binary:
                 if len(raw) + len(chunk) > 8 * 1024 * 1024:
-                    raise ValueError(f"oversized evidence JSON: {name}")
+                    raise ValueError(f"Превышен допустимый размер: «evidence JSON»: {name}")
                 raw.extend(chunk)
     if hasher.hexdigest() != digest:
-        raise ValueError(f"content digest mismatch: {name}")
+        raise ValueError(f"Несовпадение: «content digest»: {name}")
     return bytes(raw)
 
 
@@ -120,7 +120,7 @@ def check_report(
             or not SHA256.fullmatch(report.get("logSha256", ""))
             or not report.get("minecraftVersion")
         ):
-            raise ValueError("real Minecraft/Managed Java evidence missing")
+            raise ValueError("Отсутствует: «real Minecraft/Managed Java evidence»")
     elif subject == "certification":
         if (
             not report.get("gitTreeClean")
@@ -171,9 +171,9 @@ def check_report(
             version != "0.25.0"
             or report.get("schemaVersion") != "launcher.components.certification.v1"
         ):
-            raise ValueError("unsupported optional components certification schema")
+            raise ValueError("Не поддерживается: «optional components certification schema»")
         if report.get("target") != target or report.get("gitTreeClean") is not True:
-            raise ValueError("optional components certification target/source mismatch")
+            raise ValueError("Несовпадение: «optional components certification target/source»")
         if (
             report.get("signedManifestVersion") != "3.0"
             or report.get("catalogSchema") != "5.0"
@@ -186,7 +186,7 @@ def check_report(
             or report.get("actualGuardIntegration") is not True
             or report.get("actualBridgeIntegration") is not True
         ):
-            raise ValueError("actual Minecraft/Guard/Bridge evidence missing")
+            raise ValueError("Отсутствует: «actual Minecraft/Guard/Bridge evidence»")
         checks = report.get("checks")
         if not isinstance(checks, dict) or any(
             checks.get(c) != "passed" for c in COMPONENT_GA_CHECKS
@@ -195,7 +195,7 @@ def check_report(
                 "optional components certification has skipped/failed gates"
             )
         if not SHA256.fullmatch(report.get("nativeEvidenceSha256", "")):
-            raise ValueError("native execution evidence digest missing")
+            raise ValueError("Отсутствует: «native execution evidence digest»")
         for section in ("minecraftEvidence", "guardEvidence", "bridgeEvidence"):
             reference = report.get(section)
             if (
@@ -210,11 +210,11 @@ def check_report(
             or len(report["runs"]) < 6
             or report.get("speedup", 0) <= 1
         ):
-            raise ValueError("baseline benchmark measurement/speedup missing")
+            raise ValueError("Отсутствует: «baseline benchmark measurement/speedup»")
         if not SHA256.fullmatch(
             report.get("baselineExecutableSha256", "")
         ) or not SHA256.fullmatch(report.get("candidateExecutableSha256", "")):
-            raise ValueError("real compiled baseline/candidate hashes missing")
+            raise ValueError("Отсутствует: «real compiled baseline/candidate hashes»")
         if {r.get("implementation") for r in report["runs"]} != {
             "baseline",
             "candidate",
@@ -229,7 +229,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         raise ValueError("symlinked attestation not accepted")
     raw = data.read_bytes()
     if len(raw) > 1024 * 1024:
-        raise ValueError("oversized signed GA attestation")
+        raise ValueError("Превышен допустимый размер: «signed GA attestation»")
     signature = bytes.fromhex(sig.read_text("ascii").strip())
     key.verify(
         signature, (COMPONENT_GA_DOMAIN if version == "0.25.0" else DOMAIN) + raw
@@ -237,14 +237,14 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
     doc = strict_json(raw)
     pair = (doc.get("platform"), doc.get("architecture"))
     if pair not in TARGETS or folder.name != "-".join(pair):
-        raise ValueError(f"unexpected platform/architecture {pair}")
+        raise ValueError(f"Неожиданное значение: «platform/architecture» {pair}")
     schema = (
         COMPONENT_GA_SCHEMA if version == "0.25.0" else "launcher.ga.attestation.v1"
     )
     if doc.get("schemaVersion") != schema or doc.get("status") != "passed":
-        raise ValueError("unsupported or incomplete signed attestation")
+        raise ValueError("Не поддерживается: «or incomplete signed attestation»")
     if doc.get("commit") != commit or doc.get("productVersion") != version:
-        raise ValueError("attestation commit/version mismatch")
+        raise ValueError("Несовпадение: «attestation commit/version»")
     if doc.get("gitTreeClean") is not True:
         raise ValueError("release must originate from clean source tree")
     checks = doc.get("checks")
@@ -303,7 +303,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         if components.get("installerSha256") != installer_sha:
             raise ValueError("components certification belongs to another installer")
         if components["nativeEvidenceSha256"] != objects["nativeRun"]["sha256"]:
-            raise ValueError("native run digest does not match authenticated evidence")
+            raise ValueError("«native run digest» не совпадает с «authenticated evidence»")
         for section, object_name in (
             ("minecraftEvidence", "minecraftRun"),
             ("guardEvidence", "guardRun"),
@@ -337,7 +337,7 @@ def verify_all(root: Path, public_key_hex: str, commit: str, version="0.24.0") -
     if not GITSHA.fullmatch(commit):
         raise ValueError("exact 40-byte git commit is mandatory")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", public_key_hex):
-        raise ValueError("trusted attestation key must be 32 raw bytes in hex")
+        raise ValueError("Для «trusted attestation key» требуется: «32 raw bytes in hex»")
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex))
     results = []
     for platform, arch in sorted(TARGETS):

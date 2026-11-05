@@ -33,6 +33,6 @@
     "targets": "all",
     "category": "Game",
     "shortDescription": "Брендируемый открытый лаунчер для Minecraft-проектов",
-    "longDescription": "Launcher — русскоязычная open-source инфраструктура лаунчера с white-label branding system для Minecraft-проектов."
+    "longDescription": "Launcher — русскоязычная инфраструктура лаунчера с открытым кодом и настройкой фирменного оформления для Minecraft-проектов."
   }
 }

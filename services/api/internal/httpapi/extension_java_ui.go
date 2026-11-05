@@ -40,7 +40,7 @@ func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall
 	switch method {
 	case "java.action.invoke":
 		if args.ActionID == "" || len(args.Payload) == 0 || len(args.Payload) > 24<<10 || args.Payload[0] != '{' || !json.Valid(args.Payload) {
-			return nil, errors.New("UI action requires bounded JSON payload")
+			return nil, errors.New("Для «UI action» требуется «bounded JSON payload»")
 		}
 		payload["actionId"] = args.ActionID
 		payload["payload"] = json.RawMessage(args.Payload)
@@ -49,12 +49,12 @@ func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall
 		payload["key"] = args.Key
 	case "java.settings.put":
 		if len(args.Value) == 0 || len(args.Value) > 24<<10 || !json.Valid(args.Value) || string(args.Value) == "null" {
-			return nil, errors.New("invalid settings value")
+			return nil, errors.New("Некорректное значение: «settings value»")
 		}
 		payload["key"] = args.Key
 		payload["value"] = json.RawMessage(args.Value)
 	default:
-		return nil, fmt.Errorf("unsupported Java UI method %q", method)
+		return nil, fmt.Errorf("Не поддерживается: «Java UI method» %q", method)
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

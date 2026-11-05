@@ -35,16 +35,16 @@ _SHA = re.compile(r"^[0-9a-f]{40}$")
 def read_report(path: Path) -> tuple[dict, str]:
     blob = path.read_bytes()
     if len(blob) > 1024 * 1024:
-        raise ValueError("oversized evidence report")
+        raise ValueError("Превышен допустимый размер: «evidence report»")
     doc = json.loads(blob)
     if not isinstance(doc, dict):
-        raise ValueError("invalid evidence document")
+        raise ValueError("Некорректное значение: «evidence document»")
     return doc, hashlib.sha256(blob).hexdigest()
 
 
 def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
     if not _SHA.fullmatch(expected_commit):
-        raise ValueError("a full, exact 40-character Git commit is required")
+        raise ValueError("Требуется: «a full, exact 40-character Git commit»")
     result = {
         "schemaVersion": "1.0",
         "version": "0.24.13",
@@ -59,9 +59,9 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
         report, digest = read_report(path)
         target = report.get("target")
         if target not in REQUIRED_TARGETS or target in result["platforms"]:
-            raise ValueError(f"duplicate or unsupported target: {target}")
+            raise ValueError(f"Обнаружен дубликат: «or unsupported target»: {target}")
         if report.get("schemaVersion") != "1.0" or report.get("version") != "0.24.13":
-            raise ValueError(f"unexpected certification schema/version for {target}")
+            raise ValueError(f"Неожиданное значение: «certification schema/version for» {target}")
         if (
             report.get("commit") != expected_commit
             or report.get("gitTreeClean") is not True

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrRoutingRequired = errors.New("explicit authentication provider required")
+	ErrRoutingRequired = errors.New("Требуется: «explicit authentication provider»")
 	ErrRoutingDenied   = errors.New("authentication provider denied by routing policy")
 	ErrLinkingDisabled = errors.New("account linking disabled for provider")
 )
@@ -132,7 +132,7 @@ func rejectDuplicateRoutingKeys0293(dec *json.Decoder) error {
 // блокирует запуск API.
 func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 	if cfg.Version != 1 {
-		return fmt.Errorf("unsupported auth routing version %d", cfg.Version)
+		return fmt.Errorf("Не поддерживается: «auth routing version» %d", cfg.Version)
 	}
 	cfg.DefaultProvider = strings.ToLower(strings.TrimSpace(cfg.DefaultProvider))
 	if cfg.DefaultProvider == "" && !cfg.RequireExplicitProvider {
@@ -145,7 +145,7 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 		return ok && authconnector.HasCapability(conn.Metadata(), authconnector.CapabilityPasswordAuth)
 	}
 	if cfg.DefaultProvider != "" && !eligible(cfg.DefaultProvider) {
-		return fmt.Errorf("auth routing default provider %q is missing or cannot authenticate passwords", cfg.DefaultProvider)
+		return fmt.Errorf("«auth routing default provider %q is missing or»: запрещено «authenticate passwords»", cfg.DefaultProvider)
 	}
 	rules := make([]RoutingRule, 0, len(cfg.Rules))
 	domains := make(map[string]struct{}, len(cfg.Rules))
@@ -156,24 +156,24 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 		rule.EmailDomain = strings.ToLower(strings.TrimSpace(rule.EmailDomain))
 		rule.ProviderID = strings.ToLower(strings.TrimSpace(rule.ProviderID))
 		if len(rule.EmailDomain) > 253 || !validRouteDomain0293.MatchString(rule.EmailDomain) {
-			return fmt.Errorf("invalid auth routing email domain %q", rule.EmailDomain)
+			return fmt.Errorf("Некорректное значение: «auth routing email domain» %q", rule.EmailDomain)
 		}
 		for _, label := range strings.Split(rule.EmailDomain, ".") {
 			if len(label) > 63 {
-				return fmt.Errorf("invalid auth routing email domain label in %q", rule.EmailDomain)
+				return fmt.Errorf("Некорректное значение: «auth routing email domain label in» %q", rule.EmailDomain)
 			}
 		}
 		if _, exists := domains[rule.EmailDomain]; exists {
-			return fmt.Errorf("duplicate auth routing domain %q", rule.EmailDomain)
+			return fmt.Errorf("Обнаружен дубликат: «auth routing domain» %q", rule.EmailDomain)
 		}
 		if !eligible(rule.ProviderID) {
-			return fmt.Errorf("auth routing provider %q is missing or cannot authenticate passwords", rule.ProviderID)
+			return fmt.Errorf("«auth routing provider %q is missing or»: запрещено «authenticate passwords»", rule.ProviderID)
 		}
 		domains[rule.EmailDomain] = struct{}{}
 		rules = append(rules, rule)
 	}
 	if cfg.DisableLinking && len(cfg.LinkingAllowProviders) != 0 {
-		return errors.New("disableLinking cannot be combined with linkingAllowProviders")
+		return errors.New("«disableLinking»: запрещено «be combined with linkingAllowProviders»")
 	}
 	if len(cfg.LinkingAllowProviders) > 256 {
 		return errors.New("auth linking allowlist exceeds 256 entries")
@@ -186,7 +186,7 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 			return fmt.Errorf("auth linking provider %q not registered", id)
 		}
 		if seen[id] {
-			return fmt.Errorf("duplicate auth linking provider %q", id)
+			return fmt.Errorf("Обнаружен дубликат: «auth linking provider» %q", id)
 		}
 		seen[id] = true
 		linking = append(linking, id)

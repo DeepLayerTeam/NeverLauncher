@@ -45,7 +45,7 @@ var factoryAdapterDefinitions02711 = map[string]struct {
 func factoryAdapterPinByID02711(id string) (factoryAdapterPin02711, error) {
 	def, ok := factoryAdapterDefinitions02711[id]
 	if !ok {
-		return factoryAdapterPin02711{}, fmt.Errorf("unknown executable adapter %q", id)
+		return factoryAdapterPin02711{}, fmt.Errorf("Неизвестное значение: «executable adapter» %q", id)
 	}
 	h := sha256.New()
 	_, _ = h.Write([]byte("launcher-adapter-v1\x00" + id + "\x00" + def.version + "\x00"))
@@ -88,7 +88,7 @@ func validateFactoryAdapterPins02711(p factoryPlan0271) error {
 	seen := map[string]bool{}
 	for i, pin := range p.AdapterPins {
 		if pin.ID != p.Steps[i].Adapter || seen[pin.ID] || strings.TrimSpace(pin.Version) != pin.Version || pin.Version == "" || !isSHA256Hex0271(pin.ImplementationSHA256) {
-			return fmt.Errorf("invalid factory adapter pin at step %d", i)
+			return fmt.Errorf("Некорректное значение: «factory adapter pin at step» %d", i)
 		}
 		seen[pin.ID] = true
 	}
@@ -137,7 +137,7 @@ func factoryAdapterTargetCheck02711(p factoryPlan0271) error {
 	// мостов Cleanroom/lwjgl3ify действуют отдельные правила установки; их нельзя
 	// автоматически считать совместимыми с классическими адаптерами.
 	if p.Loader == "forge" && (p.MinecraftVersion == "1.7.10" || p.MinecraftVersion == "1.12.2") && p.Java.Major != 8 {
-		return fmt.Errorf("classic Forge %s requires Java 8; Java %d requires a separately validated bridge target", p.MinecraftVersion, p.Java.Major)
+		return fmt.Errorf("Для «classic Forge %s requires Java 8; Java» %d требуется «a separately validated bridge target»", p.MinecraftVersion, p.Java.Major)
 	}
 	return nil
 }

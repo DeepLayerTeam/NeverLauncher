@@ -101,7 +101,7 @@ func cleanUUID02512(id string) (string, error) {
 func origin02512(raw string, allowLoopback bool) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || u.Opaque != "" {
-		return nil, errors.New("origin must be an HTTP(S) origin without path, credentials or query")
+		return nil, errors.New("Для источник URL требуется: «an HTTP(S) origin without path, credentials or query»")
 	}
 	if u.Scheme == "https" {
 		return u, nil
@@ -126,14 +126,14 @@ func fetch02512(ctx context.Context, c *http.Client, raw string) ([]byte, error)
 		return nil, fmt.Errorf("GET %s HTTP %d", req.URL.Path, resp.StatusCode)
 	}
 	if resp.ContentLength > maxResponse02512 {
-		return nil, errors.New("oversized profile or texture response")
+		return nil, errors.New("Превышен допустимый размер: «profile or texture response»")
 	}
 	content, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse02512+1))
 	if err != nil {
 		return nil, err
 	}
 	if len(content) > maxResponse02512 {
-		return nil, errors.New("oversized profile or texture response")
+		return nil, errors.New("Превышен допустимый размер: «profile or texture response»")
 	}
 	return content, nil
 }
@@ -170,10 +170,10 @@ func checkTexture02512(ctx context.Context, c *http.Client, raw string, kind, mo
 	}
 	digest := strings.TrimPrefix(u.Path, prefix)
 	if len(digest) != 64 {
-		return errors.New("invalid content-addressed digest")
+		return errors.New("Некорректное значение: «content-addressed digest»")
 	}
 	if _, err := hex.DecodeString(digest); err != nil || strings.ToLower(digest) != digest {
-		return errors.New("invalid lowercase digest")
+		return errors.New("Некорректное значение: «lowercase digest»")
 	}
 	content, err := fetch02512(ctx, c, u.String())
 	if err != nil {
@@ -222,7 +222,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 	}
 	key, ok := pub.(*rsa.PublicKey)
 	if !ok || key.N.BitLen() < 2048 {
-		return report, errors.New("authlib-injector signing key must be RSA >= 2048 bits")
+		return report, errors.New("Для «authlib-injector signing key» требуется: «RSA >= 2048 bits»")
 	}
 	raw, err := fetch02512(ctx, client, origin.String()+"/sessionserver/session/minecraft/profile/"+uid+"?unsigned=false")
 	if err != nil {
@@ -233,7 +233,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if profile.ID != uid || profile.Name == "" {
-		return report, errors.New("profile identity mismatch")
+		return report, errors.New("Несовпадение: «profile identity»")
 	}
 	if len(profile.Properties) != 1 || profile.Properties[0].Name != "textures" || profile.Properties[0].Signature == "" {
 		return report, errors.New("profile lacks exactly one signed textures property")
@@ -245,7 +245,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if err := rsa.VerifyPKCS1v15(key, crypto.SHA1, digest[:], sig); err != nil {
-		return report, fmt.Errorf("RSA texture signature invalid: %w", err)
+		return report, fmt.Errorf("Некорректное значение: «RSA texture signature»: %w", err)
 	}
 	report.SignatureValid = true
 	report.ProfileID = uid
@@ -258,19 +258,19 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if payload.ProfileID != uid || payload.ProfileName != profile.Name {
-		return report, errors.New("signed texture property identity mismatch")
+		return report, errors.New("Несовпадение: «signed texture property identity»")
 	}
 	for _, kind := range []string{"SKIN", "CAPE"} {
 		entry, found := payload.Textures[kind]
 		required := kind == "SKIN" && opt.ExpectSkin || kind == "CAPE" && opt.ExpectCape
 		if !found {
 			if required {
-				return report, fmt.Errorf("active %s texture missing", kind)
+				return report, fmt.Errorf("Отсутствует: «active %s texture»", kind)
 			}
 			continue
 		}
 		if kind == "SKIN" && entry.Metadata.Model != "" && entry.Metadata.Model != "slim" {
-			return report, errors.New("Minecraft skin model must be default or slim")
+			return report, errors.New("Для «Minecraft skin model» требуется: «default or slim»")
 		}
 		model := "classic"
 		if entry.Metadata.Model == "slim" {

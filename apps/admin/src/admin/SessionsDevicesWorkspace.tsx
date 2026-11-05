@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
 import { auditHref, recoveryAdvice } from './lifecycle';
@@ -70,8 +71,8 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
     <div className="dataToolbar"><label>Поиск<input type="search" value={query} onChange={e => setQuery(e.target.value)} /></label><button disabled={!!busy || sessions.length < 2} onClick={revokeOthers}>Отозвать другие сессии</button></div>
     <h3>Мои активные сессии ({sessions.length})</h3>
     {sessions.filter(item => match(`${item.id} ${item.device} ${item.deviceId} ${item.provider}`)).map(item => <article className="subcard" key={item.id}>
-      <div className="registryHeading"><strong>{item.device || item.deviceId || 'Неизвестное устройство'} {item.current ? '(текущая)' : ''}</strong><span className="badge">{item.status || 'unknown'}</span></div>
-      <p className="muted">{item.provider || 'local'} · risk: {item.riskState || 'unknown'} · IP: {item.lastIp || '—'} · последний контакт: {item.lastSeenAt || '—'} · истекает: {item.expiresAt || '—'}</p>
+      <div className="registryHeading"><strong>{item.device || item.deviceId || 'Неизвестное устройство'} {item.current ? '(текущая)' : ''}</strong><span className="badge">{statusRu(item.status)}</span></div>
+      <p className="muted">{item.provider || 'локальный'} · риск: {statusRu(item.riskState)} · IP: {item.lastIp || '—'} · последний контакт: {item.lastSeenAt || '—'} · истекает: {item.expiresAt || '—'}</p>
       <p><code>{item.id}</code> · <a href={auditHref(item.id)}>Аудит сессии</a></p>
       <div className="buttonRow"><button disabled={!!busy} onClick={() => { setRenameId(item.id); setNewName(item.device || ''); }}>Переименовать</button><button className="danger" disabled={!!busy} onClick={() => revoke(item)}>{item.current ? 'Завершить и выйти' : 'Отозвать'}</button></div>
       {renameId === item.id && <div className="formGrid"><label className="field">Новое название<input value={newName} maxLength={120} onChange={e => setNewName(e.target.value)} /></label><div className="buttonRow"><button disabled={!!busy || !newName.trim()} onClick={() => rename(item)}>Сохранить</button><button onClick={() => setRenameId('')}>Отмена</button></div></div>}
@@ -79,7 +80,7 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
     {sessions.length === 0 && <p className="muted">Список сессий пуст или ещё загружается.</p>}
     {adminAccess && <><h3>Доверенные устройства ({devices.length})</h3>
       {devices.filter(item => match(`${item.id} ${item.userId} ${item.name} ${item.status}`)).map(item => <article className="subcard" key={item.id}>
-        <div className="registryHeading"><strong>{item.name || item.id}</strong><span className={`badge ${item.status === 'active' ? 'ok' : 'warn'}`}>{item.status}</span></div>
+        <div className="registryHeading"><strong>{item.name || item.id}</strong><span className={`badge ${item.status === 'active' ? 'ok' : 'warn'}`}>{statusRu(item.status)}</span></div>
         <p className="muted">Пользователь: {item.userId} · доверие: {item.trustState || 'неизвестно'} · {item.keyAlgorithm || 'ключ неизвестен'} · привязка: {item.keyBinding || 'неизвестно'} · последнее посещение: {item.lastSeenAt || '—'}</p>
         {item.revokedAt && <p>Отозвано: {item.revokedAt} · {item.revokedReason || 'причина не указана'}</p>}
         <p><code>{item.id}</code> · <a href={auditHref(item.id)}>Аудит устройства</a></p>

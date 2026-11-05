@@ -32,21 +32,21 @@ type preparedJavaContent0486 struct {
 func decodeJavaPreparedContent0486(raw json.RawMessage) ([]byte, error) {
 	var answer preparedJavaContent0486
 	if len(raw) == 0 || len(raw) > 64<<10 || json.Unmarshal(raw, &answer) != nil {
-		return nil, errors.New("invalid content provider response")
+		return nil, errors.New("Некорректное значение: «content provider response»")
 	}
 	if answer.ErrorCode != "" {
 		return nil, fmt.Errorf("Java provider rejected package: %s", answer.ErrorCode)
 	}
 	if !answer.RequiresSigning || answer.Size < 0 || answer.Size > maxJavaContentTransform0486 || len(answer.DataBase64) > (maxJavaContentTransform0486+2)/3*4+8 {
-		return nil, errors.New("unsigned content preparation response invalid or too large")
+		return nil, errors.New("Превышен допустимый размер: «unsigned content preparation response invalid or»")
 	}
 	bytes, err := base64.StdEncoding.DecodeString(answer.DataBase64)
 	if err != nil || len(bytes) != answer.Size {
-		return nil, errors.New("content provider size/base64 mismatch")
+		return nil, errors.New("Несовпадение: «content provider size/base64»")
 	}
 	digest := sha256.Sum256(bytes)
 	if !strings.EqualFold(answer.SHA256, hex.EncodeToString(digest[:])) {
-		return nil, errors.New("content provider digest mismatch")
+		return nil, errors.New("Несовпадение: «content provider digest»")
 	}
 	return bytes, nil
 }
@@ -63,7 +63,7 @@ func (s Server) prepareJavaPackageFile0486(ctx context.Context, extensionID, pro
 		return nil, errors.New("Некорректное значение: содержимое ID расширения")
 	}
 	if projectID == "" || filename == "" {
-		return nil, errors.New("package project and path required")
+		return nil, errors.New("Требуется: «package project and path»")
 	}
 	if len(raw) > maxJavaContentTransform0486 {
 		return nil, errors.New("Java content transform supports files <=24 KiB; larger files require the core package upload pipeline")

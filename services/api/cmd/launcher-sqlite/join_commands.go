@@ -38,7 +38,7 @@ func readNodeKey(path string) (ed25519.PrivateKey, error) {
 		return nil, e
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() != ed25519.PrivateKeySize {
-		return nil, errors.New("node key must be 0600 and exactly 64 raw bytes")
+		return nil, errors.New("Для «node key» требуется: «0600 and exactly 64 raw bytes»")
 	}
 	raw, e := os.ReadFile(path)
 	if e != nil {
@@ -70,7 +70,7 @@ func runJoinAction(args []string) int {
 		dir := filepath.Dir(*keyFile)
 		info, e := os.Lstat(dir)
 		if e != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
-			fmt.Fprintln(os.Stderr, "key directory must be private 0700")
+			fmt.Fprintln(os.Stderr, "Для «key directory» требуется: «private 0700»")
 			return 1
 		}
 		pub, private, e := ed25519.GenerateKey(rand.Reader)
@@ -118,14 +118,14 @@ func runJoinAction(args []string) int {
 		var hash string
 		if v.Action == "redeem" {
 			if len(v.Ticket) != 47 || v.Ticket[:4] != "nlj_" {
-				fmt.Fprintln(os.Stderr, "invalid join ticket")
+				fmt.Fprintln(os.Stderr, "Некорректное значение: «join ticket»")
 				return 1
 			}
 			hash = sqlitecore.SignedPayloadHash([]byte(v.Ticket))
 		} else if v.Action == "ping" {
 			hash = sqlitecore.SignedPayloadHash([]byte(v.Data))
 		} else {
-			fmt.Fprintln(os.Stderr, "unsupported action")
+			fmt.Fprintln(os.Stderr, "Не поддерживается: «action»")
 			return 2
 		}
 		nonce := make([]byte, 24)

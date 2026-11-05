@@ -73,10 +73,10 @@ def verify(path: Path, signer: str):
         # системного хранилища, принимающего любого подписанта, недостаточно.
         keyring = os.environ.get("LAUNCHER_GA_GPG_KEYRING")
         if not keyring or not Path(keyring).is_file():
-            raise ValueError("isolated trusted GPG keyring required")
+            raise ValueError("Требуется: «isolated trusted GPG keyring»")
         asc = Path(str(path) + ".asc")
         if not asc.is_file() or asc.is_symlink():
-            raise ValueError("missing detached Linux package signature")
+            raise ValueError("Отсутствует: «detached Linux package signature»")
         result = execute(
             [
                 "gpg",
@@ -95,9 +95,9 @@ def verify(path: Path, signer: str):
             line.startswith("[GNUPG:] VALIDSIG " + signer.upper() + " ")
             for line in result.splitlines()
         ):
-            raise ValueError("detached signature signer fingerprint mismatch")
+            raise ValueError("Несовпадение: «detached signature signer fingerprint»")
     else:
-        raise ValueError("unsupported native signing platform")
+        raise ValueError("Не поддерживается: «native signing platform»")
     return {
         "status": "passed",
         "signatureVerified": True,
@@ -116,7 +116,7 @@ def main():
     args = p.parse_args()
     try:
         if not re.fullmatch("[0-9a-f]{40}", args.commit):
-            raise ValueError("exact git commit required")
+            raise ValueError("Требуется: «exact git commit»")
         report = verify(args.installer, args.expected_signer)
         report.update(productVersion="0.24.0", commit=args.commit)
     except (OSError, ValueError, subprocess.TimeoutExpired) as exc:

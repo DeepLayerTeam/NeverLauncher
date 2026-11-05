@@ -21,7 +21,7 @@ var ErrConflict = errors.New("repository conflict")
 
 // ErrStableRuntimeGate0341 — непреодолимая граница защиты релиза. В 0.34.1 нет
 // аттестованного исполнителя Runtime; старого подписанного JSON недостаточно.
-var ErrStableRuntimeGate0341 = errors.New("stable_runtime_gate_0341: trusted staged-client/server execution is not yet available; stable publication denied")
+var ErrStableRuntimeGate0341 = errors.New("Доступ запрещён: «stable_runtime_gate_0341: trusted staged-client/server execution is not yet available; stable publication»")
 
 func IsStableChannel0341(channel string) bool {
 	return strings.EqualFold(strings.TrimSpace(channel), "stable")
@@ -810,7 +810,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("Требуется: «federated user id/email and provider/subject are»")
 	}
 	existingUserIndex := -1
 	for i, existing := range r.users {
@@ -1254,7 +1254,7 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 	item.Subject = strings.TrimSpace(item.Subject)
 	item.EncryptedRefreshToken = strings.TrimSpace(item.EncryptedRefreshToken)
 	if item.UserID == "" || item.IdentityID == "" || item.Provider == "" || item.Subject == "" || item.EncryptedRefreshToken == "" {
-		return model.ProviderCredential{}, fmt.Errorf("provider credential fields are required")
+		return model.ProviderCredential{}, fmt.Errorf("Требуется: «provider credential fields are»")
 	}
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.ProviderCredential{}, err
@@ -1267,7 +1267,7 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 		}
 	}
 	if !matched {
-		return model.ProviderCredential{}, fmt.Errorf("provider credential identity mismatch")
+		return model.ProviderCredential{}, fmt.Errorf("Несовпадение: «provider credential identity»")
 	}
 	now := time.Now().UTC()
 	for i := range r.providerCredentials {
@@ -1361,7 +1361,7 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 		item.IdentityVersion = "independent-v1"
 	}
 	if item.UserID == "" || item.UUID == "" || item.Name == "" {
-		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
+		return model.MinecraftProfile{}, fmt.Errorf("Требуется: «minecraft profile fields are»")
 	}
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.MinecraftProfile{}, err
@@ -1396,7 +1396,7 @@ func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (mo
 	}
 	item.AccessTokenHash = strings.TrimSpace(item.AccessTokenHash)
 	if item.ID == "" || item.UserID == "" || item.NeverSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
-		return model.MinecraftSession{}, fmt.Errorf("minecraft session fields are required")
+		return model.MinecraftSession{}, fmt.Errorf("Требуется: «minecraft session fields are»")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {
@@ -1509,7 +1509,7 @@ func (r *MemoryRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
 	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
 	item.ServerID = strings.TrimSpace(item.ServerID)
 	if item.Username == "" || item.ProfileUUID == "" || item.UserID == "" || item.MinecraftSessionID == "" || item.ServerID == "" {
-		return fmt.Errorf("minecraft join fields are required")
+		return fmt.Errorf("Требуется: «minecraft join fields are»")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {

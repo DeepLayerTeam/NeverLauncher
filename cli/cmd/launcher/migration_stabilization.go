@@ -107,10 +107,10 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 
 func validateComponentUpdateState01510(state componentUpdateState0157) error {
 	if state.SchemaVersion != "1.0" {
-		return fmt.Errorf("component state schemaVersion=%q unsupported", state.SchemaVersion)
+		return fmt.Errorf("Не поддерживается: «component state schemaVersion=%q»", state.SchemaVersion)
 	}
 	if _, _, _, ok := parseCoreVersion(state.Version); !ok {
-		return fmt.Errorf("component state version invalid: %q", state.Version)
+		return fmt.Errorf("Некорректное значение: «component state version»: %q", state.Version)
 	}
 	if strings.TrimSpace(state.Platform) == "" || strings.TrimSpace(state.Architecture) == "" {
 		return errors.New("component state target is incomplete")
@@ -409,7 +409,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	}
 	migration, err := migrateComponentUpdateState01510(root)
 	if err != nil || !migration.Migrated {
-		return nil, fmt.Errorf("component state migration failed: %v report=%+v", err, migration)
+		return nil, fmt.Errorf("Ошибка: «component state migration»: %v report=%+v", err, migration)
 	}
 	if _, err := os.Stat(legacyPath); !errors.Is(err, os.ErrNotExist) {
 		return nil, errors.New("legacy component state survived migration")
@@ -443,7 +443,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	txRoot := filepath.Join(updater.controlDir, "transactions")
 	entries, err := os.ReadDir(txRoot)
 	if err != nil || len(entries) == 0 {
-		return nil, errors.New("stabilization self-test transaction journal missing")
+		return nil, errors.New("Отсутствует: «stabilization self-test transaction journal»")
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {

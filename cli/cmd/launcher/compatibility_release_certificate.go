@@ -137,7 +137,7 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("release certificate matrix: %w", err)
 	}
 	if matrix.ProductVersion != certification.ProductVersion || matrix.Repository != certification.Repository || matrix.Commit != certification.Commit || matrix.RunID != certification.RunID {
-		return loaderCompatibilityReleaseCertificate01711{}, errors.New("loader compatibility release certificate cohort mismatch")
+		return loaderCompatibilityReleaseCertificate01711{}, errors.New("Несовпадение: «loader compatibility release certificate cohort»")
 	}
 
 	requiredByID := make(map[string]releaseCompatibilityTarget, len(targets.Targets))

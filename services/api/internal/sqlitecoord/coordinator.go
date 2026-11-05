@@ -65,7 +65,7 @@ func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (
 		}
 		fields := strings.Fields(stmt)
 		if len(fields) < 6 {
-			return false, fmt.Errorf("invalid embedded coordinator DDL: %q", stmt)
+			return false, fmt.Errorf("Некорректное значение: «embedded coordinator DDL»: %q", stmt)
 		}
 		name := fields[5]
 		expected[name] = normalizeCoordinatorDDL0471(stmt)
@@ -83,7 +83,7 @@ func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (
 		}
 		want, ok := expected[name]
 		if !ok || !sqlText.Valid || normalizeCoordinatorDDL0471(sqlText.String) != want {
-			err = fmt.Errorf("coordinator incompatible %s schema %q; manual migration required", kind, name)
+			err = fmt.Errorf("Требуется: «coordinator incompatible %s schema %q; manual migration»", kind, name)
 			break
 		}
 		seen[name] = struct{}{}
@@ -154,7 +154,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 			return e
 		}
 		if v != schemaVersion {
-			return fmt.Errorf("coordinator schema version %d unsupported", v)
+			return fmt.Errorf("Не поддерживается: «coordinator schema version» %d", v)
 		}
 		return nil
 	})

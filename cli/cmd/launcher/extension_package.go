@@ -737,7 +737,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	var total uint64
 	for _, entry := range reader.File {
 		if err := validateExtensionArchivePath0202(entry.Name); err != nil {
-			return nil, fmt.Errorf("unsafe .nlext entry %q: %w", entry.Name, err)
+			return nil, fmt.Errorf("Небезопасное значение: «.nlext entry» %q: %w", entry.Name, err)
 		}
 		fold := strings.ToLower(entry.Name)
 		if previous, exists := caseFolded[fold]; exists {
@@ -849,7 +849,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		return nil, fmt.Errorf("Декодирование: launcher-package.json: %w", err)
 	}
 	if descriptor.Format != extensionPackageFormat0202 || descriptor.FormatVersion != extensionPackageFormatVersion0202 {
-		return nil, fmt.Errorf("unsupported .nlext format %q/%q", descriptor.Format, descriptor.FormatVersion)
+		return nil, fmt.Errorf("Не поддерживается: «.nlext format %q/%q»", descriptor.Format, descriptor.FormatVersion)
 	}
 	if descriptor.BuildEpoch < 315532800 {
 		return nil, errors.New("launcher-package.json содержит некорректный buildEpoch")
@@ -1075,7 +1075,7 @@ func signExtensionPackage0202(packagePath, outputPath, privateKeyPath string, fo
 		entry := analysis.Entries[name]
 		if entry == nil {
 			_ = zw.Close()
-			return nil, fmt.Errorf("missing package entry during signing: %s", name)
+			return nil, fmt.Errorf("Отсутствует: «package entry during signing»: %s", name)
 		}
 		if err := copyCanonicalZipEntry0202(zw, entry, buildTime); err != nil {
 			_ = zw.Close()

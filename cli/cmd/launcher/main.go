@@ -50,7 +50,7 @@ const helpText = `CLI Launcher
   server-bridge host remote init|tls-init|issue|revoke|rotate-key|serve|call  HTTPS RemoteControl с сервисными токенами ограниченного действия
   server-bridge host world-backup create|verify|restore|list  согласованная резервная копия миров Minecraft, плагинов и конфигураций
 
-Backend / production:
+Сервер / промышленная эксплуатация:
   auth login|capabilities|accounts|roles|sessions|revoke|logout-all|session-policy|password-policy
   admin overview|users|roles|audit|storage-health|create-project|update-project|create-profile|update-profile|create-channel|update-channel|create-user
   install profile list|wizard|env|storage-check|bootstrap-admin|first-project|first-run|readiness|verify
@@ -64,7 +64,7 @@ Backend / production:
   migrate ...
   production deployment|first-run|e2e
 
-Desktop / package / release:
+Приложение / пакет / релиз:
   desktop connect|config|platforms|package|verify
   client ...
   pipeline ...

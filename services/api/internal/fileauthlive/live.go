@@ -80,7 +80,7 @@ func LoadLiveConfigs(jsonValue, filePath string) ([]LiveConfig, error) {
 			return nil, err
 		}
 		if seen[cfg.ID] {
-			return nil, fmt.Errorf("duplicate live FileAuth provider id %q", cfg.ID)
+			return nil, fmt.Errorf("Обнаружен дубликат: «live FileAuth provider id» %q", cfg.ID)
 		}
 		seen[cfg.ID] = true
 		configs[i] = cfg
@@ -96,13 +96,13 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 	in.Provisioning.Mode = strings.ToLower(strings.TrimSpace(in.Provisioning.Mode))
 	in.Provisioning.DefaultRole = strings.TrimSpace(in.Provisioning.DefaultRole)
 	if !providerIDPattern.MatchString(in.ID) || in.ID == "local" {
-		return in, errors.New("invalid live FileAuth provider id")
+		return in, errors.New("Некорректное значение: «live FileAuth provider id»")
 	}
 	if !fileauth.SupportedFormat(in.PasswordFormat) {
 		return in, fmt.Errorf("live FileAuth provider %q: unsupported explicit password format", in.ID)
 	}
 	if in.DatabasePath == "" || !filepath.IsAbs(in.DatabasePath) || !strings.EqualFold(filepath.Base(in.DatabasePath), "Database.json") {
-		return in, fmt.Errorf("live FileAuth provider %q: absolute Database.json path is required", in.ID)
+		return in, fmt.Errorf("Требуется: «live FileAuth provider %q: absolute Database.json path»", in.ID)
 	}
 	if in.DisplayName == "" {
 		in.DisplayName = in.ID
@@ -114,7 +114,7 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 		in.Provisioning.Mode = "explicit-only"
 	}
 	if in.Provisioning.Mode != "explicit-only" && in.Provisioning.Mode != "jit" {
-		return in, errors.New("invalid live FileAuth provisioning mode")
+		return in, errors.New("Некорректное значение: «live FileAuth provisioning mode»")
 	}
 	if in.Provisioning.DefaultRole == "" {
 		in.Provisioning.DefaultRole = "player"
@@ -139,7 +139,7 @@ type LiveConnector struct {
 // номинально настроенного, но непригодного провайдера.
 func NewLiveConnector(ctx context.Context, input LiveConfig, verifier func(password, encoded string) bool) (*LiveConnector, error) {
 	if verifier == nil {
-		return nil, errors.New("live FileAuth password verifier is required")
+		return nil, errors.New("Требуется: «live FileAuth password verifier»")
 	}
 	cfg, err := normalizeLiveConfig(input)
 	if err != nil {
@@ -181,7 +181,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if !before.Mode().IsRegular() || before.Mode().Perm()&0007 != 0 {
-		return nil, errors.New("FileAuth Database.json must be a regular file without world permissions")
+		return nil, errors.New("Для файл Database.json системы FileAuth требуется: «a regular file without world permissions»")
 	}
 	f, err := os.Open(c.cfg.DatabasePath)
 	if err != nil {
@@ -193,7 +193,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if !os.SameFile(before, opened) || opened.Size() > fileauth.MaxDatabaseBytes || !opened.Mode().IsRegular() {
-		return nil, errors.New("FileAuth Database.json changed during open or is too large")
+		return nil, errors.New("Превышен допустимый размер: «FileAuth Database.json changed during open or»")
 	}
 	data, err := io.ReadAll(io.LimitReader(f, fileauth.MaxDatabaseBytes+1))
 	if err != nil {

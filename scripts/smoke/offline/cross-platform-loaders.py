@@ -10,7 +10,7 @@ core = tuple(
     int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3]
 )
 if core < (0, 17, 9):
-    raise SystemExit(f"Cross-platform Loaders requires VERSION>=0.17.9, got {version}")
+    raise SystemExit(f"Для «Cross-platform Loaders» требуется «VERSION>=0.17.9, got» {version}")
 
 
 def read(rel: str) -> str:

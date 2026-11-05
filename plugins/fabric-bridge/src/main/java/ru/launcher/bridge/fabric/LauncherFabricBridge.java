@@ -509,7 +509,7 @@ public final class LauncherFabricBridge implements ModInitializer {
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            LOGGER.error("Launcher Fabric bridge {} worker failed", role, error);
+            LOGGER.error("Ошибка: «Launcher Fabric bridge {} worker»", role, error);
         });
         return thread;
     }

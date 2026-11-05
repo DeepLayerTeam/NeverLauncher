@@ -105,7 +105,7 @@ func windowsTargetMetadata0152(arch string) (rustTarget string, machine uint16, 
 	case "arm64":
 		return "aarch64-pc-windows-msvc", 0xaa64, "0xAA64", nil
 	default:
-		return "", 0, "", fmt.Errorf("unsupported Windows architecture %q", arch)
+		return "", 0, "", fmt.Errorf("Архитектура Windows не поддерживается: %q", arch)
 	}
 }
 
@@ -139,7 +139,7 @@ func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 	}
 	peOffset := int(binary.LittleEndian.Uint32(data[0x3c:0x40]))
 	if peOffset < 0x40 || peOffset+24 > len(data) {
-		return windowsPEInfo0152{}, errors.New("invalid PE header offset")
+		return windowsPEInfo0152{}, errors.New("Некорректное значение: «PE header offset»")
 	}
 	if !bytes.Equal(data[peOffset:peOffset+4], []byte{'P', 'E', 0, 0}) {
 		return windowsPEInfo0152{}, errors.New("Некорректное значение: PE подпись")
@@ -153,13 +153,13 @@ func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 	case 0xaa64:
 		arch = "arm64"
 	default:
-		return windowsPEInfo0152{}, fmt.Errorf("unsupported PE machine %s", machineText)
+		return windowsPEInfo0152{}, fmt.Errorf("Не поддерживается: «PE machine» %s", machineText)
 	}
 
 	optionalSize := int(binary.LittleEndian.Uint16(data[peOffset+20 : peOffset+22]))
 	optionalOffset := peOffset + 24
 	if optionalSize < 2 || optionalOffset+optionalSize > len(data) {
-		return windowsPEInfo0152{}, errors.New("invalid PE optional header")
+		return windowsPEInfo0152{}, errors.New("Некорректное значение: «PE optional header»")
 	}
 	magic := binary.LittleEndian.Uint16(data[optionalOffset : optionalOffset+2])
 	dataDirectoryOffset := 0
@@ -169,7 +169,7 @@ func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 	case 0x10b: // PE32
 		dataDirectoryOffset = optionalOffset + 96
 	default:
-		return windowsPEInfo0152{}, fmt.Errorf("unsupported PE optional header magic 0x%04X", magic)
+		return windowsPEInfo0152{}, fmt.Errorf("Не поддерживается: «PE optional header magic 0x%04X»", magic)
 	}
 	securityEntry := dataDirectoryOffset + 4*8
 	if securityEntry+8 > optionalOffset+optionalSize || securityEntry+8 > len(data) {
@@ -180,7 +180,7 @@ func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 	hasSignature := false
 	if certOffset != 0 || certSize != 0 {
 		if certOffset <= 0 || certSize < 8 || certOffset+certSize > len(data) {
-			return windowsPEInfo0152{}, errors.New("invalid PE certificate table bounds")
+			return windowsPEInfo0152{}, errors.New("Некорректное значение: «PE certificate table bounds»")
 		}
 		certLength := int(binary.LittleEndian.Uint32(data[certOffset : certOffset+4]))
 		certType := binary.LittleEndian.Uint16(data[certOffset+6 : certOffset+8])
@@ -270,7 +270,7 @@ func readWindowsSigningEvidence0152(dir string) (WindowsSigningEvidence0152, err
 func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget0152, artifactByComponent map[string]WindowsSignedArtifact0152, requireSigned bool) error {
 	expectedPackage, expectedManifest := expectedWindowsPackage0152(ver, arch)
 	if target.Package.Name != expectedPackage || target.Package.Manifest != expectedManifest {
-		return fmt.Errorf("Windows %s package identity mismatch", arch)
+		return fmt.Errorf("Несовпадение: «Windows %s package identity»", arch)
 	}
 	packagePath, err := safeDeliveryArtifactPath(dir, target.Package.Name)
 	if err != nil {
@@ -314,10 +314,10 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		} `json:"artifacts"`
 	}
 	if err := json.Unmarshal(manifestRaw, &manifest); err != nil {
-		return fmt.Errorf("Windows %s package manifest invalid: %w", arch, err)
+		return fmt.Errorf("Некорректное значение: «Windows %s package manifest»: %w", arch, err)
 	}
 	if manifest.SchemaVersion != "1.1" || manifest.ProductVersion != ver || manifest.Platform != "windows-"+arch || manifest.Architecture != arch {
-		return fmt.Errorf("Windows %s package manifest identity mismatch", arch)
+		return fmt.Errorf("Несовпадение: «Windows %s package manifest identity»", arch)
 	}
 	if requireSigned && (!manifest.AuthenticodeRequired || manifest.SigningMode != "authenticode-rfc3161") {
 		return fmt.Errorf("Windows %s package manifest does not require production Authenticode", arch)
@@ -359,7 +359,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 
 	zf, err := zip.OpenReader(packagePath)
 	if err != nil {
-		return fmt.Errorf("Windows %s package zip invalid: %w", arch, err)
+		return fmt.Errorf("Некорректное значение: «Windows %s package zip»: %w", arch, err)
 	}
 	defer zf.Close()
 	zipFiles := map[string][]byte{}
@@ -433,7 +433,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		}
 		var update componentUpdateManifest0157
 		if err := json.Unmarshal(updateRaw, &update); err != nil {
-			return fmt.Errorf("Windows %s component update manifest invalid: %w", arch, err)
+			return fmt.Errorf("Некорректное значение: «Windows %s component update manifest»: %w", arch, err)
 		}
 		expectedTrust := "unsigned-development"
 		if requireSigned {
@@ -444,7 +444,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 			expectedComponentCount = 4
 		}
 		if update.SchemaVersion != "1.0" || update.Product != "Launcher" || update.ProductVersion != ver || update.Platform != "windows" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != expectedTrust || len(update.Components) != expectedComponentCount {
-			return fmt.Errorf("Windows %s component update manifest identity mismatch", arch)
+			return fmt.Errorf("Несовпадение: «Windows %s component update manifest identity»", arch)
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
 		expectedEntry := map[string]string{"desktop": "launcher-desktop.exe", "guard": "guard.exe", "runtime": "runtime.exe"}
@@ -492,7 +492,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 	}
 	release, ok := root.Releases[ver]
 	if root.SchemaVersion != "2.0" || !ok || release.ProtocolVersion != 4 {
-		return errors.New("Windows delivery allowlist schema/release mismatch")
+		return errors.New("Несовпадение: «Windows delivery allowlist schema/release»")
 	}
 	policy, ok := release.Platforms["windows"]
 	if !ok {
@@ -503,7 +503,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 		expectedMode = "authenticode"
 	}
 	if policy.SigningMode != expectedMode || len(policy.Artifacts) != 2 {
-		return errors.New("Windows delivery allowlist signing mode/artifact count mismatch")
+		return errors.New("Несовпадение: «Windows delivery allowlist signing mode/artifact count»")
 	}
 	expectedPairs := map[string]bool{}
 	for _, target := range evidence.Targets {
@@ -525,7 +525,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 			return errors.New("Windows delivery allowlist contains unexpected/duplicate artifact pair")
 		}
 		if row.RequireAuthenticode != productionSigned {
-			return errors.New("Windows delivery allowlist requireAuthenticode mismatch")
+			return errors.New("Несовпадение: «Windows delivery allowlist requireAuthenticode»")
 		}
 		seen[key] = true
 	}
@@ -541,19 +541,19 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		return err
 	}
 	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Platform != "windows" {
-		return errors.New("Windows signing evidence identity/schema mismatch")
+		return errors.New("Несовпадение: «Windows signing evidence identity/schema»")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, evidence.GeneratedAt); err != nil {
 		if _, fallbackErr := time.Parse(time.RFC3339, evidence.GeneratedAt); fallbackErr != nil {
-			return errors.New("Windows signing evidence generatedAt is invalid")
+			return errors.New("Некорректное значение: «Windows signing evidence generatedAt»")
 		}
 	}
 	productionSigned := evidence.SigningMode == "authenticode-rfc3161"
 	if evidence.SigningMode != "authenticode-rfc3161" && evidence.SigningMode != "unsigned-development" {
-		return fmt.Errorf("unsupported Windows signing mode %q", evidence.SigningMode)
+		return fmt.Errorf("Не поддерживается: «Windows signing mode» %q", evidence.SigningMode)
 	}
 	if requireSigned && !productionSigned {
-		return errors.New("production publish requires Authenticode+RFC3161 Windows signing")
+		return errors.New("Для «production publish» требуется «Authenticode+RFC3161 Windows signing»")
 	}
 	if productionSigned {
 		if evidence.Signer == nil || !windowsCertThumbprintRE0152.MatchString(evidence.Signer.Thumbprint) || strings.TrimSpace(evidence.TimestampServer) == "" {
@@ -572,7 +572,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 
 	delivery, err := readDeliveryManifest0151(dir)
 	if err != nil {
-		return fmt.Errorf("Windows signing requires delivery manifest: %w", err)
+		return fmt.Errorf("Для «Windows signing» требуется «delivery manifest:» %w", err)
 	}
 	deliveryByName := map[string]DeliveryArtifact{}
 	for _, artifact := range delivery.Artifacts {
@@ -590,11 +590,11 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 			return err
 		}
 		if seenTargets[arch] {
-			return fmt.Errorf("duplicate Windows signing target %s", arch)
+			return fmt.Errorf("Обнаружен дубликат: «Windows signing target» %s", arch)
 		}
 		seenTargets[arch] = true
 		if target.RustTarget != rustTarget || !strings.EqualFold(target.PEMachine, expectedMachineText) {
-			return fmt.Errorf("Windows %s target metadata mismatch", arch)
+			return fmt.Errorf("Несовпадение: «Windows %s target metadata»", arch)
 		}
 		expectedNames := expectedWindowsSignedArtifactsForVersion0157(ver, arch)
 		if len(target.Artifacts) != len(expectedNames) {
@@ -604,7 +604,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		for _, artifact := range target.Artifacts {
 			expectedName, known := expectedNames[artifact.Component]
 			if !known || artifact.Name != expectedName || artifact.Architecture != arch || !strings.EqualFold(artifact.PEMachine, expectedMachineText) {
-				return fmt.Errorf("Windows %s signed artifact identity mismatch: %s", arch, artifact.Name)
+				return fmt.Errorf("Несовпадение: «Windows %s signed artifact identity»: %s", arch, artifact.Name)
 			}
 			if _, exists := artifactByComponent[artifact.Component]; exists {
 				return fmt.Errorf("Windows %s duplicate signed component %s", arch, artifact.Component)
@@ -619,7 +619,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 				return fmt.Errorf("Windows signed artifact %s: %w", artifact.Name, err)
 			}
 			if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
-				return fmt.Errorf("Windows signed artifact %s checksum/size mismatch", artifact.Name)
+				return fmt.Errorf("Несовпадение: «Windows signed artifact %s checksum/size»", artifact.Name)
 			}
 			deliveryArtifact, ok := deliveryByName[artifact.Name]
 			if !ok || deliveryArtifact.Platform != "windows" || deliveryArtifact.Architecture != arch || deliveryArtifact.Size != actualSize || !strings.EqualFold(deliveryArtifact.SHA256, actualHash) {
@@ -627,17 +627,17 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 			}
 			pe, err := inspectWindowsPEFile0152(path)
 			if err != nil || pe.Architecture != arch || pe.Machine != expectedMachine {
-				return fmt.Errorf("Windows signed artifact %s PE validation failed: %v", artifact.Name, err)
+				return fmt.Errorf("Ошибка: «Windows signed artifact %s PE validation»: %v", artifact.Name, err)
 			}
 			if productionSigned {
 				if artifact.AuthenticodeStatus != "Valid" || !artifact.Timestamped || !artifact.SigntoolVerified || !pe.HasSignature {
 					return fmt.Errorf("Windows signed artifact %s lacks verified Authenticode+timestamp evidence", artifact.Name)
 				}
 				if !strings.EqualFold(artifact.SignerThumbprint, evidence.Signer.Thumbprint) || !windowsCertThumbprintRE0152.MatchString(artifact.TimestampSignerThumbprint) {
-					return fmt.Errorf("Windows signed artifact %s signer/timestamp identity mismatch", artifact.Name)
+					return fmt.Errorf("Несовпадение: «Windows signed artifact %s signer/timestamp identity»", artifact.Name)
 				}
 				if err := verifyWindowsAuthenticodeNative0152(path, artifact.SignerThumbprint, artifact.TimestampSignerThumbprint); err != nil {
-					return fmt.Errorf("Windows signed artifact %s native Authenticode verification failed: %w", artifact.Name, err)
+					return fmt.Errorf("Ошибка: «Windows signed artifact %s native Authenticode verification»: %w", artifact.Name, err)
 				}
 			} else if artifact.AuthenticodeStatus == "Valid" || artifact.Timestamped || artifact.SigntoolVerified {
 				return fmt.Errorf("unsigned-development Windows evidence overclaims signature status for %s", artifact.Name)
@@ -661,7 +661,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 	}
 	sort.Strings(architectures)
 	if strings.Join(architectures, ",") != "arm64,x64" {
-		return errors.New("Windows signing evidence target set is invalid")
+		return errors.New("Некорректное значение: «Windows signing evidence target set»")
 	}
 	return nil
 }

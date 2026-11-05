@@ -104,12 +104,12 @@ func readJSON(file string, out any) error {
 // пути из изменённого реестра свидетельств.
 func SafeRepoFile(root, relative string) (string, error) {
 	if relative == "" || strings.Contains(relative, "\\") || strings.Contains(relative, "\x00") || filepath.IsAbs(relative) || filepath.Clean(relative) != relative || relative == "." || relative == ".." || strings.HasPrefix(relative, "../") {
-		return "", fmt.Errorf("invalid evidence path %q", relative)
+		return "", fmt.Errorf("Некорректное значение: путь к подтверждающим данным %q", relative)
 	}
 	p := root
 	for _, part := range strings.Split(relative, "/") {
 		if part == "" || part == "." || part == ".." {
-			return "", fmt.Errorf("invalid evidence path %q", relative)
+			return "", fmt.Errorf("Некорректное значение: путь к подтверждающим данным %q", relative)
 		}
 		p = filepath.Join(p, part)
 		info, err := os.Lstat(p)
@@ -117,7 +117,7 @@ func SafeRepoFile(root, relative string) (string, error) {
 			return "", fmt.Errorf("evidence path missing %q: %w", relative, err)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return "", fmt.Errorf("symlink evidence forbidden: %q", relative)
+			return "", fmt.Errorf("Запрещено: «symlink evidence»: %q", relative)
 		}
 	}
 	info, err := os.Stat(p)
@@ -374,7 +374,7 @@ func nearestGoModule(root, relative string) (directory, goPackage string, err er
 			return current, pkg, nil
 		}
 		if current == "." || current == "" {
-			return "", "", fmt.Errorf("no Go module for %s", relative)
+			return "", "", fmt.Errorf("Отсутствует: «Go module for» %s", relative)
 		}
 		current = filepath.Dir(current)
 	}

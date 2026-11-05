@@ -204,7 +204,7 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 		return fmt.Errorf("Не поддерживается: тип события расширения %q", in.Type)
 	}
 	if !spec.SyncAllowed {
-		return fmt.Errorf("event %s cannot be used as sync hook", in.Type)
+		return fmt.Errorf("«event» %s: запрещено «be used as sync hook»", in.Type)
 	}
 	event, _, err := b.Publish(ctx, in)
 	if err != nil {
@@ -216,7 +216,7 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 	}
 	d := b.dispatcherValue()
 	if len(subs) > 0 && d == nil {
-		return errors.New("sync hook dispatcher unavailable")
+		return errors.New("Недоступно: «sync hook dispatcher»")
 	}
 	for _, sub := range subs {
 		if err := ctx.Err(); err != nil {
@@ -232,7 +232,7 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 			return fmt.Errorf("%w: %s/%s", ErrHookTimeout, sub.ExtensionID, event.Type)
 		}
 		if callErr != nil {
-			return fmt.Errorf("sync hook %s/%s failed: %w", sub.ExtensionID, event.Type, callErr)
+			return fmt.Errorf("Ошибка: «sync hook %s/%s»: %w", sub.ExtensionID, event.Type, callErr)
 		}
 		if !result.OK {
 			return fmt.Errorf("%w: %s: %s", ErrHookRejected, sub.ExtensionID, strings.TrimSpace(result.Message))
@@ -299,7 +299,7 @@ func (b *Bus) processBatch(ctx context.Context) {
 		}
 		items, err := b.store.LeaseExtensionEventDeliveries(ctx, 1, time.Now().UTC().Add(b.cfg.LeaseDuration))
 		if err != nil {
-			log.Printf("Extensions event lease failed: %v", err)
+			log.Printf("Ошибка: «Extensions event lease»: %v", err)
 			return
 		}
 		if len(items) == 0 {

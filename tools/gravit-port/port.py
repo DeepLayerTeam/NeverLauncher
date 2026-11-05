@@ -31,25 +31,25 @@ def run(*cmd: str, cwd: Path = ROOT) -> None:
     try:
         subprocess.run(cmd, cwd=cwd, check=True)
     except (subprocess.CalledProcessError, OSError) as exc:
-        raise PortError(f"tool failed: {cmd[0]} ({exc})") from exc
+        raise PortError(f"Ошибка: «tool»: {cmd[0]} ({exc})") from exc
 
 
 def sources_in(directory: Path) -> list[Path]:
     if not directory.is_dir() or directory.is_symlink():
-        raise PortError("source must be a real directory")
+        raise PortError("Для источник требуется: настоящий каталог")
     source = directory.resolve(strict=True)
     result: list[Path] = []
     for p in sorted(source.rglob("*")):
         if p.is_symlink():
-            raise PortError(f"source symlink forbidden: {p}")
+            raise PortError(f"Запрещено: «source symlink»: {p}")
         if p.is_file():
             if p.suffix != ".java":
                 continue  # Non-Java assets are deliberately not embedded.
             if p.stat().st_size > 1 << 20 or not p.resolve().is_relative_to(source):
-                raise PortError(f"unsafe source file: {p}")
+                raise PortError(f"Небезопасное значение: «source file»: {p}")
             result.append(p)
         elif not p.is_dir():
-            raise PortError(f"unsupported source entry: {p}")
+            raise PortError(f"Не поддерживается: «source entry»: {p}")
     if not result or len(result) > 1000:
         raise PortError("expected 1..1000 Java source files")
     return result
@@ -59,7 +59,7 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
     try:
         doc = json.loads(raw)
     except (ValueError, UnicodeDecodeError) as exc:
-        raise PortError(f"invalid extension manifest: {exc}") from exc
+        raise PortError(f"Некорректное значение: «extension manifest»: {exc}") from exc
     if (
         not isinstance(doc, dict)
         or doc.get("schemaVersion") != "2.0"
@@ -68,7 +68,7 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
         raise PortError("expected a schemaVersion 2.0 / api 1.0 extension manifest")
     targets = doc.get("targets")
     if not isinstance(targets, list) or not targets:
-        raise PortError("extension manifest requires backend/cli target")
+        raise PortError("Для «extension manifest» требуется «backend/cli target»")
     if any(
         not isinstance(t, dict)
         or t.get("kind") not in ("backend", "cli")
@@ -79,9 +79,9 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
             "ported Java module must use its built JAR for backend/cli targets"
         )
     if len({t["kind"] for t in targets}) != len(targets):
-        raise PortError("duplicate Java target")
+        raise PortError("Обнаружен дубликат: цель Java")
     if not isinstance(doc.get("permissions"), list):
-        raise PortError("permissions must be declared in the signed manifest")
+        raise PortError("Для разрешения требуется: «declared in the signed manifest»")
 
 
 def ensure_clean_destination(path: Path) -> None:
@@ -94,25 +94,25 @@ def build(args: argparse.Namespace) -> None:
     if not IDENT.fullmatch(args.module_class) or args.module_class.startswith(
         ("pro.gravit.", "ru.launcher.sdk.")
     ):
-        raise PortError("invalid or reserved Gravit module class name")
+        raise PortError("Некорректное значение: «or reserved Gravit module class name»")
     entrypoint = "backend/gravit-port.jar"
     if args.manifest.is_symlink():
-        raise PortError("manifest symlink forbidden")
+        raise PortError("Запрещено: «manifest symlink»")
     manifest_file = args.manifest.resolve(strict=True)
     if not manifest_file.is_file() or manifest_file.stat().st_size > 1 << 20:
-        raise PortError("manifest must be a regular non-symlink file under 1 MiB")
+        raise PortError("Для манифест требуется: «a regular non-symlink file under 1 MiB»")
     raw_manifest = manifest_file.read_bytes()
     validate_manifest(raw_manifest, entrypoint)
     sources = sources_in(args.source)
     if args.output.is_symlink() or (
         args.package is not None and args.package.is_symlink()
     ):
-        raise PortError("output symlink forbidden")
+        raise PortError("Запрещено: «output symlink»")
     destination = args.output.resolve()
     ensure_clean_destination(destination)
     if args.private_key is not None:
         if args.package is None or args.public_key is None or args.nl is None:
-            raise PortError("signing requires --package, --nl and --public-key")
+            raise PortError("Для «signing» требуется «--package, --nl and --public-key»")
         ensure_clean_destination(args.package.resolve())
     elif args.package is not None or args.public_key is not None or args.nl is not None:
         raise PortError(
@@ -225,14 +225,14 @@ def build(args: argparse.Namespace) -> None:
         with zipfile.ZipFile(jpath) as archive:
             names = archive.namelist()
             if len(names) != len(set(names)):
-                raise PortError("duplicate JAR entries")
+                raise PortError("Обнаружен дубликат: «JAR entries»")
             for name in (
                 "ru/launcher/sdk/host/JavaExtensionHost.class",
                 "ru/launcher/sdk/gravit/GravitCompatExtension.class",
                 args.module_class.replace(".", "/") + ".class",
             ):
                 if name not in names:
-                    raise PortError("missing executable JAR class: " + name)
+                    raise PortError("Отсутствует: «executable JAR class:»" + name)
         (stage / "launcher-extension.json").write_bytes(raw_manifest)
         # Publish the build directory only after the actual compilation and JAR verification.
         stage.rename(destination)

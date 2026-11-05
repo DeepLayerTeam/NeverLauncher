@@ -45,14 +45,14 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 		return report, err
 	}
 	if len(raw) > 2<<20 {
-		return report, errors.New("certification matrix too large")
+		return report, errors.New("Превышен допустимый размер: «certification matrix»")
 	}
 	var m factoryMatrix02712
 	if err = json.Unmarshal(raw, &m); err != nil {
 		return report, err
 	}
 	if m.Schema != "launcher.factory.certification-matrix.v1" || len(m.Targets) == 0 || len(m.Targets) > 100 {
-		return report, errors.New("invalid certification matrix")
+		return report, errors.New("Некорректное значение: «certification matrix»")
 	}
 	report = factoryMatrixReport02712{Schema: "launcher.factory.certification-report.v1", Total: len(m.Targets), Status: "failed", Results: make([]factoryMatrixResult02712, 0, len(m.Targets))}
 	seen := map[string]bool{}
@@ -77,7 +77,7 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 		record := factoryMatrixResult02712{ID: t.ID, Status: "failed"}
 		cert, verifyErr := certVerify02712(dir, certPath, pubPath)
 		if verifyErr == nil && (cert.Loader != t.Loader || cert.MinecraftVersion != t.Minecraft || cert.Target.OS != t.OS || cert.Target.Arch != t.Arch) {
-			verifyErr = errors.New("certificate identity does not match required matrix target")
+			verifyErr = errors.New("«certificate identity» не совпадает с «required matrix target»")
 		}
 		if verifyErr != nil {
 			record.Reason = verifyErr.Error()

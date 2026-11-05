@@ -50,7 +50,7 @@ func handleDurableOperation0217(args []string) error {
 			result, _, err = adminBackendPost(args, path+"/"+args[0], nil)
 		}
 	default:
-		return fmt.Errorf("unknown operation subcommand: %s", args[0])
+		return fmt.Errorf("Неизвестное значение: «operation subcommand»: %s", args[0])
 	}
 	if err != nil {
 		return err

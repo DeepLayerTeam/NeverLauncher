@@ -27,18 +27,18 @@ import (
 func Export(ctx context.Context, postgresDSN, target string) (out Report, err error) {
 	out = Report{Format: importVersion, PostgreSQLSchema: Schema, ReadyForBackendCutover: false}
 	if strings.TrimSpace(postgresDSN) == "" || strings.TrimSpace(target) == "" {
-		return out, errors.New("PostgreSQL DSN and target SQLite backup required")
+		return out, errors.New("Требуется: «PostgreSQL DSN and target SQLite backup»")
 	}
 	dest, err := filepath.Abs(target)
 	if err != nil {
 		return out, err
 	}
 	if dest == "/" {
-		return out, errors.New("unsafe SQLite destination")
+		return out, errors.New("Небезопасное значение: «SQLite destination»")
 	}
 	parent := filepath.Dir(dest)
 	if st, e := os.Lstat(parent); e != nil || !st.IsDir() || st.Mode().Perm()&0077 != 0 {
-		return out, errors.New("SQLite destination must be in a private 0700 existing directory")
+		return out, errors.New("Для «SQLite destination» требуется: «in a private 0700 existing directory»")
 	}
 	for _, suffix := range []string{"", ".json", "-wal", "-shm", "-journal"} {
 		if _, e := os.Lstat(dest + suffix); e == nil {
@@ -108,7 +108,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 		return out, fmt.Errorf("reconstructed SQLite backup integrity: %w", err)
 	}
 	if actual.SHA256 != out.SnapshotSHA256 {
-		return out, errors.New("reconstructed SQLite SHA mismatch")
+		return out, errors.New("Несовпадение: «reconstructed SQLite SHA»")
 	}
 	if err = verifyRestoredCore(ctx, tmp); err != nil {
 		return out, fmt.Errorf("reconstructed application invariants: %w", err)
@@ -190,12 +190,12 @@ func readChunks(ctx context.Context, tx pgx.Tx, dest io.Writer, expectedSize int
 			break
 		}
 		if ordinal != count || len(data) == 0 || len(data) > snapshotChunkSize {
-			err = errors.New("invalid or missing PostgreSQL snapshot chunk")
+			err = errors.New("Некорректное значение: «or missing PostgreSQL snapshot chunk»")
 			break
 		}
 		sum := sha256.Sum256(data)
 		if hex.EncodeToString(sum[:]) != savedHash {
-			err = errors.New("snapshot chunk SHA-256 mismatch")
+			err = errors.New("Несовпадение: «snapshot chunk SHA-256»")
 			break
 		}
 		n, writeErr := dest.Write(data)
@@ -221,7 +221,7 @@ func readChunks(ctx context.Context, tx pgx.Tx, dest io.Writer, expectedSize int
 		return err
 	}
 	if count == 0 || size != expectedSize || hex.EncodeToString(digest.Sum(nil)) != expectedHash {
-		return errors.New("PostgreSQL snapshot length or SHA mismatch")
+		return errors.New("Несовпадение: «PostgreSQL snapshot length or SHA»")
 	}
 	return nil
 }

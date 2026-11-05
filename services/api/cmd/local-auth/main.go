@@ -70,7 +70,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 			MigrationStatus(context.Context) (dbmigrate.Status, error)
 		})
 		if !ok {
-			return errors.New("PostgreSQL migration checker unavailable")
+			return errors.New("Недоступно: «PostgreSQL migration checker»")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -83,7 +83,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 		}
 		importer, ok := repo.(repository.FileAuthImporter0295)
 		if !ok {
-			return errors.New("PostgreSQL atomic importer unavailable")
+			return errors.New("Недоступно: «PostgreSQL atomic importer»")
 		}
 		count, err := importer.ImportFileAuth0295(ctx, records, !*apply)
 		if err != nil {
@@ -98,7 +98,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 	case "list", "export", "create", "password", "disable", "enable":
 		return runOnline(args, output, input)
 	default:
-		return fmt.Errorf("unknown local-auth command %q", args[0])
+		return fmt.Errorf("Неизвестное значение: «local-auth command» %q", args[0])
 	}
 }
 
@@ -115,7 +115,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return errors.New("unexpected positional arguments (passwords must only arrive over stdin)")
+		return errors.New("Неожиданное значение: «positional arguments (passwords must only arrive over stdin)»")
 	}
 	base, err := url.Parse(strings.TrimRight(strings.TrimSpace(*endpoint), "/"))
 	if err != nil {
@@ -129,7 +129,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 	}
 	token := strings.TrimSpace(os.Getenv(*tokenEnv))
 	if token == "" {
-		return fmt.Errorf("missing token environment variable %s", *tokenEnv)
+		return fmt.Errorf("Отсутствует: «token environment variable» %s", *tokenEnv)
 	}
 	var method, path string
 	var payload any
@@ -138,7 +138,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		method, path = "GET", "/api/v1/admin/users"
 	case "create":
 		if *email == "" || strings.Contains(*email, "@"+fileauth.EmailDomain) || (*role != "player" && *role != "viewer") {
-			return errors.New("create requires --email and an unprivileged --role (player|viewer)")
+			return errors.New("Для «create» требуется «--email and an unprivileged --role (player|viewer)»")
 		}
 		password, err := readPassword(input)
 		if err != nil {
@@ -148,7 +148,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		payload = map[string]any{"email": *email, "displayName": *displayName, "roleId": *role, "password": password}
 	case "password":
 		if *userID == "" {
-			return errors.New("password requires --user-id")
+			return errors.New("Для пароль требуется --user-id")
 		}
 		password, err := readPassword(input)
 		if err != nil {

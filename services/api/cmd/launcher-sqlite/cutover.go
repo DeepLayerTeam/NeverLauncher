@@ -26,12 +26,12 @@ func runPGCutoverCheck0475(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 0 || *timeout <= 0 || *sha == "" || *project == "" || *email == "" || *dsnEnv == "" || strings.ContainsAny(*dsnEnv, "= \t\n\r\x00") {
-		fmt.Fprintln(os.Stderr, "invalid cutover check flags")
+		fmt.Fprintln(os.Stderr, "Некорректное значение: «cutover check flags»")
 		return 2
 	}
 	dsn := os.Getenv(*dsnEnv)
 	if dsn == "" {
-		fmt.Fprintln(os.Stderr, "PostgreSQL DSN env is empty")
+		fmt.Fprintln(os.Stderr, "Пустое значение: «PostgreSQL DSN env»")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)

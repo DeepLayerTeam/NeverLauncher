@@ -58,7 +58,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 		if suppliedSecondFactor {
 			ok, reason := s.State.Security.verifySecondFactor(user.ID, totp, recovery)
 			if !ok {
-				return loginMFAResult117{}, errors.New("invalid local second factor")
+				return loginMFAResult117{}, errors.New("Некорректное значение: «local second factor»")
 			}
 			switch reason {
 			case "totp-ok":
@@ -66,13 +66,13 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 			case "recovery-ok":
 				methods = mergeAuthMethods117(methods, "recovery-code")
 			default:
-				return loginMFAResult117{}, errors.New("invalid local second factor state")
+				return loginMFAResult117{}, errors.New("Некорректное значение: «local second factor state»")
 			}
 			strength = "mfa"
 		} else if passkeys > 0 {
 			return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 		} else {
-			return loginMFAResult117{}, errors.New("local second factor is required")
+			return loginMFAResult117{}, errors.New("Требуется: «local second factor»")
 		}
 	}
 

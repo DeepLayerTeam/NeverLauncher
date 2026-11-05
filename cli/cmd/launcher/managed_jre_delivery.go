@@ -159,11 +159,11 @@ func normalizeArchiveEntry0155(name string) (string, error) {
 		return "", nil
 	}
 	if strings.HasPrefix(normalized, "/") || strings.Contains(normalized, "\x00") {
-		return "", fmt.Errorf("unsafe JRE archive entry %q", name)
+		return "", fmt.Errorf("Небезопасное значение: «JRE archive entry» %q", name)
 	}
 	clean := filepath.ToSlash(filepath.Clean(normalized))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.Contains(clean, "/../") {
-		return "", fmt.Errorf("unsafe JRE archive entry %q", name)
+		return "", fmt.Errorf("Небезопасное значение: «JRE archive entry» %q", name)
 	}
 	return clean, nil
 }
@@ -211,7 +211,7 @@ func validateManagedJREBinary0155(platform, arch string, data []byte) error {
 			return fmt.Errorf("bin/java architecture=%s, expected %s", info.Architecture, arch)
 		}
 	default:
-		return fmt.Errorf("unsupported Managed JRE platform %q", platform)
+		return fmt.Errorf("Не поддерживается: «Managed JRE platform» %q", platform)
 	}
 	return nil
 }
@@ -231,7 +231,7 @@ func scanManagedJREZip0155(path, platform, arch string) (string, error) {
 		return "", err
 	}
 	if len(zr.File) == 0 || len(zr.File) > 100000 {
-		return "", fmt.Errorf("invalid JRE zip entry count %d", len(zr.File))
+		return "", fmt.Errorf("Некорректное значение: «JRE zip entry count» %d", len(zr.File))
 	}
 	javaEntry := ""
 	for _, zf := range zr.File {
@@ -250,7 +250,7 @@ func scanManagedJREZip0155(path, platform, arch string) (string, error) {
 			raw, err := io.ReadAll(io.LimitReader(rc, 4097))
 			rc.Close()
 			if err != nil || len(raw) > 4096 {
-				return "", fmt.Errorf("invalid JRE zip symlink %s", clean)
+				return "", fmt.Errorf("Некорректное значение: «JRE zip symlink» %s", clean)
 			}
 			if err := validateArchiveLink0155(clean, string(raw)); err != nil {
 				return "", err
@@ -271,7 +271,7 @@ func scanManagedJREZip0155(path, platform, arch string) (string, error) {
 			data, err := io.ReadAll(io.LimitReader(rc, maxManagedJREEntry0155+1))
 			rc.Close()
 			if err != nil || int64(len(data)) > maxManagedJREEntry0155 {
-				return "", errors.New("JRE java.exe cannot be read safely")
+				return "", errors.New("«JRE java.exe»: запрещено «be read safely»")
 			}
 			if err := validateManagedJREBinary0155(platform, arch, data); err != nil {
 				return "", err
@@ -329,12 +329,12 @@ func scanManagedJRETarGz0155(path, platform, arch string) (string, error) {
 		case tar.TypeLink:
 			linked, err := normalizeArchiveEntry0155(hdr.Linkname)
 			if err != nil || linked == "" {
-				return "", fmt.Errorf("unsafe JRE tar hardlink %s -> %q", clean, hdr.Linkname)
+				return "", fmt.Errorf("Небезопасное значение: «JRE tar hardlink %s ->» %q", clean, hdr.Linkname)
 			}
 			continue
 		case tar.TypeReg, tar.TypeRegA:
 		default:
-			return "", fmt.Errorf("unsupported JRE tar entry type %d for %s", hdr.Typeflag, clean)
+			return "", fmt.Errorf("Не поддерживается: «JRE tar entry type %d for» %s", hdr.Typeflag, clean)
 		}
 		if strings.HasSuffix(strings.ToLower(clean), "/bin/java") {
 			if javaEntry != "" {
@@ -345,7 +345,7 @@ func scanManagedJRETarGz0155(path, platform, arch string) (string, error) {
 			}
 			data, err := io.ReadAll(io.LimitReader(tr, maxManagedJREEntry0155+1))
 			if err != nil || int64(len(data)) != hdr.Size {
-				return "", errors.New("JRE bin/java cannot be read safely")
+				return "", errors.New("«JRE bin/java»: запрещено «be read safely»")
 			}
 			if err := validateManagedJREBinary0155(platform, arch, data); err != nil {
 				return "", err
@@ -369,7 +369,7 @@ func verifyManagedJREArchive0155(dir string, target ManagedJRETarget0155) error 
 		return err
 	}
 	if target.Size <= 0 || size != target.Size || !validDeliverySHA256(target.SHA256) || !strings.EqualFold(sum, target.SHA256) {
-		return fmt.Errorf("Managed JRE %s/%s archive checksum/size mismatch", target.Platform, target.Architecture)
+		return fmt.Errorf("Несовпадение: «Managed JRE %s/%s archive checksum/size»", target.Platform, target.Architecture)
 	}
 	if !validDeliverySHA256(target.SourceSHA256) || !strings.EqualFold(target.SourceSHA256, target.SHA256) {
 		return fmt.Errorf("Managed JRE %s/%s is not the exact vendor archive", target.Platform, target.Architecture)
@@ -417,12 +417,12 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 	for _, target := range manifest.Targets {
 		canonical, err := canonicalDeliveryTarget(target.Platform, target.Architecture)
 		if err != nil || canonical.Platform == "any" || canonical.Architecture == "any" || canonical.Architecture == "universal" {
-			return fmt.Errorf("Managed JRE target invalid: %s/%s", target.Platform, target.Architecture)
+			return fmt.Errorf("Некорректное значение: «Managed JRE target»: %s/%s", target.Platform, target.Architecture)
 		}
 		key := canonical.Platform + "/" + canonical.Architecture
 		expectedArchive, ok := expected[key]
 		if !ok || target.Archive != expectedArchive || target.Platform != canonical.Platform || target.Architecture != canonical.Architecture {
-			return fmt.Errorf("unexpected Managed JRE target %s archive=%s", key, target.Archive)
+			return fmt.Errorf("Неожиданное значение: «Managed JRE target %s archive=%s»", key, target.Archive)
 		}
 		if _, duplicate := targetByKey[key]; duplicate {
 			return fmt.Errorf("Обнаружен дубликат: Managed JRE цель %s", key)
@@ -443,10 +443,10 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 		return err
 	}
 	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Distribution != "temurin" || evidence.Vendor != "Eclipse Adoptium" || evidence.IntegrityMode != "exact-vendor-archive-sha256" || evidence.Manifest != managedJREManifestFile0155 || !validDeliverySHA256(evidence.ManifestSHA256) || !strings.EqualFold(evidence.ManifestSHA256, manifestHash) || strings.TrimSpace(evidence.GeneratedAt) == "" {
-		return errors.New("Managed JRE evidence identity/manifest hash mismatch")
+		return errors.New("Несовпадение: «Managed JRE evidence identity/manifest hash»")
 	}
 	if len(evidence.Targets) != len(expected) {
-		return errors.New("Managed JRE evidence target count mismatch")
+		return errors.New("Несовпадение: «Managed JRE evidence target count»")
 	}
 	seenEvidence := map[string]bool{}
 	for _, item := range evidence.Targets {

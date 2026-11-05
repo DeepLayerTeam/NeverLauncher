@@ -696,7 +696,7 @@ func mirrorDedupeLibraries0274(stage string) ([]mirrorAction0274, error) {
 	if st, err := os.Stat(libs); err != nil {
 		return nil, err
 	} else if !st.IsDir() {
-		return nil, errors.New("libraries is not a directory")
+		return nil, errors.New("«libraries»: требуется каталог")
 	}
 	canonical := map[string]string{}
 	actions := []mirrorAction0274{}

@@ -64,14 +64,14 @@ func BatchDigest0492(b Batch0492) (string, error) {
 }
 func VerifyBatch0492(b Batch0492) error {
 	if b.Format != BatchFormat0492 || len(b.BatchSHA256) != 64 || len(b.SourceSHA256) != 64 || len(b.TargetSHA256) != 64 || b.ProfileCount != len(b.Profiles) || b.ProfileCount < 1 || b.ProfileCount > MaxProfiles0492 {
-		return errors.New("invalid multi-profile dry-run")
+		return errors.New("Некорректное значение: «multi-profile dry-run»")
 	}
 	digest, err := BatchDigest0492(b)
 	if err != nil {
 		return err
 	}
 	if digest != b.BatchSHA256 {
-		return errors.New("multi-profile dry-run changed")
+		return errors.New("Обнаружено изменение: «multi-profile dry-run»")
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func VerifyBatch0492(b Batch0492) error {
 func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, project, target string, existing map[string]bool, inventory inv.Inventory, compatibility gd.Report, modules gm.Report, identities IdentityPreview, destinations []Destination) (Batch0492, error) {
 	out := Batch0492{Format: BatchFormat0492, RunID: run, ProjectID: project, SourceSHA256: inventory.SourceSHA256, InventorySHA256: inventory.ManifestSHA256, TargetSHA256: target, Profiles: []ProfileResult0492{}, Blockers: []string{}, Status: "manual"}
 	if len(destinations) == 0 || len(destinations) > MaxProfiles0492 || run == "" || project == "" || len(target) != 64 || size != inventory.SourceBytes || compatibility.SourceSHA256 != inventory.SourceSHA256 || modules.SourceSHA256 != inventory.SourceSHA256 || modules.InventorySHA256 != inventory.ManifestSHA256 {
-		return out, errors.New("invalid batch source, destination count or target snapshot")
+		return out, errors.New("Некорректное значение: «batch source, destination count or target snapshot»")
 	}
 	if _, err := inventory.Manifest(); err != nil {
 		return out, err
@@ -95,7 +95,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		}
 	}
 	if len(available) == 0 || len(available) != len(destinations) {
-		return out, fmt.Errorf("every Gravit profile must be mapped exactly once: source has %d, request has %d", len(available), len(destinations))
+		return out, fmt.Errorf("Для «every Gravit profile» требуется: «mapped exactly once: source has %d, request has» %d", len(available), len(destinations))
 	}
 	mapped, ids := make(map[string]bool), make(map[string]bool)
 	for _, d := range destinations {
@@ -104,7 +104,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		}
 		id := strings.ToLower(d.ProfileID)
 		if ids[id] {
-			return out, errors.New("duplicate target profile ID")
+			return out, errors.New("Обнаружен дубликат: «target profile ID»")
 		}
 		ids[id], mapped[d.ProfilePath] = true, true
 	}

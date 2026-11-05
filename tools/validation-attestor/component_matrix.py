@@ -18,7 +18,7 @@ def selected_components(manifest, choice):
         return set(), {f["path"] for f in manifest["files"]}
     by_id = {c["id"]: c for c in cat["components"]}
     if len(by_id) != len(cat["components"]):
-        raise ValueError("duplicate signed component id")
+        raise ValueError("Обнаружен дубликат: «signed component id»")
     if choice.startswith("@custom:v1:"):
         text = choice[len("@custom:v1:") :]
         if ":" not in text:
@@ -37,7 +37,7 @@ def selected_components(manifest, choice):
     presets = {p["id"]: p["components"] for p in cat.get("presets", [])}
     if base:
         if base not in presets:
-            raise ValueError("unknown signed preset " + base)
+            raise ValueError("Неизвестное значение: «signed preset»" + base)
         roots = set(presets[base])
     else:
         roots = {c["id"] for c in cat["components"] if c.get("default")}
@@ -53,7 +53,7 @@ def selected_components(manifest, choice):
                 or not ID.fullmatch(term[1:])
                 or term[1:] in seen
             ):
-                raise ValueError("invalid or duplicate custom choice")
+                raise ValueError("Некорректное значение: «or duplicate custom choice»")
             ident = term[1:]
             seen.add(ident)
             if ident not in by_id:
@@ -77,7 +77,7 @@ def selected_components(manifest, choice):
             return
         c = by_id.get(ident)
         if c is None:
-            raise ValueError("unknown dependency")
+            raise ValueError("Неизвестное значение: «dependency»")
         selected.add(ident)
         for dep in c.get("dependencies", []):
             include(dep["id"], chain + (ident,))

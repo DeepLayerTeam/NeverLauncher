@@ -25,7 +25,7 @@ func migrationModuleEndpoint0338(endpoint string) error {
 	if u.Scheme == "http" && ip != nil && ip.IsLoopback() {
 		return nil
 	}
-	return errors.New("Gravit module upload requires HTTPS or loopback IP")
+	return errors.New("Для «Gravit module upload» требуется «HTTPS or loopback IP»")
 }
 func migrationModuleAnalyze0338(endpoint, token, source, out string) error {
 	if err := migrationModuleEndpoint0338(endpoint); err != nil {

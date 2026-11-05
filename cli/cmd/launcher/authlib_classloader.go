@@ -72,7 +72,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 		return input, err
 	}
 	if err := d.Decode(new(any)); err != io.EOF {
-		return input, errors.New("unexpected data after compatibility request")
+		return input, errors.New("Неожиданное значение: «data after compatibility request»")
 	}
 	// Запретите приём слишком большого, хотя и синтаксически допустимого, документа JSON.
 	if st, err := file.Stat(); err != nil || st.Size() > 1<<20 {
@@ -99,7 +99,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 
 func compatValidateJar0279(path, digest, prefix string) error {
 	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(strings.ToLower(path), ".jar") {
-		return fmt.Errorf("compatibility JAR must be under %s: %q", prefix, path)
+		return fmt.Errorf("Для «compatibility JAR» требуется: «under %s:» %q", prefix, path)
 	}
 	if err := validateVanillaRelativePath(path); err != nil {
 		return err
@@ -122,7 +122,7 @@ func compatValidateLock0279(lock *compatLock0279) error {
 		return errors.New("Режим аутентификации не поддерживается")
 	}
 	if lock.JavaMajor < 8 || lock.JavaMajor > 30 {
-		return errors.New("invalid Java major for compatibility")
+		return errors.New("Некорректное значение: «Java major for compatibility»")
 	}
 	if len(lock.Classpath)+len(lock.Modulepath)+len(lock.JavaAgents) > 64 || len(lock.AddOpens) > 64 {
 		return errors.New("Превышено допустимое число элементов загрузчика классов")
@@ -159,14 +159,14 @@ func compatValidateLock0279(lock *compatLock0279) error {
 			return err
 		}
 		if strings.ContainsAny(entry.Options, "\r\n\x00") || len(entry.Options) > 2048 || strings.Contains(entry.Options, "${") {
-			return fmt.Errorf("invalid Java agent options for %s", entry.Path)
+			return fmt.Errorf("Некорректное значение: «Java agent options for» %s", entry.Path)
 		}
 	}
 	opened := map[string]bool{}
 	for _, op := range lock.AddOpens {
 		// Разрешайте только module/package=ALL-UNNAMED; произвольные параметры JVM запрещены.
 		if !validAddOpens0279(op) || opened[op] {
-			return fmt.Errorf("unsupported or duplicate --add-opens %q", op)
+			return fmt.Errorf("Не поддерживается: «or duplicate --add-opens» %q", op)
 		}
 		opened[op] = true
 	}
@@ -274,7 +274,7 @@ func readCompatReceipt0279(root string) (*compatLock0279, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 1<<20 {
-		return nil, errors.New("compatibility receipt must be a small regular file")
+		return nil, errors.New("Для «compatibility receipt» требуется: «a small regular file»")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -353,7 +353,7 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 	}
 	lock := compatLock0279{SchemaVersion: compatSchema0279, AuthMode: req.AuthMode, JavaMajor: p.Java.Major, ParentInstallPlanSHA256: p.ReproducibilitySHA256, AddOpens: req.AddOpens}
 	if req.AuthMode == "yggdrasil" && !allowAuthAgent {
-		return nil, errors.New("custom Yggdrasil agent requires --allow-auth-agent true")
+		return nil, errors.New("Для «custom Yggdrasil agent» требуется «--allow-auth-agent true»")
 	}
 	actions := []mirrorAction0274{}
 	install := func(entry compatInputArtifact0279, prefix string) (compatArtifact0279, error) {
@@ -478,7 +478,7 @@ func handleRuntimeCompat0279(args []string) error {
 	case "compat-apply":
 		inputFile := flagValue(flags, "--file", "")
 		if inputFile == "" {
-			return errors.New("compat-apply requires --file")
+			return errors.New("Для «compat-apply» требуется --file")
 		}
 		request, err := compatReadRequest0279(inputFile)
 		if err != nil {

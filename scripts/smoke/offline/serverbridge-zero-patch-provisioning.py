@@ -95,10 +95,10 @@ require(
 )
 targets = json.loads(read("serverbridge/targets.json"))
 if targets.get("productVersion") != version or len(targets.get("targets", [])) != 14:
-    raise SystemExit("0.19.9+ ServerBridge target metadata mismatch")
+    raise SystemExit("Несовпадение: «0.19.9+ ServerBridge target metadata»")
 hybrid = json.loads(read("serverbridge/hybrid-targets.json"))
 if hybrid.get("productVersion") != version or any(
     x.get("status") != "not-certified" for x in hybrid.get("targets", [])
 ):
-    raise SystemExit("0.19.9+ hybrid certification metadata mismatch")
+    raise SystemExit("Несовпадение: «0.19.9+ hybrid certification metadata»")
 print("ServerBridge Zero-Patch Provisioning 0.19.9+ production gate: OK")

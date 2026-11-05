@@ -63,7 +63,7 @@ func ParseKey(raw string) ([]byte, error) {
 	if b, err := base64.StdEncoding.DecodeString(raw); err == nil && len(b) == 32 {
 		return b, nil
 	}
-	return nil, errors.New("extension secrets key must be 32-byte hex or base64")
+	return nil, errors.New("Для «extension secrets key» требуется: «32-byte hex or base64»")
 }
 func New(repo repository.Repository, key []byte) (*Manager, error) {
 	if repo == nil {
@@ -302,7 +302,7 @@ func (m *Manager) GetSecret(ctx context.Context, extensionID, scope, scopeID, na
 		return nil, err
 	}
 	if s.KeyVersion != KeyVersion {
-		return nil, fmt.Errorf("unsupported extension secret key version %q", s.KeyVersion)
+		return nil, fmt.Errorf("Не поддерживается: «extension secret key version» %q", s.KeyVersion)
 	}
 	block, err := aes.NewCipher(m.key)
 	if err != nil {

@@ -60,7 +60,7 @@ def doc(path: Path, *, private: bool = False) -> dict:
     try:
         value = json.loads(regular(path, private=private))
     except (ValueError, UnicodeError) as exc:
-        raise Blocked("invalid JSON: " + str(path)) from exc
+        raise Blocked("Некорректное значение: «JSON:»" + str(path)) from exc
     require(type(value) is dict, "JSON object required: " + str(path))
     return value
 
@@ -234,7 +234,7 @@ def check_modules(cfg: dict, refs: dict, output: Path) -> list[dict]:
         try:
             observation = json.loads(stdout)
         except (ValueError, UnicodeError) as exc:
-            raise Blocked("invalid module output: " + module) from exc
+            raise Blocked("Некорректное значение: «module output:»" + module) from exc
         require(type(observation) is dict and observation.get("moduleId") == module
                 and observation.get("runId") == case["runId"]
                 and observation.get("projectId") == case["projectId"]

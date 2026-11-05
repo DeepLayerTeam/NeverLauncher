@@ -33,9 +33,9 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
     if s.len()!=10 || !s.starts_with("0x") ||
        !s[2..].bytes().all(|b| b.is_ascii_hexdigit()) ||
        !s[2..4].eq_ignore_ascii_case("81") {
-        return Err("Linux AK must be a provisioned TPM persistent 0x81xxxxxx handle".into());
+        return Err("В Linux ключ AK должен иметь постоянный дескриптор TPM вида 0x81xxxxxx".into());
     }
-    let n=u32::from_str_radix(&s[2..],16).map_err(|_|"invalid AK handle")?;
+    let n=u32::from_str_radix(&s[2..],16).map_err(|_|"Некорректное значение: «AK handle»")?;
     Ok(format!("0x{n:08x}"))
 }
 
@@ -44,7 +44,7 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
 // только стандартные каталоги приложений XDG; путь от frontend принимать нельзя.
 fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
     if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b=='-') {
-        return Err("invalid hardware-enclave TPM label".into());
+        return Err("Некорректное значение: «hardware-enclave TPM label»".into());
     }
     let home=std::env::var_os("HOME").ok_or("HOME is unavailable")?;
     let config=std::env::var_os("XDG_CONFIG_HOME").filter(|v| Path::new(v).is_absolute())
@@ -65,16 +65,16 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
 
 fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> {
     // Никаких символических ссылок. Нельзя незаметно использовать данные другого UID.
-    let md=fs::symlink_metadata(path).map_err(|e|format!("TPM device blob missing: {e}"))?;
+    let md=fs::symlink_metadata(path).map_err(|e|format!("Отсутствует: «TPM device blob»: {e}"))?;
     if !md.file_type().is_file() || md.uid() != unsafe { libc::geteuid() } || md.len()==0 || md.len() as usize>maximum ||
        md.mode() & 0o022 != 0 {
-        return Err("TPM key blob must be an owned, non-group/world-writable regular file".into());
+        return Err("Для «TPM key blob» требуется: «an owned, non-group/world-writable regular file»".into());
     }
     // Проверка обычного файла предотвращает прямое следование симлинку; Linux
     // O_NOFOLLOW закрывает гонку переименования в симлинк между stat и open.
     let mut opts=OpenOptions::new();
     opts.read(true).custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
-    let mut f=opts.open(path).map_err(|e|format!("cannot open TPM key blob: {e}"))?;
+    let mut f=opts.open(path).map_err(|e|format!("Не удалось открыть «TPM key blob:» {e}"))?;
     let fdmd=f.metadata().map_err(|e|e.to_string())?;
     if !fdmd.is_file() || fdmd.uid()!=md.uid() || fdmd.ino()!=md.ino() || fdmd.len()!=md.len() {
         return Err("TPM key blob changed while opening".into());
@@ -82,7 +82,7 @@ fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> 
     use std::io::Read;
     let mut bytes=Vec::new();
     f.take((maximum+1) as u64).read_to_end(&mut bytes).map_err(|e|e.to_string())?;
-    if bytes.is_empty() || bytes.len()>maximum { return Err("TPM key blob size invalid".into()); }
+    if bytes.is_empty() || bytes.len()>maximum { return Err("Недопустимый размер блока ключа TPM".into()); }
     Ok(bytes)
 }
 
@@ -99,7 +99,7 @@ impl TempTPMDir {
                     return Ok(Self(path));
                 },
                 Err(e) if e.kind()==std::io::ErrorKind::AlreadyExists => continue,
-                Err(e)=>return Err(format!("cannot create TPM workspace: {e}")),
+                Err(e)=>return Err(format!("Не удалось создать «TPM workspace:» {e}")),
             }
         }
         Err("cannot allocate unique TPM workspace".into())
@@ -108,7 +108,7 @@ impl TempTPMDir {
     fn write(&self, name: &str, bytes: &[u8]) -> Result<PathBuf,String> {
         let path=self.file(name);
         let mut f=OpenOptions::new().write(true).create_new(true).mode(0o600).open(&path)
-            .map_err(|e|format!("cannot create temporary TPM input: {e}"))?;
+            .map_err(|e|format!("Не удалось создать «temporary TPM input:» {e}"))?;
         f.write_all(bytes).map_err(|e|e.to_string())?;
         Ok(path)
     }
@@ -117,7 +117,7 @@ impl Drop for TempTPMDir { fn drop(&mut self){ let _=fs::remove_dir_all(&self.0)
 
 fn tool(program: &str, args: &[String]) -> Result<(),String> {
     const NAMES: &[&str]=&["tpm2_createprimary","tpm2_load","tpm2_readpublic","tpm2_certify","tpm2_quote","tpm2_pcrread"];
-    if !NAMES.contains(&program) { return Err("unknown TPM command".into()); }
+    if !NAMES.contains(&program) { return Err("Неизвестное значение: команда TPM".into()); }
     // Фиксированный абсолютный путь к исполняемому файлу: никакого поиска по PATH и подстановок shell.
     let path=Path::new("/usr/bin").join(program);
     let mut child=Command::new(path).args(args).env_remove("TPM2TOOLS_TCTI")
@@ -145,7 +145,7 @@ fn bytes_from(path: &Path, cap: usize) -> Result<Vec<u8>,String> {
     read_bounded_regular(path,cap).map_err(|e|format!("TPM output unreadable: {e}"))
 }
 fn to_tpm2b(bytes: &[u8], limit: usize) -> Result<Vec<u8>,String> {
-    if bytes.is_empty() || bytes.len()>limit || bytes.len()>u16::MAX as usize {return Err("invalid TPM blob length".into());}
+    if bytes.is_empty() || bytes.len()>limit || bytes.len()>u16::MAX as usize {return Err("Некорректная длина блока TPM".into());}
     let mut out=(bytes.len() as u16).to_be_bytes().to_vec();out.extend_from_slice(bytes);Ok(out)
 }
 
@@ -173,7 +173,7 @@ fn validate_outputs(public: &[u8], att: &[u8], sig: &[u8], registered: &[u8], ex
     response.extend_from_slice(&[0;4]);response.extend_from_slice(&(params.len() as u32).to_be_bytes());
     response.extend_from_slice(&params);
     let (a,s)=crate::tpm_wire_0313::parse_certify_response(&response,extra)?;
-    if a!=att || s!=sig {return Err("TPM result canonicalization mismatch".into());}
+    if a!=att || s!=sig {return Err("Несовпадение: канонизация результата TPM".into());}
     Ok(())
 }
 
@@ -181,15 +181,15 @@ pub fn certify(
     device_label: &str, registered_sec1: &[u8], extra_b64url: &str,
     ak_handle: &str, ak_certificate_pem: &str, intermediates_pem: Vec<String>,
 ) -> Result<LinuxTPMEvidence0314,String> {
-    if !Path::new("/dev/tpmrm0").exists() {return Err("Linux TPM resource manager /dev/tpmrm0 unavailable".into());}
-    if registered_sec1.len()!=65 || registered_sec1[0]!=4 {return Err("registered P-256 public key required".into());}
-    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"invalid server TPM qualifier")?;
-    let extra: [u8;32]=extra.try_into().map_err(|_|"TPM qualifier must be SHA-256 (32 bytes)")?;
+    if !Path::new("/dev/tpmrm0").exists() {return Err("Менеджер ресурсов TPM Linux (/dev/tpmrm0) недоступен".into());}
+    if registered_sec1.len()!=65 || registered_sec1[0]!=4 {return Err("Необходим зарегистрированный публичный ключ P-256".into());}
+    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: «server TPM qualifier»")?;
+    let extra: [u8;32]=extra.try_into().map_err(|_|"Для «TPM qualifier» требуется: «SHA-256 (32 bytes)»")?;
     let ak=parse_ak_handle(ak_handle)?;
     if ak_certificate_pem.len()>MAX_CERT || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
        !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
        intermediates_pem.iter().any(|p|p.len()>MAX_CERT || !p.contains("-----BEGIN CERTIFICATE-----")) {
-        return Err("issuer-certified AK X.509 PEM required".into());
+        return Err("Требуется: «issuer-certified AK X.509 PEM»".into());
     }
     let (pub_blob,priv_blob)=device_blobs(device_label)?;
     // Публичный ключ — TPMT_PUBLIC (не TPM2B_PUBLIC) от hardware-enclave. Обёрнутый
@@ -201,7 +201,7 @@ pub fn certify(
     read_frame.extend_from_slice(&((10+public_params.len()) as u32).to_be_bytes());
     read_frame.extend_from_slice(&[0;4]);read_frame.extend_from_slice(&public_params);
     let (_,point)=crate::tpm_wire_0313::parse_public_response(&read_frame)?;
-    if point.as_slice()!=registered_sec1 {return Err("TPM wrapped identity does not match registered public key".into());}
+    if point.as_slice()!=registered_sec1 {return Err("Идентичность TPM не совпадает с зарегистрированным публичным ключом".into());}
     let tmp=TempTPMDir::new()?;
     let pub_path=tmp.write("device.pub",&public)?;
     let private_path=tmp.write("device.priv",&to_tpm2b(&priv_blob,MAX_BLOB)?)?;
@@ -269,27 +269,27 @@ fn pcr_indices0315(selection: &str) -> Result<Vec<u8>,String> {
     let mut values=Vec::new();
     for component in indices.split(',') {
         if component.len()>2 || component.len()==0 || (component.starts_with('0') && component!="0") ||
-           !component.bytes().all(|b|b.is_ascii_digit()) {return Err("invalid PCR index".into());}
-        let i=component.parse::<u8>().map_err(|_|"invalid PCR index")?;
-        if i>23 || values.last().map_or(false,|previous|*previous>=i) {return Err("PCR indices must be strictly ascending and unique 0..23".into());}
+           !component.bytes().all(|b|b.is_ascii_digit()) {return Err("Недопустимый индекс PCR".into());}
+        let i=component.parse::<u8>().map_err(|_|"Недопустимый индекс PCR")?;
+        if i>23 || values.last().map_or(false,|previous|*previous>=i) {return Err("Индексы PCR должны быть уникальными, строго возрастать и находиться в диапазоне 0–23".into());}
         values.push(i);
     }
-    if values.len()==0 || values.len()>24 {return Err("invalid PCR index count".into());}
+    if values.len()==0 || values.len()>24 {return Err("Некорректное число индексов PCR".into());}
     Ok(values)
 }
 pub fn quote0315(
     extra_b64url: &str, pcr_selection: &str, ak_handle: &str,
     ak_certificate_pem: &str, intermediates_pem: Vec<String>,
 ) -> Result<LinuxTPMQuote0315,String> {
-    if !Path::new("/dev/tpmrm0").exists() {return Err("TPM resource manager unavailable".into());}
-    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"invalid server Quote qualifier")?;
+    if !Path::new("/dev/tpmrm0").exists() {return Err("Недоступно: менеджер ресурсов TPM".into());}
+    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: «server Quote qualifier»")?;
     let extra: [u8;32]=extra.try_into().map_err(|_|"Quote qualifier must contain 32 bytes")?;
     let ak=parse_ak_handle(ak_handle)?;
     let indices=pcr_indices0315(pcr_selection)?;
     if ak_certificate_pem.len()>MAX_CERT || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
        !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
        intermediates_pem.iter().any(|c|c.len()>MAX_CERT || !c.contains("-----BEGIN CERTIFICATE-----")) {
-        return Err("issuer-certified AK required".into());
+        return Err("Требуется: «issuer-certified AK»".into());
     }
     let dir=TempTPMDir::new()?;
     let nonce=dir.write("nonce.bin",&extra)?;
@@ -303,7 +303,7 @@ pub fn quote0315(
     // проверяет их общий дайджест из подписанного TPMS_ATTEST.
     tool("tpm2_pcrread",&arglist(&["-Q","-o",&stringify(&pcr_file),"-F","values",pcr_selection]))?;
     let values=bytes_from(&pcr_file,24*32)?;
-    if values.len()!=indices.len()*32 {return Err("unexpected PCR value file length".into());}
+    if values.len()!=indices.len()*32 {return Err("Неожиданное значение: длина файла значений PCR".into());}
     let mut pcr_values=std::collections::BTreeMap::new();
     for (position,index) in indices.iter().enumerate(){
         pcr_values.insert(index.to_string(),hex::encode(&values[position*32..(position+1)*32]));
