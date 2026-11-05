@@ -1,4 +1,4 @@
-"""Локальные интеграционные регрессии. Фиктивные проверки НЕ сертифицируют GA."""
+"""Local integration regressions. The fake checker/probes do NOT certify GA."""
 import hashlib
 import json
 from pathlib import Path

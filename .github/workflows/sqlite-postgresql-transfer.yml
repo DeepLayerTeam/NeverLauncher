@@ -41,7 +41,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить наличие поддерживаемой локальной файловой системы
+      - name: Ensure supported local filesystem
         shell: bash
         run: |
           set -euo pipefail
@@ -50,7 +50,7 @@ jobs:
           fstype=$(stat -f -c '%T' "$RUNNER_TEMP/nl-03211")
           case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem $fstype"; exit 1;; esac
           echo "TMPDIR=$RUNNER_TEMP/nl-03211" >> "$GITHUB_ENV"
-      - name: статические проверки и полные нативного зависимостей
+      - name: Static checks and full native dependencies
         shell: bash
         run: |
           set -euo pipefail
@@ -58,12 +58,12 @@ jobs:
           go mod verify
           test -z "$(gofmt -l internal/sqlitepg cmd/launcher-sqlite)"
           go vet ./internal/sqlitepg ./cmd/launcher-sqlite
-      - name: нативного SQLite/PostgreSQL bidirectional transfer, минимальных пакета и негативные тесты
+      - name: Native SQLite/PostgreSQL bidirectional transfer, minimal bundle and negative tests
         shell: bash
         run: |
           set -euo pipefail
           go test -race -count=1 -timeout=20m -v ./internal/sqlitepg
-      - name: CLI end для end и обязательные second-run отклонения
+      - name: CLI end to end and mandatory second-run rejection
         shell: bash
         run: |
           set -euo pipefail

@@ -34,21 +34,20 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Go формат и Backend Собрать
+      - name: Go format and Backend build
         working-directory: services/api
         run: |
           test -z "$(gofmt -l internal/repository/*02910*.go internal/federation/*02910*.go internal/httpapi/*02910*.go internal/sqlconnector/connector.go)"
           go build ./cmd/...
-      - name: Применить реальной PostgreSQL миграции
+      - name: Apply real PostgreSQL migrations
         working-directory: services/api
         env:
           LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
         run: |
-          # Применяйте каталог миграций той же реализацией репозитория, которая используется в
-          # промышленной среде.
+          # Apply migration catalogue with the same repository implementation used by production.
           go test ./internal/dbmigrate -count=1
           psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
-      - name: авторизации провайдера Wizard модульных, гонок и PostgreSQL интеграционные тесты
+      - name: Auth Provider Wizard unit, race and PostgreSQL integration tests
         working-directory: services/api
         env:
           LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
@@ -60,12 +59,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Admin интерфейса промышленная сборка и тесты
+      - name: Admin UI production build and tests
         working-directory: apps/admin
         run: |
           npm ci
           npm test
           npm run build
-      - name: Миграции CLI остаются в синхронизации
+      - name: CLI migrations remain in sync
         working-directory: cli
         run: go test ./internal/dbmigrate

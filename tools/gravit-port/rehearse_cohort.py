@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Запустить импорт трёх проектов Gravit, *настоящую* репетицию Minecraft и обновление подписанного клиента.
+"""Run a three-project Gravit import, *real* Minecraft rehearsal and signed client update.
 
-Используются только существующие рабочие пути CLI NeverLauncher. Репетиция после обновления
-специально служит ЛОКАЛЬНЫМ свидетельством: квитанция MIG10 Backend неизменяема. Утилита не
-подписывает GA, не подделывает квитанции и не выполняет промышленное переключение.
+Only existing NeverLauncher CLI runtime paths are used. Rehearsal after update
+is an intentionally LOCAL witness: the MIG10 Backend receipt is immutable.
+This tool cannot sign GA, forge receipts, or perform production cutover.
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def json_file(path: Path, limit: int = 1024 * 1024) -> dict:
 
 
 def _checked_open(path: Path, limit: int):
-    """Привязывать исходные файлы к inode; замена файла или появление ссылки должны блокировать переключение."""
+    """Pin source files to an inode; a replaced or linked source must block cutover."""
     try:
         st = path.lstat()
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,
@@ -100,7 +100,7 @@ def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) 
     require(isinstance(name, str) and name.startswith("/") and isinstance(digest, str)
             and bool(HEX.fullmatch(digest)), "absolute file and expected SHA-256 required")
     path = Path(name)
-    # Хешировать поток с закреплённым inode; завершать с ошибкой, если вход изменён или связан ссылкой.
+    # Hash an inode-pinned stream; fail if input changed or is linked.
     stream, st = _checked_open(path, limit)
     with stream:
         h = hashlib.sha256()
@@ -185,9 +185,9 @@ def preflight(config: dict, output: Path) -> list[dict]:
         require(pkg != source and delivery != source, "source and update package must differ")
         component = within(root, p.get("installedComponent"))
         regular_bytes(component, 256 << 20)
-        # Привязать оба свидетельства запуска Minecraft к *реально обновлённому исполняемому файлу*.
-        # Иначе стабильная обёртка могла бы запустить старый клиент, пока другой
-        # файл Runtime успешно обновлён, создавая ложное свидетельство обновления.
+        # Tie both Minecraft launch witnesses to the *actual updated executable*.
+        # A stable wrapper could otherwise launch an old client while a different
+        # runtime file was successfully updated, creating false upgrade evidence.
         require(root.is_relative_to(stage) and isinstance(live.get("clientPath"), str),
                 "the real client install must be inside its isolated stage")
         require(within(stage, live["clientPath"]) == component,
@@ -209,7 +209,7 @@ def preflight(config: dict, output: Path) -> list[dict]:
 
 
 def cli(launcher: str, args: list[str], timeout: int = 1800) -> None:
-    # Никогда не помещать bearer-токен оператора в аргументы процесса или отчёт.
+    # Never put the operator bearer token into process arguments or the report.
     env = dict(os.environ)
     with open(os.devnull, "wb") as sink:
         try:

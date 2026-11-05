@@ -18,13 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Запустить исполняемого файла Guard целостности регрессии
+      - name: Run executable Guard integrity regressions
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity_0437_tests
-      - name: Скомпилировать изоляцию процессов Guard
+      - name: Compile Guard process boundary
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --bin guard
-      - name: Установить signing-test зависимости
+      - name: Install signing-test dependency
         if: runner.os == 'Linux'
         run: python3 -m pip install 'cryptography>=42,<47'
-      - name: Проверить настоящую подпись пакетов Linux и TAR-доставку
+      - name: Verify real Linux package-signing and tar delivery
         if: runner.os == 'Linux'
         run: python3 scripts/release/test_guard_manifest_sign_0437.py -q

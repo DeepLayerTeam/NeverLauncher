@@ -40,19 +40,19 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: идентичности детектора и воспроизводимых инвентаризации тесты на состояние гонки
+      - name: Identity detector and reproducible inventory race tests
         working-directory: services/api
         run: go test -race -count=1 -timeout 10m ./internal/gravitidentity ./internal/gravitinventory
-      - name: PostgreSQL транзакционных сопоставления и целевой платформы конфликта тесты
+      - name: PostgreSQL transactional mapping and target collision tests
         working-directory: services/api
         run: go test -race -count=1 -timeout 10m ./internal/repository -run '^TestMigrationIdentityTransactional0334$'
-      - name: Скомпилировать весь Backend и HTTP-обработчики
+      - name: Compile full Backend and HTTP handlers
         working-directory: services/api
         run: go test -run '^$' ./internal/httpapi ./internal/repository
-      - name: CLI интеграции
+      - name: CLI integration
         working-directory: cli
         run: go test -race -count=1 -timeout 5m ./cmd/launcher
-      - name: OpenAPI и версий
+      - name: OpenAPI and versions
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check

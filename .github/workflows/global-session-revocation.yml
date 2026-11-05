@@ -45,14 +45,14 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Скомпилировать реального API и CLI
+      - name: Compile real API and CLI
         run: go build ./cmd/...
-      - name: Собрать CLI и Проверить its запечатанного миграции каталога
+      - name: Build CLI and validate its sealed migration catalog
         working-directory: cli
         run: go build ./cmd/... && go test -count=1 ./internal/dbmigrate
-      - name: Проверить миграции и реальный отзыв сессий между репликами
+      - name: Validate migrations and actual cross-replica revocations
         run: go test -count=1 -timeout=10m ./internal/dbmigrate ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestRevocationTerminalPostgres0434|TestRevokedDeviceKeyCannotBeResurrected0434|TestRevokedMinecraftTokenCannotBeResurrected0434|TestEvaluateAppliedSealedCatalog|TestCanonicalIssuerPostgres0291'
-      - name: Проверить применение отзыва роли через HTTP
+      - name: Exercise HTTP role-revoke enforcement
         run: go test -race -count=1 -timeout=10m ./internal/httpapi -run 'TestRoleUpdateRevokesLiveNeverToken0297|TestCompromisedRiskRevokesSessionAndRefreshMemory0297|TestDirectDeviceRevocationDeniesStaleAccessAndRefresh0434|TestSecurityHardening902TOTPAndPasswordReset'
       - name: Статический анализ
         run: go vet ./internal/dbmigrate ./internal/repository ./internal/httpapi

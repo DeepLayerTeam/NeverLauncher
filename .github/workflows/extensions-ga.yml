@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Проверить GA исходников контракта
+      - name: Validate GA source contract
         shell: bash
         run: |
           python3 scripts/compatibility/extensions_ga_0210.py validate
@@ -52,13 +52,13 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
 
-      - name: Backend Extensions GA тесты
+      - name: Backend Extensions GA tests
         shell: bash
         run: |
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/launcher-api)
           (cd services/api && go build ./cmd/launcher-api)
 
-      - name: CLI и SDK тесты
+      - name: CLI and SDK tests
         shell: bash
         run: |
           (cd cli && go test ./internal/dbmigrate ./cmd/launcher)
@@ -68,12 +68,12 @@ jobs:
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk
 
-      - name: Admin extension оператора интерфейса тесты и хоста Собрать
+      - name: Admin extension operator UI tests and host build
         shell: bash
         run: |
           (cd apps/admin && npm ci && npm test && npm run build)
 
-      - name: Desktop extension безопасности тесты и хоста Собрать
+      - name: Desktop extension security tests and host build
         shell: bash
         run: |
           (cd apps/desktop && npm ci && npm run test:extension-security && npm run build)
@@ -111,7 +111,7 @@ jobs:
           pattern: extensions-ga-evidence-*
           path: evidence-raw
           merge-multiple: true
-      - name: Собрать блокировка при ошибке публичной матрицы и сертификата
+      - name: Build fail-closed public matrix and certificate
         run: |
           python3 scripts/compatibility/extensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_GA_COMPATIBILITY.json --out-md EXTENSIONS_GA_COMPATIBILITY.md --out-certificate EXTENSIONS_GA_CERTIFICATE.json
       - uses: actions/upload-artifact@v4

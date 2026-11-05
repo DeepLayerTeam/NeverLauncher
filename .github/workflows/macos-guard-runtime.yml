@@ -35,24 +35,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Потребовать нативного хоста и подписанных JDK
+      - name: Require native host and signed JDK
         run: |
           test "$(uname -m)" = '${{ matrix.arch }}'
           codesign --verify --strict --verbose=2 "$JAVA_HOME/bin/java"
           codesign -dvvv "$JAVA_HOME/bin/java" 2>&1 | grep 'TeamIdentifier=' | grep -v 'not set'
-      - name: Скомпилировать реального Rust Runtime, Guard и тестировать бинарных файлов
+      - name: Compile real Rust Runtime, Guard and test binaries
         run: |
           cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
-      - name: Интеграционные тесты процессов macOS libproc и подписанной JVM
+      - name: macOS libproc process and signed-JVM integration tests
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib macos_runtime_guard_0509 -- --nocapture
-      - name: Guard пульса нельзя silently перезапуска a отсутствующих authority
+      - name: Guard heartbeat cannot silently restart a missing authority
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --test macos_guard_runtime_0509 -- --nocapture
-      - name: подписанных JAR/нативного целостности и Java сторожевого процесса регрессии
+      - name: Signed JAR/native integrity and Java watchdog regressions
         run: |
           python3 scripts/tests/guard_runtime_integrity_0505.py
           python3 scripts/tests/continuous_game_protection_0506.py
-      - name: Диагностика SIP (не считается успешной проверкой Runtime)
+      - name: SIP diagnostic (not treated as a successful runtime check)
         if: always()
         run: |
           /usr/bin/csrutil status || true

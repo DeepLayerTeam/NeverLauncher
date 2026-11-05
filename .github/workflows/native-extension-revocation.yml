@@ -50,26 +50,26 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Потребовать реального архитектуры и ОС
+      - name: Require actual architecture and OS
         shell: bash
         run: |
           set -euo pipefail
           test "$(go env GOOS)" = '${{ matrix.os }}'
           test "$(go env GOARCH)" = '${{ matrix.arch }}'
-      - name: отзыв реального running нативного CLI процесса и брокера access
+      - name: Revoke actual running native CLI process and broker access
         shell: bash
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -count=1 -timeout 5m -v ./internal/extensionhost \
             -run 'TestNativeCLIRevocationStopsRunningProcess04312|TestCLIAuthorityPreflightRejectsRevocation04312|TestBrokerResponseRevocation04312'
-      - name: существующих extension хоста и авторизации регрессии набора
+      - name: Existing extension host and authorization regression suite
         shell: bash
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -count=1 -timeout 8m ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionsecurity
-  # Изоляция ядром с непривилегированными пространствами имён и cgroup, подписанный
-  # помощник macOS и Windows AppContainer/Job отдельно проверяются существующими
-  # живыми платформенными workflow и этапом доказательств выпуска. Проверка
-  # супервизора отзыва сама по себе не сертифицирует песочницу.
+  # Kernel isolation with native unprivileged user namespaces/cgroup, signed
+  # macOS helper and Windows AppContainer/Job is separately required by the
+  # existing platform-specific live workflows and release evidence gate.
+  # A test of the revocation *supervisor* is not itself sandbox certification.

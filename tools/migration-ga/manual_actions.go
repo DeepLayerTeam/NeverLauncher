@@ -23,8 +23,8 @@ func markdownSafe(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// Экспортировать все ожидающие ручные действия непосредственно из неизменяемого отчёта;
-// это список задач оператора, а НЕ утверждение, что они уже выполнены.
+// Export all outstanding manual operations from the immutable report itself;
+// this is a worklist for operators, NOT a claim that the actions were done.
 func renderManualWorklist(p Plan, r Report) ([]byte, error) {
 	if err := reportVerified(r); err != nil {
 		return nil, err

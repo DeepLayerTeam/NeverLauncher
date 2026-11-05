@@ -49,12 +49,12 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Скомпилировать промышленный API и Запустить vet
+      - name: Compile production API and run vet
         working-directory: services/api
         run: |
           go build ./cmd/...
           go vet ./internal/httpapi ./internal/repository
-      - name: реального восстановления и отзыва регрессии (Блокировать на отсутствующих или пропущенных тесты)
+      - name: Real recovery and revocation regressions (fail on missing or skipped tests)
         working-directory: services/api
         shell: bash
         run: |
@@ -69,7 +69,7 @@ jobs:
           if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/recovery-http.log" "$RUNNER_TEMP/recovery-postgres.log"; then
             echo 'Recovery verification was skipped or failed' >&2; exit 1
           fi
-      - name: Загрузить исходные журналы выполнения восстановления
+      - name: Upload raw recovery execution logs
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Выполнить обновления/восстановления, mixed-version и зависимости HA регрессионные тесты
+      - name: Execute update/recovery, mixed-version and dependency HA regression tests
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
@@ -32,7 +32,7 @@ jobs:
             scripts/operations/test_multi_host_0512.py \
             scripts/operations/test_ha_inventory_0511.py \
             scripts/operations/test_dependency_ha_0513.py -v
-      - name: Проверить unchanged PostgreSQL миграции каталога и версии релиза
+      - name: Verify unchanged PostgreSQL migration catalog and release version
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -c 'import nn1_compat_0516 as n; c, d=n.migration_catalog(); assert len(c) >= 100; print("pinned SQL SHA-256:",d)'
@@ -41,6 +41,6 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Запустить промышленной миграции checker регрессии
+      - name: Run production migration checker regressions
         working-directory: services/api
         run: go test -count=1 ./internal/dbmigrate

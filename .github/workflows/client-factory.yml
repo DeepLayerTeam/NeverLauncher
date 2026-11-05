@@ -26,19 +26,19 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Проверка форматирования
+      - name: Format check
         if: runner.os == 'Linux'
         shell: bash
         run: |
           test -z "$(gofmt -l cli/cmd/launcher/client_factory_0271*.go)"
-      - name: реального materializer тестовых данных и factory Воспроизвести
+      - name: Real materializer fixtures and factory replay
         working-directory: cli
         shell: bash
         run: >-
           go test ./cmd/launcher
           -run 'TestClientFactory0271|TestInstallVanillaMaterializesVerifiedClient|TestFabricAndQuiltMaterializersProduceConsumableClientTree|TestForgeAndNeoForgeProcessorMaterializers'
           -count=1 -timeout=5m
-      - name: Проверить CLI Собрать
+      - name: Verify CLI build
         working-directory: cli
         shell: bash
         run: go build ./cmd/launcher

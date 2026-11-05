@@ -15,17 +15,17 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Разрушающий сценарий лабораторных испытаний (требуется разрешение защищённой среды physical-ha-lab)'
+        description: 'Destructive lab scenario (requires protected physical-ha-lab approval)'
         type: choice
         required: true
         options: [host, partition, dependency, world]
       victim:
-        description: 'Имя одобренного физического узла HA'
+        description: 'Approved physical HA node label'
         type: choice
         required: true
         options: [a, b]
       service:
-        description: 'Служба зависимой системы для соответствующего режима'
+        description: 'Dependency unit for dependency mode'
         type: choice
         required: true
         options: [patroni, redis-server, minio]
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Физические отказы, надёжный приёмник, лидер зависимых служб и регрессионные тесты восстановления (не GA)
+      - name: Physical fault, durable receiver, dependency leader and recovery regressions (not GA)
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest -v \
@@ -55,7 +55,7 @@ jobs:
             scripts/operations/test_independent_ha_ga_0520.py
           python3 -m py_compile scripts/operations/physical_ha_dr_05210.py scripts/operations/alert_receiver_05210.py
           python3 scripts/version/manage.py check
-      - name: Убедиться, что без физического оборудования и секретов не формируется квитанция о приёмке
+      - name: Ensure no physical receipt is produced without actual hardware and secrets
         run: |
           set +e
           python3 scripts/operations/physical_ha_dr_05210.py host \
@@ -105,7 +105,7 @@ jobs:
       RCON_PASSWORD: ${{ secrets.HA_RCON_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-      - name: Разрушающий тест физического HA (никогда не запускается в публичном GitHub CI)
+      - name: Destructive physical HA test (never runs on public GitHub CI)
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -163,6 +163,6 @@ jobs:
           from pathlib import Path
           assert doc['status']=='PASS' and doc['version']==Path('VERSION').read_text().strip()
           PY
-      - name: Точно обозначить границы подтверждённой приёмки
+      - name: State acceptance boundary accurately
         run: |
           echo 'Live hardware receipt observed. Independent signed 0.53.0 GA remains separately blocked.' >> "$GITHUB_STEP_SUMMARY"

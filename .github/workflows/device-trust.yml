@@ -62,13 +62,13 @@ jobs:
             cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.kind == 'native-tests'
-      - name: Установить зависимости E2E-тестов протокола PostgreSQL
+      - name: Install PostgreSQL protocol E2E dependencies
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends jq postgresql-client openssl
-      - name: Установить нативные зависимости Device Trust для Linux
+      - name: Install Linux native Device Trust dependencies
         if: matrix.kind == 'native-tests' && matrix.os == 'linux'
         shell: bash
         run: |
@@ -76,11 +76,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
-      - name: Запустить E2E-тест миграции Device Trust с 0.12.9 на 0.12.10
+      - name: Run Device Trust 0.12.9 to 0.12.10 migration E2E
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         run: bash e2e/scripts/run-device-trust-migration-e2e.sh
-      - name: Запустить E2E-тест протокола Device Trust с PostgreSQL
+      - name: Run PostgreSQL Device Trust protocol E2E
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         env:
@@ -88,14 +88,14 @@ jobs:
           LAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
           LAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
-      - name: Запустить настоящие HTTP-регрессионные тесты привязки Device Trust и эпох
+      - name: Run real HTTP Device Trust binding and epoch regression tests
         if: matrix.kind == 'native-tests'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p e2e/device-trust-result
           (cd services/api && go test -v -count=1 ./internal/httpapi -run 'TestDeviceTrust.*0432') 2>&1 | tee e2e/device-trust-result/native-go-device-binding.txt
-      - name: Скомпилировать управление ключами Tauri и выполнить нативные тесты политик
+      - name: Compile Tauri key lifecycle and run native policy tests
         if: matrix.kind == 'native-tests'
         shell: bash
         run: |
@@ -110,7 +110,7 @@ jobs:
             --run-id '${{ github.run_id }}' \
             --log e2e/device-trust-result/native-cargo-test.txt \
             --output e2e/device-trust-result/device-trust-result.json
-      - name: Загрузить машиночитаемые подтверждения Device Trust
+      - name: Upload machine-verifiable Device Trust evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -131,13 +131,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Скачать подтверждения Device Trust
+      - name: Download Device Trust evidence
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: device-trust-*
           path: device-trust-results
-      - name: Собрать матрицу доверия для точного коммита
+      - name: Aggregate exact-commit trust matrix
         shell: bash
         run: |
           set +e
@@ -158,7 +158,7 @@ jobs:
           fi
           cat device-trust-public/aggregate.log
           exit "$rc"
-      - name: Загрузить публичную матрицу доверия в JSON и Markdown
+      - name: Upload public trust matrix JSON and Markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:

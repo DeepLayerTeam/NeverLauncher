@@ -24,13 +24,13 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci --ignore-scripts
         working-directory: apps/desktop
-      - name: Собрать фактический React интерфейса пакета и Проверить типы все TSX
+      - name: Build actual React renderer bundle and type-check all TSX
         working-directory: apps/desktop
         run: npm run build
-      - name: Проверить взаимодействия в рабочей области игрока и навигацию
+      - name: Execute player workspace and navigation interactions
         working-directory: apps/desktop
         run: npm run test:workspace
-      - name: существующих запуска, компонента, текстур, официального учётной записи регрессии
+      - name: Existing launch, component, textures, official account regressions
         working-directory: apps/desktop
         run: |
           npm run test:components

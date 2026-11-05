@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Автономные модульные тесты обработки токенов только на хосте, НЕ сертификация провайдера."""
+"""Offline unit tests of host-only token handling, NOT a provider certification."""
 
 import tempfile
 from pathlib import Path

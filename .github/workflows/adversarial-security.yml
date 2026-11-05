@@ -14,11 +14,11 @@ on:
       live_linux:
         type: boolean
         default: false
-        description: 'Запустить тест песочницы Linux на заранее подготовленном агенте с делегированным cgroup v2'
+        description: 'Run Linux sandbox on pre-provisioned delegated cgroup v2 runner'
       live_windows:
         type: boolean
         default: false
-        description: 'Запустить проверку AppContainer/Job на подготовленном агенте Windows'
+        description: 'Run AppContainer/Job test on provisioned Windows runner'
 
 permissions:
   contents: read
@@ -32,16 +32,16 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: обязательные threat-focused тесты (детектор гонок, пропуски тестов запрещены)
+      - name: Mandatory threat-focused tests (race detector, no test skips allowed)
         run: python3 scripts/security/certify_03114.py --tier offline --output "$RUNNER_TEMP/03114-offline.json"
-      - name: Проверить Runtime Guard и ServerBridge на атакующие сценарии сессий
+      - name: Guard runtime and ServerBridge adversarial session checks
         run: python3 scripts/security/certify_03114.py --tier backend-security --output "$RUNNER_TEMP/03114-backend-security.json"
-      - name: полные промышленной зависимости Собрать
+      - name: Full production dependency build
         working-directory: services/api
         run: |
           go vet ./internal/attestverify ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker ./internal/linuxsandbox
           go build ./...
-      - name: Загрузить артефакты подтверждений regardless outcome
+      - name: Upload evidence regardless of outcome
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -57,10 +57,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Windows песочницы и хоста Protocol компиляции
+      - name: Windows sandbox and Host Protocol compilation
         working-directory: services/api
         run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
-      - name: Промышленная сборка API
+      - name: Production API build
         working-directory: services/api
         run: go build ./...
   darwin-cross-compile:
@@ -70,7 +70,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: macOS Скомпилировать НЕ сертификация изоляции ОС
+      - name: macOS compile is NOT OS confinement certification
         working-directory: services/api
         run: |
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
@@ -84,9 +84,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: реального пространств имён, cgroup и дочерних процессов изоляции (SKIP отказа)
+      - name: Real namespaces, cgroup and descendant isolation (SKIP is failure)
         run: python3 scripts/security/certify_03114.py --tier linux-live --output "$RUNNER_TEMP/03114-linux-live.json"
-      - name: Опубликовать kernel подтверждений
+      - name: Publish kernel evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -102,10 +102,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: реального AppContainer, ACL, Job и дочернего процесса тесты (SKIP отказа)
+      - name: Real AppContainer, ACL, Job and child process tests (SKIP is failure)
         shell: pwsh
         run: python scripts/security/certify_03114.py --tier windows-live --output "$env:RUNNER_TEMP/03114-windows-live.json"
-      - name: Опубликовать Windows подтверждений
+      - name: Publish Windows evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:

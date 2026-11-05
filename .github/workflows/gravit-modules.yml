@@ -39,13 +39,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: полные API компиляцию и MIG08 тесты на состояние гонки
+      - name: Full API compile and MIG08 race tests
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitmodules
           go test -count=1 -timeout 5m ./internal/repository -run 'TestMigrationModuleReportImmutable0338'
           go test -count=1 ./internal/httpapi -run 'TestMigrationBridgeLive0446|TestMigrationEnrollmentJSONStrict0446'
-      - name: CLI миграции тесты
+      - name: CLI migration tests
         working-directory: cli
         run: go test -count=1 ./cmd/launcher -run 'TestMigrationModules0338|TestMigrationWorkflow0331'
   web-checks:
@@ -61,7 +61,7 @@ jobs:
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py
           node --check services/api/internal/embeddedadmin/site/app.js
-      - name: Собрать React Admin
+      - name: Build React Admin
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts

@@ -40,13 +40,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить переключение, маршрутизацию PostgreSQL и защиту от конфликтов
+      - name: Cutover validation and PostgreSQL routing/fence test
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitcutover
           go test -race -count=1 ./internal/repository -run '^TestMigrationCutoverPostgres03311$'
           go test -run '^$' ./internal/httpapi
-      - name: CLI компиляции и тесты
+      - name: CLI compilation and tests
         working-directory: cli
         run: go test -count=1 ./cmd/launcher -run 'TestMigrationCutover03311|TestMigrationWorkflow0331|TestFence|TestRollbackBoundSnapshot0448'
       - uses: actions/setup-node@v4
@@ -54,12 +54,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: React промышленная сборка
+      - name: React production build
         working-directory: apps/admin
         run: |
           npm ci
           npm run build
-      - name: версии и API
+      - name: Version and API
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

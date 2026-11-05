@@ -21,13 +21,12 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: песочницы и Extension хоста модульные тесты
+      - name: Sandbox and Extension Host unit tests
         working-directory: services/api
         run: go test -race -count=1 ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost ./internal/extensionlifecycle
-      - name: Проверить сборку и безопасности политики
+      - name: Validate build and security policy
         working-directory: services/api
         run: go vet ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
-# Приёмка аппаратных средств и ядра требует отдельного собственного раннера с
-# выделенной непривилегированной служебной учётной записью и заранее
-# делегированными cgroups v2. На раннерах GitHub параметр
-# NL_RUN_LIVE_LINUX_SANDBOX=1 не задаётся.
+# Hardware/kernel acceptance requires a separate self-hosted runner with a
+# dedicated unprivileged service identity and pre-delegated cgroups v2.
+# NL_RUN_LIVE_LINUX_SANDBOX=1 is not set on GitHub-hosted runners.

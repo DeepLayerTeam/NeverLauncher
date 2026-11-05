@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Скомпилировать явно перенесённый из исходников модуль Gravit в настоящее расширение.
+"""Compile an explicitly source-ported Gravit module into a real Extension.
 
-Произвольные JAR Gravit не загружаются, опасная эмуляция Java API не выполняется. Опубликованные
-пакеты должны быть подписаны и независимо проверены через CLI.
+Does not load arbitrary Gravit JARs or attempt unsafe Java API emulation.
+Published packages must be signed and independently verified by CLI.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def sources_in(directory: Path) -> list[Path]:
             raise PortError(f"source symlink forbidden: {p}")
         if p.is_file():
             if p.suffix != ".java":
-                continue  # Ресурсы не на Java намеренно не встраиваются.
+                continue  # Non-Java assets are deliberately not embedded.
             if p.stat().st_size > 1 << 20 or not p.resolve().is_relative_to(source):
                 raise PortError(f"unsafe source file: {p}")
             result.append(p)
@@ -119,7 +119,7 @@ def build(args: argparse.Namespace) -> None:
             "a .nlext needs all of --private-key, --public-key, --package and --nl"
         )
 
-    # Официально поддерживаемое подмножество исходного порта собирается с нашей точной версией SDK, а не upstream JAR Gravit.
+    # The official source-port subset is built against our exact SDK, upstream Gravit JARs.
     run("sh", "sdk/java/gravit-compat/build.sh")
     core = ROOT / "sdk/java/core/build/classes"
     adapter = ROOT / "sdk/java/gravit-compat/build/classes"
@@ -157,7 +157,7 @@ def build(args: argparse.Namespace) -> None:
         main = classes.joinpath(*args.module_class.split(".")).with_suffix(".class")
         if not main.is_file():
             raise PortError(f"module class not generated: {args.module_class}")
-        # javap проверяет байткод, не инициализируя и не выполняя недоверенный класс.
+        # javap inspects bytecode without initializing or executing an untrusted class.
         javap = (
             str(Path(os.environ["JAVA_HOME"]) / "bin/javap")
             if os.environ.get("JAVA_HOME")
@@ -234,10 +234,10 @@ def build(args: argparse.Namespace) -> None:
                 if name not in names:
                     raise PortError("missing executable JAR class: " + name)
         (stage / "launcher-extension.json").write_bytes(raw_manifest)
-        # Публиковать каталог сборки только после фактической компиляции и проверки JAR.
+        # Publish the build directory only after the actual compilation and JAR verification.
         stage.rename(destination)
 
-    # Нет ключа подписи — есть только недоверенный staging-каталог. Не представлять его устанавливаемым пакетом.
+    # No signing key -> only an untrusted staging directory. Represent that as an installable package.
     if args.private_key is not None:
         pkg = args.package.resolve()
         try:
@@ -281,31 +281,31 @@ def build(args: argparse.Namespace) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Скомпилировать явно перенесённый Java-модуль Gravit в исполняемое расширение"
+        description="Compile an explicitly ported Gravit Java module to executable Extension"
     )
     parser.add_argument(
-        "--source", type=Path, required=True, help="Каталог с перенесёнными исходниками .java"
+        "--source", type=Path, required=True, help="directory with ported .java sources"
     )
     parser.add_argument(
-        "--module-class", required=True, help="Полное имя класса LauncherModule (FQCN)"
+        "--module-class", required=True, help="concrete LauncherModule FQCN"
     )
     parser.add_argument(
         "--manifest",
         type=Path,
         required=True,
-        help="Одобренный манифест расширения, без неявных разрешений",
+        help="approved extension manifest, no implicit permissions",
     )
     parser.add_argument(
-        "--output", type=Path, required=True, help="Новый каталог пакета; будет перезаписан"
+        "--output", type=Path, required=True, help="new package directory; overwritten"
     )
-    parser.add_argument("--nl", type=Path, help="Скомпилированный CLI для подписи")
+    parser.add_argument("--nl", type=Path, help="compiled CLI executable for signing")
     parser.add_argument(
-        "--private-key", type=Path, help="Существующий закрытый ключ Ed25519 издателя"
+        "--private-key", type=Path, help="existing publisher private Ed25519 key"
     )
     parser.add_argument(
-        "--public-key", type=Path, help="Соответствующий доверенный открытый ключ издателя"
+        "--public-key", type=Path, help="matching trusted publisher public key"
     )
-    parser.add_argument("--package", type=Path, help="Новый подписанный выходной файл .nlext")
+    parser.add_argument("--package", type=Path, help="new signed .nlext output")
     args = parser.parse_args()
     try:
         build(args)

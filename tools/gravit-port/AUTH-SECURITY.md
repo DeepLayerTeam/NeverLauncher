@@ -1,12 +1,12 @@
 # 0.49.6 — миграция авторизации и защиты: инструкция для оператора
 
-Этот выпуск меняет **существующие пути исполнения**, но не ABI модулей Gravit. Реализованы более безопасная проверка старых паролей, автономный механизм записи FileAuthSystem, ротация сертификатов с подписью корневым ключом, более строгий допуск Guard и проверка официальных профилей Minecraft. Это **не доказывает** бинарную совместимость всех вариантов JAR Gravit AdditionalHash, FileAuthSystem, GenerateCertificate, LauncherGuard и MojangSupport.
+This release modifies **existing execution paths**, not the Gravit module ABI. Its supported outputs are a safer legacy password verifier, an offline FileAuthSystem writer, root-signed certificate rotation, stricter Guard gating, and stricter official Minecraft profile verification. This is **not** evidence that every Gravit AdditionalHash / FileAuthSystem / GenerateCertificate / LauncherGuard / MojangSupport JAR is binary compatible.
 
 ## FileAuthSystem Database.json — явный автономный механизм записи
 
-1. Остановите LaunchServer/Gravit и **всех остальных пользователей `Database.json`**. Действующий коннектор NeverLauncher FileAuth работает только для чтения и автоматически перечитывает изменённый источник; локальная advisory-блокировка автономного писателя не остановит посторонний процесс, игнорирующий её.
-2. Защитите `Database.json` как приватный обычный файл, создайте полные резервные копии отдельного `Sessions.json` и состояния Gravit обычным механизмом, получите точный SHA-256 файла `Database.json`. Программа **не читает и не меняет `Sessions.json`**: перед перезапуском источника отдельно отзовите все старые сеансы.
-3. Для переименования:
+1. Stop LaunchServer/Gravit and **all other users of Database.json**. NeverLauncher's live FileAuth connector is read-only and automatically re-reads the changed source; the offline writer's local advisory lock does not stop a foreign writer that ignores it.
+2. Secure `Database.json` (private regular file), take a full backup of any separate `Sessions.json` and Gravit state using your normal backup system, and obtain an exact SHA-256 digest of `Database.json`. The writer **does not read or modify Sessions.json**, revoke all upstream sessions separately before restarting the source.
+3. For a rename:
 
    ```bash
    python3 tools/gravit-port/fileauth_writeback_0496.py \
@@ -17,18 +17,18 @@
       --writers-stopped
    ```
 
-   Операция `disable` удаляет только выбранный аккаунт (последний удалить нельзя). Для смены пароля со старым SHA256-хешем укажите `--operation set-password --password-file /secure/password.txt --password-format sha256-hex --allow-weak-legacy-hash`; **это только совместимость**, не рекомендуемая для новых аккаунтов. Файл пароля должен быть приватным, читается как точные байты и не включается в квитанцию. Не передавайте пароль в командной строке. По возможности переносите аккаунты в локальное хранилище NeverLauncher с Argon2id.
-4. Проверьте JSON-квитанцию (`sourceSha256`, `updatedSha256`, путь копии, действие, UUID), результат через вход FileAuth в NeverLauncher, отзыв и новые сеансы NeverLauncher. Писатель фиксирует изменения атомарным переименованием и сохраняет неизвестные метаданные пользователя, а также долговременную приватную hardlink-копию исходного inode. Не используйте устаревший `--expected-sha256`: несовпадение предусловия завершает операцию без изменения источника.
-5. При отказе до фиксации исходный файл не затронут. Для восстановления после фиксации остановите всех писателей, исследуйте промежуточные записи и верните данные из приватной копии. **Никогда не восстанавливайте старые токены `Sessions.json` в NeverLauncher**. Автономное изменение FileAuth само по себе не отзывает сеансы NeverLauncher; при необходимости используйте административные операции отзыва сеансов/устройств.
+   `disable` removes only the selected account (the last account cannot be removed). For legacy SHA256-hash password rotation, use `--operation set-password --password-file /secure/password.txt --password-format sha256-hex --allow-weak-legacy-hash`; **this is compatibility-only**, not recommended for new accounts. The password file must be private, is read as exact bytes, and isn't included in the receipt. Don't put passwords on the command line. Move accounts to NeverLauncher's Argon2id-backed local storage whenever possible.
+4. Inspect the JSON receipt (`sourceSha256`, `updatedSha256`, backup path, operation, UUID), verify the result with NeverLauncher FileAuth login, and check revocation and newly issued NeverLauncher sessions. The writer commits by atomic rename and preserves unknown user metadata, while keeping a durable, private hardlink backup to the original inode. Never reuse a stale `--expected-sha256`; a precondition mismatch aborts without touching the source.
+5. If the operation fails before commit, the existing source is intact. To restore after commit, stop all writers and recover from the private backup after inspecting intervening writes. **Do not restore old Sessions.json tokens into NeverLauncher**. Offline FileAuth mutation does not itself revoke existing NeverLauncher sessions; use existing admin session/device revocation operations as appropriate.
 
-Утилита поддерживается только на POSIX (`flock`, `fsync`, атомарное переименование в том же каталоге). В Windows выполните её на поддерживаемом POSIX-хосте администратора с файловой системой, обеспечивающей указанные гарантии, либо используйте существующий импорт и управление аккаунтами NeverLauncher.
+This maintenance tool is POSIX-only (`flock`, `fsync`, atomic same-directory rename). On Windows, perform the mutation on a supported POSIX administrative host with the storage mounted in a filesystem that supports those guarantees. If not, use the existing NeverLauncher import and account management instead.
 
-## Доверие к релизу и делегированные сертификаты
+## доверие к релизу и делегированные сертификаты
 
-`trust_certificates_0496.py` управляет **делегированным доверием к компонентам с подписью корневым ключом**, а не сертификатами Windows Authenticode или Mojang. Используется существующий закреплённый корень, никогда не корень, объявленный входными данными Gravit либо созданный при запуске. Выполняйте только в автономной среде подписи релизов. Секрет корня храните в подготовленной переменной окружения `LAUNCHER_TRUST_ROOT_ED25519_SEED`, не в распространяемых исходниках.
+`trust_certificates_0496.py` operates on **root-signed delegated component trust**, not a Windows Authenticode or Mojang-issued certificate. It uses the existing pinned trust root; it never trusts a root advertised by Gravit input or generated at runtime. Run in the offline release-signing environment only. Keep the root seed in the provisioned `LAUNCHER_TRUST_ROOT_ED25519_SEED` environment variable, never the distributed source tree.
 
-1. Проверьте и закрепите **точный SHA-256 существующего подписанного файла политики**. Открытый ключ корня берите из заранее подготовленного бинарного якоря доверия.
-2. Выпустите делегированный сертификат/ключ:
+1. Inspect and pin the **exact SHA-256 of the existing signed policy file**. Supply the trust root public key from the pre-provisioned binary anchor.
+2. Issue a delegated certificate/key:
 
    ```bash
    python3 scripts/release/trust_certificates_0496.py issue \
@@ -37,20 +37,20 @@
       --key-id components-0496 --private-key-output /secure/trust/components-0496.key
    ```
 
-   Приватный seed Ed25519 создаётся с правами `0600` и не входит в политику, подписанную корнем. Эпоха доверия увеличивается. Настоящий `component_set_sign.py` принимает этот ключ для подписи, если срок действия политики охватывает момент подписания.
-3. Отзовите ключ командой `revoke` со свежим SHA-256 политики и тем же закреплённым корнем. Эпоха снова увеличится. Новые подписи компонентов отозванным ключом отвергаются настоящим процессом подписи. Распространите обновлённую подписанную корнем политику через **существующий подписанный механизм обновлений**: её локальное создание само по себе не отзывает ключ на уже установленных автономных клиентах. Для подтверждения доставки и применения используйте квитанции/шлюзы релиза.
+   The private Ed25519 seed is created with mode `0600` and isn't included in the root-signed policy. The trust epoch increments. The real `component_set_sign.py` accepts this key for signing if the policy's validity interval covers the signing time.
+3. Revoke this key using `revoke` with a fresh policy SHA-256 and the same pinned root. The trust epoch increments again. New component signatures with the revoked key are rejected by the actual signing path. Distribute the updated root-signed trust policy via the **existing signed update mechanism**; generating it locally does not itself revoke previously installed offline clients. Use the existing receipt/release gates for delivery and enforcement verification.
 
-`sign-trust-policy.py` теперь запрещает дубли JSON и ID ключей, недействительные сроки, входы/выходы через символические ссылки и повреждённые ключи. Подпись проверяется, подписанная политика записывается атомарно с правами `0600`.
+`sign-trust-policy.py` now refuses duplicate JSON and key IDs, invalid validity windows, symlinked inputs/output and malformed key material. It performs signature verification and atomically writes the signed policy with `0600` permissions.
 
-## Действующая защита во время исполнения
+## действующая защита во время исполнения
 
-- **AdditionalHash:** импортированный Argon2id PHC с чрезмерной памятью, итерациями или параллелизмом отвергается проверяющим при настоящем входе **до** выделения памяти. Поддерживаемые дайджесты и PHPass работают без изменений. Слабые старые хеши — только для миграции; успешный вход NeverLauncher должен пересчитать их существующей локальной авторизацией.
-- **LauncherGuard:** повреждённые и переполненные строки версии выпуска больше не отключают обязательную политику непрерывного Guard Windows. Сопоставление разрешённых дайджестов модулей/хуков и отзыв билетов остаются в существующих путях Backend. Это не означает полного античит-покрытия или равной защиты пользовательского режима на всех платформах.
-- **MojangSupport:** аутентифицированное чтение профилей Minecraft теперь отклоняет не только неправильные UUID, но и недопустимые имена пользователей Minecraft. Цепочка OAuth→Xbox→XSTS→Minecraft, права на игру и sessionserver не меняются. **Настоящий Microsoft-аккаунт, права и вход в игру проверяйте отдельно с разрешёнными учётными данными**; refresh-токены никогда не должны попадать в публичный журнал.
+- **AdditionalHash:** an imported Argon2id PHC with large memory/iteration/parallelism parameters is rejected by the actual login verifier before allocating Argon2 memory; supported digest and PHPass verifiers remain unchanged. Weak legacy hashes are for supported migration only; a successful NeverLauncher login should rehash them using the existing local-auth flow.
+- **LauncherGuard:** malformed or overflowing release version strings can no longer disable the Windows continuous-Guard policy requirement. Module/hook allowlist digest matching and ticket revocation remain enforced by existing Backend paths. This does not imply full anti-cheat coverage or user-mode protection parity across platforms.
+- **MojangSupport:** token-authenticated Minecraft profile reads now reject invalid Minecraft usernames, not just invalid UUID strings. The existing OAuth→Xbox→XSTS→Minecraft chain, entitlement and sessionserver mechanisms remain unchanged. **Real Microsoft account / entitlement / game join must be tested separately with authorized credentials**, never test refresh tokens in a public log.
 
-## Контроль качества и продвижение релиза
+## контроль качества и продвижение релиза
 
-Целевые Python-тесты:
+Run targeted Python tests:
 
 ```bash
 python3 -m unittest discover -s tools/gravit-port -p 'test_fileauth_writeback_0496.py'
@@ -58,6 +58,6 @@ python3 -m unittest discover -s scripts/release -p 'test_trust_policy_*.py'
 python3 -m unittest discover -s scripts/release -p 'test_trust_certificates_0496.py'
 ```
 
-Тесты Backend требуют **Go 1.27.3**, чистого кеша зависимостей, а интеграция авторизации/Guard — PostgreSQL и работающего API. После прохождения проведите: внешний вход FileAuth и удаление аккаунта, цикл выдачи подписанной политики → подпись компонента → отзыв → отказ, проверки Guard Windows во время работы и повторов, права Microsoft Minecraft и подключение к серверу на окружении, близком к промышленному.
+Backend tests require **Go 1.27.3**, a clean dependency cache and, for integrated auth/Guard, PostgreSQL + a live API. After passing those, execute: FileAuth external login and external account removal, signed policy issue→component sign→revoke→denial, Windows Guard runtime/replay checks, and Microsoft Minecraft entitlement/session join on production-like runners.
 
-**Статус:** патч имеет локальные подтверждения самостоятельного Python-кода и некоторых Go-пакетов. Подписанные установщики ОС, испытания PostgreSQL, реальный вход/подключение Minecraft, нативный Guard, варианты модулей Gravit и независимая промышленная приёмка GA остаются **ЗАБЛОКИРОВАННЫМИ** до физических испытаний с настоящими учётными данными.
+**Status:** this patch has local execution evidence for its standalone Python code and some Go packages. Signed OS installers, PostgreSQL test, real Minecraft sign-in/join, native Guard, all Gravit module variants and independent production GA remain **BLOCKED** pending their physical/credentialled test environments.

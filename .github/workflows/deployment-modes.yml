@@ -26,19 +26,19 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить инструментарий, модули и форматирование
+      - name: Verify toolchain, modules and formatting
         run: |
           set -euo pipefail
           go version
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/deployment internal/config/config.go cmd/launcher-api/main.go)"
-      - name: Тесты топологии и настоящих межпроцессных блокировок ОС
+      - name: Topology and real cross-process OS lock tests
         run: |
           set -euo pipefail
           go test -race -count=1 -timeout=5m ./internal/deployment ./internal/config
           go vet ./internal/deployment ./internal/config ./cmd/launcher-api
-      - name: Скомпилировать промышленный API (реального драйверов)
+      - name: Compile production API (real drivers)
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-api-328" ./cmd/launcher-api

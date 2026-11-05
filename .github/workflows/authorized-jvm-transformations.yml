@@ -52,14 +52,14 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: реальные JVM загрузчика классов origins / негативные сценарии (не Minecraft E2E)
+      - name: Live JVM classloader origins / negative cases (not Minecraft E2E)
         run: python scripts/tests/guard_loader_0504.py
-      - name: подписанных политики и доверенные JVM Go интеграции
+      - name: Signed policy and Trusted JVM Go integration
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestGuardLoader0504|TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1 -timeout 12m
-      - name: Проверки нативной подписанной политики и доверенного запуска
+      - name: Native signed policy and trusted launch checks
         run: |
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guarded_trusted_launch_0503
-      - name: канонической версии согласованности
+      - name: Canonical version consistency
         run: python scripts/version/manage.py check

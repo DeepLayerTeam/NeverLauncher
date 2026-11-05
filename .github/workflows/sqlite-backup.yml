@@ -25,13 +25,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить зависимостей и формат
+      - name: Verify dependencies and format
         run: |
           set -euo pipefail
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitedurable internal/sqlitecore cmd/launcher-sqlite)"
-      - name: Проверить локального надёжного файловой системы
+      - name: Verify local durable filesystem
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-backup-tests
         run: |
@@ -42,12 +42,12 @@ jobs:
           case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem: $fstype"; exit 1 ;; esac
           echo "LAUNCHER_SQLITE_TEST_ROOT=$LAUNCHER_SQLITE_TEST_ROOT" >> "$GITHUB_ENV"
           echo 'LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1' >> "$GITHUB_ENV"
-      - name: интеграции, параллельности и исходников vet
+      - name: Integration, concurrency and source vet
         run: |
           set -euo pipefail
           go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./cmd/launcher-sqlite
           go vet ./internal/sqlitedurable ./internal/sqlitecore ./cmd/launcher-sqlite
-      - name: Сквозные CLI Резервная копия, Проверить, восстановления, pre-upgrade
+      - name: End-to-end CLI backup, verify, restore, pre-upgrade
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
@@ -66,7 +66,7 @@ jobs:
           assert m['schemaVersion']==326 and m['bytes']==p.stat().st_size,m
           assert sqlite3.connect(f'file:{p}?mode=ro',uri=True).execute('PRAGMA integrity_check').fetchone()[0]=='ok'
           PY
-          # Подмена отдельного файла должна приводить к отказу по принципу fail-closed.
+          # File-level tampering must fail closed.
           python3 - "$RUNNER_TEMP/dep06/backups/initial.db" <<'PY'
           import sys
           with open(sys.argv[1],'r+b') as f:

@@ -23,13 +23,13 @@ jobs:
         with:
           go-version: '1.27.3'
           cache-dependency-path: services/api/go.sum
-      - name: Проверить реального SQLite зависимости и форматирования
+      - name: Verify actual SQLite dependency and formatting
         run: |
           set -euo pipefail
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/launcher-sqlite)"
-      - name: Потребовать поддерживаемых нативного файловой системы; гонок + перезапуска тесты
+      - name: Require supported native filesystem; race + restart tests
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
@@ -40,7 +40,7 @@ jobs:
           stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
-      - name: Собрать промышленной CLI и Протестировать реального надёжного queue & outbox
+      - name: Build production CLI and exercise real durable queue & outbox
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
         run: |

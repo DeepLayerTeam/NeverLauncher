@@ -38,15 +38,15 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: ядра + реального локального HTTP Runtime тесты
+      - name: Core + real local HTTP runtime tests
         shell: bash
         run: sh sdk/java/core/build.sh test
-      - name: Скомпилировать исполняемого файла Backend/CLI примера
+      - name: Compile executable backend/CLI example
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/runtime-example"
           javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/launcher/RuntimeExample.java
-      - name: Проверить реального JAR артефакта
+      - name: Verify actual jar artifact
         shell: bash
         run: jar tf sdk/java/core/build/launcher-java-sdk-core.jar | grep -q 'ru/launcher/sdk/core/RuntimeCallbackServer.class'
   java-two-process-e2e:
@@ -61,13 +61,13 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Собрать и протестировать настоящие дочерние процессы Java Backend и CLI
+      - name: Build and test real Java backend and CLI subprocesses
         run: |
           sh examples/extensions/java-runtime/build.sh
           python3 examples/extensions/java-runtime/test-runner.py
           sh examples/extensions/java-lifecycle/build.sh
           python3 examples/extensions/java-lifecycle/test-runner.py
-      - name: Упаковать подписанные примеры Java-расширений Backend/CLI и проверить Ed25519
+      - name: Pack signed Extensions Java backend/CLI example and verify Ed25519
         run: |
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/extension-key.pem"
@@ -82,15 +82,15 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: реального Go хоста HTTP брокера, persistence, разрешения отзыва и безопасности тесты
+      - name: Real Go host HTTP broker, persistence, permission revocation and security tests
         working-directory: services/api
         run: go test -race -count=1 -run 'TestRuntime.*0303' ./internal/extensionhost
-      - name: Go хоста регрессионные тесты
+      - name: Go host regression tests
         working-directory: services/api
         run: go test -count=1 ./internal/extensionhost
-      - name: надёжного EventBus Воспроизвести, queue аренды и JSON целостности регрессии
+      - name: Durable EventBus replay, queue lease and JSON integrity regressions
         working-directory: services/api
         run: go test -race -count=1 -run 'Test.*(0206|0423)' ./internal/eventbus ./internal/repository
-      - name: Проверить хранение документов брокера при перезапуске управляющих процессов
+      - name: Real broker persistent documents across restarted supervisors
         working-directory: services/api
         run: go test -race -count=1 -run '^TestRuntimeBrokerDocumentsSurviveSupervisorRestart0423$' ./internal/extensionhost

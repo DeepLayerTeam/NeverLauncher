@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Приёмочные тесты исполняемых файлов с запретом при неопределённости
+      - name: Fail-closed executable acceptance suite
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/acceptance/ux_0351.py audit
@@ -67,9 +67,9 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Скомпилировать реальный нативный исполняемый файл и ограниченный тестовый подписыватель Ed25519
+      - name: Compile real native executable and restricted Ed25519 fixture signer
         run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
-      - name: Проверить подписанную HTTP-установку, восстановление и негативные тесты доверия
+      - name: Execute signed HTTP install/repair and negative native trust tests
         shell: bash
         run: |
           set -euo pipefail
@@ -115,12 +115,12 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Установить нативный инструментарий WebView для Linux
+      - name: Install Linux native WebView toolchain
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libxdo-dev libssl-dev librsvg2-dev libgtk-3-dev build-essential
-      - name: Установить зависимости и собрать действующий интерфейс Desktop
+      - name: Install and build real Desktop renderer
         working-directory: apps/desktop
         run: |
           npm ci --no-audit --no-fund
@@ -131,11 +131,11 @@ jobs:
           npm run test:update-migration
           npm run test:diagnostics-support
           npm run test:accessibility
-      - name: Скомпилировать и модульно протестировать Tauri с текущим Runtime
+      - name: Compile and unit-test native Tauri with current Runtime
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-default-features
           cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: Вычислить хеши реального исполняемого файла и промышленного интерфейса
+      - name: Hash actual executable and production-renderer bytes
         shell: bash
         run: |
           set -euo pipefail
@@ -182,12 +182,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Запустить проверки безопасности Go, отката, согласий и неизменяемого stable-снимка PostgreSQL
+      - name: Run Go security, rollback, consent and PostgreSQL immutable stable snapshot
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 25m ./internal/httpapi ./internal/repository -run 'TestRollbackOperationIdempotency0217|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213|TestCanonicalPackageProductUploadValidatePublish|TestSupportReportSubmitRequiresLoginAndConsent03510|TestSupportReportRejectsUnknownFields03510|TestOperatorDiagnosticsDoesNotLeakInfrastructure03510|TestProductionGateFailClosedWithoutTargets03411|TestProductionGateUnknownEvidenceFieldsRejected03411|TestGAStableSnapshotImmutablePostgres0350|TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341'
           go build ./cmd/launcher-api
-      - name: Реальные изолированные HTTP E2E Backend с авторизацией владельца и игрока
+      - name: Real disposable Backend and owner/player authenticated HTTP E2E
         run: |
           mkdir -p rc-out/backend
           bash scripts/acceptance/run_owner_player_0351.sh "$PWD/rc-out/backend/owner-player.json"
@@ -223,7 +223,7 @@ jobs:
         with:
           name: rc03514-backend-${{ github.sha }}
           path: rc-out/backend
-      - name: Проверить фактические операции, хеши, область действия и полноту точного коммита
+      - name: Verify true operations, hashes, scope and exact-commit completeness
         run: |
           python scripts/rc/gate_03514.py \
             --native-dir rc-out/native --desktop-dir rc-out/desktop \

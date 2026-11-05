@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       manifest_url:
-        description: 'HTTPS-индекс исходных данных шести публично доступных подписанных финальных установщиков'
+        description: 'HTTPS source index of the exact six publicly downloadable signed final installers'
         type: string
         required: true
       manifest_sha256:
-        description: 'Независимо утверждённый SHA-256 исходного индекса (НЕ скопированный из самого индекса)'
+        description: 'Independently approved SHA-256 of source index (NOT copied from the index)'
         type: string
         required: true
       manifest_size:
-        description: 'Точный размер индекса исходных артефактов в байтах из защищённого утверждения релиза'
+        description: 'Exact source index byte size from protected release approval'
         type: string
         required: true
       project:
-        description: 'ID проекта, закреплённый подписанной конфигурацией начальной установки'
+        description: 'Project ID pinned by signed bootstrap configuration'
         type: string
         required: true
 
@@ -31,9 +31,8 @@ concurrency:
 jobs:
   native-package:
     name: Real signed installer on ${{ matrix.platform }}-${{ matrix.arch }}
-    # Эти размещённые раннеры одноразовые. Тест выполняет настоящие системные
-    # установщики, включая sudo dpkg и Apple Installer, поэтому НЕ ДОЛЖЕН запускаться
-    # на пользовательских машинах.
+    # These hosted runners are disposable. This test runs real system installers,
+    # including sudo dpkg and Apple Installer, and MUST NOT run on user machines.
     strategy:
       fail-fast: false
       matrix:
@@ -49,7 +48,7 @@ jobs:
     environment: production-acceptance
     timeout-minutes: 70
     steps:
-      - name: Отклонить недоверенных branch/ref перед accessing релиза входных данных
+      - name: Reject untrusted branch/ref before accessing release inputs
         shell: bash
         run: |
           [[ "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/tags/v* ]] || exit 2
@@ -59,9 +58,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Установить pinned-format Ed25519 проверки зависимости
+      - name: Install pinned-format Ed25519 review dependency
         run: python -m pip install 'cryptography>=42,<47'
-      - name: Закрепить реального нативного исполнителя архитектуры
+      - name: Pin real native runner architecture
         shell: bash
         run: |
           set -euo pipefail
@@ -73,7 +72,7 @@ jobs:
           print('Native runner:',m.host_target())
           assert m.host_target()==('${{ matrix.platform }}','${{ matrix.arch }}')
           PY
-      - name: настроить независимая нативного подписи доверия
+      - name: Provision independent native signature trust
         shell: bash
         env:
           LINUX_GPG_KEYRING_BASE64: ${{ secrets.NL_NATIVE_ACCEPTANCE_GPG_KEYRING_BASE64 }}
@@ -89,7 +88,7 @@ jobs:
           path.chmod(0o600)
           PY
           fi
-      - name: Скачать, аутентифицировать, установить в систему, настроить и проверить финальный пакет
+      - name: Download, authenticate, system-install, provision and verify the final package
         shell: bash
         env:
           NATIVE_MANIFEST_URL: ${{ inputs.manifest_url }}
@@ -119,7 +118,7 @@ jobs:
             --windows-thumbprint "$PINNED_WINDOWS_SHA1" \
             --apple-team-id "$PINNED_APPLE_TEAM_ID" \
             --disposable-runner --output "$RUNNER_TEMP/native-package-0522"
-      - name: Загрузить артефакты обезличенных diagnostic журналов и подтверждённые квитанции или BLOCKED marker
+      - name: Upload redacted diagnostic logs and verified receipt or BLOCKED marker
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -127,7 +126,7 @@ jobs:
           path: ${{ runner.temp }}/native-package-0522/
           if-no-files-found: warn
           retention-days: 90
-      - name: Очистить приёмки keyring
+      - name: Clear acceptance keyring
         if: always() && matrix.platform == 'linux'
         shell: bash
         run: rm -f "$RUNNER_TEMP/native-acceptance-trusted.gpg"
@@ -140,7 +139,7 @@ jobs:
     timeout-minutes: 15
     environment: production-acceptance
     steps:
-      - name: отсутствующих нативного целевой платформы blocks приёмки
+      - name: Missing native target blocks acceptance
         shell: bash
         env:
           RESULT: ${{ needs.native-package.result }}
@@ -152,14 +151,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Установить signature-verification зависимости
+      - name: Install signature-verification dependency
         run: python -m pip install 'cryptography>=42,<47'
       - uses: actions/download-artifact@v4
         with:
           pattern: native-package-0522-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-package-receipts-0522
           merge-multiple: false
-      - name: Повторно получить тот же независимо закреплённый индекс исходников
+      - name: Re-fetch same independently pinned source index
         shell: bash
         env:
           INDEX_URL: ${{ inputs.manifest_url }}
@@ -173,7 +172,7 @@ jobs:
           m.fetch(os.environ['INDEX_URL'],pathlib.Path(os.environ['RUNNER_TEMP'])/'native-final-sources-0522.json',
                   os.environ['INDEX_SHA256'],int(os.environ['INDEX_SIZE']))
           PY
-      - name: Независимо проверить хеши отчётов и журналов; отклонить любые пропуски или подмены
+      - name: Independently replay reports/log hashes, block any omission or substitution
         shell: bash
         env:
           INDEX_SHA256: ${{ inputs.manifest_sha256 }}

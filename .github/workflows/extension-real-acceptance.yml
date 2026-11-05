@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Собрать запускаемые Java-расширения и модуль переноса исходников
+      - name: Build runnable Java extensions and source-port module
         shell: bash
         run: |
           set -euo pipefail
@@ -42,13 +42,13 @@ jobs:
           sh examples/extensions/java-runtime/build.sh
           sh examples/extensions/java-lifecycle/build.sh
           sh examples/extensions/gravit-compat/build.sh
-      - name: Скомпилировать реального нативного CLI для этот целевой платформы
+      - name: Compile real native CLI for this target
         shell: bash
         run: |
           set -euo pipefail
           cd cli
           go build -o "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/launcher
-      - name: Выполнить JVM E2E и негативные подписи тесты
+      - name: Execute JVM E2E and negative signature tests
         shell: bash
         run: |
           set -euo pipefail
@@ -74,9 +74,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Собрать реального Java extension хоста JAR
+      - name: Build real Java extension host JAR
         run: sh examples/extensions/java-host/build.sh
-      - name: Запустить Go управляющего процесса, реальные разрешения отзыва и real-JVM жизненного цикла
+      - name: Run Go supervisor, live permission revocation and real-JVM lifecycle
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
@@ -97,9 +97,9 @@ jobs:
           pattern: extensions-04212-*
           path: evidence
           merge-multiple: true
-      - name: Блокировка при ошибке подтверждений тесты
+      - name: Fail-closed evidence tests
         run: python3 -m unittest discover -s e2e/extensions -p 'test_*.py' -v
-      - name: все шести целевых платформ и Go управляющего процесса должны pass
+      - name: All six targets AND Go supervisor must pass
         env:
           GO_SUPERVISOR_RESULT: ${{ needs.go-supervisor.result }}
           PLATFORM_RESULT: ${{ needs.real-platform.result }}

@@ -43,7 +43,7 @@ jobs:
             --major 21
           cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json "${OUT}/MANAGED_JAVA_II_EVIDENCE.json"
 
-      - name: Проверить шесть целевых платформ и привязку доставки
+      - name: Verify six targets and delivery binding
         shell: bash
         run: |
           set -euo pipefail
@@ -54,7 +54,7 @@ jobs:
           /tmp/nl delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
 
-      - name: Загрузить артефакты Managed JRE промышленной ресурсов
+      - name: Upload Managed JRE production assets
         uses: actions/upload-artifact@v4
         with:
           name: launcher-managed-jre-${{ github.sha }}

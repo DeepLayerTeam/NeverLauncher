@@ -52,7 +52,7 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Проверить обязательной подписания секретов
+      - name: Validate required signing secrets
         shell: bash
         env:
           MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
@@ -68,7 +68,7 @@ jobs:
             test -n "${!name:-}" || { echo "missing required secret: ${name}" >&2; exit 2; }
           done
 
-      - name: Импортировать сертификат Developer ID и настроить notarytool
+      - name: Import Developer ID certificate and configure notarytool
         shell: bash
         env:
           MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
@@ -96,7 +96,7 @@ jobs:
 
       - name: Установка зависимости для подписи набора компонентов
         run: python3 -m pip install 'cryptography>=43,<47'
-      - name: Собрать, Подписать, notarize и staple x64 + ARM64 пакетов
+      - name: Build, sign, notarize and staple x64 + ARM64 packages
         shell: bash
         env:
           LAUNCHER_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
@@ -106,7 +106,7 @@ jobs:
           LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ secrets.COMPONENT_SET_ED25519_PUBLIC_KEY }}
         run: bash scripts/release/build-macos-production.sh
 
-      - name: Проверить промышленной подтверждений и доставки привязки
+      - name: Verify production evidence and delivery binding
         shell: bash
         run: |
           set -euo pipefail
@@ -118,7 +118,7 @@ jobs:
           python3 scripts/release/secret-scan.py "${DIR}/launcher-desktop-${VERSION}-macos-x64.zip"
           python3 scripts/release/secret-scan.py "${DIR}/launcher-desktop-${VERSION}-macos-arm64.zip"
 
-      - name: "Проверить финальное упакованное приложение: Developer ID, Gatekeeper и нотариальное заверение"
+      - name: Verify final packaged app Developer ID, Gatekeeper and notarization
         shell: bash
         run: |
           set -euo pipefail
@@ -135,7 +135,7 @@ jobs:
             xcrun stapler validate "$APP"
             rm -rf "$EXTRACT"
           done
-      - name: Удалить импортированных подписания материалов
+      - name: Remove imported signing material
         if: always()
         shell: bash
         run: |
@@ -144,7 +144,7 @@ jobs:
             security delete-keychain "$LAUNCHER_SIGNING_KEYCHAIN" || true
           fi
 
-      - name: Загрузить артефакты notarized macOS доставки
+      - name: Upload notarized macOS delivery
         uses: actions/upload-artifact@v4
         with:
           name: launcher-macos-notarized-${{ github.sha }}

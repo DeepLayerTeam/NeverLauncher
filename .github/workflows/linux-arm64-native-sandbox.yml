@@ -16,7 +16,7 @@ on:
       live_arm64:
         type: boolean
         default: false
-        description: 'Потребовать реальные тесты ядра на подготовленном агенте песочницы ARM64'
+        description: 'Require real kernel tests on a provisioned ARM64 sandbox runner'
 
 permissions:
   contents: read
@@ -33,7 +33,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Скомпилировать настоящую песочницу и Host для Linux ARM64
+      - name: Compile actual sandbox and host on Linux ARM64
         working-directory: services/api
         env:
           GOOS: linux
@@ -43,7 +43,7 @@ jobs:
           go test -c -o "$RUNNER_TEMP/linuxsandbox-arm64.test" ./internal/linuxsandbox
           go build ./internal/extensionhost ./internal/extensionpolicy
           test -s "$RUNNER_TEMP/linuxsandbox-arm64.test"
-      - name: Выполнить Linux AMD64 non-hardware песочницы регрессии
+      - name: Execute Linux AMD64 non-hardware sandbox regressions
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/linuxsandbox ./internal/extensionhost ./internal/extensionpolicy
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Проверить реальные пространства имён пользователя без привилегий, seccomp, делегированную cgroup v2 и cgroup.kill
+      - name: Require real unprivileged user namespaces, seccomp, delegated cgroup v2 and cgroup.kill
         working-directory: services/api
         env:
           NL_RUN_LIVE_LINUX_SANDBOX: '1'
@@ -68,7 +68,7 @@ jobs:
           test "$(uname -m)" = aarch64
           test "$(id -u)" != 0
           go test -count=1 -v ./internal/linuxsandbox -run 'TestARM64NativeKernelBoundary0439|TestLinuxIsolationLive0319|TestLinuxAdversarialDescendants03114'
-      - name: Проверить ARM64 нативного интеграции регрессии
+      - name: Verify ARM64 native integration regressions
         working-directory: services/api
         run: |
           test "$(uname -m)" = aarch64

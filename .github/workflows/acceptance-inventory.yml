@@ -24,13 +24,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Установить верификатора зависимости
+      - name: Install verifier dependency
         run: python3 -m pip install 'cryptography>=42,<47'
-      - name: Проверить actual-client скрипта синтаксиса
+      - name: Check actual-client script syntax
         run: bash -n e2e/scripts/run-compatibility-case.sh
-      - name: Выполнить обязательные 0.52.1 подписи, журнала и модификации регрессии
+      - name: Run mandatory 0.52.1 signature, log and tamper regressions
         run: python3 -m unittest discover -s scripts/acceptance -p 'test_*_0521.py' -v
-      - name: Проверить реального каталога покрытия и Блокировать closed без реального выполнения
+      - name: Check real catalog coverage and fail closed without real execution
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/acceptance"

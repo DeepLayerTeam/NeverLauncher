@@ -27,13 +27,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить воспроизводимых модуля зависимостей
+      - name: Verify reproducible module dependencies
         run: |
           set -euo pipefail
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_0327_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/launcher-api/main.go)"
-      - name: локального файловой системы и WAL интеграции (без пропусков permitted)
+      - name: Local filesystem and WAL integration (no skips permitted)
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-coordinator-327
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
@@ -44,5 +44,5 @@ jobs:
           stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -timeout=15m ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config
           go vet ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config ./internal/httpapi ./cmd/launcher-api
-      - name: Собрать фактический API с SQLite координатора пути
+      - name: Build actual API with SQLite coordinator path
         run: go build -trimpath -o "$RUNNER_TEMP/launcher-api-327" ./cmd/launcher-api

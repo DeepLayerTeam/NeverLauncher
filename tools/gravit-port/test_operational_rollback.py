@@ -1,6 +1,6 @@
-"""Тесты реального обмена с подпроцессами и Unix-сокетом на имитированных Backend/systemd.
+"""Real subprocess + Unix-socket transport tests against fake Backend/systemd.
 
-НЕ являются свидетельством работающего PostgreSQL, настоящих миров Gravit или входа в Minecraft.
+NOT evidence of running PostgreSQL, actual Gravit worlds or Minecraft join.
 """
 import hashlib
 import json
@@ -130,7 +130,7 @@ class RollbackTests(unittest.TestCase):
         prev.write_private(self.fresh,self.snapshot)
         self.assertEqual(self.call('commit'),0)
         self.assertEqual(self.statefile.read_text(),'rolled_back')
-        self.assertEqual(self.call('reconcile'),0)  # повторное чтение идемпотентно; фиксация транзакции не повторяется
+        self.assertEqual(self.call('reconcile'),0)  # readback is idempotent; commit is not retried
         state = rb.state_load(self.journal,hashlib.sha256(self.cfgfile.read_bytes()).hexdigest(),
                               hashlib.sha256(self.cutfile.read_bytes()).hexdigest())
         self.assertEqual(state['phase'],'committed_fenced')

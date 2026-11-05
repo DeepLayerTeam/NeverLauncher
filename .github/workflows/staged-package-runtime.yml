@@ -1,6 +1,5 @@
-# ТОЛЬКО НАБЛЮДЕНИЕ. Нельзя публиковать, подписывать или повышать результат этого
-# CI до ValidationEvidence. Требуется доверенный независимый аттестатор хоста
-# 0.34.5.
+# OBSERVATIONAL ONLY. Do not publish, sign or promote this CI output as
+# ValidationEvidence. A trusted, independent 0.34.5 host attestor is required.
 name: Подготовленный пакет, настоящая авторизация и игровой процесс (только наблюдение)
 on:
   workflow_call:
@@ -15,11 +14,11 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: ID существующего подписанного подготовленного пакета Backend, прошедшего проверку целостности
+        description: Existing signed, staged and integrity-passed backend package ID
         required: true
         type: string
       runtime_seconds:
-        description: Максимальное время запуска реального GUI Minecraft (15–3600 секунд)
+        description: Max time for real Minecraft GUI startup (15..3600 seconds)
         required: true
         type: number
         default: 180
@@ -45,23 +44,23 @@ jobs:
             8
             17
             21
-      - name: Установить graphics библиотек
+      - name: Install graphics libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng xdotool
-      - name: Отклонить ложного запуска доказательства и Проверить исполнителя операций
+      - name: Reject false startup proof and verify runner operations
         run: |
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_matching_0344.py
           python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_staged_lifecycle_0349.py
-      - name: Собрать исполняемые файлы CLI и Runtime без сборки клиента Minecraft
+      - name: Build CLI and Runtime executables only (build Minecraft client)
         run: |
           cd cli && go build -o ../nl ./cmd/launcher
           cd ..
           cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
-      - name: Выполнить точного промежуточного contents через транзакционных установщика и Runtime
+      - name: Execute exact staged contents via transactional installer and Runtime
         env:
           STAGED_BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
           STAGED_OPERATOR: ${{ secrets.NL_STAGED_RUNNER_OPERATOR_TOKEN }}
@@ -88,9 +87,8 @@ jobs:
           set -euo pipefail
           test -n "$STAGED_BACKEND" && test -n "$STAGED_OPERATOR" && test -n "$STAGED_PACKAGE_ID" && test -n "$STAGED_MANIFEST_KEY"
           export LIBGL_ALWAYS_SOFTWARE=1
-          # CI предназначен только для диагностики: краткоживущие тестовые учётные
-          # данные промежуточного окружения; независимый аттестатор выполняет
-          # доверенную официальную цепочку OAuth.
+          # Diagnostic-only CI: short-lived staging test credentials; the
+          # independent attestor performs the trusted official OAuth chain.
           [[ "$AUTH_MODE" == official || "$AUTH_MODE" == custom ]] || { echo 'real V07 provider mode missing' >&2; exit 2; }
           [[ -n "$AUTH_CREDENTIAL" ]] || { echo 'live staging credential missing; mock prohibited' >&2; exit 2; }
           umask 077
@@ -106,17 +104,16 @@ jobs:
             NEGATIVE_ARG=(--negative-credentials-file "$AUTH_DIR/negative.json")
             GUARD_ARG=(--guard-denied-credentials-file "$AUTH_DIR/guard-denied.json")
           fi
-          # Предыдущий релиз должен быть одобренным, независимо подписанным и
-          # неизменяемым пакетом. Установка только текущего релиза не проходит V09.
+          # Previous release must be an approved, independently signed and
+          # immutable bundle. A current-only install cannot pass V09.
           [[ "$PREVIOUS_BUNDLE_URL" == https://* ]] || { echo 'V09 prior signed release HTTPS URL missing' >&2; exit 2; }
           [[ "$PREVIOUS_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 prior release SHA256 missing' >&2; exit 2; }
           [[ -n "$REPLACEMENT_JAVA" && -x "$REPLACEMENT_JAVA" ]] || { echo 'V09 distinct Java binary missing' >&2; exit 2; }
           curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --max-time 600 --output "$RUNNER_TEMP/previous-signed-release.zip" "$PREVIOUS_BUNDLE_URL"
           echo "$PREVIOUS_BUNDLE_SHA256  $RUNNER_TEMP/previous-signed-release.zip" | sha256sum -c - >/dev/null
-          # Тот же промышленный установщик Managed Java в Runtime должен помещать
-          # умышленно повреждённый подписанный бинарник Java в карантин и
-          # переустанавливать его.
+          # The same production Runtime Managed Java installer must
+          # quarantine/reinstall an intentionally corrupted signed Java binary.
           [[ "$MANAGED_JRE_BUNDLE_URL" == https://* ]] || { echo 'V09 pinned Managed JRE bundle URL missing' >&2; exit 2; }
           [[ "$MANAGED_JRE_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE bundle SHA256 missing' >&2; exit 2; }
           [[ "$MANAGED_JRE_MANIFEST_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE manifest SHA256 missing' >&2; exit 2; }
@@ -127,9 +124,8 @@ jobs:
           unzip -q "$RUNNER_TEMP/managed-jre-bundle.zip" -d "$RUNNER_TEMP/managed-jre-bundle"
           test -f "$RUNNER_TEMP/managed-jre-bundle/MANAGED_JRE_MANIFEST.json" || exit 2
           echo "$MANAGED_JRE_MANIFEST_SHA256  $RUNNER_TEMP/managed-jre-bundle/MANAGED_JRE_MANIFEST.json" | sha256sum -c - >/dev/null
-          # Для серверов, отличных от Vanilla, требуется внешний полный серверный
-          # дистрибутив с закреплённой версией. Никогда не создавайте вместо него
-          # подменный клиент.
+          # Non-Vanilla servers must use an externally provisioned complete,
+          # pinned server distribution. Never materialize a substitute client.
           SERVER_BUNDLE=""
           if [[ -n "$SERVER_BUNDLE_URL" ]]; then
             [[ "$SERVER_BUNDLE_URL" == https://* ]] || { echo 'server bundle URL requires HTTPS' >&2; exit 1; }
@@ -154,7 +150,7 @@ jobs:
               "${NEGATIVE_ARG[@]}" "${GUARD_ARG[@]}" \
               --server-bundle "$SERVER_BUNDLE" --server-sha256 "$SERVER_BUNDLE_SHA256" \
               --server-entry "$SERVER_ENTRY" --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA256" --bridge-version "$BRIDGE_VERSION"
-      - name: Загрузить артефакты обезличенных observational подтверждений (без grant или закрытого ключа)
+      - name: Upload redacted observational evidence (no grant or private key)
         if: always()
         uses: actions/upload-artifact@v4
         with:

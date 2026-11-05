@@ -26,20 +26,20 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Скомпилировать Swift и проверить entitlements plist
+      - name: Swift compile and verify entitlements plist
         run: |
           xcrun swiftc -O ../../macos/sandbox-helper/ExtensionSandbox.swift -o /tmp/NeverExtensionSandbox -lsandbox -lproc
           plutil -lint ../../macos/sandbox-helper/ExtensionSandbox.entitlements
-      - name: тестировать и cross-build ядра Go пакетов
+      - name: Test and cross-build core Go packages
         run: |
           go test -race ./internal/macossandbox ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
-      - name: macOS SDK компиляции
+      - name: Darwin SDK compilation
         run: |
           (cd ../../sdk/backend/go && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./...)
           (cd ../../sdk/cli/go && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./...)
-      - name: Проверить наличие сертификата релиза для подписанного артефакта
+      - name: Release certificate required for signed artifact
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           SIGN_IDENTITY: ${{ vars.LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY }}

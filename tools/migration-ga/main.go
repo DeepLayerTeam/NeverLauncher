@@ -1,6 +1,6 @@
-// Исполнитель свидетельств Migration Center GA. Этот бинарник не объявляет развёртывание
-// готовым к production лишь потому, что администратор рассмотрел отчёт миграции:
-// он выполняет настроенные независимые проверки и заверяет их фактические результаты.
+// Migration Center GA evidence runner. This binary does not declare a deployment
+// production-ready merely because an administrator reviewed a migration report:
+// it executes the configured independent checks and seals their actual output.
 package main
 
 import (
@@ -49,10 +49,10 @@ func referenceClassValid(s string) bool {
 
 var gravit57 = regexp.MustCompile(`^5\.7\.[0-9]+$`)
 
-// Эти проверки — исполняемые операторские пробы, а не заявления об универсальной поддержке загрузчиков.
-// Референсный проект проверяет только реально используемые возможности;
-// комбинированное покрытие включает FileAuth, SQL, официальную авторизацию, два загрузчика,
-// необязательные файлы, текстуры, перенесённые исходные модули и безопасное переключение/возврат.
+// These checks are executable operator probes, not claims of universal loader
+// support. A reference project only exercises the features it actually uses;
+// combined coverage includes FileAuth, SQL, official auth, two loaders,
+// optional files, textures, source-port modules and safe cutover/return.
 var commonChecks = []string{
 	"uuid-world-plugin-data", "admin-permissions", "desktop-cache-install",
 	"staged-cutover-canary", "operational-rollback-drill",
@@ -72,7 +72,7 @@ func requiredForClass(class string) []string {
 	return append(out, classChecks[class]...)
 }
 
-var required = func() []string { // объединение, используется только для ограничения проверяемых имён
+var required = func() []string { // union, used only to bound check names
 	seen := map[string]bool{}
 	var out []string
 	for _, class := range referenceClasses {
@@ -114,8 +114,8 @@ type Decision struct {
 	Revision int64  `json:"revision"`
 }
 
-// Это повторяет сетевую схему отчёта v1 Backend, включая канонический
-// порядок полей структуры Go, чтобы квитанцию нельзя было привязать к изменённому отчёту.
+// This mirrors the backend's v1 report wire schema, including Go's canonical
+// struct field order, so a receipt cannot be rebound to an altered report.
 type Report struct {
 	Format          string         `json:"format"`
 	RunID           string         `json:"runId"`
@@ -277,7 +277,7 @@ func reportVerified(r Report) error {
 		return e
 	}
 	if hash(b) != d {
-		return errors.New("Несоответствие: отчёт о миграции контрольная сумма")
+		return errors.New("migration report checksum mismatch")
 	}
 	stages := map[string]string{}
 	for _, ev := range r.Evidence {
@@ -329,9 +329,9 @@ func getJSON(ctx context.Context, client *http.Client, endpoint, token string, o
 	if e != nil {
 		return e
 	}
-	// Все ответы Launcher Admin упакованы в оболочку {"data": ...}.
-	// Не принимать прямой или неизвестный ответ, который случайно соответствует
-	// лишь части ожидаемых полей отчёта.
+	// All Launcher Admin responses are enveloped as {"data": ...}.
+	// Do not accept a bare or unknown response that only happens to match a
+	// subset of the expected report fields.
 	var envelope struct {
 		Data json.RawMessage `json:"data"`
 	}
@@ -358,9 +358,9 @@ func checkBackendURL(raw string) error {
 	return nil
 }
 
-// sourceJarVersion проверяет реальный бинарник LaunchServer внутри MIG03,
-// а не заявленную оператором версию. Намеренно принимаются только манифесты
-// с явной идентичностью продукта Gravit/LaunchServer.
+// sourceJarVersion verifies the actual LaunchServer binary contained in MIG03,
+// not the operator's version claim. This intentionally accepts only manifests
+// carrying an explicit Gravit/LaunchServer product identity.
 func sourceJarEvidence(archivePath string) (string, string, error) {
 	outer, err := zip.OpenReader(archivePath)
 	if err != nil {
@@ -368,7 +368,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 	}
 	defer outer.Close()
 	if len(outer.File) > 30000 {
-		return "", "", errors.New("Превышено число элементов исходного ZIP")
+		return "", "", errors.New("too many source ZIP entries")
 	}
 	found := ""
 	jarHash := ""
@@ -380,7 +380,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			return "", "", errors.New("multiple LaunchServer jars")
 		}
 		if f.UncompressedSize64 == 0 || f.UncompressedSize64 > 32<<20 || f.CompressedSize64 == 0 {
-			return "", "", errors.New("Небезопасный объект: LaunchServer JAR размер")
+			return "", "", errors.New("unsafe LaunchServer jar size")
 		}
 		reader, e := f.Open()
 		if e != nil {
@@ -413,12 +413,12 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			b, e := io.ReadAll(io.LimitReader(read, (64<<10)+1))
 			read.Close()
 			if e != nil || uint64(len(b)) != item.UncompressedSize64 {
-				return "", "", errors.New("Некорректное значение: JAR манифест")
+				return "", "", errors.New("invalid jar manifest")
 			}
 			manifest = string(b)
 		}
 		if manifest == "" {
-			return "", "", errors.New("Отсутствует: LaunchServer JAR манифест")
+			return "", "", errors.New("missing LaunchServer jar manifest")
 		}
 		product := ""
 		ver := ""
@@ -444,7 +444,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 		jarHash = hash(data)
 		ver = strings.TrimPrefix(ver, "v")
 		if !gravit57.MatchString(ver) {
-			return "", "", errors.New("Не поддерживается: JAR версия")
+			return "", "", errors.New("unsupported JAR version")
 		}
 		found = ver
 	}
@@ -495,8 +495,8 @@ func validatePlan(p Plan) error {
 	return nil
 }
 
-// boundedOutput прерывает проверки, пытающиеся вывести неограниченный JSON в stdout.
-// Stderr намеренно не собирается (может содержать токены доступа).
+// boundedOutput aborts checks that try to emit unbounded JSON on stdout.
+// Stderr is intentionally not collected (it can contain access tokens).
 type boundedOutput struct {
 	data  bytes.Buffer
 	limit int
@@ -518,7 +518,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	defer cancel()
 	exe := exec.CommandContext(cctx, c.Command[0], c.Command[1:]...)
 	exe.Dir = filepath.Dir(p.SourceArchive)
-	// Тестовым подпроцессам не предоставляются учётные данные Backend или ключи подписи.
+	// No backend credentials or signing keys are exposed to test subprocesses.
 	env := []string{}
 	for _, s := range os.Environ() {
 		if strings.HasPrefix(s, "LAUNCHER_MIGRATION_GA_") || strings.HasPrefix(s, "LAUNCHER_ADMIN_TOKEN=") || strings.HasPrefix(s, "MIGRATION_GA_") {
@@ -529,12 +529,12 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	exe.Env = env
 	stdout := &boundedOutput{limit: 4 << 20}
 	exe.Stdout = stdout
-	// Stderr проверки может содержать учётные данные; не допускать его в журналы CI.
+	// Check stderr can contain credentials; never allow it into CI logs.
 	exe.Stderr = io.Discard
 	started := time.Now()
 	e := exe.Run()
 	out := stdout.data.Bytes()
-	// Подменённый исполняемый файл теста не может участвовать в подписанном результате GA.
+	// A replaced test executable cannot contribute to a signed GA result.
 	if err := verifyExecutable(c); err != nil {
 		return result, fmt.Errorf("%s check executable changed: %w", c.Name, err)
 	}
@@ -640,7 +640,7 @@ func seal(b Bundle, key ed25519.PrivateKey) (Bundle, error) {
 }
 func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	if b.Format != format || b.Version != version || !referenceClassValid(b.ReferenceClass) || !commitHash(b.CommitSHA) || !gravit57.MatchString(b.SourceVersion) || !digest(b.TrustedGravitJarSHA256) || !digest(b.TargetReleaseSHA256) || !digest(b.ReportSHA256) || !digest(b.SourceSHA256) || b.RunID == "" || b.ProjectID == "" || b.ReviewedBy == "" || !digest(b.ReviewEvidenceSHA256) || len(b.Checks) != len(requiredForClass(b.ReferenceClass)) {
-		return errors.New("Неполные данные: GA сертификат")
+		return errors.New("incomplete GA certificate")
 	}
 	key, e := base64.StdEncoding.DecodeString(b.PublicKey)
 	if e != nil || !bytes.Equal(key, public) {
@@ -655,7 +655,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 		return e
 	}
 	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.45.0\x00"), raw...), signature) {
-		return errors.New("Некорректное значение: GA подпись")
+		return errors.New("invalid GA signature")
 	}
 	seen := map[string]bool{}
 	for _, c := range b.Checks {
@@ -676,12 +676,12 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	return nil
 }
 
-// writePrivate публикует полностью fsync-синхронизированный файл, никогда не заменяя
-// существующий результат GA. Связывание временного файла жёсткой ссылкой обеспечивает атомарную публикацию
-// без перезаписи в целевой файловой системе.
+// writePrivate publishes a fully fsynced file without ever replacing an
+// existing GA result. Linking the temp file provides an atomic no-overwrite
+// publish operation on the destination filesystem.
 func writePrivate(path string, data []byte) error {
 	if path == "" {
-		return errors.New("Необходимо указать путь вывода")
+		return errors.New("output path is required")
 	}
 	dir := filepath.Dir(path)
 	f, e := os.CreateTemp(dir, ".migration-ga-*")
@@ -723,7 +723,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return errors.New("a separate absolute evidence directory is required")
 	}
 	if strings.TrimSpace(token) == "" {
-		return errors.New("Отсутствует: LAUNCHER_MIGRATION_GA_TOKEN")
+		return errors.New("missing LAUNCHER_MIGRATION_GA_TOKEN")
 	}
 	source, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
@@ -748,8 +748,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if r.RunID != p.RunID || r.ProjectID != p.ProjectID || r.SourceSHA256 != source {
 		return errors.New("source ZIP, project or run does not match database report")
 	}
-	// Связать протестированный выпуск с действительно активным переключением, а не просто
-	// ID выпуска или дайджестом, выдуманным скриптами тестирования оператора.
+	// Bind the tested release to an actually active cutover, not merely
+	// a release ID or digest invented by the operator's test scripts.
 	foundTarget := false
 	for _, ev := range r.Evidence {
 		if strings.HasPrefix(ev.Stage, "cutover_scope:") && ev.State == "verified" && ev.Details == "active" && ev.SHA256 == p.TargetReleaseSHA256 {
@@ -781,8 +781,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	}
 	sort.Strings(uuids)
 	b := Bundle{Format: format, Version: version, ReferenceClass: p.ReferenceClass, RunID: p.RunID, ProjectID: p.ProjectID, CommitSHA: p.CommitSHA, SourceVersion: p.SourceVersion, TrustedGravitJarSHA256: p.TrustedGravitJarSHA256, TargetReleaseSHA256: p.TargetReleaseSHA256, ReportSHA256: r.ReportSHA256, SourceSHA256: source, ReviewedBy: review.ReviewedBy, ReviewEvidenceSHA256: review.EvidenceSHA256, Checks: []SealedProbe{}}
-	// Создавать каталог свидетельств только после проверки авторитетного отчёта и
-	// неизменяемого рассмотрения оператором. Ранее созданные каталоги не используются повторно.
+	// Create the evidence directory only after the authoritative report and
+	// immutable operator review have been checked. No prior directory is reused.
 	if e = os.Mkdir(evidenceDir, 0700); e != nil {
 		return fmt.Errorf("new evidence directory: %w", e)
 	}
@@ -796,8 +796,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if err := ensureSnapshotStillMatches(p, evidenceDir); err != nil {
 		return fmt.Errorf("snapshots changed during GA execution: %w", err)
 	}
-	// Проверка не должна менять собственные исходные байты Gravit после первоначальной
-	// проверки источника и всё же получать подписанный сертификат.
+	// A check must not change its own Gravit source bytes after the initial
+	// source verification while still receiving a signed certificate.
 	again, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
 		return e
@@ -805,8 +805,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if again != source {
 		return errors.New("source archive changed during GA checks")
 	}
-	// Повторно прочитать Backend: новая квитанция источника, маршрут или идентичность делают
-	// предыдущую успешную проверку недействительной до записи сертификата.
+	// Re-read the backend: a new source receipt, route or identity invalidates
+	// a previously successful check before its certificate can be written.
 	var after Report
 	if e = getJSON(ctx, client, endpoint, token, &after); e != nil {
 		return e
@@ -824,8 +824,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if afterReview.Status != review.Status || afterReview.ReviewedBy != review.ReviewedBy || afterReview.ReviewedAt != review.ReviewedAt || afterReview.EvidenceReference != review.EvidenceReference || afterReview.EvidenceSHA256 != review.EvidenceSHA256 || afterReview.Report.ReportSHA256 != r.ReportSHA256 {
 		return errors.New("migration operator review changed during GA E2E; rerun")
 	}
-	// Доступ к материалам подписи независимого аудита допускается только после завершения всех недоверенных
-	// команд проб и повторного чтения авторитетного состояния.
+	// Access independent audit signing material only after all untrusted
+	// probe commands have exited and the authoritative state was reread.
 	key, e := signingKey(p.SigningKey)
 	if e != nil {
 		return e
@@ -860,8 +860,8 @@ func runMain(args []string) error {
 	case "integration-audit":
 		return integrationAuditCommand0491(args[1:])
 	case "manual-actions":
-		planFile := fs.String("plan", "", "План миграции для оператора")
-		out := fs.String("output", "", "Новый Markdown-файл списка задач оператора")
+		planFile := fs.String("plan", "", "migration operator plan")
+		out := fs.String("output", "", "new operator worklist Markdown file")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -875,17 +875,17 @@ func runMain(args []string) error {
 		}
 		return exportManualWorklist(context.Background(), p, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out)
 	case "audit-state":
-		source := fs.String("source", "", "Абсолютный путь к каталогу исходного снимка")
-		target := fs.String("target", "", "Абсолютный путь к каталогу целевого снимка")
-		out := fs.String("output", "", "Новый приватный JSON-файл аудиторских свидетельств")
+		source := fs.String("source", "", "absolute source snapshot directory")
+		target := fs.String("target", "", "absolute target snapshot directory")
+		out := fs.String("output", "", "new private JSON audit evidence file")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
 		return executeStateAudit(*source, *target, *out)
 	case "certify":
-		evidenceDir := fs.String("evidence-dir", "", "Новый приватный каталог для полного набора свидетельств проверки")
-		p := fs.String("plan", "", "JSON-план проверок оператора")
-		out := fs.String("output", "", "Подписанный сертификат (создаётся с правами 0600)")
+		evidenceDir := fs.String("evidence-dir", "", "new private directory for complete check evidence")
+		p := fs.String("plan", "", "operator check plan JSON")
+		out := fs.String("output", "", "signed certificate (created with 0600)")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -899,9 +899,9 @@ func runMain(args []string) error {
 		}
 		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out, *evidenceDir)
 	case "verify":
-		evidenceDir := fs.String("evidence-dir", "", "Сохранённый каталог свидетельств (обязательно)")
-		file := fs.String("certificate", "", "Подписанный пакет свидетельств")
-		pub := fs.String("public-key", "", "Доверенный ПУБЛИЧНЫЙ ключ Ed25519 в PEM")
+		evidenceDir := fs.String("evidence-dir", "", "preserved evidence directory (required)")
+		file := fs.String("certificate", "", "signed evidence bundle")
+		pub := fs.String("public-key", "", "trusted Ed25519 PUBLIC KEY PEM")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -927,7 +927,7 @@ func runMain(args []string) error {
 		}
 		key, ok := anyKey.(ed25519.PublicKey)
 		if !ok {
-			return errors.New("Требуемый формат для доверенный ключ: Ed25519")
+			return errors.New("trusted key must be Ed25519")
 		}
 		if e = verifyBundle(b, key); e != nil {
 			return e
@@ -938,16 +938,16 @@ func runMain(args []string) error {
 		fmt.Println("GA evidence signature, matrix and stored artifacts verified:", b.RunID)
 		return nil
 	case "verify-cohort", "verify-cohort-live":
-		key := fs.String("public-key", "", "Доверенный публичный ключ Ed25519")
-		single := fs.String("fileauth-single", "", "Сертификат fileauth")
-		singleDir := fs.String("fileauth-single-evidence", "", "Каталог свидетельств fileauth")
-		modded := fs.String("sql-modded", "", "Сертификат SQL/modded")
-		moddedDir := fs.String("sql-modded-evidence", "", "Каталог свидетельств SQL/modded")
-		network := fs.String("proxy-network", "", "Сетевой сертификат")
-		networkDir := fs.String("proxy-network-evidence", "", "Каталог сетевых свидетельств")
-		singlePlan := fs.String("fileauth-single-plan", "", "План проверки работающего источника fileauth")
-		moddedPlan := fs.String("sql-modded-plan", "", "План проверки работающего источника SQL/modded")
-		networkPlan := fs.String("proxy-network-plan", "", "План проверки работающего сетевого источника")
+		key := fs.String("public-key", "", "trusted Ed25519 public key")
+		single := fs.String("fileauth-single", "", "fileauth certificate")
+		singleDir := fs.String("fileauth-single-evidence", "", "fileauth evidence directory")
+		modded := fs.String("sql-modded", "", "SQL/modded certificate")
+		moddedDir := fs.String("sql-modded-evidence", "", "SQL/modded evidence directory")
+		network := fs.String("proxy-network", "", "network certificate")
+		networkDir := fs.String("proxy-network-evidence", "", "network evidence directory")
+		singlePlan := fs.String("fileauth-single-plan", "", "fileauth live source plan")
+		moddedPlan := fs.String("sql-modded-plan", "", "SQL/modded live source plan")
+		networkPlan := fs.String("proxy-network-plan", "", "network live source plan")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}

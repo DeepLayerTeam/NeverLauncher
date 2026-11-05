@@ -22,7 +22,7 @@ jobs:
         with:
           go-version: "1.27.3"
           cache-dependency-path: services/api/go.sum
-      - name: Проверить локального файловой системы и Go модуля разрешения
+      - name: Validate local filesystem and Go module resolution
         run: |
           set -euo pipefail
           go mod download
@@ -31,14 +31,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sqlite-dep00"
           chmod 0700 "$RUNNER_TEMP/sqlite-dep00"
           stat -f -c '%T' "$RUNNER_TEMP/sqlite-dep00"
-      - name: реального WAL аварийного завершения, процесса разделения владения и транзакции тесты
+      - name: Real WAL crash, process fencing and transaction tests
         env:
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-dep00
         run: go test -race -count=1 -v ./internal/sqlitedurable ./cmd/launcher-sqlite
-      - name: Собрать фактический CLI
+      - name: Build actual CLI
         run: go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
-      - name: реального CLI Проверить и проверки
+      - name: Real CLI probe and verification
         run: |
           "$RUNNER_TEMP/launcher-sqlite" probe --db "$RUNNER_TEMP/sqlite-dep00/preflight.sqlite"
           "$RUNNER_TEMP/launcher-sqlite" verify --db "$RUNNER_TEMP/sqlite-dep00/preflight.sqlite"

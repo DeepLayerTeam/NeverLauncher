@@ -1,4 +1,4 @@
-name: Java Identity SPI 0.48.5 — интерфейс поставщика идентичности
+name: Java Identity SPI 0.48.5
 on:
   push:
     paths:

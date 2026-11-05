@@ -47,7 +47,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: строгой версии и реальные оператора негативные проверки
+      - name: Strict version and live operator negative checks
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check
@@ -64,7 +64,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Собрать промышленный Backend и Запустить браузера Воспроизвести + существующих авторизации регрессии
+      - name: Build production Backend and run browser replay + existing auth regressions
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -73,9 +73,9 @@ jobs:
           go test -race -count=1 -timeout=12m ./internal/httpapi \
             -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
   live-external-providers:
-    # Учётную запись Microsoft и секреты SQL/OIDC должен предоставлять независимый
-    # оператор. Их нельзя хранить в журналах Actions или тестовых фикстурах.
-    # Отсутствие подтверждения означает BLOCKED, а не автоматическое одобрение GA.
+    # External Microsoft identity and SQL/OIDC secrets must be provisioned by
+    # an independent operator, never stored in Actions logs or unit fixtures.
+    # A missing proof remains BLOCKED; this is not an automatic GA approval.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, auth-identity-live]
     environment: auth-identity-physical-acceptance
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: реальные Microsoft/Minecraft, SQL, локального, OIDC и сессии Воспроизвести
+      - name: Live Microsoft/Minecraft, SQL, local, OIDC and session replay
         env:
           AUTH_0525_SECRETS_FILE: ${{ vars.AUTH_0525_SECRETS_FILE }}
           AUTH_0525_OIDC_PROOF_FILE: ${{ vars.AUTH_0525_OIDC_PROOF_FILE }}

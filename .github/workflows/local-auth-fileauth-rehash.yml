@@ -54,13 +54,13 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Verify Go formatting
         run: test -z "$(gofmt -l internal/fileauth internal/fileauthlive internal/localpassword internal/repository/local_auth_0295* internal/httpapi/local_auth_0295_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth-0295)"
-      - name: Проверить настоящий парсер FileAuth, тестовые хеши и вход по старым паролям
+      - name: Real FileAuth parser / hash vectors and legacy password login
         run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/localpassword ./internal/httpapi -run '(0295|0426)$'
-      - name: реальные FileAuth провайдера и HTTP федерации интеграции
+      - name: Live FileAuth provider and HTTP federation integration
         run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/fileauthlive ./internal/httpapi -run '0426$'
-      - name: Проверить атомарный импорт PostgreSQL, UUID, конфликты и интеграцию CAS
+      - name: PostgreSQL atomic import, UUID, collision and CAS integration
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
-      - name: Скомпилировать CLI и Backend
+      - name: Compile CLI and Backend
         run: go build ./cmd/local-auth-0295 ./cmd/launcher-api
-      - name: ядра регрессионные тесты
+      - name: Core regression tests
         run: go test -count=1 -timeout=8m ./internal/federation ./internal/repository ./internal/httpapi

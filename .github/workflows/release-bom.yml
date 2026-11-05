@@ -44,15 +44,15 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache: false
-      - name: версии синхронизации и релиза исходников проверки
+      - name: Version sync and release source checks
         run: python3 scripts/version/manage.py check
-      - name: реального Go BOM тесты и проверки на состояние гонки
+      - name: Real Go BOM tests and race checks
         working-directory: cli
         run: |
           go test -race ./cmd/launcher -run '^TestReleaseBOM03214' -count=1 -v
           go vet ./cmd/launcher
-      - name: подписанных дистрибутива пакета привязки и негативные тесты
+      - name: Signed distribution package binding and negative tests
         working-directory: cli
         run: go test -race ./cmd/launcher -run '^TestReleaseDistribution04511' -count=1 -v
-      - name: Проверить точку входа Bash
+      - name: Validate bash entrypoint
         run: bash -n scripts/release/build-release.sh

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Независимый аттестатор V04/V06 на стороне хоста. Выполняется внутри исполнителя.
+"""Independent host-side V04/V06 attestor. Execute inside the worker.
 
-Контролируемый оператором непривилегированный хост запускает ТОЛЬКО предварительно одобренный
-OCI-образ по дайджесту. Закрытый ключ Ed25519 остаётся в этом процессе хоста, в OCI, CI, окружении
-Docker, сети или смонтированных томах. Подписываются только проверенные наблюдения файлов на диске
-из этого запуска, а не загруженные вызывающими сторонами JSON.
+An operator-controlled, non-root host invokes ONLY the pre-approved OCI image
+by digest. The Ed25519 private key stays in this host process, in OCI,
+CI, Docker environment, network or mounted volumes. Only verified on-disk
+observations from this execution are signed, not uploaded JSON from callers.
 """
 
 import argparse
@@ -122,7 +122,7 @@ def needs_adversarial_gameplay(version):
 
 
 def verify_adversarial_gameplay_04314(work, signed_manifest, snapshot, game):
-    """Независимый хост: привязывать отрицательные проверки к подготовленным байтам и подтверждению игрового запуска."""
+    """Independent host: bind negative probes to staged bytes and game proof."""
     proof = read_json(work / "adversarial-gameplay-04314.json")
     assertion = game.get("adversarialGameplay04314")
     check(isinstance(assertion, dict) and assertion.get("status") == "passed"
@@ -188,9 +188,9 @@ def canonical(obj):
 
 
 def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
-    """Независимо проверять настоящие байты выпуска и диагностику нативного жизненного цикла.
+    """Independently check actual release bytes and native lifecycle diagnostics.
 
-    Сам по себе список утверждений PASS, переданный исполнителем, принимается на доверие.
+    Trust a worker-supplied list of PASS assertions on its own.
     """
     proof = read_json(work / "update-recovery.json")
     root = work / "lifecycle-validation"
@@ -365,7 +365,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
 
 
 def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridge_sha):
-    """Запускать только после успешного завершения доверенного OCI-контейнера с закреплённым образом."""
+    """Only run after a trusted, pinned OCI container has exited successfully."""
     report = read_json(work / "staged-execution.json")
     check(
         report["schemaVersion"] == "launcher.staged-runtime-run.v1",
@@ -386,9 +386,9 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             stages[stage].get("evidenceSha256") == hashes[name],
             "stage evidence does not match raw artifact: " + stage,
         )
-    # Фактический дисплей, рендерер и ОС задания входят в проверенные
-    # наблюдения. Задание без графического интерфейса/только материализация должно быть подписано
-    # НЕ должно подписываться как положительный запуск Runtime Minecraft.
+    # The job's actual display, renderer and OS are part of the verified
+    # observations. A headless/materialization-only job must be signed
+    # as a positive Minecraft runtime run.
     host = read_json(work / "host-capabilities.json")
     check(
         host.get("schemaVersion") == "launcher.runner-capabilities.v1"
@@ -422,8 +422,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and HEX64.fullmatch(identity["guardPolicySha256"]),
         "unbound runtime plan or guard policy",
     )
-    # Независимо проверять точные подготовленные загрузки И реально установленные
-    # байты. Отчёт со словом «valid» не компенсирует изменённый JAR игры.
+    # Independently verify the exact staged downloads AND the actual installed
+    # bytes. A report saying "valid" cannot compensate for a modified game jar.
     snapshot = read_json(work / "payload" / "staged-package-description.json")
     signed_manifest = read_json(work / "payload" / "signed-release-manifest.json")
     check(
@@ -479,8 +479,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             observed <= selected_paths and bool(observed),
             "native verifier checked files outside selected preset",
         )
-        # Для каждого необязательного JAR наличие должно совпадать с подписанным включением.
-        # Установка по умолчанию с невыбранными модами в mods/ означала бы FAIL.
+        # For every optional JAR, presence must equal signed membership. A
+        # default install leaving unselected mods in mods/ would be a FAIL.
         all_optional = {f for c in catalog["components"] for f in c["files"]}
         for name in all_optional:
             if name not in selected_paths:
@@ -775,7 +775,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and finished <= datetime.now(timezone.utc),
         "invalid execution time bounds",
     )
-    # ВАЖНО: порядок должен совпадать с порядком полей validationPayload0345 в Go.
+    # IMPORTANT: order must match Go validationPayload0345 field order.
     evidence = {
         "schemaVersion": SCHEMA,
         "runNonce": issued["nonce"],
@@ -817,8 +817,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         .isoformat()
         .replace("+00:00", "Z"),
     }
-    # Целевая матрица выдаётся Backend, а не выбирается CI или
-    # исполнителя. Требовать ТОЧНОГО совпадения идентичности; без масок и резервной цели.
+    # The target matrix is issued by the Backend, not selected by CI or the
+    # worker. Require an EXACT identity match; no wildcard or fallback target.
     fields = (
         "packageVersion",
         "manifestSha256",
@@ -905,7 +905,7 @@ def sign_evidence(payload, key_path):
         private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     ).hexdigest()
     payload = {key: payload[key] for key in EVIDENCE_FIELDS}
-    # Порядок байтов следующего словаря совпадает с порядком полей структуры Go.
+    # The byte order of the following dictionary is the Go struct field order.
     return {
         "evidence": payload,
         "signature": base64.urlsafe_b64encode(private.sign(DOMAIN + canonical(payload)))
@@ -936,9 +936,9 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
     check(
         HEX64.fullmatch(cfg.manifest_key), "signed staged manifest key must be pinned"
     )
-    # Получать/проверять образ по дайджесту на доверенном хосте. Метки образа
-    # неизменяемы при закреплённом дайджесте, поэтому произвольные предоставленные хостом источники
-    # и идентификаторы сборки нельзя незаметно представить как наблюдаемое происхождение.
+    # Pull/inspect the digest-identified image on the trusted host. Image labels
+    # are immutable under the pinned digest, so arbitrary host-provided source
+    # and build identifiers cannot be silently presented as observed provenance.
     subprocess.run(
         [cfg.engine, "pull", "--quiet", cfg.image],
         check=True,
@@ -959,7 +959,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
         and labels.get("io.launcher.validation.build-sha256") == cfg.build_sha,
         "pinned image build provenance labels do not match operator-approved release",
     )
-    # Не принимать выбранный пользователем исполняемый файл, Runtime, образ, флаги Docker или ключ подписи.
+    # Do not accept a user-chosen executable, runtime, image, Docker flags or signing key.
     grant = (
         issued_grant
         if issued_grant is not None
@@ -1010,9 +1010,9 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
             stderr=subprocess.PIPE,
             timeout=30,
         )
-        # Монтировать производственные данные, Docker socket, исходный checkout раннера,
-        # токен администратора или ключ подписи. Каждое задание получает отдельное сетевое пространство имён,
-        # корневую файловую систему только для чтения, отключённые Linux capabilities и ограниченные ресурсы.
+        # Mount production data, Docker socket, runner source checkout,
+        # admin token or signing key. Each job gets a fresh network namespace,
+        # root filesystem readonly, all Linux capabilities dropped and bounded resources.
         name = "nl-validation-" + grant["runId"][:24]
         args = [
             cfg.engine,
@@ -1151,7 +1151,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 and stat.st_size <= 16384,
                 "test-account credential file must be a regular owner-only file",
             )
-            # Монтировать напрямую, копировать в общие артефакты work/output.
+            # Mounted directly, copied into generic work/output artifacts.
             args[args.index(cfg.image) : args.index(cfg.image)] = [
                 "--mount",
                 f"type=bind,src={path},dst={inside},readonly",
@@ -1215,8 +1215,8 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 timeout=30,
                 check=False,
             )
-        # Сохранять только обезличенную ограниченную диагностику хоста с дайджестом и
-        # сроком действия; НЕ предоставлять сырой stdout через API, CI или UI оператора.
+        # Retain only redacted, bounded host-only diagnostics with a digest and
+        # expiry; make the raw stdout available to API, CI or operator UI.
         if cfg.diagnostics_dir:
             retain_redacted_diagnostics(
                 worker_log,
@@ -1239,8 +1239,8 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 "worker executed a different runtime matrix target",
             )
         signed = sign_evidence(payload, cfg.signing_key)
-        # Ни одна подпись не передаётся OCI-контейнеру или предоставленному пользователем
-        # отчёту. Только Backend получает подписанные свидетельства через API с ограничениями по правам.
+        # No signature is ever exposed to an OCI container or a user-supplied
+        # report. Only the backend receives signed evidence via scoped API.
         result = request_json(
             cfg.backend,
             "/api/v1/packages/" + package_id + "/validation-attestations",
@@ -1255,11 +1255,11 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
 
 
 def execute_matrix(cfg, package_id):
-    """Для КАЖДОЙ обязательной цели запускать собственный новый подготовленный допуск и OCI-задание.
+    """Execute every required target on its OWN fresh staged grant and OCI job.
 
-    Неуспешный сценарий остаётся неуспешным. Успешный сценарий по умолчанию не заменяет
-    отсутствующий пресет. Неподдерживаемые сочетания ОС/архитектуры остаются незавершёнными, пока их
-    не выполнит реальный подходящий исполнитель; синтетический PASS не выдаётся.
+    A failed case remains failed. A passing default cannot be substituted for a
+    missing preset. Unsupported OS/arch targets remain incomplete until a
+    real matching worker executes them; no synthetic pass is emitted.
     """
     initial = request_json(
         cfg.backend,
@@ -1299,8 +1299,8 @@ def execute_matrix(cfg, package_id):
             )
             continue
         try:
-            # Отдельные grant/challenge/workdir не позволяют одному успешному запуску
-            # для предотвращения повторного использования с двумя ID целей или двумя разными пресетами.
+            # A separate grant/challenge/workdir prevents one successful run
+            # from being replayed for two target IDs or two different presets.
             grant = (
                 initial
                 if index == 0
@@ -1348,67 +1348,67 @@ def main():
     p.add_argument(
         "--operator-token-file",
         required=True,
-        help="Файл учётных данных только для хоста с правами 0600; передаётся исполнителю",
+        help="0600 host-only credential file; enters worker",
     )
     p.add_argument(
         "--signing-key",
         required=True,
-        help="Ed25519 PKCS8 PEM только для хоста, права доступа 0600",
+        help="Host-only Ed25519 PKCS8 PEM, permission 0600",
     )
     p.add_argument(
-        "--image", required=True, help="Доверенное имя образа с полным закреплённым дайджестом name@sha256:..."
+        "--image", required=True, help="Trusted fully pinned image name@sha256:..."
     )
     p.add_argument("--auth-mode", choices=("official", "custom"), required=True)
     p.add_argument(
-        "--credentials-file", default="", help="Только JSON тестового сеанса Custom-Yggdrasil"
+        "--credentials-file", default="", help="Custom-Yggdrasil test-session JSON only"
     )
     p.add_argument(
         "--official-client-id",
         default="",
-        help="ID выделенного публичного приложения Microsoft",
+        help="Dedicated Microsoft public-client app ID",
     )
     p.add_argument(
         "--official-refresh-token-file",
         default="",
-        help="Авторизованный refresh-токен тестовой учётной записи только на хосте, права 0600",
+        help="Host-only authorized test account refresh token, 0600",
     )
     p.add_argument(
         "--negative-credentials-file",
         default="",
-        help="Отдельный живой сеанс для проверки отзыва Custom",
+        help="Separate live session for custom revocation",
     )
     p.add_argument(
         "--guard-denied-credentials-file",
         default="",
-        help="Настоящий живой сеанс, отклоняемый политикой",
+        help="Real live policy-denied session",
     )
     p.add_argument(
         "--previous-bundle-file",
         required=True,
-        help="Одобренный хостом настоящий ZIP предыдущего подписанного выпуска",
+        help="Host-approved actual previous signed release ZIP",
     )
     p.add_argument(
-        "--previous-sha", required=True, help="SHA-256 пакета предыдущего выпуска"
+        "--previous-sha", required=True, help="SHA-256 of prior-release bundle"
     )
     p.add_argument(
         "--replacement-java-home",
         required=True,
-        help="Одобренный хостом каталог другой версии JDK/JRE",
+        help="Host-approved different JDK/JRE directory",
     )
     p.add_argument(
         "--managed-java-manifest-file",
         required=True,
-        help="Закреплённый манифест промышленного дистрибутива Temurin; архив в том же каталоге",
+        help="Pinned production Temurin distribution manifest; archive in same directory",
     )
     p.add_argument(
         "--managed-java-sha",
         required=True,
-        help="SHA-256 закреплённого манифеста Managed JRE",
+        help="SHA-256 of pinned Managed JRE manifest",
     )
     p.add_argument(
         "--server-bundle-file",
         default="",
-        help="Полный ZIP соответствующего сервера, закреплённый на хосте",
+        help="Host-pinned complete matching server ZIP",
     )
     p.add_argument("--server-sha", default="")
     p.add_argument("--server-entry", default="")
@@ -1422,12 +1422,12 @@ def main():
     p.add_argument(
         "--diagnostics-dir",
         required=True,
-        help="Закрытый диагностический каталог исполнителя с правами 0700 и удалёнными секретами",
+        help="Host-only 0700 redacted worker diagnostic spool",
     )
     p.add_argument("--diagnostics-ttl-hours", type=int, default=168)
     p.add_argument("--engine", choices=("podman",), default="podman")
     p.add_argument(
-        "--package-id", help="Разовая аттестация; не указывать для службы mTLS"
+        "--package-id", help="One-shot attestation; omit for the mTLS service"
     )
     p.add_argument("--listen", default="127.0.0.1:8845")
     p.add_argument("--tls-cert", default="")
@@ -1443,8 +1443,8 @@ def main():
     check(bool(cfg.operator_token), "missing host operator credential")
     check(15 <= cfg.runtime_seconds <= 3600, "invalid runtime deadline")
     check(1 <= cfg.diagnostics_ttl_hours <= 720, "invalid diagnostic retention TTL")
-    # Docker daemon с root-правами делает клиента фактически root на хосте,
-    # включая доступ к ключу подписи. Безусловно отклонять.
+    # A rootful Docker daemon makes its client effectively root on the host,
+    # including access to the signing key. Refuse it unconditionally.
     info = subprocess.run(
         ["podman", "info", "--format", "{{.Host.Security.Rootless}}"],
         stdout=subprocess.PIPE,

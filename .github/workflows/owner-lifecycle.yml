@@ -28,17 +28,17 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Выполнить релиза жизненного цикла против авторизованных API запроса logic
+      - name: Execute release lifecycle against authenticated API request logic
         working-directory: apps/admin
         run: |
           node --experimental-strip-types --test tests/owner-lifecycle-03513.test.mjs tests/release-workspace.test.mjs tests/everyday-lifecycle.test.mjs
-      - name: Установить точного Admin зависимостей, Проверить типы и Собрать промышленной интерфейса
+      - name: Install exact Admin dependencies, typecheck and build production UI
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm run build
           npm test
-      - name: Проверить 54 G/M references остаются исполняемого файла для текущей версии
+      - name: Verify 54 G/M references remain executable for current VERSION
         run: |
           python3 scripts/acceptance/ux_0351.py audit
           python3 -m unittest discover -s scripts/acceptance -p 'test_*.py' -v
@@ -52,12 +52,12 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Запустить подлинные пакета -> подписанного релиза -> отката/API контрольного этапа регрессии
+      - name: Run genuine package -> signed release -> rollback/API gate regression
         working-directory: services/api
         run: |
           go test -tags launcher_nopgx -count=1 -timeout=15m ./internal/httpapi -run 'TestRollbackOperationIdempotency0217|TestCanonicalPackageProductUploadValidatePublish|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213'
           go build -tags launcher_nopgx ./cmd/launcher-api
-      - name: Запустить HTTP-сценарий с авторизацией владельца и игрока в одноразовой среде
+      - name: Run disposable authenticated owner and player HTTP journey
         run: |
           bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/03513-owner-player.json"
       - uses: actions/upload-artifact@v4

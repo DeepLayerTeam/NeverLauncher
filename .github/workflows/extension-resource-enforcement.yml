@@ -29,15 +29,15 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: промышленной Go пакета тесты (реальных зависимостей)
+      - name: Production Go package tests (real dependencies)
         run: go test -race ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
       - name: Статический анализ
         run: go vet ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
-      - name: API интеграции Скомпилировать
+      - name: API integration compile
         run: go build ./...
-      - name: Кросс-компиляция для Windows
+      - name: Windows cross-build
         run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/windowssandbox
-      - name: Кросс-компиляция macOS для ARM64 и AMD64
+      - name: macOS cross-build arm64 and amd64
         run: |
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
@@ -67,6 +67,5 @@ jobs:
           go-version-file: services/api/go.mod
       - run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
       - run: go build ./...
-    # Проверка обхода ограничений дочернего процесса AppContainer, ACL и Job
-    # требует отдельно подготовленных раннеров E2E; успешная компиляция не
-    # доказывает изоляцию средствами ОС.
+    # Actual AppContainer child/ACL/Job bypass checks require separately
+    # provisioned E2E runners; compilation is not proof of OS confinement.

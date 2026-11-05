@@ -39,10 +39,10 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: миграции механизма, SQL интеграции, целевой платформы базовой линии
+      - name: Migration engine, SQL integration, target baseline
         working-directory: services/api
         run: go test -race -count=1 -timeout 5m ./internal/migrationworkflow ./internal/repository ./internal/httpapi -run 'TestMigrationDurability0331|TestMigrationFailureResume0331|TestMigrationTargetSteps0331|TestMigrationStepGate0331'
-      - name: CLI контракта
+      - name: CLI contract
         working-directory: cli
         run: go test -count=1 ./cmd/launcher -run '^TestMigrationWorkflowCLI0331$'
   admin:

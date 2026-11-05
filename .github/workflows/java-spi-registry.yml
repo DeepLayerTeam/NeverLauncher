@@ -33,11 +33,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Скомпилировать SDK и Протестировать жизненного цикла, совместимости и races
+      - name: Compile SDK and exercise lifecycle, compatibility and races
         run: sh sdk/java/core/build.sh test
-      - name: Собрать исполняемое Java-расширение и закреплённые зависимости JAR
+      - name: Build executable Java extension and pinned dependent JAR
         run: sh examples/extensions/java-spi/build.sh
-      - name: реального авторизованных JVM хоста, RPC провайдера switching, CLI и блокировка при ошибке готовности
+      - name: Real authenticated JVM Host, RPC provider switching, CLI and fail-closed readiness
         run: python3 examples/extensions/java-spi/test-runner.py
   extension-package-preflight:
     runs-on: ubuntu-24.04
@@ -54,12 +54,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Собрать реального SPI extension архива
+      - name: Build real SPI extension archive
         run: sh examples/extensions/java-spi/build.sh
-      - name: Запустить существующих locked-JAR предварительной проверки и conflict тесты
+      - name: Run existing locked-JAR preflight and conflict tests
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-spi/build/package/backend/java-spi.jar
         run: go test -race -count=1 ./internal/extensionjava
-      - name: Проверить все канонической релиза метаданных
+      - name: Verify all canonical release metadata
         run: python3 scripts/version/manage.py check

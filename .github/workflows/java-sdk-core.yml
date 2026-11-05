@@ -27,18 +27,18 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Скомпилировать SDK и Запустить Java HTTP-host интеграционные тесты
+      - name: Compile SDK and run Java HTTP-host integration tests
         shell: bash
         run: bash sdk/java/core/build.sh test
-      - name: Скомпилировать реального примера
+      - name: Compile real example
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/java-example"
           javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/java-example" examples/extensions/java-lifecycle/src/ru/example/launcher/LifecycleExample.java
-      - name: Проверить соответствие манифеста поставляемой схеме Extensions
+      - name: Check manifest matches shipping Extensions schema
         shell: bash
         run: python3 -m json.tool examples/extensions/java-lifecycle/launcher-extension.json >/dev/null
-      - name: Проверить produced SDK артефакта
+      - name: Verify produced SDK artifact
         shell: bash
         run: jar tf sdk/java/core/build/launcher-java-sdk-core.jar | grep -q 'ru/launcher/sdk/core/ExtensionRunner.class'
   java-process-e2e:
@@ -53,11 +53,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Собрать данные для подписи и проверить работающий процесс Java-расширения
+      - name: Build signable payload and exercise running Java extension process
         run: |
           sh examples/extensions/java-lifecycle/build.sh
           python3 examples/extensions/java-lifecycle/test-runner.py
-      - name: реального CLI pack, Ed25519 подписи и проверки
+      - name: Real CLI pack, Ed25519 signature and verification
         run: |
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/extension-key.pem"

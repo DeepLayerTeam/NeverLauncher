@@ -29,21 +29,21 @@ jobs:
           go-version-file: services/api/go.mod
           cache: true
           cache-dependency-path: services/api/go.sum
-      - name: версии метаданных
+      - name: Version metadata
         run: python3 scripts/version/manage.py check
-      - name: производительности metrics и bounded бенчмарка тесты на состояние гонки
+      - name: Capacity metrics and bounded benchmark race tests
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/capacity ./cmd/launcher-capacity-bench
           go vet ./internal/capacity ./cmd/launcher-capacity-bench
-      - name: полные API компиляцию и HTTP интеграции (реального зафиксированных зависимостей)
+      - name: Full API compile and HTTP integration (real pinned dependencies)
         working-directory: services/api
         run: |
           go test -run '^TestCanonicalStatusReadyAndMetrics$' -count=1 ./internal/httpapi
           go test -run '^$' ./cmd/launcher-api
           go build -o /tmp/launcher-capacity-bench ./cmd/launcher-capacity-bench
           go build -o /tmp/launcher-api ./cmd/launcher-api
-      - name: Только для чтения бенчмарка rejects unconfirmed выполнения
+      - name: Read-only benchmark rejects unconfirmed execution
         run: |
           if /tmp/launcher-capacity-bench --url http://127.0.0.1:8080/api/v1/status; then
             echo 'FAIL: benchmark ran without --confirm' >&2

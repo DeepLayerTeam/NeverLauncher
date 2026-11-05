@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// Запечатанный сертификат — историческое свидетельство. Эта проверка повторно запрашивает
-// работающий Backend перед финальным продвижением Migration GA, чтобы откат, отзыв
-// или обновлённый список не скрывались за действующей старой подписью.
+// A sealed certificate is historical evidence. This check queries the live
+// backend again before final Migration GA promotion, so a rollback, revocation
+// or revised inventory cannot be hidden by a valid historical signature.
 func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) error {
 	if strings.TrimSpace(token) == "" {
 		return errors.New("live GA check requires a backend token")
@@ -66,8 +66,8 @@ func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) er
 	return nil
 }
 
-// Вызывается только после проверки подписей и всех сохранённых свидетельств. Каждая
-// ссылка имеет отдельный доверенный план и перепроверяется при продвижении.
+// Called only after verifying the signatures and all retained evidence. Every
+// reference has a separate trusted plan and is rechecked at promotion time.
 func verifyCohortLive(ctx context.Context, inputs map[string]CohortInput, plans map[string]string, token string) error {
 	for _, class := range referenceClasses {
 		file := plans[class]
@@ -82,9 +82,9 @@ func verifyCohortLive(ctx context.Context, inputs map[string]CohortInput, plans 
 		if err := decodeStrict(raw, &p); err != nil {
 			return err
 		}
-		// Приватный ключ подписи не нужен для проверки ссылки: его могли
-		// ротировать или удалить после сертификации. Вместо него проверять поля,
-		// которые связывают источник, COMMIT и Backend.
+		// The private signing key is not needed to verify a reference; it may
+		// have been rotated/removed since certification. Validate the fields
+		// that bind the source, commit and backend instead.
 		if p.ReferenceClass != class || !commitHash(p.CommitSHA) || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) {
 			return errors.New("invalid live reference plan")
 		}
@@ -106,8 +106,8 @@ func loadCohortPlanPaths(single, modded, network string) map[string]string {
 	return map[string]string{"fileauth-single": single, "sql-modded": modded, "proxy-network": network}
 }
 
-// Защита от случайного запуска автономной проверки как продвижения GA. Автоматизация
-// оператора использует отдельную команду и должна передать три живых плана.
+// Guard accidental execution of an offline verify as a GA promotion. Operator
+// automation uses this distinct command and must provide three live plans.
 func verifyCohortLiveCommand(ctx context.Context, key string, cohort map[string]CohortInput, planFiles map[string]string) error {
 	if err := verifyCohort(key, cohort); err != nil {
 		return err

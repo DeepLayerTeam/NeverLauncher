@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Восстанавливать проверенные холодные файлы миров/пользователей Minecraft, но никогда — работающие БД.
+"""Restore verified cold Minecraft world/user files, never live DBs.
 
-Работает только после блокирующего этапа operational_rollback_04912.py, когда обе службы записи
-игровых данных замаскированы/остановлены, а входной трафик авторизации и игры в HAProxy закрыт.
-Заменённая папка сохраняется для ручного восстановления. Базы плагинов не согласовываются.
+Only works after operational_rollback_04912.py fence, with both game writer
+services masked/inactive and HAProxy auth/game ingress closed. The replaced
+folder is retained for manual recovery. Does not reconcile plugin databases.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def ensure_dir(path: Path):
 
 
 def entries(root: Path):
-    """Перечислять объекты без перехода по ссылкам; исключать устройства и файлы с жёсткими ссылками."""
+    """Enumerate without following links; no device files or hard-linked files."""
     ensure_dir(root)
     results = []
     total = 0
@@ -142,7 +142,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
     staged = Path(tempfile.mkdtemp(prefix=".never-restoring-", dir=target.parent))
     state = {"format":FORMAT,"runId":run_id,"phase":"staging","target":str(target),
              "retained":str(old),"stage":str(staged),"manifestSha256":co.digest(json.dumps(manifest,sort_keys=True).encode())}
-    # Постоянный журнал до любого изменения целевого объекта.
+    # Durable journal before any mutation of the destination.
     def record(phase):
         state["phase"] = phase
         raw = (json.dumps(state, sort_keys=True) + "\n").encode()
@@ -178,9 +178,9 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
                            "source backup file changed during restore")
             co.require(sha.hexdigest() == item["sha256"], "backup content SHA-256 differs")
         co.require(entries(staged) == files, "staged restore differs from sealed manifest")
-        # Восстановление от root не должно оставлять мир недоступным для чтения
-        # выделенного пользователя игровой службы. Сохранить исходные права владения назначением и
-        # используйте неисполняемые режимы файлов копии; никогда не копируйте биты setuid/sticky.
+        # A root-operated restore must not leave the world unreadable by the
+        # dedicated game service user. Preserve original target ownership and
+        # use non-executable backup file modes; never copy setuid/sticky bits.
         directories = [staged]
         for base, dirs, names in os.walk(staged, followlinks=False):
             for d in dirs:
@@ -195,7 +195,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
                 finally: os.close(fd)
         for p in reversed(directories):
             os.chown(p, owner.st_uid, owner.st_gid)
-            # Игровой аккаунт должен иметь возможность пройти по своему каталогу мира.
+            # The game account must traverse its own world directory.
             mode = (owner.st_mode & 0o777) | 0o700
             os.chmod(p, mode)
             fd = os.open(p, os.O_RDONLY | getattr(os,"O_DIRECTORY",0))
@@ -215,7 +215,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
         co.require(entries(target) == files, "post-restore data checksum mismatch: keep traffic closed")
         record("verified_installed")
     except BaseException:
-        # Сбой во время окна rename восстанавливается по сохранённой старой папке.
+        # A crash in the rename window is recoverable using the retained old folder.
         if not target.exists() and old.is_dir() and not old.is_symlink():
             os.replace(old, target)
             record("restored_previous_after_failure")
@@ -223,8 +223,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
 
 
 def recover(target: Path, manifest: dict, directory: Path, run_id: str):
-    """После прерывания процесса или питания согласовывать устойчивый журнал переименований; никогда не
-перезаписывать данные."""
+    """Reconcile durable rename journal after kill/power loss; never overwrite data."""
     files = validate_manifest(manifest, run_id)
     journal = directory / "file-restore-state.json"
     state = co.document(journal, 16384)
@@ -239,8 +238,8 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
     co.require(stage.is_absolute() and stage.parent == target.parent and
                stage.name.startswith(".never-restoring-"), "unsafe staged restore path")
     phase = state.get("phase")
-    # Файл .next после убитого процесса не является авторитетным; старый
-    # атомарно заменённый журнал — последнее долговременное состояние. Отклонять ссылки.
+    # A .next file left by a killed process is not authoritative; the old
+    # atomically replaced journal is the last durable state. Reject links.
     nextfile = journal.with_name(journal.name + ".next")
     if nextfile.exists() or nextfile.is_symlink():
         st = nextfile.lstat()

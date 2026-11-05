@@ -32,19 +32,19 @@ jobs:
         with: {go-version-file: cli/go.mod}
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: версии и нативного parity проверки
+      - name: Version and native parity checks
         run: |
           python3 scripts/version/manage.py check
           (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run 'TestAudit0301|TestAudit0302PinnedBaseline|TestModuleParityCLI0301|TestModuleParity03011')
           (cd cli && go vet ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
-      - name: все модулей have реального источников и запускаемого тестировать подтверждений
+      - name: All modules have real sources and runnable test evidence
         run: |
           mkdir -p parity-reports
           "$RUNNER_TEMP/nl" module-parity audit --report parity-reports/03011.json
-      - name: Выполнить новых equivalents независимо (не generic пакета success)
+      - name: Execute new equivalents independently (not generic package success)
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --module M02,M04,M13,M14,M15,M17,M18,M19 --run-tests --require-tests --timeout 120s --report parity-reports/new-equivalents.json
-      - name: Запретить отмечать намеренно небезопасные исключения командной политики как подтверждённые
+      - name: Intentional unsafe-command policy exception cannot be marked verified
         run: |
           if "$RUNNER_TEMP/nl" module-parity audit --require-full-parity --report parity-reports/uncertified.json; then
             echo 'Full equivalence must not be claimed without module-specific certification' >&2
@@ -64,17 +64,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm, cache-dependency-path: apps/desktop/package-lock.json}
-      - name: Asset и prewarm тесты
+      - name: Asset and prewarm tests
         run: |
           node --test scripts/desktop/prebuild_assets_03011.test.mjs
           node --experimental-strip-types --test scripts/desktop/startup_prewarmer_03011.test.mjs
-      - name: Промышленная сборка Vite с разделением кода и индексом ресурсов
+      - name: Production Vite code splitting + asset index
         working-directory: apps/desktop
         run: |
           npm ci --ignore-scripts
           npm run build
           npm run verify:assets
-      - name: Подтвердить существование модулей с отложенной загрузкой
+      - name: Prove that lazy chunks exist
         shell: bash
         run: |
           node - <<'NODE'

@@ -47,11 +47,11 @@ jobs:
       - run: python3 scripts/contracts/validate-openapi.py
       - run: python3 scripts/version/manage.py check
 
-      - name: Проверить реального оператора document links и исполняемого файла путей
+      - name: Check real operator document links and executable paths
         run: python3 scripts/operations/operator_accept_04513.py docs-check
-      - name: Протестировать только для чтения оператора приёмки и отказа случаев
+      - name: Exercise read-only operator acceptance and failure cases
         run: python3 -m unittest scripts/operations/test_operator_accept_04513.py -v
-      - name: Проверить работоспособность реальных эксплуатационных точек входа
+      - name: Verify actual operational entrypoints are callable
         run: |
           python3 scripts/install/production-deploy.py compose --help
           python3 scripts/install/minimal-install.py --help
@@ -59,7 +59,7 @@ jobs:
           python3 scripts/operations/db_upgrade_0457.py --help
           python3 scripts/operations/component_upgrade_0458.py --help
           python3 scripts/operations/observability_0459.py --help
-      - name: Независимые регрессионные проверки оркестрации реальных команд оператора (без ложного прохождения Docker)
+      - name: Independent operator real-command orchestration regressions (no fake Docker pass)
         run: |
           PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_independent_accept_04514.py -v
           python3 scripts/operations/independent_accept_04514.py --help

@@ -23,15 +23,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: реального валидации logic и вредоносных подтверждений регрессии
+      - name: Real validation logic and hostile evidence regressions
         run: python3 scripts/guard_ci/test_adversarial_pilot_05012.py
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Скомпилировать и Протестировать реального сервера shadow journal
+      - name: Compile and exercise actual server shadow journal
         working-directory: services/api/internal/httpapi
         run: go test guard_shadow_05012.go guard_shadow_05012_test.go -count=1 -v
-      - name: Скомпилировать сервера пульса интеграции using всего API пакета
+      - name: Compile server heartbeat integration using full API package
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestGuardShadow05012|TestServerBoundGuard0507' -count=1 -timeout=15m
   actual-jvm-adversarial:
@@ -59,10 +59,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Установить Linux нативного библиотеки тестировать предварительных условий
+      - name: Install Linux native library test prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential
-      - name: Запустить поддерживаемых JVM атакующих наборов с captured подтверждений
+      - name: Run supported JVM adversarial suites with captured evidence
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then

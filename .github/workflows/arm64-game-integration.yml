@@ -44,13 +44,13 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Нативные зависимости Desktop/Tauri для Linux
+      - name: Linux native Desktop/Tauri prerequisites
         if: runner.os == 'Linux'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
-      - name: Проверить фактического исполнителя архитектуры
+      - name: Verify actual runner architecture
         shell: bash
         env:
           EXPECTED_ARCH: ${{ matrix.arch }}
@@ -60,7 +60,7 @@ jobs:
           test "$(go env GOOS)" = "$EXPECTED_OS" || { echo 'FAIL: wrong native operating system'; exit 1; }
           test "$(go env GOARCH)" = "$EXPECTED_ARCH" || { echo 'FAIL: emulated or wrong native architecture'; exit 1; }
           test "$(rustc -vV | sed -n 's/^host: //p')" = "$(python3 -c 'import os; o=os.getenv("EXPECTED_OS"); a=os.getenv("EXPECTED_ARCH"); print(("aarch64" if a=="arm64" else "x86_64") + "-" + ("pc-windows-msvc" if o=="windows" else "unknown-linux-gnu" if o=="linux" else "apple-darwin"))')" || { echo 'FAIL: Rust host is not native target'; exit 1; }
-      - name: Go нативного игры factory и загрузчика тесты
+      - name: Go native game factory and loader tests
         working-directory: cli
         shell: bash
         run: |
@@ -69,20 +69,20 @@ jobs:
           mkdir -p ../dist/arm64-native-check
           SUFFIX=''; test '${{ matrix.os }}' != windows || SUFFIX='.exe'
           go build -trimpath -o "../dist/arm64-native-check/launcher${SUFFIX}" ./cmd/launcher
-      - name: Проверить Managed Java нативного machine и метаданных разрешения
+      - name: Verify Managed Java native machine and metadata resolution
         shell: bash
         run: |
           set -euo pipefail
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib native_managed_java_machine_checks_cover_all_arm64_targets -- --nocapture
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib arm64_native_artifact_resolves_to_natives_not_classpath -- --nocapture
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib unknown_or_foreign_native_classifiers_never_enter_arm64_game -- --nocapture
-      - name: Собрать реального Guard и Runtime (нативного)
+      - name: Build real Guard and Runtime (native)
         shell: bash
         run: |
           set -euo pipefail
           cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib game_guard_lifetime_0438 -- --nocapture
-      - name: Собрать нативный Desktop и Frontend
+      - name: Build native Desktop and frontend
         shell: bash
         run: |
           set -euo pipefail
@@ -91,7 +91,7 @@ jobs:
           npm run build
           cd ../..
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml --bin launcher-desktop
-      - name: Отклонить отсутствующих нативного компонента бинарных файлов
+      - name: Reject missing native component binaries
         shell: bash
         run: |
           set -euo pipefail

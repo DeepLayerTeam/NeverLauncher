@@ -36,15 +36,15 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Модульные тесты нативной проверки учётных записей
+      - name: Native account verification unit tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_verification_0266::tests
-      - name: нативного провайдера HTTP тестовых данных тесты
+      - name: Native provider HTTP fixture tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests
-      - name: нативного идентичности совместимости тесты
+      - name: Native identity compatibility tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
       - name: Компиляция Rust
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: интерфейса регрессии и промышленной пакета
+      - name: Renderer regressions and production bundle
         working-directory: apps/desktop
         run: |
           npm ci

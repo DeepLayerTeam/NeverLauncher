@@ -26,14 +26,14 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Java SDK 17/21 Runtime регрессии
+      - name: Java SDK 17/21 runtime regression
         shell: bash
         run: sh sdk/java/core/build.sh test
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27.3'
           cache-dependency-path: services/api/go.sum
-      - name: Java хоста разрешения, scratch, budgets и обезличивания регрессии
+      - name: Java Host permission, scratch, budgets and redaction regressions
         shell: bash
         working-directory: services/api
         run: go test -count=1 -run 'TestJava.*04811' ./internal/extensionhost
@@ -45,6 +45,6 @@ jobs:
         with:
           go-version: '1.27.3'
           cache-dependency-path: services/api/go.sum
-      - name: Extension хоста интеграции и гонок
+      - name: Extension Host integration and race
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity ./internal/extensionbroker

@@ -17,9 +17,9 @@ import (
 	"strings"
 )
 
-// Дисковое сравнение независимо изолированных снимков Minecraft-проектов.
-// Оба корня должны содержать world/, plugins/ и player-uuids.txt. Аудитор
-// читает реальные байты; хеши от вызывающего не могут скрыть несовпадающие данные.
+// An on-disk comparison of independently fenced Minecraft project snapshots.
+// Both roots must contain world/, plugins/ and player-uuids.txt. The auditor
+// reads actual bytes; caller-supplied hashes cannot make mismatched data pass.
 const stateAuditFormat = "never/gravit-state-audit/v1"
 const stateMaxFiles = 150000
 const stateMaxBytes int64 = 1 << 40
@@ -38,7 +38,7 @@ type StateAudit struct {
 	TargetUUIDs        []string `json:"targetUuids"`
 	WorldFiles         int      `json:"worldFiles"`
 	PluginFiles        int      `json:"pluginFiles"`
-	// Исключения строго ограничены временным файлом блокировки Minecraft.
+	// Exclusions are explicitly bounded to Minecraft's transient lock file.
 	Excluded []string `json:"excluded"`
 }
 
@@ -82,7 +82,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		}
 		paths = append(paths, rel)
 		if len(paths) > stateMaxFiles {
-			return errors.New("Слишком много файлов снимка")
+			return errors.New("too many snapshot files")
 		}
 		return nil
 	})
@@ -124,7 +124,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		if err != nil || statErr != nil || closeErr != nil || n != before.Size() || after.Size() != before.Size() || !after.ModTime().Equal(before.ModTime()) {
 			return result, fmt.Errorf("snapshot file changed during audit: %s", rel)
 		}
-		// Стабильное кадровое кодирование исключает коллизии конкатенации path+content.
+		// Stable framed encoding prevents path+content concatenation collisions.
 		pathBytes := []byte(filepath.ToSlash(rel))
 		if err = binary.Write(h, binary.BigEndian, uint32(len(pathBytes))); err != nil {
 			return result, err
@@ -275,9 +275,9 @@ func executeStateAudit(source, target, output string) error {
 	return writePrivate(output, append(raw, '\n'))
 }
 
-// validateStateAuditEvidence не даёт квитанции просто заявить
-// равные дайджесты, оставив в свидетельствах посторонний открытый текст.
-// Подписанная квитанция должна совпадать с реальным структурированным результатом аудита на диске.
+// validateStateAuditEvidence prevents a check receipt from merely asserting
+// equal digests while retaining unrelated plaintext as its evidence. The
+// signed receipt must match the actual structured on-disk audit output.
 func validateStateAuditEvidence(data []byte, probe Probe) error {
 	var a StateAudit
 	if err := decodeStrict(data, &a); err != nil {
@@ -306,9 +306,9 @@ func validateStateAuditEvidence(data []byte, probe Probe) error {
 	return nil
 }
 
-// Повторно прочитать исходные замороженные снимки после *всех* проб и снова при живом
-// продвижении GA. Поздние тесты не должны незаметно менять ранее одобренное
-// состояние игроков, мира или плагинов, сохраняя действующую историческую квитанцию.
+// Re-read original frozen snapshots after *all* probes and again at live GA
+// promotion. Later tests must not silently mutate the previously approved
+// player, world, or plugin state while leaving a historical receipt intact.
 func ensureSnapshotStillMatches(p Plan, evidenceDir string) error {
 	expectedBytes, err := checkPrivateRegular(filepath.Join(evidenceDir, "uuid-world-plugin-data.evidence"), maxDocument)
 	if err != nil {

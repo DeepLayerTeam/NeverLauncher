@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Выполнить настоящую миграцию учётных записей, секретов и доверия Gravit через работающий API.
+"""Run the real Gravit identity/credential/trust migration against a live API.
 
-Предусловия: уже подготовленный запуск миграции с сохранённой инвентаризацией ZIP Gravit (и
-PostgreSQL). Утилита никогда не десериализует верификаторы паролей, не принимает сеансы Gravit и не
-импортирует роль администратора Gravit. Для ролей нужны индивидуально одобренные сопоставления и
-действующий токен администратора, аутентифицированный passkey.
+Preconditions: an existing prepared migration run with persisted Gravit ZIP
+inventory (and PostgreSQL). This tool never deserializes password verifiers,
+accepts Gravit sessions, or imports a Gravit administrator role. Roles require
+an individually approved mapping and a current passkey-authenticated admin token.
 """
 import argparse
 import hashlib
@@ -52,8 +52,7 @@ def canonical_uuid(value):
 
 
 def role_plan(path, imported, users):
-    """Требовать явного одобрения для каждого UUID; не повышать привилегии уже сопоставленных пользователей
-NeverLauncher."""
+    """Require explicit per-UUID approval; never elevate matched Never users."""
     if not path:
         return []
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -90,7 +89,7 @@ NeverLauncher."""
 
 
 class NoRedirect(HTTPRedirectHandler):
-    """Перенаправленный Bearer-запрос иначе может раскрыть токен оператора."""
+    """A redirected Bearer request could otherwise disclose the operator token."""
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
 
@@ -118,7 +117,7 @@ class Backend:
                         raise MigrationError("unexpected Backend response status")
                     raw = resp.read(MAX_RESPONSE + 1)
             except HTTPError as exc:
-                # НЕ выводить тело ошибки сервера (может содержать секреты).
+                # Do NOT echo a server error body (may contain secrets).
                 raise MigrationError("Backend rejected %s %s (HTTP %d)" % (method, path, exc.code)) from None
             except (OSError, URLError) as exc:
                 raise MigrationError("Backend transport error: %s" % type(exc).__name__) from None
@@ -180,7 +179,7 @@ def atomic_receipt(target, receipt):
             out.write("\n")
             out.flush()
             os.fsync(out.fileno())
-        os.link(temporary, output)  # не перезаписывать данные при конкурирующем действии другого оператора
+        os.link(temporary, output)  # no overwrite when another operator races
         os.unlink(temporary)
     finally:
         if os.path.exists(temporary):
@@ -255,15 +254,15 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--backend", required=True, help="HTTPS-адрес работающего API NeverLauncher")
+    p.add_argument("--backend", required=True, help="HTTPS origin of running NeverLauncher API")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-zip", required=True)
     p.add_argument("--mode", choices=["prepare", "import"], default="prepare")
-    p.add_argument("--password-format", default="", help="Явно поддерживаемый формат верификатора FileAuth")
+    p.add_argument("--password-format", default="", help="explicit supported FileAuth verifier format")
     p.add_argument("--allow-manual-resets", action="store_true")
-    p.add_argument("--fresh-keys-confirmed", action="store_true", help="Оператор подтверждает независимо предоставленные ключи подписи/JWT Never")
-    p.add_argument("--roles-file", help="Одобренные явные назначения ролей UUID->project (только импорт, требуется свежая passkey MFA)")
-    p.add_argument("--texture-mapping-output", help="Проверенная карта UUID для gravit-textures-import-02510 (только импорт)")
+    p.add_argument("--fresh-keys-confirmed", action="store_true", help="operator confirms independently provisioned Never signing/JWT keys")
+    p.add_argument("--roles-file", help="approved explicit UUID->project role grants (import only, recent passkey MFA required)")
+    p.add_argument("--texture-mapping-output", help="verified UUID map for gravit-textures-import-02510 (import only)")
     p.add_argument("--receipt", required=True)
     args = p.parse_args(argv)
     if not RUN_ID.fullmatch(args.run_id):
@@ -277,7 +276,7 @@ def main(argv=None):
         result = migrate(Backend(args.backend, token), args.run_id, args.source_zip, args.mode, args.password_format, args.allow_manual_resets, args.roles_file, args.texture_mapping_output)
         atomic_receipt(args.receipt, result)
     except (MigrationError, OSError, ValueError, KeyError) as exc:
-        # Никогда не выводить хеши паролей, токены, тела ответов или исходные пути.
+        # Never print password hashes, tokens, response bodies or source paths.
         print("migration failed (%s)" % type(exc).__name__, file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))

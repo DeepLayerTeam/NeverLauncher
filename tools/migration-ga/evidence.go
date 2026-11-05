@@ -17,9 +17,9 @@ import (
 	"strings"
 )
 
-// Свидетельства не заменяют настоящие проверки Minecraft и БД. Это
-// точный сохранённый результат таких проверок, который можно независимо проверить даже после
-// завершения процесса сертификации.
+// Evidence is not a substitute for real Minecraft and database checks. It is
+// the exact, durable output they produced, independently re-verifiable after
+// the process that performed certification has exited.
 func verifyExecutable(c Check) error {
 	info, err := os.Lstat(c.Command[0])
 	if err != nil {
@@ -152,8 +152,8 @@ func verifyEvidence(b Bundle, dir string) error {
 		if err = decodeStrict(raw, &probe); err != nil {
 			return err
 		}
-		// Сертификат подписывает каноническую нормализованную квитанцию, а не завершающие
-		// пробелы или форматирование под контролем оператора.
+		// The certificate signs the canonical normalized receipt, not trailing
+		// whitespace or operator-controlled formatting.
 		canonical, err := json.Marshal(probe)
 		if err != nil {
 			return err
@@ -168,7 +168,7 @@ func verifyEvidence(b Bundle, dir string) error {
 		}
 		sum, err := shaFile(evidence, 128<<20)
 		if err != nil || sum != check.EvidenceSHA256 {
-			return fmt.Errorf("Несоответствие: %s свидетельство SHA-256", check.Name)
+			return fmt.Errorf("%s evidence SHA-256 mismatch", check.Name)
 		}
 		if check.Name == "uuid-world-plugin-data" {
 			auditRaw, readErr := os.ReadFile(evidence)
@@ -183,7 +183,7 @@ func verifyEvidence(b Bundle, dir string) error {
 			sort.Strings(source)
 			sort.Strings(target)
 			if !bytes.Equal([]byte(strings.Join(source, "\n")), []byte(strings.Join(target, "\n"))) {
-				return errors.New("Несоответствие: source/target UUID")
+				return errors.New("source/target UUID mismatch")
 			}
 			for i, id := range source {
 				if id == "" || (i > 0 && id == source[i-1]) {
@@ -215,7 +215,7 @@ func loadTrustedKey(filename string) (ed25519.PublicKey, error) {
 	}
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
-		return nil, errors.New("Требуемый формат для доверенный ключ: Ed25519")
+		return nil, errors.New("trusted key must be Ed25519")
 	}
 	return pub, nil
 }
@@ -230,9 +230,9 @@ func readCertificate(filename string) (Bundle, error) {
 	return cert, err
 }
 
-// Один оператор не может объявить всю инфраструктуру мигрированной, проверив только
-// самый простой сервер. Для каждой обязательной ссылки нужна собственная подписанная квитанция и все
-// 13 реальных проверок; проекты и исходные архивы должны действительно различаться.
+// One operator cannot declare the whole fleet migrated by testing only the
+// easiest server. Each required reference has its own signed receipt and all
+// 13 real checks; projects and source archives must be genuinely distinct.
 func verifyCohort(keyFile string, cohort map[string]CohortInput) error {
 	public, err := loadTrustedKey(keyFile)
 	if err != nil {

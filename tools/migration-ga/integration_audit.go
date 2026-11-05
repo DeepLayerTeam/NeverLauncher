@@ -17,11 +17,11 @@ import (
 	"time"
 )
 
-// LiveIntegrationAudit0491 намеренно НЕ продвигает состояние миграции проекта.
-// Он проверяет согласованность реальной строки PostgreSQL, аутентифицированного Go
-// API и *настоящего RPC-ответа* установленного Java Host. Одной успешной
-// готовности API /ready или кэшированного heartbeat супервизора недостаточно.
-// SQL-транзакция выполняется только для чтения, в том числе в production.
+// LiveIntegrationAudit0491 intentionally does NOT take a project's migration
+// state forward. It verifies that the live PostgreSQL row, authenticated Go
+// API and a *real RPC response* from an installed Java Host agree. A successful
+// API /ready or cached supervisor heartbeat alone cannot satisfy this check.
+// The SQL transaction is read-only, including on production installations.
 type LiveIntegrationAudit0491 struct {
 	Format                 string    `json:"format"`
 	CheckedAt              time.Time `json:"checkedAt"`
@@ -50,15 +50,15 @@ var auditIdentifier0491 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}
 
 func integrationAuditCommand0491(args []string) error {
 	fs := flag.NewFlagSet("integration-audit", flag.ContinueOnError)
-	backend := fs.String("backend", "", "HTTPS-адрес источника Backend (или числовой loopback HTTP)")
-	project := fs.String("project", "", "Идентификатор существующего проекта")
-	run := fs.String("run", "", "Идентификатор существующего запуска миграции Gravit")
-	extension := fs.String("extension", "", "Идентификатор установленного работающего расширения Java Host")
-	scope := fs.String("scope", "global", "global или project")
-	scopeID := fs.String("scope-id", "", "Идентификатор проекта для расширения с областью действия project")
-	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN PostgreSQL")
-	psql := fs.String("psql", "psql", "Путь к исполняемому файлу psql")
-	output := fs.String("output", "", "Новый приватный JSON-файл свидетельств")
+	backend := fs.String("backend", "", "HTTPS Backend origin (or numeric loopback HTTP)")
+	project := fs.String("project", "", "existing project ID")
+	run := fs.String("run", "", "existing Gravit migration run ID")
+	extension := fs.String("extension", "", "installed running Java Host extension ID")
+	scope := fs.String("scope", "global", "global or project")
+	scopeID := fs.String("scope-id", "", "project ID for a project-scoped extension")
+	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "environment variable containing PostgreSQL DSN")
+	psql := fs.String("psql", "psql", "path to psql executable")
+	output := fs.String("output", "", "new private JSON evidence file")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -81,9 +81,9 @@ func validAuditScope0491(s, scopeID, project string) bool {
 	return s == "project" && scopeID == project
 }
 
-// psql вызывается без shell и DSN в argv. libpq получает DSN через
-// PGDATABASE. SQL содержит только запросы чтения и безопасно экранированные
-// идентификаторы, без изменения схемы, временных таблиц или прав записи.
+// psql is invoked without a shell or DSN in argv. libpq receives the DSN via
+// PGDATABASE. The submitted SQL has only read-only statements and safely quoted
+// identifiers, with no schema changes, temporary tables or write privileges.
 func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) (pgAudit0491, string, error) {
 	var record pgAudit0491
 	exe, err := exec.LookPath(opts.PSQL)
@@ -92,7 +92,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 	}
 	executableSHA, err := shaFile(exe, 256<<20)
 	if err != nil {
-		return record, "", fmt.Errorf("Не удалось подтвердить подлинность исполняемого файла psql: %w", err)
+		return record, "", fmt.Errorf("cannot authenticate psql executable: %w", err)
 	}
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 	sql := `BEGIN READ ONLY;\nSELECT json_build_object(\n` +
@@ -101,7 +101,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 		`'migration',(SELECT row_to_json(m) FROM (SELECT id,project_id,source_kind,status,step,revision FROM migration_runs_0331 WHERE id=` + quote(opts.Run) + `) m),` +
 		`'extension',(SELECT row_to_json(e) FROM (SELECT extension_id,scope,scope_id,current_version,current_state,generation,enabled FROM extension_installs WHERE extension_id=` + quote(opts.Extension) + ` AND scope=` + quote(opts.Scope) + ` AND scope_id=` + quote(opts.ScopeID) + `) e)` +
 		`)::text;\nCOMMIT;\n`
-	// Настоящие переводы строк, а не экранированные SQL-литералы.
+	// Real newlines, not escaped SQL string literals.
 	sql = strings.ReplaceAll(sql, `\n`, "\n")
 	cmd := exec.CommandContext(ctx, exe, "--no-psqlrc", "--quiet", "--tuples-only", "--no-align", "--set=ON_ERROR_STOP=1")
 	cmd.Stdin = strings.NewReader(sql)
@@ -128,8 +128,8 @@ func withoutPostgresEnvironment0491(env []string, opts liveIntegrationOptions049
 	out := make([]string, 0, len(env))
 	for _, v := range env {
 		key, value, _ := strings.Cut(v, "=")
-		// Не передавать bearer авторизации API или вторую копию
-		// учётных данных PostgreSQL внешнему клиентскому процессу.
+		// Do not forward the API authorization bearer or a second copy of
+		// PostgreSQL credentials to the external client process.
 		if strings.HasPrefix(key, "PG") || strings.HasPrefix(key, "LAUNCHER_MIGRATION_GA_") || key == "LAUNCHER_POSTGRES_DSN" || value == opts.Token || value == opts.DSN {
 			continue
 		}
@@ -187,8 +187,8 @@ type hostProbe0491 struct {
 }
 
 func auditGet0491(ctx context.Context, client *http.Client, endpoint, token string, out any) error {
-	// Существующие ответы Backend несут дополнительные версионированные поля. Сохранить
-	// проверку оболочки ответа, затем декодировать только известную проекцию аудита.
+	// Existing Backend responses carry additional versioned fields. Preserve
+	// envelope verification, then decode the known audit projection only.
 	var raw json.RawMessage
 	if err := getJSON(ctx, client, endpoint, token, &raw); err != nil {
 		return err
@@ -248,7 +248,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return errors.New("invalid scope, PostgreSQL DSN or admin token")
 	}
 	client := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	// Готовность Backend должна включать действующий ping PostgreSQL и состояние схемы.
+	// Backend readiness must include a live PostgreSQL ping and schema status.
 	var ready struct {
 		Status     string            `json:"status"`
 		Version    string            `json:"version"`
@@ -305,8 +305,8 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	if !probe.Java.Responsive || probe.Java.State != "RUNNING" {
 		return errors.New("Java JVM did not acknowledge a live RUNNING RPC")
 	}
-	// Повторно прочитать оба независимых хранилища после выполнения JVM. Параллельная
-	// миграция или обновление расширения не должны заверять устаревший межсистемный результат.
+	// Re-read both independent stores after JVM execution. A concurrent
+	// migration or extension update must not seal a stale cross-system result.
 	pgAfter, _, err := postgresSnapshot0491(ctx, opts)
 	if err != nil {
 		return err
@@ -328,7 +328,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	if err != nil {
 		return err
 	}
-	// При ошибке аудита никогда не создавать аттестацию или частичный файл PASS.
+	// A failed audit never emits an attestation or a partial PASS file.
 	if err = writePrivate(opts.Output, append(data, '\n')); err != nil {
 		return err
 	}
@@ -337,7 +337,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 }
 func matchIntegrationSnapshot0491(opts liveIntegrationOptions0491, run migrationAuditRun0491, pg pgAudit0491, host hostAudit0491) error {
 	if pg.Migration == nil || pg.Extension == nil {
-		return errors.New("Неполные данные: PostgreSQL migration/extension состояние")
+		return errors.New("incomplete PostgreSQL migration/extension state")
 	}
 	m, e := pg.Migration, pg.Extension
 	if m.ID != run.ID || m.ProjectID != run.ProjectID || m.SourceKind != run.SourceKind || m.Status != run.Status || m.Step != run.Step || m.Revision != run.Revision {

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Точный утверждённый 40-символьный коммит (защищённая среда)
+        description: Exact approved 40-character commit (protected environment)
         type: string
         required: true
 
@@ -37,9 +37,8 @@ jobs:
           python scripts/version/manage.py check
 
   build:
-    # Требуются два действительно независимых запуска нативного компилятора и
-    # цепочки инструментов, а не два отчёта о контрольных суммах из одного
-    # каталога сборки.
+    # Real independent native compiler/toolchain executions, not two checksum
+    # reports manufactured from a single build directory.
     if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [regression]
     environment: production-acceptance
@@ -80,7 +79,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Проверить Очистить неизменяемых исходников и зафиксированных зависимостей
+      - name: Verify clean immutable source and pinned dependencies
         env:
           EXPECTED_SHA: ${{ inputs.source_commit }}
         shell: bash
@@ -91,13 +90,13 @@ jobs:
           test "$(cat VERSION)" = 0.53.0
           git diff --exit-code HEAD --
           git diff --cached --exit-code HEAD --
-      - name: Установить Linux нативного Собрать зависимостей
+      - name: Install Linux native build dependencies
         if: startsWith(matrix.target, 'linux')
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
-      - name: нативного исполняемого файла компиляции и deterministic неподписанной упаковки
+      - name: Native executable compilation and deterministic unsigned packaging
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
@@ -140,7 +139,7 @@ jobs:
           pattern: unsigned-05212-${{ matrix.builder }}-*-${{ inputs.source_commit }}
           path: dist/unsigned-capture
           merge-multiple: true
-      - name: Повторно открыть настоящие архивы и подписать наблюдение по всем шести платформам
+      - name: Reopen real archives and sign complete six-target observation
         env:
           BUILDER: ${{ matrix.builder }}
           SOURCE_SHA: ${{ inputs.source_commit }}
@@ -201,7 +200,7 @@ jobs:
         with:
           name: independent-05212-builder-b-${{ inputs.source_commit }}
           path: dist/b-receipt
-      - name: Независимо закрепить публичные ключи и повторно вычислить хеш каждого файла архива
+      - name: Independently pin public keys and rehash every archive member
         env:
           A_PUBLIC: ${{ vars.LAUNCHER_REPRO_BUILDER_A_PUBLIC_KEY_PEM }}
           B_PUBLIC: ${{ vars.LAUNCHER_REPRO_BUILDER_B_PUBLIC_KEY_PEM }}

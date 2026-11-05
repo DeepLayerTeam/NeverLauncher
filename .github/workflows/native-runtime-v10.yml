@@ -1,5 +1,4 @@
-# Только наблюдательное исполнение на разных платформах. НИКОГДА не содержит ключ
-# подписи аттестации.
+# Observational cross-platform execution. NEVER holds an attestation signing key.
 name: V10 — подготовленный нативный Runtime (Windows Linux macOS)
 on:
   workflow_call:
@@ -11,21 +10,21 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: ID неизменяемого подготовленного пакета
+        description: Immutable staged package ID
         required: true
         type: string
       os:
-        description: ОС выделенного собственного агента
+        description: OS of dedicated self-hosted worker
         required: true
         type: choice
         options: [linux, windows, macos]
       arch:
-        description: Архитектура выделенного собственного агента
+        description: Architecture of dedicated self-hosted worker
         required: true
         type: choice
         options: [amd64, arm64]
       mode:
-        description: Headless — только установка подписанных байтов, GUI — полный реальный сценарий
+        description: Headless = signed-byte installation only, GUI = complete real scenario
         required: true
         type: choice
         options: [headless, gui]
@@ -33,8 +32,7 @@ permissions:
   contents: read
 jobs:
   native-observation:
-    # Возможности обозначены явно; обычная размещённая VM не считается способной
-    # запускать GUI.
+    # Explicit capability labels; a generic hosted VM is not assumed GUI-capable.
     runs-on: ${{ fromJSON(format('["self-hosted","nl-validation","nl-{0}","nl-{1}","nl-{2}"]', inputs.os, inputs.arch, inputs.mode)) }}
     timeout-minutes: 180
     environment: runtime-validation-staging
@@ -53,18 +51,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Установить нативного GUI Проверить зависимостей
+      - name: Install native GUI probe dependencies
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check 'psutil>=6,<9' 'Pillow>=11,<13' 'glfw>=2.7,<3' 'PyOpenGL>=3.1,<4' 'pynput>=1.7,<2'
           if [[ '${{ inputs.os }}' == macos ]]; then python -m pip install 'pyobjc-framework-Quartz>=10,<14'; fi
-          # Для Linux GUI необходимы заранее установленные xwininfo, xprop, scrot,
-          # identify, tesseract, glxinfo, xdotool и рабочая переменная DISPLAY.
+          # Linux GUI runners require pre-provisioned xwininfo, xprop,
+          # scrot, identify, tesseract, glxinfo, xdotool and a working DISPLAY.
           python e2e/scripts/test_runtime_capabilities_03410.py
           python e2e/scripts/test_staged_readiness_0343.py
           python e2e/scripts/test_staged_matching_0344.py
-      - name: Собрать промышленной CLI и Runtime (не the игры)
+      - name: Build production CLI and Runtime (not the game)
         shell: bash
         run: |
           set -euo pipefail
@@ -73,7 +71,7 @@ jobs:
           (cd cli && go build -o "$RUNNER_TEMP/nl-v10-tools/launcher${SUFFIX}" ./cmd/launcher)
           cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
           cp "runtime/runtime/target/release/runtime${SUFFIX}" "$RUNNER_TEMP/nl-v10-tools/runtime${SUFFIX}"
-      - name: Выполнить реального промежуточного пакета и export только обезличенных наблюдений
+      - name: Execute real staged package and export only redacted observations
         shell: bash
         env:
           BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
@@ -147,7 +145,7 @@ jobs:
           name: v10-native-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.mode }}-${{ github.run_id }}
           if-no-files-found: ignore
           path: ${{ runner.temp }}/nl-v10-reports/*.json
-      - name: Очистить артефактов на постоянного воркера
+      - name: Clean artifacts on persistent worker
         if: always()
         shell: bash
         run: |

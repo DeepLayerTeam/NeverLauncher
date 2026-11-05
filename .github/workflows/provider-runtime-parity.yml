@@ -69,15 +69,15 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить промышленной Go форматирования
+      - name: Verify production Go formatting
         run: test -z "$(gofmt -l pkg/authconnector internal/httpapi/mfa_login_117.go internal/httpapi/oidc_flow_115.go internal/httpapi/admin_handlers.go internal/httpapi/*0296*.go)"
-      - name: Собрать реального Backend и CLI
+      - name: Build real Backend and CLI
         run: go build ./cmd/...
-      - name: Запустить регрессионные тесты подписанной авторизации HTTP/OIDC/Microsoft и Runtime API
+      - name: Run signed HTTP/OIDC/Microsoft and runtime API authentication regressions
         run: go test -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation ./internal/httpapi ./internal/repository
-      - name: Проверить надёжность провайдера и жизненный цикл учётных данных с детектором гонок
+      - name: Check provider assurance and credential lifecycle with race detector
         run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpapi ./internal/federation -run '0296|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestHTTPLoginUsesRegisteredExternalConnector112|TestFederationE2E01110CanonicalSessionMatrix'
-      - name: реальные SQL/PostgreSQL MySQL MariaDB устаревшего сопоставления входа
+      - name: Live SQL/PostgreSQL MySQL MariaDB legacy mapping login
         env:
           LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
           LAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false

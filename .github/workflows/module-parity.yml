@@ -37,23 +37,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: версии метаданных, нативного auditor и негативные тесты
+      - name: Version metadata, native auditor and negative tests
         run: |
           python3 scripts/version/manage.py check
           (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run '^TestAudit0301|^TestModuleParityCLI0301' )
           (cd cli && go vet ./internal/moduleparity)
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
-      - name: Проверить все M01-M19 источников и Java protocol привязки
+      - name: Validate all M01-M19 sources and Java protocol binding
         run: |
           mkdir -p audit-evidence
           "$RUNNER_TEMP/nl" module-parity audit --report audit-evidence/source.json
-      - name: Выполнить Desktop запуска регрессионные тесты
+      - name: Execute desktop startup regression tests
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M07 --timeout 90s --report audit-evidence/desktop-linux.json
-      - name: Выполнить нативного prestarter регрессионные тесты
+      - name: Execute native prestarter regression tests
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M11 --timeout 240s --report audit-evidence/prestarter-linux.json
-      - name: Подтвердить, что отсутствующие модули нельзя объявить полностью совместимыми
+      - name: Prove missing modules cannot become full parity by declaration
         run: |
           if "$RUNNER_TEMP/nl" module-parity audit --require-full-parity --report audit-evidence/uncertified.json; then
             echo 'Uncertified matrix falsely reported full M01-M19 parity' >&2

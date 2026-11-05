@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       actual_minecraft:
-        description: 'Запустить настоящую JVM Minecraft и записать результаты (с загрузкой артефактов Mojang)'
+        description: 'Run and capture real Mojang Minecraft JVM launches (downloads Mojang artifacts)'
         type: boolean
         required: true
         default: false
@@ -47,7 +47,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Проверить канонической версии и идентичности исходников
+      - name: Check canonical version and source identity
         shell: bash
         run: |
           set -euo pipefail
@@ -55,23 +55,23 @@ jobs:
           python3 scripts/version/manage.py check
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain --untracked-files=normal)"
-      - name: тестовых данных и release-gate модульные тесты
+      - name: Fixture and release-gate unit tests
         shell: bash
         run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
-      - name: реального Go resolver и подписанных плана политики тесты
+      - name: Real Go resolver and signed plan policy tests
         shell: bash
         run: |
           set -euo pipefail
           (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy02412)
           (cd services/api && go test -count=1 ./internal/httpapi -run '^TestVerifiedPlanHardwareDeviceSignatureAndBinding02412$')
           (cd cli && go test -count=1 ./cmd/launcher -run 'Test.*Components.*0249|TestComponent.*02310')
-      - name: Тесты реального Rust Runtime, транзакций и атакующих сценариев
+      - name: Real Rust runtime and transactional/adversarial tests
         shell: bash
         run: |
           set -euo pipefail
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
-      - name: Запустить подписанных v3 компонента жизненного цикла с loopback HTTP сбоя injection
+      - name: Run signed v3 component lifecycle with loopback HTTP fault injection
         shell: bash
         run: |
           set -euo pipefail
@@ -80,18 +80,18 @@ jobs:
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --signer "runtime/runtime/target/debug/examples/cert_sign_fixture${suffix}" \
             --output "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json"
-      - name: Установить graphical зависимостей для реального Linux Minecraft
+      - name: Install graphical dependencies for real Linux Minecraft
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'linux'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 mesa-vulkan-drivers libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Установить software GL для Windows реального клиента Запустить
+      - name: Install software GL for Windows real client run
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'windows'
         shell: pwsh
         run: |
           ./scripts/compatibility/install-windows-mesa.ps1 -Architecture '${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}' -JavaExecutable "$env:JAVA_HOME/bin/java.exe"
-      - name: Запустить настоящий клиент Minecraft от Mojang (ложный успех имитации не допускается)
+      - name: Real Mojang Minecraft client launch (a mock success)
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
         shell: bash
         env:
@@ -113,7 +113,7 @@ jobs:
           report=json.loads(p.read_text())
           assert report['status']=='passed' and report['checks']['actualClient'] is True, 'Minecraft did not actually launch'
           PY
-      - name: Создать отчёт с привязкой к происхождению (не засчитывать отсутствующие Guard/Bridge)
+      - name: Build provenance-bound report (marks missing Guard/Bridge as passed)
         if: success()
         shell: bash
         run: |
@@ -125,7 +125,7 @@ jobs:
             --bridge "dist/02413/bridge-${{ matrix.os }}-${{ matrix.arch }}.json" \
             --commit "$GITHUB_SHA" --target '${{ matrix.os }}-${{ matrix.arch }}' \
             --output "dist/02413/report-${{ matrix.os }}-${{ matrix.arch }}.json"
-      - name: Загрузить артефакты реального выполнения подтверждений (включая partial отказов)
+      - name: Upload actual execution evidence (including partial failures)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -137,11 +137,10 @@ jobs:
             e2e/runtime/vanilla-install.json
           if-no-files-found: warn
           retention-days: 45
-  # Этот workflow выполняет платформенную матрицу тестов, но сам по себе не даёт
-  # права одобрить 0.25.0. Для полной сертификации необходимы шесть независимо
-  # собранных записей доказательств, настоящий запуск Minecraft на каждой
-  # обязательной платформе, живая интеграция Guard/ServerBridge и отдельный
-  # подписанный этап GA на чистой машине.
+  # This workflow is an executable per-platform test matrix, not an authority to
+  # approve 0.25.0. Full certification requires six independently collected
+  # evidence records, actual Minecraft launch on each required target, live
+  # Guard/ServerBridge integration and separate signed clean-machine GA gate.
 
   aggregate-certification:
     if: always() && github.event_name == 'workflow_dispatch'
@@ -157,20 +156,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Скачать все submitted платформы подтверждений (без synthetic отсутствующих результатов)
+      - name: Download all submitted platform evidence (no synthetic missing results)
         uses: actions/download-artifact@v4
         with:
           pattern: components-02413-*
           path: dist/platform-evidence-02413
           merge-multiple: false
-      - name: Потребовать все шесть платформ, реальный Minecraft и подтверждения Guard/Bridge
+      - name: Enforce all six targets, real Minecraft and Guard/Bridge evidence
         shell: bash
         run: |
           set -euo pipefail
           mapfile -d '' reports < <(find dist/platform-evidence-02413 -type f -name 'report-*.json' -print0)
           python3 scripts/certification/gate_02413.py --commit "$GITHUB_SHA" \
             --output dist/certification-02413-aggregate.json "${reports[@]}"
-      - name: Сохранить отрицательные и неполные заключения для аудита
+      - name: Retain failed/incomplete verdict for audit
         if: always()
         uses: actions/upload-artifact@v4
         with:

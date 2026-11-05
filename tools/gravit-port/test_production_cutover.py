@@ -1,7 +1,7 @@
-"""Интеграционные тесты настоящего Unix-протокола HAProxy и CLI-передачи через подпроцессы.
+"""Integration-focused tests: real Unix HAProxy protocol and subprocess CLI transport.
 
-Тестовые HAProxy и CLI являются имитациями; эти тесты не сертифицируют производственный Minecraft,
-реальную транзакцию PostgreSQL или работающую установку прокси.
+The test HAProxy and CLI are fakes; these tests cannot certify production
+Minecraft, a real PostgreSQL transaction, or a live proxy installation.
 """
 import importlib.util
 import hashlib
@@ -166,7 +166,7 @@ class CutoverTests(unittest.TestCase):
         write_private(path, receipt)
         self.config["fenceReceipt"] = str(path)
         self.save_config()
-        # Предварительная конфигурация неизменна между фазами. Укажите путь квитанции заранее.
+        # Pre-flight config is immutable across phases. Configure the receipt path in advance.
         return path
 
     def test_real_socket_drains_auth_and_game_before_closing(self):
@@ -179,7 +179,7 @@ class CutoverTests(unittest.TestCase):
         self.assertFalse(state["trafficOpen"])
 
     def test_two_phase_real_cli_subprocess_and_postjoin_success(self):
-        # Путь квитанции должен быть включён ДО prepare; позднее байты менять нельзя.
+        # Receipt path must be included BEFORE prepare; the bytes cannot be changed later.
         self.proof()
         self.prepare()
         with patch.object(mod, "auth_canary") as auth_check:

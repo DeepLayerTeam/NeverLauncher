@@ -45,7 +45,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить Go привязки и репозитория тесты
+      - name: Check Go linking and repository tests
         working-directory: services/api
         run: |
           go vet ./internal/httpapi ./internal/repository
@@ -60,7 +60,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-14]
     steps:
       - uses: actions/checkout@v4
-      - name: Linux нативного зависимостей
+      - name: Linux native dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -71,11 +71,11 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Скомпилировать и тестировать нативного идентичности manager
+      - name: Compile and test native identity manager
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: TypeScript тесты и промышленной пакета
+      - name: TypeScript tests and production bundle
         working-directory: apps/desktop
         run: |
           npm ci

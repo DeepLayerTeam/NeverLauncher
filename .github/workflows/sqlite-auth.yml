@@ -24,19 +24,19 @@ jobs:
         with:
           go-version: '1.27.3'
           cache-dependency-path: services/api/go.sum
-      - name: Проверить Go модулей и форматирования
+      - name: Verify go modules and formatting
         run: |
           set -euo pipefail
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitecore cmd/launcher-sqlite)"
-      - name: Сертифицировать нативного локального файловой системы
+      - name: Certify native local filesystem
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/sqlite-auth"
           chmod 0700 "$RUNNER_TEMP/sqlite-auth"
           stat -f -c '%T' "$RUNNER_TEMP/sqlite-auth"
-      - name: Запустить реальные-драйвера авторизации/MFA/Воспроизвести/отзыва/перезапуска/миграции тесты
+      - name: Run real-driver auth/MFA/replay/revocation/restart/migration tests
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-auth
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
@@ -44,7 +44,7 @@ jobs:
           set -euo pipefail
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
-      - name: Скомпилировать и Инициализировать CLI с текущей схемы
+      - name: Compile and initialize CLI with current schema
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite

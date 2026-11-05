@@ -39,13 +39,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Backend интеграции, races и реального авторизации верификатора модульные тесты
+      - name: Backend integration, races and real auth verifier unit tests
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 5m ./internal/gravitcredentials ./internal/gravitidentity ./internal/gravitinventory ./internal/fileauth ./internal/localpassword
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationAuthAtomicIdempotent0335|TestMigrationIdentityTransactional0334|TestMigrationDurability0331|TestMigratedSQLUserIDDoesNotCollideAcrossSources0444'
           go test -count=1 -timeout 5m ./internal/httpapi -run 'TestImportedFileAuthLocalLoginAndAtomicRehash0295|TestMigrationTargetSteps0331'
-      - name: Сборки CLI и тесты
+      - name: CLI builds and tests
         working-directory: cli
         run: go test -count=1 ./cmd/launcher
   contract-admin:
@@ -60,14 +60,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: OpenAPI и продукта версии
+      - name: OpenAPI and product version
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py
-      - name: Admin Собрать
+      - name: Admin build
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts
           npm run build
-      - name: Проверка синтаксиса встроенной панели Admin
+      - name: Embedded Admin syntax
         run: node --check services/api/internal/embeddedadmin/site/app.js

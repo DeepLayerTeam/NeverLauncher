@@ -39,13 +39,13 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: реального JVM пульса/жизненного цикла и исполняемого файла целостности
+      - name: Real JVM heartbeat/lifecycle and executable integrity
         run: python scripts/tests/continuous_game_protection_0506.py
-      - name: предыдущие настоящей JVM целостности регрессии
+      - name: Previous real JVM integrity regressions
         run: python scripts/tests/guard_runtime_integrity_0505.py
-      - name: Скомпилировать и Выполнить нативного parent сторожевого процесса регрессии
+      - name: Compile and execute native parent watchdog regressions
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib continuous_game_protection_0506
-      - name: Скомпилировать всего Runtime и supervised лаунчера
+      - name: Compile full Runtime and supervised launcher
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib --no-run
-      - name: Проверить версии согласованности
+      - name: Check version consistency
         run: python scripts/version/manage.py check

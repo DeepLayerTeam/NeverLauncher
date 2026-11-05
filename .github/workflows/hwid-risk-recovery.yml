@@ -40,13 +40,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Собрать промышленный API
+      - name: Build production API
         working-directory: services/api
         run: go build ./cmd/...
-      - name: Проверить риск HWID и реальное межрепликовое восстановление PostgreSQL
+      - name: Test HWID risk and actual Postgres cross-replica recovery
         working-directory: services/api
         run: go test -race -count=1 -timeout=12m ./internal/repository ./internal/httpapi ./internal/dbmigrate -run 'TestHWID|TestEvaluateAppliedSealedCatalog'
-      - name: Проверить Миграции CLI и Собрать
+      - name: Verify CLI migrations and build
         working-directory: cli
         run: go test ./internal/dbmigrate && go build ./cmd/...
       - name: Статический анализ Go (vet)
@@ -67,10 +67,10 @@ jobs:
       - run: npm run build
         working-directory: apps/desktop
       - uses: dtolnay/rust-toolchain@stable
-      - name: Установить Tauri/Linux Собрать зависимостей
+      - name: Install Tauri/Linux build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
-      - name: Модульные тесты нативных признаков непрерывности аппаратной идентификации
+      - name: Native hardware continuity hint unit test
         working-directory: apps/desktop/src-tauri
         run: cargo test hwid_risk_0299 -- --nocapture

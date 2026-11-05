@@ -39,13 +39,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Content исходников и workspace интеграции
+      - name: Content source and workspace integration
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitcontent
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationContentAtomicReplay0337|TestMigrationContentSigning0337'
           go test -count=1 ./internal/httpapi -run 'TestMigrationContent0337'
-      - name: CLI регрессии
+      - name: CLI regression
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestMigrationContent0337|TestMigrationWorkflow0331'
   admin-build:
@@ -64,7 +64,7 @@ jobs:
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py
           node --check services/api/internal/embeddedadmin/site/app.js
-      - name: Собрать Admin SPA
+      - name: Build admin SPA
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts

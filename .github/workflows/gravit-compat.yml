@@ -37,15 +37,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Java ядра регрессии и Gravit совместимости тесты
+      - name: Java Core regression and Gravit compatibility tests
         shell: bash
         run: |
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
-      - name: Собрать ported модуля fat JAR
+      - name: Build ported module fat JAR
         shell: bash
         run: sh examples/extensions/gravit-compat/build.sh
-      - name: реального JVM RPC/events/CLI интеграции
+      - name: Real JVM RPC/events/CLI integration
         shell: bash
         run: python3 examples/extensions/gravit-compat/test-runner.py
   go-preflight-and-signature:
@@ -60,14 +60,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Собрать реального адаптера JAR
+      - name: Build real adapter JAR
         run: sh examples/extensions/gravit-compat/build.sh
-      - name: Отклонить unsupported/отсутствующих Gravit точки входа class и Проверить a реального JAR
+      - name: Reject unsupported/missing Gravit entrypoint class and verify a real JAR
         working-directory: services/api
         env:
           LAUNCHER_TEST_GRAVIT_PORT_JAR: ${{ github.workspace }}/examples/extensions/gravit-compat/build/package/backend/gravit-port.jar
         run: go test -race -count=1 ./internal/extensionjava
-      - name: Собрать CLI и Проверить подписанных .nlext
+      - name: Build CLI and verify signed .nlext
         shell: bash
         run: |
           set -eu

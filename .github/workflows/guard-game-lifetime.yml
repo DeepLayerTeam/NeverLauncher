@@ -41,19 +41,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: Linux Tauri Собрать зависимостей
+      - name: Linux Tauri build dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
-      - name: Проверить промышленной процесса termination code
+      - name: Check production process termination code
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --lib
-      - name: Запустить реальные процесса завершения тестировать (Linux)
+      - name: Run real process kill test (Linux)
         if: runner.os == 'Linux'
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib game_guard_lifetime_0438_tests -- --nocapture
-      - name: Собрать и тестировать нативный Desktop игры сторожевого процесса
+      - name: Build and test native Desktop game watchdog
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml game_guard_watchdog_0438 -- --nocapture
-      - name: Скомпилировать Runtime Guard и Desktop
+      - name: Compile both Guard and Desktop runtime
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --bin guard
   security-release-gate:
     name: Deny missing live gameplay evidence
@@ -63,5 +63,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: существующих безопасности контрольных этапов и новых 0.43.8 отказа scenarios
+      - name: Existing security gates and new 0.43.8 denial scenarios
         run: python3 -m unittest discover -s scripts/ga -p 'test_security_capabilities_0431.py' -v

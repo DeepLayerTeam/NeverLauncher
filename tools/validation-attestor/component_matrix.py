@@ -1,8 +1,8 @@
-"""Независимая проверка подписанного выбора компонентов на стороне хоста.
+"""Independent host-side verification of the signed component selection.
 
-Пути к файлам компонентов или их ID, полученные от исполнителя, здесь принимаются за истину. Все
-необязательные владельцы и транзитивное замыкание выводятся из неизменяемого проверенного манифеста
-подготовленного выпуска.
+This accepts component file paths or component IDs from the worker as
+truth. All optional ownership and the transitive closure derive from the
+immutable, verified staged release manifest.
 """
 
 import re
@@ -93,8 +93,8 @@ def selected_components(manifest, choice):
                 raise ValueError("exclusive component group conflict")
             groups[group] = ident
         for conflict in c.get("conflicts", []):
-            # Закреплённый нативный резолвер также применяет versionRange;
-            # аттестатор НЕ считает выбранный конфликт безопасным по умолчанию.
+            # The pinned native resolver enforces versionRange as well;
+            # the attestor treats a selected conflict as safe by default.
             if conflict["id"] in selected and not conflict.get("versionRange"):
                 raise ValueError("conflicting selected components")
     selected_files = set()
