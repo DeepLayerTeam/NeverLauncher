@@ -1,0 +1,866 @@
+//! Ограниченные потоковые загрузки по подписанным манифестам с учётом хоста.
+//! Каждому файлу очереди выделяется один слот обработчика; разрешение хоста
+//! захватывается до его запуска. Тело HTTP не накапливается в памяти,
+//! а запись на диск естественным образом создаёт обратное давление.
+use crate::{content_cache::{self, CacheStore}, file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
+    DownloadResult, Manifest, ManifestFile};
+use serde::Serialize;
+#[cfg(test)]
+use sha2::{Digest, Sha256};
+use std::{collections::{HashMap, VecDeque}, path::{Path, PathBuf}, sync::{Arc, Mutex, OnceLock, Weak},
+    sync::atomic::{AtomicU64, AtomicUsize, Ordering}, time::{Duration, Instant}};
+use tokio::{fs, sync::{OwnedSemaphorePermit, Semaphore, watch}, task::JoinSet};
+
+pub const DOWNLOAD_PROGRESS_EVENT: &str = "launcher-download-progress";
+// Ограничивайте суммарную передачу при параллельных вызовах Desktop/Repair
+// внутри процесса. Планировщик одного запуска вправе ужесточить ограничения,
+// но не может превышать общие пределы.
+const PROCESS_GLOBAL_LIMIT: usize = 6;
+const PROCESS_HOST_LIMIT: usize = 3;
+static PROCESS_SLOTS: OnceLock<Arc<Semaphore>> = OnceLock::new();
+static PROCESS_HOST_SLOTS: OnceLock<Mutex<HashMap<String, Weak<Semaphore>>>> = OnceLock::new();
+
+fn process_host_permit_map(hosts: impl Iterator<Item = String>) -> HashMap<String, Arc<Semaphore>> {
+    let mut guard = PROCESS_HOST_SLOTS.get_or_init(|| Mutex::new(HashMap::new()))
+        .lock().expect("Блокировка лимита подключений к хосту повреждена");
+    guard.retain(|_, gate| gate.strong_count() != 0);
+    let mut entries = HashMap::new();
+    for host in hosts {
+        let gate = guard.get(&host).and_then(Weak::upgrade).unwrap_or_else(|| {
+            let gate = Arc::new(Semaphore::new(PROCESS_HOST_LIMIT));
+            guard.insert(host.clone(), Arc::downgrade(&gate));
+            gate
+        });
+        entries.insert(host, gate);
+    }
+    entries
+}
+pub type ProgressSink = Arc<dyn Fn(DownloadProgress) + Send + Sync + 'static>;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadProgress {
+    pub operation_id: String,
+    pub phase: String,
+    pub total_files: usize,
+    pub queued: usize,
+    pub active: usize,
+    pub completed: usize,
+    pub failed: usize,
+    pub skipped: usize,
+    pub bytes_expected: u64,
+    /// Принятые сетевые байты, включая некорректные ответы (не проверенные данные).
+    pub bytes_transferred: u64,
+    /// Байты, уже проверенные по подписанному SHA-256 (из сети или кеша).
+    pub bytes_verified: u64,
+    /// Входящие сетевые байты в секунду за текущее окно; при зависании — ноль.
+    pub speed_bytes_per_second: u64,
+    /// Приблизительное время окончания загрузок, не обещание времени фиксации.
+    pub eta_seconds: Option<u64>,
+    pub elapsed_seconds: u64,
+    pub cache_hits: usize,
+    pub bytes_reused: u64,
+    pub current_file: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DownloadLimits {
+    pub global: usize,
+    pub per_host: usize,
+}
+
+impl Default for DownloadLimits {
+    fn default() -> Self { Self { global: 6, per_host: 3 } }
+}
+
+impl DownloadLimits {
+    fn validate(self) -> Result<Self, String> {
+        if self.global == 0 || self.global > 32 || self.per_host == 0 || self.per_host > self.global {
+            return Err("Некорректное значение: «download concurrency limits (global 1..=32, per_host 1..=global)»".into());
+        }
+        Ok(self)
+    }
+}
+
+struct Source {
+    url: String,
+    host: String,
+}
+
+struct Job {
+    file: ManifestFile,
+    target: PathBuf,
+    host: String,
+    sources: Vec<Source>,
+    priority: u8,
+    order: usize,
+}
+
+// Критичные метаданные Minecraft и исполняемые зависимости должны загружаться
+// раньше массовых ресурсов. Внутри одного приоритета сохраняется порядок манифеста.
+fn priority(file: &ManifestFile) -> u8 {
+    if file.executable || file.path.starts_with("versions/") { 0 }
+    else if file.path.starts_with("libraries/") || file.path.starts_with("natives/") { 1 }
+    else if file.path.starts_with("assets/") { 3 }
+    else { 2 }
+}
+
+struct TransferMetrics {
+    samples: VecDeque<(Instant, u64)>,
+    in_flight: HashMap<String, u64>,
+}
+
+fn eta_for_remaining(remaining: u64, bytes_per_second: u64) -> Option<u64> {
+    if remaining == 0 { return Some(0); }
+    if bytes_per_second == 0 { return None; }
+    Some(remaining.saturating_add(bytes_per_second - 1) / bytes_per_second)
+}
+
+struct Statistics {
+    total: usize,
+    skipped: AtomicUsize,
+    completed: AtomicUsize,
+    failed: AtomicUsize,
+    active: AtomicUsize,
+    queued: AtomicUsize,
+    transferred: AtomicU64,
+    verified: AtomicU64,
+    started: Instant,
+    metrics: Mutex<TransferMetrics>,
+    cache_hits: AtomicUsize,
+    bytes_reused: AtomicU64,
+    expected: u64,
+    last_emit: Mutex<Instant>,
+    last_phase: Mutex<String>,
+    operation_id: String,
+    sink: Option<ProgressSink>,
+}
+
+impl Statistics {
+    fn emit(&self, phase: &str, path: Option<&str>, force: bool) {
+        let Some(sink) = &self.sink else { return };
+        // Не создавайте отдельное событие Tauri для каждого небольшого сетевого пакета.
+        let Ok(mut last) = self.last_emit.try_lock() else { return };
+        if !force && last.elapsed() < Duration::from_millis(100) { return }
+        let now = Instant::now();
+        *last = now;
+        if let Ok(mut latest) = self.last_phase.lock() { *latest = phase.to_string(); }
+        let transferred = self.transferred.load(Ordering::Relaxed);
+        let verified = self.verified.load(Ordering::Relaxed);
+        let (speed, in_flight) = {
+            let mut metrics = self.metrics.lock().expect("Блокировка метрик загрузки повреждена");
+            if metrics.samples.back().is_none_or(|(previous, _)| now.duration_since(*previous) >= Duration::from_millis(250)) {
+                metrics.samples.push_back((now, transferred));
+            }
+            while metrics.samples.front().is_some_and(|(previous, _)| now.duration_since(*previous) > Duration::from_secs(5)) {
+                metrics.samples.pop_front();
+            }
+            let speed = metrics.samples.front().and_then(|(time, bytes)| {
+                let elapsed = now.duration_since(*time).as_secs_f64();
+                (elapsed >= 0.25).then(|| ((transferred.saturating_sub(*bytes)) as f64 / elapsed) as u64)
+            }).unwrap_or(0);
+            let active = metrics.in_flight.values().copied().fold(0u64, u64::saturating_add);
+            (speed, active)
+        };
+        // Повторы и переключения зеркал учитываются как сетевой трафик,
+        // а не новый проверенный прогресс. Активные байты относятся лишь к текущей
+        // попытке каждого файла; обе величины ограничены подписанным ожидаемым размером.
+        let remaining = self.expected.saturating_sub(verified.saturating_add(in_flight).min(self.expected));
+        let eta = if matches!(phase, "downloading" | "retrying" | "starting") {
+            eta_for_remaining(remaining, speed)
+        } else { None };
+        let snapshot = DownloadProgress {
+            operation_id: self.operation_id.clone(), phase: phase.to_string(),
+            total_files: self.total,
+            queued: self.queued.load(Ordering::Relaxed),
+            active: self.active.load(Ordering::Relaxed),
+            completed: self.completed.load(Ordering::Relaxed),
+            failed: self.failed.load(Ordering::Relaxed),
+            skipped: self.skipped.load(Ordering::Relaxed),
+            bytes_expected: self.expected,
+            bytes_transferred: transferred,
+            bytes_verified: verified,
+            speed_bytes_per_second: speed,
+            eta_seconds: eta,
+            elapsed_seconds: now.duration_since(self.started).as_secs(),
+            cache_hits: self.cache_hits.load(Ordering::Relaxed),
+            bytes_reused: self.bytes_reused.load(Ordering::Relaxed),
+            current_file: path.map(ToOwned::to_owned),
+        };
+        // Не удерживайте мьютекс во время уведомления клиентов.
+        drop(last);
+        sink(snapshot);
+    }
+}
+
+fn file_host(url: &str) -> Result<String, String> {
+    let parsed = reqwest::Url::parse(url).map_err(|e| format!("Некорректное значение: URL скачивания: {e}"))?;
+    if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() ||
+        !parsed.username().is_empty() || parsed.password().is_some() || parsed.fragment().is_some() {
+        return Err("Небезопасное значение: URL скачивания".into());
+    }
+    Ok(format!("{}://{}:{}", parsed.scheme(), parsed.host_str().unwrap_or_default(),
+        parsed.port_or_known_default().unwrap_or(0)))
+}
+
+// Блокировка содержимого удерживается на всём протяжении операции,
+// включая зеркала и публикацию: два профиля не могут одновременно скачивать
+// один объект с одинаковым SHA-256.
+async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics,
+    mut control: watch::Receiver<Directive>, initial_permits: (OwnedSemaphorePermit, OwnedSemaphorePermit),
+    local_hosts: &HashMap<String, Arc<Semaphore>>,
+    process_hosts: &HashMap<String, Arc<Semaphore>>,
+    cache: &CacheStore) -> Result<bool, String> {
+    network_resilience::check(&control)?;
+    let lease = tokio::select! {
+        result = cache.lock(&job.file) => result?,
+        state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
+    };
+    network_resilience::check(&control)?;
+    if lease.restore(root, &job.file, &job.target).await? {
+        stats.cache_hits.fetch_add(1, Ordering::Relaxed);
+        stats.bytes_reused.fetch_add(job.file.size, Ordering::Relaxed);
+        stats.emit("cache-hit", Some(&job.file.path), true);
+        return Ok(true);
+    }
+    let mut permits = Some(initial_permits);
+    let mut failures = Vec::new();
+    for (source_index, source) in job.sources.iter().enumerate() {
+        network_resilience::check(&control)?;
+        if source_index != 0 {
+            // Освобождайте слоты старого хоста ДО ожидания слотов зеркала,
+            // чтобы не возникали взаимные блокировки заданий, переключающихся A->B и B->A.
+            drop(permits.take());
+            let local = Arc::clone(local_hosts.get(&source.host).ok_or("Отсутствует семафор хоста зеркала")?);
+            let global_host = Arc::clone(process_hosts.get(&source.host).ok_or("Отсутствует семафор зеркала хоста процесса")?);
+            let local_slot = tokio::select! {
+                result = local.acquire_owned() => result.map_err(|e| e.to_string())?,
+                state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
+            };
+            let process_slot = tokio::select! {
+                result = global_host.acquire_owned() => result.map_err(|e| e.to_string())?,
+                state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
+            };
+            permits = Some((local_slot, process_slot));
+        }
+        // Метаданные возобновления привязаны к точному URL. При переключении
+        // зеркала безопасно отбрасывается частичный файл с валидатором другого сервера
+        // Возобновление HTTP-загрузки версии 0.23.2.
+        let mut requested = job.file.clone();
+        requested.url = source.url.clone();
+        for attempt in 0..network_resilience::MAX_ATTEMPTS {
+            network_resilience::check(&control)?;
+            // При каждом повторе прогресс учитывается заново. Никогда не считайте
+            // повторные или некорректные сетевые байты установленными данными.
+            stats.metrics.lock().expect("Блокировка метрик загрузки повреждена")
+                .in_flight.insert(job.file.path.clone(), 0);
+            let outcome = crate::http_resume::download_verified_controlled(client, root, &requested,
+                &job.target, |bytes| {
+                    stats.transferred.fetch_add(bytes, Ordering::Relaxed);
+                    let mut metrics = stats.metrics.lock().expect("Блокировка метрик загрузки повреждена");
+                    let active = metrics.in_flight.entry(job.file.path.clone()).or_insert(0);
+                    *active = active.saturating_add(bytes).min(job.file.size);
+                    drop(metrics);
+                    stats.emit("downloading", Some(&job.file.path), false);
+                }, control.clone()).await;
+            match outcome {
+                Ok(()) => {
+                    // Исчерпание места в кеше не должно превращать успешно проверенный
+                    // и установленный файл клиента в неуспешную загрузку.
+                    if lease.publish(&job.file, &job.target).await.is_err() {
+                        stats.emit("cache-write-failed", Some(&job.file.path), true);
+                    }
+                    return Ok(false);
+                },
+                Err(error) => {
+                    network_resilience::check(&control)?;
+                    let retry = if attempt + 1 < network_resilience::MAX_ATTEMPTS {
+                        network_resilience::retry_delay(&error, attempt)
+                    } else { None };
+                    if let Some(delay) = retry {
+                        stats.emit("retrying", Some(&job.file.path), true);
+                        network_resilience::wait(delay, &mut control).await?;
+                    } else {
+                        failures.push(format!("{}: {error}", source.host));
+                        break;
+                    }
+                }
+            }
+        }
+        if source_index + 1 < job.sources.len() {
+            stats.emit("mirror-fallback", Some(&job.file.path), true);
+        }
+    }
+    Err(format!("{}: все подписанные источники завершились ошибкой: {}", job.file.path, failures.join("; ")))
+}
+
+/// Скачивайте потоком только отсутствующие или несовпадающие файлы,
+/// используя ограниченное число обработчиков. Ошибки учитываются по каждому
+/// файлу; неисправное зеркало/файл не отменяет остальные задания.
+/// Этот же механизм используется в repair_client, отдельного загрузчика нет.
+pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits,
+                 sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
+    run_with_store(manifest, root, limits, sink, operation_id, control, CacheStore::standard()?).await
+}
+// Выполняйте подписанный пресет: в планировщик попадают только
+// разрешённые пути из манифеста.
+pub(crate) async fn run_selected(manifest:&Manifest,root:&Path,limits:DownloadLimits,
+    sink:Option<ProgressSink>,operation_id:String,control:watch::Receiver<Directive>,
+    selected:&std::collections::HashSet<String>)->Result<DownloadResult,String>{
+    let mut filtered=manifest.clone();
+    filtered.files.retain(|f|selected.contains(&f.path));
+    run(&filtered,root,limits,sink,operation_id,control).await
+}
+
+async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits,
+    sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>,
+    cache: CacheStore) -> Result<DownloadResult, String> {
+    let limits = limits.validate()?;
+    let client = reqwest::Client::builder()
+        .connect_timeout(network_resilience::CONNECT_TIMEOUT)
+        // Перенаправление может перевести запрос на другой хост уже после выдачи
+        // слота исходного хоста. Никогда не переходите по редиректам автоматически.
+        .redirect(reqwest::redirect::Policy::none())
+        .pool_max_idle_per_host(limits.per_host)
+        .build().map_err(|e| format!("Ошибка HTTP-клиента загрузки: {e}"))?;
+    let mut result = DownloadResult { downloaded: 0, skipped: 0, failed: 0, repaired: 0,
+        bytes_downloaded: 0, cache_hits: 0, bytes_reused: 0, failed_files: Vec::new(), messages: Vec::new() };
+    let mut jobs = Vec::new();
+    for (order, file) in manifest.files.iter().enumerate() {
+        if !manifest_file_applies(file) || file_ownership::skip_download(manifest, file) {
+            result.skipped += 1;
+            continue;
+        }
+        let target = safe_join(root, &file.path)?;
+        file_ownership::ensure_no_symlinks(root, &target)?;
+        if manifest.schema_version == "2.0" && file_ownership::effective_ownership(file) == "optional"
+            && !file_ownership::must_verify(manifest, &file.path) && !target.exists() {
+            result.skipped += 1;
+            continue;
+        }
+        let actual = match fs::metadata(&target).await {
+            Ok(meta) if meta.len() == file.size => sha256_file(&target).await
+                .map(|digest| digest.eq_ignore_ascii_case(&file.sha256)).unwrap_or(false),
+            _ => false,
+        };
+        if actual { result.skipped += 1; continue; }
+        let urls = std::iter::once(&file.url).chain(file.mirrors.iter());
+        // Проверяйте каждый источник *до* начала любой сетевой операции.
+        // Уникальные URL сохраняют подписанный порядок приоритетов, дубликаты игнорируются.
+        let mut sources = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        let mut invalid = None;
+        for url in urls {
+            if !seen.insert(url.as_str()) { continue; }
+            match file_host(url) {
+                Ok(host) => sources.push(Source { url: url.clone(), host }),
+                Err(err) => { invalid = Some(err); break; },
+            }
+        }
+        match invalid {
+            None => {
+                let host = sources.first().expect("Манифест должен содержать основной источник").host.clone();
+                jobs.push(Job { file: file.clone(), target, host, sources,
+                    priority: priority(file), order });
+            },
+            Some(e) => {
+                result.failed += 1;
+                result.failed_files.push(file.path.clone());
+                result.messages.push(format!("{}: {e}", file.path));
+            }
+        }
+    }
+    jobs.sort_by_key(|job| (job.priority, job.order));
+    let expected: u64 = jobs.iter().map(|job| job.file.size).sum();
+    let stats = Arc::new(Statistics {
+        total: manifest.files.len(), skipped: AtomicUsize::new(result.skipped),
+        completed: AtomicUsize::new(0), failed: AtomicUsize::new(result.failed),
+        active: AtomicUsize::new(0), queued: AtomicUsize::new(jobs.len()),
+        transferred: AtomicU64::new(0), verified: AtomicU64::new(0),
+        started: Instant::now(), metrics: Mutex::new(TransferMetrics { samples: VecDeque::new(), in_flight: HashMap::new() }),
+        cache_hits: AtomicUsize::new(0),
+        bytes_reused: AtomicU64::new(0), expected,
+        last_emit: Mutex::new(Instant::now() - Duration::from_secs(1)),
+        last_phase: Mutex::new("starting".into()),
+        operation_id, sink,
+    });
+    stats.emit("starting", None, true);
+    let mut pending: VecDeque<Job> = jobs.into();
+    let mut host_limits: HashMap<String, Arc<Semaphore>> = HashMap::new();
+    for job in &pending {
+        for source in &job.sources {
+            host_limits.entry(source.host.clone())
+                .or_insert_with(|| Arc::new(Semaphore::new(limits.per_host)));
+        }
+    }
+    let process_slots = Arc::clone(PROCESS_SLOTS.get_or_init(||
+        Arc::new(Semaphore::new(PROCESS_GLOBAL_LIMIT))));
+    let process_hosts = process_host_permit_map(pending.iter()
+        .flat_map(|job| job.sources.iter().map(|source| source.host.clone())));
+    let cache = Arc::new(cache);
+    let root = root.to_path_buf();
+    let mut workers: JoinSet<(String, u64, Result<bool, String>)> = JoinSet::new();
+    while !pending.is_empty() || !workers.is_empty() {
+        if *control.borrow() != Directive::Running && workers.is_empty() { break; }
+        while *control.borrow() == Directive::Running && workers.len() < limits.global && !pending.is_empty() {
+            // Не блокируйте выполнение на первом перегруженном хосте, если доступен другой.
+            let mut chosen: Option<(usize, OwnedSemaphorePermit, OwnedSemaphorePermit, OwnedSemaphorePermit)> = None;
+            for (idx, job) in pending.iter().enumerate() {
+                let Some(local) = host_limits.get(&job.host) else { continue };
+                let Some(shared) = process_hosts.get(&job.host) else { continue };
+                if let Ok(local_permit) = Arc::clone(local).try_acquire_owned() {
+                    if let Ok(host_permit) = Arc::clone(shared).try_acquire_owned() {
+                        if let Ok(global_permit) = Arc::clone(&process_slots).try_acquire_owned() {
+                            chosen = Some((idx, local_permit, host_permit, global_permit));
+                            break;
+                        }
+                    }
+                }
+            }
+            let Some((idx, local_permit, host_permit, global_permit)) = chosen else { break };
+            let job = pending.remove(idx).expect("position was present");
+            let client = client.clone();
+            let root = root.clone();
+            let stats = Arc::clone(&stats);
+            let control = control.clone();
+            let local_hosts = host_limits.clone();
+            let process_hosts = process_hosts.clone();
+            let cache = Arc::clone(&cache);
+            stats.queued.fetch_sub(1, Ordering::Relaxed);
+            stats.active.fetch_add(1, Ordering::Relaxed);
+            workers.spawn(async move {
+                let _global_permit = global_permit;
+                let outcome = fetch_one(&client, &root, &job, &stats, control,
+                    (local_permit, host_permit), &local_hosts, &process_hosts, &cache).await;
+                (job.file.path, job.file.size, outcome)
+            });
+        }
+        if workers.is_empty() && !pending.is_empty() {
+            // Другой вызов скачивания может удерживать все общепроцессные разрешения.
+            // Освободите выполнение вместо активного ожидания с пустым JoinSet.
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            continue;
+        }
+        // Зависшее тело HTTP не должно сохранять на экране устаревшие ненулевые
+        // скорость/ETA до тайм-аута чтения. Heartbeat пересчитывает скользящее окно,
+        // даже когда ни один активный обработчик не выдаёт байты.
+        let outcome = tokio::time::timeout(Duration::from_secs(1), workers.join_next()).await;
+        let outcome = match outcome {
+            Ok(Some(outcome)) => outcome,
+            Ok(None) => break,
+            Err(_) => {
+                let phase = stats.last_phase.lock().map(|v| v.clone()).unwrap_or_else(|_| "downloading".into());
+                stats.emit(&phase, None, true);
+                continue;
+            }
+        };
+        {
+            stats.active.fetch_sub(1, Ordering::Relaxed);
+            match outcome {
+                Ok((path, size, Ok(_cache_hit))) => {
+                    stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
+                    stats.verified.fetch_add(size, Ordering::Relaxed);
+                    result.downloaded += 1;
+                    result.repaired += 1;
+                    stats.completed.fetch_add(1, Ordering::Relaxed);
+                    stats.emit("verified", Some(&path), true);
+                },
+                Ok((path, _, Err(e))) if e == "download paused" || e == "download cancelled" => {
+                    stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
+                    // Долговременный журнал и все проверенные частичные файлы сохраняются.
+                },
+                Ok((path, _, Err(e))) => {
+                    stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
+                    result.failed += 1;
+                    result.failed_files.push(path.clone());
+                    result.messages.push(e);
+                    stats.failed.fetch_add(1, Ordering::Relaxed);
+                    stats.emit("failed-file", Some(&path), true);
+                },
+                Err(e) => {
+                    result.failed += 1;
+                    result.messages.push(format!("Рабочий процесс загрузки аварийно завершился: {e}"));
+                    stats.failed.fetch_add(1, Ordering::Relaxed);
+                    stats.emit("failed-file", None, true);
+                },
+            }
+        }
+    }
+    result.bytes_downloaded = stats.transferred.load(Ordering::Relaxed);
+    result.cache_hits = stats.cache_hits.load(Ordering::Relaxed);
+    result.bytes_reused = stats.bytes_reused.load(Ordering::Relaxed);
+    stats.emit(match *control.borrow() {
+        Directive::Running if result.failed > 0 => "failed",
+        Directive::Running => "staged", // Выпуск ещё НЕ опубликован.
+        Directive::Paused => "paused", Directive::Cancelled => "cancelled"
+    }, None, true);
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::sync::atomic::Ordering;
+    use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpListener};
+
+    struct TestHttp {
+        base: String,
+        max_active: Arc<AtomicUsize>,
+        task: tokio::task::JoinHandle<()>,
+    }
+
+    async fn test_http(global_active: Arc<AtomicUsize>, global_max: Arc<AtomicUsize>) -> TestHttp {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let active = Arc::new(AtomicUsize::new(0));
+        let max_active = Arc::new(AtomicUsize::new(0));
+        let own_active = Arc::clone(&active);
+        let own_max = Arc::clone(&max_active);
+        let task = tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _)) = listener.accept().await else { break };
+                let active = Arc::clone(&own_active);
+                let max_active = Arc::clone(&own_max);
+                let global_active = Arc::clone(&global_active);
+                let global_max = Arc::clone(&global_max);
+                tokio::spawn(async move {
+                    let mut request = [0u8; 4096];
+                    let count = match socket.read(&mut request).await {
+                        Ok(n) if n > 0 => n,
+                        _ => return,
+                    };
+                    let line = String::from_utf8_lossy(&request[..count]);
+                    let path = line.split_whitespace().nth(1).unwrap_or("/missing");
+                    let body = format!("file:{path}");
+                    let now = active.fetch_add(1, Ordering::SeqCst) + 1;
+                    max_active.fetch_max(now, Ordering::SeqCst);
+                    let all = global_active.fetch_add(1, Ordering::SeqCst) + 1;
+                    global_max.fetch_max(all, Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(90)).await;
+                    let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+                    let _ = socket.write_all(response.as_bytes()).await;
+                    let _ = socket.shutdown().await;
+                    active.fetch_sub(1, Ordering::SeqCst);
+                    global_active.fetch_sub(1, Ordering::SeqCst);
+                });
+            }
+        });
+        TestHttp { base, max_active, task }
+    }
+
+    #[test]
+    fn measured_eta_cannot_claim_completion_when_rate_is_unknown() {
+        assert_eq!(eta_for_remaining(1024, 0), None);
+        assert_eq!(eta_for_remaining(1024, 512), Some(2));
+        assert_eq!(eta_for_remaining(1025, 512), Some(3));
+        assert_eq!(eta_for_remaining(0, 0), Some(0));
+        assert_eq!(eta_for_remaining(u64::MAX, 1), Some(u64::MAX));
+    }
+
+    #[test]
+    fn measured_wire_speed_and_verified_bytes_are_independent() {
+        let received = Arc::new(Mutex::new(Vec::<DownloadProgress>::new()));
+        let frames = Arc::clone(&received);
+        let sink: ProgressSink = Arc::new(move |event| frames.lock().unwrap().push(event));
+        let now = Instant::now();
+        let stats = Statistics {
+            total: 1, skipped: AtomicUsize::new(0), completed: AtomicUsize::new(0),
+            failed: AtomicUsize::new(0), active: AtomicUsize::new(1), queued: AtomicUsize::new(0),
+            transferred: AtomicU64::new(600), verified: AtomicU64::new(0),
+            started: now - Duration::from_secs(2),
+            metrics: Mutex::new(TransferMetrics {
+                samples: VecDeque::from([(now - Duration::from_secs(1), 0)]),
+                in_flight: HashMap::from([("libraries/a.jar".into(), 600)]),
+            }),
+            cache_hits: AtomicUsize::new(0), bytes_reused: AtomicU64::new(0),
+            expected: 1000, last_emit: Mutex::new(now - Duration::from_secs(1)),
+            last_phase: Mutex::new("starting".into()),
+            operation_id: "measured".into(), sink: Some(sink),
+        };
+        stats.emit("downloading", Some("libraries/a.jar"), true);
+        let observed = received.lock().unwrap();
+        let event = observed.last().unwrap();
+        assert_eq!(event.bytes_transferred, 600);
+        assert_eq!(event.bytes_verified, 0); // подпись и хеш ещё не проверены
+        assert!(event.speed_bytes_per_second > 0);
+        assert_eq!(event.eta_seconds, Some(1));
+        assert!(event.elapsed_seconds >= 2);
+    }
+
+    #[test]
+    fn prioritizes_critical_files_before_bulk_assets() {
+        let mut f = ManifestFile {
+            path: "assets/objects/a".into(), size: 1, sha256: "00".repeat(32),
+            url: "https://example.com/a".into(), required: true, executable: false,
+            target_os: Vec::new(), ownership: "required".into(), mirrors: vec![],
+        };
+        assert_eq!(priority(&f), 3);
+        f.path = "libraries/a.jar".into();
+        assert_eq!(priority(&f), 1);
+        f.executable = true;
+        assert_eq!(priority(&f), 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn bounded_parallel_downloads_isolate_failures_and_report_progress() {
+        let global_active = Arc::new(AtomicUsize::new(0));
+        let global_max = Arc::new(AtomicUsize::new(0));
+        let a = test_http(Arc::clone(&global_active), Arc::clone(&global_max)).await;
+        let b = test_http(Arc::clone(&global_active), Arc::clone(&global_max)).await;
+        let mut entries = Vec::new();
+        for i in 0..8 {
+            let path = if i == 7 { "/bad".into() } else { format!("/{i}") };
+            let body = format!("file:{path}");
+            let host = if i == 6 { &b.base } else { &a.base };
+            entries.push(json!({
+                "path": format!("libraries/{i}.jar"),
+                "size": body.len(),
+                "sha256": if i == 7 { hex::encode(Sha256::digest(b"not the downloaded content")) }
+                           else { hex::encode(Sha256::digest(body.as_bytes())) },
+                "url": format!("{host}{path}"), "required": true,
+                "ownership": "required"
+            }));
+        }
+        let manifest: Manifest = serde_json::from_value(json!({
+            "schemaVersion": "1.0", "projectId": "test", "profileId": "test",
+            "channel": "test", "version": "1", "createdAt": "test",
+            "minecraft": { "version": "1.21.1", "loader": "vanilla" },
+            "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
+            "files": entries,
+        })).unwrap();
+        let root = std::env::temp_dir().join(format!("runtime-parallel-test-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(&root).await.unwrap();
+        let events = Arc::new(Mutex::new(Vec::<DownloadProgress>::new()));
+        let observed = Arc::clone(&events);
+        let sink: ProgressSink = Arc::new(move |p| observed.lock().unwrap().push(p));
+        let result = run_with_store(&manifest, &root, DownloadLimits { global: 3, per_host: 2 }, Some(sink), "test-scheduler".into(), watch::channel(Directive::Running).1, CacheStore::at(root.join("cache"))).await.unwrap();
+        assert_eq!(result.downloaded, 7, "{:?}", result.messages);
+        assert_eq!(result.failed, 1, "{:?}", result.messages);
+        assert_eq!(result.failed_files, vec!["libraries/7.jar"]);
+        assert!(a.max_active.load(Ordering::SeqCst) >= 2, "no parallel downloads on first host");
+        assert!(a.max_active.load(Ordering::SeqCst) <= 2, "exceeded per-host limit");
+        assert!(global_max.load(Ordering::SeqCst) >= 2, "downloads were sequential");
+        assert!(global_max.load(Ordering::SeqCst) <= 3, "exceeded global limit");
+        assert!(b.max_active.load(Ordering::SeqCst) <= 2);
+        for i in 0..7 {
+            assert_eq!(fs::read_to_string(root.join(format!("libraries/{i}.jar"))).await.unwrap(),
+                format!("file:/{i}"));
+        }
+        assert!(!root.join("libraries/7.jar").exists());
+        let events = events.lock().unwrap();
+        assert!(events.iter().any(|p| p.phase == "downloading"));
+        let final_event = events.last().unwrap();
+        assert_eq!(final_event.phase, "failed");
+        assert_eq!(final_event.completed, 7);
+        assert_eq!(final_event.failed, 1);
+        assert_eq!(final_event.active, 0);
+        assert_eq!(final_event.queued, 0);
+        assert_eq!(final_event.bytes_transferred, result.bytes_downloaded);
+        assert_eq!(final_event.bytes_verified, (0..7).map(|i| format!("file:/{i}").len() as u64).sum::<u64>());
+        assert!(final_event.bytes_verified < final_event.bytes_expected);
+        assert_eq!(final_event.eta_seconds, None);
+        assert!(events.iter().all(|e| e.bytes_verified <= e.bytes_expected));
+        drop(events);
+        a.task.abort();
+        b.task.abort();
+        fs::remove_dir_all(&root).await.unwrap();
+    }
+}
+
+#[cfg(test)]
+mod concurrent_operations_tests {
+    use super::*;
+    use serde_json::json;
+    use std::sync::atomic::Ordering;
+    use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpListener};
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn separate_repair_downloads_share_process_host_limit() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let active = Arc::new(AtomicUsize::new(0));
+        let peak = Arc::new(AtomicUsize::new(0));
+        let active_server = Arc::clone(&active);
+        let peak_server = Arc::clone(&peak);
+        let server = tokio::spawn(async move {
+            while let Ok((mut conn, _)) = listener.accept().await {
+                let active = Arc::clone(&active_server);
+                let peak = Arc::clone(&peak_server);
+                tokio::spawn(async move {
+                    let mut incoming = [0u8; 1024];
+                    let n = match conn.read(&mut incoming).await { Ok(n) if n > 0 => n, _ => return };
+                    let request = String::from_utf8_lossy(&incoming[..n]);
+                    let path = request.split_whitespace().nth(1).unwrap_or("/bad");
+                    let body = format!("x-{path}");
+                    let current = active.fetch_add(1, Ordering::SeqCst) + 1;
+                    peak.fetch_max(current, Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(70)).await;
+                    let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+                    let _ = conn.write_all(response.as_bytes()).await;
+                    let _ = conn.shutdown().await;
+                    active.fetch_sub(1, Ordering::SeqCst);
+                });
+            }
+        });
+        let entries: Vec<_> = (0..8).map(|i| json!({
+            "path": format!("libraries/{i}.jar"), "size": format!("x-/{i}").len(),
+            "sha256": hex::encode(Sha256::digest(format!("x-/{i}").as_bytes())),
+            "url": format!("{base}/{i}"), "required": true
+        })).collect();
+        let manifest: Manifest = serde_json::from_value(json!({
+            "schemaVersion": "1.0", "projectId": "test", "profileId": "test",
+            "channel": "test", "version": "1", "createdAt": "test",
+            "minecraft": { "version": "1.21.1", "loader": "vanilla" },
+            "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
+            "files": entries
+        })).unwrap();
+        let first = std::env::temp_dir().join(format!("nl-a-{:016x}", rand::random::<u64>()));
+        let second = std::env::temp_dir().join(format!("nl-b-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(&first).await.unwrap();
+        fs::create_dir_all(&second).await.unwrap();
+        let shared_cache = std::env::temp_dir().join(format!("nl-host-shared-{:016x}", rand::random::<u64>()));
+        let (left, right) = tokio::join!(
+            run_with_store(&manifest, &first, DownloadLimits::default(), None, "test-one".into(), watch::channel(Directive::Running).1, CacheStore::at(shared_cache.clone())),
+            run_with_store(&manifest, &second, DownloadLimits::default(), None, "test-two".into(), watch::channel(Directive::Running).1, CacheStore::at(shared_cache.clone()))
+        );
+        assert_eq!(left.unwrap().downloaded, 8);
+        assert_eq!(right.unwrap().downloaded, 8);
+        assert!(peak.load(Ordering::SeqCst) >= 2);
+        assert!(peak.load(Ordering::SeqCst) <= PROCESS_HOST_LIMIT,
+            "independent operations exceeded the process-wide host budget");
+        server.abort();
+        fs::remove_dir_all(first).await.unwrap();
+        fs::remove_dir_all(second).await.unwrap();
+        fs::remove_dir_all(shared_cache).await.unwrap();
+    }
+    #[tokio::test]
+    async fn retries_503_then_truncated_body_by_range_without_repeating_prefix() {
+        let bytes = b"0123456789ABCDEFGHIJ";
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/file", listener.local_addr().unwrap());
+        let requests = Arc::new(Mutex::new(Vec::<String>::new()));
+        let observed = Arc::clone(&requests);
+        let server = tokio::spawn(async move {
+            for step in 0..3 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                let mut buffer = [0u8; 2048];
+                while !request.windows(4).any(|w| w == b"\r\n\r\n") {
+                    let n = stream.read(&mut buffer).await.unwrap();
+                    assert!(n > 0);
+                    request.extend_from_slice(&buffer[..n]);
+                }
+                observed.lock().unwrap().push(String::from_utf8(request).unwrap());
+                let response = match step {
+                    0 => b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\nRetry-After: 0\r\nConnection: close\r\n\r\n".to_vec(),
+                    1 => [b"HTTP/1.1 200 OK\r\nContent-Length: 20\r\nETag: \"stable\"\r\nConnection: close\r\n\r\n".as_slice(), &bytes[..8]].concat(),
+                    _ => [b"HTTP/1.1 206 Partial Content\r\nContent-Length: 12\r\nContent-Range: bytes 8-19/20\r\nETag: \"stable\"\r\nConnection: close\r\n\r\n".as_slice(), &bytes[8..]].concat(),
+                };
+                stream.write_all(&response).await.unwrap();
+                let _ = stream.shutdown().await;
+            }
+        });
+        let manifest: Manifest = serde_json::from_value(json!({
+            "schemaVersion": "1.0", "projectId": "test", "profileId": "test", "channel": "stable",
+            "version": "test", "createdAt": "test", "minecraft": { "version": "1.21.1", "loader": "vanilla" },
+            "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
+            "files": [{"path": "libraries/retry.jar", "url": url, "size": bytes.len(),
+                "sha256": hex::encode(Sha256::digest(bytes)), "required": true, "executable": false }]
+        })).unwrap();
+        let root = std::env::temp_dir().join(format!("nl-retry-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(&root).await.unwrap();
+        let result = tokio::time::timeout(Duration::from_secs(12), run_with_store(&manifest, &root,
+            DownloadLimits::default(), None, "retry-test".into(), watch::channel(Directive::Running).1, CacheStore::at(root.join("cache"))))
+            .await.unwrap().unwrap();
+        assert_eq!(result.downloaded, 1, "{:?}", result.messages);
+        assert_eq!(result.failed, 0);
+        assert_eq!(result.bytes_downloaded, 20, "only the missing suffix crossed the wire after failure");
+        assert_eq!(fs::read(root.join("libraries/retry.jar")).await.unwrap(), bytes);
+        server.await.unwrap();
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(requests[2].to_ascii_lowercase().contains("range: bytes=8-"));
+        assert!(requests[2].to_ascii_lowercase().contains("if-range: \"stable\""));
+        drop(requests);
+        fs::remove_dir_all(root).await.unwrap();
+    }
+
+}
+
+#[cfg(test)]
+mod content_cache_mirror_integration_tests {
+    use super::*;
+    use serde_json::json;
+    use sha2::{Digest, Sha256};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpListener};
+
+    async fn serve(body: &'static [u8]) -> (String, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/download", listener.local_addr().unwrap());
+        let count = Arc::new(AtomicUsize::new(0));
+        let observed = Arc::clone(&count);
+        let task = tokio::spawn(async move {
+            while let Ok((mut stream, _)) = listener.accept().await {
+                let observed = Arc::clone(&observed);
+                tokio::spawn(async move {
+                    let mut input = [0u8; 2048];
+                    let _ = stream.read(&mut input).await;
+                    observed.fetch_add(1, Ordering::SeqCst);
+                    let header = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+                    let _ = stream.write_all(header.as_bytes()).await;
+                    let _ = stream.write_all(body).await;
+                    let _ = stream.shutdown().await;
+                });
+            }
+        });
+        (url, count, task)
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn detects_tampered_primary_falls_back_to_mirror_and_second_profile_is_offline() {
+        let trusted = b"real-verified-jar";
+        let poisoned = b"fake-verified-jar"; // длина совпадает; несоответствие обнаружит только SHA-256
+        assert_eq!(trusted.len(), poisoned.len());
+        let (primary, primary_count, primary_server) = serve(poisoned).await;
+        let (mirror, mirror_count, mirror_server) = serve(trusted).await;
+        let manifest: Manifest = serde_json::from_value(json!({
+            "schemaVersion": "1.0", "projectId": "test", "profileId": "one",
+            "channel": "stable", "version": "1", "createdAt": "test",
+            "minecraft": { "version": "1.21.1", "loader": "vanilla" },
+            "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
+            "files": [{"path": "libraries/common.jar", "size": trusted.len(),
+                "sha256": hex::encode(Sha256::digest(trusted)), "url": primary,
+                "mirrors": [mirror], "required": true}]
+        })).unwrap();
+        let sandbox = std::env::temp_dir().join(format!("nl-mirror-cache-e2e-{:016x}", rand::random::<u64>()));
+        let first = sandbox.join("profile-a");
+        let second = sandbox.join("profile-b");
+        fs::create_dir_all(&first).await.unwrap();
+        fs::create_dir_all(&second).await.unwrap();
+        let result = run_with_store(&manifest, &first, DownloadLimits::default(), None,
+            "mirror-primary-poisoned".into(), watch::channel(Directive::Running).1,
+            CacheStore::at(sandbox.join("shared-content-cache"))).await.unwrap();
+        assert_eq!(result.downloaded, 1, "{:?}", result.messages);
+        assert_eq!(result.failed, 0, "{:?}", result.messages);
+        assert!(primary_count.load(Ordering::SeqCst) >= 1);
+        assert_eq!(mirror_count.load(Ordering::SeqCst), 1);
+        assert_eq!(fs::read(first.join("libraries/common.jar")).await.unwrap(), trusted);
+        assert_eq!(result.bytes_downloaded as usize, poisoned.len() + trusted.len());
+
+        // Имитируйте полный отказ сети при установке нового профиля.
+        primary_server.abort();
+        mirror_server.abort();
+        let offline = run_with_store(&manifest, &second, DownloadLimits::default(), None,
+            "cache-offline-reinstall".into(), watch::channel(Directive::Running).1,
+            CacheStore::at(sandbox.join("shared-content-cache"))).await.unwrap();
+        assert_eq!(offline.downloaded, 1, "{:?}", offline.messages);
+        assert_eq!(offline.failed, 0);
+        assert_eq!(offline.cache_hits, 1);
+        assert_eq!(offline.bytes_reused, trusted.len() as u64);
+        assert_eq!(offline.bytes_downloaded, 0, "cache hit must transfer zero wire bytes");
+        assert_eq!(fs::read(second.join("libraries/common.jar")).await.unwrap(), trusted);
+        fs::remove_dir_all(sandbox).await.unwrap();
+    }
+}

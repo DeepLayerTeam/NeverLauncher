@@ -1,0 +1,691 @@
+package httpapi
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
+)
+
+const minecraftSessionTTL119 = 24 * time.Hour
+const minecraftJoinTTL119 = 2 * time.Minute
+
+type minecraftSessionRequest119 struct {
+	ClientToken            string `json:"clientToken,omitempty"`
+	GuardAttestationTicket string `json:"guardAttestationTicket"`
+}
+
+type yggdrasilAuthenticateRequest119 struct {
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	ClientToken  string `json:"clientToken,omitempty"`
+	RequestUser  bool   `json:"requestUser,omitempty"`
+	ProviderID   string `json:"providerId,omitempty"`
+	TOTP         string `json:"totp,omitempty"`
+	RecoveryCode string `json:"recoveryCode,omitempty"`
+}
+
+type yggdrasilRefreshRequest119 struct {
+	AccessToken     string `json:"accessToken"`
+	ClientToken     string `json:"clientToken,omitempty"`
+	RequestUser     bool   `json:"requestUser,omitempty"`
+	SelectedProfile *struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"selectedProfile,omitempty"`
+}
+
+type yggdrasilTokenRequest119 struct {
+	AccessToken string `json:"accessToken"`
+	ClientToken string `json:"clientToken,omitempty"`
+}
+
+type yggdrasilSignoutRequest119 struct {
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	ProviderID string `json:"providerId,omitempty"`
+}
+
+type yggdrasilJoinRequest119 struct {
+	AccessToken     string `json:"accessToken"`
+	SelectedProfile string `json:"selectedProfile"`
+	ServerID        string `json:"serverId"`
+}
+
+func (s Server) minecraftRepo119() (repository.MinecraftRepository, error) {
+	repo, ok := s.Repo.(repository.MinecraftRepository)
+	if !ok {
+		return nil, errors.New("Недоступно: «minecraft repository»")
+	}
+	return repo, nil
+}
+
+func newMinecraftProfileUUID119() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	// Локальная идентичность GameProfile намеренно не зависит от ID пользователей Never.
+	// UUIDv4 сохраняется один раз и остаётся неизменным весь срок жизни профиля.
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	h := hex.EncodeToString(b)
+	return h[:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32], nil
+}
+
+func minecraftID119(uuid string) string {
+	return strings.ReplaceAll(strings.ToLower(strings.TrimSpace(uuid)), "-", "")
+}
+
+func minecraftName119(user model.User) string {
+	for _, raw := range []string{user.DisplayName, strings.SplitN(user.Email, "@", 2)[0], user.ID} {
+		var b strings.Builder
+		for _, ch := range raw {
+			if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
+				b.WriteRune(ch)
+			}
+		}
+		v := b.String()
+		if len(v) > 16 {
+			v = v[:16]
+		}
+		if len(v) >= 3 {
+			return v
+		}
+	}
+	return "NL_Player"
+}
+
+func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfile, error) {
+	repo, err := s.minecraftRepo119()
+	if err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	if item, err := repo.GetMinecraftProfileByUser(user.ID); err == nil {
+		if err := s.syncTextureIdentity0251(item); err != nil {
+			return model.MinecraftProfile{}, err
+		}
+		return item, nil
+	}
+	base := minecraftName119(user)
+	for i := 0; i < 100; i++ {
+		name := base
+		if i > 0 {
+			suffix := fmt.Sprintf("_%x", sha256.Sum256([]byte(user.ID+fmt.Sprint(i))))[:5]
+			cut := 16 - len(suffix)
+			if cut < 3 {
+				cut = 3
+			}
+			if len(base) > cut {
+				name = base[:cut] + suffix
+			} else {
+				name = base + suffix
+			}
+		}
+		if existing, err := repo.GetMinecraftProfileByName(name); err == nil && existing.UserID != user.ID {
+			continue
+		}
+		uuid, uuidErr := newMinecraftProfileUUID119()
+		if uuidErr != nil {
+			return model.MinecraftProfile{}, uuidErr
+		}
+		profile, err := repo.SaveMinecraftProfile(model.MinecraftProfile{
+			UserID: user.ID, UUID: uuid, Name: name,
+			Issuer: "launcher", Realm: "local", Subject: uuid, IdentityVersion: "independent-v1",
+		})
+		if err == nil {
+			if err := s.syncTextureIdentity0251(profile); err != nil {
+				return model.MinecraftProfile{}, err
+			}
+			return profile, nil
+		}
+		// Другой экземпляр мог создать профиль этого пользователя или такое же имя
+		// без учёта регистра между SELECT и INSERT. Найдите победившую запись и
+		// повторяйте только при конфликте имени; не скрывайте другие ошибки БД.
+		if existing, getErr := repo.GetMinecraftProfileByUser(user.ID); getErr == nil {
+			if err := s.syncTextureIdentity0251(existing); err != nil {
+				return model.MinecraftProfile{}, err
+			}
+			return existing, nil
+		}
+		if existing, getErr := repo.GetMinecraftProfileByName(name); getErr == nil && existing.UserID != user.ID {
+			continue
+		}
+		return model.MinecraftProfile{}, err
+	}
+	return model.MinecraftProfile{}, fmt.Errorf("Не удалось создать уникальное имя профиля Minecraft")
+}
+
+func (s Server) issueMinecraftSession119(user model.User, neverSessionID, clientToken string) (model.MinecraftSession, string, model.MinecraftProfile, error) {
+	parentSession, ok := s.State.AuthSessions.get(neverSessionID, user.ID)
+	if !ok {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
+	if parentSession.BindingEpoch < 1 {
+		parentSession.BindingEpoch = 1
+	}
+	return s.issueMinecraftSessionWithTrust119(user, neverSessionID, clientToken, parentSession.TrustedDeviceID, parentSession.BindingEpoch)
+}
+
+// issueMinecraftSessionWithTrust119 сохраняет точный снимок устройства
+// и привязки, уже разрешённый вызывающей стороной. Он не повышает
+// привязку при гонке: если перепривязка произошла до проверки, выдача
+// неуспешна; если после — старый сохранённый снимок отклонит следующая
+// живая проверка. Это закрывает TOCTOU при выдаче токена.
+func (s Server) issueMinecraftSessionWithTrust119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64) (model.MinecraftSession, string, model.MinecraftProfile, error) {
+	return s.issueMinecraftSessionWithTrustAndIntegrity119(user, neverSessionID, clientToken, trustedDeviceID, bindingEpoch, nil)
+}
+
+func (s Server) issueMinecraftSessionWithTrustAndIntegrity119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64, integrity *minecraftIntegritySnapshot0135) (model.MinecraftSession, string, model.MinecraftProfile, error) {
+	decision := s.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeLaunch, UserID: user.ID, SessionID: neverSessionID, DeviceID: trustedDeviceID, RoleID: user.RoleID})
+	if !decision.Allowed() {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
+	repo, err := s.minecraftRepo119()
+	if err != nil {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
+	}
+	parentSession, ok := s.State.AuthSessions.get(neverSessionID, user.ID)
+	if !ok {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
+	if parentSession.BindingEpoch < 1 {
+		parentSession.BindingEpoch = 1
+	}
+	trustedDeviceID = strings.TrimSpace(trustedDeviceID)
+	if bindingEpoch < 1 {
+		bindingEpoch = 1
+	}
+	if parentSession.BindingEpoch != bindingEpoch || strings.TrimSpace(parentSession.TrustedDeviceID) != trustedDeviceID {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
+	profile, err := s.ensureMinecraftProfile119(user)
+	if err != nil {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
+	}
+	token, err := randomToken("nlmc")
+	if err != nil {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
+	}
+	if strings.TrimSpace(clientToken) == "" {
+		clientToken, err = randomToken("nlct")
+		if err != nil {
+			return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
+		}
+	}
+	now := time.Now().UTC()
+	session := model.MinecraftSession{ID: "mcs-" + strings.TrimPrefix(token, "nlmc_"), UserID: user.ID, NeverSessionID: neverSessionID, ProfileUUID: profile.UUID, TrustedDeviceID: trustedDeviceID, BindingEpoch: bindingEpoch, ClientToken: clientToken, AccessTokenHash: tokenHash910(token), Status: "active", CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(minecraftSessionTTL119)}
+	if integrity != nil {
+		session.IntegrityVerified = true
+		session.GuardAttestationSHA256 = integrity.GuardAttestationSHA256
+		session.GuardEvidenceSHA256 = integrity.GuardEvidenceSHA256
+		session.GuardSHA256 = integrity.GuardSHA256
+		session.LauncherSHA256 = integrity.LauncherSHA256
+		session.LauncherVersion = integrity.LauncherVersion
+		session.IntegrityVerifiedAt = integrity.VerifiedAt
+	}
+	session, err = repo.SaveMinecraftSession(session)
+	return session, token, profile, err
+}
+
+func (s Server) validateMinecraftToken119(token string) (model.MinecraftSession, model.MinecraftProfile, model.User, error) {
+	repo, err := s.minecraftRepo119()
+	if err != nil {
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, err
+	}
+	session, err := repo.GetMinecraftSessionByTokenHash(tokenHash910(strings.TrimSpace(token)))
+	if err != nil || session.Status != "active" || !session.ExpiresAt.After(time.Now().UTC()) {
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	_, trust := s.evaluateGameplayTrust0127(nil, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, false)
+	if !trust.Allowed {
+		if gameplayTrustPermanentFailure0127(trust.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "trust-policy:"+trust.Reason)
+		}
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	integrity := s.evaluateMinecraftIntegrity0135(session)
+	if !integrity.Allowed {
+		if minecraftIntegrityPermanentFailure0135(integrity.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "integrity-policy:"+integrity.Reason)
+		}
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	if !s.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeJoin, UserID: session.UserID, SessionID: session.NeverSessionID, DeviceID: session.TrustedDeviceID}).Allowed() {
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	user, err := s.Repo.GetUser(session.UserID)
+	if err != nil || user.Status == "disabled" {
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	profile, err := repo.GetMinecraftProfileByUUID(session.ProfileUUID)
+	if err != nil {
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	_, _ = repo.TouchMinecraftSession(session.ID)
+	return session, profile, user, nil
+}
+
+func minecraftProfileJSON119(profile model.MinecraftProfile, texture map[string]string) map[string]any {
+	properties := []map[string]string{}
+	if texture != nil {
+		properties = append(properties, texture)
+	}
+	return map[string]any{"id": minecraftID119(profile.UUID), "name": profile.Name, "properties": properties}
+}
+
+func (s Server) minecraftTexture119(ctx context.Context, profile model.MinecraftProfile) (map[string]string, error) {
+	texture, err := s.localTextureRecord0394(ctx, profile.UUID, profile.Name)
+	if err != nil {
+		return nil, err
+	}
+	return s.textureProperty0256(texture, true)
+}
+
+func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Request) {
+	claims, err := s.verifyAdminTokenFromRequest(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	var req minecraftSessionRequest119
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "некорректный JSON")
+		return
+	}
+	if err := dec.Decode(&struct{}{}); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "тело запроса должно содержать один JSON-объект")
+		return
+	}
+	_, trust := s.evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)
+	if !trust.Allowed {
+		s.writeGameplayTrustRequirement0127(w, trust)
+		return
+	}
+	var guardTicket model.DeviceChallenge
+	guardRequired, err := s.guardAttestationRequiredForSession0134(claims)
+	if err != nil {
+		writeError(w, http.StatusPreconditionFailed, "не удалось определить Guard policy для trusted device")
+		return
+	}
+	var integritySnapshot *minecraftIntegritySnapshot0135
+	if guardRequired {
+		guardTicket, err = s.consumeGuardLaunchTicket0134(r, claims, req.GuardAttestationTicket)
+		if err != nil {
+			writeError(w, http.StatusPreconditionFailed, err.Error())
+			return
+		}
+		snapshot, snapshotErr := snapshotFromGuardLaunchTicket0135(guardTicket)
+		if snapshotErr != nil {
+			writeError(w, http.StatusPreconditionFailed, snapshotErr.Error())
+			return
+		}
+		integritySnapshot = &snapshot
+	}
+	user, err := s.Repo.GetUser(claims.Sub)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "пользователь не найден")
+		return
+	}
+	session, token, profile, err := s.issueMinecraftSessionWithTrustAndIntegrity119(user, claims.SessionID, req.ClientToken, trust.TrustedDeviceID, trust.BindingEpoch, integritySnapshot)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "не удалось создать Minecraft session")
+		return
+	}
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("minecraft-session"), Actor: user.Email, Action: "minecraft:session:issued", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	if guardTicket.ID != "" {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-launch"), Actor: user.Email, Action: "guard:launch-ticket:consumed", Target: guardTicket.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	}
+	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
+	if propertyErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"accessToken": token, "clientToken": session.ClientToken, "expiresAt": session.ExpiresAt, "profile": minecraftProfileJSON119(profile, property), "integrity": integrityMetadataFromMinecraftSession0135(session)}})
+}
+
+func (s Server) minecraftProfileCurrent119(w http.ResponseWriter, r *http.Request) {
+	claims, err := s.verifyAdminTokenFromRequest(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	user, err := s.Repo.GetUser(claims.Sub)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "пользователь не найден")
+		return
+	}
+	profile, err := s.ensureMinecraftProfile119(user)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "не удалось получить Minecraft profile")
+		return
+	}
+	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
+	if propertyErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": minecraftProfileJSON119(profile, property)})
+}
+
+func decodeYggdrasil119(w http.ResponseWriter, r *http.Request, dst any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(dst)
+}
+func writeYggdrasilError119(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]any{"error": "ForbiddenOperationException", "errorMessage": message})
+}
+
+func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request) {
+	var req yggdrasilAuthenticateRequest119
+	if decodeYggdrasil119(w, r, &req) != nil {
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	result, err := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: strings.TrimSpace(req.Username), Secret: req.Password})
+	if err != nil {
+		status := federationHTTPStatus112(err)
+		if status < 400 || status >= 500 {
+			status = http.StatusForbidden
+		}
+		writeYggdrasilError119(w, status, "Неверные учётные данные")
+		return
+	}
+	if !s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.BeforeAuth, UserID: result.User.ID, DeviceID: "minecraft-authlib", RoleID: result.User.RoleID}).Allowed() {
+		writeYggdrasilError119(w, http.StatusForbidden, "Protection policy denied authentication")
+		return
+	}
+	mfa, err := s.evaluateLoginMFA117(result.User, result.AuthMethods, req.TOTP, req.RecoveryCode)
+	if err != nil || mfa.NeedPasskey {
+		writeYggdrasilError119(w, http.StatusForbidden, "MFA requires Launcher session exchange")
+		return
+	}
+	_, _, neverSession, err := s.issueLoginSessionWithAuth(result.User, r, "minecraft-authlib", mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Session creation failed")
+		return
+	}
+	mcSession, token, profile, err := s.issueMinecraftSession119(result.User, neverSession.ID, req.ClientToken)
+	if err != nil {
+		s.State.AuthSessions.revoke(neverSession.ID, "minecraft-session-failed")
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Minecraft session creation failed")
+		return
+	}
+	payload := map[string]any{"accessToken": token, "clientToken": mcSession.ClientToken, "availableProfiles": []any{minecraftProfileJSON119(profile, nil)}, "selectedProfile": minecraftProfileJSON119(profile, nil)}
+	if req.RequestUser {
+		payload["user"] = map[string]any{"id": result.User.ID, "properties": []any{}}
+	}
+	writeJSON(w, http.StatusOK, payload)
+}
+
+func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
+	var req yggdrasilRefreshRequest119
+	if decodeYggdrasil119(w, r, &req) != nil {
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	old, profile, user, err := s.validateMinecraftToken119(req.AccessToken)
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
+		return
+	}
+	repo, _ := s.minecraftRepo119()
+	if err := repo.RevokeMinecraftSession(old.ID, "yggdrasil-refresh"); err != nil {
+		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
+		return
+	}
+	var integritySnapshot *minecraftIntegritySnapshot0135
+	if old.IntegrityVerified {
+		integritySnapshot = &minecraftIntegritySnapshot0135{
+			GuardAttestationSHA256: old.GuardAttestationSHA256, GuardEvidenceSHA256: old.GuardEvidenceSHA256,
+			GuardSHA256: old.GuardSHA256, LauncherSHA256: old.LauncherSHA256, LauncherVersion: old.LauncherVersion, VerifiedAt: old.IntegrityVerifiedAt,
+		}
+	}
+	fresh, token, profile, err := s.issueMinecraftSessionWithTrustAndIntegrity119(user, old.NeverSessionID, firstNonEmpty(req.ClientToken, old.ClientToken), old.TrustedDeviceID, old.BindingEpoch, integritySnapshot)
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Session refresh failed")
+		return
+	}
+	payload := map[string]any{"accessToken": token, "clientToken": fresh.ClientToken, "selectedProfile": minecraftProfileJSON119(profile, nil)}
+	if req.RequestUser {
+		payload["user"] = map[string]any{"id": user.ID, "properties": []any{}}
+	}
+	writeJSON(w, http.StatusOK, payload)
+}
+
+func (s Server) yggdrasilValidate119(w http.ResponseWriter, r *http.Request) {
+	var req yggdrasilTokenRequest119
+	if decodeYggdrasil119(w, r, &req) != nil {
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	session, _, _, err := s.validateMinecraftToken119(req.AccessToken)
+	if err != nil || (req.ClientToken != "" && req.ClientToken != session.ClientToken) {
+		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (s Server) yggdrasilInvalidate119(w http.ResponseWriter, r *http.Request) {
+	var req yggdrasilTokenRequest119
+	if decodeYggdrasil119(w, r, &req) == nil {
+		if repo, err := s.minecraftRepo119(); err == nil {
+			if session, err := repo.GetMinecraftSessionByTokenHash(tokenHash910(req.AccessToken)); err == nil && (req.ClientToken == "" || req.ClientToken == session.ClientToken) {
+				_ = repo.RevokeMinecraftSession(session.ID, "yggdrasil-invalidate")
+			}
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s Server) yggdrasilSignout119(w http.ResponseWriter, r *http.Request) {
+	var req yggdrasilSignoutRequest119
+	if decodeYggdrasil119(w, r, &req) != nil {
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	result, err := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: strings.TrimSpace(req.Username), Secret: req.Password})
+	if err != nil {
+		if errors.Is(err, federation.ErrCapabilityUnsupported) {
+			writeYggdrasilError119(w, http.StatusForbidden, "Provider does not support password signout")
+			return
+		}
+		writeYggdrasilError119(w, http.StatusForbidden, "Неверные учётные данные")
+		return
+	}
+	s.State.AuthSessions.revokeUser(result.User.ID, "yggdrasil-signout")
+	if repo, err := s.minecraftRepo119(); err == nil {
+		repo.RevokeMinecraftSessionsByUser(result.User.ID, "yggdrasil-signout")
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s Server) yggdrasilJoin119(w http.ResponseWriter, r *http.Request) {
+	var req yggdrasilJoinRequest119
+	if decodeYggdrasil119(w, r, &req) != nil {
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
+		return
+	}
+	session, profile, _, err := s.validateMinecraftToken119(req.AccessToken)
+	if err != nil || minecraftID119(profile.UUID) != strings.ReplaceAll(strings.ToLower(strings.TrimSpace(req.SelectedProfile)), "-", "") {
+		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token or profile")
+		return
+	}
+	if strings.TrimSpace(req.ServerID) == "" {
+		writeYggdrasilError119(w, http.StatusBadRequest, "serverId is required")
+		return
+	}
+	_, trust := s.evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)
+	if !trust.Allowed {
+		writeYggdrasilError119(w, http.StatusForbidden, "Launcher trust policy denied join: "+trust.Reason)
+		return
+	}
+	repo, _ := s.minecraftRepo119()
+	now := time.Now().UTC()
+	err = repo.SaveMinecraftJoin(model.MinecraftJoin{Username: profile.Name, UsernameNormalized: strings.ToLower(profile.Name), ProfileUUID: profile.UUID, UserID: session.UserID, MinecraftSessionID: session.ID, ServerID: req.ServerID, IP: clientIP(r), CreatedAt: now, ExpiresAt: now.Add(minecraftJoinTTL119)})
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Join persistence failed")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	username := strings.TrimSpace(r.URL.Query().Get("username"))
+	serverID := strings.TrimSpace(r.URL.Query().Get("serverId"))
+	if username == "" || serverID == "" {
+		writeYggdrasilError119(w, http.StatusBadRequest, "username and serverId are required")
+		return
+	}
+	repo, err := s.minecraftRepo119()
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Хранилище Minecraft недоступно")
+		return
+	}
+	join, err := repo.GetMinecraftJoin(username, serverID)
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if requestedIP := strings.TrimSpace(r.URL.Query().Get("ip")); requestedIP != "" && join.IP != "" && requestedIP != join.IP {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	session, err := repo.GetMinecraftSession(join.MinecraftSessionID)
+	if err != nil || session.Status != "active" || !session.ExpiresAt.After(time.Now().UTC()) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	_, trust := s.evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)
+	if !trust.Allowed {
+		if gameplayTrustPermanentFailure0127(trust.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "trust-policy:"+trust.Reason)
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	integrity := s.evaluateMinecraftIntegrity0135(session)
+	if !integrity.Allowed {
+		if minecraftIntegrityPermanentFailure0135(integrity.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "integrity-policy:"+integrity.Reason)
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	profile, err := repo.GetMinecraftProfileByUUID(join.ProfileUUID)
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
+	if propertyErr != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
+		return
+	}
+	if _, err := repo.ConsumeMinecraftJoin(username, serverID, join.MinecraftSessionID, time.Now().UTC()); err != nil {
+		// Только первый из параллельных запросов /hasJoined может погасить билет
+		// сеанса.
+		// Одноразовые билеты входа: только первый параллельный /hasJoined данного сеанса
+		// может разрешить подключение. Проигравшие и повторные запросы строго отклоняются.
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	writeJSON(w, http.StatusOK, minecraftProfileJSON119(profile, property))
+}
+
+func (s Server) yggdrasilProfile119(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	repo, err := s.minecraftRepo119()
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	profile, err := repo.GetMinecraftProfileByUUID(r.PathValue("uuid"))
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	unsigned := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("unsigned")))
+	if unsigned != "" && unsigned != "true" && unsigned != "false" {
+		writeYggdrasilError119(w, http.StatusBadRequest, "unsigned must be true or false")
+		return
+	}
+	texture, lookupErr := s.localTextureRecord0394(r.Context(), profile.UUID, profile.Name)
+	if lookupErr != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "База текстур Yggdrasil недоступна")
+		return
+	}
+	property, propertyErr := s.textureProperty0256(texture, unsigned == "false")
+	if propertyErr != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	writeJSON(w, http.StatusOK, minecraftProfileJSON119(profile, property))
+}
+func (s Server) yggdrasilProfileByName119(w http.ResponseWriter, r *http.Request) {
+	repo, err := s.minecraftRepo119()
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	profile, err := repo.GetMinecraftProfileByName(r.PathValue("username"))
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": minecraftID119(profile.UUID), "name": profile.Name})
+}
+
+func (s Server) yggdrasilMetadata119(w http.ResponseWriter, r *http.Request) {
+	signer, err := s.yggdrasilSigner0256()
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
+		return
+	}
+	domains, err := s.textureDomains0256()
+	if err != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil texture allowlist unavailable")
+		return
+	}
+	base := strings.TrimRight(strings.TrimSpace(s.Config.PublicURL), "/")
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	writeJSON(w, http.StatusOK, map[string]any{
+		"meta": map[string]any{"serverName": "Launcher", "implementationName": "Launcher Yggdrasil", "implementationVersion": s.Version,
+			"feature.non_email_login": true, "feature.enable_profile_key": false, "links": map[string]string{"homepage": base}},
+		"skinDomains": domains, "signaturePublickey": signer.PublicPEM,
+	})
+}
+
+func (s Server) syncTextureIdentity0251(profile model.MinecraftProfile) error {
+	if repo, ok := s.Repo.(interface {
+		EnsureTextureIdentity0251(context.Context, model.MinecraftProfile) error
+	}); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return repo.EnsureTextureIdentity0251(ctx, profile)
+	}
+	return nil
+}

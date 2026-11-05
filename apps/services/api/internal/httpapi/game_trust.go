@@ -1,0 +1,168 @@
+package httpapi
+
+import (
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"os"
+	"strings"
+	"time"
+)
+
+// Плоскость управления использует те же разделённые по ролям и подписанные корнем
+// байты политики, что Prestarter и Runtime. API-запрос НЕ может задавать
+// собственный доверенный корень.
+type gameTrustEnvelope02312 struct {
+	SchemaVersion string `json:"schemaVersion"`
+	Payload       string `json:"payload"`
+	RootSignature string `json:"rootSignature"`
+}
+type gameTrustKey02312 struct {
+	ID          string `json:"id"`
+	Role        string `json:"role"`
+	PublicKey   string `json:"publicKey"`
+	Status      string `json:"status"`
+	NotBefore   string `json:"notBefore"`
+	VerifyUntil string `json:"verifyUntil"`
+}
+type gameTrustPolicy02312 struct {
+	SchemaVersion string              `json:"schemaVersion"`
+	Domain        string              `json:"domain"`
+	Epoch         uint64              `json:"epoch"`
+	IssuedAt      string              `json:"issuedAt"`
+	ExpiresAt     string              `json:"expiresAt"`
+	Keys          []gameTrustKey02312 `json:"keys"`
+}
+
+func gameTrustUTC02312(s string) (time.Time, error) { return time.Parse("2006-01-02T15:04:05Z", s) }
+func currentGameTrust02312() (gameTrustPolicy02312, error) {
+	var p gameTrustPolicy02312
+	rootHex := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY"))
+	path := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE"))
+	if rootHex == "" || path == "" {
+		return p, errors.New("Для производственной подписи необходимы путь к доверенной игровой политике и подготовленный корневой ключ")
+	}
+	root, e := hex.DecodeString(rootHex)
+	if e != nil || len(root) != 32 {
+		return p, errors.New("Некорректное значение: корневой ключ доверия игры")
+	}
+	stat, e := os.Lstat(path)
+	if e != nil {
+		return p, e
+	}
+	if !stat.Mode().IsRegular() || stat.Size() > 128*1024 {
+		return p, errors.New("Небезопасный объект: игра файл политики")
+	}
+	raw, e := os.ReadFile(path)
+	if e != nil {
+		return p, e
+	}
+	var env gameTrustEnvelope02312
+	if e = json.Unmarshal(raw, &env); e != nil {
+		return p, e
+	}
+	if env.SchemaVersion != "1.0" {
+		return p, errors.New("Не поддерживается: «game policy envelope»")
+	}
+	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
+	if e != nil || len(payload) > 96*1024 {
+		return p, errors.New("Некорректное значение: игра данные политики доверия")
+	}
+	sig, e := hex.DecodeString(env.RootSignature)
+	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte("Launcher-Trust-Policy-v1\n"), payload...), sig) {
+		return p, errors.New("Некорректное значение: «game trust root signature»")
+	}
+	if e = json.Unmarshal(payload, &p); e != nil {
+		return p, e
+	}
+	if p.SchemaVersion != "1.0" || p.Domain != "launcher.trust.v1" || p.Epoch == 0 {
+		return p, errors.New("Некорректное значение: «game trust domain/epoch»")
+	}
+	start, e := gameTrustUTC02312(p.IssuedAt)
+	if e != nil {
+		return p, e
+	}
+	end, e := gameTrustUTC02312(p.ExpiresAt)
+	if e != nil {
+		return p, e
+	}
+	now := time.Now().UTC()
+	if start.After(now.Add(5*time.Minute)) || !end.After(now) || end.Sub(start) > 90*24*time.Hour {
+		return p, errors.New("Доверенная игровая политика просрочена или датирована будущим")
+	}
+	return p, nil
+}
+func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, signedAt time.Time, issuance bool) error {
+	for _, k := range policy.Keys {
+		if k.Role != "game" || !strings.EqualFold(k.PublicKey, pub) {
+			continue
+		}
+		if k.Status == "revoked" {
+			return errors.New("Ключ подписи игры отозван")
+		}
+		if k.Status != "active" && k.Status != "verify-only" {
+			return errors.New("Неизвестное значение: «game signing key status»")
+		}
+		if issuance && k.Status != "active" {
+			return errors.New("«retired game signing key»: запрещено «publish»")
+		}
+		first, e := gameTrustUTC02312(k.NotBefore)
+		if e != nil {
+			return e
+		}
+		if signedAt.Before(first) || signedAt.After(time.Now().UTC().Add(5*time.Minute)) {
+			return errors.New("Временная метка подписи игры находится вне срока действия ключа")
+		}
+		if k.Status == "verify-only" {
+			limit, e := gameTrustUTC02312(k.VerifyUntil)
+			if e != nil {
+				return e
+			}
+			if !time.Now().UTC().Before(limit) || !signedAt.Before(limit) {
+				return errors.New("Истёк срок действия: «game verify-only overlap»")
+			}
+		}
+		return nil
+	}
+	return fmt.Errorf("Корневой ключ не делегировал полномочия ключу подписи игры: %s", pub)
+}
+func (s Server) enforceGameTrustSigning02312(manifest *model.Manifest, private ed25519.PrivateKey) error {
+	configured := os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
+	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")
+	if !configured && !production {
+		return nil
+	}
+	p, e := currentGameTrust02312()
+	if e != nil {
+		return e
+	}
+	key := hex.EncodeToString(private.Public().(ed25519.PublicKey))
+	if e = authorizedGameSigningKey02312(p, key, time.Now().UTC(), true); e != nil {
+		return e
+	}
+	manifest.TrustEpoch = p.Epoch
+	return nil
+}
+func (s Server) enforceGameTrustVerify02312(manifest model.Manifest) error {
+	configured := os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
+	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")
+	if !configured && !production {
+		return nil
+	}
+	p, e := currentGameTrust02312()
+	if e != nil {
+		return e
+	}
+	if manifest.TrustEpoch == 0 || manifest.TrustEpoch > p.Epoch {
+		return errors.New("Подписанный игровой манифест не ссылается на принятое поколение доверия")
+	}
+	at, e := time.Parse(time.RFC3339Nano, manifest.Signature.SignedAt)
+	if e != nil {
+		return e
+	}
+	return authorizedGameSigningKey02312(p, manifest.Signature.PublicKey, at, false)
+}

@@ -1,0 +1,750 @@
+package main
+
+import (
+	"context"
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+const (
+	defaultFabricMetaBase = "https://meta.fabricmc.net/v2"
+	defaultQuiltMetaBase  = "https://meta.quiltmc.org/v3"
+)
+
+type loaderMaterializeOptions struct {
+	Loader             string
+	MinecraftVersion   string
+	LoaderVersion      string
+	ClientDir          string
+	VersionManifest    string
+	AssetBaseURL       string
+	LibraryBaseURL     string
+	MetaBaseURL        string
+	Targets            []vanillaTarget
+	Workers            int
+	StrictUpstream     bool
+	SharedCacheDir     string
+	ResolutionLockPath string
+	LoaderCacheOnly    bool
+	EnforceGASupport   bool
+	HTTPClient         *http.Client
+}
+
+type loaderMetaEntry struct {
+	Loader       loaderMetaVersion `json:"loader"`
+	Intermediary loaderMetaVersion `json:"intermediary"`
+}
+
+type loaderMetaVersion struct {
+	Separator string `json:"separator"`
+	Build     int    `json:"build"`
+	Maven     string `json:"maven"`
+	Version   string `json:"version"`
+	Stable    bool   `json:"stable"`
+}
+
+type loaderVersionProfile struct {
+	ID            string          `json:"id"`
+	InheritsFrom  string          `json:"inheritsFrom"`
+	Type          string          `json:"type,omitempty"`
+	MainClass     string          `json:"mainClass"`
+	Libraries     []MojangLibrary `json:"libraries"`
+	Arguments     MojangArguments `json:"arguments,omitempty"`
+	MinecraftArgs string          `json:"minecraftArguments,omitempty"`
+	Time          string          `json:"time,omitempty"`
+	ReleaseTime   string          `json:"releaseTime,omitempty"`
+}
+
+type loaderMaterializeResult struct {
+	SchemaVersion          string                  `json:"schemaVersion"`
+	ToolVersion            string                  `json:"toolVersion"`
+	Loader                 string                  `json:"loader"`
+	MinecraftVersion       string                  `json:"minecraftVersion"`
+	LoaderVersion          string                  `json:"loaderVersion"`
+	ProfileID              string                  `json:"profileId"`
+	ProfilePath            string                  `json:"profilePath"`
+	MainClass              string                  `json:"mainClass"`
+	ClientDir              string                  `json:"clientDir"`
+	JavaMajorVersion       int                     `json:"javaMajorVersion"`
+	LibraryCount           int                     `json:"libraryCount"`
+	Downloaded             int                     `json:"downloaded"`
+	Cached                 int                     `json:"cached"`
+	TotalBytes             int64                   `json:"totalBytes"`
+	ProfileSHA256          string                  `json:"profileSha256"`
+	ResolutionLockPath     string                  `json:"resolutionLockPath"`
+	ResolutionLockSHA256   string                  `json:"resolutionLockSha256"`
+	ResolutionSourceURL    string                  `json:"resolutionSourceUrl"`
+	ResolutionSourceSHA256 string                  `json:"resolutionSourceSha256"`
+	MaterializationSHA256  string                  `json:"materializationSha256"`
+	ReproducibilitySHA256  string                  `json:"reproducibilitySha256"`
+	ResolutionPinned       bool                    `json:"resolutionPinned"`
+	LoaderCacheOnly        bool                    `json:"loaderCacheOnly"`
+	PayloadCacheHit        bool                    `json:"payloadCacheHit"`
+	UpstreamRecoveryUsed   bool                    `json:"upstreamRecoveryUsed"`
+	Vanilla                vanillaInstallResult    `json:"vanilla"`
+	Files                  []vanillaDownloadedFile `json:"files"`
+	Status                 string                  `json:"status"`
+}
+
+func handleRuntimeFabricInstall(args []string) error {
+	return handleRuntimeLoaderInstall("fabric", args)
+}
+
+func handleRuntimeQuiltInstall(args []string) error {
+	return handleRuntimeLoaderInstall("quilt", args)
+}
+
+func handleRuntimeFabricPackage(args []string) error {
+	return handleRuntimeLoaderPackage("fabric", args)
+}
+
+func handleRuntimeQuiltPackage(args []string) error {
+	return handleRuntimeLoaderPackage("quilt", args)
+}
+
+func handleRuntimeLoaderInstall(loader string, args []string) error {
+	opts, err := parseLoaderMaterializeOptions(loader, args)
+	if err != nil {
+		return err
+	}
+	lock, err := acquireCompatibilityMaterializationLock(opts.ClientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	result, err := installMetaLoader(context.Background(), opts)
+	if err != nil {
+		return err
+	}
+	return writeOrPrintJSON(flagValue(args, "--output", ""), result)
+}
+
+func handleRuntimeLoaderPackage(loader string, args []string) error {
+	opts, err := parseLoaderMaterializeOptions(loader, args)
+	if err != nil {
+		return err
+	}
+	lock, err := acquireCompatibilityMaterializationLock(opts.ClientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	result, err := installMetaLoader(context.Background(), opts)
+	if err != nil {
+		return err
+	}
+	releaseVersion := flagValue(args, "--version", result.MinecraftVersion+"-"+loader+"-"+result.LoaderVersion)
+	pkg, err := buildClientPackage(opts.ClientDir, flagValue(args, "--project", "demo-project"), flagValue(args, "--profile", loader), flagValue(args, "--channel", "stable"), releaseVersion, flagValue(args, "--base-url", ""))
+	if err != nil {
+		return err
+	}
+	pkg["status"] = "materialized-and-packaged"
+	pkg[loader] = result
+	pkg["manifestSettings"] = map[string]any{
+		"minecraft": map[string]any{
+			"version":       result.MinecraftVersion,
+			"loader":        loader,
+			"loaderVersion": result.LoaderVersion,
+			"mainClass":     result.MainClass,
+		},
+		"runtime": map[string]any{
+			"java": map[string]any{
+				"majorVersion":    result.JavaMajorVersion,
+				"distribution":    "temurin",
+				"allowCustomPath": true,
+			},
+			"launch": map[string]any{
+				"classpathStrategy":   "compatibility",
+				"versionMetadataPath": result.ProfilePath,
+				"nativesDirectory":    "natives",
+				"offlineMode":         true,
+			},
+		},
+		"directories": map[string]any{"game": ".", "assets": "assets", "libraries": "libraries", "natives": "natives"},
+	}
+	return writeOrPrintJSON(flagValue(args, "--output", "client-package.json"), pkg)
+}
+
+func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterializeOptions, error) {
+	loader = strings.ToLower(strings.TrimSpace(loader))
+	if loader != "fabric" && loader != "quilt" {
+		return loaderMaterializeOptions{}, fmt.Errorf("meta loader %s не поддерживается", loader)
+	}
+	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
+	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
+		if _, err := enforceLoaderGASupport0180(loader, minecraftVersion, 0); err != nil {
+			return loaderMaterializeOptions{}, err
+		}
+	}
+	clientDir := flagValue(args, "--client-dir", filepath.Join(".launcher", loader, minecraftVersion))
+	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
+	if err != nil || workers < 1 || workers > 64 {
+		return loaderMaterializeOptions{}, errors.New("--workers должен быть числом от 1 до 64")
+	}
+	targets, err := parseVanillaTargets(flagValue(args, "--target", currentVanillaTarget().OS+"/"+currentVanillaTarget().Arch))
+	if err != nil {
+		return loaderMaterializeOptions{}, err
+	}
+	metaBase := flagValue(args, "--meta-base-url", defaultMetaBaseForLoader(loader))
+	if err := validateMetaBaseURL(metaBase); err != nil {
+		return loaderMaterializeOptions{}, err
+	}
+	return loaderMaterializeOptions{
+		Loader:             loader,
+		MinecraftVersion:   minecraftVersion,
+		LoaderVersion:      strings.TrimSpace(flagValue(args, "--loader-version", "latest-stable")),
+		ClientDir:          clientDir,
+		VersionManifest:    flagValue(args, "--version-manifest", defaultMojangVersionManifest),
+		AssetBaseURL:       flagValue(args, "--asset-base-url", defaultMojangAssetBase),
+		LibraryBaseURL:     flagValue(args, "--library-base-url", defaultMojangLibraryBase),
+		MetaBaseURL:        strings.TrimRight(metaBase, "/"),
+		Targets:            targets,
+		Workers:            workers,
+		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
+		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
+		LoaderCacheOnly:    strings.EqualFold(flagValue(args, "--loader-cache-only", "false"), "true"),
+		EnforceGASupport:   true,
+	}, nil
+}
+
+func defaultMetaBaseForLoader(loader string) string {
+	if loader == "quilt" {
+		return defaultQuiltMetaBase
+	}
+	return defaultFabricMetaBase
+}
+
+func validateMetaBaseURL(raw string) error {
+	if strings.TrimSpace(raw) == "" {
+		return errors.New("Meta API base URL пуст")
+	}
+	return validateRemoteURL(strings.TrimRight(raw, "/") + "/versions/loader/probe")
+}
+
+func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (loaderMaterializeResult, error) {
+	var cacheErr error
+	ctx, cacheErr = sharedArtifactsContext0277(ctx, opts.SharedCacheDir, opts.ClientDir)
+	if cacheErr != nil {
+		return loaderMaterializeResult{}, cacheErr
+	}
+	loader := strings.ToLower(strings.TrimSpace(opts.Loader))
+	if loader != "fabric" && loader != "quilt" {
+		return loaderMaterializeResult{}, fmt.Errorf("поддерживаются только Fabric и Quilt, получен %s", loader)
+	}
+	if opts.HTTPClient == nil {
+		opts.HTTPClient = secureHTTPClient()
+	}
+	if opts.MetaBaseURL == "" {
+		opts.MetaBaseURL = defaultMetaBaseForLoader(loader)
+	}
+	if err := validateMetaBaseURL(opts.MetaBaseURL); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+
+	vanilla, err := installVanilla(ctx, vanillaInstallOptions{
+		MinecraftVersion: opts.MinecraftVersion,
+		ClientDir:        opts.ClientDir,
+		VersionManifest:  opts.VersionManifest,
+		AssetBaseURL:     opts.AssetBaseURL,
+		LibraryBaseURL:   opts.LibraryBaseURL,
+		Targets:          opts.Targets,
+		Workers:          opts.Workers,
+		StrictUpstream:   opts.StrictUpstream,
+		HTTPClient:       opts.HTTPClient,
+	})
+	if err != nil {
+		return loaderMaterializeResult{}, fmt.Errorf("%s: базовая версия Vanilla: %w", loader, err)
+	}
+	if opts.EnforceGASupport && compatibilityLoaderGA0180Required(version) {
+		if _, err := enforceLoaderGASupport0180(loader, vanilla.MinecraftVersion, vanilla.JavaMajorVersion); err != nil {
+			return loaderMaterializeResult{}, err
+		}
+	}
+
+	lockPath := opts.ResolutionLockPath
+	if lockPath == "" {
+		lockPath = defaultLoaderResolutionLockPath(opts.ClientDir, loader)
+	}
+	pinned, err := readLoaderResolutionLock(lockPath, loader, vanilla.MinecraftVersion, opts.LoaderVersion)
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	var selectedEntry loaderMetaEntry
+	var resolutionSourceURL, resolutionSourceSHA256 string
+	if pinned != nil {
+		selectedEntry.Loader.Version = pinned.ResolvedVersion
+		selectedEntry.Loader.Maven = pinned.LoaderMaven
+		selectedEntry.Intermediary.Maven = pinned.IntermediaryMaven
+		resolutionSourceURL = pinned.ResolutionSourceURL
+		resolutionSourceSHA256 = pinned.ResolutionSourceSHA256
+	} else {
+		selectedEntry, resolutionSourceURL, resolutionSourceSHA256, err = resolveMetaLoaderVersionWithEvidence(ctx, opts.HTTPClient, loader, opts.MetaBaseURL, vanilla.MinecraftVersion, opts.LoaderVersion)
+		if err != nil {
+			return loaderMaterializeResult{}, err
+		}
+	}
+	selectedLoader := selectedEntry.Loader.Version
+	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), url.PathEscape(vanilla.MinecraftVersion), url.PathEscape(selectedLoader))
+	profileBytes, payloadCacheHit, upstreamRecoveryUsed, err := fetchLoaderProfileWithCache(ctx, opts.HTTPClient, opts.ClientDir, loader, vanilla.MinecraftVersion, profileURL, pinned, opts.LoaderCacheOnly, 16<<20)
+	if err != nil {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile: %w", loader, err)
+	}
+	if err := assertPinnedPayload(pinned, profileURL, profileBytes); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	upstreamProfileSHA256 := sha256HexBytes(profileBytes)
+	var profile loaderVersionProfile
+	if err := json.Unmarshal(profileBytes, &profile); err != nil {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile JSON повреждён: %w", loader, err)
+	}
+	if profile.ID == "" {
+		profile.ID = fmt.Sprintf("%s-loader-%s-%s", loader, selectedLoader, vanilla.MinecraftVersion)
+	}
+	if err := validateLoaderProfileID(profile.ID); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	if profile.InheritsFrom == "" {
+		profile.InheritsFrom = vanilla.MinecraftVersion
+	}
+	if profile.InheritsFrom != vanilla.MinecraftVersion {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile inheritsFrom=%s, ожидался %s", loader, profile.InheritsFrom, vanilla.MinecraftVersion)
+	}
+	if profile.MainClass == "" {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит mainClass", loader)
+	}
+	if len(profile.Libraries) == 0 {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит libraries", loader)
+	}
+	if selectedEntry.Loader.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Loader.Maven) {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит выбранный loader artifact %s", loader, selectedEntry.Loader.Maven)
+	}
+	// Minecraft 26.1+ распространяется без обфускации. Fabric Meta может указывать
+	// маркер intermediary:0.0.0 вместо JAR с маппингами в профиле запуска. Не
+	// требуйте вымышленную зависимость от маппингов для этих выпусков, но сохраняйте
+	// строгую проверку идентичности настоящих intermediary-артефактов.
+	intermediary := selectedEntry.Intermediary.Maven
+	noMappingSentinel := loader == "fabric" && strings.HasPrefix(vanilla.MinecraftVersion, "26.") && intermediary == "net.fabricmc:intermediary:0.0.0"
+	if intermediary != "" && !noMappingSentinel && !profileHasLibrary(profile.Libraries, intermediary) {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит intermediary artifact %s", loader, intermediary)
+	}
+	if profile.Type == "" {
+		profile.Type = "release"
+	}
+
+	files, err := materializeLoaderLibraries(ctx, opts.HTTPClient, opts.ClientDir, &profile, opts.Workers, opts.StrictUpstream, opts.Targets...)
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	profileBytes, err = json.MarshalIndent(profile, "", "  ")
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	profileBytes = append(profileBytes, '\n')
+	profilePath := filepath.ToSlash(filepath.Join("versions", profile.ID, profile.ID+".json"))
+	profileDest, err := secureClientDestination(opts.ClientDir, profilePath)
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	if err := writeAtomicBytes(profileDest, profileBytes, 0o644); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	profileSHA := sha256.Sum256(profileBytes)
+	profileSHA256 := hex.EncodeToString(profileSHA[:])
+	if err := assertPinnedRuntimeProfile(pinned, profileSHA256); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	files = append(files, vanillaDownloadedFile{
+		Path: profilePath, Kind: loader + "-profile", Size: int64(len(profileBytes)), SHA256: profileSHA256,
+	})
+	files = dedupeDownloadedFiles(files)
+	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+	materializationSHA256 := loaderMaterializationSHA256(files)
+	if err := assertPinnedMaterialization(pinned, materializationSHA256); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	selectorForLock := opts.LoaderVersion
+	if pinned != nil {
+		selectorForLock = pinned.Selector
+	}
+	resolution := loaderResolutionLock{
+		SchemaVersion: loaderResolutionLockSchema, Loader: loader, MinecraftVersion: vanilla.MinecraftVersion, Selector: selectorForLock,
+		ResolvedVersion: selectedLoader, LoaderMaven: selectedEntry.Loader.Maven, IntermediaryMaven: selectedEntry.Intermediary.Maven,
+		ResolutionSourceURL: resolutionSourceURL, ResolutionSourceSHA256: resolutionSourceSHA256,
+		PayloadURL: profileURL, PayloadSHA256: upstreamProfileSHA256, RuntimeProfileSHA256: profileSHA256, MaterializationSHA256: materializationSHA256,
+	}
+	resolution, resolutionLockSHA256, err := persistLoaderResolutionLock(lockPath, resolution)
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+
+	downloaded, cached := 0, 0
+	var total int64
+	for _, file := range files {
+		if file.Cached {
+			cached++
+		} else if strings.HasPrefix(file.Kind, loader+"-") && file.Kind != loader+"-profile" {
+			downloaded++
+		}
+		total += file.Size
+	}
+	state := map[string]any{
+		"schemaVersion":          "1.0",
+		"toolVersion":            version,
+		"loader":                 loader,
+		"minecraftVersion":       vanilla.MinecraftVersion,
+		"loaderVersion":          selectedLoader,
+		"profileId":              profile.ID,
+		"profilePath":            profilePath,
+		"profileSha256":          profileSHA256,
+		"resolutionLockPath":     filepath.ToSlash(lockPath),
+		"resolutionLockSha256":   resolutionLockSHA256,
+		"resolutionSourceUrl":    resolutionSourceURL,
+		"resolutionSourceSha256": resolutionSourceSHA256,
+		"materializationSha256":  materializationSHA256,
+		"reproducibilitySha256":  resolution.ReproducibilitySHA256,
+		"resolutionPinned":       pinned != nil,
+		"loaderCacheOnly":        opts.LoaderCacheOnly,
+		"payloadCacheHit":        payloadCacheHit,
+		"upstreamRecoveryUsed":   upstreamRecoveryUsed,
+		"status":                 "installed-and-verified",
+	}
+	stateBytes, _ := json.MarshalIndent(state, "", "  ")
+	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".launcher", loader+"-install.json")))
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	if err := writeAtomicBytes(statePath, append(stateBytes, '\n'), 0o600); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+
+	return loaderMaterializeResult{
+		SchemaVersion:      "1.0",
+		ToolVersion:        version,
+		Loader:             loader,
+		MinecraftVersion:   vanilla.MinecraftVersion,
+		LoaderVersion:      selectedLoader,
+		ProfileID:          profile.ID,
+		ProfilePath:        profilePath,
+		MainClass:          profile.MainClass,
+		ClientDir:          opts.ClientDir,
+		JavaMajorVersion:   vanilla.JavaMajorVersion,
+		LibraryCount:       len(profile.Libraries),
+		Downloaded:         downloaded,
+		Cached:             cached,
+		TotalBytes:         total,
+		ProfileSHA256:      profileSHA256,
+		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256,
+		ResolutionSourceURL: resolutionSourceURL, ResolutionSourceSHA256: resolutionSourceSHA256,
+		MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		LoaderCacheOnly: opts.LoaderCacheOnly, PayloadCacheHit: payloadCacheHit, UpstreamRecoveryUsed: upstreamRecoveryUsed,
+		Vanilla: vanilla,
+		Files:   files,
+		Status:  "installed-and-verified",
+	}, nil
+}
+
+func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, error) {
+	entry, _, _, err := resolveMetaLoaderVersionWithEvidence(ctx, client, loader, metaBase, minecraftVersion, requested)
+	return entry, err
+}
+
+func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, string, string, error) {
+	loader = strings.ToLower(strings.TrimSpace(loader))
+	if loader != "fabric" && loader != "quilt" {
+		return loaderMetaEntry{}, "", "", fmt.Errorf("meta loader %s не поддерживается", loader)
+	}
+	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), url.PathEscape(minecraftVersion))
+	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
+	if err != nil {
+		if strings.Contains(err.Error(), "HTTP 404") {
+			// Quilt/Fabric Meta возвращает 404, если для версии Minecraft нет
+			// соответствующих маппингов загрузчика. Корректный HTTP 404 нельзя
+			// заменять выдуманным резервным вариантом или считать успешной сертификацией.
+			return loaderMetaEntry{}, "", "", fmt.Errorf("Метаданные версии загрузчика %s: Minecraft %s отсутствует в исходном индексе совместимости (HTTP 404): %w", loader, minecraftVersion, err)
+		}
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Метаданные версии загрузчика %s: %w", loader, err)
+	}
+	var entries []loaderMetaEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata повреждены: %w", loader, err)
+	}
+	if len(entries) == 0 {
+		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
+	}
+	selected, err := selectModernMetaEntry0272(loader, minecraftVersion, requested, entries)
+	if err != nil {
+		return loaderMetaEntry{}, "", "", err
+	}
+	return selected, url, sha256HexBytes(data), nil
+}
+
+// Quilt Meta v3 не гарантирует булево поле `stable` в строках загрузчика,
+// как Fabric. Стабильные релизы Quilt Loader содержат обычное числовое ядро
+// SemVer; предварительные версии имеют суффиксы вроде -beta/-rc. Так
+// `latest-stable` не выберет молча первый предварительный релиз из Meta.
+func isStableQuiltLoaderVersion(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false
+	}
+	core := strings.SplitN(value, "+", 2)[0]
+	if strings.Contains(core, "-") {
+		return false
+	}
+	parts := strings.Split(core, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "" {
+			return false
+		}
+		if _, err := strconv.Atoi(part); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// quiltStableVersionLess сравнивает числовые тройки SemVer без
+// лексикографической сортировки (0.9.9 должно быть меньше 0.10.0).
+func quiltStableVersionLess(a, b string) bool {
+	aParts := strings.Split(strings.SplitN(a, "+", 2)[0], ".")
+	bParts := strings.Split(strings.SplitN(b, "+", 2)[0], ".")
+	for i := 0; i < 3; i++ {
+		av, _ := strconv.Atoi(aParts[i])
+		bv, _ := strconv.Atoi(bParts[i])
+		if av != bv {
+			return av < bv
+		}
+	}
+	return false
+}
+
+func profileHasLibrary(libraries []MojangLibrary, coordinate string) bool {
+	coordinate = strings.TrimSpace(coordinate)
+	for _, library := range libraries {
+		if strings.TrimSpace(library.Name) == coordinate {
+			return true
+		}
+	}
+	return false
+}
+
+func validateLoaderProfileID(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" || id == "." || id == ".." || strings.ContainsAny(id, `/\\`) {
+		return fmt.Errorf("loader profile id некорректен: %q", id)
+	}
+	return nil
+}
+
+// Подготавливайте только библиотеки, относящиеся к выбранным ОС и
+// архитектурам. Метаданные других платформ остаются в неизменяемом профиле,
+// но не должны принуждать Linux, например, загружать Windows-зависимости.
+func materializeLoaderLibraries(ctx context.Context, client *http.Client, clientDir string, profile *loaderVersionProfile, workers int, strict bool, selectedTargets ...vanillaTarget) ([]vanillaDownloadedFile, error) {
+	if len(selectedTargets) == 0 {
+		selectedTargets = []vanillaTarget{currentVanillaTarget()}
+	}
+	for index, target := range selectedTargets {
+		normalized, err := normalizeVanillaTarget(target)
+		if err != nil {
+			return nil, fmt.Errorf("Цель загрузчика [%d]: %w", index, err)
+		}
+		selectedTargets[index] = normalized
+	}
+	if workers < 1 {
+		workers = 12
+	}
+	tasks := make([]vanillaDownloadTask, 0, len(profile.Libraries))
+	seen := map[string]string{}
+	seenURLs := map[string]string{}
+	applicable := make(map[int]bool)
+	for index := range profile.Libraries {
+		lib := &profile.Libraries[index]
+		if strings.TrimSpace(lib.Name) == "" {
+			return nil, fmt.Errorf("loader profile library[%d] не содержит name", index)
+		}
+		if lib.ClientReq != nil && !*lib.ClientReq {
+			continue
+		}
+		var targetOS []string
+		for _, target := range selectedTargets {
+			if rulesAllowTarget(lib.Rules, target) && libraryArtifactAppliesToTarget(lib.Name, target) {
+				targetOS = append(targetOS, target.OS)
+			}
+		}
+		if len(targetOS) == 0 {
+			continue
+		}
+		applicable[index] = true
+		artifact := lib.Downloads.Artifact
+		canonical, err := strictMavenPath(lib.Name)
+		if err != nil {
+			return nil, fmt.Errorf("Библиотека загрузчика %s: %w", lib.Name, err)
+		}
+		rel := strings.TrimSpace(artifact.Path)
+		if rel == "" {
+			rel = canonical
+		}
+		rel = strings.TrimPrefix(filepath.ToSlash(rel), "libraries/")
+		if rel != canonical {
+			return nil, fmt.Errorf("Библиотека загрузчика %s: artifact.path %q не соответствует идентификатору Maven %q", lib.Name, rel, canonical)
+		}
+		if err := validateVanillaRelativePath(rel); err != nil {
+			return nil, fmt.Errorf("Путь к библиотеке %s: %w", lib.Name, err)
+		}
+		artifactURL := strings.TrimSpace(artifact.URL)
+		if artifactURL == "" {
+			base := strings.TrimSpace(lib.URL)
+			if base == "" {
+				return nil, fmt.Errorf("loader library %s не содержит Maven repository URL", lib.Name)
+			}
+			artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(rel, "/")
+		}
+		if err := validateRemoteURL(artifactURL); err != nil {
+			return nil, fmt.Errorf("URL библиотеки загрузчика %s: %w", lib.Name, err)
+		}
+		expectedSHA1 := strings.ToLower(strings.TrimSpace(artifact.SHA1))
+		if expectedSHA1 == "" {
+			shaURL := artifactURL + ".sha1"
+			shaBytes, err := fetchLimitedBytes(ctx, client, shaURL, 64<<10)
+			if err != nil {
+				if strict {
+					return nil, fmt.Errorf("loader library %s: не удалось получить SHA-1: %w", lib.Name, err)
+				}
+			} else {
+				expectedSHA1 = parseSHA1Sidecar(string(shaBytes))
+			}
+		}
+		if strict && !validSHA1Hex(expectedSHA1) {
+			return nil, fmt.Errorf("loader library %s: Maven repository не предоставил корректный SHA-1", lib.Name)
+		}
+		if expectedSHA1 != "" && !validSHA1Hex(expectedSHA1) {
+			return nil, fmt.Errorf("loader library %s: некорректный SHA-1", lib.Name)
+		}
+		path := "libraries/" + rel
+		if previous, ok := seen[path]; ok {
+			if previous != expectedSHA1 || seenURLs[path] != artifactURL {
+				return nil, fmt.Errorf("loader profile содержит конфликтующие artifacts/sources для %s", path)
+			}
+		} else {
+			seen[path] = expectedSHA1
+			seenURLs[path] = artifactURL
+			tasks = append(tasks, vanillaDownloadTask{Path: path, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size, Kind: "loader-library", TargetOS: uniqueStrings(targetOS)})
+		}
+		lib.Downloads.Artifact = MojangDownload{Path: rel, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size}
+	}
+
+	files, err := runVanillaDownloads(ctx, client, clientDir, tasks, workers)
+	if err != nil {
+		return nil, err
+	}
+	byPath := make(map[string]vanillaDownloadedFile, len(files))
+	for _, file := range files {
+		byPath[file.Path] = file
+	}
+	for index := range profile.Libraries {
+		if !applicable[index] {
+			continue
+		}
+		lib := &profile.Libraries[index]
+		rel := strings.TrimPrefix(filepath.ToSlash(lib.Downloads.Artifact.Path), "libraries/")
+		path := "libraries/" + rel
+		file, ok := byPath[path]
+		if !ok {
+			return nil, fmt.Errorf("loader library %s не материализована", lib.Name)
+		}
+		artifact := lib.Downloads.Artifact
+		artifact.Size = file.Size
+		if artifact.SHA1 == "" {
+			artifact.SHA1 = file.SHA1
+		}
+		lib.Downloads.Artifact = artifact
+	}
+	return files, nil
+}
+
+func strictMavenPath(name string) (string, error) {
+	// Координаты Maven для Fabric/Quilt могут явно задавать @jar. Другие расширения
+	// отклоняются: элементы classpath должны быть загружаемыми архивами.
+	coordinate, extension, hasExtension := strings.Cut(strings.TrimSpace(name), "@")
+	if hasExtension && extension != "jar" {
+		return "", fmt.Errorf("У координаты Maven %q для загрузчика неподдерживаемое расширение classpath", name)
+	}
+	parts := strings.Split(coordinate, ":")
+	if len(parts) < 3 || len(parts) > 4 {
+		return "", fmt.Errorf("Maven coordinate %q должен иметь group:artifact:version[:classifier]", name)
+	}
+	for _, part := range parts {
+		if strings.TrimSpace(part) != part || part == "" || part == "." || part == ".." || strings.ContainsAny(part, `/\:@`) {
+			return "", fmt.Errorf("Maven coordinate %q содержит недопустимую часть", name)
+		}
+	}
+	for _, group := range strings.Split(parts[0], ".") {
+		if group == "" {
+			return "", fmt.Errorf("Maven coordinate %q содержит пустую часть group", name)
+		}
+	}
+	group := strings.ReplaceAll(parts[0], ".", "/")
+	artifact, ver := parts[1], parts[2]
+	classifier := ""
+	if len(parts) == 4 {
+		classifier = "-" + parts[3]
+	}
+	return filepath.ToSlash(filepath.Join(group, artifact, ver, artifact+"-"+ver+classifier+".jar")), nil
+}
+
+func fetchLimitedBytes(ctx context.Context, client *http.Client, rawURL string, max int64) ([]byte, error) {
+	if err := validateRemoteURL(rawURL); err != nil {
+		return nil, err
+	}
+	resp, err := compatibilityGET(ctx, client, rawURL, "Launcher/"+version+" LoaderMaterializer")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	reader := io.LimitReader(resp.Body, max+1)
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > max {
+		return nil, fmt.Errorf("response превышает лимит %d bytes", max)
+	}
+	return data, nil
+}
+
+func parseSHA1Sidecar(value string) string {
+	fields := strings.Fields(strings.TrimSpace(value))
+	if len(fields) == 0 {
+		return ""
+	}
+	candidate := strings.ToLower(strings.TrimSpace(fields[0]))
+	if validSHA1Hex(candidate) {
+		return candidate
+	}
+	return ""
+}
+
+func validSHA1Hex(value string) bool {
+	if len(value) != sha1.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
+}

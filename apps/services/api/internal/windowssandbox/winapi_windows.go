@@ -1,0 +1,428 @@
+//go:build windows
+
+package windowssandbox
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"syscall"
+	"unsafe"
+)
+
+var (
+	kernel32            = syscall.NewLazyDLL("kernel32.dll")
+	userenv             = syscall.NewLazyDLL("userenv.dll")
+	advapi              = syscall.NewLazyDLL("advapi32.dll")
+	createProfile       = userenv.NewProc("CreateAppContainerProfile")
+	deriveSID           = userenv.NewProc("DeriveAppContainerSidFromAppContainerName")
+	deleteProfile       = userenv.NewProc("DeleteAppContainerProfile")
+	getProfilePath      = userenv.NewProc("GetAppContainerFolderPath")
+	localFree           = kernel32.NewProc("LocalFree")
+	initAttrs           = kernel32.NewProc("InitializeProcThreadAttributeList")
+	updateAttrs         = kernel32.NewProc("UpdateProcThreadAttribute")
+	deleteAttrs         = kernel32.NewProc("DeleteProcThreadAttributeList")
+	createProc          = kernel32.NewProc("CreateProcessW")
+	createJob           = kernel32.NewProc("CreateJobObjectW")
+	setJob              = kernel32.NewProc("SetInformationJobObject")
+	assignJob           = kernel32.NewProc("AssignProcessToJobObject")
+	isProcessInJob      = kernel32.NewProc("IsProcessInJob")
+	queryJob            = kernel32.NewProc("QueryInformationJobObject")
+	getFileAttributes   = kernel32.NewProc("GetFileAttributesW")
+	resumeThread        = kernel32.NewProc("ResumeThread")
+	waitObject          = kernel32.NewProc("WaitForSingleObject")
+	getExitCode         = kernel32.NewProc("GetExitCodeProcess")
+	terminateJob        = kernel32.NewProc("TerminateJobObject")
+	createNamedPipe     = kernel32.NewProc("CreateNamedPipeW")
+	connectNamedPipe    = kernel32.NewProc("ConnectNamedPipe")
+	disconnectNamedPipe = kernel32.NewProc("DisconnectNamedPipe")
+	convertSDDL         = advapi.NewProc("ConvertStringSecurityDescriptorToSecurityDescriptorW")
+	getLengthSD         = advapi.NewProc("GetSecurityDescriptorLength")
+	convertSID          = advapi.NewProc("ConvertSidToStringSidW")
+	openProcessToken    = advapi.NewProc("OpenProcessToken")
+	getTokenInformation = advapi.NewProc("GetTokenInformation")
+	equalSID            = advapi.NewProc("EqualSid")
+	terminateProcess    = kernel32.NewProc("TerminateProcess")
+	getCurrentProcess   = kernel32.NewProc("GetCurrentProcess")
+	duplicateHandle     = kernel32.NewProc("DuplicateHandle")
+)
+
+func winerr(op string, r uintptr, e error) error {
+	if r != 0 {
+		return nil
+	}
+	if e != nil && e != syscall.Errno(0) {
+		return fmt.Errorf("%s: %w", op, e)
+	}
+	return fmt.Errorf("%s failed", op)
+}
+func utf16FromPtr(p *uint16) string {
+	if p == nil {
+		return ""
+	}
+	buf := []uint16{}
+	for i := uintptr(0); i < 32768; i++ {
+		v := *(*uint16)(unsafe.Pointer(uintptr(unsafe.Pointer(p)) + 2*i))
+		if v == 0 {
+			break
+		}
+		buf = append(buf, v)
+	}
+	return syscall.UTF16ToString(buf)
+}
+func utf16(s string) *uint16 { p, _ := syscall.UTF16PtrFromString(s); return p }
+func newProfile(name string) (uintptr, string, error) {
+	n := utf16(name)
+	var sid uintptr
+	r, _, _ := createProfile.Call(uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(n)), 0, 0, uintptr(unsafe.Pointer(&sid)))
+	// HRESULT ERROR_ALREADY_EXISTS = 0x800700b7. Только случайное имя вызывающего может совпасть с существующим профилем.
+	if r == 0x800700b7 {
+		r, _, _ = deriveSID.Call(uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(&sid)))
+	}
+	if r != 0 || sid == 0 {
+		return 0, "", fmt.Errorf("CreateAppContainerProfile/Derive SID: HRESULT 0x%x", r)
+	}
+	var p *uint16
+	ok, _, err := convertSID.Call(sid, uintptr(unsafe.Pointer(&p)))
+	if e := winerr("ConvertSidToStringSid", ok, err); e != nil {
+		localFree.Call(sid)
+		return 0, "", e
+	}
+	s := utf16FromPtr(p)
+	localFree.Call(uintptr(unsafe.Pointer(p)))
+	return sid, s, nil
+}
+func destroyProfile(name string) { deleteProfile.Call(uintptr(unsafe.Pointer(utf16(name)))) }
+func freeSID(sid uintptr) {
+	if sid != 0 {
+		localFree.Call(sid)
+	}
+}
+func profilePath(sid uintptr) (string, error) {
+	var p *uint16
+	r, _, _ := getProfilePath.Call(sid, uintptr(unsafe.Pointer(&p)))
+	if r != 0 || p == nil {
+		return "", fmt.Errorf("GetAppContainerFolderPath: HRESULT 0x%x", r)
+	}
+	result := utf16FromPtr(p)
+	localFree.Call(uintptr(unsafe.Pointer(p)))
+	return result, nil
+}
+func securityDescriptor(sddl string) (uintptr, error) {
+	var sd uintptr
+	r, _, e := convertSDDL.Call(uintptr(unsafe.Pointer(utf16(sddl))), 1, uintptr(unsafe.Pointer(&sd)), 0)
+	if err := winerr("ConvertStringSecurityDescriptorToSecurityDescriptor", r, e); err != nil {
+		return 0, err
+	}
+	return sd, nil
+}
+func closeHandle(h uintptr) {
+	if h != 0 && h != ^uintptr(0) {
+		syscall.CloseHandle(syscall.Handle(h))
+	}
+}
+
+// Windows junction и точки монтирования могут быть reparse points, даже если
+// обычная проверка режима файла не выявляет символьную ссылку.
+func rejectReparsePoint(path string) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("sandbox-reparse-check-needs-absolute-path")
+	}
+	attributes, _, err := getFileAttributes.Call(uintptr(unsafe.Pointer(utf16(path))))
+	if attributes == ^uintptr(0) || uint32(attributes) == 0xFFFFFFFF {
+		return fmt.Errorf("sandbox-GetFileAttributes(%s): %w", path, err)
+	}
+	if attributes&0x400 != 0 { // FILE_ATTRIBUTE_REPARSE_POINT
+		return fmt.Errorf("sandbox-package-reparse-point-rejected: %s", path)
+	}
+	return nil
+}
+
+func ensureWindows() error {
+	if os.Getenv("OS") != "Windows_NT" {
+		return errors.New("windows-process-environment-unavailable")
+	}
+	return nil
+}
+func validSID(s string) bool { return strings.HasPrefix(s, "S-1-15-2-") && len(s) < 300 }
+
+type securityCapabilities struct {
+	appContainerSid uintptr
+	capabilities    uintptr
+	capabilityCount uint32
+	reserved        uint32
+}
+type startupInfo struct {
+	cb                                                                 uint32
+	reserved                                                           uintptr
+	desktop                                                            uintptr
+	title                                                              uintptr
+	x, y, xSize, ySize, xCountChars, yCountChars, fillAttribute, flags uint32
+	showWindow, reserved2                                              uint16
+	reserved2Ptr                                                       uintptr
+	stdInput, stdOutput, stdError                                      uintptr
+}
+type startupInfoEx struct {
+	startupInfo
+	attrList uintptr
+}
+type processInfo struct {
+	process, thread     uintptr
+	processId, threadId uint32
+}
+
+const (
+	procThreadSecurityCapabilities = 0x00020009
+	procThreadHandleList           = 0x00020002
+	duplicateSameAccess            = 0x00000002
+	extendedStartupInfo            = 0x00080000
+	createSuspended                = 0x00000004
+	createUnicodeEnvironment       = 0x00000400
+	startfUseStdHandles            = 0x00000100
+	waitInfinite                   = 0xFFFFFFFF
+	jobExtendedLimitInformation    = 9
+	jobCPURateControlInformation   = 15
+	jobKillOnClose                 = 0x2000
+	jobProcessMemory               = 0x100
+	jobActiveProcesses             = 0x8
+	jobCPURateEnable               = 0x1
+	jobCPURateHardCap              = 0x4
+)
+
+type ioCounters struct{ readOps, writeOps, otherOps, readBytes, writeBytes, otherBytes uint64 }
+type basicLimit struct {
+	perProcessUserTime, perJobUserTime int64
+	limitFlags                         uint32
+	minWorkingSet, maxWorkingSet       uintptr
+	activeProcessLimit                 uint32
+	affinity                           uintptr
+	priorityClass, schedulingClass     uint32
+}
+type extendedLimits struct {
+	basic                                                                        basicLimit
+	io                                                                           ioCounters
+	processMemoryLimit, jobMemoryLimit, peakProcessMemoryUsed, peakJobMemoryUsed uintptr
+}
+type cpuRate struct{ control, rate uint32 }
+
+// Повторно прочитать *эффективные* ограничения Job ядра после назначения. Сам по себе
+// успешный вызов SetInformationJobObject не доказывает, что все обязательные
+// ограничения сохранились или процесс содержится именно в этом Job.
+func verifyJobContainment(job, process uintptr, p Policy) error {
+	var member int32
+	ok, _, e := isProcessInJob.Call(process, job, uintptr(unsafe.Pointer(&member)))
+	if err := winerr("IsProcessInJob", ok, e); err != nil {
+		return err
+	}
+	if member == 0 {
+		return errors.New("sandbox-child-outside-required-job")
+	}
+	var limits extendedLimits
+	var returned uint32
+	ok, _, e = queryJob.Call(job, jobExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), unsafe.Sizeof(limits), uintptr(unsafe.Pointer(&returned)))
+	if err := winerr("QueryInformationJobObject(ExtendedLimit)", ok, e); err != nil {
+		return err
+	}
+	if uintptr(returned) < unsafe.Sizeof(limits) {
+		return errors.New("sandbox-job-limit-report-truncated")
+	}
+	const required = jobKillOnClose | jobProcessMemory | jobActiveProcesses | 0x200 // JOB_MEMORY
+	const breakaway = 0x800 | 0x1000                                                // BREAKAWAY_OK, SILENT_BREAKAWAY_OK
+	if limits.basic.limitFlags&required != required || limits.basic.limitFlags&breakaway != 0 {
+		return errors.New("sandbox-job-required-limit-missing-or-breakaway-enabled")
+	}
+	if limits.basic.activeProcessLimit != uint32(p.MaxProcesses) ||
+		limits.processMemoryLimit != uintptr(p.MaxMemoryBytes) || limits.jobMemoryLimit != uintptr(p.MaxMemoryBytes) {
+		return errors.New("sandbox-job-resource-limits-mismatch")
+	}
+	var cpu cpuRate
+	returned = 0
+	ok, _, e = queryJob.Call(job, jobCPURateControlInformation, uintptr(unsafe.Pointer(&cpu)), unsafe.Sizeof(cpu), uintptr(unsafe.Pointer(&returned)))
+	if err := winerr("QueryInformationJobObject(CpuRate)", ok, e); err != nil {
+		return err
+	}
+	if uintptr(returned) < unsafe.Sizeof(cpu) || cpu.control&(jobCPURateEnable|jobCPURateHardCap) != (jobCPURateEnable|jobCPURateHardCap) || cpu.rate != uint32(p.MaxCPUPercent*100) {
+		return errors.New("sandbox-job-cpu-hard-cap-not-enforced")
+	}
+	return nil
+}
+
+// Создание процесса AppContainer проверяется по фактическому первичному токену,
+// а не только по успешному UpdateProcThreadAttribute.
+func verifyAppContainerToken(process uintptr, wantSID uintptr) error {
+	var token uintptr
+	ok, _, e := openProcessToken.Call(process, 0x0008, uintptr(unsafe.Pointer(&token))) // TOKEN_QUERY
+	if er := winerr("OpenProcessToken", ok, e); er != nil {
+		return er
+	}
+	defer closeHandle(token)
+	var isContainer uint32
+	var received uint32
+	ok, _, e = getTokenInformation.Call(token, 29, uintptr(unsafe.Pointer(&isContainer)), 4, uintptr(unsafe.Pointer(&received))) // TokenIsAppContainer
+	if er := winerr("GetTokenInformation(TokenIsAppContainer)", ok, e); er != nil {
+		return er
+	}
+	if isContainer != 1 {
+		return errors.New("sandbox-created-process-does-not-have-AppContainer-token")
+	}
+	var tokenContainerSID uintptr
+	ok, _, e = getTokenInformation.Call(token, 31, uintptr(unsafe.Pointer(&tokenContainerSID)), uintptr(unsafe.Sizeof(tokenContainerSID)), uintptr(unsafe.Pointer(&received))) // TokenAppContainerSid
+	if er := winerr("GetTokenInformation(TokenAppContainerSid)", ok, e); er != nil {
+		return er
+	}
+	if tokenContainerSID == 0 {
+		return errors.New("sandbox-child-AppContainer-SID-is-empty")
+	}
+	same, _, _ := equalSID.Call(tokenContainerSID, wantSID)
+	if same == 0 {
+		return errors.New("sandbox-child-AppContainer-SID-mismatch")
+	}
+	return nil
+}
+
+// Только три явно дублированных стандартных потока могут пересечь границу AppContainer.
+// границу. Обычный наследуемый Win32 HANDLE (сокет БД, канал брокера,
+// секретный файл, токен сервиса) не должен наследоваться расширением.
+func inheritableStandardHandles() ([3]uintptr, error) {
+	var handles [3]uintptr
+	own, _, _ := getCurrentProcess.Call()
+	for i, original := range []uintptr{uintptr(syscall.Stdin), uintptr(syscall.Stdout), uintptr(syscall.Stderr)} {
+		if original == 0 || original == ^uintptr(0) {
+			for _, h := range handles {
+				closeHandle(h)
+			}
+			return [3]uintptr{}, errors.New("sandbox-standard-handle-unavailable")
+		}
+		var duplicated uintptr
+		ok, _, err := duplicateHandle.Call(own, original, own, uintptr(unsafe.Pointer(&duplicated)), 0, 1, duplicateSameAccess)
+		if e := winerr("DuplicateHandle isolated standard stream", ok, err); e != nil {
+			for _, h := range handles {
+				closeHandle(h)
+			}
+			return [3]uintptr{}, e
+		}
+		handles[i] = duplicated
+	}
+	return handles, nil
+}
+
+func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintptr, uint32, error) {
+	// Запросить настоящий токен AppContainer через атрибут процесса Windows.
+	// Если Windows не сможет применить его, вернёт ERROR_NOT_SUPPORTED.
+	var size uintptr
+	initAttrs.Call(0, 2, 0, uintptr(unsafe.Pointer(&size)))
+	if size == 0 {
+		return 0, 0, 0, 0, errors.New("Недоступно: «AppContainer attribute list»")
+	}
+	backing := make([]byte, size)
+	attrs := uintptr(unsafe.Pointer(&backing[0]))
+	r, _, e := initAttrs.Call(attrs, 2, 0, uintptr(unsafe.Pointer(&size)))
+	if err := winerr("InitializeProcThreadAttributeList", r, e); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	defer deleteAttrs.Call(attrs)
+	sc := securityCapabilities{appContainerSid: sid}
+	r, _, e = updateAttrs.Call(attrs, 0, procThreadSecurityCapabilities, uintptr(unsafe.Pointer(&sc)), unsafe.Sizeof(sc), 0, 0)
+	if err := winerr("AppContainer SECURITY_CAPABILITIES", r, e); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	streams, err := inheritableStandardHandles()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	defer func() {
+		for _, handle := range streams {
+			closeHandle(handle)
+		}
+	}()
+	// Для STARTF_USESTDHANDLES bInheritHandles должен быть TRUE, но наследование
+	// ограничивается этим явным белым списком (не всеми наследуемыми дескрипторами).
+	r, _, e = updateAttrs.Call(attrs, 0, procThreadHandleList,
+		uintptr(unsafe.Pointer(&streams[0])), unsafe.Sizeof(streams), 0, 0)
+	if err := winerr("AppContainer inherited-handle allowlist", r, e); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	job, _, e := createJob.Call(0, 0)
+	if err := winerr("CreateJobObject", job, e); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	fail := func(err error) (uintptr, uintptr, uintptr, uint32, error) { closeHandle(job); return 0, 0, 0, 0, err }
+	limits := extendedLimits{}
+	limits.basic.limitFlags = jobKillOnClose | jobProcessMemory | jobActiveProcesses
+	limits.basic.activeProcessLimit = uint32(c.Policy.MaxProcesses)
+	limits.processMemoryLimit = uintptr(c.Policy.MaxMemoryBytes)
+	limits.jobMemoryLimit = uintptr(c.Policy.MaxMemoryBytes)
+	limits.basic.limitFlags |= 0x200 // JOB_OBJECT_LIMIT_JOB_MEMORY
+	r, _, e = setJob.Call(job, jobExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), unsafe.Sizeof(limits))
+	if err := winerr("SetInformationJobObject limits", r, e); err != nil {
+		return fail(err)
+	}
+	cpu := cpuRate{control: jobCPURateEnable | jobCPURateHardCap, rate: uint32(c.Policy.MaxCPUPercent * 100)}
+	r, _, e = setJob.Call(job, jobCPURateControlInformation, uintptr(unsafe.Pointer(&cpu)), unsafe.Sizeof(cpu))
+	if err := winerr("SetInformationJobObject CPU", r, e); err != nil {
+		return fail(err)
+	}
+	// И cmd, и окружение происходят из подписанного проверенного манифеста расширения.
+	args := append([]string{c.Entrypoint}, c.Args...)
+	commandLine := syscall.EscapeArg(args[0])
+	for _, a := range args[1:] {
+		commandLine += " " + syscall.EscapeArg(a)
+	}
+	env := make([]string, 0, len(c.Environment)+5)
+	for _, v := range c.Environment {
+		k, _, _ := strings.Cut(v, "=")
+		switch strings.ToUpper(k) {
+		case "LAUNCHER_EXTENSION_HOST_URL", "LAUNCHER_EXTENSION_HOST_PIPE", "TEMP", "TMP", "LOCALAPPDATA":
+			continue
+		}
+		env = append(env, v)
+	}
+	env = append(env, "LAUNCHER_EXTENSION_HOST_URL=http://launcher.host.invalid", "LAUNCHER_EXTENSION_HOST_PIPE="+c.Pipe)
+	env = append(env, "TEMP="+c.Scratch, "TMP="+c.Scratch, "LOCALAPPDATA="+c.Scratch)
+	sort.Slice(env, func(i, j int) bool { return strings.ToUpper(env[i]) < strings.ToUpper(env[j]) })
+	envBlock := []uint16{}
+	for _, pair := range env {
+		if strings.IndexByte(pair, 0) >= 0 {
+			return fail(errors.New("В окружении дочернего процесса обнаружен символ NUL"))
+		}
+		envBlock = append(envBlock, syscall.StringToUTF16(pair)...)
+	}
+	envBlock = append(envBlock, 0)
+	si := startupInfoEx{startupInfo: startupInfo{cb: uint32(unsafe.Sizeof(startupInfoEx{})), flags: startfUseStdHandles}, attrList: attrs}
+	// Только дубликаты дескрипторов из белого списка. Атрибут handle-list обязателен.
+	si.stdInput = streams[0]
+	si.stdOutput = streams[1]
+	si.stdError = streams[2]
+	var pi processInfo
+	r, _, e = createProc.Call(uintptr(unsafe.Pointer(utf16(c.Entrypoint))), uintptr(unsafe.Pointer(utf16(commandLine))), 0, 0, 1,
+		extendedStartupInfo|createSuspended|createUnicodeEnvironment, uintptr(unsafe.Pointer(&envBlock[0])), uintptr(unsafe.Pointer(utf16(c.PayloadRoot))), uintptr(unsafe.Pointer(&si)), uintptr(unsafe.Pointer(&pi)))
+	if err := winerr("CreateProcessW AppContainer", r, e); err != nil {
+		return fail(err)
+	}
+	if err := verifyAppContainerToken(pi.process, sid); err != nil {
+		terminateProcess.Call(pi.process, 1)
+		closeHandle(pi.thread)
+		closeHandle(pi.process)
+		return fail(err)
+	}
+	r, _, e = assignJob.Call(job, pi.process)
+	if err := winerr("AssignProcessToJobObject before resume", r, e); err != nil {
+		terminateProcess.Call(pi.process, 1)
+		closeHandle(pi.thread)
+		closeHandle(pi.process)
+		return fail(err)
+	}
+	if err := verifyJobContainment(job, pi.process, c.Policy); err != nil {
+		terminateJob.Call(job, 1)
+		closeHandle(pi.thread)
+		closeHandle(pi.process)
+		return fail(err)
+	}
+	// Дочерний процесс остаётся приостановленным, пока родитель не запишет его реальный PID.
+	// Помощник удерживает дескрипторы приостановленного потока и Job, пока родитель
+	// не подтвердит готовность через аутентифицированный управляющий канал экземпляра.
+	return pi.process, pi.thread, job, pi.processId, nil
+}

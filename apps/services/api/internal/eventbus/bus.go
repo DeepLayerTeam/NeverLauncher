@@ -1,0 +1,507 @@
+package eventbus
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"math"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+)
+
+const ProtocolVersion = "1.0"
+
+var (
+	ErrHookRejected      = errors.New("Синхронный обработчик расширения отклонил операцию")
+	ErrHookTimeout       = errors.New("Превышено время ожидания синхронного обработчика расширения")
+	ErrPermanentDelivery = errors.New("Событие расширения окончательно отклонено")
+)
+
+type EventSpec struct {
+	Type               string
+	CategoryPermission string
+	SyncAllowed        bool
+}
+
+var specs0206 = map[string]EventSpec{
+	"project.before-save":         {"project.before-save", "project:read", true},
+	"profile.before-save":         {"profile.before-save", "project:read", true},
+	"project.saved":               {"project.saved", "project:read", false},
+	"release.created":             {"release.created", "release:read", false},
+	"release.before-publish":      {"release.before-publish", "release:read", true},
+	"release.published":           {"release.published", "release:read", false},
+	"package.created":             {"package.created", "release:read", false},
+	"package.file-added":          {"package.file-added", "release:read", false},
+	"package.validated":           {"package.validated", "release:read", false},
+	"package.signed":              {"package.signed", "release:read", false},
+	"package.staged":              {"package.staged", "release:read", false},
+	"package.integrity-checked":   {"package.integrity-checked", "release:read", false},
+	"package.runtime-validated":   {"package.runtime-validated", "release:read", false},
+	"package.smoke-tested":        {"package.smoke-tested", "release:read", false},
+	"package.before-publish":      {"package.before-publish", "release:read", true},
+	"package.published":           {"package.published", "release:read", false},
+	"storage.before-write":        {"storage.before-write", "storage:read", true},
+	"storage.file-written":        {"storage.file-written", "storage:read", false},
+	"serverbridge.event.received": {"serverbridge.event.received", "serverbridge:read", false},
+	"audit.event.created":         {"audit.event.created", "audit:read", false},
+}
+
+func KnownEventTypes() []string {
+	out := make([]string, 0, len(specs0206))
+	for k := range specs0206 {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+func Spec(eventType string) (EventSpec, bool) {
+	x, ok := specs0206[strings.ToLower(strings.TrimSpace(eventType))]
+	return x, ok
+}
+
+type Config struct {
+	WorkerInterval time.Duration
+	LeaseDuration  time.Duration
+	HookTimeout    time.Duration
+	MaxAttempts    int
+	BaseRetry      time.Duration
+	MaxRetry       time.Duration
+	BatchSize      int
+}
+
+func (c Config) normalized() Config {
+	if c.WorkerInterval <= 0 {
+		c.WorkerInterval = 250 * time.Millisecond
+	}
+	if c.LeaseDuration <= 0 {
+		c.LeaseDuration = 30 * time.Second
+	}
+	if c.HookTimeout <= 0 {
+		c.HookTimeout = 2 * time.Second
+	}
+	if c.MaxAttempts <= 0 {
+		c.MaxAttempts = 8
+	}
+	if c.BaseRetry <= 0 {
+		c.BaseRetry = time.Second
+	}
+	if c.MaxRetry <= 0 {
+		c.MaxRetry = 5 * time.Minute
+	}
+	if c.BatchSize <= 0 {
+		c.BatchSize = 32
+	}
+	if c.BatchSize > 100 {
+		c.BatchSize = 100
+	}
+	return c
+}
+
+type Dispatcher interface {
+	DeliverExtensionEvent(context.Context, model.ExtensionEventSubscription, model.ExtensionEvent) error
+	DeliverExtensionHook(context.Context, model.ExtensionEventSubscription, model.ExtensionEvent) (model.ExtensionHookResult, error)
+}
+
+type Bus struct {
+	cfg        Config
+	store      repository.ExtensionEventStore
+	mu         sync.RWMutex
+	dispatcher Dispatcher
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+}
+
+func New(cfg Config, repo repository.Repository) (*Bus, error) {
+	store, ok := repo.(repository.ExtensionEventStore)
+	if !ok {
+		return nil, errors.New("Репозиторий не поддерживает отказоустойчивое хранилище событий расширений")
+	}
+	return &Bus{cfg: cfg.normalized(), store: store}, nil
+}
+func (b *Bus) SetDispatcher(d Dispatcher)  { b.mu.Lock(); b.dispatcher = d; b.mu.Unlock() }
+func (b *Bus) dispatcherValue() Dispatcher { b.mu.RLock(); defer b.mu.RUnlock(); return b.dispatcher }
+func (b *Bus) Start(ctx context.Context) {
+	b.mu.Lock()
+	if b.cancel != nil {
+		b.mu.Unlock()
+		return
+	}
+	runCtx, cancel := context.WithCancel(ctx)
+	b.cancel = cancel
+	b.wg.Add(1)
+	b.mu.Unlock()
+	go b.worker(runCtx)
+}
+func (b *Bus) Close() {
+	b.mu.Lock()
+	cancel := b.cancel
+	b.cancel = nil
+	b.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	b.wg.Wait()
+}
+
+type PublishInput struct {
+	Type, ProjectID, AggregateType, AggregateID, OrderingKey, IdempotencyKey, Source string
+	Payload                                                                          any
+	OccurredAt                                                                       time.Time
+}
+
+func (b *Bus) Publish(ctx context.Context, in PublishInput) (model.ExtensionEvent, bool, error) {
+	event, err := buildEvent0206(in)
+	if err != nil {
+		return model.ExtensionEvent{}, false, err
+	}
+	return b.store.PublishExtensionEvent(ctx, event)
+}
+func buildEvent0206(in PublishInput) (model.ExtensionEvent, error) {
+	t := strings.ToLower(strings.TrimSpace(in.Type))
+	if _, ok := specs0206[t]; !ok {
+		return model.ExtensionEvent{}, fmt.Errorf("Не поддерживается: тип события расширения %q", t)
+	}
+	raw, err := json.Marshal(in.Payload)
+	if err != nil {
+		return model.ExtensionEvent{}, err
+	}
+	id, err := randomID0206()
+	if err != nil {
+		return model.ExtensionEvent{}, err
+	}
+	if strings.TrimSpace(in.IdempotencyKey) == "" {
+		in.IdempotencyKey = id
+	}
+	if strings.TrimSpace(in.OrderingKey) == "" {
+		in.OrderingKey = in.AggregateType + ":" + in.AggregateID
+	}
+	if in.OccurredAt.IsZero() {
+		in.OccurredAt = time.Now().UTC()
+	}
+	return model.ExtensionEvent{ID: id, Type: t, SchemaVersion: 1, ProjectID: strings.TrimSpace(in.ProjectID), AggregateType: strings.TrimSpace(in.AggregateType), AggregateID: strings.TrimSpace(in.AggregateID), OrderingKey: strings.TrimSpace(in.OrderingKey), IdempotencyKey: strings.TrimSpace(in.IdempotencyKey), Source: strings.TrimSpace(in.Source), Payload: raw, OccurredAt: in.OccurredAt}, nil
+}
+func randomID0206() (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	return "evt_" + hex.EncodeToString(b[:]), nil
+}
+
+func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
+	spec, ok := Spec(in.Type)
+	if !ok {
+		return fmt.Errorf("Не поддерживается: тип события расширения %q", in.Type)
+	}
+	if !spec.SyncAllowed {
+		return fmt.Errorf("«event» %s: запрещено «be used as sync hook»", in.Type)
+	}
+	event, _, err := b.Publish(ctx, in)
+	if err != nil {
+		return err
+	}
+	subs, err := b.store.ListExtensionEventSubscriptionsForType(ctx, event.Type, model.ExtensionEventModeSync)
+	if err != nil {
+		return err
+	}
+	d := b.dispatcherValue()
+	if len(subs) > 0 && d == nil {
+		return errors.New("Недоступно: «sync hook dispatcher»")
+	}
+	for _, sub := range subs {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if sub.Scope == "project" && sub.ScopeID != event.ProjectID {
+			continue
+		}
+		hookCtx, cancel := context.WithTimeout(ctx, b.cfg.HookTimeout)
+		result, callErr := d.DeliverExtensionHook(hookCtx, sub, event)
+		cancel()
+		if errors.Is(callErr, context.DeadlineExceeded) || errors.Is(hookCtx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("%w: %s/%s", ErrHookTimeout, sub.ExtensionID, event.Type)
+		}
+		if callErr != nil {
+			return fmt.Errorf("Ошибка: «sync hook %s/%s»: %w", sub.ExtensionID, event.Type, callErr)
+		}
+		if !result.OK {
+			return fmt.Errorf("%w: %s: %s", ErrHookRejected, sub.ExtensionID, strings.TrimSpace(result.Message))
+		}
+	}
+	return nil
+}
+
+func (b *Bus) Subscribe(ctx context.Context, sub model.ExtensionEventSubscription) (model.ExtensionEventSubscription, error) {
+	if _, ok := Spec(sub.EventType); !ok {
+		return model.ExtensionEventSubscription{}, fmt.Errorf("Не поддерживается: тип события расширения %q", sub.EventType)
+	}
+	if sub.Mode == model.ExtensionEventModeSync {
+		spec, _ := Spec(sub.EventType)
+		if !spec.SyncAllowed {
+			return model.ExtensionEventSubscription{}, fmt.Errorf("Событие %s поддерживает только асинхронную обработку", sub.EventType)
+		}
+	}
+	sub.Enabled = true
+	return b.store.SaveExtensionEventSubscription(ctx, sub)
+}
+func (b *Bus) Unsubscribe(ctx context.Context, id int64, extensionID, scope, scopeID string) error {
+	return b.store.DeleteExtensionEventSubscription(ctx, id, extensionID, scope, scopeID)
+}
+func (b *Bus) Subscriptions(ctx context.Context, extensionID, scope, scopeID string) ([]model.ExtensionEventSubscription, error) {
+	return b.store.ListExtensionEventSubscriptions(ctx, extensionID, scope, scopeID)
+}
+func (b *Bus) SetSubscriptionsEnabled(ctx context.Context, extensionID, scope, scopeID string, enabled bool) error {
+	return b.store.SetExtensionEventSubscriptionsEnabled(ctx, extensionID, scope, scopeID, enabled)
+}
+func (b *Bus) DeadLetters(ctx context.Context, extensionID string, limit int) ([]model.ExtensionEventDeadLetter, error) {
+	return b.store.ListExtensionEventDeadLetters(ctx, extensionID, limit)
+}
+func (b *Bus) ConfigSummary() map[string]any {
+	return map[string]any{"protocolVersion": ProtocolVersion, "workerIntervalMs": b.cfg.WorkerInterval.Milliseconds(), "leaseSeconds": b.cfg.LeaseDuration.Seconds(), "hookTimeoutMs": b.cfg.HookTimeout.Milliseconds(), "maxAttempts": b.cfg.MaxAttempts, "baseRetryMs": b.cfg.BaseRetry.Milliseconds(), "maxRetrySeconds": b.cfg.MaxRetry.Seconds(), "batchSize": b.cfg.BatchSize}
+}
+
+func (b *Bus) worker(ctx context.Context) {
+	defer b.wg.Done()
+	ticker := time.NewTicker(b.cfg.WorkerInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			b.processBatch(ctx)
+		}
+	}
+}
+
+// Захватывайте по одной доставке. Предварительная аренда всего пакета позволяет
+// последнему элементу истечь во время длительных ранних обратных вызовов: второй
+// узел API тогда может одновременно исполнить тот же вызов. Новая аренда для
+// каждого элемента синхронизирует срок с фактическим началом работы.
+func (b *Bus) processBatch(ctx context.Context) {
+	d := b.dispatcherValue()
+	if d == nil {
+		return
+	}
+	for i := 0; i < b.cfg.BatchSize; i++ {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+		items, err := b.store.LeaseExtensionEventDeliveries(ctx, 1, time.Now().UTC().Add(b.cfg.LeaseDuration))
+		if err != nil {
+			log.Printf("Ошибка: «Extensions event lease»: %v", err)
+			return
+		}
+		if len(items) == 0 {
+			return
+		}
+		env := items[0]
+		// Оставляйте время на ACK и повтор после крайнего срока обратного вызова. Это
+		// также ограничивает удалённые вызовы, когда несколько worker используют один
+		// SQL-репозиторий.
+		budget := b.cfg.LeaseDuration * 9 / 10
+		if budget <= 0 {
+			budget = b.cfg.LeaseDuration
+		}
+		deliveryCtx, cancel := context.WithTimeout(ctx, budget)
+		err = d.DeliverExtensionEvent(deliveryCtx, env.Subscription, env.Event)
+		cancel()
+		now := time.Now().UTC()
+		if err == nil {
+			if ackErr := b.store.CompleteExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now); ackErr != nil {
+				log.Printf("Не удалось подтвердить доставку события расширения delivery=%d: %v", env.Delivery.ID, ackErr)
+			}
+			continue
+		}
+		if env.Delivery.AttemptCount >= b.cfg.MaxAttempts || errors.Is(err, ErrPermanentDelivery) {
+			if dlqErr := b.store.DeadLetterExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, err.Error(), now); dlqErr != nil {
+				log.Printf("Ошибка помещения события расширения в очередь недоставленных сообщений delivery=%d: %v", env.Delivery.ID, dlqErr)
+			}
+			continue
+		}
+		delay := b.retryDelay(env.Delivery.AttemptCount)
+		if retryErr := b.store.RetryExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now.Add(delay), err.Error()); retryErr != nil {
+			log.Printf("Не удалось запланировать повторную доставку события расширения delivery=%d: %v", env.Delivery.ID, retryErr)
+		}
+	}
+}
+
+func (b *Bus) retryDelay(attempt int) time.Duration {
+	if attempt < 1 {
+		attempt = 1
+	}
+	power := math.Min(float64(attempt-1), 10)
+	d := time.Duration(float64(b.cfg.BaseRetry) * math.Pow(2, power))
+	if d > b.cfg.MaxRetry {
+		return b.cfg.MaxRetry
+	}
+	return d
+}
+
+// Типизированные данные предметной области. Намеренно содержат только
+// идентификаторы и неизменяемые снимки; токены аутентификации, учётные данные
+// Guard/устройства и секреты бэкенда никогда не копируются в события расширений.
+type ProjectPayload struct {
+	Action  string        `json:"action"`
+	Actor   string        `json:"actor,omitempty"`
+	Project model.Project `json:"project"`
+}
+type ReleasePayload struct {
+	Action            string               `json:"action"`
+	Actor             string               `json:"actor,omitempty"`
+	Release           model.ReleaseVersion `json:"release"`
+	ManifestSHA256    string               `json:"manifestSha256,omitempty"`
+	ManifestFileCount int                  `json:"manifestFileCount,omitempty"`
+	ManifestOmitted   bool                 `json:"manifestOmitted,omitempty"`
+}
+
+// Релиз может включать десятки тысяч файлов. Шина событий расширений ограничивает
+// данные 1 МиБ; полный подписанный манифест в синхронном before-publish делает
+// большие корректные релизы неопубликуемыми. Для старых потребителей сохраняйте
+// небольшие снимки, а для больших манифестов используйте явно помеченную
+// проекцию с адресацией по содержимому. Канонический манифест по-прежнему
+// хранится и проверяется репозиторием релизов, а не событием.
+func releaseEventPayload0206(action, actor string, release model.ReleaseVersion) (ReleasePayload, error) {
+	payload := ReleasePayload{Action: action, Actor: actor, Release: release}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return ReleasePayload{}, err
+	}
+	if len(encoded) <= 512<<10 {
+		return payload, nil
+	}
+	manifestBytes, err := json.Marshal(release.Manifest)
+	if err != nil {
+		return ReleasePayload{}, err
+	}
+	digest := sha256.Sum256(manifestBytes)
+	payload.ManifestSHA256 = hex.EncodeToString(digest[:])
+	payload.ManifestFileCount = len(release.Manifest.Files)
+	payload.ManifestOmitted = true
+	// Сохраняйте устойчивую идентичность, метаданные Minecraft/загрузчика и Java. Никогда не
+	// публикуйте обрезанный список файлов или похожую на ошибочную подпись сокращённого манифеста.
+	payload.Release.Manifest = model.Manifest{
+		SchemaVersion: release.Manifest.SchemaVersion,
+		ProjectID:     release.Manifest.ProjectID,
+		ProfileID:     release.Manifest.ProfileID,
+		Channel:       release.Manifest.Channel,
+		Version:       release.Manifest.Version,
+		CreatedAt:     release.Manifest.CreatedAt,
+		Minecraft: model.MinecraftInfo{
+			Version:       release.Manifest.Minecraft.Version,
+			Loader:        release.Manifest.Minecraft.Loader,
+			LoaderVersion: release.Manifest.Minecraft.LoaderVersion,
+		},
+		Runtime: model.RuntimeInfo{Java: release.Manifest.Runtime.Java},
+	}
+	return payload, nil
+}
+
+type PackagePayload struct {
+	Action    string `json:"action"`
+	Actor     string `json:"actor,omitempty"`
+	PackageID string `json:"packageId"`
+	ProjectID string `json:"projectId"`
+	ProfileID string `json:"profileId,omitempty"`
+	Channel   string `json:"channel,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Status    string `json:"status,omitempty"`
+}
+type StoragePayload struct {
+	Action    string `json:"action"`
+	Actor     string `json:"actor,omitempty"`
+	ProjectID string `json:"projectId"`
+	VersionID string `json:"versionId"`
+	Path      string `json:"path"`
+	SHA256    string `json:"sha256,omitempty"`
+	Size      int64  `json:"size"`
+}
+type ServerBridgePayload struct {
+	ServerID  string                  `json:"serverId"`
+	RuntimeID string                  `json:"runtimeId"`
+	Event     model.ServerBridgeEvent `json:"event"`
+}
+type AuditPayload struct {
+	Event model.AuditEvent `json:"event"`
+}
+
+func (b *Bus) BeforeProjectSave(ctx context.Context, actor, action string, p model.Project) error {
+	return b.DispatchSync(ctx, PublishInput{Type: "project.before-save", ProjectID: p.ID, AggregateType: "project", AggregateID: p.ID, OrderingKey: "project:" + p.ID, IdempotencyKey: "hook:" + action + ":" + p.ID + ":" + fmt.Sprint(time.Now().UTC().UnixNano()), Source: "httpapi", Payload: ProjectPayload{Action: action, Actor: actor, Project: p}})
+}
+
+// BeforeProfileSave применяет Java-политику до записи предлагаемого профиля. Хуки
+// получают полный предложенный профиль, а не недоверенный фрагмент запроса. Запрет,
+// тайм-аут или недоступность подписанного хоста отклоняют изменение.
+func (b *Bus) BeforeProfileSave(ctx context.Context, actor, action string, p model.Profile) error {
+	return b.DispatchSync(ctx, PublishInput{
+		Type: "profile.before-save", ProjectID: p.ProjectID,
+		AggregateType: "profile", AggregateID: p.ID,
+		OrderingKey:    "profile:" + p.ProjectID + ":" + p.ID,
+		IdempotencyKey: "profile-hook:" + action + ":" + p.ProjectID + ":" + p.ID + ":" + fmt.Sprint(time.Now().UTC().UnixNano()),
+		Source:         "httpapi", Payload: map[string]any{"action": action, "actor": actor, "profile": p},
+	})
+}
+
+func (b *Bus) ProjectSaved(ctx context.Context, actor, action string, p model.Project) error {
+	_, _, err := b.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: p.ID, AggregateType: "project", AggregateID: p.ID, OrderingKey: "project:" + p.ID, IdempotencyKey: action + ":" + p.ID + ":" + p.UpdatedAt.UTC().Format(time.RFC3339Nano), Source: "httpapi", Payload: ProjectPayload{Action: action, Actor: actor, Project: p}, OccurredAt: p.UpdatedAt})
+	return err
+}
+func (b *Bus) ReleaseCreated(ctx context.Context, actor string, r model.ReleaseVersion) error {
+	payload, err := releaseEventPayload0206("created", actor, r)
+	if err != nil {
+		return err
+	}
+	_, _, err = b.Publish(ctx, PublishInput{Type: "release.created", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "created:" + r.ID, Source: "httpapi", Payload: payload})
+	return err
+}
+func (b *Bus) BeforeReleasePublish(ctx context.Context, actor string, r model.ReleaseVersion) error {
+	payload, err := releaseEventPayload0206("publish", actor, r)
+	if err != nil {
+		return err
+	}
+	return b.DispatchSync(ctx, PublishInput{Type: "release.before-publish", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "before-publish:" + r.ID, Source: "httpapi", Payload: payload})
+}
+func (b *Bus) ReleasePublished(ctx context.Context, actor string, r model.ReleaseVersion) error {
+	payload, err := releaseEventPayload0206("published", actor, r)
+	if err != nil {
+		return err
+	}
+	_, _, err = b.Publish(ctx, PublishInput{Type: "release.published", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "published:" + r.ID, Source: "httpapi", Payload: payload})
+	return err
+}
+func (b *Bus) PackageEvent(ctx context.Context, eventType string, p PackagePayload) error {
+	_, _, err := b.Publish(ctx, PublishInput{Type: eventType, ProjectID: p.ProjectID, AggregateType: "package", AggregateID: p.PackageID, OrderingKey: "package:" + p.PackageID, IdempotencyKey: eventType + ":" + p.PackageID + ":" + p.Status, Source: "httpapi", Payload: p})
+	return err
+}
+func (b *Bus) BeforePackagePublish(ctx context.Context, p PackagePayload) error {
+	return b.DispatchSync(ctx, PublishInput{Type: "package.before-publish", ProjectID: p.ProjectID, AggregateType: "package", AggregateID: p.PackageID, OrderingKey: "package:" + p.PackageID, IdempotencyKey: "before-publish:" + p.PackageID, Source: "httpapi", Payload: p})
+}
+func (b *Bus) BeforeStorageWrite(ctx context.Context, p StoragePayload) error {
+	return b.DispatchSync(ctx, PublishInput{Type: "storage.before-write", ProjectID: p.ProjectID, AggregateType: "storage", AggregateID: p.ProjectID + ":" + p.VersionID + ":" + p.Path, OrderingKey: "storage:" + p.ProjectID + ":" + p.VersionID, IdempotencyKey: "before-write:" + p.ProjectID + ":" + p.VersionID + ":" + p.Path + ":" + fmt.Sprint(time.Now().UTC().UnixNano()), Source: "httpapi", Payload: p})
+}
+func (b *Bus) StorageWritten(ctx context.Context, p StoragePayload) error {
+	_, _, err := b.Publish(ctx, PublishInput{Type: "storage.file-written", ProjectID: p.ProjectID, AggregateType: "storage", AggregateID: p.ProjectID + ":" + p.VersionID + ":" + p.Path, OrderingKey: "storage:" + p.ProjectID + ":" + p.VersionID, IdempotencyKey: "written:" + p.ProjectID + ":" + p.VersionID + ":" + p.Path + ":" + p.SHA256, Source: "httpapi", Payload: p})
+	return err
+}
+func (b *Bus) ServerBridgeReceived(ctx context.Context, projectID, serverID, runtimeID string, e model.ServerBridgeEvent) error {
+	_, _, err := b.Publish(ctx, PublishInput{Type: "serverbridge.event.received", ProjectID: projectID, AggregateType: "serverbridge", AggregateID: serverID, OrderingKey: "serverbridge:" + serverID + ":" + runtimeID, IdempotencyKey: "bridge:" + serverID + ":" + e.EventID, Source: "serverbridge", Payload: ServerBridgePayload{ServerID: serverID, RuntimeID: runtimeID, Event: e}, OccurredAt: time.UnixMilli(e.OccurredAtUnixMillis).UTC()})
+	return err
+}
+func (b *Bus) AuditCreated(ctx context.Context, e model.AuditEvent) error {
+	id := e.ID
+	if id == "" {
+		id = e.Action + ":" + e.Target + ":" + e.CreatedAt.UTC().Format(time.RFC3339Nano)
+	}
+	_, _, err := b.Publish(ctx, PublishInput{Type: "audit.event.created", AggregateType: "audit", AggregateID: id, OrderingKey: "audit", IdempotencyKey: "audit:" + id, Source: "audit", Payload: AuditPayload{Event: e}, OccurredAt: e.CreatedAt})
+	return err
+}

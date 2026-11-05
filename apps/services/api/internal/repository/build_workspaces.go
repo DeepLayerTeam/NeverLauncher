@@ -1,0 +1,386 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"reflect"
+	"sort"
+	"strings"
+	"time"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+)
+
+// BuildFile идентифицирует неизменяемые загруженные байты с адресацией по
+// содержимому. Path — логический игровой путь, а не путь файловой системы хоста
+// API.
+type BuildFile struct {
+	Path       string   `json:"path"`
+	Size       int64    `json:"size"`
+	SHA256     string   `json:"sha256"`
+	Ownership  string   `json:"ownership"`
+	Executable bool     `json:"executable"`
+	TargetOS   []string `json:"targetOs,omitempty"`
+	Selected   bool     `json:"selected"`
+}
+
+type BuildSettings struct {
+	Minecraft    model.MinecraftInfo `json:"minecraft"`
+	Runtime      model.RuntimeInfo   `json:"runtime"`
+	Directories  model.Directories   `json:"directories,omitempty"`
+	FileRules    []model.FileRule    `json:"fileRules,omitempty"`
+	ToolVersions map[string]string   `json:"toolVersions,omitempty"`
+}
+
+type BuildWorkspace struct {
+	ID              string        `json:"id"`
+	ProjectID       string        `json:"projectId"`
+	OwnerID         string        `json:"ownerId"`
+	ProfileID       string        `json:"profileId"`
+	Channel         string        `json:"channel"`
+	Version         string        `json:"version"`
+	ProfileRevision int64         `json:"profileRevision"`
+	ProfileDigest   string        `json:"profileDigest"`
+	Settings        BuildSettings `json:"settings"`
+	Files           []BuildFile   `json:"files"`
+	State           string        `json:"state"`
+	BuildDigest     string        `json:"buildDigest,omitempty"`
+	PackageID       string        `json:"packageId,omitempty"`
+	Revision        int64         `json:"revision"`
+	CreatedAt       time.Time     `json:"createdAt"`
+	UpdatedAt       time.Time     `json:"updatedAt"`
+}
+
+type BuildWorkspaceStore interface {
+	CreateBuildWorkspace(context.Context, BuildWorkspace) (BuildWorkspace, error)
+	GetBuildWorkspace(context.Context, string) (BuildWorkspace, error)
+	ListBuildWorkspaces(context.Context, string, string) ([]BuildWorkspace, error)
+	SaveBuildWorkspace(context.Context, BuildWorkspace) (BuildWorkspace, error)
+}
+
+// BuildPackageLocator0384 запрещает менять материализованный пакет рабочего
+// пространства через старый API прямой загрузки файлов. Подпись и публикация
+// остаются отдельными операциями релиза.
+type BuildPackageLocator0384 interface {
+	MaterializedBuildForPackage0384(context.Context, string) (bool, error)
+}
+
+func (r *MemoryRepository) MaterializedBuildForPackage0384(_ context.Context, packageID string) (bool, error) {
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	for _, ws := range r.buildWorkspaces {
+		if ws.PackageID == packageID && ws.State == "built" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *SQLRepository) MaterializedBuildForPackage0384(ctx context.Context, packageID string) (bool, error) {
+	if err := r.check(); err != nil {
+		return false, err
+	}
+	var exists bool
+	err := r.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM build_workspaces_0226 WHERE data->>'packageId'=$1 AND data->>'state'='built')`, packageID).Scan(&exists)
+	return exists, err
+}
+
+func validWorkspace0226(w BuildWorkspace) error {
+	for _, id := range []string{w.ID, w.ProjectID, w.OwnerID, w.ProfileID, w.Channel, w.Version} {
+		if id == "" || len(id) > 128 || strings.ContainsAny(id, "\x00\r\n") {
+			return errors.New("Некорректное значение: «workspace identity»")
+		}
+	}
+	if w.ProfileRevision < 1 || len(w.ProfileDigest) != 64 || len(w.Files) > 25000 {
+		return errors.New("Некорректное значение: «pinned profile or file count»")
+	}
+	return nil
+}
+
+// validateWorkspaceTransition0230 обеспечивает устойчивые идентичности и
+// неизменяемые входные настройки, формирующие BuildDigest. Без проверки другой
+// клиент может сменить инструментарий/Runtime, сохранив закреплённый снимок.
+func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
+	if old.Revision != next.Revision || old.ProjectID != next.ProjectID ||
+		old.OwnerID != next.OwnerID || old.ProfileID != next.ProfileID ||
+		old.Channel != next.Channel || old.Version != next.Version ||
+		old.ProfileDigest != next.ProfileDigest || old.ProfileRevision != next.ProfileRevision {
+		return ErrConflict
+	}
+	if !reflect.DeepEqual(old.Settings, next.Settings) {
+		return fmt.Errorf("%w: параметры сборки рабочей области неизменяемы; создайте новую область", ErrConflict)
+	}
+	if old.State == "built" {
+		return ErrImmutable
+	}
+	switch next.State {
+	case "importing":
+		if next.BuildDigest != "" {
+			return errors.New("«importing workspace»: запрещено «retain build digest»")
+		}
+	case "staged":
+		if next.BuildDigest != "" {
+			return errors.New("«staged workspace»: запрещено «retain build digest»")
+		}
+	case "built":
+		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {
+			return errors.New("built workspace: требуется «staged inputs, package and SHA-256 build digest»")
+		}
+		if _, err := hex.DecodeString(next.BuildDigest); err != nil {
+			return errors.New("Некорректное значение: «build digest»")
+		}
+	default:
+		return errors.New("Некорректное значение: «workspace state transition»")
+	}
+	if old.PackageID != "" && old.PackageID != next.PackageID {
+		return fmt.Errorf("%w: резервирование пакета рабочей области неизменяемо", ErrConflict)
+	}
+	return nil
+}
+
+// FactoryWorkspaceStore0401 атомарно принимает проверенный результат Client Factory
+// и точный путь метаданных запуска. Обычные изменения рабочего пространства
+// сохраняют неизменяемость настроек; такой переход допустим только для нового
+// пустого несобранного пространства.
+type FactoryWorkspaceStore0401 interface {
+	SaveFactoryWorkspace0401(context.Context, BuildWorkspace) (BuildWorkspace, error)
+}
+
+func validateFactoryWorkspace0401(old, next BuildWorkspace) error {
+	if old.State != "importing" || len(old.Files) != 0 || old.PackageID != "" ||
+		next.State != "importing" || len(next.Files) == 0 || next.PackageID != "" {
+		return ErrConflict
+	}
+	if next.Settings.Runtime.Launch.ClasspathStrategy != "mojang" ||
+		next.Settings.Runtime.Launch.VersionMetadataPath == "" ||
+		(old.Settings.Runtime.Launch.ClasspathStrategy != "" && old.Settings.Runtime.Launch.ClasspathStrategy != "mojang") ||
+		(old.Settings.Runtime.Launch.VersionMetadataPath != "" && old.Settings.Runtime.Launch.VersionMetadataPath != next.Settings.Runtime.Launch.VersionMetadataPath) {
+		return ErrConflict
+	}
+	before := next
+	before.Settings = old.Settings
+	if err := validateWorkspaceTransition0230(old, before); err != nil {
+		return err
+	}
+	expected := old.Settings
+	expected.Runtime.Launch.ClasspathStrategy = "mojang"
+	expected.Runtime.Launch.VersionMetadataPath = next.Settings.Runtime.Launch.VersionMetadataPath
+	if !reflect.DeepEqual(next.Settings, expected) {
+		return ErrConflict
+	}
+	return nil
+}
+
+func cloneWorkspace0226(w BuildWorkspace) BuildWorkspace {
+	// Преобразование JSON туда и обратно создаёт независимые вложенные срезы и карты;
+	// вызывающий не может изменить сохранённую запись без сохранения с проверкой
+	// ревизии.
+	b, _ := json.Marshal(w)
+	var c BuildWorkspace
+	_ = json.Unmarshal(b, &c)
+	return c
+}
+func (r *MemoryRepository) CreateBuildWorkspace(_ context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	if err := validWorkspace0226(w); err != nil {
+		return w, err
+	}
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	if r.buildWorkspaces == nil {
+		r.buildWorkspaces = make(map[string]BuildWorkspace)
+	}
+	if _, exists := r.buildWorkspaces[w.ID]; exists {
+		return w, ErrConflict
+	}
+	now := time.Now().UTC()
+	w.Revision = 1
+	w.State = "importing"
+	w.CreatedAt = now
+	w.UpdatedAt = now
+	r.buildWorkspaces[w.ID] = cloneWorkspace0226(w)
+	return cloneWorkspace0226(w), nil
+}
+func (r *MemoryRepository) GetBuildWorkspace(_ context.Context, id string) (BuildWorkspace, error) {
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	w, ok := r.buildWorkspaces[id]
+	if !ok {
+		return w, ErrNotFound
+	}
+	return cloneWorkspace0226(w), nil
+}
+func (r *MemoryRepository) ListBuildWorkspaces(_ context.Context, projectID, ownerID string) ([]BuildWorkspace, error) {
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	rows := []BuildWorkspace{}
+	for _, w := range r.buildWorkspaces {
+		if w.ProjectID == projectID && w.OwnerID == ownerID {
+			rows = append(rows, cloneWorkspace0226(w))
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].UpdatedAt.After(rows[j].UpdatedAt) })
+	return rows, nil
+}
+func (r *MemoryRepository) SaveBuildWorkspace(_ context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	if err := validWorkspace0226(w); err != nil {
+		return w, err
+	}
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	old, ok := r.buildWorkspaces[w.ID]
+	if !ok {
+		return w, ErrNotFound
+	}
+	if err := validateWorkspaceTransition0230(old, w); err != nil {
+		return w, err
+	}
+	w.Revision++
+	w.CreatedAt = old.CreatedAt
+	w.UpdatedAt = time.Now().UTC()
+	r.buildWorkspaces[w.ID] = cloneWorkspace0226(w)
+	return cloneWorkspace0226(w), nil
+}
+func (r *MemoryRepository) SaveFactoryWorkspace0401(_ context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	if err := validWorkspace0226(w); err != nil {
+		return w, err
+	}
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	old, exists := r.buildWorkspaces[w.ID]
+	if !exists {
+		return w, ErrNotFound
+	}
+	if err := validateFactoryWorkspace0401(old, w); err != nil {
+		return w, err
+	}
+	w.Revision++
+	w.CreatedAt = old.CreatedAt
+	w.UpdatedAt = time.Now().UTC()
+	r.buildWorkspaces[w.ID] = cloneWorkspace0226(w)
+	return cloneWorkspace0226(w), nil
+}
+
+func (r *SQLRepository) CreateBuildWorkspace(ctx context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	if err := r.check(); err != nil {
+		return w, err
+	}
+	if err := validWorkspace0226(w); err != nil {
+		return w, err
+	}
+	now := time.Now().UTC()
+	w.Revision = 1
+	w.State = "importing"
+	w.CreatedAt = now
+	w.UpdatedAt = now
+	b, err := json.Marshal(w)
+	if err != nil {
+		return w, err
+	}
+	res, err := r.db.ExecContext(ctx, `INSERT INTO build_workspaces_0226(id,project_id,owner_id,revision,data) VALUES($1,$2,$3,1,$4::jsonb) ON CONFLICT DO NOTHING`, w.ID, w.ProjectID, w.OwnerID, string(b))
+	if err != nil {
+		return w, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return w, err
+	}
+	if affected != 1 {
+		return w, ErrConflict
+	}
+	return cloneWorkspace0226(w), nil
+}
+func decodeWorkspace0226(row interface{ Scan(...any) error }) (BuildWorkspace, error) {
+	var raw []byte
+	var w BuildWorkspace
+	err := row.Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return w, ErrNotFound
+	}
+	if err != nil {
+		return w, err
+	}
+	err = json.Unmarshal(raw, &w)
+	return w, err
+}
+func (r *SQLRepository) GetBuildWorkspace(ctx context.Context, id string) (BuildWorkspace, error) {
+	if err := r.check(); err != nil {
+		return BuildWorkspace{}, err
+	}
+	return decodeWorkspace0226(r.db.QueryRowContext(ctx, `SELECT data FROM build_workspaces_0226 WHERE id=$1`, id))
+}
+func (r *SQLRepository) ListBuildWorkspaces(ctx context.Context, projectID, ownerID string) ([]BuildWorkspace, error) {
+	if err := r.check(); err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT data FROM build_workspaces_0226 WHERE project_id=$1 AND owner_id=$2 ORDER BY updated_at DESC LIMIT 100`, projectID, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BuildWorkspace{}
+	for rows.Next() {
+		w, e := decodeWorkspace0226(rows)
+		if e != nil {
+			return nil, e
+		}
+		items = append(items, w)
+	}
+	return items, rows.Err()
+}
+func (r *SQLRepository) SaveFactoryWorkspace0401(ctx context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	return r.saveBuildWorkspace0401(ctx, w, true)
+}
+
+func (r *SQLRepository) SaveBuildWorkspace(ctx context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	return r.saveBuildWorkspace0401(ctx, w, false)
+}
+
+func (r *SQLRepository) saveBuildWorkspace0401(ctx context.Context, w BuildWorkspace, factory bool) (BuildWorkspace, error) {
+	if err := r.check(); err != nil {
+		return w, err
+	}
+	if err := validWorkspace0226(w); err != nil {
+		return w, err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return w, err
+	}
+	defer tx.Rollback()
+	old, err := decodeWorkspace0226(tx.QueryRowContext(ctx, `SELECT data FROM build_workspaces_0226 WHERE id=$1 FOR UPDATE`, w.ID))
+	if err != nil {
+		return w, err
+	}
+	var validation error
+	if factory {
+		validation = validateFactoryWorkspace0401(old, w)
+	} else {
+		validation = validateWorkspaceTransition0230(old, w)
+	}
+	if validation != nil {
+		return w, validation
+	}
+	w.Revision++
+	w.CreatedAt = old.CreatedAt
+	w.UpdatedAt = time.Now().UTC()
+	b, e := json.Marshal(w)
+	if e != nil {
+		return w, e
+	}
+	res, e := tx.ExecContext(ctx, `UPDATE build_workspaces_0226 SET revision=$2,data=$3::jsonb,updated_at=now() WHERE id=$1 AND revision=$4`, w.ID, w.Revision, string(b), old.Revision)
+	if e != nil {
+		return w, e
+	}
+	n, e := res.RowsAffected()
+	if e != nil {
+		return w, e
+	}
+	if n != 1 {
+		return w, fmt.Errorf("Несовпадение: «%w: revision»", ErrConflict)
+	}
+	return w, tx.Commit()
+}

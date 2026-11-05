@@ -1,0 +1,371 @@
+package httpconnector
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/configmigration"
+	"net"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
+const (
+	providerVersion = "0.11.4"
+	protocolVersion = "launcher-http-auth/1"
+)
+
+type EndpointConfig struct {
+	Authenticate string `json:"authenticate,omitempty"`
+	Refresh      string `json:"refresh,omitempty"`
+	Resolve      string `json:"resolve,omitempty"`
+	Logout       string `json:"logout,omitempty"`
+	Health       string `json:"health,omitempty"`
+}
+
+type HMACConfig struct {
+	KeyID        string `json:"keyId,omitempty"`
+	SecretEnv    string `json:"secretEnv,omitempty"`
+	SecretFile   string `json:"secretFile,omitempty"`
+	MaxClockSkew string `json:"maxClockSkew,omitempty"`
+}
+
+type MTLSConfig struct {
+	CertFile string `json:"certFile,omitempty"`
+	KeyFile  string `json:"keyFile,omitempty"`
+	CAFile   string `json:"caFile,omitempty"`
+}
+
+type ProvisioningConfig struct {
+	Mode        string `json:"mode,omitempty"`
+	DefaultRole string `json:"defaultRole,omitempty"`
+}
+
+type Config struct {
+	ID               string             `json:"id"`
+	DisplayName      string             `json:"displayName,omitempty"`
+	BaseURL          string             `json:"baseUrl"`
+	Issuer           string             `json:"issuer"`
+	HostAllowlist    []string           `json:"hostAllowlist,omitempty"`
+	AllowedCIDRs     []string           `json:"allowedCidrs,omitempty"`
+	Endpoints        EndpointConfig     `json:"endpoints,omitempty"`
+	HMAC             HMACConfig         `json:"hmac"`
+	MTLS             MTLSConfig         `json:"mtls,omitempty"`
+	RequestTimeout   string             `json:"requestTimeout,omitempty"`
+	ConnectTimeout   string             `json:"connectTimeout,omitempty"`
+	MaxResponseBytes int64              `json:"maxResponseBytes,omitempty"`
+	MaxIdleConns     int                `json:"maxIdleConns,omitempty"`
+	MaxConnsPerHost  int                `json:"maxConnsPerHost,omitempty"`
+	IdleConnTimeout  string             `json:"idleConnTimeout,omitempty"`
+	Provisioning     ProvisioningConfig `json:"provisioning,omitempty"`
+}
+
+type RuntimeConfig struct {
+	Config
+	ParsedBaseURL           *url.URL
+	HMACSecret              []byte
+	MaxClockSkewDuration    time.Duration
+	RequestTimeoutDuration  time.Duration
+	ConnectTimeoutDuration  time.Duration
+	IdleConnTimeoutDuration time.Duration
+	ParsedAllowedCIDRs      []*net.IPNet
+}
+
+func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
+	jsonValue = strings.TrimSpace(jsonValue)
+	filePath = strings.TrimSpace(filePath)
+	if jsonValue != "" && filePath != "" {
+		return nil, errors.New("Настройте только один источник: LAUNCHER_AUTH_HTTP_PROVIDERS_JSON или LAUNCHER_AUTH_HTTP_PROVIDERS_FILE")
+	}
+	if jsonValue == "" && filePath == "" {
+		return nil, nil
+	}
+	raw := []byte(jsonValue)
+	if filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("Не удалось прочитать файл провайдеров авторизации HTTP: %w", err)
+		}
+		raw = data
+	}
+	configs, err := configmigration.Decode[Config](raw)
+	if err != nil {
+		return nil, fmt.Errorf("Не удалось декодировать настройки провайдеров авторизации HTTP: %w", err)
+	}
+	return configs, nil
+}
+
+func Normalize(input Config) (RuntimeConfig, error) {
+	cfg := input
+	cfg.ID = strings.ToLower(strings.TrimSpace(cfg.ID))
+	cfg.DisplayName = strings.TrimSpace(cfg.DisplayName)
+	cfg.BaseURL = strings.TrimSpace(cfg.BaseURL)
+	cfg.Issuer = strings.TrimSpace(cfg.Issuer)
+	cfg.HMAC.KeyID = strings.TrimSpace(cfg.HMAC.KeyID)
+	cfg.HMAC.SecretEnv = strings.TrimSpace(cfg.HMAC.SecretEnv)
+	cfg.HMAC.SecretFile = strings.TrimSpace(cfg.HMAC.SecretFile)
+	cfg.MTLS.CertFile = strings.TrimSpace(cfg.MTLS.CertFile)
+	cfg.MTLS.KeyFile = strings.TrimSpace(cfg.MTLS.KeyFile)
+	cfg.MTLS.CAFile = strings.TrimSpace(cfg.MTLS.CAFile)
+	cfg.Provisioning.Mode = strings.ToLower(strings.TrimSpace(cfg.Provisioning.Mode))
+	cfg.Provisioning.DefaultRole = strings.TrimSpace(cfg.Provisioning.DefaultRole)
+
+	if err := validateProviderID(cfg.ID); err != nil {
+		return RuntimeConfig{}, err
+	}
+	if cfg.DisplayName == "" {
+		cfg.DisplayName = cfg.ID
+	}
+	if len(cfg.DisplayName) > 128 {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: displayName длиннее 128 символов", cfg.ID)
+	}
+	parsed, err := url.Parse(cfg.BaseURL)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: baseUrl: требуется абсолютный URL HTTPS", cfg.ID)
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: baseUrl не должен содержать учётные данные, параметры запроса или фрагмент", cfg.ID)
+	}
+	if parsed.Port() != "" {
+		if _, err := net.LookupPort("tcp", parsed.Port()); err != nil {
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый порт baseUrl: %w", cfg.ID, err)
+		}
+	}
+	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
+	parsed.RawPath = ""
+	cfg.BaseURL = strings.TrimSuffix(cfg.BaseURL, "/")
+
+	if cfg.Issuer == "" || len(cfg.Issuer) > 256 {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: требуется issuer длиной не более 256 символов", cfg.ID)
+	}
+
+	host := strings.ToLower(parsed.Hostname())
+	if len(cfg.HostAllowlist) == 0 {
+		cfg.HostAllowlist = []string{host}
+	}
+	seenHosts := map[string]struct{}{}
+	normalizedHosts := make([]string, 0, len(cfg.HostAllowlist))
+	for _, item := range cfg.HostAllowlist {
+		item = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(item, ".")))
+		if item == "" || strings.ContainsAny(item, "/@?#*") {
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый элемент hostAllowlist %q", cfg.ID, item)
+		}
+		if net.ParseIP(item) == nil {
+			for _, r := range item {
+				if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '.') {
+					return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый элемент hostAllowlist %q", cfg.ID, item)
+				}
+			}
+		}
+		if _, ok := seenHosts[item]; ok {
+			continue
+		}
+		seenHosts[item] = struct{}{}
+		normalizedHosts = append(normalizedHosts, item)
+	}
+	cfg.HostAllowlist = normalizedHosts
+	if !hostAllowed(host, cfg.HostAllowlist) {
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: хост baseUrl %q отсутствует в hostAllowlist", cfg.ID, host)
+	}
+
+	allowedCIDRs := make([]*net.IPNet, 0, len(cfg.AllowedCIDRs))
+	for _, raw := range cfg.AllowedCIDRs {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		_, network, err := net.ParseCIDR(raw)
+		if err != nil {
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый элемент allowedCidrs %q: %w", cfg.ID, raw, err)
+		}
+		allowedCIDRs = append(allowedCIDRs, network)
+	}
+
+	if cfg.Endpoints.Authenticate == "" {
+		cfg.Endpoints.Authenticate = "/authenticate"
+	}
+	if cfg.Endpoints.Refresh == "" {
+		cfg.Endpoints.Refresh = "/refresh"
+	}
+	if cfg.Endpoints.Resolve == "" {
+		cfg.Endpoints.Resolve = "/resolve"
+	}
+	if cfg.Endpoints.Logout == "" {
+		cfg.Endpoints.Logout = "/logout"
+	}
+	if cfg.Endpoints.Health == "" {
+		cfg.Endpoints.Health = "/health"
+	}
+	for name, endpoint := range map[string]string{
+		"authenticate": cfg.Endpoints.Authenticate, "refresh": cfg.Endpoints.Refresh,
+		"resolve": cfg.Endpoints.Resolve, "logout": cfg.Endpoints.Logout, "health": cfg.Endpoints.Health,
+	} {
+		if err := validateEndpointPath(endpoint); err != nil {
+			return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q, конечная точка %s: %w", cfg.ID, name, err)
+		}
+	}
+
+	secret, err := loadHMACSecret(cfg.HMAC)
+	if err != nil {
+		return RuntimeConfig{}, fmt.Errorf("Ошибка HTTP-коннектора %q: %w", cfg.ID, err)
+	}
+	if len(secret) < 32 {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: секрет HMAC должен содержать не менее 32 байт", cfg.ID)
+	}
+	if cfg.HMAC.KeyID == "" {
+		cfg.HMAC.KeyID = cfg.ID
+	}
+	if len(cfg.HMAC.KeyID) > 128 {
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: значение HMAC keyId превышает 128 символов", cfg.ID)
+	}
+	for _, r := range cfg.HMAC.KeyID {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: HMAC keyId содержит неподдерживаемый символ %q", cfg.ID, r)
+		}
+	}
+
+	if (cfg.MTLS.CertFile == "") != (cfg.MTLS.KeyFile == "") {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: mTLS certFile и keyFile необходимо настраивать совместно", cfg.ID)
+	}
+	for label, path := range map[string]string{"certFile": cfg.MTLS.CertFile, "keyFile": cfg.MTLS.KeyFile, "caFile": cfg.MTLS.CAFile} {
+		if path != "" && !filepath.IsAbs(path) {
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: путь mTLS %s должен быть абсолютным", cfg.ID, label)
+		}
+	}
+
+	maxSkew, err := parseDuration(cfg.HMAC.MaxClockSkew, 2*time.Minute, 5*time.Second, 10*time.Minute)
+	if err != nil {
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: неверный hmac.maxClockSkew: %w", cfg.ID, err)
+	}
+	requestTimeout, err := parseDuration(cfg.RequestTimeout, 5*time.Second, 250*time.Millisecond, 30*time.Second)
+	if err != nil {
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: неверный requestTimeout: %w", cfg.ID, err)
+	}
+	connectTimeout, err := parseDuration(cfg.ConnectTimeout, 3*time.Second, 100*time.Millisecond, 15*time.Second)
+	if err != nil {
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: неверный connectTimeout: %w", cfg.ID, err)
+	}
+	idleTimeout, err := parseDuration(cfg.IdleConnTimeout, 45*time.Second, time.Second, 5*time.Minute)
+	if err != nil {
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: неверный idleConnTimeout: %w", cfg.ID, err)
+	}
+
+	if cfg.MaxResponseBytes == 0 {
+		cfg.MaxResponseBytes = 1 << 20
+	}
+	if cfg.MaxResponseBytes < 1024 || cfg.MaxResponseBytes > 8<<20 {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: maxResponseBytes должен быть от 1024 до 8388608", cfg.ID)
+	}
+	if cfg.MaxIdleConns == 0 {
+		cfg.MaxIdleConns = 16
+	}
+	if cfg.MaxIdleConns < 1 || cfg.MaxIdleConns > 256 {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: maxIdleConns должен быть от 1 до 256", cfg.ID)
+	}
+	if cfg.MaxConnsPerHost == 0 {
+		cfg.MaxConnsPerHost = 32
+	}
+	if cfg.MaxConnsPerHost < 1 || cfg.MaxConnsPerHost > 256 {
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: maxConnsPerHost должен быть от 1 до 256", cfg.ID)
+	}
+
+	if cfg.Provisioning.Mode == "" {
+		cfg.Provisioning.Mode = "jit"
+	}
+	switch cfg.Provisioning.Mode {
+	case "jit", "explicit-only":
+	default:
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: неподдерживаемый режим provisioning %q", cfg.ID, cfg.Provisioning.Mode)
+	}
+	if cfg.Provisioning.DefaultRole == "" {
+		cfg.Provisioning.DefaultRole = "player"
+	}
+
+	return RuntimeConfig{
+		Config: cfg, ParsedBaseURL: parsed, HMACSecret: secret,
+		MaxClockSkewDuration: maxSkew, RequestTimeoutDuration: requestTimeout,
+		ConnectTimeoutDuration: connectTimeout, IdleConnTimeoutDuration: idleTimeout,
+		ParsedAllowedCIDRs: allowedCIDRs,
+	}, nil
+}
+
+func validateProviderID(id string) error {
+	if id == "" || id == "local" {
+		return errors.New("Идентификатор коннектора HTTP обязателен и не может быть local")
+	}
+	if len(id) > 64 {
+		return fmt.Errorf("Идентификатор HTTP-коннектора %q превышает 64 символа", id)
+	}
+	for _, r := range id {
+		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
+			return fmt.Errorf("Идентификатор коннектора HTTP %q содержит неподдерживаемый символ %q", id, r)
+		}
+	}
+	return nil
+}
+
+func validateEndpointPath(value string) error {
+	if value == "" || !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") {
+		return errors.New("Требуется абсолютный путь, начинающийся с одного символа косой черты")
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return errors.New("Требуется относительный путь конечной точки без хоста, параметров запроса и фрагмента")
+	}
+	for _, segment := range strings.Split(parsed.Path, "/") {
+		if segment == ".." || segment == "." {
+			return errors.New("Сегменты обхода каталогов в пути запрещены")
+		}
+	}
+	return nil
+}
+
+func loadHMACSecret(cfg HMACConfig) ([]byte, error) {
+	if (cfg.SecretEnv == "") == (cfg.SecretFile == "") {
+		return nil, errors.New("Настройте ровно одно поле hmac.secretEnv или hmac.secretFile")
+	}
+	var raw []byte
+	if cfg.SecretEnv != "" {
+		value, ok := os.LookupEnv(cfg.SecretEnv)
+		if !ok || value == "" {
+			return nil, fmt.Errorf("Переменная окружения %s с секретом HMAC пуста", cfg.SecretEnv)
+		}
+		raw = []byte(value)
+	} else {
+		data, err := os.ReadFile(cfg.SecretFile)
+		if err != nil {
+			return nil, fmt.Errorf("Не удалось прочитать файл секрета HMAC: %w", err)
+		}
+		raw = bytes.TrimSuffix(data, []byte("\r\n"))
+		raw = bytes.TrimSuffix(raw, []byte("\n"))
+	}
+	return append([]byte(nil), raw...), nil
+}
+
+func parseDuration(raw string, fallback, min, max time.Duration) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, err
+	}
+	if value < min || value > max {
+		return 0, fmt.Errorf("Продолжительность должна быть от %s до %s", min, max)
+	}
+	return value, nil
+}
+
+func hostAllowed(host string, allowlist []string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	for _, allowed := range allowlist {
+		if host == strings.ToLower(strings.TrimSuffix(strings.TrimSpace(allowed), ".")) {
+			return true
+		}
+	}
+	return false
+}

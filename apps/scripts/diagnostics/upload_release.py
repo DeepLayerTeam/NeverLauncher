@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""Загружать только существующие воспроизводимо собранные артефакты Sentry; при несовпадении
+блокировать операцию.
+
+Учётные данные передаются через SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT. Учётные данные,
+символы и карты исходников никогда не записываются в архив выпуска.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import zipfile
+
+RELEASE_RE = re.compile(r"^launcher@\d+\.\d+\.\d+\+[a-f0-9]{7,40}$")
+
+
+def release_id(version: str, commit: str) -> str:
+    result = f"launcher@{version}+{commit}"
+    if not RELEASE_RE.fullmatch(result):
+        raise ValueError(
+            "release must include an exact SemVer and a 7..40 digit git SHA"
+        )
+    return result
+
+
+def command(cli: str, *args: str) -> None:
+    subprocess.run([cli, *args], check=True, timeout=180)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", required=True)
+    parser.add_argument(
+        "--commit", required=True, help="Полный SHA Git публикуемой сборки"
+    )
+    parser.add_argument(
+        "--js-dist", type=Path, help="Каталог Vite dist/ со скрытыми файлами .js.map"
+    )
+    parser.add_argument(
+        "--native-symbols",
+        type=Path,
+        help="Путь к символам PDB, dSYM или ELF без удаления отладочной информации",
+    )
+    parser.add_argument(
+        "--jvm-mapping",
+        type=Path,
+        help="Настоящий ProGuard/R8 mapping.txt, если применялось обфусцирование",
+    )
+    parser.add_argument(
+        "--mapping-uuid",
+        help="UUID внутри соответствующей сборки JVM; обязателен для --jvm-mapping",
+    )
+    parser.add_argument(
+        "--jvm-jar",
+        type=Path,
+        help="Собранный JVM JAR с META-INF/sentry-debug-meta.properties",
+    )
+    parser.add_argument("--cli", default="sentry-cli")
+    args = parser.parse_args(argv)
+    release = release_id(args.version, args.commit)
+    if not any((args.js_dist, args.native_symbols, args.jvm_mapping)):
+        parser.error("Требуется: «at least one artifact»")
+    for env in ("SENTRY_AUTH_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT"):
+        if not os.environ.get(env):
+            parser.error(f"{env} is required for a real upload")
+    if args.jvm_mapping and (
+        not args.mapping_uuid
+        or not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", args.mapping_uuid)
+        or not args.jvm_jar
+    ):
+        parser.error(
+            "Для --jvm-mapping необходимы UUID и --jvm-jar со встроенными совпадающими метаданными"
+        )
+    if args.jvm_mapping:
+        try:
+            with zipfile.ZipFile(args.jvm_jar) as bundle:
+                names = [
+                    name
+                    for name in bundle.namelist()
+                    if name == "META-INF/sentry-debug-meta.properties"
+                ]
+                if len(names) != 1 or bundle.getinfo(names[0]).file_size > 65536:
+                    parser.error(
+                        "JAR JVM должен содержать ровно одну запись метаданных UUID Sentry допустимого размера"
+                    )
+                metadata = bundle.read(names[0]).decode("utf-8")
+                fields = dict(
+                    line.split("=", 1)
+                    for line in metadata.splitlines()
+                    if "=" in line and not line.lstrip().startswith("#")
+                )
+                if (
+                    fields.get("io.sentry.proguard.uuid", "").lower()
+                    != args.mapping_uuid.lower()
+                ):
+                    parser.error("«mapping UUID» не совпадает с «built JAR: refuse upload»")
+        except (OSError, zipfile.BadZipFile, UnicodeError) as exc:
+            parser.error(f"Не удалось проверить «JVM mapping/build pair:» {exc}")
+        sample = args.jvm_mapping.read_text(encoding="utf-8")[:8192]
+        if " -> " not in sample:
+            parser.error("Файл сопоставления JVM не похож на карту ProGuard")
+    root = Path(__file__).resolve().parents[2]
+    if args.version != (root / "VERSION").read_text().strip():
+        parser.error("Версия отличается от VERSION; артефакт отклонён")
+    try:
+        checked = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=root, text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        checked = ""
+    if checked and not checked.startswith(args.commit):
+        parser.error("Коммит не совпадает с исходным деревом, использованным для сборки артефактов")
+    js_maps = []
+    if args.js_dist:
+        dist = args.js_dist.resolve(strict=True)
+        assets = dist / "assets"
+        js_maps = sorted(assets.glob("*.js.map"))
+        if not js_maps:
+            parser.error(
+                "Карты исходного кода Vite JS отсутствуют: перед загрузкой соберите рабочие ресурсы"
+            )
+        for sm in js_maps:
+            js = sm.with_suffix("")
+            if not js.is_file() or js.is_symlink() or sm.is_symlink():
+                parser.error(
+                    f"map is not paired with an actual non-symlink bundle: {sm}"
+                )
+            try:
+                data = json.loads(sm.read_text())
+            except (OSError, ValueError) as exc:
+                parser.error(f"Некорректное значение: «source map» {sm}: {exc}")
+            if (
+                data.get("version") != 3
+                or not data.get("sources")
+                or not data.get("mappings")
+            ):
+                parser.error(f"Некорректная или пустая карта исходников {sm}")
+    for name, path in (
+        ("native debug symbols", args.native_symbols),
+        ("JVM obfuscation mapping", args.jvm_mapping),
+    ):
+        if path and (
+            not path.exists()
+            or path.is_symlink()
+            or (path.is_file() and path.stat().st_size == 0)
+        ):
+            parser.error(f"{name} not available: {path}")
+    # Загружайте до удаления карт; неудачные выгрузки сохраняют артефакты для повтора.
+    command(args.cli, "releases", "new", release)
+    if args.js_dist:
+        command(
+            args.cli,
+            "sourcemaps",
+            "upload",
+            str(assets),
+            "--release",
+            release,
+            "--url-prefix",
+            "~/assets",
+        )
+    if args.native_symbols:
+        command(args.cli, "debug-files", "upload", str(args.native_symbols.resolve()))
+    if args.jvm_mapping:
+        command(
+            args.cli,
+            "upload-proguard",
+            "--uuid",
+            args.mapping_uuid,
+            str(args.jvm_mapping.resolve()),
+        )
+    command(args.cli, "releases", "finalize", release)
+    # Только после успешного завершения ВСЕХ загрузок; source maps не должны утекать в распространяемые пакеты.
+    for sm in js_maps:
+        sm.unlink()
+    print(f"Sentry release {release} uploaded; removed {len(js_maps)} private JS maps")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"Upload failed: {exc}; debug artifacts were retained for retry",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)

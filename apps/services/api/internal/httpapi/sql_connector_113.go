@@ -1,0 +1,177 @@
+package httpapi
+
+import (
+	"context"
+	"fmt"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauthlive"
+	"gitflic.ru/skif4er/launcher/services/api/internal/httpconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/microsoftconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/oidcconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/conformance"
+)
+
+// NewFederationCore создаёт устойчивый производственный реестр провайдеров
+// 0.12+. Каждый настроенный провайдер открывается, проходит проверку здоровья
+// и соответствия SDK и регистрируется до приёма трафика API. Неисправный
+// SQL/HTTP/OIDC провайдер мешает запуску, а не молча переносит вход к другому.
+func NewFederationCore(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	core := federation.New(repo)
+	local := localAuthConnector112{repo: repo}
+	if report := conformance.Run(ctx, local); !report.Passed {
+		return nil, fmt.Errorf("Локальный коннектор не прошёл проверку соответствия SDK: %+v", report.Checks)
+	}
+	if err := core.Register(local); err != nil {
+		return nil, err
+	}
+
+	sqlConfigs, err := sqlconnector.LoadConfigs(cfg.AuthSQLProvidersJSON, cfg.AuthSQLProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range sqlConfigs {
+		normalized, err := sqlconnector.Normalize(providerConfig)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		connector, err := sqlconnector.New(ctx, providerConfig)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, normalized.Provisioning.Mode, normalized.Provisioning.DefaultRole); err != nil {
+			_ = connector.Close()
+			_ = core.Close()
+			return nil, fmt.Errorf("Ошибка регистрации SQL-коннектора: %w", err)
+		}
+	}
+
+	// Живые источники Gravit FileAuthSystem включаются явно и работают только для
+	// чтения. Повреждённая, нечитаемая или неоднозначная БД должна блокировать
+	// регистрацию и дальнейший вход; Never никогда не переходит на свои локальные
+	// аккаунты.
+	fileConfigs, err := fileauthlive.LoadLiveConfigs(cfg.AuthFileProvidersJSON, cfg.AuthFileProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range fileConfigs {
+		connector, err := fileauthlive.NewLiveConnector(ctx, providerConfig, localpassword.Verify)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
+			_ = core.Close()
+			return nil, fmt.Errorf("Ошибка регистрации коннектора FileAuth: %w", err)
+		}
+	}
+
+	httpConfigs, err := httpconnector.LoadConfigs(cfg.AuthHTTPProvidersJSON, cfg.AuthHTTPProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range httpConfigs {
+		connector, err := httpconnector.New(ctx, providerConfig)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
+			_ = connector.Close()
+			_ = core.Close()
+			return nil, fmt.Errorf("Ошибка регистрации HTTP-коннектора: %w", err)
+		}
+	}
+
+	oidcConfigs, err := oidcconnector.LoadConfigs(cfg.AuthOIDCProvidersJSON, cfg.AuthOIDCProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range oidcConfigs {
+		connector, err := oidcconnector.New(ctx, providerConfig)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
+			_ = connector.Close()
+			_ = core.Close()
+			return nil, fmt.Errorf("Ошибка регистрации OIDC-коннектора: %w", err)
+		}
+	}
+
+	microsoftConfigs, err := microsoftconnector.LoadConfigs(cfg.AuthMicrosoftProvidersJSON, cfg.AuthMicrosoftProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range microsoftConfigs {
+		connector, err := microsoftconnector.New(ctx, providerConfig)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
+			_ = connector.Close()
+			_ = core.Close()
+			return nil, fmt.Errorf("Ошибка регистрации коннектора Microsoft: %w", err)
+		}
+	}
+	routing, err := federation.LoadRoutingConfig(cfg.AuthRoutingJSON, cfg.AuthRoutingFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	if err := core.ConfigureRouting(routing); err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	return core, nil
+}
+
+func registerFederatedConnector(ctx context.Context, core *federation.Core, connector interface {
+	Metadata() authconnector.Metadata
+	Health(context.Context) error
+}, provisioningMode, defaultRole string) error {
+	report := conformance.Run(ctx, connector)
+	if !report.Passed {
+		return fmt.Errorf("Коннектор %q не прошёл проверку соответствия SDK: %+v", report.ConnectorID, report.Checks)
+	}
+	policy := federation.ProviderPolicy{AutoProvision: provisioningMode == "jit", DefaultRole: defaultRole}
+	if mapper, ok := connector.(interface{ RoleMappings() map[string]string }); ok {
+		policy.RoleMappings = mapper.RoleMappings()
+	}
+	return core.RegisterWithPolicy(connector, policy)
+}
+
+// NewFederationCore116 сохраняет совместимость исходного кода для встраиваний с 0.11.6+.
+func NewFederationCore116(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	return NewFederationCore(ctx, repo, cfg)
+}
+
+// NewFederationCore115 сохраняет совместимость исходного кода для встраиваний 0.11.5.
+func NewFederationCore115(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	return NewFederationCore(ctx, repo, cfg)
+}
+
+// NewFederationCore113 сохраняет совместимость с встраиваниями
+// и тестами 0.11.3. Теперь он делегирует текущему реестру
+// и загружает также настроенные HTTP-провайдеры.
+func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	return NewFederationCore(ctx, repo, cfg)
+}
+
+func NewFederationCore113(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	return NewFederationCore(ctx, repo, cfg)
+}

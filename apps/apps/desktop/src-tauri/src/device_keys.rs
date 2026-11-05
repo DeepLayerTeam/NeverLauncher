@@ -1,0 +1,1270 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use ed25519_dalek::{Signer, SigningKey};
+use hardware_enclave::{create_signer, AccessPolicy, EnclaveConfig, SignerHandle};
+use p256::ecdsa::Signature as P256Signature;
+use rand::{rngs::OsRng, RngCore};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use zeroize::Zeroize;
+
+const DEVICE_KEY_SERVICE: &str = "Launcher Device Keys";
+const DEVICE_KEY_SCHEMA_VERSION: &str = "2";
+const DEVICE_HARDWARE_APP: &str = "launcher-desktop";
+
+fn default_software_algorithm() -> String { "ed25519".into() }
+fn default_software_binding() -> String { "software".into() }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecureDeviceKeyRecord {
+    schema_version: String,
+    user_id: String,
+    public_key: String,
+    fingerprint: String,
+    #[serde(default)]
+    private_seed_hex: String,
+    #[serde(default)]
+    device_id: Option<String>,
+    created_at_unix: u64,
+    storage_backend: String,
+    #[serde(default = "default_software_algorithm")]
+    key_algorithm: String,
+    #[serde(default = "default_software_binding")]
+    key_binding: String,
+    #[serde(default)]
+    hardware_provider: String,
+    #[serde(default)]
+    hardware_label: String,
+}
+
+impl Drop for SecureDeviceKeyRecord {
+    fn drop(&mut self) {
+        self.private_seed_hex.zeroize();
+    }
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceKeyInfo {
+    pub user_id: String,
+    pub public_key: String,
+    pub fingerprint: String,
+    pub device_id: Option<String>,
+    pub created_at_unix: u64,
+    pub storage_backend: String,
+    pub key_algorithm: String,
+    pub key_binding: String,
+    pub hardware_provider: String,
+    pub hardware_bound: bool,
+    pub private_key_exposed_to_frontend: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceSignatureResult {
+    pub fingerprint: String,
+    pub public_key: String,
+    pub signature: String,
+    pub key_algorithm: String,
+    pub key_binding: String,
+    pub hardware_provider: String,
+    pub hardware_bound: bool,
+}
+
+fn normalize_backend_url(value: &str) -> Result<String, String> {
+    let value = value.trim().trim_end_matches('/').to_ascii_lowercase();
+    if value.is_empty() {
+        return Err("Backend URL обязателен для device key storage".into());
+    }
+    let secure = value.starts_with("https://");
+    let loopback_http = value.strip_prefix("http://").map(|rest| {
+        let authority = rest.split('/').next().unwrap_or("");
+        if authority.contains('@') { return false; }
+        let host = if authority.starts_with('[') {
+            authority.split(']').next().map(|v| format!("{}]", v)).unwrap_or_default()
+        } else {
+            authority.split(':').next().unwrap_or("").to_string()
+        };
+        matches!(host.as_str(), "localhost" | "127.0.0.1" | "[::1]")
+    }).unwrap_or(false);
+    if !secure && !loopback_http {
+        return Err("Device key разрешён только для HTTPS Backend; HTTP допустим только для localhost development".into());
+    }
+    Ok(value)
+}
+
+fn normalize_user_id(value: &str) -> Result<String, String> {
+    let value = value.trim();
+    if value.is_empty() || value.len() > 160 {
+        return Err("userId обязателен для device key storage".into());
+    }
+    Ok(value.to_string())
+}
+
+fn device_key_username(backend_url: &str, user_id: &str) -> Result<String, String> {
+    let backend = normalize_backend_url(backend_url)?;
+    let user = normalize_user_id(user_id)?;
+    let mut hasher = Sha256::new();
+    hasher.update(b"Launcher Device Key v1\0");
+    hasher.update(backend.as_bytes());
+    hasher.update(b"\0");
+    hasher.update(user.as_bytes());
+    Ok(format!("device:{}", hex::encode(hasher.finalize())))
+}
+
+fn staged_device_key_username(backend_url: &str, user_id: &str) -> Result<String, String> {
+    Ok(format!("{}:staged", device_key_username(backend_url, user_id)?))
+}
+
+fn hardware_key_label_generation(backend_url: &str, user_id: &str, generation: &str) -> Result<String, String> {
+    let username = device_key_username(backend_url, user_id)?;
+    let mut hasher = Sha256::new();
+    hasher.update(b"Launcher Hardware Device Key v2\0");
+    hasher.update(username.as_bytes());
+    hasher.update(b"\0");
+    hasher.update(generation.as_bytes());
+    Ok(format!("nl-device-{}", &hex::encode(hasher.finalize())[..32]))
+}
+
+fn random_key_generation() -> String {
+    let mut bytes = [0u8; 16];
+    OsRng.fill_bytes(&mut bytes);
+    hex::encode(bytes)
+}
+
+fn storage_backend_name() -> &'static str {
+    #[cfg(target_os = "windows")]
+    { return "windows-credential-manager"; }
+    #[cfg(target_os = "macos")]
+    { return "macos-keychain"; }
+    #[cfg(target_os = "linux")]
+    { return "linux-secret-service"; }
+    #[allow(unreachable_code)]
+    "os-keyring"
+}
+
+fn keyring_entry(backend_url: &str, user_id: &str) -> Result<keyring::v1::Entry, String> {
+    let username = device_key_username(backend_url, user_id)?;
+    keyring::v1::Entry::new(DEVICE_KEY_SERVICE, &username)
+        .map_err(|e| format!("OS secure storage для device key недоступен: {e}"))
+}
+
+fn staged_keyring_entry(backend_url: &str, user_id: &str) -> Result<keyring::v1::Entry, String> {
+    let username = staged_device_key_username(backend_url, user_id)?;
+    keyring::v1::Entry::new(DEVICE_KEY_SERVICE, &username)
+        .map_err(|e| format!("OS secure storage для staged device key недоступен: {e}"))
+}
+
+fn record_to_info(record: &SecureDeviceKeyRecord) -> DeviceKeyInfo {
+    DeviceKeyInfo {
+        user_id: record.user_id.clone(),
+        public_key: record.public_key.clone(),
+        fingerprint: record.fingerprint.clone(),
+        device_id: record.device_id.clone(),
+        created_at_unix: record.created_at_unix,
+        storage_backend: record.storage_backend.clone(),
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: record.key_binding == "hardware",
+        private_key_exposed_to_frontend: false,
+    }
+}
+
+fn validate_software_record(record: &mut SecureDeviceKeyRecord) -> Result<SigningKey, String> {
+    if record.key_algorithm != "ed25519" || record.key_binding != "software" {
+        return Err("software device key record имеет некорректный algorithm/binding".into());
+    }
+    let mut seed = hex::decode(record.private_seed_hex.trim())
+        .map_err(|_| "device key seed в OS secure storage повреждён".to_string())?;
+    if seed.len() != 32 {
+        seed.zeroize();
+        return Err("device key seed в OS secure storage имеет неверную длину".into());
+    }
+    let mut seed_array = [0u8; 32];
+    seed_array.copy_from_slice(&seed);
+    seed.zeroize();
+    let signing = SigningKey::from_bytes(&seed_array);
+    seed_array.zeroize();
+    let public = signing.verifying_key().to_bytes();
+    let public_b64 = URL_SAFE_NO_PAD.encode(public);
+    let fingerprint = hex::encode(Sha256::digest(public));
+    if record.public_key != public_b64 || record.fingerprint != fingerprint {
+        return Err("device key record в OS secure storage не проходит self-check".into());
+    }
+    Ok(signing)
+}
+
+fn is_hardware_backend_kind(provider: &str) -> bool {
+    let p = provider.to_ascii_lowercase();
+    // При сомнениях отказываем: допустимы только известные имена Secure
+    // Enclave, TPM и моста TPM для WSL. Новый или неизвестный бэкенд
+    // должен пройти проверку перед объявлением аппаратно привязанным.
+    (p.contains("tpm")
+        || p.contains("secureenclave")
+        || p.contains("secure_enclave")
+        || p.contains("wslbridge")
+        || p.contains("wsl_bridge"))
+        && !p.contains("keyring")
+        && !p.contains("software")
+        && !p.contains("test")
+}
+
+fn hardware_signer(label: &str) -> Result<(SignerHandle, String), String> {
+    let config = EnclaveConfig::new(DEVICE_HARDWARE_APP, label);
+    let signer = create_signer(&config).map_err(|e| format!("hardware signer недоступен: {e}"))?;
+    let provider = format!("{:?}", signer.backend_kind());
+    // Связка ключей Linux и любые явно программные или тестовые бэкенды намеренно
+    // не считаются аппаратно привязанной идентификацией. Для них допустим только
+    // существующий резервный механизм Ed25519 и защищённого хранилища ОС.
+    if !is_hardware_backend_kind(&provider) {
+        return Err(format!("platform signer backend {provider} не является hardware-isolated"));
+    }
+    Ok((signer, provider))
+}
+
+fn validate_hardware_record(record: &SecureDeviceKeyRecord) -> Result<(SignerHandle, String), String> {
+    if record.key_algorithm != "p256" || record.key_binding != "hardware" || record.hardware_label.is_empty() {
+        return Err("hardware device key record имеет некорректный algorithm/binding".into());
+    }
+    if !record.private_seed_hex.is_empty() {
+        return Err("hardware-bound device record не должен содержать private seed".into());
+    }
+    let (signer, provider) = hardware_signer(&record.hardware_label)?;
+    if !record.hardware_provider.is_empty() && provider != record.hardware_provider {
+        return Err(format!("hardware provider изменился: saved={} current={provider}", record.hardware_provider));
+    }
+    let public = signer.public_key(&record.hardware_label)
+        .map_err(|e| format!("не удалось получить hardware public key: {e}"))?;
+    if public.len() != 65 || public[0] != 0x04 {
+        return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
+    }
+    let public_b64 = URL_SAFE_NO_PAD.encode(&public);
+    let fingerprint = hex::encode(Sha256::digest(&public));
+    if record.public_key != public_b64 || record.fingerprint != fingerprint {
+        return Err("hardware-bound device key не проходит public-key self-check".into());
+    }
+    Ok((signer, provider))
+}
+
+fn validate_record(record: &mut SecureDeviceKeyRecord) -> Result<(), String> {
+    if record.schema_version != "1" && record.schema_version != DEVICE_KEY_SCHEMA_VERSION {
+        return Err("device key record имеет неподдерживаемую версию".into());
+    }
+    if record.schema_version == "1" {
+        record.key_algorithm = "ed25519".into();
+        record.key_binding = "software".into();
+        record.hardware_provider.clear();
+        record.hardware_label.clear();
+    }
+    match record.key_binding.as_str() {
+        "hardware" => { let _ = validate_hardware_record(record)?; }
+        "software" => { let _ = validate_software_record(record)?; }
+        _ => return Err("device key record содержит неизвестный keyBinding".into()),
+    }
+    Ok(())
+}
+
+fn load_record(backend_url: &str, user_id: &str) -> Result<Option<SecureDeviceKeyRecord>, String> {
+    let entry = keyring_entry(backend_url, user_id)?;
+    match entry.get_password() {
+        Ok(mut secret) => {
+            let parsed = serde_json::from_str::<SecureDeviceKeyRecord>(&secret)
+                .map_err(|e| format!("device key record в OS secure storage повреждён: {e}"));
+            secret.zeroize();
+            parsed.map(Some)
+        }
+        Err(keyring::v1::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("не удалось прочитать device key из OS secure storage: {e}")),
+    }
+}
+
+fn save_record(backend_url: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
+    let entry = keyring_entry(backend_url, user_id)?;
+    let mut secret = serde_json::to_string(record)
+        .map_err(|e| format!("не удалось сериализовать device key record: {e}"))?;
+    let result = entry
+        .set_password(&secret)
+        .map_err(|e| format!("не удалось сохранить device key metadata в OS secure storage: {e}"));
+    secret.zeroize();
+    result
+}
+
+fn load_staged_record(backend_url: &str, user_id: &str) -> Result<Option<SecureDeviceKeyRecord>, String> {
+    let entry = staged_keyring_entry(backend_url, user_id)?;
+    match entry.get_password() {
+        Ok(mut secret) => {
+            let parsed = serde_json::from_str::<SecureDeviceKeyRecord>(&secret)
+                .map_err(|e| format!("staged device key record повреждён: {e}"));
+            secret.zeroize();
+            parsed.map(Some)
+        }
+        Err(keyring::v1::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("не удалось прочитать staged device key: {e}")),
+    }
+}
+
+fn save_staged_record(backend_url: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
+    let entry = staged_keyring_entry(backend_url, user_id)?;
+    let mut secret = serde_json::to_string(record).map_err(|e| format!("не удалось сериализовать staged device key: {e}"))?;
+    let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить staged device key: {e}"));
+    secret.zeroize();
+    result
+}
+
+fn new_software_record(user_id: &str) -> SecureDeviceKeyRecord {
+    let mut rng = OsRng;
+    let signing = SigningKey::generate(&mut rng);
+    let public = signing.verifying_key().to_bytes();
+    let fingerprint = hex::encode(Sha256::digest(public));
+    let mut seed_hex = hex::encode(signing.to_bytes());
+    let record = SecureDeviceKeyRecord {
+        schema_version: DEVICE_KEY_SCHEMA_VERSION.into(),
+        user_id: user_id.to_string(),
+        public_key: URL_SAFE_NO_PAD.encode(public),
+        fingerprint,
+        private_seed_hex: seed_hex.clone(),
+        device_id: None,
+        created_at_unix: now_unix(),
+        storage_backend: storage_backend_name().into(),
+        key_algorithm: "ed25519".into(),
+        key_binding: "software".into(),
+        hardware_provider: String::new(),
+        hardware_label: String::new(),
+    };
+    seed_hex.zeroize();
+    record
+}
+
+fn now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|v| v.as_secs())
+        .unwrap_or(0)
+}
+
+fn try_new_hardware_record_with_generation(backend_url: &str, user_id: &str, generation: &str) -> Result<SecureDeviceKeyRecord, String> {
+    let label = hardware_key_label_generation(backend_url, user_id, generation)?;
+    let (signer, provider) = hardware_signer(&label)?;
+    if signer.key_exists(&label).map_err(|e| format!("Ошибка: поиск аппаратного ключа: {e}"))? {
+        return Err("generation-specific hardware label уже существует".into());
+    }
+    signer.generate_key(&label, AccessPolicy::None).map_err(|e| format!("Ошибка: создание аппаратного ключа: {e}"))?;
+    let public = signer.public_key(&label).map_err(|e| format!("Ошибка: чтение аппаратного публичного ключа: {e}"))?;
+    if public.len() != 65 || public[0] != 0x04 {
+        let _ = signer.delete_key(&label);
+        return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
+    }
+    Ok(SecureDeviceKeyRecord {
+        schema_version: DEVICE_KEY_SCHEMA_VERSION.into(), user_id: user_id.to_string(), public_key: URL_SAFE_NO_PAD.encode(&public),
+        fingerprint: hex::encode(Sha256::digest(&public)), private_seed_hex: String::new(), device_id: None, created_at_unix: now_unix(),
+        storage_backend: "platform-hardware-enclave".into(), key_algorithm: "p256".into(), key_binding: "hardware".into(), hardware_provider: provider, hardware_label: label,
+    })
+}
+
+fn try_new_hardware_record(backend_url: &str, user_id: &str) -> Result<SecureDeviceKeyRecord, String> {
+    try_new_hardware_record_with_generation(backend_url, user_id, &random_key_generation())
+}
+
+pub fn ensure_device_key(backend_url: &str, user_id: &str) -> Result<DeviceKeyInfo, String> {
+    let user = normalize_user_id(user_id)?;
+    if let Some(mut existing) = load_record(backend_url, &user)? {
+        validate_record(&mut existing)?;
+        if existing.schema_version == "1" {
+            existing.schema_version = DEVICE_KEY_SCHEMA_VERSION.into();
+            save_record(backend_url, &user, &existing)?;
+        }
+        return Ok(record_to_info(&existing));
+    }
+    let mut record = match try_new_hardware_record(backend_url, &user) {
+        Ok(record) => record,
+        Err(_) => new_software_record(&user),
+    };
+    validate_record(&mut record)?;
+    save_record(backend_url, &user, &record)?;
+    Ok(record_to_info(&record))
+}
+
+pub fn device_key_status(backend_url: &str, user_id: &str) -> Result<Option<DeviceKeyInfo>, String> {
+    let user = normalize_user_id(user_id)?;
+    match load_record(backend_url, &user)? {
+        Some(mut record) => {
+            validate_record(&mut record)?;
+            Ok(Some(record_to_info(&record)))
+        }
+        None => Ok(None),
+    }
+}
+
+fn validate_device_signing_payload(payload: &str, user_id: &str) -> Result<(), String> {
+    if payload.is_empty() || payload.len() > 16 * 1024 {
+        return Err("device signing payload имеет недопустимый размер".into());
+    }
+    let lines = payload.split_terminator('\n').collect::<Vec<_>>();
+    if lines.len() != 6 || lines[0] != "Launcher Device Trust v1" {
+        return Err("device signing payload не является каноническим Launcher Device Trust v1 payload".into());
+    }
+    if lines[1] != "purpose=register" && lines[1] != "purpose=session-bind" {
+        return Err("device signing purpose не разрешён".into());
+    }
+    if lines[2].strip_prefix("challenge=").unwrap_or("").is_empty()
+        || lines[3] != format!("user={}", user_id)
+        || lines[4].strip_prefix("device=").unwrap_or("").is_empty()
+        || lines[5].strip_prefix("session=").unwrap_or("").is_empty() {
+        return Err("device signing payload не совпадает с ожидаемой canonical identity/session binding".into());
+    }
+    Ok(())
+}
+
+fn validate_device_attestation_payload(payload: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
+    if payload.is_empty() || payload.len() > 16 * 1024 {
+        return Err("device attestation payload имеет недопустимый размер".into());
+    }
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" {
+        return Err("device attestation требует hardware-bound P-256 key".into());
+    }
+    let device_id = record.device_id.as_deref().unwrap_or("").trim();
+    if device_id.is_empty() {
+        return Err("device attestation требует уже зарегистрированный deviceId".into());
+    }
+    let lines = payload.split_terminator('\n').collect::<Vec<_>>();
+    if lines.len() != 13 || lines[0] != "Launcher Device Attestation v1" || lines[1] != "purpose=attest" {
+        return Err("device attestation payload не является каноническим Launcher Device Attestation v1 payload".into());
+    }
+    if lines[2].strip_prefix("challenge=").unwrap_or("").is_empty()
+        || lines[3] != format!("user={}", user_id)
+        || lines[4] != format!("device={}", device_id)
+        || lines[5].strip_prefix("session=").unwrap_or("").is_empty()
+        || lines[6] != format!("fingerprint={}", record.fingerprint)
+        || lines[7] != "algorithm=p256"
+        || lines[8] != "binding=hardware"
+        || lines[9] != format!("provider={}", record.hardware_provider)
+        || lines[10].strip_prefix("issued-at=").unwrap_or("").is_empty()
+        || lines[11].strip_prefix("challenge-expires-at=").unwrap_or("").is_empty()
+        || lines[12].strip_prefix("attestation-valid-until=").unwrap_or("").is_empty()
+    {
+        return Err("device attestation payload не совпадает с зарегистрированной hardware identity/session/freshness binding".into());
+    }
+    Ok(())
+}
+
+fn require_hex_sha256(label: &str, value: &str) -> Result<String, String> {
+    let value = value.trim().to_ascii_lowercase();
+    if value.len() != 64 || !value.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(format!("{label} должен быть SHA-256 hex"));
+    }
+    Ok(value)
+}
+
+#[derive(Debug, Clone)]
+pub struct GuardAttestationSignRequest {
+    pub backend_url: String,
+    pub user_id: String,
+    pub device_id: String,
+    pub session_id: String,
+    pub binding_epoch: i64,
+    pub launcher_version: String,
+    pub challenge_id: String,
+    pub challenge: String,
+    pub challenge_expires_at: String,
+    pub attestation_sha256: String,
+    pub evidence_sha256: String,
+    pub guard_sha256: String,
+    pub launcher_sha256: String,
+}
+
+fn guard_attestation_device_payload(
+    user_id: &str,
+    record: &SecureDeviceKeyRecord,
+    request: &GuardAttestationSignRequest,
+) -> Result<String, String> {
+    let GuardAttestationSignRequest {
+        device_id, session_id, binding_epoch, launcher_version, challenge_id, challenge,
+        challenge_expires_at, attestation_sha256, evidence_sha256, guard_sha256, launcher_sha256, ..
+    } = request;
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" {
+        return Err("Guard Attestation требует hardware-bound P-256 device key".into());
+    }
+    let registered_device = record.device_id.as_deref().unwrap_or("").trim();
+    if registered_device.is_empty() || registered_device != device_id.trim() {
+        return Err("Guard Attestation запрошена не для локально зарегистрированного device key".into());
+    }
+    let session_id = session_id.trim();
+    let launcher_version = launcher_version.trim();
+    let challenge_id = challenge_id.trim();
+    let challenge = challenge.trim();
+    let challenge_expires_at = challenge_expires_at.trim();
+    if session_id.is_empty() || session_id.len() > 256 || *binding_epoch < 1 {
+        return Err("Guard Attestation session binding недействителен".into());
+    }
+    if launcher_version.is_empty() || launcher_version.len() > 64
+        || challenge_id.is_empty() || challenge_id.len() > 160
+        || challenge.is_empty() || challenge.len() > 4096
+        || challenge_expires_at.is_empty() || challenge_expires_at.len() > 80
+    {
+        return Err("Guard Attestation challenge/release metadata недействительны".into());
+    }
+    let attestation_sha256 = require_hex_sha256("attestationSha256", attestation_sha256)?;
+    let evidence_sha256 = require_hex_sha256("evidenceSha256", evidence_sha256)?;
+    let guard_sha256 = require_hex_sha256("guardSha256", guard_sha256)?;
+    let launcher_sha256 = require_hex_sha256("launcherSha256", launcher_sha256)?;
+    Ok(format!(
+        concat!(
+            "Launcher Guard Attestation Device Binding v1\n",
+            "purpose=guard-attest\n",
+            "challenge={}\n",
+            "challenge-id={}\n",
+            "user={}\n",
+            "device={}\n",
+            "session={}\n",
+            "binding-epoch={}\n",
+            "launcher-version={}\n",
+            "fingerprint={}\n",
+            "attestation-sha256={}\n",
+            "evidence-sha256={}\n",
+            "guard-sha256={}\n",
+            "launcher-sha256={}\n",
+            "challenge-expires-at={}\n"
+        ),
+        challenge, challenge_id, user_id, registered_device, session_id, binding_epoch,
+        launcher_version, record.fingerprint, attestation_sha256, evidence_sha256, guard_sha256,
+        launcher_sha256, challenge_expires_at,
+    ))
+}
+
+pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(&request.user_id)?;
+    let mut record = load_record(&request.backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let payload = guard_attestation_device_payload(&user, &record, &request)?;
+    let (signer, _) = validate_hardware_record(&record)?;
+    let der = signer.sign(&record.hardware_label, payload.as_bytes())
+        .map_err(|e| format!("Ошибка: аппаратная подпись аттестации Guard: {e}"))?;
+    let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
+        signature,
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: true,
+    })
+}
+
+
+#[cfg_attr(not(windows), allow(dead_code))]
+#[derive(Debug, Clone)]
+pub struct GuardAttestationV2SignRequest {
+    pub backend_url: String,
+    pub user_id: String,
+    pub device_id: String,
+    pub session_id: String,
+    pub binding_epoch: i64,
+    pub launcher_version: String,
+    pub challenge_id: String,
+    pub challenge: String,
+    pub challenge_expires_at: String,
+    pub attestation_sha256: String,
+    pub continuous_evidence_sha256: String,
+    pub base_attestation_sha256: String,
+    pub runtime_pid: u32,
+}
+
+#[cfg_attr(not(windows), allow(dead_code))]
+fn guard_attestation_v2_device_payload(
+    user_id: &str,
+    record: &SecureDeviceKeyRecord,
+    request: &GuardAttestationV2SignRequest,
+) -> Result<String, String> {
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" {
+        return Err("Guard Attestation v2 требует hardware-bound P-256 device key".into());
+    }
+    let registered_device = record.device_id.as_deref().unwrap_or("").trim();
+    if registered_device.is_empty() || registered_device != request.device_id.trim() {
+        return Err("Guard Attestation v2 запрошена не для локально зарегистрированного device key".into());
+    }
+    let session_id = request.session_id.trim();
+    let launcher_version = request.launcher_version.trim();
+    let challenge_id = request.challenge_id.trim();
+    let challenge = request.challenge.trim();
+    let challenge_expires_at = request.challenge_expires_at.trim();
+    if session_id.is_empty() || session_id.len() > 256 || request.binding_epoch < 1
+        || launcher_version.is_empty() || launcher_version.len() > 64
+        || challenge_id.is_empty() || challenge_id.len() > 160
+        || challenge.is_empty() || challenge.len() > 4096
+        || challenge_expires_at.is_empty() || challenge_expires_at.len() > 80
+        || request.runtime_pid == 0
+    {
+        return Err("Guard Attestation v2 challenge/runtime metadata недействительны".into());
+    }
+    let attestation_sha256 = require_hex_sha256("attestationSha256", &request.attestation_sha256)?;
+    let continuous_evidence_sha256 = require_hex_sha256("continuousEvidenceSha256", &request.continuous_evidence_sha256)?;
+    let base_attestation_sha256 = require_hex_sha256("baseAttestationSha256", &request.base_attestation_sha256)?;
+    Ok(format!(
+        concat!(
+            "Launcher Guard Attestation Device Binding v2\n",
+            "purpose=guard-attest-v2\n",
+            "challenge={}\n",
+            "challenge-id={}\n",
+            "user={}\n",
+            "device={}\n",
+            "session={}\n",
+            "binding-epoch={}\n",
+            "launcher-version={}\n",
+            "fingerprint={}\n",
+            "attestation-sha256={}\n",
+            "continuous-evidence-sha256={}\n",
+            "base-attestation-sha256={}\n",
+            "runtime-pid={}\n",
+            "challenge-expires-at={}\n"
+        ),
+        challenge, challenge_id, user_id, registered_device, session_id, request.binding_epoch,
+        launcher_version, record.fingerprint, attestation_sha256, continuous_evidence_sha256,
+        base_attestation_sha256, request.runtime_pid, challenge_expires_at,
+    ))
+}
+
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn sign_guard_attestation_v2(request: GuardAttestationV2SignRequest) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(&request.user_id)?;
+    let mut record = load_record(&request.backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let payload = guard_attestation_v2_device_payload(&user, &record, &request)?;
+    let (signer, _) = validate_hardware_record(&record)?;
+    let der = signer.sign(&record.hardware_label, payload.as_bytes())
+        .map_err(|e| format!("Ошибка: аппаратная подпись аттестации Guard v2: {e}"))?;
+    let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
+        signature,
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: true,
+    })
+}
+
+fn der_ecdsa_to_p1363(der: &[u8]) -> Result<[u8; 64], String> {
+    let sig = P256Signature::from_der(der).map_err(|_| "hardware ECDSA signature DER повреждена".to_string())?;
+    let bytes = sig.to_bytes();
+    let mut out = [0u8; 64];
+    out.copy_from_slice(&bytes);
+    Ok(out)
+}
+
+pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    validate_device_signing_payload(payload, &user)?;
+    let mut record = load_record(backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let signature = if record.key_binding == "hardware" {
+        let (signer, _) = validate_hardware_record(&record)?;
+        let der = signer.sign(&record.hardware_label, payload.as_bytes())
+            .map_err(|e| format!("Ошибка: аппаратная подпись устройства: {e}"))?;
+        URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
+    } else {
+        let signing = validate_software_record(&mut record)?;
+        URL_SAFE_NO_PAD.encode(signing.sign(payload.as_bytes()).to_bytes())
+    };
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
+        signature,
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: record.key_binding == "hardware",
+    })
+}
+
+fn session_refresh_payload(user_id: &str, session_id: &str, device_id: &str, binding_epoch: i64, refresh_token: &str) -> Result<String, String> {
+    let session_id = session_id.trim();
+    let device_id = device_id.trim();
+    if session_id.is_empty() || session_id.len() > 256 || device_id.is_empty() || device_id.len() > 160 {
+        return Err("session/device binding для refresh недействителен".into());
+    }
+    if binding_epoch < 1 {
+        return Err("bindingEpoch для refresh должен быть >= 1".into());
+    }
+    if refresh_token.is_empty() || refresh_token.len() > 4096 {
+        return Err("refresh token имеет недопустимый размер".into());
+    }
+    let digest = hex::encode(Sha256::digest(refresh_token.as_bytes()));
+    Ok(format!(
+        "Launcher Session Device Binding v1\npurpose=refresh\nuser={}\nsession={}\ndevice={}\nbinding-epoch={}\nrefresh-token-sha256={}\n",
+        user_id, session_id, device_id, binding_epoch, digest
+    ))
+}
+
+pub fn sign_session_refresh(
+    backend_url: &str,
+    user_id: &str,
+    session_id: &str,
+    device_id: &str,
+    binding_epoch: i64,
+    refresh_token: &str,
+) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    let mut record = load_record(backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let registered_device = record.device_id.as_deref().unwrap_or("").trim();
+    if registered_device.is_empty() || registered_device != device_id.trim() {
+        return Err("refresh proof запрошен не для локально зарегистрированного device key".into());
+    }
+    let payload = session_refresh_payload(&user, session_id, registered_device, binding_epoch, refresh_token)?;
+    let signature = if record.key_binding == "hardware" {
+        let (signer, _) = validate_hardware_record(&record)?;
+        let der = signer.sign(&record.hardware_label, payload.as_bytes())
+            .map_err(|e| format!("Ошибка: аппаратная подпись обновления сессии: {e}"))?;
+        URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
+    } else {
+        let signing = validate_software_record(&mut record)?;
+        URL_SAFE_NO_PAD.encode(signing.sign(payload.as_bytes()).to_bytes())
+    };
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
+        signature,
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: record.key_binding == "hardware",
+    })
+}
+
+pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    let mut record = load_record(backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    validate_device_attestation_payload(payload, &user, &record)?;
+
+    // Для аттестации намеренно нет программного резервного режима. Это отдельная граница
+    // IPC, не связанная с обычным подтверждением владения ключом; используется только
+    // сохранённый неэкспортируемый аппаратный ключ, ранее зарегистрированный сервером.
+    let (signer, _) = validate_hardware_record(&record)?;
+    let der = signer.sign(&record.hardware_label, payload.as_bytes())
+        .map_err(|e| format!("Ошибка: аппаратная подпись аттестации устройства: {e}"))?;
+    let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
+        signature,
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: true,
+    })
+}
+
+fn validate_device_replacement_payload(payload: &str, user_id: &str) -> Result<Vec<String>, String> {
+    if payload.is_empty() || payload.len() > 16 * 1024 { return Err("device replacement payload имеет недопустимый размер".into()); }
+    let lines = payload.split_terminator('\n').map(str::to_string).collect::<Vec<_>>();
+    if lines.len() != 14 || lines[0] != "Launcher Device Key Replacement v1" { return Err("replacement payload не является каноническим Launcher v1 payload".into()); }
+    if lines[1] != "purpose=rotate" && lines[1] != "purpose=recover" { return Err("replacement purpose не разрешён".into()); }
+    if lines[2].strip_prefix("challenge=").unwrap_or("").is_empty()
+        || lines[3] != format!("user={}", user_id)
+        || lines[4].strip_prefix("session=").unwrap_or("").is_empty()
+        || lines[5].strip_prefix("old-device=").unwrap_or("").is_empty()
+        || lines[6].strip_prefix("old-fingerprint=").unwrap_or("").is_empty()
+        || lines[7].strip_prefix("new-device=").unwrap_or("").is_empty()
+        || lines[8].strip_prefix("new-fingerprint=").unwrap_or("").is_empty()
+        || lines[9].strip_prefix("new-algorithm=").unwrap_or("").is_empty()
+        || lines[10].strip_prefix("new-binding=").unwrap_or("").is_empty()
+        || !lines[11].starts_with("new-provider=")
+        || lines[12].strip_prefix("issued-at=").unwrap_or("").is_empty()
+        || lines[13].strip_prefix("expires-at=").unwrap_or("").is_empty() {
+        return Err("replacement payload identity/freshness fields повреждены".into());
+    }
+    Ok(lines)
+}
+
+fn sign_with_record(record: &mut SecureDeviceKeyRecord, payload: &str) -> Result<String, String> {
+    if record.key_binding == "hardware" {
+        let (signer, _) = validate_hardware_record(record)?;
+        let der = signer.sign(&record.hardware_label, payload.as_bytes()).map_err(|e| format!("Ошибка: аппаратная подпись устройства: {e}"))?;
+        Ok(URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?))
+    } else {
+        let signing = validate_software_record(record)?;
+        Ok(URL_SAFE_NO_PAD.encode(signing.sign(payload.as_bytes()).to_bytes()))
+    }
+}
+
+pub fn stage_device_key_replacement(backend_url: &str, user_id: &str) -> Result<DeviceKeyInfo, String> {
+    let user = normalize_user_id(user_id)?;
+    // Если сервер сохранил замену ключа, но ответ HTTP потерялся, удаление подготовленного ключа сделает вновь
+    // привязанную учётную запись невосстановимой. Используйте ту же подготовленную идентичность до
+    // согласования состояния с сервером либо её явного удаления пользователем.
+    if let Some(mut previous) = load_staged_record(backend_url, &user)? {
+        validate_record(&mut previous)?;
+        return Ok(record_to_info(&previous));
+    }
+    let generation = random_key_generation();
+    let mut record = match try_new_hardware_record_with_generation(backend_url, &user, &generation) {
+        Ok(record) => record,
+        Err(_) => new_software_record(&user),
+    };
+    if let Err(err) = validate_record(&mut record).and_then(|_| save_staged_record(backend_url, &user, &record)) {
+        // Аппаратный ключ создан успешно, но метаданные не сохранились.
+        if record.key_binding == "hardware" && !record.hardware_label.is_empty() {
+            if let Ok((signer, _)) = hardware_signer(&record.hardware_label) {
+                let _ = signer.delete_key(&record.hardware_label);
+            }
+        }
+        return Err(err);
+    }
+    Ok(record_to_info(&record))
+}
+
+pub fn staged_device_key_status(backend_url: &str, user_id: &str) -> Result<Option<DeviceKeyInfo>, String> {
+    let user = normalize_user_id(user_id)?;
+    match load_staged_record(backend_url, &user)? {
+        Some(mut record) => { validate_record(&mut record)?; Ok(Some(record_to_info(&record))) }
+        None => Ok(None),
+    }
+}
+
+pub fn sign_staged_device_replacement(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    let lines = validate_device_replacement_payload(payload, &user)?;
+    let mut record = load_staged_record(backend_url, &user)?.ok_or_else(|| "staged device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    if lines[8] != format!("new-fingerprint={}", record.fingerprint)
+        || lines[9] != format!("new-algorithm={}", record.key_algorithm)
+        || lines[10] != format!("new-binding={}", record.key_binding)
+        || lines[11] != format!("new-provider={}", record.hardware_provider) {
+        return Err("replacement payload не соответствует staged device key".into());
+    }
+    let signature = sign_with_record(&mut record, payload)?;
+    Ok(DeviceSignatureResult { fingerprint: record.fingerprint.clone(), public_key: record.public_key.clone(), signature, key_algorithm: record.key_algorithm.clone(), key_binding: record.key_binding.clone(), hardware_provider: record.hardware_provider.clone(), hardware_bound: record.key_binding == "hardware" })
+}
+
+pub fn sign_current_device_replacement(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    let lines = validate_device_replacement_payload(payload, &user)?;
+    if lines[1] != "purpose=rotate" { return Err("current device key используется только для rotate proof".into()); }
+    let mut record = load_record(backend_url, &user)?.ok_or_else(|| "current device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let device_id = record.device_id.as_deref().unwrap_or("");
+    if device_id.is_empty() || lines[5] != format!("old-device={}", device_id) || lines[6] != format!("old-fingerprint={}", record.fingerprint) {
+        return Err("rotation payload не соответствует текущему device key".into());
+    }
+    let signature = sign_with_record(&mut record, payload)?;
+    Ok(DeviceSignatureResult { fingerprint: record.fingerprint.clone(), public_key: record.public_key.clone(), signature, key_algorithm: record.key_algorithm.clone(), key_binding: record.key_binding.clone(), hardware_provider: record.hardware_provider.clone(), hardware_bound: record.key_binding == "hardware" })
+}
+
+pub fn commit_staged_device_key(backend_url: &str, user_id: &str, device_id: &str) -> Result<DeviceKeyInfo, String> {
+    let user = normalize_user_id(user_id)?;
+    let device_id = device_id.trim();
+    if device_id.is_empty() || device_id.len() > 160 { return Err("replacement deviceId обязателен".into()); }
+    let mut staged = load_staged_record(backend_url, &user)?.ok_or_else(|| "staged device key отсутствует".to_string())?;
+    validate_record(&mut staged)?;
+    let old = load_record(backend_url, &user)?;
+    staged.device_id = Some(device_id.to_string());
+    save_record(backend_url, &user, &staged)?;
+    let entry = staged_keyring_entry(backend_url, &user)?;
+    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => {}, Err(e) => return Err(format!("replacement committed, но staged metadata cleanup failed: {e}")) }
+    if let Some(old_record) = old {
+        if old_record.key_binding == "hardware" && !old_record.hardware_label.is_empty() && old_record.hardware_label != staged.hardware_label {
+            if let Ok((signer, _)) = hardware_signer(&old_record.hardware_label) {
+                if signer.key_exists(&old_record.hardware_label).unwrap_or(false) { let _ = signer.delete_key(&old_record.hardware_label); }
+            }
+        }
+    }
+    Ok(record_to_info(&staged))
+}
+
+pub fn abort_staged_device_key(backend_url: &str, user_id: &str) -> Result<(), String> {
+    let user = normalize_user_id(user_id)?;
+    if let Some(mut record) = load_staged_record(backend_url, &user)? {
+        if record.key_binding == "hardware" && !record.hardware_label.is_empty() {
+            if let Ok((signer, _)) = hardware_signer(&record.hardware_label) {
+                if signer.key_exists(&record.hardware_label).unwrap_or(false) { let _ = signer.delete_key(&record.hardware_label); }
+            }
+        }
+        record.private_seed_hex.zeroize();
+    }
+    let entry = staged_keyring_entry(backend_url, &user)?;
+    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()), Err(e) => Err(format!("не удалось удалить staged device key metadata: {e}")) }
+}
+
+pub fn bind_device_key(backend_url: &str, user_id: &str, device_id: &str) -> Result<DeviceKeyInfo, String> {
+    let user = normalize_user_id(user_id)?;
+    let device_id = device_id.trim();
+    if device_id.is_empty() || device_id.len() > 160 {
+        return Err("deviceId обязателен".into());
+    }
+    let mut record = load_record(backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    record.device_id = Some(device_id.to_string());
+    save_record(backend_url, &user, &record)?;
+    Ok(record_to_info(&record))
+}
+
+pub fn reset_device_key(backend_url: &str, user_id: &str) -> Result<DeviceKeyInfo, String> {
+    delete_device_key(backend_url, user_id)?;
+    let user = normalize_user_id(user_id)?;
+    let mut record = match try_new_hardware_record_with_generation(backend_url, &user, &random_key_generation()) {
+        Ok(record) => record, Err(_) => new_software_record(&user),
+    };
+    validate_record(&mut record)?;
+    save_record(backend_url, &user, &record)?;
+    Ok(record_to_info(&record))
+}
+
+pub fn delete_device_key(backend_url: &str, user_id: &str) -> Result<(), String> {
+    let _ = abort_staged_device_key(backend_url, user_id);
+    if let Some(mut record) = load_record(backend_url, user_id)? {
+        if record.key_binding == "hardware" && !record.hardware_label.is_empty() {
+            if let Ok((signer, _)) = hardware_signer(&record.hardware_label) {
+                if signer.key_exists(&record.hardware_label).unwrap_or(false) {
+                    signer.delete_key(&record.hardware_label)
+                        .map_err(|e| format!("не удалось удалить hardware device key: {e}"))?;
+                }
+            }
+        }
+        record.private_seed_hex.zeroize();
+    }
+    let entry = keyring_entry(backend_url, user_id)?;
+    match entry.delete_credential() {
+        Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()),
+        Err(e) => Err(format!("не удалось удалить device key metadata из OS secure storage: {e}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn macos_capability_probe_elevates_non_mac_hosts_0316() {
+        let info = macos_trust_status_0316("https://example.test", "user").unwrap();
+        assert_eq!(info.remote_device_key_provenance, "not-verified");
+        assert_eq!(info.strict_profile, "deny");
+        assert_eq!(info.app_attest, "unsupported");
+    }
+
+    #[test]
+    fn native_replacement_payload_refuses_forged_scope_0316() {
+        let payload = "Launcher Device Key Replacement v1\npurpose=recover\nchallenge=x\nuser=user-a\nsession=s\nold-device=d1\nold-fingerprint=f1\nnew-device=d2\nnew-fingerprint=f2\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-01-01T00:00:00Z\nexpires-at=2026-01-01T00:01:00Z\n";
+        assert!(validate_device_replacement_payload(payload, "user-a").is_ok());
+        assert!(validate_device_replacement_payload(payload, "user-b").is_err());
+        assert!(validate_device_replacement_payload(&payload.replace("purpose=recover", "purpose=admin"), "user-a").is_err());
+    }
+
+    #[test]
+    fn storage_username_is_scoped_by_backend_and_user() {
+        let a = device_key_username("https://example.test/", "user-a").unwrap();
+        let b = device_key_username("https://example.test", "user-b").unwrap();
+        let c = device_key_username("https://other.test", "user-a").unwrap();
+        assert_ne!(a, b);
+        assert_ne!(a, c);
+        assert!(a.starts_with("device:"));
+    }
+
+    #[test]
+    fn hardware_backend_classification_is_fail_closed() {
+        assert!(is_hardware_backend_kind("MacOsSecureEnclave"));
+        assert!(is_hardware_backend_kind("WindowsTpm"));
+        assert!(is_hardware_backend_kind("LinuxTpm"));
+        assert!(is_hardware_backend_kind("WslBridge"));
+        assert!(!is_hardware_backend_kind("LinuxKeyring"));
+        assert!(!is_hardware_backend_kind("Software"));
+        assert!(!is_hardware_backend_kind("TestSoftware"));
+        assert!(!is_hardware_backend_kind("UnknownFutureBackend"));
+    }
+
+    #[test]
+    fn hardware_generation_labels_are_scoped_and_rotate() {
+        let a1 = hardware_key_label_generation("https://example.test", "user-a", "generation-1").unwrap();
+        let a2 = hardware_key_label_generation("https://example.test", "user-a", "generation-2").unwrap();
+        let b1 = hardware_key_label_generation("https://example.test", "user-b", "generation-1").unwrap();
+        assert_ne!(a1, a2);
+        assert_ne!(a1, b1);
+        assert!(a1.starts_with("nl-device-"));
+    }
+
+    #[test]
+    fn replacement_payload_is_canonical_and_user_scoped() {
+        let good = "Launcher Device Key Replacement v1\npurpose=rotate\nchallenge=abc\nuser=user-a\nsession=sess-1\nold-device=dev-old\nold-fingerprint=oldfp\nnew-device=dev-new\nnew-fingerprint=newfp\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-09-22T12:00:00Z\nexpires-at=2026-09-22T12:02:00Z\n";
+        assert!(validate_device_replacement_payload(good, "user-a").is_ok());
+        assert!(validate_device_replacement_payload(good, "user-b").is_err());
+        assert!(validate_device_replacement_payload(&good.replace("purpose=rotate", "purpose=delete"), "user-a").is_err());
+    }
+
+    #[test]
+    fn rejects_remote_plain_http_backend() {
+        assert!(normalize_backend_url("http://example.test").is_err());
+        assert!(normalize_backend_url("http://localhost.evil.test").is_err());
+        assert!(normalize_backend_url("http://127.0.0.1.evil.test").is_err());
+        assert!(normalize_backend_url("http://localhost:8080").is_ok());
+    }
+
+    #[test]
+    fn signing_payload_is_scoped_to_device_trust_and_user() {
+        let good = "Launcher Device Trust v1\npurpose=register\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\n";
+        assert!(validate_device_signing_payload(good, "user-a").is_ok());
+        assert!(validate_device_signing_payload(good, "user-b").is_err());
+        assert!(validate_device_signing_payload("arbitrary payload", "user-a").is_err());
+    }
+
+    #[test]
+    fn refresh_payload_binds_session_device_epoch_and_token_hash_without_token_disclosure() {
+        let payload = session_refresh_payload("user-a", "sess-1", "dev-1", 3, "nlr_secret-refresh").unwrap();
+        assert!(payload.contains("user=user-a\n"));
+        assert!(payload.contains("session=sess-1\n"));
+        assert!(payload.contains("device=dev-1\n"));
+        assert!(payload.contains("binding-epoch=3\n"));
+        assert!(payload.contains("refresh-token-sha256="));
+        assert!(!payload.contains("nlr_secret-refresh"));
+        assert!(session_refresh_payload("user-a", "sess-1", "dev-1", 0, "x").is_err());
+    }
+
+    #[test]
+    fn attestation_payload_is_hardware_only_and_identity_bound() {
+        let record = SecureDeviceKeyRecord {
+            schema_version: DEVICE_KEY_SCHEMA_VERSION.into(),
+            user_id: "user-a".into(),
+            public_key: "pub".into(),
+            fingerprint: "fp123".into(),
+            private_seed_hex: String::new(),
+            device_id: Some("dev-1".into()),
+            created_at_unix: 1,
+            storage_backend: "platform-hardware-enclave".into(),
+            key_algorithm: "p256".into(),
+            key_binding: "hardware".into(),
+            hardware_provider: "WindowsTpm".into(),
+            hardware_label: "nl-device-test".into(),
+        };
+        let good = "Launcher Device Attestation v1\npurpose=attest\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\nfingerprint=fp123\nalgorithm=p256\nbinding=hardware\nprovider=WindowsTpm\nissued-at=2026-09-16T20:00:00Z\nchallenge-expires-at=2026-09-16T20:02:00Z\nattestation-valid-until=2026-09-17T08:00:00Z\n";
+        assert!(validate_device_attestation_payload(good, "user-a", &record).is_ok());
+        assert!(validate_device_attestation_payload(good, "user-b", &record).is_err());
+        assert!(validate_device_attestation_payload(&good.replace("fingerprint=fp123", "fingerprint=other"), "user-a", &record).is_err());
+
+        let mut software = record;
+        software.key_algorithm = "ed25519".into();
+        software.key_binding = "software".into();
+        assert!(validate_device_attestation_payload(good, "user-a", &software).is_err());
+    }
+    #[test]
+    fn device_trust_release_0130_is_fail_closed() {
+        assert_eq!(DEVICE_KEY_SCHEMA_VERSION, "2");
+        assert!(normalize_backend_url("http://example.invalid").is_err());
+        assert!(!is_hardware_backend_kind("Software"));
+        assert!(!is_hardware_backend_kind("UnknownFutureBackend"));
+        let info = DeviceKeyInfo {
+            user_id: "user-a".into(), public_key: "pub".into(), fingerprint: "fp".into(), device_id: Some("dev-1".into()),
+            created_at_unix: 1, storage_backend: "os-keyring".into(), key_algorithm: "ed25519".into(), key_binding: "software".into(),
+            hardware_provider: String::new(), hardware_bound: false, private_key_exposed_to_frontend: false,
+        };
+        assert!(!info.private_key_exposed_to_frontend);
+    }
+
+}
+
+
+/// Вызывать этот модуль подписи разрешено только из нативного пути с проверенным установленным выпуском.
+/// Универсальный JS API подписи устройства намеренно отклоняет этот домен.
+pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    if payload.len() > 4096 || !payload.starts_with("Launcher-Verified-Component-Plan-v1\n")
+        || payload.contains('\r') || payload.split('\n').count() != 16 {
+        return Err("Некорректное значение: данные плана, проверенного нативным компонентом".into());
+    }
+    let user = normalize_user_id(user_id)?;
+    let mut record = load_record(backend_url, &user)?.ok_or("Отсутствует доверенный ключ устройства")?;
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" || record.device_id.as_deref() != Some(device_id) {
+        return Err("Проверенный план: требуется привязанный аппаратный ключ устройства P-256".into());
+    }
+    validate_record(&mut record)?;
+    let signature = sign_with_record(&mut record, payload)?;
+    Ok(DeviceSignatureResult { fingerprint:record.fingerprint.clone(), public_key:record.public_key.clone(), signature,
+        key_algorithm:record.key_algorithm.clone(),key_binding:record.key_binding.clone(),
+        hardware_provider:record.hardware_provider.clone(),hardware_bound:true })
+}
+
+/// Только Windows: создайте TPM2_Certify для уже зарегистрированного ключа PCP. Администратор должен
+/// отдельно зарегистрировать AK и выпустить доверенный сертификат AK. Эта операция создаёт ключ или
+/// заменяет зарегистрированную идентичность устройства.
+pub fn windows_tpm_certify_0313(
+    backend_url: &str, user_id: &str, device_id: &str,
+    tpm_extra_data_sha256: &str, ak_key_name: &str,
+    ak_certificate_pem: &str, intermediates_pem: Vec<String>,
+) -> Result<serde_json::Value,String> {
+    #[cfg(not(target_os="windows"))]
+    {
+        let _ = (backend_url,user_id,device_id,tpm_extra_data_sha256,ak_key_name,ak_certificate_pem,intermediates_pem);
+        Err("TPM2_Certify поддерживается этим нативным компонентом только в Windows".into())
+    }
+    #[cfg(target_os="windows")]
+    {
+        let user = normalize_user_id(user_id)?;
+        let record = load_record(backend_url,&user)?.ok_or("Не найден зарегистрированный ключ устройства")?;
+        if record.user_id != user || record.device_id.as_deref() != Some(device_id) ||
+           record.key_binding != "hardware" || record.key_algorithm != "p256" ||
+           !record.hardware_provider.to_ascii_lowercase().contains("tpm") {
+            return Err("Требуется: зарегистрированная идентичность TPM P-256 в Windows".into());
+        }
+        let _ = validate_hardware_record(&record)?;
+        let sec1 = URL_SAFE_NO_PAD.decode(&record.public_key)
+            .map_err(|_|"Повреждён зарегистрированный публичный ключ")?;
+        let evidence = crate::tpm_windows_0313::certify(
+            &record.hardware_label,&sec1,tpm_extra_data_sha256,
+            ak_key_name,ak_certificate_pem,intermediates_pem,
+        )?;
+        serde_json::to_value(evidence).map_err(|e|e.to_string())
+    }
+}
+
+/// Проверка Linux TPM2 Certify для той же идентичности подписи в аппаратном анклаве, которая была
+/// зарегистрирована ранее. AK регистрируется по независимому каналу и хранится в TPM. Программная
+/// аттестация, замена ключа и ослабление разрешений запрещены.
+pub fn linux_tpm_certify_0314(
+    backend_url: &str, user_id: &str, device_id: &str,
+    tpm_extra_data_sha256: &str, ak_handle: &str,
+    ak_certificate_pem: &str, intermediates_pem: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    #[cfg(not(target_os="linux"))]
+    {
+        let _=(backend_url,user_id,device_id,tpm_extra_data_sha256,ak_handle,ak_certificate_pem,intermediates_pem);
+        Err("Для данные нативной проверки TPM Linux требуется glibc в Linux и устройство TPM 2.0".into())
+    }
+    #[cfg(target_os="linux")]
+    {
+        let user=normalize_user_id(user_id)?;
+        let record=load_record(backend_url,&user)?.ok_or("Не найден зарегистрированный ключ устройства Linux")?;
+        if record.user_id!=user || record.device_id.as_deref()!=Some(device_id) ||
+           record.key_algorithm!="p256" || record.key_binding!="hardware" ||
+           !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm") {
+            return Err("Требуется зарегистрированная идентичность подписи TPM P-256 в Linux, не программное хранилище, связка ключей или WSL".into());
+        }
+        // Также проверяется, что фактический подписант аппаратного анклава по-прежнему владеет именно открытым
+        // ключом, зарегистрированным для устройства.
+        let _=validate_hardware_record(&record)?;
+        let sec1=URL_SAFE_NO_PAD.decode(&record.public_key).map_err(|_|"Повреждён зарегистрированный публичный ключ")?;
+        let proof=crate::tpm_linux_0314::certify(&record.hardware_label,&sec1,
+            tpm_extra_data_sha256,ak_handle,ak_certificate_pem,intermediates_pem)?;
+        serde_json::to_value(proof).map_err(|e|e.to_string())
+    }
+}
+
+
+/// TPM Quote подписан зарегистрированным AK и проверяется на сервере по закреплённому сертификату AK.
+/// Программный запасной вариант никогда не предлагается.
+pub fn measured_boot_quote_0315(
+ backend_url:&str,user_id:&str,device_id:&str,extra:&str,selection:&str,ak_key:&str,
+ certificate:&str,intermediates:Vec<String>,
+)->Result<serde_json::Value,String>{
+ let user=normalize_user_id(user_id)?;
+ let record=load_record(backend_url,&user)?.ok_or("Отсутствует зарегистрированный аппаратный ключ устройства")?;
+ if record.user_id!=user || record.device_id.as_deref()!=Some(device_id) || record.key_algorithm!="p256" || record.key_binding!="hardware" {
+  return Err("Для аттестационная цитата TPM Quote требуется привязанное аппаратное устройство P-256".into());
+ }
+ let _=validate_hardware_record(&record)?;
+ #[cfg(target_os="windows")]
+ {
+  if !record.hardware_provider.to_ascii_lowercase().contains("tpm") {return Err("Требуется: ключ TPM Windows".into());}
+  let proof=crate::tpm_windows_0313::quote0315(extra,selection,ak_key,certificate,intermediates)?;
+  return serde_json::to_value(proof).map_err(|e|e.to_string());
+ }
+ #[cfg(target_os="linux")]
+ {
+  if !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm"){return Err("Требуется: ключ TPM Linux".into());}
+  let proof=crate::tpm_linux_0314::quote0315(extra,selection,ak_key,certificate,intermediates)?;
+  return serde_json::to_value(proof).map_err(|e|e.to_string());
+ }
+ #[cfg(not(any(target_os="windows",target_os="linux")))]
+ {
+  let _=(extra,selection,ak_key,certificate,intermediates);
+  Err("Для TPM Quote измеренной загрузки требуется TPM 2.0 в Windows или Linux".into())
+ }
+}
+
+// 0.31.6 — нативная проверка возможностей macOS. Это ЛОКАЛЬНАЯ диагностика, а не доказательство
+// аппаратного происхождения или утверждение App Attest для сервера.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MacOSTrustStatus0316 {
+    pub platform: &'static str,
+    pub local_device_key: String,
+    pub local_secure_enclave: String,
+    pub app_attest: String,
+    pub remote_device_key_provenance: &'static str,
+    pub strict_profile: &'static str,
+    pub reason_codes: Vec<&'static str>,
+}
+
+#[cfg(target_os = "macos")]
+fn app_attest_available_0316() -> bool {
+    use std::ffi::{c_char, c_void};
+    #[link(name = "objc")]
+    extern "C" {
+        fn objc_getClass(name: *const c_char) -> *mut c_void;
+        fn sel_registerName(name: *const c_char) -> *mut c_void;
+        fn objc_msgSend();
+    }
+    // Линковка обеспечивает загрузку настоящего фреймворка DeviceCheck. Одного наблюдения версии ОС, типа
+    // процессора или entitlement недостаточно.
+    #[link(name = "DeviceCheck", kind = "framework")]
+    extern "C" {}
+    unsafe {
+        let klass = objc_getClass(b"DCAppAttestService\0".as_ptr().cast());
+        if klass.is_null() { return false; }
+        let shared_selector = sel_registerName(b"sharedService\0".as_ptr().cast());
+        let supported_selector = sel_registerName(b"isSupported\0".as_ptr().cast());
+        if shared_selector.is_null() || supported_selector.is_null() { return false; }
+        let send_object: unsafe extern "C" fn(*mut c_void, *mut c_void) -> *mut c_void =
+            std::mem::transmute(objc_msgSend as *const ());
+        let service = send_object(klass, shared_selector);
+        if service.is_null() { return false; }
+        let send_bool: unsafe extern "C" fn(*mut c_void, *mut c_void) -> i8 =
+            std::mem::transmute(objc_msgSend as *const ());
+        send_bool(service, supported_selector) != 0
+    }
+}
+
+pub fn macos_trust_status_0316(backend_url: &str, user_id: &str) -> Result<MacOSTrustStatus0316, String> {
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (backend_url, user_id);
+        return Ok(MacOSTrustStatus0316 {
+            platform: std::env::consts::OS, local_device_key: "unsupported".into(),
+            local_secure_enclave: "unsupported".into(), app_attest: "unsupported".into(),
+            remote_device_key_provenance: "not-verified", strict_profile: "deny",
+            reason_codes: vec!["macos-only-capability-probe"],
+        });
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // Проверяйте РЕАЛЬНЫЙ ключ в Keychain/Enclave. Метка провайдера сама по себе не служит основанием для
+        // удалённого доверия.
+        let (local_key, enclave) = match device_key_status(backend_url, user_id) {
+            Ok(Some(key)) if key.key_binding == "hardware" && key.key_algorithm == "p256"
+                && key.hardware_provider.to_ascii_lowercase().contains("secureenclave") =>
+                ("verified-local-possession", "locally-available"),
+            Ok(Some(_)) => ("verified-local-possession", "not-used-by-current-key"),
+            Ok(None) => ("not-registered", "not-verified"),
+            Err(_) => ("keychain-unavailable-or-key-invalid", "not-verified"),
+        };
+        let app_attest = if app_attest_available_0316() {
+            "api-supported-not-attested"
+        } else {
+            "api-unavailable"
+        };
+        Ok(MacOSTrustStatus0316 {
+            platform: "macos", local_device_key: local_key.into(),
+            local_secure_enclave: enclave.into(), app_attest: app_attest.into(),
+            remote_device_key_provenance: "not-verified", strict_profile: "deny",
+            reason_codes: vec!["macos-device-key-provenance-not-remotely-verified",
+                               "macos-app-attest-not-bound-to-device-identity",
+                               "guard-runtime-evidence-unavailable"],
+        })
+    }
+}

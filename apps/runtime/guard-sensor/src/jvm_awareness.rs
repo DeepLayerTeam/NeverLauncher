@@ -1,0 +1,1038 @@
+#![cfg(windows)]
+
+use sha2::{Digest, Sha256};
+use std::{
+    ffi::c_void,
+    path::PathBuf,
+    mem::size_of,
+    sync::{
+        atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering},
+        Mutex, OnceLock,
+    },
+};
+
+const CERTIFIED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25];
+const VS_FFI_SIGNATURE: u32 = 0xFEEF_04BD;
+const MEM_COMMIT: u32 = 0x0000_1000;
+const MEM_PRIVATE: u32 = 0x0002_0000;
+const PAGE_EXECUTE: u32 = 0x10;
+const PAGE_EXECUTE_READ: u32 = 0x20;
+const PAGE_EXECUTE_READWRITE: u32 = 0x40;
+const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
+const PAGE_GUARD: u32 = 0x100;
+const PAGE_NOACCESS: u32 = 0x01;
+const MAX_MODULE_PATH: usize = 32768;
+const MAX_STACK_FRAMES: usize = 16;
+const GET_MODULE_HANDLE_EX_FLAG_PIN: u32 = 0x0000_0001;
+const GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT: u32 = 0x0000_0002;
+const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
+const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x0000_0800;
+const LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR: u32 = 0x0000_0100;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+#[allow(dead_code)]
+struct ModuleInfo {
+    base_of_dll: *mut c_void,
+    size_of_image: u32,
+    entry_point: *mut c_void,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+#[allow(dead_code)]
+struct MemoryBasicInformation {
+    base_address: *mut c_void,
+    allocation_base: *mut c_void,
+    allocation_protect: u32,
+    partition_id: u16,
+    region_size: usize,
+    state: u32,
+    protect: u32,
+    kind: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+#[allow(dead_code)]
+struct VsFixedFileInfo {
+    signature: u32,
+    struct_version: u32,
+    file_version_ms: u32,
+    file_version_ls: u32,
+    product_version_ms: u32,
+    product_version_ls: u32,
+    file_flags_mask: u32,
+    file_flags: u32,
+    file_os: u32,
+    file_type: u32,
+    file_subtype: u32,
+    file_date_ms: u32,
+    file_date_ls: u32,
+}
+
+#[link(name = "kernel32")]
+extern "system" {
+    fn GetCurrentProcess() -> *mut c_void;
+    fn GetModuleHandleW(name: *const u16) -> *mut c_void;
+    fn LoadLibraryExW(name: *const u16, file: *mut c_void, flags: u32) -> *mut c_void;
+    fn GetModuleHandleExW(flags: u32, name_or_address: *const u16, module: *mut *mut c_void) -> i32;
+    fn GetModuleFileNameW(module: *mut c_void, filename: *mut u16, size: u32) -> u32;
+    fn GetSystemDirectoryW(buffer: *mut u16, size: u32) -> u32;
+    fn K32GetModuleInformation(
+        process: *mut c_void,
+        module: *mut c_void,
+        info: *mut ModuleInfo,
+        cb: u32,
+    ) -> i32;
+    fn VirtualQuery(
+        address: *const c_void,
+        buffer: *mut MemoryBasicInformation,
+        length: usize,
+    ) -> usize;
+    fn RtlCaptureStackBackTrace(
+        frames_to_skip: u32,
+        frames_to_capture: u32,
+        back_trace: *mut *mut c_void,
+        back_trace_hash: *mut u32,
+    ) -> u16;
+}
+
+#[link(name = "version")]
+extern "system" {
+    fn GetFileVersionInfoSizeW(filename: *const u16, handle: *mut u32) -> u32;
+    fn GetFileVersionInfoW(
+        filename: *const u16,
+        handle: u32,
+        length: u32,
+        data: *mut c_void,
+    ) -> i32;
+    fn VerQueryValueW(
+        block: *const c_void,
+        sub_block: *const u16,
+        buffer: *mut *mut c_void,
+        length: *mut u32,
+    ) -> i32;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TransitionOrigin {
+    HotSpotJvm,
+    // Проверенные системные диспетчеры могут выделять исполняемые страницы при обслуживании HotSpot в Windows; это не равнозначно произвольной нативной DLL.
+    TrustedSystemDispatcher,
+    ForeignNative,
+    Unknown,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TransitionProvenance {
+    pub origin: TransitionOrigin,
+    pub caller: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct JvmAwareSnapshot {
+    pub active: bool,
+    pub healthy: bool,
+    pub java_major: u32,
+    pub jvm_module_size: u32,
+    pub jvm_path_sha256: String,
+    pub baseline_private_executable_region_count: u32,
+    pub jit_transition_count: u64,
+    pub trusted_system_transition_count: u64,
+    pub foreign_executable_transition_count: u64,
+    pub unknown_executable_transition_count: u64,
+    pub integrity_check_count: u64,
+    pub state_sha256: String,
+}
+
+#[derive(Clone, Debug)]
+struct JvmIdentity {
+    java_major: u32,
+    module_base: usize,
+    module_size: u32,
+    path_sha256: String,
+}
+
+#[derive(Clone, Debug)]
+struct JvmAwareState {
+    active: bool,
+    healthy: bool,
+    identity: JvmIdentity,
+    baseline_private_executable_region_count: u32,
+    integrity_check_count: u64,
+}
+
+static JVM_STATE: Mutex<Option<JvmAwareState>> = Mutex::new(None);
+static JVM_ACTIVE: AtomicBool = AtomicBool::new(false);
+static JVM_BASE: AtomicUsize = AtomicUsize::new(0);
+static JVM_END: AtomicUsize = AtomicUsize::new(0);
+static JVM_MAJOR: AtomicU32 = AtomicU32::new(0);
+static SENSOR_BASE: AtomicUsize = AtomicUsize::new(0);
+static SENSOR_END: AtomicUsize = AtomicUsize::new(0);
+static JIT_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
+static TRUSTED_SYSTEM_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
+// Инициализация выполняется однократно до активации перехватов. Внутри перехвата VirtualAlloc запрещены разрешение путей Win32, выделение памяти и блокировки.
+static TRUSTED_SYSTEM_DISPATCHERS: OnceLock<Vec<(usize, usize)>> = OnceLock::new();
+// LWJGL загружается только после Agent_OnLoad. Закрепите конкретную нативную библиотеку с проверенным хешем из каталога запуска, чтобы её базовый адрес не мог повторно использоваться недоверенной DLL. Внутри перехватов памяти нельзя разрешать пути или выделять память в куче.
+static VERIFIED_NATIVE_LAUNCH_ROOT: OnceLock<PathBuf> = OnceLock::new();
+static VERIFIED_LWJGL_IMAGE: OnceLock<VerifiedNativeImage> = OnceLock::new();
+// Некоторые профили загружают дополнительные побайтно идентичные копии lwjgl.dll. Закрепите каждый одобренный образ, но публикуйте диапазоны адресов для перехватов памяти только через атомарные операции release/acquire; в обратных вызовах запрещены операции с путями и мьютексы.
+const MAX_ADDITIONAL_LWJGL_IMAGES: usize = 8;
+static LWJGL_REGISTRATION_LOCK: Mutex<()> = Mutex::new(());
+static ADDITIONAL_LWJGL_IMAGES: Mutex<Vec<VerifiedNativeImage>> = Mutex::new(Vec::new());
+static ADDITIONAL_LWJGL_BASES: [AtomicUsize; MAX_ADDITIONAL_LWJGL_IMAGES] =
+    [const { AtomicUsize::new(0) }; MAX_ADDITIONAL_LWJGL_IMAGES];
+static ADDITIONAL_LWJGL_ENDS: [AtomicUsize; MAX_ADDITIONAL_LWJGL_IMAGES] =
+    [const { AtomicUsize::new(0) }; MAX_ADDITIONAL_LWJGL_IMAGES];
+static RUNTIME_NATIVE_LOAD_FAILED: AtomicBool = AtomicBool::new(false);
+
+#[derive(Debug)]
+struct VerifiedNativeImage {
+    base: usize,
+    end: usize,
+    canonical_path: PathBuf,
+    file_sha256: [u8; 32],
+}
+static FOREIGN_EXECUTABLE_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
+static UNKNOWN_EXECUTABLE_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
+static LAST_FOREIGN_CALLER: AtomicUsize = AtomicUsize::new(0);
+static LAST_UNKNOWN_CALLER: AtomicUsize = AtomicUsize::new(0);
+
+pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
+    if java_vm.is_null() {
+        return Err("Защита Guard для JVM получила пустой указатель JavaVM".to_string());
+    }
+    let identity = inspect_jvm_identity()?;
+    if !CERTIFIED_JAVA_MAJORS.contains(&identity.java_major) {
+        return Err(format!(
+            "Guard JVM-Aware Protection unsupported Java major {}; certified majors are 8/16/17/21/25",
+            identity.java_major
+        ));
+    }
+    let end = identity
+        .module_base
+        .checked_add(identity.module_size as usize)
+        .ok_or_else(|| "Guard JVM-Aware Protection: переполнение диапазона адресов jvm.dll".to_string())?;
+
+    let (sensor_base, sensor_end) = current_sensor_image_range()?;
+    let system_dispatchers = resolve_system_dispatchers()?;
+    if let Some(existing) = TRUSTED_SYSTEM_DISPATCHERS.get() {
+        if existing != &system_dispatchers {
+            return Err("Защита Guard для JVM обнаружила изменение идентичности системного модуля".to_string());
+        }
+    } else {
+        TRUSTED_SYSTEM_DISPATCHERS
+            .set(system_dispatchers)
+            .map_err(|_| "Защита Guard для JVM обнаружила гонку инициализации системного диспетчера".to_string())?;
+    }
+
+    let launch_root = std::env::current_dir()
+        .and_then(std::fs::canonicalize)
+        .map_err(|err| format!("Guard для JVM: не удалось определить корневой каталог нативного запуска: {err}"))?;
+    if let Some(existing) = VERIFIED_NATIVE_LAUNCH_ROOT.get() {
+        if existing != &launch_root {
+            return Err("Обнаружено изменение: «Guard JVM-Aware native launch root»".to_string());
+        }
+    } else {
+        VERIFIED_NATIVE_LAUNCH_ROOT.set(launch_root)
+            .map_err(|_| "Guard обнаружил гонку инициализации корня нативного запуска JVM".to_string())?;
+    }
+    RUNTIME_NATIVE_LOAD_FAILED.store(false, Ordering::Release);
+
+    JIT_TRANSITIONS.store(0, Ordering::Release);
+    TRUSTED_SYSTEM_TRANSITIONS.store(0, Ordering::Release);
+    FOREIGN_EXECUTABLE_TRANSITIONS.store(0, Ordering::Release);
+    UNKNOWN_EXECUTABLE_TRANSITIONS.store(0, Ordering::Release);
+    LAST_FOREIGN_CALLER.store(0, Ordering::Release);
+    LAST_UNKNOWN_CALLER.store(0, Ordering::Release);
+    JVM_BASE.store(identity.module_base, Ordering::Release);
+    JVM_END.store(end, Ordering::Release);
+    JVM_MAJOR.store(identity.java_major, Ordering::Release);
+    SENSOR_BASE.store(sensor_base, Ordering::Release);
+    SENSOR_END.store(sensor_end, Ordering::Release);
+    JVM_ACTIVE.store(true, Ordering::Release);
+
+    let baseline_private_executable_region_count = count_private_executable_regions()?;
+    let state = JvmAwareState {
+        active: true,
+        healthy: true,
+        identity,
+        baseline_private_executable_region_count,
+        integrity_check_count: 1,
+    };
+    let snapshot = snapshot_for_state(&state);
+    *JVM_STATE
+        .lock()
+        .map_err(|_| "Повреждена блокировка состояния защиты Guard для JVM".to_string())? =
+        Some(state);
+    Ok(snapshot)
+}
+
+fn is_verified_lwjgl_caller(address: usize) -> bool {
+    if VERIFIED_LWJGL_IMAGE.get().is_some_and(|native| {
+        address >= native.base && address < native.end
+    }) {
+        return true;
+    }
+    for index in 0..MAX_ADDITIONAL_LWJGL_IMAGES {
+        // Граница end публикуется последней и не очищается: диапазон либо полностью проверен, либо невидим для этого пути перехвата без блокировок.
+        let end = ADDITIONAL_LWJGL_ENDS[index].load(Ordering::Acquire);
+        let base = ADDITIONAL_LWJGL_BASES[index].load(Ordering::Relaxed);
+        if end > base && address >= base && address < end {
+            return true;
+        }
+    }
+    false
+}
+
+fn check_verified_lwjgl_image(native: &VerifiedNativeImage) -> Result<(), String> {
+    let bytes = std::fs::read(&native.canonical_path)
+        .map_err(|err| format!("Образ LWJGL исчез во время проверки Guard: {err}"))?;
+    let mut digest = [0u8; 32];
+    digest.copy_from_slice(&Sha256::digest(&bytes));
+    if digest != native.file_sha256 {
+        return Err("Обнаружено изменение: «Guard JVM-Aware LWJGL image content»".to_string());
+    }
+    Ok(())
+}
+
+pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
+    if RUNTIME_NATIVE_LOAD_FAILED.load(Ordering::Acquire) {
+        return Err("Guard отклонил неожиданный нативный образ LWJGL".to_string());
+    }
+    if let Some(native) = VERIFIED_LWJGL_IMAGE.get() {
+        // Каждый образ закреплён загрузчиком; при каждом сигнале активности пересчитывайте хеш байтов на диске.
+        check_verified_lwjgl_image(native)?;
+    }
+    for native in ADDITIONAL_LWJGL_IMAGES.lock()
+        .map_err(|_| "Повреждена блокировка реестра нативных образов Guard".to_string())?
+        .iter()
+    {
+        check_verified_lwjgl_image(native)?;
+    }
+    // DLL, загруженная напрямую через ntdll, может один раз выполниться до регистрации обратным вызовом IAT LoadLibrary. Разрешена повторная классификация только ОДНОГО ожидающего события и только после тех же строгих проверок пути и образа. Несколько или неизвестные переходы отклоняются.
+    reconcile_first_runtime_native_transition()?;
+    let foreign = FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
+    if foreign != 0 {
+        let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
+        return Err(format!(
+            "Guard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}, module={}",
+            caller_module_basename(caller)
+        ));
+    }
+    let unknown = UNKNOWN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
+    if unknown != 0 {
+        let caller = LAST_UNKNOWN_CALLER.load(Ordering::Acquire);
+        return Err(format!(
+            "Guard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}, module={}",
+            caller_module_basename(caller)
+        ));
+    }
+
+    let current = inspect_jvm_identity()?;
+    let mut guard = JVM_STATE
+        .lock()
+        .map_err(|_| "Повреждена блокировка состояния защиты Guard для JVM".to_string())?;
+    let state = guard
+        .as_mut()
+        .ok_or_else(|| "Guard JVM-Aware Protection не инициализирован".to_string())?;
+    if !state.active || !state.healthy || !JVM_ACTIVE.load(Ordering::Acquire) {
+        return Err("Защита Guard для JVM не активна или работает некорректно".to_string());
+    }
+    if current.java_major != state.identity.java_major
+        || current.module_base != state.identity.module_base
+        || current.module_size != state.identity.module_size
+        || current.path_sha256 != state.identity.path_sha256
+    {
+        state.healthy = false;
+        return Err("Guard обнаружил изменение идентичности jvm.dll".to_string());
+    }
+    state.integrity_check_count = state.integrity_check_count.saturating_add(1);
+    Ok(snapshot_for_state(state))
+}
+
+pub fn shutdown() {
+    JVM_ACTIVE.store(false, Ordering::Release);
+    JVM_BASE.store(0, Ordering::Release);
+    JVM_END.store(0, Ordering::Release);
+    JVM_MAJOR.store(0, Ordering::Release);
+    SENSOR_BASE.store(0, Ordering::Release);
+    SENSOR_END.store(0, Ordering::Release);
+    if let Ok(mut guard) = JVM_STATE.lock() {
+        *guard = None;
+    }
+}
+
+// Происхождение для диагностики определяйте только в потоке обработчика. В перехвате VirtualAlloc нельзя запрашивать пути модулей или выделять строки.
+fn caller_module_basename(address: usize) -> String {
+    if address == 0 { return "unknown".to_string(); }
+    let mut module = std::ptr::null_mut();
+    let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+    if unsafe { GetModuleHandleExW(flags, address as *const u16, &mut module) } == 0 || module.is_null() {
+        return "unmapped".to_string();
+    }
+    let mut wide = [0u16; MAX_MODULE_PATH];
+    let len = unsafe { GetModuleFileNameW(module, wide.as_mut_ptr(), wide.len() as u32) } as usize;
+    if len == 0 || len >= wide.len() { return "unavailable".to_string(); }
+    let path = String::from_utf16_lossy(&wide[..len]);
+    path.rsplit(['\\', '/']).next().unwrap_or("unknown").to_string()
+}
+
+// Доверяйте только проверенным образам диспетчеров System32 и конкретному образу OpenGL из уже проверенной установки JVM. Module Guard закрепляет путь и содержимое загруженной DLL; Memory Integrity отдельно проверяет код образа. Модули из модпаков и произвольные модули из PATH не освобождаются от проверки.
+fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
+    let mut directory = [0u16; MAX_MODULE_PATH];
+    let len = unsafe { GetSystemDirectoryW(directory.as_mut_ptr(), directory.len() as u32) } as usize;
+    if len == 0 || len >= directory.len() {
+        return Err("защита Guard с учётом JVM: запрещено «resolve System32»".to_string());
+    }
+    let system_root = String::from_utf16_lossy(&directory[..len])
+        .trim_end_matches('\\')
+        .replace('/', "\\")
+        .to_ascii_lowercase();
+    let mut ranges = Vec::new();
+    // Диспетчеры OpenGL законно выделяют исполняемую память MEM_PRIVATE. В CI используется проверенная по SHA-256 Mesa opengl32.dll рядом с java.exe, а НЕ системная opengl32.dll Windows. Разрешайте только каталог bin уже сертифицированной JVM (либо запасной System32). Предварительная загрузка до установки перехватов не позволяет LoadLibrary внести неизвестный диспетчер посреди работы JIT.
+    let jvm_module = unsafe { GetModuleHandleW(wide_null("jvm.dll").as_ptr()) };
+    if jvm_module.is_null() {
+        return Err("защита Guard с учётом JVM: запрещено «locate jvm.dll for OpenGL provenance»".to_string());
+    }
+    let jvm_path = module_path(jvm_module)?;
+    let jvm_dir = std::path::Path::new(&jvm_path).parent()
+        .ok_or_else(|| "Guard JVM-Aware Protection: недопустимый каталог jvm.dll".to_string())?;
+    let jvm_dir_name = jvm_dir.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    let jvm_bin = jvm_dir.parent()
+        .ok_or_else(|| "Guard JVM-Aware Protection: отсутствует каталог bin JVM".to_string())?;
+    if !(jvm_dir_name.eq_ignore_ascii_case("server") || jvm_dir_name.eq_ignore_ascii_case("client"))
+        || !jvm_bin.file_name().and_then(|name| name.to_str()).unwrap_or("").eq_ignore_ascii_case("bin")
+    {
+        return Err("Guard обнаружил неожиданную структуру каталогов JVM".to_string());
+    }
+    let runtime_opengl = jvm_bin.join("opengl32.dll");
+    let runtime_opengl_metadata = std::fs::symlink_metadata(&runtime_opengl);
+    let runtime_opengl_exists = match runtime_opengl_metadata {
+        Ok(ref metadata) if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 => {
+            return Err("Guard отклонил OpenGL-образ Java, который не является обычным файлом".to_string());
+        }
+        Ok(_) => true,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => false,
+        Err(err) => return Err(format!("защита Guard с учётом JVM: запрещено «inspect Java runtime OpenGL image:» {err}")),
+    };
+    for name in ["ntdll.dll", "kernel32.dll", "kernelbase.dll", "ucrtbase.dll", "opengl32.dll"] {
+        let wide = wide_null(name);
+        let (module, expected_path) = if name == "opengl32.dll" {
+            if runtime_opengl_exists {
+                let path = runtime_opengl.to_string_lossy().into_owned();
+                let loaded = unsafe {
+                    LoadLibraryExW(wide_null(&path).as_ptr(), std::ptr::null_mut(),
+                        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)
+                };
+                (loaded, path.replace('/', "\\").to_ascii_lowercase())
+            } else {
+                let loaded = unsafe {
+                    LoadLibraryExW(wide.as_ptr(), std::ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32)
+                };
+                (loaded, format!("{system_root}\\{name}"))
+            }
+        } else {
+            (unsafe { GetModuleHandleW(wide.as_ptr()) }, format!("{system_root}\\{name}"))
+        };
+        if module.is_null() {
+            if name == "opengl32.dll" {
+                return Err(format!("защита Guard с учётом JVM: запрещено «load verified OpenGL dispatcher: {}»", std::io::Error::last_os_error()));
+            }
+            continue;
+        }
+        let mut path = [0u16; MAX_MODULE_PATH];
+        let count = unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
+        if count == 0 || count >= path.len() {
+            return Err(format!("защита Guard с учётом JVM: запрещено «identify» {name}"));
+        }
+        let loaded_path = String::from_utf16_lossy(&path[..count]).replace('/', "\\").to_ascii_lowercase();
+        if loaded_path != expected_path {
+            return Err(format!("Guard обнаружил неожиданное расположение образа диспетчера: {name}"));
+        }
+        let mut info = ModuleInfo::default();
+        let ok = unsafe {
+            K32GetModuleInformation(GetCurrentProcess(), module, &mut info, size_of::<ModuleInfo>() as u32)
+        };
+        if ok == 0 || info.size_of_image == 0 {
+            return Err(format!("защита Guard с учётом JVM: запрещено «inspect» {name}"));
+        }
+        let base = info.base_of_dll as usize;
+        let end = base.checked_add(info.size_of_image as usize)
+            .ok_or_else(|| format!("Превышен размер образа {name}, контролируемого Guard"))?;
+        ranges.push((base, end));
+    }
+    if ranges.is_empty() {
+        return Err("Guard не обнаружил ни одного проверенного диспетчера".to_string());
+    }
+    Ok(ranges)
+}
+
+fn reconcile_first_runtime_native_transition() -> Result<(), String> {
+    if FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire) != 1 {
+        return Ok(());
+    }
+    let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
+    if caller == 0 {
+        return Ok(());
+    }
+    if !is_verified_lwjgl_caller(caller) {
+        let mut module = std::ptr::null_mut();
+        let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+        if unsafe { GetModuleHandleExW(flags, caller as *const u16, &mut module) } == 0 || module.is_null() {
+            return Ok(());
+        }
+        // Здесь проверяется только имя файла, чтобы решить, нужна ли регистрация; сама регистрация проверяет канонический путь, расположение в дереве и SHA.
+        let path = module_path(module)?;
+        if !PathBuf::from(path).file_name().is_some_and(|name| {
+            name.to_string_lossy().eq_ignore_ascii_case("lwjgl.dll")
+        }) {
+            return Ok(());
+        }
+        register_loaded_native_dispatcher(module)?;
+    }
+    if is_verified_lwjgl_caller(caller) && FOREIGN_EXECUTABLE_TRANSITIONS.compare_exchange(
+        1, 0, Ordering::AcqRel, Ordering::Acquire
+    ).is_ok() {
+        TRUSTED_SYSTEM_TRANSITIONS.fetch_add(1, Ordering::Relaxed);
+    }
+    Ok(())
+}
+
+/// Зарегистрируйте единственный разрешённый диспетчер LWJGL после возврата LoadLibrary. Полный канонический путь должен указывать именно на платформенную библиотеку из подготовленного клиента, а не на произвольный файл lwjgl.dll. Module Guard отдельно проверяет и хеширует аутентифицированные события загрузки DLL.
+pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), String> {
+    if module.is_null() || !JVM_ACTIVE.load(Ordering::Acquire) {
+        return Ok(());
+    }
+    let path = module_path(module)?;
+    let loaded = PathBuf::from(path.as_str());
+    if !loaded.file_name().is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("lwjgl.dll")) {
+        return Ok(());
+    }
+    let result = (|| -> Result<(), String> {
+        // Сериализуйте повторные уведомления LoadLibrary и регистрацию из пути heartbeat. Перехваты VirtualAlloc не берут блокировки.
+        let _registration_guard = LWJGL_REGISTRATION_LOCK.lock()
+            .map_err(|_| "Повреждена блокировка регистрации нативных модулей Guard".to_string())?;
+        let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()
+            .ok_or_else(|| "Guard JVM-Aware: отсутствует закреплённый корневой каталог нативного запуска".to_string())?;
+        let native_root = launch_root.join("natives").join("windows")
+            .join(std::env::consts::ARCH);
+        // Подготовленный классификатор Mojang LWJGL сохраняет структуру каталогов архива. Одобренный манифест Windows/x86_64 содержит natives/windows/x86_64/windows/x64/org/lwjgl/lwjgl.dll вместо старого плоского natives/windows/x86_64/lwjgl.dll. Разрешены только эти точные платформенные варианты, а не поиск по имени файла.
+        let classifier_arch = match std::env::consts::ARCH {
+            "x86_64" => "x64",
+            "aarch64" => "arm64",
+            arch => return Err(format!("Guard не поддерживает архитектуру LWJGL: {arch}")),
+        };
+        let extract_root = launch_root.join(".launcher").join("lwjgl-extract")
+            .join("windows").join(std::env::consts::ARCH);
+        let candidates = [
+            native_root.join("lwjgl.dll"),
+            native_root.join("windows").join(classifier_arch)
+                .join("org").join("lwjgl").join("lwjgl.dll"),
+            // Явно закреплённый корень распаковки LWJGL принимается только после сравнения его байтов с сертифицированной плоской нативной библиотекой.
+            extract_root.join("lwjgl.dll"),
+        ];
+        let canonical_path = std::fs::canonicalize(&loaded)
+            .map_err(|err| format!("Guard для JVM: запрещено «canonicalize LWJGL:» {err}"))?;
+        // LWJGL 3 распаковывает библиотеку в <pinned-root>/<version>/<platform>/lwjgl.dll (например, 3.4.3+4/x64). Выводите только этот точный путь из фактического пути, сообщённого загрузчиком. Произвольным вложенным файлам доверять нельзя.
+        let versioned_candidate = canonical_path.strip_prefix(&extract_root).ok()
+            .and_then(|relative| {
+                use std::path::Component;
+                let parts: Vec<_> = relative.components().collect();
+                match parts.as_slice() {
+                    [Component::Normal(version), Component::Normal(platform), Component::Normal(name)]
+                        if name.to_string_lossy().eq_ignore_ascii_case("lwjgl.dll")
+                            && platform.to_string_lossy().eq_ignore_ascii_case(classifier_arch)
+                            && !version.is_empty()
+                            && version.len() <= 64
+                            && version.to_string_lossy().bytes().all(|byte|
+                                byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'+' | b'-' | b'_')) =>
+                    {
+                        Some(extract_root.join(version).join(platform).join(name))
+                    }
+                    _ => None,
+                }
+            });
+        // Отсутствие старой схемы размещения не должно нарушать работу Sensor, если нативная библиотека корректно хранится в платформенной структуре архива.
+        let mut matched = None;
+        for (candidate_index, expected) in candidates.iter().chain(versioned_candidate.iter()).enumerate() {
+            // До канонизации проверяйте каждый компонент каталога: переходы по символическим ссылкам или точкам повторного разбора внутри сертифицированного клиента запрещены.
+            let mut component = expected.as_path();
+            let mut safe = true;
+            while component != launch_root.as_path() {
+                match std::fs::symlink_metadata(component) {
+                    Ok(metadata) if metadata.file_type().is_symlink() => {
+                        return Err("Guard отклонил путь к нативному модулю через символическую ссылку или точку повторного разбора".to_string());
+                    }
+                    Ok(_) => {},
+                    Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                        safe = false;
+                        break;
+                    }
+                    Err(err) => return Err(format!("Ошибка: «Guard JVM-Aware native path inspection»: {err}")),
+                }
+                component = component.parent()
+                    .ok_or_else(|| "Guard JVM-Aware: недопустимая цепочка родительских каталогов нативных файлов".to_string())?;
+            }
+            if !safe { continue; }
+            let expected_path = std::fs::canonicalize(expected)
+                .map_err(|err| format!("Guard для JVM: запрещено «find expected native:» {err}"))?;
+            if !expected_path.starts_with(launch_root) {
+                return Err("Путь к нативному модулю Guard выходит за пределы каталога запуска".to_string());
+            }
+            if canonical_path.to_string_lossy().eq_ignore_ascii_case(&expected_path.to_string_lossy()) {
+                matched = Some(candidate_index);
+                break;
+            }
+        }
+        let matched = matched.ok_or_else(|| {
+            let location = canonical_path.strip_prefix(launch_root)
+                .map(|relative| relative.to_string_lossy().chars().take(180).collect::<String>())
+                .unwrap_or_else(|_| "outside pinned client root".to_string());
+            format!("LWJGL загружен вне сертифицированного каталога нативных библиотек ({location})")
+        })?;
+        let metadata = std::fs::symlink_metadata(&loaded)
+            .map_err(|err| format!("Guard для JVM: запрещено «inspect LWJGL native:» {err}"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
+            return Err("«Guard JVM-Aware LWJGL native»: требуется обычный файл".to_string());
+        }
+        let mut info = ModuleInfo::default();
+        if unsafe { K32GetModuleInformation(GetCurrentProcess(), module, &mut info,
+            size_of::<ModuleInfo>() as u32) } == 0 || info.size_of_image == 0 {
+            return Err("Guard для JVM: запрещено «inspect loaded LWJGL image»".to_string());
+        }
+        let base = info.base_of_dll as usize;
+        let end = base.checked_add(info.size_of_image as usize)
+            .ok_or_else(|| "Guard JVM-Aware: переполнение адреса модуля LWJGL".to_string())?;
+        let bytes = std::fs::read(&canonical_path)
+            .map_err(|err| format!("Guard для JVM: запрещено «hash LWJGL image:» {err}"))?;
+        let mut file_sha256 = [0u8; 32];
+        file_sha256.copy_from_slice(&Sha256::digest(&bytes));
+        if matched == 2 || matched == 3 {
+            // Извлечённые байты получены из ресурса classpath, а не из уже сертифицированного дерева пакета. Требуйте точного совпадения дайджеста с закреплённым плоским псевдонимом, опубликованным установщиком с проверкой Mojang. Это запрещает произвольные DLL в кэше распаковки.
+            let certified = &candidates[0];
+            let mut current = certified.as_path();
+            while current != launch_root.as_path() {
+                let metadata = std::fs::symlink_metadata(current)
+                    .map_err(|err| format!("Guard для JVM: запрещено «inspect certified LWJGL component:» {err}"))?;
+                if metadata.file_type().is_symlink() {
+                    return Err("Проверенный путь LWJGL содержит символическую ссылку или точку повторного разбора".to_string());
+                }
+                current = current.parent().ok_or_else(||
+                    "Guard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
+            }
+            let canonical_certified = std::fs::canonicalize(certified)
+                .map_err(|err| format!("Guard для JVM: запрещено «canonicalize certified LWJGL:» {err}"))?;
+            if !canonical_certified.starts_with(launch_root) {
+                return Err("Проверенный LWJGL находится вне закреплённого корневого каталога клиента".to_string());
+            }
+            let metadata = std::fs::metadata(&canonical_certified)
+                .map_err(|err| format!("Ошибка: «Guard JVM-Aware certified LWJGL metadata»: {err}"))?;
+            if !metadata.is_file() || metadata.len() == 0 {
+                return Err("«Guard JVM-Aware certified LWJGL»: требуется обычный файл".to_string());
+            }
+            let expected_digest = Sha256::digest(std::fs::read(&canonical_certified)
+                .map_err(|err| format!("Guard для JVM: запрещено «hash certified LWJGL:» {err}"))?);
+            if file_sha256.as_slice() != expected_digest.as_slice() {
+                return Err("Извлечённый LWJGL отличается от сертифицированного образа пакета".to_string());
+            }
+        }
+        // Другой загрузчик классов может создать второе отображение LWJGL. Принимайте его только после независимой проверки по тем же байтам пакета и точному одобренному пути; известный базовый адрес нельзя заменять или повторно использовать.
+        if let Some(existing) = VERIFIED_LWJGL_IMAGE.get() {
+            if existing.base == base && existing.end == end && existing.canonical_path == canonical_path
+                && existing.file_sha256 == file_sha256 {
+                return Ok(());
+            }
+            if existing.file_sha256 != file_sha256 || existing.base == base {
+                return Err("Guard обнаружил неожиданную замену модуля LWJGL".to_string());
+            }
+        }
+        let mut additional = ADDITIONAL_LWJGL_IMAGES.lock()
+            .map_err(|_| "Повреждена блокировка дополнительного реестра нативных модулей Guard".to_string())?;
+        if additional.iter().any(|image| image.base == base && image.end == end
+            && image.canonical_path == canonical_path && image.file_sha256 == file_sha256) {
+            return Ok(());
+        }
+        if additional.iter().any(|image| image.base == base) {
+            return Err("Guard обнаружил неожиданную замену модуля LWJGL".to_string());
+        }
+        if VERIFIED_LWJGL_IMAGE.get().is_some() && additional.len() >= MAX_ADDITIONAL_LWJGL_IMAGES {
+            return Err("Превышено допустимое число проверенных модулей LWJGL".to_string());
+        }
+        // Перед публикацией диапазона навсегда закрепите каждую проверенную DLL.
+        let mut pinned = std::ptr::null_mut();
+        if unsafe { GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+            base as *const u16, &mut pinned) } == 0 || pinned != module {
+            return Err("Guard для JVM: запрещено «pin verified LWJGL module»".to_string());
+        }
+        let verified = VerifiedNativeImage { base, end, canonical_path, file_sha256 };
+        if VERIFIED_LWJGL_IMAGE.get().is_none() {
+            VERIFIED_LWJGL_IMAGE.set(verified)
+                .map_err(|_| "Guard обнаружил гонку регистрации LWJGL".to_string())
+        } else {
+            let index = additional.len();
+            additional.push(verified);
+            ADDITIONAL_LWJGL_BASES[index].store(base, Ordering::Relaxed);
+            ADDITIONAL_LWJGL_ENDS[index].store(end, Ordering::Release);
+            Ok(())
+        }
+    })();
+    if result.is_err() {
+        RUNTIME_NATIVE_LOAD_FAILED.store(true, Ordering::Release);
+    }
+    result
+}
+
+/// Захватывает цепочку вызовов внутри обёртки IAT Guard. Реализация памяти
+/// HotSpot для Windows вызывает VirtualAlloc/VirtualProtect из jvm.dll, поэтому
+/// допустимый JIT-переход или изменение кеша кода должны иметь прямой внешний
+/// вызов из неизменяемого диапазона образа jvm.dll. Операция не выделяет память.
+pub fn capture_transition_provenance() -> TransitionProvenance {
+    if !JVM_ACTIVE.load(Ordering::Acquire) {
+        return TransitionProvenance {
+            origin: TransitionOrigin::Unknown,
+            caller: 0,
+        };
+    }
+    let jvm_base = JVM_BASE.load(Ordering::Acquire);
+    let jvm_end = JVM_END.load(Ordering::Acquire);
+    let sensor_base = SENSOR_BASE.load(Ordering::Acquire);
+    let sensor_end = SENSOR_END.load(Ordering::Acquire);
+    if jvm_base == 0
+        || jvm_end <= jvm_base
+        || sensor_base == 0
+        || sensor_end <= sensor_base
+    {
+        return TransitionProvenance {
+            origin: TransitionOrigin::Unknown,
+            caller: 0,
+        };
+    }
+
+    let mut frames = [std::ptr::null_mut(); MAX_STACK_FRAMES];
+    let captured = unsafe {
+        RtlCaptureStackBackTrace(
+            0,
+            MAX_STACK_FRAMES as u32,
+            frames.as_mut_ptr(),
+            std::ptr::null_mut(),
+        )
+    } as usize;
+    if captured == 0 {
+        return TransitionProvenance {
+            origin: TransitionOrigin::Unknown,
+            caller: 0,
+        };
+    }
+
+    // Найдите первый адрес возврата после собственных кадров обёртки
+    // Sensor. Искать любой кадр jvm.dll недостаточно: JNI или нативный
+    // код, вызванный HotSpot, естественно содержит jvm.dll глубже в стеке.
+    // Только прямой внешний вызов обёртки IAT может разрешать JIT-память.
+    let mut saw_sensor_frame = false;
+    for frame in frames.iter().take(captured) {
+        let address = *frame as usize;
+        if address == 0 {
+            continue;
+        }
+        if address >= sensor_base && address < sensor_end {
+            saw_sensor_frame = true;
+            continue;
+        }
+        if !saw_sensor_frame {
+            continue;
+        }
+        return TransitionProvenance {
+            origin: if address >= jvm_base && address < jvm_end {
+                TransitionOrigin::HotSpotJvm
+            } else if TRUSTED_SYSTEM_DISPATCHERS
+                .get()
+                .is_some_and(|ranges| ranges.iter().any(|(base, end)| address >= *base && address < *end))
+                || is_verified_lwjgl_caller(address)
+            {
+                TransitionOrigin::TrustedSystemDispatcher
+            } else {
+                TransitionOrigin::ForeignNative
+            },
+            caller: address,
+        };
+    }
+
+    TransitionProvenance {
+        origin: TransitionOrigin::Unknown,
+        caller: 0,
+    }
+}
+
+/// Учитывайте лишь переходы, чей результат — зафиксированная исполняемая
+/// память MEM_PRIVATE. Изменения страниц образов остаются в ведении Memory
+/// Integrity, сохраняя отдельный механизм обнаружения изменений кода.
+pub fn observe_memory_transition(
+    address: *mut c_void,
+    protect: u32,
+    provenance: TransitionProvenance,
+) {
+    if address.is_null() || !is_executable(protect) || !JVM_ACTIVE.load(Ordering::Acquire) {
+        return;
+    }
+    let mut info = MemoryBasicInformation::default();
+    let queried = unsafe {
+        VirtualQuery(
+            address as *const c_void,
+            &mut info,
+            size_of::<MemoryBasicInformation>(),
+        )
+    };
+    if queried == 0
+        || info.state != MEM_COMMIT
+        || info.kind != MEM_PRIVATE
+        || !is_executable(info.protect)
+        || info.protect & (PAGE_GUARD | PAGE_NOACCESS) != 0
+    {
+        return;
+    }
+
+    match provenance.origin {
+        TransitionOrigin::HotSpotJvm => {
+            JIT_TRANSITIONS.fetch_add(1, Ordering::Relaxed);
+        }
+        TransitionOrigin::TrustedSystemDispatcher => {
+            TRUSTED_SYSTEM_TRANSITIONS.fetch_add(1, Ordering::Relaxed);
+        }
+        TransitionOrigin::ForeignNative => {
+            LAST_FOREIGN_CALLER.store(provenance.caller, Ordering::Release);
+            FOREIGN_EXECUTABLE_TRANSITIONS.fetch_add(1, Ordering::AcqRel);
+        }
+        TransitionOrigin::Unknown => {
+            LAST_UNKNOWN_CALLER.store(provenance.caller, Ordering::Release);
+            UNKNOWN_EXECUTABLE_TRANSITIONS.fetch_add(1, Ordering::AcqRel);
+        }
+    }
+}
+
+fn current_sensor_image_range() -> Result<(usize, usize), String> {
+    let mut module = std::ptr::null_mut();
+    let address = capture_transition_provenance as usize as *const u16;
+    let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+    if unsafe { GetModuleHandleExW(flags, address, &mut module) } == 0 || module.is_null() {
+        return Err(format!(
+            "Guard JVM-Aware Protection cannot resolve Sensor module: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let mut info = ModuleInfo::default();
+    if unsafe {
+        K32GetModuleInformation(
+            GetCurrentProcess(),
+            module,
+            &mut info,
+            size_of::<ModuleInfo>() as u32,
+        )
+    } == 0
+        || info.base_of_dll.is_null()
+        || info.size_of_image == 0
+    {
+        return Err(format!(
+            "Guard JVM-Aware Protection cannot query Sensor module information: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let base = info.base_of_dll as usize;
+    let end = base
+        .checked_add(info.size_of_image as usize)
+        .ok_or_else(|| "Guard JVM-Aware Protection: переполнение диапазона адресов датчика".to_string())?;
+    Ok((base, end))
+}
+
+fn count_private_executable_regions() -> Result<u32, String> {
+    let mut count = 0u32;
+    let mut cursor = 0usize;
+    loop {
+        let mut info = MemoryBasicInformation::default();
+        let queried = unsafe {
+            VirtualQuery(
+                cursor as *const c_void,
+                &mut info,
+                size_of::<MemoryBasicInformation>(),
+            )
+        };
+        if queried == 0 {
+            break;
+        }
+        let base = info.base_address as usize;
+        let size = info.region_size;
+        if size == 0 {
+            return Err("VirtualQuery вернул нулевой размер области при проверке Guard для JVM".to_string());
+        }
+        if info.state == MEM_COMMIT
+            && info.kind == MEM_PRIVATE
+            && is_executable(info.protect)
+            && info.protect & (PAGE_GUARD | PAGE_NOACCESS) == 0
+        {
+            count = count.saturating_add(1);
+        }
+        let next = base
+            .checked_add(size)
+            .ok_or_else(|| "Guard JVM-Aware Protection: переполнение адресного пространства".to_string())?;
+        if next <= cursor {
+            return Err("VirtualQuery не перешёл к следующей области при проверке Guard для JVM".to_string());
+        }
+        cursor = next;
+    }
+    Ok(count)
+}
+
+fn inspect_jvm_identity() -> Result<JvmIdentity, String> {
+    let jvm_name = wide_null("jvm.dll");
+    let module = unsafe { GetModuleHandleW(jvm_name.as_ptr()) };
+    if module.is_null() {
+        return Err("защита Guard с учётом JVM: запрещено «locate loaded jvm.dll»".to_string());
+    }
+
+    let mut info = ModuleInfo::default();
+    if unsafe {
+        K32GetModuleInformation(
+            GetCurrentProcess(),
+            module,
+            &mut info,
+            size_of::<ModuleInfo>() as u32,
+        )
+    } == 0
+        || info.base_of_dll.is_null()
+        || info.size_of_image == 0
+    {
+        return Err(format!(
+            "Guard JVM-Aware Protection cannot query jvm.dll module information: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+
+    let path = module_path(module)?;
+    let java_major = file_java_major(&path)?;
+    let normalized_path = path.replace('/', "\\").to_ascii_lowercase();
+    let path_sha256 = hex::encode(Sha256::digest(normalized_path.as_bytes()));
+    Ok(JvmIdentity {
+        java_major,
+        module_base: info.base_of_dll as usize,
+        module_size: info.size_of_image,
+        path_sha256,
+    })
+}
+
+fn module_path(module: *mut c_void) -> Result<String, String> {
+    let mut buffer = vec![0u16; MAX_MODULE_PATH];
+    let length = unsafe { GetModuleFileNameW(module, buffer.as_mut_ptr(), buffer.len() as u32) }
+        as usize;
+    if length == 0 || length >= buffer.len() {
+        return Err(format!(
+            "Guard JVM-Aware Protection cannot resolve jvm.dll path: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    Ok(String::from_utf16_lossy(&buffer[..length]))
+}
+
+fn file_java_major(path: &str) -> Result<u32, String> {
+    let path_w = wide_null(path);
+    let mut handle = 0u32;
+    let size = unsafe { GetFileVersionInfoSizeW(path_w.as_ptr(), &mut handle) };
+    if size == 0 {
+        return Err(format!(
+            "Guard JVM-Aware Protection cannot read jvm.dll version resource: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let mut data = vec![0u8; size as usize];
+    if unsafe {
+        GetFileVersionInfoW(path_w.as_ptr(), 0, size, data.as_mut_ptr().cast())
+    } == 0
+    {
+        return Err(format!(
+            "Guard JVM-Aware Protection cannot load jvm.dll version resource: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let root = wide_null("\\");
+    let mut value = std::ptr::null_mut();
+    let mut value_len = 0u32;
+    if unsafe {
+        VerQueryValueW(
+            data.as_ptr().cast(),
+            root.as_ptr(),
+            &mut value,
+            &mut value_len,
+        )
+    } == 0
+        || value.is_null()
+        || value_len < size_of::<VsFixedFileInfo>() as u32
+    {
+        return Err("В jvm.dll отсутствуют фиксированные сведения о версии".to_string());
+    }
+    let info = unsafe { &*(value as *const VsFixedFileInfo) };
+    if info.signature != VS_FFI_SIGNATURE {
+        return Err("Некорректная подпись версии jvm.dll".to_string());
+    }
+    let mut major = info.file_version_ms >> 16;
+    let minor = info.file_version_ms & 0xFFFF;
+    if major == 1 && minor != 0 {
+        major = minor;
+    }
+    if major == 0 {
+        major = info.product_version_ms >> 16;
+    }
+    if major == 1 {
+        let product_minor = info.product_version_ms & 0xFFFF;
+        if product_minor != 0 {
+            major = product_minor;
+        }
+    }
+    if major == 0 {
+        return Err("защита Guard с учётом JVM: запрещено «determine Java major from jvm.dll»".to_string());
+    }
+    Ok(major)
+}
+
+fn snapshot_for_state(state: &JvmAwareState) -> JvmAwareSnapshot {
+    let jit = JIT_TRANSITIONS.load(Ordering::Acquire);
+    let trusted_system = TRUSTED_SYSTEM_TRANSITIONS.load(Ordering::Acquire);
+    let foreign = FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
+    let unknown = UNKNOWN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
+    let mut digest = Sha256::new();
+    digest.update(b"Guard JVM-Aware Protection state v1\0");
+    digest.update(state.identity.java_major.to_le_bytes());
+    digest.update((state.identity.module_base as u64).to_le_bytes());
+    digest.update(state.identity.module_size.to_le_bytes());
+    digest.update(state.identity.path_sha256.as_bytes());
+    digest.update(state.baseline_private_executable_region_count.to_le_bytes());
+    digest.update(jit.to_le_bytes());
+    digest.update(trusted_system.to_le_bytes());
+    digest.update(foreign.to_le_bytes());
+    digest.update(unknown.to_le_bytes());
+    digest.update(state.integrity_check_count.to_le_bytes());
+    JvmAwareSnapshot {
+        active: state.active,
+        healthy: state.healthy && foreign == 0 && unknown == 0,
+        java_major: state.identity.java_major,
+        jvm_module_size: state.identity.module_size,
+        jvm_path_sha256: state.identity.path_sha256.clone(),
+        baseline_private_executable_region_count: state.baseline_private_executable_region_count,
+        jit_transition_count: jit,
+        trusted_system_transition_count: trusted_system,
+        foreign_executable_transition_count: foreign,
+        unknown_executable_transition_count: unknown,
+        integrity_check_count: state.integrity_check_count,
+        state_sha256: hex::encode(digest.finalize()),
+    }
+}
+
+fn is_executable(protect: u32) -> bool {
+    matches!(
+        protect & 0xFF,
+        PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY
+    )
+}
+
+fn wide_null(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}

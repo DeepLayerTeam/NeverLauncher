@@ -1,0 +1,83 @@
+package federation
+
+import (
+	"errors"
+	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+)
+
+// SwapManaged заменяет живой коннектор, не закрывая соединение, которое ещё
+// использует другой запрос. Устаревшие соединения закрываются при Core.Close.
+func (c *Core) SwapManaged(connector authconnector.Connector, policy ProviderPolicy, revision int64) error {
+	if err := authconnector.ValidateConnector(connector); err != nil {
+		return err
+	}
+	id := authconnector.NormalizedMetadata(connector.Metadata()).ID
+	// Политики применяются к реальным JIT-пользователям: нельзя принимать
+	// неизвестные локальные роли, включая отображения, которые иначе могли бы
+	// повысить привилегии.
+	known := make(map[string]bool)
+	for _, role := range c.repo.ListRoles() {
+		known[role.ID] = true
+	}
+	if policy.AutoProvision && !known[policy.DefaultRole] {
+		return fmt.Errorf("Некорректное значение: «default role» %q", policy.DefaultRole)
+	}
+	for _, target := range policy.RoleMappings {
+		if !known[target] {
+			return fmt.Errorf("Некорректное значение: «mapped role» %q", target)
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if id == "local" {
+		return errors.New("«local provider»: запрещено «be replaced»")
+	}
+	if _, exists := c.connectors[id]; exists {
+		if _, owned := c.managedRevisions[id]; !owned {
+			return fmt.Errorf("Провайдер %q управляется конфигурацией первоначальной настройки", id)
+		}
+		c.retiredManaged = append(c.retiredManaged, c.connectors[id])
+	}
+	if c.managedRevisions == nil {
+		c.managedRevisions = map[string]int64{}
+	}
+	c.connectors[id] = connector
+	c.policies[id] = policy
+	c.managedRevisions[id] = revision
+	return nil
+}
+func (c *Core) ManagedRevision(id string) int64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.managedRevisions[id]
+}
+func (c *Core) DisableManaged(id string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, exists := c.connectors[id]; exists {
+		if _, managed := c.managedRevisions[id]; !managed {
+			return fmt.Errorf("Провайдер %q управляется конфигурацией первоначальной настройки", id)
+		}
+		c.retiredManaged = append(c.retiredManaged, c.connectors[id])
+		delete(c.connectors, id)
+		delete(c.policies, id)
+	}
+	delete(c.managedRevisions, id)
+	return nil
+}
+func (c *Core) WithManagedSync(fn func() error) error {
+	c.managedSync.Lock()
+	defer c.managedSync.Unlock()
+	return fn()
+}
+
+func (c *Core) ManagedIDs() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	ids := make([]string, 0, len(c.managedRevisions))
+	for id := range c.managedRevisions {
+		ids = append(ids, id)
+	}
+	return ids
+}

@@ -1,0 +1,203 @@
+// Package extensionpolicy проверяет подписанную политику песочницы и
+// обеспечивает согласие в рамках версии при каждом изменении политики
+// привилегий.
+package extensionpolicy
+
+import (
+	"runtime"
+
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/linuxsandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/macossandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
+)
+
+var resourceName = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)
+var hostname = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$`)
+
+func normalizedSet(values []string, check func(string) bool) ([]string, error) {
+	if len(values) > 128 {
+		return nil, errors.New("Превышен допустимый размер: «sandbox grant list»")
+	}
+	m := make(map[string]bool, len(values))
+	for _, v := range values {
+		if v == "" || strings.TrimSpace(v) != v || v != strings.ToLower(v) || !check(v) {
+			return nil, fmt.Errorf("Некорректное значение: разрешение изолированной среды %q", v)
+		}
+		if m[v] {
+			return nil, fmt.Errorf("Обнаружен дубликат: разрешение изолированной среды %q", v)
+		}
+		m[v] = true
+	}
+	result := make([]string, 0, len(m))
+	for v := range m {
+		result = append(result, v)
+	}
+	sort.Strings(result)
+	return result, nil
+}
+func fsGrant(v string) bool {
+	if v == "package" || v == "scratch" {
+		return true
+	}
+	if !strings.HasPrefix(v, "shared:") {
+		return false
+	}
+	return resourceName.MatchString(strings.TrimPrefix(v, "shared:"))
+}
+func netGrant(v string) bool {
+	host, port, err := net.SplitHostPort(v)
+	if err != nil || port == "" || host == "" || strings.ContainsAny(host, "/%*\\") {
+		return false
+	}
+	if !hostname.MatchString(host) || net.ParseIP(host) != nil || strings.HasSuffix(host, ".") {
+		return false
+	}
+	n, e := strconv.Atoi(port)
+	return e == nil && n > 0 && n <= 65535 && strconv.Itoa(n) == port
+}
+func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, error) {
+	if in == nil {
+		return nil, nil
+	} // устаревшие пакеты сохраняют явно заданный режим без изоляции
+	p := *in
+	if p.Version != "1" {
+		return nil, errors.New("sandbox.version: требуется «1»")
+	}
+	if p.Mode != "isolated" && p.Mode != "trusted" {
+		return nil, errors.New("sandbox.mode: требуется «isolated or trusted»")
+	}
+	var err error
+	if p.FilesystemRead, err = normalizedSet(p.FilesystemRead, func(v string) bool { return v == "package" || fsGrant(v) && v != "scratch" }); err != nil {
+		return nil, err
+	}
+	if p.FilesystemWrite, err = normalizedSet(p.FilesystemWrite, func(v string) bool { return v == "scratch" || (strings.HasPrefix(v, "shared:") && fsGrant(v)) }); err != nil {
+		return nil, err
+	}
+	if p.NetworkOutbound, err = normalizedSet(p.NetworkOutbound, netGrant); err != nil {
+		return nil, err
+	}
+	if p.Secrets, err = normalizedSet(p.Secrets, resourceName.MatchString); err != nil {
+		return nil, err
+	}
+	if p.MaxProcesses < 0 || p.MaxProcesses > 128 || p.MaxMemoryBytes < 0 || p.MaxMemoryBytes > 64<<30 || p.MaxCPUPercent < 0 || p.MaxCPUPercent > 100 || p.TimeoutSeconds < 0 || p.TimeoutSeconds > 86400 {
+		return nil, errors.New("Некорректное значение: «sandbox resource limit»")
+	}
+	if p.MaxRequestsPerSecond < 0 || p.MaxRequestsPerSecond > 64 || p.MaxOutputBytes < 0 || p.MaxOutputBytes > 8<<20 {
+		return nil, errors.New("Ограничение частоты IPC или объёма вывода изолированной среды превышает максимальное значение хоста")
+	}
+	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
+		return nil, errors.New("isolated sandbox: требуется «finite process, memory, CPU and time limits»")
+	}
+	return &p, nil
+}
+
+func LaunchAllowed(m model.ExtensionManifest) error {
+	p, err := Validate(m.Sandbox)
+	if err != nil {
+		return err
+	}
+	if p != nil && p.Mode == "isolated" {
+		var err error
+		if runtime.GOOS == "windows" {
+			err = windowssandbox.Available()
+		} else if runtime.GOOS == "darwin" {
+			err = macossandbox.Available()
+		} else {
+			err = linuxsandbox.Available()
+		}
+		if err != nil {
+			return fmt.Errorf("Изолированная среда недоступна: %w", err)
+		}
+	}
+	return nil
+}
+
+// ApprovalDigest связывает подтверждение проверяющего точно с подписанными
+// правами и политикой песочницы целевой версии, включая её ID.
+func ApprovalDigest(m model.ExtensionManifest) (string, error) {
+	normalized, err := Validate(m.Sandbox)
+	if err != nil {
+		return "", err
+	}
+	perms := append([]string{}, m.Permissions...)
+	sort.Strings(perms)
+	b, err := json.Marshal(struct {
+		ID          string                        `json:"id"`
+		Version     string                        `json:"version"`
+		Permissions []string                      `json:"permissions"`
+		Sandbox     *model.ExtensionSandboxPolicy `json:"sandbox"`
+	}{m.ID, m.Version, perms, normalized})
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.Sum256(b)
+	return "sha256:" + hex.EncodeToString(hash[:]), nil
+}
+
+// ChangesRequireApproval сравнивает точную политику, влияющую на безопасность.
+// Даже сужение или перестановка, меняющие смысл, требуют рассмотрения, а не
+// предполагаются безопасными.
+func ChangesRequireApproval(before, after model.ExtensionManifest) (bool, error) {
+	if before.ID == "" || after.ID == "" || before.ID != after.ID {
+		return true, errors.New("Изменение политики изолированной среды должно сохранять идентификатор расширения")
+	}
+	a, err := Validate(before.Sandbox)
+	if err != nil {
+		return true, err
+	}
+	b, err := Validate(after.Sandbox)
+	if err != nil {
+		return true, err
+	}
+	old, err := json.Marshal(struct {
+		Permissions []string
+		Sandbox     *model.ExtensionSandboxPolicy
+	}{before.Permissions, a})
+	if err != nil {
+		return true, err
+	}
+	next, err := json.Marshal(struct {
+		Permissions []string
+		Sandbox     *model.ExtensionSandboxPolicy
+	}{after.Permissions, b})
+	if err != nil {
+		return true, err
+	}
+	return string(old) != string(next), nil
+}
+
+func RequireReview(before, after model.ExtensionManifest, submittedDigest string) error {
+	// Проверка безопасности всегда относится к одной подписанной идентичности
+	// расширения. Никогда не считайте смену ID при тех же разрешениях безопасным
+	// обновлением.
+	if before.ID == "" || after.ID == "" || before.ID != after.ID {
+		return errors.New("«sandbox approval»: запрещено «cross extension identities»")
+	}
+	changed, err := ChangesRequireApproval(before, after)
+	if err != nil {
+		return err
+	}
+	if !changed {
+		return nil
+	}
+	want, err := ApprovalDigest(after)
+	if err != nil {
+		return err
+	}
+	if submittedDigest != want {
+		return fmt.Errorf("Политика изолированной среды или разрешений изменена: требуется явное согласование владельца; целевой approvalDigest=%s", want)
+	}
+	return nil
+}

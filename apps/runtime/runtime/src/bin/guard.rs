@@ -1,0 +1,145 @@
+#[cfg(windows)]
+use runtime::{
+    ensure_windows_protection_core_with_profile, protection_profile_from_environment,
+    run_windows_guard_server, WindowsProtectionProfile,
+};
+#[cfg(target_os = "linux")]
+use runtime::{linux_policy::ensure_linux_production_hardening, run_linux_guard_server};
+#[cfg(target_os = "macos")]
+use runtime::{macos_policy::ensure_macos_production_hardening, run_macos_guard_server};
+use std::{env, process::ExitCode};
+
+fn main() -> ExitCode {
+    let args = env::args().skip(1).collect::<Vec<_>>();
+    let show_help = args.iter().any(|arg| arg == "--help" || arg == "-h");
+
+    #[cfg(windows)]
+    if !show_help {
+        let profile = match windows_protection_profile(&args) {
+            Ok(profile) => profile,
+            Err(err) => {
+                eprintln!("Ошибка Guard: {err}");
+                return ExitCode::FAILURE;
+            }
+        };
+        if let Err(err) = ensure_windows_protection_core_with_profile(profile) {
+            eprintln!("Ошибка Guard: {err}");
+            return ExitCode::FAILURE;
+        }
+    }
+    #[cfg(target_os = "linux")]
+    if !show_help {
+        if let Err(err) = ensure_linux_production_hardening() {
+            eprintln!("Ошибка Guard: {err}");
+            return ExitCode::FAILURE;
+        }
+    }
+    #[cfg(target_os = "macos")]
+    if !show_help {
+        if let Err(err) = ensure_macos_production_hardening() {
+            eprintln!("Ошибка Guard: {err}");
+            return ExitCode::FAILURE;
+        }
+    }
+
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(err) => {
+            eprintln!("guard: не удалось инициализировать асинхронный Runtime: {err}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match runtime.block_on(run(args)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("Ошибка Guard: {err}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+async fn run(args: Vec<String>) -> Result<(), String> {
+    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
+        #[cfg(windows)]
+        println!(
+            "Guard {}\nИспользование: guard --pipe <local named pipe> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
+            env!("CARGO_PKG_VERSION")
+        );
+        #[cfg(target_os = "linux")]
+        println!(
+            "Guard {}\nИспользование: guard --socket <private unix socket> --parent-pid <pid>\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
+            env!("CARGO_PKG_VERSION")
+        );
+        #[cfg(target_os = "macos")]
+        println!(
+            "Guard {}\nИспользование: guard --socket <private unix socket> --parent-pid <pid>\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
+            env!("CARGO_PKG_VERSION")
+        );
+        return Ok(());
+    }
+    let parent_pid = required_flag(&args, "--parent-pid")?
+        .parse::<u32>()
+        .map_err(|_| "Параметр --parent-pid должен быть положительным числом u32".to_string())?;
+    if parent_pid == 0 {
+        return Err("Параметр --parent-pid должен быть положительным числом u32".to_string());
+    }
+    #[cfg(windows)]
+    {
+        run_windows_guard_server(required_flag(&args, "--pipe")?, parent_pid).await
+    }
+    #[cfg(target_os = "linux")]
+    {
+        run_linux_guard_server(
+            std::path::PathBuf::from(required_flag(&args, "--socket")?),
+            parent_pid,
+        )
+        .await
+    }
+    #[cfg(target_os = "macos")]
+    {
+        run_macos_guard_server(
+            std::path::PathBuf::from(required_flag(&args, "--socket")?),
+            parent_pid,
+        )
+        .await
+    }
+    #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
+    {
+        let _ = parent_pid;
+        Err("Реализация Guard для рабочего окружения доступна в Windows, Linux и macOS".into())
+    }
+}
+
+#[cfg(windows)]
+fn windows_protection_profile(args: &[String]) -> Result<WindowsProtectionProfile, String> {
+    match optional_flag(args, "--protection-profile")? {
+        Some(value) => value.parse(),
+        None => protection_profile_from_environment(),
+    }
+}
+
+fn required_flag(args: &[String], name: &str) -> Result<String, String> {
+    optional_flag(args, name)?.ok_or_else(|| format!("Отсутствует обязательный аргумент {name}"))
+}
+
+fn optional_flag(args: &[String], name: &str) -> Result<Option<String>, String> {
+    let mut found = None;
+    let mut index = 0usize;
+    while index < args.len() {
+        if args[index] == name {
+            let value = args
+                .get(index + 1)
+                .ok_or_else(|| format!("Для аргумента {name} требуется значение"))?;
+            if found.replace(value.clone()).is_some() {
+                return Err(format!("Аргумент {name} можно указывать только один раз"));
+            }
+            index += 2;
+        } else {
+            index += 1;
+        }
+    }
+    Ok(found)
+}

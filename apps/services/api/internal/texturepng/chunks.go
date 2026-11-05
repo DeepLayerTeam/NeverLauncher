@@ -1,0 +1,68 @@
+package texturepng
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"hash/crc32"
+)
+
+func validateChunks(png []byte) error {
+	offset := 8
+	hasIHDR, hasIDAT, hasIEND := false, false, false
+	for offset < len(png) {
+		if len(png)-offset < 12 {
+			return ErrInvalid
+		}
+		size := uint64(binary.BigEndian.Uint32(png[offset:]))
+		// Проверка целочисленного переполнения перед срезами, включая вредоносные длины 0xffffffff.
+		if size > uint64(len(png)-offset-12) {
+			return ErrInvalid
+		}
+		begin := offset + 4
+		chunkType := png[begin : begin+4]
+		dataEnd := begin + 4 + int(size)
+		content := png[begin:dataEnd]
+		actualCRC := binary.BigEndian.Uint32(png[dataEnd:])
+		if crc32.ChecksumIEEE(content) != actualCRC {
+			return fmt.Errorf("Несоответствие: %w: CRC", ErrInvalid)
+		}
+		for _, c := range chunkType {
+			if !(c >= 'A' && c <= 'Z') && !(c >= 'a' && c <= 'z') {
+				return ErrInvalid
+			}
+		}
+		switch string(chunkType) {
+		case "IHDR":
+			if hasIHDR || hasIDAT || offset != 8 || size != 13 {
+				return ErrInvalid
+			}
+			hasIHDR = true
+		case "IDAT":
+			if !hasIHDR || hasIEND {
+				return ErrInvalid
+			}
+			hasIDAT = true
+		case "IEND":
+			if !hasIHDR || !hasIDAT || hasIEND || size != 0 || dataEnd+4 != len(png) {
+				return ErrInvalid
+			}
+			hasIEND = true
+		case "acTL", "fcTL", "fdAT":
+			return fmt.Errorf("%w: анимированный PNG не является текстурой Minecraft", ErrInvalid)
+		default:
+			// Отклонять неизвестные критические блоки (вспомогательные удаляются).
+			if chunkType[0] >= 'A' && chunkType[0] <= 'Z' && !bytes.Equal(chunkType, []byte("PLTE")) {
+				return fmt.Errorf("%w: неподдерживаемый критический блок PNG", ErrInvalid)
+			}
+		}
+		offset = dataEnd + 4
+		if hasIEND {
+			break
+		}
+	}
+	if !hasIHDR || !hasIDAT || !hasIEND {
+		return ErrInvalid
+	}
+	return nil
+}

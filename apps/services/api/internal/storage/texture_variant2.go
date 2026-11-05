@@ -1,0 +1,147 @@
+package storage
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
+// PutTextureImmutable0253 гарантирует, что существующий блоб с ключом-дайджестом НЕ
+// перезаписывается в S3. Конфликт принимается только после проверки удалённых
+// байтов, включая их дайджест. Локальная реализация использует атомарную жёсткую ссылку.
+func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, png []byte) (string, int64, error) {
+	rel, err := texturePath0252(digest)
+	if err != nil {
+		return "", 0, err
+	}
+	sum := sha256.Sum256(png)
+	if hex.EncodeToString(sum[:]) != digest {
+		return "", 0, errors.New("Несоответствие: текстура SHA-256")
+	}
+	if len(png) == 0 || len(png) > 4<<20 {
+		return "", 0, errors.New("Некорректное значение: «texture payload size»")
+	}
+	if s3, ok := store.(*S3Storage); ok {
+		key, err := objectKey(textureProject0252, textureVersion0252, rel)
+		if err != nil {
+			return "", 0, err
+		}
+		hdr := http.Header{}
+		hdr.Set("If-None-Match", "*")
+		hdr.Set("Content-Type", "image/png")
+		hdr.Set("Cache-Control", "public, max-age=31536000, immutable")
+		putCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+		defer cancel()
+		req, err := s3.newSignedRequestWithHeaders0253(putCtx, http.MethodPut, key, bytes.NewReader(png), int64(len(png)), digest, hdr)
+		if err != nil {
+			return "", 0, err
+		}
+		resp, err := s3.client.Do(req)
+		if err != nil {
+			return "", 0, fmt.Errorf("Ошибка записи текстуры в S3: %w", err)
+		}
+		defer resp.Body.Close()
+		switch {
+		case resp.StatusCode >= 200 && resp.StatusCode < 300:
+			return key, int64(len(png)), nil
+		case resp.StatusCode == http.StatusPreconditionFailed || resp.StatusCode == http.StatusConflict:
+			// Конфликтующий неизменяемый объект может быть повреждён: проверить до дедупликации.
+			body, size, err := OpenTexture0252(s3, digest)
+			if err != nil {
+				return "", 0, fmt.Errorf("Ошибка чтения при конфликте текстур S3: %w", err)
+			}
+			defer body.Close()
+			found, err := io.ReadAll(io.LimitReader(body, 4<<20+1))
+			if err != nil || size > 4<<20 || !bytes.Equal(found, png) {
+				return "", 0, errors.New("Коллизия контрольных сумм S3 или повреждён неизменяемый объект")
+			}
+			return key, int64(len(png)), nil
+		default:
+			errorBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+			return "", 0, fmt.Errorf("Запись текстуры в S3: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(errorBody)))
+		}
+	}
+	return SaveTexture0252(store, digest, png)
+}
+
+// DeleteTexture0253 идемпотентен. Принимает только ключи текстурных объектов SHA-256.
+// Вызов требует GC-аренды БД; пользовательские запросы не могут вызывать его.
+func DeleteTexture0253(ctx context.Context, store Storage, digest string) error {
+	rel, err := texturePath0252(digest)
+	if err != nil {
+		return err
+	}
+	if local, ok := store.(*LocalStorage); ok {
+		filePath, _, err := local.objectPath(textureProject0252, textureVersion0252, rel)
+		if err != nil {
+			return err
+		}
+		// Не переходить по ссылкам и не удалять символьные ссылки, неожиданные типы или подменённые файлы.
+		info, err := os.Lstat(filePath)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return errors.New("«texture object»: требуется обычный файл")
+		}
+		f, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		sum := sha256.New()
+		n, readErr := io.Copy(sum, io.LimitReader(f, 4<<20+1))
+		closeErr := f.Close()
+		if readErr != nil {
+			return readErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		if n > 4<<20 || hex.EncodeToString(sum.Sum(nil)) != digest {
+			return errors.New("Файл текстуры повреждён, сборка мусора отклонена")
+		}
+		if err := os.Remove(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if dir, err := os.Open(filepath.Dir(filePath)); err == nil {
+			_ = dir.Sync()
+			_ = dir.Close()
+		}
+		return nil
+	}
+	s3, ok := store.(*S3Storage)
+	if !ok {
+		return errors.New("texture GC: требуется «local or S3 storage»")
+	}
+	key, err := objectKey(textureProject0252, textureVersion0252, rel)
+	if err != nil {
+		return err
+	}
+	deleteCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	req, err := s3.newSignedRequest(deleteCtx, http.MethodDelete, key, nil, 0)
+	if err != nil {
+		return err
+	}
+	resp, err := s3.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusOK {
+		return nil
+	}
+	return fmt.Errorf("Удаление текстуры S3: HTTP %d", resp.StatusCode)
+}
