@@ -41,7 +41,7 @@ def require(ok, reason):
 
 def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
     files = sorted(folder.glob("*.sql"))
-    require(len(files) >= 100, "missing embedded PostgreSQL migration catalog")
+    require(len(files) >= 100, "Отсутствует встроенный каталог миграций PostgreSQL")
     digest = hashlib.sha256()
     versions = {}
     for item in files:
@@ -61,9 +61,9 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
 
 def dsn_environment(path):
     require(path.is_file() and not path.is_symlink() and path.stat().st_nlink == 1 and
-            (stat.S_IMODE(path.stat().st_mode) & 0o077) == 0, "private 0600 PostgreSQL DSN file required")
+            (stat.S_IMODE(path.stat().st_mode) & 0o077) == 0, "Требуется закрытый файл DSN PostgreSQL с правами 0600")
     content = path.read_text(encoding="utf-8")
-    require(len(content) < 8192 and len(content.splitlines()) == 1, "DSN file must contain exactly one PostgreSQL URL")
+    require(len(content) < 8192 and len(content.splitlines()) == 1, "Файл DSN должен содержать ровно один URL PostgreSQL")
     parsed = urlsplit(content.strip())
     require(parsed.scheme in ("postgres", "postgresql") and parsed.hostname and parsed.path not in ("", "/")
             and parsed.username and parsed.password is not None and not parsed.fragment,
@@ -71,7 +71,7 @@ def dsn_environment(path):
     query = parse_qs(parsed.query, strict_parsing=True, keep_blank_values=True)
     require(set(query) <= {"sslmode", "sslrootcert", "sslcert", "sslkey", "connect_timeout"}
             and all(len(v) == 1 for v in query.values()) and query.get("sslmode") == ["verify-full"],
-            "PostgreSQL URL must enforce TLS hostname validation (verify-full)")
+            "URL PostgreSQL должен требовать проверки имени узла через TLS (verify-full)")
     # Явное окружение имеет приоритет над внешней конфигурацией libpq; никогда не
     # записывайте DSN в журнал.
     env = {k: v for k, v in os.environ.items() if not k.startswith("PG")}
@@ -116,7 +116,7 @@ def live_pg_migrations(path):
         raise CompatibilityError("Не удалось проверить схему работающей PostgreSQL") from exc
     # stderr может содержать строки подключения, учётные данные или внутренние
     # сведения.
-    require(proc.returncode == 0 and len(proc.stdout) <= 200_000, "live PostgreSQL schema probe failed")
+    require(proc.returncode == 0 and len(proc.stdout) <= 200_000, "Проверка схемы рабочего PostgreSQL завершилась ошибкой")
     rows = [s.strip() for s in proc.stdout.splitlines() if s.strip()]
     require(rows and rows[0] == "primary", "PostgreSQL DSN does not resolve to a writable primary")
     require(len(rows) >= 2 and rows[1] == "shape-ok", "actual durable/outbox/ServerBridge schema shape incompatible")
@@ -127,7 +127,7 @@ def live_pg_migrations(path):
         except (ValueError, TypeError) as exc:
             raise CompatibilityError("PostgreSQL вернул строку миграции, которую невозможно разобрать") from exc
         require(isinstance(data, dict) and isinstance(data.get("version"), str) and
-                isinstance(data.get("checksum"), str), "invalid migration tracking row")
+                isinstance(data.get("checksum"), str), "Недопустимая строка отслеживания миграций")
         require(data["version"] not in actual, "duplicate applied migrations")
         actual[data["version"]] = data["checksum"]
     return actual
@@ -144,24 +144,24 @@ def validate_schema(actual, catalog):
 
 
 def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
-    require(len(reports) >= 2, "at least two independently observed hosts required")
+    require(len(reports) >= 2, "Требуются минимум два независимо проверенных узла")
     machines, engines, node_ids = set(), set(), set()
     baseline = None
     versions = {}
     observed_contracts = None
     for label, report in reports.items():
         require(report.get("schema") == multi.SCHEMA and report.get("configurationValidated") is True
-                and report.get("ready") is True and not report.get("issues"), "host is not live-ready: " + label)
+                and report.get("ready") is True and not report.get("issues"), "Узел не готов к рабочему режиму: " + label)
         machine = report.get("machineIdentity")
         node_id = report.get("nodeId")
         live = report.get("live") or {}
         engine = live.get("dockerEngineIdentity")
         require(machine and engine and node_id and machine not in machines and engine not in engines
-                and node_id not in node_ids, "duplicate or missing host/engine/replica identity")
+                and node_id not in node_ids, "Дублирующийся или отсутствующий идентификатор узла, движка или реплики")
         machines.add(machine); engines.add(engine); node_ids.add(node_id)
         refs = report.get("imageDigestRefs") or {}
         require(refs.get("api") == refs.get("worker") and multi.DIGEST_REGEX.fullmatch(refs.get("api", "")),
-                "API and worker must use the same pinned image per host")
+                "API и обработчик должны использовать один и тот же закреплённый образ на каждом узле")
         shared = report.get("sharedEndpoints")
         require(isinstance(shared, dict) and shared and (baseline is None or shared == baseline),
                 "mixed versions are pointing to different dependency endpoints")
@@ -179,7 +179,7 @@ def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
             require(item.get("environment", {}).get("LAUNCHER_REPLICA_ID") == node_id + "-" + role,
                     "incorrect live replica role identity on " + label)
             actual_versions.append(readiness["version"])
-        require(actual_versions[0] == actual_versions[1], "API and worker version mismatch within host " + label)
+        require(actual_versions[0] == actual_versions[1], "Версии API и обработчика не совпадают на узле " + label)
         versions[label] = actual_versions[0]
         contracts = report.get("compatibility0516")
         require(isinstance(contracts, dict) and contracts.get("liveVersion") == actual_versions[0]
@@ -208,11 +208,11 @@ def verify(args):
     versions = validate_live_nodes(reports, require_mixed=args.require_mixed)
     migrations = validate_schema(live_pg_migrations(args.pg_dsn_file), catalog)
     ready, edge = multi.edge_ready(args.edge_url)
-    require(ready, "external HTTPS edge failed its real readiness checks")
+    require(ready, "Внешний HTTPS-шлюз не прошёл реальные проверки готовности")
     return {"schema": SCHEMA, "verified": True, "sourceVersion": "0.51.5", "targetVersion": "0.51.6",
             "liveVersions": versions, "hostCount": len(reports), "catalogSHA256": digest,
             "postgres": migrations, "edge": {"success": edge.get("success"), "sampled": edge.get("sampled")},
-            "limit": "no DDL, no mixed-version extension/JVM agent hot-reload, no world process live migration"}
+            "limit": "Запрещены DDL, горячая перезагрузка расширений/JVM-агентов разных версий и живая миграция игровых процессов"}
 
 
 def main(argv=None):
@@ -228,7 +228,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         require(os.path.isabs(args.directory) and multi.PROJECT_REGEX.fullmatch(args.project),
-                "invalid remote directory/project")
+                "Недопустимый удалённый каталог или проект")
         report = verify(args)
         inventory.write_report(args.output, report)
         print("Совместимость N/N−1 на работающей системе проверена; каталог миграций не изменён, DDL не выполнялись", file=sys.stderr)

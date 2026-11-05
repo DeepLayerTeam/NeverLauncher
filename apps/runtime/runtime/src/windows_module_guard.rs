@@ -412,7 +412,7 @@ mod imp {
         let ready_event = parse_event_packet(&ready_packet, &secret, pid, 1)?;
         if ready_event.reason != MODULE_EVENT_REASON_HOOK_READY {
             return Err(format!(
-                "Guard Hook Engine expected HOOK_READY as first event, got {}",
+                "Guard Hook Engine: первым событием ожидалось HOOK_READY, получено {}",
                 ready_event.reason
             ));
         }
@@ -453,7 +453,7 @@ mod imp {
         let memory_ready_event = parse_event_packet(&memory_ready_packet, &secret, pid, 2)?;
         if memory_ready_event.reason != MODULE_EVENT_REASON_MEMORY_READY {
             return Err(format!(
-                "Guard Memory Integrity expected MEMORY_READY as second event, got {}",
+                "Guard Memory Integrity: вторым событием ожидалось MEMORY_READY, получено {}",
                 memory_ready_event.reason
             ));
         }
@@ -486,7 +486,7 @@ mod imp {
         let thread_ready_event = parse_event_packet(&thread_ready_packet, &secret, pid, 3)?;
         if thread_ready_event.reason != MODULE_EVENT_REASON_THREAD_PROCESS_READY {
             return Err(format!(
-                "Guard Thread & Process Integrity expected THREAD_PROCESS_READY as third event, got {}",
+                "Guard Thread & Process Integrity: третьим событием ожидалось THREAD_PROCESS_READY, получено {}",
                 thread_ready_event.reason
             ));
         }
@@ -529,7 +529,7 @@ mod imp {
         let debug_ready_event = parse_event_packet(&debug_ready_packet, &secret, pid, 4)?;
         if debug_ready_event.reason != MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY {
             return Err(format!(
-                "Guard Debug & Instrumentation Guard expected DEBUG_INSTRUMENTATION_READY as fourth event, got {}",
+                "Guard Debug & Instrumentation: четвёртым событием ожидалось DEBUG_INSTRUMENTATION_READY, получено {}",
                 debug_ready_event.reason
             ));
         }
@@ -569,7 +569,7 @@ mod imp {
         let jvm_ready_event = parse_event_packet(&jvm_ready_packet, &secret, pid, 5)?;
         if jvm_ready_event.reason != MODULE_EVENT_REASON_JVM_AWARE_READY {
             return Err(format!(
-                "Guard JVM-Aware Protection expected JVM_AWARE_READY as fifth event, got {}",
+                "Guard JVM-Aware Protection: пятым событием ожидалось JVM_AWARE_READY, получено {}",
                 jvm_ready_event.reason
             ));
         }
@@ -606,7 +606,7 @@ mod imp {
         let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
         if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
             return Err(format!(
-                "Guard Continuous Guard expected CONTINUOUS_READY as sixth event, got {}",
+                "Guard Continuous Guard: шестым событием ожидалось CONTINUOUS_READY, получено {}",
                 continuous_ready_event.reason
             ));
         }
@@ -999,7 +999,7 @@ mod imp {
                         Err("Несовпадение: «Guard Continuous Guard heartbeat metadata»".to_string())
                     } else if event.base_address != guard_sequence {
                         Err(format!(
-                            "Guard Continuous Guard guard-sequence mismatch: expected {guard_sequence}, got {}",
+                            "Guard Continuous Guard: нарушение последовательности Guard; ожидалось {guard_sequence}, получено {}",
                             event.base_address
                         ))
                     } else {
@@ -1307,7 +1307,7 @@ mod imp {
         let certified_major = crate::GUARD_CERTIFIED_JAVA_MAJORS.contains(&java_major);
         if !certified_major {
             return Err(format!(
-                "Guard JVM-Aware Protection reported unsupported Java major {java_major}"
+                "Guard JVM-Aware Protection: обнаружена неподдерживаемая основная версия Java {java_major}"
             ));
         }
         if event.size_of_image == 0 {
@@ -1379,7 +1379,7 @@ mod imp {
         }
         if sequence != expected_sequence {
             return Err(format!(
-                "Module Guard event sequence mismatch: expected {expected_sequence}, got {sequence}"
+                "Module Guard: нарушение последовательности событий; ожидалось {expected_sequence}, получено {sequence}"
             ));
         }
         let mut mac = HmacSha256::new_from_slice(secret)
@@ -1447,7 +1447,7 @@ mod imp {
                 let first_missing = pending_unloads.entry(*base).or_insert_with(Instant::now);
                 if first_missing.elapsed() >= UNLOAD_EVENT_GRACE {
                     return Err(format!(
-                        "Module Guard external snapshot missing module base 0x{base:X}: no authenticated unload within grace"
+                        "Module Guard: во внешнем снимке отсутствует модуль с адресом 0x{base:X}; за отведённое время не получено подтверждение выгрузки"
                     ));
                 }
                 continue;
@@ -1455,7 +1455,7 @@ mod imp {
             pending_unloads.remove(base);
             if !observed_path.eq_ignore_ascii_case(expected_path) {
                 return Err(format!(
-                    "Module Guard module path drift at base 0x{base:X}: expected {expected_path}, observed {observed_path}"
+                    "Module Guard: путь модуля по адресу 0x{base:X} изменился; ожидалось {expected_path}, обнаружено {observed_path}"
                 ));
             }
         }
@@ -1491,7 +1491,7 @@ mod imp {
         // выгрузке только по ToolHelp.
         if expected.len().saturating_sub(pending_unloads.len()) != observed_map.len() {
             return Err(format!(
-                "Module Guard external snapshot count mismatch: expected {} active, observed {}",
+                "Module Guard: число модулей во внешнем снимке не совпадает; ожидалось {} активных, обнаружено {}",
                 expected.len().saturating_sub(pending_unloads.len()), observed_map.len()
             ));
         }

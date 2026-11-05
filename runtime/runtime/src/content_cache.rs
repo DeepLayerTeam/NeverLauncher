@@ -34,7 +34,7 @@ fn user_cache_root() -> Result<PathBuf, String> {
     let path = std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from)
         .filter(|p| p.is_absolute())
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")));
-    let base = path.ok_or("no user cache directory (HOME/LOCALAPPDATA missing)")?;
+    let base = path.ok_or("Нет пользовательского каталога кеша (отсутствуют HOME/LOCALAPPDATA)")?;
     if !base.is_absolute() { return Err("cache base: требуется «absolute»".into()); }
     Ok(base.join("Launcher").join("content-v1"))
 }
@@ -127,7 +127,7 @@ impl CacheLease {
             return Ok(false);
         }
         file_ownership::ensure_no_symlinks(root, target)?;
-        let parent = target.parent().ok_or("invalid destination")?;
+        let parent = target.parent().ok_or("Недопустимый целевой путь")?;
         fs::create_dir_all(parent).await.map_err(|e| format!("Не удалось создать целевой каталог: {e}"))?;
         file_ownership::ensure_no_symlinks(root, target)?;
         let staging = parent.join(format!(".nl-cache-{:016x}.tmp", rand::random::<u64>()));
@@ -151,7 +151,7 @@ impl CacheLease {
 
     pub(crate) async fn publish(&self, file: &ManifestFile, verified_source: &Path) -> Result<(), String> {
         if existing_verified(&self.path, file).await? { return Ok(()); }
-        let parent = self.path.parent().ok_or("invalid cache object directory")?;
+        let parent = self.path.parent().ok_or("Недопустимый каталог объекта кеша")?;
         let staging = parent.join(format!(".nl-object-{:016x}.tmp", rand::random::<u64>()));
         let outcome = async {
             let mut source = fs::File::open(verified_source).await.map_err(|e| e.to_string())?;

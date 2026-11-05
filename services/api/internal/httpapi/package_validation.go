@@ -170,7 +170,7 @@ func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request
 	}
 	response := map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "version": lookup.Release.Version, "status": "integrity-" + result.Result, "validationKind": "integrity", "runtimeExecuted": false, "runtimeStatus": "not-checked", "checks": result.Checks, "result": result}}
 	if result.Result != "passed" {
-		response["error"] = map[string]any{"code": "integrity-check-failed", "reasonCode": "integrity-check-failed", "message": "integrity check failed; inspect the exact rejected files and manifest", "blockers": fileCheckBlockers0385(result.Checks)}
+		response["error"] = map[string]any{"code": "integrity-check-failed", "reasonCode": "integrity-check-failed", "message": "Проверка целостности не пройдена; изучите отклонённые файлы и манифест", "blockers": fileCheckBlockers0385(result.Checks)}
 	}
 	writeJSON(w, code, response)
 }

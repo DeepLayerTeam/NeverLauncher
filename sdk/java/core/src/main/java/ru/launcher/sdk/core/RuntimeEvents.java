@@ -63,7 +63,7 @@ public final class RuntimeEvents implements AutoCloseable {
         Objects.requireNonNull(hook);
         return subscribeDetailed(eventType,"sync",schema,decoder,event->{
             HookDecision decision=hook.evaluate(event);
-            if(decision==null||!decision.allowed())throw new HookRejected(decision==null?"hook returned no decision":decision.reason());
+            if(decision==null||!decision.allowed())throw new HookRejected(decision==null?"Хук не вернул решение":decision.reason());
         });
     }
     @SuppressWarnings("unchecked")
@@ -73,9 +73,9 @@ public final class RuntimeEvents implements AutoCloseable {
         String type=Json.string(raw,"type",true),mode=Json.string(sub,"mode",true);
         if(!type.equals(sub.get("eventType"))||!mode.equals(sync?"sync":"async"))throw new IllegalArgumentException("Подписка на события не совпадает");
         Binding<?> binding=handlers.get(type+":"+mode);
-        if(binding==null)throw new IllegalArgumentException("no event handler for "+type+":"+mode);
+        if(binding==null)throw new IllegalArgumentException("Нет обработчика события для "+type+":"+mode);
         String id=Json.string(raw,"id",true);
-        if(id.isBlank()||id.length()>128)throw new IllegalArgumentException("invalid event id");
+        if(id.isBlank()||id.length()>128)throw new IllegalArgumentException("Недопустимый идентификатор события");
         Envelope<Object> event=new Envelope<>(id,type,Json.string(raw,"projectId",false),Json.string(raw,"idempotencyKey",false),raw.get("payload"));
         int schemaVersion=boundedInt(raw.get("schemaVersion"),1,1,1024);
         long sequence=boundedLong(raw.get("sequence"),0,0,Long.MAX_VALUE);
@@ -85,7 +85,7 @@ public final class RuntimeEvents implements AutoCloseable {
     private static int boundedInt(Object raw,int fallback,int min,int max){long n=boundedLong(raw,fallback,min,max);return (int)n;}
     private static long boundedLong(Object raw,long fallback,long min,long max){
         if(raw==null)return fallback;
-        if(!(raw instanceof Number n)||n.longValue()<min||n.longValue()>max||n.doubleValue()!=n.longValue())throw new IllegalArgumentException("invalid event metadata number");
+        if(!(raw instanceof Number n)||n.longValue()<min||n.longValue()>max||n.doubleValue()!=n.longValue())throw new IllegalArgumentException("Недопустимое числовое значение метаданных события");
         return n.longValue();
     }
     private static String opt(Map<String,Object> raw,String key){
@@ -99,7 +99,7 @@ public final class RuntimeEvents implements AutoCloseable {
     public synchronized void unsubscribe(String eventType,String mode)throws IOException,InterruptedException {
         String key=eventType+":"+mode;
         Long id=subscriptions.get(key);
-        if(id==null)throw new IllegalArgumentException("subscription is not registered: "+key);
+        if(id==null)throw new IllegalArgumentException("Подписка не зарегистрирована: "+key);
         host.unsubscribe(id);
         subscriptions.remove(key);handlers.remove(key);
     }

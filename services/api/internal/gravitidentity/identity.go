@@ -361,7 +361,7 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 	rows := make([]Mapping, 0, len(accounts))
 	sum := map[string]int{"matched": 0, "pending_import": 0, "blocked": 0}
 	for _, a := range accounts {
-		m := Mapping{Account: a, Status: "pending_import", Reason: "no matching Never identity; reserved for subsequent authenticated account import"}
+		m := Mapping{Account: a, Status: "pending_import", Reason: "Нет соответствующей учётной записи Never; зарезервировано для последующего импорта с подтверждением подлинности"}
 		switch {
 		case seenID[a.Provider+"\x00"+a.SourceID] > 1:
 			m.Status = "blocked"
@@ -386,11 +386,11 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 				} else {
 					m.TargetUserID = owner.UserID
 					m.Status = "matched"
-					m.Reason = "exact Never UUID and username match; target ownership must be reverified before cutover"
+					m.Reason = "UUID и имя пользователя Never совпадают; перед переключением необходимо повторно проверить владение целевой учётной записью"
 				}
 			} else if len(nameOwners) != 0 {
 				m.Status = "blocked"
-				m.Reason = "username already belongs to a different Never UUID"
+				m.Reason = "Имя пользователя уже связано с другим UUID Never"
 			}
 		}
 		sum[m.Status]++

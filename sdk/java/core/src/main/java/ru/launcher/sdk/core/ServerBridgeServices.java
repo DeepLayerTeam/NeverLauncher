@@ -54,7 +54,7 @@ public final class ServerBridgeServices {
         return (int)n;
     }
     private static Server decodeServer(Map<String,Object> m){
-        Object raw=m.get("runtimeActive");if(!(raw instanceof Boolean active))throw new IllegalArgumentException("invalid runtimeActive");
+        Object raw=m.get("runtimeActive");if(!(raw instanceof Boolean active))throw new IllegalArgumentException("Недопустимое значение runtimeActive");
         return new Server(required(m,"id"),required(m,"projectId"),str(m,"profileId"),str(m,"name"),str(m,"kind"),
                 str(m,"status"),integer(m,"protocolVersion"),numeric(m,"runtimeEpoch"),active,str(m,"lastHeartbeatAt"),
                 integer(m,"playersOnline"),str(m,"serverBrand"),str(m,"minecraftVersion"));
@@ -77,10 +77,10 @@ public final class ServerBridgeServices {
     }
     /** Ограниченный стабильный список проекта, отсортированный по ID. */
     public Page<Server> servers(String projectId,int offset,int limit)throws IOException,InterruptedException {
-        if(offset<0||offset>1_000_000||limit<1||limit>50)throw new IllegalArgumentException("invalid page");
+        if(offset<0||offset>1_000_000||limit<1||limit>50)throw new IllegalArgumentException("Недопустимая страница");
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));req.put("offset",offset);req.put("limit",limit);
         Map<String,Object> result=call("bridge.servers",req);
-        if(!(result.get("items") instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("invalid server page");
+        if(!(result.get("items") instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("Недопустимая страница сервера");
         List<Server> servers=new ArrayList<>();
         for(Object raw:items) {
             Server server=decodeServer(Json.object(raw));
@@ -90,7 +90,7 @@ public final class ServerBridgeServices {
         Integer next=null;
         if(result.containsKey("nextOffset")) {
             long value=numeric(result,"nextOffset");
-            if(value<=offset||value>1_000_000)throw new IllegalArgumentException("invalid server cursor");
+            if(value<=offset||value>1_000_000)throw new IllegalArgumentException("Недопустимый курсор сервера");
             next=(int)value;
         }
         return new Page<>(servers,next);
@@ -104,7 +104,7 @@ public final class ServerBridgeServices {
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));
         req.put("serverId",id(serverId,"serverId"));req.put("username",username);
         Object pending=call("bridge.access.ticket",req).get("pendingTicket");
-        if(!(pending instanceof Boolean result))throw new IllegalArgumentException("invalid join-ticket response");
+        if(!(pending instanceof Boolean result))throw new IllegalArgumentException("Недопустимый ответ с билетом подключения");
         return result;
     }
     /** Команды сохраняются для доставки аутентифицированному Runtime. Они НЕ выполняются синхронно.
@@ -116,18 +116,18 @@ public final class ServerBridgeServices {
         if(type==null||!Set.of("message.broadcast","player.kick","whitelist.add","whitelist.remove","whitelist.enable",
                 "whitelist.disable","ban.add","ban.remove","server.save","server.maintenance","server.drain").contains(type))
             throw new IllegalArgumentException("Команда не поддерживается");
-        if(payload==null||payload.size()>16)throw new IllegalArgumentException("invalid payload");
+        if(payload==null||payload.size()>16)throw new IllegalArgumentException("Недопустимые данные запроса");
         if(idempotencyKey==null||idempotencyKey.length()<8||idempotencyKey.length()>128||
                 idempotencyKey.indexOf('\n')>=0||idempotencyKey.indexOf('\r')>=0)
-            throw new IllegalArgumentException("invalid idempotencyKey");
-        if(expiresInSeconds!=0&&(expiresInSeconds<10||expiresInSeconds>600))throw new IllegalArgumentException("invalid expiry");
+            throw new IllegalArgumentException("Недопустимый idempotencyKey");
+        if(expiresInSeconds!=0&&(expiresInSeconds<10||expiresInSeconds>600))throw new IllegalArgumentException("Недопустимый срок действия");
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));
         req.put("serverId",serverId);req.put("commandType",type);req.put("payload",Map.copyOf(payload));
         req.put("idempotencyKey",idempotencyKey);req.put("expiresInSeconds",expiresInSeconds);
         Map<String,Object> result=call("bridge.command.create",req);
         Command command=decodeCommand(Json.object(result.get("command")));
-        if(!serverId.equals(command.serverId())||!type.equals(command.type()))throw new SecurityException("command result mismatch");
-        if(!(result.get("idempotentReplay") instanceof Boolean replay))throw new IllegalArgumentException("missing replay state");
+        if(!serverId.equals(command.serverId())||!type.equals(command.type()))throw new SecurityException("Несовпадение результата команды");
+        if(!(result.get("idempotentReplay") instanceof Boolean replay))throw new IllegalArgumentException("Отсутствует состояние повторного воспроизведения");
         return new Receipt(command,replay);
     }
     /** Повторная проверка сохранённого состояния команды; pending/leased не означает успешного завершения. */
@@ -145,7 +145,7 @@ public final class ServerBridgeServices {
         if(raw.size()>32)throw new IllegalArgumentException("too many event fields");
         Map<String,String> values=new LinkedHashMap<>();
         for(var item:raw.entrySet()) {
-            if(!(item.getValue() instanceof String s)||s.length()>4096)throw new IllegalArgumentException("invalid event field");
+            if(!(item.getValue() instanceof String s)||s.length()>4096)throw new IllegalArgumentException("Недопустимое поле события");
             values.put(item.getKey(),s);
         }
         return new ServerEvent(required(m,"serverId"),required(m,"runtimeId"),numeric(event,"sequence"),

@@ -124,7 +124,7 @@ func (s Server) beginOIDC115(r *http.Request, providerID, redirectURI, deviceID 
 		}
 	}
 	if strings.TrimSpace(redirectURI) == "" {
-		return authconnector.BrowserAuthStart{}, "", authconnector.NewError(authconnector.ErrMisconfigured, "OIDC redirect URI is required")
+		return authconnector.BrowserAuthStart{}, "", authconnector.NewError(authconnector.ErrMisconfigured, "Необходимо указать URI перенаправления OIDC")
 	}
 	state, err := randomURLToken115(32)
 	if err != nil {
@@ -285,7 +285,7 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 		return tx, err
 	}
 	if tx.ExpiresAt <= time.Now().UTC().Unix() || tx.ExpiresAt > time.Now().UTC().Add(oidcTransactionTTL115+time.Minute).Unix() {
-		return tx, errors.New("expired OIDC transaction")
+		return tx, errors.New("Срок действия транзакции OIDC истёк")
 	}
 	if tx.ProviderID == "" || tx.RedirectURI == "" || tx.State == "" || tx.Nonce == "" || tx.PKCEVerifier == "" {
 		return tx, errors.New("incomplete OIDC transaction")

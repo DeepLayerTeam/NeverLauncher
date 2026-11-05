@@ -436,7 +436,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
         if state.get(id)==Some(&2){return Ok(())}
         if state.get(id)==Some(&1){let i=stack.iter().position(|s|*s==id).unwrap_or(0);let mut path=stack[i..].to_vec();path.push(id);return Err(format!("cycle: {}",path.join(" -> ")))}
         state.insert(id,1);stack.push(id);
-        let current=*items.get(id).ok_or_else(||format!("missing dependency node {id}"))?;
+        let current=*items.get(id).ok_or_else(||format!("Отсутствует узел зависимости {id}"))?;
         for dep in &current.dependencies {visit(dep.id.as_str(),items,state,stack)?}
         stack.pop();state.insert(id,2);Ok(())
     }
@@ -446,7 +446,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     // именованные пресеты не фильтруются и должны быть структурно пригодны
     // для всех целей до подписи и публикации манифеста владельцем.
     if cat.schema_version!="4.0" && cat.schema_version!="5.0" {resolve_graph_v3(cat,"")?;}
-    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
+    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("Недопустимый набор настроек {}: {e}",p.id))?;}
     Ok(())
 }
 // v0.24.7: выбор установки — недоверенный список ID подписанных компонентов,
@@ -457,7 +457,7 @@ const CUSTOM_SELECTION_PREFIX_0247:&str="@custom:v1:";
 fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<String>,HashSet<String>),String>{
     let (base,changes)=if let Some(encoded)=preset.strip_prefix(CUSTOM_SELECTION_PREFIX_0247){
         if preset.len()>8192 {return Err("Выбор компонентов превышает 8192 байта".into())}
-        let (base,encoded_changes)=encoded.split_once(':').ok_or("invalid custom component selection format")?;
+        let (base,encoded_changes)=encoded.split_once(':').ok_or("Недопустимый формат выбора пользовательского компонента")?;
         (base,Some(encoded_changes))
     }else{(preset,None)};
     let chosen=if base.is_empty(){cat.default_preset.as_str()}else{base};

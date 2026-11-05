@@ -39,15 +39,15 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 	}
 	md, e := manifestDigest0212(lookup.Release.Manifest)
 	if e != nil {
-		return block("cannot digest release manifest")
+		return block("Не удалось вычислить хеш манифеста релиза")
 	}
 	fd, e := artifactDigest0212(lookup.Files)
 	if e != nil {
-		return block("cannot digest staged files")
+		return block("Не удалось вычислить хеш подготовленных файлов")
 	}
 	targets, matrix, e := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, md, fd)
 	if e != nil {
-		return block("required target policy: " + e.Error())
+		return block("Обязательная политика целевых платформ: " + e.Error())
 	}
 	// У релиза могут быть разные хеши сборки для платформ, но каждая цель должна
 	// происходить из одной точной ревизии исходников. Смешанные свидетельства не
@@ -55,7 +55,7 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 	// откат.
 	source, consistent := stableSourceConsistency0350(targets)
 	if !consistent {
-		return block("required targets use different source revisions")
+		return block("Обязательные целевые платформы используют разные ревизии исходного кода")
 	}
 	c.SourceSHA = source
 	c.Targets = targets
@@ -63,43 +63,43 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 	c.Required = len(targets)
 	for _, t := range targets {
 		c.TargetCoverage[t.ID] = false
-		c.TargetBlockers[t.ID] = "missing signed matching runtime attestation"
+		c.TargetBlockers[t.ID] = "Отсутствует соответствующая подписанная аттестация Runtime"
 	}
 	if !validationHex0345.MatchString(s.Config.ValidationTrustedRunnerImageSHA2560345) {
 		return block("trusted OCI runner image not pinned")
 	}
 	if _, e = validationKeyFingerprint0346(s.Config.ValidationAttestationPublicKey0345); e != nil {
-		return block("trusted attestation public key missing")
+		return block("Отсутствует доверенный открытый ключ аттестации")
 	}
 	if sig := lookup.Release.Manifest.Signature; sig != nil {
 		a, ae := base64.RawURLEncoding.DecodeString(s.Config.ValidationAttestationPublicKey0345)
 		b, be := hex.DecodeString(sig.PublicKey)
 		if ae != nil || be != nil || bytes.Equal(a, b) {
-			return block("attestor and release signing keys must be distinct")
+			return block("Ключи аттестатора и подписи релиза должны различаться")
 		}
 	}
 	if s.verifyManifestSignature(lookup.Release.Manifest) != nil || !manifestFilesMatch0212(lookup.Release.Manifest, lookup.Files) {
-		return block("release signature or signed files invalid")
+		return block("Недопустимая подпись релиза или подписанные файлы")
 	}
 	check, e := s.Repo.LatestIntegrityCheck(ctx, lookup.Release.ID)
 	if e != nil || check.Result != "passed" || check.ManifestDigest != md || check.ArtifactDigest != fd {
-		return block("fresh manifest/files integrity PASS missing")
+		return block("Отсутствует актуальное подтверждение успешной проверки целостности манифеста и файлов")
 	}
 	attestations, ok := s.Repo.(validationAttestationRepository0345)
 	if !ok {
-		return block("trusted attestation repository unavailable")
+		return block("Хранилище доверенных аттестаций недоступно")
 	}
 	fresh, ok := s.Repo.(validationFreshnessStore0346)
 	if !ok {
-		return block("key revocation/challenge repository unavailable")
+		return block("Хранилище отзывов ключей и проверочных запросов недоступно")
 	}
 	records, e := attestations.ListValidationAttestations0345(ctx, lookup.Release.ID)
 	if e != nil {
-		return block("attestation records unavailable: " + e.Error())
+		return block("Записи аттестаций недоступны: " + e.Error())
 	}
 	runs, e := attestations.ListStagedRuns0342(ctx, lookup.Release.ID)
 	if e != nil {
-		return block("recorded execution runs unavailable")
+		return block("Записи выполненных запусков недоступны")
 	}
 	runIndex := make(map[string]int, len(runs))
 	for i := range runs {

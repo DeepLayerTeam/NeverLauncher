@@ -112,7 +112,7 @@ func Evaluate(v Report) (Report, error) {
 		add("world snapshot checksum differs")
 	}
 	if v.Source.Loader == "" || v.Source.Loader != v.Target.Loader {
-		add("Minecraft loader mismatch")
+		add("Несовпадение загрузчика Minecraft")
 	}
 	if !digest.MatchString(v.Source.OptionalPresetSHA256) || v.Source.OptionalPresetSHA256 != v.Target.OptionalPresetSHA256 {
 		add("optional preset differs")
@@ -140,7 +140,7 @@ func Evaluate(v Report) (Report, error) {
 		uuidSeen[p.UUID] = true
 		before, ok := indexed[p.SourceID]
 		if !ok {
-			add("unexpected target identity")
+			add("Неожиданный идентификатор целевой системы")
 			continue
 		}
 		if p.UUID != before.UUID {
@@ -164,7 +164,7 @@ func Evaluate(v Report) (Report, error) {
 	}
 	for id := range indexed {
 		if !seen[id] {
-			add("missing player: " + id)
+			add("Отсутствует игрок: " + id)
 		}
 	}
 	if len(v.Probes) > 32 {
@@ -180,7 +180,7 @@ func Evaluate(v Report) (Report, error) {
 		}
 		results[p.Name] = true
 		if !p.Passed {
-			add("probe failed: " + p.Name)
+			add("Проверка завершилась ошибкой: " + p.Name)
 		}
 		if (p.Name == "login" || p.Name == "join") && !uuidSeen[p.UUID] {
 			add("probe returned unknown UUID: " + p.Name)
@@ -188,7 +188,7 @@ func Evaluate(v Report) (Report, error) {
 	}
 	for _, name := range RequiredProbes {
 		if !results[name] {
-			add("required probe missing: " + name)
+			add("Отсутствует обязательная проверка: " + name)
 		}
 	}
 	// Скрипт с результатом `passed:true` не означает живую приёмку Minecraft.
@@ -197,7 +197,7 @@ func Evaluate(v Report) (Report, error) {
 	// проверяет внутреннюю согласованность, но не удалённую аттестацию: он всё ещё
 	// доверяет оператору staging и его RCON-серверу.
 	if v.LiveSession == nil {
-		add("native Minecraft launch and live join evidence missing")
+		add("Отсутствуют доказательства нативного запуска Minecraft и подключения к работающему серверу")
 	} else {
 		live := v.LiveSession
 		if !digest.MatchString(live.ClientSHA256) || !digest.MatchString(live.BeforeSHA256) || !digest.MatchString(live.JoinedSHA256) ||
@@ -247,7 +247,7 @@ func CompareReady(v Report) error {
 	a, _ := json.Marshal(check.Blockers)
 	b, _ := json.Marshal(v.Blockers)
 	if string(a) != string(b) || check.Ready != v.Ready || v.CutoverAllowed {
-		return fmt.Errorf("rehearsal status is not verified: %s", strings.Join(check.Blockers, "; "))
+		return fmt.Errorf("Статус репетиционного запуска не подтверждён: %s", strings.Join(check.Blockers, "; "))
 	}
 	return nil
 }

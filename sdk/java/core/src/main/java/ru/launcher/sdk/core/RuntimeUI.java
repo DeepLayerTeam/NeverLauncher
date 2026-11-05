@@ -40,7 +40,7 @@ public final class RuntimeUI implements AutoCloseable {
     /** Каждый параметр должен быть явно зарегистрирован в Java и сохранён в существующей конфигурации расширения. */
     public synchronized void registerSetting(String target,String name,JsonSchema schema,Object fallback){
         active();String key=surface(target)+":"+token(name);
-        Objects.requireNonNull(schema,"settings require a schema");
+        Objects.requireNonNull(schema,"Для настроек необходима схема");
         if(fallback!=null)schema.validate(fallback);
         if(settings.putIfAbsent(key,new Setting(schema,fallback))!=null)throw new IllegalArgumentException("Повторяющаяся настройка интерфейса");
     }

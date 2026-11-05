@@ -154,7 +154,7 @@ def nodes_from_args(args):
     nodes = multi.parse_nodes(args.node)
     require(len(nodes) >= 2, 'independent multi-host acceptance requires two or more physical nodes')
     require(args.directory.startswith('/'), 'deployment directory must be absolute')
-    require(multi.PROJECT_REGEX.fullmatch(args.project), 'invalid project')
+    require(multi.PROJECT_REGEX.fullmatch(args.project), 'Недопустимый проект')
     multi.validate_edge_url(args.edge_url)
     return nodes
 

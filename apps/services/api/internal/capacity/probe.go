@@ -85,7 +85,7 @@ func (r *Report) issue(level, metric, observed, condition, advice string) {
 // проверка видна и помечает отчёт как непроверенный; ноль никогда не подставляется
 // как выдуманный успешный результат.
 func Probe(ctx context.Context, opt Options) Report {
-	r := Report{Mode: opt.Mode, At: time.Now().UTC(), Source: "live readings; thresholds are operational guardrails, not load benchmarks", Issues: []Issue{}, Verified: true, Limitations: []string{"S3 capacity/quota is not observable through a portable S3 API", "Distributed failover/fencing remains separately subject to diagnose growth and multi-host testing"}}
+	r := Report{Mode: opt.Mode, At: time.Now().UTC(), Source: "live readings; thresholds are operational guardrails, not load benchmarks", Issues: []Issue{}, Verified: true, Limitations: []string{"Ёмкость и квоту S3 нельзя определить через переносимый API S3", "Distributed failover/fencing remains separately subject to diagnose growth and multi-host testing"}}
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	r.GoHeapBytes = ms.HeapAlloc
@@ -152,13 +152,13 @@ func (r *Report) evaluatePostgres(p PostgreSQL) {
 		r.issue("warning", "postgres.connections", fmt.Sprintf("%d/%d", p.ActiveConnections, p.MaxConnections), ">= 80% max_connections", "Reduce leaked/idle connections, tune bounded pools; consider PgBouncer before more API replicas")
 	}
 	if p.PendingJobs >= QueueWarningSize {
-		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), ">= 500 pending jobs", "Check failed workers and retry rate; increase worker concurrency only after lease/fencing verification")
+		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), ">= 500 pending jobs", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")
 	}
 	if p.OldestPendingJobSeconds > OldestJobWarning.Seconds() && p.PendingJobs > 0 {
 		r.issue("warning", "jobs.oldest_pending", fmt.Sprintf("%.0fs", p.OldestPendingJobSeconds), "> 60s oldest pending job", "Inspect worker health, DB throughput and job retry policy")
 	}
 	if p.ExpiredJobLeases > 0 {
-		r.issue("warning", "jobs.expired_leases", fmt.Sprint(p.ExpiredJobLeases), "> 0 expired running-job leases", "Check worker crashes and fencing; do not blindly replay non-idempotent operations")
+		r.issue("warning", "jobs.expired_leases", fmt.Sprint(p.ExpiredJobLeases), "> 0 просроченных аренд выполняющихся заданий", "Check worker crashes and fencing; do not blindly replay non-idempotent operations")
 	}
 	if p.PendingOutbox >= QueueWarningSize {
 		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), ">= 500 pending events", "Inspect outbox dispatcher and downstream acknowledgements; retain at-least-once idempotency")

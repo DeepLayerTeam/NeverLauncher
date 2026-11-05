@@ -41,7 +41,7 @@ def exe_arch(data: bytes, platform: str, arch: str) -> None:
         if data[:4] != b'\x7fELF' or data[4] != 2 or data[5] != 1 or struct.unpack_from('<H',data,18)[0] != ARCH[arch]['elf']:
             raise ValueError('invalid ELF64 target architecture')
     elif platform == 'windows':
-        if data[:2] != b'MZ':raise ValueError('invalid PE DOS header')
+        if data[:2] != b'MZ':raise ValueError('Недопустимый заголовок PE DOS')
         off=struct.unpack_from('<I',data,0x3c)[0]
         if off > len(data)-24 or data[off:off+4] != b'PE\0\0' or struct.unpack_from('<H',data,off+4)[0] != ARCH[arch]['pe']:
             raise ValueError('invalid PE target architecture')

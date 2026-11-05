@@ -52,7 +52,7 @@ class Backup0518Tests(unittest.TestCase):
                 result = cb.freeze(directory, "launcher", run_id)
                 self.assertEqual(result["status"], "frozen")
                 self.assertEqual(cb.assert_frozen(directory, "launcher", run_id)["nodeId"], "node-a")
-                with self.assertRaisesRegex(cb.BackupError, "already frozen"):
+                with self.assertRaisesRegex(cb.BackupError, "уже заморожен"):
                     cb.freeze(directory, "launcher", run_id)
                 self.assertEqual(cb.thaw(directory, "launcher", run_id)["status"], "resumed")
                 self.assertFalse((directory / cb.STATE_FILE).exists())
@@ -99,7 +99,7 @@ class Backup0518Tests(unittest.TestCase):
 
     def test_s3_version_change_refuses_cohort_and_requires_versioning(self):
         with patch.object(cb, "execute", side_effect=[b'{"Status":"Suspended"}']):
-            with self.assertRaisesRegex(cb.BackupError, "versioning"):
+            with self.assertRaisesRegex(cb.BackupError, "версионирование"):
                 cb.s3_version_inventory("bucket.example", "https://s3.example")
         with patch.object(cb, "execute", side_effect=[b'{"Status":"Enabled"}',
                                                         b'{"Versions":[{"Key":"abc","VersionId":"2","IsLatest":true,"Size":4}]}']):
@@ -147,7 +147,7 @@ class Backup0518Tests(unittest.TestCase):
             with self.assertRaisesRegex(dr.DrillError, "world backup"):
                 cb.validate_backup(folder)
             (folder / "identity-and-metadata.dump").write_bytes(b"changed")
-            with self.assertRaisesRegex(cb.BackupError, "checksum"):
+            with self.assertRaisesRegex(cb.BackupError, "контрольных сумм"):
                 cb.validate_backup(folder)
 
     def test_pitr_restore_rejects_nonfresh_destination(self):
@@ -159,7 +159,7 @@ class Backup0518Tests(unittest.TestCase):
             os.chmod(root / "manifest.json", 0o600)
             args = type("Args", (), {"backup": str(root), "pgdata": str(root), "stanza": "launcher",
                                       "confirm": "20261103-100000F"})()
-            with self.assertRaisesRegex(cb.BackupError, "fresh host"):
+            with self.assertRaisesRegex(cb.BackupError, "чистый узел"):
                 cb.restore_pg_fresh(args)
 
     def test_pgbackrest_restores_real_fresh_pgdata_with_lsn_or_pitr(self):

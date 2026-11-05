@@ -174,7 +174,7 @@ func main() {
 	confirm := flag.Bool("confirm", false, "Явно подтвердить создание HTTP-нагрузки")
 	flag.Parse()
 	if !*confirm || *maxWorkers < 1 || *maxWorkers > 64 || *stepTime < 2*time.Second || *stepTime > 120*time.Second {
-		fmt.Fprintln(os.Stderr, "--confirm required; --max-workers 1..64; --step 2s..120s")
+		fmt.Fprintln(os.Stderr, "Требуется --confirm; --max-workers 1..64; --step 2s..120s")
 		os.Exit(2)
 	}
 	target, e := safeURL(*address, *remote)

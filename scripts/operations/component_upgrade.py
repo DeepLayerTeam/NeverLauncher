@@ -60,18 +60,18 @@ def digest(path):
 
 
 def checked_file(path: Path, sha: str, *, must_be_root=False):
-    must(SHA_RE.fullmatch(sha) is not None, 'pinned SHA-256 must be 64 lowercase hexadecimal characters')
+    must(SHA_RE.fullmatch(sha) is not None, 'Закреплённый SHA-256 должен содержать 64 шестнадцатеричных символа в нижнем регистре')
     st = path.lstat()
     must(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_size > 0,
-         'source must be a nonempty regular file (no symlink/hardlink)')
+         'Источник должен быть непустым обычным файлом (не символической и не жёсткой ссылкой)')
     if must_be_root:
-        must(st.st_uid == 0 and not (st.st_mode & 0o022), 'source must be immutable to non-root users')
-    must(digest(path) == sha, 'pinned SHA-256 mismatch')
+        must(st.st_uid == 0 and not (st.st_mode & 0o022), 'Пользователи без прав root не должны иметь возможности изменять источник')
+    must(digest(path) == sha, 'Несовпадение закреплённого SHA-256')
 
 
 def read_version(env_file):
-    must(env_file.is_file() and not env_file.is_symlink(), 'environment file missing or symlinked')
-    must(not env_file.stat().st_mode & 0o077, 'production environment file must be private')
+    must(env_file.is_file() and not env_file.is_symlink(), 'Файл окружения отсутствует или является символической ссылкой')
+    must(not env_file.stat().st_mode & 0o077, 'Файл рабочего окружения должен иметь ограниченные права доступа')
     data = database.env_values(env_file)
     return data, data.get('LAUNCHER_IMAGE_TAG', '')
 
@@ -81,7 +81,7 @@ def assert_same_config(before, after, *, source_version=SOURCE, target_version=T
     new, target = read_version(after)
     must(version == source_version and target == target_version and version != target,
          'source/target versions do not match pinned upgrade intent')
-    must(new.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false', 'automatic DDL is forbidden during component upgrade')
+    must(new.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false', 'Автоматическое выполнение DDL при обновлении компонентов запрещено')
     # При переключении не меняйте одновременно учётные данные, хранилище, DNS, ключи
     # или политику подписи; для них нужны отдельные аудируемые операции.
     allowed = {'LAUNCHER_IMAGE_TAG', 'LAUNCHER_DATABASE_AUTO_MIGRATE'}
@@ -93,7 +93,7 @@ def assert_same_config(before, after, *, source_version=SOURCE, target_version=T
 def image_id(tag):
     result = run(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], timeout=30)
     value = result.decode('ascii', errors='strict').strip()
-    must(value.startswith('sha256:') and SHA_RE.fullmatch(value[7:]) is not None, 'invalid image ID')
+    must(value.startswith('sha256:') and SHA_RE.fullmatch(value[7:]) is not None, 'Недопустимый идентификатор образа')
     return value
 
 
@@ -102,9 +102,9 @@ def verify_service_image(project, env, service, expected_version):
     image_type = 'admin' if service == 'admin' else 'api'
     expected = image_id(f'launcher-{image_type}:{expected_version}')
     container = dr.compose(project, env, 'ps', '-q', service, timeout=30).stdout.decode('ascii').strip()
-    must(re.fullmatch(r'[0-9a-f]{12,64}', container) is not None, 'running service container ID missing')
+    must(re.fullmatch(r'[0-9a-f]{12,64}', container) is not None, 'Отсутствует ID контейнера работающей службы')
     actual = run(['docker', 'inspect', '--format', '{{.Image}}', container], timeout=30).decode('ascii').strip()
-    must(actual == expected, 'running container uses unexpected image digest: ' + service)
+    must(actual == expected, 'Работающий контейнер использует неожиданный хеш образа: ' + service)
 
 
 def check_admin(project, env):
@@ -144,13 +144,13 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
     dr.authorize_project(project, confirm, production=production, approved=approved)
     assert_same_config(source, target, source_version=source_version, target_version=target_version)
     must(snapshot.is_absolute() and not snapshot.exists() and snapshot.parent.is_dir()
-         and not snapshot.parent.is_symlink(), 'snapshot must be an unused path on protected storage')
-    must(snapshot.parent.stat().st_mode & 0o077 == 0, 'snapshot parent must be private (0700)')
+         and not snapshot.parent.is_symlink(), 'Путь снимка должен быть неиспользуемым и находиться на защищённом хранилище')
+    must(snapshot.parent.stat().st_mode & 0o077 == 0, 'Родительский каталог снимка должен иметь права 0700')
     with database.lock(snapshot.parent):
         states = dr.compose_states(project, source)
-        must(states.get('postgres') == 'running' and states.get('api') == 'running', 'source PostgreSQL/API must be running')
+        must(states.get('postgres') == 'running' and states.get('api') == 'running', 'Исходные PostgreSQL и API должны быть запущены')
         must(not any(states.get(s) == 'running' for s in ('api-b', 'worker-a', 'worker-b', 'redis')),
-             'unexpected Network-HA roles; cannot upgrade as Standard')
+             'Неожиданные роли Network-HA; обновление в режиме Standard невозможно')
         for svc in ('api', 'admin', 'nginx'):
             must(states.get(svc, 'exited') not in ('paused', 'restarting'), 'unhealthy source service: ' + svc)
         original = [svc for svc in ('api', 'admin', 'nginx') if states.get(svc) == 'running']
@@ -190,8 +190,8 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
                          for svc in source_images), 'source image digest changed; rollback unsafe')
                 restore_service_set(project, source, original, expected=source_version)
             except Exception as recovery:
-                raise ComponentError('component cutover failed AND old API could not be verified; keep Nginx stopped') from recovery
-            raise ComponentError('component cutover failed; prior application images restored and verified') from problem
+                raise ComponentError('Переключение компонента завершилось ошибкой, и старый API не удалось проверить; оставьте Nginx остановленным') from recovery
+            raise ComponentError('Переключение компонента завершилось ошибкой; предыдущие образы приложения восстановлены и проверены') from problem
 
 
 
@@ -241,11 +241,11 @@ def network_ha(project, confirm, source, target, snapshot, world_backups,
     must(world_backups and s3_bucket, 'HA upgrade requires confirmed stopped worlds and S3 snapshot')
     must(snapshot.is_absolute() and not snapshot.exists() and snapshot.parent.is_dir()
          and not snapshot.parent.is_symlink() and not (snapshot.parent.stat().st_mode & 0o077),
-         'HA backup must be new and stored in private directory')
+         'Резервная копия HA должна быть новой и храниться в закрытом каталоге')
     with network_overlay(), database.lock(snapshot.parent):
         states = dr.compose_states(project, source)
         must(all(states.get(s) == 'running' for s in ('postgres', 'redis', 'api', 'api-b', 'worker-a', 'worker-b', 'admin', 'nginx')),
-             'all Network-HA roles must be healthy/running before cutover')
+             'Перед переключением все роли Network-HA должны быть исправны и запущены')
         for svc in ('api', 'api-b'):
             dr.check_restored_backend(project, source, version=source_version, storage='s3', service=svc)
         for svc in ('worker-a', 'worker-b'):
@@ -278,8 +278,8 @@ def network_ha(project, confirm, source, target, snapshot, world_backups,
                      'previous HA image was replaced')
                 restore_ha_roles(project, source, expected=source_version)
             except Exception as failure:
-                raise ComponentError('HA cutover and prior-version recovery both failed; Nginx must stay disabled') from failure
-            raise ComponentError('HA component cutover failed; original binaries restored and checked') from cause
+                raise ComponentError('Переключение HA и восстановление предыдущей версии завершились ошибкой; Nginx должен оставаться отключённым') from failure
+            raise ComponentError('Переключение HA-компонента завершилось ошибкой; исходные бинарные файлы восстановлены и проверены') from cause
 
 def systemctl_is_active(service):
     return subprocess.run(['systemctl', 'is-active', '--quiet', service], stdout=subprocess.DEVNULL,
@@ -303,24 +303,24 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
     """
     must(os.geteuid() == 0, 'host executable upgrade requires root')
     must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'0\.\d+\.\d+', target_version),
-         'source/target binary version invalid')
-    must(re.fullmatch(r'\d{4}', backup_tag), 'invalid backup tag')
-    must(component in COMPONENTS, 'unsupported host component')
-    must(component != 'api' or service == 'launcher.service', 'minimal API must use managed launcher.service')
+         'Недопустимая версия исходного или целевого бинарного файла')
+    must(re.fullmatch(r'\d{4}', backup_tag), 'Недопустимая метка резервной копии')
+    must(component in COMPONENTS, 'Неподдерживаемый компонент узла')
+    must(component != 'api' or service == 'launcher.service', 'Минимальный API должен использовать управляемую службу launcher.service')
     must(component != 'bridge' or bool(service), 'ServerBridge upgrade requires a systemd unit')
-    must(install.is_absolute() and source.is_absolute(), 'binary paths must be absolute')
-    must(install != source and install.parent.is_dir(), 'source must differ from destination')
+    must(install.is_absolute() and source.is_absolute(), 'Пути к бинарным файлам должны быть абсолютными')
+    must(install != source and install.parent.is_dir(), 'Исходный и целевой пути должны различаться')
     must(not install.parent.is_symlink() and install.parent.stat().st_uid == 0
-         and not install.parent.stat().st_mode & 0o022, 'install directory must be root owned and protected')
+         and not install.parent.stat().st_mode & 0o022, 'Каталог установки должен принадлежать root и быть защищён')
     checked_file(source, checksum, must_be_root=True)
     old = install.lstat()
     must(stat.S_ISREG(old.st_mode) and old.st_uid == 0 and old.st_nlink == 1
-         and not (old.st_mode & 0o022), 'existing binary must be root-owned regular file')
+         and not (old.st_mode & 0o022), 'Существующий бинарный файл должен быть обычным файлом, принадлежащим root')
     must(not install.with_name(install.name + '.previous-' + backup_tag).exists(), 'previous backup exists; resolve prior upgrade first')
     if service:
-        must(SERVICE_RE.fullmatch(service) is not None, 'invalid systemd service')
+        must(SERVICE_RE.fullmatch(service) is not None, 'Недопустимая служба systemd')
     old_active = bool(service and systemctl_is_active(service))
-    must(component != 'api' or old_active, 'managed API must be running for verified cutover')
+    must(component != 'api' or old_active, 'Для проверенного переключения управляемый API должен работать')
     backup = install.with_name(install.name + '.previous-' + backup_tag)
     with database.lock(install.parent):
         # Нельзя сочетать работающий процесс Runtime с частично скопированным файлом.
@@ -342,14 +342,14 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
                         os.unlink(stage)
             if component != 'api':
                 version_output = run([str(install), 'version'], timeout=30).decode('utf-8', errors='replace')
-                must(target_version in version_output, 'new CLI/Bridge executable reports unexpected version')
+                must(target_version in version_output, 'Новый исполняемый файл CLI/Bridge сообщает неожиданную версию')
             if old_active:
                 run(['systemctl', 'start', service], timeout=90)
-                must(systemctl_is_active(service), 'upgraded systemd service is not active')
+                must(systemctl_is_active(service), 'Обновлённая служба systemd неактивна')
                 if component == 'api':
                     database.wait_loopback_ready(ready_url or 'http://127.0.0.1:8080/ready', expected_version=target_version)
             elif component == 'api':
-                raise ComponentError('minimal API service must be active for verified cutover')
+                raise ComponentError('Для проверенного переключения служба минимального API должна быть активна')
             return {'status': 'upgraded', 'component': component,
                     'fromSha256': digest(backup), 'toSha256': checksum,
                     'rollbackExecutable': str(backup), 'serviceVerified': bool(old_active)}
@@ -365,12 +365,12 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
                 os.replace(backup, install); fsync_dir(install.parent)
                 if old_active:
                     run(['systemctl', 'start', service], timeout=90)
-                    must(systemctl_is_active(service), 'old service failed after rollback')
+                    must(systemctl_is_active(service), 'Старая служба не запустилась после отката')
                     if component == 'api':
                         database.wait_loopback_ready(ready_url or 'http://127.0.0.1:8080/ready', expected_version=source_version)
             except Exception as rollback_error:
-                raise ComponentError('host upgrade failed; previous executable could not be verified, service must stay down') from rollback_error
-            raise ComponentError('host upgrade failed, old binary restored') from error
+                raise ComponentError('Обновление узла завершилось ошибкой; предыдущий исполняемый файл не прошёл проверку, служба должна оставаться остановленной') from rollback_error
+            raise ComponentError('Обновление узла завершилось ошибкой; старый бинарный файл восстановлен') from error
 
 
 def rollback_linux_host(component, install: Path, expected_previous_sha, *, service=None,
@@ -382,19 +382,19 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
     """
     must(os.geteuid() == 0, 'host rollback requires root')
     must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'\d{4}', backup_tag),
-         'invalid rollback version/tag')
-    must(component in COMPONENTS, 'unsupported host component')
+         'Недопустимая версия или метка отката')
+    must(component in COMPONENTS, 'Неподдерживаемый компонент узла')
     must(install.is_absolute() and install.parent.is_dir()
          and not install.parent.is_symlink() and install.parent.stat().st_uid == 0
          and not install.parent.stat().st_mode & 0o022, 'unsafe host rollback destination')
-    must(component != 'api' or service == 'launcher.service', 'minimal API must use launcher.service')
+    must(component != 'api' or service == 'launcher.service', 'Минимальный API должен использовать launcher.service')
     must(component != 'bridge' or bool(service), 'ServerBridge rollback requires its systemd service')
     if service:
-        must(SERVICE_RE.fullmatch(service) is not None, 'invalid systemd service')
+        must(SERVICE_RE.fullmatch(service) is not None, 'Недопустимая служба systemd')
     backup = install.with_name(install.name + '.previous-' + backup_tag)
     failed = install.with_name(install.name + '.failed-' + backup_tag)
     checked_file(backup, expected_previous_sha, must_be_root=True)
-    must(not failed.exists() and not failed.is_symlink(), 'prior failed binary exists; manual intervention required')
+    must(not failed.exists() and not failed.is_symlink(), 'Существует бинарный файл предыдущего неудачного обновления; требуется вмешательство оператора')
     with database.lock(install.parent):
         was_active = bool(service and systemctl_is_active(service))
         if was_active:
@@ -408,7 +408,7 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
         os.replace(backup, install)
         fsync_dir(install.parent)
         try:
-            must(digest(install) == expected_previous_sha, 'restored old bytes mismatch')
+            must(digest(install) == expected_previous_sha, 'Восстановленные байты старой версии не совпадают')
             if component != 'api':
                 must(source_version in run([str(install), 'version'], timeout=30).decode('utf-8'),
                      'old CLI/Bridge version does not match')
@@ -429,16 +429,16 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
                     run(['systemctl', 'stop', service], timeout=60)
                 except Exception:
                     pass
-            raise ComponentError('old executable restored but health/version not verified; service must stay stopped') from problem
+            raise ComponentError('Старый исполняемый файл восстановлен, но его состояние и версия не проверены; служба должна оставаться остановленной') from problem
 
 
 def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Path, *, target_version=TARGET):
     """Вызывает существующий подписанный транзакционный механизм обновления компонентов, а не
 альтернативный установщик."""
-    must(root.is_absolute() and root.is_dir() and not root.is_symlink(), 'existing client installation root required')
-    must(delivery.is_file() and not delivery.is_symlink(), 'independently approved delivery manifest required')
+    must(root.is_absolute() and root.is_dir() and not root.is_symlink(), 'Требуется корневой каталог существующей установки клиента')
+    must(delivery.is_file() and not delivery.is_symlink(), 'Требуется независимо утверждённый манифест поставки')
     checked_file(package, checksum)
-    must(cli.is_file() and not cli.is_symlink(), 'installed NeverLauncher CLI required')
+    must(cli.is_file() and not cli.is_symlink(), 'Требуется установленный CLI NeverLauncher')
     output = run([str(cli), 'update', 'components', '--package', str(package),
                   '--expected-sha256', checksum, '--delivery-manifest', str(delivery),
                   '--root', str(root)], timeout=900)
@@ -447,7 +447,7 @@ def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Pat
     except ValueError as exc:
         raise ComponentError('native updater did not return JSON report') from exc
     must(isinstance(report, dict) and report.get('status') == 'committed'
-         and report.get('toVersion') == target_version, 'native updater did not commit required version')
+         and report.get('toVersion') == target_version, 'Нативный обновлятор не зафиксировал требуемую версию')
     # Существующая проверка пакета обновления проверяет хеши каждого файла, подпись,
     # эпоху доверия, идентичность платформы и журнал отката. Эти проверки здесь не
     # переопределяются.
@@ -460,9 +460,9 @@ def extensions(cli: Path, backend: str, coords: list[str], channel: str):
     url = urlsplit(backend)
     must(url.scheme == 'https' and bool(url.hostname) and not url.username and not url.password
          and not url.query and not url.fragment and not url.path.rstrip('/'),
-         'production extension backend must be an HTTPS origin')
-    must(channel in ('stable', 'beta'), 'invalid extension channel')
-    must(cli.is_file() and not cli.is_symlink(), 'NeverLauncher CLI missing')
+         'Рабочий Backend расширений должен использовать HTTPS')
+    must(channel in ('stable', 'beta'), 'Недопустимый канал расширения')
+    must(cli.is_file() and not cli.is_symlink(), 'CLI NeverLauncher отсутствует')
     must(bool(os.environ.get('LAUNCHER_TOKEN')), 'provide a fresh MFA-authorized LAUNCHER_TOKEN in the operator environment')
     base = [str(cli), 'extension', 'updates']
     flags = ['--backend', backend, '--channel', channel]
@@ -548,7 +548,7 @@ def main(argv=None):
         return 0
     except (ComponentError, dr.DrillError, database.UpgradeError, ValueError, OSError,
             subprocess.TimeoutExpired, UnicodeError, json.JSONDecodeError) as exc:
-        print('component upgrade blocked: ' + str(exc), file=sys.stderr)
+        print('Обновление компонента заблокировано: ' + str(exc), file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

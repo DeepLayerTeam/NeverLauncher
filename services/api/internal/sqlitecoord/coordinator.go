@@ -19,7 +19,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-var ErrInvalid = errors.New("sqlite coordinator: invalid arguments")
+var ErrInvalid = errors.New("Координатор SQLite: недопустимые аргументы")
 
 // Coordinator владеет ровно одной локальной базой SQLite и блокировкой весь срок работы.
 // Второй процесс не может открыть ту же базу через sqlitedurable.Open.

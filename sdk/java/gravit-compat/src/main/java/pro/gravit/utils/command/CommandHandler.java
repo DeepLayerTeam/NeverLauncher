@@ -11,10 +11,10 @@ public final class CommandHandler {
     public void registerCommand(String name,Command command){
         Objects.requireNonNull(command);
         target.register(name,null,input->input,raw->{
-            if(!(raw instanceof Map<?,?> map)||!(map.get("args") instanceof List<?> list)||list.size()>128)throw new IllegalArgumentException("invalid command input");
+            if(!(raw instanceof Map<?,?> map)||!(map.get("args") instanceof List<?> list)||list.size()>128)throw new IllegalArgumentException("Недопустимый ввод команды");
             String[] args=new String[list.size()];
             for(int i=0;i<args.length;i++){
-                if(!(list.get(i) instanceof String s)||s.length()>8192)throw new IllegalArgumentException("invalid command arg");args[i]=s;
+                if(!(list.get(i) instanceof String s)||s.length()>8192)throw new IllegalArgumentException("Недопустимый аргумент команды");args[i]=s;
             }
             try{
                 command.invoke(args);

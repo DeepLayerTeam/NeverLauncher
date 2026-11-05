@@ -31,9 +31,9 @@ type publishBlocked0385 struct{ Blockers []publishBlocker0385 }
 
 func (e publishBlocked0385) Error() string {
 	if len(e.Blockers) == 0 {
-		return "publish blocked"
+		return "Публикация заблокирована"
 	}
-	return "publish blocked: " + e.Blockers[0].Message
+	return "Публикация заблокирована: " + e.Blockers[0].Message
 }
 
 func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup packageLookup) publishReadiness0385 {

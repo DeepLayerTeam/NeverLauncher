@@ -31,13 +31,13 @@ func ValidateLoopbackRedirect(redirect string) error {
 		return errors.New("redirect must be http://localhost:<port>/minecraft-poc/callback (or 127.0.0.1)")
 	}
 	if u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil {
-		return errors.New("redirect host is not loopback")
+		return errors.New("Хост перенаправления не является локальным адресом обратной петли")
 	}
 	if ip := net.ParseIP(u.Hostname()); ip != nil && !ip.IsLoopback() {
-		return errors.New("redirect host is not loopback")
+		return errors.New("Хост перенаправления не является локальным адресом обратной петли")
 	}
 	if u.Port() == "0" {
-		return errors.New("redirect must have an assigned port")
+		return errors.New("У перенаправления должен быть указан порт")
 	}
 	return nil
 }
@@ -61,7 +61,7 @@ func (c *Client) AuthorizationURL(clientID, redirect, state, challenge string) (
 		return "", errors.New("Некорректное значение: OAuth состояние")
 	}
 	if len(challenge) != 43 || !regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(challenge) {
-		return "", errors.New("invalid S256 challenge")
+		return "", errors.New("Недопустимый проверочный запрос S256")
 	}
 	v := url.Values{
 		"client_id": {clientID}, "response_type": {"code"}, "redirect_uri": {redirect},

@@ -201,7 +201,7 @@ func matchRange0243(actual, expr string) (bool, error) {
 		return true, nil
 	}
 	if len(expr) > 256 {
-		return false, fmt.Errorf("range exceeds 256 bytes")
+		return false, fmt.Errorf("Диапазон превышает 256 байт")
 	}
 	anyMatched := false
 	for _, alternative := range strings.Split(expr, "||") {
@@ -360,7 +360,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	}
 	for _, p := range cat.Presets {
 		if _, err := resolveCatalogGraph0243(cat, p.ID); err != nil {
-			return fmt.Errorf("preset %q invalid: %w", p.ID, err)
+			return fmt.Errorf("Недопустимый набор настроек %q: %w", p.ID, err)
 		}
 	}
 	return nil

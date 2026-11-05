@@ -57,7 +57,7 @@ class MinimalRunnerTests(unittest.TestCase):
             work = base/'work'
             work.mkdir()
             (work/'already').write_text('x')
-            with self.assertRaisesRegex(mod.AcceptanceFailure, 'empty'):
+            with self.assertRaisesRegex(mod.AcceptanceFailure, 'пустым'):
                 mod.run_acceptance(binary, base/'guard', base/'bridge', work, {'checks': []})
             (work/'already').unlink()
             binary.chmod(0o777)

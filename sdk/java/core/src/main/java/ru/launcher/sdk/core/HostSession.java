@@ -67,16 +67,16 @@ public final class HostSession implements AutoCloseable {
         Map<String,Object> hello=new LinkedHashMap<>(Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId",instanceId,"extensionId",extensionId,"pid",ProcessHandle.current().pid()));
         if(!callbackUrl.isBlank())hello.put("callbackUrl",callbackUrl);
         Map<String,Object> response=post("/v1/hello",hello);
-        if(!"1.0".equals(response.get("protocolVersion"))||!"1.0".equals(response.get("extensionApiVersion"))||!instanceId.equals(response.get("instanceId")))throw new CompatibilityError("HOST_PROTOCOL_MISMATCH","host hello protocol/API/identity mismatch");
+        if(!"1.0".equals(response.get("protocolVersion"))||!"1.0".equals(response.get("extensionApiVersion"))||!instanceId.equals(response.get("instanceId")))throw new CompatibilityError("HOST_PROTOCOL_MISMATCH","Несовпадение протокола, API или удостоверения при приветствии хоста");
         Set<String> negotiated=parseNames(response.get("capabilities"),"capabilities");
         if(!negotiated.containsAll(requiredCapabilities)){
             Set<String> missing=new TreeSet<>(requiredCapabilities);missing.removeAll(negotiated);
-            throw new CompatibilityError("HOST_CAPABILITY_UNAVAILABLE","host does not grant required capabilities: "+missing);
+            throw new CompatibilityError("HOST_CAPABILITY_UNAVAILABLE","Хост не предоставляет необходимые возможности: "+missing);
         }
         Object version=response.get("eventProtocolVersion");
         // Версия 0.42.0 уже объявляет протокол событий; при его наличии независимую
         // версию обязательно проверять.
-        if(version!=null && !"1.0".equals(version))throw new CompatibilityError("HOST_EVENT_PROTOCOL_MISMATCH","unsupported event protocol: "+version);
+        if(version!=null && !"1.0".equals(version))throw new CompatibilityError("HOST_EVENT_PROTOCOL_MISMATCH","Неподдерживаемый протокол событий: "+version);
         Set<String> supportedEvents=parseNames(response.get("events"),"events");
         Object hb=response.get("heartbeatTimeoutSeconds");if(!(hb instanceof Number n)||n.longValue()<2||n.longValue()>3600||n.doubleValue()!=n.longValue())throw new IOException("Некорректный интервал сигналов активности");
         capabilities=negotiated;
@@ -150,7 +150,7 @@ public final class HostSession implements AutoCloseable {
                 Object value=fault.get("code");
                 if(value instanceof String v&&v.matches("[A-Z][A-Z0-9_]{2,63}"))code=v;
             }catch(IllegalArgumentException ignored){/* исходный Go-хост версии 0.42.0 использует обычный текстовый http.Error */}
-            throw new HostError(response.statusCode(),code,"host request "+path+" failed with HTTP "+response.statusCode()+" ("+code+")");
+            throw new HostError(response.statusCode(),code,"host request "+path+" завершился ошибкой HTTP "+response.statusCode()+" ("+code+")");
         }
         if(responseBody.isEmpty())return Map.of();
         return Json.object(Json.parse(responseBody));

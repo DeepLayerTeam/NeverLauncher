@@ -446,7 +446,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     // именованные пресеты не фильтруются и должны быть структурно пригодны
     // для всех целей до подписи и публикации манифеста владельцем.
     if cat.schema_version!="4.0" && cat.schema_version!="5.0" {resolve_graph_v3(cat,"")?;}
-    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
+    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("Недопустимый набор настроек {}: {e}",p.id))?;}
     Ok(())
 }
 // v0.24.7: выбор установки — недоверенный список ID подписанных компонентов,

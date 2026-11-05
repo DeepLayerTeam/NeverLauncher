@@ -115,7 +115,7 @@ func (c *Connector) Health(ctx context.Context) error {
 	healthCtx, cancel := context.WithTimeout(ctx, c.cfg.ConnectTimeoutDuration)
 	defer cancel()
 	if err := c.db.PingContext(healthCtx); err != nil {
-		return authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider database is unavailable", err)
+		return authconnector.WrapError(authconnector.ErrUnavailable, "База данных SQL-провайдера недоступна", err)
 	}
 	return nil
 }
@@ -138,21 +138,21 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, request authconnec
 	}
 	active, err := c.isActive(identity.status)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "SQL identity status is invalid", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый статус SQL-учётной записи", err)
 	}
 	if !active {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "SQL identity is disabled")
 	}
 	valid, err := verifyPassword(request.Secret, identity.passwordHash, c.cfg.Password)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "SQL password hash cannot be verified", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Не удалось проверить хеш пароля SQL", err)
 	}
 	if !valid {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	mapped, err := c.mapIdentity(identity)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "SQL identity mapping failed", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Не удалось сопоставить SQL-учётную запись", err)
 	}
 	return authconnector.Authentication{Identity: mapped, AuthMethods: []string{"password"}}, nil
 }
@@ -160,18 +160,18 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, request authconnec
 func (c *Connector) ResolveIdentity(ctx context.Context, request authconnector.ResolveRequest) (authconnector.Identity, error) {
 	subject := strings.TrimSpace(request.Subject)
 	if subject == "" {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "SQL identity subject is required")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Необходим идентификатор субъекта SQL-учётной записи")
 	}
 	row, err := c.lookup(ctx, c.stmtBySub, subject)
 	if err != nil {
 		if authconnector.CodeOf(err) == authconnector.ErrInvalidCredentials {
-			return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "SQL identity not found")
+			return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "SQL-учётная запись не найдена")
 		}
 		return authconnector.Identity{}, err
 	}
 	active, err := c.isActive(row.status)
 	if err != nil {
-		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "SQL identity status is invalid", err)
+		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый статус SQL-учётной записи", err)
 	}
 	if !active {
 		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "SQL identity is disabled")
@@ -219,22 +219,22 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 	defer cancel()
 	tx, err := c.db.BeginTx(queryCtx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider read-only transaction failed", err)
+		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "Транзакция SQL-провайдера только для чтения завершилась ошибкой", err)
 	}
 	defer tx.Rollback()
 	if stmt == nil {
-		return rowIdentity{}, authconnector.NewError(authconnector.ErrMisconfigured, "SQL provider statement is unavailable")
+		return rowIdentity{}, authconnector.NewError(authconnector.ErrMisconfigured, "Подготовленный запрос SQL-провайдера недоступен")
 	}
 	rows, err := tx.StmtContext(queryCtx, stmt).QueryContext(queryCtx, args...)
 	if err != nil {
-		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider query failed", err)
+		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "Запрос SQL-провайдера завершился ошибкой", err)
 	}
 	defer rows.Close()
 	var found []rowIdentity
 	for rows.Next() {
 		var values [9]sql.NullString
 		if err := rows.Scan(&values[0], &values[1], &values[2], &values[3], &values[4], &values[5], &values[6], &values[7], &values[8]); err != nil {
-			return rowIdentity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "SQL provider row cannot be scanned", err)
+			return rowIdentity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Не удалось прочитать строку результата SQL-провайдера", err)
 		}
 		found = append(found, rowIdentity{subject: values[0].String, username: values[1].String, email: values[2].String, passwordHash: values[3].String, status: values[4].String, displayName: values[5].String, groupsRaw: values[6].String, rolesRaw: values[7].String, minecraftUUID: values[8].String})
 		if len(found) > 1 {
@@ -242,7 +242,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider query failed", err)
+		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "Запрос SQL-провайдера завершился ошибкой", err)
 	}
 	if len(found) == 0 {
 		// Намеренно используйте ту же публичную ошибку, что и при неверном пароле, чтобы избежать определения существования учётных записей.
@@ -252,7 +252,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 		return rowIdentity{}, authconnector.NewError(authconnector.ErrMisconfigured, "SQL identity has empty subject or password hash")
 	}
 	if err := tx.Commit(); err != nil {
-		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider read-only transaction commit failed", err)
+		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "Не удалось зафиксировать транзакцию SQL-провайдера только для чтения", err)
 	}
 	return found[0], nil
 }

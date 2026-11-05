@@ -128,7 +128,7 @@ IF broken<>0 THEN RAISE EXCEPTION 'database has % pending migration(s)', broken;
 SELECT count(*) INTO broken FROM schema_migrations s JOIN nl_expected_migrations e ON e.version=s.version WHERE coalesce(s.checksum,'')='';
 IF broken<>0 THEN RAISE EXCEPTION 'database has % migration(s) without sealed checksum', broken; END IF;
 SELECT count(*) INTO broken FROM schema_migrations s JOIN nl_expected_migrations e ON e.version=s.version WHERE s.checksum<>e.checksum;
-IF broken<>0 THEN RAISE EXCEPTION 'database has % migration checksum mismatch(es)', broken; END IF;
+IF broken<>0 THEN RAISE EXCEPTION 'В базе данных обнаружено % несовпадений контрольных сумм миграций', broken; END IF;
 END $$;
 `)
 	b.WriteString("SELECT 'verified' AS status, count(*) AS migrations, max(version) AS current FROM nl_expected_migrations;\n")

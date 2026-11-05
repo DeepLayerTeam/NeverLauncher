@@ -334,7 +334,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 			if _, revokeErr := s.Repo.RevokeTrustedDevice(cleanupCtx, claims.Sub, replacement.ID, "replacement-bind-failed"); revokeErr == nil && oldDevice.Status == "revoked" {
 				if recoveryRepo, ok := s.Repo.(repository.RevokedDeviceRecoveryRepository0435); ok {
 					if releaseErr := recoveryRepo.ReleaseFailedRevokedDeviceRecovery0435(cleanupCtx, claims.Sub, oldDeviceID, replacement.ID); releaseErr != nil {
-						log.Printf("account recovery failed to release tombstone after key revocation: %v", releaseErr)
+						log.Printf("При восстановлении учётной записи не удалось снять отметку об удалении после отзыва ключа: %v", releaseErr)
 					}
 				}
 			}

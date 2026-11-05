@@ -117,7 +117,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		row := ProfileResult0492{Destination: d, Status: "blocked", Blockers: []string{}, Dependencies: []Dependency0492{}}
 		content, err := gc.PreparePinned(ctx, source, size, inventory, d.ProfilePath, project, d.ProfileID, d.ProfileName, d.Loader, d.LoaderVersion)
 		if err != nil {
-			row.Blockers = append(row.Blockers, "conversion failed: "+err.Error())
+			row.Blockers = append(row.Blockers, "Преобразование завершилось ошибкой: "+err.Error())
 		} else {
 			row.SourceDirectory, row.FilesSHA256, row.FileCount = content.SourceDirectory, content.FilesSHA256, len(content.Files)
 			folded := strings.ToLower(content.SourceDirectory)
@@ -191,7 +191,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 			})
 			plan, e := Build(run, project, target, d, inventory, compatibility, modules, content, existing[d.ProfileID], identities)
 			if e != nil {
-				row.Blockers = append(row.Blockers, "plan failed: "+e.Error())
+				row.Blockers = append(row.Blockers, "План завершился ошибкой: "+e.Error())
 			} else {
 				row.PlanSHA256, row.TransferBytes = plan.PlanSHA256, plan.TransferBytes
 				row.Blockers = append(row.Blockers, plan.Blockers...)

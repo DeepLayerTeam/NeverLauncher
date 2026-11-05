@@ -165,7 +165,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 		}
 		for proto, n := range expected {
 			if item.Provides[proto] != n {
-				return fmt.Errorf("unsupported %s %s: got %d expected %d", item.Component, proto, item.Provides[proto], n)
+				return fmt.Errorf("Неподдерживаемый %s %s: получено %d, ожидалось %d", item.Component, proto, item.Provides[proto], n)
 			}
 		}
 		byRole[item.Component] = item

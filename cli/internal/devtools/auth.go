@@ -169,13 +169,13 @@ func (f *FixtureServer) Handler() http.Handler {
 			Password string `json:"password"`
 		}
 		if e := fixtureDecode(r, &req); e != nil || len(req.Username) > 64 {
-			writeFixtureJSON(w, 400, map[string]string{"error": "invalid request"})
+			writeFixtureJSON(w, 400, map[string]string{"error": "Недопустимый запрос"})
 			return
 		}
 		pass, e := base64.RawURLEncoding.DecodeString(req.Password)
 		if e != nil || subtle.ConstantTimeCompare(pass, f.password[:]) != 1 || req.Username != f.user {
 			f.addEvent("auth.login.rejected", req.Username)
-			writeFixtureJSON(w, 401, map[string]string{"error": "invalid fixture credentials"})
+			writeFixtureJSON(w, 401, map[string]string{"error": "Недопустимые учётные данные тестового набора"})
 			return
 		}
 		tok, e := f.Issue(f.user, []string{"test:player"}, 5*time.Minute)
@@ -188,7 +188,7 @@ func (f *FixtureServer) Handler() http.Handler {
 	})
 	mux.HandleFunc("POST /fixture/v1/issue", func(w http.ResponseWriter, r *http.Request) {
 		if !f.controlOK(r) {
-			writeFixtureJSON(w, 403, map[string]string{"error": "test control token required"})
+			writeFixtureJSON(w, 403, map[string]string{"error": "Требуется токен управления тестом"})
 			return
 		}
 		var req struct {
@@ -197,7 +197,7 @@ func (f *FixtureServer) Handler() http.Handler {
 			TTLSeconds int      `json:"ttlSeconds"`
 		}
 		if e := fixtureDecode(r, &req); e != nil || len(req.Subject) > 128 {
-			writeFixtureJSON(w, 400, map[string]string{"error": "invalid request"})
+			writeFixtureJSON(w, 400, map[string]string{"error": "Недопустимый запрос"})
 			return
 		}
 		tok, e := f.Issue(req.Subject, req.Scopes, time.Duration(req.TTLSeconds)*time.Second)
@@ -224,7 +224,7 @@ func (f *FixtureServer) Handler() http.Handler {
 	})
 	mux.HandleFunc("POST /fixture/v1/revoke", func(w http.ResponseWriter, r *http.Request) {
 		if !f.controlOK(r) {
-			writeFixtureJSON(w, 403, map[string]string{"error": "control token required"})
+			writeFixtureJSON(w, 403, map[string]string{"error": "Требуется управляющий токен"})
 			return
 		}
 		var req struct {
@@ -247,7 +247,7 @@ func (f *FixtureServer) Handler() http.Handler {
 	})
 	mux.HandleFunc("GET /fixture/v1/events", func(w http.ResponseWriter, r *http.Request) {
 		if !f.controlOK(r) {
-			writeFixtureJSON(w, 403, map[string]string{"error": "control token required"})
+			writeFixtureJSON(w, 403, map[string]string{"error": "Требуется управляющий токен"})
 			return
 		}
 		after, _ := strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)

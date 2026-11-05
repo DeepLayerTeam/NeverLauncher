@@ -20,7 +20,7 @@ func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 	}
 	pg, err := pgx.Connect(ctx, dsn)
 	if err != nil {
-		return fmt.Errorf("PostgreSQL backend gate connection failed (credentials redacted): %w", err)
+		return fmt.Errorf("Подключение к PostgreSQL для контрольной проверки Backend завершилось ошибкой (учётные данные скрыты): %w", err)
 	}
 	defer pg.Close(context.Background())
 	for _, name := range []string{"public.sqlite_live_receipts_0473", Schema + ".migration_receipt"} {

@@ -58,7 +58,7 @@ def safe_file(path: Path, *, max_size=65536):
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
             stat.S_IMODE(st.st_mode) & 0o077 == 0 and 0 < st.st_size <= max_size,
-            "private file required")
+            "Требуется закрытый файл")
     return path.read_bytes()
 
 
@@ -90,12 +90,12 @@ def execute(args, *, timeout=120, env=None, input=None, cwd=None):
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise BackupError("Недоступно или превышено время ожидания: " + args[0]) from exc
     require(cp.returncode == 0 and len(cp.stdout) <= 16 * 1024 * 1024,
-            "command failed: " + args[0])
+            "Команда завершилась ошибкой: " + args[0])
     return cp.stdout
 
 
 def stream_command(args, target: Path, *, timeout=7200, cwd=None):
-    require(not target.exists() and not target.is_symlink(), "backup output already exists")
+    require(not target.exists() and not target.is_symlink(), "Результат резервного копирования уже существует")
     with target.open("xb") as fd:
         try:
             proc = subprocess.Popen(args, cwd=cwd, stdout=fd, stderr=subprocess.PIPE)
@@ -104,7 +104,7 @@ def stream_command(args, target: Path, *, timeout=7200, cwd=None):
             except subprocess.TimeoutExpired:
                 proc.kill(); proc.communicate()
                 raise BackupError("Превышено время ожидания потоковой операции")
-            require(proc.returncode == 0, "stream command failed: " + args[0])
+            require(proc.returncode == 0, "Потоковая команда завершилась ошибкой: " + args[0])
         except BaseException:
             target.unlink(missing_ok=True)
             raise
@@ -134,13 +134,13 @@ def local_services(directory, project):
 
 
 def freeze(directory: Path, project: str, run_id: str):
-    require(bool(RUN_ID.fullmatch(run_id)), "invalid run identifier")
-    require(directory.is_dir() and not directory.is_symlink(), "invalid host deployment directory")
-    require(not (directory / STATE_FILE).exists(), "host is already frozen; use explicit recovery")
+    require(bool(RUN_ID.fullmatch(run_id)), "Недопустимый идентификатор запуска")
+    require(directory.is_dir() and not directory.is_symlink(), "Недопустимый каталог развёртывания узла")
+    require(not (directory / STATE_FILE).exists(), "Узел уже заморожен; используйте явное восстановление")
     # Проверяйте реально сформированную конфигурацию, идентификаторы Runtime и внешние зависимости.
     config = multi.resolved_compose(directory, project)
     states = local_services(directory, project)
-    require(states.get("api") == "running" and states.get("worker") == "running", "API and worker must both be running before freeze")
+    require(states.get("api") == "running" and states.get("worker") == "running", "Перед заморозкой должны работать и API, и обработчик")
     record = {"schema": SCHEMA, "runId": run_id, "project": project,
               "nodeId": config["nodeId"], "phase": "stopping", "services": ["api", "worker"]}
     path = directory / STATE_FILE
@@ -189,7 +189,7 @@ def assert_frozen(directory, project, run_id):
 
 def thaw(directory, project, run_id):
     data = frozen_record(directory, project, run_id)
-    require(data.get("phase") in ("stopping", "frozen"), "host already thawed")
+    require(data.get("phase") in ("stopping", "frozen"), "Узел уже разморожен")
     execute(multi.compose_command(directory, project, "up", "-d", "--no-build", "--no-deps", "--wait", "api", "worker"),
             cwd=directory, timeout=180)
     states = local_services(directory, project)
@@ -202,7 +202,7 @@ def thaw(directory, project, run_id):
 def stream_volume(directory, project, run_id, logical, image):
     assert_frozen(directory, project, run_id)
     require(logical in VOLUMES, "unknown local state volume")
-    require(bool(multi.DIGEST_REGEX.fullmatch(image)), "tar image must be pinned by digest")
+    require(bool(multi.DIGEST_REGEX.fullmatch(image)), "Образ tar должен быть закреплён по хешу")
     volume = project + "_" + logical
     out = subprocess.Popen(["docker", "run", "--rm", "--network", "none", "--read-only",
                             "--mount", f"type=volume,src={volume},dst=/source,readonly",
@@ -213,7 +213,7 @@ def stream_volume(directory, project, run_id, logical, image):
     except subprocess.TimeoutExpired:
         out.kill(); out.communicate()
         raise BackupError("Превышено время ожидания архивации тома")
-    require(out.returncode == 0, "volume backup failed")
+    require(out.returncode == 0, "Резервное копирование тома завершилось ошибкой")
 
 
 def pg_query(dsn: Path):
@@ -226,12 +226,12 @@ def pg_query(dsn: Path):
                   env=env, timeout=35).decode().strip()
     m = re.fullmatch(r"([01])\|(\d+)\|([0-9A-F]+/[0-9A-F]+)", raw)
     require(bool(m) and m.group(1) == "1" and int(m.group(2)) == 0,
-            "PostgreSQL is not sole writable primary or foreign client sessions exist")
+            "PostgreSQL не является единственным доступным для записи основным узлом или существуют посторонние клиентские сеансы")
     return m.group(3)
 
 
 def pgbackrest(stanza, *args):
-    require(bool(PG_STANZA.fullmatch(stanza)), "invalid pgBackRest stanza")
+    require(bool(PG_STANZA.fullmatch(stanza)), "Недопустимая конфигурация pgBackRest stanza")
     return execute(["pgbackrest", "--stanza=" + stanza, *args], timeout=7200)
 
 
@@ -241,7 +241,7 @@ def pg_info(stanza):
     except (ValueError, UnicodeError) as exc:
         raise BackupError("Некорректное значение: «pgBackRest inventory»") from exc
     require(isinstance(value, list) and len(value) == 1 and value[0].get("name") == stanza,
-            "pgBackRest stanza not found")
+            "Конфигурация pgBackRest stanza не найдена")
     require(value[0].get("status", {}).get("code") == 0, "pgBackRest repository unhealthy")
     return value[0]
 
@@ -270,7 +270,7 @@ def s3_version_inventory(bucket, endpoint):
     options = dr.s3_options(endpoint)
     versioning = json.loads(execute(["aws", *options, "s3api", "get-bucket-versioning",
                                      "--bucket", bucket, "--output", "json"]))
-    require(versioning.get("Status") == "Enabled", "S3 bucket versioning must be enabled")
+    require(versioning.get("Status") == "Enabled", "В бакете S3 должно быть включено версионирование")
     rows = []
     marker = None
     seen_markers = set()
@@ -285,10 +285,10 @@ def s3_version_inventory(bucket, endpoint):
         for kind in ("Versions", "DeleteMarkers"):
             for entry in payload.get(kind, []):
                 require(isinstance(entry.get("Key"), str) and isinstance(entry.get("VersionId"), str)
-                        and isinstance(entry.get("IsLatest"), bool), "invalid S3 version inventory")
+                        and isinstance(entry.get("IsLatest"), bool), "Недопустимая инвентаризация версий S3")
                 rows.append((kind, entry["Key"], entry["VersionId"], entry["IsLatest"],
                              entry.get("Size") if kind == "Versions" else None))
-        require(len(rows) <= 2_000_000, "S3 inventory exceeds bounded backup capacity")
+        require(len(rows) <= 2_000_000, "Инвентаризация S3 превышает допустимый объём резервного копирования")
         if not payload.get("IsTruncated", False):
             break
         next_marker = (payload.get("NextKeyMarker"), payload.get("NextVersionIdMarker"))
@@ -301,7 +301,7 @@ def s3_version_inventory(bucket, endpoint):
 
 def tree_files(folder):
     result = {}
-    require(folder.is_dir() and not folder.is_symlink(), "missing/unsafe backup tree")
+    require(folder.is_dir() and not folder.is_symlink(), "Дерево резервной копии отсутствует или небезопасно")
     for entry in folder.rglob("*"):
         st = entry.lstat()
         require(not stat.S_ISLNK(st.st_mode) and (stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode)),
@@ -313,7 +313,7 @@ def tree_files(folder):
 
 
 def archive_payload_file(folder, source):
-    require(source.is_file() and not source.is_symlink(), "backup payload missing")
+    require(source.is_file() and not source.is_symlink(), "Данные резервной копии отсутствуют")
     return {"size": source.stat().st_size, "sha256": dr.sha256_file(source)}
 
 
@@ -327,23 +327,23 @@ def read_private_json(path):
 def world_spec(path):
     # Произвольные строки команд запрещены: каждое удалённое задание вызывает реальный CLI Launcher.
     spec = read_private_json(path)
-    require(isinstance(spec, list) and len(spec) > 0, "at least one game world is required")
+    require(isinstance(spec, list) and len(spec) > 0, "Необходим хотя бы один игровой мир")
     seen = set()
     for row in spec:
         require(isinstance(row, dict) and set(row) == {"name", "target", "serverRoot", "backupRoot", "world"},
-                "invalid world host specification")
+                "Недопустимое описание узла игрового мира")
         require(bool(NAME.fullmatch(row["name"])) and row["name"] not in seen and
-                bool(multi.HOST_REGEX.fullmatch(row["target"])), "invalid/duplicate world target")
+                bool(multi.HOST_REGEX.fullmatch(row["target"])), "Недопустимый или повторяющийся целевой игровой мир")
         for field in ("serverRoot", "backupRoot"):
             require(isinstance(row[field], str) and row[field].startswith("/") and
                     ".." not in Path(row[field]).parts, "unsafe world host path")
-        require(bool(NAME.fullmatch(row["world"])), "invalid world name")
+        require(bool(NAME.fullmatch(row["world"])), "Недопустимое имя игрового мира")
         seen.add(row["name"])
     return spec
 
 
 def local_world_create(cli, server_root, backup_root, world, run_id):
-    require(cli.startswith("/") and Path(cli).is_file() and not Path(cli).is_symlink(), "missing trusted CLI executable")
+    require(cli.startswith("/") and Path(cli).is_file() and not Path(cli).is_symlink(), "Отсутствует доверенный исполняемый файл CLI")
     require(server_root.startswith("/") and backup_root.startswith("/") and
             bool(NAME.fullmatch(world)) and bool(RUN_ID.fullmatch(run_id)),
             "unsafe world backup input")
@@ -365,7 +365,7 @@ def local_world_create(cli, server_root, backup_root, world, run_id):
 def local_world_release(cli, server_root, run_id):
     require(cli.startswith("/") and Path(cli).is_file() and not Path(cli).is_symlink()
             and server_root.startswith("/") and bool(RUN_ID.fullmatch(run_id)),
-            "invalid world release request")
+            "Недопустимый запрос выпуска игрового мира")
     execute([cli, "server-bridge", "host", "world-backup", "release",
              "--server-root", server_root, "--hold-id", run_id], timeout=60)
     return {"status": "world-released", "holdId": run_id}
@@ -381,7 +381,7 @@ def local_world_stream(backup_root, backup_id):
     except subprocess.TimeoutExpired:
         proc.kill(); proc.communicate()
         raise BackupError("Превышено время ожидания архивации игрового мира")
-    require(proc.returncode == 0, "world archive failed")
+    require(proc.returncode == 0, "Архивация игрового мира завершилась ошибкой")
 
 
 def unpack_safe_tar(path: Path, dest: Path):
@@ -400,10 +400,10 @@ def unpack_safe_tar(path: Path, dest: Path):
             if entry.isdir():
                 target.mkdir(parents=True, exist_ok=True, mode=0o700)
             else:
-                require(target.parent.is_dir() and not target.is_symlink(), "invalid archive parent")
-                require(entry.size >= 0 and entry.size < (1 << 43), "invalid archive size")
+                require(target.parent.is_dir() and not target.is_symlink(), "Недопустимый родительский каталог архива")
+                require(entry.size >= 0 and entry.size < (1 << 43), "Недопустимый размер архива")
                 source = archive.extractfile(entry)
-                require(source is not None, "invalid archive file")
+                require(source is not None, "Недопустимый файл архива")
                 with source, target.open("xb") as output:
                     shutil.copyfileobj(source, output, STREAM_CHUNK)
                 os.chmod(target, 0o600)
@@ -441,19 +441,19 @@ def remote_json(target, script, action, *, directory, project, run_id, extras=()
 
 
 def validate_backup(folder, *, stanza=None):
-    require(folder.is_dir() and not folder.is_symlink(), "backup directory missing/unsafe")
+    require(folder.is_dir() and not folder.is_symlink(), "Каталог резервной копии отсутствует или небезопасен")
     path = folder / "manifest.json"
     try:
         document = json.loads(safe_file(path, max_size=8 * 1024 * 1024))
     except (ValueError, UnicodeError, OSError) as exc:
         raise BackupError("Некорректное значение: «backup manifest»") from exc
     require(document.get("schema") == SCHEMA and bool(RUN_ID.fullmatch(str(document.get("runId", "")))),
-            "unsupported backup format")
+            "Неподдерживаемый формат резервной копии")
     expected = document.get("files")
-    require(isinstance(expected, dict) and expected, "missing backup file hashes")
+    require(isinstance(expected, dict) and expected, "Отсутствуют хеши файлов резервной копии")
     actual = tree_files(folder)
     actual.pop("manifest.json", None)
-    require(expected == actual, "backup payload checksum/inventory mismatch")
+    require(expected == actual, "Несовпадение контрольных сумм данных резервной копии и инвентаризации")
     require(document.get("postgres", {}).get("backup", {}).get("label") and
             len(document.get("nodes", [])) >= 2 and len(document.get("worlds", [])) >= 1,
             "backup lacks PostgreSQL, nodes or worlds")
@@ -467,7 +467,7 @@ def validate_backup(folder, *, stanza=None):
         require(dr.sha256_file(world_path / "manifest.json") == row["manifestSha256"],
                 "world receipt changed")
     s3_inventory = folder / "s3-versions.json"
-    require(s3_inventory.is_file() and not s3_inventory.is_symlink(), "S3 version inventory missing")
+    require(s3_inventory.is_file() and not s3_inventory.is_symlink(), "Отсутствует инвентаризация версий S3")
     require(hashlib.sha256(json.dumps(json.loads(s3_inventory.read_text()),
                                    separators=(",", ":")).encode()).hexdigest() ==
             document["s3"]["versionInventorySha256"], "S3 version inventory changed")
@@ -479,32 +479,32 @@ def validate_backup(folder, *, stanza=None):
         info = pg_info(stanza)
         found = [x for x in info.get("backup", []) if x.get("label") == document["postgres"]["backup"]["label"]]
         require(len(found) == 1 and found[0].get("archive") == document["postgres"]["backup"]["archive"],
-                "PITR backup/WAL range missing from repository")
+                "В хранилище отсутствует резервная копия PITR или диапазон WAL")
     return {"status": "verified", "runId": document["runId"],
             "physicalBackup": document["postgres"]["backup"]["label"], "files": len(expected)}
 
 
 def orchestrate(args):
-    require(args.acknowledge_maintenance, "explicit --acknowledge-maintenance is required")
-    require(bool(RUN_ID.fullmatch(args.run_id)), "invalid run identifier")
+    require(args.acknowledge_maintenance, "Требуется явное подтверждение --acknowledge-maintenance")
+    require(bool(RUN_ID.fullmatch(args.run_id)), "Недопустимый идентификатор запуска")
     nodes = multi.parse_nodes(args.node)
-    require(bool(multi.PROJECT_REGEX.fullmatch(args.project)), "invalid project")
-    require(args.directory.startswith("/") and not args.directory.endswith("/.."), "invalid deployment directory")
-    require(bool(multi.DIGEST_REGEX.fullmatch(args.tar_image)), "immutable tar OCI image required")
-    require(bool(PG_STANZA.fullmatch(args.stanza)), "invalid pgBackRest stanza")
+    require(bool(multi.PROJECT_REGEX.fullmatch(args.project)), "Недопустимый проект")
+    require(args.directory.startswith("/") and not args.directory.endswith("/.."), "Недопустимый каталог развёртывания")
+    require(bool(multi.DIGEST_REGEX.fullmatch(args.tar_image)), "Требуется неизменяемый tar-образ OCI")
+    require(bool(PG_STANZA.fullmatch(args.stanza)), "Недопустимая конфигурация pgBackRest stanza")
     worlds = world_spec(Path(args.world_file))
     trust = read_private_json(Path(args.trust_file))
     require(isinstance(trust, dict) and trust and all(isinstance(k, str) and HEX64.fullmatch(str(v)) for k,v in trust.items()),
-            "trust root escrow hashes must be explicit")
-    require(args.external_auth_policy in ("none", "included"), "external auth coverage must be explicit")
+            "Хеши доверенных корневых ключей в защищённом хранении необходимо указать явно")
+    require(args.external_auth_policy in ("none", "included"), "Необходимо явно определить охват внешней аутентификации")
     if args.external_auth_policy == "included":
-        require(args.external_source, "external auth sources required")
+        require(args.external_source, "Требуются источники внешней аутентификации")
     else:
         require(not args.external_source, "external source contradicts none policy")
     dest = Path(args.destination)
-    require(not dest.exists() and not dest.is_symlink(), "backup destination must be new")
+    require(not dest.exists() and not dest.is_symlink(), "Путь назначения резервной копии должен быть новым")
     require(dest.parent.is_dir() and stat.S_IMODE(dest.parent.stat().st_mode) & 0o077 == 0,
-            "backup parent must be private (0700)")
+            "Родительский каталог резервной копии должен иметь права 0700")
     start = datetime.now(timezone.utc)
     stage = Path(tempfile.mkdtemp(prefix=".cohort-0518-", dir=dest.parent))
     os.chmod(stage, 0o700)
@@ -521,7 +521,7 @@ def orchestrate(args):
             report = remote_json(host, args.remote_script, "local-freeze", directory=args.directory,
                                  project=args.project, run_id=args.run_id, timeout=240)
             require(report.get("status") == "frozen" and report.get("runId") == args.run_id,
-                    "remote host could not be frozen")
+                    "Не удалось заморозить удалённый узел")
             frozen_reports.append(report)
         require(len({r.get("nodeId") for r in frozen_reports}) == len(nodes) and
                 len({r.get("machineIdentity") for r in frozen_reports}) == len(nodes) and
@@ -546,7 +546,7 @@ def orchestrate(args):
             require(data.get("holdId") == args.run_id, "game host did not retain the launch gate")
             moment = datetime.fromisoformat(data["createdAt"].replace("Z", "+00:00"))
             require(moment >= frozen_at and moment <= datetime.now(timezone.utc),
-                    "world snapshot was not created within the frozen backup window")
+                    "Снимок игрового мира не был создан в период заморозки резервного копирования")
             name = row["name"]
             wid = data["backupId"]
             loc = stage / "worlds" / name
@@ -569,7 +569,7 @@ def orchestrate(args):
             env = nn.dsn_environment(Path(args.pg_dsn_file))
             proc = subprocess.run(["pg_dump", "--format=custom", "--no-owner", "--no-acl"],
                                   env=env, stdout=fd, stderr=subprocess.PIPE, timeout=3600, check=False)
-            require(proc.returncode == 0, "PostgreSQL logical identity dump failed")
+            require(proc.returncode == 0, "Логическая выгрузка учётных записей PostgreSQL завершилась ошибкой")
         execute(["pg_restore", "--list", str(stage / "identity-and-metadata.dump")], timeout=120)
         s3_before = s3_version_inventory(args.s3_bucket, args.s3_endpoint)
         # Всё локальное устойчивое состояние каждого узла считывается, пока запись остановлена.
@@ -619,12 +619,12 @@ def orchestrate(args):
                        hashlib.sha256(json.dumps(s3_before, separators=(",", ":")).encode()).hexdigest(),
                        "files": s3_files},
                 "trustEscrowSha256": trust, "externalAuthPolicy": args.external_auth_policy,
-                "limitations": "PITR other than cohort point is PostgreSQL-only; game worlds/S3 require matching checkpoint",
+                "limitations": "PITR вне общей контрольной точки применим только к PostgreSQL; игровые миры и S3 требуют соответствующей контрольной точки",
                 "files": {}}
         for entry in args.external_source:
             key, sep, path = entry.partition("=")
             require(sep and bool(NAME.fullmatch(key)) and Path(path).is_file() and not Path(path).is_symlink(),
-                    "invalid external provider source")
+                    "Недопустимый источник внешнего провайдера")
             dest_file = stage / "external" / key
             dest_file.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             with Path(path).open("rb") as src, dest_file.open("xb") as target:
@@ -652,7 +652,7 @@ def orchestrate(args):
                                      extras=("--world-cli", args.world_cli,
                                              "--server-root", row["serverRoot"]), timeout=90)
                 require(result.get("status") == "world-released" and
-                        result.get("holdId") == args.run_id, "world launch gate was not released")
+                        result.get("holdId") == args.run_id, "Блокировка запуска игрового мира не снята")
             except (BackupError, ValueError):
                 resume_errors.append(row["name"] + "(world-gate)")
         # Возобновляйте службы даже при ошибке, но НЕ заявляйте об успехе, если перезапуск не удался. Никогда не
@@ -678,30 +678,30 @@ def restore_pg_fresh(args):
     data = read_private_json(Path(args.backup) / "manifest.json")
     require(data.get("schema") == SCHEMA, "wrong backup manifest")
     label = data.get("postgres", {}).get("backup", {}).get("label", "")
-    require(bool(BACKUP_LABEL.fullmatch(label)), "invalid physical backup label")
+    require(bool(BACKUP_LABEL.fullmatch(label)), "Недопустимая метка физической резервной копии")
     require(args.confirm == label, "PITR restore requires exact --confirm backup label")
     target = Path(args.pgdata)
     require(target.is_absolute() and not target.exists() and not target.is_symlink(),
-            "PostgreSQL restore destination must be absent (fresh host)")
+            "Каталог восстановления PostgreSQL должен отсутствовать (чистый узел)")
     parent = target.parent
-    require(parent.is_dir() and not parent.is_symlink(), "restore parent must be a real directory")
+    require(parent.is_dir() and not parent.is_symlink(), "Родительский каталог восстановления должен быть настоящим каталогом")
     for ancestor in (parent, *parent.parents):
         require(not ancestor.is_symlink(), "symlink in restore destination ancestry")
     require(bool(PG_STANZA.fullmatch(args.stanza)) and args.stanza == data["postgres"]["backup"]["stanza"],
-            "restore stanza mismatch")
+            "Несовпадение конфигурации stanza при восстановлении")
     validate_backup(Path(args.backup), stanza=args.stanza)
     if args.action == "cohort-pg-restore-fresh":
         # Восстанавливайте ТОЧНЫЙ LSN, закреплённый вместе со снимком S3/миров; нельзя незаметно продвигать
         # PostgreSQL дальше согласованной группы.
         lsn = data["postgres"].get("cohortLsn", "")
-        require(bool(re.fullmatch(r"[0-9A-F]+/[0-9A-F]+", lsn)), "invalid cohort LSN")
+        require(bool(re.fullmatch(r"[0-9A-F]+/[0-9A-F]+", lsn)), "Недопустимый общий LSN")
         recovery = ("--type=lsn", "--target=" + lsn)
         target_desc = lsn
     else:
         require(args.target_time and args.pg_only_reconciliation_ack,
                 "non-cohort PostgreSQL PITR requires explicit reconciliation acknowledgement")
         date = datetime.fromisoformat(args.target_time.replace("Z", "+00:00"))
-        require(date.tzinfo is not None, "PITR time must include time zone")
+        require(date.tzinfo is not None, "Время PITR должно содержать часовой пояс")
         recovery = ("--type=time", "--target=" + date.isoformat(sep=" "))
         target_desc = date.astimezone(timezone.utc).isoformat()
     # pgBackRest восстанавливает файлы данных и конфигурацию восстановления, но НЕ воспроизводит WAL до
@@ -709,7 +709,7 @@ def restore_pg_fresh(args):
     # прежнего кластера.
     tablespaces = target.with_name(target.name + "-tablespaces")
     require(not tablespaces.exists() and not tablespaces.is_symlink(),
-            "fresh PostgreSQL tablespace destination already exists")
+            "Целевой каталог нового табличного пространства PostgreSQL уже существует")
     pgbackrest(args.stanza, "--pg1-path=" + str(target), "--tablespace-map-all=" + str(tablespaces),
                "--set=" + label, *recovery, "--target-action=pause", "restore")
     require(target.is_dir() and (target / "PG_VERSION").is_file(),

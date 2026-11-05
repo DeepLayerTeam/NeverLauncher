@@ -144,7 +144,7 @@ func factoryRead02710(root, id string) (factoryBuilderJob02710, string, error) {
 	if job.State == "running" || job.State == "verifying" || job.State == "queued" {
 		if _, live := factoryProcesses02710.Load(id); !live && (job.State != "queued" || time.Since(job.UpdatedAt) > time.Minute) {
 			job.State = "interrupted"
-			job.Error = "Worker interrupted; create a new job. Partial output is not publishable."
+			job.Error = "Обработчик прервал работу; создайте новое задание. Частичный результат нельзя публиковать."
 		}
 	}
 	return job, dir, nil
@@ -253,7 +253,7 @@ func factoryRun02710(binary, root string, job factoryBuilderJob02710) {
 	logfile, err := os.OpenFile(filepath.Join(dir, "execution.log"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		job.State = "failed"
-		job.Error = "cannot open execution journal"
+		job.Error = "Не удалось открыть журнал выполнения"
 		_ = factorySave02710(dir, job)
 		return
 	}

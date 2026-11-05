@@ -186,7 +186,7 @@ func family0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 			return revoked
 		}
 		return nil
-	}(), time.Now().UTC(), "SQLite migration: reauthentication required", status)
+	}(), time.Now().UTC(), "Миграция SQLite: требуется повторная аутентификация", status)
 	return e
 }
 func refresh0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
@@ -373,7 +373,7 @@ func minecraftSession0474(ctx context.Context, tx pgx.Tx, s map[string]any) erro
 	}
 	// После миграции токены доступа другого центра недействительны.
 	_, e = tx.Exec(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,core_original_status_0474,core_original_reason_0474)
-    VALUES($1,$2,$3,$4,$5,'revoked',$6,$6,$7,$8,$9,$10,$11)`, s["id"], s["user_id"], s["session_id"], s["profile_uuid"], hash, created, expires, time.Now().UTC(), "SQLite migration: new login required", status, s["revoked_reason"])
+    VALUES($1,$2,$3,$4,$5,'revoked',$6,$6,$7,$8,$9,$10,$11)`, s["id"], s["user_id"], s["session_id"], s["profile_uuid"], hash, created, expires, time.Now().UTC(), "Миграция SQLite: требуется новый вход", status, s["revoked_reason"])
 	return e
 }
 func revocation0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {

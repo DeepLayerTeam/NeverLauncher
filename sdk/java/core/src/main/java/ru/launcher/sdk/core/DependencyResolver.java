@@ -6,12 +6,12 @@ import java.util.*;
 public final class DependencyResolver {
     private DependencyResolver() {}
     public static List<ExtensionManifest> resolve(Collection<ExtensionManifest> available, Collection<ExtensionManifest.Dependency> roots) {
-        if(available.size()>4096||roots.size()>2048)throw new IllegalArgumentException("dependency graph exceeds size limit");
+        if(available.size()>4096||roots.size()>2048)throw new IllegalArgumentException("Граф зависимостей превышает ограничение размера");
         Map<String,List<ExtensionManifest>> byId=new HashMap<>();
         for(ExtensionManifest m:available)byId.computeIfAbsent(m.id(),k->new ArrayList<>()).add(m);
         for(List<ExtensionManifest> items:byId.values())items.sort(Comparator.comparing(ExtensionManifest::version).reversed());
         Map<String,ExtensionManifest> selected=search(byId,new LinkedHashMap<>(),new ArrayList<>(roots),0);
-        if(selected==null)throw new IllegalArgumentException("no compatible dependency solution");
+        if(selected==null)throw new IllegalArgumentException("Не найден совместимый набор зависимостей");
         List<ExtensionManifest> ordered=new ArrayList<>();Set<String> visited=new HashSet<>(),visiting=new HashSet<>();
         for(String id:selected.keySet())visit(id,selected,visited,visiting,ordered);
         return List.copyOf(ordered);

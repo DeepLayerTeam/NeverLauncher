@@ -887,7 +887,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
                 }
             }
         }
-        let active = pointer(&root)?.active.ok_or("no active release")?;
+        let active = pointer(&root)?.active.ok_or("Нет активного релиза")?;
         if active.manifest.game_release_generation > 0 { return Err("Для отката игры требуется новый подписанный gameReleaseGeneration; опубликуйте прежнее содержимое как новый релиз".into()); }
         if active.id != j.next.id { return Err("Последняя работоспособная версия не соответствует предыдущему активному релизу".into()); }
         if !verify_installed(&root, &active)? { return Err("Текущий релиз изменён; перезапись локальных изменений отклонена".into()); }
@@ -1001,7 +1001,7 @@ mod tests {
         fs::create_dir_all(source.join("mods")).unwrap();
         fs::write(source.join("mods/a.jar"),b"CORRUPTED").unwrap();
         let error=adopt_verified_staged(&manifest,&source,&root,&key,None).await.unwrap_err();
-        assert!(error.contains("digest mismatch"),"{error}");
+        assert!(error.contains("Несовпадение хеша"),"{error}");
         assert!(pointer(&root).unwrap().active.is_none());
         assert!(!root.join("mods/a.jar").exists());
         let _=fs::remove_dir_all(parent);

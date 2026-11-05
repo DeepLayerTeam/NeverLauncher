@@ -367,7 +367,7 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         return Err("Недопустимый локальный файл манифеста Managed JRE".to_string());
     }
     let bytes = fs::read(&canonical).await.map_err(|err| format!("Ошибка чтения манифеста Managed JRE: {err}"))?;
-    let base = canonical.parent().ok_or_else(|| "Managed JRE manifest has no parent directory".to_string())?.to_path_buf();
+    let base = canonical.parent().ok_or_else(|| "У манифеста управляемой JRE нет родительского каталога".to_string())?.to_path_buf();
     Ok((bytes, DistributionArchiveBase::Local(base)))
 }
 
@@ -1467,7 +1467,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     }
     // JVM должна использовать собственные библиотеки среды выполнения образа. Обёртка, запускающая постороннюю системную Java, не является управляемой установкой.
     let packaged_home = java.parent().and_then(Path::parent)
-        .ok_or_else(|| "Managed Java executable is not under bin/".to_string())?;
+        .ok_or_else(|| "Исполняемый файл управляемой Java находится вне каталога bin/".to_string())?;
     let packaged_home = std::fs::canonicalize(packaged_home)
         .map_err(|e| format!("Корневой каталог пакета управляемой Java: {e}"))?;
     let actual_home = std::fs::canonicalize(parts[3])
@@ -1735,7 +1735,7 @@ mod tests {
     #[test]
     fn managed_java_ii_major_policy_is_exact() {
         for major in MANAGED_JAVA_MAJORS {
-            assert!(validate_managed_java_major(major).is_ok(), "Java {major} must be managed");
+            assert!(validate_managed_java_major(major).is_ok(), "Java {major} должна быть управляемой");
         }
         for major in [7, 11, 22, 26] {
             assert!(validate_managed_java_major(major).is_err(), "Для Java {major} требуется: «rejected»");

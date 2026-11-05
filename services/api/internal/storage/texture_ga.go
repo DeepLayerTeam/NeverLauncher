@@ -37,7 +37,7 @@ func VerifyTextureGA0260(ctx context.Context, store Storage, obj TextureBackupOb
 		return TextureVerification02511{Digest: obj.Digest, Result: "unavailable", Detail: err.Error()}
 	}
 	if len(content) > texturepng.MaxEncodedBytes || (size >= 0 && int64(len(content)) != size) {
-		return TextureVerification02511{Digest: obj.Digest, Result: "corrupt", Detail: "texture exceeds PNG limit or declared byte size"}
+		return TextureVerification02511{Digest: obj.Digest, Result: "corrupt", Detail: "Текстура превышает ограничение PNG или заявленный размер"}
 	}
 	// Сам PNG не кодирует выбор classic/slim. Оба варианта имеют
 	// одинаковую допустимую геометрию скина 64x64. Ресурс 64x32 может быть старым скином

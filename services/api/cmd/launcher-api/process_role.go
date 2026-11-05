@@ -73,7 +73,7 @@ func workerProbeHandler0455(last *atomic.Int64, backend http.Handler) http.Handl
 	})
 	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {
 		if !workerReady0455(last, time.Now()) {
-			http.Error(w, "worker has no recent successful PostgreSQL poll", http.StatusServiceUnavailable)
+			http.Error(w, "У обработчика нет недавнего успешного опроса PostgreSQL", http.StatusServiceUnavailable)
 			return
 		}
 		if backend != nil {

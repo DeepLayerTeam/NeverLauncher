@@ -139,7 +139,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		opts[i] = obj
 		name, ok := gravitString02411(obj["name"])
 		if !ok || strings.TrimSpace(name) == "" || len(name) > 256 || strings.IndexFunc(name, unicode.IsControl) >= 0 {
-			note(label+".name", "blocked", "", "nonempty valid name required")
+			note(label+".name", "blocked", "", "Требуется непустое допустимое имя")
 			continue
 		}
 		if _, dup := names[name]; dup {
@@ -148,7 +148,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		}
 		id := gravitID02411("gravit-", name)
 		if existingIDs[id] {
-			note(label+".name", "blocked", "", "stable ID already exists in catalog")
+			note(label+".name", "blocked", "", "Устойчивый идентификатор уже существует в каталоге")
 			continue
 		}
 		names[name] = id
@@ -189,7 +189,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 				c.Description = s
 				note(label+".info", "mapped", "components."+id+".description", "description")
 			} else {
-				note(label+".info", "blocked", "", "invalid description")
+				note(label+".info", "blocked", "", "Недопустимое описание")
 			}
 		}
 		for _, field := range []string{"mark", "visible", "limited"} {
@@ -207,7 +207,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 				case "limited":
 					c.Limited = b
 					if b {
-						note(label+".limited", "blocked", "", "Gravit permission mask cannot be imported as verified Never entitlements")
+						note(label+".limited", "blocked", "", "Маску разрешений Gravit нельзя импортировать как подтверждённые права Never")
 						continue
 					}
 				}
@@ -217,7 +217,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if v, has := obj["permissions"]; has {
 			n, ok := gravitInt02411(v)
 			if !ok || n != 0 {
-				note(label+".permissions", "blocked", "", "Gravit permission bitmask cannot grant Never permissions")
+				note(label+".permissions", "blocked", "", "Битовая маска разрешений Gravit не может предоставлять права Never")
 			} else {
 				note(label+".permissions", "mapped", "", "zero permissions")
 			}
@@ -225,7 +225,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if v, has := obj["category"]; has && !bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
 			s, ok := gravitString02411(v)
 			if !ok || len(s) > 120 || strings.IndexFunc(s, unicode.IsControl) >= 0 {
-				note(label+".category", "blocked", "", "invalid category")
+				note(label+".category", "blocked", "", "Недопустимая категория")
 			} else if s != "" && !strings.EqualFold(s, "GLOBAL") {
 				cid := gravitID02411("gravit-category-", s)
 				c.CategoryID = cid
@@ -239,9 +239,9 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if v, has := obj["subTreeLevel"]; has {
 			n, ok := gravitInt02411(v)
 			if !ok || n < 0 || n > 32 {
-				note(label+".subTreeLevel", "blocked", "", "invalid nesting level")
+				note(label+".subTreeLevel", "blocked", "", "Недопустимый уровень вложенности")
 			} else if n > 1 {
-				note(label+".subTreeLevel", "manual", "groups", "visual indentation has no semantic parent identity; review nested groups")
+				note(label+".subTreeLevel", "manual", "groups", "Визуальный отступ не определяет родительскую сущность; проверьте вложенные группы")
 			}
 		}
 		for _, rel := range []struct {
@@ -263,7 +263,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					}
 					for k := range r {
 						if k != "name" {
-							note(fld+"."+k, "blocked", "", "unsupported relation attribute")
+							note(fld+"."+k, "blocked", "", "Неподдерживаемый атрибут отношения")
 						}
 					}
 					rn, ok := gravitString02411(r["name"])
@@ -284,7 +284,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if v, has := obj["triggers"]; has && !bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
 			a, err := gravitArray02411(v)
 			if err != nil || len(a) > 0 {
-				note(label+".triggers", "blocked", "", "legacy triggers semantics unsupported; use recognized triggersList")
+				note(label+".triggers", "blocked", "", "Семантика устаревших триггеров не поддерживается; используйте распознаваемый triggersList")
 			}
 		}
 		if v, has := obj["triggersList"]; has && !bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
@@ -309,7 +309,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						inverted, iok = gravitBool02411(raw)
 					}
 					if !ok || !rok || !iok || !required || inverted || seen[kind] {
-						note(fld, "blocked", "", "only distinct non-inverted required os/java/arch predicates preserve Never availability semantics")
+						note(fld, "blocked", "", "Только отдельные обязательные, неинвертированные условия os/java/arch сохраняют семантику доступности Never")
 						continue
 					}
 					seen[kind] = true
@@ -329,7 +329,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							valid = false
 						}
 						if !valid {
-							note(fld, "blocked", "", "unsupported Gravit OS")
+							note(fld, "blocked", "", "Неподдерживаемая ОС Gravit")
 							continue
 						}
 					case "arch":
@@ -344,7 +344,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							valid = false
 						}
 						if !valid {
-							note(fld, "blocked", "", "unsupported Gravit architecture")
+							note(fld, "blocked", "", "Неподдерживаемая архитектура Gravit")
 							continue
 						}
 					case "java":
@@ -362,12 +362,12 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						if raw, has := t["requireJavaFX"]; has {
 							fx, ok := gravitBool02411(raw)
 							if !ok || fx {
-								note(fld, "blocked", "", "JavaFX runtime requirement cannot be verified as a Never condition")
+								note(fld, "blocked", "", "Требование JavaFX Runtime нельзя проверить как условие Never")
 								continue
 							}
 						}
 						if !okMin || !okMax || min < 0 || max < 0 || min > 99 || max > 999 || (max != 999 && max != 0 && max < min) {
-							note(fld, "blocked", "", "invalid Java major range")
+							note(fld, "blocked", "", "Недопустимый диапазон основных версий Java")
 							continue
 						}
 						cond.JavaMajorMin = uint32(min)
@@ -375,7 +375,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							cond.JavaMajorMax = uint32(max)
 						}
 					default:
-						note(fld, "blocked", "", "unsupported trigger type")
+						note(fld, "blocked", "", "Неподдерживаемый тип триггера")
 						continue
 					}
 					for k := range t {
@@ -383,7 +383,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							note(fld+"."+k, "blocked", "", "unknown trigger field")
 						}
 					}
-					note(fld, "transformed", "components."+id+".conditions", "required trigger mapped to signed availability predicate")
+					note(fld, "transformed", "components."+id+".conditions", "Обязательный триггер сопоставлен с подписанным условием доступности")
 				}
 				if len(cond.OS) > 0 || len(cond.Arch) > 0 || cond.JavaMajorMin > 0 || cond.JavaMajorMax > 0 {
 					c.Conditions = &cond
@@ -411,7 +411,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					}
 					typ, ok := gravitString02411(a["type"])
 					if !ok {
-						note(fld, "blocked", "", "missing action type")
+						note(fld, "blocked", "", "Отсутствует тип действия")
 						continue
 					}
 					lower := strings.ToLower(typ)
@@ -427,13 +427,13 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							}
 							var paths []string
 							if json.Unmarshal(a["args"], &paths) != nil || len(paths) == 0 || len(paths) > 64 {
-								note(fld, "blocked", "", "invalid classpath args")
+								note(fld, "blocked", "", "Недопустимые аргументы classpath")
 								continue
 							}
 							if v, has := a["useAltClasspath"]; has {
 								alt, ok := gravitBool02411(v)
 								if !ok || alt {
-									note(fld, "blocked", "", "alternate system classpath is not equivalent to Never signed classpath")
+									note(fld, "blocked", "", "Альтернативный системный classpath не эквивалентен подписанному classpath Never")
 									continue
 								}
 							}
@@ -442,17 +442,17 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						}
 						for k := range a {
 							if k != "type" && k != "files" {
-								note(fld+"."+k, "blocked", "", "unsupported file action field")
+								note(fld+"."+k, "blocked", "", "Неподдерживаемое поле файлового действия")
 							}
 						}
 						rawFiles := a["files"]
 						if len(rawFiles) == 0 {
-							note(fld, "blocked", "", "missing files map")
+							note(fld, "blocked", "", "Отсутствует карта файлов")
 							continue
 						}
 						fm, e := gravitObject02210(rawFiles)
 						if e != nil || len(fm) == 0 {
-							note(fld, "blocked", "", "expected nonempty file path map")
+							note(fld, "blocked", "", "Ожидалась непустая карта путей к файлам")
 							continue
 						}
 						paths := make([]string, 0, len(fm))
@@ -463,11 +463,11 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						for _, sourcePath := range paths {
 							v, ok := gravitString02411(fm[sourcePath])
 							if !ok {
-								note(fld+".files."+sourcePath, "blocked", "", "file destination must be string")
+								note(fld+".files."+sourcePath, "blocked", "", "Путь назначения файла должен быть строкой")
 								continue
 							}
 							if v != "" && v != sourcePath {
-								note(fld+".files."+sourcePath, "blocked", "", "file relocation/rename cannot be proven equivalent to signed managed ownership")
+								note(fld+".files."+sourcePath, "blocked", "", "Нельзя подтвердить, что перенос или переименование файла сохраняет эквивалентность подписанному управляемому владению")
 								continue
 							}
 							if !gravitSafePath02210(sourcePath) || gravitProtected02210(sourcePath) {
@@ -492,7 +492,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						}
 						var args []string
 						if json.Unmarshal(a["args"], &args) != nil || len(args) == 0 || len(args) > 32 {
-							note(fld, "blocked", "", "invalid args array")
+							note(fld, "blocked", "", "Недопустимый массив аргументов")
 							continue
 						}
 						kind := "JvmArgs"
@@ -506,13 +506,13 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							}
 						}
 						if !valid {
-							note(fld, "blocked", "", "unsafe or unsupported Never argument; no command execution or auth override permitted")
+							note(fld, "blocked", "", "Небезопасный или неподдерживаемый аргумент Never; выполнение команд и переопределение аутентификации запрещены")
 							continue
 						}
 						c.Actions = append(c.Actions, ComponentAction0245{Type: kind, Args: args})
 						note(fld, "mapped", "components."+id+".actions", "safe signed argument action")
 					default:
-						note(fld, "blocked", "", "unsupported optional action type "+typ)
+						note(fld, "blocked", "", "Неподдерживаемый тип дополнительного действия "+typ)
 					}
 				}
 				for _, cp := range pendingCP {
@@ -525,7 +525,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							}
 						}
 						if !found || !strings.HasSuffix(strings.ToLower(p), ".jar") {
-							note(cp.field, "blocked", "", "classpath entries require a signed JAR owned by the same component: "+p)
+							note(cp.field, "blocked", "", "Элементы classpath требуют подписанный JAR, принадлежащий тому же компоненту: "+p)
 							continue
 						}
 						c.Actions = append(c.Actions, ComponentAction0245{Type: "ClassPath", Path: p})
@@ -535,13 +535,13 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 			}
 		}
 		if len(c.Files) == 0 {
-			note(label, "blocked", "", "Never components require one or more staged, signed optional files")
+			note(label, "blocked", "", "Для компонентов Never требуется один или несколько подготовленных подписанных дополнительных файлов")
 		}
 		cat.Components = append(cat.Components, c)
 	}
 	for _, f := range signedFiles {
 		if FileOwnership0224(f) == "optional" && !owned[strings.ToLower(f.Path)] {
-			note("files."+f.Path, "blocked", "", "staged optional file has no component owner; assign in editor before signing")
+			note("files."+f.Path, "blocked", "", "У подготовленного дополнительного файла нет компонента-владельца; назначьте его в редакторе до подписания")
 		}
 	}
 	cat = NewComponentCatalog0245(cat, base.Revision+1)

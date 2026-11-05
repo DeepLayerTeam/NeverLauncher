@@ -80,7 +80,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 		if passkeys > 0 {
 			return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 		}
-		return loginMFAResult117{}, errors.New("MFA is required but no usable method is configured")
+		return loginMFAResult117{}, errors.New("Требуется MFA, но ни один доступный метод не настроен")
 	}
 	return loginMFAResult117{Methods: methods, Strength: strength}, nil
 }

@@ -18,9 +18,9 @@ public final class RuntimeStateMigrations {
 
     RuntimeStateMigrations(RuntimeDocuments config,RuntimeDocuments storage){this.config=config;this.storage=storage;}
     public synchronized void register(String fromVersion,String toVersion,Migration migration){
-        if(executing)throw new IllegalStateException("cannot register migrations while upgrading");
+        if(executing)throw new IllegalStateException("Нельзя регистрировать миграции во время обновления");
         SemVer from=SemVer.parse(fromVersion),to=SemVer.parse(toVersion);
-        if(from.compareTo(to)>=0)throw new IllegalArgumentException("state migrations must advance versions");
+        if(from.compareTo(to)>=0)throw new IllegalArgumentException("Миграции состояния должны увеличивать версию");
         Objects.requireNonNull(migration,"migration");
         if(steps.putIfAbsent(from,new Step(to,migration))!=null)
             throw new IllegalArgumentException("duplicate migration starting at "+from);
@@ -41,7 +41,7 @@ public final class RuntimeStateMigrations {
                 if(++applied>32)throw new IllegalStateException("state migration chain too long");
                 Step step=steps.get(cursor);
                 if(step==null||step.target.compareTo(target)>0)
-                    throw new IllegalStateException("missing state migration from "+cursor+" to "+target);
+                    throw new IllegalStateException("Отсутствует миграция состояния с версии "+cursor+" to "+target);
                 step.migration.apply(config,storage);
                 cursor=step.target;
             }

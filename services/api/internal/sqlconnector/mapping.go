@@ -69,7 +69,7 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 	query := "SELECT " + strings.Join(projection, ", ") + " FROM " + quote(cfg.Table) + " WHERE 1 = 0"
 	rows, err := tx.QueryContext(inspectCtx, query)
 	if err != nil {
-		return nil, fmt.Errorf("SQL schema mismatch or insufficient SELECT privilege: %w", err)
+		return nil, fmt.Errorf("Несовпадение схемы SQL или недостаточно прав SELECT: %w", err)
 	}
 	types, err := rows.ColumnTypes()
 	if err != nil {

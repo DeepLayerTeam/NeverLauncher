@@ -124,7 +124,7 @@ func (s Server) beginOIDC115(r *http.Request, providerID, redirectURI, deviceID 
 		}
 	}
 	if strings.TrimSpace(redirectURI) == "" {
-		return authconnector.BrowserAuthStart{}, "", authconnector.NewError(authconnector.ErrMisconfigured, "OIDC redirect URI is required")
+		return authconnector.BrowserAuthStart{}, "", authconnector.NewError(authconnector.ErrMisconfigured, "Необходимо указать URI перенаправления OIDC")
 	}
 	state, err := randomURLToken115(32)
 	if err != nil {

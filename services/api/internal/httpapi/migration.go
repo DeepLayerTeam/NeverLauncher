@@ -39,7 +39,7 @@ func migrationRead0331[T any](w http.ResponseWriter, r *http.Request) (T, bool) 
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&v); err != nil {
-		writeError(w, 400, "invalid migration request JSON")
+		writeError(w, 400, "Недопустимый JSON запроса миграции")
 		return v, false
 	}
 	var trailing any
@@ -53,11 +53,11 @@ func migrationRead0331[T any](w http.ResponseWriter, r *http.Request) (T, bool) 
 func migrationHTTPError0331(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, mw.ErrNotFound):
-		writeError(w, 404, "migration run not found")
+		writeError(w, 404, "Запуск миграции не найден")
 	case errors.Is(err, mw.ErrBusy), errors.Is(err, mw.ErrConflict):
 		writeError(w, 409, err.Error())
 	default:
-		writeError(w, 503, "migration repository operation failed")
+		writeError(w, 503, "Операция с хранилищем миграции завершилась ошибкой")
 	}
 }
 func (s Server) migrationCreate0331(w http.ResponseWriter, r *http.Request) {
@@ -74,11 +74,11 @@ func (s Server) migrationCreate0331(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(req.ProjectID) < 1 || len(req.ProjectID) > 128 || len(req.IdempotencyKey) < 8 || len(req.IdempotencyKey) > 128 || req.SourceKind != "gravit" {
-		writeError(w, 400, "projectId, idempotencyKey (8..128), sourceKind=gravit required")
+		writeError(w, 400, "Требуются projectId, idempotencyKey (8..128) и sourceKind=gravit")
 		return
 	}
 	if _, err := s.Repo.GetProject(req.ProjectID); err != nil {
-		writeError(w, 404, "target project not found")
+		writeError(w, 404, "Целевой проект не найден")
 		return
 	}
 	run, err := store.CreateMigration0331(r.Context(), req.ProjectID, req.SourceKind, req.IdempotencyKey)
@@ -134,7 +134,7 @@ func (s Server) migrationEvents0331(w http.ResponseWriter, r *http.Request) {
 		err = nil
 	}
 	if err != nil || after < 0 {
-		writeError(w, 400, "invalid event cursor")
+		writeError(w, 400, "Недопустимый курсор событий")
 		return
 	}
 	events, err := store.MigrationEvents0331(r.Context(), id, after, 100)
@@ -200,7 +200,7 @@ func (s Server) migrationExecute0331(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < 2; i++ {
 		owner, err := migrationOwner0331()
 		if err != nil {
-			writeError(w, 503, "secure lease owner unavailable")
+			writeError(w, 503, "Владелец защищённой аренды недоступен")
 			return
 		}
 		lease, err := store.ClaimMigration0331(r.Context(), id, owner, 45*time.Second)
@@ -213,12 +213,12 @@ func (s Server) migrationExecute0331(w http.ResponseWriter, r *http.Request) {
 		}
 		result, err := s.migrationBaseline0331(r.Context(), lease.Run)
 		if err != nil {
-			_, failErr := store.FailMigration0331(r.Context(), lease, "baseline step failed: "+err.Error())
+			_, failErr := store.FailMigration0331(r.Context(), lease, "Ошибка базового этапа: "+err.Error())
 			if failErr != nil {
 				migrationHTTPError0331(w, failErr)
 				return
 			}
-			writeError(w, 409, "target baseline failed; inspect run and resume after repair")
+			writeError(w, 409, "Подготовка целевой системы завершилась ошибкой; изучите журнал запуска и продолжите после исправления")
 			return
 		}
 		run, err = store.CheckpointMigration0331(r.Context(), lease, lease.Run.Step, result)

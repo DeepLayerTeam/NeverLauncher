@@ -104,7 +104,7 @@ func (s Server) enforceProtection0298(w http.ResponseWriter, r *http.Request, st
 	if decision.Reason == "ban_store_unavailable" || decision.Reason == "policy_handler_unavailable" {
 		status = http.StatusServiceUnavailable
 	}
-	writeJSON(w, status, map[string]any{"error": map[string]any{"code": status, "message": "protection policy denied", "reason": decision.Reason, "action": decision.Action, "stage": stage}})
+	writeJSON(w, status, map[string]any{"error": map[string]any{"code": status, "message": "Политика защиты запретила действие", "reason": decision.Reason, "action": decision.Action, "stage": stage}})
 	return false
 }
 func (s Server) protectionBanStore0298() (repository.ProtectionBanStore, bool) {
@@ -130,7 +130,7 @@ func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := strings.TrimSpace(r.PathValue("userId"))
 	if userID == claims.Sub {
-		writeError(w, http.StatusForbidden, "cannot ban current administrator")
+		writeError(w, http.StatusForbidden, "Нельзя заблокировать текущего администратора")
 		return
 	}
 	if _, err := s.Repo.GetUser(userID); err != nil {
@@ -144,12 +144,12 @@ func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 
 	input.Reason = strings.TrimSpace(input.Reason)
 	if len(input.Reason) < 3 || len(input.Reason) > 512 || (input.ExpiresAt != nil && !input.ExpiresAt.After(time.Now().UTC())) {
-		writeError(w, http.StatusBadRequest, "reason length 3..512 and future expiry required")
+		writeError(w, http.StatusBadRequest, "Требуются причина длиной 3–512 символов и срок действия в будущем")
 		return
 	}
 	ban := repository.ProtectionBan{UserID: userID, Actor: claims.Sub, Reason: input.Reason, ExpiresAt: input.ExpiresAt}
 	if err := store.SetProtectionBan(r.Context(), ban); err != nil {
-		writeError(w, http.StatusServiceUnavailable, "ban transaction failed")
+		writeError(w, http.StatusServiceUnavailable, "Транзакция блокировки завершилась ошибкой")
 		return
 	}
 	// Триггер БД выполняет транзакцию межрепликового отзыва до возврата Set. В режиме
@@ -175,11 +175,11 @@ func (s Server) adminProtectionUnban0298(w http.ResponseWriter, r *http.Request)
 	userID := strings.TrimSpace(r.PathValue("userId"))
 	changed, err := store.RevokeProtectionBan(r.Context(), userID, claims.Sub)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "unban failed")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось снять блокировку")
 		return
 	}
 	if !changed {
-		writeError(w, http.StatusNotFound, "active ban not found")
+		writeError(w, http.StatusNotFound, "Активная блокировка не найдена")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "protection:unban", Target: userID, ReasonCode: "admin-unban", CorrelationID: correlationID02111(r), CreatedAt: time.Now().UTC()})

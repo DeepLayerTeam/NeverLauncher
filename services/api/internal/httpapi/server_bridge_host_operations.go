@@ -180,12 +180,12 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 	} else {
 		stored.RemoteReceipt, _ = json.Marshal(receipt)
 		if receipt.State == "indeterminate" {
-			stored.Error = "RemoteControl cannot prove host action completion: " + receipt.Error
+			stored.Error = "RemoteControl не может подтвердить завершение действия на узле: " + receipt.Error
 		} else {
 			after, statusErr := client.Status(ctx)
 			if statusErr != nil {
 				stored.State = "accepted"
-				stored.Error = "remote acknowledgement received but host status unavailable: " + statusErr.Error()
+				stored.Error = "Подтверждение удалённого узла получено, но его состояние недоступно: " + statusErr.Error()
 			} else {
 				stored.HostAfter, _ = json.Marshal(after)
 				// JVM может запуститься до переподключения игрового плагина. Статус accepted

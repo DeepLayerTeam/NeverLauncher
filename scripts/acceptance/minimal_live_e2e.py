@@ -126,7 +126,7 @@ class RealAPI:
         self.loghandle = None
 
     def start(self, *, expect_failure=False):
-        require(self.proc is None, "API process already started")
+        require(self.proc is None, "Процесс API уже запущен")
         logpath = self.logdir / ("api-" + secrets.token_hex(5) + ".log")
         self.loghandle = logpath.open("xb")
         os.chmod(logpath, 0o600)
@@ -152,7 +152,7 @@ class RealAPI:
                 if expect_failure:
                     require(
                         self.proc.returncode != 0,
-                        "invalid/colliding API unexpectedly succeeded",
+                        "Недопустимый или конфликтующий API неожиданно успешно запустился",
                     )
                     self.proc.wait(timeout=2)
                     self.proc = None
@@ -207,7 +207,7 @@ class RealAPI:
             require(proc.returncode < 0, "SIGKILL did not terminate API")
         elif proc.returncode != 0:
             raise AcceptanceFailure(
-                f"API failed graceful SIGTERM with exit {proc.returncode}"
+                f"API не смог корректно завершиться по SIGTERM, код выхода {proc.returncode}"
             )
         self.proc = None
         self._close_log()
@@ -256,7 +256,7 @@ def verify_project(port, identifier, token=None):
             200,
             headers={"Authorization": "Bearer " + token},
         )
-        require(isinstance(sessions, dict), "sessions endpoint returned invalid result")
+        require(isinstance(sessions, dict), "Эндпоинт сеансов вернул недопустимый результат")
 
 
 
@@ -266,17 +266,17 @@ def owner_admin_crud_0523(port, email, password):
                    {'email': email, 'password': password})
     token = login.get('token')
     require(isinstance(token, str) and len(token) >= 20,
-            'real administrator login missing session')
+            'При реальном входе администратора не создан сеанс')
     unauth_status, _ = request(port, 'POST', '/api/v1/admin/projects',
                                {'id': 'unauthenticated-0523', 'name': 'Rejected'})
-    require(unauth_status in (401, 403), 'unauthenticated admin mutation was not denied')
+    require(unauth_status in (401, 403), 'Изменение данных администратора без аутентификации не было запрещено')
     header = {'Authorization': 'Bearer ' + token}
     project = 'owner0523-' + secrets.token_hex(8)
     description = 'Minimal SQLite retained owner project ' + secrets.token_hex(8)
     created = expect(port, 'POST', '/api/v1/admin/projects', 201,
                      {'id': project, 'name': 'Owner acceptance project', 'defaultChannel': 'stable'}, header)
     require(created.get('data', {}).get('project', {}).get('id') == project,
-            'owner project was not created')
+            'Проект владельца не был создан')
     expect(port, 'PATCH', '/api/v1/admin/projects/' + project, 200,
            {'description': description}, header)
     profile = 'owner-vanilla'
@@ -284,11 +284,11 @@ def owner_admin_crud_0523(port, email, password):
     profile_response = expect(port, 'POST', '/api/v1/admin/projects/' + project + '/profiles', 201,
                               {'id': profile, 'name': 'Owner vanilla', 'loader': 'vanilla'}, header)
     require(profile_response.get('data', {}).get('profile', {}).get('id') == profile,
-            'owner profile was not created')
+            'Профиль владельца не был создан')
     channel_response = expect(port, 'POST', '/api/v1/admin/projects/' + project + '/channels', 201,
                               {'id': channel, 'name': 'Owner review', 'protected': True}, header)
     require(channel_response.get('data', {}).get('channel', {}).get('id') == channel,
-            'owner channel was not created')
+            'Канал владельца не был создан')
     verify_admin_0523(port, email, password, project, description, profile, channel)
     expect(port, 'GET', '/api/v1/projects/' + project + '/profiles/' + profile + '/manifest', 404)
     return (project, description, profile, channel)
@@ -305,13 +305,13 @@ def verify_admin_0523(port, email, password, project, description, profile, chan
     profiles = expect(port, 'GET', '/api/v1/projects/' + project + '/profiles', 200)
     channels = expect(port, 'GET', '/api/v1/projects/' + project + '/channels', 200)
     require(any(p.get('id') == profile for p in profiles.get('items', [])),
-            'persisted profile missing')
+            'Сохранённый профиль отсутствует')
     require(any(c.get('id') == channel for c in channels.get('items', [])),
-            'persisted channel missing')
+            'Сохранённый канал отсутствует')
     expect(port, 'GET', '/api/v1/admin/audit', 200,
            headers={'Authorization': 'Bearer ' + token})
     denied_status, _ = request(port, 'GET', '/api/v1/admin/audit')
-    require(denied_status in (401, 403), 'unauthenticated audit read was not denied')
+    require(denied_status in (401, 403), 'Чтение аудита без аутентификации не было запрещено')
 
 
 def run_acceptance(
@@ -324,16 +324,16 @@ def run_acceptance(
 ):
     require(
         binary.is_absolute() and binary.is_file() and os.access(binary, os.X_OK),
-        "missing executable real API binary",
+        "Отсутствует исполняемый бинарный файл реального API",
     )
     require(not binary.stat().st_mode & 0o022, "insecure API binary permissions")
     require(
         guard.is_file() and bridge.is_file(),
-        "actual Guard/Bridge policy files required",
+        "Требуются действительные файлы политик Guard/Bridge",
     )
     require(
         work.is_absolute() and work.is_dir() and not any(work.iterdir()),
-        "work directory must be empty",
+        "Рабочий каталог должен быть пустым",
     )
     report["binarySha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
     report["sourceCommit"] = os.environ.get("GITHUB_SHA", "")
@@ -405,7 +405,7 @@ def run_acceptance(
             before = expect(port, "GET", "/api/v1/install/readiness", 200)
             require(
                 not before.get("data", {}).get("installationCompleted"),
-                "fresh installation already completed",
+                "Чистая установка уже завершена",
             )
             denied = expect(
                 port,
@@ -414,7 +414,7 @@ def run_acceptance(
                 403,
                 {"email": email, "password": password},
             )
-            require(isinstance(denied, dict), "invalid unauthenticated refusal")
+            require(isinstance(denied, dict), "Недопустимый ответ отказа для неаутентифицированного запроса")
             created = expect(
                 port,
                 "POST",
@@ -646,7 +646,7 @@ def run_acceptance(
                 command(sys.executable, INSTALLER, "export-portable", "--bundle", bundle,
                         "--output", portable_path, "--passphrase-file", portable_secret)
                 require(portable_path.read_bytes().startswith(b"NEVER-MINIMAL-PORTABLE-1\n"),
-                        "missing authenticated transfer envelope")
+                        "Отсутствует аутентифицированная оболочка передачи данных")
                 command(sys.executable, INSTALLER, "verify-portable", "--input", portable_path,
                         "--passphrase-file", portable_secret)
                 command(sys.executable, INSTALLER, "restore-portable", "--input", portable_path,
@@ -709,7 +709,7 @@ def run_acceptance(
                     "UPDATE http_repository_state_0372 SET sha256=? WHERE singleton=1",
                     ("0" * 64,),
                 )
-                require(conn.total_changes == 1, "HTTP SQLite state row missing")
+                require(conn.total_changes == 1, "Отсутствует строка состояния HTTP SQLite")
                 conn.commit()
             bad = RealAPI(
                 binary,
@@ -724,7 +724,7 @@ def run_acceptance(
                 bad.cleanup()
             require(
                 not (corrupt_root / "backups").is_symlink(),
-                "invalid corruption test state",
+                "Недопустимое состояние теста повреждения данных",
             )
 
         step(report, "corrupt_repository_prevents_api_start", corrupt_repository)
@@ -802,7 +802,7 @@ def main(argv=None):
             report,
             args.expected_version,
         )
-        require(len(report["checks"]) >= 20, "insufficient actual E2E evidence")
+        require(len(report["checks"]) >= 20, "Недостаточно фактических доказательств E2E")
         report["status"] = "passed"
         code = 0
     except (

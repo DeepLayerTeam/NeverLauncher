@@ -174,10 +174,10 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		return ""
 	}
 	if len(v.OS) > 0 && !in0244(v.OS, env.OS) {
-		return fmt.Sprintf("OS %q is not in %v", env.OS, v.OS)
+		return fmt.Sprintf("ОС %q отсутствует в %v", env.OS, v.OS)
 	}
 	if len(v.Arch) > 0 && !in0244(v.Arch, env.Arch) {
-		return fmt.Sprintf("architecture %q is not in %v", env.Arch, v.Arch)
+		return fmt.Sprintf("Архитектура %q отсутствует в %v", env.Arch, v.Arch)
 	}
 	if v.JavaMajorMin > 0 && (env.JavaMajor == 0 || env.JavaMajor < v.JavaMajorMin) {
 		return fmt.Sprintf("Основная версия Java %d ниже %d", env.JavaMajor, v.JavaMajorMin)
@@ -186,7 +186,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		return fmt.Sprintf("Основная версия Java %d превышает %d", env.JavaMajor, v.JavaMajorMax)
 	}
 	if len(v.MinecraftVersions) > 0 && !in0244(v.MinecraftVersions, env.MinecraftVersion) {
-		return fmt.Sprintf("Minecraft %q is not in %v", env.MinecraftVersion, v.MinecraftVersions)
+		return fmt.Sprintf("Версия Minecraft %q отсутствует в %v", env.MinecraftVersion, v.MinecraftVersions)
 	}
 	if v.MinecraftVersionRange != "" {
 		ok, e := matchRange0243(env.MinecraftVersion, v.MinecraftVersionRange)
@@ -198,7 +198,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		}
 	}
 	if len(v.Loaders) > 0 && !in0244(v.Loaders, strings.ToLower(env.Loader)) {
-		return fmt.Sprintf("loader %q is not in %v", env.Loader, v.Loaders)
+		return fmt.Sprintf("Загрузчик %q отсутствует в %v", env.Loader, v.Loaders)
 	}
 	if v.LoaderVersionRange != "" {
 		ok, e := matchRange0243(env.LoaderVersion, v.LoaderVersionRange)

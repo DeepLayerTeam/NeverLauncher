@@ -33,14 +33,14 @@ type stateRule0474 struct {
 func mustText0474(src map[string]any, name string) (string, error) {
 	v, ok := src[name].(string)
 	if !ok {
-		return "", fmt.Errorf("expected text in %s", name)
+		return "", fmt.Errorf("В %s ожидался текст", name)
 	}
 	return v, nil
 }
 func mustInt0474(src map[string]any, name string) (int64, error) {
 	v, ok := src[name].(int64)
 	if !ok {
-		return 0, fmt.Errorf("expected integer in %s", name)
+		return 0, fmt.Errorf("В %s ожидалось целое число", name)
 	}
 	return v, nil
 }
@@ -73,7 +73,7 @@ func validatedHash0474(src map[string]any, name string) (string, error) {
 		return "", fmt.Errorf("Некорректное значение: %s hex", name)
 	}
 	if strings.ToLower(s) != s {
-		return "", fmt.Errorf("invalid %s casing", name)
+		return "", fmt.Errorf("Недопустимый регистр символов в %s", name)
 	}
 	return s, nil
 }
@@ -186,7 +186,7 @@ func family0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 			return revoked
 		}
 		return nil
-	}(), time.Now().UTC(), "SQLite migration: reauthentication required", status)
+	}(), time.Now().UTC(), "Миграция SQLite: требуется повторная аутентификация", status)
 	return e
 }
 func refresh0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
@@ -241,7 +241,7 @@ func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 	}
 	seed, err := old.Open(nil, coreCipher[:old.NonceSize()], coreCipher[old.NonceSize():], []byte("Launcher/TOTP/0.32.3"))
 	if err != nil {
-		return "", errors.New("SQLite MFA key mismatch or encrypted secret corrupted")
+		return "", errors.New("Ключ MFA SQLite не совпадает или зашифрованный секрет повреждён")
 	}
 	defer func() {
 		for i := range seed {
@@ -249,7 +249,7 @@ func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 		}
 	}()
 	if len(seed) != 20 {
-		return "", errors.New("SQLite TOTP seed has unsupported length")
+		return "", errors.New("Секрет TOTP SQLite имеет неподдерживаемую длину")
 	}
 	text := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(seed)
 	derived := sha256.Sum256([]byte(keys.PostgreSQLSecret))
@@ -373,7 +373,7 @@ func minecraftSession0474(ctx context.Context, tx pgx.Tx, s map[string]any) erro
 	}
 	// После миграции токены доступа другого центра недействительны.
 	_, e = tx.Exec(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,core_original_status_0474,core_original_reason_0474)
-    VALUES($1,$2,$3,$4,$5,'revoked',$6,$6,$7,$8,$9,$10,$11)`, s["id"], s["user_id"], s["session_id"], s["profile_uuid"], hash, created, expires, time.Now().UTC(), "SQLite migration: new login required", status, s["revoked_reason"])
+    VALUES($1,$2,$3,$4,$5,'revoked',$6,$6,$7,$8,$9,$10,$11)`, s["id"], s["user_id"], s["session_id"], s["profile_uuid"], hash, created, expires, time.Now().UTC(), "Миграция SQLite: требуется новый вход", status, s["revoked_reason"])
 	return e
 }
 func revocation0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {

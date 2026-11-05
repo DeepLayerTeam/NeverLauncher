@@ -22,23 +22,23 @@ import (
 func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request) {
 	raw := strings.TrimSpace(r.Header.Get("Authorization"))
 	if !strings.HasPrefix(raw, "Bearer ") {
-		writeYggdrasilError119(w, http.StatusUnauthorized, "Minecraft access token required")
+		writeYggdrasilError119(w, http.StatusUnauthorized, "Требуется токен доступа Minecraft")
 		return
 	}
 	_, profile, user, err := s.validateMinecraftToken119(strings.TrimSpace(strings.TrimPrefix(raw, "Bearer ")))
 	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" ||
 		minecraftID119(profile.UUID) != minecraftID119(r.PathValue("uuid")) {
-		writeYggdrasilError119(w, http.StatusUnauthorized, "Invalid token or profile")
+		writeYggdrasilError119(w, http.StatusUnauthorized, "Недопустимый токен или профиль")
 		return
 	}
 	kind := r.PathValue("kind")
 	if kind != "skin" && kind != "cape" {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid texture type")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Недопустимый тип текстуры")
 		return
 	}
 	repo, ok := s.Repo.(repository.TextureUploadRepository0252)
 	if !ok || s.Storage == nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Texture storage unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Хранилище текстур недоступно")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
@@ -64,7 +64,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 		if revision > 0 {
 			svc, ok := s.Repo.(repository.TextureServiceRepository0255)
 			if !ok {
-				writeYggdrasilError119(w, http.StatusServiceUnavailable, "Texture service unavailable")
+				writeYggdrasilError119(w, http.StatusServiceUnavailable, "Сервис текстур недоступен")
 				return
 			}
 			_, err = svc.ClearTexture0255(ctx, profile, kind, revision, false)
@@ -96,7 +96,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 			break
 		}
 		if nextErr != nil {
-			writeYggdrasilError119(w, http.StatusBadRequest, "Invalid multipart request")
+			writeYggdrasilError119(w, http.StatusBadRequest, "Недопустимый multipart-запрос")
 			return
 		}
 		name := part.FormName()
@@ -104,34 +104,34 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 		case "file":
 			if seenFile || !strings.EqualFold(part.Header.Get("Content-Type"), "image/png") {
 				part.Close()
-				writeYggdrasilError119(w, http.StatusBadRequest, "Single image/png file required")
+				writeYggdrasilError119(w, http.StatusBadRequest, "Требуется один файл image/png")
 				return
 			}
 			seenFile = true
 			file, err = io.ReadAll(io.LimitReader(part, texturepng.MaxEncodedBytes+1))
 			if err != nil || len(file) > texturepng.MaxEncodedBytes {
 				part.Close()
-				writeYggdrasilError119(w, http.StatusRequestEntityTooLarge, "PNG exceeds limit")
+				writeYggdrasilError119(w, http.StatusRequestEntityTooLarge, "Размер PNG превышает ограничение")
 				return
 			}
 		case "model":
 			if seenModel || kind == "cape" {
 				part.Close()
-				writeYggdrasilError119(w, http.StatusBadRequest, "Invalid model field")
+				writeYggdrasilError119(w, http.StatusBadRequest, "Недопустимое поле модели")
 				return
 			}
 			seenModel = true
 			b, readErr := io.ReadAll(io.LimitReader(part, 16))
 			if readErr != nil || len(b) >= 16 {
 				part.Close()
-				writeYggdrasilError119(w, http.StatusBadRequest, "Invalid model")
+				writeYggdrasilError119(w, http.StatusBadRequest, "Недопустимая модель")
 				return
 			}
 			if string(b) == "slim" {
 				modelName = "slim"
 			} else if string(b) != "" {
 				part.Close()
-				writeYggdrasilError119(w, http.StatusBadRequest, "Model must be slim or empty")
+				writeYggdrasilError119(w, http.StatusBadRequest, "Модель должна быть slim или пустой")
 				return
 			}
 		default:
@@ -146,12 +146,12 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 		}
 	}
 	if !seenFile || len(file) == 0 {
-		writeYggdrasilError119(w, http.StatusBadRequest, "PNG file required")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Требуется файл PNG")
 		return
 	}
 	normalized, err := texturepng.Process(bytes.NewReader(file), kind, modelName)
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusUnprocessableEntity, "Invalid Minecraft PNG")
+		writeYggdrasilError119(w, http.StatusUnprocessableEntity, "Недопустимый PNG для Minecraft")
 		return
 	}
 	staged := repository.VerifiedTexture0252{Digest: normalized.Digest, Width: normalized.Width, Height: normalized.Height,
@@ -161,7 +161,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 		StageTextureUpload0253(context.Context, model.MinecraftProfile, repository.VerifiedTexture0252) error
 	})
 	if !ok {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Texture staging unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Временное хранилище текстур недоступно")
 		return
 	}
 	if err = sr.StageTextureUpload0253(ctx, profile, staged); err != nil {
@@ -170,7 +170,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 	}
 	key, size, err := storage.PutTextureImmutable0253(ctx, s.Storage, normalized.Digest, normalized.PNG)
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Texture storage write failed")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Ошибка записи в хранилище текстур")
 		return
 	}
 	staged.ObjectKey = key
@@ -221,7 +221,7 @@ func (s Server) yggdrasilBatchProfiles0256(w http.ResponseWriter, r *http.Reques
 	seen := map[string]bool{}
 	for _, name := range names {
 		if len(name) < 3 || len(name) > 16 || strings.TrimSpace(name) != name {
-			writeYggdrasilError119(w, http.StatusBadRequest, "Invalid profile name")
+			writeYggdrasilError119(w, http.StatusBadRequest, "Недопустимое имя профиля")
 			return
 		}
 		lower := strings.ToLower(name)

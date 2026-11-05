@@ -358,7 +358,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	}
 	for _, p := range cat.Presets {
 		if _, err := resolveCatalogGraph0243(cat, p.ID); err != nil {
-			return fmt.Errorf("preset %q invalid: %w", p.ID, err)
+			return fmt.Errorf("Недопустимый набор настроек %q: %w", p.ID, err)
 		}
 	}
 	return nil

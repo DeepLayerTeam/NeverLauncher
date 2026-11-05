@@ -33,7 +33,7 @@ class StandardComponentTests(unittest.TestCase):
         with patch.object(c,'image_id',return_value='sha256:'+'a'*64), \
              patch.object(dr,'compose',return_value=Result(fake_id.encode())), \
              patch.object(c,'run',return_value=('sha256:'+'b'*64).encode()):
-            with self.assertRaisesRegex(c.ComponentError,'unexpected image digest'):
+            with self.assertRaisesRegex(c.ComponentError,'неожиданный хеш образа'):
                 c.verify_service_image('nl-dr-check',Path('/test.env'),'api-b',c.TARGET)
 
     def test_source_version_and_secret_changes_are_blocked(self):
@@ -47,7 +47,7 @@ class StandardComponentTests(unittest.TestCase):
             with self.assertRaisesRegex(c.ComponentError, 'DDL'):
                 c.assert_same_config(source, target)
             target.chmod(0o644)
-            with self.assertRaisesRegex(c.ComponentError, 'private'):
+            with self.assertRaisesRegex(c.ComponentError, 'ограниченные права доступа'):
                 c.assert_same_config(source, target)
 
     def test_success_uses_real_backup_before_cutover(self):
@@ -87,7 +87,7 @@ class StandardComponentTests(unittest.TestCase):
                 patch.object(dr,'compose'), \
                 patch.object(c,'image_id',side_effect=lambda tag: 'sha256:'+('a' if tag.endswith(c.SOURCE) else 'b')*64), \
                 patch.object(c,'restore_service_set',side_effect=lambda *a,**k: versions.append(k['expected']) or (None if k['expected']==c.SOURCE else (_ for _ in ()).throw(c.ComponentError('new broken')))):
-                with self.assertRaisesRegex(c.ComponentError, 'restored and verified'):
+                with self.assertRaisesRegex(c.ComponentError, 'восстановлены и проверены'):
                     c.standard('nl-dr-test','nl-dr-test',source,target,root/'snapshot')
                 self.assertEqual(versions,[c.TARGET,c.SOURCE])
 
@@ -101,7 +101,7 @@ class StandardComponentTests(unittest.TestCase):
                 patch.object(dr,'compose'), \
                 patch.object(c,'image_id',side_effect=lambda tag: 'sha256:'+('a' if tag.endswith(c.SOURCE) else 'b')*64), \
                 patch.object(c,'restore_service_set',side_effect=c.ComponentError('not ready')):
-                with self.assertRaisesRegex(c.ComponentError, 'could not be verified'):
+                with self.assertRaisesRegex(c.ComponentError, 'не удалось проверить'):
                     c.standard('nl-dr-test','nl-dr-test',source,target,root/'snapshot')
 
 
@@ -151,7 +151,7 @@ class HAComponentTests(unittest.TestCase):
                 patch.object(dr,'compose'), \
                 patch.object(c,'image_id',side_effect=lambda tag: 'sha256:'+('a' if tag.endswith(c.SOURCE) else 'b')*64), \
                 patch.object(c,'restore_ha_roles',side_effect=[c.ComponentError('failed'),None]) as roles:
-                with self.assertRaisesRegex(c.ComponentError,'original binaries restored'):
+                with self.assertRaisesRegex(c.ComponentError,'исходные бинарные файлы восстановлены'):
                     c.network_ha('nl-dr-a','nl-dr-a',source,target,root/'backup',{'world':root},'bucket',None)
                 self.assertEqual([x.kwargs['expected'] for x in roles.call_args_list],[c.TARGET,c.SOURCE])
                 self.assertEqual(dr.COMPOSE_PROFILES,[])
@@ -189,7 +189,7 @@ class HostBinaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);old,new,sha=self.fixture(root)
             c.host_binary('cli',new,old,sha)
-            with self.assertRaisesRegex(c.ComponentError,'Контрольная сумма SHA-256 не совпадает'):
+            with self.assertRaisesRegex(c.ComponentError,'Несовпадение закреплённого SHA-256'):
                 c.rollback_linux_host('cli',old,'0'*64)
             self.assertEqual(old.read_bytes(),new.read_bytes())
 
@@ -198,7 +198,7 @@ class HostBinaryTests(unittest.TestCase):
             root=Path(tmp);old,new,sha=self.fixture(root)
             previous=old.read_bytes()
             new.write_text('#!/bin/sh\necho broken\n');sha=c.digest(new)
-            with self.assertRaisesRegex(c.ComponentError,'old binary restored'):
+            with self.assertRaisesRegex(c.ComponentError,'старый бинарный файл восстановлен'):
                 c.host_binary('cli',new,old,sha)
             self.assertEqual(old.read_bytes(),previous)
             self.assertFalse((root/'launcher.previous-0458').exists())
@@ -206,7 +206,7 @@ class HostBinaryTests(unittest.TestCase):
     def test_invalid_hash_refused_before_swap(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);old,new,sha=self.fixture(root)
-            with self.assertRaisesRegex(c.ComponentError,'Контрольная сумма SHA-256 не совпадает'):
+            with self.assertRaisesRegex(c.ComponentError,'Несовпадение закреплённого SHA-256'):
                 c.host_binary('cli',new,old,'0'*64)
             self.assertIn('0.45.7',old.read_text())
 
@@ -244,7 +244,7 @@ class ClientExtensionTests(unittest.TestCase):
                 self.assertIn('--delivery-manifest',args)
                 self.assertNotIn('--allow-unpinned-development',args)
                 self.assertEqual(result['nativeReport']['status'],'committed')
-            with self.assertRaisesRegex(c.ComponentError,'Контрольная сумма SHA-256 не совпадает'):
+            with self.assertRaisesRegex(c.ComponentError,'Несовпадение закреплённого SHA-256'):
                 c.client_package(cli,pkg,'0'*64,delivery,root)
 
     def test_extension_transaction_requires_committed_status(self):
@@ -252,16 +252,16 @@ class ClientExtensionTests(unittest.TestCase):
             cli=Path(tmp)/'nl';cli.write_bytes(b'x')
             plan={'data': {'plan': {'items': []}}}
             good={'data': {'transaction': {'status': 'succeeded','id':'tx1'}}}
-            with patch.dict(os.environ,{'LAUNCHER_TOKEN':'private'},clear=False), \
+            with patch.dict(os.environ,{'LAUNCHER_TOKEN':'ограниченные права доступа'},clear=False), \
                  patch.object(c,'run',side_effect=[json.dumps(plan).encode(),json.dumps(good).encode()]) as cmd:
                 result=c.extensions(cli,'https://example.org',['my.ext@0.45.8'],'stable')
                 self.assertEqual(result['transactionId'],'tx1')
                 self.assertIn('apply',cmd.call_args.args[0])
-            with patch.dict(os.environ,{'LAUNCHER_TOKEN':'private'},clear=False), \
+            with patch.dict(os.environ,{'LAUNCHER_TOKEN':'ограниченные права доступа'},clear=False), \
                  patch.object(c,'run',side_effect=[json.dumps(plan).encode(),json.dumps({'data':{'transaction':{'status':'rolled_back'}}}).encode()]):
                 with self.assertRaisesRegex(c.ComponentError,'did not commit'):
                     c.extensions(cli,'https://example.org',['my.ext@0.45.8'],'stable')
-            with self.assertRaisesRegex(c.ComponentError,'HTTPS origin'):
+            with self.assertRaisesRegex(c.ComponentError,'использовать HTTPS'):
                 c.extensions(cli,'http://example.org',['my.ext@0.45.8'],'stable')
 
 

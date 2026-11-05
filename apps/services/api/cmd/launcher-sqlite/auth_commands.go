@@ -87,7 +87,7 @@ func runAuthAction(args []string) int {
 		return 0
 	}
 	if *db == "" {
-		fmt.Fprintln(os.Stderr, "--db required")
+		fmt.Fprintln(os.Stderr, "Требуется --db")
 		return 2
 	}
 	if _, e := os.Stat(*db); e != nil {
@@ -213,7 +213,7 @@ func runAuthAction(args []string) int {
 		return 2
 	}
 	if e != nil {
-		fmt.Fprintln(os.Stderr, "auth operation rejected:", e)
+		fmt.Fprintln(os.Stderr, "Операция аутентификации отклонена:", e)
 		return 1
 	}
 	if e = json.NewEncoder(os.Stdout).Encode(output); e != nil {

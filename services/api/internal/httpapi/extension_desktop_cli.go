@@ -130,7 +130,7 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if !allowed {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("desktop:contribute is not granted")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("Разрешение desktop:contribute не предоставлено")
 	}
 	return install, ver.Manifest, nil
 }
@@ -307,7 +307,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		}
 		if json.Unmarshal(req.Params, &p) != nil || p.Version != install.CurrentVersion || p.Generation != install.Generation ||
 			(p.Action != "tauri.platform" && p.Action != "tauri.openGameDirectory") {
-			respond(nil, errors.New("stale or invalid desktop bridge request"))
+			respond(nil, errors.New("Устаревший или недопустимый запрос моста Desktop"))
 			return
 		}
 		projectID := ""

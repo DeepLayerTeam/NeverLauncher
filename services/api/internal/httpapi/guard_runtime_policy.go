@@ -121,7 +121,7 @@ func verifyGuardRuntimePolicy0317(policy guardReleasePolicy0134, platform string
 		return "", errors.New("«Windows Guard runtime allowlist»: не настроено")
 	}
 	if !guardRuntimeMatches0317(profiles, evidence.JavaMajor, evidence.ModuleSetSHA256, evidence.CodeSetSHA256, evidence.HookSetSHA256) {
-		return "", errors.New("Java version or runtime module/code/hook set is not approved")
+		return "", errors.New("Версия Java или набор модулей, кода и хуков Runtime не одобрены")
 	}
 	return guardRuntimePolicyDigest0317(profiles), nil
 }
@@ -197,7 +197,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	// TTL билета в репозитории является авторитетным; часы клиента и прежняя
 	// оценка аппаратного корня не продлевают гарантии процесса.
 	if ticket.CreatedAt.After(now.Add(guardAttestationClockSkew0134)) || !ticket.ExpiresAt.After(now) {
-		return errors.New("Continuous Guard ticket expired or from the future")
+		return errors.New("Билет Continuous Guard просрочен или датирован будущим временем")
 	}
 	return nil
 }

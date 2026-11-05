@@ -1735,7 +1735,7 @@ mod tests {
     #[test]
     fn managed_java_ii_major_policy_is_exact() {
         for major in MANAGED_JAVA_MAJORS {
-            assert!(validate_managed_java_major(major).is_ok(), "Java {major} must be managed");
+            assert!(validate_managed_java_major(major).is_ok(), "Java {major} должна быть управляемой");
         }
         for major in [7, 11, 22, 26] {
             assert!(validate_managed_java_major(major).is_err(), "Для Java {major} требуется: «rejected»");

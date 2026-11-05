@@ -357,7 +357,7 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "SQLite minimal requires absolute clean coordinator path")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == strings.TrimSpace(cfg.SQLiteCoordinatorPath) {
-			problems = append(problems, "SQLite repository and coordinator cannot share a file")
+			problems = append(problems, "Хранилище SQLite и координатор не могут использовать один файл")
 		}
 		if cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.RedisURL) != "" {
 			problems = append(problems, "SQLite minimal forbids ServerBridge HA and Redis")
@@ -370,7 +370,7 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "production PostgreSQL requires pgx driver")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-			problems = append(problems, "LAUNCHER_DATABASE_DSN is required")
+			problems = append(problems, "Требуется LAUNCHER_DATABASE_DSN")
 		}
 	}
 	secret := strings.TrimSpace(cfg.AuthTokenSecret)

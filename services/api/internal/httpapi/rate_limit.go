@@ -31,10 +31,10 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 			return fmt.Errorf("SQLite HTTP backend: требуется «durable SQLite coordinator path»")
 		}
 		if filepath.Clean(cfg.SQLiteCoordinatorPath) == filepath.Clean(cfg.DatabaseDSN) {
-			return fmt.Errorf("SQLite repository and coordinator require distinct lockable files")
+			return fmt.Errorf("Хранилищу SQLite и координатору требуются разные файлы с поддержкой блокировок")
 		}
 		if cfg.RateLimitEnabled && !cfg.RateLimitFailClosed {
-			return fmt.Errorf("SQLite backend rate limiting must fail closed")
+			return fmt.Errorf("При сбое ограничителя запросов SQLite Backend должен блокировать запросы")
 		}
 	}
 	s.ServerBridgeReplicaID = strings.TrimSpace(cfg.ServerBridgeReplicaID)
@@ -55,7 +55,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 			return fmt.Errorf("«SQLite single-node»: запрещено «satisfy distributed ServerBridge HA»")
 		}
 		if cfg.RateLimitEnabled && !cfg.RateLimitFailClosed {
-			return fmt.Errorf("SQLite rate limiting must fail closed")
+			return fmt.Errorf("При сбое ограничителя запросов SQLite доступ должен блокироваться")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		coordinator, openErr := sqlitecoord.Open(ctx, path)

@@ -105,7 +105,7 @@ func compatValidateJar0279(path, digest, prefix string) error {
 		return err
 	}
 	if !isSHA256Hex0271(digest) {
-		return fmt.Errorf("SHA-256 required: %s", path)
+		return fmt.Errorf("Требуется SHA-256: %s", path)
 	}
 	return nil
 }

@@ -144,7 +144,7 @@ class OperationsGATests(unittest.TestCase):
         path=self.reports['install-standard']
         data=json.loads(path.read_text());data['release']='0.46.1'
         path.write_text(json.dumps(data))
-        with self.assertRaisesRegex(ga.operational.Rejected,'receipt release mismatch'):
+        with self.assertRaisesRegex(ga.operational.Rejected,'Несовпадение релиза в квитанции'):
             self.attest()
 
     def test_legacy_domain_not_changed(self):

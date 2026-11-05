@@ -129,7 +129,7 @@ pub fn wait_for_guard_ack(
         };
         if ok == 0 {
             return Err(format!(
-                "Continuous Guard Guard-ACK pipe probe failed: {}",
+                "Continuous Guard: проверка канала Guard-ACK завершилась ошибкой: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -178,12 +178,12 @@ fn verify_guard_ack_packet(
     }
     if guard_sequence != expected_guard_sequence {
         return Err(format!(
-            "Continuous Guard Guard-ACK sequence mismatch: expected {expected_guard_sequence}, got {guard_sequence}"
+            "Continuous Guard: нарушение последовательности Guard-ACK; ожидалось {expected_guard_sequence}, получено {guard_sequence}"
         ));
     }
     if sensor_sequence != expected_sensor_sequence {
         return Err(format!(
-            "Continuous Guard Guard-ACK sensor sequence mismatch: expected {expected_sensor_sequence}, got {sensor_sequence}"
+            "Continuous Guard: нарушение последовательности датчика Guard-ACK; ожидалось {expected_sensor_sequence}, получено {sensor_sequence}"
         ));
     }
     if packet[32..64] != expected_chain[..] {

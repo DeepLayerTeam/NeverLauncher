@@ -231,8 +231,8 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
             // Освобождайте слоты старого хоста ДО ожидания слотов зеркала,
             // чтобы не возникали взаимные блокировки заданий, переключающихся A->B и B->A.
             drop(permits.take());
-            let local = Arc::clone(local_hosts.get(&source.host).ok_or("missing mirror host semaphore")?);
-            let global_host = Arc::clone(process_hosts.get(&source.host).ok_or("missing process mirror host semaphore")?);
+            let local = Arc::clone(local_hosts.get(&source.host).ok_or("Отсутствует семафор зеркального узла")?);
+            let global_host = Arc::clone(process_hosts.get(&source.host).ok_or("Отсутствует семафор процесса для зеркального узла")?);
             let local_slot = tokio::select! {
                 result = local.acquire_owned() => result.map_err(|e| e.to_string())?,
                 state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
@@ -291,7 +291,7 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
             stats.emit("mirror-fallback", Some(&job.file.path), true);
         }
     }
-    Err(format!("{}: all signed sources failed: {}", job.file.path, failures.join("; ")))
+    Err(format!("{}: все подписанные источники завершились ошибкой: {}", job.file.path, failures.join("; ")))
 }
 
 /// Скачивайте потоком только отсутствующие или несовпадающие файлы,

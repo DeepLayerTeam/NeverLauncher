@@ -534,8 +534,8 @@ pub fn apply_launch_preferences(manifest: &Manifest, root: &Path, plan: &mut Lau
     plan.game_args.retain(|arg| arg != "--fullscreen");
     if preferences.fullscreen { plan.game_args.push("--fullscreen".into()); }
     if preferences.auto_enter {
-        let host = preferences.server_host.as_ref().ok_or("server host missing")?;
-        let port = preferences.server_port.ok_or("server port missing")?;
+        let host = preferences.server_host.as_ref().ok_or("Не указан адрес сервера")?;
+        let port = preferences.server_port.ok_or("Не указан порт сервера")?;
         if minecraft_supports_quick_play_multiplayer(&manifest.minecraft.version) {
             replace_or_append_arg_pair(&mut plan.game_args, "--quickPlayMultiplayer", format!("{host}:{port}"));
         } else {
@@ -739,7 +739,7 @@ async fn replace_verified_managed_file_0224(part: &Path, target: &Path) -> Resul
     #[cfg(windows)]
     {
         if !target.exists() { return fs::rename(part,target).await.map_err(|e| format!("Переключение управляемого файла {}: {e}",target.display())); }
-        let name = target.file_name().ok_or("invalid managed filename")?.to_string_lossy();
+        let name = target.file_name().ok_or("Недопустимое имя управляемого файла")?.to_string_lossy();
         let backup = target.with_file_name(format!("{name}.nlbackup-{}-{}",std::process::id(),now_unix()?));
         if std::fs::symlink_metadata(&backup).is_ok() {return Err("Конфликт с резервной копией управляемого файла".into());}
         fs::rename(target,&backup).await.map_err(|e| format!("Резервная копия управляемого файла {}: {e}",target.display()))?;
@@ -1550,7 +1550,7 @@ fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &Minec
                     injector = Some(safe_join(root, &file.path)?);
                 }
             }
-            let path=injector.ok_or("Yggdrasil online launch requires a required, signed authlib-injector JAR")?;
+            let path=injector.ok_or("Для сетевого запуска Yggdrasil необходим обязательный подписанный JAR authlib-injector")?;
             if !tokio_path_exists119(&path) {return Err("Подписанный authlib-injector отсутствует".into());}
             let base=credentials.auth_server_base_url.trim_end_matches('/');
             plan.jvm_args.push(format!("-javaagent:{}={}",path.to_string_lossy(),base));

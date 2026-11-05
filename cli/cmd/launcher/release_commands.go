@@ -478,7 +478,7 @@ func desktopConfigModel(args []string) map[string]any {
 		"channel":       channel,
 		"fields":        []string{"backendUrl", "projectId", "profileId", "channel", "gameDirectory", "javaPath", "username", "memoryMb", "pinnedPublicKey"},
 		"secrets":       []string{"accessToken", "refreshToken", "password"},
-		"secretPolicy":  "tokens must be stored in secure storage; config.json never contains plaintext tokens",
+		"secretPolicy":  "Токены должны храниться в защищённом хранилище; config.json никогда не должен содержать токены открытым текстом",
 	}
 }
 

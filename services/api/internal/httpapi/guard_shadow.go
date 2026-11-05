@@ -43,7 +43,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	di, err := os.Lstat(directory)
 	if err != nil || !di.IsDir() || di.Mode()&os.ModeSymlink != 0 || di.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Guard shadow directory must exist with private permissions")
+		return nil, errors.New("Каталог теневой проверки Guard должен существовать и иметь ограниченные права доступа")
 	}
 	ki, err := os.Lstat(keyFile)
 	if err != nil || !ki.Mode().IsRegular() || ki.Mode().Perm()&0077 != 0 {

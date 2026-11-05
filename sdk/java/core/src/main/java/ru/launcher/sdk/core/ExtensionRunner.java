@@ -26,7 +26,7 @@ public final class ExtensionRunner {
         return launch(manifestPath,className,env,argv,true,null);
     }
     public static Object runCli(String manifestPath,String className,Map<String,String> env,String[] argv)throws Exception {
-        if(argv.length==0||argv.length>128)throw new IllegalArgumentException("CLI command required");
+        if(argv.length==0||argv.length>128)throw new IllegalArgumentException("Требуется команда CLI");
         return launch(manifestPath,className,env,argv,false,null);
     }
     public static void runManagedFromHost(String className,Map<String,String> env)throws Exception {
@@ -40,7 +40,7 @@ public final class ExtensionRunner {
         ExtensionManifest manifest=ExtensionManifest.parse(source);
         String kind=argv==null?"backend":"cli";
         if(manifest.targets().stream().noneMatch(t->t.kind().equals(kind)))throw new IllegalArgumentException("Java extension requires "+kind+" target");
-        if(!kind.equals(env.getOrDefault("LAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("host target mismatch");
+        if(!kind.equals(env.getOrDefault("LAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("Несовпадение целевого хоста");
         // Загрузка без инициализации не допускает выполнения статических
         // инициализаторов расширения, пока аутентифицированный хост не согласует API.
         try(BundledLibraries libraries=BundledLibraries.open(manifest.api())) {
@@ -81,7 +81,7 @@ public final class ExtensionRunner {
                         return response;
                     }
                     while(host.healthy()&&!stopping.await(1,TimeUnit.SECONDS)){}
-                    if(!host.healthy()&&!shuttingDown.get())throw new IllegalStateException("extension host heartbeat failed");
+                    if(!host.healthy()&&!shuttingDown.get())throw new IllegalStateException("Ошибка проверки доступности хоста расширения");
                     lifecycle.stop(Duration.ofSeconds(3));
                     return null;
                 } finally {
@@ -101,7 +101,7 @@ public final class ExtensionRunner {
             if(value==null)continue;
             Object actions=Json.object(value).get("actions");
             if(actions==null)continue;
-            if(!(actions instanceof List<?> items))throw new IllegalArgumentException("UI actions must be an array");
+            if(!(actions instanceof List<?> items))throw new IllegalArgumentException("Действия UI должны быть массивом");
             Set<String> names=new HashSet<>();
             for(Object item:items){
                 String id=Json.string(Json.object(item),"id",true);

@@ -516,7 +516,7 @@ func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request
 	}
 	requestedProfile := strings.TrimSpace(r.URL.Query().Get("requireProfile"))
 	if requestedProfile != "" && requestedProfile != trustbaseline.Standard && requestedProfile != trustbaseline.Strict {
-		writeError(w, http.StatusBadRequest, "requireProfile must be standard or strict")
+		writeError(w, http.StatusBadRequest, "Параметр requireProfile должен иметь значение standard или strict")
 		return
 	}
 	assessment := trustbaseline.Evaluate(model.TrustedDevice{}, false, time.Now().UTC())

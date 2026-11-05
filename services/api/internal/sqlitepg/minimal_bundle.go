@@ -487,7 +487,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 			}
 			ch := sha256.Sum256(chunk)
 			if ordinal != count || len(chunk) == 0 || len(chunk) > snapshotChunkSize || hex.EncodeToString(ch[:]) != digest {
-				err = errors.New("missing/corrupt PostgreSQL bundle chunk")
+				err = errors.New("Отсутствует или повреждён фрагмент пакета PostgreSQL")
 				break
 			}
 			var written int
@@ -503,7 +503,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 			n += int64(written)
 			count++
 			if n > f.Bytes {
-				err = errors.New("bundle exceeds declared size")
+				err = errors.New("Размер пакета превышает заявленный")
 				break
 			}
 		}

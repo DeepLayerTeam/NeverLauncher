@@ -169,7 +169,7 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 		if quarantined && trustErr == nil {
 			trustErr = errors.New("Установленный пакет находится в карантине")
 		}
-		reason := "extension trust rejected active installation"
+		reason := "Проверка доверия к расширению отклонила действующую установку"
 		if trustErr != nil {
 			reason += ": " + trustErr.Error()
 		} else if len(decision.Violations) > 0 {

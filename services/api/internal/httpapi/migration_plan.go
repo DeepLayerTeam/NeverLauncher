@@ -219,7 +219,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 422, "Не удалось сформировать предпросмотр содержимого: "+e.Error())
 		return
 	}
-	ids := gp.IdentityPreview{State: "blocked", Reason: "no supported source identity snapshot"}
+	ids := gp.IdentityPreview{State: "blocked", Reason: "Нет поддерживаемого снимка исходных учётных записей"}
 	accounts, identityErr := gi.Extract(r.Context(), f, n, saved)
 	if identityErr != nil {
 		ids.Reason = identityErr.Error()
@@ -231,7 +231,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 			ids.Reason = "duplicate UUID, provider ID or username in source accounts"
 		} else {
 			ids.State = "review_required"
-			ids.Reason = "source IDs extracted; target UUID ownership and password verifiers still require independent reconciliation"
+			ids.Reason = "Идентификаторы источника извлечены; владение целевыми UUID и проверяющие данные паролей ещё нужно согласовать независимо"
 		}
 	}
 	target, existing, e := s.migrationTargetSnapshot0442(run.ProjectID)

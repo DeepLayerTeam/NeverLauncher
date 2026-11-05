@@ -263,7 +263,7 @@ def local_heal(directory, project):
 
 
 def ssh_helper(target, script, directory, project, mode, *, approval=None):
-    require(multi.HOST_REGEX.fullmatch(target) and not target.startswith('-'), 'invalid SSH target')
+    require(multi.HOST_REGEX.fullmatch(target) and not target.startswith('-'), 'Недопустимый целевой узел SSH')
     require(script.startswith('/') and directory.startswith('/') and '\n' not in script + directory,
             'remote paths must be absolute and single-line')
     require(mode in ('local-isolate', 'local-status', 'local-heal'), 'unsupported remote mode')
@@ -614,7 +614,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.mode.startswith('local-'):
-            require(multi.PROJECT_REGEX.fullmatch(args.project), 'invalid project')
+            require(multi.PROJECT_REGEX.fullmatch(args.project), 'Недопустимый проект')
             directory = Path(args.directory).absolute()
             if args.mode == 'local-isolate':
                 result = local_isolate(directory, args.project, Path(args.approval_file).absolute())
@@ -626,7 +626,7 @@ def main(argv=None):
             result = render_monitor(args)
         else:
             nodes = multi.parse_nodes(args.node)
-            require(multi.PROJECT_REGEX.fullmatch(args.project), 'invalid project')
+            require(multi.PROJECT_REGEX.fullmatch(args.project), 'Недопустимый проект')
             if args.mode == 'suite':
                 suite_dir = Path(args.suite_directory).absolute()
                 with lock_for(suite_dir):

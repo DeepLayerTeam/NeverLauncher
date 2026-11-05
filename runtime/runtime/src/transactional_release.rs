@@ -183,7 +183,7 @@ fn verify_installed(root: &Path, release: &Release) -> Result<bool, String> {
     for p in &release.installed {
         let path = safe_join(root, p)?;
         file_ownership::ensure_no_symlinks(root, &path)?;
-        let (sha, size) = expected(release, p).ok_or("missing signed file in release")?;
+        let (sha, size) = expected(release, p).ok_or("В релизе отсутствует подписанный файл")?;
         if !matches_digest(&path, sha, size) { return Ok(false); }
     }
     Ok(true)
@@ -278,7 +278,7 @@ fn copy_durable(src: &Path, dest: &Path) -> Result<(), String> {
     result
 }
 fn switch_file(root: &Path, source: &Path, destination: &Path) -> Result<(), String> {
-    let parent = destination.parent().ok_or("target has no parent")?;
+    let parent = destination.parent().ok_or("У целевого пути отсутствует родительский каталог")?;
     file_ownership::ensure_no_symlinks(root, destination)?;
     safe_dir(root, parent)?;
     platform_fs::replace_file(root, source, destination)
@@ -445,7 +445,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
     verify_manifest_signature(manifest,key)?;
     let wanted_plan=resolved_download_0246::resolve(manifest,preset)?;
     let wanted=crate::component_catalog_0241::active_files(manifest,preset)?;
-    let active=pointer(root)?.active.ok_or("client release is not installed")?;
+    let active=pointer(root)?.active.ok_or("Релиз клиента не установлен")?;
     validate_release(&active,key)?;
     if let Some(ref installed_digest)=active.plan_sha256 {
         if wanted_plan.sha256!=*installed_digest {
@@ -469,7 +469,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
 // Действия v5 нельзя применять к лишь скачанному, но не зафиксированному
 // манифесту. Даже пресеты по умолчанию требуют идентичного подписанного активного релиза.
 pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Option<String>,String>{
-    let active=pointer(root)?.active.ok_or("signed component actions require installed active release")?;
+    let active=pointer(root)?.active.ok_or("Для операций с подписанными компонентами необходим установленный активный релиз")?;
     let expected=manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     let actual=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     if expected!=actual{return Err("«signed component actions» не совпадает с «installed release»".into())}
@@ -511,7 +511,7 @@ fn reusable_file(root:&Path, previous:Option<&Release>, next:&Release, path:&str
 fn verify_prepared(root:&Path,stage:&Path, next:&Release, previous:Option<&Release>)->Result<(),String>{
     for p in &next.installed {
         if reusable_file(root,previous,next,p)? {continue}
-        let (sha,size)=expected(next,p).ok_or("missing signed planned file")?;
+        let (sha,size)=expected(next,p).ok_or("Отсутствует подписанный файл из плана")?;
         let staged=safe_join(stage,p)?;
         file_ownership::ensure_no_symlinks(root,&staged)?;
         if !matches_digest(&staged,sha,size){return Err(format!("Подготовленный файл клиента не прошёл проверку SHA-256: {p}"))}
@@ -869,7 +869,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         let _guard = lock(&root)?;
         let root = root.canonicalize().map_err(|e| e.to_string())?;
         recover_locked(&root, &key)?;
-        let mut j = last_known_good(&root)?.ok_or("no last-known-good client release")?;
+        let mut j = last_known_good(&root)?.ok_or("Отсутствует последняя подтверждённо исправная версия клиента")?;
         verify_journal(&root, &j, &key)?;
         if j.previous.is_none() {
             return Err("Отсутствует: «previous working client release to roll back to»".into());
@@ -881,13 +881,13 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
             for p in &old.installed {
                 let backup=safe_join(&backup_dir(&root,&j.backup_id),p)?;
                 file_ownership::ensure_no_symlinks(&root,&backup)?;
-                let (sha,size)=expected(old,p).ok_or("previous signed file missing")?;
+                let (sha,size)=expected(old,p).ok_or("Отсутствует предыдущий подписанный файл")?;
                 if !matches_digest(&backup,sha,size) {
                     return Err(format!("Откат отклонён: предыдущий подписанный файл уже повреждён: {p}"));
                 }
             }
         }
-        let active = pointer(&root)?.active.ok_or("no active release")?;
+        let active = pointer(&root)?.active.ok_or("Нет активного релиза")?;
         if active.manifest.game_release_generation > 0 { return Err("Для отката игры требуется новый подписанный gameReleaseGeneration; опубликуйте прежнее содержимое как новый релиз".into()); }
         if active.id != j.next.id { return Err("Последняя работоспособная версия не соответствует предыдущему активному релизу".into()); }
         if !verify_installed(&root, &active)? { return Err("Текущий релиз изменён; перезапись локальных изменений отклонена".into()); }
@@ -1001,7 +1001,7 @@ mod tests {
         fs::create_dir_all(source.join("mods")).unwrap();
         fs::write(source.join("mods/a.jar"),b"CORRUPTED").unwrap();
         let error=adopt_verified_staged(&manifest,&source,&root,&key,None).await.unwrap_err();
-        assert!(error.contains("digest mismatch"),"{error}");
+        assert!(error.contains("Несовпадение хеша"),"{error}");
         assert!(pointer(&root).unwrap().active.is_none());
         assert!(!root.join("mods/a.jar").exists());
         let _=fs::remove_dir_all(parent);
@@ -1705,7 +1705,7 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
         if !matches_digest(&source,&conflict.sha256,conflict.size){
             return Err(format!("Пользовательский файл изменился при сохранении конфликтов: {}; ранее сохранённые файлы находятся в {}",conflict.path,archive.display()));
         }
-        safe_dir(&root,dest.parent().ok_or("invalid conflict archive path")?)?;
+        safe_dir(&root,dest.parent().ok_or("Недопустимый путь архива конфликтов")?)?;
         if fs::symlink_metadata(&dest).is_ok(){return Err("Каталог назначения архива игрока уже существует".into())}
         fs::rename(&source,&dest).map_err(|e|format!("preserve user file {}: {e}; previously moved files in {}",conflict.path,archive.display()))?;
         if !matches_digest(&dest,&conflict.sha256,conflict.size){

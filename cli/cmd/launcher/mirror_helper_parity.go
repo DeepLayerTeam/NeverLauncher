@@ -87,7 +87,7 @@ func mirrorCheckedHash0274(path, expected string) (int64, error) {
 		return 0, err
 	}
 	if !strings.EqualFold(hash, expected) {
-		return 0, fmt.Errorf("SHA-256 mismatch: %s", path)
+		return 0, fmt.Errorf("Несовпадение SHA-256: %s", path)
 	}
 	return size, nil
 }

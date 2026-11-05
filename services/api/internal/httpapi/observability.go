@@ -42,7 +42,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			checks["rateLimiter"] = err.Error()
 			if s.State.RateLimitFailClosed {
-				writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "rate limiter unavailable"})
+				writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "Ограничитель частоты запросов недоступен"})
 				return
 			}
 		} else {
@@ -71,7 +71,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		ha, err := s.State.ServerBridge.haStatus0149()
 		if err != nil {
 			checks["serverBridgeHA"] = err.Error()
-			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "serverbridge PostgreSQL HA status unavailable"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "Состояние отказоустойчивости PostgreSQL для ServerBridge недоступно"})
 			return
 		}
 		checks["serverBridgeHA"] = fmt.Sprintf("fresh_nodes=%d/%d fresh_topology=%d active_handoffs=%d nonce_backlog=%d", ha.NodesFresh, ha.NodesActive, ha.TopologyFresh, ha.ActiveHandoffs, ha.ExpiredNonceBacklog)
@@ -87,7 +87,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		}
 		checks["federation"] = fmt.Sprintf("%d/%d providers healthy", healthy, len(health))
 		if len(health) == 0 || healthy == 0 {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "no healthy authentication provider"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "Нет исправного провайдера аутентификации"})
 			return
 		}
 	}
@@ -97,7 +97,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 	}); ok {
 		status, err := migrator.MigrationStatus(ctx)
 		if err != nil || !status.Compatible || len(status.Pending) > 0 {
-			message := "database schema is not current"
+			message := "Схема базы данных устарела"
 			if err != nil {
 				message = err.Error()
 			}

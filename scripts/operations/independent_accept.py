@@ -64,55 +64,55 @@ def actor(primary: str) -> str:
     sudo_user = os.environ.get('SUDO_USER', '') if os.geteuid() == 0 else ''
     if os.geteuid() == 0:
         ensure(bool(sudo_user) and sudo_user != 'root',
-               'independent root operations require sudo from a named non-root operator')
+               'Для независимых операций с правами root требуется sudo от указанного оператора, не являющегося root')
     name = sudo_user or real_user
-    ensure(USER_RE.fullmatch(name) and USER_RE.fullmatch(primary), 'invalid local operator identity')
-    ensure(name != primary, 'primary operator cannot certify their own deployment')
+    ensure(USER_RE.fullmatch(name) and USER_RE.fullmatch(primary), 'Недопустимый идентификатор локального оператора')
+    ensure(name != primary, 'Основной оператор не может самостоятельно сертифицировать своё развёртывание')
     return name
 
 
 def host_id() -> str:
     path = Path('/etc/machine-id')
-    ensure(path.is_file() and not path.is_symlink(), 'Linux machine-id unavailable')
+    ensure(path.is_file() and not path.is_symlink(), 'Идентификатор machine-id Linux недоступен')
     raw = path.read_text(encoding='ascii').strip()
-    ensure(re.fullmatch(r'[0-9a-f]{32}', raw) is not None, 'invalid Linux machine-id')
+    ensure(re.fullmatch(r'[0-9a-f]{32}', raw) is not None, 'Недопустимый machine-id Linux')
     return hashlib.sha256(('neverlauncher-operator-host:' + raw).encode()).hexdigest()
 
 
 def require_version(value):
-    ensure(VERSION_RE.fullmatch(value) is not None, 'invalid release version')
+    ensure(VERSION_RE.fullmatch(value) is not None, 'Недопустимая версия релиза')
 
 
 def private_file(path: Path) -> Path:
     ensure(path.is_absolute() and path.is_file() and not path.is_symlink()
-           and not (path.stat().st_mode & 0o077), 'required private file missing or not mode 0600')
+           and not (path.stat().st_mode & 0o077), 'Отсутствует обязательный закрытый файл или его права отличаются от 0600')
     return path
 
 
 def report_target(path: Path):
-    ensure(path.is_absolute() and not path.exists() and not path.is_symlink(), 'receipt path must be new absolute path')
+    ensure(path.is_absolute() and not path.exists() and not path.is_symlink(), 'Путь квитанции должен быть новым абсолютным путём')
     ensure(path.parent.is_dir() and not path.parent.is_symlink()
-           and not (path.parent.stat().st_mode & 0o077), 'receipt directory must be private (0700)')
+           and not (path.parent.stat().st_mode & 0o077), 'Каталог квитанций должен иметь закрытые права доступа (0700)')
 
 
 def invoke(argv: list[str], *, timeout: int = 2400, json_result: bool = False):
     """Запускать существующую разрешённую точку входа; не выводить stdout/stderr (секреты)."""
     ensure(argv[0] == sys.executable and Path(argv[1]).resolve() in (INSTALL, UPGRADE, DR, CHAOS, LIVE),
-           'unsupported operational entrypoint')
+           'Неподдерживаемая точка входа эксплуатационной операции')
     try:
         p = subprocess.run(argv, stdout=subprocess.PIPE if json_result else subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise Rejected('operator command unavailable or timed out: ' + Path(argv[1]).name) from exc
-    ensure(p.returncode == 0, 'operation failed: ' + Path(argv[1]).name)
+        raise Rejected('Команда оператора недоступна или превысила время ожидания: ' + Path(argv[1]).name) from exc
+    ensure(p.returncode == 0, 'Операция завершилась ошибкой: ' + Path(argv[1]).name)
     if not json_result:
         return None
     ensure(len(p.stdout) <= MAX_OUTPUT, 'operation returned excessive output')
     try:
         data = json.loads(p.stdout)
     except (UnicodeError, ValueError) as exc:
-        raise Rejected('operational tool returned invalid JSON') from exc
-    ensure(isinstance(data, dict), 'operational tool returned unexpected output')
+        raise Rejected('Эксплуатационная утилита вернула недопустимый JSON') from exc
+    ensure(isinstance(data, dict), 'Эксплуатационная утилита вернула неожиданный результат')
     return data
 
 
@@ -124,7 +124,7 @@ def probe(mode, project, env, url, version):
         result = invoke(argv, timeout=120, json_result=True)
         ensure(result.get('status') == 'passed' and result.get('mode') == mode
                and result.get('scope') == 'read-only-live-readiness', 'actual backend readiness not verified')
-        ensure(path.is_file() and path.stat().st_mode & 0o077 == 0, 'private live receipt missing')
+        ensure(path.is_file() and path.stat().st_mode & 0o077 == 0, 'Отсутствует закрытая квитанция о реальном выполнении')
         ensure(result == json.loads(path.read_text()), 'live receipt differs from command result')
         return {'sha256': sha(path), 'checks': sorted(result['checks']),
                 'version': result['public']['version']}
@@ -134,16 +134,16 @@ def base_receipt(args, stage, started, operator):
     return {'schema': 1, 'status': 'passed', 'stage': stage, 'release': VERSION,
             'startedUtc': started, 'completedUtc': datetime.now(timezone.utc).isoformat(),
             'secondOperator': operator, 'firstOperator': args.primary_operator,
-            'machineFingerprint': host_id(), 'scope': 'live execution of existing operational commands; no inferred cross-host certification'}
+            'machineFingerprint': host_id(), 'scope': 'Реальное выполнение существующих эксплуатационных команд; межузловая сертификация автоматически не предполагается'}
 
 
 def read_receipt(path, stage):
     private_file(path)
-    ensure(path.stat().st_size <= MAX_OUTPUT, 'receipt exceeds safety limit')
+    ensure(path.stat().st_size <= MAX_OUTPUT, 'Размер квитанции превышает допустимое ограничение')
     try:
         doc = json.loads(path.read_text(encoding='utf-8'))
     except (UnicodeError, ValueError) as exc:
-        raise Rejected('invalid source receipt') from exc
+        raise Rejected('Недопустимая исходная квитанция') from exc
     ensure(isinstance(doc, dict) and doc.get('schema') == 1 and doc.get('status') == 'passed'
            and doc.get('stage') == stage, 'wrong or unverified receipt stage')
     return doc
@@ -165,10 +165,10 @@ def assert_fresh_compose_project(project: str):
             proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                   check=False, timeout=20)
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise Rejected('Docker inventory cannot be checked') from exc
+            raise Rejected('Невозможно проверить инвентаризацию Docker') from exc
         ensure(proc.returncode == 0 and len(proc.stdout) < 128 * 1024,
-               'Docker inventory failed closed')
-        ensure(not proc.stdout.strip(), 'clean install blocked: existing Compose ' + scope)
+               'Проверка инвентаризации Docker завершилась безопасным отказом')
+        ensure(not proc.stdout.strip(), 'Чистая установка заблокирована: обнаружена существующая конфигурация Compose ' + scope)
 
 
 def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
@@ -181,19 +181,19 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
     """
     live.checked_origin(url.removesuffix('/ready'))
     ensure('@' in email and 0 < len(email) <= 254 and not any(c.isspace() for c in email),
-           'invalid existing administrator email')
+           'Недопустимый адрес электронной почты действующего администратора')
     ensure(re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}', project_id) is not None,
-           'invalid project ID for recovered-data verification')
+           'Недопустимый ID проекта для проверки восстановленных данных')
     private_file(password_file)
     ensure(password_file.stat().st_size <= 4096, 'administrator password file too large')
     password = password_file.read_text(encoding='utf-8').rstrip('\r\n')
     ensure(len(password) >= 12 and not any(c in password for c in '\x00\r\n'),
-           'invalid administrator password file')
+           'Недопустимый файл пароля администратора')
     body = {'email': email, 'password': password}
     if totp_file is not None:
         private_file(totp_file)
         totp = totp_file.read_text(encoding='ascii').strip()
-        ensure(re.fullmatch(r'\d{6,8}', totp) is not None, 'invalid TOTP code')
+        ensure(re.fullmatch(r'\d{6,8}', totp) is not None, 'Недопустимый код TOTP')
         body['totp'] = totp
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *unused):
@@ -211,14 +211,14 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
         try:
             with opener.open(q, timeout=15) as response:
                 ensure(response.status == 200 and response.headers.get('Content-Type','').split(';')[0] == 'application/json',
-                       'administrator HTTP verification failed')
+                       'HTTP-проверка администратора завершилась ошибкой')
                 raw = response.read(1024 * 1024 + 1)
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
-            raise Rejected('administrator login/authorization failed over trusted HTTPS') from exc
+            raise Rejected('Вход или авторизация администратора через доверенный HTTPS завершились ошибкой') from exc
         ensure(len(raw) <= 1024 * 1024, 'administrator response too large')
         try: result = json.loads(raw)
-        except (UnicodeError, ValueError) as exc: raise Rejected('administrator response invalid') from exc
-        ensure(isinstance(result, dict), 'administrator response is not an object')
+        except (UnicodeError, ValueError) as exc: raise Rejected('Недопустимый ответ администратора') from exc
+        ensure(isinstance(result, dict), 'Ответ администратора не является объектом')
         return result
     session = request('/api/v1/admin/login', body)
     token = session.get('token')
@@ -231,7 +231,7 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
     ensure(overview.get('version') == expected_version and
            isinstance(overview.get('projects'), list) and
            any(isinstance(item, dict) and item.get('id') == project_id for item in overview['projects']),
-           'expected pre-existing project is missing or inaccessible')
+           'Ожидаемый существующий проект отсутствует или недоступен')
     return {'oldAdminLogin': 'verified', 'oldProjectId': project_id,
             'oldProjectRead': 'verified', 'backendVersion': expected_version}
 
@@ -240,9 +240,9 @@ def accept_install(args):
     ensure(args.project == 'launcher', 'production installer has fixed launcher Compose project')
     checked_env(args.env_file, args.version, 'standard', args.url)
     private_file(args.password_file)
-    ensure(args.version == VERSION, 'install version must equal checked source release')
+    ensure(args.version == VERSION, 'Версия установки должна совпадать с проверенным исходным релизом')
     ensure(not (args.env_file.parent / '.launcher-compose-state.json').exists(),
-           'clean install required: existing deployment state found')
+           'Требуется чистая установка: найдено состояние существующего развёртывания')
     assert_fresh_compose_project(args.project)
     for action in ('check', 'up'):
         invoke([sys.executable, str(INSTALL), 'compose', action, '--mode', 'standard', '--env', str(args.env_file)], timeout=2400)
@@ -252,16 +252,16 @@ def accept_install(args):
     check = probe('standard', args.project, args.env_file, args.url, args.version)
     return {'mode': 'standard', 'installedVersion': args.version, 'ready': check,
             'firstAdminCreatedAndLoginVerified': True,
-            'limits': ['actual MFA enrolment and project creation require separate user evidence']}
+            'limits': ['Для фактической регистрации MFA и создания проекта необходимы отдельные доказательства действий пользователя']}
 
 
 def accept_upgrade(args):
     ensure(args.project == args.confirm and args.maintenance_approved,
-           'must confirm exact source project and explicitly approve maintenance')
+           'Необходимо подтвердить точный исходный проект и явно разрешить обслуживание')
     require_version(args.from_version); require_version(args.to_version)
     checked_env(args.source_env, args.from_version, 'standard', args.url)
     checked_env(args.target_env, args.to_version, 'standard', args.url)
-    ensure(args.from_version != args.to_version, 'source and target versions must differ')
+    ensure(args.from_version != args.to_version, 'Исходная и целевая версии должны различаться')
     # Промышленный обновлятор компонентов собирает настоящие образы, создаёт
     # контрольную точку PostgreSQL/бинарных объектов и выполняет проверенный откат
     # прежних образов при ошибке.
@@ -273,11 +273,11 @@ def accept_upgrade(args):
     ensure(output.get('status') == 'upgraded' and output.get('from') == args.from_version
            and output.get('to') == args.to_version and output.get('backendVerified') is True,
            'component updater has not proved successful cutover')
-    ensure((args.snapshot / 'manifest.json').is_file(), 'actual verified backup manifest missing')
+    ensure((args.snapshot / 'manifest.json').is_file(), 'Отсутствует фактически проверенный манифест резервной копии')
     verify = invoke([sys.executable, str(DR), 'verify', '--snapshot', str(args.snapshot)],
                     timeout=300, json_result=True)
     ensure(verify.get('status') == 'verified' and verify.get('postgresArchiveChecked') is True,
-           'independent backup verification failed')
+           'Независимая проверка резервной копии завершилась ошибкой')
     check = probe('standard', args.project, args.target_env, args.url, args.to_version)
     identity = verify_old_owner(args.url, args.admin_email, args.admin_password_file,
                                 args.project_id, args.to_version, args.totp_file)
@@ -289,10 +289,10 @@ def accept_upgrade(args):
 
 def accept_restore(args):
     ensure(args.project == args.confirm and args.maintenance_approved,
-           'must confirm exact restoration project and explicitly approve destructive restore')
+           'Необходимо подтвердить конкретный проект восстановления и явно разрешить восстановление с перезаписью данных')
     source = read_receipt(args.source_receipt, 'upgrade-standard')
     ensure(source.get('machineFingerprint') != host_id(),
-           'restore must be run on a different Linux host from source upgrade')
+           'Восстановление должно выполняться на другом Linux-узле, отличном от узла исходного обновления')
     ensure(source.get('secondOperator') == args.primary_operator or
            source.get('firstOperator') == args.primary_operator,
            'first operator identity does not match supplied source receipt')
@@ -321,21 +321,21 @@ def accept_restore(args):
             dr.compose(args.project, args.env_file, 'stop', '-t', '10',
                        'nginx', 'admin', 'api', timeout=45)
         except Exception as shutdown_exc:
-            raise Rejected('restored data could not be accepted and target isolation failed') from shutdown_exc
+            raise Rejected('Восстановленные данные не удалось принять, а изоляция целевой среды не пройдена') from shutdown_exc
         raise
     return {'identity': identity, 'mode': 'standard', 'recoveredVersion': source['from'],
             'sourceHostFingerprint': source['machineFingerprint'],
             'sourceReceiptSha256': sha(args.source_receipt),
             'backupManifestSha256': sha(snapshot_manifest), 'ready': check,
-            'limits': ['readiness and restored database/volume bytes checked; prior admin login must be independently repeated']}
+            'limits': ['Готовность, восстановленные байты БД и томов проверены; предыдущий вход администратора нужно независимо повторить']}
 
 
 def accept_failover(args):
-    ensure(args.project == args.confirm, 'must confirm exact isolated lab project')
+    ensure(args.project == args.confirm, 'Необходимо подтвердить точный идентификатор изолированного тестового проекта')
     ensure(re.fullmatch(r'nl-dr-[a-z0-9][a-z0-9-]{0,35}', args.project) is not None,
            'destructive failover only allowed in isolated nl-dr-* projects')
     checked_env(args.env_file, args.version, 'network-ha', args.url)
-    ensure(args.version == VERSION, 'failover test must use matching source release')
+    ensure(args.version == VERSION, 'Тест переключения при отказе должен использовать соответствующий исходный релиз')
     # Скрипт хаос-тестов требует локальный вход/S3, проверяет настоящую
     # идентичность контейнера Docker, прерывает PostgreSQL/Redis/S3/API/сеть,
     # проверяет подтверждённые контрольные записи и восстанавливает службы в
@@ -369,24 +369,24 @@ def accept_verify(args):
     # Свежая установка и обновление предыдущей версии могут выполняться на отдельных
     # исходных хостах.
     ensure(restore['machineFingerprint'] != upgrade['machineFingerprint'], 'restore reused original host')
-    ensure(restore['sourceHostFingerprint'] == upgrade['machineFingerprint'], 'restore source mismatch')
+    ensure(restore['sourceHostFingerprint'] == upgrade['machineFingerprint'], 'Несовпадение источника восстановления')
     ensure(restore['sourceReceiptSha256'] == sha(args.upgrade_receipt), 'restore does not bind exact upgrade receipt')
     ensure(restore['backupManifestSha256'] == upgrade['backupManifestSha256'], 'restore and upgrade backups differ')
     ensure(inst['secondOperator'] == upgrade['secondOperator'] == restore['secondOperator'] == fail['secondOperator'],
            'second operator identity differs between stages')
-    ensure(all(records[name]['release'] == VERSION for name in records), 'receipt release mismatch')
+    ensure(all(records[name]['release'] == VERSION for name in records), 'Несовпадение релиза в квитанции')
     ensure(inst['installedVersion'] == VERSION and upgrade['to'] == VERSION, 'install/upgrade target release differs')
     ensure(restore['recoveredVersion'] == upgrade['from'], 'restore did not use source-version checkpoint')
     ensure(all(records[name]['firstOperator'] == inst['firstOperator'] for name in records),
            'first-operator identity differs between stages')
     ensure(fail['faults'] == sorted(['postgres-stopped', 'redis-stopped', 's3-stopped', 'api-stopped',
-                                    'worker-a-network-partition']), 'failover faults mismatch')
+                                    'worker-a-network-partition']), 'Несовпадение неисправностей в тесте переключения')
     return {'stages': {key: sha(path) for key, path in (
         ('install-standard', args.install_receipt), ('upgrade-standard', args.upgrade_receipt),
         ('restore-standard', args.restore_receipt), ('failover-network-ha', args.failover_receipt))},
         'result': 'four operational stage receipts internally consistent',
-        'limits': ['receipts are not cryptographic signatures; operator and host credentials require external attestation',
-                   'separate real-world MFA, Minecraft join, multi-host HA and RPO must still be certified']}
+        'limits': ['Квитанции не являются криптографическими подписями; данные оператора и узла требуют внешней аттестации',
+                   'Отдельно необходимо подтвердить MFA, подключение к Minecraft, отказоустойчивость нескольких узлов и RPO в реальных условиях']}
 
 
 def atomic_report(path, value):
@@ -479,7 +479,7 @@ def main(argv=None):
     except (Rejected, live.AcceptanceError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
         # Пути, argv, секреты, окружение и закрытые тела ответов backend никогда не выводятся.
         print(json.dumps({'status': 'failed', 'stage': args.stage,
-                          'reason': str(exc) if isinstance(exc, Rejected) else 'operational verification failed'},
+                          'reason': str(exc) if isinstance(exc, Rejected) else 'Эксплуатационная проверка завершилась ошибкой'},
                          ensure_ascii=False), file=sys.stderr)
         return 1
 

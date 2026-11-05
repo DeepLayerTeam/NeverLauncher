@@ -272,7 +272,7 @@ func handlePackaging(args []string) error {
 
 func packaging940ReleaseGates() []map[string]any {
 	return []map[string]any{
-		{"id": "version-matrix", "required": true, "status": "required", "check": "VERSION, CLI, API, Admin, Desktop, Tauri, OpenAPI must equal 0.10.0"},
+		{"id": "version-matrix", "required": true, "status": "required", "check": "VERSION, CLI, API, Admin, Desktop, Tauri, OpenAPI должны совпадать с 0.10.0"},
 		{"id": "backend-build", "required": true, "status": "required", "check": "go build -tags launcher_nopgx ./cmd/launcher-api"},
 		{"id": "cli-build", "required": true, "status": "required", "check": "go build ./cmd/launcher"},
 		{"id": "admin-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/admin"},

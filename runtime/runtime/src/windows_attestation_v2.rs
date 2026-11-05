@@ -243,7 +243,7 @@ pub fn collect_windows_continuous_evidence_v2(
     if status.id != process_id || status.state != "running" {
         return Err("Для аттестации Guard v2 требуется запрошенный работающий процесс Runtime".to_string());
     }
-    let runtime_pid = status.pid.ok_or_else(|| "Guard Attestation v2 runtime PID unavailable".to_string())?;
+    let runtime_pid = status.pid.ok_or_else(|| "Недоступен PID процесса Runtime для аттестации Guard v2".to_string())?;
     let sensor: &WindowsSensorReport = status.windows_sensor.as_ref().ok_or_else(|| {
         "Guard Attestation v2 requires authenticated Windows Sensor evidence".to_string()
     })?;

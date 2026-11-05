@@ -1560,7 +1560,7 @@ func copyZipEntryAtomic(entry *zip.File, dst string) error {
 	closeErr := out.Close()
 	if copyErr != nil || syncErr != nil || closeErr != nil {
 		_ = os.Remove(tmp)
-		return fmt.Errorf("extract %s failed: %v %v %v", entry.Name, copyErr, syncErr, closeErr)
+		return fmt.Errorf("Не удалось извлечь %s: %v %v %v", entry.Name, copyErr, syncErr, closeErr)
 	}
 	if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 		_ = os.Remove(tmp)

@@ -338,7 +338,7 @@ def execute(args, report):
     check(report, 'unused_isolated_compose_project', lambda: no_existing_project(project_name))
     password = private_bytes(args.password_file.absolute()).decode('utf-8')
     require(len(password) >= 12 and '\n' not in password and '\r' not in password,
-            'invalid administrator password file')
+            'Недопустимый файл пароля администратора')
     require(args.server_id and re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{2,100}', args.server_id),
             'dedicated registered game server ID required')
     marker = args.world_marker.absolute()

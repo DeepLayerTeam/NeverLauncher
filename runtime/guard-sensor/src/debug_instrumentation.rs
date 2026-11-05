@@ -83,7 +83,7 @@ pub fn reconcile_and_verify() -> Result<DebugInstrumentationSnapshot, String> {
         .map_err(|_| "Повреждена блокировка состояния защиты от отладки Guard".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "Guard Debug & Instrumentation Guard is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Debug & Instrumentation не инициализирован".to_string())?;
     if !state.active || !state.healthy {
         return Err("Защита Guard от отладки и инструментирования не активна или работает некорректно".to_string());
     }

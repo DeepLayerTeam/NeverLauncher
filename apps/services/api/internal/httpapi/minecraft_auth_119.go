@@ -412,7 +412,7 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if !s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.BeforeAuth, UserID: result.User.ID, DeviceID: "minecraft-authlib", RoleID: result.User.RoleID}).Allowed() {
-		writeYggdrasilError119(w, http.StatusForbidden, "Protection policy denied authentication")
+		writeYggdrasilError119(w, http.StatusForbidden, "Политика защиты запретила аутентификацию")
 		return
 	}
 	mfa, err := s.evaluateLoginMFA117(result.User, result.AuthMethods, req.TOTP, req.RecoveryCode)
@@ -422,13 +422,13 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 	}
 	_, _, neverSession, err := s.issueLoginSessionWithAuth(result.User, r, "minecraft-authlib", mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusInternalServerError, "Session creation failed")
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Не удалось создать сеанс")
 		return
 	}
 	mcSession, token, profile, err := s.issueMinecraftSession119(result.User, neverSession.ID, req.ClientToken)
 	if err != nil {
 		s.State.AuthSessions.revoke(neverSession.ID, "minecraft-session-failed")
-		writeYggdrasilError119(w, http.StatusInternalServerError, "Minecraft session creation failed")
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Не удалось создать сеанс Minecraft")
 		return
 	}
 	payload := map[string]any{"accessToken": token, "clientToken": mcSession.ClientToken, "availableProfiles": []any{minecraftProfileJSON119(profile, nil)}, "selectedProfile": minecraftProfileJSON119(profile, nil)}
@@ -446,12 +446,12 @@ func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
 	}
 	old, profile, user, err := s.validateMinecraftToken119(req.AccessToken)
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
+		writeYggdrasilError119(w, http.StatusForbidden, "Недопустимый токен")
 		return
 	}
 	repo, _ := s.minecraftRepo119()
 	if err := repo.RevokeMinecraftSession(old.ID, "yggdrasil-refresh"); err != nil {
-		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
+		writeYggdrasilError119(w, http.StatusForbidden, "Недопустимый токен")
 		return
 	}
 	var integritySnapshot *minecraftIntegritySnapshot0135
@@ -463,7 +463,7 @@ func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
 	}
 	fresh, token, profile, err := s.issueMinecraftSessionWithTrustAndIntegrity119(user, old.NeverSessionID, firstNonEmpty(req.ClientToken, old.ClientToken), old.TrustedDeviceID, old.BindingEpoch, integritySnapshot)
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusInternalServerError, "Session refresh failed")
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Не удалось обновить сеанс")
 		return
 	}
 	payload := map[string]any{"accessToken": token, "clientToken": fresh.ClientToken, "selectedProfile": minecraftProfileJSON119(profile, nil)}
@@ -481,7 +481,7 @@ func (s Server) yggdrasilValidate119(w http.ResponseWriter, r *http.Request) {
 	}
 	session, _, _, err := s.validateMinecraftToken119(req.AccessToken)
 	if err != nil || (req.ClientToken != "" && req.ClientToken != session.ClientToken) {
-		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
+		writeYggdrasilError119(w, http.StatusForbidden, "Недопустимый токен")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -528,23 +528,23 @@ func (s Server) yggdrasilJoin119(w http.ResponseWriter, r *http.Request) {
 	}
 	session, profile, _, err := s.validateMinecraftToken119(req.AccessToken)
 	if err != nil || minecraftID119(profile.UUID) != strings.ReplaceAll(strings.ToLower(strings.TrimSpace(req.SelectedProfile)), "-", "") {
-		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token or profile")
+		writeYggdrasilError119(w, http.StatusForbidden, "Недопустимый токен или профиль")
 		return
 	}
 	if strings.TrimSpace(req.ServerID) == "" {
-		writeYggdrasilError119(w, http.StatusBadRequest, "serverId is required")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Необходимо указать serverId")
 		return
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)
 	if !trust.Allowed {
-		writeYggdrasilError119(w, http.StatusForbidden, "Launcher trust policy denied join: "+trust.Reason)
+		writeYggdrasilError119(w, http.StatusForbidden, "Политика доверия лаунчера запретила подключение: "+trust.Reason)
 		return
 	}
 	repo, _ := s.minecraftRepo119()
 	now := time.Now().UTC()
 	err = repo.SaveMinecraftJoin(model.MinecraftJoin{Username: profile.Name, UsernameNormalized: strings.ToLower(profile.Name), ProfileUUID: profile.UUID, UserID: session.UserID, MinecraftSessionID: session.ID, ServerID: req.ServerID, IP: clientIP(r), CreatedAt: now, ExpiresAt: now.Add(minecraftJoinTTL119)})
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusInternalServerError, "Join persistence failed")
+		writeYggdrasilError119(w, http.StatusInternalServerError, "Не удалось сохранить данные подключения")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -555,7 +555,7 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimSpace(r.URL.Query().Get("username"))
 	serverID := strings.TrimSpace(r.URL.Query().Get("serverId"))
 	if username == "" || serverID == "" {
-		writeYggdrasilError119(w, http.StatusBadRequest, "username and serverId are required")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Требуются username и serverId")
 		return
 	}
 	repo, err := s.minecraftRepo119()
@@ -629,7 +629,7 @@ func (s Server) yggdrasilProfile119(w http.ResponseWriter, r *http.Request) {
 	}
 	unsigned := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("unsigned")))
 	if unsigned != "" && unsigned != "true" && unsigned != "false" {
-		writeYggdrasilError119(w, http.StatusBadRequest, "unsigned must be true or false")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Параметр unsigned должен быть true или false")
 		return
 	}
 	texture, lookupErr := s.localTextureRecord0394(r.Context(), profile.UUID, profile.Name)
@@ -667,7 +667,7 @@ func (s Server) yggdrasilMetadata119(w http.ResponseWriter, r *http.Request) {
 	}
 	domains, err := s.textureDomains0256()
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil texture allowlist unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Список разрешённых текстур Yggdrasil недоступен")
 		return
 	}
 	base := strings.TrimRight(strings.TrimSpace(s.Config.PublicURL), "/")

@@ -22,9 +22,9 @@ import (
 const ProtocolVersion = "1.0"
 
 var (
-	ErrHookRejected      = errors.New("extension sync hook rejected operation")
+	ErrHookRejected      = errors.New("Синхронный хук расширения отклонил операцию")
 	ErrHookTimeout       = errors.New("extension sync hook timeout")
-	ErrPermanentDelivery = errors.New("extension event permanently rejected")
+	ErrPermanentDelivery = errors.New("Событие расширения окончательно отклонено")
 )
 
 type EventSpec struct {
@@ -319,19 +319,19 @@ func (b *Bus) processBatch(ctx context.Context) {
 		now := time.Now().UTC()
 		if err == nil {
 			if ackErr := b.store.CompleteExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now); ackErr != nil {
-				log.Printf("Extensions event ack failed delivery=%d: %v", env.Delivery.ID, ackErr)
+				log.Printf("Не удалось подтвердить событие Extensions для доставки=%d: %v", env.Delivery.ID, ackErr)
 			}
 			continue
 		}
 		if env.Delivery.AttemptCount >= b.cfg.MaxAttempts || errors.Is(err, ErrPermanentDelivery) {
 			if dlqErr := b.store.DeadLetterExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, err.Error(), now); dlqErr != nil {
-				log.Printf("Extensions DLQ failed delivery=%d: %v", env.Delivery.ID, dlqErr)
+				log.Printf("Ошибка очереди недоставленных сообщений Extensions для доставки=%d: %v", env.Delivery.ID, dlqErr)
 			}
 			continue
 		}
 		delay := b.retryDelay(env.Delivery.AttemptCount)
 		if retryErr := b.store.RetryExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now.Add(delay), err.Error()); retryErr != nil {
-			log.Printf("Extensions retry scheduling failed delivery=%d: %v", env.Delivery.ID, retryErr)
+			log.Printf("Не удалось запланировать повторную попытку Extensions для доставки=%d: %v", env.Delivery.ID, retryErr)
 		}
 	}
 }

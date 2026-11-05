@@ -60,7 +60,7 @@ DO $nl$
 DECLARE bad BIGINT;
 BEGIN
  IF to_regclass('users') IS NULL OR to_regclass('auth_identities') IS NULL OR to_regclass('minecraft_profiles') IS NULL THEN
-  RAISE EXCEPTION 'auth upgrade: required identity tables absent';
+  RAISE EXCEPTION 'Обновление аутентификации: отсутствуют обязательные таблицы учётных записей';
  END IF;
  SELECT count(*) INTO bad FROM auth_identities i LEFT JOIN users u ON i.user_id=u.id WHERE u.id IS NULL;
  IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: orphaned auth identities: %',bad; END IF;

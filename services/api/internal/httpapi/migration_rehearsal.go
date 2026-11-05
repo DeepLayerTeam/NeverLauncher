@@ -63,18 +63,18 @@ func (s Server) migrationRehearsalPost03310(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if r.Header.Get("X-Migration-Rehearsal-Confirm") != run.ID {
-		writeError(w, 400, "run confirmation required")
+		writeError(w, 400, "Требуется подтверждение запуска")
 		return
 	}
 	if r.Header.Get("Content-Type") != "application/json" {
-		writeError(w, 415, "expected application/json")
+		writeError(w, 415, "Ожидается application/json")
 		return
 	}
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, gr.MaxReportBytes))
 	dec.DisallowUnknownFields()
 	var report gr.Report
 	if e = dec.Decode(&report); e != nil {
-		writeError(w, 400, "invalid rehearsal evidence")
+		writeError(w, 400, "Недопустимые доказательства репетиционного запуска")
 		return
 	}
 	var extra any

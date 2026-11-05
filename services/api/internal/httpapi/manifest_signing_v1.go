@@ -78,7 +78,7 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 			return e
 		}
 		if !ed25519.PublicKey(declaredPublicKey).Equal(privateKey.Public().(ed25519.PublicKey)) {
-			return errors.New("manifest signer is not the configured key")
+			return errors.New("Подпись манифеста выполнена не настроенным ключом")
 		}
 	}
 	signature, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.Signature))

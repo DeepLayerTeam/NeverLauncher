@@ -235,11 +235,11 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 	if !l.ScheduleRestart() {
 		// Запрос уже сохранён как принятый, но ещё не выполнен. Никогда не сообщайте
 		// об успешном завершении.
-		writeJSON(w, 202, map[string]any{"operation": rec, "state": "indeterminate", "note": "restart already in progress; check supervisor and instance identity"})
+		writeJSON(w, 202, map[string]any{"operation": rec, "state": "indeterminate", "note": "Перезапуск уже выполняется; проверьте супервизор и идентификатор экземпляра"})
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 202, map[string]any{"operation": rec, "state": "accepted", "note": "external supervisor must restart the process after graceful shutdown"})
+	writeJSON(w, 202, map[string]any{"operation": rec, "state": "accepted", "note": "После корректного завершения процесса его должен перезапустить внешний супервизор"})
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}

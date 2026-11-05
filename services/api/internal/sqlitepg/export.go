@@ -42,7 +42,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	}
 	for _, suffix := range []string{"", ".json", "-wal", "-shm", "-journal"} {
 		if _, e := os.Lstat(dest + suffix); e == nil {
-			return out, fmt.Errorf("destination already exists: %s", dest+suffix)
+			return out, fmt.Errorf("Целевой объект уже существует: %s", dest+suffix)
 		} else if !os.IsNotExist(e) {
 			return out, e
 		}
@@ -71,7 +71,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 		return out, err
 	}
 	if out.Format != importVersion || out.SQLiteSchema != sqlitecore.SchemaVersion || out.PostgreSQLSchema != Schema || out.ReadyForBackendCutover || out.SnapshotSHA256 != receiptID || manifest.SHA256 != receiptID || manifest.SchemaVersion != sqlitecore.SchemaVersion || manifest.Bytes <= 0 {
-		return out, errors.New("unsupported, incomplete or inconsistent PostgreSQL transfer receipt")
+		return out, errors.New("Неподдерживаемая, неполная или противоречивая квитанция переноса PostgreSQL")
 	}
 	// Закрытая временная резервная копия не публикуется, пока оба зеркала PostgreSQL
 	// и исходные инварианты SQLite-приложения не пройдут проверку.
@@ -211,7 +211,7 @@ func readChunks(ctx context.Context, tx pgx.Tx, dest io.Writer, expectedSize int
 		count++
 		size += int64(len(data))
 		if size > expectedSize {
-			err = errors.New("snapshot exceeds manifest size")
+			err = errors.New("Размер снимка превышает указанный в манифесте")
 			break
 		}
 	}

@@ -150,7 +150,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     require(document.get('operator') and document.get('sourceMachine') != document.get('restoreMachine') and
             all(isinstance(document.get(name), str) and SHA.fullmatch(document[name]) for name in ('sourceMachine','restoreMachine','openApiV1Sha256')),
             'invalid independently certified identities or API hash')
-    require(document.get('scope') == 'actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO',
+    require(document.get('scope') == 'Фактическая независимая эксплуатационная приёмка; RPO проверен только на контрольных данных, без утверждений об отказоустойчивости физических узлов и неизмеренного RPO нагрузки',
             'unsupported operations scope')
     stages = document.get('stageReceipts', {})
     require(isinstance(stages, dict) and set(stages) == set(NAMES) and

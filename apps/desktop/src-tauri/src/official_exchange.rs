@@ -346,7 +346,7 @@ fn classify(status: u16, hint: &ErrorBody, retry_after: Option<u64>) -> Provider
         "invalid_grant" | "interaction_required" => return ProviderError::InvalidGrant,
         _ => {},
     }
-    if status==403 && (hint.message.to_ascii_lowercase().contains("invalid app registration") || hint.error.to_ascii_lowercase().contains("invalid_app_registration")) { return ProviderError::AppNotAuthorized; }
+    if status==403 && (hint.message.to_ascii_lowercase().contains("Недопустимая регистрация приложения") || hint.error.to_ascii_lowercase().contains("invalid_app_registration")) { return ProviderError::AppNotAuthorized; }
     if status==401 {
         return match hint.xerr.as_i64().or_else(||hint.xerr.as_str().and_then(|s|s.parse::<i64>().ok())) {
             Some(2148916233) => ProviderError::XboxAccount,

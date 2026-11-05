@@ -41,7 +41,7 @@ func runBackupAction(args []string) int {
 		return 2
 	}
 	if (action == "backup" || action == "pre-upgrade" || action == "restore") && *db == "" {
-		fmt.Fprintln(os.Stderr, "--db required")
+		fmt.Fprintln(os.Stderr, "Требуется --db")
 		return 2
 	}
 	if *replace && action != "restore" {

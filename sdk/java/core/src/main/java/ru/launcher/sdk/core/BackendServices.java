@@ -44,12 +44,12 @@ public final class BackendServices {
         return host.capability(capability, payload);
     }
     private static Map<String,Object> record(Map<String,Object> response, String key) {
-        return Json.object(Objects.requireNonNull(response.get(key),"backend response missing " + key));
+        return Json.object(Objects.requireNonNull(response.get(key),"В ответе Backend отсутствует " + key));
     }
     private static String text(Map<String,Object> raw,String key) {
         Object v=raw.get(key);
         if(v==null)return "";
-        if(!(v instanceof String s))throw new IllegalArgumentException("invalid backend field: " + key);
+        if(!(v instanceof String s))throw new IllegalArgumentException("Недопустимое поле Backend: " + key);
         return s;
     }
     private static String required(Map<String,Object> raw,String key) {
@@ -57,7 +57,7 @@ public final class BackendServices {
     }
     private static boolean bool(Map<String,Object> raw,String key) {
         Object n=raw.get(key);
-        if(!(n instanceof Boolean b))throw new IllegalArgumentException("invalid backend boolean: "+key);
+        if(!(n instanceof Boolean b))throw new IllegalArgumentException("Недопустимое логическое значение Backend: "+key);
         return b;
     }
     private static long number(Map<String,Object> raw,String key) {

@@ -59,7 +59,7 @@ func DiagnoseHost() DeviceDiagnostics {
 		d.TPMDevice = Capability{"unsupported", "tpm-device-not-applicable-to-macos"}
 		d.Notes = append(d.Notes, "Secure Enclave key generation and App Attest availability do not establish remote provenance for an arbitrary device key.")
 	case "windows":
-		d.Notes = append(d.Notes, "Windows TPM provisioning and key attestation require native device-side evidence; server cannot infer them from a provider label.")
+		d.Notes = append(d.Notes, "Для настройки Windows TPM и аттестации ключа нужны доказательства с самого устройства; сервер не может определить это по названию провайдера.")
 	}
 	return d
 }

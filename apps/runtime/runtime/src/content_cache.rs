@@ -127,7 +127,7 @@ impl CacheLease {
             return Ok(false);
         }
         file_ownership::ensure_no_symlinks(root, target)?;
-        let parent = target.parent().ok_or("invalid destination")?;
+        let parent = target.parent().ok_or("Недопустимый целевой путь")?;
         fs::create_dir_all(parent).await.map_err(|e| format!("Не удалось создать целевой каталог: {e}"))?;
         file_ownership::ensure_no_symlinks(root, target)?;
         let staging = parent.join(format!(".nl-cache-{:016x}.tmp", rand::random::<u64>()));

@@ -210,7 +210,7 @@ func normalizeBuildFile0226(f repository.BuildFile) error {
 		f.Ownership = "required"
 	}
 	if f.Ownership != "managed" && f.Ownership != "required" && f.Ownership != "optional" {
-		return errors.New("only managed/required/optional files can be uploaded")
+		return errors.New("Разрешено загружать только управляемые, обязательные и дополнительные файлы")
 	}
 	m := model.Manifest{SchemaVersion: model.ManifestSchemaV2, Files: []model.ManifestFile{{Path: f.Path, Required: f.Ownership != "optional", Ownership: f.Ownership}}}
 	if err := model.ValidateFileOwnership0224(m); err != nil {
@@ -264,7 +264,7 @@ func (s Server) readWorkspaceSource0226(ws repository.BuildWorkspace, f reposito
 	}
 	max := f.Size + int64(len("NLBW1")) + int64(aead.NonceSize()+aead.Overhead())
 	if size != max {
-		return nil, fmt.Errorf("encrypted size mismatch at %s", f.Path)
+		return nil, fmt.Errorf("Несовпадение размера зашифрованных данных в %s", f.Path)
 	}
 	raw, err := io.ReadAll(io.LimitReader(src, max+1))
 	if err != nil {
@@ -278,11 +278,11 @@ func (s Server) readWorkspaceSource0226(ws repository.BuildWorkspace, f reposito
 	aad := []byte(ws.ProjectID + "\x00" + ws.ID + "\x00" + f.SHA256)
 	plain, err := aead.Open(nil, nonce, raw[offset+aead.NonceSize():], aad)
 	if err != nil {
-		return nil, fmt.Errorf("source authentication failed at %s: %w", f.Path, err)
+		return nil, fmt.Errorf("Ошибка аутентификации источника в %s: %w", f.Path, err)
 	}
 	sum := sha256.Sum256(plain)
 	if int64(len(plain)) != f.Size || hex.EncodeToString(sum[:]) != f.SHA256 {
-		return nil, fmt.Errorf("source integrity mismatch at %s", f.Path)
+		return nil, fmt.Errorf("Нарушение целостности источника в %s", f.Path)
 	}
 	return plain, nil
 }

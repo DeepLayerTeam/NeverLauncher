@@ -37,7 +37,7 @@ func securityScope0207(r *http.Request) (string, string) {
 }
 func (s Server) extensionSecurityReady0207(w http.ResponseWriter) bool {
 	if s.ExtensionSecurity == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension capability security unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Проверка безопасности возможностей расширения недоступна")
 		return false
 	}
 	return true
@@ -159,7 +159,7 @@ func (s Server) extensionPermissionRevoke0207(w http.ResponseWriter, r *http.Req
 	permission := strings.ToLower(strings.TrimSpace(r.PathValue("permission")))
 	if err := s.ExtensionSecurity.Revoke(r.Context(), id, scope, scopeID, permission); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			writeError(w, 404, "permission grant not found")
+			writeError(w, 404, "Выданное разрешение не найдено")
 		} else {
 			writeError(w, 400, err.Error())
 		}
@@ -195,7 +195,7 @@ func (s Server) extensionSecretPut0207(w http.ResponseWriter, r *http.Request) {
 	}
 	value, err := base64.StdEncoding.DecodeString(req.ValueBase64)
 	if err != nil {
-		writeError(w, 400, "valueBase64 is invalid")
+		writeError(w, 400, "Недопустимое значение valueBase64")
 		return
 	}
 	meta, err := s.ExtensionSecurity.SetSecret(r.Context(), r.PathValue("extensionId"), req.Scope, req.ScopeID, r.PathValue("secretName"), value, s.adminActor(r))
@@ -218,7 +218,7 @@ func (s Server) extensionSecretDelete0207(w http.ResponseWriter, r *http.Request
 	name := r.PathValue("secretName")
 	if err := s.ExtensionSecurity.DeleteSecret(r.Context(), id, scope, scopeID, name); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			writeError(w, 404, "secret not found")
+			writeError(w, 404, "Секрет не найден")
 		} else {
 			writeError(w, 400, err.Error())
 		}

@@ -27,7 +27,7 @@ func moduleParityRepo0301() (string, error) {
 		}
 		dir = parent
 	}
-	return "", errors.New("module parity registry not found; use --root <repository checkout>")
+	return "", errors.New("Реестр паритета модулей не найден; укажите --root <repository checkout>")
 }
 
 func paritySwitch0301(args []string, name string) bool {

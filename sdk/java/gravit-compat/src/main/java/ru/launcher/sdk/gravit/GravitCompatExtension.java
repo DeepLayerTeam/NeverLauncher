@@ -17,9 +17,9 @@ public final class GravitCompatExtension implements Extension {
             if(!GravitCompatExtension.class.getName().equals(attrs.getValue("Launcher-Extension-Class")))throw new SecurityException("not a Gravit compatibility package");
             className=attrs.getValue("Launcher-Gravit-Module-Class");
         }
-        if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}")||className.contains("..")||className.startsWith("pro.gravit.launcher.")||className.startsWith("ru.launcher.sdk."))throw new SecurityException("invalid ported Gravit module class");
+        if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}")||className.contains("..")||className.startsWith("pro.gravit.launcher.")||className.startsWith("ru.launcher.sdk."))throw new SecurityException("Недопустимый класс перенесённого модуля Gravit");
         Class<?> type=Class.forName(className,false,GravitCompatExtension.class.getClassLoader());
-        if(!LauncherModule.class.isAssignableFrom(type)||java.lang.reflect.Modifier.isAbstract(type.getModifiers()))throw new SecurityException("class is not a concrete LauncherModule");
+        if(!LauncherModule.class.isAssignableFrom(type)||java.lang.reflect.Modifier.isAbstract(type.getModifiers()))throw new SecurityException("Класс не является конкретной реализацией LauncherModule");
         module=(LauncherModule)type.getDeclaredConstructor().newInstance();
         LauncherModulesManager manager=new LauncherModulesManager(context.runtime());
         // Зависимости нужно перенести в манифест Extensions: не разрешайте незаметно внутренние модули Gravit.

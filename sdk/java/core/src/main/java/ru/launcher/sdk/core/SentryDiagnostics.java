@@ -22,12 +22,12 @@ public final class SentryDiagnostics {
         if (dsn == null || dsn.isBlank()) return;
         Destination destination = Destination.parse(dsn);
         String release = env.getOrDefault("LAUNCHER_SENTRY_RELEASE","launcher@0.31.0");
-        if (!release.matches("[A-Za-z0-9_.@+\\-]{1,128}")) throw new IllegalArgumentException("invalid Sentry release");
+        if (!release.matches("[A-Za-z0-9_.@+\\-]{1,128}")) throw new IllegalArgumentException("Недопустимый релиз Sentry");
         Thread.UncaughtExceptionHandler original = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, failure) -> {
             // Сохраняйте стандартное поведение диагностики и завершения JVM.
             if (original != null) original.uncaughtException(thread,failure);
-            else {System.err.println("Java extension failed: " + failure.getClass().getSimpleName());}
+            else {System.err.println("Расширение Java завершилось ошибкой: " + failure.getClass().getSimpleName());}
             try {send(destination,release,failure);} catch (Exception ignored) { /* диагностика никогда не скрывает ошибку */ }
         });
     }
@@ -41,10 +41,10 @@ public final class SentryDiagnostics {
                   ("localhost".equals(uri.getHost()) || "127.0.0.1".equals(uri.getHost()) || "::1".equals(uri.getHost()))))
                 throw new IllegalArgumentException("Sentry requires HTTPS");
             String rawPath = uri.getRawPath();
-            if(rawPath==null || !rawPath.matches("(?:/[A-Za-z0-9_-]+)*/[0-9]{1,20}")) throw new IllegalArgumentException("invalid Sentry project");
+            if(rawPath==null || !rawPath.matches("(?:/[A-Za-z0-9_-]+)*/[0-9]{1,20}")) throw new IllegalArgumentException("Недопустимый проект Sentry");
             int last=rawPath.lastIndexOf('/');
             String endpoint=uri.getScheme()+"://"+uri.getRawAuthority().substring(uri.getRawAuthority().indexOf('@')+1)+rawPath.substring(0,last)+"/api/"+rawPath.substring(last+1)+"/envelope/";
-            if (!user.matches("[A-Za-z0-9]{1,128}")) throw new IllegalArgumentException("invalid Sentry public key");
+            if (!user.matches("[A-Za-z0-9]{1,128}")) throw new IllegalArgumentException("Недопустимый открытый ключ Sentry");
             return new Destination(dsn,endpoint,user);
         }
     }
@@ -73,7 +73,7 @@ public final class SentryDiagnostics {
         String id=UUID.randomUUID().toString().replace("-","");
         Map<String,Object> event=new LinkedHashMap<>();
         event.put("event_id",id);event.put("timestamp",Instant.now().toString());event.put("platform","java");event.put("level","error");event.put("release",release);
-        event.put("exception",Map.of("values",List.of(Map.of("type",name,"value","Hosted JVM extension failed","stacktrace",Map.of("frames",frames)))));
+        event.put("exception",Map.of("values",List.of(Map.of("type",name,"value","Ошибка расширения размещённой JVM","stacktrace",Map.of("frames",frames)))));
         event.put("sdk",Map.of("name","launcher.jvm","version","0.31.0"));
         String envelope=Json.encode(Map.of("event_id",id,"dsn",dest.dsn))+"\n"+Json.encode(Map.of("type","event"))+"\n"+Json.encode(event)+"\n";
         HttpRequest request=HttpRequest.newBuilder(URI.create(dest.endpoint)).timeout(Duration.ofSeconds(3))

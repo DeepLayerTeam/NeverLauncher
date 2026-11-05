@@ -81,7 +81,7 @@ func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	probe, err := createManagedProvider02910(ctx, v, s.ExtensionHost)
 	if err != nil {
-		writeJSON(w, 422, map[string]any{"healthy": false, "detail": "live configuration, credential references, mapping or provider health failed"})
+		writeJSON(w, 422, map[string]any{"healthy": false, "detail": "Ошибка рабочей конфигурации, ссылок на учётные данные, сопоставления или состояния провайдера"})
 		return
 	}
 	defer closeManaged02910(probe.Connector)

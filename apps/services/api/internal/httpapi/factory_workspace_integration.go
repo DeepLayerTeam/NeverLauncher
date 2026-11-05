@@ -241,16 +241,16 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 			Size   int64  `json:"size"`
 		}{file.Path, file.SHA256, file.Size}, maxFile)
 		if readErr != nil {
-			writeError(w, 409, "factory file validation failed: "+readErr.Error())
+			writeError(w, 409, "Проверка файлов фабрики завершилась ошибкой: "+readErr.Error())
 			return
 		}
 		encrypted, encErr := s.encryptWorkspace0226(ws, file, data)
 		if encErr != nil {
-			writeError(w, 503, "factory source encryption failed")
+			writeError(w, 503, "Не удалось зашифровать исходные данные фабрики")
 			return
 		}
 		if _, _, err = s.Storage.Save(ws.ProjectID, ws.ID, workspaceObjectPath0226(file), bytes.NewReader(encrypted)); err != nil {
-			writeError(w, 503, "factory source storage write failed")
+			writeError(w, 503, "Не удалось записать исходные данные фабрики в хранилище")
 			return
 		}
 	}
@@ -258,13 +258,13 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	// незаметно обрезающим или повреждающим данные, создать рабочее пространство.
 	for _, file := range ws.Files {
 		if err = s.workspaceVerifyFile0226(ws, file); err != nil {
-			writeError(w, 503, "stored factory source failed integrity verification")
+			writeError(w, 503, "Сохранённые исходные данные фабрики не прошли проверку целостности")
 			return
 		}
 	}
 	saved, err := factoryStore.SaveFactoryWorkspace0401(r.Context(), ws)
 	if err != nil {
-		writeError(w, 409, "factory delivery commit failed: "+err.Error())
+		writeError(w, 409, "Не удалось подтвердить доставку результата фабрики: "+err.Error())
 		return
 	}
 	s.audit(r, ws.OwnerID, "client-factory:deliver", job.ID+":"+p.ReproducibilitySHA256)

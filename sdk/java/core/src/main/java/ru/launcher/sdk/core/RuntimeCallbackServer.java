@@ -34,7 +34,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     }
     public RuntimeCallbackServer(String callbackToken,RuntimeServices services)throws IOException {this(callbackToken,services,()->"RUNNING");}
     public RuntimeCallbackServer(String callbackToken,RuntimeServices services,Supplier<String> lifecycleState)throws IOException {
-        if(callbackToken==null||callbackToken.isBlank())throw new IllegalArgumentException("callback token missing");
+        if(callbackToken==null||callbackToken.isBlank())throw new IllegalArgumentException("Отсутствует токен обратного вызова");
         token=callbackToken;this.services=Objects.requireNonNull(services);this.lifecycleState=Objects.requireNonNull(lifecycleState);
         server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),16);
         server.createContext("/v1/events",e->handle(e,"events"));
@@ -47,32 +47,32 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     private void handle(HttpExchange exchange,String kind){
         try {
             if(!accepting.get()){respond(exchange,503,Map.of("error","extension shutting down"));return;}
-            if(!exchange.getRemoteAddress().getAddress().isLoopbackAddress()){respond(exchange,403,Map.of("error","loopback required"));return;}
+            if(!exchange.getRemoteAddress().getAddress().isLoopbackAddress()){respond(exchange,403,Map.of("error","Требуется локальный адрес обратной петли"));return;}
             String header=exchange.getRequestHeaders().getFirst("Authorization");
             byte[] expected=("Bearer "+token).getBytes(StandardCharsets.UTF_8);
             if(header==null||!MessageDigest.isEqual(expected,header.getBytes(StandardCharsets.UTF_8))){respond(exchange,401,Map.of("error","not authorized"));return;}
             if(!exchange.getRequestMethod().equals("POST")||!exchange.getRequestURI().getPath().equals("/v1/"+kind)){respond(exchange,405,Map.of("error","not allowed"));return;}
             int bodyLimit=(kind.equals("events")||kind.equals("hooks"))?MAX_EVENT_BODY:MAX_BODY;
             byte[] body=exchange.getRequestBody().readNBytes(bodyLimit+1);
-            if(body.length>bodyLimit){respond(exchange,413,Map.of("error","callback exceeds transport limit"));return;}
+            if(body.length>bodyLimit){respond(exchange,413,Map.of("error","Размер обратного вызова превышает ограничение транспорта"));return;}
             Map<String,Object> data=Json.object(Json.parse(new String(body,StandardCharsets.UTF_8),bodyLimit));
             long millis=1800;
             if(kind.equals("rpc")){
                 Object raw=data.get("deadlineMs");
                 String method=Json.string(data,"method",true);
                 long max=method.equals("state.migrate")?8000:1800;
-                if(!(raw instanceof Long n)||n<1||n>max){respond(exchange,400,Map.of("error","invalid RPC deadline"));return;}
+                if(!(raw instanceof Long n)||n<1||n>max){respond(exchange,400,Map.of("error","Недопустимый срок ожидания RPC"));return;}
                 millis=n;
-                if(!"1.0".equals(data.get("protocolVersion"))){respond(exchange,409,Map.of("error","RPC protocol mismatch"));return;}
+                if(!"1.0".equals(data.get("protocolVersion"))){respond(exchange,409,Map.of("error","Несовпадение протокола RPC"));return;}
                 String id=Json.string(data,"requestId",true);
-                if(id.length()>64||!id.matches("[a-zA-Z0-9_-]+")){respond(exchange,400,Map.of("error","invalid RPC request id"));return;}
+                if(id.length()>64||!id.matches("[a-zA-Z0-9_-]+")){respond(exchange,400,Map.of("error","Недопустимый идентификатор запроса RPC"));return;}
             }
             // Обратный вызов, пришедший после STOPPING, не должен фиксировать новые
             // изменения. Проверка здоровья остаётся доступной, чтобы супервизор мог
             // диагностировать завершающийся процесс.
             String method=kind.equals("rpc")?Json.string(data,"method",true):"";
             if(!"health".equals(method) && !"RUNNING".equals(lifecycleState.get())){
-                respond(exchange,503,Map.of("error","extension is not running"));return;
+                respond(exchange,503,Map.of("error","Расширение не запущено"));return;
             }
             Future<Object> future;
             try{future=handlers.submit(()->{
@@ -89,17 +89,17 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 if(!accepting.get()){respond(exchange,503,Map.of("error","extension shutting down"));return;}
                 if(kind.equals("events")){
                     if(cause instanceof RuntimeEvents.PermanentFailure || cause instanceof IllegalArgumentException){
-                        respond(exchange,422,Map.of("code","EVENT_REJECTED","error","event rejected permanently"));
+                        respond(exchange,422,Map.of("code","EVENT_REJECTED","error","Событие окончательно отклонено"));
                     }else{
-                        respond(exchange,503,Map.of("code","EVENT_RETRY","error","event handler failed; retry"));
+                        respond(exchange,503,Map.of("code","EVENT_RETRY","error","Ошибка обработчика события; повторите попытку"));
                     }
                 }else if(kind.equals("hooks")){
-                    respond(exchange,422,Map.of("code","HOOK_REJECTED","error","policy hook rejected or failed"));
+                    respond(exchange,422,Map.of("code","HOOK_REJECTED","error","Хук политики отклонил операцию или завершился ошибкой"));
                 }else respond(exchange,422,Map.of("error",cause.getClass().getSimpleName()));
             }
             catch(InterruptedException ex){Thread.currentThread().interrupt();future.cancel(true);respond(exchange,503,Map.of("error","interrupted"));}
             finally{pending.remove(future);}
-        }catch(Exception e){try{respond(exchange,400,Map.of("error","invalid callback"));}catch(IOException ignored){}}finally{exchange.close();}
+        }catch(Exception e){try{respond(exchange,400,Map.of("error","Недопустимый обратный вызов"));}catch(IOException ignored){}}finally{exchange.close();}
     }
     private Object dispatch(String kind,Map<String,Object> data)throws Exception{
         if(kind.equals("commands"))return nullableResult("result",services.commands().invoke(Json.string(data,"command",true),data.get("payload")));

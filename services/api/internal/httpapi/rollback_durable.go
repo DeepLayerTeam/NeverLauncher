@@ -267,12 +267,12 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	}
 	if s.EventBus != nil {
 		if err = s.EventBus.BeforeReleasePublish(ctx, job.ActorID, release); err != nil {
-			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "extension release publish rejected: "+err.Error())
+			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Публикация релиза расширения отклонена: "+err.Error())
 			return nil, err
 		}
 		event := eventbus.PackagePayload{Action: "publish", Actor: job.ActorID, PackageID: release.ID, ProjectID: p.ProjectID, ProfileID: p.ProfileID, Channel: p.Channel, Version: release.Version, Status: release.Status}
 		if err = s.EventBus.BeforePackagePublish(ctx, event); err != nil {
-			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "extension package publish rejected: "+err.Error())
+			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Публикация пакета расширения отклонена: "+err.Error())
 			return nil, err
 		}
 	}

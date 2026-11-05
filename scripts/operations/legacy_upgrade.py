@@ -363,7 +363,7 @@ def bridge_jar_update(root: Path, args, source: str):
             install.parent.is_dir() and not install.parent.is_symlink() and
             install.parent.stat().st_uid == 0 and not install.parent.stat().st_mode & 0o022,
             'plugin installation directory must be root-owned and protected')
-    require(native.SERVICE_RE.fullmatch(args.service), 'invalid systemd service')
+    require(native.SERVICE_RE.fullmatch(args.service), 'Недопустимая служба systemd')
     require(jar_metadata_version(jar) == TARGET, 'new Bridge JAR embeds the wrong version')
     require(jar_metadata_version(install) == source, 'installed Bridge JAR release drift')
     require(native.systemctl_is_active(args.service), 'Bridge must be active before cutover')

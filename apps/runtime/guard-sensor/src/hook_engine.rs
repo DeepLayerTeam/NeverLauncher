@@ -163,7 +163,7 @@ fn pin_module(base: usize) -> Result<PinnedModule, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "Guard Hook Engine cannot retain module at 0x{base:X}: {}",
+            "Guard Hook Engine не может удержать модуль по адресу 0x{base:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -539,7 +539,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     };
     if pointer_size != size_of::<usize>() {
         return Err(format!(
-            "Guard Hook Engine module/process architecture mismatch in {}",
+            "Guard Hook Engine: несовпадение архитектуры модуля и процесса в {}",
             module.path
         ));
     }
@@ -602,7 +602,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
                     let expected = unsafe { GetProcAddress(imported_module, spec.c_name.as_ptr().cast()) };
                     if expected.is_null() {
                         return Err(format!(
-                            "Guard Hook Engine cannot resolve imported {} from {}",
+                            "Guard Hook Engine не может определить импортируемый {} из {}",
                             spec.name, import_dll
                         ));
                     }
@@ -760,7 +760,7 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
     let length = unsafe { GetModuleFileNameW(module, buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
     if length == 0 || length >= buffer.len() {
         return Err(format!(
-            "Guard Hook Engine cannot resolve module path: {}",
+            "Guard Hook Engine не может определить путь модуля: {}",
             std::io::Error::last_os_error()
         ));
     }

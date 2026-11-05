@@ -223,18 +223,18 @@ func (s Server) publishDurably0213(r *http.Request, lookup packageLookup) (model
 func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.DurableControlPlane, job model.DurableJob, worker string) (model.ReleaseVersion, error) {
 	var payload model.DurablePublishPayload
 	if err := json.Unmarshal(job.Payload, &payload); err != nil {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "invalid publish job payload")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Недопустимые данные задания публикации")
 		return model.ReleaseVersion{}, err
 	}
 	// Отказывайте по умолчанию устаревшим заданиям без зафиксированного head;
 	// обнаруживайте устаревшие задания заранее, сохраняя CAS репозитория последней
 	// границей конкуренции.
 	if payload.ExpectedHeadRevision == nil {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job missing channel head revision")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "В задании публикации отсутствует текущая ревизия канала")
 		return model.ReleaseVersion{}, repository.ErrConflict
 	}
 	if payload.PackageID != job.ResourceID || payload.ExpectedManifestDigest == "" || payload.ExpectedArtifactDigest == "" {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job payload identity mismatch")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Несовпадение идентификаторов данных задания публикации")
 		return model.ReleaseVersion{}, errors.New("Несовпадение: «publish job payload identity»")
 	}
 
@@ -290,14 +290,14 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, repository.ErrConflict
 	}
 	if err := s.validatePublishEvidenceContext0213(ctx, lookup); err != nil {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish evidence no longer valid: "+err.Error())
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Подтверждение публикации больше недействительно: "+err.Error())
 		return model.ReleaseVersion{}, err
 	}
 	if err := s.checkGameReleasePublishGeneration02311(lookup.Release); err != nil {
 		return model.ReleaseVersion{}, err
 	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "manifest signature no longer valid")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Подпись манифеста больше недействительна")
 		return model.ReleaseVersion{}, err
 	}
 
@@ -323,7 +323,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 	if repository.IsStableChannel0341(lookup.Release.Channel) {
 		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)
 		if gateErr != nil {
-			reason := "stable runtime targets missing/failed/inconclusive: " + fmt.Sprint(coverage.TargetBlockers) + ": " + gateErr.Error()
+			reason := "Обязательные целевые среды Runtime отсутствуют, завершились ошибкой или не дали определённого результата: " + fmt.Sprint(coverage.TargetBlockers) + ": " + gateErr.Error()
 			s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "release:publish-blocked", Target: lookup.Release.ID, JobID: job.ID, ReasonCode: "stable_runtime_targets_incomplete_03411", CreatedAt: time.Now().UTC()})
 			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, reason)
 			return model.ReleaseVersion{}, gateErr

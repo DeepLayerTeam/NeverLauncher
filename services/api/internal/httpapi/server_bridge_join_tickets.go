@@ -30,7 +30,7 @@ func bridgeJoinRedemption0143(r *http.Request, server bridgeServerRecord) (model
 	}
 	nonceSum := sha256.Sum256(nonce)
 	if server.ID == "" || server.IdentityEpoch < 1 || len(server.KeyFingerprint) != 64 {
-		return model.ServerBridgeJoinRedemption{}, fmt.Errorf("serverbridge node identity unavailable for ticket redemption")
+		return model.ServerBridgeJoinRedemption{}, fmt.Errorf("Идентификатор узла ServerBridge недоступен для погашения билета")
 	}
 	return model.ServerBridgeJoinRedemption{
 		NodeID:         server.ID,

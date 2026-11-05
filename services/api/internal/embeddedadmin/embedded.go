@@ -14,7 +14,7 @@ var assets embed.FS
 func Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "Метод не разрешён", http.StatusMethodNotAllowed)
 			return
 		}
 		name := ""

@@ -19,15 +19,15 @@ public final class LauncherModulesManager {
         if(active)throw new IllegalStateException("event registration is closed after module init");
         Objects.requireNonNull(callback);
         HostEvent annotation=type.getAnnotation(HostEvent.class);
-        if(annotation==null)throw new UnsupportedOperationException("Gravit event is not mapped to Extensions: "+type.getName());
-        if(!annotation.type().matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(annotation.mode()))throw new IllegalArgumentException("invalid host event mapping");
-        try{type.getConstructor(RuntimeEvents.Envelope.class);}catch(NoSuchMethodException e){throw new IllegalArgumentException("ported event missing envelope constructor",e);}
+        if(annotation==null)throw new UnsupportedOperationException("Событие Gravit не сопоставлено с Extensions: "+type.getName());
+        if(!annotation.type().matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(annotation.mode()))throw new IllegalArgumentException("Недопустимое сопоставление событий хоста");
+        try{type.getConstructor(RuntimeEvents.Envelope.class);}catch(NoSuchMethodException e){throw new IllegalArgumentException("У перенесённого события отсутствует конструктор оболочки",e);}
         pending.computeIfAbsent(annotation.type()+":"+annotation.mode(),x->new ArrayList<>()).add(new Registration<>(type,callback));
         return true;
     }
     /** Подписываться только после успешной инициализации, но не в частично инициализированном модуле Gravit. */
     public synchronized void activate() throws Exception {
-        if(active)throw new IllegalStateException("already activated");
+        if(active)throw new IllegalStateException("Уже активировано");
         for(var item:pending.entrySet()){
             int i=item.getKey().lastIndexOf(':');
             String eventType=item.getKey().substring(0,i),mode=item.getKey().substring(i+1);

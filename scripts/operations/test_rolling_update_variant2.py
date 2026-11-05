@@ -85,16 +85,16 @@ class RollingTest(unittest.TestCase):
 
     def test_stage_rejects_unreadable_file_symlink_hardlink_group_write_and_identical(self):
         self.target.chmod(0o640)
-        with self.assertRaisesRegex(ru.RollingError, "unsafe"):
+        with self.assertRaisesRegex(ru.RollingError, "небезопасен"):
             ru.secure(self.target)
         self.target.chmod(0o600)
         self.target.unlink()
         self.target.symlink_to(self.current)
-        with self.assertRaisesRegex(ru.RollingError, "unsafe"):
+        with self.assertRaisesRegex(ru.RollingError, "небезопасен"):
             ru.secure(self.target)
         self.target.unlink()
         os.link(self.current, self.target)
-        with self.assertRaisesRegex(ru.RollingError, "unsafe"):
+        with self.assertRaisesRegex(ru.RollingError, "небезопасен"):
             ru.secure(self.target)
         self.target.unlink()
         self.target.write_bytes(self.current.read_bytes())
@@ -119,7 +119,7 @@ class RollingTest(unittest.TestCase):
 
     def test_local_host_lock_prevents_concurrent_operations(self):
         with ru.host_lock(self.directory):
-            with self.assertRaisesRegex(ru.RollingError, "already running"):
+            with self.assertRaisesRegex(ru.RollingError, "уже выполняется"):
                 with ru.host_lock(self.directory):
                     pass
 
@@ -127,7 +127,7 @@ class RollingTest(unittest.TestCase):
         ru.journal(self.directory, {"schema": ru.SCHEMA, "phase": "stopping"})
         self.assertEqual(ru.read_journal(self.directory)["phase"], "stopping")
         (self.directory / ru.STATE).write_text("not-json")
-        with self.assertRaisesRegex(ru.RollingError, "invalid"):
+        with self.assertRaisesRegex(ru.RollingError, "Некорректное значение"):
             ru.read_journal(self.directory)
 
     def test_real_docker_command_sequence_and_rollback_on_start_failure(self):
@@ -144,7 +144,7 @@ class RollingTest(unittest.TestCase):
              patch.object(ru, "live_local", return_value=live_report("node-a", ru.SOURCE)), \
              patch.object(ru, "compose", side_effect=compose), \
              patch.object(multi, "run", return_value="sha256:123"):
-            with self.assertRaisesRegex(ru.RollingError, "restored and verified"):
+            with self.assertRaisesRegex(ru.RollingError, "восстановлен и проверен"):
                 ru.apply_host(self.directory, "launcher")
         self.assertEqual(self.current.read_bytes(), original)
         self.assertEqual(ru.read_journal(self.directory)["phase"], "rolled-back")
@@ -221,7 +221,7 @@ class RollingTest(unittest.TestCase):
 
     def test_remote_rejects_uncertain_response_and_does_not_claim_success(self):
         with patch.object(multi, "run", return_value="not-json"):
-            with self.assertRaisesRegex(ru.RollingError, "invalid JSON"):
+            with self.assertRaisesRegex(ru.RollingError, "некорректный JSON"):
                 ru.remote("user@node-a", "/opt/launcher/scripts/operations/rolling_update_0520.py",
                           "/opt/launcher/deploy/production", "launcher", "local-apply")
 
@@ -229,7 +229,7 @@ class RollingTest(unittest.TestCase):
         with patch.object(multi, "edge_ready", return_value=(False, {})):
             with ru.EdgeMonitor("https://edge.example") as monitor:
                 __import__('time').sleep(.04)
-            with self.assertRaisesRegex(ru.RollingError, "unavailable"):
+            with self.assertRaisesRegex(ru.RollingError, "недоступен"):
                 monitor.assert_continuity()
 
     def test_advisory_lock_requires_stable_connection(self):
@@ -349,7 +349,7 @@ class ClusterControllerTest(unittest.TestCase):
             def assert_continuity(self):
                 raise ru.RollingError("edge down")
         with self.mocks(), patch.object(ru, "EdgeMonitor", FailureMonitor):
-            with self.assertRaisesRegex(ru.RollingError, "affected node restored"):
+            with self.assertRaisesRegex(ru.RollingError, "затронутый узел восстановлен"):
                 ru.rollout(self.args)
         self.assertEqual(self.versions["alpha"], ru.SOURCE)
         self.assertIn(("alpha", "local-rollback"), self.actions)
@@ -370,7 +370,7 @@ class ClusterControllerTest(unittest.TestCase):
                 response["targetImage"] = "invalid-sha"
             return response
         with self.mocks(), patch.object(ru, "remote", side_effect=altered):
-            with self.assertRaisesRegex(ru.RollingError, "affected node restored"):
+            with self.assertRaisesRegex(ru.RollingError, "затронутый узел восстановлен"):
                 ru.rollout(self.args)
         self.assertIn(("alpha", "local-rollback"), self.actions)
         self.assertNotIn(("beta", "local-apply"), self.actions)

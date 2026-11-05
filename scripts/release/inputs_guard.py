@@ -130,7 +130,7 @@ def main():
         snapshot=record()
         if args.mode=='freeze':
             if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', snapshot['release']):
-                raise ValueError('invalid release version')
+                raise ValueError('Недопустимая версия релиза')
             BASELINE.write_text(json.dumps(snapshot, indent=2, sort_keys=True)+'\n',encoding='utf8')
             print(f'frozen {len(snapshot["files"])} real source inputs')
         else:

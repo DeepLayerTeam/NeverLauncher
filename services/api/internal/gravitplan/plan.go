@@ -127,7 +127,7 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 			if f.Path == d.ProfilePath {
 				row.Status = "transformed"
 				row.Target = d.ProfileID
-				row.Reason = "profile settings converted using active content converter; release build and game launch still required"
+				row.Reason = "Настройки профиля преобразованы действующим конвертером; сборка релиза и запуск игры ещё необходимы"
 			} else {
 				row.Reason = "profile not selected: configure and preview each profile before cutover"
 			}
@@ -143,18 +143,18 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 				row.Reason = "file not included in selected profile; inspect ownership and import separately"
 			}
 		case "module", "module_config", "server_wrapper":
-			row.Reason = "review module replacement or ServerBridge enrollment; no foreign JAR is executed"
+			row.Reason = "Проверьте замену модуля или регистрацию ServerBridge; сторонний JAR не запускается"
 		case "authentication":
 			row.Reason = "identity, UUID and password verifier mapping requires a separate verified preview"
 		case "texture":
 			row.Reason = "texture requires validated source/provider import and Minecraft rendering check"
 		case "key":
 			row.Status = "excluded"
-			row.Reason = "legacy private keys and trust credentials must never be imported; rotate on target"
+			row.Reason = "Старые закрытые ключи и доверенные учётные данные нельзя импортировать; замените их в целевой системе"
 		case "launchserver", "runtime":
-			row.Reason = "settings must be configured and validated in Never; no secrets automatically carried over"
+			row.Reason = "Настройки необходимо задать и проверить в Never; секреты автоматически не переносятся"
 		default:
-			row.Reason = "unclassified source; operator must decide before cutover"
+			row.Reason = "Источник не классифицирован; оператор должен принять решение до переключения"
 		}
 		add(row)
 	}
@@ -180,25 +180,25 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 		p.Blockers = append(p.Blockers, "content: "+b)
 	}
 	if !content.Ready {
-		p.Blockers = append(p.Blockers, "selected profile cannot be imported with the current converter")
+		p.Blockers = append(p.Blockers, "Выбранный профиль невозможно импортировать текущим конвертером")
 	}
 	if identities.State != "review_required" || identities.DuplicateOrConflicting > 0 || identities.SourceAccounts == 0 {
 		p.Blockers = append(p.Blockers, "identities: "+identities.Reason)
 	}
 	if targetProfileExists {
-		p.Blockers = append(p.Blockers, "destination profile ID already exists; select a new profile ID or reconcile explicitly")
+		p.Blockers = append(p.Blockers, "Целевой идентификатор профиля уже существует; выберите новый или явно разрешите конфликт")
 	}
 	if c.Status == "blocked" || c.VersionStatus == "unsupported" || c.VersionStatus == "conflict" {
-		p.Blockers = append(p.Blockers, "Gravit compatibility analysis is blocked")
+		p.Blockers = append(p.Blockers, "Анализ совместимости Gravit заблокирован")
 	}
 	if len(p.Blockers) > 0 {
 		p.Status = "blocked"
 	}
 	p.Checklist = []Checklist{
-		{"verify_source", "Re-upload the original ZIP at import; source SHA-256 and manifest must still match", true},
+		{"verify_source", "При импорте повторно загрузите исходный ZIP; SHA-256 источника и манифест должны совпадать", true},
 		{"resolve_manual", "Review unselected profiles, unknown files, optional conditions and module replacements", true},
 		{"verify_uuid", "Reconcile every account UUID with playerdata, permissions and inventory; handle conflicting UUIDs manually", true},
-		{"reset_credentials", "Rotate launcher, device, ServerBridge and proxy keys; plan resets for unsupported password hashes", true},
+		{"reset_credentials", "Замените ключи лаунчера, устройств, ServerBridge и прокси; предусмотрите сброс неподдерживаемых хешей паролей", true},
 		{"textures", "Re-import validated skins/capes and confirm rendering for the selected authentication mode", true},
 		{"rehearse", "Build a signed target release and prove real client launch, server join and data continuity", true},
 		{"backup_and_rollback", "Take and restore-test source/world backups; agree on downtime, writer fencing and rollback point", true},

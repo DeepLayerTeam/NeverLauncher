@@ -134,7 +134,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if e = cmd.Run(); e != nil {
-		return probe, fmt.Errorf("probe %s failed (exit/timeout): %w", name, e)
+		return probe, fmt.Errorf("Проверка %s завершилась ошибкой (выход/тайм-аут): %w", name, e)
 	}
 	var output struct {
 		Passed   bool   `json:"passed"`

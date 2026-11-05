@@ -289,19 +289,19 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 func verifyDeviceTrustCertificationInBundle(dir, ver string) error {
 	matrixRaw, err := os.ReadFile(filepath.Join(dir, deviceTrustMatrixReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", deviceTrustMatrixReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", deviceTrustMatrixReleaseFile, err)
 	}
 	targetsRaw, err := os.ReadFile(filepath.Join(dir, deviceTrustTargetsReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", deviceTrustTargetsReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", deviceTrustTargetsReleaseFile, err)
 	}
 	certRaw, err := os.ReadFile(filepath.Join(dir, deviceTrustCertificationReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", deviceTrustCertificationReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", deviceTrustCertificationReleaseFile, err)
 	}
 	var stored releaseDeviceTrustCertification
 	if err := json.Unmarshal(certRaw, &stored); err != nil {
-		return fmt.Errorf("%s invalid: %w", deviceTrustCertificationReleaseFile, err)
+		return fmt.Errorf("Недопустимое значение %s: %w", deviceTrustCertificationReleaseFile, err)
 	}
 	expected, err := validateDeviceTrustEvidence(matrixRaw, targetsRaw, ver, stored.Commit)
 	if err != nil {

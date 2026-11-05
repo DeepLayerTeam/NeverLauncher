@@ -48,7 +48,7 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !result.Ready {
-		writeJSON(w, 422, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "import has blocked or manual fields; resolve them before creating a profile", "code": "gravit-import-not-ready"}, "data": result})
+		writeJSON(w, 422, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "Импорт содержит заблокированные поля или поля для ручной обработки; устраните их до создания профиля", "code": "gravit-import-not-ready"}, "data": result})
 		return
 	}
 	if req.SourceSHA256 == "" || req.SourceSHA256 != result.SourceSHA256 {

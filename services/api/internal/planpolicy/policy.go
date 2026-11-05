@@ -65,7 +65,7 @@ func Load(now time.Time) (Policy, error) {
 	path := strings.TrimSpace(os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE"))
 	pin := strings.TrimSpace(os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY"))
 	if path == "" || pin == "" {
-		return out, errors.New("signed ServerBridge plan policy is not provisioned")
+		return out, errors.New("Политика подписанного плана ServerBridge не настроена")
 	}
 	key, e := hex.DecodeString(pin)
 	if e != nil || len(key) != ed25519.PublicKeySize {

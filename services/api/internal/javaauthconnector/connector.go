@@ -56,20 +56,20 @@ func (c *Connector) Metadata() authconnector.Metadata {
 func (c *Connector) rpc(ctx context.Context, method string, params any) (map[string]json.RawMessage, error) {
 	raw, err := json.Marshal(params)
 	if err != nil {
-		return nil, authconnector.NewError(authconnector.ErrMisconfigured, "invalid Java request")
+		return nil, authconnector.NewError(authconnector.ErrMisconfigured, "Недопустимый запрос Java")
 	}
 	result, err := c.host.CallJavaRPC0304(ctx, extensionhost.Key{ExtensionID: c.config.ExtensionID, Scope: "global"}, method, raw)
 	if err != nil {
-		return nil, authconnector.NewError(authconnector.ErrUnavailable, "Java identity provider unavailable")
+		return nil, authconnector.NewError(authconnector.ErrUnavailable, "Провайдер удостоверений Java недоступен")
 	}
 	var response map[string]json.RawMessage
 	if err = json.Unmarshal(result, &response); err != nil {
-		return nil, authconnector.NewError(authconnector.ErrMisconfigured, "invalid Java identity response")
+		return nil, authconnector.NewError(authconnector.ErrMisconfigured, "Недопустимый ответ провайдера удостоверений Java")
 	}
 	if fault, ok := response["errorCode"]; ok {
 		var code string
 		if json.Unmarshal(fault, &code) != nil {
-			return nil, authconnector.NewError(authconnector.ErrMisconfigured, "invalid Java identity error")
+			return nil, authconnector.NewError(authconnector.ErrMisconfigured, "Недопустимая ошибка провайдера удостоверений Java")
 		}
 		allowed := map[authconnector.ErrorCode]bool{
 			authconnector.ErrInvalidCredentials: true, authconnector.ErrIdentityDisabled: true, authconnector.ErrIdentityNotFound: true,
@@ -78,7 +78,7 @@ func (c *Connector) rpc(ctx context.Context, method string, params any) (map[str
 		if !allowed[authconnector.ErrorCode(code)] {
 			code = string(authconnector.ErrMisconfigured)
 		}
-		return nil, authconnector.NewError(authconnector.ErrorCode(code), "Java identity provider rejected request")
+		return nil, authconnector.NewError(authconnector.ErrorCode(code), "Провайдер удостоверений Java отклонил запрос")
 	}
 	return response, nil
 }
@@ -108,7 +108,7 @@ func (v javaIdentity) validated() (authconnector.Identity, error) {
 		return id, err
 	}
 	if v.Issuer == "" {
-		return id, authconnector.NewError(authconnector.ErrMisconfigured, "Java identity issuer is required")
+		return id, authconnector.NewError(authconnector.ErrMisconfigured, "Необходимо указать издателя удостоверений Java")
 	}
 	return id, nil
 }
@@ -130,13 +130,13 @@ func decodeProof(raw json.RawMessage) (authconnector.Authentication, error) {
 		return authconnector.Authentication{}, err
 	}
 	if len(p.AuthMethods) == 0 || p.ExpiresAt < 0 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "invalid Java authentication proof")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Недопустимое подтверждение аутентификации Java")
 	}
 	result := authconnector.Authentication{Identity: identity, AuthMethods: p.AuthMethods, ProviderToken: p.ProviderToken}
 	if p.ExpiresAt != 0 {
 		result.ExpiresAt = time.Unix(p.ExpiresAt, 0).UTC()
 		if !time.Now().Before(result.ExpiresAt) {
-			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "expired Java provider proof")
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Срок действия подтверждения провайдера Java истёк")
 		}
 	}
 	if err = authconnector.ValidateAuthentication(result); err != nil {
@@ -156,7 +156,7 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, req authconnector.
 }
 func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.ResolveRequest) (authconnector.Identity, error) {
 	if req.Subject == "" || len(req.Subject) > 512 {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "invalid subject")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Недопустимый идентификатор субъекта")
 	}
 	response, err := c.rpc(ctx, "auth.resolve", map[string]string{"subject": req.Subject})
 	if err != nil {
@@ -171,7 +171,7 @@ func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.Resol
 		return parsed, err
 	}
 	if parsed.Subject != req.Subject {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "Java identity subject mismatch")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "Несовпадение субъекта удостоверения Java")
 	}
 	return parsed, nil
 }
@@ -180,7 +180,7 @@ func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.Resol
 // прав или выдачу нового сеанса входа.
 func (c *Connector) VerifyProviderSession(ctx context.Context, token string) (authconnector.Authentication, error) {
 	if token == "" || len(token) > 16384 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid provider token")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Недопустимый токен провайдера")
 	}
 	response, err := c.rpc(ctx, "auth.session.verify", map[string]string{"providerToken": token})
 	if err != nil {
@@ -190,7 +190,7 @@ func (c *Connector) VerifyProviderSession(ctx context.Context, token string) (au
 }
 func (c *Connector) Revoke(ctx context.Context, req authconnector.RevokeRequest) error {
 	if req.Subject == "" || len(req.Subject) > 512 || req.ProviderToken == "" || len(req.ProviderToken) > 16384 {
-		return authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid provider token")
+		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Недопустимый токен провайдера")
 	}
 	response, err := c.rpc(ctx, "auth.session.revoke", map[string]string{"subject": req.Subject, "providerToken": req.ProviderToken})
 	if err != nil {

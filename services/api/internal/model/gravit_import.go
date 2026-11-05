@@ -505,11 +505,11 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	if raw, ok := root["properties"]; ok {
 		var p map[string]json.RawMessage
 		if json.Unmarshal(raw, &p) != nil || p == nil {
-			report("properties", "blocked", "", "expected object")
+			report("properties", "blocked", "", "Ожидался объект")
 		} else if len(p) > 0 {
-			report("properties", "manual", "", "custom properties require explicit audit for launch/auth semantics")
+			report("properties", "manual", "", "Пользовательские свойства требуют отдельной проверки влияния на запуск и аутентификацию")
 		} else {
-			report("properties", "mapped", "", "no custom properties")
+			report("properties", "mapped", "", "Нет пользовательских свойств")
 		}
 	}
 	known := map[string]bool{}
@@ -518,7 +518,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	}
 	for k := range root {
 		if !known[k] {
-			report(k, "blocked", "", "unknown Gravit field: no silent omission of potential launch/security behavior")
+			report(k, "blocked", "", "Неизвестное поле Gravit: нельзя молча пропускать возможное влияние на запуск или безопасность")
 		}
 	}
 	// Предпросмотр может содержать пути classpath, ещё отсутствующие в его перечне

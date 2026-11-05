@@ -609,7 +609,7 @@ func newIPCProxy(conn net.Conn) http.Handler {
 		}
 		resp, err := http.ReadResponse(reader, clone)
 		if err != nil {
-			http.Error(w, "host ipc rejected", 502)
+			http.Error(w, "IPC-запрос хоста отклонён", 502)
 			return
 		}
 		defer resp.Body.Close()

@@ -439,7 +439,7 @@ func main() {
 		os.Exit(2)
 	}
 	if *timeout <= 0 || *timeout > 30*time.Minute {
-		fmt.Fprintln(os.Stderr, "--timeout must be within (0, 30m]")
+		fmt.Fprintln(os.Stderr, "Значение --timeout должно находиться в интервале (0, 30m]")
 		os.Exit(2)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -448,7 +448,7 @@ func main() {
 	defer cancel()
 	r := verify(ctx, officialminecraft.New(), options{ClientID: *clientID, Flow: *flow, Timeout: *timeout, OpenBrowser: !*noOpen, RequireOnlineSession: *online, ProbeServer: *server, ProbeProtocol: *protocol}, os.Stderr)
 	if err := writeReport(*output, r); err != nil {
-		fmt.Fprintln(os.Stderr, "Could not safely save report:", err)
+		fmt.Fprintln(os.Stderr, "Не удалось безопасно сохранить отчёт:", err)
 		os.Exit(3)
 	}
 	if r.Result != "provider_access_verified" && r.Result != "online_session_verified" {

@@ -200,7 +200,7 @@ func parseWrapper(raw []byte, p, sha string) Wrapper {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	if e := decoder.Decode(&obj); e != nil || obj == nil {
 		w.Status = "blocked"
-		w.Reason = "invalid wrapper JSON"
+		w.Reason = "Недопустимый JSON обёртки"
 		return w
 	}
 	var extra any
@@ -227,7 +227,7 @@ func parseWrapper(raw []byte, p, sha string) Wrapper {
 			w.LegacyAddressPresent = true
 		}
 	}
-	w.Reason = "legacy ServerWrapper/authlib configuration must be replaced by a newly enrolled ServerBridge node; no secrets are adopted"
+	w.Reason = "Устаревшую конфигурацию ServerWrapper/authlib нужно заменить новым зарегистрированным узлом ServerBridge; секреты не переносятся"
 	return w
 }
 func legacyWrapperJar(p string) bool {
@@ -319,7 +319,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			limit = maxWrapper
 		}
 		if f.UncompressedSize64 > uint64(limit) {
-			result.Blockers = append(result.Blockers, p+": source exceeds inspection limit")
+			result.Blockers = append(result.Blockers, p+": источник превышает ограничение анализа")
 			continue
 		}
 		b, err := readFile(ctx, f, limit)
@@ -346,11 +346,11 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			}
 			m := Module{Path: p, SHA256: sha, Name: moduleName, Implementation: "source_port", Status: "blocked"}
 			if !strings.HasSuffix(strings.ToLower(p), ".json") {
-				m.Reason = "unsupported module configuration format; source port required"
+				m.Reason = "Неподдерживаемый формат конфигурации модуля; требуется перенос исходного кода"
 			} else if !validModuleConfig0446(b) {
-				m.Reason = "invalid or ambiguous module configuration JSON"
+				m.Reason = "Недопустимый или неоднозначный JSON конфигурации модуля"
 			} else if moduleName == "" || !moduleArtifacts[strings.ToLower(moduleName)] {
-				m.Reason = "module configuration has no matching JAR in archive; resolve missing dependency or explicitly port"
+				m.Reason = "Для конфигурации модуля в архиве нет соответствующего JAR; устраните недостающую зависимость или явно перенесите код"
 			} else {
 				m.Status = "manual"
 				m.Reason = "configuration verified; independently port settings and test new module behavior; legacy secrets are not adopted"
@@ -377,20 +377,20 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 				}
 			}
 			if er != nil {
-				m.Reason = "unsafe or invalid JAR: " + er.Error()
+				m.Reason = "Небезопасный или недопустимый JAR: " + er.Error()
 			} else if legacyWrapperJar(p) {
 				// Эти старые бинарники никогда не импортируются. Имя указывает лишь роль
 				// замены, а НЕ подлинность поставщика или доверие.
 				m.Implementation = "built_in_equivalent"
 				m.Status = "manual"
-				m.Reason = "legacy wrapper/authlib binary must be removed, not executed; replace with Never ServerBridge and independently test login/join"
+				m.Reason = "Устаревший бинарный файл wrapper/authlib необходимо удалить, а не запускать; замените его на Never ServerBridge и независимо проверьте вход и подключение"
 			} else if auth || launch {
-				m.Reason = "module references authentication/launcher API; source port and behavioral tests required"
+				m.Reason = "Модуль использует API аутентификации/лаунчера; требуется перенос исходного кода и поведенческие тесты"
 			} else if m.SourcesPresent {
 				m.Implementation = "source_port"
-				m.Reason = "source available but adapter not validated; explicit port and tests required"
+				m.Reason = "Исходный код доступен, но адаптер не проверен; требуется явный перенос и тестирование"
 			} else {
-				m.Reason = "unrecognized executable JAR: no approved equivalent/adapter; source port or removal required"
+				m.Reason = "Неизвестный исполняемый JAR: нет одобренного аналога или адаптера; требуется перенос исходного кода либо удаление"
 			}
 			result.Modules = append(result.Modules, m)
 			if m.Status == "blocked" {

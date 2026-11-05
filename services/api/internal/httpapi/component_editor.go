@@ -85,7 +85,7 @@ func previewCatalog0248(release model.ReleaseVersion, req componentEditorRequest
 	candidate := release.Manifest
 	candidate.ComponentCatalog = &cat
 	if release.Manifest.SchemaVersion != model.ManifestSchemaV3 {
-		report.Errors = append(report.Errors, "package must be created with Manifest v3")
+		report.Errors = append(report.Errors, "Пакет необходимо создать с манифестом v3")
 	} else if err := model.ValidateManifestSchema(candidate); err != nil {
 		report.Errors = append(report.Errors, err.Error())
 	}
@@ -144,7 +144,7 @@ func (s Server) componentCatalogSave0248(w http.ResponseWriter, r *http.Request)
 	// изменениями компонентов.
 	lookup, unlock, err := s.lockPackageLookupMutation(r.Context(), r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusConflict, "package is busy or missing")
+		writeError(w, http.StatusConflict, "Пакет занят или отсутствует")
 		return
 	}
 	defer unlock()
@@ -174,7 +174,7 @@ func (s Server) componentCatalogSave0248(w http.ResponseWriter, r *http.Request)
 		UpdateDraftComponentCatalog0248(string, string, uint64, model.ComponentCatalog0241) (model.ReleaseVersion, error)
 	})
 	if !ok {
-		writeError(w, http.StatusInternalServerError, "catalog repository update unavailable")
+		writeError(w, http.StatusInternalServerError, "Обновление хранилища каталога недоступно")
 		return
 	}
 	updated, err := updater.UpdateDraftComponentCatalog0248(lookup.Release.ProjectID, lookup.Release.ID, req.ExpectedRevision, cat)

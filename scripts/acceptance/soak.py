@@ -53,7 +53,7 @@ def digest(path: Path):
 
 def output_dir(path: Path):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(),
-            'new absolute report directory required')
+            'Требуется новый абсолютный путь каталога отчётов')
     require(path.parent.is_dir() and not path.parent.is_symlink(), 'unsafe parent directory')
     path.mkdir(mode=0o700)
     return path
@@ -66,9 +66,9 @@ def write_receipt(path: Path, data):
 
 def check_identity(args):
     require(COMMIT.fullmatch(args.commit or '') is not None and RUN.fullmatch(args.run_id or '') is not None
-            and type(args.attempt) is int and args.attempt > 0, 'real CI commit/run identity required')
+            and type(args.attempt) is int and args.attempt > 0, 'Требуются действительные идентификаторы коммита CI и запуска')
     require(inventory.VERSION >= '0.53.0', 'requires product version 0.53.0 or later')
-    require(3600 <= args.min_seconds <= 24*3600, 'soak must run for at least one real hour')
+    require(3600 <= args.min_seconds <= 24*3600, 'Нагрузочная проверка должна выполняться не менее одного реального часа')
 
 def copy_selected(raw: Path, destination: Path, names):
     destination.mkdir(mode=0o700, parents=True, exist_ok=False)
@@ -128,10 +128,10 @@ def run_game_subprocess(log, env, timeout):
 
 def game(args):
     check_identity(args)
-    require(args.min_sessions >= 8 and args.min_sessions <= 200, 'at least eight real client-server sessions required')
+    require(args.min_sessions >= 8 and args.min_sessions <= 200, 'Требуется не менее восьми реальных клиент-серверных сеансов')
     targets = {t['id']: t for t in inventory.catalogs()['minecraft']['rows'] if t['required']}
     require(args.target_id in targets and targets[args.target_id]['scope'] == 'client',
-            'must choose a required real Minecraft client target')
+            'Необходимо выбрать обязательную целевую конфигурацию реального клиента Minecraft')
     target = targets[args.target_id]
     env = os.environ.copy()
     expected = {'LAUNCHER_COMPAT_TARGET_ID': target['id'], 'LAUNCHER_COMPAT_OS': target['os'],
@@ -145,7 +145,7 @@ def game(args):
                 'GITHUB_RUN_ATTEMPT': str(args.attempt)}
     require(env.get('LAUNCHER_ACCEPTANCE_DISPOSABLE') == '1',
             'game soak may clear e2e/runtime only in approved disposable checkout')
-    require(env.get('LAUNCHER_E2E_JAVA'), 'existing supported JRE must be explicitly selected')
+    require(env.get('LAUNCHER_E2E_JAVA'), 'Необходимо явно выбрать существующую поддерживаемую JRE')
     for key, value in expected.items():
         require(not env.get(key) or env[key] == value, 'runner metadata conflict: ' + key)
     env.update(expected)
@@ -173,7 +173,7 @@ def game(args):
             require(log.stat().st_size <= MAX_LOG, 'game log over max size')
             require(not re.search(rb'(?i)(authorization:\s*bearer\s+\S+|refresh[_ -]?token\s*[=:]\s*\S+)',
                                   log.read_bytes()), 'unredacted secrets in game runner output')
-            require(rc == 0, f'actual client/server failed (session {i+1}): {rc}')
+            require(rc == 0, f'Реальные клиент/сервер завершились ошибкой (сеанс {i+1}): {rc}')
             verified = session_archive(target, sample, args)
             receipt['sessions'].append({'session': i+1, 'seconds': round(time.monotonic()-start,3),
                                         'resultSha256': verified['resultSha256'],
@@ -181,7 +181,7 @@ def game(args):
                                         'runnerLogSha256': digest(log)})
         duration = time.monotonic()-started
         require(duration >= args.min_seconds and len(receipt['sessions']) >= args.min_sessions,
-                'insufficient real runtime')
+                'Недостаточная длительность реального выполнения')
         receipt['seconds'] = round(duration,3)
         receipt['status'] = 'OBSERVED_NOT_GA'
         write_receipt(out/'soak.json', receipt)
@@ -208,7 +208,7 @@ def https_once(url: str, timeout: float):
         response = connection.getresponse()
         data = response.read(256 * 1024 + 1)
         require(response.status == 200 and 0 < len(data) <= 256*1024,
-                'backend failed (HTTP status or empty/oversize response)')
+                'Ошибка Backend (статус HTTP, пустой или слишком большой ответ)')
         return (time.monotonic()-begin)*1000, len(data)
     finally:
         connection.close()
@@ -222,7 +222,7 @@ def http(args):
     check_identity(args)
     check_https(args.url)
     require(1 <= args.concurrency <= 64 and 1000 <= args.min_requests <= 10_000_000 and
-            1 <= args.max_p95_ms <= 30000, 'unsupported load budget')
+            1 <= args.max_p95_ms <= 30000, 'Неподдерживаемый бюджет нагрузки')
     out = output_dir(args.output)
     started = time.monotonic()
     durations, bytes_total, failures = [], 0, 0

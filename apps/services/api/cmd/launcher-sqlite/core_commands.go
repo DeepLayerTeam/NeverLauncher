@@ -84,7 +84,7 @@ func runCoreAction(args []string) int {
 		return 2
 	}
 	if *db == "" || *timeout <= 0 || flags.NArg() != 0 || (action != "core-get" && strings.TrimSpace(*actor) == "") {
-		fmt.Fprintln(os.Stderr, "--db, valid --timeout and --actor (for mutation) required")
+		fmt.Fprintln(os.Stderr, "Требуются --db, допустимый --timeout и --actor (для изменения данных)")
 		return 2
 	}
 	if _, err := os.Stat(*db); err != nil {
@@ -215,7 +215,7 @@ func runCoreAction(args []string) int {
 		}
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "SQLite core operation refused:", err)
+		fmt.Fprintln(os.Stderr, "Операция ядра SQLite отклонена:", err)
 		return 1
 	}
 	// Хеши паролей пользователей скрыты JSON-тегами model.User.

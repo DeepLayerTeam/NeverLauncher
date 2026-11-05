@@ -386,15 +386,15 @@ func verifyLoaderCompatibilityReleaseCertificate01711(dir, ver string) error {
 	}
 	var compatibilityCertification releaseCompatibilityCertification
 	if err := json.Unmarshal(compatRaw, &compatibilityCertification); err != nil {
-		return fmt.Errorf("%s invalid: %w", compatibilityCertificationReleaseFile, err)
+		return fmt.Errorf("Недопустимое значение %s: %w", compatibilityCertificationReleaseFile, err)
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, loaderCompatibilityReleaseCertificateFile01711))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", loaderCompatibilityReleaseCertificateFile01711, err)
+		return fmt.Errorf("Отсутствует %s: %w", loaderCompatibilityReleaseCertificateFile01711, err)
 	}
 	var stored loaderCompatibilityReleaseCertificate01711
 	if err := json.Unmarshal(raw, &stored); err != nil {
-		return fmt.Errorf("%s invalid: %w", loaderCompatibilityReleaseCertificateFile01711, err)
+		return fmt.Errorf("Недопустимое значение %s: %w", loaderCompatibilityReleaseCertificateFile01711, err)
 	}
 	expected, err := buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, compatRaw, compatibilityCertification)
 	if err != nil {

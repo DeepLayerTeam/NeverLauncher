@@ -227,7 +227,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 	}
 	m, ok := v.(map[any]any)
 	if !ok {
-		return 0, nil, errors.New("COSE key is not a map")
+		return 0, nil, errors.New("Ключ COSE не является картой")
 	}
 	kty, _ := intValue(m[uint64(1)])
 	alg, _ := intValue(m[uint64(3)])
@@ -243,11 +243,11 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		x, _ := m[int64(-2)].([]byte)
 		y, _ := m[int64(-3)].([]byte)
 		if len(x) != 32 || len(y) != 32 {
-			return 0, nil, errors.New("invalid P-256 coordinates")
+			return 0, nil, errors.New("Недопустимые координаты P-256")
 		}
 		pub := &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)}
 		if !pub.Curve.IsOnCurve(pub.X, pub.Y) {
-			return 0, nil, errors.New("P-256 point is not on curve")
+			return 0, nil, errors.New("Точка P-256 не принадлежит кривой")
 		}
 		return alg, pub, nil
 	case 3: // RSA

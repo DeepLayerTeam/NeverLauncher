@@ -1350,19 +1350,19 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 	certPath := filepath.Join(dir, compatibilityCertificationReleaseFile)
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", compatibilityMatrixReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", compatibilityMatrixReleaseFile, err)
 	}
 	targetsRaw, err := os.ReadFile(targetsPath)
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", compatibilityTargetsReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", compatibilityTargetsReleaseFile, err)
 	}
 	certRaw, err := os.ReadFile(certPath)
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", compatibilityCertificationReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", compatibilityCertificationReleaseFile, err)
 	}
 	var stored releaseCompatibilityCertification
 	if err := json.Unmarshal(certRaw, &stored); err != nil {
-		return fmt.Errorf("%s invalid: %w", compatibilityCertificationReleaseFile, err)
+		return fmt.Errorf("Недопустимое значение %s: %w", compatibilityCertificationReleaseFile, err)
 	}
 	expected, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, ver, stored.Commit)
 	if err != nil {

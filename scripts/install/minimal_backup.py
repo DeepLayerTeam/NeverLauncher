@@ -314,7 +314,7 @@ def verify(bundle):
         and isinstance(manifest.get("files"), list)
         and isinstance(manifest.get("directories"), list)
         and isinstance(manifest.get("sourceRoot"), str),
-        "unsupported backup format",
+        "Неподдерживаемый формат резервной копии",
     )
     declared_dirs = manifest["directories"]
     declared_files = manifest["files"]

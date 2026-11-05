@@ -36,7 +36,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 	}
 	identifier := strings.ToLower(strings.TrimSpace(req.Identifier))
 	if identifier == "" || req.Secret == "" {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "identifier and password are required")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Требуются идентификатор и пароль")
 	}
 	user, err := c.repo.GetUserByEmail(identifier)
 	if err != nil {
@@ -83,7 +83,7 @@ func (c localAuthConnector112) ResolveIdentity(ctx context.Context, req authconn
 	}
 	user, err := c.repo.GetUser(strings.TrimSpace(req.Subject))
 	if err != nil {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "local identity not found")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Локальная учётная запись не найдена")
 	}
 	return authconnector.Identity{Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, Roles: []string{user.RoleID}, Claims: map[string]any{"roleId": user.RoleID}}, nil
 }

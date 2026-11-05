@@ -274,7 +274,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 	validation := "valid build inputs: " + digest
 	valid := validationErr == nil
 	if validationErr != nil {
-		validation = "build validation blocked: " + validationErr.Error()
+		validation = "Проверка сборки заблокирована: " + validationErr.Error()
 	}
 	s.audit(r, claims.Sub, "migration:gravit-content-stage", run.ProjectID+"/"+ws.ID)
 	response := migrationContentResponse0337(plan, ws, validation, valid)
@@ -366,7 +366,7 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 	req := componentEditorRequest0248{ExpectedRevision: existing.Revision, Catalog: original}
 	cat, report := previewCatalog0248(lookup.Release, req)
 	if !report.Valid {
-		writeJSON(w, 422, map[string]any{"data": report, "error": map[string]any{"message": "optional catalog validation blocked", "code": "optional-invalid"}})
+		writeJSON(w, 422, map[string]any{"data": report, "error": map[string]any{"message": "Проверка каталога дополнительных компонентов заблокирована", "code": "optional-invalid"}})
 		return
 	}
 	writer, ok := s.Repo.(interface {

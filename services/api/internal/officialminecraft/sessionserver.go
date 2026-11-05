@@ -26,7 +26,7 @@ import (
 const sessionServerOrigin = "https://sessionserver.mojang.com"
 
 var (
-	ErrOnlineSessionRejected  = errors.New("official online-mode session rejected")
+	ErrOnlineSessionRejected  = errors.New("Официальная сессия в сетевом режиме отклонена")
 	ErrOnlineIdentityMismatch = errors.New("Идентификатор онлайн-сессии не совпадает")
 )
 

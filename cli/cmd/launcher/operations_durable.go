@@ -38,7 +38,7 @@ func handleDurableOperation0217(args []string) error {
 	case "status", "attempts", "cancel", "retry":
 		id := strings.TrimSpace(flagValue(args, "--id", ""))
 		if id == "" {
-			return errors.New("--id <operationId> is required")
+			return errors.New("Требуется --id <operationId>")
 		}
 		path := "/api/v1/operations/" + url.PathEscape(id)
 		if args[0] == "attempts" {

@@ -93,7 +93,7 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 	if payload != nil {
 		body, err = json.Marshal(payload)
 		if err != nil {
-			return authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP connector request cannot be encoded", err)
+			return authconnector.WrapError(authconnector.ErrMisconfigured, "Не удалось закодировать запрос HTTP-коннектора", err)
 		}
 	}
 	target := *c.cfg.ParsedBaseURL
@@ -104,11 +104,11 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 
 	req, err := http.NewRequestWithContext(ctx, method, target.String(), bytes.NewReader(body))
 	if err != nil {
-		return authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP connector request cannot be created", err)
+		return authconnector.WrapError(authconnector.ErrMisconfigured, "Не удалось сформировать запрос HTTP-коннектора", err)
 	}
 	nonce, err := randomHex(24)
 	if err != nil {
-		return authconnector.WrapError(authconnector.ErrUnavailable, "HTTP connector nonce generation failed", err)
+		return authconnector.WrapError(authconnector.ErrUnavailable, "Не удалось создать одноразовый код HTTP-коннектора", err)
 	}
 	timestamp := strconv.FormatInt(time.Now().UTC().Unix(), 10)
 	canonical := requestCanonical(method, req.URL.EscapedPath(), timestamp, nonce, body)
@@ -126,11 +126,11 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return authconnector.WrapError(authconnector.ErrUnavailable, "HTTP auth provider request failed", err)
+		return authconnector.WrapError(authconnector.ErrUnavailable, "Запрос к HTTP-провайдеру аутентификации завершился ошибкой", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider redirects are forbidden")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Перенаправления HTTP-провайдера аутентификации запрещены")
 	}
 	mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
@@ -139,10 +139,10 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 	limited := io.LimitReader(resp.Body, c.cfg.MaxResponseBytes+1)
 	responseBody, err := io.ReadAll(limited)
 	if err != nil {
-		return authconnector.WrapError(authconnector.ErrUnavailable, "HTTP auth provider response cannot be read", err)
+		return authconnector.WrapError(authconnector.ErrUnavailable, "Не удалось прочитать ответ HTTP-провайдера аутентификации", err)
 	}
 	if int64(len(responseBody)) > c.cfg.MaxResponseBytes {
-		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider response exceeds configured size limit")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "Ответ HTTP-провайдера превышает заданное ограничение размера")
 	}
 	if err := c.verifyResponse(resp, nonce, responseBody); err != nil {
 		return err
@@ -155,7 +155,7 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 		return nil
 	}
 	if err := strictDecode(responseBody, output); err != nil {
-		return authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP auth provider response schema is invalid", err)
+		return authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимая схема ответа HTTP-провайдера", err)
 	}
 	return nil
 }
@@ -166,18 +166,18 @@ func (c *signedClient) verifyResponse(resp *http.Response, expectedNonce string,
 	nonce := strings.TrimSpace(resp.Header.Get(headerNonce))
 	signatureRaw := strings.TrimSpace(resp.Header.Get(headerSignature))
 	if keyID != c.cfg.HMAC.KeyID || nonce == "" || nonce != expectedNonce || timestampRaw == "" || signatureRaw == "" {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response signature headers are invalid")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Недопустимые заголовки подписи ответа HTTP-провайдера")
 	}
 	unix, err := strconv.ParseInt(timestampRaw, 10, 64)
 	if err != nil {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response timestamp is invalid")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Недопустимая временная метка ответа HTTP-провайдера")
 	}
 	delta := time.Since(time.Unix(unix, 0)).Abs()
 	if delta > c.cfg.MaxClockSkewDuration {
 		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response timestamp is outside replay window")
 	}
 	if !strings.HasPrefix(signatureRaw, "v1=") {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response signature version is unsupported")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Неподдерживаемая версия подписи ответа HTTP-провайдера")
 	}
 	provided, err := hex.DecodeString(strings.TrimPrefix(signatureRaw, "v1="))
 	if err != nil {
@@ -185,7 +185,7 @@ func (c *signedClient) verifyResponse(resp *http.Response, expectedNonce string,
 	}
 	expected := sign(c.cfg.HMACSecret, responseCanonical(resp.StatusCode, timestampRaw, nonce, body))
 	if !hmac.Equal(expected, provided) {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response signature verification failed")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Не удалось проверить подпись ответа HTTP-провайдера")
 	}
 	if !c.consumeNonce(nonce, time.Now().UTC()) {
 		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response replay detected")
@@ -212,7 +212,7 @@ func (c *signedClient) consumeNonce(nonce string, now time.Time) bool {
 func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	var envelope remoteErrorResponse
 	if err := strictDecode(body, &envelope); err != nil {
-		return authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP auth provider error schema is invalid", err)
+		return authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимая схема ошибки HTTP-провайдера", err)
 	}
 	if err := validateProtocol(c.cfg, envelope.ProtocolVersion, envelope.Issuer); err != nil {
 		return err
@@ -224,14 +224,14 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	case http.StatusForbidden:
 		return authconnector.NewError(authconnector.ErrIdentityDisabled, "HTTP identity is disabled")
 	case http.StatusNotFound:
-		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP identity not found")
+		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP-учётная запись не найдена")
 	case http.StatusConflict:
 		return authconnector.NewError(authconnector.ErrConflict, "HTTP identity conflict")
 	case http.StatusTooManyRequests, http.StatusRequestTimeout, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
-		return &authconnector.Error{Code: authconnector.ErrUnavailable, Message: "HTTP auth provider is temporarily unavailable", Temporary: true}
+		return &authconnector.Error{Code: authconnector.ErrUnavailable, Message: "HTTP-провайдер аутентификации временно недоступен", Temporary: true}
 	}
 	if status >= 500 {
-		return &authconnector.Error{Code: authconnector.ErrUnavailable, Message: "HTTP auth provider failed", Temporary: true}
+		return &authconnector.Error{Code: authconnector.ErrUnavailable, Message: "Сбой HTTP-провайдера аутентификации", Temporary: true}
 	}
 	switch code {
 	case "invalid_credentials":
@@ -239,11 +239,11 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	case "identity_disabled":
 		return authconnector.NewError(authconnector.ErrIdentityDisabled, "HTTP identity is disabled")
 	case "identity_not_found":
-		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP identity not found")
+		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP-учётная запись не найдена")
 	case "conflict":
 		return authconnector.NewError(authconnector.ErrConflict, "HTTP identity conflict")
 	default:
-		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider returned unsupported error status")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-провайдер вернул неподдерживаемый статус ошибки")
 	}
 }
 
@@ -286,10 +286,10 @@ func strictDecode(data []byte, output any) error {
 
 func validateProtocol(cfg RuntimeConfig, version, issuer string) error {
 	if version != protocolVersion {
-		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider protocolVersion mismatch")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "Несовпадение версии протокола HTTP-провайдера")
 	}
 	if issuer != cfg.Issuer {
-		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider issuer mismatch")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "Несовпадение издателя HTTP-провайдера")
 	}
 	return nil
 }

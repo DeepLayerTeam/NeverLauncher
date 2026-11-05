@@ -387,19 +387,19 @@ func verifyGuardCIArtifactsInDir(dir string, artifacts []releaseGuardCertifiedAr
 func verifyGuardCICertificationInBundle(dir, ver string) error {
 	matrixRaw, err := os.ReadFile(filepath.Join(dir, guardCIMatrixReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", guardCIMatrixReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", guardCIMatrixReleaseFile, err)
 	}
 	targetsRaw, err := os.ReadFile(filepath.Join(dir, guardCITargetsReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", guardCITargetsReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", guardCITargetsReleaseFile, err)
 	}
 	certRaw, err := os.ReadFile(filepath.Join(dir, guardCICertificationReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s missing: %w", guardCICertificationReleaseFile, err)
+		return fmt.Errorf("Отсутствует %s: %w", guardCICertificationReleaseFile, err)
 	}
 	var stored releaseGuardCICertification
 	if err := json.Unmarshal(certRaw, &stored); err != nil {
-		return fmt.Errorf("%s invalid: %w", guardCICertificationReleaseFile, err)
+		return fmt.Errorf("Недопустимое значение %s: %w", guardCICertificationReleaseFile, err)
 	}
 	expected, err := validateGuardCIEvidence(matrixRaw, targetsRaw, ver, stored.Commit)
 	if err != nil {

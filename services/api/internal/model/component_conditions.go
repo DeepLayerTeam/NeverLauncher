@@ -102,7 +102,7 @@ func validDistinct0244(values []string, limit int, valid func(string) bool) erro
 	seen := make(map[string]bool, len(values))
 	for _, v := range values {
 		if !valid(v) || seen[v] {
-			return fmt.Errorf("invalid/duplicate condition value %q", v)
+			return fmt.Errorf("Недопустимое или повторяющееся значение условия %q", v)
 		}
 		seen[v] = true
 	}
@@ -123,7 +123,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			continue
 		}
 		if v.SchemaVersion != "1.0" {
-			return fmt.Errorf("component %s: unsupported condition schema %q", c.ID, v.SchemaVersion)
+			return fmt.Errorf("Компонент %s: неподдерживаемая схема условия %q", c.ID, v.SchemaVersion)
 		}
 		if err := validDistinct0244(v.OS, 8, func(s string) bool { return s == "windows" || s == "linux" || s == "macos" }); err != nil {
 			return fmt.Errorf("component %s OS: %w", c.ID, err)
@@ -135,7 +135,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			return fmt.Errorf("component %s: inverted Java major range", c.ID)
 		}
 		if v.JavaMajorMin > 99 || v.JavaMajorMax > 99 {
-			return fmt.Errorf("component %s: invalid Java major", c.ID)
+			return fmt.Errorf("Компонент %s: недопустимая основная версия Java", c.ID)
 		}
 		if err := validDistinct0244(v.MinecraftVersions, 64, func(s string) bool { return len(s) > 0 && len(s) <= 80 && !strings.ContainsAny(s, " \t\r\n\x00") }); err != nil {
 			return fmt.Errorf("component %s Minecraft: %w", c.ID, err)
@@ -174,10 +174,10 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		return ""
 	}
 	if len(v.OS) > 0 && !in0244(v.OS, env.OS) {
-		return fmt.Sprintf("OS %q is not in %v", env.OS, v.OS)
+		return fmt.Sprintf("ОС %q отсутствует в %v", env.OS, v.OS)
 	}
 	if len(v.Arch) > 0 && !in0244(v.Arch, env.Arch) {
-		return fmt.Sprintf("architecture %q is not in %v", env.Arch, v.Arch)
+		return fmt.Sprintf("Архитектура %q отсутствует в %v", env.Arch, v.Arch)
 	}
 	if v.JavaMajorMin > 0 && (env.JavaMajor == 0 || env.JavaMajor < v.JavaMajorMin) {
 		return fmt.Sprintf("Основная версия Java %d ниже %d", env.JavaMajor, v.JavaMajorMin)
@@ -186,7 +186,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		return fmt.Sprintf("Основная версия Java %d превышает %d", env.JavaMajor, v.JavaMajorMax)
 	}
 	if len(v.MinecraftVersions) > 0 && !in0244(v.MinecraftVersions, env.MinecraftVersion) {
-		return fmt.Sprintf("Minecraft %q is not in %v", env.MinecraftVersion, v.MinecraftVersions)
+		return fmt.Sprintf("Версия Minecraft %q отсутствует в %v", env.MinecraftVersion, v.MinecraftVersions)
 	}
 	if v.MinecraftVersionRange != "" {
 		ok, e := matchRange0243(env.MinecraftVersion, v.MinecraftVersionRange)
@@ -198,7 +198,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		}
 	}
 	if len(v.Loaders) > 0 && !in0244(v.Loaders, strings.ToLower(env.Loader)) {
-		return fmt.Sprintf("loader %q is not in %v", env.Loader, v.Loaders)
+		return fmt.Sprintf("Загрузчик %q отсутствует в %v", env.Loader, v.Loaders)
 	}
 	if v.LoaderVersionRange != "" {
 		ok, e := matchRange0243(env.LoaderVersion, v.LoaderVersionRange)

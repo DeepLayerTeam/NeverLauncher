@@ -89,7 +89,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 		return fail(errors.New("Блокировка экземпляра: требуется «owned regular 0600 file with one hard link»"))
 	}
 	if err := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		return fail(fmt.Errorf("instance already running, lock %s: %w", path, err))
+		return fail(fmt.Errorf("Экземпляр уже запущен, блокировка %s: %w", path, err))
 	}
 	// Обнаруживайте подмену пути между открытием и получением блокировки.
 	pathInfo, err := os.Lstat(path)

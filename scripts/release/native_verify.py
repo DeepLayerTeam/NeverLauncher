@@ -42,10 +42,10 @@ def normalize_pe(unsigned: bytes, signed: bytes) -> None:
     if len(unsigned)<512 or len(signed)<len(unsigned):
         raise ValueError('truncated PE signing transformation')
     def offsets(payload):
-        if payload[:2]!=b'MZ':raise ValueError('invalid PE DOS header')
+        if payload[:2]!=b'MZ':raise ValueError('Недопустимый заголовок PE DOS')
         off=struct.unpack_from('<I',payload,0x3c)[0]
         if off+160>len(payload) or payload[off:off+4]!=b'PE\0\0':
-            raise ValueError('invalid PE signing header')
+            raise ValueError('Недопустимый заголовок подписи PE')
         return off+24+64,off+24+112+4*8
     ck_a,sec_a=offsets(unsigned);ck_b,sec_b=offsets(signed)
     if (ck_a,sec_a)!=(ck_b,sec_b):raise ValueError('PE layout changed during signing')
@@ -53,7 +53,7 @@ def normalize_pe(unsigned: bytes, signed: bytes) -> None:
     original_dir=struct.unpack_from('<II',u,sec_a)
     cert_off,cert_size=struct.unpack_from('<II',s,sec_b)
     if original_dir!=(0,0) or cert_off<len(u) or cert_off>len(u)+7 or cert_size<8 or cert_off+cert_size>len(s):
-        raise ValueError('PE signing certificate placement/bounds invalid')
+        raise ValueError('Недопустимое расположение сертификата подписи PE или его границы')
     for arr in (u,s):
         arr[ck_a:ck_a+4]=b'\0'*4
         arr[sec_a:sec_a+8]=b'\0'*8
@@ -96,7 +96,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
         signtool=shutil.which('signtool.exe')
         powershell=shutil.which('pwsh.exe') or shutil.which('powershell.exe')
         if not signtool or not powershell:
-            raise ValueError('native Windows signing validators unavailable')
+            raise ValueError('Нативные средства проверки подписи Windows недоступны')
         with tempfile.TemporaryDirectory(prefix='launcher-authenticode-') as t:
             for name in binary_names:
                 normalize_pe(unsigned_files[name],signed_files[name])
@@ -118,7 +118,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
         stapler=shutil.which('xcrun')
         gatekeeper=Path('/usr/sbin/spctl')
         if not codesign or not ditto or not stapler or not gatekeeper.is_file():
-            raise ValueError('macOS native Gatekeeper/notary validators unavailable')
+            raise ValueError('Нативные проверки Gatekeeper/нотаризации macOS недоступны')
         with tempfile.TemporaryDirectory(prefix='launcher-codesign-') as t:
             app=Path(t)/'Launcher.app'
             # Проверяйте безопасность элементов перед нативной распаковкой; ditto
@@ -126,7 +126,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
             read_archive(signed_root/file)
             call([ditto,'-xk',str(signed_root/file),t])
             if not app.is_dir():
-                raise ValueError('macOS package has no extracted Launcher.app')
+                raise ValueError('В пакете macOS отсутствует извлечённый Launcher.app')
             call([codesign,'--verify','--deep','--strict','--verbose=2',str(app)])
             call([str(gatekeeper),'--assess','--type','execute','--verbose=2',str(app)])
             call([stapler,'stapler','validate',str(app)])
@@ -156,9 +156,9 @@ def main():
                              public_key=args.public_key,trust_policy=args.trust_policy,trust_state=args.trust_state)
         atomic_json(args.out,report)
     except (ValueError,OSError,subprocess.TimeoutExpired,KeyError,zipfile.BadZipFile) as exc:
-        print('NATIVE SIGNING BLOCKED: '+str(exc),file=sys.stderr)
+        print('ПРОВЕРКА НАТИВНОЙ ПОДПИСИ ЗАБЛОКИРОВАНА: '+str(exc),file=sys.stderr)
         return 2
-    print(f'PASS: OS-native signing verified for actual {args.target} package; independent transform audit remains required')
+    print(f'PASS: нативная подпись ОС проверена для фактического пакета {args.target}; независимый аудит преобразований по-прежнему требуется')
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

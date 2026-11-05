@@ -133,7 +133,7 @@ func (s Server) stagedSnapshot0342(ctx context.Context, g stagedGrant0342) (pack
 	}
 	check, err := s.Repo.LatestIntegrityCheck(ctx, g.PackageID)
 	if err != nil || check.Result != "passed" || check.ManifestDigest != md || check.ArtifactDigest != fd {
-		return lookup, errors.New("staged integrity proof missing or stale")
+		return lookup, errors.New("Подтверждение целостности подготовленных файлов отсутствует или устарело")
 	}
 	return lookup, nil
 }

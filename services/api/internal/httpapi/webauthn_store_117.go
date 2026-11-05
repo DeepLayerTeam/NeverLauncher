@@ -130,7 +130,7 @@ func (s *passkeyStore117) saveCredential(c passkeyCredential117) error {
 	defer s.mu.Unlock()
 	key := base64.RawURLEncoding.EncodeToString(c.CredentialID)
 	if existing, ok := s.credentialIndex[key]; ok && existing != c.ID {
-		return errors.New("credential already registered")
+		return errors.New("Учётные данные уже зарегистрированы")
 	}
 	if c.Status == "" {
 		c.Status = "active"

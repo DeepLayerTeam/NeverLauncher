@@ -56,8 +56,8 @@ pub(crate) fn canonical_attestation_core(attestation: &GuardRemoteAttestation) -
     }
     if attestation.schema == GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA {
         let macos = attestation.process_policy.macos.as_ref().ok_or_else(|| "Подтверждение macOS Guard не содержит сведения о политике процессов macOS".to_string())?;
-        let guard = attestation.evidence.guard.macos.as_ref().ok_or_else(|| "macOS Guard Attestation missing guard security evidence".to_string())?;
-        let launcher = attestation.evidence.launcher.macos.as_ref().ok_or_else(|| "macOS Guard Attestation missing launcher security evidence".to_string())?;
+        let guard = attestation.evidence.guard.macos.as_ref().ok_or_else(|| "В аттестации Guard для macOS отсутствуют доказательства безопасности защиты".to_string())?;
+        let launcher = attestation.evidence.launcher.macos.as_ref().ok_or_else(|| "В аттестации Guard для macOS отсутствуют доказательства безопасности лаунчера".to_string())?;
         return Ok(format!(
             concat!(
                 "Launcher Guard Attestation Core macOS v1\n",

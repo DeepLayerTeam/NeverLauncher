@@ -259,7 +259,7 @@ mod imp {
             let mut server = self
                 .server
                 .take()
-                .ok_or_else(|| "Guard Sensor startup pipe already consumed".to_string())?;
+                .ok_or_else(|| "Канал запуска Guard Sensor уже был использован".to_string())?;
             timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), server.connect())
                 .await
                 .map_err(|_| "Датчик Guard не загрузился до истечения времени запуска JVM".to_string())?

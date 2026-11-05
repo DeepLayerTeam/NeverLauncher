@@ -66,7 +66,7 @@ def secure(path):
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
             (stat.S_IMODE(st.st_mode) & 0o077) == 0 and
             0 < st.st_size <= MAX_BYTES,
-            "required file is unsafe: " + path.name)
+            "Обязательный файл небезопасен: " + path.name)
     return path.read_bytes()
 
 
@@ -84,7 +84,7 @@ def sync_directory(directory):
 
 def atomic_write(path, content):
     """Атомарная замена файла с защитой от сбоев; содержимое никогда не выводится и не передаётся через argv."""
-    require(path.parent.is_dir() and not path.parent.is_symlink(), "invalid deployment directory")
+    require(path.parent.is_dir() and not path.parent.is_symlink(), "Недопустимый каталог развёртывания")
     fd, tmp = tempfile.mkstemp(prefix=".rolling-tmp-", dir=path.parent)
     try:
         os.fchmod(fd, 0o600)
@@ -128,7 +128,7 @@ def read_journal(directory):
     except (ValueError, UnicodeDecodeError) as exc:
         raise RollingError("Некорректное значение: «local recovery journal»") from exc
     require(isinstance(data, dict) and data.get("schema") == SCHEMA,
-            "invalid local recovery journal schema")
+            "Недопустимая схема локального журнала восстановления")
     return data
 
 
@@ -159,7 +159,7 @@ def rendered(directory, project, env):
     except ValueError as exc:
         raise RollingError("Некорректное значение: «rendered Compose JSON»") from exc
     require(isinstance(data, dict) and isinstance(data.get("services"), dict),
-            "invalid resolved Compose services")
+            "Недопустимый состав служб Compose")
     return data
 
 
@@ -169,9 +169,9 @@ def validate_stage(directory, project):
     target = secure(target_file)
     st_dir = directory.stat()
     require(not directory.is_symlink() and not (stat.S_IMODE(st_dir.st_mode) & 0o022),
-            "deployment directory must not be group/world writable")
+            "Каталог развёртывания не должен быть доступен для записи группе и другим пользователям")
     require(current_file.stat().st_uid == target_file.stat().st_uid,
-            "source and staged configuration must have the same owner")
+            "Исходная и подготовленная конфигурации должны иметь одного владельца")
     require(sha(current) != sha(target), "stage is identical to current deployment")
     before = multi.resolved_compose(directory, project)
     after = multi.resolved_compose(directory, project, env_file=target_file)
@@ -203,7 +203,7 @@ def validate_stage(directory, project):
 def live_local(directory, project, version):
     report = multi.local_compat_observe_0516(directory, project)
     require(report["ready"] and report["compatibility0516"]["liveVersion"] == version,
-            "actual API/worker process version does not match expected " + version)
+            "Фактическая версия процесса API/обработчика не совпадает с ожидаемой " + version)
     return report
 
 
@@ -260,7 +260,7 @@ def rollback_host_locked(directory, project, *, expected=None):
     state = read_journal(directory)
     require(state is not None and state.get("phase") in
             ("prepared", "stopping", "switching", "applied", "rolling-back"),
-            "no recoverable rolling journal")
+            "Нет подходящего журнала поэтапного обновления для восстановления")
     if expected is not None:
         require(state["sourceHash"] == expected["sourceHash"] and
                 state["targetHash"] == expected["targetHash"], "recovery journal changed")
@@ -298,10 +298,10 @@ def host_plan(directory, project):
 
 
 def remote(target, script, directory, project, operation, *, timeout=540):
-    require(multi.HOST_REGEX.fullmatch(target) and not target.startswith("-"), "invalid SSH target")
+    require(multi.HOST_REGEX.fullmatch(target) and not target.startswith("-"), "Недопустимый целевой узел SSH")
     require(script.startswith("/") and directory.startswith("/") and
             all("\n" not in p and "\r" not in p for p in (script, directory)),
-            "invalid remote script/location")
+            "Недопустимый удалённый скрипт или путь")
     cmd_args = ["python3", script, operation, "--directory", directory,
                 "--project", project, "--output", "-"]
     if operation in ("local-apply", "local-rollback"):
@@ -354,7 +354,7 @@ class PGAdvisoryLock:
 
     def ping(self):
         require(self._query("SELECT 'ALIVE';") == "ALIVE",
-                "PostgreSQL cluster rolling lock heartbeat failed")
+                "Ошибка подтверждения активности блокировки поэтапного обновления кластера PostgreSQL")
 
     def __exit__(self, *_):
         if self.process:
@@ -397,7 +397,7 @@ class EdgeMonitor:
 
     def assert_continuity(self):
         require(self.samples >= 2 and self.failures == 0,
-                "public HTTPS edge was unavailable or insufficiently observed during host cutover")
+                "Во время переключения узла публичный HTTPS-шлюз был недоступен или недостаточно проверен")
 
 
 def observe(nodes, script, directory, project):
@@ -426,7 +426,7 @@ def verify_cluster(nodes, script, directory, project, edge_url, catalog):
     assert_image_cohorts(reports, versions)
     nn.validate_schema(nn.live_pg_migrations(catalog["dsn"]), catalog["versions"])
     ready, _ = multi.edge_ready(edge_url)
-    require(ready, "public HTTPS LB readiness failed")
+    require(ready, "Публичный HTTPS-балансировщик нагрузки не прошёл проверку готовности")
     return reports, versions
 
 
@@ -441,7 +441,7 @@ def rollout(args):
         reports, versions = verify_cluster(nodes, args.remote_script, args.directory,
                                            args.project, args.edge_url, catalog)
         event["initialVersions"] = versions.copy()
-        require(set(versions.values()) <= PAIR, "unsupported starting cluster version")
+        require(set(versions.values()) <= PAIR, "Неподдерживаемая исходная версия кластера")
         # До изменения первого хоста выполните предварительную проверку КАЖДОЙ
         # подготовленной цели. Несовпадающий дайджест или неподготовленный узел
         # нельзя обнаруживать уже после изменения первой ноды.
@@ -465,7 +465,7 @@ def rollout(args):
                 continue   # безопасное повторное выполнение после ранее частично завершённого развёртывания
             lock.ping()
             require(all(reports[n]["ready"] for n in nodes if n != label),
-                    "no independent healthy survivor")
+                    "Не осталось независимого исправного узла")
             planned = remote(target, args.rolling_script, args.directory, args.project,
                              "local-plan", timeout=240)
             require(planned == initial_plans[label] and
@@ -484,12 +484,12 @@ def rollout(args):
                 require(result["nodeId"] == planned["nodeId"] and
                         result["targetImage"] == planned["targetImage"] and
                         result["from"] == SOURCE and result["to"] == TARGET,
-                        "node returned unexpected rollout receipt")
+                        "Узел вернул неожиданную квитанцию развёртывания")
                 monitor.assert_continuity()
                 reports, versions = verify_cluster(nodes, args.remote_script, args.directory,
                                                    args.project, args.edge_url, catalog)
                 require(versions[label] == TARGET and all(v in PAIR for v in versions.values()),
-                        "post-cutover versions mismatch")
+                        "Несовпадение версий после переключения")
             except Exception as error:
                 try:
                     lock.ping()
@@ -498,7 +498,7 @@ def rollout(args):
                     require(rolled["phase"] == "rolled-back", "rollback not confirmed")
                     reports, versions = verify_cluster(nodes, args.remote_script,
                                                        args.directory, args.project, args.edge_url, catalog)
-                    require(versions[label] == SOURCE, "rollback actual version mismatch")
+                    require(versions[label] == SOURCE, "Фактическая версия после отката не совпадает с ожидаемой")
                 except Exception as recovery:
                     raise RollingError("Проверка после переключения не пройдена, успешность отката не подтверждена") from recovery
                 raise RollingError("Проверка после переключения не пройдена; затронутый узел восстановлен") from error
@@ -529,14 +529,14 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         require(Path(args.directory).is_absolute() and multi.PROJECT_REGEX.fullmatch(args.project),
-                "invalid absolute deployment directory/project")
+                "Недопустимый абсолютный путь развёртывания или проект")
         if args.action == "cluster-roll":
             require(args.allow_update and args.pg_dsn_file and args.edge_url,
                     "cluster-roll requires --allow-update --pg-dsn-file --edge-url")
             result = rollout(args)
         else:
             directory = Path(args.directory)
-            require(directory.is_dir() and not directory.is_symlink(), "deployment directory missing")
+            require(directory.is_dir() and not directory.is_symlink(), "Каталог развёртывания отсутствует")
             if args.action == "local-plan":
                 result = host_plan(directory, args.project)
             elif args.action == "local-apply":

@@ -120,7 +120,7 @@ func (s Server) officialBrowserExchange0263(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if len(s.Config.AuthTokenSecret) < 24 {
-		writeError(w, 503, "own official application registration is not configured")
+		writeError(w, 503, "Регистрация собственного официального приложения не настроена")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 8192)
@@ -128,16 +128,16 @@ func (s Server) officialBrowserExchange0263(w http.ResponseWriter, r *http.Reque
 	decoder.DisallowUnknownFields()
 	var v officialBrowserRequest0263
 	if err := decoder.Decode(&v); err != nil {
-		writeError(w, 400, "invalid browser code payload")
+		writeError(w, 400, "Недопустимые данные кода авторизации браузера")
 		return
 	}
 	var extra any
 	if err := decoder.Decode(&extra); err != io.EOF {
-		writeError(w, 400, "unexpected browser payload data")
+		writeError(w, 400, "Неожиданные данные ответа браузера")
 		return
 	}
 	if err := validateOfficialBrowserRequest0263(v); err != nil {
-		writeError(w, 400, "invalid browser callback credentials")
+		writeError(w, 400, "Недопустимые учётные данные обратного вызова браузера")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 70*time.Second)

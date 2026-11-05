@@ -957,20 +957,20 @@ fn expected_windows_platform() -> &'static str {
 fn validate_release_identity(status: &GuardStatus, expected_platform: &str) -> Result<(), String> {
     if status.product_version != env!("CARGO_PKG_VERSION") {
         return Err(format!(
-            "Guard release version mismatch: Desktop={} Guard={}",
+            "Версии релизов Guard и Desktop не совпадают: Desktop={} Guard={}",
             env!("CARGO_PKG_VERSION"),
             status.product_version
         ));
     }
     if status.platform != expected_platform {
         return Err(format!(
-            "Guard platform mismatch: expected {expected_platform}, got {}",
+            "Несовпадение платформы Guard: ожидалась {expected_platform}, получена {}",
             status.platform
         ));
     }
     if status.protocol_version != GUARD_PROTOCOL_VERSION {
         return Err(format!(
-            "Guard protocol mismatch: Desktop={} Guard={}",
+            "Несовпадение версий протокола Guard: Desktop={} Guard={}",
             GUARD_PROTOCOL_VERSION,
             status.protocol_version
         ));
@@ -995,7 +995,7 @@ fn validate_status_profile(
 ) -> Result<(), String> {
     if status.windows_protection_profile != expected_profile.as_str() {
         return Err(format!(
-            "Guard Windows protection profile mismatch: expected {expected_profile}, got {}",
+            "Несовпадение профиля защиты Guard в Windows: ожидался {expected_profile}, получен {}",
             status.windows_protection_profile
         ));
     }
@@ -1082,7 +1082,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
     let mut token: HANDLE = null_mut();
     if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
         return Err(format!(
-            "Guard cannot open current process token for pipe ACL: {}",
+            "Guard не может открыть токен текущего процесса для ACL канала: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1118,7 +1118,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
     } == 0
     {
         return Err(format!(
-            "Guard cannot read current user SID for pipe ACL: {}",
+            "Guard не может прочитать SID текущего пользователя для ACL канала: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1132,7 +1132,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
         || sid_text.is_null()
     {
         return Err(format!(
-            "Guard cannot convert current user SID for pipe ACL: {}",
+            "Guard не может преобразовать SID текущего пользователя для ACL канала: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1231,7 +1231,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     let observed_parent_pid = observed_windows_parent_pid(guard_pid)?;
     if observed_parent_pid != parent_pid {
         return Err(format!(
-            "Guard actual parent PID mismatch: expected {parent_pid}, observed {observed_parent_pid}"
+            "Несовпадение фактического PID родительского процесса Guard: ожидался {parent_pid}, обнаружен {observed_parent_pid}"
         ));
     }
 
@@ -1253,7 +1253,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             bootstrap_secret.zeroize();
             let detail = last_auth_error
                 .as_deref()
-                .unwrap_or("no authenticated client connected");
+                .unwrap_or("Нет подключённого аутентифицированного клиента");
             return Err(format!(
                 "Guard IPC: срок действия окна аутентификации истёк: {detail}"
             ));

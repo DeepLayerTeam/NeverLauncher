@@ -95,7 +95,7 @@ func fileDigest0474(ctx context.Context, reader io.Reader) (string, int64, error
 		return "", 0, e
 	}
 	if n > maxFile {
-		return "", n, errors.New("file exceeds 1 TiB migration limit")
+		return "", n, errors.New("Размер файла превышает ограничение миграции 1 ТиБ")
 	}
 	return hex.EncodeToString(h.Sum(nil)), n, nil
 }
@@ -225,7 +225,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 	h := sha256.New()
 	n, e := io.Copy(io.MultiWriter(tmp, h), &io.LimitedReader{R: &contextReader0474{ctx, source}, N: obj.size + 1})
 	if e == nil && (n != obj.size || hex.EncodeToString(h.Sum(nil)) != obj.hash) {
-		e = errors.New("source file digest mismatch while copying")
+		e = errors.New("Хеш исходного файла изменился во время копирования")
 	}
 	if e == nil {
 		e = tmp.Sync()
@@ -259,7 +259,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 			a, _ := filepath.Abs(l.RootPath())
 			b, _ := filepath.Abs(d.RootPath())
 			if a == b {
-				return report, errors.New("source and destination storage roots must differ")
+				return report, errors.New("Корневые каталоги исходного и целевого хранилищ должны различаться")
 			}
 		}
 	}

@@ -44,20 +44,20 @@ def now():
     return datetime.now(timezone.utc)
 
 def absolute_fresh(path: Path):
-    require(path.is_absolute() and not path.exists() and not path.is_symlink(), "destination must be a fresh absolute path")
-    require(path.parent.is_dir() and not path.parent.is_symlink(), "destination parent missing or symlinked")
+    require(path.is_absolute() and not path.exists() and not path.is_symlink(), "Целевой путь должен быть новым абсолютным путём")
+    require(path.parent.is_dir() and not path.parent.is_symlink(), "Родительский каталог назначения отсутствует или является символической ссылкой")
     require(all(not p.is_symlink() for p in path.parents), "unsafe destination ancestry")
 
 def private_directory(path: Path):
     require(path.is_dir() and not path.is_symlink() and stat.S_IMODE(path.stat().st_mode) & 0o077 == 0,
-            "directory must exist and be private (0700)")
+            "Каталог должен существовать и иметь права 0700")
 
 def parse_pairs(values, *, expected=None):
     result = {}
     for item in values:
         label, sep, value = item.partition("=")
         require(sep and cb.NAME.fullmatch(label) and value and label not in result,
-                "invalid or duplicated name=value")
+                "Недопустимая или повторяющаяся пара name=value")
         result[label] = value
     if expected is not None:
         require(set(result) == set(expected), "recovery target set differs from checkpoint")
@@ -66,7 +66,7 @@ def parse_pairs(values, *, expected=None):
 def verified_source(backup: Path, stanza: str, trust_file: Path):
     cb.validate_backup(backup, stanza=stanza)
     manifest = cb.read_private_json(backup / "manifest.json")
-    require(manifest["schema"] == cb.SCHEMA and manifest.get("version") == "0.51.8", "unsupported checkpoint")
+    require(manifest["schema"] == cb.SCHEMA and manifest.get("version") == "0.51.8", "Неподдерживаемая контрольная точка")
     trust = cb.read_private_json(trust_file)
     require(isinstance(trust, dict) and trust and trust == manifest["trustEscrowSha256"],
             "independently escrowed trust roots do not match checkpoint")
@@ -83,7 +83,7 @@ def fresh_bucket(bucket, endpoint, source_bucket):
 def target_spec(args, manifest):
     original_nodes = {r["label"] for r in manifest["nodes"]}
     nodes = parse_pairs(args.node, expected=original_nodes)
-    require(len(nodes) >= 2 and len(set(nodes.values())) == len(nodes), "at least two distinct restore hosts required")
+    require(len(nodes) >= 2 and len(set(nodes.values())) == len(nodes), "Для восстановления требуются минимум два разных узла")
     for host in nodes.values():
         require(bool(multi.HOST_REGEX.fullmatch(host)) and not host.startswith("-"), "unsafe restore SSH target")
     worlds = parse_pairs(args.world_destination, expected={r["name"] for r in manifest["worlds"]})
@@ -96,8 +96,8 @@ def target_spec(args, manifest):
                 "world requires trusted SSH target and absolute fresh destination")
         entries[name] = (host, path)
     require(args.project.startswith("nl-dr-") and bool(dr.PROJECT_PATTERN.fullmatch(args.project)),
-            "isolated DR project must start with nl-dr-")
-    require(bool(multi.DIGEST_REGEX.fullmatch(args.tar_image)), "unverified tar image (OCI digest required)")
+            "Имя изолированного DR-проекта должно начинаться с nl-dr-")
+    require(bool(multi.DIGEST_REGEX.fullmatch(args.tar_image)), "Непроверенный tar-образ (требуется хеш OCI)")
     return nodes, entries
 
 def transfer(host, script, mode, source: Path, *options, timeout=7200):
@@ -109,7 +109,7 @@ def transfer(host, script, mode, source: Path, *options, timeout=7200):
                                 timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise RecoveryError("Недоступно: «SSH recovery transfer»") from exc
-    require(cp.returncode == 0 and len(cp.stdout) <= 65536, "remote restore refused or failed")
+    require(cp.returncode == 0 and len(cp.stdout) <= 65536, "Удалённое восстановление отклонено или завершилось ошибкой")
     try:
         return json.loads(cp.stdout)
     except (UnicodeError, ValueError) as exc:
@@ -123,7 +123,7 @@ def remote_json(host, script, mode, *options, timeout=180):
         raise RecoveryError("Некорректное значение: «remote inventory»") from exc
 
 def stdin_archive(expected_sha):
-    require(bool(cb.HEX64.fullmatch(expected_sha)), "invalid transfer checksum")
+    require(bool(cb.HEX64.fullmatch(expected_sha)), "Недопустимая контрольная сумма передачи")
     fd, filename = tempfile.mkstemp(prefix=".restore-0519-")
     os.fchmod(fd, 0o600)
     path = Path(filename)
@@ -133,20 +133,20 @@ def stdin_archive(expected_sha):
         with os.fdopen(fd, "wb") as output:
             while chunk := sys.stdin.buffer.read(1024 * 1024):
                 total += len(chunk)
-                require(total <= MAX_TRANSFER, "restore transfer exceeds configured limit")
+                require(total <= MAX_TRANSFER, "Передача данных восстановления превышает заданное ограничение")
                 sha.update(chunk)
                 output.write(chunk)
             output.flush(); os.fsync(output.fileno())
-        require(total > 0 and sha.hexdigest() == expected_sha, "transfer checksum mismatch")
+        require(total > 0 and sha.hexdigest() == expected_sha, "Несовпадение контрольной суммы передачи")
         return path
     except BaseException:
         path.unlink(missing_ok=True)
         raise
 
 def docker_clean(project):
-    require(bool(dr.PROJECT_PATTERN.fullmatch(project)), "invalid recovery project")
+    require(bool(dr.PROJECT_PATTERN.fullmatch(project)), "Недопустимый проект восстановления")
     active = cb.execute(["docker", "ps", "-aq", "--filter", "label=com.docker.compose.project=" + project])
-    require(not active.strip(), "recovery project already contains containers")
+    require(not active.strip(), "Проект восстановления уже содержит контейнеры")
 
 def local_preflight(args):
     docker_clean(args.project)
@@ -154,21 +154,21 @@ def local_preflight(args):
         vol = args.project + "_" + name
         cp = subprocess.run(["docker", "volume", "inspect", vol], stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL, timeout=20, check=False)
-        require(cp.returncode != 0, "restoration volume already exists")
+        require(cp.returncode != 0, "Том восстановления уже существует")
     identity = multi.inventory.machine_identity()
-    require(bool(identity), "missing real machine identity")
+    require(bool(identity), "Отсутствует действительный идентификатор машины")
     return {"status": "fresh", "machineIdentity": identity}
 
 def restore_volume_local(args):
     docker_clean(args.project)
     require(args.volume in cb.VOLUMES and bool(multi.DIGEST_REGEX.fullmatch(args.tar_image)),
-            "unsupported recovery volume/image")
+            "Неподдерживаемый том или образ восстановления")
     vol = args.project + "_" + args.volume
     # Проверяйте ДО чтения больших полезных данных, иначе Docker автоматически создаст каталоги
     # назначения.
     probe = subprocess.run(["docker", "volume", "inspect", vol], stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, timeout=20, check=False)
-    require(probe.returncode != 0, "volume already exists (no overwrite)")
+    require(probe.returncode != 0, "Том уже существует (перезапись запрещена)")
     tarpath = stdin_archive(args.sha256)
     try:
         expected = dr.tar_digests(tarpath)
@@ -179,7 +179,7 @@ def restore_volume_local(args):
                                  args.tar_image, "tar", "-xzf", "-", "-C", "/target"],
                                 stdin=data, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                                 timeout=7200, check=False)
-        require(cp.returncode == 0, "Docker volume extraction failed")
+        require(cp.returncode == 0, "Не удалось извлечь том Docker")
         with tempfile.TemporaryDirectory(prefix=".readback-0519-") as temporary:
             readback = Path(temporary) / "readback.tar.gz"
             dr.stream_to_file(["docker", "run", "--rm", "--network", "none", "--read-only",
@@ -192,14 +192,14 @@ def restore_volume_local(args):
         tarpath.unlink(missing_ok=True)
 
 def world_stream_archive(source: Path, target: Path):
-    cb.require(dr.safe_world_backup(source)["id"] == source.name, "invalid world backup")
+    cb.require(dr.safe_world_backup(source)["id"] == source.name, "Недопустимая резервная копия игрового мира")
     with tarfile.open(target, "w:gz") as archive:
         archive.add(source, arcname=source.name, recursive=True)
 
 def restore_world_local(args):
     dest = Path(args.destination)
     absolute_fresh(dest)
-    require(bool(dr.WORLD_BACKUP_ID.fullmatch(args.backup_id)), "invalid world backup ID")
+    require(bool(dr.WORLD_BACKUP_ID.fullmatch(args.backup_id)), "Недопустимый ID резервной копии игрового мира")
     tarpath = stdin_archive(args.sha256)
     try:
         with tempfile.TemporaryDirectory(prefix=".world-recovery-0519-", dir=dest.parent) as tmp:
@@ -240,14 +240,14 @@ def prepare(args):
     require(Path(args.pgdata).resolve() not in (backup.resolve(), work.resolve()) and
             backup.resolve() not in Path(args.pgdata).resolve().parents and
             work.resolve() not in Path(args.pgdata).resolve().parents, "PostgreSQL target overlaps protected backup/workspace")
-    require(args.s3_bucket != manifest["s3"]["bucket"], "source bucket cannot be recovery bucket")
+    require(args.s3_bucket != manifest["s3"]["bucket"], "Исходный бакет не может одновременно быть бакетом восстановления")
     fresh_bucket(args.s3_bucket, args.s3_endpoint, manifest["s3"]["bucket"])
     machine_ids = set()
     for host in nodes.values():
         data = remote_json(host, args.remote_script, "local-preflight", "--project", args.project)
         require(data.get("status") == "fresh" and data.get("machineIdentity") not in machine_ids and
                 data["machineIdentity"] not in {r["machineIdentity"] for r in manifest["nodes"]},
-                "recovery host must be a new independent machine")
+                "Узел восстановления должен быть новой независимой машиной")
         machine_ids.add(data["machineIdentity"])
     # Записывайте устойчивый журнал ДО любых разрушительных побочных эффектов. Никогда
     # не повторяйте неопределённое восстановление в частично заполненные тома, бакет или
@@ -267,7 +267,7 @@ def prepare(args):
     dr.s3_upload_fresh(args.s3_bucket, backup / "s3", args.s3_endpoint, manifest["s3"]["files"])
     uploaded_versions = cb.s3_version_inventory(args.s3_bucket, args.s3_endpoint)
     require(len([v for v in uploaded_versions if v[0] == "Versions" and v[3] is True]) ==
-            len(manifest["s3"]["files"]), "restored S3 inventory count mismatch")
+            len(manifest["s3"]["files"]), "Несовпадение количества объектов восстановленной инвентаризации S3")
     state["prepared"].append("s3-readback"); persist(work, state)
     for label, host in nodes.items():
         for vol in cb.VOLUMES:
@@ -315,12 +315,12 @@ def replay_postgres(args):
     require(state["phase"] == "prepared-not-admitted", "cohort not fully prepared")
     target = Path(state["pgdata"])
     require(target.is_dir() and (target / "PG_VERSION").is_file(), "PGDATA not restored")
-    require(args.source_fenced, "source infrastructure must be independently fenced first")
-    require(1024 < args.pg_port < 65536, "invalid isolated PostgreSQL port")
-    require(args.socket_dir, "private PostgreSQL socket directory required")
+    require(args.source_fenced, "Перед началом необходимо независимо изолировать исходную инфраструктуру")
+    require(1024 < args.pg_port < 65536, "Недопустимый порт изолированного PostgreSQL")
+    require(args.socket_dir, "Требуется закрытый каталог сокета PostgreSQL")
     socket_dir = Path(args.socket_dir)
     private_directory(socket_dir)
-    require(not any(socket_dir.iterdir()), "PostgreSQL recovery socket directory must be empty")
+    require(not any(socket_dir.iterdir()), "Каталог сокета PostgreSQL для восстановления должен быть пустым")
     # До проверки целевой точки WAL привязывайтесь ТОЛЬКО К UNIX-СОКЕТУ, а не к публичному
     # TCP-интерфейсу.
     options = f"-c listen_addresses='' -c unix_socket_directories={socket_dir} -c port={args.pg_port} -c hot_standby=on"
@@ -372,7 +372,7 @@ def audit_recovery(ledger_file, pg_env, incident):
     отсутствие потерь аудита доказательством сохранности неаудированных данных S3/миров.
     """
     ledger = cb.read_private_json(Path(ledger_file))
-    require(ledger.get("schema") == "neverlauncher.dr-ack-ledger/v1", "unsupported ack ledger")
+    require(ledger.get("schema") == "neverlauncher.dr-ack-ledger/v1", "Неподдерживаемый журнал подтверждений")
     rows = ledger.get("entries")
     require(isinstance(rows, list) and rows and len(rows) <= 100000, "empty/oversized audit ledger")
     last = None
@@ -393,13 +393,13 @@ def audit_recovery(ledger_file, pg_env, incident):
                              "-v", "audit_id=" + event_id],
                             input=b"SELECT id FROM audit_events WHERE id = :'audit_id';\n",
                             env=pg_env, timeout=30).decode().strip()
-        require(actual in ("", event_id), "unexpected audit readback")
+        require(actual in ("", event_id), "Неожиданный результат чтения аудита")
         if actual == event_id:
             last = stamp if last is None or stamp > last else last
             recovered += 1
         else:
             missing.append((event_id, stamp))
-    require(last is not None, "no independently acknowledged audit event survived")
+    require(last is not None, "Ни одно независимо подтверждённое событие аудита не сохранилось")
     # Более поздний ACK может не восстановиться, хотя более ранний восстановлен.
     # Сохраняйте это предупреждение вместо недостоверного утверждения, что RPO равен
     # возрасту одной контрольной точки.
@@ -427,21 +427,21 @@ def admission(args):
     state = read_state(work)
     require(state["phase"] == "postgres-promoted-isolated", "PostgreSQL recovery not proven")
     require(args.source_fenced and args.external_secrets_restored,
-            "old writers must be fenced and secrets/external auth separately restored")
-    require(args.project == state["project"], "project mismatch")
+            "Старые процессы записи необходимо изолировать, а секреты и внешнюю аутентификацию — восстановить отдельно")
+    require(args.project == state["project"], "Несовпадение проекта")
     nodes = state["nodes"]
-    require(args.ready_url and args.incident_at, "public readiness and incident timestamp required for RTO")
+    require(args.ready_url and args.incident_at, "Для расчёта RTO нужны публичная проверка готовности и время инцидента")
     incident = datetime.fromisoformat(args.incident_at.replace("Z", "+00:00"))
     frozen = datetime.fromisoformat(state["frozenUtc"].replace("Z", "+00:00"))
     require(incident.tzinfo is not None and frozen.tzinfo is not None and frozen <= incident <= now(),
-            "incident timestamp invalid or older than checkpoint")
+            "Время инцидента недопустимо или предшествует контрольной точке")
     # Проверьте, что НОВЫЙ PostgreSQL действительно допускает запись через свою
     # защищённую служебную точку подключения.
     from nn1_compat_0516 import dsn_environment
     env = dsn_environment(Path(args.pg_dsn_file))
     result = cb.execute(["psql", "-X", "-q", "-A", "-t", "-w", "-v", "ON_ERROR_STOP=1",
                          "-c", "SELECT NOT pg_is_in_recovery();"], env=env, timeout=45).decode().strip()
-    require(result == "t", "managed recovered PostgreSQL is not writable")
+    require(result == "t", "Восстановленный управляемый PostgreSQL недоступен для записи")
     catalog, _ = nn.migration_catalog()
     nn.validate_schema(nn.live_pg_migrations(Path(args.pg_dsn_file)), catalog)
     audit = audit_recovery(args.ack_ledger, env, incident) if args.ack_ledger else None
@@ -456,7 +456,7 @@ def admission(args):
         state["prepared"].append("api-worker:" + label)
         persist(work, state)
     require(multi.cluster_verify(reports, args.ready_url)["multiHostControlPlaneObserved"] is True,
-            "public ingress and recovered multi-host services failed readiness")
+            "Публичный входящий шлюз и восстановленные многоузловые службы не прошли проверку готовности")
     end = now()
     # RTO измеряется от УКАЗАННОГО времени начала инцидента до фактической
     # готовности. RPO невозможно измерить без независимо зарегистрированных

@@ -90,7 +90,7 @@ def file_manifest(pkg: dict, client_dir: Path) -> dict[str, str]:
         )
         require(
             isinstance(expected, str) and HEX.fullmatch(expected) is not None,
-            "invalid package digest",
+            "Недопустимый хеш пакета",
         )
         require(rel not in known, f"duplicate package file: {rel}")
         path = client_dir.joinpath(*rel.split("/"))

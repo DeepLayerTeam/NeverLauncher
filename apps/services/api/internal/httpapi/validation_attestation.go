@@ -391,7 +391,7 @@ func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Req
 			if policyErr == nil {
 				for _, target := range targets {
 					coverage[target.ID] = false
-					reasons[target.ID] = "missing fresh matching signed attestation"
+					reasons[target.ID] = "Отсутствует актуальная подходящая подписанная аттестация"
 				}
 				freshStore, ok := s.Repo.(validationFreshnessStore0346)
 				for _, v := range rows {

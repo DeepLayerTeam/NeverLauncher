@@ -308,7 +308,7 @@ def run(command: list[str], *, cwd: Path | None = None) -> str:
     )
     require(
         result.returncode == 0,
-        "command failed: "
+        "Команда завершилась ошибкой: "
         + " ".join(command[:5])
         + " : "
         + (result.stderr or result.stdout)[-350:],

@@ -59,7 +59,7 @@ func coordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor) (bool,
 	} // fresh database
 	for _, name := range []string{"coord_channels", "coord_leases", "coord_limits"} {
 		if !seen[name] {
-			return false, fmt.Errorf("coordinator legacy missing %s", name)
+			return false, fmt.Errorf("В устаревшем координаторе отсутствует %s", name)
 		}
 	}
 	version := 0

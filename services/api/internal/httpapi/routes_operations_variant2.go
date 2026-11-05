@@ -425,12 +425,12 @@ func (s Server) operationRecover0388(w http.ResponseWriter, r *http.Request) {
 	kind := r.URL.Query().Get("kind")
 	key := r.URL.Query().Get("idempotencyKey")
 	if projectID == "" || len(projectID) > 128 || (kind != "package-publish" && kind != durableRollbackKind0217) || len(key) < 8 || len(key) > 240 {
-		writeError(w, http.StatusBadRequest, "projectId, valid kind and idempotencyKey (8..240) required")
+		writeError(w, http.StatusBadRequest, "Необходимы projectId, допустимый kind и idempotencyKey (8..240)")
 		return
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "durable operation journal unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Устойчивый журнал операций недоступен")
 		return
 	}
 	job, err := journal.FindOperationByKey(r.Context(), kind, claims.Sub, key)
@@ -501,7 +501,7 @@ func (s Server) authorizeOperationMutation0217(w http.ResponseWriter, r *http.Re
 		return false
 	}
 	if !s.authorizeClaims(r, claims, job.Action, job.ProjectID, job.ResourceType, job.ResourceID).Allowed {
-		writeError(w, 403, "permission revoked or project access denied")
+		writeError(w, 403, "Разрешение отозвано или доступ к проекту запрещён")
 		return false
 	}
 	return s.freshAuthAllowed117(w, r, "mfa", 5*time.Minute)

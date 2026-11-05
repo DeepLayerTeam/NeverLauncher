@@ -35,7 +35,7 @@ func decodeJavaPreparedContent0486(raw json.RawMessage) ([]byte, error) {
 		return nil, errors.New("Некорректное значение: «content provider response»")
 	}
 	if answer.ErrorCode != "" {
-		return nil, fmt.Errorf("Java provider rejected package: %s", answer.ErrorCode)
+		return nil, fmt.Errorf("Java-провайдер отклонил пакет: %s", answer.ErrorCode)
 	}
 	if !answer.RequiresSigning || answer.Size < 0 || answer.Size > maxJavaContentTransform0486 || len(answer.DataBase64) > (maxJavaContentTransform0486+2)/3*4+8 {
 		return nil, errors.New("Превышен допустимый размер: «unsigned content preparation response invalid or»")
@@ -66,7 +66,7 @@ func (s Server) prepareJavaPackageFile0486(ctx context.Context, extensionID, pro
 		return nil, errors.New("Требуется: «package project and path»")
 	}
 	if len(raw) > maxJavaContentTransform0486 {
-		return nil, errors.New("Java content transform supports files <=24 KiB; larger files require the core package upload pipeline")
+		return nil, errors.New("Преобразование содержимого Java поддерживает файлы до 24 КиБ; файлы большего размера нужно загружать через основной конвейер пакетов")
 	}
 	req, err := json.Marshal(map[string]any{"projectId": projectID, "name": filename, "dataBase64": base64.StdEncoding.EncodeToString(raw)})
 	if err != nil {
@@ -74,7 +74,7 @@ func (s Server) prepareJavaPackageFile0486(ctx context.Context, extensionID, pro
 	}
 	answer, err := s.ExtensionHost.CallJavaRPC0304(ctx, extensionhost.Key{ExtensionID: extensionID, Scope: "project", ScopeID: projectID}, "content.package.prepare", req)
 	if err != nil {
-		return nil, fmt.Errorf("Java content provider unavailable or unauthorized: %w", err)
+		return nil, fmt.Errorf("Java-провайдер содержимого недоступен или не авторизован: %w", err)
 	}
 	return decodeJavaPreparedContent0486(answer)
 }

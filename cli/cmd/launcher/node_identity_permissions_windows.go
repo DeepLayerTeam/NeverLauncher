@@ -29,11 +29,11 @@ $ErrorActionPreference = 'Stop'
 $p = $env:LAUNCHER_IDENTITY_ACL_PATH
 $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 & icacls.exe $p /reset | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'icacls /reset failed' }
+if ($LASTEXITCODE -ne 0) { throw 'Команда icacls /reset завершилась ошибкой' }
 & icacls.exe $p /inheritance:r | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'icacls /inheritance:r failed' }
+if ($LASTEXITCODE -ne 0) { throw 'Команда icacls /inheritance:r завершилась ошибкой' }
 & icacls.exe $p /grant:r ('*' + $me + ':F') '*S-1-5-18:F' | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'icacls /grant:r failed' }
+if ($LASTEXITCODE -ne 0) { throw 'Команда icacls /grant:r завершилась ошибкой' }
 `)
 }
 

@@ -93,10 +93,10 @@ func Detect(cfg config.Config) (Plan, error) {
 	switch p.Mode {
 	case Development:
 		if config.IsProductionEnvironment(cfg.Environment) {
-			problems = append(problems, "memory repository forbidden in production")
+			problems = append(problems, "Хранилище в памяти запрещено в рабочем окружении")
 		}
 		if requested != "auto" {
-			problems = append(problems, "development is not a selectable production topology")
+			problems = append(problems, "Топологию development нельзя выбрать для рабочего окружения")
 		}
 	case SingleNode:
 		if !sqliteRepo {
@@ -106,10 +106,10 @@ func Detect(cfg config.Config) (Plan, error) {
 			problems = append(problems, "single-node requires local object storage")
 		}
 		if cfg.ServerBridgeHARequired {
-			problems = append(problems, "single-node cannot provide distributed ServerBridge HA")
+			problems = append(problems, "Одиночный узел не может обеспечить распределённую отказоустойчивость ServerBridge")
 		}
 		if strings.TrimSpace(cfg.RedisURL) != "" {
-			problems = append(problems, "single-node must not configure Redis; local SQLite coordination only")
+			problems = append(problems, "На одиночном узле нельзя настраивать Redis; допускается только локальная координация SQLite")
 		}
 		for label, path := range map[string]string{"repository": cfg.DatabaseDSN, "coordinator": cfg.SQLiteCoordinatorPath, "storage": cfg.StorageLocalPath} {
 			if strings.TrimSpace(path) == "" || (config.IsProductionEnvironment(cfg.Environment) && (!filepath.IsAbs(path) || filepath.Clean(path) != path)) {
@@ -117,7 +117,7 @@ func Detect(cfg config.Config) (Plan, error) {
 			}
 		}
 		if filepath.Clean(cfg.DatabaseDSN) == filepath.Clean(cfg.SQLiteCoordinatorPath) {
-			problems = append(problems, "repository and coordinator must use different SQLite files")
+			problems = append(problems, "Хранилище и координатор должны использовать разные файлы SQLite")
 		}
 		if cfg.RateLimitEnabled == false || !cfg.RateLimitFailClosed || cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
 			problems = append(problems, "single-node requires enabled fail-closed rate limiting with positive budgets")
@@ -125,30 +125,30 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.Coordinator = "sqlite"
 		p.SingleInstance = true
 		p.requireLocalFS = true
-		p.Limitations = append(p.Limitations, "one Linux API process only; no distributed HA", "SQLite-to-PostgreSQL migration requires a separate verified procedure")
+		p.Limitations = append(p.Limitations, "Допускается только один процесс Linux API; распределённая отказоустойчивость недоступна", "SQLite-to-PostgreSQL migration requires a separate verified procedure")
 		// Корневой каталог хранилища — каноническая точка привязки владения между
 		// развёртываниями.
 		p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
 		if lock := strings.TrimSpace(cfg.DeploymentLockPath); lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
-			problems = append(problems, "single-node owner lock cannot be overridden")
+			problems = append(problems, "Нельзя переопределить блокировку владельца одиночного узла")
 		}
 		p.Reasons = append(p.Reasons, "exclusive local process owner; durable SQLite HTTP repository and coordinator")
 	case Standard, NetworkHA:
 		if !postgres {
-			problems = append(problems, "standard/network-ha require PostgreSQL HTTP repository")
+			problems = append(problems, "Для standard/network-ha требуется HTTP-хранилище PostgreSQL")
 		}
 		if strings.ToLower(strings.TrimSpace(cfg.SQLDriver)) != "pgx" {
 			problems = append(problems, "PostgreSQL requires pgx driver")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-			problems = append(problems, "PostgreSQL DSN is missing")
+			problems = append(problems, "Отсутствует строка подключения PostgreSQL (DSN)")
 		}
 		if sqliteCoord {
 			if !filepath.IsAbs(cfg.SQLiteCoordinatorPath) {
-				problems = append(problems, "SQLite coordinator path must be absolute")
+				problems = append(problems, "Путь координатора SQLite должен быть абсолютным")
 			}
 			if cfg.ServerBridgeHARequired {
-				problems = append(problems, "SQLite coordinator cannot provide distributed HA")
+				problems = append(problems, "Координатор SQLite не может обеспечить распределённую отказоустойчивость")
 			}
 		}
 		if config.IsProductionEnvironment(cfg.Environment) {
@@ -164,10 +164,10 @@ func Detect(cfg config.Config) (Plan, error) {
 			if id == "" {
 				problems = append(problems, "network-ha requires an explicitly configured stable LAUNCHER_REPLICA_ID for each API/worker")
 			} else if len(id) > 128 || strings.ContainsAny(id, " \t\r\n/\\") {
-				problems = append(problems, "network-ha LAUNCHER_REPLICA_ID must be a stable non-whitespace identity of at most 128 bytes")
+				problems = append(problems, "Для network-ha LAUNCHER_REPLICA_ID должен быть устойчивым непустым идентификатором без пробелов длиной не более 128 байт")
 			}
 			if sqliteCoord {
-				problems = append(problems, "network-ha cannot use local SQLite coordinator")
+				problems = append(problems, "Режим network-ha не может использовать локальный координатор SQLite")
 			}
 			if !cfg.ServerBridgeHARequired {
 				problems = append(problems, "network-ha requires fenced ServerBridge HA")
@@ -182,20 +182,20 @@ func Detect(cfg config.Config) (Plan, error) {
 		} else {
 			p.SingleInstance = true
 			p.requireLocalFS = config.IsProductionEnvironment(cfg.Environment)
-			p.Limitations = append(p.Limitations, "one API process; not HA", "PostgreSQL remains required; SQLite coordinator does not replace the HTTP repository")
+			p.Limitations = append(p.Limitations, "one API process; not HA", "PostgreSQL остаётся обязательным; координатор SQLite не заменяет HTTP-хранилище")
 			lock := strings.TrimSpace(cfg.DeploymentLockPath)
 			switch {
 			case p.Storage == "local" && strings.TrimSpace(cfg.StorageLocalPath) != "":
 				p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
 				p.Reasons = append(p.Reasons, "instance lock anchored to shared local storage")
 				if lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
-					problems = append(problems, "local storage lock path cannot be overridden: all instances must lock the same storage root")
+					problems = append(problems, "Нельзя переопределять путь блокировки локального хранилища: все экземпляры должны блокировать один корневой каталог")
 				}
 			case sqliteCoord:
 				p.LockPath = cfg.SQLiteCoordinatorPath + ".api.owner.lock"
 				p.Reasons = append(p.Reasons, "instance lock anchored to SQLite coordinator volume")
 				if lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
-					problems = append(problems, "SQLite coordinator lock path cannot be overridden")
+					problems = append(problems, "Нельзя переопределить путь блокировки координатора SQLite")
 				}
 			case lock != "":
 				p.LockPath = lock
@@ -205,11 +205,11 @@ func Detect(cfg config.Config) (Plan, error) {
 			}
 			if p.LockPath != "" && !filepath.IsAbs(p.LockPath) {
 				if config.IsProductionEnvironment(cfg.Environment) {
-					problems = append(problems, "instance lock path must be absolute")
+					problems = append(problems, "Путь блокировки экземпляра должен быть абсолютным")
 				} else {
 					absolute, err := filepath.Abs(p.LockPath)
 					if err != nil {
-						problems = append(problems, "instance lock cannot resolve absolute path: "+err.Error())
+						problems = append(problems, "Не удалось определить абсолютный путь блокировки экземпляра: "+err.Error())
 					} else {
 						p.LockPath = absolute
 					}

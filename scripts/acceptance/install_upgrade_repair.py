@@ -38,11 +38,11 @@ def sha256(path: Path) -> str:
 
 def pinned(path: Path, digest: str):
     require(path.is_absolute() and len(digest) == 64 and all(c in '0123456789abcdef' for c in digest),
-            'absolute source and lowercase SHA-256 required')
+            'Требуются абсолютный путь источника и SHA-256 в нижнем регистре')
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and not st.st_mode & 0o022,
-            'source must be immutable regular file')
-    require(sha256(path) == digest, 'release input SHA-256 mismatch')
+            'Источник должен быть неизменяемым обычным файлом')
+    require(sha256(path) == digest, 'Несовпадение SHA-256 входного пакета релиза')
 
 
 def run(argv: list[str], *, expect_ok: bool, timeout: int = 900) -> dict:
@@ -76,9 +76,9 @@ def active(root: Path) -> dict:
         if path.is_file() and not path.is_symlink():
             value = json.loads(path.read_text(encoding='utf-8'))
             require(isinstance(value.get('generation'), int) and value['generation'] > 0,
-                    'invalid installed generation')
+                    'Недопустимое поколение установленной версии')
             rows.append(value)
-    require(rows, 'missing durable activation receipts')
+    require(rows, 'Отсутствуют устойчиво сохранённые квитанции активации')
     return max(rows, key=lambda r: r['generation'])
 
 
@@ -104,26 +104,26 @@ def main() -> int:
     args = parser.parse_args()
     require(os.name == 'posix' and os.uname().sysname == 'Linux' and os.geteuid() == 0,
             'real ENOSPC acceptance requires privileged isolated Linux runner')
-    require(args.confirm == 'DESTRUCTIVE-ISOLATED-0527', 'explicit isolated runner confirmation missing')
-    require(1024 <= args.tmpfs_mib <= 65536, 'tmpfs size must be explicitly bounded (1–64 GiB)')
+    require(args.confirm == 'DESTRUCTIVE-ISOLATED-0527', 'Отсутствует явное подтверждение изолированного исполнителя')
+    require(1024 <= args.tmpfs_mib <= 65536, 'Размер tmpfs должен быть явно ограничен (1–64 ГиБ)')
     require(args.scratch_parent.is_absolute() and args.scratch_parent.is_dir()
-            and not args.scratch_parent.is_symlink(), 'scratch parent must be real absolute directory')
+            and not args.scratch_parent.is_symlink(), 'Родительский каталог временных файлов должен быть реальным абсолютным каталогом')
     require(args.output.is_absolute() and not args.output.exists() and args.output.parent.is_dir(),
-            'output receipt must be a new absolute path')
+            'Путь выходной квитанции должен быть новым абсолютным путём')
     require(args.old_bundle.is_absolute() and args.new_bundle.is_absolute()
-            and args.old_bundle != args.new_bundle, 'two different absolute signed bundle directories required')
+            and args.old_bundle != args.new_bundle, 'Требуются два разных абсолютных каталога подписанных пакетов')
     pinned(args.installer, args.installer_sha256)
     require(os.access(args.installer, os.X_OK), 'signed installer not executable')
     for bundle, expected in ((args.old_bundle,args.old_config_sha256),(args.new_bundle,args.new_config_sha256)):
-        require(bundle.is_dir() and not bundle.is_symlink(), 'signed bundle directory missing or symlink')
+        require(bundle.is_dir() and not bundle.is_symlink(), 'Каталог подписанного пакета отсутствует или является символической ссылкой')
         pinned(bundle / 'bootstrap.signed.json', expected)
     relative = valid_rel(args.managed_repair_file)
     require(len(relative.parts) >= 3 and relative.parts[0] in ('launcher', 'profiles')
             and not set(part.lower() for part in relative.parts).intersection({
                 'saves', 'screenshots', 'resourcepacks', 'shaderpacks', 'user-files',
                 'config.json', 'options.txt', '.launcher-installer',
-            }), 'repair target must be signed-managed game/runtime bytes, not a world, user file or installer control')
-    require(len(args.managed_repair_sha256) == 64, 'managed repair checksum required')
+            }), 'Цель восстановления должна быть подписанными управляемыми игровыми файлами или Runtime, а не миром, пользовательским файлом или данными управления установщиком')
+    require(len(args.managed_repair_sha256) == 64, 'Требуется контрольная сумма управляемого восстановления')
     # Это настоящие существующие пакеты выпуска; при ошибке отказывайте до любого изменения состояния.
     for bundle in (args.old_bundle,args.new_bundle):
         run([str(args.installer),'verify','--bundle',str(bundle),'--offline'], expect_ok=True)
@@ -160,7 +160,7 @@ def main() -> int:
                 copy = Path(bad_dir) / 'untrusted'
                 shutil.copytree(args.new_bundle,copy,symlinks=True)
                 binary = copy / ('neverprestarter.exe' if os.name == 'nt' else 'neverprestarter')
-                require(binary.is_file() and not binary.is_symlink(), 'new native Prestarter missing')
+                require(binary.is_file() and not binary.is_symlink(), 'Отсутствует новый нативный Prestarter')
                 with binary.open('ab') as out:
                     out.write(b'corrupt-package-0527')
                 add_event(events,'corrupt-signed-package-rejected',native('update',copy,fail=True))
@@ -182,12 +182,12 @@ def main() -> int:
             # искусственная ошибка от поддельной ФС или тестового перехвата.
             free = shutil.disk_usage(mountpoint).free
             reserve = 128 * 1024  # достаточно для журнала ошибок, но не для настоящего выпуска
-            require(free > reserve + (32 << 20),'insufficient scratch to create disk-full test')
+            require(free > reserve + (32 << 20),'Недостаточно временного пространства для теста заполнения диска')
             filler = mountpoint / '.disk-full-filler'
             try:
                 with filler.open('wb') as fh:
                     os.posix_fallocate(fh.fileno(),0,free-reserve)
-                require(shutil.disk_usage(mountpoint).free < (1<<20), 'real tmpfs capacity was not exhausted')
+                require(shutil.disk_usage(mountpoint).free < (1<<20), 'Реальная ёмкость tmpfs не была исчерпана')
                 add_event(events,'kernel-enospc-update-rejected',native('update',args.new_bundle,fail=True))
                 require(active(root)==old,'disk-full failure switched active release')
                 preserved()
@@ -202,7 +202,7 @@ def main() -> int:
             preserved()
             managed = root / relative
             require(managed.is_file() and not managed.is_symlink() and sha256(managed)==args.managed_repair_sha256,
-                    'original managed file not present with expected SHA-256')
+                    'Исходный управляемый файл с ожидаемым SHA-256 отсутствует')
             managed.write_bytes(b'corrupted-installed-game-file-0527')
             require(sha256(managed)!=args.managed_repair_sha256,'corruption fault did not occur')
             add_event(events,'repair-managed-file',native('repair',args.new_bundle))

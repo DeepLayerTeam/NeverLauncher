@@ -787,7 +787,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(8) | None => Ok(Some(8)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang metadata Java mismatch: Legacy Vanilla requires Java 8, got {}",
+                "Minecraft {}: версия Java в метаданных Mojang не совпадает; для Legacy Vanilla требуется Java 8, получена {}",
                 merged.id, actual
             )),
         };
@@ -797,7 +797,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v2 expected {}, got {}",
+                "Minecraft {}: версия Java в метаданных Mojang не совпадает; для 0.17.0v2 ожидалась {}, получена {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(
@@ -811,7 +811,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v3 expected {}, got {}",
+                "Minecraft {}: версия Java в метаданных Mojang не совпадает; для 0.17.0v3 ожидалась {}, получена {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(

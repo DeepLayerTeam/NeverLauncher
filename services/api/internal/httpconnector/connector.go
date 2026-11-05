@@ -54,7 +54,7 @@ func (c *Connector) Metadata() authconnector.Metadata {
 
 func (c *Connector) Health(ctx context.Context) error {
 	if c == nil || c.signed == nil {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider client is unavailable")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Клиент HTTP-провайдера аутентификации недоступен")
 	}
 	var response healthResponse
 	if err := c.signed.doJSON(ctx, http.MethodGet, c.cfg.Endpoints.Health, nil, &response); err != nil {
@@ -64,7 +64,7 @@ func (c *Connector) Health(ctx context.Context) error {
 		return err
 	}
 	if strings.ToLower(strings.TrimSpace(response.Status)) != "ok" {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider health status is not ok")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Проверка состояния HTTP-провайдера аутентификации не пройдена")
 	}
 	return nil
 }
@@ -90,7 +90,7 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, req authconnector.
 	}
 	methods, err := strictNormalizeStrings(response.AuthMethods, 32, 64)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP auth provider authMethods are invalid", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимые методы аутентификации HTTP-провайдера", err)
 	}
 	if len(methods) == 0 {
 		methods = []string{"password"}
@@ -105,7 +105,7 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, req authconnector.
 func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.ResolveRequest) (authconnector.Identity, error) {
 	subject := strings.TrimSpace(req.Subject)
 	if subject == "" || len(subject) > 512 {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP identity subject is invalid")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Недопустимый субъект HTTP-учётной записи")
 	}
 	envelope, err := baseRequest()
 	if err != nil {
@@ -122,7 +122,7 @@ func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.Resol
 func (c *Connector) Refresh(ctx context.Context, providerToken string) (authconnector.Authentication, error) {
 	providerToken = strings.TrimSpace(providerToken)
 	if providerToken == "" || len(providerToken) > 16384 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "provider token is invalid")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Недопустимый токен провайдера")
 	}
 	envelope, err := baseRequest()
 	if err != nil {
@@ -139,7 +139,7 @@ func (c *Connector) Refresh(ctx context.Context, providerToken string) (authconn
 	}
 	methods, err := strictNormalizeStrings(response.AuthMethods, 32, 64)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP auth provider authMethods are invalid", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимые методы аутентификации HTTP-провайдера", err)
 	}
 	expires := time.Time{}
 	if response.ExpiresAt != nil {
@@ -152,7 +152,7 @@ func (c *Connector) Revoke(ctx context.Context, req authconnector.RevokeRequest)
 	subject := strings.TrimSpace(req.Subject)
 	token := strings.TrimSpace(req.ProviderToken)
 	if subject == "" || token == "" || len(subject) > 512 || len(token) > 16384 {
-		return authconnector.NewError(authconnector.ErrInvalidCredentials, "provider revoke request is invalid")
+		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Недопустимый запрос отзыва токена провайдера")
 	}
 	envelope, err := baseRequest()
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *Connector) Revoke(ctx context.Context, req authconnector.RevokeRequest)
 		return err
 	}
 	if strings.ToLower(strings.TrimSpace(response.Status)) != "revoked" {
-		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider logout response status is invalid")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "Недопустимый статус ответа при выходе из HTTP-провайдера")
 	}
 	return nil
 }
@@ -189,7 +189,7 @@ func (c *Connector) validateIdentityResponse(response identityResponse, expected
 	}
 	response.Subject = strings.TrimSpace(response.Subject)
 	if response.Subject == "" || len(response.Subject) > 512 {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider returned invalid subject")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-провайдер вернул недопустимый субъект учётной записи")
 	}
 	if expectedSubject != "" && response.Subject != expectedSubject {
 		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider changed subject during identity resolution")
@@ -199,11 +199,11 @@ func (c *Connector) validateIdentityResponse(response identityResponse, expected
 	}
 	groups, err := strictNormalizeStrings(response.Groups, 256, 256)
 	if err != nil {
-		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP auth provider groups are invalid", err)
+		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый список групп HTTP-провайдера", err)
 	}
 	roles, err := strictNormalizeStrings(response.Roles, 256, 256)
 	if err != nil {
-		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "HTTP auth provider roles are invalid", err)
+		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый список ролей HTTP-провайдера", err)
 	}
 	claims := response.Claims
 	if claims == nil {
@@ -220,7 +220,7 @@ func (c *Connector) validateIdentityResponse(response identityResponse, expected
 func baseRequest() (requestEnvelope, error) {
 	id, err := randomHex(16)
 	if err != nil {
-		return requestEnvelope{}, authconnector.WrapError(authconnector.ErrUnavailable, "HTTP connector request id generation failed", err)
+		return requestEnvelope{}, authconnector.WrapError(authconnector.ErrUnavailable, "Не удалось создать идентификатор запроса HTTP-коннектора", err)
 	}
 	return requestEnvelope{ProtocolVersion: protocolVersion, RequestID: id, Timestamp: time.Now().UTC()}, nil
 }
