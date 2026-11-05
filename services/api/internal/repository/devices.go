@@ -45,7 +45,7 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	device.Platform = strings.TrimSpace(device.Platform)
 	device.ClientVersion = strings.TrimSpace(device.ClientVersion)
 	if device.ID == "" || device.UserID == "" || device.Name == "" || device.PublicKey == "" || device.KeyFingerprint == "" {
-		return model.TrustedDevice{}, errors.New("device id, user id, name, public key and fingerprint are required")
+		return model.TrustedDevice{}, errors.New("Требуются идентификаторы устройства и пользователя, имя, публичный ключ и отпечаток")
 	}
 	if device.Status == "" {
 		device.Status = "active"
@@ -67,33 +67,33 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	// аппаратному происхождению ключа. Понижайте старые значения при сохранении
 	// записи.
 	if device.RemoteHardwareProvenance != "not-verified" && device.RemoteHardwareProvenance != "verified" && device.RemoteHardwareProvenance != "" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported remote hardware provenance %q", device.RemoteHardwareProvenance)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемый источник удалённой аппаратной аттестации %q", device.RemoteHardwareProvenance)
 	}
 	device.RemoteHardwareProvenance = "not-verified"
 	if device.AttestationState == "" {
 		device.AttestationState = "unattested"
 	}
 	if device.Status != "active" && device.Status != "revoked" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported device status %q", device.Status)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемый статус устройства %q", device.Status)
 	}
 	if device.TrustState != "verified" && device.TrustState != "revoked" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported trust state %q", device.TrustState)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемое состояние доверия %q", device.TrustState)
 	}
 	if device.KeyAlgorithm != "ed25519" && device.KeyAlgorithm != "p256" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported device key algorithm %q", device.KeyAlgorithm)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемый алгоритм ключа устройства %q", device.KeyAlgorithm)
 	}
 	if device.KeyBinding != "software" && device.KeyBinding != "hardware" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported device key binding %q", device.KeyBinding)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемый тип привязки ключа устройства %q", device.KeyBinding)
 	}
 	if device.Assurance != "proof-of-possession" && device.Assurance != "challenge-response-attested" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported device assurance %q", device.Assurance)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемый уровень гарантии устройства %q", device.Assurance)
 	}
 	if device.AttestationState != "unattested" && device.AttestationState != "verified" && device.AttestationState != "revoked" {
-		return model.TrustedDevice{}, fmt.Errorf("unsupported device attestation state %q", device.AttestationState)
+		return model.TrustedDevice{}, fmt.Errorf("Неподдерживаемое состояние аттестации устройства %q", device.AttestationState)
 	}
 	if device.AttestationState == "verified" {
 		if device.AttestationMethod != "challenge-response-v1" || device.AttestedAt.IsZero() || device.AttestationExpiresAt.IsZero() || !device.AttestationExpiresAt.After(device.AttestedAt) {
-			return model.TrustedDevice{}, errors.New("verified device attestation requires method and a valid freshness window")
+			return model.TrustedDevice{}, errors.New("Для подтверждённой аттестации устройства требуются метод и допустимый временной интервал")
 		}
 	} else if device.AttestationState == "unattested" {
 		device.AttestationMethod = ""
@@ -105,10 +105,10 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	}
 	if device.KeyBinding == "hardware" {
 		if device.KeyAlgorithm != "p256" {
-			return model.TrustedDevice{}, errors.New("hardware-bound device keys must use p256")
+			return model.TrustedDevice{}, errors.New("Аппаратно привязанные ключи устройства должны использовать p256")
 		}
 		if !validHardwareProvider0123(device.HardwareProvider) {
-			return model.TrustedDevice{}, errors.New("hardware-bound device key requires hardware provider")
+			return model.TrustedDevice{}, errors.New("Для аппаратно привязанного ключа устройства требуется аппаратный провайдер")
 		}
 	} else {
 		device.HardwareProvider = ""
@@ -154,7 +154,7 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 			continue
 		}
 		if existing.UserID != device.UserID {
-			return model.TrustedDevice{}, fmt.Errorf("%w: device id is already owned by another user", ErrConflict)
+			return model.TrustedDevice{}, fmt.Errorf("%w: идентификатор устройства уже принадлежит другому пользователю", ErrConflict)
 		}
 		// Отозванный ключ — постоянная tombstone-запись. Регистрация и устаревшие
 		// писатели никогда не должны активировать его или заменить публичный ключ.
@@ -162,7 +162,7 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 			device.Status != "active" || device.TrustState != "verified" ||
 			existing.PublicKey != device.PublicKey || existing.KeyFingerprint != device.KeyFingerprint ||
 			existing.KeyAlgorithm != device.KeyAlgorithm {
-			return model.TrustedDevice{}, fmt.Errorf("%w: trusted device key is immutable or revoked", ErrConflict)
+			return model.TrustedDevice{}, fmt.Errorf("%w: ключ доверенного устройства неизменяем или отозван", ErrConflict)
 		}
 		device.CreatedAt = existing.CreatedAt
 		r.trustedDevices[i] = device
@@ -186,7 +186,7 @@ func (r *MemoryRepository) RecoverRevokedTrustedDeviceKey0435(ctx context.Contex
 		return model.TrustedDevice{}, model.TrustedDevice{}, err
 	}
 	if replacement.UserID != userID || replacement.ID == oldDeviceID || replacement.Status != "active" || replacement.TrustState != "verified" || replacement.CreatedAt.After(now) {
-		return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: invalid recovered identity", ErrConflict)
+		return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: недопустимая восстановленная идентификация", ErrConflict)
 	}
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
@@ -196,7 +196,7 @@ func (r *MemoryRepository) RecoverRevokedTrustedDeviceKey0435(ctx context.Contex
 			oldIndex = i
 		}
 		if item.ID == replacement.ID || item.KeyFingerprint == replacement.KeyFingerprint {
-			return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: replacement device or key already registered", ErrConflict)
+			return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: заменяющее устройство или ключ уже зарегистрированы", ErrConflict)
 		}
 	}
 	if oldIndex < 0 {
@@ -204,7 +204,7 @@ func (r *MemoryRepository) RecoverRevokedTrustedDeviceKey0435(ctx context.Contex
 	}
 	old := r.trustedDevices[oldIndex]
 	if old.Status != "revoked" || old.TrustState != "revoked" || old.ReplacedByDeviceID != "" || old.KeyFingerprint == replacement.KeyFingerprint {
-		return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: old identity is not an unclaimed tombstone", ErrConflict)
+		return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: старая идентификация не является незанятой записью об удалении", ErrConflict)
 	}
 	replacement.CreatedAt = now
 	replacement.UpdatedAt = now
@@ -240,7 +240,7 @@ func (r *MemoryRepository) ReleaseFailedRevokedDeviceRecovery0435(ctx context.Co
 	old, newKey := r.trustedDevices[oldIndex], r.trustedDevices[newIndex]
 	if old.Status != "revoked" || old.ReplacedByDeviceID != replacementID || old.ReplacementReason != "recover" ||
 		newKey.Status != "revoked" || newKey.TrustState != "revoked" || newKey.RevokedReason != "replacement-bind-failed" {
-		return fmt.Errorf("%w: recovery claim cannot be released", ErrConflict)
+		return fmt.Errorf("%w: право на восстановление нельзя освободить", ErrConflict)
 	}
 	old.ReplacedAt = time.Time{}
 	old.ReplacedByDeviceID = ""
@@ -429,7 +429,7 @@ func (r *MemoryRepository) SaveDeviceChallenge(ctx context.Context, challenge mo
 	kept := r.deviceChallenges[:0]
 	for _, existing := range r.deviceChallenges {
 		if existing.ID == challenge.ID {
-			return fmt.Errorf("%w: duplicate device challenge", ErrConflict)
+			return fmt.Errorf("%w: повторяющийся запрос подтверждения устройства", ErrConflict)
 		}
 		if (!existing.ConsumedAt.IsZero() && existing.ConsumedAt.Before(cutoff)) || existing.ExpiresAt.Before(cutoff) {
 			continue
@@ -532,7 +532,7 @@ ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_st
 		return model.TrustedDevice{}, err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return model.TrustedDevice{}, fmt.Errorf("%w: trusted device belongs to another user", ErrConflict)
+		return model.TrustedDevice{}, fmt.Errorf("%w: доверенное устройство принадлежит другому пользователю", ErrConflict)
 	}
 	return r.GetTrustedDevice(device.UserID, device.ID)
 }
@@ -624,7 +624,7 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 	// обязаны аннулировать локальные подключения моста на репликах.
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, owner, deviceID)
 	if err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: lock bound sessions: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка блокировки связанных сеансов: %w", err)
 	}
 	type pair struct{ session, family string }
 	affected := []pair{}
@@ -632,47 +632,47 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 		var p pair
 		if err := rows.Scan(&p.session, &p.family); err != nil {
 			rows.Close()
-			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: scan bound session: %w", err)
+			return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка чтения связанного сеанса: %w", err)
 		}
 		affected = append(affected, p)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: iterate bound sessions: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка обхода связанных сеансов: %w", err)
 	}
 	rows.Close()
 	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM minecraft_sessions mc JOIN auth_sessions s ON s.id=mc.session_id WHERE s.user_id=$1 AND s.trusted_device_id=$2 AND s.status='active' AND mc.status='active'`, owner, deviceID).Scan(&result.RevokedMinecraftSessions); err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: count active game credentials: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка подсчёта активных игровых учётных данных: %w", err)
 	}
 	if !result.AlreadyRevoked {
 		if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: mark device revoked: %w", err)
+			return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка установки статуса отзыва: %w", err)
 		}
 	}
 	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, deviceID, now); err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: consume outstanding challenges: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка погашения незавершённых запросов: %w", err)
 	} else if n, err := res.RowsAffected(); err == nil {
 		result.InvalidatedChallenges = int(n)
 	}
 	families := map[string]struct{}{}
 	for _, a := range affected {
 		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke session %s: %w", a.session, err)
+			return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка отзыва сеанса %s: %w", a.session, err)
 		}
 		if a.family != "" {
 			families[a.family] = struct{}{}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1 AND status<>'revoked'`, a.family, now, reason); err != nil {
-				return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke refresh family %s: %w", a.family, err)
+				return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка отзыва семейства обновления %s: %w", a.family, err)
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, a.family, now); err != nil {
-				return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke refresh tokens for family %s: %w", a.family, err)
+				return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка отзыва токенов обновления семейства %s: %w", a.family, err)
 			}
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke minecraft sessions for %s: %w", a.session, err)
+			return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка отзыва сеансов Minecraft для %s: %w", a.session, err)
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-revoked',jsonb_build_object('deviceId',$4::text,'reason',$5::text),$6)`, owner, a.session, a.family, deviceID, reason, now); err != nil {
-			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: insert auth event for %s: %w", a.session, err)
+			return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка записи события авторизации для %s: %w", a.session, err)
 		}
 		result.RevokedSessionIDs = append(result.RevokedSessionIDs, a.session)
 	}
@@ -683,7 +683,7 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 	// бы те же ограничения; проверка здесь сохраняет принцип отказа по
 	// умолчанию и позволяет избежать неясного ответа 409 при фиксации.
 	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: validate deferred constraints: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка проверки отложенных ограничений: %w", err)
 	}
 	return result, nil
 }
@@ -706,11 +706,11 @@ func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceI
 	}
 	device, err := scanTrustedDevice0121(tx.QueryRowContext(ctx, `SELECT `+trustedDeviceColumns0121+` FROM trusted_devices WHERE id=$1`, strings.TrimSpace(deviceID)))
 	if err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: read committed device: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка чтения сохранённого устройства: %w", err)
 	}
 	result.Device = device
 	if err := tx.Commit(); err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: commit: %w", err)
+		return model.DeviceRevocationResult{}, fmt.Errorf("Отзыв доверенного устройства: ошибка фиксации транзакции: %w", err)
 	}
 	return result, nil
 }
@@ -789,7 +789,7 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	mode = strings.ToLower(strings.TrimSpace(mode))
 	reason = strings.TrimSpace(reason)
 	if userID == "" || oldDeviceID == "" || currentSessionID == "" || (mode != "rotate" && mode != "recover") {
-		return model.DeviceKeyReplacementResult{}, errors.New("invalid trusted-device replacement request")
+		return model.DeviceKeyReplacementResult{}, errors.New("Недопустимый запрос замены доверенного устройства")
 	}
 	if reason == "" {
 		reason = "device-key-" + mode
@@ -797,10 +797,10 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	var err error
 	replacement, err = normalizeTrustedDevice0121(replacement)
 	if err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: normalize replacement: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка нормализации замены: %w", err)
 	}
 	if replacement.UserID != userID || replacement.ID == oldDeviceID || replacement.Status != "active" || replacement.TrustState != "verified" {
-		return model.DeviceKeyReplacementResult{}, errors.New("invalid replacement trusted device")
+		return model.DeviceKeyReplacementResult{}, errors.New("Недопустимое заменяющее доверенное устройство")
 	}
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -810,7 +810,7 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: begin transaction: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка начала транзакции: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -820,7 +820,7 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	// промежуточную перепривязку или отзыв. Ограничения CHECK/UNIQUE проверяются
 	// сразу; все отложенные ограничения также проверяются при COMMIT.
 	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL DEFERRED`); err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: defer constraints: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка установки отложенных ограничений: %w", err)
 	}
 
 	var sessionUser, sessionStatus, sessionTrustedDevice, familyID string
@@ -829,13 +829,13 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.DeviceKeyReplacementResult{}, ErrNotFound
 		}
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: lock current session: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка блокировки текущего сеанса: %w", err)
 	}
 	if sessionUser != userID || sessionStatus != "active" {
 		return model.DeviceKeyReplacementResult{}, ErrNotFound
 	}
 	if mode == "rotate" && sessionTrustedDevice != oldDeviceID {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: rotation session is not bound to old device", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: сеанс ротации не привязан к старому устройству", ErrConflict)
 	}
 
 	var oldOwner, oldStatus, oldTrustState, oldReplacement string
@@ -844,24 +844,24 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.DeviceKeyReplacementResult{}, ErrNotFound
 		}
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: lock old device: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка блокировки старого устройства: %w", err)
 	}
 	if oldOwner != userID || oldReplacement != "" ||
 		!(oldStatus == "active" && oldTrustState == "verified") &&
 			!(mode == "recover" && oldStatus == "revoked" && oldTrustState == "revoked") {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old device is not eligible for replacement", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: старое устройство нельзя заменить", ErrConflict)
 	}
 	if mode == "recover" && oldStatus == "revoked" && (!oldRevokedAt.Valid || !sessionAuthTime.After(oldRevokedAt.Time)) {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: recovery requires phishing-resistant reauthentication after revocation", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: восстановление после отзыва требует повторной авторизации, устойчивой к фишингу", ErrConflict)
 	}
 	// Ранее отозванный ключ не может аутентифицировать сеанс восстановления. Его
 	// замену должен запросить отдельный непривязанный сеанс с новым усиленным
 	// подтверждением, а не сеанс другого доверенного устройства.
 	if mode == "recover" && oldStatus == "revoked" && sessionTrustedDevice != "" {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: revoked device recovery requires an unbound session", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: для восстановления отозванного устройства требуется несвязанный сеанс", ErrConflict)
 	}
 	if mode == "recover" && oldStatus == "active" && sessionTrustedDevice != "" && sessionTrustedDevice != oldDeviceID {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: recovery cannot replace an unrelated bound device", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: восстановление не может заменить стороннее привязанное устройство", ErrConflict)
 	}
 
 	result := model.DeviceKeyReplacementResult{}
@@ -870,18 +870,18 @@ VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested',
 ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, replacement.UserID, replacement.Name, replacement.KeyAlgorithm, replacement.KeyBinding, replacement.HardwareProvider, replacement.PublicKey, replacement.KeyFingerprint, replacement.Platform, replacement.ClientVersion, now, replacement.LastIP, replacement.LastUserAgent)
 	result.NewDevice, err = scanTrustedDevice0121(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: replacement device id or fingerprint already registered", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: идентификатор или отпечаток заменяющего устройства уже зарегистрирован", ErrConflict)
 	}
 	if err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: insert replacement: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка записи нового устройства: %w", err)
 	}
 
 	if res, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=$4 WHERE id=$1 AND user_id=$2 AND status='active'`, currentSessionID, userID, replacement.ID, now); err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: rebind current session: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка повторной привязки текущего сеанса: %w", err)
 	} else if n, rowsErr := res.RowsAffected(); rowsErr != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: count rebound current session: %w", rowsErr)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка проверки числа перепривязанных текущих сеансов: %w", rowsErr)
 	} else if n != 1 {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: current session changed during replacement", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: текущий сеанс изменился во время замены", ErrConflict)
 	}
 
 	// Триггер окончательного отзыва 0.43.4 допускает только метаданные ссылки на
@@ -893,21 +893,21 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	row = tx.QueryRowContext(ctx, oldUpdate, oldDeviceID, now, reason, replacement.ID, mode, userID)
 	result.OldDevice, err = scanTrustedDevice0121(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old trusted device changed during replacement", ErrConflict)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: старое доверенное устройство изменилось во время замены", ErrConflict)
 	}
 	if err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: revoke old device: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка отзыва старого устройства: %w", err)
 	}
 
 	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, oldDeviceID, now); err != nil {
-		return result, fmt.Errorf("replace trusted device: consume outstanding challenges: %w", err)
+		return result, fmt.Errorf("Замена доверенного устройства: ошибка погашения незавершённых запросов: %w", err)
 	} else if n, e := res.RowsAffected(); e == nil {
 		result.InvalidatedChallenges = int(n)
 	}
 
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' AND id<>$3 FOR UPDATE`, userID, oldDeviceID, currentSessionID)
 	if err != nil {
-		return result, fmt.Errorf("replace trusted device: lock sibling sessions: %w", err)
+		return result, fmt.Errorf("Замена доверенного устройства: ошибка блокировки других сеансов: %w", err)
 	}
 	type pair struct{ session, family string }
 	affected := []pair{}
@@ -915,31 +915,31 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 		var p pair
 		if err := rows.Scan(&p.session, &p.family); err != nil {
 			rows.Close()
-			return result, fmt.Errorf("replace trusted device: scan sibling session: %w", err)
+			return result, fmt.Errorf("Замена доверенного устройства: ошибка чтения другого сеанса: %w", err)
 		}
 		affected = append(affected, p)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return result, fmt.Errorf("replace trusted device: iterate sibling sessions: %w", err)
+		return result, fmt.Errorf("Замена доверенного устройства: ошибка обхода других сеансов: %w", err)
 	}
 	rows.Close()
 	families := map[string]struct{}{}
 	for _, a := range affected {
 		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return result, fmt.Errorf("replace trusted device: revoke sibling session %s: %w", a.session, err)
+			return result, fmt.Errorf("Замена доверенного устройства: ошибка отзыва другого сеанса %s: %w", a.session, err)
 		}
 		if a.family != "" {
 			families[a.family] = struct{}{}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1 AND status<>'revoked'`, a.family, now, reason); err != nil {
-				return result, fmt.Errorf("replace trusted device: revoke sibling refresh family: %w", err)
+				return result, fmt.Errorf("Замена доверенного устройства: ошибка отзыва семейства обновления другого сеанса: %w", err)
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, a.family, now); err != nil {
-				return result, fmt.Errorf("replace trusted device: revoke sibling refresh tokens: %w", err)
+				return result, fmt.Errorf("Замена доверенного устройства: ошибка отзыва токенов обновления другого сеанса: %w", err)
 			}
 		}
 		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return result, fmt.Errorf("replace trusted device: revoke sibling minecraft sessions: %w", err)
+			return result, fmt.Errorf("Замена доверенного устройства: ошибка отзыва сеансов Minecraft другого сеанса: %w", err)
 		} else if n, e := res.RowsAffected(); e == nil {
 			result.RevokedMinecraftSessions += int(n)
 		}
@@ -948,12 +948,12 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	// Действующие игровые учётные данные были выданы для старой эпохи привязки и явно отзываются,
 	// вместо того чтобы оставлять устаревшие строки, отклоняемые только при текущих проверках.
 	if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, currentSessionID, now, reason); err != nil {
-		return result, fmt.Errorf("replace trusted device: revoke current minecraft sessions: %w", err)
+		return result, fmt.Errorf("Замена доверенного устройства: ошибка отзыва сеансов Minecraft текущего сеанса: %w", err)
 	} else if n, e := res.RowsAffected(); e == nil {
 		result.RevokedMinecraftSessions += int(n)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-key-replaced',jsonb_build_object('oldDeviceId',$4::text,'newDeviceId',$5::text,'mode',$6::text),$7)`, userID, currentSessionID, familyID, oldDeviceID, replacement.ID, mode, now); err != nil {
-		return result, fmt.Errorf("replace trusted device: insert auth event: %w", err)
+		return result, fmt.Errorf("Замена доверенного устройства: ошибка записи события авторизации: %w", err)
 	}
 	result.RevokedSessions = len(affected)
 	result.RevokedRefreshFamilies = len(families)
@@ -962,10 +962,10 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	// выполняет те же проверки), но привязывает нарушение инварианта
 	// к текущему этапу вместо непрозрачного сбоя при фиксации.
 	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: validate deferred constraints: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка проверки отложенных ограничений: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: commit: %w", err)
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("Замена доверенного устройства: ошибка фиксации транзакции: %w", err)
 	}
 	return result, nil
 }

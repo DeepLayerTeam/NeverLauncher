@@ -59,10 +59,10 @@ func SnapshotProfile(p Profile) ProfileSnapshot {
 
 func ValidateProfileSnapshot(s ProfileSnapshot, projectID, profileID string) error {
 	if s.SchemaVersion != ProfileSchemaV2 || s.Revision < 1 || s.Spec.ProjectID != projectID || s.Spec.ID != profileID || s.Spec.Name == "" || s.Spec.Loader == "" {
-		return errors.New("invalid v2 profile snapshot identity or revision")
+		return errors.New("Недопустимый идентификатор или ревизия снимка профиля v2")
 	}
 	if s.Digest != ProfileDigest(s.Spec) {
-		return errors.New("v2 profile snapshot digest mismatch")
+		return errors.New("Хеш снимка профиля v2 не совпадает")
 	}
 	return nil
 }
@@ -71,26 +71,26 @@ func ValidateManifestSchema(m Manifest) error {
 	if source := m.RollbackSource; source != nil {
 		if m.GameReleaseGeneration == 0 || source.GameReleaseGeneration >= m.GameReleaseGeneration ||
 			source.Version == "" || len(source.ManifestSHA256) != 64 {
-			return errors.New("invalid signed rollbackSource or gameReleaseGeneration")
+			return errors.New("Недопустимое подписанное значение rollbackSource или gameReleaseGeneration")
 		}
 		if decoded, err := hex.DecodeString(source.ManifestSHA256); err != nil || len(decoded) != sha256.Size {
-			return errors.New("rollbackSource manifestSha256 must be SHA-256 hex")
+			return errors.New("В rollbackSource поле manifestSha256 должно быть SHA-256 в hex")
 		}
 	}
 	switch m.SchemaVersion {
 	case "1.0":
 		if m.ProfileSnapshot != nil {
-			return errors.New("v1 manifests cannot contain a v2 profile snapshot")
+			return errors.New("Манифесты v1 не могут содержать снимок профиля v2")
 		}
 	case ManifestSchemaV2, ManifestSchemaV3:
 		if m.ProfileSnapshot == nil {
-			return errors.New("v2 manifest requires a profile snapshot")
+			return errors.New("Для манифеста v2 требуется снимок профиля")
 		}
 		if err := ValidateProfileSnapshot(*m.ProfileSnapshot, m.ProjectID, m.ProfileID); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported manifest schema %q", m.SchemaVersion)
+		return fmt.Errorf("Неподдерживаемая схема манифеста %q", m.SchemaVersion)
 	}
 	if err := ValidateComponentCatalog0241(m); err != nil {
 		return err
@@ -108,38 +108,38 @@ func ValidateManifestSchema(m Manifest) error {
 
 func NormalizeProfileV2(p Profile) (Profile, error) {
 	if p.SchemaVersion != "" && p.SchemaVersion != ProfileSchemaV2 {
-		return Profile{}, fmt.Errorf("unsupported profile schema %q", p.SchemaVersion)
+		return Profile{}, fmt.Errorf("Неподдерживаемая схема профиля %q", p.SchemaVersion)
 	}
 	p.SchemaVersion = ProfileSchemaV2
 	if p.Loader == "" {
 		p.Loader = "vanilla"
 	}
 	if p.ProjectID == "" || p.ID == "" || p.Name == "" {
-		return Profile{}, errors.New("profile projectId, id and name required")
+		return Profile{}, errors.New("Для профиля обязательны projectId, id и name")
 	}
 	if p.MinecraftVersion != "" || p.LoaderVersion != "" || p.JavaMajor != 0 {
 		switch p.Loader {
 		case "vanilla", "fabric", "quilt", "forge", "neoforge":
 		default:
-			return Profile{}, errors.New("unsupported Minecraft loader")
+			return Profile{}, errors.New("Неподдерживаемый загрузчик Minecraft")
 		}
 		if p.MinecraftVersion == "" || p.JavaMajor < 8 || p.JavaMajor > 255 {
-			return Profile{}, errors.New("configured profile requires Minecraft version and Java major between 8 and 255")
+			return Profile{}, errors.New("Для настроенного профиля необходимы версия Minecraft и основная версия Java от 8 до 255")
 		}
 		if len(p.MinecraftVersion) > 64 || len(p.LoaderVersion) > 128 ||
 			strings.ContainsAny(p.MinecraftVersion, " /\\\t\n\r") || strings.ContainsAny(p.LoaderVersion, " /\\\t\n\r") {
-			return Profile{}, errors.New("invalid Minecraft or loader version")
+			return Profile{}, errors.New("Недопустимая версия Minecraft или загрузчика")
 		}
 		if p.Loader != "vanilla" && p.LoaderVersion == "" {
-			return Profile{}, errors.New("configured modded profile requires exact loader version")
+			return Profile{}, errors.New("Для настроенного модифицированного профиля требуется точная версия загрузчика")
 		}
 		if p.Loader == "vanilla" && p.LoaderVersion != "" {
-			return Profile{}, errors.New("Vanilla profile cannot declare loader version")
+			return Profile{}, errors.New("Профиль Vanilla не должен указывать версию загрузчика")
 		}
 	}
 	for _, v := range []string{p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.MinecraftVersion, p.LoaderVersion} {
 		if strings.ContainsRune(v, '\x00') {
-			return Profile{}, errors.New("profile fields cannot contain NUL")
+			return Profile{}, errors.New("Поля профиля не могут содержать NUL")
 		}
 	}
 	p.Digest = ProfileDigest(ProfileSpecOf(p))
@@ -152,19 +152,19 @@ func NormalizeProfileV2(p Profile) (Profile, error) {
 // релиза.
 func ValidateReleaseManifestTransition(existing, candidate Manifest) error {
 	if err := ValidateManifestSchema(existing); err != nil {
-		return fmt.Errorf("stored release manifest is invalid: %w", err)
+		return fmt.Errorf("Сохранённый манифест выпуска недопустим: %w", err)
 	}
 	if err := ValidateManifestSchema(candidate); err != nil {
 		return err
 	}
 	if existing.SchemaVersion != candidate.SchemaVersion {
-		return errors.New("release manifest schema is immutable; create a new release")
+		return errors.New("Схема манифеста выпуска неизменяема; создайте новый выпуск")
 	}
 	if (existing.SchemaVersion == ManifestSchemaV2 || existing.SchemaVersion == ManifestSchemaV3) && *existing.ProfileSnapshot != *candidate.ProfileSnapshot {
-		return errors.New("release profile snapshot is immutable; create a new release")
+		return errors.New("Снимок профиля выпуска неизменяем; создайте новый выпуск")
 	}
 	if existing.ProjectID != candidate.ProjectID || existing.ProfileID != candidate.ProfileID || existing.Channel != candidate.Channel || existing.Version != candidate.Version {
-		return errors.New("release manifest identity is immutable")
+		return errors.New("Идентификатор манифеста выпуска неизменяем")
 	}
 	return nil
 }

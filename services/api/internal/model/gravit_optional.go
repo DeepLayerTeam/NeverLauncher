@@ -43,7 +43,7 @@ func gravitID02411(prefix, name string) string {
 func gravitArray02411(raw json.RawMessage) ([]json.RawMessage, error) {
 	var v []json.RawMessage
 	if len(raw) == 0 || json.Unmarshal(raw, &v) != nil || v == nil {
-		return nil, errors.New("expected non-null array")
+		return nil, errors.New("Ожидался массив, отличный от null")
 	}
 	return v, nil
 }
@@ -68,7 +68,7 @@ func gravitInt02411(raw json.RawMessage) (int, bool) {
 // Ready=false, а несовместимости перечисляются.
 func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, signedFiles []ManifestFile) (GravitOptionalMigration02411, error) {
 	if len(source) == 0 || len(source) > 1<<20 {
-		return GravitOptionalMigration02411{}, errors.New("Gravit optional source must be 1 byte to 1 MiB")
+		return GravitOptionalMigration02411{}, errors.New("Размер необязательного источника Gravit должен быть от 1 байта до 1 МиБ")
 	}
 	sum := sha256.Sum256(source)
 	out := GravitOptionalMigration02411{Format: "launcher.gravit-optional-migration.v1", SourceSHA256: hex.EncodeToString(sum[:]), Fields: []GravitFieldResult02210{}, Summary: map[string]int{"mapped": 0, "transformed": 0, "manual": 0, "blocked": 0}}
@@ -86,7 +86,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		}
 		raw = root["updateOptional"]
 		if len(raw) == 0 {
-			return out, errors.New("Gravit ClientProfile missing updateOptional")
+			return out, errors.New("В Gravit ClientProfile отсутствует updateOptional")
 		}
 	}
 	entries, e := gravitArray02411(raw)
@@ -94,7 +94,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		return out, fmt.Errorf("updateOptional: %w", e)
 	}
 	if len(entries) > 4096 {
-		return out, errors.New("too many Gravit optional entries")
+		return out, errors.New("Слишком много необязательных записей Gravit")
 	}
 	// Никогда не перезаписывайте существующие компоненты и не меняйте владельца
 	// существующего файла.

@@ -56,7 +56,7 @@ func secureDirectory0303(dir string) error {
 			return e
 		}
 		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("runtime state parent is not a real directory: %s", current)
+			return fmt.Errorf("Родительский путь состояния Runtime не является обычным каталогом: %s", current)
 		}
 	}
 	return nil
@@ -64,10 +64,10 @@ func secureDirectory0303(dir string) error {
 
 func runtimeFile0303(dir, kind, key string) (string, error) {
 	if !runtimeKeyPattern0303.MatchString(key) {
-		return "", errors.New("invalid runtime document key")
+		return "", errors.New("Недопустимый ключ документа Runtime")
 	}
 	if kind != "config" && kind != "storage" {
-		return "", errors.New("invalid runtime document kind")
+		return "", errors.New("Недопустимый тип документа Runtime")
 	}
 	hash := sha256.Sum256([]byte(kind + ":" + key))
 	return filepath.Join(dir, kind+"-"+hex.EncodeToString(hash[:])+".json"), nil
@@ -75,7 +75,7 @@ func runtimeFile0303(dir, kind, key string) (string, error) {
 
 func runtimeWrite0303(ctx context.Context, dir, path string, body json.RawMessage) error {
 	if !json.Valid(body) || len(body) > runtimeValueLimit0303 {
-		return errors.New("runtime value must be JSON <= 128 KiB")
+		return errors.New("Значение Runtime должно быть JSON размером не более 128 КиБ")
 	}
 	if err := secureDirectory0303(dir); err != nil {
 		return err
@@ -97,7 +97,7 @@ func runtimeWrite0303(ctx context.Context, dir, path string, body json.RawMessag
 			return err
 		}
 		if !info.Mode().IsRegular() {
-			return errors.New("runtime state contains non-regular file")
+			return errors.New("Состояние Runtime содержит специальный файл")
 		}
 		if filepath.Join(dir, entry.Name()) != path {
 			total += info.Size()
@@ -105,7 +105,7 @@ func runtimeWrite0303(ctx context.Context, dir, path string, body json.RawMessag
 		}
 	}
 	if total > runtimeTotalLimit0303 || count >= runtimeKeyLimit0303 {
-		return errors.New("runtime state quota exceeded")
+		return errors.New("Превышена квота состояния Runtime")
 	}
 	name := make([]byte, 16)
 	if _, err := rand.Read(name); err != nil {
@@ -157,7 +157,7 @@ func runtimeRead0303(dir, path string) (json.RawMessage, bool, error) {
 		return nil, false, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > runtimeValueLimit0303 {
-		return nil, false, errors.New("unsafe runtime state file")
+		return nil, false, errors.New("Небезопасный файл состояния Runtime")
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -169,7 +169,7 @@ func runtimeRead0303(dir, path string) (json.RawMessage, bool, error) {
 		return nil, false, err
 	}
 	if len(body) > runtimeValueLimit0303 || !json.Valid(body) {
-		return nil, false, errors.New("runtime state is corrupt")
+		return nil, false, errors.New("Состояние Runtime повреждено")
 	}
 	return body, true, nil
 }
@@ -177,7 +177,7 @@ func runtimeRead0303(dir, path string) (json.RawMessage, bool, error) {
 func (s *Supervisor) executeRuntime0303(ctx context.Context, st *processState, capName string, req capabilityRequest) capabilityResult0205 {
 	parts := strings.Split(capName, ".")
 	if len(parts) != 3 || parts[0] != "runtime" || (parts[1] != "config" && parts[1] != "storage") || (parts[2] != "get" && parts[2] != "put" && parts[2] != "delete") {
-		return capabilityResult0205{status: 404, err: errors.New("unknown runtime operation")}
+		return capabilityResult0205{status: 404, err: errors.New("Неизвестная операция Runtime")}
 	}
 	permission := "storage:read"
 	if parts[2] != "get" {
@@ -185,10 +185,10 @@ func (s *Supervisor) executeRuntime0303(ctx context.Context, st *processState, c
 	}
 	ok, err := s.permissionAllowed0207(ctx, st, permission, "")
 	if err != nil {
-		return capabilityResult0205{status: 503, err: errors.New("capability policy unavailable")}
+		return capabilityResult0205{status: 503, err: errors.New("Политика разрешений недоступна")}
 	}
 	if !ok {
-		return capabilityResult0205{status: 403, err: fmt.Errorf("permission %s not granted", permission)}
+		return capabilityResult0205{status: 403, err: fmt.Errorf("Разрешение %s не предоставлено", permission)}
 	}
 	dir := runtimeDir0303(s.cfg.ExtensionRoot, st.key)
 	path, err := runtimeFile0303(dir, parts[1], req.Key)
@@ -202,7 +202,7 @@ func (s *Supervisor) executeRuntime0303(ctx context.Context, st *processState, c
 	}
 	if parts[2] == "put" {
 		if len(req.Value) == 0 {
-			return capabilityResult0205{status: 400, err: errors.New("value is required")}
+			return capabilityResult0205{status: 400, err: errors.New("Требуется значение")}
 		}
 		if err := runtimeWrite0303(ctx, dir, path, req.Value); err != nil {
 			return capabilityResult0205{status: 400, err: err}
@@ -221,7 +221,7 @@ func (s *Supervisor) executeRuntime0303(ctx context.Context, st *processState, c
 		return capabilityResult0205{status: 500, err: err}
 	}
 	if !found {
-		return capabilityResult0205{status: 404, err: errors.New("runtime key not found")}
+		return capabilityResult0205{status: 404, err: errors.New("Ключ Runtime не найден")}
 	}
 	return capabilityResult0205{status: 200, value: map[string]any{"value": body}}
 }

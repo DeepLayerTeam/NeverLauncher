@@ -72,7 +72,7 @@ func outboundHeaderAllowed04210(name string) bool {
 func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL string, headers map[string]string, bodyBase64 string) (map[string]any, int, error) {
 	u, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil {
-		return nil, http.StatusBadRequest, errors.New("http.fetch requires an https URL without userinfo")
+		return nil, http.StatusBadRequest, errors.New("Для http.fetch требуется URL HTTPS без учётных данных")
 	}
 	port := u.Port()
 	if port == "" {
@@ -81,12 +81,12 @@ func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL str
 	host := u.Hostname()
 	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
 	if err != nil || len(ips) == 0 {
-		return nil, http.StatusBadGateway, errors.New("outbound hostname resolution failed")
+		return nil, http.StatusBadGateway, errors.New("Не удалось определить адрес исходящего хоста")
 	}
 	var selected net.IP
 	for _, ip := range ips {
 		if forbiddenOutboundIP0207(ip) {
-			return nil, http.StatusForbidden, errors.New("outbound target resolves to a private/local address")
+			return nil, http.StatusForbidden, errors.New("Исходящий адрес указывает на частную или локальную сеть")
 		}
 		if selected == nil {
 			selected = ip
@@ -103,16 +103,16 @@ func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL str
 		method = http.MethodGet
 	}
 	if method != http.MethodGet && method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch && method != http.MethodDelete {
-		return nil, http.StatusBadRequest, errors.New("unsupported outbound HTTP method")
+		return nil, http.StatusBadRequest, errors.New("Неподдерживаемый исходящий метод HTTP")
 	}
 	var body []byte
 	if bodyBase64 != "" {
 		body, err = base64.StdEncoding.DecodeString(bodyBase64)
 		if err != nil {
-			return nil, http.StatusBadRequest, errors.New("bodyBase64 is invalid")
+			return nil, http.StatusBadRequest, errors.New("Недопустимое значение bodyBase64")
 		}
 		if int64(len(body)) > s.cfg.MaxHTTPRequestBytes {
-			return nil, http.StatusRequestEntityTooLarge, errors.New("outbound request body too large")
+			return nil, http.StatusRequestEntityTooLarge, errors.New("Тело исходящего запроса слишком велико")
 		}
 	}
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), strings.NewReader(string(body)))
@@ -122,16 +122,16 @@ func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL str
 	for k, v := range headers {
 		canonical := http.CanonicalHeaderKey(strings.TrimSpace(k))
 		if !outboundHeaderAllowed04210(canonical) {
-			return nil, http.StatusBadRequest, fmt.Errorf("header %s is not allowed", canonical)
+			return nil, http.StatusBadRequest, fmt.Errorf("Заголовок %s запрещён", canonical)
 		}
 		if len(v) > 8192 {
-			return nil, http.StatusBadRequest, errors.New("outbound header value too large")
+			return nil, http.StatusBadRequest, errors.New("Значение исходящего заголовка слишком велико")
 		}
 		req.Header.Set(canonical, v)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, http.StatusBadGateway, fmt.Errorf("outbound request failed: %w", err)
+		return nil, http.StatusBadGateway, fmt.Errorf("Ошибка исходящего запроса: %w", err)
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, s.cfg.MaxHTTPResponseBytes+1))
@@ -139,7 +139,7 @@ func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL str
 		return nil, http.StatusBadGateway, err
 	}
 	if int64(len(data)) > s.cfg.MaxHTTPResponseBytes {
-		return nil, http.StatusBadGateway, errors.New("outbound response exceeds configured limit")
+		return nil, http.StatusBadGateway, errors.New("Исходящий ответ превышает настроенный лимит")
 	}
 	outHeaders := map[string]string{}
 	for _, k := range []string{"Content-Type", "ETag", "Last-Modified", "Cache-Control"} {

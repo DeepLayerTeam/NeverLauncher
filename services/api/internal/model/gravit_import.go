@@ -56,14 +56,14 @@ type GravitImportResult02210 struct {
 // исчезают молча. SourceSHA256 определяет точные проанализированные входные байты.
 func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName, loaderHint string) (GravitImportResult02210, error) {
 	if len(source) == 0 || len(source) > 1<<20 {
-		return GravitImportResult02210{}, errors.New("Gravit ClientProfile must be 1 byte to 1 MiB")
+		return GravitImportResult02210{}, errors.New("Размер Gravit ClientProfile должен быть от 1 байта до 1 МиБ")
 	}
 	root, err := gravitObject02210(source)
 	if err != nil {
 		return GravitImportResult02210{}, err
 	}
 	if len(root) == 0 {
-		return GravitImportResult02210{}, errors.New("empty Gravit ClientProfile")
+		return GravitImportResult02210{}, errors.New("Gravit ClientProfile пуст")
 	}
 	sum := sha256.Sum256(source)
 	out := GravitImportResult02210{Format: "launcher.gravit-import-report.v1", SourceSHA256: hex.EncodeToString(sum[:]), Servers: []GravitServer02210{}, Fields: []GravitFieldResult02210{}, Summary: map[string]int{"mapped": 0, "transformed": 0, "manual": 0, "blocked": 0}}
@@ -126,10 +126,10 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		profileName = title
 	}
 	if len(profileName) > 120 || len(desc) > 4096 {
-		return GravitImportResult02210{}, errors.New("profile title or description too long")
+		return GravitImportResult02210{}, errors.New("Слишком длинное название или описание профиля")
 	}
 	if projectID == "" || !profileID0225.MatchString(profileID) || profileID == "." || profileID == ".." {
-		return GravitImportResult02210{}, errors.New("destination project ID and safe new profile ID required")
+		return GravitImportResult02210{}, errors.New("Требуются идентификатор целевого проекта и безопасный идентификатор нового профиля")
 	}
 	version, ok := stringField("version")
 	if ok {
@@ -545,7 +545,7 @@ func gravitObject02210(raw []byte) (map[string]json.RawMessage, error) {
 	d.UseNumber()
 	tok, e := d.Token()
 	if e != nil || tok != json.Delim('{') {
-		return nil, errors.New("Gravit ClientProfile must be a JSON object")
+		return nil, errors.New("Gravit ClientProfile должен быть объектом JSON")
 	}
 	out := map[string]json.RawMessage{}
 	for d.More() {
@@ -555,10 +555,10 @@ func gravitObject02210(raw []byte) (map[string]json.RawMessage, error) {
 		}
 		k, ok := tok.(string)
 		if !ok {
-			return nil, errors.New("invalid object key")
+			return nil, errors.New("Недопустимый ключ объекта")
 		}
 		if _, exists := out[k]; exists {
-			return nil, fmt.Errorf("duplicate JSON field %q", k)
+			return nil, fmt.Errorf("Повторяющееся поле JSON %q", k)
 		}
 		var v json.RawMessage
 		if e = d.Decode(&v); e != nil {
@@ -571,10 +571,10 @@ func gravitObject02210(raw []byte) (map[string]json.RawMessage, error) {
 	}
 	var tail json.RawMessage
 	if e = d.Decode(&tail); e != nil && e != io.EOF {
-		return nil, errors.New("unexpected trailing JSON input")
+		return nil, errors.New("Неожиданные данные после JSON")
 	}
 	if len(tail) != 0 {
-		return nil, errors.New("unexpected trailing JSON value")
+		return nil, errors.New("Неожиданное дополнительное значение после JSON")
 	}
 	return out, nil
 }

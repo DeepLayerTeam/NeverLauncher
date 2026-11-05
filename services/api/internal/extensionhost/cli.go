@@ -71,7 +71,7 @@ func cliTarget0209(manifest model.ExtensionManifest) (model.ExtensionTarget, err
 			return t, nil
 		}
 	}
-	return model.ExtensionTarget{}, errors.New("extension does not declare a cli target")
+	return model.ExtensionTarget{}, errors.New("Расширение не объявляет целевую платформу CLI")
 }
 
 // RunCLI0209 запускает неизменяемую цель cli как короткоживущий изолированный
@@ -80,20 +80,20 @@ func cliTarget0209(manifest model.ExtensionManifest) (model.ExtensionTarget, err
 // умолчанию. Секреты БД, авторизации и хранилища бэкенда ему не передаются.
 func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInstall, argv []string) (CLIResult0209, error) {
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
-		return CLIResult0209{}, errors.New("extension must be enabled before cli invocation")
+		return CLIResult0209{}, errors.New("Перед вызовом CLI расширение должно быть включено")
 	}
 	if len(argv) == 0 || len(argv) > 128 {
-		return CLIResult0209{}, errors.New("cli invocation requires 1..128 arguments")
+		return CLIResult0209{}, errors.New("Для вызова CLI требуется от 1 до 128 аргументов")
 	}
 	total := 0
 	for _, arg := range argv {
 		total += len(arg)
 		if len(arg) > 16<<10 || strings.ContainsRune(arg, '\x00') {
-			return CLIResult0209{}, errors.New("invalid cli argument")
+			return CLIResult0209{}, errors.New("Недопустимый аргумент CLI")
 		}
 	}
 	if total > 128<<10 {
-		return CLIResult0209{}, errors.New("cli arguments exceed 128 KiB")
+		return CLIResult0209{}, errors.New("Аргументы CLI превышают 128 КиБ")
 	}
 	ver, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
@@ -108,7 +108,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	}
 	security := s.securityValue0207()
 	if security == nil {
-		return CLIResult0209{}, errors.New("extension capability security unavailable")
+		return CLIResult0209{}, errors.New("Система защиты разрешений расширения недоступна")
 	}
 	projectID := ""
 	if install.Scope == "project" {
@@ -116,10 +116,10 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	}
 	allowed, err := security.Allowed(ctx, install.ExtensionID, install.CurrentVersion, install.Scope, install.ScopeID, "cli:contribute", projectID)
 	if err != nil {
-		return CLIResult0209{}, fmt.Errorf("load cli capability policy: %w", err)
+		return CLIResult0209{}, fmt.Errorf("Ошибка загрузки политики разрешений CLI: %w", err)
 	}
 	if !allowed {
-		return CLIResult0209{}, errors.New("cli:contribute is not granted")
+		return CLIResult0209{}, errors.New("Разрешение cli:contribute не предоставлено")
 	}
 	payloadRoot, err := extensionlifecycle.CurrentPayloadDir(s.cfg.ExtensionRoot, install.Scope, install.ScopeID, install.ExtensionID)
 	if err != nil {
@@ -153,13 +153,13 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	// Снимок разрешений выше предназначен только для отчёта. Ни старое поколение
 	// установки, ни отозванный грант CLI не должны разрешать exec.
 	if err := s.enforceCLITrust04312(ctx, st); err != nil {
-		return CLIResult0209{}, fmt.Errorf("cli extension trust refused: %w", err)
+		return CLIResult0209{}, fmt.Errorf("Доверие к CLI-расширению отклонено: %w", err)
 	}
 	s.mu.RLock()
 	baseURL := s.baseURL
 	s.mu.RUnlock()
 	if baseURL == "" {
-		return CLIResult0209{}, errors.New("extension host protocol server is not started")
+		return CLIResult0209{}, errors.New("Сервер протокола хоста расширений не запущен")
 	}
 	if err := s.registerTransient0209(st); err != nil {
 		return CLIResult0209{}, err
@@ -189,7 +189,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	var isolatedHandle *extensionSandbox03111
 	if ver.Manifest.Sandbox != nil && ver.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
-			return CLIResult0209{}, errors.New("sandbox-unavailable: Java callbacks require authenticated reverse RPC")
+			return CLIResult0209{}, errors.New("sandbox-unavailable: для обратных вызовов Java требуется аутентифицированный обратный RPC")
 		}
 		if err := s.validateSharedRoots03110(ver.Manifest.Sandbox); err != nil {
 			return CLIResult0209{}, err
@@ -226,21 +226,21 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	// Экстренное отключение, отзыв ключа издателя или удаление разрешения в это окно
 	// должны предотвратить исполнение, даже если первоначальный снимок прошёл.
 	if err := s.enforceCLITrust04312(ctx, st); err != nil {
-		return CLIResult0209{}, fmt.Errorf("cli extension trust changed before exec: %w", err)
+		return CLIResult0209{}, fmt.Errorf("Доверие к CLI-расширению изменилось перед запуском: %w", err)
 	}
 	st.mu.Lock()
 	stopRequestedBeforeExec := st.expectedStop
 	st.mu.Unlock()
 	if stopRequestedBeforeExec {
-		return CLIResult0209{}, errors.New("cli extension stopped before exec")
+		return CLIResult0209{}, errors.New("CLI-расширение остановлено перед запуском")
 	}
 	started := time.Now().UTC()
 	if err := cmd.Start(); err != nil {
-		return CLIResult0209{}, fmt.Errorf("start cli extension: %w", err)
+		return CLIResult0209{}, fmt.Errorf("Ошибка запуска CLI-расширения: %w", err)
 	}
 	if isolatedHandle != nil {
 		if err := isolatedHandle.Started(); err != nil {
-			return CLIResult0209{}, fmt.Errorf("sandbox enforcement failed: %w", err)
+			return CLIResult0209{}, fmt.Errorf("Не удалось применить политику изоляции: %w", err)
 		}
 	}
 	st.mu.Lock()
@@ -270,12 +270,12 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		}
 		result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: redactHostCredentials04811(stdout.String(), st.token, st.callbackToken), Stderr: redactHostCredentials04811(stderr.String(), st.token, st.callbackToken), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
 		if waitErr != nil {
-			return result, fmt.Errorf("cli extension exited before authenticated hello: %w", waitErr)
+			return result, fmt.Errorf("CLI-расширение завершилось до аутентифицированного hello: %w", waitErr)
 		}
-		return result, errors.New("cli extension exited before authenticated hello")
+		return result, errors.New("CLI-расширение завершилось до аутентифицированного hello")
 	case <-startup.C:
 		_ = killProcessTree(cmd.Process)
-		return CLIResult0209{}, fmt.Errorf("cli extension hello timeout after %s", s.cfg.StartupTimeout)
+		return CLIResult0209{}, fmt.Errorf("Время ожидания hello CLI-расширения истекло через %s", s.cfg.StartupTimeout)
 	case <-ctx.Done():
 		_ = killProcessTree(cmd.Process)
 		return CLIResult0209{}, ctx.Err()
@@ -297,7 +297,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			terminated := st.expectedStop || st.terminationInitiated
 			st.mu.Unlock()
 			if terminated {
-				return CLIResult0209{}, errors.New("cli extension terminated by supervisor")
+				return CLIResult0209{}, errors.New("CLI-расширение завершено контроллером")
 			}
 			code := 0
 			if cmd.ProcessState != nil {
@@ -305,7 +305,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			}
 			result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: redactHostCredentials04811(stdout.String(), st.token, st.callbackToken), Stderr: redactHostCredentials04811(stderr.String(), st.token, st.callbackToken), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
 			if waitErr != nil || code != 0 {
-				return result, fmt.Errorf("cli extension exited with code %d", code)
+				return result, fmt.Errorf("CLI-расширение завершилось с кодом %d", code)
 			}
 			return result, nil
 		case <-ticker.C:
@@ -319,11 +319,11 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 				if rss, count, e := processTreeUsage(cmd.Process.Pid); e == nil {
 					if s.cfg.MaxMemoryBytes > 0 && rss > s.cfg.MaxMemoryBytes {
 						_ = killProcessTree(cmd.Process)
-						return CLIResult0209{}, fmt.Errorf("cli extension memory limit exceeded: %d > %d", rss, s.cfg.MaxMemoryBytes)
+						return CLIResult0209{}, fmt.Errorf("CLI-расширение превысило лимит памяти: %d > %d", rss, s.cfg.MaxMemoryBytes)
 					}
 					if s.cfg.MaxProcesses > 0 && count > s.cfg.MaxProcesses {
 						_ = killProcessTree(cmd.Process)
-						return CLIResult0209{}, fmt.Errorf("cli extension process limit exceeded: %d > %d", count, s.cfg.MaxProcesses)
+						return CLIResult0209{}, fmt.Errorf("CLI-расширение превысило лимит процессов: %d > %d", count, s.cfg.MaxProcesses)
 					}
 				}
 			}

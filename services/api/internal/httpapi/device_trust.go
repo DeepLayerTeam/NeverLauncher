@@ -56,7 +56,7 @@ func decodeDeviceJSON0121(w http.ResponseWriter, r *http.Request, dst any, limit
 	}
 	var extra any
 	if err := dec.Decode(&extra); err == nil {
-		return errors.New("multiple JSON values")
+		return errors.New("Несколько значений JSON")
 	}
 	return nil
 }
@@ -64,11 +64,11 @@ func decodeDeviceJSON0121(w http.ResponseWriter, r *http.Request, dst any, limit
 func normalizeDeviceName0121(v string) (string, error) {
 	v = strings.TrimSpace(v)
 	if v == "" || len(v) > 96 || !utf8.ValidString(v) {
-		return "", errors.New("device name must contain 1-96 UTF-8 characters")
+		return "", errors.New("Имя устройства должно содержать от 1 до 96 символов UTF-8")
 	}
 	for _, r := range v {
 		if r < 0x20 || r == 0x7f {
-			return "", errors.New("device name contains control characters")
+			return "", errors.New("Имя устройства содержит управляющие символы")
 		}
 	}
 	return v, nil
@@ -78,7 +78,7 @@ func normalizeDeviceMetadata0121(platform, clientVersion string) (string, string
 	platform = strings.TrimSpace(platform)
 	clientVersion = strings.TrimSpace(clientVersion)
 	if len(platform) > 48 || len(clientVersion) > 96 || !utf8.ValidString(platform) || !utf8.ValidString(clientVersion) {
-		return "", "", errors.New("device platform/clientVersion is too long or invalid UTF-8")
+		return "", "", errors.New("Платформа устройства или clientVersion слишком длинны либо содержат недопустимый UTF-8")
 	}
 	return platform, clientVersion, nil
 }
@@ -106,21 +106,21 @@ func normalizeDeviceKeyProperties0123(algorithm, binding, provider string) (stri
 		binding = "software"
 	}
 	if algorithm != "ed25519" && algorithm != "p256" {
-		return "", "", "", errors.New("keyAlgorithm must be ed25519 or p256")
+		return "", "", "", errors.New("keyAlgorithm должен быть ed25519 или p256")
 	}
 	if binding != "software" && binding != "hardware" {
-		return "", "", "", errors.New("keyBinding must be software or hardware")
+		return "", "", "", errors.New("keyBinding должен быть software или hardware")
 	}
 	if binding == "hardware" {
 		if algorithm != "p256" {
-			return "", "", "", errors.New("hardware-bound identity requires p256")
+			return "", "", "", errors.New("Для аппаратно привязанной идентификации требуется p256")
 		}
 		if !validHardwareProvider0123(provider) {
-			return "", "", "", errors.New("hardwareProvider is required for hardware-bound identity")
+			return "", "", "", errors.New("Для аппаратно привязанной идентификации требуется hardwareProvider")
 		}
 	} else {
 		if algorithm != "ed25519" {
-			return "", "", "", errors.New("software device identity requires ed25519")
+			return "", "", "", errors.New("Для программной идентификации устройства требуется ed25519")
 		}
 		provider = ""
 	}
@@ -138,19 +138,19 @@ type decodedDevicePublicKey0123 struct {
 func decodeDevicePublicKey0123(raw, algorithm string) (decodedDevicePublicKey0123, error) {
 	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
 	if err != nil {
-		return decodedDevicePublicKey0123{}, errors.New("publicKey must be base64url")
+		return decodedDevicePublicKey0123{}, errors.New("publicKey должен быть в формате base64url")
 	}
 	out := decodedDevicePublicKey0123{algorithm: algorithm, raw: append([]byte(nil), b...)}
 	switch algorithm {
 	case "ed25519":
 		if len(b) != ed25519.PublicKeySize {
-			return decodedDevicePublicKey0123{}, errors.New("publicKey must be a raw Ed25519 public key")
+			return decodedDevicePublicKey0123{}, errors.New("publicKey должен содержать исходный публичный ключ Ed25519")
 		}
 		out.ed25519Key = ed25519.PublicKey(b)
 	case "p256":
 		x, y := elliptic.Unmarshal(elliptic.P256(), b)
 		if x == nil || y == nil || len(b) != 65 || b[0] != 0x04 {
-			return decodedDevicePublicKey0123{}, errors.New("publicKey must be an uncompressed SEC1 P-256 public key")
+			return decodedDevicePublicKey0123{}, errors.New("publicKey должен содержать несжатый публичный ключ SEC1 P-256")
 		}
 		out.p256Key = &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
 	default:
@@ -164,7 +164,7 @@ func decodeDevicePublicKey0123(raw, algorithm string) (decodedDevicePublicKey012
 func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSignature string) error {
 	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(rawSignature))
 	if err != nil {
-		return errors.New("signature must be base64url")
+		return errors.New("Подпись должна быть в формате base64url")
 	}
 	switch key.algorithm {
 	case "ed25519":
@@ -173,7 +173,7 @@ func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSigna
 		}
 	case "p256":
 		if len(b) != 64 {
-			return errors.New("P-256 signature must be raw IEEE P1363 r||s")
+			return errors.New("Подпись P-256 должна быть в исходном формате IEEE P1363 r||s")
 		}
 		h := sha256.Sum256([]byte(payload))
 		r := new(big.Int).SetBytes(b[:32])

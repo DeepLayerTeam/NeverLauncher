@@ -33,41 +33,41 @@ func (s *Supervisor) javaCommand0304(jar string, argv []string) (*exec.Cmd, erro
 	java := strings.TrimSpace(s.cfg.JavaExecutable)
 	if java != "" {
 		if !filepath.IsAbs(java) {
-			return nil, errors.New("configured Java executable must be absolute")
+			return nil, errors.New("Путь к настроенному исполняемому файлу Java должен быть абсолютным")
 		}
 		info, err := os.Lstat(java)
 		if err != nil {
 			return nil, err
 		}
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-			return nil, errors.New("configured Java executable must be regular, not symlink")
+			return nil, errors.New("Настроенный исполняемый файл Java должен быть обычным файлом, а не символической ссылкой")
 		}
 	} else {
 		var err error
 		java, err = exec.LookPath("java")
 		if err != nil {
-			return nil, fmt.Errorf("Java 17+ runtime missing: %w", err)
+			return nil, fmt.Errorf("Отсутствует среда выполнения Java 17+: %w", err)
 		}
 		// Процесс никогда не должен получать исполняемый файл из неявного элемента PATH,
 		// указывающего на рабочий каталог. Разрешайте обычную ссылку alternatives для JDK.
 		java, err = filepath.EvalSymlinks(java)
 		if err != nil {
-			return nil, fmt.Errorf("resolve Java runtime: %w", err)
+			return nil, fmt.Errorf("Ошибка определения среды выполнения Java: %w", err)
 		}
 	}
 	if !filepath.IsAbs(java) {
-		return nil, errors.New("resolved Java executable must be absolute")
+		return nil, errors.New("Путь к найденному исполняемому файлу Java должен быть абсолютным")
 	}
 	info, err := os.Stat(java)
 	if err != nil || !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm()&0111 == 0) {
-		return nil, errors.New("Java executable must be an executable regular file")
+		return nil, errors.New("Исполняемый файл Java должен быть обычным исполняемым файлом")
 	}
 	// Это ограничения памяти JVM, а не изоляция ОС: монитор дерева процессов
 	// остаётся границей контроля общего RSS. Оставляйте нативный запас для
 	// потоков, GC, JIT и libc вместо выделения 65 % памяти только куче Java.
 	memoryMiB := s.cfg.MaxMemoryBytes / (1 << 20)
 	if memoryMiB < 256 {
-		return nil, errors.New("Java Host requires at least 256 MiB process memory budget")
+		return nil, errors.New("Для Java Host требуется не менее 256 МиБ памяти процесса")
 	}
 	javaHeap := minInt64_04811(memoryMiB*40/100, 4096)
 	javaMeta := minInt64_04811(memoryMiB*20/100, 512)
@@ -111,7 +111,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		params = json.RawMessage(`{}`)
 	}
 	if len(params) > 64<<10 || !json.Valid(params) || params[0] != '{' {
-		return nil, errors.New("Java RPC params must be a bounded JSON object")
+		return nil, errors.New("Параметры Java RPC должны быть объектом JSON ограниченного размера")
 	}
 	key = key.normalized()
 	s.mu.RLock()
@@ -131,7 +131,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		// Коннекторы авторизации разрешены только явно согласованным
 		// глобальным установкам. Расширения проекта не могут авторизовать аккаунты.
 		if key.Scope != "global" || st.manifest.ID != key.ExtensionID {
-			return nil, errors.New("Java authentication provider scope denied")
+			return nil, errors.New("Доступ к области провайдера авторизации Java запрещён")
 		}
 		declared := false
 		for _, permission := range st.manifest.Permissions {
@@ -141,11 +141,11 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			}
 		}
 		if !declared {
-			return nil, errors.New("Java authentication capability not declared")
+			return nil, errors.New("Разрешение авторизации Java не объявлено")
 		}
 		allowed, err := s.permissionAllowed0207(ctx, st, "auth:provider", "")
 		if err != nil || !allowed {
-			return nil, errors.New("Java authentication capability revoked or unavailable")
+			return nil, errors.New("Разрешение авторизации Java отозвано или недоступно")
 		}
 	}
 	if strings.HasPrefix(method, "content.") {
@@ -156,12 +156,12 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			ProjectID string `json:"projectId"`
 		}
 		if err := json.Unmarshal(params, &payload); err != nil {
-			return nil, errors.New("invalid content project")
+			return nil, errors.New("Недопустимый проект содержимого")
 		}
 		if method != "content.health" {
 			id, err := s.scopedProject(st, payload.ProjectID)
 			if err != nil {
-				return nil, errors.New("content project scope denied")
+				return nil, errors.New("Доступ к области проекта содержимого запрещён")
 			}
 			permission := "release:read"
 			if method == "content.package.prepare" {
@@ -169,7 +169,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			}
 			granted, err := s.permissionAllowed0207(ctx, st, permission, id)
 			if err != nil || !granted {
-				return nil, errors.New("content permission denied or unavailable")
+				return nil, errors.New("Разрешение на содержимое отклонено или недоступно")
 			}
 		}
 	}
@@ -185,7 +185,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 	// проверяет актуальное доверие, но прямой RPC Go → JVM обходит его.
 	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
 		s.denyRevokedHost04210(st, err)
-		return nil, fmt.Errorf("Java RPC denied by current extension trust: %w", err)
+		return nil, fmt.Errorf("Java RPC отклонён текущей политикой доверия расширения: %w", err)
 	}
 	// Процесс может быть остановлен или заменён во время длительной проверки.
 	st.mu.Lock()
@@ -201,7 +201,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 	if strings.HasPrefix(method, "auth.") {
 		allowed, checkErr := s.permissionAllowed0207(ctx, st, "auth:provider", "")
 		if checkErr != nil || !allowed {
-			return nil, errors.New("Java authentication permission revoked during operation")
+			return nil, errors.New("Разрешение авторизации Java отозвано во время операции")
 		}
 	}
 	if strings.HasPrefix(method, "content.") && method != "content.health" {
@@ -209,7 +209,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			ProjectID string `json:"projectId"`
 		}
 		if err := json.Unmarshal(params, &payload); err != nil {
-			return nil, errors.New("invalid content scope")
+			return nil, errors.New("Недопустимая область действия содержимого")
 		}
 		id, err := s.scopedProject(st, payload.ProjectID)
 		if err != nil {
@@ -221,17 +221,17 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		}
 		granted, err := s.permissionAllowed0207(ctx, st, permission, id)
 		if err != nil || !granted {
-			return nil, errors.New("content permission revoked during RPC")
+			return nil, errors.New("Разрешение на содержимое отозвано во время RPC")
 		}
 	}
 	if strings.HasPrefix(method, "ui.") {
 		if err := s.checkJavaUI0489(ctx, st, method, params); err != nil {
-			return nil, fmt.Errorf("Java UI authorization revoked during RPC: %w", err)
+			return nil, fmt.Errorf("Разрешение интерфейса Java отозвано во время RPC: %w", err)
 		}
 	}
 	if method == "state.migrate" {
 		if err := s.enforceLiveTrust04210(ctx, st); err != nil {
-			return nil, fmt.Errorf("Java state migration trust revoked: %w", err)
+			return nil, fmt.Errorf("Доверие к миграции состояния Java отозвано: %w", err)
 		}
 	}
 	return result, nil
@@ -268,7 +268,7 @@ func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, m
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := s.callbackClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Java RPC %s failed: %w", method, err)
+		return nil, fmt.Errorf("Ошибка Java RPC %s: %w", method, err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 65537))
@@ -276,10 +276,10 @@ func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, m
 		return nil, err
 	}
 	if len(body) > 65536 {
-		return nil, errors.New("Java RPC response exceeds 64 KiB")
+		return nil, errors.New("Ответ Java RPC превышает 64 КиБ")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Java RPC %s returned HTTP %d", method, resp.StatusCode)
+		return nil, fmt.Errorf("Java RPC %s вернул HTTP %d", method, resp.StatusCode)
 	}
 	var answer javaRPCResponse0304
 	dec := json.NewDecoder(bytes.NewReader(body))
@@ -289,10 +289,10 @@ func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, m
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return nil, errors.New("trailing Java RPC response data")
+		return nil, errors.New("Лишние данные после ответа Java RPC")
 	}
 	if !answer.OK || answer.ProtocolVersion != javaRPCVersion0304 || answer.RequestID != id || !json.Valid(answer.Result) {
-		return nil, errors.New("Java RPC protocol or request identity mismatch")
+		return nil, errors.New("Несовпадение протокола Java RPC или идентификатора запроса")
 	}
 	return answer.Result, nil
 }
@@ -313,7 +313,7 @@ func (s *Supervisor) probeJava0304(st *processState) {
 			Responsive bool   `json:"responsive"`
 		}
 		if e := json.Unmarshal(payload, &result); e != nil || !result.Responsive || result.State != "RUNNING" {
-			err = errors.New("Java host is not in RUNNING state")
+			err = errors.New("Хост Java не находится в состоянии RUNNING")
 		}
 	}
 	st.mu.Lock()
@@ -373,7 +373,7 @@ func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install mod
 	sameVersion := st.install.CurrentVersion == install.CurrentVersion && st.install.Generation == install.Generation && st.install.CurrentPackageIdentity == install.CurrentPackageIdentity
 	st.mu.Unlock()
 	if !sameVersion {
-		return errors.New("extension generation changed during state migration")
+		return errors.New("Поколение расширения изменилось во время миграции состояния")
 	}
 	if !java {
 		return nil
@@ -384,7 +384,7 @@ func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install mod
 	}
 	body, err := s.CallJavaRPC0304(ctx, key, "state.migrate", params)
 	if err != nil {
-		return fmt.Errorf("state migration callback failed: %w", err)
+		return fmt.Errorf("Ошибка обратного вызова миграции состояния: %w", err)
 	}
 	var answer struct {
 		FromVersion string `json:"fromVersion"`
@@ -395,7 +395,7 @@ func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install mod
 		return err
 	}
 	if answer.FromVersion != fromVersion || answer.ToVersion != install.CurrentVersion {
-		return errors.New("invalid migration acknowledgement")
+		return errors.New("Недопустимое подтверждение миграции")
 	}
 	return nil
 }

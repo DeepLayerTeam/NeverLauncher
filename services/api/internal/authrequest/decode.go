@@ -14,7 +14,7 @@ import (
 
 const MaxBytes = 16 * 1024
 
-var ErrTooLarge = errors.New("authentication request exceeds 16 KiB")
+var ErrTooLarge = errors.New("Запрос авторизации превышает 16 КиБ")
 
 // Decode принимает строго один объект JSON, отклоняет повторяющиеся ключи
 // (включая варианты регистра и вложенные объекты), неизвестные свойства и лишние
@@ -22,29 +22,29 @@ var ErrTooLarge = errors.New("authentication request exceeds 16 KiB")
 // памяти под JSON или вызова внешнего сервиса.
 func Decode(src io.Reader, destination any) error {
 	if src == nil {
-		return errors.New("authentication request body is missing")
+		return errors.New("Тело запроса авторизации отсутствует")
 	}
 	raw, err := io.ReadAll(io.LimitReader(src, MaxBytes+1))
 	if err != nil {
-		return fmt.Errorf("read authentication request: %w", err)
+		return fmt.Errorf("Ошибка чтения запроса авторизации: %w", err)
 	}
 	if len(raw) > MaxBytes {
 		return ErrTooLarge
 	}
 	if !json.Valid(raw) {
-		return errors.New("invalid authentication JSON")
+		return errors.New("Недопустимый JSON запроса авторизации")
 	}
 	check := json.NewDecoder(bytes.NewReader(raw))
 	if err := uniqueObject(check); err != nil {
 		return err
 	}
 	if _, err := check.Token(); !errors.Is(err, io.EOF) {
-		return errors.New("authentication JSON must contain one object")
+		return errors.New("JSON запроса авторизации должен содержать один объект")
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(destination); err != nil {
-		return fmt.Errorf("decode authentication JSON: %w", err)
+		return fmt.Errorf("Ошибка декодирования JSON запроса авторизации: %w", err)
 	}
 	return nil
 }
@@ -55,7 +55,7 @@ func uniqueObject(dec *json.Decoder) error {
 		return err
 	}
 	if token != json.Delim('{') {
-		return errors.New("authentication JSON must be an object")
+		return errors.New("JSON запроса авторизации должен быть объектом")
 	}
 	return consumeObject(dec)
 }
@@ -69,13 +69,13 @@ func consumeObject(dec *json.Decoder) error {
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return errors.New("invalid authentication JSON key")
+			return errors.New("Недопустимый ключ JSON запроса авторизации")
 		}
 		// encoding/json разрешает поля структур без учёта регистра. Применяйте такую
 		// же эквивалентность, чтобы запрос не мог дважды присвоить одно поле.
 		key = strings.ToLower(key)
 		if _, duplicate := seen[key]; duplicate {
-			return errors.New("duplicate authentication JSON key")
+			return errors.New("Повторяющийся ключ JSON запроса авторизации")
 		}
 		seen[key] = struct{}{}
 		if err := consumeValue(dec); err != nil {
@@ -107,6 +107,6 @@ func consumeValue(dec *json.Decoder) error {
 		_, err := dec.Token()
 		return err
 	default:
-		return errors.New("unexpected authentication JSON delimiter")
+		return errors.New("Неожиданный разделитель в JSON запроса авторизации")
 	}
 }

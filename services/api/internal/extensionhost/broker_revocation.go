@@ -37,7 +37,7 @@ func (s *Supervisor) revalidateCapability04312(ctx context.Context, st *processS
 	case "http.fetch":
 		permission = "http:outbound"
 	default:
-		return fmt.Errorf("unknown capability %q", name)
+		return fmt.Errorf("Неизвестное разрешение %q", name)
 	}
 	project := strings.TrimSpace(req.ProjectID)
 	allowed, err := s.permissionAllowed0207(ctx, st, permission, project)
@@ -53,7 +53,7 @@ func (s *Supervisor) revalidateCapability04312(ctx context.Context, st *processS
 			return err
 		}
 		if !secretAllowed {
-			return errors.New("secret permission revoked")
+			return errors.New("Разрешение на секрет отозвано")
 		}
 	}
 	return nil

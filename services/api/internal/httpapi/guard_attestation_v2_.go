@@ -494,7 +494,7 @@ func (s Server) consumeGuardContinuousJoinTicket01810(r *http.Request, claims au
 		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket malformed")
 	}
 	if strings.TrimSpace(claims.TrustedDeviceID) == "" {
-		return model.DeviceChallenge{}, errors.New("current session is not bound to trusted device")
+		return model.DeviceChallenge{}, errors.New("Текущий сеанс не привязан к доверенному устройству")
 	}
 	now := time.Now().UTC()
 	ticket, err := s.Repo.ConsumeDeviceChallenge(r.Context(), parts[0], claims.Sub, claims.TrustedDeviceID, guardContinuousJoinPurpose01810, deviceChallengeHash0121(parts[1]), now)

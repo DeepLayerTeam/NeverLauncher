@@ -13,7 +13,7 @@ import (
 func CanonicalAuthIssuer(provider, issuer string) (string, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if provider == "" || len(provider) > 128 || strings.IndexFunc(provider, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
-		return "", errors.New("invalid auth provider")
+		return "", errors.New("Недопустимый провайдер авторизации")
 	}
 	issuer = strings.TrimSpace(issuer)
 	if issuer == "" {
@@ -24,10 +24,10 @@ func CanonicalAuthIssuer(provider, issuer string) (string, error) {
 		}
 	}
 	if len(issuer) > 2048 || strings.IndexFunc(issuer, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
-		return "", errors.New("invalid auth issuer")
+		return "", errors.New("Недопустимый источник авторизации")
 	}
 	if provider == "local" && issuer != "launcher" {
-		return "", errors.New("local provider cannot change issuer")
+		return "", errors.New("Локальный провайдер не может изменять источник авторизации")
 	}
 	return issuer, nil
 }

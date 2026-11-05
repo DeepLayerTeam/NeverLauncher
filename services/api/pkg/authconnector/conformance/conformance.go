@@ -95,7 +95,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 	var subject string
 	if authconnector.HasCapability(meta, authconnector.CapabilityPasswordAuth) {
 		if fixture.Password == nil || strings.TrimSpace(fixture.Password.Identifier) == "" || fixture.Password.Secret == "" {
-			r.add("authenticate:password", fmt.Errorf("missing test credentials"))
+			r.add("authenticate:password", fmt.Errorf("Отсутствуют тестовые учётные данные"))
 		} else {
 			result, err := connector.(authconnector.PasswordAuthenticator).AuthenticatePassword(ctx, *fixture.Password)
 			if err == nil {
@@ -115,9 +115,9 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 			invalid.Secret += "-launcher-invalid-proof"
 			_, invalidErr := connector.(authconnector.PasswordAuthenticator).AuthenticatePassword(ctx, invalid)
 			if invalidErr == nil {
-				r.add("authenticate:wrong-password", fmt.Errorf("accepted invalid credentials"))
+				r.add("authenticate:wrong-password", fmt.Errorf("Недействительные учётные данные были приняты"))
 			} else if code := authconnector.CodeOf(invalidErr); code != authconnector.ErrInvalidCredentials && code != authconnector.ErrIdentityDisabled {
-				r.add("authenticate:wrong-password", fmt.Errorf("did not reject as credentials"))
+				r.add("authenticate:wrong-password", fmt.Errorf("Ошибка не классифицирована как отклонение учётных данных"))
 			} else {
 				r.add("authenticate:wrong-password", nil)
 			}
@@ -125,11 +125,11 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
 		if fixture.Browser == nil || fixture.Browser.Complete == nil {
-			r.add("authenticate:browser", fmt.Errorf("missing browser fixture"))
+			r.add("authenticate:browser", fmt.Errorf("Отсутствуют тестовые данные браузера"))
 		} else {
 			start, err := connector.(authconnector.BrowserAuthenticator).BeginBrowserAuth(ctx, fixture.Browser.Start)
 			if err == nil && (start.AuthorizationURL == "" || start.State != fixture.Browser.Start.State) {
-				err = fmt.Errorf("invalid browser transaction")
+				err = fmt.Errorf("Недопустимая браузерная транзакция")
 			}
 			if err == nil {
 				var cb authconnector.BrowserAuthCallback
@@ -145,7 +145,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 					}
 					if err == nil {
 						if haveAuth && (auth.Identity.Subject != result.Identity.Subject || auth.Identity.Issuer != result.Identity.Issuer) {
-							err = fmt.Errorf("browser and password identities disagree")
+							err = fmt.Errorf("Идентификаторы при входе через браузер и пароль не совпадают")
 						}
 						if !haveAuth {
 							auth = result
@@ -192,7 +192,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRefresh) {
 		if token == "" || subject == "" {
-			r.add("refresh", fmt.Errorf("missing refresh fixture"))
+			r.add("refresh", fmt.Errorf("Отсутствуют тестовые данные для обновления токена"))
 		} else {
 			refreshed, err := connector.(authconnector.TokenRefresher).Refresh(ctx, token)
 			if err == nil {
@@ -209,14 +209,14 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
 		if !fixture.AllowRevoke || subject == "" {
-			r.add("revoke", fmt.Errorf("revoke fixture not enabled"))
+			r.add("revoke", fmt.Errorf("Тестовый сценарий отзыва не включён"))
 		} else {
 			revokeToken := fixture.RevokeToken
 			if revokeToken == "" {
 				revokeToken = token
 			}
 			if revokeToken == "" {
-				r.add("revoke", fmt.Errorf("missing revoke token"))
+				r.add("revoke", fmt.Errorf("Отсутствует токен для отзыва"))
 			} else {
 				err := connector.(authconnector.Revoker).Revoke(ctx, authconnector.RevokeRequest{Subject: subject, ProviderToken: revokeToken})
 				r.add("revoke", err)
@@ -224,9 +224,9 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 					if refresher, ok := connector.(authconnector.TokenRefresher); ok && authconnector.HasCapability(meta, authconnector.CapabilityTokenRefresh) {
 						_, err = refresher.Refresh(ctx, revokeToken)
 						if err == nil {
-							r.add("revoke:invalidation", fmt.Errorf("revoked credential still valid"))
+							r.add("revoke:invalidation", fmt.Errorf("Отозванные учётные данные по-прежнему действительны"))
 						} else if code := authconnector.CodeOf(err); code != authconnector.ErrInvalidCredentials && code != authconnector.ErrIdentityDisabled {
-							r.add("revoke:invalidation", fmt.Errorf("revocation not proved"))
+							r.add("revoke:invalidation", fmt.Errorf("Отзыв учётных данных не подтверждён"))
 						} else {
 							r.add("revoke:invalidation", nil)
 						}
@@ -236,17 +236,17 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 		}
 	}
 	if !authconnector.HasCapability(meta, authconnector.CapabilityPasswordAuth) && !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
-		r.add("authenticate", fmt.Errorf("no supported authentication flow"))
+		r.add("authenticate", fmt.Errorf("Нет поддерживаемого способа авторизации"))
 	}
 	return r
 }
 
 func expectIdentity(identity authconnector.Identity, subject, issuer string) error {
 	if subject != "" && identity.Subject != subject {
-		return fmt.Errorf("identity subject changed")
+		return fmt.Errorf("Субъект идентификации изменился")
 	}
 	if issuer != "" && identity.Issuer != issuer {
-		return fmt.Errorf("identity issuer changed")
+		return fmt.Errorf("Источник идентификации изменился")
 	}
 	return nil
 }

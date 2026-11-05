@@ -89,59 +89,59 @@ func ValidateFileOwnership0224(m Manifest) error {
 	seen := map[string]bool{}
 	for _, f := range m.Files {
 		if !validFilePolicyPath0224(f.Path, false) {
-			return fmt.Errorf("unsafe file path %q", f.Path)
+			return fmt.Errorf("Небезопасный путь файла %q", f.Path)
 		}
 		key := strings.ToLower(f.Path)
 		if seen[key] {
-			return fmt.Errorf("duplicate file path %q", f.Path)
+			return fmt.Errorf("Повторяющийся путь файла %q", f.Path)
 		}
 		seen[key] = true
 		ownership := FileOwnership0224(f)
 		if !validOwnership0224(ownership) {
-			return fmt.Errorf("unsupported ownership %q", ownership)
+			return fmt.Errorf("Неподдерживаемый тип владения %q", ownership)
 		}
 		if (ownership == "user-owned" || ownership == "generated") && f.Required {
-			return fmt.Errorf("user-owned/generated file cannot be required: %q", f.Path)
+			return fmt.Errorf("Пользовательский или генерируемый файл не может быть обязательным: %q", f.Path)
 		}
 		if f.Ownership != "" && ((ownership == "required" && !f.Required) || (ownership == "optional" && f.Required)) {
-			return fmt.Errorf("conflicting required/ownership at %q", f.Path)
+			return fmt.Errorf("Противоречивые свойства required/ownership для %q", f.Path)
 		}
 		if protectedFilePath0224(f.Path) && ownership != "user-owned" && ownership != "generated" {
-			return fmt.Errorf("protected user data cannot be managed: %q", f.Path)
+			return fmt.Errorf("Защищённые пользовательские данные не могут управляться системой: %q", f.Path)
 		}
 	}
 	for i, rule := range m.FileRules {
 		if !validFilePolicyPath0224(rule.Pattern, true) || !validOwnership0224(rule.Ownership) {
-			return fmt.Errorf("invalid file rule %d", i)
+			return fmt.Errorf("Недопустимое правило файлов %d", i)
 		}
 		if rule.Action != "include" && rule.Action != "exclude" && rule.Action != "verify" {
-			return fmt.Errorf("unsupported file rule action %q", rule.Action)
+			return fmt.Errorf("Неподдерживаемое действие правила файлов %q", rule.Action)
 		}
 		if rule.Action == "include" && rule.Ownership != "managed" && rule.Ownership != "required" {
-			return fmt.Errorf("include rule must manage files")
+			return fmt.Errorf("Правило include должно управлять файлами")
 		}
 		if rule.Action == "exclude" && rule.Ownership != "user-owned" && rule.Ownership != "generated" {
-			return fmt.Errorf("exclude rule must protect user-owned/generated files")
+			return fmt.Errorf("Правило exclude должно защищать пользовательские и генерируемые файлы")
 		}
 		if rule.Action == "verify" && (rule.Ownership == "user-owned" || rule.Ownership == "generated") {
-			return fmt.Errorf("verify rule cannot require checks of user-owned/generated files")
+			return fmt.Errorf("Правило verify не может требовать проверки пользовательских и генерируемых файлов")
 		}
 		base := strings.TrimSuffix(rule.Pattern, "/**")
 		if protectedFilePath0224(base) && rule.Action == "include" {
-			return fmt.Errorf("include rule targets protected data: %q", rule.Pattern)
+			return fmt.Errorf("Правило include нацелено на защищённые данные: %q", rule.Pattern)
 		}
 		for j := 0; j < i; j++ {
 			if patternsOverlap0224(m.FileRules[j].Pattern, rule.Pattern) {
-				return fmt.Errorf("overlapping file rules %q and %q", m.FileRules[j].Pattern, rule.Pattern)
+				return fmt.Errorf("Пересекающиеся правила файлов %q и %q", m.FileRules[j].Pattern, rule.Pattern)
 			}
 		}
 		for _, f := range m.Files {
 			if patternMatch0224(rule.Pattern, f.Path) {
 				if rule.Action == "exclude" && FileOwnership0224(f) != "user-owned" && FileOwnership0224(f) != "generated" {
-					return fmt.Errorf("excluded file is managed: %q", f.Path)
+					return fmt.Errorf("Исключённый файл помечен как управляемый: %q", f.Path)
 				}
 				if rule.Action == "include" && (FileOwnership0224(f) == "user-owned" || FileOwnership0224(f) == "generated") {
-					return fmt.Errorf("include targets user-owned file: %q", f.Path)
+					return fmt.Errorf("Правило include нацелено на пользовательский файл: %q", f.Path)
 				}
 			}
 		}
@@ -162,15 +162,15 @@ func ValidatePublishFileOwnership0224(m Manifest) error {
 	for _, f := range m.Files {
 		if owner := FileOwnership0224(f); owner == "required" || owner == "managed" || owner == "optional" {
 			if f.URL == "" || len(f.SHA256) != 64 || f.Size < 0 {
-				return fmt.Errorf("managed file requires URL, size, SHA-256 for publish: %q", f.Path)
+				return fmt.Errorf("Для публикации управляемого файла требуются URL, размер и SHA-256: %q", f.Path)
 			}
 			digest, err := hex.DecodeString(f.SHA256)
 			if err != nil || len(digest) != 32 {
-				return fmt.Errorf("invalid managed file SHA-256: %q", f.Path)
+				return fmt.Errorf("Недопустимый SHA-256 управляемого файла: %q", f.Path)
 			}
 			parsed, err := url.Parse(f.URL)
 			if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" {
-				return fmt.Errorf("invalid download URL: %q", f.Path)
+				return fmt.Errorf("Недопустимый URL загрузки: %q", f.Path)
 			}
 		}
 	}

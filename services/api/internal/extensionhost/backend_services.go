@@ -40,7 +40,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	}
 	permitted, err := s.permissionAllowed0207(ctx, st, permission, projectID)
 	if err != nil {
-		return denied(http.StatusServiceUnavailable, "capability policy unavailable")
+		return denied(http.StatusServiceUnavailable, "Политика разрешений недоступна")
 	}
 	if !permitted {
 		return denied(http.StatusForbidden, "permission "+permission+" not granted")
@@ -169,7 +169,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 // неограниченный HTTP-ответ. Пустой nextOffset означает последнюю страницу.
 func pagedBackend0484[T any](items []T, req capabilityRequest) capabilityResult0205 {
 	if req.Offset < 0 || req.Offset > 1_000_000 || req.Limit < 0 || req.Limit > 50 {
-		return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("invalid page offset or limit")}
+		return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("Недопустимое смещение страницы или ограничение")}
 	}
 	limit := req.Limit
 	if limit == 0 {

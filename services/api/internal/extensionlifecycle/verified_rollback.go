@@ -27,14 +27,14 @@ func (m *Manager) checkRollbackPayload0305(ctx context.Context, scope Scope, id,
 	}
 	original, err := m.Repo.GetExtensionRegistryVersion(ctx, id, version)
 	if err != nil {
-		return fmt.Errorf("signed Java rollback publication unavailable: %w", err)
+		return fmt.Errorf("Подписанная публикация для отката Java недоступна: %w", err)
 	}
 	if original.Artifact.PackageIdentity != identity {
-		return errors.New("signed Java rollback identity mismatch")
+		return errors.New("Несовпадение идентификатора подписанного выпуска для отката Java")
 	}
 	prepared, err := m.prepareArtifact0204(ctx, original)
 	if err != nil {
-		return fmt.Errorf("signed Java rollback artifact verification: %w", err)
+		return fmt.Errorf("Ошибка проверки артефакта для подписанного отката Java: %w", err)
 	}
 	defer os.Remove(prepared.Path)
 	pristine, err := makeStage0204(m.Root, scope, id)
@@ -54,7 +54,7 @@ func (m *Manager) checkRollbackPayload0305(ctx context.Context, scope Scope, id,
 		return err
 	}
 	if actual != expected {
-		return errors.New("local Java backup differs from verified signed release")
+		return errors.New("Локальная резервная копия Java отличается от проверенного подписанного выпуска")
 	}
 	return nil
 }
@@ -75,18 +75,18 @@ func digestPayload0305(root string) ([32]byte, error) {
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("backup payload contains symlink")
+			return errors.New("Резервная копия содержит символическую ссылку")
 		}
 		if entry.IsDir() {
 			return nil
 		}
 		if !info.Mode().IsRegular() {
-			return errors.New("backup payload contains special file")
+			return errors.New("Резервная копия содержит специальный файл")
 		}
 		count++
 		total += info.Size()
 		if count > 8192 || total > 512<<20 {
-			return errors.New("backup payload exceeds comparison limit")
+			return errors.New("Размер резервной копии превышает лимит сравнения")
 		}
 		rel, err := filepath.Rel(root, filename)
 		if err != nil {
@@ -116,7 +116,7 @@ func digestPayload0305(root string) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	if count == 0 {
-		return [32]byte{}, errors.New("empty backup payload")
+		return [32]byte{}, errors.New("Содержимое резервной копии пусто")
 	}
 	var digest [32]byte
 	copy(digest[:], h.Sum(nil))

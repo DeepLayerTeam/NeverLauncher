@@ -26,7 +26,7 @@ type envelope struct {
 func Decode[T any](raw []byte) ([]T, error) {
 	raw = bytes.TrimSpace(raw)
 	if len(raw) == 0 {
-		return nil, errors.New("provider configuration is empty")
+		return nil, errors.New("Конфигурация провайдера пуста")
 	}
 	var entries json.RawMessage
 	switch raw[0] {
@@ -37,44 +37,44 @@ func Decode[T any](raw []byte) ([]T, error) {
 		dec.DisallowUnknownFields()
 		var e envelope
 		if err := dec.Decode(&e); err != nil {
-			return nil, fmt.Errorf("decode provider configuration envelope: %w", err)
+			return nil, fmt.Errorf("Ошибка декодирования контейнера конфигурации провайдера: %w", err)
 		}
 		var trailing any
 		if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-			return nil, errors.New("trailing provider configuration data")
+			return nil, errors.New("Лишние данные после конфигурации провайдера")
 		}
 		switch e.SchemaVersion {
 		case 1:
 			if len(e.Configs) == 0 || len(e.Providers) != 0 {
-				return nil, errors.New("schema v1 must have configs only")
+				return nil, errors.New("В схеме v1 допускается только поле configs")
 			}
 			entries = e.Configs
 		case CurrentSchemaVersion:
 			if len(e.Providers) == 0 || len(e.Configs) != 0 {
-				return nil, errors.New("schema v2 must have providers only")
+				return nil, errors.New("В схеме v2 допускается только поле providers")
 			}
 			entries = e.Providers
 		default:
-			return nil, fmt.Errorf("unsupported provider configuration schema version %d", e.SchemaVersion)
+			return nil, fmt.Errorf("Неподдерживаемая версия схемы конфигурации провайдера: %d", e.SchemaVersion)
 		}
 	default:
-		return nil, errors.New("provider configuration must be JSON array or versioned object")
+		return nil, errors.New("Конфигурация провайдера должна быть массивом JSON или объектом с версией")
 	}
 	if len(entries) == 0 || entries[0] != '[' {
-		return nil, errors.New("provider configuration entries must be an array")
+		return nil, errors.New("Записи конфигурации провайдера должны образовывать массив")
 	}
 	dec := json.NewDecoder(bytes.NewReader(entries))
 	dec.DisallowUnknownFields()
 	var configs []T
 	if err := dec.Decode(&configs); err != nil {
-		return nil, fmt.Errorf("decode configured providers: %w", err)
+		return nil, fmt.Errorf("Ошибка декодирования настроенных провайдеров: %w", err)
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return nil, errors.New("trailing provider list data")
+		return nil, errors.New("Лишние данные после списка провайдеров")
 	}
 	if len(configs) == 0 {
-		return nil, errors.New("provider configuration contains no providers")
+		return nil, errors.New("В конфигурации провайдера нет ни одного провайдера")
 	}
 	return configs, nil
 }

@@ -16,7 +16,7 @@ func (s *Supervisor) enforceCLITrust04312(ctx context.Context, st *processState)
 	}
 	security := s.securityValue0207()
 	if security == nil {
-		return errors.New("CLI capability security unavailable")
+		return errors.New("Система защиты разрешений CLI недоступна")
 	}
 	projectID := ""
 	if st.key.Scope == "project" {
@@ -25,10 +25,10 @@ func (s *Supervisor) enforceCLITrust04312(ctx context.Context, st *processState)
 	ok, err := security.Allowed(ctx, st.key.ExtensionID, st.install.CurrentVersion,
 		st.key.Scope, st.key.ScopeID, "cli:contribute", projectID)
 	if err != nil {
-		return fmt.Errorf("CLI permission policy unavailable: %w", err)
+		return fmt.Errorf("Политика разрешений CLI недоступна: %w", err)
 	}
 	if !ok {
-		return errors.New("cli:contribute permission revoked")
+		return errors.New("Разрешение cli:contribute отозвано")
 	}
 	return nil
 }

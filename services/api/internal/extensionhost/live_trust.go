@@ -22,45 +22,45 @@ func (s *Supervisor) enforceLiveTrust04210(ctx context.Context, st *processState
 	}
 	key, install := st.key.normalized(), st.install
 	if _, err := s.repo.GetExtensionEmergencyDisable(ctx, key.ExtensionID, key.Scope, key.ScopeID); err == nil {
-		return errors.New("extension emergency-disabled")
+		return errors.New("Расширение аварийно отключено")
 	} else if !errors.Is(err, repository.ErrNotFound) {
-		return fmt.Errorf("extension emergency policy unavailable: %w", err)
+		return fmt.Errorf("Политика аварийного отключения расширения недоступна: %w", err)
 	}
 	if install.CurrentPackageIdentity != "" {
 		quarantined, err := s.repo.IsExtensionPackageQuarantined(ctx, install.CurrentPackageIdentity)
 		if err != nil {
-			return fmt.Errorf("extension quarantine policy unavailable: %w", err)
+			return fmt.Errorf("Политика карантина расширения недоступна: %w", err)
 		}
 		if quarantined {
-			return errors.New("extension package quarantined")
+			return errors.New("Пакет расширения помещён в карантин")
 		}
 	}
 	current, err := s.repo.GetExtensionInstallState(ctx, key.ExtensionID, key.Scope, key.ScopeID)
 	signed := strings.HasPrefix(install.Source, "registry:") || (strings.HasPrefix(install.Source, "rollback:") && install.CurrentPackageIdentity != "")
 	if signed && install.CurrentPackageIdentity == "" {
-		return errors.New("signed extension has no package identity")
+		return errors.New("У подписанного расширения отсутствует идентификатор пакета")
 	}
 	if err == nil {
 		if !current.Enabled || current.CurrentState != model.ExtensionInstallStateEnabled ||
 			current.Generation != install.Generation || current.CurrentVersion != install.CurrentVersion ||
 			current.CurrentPackageIdentity != install.CurrentPackageIdentity {
-			return errors.New("extension installation disabled, changed or replaced")
+			return errors.New("Установка расширения отключена, изменена или заменена")
 		}
 	} else if !errors.Is(err, repository.ErrNotFound) {
-		return fmt.Errorf("extension state unavailable: %w", err)
+		return fmt.Errorf("Состояние расширения недоступно: %w", err)
 	} else if signed {
-		return errors.New("signed extension installation no longer exists")
+		return errors.New("Подписанная установка расширения больше не существует")
 	}
 	if signed {
 		publication, err := s.repo.GetExtensionRegistryVersion(ctx, key.ExtensionID, install.CurrentVersion)
 		if err != nil {
-			return fmt.Errorf("extension publication unavailable: %w", err)
+			return fmt.Errorf("Публикация расширения недоступна: %w", err)
 		}
 		if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
-			return errors.New("extension publication identity changed")
+			return errors.New("Идентификатор публикации расширения изменился")
 		}
 		if _, err := extensiontrust.EvaluatePublication(ctx, s.repo, publication); err != nil {
-			return fmt.Errorf("extension publisher trust revoked: %w", err)
+			return fmt.Errorf("Доверие к издателю расширения отозвано: %w", err)
 		}
 	}
 	return nil

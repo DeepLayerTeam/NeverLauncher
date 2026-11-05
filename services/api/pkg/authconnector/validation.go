@@ -11,7 +11,7 @@ import (
 // профиль Minecraft) описывают доступные идентификационные данные, а не методы.
 func ValidateConnector(connector Connector) error {
 	if connector == nil || (reflect.ValueOf(connector).Kind() == reflect.Ptr && reflect.ValueOf(connector).IsNil()) {
-		return fmt.Errorf("auth connector is nil")
+		return fmt.Errorf("Коннектор авторизации не задан")
 	}
 	meta := connector.Metadata()
 	if err := ValidateMetadata(meta); err != nil {
@@ -30,14 +30,14 @@ func ValidateConnector(connector Connector) error {
 	}
 	for _, req := range required {
 		if HasCapability(meta, req.capability) && !req.implemented {
-			return fmt.Errorf("auth connector %q advertises %q without implementation", meta.ID, req.capability)
+			return fmt.Errorf("Коннектор авторизации %q объявляет %q, но не реализует его", meta.ID, req.capability)
 		}
 	}
 	// Плагину запрещено предоставлять методы с учётными данными, которые
 	// отсутствуют в метаданных: вызывающий не должен молча пропускать проверку.
 	for _, req := range required {
 		if req.implemented && !HasCapability(meta, req.capability) {
-			return fmt.Errorf("auth connector %q implements %q without declaring it", meta.ID, req.capability)
+			return fmt.Errorf("Коннектор авторизации %q реализует %q, но не объявляет его", meta.ID, req.capability)
 		}
 	}
 	return nil

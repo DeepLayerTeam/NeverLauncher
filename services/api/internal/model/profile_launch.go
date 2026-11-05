@@ -11,16 +11,16 @@ func ValidateProfileLaunch0382(spec ProfileSpec, game MinecraftInfo, javaMajor i
 		return nil
 	}
 	if game.Version != spec.MinecraftVersion {
-		return fmt.Errorf("profile launch mismatch: Minecraft %q required, received %q", spec.MinecraftVersion, game.Version)
+		return fmt.Errorf("Несовпадение параметров запуска профиля: требуется Minecraft %q, получено %q", spec.MinecraftVersion, game.Version)
 	}
 	if game.Loader != spec.Loader {
-		return fmt.Errorf("profile launch mismatch: loader %q required, received %q", spec.Loader, game.Loader)
+		return fmt.Errorf("Несовпадение параметров запуска профиля: требуется загрузчик %q, получен %q", spec.Loader, game.Loader)
 	}
 	if game.LoaderVersion != "" && game.LoaderVersion != spec.LoaderVersion {
-		return fmt.Errorf("profile launch mismatch: loaderVersion %q required, received %q", spec.LoaderVersion, game.LoaderVersion)
+		return fmt.Errorf("Несовпадение параметров запуска профиля: требуется loaderVersion %q, получено %q", spec.LoaderVersion, game.LoaderVersion)
 	}
 	if checkJava && javaMajor != spec.JavaMajor {
-		return fmt.Errorf("profile launch mismatch: Java %d required, received %d", spec.JavaMajor, javaMajor)
+		return fmt.Errorf("Несовпадение параметров запуска профиля: требуется Java %d, получено %d", spec.JavaMajor, javaMajor)
 	}
 	return nil
 }

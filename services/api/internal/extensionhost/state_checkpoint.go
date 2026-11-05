@@ -35,7 +35,7 @@ type checkpointManifest04810 struct {
 
 func checkpointPath04810(root string, key Key, txID string) (string, error) {
 	if !checkpointTx04810.MatchString(txID) {
-		return "", errors.New("invalid extension update transaction id")
+		return "", errors.New("Недопустимый идентификатор транзакции обновления расширения")
 	}
 	normalized := key.normalized()
 	digest := sha256.Sum256([]byte(normalized.String()))
@@ -47,14 +47,14 @@ func checkpointRead04810(dir string) (checkpointManifest04810, map[string][]byte
 		return checkpointManifest04810{}, nil, err
 	}
 	if !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return checkpointManifest04810{}, nil, errors.New("unsafe checkpoint directory")
+		return checkpointManifest04810{}, nil, errors.New("Небезопасный каталог контрольной точки")
 	}
 	meta, err := os.Lstat(filepath.Join(dir, "checkpoint.json"))
 	if err != nil {
 		return checkpointManifest04810{}, nil, err
 	}
 	if !meta.Mode().IsRegular() || meta.Size() > 65536 {
-		return checkpointManifest04810{}, nil, errors.New("invalid checkpoint manifest")
+		return checkpointManifest04810{}, nil, errors.New("Недопустимый манифест контрольной точки")
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, "checkpoint.json"))
 	if err != nil {
@@ -65,16 +65,16 @@ func checkpointRead04810(dir string) (checkpointManifest04810, map[string][]byte
 		return index, nil, err
 	}
 	if index.Format != 1 || len(index.Files) > checkpointMaxFiles04810 || (index.Absent && len(index.Files) != 0) {
-		return index, nil, errors.New("invalid state checkpoint inventory")
+		return index, nil, errors.New("Недопустимый реестр контрольной точки состояния")
 	}
 	contents := map[string][]byte{}
 	var total int
 	for _, entry := range index.Files {
 		if !checkpointFile04810.MatchString(entry.Name) || len(entry.SHA256) != 64 {
-			return index, nil, errors.New("invalid checkpoint member")
+			return index, nil, errors.New("Недопустимый элемент контрольной точки")
 		}
 		if _, ok := contents[entry.Name]; ok {
-			return index, nil, errors.New("duplicate checkpoint member")
+			return index, nil, errors.New("Повторяющийся элемент контрольной точки")
 		}
 		name := filepath.Join(dir, entry.Name)
 		st, err := os.Lstat(name)
@@ -82,7 +82,7 @@ func checkpointRead04810(dir string) (checkpointManifest04810, map[string][]byte
 			return index, nil, err
 		}
 		if !st.Mode().IsRegular() || st.Size() > runtimeValueLimit0303 {
-			return index, nil, errors.New("unsafe checkpoint member")
+			return index, nil, errors.New("Небезопасный элемент контрольной точки")
 		}
 		body, err := os.ReadFile(name)
 		if err != nil {
@@ -90,11 +90,11 @@ func checkpointRead04810(dir string) (checkpointManifest04810, map[string][]byte
 		}
 		sum := sha256.Sum256(body)
 		if hex.EncodeToString(sum[:]) != entry.SHA256 || !json.Valid(body) {
-			return index, nil, errors.New("checkpoint checksum mismatch or invalid JSON")
+			return index, nil, errors.New("Несовпадение контрольной суммы контрольной точки или недопустимый JSON")
 		}
 		total += len(body)
 		if total > checkpointMaxBytes04810 {
-			return index, nil, errors.New("checkpoint exceeds runtime quota")
+			return index, nil, errors.New("Контрольная точка превышает квоту Runtime")
 		}
 		contents[entry.Name] = body
 	}
@@ -103,7 +103,7 @@ func checkpointRead04810(dir string) (checkpointManifest04810, map[string][]byte
 		return index, nil, err
 	}
 	if len(entries) != len(contents)+1 {
-		return index, nil, errors.New("unexpected checkpoint members")
+		return index, nil, errors.New("Неожиданные элементы контрольной точки")
 	}
 	return index, contents, nil
 }
@@ -179,25 +179,25 @@ func snapshotRuntime04810(ctx context.Context, root string, key Key, txID string
 				return err
 			}
 			if !checkpointFile04810.MatchString(item.Name()) {
-				return fmt.Errorf("unexpected runtime state file %q", item.Name())
+				return fmt.Errorf("Неожиданный файл состояния Runtime %q", item.Name())
 			}
 			st, err := os.Lstat(filepath.Join(source, item.Name()))
 			if err != nil {
 				return err
 			}
 			if !st.Mode().IsRegular() || st.Size() > runtimeValueLimit0303 {
-				return errors.New("unsafe runtime state member")
+				return errors.New("Небезопасный элемент состояния Runtime")
 			}
 			total += st.Size()
 			if total > checkpointMaxBytes04810 || len(index.Files) >= checkpointMaxFiles04810 {
-				return errors.New("runtime state quota exceeded")
+				return errors.New("Превышена квота состояния Runtime")
 			}
 			body, err := os.ReadFile(filepath.Join(source, item.Name()))
 			if err != nil {
 				return err
 			}
 			if len(body) > runtimeValueLimit0303 || !json.Valid(body) {
-				return errors.New("invalid runtime state JSON")
+				return errors.New("Недопустимый JSON состояния Runtime")
 			}
 			sum := sha256.Sum256(body)
 			if err = checkpointWrite04810(filepath.Join(tmp, item.Name()), body); err != nil {
@@ -236,7 +236,7 @@ func restoreRuntime04810(ctx context.Context, root string, key Key, txID string)
 	}
 	index, files, err := checkpointRead04810(path)
 	if err != nil {
-		return fmt.Errorf("checkpoint validation refused restore: %w", err)
+		return fmt.Errorf("Проверка контрольной точки отклонила восстановление: %w", err)
 	}
 	dest := runtimeDir0303(root, key)
 	parent := filepath.Dir(dest)
@@ -304,7 +304,7 @@ func (s *Supervisor) DiscardRuntimeState04810(ctx context.Context, key Key, txID
 		return err
 	}
 	if !strings.HasPrefix(filepath.Base(filepath.Dir(path)), "extupd-") {
-		return errors.New("invalid checkpoint location")
+		return errors.New("Недопустимое местоположение контрольной точки")
 	}
 	return os.RemoveAll(path)
 }

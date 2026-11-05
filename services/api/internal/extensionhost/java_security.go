@@ -14,7 +14,7 @@ import (
 // ядром.
 func prepareJavaScratch04811(cmd *exec.Cmd) (string, error) {
 	if cmd == nil || len(cmd.Args) < 3 {
-		return "", errors.New("missing Java command")
+		return "", errors.New("Отсутствует команда Java")
 	}
 	jarAt := -1
 	for i, arg := range cmd.Args {
@@ -24,7 +24,7 @@ func prepareJavaScratch04811(cmd *exec.Cmd) (string, error) {
 		}
 	}
 	if jarAt < 1 || jarAt+1 >= len(cmd.Args) {
-		return "", errors.New("Java command missing -jar")
+		return "", errors.New("В команде Java отсутствует -jar")
 	}
 	scratch, err := os.MkdirTemp("", "neverlauncher-java-04811-")
 	if err != nil {

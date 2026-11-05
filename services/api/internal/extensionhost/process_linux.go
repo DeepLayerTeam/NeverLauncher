@@ -86,7 +86,7 @@ func processTreeUsage(rootPID int) (int64, int, error) {
 		count++
 	}
 	if count == 0 {
-		return 0, 0, errors.New("process group not found")
+		return 0, 0, errors.New("Группа процессов не найдена")
 	}
 	return rss, count, nil
 }

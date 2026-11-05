@@ -31,15 +31,15 @@ var profileID0225 = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{0,63}$`)
 // созданием.
 func CreateFromSnapshot0225(source ProfileSnapshot, projectID, newID, newName string) (Profile, error) {
 	if err := ValidateProfileSnapshot(source, source.Spec.ProjectID, source.Spec.ID); err != nil {
-		return Profile{}, fmt.Errorf("source snapshot: %w", err)
+		return Profile{}, fmt.Errorf("Ошибка исходного снимка: %w", err)
 	}
 	newID = strings.TrimSpace(newID)
 	newName = strings.TrimSpace(newName)
 	if !profileID0225.MatchString(newID) || newID == "." || newID == ".." {
-		return Profile{}, errors.New("destination profile ID must be 1-64 lowercase letters/digits/dot/underscore/hyphen")
+		return Profile{}, errors.New("Идентификатор целевого профиля должен состоять из 1–64 строчных латинских букв, цифр, точек, подчёркиваний или дефисов")
 	}
 	if newName == "" || len(newName) > 120 || len(source.Spec.Description) > 4096 {
-		return Profile{}, errors.New("invalid destination profile name or description length")
+		return Profile{}, errors.New("Недопустимая длина названия или описания целевого профиля")
 	}
 	p := Profile{ProjectID: projectID, ID: newID, Name: newName, Description: source.Spec.Description,
 		Loader: source.Spec.Loader, MinecraftVersion: source.Spec.MinecraftVersion, LoaderVersion: source.Spec.LoaderVersion, JavaMajor: source.Spec.JavaMajor, Preset: source.Spec.Preset, IsDefault: false}
@@ -48,7 +48,7 @@ func CreateFromSnapshot0225(source ProfileSnapshot, projectID, newID, newName st
 
 func ImportProfile0225(bundle PortableProfile0225, projectID, newID, newName string) (Profile, error) {
 	if bundle.Format != PortableProfileFormat0225 {
-		return Profile{}, fmt.Errorf("unsupported profile export format %q", bundle.Format)
+		return Profile{}, fmt.Errorf("Неподдерживаемый формат экспорта профиля %q", bundle.Format)
 	}
 	return CreateFromSnapshot0225(bundle.Snapshot, projectID, newID, newName)
 }
@@ -127,5 +127,5 @@ func CreateFromPreset0225(projectID, id, name, presetID string) (Profile, error)
 			return CreateFromSnapshot0225(snap, projectID, id, name)
 		}
 	}
-	return Profile{}, fmt.Errorf("unknown profile preset %q", presetID)
+	return Profile{}, fmt.Errorf("Неизвестный пресет профиля %q", presetID)
 }

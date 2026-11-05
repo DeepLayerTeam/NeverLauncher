@@ -22,56 +22,56 @@ func ValidateRuntimeConstraints0223(m Manifest) error {
 		return nil
 	}
 	if java.MajorVersion < 1 || java.MajorVersion > 255 {
-		return fmt.Errorf("runtime.java.majorVersion must be between 1 and 255")
+		return fmt.Errorf("runtime.java.majorVersion должно быть от 1 до 255")
 	}
 	min, rec, max := java.MinimumMajorVersion, java.RecommendedMajorVersion, java.MaximumMajorVersion
 	if min < 0 || rec < 0 || max < 0 || min > 255 || rec > 255 || max > 255 ||
 		(min > 0 && max > 0 && min > max) ||
 		(rec > 0 && min > 0 && rec < min) || (rec > 0 && max > 0 && rec > max) ||
 		(min > 0 && java.MajorVersion < min) || (max > 0 && java.MajorVersion > max) {
-		return fmt.Errorf("runtime.java major version range is inconsistent")
+		return fmt.Errorf("Диапазон основных версий runtime.java противоречив")
 	}
 	mem := m.Runtime.Memory
 	if mem.MinimumMb < 0 || mem.RecommendedMb < 0 || mem.MaximumMb < 0 ||
 		(mem.MaximumMb > 0 && mem.MinimumMb > mem.MaximumMb) ||
 		(mem.RecommendedMb > 0 && mem.MinimumMb > 0 && mem.RecommendedMb < mem.MinimumMb) ||
 		(mem.MaximumMb > 0 && mem.RecommendedMb > mem.MaximumMb) {
-		return fmt.Errorf("runtime.memory minimum/recommended/maximum MB order invalid")
+		return fmt.Errorf("Неверный порядок минимальной, рекомендуемой и максимальной памяти runtime.memory (МБ)")
 	}
 	seenHeap := map[byte]bool{}
 	heapValues := map[byte]int64{}
 	for _, arg := range m.Runtime.JVMArgs {
 		if strings.TrimSpace(arg) == "" || strings.ContainsAny(arg, "\x00\r\n") {
-			return fmt.Errorf("invalid runtime.jvmArgs element")
+			return fmt.Errorf("Недопустимый элемент runtime.jvmArgs")
 		}
 		lower := strings.ToLower(arg)
 		switch lower {
 		case "-cp", "-classpath", "--class-path", "--module-path", "--patch-module", "--upgrade-module-path", "-p", "-m", "--module", "-jar":
-			return fmt.Errorf("JVM launch path/entrypoint flag %q must use typed fields", arg)
+			return fmt.Errorf("Флаг пути или точки входа JVM %q должен задаваться типизированными полями", arg)
 		}
 		if strings.HasPrefix(lower, "-xbootclasspath") || strings.HasPrefix(lower, "--class-path=") || strings.HasPrefix(lower, "--module-path=") || strings.HasPrefix(lower, "--patch-module=") || strings.HasPrefix(lower, "--upgrade-module-path=") || strings.HasPrefix(lower, "-xx:onerror=") || strings.HasPrefix(lower, "-xx:onoutofmemoryerror=") || strings.HasPrefix(lower, "-javaagent:") || strings.HasPrefix(lower, "-agentpath:") || strings.HasPrefix(lower, "-agentlib:") {
-			return fmt.Errorf("unsupported JVM bootstrap/path/agent override %q", arg)
+			return fmt.Errorf("Неподдерживаемое переопределение bootstrap, пути или агента JVM: %q", arg)
 		}
 		if strings.HasPrefix(lower, "-xmx") || strings.HasPrefix(lower, "-xms") {
 			match := heapSize0223.FindStringSubmatch(arg)
 			if match == nil {
-				return fmt.Errorf("invalid heap JVM argument %q", arg)
+				return fmt.Errorf("Недопустимый аргумент памяти кучи JVM: %q", arg)
 			}
 			kind := match[1][0]
 			if seenHeap[kind] {
-				return fmt.Errorf("duplicate -Xm%c JVM heap argument", kind)
+				return fmt.Errorf("Повторяющийся аргумент памяти кучи JVM -Xm%c", kind)
 			}
 			seenHeap[kind] = true
 			num, err := strconv.ParseInt(match[2], 10, 64)
 			if err != nil {
-				return fmt.Errorf("invalid heap argument: %w", err)
+				return fmt.Errorf("Недопустимый аргумент памяти кучи: %w", err)
 			}
 			switch strings.ToLower(match[3]) {
 			case "k":
 				num = num/1024 + boolToInt0223(num%1024 > 0)
 			case "g":
 				if num > (1 << 50) {
-					return fmt.Errorf("heap argument too large")
+					return fmt.Errorf("Слишком большой аргумент памяти кучи")
 				}
 				num *= 1024
 			case "":
@@ -79,18 +79,18 @@ func ValidateRuntimeConstraints0223(m Manifest) error {
 			}
 			heapValues[kind] = num
 			if (mem.MinimumMb > 0 && num < int64(mem.MinimumMb)) || (mem.MaximumMb > 0 && num > int64(mem.MaximumMb)) {
-				return fmt.Errorf("heap argument %q outside runtime.memory limits", arg)
+				return fmt.Errorf("Аргумент памяти кучи %q выходит за пределы runtime.memory", arg)
 			}
 		}
 	}
 	if seenHeap['s'] && seenHeap['x'] && heapValues['s'] > heapValues['x'] {
-		return fmt.Errorf("JVM -Xms exceeds -Xmx")
+		return fmt.Errorf("Значение JVM -Xms превышает -Xmx")
 	}
 	launch := m.Runtime.Launch
 	switch strings.ToLower(strings.TrimSpace(launch.ClasspathStrategy)) {
 	case "", "manifest", "libraries", "compatibility", "mojang":
 	default:
-		return fmt.Errorf("unsupported runtime.launch.classpathStrategy %q", launch.ClasspathStrategy)
+		return fmt.Errorf("Неподдерживаемая стратегия runtime.launch.classpathStrategy: %q", launch.ClasspathStrategy)
 	}
 	declared := make(map[string]bool, len(m.Files))
 	for _, f := range m.Files {
@@ -102,35 +102,35 @@ func ValidateRuntimeConstraints0223(m Manifest) error {
 	for _, group := range [][]string{launch.ClasspathEntries, launch.ModulepathEntries} {
 		for _, entry := range group {
 			if entry == "" || strings.ContainsAny(entry, "\\:\x00\r\n") || strings.HasPrefix(entry, "/") || path.Clean(entry) != entry || entry == "." || strings.HasPrefix(entry, "../") || !strings.HasSuffix(strings.ToLower(entry), ".jar") {
-				return fmt.Errorf("invalid signed classpath/modulepath entry %q", entry)
+				return fmt.Errorf("Недопустимая подписанная запись classpath/modulepath: %q", entry)
 			}
 			if !declared[entry] {
-				return fmt.Errorf("runtime launch path %q is not a required manifest file", entry)
+				return fmt.Errorf("Путь запуска Runtime %q не является обязательным файлом манифеста", entry)
 			}
 			if used[entry] {
-				return fmt.Errorf("duplicate runtime launch path %q", entry)
+				return fmt.Errorf("Повторяющийся путь запуска Runtime: %q", entry)
 			}
 			used[entry] = true
 		}
 	}
 	if launch.MainModule != "" {
 		if !javaModuleName0223.MatchString(launch.MainModule) || len(launch.ModulepathEntries) == 0 {
-			return fmt.Errorf("runtime.launch.mainModule needs valid module name and modulepathEntries")
+			return fmt.Errorf("Для runtime.launch.mainModule требуются корректное имя модуля и modulepathEntries")
 		}
 	} else if len(launch.ModulepathEntries) > 0 {
-		return fmt.Errorf("modulepathEntries requires runtime.launch.mainModule")
+		return fmt.Errorf("Для modulepathEntries требуется runtime.launch.mainModule")
 	}
 	env := map[string]bool{}
 	for _, name := range launch.EnvironmentAllowlist {
 		upper := strings.ToUpper(name)
 		if !runtimeEnvironmentName0223.MatchString(name) || env[upper] || upper == "JAVA_TOOL_OPTIONS" || upper == "_JAVA_OPTIONS" || upper == "JDK_JAVA_OPTIONS" || upper == "CLASSPATH" {
-			return fmt.Errorf("invalid/unsafe/duplicate environmentAllowlist name %q", name)
+			return fmt.Errorf("Недопустимое, небезопасное или повторяющееся имя environmentAllowlist: %q", name)
 		}
 		env[upper] = true
 	}
 	for _, arg := range m.Minecraft.GameArgs {
 		if strings.ContainsAny(arg, "\x00\r\n") {
-			return fmt.Errorf("invalid minecraft.gameArgs element")
+			return fmt.Errorf("Недопустимый элемент minecraft.gameArgs")
 		}
 	}
 	return nil

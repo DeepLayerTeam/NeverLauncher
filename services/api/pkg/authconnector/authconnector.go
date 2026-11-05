@@ -203,29 +203,29 @@ func HasCapability(meta Metadata, capability Capability) bool {
 func ValidateMetadata(meta Metadata) error {
 	meta.ID = strings.TrimSpace(meta.ID)
 	if meta.ID == "" {
-		return fmt.Errorf("connector id is required")
+		return fmt.Errorf("Требуется идентификатор коннектора")
 	}
 	if strings.ToLower(meta.ID) != meta.ID {
-		return fmt.Errorf("connector id %q must be lowercase", meta.ID)
+		return fmt.Errorf("Идентификатор коннектора %q должен состоять из строчных букв", meta.ID)
 	}
 	for _, r := range meta.ID {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return fmt.Errorf("connector id %q contains unsupported character %q", meta.ID, r)
+			return fmt.Errorf("Идентификатор коннектора %q содержит неподдерживаемый символ %q", meta.ID, r)
 		}
 	}
 	if strings.TrimSpace(meta.DisplayName) == "" {
-		return fmt.Errorf("connector %q displayName is required", meta.ID)
+		return fmt.Errorf("Для коннектора %q требуется поле displayName", meta.ID)
 	}
 	if strings.TrimSpace(meta.Version) == "" {
-		return fmt.Errorf("connector %q version is required", meta.ID)
+		return fmt.Errorf("Для коннектора %q требуется версия", meta.ID)
 	}
 	seen := make(map[Capability]struct{}, len(meta.Capabilities))
 	for _, capability := range meta.Capabilities {
 		if strings.TrimSpace(string(capability)) == "" {
-			return fmt.Errorf("connector %q contains empty capability", meta.ID)
+			return fmt.Errorf("Коннектор %q содержит пустое разрешение", meta.ID)
 		}
 		if _, ok := seen[capability]; ok {
-			return fmt.Errorf("connector %q contains duplicate capability %q", meta.ID, capability)
+			return fmt.Errorf("Коннектор %q содержит повторяющееся разрешение %q", meta.ID, capability)
 		}
 		seen[capability] = struct{}{}
 	}

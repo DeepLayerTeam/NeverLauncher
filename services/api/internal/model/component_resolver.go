@@ -391,7 +391,7 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 			}
 		}
 		if !found {
-			return nil, resolutionError0243("unknown_preset", "", "", fmt.Sprintf("unknown component preset %q", chosen))
+			return nil, resolutionError0243("unknown_preset", "", "", fmt.Sprintf("Неизвестный пресет компонентов %q", chosen))
 		}
 	} else {
 		for _, c := range cat.Components {

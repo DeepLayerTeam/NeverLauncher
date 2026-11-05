@@ -18,10 +18,10 @@ func (s *Supervisor) checkJavaUI0489(ctx context.Context, st *processState, meth
 		Key      string `json:"key"`
 	}
 	if err := json.Unmarshal(raw, &params); err != nil {
-		return errors.New("invalid Java UI request")
+		return errors.New("Недопустимый запрос интерфейса Java")
 	}
 	if !javaUIContribution0489(st.manifest, params.Surface, method, params.ActionID, params.Key) {
-		return errors.New("Java UI contribution not declared in signed package")
+		return errors.New("Компонент интерфейса Java не объявлен в подписанном пакете")
 	}
 	permission := "ui:contribute"
 	if params.Surface == "desktop" {
@@ -33,7 +33,7 @@ func (s *Supervisor) checkJavaUI0489(ctx context.Context, st *processState, meth
 	}
 	allowed, err := s.permissionAllowed0207(ctx, st, permission, projectID)
 	if err != nil || !allowed {
-		return errors.New("Java UI contribution permission denied")
+		return errors.New("Разрешение на компонент интерфейса Java отклонено")
 	}
 	if strings.HasPrefix(method, "ui.settings.") {
 		permission = "storage:read"
@@ -42,7 +42,7 @@ func (s *Supervisor) checkJavaUI0489(ctx context.Context, st *processState, meth
 		}
 		allowed, err = s.permissionAllowed0207(ctx, st, permission, projectID)
 		if err != nil || !allowed {
-			return errors.New("Java UI settings capability denied")
+			return errors.New("Доступ к настройкам интерфейса Java запрещён")
 		}
 	}
 	return nil

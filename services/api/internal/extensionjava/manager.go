@@ -45,15 +45,15 @@ func Inspect(file string) (JarInfo, error) {
 		return JarInfo{}, err
 	}
 	if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 || st.Size() < 64 || st.Size() > 128<<20 {
-		return JarInfo{}, errors.New("JAR must be regular non-symlink file of at most 128 MiB")
+		return JarInfo{}, errors.New("JAR должен быть обычным файлом, а не символической ссылкой, размером не более 128 МиБ")
 	}
 	zr, err := zip.OpenReader(file)
 	if err != nil {
-		return JarInfo{}, fmt.Errorf("open JAR: %w", err)
+		return JarInfo{}, fmt.Errorf("Ошибка открытия JAR: %w", err)
 	}
 	defer zr.Close()
 	if len(zr.File) > 4096 {
-		return JarInfo{}, errors.New("too many JAR entries")
+		return JarInfo{}, errors.New("Слишком много элементов в JAR")
 	}
 	seen := map[string]bool{}
 	classes := map[string]bool{}
@@ -63,21 +63,21 @@ func Inspect(file string) (JarInfo, error) {
 	for _, f := range zr.File {
 		name := f.Name
 		if name == "" || name == "." || strings.HasPrefix(name, "./") || strings.ContainsAny(name, "\\\x00") || strings.HasPrefix(name, "/") || path.Clean(name) != strings.TrimSuffix(name, "/") || strings.HasPrefix(name, "../") || name == ".." || strings.Contains(name, "//") {
-			return JarInfo{}, fmt.Errorf("unsafe JAR entry %q", name)
+			return JarInfo{}, fmt.Errorf("Небезопасный элемент JAR %q", name)
 		}
 		if seen[name] {
-			return JarInfo{}, fmt.Errorf("duplicate JAR entry %q", name)
+			return JarInfo{}, fmt.Errorf("Повторяющийся элемент JAR %q", name)
 		}
 		seen[name] = true
 		if f.Mode()&os.ModeSymlink != 0 {
-			return JarInfo{}, errors.New("JAR contains symlink")
+			return JarInfo{}, errors.New("JAR содержит символическую ссылку")
 		}
 		if f.UncompressedSize64 > 32<<20 {
-			return JarInfo{}, fmt.Errorf("oversized JAR entry %q", name)
+			return JarInfo{}, fmt.Errorf("Элемент JAR %q превышает допустимый размер", name)
 		}
 		total += f.UncompressedSize64
 		if total > 384<<20 {
-			return JarInfo{}, errors.New("JAR expanded size exceeds limit")
+			return JarInfo{}, errors.New("Размер распакованного JAR превышает лимит")
 		}
 		if name == "META-INF/MANIFEST.MF" {
 			descriptor = f
@@ -88,7 +88,7 @@ func Inspect(file string) (JarInfo, error) {
 		classes[name] = true
 		result.ClassFiles++
 		if f.UncompressedSize64 < 8 {
-			return JarInfo{}, fmt.Errorf("truncated class %q", name)
+			return JarInfo{}, fmt.Errorf("Обрезанный класс %q", name)
 		}
 		r, e := f.Open()
 		if e != nil {
@@ -103,27 +103,27 @@ func Inspect(file string) (JarInfo, error) {
 		}
 		closeErr := r.Close()
 		if e != nil {
-			return JarInfo{}, fmt.Errorf("read class %s: %w", name, e)
+			return JarInfo{}, fmt.Errorf("Ошибка чтения класса %s: %w", name, e)
 		}
 		if closeErr != nil {
 			return JarInfo{}, closeErr
 		}
 		if binary.BigEndian.Uint16(header[4:6]) == 65535 {
-			return JarInfo{}, fmt.Errorf("preview bytecode %s is not supported without --enable-preview", name)
+			return JarInfo{}, fmt.Errorf("Предварительная версия байт-кода %s не поддерживается без --enable-preview", name)
 		}
 		if binary.BigEndian.Uint32(header[:4]) != 0xCAFEBABE {
-			return JarInfo{}, fmt.Errorf("invalid class magic %q", name)
+			return JarInfo{}, fmt.Errorf("Недопустимая сигнатура класса %q", name)
 		}
 		major := int(binary.BigEndian.Uint16(header[6:8]))
 		if major < 45 || major > 100 {
-			return JarInfo{}, fmt.Errorf("unsupported class version %d in %q", major, name)
+			return JarInfo{}, fmt.Errorf("Неподдерживаемая версия класса %d в %q", major, name)
 		}
 		if major > result.MaxClassMajor {
 			result.MaxClassMajor = major
 		}
 	}
 	if descriptor == nil || descriptor.UncompressedSize64 > 65536 {
-		return JarInfo{}, errors.New("JAR manifest missing or oversized")
+		return JarInfo{}, errors.New("Манифест JAR отсутствует или превышает допустимый размер")
 	}
 	r, err := descriptor.Open()
 	if err != nil {
@@ -135,7 +135,7 @@ func Inspect(file string) (JarInfo, error) {
 		return JarInfo{}, err
 	}
 	if len(data) > 65536 {
-		return JarInfo{}, errors.New("JAR manifest exceeds limit")
+		return JarInfo{}, errors.New("Манифест JAR превышает лимит")
 	}
 	attrs := map[string]string{}
 	current := ""
@@ -146,33 +146,33 @@ func Inspect(file string) (JarInfo, error) {
 		}
 		if strings.HasPrefix(line, " ") {
 			if current == "" {
-				return JarInfo{}, errors.New("orphan JAR manifest continuation")
+				return JarInfo{}, errors.New("Продолжение строки манифеста JAR без начальной строки")
 			}
 			attrs[current] += line[1:]
 			continue
 		}
 		parts := strings.SplitN(line, ": ", 2)
 		if len(parts) != 2 {
-			return JarInfo{}, errors.New("malformed JAR manifest")
+			return JarInfo{}, errors.New("Некорректный манифест JAR")
 		}
 		current = strings.ToLower(parts[0])
 		if _, exists := attrs[current]; exists {
-			return JarInfo{}, errors.New("duplicate JAR manifest attribute")
+			return JarInfo{}, errors.New("Повторяющийся атрибут манифеста JAR")
 		}
 		attrs[current] = parts[1]
 	}
 	if attrs["main-class"] != HostMain {
-		return JarInfo{}, fmt.Errorf("JAR Main-Class must be %s", HostMain)
+		return JarInfo{}, fmt.Errorf("Значение JAR Main-Class должно быть %s", HostMain)
 	}
 	class := attrs["launcher-extension-class"]
 	if !className.MatchString(class) || strings.Contains(class, "..") || strings.HasPrefix(class, ".") || strings.HasSuffix(class, ".") {
-		return JarInfo{}, errors.New("invalid Launcher-Extension-Class")
+		return JarInfo{}, errors.New("Недопустимое значение Launcher-Extension-Class")
 	}
 	if _, ok := attrs["class-path"]; ok {
-		return JarInfo{}, errors.New("external JAR Class-Path is forbidden")
+		return JarInfo{}, errors.New("Внешний JAR Class-Path запрещён")
 	}
 	if !classes[strings.ReplaceAll(class, ".", "/")+".class"] {
-		return JarInfo{}, errors.New("declared extension class absent from JAR")
+		return JarInfo{}, errors.New("Объявленный класс расширения отсутствует в JAR")
 	}
 	// Адаптер Gravit включается явно, имеет фиксированную точку входа и явно
 	// перенесённый модуль. Не считайте произвольные JAR Gravit совместимыми.
@@ -180,24 +180,24 @@ func Inspect(file string) (JarInfo, error) {
 	portedModule := attrs["launcher-gravit-module-class"]
 	if class == gravitAdapter {
 		if !className.MatchString(portedModule) || strings.Contains(portedModule, "..") || strings.HasPrefix(portedModule, ".") || strings.HasSuffix(portedModule, ".") || strings.HasPrefix(portedModule, "pro.gravit.launcher.") || strings.HasPrefix(portedModule, "ru.launcher.sdk.") {
-			return JarInfo{}, errors.New("Gravit compatibility package requires valid Launcher-Gravit-Module-Class")
+			return JarInfo{}, errors.New("Для пакета совместимости Gravit требуется корректный Launcher-Gravit-Module-Class")
 		}
 		if !classes[strings.ReplaceAll(portedModule, ".", "/")+".class"] {
-			return JarInfo{}, errors.New("ported Gravit module class absent from JAR")
+			return JarInfo{}, errors.New("Перенесённый класс модуля Gravit отсутствует в JAR")
 		}
 		if !classes["ru/launcher/sdk/gravit/GravitCompatExtension.class"] {
-			return JarInfo{}, errors.New("Gravit compatibility runtime class absent from JAR")
+			return JarInfo{}, errors.New("Класс среды совместимости Gravit отсутствует в JAR")
 		}
 		result.GravitModuleClass = portedModule
 	} else if portedModule != "" {
-		return JarInfo{}, errors.New("Gravit module class requires the explicit compatibility adapter entrypoint")
+		return JarInfo{}, errors.New("Для класса модуля Gravit требуется явная точка входа адаптера совместимости")
 	}
 	if !classes["ru/launcher/sdk/host/JavaExtensionHost.class"] {
-		return JarInfo{}, errors.New("Java Extension Host class absent from JAR")
+		return JarInfo{}, errors.New("Класс Java Extension Host отсутствует в JAR")
 	}
 	libraries, extraClasses, libraryMaxMajor, err := inspectLibraries0482(zr, classes)
 	if err != nil {
-		return JarInfo{}, fmt.Errorf("inspect bundled dependencies: %w", err)
+		return JarInfo{}, fmt.Errorf("Ошибка проверки встроенных зависимостей: %w", err)
 	}
 	result.Libraries = libraries
 	result.ClassFiles += extraClasses
@@ -219,7 +219,7 @@ func ProbeRuntime(ctx context.Context, javaBinary string, requiredFeature int) (
 		var err error
 		javaBinary, err = exec.LookPath("java")
 		if err != nil {
-			return RuntimeInfo{}, fmt.Errorf("Java runtime not found: %w", err)
+			return RuntimeInfo{}, fmt.Errorf("Среда выполнения Java не найдена: %w", err)
 		}
 	} else {
 		if !filepath.IsAbs(javaBinary) {
@@ -238,22 +238,22 @@ func ProbeRuntime(ctx context.Context, javaBinary string, requiredFeature int) (
 	cmd := exec.CommandContext(ctx, javaBinary, "-version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return RuntimeInfo{}, fmt.Errorf("Java runtime probe failed: %w", err)
+		return RuntimeInfo{}, fmt.Errorf("Проверка среды выполнения Java не пройдена: %w", err)
 	}
 	output = bytes.TrimSpace(output)
 	if len(output) > 4096 {
-		return RuntimeInfo{}, errors.New("Java runtime output too long")
+		return RuntimeInfo{}, errors.New("Слишком длинный вывод среды выполнения Java")
 	}
 	match := javaVersionPattern.FindSubmatch(output)
 	if len(match) != 2 {
-		return RuntimeInfo{}, errors.New("unrecognised Java runtime version")
+		return RuntimeInfo{}, errors.New("Неизвестная версия среды выполнения Java")
 	}
 	feature, err := strconv.Atoi(string(match[1]))
 	if err != nil {
 		return RuntimeInfo{}, err
 	}
 	if feature < 17 || feature < requiredFeature {
-		return RuntimeInfo{}, fmt.Errorf("Java %d cannot load required Java %d bytecode", feature, requiredFeature)
+		return RuntimeInfo{}, fmt.Errorf("Java %d не может загрузить требуемый байт-код Java %d", feature, requiredFeature)
 	}
 	return RuntimeInfo{Executable: javaBinary, Feature: feature}, nil
 }

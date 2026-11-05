@@ -164,15 +164,15 @@ func bridgeCommandView0488(c model.ServerBridgeControlCommand) map[string]any {
 }
 func (s *Supervisor) bridgeAuthorization0488(ctx context.Context, st *processState, projectID, permission string) (int, error) {
 	if projectID == "" {
-		return http.StatusBadRequest, errors.New("projectId required")
+		return http.StatusBadRequest, errors.New("Требуется projectId")
 	}
 	for _, p := range []string{"serverbridge:read", permission} {
 		ok, err := s.permissionAllowed0207(ctx, st, p, projectID)
 		if err != nil {
-			return http.StatusServiceUnavailable, errors.New("serverbridge capability policy unavailable")
+			return http.StatusServiceUnavailable, errors.New("Политика разрешений ServerBridge недоступна")
 		}
 		if !ok {
-			return http.StatusForbidden, fmt.Errorf("serverbridge permission %s denied", p)
+			return http.StatusForbidden, fmt.Errorf("Разрешение ServerBridge %s отклонено", p)
 		}
 	}
 	return http.StatusOK, nil
@@ -185,7 +185,7 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 	}
 	repo, ok := s.repo.(javaBridgeRepository0488)
 	if !ok {
-		return denied(http.StatusServiceUnavailable, errors.New("ServerBridge durable storage unavailable"))
+		return denied(http.StatusServiceUnavailable, errors.New("Долговременное хранилище ServerBridge недоступно"))
 	}
 	permission := "serverbridge:read"
 	kind := strings.ToLower(strings.TrimSpace(req.CommandType))
@@ -193,10 +193,10 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		var known bool
 		permission, known = authorization.GameCommandPermission(kind)
 		if !known {
-			return denied(http.StatusBadRequest, errors.New("unsupported ServerBridge command"))
+			return denied(http.StatusBadRequest, errors.New("Неподдерживаемая команда ServerBridge"))
 		}
 		if _, ok = bridgeJavaControls0488[kind]; !ok {
-			return denied(http.StatusForbidden, errors.New("ServerBridge command not available to extensions"))
+			return denied(http.StatusForbidden, errors.New("Команда ServerBridge недоступна расширениям"))
 		}
 	}
 	if status, err := s.bridgeAuthorization0488(ctx, st, projectID, permission); err != nil {
@@ -204,11 +204,11 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 	}
 	if name == "bridge.servers" {
 		if req.Offset < 0 || req.Offset > 1000000 || req.Limit < 1 || req.Limit > 50 {
-			return denied(http.StatusBadRequest, errors.New("invalid server page"))
+			return denied(http.StatusBadRequest, errors.New("Недопустимая страница серверов"))
 		}
 		nodes, err := repo.ListServerBridgeNodes(ctx)
 		if err != nil {
-			return denied(http.StatusServiceUnavailable, errors.New("ServerBridge repository unavailable"))
+			return denied(http.StatusServiceUnavailable, errors.New("Репозиторий ServerBridge недоступен"))
 		}
 		items := make([]model.ServerBridgeNode, 0)
 		for _, n := range nodes {
@@ -237,11 +237,11 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 	}
 	serverID := strings.TrimSpace(req.ServerID)
 	if serverID == "" || len(serverID) > 128 {
-		return denied(http.StatusBadRequest, errors.New("serverId required"))
+		return denied(http.StatusBadRequest, errors.New("Требуется serverId"))
 	}
 	node, err := repo.GetServerBridgeNode(ctx, serverID)
 	if err != nil || node.ProjectID != projectID {
-		return denied(http.StatusNotFound, errors.New("server not found"))
+		return denied(http.StatusNotFound, errors.New("Сервер не найден"))
 	}
 	switch name {
 	case "bridge.server":
@@ -263,7 +263,7 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		}
 		ticket, err := repo.GetActiveServerBridgeJoinTicket(ctx, username, serverID, time.Now().UTC())
 		if err != nil && !errors.Is(err, repository.ErrNotFound) {
-			return denied(http.StatusServiceUnavailable, errors.New("ServerBridge join-ticket lookup unavailable"))
+			return denied(http.StatusServiceUnavailable, errors.New("Поиск пропуска на сервер через ServerBridge недоступен"))
 		}
 		pending := err == nil && ticket.ServerID == serverID && ticket.ProjectID == projectID &&
 			ticket.IssuedIdentityEpoch == node.IdentityEpoch && strings.EqualFold(ticket.IssuedKeyFingerprint, node.KeyFingerprint) &&
@@ -271,15 +271,15 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		return capabilityResult0205{status: http.StatusOK, value: map[string]any{"pendingTicket": pending}}
 	case "bridge.command.get":
 		if req.CommandID == "" || len(req.CommandID) > 128 {
-			return denied(http.StatusBadRequest, errors.New("commandId required"))
+			return denied(http.StatusBadRequest, errors.New("Требуется commandId"))
 		}
 		command, err := repo.GetServerBridgeControlCommand(ctx, serverID, req.CommandID)
 		if err != nil || command.ServerID != serverID {
-			return denied(http.StatusNotFound, errors.New("command not found"))
+			return denied(http.StatusNotFound, errors.New("Команда не найдена"))
 		}
 		p, known := authorization.GameCommandPermission(command.Type)
 		if !known {
-			return denied(http.StatusForbidden, errors.New("command type not permitted"))
+			return denied(http.StatusForbidden, errors.New("Тип команды не разрешён"))
 		}
 		if status, err := s.bridgeAuthorization0488(ctx, st, projectID, p); err != nil {
 			return denied(status, err)
@@ -288,21 +288,21 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 	case "bridge.command.create":
 		now := time.Now().UTC()
 		if !bridgeRuntimeControl0488(node, kind, now) {
-			return denied(http.StatusConflict, errors.New("ServerBridge runtime not active or adapter capability not verified"))
+			return denied(http.StatusConflict, errors.New("Среда ServerBridge неактивна или разрешения адаптера не проверены"))
 		}
 		payload, err := bridgePayload0488(kind, req.Payload)
 		if err != nil {
 			return denied(http.StatusBadRequest, err)
 		}
 		if len(req.IdempotencyKey) < 8 || len(req.IdempotencyKey) > 128 || strings.ContainsAny(req.IdempotencyKey, "\r\n\x00") {
-			return denied(http.StatusBadRequest, errors.New("idempotencyKey must be 8..128 characters"))
+			return denied(http.StatusBadRequest, errors.New("idempotencyKey должен содержать от 8 до 128 символов"))
 		}
 		ttl := req.ExpiresInSeconds
 		if ttl == 0 {
 			ttl = 120
 		}
 		if ttl < 10 || ttl > 600 {
-			return denied(http.StatusBadRequest, errors.New("expiresInSeconds must be 10..600"))
+			return denied(http.StatusBadRequest, errors.New("expiresInSeconds должен быть от 10 до 600"))
 		}
 		if ctx.Err() != nil {
 			return denied(http.StatusGatewayTimeout, ctx.Err())
@@ -314,7 +314,7 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		}
 		random := make([]byte, 16)
 		if _, err = rand.Read(random); err != nil {
-			return denied(http.StatusInternalServerError, errors.New("secure ID generation failed"))
+			return denied(http.StatusInternalServerError, errors.New("Ошибка генерации защищённого идентификатора"))
 		}
 		raw, _ := json.Marshal(payload)
 		hash := sha256.Sum256(raw)
@@ -325,13 +325,13 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		saved, replay, err := repo.CreateServerBridgeControlCommand(ctx, cmd, now)
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
-				return denied(http.StatusConflict, errors.New("ServerBridge command conflict or runtime replaced"))
+				return denied(http.StatusConflict, errors.New("Конфликт команды ServerBridge или замена среды выполнения"))
 			}
-			return denied(http.StatusServiceUnavailable, errors.New("ServerBridge command storage unavailable"))
+			return denied(http.StatusServiceUnavailable, errors.New("Хранилище команд ServerBridge недоступно"))
 		}
 		return capabilityResult0205{status: http.StatusOK, value: map[string]any{"command": bridgeCommandView0488(saved), "idempotentReplay": replay}}
 	default:
-		return denied(http.StatusNotFound, errors.New("unsupported ServerBridge operation"))
+		return denied(http.StatusNotFound, errors.New("Неподдерживаемая операция ServerBridge"))
 	}
 }
 
@@ -359,7 +359,7 @@ func (s *Supervisor) revalidateBridge0488(ctx context.Context, st *processState,
 	if name == "bridge.command.get" {
 		repo, ok := s.repo.(javaBridgeRepository0488)
 		if !ok {
-			return errors.New("ServerBridge unavailable")
+			return errors.New("ServerBridge недоступен")
 		}
 		command, err := repo.GetServerBridgeControlCommand(ctx, req.ServerID, req.CommandID)
 		if err != nil {
@@ -367,7 +367,7 @@ func (s *Supervisor) revalidateBridge0488(ctx context.Context, st *processState,
 		}
 		node, err := repo.GetServerBridgeNode(ctx, req.ServerID)
 		if err != nil || node.ProjectID != projectID {
-			return errors.New("server scope changed")
+			return errors.New("Область сервера изменилась")
 		}
 		permission, ok = authorization.GameCommandPermission(command.Type)
 		if !ok {

@@ -19,7 +19,7 @@ func (s *Supervisor) validateSharedRoots03110(policy *model.ExtensionSandboxPoli
 		return nil
 	}
 	if s.sharedRootsErr != nil {
-		return fmt.Errorf("sandbox broker configuration invalid: %w", s.sharedRootsErr)
+		return fmt.Errorf("Недопустимая конфигурация брокера изолированной среды: %w", s.sharedRootsErr)
 	}
 	for _, grant := range append(append([]string{}, policy.FilesystemRead...), policy.FilesystemWrite...) {
 		if !strings.HasPrefix(grant, "shared:") {
@@ -27,7 +27,7 @@ func (s *Supervisor) validateSharedRoots03110(policy *model.ExtensionSandboxPoli
 		}
 		name := strings.TrimPrefix(grant, "shared:")
 		if s.sharedRoots[name] == "" {
-			return fmt.Errorf("sandbox broker shared root %q not configured", name)
+			return fmt.Errorf("Общий корневой каталог %q брокера изолированной среды не настроен", name)
 		}
 		// Повторно проверяйте при запуске и каждой операции: если корень заменён
 		// символьной ссылкой, доступ к другому поддереву не появляется незаметно.
@@ -36,7 +36,7 @@ func (s *Supervisor) validateSharedRoots03110(policy *model.ExtensionSandboxPoli
 			return err
 		}
 		if _, err := extensionbroker.ParseRoots(string(raw)); err != nil {
-			return fmt.Errorf("sandbox broker shared root %q unavailable: %w", name, err)
+			return fmt.Errorf("Общий корневой каталог %q брокера изолированной среды недоступен: %w", name, err)
 		}
 	}
 	return nil
@@ -45,7 +45,7 @@ func (s *Supervisor) validateSharedRoots03110(policy *model.ExtensionSandboxPoli
 func (s *Supervisor) fileCapability03110(ctx context.Context, st *processState, operation string, req capabilityRequest) capabilityResult0205 {
 	policy := st.manifest.Sandbox
 	if policy == nil || policy.Mode != "isolated" || !sandboxEnforced03110(st) {
-		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("scoped filesystem broker requires running OS-isolated package")}
+		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Для брокера файловой системы с ограниченной областью действия требуется запущенный пакет, изолированный средствами ОС")}
 	}
 	grant := "shared:" + req.Name
 	permission := "storage:read"
@@ -55,31 +55,31 @@ func (s *Supervisor) fileCapability03110(ctx context.Context, st *processState, 
 		grants = policy.FilesystemWrite
 	}
 	if !extensionbroker.HasGrant(grants, grant) {
-		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("filesystem resource outside signed policy")}
+		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Ресурс файловой системы выходит за пределы подписанной политики")}
 	}
 	allowed, err := s.permissionAllowed0207(ctx, st, permission, st.key.ScopeID)
 	if err != nil {
-		return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("filesystem capability authorization unavailable")}
+		return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Авторизация разрешений файловой системы недоступна")}
 	}
 	if !allowed {
-		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("filesystem capability permission denied")}
+		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Разрешение файловой системы отклонено")}
 	}
 	if err := s.validateSharedRoots03110(policy); err != nil {
 		return capabilityResult0205{status: http.StatusServiceUnavailable, err: err}
 	}
 	root := s.sharedRoots[req.Name]
 	if root == "" {
-		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("filesystem resource not mapped")}
+		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Ресурс файловой системы не сопоставлен")}
 	}
 	if operation == "fs.read" {
 		data, err := extensionbroker.Read(root, req.Path)
 		if err != nil {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("scoped filesystem read denied")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Чтение файловой системы в ограниченной области запрещено")}
 		}
 		return capabilityResult0205{status: http.StatusOK, value: map[string]any{"contentBase64": data}}
 	}
 	if err := extensionbroker.Write(root, req.Path, req.BodyBase64); err != nil {
-		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("scoped filesystem write denied")}
+		return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Запись файловой системы в ограниченной области запрещена")}
 	}
 	return capabilityResult0205{status: http.StatusOK, value: map[string]any{"written": true}}
 }

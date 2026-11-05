@@ -48,20 +48,20 @@ func (m *Manager) inspectPayload0305(ctx context.Context, root string, manifest 
 			continue
 		}
 		if target.Entrypoint == "" || filepath.IsAbs(target.Entrypoint) || strings.Contains(target.Entrypoint, "\\") {
-			return nil, errors.New("Java JAR target has invalid relative path")
+			return nil, errors.New("У целевого JAR Java недопустимый относительный путь")
 		}
 		rel := filepath.Clean(filepath.FromSlash(target.Entrypoint))
 		if rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return nil, errors.New("Java JAR target escapes payload")
+			return nil, errors.New("Путь целевого JAR Java выходит за пределы содержимого пакета")
 		}
 		full := filepath.Join(root, rel)
 		for parent := filepath.Dir(full); parent != root; parent = filepath.Dir(parent) {
 			info, err := os.Lstat(parent)
 			if err != nil {
-				return nil, fmt.Errorf("Java target parent: %w", err)
+				return nil, fmt.Errorf("Ошибка родительского каталога целевого файла Java: %w", err)
 			}
 			if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-				return nil, errors.New("Java target parent is not a regular directory")
+				return nil, errors.New("Родительский путь целевого файла Java не является обычным каталогом")
 			}
 		}
 		jar, err := extensionjava.Inspect(full)
@@ -70,7 +70,7 @@ func (m *Manager) inspectPayload0305(ctx context.Context, root string, manifest 
 		}
 		for _, library := range jar.Libraries {
 			if !extensionresolver.Matches(manifest.API, library.APIConstraint) {
-				return nil, fmt.Errorf("Java target %s: library %s@%s is incompatible with SDK API %s (requires %s)", target.Entrypoint, library.Coordinate, library.Version, manifest.API, library.APIConstraint)
+				return nil, fmt.Errorf("Целевой файл Java %s: библиотека %s@%s несовместима с SDK API %s (требуется %s)", target.Entrypoint, library.Coordinate, library.Version, manifest.API, library.APIConstraint)
 			}
 		}
 		runtime, err := extensionjava.ProbeRuntime(ctx, m.JavaExecutable, jar.MinimumJava)
@@ -110,21 +110,21 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 			if dep.Optional {
 				continue
 			}
-			return fmt.Errorf("required dependency %s %s is missing", dep.ID, dep.Version)
+			return fmt.Errorf("Отсутствует обязательная зависимость %s %s", dep.ID, dep.Version)
 		}
 		if !extensionresolver.Matches(current.CurrentVersion, dep.Version) {
-			return fmt.Errorf("dependency %s@%s does not satisfy %s", dep.ID, current.CurrentVersion, dep.Version)
+			return fmt.Errorf("Зависимость %s@%s не удовлетворяет требованию %s", dep.ID, current.CurrentVersion, dep.Version)
 		}
 		if requireEnabled && !dep.Optional && current.CurrentState != model.ExtensionInstallStateEnabled {
-			return fmt.Errorf("required dependency %s is disabled", dep.ID)
+			return fmt.Errorf("Обязательная зависимость %s отключена", dep.ID)
 		}
 		if dep.ID == manifest.ID {
-			return fmt.Errorf("extension %s depends on itself", manifest.ID)
+			return fmt.Errorf("Расширение %s зависит от самого себя", manifest.ID)
 		}
 	}
 	for _, conflict := range manifest.Conflicts {
 		if current, ok := resolve(conflict.ID); ok && extensionresolver.Matches(current.CurrentVersion, conflict.Version) {
-			return fmt.Errorf("conflict with %s@%s", conflict.ID, current.CurrentVersion)
+			return fmt.Errorf("Конфликт с %s@%s", conflict.ID, current.CurrentVersion)
 		}
 	}
 	// Не ломайте незаметно установленные зависимости при обновлении или откате поставщика API.
@@ -151,16 +151,16 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 		}
 		ver, e := m.Repo.GetExtensionVersion(ctx, dependent.ExtensionID, dependent.CurrentVersion)
 		if e != nil {
-			return fmt.Errorf("load dependent %s: %w", dependent.ExtensionID, e)
+			return fmt.Errorf("Ошибка загрузки зависимого расширения %s: %w", dependent.ExtensionID, e)
 		}
 		for _, dep := range ver.Manifest.Dependencies {
 			if dep.ID == manifest.ID && !extensionresolver.Matches(manifest.Version, dep.Version) {
-				return fmt.Errorf("update would break %s: requires %s %s", dependent.ExtensionID, manifest.ID, dep.Version)
+				return fmt.Errorf("Обновление нарушит работу %s: требуется %s %s", dependent.ExtensionID, manifest.ID, dep.Version)
 			}
 		}
 		for _, conflict := range ver.Manifest.Conflicts {
 			if conflict.ID == manifest.ID && extensionresolver.Matches(manifest.Version, conflict.Version) {
-				return fmt.Errorf("update conflicts with dependent %s", dependent.ExtensionID)
+				return fmt.Errorf("Обновление конфликтует с зависимым расширением %s", dependent.ExtensionID)
 			}
 		}
 	}
@@ -171,7 +171,7 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 	var visit func(model.ExtensionManifest) error
 	visit = func(mf model.ExtensionManifest) error {
 		if active[mf.ID] {
-			return fmt.Errorf("dependency cycle containing %s", mf.ID)
+			return fmt.Errorf("Циклическая зависимость с участием %s", mf.ID)
 		}
 		if done[mf.ID] {
 			return nil
@@ -191,7 +191,7 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 			}
 			version, err := m.Repo.GetExtensionVersion(ctx, installed.ExtensionID, installed.CurrentVersion)
 			if err != nil {
-				return fmt.Errorf("dependency manifest %s: %w", installed.ExtensionID, err)
+				return fmt.Errorf("Ошибка манифеста зависимостей %s: %w", installed.ExtensionID, err)
 			}
 			if err := visit(version.Manifest); err != nil {
 				return err
@@ -250,13 +250,13 @@ func (m *Manager) DiagnoseJava0305(ctx context.Context, id string, scope Scope) 
 	if strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") {
 		pub, e := m.Repo.GetExtensionRegistryVersion(ctx, id, install.CurrentVersion)
 		if e != nil {
-			add(fmt.Errorf("signed registry publication: %w", e))
+			add(fmt.Errorf("Ошибка подписанной публикации в реестре: %w", e))
 		} else {
 			if pub.Artifact.PackageIdentity != install.CurrentPackageIdentity {
-				add(errors.New("active package identity does not match signed registry publication"))
+				add(errors.New("Идентификатор активного пакета не совпадает с подписанной публикацией реестра"))
 			}
 			if _, e := extensiontrust.EvaluatePublication(ctx, m.Repo, pub); e != nil {
-				add(fmt.Errorf("publisher trust: %w", e))
+				add(fmt.Errorf("Ошибка доверия к издателю: %w", e))
 			}
 		}
 	}
