@@ -34,7 +34,7 @@ func runPGExport(args []string) int {
 	defer cancel()
 	report, err := sqlitepg.Export(ctx, dsn, *target)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "PostgreSQL -> SQLite verified export failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Ошибка проверенного экспорта PostgreSQL → SQLite: %v\n", err)
 		return 1
 	}
 	if err = json.NewEncoder(os.Stdout).Encode(report); err != nil {

@@ -133,14 +133,14 @@ func run() error {
 			if err := storage.BackupTextures0253(ctx, store, objects, *backup); err != nil {
 				return err
 			}
-			fmt.Printf("backed up %d verified texture objects to %s\n", len(objects), *backup)
+			fmt.Printf("Создана резервная копия %d проверенных объектов текстур в %s\n", len(objects), *backup)
 			return nil
 		}
 		n, err := storage.RestoreTextures0253(ctx, store, *backup, objects)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("restored %d texture objects\n", n)
+		fmt.Printf("Восстановлено объектов текстур: %d\n", n)
 	case "gc":
 		if _, err := repo.PruneTextureSnapshotPins02511(ctx); err != nil {
 			return err
@@ -170,7 +170,7 @@ func run() error {
 				return fmt.Errorf("GC %s: %w", candidate.Digest, err)
 			}
 		}
-		fmt.Printf("deleted %d unreferenced texture objects\n", len(candidates))
+		fmt.Printf("Удалено неиспользуемых объектов текстур: %d\n", len(candidates))
 	}
 	return nil
 }

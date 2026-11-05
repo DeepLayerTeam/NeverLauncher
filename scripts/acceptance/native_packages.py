@@ -115,7 +115,7 @@ def valid_https(url):
 def read_index(data, expected_sha, version, commit, project):
     require(type(expected_sha) is str and SHA.fullmatch(expected_sha) and digest(data) == expected_sha,
             'release source index does not match independently pinned SHA-256')
-    require(len(data) <= MAX_INDEX, 'source index too large')
+    require(len(data) <= MAX_INDEX, 'Индекс исходных файлов превышает лимит')
     doc = parse_json(data)
     require(type(doc) is dict and set(doc) == {'schema', 'version', 'commit', 'project', 'assets'},
             'Неожиданные поля индекса источников')
@@ -148,7 +148,7 @@ def read_index(data, expected_sha, version, commit, project):
             require('signatureUrl' not in item, 'Windows and macOS use embedded platform signatures')
         for url in urls:
             valid_https(url)
-            require(url not in seen_urls, 'reused package/source URL')
+            require(url not in seen_urls, 'Повторно использован URL пакета или источника')
             seen_urls.add(url)
         seen[target] = item
     require(set(seen) == TARGETS, 'Отсутствует нативная платформа или архитектура')
@@ -210,7 +210,7 @@ def execute(argv, timeout, log):
             result = subprocess.run([str(x) for x in argv], stdin=subprocess.DEVNULL,
                                     stdout=f, stderr=subprocess.STDOUT, timeout=timeout,
                                     check=False)
-        require(raw.stat().st_size <= MAX_LOG, 'subprocess log too large')
+        require(raw.stat().st_size <= MAX_LOG, 'Журнал дочернего процесса превышает лимит')
         # Сохраняются или экспортируются только обезличенные журналы. URL могут
         # содержать временные параметры авторизации; удаляйте URL полностью, а не
         # только известные имена секретов в query.
@@ -302,7 +302,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         require(a.disposable_runner and os.environ.get('GITHUB_ACTIONS') == 'true',
                 'system package install allowed ONLY on ephemeral GitHub native runner')
         app = Path('/Applications/Launcher.app')
-        require(not app.exists() and not app.is_symlink(), 'pre-existing macOS app would be overwritten')
+        require(not app.exists() and not app.is_symlink(), 'Существующее приложение macOS будет перезаписано')
         cmd('system-install', ['sudo', 'installer', '-pkg', str(package), '-target', '/'], 300)
         installer = app / 'Contents/MacOS/Launcher'
         require(installer.is_file(), 'Исполняемый файл установленного приложения macOS отсутствует')
@@ -311,7 +311,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         cmd('bootstrap-verification', [str(installer), 'verify'])
         cmd('app-signature-details', ['codesign', '-dv', '--verbose=4', str(app)])
         details = (work / 'app-signature-details.log').read_text(errors='replace')
-        require('TeamIdentifier=' + team in details, 'installed app signed by wrong Apple team')
+        require('TeamIdentifier=' + team in details, 'Установленное приложение подписано другой командой Apple')
 
     # Windows .exe сам является установщиком. Linux/macOS используют настоящий исполняемый файл,
     # установленный средствами ОС, а не новую сборку исходников или тестовую заглушку.
@@ -337,7 +337,7 @@ def run(a):
             RUN.fullmatch(a.attempt or ''), 'Необходимо закрепить исходный коммит и запуск/попытку CI')
     require(a.output.is_absolute() and not a.output.exists() and not a.output.is_symlink(),
             'Выходной каталог должен быть новым и абсолютным')
-    require(a.output.parent.is_dir() and not a.output.parent.is_symlink(), 'unsafe output parent')
+    require(a.output.parent.is_dir() and not a.output.parent.is_symlink(), 'Небезопасный родительский каталог вывода')
     # Размещайте временные данные исключительно под собственным каталогом одноразового runner.
     runner_temp = Path(os.environ['RUNNER_TEMP']).resolve()
     require(a.output.resolve().is_relative_to(runner_temp), 'Результат приёмки должен оставаться в RUNNER_TEMP')
@@ -408,7 +408,7 @@ def aggregate(a):
                 'observedAt', 'package', 'checks', 'nativeSigned', 'actuallyProvisioned', 'independentGA'},
                 'Недопустимая структура нативного наблюдения')
         target = (doc['platform'], doc['architecture'])
-        require(target in index and target not in discovered, 'duplicate/unknown native target')
+        require(target in index and target not in discovered, 'Повторяющаяся или неизвестная нативная платформа')
         require(doc['schema'] == RESULT_SCHEMA and doc['status'] == 'PASS'
                 and doc['version'] == a.version and doc['commit'] == a.commit
                 and doc['project'] == a.project and doc['sourceIndexSha256'] == a.manifest_sha256
@@ -442,7 +442,7 @@ def aggregate(a):
         machines.add(doc['runner'])
         try:
             observed = datetime.fromisoformat(doc['observedAt'].replace('Z', '+00:00'))
-            require(observed.tzinfo is not None, 'observation timestamp without zone')
+            require(observed.tzinfo is not None, 'В отметке времени наблюдения отсутствует часовой пояс')
         except (ValueError, TypeError) as exc:
             raise Blocked('Недопустимая временная метка наблюдения') from exc
         discovered[target] = {'platform': target[0], 'architecture': target[1],
@@ -476,7 +476,7 @@ def build_index(a):
         path = regular(a.packages / filename, MAX_PACKAGE)
         artifact = {'platform': osname, 'architecture': arch, 'filename': filename,
                     'url': a.base_url + filename, 'sha256': file_hash(path), 'size': path.stat().st_size}
-        require(artifact['size'] >= 100, 'undersized final package')
+        require(artifact['size'] >= 100, 'Итоговый пакет имеет недопустимо малый размер')
         if osname == 'linux':
             sig = regular(a.packages / (filename + '.asc'), 8192)
             require(sig.stat().st_size >= 100, 'undersized Linux detached signature')

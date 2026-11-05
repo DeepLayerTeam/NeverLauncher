@@ -104,7 +104,7 @@ def read_archive(path: Path) -> dict[str, bytes]:
                 if len(value)>MAX_MEMBER:raise ValueError('Распакованный элемент TAR превышает допустимый размер')
                 result[item.name]=value
                 count+=1
-    if not count:raise ValueError('empty archive')
+    if not count:raise ValueError('Пустой архив')
     return result
 
 

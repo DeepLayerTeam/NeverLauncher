@@ -87,10 +87,10 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
             'soak scope, identity or duration invalid')
     if kind == 'game':
         target_id = summary.get('target')
-        require(target_id in SOAK_TARGETS, 'game soak not for required five loader anchors')
+        require(target_id in SOAK_TARGETS, 'Длительная игровая проверка не охватывает пять обязательных загрузчиков')
         targets = {t['id']:t for t in inventory.catalogs()['minecraft']['rows'] if t['required']}
         sessions = summary.get('sessions')
-        require(type(sessions) is list and 8 <= len(sessions) <= 200, 'real sessions missing')
+        require(type(sessions) is list and 8 <= len(sessions) <= 200, 'Отсутствуют реальные сеансы')
         actual = sorted(p.name for p in root.glob('session-*'))
         require(actual == [f'session-{i+1:03d}' for i in range(len(sessions))],
                 'gameplay soak execution evidence missing or duplicated')
@@ -108,7 +108,7 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
             require(verified['resultSha256'] == receipt.get('resultSha256') and
                     verified['files'].get('matching-server.log') == receipt.get('serverLogSha256'),
                     'soak session evidence not from live joined game')
-        require(duration >= 0.5 * summary['seconds'], 'insufficient time spent in actual sessions')
+        require(duration >= 0.5 * summary['seconds'], 'Недостаточная продолжительность реальных сеансов')
         return {'targetId': target_id,'sessions':len(sessions),'seconds':summary['seconds'],
                 'receiptSha256': inventory.digest(root/'soak.json')}
     # Повторно воспроизводите сырые измерения вместо принятия независимо подписанного, но
@@ -122,7 +122,7 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
     times, durations, total_bytes = [], [], 0
     with ledger.open('rb') as stream:
         while part := stream.read(20):
-            require(len(part) == 20, 'truncated request sample')
+            require(len(part) == 20, 'Неполная выборка запросов')
             when, elapsed, size = struct.unpack('!QdI', part)
             require(0 < elapsed <= 30000 and 0 < size <= 256*1024 and
                     (not times or times[-1] <= when), 'nonmonotonic or invalid TLS timing sample')
@@ -143,7 +143,7 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
 
 def verify_repro(a):
     ka,kb = a.repro_a_key, a.repro_b_key
-    require(ka.read_bytes()!=kb.read_bytes(), 'independent builders must have distinct keys')
+    require(ka.read_bytes()!=kb.read_bytes(), 'Независимые сборщики должны использовать разные ключи')
     reproducible.pinned_key(ka,a.repro_a_pin)
     reproducible.pinned_key(kb,a.repro_b_pin)
     doc_a = reproducible.signed_json(a.repro_a_report,a.repro_a_sig,ka)
@@ -177,10 +177,10 @@ def verify_full(a):
             'all five unique loader soak folders and no unexpected entries required')
     for name in sorted(SOAK_TARGETS):
         folder = a.game_soaks / name
-        require(folder.is_dir() and not folder.is_symlink(), 'unsafe game soak directory')
+        require(folder.is_dir() and not folder.is_symlink(), 'Небезопасный каталог длительной игровой проверки')
         row = signed_soak(folder,a.soak_key,a.soak_key_pin,a.commit,a.soak_run_id,
                           a.soak_attempt,'game')
-        require(row['targetId'] == name, 'mislabelled loader soak directory')
+        require(row['targetId'] == name, 'Неверно обозначен каталог длительной проверки загрузчика')
         report.setdefault('gameSoaks',[]).append(row)
     report['httpSoak'] = signed_soak(a.http_soak,a.soak_key,a.soak_key_pin,
                                     a.commit,a.soak_run_id,a.soak_attempt,'https')
@@ -220,7 +220,7 @@ def main():
                    'version':inventory.VERSION,'commit':a.commit,
                    'status':'280_REAL_CI_OBSERVATIONS_NOT_GA',
                    'minecraft':verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)}
-        require(a.output.is_absolute() and not a.output.exists(), 'new absolute report filename required')
+        require(a.output.is_absolute() and not a.output.exists(), 'Требуется новое абсолютное имя файла отчёта')
         inventory.write_exclusive(a.output,(json.dumps(doc,sort_keys=True,indent=2)+'\n').encode())
         print('PASS: реальные наблюдения воспроизведены; независимая итоговая GA остаётся заблокированной')
         return 0

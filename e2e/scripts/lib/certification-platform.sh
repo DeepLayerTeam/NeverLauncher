@@ -76,7 +76,7 @@ with open(output, 'w', encoding='utf-8') as f:
     json.dump(payload, f, sort_keys=True, indent=2)
     f.write('\n')
 if not payload['lastSuccess']:
-    raise SystemExit('second macOS SDL 3 certification attempt did not pass')
+    raise SystemExit('Повторная сертификация macOS SDL 3 не пройдена')
 PYRETRY
       return "$second_rc"
     else

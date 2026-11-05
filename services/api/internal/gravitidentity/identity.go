@@ -365,13 +365,13 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 		switch {
 		case seenID[a.Provider+"\x00"+a.SourceID] > 1:
 			m.Status = "blocked"
-			m.Reason = "duplicate source provider ID"
+			m.Reason = "Повторяющийся идентификатор исходного провайдера"
 		case seenUUID[a.UUID] > 1:
 			m.Status = "blocked"
-			m.Reason = "duplicate source UUID across account records"
+			m.Reason = "Повторяющийся исходный UUID в записях учётных записей"
 		case seenName[strings.ToLower(a.Username)] > 1:
 			m.Status = "blocked"
-			m.Reason = "ambiguous source username (case-insensitive)"
+			m.Reason = "Неоднозначное исходное имя пользователя (без учёта регистра)"
 		default:
 			uuidOwners := byUUID[a.UUID]
 			nameOwners := byName[strings.ToLower(a.Username)]
@@ -382,7 +382,7 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 				owner := uuidOwners[0]
 				if !strings.EqualFold(owner.Username, a.Username) || (len(nameOwners) == 1 && nameOwners[0].UserID != owner.UserID) {
 					m.Status = "blocked"
-					m.Reason = "Never UUID ownership/name collision"
+					m.Reason = "Конфликт владельца или имени UUID Never"
 				} else {
 					m.TargetUserID = owner.UserID
 					m.Status = "matched"

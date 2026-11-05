@@ -64,7 +64,7 @@ func stateTree(root, child string) (treeDigest, error) {
 			return e
 		}
 		if entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("symlink in snapshot: %s", p)
+			return fmt.Errorf("Символическая ссылка в снимке: %s", p)
 		}
 		if entry.IsDir() {
 			return nil

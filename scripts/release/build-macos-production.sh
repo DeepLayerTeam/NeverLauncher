@@ -243,7 +243,7 @@ for arch in x64 arm64; do
 done
 [[ -s "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" ]] || { echo "missing final macOS notarization evidence" >&2; exit 1; }
 [[ -s "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" ]] || { echo "missing final macOS Guard allowlist evidence" >&2; exit 1; }
-printf 'Final macOS delivery inventory (%s):\n' "${OUT_DIR}"
+printf 'Итоговая опись поставки macOS (%s):\n' "${OUT_DIR}"
 find "${OUT_DIR}" -maxdepth 1 -type f -print | sort
 
 echo "Launcher ${VERSION} macOS x64+ARM64 packages prepared (signingMode=${SIGNING_MODE})"

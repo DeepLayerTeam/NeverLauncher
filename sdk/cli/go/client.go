@@ -119,11 +119,11 @@ func NewApp(commands ...Command) *App {
 }
 func (a *App) Run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return &ExitError{Code: 64, Message: "command is required"}
+		return &ExitError{Code: 64, Message: "Необходимо указать команду"}
 	}
 	cmd, ok := a.Commands[args[0]]
 	if !ok {
-		return &ExitError{Code: 64, Message: "unknown command: " + args[0]}
+		return &ExitError{Code: 64, Message: "Неизвестная команда: " + args[0]}
 	}
 	client, err := NewFromEnvironment()
 	if err != nil {

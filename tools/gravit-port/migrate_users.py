@@ -270,7 +270,7 @@ def main(argv=None):
     if args.mode == "import" and not args.fresh_keys_confirmed:
         p.error("Импорт: требуется --fresh-keys-confirmed")
     if args.mode == "prepare" and (args.roles_file or args.allow_manual_resets or args.texture_mapping_output):
-        p.error("role changes and reset acceptance require import mode")
+        p.error("Для изменения ролей и принятия сбросов требуется режим импорта")
     token = os.environ.get("NEVERLAUNCHER_MIGRATION_TOKEN", "")
     try:
         result = migrate(Backend(args.backend, token), args.run_id, args.source_zip, args.mode, args.password_format, args.allow_manual_resets, args.roles_file, args.texture_mapping_output)

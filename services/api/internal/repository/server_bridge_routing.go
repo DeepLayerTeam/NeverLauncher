@@ -169,7 +169,7 @@ func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serv
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("%w: node is stale, unhealthy, draining, in maintenance, or at capacity", ErrConflict)
+		return fmt.Errorf("%w: узел устарел, неисправен, выводится из эксплуатации, обслуживается или перегружен", ErrConflict)
 	}
 	return nil
 }

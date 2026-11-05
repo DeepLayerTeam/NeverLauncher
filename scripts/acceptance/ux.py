@@ -79,7 +79,7 @@ def load_inventory():
     require(
         data.get("schemaVersion") == "launcher.user-journeys.v1", "wrong catalog format"
     )
-    require(data.get("productVersion") == "0.35.1", "wrong catalog version")
+    require(data.get("productVersion") == "0.35.1", "Неверная версия каталога")
     current = (ROOT / "VERSION").read_text().strip()
     require(
         all(p.isdecimal() for p in current.split(".")) and len(current.split(".")) == 3,
@@ -95,11 +95,11 @@ def load_inventory():
         "required ordered unique G01-G35 + M01-M19 coverage missing",
     )
     sources = data["baseline"]
-    require(set(sources) == {"G", "M"}, "missing historical baseline")
+    require(set(sources) == {"G", "M"}, "Отсутствует историческая базовая версия")
     g = json.loads(referenced_file(sources["G"]).read_text())["requirements"]
     m = json.loads(referenced_file(sources["M"]).read_text())["modules"]
     upstream = {x["id"]: x for x in g + m}
-    require(set(upstream) == set(IDS), "baseline G/M identities changed")
+    require(set(upstream) == set(IDS), "Идентификаторы G/M базовой версии изменились")
     for j in journeys:
         ident = j["id"]
         require(
@@ -149,7 +149,7 @@ def load_inventory():
                 and j["operatorStep"].startswith("prohibited:"),
                 "M17 unsafe behavior must be explicitly forbidden",
             )
-    require(set(UX) == {f"UX{i:02}" for i in range(1, 13)}, "UX mapping incomplete")
+    require(set(UX) == {f"UX{i:02}" for i in range(1, 13)}, "Сопоставление элементов UX неполное")
     require(
         all(set(ids) <= set(IDS) and ids for ids in UX.values()), "UX orphan references"
     )
@@ -165,7 +165,7 @@ def plan_test(path):
         module = ref.parent
         while module != ROOT and not (module / "go.mod").is_file():
             module = module.parent
-        require(module != ROOT, "missing Go module for: " + path)
+        require(module != ROOT, "Отсутствует модуль Go для: " + path)
         pkg = "./" + ref.parent.relative_to(module).as_posix()
         return (
             (str(module), pkg),
@@ -205,9 +205,9 @@ def atomic_report(path, data):
 
 
 def execute(journeys, ids, timeout, report):
-    require(0 < timeout <= 1800, "timeout must be 1..1800 seconds")
+    require(0 < timeout <= 1800, "Тайм-аут должен быть от 1 до 1800 секунд")
     selected = [x for x in journeys if x["id"] in ids]
-    require(len(selected) == len(ids), "unknown requirement selected")
+    require(len(selected) == len(ids), "Выбрано неизвестное требование")
     runs = {}
     for journey in selected:
         for path in journey["testRefs"]:
@@ -250,7 +250,7 @@ def execute(journeys, ids, timeout, report):
             except (OSError, subprocess.TimeoutExpired) as e:
                 runs[key] = {
                     "status": "blocked",
-                    "reason": "execution unavailable or timed out",
+                    "reason": "Выполнение недоступно либо истекло время ожидания",
                     "testRefs": [path],
                     "command": cmd,
                 }
@@ -272,7 +272,7 @@ def execute(journeys, ids, timeout, report):
                 "status": status,
                 "userJourneyVerified": False,
                 "localTests": len(statuses),
-                "reason": "Real GUI/target operations require independent execution.",
+                "reason": "Реальные операции интерфейса и целевой системы требуют независимого выполнения.",
             }
         )
     document = {
@@ -319,7 +319,7 @@ def main(argv=None):
                 "| target verified: 0",
             )
             return 0
-        require(args.report is not None, "run requires --report")
+        require(args.report is not None, "Для запуска требуется --report")
         ids = [s.strip().upper() for s in args.ids.split(",")] if args.ids else IDS
         require(
             len(ids) == len(set(ids)) and set(ids) <= set(IDS),

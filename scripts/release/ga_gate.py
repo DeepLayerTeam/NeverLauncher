@@ -61,7 +61,7 @@ def report(root: Path, key: str):
 def validate_signed_attestation(root: Path, approval: Path, signature: Path, key: Path, commit: str):
     require(re.fullmatch('[a-f0-9]{40}', commit) is not None, 'exact release commit required')
     raw = approval.read_bytes()
-    require(len(raw) <= 128*1024 and raw and not approval.is_symlink(), 'invalid approval bytes')
+    require(len(raw) <= 128*1024 and raw and not approval.is_symlink(), 'Недопустимое содержимое подтверждения')
     sig = signature.read_bytes()
     key_raw = key.read_bytes()
     require(not key.is_symlink() and not signature.is_symlink() and len(sig) == 64 and len(key_raw) == 32, 'pinned Ed25519 key and detached signature required')
@@ -70,10 +70,10 @@ def validate_signed_attestation(root: Path, approval: Path, signature: Path, key
     except (ValueError, InvalidSignature) as exc:
         raise GateError('Независимая подпись оператора GA отклонена') from exc
     meta = json.loads(raw)
-    require(meta.get('schema') == 'neverlauncher.ga0480.independent-operator.v1' and meta.get('version') == VERSION and meta.get('commit') == commit, 'operator approval not for this release/commit')
+    require(meta.get('schema') == 'neverlauncher.ga0480.independent-operator.v1' and meta.get('version') == VERSION and meta.get('commit') == commit, 'Подтверждение оператора относится к другому выпуску или коммиту')
     files = meta.get('files')
     actual = {p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file() or p.is_symlink()}
-    require(isinstance(files, dict) and set(REQUIRED.values()) <= set(files) and set(files) == actual, 'independent signed approval must bind every evidence and package file')
+    require(isinstance(files, dict) and set(REQUIRED.values()) <= set(files) and set(files) == actual, 'Независимое подписанное подтверждение должно охватывать каждый файл свидетельств и пакета')
     for name, expected in files.items():
         require(isinstance(expected, str) and re.fullmatch('[a-f0-9]{64}', expected) and hashlib.sha256(read_safe(root,name)).hexdigest() == expected, f'independent acceptance bytes mismatch: {name}')
     return meta
@@ -81,14 +81,14 @@ def validate_signed_attestation(root: Path, approval: Path, signature: Path, key
 
 def inspect_live(root: Path):
     live = report(root,'live')
-    require(live.get('schema') == 'neverlauncher.live-upgrade-acceptance-0480-v1' and live.get('version') == VERSION, 'no real independent upgrade acceptance')
+    require(live.get('schema') == 'neverlauncher.live-upgrade-acceptance-0480-v1' and live.get('version') == VERSION, 'Нет реальной независимой приёмки обновления')
     require(isinstance(live.get('sourceBaselineSHA256'), str) and re.fullmatch('[a-f0-9]{64}',live['sourceBaselineSHA256']), 'missing original SQLite baseline SHA')
-    require(isinstance(live.get('ownerId'), str) and bool(live['ownerId']) and isinstance(live.get('project'), str) and bool(live['project']), 'old owner/project not identified')
-    require(live.get('ownerLogin') == 'actual-session' and all(live.get(field) is True for field in ('apiEquivalent','sourceSQLiteVerified','storageVerified','cutoverVerified','backendPostgresVerified')), 'live upgraded PostgreSQL backend was not proved operational')
+    require(isinstance(live.get('ownerId'), str) and bool(live['ownerId']) and isinstance(live.get('project'), str) and bool(live['project']), 'Не определены прежний владелец или проект')
+    require(live.get('ownerLogin') == 'actual-session' and all(live.get(field) is True for field in ('apiEquivalent','sourceSQLiteVerified','storageVerified','cutoverVerified','backendPostgresVerified')), 'Не подтверждена работоспособность обновлённого Backend на PostgreSQL')
 
 
 def gate(root: Path, approval: Path, signature: Path, key: Path, commit: str):
-    require((ROOT / 'VERSION').read_text().strip() == VERSION, 'source VERSION not 0.48.0')
+    require((ROOT / 'VERSION').read_text().strip() == VERSION, 'Исходный VERSION не равен 0.48.0')
     validate_signed_attestation(root,approval,signature,key,commit)
     inspect_live(root)
     verify_0478.legacy(root/REQUIRED['legacy'],VERSION)
@@ -99,7 +99,7 @@ def gate(root: Path, approval: Path, signature: Path, key: Path, commit: str):
     for name,workflow in (('staging_workflow','independent-migration-0480.yml'),('game_workflow','integration-matrix-0478.yml')):
         check_protected_run(report(root,name),VERSION,commit,workflow)
     delivery = verify_bundle(root/'signed',release_manifest=True)
-    require(delivery.get('releaseManifestMatchesAssets') is True and delivery.get('version') == VERSION, 'actual six signed release packages do not match delivery inventory')
+    require(delivery.get('releaseManifestMatchesAssets') is True and delivery.get('version') == VERSION, 'Шесть подписанных пакетов выпуска не соответствуют описи поставки')
     return {'version':VERSION, 'commit':commit, 'signedDelivery':True, 'stagingUpgrade':True, 'legacyUpgrades':True, 'realMinecraft':True}
 
 

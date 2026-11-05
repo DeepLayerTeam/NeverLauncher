@@ -208,13 +208,13 @@ def certify(
         if name not in CORE and scope == "core":
             outcome["cases"][name] = {
                 "status": "not-certified",
-                "reason": "not included in core runtime suite",
+                "reason": "Не входит в основной набор проверок среды выполнения",
             }
             continue
         if result is None:
             outcome["cases"][name] = {
                 "status": "not-certified",
-                "reason": "full E2E not passed",
+                "reason": "Полная E2E-проверка не пройдена",
             }
             continue
         try:

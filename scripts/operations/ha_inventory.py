@@ -511,7 +511,7 @@ def assess_cluster(nodes, edge=None):
     return {"status": "RISK" if issues else "UNVERIFIED", "issues": issues,
             "spof": findings, "criticalOperations": operations,
             "multiHostFailoverCertified": False,
-            "reason": "inventory/readiness cannot certify real host loss, network partitions, rolling updates or world restore"}
+            "reason": "Инвентаризация и проверка готовности не подтверждают реальные потери хостов, сетевую изоляцию, поэтапные обновления или восстановление миров"}
 
 
 def remote_node(target, remote_script, project, samples, growth):

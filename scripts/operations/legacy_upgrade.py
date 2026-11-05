@@ -48,7 +48,7 @@ def require(ok: bool, message: str):
 
 
 def checked_dir(path: Path, *, create=False):
-    require(path.is_absolute(), 'absolute directory required')
+    require(path.is_absolute(), 'Требуется абсолютный путь к каталогу')
     if create and not path.exists():
         path.mkdir(mode=0o700, parents=False)
     st = path.lstat()

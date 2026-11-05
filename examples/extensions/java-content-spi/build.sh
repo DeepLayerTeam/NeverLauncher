@@ -15,4 +15,4 @@ MANIFEST
 "$jar" --create --file "$work/build/package/backend/content-spi.jar" --manifest "$work/build/manifest.txt" -C sdk/java/core/build/classes . -C "$work/build/classes" .
 cp "$work/build/package/backend/content-spi.jar" "$work/build/package/cli/content-spi.jar"
 cp "$work/launcher-extension.json" "$work/build/package/launcher-extension.json"
-printf '%s\n' 'Built real Java Content SPI backend/CLI executable JAR (requires an authenticated Go Host at runtime)'
+printf '%s\n' 'Собран исполняемый JAR Java Content SPI для Backend/CLI (при выполнении требуется авторизованный Go Host)'

@@ -228,4 +228,4 @@ cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
 }
 JSON
 python3 "$ROOT/serverbridge/certify_release.py" --artifacts "$OUT"
-printf 'Production ServerBridge 3 artifacts, integrity allowlist and certification built in %s\n' "$OUT"
+printf 'Промышленные артефакты ServerBridge 3, список разрешённых контрольных сумм и сертификация собраны в %s\n' "$OUT"

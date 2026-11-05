@@ -107,7 +107,7 @@ def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) 
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             h.update(chunk)
         _checked_finish(path, stream, st)
-    require(h.hexdigest() == digest, "file SHA-256 differs from approved bytes: " + name)
+    require(h.hexdigest() == digest, "SHA-256 файла не соответствует утверждённому содержимому: " + name)
     return path
 
 
@@ -182,7 +182,7 @@ def preflight(config: dict, output: Path) -> list[dict]:
             require(os.access(probe, os.X_OK), "Отсутствует исполняемая проверка подготовленного окружения " + name)
         pkg = checked_file(p.get("updatePackage"), p.get("updateSha256"), 8 << 30)
         delivery = checked_file(p.get("deliveryManifest"), p.get("deliverySha256"), 16 << 20)
-        require(pkg != source and delivery != source, "source and update package must differ")
+        require(pkg != source and delivery != source, "Исходный пакет и пакет обновления должны различаться")
         component = within(root, p.get("installedComponent"))
         regular_bytes(component, 256 << 20)
         # Tie both Minecraft launch witnesses to the *actual updated executable*.
@@ -239,7 +239,7 @@ def verify_rehearsal(path: Path, p: dict, *, authoritative: bool) -> dict:
     if authoritative:
         require(r.get("blockers") == [], "Пробный запуск Backend выявил блокирующие проблемы")
     else:
-        require(r.get("blockers") != [], "local-only witness must not be reported as certified")
+        require(r.get("blockers") != [], "Локальную проверку нельзя выдавать за сертифицированную")
     return r
 
 

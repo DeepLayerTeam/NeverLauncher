@@ -55,9 +55,9 @@ def sha(path: Path) -> str:
 
 
 def canonical_uuid(raw: object) -> str:
-    require(type(raw) is str, 'missing Minecraft UUID')
+    require(type(raw) is str, 'Отсутствует UUID Minecraft')
     if len(raw) == 36:
-        require(all(raw[i] == '-' for i in (8,13,18,23)), 'malformed Minecraft UUID')
+        require(all(raw[i] == '-' for i in (8,13,18,23)), 'Некорректный UUID Minecraft')
         raw = raw.replace('-', '')
     raw = raw.lower()
     require(HEX32.fullmatch(raw) is not None, 'Некорректный UUID Minecraft')
@@ -65,7 +65,7 @@ def canonical_uuid(raw: object) -> str:
 
 
 def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt: str = '') -> dict:
-    require(root.is_dir() and not root.is_symlink(), 'missing real E2E directory')
+    require(root.is_dir() and not root.is_symlink(), 'Не найден каталог реальных E2E-проверок')
     require(HEX40.fullmatch(source) is not None or HEX64.fullmatch(source) is not None,
             'missing exact source commit')
     base = verify_game_cycle(root, version, source, run_id, run_attempt)
@@ -107,7 +107,7 @@ def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt:
         if changed != 'uuid':
             require(canonical_uuid(request.get('uuid')) == uuid, f'wrong UUID in negative case {case}')
         if case == 'invalid-uuid':
-            require(request.get('uuid') == 'not-a-minecraft-uuid', 'invalid UUID fixture missing')
+            require(request.get('uuid') == 'not-a-minecraft-uuid', 'Отсутствует тестовый набор с некорректным UUID')
         require(request.get('pluginVersion') == version and
                 HEX64.fullmatch(str(request.get('pluginSha256', ''))) is not None,
                 f'wrong actual bridge binary version/digest: {case}')

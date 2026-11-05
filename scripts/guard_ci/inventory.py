@@ -137,7 +137,7 @@ def merge(args: argparse.Namespace) -> int:
         rows.append({
             "os": os_name, "architecture": arch,
             "status": item["status"] if item else "BLOCKED",
-            "reason": "native local probe; not a game certification" if item else "no native runner report",
+            "reason": "native local probe; not a game certification" if item else "Отсутствует отчёт нативного исполняющего компонента",
             "javaMajor": item.get("javaMajor") if item else None,
             "minecraftVersion": item.get("minecraftVersion") if item else None,
             "loader": item.get("loader") if item else None,

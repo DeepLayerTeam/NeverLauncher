@@ -82,7 +82,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
     # Сравнивайте три независимых набора байтов и утверждений: JAR сборки Gradle,
     # поставляемый JAR финального каталога и замороженный сборочный манифест.
     manifest = read_json(release / "BRIDGE_PLUGIN_MANIFEST.json")
-    require(manifest.get("toolVersion") == version, "bridge manifest version mismatch")
+    require(manifest.get("toolVersion") == version, "Версия манифеста ServerBridge не совпадает")
     rows = manifest.get("artifacts")
     require(
         type(rows) is list and len(rows) == len(TARGETS),
@@ -250,7 +250,7 @@ def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
     from scripts.ga.record_network_faults_0420 import network_gate_version
 
-    require(network_gate_version(version), "network gate requires version >= 0.42.0")
+    require(network_gate_version(version), "Для сетевой проверки требуется версия не ниже 0.42.0")
     require(COMMIT.fullmatch(commit) is not None, "real source commit SHA required")
     hashes = verify_final_jars(root, release, version)
     matrix = certify(root, runtime, "all")

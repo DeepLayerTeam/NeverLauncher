@@ -55,7 +55,7 @@ def command(args, *, timeout, cwd=ROOT):
                               timeout=timeout, check=True)
     except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
         raise Blocked('Обязательная проверка регрессий исполняемого кода не пройдена: '+ ' '.join(Path(x).name for x in args[:3])) from exc
-    require(len(result.stdout)+len(result.stderr)<(8<<20), 'unbounded local test output')
+    require(len(result.stdout)+len(result.stderr)<(8<<20), 'Вывод локальной проверки превышает лимит')
     return hashlib.sha256(result.stdout+result.stderr).hexdigest()
 
 
@@ -88,7 +88,7 @@ def parse_live(cfg):
             type(cfg.get('legacy')) is list and len(cfg['legacy'])==2,
             'live Java, three Gravit and two legacy migrations required')
     versions=[entry.get('sourceVersion') for entry in cfg['legacy'] if type(entry) is dict]
-    require(sorted(versions)==['0.36.0','0.46.0'], 'both historical NeverLauncher routes required')
+    require(sorted(versions)==['0.36.0','0.46.0'], 'Требуются оба исторических маршрута NeverLauncher')
     require(len({str(entry.get('capture')) for entry in cfg['legacy']}) == 2,
             'legacy input receipts must be distinct')
     return cfg
@@ -98,7 +98,7 @@ def live_run(cfg):
     cfg=parse_live(cfg)
     sha=cfg['sourceCommit']
     java_config=private_json(Path(cfg['java']['config']))
-    require(java_config.get('sourceCommit') == sha, 'Java host commit differs from release')
+    require(java_config.get('sourceCommit') == sha, 'Коммит Java-хоста отличается от выпуска')
     java_out=Path(cfg['java']['output'])
     java_result=java_host_run(java_config,java_out)
     require(java_result.get('status') == 'LIVE_CHECKS_PASSED_REVIEW_REQUIRED'
@@ -124,7 +124,7 @@ def live_run(cfg):
             and set(row['referenceClass'] for row in grav_report.get('references',[])) == classes
             and grav_report.get('productionGA') is False,
             'full external Gravit migration and module evidence not verified')
-    require(grav_report.get('commitSha') == sha, 'Java and Gravit source commit mismatch')
+    require(grav_report.get('commitSha') == sha, 'Коммиты исходников Java и Gravit не совпадают')
     legacy_results={}
     for route in cfg['legacy']:
         source_version=route['sourceVersion']

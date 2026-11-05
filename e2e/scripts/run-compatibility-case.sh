@@ -472,5 +472,5 @@ python3 - "$RESULT" <<'PY'
 import json, sys
 p=json.load(open(sys.argv[1], encoding='utf-8'))
 if p.get('status') != 'passed':
-    raise SystemExit('compatibility result failed post-validation')
+    raise SystemExit('Результат совместимости не прошёл последующую проверку')
 PY

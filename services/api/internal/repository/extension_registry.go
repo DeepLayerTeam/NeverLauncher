@@ -678,7 +678,7 @@ func (r *SQLRepository) SaveExtensionRegistryPublisherKey(ctx context.Context, k
 	} else if err != nil {
 		return model.ExtensionRegistryPublisherKey{}, err
 	} else if !publisherActive {
-		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: publisher is inactive", ErrConflict)
+		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: издатель неактивен", ErrConflict)
 	}
 	existing, err := scanRegistryPublisherKey0203(r.db.QueryRowContext(ctx, `SELECT publisher_id,fingerprint,algorithm,public_key_base64,active,created_at,revoked_at FROM extension_registry_publisher_keys WHERE fingerprint=$1`, key.Fingerprint))
 	if err == nil {
@@ -800,7 +800,7 @@ func (r *SQLRepository) PublishExtensionRegistryVersion(ctx context.Context, pub
 	} else if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	} else if !publisherActive {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: publisher is inactive", ErrConflict)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: издатель неактивен", ErrConflict)
 	}
 	var keyActive bool
 	var keyPublisher string

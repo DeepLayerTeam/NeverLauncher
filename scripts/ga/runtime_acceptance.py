@@ -61,13 +61,13 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         isinstance(package, dict) and package.get("packageId") == package_id,
         "wrong package ID",
     )
-    require(package.get("version") == version, "wrong release version")
+    require(package.get("version") == version, "Неверная версия выпуска")
     require(package.get("channel") == "stable", "Релиз не является стабильным")
     require(
         package.get("status") == "integrity-passed",
         "release not staged with current integrity PASS",
     )
-    require(isinstance(validations, dict), "missing validation payload")
+    require(isinstance(validations, dict), "Отсутствуют данные для проверки")
     integrity = validations.get("integrity")
     require(
         isinstance(integrity, dict) and integrity.get("result") == "passed",
@@ -98,7 +98,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         isinstance(coverage, dict) and coverage.get("stablePublishEligible") is True,
         "live audit gate ineligible",
     )
-    require(coverage.get("sourceSha") == source_sha, "audit source commit mismatch")
+    require(coverage.get("sourceSha") == source_sha, "Коммит источника аудита не совпадает")
     matrix = policy.get("matrixSha256")
     require(
         isinstance(matrix, str)
@@ -133,7 +133,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         "blocked targets remain",
     )
     evidence = report.get("evidence")
-    require(isinstance(evidence, list), "missing trusted evidence history")
+    require(isinstance(evidence, list), "Отсутствует доверенная история подтверждений")
     accepted = {}
     run_ids = set()
     for item in evidence:
@@ -153,12 +153,12 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
             timestamp(item.get("expiresAt")) > now + timedelta(minutes=15),
             "evidence expires during GA release",
         )
-        require(run_id not in run_ids, "reused runtime attestation")
+        require(run_id not in run_ids, "Повторное использование аттестации среды выполнения")
         run_ids.add(run_id)
         accepted.setdefault(target_id, []).append(run_id)
-    require(set(accepted) == set(covered), "no fresh signed execution for every target")
+    require(set(accepted) == set(covered), "Не для каждой цели есть новый подписанный результат выполнения")
     runs = report.get("runs")
-    require(isinstance(runs, list), "no recorded runtime execution history")
+    require(isinstance(runs, list), "Отсутствует журнал выполнения среды")
     by_run = {r.get("runId"): r for r in runs if isinstance(r, dict)}
     for target, ids in accepted.items():
         require(
@@ -207,9 +207,9 @@ def get_json(backend, endpoint, bearer):
         HTTPSHandler(context=ssl.create_default_context()), RejectRedirect()
     )
     with opener.open(req, timeout=30) as response:
-        require(response.status == 200, "Backend returned non-200")
+        require(response.status == 200, "Backend вернул HTTP-статус, отличный от 200")
         raw = response.read((16 << 20) + 1)
-    require(len(raw) <= (16 << 20), "Backend report too large")
+    require(len(raw) <= (16 << 20), "Отчёт Backend превышает допустимый размер")
     data = json.loads(raw)
     require(
         isinstance(data, dict) and isinstance(data.get("data"), dict),

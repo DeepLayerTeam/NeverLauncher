@@ -60,7 +60,7 @@ def private_regular(path: Path):
 
 
 def save_new(path: Path, data: dict):
-    require(path.parent.is_dir() and not path.parent.is_symlink(), 'unsafe state directory')
+    require(path.parent.is_dir() and not path.parent.is_symlink(), 'Небезопасный каталог состояния')
     serialized = (json.dumps(data, sort_keys=True, indent=2) + '\n').encode()
     fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     with os.fdopen(fd, 'wb') as out:
@@ -108,13 +108,13 @@ def read_state(path):
 
 @contextmanager
 def lock_for(directory):
-    require(directory.is_dir() and not directory.is_symlink(), 'state directory missing or symlink')
+    require(directory.is_dir() and not directory.is_symlink(), 'Каталог состояния отсутствует либо является символической ссылкой')
     require(directory.stat().st_uid == os.geteuid() and not (directory.stat().st_mode & 0o022),
             'state directory must be owned by operator and not group/other writable')
     path = directory / '.multi-host-chaos-05110.lock'
     fd = os.open(path, os.O_CREAT | os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
-        require(stat.S_IMODE(os.fstat(fd).st_mode) & 0o077 == 0, 'unsafe lock permissions')
+        require(stat.S_IMODE(os.fstat(fd).st_mode) & 0o077 == 0, 'Небезопасные права доступа к файлу блокировки')
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -129,7 +129,7 @@ def invoke(argv, timeout=40):
         p = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ChaosError('Обязательная команда завершилась ошибкой или превысила время ожидания') from exc
-    require(p.returncode == 0 and len(p.stdout) <= MAX_OUTPUT, 'command failed or output too large')
+    require(p.returncode == 0 and len(p.stdout) <= MAX_OUTPUT, 'Команда завершилась ошибкой либо вывод слишком велик')
     return p.stdout.decode('utf-8', 'strict').strip()
 
 
@@ -137,7 +137,7 @@ def local_compose_id(directory, project, role, *, allow_detached=False):
     value = invoke(multi.compose_command(directory, project, 'ps', '-q', role), 20)
     require(re.fullmatch('[0-9a-f]{12,64}', value), 'missing target role container')
     inspected = json.loads(invoke(['docker', 'inspect', value], 20))
-    require(isinstance(inspected, list) and len(inspected) == 1, 'unexpected container inspection')
+    require(isinstance(inspected, list) and len(inspected) == 1, 'Результат проверки контейнера не соответствует ожиданиям')
     item = inspected[0]
     labels = (item.get('Config') or {}).get('Labels') or {}
     require(labels.get('com.docker.compose.project') == project and
@@ -158,11 +158,11 @@ def local_network_aliases(container_id, network, role):
     контейнера формально восстановлено.
     """
     raw = json.loads(invoke(['docker', 'inspect', container_id], 20))
-    require(isinstance(raw, list) and len(raw) == 1, 'container inspect invalid')
+    require(isinstance(raw, list) and len(raw) == 1, 'Недопустимый результат проверки контейнера')
     networks = ((raw[0].get('NetworkSettings') or {}).get('Networks')) or {}
-    require(network in networks, 'expected Compose network absent before isolation')
+    require(network in networks, 'До изоляции отсутствует ожидаемая сеть Compose')
     aliases = (networks[network] or {}).get('Aliases') or []
-    require(isinstance(aliases, list) and role in aliases, 'Compose service alias missing')
+    require(isinstance(aliases, list) and role in aliases, 'Отсутствует псевдоним службы Compose')
     good = sorted(set(aliases))
     require(len(good) <= 12 and all(isinstance(a, str) and
             re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,62}', a) for a in good),
@@ -172,17 +172,17 @@ def local_network_aliases(container_id, network, role):
 
 def inspect_network(container_id, network):
     inspected = json.loads(invoke(['docker', 'inspect', container_id], 20))
-    require(isinstance(inspected, list) and len(inspected) == 1, 'container disappeared')
+    require(isinstance(inspected, list) and len(inspected) == 1, 'Контейнер исчез')
     return network in (((inspected[0].get('NetworkSettings') or {}).get('Networks')) or {})
 
 
 def local_consent(directory, project, approval):
     data = json.loads(private_regular(approval))
-    require(isinstance(data, dict), 'invalid local disruption approval')
+    require(isinstance(data, dict), 'Недопустимое разрешение на локальное нарушение работы')
     actual = multi.resolved_compose(directory, project)
     require(data.get('project') == project and data.get('nodeId') == actual['nodeId'] and
             data.get('allow') == ['network-partition'], 'approval is not scoped to this project/node/fault')
-    require(isinstance(data.get('expiresUtc'), str), 'invalid approval expiry')
+    require(isinstance(data.get('expiresUtc'), str), 'Недопустимый срок действия разрешения')
     expires = datetime.fromisoformat(data['expiresUtc'].replace('Z', '+00:00'))
     require(expires.tzinfo is not None and datetime.now(timezone.utc) < expires.astimezone(timezone.utc) <=
             datetime.now(timezone.utc) + timedelta(hours=4),
@@ -199,7 +199,7 @@ def local_isolate(directory, project, approval):
         targets = [dict(role=role, container=cid, network=net,
                         aliases=local_network_aliases(cid, net, role))
                    for role in ROLES for cid, net in [local_compose_id(directory, project, role)]]
-        require(len({t['network'] for t in targets}) == 1, 'API/worker network differs')
+        require(len({t['network'] for t in targets}) == 1, 'Сети API и Worker различаются')
         state = {'schema': SCHEMA, 'project': project, 'createdUtc': utc(),
                  'phase': 'disconnecting', 'targets': targets}
         save_new(path, state)
@@ -214,7 +214,7 @@ def local_isolate(directory, project, approval):
 def local_status(directory, project):
     path = directory / '.multi-host-partition-05110.json'
     state = read_state(path)
-    require(state.get('project') == project, 'partition project mismatch')
+    require(state.get('project') == project, 'Проект сетевой изоляции не совпадает')
     detached = []
     for t in state['targets']:
         require(t['role'] in ROLES and re.fullmatch(r'[0-9a-f]{12,64}', t['container']) and
@@ -230,7 +230,7 @@ def local_heal(directory, project):
         if not path.exists() and not path.is_symlink():
             return {'schema': SCHEMA, 'project': project, 'healed': True, 'hadJournal': False}
         state = read_state(path)
-        require(state.get('project') == project, 'cannot restore a different project')
+        require(state.get('project') == project, 'Нельзя восстановить другой проект')
         errors = []
         for item in state['targets']:
             role, ident, network = item['role'], item['container'], item['network']
@@ -239,7 +239,7 @@ def local_heal(directory, project):
             # Контейнер мог быть пересоздан; никогда не подключайтесь к произвольному ID.
             try:
                 current, expected_net = local_compose_id(directory, project, role, allow_detached=True)
-                require(current == ident and expected_net == network, 'container identity changed during partition')
+                require(current == ident and expected_net == network, 'Идентификатор контейнера изменился во время сетевой изоляции')
                 if not inspect_network(ident, network):
                     aliases = item.get('aliases')
                     require(isinstance(aliases, list) and role in aliases and len(aliases) <= 12 and
@@ -250,7 +250,7 @@ def local_heal(directory, project):
                     for alias in aliases:
                         command += ['--alias', alias]
                     invoke([*command, network, ident], 35)
-                require(inspect_network(ident, network), 'Docker did not reattach network')
+                require(inspect_network(ident, network), 'Docker не подключил сеть повторно')
             except (ChaosError, OSError, ValueError):
                 errors.append(role)
         if errors:
@@ -266,7 +266,7 @@ def ssh_helper(target, script, directory, project, mode, *, approval=None):
     require(multi.HOST_REGEX.fullmatch(target) and not target.startswith('-'), 'Недопустимый целевой узел SSH')
     require(script.startswith('/') and directory.startswith('/') and '\n' not in script + directory,
             'remote paths must be absolute and single-line')
-    require(mode in ('local-isolate', 'local-status', 'local-heal'), 'unsupported remote mode')
+    require(mode in ('local-isolate', 'local-status', 'local-heal'), 'Неподдерживаемый удалённый режим')
     args = ['python3', script, mode, '--directory', directory, '--project', project]
     if approval and mode == 'local-isolate':
         require(approval.startswith('/') and '\n' not in approval, 'invalid approval file path')
@@ -282,7 +282,7 @@ def ssh_helper(target, script, directory, project, mode, *, approval=None):
 def assert_baseline(nodes, remote_script, directory, project, edge):
     reports = multi.collect_cluster(nodes, remote_script, directory, project, 'local-observe')
     check = multi.cluster_verify(reports, edge)
-    require(check['multiHostControlPlaneObserved'], 'multi-host baseline not healthy')
+    require(check['multiHostControlPlaneObserved'], 'Базовая многоузловая конфигурация неисправна')
     return reports
 
 
@@ -301,7 +301,7 @@ def edge_survivor_probe(nodes, victim, remote_script, directory, project, edge, 
         if healthy_streak >= 3:
             break
         time.sleep(interval)
-    require(healthy_streak >= 3, 'public ingress failed to recover via surviving host')
+    require(healthy_streak >= 3, 'Публичный входящий трафик не восстановился через оставшийся узел')
     # Восстановленный балансировщик, сразу переходящий между состояниями, не
     # должен проходить проверку.
     for _ in range(5):
@@ -309,14 +309,14 @@ def edge_survivor_probe(nodes, victim, remote_script, directory, project, edge, 
         ok, sample = multi.edge_ready(edge, 1)
         observations.append({'elapsedMs': round((time.monotonic()-begin)*1000),
                              'ingressReady': ok, 'samples': sample['sampled']})
-        require(ok, 'public ingress flapped during fault observation')
+        require(ok, 'Во время наблюдения сбоя публичный входящий трафик был нестабилен')
     survivor = {}
     for name, target in nodes.items():
         if name == victim:
             continue
         status = multi.remote_call(target, remote_script, directory, project, 'local-observe')
         survivor[name] = status.get('ready') is True
-    require(all(survivor.values()), 'one or more surviving API/worker nodes failed real dependency checks')
+    require(all(survivor.values()), 'Один или несколько оставшихся узлов API/Worker не прошли реальные проверки зависимостей')
     return observations, survivor
 
 
@@ -332,7 +332,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def alertmanager_observe(url, alert, deadline=45):
     endpoint_url(url)
-    require(urlsplit(url).path in ('', '/'), 'Alertmanager address must be an HTTPS origin')
+    require(urlsplit(url).path in ('', '/'), 'Адрес Alertmanager должен быть HTTPS-источником')
     require(re.fullmatch(r'NeverLauncher[A-Za-z0-9]{2,80}', alert), 'invalid alert name')
     op = urllib.request.build_opener(NoRedirect())
     until = time.monotonic() + deadline
@@ -340,7 +340,7 @@ def alertmanager_observe(url, alert, deadline=45):
         try:
             with op.open(url.rstrip('/') + '/api/v2/alerts', timeout=8) as response:
                 data = response.read(512_001)
-            require(len(data) < 512_001, 'alert API response too large')
+            require(len(data) < 512_001, 'Ответ API оповещений слишком велик')
             alerts = json.loads(data)
             if isinstance(alerts, list) and any(isinstance(a, dict) and
                     (a.get('labels') or {}).get('alertname') == alert and
@@ -359,11 +359,11 @@ def run_fault(args, nodes):
             'output report already exists')
     require(not state_path.exists() and not state_path.is_symlink(),
             'unrecovered fault journal exists; run recover')
-    require(args.failed_node in nodes, 'unknown failure target')
-    require(len(nodes) >= 2, 'at least two hosts required')
-    require(args.allow_disruption == 'I-ACCEPT-REAL-OUTAGE', 'explicit real disruption approval required')
-    require(15 <= args.timeout <= 300, 'timeout must be 15..300 seconds')
-    require(30 <= args.alert_timeout <= 300, 'alert wait must be 30..300 seconds')
+    require(args.failed_node in nodes, 'Неизвестная цель проверки сбоя')
+    require(len(nodes) >= 2, 'Требуются как минимум два хоста')
+    require(args.allow_disruption == 'I-ACCEPT-REAL-OUTAGE', 'Требуется явное разрешение на реальное нарушение работы')
+    require(15 <= args.timeout <= 300, 'Тайм-аут должен быть от 15 до 300 секунд')
+    require(30 <= args.alert_timeout <= 300, 'Ожидание оповещения должно быть от 30 до 300 секунд')
     edge = endpoint_url(args.edge_url)
     # Подтверждение исходного состояния должно предшествовать любой записи
     # намерения отключения или удалённому изменению.
@@ -392,7 +392,7 @@ def run_fault(args, nodes):
                         'stop command did not execute')
                 observed = multi.remote_call(nodes[args.failed_node], args.multi_host_script,
                                              args.directory, args.project, 'local-observe', growth=False)
-                require(observed.get('ready') is False, 'stopped host is still reporting healthy')
+                require(observed.get('ready') is False, 'Остановленный хост по-прежнему сообщает об исправном состоянии')
                 result['evidence']['faultObserved'] = True
             else:
                 ssh_helper(nodes[args.failed_node], args.chaos_script, args.directory,
@@ -430,7 +430,7 @@ def run_fault(args, nodes):
                 else:
                     recovered = ssh_helper(nodes[args.failed_node], args.chaos_script,
                                            args.directory, args.project, 'local-heal')
-                    require(recovered.get('healed') is True, 'remote Docker network recovery incomplete')
+                    require(recovered.get('healed') is True, 'Удалённое восстановление сети Docker не завершено')
                 after = assert_baseline(nodes, args.multi_host_script,
                                         args.directory, args.project, edge)
                 restore_success = bool(after)
@@ -464,7 +464,7 @@ def manual_recover(args, nodes):
     elif state['fault'] == 'network-partition':
         response = ssh_helper(nodes[victim], args.chaos_script, args.directory,
                               args.project, 'local-heal')
-        require(response.get('healed') is True, 'remote network restoration failed')
+        require(response.get('healed') is True, 'Ошибка удалённого восстановления сети')
     else:
         raise ChaosError('Неизвестный тип нарушения в журнале')
     assert_baseline(nodes, args.multi_host_script, args.directory, args.project,
@@ -521,7 +521,7 @@ def render_monitor(args):
                'scrape_configs': [probe_job('neverlauncher-host-ready-05110', targets),
                                   probe_job('neverlauncher-public-ready-05110', {'public': edge})]}
     output = Path(args.output_directory).absolute()
-    require(output.is_dir() and not output.is_symlink(), 'monitor output directory must exist')
+    require(output.is_dir() and not output.is_symlink(), 'Каталог вывода мониторинга должен существовать')
     require(all(not (output / name).exists() and not (output / name).is_symlink()
                 for name in ('prometheus-05110.yml', 'alerts-05110.yml')),
             'monitor output exists; no partial overwrite allowed')
@@ -542,7 +542,7 @@ def run_suite(args, nodes):
     require(home.is_dir() and not home.is_symlink() and home.stat().st_uid == os.geteuid() and
             stat.S_IMODE(home.stat().st_mode) & 0o077 == 0,
             'suite directory must be private 0700 and owned by operator')
-    require(1 <= args.iterations <= 3, 'suite iterations must be 1..3')
+    require(1 <= args.iterations <= 3, 'Число повторов набора проверок должно быть от 1 до 3')
     require(not any(p.name != '.multi-host-chaos-05110.lock' for p in home.iterdir()),
             'suite directory must start empty; never mix evidence')
     summary = {'schema': SCHEMA, 'release': '0.51.10', 'status': 'FAILED',

@@ -86,9 +86,9 @@ def sha(path: Path) -> str:
 
 def read(path: Path, limit=8*1024*1024):
     raw = safe(path, limit).read_bytes()
-    require(len(raw) <= limit, 'oversized JSON')
+    require(len(raw) <= limit, 'JSON превышает допустимый размер')
     doc = native.parse_json(raw)
-    require(type(doc) is dict, 'JSON document must be an object')
+    require(type(doc) is dict, 'Документ JSON должен содержать объект')
     return doc
 
 def git(*args):
@@ -99,7 +99,7 @@ def git(*args):
 def source_identity(expected: str):
     require(VERSION == '0.53.0' and COMMIT.fullmatch(expected or '') is not None,
             'exact 0.53.0 version and 40-digit approved commit required')
-    require(git('rev-parse', 'HEAD') == expected, 'candidate checkout commit changed')
+    require(git('rev-parse', 'HEAD') == expected, 'Коммит проверяемой рабочей копии изменился')
     require(git('status','--porcelain','--untracked-files=all') == '',
             'checkout is dirty or has untracked source files')
     tree = git('rev-parse','HEAD^{tree}')
@@ -143,10 +143,10 @@ def freeze(commit, project, packages, index, index_sha):
 
 def private_key(path: Path):
     p = safe(path, 8192)
-    require(not p.is_relative_to(ROOT), 'private key must be held outside checkout')
-    require(p.stat().st_mode & 0o077 == 0, 'private key must have 0600 permissions')
+    require(not p.is_relative_to(ROOT), 'Закрытый ключ должен храниться вне рабочей копии')
+    require(p.stat().st_mode & 0o077 == 0, 'Закрытый ключ должен иметь права 0600')
     key = serialization.load_pem_private_key(p.read_bytes(),password=None)
-    require(isinstance(key, Ed25519PrivateKey), 'Ed25519 private key required')
+    require(isinstance(key, Ed25519PrivateKey), 'Требуется закрытый ключ Ed25519')
     return key
 
 def verify_signature(doc, sig_path, public_path, pin, domain):
@@ -217,7 +217,7 @@ def run_regressions(log_dir: Path, *, replay=False):
         actual_count = None
         if name=='mandatory-python-regressions':
             found=re.search(rb'Ran ([1-9][0-9]*) tests? in [0-9.]+s',data)
-            require(found is not None, 'missing inspectable unittest completion summary')
+            require(found is not None, 'Отсутствует доступный для проверки итоговый отчёт unittest')
             actual_count=int(found.group(1))
         path=log_dir/(name+'.log')
         if not replay:
@@ -262,7 +262,7 @@ def rehearse(freeze_path,freeze_sig,release_key,release_pin,commit,project,packa
     frozen=sealed_freeze(freeze_path,freeze_sig,release_key,release_pin,
                          commit,project,packages,index,index_sha)
     defects=closed_defects(issues,issues_sig,issues_key,issues_pin,commit)
-    require(release_pin != issues_pin, 'release and issue-review authorities must be distinct')
+    require(release_pin != issues_pin, 'Полномочия выпуска и проверки замечаний должны принадлежать разным сторонам')
     regression=run_regressions(logs,replay=replay)
     args=full_args(config,commit)
     require(args.project == project and args.index_sha == index_sha and
@@ -340,7 +340,7 @@ def main():
             else:
                 signed=read(a.rehearsal)
                 verify_signature(signed,a.rehearsal_sig,a.review_key,a.review_pin,REHEARSAL_DOMAIN)
-                require(doc==signed,'raw evidence or regressions differ from independently signed rehearsal')
+                require(doc==signed,'Исходные свидетельства или регрессии отличаются от независимо подписанной репетиции')
         print('PASS: точные байты и исходные свидетельства реальной среды независимо перепроверены; GA НЕ предоставлена')
         return 0
     except (Blocked,inventory.Blocked,native.Blocked,sweep.Blocked, OSError,ValueError,

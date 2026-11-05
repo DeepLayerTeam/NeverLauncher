@@ -24,14 +24,14 @@ def sign(root: Path, key_path: Path, reviewer: str, publisher: str, commit: str,
     require(bool(IDENTITY.fullmatch(reviewer)) and bool(IDENTITY.fullmatch(publisher))
             and reviewer != publisher, 'independent reviewer and different publisher required')
     require(bool(COMMIT.fullmatch(commit)), 'Необходимо указать точный коммит исходников')
-    require(key_path.is_file() and not key_path.is_symlink(), 'independent PEM key missing')
+    require(key_path.is_file() and not key_path.is_symlink(), 'Отсутствует независимый PEM-ключ')
     if os.name != 'nt':
-        require(key_path.stat().st_mode & 0o077 == 0, 'reviewer private key permissions must be 0600')
+        require(key_path.stat().st_mode & 0o077 == 0, 'Закрытый ключ проверяющего должен иметь права 0600')
     require(not output.resolve().is_relative_to(root.resolve()) and
             not signature.resolve().is_relative_to(root.resolve()),
             'approval and detached signature must be outside the evidence tree')
     private = load_pem_private_key(key_path.read_bytes(), password=None)
-    require(isinstance(private, Ed25519PrivateKey), 'Ed25519 private PEM required')
+    require(isinstance(private, Ed25519PrivateKey), 'Требуется закрытый PEM-ключ Ed25519')
     doc = {'schema': SCHEMA, 'version': VERSION, 'commit': commit,
            'reviewer': reviewer, 'publisher': publisher,
            'issuedAt': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),

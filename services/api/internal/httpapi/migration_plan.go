@@ -228,7 +228,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		ids.SourceAccounts = len(accounts)
 		ids.DuplicateOrConflicting = summary["blocked"]
 		if ids.DuplicateOrConflicting > 0 {
-			ids.Reason = "duplicate UUID, provider ID or username in source accounts"
+			ids.Reason = "В исходных учётных записях повторяется UUID, идентификатор провайдера или имя пользователя"
 		} else {
 			ids.State = "review_required"
 			ids.Reason = "Идентификаторы источника извлечены; владение целевыми UUID и проверяющие данные паролей ещё нужно согласовать независимо"

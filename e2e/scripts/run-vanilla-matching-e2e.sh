@@ -82,13 +82,13 @@ client = json.load(open(client_p, encoding='utf-8'))
 server = json.load(open(server_p, encoding='utf-8'))
 verify = json.load(open(verify_p, encoding='utf-8'))
 if client.get('status') != 'installed-and-verified' or client.get('minecraftVersion') != mc or client.get('javaMajorVersion') != java:
-    raise SystemExit('client install evidence does not match target')
+    raise SystemExit('Подтверждение установки клиента не соответствует целевой платформе')
 if server.get('status') != 'installed-and-verified' or server.get('minecraftVersion') != mc or server.get('javaMajorVersion') != java:
-    raise SystemExit('server install evidence does not match client version/Java')
+    raise SystemExit('Подтверждение установки сервера не соответствует версии клиента или Java')
 if not isinstance(server.get('sha1'), str) or len(server['sha1']) != 40 or not isinstance(server.get('sha256'), str) or len(server['sha256']) != 64 or int(server.get('size') or 0) <= 0:
-    raise SystemExit('server install integrity evidence is incomplete')
+    raise SystemExit('Подтверждение целостности установки сервера неполное')
 if verify.get('status') != 'valid' or (verify.get('verify') or {}).get('valid') is not True:
-    raise SystemExit('client package verification failed')
+    raise SystemExit('Проверка клиентского пакета не пройдена')
 PY
 
 SERVER_PORT="$(python3 - <<'PY'
@@ -155,7 +155,7 @@ while time.time()<deadline:
     except OSError:
         try: last=open(log,encoding='utf-8',errors='replace').read()[-8000:]
         except OSError: pass
-        raise SystemExit('matching server exited before accepting connections\n'+last)
+        raise SystemExit('Сервер соответствующей версии завершился до начала приёма подключений\n'+last)
     s=socket.socket(); s.settimeout(.5)
     try:
         if s.connect_ex(('127.0.0.1',port)) == 0:
@@ -166,7 +166,7 @@ while time.time()<deadline:
     time.sleep(1)
 try: last=open(log,encoding='utf-8',errors='replace').read()[-8000:]
 except OSError: pass
-raise SystemExit('matching server did not become ready\n'+last)
+raise SystemExit('Сервер соответствующей версии не перешёл в состояние готовности\n'+last)
 PY
 
 # Пересоздайте мир 1.17.1 генератором только воздуха на основе настоящего NBT
@@ -202,14 +202,14 @@ pid, port, log = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
 deadline = time.monotonic() + 150
 while time.monotonic() < deadline:
     try: os.kill(pid, 0)
-    except OSError: raise SystemExit('1.17.1 void-world server exited before ready')
+    except OSError: raise SystemExit('Сервер 1.17.1 с пустым миром завершился до готовности')
     with socket.socket() as sock:
         sock.settimeout(1)
         if sock.connect_ex(('127.0.0.1', port)) == 0:
             print('[matching-e2e] 1.17.1 void-world TCP ready')
             break
     time.sleep(1)
-else: raise SystemExit('1.17.1 void-world server did not become ready')
+else: raise SystemExit('Сервер 1.17.1 с пустым миром не достиг готовности')
 with open(log, encoding='utf-8', errors='replace') as inp:
     body = inp.read()
 # Сервер 1.17.1 печатает Not a registry ops даже при продолжении загрузки
@@ -325,7 +325,7 @@ payload={
 open(out,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 if payload['status'] != 'passed':
     print(log[-12000:], file=sys.stderr)
-    raise SystemExit('actual client did not complete matching-server E2E')
+    raise SystemExit('Реальный клиент не завершил E2E-проверку с сервером соответствующей версии')
 PY
 
 python3 - "$RUNTIME_DIR/result.json" "$RUNTIME_DIR/matching-server.json" "$PRODUCT_VERSION" "$TARGET_ID" "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH" <<'PY'

@@ -101,7 +101,7 @@ def atomic_write(path, content):
 
 
 def exclusive_write(path, content):
-    require(not path.exists() and not path.is_symlink(), "existing rollover backup/state requires operator review")
+    require(not path.exists() and not path.is_symlink(), "Резервная копия или состояние переключения требуют проверки оператором")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(path, flags, 0o600)
     try:
@@ -172,7 +172,7 @@ def validate_stage(directory, project):
             "Каталог развёртывания не должен быть доступен для записи группе и другим пользователям")
     require(current_file.stat().st_uid == target_file.stat().st_uid,
             "Исходная и подготовленная конфигурации должны иметь одного владельца")
-    require(sha(current) != sha(target), "stage is identical to current deployment")
+    require(sha(current) != sha(target), "Подготовленный этап совпадает с текущим развёртыванием")
     before = multi.resolved_compose(directory, project)
     after = multi.resolved_compose(directory, project, env_file=target_file)
     require(before["nodeId"] == after["nodeId"] and
@@ -265,7 +265,7 @@ def rollback_host_locked(directory, project, *, expected=None):
         require(state["sourceHash"] == expected["sourceHash"] and
                 state["targetHash"] == expected["targetHash"], "recovery journal changed")
     previous = secure(directory / BACKUP)
-    require(sha(previous) == state["sourceHash"], "prior environment backup changed")
+    require(sha(previous) == state["sourceHash"], "Предыдущая резервная копия окружения изменилась")
     current = secure(directory / ".env")
     require(sha(current) in (state["sourceHash"], state["targetHash"]),
             "current deployment differs from the pinned rollback images")
@@ -289,7 +289,7 @@ def rollback_host(directory, project):
 
 def host_plan(directory, project):
     with host_lock(directory):
-        require(read_journal(directory) is None, "existing rolling journal requires operator review")
+        require(read_journal(directory) is None, "Существующий журнал поэтапного обновления требует проверки оператором")
         result = validate_stage(directory, project)
         live_local(directory, project, SOURCE)
         return {"schema": SCHEMA, "project": project, "nodeId": result["nodeId"],
@@ -326,12 +326,12 @@ class PGAdvisoryLock:
         self.process = None
 
     def _query(self, sql):
-        require(self.process and self.process.poll() is None, "PostgreSQL rolling lock session ended")
+        require(self.process and self.process.poll() is None, "Завершился сеанс блокировки PostgreSQL для поэтапного обновления")
         try:
             self.process.stdin.write(sql + "\n")
             self.process.stdin.flush()
             ready, _, _ = select.select([self.process.stdout], [], [], 10)
-            require(bool(ready), "PostgreSQL rolling lock connection timed out")
+            require(bool(ready), "Истекло время ожидания соединения для блокировки PostgreSQL")
             return self.process.stdout.readline().strip()
         except (OSError, ValueError, BrokenPipeError) as exc:
             raise RollingError("Ошибка: «PostgreSQL rolling lock connection»") from exc
@@ -459,7 +459,7 @@ def rollout(args):
                     "unverified staged target image on " + label)
             expected_targets.add(plan["targetImage"])
             initial_plans[label] = plan
-        require(len(expected_targets) == 1, "hosts do not agree on exactly one target OCI digest")
+        require(len(expected_targets) == 1, "Узлы не согласовали единую целевую контрольную сумму OCI")
         for label, target in nodes.items():
             if versions[label] == TARGET:
                 continue   # безопасное повторное выполнение после ранее частично завершённого развёртывания
@@ -495,7 +495,7 @@ def rollout(args):
                     lock.ping()
                     rolled = remote(target, args.rolling_script, args.directory, args.project,
                                     "local-rollback", timeout=600)
-                    require(rolled["phase"] == "rolled-back", "rollback not confirmed")
+                    require(rolled["phase"] == "rolled-back", "Откат не подтверждён")
                     reports, versions = verify_cluster(nodes, args.remote_script,
                                                        args.directory, args.project, args.edge_url, catalog)
                     require(versions[label] == SOURCE, "Фактическая версия после отката не совпадает с ожидаемой")
@@ -508,7 +508,7 @@ def rollout(args):
         lock.ping()
         _, final_versions = verify_cluster(nodes, args.remote_script, args.directory,
                                            args.project, args.edge_url, catalog)
-        require(set(final_versions.values()) == {TARGET}, "rolling update left old binaries active")
+        require(set(final_versions.values()) == {TARGET}, "После поэтапного обновления остались активными старые исполняемые файлы")
         event["finalVersions"] = final_versions
         event["verified"] = True
     return event
@@ -540,10 +540,10 @@ def main(argv=None):
             if args.action == "local-plan":
                 result = host_plan(directory, args.project)
             elif args.action == "local-apply":
-                require(args.allow_update, "local-apply requires --allow-update")
+                require(args.allow_update, "Для local-apply требуется --allow-update")
                 result = apply_host(directory, args.project)
             else:
-                require(args.allow_update, "local-rollback requires --allow-update")
+                require(args.allow_update, "Для local-rollback требуется --allow-update")
                 result = rollback_host(directory, args.project)
         inventory.write_report(args.output, result)
         return 0

@@ -57,7 +57,7 @@ class API:
         except HTTPError as e:
             status = e.code
             data = e.read(MAX_BODY + 1)
-        require(len(data) <= MAX_BODY, "oversized Backend response")
+        require(len(data) <= MAX_BODY, "Ответ Backend превышает допустимый размер")
         require(
             status in expected, f"{method} {path}: expected {expected}, got {status}"
         )

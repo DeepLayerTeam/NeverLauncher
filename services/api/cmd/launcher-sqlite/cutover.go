@@ -38,7 +38,7 @@ func runPGCutoverCheck0475(args []string) int {
 	defer cancel()
 	result, err := sqlitepg.VerifyCutover0475(ctx, dsn, *sha, *project, *email)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cutover verification failed closed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Проверка переключения завершилась безопасным отказом: %v\n", err)
 		return 1
 	}
 	if err = json.NewEncoder(os.Stdout).Encode(result); err != nil {

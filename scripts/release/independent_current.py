@@ -46,7 +46,7 @@ def inputs() -> dict:
     output = {}
     for name in LOCKS:
         path = ROOT / name
-        require(path.is_file() and not path.is_symlink(), 'missing locked build input: ' + name)
+        require(path.is_file() and not path.is_symlink(), 'Отсутствуют закреплённые входные данные сборки: ' + name)
         output[name] = sha256_file(path)
     return output
 
@@ -58,7 +58,7 @@ def scan(directory: Path):
             'absolute, non-symlinked actual payload directory required')
     expected = expected_archives()
     seen = {p.name for p in directory.iterdir()}
-    require(seen == set(expected.values()), 'six exact unsigned archives required, no extra files')
+    require(seen == set(expected.values()), 'Требуются ровно шесть неподписанных архивов без лишних файлов')
     output = {}
     for target, name in sorted(expected.items()):
         path = require_path(directory, name)
@@ -66,11 +66,11 @@ def scan(directory: Path):
         members = visit_archive(path, platform, arch)
         output[target] = {'file': name, 'size': path.stat().st_size,
                           'sha256': sha256_file(path), 'members': members}
-    require(set(output) == TARGETS, 'six target coverage incomplete')
+    require(set(output) == TARGETS, 'Не обеспечен охват всех шести целевых платформ')
     return output
 
 def capture(directory: Path, builder: str, runner: str, commit: str, run_id: str, attempt: int):
-    require(VERSION == '0.53.0', 'release version 0.53.0 required')
+    require(VERSION == '0.53.0', 'Требуется версия выпуска 0.53.0')
     require(SHA.fullmatch(commit) and source_sha() == commit, 'checkout/source commit mismatch')
     require(all(ID.fullmatch(x or '') for x in (builder, runner, run_id)) and
             type(attempt) is int and attempt > 0, 'invalid independent builder identity')
@@ -80,24 +80,24 @@ def capture(directory: Path, builder: str, runner: str, commit: str, run_id: str
 
 def pinned_key(path: Path, pin: str):
     require(re.fullmatch('[a-f0-9]{64}', pin or ''), 'independently pinned builder key required')
-    require(path.is_absolute() and path.is_file() and not path.is_symlink(), 'unsafe builder key path')
+    require(path.is_absolute() and path.is_file() and not path.is_symlink(), 'Небезопасный путь к ключу сборщика')
     raw = path.read_bytes()
-    require(len(raw) <= 8192, 'builder key too large')
+    require(len(raw) <= 8192, 'Ключ сборщика превышает допустимый размер')
     key = serialization.load_pem_public_key(raw)
-    require(isinstance(key, Ed25519PublicKey), 'Ed25519 builder key required')
+    require(isinstance(key, Ed25519PublicKey), 'Требуется ключ сборщика Ed25519')
     der = key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     require(hashlib.sha256(der).hexdigest() == pin, 'builder public key pin mismatch')
     return key
 
 def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str, attempt: int):
-    require(a.get('schema') == b.get('schema') == SCHEMA, 'unsupported independent-build schema')
+    require(a.get('schema') == b.get('schema') == SCHEMA, 'Неподдерживаемая схема независимой сборки')
     require(a.get('version') == b.get('version') == VERSION == '0.53.0' and
             a.get('commit') == b.get('commit') == commit and
             a.get('runId') == b.get('runId') == run_id and
             a.get('attempt') == b.get('attempt') == attempt,
             'source, version or CI run differs')
     require(source_sha() == commit and SHA.fullmatch(commit) is not None, 'checkout not exact source')
-    require(a.get('inputs') == b.get('inputs') == inputs(), 'build inputs changed')
+    require(a.get('inputs') == b.get('inputs') == inputs(), 'Входные данные сборки изменились')
     require(a.get('builder') != b.get('builder') and a.get('runner') != b.get('runner') and
             all(ID.fullmatch(x or '') for x in (a.get('builder'), b.get('builder'), a.get('runner'), b.get('runner'))),
             'independent builder/runner identities required')
@@ -139,13 +139,13 @@ def main():
             doc = capture(a.bundle.resolve(), a.builder, a.runner, a.commit, a.run_id, a.attempt)
         else:
             left, right = Path(a.a_key).resolve(), Path(a.b_key).resolve()
-            require(left.read_bytes() != right.read_bytes(), 'different independent trust anchors required')
+            require(left.read_bytes() != right.read_bytes(), 'Требуются разные независимые якоря доверия')
             pinned_key(left, a.a_key_sha256); pinned_key(right, a.b_key_sha256)
             r1 = signed_json(Path(a.a_report).resolve(), Path(a.a_sig).resolve(), left)
             r2 = signed_json(Path(a.b_report).resolve(), Path(a.b_sig).resolve(), right)
             doc = compare(r1, r2, Path(a.a_dir).resolve(), Path(a.b_dir).resolve(),
                           a.commit, a.run_id, a.attempt)
-        require(not a.out.exists(), 'refusing to overwrite comparison/receipt')
+        require(not a.out.exists(), 'Перезапись сравнения или квитанции запрещена')
         atomic_json(a.out, doc)
         print('PASS: точные байты неподписанного содержимого независимо проверены; итоговая нативная GA НЕ подтверждена')
         return 0

@@ -105,7 +105,7 @@ def execute(argv: list[str], *, timeout: int, env: dict[str, str], max_out: int 
                              stderr=subprocess.DEVNULL, timeout=timeout, env=env, check=True)
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         raise Blocked("Ошибка команды проверки работающей системы: " + Path(argv[0]).name) from exc
-    require(0 < len(run.stdout) <= max_out, "missing or unbounded live command output")
+    require(0 < len(run.stdout) <= max_out, "Вывод выполняемой команды отсутствует или превышает лимит")
     return run.stdout
 
 
@@ -262,7 +262,7 @@ def check_modules(cfg: dict, refs: dict, output: Path) -> list[dict]:
             shutil.copyfileobj(source, target, 1 << 20)
             target.flush()
             os.fsync(target.fileno())
-        require(sha(dest, 128 << 20) == eh, "preserved module evidence differs from executed check")
+        require(sha(dest, 128 << 20) == eh, "Сохранённое подтверждение модуля не соответствует выполненной проверке")
     return result
 
 

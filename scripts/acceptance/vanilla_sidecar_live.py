@@ -128,7 +128,7 @@ def verify(cfg, *, sleep=time.sleep):
     require(jar.is_absolute() and server_dir.is_absolute(), 'absolute sidecar/server paths required')
     inspect_process(cfg['sidecarPid'], jar, cfg['sidecarSha256'])
     props = server_dir / 'server.properties'
-    require(props.is_file() and not props.is_symlink(), 'real Vanilla server.properties required')
+    require(props.is_file() and not props.is_symlink(), 'Требуется настоящий файл Vanilla server.properties')
     settings = dict(line.split('=', 1) for line in props.read_text().splitlines() if '=' in line and not line.startswith('#'))
     require(settings.get('enable-rcon') == 'true' and
             int(settings.get('rcon.port', '0')) == cfg['rconPort'] and
@@ -149,14 +149,14 @@ def verify(cfg, *, sleep=time.sleep):
             'production sidecar did not pass authenticated startup heartbeat')
     running = status('127.0.0.1', cfg['minecraftPort'], '1.21.1')
     players = rcon('127.0.0.1', cfg['rconPort'], password, 'list')
-    require('players online' in players.lower(), 'RCON did not return actual player list')
+    require('players online' in players.lower(), 'RCON не вернул фактический список игроков')
     def clock():
         raw = rcon('127.0.0.1', cfg['rconPort'], password, 'time query gametime')
         match = re.search(r'\b([0-9]{1,20})\b', raw)
-        require(match is not None, 'RCON did not return game tick count')
+        require(match is not None, 'RCON не вернул число игровых тактов')
         return int(match.group(1))
     previous = clock(); sleep(2); current = clock()
-    require(current > previous and current - previous < 2000, 'Vanilla JVM not advancing game ticks')
+    require(current > previous and current - previous < 2000, 'JVM Vanilla не продвигает игровые такты')
     inspect_process(cfg['sidecarPid'], jar, cfg['sidecarSha256'])
     return {'targetId': 'vanilla', 'coverage': 'sidecar-rcon-e2e', 'version': VERSION,
             'status': 'LIVE_VERIFIED_REVIEW_REQUIRED', 'javaPid': cfg['sidecarPid'],

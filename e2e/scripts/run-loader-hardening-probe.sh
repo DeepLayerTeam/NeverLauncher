@@ -47,9 +47,9 @@ legacy_without_processors = loader == 'forge' and install_mode in (
 journals = sorted((root / '.launcher' / 'installers' / loader).glob('*/processor-journal.json'))
 if not journals:
     if legacy_without_processors:
-        print('legacy Forge without client processors: recovery journal is not applicable')
+        print('Для старого Forge без клиентских обработчиков журнал восстановления не применяется')
         raise SystemExit(0)
-    raise SystemExit('processor recovery journal is missing')
+    raise SystemExit('Отсутствует журнал восстановления обработчиков')
 path = journals[-1]
 data = json.loads(path.read_text(encoding='utf-8'))
 entries = data.get('entries') or {}
@@ -62,7 +62,7 @@ for key in sorted(entries, key=lambda x: int(x) if str(x).isdigit() else str(x))
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
         break
 else:
-    raise SystemExit('processor journal has no completed client processor to recover')
+    raise SystemExit('В журнале нет завершённого клиентского обработчика для восстановления')
 PY
 fi
 
@@ -96,20 +96,20 @@ lock = json.loads(lock_raw.decode('utf-8'))
 sha_re = re.compile(r'^[0-9a-f]{64}$')
 payload_sha = str(lock.get('payloadSha256') or '').lower()
 if not sha_re.fullmatch(payload_sha):
-    raise SystemExit('resolution lock has no valid pinned payload SHA-256')
+    raise SystemExit('В блокировке разрешения отсутствует допустимый закреплённый SHA-256 содержимого')
 cache_path = Path(client_dir) / '.launcher' / 'loader-cache' / 'sha256' / payload_sha[:2] / (payload_sha + '.payload')
 if not cache_path.is_file():
     raise SystemExit(f'content-addressed loader cache payload is missing: {cache_path}')
 h = hashlib.sha256(cache_path.read_bytes()).hexdigest()
 if h != payload_sha:
-    raise SystemExit('content-addressed loader cache SHA-256 mismatch')
+    raise SystemExit('SHA-256 адресуемого по содержимому кеша загрузчика не совпадает')
 if result.get('status') != 'installed-and-verified' or result.get('resolutionPinned') is not True or result.get('loaderCacheOnly') is not True:
-    raise SystemExit('cache-only replay did not complete through immutable resolution lock')
+    raise SystemExit('Повторное выполнение только из кеша не завершилось с неизменяемой блокировкой разрешения')
 if result.get('reproducibilitySha256') != lock.get('reproducibilitySha256'):
-    raise SystemExit('cache-only replay changed reproducibility identity')
+    raise SystemExit('Повторное выполнение из кеша изменило идентификатор воспроизводимости')
 cache_hit = result.get('payloadCacheHit') is True if loader in ('fabric','quilt') else result.get('installerCacheHit') is True
 if not cache_hit or result.get('upstreamRecoveryUsed') is not True:
-    raise SystemExit('cache-only replay did not prove upstream-independent cache recovery')
+    raise SystemExit('Не подтверждено восстановление из кеша без обращения к внешнему источнику')
 processor_verified = True
 processor_applicable = False
 client_count = 0

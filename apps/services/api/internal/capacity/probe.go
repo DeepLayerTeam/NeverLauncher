@@ -152,16 +152,16 @@ func (r *Report) evaluatePostgres(p PostgreSQL) {
 		r.issue("warning", "postgres.connections", fmt.Sprintf("%d/%d", p.ActiveConnections, p.MaxConnections), ">= 80% max_connections", "Устраните утечки и простаивающие соединения, настройте ограниченные пулы; рассмотрите PgBouncer перед увеличением числа реплик API")
 	}
 	if p.PendingJobs >= QueueWarningSize {
-		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), ">= 500 pending jobs", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")
+		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), "Не менее 500 ожидающих заданий", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")
 	}
 	if p.OldestPendingJobSeconds > OldestJobWarning.Seconds() && p.PendingJobs > 0 {
-		r.issue("warning", "jobs.oldest_pending", fmt.Sprintf("%.0fs", p.OldestPendingJobSeconds), "> 60s oldest pending job", "Проверьте состояние обработчиков, производительность БД и политику повторного запуска заданий")
+		r.issue("warning", "jobs.oldest_pending", fmt.Sprintf("%.0fs", p.OldestPendingJobSeconds), "Самое старое задание ожидает более 60 секунд", "Проверьте состояние обработчиков, производительность БД и политику повторного запуска заданий")
 	}
 	if p.ExpiredJobLeases > 0 {
 		r.issue("warning", "jobs.expired_leases", fmt.Sprint(p.ExpiredJobLeases), "> 0 просроченных аренд выполняющихся заданий", "Проверьте сбои обработчиков и ограждение; не повторяйте вслепую операции без идемпотентности")
 	}
 	if p.PendingOutbox >= QueueWarningSize {
-		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), ">= 500 pending events", "Проверьте обработчик исходящих событий и подтверждения получателей; сохраните идемпотентность при доставке не реже одного раза")
+		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), "Не менее 500 ожидающих событий", "Проверьте обработчик исходящих событий и подтверждения получателей; сохраните идемпотентность при доставке не реже одного раза")
 	}
 }
 func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {

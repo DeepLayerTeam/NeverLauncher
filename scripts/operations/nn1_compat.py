@@ -50,7 +50,7 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
         content = item.read_bytes()
         checksum = hashlib.sha256(content).hexdigest()
         name = item.stem
-        require(name not in versions, "duplicate migration name")
+        require(name not in versions, "Повторяющееся имя миграции")
         digest.update(item.name.encode("ascii") + b"\0" + checksum.encode("ascii") + b"\n")
         versions[name] = checksum
     # Пока активен хотя бы один экземпляр 0.51.5, новые миграции развёртывать
@@ -118,8 +118,8 @@ def live_pg_migrations(path):
     # сведения.
     require(proc.returncode == 0 and len(proc.stdout) <= 200_000, "Проверка схемы рабочего PostgreSQL завершилась ошибкой")
     rows = [s.strip() for s in proc.stdout.splitlines() if s.strip()]
-    require(rows and rows[0] == "primary", "PostgreSQL DSN does not resolve to a writable primary")
-    require(len(rows) >= 2 and rows[1] == "shape-ok", "actual durable/outbox/ServerBridge schema shape incompatible")
+    require(rows and rows[0] == "primary", "DSN PostgreSQL не указывает на доступный для записи основной узел")
+    require(len(rows) >= 2 and rows[1] == "shape-ok", "Фактические схемы durable/outbox/ServerBridge несовместимы")
     actual = {}
     for row in rows[2:]:
         try:
@@ -128,7 +128,7 @@ def live_pg_migrations(path):
             raise CompatibilityError("PostgreSQL вернул строку миграции, которую невозможно разобрать") from exc
         require(isinstance(data, dict) and isinstance(data.get("version"), str) and
                 isinstance(data.get("checksum"), str), "Недопустимая строка отслеживания миграций")
-        require(data["version"] not in actual, "duplicate applied migrations")
+        require(data["version"] not in actual, "Обнаружены повторно применённые миграции")
         actual[data["version"]] = data["checksum"]
     return actual
 
@@ -192,7 +192,7 @@ def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
         require(observed_contracts is None or observed_contracts == fingerprints,
                 "running API/Bridge contracts differ between supported cohort versions")
         observed_contracts = fingerprints
-    require(not require_mixed or set(versions.values()) == pair, "mixed version run requires both N and N-1")
+    require(not require_mixed or set(versions.values()) == pair, "Для запуска со смешанными версиями требуются обе версии: N и N-1")
     return versions
 
 

@@ -95,7 +95,7 @@ def validate(config: dict, journal_dir: Path):
     require(journal_dir.is_dir() and not journal_dir.is_symlink() and journal_dir.stat().st_mode & 0o077 == 0,
             "Каталог журнала должен существовать, быть закрытым (0700) и не являться ссылкой")
     routes = config.get("routes")
-    require(isinstance(routes, dict) and set(routes) == {"auth", "game"}, "both auth and game ingress backends required")
+    require(isinstance(routes, dict) and set(routes) == {"auth", "game"}, "Требуются серверные компоненты для входа и игрового трафика")
     pairs = []
     for kind in ("auth", "game"):
         route = routes[kind]
@@ -103,8 +103,8 @@ def validate(config: dict, journal_dir: Path):
         require(all(isinstance(v, str) and SERVER.fullmatch(v) for v in route.values()), "Некорректный Backend или сервер HAProxy")
         require(route["source"] != route["target"], "Источник и цель HAProxy должны различаться")
         pairs.extend([(route["backend"], route["source"]), (route["backend"], route["target"])])
-    require(len(pairs) == len(set(pairs)) and routes["auth"]["backend"] != routes["game"]["backend"], "auth and game must have distinct dedicated proxy backends")
-    require(5 <= config.get("drainSeconds", 0) <= 600, "drainSeconds must be 5..600")
+    require(len(pairs) == len(set(pairs)) and routes["auth"]["backend"] != routes["game"]["backend"], "Для входа и игрового трафика нужны разные выделенные серверы прокси")
+    require(5 <= config.get("drainSeconds", 0) <= 600, "Параметр drainSeconds должен быть от 5 до 600")
     require(isinstance(config.get("postSwitchStage"), str) and Path(config["postSwitchStage"]).is_absolute(), "После переключения требуется этап фактического запуска Minecraft")
     require(isinstance(config.get("gamePublicAddress"), str) and bool(re.fullmatch(r"[A-Za-z0-9.-]+:[0-9]{1,5}", config["gamePublicAddress"])),
             "Необходимо явно указать публичный адрес Minecraft в формате host:port")
@@ -282,7 +282,7 @@ def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
                            timeout=timeout, check=True)
         except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             raise Blocked("Ошибка команды CLI миграции NeverLauncher: " + args[0]) from exc
-    require(output.exists(), "CLI did not create result " + args[0])
+    require(output.exists(), "CLI не создал результат " + args[0])
     result = document(output, 1 << 20)
     return result.get("data", result)
 
@@ -304,7 +304,7 @@ def assert_route(route: dict, cfg: dict, active: bool):
     want_rev = cfg["expectedRevision"] + (1 if active else 0)
     require(route.get("revision") == want_rev, "Редакция маршрута переключения изменилась")
     if active:
-        require(route.get("activatedRevision") == cfg["baselineRevision"] + 1, "activated channel head differs from approved baseline")
+        require(route.get("activatedRevision") == cfg["baselineRevision"] + 1, "Активированная версия канала не соответствует утверждённой базовой версии")
 
 
 def receipt_check(cfg: dict) -> None:
@@ -325,7 +325,7 @@ def receipt_check(cfg: dict) -> None:
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise Blocked("auth canary redirected")
+        raise Blocked("Контрольный запрос авторизации перенаправлен")
 
 
 def auth_canary(cfg: dict, *, public: bool = False):
@@ -337,11 +337,11 @@ def auth_canary(cfg: dict, *, public: bool = False):
     # TLS validation uses OS trust; no insecure override and no cross-host redirects.
     try:
         with build_opener(HTTPSHandler(), NoRedirect()).open(req, timeout=8) as response:
-            require(response.status == 200, "auth canary denied")
+            require(response.status == 200, "Контрольный запрос авторизации отклонён")
             data = response.read(8193)
     except (HTTPError, URLError, TimeoutError) as exc:
         raise Blocked("Ошибка: проверочный вход с аутентификацией в целевую систему") from exc
-    require(len(data) <= 8192, "oversized auth canary result")
+    require(len(data) <= 8192, "Ответ контрольного запроса авторизации слишком велик")
     result = json.loads(data)
     require(isinstance(result, dict) and result.get(canary["uuidJSONField"]) == canary["expectedPlayerUuid"],
             "Контрольная проверка авторизации подтвердила неверный UUID Minecraft")
@@ -366,7 +366,7 @@ def live_canary(cfg: dict, directory: Path) -> dict:
 
 
 def prepare(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
-    require(not (directory / "cutover-state.json").exists(), "existing journal requires manual recovery")
+    require(not (directory / "cutover-state.json").exists(), "Существующий журнал требует ручного восстановления")
     route = route_list(cfg, directory, "route-before.json")
     assert_route(route, cfg, False)
     proxy_pid = proxy.instance()
@@ -389,7 +389,7 @@ def prepare(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
                 remaining += int(scur)
             if remaining == 0:
                 break
-            require(time.monotonic() < deadline, "source game/auth sessions did not drain")
+            require(time.monotonic() < deadline, "Игровые сеансы и сеансы авторизации источника не завершились")
             time.sleep(1)
         close_ingress(proxy, cfg)
         require(proxy.instance() == proxy_pid, "HAProxy перезапустился во время подготовки переключения")

@@ -113,7 +113,7 @@ def check_binary(path: Path) -> Path:
 
 def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
     runtime, signer = check_binary(runtime), check_binary(signer)
-    require(rc_extended(version), "release candidate version mismatch")
+    require(rc_extended(version), "Версия кандидата в выпуск не совпадает")
     require(
         re.fullmatch(r"[a-f0-9]{40}", commit) is not None, "missing exact source commit"
     )

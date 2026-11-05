@@ -93,7 +93,7 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
     try:
         completed = datetime.fromisoformat(report['completedAt'].replace('Z', '+00:00'))
     except (KeyError, AttributeError, ValueError) as exc:
-        raise Blocked('acceptance is undated') from exc
+        raise Blocked('В приёмке отсутствует дата') from exc
     now = datetime.now(timezone.utc)
     require(completed.tzinfo is not None and now - timedelta(hours=72) <= completed <= now + timedelta(minutes=1),
             'acceptance evidence is stale or future-dated')
@@ -112,7 +112,7 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
     # Сравнивайте идентичность независимого проверяющего с авторами трёх подписанных
     # сертификатов Migration GA; самопроверка собственной квитанции GA запрещена.
     refs = config.get('references')
-    require(type(refs) is dict and set(refs) == set(ga.CLASSES), 'missing real live GA plan/receipt references')
+    require(type(refs) is dict and set(refs) == set(ga.CLASSES), 'Отсутствуют ссылки на реальный план и квитанции GA')
     for cls in ga.CLASSES:
         certificate = ga.doc(Path(refs[cls]['certificate']), private=True)
         require(signed_review['reviewer'] != certificate.get('reviewedBy'),

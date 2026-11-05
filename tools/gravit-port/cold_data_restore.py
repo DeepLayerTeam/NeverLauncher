@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Restore verified cold Minecraft world/user files, never live DBs.
+"""Восстановление проверенных файлов миров и пользователей Minecraft, но не работающих БД.
 
-Only works after operational_rollback_04912.py fence, with both game writer
-services masked/inactive and HAProxy auth/game ingress closed. The replaced
-folder is retained for manual recovery. Does not reconcile plugin databases.
+Допускается только после изоляции через operational_rollback_04912.py:
+обе службы записи игровых данных должны быть отключены, а входящий
+игровой трафик и авторизация через HAProxy — закрыты. Заменённый каталог
+сохраняется для ручного восстановления. Базы данных плагинов не согласуются.
 """
 from __future__ import annotations
 
@@ -28,11 +29,11 @@ MAX_TOTAL_BYTES = 1 << 40
 
 
 def ensure_dir(path: Path):
-    co.require(path.is_absolute() and path.is_dir() and not path.is_symlink(), "real absolute directory required")
+    co.require(path.is_absolute() and path.is_dir() and not path.is_symlink(), "Требуется существующий каталог с абсолютным путём")
 
 
 def entries(root: Path):
-    """Enumerate without following links; no device files or hard-linked files."""
+    """Перечисляет файлы без перехода по ссылкам; устройства и жёсткие ссылки запрещены."""
     ensure_dir(root)
     results = []
     total = 0
@@ -41,36 +42,36 @@ def entries(root: Path):
         files.sort()
         for name in dirs:
             p = Path(base) / name
-            co.require(stat.S_ISDIR(p.lstat().st_mode), "symlink or special directory in backup")
+            co.require(stat.S_ISDIR(p.lstat().st_mode), "В резервной копии обнаружена символическая ссылка или специальный каталог")
         for name in files:
             p = Path(base) / name
             st = p.lstat()
-            co.require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1, "backup contains linked/special file")
+            co.require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1, "Резервная копия содержит ссылку или специальный файл")
             co.require(st.st_size <= MAX_TOTAL_BYTES and total + st.st_size <= MAX_TOTAL_BYTES,
-                       "file backup exceeds limit")
+                       "Превышен допустимый размер файлов резервной копии")
             total += st.st_size
-            co.require(len(results) < MAX_ENTRIES, "file backup has too many files")
+            co.require(len(results) < MAX_ENTRIES, "В резервной копии слишком много файлов")
             rel = p.relative_to(root).as_posix()
             co.require(len(rel) < 1024 and all(x not in ("", ".", "..") for x in PurePosixPath(rel).parts),
-                       "invalid backup file path")
+                       "Недопустимый путь файла в резервной копии")
             sha = hashlib.sha256()
             fd = os.open(p, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
             with os.fdopen(fd, "rb") as source:
-                co.require(os.fstat(source.fileno()).st_ino == st.st_ino, "backup file raced")
+                co.require(os.fstat(source.fileno()).st_ino == st.st_ino, "Файл резервной копии изменился во время проверки")
                 while chunk := source.read(1 << 20):
                     sha.update(chunk)
                 end = os.fstat(source.fileno())
                 co.require(end.st_size == st.st_size and end.st_mtime_ns == st.st_mtime_ns,
-                           "backup writer changed file during scan")
+                           "Файл резервной копии изменён во время сканирования")
             results.append({"path":rel, "size":st.st_size, "sha256":sha.hexdigest()})
     return results
 
 
 def write_manifest(root: Path, output: Path, run_id: str):
     co.require(bool(co.ROUTE.fullmatch(run_id)), "Требуется корректный идентификатор запуска")
-    co.require(output.is_absolute() and not output.exists(), "new absolute manifest path required")
+    co.require(output.is_absolute() and not output.exists(), "Требуется новый абсолютный путь к манифесту")
     manifest = {"format":FORMAT, "runId":run_id, "files":entries(root)}
-    co.require(manifest["files"], "empty backup not accepted")
+    co.require(manifest["files"], "Пустая резервная копия не допускается")
     raw = (json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n").encode()
     fd = os.open(output, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(fd, "wb") as dest:
@@ -81,9 +82,9 @@ def write_manifest(root: Path, output: Path, run_id: str):
 
 
 def validate_manifest(manifest: dict, run_id: str):
-    co.require(manifest.get("format") == FORMAT and manifest.get("runId") == run_id, "backup does not match run")
+    co.require(manifest.get("format") == FORMAT and manifest.get("runId") == run_id, "Резервная копия не соответствует запуску")
     files = manifest.get("files")
-    co.require(isinstance(files, list) and 0 < len(files) <= MAX_ENTRIES, "invalid backup file count")
+    co.require(isinstance(files, list) and 0 < len(files) <= MAX_ENTRIES, "Недопустимое число файлов резервной копии")
     names = []
     amount = 0
     for item in files:
@@ -96,17 +97,17 @@ def validate_manifest(manifest: dict, run_id: str):
                    and 0 <= item["size"] <= MAX_TOTAL_BYTES and
                    isinstance(item["sha256"], str) and bool(co.HEX.fullmatch(item["sha256"])), "invalid backup digest")
         amount += item["size"]
-        co.require(amount <= MAX_TOTAL_BYTES, "backup size limit exceeded")
+        co.require(amount <= MAX_TOTAL_BYTES, "Превышен предельный размер резервной копии")
         names.append(name)
-    co.require(names == sorted(set(names)), "backup entries duplicate or out of order")
+    co.require(names == sorted(set(names)), "Записи резервной копии дублируются или нарушен порядок")
     return files
 
 
 def safe_path(path: Path):
-    co.require(path.is_absolute() and not path.is_symlink(), "real absolute target required")
+    co.require(path.is_absolute() and not path.is_symlink(), "Требуется абсолютный путь к существующей цели")
     current = path.parent
     while current != current.parent:
-        co.require(not current.is_symlink(), "symlink in restore parent path")
+        co.require(not current.is_symlink(), "В родительском пути восстановления обнаружена символическая ссылка")
         current = current.parent
 
 
@@ -119,7 +120,7 @@ def get_state(cfgfile, rbfile, directory):
     cfg = json.loads(rraw)
     rb.validate(cfg, cut)
     state = rb.state_load(directory, co.digest(rraw), cut["_hash"])
-    co.require(state["phase"] in ("fenced", "planned", "committed_fenced"), "rollback not in a safe fenced phase")
+    co.require(state["phase"] in ("fenced", "planned", "committed_fenced"), "Откат не находится на безопасном этапе изоляции")
     rb.assert_proxy(co.Proxy(cut["proxySocket"]), cut, state)
     rb.check_writers(cfg)
     return cfg, state
@@ -129,20 +130,20 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
     files = validate_manifest(manifest, run_id)
     ensure_dir(source)
     safe_path(target)
-    co.require(target.is_dir() and not target.is_symlink(), "existing restore target must be real directory")
+    co.require(target.is_dir() and not target.is_symlink(), "Цель восстановления должна быть существующим обычным каталогом")
     owner = target.stat()
     co.require(os.geteuid() == 0 or owner.st_uid == os.geteuid(),
-               "operator must own target directory or run as root to preserve game-service ownership")
+               "Для сохранения владельца игровых файлов оператор должен владеть каталогом или работать от root")
     co.require(source.resolve() != target.resolve() and not source.resolve().is_relative_to(target.resolve())
-               and not target.resolve().is_relative_to(source.resolve()), "backup and destination overlap")
+               and not target.resolve().is_relative_to(source.resolve()), "Исходная резервная копия и каталог назначения пересекаются")
     old = target.with_name(target.name + ".before-" + run_id)
-    co.require(not old.exists() and not old.is_symlink(), "retained old directory already exists")
+    co.require(not old.exists() and not old.is_symlink(), "Каталог для сохранения предыдущей версии уже существует")
     journal = directory / "file-restore-state.json"
     co.require(not journal.exists(), "Попытка восстановления файлов уже предпринималась; проверьте журнал")
     staged = Path(tempfile.mkdtemp(prefix=".never-restoring-", dir=target.parent))
     state = {"format":FORMAT,"runId":run_id,"phase":"staging","target":str(target),
              "retained":str(old),"stage":str(staged),"manifestSha256":co.digest(json.dumps(manifest,sort_keys=True).encode())}
-    # Durable journal before any mutation of the destination.
+    # Надёжный журнал записывается до изменения каталога назначения.
     def record(phase):
         state["phase"] = phase
         raw = (json.dumps(state, sort_keys=True) + "\n").encode()
@@ -156,7 +157,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
         finally: os.close(dfd)
     record("staging")
     try:
-        co.require(entries(source) == files, "original backup tree differs from sealed manifest")
+        co.require(entries(source) == files, "Исходное дерево резервной копии не соответствует опечатанному манифесту")
         for item in files:
             rel = item["path"]
             original = source / rel
@@ -167,7 +168,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
             with os.fdopen(src_fd,"rb") as f:
                 st = os.fstat(f.fileno())
                 co.require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_size == item["size"],
-                           "backup file changed or linked")
+                           "Файл резервной копии изменён или содержит ссылку")
                 out_fd = os.open(dest, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os,"O_NOFOLLOW",0), 0o600)
                 with os.fdopen(out_fd,"wb") as out:
                     while part := f.read(1<<20):
@@ -175,12 +176,12 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
                     out.flush(); os.fsync(out.fileno())
                 final = os.fstat(f.fileno())
                 co.require(final.st_size == st.st_size and final.st_mtime_ns == st.st_mtime_ns,
-                           "source backup file changed during restore")
+                           "Исходный файл резервной копии изменился во время восстановления")
             co.require(sha.hexdigest() == item["sha256"], "SHA-256 содержимого резервной копии не совпадает")
-        co.require(entries(staged) == files, "staged restore differs from sealed manifest")
-        # A root-operated restore must not leave the world unreadable by the
-        # dedicated game service user. Preserve original target ownership and
-        # use non-executable backup file modes; never copy setuid/sticky bits.
+        co.require(entries(staged) == files, "Подготовленные файлы восстановления не соответствуют опечатанному манифесту")
+        # Восстановление от root не должно лишить игровую службу доступа
+        # к файлам мира. Сохраните владельца исходного каталога и
+        # запретите исполнение файлов; не копируйте биты setuid/sticky.
         directories = [staged]
         for base, dirs, names in os.walk(staged, followlinks=False):
             for d in dirs:
@@ -195,7 +196,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
                 finally: os.close(fd)
         for p in reversed(directories):
             os.chown(p, owner.st_uid, owner.st_gid)
-            # The game account must traverse its own world directory.
+            # Учётная запись игры должна иметь доступ к своему каталогу мира.
             mode = (owner.st_mode & 0o777) | 0o700
             os.chmod(p, mode)
             fd = os.open(p, os.O_RDONLY | getattr(os,"O_DIRECTORY",0))
@@ -298,7 +299,7 @@ def main(argv=None):
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 cfg, state = get_state(Path(args.cutover_config), Path(args.rollback_config), directory)
-                co.require(cfg["runId"] == args.run, "restore run mismatch")
+                co.require(cfg["runId"] == args.run, "Идентификатор запуска восстановления не совпадает")
                 if args.command == "restore":
                     restore(source, Path(args.target), co.document(mf, 16 << 20), directory, args.run)
                 else:

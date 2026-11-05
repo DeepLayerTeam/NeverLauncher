@@ -604,7 +604,7 @@ def s3_object_probe(cfg, creds, gateways):
     межшлюзовая проверка записи/чтения/удаления может подтвердить его для данного наблюдения.
     """
     if not gateways:
-        raise HAError('no live S3 gateway to probe')
+        raise HAError('Нет работающего шлюза S3 для проверки')
     token = secrets.token_hex(16)
     key = 'launcher-ha-probe-0513/' + token
     payload = secrets.token_bytes(96)

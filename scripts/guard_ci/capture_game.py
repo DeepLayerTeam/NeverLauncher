@@ -27,22 +27,22 @@ def capture(work: Path, paper: Path, username: str, target: str, loader: str, co
             'exact native target, loader and source commit required')
     host_os = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}.get(platform.system())
     host_arch = {'x86_64': 'x64', 'AMD64': 'x64', 'aarch64': 'arm64', 'arm64': 'arm64'}.get(platform.machine())
-    require(f'{host_os}-{host_arch}' == target, 'Minecraft E2E capture must execute on native platform')
+    require(f'{host_os}-{host_arch}' == target, 'Запись E2E Minecraft необходимо выполнять на целевой платформе')
     release = inventory(release_bundle)
-    require(release['version'] == VERSION, 'wrong final release package version')
+    require(release['version'] == VERSION, 'Неверная версия итогового пакета выпуска')
     row = release['targets'][target]
     require(package.resolve() == (release_bundle / row['file']).resolve() and package.is_file()
             and not package.is_symlink(), 'not the exact final signed installer')
     from adversarial_pilot_05012 import file_hash
     require(file_hash(package) == row['sha256'], 'final installer modified after validation')
     game = verify_game(work, paper, username)
-    require(game['loader'] == loader, 'actual Minecraft loader differs from requested target')
+    require(game['loader'] == loader, 'Фактический загрузчик Minecraft отличается от запрошенного')
     require(paper.resolve() == (work / 'paper.log').resolve(),
             'Paper join log must be retained alongside the exact game evidence')
     result = {'target': target, 'version': VERSION, 'loader': loader,
               'packageSha256': row['sha256'], 'username': username, 'commit': commit}
     output = work / 'run-identity.json'
-    require(not output.exists(), 'do not overwrite previously captured game run')
+    require(not output.exists(), 'Не перезаписывайте ранее сохранённый запуск игры')
     handle = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(handle, 'w', encoding='utf-8') as stream:
         json.dump(result, stream, sort_keys=True, indent=2)

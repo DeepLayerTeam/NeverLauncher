@@ -239,7 +239,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 		if e != nil {
 			return nil, fmt.Errorf("Строка SQL %d: %w", line, e)
 		}
-		c := Credential{Account: gi.Account{Provider: "sql", SourceID: rec[cols["id"]], Username: rec[cols["username"]], UUID: uuid, SourcePath: path}, State: "manual_reset", Reason: "no supported password verifier supplied"}
+		c := Credential{Account: gi.Account{Provider: "sql", SourceID: rec[cols["id"]], Username: rec[cols["username"]], UUID: uuid, SourcePath: path}, State: "manual_reset", Reason: "Не передан поддерживаемый механизм проверки пароля"}
 		fcol, hasF := cols["password_format"]
 		hcol, hasH := cols["password_hash"]
 		if hasF && hasH {

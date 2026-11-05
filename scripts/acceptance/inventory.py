@@ -124,11 +124,11 @@ def catalogs():
                     isinstance(target.get('id'), str) and
                     compatibility.ID_RE.fullmatch(target['id']) is not None,
                     group + ': invalid matrix target')
-            require(target['id'] not in ids, group + ': duplicate target ID')
+            require(target['id'] not in ids, group + ': повторяющийся идентификатор цели')
             ids.add(target['id'])
         require(sum(row['required'] for row in targets) >= minimum,
                 group + ': required targets dropped below verified baseline')
-        require((ROOT / RUNNERS[group]).is_file(), group + ': real runner missing')
+        require((ROOT / RUNNERS[group]).is_file(), group + ': отсутствует реальный исполняющий компонент')
         loaded[group] = {'rows': targets, 'sha256': digest(path), 'runner': RUNNERS[group]}
     # Повторно используйте существующую глубокую семантическую проверку загрузчика, Java и политики поддержки.
     compatibility.load_targets(ROOT / CATALOGS['minecraft'][0])
@@ -146,7 +146,7 @@ def locate_result_roots(results_root: Path):
     for current, dirs, files in os.walk(results_root, followlinks=False):
         current_path = Path(current)
         for entry in dirs:
-            require(not (current_path / entry).is_symlink(), 'symlinked evidence directory')
+            require(not (current_path / entry).is_symlink(), 'Каталог подтверждающих данных является символической ссылкой')
         if 'compatibility-result.json' not in files:
             continue
         result_path = current_path / 'compatibility-result.json'
@@ -154,7 +154,7 @@ def locate_result_roots(results_root: Path):
         name = doc.get('targetId')
         require(isinstance(name, str) and compatibility.ID_RE.fullmatch(name),
                 'invalid targetId in evidence')
-        require(name not in found, 'duplicate observed target: ' + name)
+        require(name not in found, 'Повторяющаяся проверенная цель: ' + name)
         found[name] = (result_path, doc)
     return found, errors
 
@@ -164,7 +164,7 @@ def verify_runtime_bytes(target, result_path: Path):
     runtime = (result_path.parent.parent / 'runtime' if result_path.parent.name == 'compatibility-result'
                else result_path.parent / 'runtime')
     base = read_json(runtime / 'result.json')
-    require(base.get('status') == 'passed', target['id'] + ': runtime did not pass')
+    require(base.get('status') == 'passed', target['id'] + ': проверка среды выполнения не пройдена')
     if target['scope'] == 'client':
         loader = target['loader']
         cert = read_json(runtime / (loader + '-certification.json'))
@@ -280,7 +280,7 @@ def inventory(results_root: Path, commit: str, run_id: str, attempt: int, *, str
     tables = catalogs()
     found, errors = locate_result_roots(results_root)
     required = {t['id']: t for t in tables['minecraft']['rows'] if t['required']}
-    require(not (set(found) - set(required)), 'unknown/optional evidence targets: ' +
+    require(not (set(found) - set(required)), 'Неизвестные или необязательные цели подтверждения: ' +
             ', '.join(sorted(set(found) - set(required))[:6]))
     rows = []
     for group in CATALOGS:
@@ -299,13 +299,13 @@ def inventory(results_root: Path, commit: str, run_id: str, attempt: int, *, str
                 except (Blocked, OSError, KeyError, TypeError, ValueError) as exc:
                     item['error'] = str(exc)[:512]
             elif group != 'minecraft':
-                item['reason'] = 'requires independently verified suite-specific runtime evidence'
+                item['reason'] = 'Требуется независимо проверенное подтверждение запуска для соответствующего набора'
             else:
-                item['reason'] = 'missing actual client execution evidence'
+                item['reason'] = 'Отсутствуют подтверждения фактического запуска клиента'
             rows.append(item)
     for e2e in E2E:
         rows.append({'id': 'user/' + e2e, 'required': True, 'status': 'blocked',
-                     'reason': 'separate real user-journey and final package acceptance required'})
+                     'reason': 'Требуются отдельные приёмки реального пользовательского сценария и итогового пакета'})
     counts = {'required': sum(x['required'] for x in rows),
               'observed': sum(x['status'] == 'observed' for x in rows),
               'blocked': sum(x['status'] == 'blocked' for x in rows),
@@ -325,7 +325,7 @@ def inventory(results_root: Path, commit: str, run_id: str, attempt: int, *, str
 def public_key(path: Path, pinned_sha: str):
     require(SHA.fullmatch(pinned_sha) is not None, 'independently pinned public key SHA256 required')
     key = serialization.load_pem_public_key(safe_file(path, 8192).read_bytes())
-    require(isinstance(key, Ed25519PublicKey), 'only Ed25519 independent reviewer public keys')
+    require(isinstance(key, Ed25519PublicKey), 'Допустимы только открытые ключи независимых проверяющих Ed25519')
     der = key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     require(hashlib.sha256(der).hexdigest() == pinned_sha, 'reviewer key does not match independent pin')
     return key
@@ -334,7 +334,7 @@ def public_key(path: Path, pinned_sha: str):
 def write_exclusive(path: Path, data: bytes):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(),
             'new absolute output path required')
-    require(path.parent.is_dir() and not path.parent.is_symlink(), 'unsafe output directory')
+    require(path.parent.is_dir() and not path.parent.is_symlink(), 'Небезопасный каталог вывода')
     descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     with os.fdopen(descriptor, 'wb') as stream:
         stream.write(data)
@@ -366,7 +366,7 @@ def command_inventory(args):
 def command_sign(args):
     require(args.private_key.resolve().is_relative_to(ROOT) is False,
             'independent signing private key must be outside source checkout')
-    require(args.private_key.stat().st_mode & 0o077 == 0, 'signer private key must be mode 0600')
+    require(args.private_key.stat().st_mode & 0o077 == 0, 'Закрытый ключ подписанта должен иметь права 0600')
     pinned = public_key(args.public_key.resolve(), args.public_key_sha256)
     key = serialization.load_pem_private_key(safe_file(args.private_key.resolve(), 8192).read_bytes(), password=None)
     require(isinstance(key, Ed25519PrivateKey) and key.public_key().public_bytes(

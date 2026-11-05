@@ -46,7 +46,7 @@ def require(ok, why):
 
 
 def private_json(path: Path, max_size=32768):
-    require(path.is_absolute() and path.is_file() and not path.is_symlink(), 'private input file must be an absolute regular file')
+    require(path.is_absolute() and path.is_file() and not path.is_symlink(), 'Входной закрытый файл должен иметь абсолютный путь и быть обычным файлом')
     info = path.stat()
     require(info.st_uid == os.geteuid() and stat.S_ISREG(info.st_mode) and
             info.st_mode & 0o077 == 0 and 0 < info.st_size <= max_size,
@@ -59,13 +59,13 @@ def private_json(path: Path, max_size=32768):
                 'private file changed during validation')
         with os.fdopen(fd, 'rb', closefd=False) as stream:
             raw = stream.read(max_size + 1)
-        require(len(raw) <= max_size, 'private input exceeded maximum size')
+        require(len(raw) <= max_size, 'Закрытый входной файл превышает максимальный размер')
     finally:
         os.close(fd)
     def unique(pairs):
         result = {}
         for name, value in pairs:
-            require(name not in result, 'duplicate private JSON field')
+            require(name not in result, 'Повторяющееся поле закрытого JSON')
             result[name] = value
         return result
     try:
@@ -73,12 +73,12 @@ def private_json(path: Path, max_size=32768):
             parse_constant=lambda item: (_ for _ in ()).throw(Blocked('invalid JSON constant')))
     except (UnicodeError, ValueError):
         raise Blocked('Некорректные закрытые входные данные JSON') from None
-    require(isinstance(parsed, dict), 'private JSON must be an object')
+    require(isinstance(parsed, dict), 'Закрытый JSON должен содержать объект')
     return parsed
 
 
 def private_write(path: Path, data: dict):
-    require(path.is_absolute() and path.parent.is_dir() and not path.parent.is_symlink(), 'output parent must exist and be an absolute directory')
+    require(path.is_absolute() and path.parent.is_dir() and not path.parent.is_symlink(), 'Родительский каталог вывода должен существовать и иметь абсолютный путь')
     require(not path.exists() and not path.is_symlink(), 'output already exists; refusing to overwrite evidence')
     tmp = path.with_name('.' + path.name + '.' + secrets.token_hex(8))
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600)
@@ -126,13 +126,13 @@ class LiveAPI:
             status, raw = error.code, error.read(262145)
         except (URLError, OSError, TimeoutError):
             raise Blocked('Ошибка соединения или сертификата HTTPS Backend') from None
-        require(len(raw) <= 262144, 'oversized Backend response')
+        require(len(raw) <= 262144, 'Ответ Backend превышает допустимый размер')
         require(status in expected, f'{method} {route.split("?")[0]} returned HTTP {status}, expected {expected}')
         try:
             parsed = json.loads(raw)
         except (UnicodeError, ValueError):
             raise Blocked('Backend вернул ответ не в формате JSON') from None
-        require(isinstance(parsed, dict), 'Backend returned non-object response')
+        require(isinstance(parsed, dict), 'Backend вернул ответ, не являющийся объектом')
         return parsed
 
 
@@ -177,7 +177,7 @@ def auth_login(api, entry, provider):
     require(isinstance(tokens.get('accessToken'), str) and len(tokens['accessToken']) >= 32 and
             isinstance(tokens.get('refreshToken'), str) and len(tokens['refreshToken']) >= 32,
             'login did not issue real Never access/refresh pair')
-    require(data.get('provider') == provider, 'provider routing crossed issuer/provider boundary')
+    require(data.get('provider') == provider, 'Маршрутизация провайдера нарушила границу издателя и провайдера')
     return user, tokens
 
 
@@ -186,7 +186,7 @@ def expect_denied(api, method, route, *, data=None, token=None, codes=(401, 403)
 
 
 def record(report, name, observations=None):
-    require(name not in (e['id'] for e in report['checks']), 'duplicate acceptance result')
+    require(name not in (e['id'] for e in report['checks']), 'Повторяющийся результат приёмки')
     report['checks'].append({'id': name, 'status': 'passed', 'observations': observations or {}})
     print('PASS', name, flush=True)
 
@@ -199,12 +199,12 @@ def check_input(raw):
     sql = credentials(raw.get('sql'), 'SQL')
     for key in ('local', 'secondary', 'sql'):
         safe_provider(raw[key].get('providerId'))
-    require(local['identifier'] != secondary['identifier'], 'secondary identity must be independent')
-    require(raw['sql']['providerId'] != local['providerId'], 'SQL test must use a different provider')
+    require(local['identifier'] != secondary['identifier'], 'Дополнительная учётная запись должна быть независимой')
+    require(raw['sql']['providerId'] != local['providerId'], 'Для SQL-проверки необходимо использовать другого провайдера')
     oidc = raw.get('oidc')
-    require(isinstance(oidc, dict), 'live OIDC configuration required')
+    require(isinstance(oidc, dict), 'Требуется работающая конфигурация OIDC')
     safe_provider(oidc.get('providerId'))
-    require(oidc.get('kind') in ('generic', 'microsoft'), 'OIDC kind must be generic or microsoft')
+    require(oidc.get('kind') in ('generic', 'microsoft'), 'Тип OIDC должен быть generic или microsoft')
     official = raw.get('official')
     require(isinstance(official, dict) and official.get('userType') == 'msa' and
             official.get('authServerBaseUrl') == '' and

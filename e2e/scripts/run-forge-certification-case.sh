@@ -73,11 +73,11 @@ for key in ("resolutionLockSha256", "resolutionSourceSha256", "reproducibilitySh
 if install.get("resolutionPinned") is not True:
     raise SystemExit("При повторной подготовке пакета не использована сохранённая фиксация версии загрузчика")
 if lock_sha != install.get("resolutionLockSha256") or lock_sha != first_lock:
-    raise SystemExit("loader resolution lock SHA-256 changed between materializations")
+    raise SystemExit("SHA-256 блокировки загрузчика изменился между установками")
 if install.get("reproducibilitySha256") != first_repro or lock.get("reproducibilitySha256") != first_repro:
-    raise SystemExit("loader reproducibility identity changed between materializations")
+    raise SystemExit("Идентификатор воспроизводимости загрузчика изменился между установками")
 if lock.get("resolvedVersion") != install.get("loaderVersion"):
-    raise SystemExit("loader lock resolvedVersion mismatch")
+    raise SystemExit("Значение resolvedVersion в блокировке загрузчика не совпадает")
 if lock.get("selector") in ("", None) or lock.get("resolvedVersion") in ("latest", "latest-stable", "stable", "recommended"):
     raise SystemExit("Фиксация версии загрузчика допускает изменения")
 PY
@@ -100,9 +100,9 @@ settings = package.get('manifestSettings') or {}
 minecraft = settings.get('minecraft') or {}
 runtime = settings.get('runtime') or {}
 if not (install.get('status') == 'installed-and-verified' and install.get('loader') == 'forge' and install.get('minecraftVersion') == mc and install.get('javaMajorVersion') == java):
-    raise SystemExit('invalid Forge materialization evidence')
+    raise SystemExit('Недопустимое подтверждение установки Forge')
 if not (install.get('loaderVersion') and install.get('artifactVersion') and install.get('profileId') and install.get('profilePath') and install.get('mainClass')):
-    raise SystemExit('Forge profile was not fully materialized')
+    raise SystemExit('Профиль Forge установлен не полностью')
 client_processors = int(install.get('clientProcessorCount') or 0)
 ran = int(install.get('processorRan') or 0)
 skipped = int(install.get('processorSkipped') or 0)
@@ -135,13 +135,13 @@ for key in ('installerSha256', 'profileSha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(install.get(key) or '')):
         raise SystemExit(f'invalid Forge {key}')
 if int(install.get('libraryCount') or 0) <= 0:
-    raise SystemExit('Forge runtime libraries were not materialized')
+    raise SystemExit('Библиотеки среды Forge не установлены')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):
     raise SystemExit('Ошибка проверки подготовленного пакета')
 if not (minecraft.get('version') == mc and minecraft.get('loader') == 'forge' and minecraft.get('loaderVersion') == install.get('loaderVersion') and minecraft.get('mainClass') == install.get('mainClass')):
-    raise SystemExit('Forge package metadata mismatch')
+    raise SystemExit('Метаданные пакета Forge не совпадают')
 if not ((runtime.get('java') or {}).get('majorVersion') == java and (runtime.get('launch') or {}).get('classpathStrategy') == 'compatibility' and (runtime.get('launch') or {}).get('versionMetadataPath') == install.get('profilePath')):
-    raise SystemExit('Forge package runtime settings mismatch')
+    raise SystemExit('Настройки запуска пакета Forge не совпадают')
 open(install_p, 'w', encoding='utf-8').write(json.dumps(install, indent=2, ensure_ascii=False) + '\n')
 print(install['profileId'])
 PY
@@ -184,11 +184,11 @@ java = int(java)
 cert = json.load(open(cert_p, encoding='utf-8'))
 install = json.load(open(install_p, encoding='utf-8'))
 if not (cert.get('status') == 'passed' and cert.get('minecraftVersion') == profile and cert.get('requiredJavaMajor') == java and cert.get('detectedJavaMajor') == java):
-    raise SystemExit('actual Forge client certification failed')
+    raise SystemExit('Реальная сертификация клиента Forge не пройдена')
 if not ((cert.get('timedOut') is True or cert.get('success') is True) and int(cert.get('classpathEntries') or 0) > 0):
-    raise SystemExit('Forge client did not stay alive or exit successfully')
+    raise SystemExit('Клиент Forge не продолжил работу и не завершился успешно')
 if cert.get('mainClass') != install.get('mainClass'):
-    raise SystemExit('Forge launch mainClass mismatch')
+    raise SystemExit('Основной класс запуска Forge не совпадает')
 PY
 
 python3 "$ROOT/scripts/compatibility/verify-loader-platform.py" \

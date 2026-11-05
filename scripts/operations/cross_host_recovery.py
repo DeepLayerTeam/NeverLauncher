@@ -46,7 +46,7 @@ def now():
 def absolute_fresh(path: Path):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(), "Целевой путь должен быть новым абсолютным путём")
     require(path.parent.is_dir() and not path.parent.is_symlink(), "Родительский каталог назначения отсутствует или является символической ссылкой")
-    require(all(not p.is_symlink() for p in path.parents), "unsafe destination ancestry")
+    require(all(not p.is_symlink() for p in path.parents), "Небезопасная цепочка родительских каталогов назначения")
 
 def private_directory(path: Path):
     require(path.is_dir() and not path.is_symlink() and stat.S_IMODE(path.stat().st_mode) & 0o077 == 0,
@@ -60,7 +60,7 @@ def parse_pairs(values, *, expected=None):
                 "Недопустимая или повторяющаяся пара name=value")
         result[label] = value
     if expected is not None:
-        require(set(result) == set(expected), "recovery target set differs from checkpoint")
+        require(set(result) == set(expected), "Набор целей восстановления отличается от контрольной точки")
     return result
 
 def verified_source(backup: Path, stanza: str, trust_file: Path):
@@ -76,7 +76,7 @@ def verified_source(backup: Path, stanza: str, trust_file: Path):
     return manifest
 
 def fresh_bucket(bucket, endpoint, source_bucket):
-    require(bucket != source_bucket, "refusing to restore into source S3 bucket")
+    require(bucket != source_bucket, "Восстановление в исходный бакет S3 запрещено")
     require(cb.s3_version_inventory(bucket, endpoint) == [],
             "destination S3 bucket contains objects, versions or delete markers")
 
@@ -101,7 +101,7 @@ def target_spec(args, manifest):
     return nodes, entries
 
 def transfer(host, script, mode, source: Path, *options, timeout=7200):
-    require(source.is_file() and not source.is_symlink(), "source archive not available")
+    require(source.is_file() and not source.is_symlink(), "Исходный архив недоступен")
     cmd = cb.ssh(host, script, mode, *options)
     try:
         with source.open("rb") as stream:
@@ -186,7 +186,7 @@ def restore_volume_local(args):
                                "--mount", f"type=volume,src={vol},dst=/source,readonly",
                                args.tar_image, "tar", "-czf", "-", "-C", "/source", "."],
                               readback, timeout=7200)
-            require(expected == dr.tar_digests(readback), "volume readback differs from original files")
+            require(expected == dr.tar_digests(readback), "Повторное чтение тома отличается от исходных файлов")
         return {"status": "restored", "volume": args.volume, "files": len(expected)}
     finally:
         tarpath.unlink(missing_ok=True)
@@ -227,13 +227,13 @@ def persist(work, state):
 
 def read_state(work):
     state = cb.read_private_json(state_path(work))
-    require(state.get("schema") == SCHEMA, "wrong recovery state")
+    require(state.get("schema") == SCHEMA, "Неверное состояние восстановления")
     return state
 
 def prepare(args):
     backup, work = Path(args.backup), Path(args.work)
     private_directory(work)
-    require(not state_path(work).exists(), "existing recovery journal (resume requires inspection)")
+    require(not state_path(work).exists(), "Обнаружен журнал восстановления; перед продолжением требуется проверка")
     manifest = verified_source(backup, args.stanza, Path(args.trust_file))
     nodes, worlds = target_spec(args, manifest)
     absolute_fresh(Path(args.pgdata))
@@ -312,9 +312,9 @@ def pg_sql(port, query, socket_dir, *, timeout=60):
 def replay_postgres(args):
     work = Path(args.work); private_directory(work)
     state = read_state(work)
-    require(state["phase"] == "prepared-not-admitted", "cohort not fully prepared")
+    require(state["phase"] == "prepared-not-admitted", "Группа узлов подготовлена не полностью")
     target = Path(state["pgdata"])
-    require(target.is_dir() and (target / "PG_VERSION").is_file(), "PGDATA not restored")
+    require(target.is_dir() and (target / "PG_VERSION").is_file(), "Каталог PGDATA не восстановлен")
     require(args.source_fenced, "Перед началом необходимо независимо изолировать исходную инфраструктуру")
     require(1024 < args.pg_port < 65536, "Недопустимый порт изолированного PostgreSQL")
     require(args.socket_dir, "Требуется закрытый каталог сокета PostgreSQL")
@@ -374,7 +374,7 @@ def audit_recovery(ledger_file, pg_env, incident):
     ledger = cb.read_private_json(Path(ledger_file))
     require(ledger.get("schema") == "neverlauncher.dr-ack-ledger/v1", "Неподдерживаемый журнал подтверждений")
     rows = ledger.get("entries")
-    require(isinstance(rows, list) and rows and len(rows) <= 100000, "empty/oversized audit ledger")
+    require(isinstance(rows, list) and rows and len(rows) <= 100000, "Журнал аудита пуст или превышает допустимый размер")
     last = None
     recovered = 0
     missing = []
@@ -425,7 +425,7 @@ def assert_recovered_runtime(report):
 def admission(args):
     work = Path(args.work); private_directory(work)
     state = read_state(work)
-    require(state["phase"] == "postgres-promoted-isolated", "PostgreSQL recovery not proven")
+    require(state["phase"] == "postgres-promoted-isolated", "Восстановление PostgreSQL не подтверждено")
     require(args.source_fenced and args.external_secrets_restored,
             "Старые процессы записи необходимо изолировать, а секреты и внешнюю аутентификацию — восстановить отдельно")
     require(args.project == state["project"], "Несовпадение проекта")

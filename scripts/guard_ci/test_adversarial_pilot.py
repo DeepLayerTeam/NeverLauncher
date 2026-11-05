@@ -70,13 +70,13 @@ class PilotEvidenceTests05012(unittest.TestCase):
     def test_broken_chain_rejected(self):
         self.append(1)
         self.append(2, prev='0' * 64)
-        with self.assertRaisesRegex(mod.EvidenceError, 'broken shadow record chain'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'Нарушена цепочка записей теневого режима'):
             mod.analyze_shadow(self.logdir, self.keyfile)
 
     def test_replayed_sequence_rejected(self):
         e = self.append(1)
         self.append(1, prev=e['mac'])
-        with self.assertRaisesRegex(mod.EvidenceError, 'missing/replayed shadow sequence'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'Последовательность теневого режима отсутствует или воспроизведена повторно'):
             mod.analyze_shadow(self.logdir, self.keyfile)
 
     def test_unknown_review_rejected(self):
@@ -91,7 +91,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
         review = self.root / 'review.jsonl'
         review.write_text('{"eventMac":"' + event['mac'] + '","verdict":"true_positive",'
                           '"verdict":"false_positive","reviewerId":"operator"}\n')
-        with self.assertRaisesRegex(mod.EvidenceError, 'duplicate incident review'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'Повторяющееся поле JSON разбора инцидента'):
             mod.analyze_shadow(self.logdir, self.keyfile, review)
         review.write_text(json.dumps(dict(eventMac=event['mac'], verdict='true_positive', reviewerId='operator'))+'\n')
         link = self.root / 'link.jsonl'; link.symlink_to(review)
@@ -116,7 +116,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
     def test_insecure_shadow_key_rejected(self):
         os.chmod(self.keyfile, 0o644)
         self.append(1)
-        with self.assertRaisesRegex(mod.EvidenceError, 'unsafe permissions'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'Небезопасные права'):
             mod.analyze_shadow(self.logdir, self.keyfile)
 
     def test_a_b_frame_comparison_real_values_and_metadata(self):
@@ -135,7 +135,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
         content = json.loads(path.read_text())
         content['scene'] = 'different'
         path.write_text(json.dumps(content))
-        with self.assertRaisesRegex(mod.EvidenceError, 'matched'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'метаданные'):
             mod.compare_performance(self.root/'base', self.root/'protected')
 
     def test_missing_game_evidence_is_not_minecraft_pass(self):
@@ -151,7 +151,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
         evidence = mod.verify_game(work, log, 'Steve')
         self.assertEqual('EVIDENCE_VERIFIED_NOT_INDEPENDENT', evidence['status'])
         (work/'runtime-launch-minecraft.json').unlink()
-        with self.assertRaisesRegex(mod.EvidenceError, 'missing real E2E evidence'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'Отсутствует реальное E2E-подтверждение'):
             mod.verify_game(work, log, 'Steve')
 
     def test_invalid_game_join_logs_are_rejected(self):
@@ -162,7 +162,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
             'evidence':['runtime-launch-minecraft.json']}))
         (work/'runtime-launch-minecraft.json').write_text(json.dumps({'success':True}))
         log = self.root/'paper.log';log.write_text('Steve joined the game\n')
-        with self.assertRaisesRegex(mod.EvidenceError, 'authenticated admission'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'авторизованный допуск'):
             mod.verify_game(work, log, 'Steve')
 
 

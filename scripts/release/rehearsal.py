@@ -85,17 +85,17 @@ def architecture(content: bytes, target: str) -> None:
         )
         ncmds = struct.unpack_from("<I", content, 16)[0]
         size = struct.unpack_from("<I", content, 20)[0]
-        require(0 < ncmds <= 200 and 32 + size <= len(content), "bad Mach-O commands")
+        require(0 < ncmds <= 200 and 32 + size <= len(content), "Недопустимые команды Mach-O")
         cursor = 32
         signed = False
         for _ in range(ncmds):
-            require(cursor + 8 <= 32 + size, "bad Mach-O command size")
+            require(cursor + 8 <= 32 + size, "Недопустимый размер команды Mach-O")
             cmd, length = struct.unpack_from("<II", content, cursor)
             require(
                 length >= 8 and cursor + length <= 32 + size, "truncated Mach-O command"
             )
             if cmd == 0x1D:
-                require(length >= 16, "truncated code-signing command")
+                require(length >= 16, "Неполная команда подписи кода")
                 off, length_sig = struct.unpack_from("<II", content, cursor + 8)
                 require(
                     off > 0 and length_sig > 0 and off + length_sig <= len(content),
@@ -155,14 +155,14 @@ def unpack(path: Path) -> dict[str, bytes]:
             for meta in archive:
                 if meta.isdir():
                     continue
-                require(meta.isfile() and meta.name not in result, "unsafe TAR member")
+                require(meta.isfile() and meta.name not in result, "Небезопасный элемент архива TAR")
                 total += meta.size
                 require(
                     total <= MAX_UNCOMPRESSED and len(result) < MAX_ENTRIES,
                     "TAR expansion limit",
                 )
                 reader = archive.extractfile(meta)
-                require(reader is not None, "unreadable TAR member")
+                require(reader is not None, "Невозможно прочитать элемент архива TAR")
                 result[meta.name] = reader.read()
     safe_members(result)
     return result
@@ -216,7 +216,7 @@ def verify_update_payload_0410(
 
     package_rows = {}
     for row in manifest["artifacts"]:
-        require(isinstance(row, dict), "invalid installer artifact entry")
+        require(isinstance(row, dict), "Недопустимая запись артефакта установщика")
         source = (
             row.get("packagePath")
             if system == "linux"
@@ -237,7 +237,7 @@ def verify_update_payload_0410(
         )
         roles = set()
         for entry in rows:
-            require(isinstance(entry, dict), "invalid installed component entry")
+            require(isinstance(entry, dict), "Недопустимая запись установленного компонента")
             role = entry.get("component")
             require(
                 isinstance(role, str) and role in expected and role not in roles,
@@ -591,7 +591,7 @@ def current_run() -> tuple[str, str]:
 def certify(bundle: Path, evidence: Path, key: Path, version: str, commit: str) -> dict:
     run_id, run_attempt = current_run()
     receipt = verify(bundle, evidence, key, version, commit)
-    require(requires_rehearsal(version), "rehearsal requires 0.36.5 or newer")
+    require(requires_rehearsal(version), "Для репетиции требуется версия не ниже 0.36.5")
     allowed = {name for target in TARGETS for name in paths(version, target)}
     allowed.update(
         {
@@ -706,7 +706,7 @@ def dry_run(
                     "SHA256SUMS mismatch " + source.name,
                 )
         copied_cli = stage / cli.name
-        require(copied_cli.is_file(), "publication dry-run is missing its release CLI")
+        require(copied_cli.is_file(), "В пробной публикации отсутствует CLI выпуска")
         copied_cli.chmod(cli.stat().st_mode & 0o777)
         argv = [
             str(copied_cli.resolve()),

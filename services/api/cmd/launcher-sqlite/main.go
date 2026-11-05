@@ -118,7 +118,7 @@ func run(args []string) int {
 		}
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "sqlite storage failed closed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Безопасная остановка хранилища SQLite: %v\n", err)
 		return 1
 	}
 	payload["status"] = "ok"

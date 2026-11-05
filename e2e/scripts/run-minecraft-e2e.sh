@@ -199,7 +199,7 @@ wait_bridge_heartbeat() {
 # Дожидайтесь условий готовности PostgreSQL, применяемых бэкендом.
 wait_bridge_routable() {
   local service="$1" node_id="$2" elapsed state
-  [[ "$node_id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "invalid node id" >&2; return 1; }
+  [[ "$node_id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Недопустимый идентификатор узла" >&2; return 1; }
   for elapsed in $(seq 1 90); do
     state="$(psql "$DB_DSN" -AtF '|' -c "
       SELECT n.status, n.routing_state, n.routing_health,
@@ -725,9 +725,9 @@ actual = hashlib.sha256(raw).hexdigest()
 if actual != expected_lock:
     raise SystemExit(f'loader lock SHA-256 mismatch: expected {expected_lock} got {actual}')
 if lock.get('reproducibilitySha256') != expected_repro:
-    raise SystemExit('loader lock reproducibility identity mismatch')
+    raise SystemExit('Идентификатор воспроизводимости закреплённого загрузчика не совпадает')
 if lock.get('resolvedVersion') in ('', None, 'latest', 'latest-stable', 'stable', 'recommended'):
-    raise SystemExit('loader lock does not contain an immutable resolvedVersion')
+    raise SystemExit('В блокировке загрузчика отсутствует неизменяемый resolvedVersion')
 for key in ('resolutionSourceSha256', 'payloadSha256', 'runtimeProfileSha256', 'materializationSha256', 'reproducibilitySha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(lock.get(key) or '')):
         raise SystemExit(f'loader lock {key} is invalid')

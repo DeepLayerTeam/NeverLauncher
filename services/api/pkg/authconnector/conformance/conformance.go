@@ -55,7 +55,7 @@ func (r *Report) add(name string, err error) {
 		// ошибки могут содержать секреты, подписанные URL, токены доступа или PII.
 		var e *authconnector.Error
 		if errors.As(err, &e) && e.Code != "" {
-			c.Message = "provider error: " + string(e.Code)
+			c.Message = "Ошибка провайдера: " + string(e.Code)
 		} else {
 			c.Message = "check failed"
 		}

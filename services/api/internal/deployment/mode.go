@@ -70,19 +70,19 @@ func Detect(cfg config.Config) (Plan, error) {
 	switch {
 	case requested != "auto":
 		p.Mode = Mode(requested)
-		p.Reasons = append(p.Reasons, "selected explicitly by LAUNCHER_DEPLOYMENT_MODE")
+		p.Reasons = append(p.Reasons, "Выбрано явно через LAUNCHER_DEPLOYMENT_MODE")
 	case sqliteRepo:
 		p.Mode = SingleNode
-		p.Reasons = append(p.Reasons, "SQLite repository configured")
+		p.Reasons = append(p.Reasons, "Настроен репозиторий SQLite")
 	case memory:
 		p.Mode = Development
 		p.Reasons = append(p.Reasons, "Настроено хранилище в памяти; только для разработки")
 	case postgres && sqliteCoord:
 		p.Mode = Standard
-		p.Reasons = append(p.Reasons, "PostgreSQL repository with local SQLite coordinator")
+		p.Reasons = append(p.Reasons, "Репозиторий PostgreSQL с локальным координатором SQLite")
 	case postgres && cfg.ServerBridgeHARequired && s3:
 		p.Mode = NetworkHA
-		p.Reasons = append(p.Reasons, "PostgreSQL, Redis HA policy and S3 storage are configured")
+		p.Reasons = append(p.Reasons, "Настроены PostgreSQL, политика высокой доступности Redis и хранилище S3")
 	case postgres:
 		p.Mode = Standard
 		p.Reasons = append(p.Reasons, "PostgreSQL repository; HA topology is incomplete or disabled")
@@ -178,7 +178,7 @@ func Detect(cfg config.Config) (Plan, error) {
 			if strings.TrimSpace(cfg.RedisURL) == "" {
 				problems = append(problems, "Для режима network-ha требуется Redis")
 			}
-			p.Reasons = append(p.Reasons, "multi-replica topology requires independently verified lease/fencing/failover")
+			p.Reasons = append(p.Reasons, "Для многорепликовой конфигурации необходима независимая проверка аренды, изоляции и переключения при сбое")
 		} else {
 			p.SingleInstance = true
 			p.requireLocalFS = config.IsProductionEnvironment(cfg.Environment)

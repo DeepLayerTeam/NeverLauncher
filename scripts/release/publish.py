@@ -104,7 +104,7 @@ def file_set(bundle: Path) -> dict[str, str]:
             "duplicate/self-reference in SHA256SUMS",
         )
         expected[name] = digest
-    require(len(expected) >= 20, "release has too few signed assets")
+    require(len(expected) >= 20, "В выпуске недостаточно подписанных артефактов")
     present = set()
     for p in bundle.iterdir():
         require(
@@ -117,7 +117,7 @@ def file_set(bundle: Path) -> dict[str, str]:
         "unsigned extra or missing release asset",
     )
     for name, digest in expected.items():
-        require(sha(bundle / name) == digest, "signed asset checksum mismatch: " + name)
+        require(sha(bundle / name) == digest, "Контрольная сумма подписанного артефакта не совпадает: " + name)
     for extra in ("SHA256SUMS", "SHA256SUMS.sig"):
         require(
             (bundle / extra).stat().st_size > 0, "missing release signature/checksums"
@@ -188,7 +188,7 @@ def verify_security_archive(
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(member, "r") as stream:
                     data = stream.read(32 * 1024 * 1024 + 1)
-                require(len(data) == member.file_size, "truncated security evidence")
+                require(len(data) == member.file_size, "Неполные подтверждения безопасности")
                 path.write_bytes(data)
         verify_security(
             extracted, approval, run_id=str(run_id), run_attempt=attempt, now=now
@@ -296,7 +296,7 @@ def verify_ga(
                 bundle, evidence, public_key, version, commit,
                 run_id=str(run_id), run_attempt=attempt,
             )
-            require(actual == receipt, "GA receipt differs from independent full replay")
+            require(actual == receipt, "Квитанция GA отличается от независимого полного повторения")
             if parsed(version)[0] >= (0, 44, 0):
                 verify_support_file(bundle / SUPPORT_REPORT_0440, actual)
     return receipt["approvalSha256"]
@@ -513,7 +513,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         run(args)
         # Загружайте лишь опечатанный снимок с повторно проверенными хешами; неполный выпуск нельзя продвигать.
         for name in sorted(files):
-            require(sha(snapshot / name) == files[name], "sealed asset changed: " + name)
+            require(sha(snapshot / name) == files[name], "Опечатанный артефакт изменился: " + name)
             run(["gh", "release", "upload", tag, str(snapshot / name), "--repo", repo])
         with tempfile.TemporaryDirectory(prefix="nl-0370-roundtrip-") as tmp:
             remote = Path(tmp)

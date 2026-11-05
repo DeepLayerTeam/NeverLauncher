@@ -80,7 +80,7 @@ import sys
 paths=open(sys.argv[1],encoding='utf-8',errors='replace').read().splitlines()
 version=sys.argv[2]
 if not paths:
-    raise SystemExit('loader server artifact list is empty')
+    raise SystemExit('Список артефактов сервера загрузчика пуст')
 needle='/' + version + '/'
 if not any(needle in p.replace('\\','/') or version in p.rsplit('/',1)[-1] for p in paths):
     raise SystemExit(f'exact loader version {version!r} is not present in server runtime artifact paths')
@@ -138,22 +138,22 @@ log_raw=open(log_p,'rb').read(); art_raw=open(art_p,'rb').read()
 log=log_raw.decode('utf-8','replace')
 paths=[x for x in art_raw.decode('utf-8','replace').splitlines() if x]
 if client.get('status')!='passed' or client.get('minecraftVersion')!=profile:
-    raise SystemExit('loader-native client certification failed')
+    raise SystemExit('Сертификация нативного клиента загрузчика не пройдена')
 if client.get('requiredJavaMajor')!=java or client.get('detectedJavaMajor')!=java:
-    raise SystemExit('loader-native client Java mismatch')
+    raise SystemExit('Версия Java нативного клиента загрузчика не совпадает')
 if client.get('matchingServer')!='127.0.0.1' or client.get('matchingServerPort')!=port:
-    raise SystemExit('loader-native client did not target dedicated loader server')
+    raise SystemExit('Нативный клиент загрузчика не подключился к выделенному серверу загрузчика')
 if not (client.get('timedOut') is True or client.get('success') is True):
-    raise SystemExit('loader-native client did not stay alive or exit successfully')
+    raise SystemExit('Нативный клиент загрузчика не продолжил работу и не завершился успешно')
 if int(client.get('classpathEntries') or 0)<=0:
-    raise SystemExit('loader-native client classpath is empty')
+    raise SystemExit('Путь классов нативного клиента загрузчика пуст')
 if health.get('Status')!='healthy' or int(health.get('FailingStreak') or 0)!=0:
-    raise SystemExit('loader-native server is not healthy')
+    raise SystemExit('Нативный сервер загрузчика неисправен')
 if 'NL_Cert_Client joined the game' not in log:
-    raise SystemExit('loader-native server log does not prove actual client join')
+    raise SystemExit('Журнал нативного сервера загрузчика не подтверждает фактическое подключение клиента')
 needle='/' + loader_ver + '/'
 if not any(needle in p.replace('\\','/') or loader_ver in p.rsplit('/',1)[-1] for p in paths):
-    raise SystemExit('loader-native server exact loader artifact missing')
+    raise SystemExit('На нативном сервере загрузчика отсутствует точный артефакт загрузчика')
 family_markers={'fabric':['fabric'],'quilt':['quilt'],'forge':['forge'],'neoforge':['neoforge','neo forge']}
 low=log.lower()
 if not any(marker in low for marker in family_markers[loader]):

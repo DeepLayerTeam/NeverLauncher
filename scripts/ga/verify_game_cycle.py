@@ -47,12 +47,12 @@ def load(root: Path, name: str) -> dict:
     def unique(pairs):
         value = {}
         for key, entry in pairs:
-            require(key not in value, "duplicate evidence field: " + key)
+            require(key not in value, "Повторяющееся поле подтверждения: " + key)
             value[key] = entry
         return value
 
     doc = json.loads(p.read_text(encoding="utf-8"), object_pairs_hook=unique)
-    require(isinstance(doc, dict), "not a JSON object: " + name)
+    require(isinstance(doc, dict), "Значение не является объектом JSON: " + name)
     return doc
 
 

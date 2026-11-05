@@ -109,7 +109,7 @@ def stream_command(args, target: Path, *, timeout=7200, cwd=None):
             target.unlink(missing_ok=True)
             raise
         fd.flush(); os.fsync(fd.fileno())
-    require(target.stat().st_size > 0, "empty archive")
+    require(target.stat().st_size > 0, "Пустой архив")
 
 
 def ssh(target, script, command, *args):
@@ -180,7 +180,7 @@ def frozen_record(directory, project, run_id):
 
 def assert_frozen(directory, project, run_id):
     data = frozen_record(directory, project, run_id)
-    require(data.get("phase") == "frozen", "host freeze is incomplete")
+    require(data.get("phase") == "frozen", "Остановка записи на хосте выполнена не полностью")
     states = local_services(directory, project)
     require(all(states.get(k) not in ("running", "restarting", "paused") for k in ("api", "worker")),
             "host resumed during snapshot")
@@ -193,7 +193,7 @@ def thaw(directory, project, run_id):
     execute(multi.compose_command(directory, project, "up", "-d", "--no-build", "--no-deps", "--wait", "api", "worker"),
             cwd=directory, timeout=180)
     states = local_services(directory, project)
-    require(states.get("api") == "running" and states.get("worker") == "running", "API/worker not restarted")
+    require(states.get("api") == "running" and states.get("worker") == "running", "API или Worker не перезапущены")
     (directory / STATE_FILE).unlink()
     sync_dir(directory)
     return {"status": "resumed", "nodeId": data["nodeId"], "runId": run_id}
@@ -242,7 +242,7 @@ def pg_info(stanza):
         raise BackupError("Некорректное значение: «pgBackRest inventory»") from exc
     require(isinstance(value, list) and len(value) == 1 and value[0].get("name") == stanza,
             "Конфигурация pgBackRest stanza не найдена")
-    require(value[0].get("status", {}).get("code") == 0, "pgBackRest repository unhealthy")
+    require(value[0].get("status", {}).get("code") == 0, "Репозиторий pgBackRest неисправен")
     return value[0]
 
 
@@ -253,7 +253,7 @@ def backup_physical(stanza):
     pgbackrest(stanza, "check")
     after = pg_info(stanza)
     fresh = [x for x in after.get("backup", []) if x.get("label") not in before]
-    require(len(fresh) == 1, "pgBackRest did not register one new physical backup")
+    require(len(fresh) == 1, "pgBackRest не зарегистрировал новую физическую резервную копию")
     row = fresh[0]
     require(row.get("type") == "full" and bool(BACKUP_LABEL.fullmatch(str(row.get("label", ""))))
             and isinstance(row.get("timestamp", {}).get("stop"), int)
@@ -307,7 +307,7 @@ def tree_files(folder):
         require(not stat.S_ISLNK(st.st_mode) and (stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode)),
                 "unsafe backup tree entry")
         if stat.S_ISREG(st.st_mode):
-            require(st.st_nlink == 1, "hardlinked backup payload")
+            require(st.st_nlink == 1, "В содержимом резервной копии обнаружены жёсткие ссылки")
             result[entry.relative_to(folder).as_posix()] = {"size": st.st_size, "sha256": dr.sha256_file(entry)}
     return dict(sorted(result.items()))
 
@@ -385,7 +385,7 @@ def local_world_stream(backup_root, backup_id):
 
 
 def unpack_safe_tar(path: Path, dest: Path):
-    require(not dest.exists(), "unpack destination exists")
+    require(not dest.exists(), "Каталог распаковки уже существует")
     dest.mkdir(parents=True, mode=0o700)
     with tarfile.open(path, "r:gz") as archive:
         seen = set()
@@ -471,7 +471,7 @@ def validate_backup(folder, *, stanza=None):
     require(hashlib.sha256(json.dumps(json.loads(s3_inventory.read_text()),
                                    separators=(",", ":")).encode()).hexdigest() ==
             document["s3"]["versionInventorySha256"], "S3 version inventory changed")
-    require(tree_files(folder / "s3") == document["s3"]["files"], "S3 object payload changed")
+    require(tree_files(folder / "s3") == document["s3"]["files"], "Содержимое объекта S3 изменилось")
     if stanza:
         require(stanza == document["postgres"]["backup"]["stanza"], "wrong PostgreSQL stanza")
         pgbackrest(stanza, "check")

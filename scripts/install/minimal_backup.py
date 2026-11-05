@@ -95,7 +95,7 @@ def private_directory(path):
 
 def safe_absolute(path):
     p = Path(os.path.abspath(path))
-    require(p.is_absolute() and p != Path("/"), "absolute non-root path required")
+    require(p.is_absolute() and p != Path("/"), "Требуется абсолютный путь, отличный от корневого каталога")
     # Проверяйте все существующие сегменты пути, включая родительские каталоги назначения.
     for parent in reversed((p, *p.parents)):
         if parent.is_symlink():
@@ -112,7 +112,7 @@ def read_install(root):
     for line in env.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("#"):
             continue
-        require("=" in line, "bad backend.env record")
+        require("=" in line, "Некорректная запись в backend.env")
         key, value = line.split("=", 1)
         require(
             key.startswith("LAUNCHER_") and key not in values,
@@ -250,7 +250,7 @@ def paths_in(root):
         rel_dir = base.relative_to(root)
         check_path(base, directory=True)
         if rel_dir == Path("."):
-            require("backups" in names, "missing backups directory")
+            require("backups" in names, "Отсутствует каталог резервных копий")
             private_directory(root / "backups")
             names.remove("backups")
         names.sort()
@@ -364,7 +364,7 @@ def verify(bundle):
         if record["kind"] == "sqlite":
             sqlite_integrity(path)
         filepaths.append(rel)
-    require(filepaths == sorted(set(filepaths)), "duplicate/out-of-order paths")
+    require(filepaths == sorted(set(filepaths)), "Пути дублируются или указаны не по порядку")
     require(
         all(name in filepaths for name in DB_NAMES), "Обязательная база данных SQLite отсутствует"
     )
@@ -373,7 +373,7 @@ def verify(bundle):
         declared_dirs == actual_dirs and filepaths == actual_files,
         f"Неполное или неожиданное содержимое пакета: ожидались каталоги {declared_dirs}, обнаружены {actual_dirs}; ожидались файлы {filepaths}, обнаружены {actual_files}",
     )
-    require("config/backend.env" in filepaths, "backup config missing")
+    require("config/backend.env" in filepaths, "Отсутствует конфигурация резервного копирования")
     return manifest
 
 
@@ -457,7 +457,7 @@ def backup(root, destination=None):
                 fsync_dir(payload if d == "." else payload / d)
             fsync_dir(stage)
             verify(stage)
-            require(not dest.exists(), "backup destination appeared during creation")
+            require(not dest.exists(), "Каталог назначения резервной копии появился в процессе создания")
             publish_new_directory(stage, dest)
             fsync_dir(dest.parent)
             return dest
@@ -498,7 +498,7 @@ def restore(bundle, target_root):
         for line in envfile.read_text(encoding="utf-8").splitlines():
             if not line or line.startswith("#"):
                 continue
-            require("=" in line, "invalid restored env")
+            require("=" in line, "Недопустимое восстановленное окружение")
             key, value = line.split("=", 1)
             values[key] = value
         previous = safe_absolute(manifest["sourceRoot"])

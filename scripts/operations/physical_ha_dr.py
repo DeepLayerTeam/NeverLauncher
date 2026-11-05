@@ -71,7 +71,7 @@ def read_json(p):
     def unique(pairs):
         result = {}
         for k, v in pairs:
-            require(k not in result, 'duplicate JSON member')
+            require(k not in result, 'Повторяющееся поле объекта JSON')
             result[k] = v
         return result
     return json.loads(private_bytes(Path(p), 4 << 20), object_pairs_hook=unique)

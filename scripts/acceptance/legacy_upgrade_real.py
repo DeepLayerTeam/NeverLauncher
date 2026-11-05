@@ -59,7 +59,7 @@ def private_json(path):
     def unique(pairs):
         result = {}
         for name, value in pairs:
-            require(name not in result, 'duplicate JSON field')
+            require(name not in result, 'Повторяющееся поле JSON')
             result[name] = value
         return result
     value = json.loads(data, object_pairs_hook=unique)

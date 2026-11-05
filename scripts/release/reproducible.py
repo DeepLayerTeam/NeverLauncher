@@ -115,7 +115,7 @@ def inspect_exe(head: bytes, platform: str, architecture: str) -> None:
             raise ValueError('В неподписанном PE отсутствует заголовок DOS')
         offset = struct.unpack_from('<I', head, 0x3c)[0]
         if offset > len(head) - 160 or head[offset:offset+4] != b'PE\0\0':
-            raise ValueError('invalid PE header')
+            raise ValueError('Недопустимый заголовок PE')
         if struct.unpack_from('<H', head, offset+4)[0] != ARCH[architecture]['pe'] or struct.unpack_from('<H',head,offset+24)[0] != 0x20b:
             raise ValueError('Не совпадает архитектура неподписанного PE64')
         cert_off, cert_size = struct.unpack_from('<II',head,offset+24+112+4*8)

@@ -227,7 +227,7 @@ def object_pairs(pairs):
 
 def read_json(path: Path):
     value = json.loads(read_file(path), object_pairs_hook=object_pairs)
-    require(isinstance(value, dict), "JSON root must be an object")
+    require(isinstance(value, dict), "Корневое значение JSON должно быть объектом")
     return value
 
 

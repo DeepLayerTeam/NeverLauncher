@@ -236,7 +236,7 @@ func (r *Reporter) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if v := recover(); v != nil {
-				r.Capture("http.panic", "backend", "handler panic")
+				r.Capture("http.panic", "backend", "Паника обработчика")
 				panic(v)
 			}
 		}()

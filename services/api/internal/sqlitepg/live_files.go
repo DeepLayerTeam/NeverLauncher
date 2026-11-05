@@ -82,7 +82,7 @@ func noSymlinks0474(root, rel string) error {
 			return e
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("symlink in storage: %s", rel)
+			return fmt.Errorf("Символическая ссылка в хранилище: %s", rel)
 		}
 	}
 	return nil

@@ -70,7 +70,7 @@ def hash_file(path):
 def unique(pairs):
     data = {}
     for name, value in pairs:
-        require(name not in data, 'duplicate JSON member')
+        require(name not in data, 'Повторяющееся поле объекта JSON')
         data[name] = value
     return data
 
@@ -82,12 +82,12 @@ def read_json(path, *, private=False):
     require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and 0 < info.st_size <= MAX_JSON,
             'invalid evidence size/type')
     if private:
-        require(stat.S_IMODE(info.st_mode) & 0o077 == 0, 'private evidence file mode must be 0600')
+        require(stat.S_IMODE(info.st_mode) & 0o077 == 0, 'Файл закрытых подтверждений должен иметь права 0600')
     try:
         result = json.loads(path.read_bytes(), object_pairs_hook=unique)
     except (UnicodeError, ValueError) as exc:
         raise Blocked('Некорректный JSON свидетельств') from exc
-    require(isinstance(result, dict), 'evidence root must be object')
+    require(isinstance(result, dict), 'Корень подтверждений должен быть объектом')
     return result
 
 
@@ -122,16 +122,16 @@ def operator(primary):
     name = pwd.getpwuid(os.getuid()).pw_name
     if os.geteuid() == 0:
         name = os.environ.get('SUDO_USER', '')
-        require(name and name != 'root', 'independent operation as root requires named sudo origin')
+        require(name and name != 'root', 'Для независимой операции от root требуется указанный источник sudo')
     require(bool(IDENTITY.fullmatch(name)) and name != primary,
             'acceptance must be performed by a different, OS-authenticated operator')
     machine = multi.inventory.machine_identity()
-    require(machine, 'observer machine must have a stable independent machine ID')
+    require(machine, 'Машина наблюдателя должна иметь устойчивый независимый идентификатор')
     return name, machine
 
 
 def execute(path, args, timeout, *, json_output=True):
-    require(path in COMMANDS.values(), 'unsupported executable under independent acceptance')
+    require(path in COMMANDS.values(), 'Неподдерживаемый исполняемый файл для независимой приёмки')
     try:
         completed = subprocess.run([sys.executable, str(path), *args], timeout=timeout,
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False)
@@ -140,19 +140,19 @@ def execute(path, args, timeout, *, json_output=True):
     require(completed.returncode == 0 and len(completed.stdout) <= MAX_JSON,
             'live operation did not pass: ' + path.name)
     if not json_output:
-        require(not completed.stdout.strip(), "unexpected release-controller stdout")
+        require(not completed.stdout.strip(), "Неожиданный стандартный вывод контроллера выпусков")
         return None
     try:
         response = json.loads(completed.stdout, object_pairs_hook=unique)
     except (UnicodeError, ValueError) as exc:
         raise Blocked('Реальная операция не вернула проверенный JSON: ' + path.name) from exc
-    require(isinstance(response, dict), 'live operation returned unexpected result')
+    require(isinstance(response, dict), 'Реальная операция вернула неожиданный результат')
     return response
 
 
 def nodes_from_args(args):
     nodes = multi.parse_nodes(args.node)
-    require(len(nodes) >= 2, 'independent multi-host acceptance requires two or more physical nodes')
+    require(len(nodes) >= 2, 'Для независимой многоузловой приёмки нужны минимум два физических узла')
     require(args.directory.startswith('/'), 'deployment directory must be absolute')
     require(multi.PROJECT_REGEX.fullmatch(args.project), 'Недопустимый проект')
     multi.validate_edge_url(args.edge_url)
@@ -164,7 +164,7 @@ def observe(args, *, expected=VERSION):
     reports = multi.collect_cluster(nodes, args.remote_script, args.directory,
                                     args.project, 'local-compat-observe', growth=True)
     versions = compat.validate_live_nodes(reports, pair=frozenset({expected}))
-    require(set(versions.values()) == {expected}, 'real processes do not run the intended release')
+    require(set(versions.values()) == {expected}, 'Реальные процессы выполняют не тот выпуск')
     catalog, digest = compat.migration_catalog()
     compat.validate_schema(compat.live_pg_migrations(Path(args.pg_dsn_file)), catalog)
     good, samples = multi.edge_ready(args.edge_url)
@@ -190,7 +190,7 @@ def verify_suite(home, nodes, iterations):
             'chaos suite missing a fault or a host')
     seen, digests = set(), {}
     for row in rows:
-        require(isinstance(row, dict), 'invalid chaos case')
+        require(isinstance(row, dict), 'Недопустимый сценарий отказоустойчивости')
         key = (row.get('node'), row.get('fault'), row.get('iteration'))
         require(key not in seen and key[0] in nodes and key[1] in ('host-stop', 'network-partition')
                 and type(key[2]) is int and 1 <= key[2] <= iterations,
@@ -240,7 +240,7 @@ def validate_rolling(path, nodes):
 
 
 def validate_recovery(work, maximum_rto, maximum_sample_rpo, nodes):
-    require(work.is_absolute() and work.is_dir() and not work.is_symlink(), 'DR work directory unavailable')
+    require(work.is_absolute() and work.is_dir() and not work.is_symlink(), 'Рабочий каталог аварийного восстановления недоступен')
     state_path = work / 'recovery-state-0519.json'
     result_path = work / 'recovery-result-0519.json'
     state, result = read_json(state_path, private=True), read_json(result_path, private=True)
@@ -278,7 +278,7 @@ def receipt(args, stage, actor, machine, details, observed=None):
 def stage(args):
     actor, machine = operator(args.publisher)
     require(COMMIT.fullmatch(args.commit or '') is not None, '40-character release source commit required')
-    require((ROOT / 'VERSION').read_text().strip() == VERSION, 'source checkout has wrong version')
+    require((ROOT / 'VERSION').read_text().strip() == VERSION, 'Рабочая копия исходников имеет неверную версию')
     nodes = nodes_from_args(args)
     target = Path(args.output)
     fresh_output(target)
@@ -298,7 +298,7 @@ def stage(args):
             '--alertmanager-url', args.alertmanager_url,
             '--multi-host-script', args.remote_script, '--chaos-script', args.chaos_script,
             *sum((['--node', node] for node in args.node), [])], 3600)
-        require(outcome.get('status') == 'PASS', 'real chaos command failed')
+        require(outcome.get('status') == 'PASS', 'Реальная команда проверки отказоустойчивости завершилась ошибкой')
         details = verify_suite(home, nodes, args.iterations)
     elif args.stage == 'rolling':
         # Перед поэтапным обновлением требуйте N-1 работающих процессов; смешанное исходное
@@ -351,9 +351,9 @@ def validate_stage_receipts(files, *, commit, publisher):
         require(isinstance(data.get('observerMachine'), str) and
                 data['observerMachine'].startswith('machine:'), 'missing observer host fingerprint')
         machine = machine or data['observerMachine']
-        require(data['observerMachine'] == machine, 'inconsistent independent observer machines')
+        require(data['observerMachine'] == machine, 'Данные независимых машин-наблюдателей противоречат друг другу')
         docs[name] = data
-    require(seen == set(STAGES), 'all chaos, rolling, recovery, bundle receipts required')
+    require(seen == set(STAGES), 'Требуются квитанции проверок отказов, обновлений, восстановления и пакетов')
     return docs, {read_json(path, private=True)['stage']: hash_file(path) for path in files}
 
 
@@ -362,7 +362,7 @@ def final_bundle(args):
     # сохранённых сведений.
     from delivery_verify_0462 import verify_bundle
     bundle = Path(args.bundle)
-    require(bundle.is_absolute(), 'final download directory must be absolute')
+    require(bundle.is_absolute(), 'Конечный каталог загрузки должен иметь абсолютный путь')
     verified = verify_bundle(bundle, release_manifest=True)
     require(verified.get('version') == VERSION and len(verified.get('targets', {})) == 6,
             'complete final six-platform delivery not verified')

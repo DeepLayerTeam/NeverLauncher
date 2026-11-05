@@ -53,16 +53,16 @@ def package_hash(path: Path):
 def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
     version = (ROOT / 'VERSION').read_text().strip()
     require(COMMIT.fullmatch(commit) is not None, 'invalid source commit')
-    require(version in ('0.46.0', '0.46.1', '0.46.2', '0.46.3'), 'unsupported operations acceptance version')
+    require(version in ('0.46.0', '0.46.1', '0.46.2', '0.46.3'), 'Неподдерживаемая версия эксплуатационной приёмки')
     records = {name: operational.read_receipt(path, name) for name, path in receipts.items()}
     args = argparse.Namespace(install_receipt=receipts[NAMES[0]], upgrade_receipt=receipts[NAMES[1]],
                               restore_receipt=receipts[NAMES[2]], failover_receipt=receipts[NAMES[3]])
     operational.accept_verify(args)
     now = datetime.now(timezone.utc)
     for name, data in records.items():
-        require(data.get('status') == 'passed' and data.get('release') == version, 'wrong stage release')
+        require(data.get('status') == 'passed' and data.get('release') == version, 'Неверный выпуск на подготовительном этапе')
         fresh(data.get('completedUtc'), now)
-        require(data.get('secondOperator') != data.get('firstOperator'), 'operator is not independent')
+        require(data.get('secondOperator') != data.get('firstOperator'), 'Оператор не является независимым')
     require(records['upgrade-standard'].get('identity', {}).get('oldAdminLogin') == 'verified' and
             records['upgrade-standard'].get('identity', {}).get('oldProjectRead') == 'verified',
             'upgrade needs verified real account and pre-existing project')
@@ -85,7 +85,7 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
     import subprocess
     proc = subprocess.run([sys.executable, str(ROOT / 'scripts/contracts/compatibility_04512.py')],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
-    require(proc.returncode == 0, 'backward-compatible OpenAPI v1 gate failed')
+    require(proc.returncode == 0, 'Проверка обратной совместимости OpenAPI v1 не пройдена')
     return {
         'schema': 'neverlauncher.operations-ga.0460.v1',
         'version': version, 'sourceCommit': commit, 'issuedAt': now.isoformat(),
@@ -116,7 +116,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     Намеренно отделена от поставляемого CLI, чтобы устаревший бинарный Launcher до 0.46 не мог
     разрешить неполный эксплуатационный выпуск.
     """
-    require(bundle.is_dir() and not bundle.is_symlink(), 'release bundle missing')
+    require(bundle.is_dir() and not bundle.is_symlink(), 'Пакет выпуска отсутствует')
     require(public_key_file.resolve().is_relative_to(bundle.resolve()) is False,
             'operator trust anchor must be outside the bundle')
     require(release_key_file.resolve().is_relative_to(bundle.resolve()) is False,
@@ -126,7 +126,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     require(isinstance(pub, Ed25519PublicKey) and isinstance(rel, Ed25519PublicKey),
             'both trust anchors must be Ed25519')
     key_bytes = lambda key: key.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
-    require(key_bytes(pub) != key_bytes(rel), 'release signer cannot attest own operations')
+    require(key_bytes(pub) != key_bytes(rel), 'Подписант выпуска не может самостоятельно подтверждать собственные операции')
     def load(name, max_len):
         p = bundle / name
         require(p.is_file() and not p.is_symlink() and 0 < p.stat().st_size <= max_len,
@@ -159,7 +159,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     apis = [c['sourceSha256'] for c in bom.get('components', []) if c.get('sourceFile') == 'schemas/openapi.yaml']
     require(apis == [document.get('openApiV1Sha256')], 'approved API differs from pinned source in release BOM')
     targets = document.get('targets')
-    require(isinstance(targets, dict) and len(targets) == 6, 'must attest six final installers')
+    require(isinstance(targets, dict) and len(targets) == 6, 'Необходимо аттестовать шесть итоговых установщиков')
     for os_name, arch, filename in (
         ('windows','x64',f'launcher-desktop-{document["version"]}-windows-x64.zip'),
         ('windows','arm64',f'launcher-desktop-{document["version"]}-windows-arm64.zip'),
@@ -206,9 +206,9 @@ def main():
         receipts = dict(zip(NAMES, (args.install_receipt, args.upgrade_receipt, args.restore_receipt, args.failover_receipt)))
         for file in receipts.values(): operational.private_file(file)
         key_path = operational.private_file(args.operator_private_key)
-        require(key_path.stat().st_size < 16384, 'operator key too large')
+        require(key_path.stat().st_size < 16384, 'Ключ оператора превышает допустимый размер')
         private = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
-        require(isinstance(private, Ed25519PrivateKey), 'operator key must be Ed25519')
+        require(isinstance(private, Ed25519PrivateKey), 'Ключ оператора должен использовать Ed25519')
         require(args.output_dir.is_dir() and not args.output_dir.is_symlink() and
                 not (args.output_dir.stat().st_mode & 0o077), 'output directory must be private')
         approved = build_attestation(args.bundle, receipts, args.source_commit)

@@ -48,7 +48,7 @@ import json,sys
 ready=json.load(open(sys.argv[1],encoding='utf-8'))
 p=ready.get('port')
 if ready.get('targetId') != sys.argv[2] or type(p) is not int or not 1 <= p <= 65535:
-    raise SystemExit('invalid dedicated server port/identity')
+    raise SystemExit('Недопустимый порт или идентификатор выделенного сервера')
 print(p)
 PY
 )" || return 3

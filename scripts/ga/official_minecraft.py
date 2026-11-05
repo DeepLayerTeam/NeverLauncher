@@ -68,7 +68,7 @@ def strict_json(raw: bytes) -> dict:
     def unique(pairs):
         result = {}
         for key, value in pairs:
-            require(key not in result, "duplicate JSON field")
+            require(key not in result, "Повторяющееся поле JSON")
             result[key] = value
         return result
 
@@ -79,7 +79,7 @@ def strict_json(raw: bytes) -> dict:
             GateError("invalid numeric constant")
         ),
     )
-    require(type(value) is dict, "evidence is not a JSON object")
+    require(type(value) is dict, "Подтверждающие данные должны быть объектом JSON")
     return value
 
 
@@ -92,7 +92,7 @@ def file_bytes(
         and Path(filename).name == filename
         and filename.endswith(".json")
         and not filename.startswith("."),
-        "unsafe evidence filename",
+        "Небезопасное имя файла подтверждения",
     )
     require(
         isinstance(expected_digest, str)
@@ -104,7 +104,7 @@ def file_bytes(
         not folder.is_symlink() and not path.is_symlink() and path.is_file(),
         "missing/symlinked evidence file",
     )
-    require(path.stat().st_size <= max_size, "oversized GA evidence")
+    require(path.stat().st_size <= max_size, "Подтверждающие данные GA превышают допустимый размер")
     raw = path.read_bytes()
     require(
         hashlib.sha256(raw).hexdigest() == expected_digest,
@@ -114,7 +114,7 @@ def file_bytes(
 
 
 def checked_time(value: str, now: datetime) -> None:
-    require(isinstance(value, str), "missing observed time")
+    require(isinstance(value, str), "Не указано время наблюдения")
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as e:

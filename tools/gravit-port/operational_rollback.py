@@ -47,13 +47,13 @@ def validate(cfg: dict, cutover: dict):
         values = units[side]
         require(isinstance(values, list) and values and all(isinstance(x, str) and UNIT.fullmatch(x) for x in values)
                 and len(values) == len(set(values)), "Некорректный список служб systemd: " + side)
-    require(not set(units["source"]).intersection(units["target"]), "same unit cannot be both source and target")
+    require(not set(units["source"]).intersection(units["target"]), "Одна служба не может одновременно быть источником и целью")
     for name in ("currentSnapshot", "sourceSnapshot"):
         require(isinstance(cfg.get(name), str) and Path(cfg[name]).is_absolute(), "absolute " + name + " required")
     # No arbitrary shell/script runner, insecure HTTP or secrets accepted in recovery config.
     permitted = {"format", "runId", "profileId", "channel", "cutoverConfigSha256", "units",
                  "currentSnapshot", "sourceSnapshot", "reconciliationEvidenceSha256"}
-    require(set(cfg) <= permitted, "unknown or unsafe rollback configuration fields")
+    require(set(cfg) <= permitted, "Неизвестные или небезопасные поля конфигурации отката")
     if "reconciliationEvidenceSha256" in cfg:
         require(bool(co.HEX.fullmatch(str(cfg["reconciliationEvidenceSha256"]))), "Некорректные доказательства сверки")
 

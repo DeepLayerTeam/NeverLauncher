@@ -54,7 +54,7 @@ def digest(path: Path):
 def output_dir(path: Path):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(),
             'Требуется новый абсолютный путь каталога отчётов')
-    require(path.parent.is_dir() and not path.parent.is_symlink(), 'unsafe parent directory')
+    require(path.parent.is_dir() and not path.parent.is_symlink(), 'Небезопасный родительский каталог')
     path.mkdir(mode=0o700)
     return path
 
@@ -67,12 +67,12 @@ def write_receipt(path: Path, data):
 def check_identity(args):
     require(COMMIT.fullmatch(args.commit or '') is not None and RUN.fullmatch(args.run_id or '') is not None
             and type(args.attempt) is int and args.attempt > 0, 'Требуются действительные идентификаторы коммита CI и запуска')
-    require(inventory.VERSION >= '0.53.0', 'requires product version 0.53.0 or later')
+    require(inventory.VERSION >= '0.53.0', 'Требуется версия продукта 0.53.0 или новее')
     require(3600 <= args.min_seconds <= 24*3600, 'Нагрузочная проверка должна выполняться не менее одного реального часа')
 
 def copy_selected(raw: Path, destination: Path, names):
     destination.mkdir(mode=0o700, parents=True, exist_ok=False)
-    require(len(names) == len(set(names)) and len(names) <= 100, 'unsafe evidence file list')
+    require(len(names) == len(set(names)) and len(names) <= 100, 'Небезопасный список файлов подтверждения')
     for name in names:
         require(isinstance(name, str) and re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}',name),
                 'untrusted evidence basename')
@@ -147,7 +147,7 @@ def game(args):
             'game soak may clear e2e/runtime only in approved disposable checkout')
     require(env.get('LAUNCHER_E2E_JAVA'), 'Необходимо явно выбрать существующую поддерживаемую JRE')
     for key, value in expected.items():
-        require(not env.get(key) or env[key] == value, 'runner metadata conflict: ' + key)
+        require(not env.get(key) or env[key] == value, 'Конфликт метаданных исполняющего компонента: ' + key)
     env.update(expected)
     out = output_dir(args.output)
     started = time.monotonic()
@@ -158,19 +158,19 @@ def game(args):
     try:
         while time.monotonic()-started < args.min_seconds or len(receipt['sessions']) < args.min_sessions:
             i = len(receipt['sessions'])
-            require(i < args.max_sessions, 'session limit reached before minimum duration')
+            require(i < args.max_sessions, 'Лимит сеансов достигнут раньше минимальной продолжительности')
             sample = out / f'session-{i+1:03d}'
             sample.mkdir(mode=0o700)
             # Не используйте устаревшие результаты прежней попытки игры или runner.
             for folder in ('e2e/compatibility-result', 'e2e/runtime'):
                 old = ROOT / folder
-                require(not old.is_symlink(), 'unsafe reused runtime directory')
+                require(not old.is_symlink(), 'Небезопасное повторное использование каталога среды выполнения')
                 if old.is_dir():
                     shutil.rmtree(old)
             start = time.monotonic()
             log = sample / 'runner.log'
             rc = run_game_subprocess(log, env, args.session_timeout)
-            require(log.stat().st_size <= MAX_LOG, 'game log over max size')
+            require(log.stat().st_size <= MAX_LOG, 'Размер игрового журнала превышает лимит')
             require(not re.search(rb'(?i)(authorization:\s*bearer\s+\S+|refresh[_ -]?token\s*[=:]\s*\S+)',
                                   log.read_bytes()), 'unredacted secrets in game runner output')
             require(rc == 0, f'Реальные клиент/сервер завершились ошибкой (сеанс {i+1}): {rc}')
@@ -214,7 +214,7 @@ def https_once(url: str, timeout: float):
         connection.close()
 
 def percentile(values, q):
-    require(len(values) >= 2, 'not enough load observations')
+    require(len(values) >= 2, 'Недостаточно наблюдений нагрузки')
     values = sorted(values)
     return values[min(len(values)-1, int(len(values)*q + .999999)-1)]
 
@@ -237,7 +237,7 @@ def http(args):
                 for _ in range(max(0, args.concurrency-len(pending))):
                     pending.add(pool.submit(https_once, args.url, args.timeout))
                 done, pending = wait(pending, timeout=args.timeout+1, return_when=FIRST_COMPLETED)
-                require(done, 'HTTP workers stalled')
+                require(done, 'Обработчики HTTP-запросов перестали отвечать')
                 for future in done:
                     try:
                         elapsed, size = future.result()
@@ -245,9 +245,9 @@ def http(args):
                         ledger.write(struct.pack('!QdI', time.monotonic_ns(), elapsed, size))
                     except Exception:
                         failures += 1
-                require(failures == 0, 'request failure under HTTPS load')
-                require(len(durations) <= 10_000_000, 'request evidence capacity exceeded')
-                require(time.monotonic()-started < args.max_seconds, 'load test exceeded approved time budget')
+                require(failures == 0, 'Ошибка запроса под нагрузкой HTTPS')
+                require(len(durations) <= 10_000_000, 'Превышен лимит данных подтверждения запросов')
+                require(time.monotonic()-started < args.max_seconds, 'Нагрузочная проверка превысила утверждённое время')
             for task in pending:
                 task.cancel()
             ledger.flush(); os.fsync(ledger.fileno())

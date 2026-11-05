@@ -48,7 +48,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
     checked = set()
     digests = {}
     for reference in refs:
-        require(type(reference) is dict, "invalid signed GA target")
+        require(type(reference) is dict, "Недопустимая цель подписанной приёмки GA")
         target = reference.get("target")
         require(
             target in PACKAGES
@@ -78,7 +78,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
         )
         checked.add(target)
         digests[target] = digest
-    require(checked == PACKAGES.keys(), "missing certified shipping target")
+    require(checked == PACKAGES.keys(), "Отсутствует сертифицированная платформа поставки")
     return digests
 
 

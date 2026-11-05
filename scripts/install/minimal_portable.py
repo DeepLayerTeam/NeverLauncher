@@ -161,7 +161,7 @@ def _decrypt_to(archive_path, target, secret):
                 raise core.BackupError("Ошибка: «portable archive authentication»") from exc
             plaintext.flush()
             os.fsync(plaintext.fileno())
-        core.require(source.stat().st_size == st.st_size, "portable file changed during read")
+        core.require(source.stat().st_size == st.st_size, "Переносимый файл изменился во время чтения")
 
 
 def _extract_authenticated(tar_path, destination):
@@ -169,12 +169,12 @@ def _extract_authenticated(tar_path, destination):
     seen = set()
     with tarfile.open(tar_path, mode="r:") as archive:
         for member in archive:
-            core.require(len(seen) < MAX_ENTRIES, "too many archive entries")
+            core.require(len(seen) < MAX_ENTRIES, "В архиве слишком много записей")
             rel = core.validate_relative(member.name)
             parts = rel.parts
-            core.require(parts[0] == "snapshot", "unexpected archive root")
-            core.require(member.isdir() or member.isfile(), "unsafe archive entry type")
-            core.require(member.name not in seen, "duplicate archive member")
+            core.require(parts[0] == "snapshot", "Неожиданный корневой каталог архива")
+            core.require(member.isdir() or member.isfile(), "Небезопасный тип элемента архива")
+            core.require(member.name not in seen, "Повторяющийся элемент архива")
             seen.add(member.name)
             core.require(
                 member.name in ("snapshot", "snapshot/manifest.json", "snapshot/payload")
@@ -193,11 +193,11 @@ def _extract_authenticated(tar_path, destination):
                 try:
                     with os.fdopen(fd, "wb") as stream:
                         reader = archive.extractfile(member)
-                        core.require(reader is not None, "missing archive member data")
+                        core.require(reader is not None, "Отсутствуют данные элемента архива")
                         remaining = member.size
                         while remaining:
                             part = reader.read(min(BLOCK, remaining))
-                            core.require(bool(part), "truncated archive member")
+                            core.require(bool(part), "Неполный элемент архива")
                             stream.write(part)
                             remaining -= len(part)
                         stream.flush()
@@ -205,17 +205,17 @@ def _extract_authenticated(tar_path, destination):
                 except BaseException:
                     target.unlink(missing_ok=True)
                     raise
-    core.require("snapshot/manifest.json" in seen, "missing archive manifest")
+    core.require("snapshot/manifest.json" in seen, "Отсутствует манифест архива")
     return destination / "snapshot"
 
 
 def import_and_verify(input_file, secret_file, *, target_root=None):
     secret = passphrase(secret_file)
     source = core.safe_absolute(input_file)
-    core.require(source.exists(), "portable archive missing")
+    core.require(source.exists(), "Переносимый архив отсутствует")
     if target_root is not None:
         target = core.safe_absolute(target_root)
-        core.require(not target.exists() and not target.is_symlink(), "restore destination exists")
+        core.require(not target.exists() and not target.is_symlink(), "Каталог назначения восстановления уже существует")
         parent = target.parent
     else:
         parent = source.parent

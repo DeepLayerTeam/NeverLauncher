@@ -63,4 +63,4 @@ PY
 [[ ! -e "$(dirname "$install_dir")/.staging-dead-worker" ]] || { echo 'stale staging was not removed' >&2; exit 1; }
 # Итоговый офлайн-запуск использует проверенную управляемую JVM, а не Java хоста.
 env -u JAVA_HOME PATH="$work/bin" "$java_exe" -version > "$work/recovered-version.log" 2>&1
-printf 'Managed Java 0.40.7 clean-host install, corruption recovery and JVM execution: PASS\n'
+printf 'Установка Managed Java 0.40.7 на чистом хосте, восстановление после повреждения и запуск JVM: PASS\n'

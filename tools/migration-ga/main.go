@@ -49,10 +49,10 @@ func referenceClassValid(s string) bool {
 
 var gravit57 = regexp.MustCompile(`^5\.7\.[0-9]+$`)
 
-// These checks are executable operator probes, not claims of universal loader
-// support. A reference project only exercises the features it actually uses;
-// combined coverage includes FileAuth, SQL, official auth, two loaders,
-// optional files, textures, source-port modules and safe cutover/return.
+// Это исполняемые операторские проверки, а не заявление об универсальной
+// поддержке загрузчиков. Эталонный проект проверяет только используемые функции;
+// общий охват включает FileAuth, SQL, официальную авторизацию, два загрузчика,
+// дополнительные файлы, текстуры, модули исходного порта и безопасное переключение/откат.
 var commonChecks = []string{
 	"uuid-world-plugin-data", "admin-permissions", "desktop-cache-install",
 	"staged-cutover-canary", "operational-rollback-drill",
@@ -640,7 +640,7 @@ func seal(b Bundle, key ed25519.PrivateKey) (Bundle, error) {
 }
 func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	if b.Format != format || b.Version != version || !referenceClassValid(b.ReferenceClass) || !commitHash(b.CommitSHA) || !gravit57.MatchString(b.SourceVersion) || !digest(b.TrustedGravitJarSHA256) || !digest(b.TargetReleaseSHA256) || !digest(b.ReportSHA256) || !digest(b.SourceSHA256) || b.RunID == "" || b.ProjectID == "" || b.ReviewedBy == "" || !digest(b.ReviewEvidenceSHA256) || len(b.Checks) != len(requiredForClass(b.ReferenceClass)) {
-		return errors.New("incomplete GA certificate")
+		return errors.New("Неполный сертификат GA")
 	}
 	key, e := base64.StdEncoding.DecodeString(b.PublicKey)
 	if e != nil || !bytes.Equal(key, public) {

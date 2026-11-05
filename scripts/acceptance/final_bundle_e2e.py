@@ -101,13 +101,13 @@ def identity(bundle: Path, version: str, commit: str) -> dict:
         digest, name = match.groups()
         require(name not in digests, "duplicate SHA256SUMS entry")
         digests[name] = digest
-    require(BINARY in digests, "final Linux API missing from signed asset list")
+    require(BINARY in digests, "Итоговый API Linux отсутствует в списке подписанных артефактов")
     binary = bundle / BINARY
     require(
         binary.is_file() and not binary.is_symlink() and os.access(binary, os.X_OK),
         "final API artifact not executable",
     )
-    require(binary.stat().st_mode & 0o022 == 0, "final API is group/world writable")
+    require(binary.stat().st_mode & 0o022 == 0, "Итоговый API доступен на запись группе или всем пользователям")
     digest = sha(binary)
     require(digest == digests[BINARY], "final API SHA256 differs from signed checksums")
     return {
@@ -182,7 +182,7 @@ def main(argv=None) -> int:
             "live E2E work root must be empty",
         )
         live_path = args.report.with_name(args.report.stem + "-live.json")
-        require(live_path != args.report, "distinct report paths required")
+        require(live_path != args.report, "Для отчётов требуются разные пути")
         env = dict(os.environ, GITHUB_SHA=args.commit)
         proc = subprocess.run(
             [
@@ -204,7 +204,7 @@ def main(argv=None) -> int:
             env=env,
             check=False,
         )
-        require(proc.returncode == 0, "live E2E process failed")
+        require(proc.returncode == 0, "Процесс реальной E2E-проверки завершился ошибкой")
         live = json.loads(live_path.read_text(encoding="utf-8"))
         validate_live_report(live, item)
         # Выявляйте изменение окончательного ресурса между запуском и окончательным подтверждением.

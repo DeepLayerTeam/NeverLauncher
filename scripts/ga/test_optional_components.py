@@ -203,7 +203,7 @@ class OptionalComponentsGATests(unittest.TestCase):
             path = root / "darwin-arm64" / "components.bin"
             raw = path.read_bytes().replace(b'"passed"', b'"skipped"', 1)
             path.write_bytes(raw)
-            with self.assertRaisesRegex(ValueError, "digest mismatch"):
+            with self.assertRaisesRegex(ValueError, "Несовпадение: «content digest»"):
                 verify_all(root, key, COMMIT, version=VERSION)
 
     def test_cross_commit_is_rejected(self):
@@ -224,7 +224,7 @@ class OptionalComponentsGATests(unittest.TestCase):
                 verify_all(root, key, COMMIT, version=VERSION)
 
     def test_duplicate_json_object_fields_rejected(self):
-        with self.assertRaisesRegex(ValueError, "duplicate JSON field"):
+        with self.assertRaisesRegex(ValueError, "Обнаружен дубликат: поле JSON"):
             strict_json(b'{"status":"passed","status":"failed"}')
 
     def test_unknown_public_key_rejected(self):

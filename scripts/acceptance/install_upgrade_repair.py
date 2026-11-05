@@ -113,7 +113,7 @@ def main() -> int:
     require(args.old_bundle.is_absolute() and args.new_bundle.is_absolute()
             and args.old_bundle != args.new_bundle, 'Требуются два разных абсолютных каталога подписанных пакетов')
     pinned(args.installer, args.installer_sha256)
-    require(os.access(args.installer, os.X_OK), 'signed installer not executable')
+    require(os.access(args.installer, os.X_OK), 'Подписанный установщик нельзя запустить')
     for bundle, expected in ((args.old_bundle,args.old_config_sha256),(args.new_bundle,args.new_config_sha256)):
         require(bundle.is_dir() and not bundle.is_symlink(), 'Каталог подписанного пакета отсутствует или является символической ссылкой')
         pinned(bundle / 'bootstrap.signed.json', expected)
@@ -164,7 +164,7 @@ def main() -> int:
                 with binary.open('ab') as out:
                     out.write(b'corrupt-package-0527')
                 add_event(events,'corrupt-signed-package-rejected',native('update',copy,fail=True))
-            require(active(root)==old,'bad package changed active release')
+            require(active(root)==old,'Повреждённый пакет изменил активную версию')
             preserved()
             # Сначала докажите, что изолированное сетевое пространство имён ДЕЙСТВИТЕЛЬНО создано.
             # Ошибка EPERM/unshare не считается успешной проверкой сетевого отказа.
@@ -176,7 +176,7 @@ def main() -> int:
             network_argv=['unshare','-n','--',str(args.installer),'update','--root',str(root),
                           '--bundle',str(args.new_bundle),'--no-start']
             add_event(events,'disconnected-network-rejected',run(network_argv,expect_ok=False))
-            require(active(root)==old,'network failure switched active release')
+            require(active(root)==old,'Сетевая ошибка привела к переключению активной версии')
             preserved()
             # Физически израсходуйте доступные блоки tmpfs: это настоящий ENOSPC ядра, а не
             # искусственная ошибка от поддельной ФС или тестового перехвата.
@@ -189,7 +189,7 @@ def main() -> int:
                     os.posix_fallocate(fh.fileno(),0,free-reserve)
                 require(shutil.disk_usage(mountpoint).free < (1<<20), 'Реальная ёмкость tmpfs не была исчерпана')
                 add_event(events,'kernel-enospc-update-rejected',native('update',args.new_bundle,fail=True))
-                require(active(root)==old,'disk-full failure switched active release')
+                require(active(root)==old,'Нехватка места на диске привела к переключению активной версии')
                 preserved()
             finally:
                 filler.unlink(missing_ok=True)
@@ -217,7 +217,7 @@ def main() -> int:
             preserved()
             add_event(events,'uninstall-preserve-saves',native('uninstall'))
             preserved()
-            require(not (root/'.launcher-installer').exists(),'uninstall retained installer internals')
+            require(not (root/'.launcher-installer').exists(),'После удаления остались внутренние файлы установщика')
             report = {'schemaVersion':'1.0','version':(Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'status':'PASS',
                       'installerSHA256':args.installer_sha256,'oldConfigSHA256':args.old_config_sha256,
                       'newConfigSHA256':args.new_config_sha256,'managedFileSHA256':args.managed_repair_sha256,

@@ -57,7 +57,7 @@ func runPGFiles0474(args []string) int {
 	defer cancel()
 	report, e := sqlitepg.CopyFileObjects0474(ctx, dsn, src, dst)
 	if e != nil {
-		fmt.Fprintf(os.Stderr, "verified storage copy failed: %v\n", e)
+		fmt.Fprintf(os.Stderr, "Ошибка проверенного копирования хранилища: %v\n", e)
 		return 1
 	}
 	if e = json.NewEncoder(os.Stdout).Encode(report); e != nil {

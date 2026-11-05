@@ -55,9 +55,9 @@ def json_unique(pairs):
 
 
 def regular(path: Path, limit: int = MAX_SMALL) -> bytes:
-    require(path.is_file() and not path.is_symlink(), 'missing/non-regular evidence: ' + str(path))
+    require(path.is_file() and not path.is_symlink(), 'Отсутствует подтверждение или его файл не является обычным: ' + str(path))
     size = path.stat().st_size
-    require(0 < size <= limit, 'empty/oversized evidence: ' + str(path))
+    require(0 < size <= limit, 'Подтверждение пустое или слишком велико: ' + str(path))
     return path.read_bytes()
 
 
@@ -66,29 +66,29 @@ def doc(path: Path) -> dict:
         obj = json.loads(regular(path), object_pairs_hook=json_unique)
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise Blocked('invalid JSON: ' + str(path)) from exc
-    require(type(obj) is dict, 'evidence JSON must be an object: ' + str(path))
+    require(type(obj) is dict, 'JSON подтверждения должен содержать объект: ' + str(path))
     return obj
 
 
 def evidence_inventory(root: Path) -> dict[str, str]:
-    require(root.is_dir() and not root.is_symlink(), 'real evidence directory required')
+    require(root.is_dir() and not root.is_symlink(), 'Требуется существующий каталог подтверждений')
     output = {}
     folded = set()
     for base, dirs, files in os.walk(root, followlinks=False):
         for name in dirs:
-            require(not (Path(base) / name).is_symlink(), 'symlink evidence directory')
+            require(not (Path(base) / name).is_symlink(), 'Каталог подтверждений является символической ссылкой')
         for name in files:
             path = Path(base) / name
-            require(not path.is_symlink() and path.is_file(), 'symlink/special evidence file')
+            require(not path.is_symlink() and path.is_file(), 'Файл подтверждения является ссылкой или специальным файлом')
             relative = path.relative_to(root).as_posix()
             require(len(relative) <= 240 and re.fullmatch(r'[A-Za-z0-9_./-]+', relative) is not None
                     and '..' not in Path(relative).parts, 'unsafe evidence member: ' + relative)
-            require(relative.casefold() not in folded, 'case-ambiguous evidence: ' + relative)
+            require(relative.casefold() not in folded, 'Неоднозначное имя файла подтверждения с учётом регистра: ' + relative)
             folded.add(relative.casefold())
-            require(path.stat().st_size > 0, 'empty evidence: ' + relative)
+            require(path.stat().st_size > 0, 'Пустое подтверждение: ' + relative)
             output[relative] = file_hash(path)
-            require(len(output) <= 50_000, 'excessive evidence tree')
-    require(bool(output), 'empty evidence tree')
+            require(len(output) <= 50_000, 'Превышен лимит дерева подтверждений')
+    require(bool(output), 'Пустое дерево подтверждений')
     return output
 
 
@@ -121,7 +121,7 @@ def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Pa
             'review is stale or future-dated')
     files = manifest['files']
     actual = evidence_inventory(root)
-    require(type(files) is dict and files == actual, 'independent approval does not bind every exact evidence byte')
+    require(type(files) is dict and files == actual, 'Независимое подтверждение не охватывает все байты свидетельств')
     return {'reviewer': manifest['reviewer'], 'approvalSha256': hashlib.sha256(data).hexdigest(),
             'reviewerKeySha256': hashlib.sha256(key).hexdigest(), 'filesBound': len(actual)}
 
@@ -152,7 +152,7 @@ def verified_native(root: Path, commit: str, delivered: dict) -> dict:
         for field in ('publisherSigner', 'operator', 'executionId'):
             require(type(r[field]) is str and bool(IDENTITY.fullmatch(r[field])),
                     target + ': invalid ' + field)
-        require((target, r['executionId']) not in seen_runs, 'reused native execution ID')
+        require((target, r['executionId']) not in seen_runs, 'Повторно использован идентификатор нативного выполнения')
         seen_runs.add((target, r['executionId']))
         results[target] = r
     return results
@@ -198,7 +198,7 @@ def verified_frame_times(root: Path, delivered: dict) -> dict:
                 target + ': performance run is from different host architecture')
         require(meta.get('packageSha256') == delivered['targets'][target]['sha256'],
                 target + ': performance capture is not bound to final signed package')
-        require(details['status'] == 'PASS_MEASURED', target + ': frame-time p95 exceeded budget')
+        require(details['status'] == 'PASS_MEASURED', target + ': p95 времени кадра превышает допустимый предел')
         results[target] = details['guardP95RegressionPercent']
     return results
 
@@ -225,7 +225,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
          shadow_key: Path, *, publishing_bundle: Path | None = None, now=None) -> dict:
     require((ROOT / 'VERSION').read_text(encoding='utf-8').strip() == VERSION,
             'source VERSION must equal 0.51.0')
-    require(root.is_dir() and not root.is_symlink(), 'evidence root missing')
+    require(root.is_dir() and not root.is_symlink(), 'Отсутствует корень подтверждений')
     require(not shadow_key.resolve().is_relative_to(root.resolve()),
             'private shadow journal verification key must remain outside evidence')
     require(not trusted_key.resolve().is_relative_to(root.resolve()),
@@ -244,7 +244,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
                 'publication candidate differs from independently reviewed final signed bytes')
     native = verified_native(root, commit, release)
     game = verify_native_game(root / 'native-game', native_package_id, VERSION, commit, ci_run)
-    require(len(game['targets']) == 6, 'native game reports missing')
+    require(len(game['targets']) == 6, 'Отсутствуют отчёты реального игрового запуска')
     for row in game['targets']:
         target = row['target']
         require(row['artifactSha256'] == release['targets'][target]['sha256'],

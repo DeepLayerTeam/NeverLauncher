@@ -67,7 +67,7 @@ install = json.load(open(install_p, encoding='utf-8'))
 verify = json.load(open(verify_p, encoding='utf-8'))
 package = json.load(open(package_p, encoding='utf-8'))
 if not (install.get('minecraftVersion') == mc and install.get('javaMajorVersion') == java and install.get('status') == 'installed-and-verified' and len(install.get('files') or []) > 10):
-    raise SystemExit('invalid vanilla-install evidence')
+    raise SystemExit('Недопустимое подтверждение установки Vanilla')
 internal_os = 'osx' if os_name == 'macos' else os_name
 if {'os': internal_os, 'arch': arch} not in (install.get('targets') or []):
     raise SystemExit(f'vanilla install target mismatch: expected {internal_os}/{arch}')
@@ -77,7 +77,7 @@ settings = package.get('manifestSettings') or {}
 minecraft = settings.get('minecraft') or {}
 runtime = settings.get('runtime') or {}
 if not (minecraft.get('version') == mc and minecraft.get('loader') == 'vanilla' and (runtime.get('java') or {}).get('majorVersion') == java and (runtime.get('launch') or {}).get('classpathStrategy') == 'compatibility'):
-    raise SystemExit('invalid client package runtime settings')
+    raise SystemExit('Недопустимые настройки запуска клиентского пакета')
 PY
 
 # Новый CI-профиль ещё не подтвердил одноразовые предупреждения о
@@ -126,7 +126,7 @@ import json, sys
 p=json.load(open(sys.argv[1], encoding='utf-8'))
 mc=sys.argv[2]; java=int(sys.argv[3])
 if not (p.get('status') == 'passed' and p.get('minecraftVersion') == mc and p.get('requiredJavaMajor') == java and p.get('detectedJavaMajor') == java and (p.get('timedOut') is True or p.get('success') is True) and int(p.get('classpathEntries') or 0) > 0):
-    raise SystemExit('actual client certification failed')
+    raise SystemExit('Реальная сертификация клиента не пройдена')
 PY
 
 python3 - "$RUNTIME_DIR/result.json" "$RUNTIME_DIR/vanilla-certification.json" "$PRODUCT_VERSION" "$TARGET_ID" "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH" <<'PY'

@@ -66,7 +66,7 @@ class Inventory0501Tests(unittest.TestCase):
             self.assertEqual(len(result['targets']), len(TARGETS))
             self.assertFalse(result['certified'])
             self.assertEqual(result['status'], 'BLOCKED')
-            self.assertEqual(sum(row['reason'] == 'no native runner report' for row in result['targets']), len(TARGETS)-1)
+            self.assertEqual(sum(row['reason'] == 'Отсутствует отчёт нативного исполняющего компонента' for row in result['targets']), len(TARGETS)-1)
 
     def test_matrix_rejects_duplicate_native_platform(self):
         with tempfile.TemporaryDirectory() as temp:

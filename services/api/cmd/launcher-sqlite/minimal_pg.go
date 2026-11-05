@@ -39,7 +39,7 @@ func runMinimalPG0377(command string, args []string) int {
 		report, err = sqlitepg.ExportMinimalBundle0377(ctx, dsn, *bundle)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "verified minimal transfer failed closed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Минимальный перенос завершился безопасным отказом: %v\n", err)
 		return 1
 	}
 	if err = json.NewEncoder(os.Stdout).Encode(report); err != nil {

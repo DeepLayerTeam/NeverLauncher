@@ -90,7 +90,7 @@ def request(port, method, path, payload=None, headers=None, *, timeout=5):
         conn.request(method, path, body=data, headers=hdr)
         response = conn.getresponse()
         body = response.read(512 * 1024)
-        require(len(body) < 512 * 1024, "oversized HTTP response")
+        require(len(body) < 512 * 1024, "Ответ HTTP превышает допустимый размер")
         try:
             doc = json.loads(body)
         except (ValueError, UnicodeError) as exc:
@@ -204,7 +204,7 @@ class RealAPI:
             proc.wait(timeout=8)
             raise AcceptanceFailure("API не завершил обработку запросов после SIGTERM") from exc
         if crash:
-            require(proc.returncode < 0, "SIGKILL did not terminate API")
+            require(proc.returncode < 0, "Сигнал SIGKILL не остановил API")
         elif proc.returncode != 0:
             raise AcceptanceFailure(
                 f"API не смог корректно завершиться по SIGTERM, код выхода {proc.returncode}"
@@ -242,7 +242,7 @@ def step(report, name, fn):
 
 def verify_project(port, identifier, token=None):
     item = expect(port, "GET", "/api/v1/projects/" + identifier, 200)
-    require(item.get("id") == identifier, "project identity changed after restart")
+    require(item.get("id") == identifier, "Идентификатор проекта изменился после перезапуска")
     versions = expect(port, "GET", "/api/v1/projects/" + identifier + "/versions", 200)
     require(
         isinstance(versions.get("items"), list) and versions["items"],
@@ -298,7 +298,7 @@ def verify_admin_0523(port, email, password, project, description, profile, chan
     login = expect(port, 'POST', '/api/v1/admin/login', 200,
                    {'email': email, 'password': password})
     token = login.get('token')
-    require(isinstance(token, str) and len(token) >= 20, 'administrator login state lost')
+    require(isinstance(token, str) and len(token) >= 20, 'Состояние входа администратора потеряно')
     doc = expect(port, 'GET', '/api/v1/projects/' + project, 200)
     require(doc.get('id') == project and doc.get('description') == description,
             'persisted admin project data differs')
@@ -326,7 +326,7 @@ def run_acceptance(
         binary.is_absolute() and binary.is_file() and os.access(binary, os.X_OK),
         "Отсутствует исполняемый бинарный файл реального API",
     )
-    require(not binary.stat().st_mode & 0o022, "insecure API binary permissions")
+    require(not binary.stat().st_mode & 0o022, "Небезопасные права доступа к исполняемому файлу API")
     require(
         guard.is_file() and bridge.is_file(),
         "Требуются действительные файлы политик Guard/Bridge",
@@ -380,7 +380,7 @@ def run_acceptance(
             if "=" in line
         )
         token = envvalues["LAUNCHER_BOOTSTRAP_TOKEN"]
-        require(not envvalues.get("LAUNCHER_REDIS_URL"), "Redis injected into minimal")
+        require(not envvalues.get("LAUNCHER_REDIS_URL"), "В минимальную конфигурацию неожиданно включён Redis")
         step(
             report,
             "installer_diagnose",
@@ -563,7 +563,7 @@ def run_acceptance(
             verify = json.loads(
                 command(sys.executable, INSTALLER, "backup-verify", "--bundle", bundle)
             )
-            require(verify.get("operation") == "verify", "backup not verified")
+            require(verify.get("operation") == "verify", "Резервная копия не прошла проверку")
             return bundle
 
         bundle = step(report, "offline_consistent_backup_verify", create_backup)
@@ -678,7 +678,7 @@ def run_acceptance(
                 with tampered.open("r+b") as stream:
                     stream.seek(60)
                     first = stream.read(1)
-                    require(bool(first), "portable test archive unexpectedly short")
+                    require(bool(first), "Переносимый тестовый архив неожиданно мал")
                     stream.seek(60)
                     stream.write(bytes([first[0] ^ 1]))
                 denied = work / "tampered-restore-refused"
@@ -745,7 +745,7 @@ def run_acceptance(
                 text=True,
                 timeout=30,
             )
-            require(p.returncode != 0, "tampered backup incorrectly verified")
+            require(p.returncode != 0, "Изменённая резервная копия ошибочно прошла проверку")
             target = work / "should-not-restore"
             p = subprocess.run(
                 [

@@ -99,15 +99,15 @@ settings = package.get('manifestSettings') or {}
 minecraft = settings.get('minecraft') or {}
 runtime = settings.get('runtime') or {}
 if not (install.get('status') == 'installed-and-verified' and install.get('minecraftVersion') == mc and install.get('javaMajorVersion') == java):
-    raise SystemExit('invalid Fabric materialization evidence')
+    raise SystemExit('Недопустимое подтверждение установки Fabric')
 if not (install.get('loaderVersion') and install.get('profileId') and install.get('mainClass') and int(install.get('libraryCount') or 0) > 0):
-    raise SystemExit('Fabric profile was not fully materialized')
+    raise SystemExit('Профиль Fabric установлен не полностью')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):
     raise SystemExit('Ошибка проверки подготовленного пакета')
 if not (minecraft.get('version') == mc and minecraft.get('loader') == 'fabric' and minecraft.get('loaderVersion') == install.get('loaderVersion') and minecraft.get('mainClass') == install.get('mainClass')):
-    raise SystemExit('Fabric package metadata mismatch')
+    raise SystemExit('Метаданные пакета Fabric не совпадают')
 if not ((runtime.get('java') or {}).get('majorVersion') == java and (runtime.get('launch') or {}).get('classpathStrategy') == 'compatibility' and (runtime.get('launch') or {}).get('versionMetadataPath') == install.get('profilePath')):
-    raise SystemExit('Fabric package runtime settings mismatch')
+    raise SystemExit('Настройки запуска пакета Fabric не совпадают')
 open(install_p, 'w', encoding='utf-8').write(json.dumps(install, indent=2, ensure_ascii=False) + '\n')
 print(install['profileId'])
 PY
@@ -142,11 +142,11 @@ java = int(java)
 cert = json.load(open(cert_p, encoding='utf-8'))
 install = json.load(open(install_p, encoding='utf-8'))
 if not (cert.get('status') == 'passed' and cert.get('minecraftVersion') == profile and cert.get('requiredJavaMajor') == java and cert.get('detectedJavaMajor') == java):
-    raise SystemExit('actual Fabric client certification failed')
+    raise SystemExit('Реальная сертификация клиента Fabric не пройдена')
 if not ((cert.get('timedOut') is True or cert.get('success') is True) and int(cert.get('classpathEntries') or 0) > 0):
-    raise SystemExit('Fabric client did not stay alive or exit successfully')
+    raise SystemExit('Клиент Fabric не продолжил работу и не завершился успешно')
 if cert.get('mainClass') != install.get('mainClass'):
-    raise SystemExit('Fabric launch mainClass mismatch')
+    raise SystemExit('Основной класс запуска Fabric не совпадает')
 PY
 
 python3 "$ROOT/scripts/compatibility/verify-loader-platform.py" \
