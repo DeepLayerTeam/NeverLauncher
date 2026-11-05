@@ -67,7 +67,7 @@ func writeExclusive(path string, raw []byte) error {
 }
 func keygen(privatePath, publicPath string) error {
 	if privatePath == "" || publicPath == "" || privatePath == publicPath {
-		return errors.New("separate --private-key and --public-key required")
+		return errors.New("Необходимо отдельно указать --private-key и --public-key")
 	}
 	// Вызывающая сторона должна выбрать внешний каталог секретов, управляемый оператором.
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -85,14 +85,14 @@ func keygen(privatePath, publicPath string) error {
 }
 func sign(policy, key, out string) error {
 	if policy == "" || key == "" || out == "" {
-		return errors.New("--policy, --private-key and --out are required")
+		return errors.New("Необходимо указать --policy, --private-key и --out")
 	}
 	st, err := os.Lstat(policy)
 	if err != nil {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 192*1024 {
-		return errors.New("invalid policy source file")
+		return errors.New("Недопустимый исходный файл политики")
 	}
 	payload, err := os.ReadFile(policy)
 	if err != nil {
@@ -105,18 +105,18 @@ func sign(policy, key, out string) error {
 	}
 	var extra any
 	if err = dec.Decode(&extra); err != io.EOF {
-		return errors.New("unexpected trailing JSON")
+		return errors.New("Неожиданные данные после значения JSON")
 	}
 	var version string
 	if err = json.Unmarshal(object["schemaVersion"], &version); err != nil || version != schema {
-		return errors.New("unexpected policy schema")
+		return errors.New("Неожиданная схема политики")
 	}
 	sk, err := os.Lstat(key)
 	if err != nil {
 		return err
 	}
 	if !sk.Mode().IsRegular() || sk.Size() > 512 {
-		return errors.New("invalid private key file")
+		return errors.New("Недопустимый файл закрытого ключа")
 	}
 	rawKey, err := os.ReadFile(key)
 	if err != nil {
@@ -124,11 +124,11 @@ func sign(policy, key, out string) error {
 	}
 	private, err := hex.DecodeString(strings.TrimSpace(string(rawKey)))
 	if err != nil || len(private) != ed25519.PrivateKeySize {
-		return errors.New("private key must be 64-byte Ed25519 seed+public hex")
+		return errors.New("Закрытый ключ должен быть 64-байтовым шестнадцатеричным значением Ed25519 seed+public")
 	}
 	derived := ed25519.NewKeyFromSeed(private[:ed25519.SeedSize])
 	if !bytes.Equal(derived, private) {
-		return errors.New("private key halves inconsistent")
+		return errors.New("Части закрытого ключа не согласованы")
 	}
 	signature := ed25519.Sign(ed25519.PrivateKey(private), append([]byte(domain), payload...))
 	encoded, err := json.Marshal(map[string]string{"schemaVersion": schema, "payload": base64.StdEncoding.EncodeToString(payload), "signature": hex.EncodeToString(signature)})

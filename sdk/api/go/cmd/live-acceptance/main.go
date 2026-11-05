@@ -24,19 +24,19 @@ func run() error {
  expected:=required("NL_GA_BINARY_SHA256")
  client,err:=neverapi.New(origin,token);if err!=nil{return err}
  ctx,cancel:=context.WithTimeout(context.Background(),4*time.Minute);defer cancel()
- if err=client.CheckCompatibility(ctx);err!=nil{return fmt.Errorf("live published API compatibility: %w",err)}
+ if err=client.CheckCompatibility(ctx);err!=nil{return fmt.Errorf("Совместимость опубликованного рабочего API: %w",err)}
  var jsonBody map[string]any
  if err=client.Request(ctx,"GET",jsonPath,nil,nil,&jsonBody,"");err!=nil{return err}
- if len(jsonBody)==0{return errors.New("real API returned empty JSON")}
+ if len(jsonBody)==0{return errors.New("Рабочий API вернул пустой JSON")}
  // Проверяйте настоящие потоковые ответы, а не преобразование в JSON.
  var text strings.Builder
  n,err:=client.RequestStream(ctx,"GET",textPath,nil,nil,"",&text,1<<20,"")
  if err!=nil || n<10 || !utf8.ValidString(text.String()) || strings.ContainsRune(text.String(),'\x00') {
-  return fmt.Errorf("real metrics/text SDK streaming failed: %v",err)
+  return fmt.Errorf("Потоковая передача метрик и текста через SDK не удалась: %v",err)
  }
  hash:=sha256.New()
  n,err=client.RequestStream(ctx,"GET",binaryPath,nil,nil,"",hash,1<<30,"")
- if err!=nil{return err};if n<8 || hex.EncodeToString(hash.Sum(nil))!=expected{return errors.New("live binary stream digest mismatch")}
+ if err!=nil{return err};if n<8 || hex.EncodeToString(hash.Sum(nil))!=expected{return errors.New("Несовпадение хеша рабочего бинарного потока")}
  // Некорректные адреса должны отклоняться до передачи Bearer-токена.
  if _,err=client.RequestStream(ctx,"GET","https://untrusted.invalid",nil,nil,"",io.Discard,1024,"");err==nil{return errors.New("external origin not rejected")}
  fmt.Printf("PASS sdk=go checks=3 binaryBytes=%d binarySha256=%s\n",n,expected)

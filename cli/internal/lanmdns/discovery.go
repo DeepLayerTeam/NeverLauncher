@@ -41,7 +41,7 @@ func ValidateURL(raw string) (*url.URL, error) {
 		return nil, err
 	}
 	if u.Scheme != "https" || u.Hostname() == "" || u.Port() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" {
-		return nil, errors.New("LAN endpoint must be an https URL with hostname and explicit port")
+		return nil, errors.New("Конечная точка LAN должна быть URL HTTPS с именем хоста и явно указанным портом")
 	}
 	port, err := strconv.Atoi(u.Port())
 	if err != nil || port < 1 || port > 65535 {
@@ -59,7 +59,7 @@ func ValidatePublishAddress(raw string) (*url.URL, error) {
 	}
 	ip := net.ParseIP(u.Hostname()).To4()
 	if ip == nil || ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() {
-		return nil, errors.New("publish URL must contain an active non-loopback local IPv4 address")
+		return nil, errors.New("URL публикации должен содержать активный локальный IPv4-адрес, отличный от loopback")
 	}
 	ips, err := ipForInterface()
 	if err != nil {
@@ -70,7 +70,7 @@ func ValidatePublishAddress(raw string) (*url.URL, error) {
 			return u, nil
 		}
 	}
-	return nil, errors.New("publish URL IP does not match a local LAN interface")
+	return nil, errors.New("IP-адрес URL публикации не соответствует локальному интерфейсу LAN")
 }
 
 func instanceName(name string) (string, error) {
@@ -91,10 +91,10 @@ func announceMessage(name string, port int, fingerprint string, ips []net.IP, tt
 		return nil, err
 	}
 	if !FingerprintOK(fingerprint) {
-		return nil, errors.New("invalid SHA-256 certificate fingerprint")
+		return nil, errors.New("Недопустимый отпечаток сертификата SHA-256")
 	}
 	if port < 1 || port > 65535 {
-		return nil, errors.New("invalid port")
+		return nil, errors.New("Недопустимый порт")
 	}
 	host := strings.ReplaceAll(name, "_", "-") + ".local."
 	var b bytes.Buffer
@@ -103,7 +103,7 @@ func announceMessage(name string, port int, fingerprint string, ips []net.IP, tt
 	binary.BigEndian.PutUint16(p[2:4], 0x8400)
 	for _, ip := range ips {
 		if ip.To4() == nil {
-			return nil, errors.New("mDNS IPv4 advertisement contains a non-IPv4 address")
+			return nil, errors.New("Объявление mDNS IPv4 содержит адрес другого типа")
 		}
 	}
 	binary.BigEndian.PutUint16(p[6:8], uint16(3+len(ips)))
@@ -133,7 +133,7 @@ func announceMessage(name string, port int, fingerprint string, ips []net.IP, tt
 		}
 	}
 	if b.Len() > maxMessage {
-		return nil, errors.New("DNS response too large")
+		return nil, errors.New("Ответ DNS слишком большой")
 	}
 	return b.Bytes(), nil
 }
@@ -147,7 +147,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	}
 	addr := listenIP.To4()
 	if addr == nil {
-		return errors.New("publisher requires a local IPv4 address")
+		return errors.New("Для публикации требуется локальный IPv4-адрес")
 	}
 	found := false
 	for _, ip := range local {
@@ -157,7 +157,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 		}
 	}
 	if !found {
-		return errors.New("publisher address is not a local LAN interface")
+		return errors.New("Адрес публикации не относится к локальному интерфейсу LAN")
 	}
 	ips := []net.IP{addr}
 	packet, err := announceMessage(name, port, fingerprint, ips, 120)
@@ -166,7 +166,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	}
 	conn, err := net.ListenMulticastUDP("udp4", nil, &net.UDPAddr{IP: net.ParseIP("224.0.0.251"), Port: 5353})
 	if err != nil {
-		return fmt.Errorf("mDNS multicast listener: %w", err)
+		return fmt.Errorf("Ошибка multicast-приёмника mDNS: %w", err)
 	}
 	defer conn.Close()
 	_ = conn.SetReadBuffer(65536)
@@ -179,7 +179,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	defer sender.Close()
 	send := func(b []byte) error { _, e := sender.Write(b); return e }
 	if err := send(packet); err != nil {
-		return fmt.Errorf("mDNS initial advertisement: %w", err)
+		return fmt.Errorf("Ошибка первоначального объявления mDNS: %w", err)
 	}
 	ticker := time.NewTicker(50 * time.Second)
 	defer ticker.Stop()
@@ -208,7 +208,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 			if collides {
 				goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
 				_ = send(goodbye)
-				return errors.New("mDNS instance collision: choose a distinct instance name")
+				return errors.New("Конфликт имён экземпляров mDNS: выберите другое имя")
 			}
 			qs, _, err := parsePacket(buf[:n])
 			if err != nil {
@@ -231,7 +231,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 			// Не продолжайте публиковать адрес, удалённый с хоста.
 			current, err := ipForInterface()
 			if err != nil {
-				return fmt.Errorf("mDNS interface refresh: %w", err)
+				return fmt.Errorf("Ошибка обновления интерфейса mDNS: %w", err)
 			}
 			stillLocal := false
 			for _, ip := range current {
@@ -243,10 +243,10 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 			if !stillLocal {
 				goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
 				_ = send(goodbye)
-				return errors.New("mDNS advertised interface address disappeared")
+				return errors.New("Объявленный адрес интерфейса mDNS больше недоступен")
 			}
 			if err := send(packet); err != nil {
-				return fmt.Errorf("mDNS refresh advertisement: %w", err)
+				return fmt.Errorf("Ошибка обновления объявления mDNS: %w", err)
 			}
 		default:
 		}
@@ -256,7 +256,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 // ParseAdvertisement разбирает ответ DNS-SD, а не доказательство доверия.
 func ParseAdvertisement(p []byte) ([]Endpoint, error) {
 	if len(p) < 12 || (binary.BigEndian.Uint16(p[2:4])&0x800f) != 0x8000 {
-		return nil, errors.New("mDNS advertisement must be a successful DNS response")
+		return nil, errors.New("Объявление mDNS должно представлять собой успешный ответ DNS")
 	}
 	_, rr, err := parsePacket(p)
 	if err != nil {
@@ -376,7 +376,7 @@ func goodbyeInstances0498(packet []byte) map[string]bool {
 
 func Discover(ctx context.Context, duration time.Duration) ([]Endpoint, error) {
 	if duration <= 0 || duration > 30*time.Second {
-		return nil, errors.New("discovery duration must be 1..30s")
+		return nil, errors.New("Длительность обнаружения должна составлять от 1 до 30 с")
 	}
 	conn, err := net.ListenMulticastUDP("udp4", nil, &net.UDPAddr{IP: net.ParseIP("224.0.0.251"), Port: 5353})
 	if err != nil {
@@ -424,7 +424,7 @@ func VerifyTLS(ctx context.Context, rawURL, pin string) error {
 		return err
 	}
 	if !FingerprintOK(pin) {
-		return errors.New("explicit pinned SHA-256 certificate fingerprint is required")
+		return errors.New("Необходимо явно указать закреплённый отпечаток сертификата SHA-256")
 	}
 	expected, _ := hex.DecodeString(strings.ToLower(pin))
 	dialer := net.Dialer{Timeout: 5 * time.Second}
@@ -433,11 +433,11 @@ func VerifyTLS(ctx context.Context, rawURL, pin string) error {
 	cfg := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: u.Hostname(),
 		InsecureSkipVerify: true, VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 			if len(rawCerts) == 0 {
-				return errors.New("TLS peer has no certificate")
+				return errors.New("У однорангового узла TLS отсутствует сертификат")
 			}
 			sum := sha256.Sum256(rawCerts[0])
 			if subtle.ConstantTimeCompare(sum[:], expected) != 1 {
-				return errors.New("TLS certificate fingerprint mismatch")
+				return errors.New("Отпечаток сертификата TLS не совпадает")
 			}
 			return nil
 		},
@@ -454,7 +454,7 @@ func VerifyTLS(ctx context.Context, rawURL, pin string) error {
 		_ = conn.SetDeadline(time.Now().Add(6 * time.Second))
 	}
 	if err := conn.HandshakeContext(ctx); err != nil {
-		return fmt.Errorf("pinned TLS handshake failed: %w", err)
+		return fmt.Errorf("Рукопожатие TLS с закреплённым сертификатом не выполнено: %w", err)
 	}
 	return nil
 }

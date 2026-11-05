@@ -97,12 +97,12 @@ func validPermissionName0244(s string) bool {
 
 func validDistinct0244(values []string, limit int, valid func(string) bool) error {
 	if len(values) > limit {
-		return errors.New("condition array exceeds limit")
+		return errors.New("Массив условий превышает допустимый предел")
 	}
 	seen := make(map[string]bool, len(values))
 	for _, v := range values {
 		if !valid(v) || seen[v] {
-			return fmt.Errorf("invalid/duplicate condition value %q", v)
+			return fmt.Errorf("Недопустимое или повторяющееся значение условия %q", v)
 		}
 		seen[v] = true
 	}
@@ -112,7 +112,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		for _, c := range cat.Components {
 			if c.Conditions != nil {
-				return fmt.Errorf("component %s has unsigned v4 conditions", c.ID)
+				return fmt.Errorf("У компонента %s есть неподписанные условия версии 4", c.ID)
 			}
 		}
 		return nil
@@ -123,7 +123,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			continue
 		}
 		if v.SchemaVersion != "1.0" {
-			return fmt.Errorf("component %s: unsupported condition schema %q", c.ID, v.SchemaVersion)
+			return fmt.Errorf("Компонент %s: неподдерживаемая схема условий %q", c.ID, v.SchemaVersion)
 		}
 		if err := validDistinct0244(v.OS, 8, func(s string) bool { return s == "windows" || s == "linux" || s == "macos" }); err != nil {
 			return fmt.Errorf("component %s OS: %w", c.ID, err)
@@ -132,10 +132,10 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			return fmt.Errorf("component %s arch: %w", c.ID, err)
 		}
 		if v.JavaMajorMax != 0 && v.JavaMajorMin > v.JavaMajorMax {
-			return fmt.Errorf("component %s: inverted Java major range", c.ID)
+			return fmt.Errorf("Компонент %s: границы диапазона основных версий Java указаны в обратном порядке", c.ID)
 		}
 		if v.JavaMajorMin > 99 || v.JavaMajorMax > 99 {
-			return fmt.Errorf("component %s: invalid Java major", c.ID)
+			return fmt.Errorf("Компонент %s: недопустимая основная версия Java", c.ID)
 		}
 		if err := validDistinct0244(v.MinecraftVersions, 64, func(s string) bool { return len(s) > 0 && len(s) <= 80 && !strings.ContainsAny(s, " \t\r\n\x00") }); err != nil {
 			return fmt.Errorf("component %s Minecraft: %w", c.ID, err)
@@ -150,12 +150,12 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 		}
 		if v.MinecraftVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.MinecraftVersionRange); err != nil {
-				return fmt.Errorf("component %s Minecraft range: %w", c.ID, err)
+				return fmt.Errorf("Компонент %s, диапазон версий Minecraft: %w", c.ID, err)
 			}
 		}
 		if v.LoaderVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.LoaderVersionRange); err != nil {
-				return fmt.Errorf("component %s loader range: %w", c.ID, err)
+				return fmt.Errorf("Компонент %s, диапазон версий загрузчика: %w", c.ID, err)
 			}
 		}
 	}
@@ -222,7 +222,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 // исключается, а недоступный обязательный выбор вызывает явную ошибку.
 func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env ComponentEnvironment0244) ([]string, error) {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
-		return nil, fmt.Errorf("condition resolver requires catalog v4")
+		return nil, fmt.Errorf("Для разрешения условий требуется каталог версии 4")
 	}
 	if err := ValidateCatalogConditions0244(cat); err != nil {
 		return nil, err

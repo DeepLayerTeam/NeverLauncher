@@ -41,14 +41,14 @@ type policyContent05011 struct {
 
 func operatorRead05011(path string, cap int64) ([]byte, error) {
 	if path == "" {
-		return nil, errors.New("signed policy file required")
+		return nil, errors.New("Необходим файл подписанной политики")
 	}
 	stat, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 	if !stat.Mode().IsRegular() || stat.Size() == 0 || stat.Size() > cap {
-		return nil, errors.New("unsafe signed policy input")
+		return nil, errors.New("Небезопасные входные данные подписанной политики")
 	}
 	return os.ReadFile(path)
 }
@@ -59,7 +59,7 @@ func operatorKey05011(key string) (ed25519.PrivateKey, error) {
 	}
 	decoded, err := hex.DecodeString(strings.TrimSpace(string(raw)))
 	if err != nil || len(decoded) != ed25519.PrivateKeySize {
-		return nil, errors.New("invalid Ed25519 private key")
+		return nil, errors.New("Недопустимый закрытый ключ Ed25519")
 	}
 	derived := ed25519.NewKeyFromSeed(decoded[:ed25519.SeedSize])
 	if !bytes.Equal(derived, decoded) {
@@ -78,24 +78,24 @@ func operatorParse05011(file string, priv ed25519.PrivateKey) (policyContent0501
 		return result, err
 	}
 	if env.Schema != schema {
-		return result, errors.New("policy envelope schema mismatch")
+		return result, errors.New("Несовпадение схемы оболочки политики")
 	}
 	payload, err := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if err != nil || len(payload) == 0 || len(payload) > 192*1024 {
-		return result, errors.New("invalid policy payload")
+		return result, errors.New("Недопустимые данные политики")
 	}
 	signature, err := hex.DecodeString(env.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return result, errors.New("invalid signature length")
+		return result, errors.New("Недопустимая длина подписи")
 	}
 	if !ed25519.Verify(priv.Public().(ed25519.PublicKey), append([]byte(domain), payload...), signature) {
-		return result, errors.New("signed policy failed verification with operator key")
+		return result, errors.New("Подпись политики не прошла проверку ключом оператора")
 	}
 	if err = decodeStrict05011(payload, &result); err != nil {
 		return result, err
 	}
 	if result.Schema != schema || result.Epoch == 0 || result.ProjectID == "" || result.Minecraft == "" || result.Loader == "" || result.ExpiresAt <= result.IssuedAt {
-		return result, errors.New("invalid signed policy scope/epoch/timestamps")
+		return result, errors.New("Недопустимая область действия, эпоха или временные метки подписанной политики")
 	}
 	return result, nil
 }
@@ -119,7 +119,7 @@ func mergeRevocations05011(current, previous []string) ([]string, error) {
 	out := make([]string, 0, len(current)+len(previous))
 	for _, s := range append(append([]string{}, current...), previous...) {
 		if s == "" || len(s) > 256 || strings.ContainsAny(s, "\x00\r\n") {
-			return nil, errors.New("invalid revocation entry")
+			return nil, errors.New("Недопустимая запись об отзыве")
 		}
 		if !set[s] {
 			out = append(out, s)
@@ -127,7 +127,7 @@ func mergeRevocations05011(current, previous []string) ([]string, error) {
 		}
 	}
 	if len(out) > 4096 {
-		return nil, errors.New("revocation list too long")
+		return nil, errors.New("Список отзывов слишком длинный")
 	}
 	return out, nil
 }
@@ -140,10 +140,10 @@ func verifyDigest05011(value string) bool {
 }
 func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, digests, transforms string, now time.Time) error {
 	if mode != "revoke" && mode != "rollback" {
-		return errors.New("expected revoke or rollback")
+		return errors.New("Ожидалась операция revoke или rollback")
 	}
 	if outFile == "" {
-		return errors.New("--out required")
+		return errors.New("Необходимо указать --out")
 	}
 	private, err := operatorKey05011(keyFile)
 	if err != nil {
@@ -154,26 +154,26 @@ func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, dige
 		return err
 	}
 	if current.Epoch == math.MaxUint64 {
-		return errors.New("epoch exhausted")
+		return errors.New("Исчерпан диапазон значений эпохи")
 	}
 	next := current
 	if mode == "rollback" {
 		if previousFile == "" {
-			return errors.New("--previous signed policy required")
+			return errors.New("Требуется предыдущая подписанная политика через --previous")
 		}
 		previous, err := operatorParse05011(previousFile, private)
 		if err != nil {
 			return err
 		}
 		if previous.Epoch >= current.Epoch {
-			return errors.New("rollback source must be older")
+			return errors.New("Исходная версия для отката должна быть более ранней")
 		}
 		if previous.ProjectID != current.ProjectID || previous.Minecraft != current.Minecraft || !strings.EqualFold(previous.Loader, current.Loader) {
-			return errors.New("rollback policy scope differs")
+			return errors.New("Область действия политики отката отличается")
 		}
 		next = previous
 	} else if strings.TrimSpace(digests) == "" && strings.TrimSpace(transforms) == "" {
-		return errors.New("at least one revocation required")
+		return errors.New("Требуется хотя бы одна запись об отзыве")
 	}
 	next.Epoch = current.Epoch + 1
 	next.IssuedAt = now.Unix()
@@ -185,7 +185,7 @@ func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, dige
 		}
 		s = strings.TrimSpace(s)
 		if !verifyDigest05011(s) {
-			return errors.New("revoke digest must be lowercase SHA-256")
+			return errors.New("Хеш отзыва должен быть SHA-256 в нижнем регистре")
 		}
 		newDigests = append(newDigests, s)
 	}
@@ -196,7 +196,7 @@ func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, dige
 		}
 		s = strings.TrimSpace(s)
 		if s == "" {
-			return errors.New("empty transformation")
+			return errors.New("Пустое преобразование")
 		}
 		newTrans = append(newTrans, s)
 	}

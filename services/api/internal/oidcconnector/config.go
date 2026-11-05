@@ -69,7 +69,7 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	jsonValue = strings.TrimSpace(jsonValue)
 	filePath = strings.TrimSpace(filePath)
 	if jsonValue != "" && filePath != "" {
-		return nil, errors.New("configure only one of LAUNCHER_AUTH_OIDC_PROVIDERS_JSON or LAUNCHER_AUTH_OIDC_PROVIDERS_FILE")
+		return nil, errors.New("Настройте только один источник: LAUNCHER_AUTH_OIDC_PROVIDERS_JSON или LAUNCHER_AUTH_OIDC_PROVIDERS_FILE")
 	}
 	if jsonValue == "" && filePath == "" {
 		return nil, nil
@@ -78,13 +78,13 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	if filePath != "" {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("read OIDC providers file: %w", err)
+			return nil, fmt.Errorf("Не удалось прочитать файл провайдеров OIDC: %w", err)
 		}
 		raw = data
 	}
 	configs, err := configmigration.Decode[Config](raw)
 	if err != nil {
-		return nil, fmt.Errorf("decode configured oidcconnector auth providers: %w", err)
+		return nil, fmt.Errorf("Не удалось декодировать настройки провайдеров авторизации OIDC: %w", err)
 	}
 	return configs, nil
 }
@@ -109,14 +109,14 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.DisplayName = cfg.ID
 	}
 	if len(cfg.DisplayName) > 128 {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: displayName exceeds 128 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: displayName длиннее 128 символов", cfg.ID)
 	}
 	issuer, err := url.Parse(cfg.Issuer)
 	if err != nil || issuer.Scheme != "https" || issuer.Host == "" || issuer.RawQuery != "" || issuer.Fragment != "" || issuer.User != nil {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: issuer must be an absolute HTTPS URL without credentials, query or fragment", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: issuer должен быть абсолютным HTTPS URL без учётных данных, параметров запроса и фрагмента", cfg.ID)
 	}
 	if cfg.ClientID == "" || len(cfg.ClientID) > 512 {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: clientId is required and must be <= 512 bytes", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: требуется clientId длиной не более 512 байт", cfg.ID)
 	}
 	if cfg.TokenEndpointAuthMethod == "" {
 		if cfg.ClientSecretEnv != "" || cfg.ClientSecretFile != "" {
@@ -128,36 +128,36 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	switch cfg.TokenEndpointAuthMethod {
 	case "client_secret_basic", "client_secret_post", "none":
 	default:
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: unsupported tokenEndpointAuthMethod %q", cfg.ID, cfg.TokenEndpointAuthMethod)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: неподдерживаемый tokenEndpointAuthMethod %q", cfg.ID, cfg.TokenEndpointAuthMethod)
 	}
 	if cfg.ClientSecretEnv != "" && cfg.ClientSecretFile != "" {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: configure only one clientSecretEnv/clientSecretFile", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: настройте только одно поле clientSecretEnv или clientSecretFile", cfg.ID)
 	}
 	secret := ""
 	if cfg.ClientSecretEnv != "" {
 		secret = os.Getenv(cfg.ClientSecretEnv)
 		if secret == "" {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: environment variable %s is empty", cfg.ID, cfg.ClientSecretEnv)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: переменная окружения %s пуста", cfg.ID, cfg.ClientSecretEnv)
 		}
 	}
 	if cfg.ClientSecretFile != "" {
 		if !filepath.IsAbs(cfg.ClientSecretFile) {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: clientSecretFile must be absolute", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: clientSecretFile должен задавать абсолютный путь", cfg.ID)
 		}
 		b, err := os.ReadFile(cfg.ClientSecretFile)
 		if err != nil {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: read client secret: %w", cfg.ID, err)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: ошибка чтения секрета клиента: %w", cfg.ID, err)
 		}
 		secret = strings.TrimSpace(string(b))
 	}
 	if cfg.TokenEndpointAuthMethod != "none" && secret == "" {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: client secret is required for %s", cfg.ID, cfg.TokenEndpointAuthMethod)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: для %s необходим секрет клиента", cfg.ID, cfg.TokenEndpointAuthMethod)
 	}
 	if cfg.TokenEndpointAuthMethod == "none" && secret != "" {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: public client auth method none cannot be configured with a client secret", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: для публичного клиента с методом none нельзя задавать секрет клиента", cfg.ID)
 	}
 	if len(cfg.RedirectURIs) == 0 {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: at least one redirectUri is required", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: требуется хотя бы один redirectUri", cfg.ID)
 	}
 	redirectSet := map[string]struct{}{}
 	normalizedRedirects := make([]string, 0, len(cfg.RedirectURIs))
@@ -165,15 +165,15 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		raw = strings.TrimSpace(raw)
 		u, err := url.Parse(raw)
 		if err != nil || u.Scheme == "" || u.Fragment != "" {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: invalid redirectUri %q", cfg.ID, raw)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: недопустимый redirectUri %q", cfg.ID, raw)
 		}
 		if u.Scheme == "http" {
 			host := strings.ToLower(u.Hostname())
 			if host != "127.0.0.1" && host != "::1" && host != "localhost" {
-				return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: HTTP redirectUri is allowed only for loopback clients", cfg.ID)
+				return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: HTTP redirectUri разрешён только для loopback-клиентов", cfg.ID)
 			}
 		} else if u.Scheme != "https" && !strings.Contains(u.Scheme, ".") && !strings.Contains(u.Scheme, "+") && !strings.Contains(u.Scheme, "-") {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: redirectUri scheme %q is not allowed", cfg.ID, u.Scheme)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: схема redirectUri %q запрещена", cfg.ID, u.Scheme)
 		}
 		if _, ok := redirectSet[raw]; !ok {
 			redirectSet[raw] = struct{}{}
@@ -191,7 +191,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	for _, scope := range scopes {
 		scope = strings.TrimSpace(scope)
 		if scope == "" || strings.ContainsAny(scope, " \t\r\n") {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: invalid scope", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: недопустимая область доступа", cfg.ID)
 		}
 		if scope == "openid" {
 			hasOpenID = true
@@ -202,7 +202,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 	}
 	if !hasOpenID {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: scopes must include openid", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: scopes должен включать openid", cfg.ID)
 	}
 	if len(cfg.HostAllowlist) == 0 {
 		cfg.HostAllowlist = []string{strings.ToLower(issuer.Hostname())}
@@ -212,18 +212,18 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: %w", cfg.ID, err)
 	}
 	if !hostAllowed(strings.ToLower(issuer.Hostname()), cfg.HostAllowlist) {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: issuer host is not in hostAllowlist", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: хост issuer отсутствует в hostAllowlist", cfg.ID)
 	}
 	allowedCIDRs := make([]*net.IPNet, 0, len(cfg.AllowedCIDRs))
 	for _, raw := range cfg.AllowedCIDRs {
 		_, network, err := net.ParseCIDR(strings.TrimSpace(raw))
 		if err != nil {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: invalid allowedCidrs entry %q", cfg.ID, raw)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: недопустимый элемент allowedCidrs %q", cfg.ID, raw)
 		}
 		allowedCIDRs = append(allowedCIDRs, network)
 	}
 	if cfg.CAFile != "" && !filepath.IsAbs(cfg.CAFile) {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: caFile must be absolute", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: caFile должен задавать абсолютный путь", cfg.ID)
 	}
 	requestTimeout, err := parseDuration(cfg.RequestTimeout, 8*time.Second, time.Second, 30*time.Second)
 	if err != nil {
@@ -241,20 +241,20 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.MaxResponseBytes = 2 << 20
 	}
 	if cfg.MaxResponseBytes < 4096 || cfg.MaxResponseBytes > 8<<20 {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: maxResponseBytes must be 4096..8388608", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: maxResponseBytes должен быть от 4096 до 8388608", cfg.ID)
 	}
 	if cfg.UserInfoMode == "" {
 		cfg.UserInfoMode = "disabled"
 	}
 	if cfg.UserInfoMode != "disabled" && cfg.UserInfoMode != "optional" && cfg.UserInfoMode != "required" {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: userInfoMode must be disabled, optional or required", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: userInfoMode должен быть disabled, optional или required", cfg.ID)
 	}
 	mapping := &cfg.Claims
 	if mapping.Subject == "" {
 		mapping.Subject = "sub"
 	}
 	if mapping.Subject != "sub" {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: claims.subject must be the standard OIDC sub claim", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: claims.subject должен указывать на стандартное утверждение OIDC sub", cfg.ID)
 	}
 	if mapping.Email == "" {
 		mapping.Email = "email"
@@ -277,14 +277,14 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 	}
 	if len(cfg.RoleMappings) > 256 {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: too many roleMappings", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: слишком много записей roleMappings", cfg.ID)
 	}
 	normalizedRoleMappings := make(map[string]string, len(cfg.RoleMappings))
 	for externalValue, neverRole := range cfg.RoleMappings {
 		externalValue = strings.TrimSpace(externalValue)
 		neverRole = strings.TrimSpace(neverRole)
 		if externalValue == "" || neverRole == "" || len(externalValue) > 256 || len(neverRole) > 128 {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: invalid roleMappings entry", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: недопустимая запись roleMappings", cfg.ID)
 		}
 		normalizedRoleMappings[externalValue] = neverRole
 	}
@@ -294,7 +294,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.Provisioning.Mode = "explicit-only"
 	}
 	if cfg.Provisioning.Mode != "explicit-only" && cfg.Provisioning.Mode != "jit" {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: provisioning.mode must be explicit-only or jit", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: provisioning.mode должен быть explicit-only или jit", cfg.ID)
 	}
 	if cfg.Provisioning.Mode == "jit" && cfg.Provisioning.DefaultRole == "" {
 		cfg.Provisioning.DefaultRole = "player"
@@ -310,7 +310,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		switch alg {
 		case "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA":
 		default:
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: unsupported ID token algorithm %q", cfg.ID, alg)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: неподдерживаемый алгоритм ID-токена %q", cfg.ID, alg)
 		}
 		if _, ok := algSet[alg]; !ok {
 			algSet[alg] = struct{}{}
@@ -338,18 +338,18 @@ func validateProviderID(v string) error {
 }
 func validateClaimPath(v string) error {
 	if v == "" {
-		return errors.New("claim mapping cannot be empty")
+		return errors.New("Сопоставление утверждений не может быть пустым")
 	}
 	if len(v) > 128 {
-		return errors.New("claim mapping exceeds 128 bytes")
+		return errors.New("Сопоставление утверждений превышает 128 байт")
 	}
 	for _, part := range strings.Split(v, ".") {
 		if part == "" {
-			return fmt.Errorf("invalid claim mapping %q", v)
+			return fmt.Errorf("Недопустимое сопоставление утверждений %q", v)
 		}
 		for _, r := range part {
 			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
-				return fmt.Errorf("invalid claim mapping %q", v)
+				return fmt.Errorf("Недопустимое сопоставление утверждений %q", v)
 			}
 		}
 	}
@@ -361,7 +361,7 @@ func normalizeHosts(values []string) ([]string, error) {
 	for _, v := range values {
 		v = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(v, ".")))
 		if v == "" || strings.ContainsAny(v, "/@?#*") {
-			return nil, fmt.Errorf("invalid hostAllowlist entry %q", v)
+			return nil, fmt.Errorf("Недопустимый элемент hostAllowlist %q", v)
 		}
 		if _, ok := seen[v]; !ok {
 			seen[v] = struct{}{}

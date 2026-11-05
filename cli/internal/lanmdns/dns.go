@@ -121,12 +121,12 @@ func buildQuery() []byte {
 }
 func parsePacket(p []byte) ([]question, []record, error) {
 	if len(p) < 12 || len(p) > maxMessage {
-		return nil, nil, errors.New("invalid DNS packet length")
+		return nil, nil, errors.New("Недопустимая длина пакета DNS")
 	}
 	countq := int(binary.BigEndian.Uint16(p[4:6]))
 	count := int(binary.BigEndian.Uint16(p[6:8])) + int(binary.BigEndian.Uint16(p[8:10])) + int(binary.BigEndian.Uint16(p[10:12]))
 	if countq > 100 || count > 100 {
-		return nil, nil, errors.New("DNS packet too many records")
+		return nil, nil, errors.New("Слишком много записей в пакете DNS")
 	}
 	at := 12
 	qs := make([]question, 0, countq)
@@ -167,7 +167,7 @@ func encodeTXT(fields ...string) ([]byte, error) {
 	var b bytes.Buffer
 	for _, v := range fields {
 		if len(v) > 255 {
-			return nil, fmt.Errorf("DNS TXT too long")
+			return nil, fmt.Errorf("Запись DNS TXT слишком длинная")
 		}
 		b.WriteByte(byte(len(v)))
 		b.WriteString(v)

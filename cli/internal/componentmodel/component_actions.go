@@ -123,17 +123,17 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 	if cat.SchemaVersion != ComponentCatalogSchema0245 {
 		for _, c := range cat.Components {
 			if len(c.Actions) != 0 {
-				return fmt.Errorf("component %s actions not signed by catalog schema", c.ID)
+				return fmt.Errorf("Действия компонента %s не подписаны схемой каталога", c.ID)
 			}
 		}
 		return nil
 	}
 	if len(cat.Components) > 4096 {
-		return fmt.Errorf("too many components")
+		return fmt.Errorf("Превышено допустимое количество компонентов")
 	}
 	for _, c := range cat.Components {
 		if len(c.Actions) > 64 {
-			return fmt.Errorf("component %s: too many actions", c.ID)
+			return fmt.Errorf("Компонент %s: слишком много действий", c.ID)
 		}
 		owned := make(map[string]bool, len(c.Files))
 		for _, p := range c.Files {
@@ -144,19 +144,19 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 			switch a.Type {
 			case "File", "ClassPath":
 				if len(a.Args) != 0 || !owned[a.Path] || !validFilePolicyPath0224(a.Path, false) {
-					return fmt.Errorf("component %s: %s action refers to unsigned/unowned file %q", c.ID, a.Type, a.Path)
+					return fmt.Errorf("Компонент %s: действие %s ссылается на неподписанный файл %q без владельца", c.ID, a.Type, a.Path)
 				}
 				if a.Type == "ClassPath" && !strings.HasSuffix(strings.ToLower(a.Path), ".jar") {
-					return fmt.Errorf("component %s: classpath action requires JAR", c.ID)
+					return fmt.Errorf("Компонент %s: для действия classpath требуется JAR-файл", c.ID)
 				}
 				key := a.Type + ":" + strings.ToLower(a.Path)
 				if seen[key] {
-					return fmt.Errorf("component %s: duplicate action %s", c.ID, key)
+					return fmt.Errorf("Компонент %s: повторяющееся действие %s", c.ID, key)
 				}
 				seen[key] = true
 			case "JvmArgs", "ClientArgs":
 				if a.Path != "" || len(a.Args) == 0 || len(a.Args) > 32 {
-					return fmt.Errorf("component %s: invalid argument action", c.ID)
+					return fmt.Errorf("Компонент %s: недопустимое действие с аргументами", c.ID)
 				}
 				for _, arg := range a.Args {
 					if !safeOptionalArgument0245(a.Type, arg) {
@@ -164,12 +164,12 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 					}
 					key := a.Type + ":" + arg
 					if seen[key] {
-						return fmt.Errorf("component %s: duplicate argument %q", c.ID, arg)
+						return fmt.Errorf("Компонент %s: повторяющийся аргумент %q", c.ID, arg)
 					}
 					seen[key] = true
 				}
 			default:
-				return fmt.Errorf("component %s: unsupported action type %q", c.ID, a.Type)
+				return fmt.Errorf("Компонент %s: неподдерживаемый тип действия %q", c.ID, a.Type)
 			}
 		}
 	}

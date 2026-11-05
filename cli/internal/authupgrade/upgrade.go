@@ -120,7 +120,7 @@ func ScanPSQL(ctx context.Context, executable, dsn string, allow []string) (Chec
 	var stderr bytes.Buffer
 	cmd.Stderr = &boundedWriter{w: &stderr, limit: 8192}
 	if err = cmd.Start(); err != nil {
-		return Checkpoint{}, fmt.Errorf("start psql: %w", err)
+		return Checkpoint{}, fmt.Errorf("Не удалось запустить psql: %w", err)
 	}
 	checkpoint, scanErr := ScanRows(stdout, allow)
 	if scanErr != nil {
@@ -128,13 +128,13 @@ func ScanPSQL(ctx context.Context, executable, dsn string, allow []string) (Chec
 	}
 	waitErr := cmd.Wait()
 	if waitErr != nil && stderr.Len() > 0 && (scanErr == nil || strings.Contains(scanErr.Error(), "empty PostgreSQL auth scan") || strings.Contains(scanErr.Error(), "incomplete PostgreSQL auth scan")) {
-		return Checkpoint{}, fmt.Errorf("PostgreSQL rejected auth migration preflight: %w (%s)", waitErr, strings.TrimSpace(stderr.String()))
+		return Checkpoint{}, fmt.Errorf("PostgreSQL отклонил предварительную проверку миграции авторизации: %w (%s)", waitErr, strings.TrimSpace(stderr.String()))
 	}
 	if scanErr != nil {
 		return Checkpoint{}, scanErr
 	}
 	if waitErr != nil {
-		return Checkpoint{}, fmt.Errorf("read-only auth migration scan failed: %w (%s)", waitErr, strings.TrimSpace(stderr.String()))
+		return Checkpoint{}, fmt.Errorf("Сканирование миграции авторизации в режиме чтения не удалось: %w (%s)", waitErr, strings.TrimSpace(stderr.String()))
 	}
 	return checkpoint, nil
 }
@@ -161,7 +161,7 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 	permitted := map[string]bool{"local": true}
 	for _, name := range allow {
 		if name == "" || strings.TrimSpace(name) != name || len(name) > 128 || strings.ContainsAny(name, "\r\n\x00") {
-			return Checkpoint{}, fmt.Errorf("invalid permitted provider ID")
+			return Checkpoint{}, fmt.Errorf("Недопустимый идентификатор разрешённого провайдера")
 		}
 		permitted[name] = true
 	}
@@ -185,21 +185,21 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 		}
 		rows++
 		if rows > maxRows {
-			return Checkpoint{}, errors.New("auth upgrade scan exceeds 2 million rows")
+			return Checkpoint{}, errors.New("Сканирование обновления авторизации превышает два миллиона строк")
 		}
 		var x scanRow
 		if err := json.Unmarshal(line, &x); err != nil {
-			return Checkpoint{}, fmt.Errorf("invalid database scan row %d: %w", rows, err)
+			return Checkpoint{}, fmt.Errorf("Недопустимая строка сканирования базы данных %d: %w", rows, err)
 		}
 		switch x.Kind {
 		case "meta":
 			if x.A != "scan-v1" || sawMeta {
-				return Checkpoint{}, errors.New("invalid scan marker")
+				return Checkpoint{}, errors.New("Недопустимый маркер сканирования")
 			}
 			sawMeta = true
 		case "user", "identity", "profile":
 			if x.A == "" || x.B == "" {
-				return Checkpoint{}, errors.New("malformed identity record in database scan")
+				return Checkpoint{}, errors.New("Некорректная запись идентификации при сканировании базы данных")
 			}
 			// Повторно кодируйте канонический JSON, а не пробельные последовательности в формате psql.
 			encoded, _ := json.Marshal(x)
@@ -211,7 +211,7 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 			var err error
 			n, err = strconv.ParseInt(x.B, 10, 64)
 			if err != nil || n < 0 || x.A == "" {
-				return Checkpoint{}, errors.New("invalid provider count")
+				return Checkpoint{}, errors.New("Недопустимое количество провайдеров")
 			}
 			cp.Providers[x.A] += n
 		case "password":
@@ -219,21 +219,21 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 			var err error
 			n, err = strconv.ParseInt(x.B, 10, 64)
 			if err != nil || n < 0 {
-				return Checkpoint{}, errors.New("invalid password classification count")
+				return Checkpoint{}, errors.New("Недопустимое количество классификаций паролей")
 			}
 			cp.PasswordFormats[x.A] += n
 		default:
-			return Checkpoint{}, fmt.Errorf("unknown auth scan row kind %q", x.Kind)
+			return Checkpoint{}, fmt.Errorf("Неизвестный тип строки сканирования авторизации %q", x.Kind)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return Checkpoint{}, err
 	}
 	if rows == 0 {
-		return Checkpoint{}, errors.New("empty PostgreSQL auth scan; no checkpoint generated")
+		return Checkpoint{}, errors.New("Сканирование авторизации PostgreSQL вернуло пустой результат; контрольная точка не создана")
 	}
 	if !sawMeta {
-		return Checkpoint{}, errors.New("incomplete PostgreSQL auth scan marker")
+		return Checkpoint{}, errors.New("Неполный маркер сканирования авторизации PostgreSQL")
 	}
 	var totalPassword, totalProviders int64
 	for _, n := range cp.PasswordFormats {
@@ -243,14 +243,14 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 		totalProviders += n
 	}
 	if totalPassword != counters["user"] || totalProviders != counters["identity"] {
-		return Checkpoint{}, errors.New("auth scan count mismatch; refusing incomplete checkpoint")
+		return Checkpoint{}, errors.New("Несовпадение количества записей сканирования авторизации; неполная контрольная точка отклонена")
 	}
 	if cp.PasswordFormats["unsupported"] > 0 {
-		return Checkpoint{}, fmt.Errorf("%d unknown password hashes block automatic migration", cp.PasswordFormats["unsupported"])
+		return Checkpoint{}, fmt.Errorf("%d неизвестных хешей паролей препятствуют автоматической миграции", cp.PasswordFormats["unsupported"])
 	}
 	for provider, n := range cp.Providers {
 		if n > 0 && !permitted[provider] {
-			return Checkpoint{}, fmt.Errorf("provider %q is not verified: explicitly acknowledge via --allow-provider after validating its issuer and custom implementation", provider)
+			return Checkpoint{}, fmt.Errorf("Провайдер %q не проверен: после проверки издателя и собственной реализации укажите явное подтверждение через --allow-provider", provider)
 		}
 	}
 	for k, hasher := range h {
@@ -261,19 +261,19 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 
 func Compare(before, after Checkpoint) error {
 	if before.SchemaVersion != CheckpointVersion || before.Scope != "auth-identity-preservation-v1" {
-		return errors.New("unsupported or corrupted checkpoint version")
+		return errors.New("Неподдерживаемая или повреждённая версия контрольной точки")
 	}
 	for _, kind := range []string{"user", "identity", "profile"} {
 		if before.Identity[kind] != after.Identity[kind] {
-			return fmt.Errorf("%s preservation fingerprint or row count changed; stop rollout and investigate, do NOT merge or rewrite identities", kind)
+			return fmt.Errorf("Изменился контрольный отпечаток сохранности или количество строк %s; остановите развёртывание и разберитесь с причиной, НЕ объединяйте и не перезаписывайте идентификационные данные", kind)
 		}
 	}
 	if len(before.AllowedProviders) != len(after.AllowedProviders) {
-		return errors.New("checkpoint provider allowlist mismatch")
+		return errors.New("Несовпадение списка разрешённых провайдеров в контрольной точке")
 	}
 	for i, v := range before.AllowedProviders {
 		if after.AllowedProviders[i] != v {
-			return errors.New("checkpoint provider allowlist mismatch")
+			return errors.New("Несовпадение списка разрешённых провайдеров в контрольной точке")
 		}
 	}
 	return nil
@@ -281,7 +281,7 @@ func Compare(before, after Checkpoint) error {
 
 func Save(path string, c Checkpoint) error {
 	if path == "" {
-		return errors.New("checkpoint output path is required")
+		return errors.New("Необходимо указать путь вывода контрольной точки")
 	}
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
@@ -316,7 +316,7 @@ func Load(path string) (Checkpoint, error) {
 		return cp, err
 	}
 	if len(raw) >= 128<<10 {
-		return cp, errors.New("checkpoint too large")
+		return cp, errors.New("Контрольная точка слишком большая")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
@@ -325,15 +325,15 @@ func Load(path string) (Checkpoint, error) {
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
-		return cp, errors.New("checkpoint contains trailing data")
+		return cp, errors.New("Контрольная точка содержит лишние данные в конце")
 	}
 	if cp.SchemaVersion != CheckpointVersion || cp.Scope != "auth-identity-preservation-v1" {
-		return cp, errors.New("unsupported checkpoint")
+		return cp, errors.New("Неподдерживаемая контрольная точка")
 	}
 	for _, name := range []string{"user", "identity", "profile"} {
 		d, ok := cp.Identity[name]
 		if !ok || len(d.SHA256) != 64 || d.Count < 0 {
-			return cp, fmt.Errorf("malformed checkpoint %s", name)
+			return cp, fmt.Errorf("Некорректная контрольная точка %s", name)
 		}
 	}
 	return cp, nil

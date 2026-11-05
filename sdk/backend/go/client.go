@@ -51,7 +51,7 @@ func Environment() (HostEnvironment, error) {
 		InstanceId:          strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_INSTANCE_ID")),
 	}
 	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
-		return HostEnvironment{}, errors.New("Launcher Extension Host environment is incomplete")
+		return HostEnvironment{}, errors.New("Окружение Launcher Extension Host настроено не полностью")
 	}
 	if env.Scope == "" {
 		env.Scope = "global"
@@ -128,7 +128,7 @@ func (c *Client) Hello(ctx context.Context, callbackURL string) (HelloResponse, 
 		return HelloResponse{}, err
 	}
 	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
-		return HelloResponse{}, errors.New("Launcher Host hello identity/protocol mismatch")
+		return HelloResponse{}, errors.New("Несовпадение идентификатора или протокола при приветствии Launcher Host")
 	}
 	c.mu.Lock()
 	c.hello = out
@@ -173,7 +173,7 @@ func (c *Client) Log(ctx context.Context, level, message string, fields map[stri
 func (c *Client) Capability(ctx context.Context, name string, request any, response any) error {
 	name = strings.TrimSpace(strings.ToLower(name))
 	if name == "" || strings.Contains(name, "/") || strings.Contains(name, "..") {
-		return errors.New("invalid capability name")
+		return errors.New("Недопустимое имя разрешения")
 	}
 	return c.doJSON(ctx, http.MethodPost, "/v1/capabilities/"+name, request, response)
 }
@@ -249,7 +249,7 @@ func (c *Client) Unsubscribe(ctx context.Context, id int64) error {
 // Возвращённый URL безопасно передавать в Hello. Закройте сервер при завершении расширения.
 func (c *Client) StartCallbackServer(events EventHandler, hooks HookHandler) (*CallbackServer, error) {
 	if c.env.CallbackToken == "" {
-		return nil, errors.New("Launcher callback token is missing")
+		return nil, errors.New("Отсутствует токен обратного вызова Launcher")
 	}
 	s, err := newCallbackServer(c.env.CallbackToken, events, hooks)
 	if err != nil {

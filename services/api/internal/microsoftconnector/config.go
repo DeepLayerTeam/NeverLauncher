@@ -67,7 +67,7 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	jsonValue = strings.TrimSpace(jsonValue)
 	filePath = strings.TrimSpace(filePath)
 	if jsonValue != "" && filePath != "" {
-		return nil, errors.New("configure only one of LAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON or LAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE")
+		return nil, errors.New("Настройте только один источник: LAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON или LAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE")
 	}
 	if jsonValue == "" && filePath == "" {
 		return nil, nil
@@ -76,13 +76,13 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	if filePath != "" {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("read Microsoft providers file: %w", err)
+			return nil, fmt.Errorf("Не удалось прочитать файл провайдеров Microsoft: %w", err)
 		}
 		raw = data
 	}
 	configs, err := configmigration.Decode[Config](raw)
 	if err != nil {
-		return nil, fmt.Errorf("decode configured microsoftconnector auth providers: %w", err)
+		return nil, fmt.Errorf("Не удалось декодировать настройки провайдеров авторизации Microsoft: %w", err)
 	}
 	return configs, nil
 }
@@ -112,7 +112,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.DisplayName = "Microsoft"
 	}
 	if len(cfg.DisplayName) > 128 {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: displayName exceeds 128 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: displayName длиннее 128 символов", cfg.ID)
 	}
 	if cfg.Cloud == "" {
 		cfg.Cloud = "global"
@@ -127,19 +127,19 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cloudAuthority = "https://login.partner.microsoftonline.cn"
 	case "custom":
 		if !cfg.AllowCustomAuthority {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: cloud=custom requires allowCustomAuthority=true", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: для cloud=custom необходимо allowCustomAuthority=true", cfg.ID)
 		}
 	default:
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: cloud must be global, usgov, china or custom", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: cloud должен быть global, usgov, china или custom", cfg.ID)
 	}
 	if cfg.AuthorityURL == "" {
 		cfg.AuthorityURL = cloudAuthority
 	} else if cloudAuthority != "" && cfg.AuthorityURL != cloudAuthority && !cfg.AllowCustomAuthority {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: authorityUrl does not match cloud %q", cfg.ID, cfg.Cloud)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: authorityUrl не соответствует cloud %q", cfg.ID, cfg.Cloud)
 	}
 	authority, err := url.Parse(cfg.AuthorityURL)
 	if err != nil || authority.Scheme != "https" || authority.Host == "" || authority.User != nil || authority.RawQuery != "" || authority.Fragment != "" || (authority.Path != "" && authority.Path != "/") {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: authorityUrl must be an HTTPS origin", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: authorityUrl должен указывать на HTTPS-источник", cfg.ID)
 	}
 	cfg.AuthorityURL = strings.TrimSuffix(authority.String(), "/")
 
@@ -151,27 +151,27 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	case "common", "organizations", "consumers":
 	default:
 		if !validGUID(cfg.Tenant) {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: tenant must be common, organizations, consumers or an immutable tenant GUID", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: tenant должен быть common, organizations, consumers или неизменяемым GUID арендатора", cfg.ID)
 		}
 		tenantMode = "tenant"
 		cfg.Tenant = strings.ToLower(cfg.Tenant)
 	}
 	if cfg.ClientID == "" || !validGUID(cfg.ClientID) {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: clientId must be an application GUID", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: clientId должен быть GUID приложения", cfg.ID)
 	}
 
 	allowedTenantSet := map[string]struct{}{}
 	for _, raw := range cfg.AllowedTenantIDs {
 		v := strings.ToLower(strings.TrimSpace(raw))
 		if !validGUID(v) {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: invalid allowedTenantIds value %q", cfg.ID, raw)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: недопустимое значение allowedTenantIds %q", cfg.ID, raw)
 		}
 		allowedTenantSet[v] = struct{}{}
 	}
 	if tenantMode == "tenant" {
 		if len(allowedTenantSet) > 0 {
 			if _, ok := allowedTenantSet[cfg.Tenant]; !ok || len(allowedTenantSet) != 1 {
-				return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: single-tenant provider cannot allow other tenants", cfg.ID)
+				return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: провайдер одного арендатора не может разрешать других арендаторов", cfg.ID)
 			}
 		}
 		allowedTenantSet[cfg.Tenant] = struct{}{}
@@ -179,14 +179,14 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	if cfg.Tenant == "consumers" {
 		if len(allowedTenantSet) > 0 {
 			if _, ok := allowedTenantSet[personalMicrosoftTenantID]; !ok || len(allowedTenantSet) != 1 {
-				return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: consumers authority only accepts the Microsoft personal-account tenant", cfg.ID)
+				return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: authority consumers принимает только арендатора личных учётных записей Microsoft", cfg.ID)
 			}
 		}
 		allowedTenantSet[personalMicrosoftTenantID] = struct{}{}
 	}
 	if cfg.Tenant == "organizations" {
 		if _, ok := allowedTenantSet[personalMicrosoftTenantID]; ok {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: organizations authority cannot allow personal Microsoft accounts", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: authority organizations не может разрешать личные учётные записи Microsoft", cfg.ID)
 		}
 	}
 
@@ -198,20 +198,20 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 	}
 	if cfg.TokenEndpointAuthMethod != "client_secret_post" && cfg.TokenEndpointAuthMethod != "client_secret_basic" && cfg.TokenEndpointAuthMethod != "none" {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: unsupported tokenEndpointAuthMethod", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: неподдерживаемый tokenEndpointAuthMethod", cfg.ID)
 	}
 	if cfg.ClientSecretEnv != "" && cfg.ClientSecretFile != "" {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: configure only one clientSecretEnv/clientSecretFile", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: настройте только одно поле clientSecretEnv или clientSecretFile", cfg.ID)
 	}
 	if cfg.ClientSecretFile != "" && !filepath.IsAbs(cfg.ClientSecretFile) {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: clientSecretFile must be absolute", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: clientSecretFile должен задавать абсолютный путь", cfg.ID)
 	}
 	if cfg.CAFile != "" && !filepath.IsAbs(cfg.CAFile) {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: caFile must be absolute", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: caFile должен задавать абсолютный путь", cfg.ID)
 	}
 
 	if len(cfg.RedirectURIs) == 0 {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: at least one redirectUri is required", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: требуется хотя бы один redirectUri", cfg.ID)
 	}
 	postLogoutSet := map[string]struct{}{}
 	for _, raw := range cfg.PostLogoutRedirectURIs {
@@ -221,7 +221,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 		u, err := url.Parse(v)
 		if err != nil || u.Scheme == "" || u.Fragment != "" {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: invalid postLogoutRedirectUri %q", cfg.ID, raw)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: недопустимый postLogoutRedirectUri %q", cfg.ID, raw)
 		}
 		postLogoutSet[v] = struct{}{}
 	}
@@ -232,7 +232,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	for _, scope := range cfg.Scopes {
 		scope = strings.TrimSpace(scope)
 		if scope == "" || strings.ContainsAny(scope, " \t\r\n") {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: invalid scope", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: недопустимая область доступа", cfg.ID)
 		}
 		scopeSet[scope] = struct{}{}
 	}
@@ -250,17 +250,17 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		switch cfg.Prompt {
 		case "login", "none", "consent", "select_account":
 		default:
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: unsupported prompt %q", cfg.ID, cfg.Prompt)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: неподдерживаемый prompt %q", cfg.ID, cfg.Prompt)
 		}
 	}
 	if len(cfg.DomainHint) > 256 || len(cfg.LoginHint) > 512 {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: domainHint/loginHint is too long", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: domainHint/loginHint слишком длинный", cfg.ID)
 	}
 	if cfg.Provisioning.Mode == "" {
 		cfg.Provisioning.Mode = "explicit-only"
 	}
 	if cfg.Provisioning.Mode != "explicit-only" && cfg.Provisioning.Mode != "jit" {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: provisioning.mode must be explicit-only or jit", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: provisioning.mode должен быть explicit-only или jit", cfg.ID)
 	}
 	if cfg.Provisioning.Mode == "jit" && cfg.Provisioning.DefaultRole == "" {
 		cfg.Provisioning.DefaultRole = "player"
@@ -280,11 +280,11 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	// Проверяйте делегированную общую конфигурацию при
 	// загрузке Microsoft, до любого сетевого вызова.
 	if _, err := oidcconnector.Normalize(oidcCfg); err != nil {
-		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q OIDC configuration: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q, конфигурация OIDC: %w", cfg.ID, err)
 	}
 	for _, raw := range cfg.AllowedCIDRs {
 		if _, _, err := net.ParseCIDR(strings.TrimSpace(raw)); err != nil {
-			return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q: invalid allowedCidrs value %q", cfg.ID, raw)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: недопустимое значение allowedCidrs %q", cfg.ID, raw)
 		}
 	}
 	return RuntimeConfig{Config: cfg, AuthorityBase: cfg.AuthorityURL, TenantMode: tenantMode, AllowedTenantSet: allowedTenantSet, PostLogoutRedirectSet: postLogoutSet, OIDC: oidcCfg}, nil
@@ -301,11 +301,11 @@ func (c RuntimeConfig) PostLogoutRedirectAllowed(v string) bool {
 
 func validateProviderID(v string) error {
 	if v == "" {
-		return errors.New("Microsoft connector id is required")
+		return errors.New("Необходим идентификатор коннектора Microsoft")
 	}
 	for _, r := range v {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return fmt.Errorf("invalid Microsoft connector id %q", v)
+			return fmt.Errorf("Недопустимый идентификатор коннектора Microsoft %q", v)
 		}
 	}
 	return nil

@@ -48,7 +48,7 @@ func LoadPreviousMatrix03011(root string) (Matrix, error) {
 func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaseline string, requireCurrent bool) (Report, error) {
 	baseline, err := Inspect(root)
 	if err != nil {
-		return Report{}, fmt.Errorf("historical contract regression: %w", err)
+		return Report{}, fmt.Errorf("Нарушение совместимости с историческим контрактом: %w", err)
 	}
 	var m Matrix
 	if err := readJSON(filepath.Join(root, filename), &m); err != nil {
@@ -60,31 +60,31 @@ func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaselin
 	}
 	version := strings.TrimSpace(string(versionBytes))
 	if (requireCurrent && version != expectedVersion) || m.SchemaVersion != "1.0" || m.ProductVersion != expectedVersion || m.AuditBaseline != expectedBaseline || m.Upstream.Commit != baseline.UpstreamCommit || m.Upstream.Repository != "GravitLauncher/LauncherModules" {
-		return Report{}, fmt.Errorf("%s parity matrix/version/upstream mismatch", expectedVersion)
+		return Report{}, fmt.Errorf("%s: несовпадение матрицы соответствия, версии или исходного проекта", expectedVersion)
 	}
 	if len(m.Modules) != 19 {
-		return Report{}, fmt.Errorf("expected 19 Gravit modules, got %d", len(m.Modules))
+		return Report{}, fmt.Errorf("Ожидалось 19 модулей Gravit, получено %d", len(m.Modules))
 	}
 	report := Report{SchemaVersion: "1.0", ProductVersion: expectedVersion, UpstreamCommit: m.Upstream.Commit, AuditStatus: "current-evidence-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
 	for i, mod := range m.Modules {
 		old := baseline.Results[i]
 		if mod.ID != old.ModuleID || mod.UpstreamModule != old.UpstreamModule || strings.TrimSpace(mod.Equivalent) == "" || strings.TrimSpace(mod.Limitations) == "" {
-			return Report{}, fmt.Errorf("M%02d identity/equivalence invalid", i+1)
+			return Report{}, fmt.Errorf("M%02d: недопустимая идентификация или эквивалентность", i+1)
 		}
 		if mod.Status != "partial" && mod.Status != "blocked" && mod.Status != "planned" {
-			return Report{}, fmt.Errorf("%s unsafe status %q", mod.ID, mod.Status)
+			return Report{}, fmt.Errorf("%s: небезопасное состояние %q", mod.ID, mod.Status)
 		}
 		if old.Status == "blocked" && mod.Status != "blocked" {
-			return Report{}, fmt.Errorf("%s unsafe command exclusion cannot be removed", mod.ID)
+			return Report{}, fmt.Errorf("%s: исключение небезопасной команды нельзя отменить", mod.ID)
 		}
 		if mod.Status == "partial" && (len(mod.SourceRefs) == 0 || len(mod.TestRefs) == 0) {
-			return Report{}, fmt.Errorf("%s partial without executable evidence", mod.ID)
+			return Report{}, fmt.Errorf("%s: частичная реализация без исполняемых подтверждений", mod.ID)
 		}
 		seen := map[string]bool{}
 		digests := map[string]string{}
 		for _, ref := range append(append([]string{}, mod.SourceRefs...), mod.TestRefs...) {
 			if seen[ref] {
-				return Report{}, fmt.Errorf("%s duplicate evidence %s", mod.ID, ref)
+				return Report{}, fmt.Errorf("%s: повторяющееся подтверждение %s", mod.ID, ref)
 			}
 			seen[ref] = true
 			path, e := SafeRepoFile(root, ref)
@@ -99,7 +99,7 @@ func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaselin
 		}
 		for _, ref := range mod.TestRefs {
 			if !strings.HasSuffix(ref, "_test.go") && !strings.HasSuffix(ref, ".test.mjs") {
-				return Report{}, fmt.Errorf("%s test is not runnable via parity auditor: %s", mod.ID, ref)
+				return Report{}, fmt.Errorf("%s: тест нельзя запустить через аудитор соответствия: %s", mod.ID, ref)
 			}
 		}
 		report.Results = append(report.Results, Result{ModuleID: mod.ID, UpstreamModule: mod.UpstreamModule, Status: mod.Status, SourceValidated: true, SourceDigests: digests, Test: TestOutcome{Status: "not-run"}, Limitations: mod.Limitations})
@@ -151,22 +151,22 @@ func InspectLatest04211(root string) (Report, error) {
 		return Report{}, err
 	}
 	if !latestAuditVersionAllowed(string(version)) || current.SchemaVersion != "1.0" || current.ProductVersion != "0.42.11" || current.AuditBaseline != "0.31.0" || current.Upstream != baseline.Upstream || len(current.Modules) != 19 || len(baseline.Modules) != 19 {
-		return Report{}, fmt.Errorf("pinned 0.42.11 Gravit module inventory/version mismatch")
+		return Report{}, fmt.Errorf("Несовпадение списка или версии модулей Gravit, закреплённых для 0.42.11")
 	}
 	report := Report{SchemaVersion: "1.0", ProductVersion: strings.TrimSpace(string(version)), UpstreamCommit: current.Upstream.Commit, AuditStatus: "evidence-present-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
 	for i, mod := range current.Modules {
 		expected := fmt.Sprintf("M%02d", i+1)
 		if mod.ID != expected || mod.ID != baseline.Modules[i].ID || mod.UpstreamModule != baseline.Modules[i].UpstreamModule || strings.TrimSpace(mod.Equivalent) == "" || strings.TrimSpace(mod.Limitations) == "" || (mod.Status != "partial" && mod.Status != "blocked") || (baseline.Modules[i].Status == "blocked" && mod.Status != "blocked") {
-			return Report{}, fmt.Errorf("%s invalid identity, status or limitation", expected)
+			return Report{}, fmt.Errorf("%s: недопустимый идентификатор, состояние или ограничение", expected)
 		}
 		if mod.Status == "partial" && (len(mod.SourceRefs) == 0 || len(mod.TestRefs) == 0) {
-			return Report{}, fmt.Errorf("%s missing source or runnable tests", mod.ID)
+			return Report{}, fmt.Errorf("%s: отсутствуют исходники или запускаемые тесты", mod.ID)
 		}
 		seen := map[string]bool{}
 		hashes := map[string]string{}
 		for _, ref := range append(append([]string{}, mod.SourceRefs...), mod.TestRefs...) {
 			if seen[ref] {
-				return Report{}, fmt.Errorf("%s duplicate evidence %q", mod.ID, ref)
+				return Report{}, fmt.Errorf("%s: повторяющееся подтверждение %q", mod.ID, ref)
 			}
 			seen[ref] = true
 			safe, err := SafeRepoFile(root, ref)
@@ -181,7 +181,7 @@ func InspectLatest04211(root string) (Report, error) {
 		}
 		for _, ref := range mod.TestRefs {
 			if !strings.HasSuffix(ref, "_test.go") && !strings.HasSuffix(ref, ".test.mjs") {
-				return Report{}, fmt.Errorf("%s unexecutable test evidence: %s", mod.ID, ref)
+				return Report{}, fmt.Errorf("%s: подтверждающий тест не может быть выполнен: %s", mod.ID, ref)
 			}
 		}
 		report.Results = append(report.Results, Result{ModuleID: mod.ID, UpstreamModule: mod.UpstreamModule, Status: mod.Status, SourceValidated: true, SourceDigests: hashes, Test: TestOutcome{Status: "not-run"}, Limitations: mod.Limitations})

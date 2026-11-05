@@ -64,39 +64,39 @@ func VerifyRegistration(cfg VerifyConfig, clientDataJSON, attestationObject, raw
 		return RegistrationResult{}, fmt.Errorf("attestation CBOR: %w", err)
 	}
 	if consumed != len(attestationObject) {
-		return RegistrationResult{}, errors.New("attestation object has trailing data")
+		return RegistrationResult{}, errors.New("Объект аттестации содержит лишние данные в конце")
 	}
 	m, ok := v.(map[any]any)
 	if !ok {
-		return RegistrationResult{}, errors.New("attestation object is not a map")
+		return RegistrationResult{}, errors.New("Объект аттестации не является словарём")
 	}
 	fmtV, _ := mapGet(m, "fmt")
 	format, _ := fmtV.(string)
 	if format != "none" {
-		return RegistrationResult{}, fmt.Errorf("attestation format %q is not accepted; server requests none", format)
+		return RegistrationResult{}, fmt.Errorf("Формат аттестации %q не принимается: сервер запрашивает none", format)
 	}
 	stmtV, ok := mapGet(m, "attStmt")
 	if !ok {
-		return RegistrationResult{}, errors.New("attestation statement missing")
+		return RegistrationResult{}, errors.New("Отсутствует выражение аттестации")
 	}
 	stmt, ok := stmtV.(map[any]any)
 	if !ok || len(stmt) != 0 {
-		return RegistrationResult{}, errors.New("none attestation statement must be an empty map")
+		return RegistrationResult{}, errors.New("Выражение аттестации none должно быть пустым словарём")
 	}
 	authV, ok := mapGet(m, "authData")
 	if !ok {
-		return RegistrationResult{}, errors.New("attestation authData missing")
+		return RegistrationResult{}, errors.New("Отсутствует поле authData в аттестации")
 	}
 	authData, ok := authV.([]byte)
 	if !ok {
-		return RegistrationResult{}, errors.New("attestation authData invalid")
+		return RegistrationResult{}, errors.New("Недопустимое поле authData в аттестации")
 	}
 	parsed, err := parseAuthenticatorData(cfg, authData, true)
 	if err != nil {
 		return RegistrationResult{}, err
 	}
 	if !bytes.Equal(rawID, parsed.credentialID) {
-		return RegistrationResult{}, errors.New("rawId does not match attested credential id")
+		return RegistrationResult{}, errors.New("rawId не соответствует идентификатору подтверждённых учётных данных")
 	}
 	alg, _, err := parseCOSEPublicKey(parsed.publicKeyCOSE)
 	if err != nil {
@@ -123,19 +123,19 @@ func VerifyAssertion(cfg VerifyConfig, clientDataJSON, authenticatorData, signat
 		return AssertionResult{}, err
 	}
 	if (parsed.flags&FlagBE != 0) != backupEligible {
-		return AssertionResult{}, errors.New("WebAuthn backup eligibility flag changed")
+		return AssertionResult{}, errors.New("Изменился флаг возможности резервного копирования WebAuthn")
 	}
 	// Нулевое значение счётчика допустимо. Для аутентификаторов без поддержки резервирования нерастущий
 	// ненулевой счётчик рассматривается как признак клонирования или повтора и отклоняется.
 	if !backupEligible && storedSignCount != 0 && parsed.signCount != 0 && parsed.signCount <= storedSignCount {
-		return AssertionResult{}, errors.New("WebAuthn signature counter did not increase")
+		return AssertionResult{}, errors.New("Счётчик подписей WebAuthn не увеличился")
 	}
 	return AssertionResult{SignCount: parsed.signCount, BackupEligible: parsed.flags&FlagBE != 0, BackedUp: parsed.flags&FlagBS != 0, UserVerified: parsed.flags&FlagUV != 0}, nil
 }
 
 func verifyClientData(cfg VerifyConfig, raw []byte, expectedType string) error {
 	if len(raw) == 0 || len(raw) > 64*1024 {
-		return errors.New("clientDataJSON size invalid")
+		return errors.New("Недопустимый размер clientDataJSON")
 	}
 	var cd ClientData
 	dec := json.NewDecoder(bytes.NewReader(raw))
@@ -144,23 +144,23 @@ func verifyClientData(cfg VerifyConfig, raw []byte, expectedType string) error {
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return errors.New("clientDataJSON has trailing JSON")
+		return errors.New("clientDataJSON содержит лишние данные JSON в конце")
 	}
 	if cd.Type != expectedType {
-		return errors.New("WebAuthn clientData type mismatch")
+		return errors.New("Несовпадение типа clientData WebAuthn")
 	}
 	got, err := base64.RawURLEncoding.DecodeString(cd.Challenge)
 	if err != nil {
-		return errors.New("WebAuthn challenge encoding invalid")
+		return errors.New("Недопустимая кодировка запроса challenge WebAuthn")
 	}
 	if !bytes.Equal(got, cfg.Challenge) {
-		return errors.New("WebAuthn challenge mismatch")
+		return errors.New("Несовпадение запроса challenge WebAuthn")
 	}
 	if cd.CrossOrigin {
-		return errors.New("cross-origin WebAuthn ceremony rejected")
+		return errors.New("Операция WebAuthn с другого источника отклонена")
 	}
 	if _, ok := cfg.Origins[strings.TrimSpace(cd.Origin)]; !ok {
-		return errors.New("WebAuthn origin rejected")
+		return errors.New("Источник WebAuthn отклонён")
 	}
 	return nil
 }
@@ -173,45 +173,45 @@ type parsedAuthData struct {
 
 func parseAuthenticatorData(cfg VerifyConfig, b []byte, needAttested bool) (parsedAuthData, error) {
 	if len(b) < 37 {
-		return parsedAuthData{}, errors.New("authenticatorData too short")
+		return parsedAuthData{}, errors.New("Поле authenticatorData слишком короткое")
 	}
 	expected := sha256.Sum256([]byte(cfg.RPID))
 	if !bytes.Equal(b[:32], expected[:]) {
-		return parsedAuthData{}, errors.New("RP ID hash mismatch")
+		return parsedAuthData{}, errors.New("Несовпадение хеша RP ID")
 	}
 	flags := b[32]
 	if flags&FlagUP == 0 {
-		return parsedAuthData{}, errors.New("user presence flag missing")
+		return parsedAuthData{}, errors.New("Отсутствует флаг присутствия пользователя")
 	}
 	if cfg.RequireUV && flags&FlagUV == 0 {
-		return parsedAuthData{}, errors.New("user verification flag missing")
+		return parsedAuthData{}, errors.New("Отсутствует флаг проверки пользователя")
 	}
 	if flags&FlagBS != 0 && flags&FlagBE == 0 {
-		return parsedAuthData{}, errors.New("invalid backup state flags")
+		return parsedAuthData{}, errors.New("Недопустимые флаги состояния резервного копирования")
 	}
 	p := parsedAuthData{flags: flags, signCount: binary.BigEndian.Uint32(b[33:37])}
 	if !needAttested {
 		return p, nil
 	}
 	if flags&FlagAT == 0 {
-		return parsedAuthData{}, errors.New("attested credential data missing")
+		return parsedAuthData{}, errors.New("Отсутствуют подтверждённые учётные данные")
 	}
 	if len(b) < 55 {
-		return parsedAuthData{}, errors.New("attested credential data truncated")
+		return parsedAuthData{}, errors.New("Подтверждённые учётные данные обрезаны")
 	}
 	p.aaguid = append([]byte(nil), b[37:53]...)
 	n := int(binary.BigEndian.Uint16(b[53:55]))
 	if n < 1 || n > 1024 || len(b) < 55+n {
-		return parsedAuthData{}, errors.New("credential id length invalid")
+		return parsedAuthData{}, errors.New("Недопустимая длина идентификатора учётных данных")
 	}
 	p.credentialID = append([]byte(nil), b[55:55+n]...)
 	start := 55 + n
 	_, used, err := decodeCBOR(b[start:])
 	if err != nil {
-		return parsedAuthData{}, fmt.Errorf("credential public key: %w", err)
+		return parsedAuthData{}, fmt.Errorf("Публичный ключ учётных данных: %w", err)
 	}
 	if used < 1 {
-		return parsedAuthData{}, errors.New("credential public key missing")
+		return parsedAuthData{}, errors.New("Отсутствует публичный ключ учётных данных")
 	}
 	p.publicKeyCOSE = append([]byte(nil), b[start:start+used]...)
 	return p, nil
@@ -223,7 +223,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		return 0, nil, fmt.Errorf("COSE key: %w", err)
 	}
 	if used != len(raw) {
-		return 0, nil, errors.New("COSE key trailing data")
+		return 0, nil, errors.New("Лишние данные после ключа COSE")
 	}
 	m, ok := v.(map[any]any)
 	if !ok {
@@ -278,7 +278,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		}
 		return alg, ed25519.PublicKey(append([]byte(nil), x...)), nil
 	default:
-		return 0, nil, fmt.Errorf("unsupported COSE key type %d", kty)
+		return 0, nil, fmt.Errorf("Неподдерживаемый тип ключа COSE %d", kty)
 	}
 }
 
@@ -288,31 +288,31 @@ func verifySignature(alg int64, pub crypto.PublicKey, data, sig []byte) error {
 	case -7:
 		p, ok := pub.(*ecdsa.PublicKey)
 		if !ok {
-			return errors.New("ES256 key mismatch")
+			return errors.New("Несовпадение ключа ES256")
 		}
 		if !ecdsa.VerifyASN1(p, digest[:], sig) {
-			return errors.New("WebAuthn ES256 signature invalid")
+			return errors.New("Недопустимая подпись WebAuthn ES256")
 		}
 		return nil
 	case -257:
 		p, ok := pub.(*rsa.PublicKey)
 		if !ok {
-			return errors.New("RS256 key mismatch")
+			return errors.New("Несовпадение ключа RS256")
 		}
 		if err := rsa.VerifyPKCS1v15(p, crypto.SHA256, digest[:], sig); err != nil {
-			return errors.New("WebAuthn RS256 signature invalid")
+			return errors.New("Недопустимая подпись WebAuthn RS256")
 		}
 		return nil
 	case -8:
 		p, ok := pub.(ed25519.PublicKey)
 		if !ok {
-			return errors.New("Ed25519 key mismatch")
+			return errors.New("Несовпадение ключа Ed25519")
 		}
 		if !ed25519.Verify(p, data, sig) {
-			return errors.New("WebAuthn Ed25519 signature invalid")
+			return errors.New("Недопустимая подпись WebAuthn Ed25519")
 		}
 		return nil
 	default:
-		return fmt.Errorf("unsupported WebAuthn algorithm %d", alg)
+		return fmt.Errorf("Неподдерживаемый алгоритм WebAuthn %d", alg)
 	}
 }

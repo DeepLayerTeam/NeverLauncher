@@ -78,7 +78,7 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	jsonValue = strings.TrimSpace(jsonValue)
 	filePath = strings.TrimSpace(filePath)
 	if jsonValue != "" && filePath != "" {
-		return nil, errors.New("configure only one of LAUNCHER_AUTH_HTTP_PROVIDERS_JSON or LAUNCHER_AUTH_HTTP_PROVIDERS_FILE")
+		return nil, errors.New("Настройте только один источник: LAUNCHER_AUTH_HTTP_PROVIDERS_JSON или LAUNCHER_AUTH_HTTP_PROVIDERS_FILE")
 	}
 	if jsonValue == "" && filePath == "" {
 		return nil, nil
@@ -87,13 +87,13 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	if filePath != "" {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("read HTTP auth providers file: %w", err)
+			return nil, fmt.Errorf("Не удалось прочитать файл провайдеров авторизации HTTP: %w", err)
 		}
 		raw = data
 	}
 	configs, err := configmigration.Decode[Config](raw)
 	if err != nil {
-		return nil, fmt.Errorf("decode configured httpconnector auth providers: %w", err)
+		return nil, fmt.Errorf("Не удалось декодировать настройки провайдеров авторизации HTTP: %w", err)
 	}
 	return configs, nil
 }
@@ -120,18 +120,18 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.DisplayName = cfg.ID
 	}
 	if len(cfg.DisplayName) > 128 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: displayName exceeds 128 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: displayName длиннее 128 символов", cfg.ID)
 	}
 	parsed, err := url.Parse(cfg.BaseURL)
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
 		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: baseUrl must be an absolute HTTPS URL", cfg.ID)
 	}
 	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: baseUrl cannot contain credentials, query or fragment", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: baseUrl не должен содержать учётные данные, параметры запроса или фрагмент", cfg.ID)
 	}
 	if parsed.Port() != "" {
 		if _, err := net.LookupPort("tcp", parsed.Port()); err != nil {
-			return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: invalid baseUrl port: %w", cfg.ID, err)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый порт baseUrl: %w", cfg.ID, err)
 		}
 	}
 	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
@@ -139,7 +139,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	cfg.BaseURL = strings.TrimSuffix(cfg.BaseURL, "/")
 
 	if cfg.Issuer == "" || len(cfg.Issuer) > 256 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: issuer is required and must be <= 256 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: требуется issuer длиной не более 256 символов", cfg.ID)
 	}
 
 	host := strings.ToLower(parsed.Hostname())
@@ -151,12 +151,12 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	for _, item := range cfg.HostAllowlist {
 		item = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(item, ".")))
 		if item == "" || strings.ContainsAny(item, "/@?#*") {
-			return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: invalid hostAllowlist entry %q", cfg.ID, item)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый элемент hostAllowlist %q", cfg.ID, item)
 		}
 		if net.ParseIP(item) == nil {
 			for _, r := range item {
 				if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '.') {
-					return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: invalid hostAllowlist entry %q", cfg.ID, item)
+					return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый элемент hostAllowlist %q", cfg.ID, item)
 				}
 			}
 		}
@@ -179,7 +179,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 		_, network, err := net.ParseCIDR(raw)
 		if err != nil {
-			return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: invalid allowedCidrs entry %q: %w", cfg.ID, raw, err)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: недопустимый элемент allowedCidrs %q: %w", cfg.ID, raw, err)
 		}
 		allowedCIDRs = append(allowedCIDRs, network)
 	}
@@ -213,7 +213,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: %w", cfg.ID, err)
 	}
 	if len(secret) < 32 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: HMAC secret must contain at least 32 bytes", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: секрет HMAC должен содержать не менее 32 байт", cfg.ID)
 	}
 	if cfg.HMAC.KeyID == "" {
 		cfg.HMAC.KeyID = cfg.ID
@@ -223,16 +223,16 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	for _, r := range cfg.HMAC.KeyID {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: HMAC keyId contains unsupported character %q", cfg.ID, r)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: HMAC keyId содержит неподдерживаемый символ %q", cfg.ID, r)
 		}
 	}
 
 	if (cfg.MTLS.CertFile == "") != (cfg.MTLS.KeyFile == "") {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: mTLS certFile and keyFile must be configured together", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: mTLS certFile и keyFile необходимо настраивать совместно", cfg.ID)
 	}
 	for label, path := range map[string]string{"certFile": cfg.MTLS.CertFile, "keyFile": cfg.MTLS.KeyFile, "caFile": cfg.MTLS.CAFile} {
 		if path != "" && !filepath.IsAbs(path) {
-			return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: mTLS %s must be an absolute path", cfg.ID, label)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: путь mTLS %s должен быть абсолютным", cfg.ID, label)
 		}
 	}
 
@@ -257,19 +257,19 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.MaxResponseBytes = 1 << 20
 	}
 	if cfg.MaxResponseBytes < 1024 || cfg.MaxResponseBytes > 8<<20 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: maxResponseBytes must be between 1024 and 8388608", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: maxResponseBytes должен быть от 1024 до 8388608", cfg.ID)
 	}
 	if cfg.MaxIdleConns == 0 {
 		cfg.MaxIdleConns = 16
 	}
 	if cfg.MaxIdleConns < 1 || cfg.MaxIdleConns > 256 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: maxIdleConns must be between 1 and 256", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: maxIdleConns должен быть от 1 до 256", cfg.ID)
 	}
 	if cfg.MaxConnsPerHost == 0 {
 		cfg.MaxConnsPerHost = 32
 	}
 	if cfg.MaxConnsPerHost < 1 || cfg.MaxConnsPerHost > 256 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: maxConnsPerHost must be between 1 and 256", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: maxConnsPerHost должен быть от 1 до 256", cfg.ID)
 	}
 
 	if cfg.Provisioning.Mode == "" {
@@ -278,7 +278,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	switch cfg.Provisioning.Mode {
 	case "jit", "explicit-only":
 	default:
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: unsupported provisioning mode %q", cfg.ID, cfg.Provisioning.Mode)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: неподдерживаемый режим provisioning %q", cfg.ID, cfg.Provisioning.Mode)
 	}
 	if cfg.Provisioning.DefaultRole == "" {
 		cfg.Provisioning.DefaultRole = "player"
@@ -294,14 +294,14 @@ func Normalize(input Config) (RuntimeConfig, error) {
 
 func validateProviderID(id string) error {
 	if id == "" || id == "local" {
-		return errors.New("HTTP connector id is required and cannot be 'local'")
+		return errors.New("Идентификатор коннектора HTTP обязателен и не может быть local")
 	}
 	if len(id) > 64 {
 		return fmt.Errorf("HTTP connector id %q exceeds 64 characters", id)
 	}
 	for _, r := range id {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return fmt.Errorf("HTTP connector id %q contains unsupported character %q", id, r)
+			return fmt.Errorf("Идентификатор коннектора HTTP %q содержит неподдерживаемый символ %q", id, r)
 		}
 	}
 	return nil
@@ -309,15 +309,15 @@ func validateProviderID(id string) error {
 
 func validateEndpointPath(value string) error {
 	if value == "" || !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") {
-		return errors.New("must be an absolute path beginning with one slash")
+		return errors.New("Требуется абсолютный путь, начинающийся с одного символа косой черты")
 	}
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return errors.New("must be a relative endpoint path without host, query or fragment")
+		return errors.New("Требуется относительный путь конечной точки без хоста, параметров запроса и фрагмента")
 	}
 	for _, segment := range strings.Split(parsed.Path, "/") {
 		if segment == ".." || segment == "." {
-			return errors.New("path traversal segments are not allowed")
+			return errors.New("Сегменты обхода каталогов в пути запрещены")
 		}
 	}
 	return nil
@@ -325,19 +325,19 @@ func validateEndpointPath(value string) error {
 
 func loadHMACSecret(cfg HMACConfig) ([]byte, error) {
 	if (cfg.SecretEnv == "") == (cfg.SecretFile == "") {
-		return nil, errors.New("configure exactly one of hmac.secretEnv or hmac.secretFile")
+		return nil, errors.New("Настройте ровно одно поле hmac.secretEnv или hmac.secretFile")
 	}
 	var raw []byte
 	if cfg.SecretEnv != "" {
 		value, ok := os.LookupEnv(cfg.SecretEnv)
 		if !ok || value == "" {
-			return nil, fmt.Errorf("HMAC secret environment variable %s is empty", cfg.SecretEnv)
+			return nil, fmt.Errorf("Переменная окружения %s с секретом HMAC пуста", cfg.SecretEnv)
 		}
 		raw = []byte(value)
 	} else {
 		data, err := os.ReadFile(cfg.SecretFile)
 		if err != nil {
-			return nil, fmt.Errorf("read HMAC secret file: %w", err)
+			return nil, fmt.Errorf("Не удалось прочитать файл секрета HMAC: %w", err)
 		}
 		raw = bytes.TrimSuffix(data, []byte("\r\n"))
 		raw = bytes.TrimSuffix(raw, []byte("\n"))
@@ -355,7 +355,7 @@ func parseDuration(raw string, fallback, min, max time.Duration) (time.Duration,
 		return 0, err
 	}
 	if value < min || value > max {
-		return 0, fmt.Errorf("duration must be between %s and %s", min, max)
+		return 0, fmt.Errorf("Продолжительность должна быть от %s до %s", min, max)
 	}
 	return value, nil
 }

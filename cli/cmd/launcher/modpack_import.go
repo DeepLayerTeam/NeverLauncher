@@ -123,17 +123,17 @@ type curseIndex0275 struct {
 
 func packPath0275(v string) error {
 	if len(v) > 1024 || v == "" || strings.Contains(v, "\\") || strings.Contains(v, ":") || strings.HasPrefix(v, "/") || strings.ContainsAny(v, "\x00\r\n") {
-		return fmt.Errorf("unsafe modpack path %q", v)
+		return fmt.Errorf("Небезопасный путь модпака %q", v)
 	}
 	for _, seg := range strings.Split(v, "/") {
 		if len(seg) > 240 || seg == "" || seg == "." || seg == ".." || strings.HasSuffix(seg, ".") || strings.HasSuffix(seg, " ") {
-			return fmt.Errorf("unsafe modpack path segment in %q", v)
+			return fmt.Errorf("Небезопасный сегмент пути модпака в %q", v)
 		}
 	}
 	for _, seg := range strings.Split(v, "/") {
 		base := strings.ToUpper(strings.SplitN(seg, ".", 2)[0])
 		if base == "CON" || base == "NUL" || base == "AUX" || base == "PRN" || (len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) && base[3] >= '1' && base[3] <= '9') {
-			return fmt.Errorf("Windows-reserved modpack path %q", v)
+			return fmt.Errorf("Зарезервированный в Windows путь модпака %q", v)
 		}
 	}
 	return validateVanillaRelativePath(v)
@@ -145,14 +145,14 @@ func packOutputPath0275(v string) error {
 	lower := strings.ToLower(v)
 	for _, prefix := range []string{".launcher/", "versions/", "assets/", "libraries/", "natives/", "runtime/"} {
 		if lower == strings.TrimSuffix(prefix, "/") || strings.HasPrefix(lower, prefix) {
-			return fmt.Errorf("modpack cannot overwrite managed path %s", v)
+			return fmt.Errorf("Модпак не может перезаписать управляемый путь %s", v)
 		}
 	}
 	return nil
 }
 func readPackJSON0275(z *zip.File, v any) error {
 	if z == nil || z.UncompressedSize64 > 4<<20 || !z.Mode().IsRegular() {
-		return errors.New("invalid or oversized modpack manifest")
+		return errors.New("Недопустимый или слишком большой манифест модпака")
 	}
 	r, err := z.Open()
 	if err != nil {
@@ -171,7 +171,7 @@ func readPackJSON0275(z *zip.File, v any) error {
 		return err
 	}
 	if err = dec.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return errors.New("trailing manifest JSON")
+		return errors.New("Лишние данные JSON после манифеста")
 	}
 	return nil
 }
@@ -188,7 +188,7 @@ func modrinthDownloadURL0275(raw string) error {
 	case "cdn.modrinth.com", "github.com", "raw.githubusercontent.com", "gitlab.com", "localhost", "127.0.0.1", "::1":
 		return nil
 	}
-	return fmt.Errorf("untrusted Modrinth download hostname %s", host)
+	return fmt.Errorf("Недоверенное имя хоста загрузки Modrinth: %s", host)
 }
 func loaderFromModrinth0275(deps map[string]string) (string, string, string, error) {
 	mc := strings.TrimSpace(deps["minecraft"])
@@ -261,7 +261,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 		return spec, nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > modpackMaxBytes0275 {
-		return spec, nil, errors.New("modpack must be regular ZIP <= 2 GiB")
+		return spec, nil, errors.New("Модпак должен быть обычным ZIP-файлом размером не более 2 ГиБ")
 	}
 	packHash, _, err := hashFile(archive)
 	if err != nil {
@@ -276,7 +276,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 	folded := map[string]bool{}
 	var total uint64
 	if len(zr.File) > 10000 {
-		return fail(errors.New("modpack has too many ZIP entries"))
+		return fail(errors.New("Модпак содержит слишком много элементов ZIP"))
 	}
 	for _, f := range zr.File {
 		p := f.Name
@@ -287,7 +287,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			return fail(err)
 		}
 		if folded[strings.ToLower(p)] {
-			return fail(fmt.Errorf("duplicate/case-colliding archive path %q", p))
+			return fail(fmt.Errorf("Повторяющийся путь архива или конфликт регистра %q", p))
 		}
 		folded[strings.ToLower(p)] = true
 		if f.FileInfo().IsDir() {
@@ -298,7 +298,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 		}
 		total += f.UncompressedSize64
 		if total > uint64(modpackMaxBytes0275) {
-			return fail(errors.New("modpack decompressed size exceeds limit"))
+			return fail(errors.New("Размер распакованного модпака превышает допустимый предел"))
 		}
 		files[p] = f
 	}
@@ -307,7 +307,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 	_, mr := files["modrinth.index.json"]
 	_, cf := files["manifest.json"]
 	if mr == cf {
-		return fail(errors.New("archive must contain exactly one Modrinth or CurseForge manifest"))
+		return fail(errors.New("Архив должен содержать ровно один манифест Modrinth или CurseForge"))
 	}
 	var layers []string
 	if mr {
@@ -317,7 +317,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			return fail(err)
 		}
 		if index.FormatVersion != 1 || index.Game != "minecraft" || index.VersionID == "" || index.Name == "" {
-			return fail(errors.New("invalid Modrinth index"))
+			return fail(errors.New("Недопустимый индекс Modrinth"))
 		}
 		spec.Name = index.Name
 		spec.Version = index.VersionID
@@ -326,7 +326,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			return fail(err)
 		}
 		if len(index.Files) > 4000 {
-			return fail(errors.New("too many Modrinth files"))
+			return fail(errors.New("Слишком много файлов Modrinth"))
 		}
 		for _, f := range index.Files {
 			if err := packOutputPath0275(f.Path); err != nil {
@@ -336,7 +336,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			server := f.Env["server"]
 			for _, side := range []string{client, server} {
 				if side != "" && side != "required" && side != "optional" && side != "unsupported" {
-					return fail(fmt.Errorf("unknown Modrinth environment %q", side))
+					return fail(fmt.Errorf("Неизвестное окружение Modrinth %q", side))
 				}
 			}
 			if client == "unsupported" || client == "optional" && !includeOptional {
@@ -344,13 +344,13 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 				continue
 			}
 			if f.FileSize < 0 || f.FileSize > modpackMaxFile0275 {
-				return fail(fmt.Errorf("invalid file size for %s", f.Path))
+				return fail(fmt.Errorf("Недопустимый размер файла %s", f.Path))
 			}
 			if len(f.Downloads) > 8 {
-				return fail(fmt.Errorf("missing/excessive downloads for %s", f.Path))
+				return fail(fmt.Errorf("Для %s отсутствуют загрузки или их слишком много", f.Path))
 			}
 			if len(f.Hashes["sha1"]) != 40 || len(f.Hashes["sha512"]) != 128 {
-				return fail(fmt.Errorf("Modrinth requires SHA1+SHA512 for %s", f.Path))
+				return fail(fmt.Errorf("Для Modrinth необходимы SHA1 и SHA512 для %s", f.Path))
 			}
 			if _, e := hex.DecodeString(f.Hashes["sha1"]); e != nil {
 				return fail(e)
@@ -373,7 +373,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			return fail(err)
 		}
 		if index.ManifestType != "minecraftModpack" || index.ManifestVersion != 1 || index.Name == "" {
-			return fail(errors.New("unsupported CurseForge manifest"))
+			return fail(errors.New("Неподдерживаемый манифест CurseForge"))
 		}
 		spec.Name = index.Name
 		spec.Version = index.Version
@@ -382,11 +382,11 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			return fail(err)
 		}
 		if len(index.Files) > 4000 {
-			return fail(errors.New("too many CurseForge files"))
+			return fail(errors.New("Слишком много файлов CurseForge"))
 		}
 		for _, f := range index.Files {
 			if f.ProjectID <= 0 || f.FileID <= 0 {
-				return fail(errors.New("invalid CurseForge project/file id"))
+				return fail(errors.New("Недопустимый идентификатор проекта или файла CurseForge"))
 			}
 			if !f.Required && !includeOptional {
 				spec.Skipped = append(spec.Skipped, fmt.Sprintf("curseforge:%d/%d", f.ProjectID, f.FileID))
@@ -402,7 +402,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			return fail(err)
 		}
 		if strings.Contains(dir, "/") {
-			return fail(errors.New("CurseForge override directory must be a single directory"))
+			return fail(errors.New("Каталог переопределений CurseForge должен быть одним каталогом"))
 		}
 		layers = []string{dir + "/"}
 	}
@@ -423,7 +423,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 	for p := range spec.Overrides {
 		key := strings.ToLower(p)
 		if old, exists := overrideCase[key]; exists && old != p {
-			return fail(fmt.Errorf("override target has case collision: %s and %s", old, p))
+			return fail(fmt.Errorf("Конфликт регистра путей переопределений: %s и %s", old, p))
 		}
 		overrideCase[key] = p
 	}
@@ -432,14 +432,14 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 		key := strings.ToLower(f.Path)
 		if key != "" {
 			if paths[key] {
-				return fail(fmt.Errorf("duplicate modpack file %s", f.Path))
+				return fail(fmt.Errorf("Повторяющийся файл модпака %s", f.Path))
 			}
 			paths[key] = true
 		}
 	}
 	for p := range spec.Overrides {
 		if paths[strings.ToLower(p)] {
-			return fail(fmt.Errorf("download collides with override %s", p))
+			return fail(fmt.Errorf("Загрузка конфликтует с переопределением %s", p))
 		}
 	}
 	sort.Slice(spec.Files, func(i, j int) bool { return spec.Files[i].Source < spec.Files[j].Source })
@@ -504,7 +504,7 @@ func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir stri
 						err = fmt.Errorf("HTTP %d", resp.StatusCode)
 					} else if resp.ContentLength > modpackMaxFile0275 {
 						resp.Body.Close()
-						err = errors.New("download exceeds size limit")
+						err = errors.New("Загрузка превышает ограничение размера")
 					} else {
 						reader = resp.Body
 					}
@@ -520,9 +520,9 @@ func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir stri
 			} else if closeErr != nil {
 				err = closeErr
 			} else if n > modpackMaxFile0275 {
-				err = errors.New("download exceeds size limit")
+				err = errors.New("Загрузка превышает ограничение размера")
 			} else if n != f.Size {
-				err = errors.New("file size mismatch")
+				err = errors.New("Несовпадение размера файла")
 			} else if f.SHA1 != "" && !strings.EqualFold(f.SHA1, hex.EncodeToString(h1.Sum(nil))) {
 				err = errors.New("SHA-1 mismatch")
 			} else if f.SHA512 != "" && !strings.EqualFold(f.SHA512, hex.EncodeToString(h512.Sum(nil))) {
@@ -579,27 +579,27 @@ func curseFileMetadata0275(ctx context.Context, client *http.Client, api, key st
 		} `json:"data"`
 	}
 	if resp.ContentLength > 4<<20 {
-		return errors.New("CurseForge metadata oversized")
+		return errors.New("Метаданные CurseForge слишком большие")
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20+1))
 	if err != nil {
 		return err
 	}
 	if len(b) > 4<<20 {
-		return errors.New("CurseForge metadata too large")
+		return errors.New("Метаданные CurseForge слишком большие")
 	}
 	if err = json.Unmarshal(b, &data); err != nil {
 		return err
 	}
 	d := data.Data
 	if d.ID != f.FileID || d.ModID != f.ProjectID {
-		return errors.New("CurseForge file identity mismatch")
+		return errors.New("Несовпадение идентификатора файла CurseForge")
 	}
 	if d.FileLength < 0 || d.FileLength > modpackMaxFile0275 {
-		return errors.New("invalid CurseForge file size")
+		return errors.New("Недопустимый размер файла CurseForge")
 	}
 	if d.FileName == "" || path.Base(d.FileName) != d.FileName || packPath0275(d.FileName) != nil || !strings.HasSuffix(strings.ToLower(d.FileName), ".jar") {
-		return errors.New("unsafe/non-jar CurseForge filename")
+		return errors.New("Небезопасное имя файла CurseForge или файл не является JAR")
 	}
 	f.Path = "mods/" + d.FileName
 	f.ManualName = d.FileName
@@ -612,7 +612,7 @@ func curseFileMetadata0275(ctx context.Context, client *http.Client, api, key st
 		}
 	}
 	if f.SHA1 == "" {
-		return errors.New("CurseForge has no trustworthy SHA-1 for this file")
+		return errors.New("Для этого файла CurseForge отсутствует доверенный SHA-1")
 	}
 	if d.DownloadURL != nil && *d.DownloadURL != "" {
 		if err := validateRemoteURL(*d.DownloadURL); err != nil {
@@ -681,7 +681,7 @@ func importModpack0275(ctx context.Context, archive, destination, manual, api, k
 }
 func importModpackWithGates0276(ctx context.Context, archive, destination, manual, api, key string, includeOptional bool, options factoryBuildOptions0271, permissionFile, distribution string) (modpackReport0275, error) {
 	if distribution != "local" && distribution != "redistributable" {
-		return modpackReport0275{}, errors.New("--distribution must be local or redistributable")
+		return modpackReport0275{}, errors.New("Параметр --distribution должен иметь значение local или redistributable")
 	}
 
 	spec, zr, err := parseModpack0275(archive, includeOptional)
@@ -699,7 +699,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 		return report, err
 	}
 	if _, e := os.Lstat(abs); e == nil {
-		return report, errors.New("modpack import requires a new nonexistent destination; existing clients are never overwritten")
+		return report, errors.New("Для импорта модпака нужен новый несуществующий каталог; существующие клиенты никогда не перезаписываются")
 	} else if !errors.Is(e, os.ErrNotExist) {
 		return report, e
 	}
@@ -725,7 +725,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 			report.Missing = append(report.Missing, modpackMissing0275{Code: "api_key_required", Path: f.Source, Source: f.Source, Reason: "CurseForge API key required", ManualAction: "provide LAUNCHER_CURSEFORGE_API_KEY to resolve upstream hash; no unverified manual override is accepted"})
 		}
 		report.Status = "blocked"
-		return report, errors.New("CurseForge API key required; no artifacts were published")
+		return report, errors.New("Необходим API-ключ CurseForge; артефакты не опубликованы")
 	}
 	downloaded := make([]mirrorArtifact0274, 0, len(spec.Files)+len(spec.Overrides)+1)
 	imported := make([]modpackFile0275, 0, len(spec.Files)+len(spec.Overrides))
@@ -743,11 +743,11 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 			return report, err
 		}
 		if f.Size > modpackMaxBytes0275-remoteBytes {
-			return report, errors.New("modpack total download size exceeds 2 GiB")
+			return report, errors.New("Общий размер загрузок модпака превышает 2 ГиБ")
 		}
 		remoteBytes += f.Size
 		if byPath[strings.ToLower(f.Path)] {
-			return report, fmt.Errorf("duplicate resolved mod file %s", f.Path)
+			return report, fmt.Errorf("Повторяющийся найденный файл мода %s", f.Path)
 		}
 		byPath[strings.ToLower(f.Path)] = true
 		downloadedFile, sha, size, e := fetchModpackArtifact0275(ctx, client, cache, f, manual)
@@ -776,7 +776,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	}
 	for _, p := range sortedZipNames0275(spec.Overrides) {
 		if byPath[strings.ToLower(p)] {
-			return report, fmt.Errorf("override collides with downloaded file %s", p)
+			return report, fmt.Errorf("Переопределение конфликтует с загруженным файлом %s", p)
 		}
 		f, sha, size, e := readZipOverride0275(spec.Overrides[p], cache)
 		if e != nil {
@@ -797,7 +797,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	}
 	if len(report.Missing) > 0 {
 		report.Status = "blocked"
-		return report, fmt.Errorf("%d required modpack artifacts unavailable; destination not published", len(report.Missing))
+		return report, fmt.Errorf("Недоступно %d обязательных артефактов модпака; результат не опубликован", len(report.Missing))
 	}
 	options.Loader = spec.Loader
 	options.LoaderVersion = spec.LoaderVersion
@@ -808,7 +808,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 		options.LoaderVersion = ""
 	}
 	if _, err = executeFactoryBuild0271(ctx, options); err != nil {
-		return report, fmt.Errorf("client install: %w", err)
+		return report, fmt.Errorf("Установка клиента: %w", err)
 	}
 	// Сами доказательства входят в неизменяемую исходную квитанцию. Сохраняются только ID
 	// и хеши, но не закрытые API-ключи или локальные пути кэша.
@@ -845,7 +845,7 @@ func handleModpack0275(args []string) error {
 	}
 	archive := flagValue(args[1:], "--file", "")
 	if archive == "" {
-		return errors.New("--file path to .mrpack or CurseForge .zip required")
+		return errors.New("Необходимо указать --file с путём к .mrpack или ZIP-файлу CurseForge")
 	}
 	flags := args[1:]
 	optional := strings.EqualFold(flagValue(flags, "--include-optional", "false"), "true")
@@ -902,6 +902,6 @@ func handleModpack0275(args []string) error {
 		}
 		return writeOrPrintJSON(output, report)
 	default:
-		return fmt.Errorf("unknown modpack operation %q", args[0])
+		return fmt.Errorf("Неизвестная операция модпака %q", args[0])
 	}
 }

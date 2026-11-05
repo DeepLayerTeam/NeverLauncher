@@ -103,7 +103,7 @@ func validateComponentRelativePath0157(value string) error {
 		return err
 	}
 	if strings.HasPrefix(strings.ToLower(value), ".launcher/updater/") {
-		return fmt.Errorf("component path conflicts with updater control directory: %s", value)
+		return fmt.Errorf("Путь компонента конфликтует со служебным каталогом обновления: %s", value)
 	}
 	return nil
 }
@@ -114,7 +114,7 @@ func readComponentUpdateManifest0157(path string) (componentUpdateManifest0157, 
 		return componentUpdateManifest0157{}, err
 	}
 	if len(raw) == 0 || len(raw) > 512*1024 {
-		return componentUpdateManifest0157{}, errors.New("component update manifest size is invalid")
+		return componentUpdateManifest0157{}, errors.New("Недопустимый размер манифеста обновления компонентов")
 	}
 	var manifest componentUpdateManifest0157
 	if err := json.Unmarshal(raw, &manifest); err != nil {
@@ -125,7 +125,7 @@ func readComponentUpdateManifest0157(path string) (componentUpdateManifest0157, 
 
 func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, manifestDir string, allowDevelopment bool) error {
 	if (manifest.SchemaVersion != "1.0" && manifest.SchemaVersion != "2.0") || manifest.Product != "Launcher" || strings.TrimSpace(manifest.ProductVersion) == "" {
-		return errors.New("component update manifest identity/schema mismatch")
+		return errors.New("Несовпадение идентификатора или схемы манифеста обновления компонентов")
 	}
 	if componentCoordinationRequired02310(manifest.ProductVersion) {
 		if err := validateComponentProtocols02310(manifest); err != nil {
@@ -133,7 +133,7 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 		}
 	}
 	if componentSecurityRequired02311(manifest.ProductVersion) && manifest.SecurityGeneration == 0 {
-		return errors.New("signed component securityGeneration must be positive for 0.23.11+")
+		return errors.New("Для версии 0.23.11 и новее подписанное поле securityGeneration компонента должно быть положительным")
 	}
 	target, err := componentUpdateCurrentTarget0157()
 	if err != nil {
@@ -148,23 +148,23 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 		return err
 	}
 	if platform != target.Platform || arch != target.Architecture {
-		return fmt.Errorf("component package target mismatch: package=%s/%s host=%s/%s", platform, arch, target.Platform, target.Architecture)
+		return fmt.Errorf("Несовпадение целевой платформы пакета компонентов: пакет=%s/%s, хост=%s/%s", platform, arch, target.Platform, target.Architecture)
 	}
 	if manifest.Platform != platform || manifest.Architecture != arch {
-		return errors.New("component package target must use canonical platform/architecture")
+		return errors.New("Цель пакета компонентов должна использовать канонические обозначения платформы и архитектуры")
 	}
 	if manifest.Layout != "adjacent-files" && manifest.Layout != "macos-app-bundle" {
-		return fmt.Errorf("unsupported component update layout %q", manifest.Layout)
+		return fmt.Errorf("Неподдерживаемая структура обновления компонентов %q", manifest.Layout)
 	}
 	if manifest.Layout == "macos-app-bundle" && platform != "macos" {
-		return errors.New("macos-app-bundle layout is valid only on macOS")
+		return errors.New("Структура macos-app-bundle допустима только на macOS")
 	}
 	expected := map[string]bool{"desktop": false, "guard": false, "runtime": false}
 	if platform == "windows" && guardSensorRequired0182(manifest.ProductVersion) {
 		expected["sensor"] = false
 	}
 	if len(manifest.Components) != len(expected) {
-		return fmt.Errorf("component update manifest has %d required components, expected %d", len(manifest.Components), len(expected))
+		return fmt.Errorf("Манифест обновления содержит %d обязательных компонентов вместо ожидаемых %d", len(manifest.Components), len(expected))
 	}
 	seenTargets := map[string]bool{}
 	sourceBase := manifestDir
@@ -174,42 +174,42 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 	}
 	for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
 		if err := validateComponentRelativePath0157(item.SourcePath); err != nil {
-			return fmt.Errorf("unsafe component source path %q: %w", item.SourcePath, err)
+			return fmt.Errorf("Небезопасный исходный путь компонента %q: %w", item.SourcePath, err)
 		}
 		if err := validateComponentRelativePath0157(item.TargetPath); err != nil {
-			return fmt.Errorf("unsafe component target path %q: %w", item.TargetPath, err)
+			return fmt.Errorf("Небезопасный целевой путь компонента %q: %w", item.TargetPath, err)
 		}
 		if item.Size <= 0 || !validSHA256Hex0157(item.SHA256) {
-			return fmt.Errorf("invalid component metadata for %s", item.Component)
+			return fmt.Errorf("Недопустимые метаданные компонента %s", item.Component)
 		}
 		key := strings.ToLower(item.TargetPath)
 		if runtime.GOOS != "windows" {
 			key = item.TargetPath
 		}
 		if seenTargets[key] {
-			return fmt.Errorf("duplicate component target path %s", item.TargetPath)
+			return fmt.Errorf("Повторяющийся целевой путь компонента %s", item.TargetPath)
 		}
 		seenTargets[key] = true
 		source := filepath.Join(sourceBase, filepath.FromSlash(item.SourcePath))
 		if err := verifyUpdaterFile0156(source, item.Size, item.SHA256); err != nil {
-			return fmt.Errorf("component package source verify %s: %w", item.SourcePath, err)
+			return fmt.Errorf("Проверка источника пакета компонентов %s: %w", item.SourcePath, err)
 		}
 	}
 	for _, item := range manifest.Components {
 		if _, ok := expected[item.Component]; !ok {
-			return fmt.Errorf("unknown required component %q", item.Component)
+			return fmt.Errorf("Неизвестный обязательный компонент %q", item.Component)
 		}
 		if expected[item.Component] {
-			return fmt.Errorf("duplicate required component %q", item.Component)
+			return fmt.Errorf("Повторяющийся обязательный компонент %q", item.Component)
 		}
 		expected[item.Component] = true
 		if !item.Executable {
-			return fmt.Errorf("required component %s must be executable", item.Component)
+			return fmt.Errorf("Обязательный компонент %s должен быть исполняемым", item.Component)
 		}
 	}
 	for component, present := range expected {
 		if !present {
-			return fmt.Errorf("component update manifest missing %s", component)
+			return fmt.Errorf("В манифесте обновления компонентов отсутствует %s", component)
 		}
 	}
 	if allowDevelopment && (manifest.TrustMode == "development-self-test" || manifest.TrustMode == "unsigned-development" || manifest.TrustMode == "adhoc-development") {
@@ -218,23 +218,23 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 	switch platform {
 	case "windows":
 		if manifest.TrustMode != "authenticode-rfc3161" {
-			return errors.New("production Windows component update requires authenticode-rfc3161 trustMode")
+			return errors.New("Для рабочего обновления компонентов Windows требуется trustMode authenticode-rfc3161")
 		}
 		for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
 			if item.Component != "updater" && !containsCoreComponent02310(item.Component) {
 				continue
 			}
 			if !windowsCertThumbprintRE0152.MatchString(item.SignerThumbprint) || !windowsCertThumbprintRE0152.MatchString(item.TimestampSignerThumbprint) {
-				return fmt.Errorf("Windows component %s is missing signer/timestamp identity", item.Component)
+				return fmt.Errorf("У компонента Windows %s отсутствуют сведения о подписанте или метке времени", item.Component)
 			}
 		}
 	case "linux":
 		if manifest.TrustMode != "sha256-delivery" {
-			return errors.New("production Linux component update requires sha256-delivery trustMode")
+			return errors.New("Для рабочего обновления компонентов Linux требуется trustMode sha256-delivery")
 		}
 	case "macos":
 		if manifest.TrustMode != "developer-id-notarized" {
-			return errors.New("production macOS component update requires developer-id-notarized trustMode")
+			return errors.New("Для рабочего обновления компонентов macOS требуется trustMode developer-id-notarized")
 		}
 	}
 	return nil
@@ -263,26 +263,26 @@ func verifyComponentBinaries0157(manifest componentUpdateManifest0157, base stri
 		}
 		path := filepath.Join(base, filepath.FromSlash(rel))
 		if err := verifyUpdaterFile0156(path, item.Size, item.SHA256); err != nil {
-			return fmt.Errorf("%s hash verification: %w", item.Component, err)
+			return fmt.Errorf("Проверка хеша %s: %w", item.Component, err)
 		}
 		switch manifest.Platform {
 		case "windows":
 			pe, err := inspectWindowsPEFile0152(path)
 			if err != nil || pe.Architecture != manifest.Architecture || !pe.HasSignature {
-				return fmt.Errorf("%s Windows PE/AuthentiCode boundary failed: %v", item.Component, err)
+				return fmt.Errorf("%s: проверка границы Windows PE/AuthentiCode не пройдена: %v", item.Component, err)
 			}
 			if err := verifyWindowsAuthenticodeNative0152(path, item.SignerThumbprint, item.TimestampSignerThumbprint); err != nil {
-				return fmt.Errorf("%s Authenticode verify: %w", item.Component, err)
+				return fmt.Errorf("%s: проверка Authenticode: %w", item.Component, err)
 			}
 		case "linux":
 			elf, err := inspectLinuxELFFile0153(path)
 			if err != nil || elf.Architecture != manifest.Architecture {
-				return fmt.Errorf("%s ELF architecture verify: %v", item.Component, err)
+				return fmt.Errorf("%s: проверка архитектуры ELF: %v", item.Component, err)
 			}
 		case "macos":
 			macho, err := inspectMacOSMachOFile0154(path)
 			if err != nil || macho.Architecture != manifest.Architecture || !macho.HasCodeSignature {
-				return fmt.Errorf("%s Mach-O signature/architecture verify: %v", item.Component, err)
+				return fmt.Errorf("%s: проверка подписи и архитектуры Mach-O: %v", item.Component, err)
 			}
 		}
 	}
@@ -294,7 +294,7 @@ func hashPackagePin0157(packagePath, expected string, allowDevelopment bool) err
 		return err
 	} else if stat.IsDir() {
 		if !allowDevelopment {
-			return errors.New("production component update requires a pinned archive, not an unpacked directory")
+			return errors.New("Для рабочего обновления компонентов требуется закреплённый архив, а не распакованный каталог")
 		}
 		return nil
 	}
@@ -302,14 +302,14 @@ func hashPackagePin0157(packagePath, expected string, allowDevelopment bool) err
 		if allowDevelopment && strings.TrimSpace(expected) == "" {
 			return nil
 		}
-		return errors.New("component update requires --expected-sha256 with a 64-hex package digest")
+		return errors.New("Для обновления компонентов требуется --expected-sha256 с 64-символьным шестнадцатеричным хешем пакета")
 	}
 	actual, _, err := hashFile(packagePath)
 	if err != nil {
 		return err
 	}
 	if !strings.EqualFold(actual, expected) {
-		return fmt.Errorf("component update package SHA-256 mismatch: got=%s expected=%s", actual, strings.ToLower(expected))
+		return fmt.Errorf("Несовпадение SHA-256 пакета обновления компонентов: получено=%s, ожидалось=%s", actual, strings.ToLower(expected))
 	}
 	return nil
 }
@@ -320,7 +320,7 @@ func verifyPackageAgainstDelivery0157(deliveryPath, packagePath, expectedSHA str
 	}
 	dir := filepath.Dir(deliveryPath)
 	if filepath.Base(deliveryPath) != deliveryManifestFile0151 {
-		return errors.New("--delivery-manifest must point to DELIVERY_MANIFEST.json")
+		return errors.New("Параметр --delivery-manifest должен указывать на DELIVERY_MANIFEST.json")
 	}
 	manifest, err := readDeliveryManifest0151(dir)
 	if err != nil {
@@ -330,12 +330,12 @@ func verifyPackageAgainstDelivery0157(deliveryPath, packagePath, expectedSHA str
 	for _, artifact := range manifest.Artifacts {
 		if artifact.Name == name {
 			if artifact.Component != "desktop-package" || !strings.EqualFold(artifact.SHA256, expectedSHA) {
-				return errors.New("component update package is not bound to delivery manifest hash")
+				return errors.New("Пакет обновления компонентов не привязан к хешу манифеста доставки")
 			}
 			return nil
 		}
 	}
-	return fmt.Errorf("component update package %s is absent from DELIVERY_MANIFEST.json", name)
+	return fmt.Errorf("Пакет обновления компонентов %s отсутствует в DELIVERY_MANIFEST.json", name)
 }
 
 func extractComponentPackage0157(packagePath, dst string) error {
@@ -351,7 +351,7 @@ func extractComponentPackage0157(packagePath, dst string) error {
 		if runtime.GOOS == "darwin" {
 			cmd := exec.Command("/usr/bin/ditto", "-x", "-k", packagePath, dst)
 			if out, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("ditto extract failed: %w: %s", err, strings.TrimSpace(string(out)))
+				return fmt.Errorf("Ошибка распаковки через ditto: %w: %s", err, strings.TrimSpace(string(out)))
 			}
 			return nil
 		}
@@ -360,7 +360,7 @@ func extractComponentPackage0157(packagePath, dst string) error {
 	if strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz") {
 		return extractComponentTarGz0157(packagePath, dst)
 	}
-	return fmt.Errorf("unsupported component package format: %s", filepath.Base(packagePath))
+	return fmt.Errorf("Неподдерживаемый формат пакета компонентов: %s", filepath.Base(packagePath))
 }
 
 func safeExtractPath0157(root, name string) (string, error) {
@@ -392,7 +392,7 @@ func extractComponentZip0157(path, dst string) error {
 		}
 		mode := file.Mode()
 		if mode&os.ModeSymlink != 0 || (!file.FileInfo().IsDir() && !mode.IsRegular()) {
-			return fmt.Errorf("package entry must be regular file/directory: %s", name)
+			return fmt.Errorf("Элемент пакета должен быть обычным файлом или каталогом: %s", name)
 		}
 		if file.FileInfo().IsDir() {
 			if err := os.MkdirAll(target, 0o755); err != nil {
@@ -402,7 +402,7 @@ func extractComponentZip0157(path, dst string) error {
 		}
 		total += int64(file.UncompressedSize64)
 		if total > 8<<30 {
-			return errors.New("component package exceeds 8 GiB extraction limit")
+			return errors.New("Пакет компонентов превышает лимит распаковки 8 ГиБ")
 		}
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
@@ -470,7 +470,7 @@ func extractComponentTarGz0157(path, dst string) error {
 		case tar.TypeReg, tar.TypeRegA:
 			total += h.Size
 			if h.Size < 0 || total > 8<<30 {
-				return errors.New("component package exceeds 8 GiB extraction limit")
+				return errors.New("Пакет компонентов превышает лимит распаковки 8 ГиБ")
 			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
@@ -492,7 +492,7 @@ func extractComponentTarGz0157(path, dst string) error {
 				return closeErr
 			}
 		default:
-			return fmt.Errorf("package entry type is not allowed: %s", h.Name)
+			return fmt.Errorf("Тип элемента пакета запрещён: %s", h.Name)
 		}
 	}
 	return nil
@@ -511,7 +511,7 @@ func copyComponentTree0157(src, dst string) error {
 			return os.MkdirAll(dst, 0o755)
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("development component bundle contains symlink: %s", rel)
+			return fmt.Errorf("Пакет компонентов для разработки содержит символическую ссылку: %s", rel)
 		}
 		target := filepath.Join(dst, rel)
 		if d.IsDir() {
@@ -519,7 +519,7 @@ func copyComponentTree0157(src, dst string) error {
 		}
 		info, err := d.Info()
 		if err != nil || !info.Mode().IsRegular() {
-			return fmt.Errorf("development component bundle contains non-regular file: %s", rel)
+			return fmt.Errorf("Пакет компонентов для разработки содержит нестандартный файл: %s", rel)
 		}
 		return copyUpdaterSource0156(path, target, info.Mode().Perm())
 	})
@@ -534,10 +534,10 @@ func findComponentManifest0157(root string) (string, error) {
 		}
 		count++
 		if count > 20000 {
-			return errors.New("component package contains too many filesystem entries")
+			return errors.New("Пакет компонентов содержит слишком много элементов файловой системы")
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("component package contains symlink: %s", path)
+			return fmt.Errorf("Пакет компонентов содержит символическую ссылку: %s", path)
 		}
 		if !d.IsDir() && d.Name() == componentUpdateManifestFile0157 {
 			matches = append(matches, path)
@@ -624,12 +624,12 @@ func waitForComponentParent0157(pid int, timeout time.Duration) error {
 		return nil
 	}
 	if pid == os.Getpid() {
-		return errors.New("--wait-pid cannot be the updater process itself")
+		return errors.New("Параметр --wait-pid не должен указывать на сам процесс обновления")
 	}
 	deadline := time.Now().Add(timeout)
 	for updaterProcessAlive0156(pid) {
 		if time.Now().After(deadline) {
-			return fmt.Errorf("timed out waiting for Desktop pid=%d to exit", pid)
+			return fmt.Errorf("Превышено время ожидания завершения Desktop с PID=%d", pid)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -646,7 +646,7 @@ func applyAdjacentComponentUpdate0157(manifest componentUpdateManifest0157, mani
 		return nil, err
 	}
 	if _, err := migrateComponentUpdateState01510(root); err != nil {
-		return nil, fmt.Errorf("migrate component update state: %w", err)
+		return nil, fmt.Errorf("Миграция состояния обновления компонентов: %w", err)
 	}
 	files := []updaterFileSpec0156{}
 	for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
@@ -759,7 +759,7 @@ func readComponentTreeJournal0157(u *transactionalUpdater0156, id string) (*comp
 		return nil, err
 	}
 	if journal.SchemaVersion != componentTreeSchema0157 || journal.ID != id || filepath.Clean(journal.Root) != u.root {
-		return nil, fmt.Errorf("invalid component tree journal %s", id)
+		return nil, fmt.Errorf("Недопустимый журнал дерева компонентов %s", id)
 	}
 	return &journal, nil
 }
@@ -787,21 +787,21 @@ func rollbackComponentTreeLocked0157(u *transactionalUpdater0156, journal *compo
 	}
 	if st, err := os.Lstat(live); err == nil {
 		if st.Mode()&os.ModeSymlink != 0 || !st.IsDir() {
-			return errors.New("component tree rollback refuses non-directory live bundle")
+			return errors.New("Откат дерева компонентов отклонён: текущий пакет не является каталогом")
 		}
 		_ = os.RemoveAll(journal.FailedPath)
 		if err := os.Rename(live, journal.FailedPath); err != nil {
-			return fmt.Errorf("preserve failed component bundle: %w", err)
+			return fmt.Errorf("Не удалось сохранить неисправный пакет компонентов: %w", err)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	if st, err := os.Lstat(journal.BackupPath); err == nil {
 		if st.Mode()&os.ModeSymlink != 0 || !st.IsDir() {
-			return errors.New("component tree backup is not a safe directory")
+			return errors.New("Резервная копия дерева компонентов не является безопасным каталогом")
 		}
 		if err := os.Rename(journal.BackupPath, live); err != nil {
-			return fmt.Errorf("restore component bundle backup: %w", err)
+			return fmt.Errorf("Восстановление резервной копии пакета компонентов: %w", err)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -812,7 +812,7 @@ func rollbackComponentTreeLocked0157(u *transactionalUpdater0156, journal *compo
 		return err
 	}
 	if err := removeSafeComponentTreePayload01510(u, journal); err != nil {
-		return fmt.Errorf("cleanup rolled-back component tree payload: %w", err)
+		return fmt.Errorf("Очистка содержимого дерева компонентов после отката: %w", err)
 	}
 	return nil
 }
@@ -852,11 +852,11 @@ func (u *transactionalUpdater0156) recoverComponentTreesLocked0157() ([]string, 
 				return recovered, err
 			}
 		case "old-moved", "new-moved", "verifying", "rolling-back":
-			if err := rollbackComponentTreeLocked0157(u, journal, errors.New("crash recovery")); err != nil {
+			if err := rollbackComponentTreeLocked0157(u, journal, errors.New("Восстановление после сбоя")); err != nil {
 				return recovered, err
 			}
 		default:
-			return recovered, fmt.Errorf("unknown component tree transaction phase %q", journal.Phase)
+			return recovered, fmt.Errorf("Неизвестная фаза транзакции дерева компонентов %q", journal.Phase)
 		}
 		recovered = append(recovered, id)
 	}
@@ -887,15 +887,15 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 	controlAbs, _ := filepath.Abs(u.controlDir)
 	relControl, err := filepath.Rel(controlAbs, stageAbs)
 	if err != nil || relControl == "." || relControl == ".." || strings.HasPrefix(relControl, ".."+string(filepath.Separator)) {
-		return nil, errors.New("component tree staging must reside inside updater control directory on the live filesystem")
+		return nil, errors.New("Подготовка дерева компонентов должна происходить внутри служебного каталога обновления в рабочей файловой системе")
 	}
 	for label, path := range map[string]string{"live": live, "stage": stageAbs} {
 		st, err := os.Lstat(path)
 		if err != nil {
-			return nil, fmt.Errorf("%s component tree: %w", label, err)
+			return nil, fmt.Errorf("Дерево компонентов %s: %w", label, err)
 		}
 		if st.Mode()&os.ModeSymlink != 0 || !st.IsDir() {
-			return nil, fmt.Errorf("%s component tree must be a non-symlink directory", label)
+			return nil, fmt.Errorf("Дерево компонентов %s должно быть каталогом, а не символической ссылкой", label)
 		}
 	}
 	id, err := newUpdaterTransactionID0156()
@@ -915,7 +915,7 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 		return nil, err
 	}
 	if err := os.Rename(live, journal.BackupPath); err != nil {
-		return nil, fmt.Errorf("move live component bundle to backup: %w", err)
+		return nil, fmt.Errorf("Перенос рабочего пакета компонентов в резервную копию: %w", err)
 	}
 	syncDirBestEffort0156(u.root)
 	journal.Phase = "old-moved"
@@ -926,7 +926,7 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 	if err := os.Rename(stageAbs, live); err != nil {
 		rb := rollbackComponentTreeLocked0157(u, journal, err)
 		if rb != nil {
-			return nil, fmt.Errorf("component tree switch failed: %v; rollback failed: %w", err, rb)
+			return nil, fmt.Errorf("Переключение дерева компонентов не удалось: %v; откат также не удался: %w", err, rb)
 		}
 		return nil, err
 	}
@@ -935,7 +935,7 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 	if err := writeComponentTreeJournal0157(u, journal); err != nil {
 		rb := rollbackComponentTreeLocked0157(u, journal, err)
 		if rb != nil {
-			return nil, fmt.Errorf("component tree journal failed after switch: %v; rollback failed: %w", err, rb)
+			return nil, fmt.Errorf("Ошибка журнала дерева компонентов после переключения: %v; откат также не удался: %w", err, rb)
 		}
 		return nil, err
 	}
@@ -943,7 +943,7 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 	if err := writeComponentTreeJournal0157(u, journal); err != nil {
 		rb := rollbackComponentTreeLocked0157(u, journal, err)
 		if rb != nil {
-			return nil, fmt.Errorf("component tree verifying journal failed: %v; rollback failed: %w", err, rb)
+			return nil, fmt.Errorf("Ошибка журнала проверки дерева компонентов: %v; откат также не удался: %w", err, rb)
 		}
 		return nil, err
 	}
@@ -951,9 +951,9 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 		if err := verify(live); err != nil {
 			rb := rollbackComponentTreeLocked0157(u, journal, err)
 			if rb != nil {
-				return nil, fmt.Errorf("component tree verify failed: %v; rollback failed: %w", err, rb)
+				return nil, fmt.Errorf("Проверка дерева компонентов не удалась: %v; откат также не удался: %w", err, rb)
 			}
-			return nil, fmt.Errorf("component tree transaction %s rolled back: %w", id, err)
+			return nil, fmt.Errorf("Транзакция дерева компонентов %s откатилась: %w", id, err)
 		}
 	}
 	journal.Phase = "committed"
@@ -961,12 +961,12 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 	if err := writeComponentTreeJournal0157(u, journal); err != nil {
 		rb := rollbackComponentTreeLocked0157(u, journal, err)
 		if rb != nil {
-			return nil, fmt.Errorf("component tree commit journal failed: %v; rollback failed: %w", err, rb)
+			return nil, fmt.Errorf("Ошибка записи журнала фиксации дерева компонентов: %v; откат также не удался: %w", err, rb)
 		}
 		return nil, err
 	}
 	if err := removeSafeComponentTreePayload01510(u, journal); err != nil {
-		return nil, fmt.Errorf("cleanup committed component tree payload: %w", err)
+		return nil, fmt.Errorf("Очистка содержимого зафиксированного дерева компонентов: %w", err)
 	}
 	return map[string]any{
 		"schemaVersion": componentTreeSchema0157, "toolVersion": version, "engine": "unified-transactional-updater",
@@ -985,7 +985,7 @@ func verifyMacOSInstalledBundle0157(manifest componentUpdateManifest0157, appRoo
 	for _, command := range [][]string{{"/usr/bin/codesign", "--verify", "--deep", "--strict", "--verbose=2", appRoot}, {"/usr/bin/xcrun", "stapler", "validate", appRoot}, {"/usr/sbin/spctl", "--assess", "--type", "execute", "--verbose=2", appRoot}} {
 		cmd := exec.Command(command[0], command[1:]...)
 		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("macOS post-update verification failed: %s: %w: %s", strings.Join(command, " "), err, strings.TrimSpace(string(out)))
+			return fmt.Errorf("Проверка macOS после обновления не пройдена: %s: %w: %s", strings.Join(command, " "), err, strings.TrimSpace(string(out)))
 		}
 	}
 	return nil
@@ -997,22 +997,22 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 	for filepath.Base(appSource) != liveBundle {
 		parent := filepath.Dir(appSource)
 		if parent == appSource {
-			return nil, fmt.Errorf("component manifest is not inside expected app bundle %s", liveBundle)
+			return nil, fmt.Errorf("Манифест компонента находится вне ожидаемого пакета приложения %s", liveBundle)
 		}
 		appSource = parent
 	}
 	if filepath.Base(appSource) != liveBundle {
-		return nil, errors.New("component package app bundle identity mismatch")
+		return nil, errors.New("Несовпадение идентификатора пакета приложения в пакете компонентов")
 	}
 	updater, err := newTransactionalUpdater0156(root)
 	if err != nil {
 		return nil, err
 	}
 	if err := verifyComponentBinaries0157(manifest, appSource, true, allowDevelopment); err != nil {
-		return nil, fmt.Errorf("staged macOS component verify: %w", err)
+		return nil, fmt.Errorf("Проверка подготовленного компонента macOS: %w", err)
 	}
 	if _, err := migrateComponentUpdateState01510(root); err != nil {
-		return nil, fmt.Errorf("component state migration: %w", err)
+		return nil, fmt.Errorf("Миграция состояния компонентов: %w", err)
 	}
 	fromVersion := currentComponentVersion0157(root)
 	statePath := filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))
@@ -1052,7 +1052,7 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 			return nil, err
 		}
 		if err := writeJSONFileAtomicMode(statePath, state, 0o600); err != nil {
-			return nil, fmt.Errorf("persist canonical component update state: %w", err)
+			return nil, fmt.Errorf("Сохранение канонического состояния обновления компонентов: %w", err)
 		}
 	}
 	report["components"] = []string{"desktop", "guard", "runtime"}
@@ -1062,7 +1062,7 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 
 func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitRoot, currentDesktop string, waitPID int, restart, allowDevelopment bool) (map[string]any, error) {
 	if strings.TrimSpace(packagePath) == "" {
-		return nil, errors.New("update components requires --package")
+		return nil, errors.New("Для обновления компонентов необходим параметр --package")
 	}
 	if err := hashPackagePin0157(packagePath, expectedSHA, allowDevelopment); err != nil {
 		return nil, err
@@ -1148,7 +1148,7 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 		return nil, err
 	}
 	if err := verifyComponentBinaries0157(manifest, filepath.Dir(manifestPath), false, allowDevelopment); err != nil && manifest.Layout == "adjacent-files" {
-		return nil, fmt.Errorf("component package binary verification: %w", err)
+		return nil, fmt.Errorf("Проверка исполняемых файлов пакета компонентов: %w", err)
 	}
 	var report map[string]any
 	if manifest.Layout == "macos-app-bundle" {
@@ -1160,7 +1160,7 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 		return nil, err
 	}
 	if err := commitComponentGeneration02311(root, manifest); err != nil {
-		return nil, fmt.Errorf("component set committed; security generation persistence requires recovery: %w", err)
+		return nil, fmt.Errorf("Набор компонентов зафиксирован; для сохранения поколения безопасности требуется восстановление: %w", err)
 	}
 	report["package"] = packagePath
 	if expectedSHA != "" {
@@ -1169,7 +1169,7 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	if restart {
 		executable, _ := report["restartExecutable"].(string)
 		if strings.TrimSpace(executable) == "" {
-			return nil, errors.New("component update committed but restart executable is unavailable")
+			return nil, errors.New("Обновление компонентов зафиксировано, но исполняемый файл для перезапуска недоступен")
 		}
 		cmd := exec.Command(executable)
 		cmd.Dir = filepath.Dir(executable)
@@ -1177,7 +1177,7 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 		cmd.Stdout = nil
 		cmd.Stderr = nil
 		if err := cmd.Start(); err != nil {
-			return nil, fmt.Errorf("component update committed but Desktop restart failed: %w", err)
+			return nil, fmt.Errorf("Обновление компонентов зафиксировано, но перезапуск Desktop не удался: %w", err)
 		}
 		report["restartedPid"] = cmd.Process.Pid
 	}
@@ -1281,13 +1281,13 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 		return nil, err
 	}
 	if _, err := applyComponentTree0157(treeUpdater, "Launcher.app", stage, "0.15.6", version, func(string) error {
-		return errors.New("forced component tree post-verify failure")
+		return errors.New("Принудительно вызванная ошибка проверки дерева компонентов после обновления")
 	}); err == nil {
-		return nil, errors.New("component tree self-test expected automatic rollback")
+		return nil, errors.New("Самопроверка дерева компонентов ожидала автоматического отката")
 	}
 	restored, err := os.ReadFile(oldDesktop)
 	if err != nil || string(restored) != "old-tree-desktop" {
-		return nil, fmt.Errorf("component tree rollback self-test did not restore live app: %w", err)
+		return nil, fmt.Errorf("Самопроверка отката дерева компонентов не восстановила рабочее приложение: %w", err)
 	}
 	return map[string]any{"schemaVersion": "1.0", "toolVersion": version, "components": []string{"desktop", "guard", "runtime"}, "transaction": report, "macosTreeRollback": "ok", "status": "ok"}, nil
 }
@@ -1298,7 +1298,7 @@ func parseWaitPID0157(value string) (int, error) {
 	}
 	pid, err := strconv.Atoi(value)
 	if err != nil || pid <= 0 {
-		return 0, errors.New("--wait-pid must be a positive integer")
+		return 0, errors.New("Параметр --wait-pid должен быть положительным целым числом")
 	}
 	return pid, nil
 }

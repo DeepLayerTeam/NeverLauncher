@@ -4,4 +4,4 @@ package installer
 
 import "errors"
 
-func noReplace(from, to string) error { return errors.New("atomic install requires Linux renameat2") }
+func noReplace(from, to string) error { return errors.New("Для атомарной установки требуется Linux renameat2") }

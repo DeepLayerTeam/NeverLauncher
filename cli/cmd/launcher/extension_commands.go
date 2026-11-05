@@ -227,7 +227,7 @@ func handleExtension0201(args []string) error {
 		}
 		_, _, digest, err := loadCanonicalExtension0201(out)
 		if err != nil {
-			return fmt.Errorf("verify imported canonical manifest: %w", err)
+			return fmt.Errorf("Проверка импортированного канонического манифеста: %w", err)
 		}
 		printJSON(map[string]any{"imported": true, "source": source, "output": out, "id": manifest.ID, "version": manifest.Version, "sha256": digest})
 		return nil
@@ -451,7 +451,7 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 		return nil
 	}
 	if len(d.Pages) == 0 || len(d.Pages) > 64 || len(d.Navigation) > 64 || len(d.Actions) > 64 {
-		return errors.New("desktop contributions contain invalid item count")
+		return errors.New("Расширения Desktop содержат недопустимое количество элементов")
 	}
 	pages := map[string]struct{}{}
 	for i := range d.Pages {
@@ -460,10 +460,10 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminContributionID0208CLI(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
-			return fmt.Errorf("invalid desktop page %q", p.ID)
+			return fmt.Errorf("Недопустимая страница Desktop %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("duplicate desktop page %q", p.ID)
+			return fmt.Errorf("Повторяющаяся страница Desktop %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -474,13 +474,13 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminContributionID0208CLI(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
-			return fmt.Errorf("invalid desktop navigation %q", n.ID)
+			return fmt.Errorf("Недопустимый элемент навигации Desktop %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
-			return fmt.Errorf("desktop navigation %s references unknown page %s", n.ID, n.PageID)
+			return fmt.Errorf("Элемент навигации Desktop %s ссылается на неизвестную страницу %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("duplicate desktop navigation %q", n.ID)
+			return fmt.Errorf("Повторяющийся элемент навигации Desktop %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -495,13 +495,13 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 			a.Placement = "toolbar"
 		}
 		if !validAdminContributionID0208CLI(a.ID) || a.Label == "" || len(a.Label) > 80 || (a.Placement != "toolbar" && a.Placement != "page") {
-			return fmt.Errorf("invalid desktop action %q", a.ID)
+			return fmt.Errorf("Недопустимое действие Desktop %q", a.ID)
 		}
 		if _, ok := pages[a.PageID]; !ok {
-			return fmt.Errorf("desktop action %s references unknown page %s", a.ID, a.PageID)
+			return fmt.Errorf("Действие Desktop %s ссылается на неизвестную страницу %s", a.ID, a.PageID)
 		}
 		if _, ok := seen[a.ID]; ok {
-			return fmt.Errorf("duplicate desktop action %q", a.ID)
+			return fmt.Errorf("Повторяющееся действие Desktop %q", a.ID)
 		}
 		seen[a.ID] = struct{}{}
 	}
@@ -535,10 +535,10 @@ func normalizeCLIContributions0209(c *CanonicalExtensionCLIContributions0209) er
 	}
 	c.Namespace = strings.ToLower(strings.TrimSpace(c.Namespace))
 	if !validAdminContributionID0208CLI(c.Namespace) {
-		return errors.New("cli namespace must match [a-z0-9][a-z0-9._-]{1,63}")
+		return errors.New("Пространство имён CLI должно соответствовать шаблону [a-z0-9][a-z0-9._-]{1,63}")
 	}
 	if len(c.Commands) == 0 || len(c.Commands) > 64 {
-		return errors.New("cli contributions require 1..64 commands")
+		return errors.New("Расширения команд CLI должны содержать от 1 до 64 команд")
 	}
 	seen := map[string]struct{}{}
 	for i := range c.Commands {
@@ -547,10 +547,10 @@ func normalizeCLIContributions0209(c *CanonicalExtensionCLIContributions0209) er
 		cmd.Description = strings.TrimSpace(cmd.Description)
 		cmd.Usage = strings.TrimSpace(cmd.Usage)
 		if !validAdminContributionID0208CLI(cmd.Name) || len(cmd.Description) > 240 || len(cmd.Usage) > 240 {
-			return fmt.Errorf("invalid cli command %q", cmd.Name)
+			return fmt.Errorf("Недопустимая команда CLI %q", cmd.Name)
 		}
 		if _, ok := seen[cmd.Name]; ok {
-			return fmt.Errorf("duplicate cli command %q", cmd.Name)
+			return fmt.Errorf("Повторяющаяся команда CLI %q", cmd.Name)
 		}
 		seen[cmd.Name] = struct{}{}
 	}
@@ -570,14 +570,14 @@ func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionM
 	dec.DisallowUnknownFields()
 	var legacy PluginManifest
 	if err := dec.Decode(&legacy); err != nil {
-		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("decode legacy manifest %s: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("Не удалось декодировать устаревший манифест %s: %w", path, err)
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); err != io.EOF {
 		if err == nil {
 			err = errors.New("trailing JSON value")
 		}
-		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("legacy manifest %s contains trailing JSON data: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("Устаревший манифест %s содержит лишние данные JSON в конце: %w", path, err)
 	}
 	publisher = strings.TrimSpace(publisher)
 	if publisher == "" && legacy.Metadata != nil {
@@ -636,7 +636,7 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 		return nil
 	}
 	if len(a.Pages) > 64 || len(a.Navigation) > 64 || len(a.DashboardWidgets) > 32 || len(a.Actions) > 64 {
-		return errors.New("admin contributions exceed limits")
+		return errors.New("Расширения интерфейса Admin превышают допустимые ограничения")
 	}
 	pages := map[string]struct{}{}
 	for i := range a.Pages {
@@ -645,10 +645,10 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminID0208(p.ID) || p.Title == "" || len(p.Title) > 120 {
-			return fmt.Errorf("invalid admin page %q", p.ID)
+			return fmt.Errorf("Недопустимая страница Admin %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("duplicate admin page %q", p.ID)
+			return fmt.Errorf("Повторяющаяся страница Admin %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -659,13 +659,13 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminID0208(n.ID) || n.Label == "" || len(n.Label) > 80 {
-			return fmt.Errorf("invalid admin navigation %q", n.ID)
+			return fmt.Errorf("Недопустимый элемент навигации Admin %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
-			return fmt.Errorf("admin navigation %s references unknown page %s", n.ID, n.PageID)
+			return fmt.Errorf("Элемент навигации Admin %s ссылается на неизвестную страницу %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("duplicate admin navigation %q", n.ID)
+			return fmt.Errorf("Повторяющийся элемент навигации Admin %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -679,13 +679,13 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 			w.Height = 280
 		}
 		if !validAdminID0208(w.ID) || w.Title == "" || len(w.Title) > 120 || w.Height < 160 || w.Height > 1200 {
-			return fmt.Errorf("invalid admin widget %q", w.ID)
+			return fmt.Errorf("Недопустимый виджет Admin %q", w.ID)
 		}
 		if _, ok := pages[w.PageID]; !ok {
-			return fmt.Errorf("admin widget %s references unknown page %s", w.ID, w.PageID)
+			return fmt.Errorf("Виджет Admin %s ссылается на неизвестную страницу %s", w.ID, w.PageID)
 		}
 		if _, ok := seen[w.ID]; ok {
-			return fmt.Errorf("duplicate admin widget %q", w.ID)
+			return fmt.Errorf("Повторяющийся виджет Admin %q", w.ID)
 		}
 		seen[w.ID] = struct{}{}
 	}
@@ -700,13 +700,13 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 			x.Placement = "toolbar"
 		}
 		if !validAdminID0208(x.ID) || x.Label == "" || len(x.Label) > 80 || (x.Placement != "toolbar" && x.Placement != "dashboard") {
-			return fmt.Errorf("invalid admin action %q", x.ID)
+			return fmt.Errorf("Недопустимое действие Admin %q", x.ID)
 		}
 		if _, ok := pages[x.PageID]; !ok {
-			return fmt.Errorf("admin action %s references unknown page %s", x.ID, x.PageID)
+			return fmt.Errorf("Действие Admin %s ссылается на неизвестную страницу %s", x.ID, x.PageID)
 		}
 		if _, ok := seen[x.ID]; ok {
-			return fmt.Errorf("duplicate admin action %q", x.ID)
+			return fmt.Errorf("Повторяющееся действие Admin %q", x.ID)
 		}
 		seen[x.ID] = struct{}{}
 	}

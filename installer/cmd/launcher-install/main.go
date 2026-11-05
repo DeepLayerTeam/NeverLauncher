@@ -19,7 +19,7 @@ func usage() {
 func run() error {
 	if len(os.Args) < 2 {
 		usage()
-		return fmt.Errorf("subcommand required")
+		return fmt.Errorf("Необходимо указать подкоманду")
 	}
 	switch os.Args[1] {
 	case "verify", "install":
@@ -88,7 +88,7 @@ func run() error {
 			return err
 		}
 		if (*token == "") == (*envFile == "") {
-			return fmt.Errorf("choose exactly one of --token-file and --env-file")
+			return fmt.Errorf("Укажите ровно один из параметров --token-file или --env-file")
 		}
 		if *envFile != "" {
 			return installer.BootstrapOwnerFromEnv(*url, *email, *name, *pass, *envFile)
@@ -96,7 +96,7 @@ func run() error {
 		return installer.BootstrapOwner(*url, *email, *name, *pass, *token)
 	default:
 		usage()
-		return fmt.Errorf("unknown subcommand")
+		return fmt.Errorf("Неизвестная подкоманда")
 	}
 }
 func main() {

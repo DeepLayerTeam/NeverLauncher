@@ -44,7 +44,7 @@ func New(baseURL, token string) (*Client, error) {
 	host := u.Hostname()
 	ip := net.ParseIP(host)
 	if u.Scheme != "https" && !(u.Scheme == "http" && (strings.EqualFold(host, "localhost") || ip != nil && ip.IsLoopback())) {
-		return nil, errors.New("API requires HTTPS (HTTP is only allowed on loopback)")
+		return nil, errors.New("Для API требуется HTTPS (HTTP разрешён только для loopback)")
 	}
 	return &Client{BaseURL: strings.TrimRight(baseURL, "/"), Token: token, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }
@@ -59,7 +59,7 @@ func Path(template string, params map[string]string) (string, error) {
 		v, ok := params[key]
 		used[key] = true
 		if !ok || v == "" || v == "." || v == ".." || strings.ContainsAny(v, "/\\") {
-			resolveErr = fmt.Errorf("invalid path parameter %s", key)
+			resolveErr = fmt.Errorf("Недопустимый параметр пути %s", key)
 			return ""
 		}
 		return url.PathEscape(v)
@@ -90,13 +90,13 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 }
 func (c *Client) Request(ctx context.Context, method, path string, query url.Values, request any, response any, key string) error {
 	if c == nil || c.HTTP == nil {
-		return errors.New("uninitialized client")
+		return errors.New("Клиент не инициализирован")
 	}
 	if !strings.HasPrefix(path, "/api/v1/") && path != "/health" && path != "/ready" && path != "/metrics" && !strings.HasPrefix(path, "/api/profiles/minecraft") && !strings.HasPrefix(path, "/api/user/profile/") && !strings.HasPrefix(path, "/authserver/") && !strings.HasPrefix(path, "/sessionserver/") {
-		return errors.New("route outside supported OpenAPI v1")
+		return errors.New("Маршрут не входит в поддерживаемый OpenAPI версии 1")
 	}
 	if strings.Contains(path, "?") || strings.Contains(path, "#") || strings.Contains(path, "..") || strings.HasPrefix(path, "//") {
-		return errors.New("unsafe request path")
+		return errors.New("Небезопасный путь запроса")
 	}
 	var body io.Reader
 	if request != nil {
@@ -123,7 +123,7 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 	}
 	if key != "" {
 		if strings.ContainsAny(key, "\r\n") {
-			return errors.New("invalid idempotency key")
+			return errors.New("Недопустимый ключ идемпотентности")
 		}
 		req.Header.Set("Idempotency-Key", key)
 	}
@@ -137,7 +137,7 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 		return err
 	}
 	if len(data) > maxResponseBytes {
-		return errors.New("API response exceeds 8 MiB")
+		return errors.New("Размер ответа API превышает 8 МиБ")
 	}
 	if result.StatusCode < 200 || result.StatusCode > 299 {
 		var e struct {
@@ -177,7 +177,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("backend not ready: %d", resp.StatusCode)
+		return fmt.Errorf("Backend ещё не готов: %d", resp.StatusCode)
 	}
 	contract := resp.Header.Get("X-Launcher-API-Contract")
 	if contract != "" {
@@ -211,10 +211,10 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 		return nil, err
 	}
 	if c == nil || c.HTTP == nil {
-		return nil, errors.New("uninitialized client")
+		return nil, errors.New("Клиент не инициализирован")
 	}
 	if idempotencyKey != "" && strings.ContainsAny(idempotencyKey, "\r\n") {
-		return nil, errors.New("invalid idempotency key")
+		return nil, errors.New("Недопустимый ключ идемпотентности")
 	}
 	target := c.BaseURL + path
 	if len(query) > 0 {
@@ -243,7 +243,7 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 		return nil, err
 	}
 	if len(data) > maxResponseBytes {
-		return nil, errors.New("API response exceeds 8 MiB")
+		return nil, errors.New("Размер ответа API превышает 8 МиБ")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var e struct {
@@ -286,25 +286,25 @@ func (c *Client) CallStream(ctx context.Context, operationID string, params map[
 // изменяется.
 func (c *Client) RequestStream(ctx context.Context, method, path string, query url.Values, requestReader io.Reader, contentType string, responseWriter io.Writer, maxResponseBytes int64, key string) (int64, error) {
 	if c == nil || c.HTTP == nil {
-		return 0, errors.New("uninitialized client")
+		return 0, errors.New("Клиент не инициализирован")
 	}
 	if !strings.HasPrefix(path, "/api/v1/") && path != "/health" && path != "/ready" && path != "/metrics" && !strings.HasPrefix(path, "/api/profiles/minecraft") && !strings.HasPrefix(path, "/api/user/profile/") && !strings.HasPrefix(path, "/authserver/") && !strings.HasPrefix(path, "/sessionserver/") {
-		return 0, errors.New("route outside supported OpenAPI v1")
+		return 0, errors.New("Маршрут не входит в поддерживаемый OpenAPI версии 1")
 	}
 	if strings.Contains(path, "?") || strings.Contains(path, "#") || strings.Contains(path, "..") || strings.HasPrefix(path, "//") {
-		return 0, errors.New("unsafe request path")
+		return 0, errors.New("Небезопасный путь запроса")
 	}
 	if key != "" && strings.ContainsAny(key, "\r\n") {
-		return 0, errors.New("invalid idempotency key")
+		return 0, errors.New("Недопустимый ключ идемпотентности")
 	}
 	if maxResponseBytes == 0 {
 		maxResponseBytes = 1 << 30
 	}
 	if maxResponseBytes < 0 || maxResponseBytes > 1<<30 {
-		return 0, errors.New("invalid response limit (max 1 GiB)")
+		return 0, errors.New("Недопустимый лимит ответа (не более 1 ГиБ)")
 	}
 	if responseWriter == nil {
-		return 0, errors.New("response writer required")
+		return 0, errors.New("Необходим обработчик записи ответа")
 	}
 	target := c.BaseURL + path
 	if len(query) > 0 {
@@ -337,7 +337,7 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 			return 0, err
 		}
 		if len(data) > maxResponseBytesForError {
-			return 0, errors.New("API error response too large")
+			return 0, errors.New("Ответ API с ошибкой слишком большой")
 		}
 		var parsed struct {
 			Code    string `json:"code"`
@@ -355,7 +355,7 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 		return 0, &APIError{Status: resp.StatusCode, Code: parsed.Code, Message: message, RequestID: resp.Header.Get("X-Correlation-ID")}
 	}
 	if resp.ContentLength > maxResponseBytes {
-		return 0, errors.New("API stream exceeds configured size limit")
+		return 0, errors.New("Поток API превышает настроенное ограничение размера")
 	}
 	// LimitReader(max+1) выявляет chunked-ответ больше объявленного предела;
 	// полный ответ не выделяется в память.
@@ -364,7 +364,7 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 		return n, err
 	}
 	if n > maxResponseBytes {
-		return n, errors.New("API stream exceeds configured size limit")
+		return n, errors.New("Поток API превышает настроенное ограничение размера")
 	}
 	return n, nil
 }

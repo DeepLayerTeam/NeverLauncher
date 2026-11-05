@@ -36,7 +36,7 @@ func validatePublicURL(raw string) error {
 			return nil
 		}
 	}
-	return errors.New("public URL must use HTTPS (HTTP allowed on loopback only)")
+	return errors.New("Публичный URL должен использовать HTTPS (HTTP разрешён только для loopback)")
 }
 
 // Init создаёт производственную конфигурацию PostgreSQL одной эксклюзивной
@@ -44,14 +44,14 @@ func validatePublicURL(raw string) error {
 // политикам подписания Guard/Bridge здесь не утверждаются.
 func Init(dest, publicURL, dsn, storageDir string) error {
 	if !filepath.IsAbs(dest) || filepath.Clean(dest) != dest || !filepath.IsAbs(storageDir) || !validEnvField(dsn) {
-		return errors.New("require absolute output/storage paths and shell-safe PostgreSQL DSN")
+		return errors.New("Необходимы абсолютные пути вывода и хранения, а также безопасная для оболочки строка подключения PostgreSQL DSN")
 	}
 	if err := validatePublicURL(publicURL); err != nil {
 		return err
 	}
 	parsed, _ := url.Parse(publicURL)
 	if parsed.Scheme != "https" {
-		return errors.New("production configuration requires HTTPS origin")
+		return errors.New("Для рабочей конфигурации требуется HTTPS-источник")
 	}
 	for _, segment := range []string{filepath.Dir(dest), filepath.Dir(storageDir)} {
 		st, e := os.Lstat(segment)
@@ -59,11 +59,11 @@ func Init(dest, publicURL, dsn, storageDir string) error {
 			return e
 		}
 		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0022 != 0 {
-			return errors.New("configuration paths require real, non-group-writable parent directories")
+			return errors.New("Пути конфигурации должны иметь существующие родительские каталоги без права записи для группы")
 		}
 	}
 	if !validEnvField(storageDir) {
-		return errors.New("invalid storage path")
+		return errors.New("Недопустимый путь хранилища")
 	}
 	secret, err := randomHex(32)
 	if err != nil {
@@ -100,7 +100,7 @@ func Init(dest, publicURL, dsn, storageDir string) error {
 	b.WriteString("# Launcher: GENERATED SECRETS. Permissions 0600. Keep in safe backup.\n# Supply verified LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON and LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON before production startup.\n")
 	for _, f := range fields {
 		if !validEnvField(f[1]) {
-			return fmt.Errorf("unsafe environment value for %s", f[0])
+			return fmt.Errorf("Небезопасное значение переменной окружения %s", f[0])
 		}
 		fmt.Fprintf(&b, "%s=%s\n", f[0], f[1])
 	}

@@ -48,7 +48,7 @@ func BootstrapOwnerFromEnv(base, email, name, passwordFile, envFile string) erro
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 {
-		return errors.New("installer environment must be regular 0600")
+		return errors.New("Файл окружения установщика должен быть обычным файлом с правами 0600")
 	}
 	f, err := os.Open(envFile)
 	if err != nil {
@@ -61,7 +61,7 @@ func BootstrapOwnerFromEnv(base, email, name, passwordFile, envFile string) erro
 		line := scanner.Text()
 		if strings.HasPrefix(line, "LAUNCHER_BOOTSTRAP_TOKEN=") {
 			if token != "" {
-				return errors.New("duplicate bootstrap token")
+				return errors.New("Повторяющийся токен начальной настройки")
 			}
 			token = strings.TrimSpace(strings.TrimPrefix(line, "LAUNCHER_BOOTSTRAP_TOKEN="))
 		}
@@ -70,7 +70,7 @@ func BootstrapOwnerFromEnv(base, email, name, passwordFile, envFile string) erro
 		return err
 	}
 	if token == "" {
-		return errors.New("bootstrap token missing from environment")
+		return errors.New("В окружении отсутствует токен начальной настройки")
 	}
 	return bootstrapWithToken(base, email, name, passwordFile, token)
 }
@@ -79,14 +79,14 @@ func bootstrapWithToken(base, email, name, passwordFile, token string) error {
 		return err
 	}
 	if !strings.Contains(email, "@") || len(email) > 254 || len(name) > 200 {
-		return errors.New("invalid owner email/name")
+		return errors.New("Недопустимая почта или имя владельца")
 	}
 	password, err := readSecretFile(passwordFile)
 	if err != nil {
 		return err
 	}
 	if len(token) < 32 || len(token) > 4096 {
-		return errors.New("invalid token length")
+		return errors.New("Недопустимая длина токена")
 	}
 	payload, err := json.Marshal(map[string]string{"email": email, "displayName": name, "password": password, "actor": "launcher-install"})
 	if err != nil {
@@ -100,7 +100,7 @@ func bootstrapWithToken(base, email, name, passwordFile, token string) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Launcher-Bootstrap-Token", token)
-	client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("bootstrap redirects forbidden") }, Transport: &http.Transport{Proxy: nil}}
+	client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("Перенаправления при начальной настройке запрещены") }, Transport: &http.Transport{Proxy: nil}}
 	res, err := client.Do(req)
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func bootstrapWithToken(base, email, name, passwordFile, token string) error {
 		return err
 	}
 	if res.StatusCode != http.StatusCreated {
-		return fmt.Errorf("owner bootstrap refused, HTTP %d: %s", res.StatusCode, string(body))
+		return fmt.Errorf("Начальная настройка владельца отклонена, HTTP %d: %s", res.StatusCode, string(body))
 	}
 	return nil
 }

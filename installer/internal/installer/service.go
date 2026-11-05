@@ -13,7 +13,7 @@ import (
 func WriteSystemdUnit(output, binary, envFile string) error {
 	for _, p := range []string{output, binary, envFile} {
 		if !filepath.IsAbs(p) || filepath.Clean(p) != p || strings.ContainsAny(p, "\r\n\t %\\\"'") {
-			return errors.New("unit paths must be absolute, clean, unescaped")
+			return errors.New("Пути служб должны быть абсолютными, нормализованными и без управляющего экранирования")
 		}
 	}
 	app, err := os.Lstat(binary)
@@ -21,14 +21,14 @@ func WriteSystemdUnit(output, binary, envFile string) error {
 		return err
 	}
 	if !app.Mode().IsRegular() || app.Mode().Perm()&0111 == 0 || app.Mode()&os.ModeSymlink != 0 {
-		return errors.New("API binary must be regular and executable")
+		return errors.New("Исполняемый файл API должен быть обычным файлом с правом запуска")
 	}
 	config, err := os.Lstat(envFile)
 	if err != nil {
 		return err
 	}
 	if !config.Mode().IsRegular() || config.Mode().Perm()&0077 != 0 {
-		return errors.New("environment must be a private 0600 file")
+		return errors.New("Файл окружения должен быть закрытым файлом с правами 0600")
 	}
 	unit := fmt.Sprintf(`[Unit]
 Description=Launcher Backend API

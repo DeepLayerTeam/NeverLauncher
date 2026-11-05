@@ -94,7 +94,7 @@ func readJSON(file string, out any) error {
 	}
 	var extra any
 	if err = d.Decode(&extra); !errors.Is(err, io.EOF) {
-		return fmt.Errorf("%s: invalid trailing data: %v", file, err)
+		return fmt.Errorf("%s: недопустимые данные в конце: %v", file, err)
 	}
 	return nil
 }
@@ -168,7 +168,7 @@ func validateJavaContract(root string) error {
 		return err
 	}
 	if host.SchemaVersion != "1.0" || host.HostProtocolVersion != spec.HostProtocolVersion || host.ExtensionAPIVersion != spec.ExtensionAPIVersion {
-		return errors.New("Java API design drifts from shipping host protocol")
+		return errors.New("Описание Java API расходится с используемым протоколом хоста")
 	}
 	astFile, e := parser.ParseFile(token.NewFileSet(), filepath.Join(root, "services/api/internal/extensioncontract/contract_0210.go"), nil, 0)
 	if e != nil {
@@ -190,21 +190,21 @@ func validateJavaContract(root string) error {
 		return true
 	})
 	if constants["HostProtocolVersion"] != spec.HostProtocolVersion || constants["ExtensionAPIVersion"] != spec.ExtensionAPIVersion || constants["ManifestSchemaVersion"] != spec.ManifestSchemaVersion {
-		return errors.New("Java API design drifts from frozen Go extension contract")
+		return errors.New("Описание Java API расходится с зафиксированным контрактом расширений Go")
 	}
 	for typeName, fields := range spec.TypeBindings {
 		shipping, ok := host.Types[typeName]
 		if !ok || len(shipping) != len(fields) {
-			return fmt.Errorf("Java type %s mismatches host protocol", typeName)
+			return fmt.Errorf("Тип Java %s не соответствует протоколу хоста", typeName)
 		}
 		for key, val := range fields {
 			if shipping[key] != val {
-				return fmt.Errorf("Java type %s.%s mismatch", typeName, key)
+				return fmt.Errorf("Несовпадение типа Java %s.%s", typeName, key)
 			}
 		}
 	}
 	if len(spec.TypeBindings) != len(host.Types) {
-		return errors.New("Java type bindings do not cover existing host types")
+		return errors.New("Привязки типов Java не охватывают существующие типы хоста")
 	}
 	hostSource, err := os.ReadFile(filepath.Join(root, "services/api/internal/extensionhost/host_0205.go"))
 	if err != nil {
@@ -212,10 +212,10 @@ func validateJavaContract(root string) error {
 	}
 	for _, route := range spec.RequiredHostRoutes {
 		if !strings.HasPrefix(route, "POST /v1/") && !strings.HasPrefix(route, "GET /v1/") && !strings.HasPrefix(route, "DELETE /v1/") {
-			return fmt.Errorf("unscoped Java route: %s", route)
+			return fmt.Errorf("Маршрут Java без заданной области действия: %s", route)
 		}
 		if !bytes.Contains(hostSource, []byte("\""+route+"\"")) {
-			return fmt.Errorf("host no longer supports Java-design route %q", route)
+			return fmt.Errorf("Хост больше не поддерживает маршрут Java API %q", route)
 		}
 	}
 	return nil
@@ -274,10 +274,10 @@ func Inspect(root string) (Report, error) {
 	// Опись M01–M19 — закреплённая база 0.30.1. Новые версии сохраняют её аудит без
 	// перезаписи исторических свидетельств и заявлений о новой совместимости.
 	if m.SchemaVersion != "1.0" || m.ProductVersion != "0.30.1" || m.AuditBaseline != "0.30.0" || !notBeforeModuleAudit0302(version) {
-		return out, fmt.Errorf("registry/version mismatch: registry=%s repo=%s", m.ProductVersion, version)
+		return out, fmt.Errorf("Несовпадение реестра и версии: registry=%s repo=%s", m.ProductVersion, version)
 	}
 	if m.Upstream.Repository != "GravitLauncher/LauncherModules" || !validCommit.MatchString(m.Upstream.Commit) {
-		return out, errors.New("invalid pinned upstream revision")
+		return out, errors.New("Недопустимая закреплённая версия исходного проекта")
 	}
 	var frozen struct {
 		Upstream struct {
@@ -294,10 +294,10 @@ func Inspect(root string) (Report, error) {
 		return out, err
 	}
 	if frozen.Upstream.Components["launcher-modules"].Commit != m.Upstream.Commit {
-		return out, errors.New("current parity matrix silently changes frozen upstream revision")
+		return out, errors.New("Текущая матрица соответствия незаметно изменяет зафиксированную версию исходного проекта")
 	}
 	if len(m.Modules) != 19 {
-		return out, fmt.Errorf("expected exactly 19 modules; got %d", len(m.Modules))
+		return out, fmt.Errorf("Ожидалось ровно 19 модулей, получено %d", len(m.Modules))
 	}
 	upstreamNames := map[string]string{}
 	for _, r := range frozen.Requirements {
@@ -307,19 +307,19 @@ func Inspect(root string) (Report, error) {
 	for i, mod := range m.Modules {
 		id := fmt.Sprintf("M%02d", i+1)
 		if mod.ID != id || mod.UpstreamModule != upstreamNames[id] || strings.TrimSpace(mod.Equivalent) == "" || strings.TrimSpace(mod.Limitations) == "" {
-			return Report{}, fmt.Errorf("%s: invalid id, upstream name, equivalent, or limitations", id)
+			return Report{}, fmt.Errorf("%s: недопустимый идентификатор, имя исходного модуля, эквивалент или ограничения", id)
 		}
 		if mod.Status != "partial" && mod.Status != "planned" && mod.Status != "blocked" {
-			return Report{}, fmt.Errorf("%s: unsupported status %q; full certification requires a separate release gate", id, mod.Status)
+			return Report{}, fmt.Errorf("%s: неподдерживаемое состояние %q; для полной сертификации требуется отдельная проверка выпуска", id, mod.Status)
 		}
 		if mod.Status == "partial" && (len(mod.SourceRefs) == 0 || len(mod.TestRefs) == 0) {
-			return Report{}, fmt.Errorf("%s: partial implementation without source and tests", id)
+			return Report{}, fmt.Errorf("%s: частичная реализация без исходников и тестов", id)
 		}
 		digests := map[string]string{}
 		seen := map[string]bool{}
 		for _, ref := range append(append([]string{}, mod.SourceRefs...), mod.TestRefs...) {
 			if seen[ref] {
-				return Report{}, fmt.Errorf("%s duplicate evidence: %s", id, ref)
+				return Report{}, fmt.Errorf("%s: повторяющееся подтверждение %s", id, ref)
 			}
 			seen[ref] = true
 			p, e := SafeRepoFile(root, ref)
@@ -334,7 +334,7 @@ func Inspect(root string) (Report, error) {
 		}
 		for _, ref := range mod.TestRefs {
 			if !strings.HasSuffix(ref, "_test.go") && !strings.HasSuffix(ref, ".test.mjs") && !strings.HasSuffix(ref, ".test.py") {
-				return Report{}, fmt.Errorf("%s test evidence not an executable test file: %s", id, ref)
+				return Report{}, fmt.Errorf("%s: подтверждающий тест не является исполняемым тестовым файлом: %s", id, ref)
 			}
 		}
 		out.Results = append(out.Results, Result{ModuleID: id, UpstreamModule: mod.UpstreamModule, Status: mod.Status, SourceValidated: true, SourceDigests: digests, Test: TestOutcome{Status: "not-run"}, Limitations: mod.Limitations})
@@ -432,7 +432,7 @@ func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, o
 				}
 				matches := goTestFunc.FindAllSubmatch(data, -1)
 				if len(matches) == 0 {
-					return fmt.Errorf("no runnable test functions in %s", ref)
+					return fmt.Errorf("В %s нет выполняемых тестовых функций", ref)
 				}
 				key := directory + "\x00" + pkg
 				g := groups[key]
@@ -447,7 +447,7 @@ func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, o
 					g.Owners[mod.ID][string(m[1])] = true
 				}
 			default:
-				return fmt.Errorf("no supported runtime test executor for %s", ref)
+				return fmt.Errorf("Для %s нет поддерживаемого средства запуска тестов", ref)
 			}
 		}
 	}

@@ -59,7 +59,7 @@ func ValidateSignedFiles0249(files []ManifestFile) error {
 	seen := map[string]bool{}
 	for _, f := range files {
 		if !validFilePolicyPath0224(f.Path, false) {
-			return fmt.Errorf("unsafe signed file path %q", f.Path)
+			return fmt.Errorf("Небезопасный путь подписанного файла %q", f.Path)
 		}
 		lower := strings.ToLower(f.Path)
 		if seen[lower] {
@@ -70,13 +70,13 @@ func ValidateSignedFiles0249(files []ManifestFile) error {
 		switch own {
 		case "managed", "required", "optional", "user-owned", "generated":
 		default:
-			return fmt.Errorf("unsupported file ownership %q", own)
+			return fmt.Errorf("Неподдерживаемый тип владения файлом %q", own)
 		}
 		if (own == "user-owned" || own == "generated") && f.Required {
-			return fmt.Errorf("user-owned file required: %q", f.Path)
+			return fmt.Errorf("Требуется файл, принадлежащий пользователю: %q", f.Path)
 		}
 		if f.Ownership != "" && ((own == "required" && !f.Required) || (own == "optional" && f.Required)) {
-			return fmt.Errorf("contradictory file ownership %q", f.Path)
+			return fmt.Errorf("Противоречивые сведения о владельце файла %q", f.Path)
 		}
 	}
 	return nil

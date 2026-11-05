@@ -70,7 +70,7 @@ func decodeKey(filename string, size int) ([]byte, error) {
 		return nil, err
 	}
 	if !stat.Mode().IsRegular() || stat.Mode()&os.ModeSymlink != 0 || stat.Mode().Perm()&0022 != 0 {
-		return nil, errors.New("signing key file must be regular and not writable by others")
+		return nil, errors.New("Файл ключа подписи должен быть обычным файлом, недоступным для записи посторонним")
 	}
 	b, err := os.ReadFile(filename)
 	if err != nil {
@@ -78,7 +78,7 @@ func decodeKey(filename string, size int) ([]byte, error) {
 	}
 	decoded, err := hex.DecodeString(strings.TrimSpace(string(b)))
 	if err != nil || len(decoded) != size {
-		return nil, fmt.Errorf("expected %d-byte hex Ed25519 key", size)
+		return nil, fmt.Errorf("Ожидался %d-байтовый ключ Ed25519 в шестнадцатеричном виде", size)
 	}
 	return decoded, nil
 }
@@ -99,17 +99,17 @@ func Verify(archive, trustKey string) (*Verified, error) {
 	var total uint64
 	for _, f := range z.File {
 		if !validRel(f.Name) || !f.Mode().IsRegular() || f.Mode()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("unsupported bundle entry %q", f.Name)
+			return nil, fmt.Errorf("Неподдерживаемый элемент пакета %q", f.Name)
 		}
 		if _, ok := entries[f.Name]; ok {
-			return nil, errors.New("duplicate bundle entry")
+			return nil, errors.New("Повторяющийся элемент пакета")
 		}
 		if f.UncompressedSize64 > uint64(maxFile) {
-			return nil, errors.New("oversized file")
+			return nil, errors.New("Размер файла превышает допустимый предел")
 		}
 		total += f.UncompressedSize64
 		if total > uint64(maxTotal) {
-			return nil, errors.New("oversized bundle")
+			return nil, errors.New("Размер пакета превышает допустимый предел")
 		}
 		entries[f.Name] = f
 	}
@@ -130,7 +130,7 @@ func Verify(archive, trustKey string) (*Verified, error) {
 		return nil, err
 	}
 	if len(raw) > 1<<20 {
-		return nil, errors.New("manifest too large")
+		return nil, errors.New("Манифест слишком большой")
 	}
 	sigRaw, err := read("manifest.sig")
 	if err != nil {
@@ -138,26 +138,26 @@ func Verify(archive, trustKey string) (*Verified, error) {
 	}
 	sig, err := hex.DecodeString(strings.TrimSpace(string(sigRaw)))
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return nil, errors.New("invalid signature encoding")
+		return nil, errors.New("Недопустимая кодировка подписи")
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), raw, sig) {
-		return nil, errors.New("bundle signature verification failed")
+		return nil, errors.New("Проверка подписи пакета не пройдена")
 	}
 	var manifest Manifest
 	if err := json.Unmarshal(raw, &manifest); err != nil {
 		return nil, err
 	}
 	if manifest.Format != "launcher-offline-bundle-v1" || !validVersion(manifest.Version) || len(manifest.Files) == 0 {
-		return nil, errors.New("invalid signed manifest")
+		return nil, errors.New("Недопустимый подписанный манифест")
 	}
 	if len(entries) != len(manifest.Files)+2 {
-		return nil, errors.New("bundle contains unsigned entries")
+		return nil, errors.New("Пакет содержит неподписанные элементы")
 	}
 	seen := make(map[string]bool)
 	res := &Verified{Manifest: manifest}
 	for _, item := range manifest.Files {
 		if !validRel(item.Path) || strings.HasPrefix(item.Path, ".") || seen[item.Path] || item.Size < 0 || item.Size > maxFile || len(item.SHA256) != 64 {
-			return nil, errors.New("invalid or duplicate manifest item")
+			return nil, errors.New("Недопустимый или повторяющийся элемент манифеста")
 		}
 		seen[item.Path] = true
 		data, err := read("payload/" + item.Path)
@@ -166,7 +166,7 @@ func Verify(archive, trustKey string) (*Verified, error) {
 		}
 		hash := sha256.Sum256(data)
 		if int64(len(data)) != item.Size || !strings.EqualFold(hex.EncodeToString(hash[:]), item.SHA256) {
-			return nil, fmt.Errorf("payload checksum mismatch: %s", item.Path)
+			return nil, fmt.Errorf("Несовпадение контрольной суммы содержимого: %s", item.Path)
 		}
 		res.files = append(res.files, verifiedFile{item, data})
 	}
@@ -185,10 +185,10 @@ func syncDir(dir string) error {
 // запускается; символьные ссылки, контролируемые пакетом, не обходятся.
 func (v *Verified) Install(target string) error {
 	if !filepath.IsAbs(target) || filepath.Clean(target) != target || target == "/" {
-		return errors.New("target must be absolute, clean, and not root")
+		return errors.New("Целевой путь должен быть абсолютным, нормализованным и не должен указывать на корень")
 	}
 	if _, err := os.Lstat(target); err == nil {
-		return errors.New("destination already exists; existing installation is untouched")
+		return errors.New("Целевой каталог уже существует; существующая установка не изменена")
 	} else if !os.IsNotExist(err) {
 		return err
 	}
@@ -198,7 +198,7 @@ func (v *Verified) Install(target string) error {
 		return err
 	}
 	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0022 != 0 {
-		return errors.New("destination parent is unsafe")
+		return errors.New("Родительский каталог назначения небезопасен")
 	}
 	temp, err := os.MkdirTemp(parent, ".launcher-stage-")
 	if err != nil {
@@ -272,7 +272,7 @@ func (v *Verified) Install(target string) error {
 		return err
 	}
 	if err := syncDir(parent); err != nil {
-		return fmt.Errorf("published but parent fsync failed: %w", err)
+		return fmt.Errorf("Публикация завершена, но fsync родительского каталога не выполнен: %w", err)
 	}
 	return nil
 }
@@ -284,7 +284,7 @@ func Pack(source, version, privateKey, destination string) error {
 	if err == nil {
 		st, e := os.Stat(privateKey)
 		if e != nil || st.Mode().Perm()&0077 != 0 {
-			return errors.New("private signing seed must be 0600")
+			return errors.New("Файл начального значения закрытого ключа подписи должен иметь права 0600")
 		}
 	}
 	if err != nil {
@@ -303,7 +303,7 @@ func Pack(source, version, privateKey, destination string) error {
 			return nil
 		}
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("bundle source contains nonregular file")
+			return errors.New("Источник пакета содержит файл нестандартного типа")
 		}
 		rel, err := filepath.Rel(source, name)
 		if err != nil {
@@ -314,11 +314,11 @@ func Pack(source, version, privateKey, destination string) error {
 			return errors.New("unsafe path")
 		}
 		if info.Size() > maxFile {
-			return errors.New("file too large")
+			return errors.New("Файл слишком большой")
 		}
 		total += info.Size()
 		if total > maxTotal {
-			return errors.New("bundle too large")
+			return errors.New("Пакет слишком большой")
 		}
 		contents, err := os.ReadFile(name)
 		if err != nil {
@@ -333,7 +333,7 @@ func Pack(source, version, privateKey, destination string) error {
 		return err
 	}
 	if len(manifest.Files) == 0 {
-		return errors.New("empty source")
+		return errors.New("Пустой источник")
 	}
 	sort.Slice(manifest.Files, func(i, j int) bool { return manifest.Files[i].Path < manifest.Files[j].Path })
 	raw, err := json.Marshal(manifest)

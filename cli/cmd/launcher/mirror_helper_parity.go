@@ -73,14 +73,14 @@ type mirrorActions0274 struct {
 
 func mirrorCheckedHash0274(path, expected string) (int64, error) {
 	if !isSHA256Hex0271(expected) {
-		return 0, errors.New("expected SHA-256 must be 64 hex characters")
+		return 0, errors.New("Ожидаемый SHA-256 должен состоять из 64 шестнадцатеричных символов")
 	}
 	st, err := os.Lstat(path)
 	if err != nil {
 		return 0, err
 	}
 	if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
-		return 0, fmt.Errorf("not a regular file: %s", path)
+		return 0, fmt.Errorf("Не является обычным файлом: %s", path)
 	}
 	hash, size, err := hashFile(path)
 	if err != nil {
@@ -94,13 +94,13 @@ func mirrorCheckedHash0274(path, expected string) (int64, error) {
 
 func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact0274) (int64, error) {
 	if !isSHA256Hex0271(a.SHA256) {
-		return 0, errors.New("SHA-256 required for every artifact")
+		return 0, errors.New("Для каждого артефакта необходим SHA-256")
 	}
 	if (a.URL == "") == (a.File == "") {
-		return 0, errors.New("exactly one of url or file required")
+		return 0, errors.New("Необходимо указать ровно одно поле: url или file")
 	}
 	if _, err := os.Lstat(dst); err == nil {
-		return 0, fmt.Errorf("refusing overwrite: %s", dst)
+		return 0, fmt.Errorf("Перезапись отклонена: %s", dst)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return 0, err
 	}
@@ -123,7 +123,7 @@ func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact027
 		}
 		if !st.Mode().IsRegular() {
 			tmp.Close()
-			return 0, errors.New("source-file must be a regular file")
+			return 0, errors.New("source-file должен указывать на обычный файл")
 		}
 		reader, err = os.Open(a.File)
 	} else {
@@ -151,7 +151,7 @@ func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact027
 		if response.ContentLength > limit {
 			response.Body.Close()
 			tmp.Close()
-			return 0, errors.New("artifact too large")
+			return 0, errors.New("Артефакт слишком большой")
 		}
 		reader = response.Body
 	}
@@ -177,10 +177,10 @@ func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact027
 		return 0, fileCloseErr
 	}
 	if size > limit {
-		return 0, errors.New("artifact too large")
+		return 0, errors.New("Артефакт слишком большой")
 	}
 	if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)), a.SHA256) {
-		return 0, errors.New("downloaded artifact SHA-256 mismatch")
+		return 0, errors.New("SHA-256 загруженного артефакта не совпадает")
 	}
 	if err := os.Rename(tmpName, dst); err != nil {
 		return 0, err
@@ -190,7 +190,7 @@ func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact027
 
 func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorArtifact0274, kind string) ([]mirrorAction0274, error) {
 	if len(entries) == 0 {
-		return nil, errors.New("empty artifact list")
+		return nil, errors.New("Список артефактов пуст")
 	}
 	seen := map[string]bool{}
 	actions := make([]mirrorAction0274, 0, len(entries))
@@ -199,17 +199,17 @@ func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorA
 			return nil, err
 		}
 		if kind == "install-mods" && (!strings.HasPrefix(a.Path, "mods/") || !strings.HasSuffix(strings.ToLower(a.Path), ".jar")) {
-			return nil, fmt.Errorf("mods must have mods/*.jar path: %s", a.Path)
+			return nil, fmt.Errorf("Моды должны располагаться по пути mods/*.jar: %s", a.Path)
 		}
 		if (kind == "lwjgl-download" || kind == "library-install") && (!strings.HasPrefix(a.Path, "libraries/") || !strings.HasSuffix(strings.ToLower(a.Path), ".jar")) {
-			return nil, errors.New("LWJGL artifact must be libraries/*.jar")
+			return nil, errors.New("Артефакт LWJGL должен располагаться по пути libraries/*.jar")
 		}
 		if a.Side != "" && a.Side != "client" && a.Side != "both" {
-			return nil, fmt.Errorf("unsupported side %q (server-only mod cannot be installed in client)", a.Side)
+			return nil, fmt.Errorf("Неподдерживаемая сторона %q (серверный мод нельзя устанавливать в клиент)", a.Side)
 		}
 		portablePath := strings.ToLower(a.Path)
 		if seen[portablePath] {
-			return nil, fmt.Errorf("case-insensitive artifact path collision: %s", a.Path)
+			return nil, fmt.Errorf("Конфликт путей артефактов без учёта регистра: %s", a.Path)
 		}
 		seen[portablePath] = true
 		dst, err := secureClientDestination(stage, a.Path)
@@ -219,7 +219,7 @@ func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorA
 		if _, statErr := os.Lstat(dst); statErr == nil {
 			// Повторная установка идентичного неизменяемого содержимого ничего не делает.
 			if _, err := mirrorCheckedHash0274(dst, a.SHA256); err != nil {
-				return nil, fmt.Errorf("existing artifact conflicts with requested bytes: %s: %w", a.Path, err)
+				return nil, fmt.Errorf("Существующий артефакт конфликтует с запрошенным содержимым: %s: %w", a.Path, err)
 			}
 			continue
 		} else if !errors.Is(statErr, os.ErrNotExist) {
@@ -259,7 +259,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		// присвоения новой версии адаптера. Любой версионированный план с устаревшим отпечатком
 		// необходимо явно пересобрать перед изменением.
 		if err = requireCurrentFactoryAdapters02711(plan); err != nil {
-			return plan, fmt.Errorf("cannot modify client using obsolete adapter: %w", err)
+			return plan, fmt.Errorf("Нельзя изменить клиент через устаревший адаптер: %w", err)
 		}
 	}
 	stage, err := os.MkdirTemp(filepath.Dir(dst), ".mirror-stage-")
@@ -286,7 +286,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 			return plan, err
 		}
 		if ledger.SchemaVersion != "launcher.mirror-actions.v1" {
-			return plan, errors.New("unknown mirror actions schema")
+			return plan, errors.New("Неизвестная схема действий зеркала")
 		}
 	} else if !errors.Is(e, os.ErrNotExist) {
 		return plan, e
@@ -349,7 +349,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		}
 		for _, earlier := range plan.Sources {
 			if earlier.Path == change.Path {
-				return plan, fmt.Errorf("artifact source already recorded: %s", change.Path)
+				return plan, fmt.Errorf("Источник артефакта уже зарегистрирован: %s", change.Path)
 			}
 		}
 		plan.Sources = append(plan.Sources, factorySource0271{
@@ -361,7 +361,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 	if full := filepath.Join(stage, filepath.FromSlash(authlibProvenancePath0279)); true {
 		if st, statErr := os.Lstat(full); statErr == nil {
 			if !st.Mode().IsRegular() {
-				return plan, errors.New("authlib provenance is not a regular file")
+				return plan, errors.New("Файл происхождения authlib не является обычным файлом")
 			}
 			sum, size, e := hashFile(full)
 			if e != nil {
@@ -414,7 +414,7 @@ func mirrorReadMods0274(manifest string) ([]mirrorArtifact0274, error) {
 		return nil, err
 	}
 	if len(raw) > 4<<20 {
-		return nil, errors.New("manifest exceeds 4 MiB")
+		return nil, errors.New("Размер манифеста превышает 4 МиБ")
 	}
 	var entries []mirrorArtifact0274
 	decoder := json.NewDecoder(bytes.NewReader(raw))
@@ -423,10 +423,10 @@ func mirrorReadMods0274(manifest string) ([]mirrorArtifact0274, error) {
 		return nil, err
 	}
 	if err = decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return nil, errors.New("extra data after artifact manifest")
+		return nil, errors.New("Лишние данные после манифеста артефактов")
 	}
 	if len(entries) > 2000 {
-		return nil, errors.New("too many mods")
+		return nil, errors.New("Слишком много модов")
 	}
 	return entries, nil
 }
@@ -437,7 +437,7 @@ func mirrorReadMods0274(manifest string) ([]mirrorArtifact0274, error) {
 // неявно в classpath каждой ОС.
 func mirrorRegisterLibrary0405(stage string, plan factoryPlan0271, coordinate, rel, source string) (mirrorAction0274, error) {
 	if len(strings.Split(coordinate, ":")) != 3 {
-		return mirrorAction0274{}, errors.New("native/classifier LWJGL jars cannot be registered without OS target rules")
+		return mirrorAction0274{}, errors.New("Нативные JAR LWJGL с классификаторами нельзя регистрировать без правил целевой ОС")
 	}
 	profile, err := secureClientDestination(stage, plan.Launch.ProfilePath)
 	if err != nil {
@@ -469,7 +469,7 @@ func mirrorRegisterLibrary0405(stage string, plan factoryPlan0271, coordinate, r
 			return mirrorAction0274{}, err
 		}
 		if lib.Name == coordinate {
-			return mirrorAction0274{}, fmt.Errorf("library already registered: %s", coordinate)
+			return mirrorAction0274{}, fmt.Errorf("Библиотека уже зарегистрирована: %s", coordinate)
 		}
 	}
 	full, err := secureClientDestination(stage, rel)
@@ -505,14 +505,14 @@ func mirrorRegisterLibrary0405(stage string, plan factoryPlan0271, coordinate, r
 
 func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA string) ([]mirrorAction0274, error) {
 	if !strings.HasPrefix(target, "libraries/com/mojang/authlib/") || !strings.HasSuffix(strings.ToLower(target), ".jar") {
-		return nil, errors.New("authlib patch target must be libraries/com/mojang/authlib/**/*.jar")
+		return nil, errors.New("Цель патча authlib должна соответствовать libraries/com/mojang/authlib/**/*.jar")
 	}
 	dst, err := secureClientDestination(stage, target)
 	if err != nil {
 		return nil, err
 	}
 	if _, err = mirrorCheckedHash0274(dst, baseSHA); err != nil {
-		return nil, fmt.Errorf("base authlib: %w", err)
+		return nil, fmt.Errorf("Базовая библиотека authlib: %w", err)
 	}
 	if _, err = mirrorCheckedHash0274(patch, patchSHA); err != nil {
 		return nil, fmt.Errorf("patch: %w", err)
@@ -532,27 +532,27 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	defer overlay.Close()
 	patches := map[string]*zip.File{}
 	if len(overlay.File) > 256 || len(base.File) > 4096 {
-		return nil, errors.New("authlib archive contains excessive entries")
+		return nil, errors.New("Архив authlib содержит слишком много элементов")
 	}
 	var patchBytes uint64
 	for _, f := range overlay.File {
 		patchBytes += f.UncompressedSize64
 		if patchBytes > 64<<20 {
-			return nil, errors.New("authlib patch exceeds 64 MiB")
+			return nil, errors.New("Размер патча authlib превышает 64 МиБ")
 		}
 		if err = validateVanillaRelativePath(f.Name); err != nil {
 			return nil, err
 		}
 		if !strings.HasPrefix(f.Name, "com/mojang/authlib/") || !strings.HasSuffix(f.Name, ".class") || f.UncompressedSize64 > 8<<20 || !f.Mode().IsRegular() {
-			return nil, fmt.Errorf("unauthorized authlib patch entry %q", f.Name)
+			return nil, fmt.Errorf("Неразрешённый элемент патча authlib %q", f.Name)
 		}
 		if _, ok := patches[f.Name]; ok {
-			return nil, errors.New("duplicate patch entry")
+			return nil, errors.New("Повторяющийся элемент патча")
 		}
 		patches[f.Name] = f
 	}
 	if len(patches) == 0 {
-		return nil, errors.New("patch contains no authlib classes")
+		return nil, errors.New("Патч не содержит классов authlib")
 	}
 	// Отклоняйте подписанные архивы до открытия записываемого вывода. Изменённый
 	// класс делает встроенные данные подписи недействительными; молчаливая
@@ -563,7 +563,7 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 		}
 		upper := strings.ToUpper(f.Name)
 		if strings.HasPrefix(upper, "META-INF/") && (strings.HasSuffix(upper, ".SF") || strings.HasSuffix(upper, ".RSA") || strings.HasSuffix(upper, ".DSA") || strings.HasSuffix(upper, ".EC")) {
-			return nil, errors.New("signed authlib archive cannot be transformed by class overlay")
+			return nil, errors.New("Подписанный архив authlib нельзя изменять наложением классов")
 		}
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(dst), ".authlib-patched-*")
@@ -577,13 +577,13 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	writeEntry := func(name string, entry *zip.File) error {
 		expanded += entry.UncompressedSize64
 		if expanded > 256<<20 {
-			return errors.New("expanded authlib exceeds 256 MiB")
+			return errors.New("Распакованный authlib превышает 256 МиБ")
 		}
 		if err := validateVanillaRelativePath(name); err != nil {
 			return err
 		}
 		if entry.UncompressedSize64 > 128<<20 {
-			return errors.New("oversized authlib entry")
+			return errors.New("Элемент authlib слишком большой")
 		}
 		h := &zip.FileHeader{Name: name, Method: zip.Deflate}
 		h.SetMode(0644)
@@ -601,7 +601,7 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 			return err
 		}
 		if n > 128<<20 {
-			return errors.New("authlib entry exceeded limit")
+			return errors.New("Элемент authlib превысил допустимый предел")
 		}
 		return nil
 	}
@@ -612,7 +612,7 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 		if seen[f.Name] {
 			writer.Close()
 			tmp.Close()
-			return nil, errors.New("duplicate base archive entry")
+			return nil, errors.New("Повторяющийся элемент базового архива")
 		}
 		seen[f.Name] = true
 		if patchEntry, ok := patches[f.Name]; ok {
@@ -708,7 +708,7 @@ func mirrorDedupeLibraries0274(stage string) ([]mirrorAction0274, error) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return fmt.Errorf("nonregular library: %s", path)
+			return fmt.Errorf("Библиотека не является обычным файлом: %s", path)
 		}
 		if !strings.HasSuffix(strings.ToLower(path), ".jar") {
 			return nil
@@ -735,7 +735,7 @@ func mirrorDedupeLibraries0274(stage string) ([]mirrorAction0274, error) {
 		}
 		temp := path + ".mirror-link"
 		if err = os.Link(first, temp); err != nil {
-			return fmt.Errorf("dedup hardlink unavailable for %s: %w", path, err)
+			return fmt.Errorf("Жёсткая ссылка для дедупликации %s недоступна: %w", path, err)
 		}
 		if err = replaceFileAtomicPortable(temp, path); err != nil {
 			os.Remove(temp)
@@ -758,7 +758,7 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 		return ws, err
 	}
 	if len(raw) > 4<<20 {
-		return ws, errors.New("workspace too large")
+		return ws, errors.New("Рабочая область слишком большая")
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -766,21 +766,21 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 		return ws, err
 	}
 	if err = dec.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return ws, errors.New("extra data after workspace JSON")
+		return ws, errors.New("Лишние данные после JSON рабочей области")
 	}
 	if ws.SchemaVersion != "launcher.mirror-workspace.v1" {
-		return ws, errors.New("unsupported workspace schema")
+		return ws, errors.New("Неподдерживаемая схема рабочей области")
 	}
 	switch ws.Loader {
 	case "vanilla", "fabric", "quilt", "forge", "neoforge":
 	default:
-		return ws, errors.New("unknown workspace loader")
+		return ws, errors.New("Неизвестный загрузчик рабочей области")
 	}
 	if strings.TrimSpace(ws.Minecraft) == "" {
-		return ws, errors.New("workspace.minecraft required")
+		return ws, errors.New("Необходимо указать workspace.minecraft")
 	}
 	if len(ws.Mods) > 2000 || len(ws.Libraries) > 128 || len(ws.AuthlibPatches) > 16 {
-		return ws, errors.New("workspace exceeds artifact limits")
+		return ws, errors.New("Рабочая область превышает ограничения на артефакты")
 	}
 	for i := range ws.Mods {
 		if ws.Mods[i].File != "" && !filepath.IsAbs(ws.Mods[i].File) {
@@ -791,13 +791,13 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 		lib := &ws.Libraries[i]
 		mavenPath, err := strictMavenPath(lib.Coordinate)
 		if err != nil {
-			return ws, fmt.Errorf("workspace library %q: %w", lib.Coordinate, err)
+			return ws, fmt.Errorf("Библиотека рабочей области %q: %w", lib.Coordinate, err)
 		}
 		if !strings.HasSuffix(strings.ToLower(mavenPath), ".jar") || strings.Count(lib.Coordinate, ":") != 2 {
-			return ws, fmt.Errorf("workspace library must be a non-classifier JAR: %s", lib.Coordinate)
+			return ws, fmt.Errorf("Библиотека рабочей области должна быть JAR без классификатора: %s", lib.Coordinate)
 		}
 		if !isSHA256Hex0271(lib.SHA256) || (lib.URL == "") == (lib.File == "") {
-			return ws, fmt.Errorf("workspace library %s requires SHA-256 and exactly one source", lib.Coordinate)
+			return ws, fmt.Errorf("Библиотеке рабочей области %s нужны SHA-256 и ровно один источник", lib.Coordinate)
 		}
 		if lib.File != "" && !filepath.IsAbs(lib.File) {
 			lib.File = filepath.Join(filepath.Dir(path), lib.File)
@@ -806,10 +806,10 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 	for i := range ws.AuthlibPatches {
 		entry := &ws.AuthlibPatches[i]
 		if !isSHA256Hex0271(entry.BaseSHA256) || !isSHA256Hex0271(entry.PatchSHA256) || !isSHA256Hex0271(entry.ExpectedSHA256) {
-			return ws, fmt.Errorf("authlib patch %d must pin base, overlay and output SHA-256", i)
+			return ws, fmt.Errorf("Патч authlib %d должен закреплять SHA-256 базы, наложения и результата", i)
 		}
 		if entry.Patch == "" {
-			return ws, fmt.Errorf("authlib patch %d has no source file", i)
+			return ws, fmt.Errorf("У патча authlib %d отсутствует исходный файл", i)
 		}
 		if !filepath.IsAbs(entry.Patch) {
 			entry.Patch = filepath.Join(filepath.Dir(path), entry.Patch)
@@ -831,7 +831,7 @@ func mirrorEnsureInstaller0427(ctx context.Context, dest string, artifact mirror
 	}
 	if st, err := os.Lstat(dest); err == nil {
 		if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
-			return errors.New("unsafe installer cache entry")
+			return errors.New("Небезопасный элемент кеша установщика")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -857,7 +857,7 @@ func mirrorEnsureInstaller0427(ctx context.Context, dest string, artifact mirror
 
 func handleRuntimeMirror0274(args []string) error {
 	if len(args) == 0 {
-		return errors.New("client-factory commands: build,verify,inspect,install-client,install-mods,download-installer,launch-installer,workspace,apply-workspace,dedup-libraries,lwjgl-download,patch-authlib,repair-installer")
+		return errors.New("Команды client-factory: build,verify,inspect,install-client,install-mods,download-installer,launch-installer,workspace,apply-workspace,dedup-libraries,lwjgl-download,patch-authlib,repair-installer")
 	}
 	command := strings.ToLower(args[0])
 	flags := args[1:]
@@ -872,14 +872,14 @@ func handleRuntimeMirror0274(args []string) error {
 	case "launch-installer", "launchinstaller":
 		loader := strings.ToLower(flagValue(flags, "--loader", ""))
 		if loader != "forge" && loader != "neoforge" {
-			return errors.New("launch-installer requires --loader forge|neoforge")
+			return errors.New("Для launch-installer необходим --loader forge|neoforge")
 		}
 		return handleRuntimeFactory0271(append([]string{"build"}, flags...))
 	case "install-mods", "installmods":
 		manifest := flagValue(flags, "--manifest", "")
 		versionID := flagValue(flags, "--modrinth-version", "")
 		if (manifest == "") == (versionID == "") {
-			return errors.New("provide exactly one of --manifest or --modrinth-version")
+			return errors.New("Укажите ровно один параметр: --manifest или --modrinth-version")
 		}
 		var mods []mirrorArtifact0274
 		var err error
@@ -908,7 +908,7 @@ func handleRuntimeMirror0274(args []string) error {
 	case "lwjgl-download", "lwjgldownload":
 		coord := flagValue(flags, "--coordinate", "")
 		if !strings.HasPrefix(coord, "org.lwjgl:") && !strings.HasPrefix(coord, "org.lwjgl.lwjgl:") {
-			return errors.New("--coordinate must refer to an org.lwjgl Maven artifact")
+			return errors.New("Параметр --coordinate должен ссылаться на Maven-артефакт org.lwjgl")
 		}
 		mavenPath, err := strictMavenPath(coord)
 		if err != nil {
@@ -916,7 +916,7 @@ func handleRuntimeMirror0274(args []string) error {
 		}
 		rel := "libraries/" + mavenPath
 		if explicit := flagValue(flags, "--path", ""); explicit != "" && explicit != rel {
-			return errors.New("--path does not match exact LWJGL Maven coordinate")
+			return errors.New("Параметр --path не соответствует точным координатам Maven для LWJGL")
 		}
 		uri := flagValue(flags, "--url", "")
 		if uri == "" {
@@ -984,7 +984,7 @@ func handleRuntimeMirror0274(args []string) error {
 		// Запрещайте неявные обновления существующего клиента. Новые рабочие пространства
 		// собираются в отдельном каталоге, затем проверяется каждый артефакт.
 		if _, err := os.Lstat(dir); err == nil {
-			return errors.New("workspace target exists: use new --client-dir to avoid changing existing releases")
+			return errors.New("Целевая рабочая область существует: используйте новый --client-dir, чтобы не менять существующие выпуски")
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
@@ -1038,7 +1038,7 @@ func handleRuntimeMirror0274(args []string) error {
 			}
 			_ = reader.Close()
 			if spec.Minecraft != ws.Minecraft || spec.Loader != ws.Loader || spec.LoaderVersion != ws.LoaderVersion {
-				return fmt.Errorf("modpack conflicts with workspace Minecraft/loader: pack=%s/%s/%s workspace=%s/%s/%s", spec.Minecraft, spec.Loader, spec.LoaderVersion, ws.Minecraft, ws.Loader, ws.LoaderVersion)
+				return fmt.Errorf("Модпак конфликтует с версией Minecraft или загрузчиком рабочей области: пакет=%s/%s/%s, рабочая область=%s/%s/%s", spec.Minecraft, spec.Loader, spec.LoaderVersion, ws.Minecraft, ws.Loader, ws.LoaderVersion)
 			}
 			_, err = importModpackWithGates0276(context.Background(), ws.Modpack, options.ClientDir,
 				flagValue(flags, "--manual-dir", ""), flagValue(flags, "--curseforge-api", ""),
@@ -1145,7 +1145,7 @@ func handleRuntimeMirror0274(args []string) error {
 		uri := flagValue(flags, "--url", "")
 		source := flagValue(flags, "--source-file", "")
 		if file == "" || !isSHA256Hex0271(sha) || (uri == "") == (source == "") {
-			return errors.New("repair-installer requires --cache-file, --sha256 and exactly one of --url or --source-file")
+			return errors.New("Для repair-installer нужны --cache-file, --sha256 и ровно один из параметров --url или --source-file")
 		}
 		lock, err := acquireFactoryLock0271(file)
 		if err != nil {
@@ -1159,15 +1159,15 @@ func handleRuntimeMirror0274(args []string) error {
 	case "download-installer", "downloadinstaller":
 		loader := strings.ToLower(flagValue(flags, "--loader", ""))
 		if loader != "forge" && loader != "neoforge" {
-			return errors.New("--loader forge|neoforge required")
+			return errors.New("Необходимо указать --loader forge|neoforge")
 		}
 		mc := flagValue(flags, "--minecraft", "")
 		if mc == "" {
-			return errors.New("--minecraft required")
+			return errors.New("Необходимо указать --minecraft")
 		}
 		cache := flagValue(flags, "--cache-dir", "")
 		if cache == "" {
-			return errors.New("--cache-dir required")
+			return errors.New("Необходимо указать --cache-dir")
 		}
 		resolved, artifact, _, err := resolveForgeLikeVersion(context.Background(), secureHTTPClient(), loader, mc, flagValue(flags, "--loader-version", "latest-stable"), flagValue(flags, "--maven-metadata-url", ""))
 		if err != nil {
@@ -1179,7 +1179,7 @@ func handleRuntimeMirror0274(args []string) error {
 		}
 		sha := strings.ToLower(flagValue(flags, "--sha256", ""))
 		if !isSHA256Hex0271(sha) {
-			return errors.New("download-installer requires pinned --sha256; mutable checksum sidecars are not trusted")
+			return errors.New("Для download-installer нужен закреплённый --sha256; изменяемым файлам контрольных сумм доверять нельзя")
 		}
 		destDir := filepath.Join(cache, loader, sanitizeVersionToken(artifact))
 		if err = os.MkdirAll(destDir, 0755); err != nil {
@@ -1205,6 +1205,6 @@ func handleRuntimeMirror0274(args []string) error {
 		}
 		return writeOrPrintJSON(output, map[string]any{"loader": loader, "minecraft": mc, "loaderVersion": resolved, "artifactVersion": artifact, "path": dest, "sha256": sha, "source": uri, "status": "verified"})
 	default:
-		return fmt.Errorf("unknown client-factory command %q", command)
+		return fmt.Errorf("Неизвестная команда client-factory %q", command)
 	}
 }
