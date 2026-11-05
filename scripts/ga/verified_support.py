@@ -21,11 +21,11 @@ SCHEMA = 'launcher.ga.verified-support.0440.v1'
 # Известные ограничения — свойства модели безопасности продукта, а не необоснованное
 # заявление о сертификации каждого аппаратно защищённого устройства.
 BOUNDS = (
-    'Device Trust and HWID are policy inputs; an HWID value is not hardware attestation.',
-    'Native extension sandbox is verified per actual OS/architecture and policy; macOS single-process helper does not provide Windows Job or Linux cgroup subtree guarantees.',
+    'Device Trust и HWID являются входными данными политики; значение HWID не является аппаратной аттестацией.',
+    'Песочница нативных расширений проверяется для конкретных ОС, архитектуры и политики; однопроцессный помощник macOS не обеспечивает гарантии Windows Job или Linux cgroup subtree.',
     'TPM2 Certify/Quote is applicable only where supported physical TPM2 hardware and a verified platform implementation are available; this report does not claim universal hardware attestation.',
-    'Client-side NeverGuard cannot guarantee resistance to an administrator who controls the host; server-side admission and revocation remain independent.',
-    'Game compatibility is limited to the separately certified Minecraft/loader/OS combinations and component selections; it is not universal support for every modpack.',
+    'NeverGuard на стороне клиента не гарантирует защиту от администратора, контролирующего компьютер; серверный допуск и отзыв остаются независимыми.',
+    'Совместимость игры ограничена отдельно сертифицированными сочетаниями Minecraft, загрузчика, ОС и компонентов; это не универсальная поддержка всех модпаков.',
 )
 
 

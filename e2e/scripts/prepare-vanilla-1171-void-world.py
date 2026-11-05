@@ -44,7 +44,7 @@ class Reader:
 
     def payload(self, tag: int, depth: int = 0):
         if depth > MAX_DEPTH:
-            raise NBTError('NBT nesting too deep')
+            raise NBTError('Слишком большая глубина вложенности NBT')
         if tag in (1, 2, 3, 4, 5, 6):
             return self.number({1: 'b', 2: 'h', 3: 'i', 4: 'q', 5: 'f', 6: 'd'}[tag])
         if tag in (7, 11, 12):
@@ -67,7 +67,7 @@ class Reader:
                     return result
                 name = self.name()
                 if name in result:
-                    raise NBTError('duplicate NBT compound field')
+                    raise NBTError('Повторяющееся поле составного тега NBT')
                 result[name] = (child_tag, self.payload(child_tag, depth + 1))
         raise NBTError(f'Неизвестный тег NBT {tag}')
 
@@ -75,13 +75,13 @@ class Reader:
 def encode_name(s: str) -> bytes:
     raw = s.encode('utf-8')
     if len(raw) > 65535:
-        raise NBTError('NBT string too long')
+        raise NBTError('Строка NBT слишком длинная')
     return struct.pack('>H', len(raw)) + raw
 
 
 def encode_payload(tag: int, val, depth: int = 0) -> bytes:
     if depth > MAX_DEPTH:
-        raise NBTError('NBT nesting too deep')
+        raise NBTError('Слишком большая глубина вложенности NBT')
     if tag in (1, 2, 3, 4, 5, 6):
         return struct.pack('>' + {1: 'b', 2: 'h', 3: 'i', 4: 'q', 5: 'f', 6: 'd'}[tag], val)
     if tag in (7, 11, 12):
@@ -112,7 +112,7 @@ def prepare(data: bytes) -> bytes:
     root_name = parser.name()
     root = parser.payload(tag)
     if parser.pos != len(data):
-        raise NBTError('trailing data in level.dat')
+        raise NBTError('Лишние данные в конце level.dat')
     world = compound(root, 'Data')
     worldgen = compound(world, 'WorldGenSettings')
     dims = compound(worldgen, 'dimensions')
@@ -141,7 +141,7 @@ def main() -> int:
     raw = path.read_bytes()
     uncompressed = gzip.decompress(raw)
     if len(uncompressed) > MAX_NBT_BYTES:
-        raise SystemExit('oversized level.dat')
+        raise SystemExit('Превышен допустимый размер level.dat')
     changed = prepare(uncompressed)
     if changed == uncompressed:
         raise SystemExit('Генератор мира в level.dat не изменился')
@@ -151,7 +151,7 @@ def main() -> int:
     parsed.name()
     parsed.payload(10)
     if parsed.pos != len(changed):
-        raise NBTError('serialized level.dat contains extra bytes')
+        raise NBTError('Сериализованный level.dat содержит лишние байты')
     fd, tmp = tempfile.mkstemp(prefix='.level-dat-', dir=path.parent)
     try:
         with os.fdopen(fd, 'wb') as out:

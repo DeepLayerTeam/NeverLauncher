@@ -399,7 +399,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     )
     if errors:
         print(
-            "Windows adversarial result FAILED validation: " + "; ".join(errors),
+            "Проверка результатов атакующих тестов Windows не пройдена: " + "; ".join(errors),
             file=sys.stderr,
         )
         return 1

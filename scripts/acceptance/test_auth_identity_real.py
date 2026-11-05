@@ -125,7 +125,7 @@ class AuthAcceptanceTests(unittest.TestCase):
                                 'provider':'wrong-provider',
                                 'tokens':{'accessToken':'x'*40, 'refreshToken':'y'*40}}}
         data=example_input()['local']
-        with self.assertRaisesRegex(auth.Blocked,'provider routing'):
+        with self.assertRaisesRegex(auth.Blocked,'Маршрутизация провайдера'):
             auth.auth_login(BadAPI(),data,'local')
 
     def test_negative_cli_rejects_missing_private_accounts_no_pass(self):

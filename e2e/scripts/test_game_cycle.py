@@ -44,21 +44,21 @@ class PackageInputs(unittest.TestCase):
         expected = game.file_manifest({"manifest": {"files": self.entries}}, self.root)
         self.assertEqual(len(expected), 11)
         (self.root / "libraries/test4.jar").write_bytes(b"changed")
-        with self.assertRaisesRegex(RuntimeError, "bytes mismatch"):
+        with self.assertRaisesRegex(RuntimeError, "Несовпадение содержимого пакета"):
             game.file_manifest({"manifest": {"files": self.entries}}, self.root)
 
     def test_symlink_and_path_traversal_fail_closed(self):
         self.entries[0]["path"] = "../secret"
-        with self.assertRaisesRegex(RuntimeError, "unsafe"):
+        with self.assertRaisesRegex(RuntimeError, "(?:Небезопасный путь|небезопасен)"):
             game.file_manifest({"manifest": {"files": self.entries}}, self.root)
         self.entries[0]["path"] = "libraries/link.jar"
         (self.root / "libraries/link.jar").symlink_to("test0.jar")
-        with self.assertRaisesRegex(RuntimeError, "unsafe"):
+        with self.assertRaisesRegex(RuntimeError, "(?:Небезопасный путь|небезопасен)"):
             game.file_manifest({"manifest": {"files": self.entries}}, self.root)
 
     def test_duplicate_manifest_file_fails(self):
         self.entries[1] = dict(self.entries[0])
-        with self.assertRaisesRegex(RuntimeError, "duplicate"):
+        with self.assertRaisesRegex(RuntimeError, "Повторяющийся файл пакета"):
             game.file_manifest({"manifest": {"files": self.entries}}, self.root)
 
     def test_different_git_sha_fails(self):

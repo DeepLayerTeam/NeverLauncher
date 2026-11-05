@@ -31,7 +31,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
         and not receipt_path.is_symlink()
         and receipt_path.is_file()
         and receipt_path.stat().st_size <= 32 * 1024,
-        "invalid GA receipt/bundle path",
+        "Некорректный путь квитанции GA или комплекта",
     )
     receipt = strict_json(receipt_path.read_bytes())
     require(
@@ -43,7 +43,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
     refs = receipt.get("targets")
     require(
         type(refs) is list and len(refs) == len(PACKAGES),
-        "expected six certified package digests",
+        "Ожидаются хеши шести сертифицированных пакетов",
     )
     checked = set()
     digests = {}
@@ -59,14 +59,14 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
         digest = reference.get("signedArtifactSha256")
         require(
             isinstance(digest, str) and SHA256.fullmatch(digest) is not None,
-            "missing approved installer digest",
+            "Отсутствует утверждённый хеш установщика",
         )
         artifact = bundle / PACKAGES[target]
         require(
             not artifact.is_symlink()
             and artifact.is_file()
             and artifact.stat().st_size > 0,
-            f"signed deliverable missing: {target}",
+            f"Отсутствует подписанный поставляемый артефакт: {target}",
         )
         h = hashlib.sha256()
         with artifact.open("rb") as handle:

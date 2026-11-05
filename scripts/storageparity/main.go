@@ -371,7 +371,7 @@ func main() {
 			fatal(err)
 		}
 		if !bytes.Equal(current, b) {
-			fatal(errors.New("storage dependency inventory drift: re-run go run ./scripts/storageparity -root .; review updated dependency map and parity coverage before merging"))
+			fatal(errors.New("Состав зависимостей хранилища изменился: повторно выполните go run ./scripts/storageparity -root .; проверьте новую карту зависимостей и охват тестов совместимости перед объединением"))
 		}
 		fmt.Printf("Инвентаризация хранилища проверена: файлов PostgreSQL — %d; методов HTTP — %d; пересечений имён SQLite — %d (НЕ подтверждает семантическую совместимость)\n", len(report.Dependencies), len(report.MethodSurface.Interface), len(report.MethodSurface.SameNames))
 		return

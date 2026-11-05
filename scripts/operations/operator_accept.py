@@ -175,9 +175,9 @@ def probe_compose(project, env, mode):
     checked = {}
     for name in CHECKS[mode]:
         entry = states.get(name)
-        require(entry is not None and entry['state'] == 'running', name + ' is not running')
+        require(entry is not None and entry['state'] == 'running', name + ' не запущен')
         require(entry['health'] == 'healthy' if name != 'nginx' else entry['health'] in ('', 'healthy'),
-                name + ' is not healthy')
+                name + ' не прошёл проверку работоспособности')
         checked[name] = entry['health'] or 'running (no healthcheck)'
     if mode == 'network-ha':
         # Проверяйте готовность настоящего backend и отдельного рабочего процесса
@@ -190,8 +190,8 @@ def probe_compose(project, env, mode):
             except (UnicodeError, ValueError) as exc:
                 raise AcceptanceError(name + ' вернул некорректный JSON состояния готовности') from exc
             require(internal.get('status') == 'ready' and internal.get('repository') == 'postgres',
-                    name + ' is not ready against PostgreSQL')
-            require(internal.get('storage') == 's3', name + ' does not use shared S3')
+                    name + ' не готов к работе с PostgreSQL')
+            require(internal.get('storage') == 's3', name + ' не использует общее хранилище S3')
             checked[name] = 'Готово (внутренние зависимости проверены)'
     return checked
 
@@ -212,7 +212,7 @@ def probe_minimal(root):
         try:
             require(connection.execute('PRAGMA integrity_check').fetchone() == ('ok',), name + ' corrupt')
             require(connection.execute('PRAGMA foreign_key_check').fetchone() is None,
-                    name + ' foreign-key violations')
+                    name + ' Нарушения внешних ключей')
         except sqlite3.Error as exc:
             raise AcceptanceError(name + ' не удалось прочитать') from exc
         finally:
@@ -229,7 +229,7 @@ def verify_docs():
     count = 0
     for name in DOC_FILES:
         path = DOCS / name
-        require(path.is_file(), 'missing documentation: ' + name)
+        require(path.is_file(), 'Отсутствует документация: ' + name)
         content = path.read_text(encoding='utf-8')
         require(len(content) > 180, 'Пустой документ оператора: ' + name)
         count += 1
@@ -240,7 +240,7 @@ def verify_docs():
             target = dest.split('#', 1)[0]
             if not target or target.startswith(('https://', 'http://', 'mailto:')):
                 continue
-            require((path.parent / target).exists(), name + ': missing linked file ' + target)
+            require((path.parent / target).exists(), name + ': отсутствует связанный файл ' + target)
             count += 1
     # Проверяйте реальное существование каждой точки входа, упомянутой в
     # эксплуатационных руководствах.

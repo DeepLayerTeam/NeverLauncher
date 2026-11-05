@@ -93,20 +93,20 @@ def ci_identity(run_id=None, run_attempt=None) -> tuple[str, int]:
 
 def load_json(path: Path, limit: int = 1024 * 1024) -> dict:
     if (path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size <= limit):
-        blocked("missing, symlinked or invalid evidence: " + str(path))
+        blocked("Отсутствующее, символьное или некорректное свидетельство: " + str(path))
 
     def unique_pairs(pairs):
         doc = {}
         for key, value in pairs:
             if key in doc:
-                blocked("duplicate evidence key: " + key)
+                blocked("Повторяющийся ключ свидетельства: " + key)
             doc[key] = value
         return doc
 
     try:
         value = json.loads(path.read_bytes(), object_pairs_hook=unique_pairs)
     except (ValueError, UnicodeDecodeError) as exc:
-        blocked("malformed JSON evidence: " + str(exc))
+        blocked("Некорректный JSON свидетельства: " + str(exc))
     if not isinstance(value, dict):
         blocked("Требуется объект свидетельства")
     return value
@@ -143,7 +143,7 @@ def verify_trace(
 ) -> None:
     scenarios = scenarios_for_version(version)
     if check not in scenarios:
-        blocked("unknown security capability: " + check)
+        blocked("Неизвестная возможность защиты: " + check)
     rid, attempt = ci_identity(run_id, run_attempt)
     try:
         osname, arch = target.split("-", 1)
@@ -181,7 +181,7 @@ def verify_trace(
     current_time = now or datetime.now(timezone.utc)
     # Независимое одобрение оператора должно выдаваться ПОСЛЕ наблюдавшегося исполнения.
     if not observation_time <= issued_at <= current_time <= expires_at or current_time - observation_time > timedelta(hours=24):
-        blocked(target + ": stale, future or out-of-approval observation: " + check)
+        blocked(target + ": устаревшее, датированное будущим или не согласованное наблюдение: " + check)
     positive, negative = scenarios[check]
     expected_scenarios = {positive: "allowed", negative: "denied"}
     if trace["scenarios"] != expected_scenarios:
@@ -189,32 +189,32 @@ def verify_trace(
 
     log_dir = evidence / "targets" / target / "security-0431"
     if log_dir.is_symlink() or not log_dir.is_dir() or (log_dir / (check + ".jsonl")).is_symlink():
-        blocked(target + ": unsafe security log path: " + check)
+        blocked(target + ": небезопасный путь к журналу защиты: " + check)
     log = log_dir / (check + ".jsonl")
     if not log.is_file() or not 0 < log.stat().st_size <= MAX_LOG:
         blocked(target + ": Журнал нативного наблюдения отсутствует, пуст или слишком велик: " + check)
     import hashlib
     raw_log = log.read_bytes()
     if hashlib.sha256(raw_log).hexdigest() != trace["runtimeLogSha256"]:
-        blocked(target + ": altered security observation log: " + check)
+        blocked(target + ": журнал наблюдений защиты был изменён: " + check)
     lines = raw_log.splitlines()
     if len(lines) != len(expected_scenarios):
         blocked(target + ": Отсутствуют обязательные или присутствуют лишние нативные наблюдения: " + check)
     found = set()
     for line in lines:
         if not line:
-            blocked("blank native observation record")
+            blocked("Пустая запись нативного наблюдения")
         def pairs(entries):
             obj = {}
             for key, value in entries:
                 if key in obj:
-                    blocked("duplicate native observation key")
+                    blocked("Повторяющийся ключ нативного наблюдения")
                 obj[key] = value
             return obj
         try:
             event = json.loads(line, object_pairs_hook=pairs)
         except (ValueError, UnicodeDecodeError):
-            blocked("malformed native observation event")
+            blocked("Некорректное событие нативного наблюдения")
         if not isinstance(event, dict) or set(event) != {
             "schemaVersion", "executionId", "runId", "runAttempt", "target",
             "packageSha256", "scenario", "observedDecision", "observedAtUtc",
@@ -223,7 +223,7 @@ def verify_trace(
             blocked("Недопустимые поля нативного события: " + check)
         scenario = event["scenario"]
         if not isinstance(scenario, str) or scenario not in expected_scenarios or scenario in found:
-            blocked("duplicate or unrecognized security event: " + check)
+            blocked("Повторяющееся или неизвестное событие защиты: " + check)
         found.add(scenario)
         for field, value in {
             "schemaVersion": LOG_SCHEMA,
@@ -234,9 +234,9 @@ def verify_trace(
             "actualExecution": True, "simulated": False,
         }.items():
             if type(event[field]) is not type(value) or event[field] != value:
-                blocked(target + ": native observation disagrees: " + field + "/" + check)
+                blocked(target + ": противоречие с нативным наблюдением: " + field + "/" + check)
     if found != set(expected_scenarios):
-        blocked(target + ": incomplete positive/negative native scenario " + check)
+        blocked(target + ": неполный положительный или отрицательный нативный сценарий " + check)
 
 
 def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_attempt=None) -> None:
@@ -256,7 +256,7 @@ def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_att
         "darwin-x64", "darwin-arm64",
     }
     if any(not isinstance(row, dict) for row in targets) or {r.get("target") for r in targets} != expected_targets:
-        blocked("wrong, duplicate or incomplete platform evidence")
+        blocked("Неверное, повторяющееся или неполное свидетельство платформы")
     import hashlib
     mandatory = scenarios_for_version(approval["version"])
     for row in targets:
@@ -274,7 +274,7 @@ def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_att
             path = directory / (check + ".json")
             trace = load_json(path)
             if hashlib.sha256(path.read_bytes()).hexdigest() != info["sha256"]:
-                blocked(target + ": signed security capability report changed: " + check)
+                blocked(target + ": подписанный отчёт о возможностях защиты изменён: " + check)
             verify_trace(
                 evidence, trace, version=approval["version"], commit=approval["commit"],
                 target=target, check=check, binary_sha=row.get("binarySha256"),

@@ -59,7 +59,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
     now = now or datetime.now(timezone.utc)
     require(
         isinstance(package, dict) and package.get("packageId") == package_id,
-        "wrong package ID",
+        "Неверный идентификатор пакета",
     )
     require(package.get("version") == version, "Неверная версия выпуска")
     require(package.get("channel") == "stable", "Релиз не является стабильным")

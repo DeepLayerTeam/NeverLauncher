@@ -108,7 +108,7 @@ def file_bytes(
     raw = path.read_bytes()
     require(
         hashlib.sha256(raw).hexdigest() == expected_digest,
-        "evidence content digest mismatch",
+        "Хеш содержимого свидетельства не совпадает",
     )
     return raw
 
@@ -158,13 +158,13 @@ def check_provider(
         and report.get("provider") == "fixed_official_microsoft_xbox_minecraft_hosts"
         and report.get("os") == platform
         and report.get("architecture") == arch,
-        "wrong live provider POC",
+        "Неверное подтверждение работы реального провайдера",
     )
     require(
         report.get("result") == "online_session_verified"
         and report.get("minecraftServicesAccess") == "verified_live_profile"
         and report.get("onlineModeSession") == "verified_live_join_has_joined",
-        "provider/sessionserver live result not passed",
+        "Реальная проверка провайдера или сервера сессий не пройдена",
     )
     stages = report.get("stages")
     require(
@@ -213,7 +213,7 @@ def verify_target(
     raw = att.read_bytes()
     try:
         signature = bytes.fromhex(sig.read_text("ascii").strip())
-        require(len(signature) == 64, "invalid Ed25519 signature length")
+        require(len(signature) == 64, "Некорректная длина подписи Ed25519")
         key.verify(signature, DOMAIN + raw)
     except (ValueError, InvalidSignature) as e:
         raise GateError("Некорректное значение: «GA evidence attestation signature»") from e
@@ -255,7 +255,7 @@ def verify_target(
     objects = data.get("objects")
     require(
         type(objects) is dict and set(objects) == REPORTS,
-        "missing exact GA evidence set",
+        "Отсутствует точный набор свидетельств GA",
     )
     proofs = {}
     for label, reference in objects.items():
@@ -284,13 +284,13 @@ def verify_target(
             and proof["matchingEvents"] >= 1
             and proof.get("reviewedOriginalLogs") is True
             and proof.get("actualClientWorldEntry") is True,
-            "unverified real game world join",
+            "Реальное подключение к игровому миру не подтверждено",
         )
         require(
             proof.get("serverKind") == kind
             if kind
             else proof.get("serverKind") in {"fabric", "forge", "neoforge"},
-            "wrong vanilla/modded loader",
+            "Неверный загрузчик Vanilla или модифицированной игры",
         )
     vault = proofs["vault"]
     common_report(vault, target, commit, "0.27.0", now)
@@ -315,7 +315,7 @@ def verify_target(
                 "offline-isolation",
             )
         ),
-        "native OS vault/lifecycle not verified",
+        "Не подтверждены нативное хранилище секретов ОС и жизненный цикл",
     )
     signed = proofs["signature"]
     common_report(signed, target, commit, "0.27.0", now)
@@ -333,7 +333,7 @@ def verify_target(
             "darwin": "developer-id-notarized",
             "linux": "signed-release-manifest",
         }[platform],
-        "native production signature not verified",
+        "Нативная производственная подпись не подтверждена",
     )
     return {
         "target": target,

@@ -96,7 +96,7 @@ def main() -> int:
     try:
         result = validate(args.log, args.source_commit, args.version)
     except (ValueError, OSError, json.JSONDecodeError) as error:
-        parser.exit(2, f"{args.version} HOST FAULT CERTIFICATION BLOCKED: {error}\n")
+        parser.exit(2, f"{args.version} Сертификация отказов узла заблокирована: {error}\n")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     temp = args.out.with_suffix(".json.tmp")
     temp.write_text(json.dumps(result, indent=2) + "\n")

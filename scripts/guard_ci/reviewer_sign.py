@@ -29,7 +29,7 @@ def sign(root: Path, key_path: Path, reviewer: str, publisher: str, commit: str,
         require(key_path.stat().st_mode & 0o077 == 0, 'Закрытый ключ проверяющего должен иметь права 0600')
     require(not output.resolve().is_relative_to(root.resolve()) and
             not signature.resolve().is_relative_to(root.resolve()),
-            'approval and detached signature must be outside the evidence tree')
+            'Согласование и отдельная подпись должны находиться вне дерева свидетельств')
     private = load_pem_private_key(key_path.read_bytes(), password=None)
     require(isinstance(private, Ed25519PrivateKey), 'Требуется закрытый PEM-ключ Ed25519')
     doc = {'schema': SCHEMA, 'version': VERSION, 'commit': commit,

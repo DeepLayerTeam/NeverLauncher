@@ -107,7 +107,7 @@ def session_archive(target, destination: Path, args):
     require(inventory.verify_compatibility(
         target, (destination / 'compatibility-result/compatibility-result.json', copied),
         args.commit, args.run_id, args.attempt) == verified,
-        'copied Minecraft session evidence does not match original live run')
+        'Скопированное свидетельство сессии Minecraft не соответствует исходному реальному запуску')
     return verified
 
 def run_game_subprocess(log, env, timeout):
@@ -254,7 +254,7 @@ def http(args):
         span = time.monotonic()-started
         p95 = percentile(durations,.95)
         require(span >= args.min_seconds and len(durations) >= args.min_requests and
-                p95 <= args.max_p95_ms, 'load latency/volume/time objective not met')
+                p95 <= args.max_p95_ms, 'Не достигнуты целевые значения задержки, объёма или длительности нагрузки')
         report.update({'status': 'OBSERVED_NOT_GA', 'seconds': round(span,3),
                        'requests': len(durations), 'failed': failures, 'responseBytes': bytes_total,
                        'p50Ms': round(percentile(durations,.5),3), 'p95Ms': round(p95,3),

@@ -113,7 +113,7 @@ class LiveAPI:
     def request(self, method, route, *, data=None, token=None, expected=(200,)):
         require(route.startswith('/api/v1/') and not route.startswith('//') and
                 not any(c in route for c in ('\\', '#', '\r', '\n')),
-                'invalid API path')
+                'Некорректный путь API')
         body = json.dumps(data, separators=(',', ':')).encode() if data is not None else None
         headers = {'Accept': 'application/json', 'Cache-Control': 'no-store'}
         if body is not None: headers['Content-Type'] = 'application/json'
@@ -141,7 +141,7 @@ def user_digest(user_id):
 
 
 def safe_provider(raw):
-    require(isinstance(raw, str) and PROVIDER_ID.fullmatch(raw), 'invalid provider ID')
+    require(isinstance(raw, str) and PROVIDER_ID.fullmatch(raw), 'Некорректный идентификатор провайдера')
     return raw
 
 
@@ -176,7 +176,7 @@ def auth_login(api, entry, provider):
             'После входа отсутствует активная основная учётная запись Never')
     require(isinstance(tokens.get('accessToken'), str) and len(tokens['accessToken']) >= 32 and
             isinstance(tokens.get('refreshToken'), str) and len(tokens['refreshToken']) >= 32,
-            'login did not issue real Never access/refresh pair')
+            'При входе не выдана действительная пара токенов доступа и обновления Never')
     require(data.get('provider') == provider, 'Маршрутизация провайдера нарушила границу издателя и провайдера')
     return user, tokens
 
@@ -231,7 +231,7 @@ def prepare(api, raw, output):
     login = api.request('POST', '/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/begin', data={})['data']
     for item in (link, login):
         require(all(isinstance(item.get(k), str) and item[k] for k in ('authorizationUrl', 'transaction', 'state')),
-                'OIDC issuer did not return PKCE browser transaction')
+                'Провайдер OIDC не вернул браузерную транзакцию PKCE')
         require(item['authorizationUrl'].startswith('https://'), 'Адрес авторизации в браузере должен использовать HTTPS')
     require(link['state'] != login['state'], 'Разные процессы авторизации OIDC повторно использовали одно и то же значение state')
     private_write(output, {'version': VERSION, 'origin': api.origin, 'providerId': oidc['providerId'],
@@ -278,7 +278,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     require(sql_user['id'] == owner, 'Вход через SQL не вернул ту же явно привязанную основную учётную запись')
     identities = api.request('GET','/api/v1/auth/identities',token=sql_tokens['accessToken'])['data']['items']
     require(any(row.get('provider') == sql['providerId'] and row.get('subject') for row in identities),
-            'SQL provider proof did not persist a scoped linked identity')
+            'Проверка SQL-провайдера не сохранила связанную учётную запись в нужной области')
     record(report,'AUTH-SQL-LINK-AND-LOGIN', {'canonicalUserSha256':user_digest(owner)})
     link = proof['link']
     api.request('POST', oidc_link_route(oidc, 'complete'), token=local_tokens['accessToken'],
@@ -306,9 +306,9 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
                   data={'minecraftAccessToken':official['accessToken'],'expectedUuid':wrong_uuid,'confirm':True})
     linked = api.request('POST','/api/v1/minecraft/official/link',token=local_tokens['accessToken'],
             data={'minecraftAccessToken':official['accessToken'],'expectedUuid':game_uuid,'confirm':True})
-    require(game_uuid in json.dumps(linked).lower(), 'verified official UUID not present in link response')
+    require(game_uuid in json.dumps(linked).lower(), 'В ответе связывания отсутствует подтверждённый официальный UUID')
     list_a = api.request('GET','/api/v1/minecraft/official/link',token=local_tokens['accessToken'])
-    require(game_uuid in json.dumps(list_a).lower(), 'official identity link not durably readable')
+    require(game_uuid in json.dumps(list_a).lower(), 'Связь с официальной учётной записью не сохранена надёжно')
     list_b = api.request('GET','/api/v1/minecraft/official/link',token=secondary_tokens['accessToken'])
     require(game_uuid not in json.dumps(list_b).lower(), 'official UUID leaked into a different owner listing')
     record(report,'AUTH-OFFICIAL-UUID-OWNERSHIP')
@@ -321,7 +321,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     if user['roleId'] in ('owner', 'admin'):
         roles = api.request('GET','/api/v1/auth/roles',token=local_tokens['accessToken'])
         require(isinstance(roles.get('data',{}).get('items'), list) and roles['data']['items'],
-                'privileged canonical role could not list roles')
+                'Привилегированная основная роль не смогла получить список ролей')
     else:
         expect_denied(api,'GET','/api/v1/auth/roles',token=local_tokens['accessToken'],codes=(403,))
     if secondary_user.get('roleId') == 'player':
@@ -334,7 +334,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     record(report,'AUTH-OFFICIAL-UNLINK-PERSISTENCE')
     refresh = api.request('POST','/api/v1/auth/refresh',data={'refreshToken':local_tokens['refreshToken']})['data']['tokens']
     require(isinstance(refresh.get('refreshToken'),str) and refresh['refreshToken'] != local_tokens['refreshToken'],
-            'refresh did not rotate token')
+            'Обновление не привело к ротации токена')
     expect_denied(api,'POST','/api/v1/auth/refresh',data={'refreshToken':local_tokens['refreshToken']})
     expect_denied(api,'GET','/api/v1/auth/sessions',token=refresh['accessToken'])
     api.request('GET','/api/v1/auth/sessions',token=secondary_tokens['accessToken'])

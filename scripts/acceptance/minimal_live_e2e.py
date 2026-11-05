@@ -172,7 +172,7 @@ class RealAPI:
                         health = expect(self.port, "GET", "/health", 200)
                         require(
                             health.get("version") == self.expected_version,
-                            "running API has wrong product version",
+                            "Работающий API сообщает неверную версию продукта",
                         )
                         expected_commit = os.environ.get("GITHUB_SHA", "")
                         if expected_commit:
@@ -372,7 +372,7 @@ def run_acceptance(
         )
         require(
             stat.S_IMODE(envfile.stat().st_mode) == 0o600,
-            "bootstrap secrets not private",
+            "Секреты начальной настройки недостаточно защищены",
         )
         envvalues = dict(
             line.split("=", 1)
@@ -400,7 +400,7 @@ def run_acceptance(
             wizard = expect(port, "GET", "/api/v1/install/wizard", 200)
             require(
                 wizard.get("data", {}).get("profile") == "minimal-sqlite",
-                "wrong installer profile",
+                "Неверный профиль установщика",
             )
             before = expect(port, "GET", "/api/v1/install/readiness", 200)
             require(
@@ -425,7 +425,7 @@ def run_acceptance(
             )
             require(
                 created.get("data", {}).get("bootstrapTokenConsumed") is True,
-                "bootstrap not consumed",
+                "Начальная настройка не была погашена",
             )
             expect(
                 port,
@@ -445,7 +445,7 @@ def run_acceptance(
             tokens = login.get("data", {}).get("tokens", {})
             require(
                 tokens.get("accessToken") and tokens.get("refreshToken"),
-                "login did not issue tokens",
+                "Вход не выдал токены",
             )
             finished = expect(
                 port,
@@ -491,7 +491,7 @@ def run_acceptance(
                 timeout=30,
             )
             require(
-                p.returncode != 0, "online backup incorrectly accepted a running API"
+                p.returncode != 0, "Онлайн-резервирование ошибочно допустило работающий API"
             )
 
         step(report, "active_writer_fencing_backup", reject_online_backup)
@@ -523,7 +523,7 @@ def run_acceptance(
             require(
                 new.get("refreshToken")
                 and new["refreshToken"] != tokens["refreshToken"],
-                "refresh did not rotate",
+                "Ротация при обновлении не выполнена",
             )
             tokens.update(new)
             # Текущий токен доступа должен работать после перезапуска.
@@ -581,12 +581,12 @@ def run_acceptance(
             require(
                 (restored / "db/http.sqlite").is_file()
                 and (restored / "db/coordinator.sqlite").is_file(),
-                "restored SQLite files absent",
+                "Файлы SQLite отсутствуют после восстановления",
             )
             new_env = (restored / "config/backend.env").read_text()
             require(
                 str(restored / "db/http.sqlite") in new_env,
-                "restored DB path not relocated",
+                "Путь восстановленной БД не был перенесён",
             )
             restored_blob = restored / "storage" / "e2e" / "blobs" / "survives.dat"
             require(
@@ -652,11 +652,11 @@ def run_acceptance(
                 command(sys.executable, INSTALLER, "restore-portable", "--input", portable_path,
                         "--target-root", alternate, "--passphrase-file", portable_secret)
                 require((alternate / "storage/e2e/blobs/survives.dat").is_file(),
-                        "off-host blob not recovered")
+                        "Объект из внешнего хранилища не восстановлен")
                 require(hashlib.sha256((alternate / "storage/e2e/blobs/survives.dat").read_bytes()).hexdigest()
                         == expected_blob_hash, "off-host blob digest differs")
                 require(str(alternate / "db/http.sqlite") in (alternate / "config/backend.env").read_text(),
-                        "off-host paths were not relocated")
+                        "Пути внешнего хранилища не перенесены")
                 command(sys.executable, INSTALLER, "check", "--env-file", alternate / "config/backend.env",
                         "--binary", binary)
             step(report, "authenticated_offhost_transfer_and_deployment_check", offhost_export_and_restore)
@@ -666,7 +666,7 @@ def run_acceptance(
                 login = expect(port, "POST", "/api/v1/auth/login", 200,
                                {"email": email, "password": password})
                 require(login.get("data", {}).get("tokens", {}).get("accessToken"),
-                        "off-host password verifier not recovered")
+                        "Внешний проверочный секрет пароля не восстановлен")
                 expect(port, "POST", "/api/v1/install/bootstrap-admin", 403,
                        {"email": email, "password": password},
                        {"X-Launcher-Bootstrap-Token": token})

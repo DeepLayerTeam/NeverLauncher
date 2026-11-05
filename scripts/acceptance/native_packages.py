@@ -54,7 +54,7 @@ def require(ok, why):
 def unique(pairs):
     out = {}
     for k, v in pairs:
-        require(k not in out, 'duplicate JSON key: ' + k)
+        require(k not in out, 'Повторяющийся ключ JSON: ' + k)
         out[k] = v
     return out
 
@@ -62,7 +62,7 @@ def unique(pairs):
 def parse_json(raw):
     try:
         return json.loads(raw, object_pairs_hook=unique,
-                          parse_constant=lambda x: (_ for _ in ()).throw(Blocked('nonfinite JSON')))
+                          parse_constant=lambda x: (_ for _ in ()).throw(Blocked('Неконечное числовое значение JSON')))
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise Blocked('Недопустимый JSON') from exc
 
@@ -81,7 +81,7 @@ def file_hash(path):
 
 def regular(path, maximum):
     require(path.is_absolute() and not path.is_symlink() and path.is_file(), 'Файл отсутствует или небезопасен: ' + str(path))
-    require(not any(p.is_symlink() for p in path.parents), 'symlink ancestor in ' + str(path))
+    require(not any(p.is_symlink() for p in path.parents), 'Символьная ссылка в родительском пути ' + str(path))
     st = path.stat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= maximum,
             'Недопустимый размер или число ссылок: ' + str(path))
@@ -114,7 +114,7 @@ def valid_https(url):
 
 def read_index(data, expected_sha, version, commit, project):
     require(type(expected_sha) is str and SHA.fullmatch(expected_sha) and digest(data) == expected_sha,
-            'release source index does not match independently pinned SHA-256')
+            'Индекс исходников выпуска не соответствует независимо закреплённому SHA-256')
     require(len(data) <= MAX_INDEX, 'Индекс исходных файлов превышает лимит')
     doc = parse_json(data)
     require(type(doc) is dict and set(doc) == {'schema', 'version', 'commit', 'project', 'assets'},
@@ -139,13 +139,13 @@ def read_index(data, expected_sha, version, commit, project):
         if target[0] == 'linux':
             require(set(item) == {'platform', 'architecture', 'filename', 'url', 'sha256', 'size',
                                   'signatureUrl', 'signatureSha256', 'signatureSize'},
-                    'Linux package requires detached GPG signature')
+                    'Для пакета Linux необходима отдельная подпись GPG')
             require(SHA.fullmatch(item['signatureSha256']) and
                     type(item['signatureSize']) is int and 100 <= item['signatureSize'] <= 8192,
                     'Недопустимая контрольная сумма или размер подписи Linux')
             urls.append(item['signatureUrl'])
         else:
-            require('signatureUrl' not in item, 'Windows and macOS use embedded platform signatures')
+            require('signatureUrl' not in item, 'Windows и macOS используют встроенные платформенные подписи')
         for url in urls:
             valid_https(url)
             require(url not in seen_urls, 'Повторно использован URL пакета или источника')
@@ -266,7 +266,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         require(a.linux_keyring is not None, 'Требуется независимо закреплённый путь к хранилищу ключей Linux')
         keyring = regular(a.linux_keyring.absolute(), 4 * 1024 * 1024)
         require(SHA.fullmatch(a.linux_keyring_sha256 or '') and
-                file_hash(keyring) == a.linux_keyring_sha256, 'untrusted Linux GPG keyring')
+                file_hash(keyring) == a.linux_keyring_sha256, 'Недоверенное хранилище ключей GPG для Linux')
         fingerprint = (a.linux_fingerprint or '').upper()
         require(re.fullmatch('[0-9A-F]{40}', fingerprint) is not None, 'Требуется закреплённый отпечаток GPG Linux')
         sig = work / (asset['filename'] + '.asc')
@@ -275,16 +275,16 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         cmd('native-signature', ['gpgv', '--keyring', str(keyring), '--status-fd', '1', str(sig), str(package)])
         status = (work / 'native-signature.log').read_text(errors='replace')
         require(re.search(r'^\[GNUPG:\] VALIDSIG ' + re.escape(fingerprint) + r'\b', status, re.M),
-                'Linux signature not made by pinned GPG fingerprint')
+                'Подпись Linux создана не ключом с закреплённым отпечатком GPG')
         cmd('package-metadata', ['dpkg-deb', '--field', str(package)])
         meta = (work / 'package-metadata.log').read_text(errors='replace')
         require(re.search(r'^Package: launcher-' + re.escape(a.project) + r'$', meta, re.M) and
                 re.search(r'^Version: ' + re.escape(a.version) + r'$', meta, re.M) and
                 re.search(r'^Architecture: ' + ('amd64' if arch == 'x64' else 'arm64') + r'$', meta, re.M),
-                'Linux .deb package metadata mismatches pinned project/version/architecture')
+                'Метаданные .deb не соответствуют закреплённым проекту, версии или архитектуре')
         # Выполняйте системный пакетный менеджер на одноразовом runner, а не на извлечённых поддельных данных.
         require(a.disposable_runner and os.environ.get('GITHUB_ACTIONS') == 'true',
-                'system package install allowed ONLY on ephemeral GitHub native runner')
+                'Установка системного пакета разрешена только на временном нативном runner GitHub')
         cmd('system-install', ['sudo', 'dpkg', '-i', str(package)], 180)
         installer = Path('/usr/lib/launcher/bundle/neverinstaller')
         require(installer.is_file() and installer.stat().st_mode & stat.S_IXUSR,
@@ -300,7 +300,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         cmd('gatekeeper-package', ['spctl', '--assess', '--type', 'install', '--verbose=4', str(package)])
         cmd('notarization', ['xcrun', 'stapler', 'validate', str(package)])
         require(a.disposable_runner and os.environ.get('GITHUB_ACTIONS') == 'true',
-                'system package install allowed ONLY on ephemeral GitHub native runner')
+                'Установка системного пакета разрешена только на временном нативном runner GitHub')
         app = Path('/Applications/Launcher.app')
         require(not app.exists() and not app.is_symlink(), 'Существующее приложение macOS будет перезаписано')
         cmd('system-install', ['sudo', 'installer', '-pkg', str(package), '-target', '/'], 300)
@@ -332,7 +332,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
 def run(a):
     osname, arch = host_target()
     require(a.disposable_runner and os.environ.get('GITHUB_ACTIONS') == 'true' and
-            os.environ.get('RUNNER_TEMP'), 'requires confirmed disposable native CI runner')
+            os.environ.get('RUNNER_TEMP'), 'Требуется подтверждённый временный нативный runner CI')
     require(COMMIT.fullmatch(a.commit or '') and RUN.fullmatch(a.run_id or '') and
             RUN.fullmatch(a.attempt or ''), 'Необходимо закрепить исходный коммит и запуск/попытку CI')
     require(a.output.is_absolute() and not a.output.exists() and not a.output.is_symlink(),
@@ -414,9 +414,9 @@ def aggregate(a):
                 and doc['project'] == a.project and doc['sourceIndexSha256'] == a.manifest_sha256
                 and doc['runId'] == a.run_id and doc['attempt'] == a.attempt
                 and doc['nativeSigned'] is True and doc['actuallyProvisioned'] is True
-                and doc['independentGA'] is False, 'stale/forged native observation')
+                and doc['independentGA'] is False, 'Устаревшее или поддельное нативное наблюдение')
         require(doc['package'] == {k: index[target][k] for k in ('filename', 'sha256', 'size')},
-                'report references different final bytes')
+                'Отчёт ссылается на другое финальное содержимое')
         checks = doc['checks']
         must = {'native-signature', 'bootstrap-verification', 'provision', 'verify-installed', 'uninstall'}
         if target[0] == 'linux':
@@ -433,10 +433,10 @@ def aggregate(a):
         for name, evidence in checks.items():
             log = regular((item / (name + '.log')).resolve(), MAX_LOG)
             require(log.stat().st_size == evidence['size'] and file_hash(log) == evidence['sha256'],
-                    'modified native execution log: ' + name)
+                    'Изменён журнал нативного выполнения: ' + name)
             first = log.read_bytes()[:1024]
             require(first.startswith(('command=' + name + '\nexit=0\n').encode()),
-                    'native process did not report exit=0: ' + name)
+                    'Нативный процесс не сообщил об успешном завершении (exit=0): ' + name)
         require(isinstance(doc['runner'], str) and 3 <= len(doc['runner']) <= 128 and
                 doc['runner'] not in machines, 'Идентификатор исполнителя отсутствует или уже использован')
         machines.add(doc['runner'])
@@ -479,7 +479,7 @@ def build_index(a):
         require(artifact['size'] >= 100, 'Итоговый пакет имеет недопустимо малый размер')
         if osname == 'linux':
             sig = regular(a.packages / (filename + '.asc'), 8192)
-            require(sig.stat().st_size >= 100, 'undersized Linux detached signature')
+            require(sig.stat().st_size >= 100, 'Недопустимо маленькая отдельная подпись Linux')
             artifact.update(signatureUrl=a.base_url + filename + '.asc',
                             signatureSha256=file_hash(sig), signatureSize=sig.stat().st_size)
         assets.append(artifact)
@@ -505,7 +505,7 @@ def trusted_review_key(path, fingerprint):
     require(isinstance(key, Ed25519PublicKey), 'Независимый проверяющий должен использовать Ed25519')
     spki = key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     require(SHA.fullmatch(fingerprint or '') and digest(spki) == fingerprint,
-            'reviewer public key does not match independently pinned SPKI SHA-256')
+            'Открытый ключ проверяющего не соответствует независимо закреплённому SPKI SHA-256')
     return key
 
 
@@ -560,7 +560,7 @@ def verify_review(a):
         timestamp = datetime.fromisoformat(payload['reviewedAt'].replace('Z', '+00:00'))
         age = datetime.now(timezone.utc) - timestamp
         require(timestamp.tzinfo and timedelta(minutes=-1) <= age <= timedelta(days=7),
-                'review too old or from the future')
+                'Проверка слишком старая или датирована будущим')
     except (ValueError, TypeError, AttributeError) as exc:
         raise Blocked('Недопустимая временная метка проверки') from exc
     require(payload['summary'] == aggregate(a), 'Подтверждения одобренного пакета больше не соответствуют исходным байтам')

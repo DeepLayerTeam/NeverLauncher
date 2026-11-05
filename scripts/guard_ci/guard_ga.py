@@ -49,7 +49,7 @@ def require(ok: bool, reason: str) -> None:
 def json_unique(pairs):
     value = {}
     for key, item in pairs:
-        require(key not in value, 'duplicate JSON key: ' + key)
+        require(key not in value, 'Повторяющийся ключ JSON: ' + key)
         value[key] = item
     return value
 
@@ -82,7 +82,7 @@ def evidence_inventory(root: Path) -> dict[str, str]:
             require(not path.is_symlink() and path.is_file(), 'Файл подтверждения является ссылкой или специальным файлом')
             relative = path.relative_to(root).as_posix()
             require(len(relative) <= 240 and re.fullmatch(r'[A-Za-z0-9_./-]+', relative) is not None
-                    and '..' not in Path(relative).parts, 'unsafe evidence member: ' + relative)
+                    and '..' not in Path(relative).parts, 'Небезопасный элемент свидетельства: ' + relative)
             require(relative.casefold() not in folded, 'Неоднозначное имя файла подтверждения с учётом регистра: ' + relative)
             folded.add(relative.casefold())
             require(path.stat().st_size > 0, 'Пустое подтверждение: ' + relative)
@@ -175,12 +175,12 @@ def verified_jvm(root: Path) -> dict:
             require(item.get('status') == 'PASS' and type(item.get('exitCode')) is int and item['exitCode'] == 0
                     and type(item.get('testsRun')) is int and type(item.get('minimumTests')) is int
                     and item['testsRun'] >= item['minimumTests'] > 0,
-                    target + ': JVM adversarial suite did not pass')
+                    target + ': набор атакующих JVM-тестов не пройден')
             name = item.get('logFile')
             require(type(name) is str and re.fullmatch(r'[a-z0-9-]+\.log', name) is not None,
-                    target + ': unsafe JVM log path')
+                    target + ': небезопасный путь к журналу JVM')
             require(item.get('logSha256') == file_hash(folder / 'logs' / name),
-                    target + ': JVM log was altered or absent')
+                    target + ': журнал JVM изменён или отсутствует')
         summary[target] = len(suites)
     return summary
 
@@ -197,7 +197,7 @@ def verified_frame_times(root: Path, delivered: dict) -> dict:
                                      'arm64': ('arm64', 'aarch64')}[arch]),
                 target + ': Измерение производительности выполнено на другой архитектуре хоста')
         require(meta.get('packageSha256') == delivered['targets'][target]['sha256'],
-                target + ': performance capture is not bound to final signed package')
+                target + ': запись производительности не привязана к финальному подписанному пакету')
         require(details['status'] == 'PASS_MEASURED', target + ': p95 времени кадра превышает допустимый предел')
         results[target] = details['guardP95RegressionPercent']
     return results
@@ -213,7 +213,7 @@ def verified_minecraft(root: Path, delivered: dict, commit: str) -> dict:
                     and run['target'] == target and run['version'] == VERSION
                     and run['loader'] == loader and run['packageSha256'] == delivered['targets'][target]['sha256']
                     and run['commit'] == commit,
-                    f'{target}/{loader}: real game not linked to final package')
+                    f'{target}/{loader}: реальный игровой запуск не связан с финальным пакетом')
             result = verify_game(work, work / 'paper.log', run['username'])
             require(result['loader'] == loader, f'{target}/{loader}: different Minecraft loader ran')
             completed += 1

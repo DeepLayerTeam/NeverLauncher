@@ -749,7 +749,7 @@ func serveUIDev02010(ctx context.Context, root string, target CanonicalExtension
 		defer cancel()
 		_ = server.Shutdown(shutdown)
 	}()
-	fmt.Fprintf(os.Stderr, "Extensions %s dev host: http://%s/\n", target.Kind, ln.Addr())
+	fmt.Fprintf(os.Stderr, "Расширения %s — локальный хост разработки: http://%s/\n", target.Kind, ln.Addr())
 	err = server.Serve(ln)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil

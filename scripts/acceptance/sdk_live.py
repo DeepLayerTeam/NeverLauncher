@@ -30,7 +30,7 @@ def run(cmd,cwd,env,timeout=240):
                           stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout)
     need(result.returncode==0 and b'PASS sdk=' in result.stdout and
          len(result.stdout)<8192 and len(result.stderr)<8192,
-         'real SDK subprocess did not complete: '+Path(cmd[0]).name)
+         'Реальный подпроцесс SDK не завершился: '+Path(cmd[0]).name)
     return result.stdout.decode('ascii','strict').strip()
 
 def probe(args):
@@ -39,14 +39,14 @@ def probe(args):
          url.query or url.fragment), 'Для промышленного SDK требуется реальный HTTPS-адрес источника')
     for path in (args.json_path,args.text_path,args.binary_path):
         need(path in ('/metrics',) or path.startswith('/api/v1/'), 'only actual application API routes are accepted')
-        need(not any(x in path for x in ('..','?','#','//','\\')),'unsafe API path')
+        need(not any(x in path for x in ('..','?','#','//','\\')),'Небезопасный путь API')
     need(re.fullmatch('[a-f0-9]{64}',args.binary_sha256 or ''),'Требуется заранее независимо закреплённая контрольная сумма исполняемого файла')
     token_path=args.bearer_file
     need(token_path.is_absolute() and token_path.is_file() and not token_path.is_symlink() and
          token_path.stat().st_uid==os.geteuid() and token_path.stat().st_mode & 0o077 == 0 and
          20<=token_path.stat().st_size<=16384,'Требуется реальный токен API в закрытом файле с правами 0600')
     token=token_path.read_text().strip()
-    need(not any(ch.isspace() for ch in token),'invalid credential')
+    need(not any(ch.isspace() for ch in token),'Некорректные учётные данные')
     env={**os.environ,'NL_GA_ORIGIN':args.origin,'NL_GA_BEARER':token,
          'NL_GA_JSON_PATH':args.json_path,'NL_GA_TEXT_PATH':args.text_path,
          'NL_GA_BINARY_PATH':args.binary_path,'NL_GA_BINARY_SHA256':args.binary_sha256}
@@ -70,7 +70,7 @@ def probe(args):
     java_source=ROOT/'sdk/java/http-client/src/test/java/ru/neverlauncher/api/LiveAcceptance.java'
     compiled=subprocess.run([javac,'--release','17','-cp',cp,'-d',str(build),str(java_source)],
                             cwd=ROOT,env=env,stdin=subprocess.DEVNULL,capture_output=True,timeout=80)
-    need(compiled.returncode==0,'live Java SDK verifier did not compile')
+    need(compiled.returncode==0,'Средство реальной проверки Java SDK не скомпилировалось')
     java_result=run([str(java),'-cp',os.pathsep.join((cp,str(build))),
                      'ru.neverlauncher.api.LiveAcceptance'],ROOT,env,180)
     outputs=(go_result,ts_result,java_result)
@@ -92,7 +92,7 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     a=p.parse_args()
     try:
-        need(VERSION=='0.53.0','requires exact 0.53.0 published SDK')
+        need(VERSION=='0.53.0','Требуется опубликованный SDK точно версии 0.53.0')
         need(a.output.is_absolute() and not a.output.exists() and a.output.parent.is_dir(),
              'Требуется новый абсолютный путь для сохранения свидетельства SDK')
         result=probe(a)

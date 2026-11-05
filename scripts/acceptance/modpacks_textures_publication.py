@@ -136,7 +136,7 @@ class API:
         except (OSError, URLError, TimeoutError):
             raise Blocked('Ошибка TLS/HTTPS-запроса к Backend') from None
         need(status in expected and len(raw) <= limit,
-             f'{method} {route.split("?")[0]} returned unexpected HTTP status {status} / size')
+             f'{method} {route.split("?")[0]} Получен неожиданный HTTP-статус {status} / size')
         return raw
 
     def json(self, method, route, **kwargs):
@@ -159,7 +159,7 @@ def multipart_png(kind, content, revision):
 
 def check_png(content, kind):
     need(content.startswith(b'\x89PNG\r\n\x1a\n') and len(content) >= 33 and len(content) <= 4 << 20,
-         f'{kind} is not a bounded PNG')
+         f'{kind} не является PNG допустимого размера')
     width, height = __import__('struct').unpack('>II', content[16:24])
     need(width >= 64 and width <= 1024 and width % 64 == 0 and
          (height in (width // 2, width) if kind == 'skin' else height == width // 2),
@@ -178,14 +178,14 @@ def upload_texture(api: API, token: str, kind: str, png: bytes):
                        content_type=content_type, token=token, expected=(200, 201))
     selected = updated.get('data', {})
     digest = selected.get('blobDigest') or selected.get('digest')
-    need(isinstance(digest, str) and HEX.fullmatch(digest), f'{kind} upload lacks a real blob digest')
+    need(isinstance(digest, str) and HEX.fullmatch(digest), f'{kind} В загрузке отсутствует фактический хеш содержимого')
     observed = api.request('GET', f'/api/v1/me/textures/{kind}/image', token=token, limit=4 << 20)
-    need(sha(observed) == digest, f'{kind} bytes served to player do not match selected digest')
+    need(sha(observed) == digest, f'{kind} Полученные игроком данные не соответствуют выбранному хешу')
     check_png(observed, kind)
     current = api.json('GET', '/api/v1/me/textures', token=token).get('data', {})
     need(current.get('profileUuid') == listing['profileUuid'] and any(
         item.get('kind') == kind and item.get('blobDigest') == digest for item in current.get('items', [])),
-        f'{kind} assignment did not persist on the Backend')
+        f'{kind} Назначение не сохранилось в Backend')
     return {'kind': kind, 'blobSha256': digest, 'profileUuid': listing['profileUuid'],
             'byteSize': len(observed)}
 
@@ -209,7 +209,7 @@ def selected_catalog_files(catalog, component_id):
     matches = [c for c in catalog.get('components', []) if c.get('id') == component_id]
     need(len(matches) == 1 and matches[0].get('files') and
          all(isinstance(x, str) and x.startswith('mods/') and '..' not in x.split('/') for x in matches[0]['files']),
-         'selected test component must own real signed mods/*.jar files')
+         'Выбранный тестовый компонент должен содержать реальные подписанные файлы mods/*.jar')
     return matches[0]['files']
 
 

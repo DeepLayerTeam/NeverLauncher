@@ -136,7 +136,7 @@ def main():
     if bool(args.expected_os)!=bool(args.expected_arch):
         parser.error('ОС и архитектуру нативной платформы необходимо указывать вместе')
     if args.expected_version and requires_adversarial_acceptance(args.expected_version) and not args.expected_os:
-        parser.error('0.43.14+ native acceptance requires explicit OS and architecture')
+        parser.error('Для нативной приёмки версии 0.43.14+ требуется явно указать ОС и архитектуру')
     if args.expected_os:
         ident=host_identity()
         if ident.get('os')!=args.expected_os or ident.get('arch')!=args.expected_arch or not ident.get('supported'):
@@ -144,12 +144,12 @@ def main():
     if args.expected_version:
         remainder += ['--expected-version', args.expected_version]
     if not 120<=args.deadline_seconds<=14400:
-        parser.error('deadline must be 120..14400 seconds')
+        parser.error('Ограничение времени должно составлять 120–14400 секунд')
     if remainder and remainder[0]=='--':remainder=remainder[1:]
     if not remainder or not {'--package-id','--backend','--cli','--runtime','--java','--pinned-public-key'} <= set(remainder):
-        parser.error('staged execution flags must include package, backend, CLI, runtime, Java and manifest key')
+        parser.error('Параметры поэтапного запуска должны включать пакет, Backend, CLI, Runtime, Java и ключ манифеста')
     if '--output' in remainder or '--execution-mode' in remainder:
-        parser.error('worker controls output directory and execution mode')
+        parser.error('Рабочий процесс самостоятельно определяет каталог вывода и режим выполнения')
     if Path(args.report_dir).exists() and any(Path(args.report_dir).iterdir()):
         parser.error('Каталог отчётов должен быть пустым')
     old_umask=os.umask(0o077)
@@ -188,7 +188,7 @@ def main():
                 try:
                     verify_game_observations_04314(args.report_dir, args.expected_os, args.expected_arch)
                 except (ValueError, OSError, TypeError, KeyError) as exc:
-                    print('native game observation BLOCKED: ' + str(exc),file=sys.stderr)
+                    print('Нативная проверка игрового процесса заблокирована: ' + str(exc),file=sys.stderr)
                     return 3
             print('Наблюдательные проверки нативного окружения завершены; результат не является подписанным свидетельством')
             return 0

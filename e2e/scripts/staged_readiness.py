@@ -135,21 +135,21 @@ def log_health(client_dir, runtime_log, loader):
     fatal = FATAL.search(combined)
     if crash_files or jvm_crashes or fatal:
         cause = (
-            "crash report / fatal JVM file"
+            "Отчёт о сбое или аварийный файл JVM"
             if crash_files or jvm_crashes
-            else "fatal output: " + fatal.group(0)[:120]
+            else "Аварийный вывод: " + fatal.group(0)[:120]
         )
         return False, cause
     loader = loader.lower()
     if loader in ("vanilla", ""):
-        return True, "vanilla: no mod-loader bootstrap required"
+        return True, "Vanilla: инициализация загрузчика модов не требуется"
     pattern = LOADER.get(loader)
     if pattern is None:
         return False, "неподдерживаемый подписанный загрузчик: " + loader
     return bool(pattern.search(combined)), (
-        "loader bootstrap log observed"
+        "Обнаружен журнал инициализации загрузчика"
         if pattern.search(combined)
-        else "required loader bootstrap log absent"
+        else "Не найден обязательный журнал инициализации загрузчика"
     )
 
 
@@ -299,29 +299,29 @@ class StartupObserver:
         if self.blocked:
             return "blocked", self.blocked
         if not ready:
-            return "failed", f"loader readiness absent: {detail}"
+            return "failed", f"Готовность загрузчика не подтверждена: {detail}"
         if launch.get("exit_code") not in (None, 0) and not launch.get("timed_out"):
-            return "failed", "Minecraft JVM exited with failure"
+            return "failed", "JVM Minecraft завершилась с ошибкой"
         if len(self.samples) != 2:
             return (
                 "failed",
-                "startup deadline reached without two live rendered main-menu observations",
+                "Истекло время запуска без двух реальных подтверждений отрисованного главного меню",
             )
         if self.samples[0]["sha256"] == self.samples[1]["sha256"]:
-            return "failed", "renderer/menu stopped updating"
+            return "failed", "Отрисовка или главное меню перестали обновляться"
         now = time.monotonic()
         if self.last_change_monotonic is None or now - self.last_change_monotonic > 12:
-            return "failed", "renderer stopped producing fresh menu frames (hang/stall)"
+            return "failed", "Рендерер перестал выдавать новые кадры меню (зависание)"
         if (
             self.window_last_seen_monotonic is None
             or now - self.window_last_seen_monotonic > 12
         ):
-            return "failed", "Minecraft window disappeared or stopped responding"
+            return "failed", "Окно Minecraft исчезло или перестало отвечать"
         if not launch.get("timed_out") and not launch.get("success"):
             return "failed", "JVM Minecraft завершилась с ошибкой до окончания проверки запуска"
         return (
             "passed",
-            f"game window PID {self.window_pid}, renderer frames and main-menu controls observed; {detail}",
+            f"PID игрового окна {self.window_pid}, подтверждены кадры рендерера и элементы главного меню; {detail}",
         )
 
     def evidence(self):

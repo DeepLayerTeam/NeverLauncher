@@ -540,12 +540,12 @@ class GameplayObserver:
             return
         self.last_probe = time.monotonic()
         if self.server.process.poll() is not None:
-            self.failure = "matching server exited during gameplay"
+            self.failure = "Соответствующий игровой сервер завершился во время игры"
             self.status = "failed"
             return
         server_log = self.server.log_text()
         if CRASH.search(server_log):
-            self.failure = "matching server fatal state during gameplay"
+            self.failure = "Соответствующий сервер перешёл в аварийное состояние во время игры"
             self.status = "failed"
             return
         # Позднее аварийное завершение нельзя скрыть ранее наблюдавшимся движением.
@@ -623,13 +623,13 @@ class GameplayObserver:
             )
             self.last_frame = self.screenshot(wid, "world-after.png")
             if self.ticks_after <= self.ticks_before:
-                self.failure = "matching server game ticks did not advance"
+                self.failure = "Игровые тики соответствующего сервера не продвигались"
             elif not changed_position(self.position_before, self.position_after):
                 self.failure = (
-                    "actual client keyboard action did not move server-side player"
+                    "Реальное нажатие клавиши в клиенте не переместило игрока на сервере"
                 )
             elif self.first_frame == self.last_frame:
-                self.failure = "world rendering did not change after client action"
+                self.failure = "Отрисовка мира не изменилась после действия клиента"
             else:
                 self.status = "passed"
         except (

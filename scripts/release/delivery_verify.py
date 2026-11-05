@@ -132,7 +132,7 @@ def verify_target(bundle: Path, target: str, name: str, version: str) -> dict:
         manifest=json.loads(files[manifest_key])
         rows=manifest.get('artifacts')
         if not isinstance(rows,list) or len(rows)<len(EXPECTED[platform]):
-            raise ValueError(f'{name}: incomplete package artifact records')
+            raise ValueError(f'{name}: неполные записи артефактов пакета')
         if manifest.get('productVersion')!=version:
             raise ValueError(f'{name}: встроенная версия не совпадает')
         if platform=='windows':

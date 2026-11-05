@@ -186,7 +186,7 @@ def validate_events(lines: str, suite: Suite, returncode: int) -> dict:
                 violations.append(f"{test}:{action}")
             if test in expected:
                 if test in finished:
-                    violations.append(f"{test}:duplicate result")
+                    violations.append(f"{test}:повторяющийся результат")
                 finished[test] = action
         if not test and action == "fail":
             violations.append("package:fail")

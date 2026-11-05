@@ -90,7 +90,7 @@ def parse_live(cfg):
     versions=[entry.get('sourceVersion') for entry in cfg['legacy'] if type(entry) is dict]
     require(sorted(versions)==['0.36.0','0.46.0'], 'Требуются оба исторических маршрута NeverLauncher')
     require(len({str(entry.get('capture')) for entry in cfg['legacy']}) == 2,
-            'legacy input receipts must be distinct')
+            'Квитанции исходных данных старой системы должны различаться')
     return cfg
 
 
@@ -103,13 +103,13 @@ def live_run(cfg):
     java_result=java_host_run(java_config,java_out)
     require(java_result.get('status') == 'LIVE_CHECKS_PASSED_REVIEW_REQUIRED'
             and java_result.get('sourceCommit') == sha and len(java_result.get('checks',[])) >= 6,
-            'five real installed Java customizations were not witnessed')
+            'Не подтверждены пять реально установленных доработок Java')
     grav=cfg['gravit']
     grav_cfg=Path(grav['config'])
     grav_dir=Path(grav['evidenceDir'])
     private_json(grav_cfg)
     require(grav_dir.is_absolute() and grav_dir.is_dir() and grav_dir.stat().st_mode & 0o077 == 0
-            and not any(grav_dir.iterdir()), 'real Gravit evidence directory must be new, private and empty')
+            and not any(grav_dir.iterdir()), 'Каталог реальных свидетельств Gravit должен быть новым, закрытым и пустым')
     try:
         subprocess.run([sys.executable,str(ROOT/'tools/gravit-port/ga_acceptance_0500.py'),
                         '--config',str(grav_cfg),'--evidence-dir',str(grav_dir)],
@@ -123,7 +123,7 @@ def live_run(cfg):
             and grav_report.get('migrationChecks')==36 and grav_report.get('moduleCheckCount')==19
             and set(row['referenceClass'] for row in grav_report.get('references',[])) == classes
             and grav_report.get('productionGA') is False,
-            'full external Gravit migration and module evidence not verified')
+            'Не подтверждены полная внешняя миграция Gravit и свидетельства по модулям')
     require(grav_report.get('commitSha') == sha, 'Коммиты исходников Java и Gravit не совпадают')
     legacy_results={}
     for route in cfg['legacy']:
@@ -134,11 +134,11 @@ def live_run(cfg):
         legacy_cfg=private_json(path)
         original=private_json(captured)
         require(legacy_cfg.get('sourceVersion')==source_version,
-                'legacy route does not match original installation')
+                'Маршрут старой системы не соответствует исходной установке')
         legacy_cfg['sourceCaptureSha256']=sha_file(str(captured))
         result=legacy.verify(legacy_cfg,original)
         require(result.get('status')=='LIVE_CHECKS_PASSED_REVIEW_REQUIRED' and
-                result.get('sourceVersion')==source_version, 'legacy live check blocked')
+                result.get('sourceVersion')==source_version, 'Реальная проверка старой системы заблокирована')
         private_save(output,result)
         legacy_results[source_version]=sha_file(str(output))
     return {'format':SCHEMA,'productVersion':(ROOT/'VERSION').read_text().strip(),'sourceCommit':sha,

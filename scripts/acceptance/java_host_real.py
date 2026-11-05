@@ -58,7 +58,7 @@ class LiveHTTP:
 
     def request(self, path, payload=None, token=None, *, expected=200, method=None):
         require(path.startswith('/') and not path.startswith('//') and not any(c in path for c in ('\\', '#', '?', '\r', '\n')),
-                'unsafe HTTP route')
+                'Небезопасный HTTP-маршрут')
         headers = {'Accept': 'application/json'}
         if token:
             headers['Authorization'] = 'Bearer ' + token
@@ -78,7 +78,7 @@ class LiveHTTP:
         require(len(raw) <= (4 << 20), 'unbounded live HTTP response')
         if isinstance(expected, int):
             expected = (expected,)
-        require(status in expected, 'live HTTP unexpected status ' + str(status) + ' ' + path)
+        require(status in expected, 'Неожиданный статус реального HTTP-запроса ' + str(status) + ' ' + path)
         try:
             response = json.loads(raw)
         except (UnicodeError, ValueError) as exc:
@@ -137,7 +137,7 @@ def run(cfg, output):
             'Требуется точный коммит Git')
     backend = LiveHTTP(cfg['backendUrl'])
     status = backend.request('/api/v1/status', token=owner)
-    require(status.get('version') == (Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'wrong running production Backend version')
+    require(status.get('version') == (Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'Неверная версия работающего производственного Backend')
     live_project = backend.request('/api/v1/projects/' + quote(project, safe=''), token=owner)
     require(project in json.dumps(live_project, sort_keys=True), 'В Backend отсутствует реальный проект')
     host = LiveHTTP(cfg['hostUrl'])
@@ -147,11 +147,11 @@ def run(cfg, output):
     require(health['result'].get('available') is True, 'Провайдер учётных записей Java недоступен')
     good = callback(host, token, 'auth.password', {'identifier':cfg['testIdentifier'], 'secret':password})
     uuid = good['result'].get('authentication', {}).get('identity', {}).get('subject')
-    require(uuid == cfg['testUuid'], 'real Java identity provider changed UUID')
+    require(uuid == cfg['testUuid'], 'Реальный Java-провайдер учётных записей изменил UUID')
     wrong = callback(host, token, 'auth.password', {'identifier':cfg['testIdentifier'], 'secret':password+'-wrong'})
     require(wrong['result'].get('errorCode') == 'invalid_credentials', 'bad password accepted')
     resolved = callback(host, token, 'auth.resolve', {'subject':uuid})
-    require(resolved['result'].get('identity', {}).get('subject') == uuid, 'identity resolve changed UUID')
+    require(resolved['result'].get('identity', {}).get('subject') == uuid, 'Разрешение учётной записи изменило UUID')
     checks.append('java-auth-identity-live')
     # 2) Реальная дополнительная библиотека с доступом через брокер и ограниченная упаковка.
     library = Path(cfg['libraryFile'])
@@ -163,13 +163,13 @@ def run(cfg, output):
             'library path outside controlled bundle')
     asset = callback(host, token, 'content.source.resolve', {'projectId':project, 'path':cfg['libraryPath']})
     require(asset['result'].get('asset', {}).get('sha256') == library_hash,
-            'real provider did not resolve verified library')
+            'Реальный провайдер не разрешил подтверждённую библиотеку')
     raw = io.BytesIO()
     with zipfile.ZipFile(raw, 'w') as z:
         z.writestr('profiles/0528-check.json', b'{"loader":"fabric"}')
     pkg = callback(host, token, 'content.package.prepare', {'projectId':project, 'name':'acceptance-0528.zip',
                     'dataBase64':base64.b64encode(raw.getvalue()).decode()})
-    require(pkg['result'].get('requiresSigning') is True, 'pre-sign package was incorrectly trusted')
+    require(pkg['result'].get('requiresSigning') is True, 'Пакет до подписания был ошибочно признан доверенным')
     zipped = base64.b64decode(pkg['result']['dataBase64'], validate=True)
     require(len(zipped) <= 100 << 20, 'package exceeds acceptance size')
     with zipfile.ZipFile(io.BytesIO(zipped)) as z:
@@ -199,7 +199,7 @@ def run(cfg, output):
         response = backend.request(profile_route, token=owner)
         rows = response.get('items', response.get('data', {}).get('items', []))
         matching = [row for row in rows if type(row) is dict and row.get('id') == cfg['profileId']]
-        require(len(matching) == 1, 'project profile not readable from real Backend')
+        require(len(matching) == 1, 'Профиль проекта нельзя прочитать из реального Backend')
         return matching[0]
     actual_profile()
     marker = 'live-0528-' + secrets.token_hex(10)
@@ -218,7 +218,7 @@ def run(cfg, output):
     checks.append('java-before-save-go-backend-commit-and-veto')
     # 4) Реестр, команды, конфигурация и миграция состояния в работающем Host.
     migrated = callback(host, token, 'state.migrate', {'fromVersion':'0.49.4','toVersion':'0.49.5'})
-    require(migrated['result'].get('applied') is True, 'Java storage state migration not applied')
+    require(migrated['result'].get('applied') is True, 'Миграция состояния Java-хранилища не применена')
     checks.append('java-persistent-state-migrate-live')
     # 5) Реальное подключение JVM Minecraft из существующего независимо повторённого сырого результата.
     game = observed_join(cfg)
@@ -228,7 +228,7 @@ def run(cfg, output):
     require(type(cfg.get('agentArtifact')) is str and
             sha_file(cfg['agentArtifact']) == cfg.get('agentSha256') and
             cfg.get('agentSha256') == agent_digest_from_game(cfg),
-            'installed trusted agent not bound to verified game launch evidence')
+            'Установленный доверенный агент не привязан к подтверждённому запуску игры')
     checks.append('java-agent-exact-game-bytes')
     report = {'schema': SCHEMA, 'version': (Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'sourceCommit':cfg['sourceCommit'],
               'projectId':project, 'extensionJarSha256':sha_file(cfg['extensionJar']),
@@ -236,7 +236,7 @@ def run(cfg, output):
               'checks':checks, 'checkCount':len(checks),
               'status':'LIVE_CHECKS_PASSED_REVIEW_REQUIRED', 'gaCertified':False,
               'at':datetime.now(timezone.utc).isoformat()}
-    require(report['extensionJarSha256'] == cfg.get('extensionJarSha256'), 'installed extension JAR changed')
+    require(report['extensionJarSha256'] == cfg.get('extensionJarSha256'), 'JAR установленного расширения изменился')
     require(not output.exists(), 'refuse overwrite of external acceptance output')
     fd = os.open(output, os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,'O_NOFOLLOW',0), 0o600)
     with os.fdopen(fd, 'w') as f:

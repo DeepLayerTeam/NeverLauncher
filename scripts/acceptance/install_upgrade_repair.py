@@ -54,7 +54,7 @@ def run(argv: list[str], *, expect_ok: bool, timeout: int = 900) -> dict:
     if expect_ok:
         require(completed.returncode == 0, f'{Path(argv[0]).name} failed (exit={completed.returncode})')
     else:
-        require(completed.returncode != 0, f'{Path(argv[0]).name} incorrectly succeeded under fault')
+        require(completed.returncode != 0, f'{Path(argv[0]).name} Операция ошибочно завершилась успешно при имитированном отказе')
     # Не публикуйте stdout/stderr: инструменты источника могут вывести секретные учётные данные.
     return {'exitCode': completed.returncode, 'durationMs': round((time.monotonic() - started) * 1000),
             'stdoutSHA256': hashlib.sha256(completed.stdout).hexdigest(),
@@ -154,7 +154,7 @@ def main() -> int:
             save.write_bytes(os.urandom(128))
             user_digest = sha256(save)
             def preserved():
-                require(save.is_file() and sha256(save)==user_digest, 'user save unexpectedly changed')
+                require(save.is_file() and sha256(save)==user_digest, 'Пользовательское сохранение неожиданно изменилось')
             # Настоящий недоверенный изменённый пакет должен отклоняться до подготовки.
             with tempfile.TemporaryDirectory(prefix='nl-corrupt-0527-',dir=args.scratch_parent) as bad_dir:
                 copy = Path(bad_dir) / 'untrusted'

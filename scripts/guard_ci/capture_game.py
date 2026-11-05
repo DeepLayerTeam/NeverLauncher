@@ -32,13 +32,13 @@ def capture(work: Path, paper: Path, username: str, target: str, loader: str, co
     require(release['version'] == VERSION, 'Неверная версия итогового пакета выпуска')
     row = release['targets'][target]
     require(package.resolve() == (release_bundle / row['file']).resolve() and package.is_file()
-            and not package.is_symlink(), 'not the exact final signed installer')
+            and not package.is_symlink(), 'Это не точный финальный подписанный установщик')
     from adversarial_pilot_05012 import file_hash
     require(file_hash(package) == row['sha256'], 'final installer modified after validation')
     game = verify_game(work, paper, username)
     require(game['loader'] == loader, 'Фактический загрузчик Minecraft отличается от запрошенного')
     require(paper.resolve() == (work / 'paper.log').resolve(),
-            'Paper join log must be retained alongside the exact game evidence')
+            'Журнал подключения Paper необходимо сохранить вместе с точными игровыми свидетельствами')
     result = {'target': target, 'version': VERSION, 'loader': loader,
               'packageSha256': row['sha256'], 'username': username, 'commit': commit}
     output = work / 'run-identity.json'

@@ -59,7 +59,7 @@ def load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        die(f"{path}: invalid JSON: {exc}")
+        die(f"{path}: некорректный JSON: {exc}")
 
 
 def load_targets(path: Path) -> dict[str, Any]:

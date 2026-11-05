@@ -51,16 +51,16 @@ class ExactPackagesTest(unittest.TestCase):
     def test_missing_and_symlinked_package_rejected(self):
         path = self.bundle / PACKAGES["linux-arm64"]
         path.unlink()
-        with self.assertRaisesRegex(GateError, "missing"):
+        with self.assertRaisesRegex(GateError, "Отсутствует"):
             verify_shipped(self.bundle, self.receipt)
         path.symlink_to(self.bundle / PACKAGES["linux-amd64"])
-        with self.assertRaisesRegex(GateError, "missing"):
+        with self.assertRaisesRegex(GateError, "Отсутствует"):
             verify_shipped(self.bundle, self.receipt)
 
     def test_incomplete_signed_set_rejected(self):
         self.data["targets"].pop()
         self.save()
-        with self.assertRaisesRegex(GateError, "six certified"):
+        with self.assertRaisesRegex(GateError, "шести сертифицированных"):
             verify_shipped(self.bundle, self.receipt)
 
     def test_duplicate_target_rejected(self):

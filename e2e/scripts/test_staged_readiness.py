@@ -75,7 +75,7 @@ class ReadinessTests(unittest.TestCase):
                 )
                 ok, reason = log_health(self.root, None, "fabric")
                 self.assertFalse(ok)
-                self.assertIn("fatal", reason)
+                self.assertIn("Аварийный вывод", reason)
 
     def test_fatal_and_crash_override_loader_and_rendered_menu(self):
         obs = self.observer()

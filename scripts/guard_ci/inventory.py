@@ -137,7 +137,7 @@ def merge(args: argparse.Namespace) -> int:
         rows.append({
             "os": os_name, "architecture": arch,
             "status": item["status"] if item else "BLOCKED",
-            "reason": "native local probe; not a game certification" if item else "Отсутствует отчёт нативного исполняющего компонента",
+            "reason": "Локальная нативная проверка; не является сертификацией игры" if item else "Отсутствует отчёт нативного исполняющего компонента",
             "javaMajor": item.get("javaMajor") if item else None,
             "minecraftVersion": item.get("minecraftVersion") if item else None,
             "loader": item.get("loader") if item else None,
@@ -148,7 +148,7 @@ def merge(args: argparse.Namespace) -> int:
         "productVersion": next(iter(reports.values()))["productVersion"] if reports else None,
         "status": "BLOCKED" if any(row["status"] != "PASS" for row in rows) else "PASS",
         "certified": False,
-        "note": "Untrusted local observations only; real game, signed packages and independent review remain mandatory",
+        "note": "Только недоверенные локальные наблюдения; обязательны реальная игра, подписанные пакеты и независимая проверка",
         "targets": rows,
     }
     output = Path(args.output)

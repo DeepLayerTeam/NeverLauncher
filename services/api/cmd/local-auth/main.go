@@ -93,7 +93,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 		if *apply {
 			state = "committed"
 		}
-		_, err = fmt.Fprintf(output, "FileAuthSystem: %d accounts %s; no Sessions.json imported\n", count, state)
+		_, err = fmt.Fprintf(output, "FileAuthSystem: %d учётных записей %s; импорт Sessions.json не выполнялся\n", count, state)
 		return err
 	case "list", "export", "create", "password", "disable", "enable":
 		return runOnline(args, output, input)
@@ -204,7 +204,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		}
 		return json.NewEncoder(output).Encode(map[string]any{"accounts": clean})
 	}
-	_, err = fmt.Fprintf(output, "%s: success; sessions and auditing handled by Backend\n", command)
+	_, err = fmt.Fprintf(output, "%s: успешно; сессиями и аудитом управляет Backend\n", command)
 	return err
 }
 

@@ -169,7 +169,7 @@ def load_json(path: Path) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
-        die(f"{path}: invalid JSON: {exc}")
+        die(f"{path}: некорректный JSON: {exc}")
     if not isinstance(data, dict):
         die(f"{path}: корневое значение должно быть объектом")
     return data
@@ -191,7 +191,7 @@ def main() -> int:
     targets = load_json(TARGETS)
     target_rows = targets.get("targets")
     if targets.get("productVersion") != VERSION or targets.get("protocolVersion") != 3:
-        die("serverbridge/targets.json version/protocol drift")
+        die("Версия или протокол в serverbridge/targets.json не соответствует ожидаемым")
     if (
         not isinstance(target_rows, list)
         or [r.get("id") for r in target_rows] != EXPECTED
@@ -252,13 +252,13 @@ def main() -> int:
         filename = row.get("file")
         expected_filename = f"launcher-{target}-bridge-{VERSION}.jar"
         if filename != expected_filename:
-            die(f"{target}: expected filename {expected_filename}, got {filename!r}")
+            die(f"{target}: ожидалось имя файла {expected_filename}, got {filename!r}")
         jar = artifacts / filename
         if not jar.is_file() or jar.stat().st_size == 0:
-            die(f"{target}: missing/non-empty JAR {jar}")
+            die(f"{target}: отсутствует JAR или он пуст {jar}")
         digest = sha256(jar)
         if not HEX64.fullmatch(digest):
-            die(f"{target}: internal SHA-256 failure")
+            die(f"{target}: внутренняя проверка SHA-256 не пройдена")
         if row.get("sha256") != digest:
             die(f"{target}: manifest SHA-256: не совпадает с JAR")
         field = HASH_FIELDS[target]
@@ -267,7 +267,7 @@ def main() -> int:
             die(f"{target}: {field} должен содержать только SHA-256 собранного JAR")
         if digest in seen_hashes:
             die(
-                f"{target}: artifact bytes are identical to {seen_hashes[digest]} (platform-matched release required)"
+                f"{target}: содержимое артефакта идентично {seen_hashes[digest]} (необходим выпуск для соответствующей платформы)"
             )
         seen_hashes[digest] = target
         try:
@@ -337,7 +337,7 @@ def main() -> int:
                     ):
                         die("vanilla: у исполняемого вспомогательного модуля отсутствует Main-Class")
         except zipfile.BadZipFile:
-            die(f"{target}: invalid JAR/ZIP")
+            die(f"{target}: некорректный JAR/ZIP")
         coverage = next(r.get("coverage") for r in target_rows if r.get("id") == target)
         evidence.append(
             {
@@ -449,7 +449,7 @@ def main() -> int:
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(
-        f"ServerBridge artifact cohort verified (not Minecraft runtime E2E): {VERSION}, {len(evidence)} platform artifacts -> {out}"
+        f"Набор артефактов ServerBridge проверен (это не Minecraft Runtime E2E): {VERSION}, {len(evidence)} артефактов платформ -> {out}"
     )
     return 0
 

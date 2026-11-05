@@ -97,15 +97,15 @@ def identity(bundle: Path, version: str, commit: str) -> dict:
     digests = {}
     for line in sums_path.read_text(encoding="utf-8").splitlines():
         match = re.fullmatch(r"([0-9a-f]{64})  ([a-zA-Z0-9][a-zA-Z0-9._+-]*)", line)
-        require(match is not None, "invalid SHA256SUMS entry")
+        require(match is not None, "Некорректная запись SHA256SUMS")
         digest, name = match.groups()
-        require(name not in digests, "duplicate SHA256SUMS entry")
+        require(name not in digests, "Повторяющаяся запись SHA256SUMS")
         digests[name] = digest
     require(BINARY in digests, "Итоговый API Linux отсутствует в списке подписанных артефактов")
     binary = bundle / BINARY
     require(
         binary.is_file() and not binary.is_symlink() and os.access(binary, os.X_OK),
-        "final API artifact not executable",
+        "Финальный артефакт API не является исполняемым",
     )
     require(binary.stat().st_mode & 0o022 == 0, "Итоговый API доступен на запись группе или всем пользователям")
     digest = sha(binary)
@@ -122,7 +122,7 @@ def identity(bundle: Path, version: str, commit: str) -> dict:
 def validate_live_report(data: dict, expected: dict) -> None:
     require(
         data.get("schemaVersion") == 1 and data.get("status") == "passed",
-        "live E2E did not pass",
+        "Реальная проверка E2E не пройдена",
     )
     require(
         all(
@@ -133,7 +133,7 @@ def validate_live_report(data: dict, expected: dict) -> None:
     )
     require(
         data.get("scope") == "minimal-linux-real-process-no-ga-attestation",
-        "wrong E2E execution scope",
+        "Неверная область выполнения E2E",
     )
     rows = data.get("checks")
     require(
@@ -210,7 +210,7 @@ def main(argv=None) -> int:
         # Выявляйте изменение окончательного ресурса между запуском и окончательным подтверждением.
         require(
             identity(args.bundle.absolute(), args.version, args.commit) == item,
-            "final artifact changed while E2E was running",
+            "Финальный артефакт изменился во время проверки E2E",
         )
         result["liveReportSha256"] = sha(live_path)
         result["checksPassed"] = len(REQUIRED_CHECKS)

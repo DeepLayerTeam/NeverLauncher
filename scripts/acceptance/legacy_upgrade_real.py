@@ -55,7 +55,7 @@ def private_json(path):
         require(len(data) == st.st_size and
                 (last.st_dev, last.st_ino, last.st_size, last.st_mtime_ns, last.st_nlink)
                 == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_nlink),
-                'private input changed during reading')
+                'Закрытые входные данные изменились во время чтения')
     def unique(pairs):
         result = {}
         for name, value in pairs:
@@ -134,7 +134,7 @@ def verify(cfg, baseline):
     # Снимайте снимок старых источников повторно; прежние записывающие процессы должны быть остановлены при переключении.
     require(source_snapshot(cfg) == baseline['source'], 'Исходные файлы изменились во время миграции')
     now = live_snapshot(cfg)
-    require(now == baseline['identity'], 'user UUID/roles, project, profile, channel or API state changed')
+    require(now == baseline['identity'], 'Изменились UUID/роли пользователя, проект, профиль, канал или состояние API')
     target = cfg.get('targetStorageRoot')
     require(type(target) is str and target.startswith('/'),
             'Требуется абсолютный путь к целевому хранилищу')
@@ -167,7 +167,7 @@ def main(argv=None):
         require(not args.output.exists() and args.output.is_absolute() and args.output.parent.is_dir()
                 and not args.output.parent.is_symlink() and not args.output.is_symlink(),
                 'Требуется новый закрытый выходной файл в существующем каталоге')
-        require(cfg.get('format') == SCHEMA, 'wrong config format')
+        require(cfg.get('format') == SCHEMA, 'Неверный формат конфигурации')
         if args.action == 'capture':
             result = capture(cfg)
         else:

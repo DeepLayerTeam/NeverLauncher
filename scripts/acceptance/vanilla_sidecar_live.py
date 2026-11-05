@@ -38,7 +38,7 @@ def recv_exact(sock, size):
     chunks = bytearray()
     while len(chunks) < size:
         part = sock.recv(size-len(chunks))
-        require(bool(part), 'truncated Minecraft/RCON response')
+        require(bool(part), 'Усечённый ответ Minecraft/RCON')
         chunks.extend(part)
     return bytes(chunks)
 
@@ -57,7 +57,7 @@ def read_varint(sock):
         n = recv_exact(sock, 1)[0]
         result |= (n & 127) << shift
         if n & 128 == 0:
-            require(result <= 0x7fffffff, 'Minecraft VarInt overflow')
+            require(result <= 0x7fffffff, 'Переполнение Minecraft VarInt')
             return result
     raise Blocked('Слишком длинное значение VarInt Minecraft')
 
@@ -80,12 +80,12 @@ def status(host, port, expected_minecraft):
         require(type(version) is dict and version.get('name') == expected_minecraft and
                 type(version.get('protocol')) is int and version['protocol'] > 0 and
                 type(players) is dict and type(players.get('max')) is int,
-                'wrong real Minecraft server/edition/version')
+                'Неверный реальный сервер, редакция или версия Minecraft')
         return {'minecraft': version['name'], 'protocol': version['protocol'], 'playersMax': players['max']}
 
 def rcon_packet(sock, request_id, command_type, body):
     raw = body.encode('utf-8')
-    require(len(raw) <= 8192, 'RCON payload too long')
+    require(len(raw) <= 8192, 'Слишком длинные данные RCON')
     payload = struct.pack('<ii', request_id, command_type) + raw + b'\0\0'
     sock.sendall(struct.pack('<i', len(payload)) + payload)
     length = struct.unpack('<i', recv_exact(sock, 4))[0]
@@ -96,7 +96,7 @@ def rcon_packet(sock, request_id, command_type, body):
     return rid, data[8:-2].decode('utf-8', errors='strict')
 
 def rcon(host, port, password, command):
-    require(host in ('127.0.0.1', '::1'), 'RCON must be loopback only')
+    require(host in ('127.0.0.1', '::1'), 'RCON должен прослушивать только локальный интерфейс')
     require(bool(password) and len(password) >= 12, 'Требуются закрытые учётные данные RCON')
     with socket.create_connection((host, port), timeout=5) as sock:
         sock.settimeout(5)
@@ -110,18 +110,18 @@ def inspect_process(pid, jar, expected_sha):
     require(os.name == 'posix' and Path('/proc').is_dir(), 'Требуется нативная проверка процессов Linux')
     require(type(pid) is int and pid > 1, 'Требуется идентификатор PID реального вспомогательного процесса JVM')
     cmdfile = Path('/proc') / str(pid) / 'cmdline'
-    require(cmdfile.is_file(), 'sidecar JVM process is not running')
+    require(cmdfile.is_file(), 'Вспомогательный процесс JVM не запущен')
     args = cmdfile.read_bytes().split(b'\x00')
-    require(args and Path(os.fsdecode(args[0])).name.startswith('java'), 'sidecar process is not Java')
+    require(args and Path(os.fsdecode(args[0])).name.startswith('java'), 'Вспомогательный процесс не является Java-процессом')
     # Проверяйте путь JAR, переданный JVM, а не случайное совпадение подстроки.
     found = [os.fsdecode(args[i+1]) for i,a in enumerate(args[:-1]) if a == b'-jar']
-    require(len(found) == 1 and Path(found[0]).resolve() == jar.resolve(), 'different executable sidecar JAR active')
+    require(len(found) == 1 and Path(found[0]).resolve() == jar.resolve(), 'Запущен другой исполняемый JAR вспомогательной службы')
     require(file_hash(jar) == expected_sha, 'Запущенный файл вспомогательного процесса отличается от проверенного JAR выпуска')
 
 def verify(cfg, *, sleep=time.sleep):
     required = {'sidecarPid', 'sidecarJar', 'sidecarSha256', 'sidecarLog', 'serverLog',
                 'serverDir', 'minecraftPort', 'rconPort', 'minecraftVersion'}
-    require(type(cfg) is dict and set(cfg) == required, 'Vanilla live host config fields incomplete')
+    require(type(cfg) is dict and set(cfg) == required, 'Конфигурация реального Vanilla-хоста заполнена не полностью')
     require(cfg['minecraftVersion'] == '1.21.1', 'Несовпадение области действия целевой платформы Vanilla')
     require(isinstance(cfg['sidecarSha256'], str) and HEX.fullmatch(cfg['sidecarSha256']), 'Недопустимая контрольная сумма вспомогательного процесса')
     jar, server_dir = Path(cfg['sidecarJar']), Path(cfg['serverDir'])
@@ -133,7 +133,7 @@ def verify(cfg, *, sleep=time.sleep):
     require(settings.get('enable-rcon') == 'true' and
             int(settings.get('rcon.port', '0')) == cfg['rconPort'] and
             int(settings.get('server-port', '25565')) == cfg['minecraftPort'],
-            'Vanilla RCON and game listener configuration do not match live host')
+            'Настройки RCON и игрового порта Vanilla не соответствуют реальному хосту')
     password = os.environ.get('LAUNCHER_VANILLA_RCON_PASSWORD', '')
     server_log = Path(cfg['serverLog']); sidecar_log = Path(cfg['sidecarLog'])
     for log in (server_log, sidecar_log):
@@ -143,10 +143,10 @@ def verify(cfg, *, sleep=time.sleep):
             'Указанный журнал не является текущим журналом сервера Vanilla')
     before_log = server_log.read_text(errors='replace')
     require('Starting minecraft server version 1.21.1' in before_log and
-            re.search(r'Done \([0-9.]+s\)!', before_log), 'server startup/ready not witnessed')
+            re.search(r'Done \([0-9.]+s\)!', before_log), 'Не подтверждены запуск и готовность сервера')
     sidecar_text = sidecar_log.read_text(errors='replace')
     require(f'Launcher Vanilla ServerBridge {VERSION} ready;' in sidecar_text,
-            'production sidecar did not pass authenticated startup heartbeat')
+            'Рабочая вспомогательная служба не прошла проверку подлинности при запуске')
     running = status('127.0.0.1', cfg['minecraftPort'], '1.21.1')
     players = rcon('127.0.0.1', cfg['rconPort'], password, 'list')
     require('players online' in players.lower(), 'RCON не вернул фактический список игроков')

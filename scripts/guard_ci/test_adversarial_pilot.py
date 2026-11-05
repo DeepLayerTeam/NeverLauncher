@@ -64,7 +64,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
         self.append(1)
         content = self.path.read_text().replace('"outcome":"allowed"', '"outcome":"revoked"')
         self.path.write_text(content)
-        with self.assertRaisesRegex(mod.EvidenceError, 'failed MAC'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'проверка MAC не пройдена'):
             mod.analyze_shadow(self.logdir, self.keyfile)
 
     def test_broken_chain_rejected(self):
@@ -83,7 +83,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
         self.append(1, outcome='revoked', reason='guard_runtime_policy_revoked')
         review = self.root / 'review.jsonl'
         review.write_text(json.dumps(dict(eventMac='f'*64, verdict='false_positive', reviewerId='operator'))+'\n')
-        with self.assertRaisesRegex(mod.EvidenceError, 'unknown event'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'неизвестное событие'):
             mod.analyze_shadow(self.logdir, self.keyfile, review)
 
     def test_review_field_collision_and_link_are_rejected(self):
@@ -95,14 +95,14 @@ class PilotEvidenceTests05012(unittest.TestCase):
             mod.analyze_shadow(self.logdir, self.keyfile, review)
         review.write_text(json.dumps(dict(eventMac=event['mac'], verdict='true_positive', reviewerId='operator'))+'\n')
         link = self.root / 'link.jsonl'; link.symlink_to(review)
-        with self.assertRaisesRegex(mod.EvidenceError, 'nonlinked'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'не символьной ссылкой'):
             mod.analyze_shadow(self.logdir, self.keyfile, link)
 
     def test_review_missing_newline_is_not_accepted(self):
         event = self.append(1, outcome='revoked', reason='guard_build_revoked')
         review = self.root / 'review.jsonl'
         review.write_text(json.dumps(dict(eventMac=event['mac'], verdict='true_positive', reviewerId='operator')))
-        with self.assertRaisesRegex(mod.EvidenceError, 'truncated'):
+        with self.assertRaisesRegex(mod.EvidenceError, 'усечённая'):
             mod.analyze_shadow(self.logdir, self.keyfile, review)
 
     def test_real_review_record_keeps_incident_blocked(self):

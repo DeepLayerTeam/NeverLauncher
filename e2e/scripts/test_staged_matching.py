@@ -43,7 +43,7 @@ class MatchingValidationTests(unittest.TestCase):
 
     def test_real_server_boot_loader_and_bridge_are_required(self):
         self.assertTrue(verify_matching_server(BOOT, VERSION, "vanilla"))
-        with self.assertRaisesRegex(RuntimeError, "loader/version"):
+        with self.assertRaisesRegex(RuntimeError, "Загрузчик или версия сервера"):
             verify_matching_server(BOOT, VERSION, "fabric", "0.16.10", True)
         log = (
             BOOT
@@ -61,7 +61,7 @@ class MatchingValidationTests(unittest.TestCase):
                 True,
                 "0.34.4",
             )
-        with self.assertRaisesRegex(RuntimeError, "fatal"):
+        with self.assertRaisesRegex(RuntimeError, "критической ошибки"):
             verify_matching_server(
                 log + "Exception in server tick loop",
                 VERSION,
@@ -120,7 +120,7 @@ class MatchingValidationTests(unittest.TestCase):
                 safe_bundle_extract(evil, target)
             self.assertFalse((root / "escape.jar").exists())
             srv = MatchingServer(root, "java", "nl", VERSION, "fabric", "0.16.10")
-            with self.assertRaisesRegex(RuntimeError, "pinned complete server bundle"):
+            with self.assertRaisesRegex(RuntimeError, "полный закреплённый комплект сервера"):
                 srv.prepare()
 
     def test_missing_binaries_and_pinned_server_hash_rejected(self):
@@ -132,7 +132,7 @@ class MatchingValidationTests(unittest.TestCase):
             srv = MatchingServer(
                 root, "java", "nl", VERSION, "vanilla", "", str(bundle), "0" * 64
             )
-            with self.assertRaisesRegex(ValueError, "differs from pinned"):
+            with self.assertRaisesRegex(ValueError, "не соответствует закреплённой"):
                 srv.prepare()
 
     def test_fake_join_with_no_player_position_or_client_action_not_pass(self):

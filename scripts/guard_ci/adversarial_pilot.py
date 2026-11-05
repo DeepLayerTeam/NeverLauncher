@@ -62,7 +62,7 @@ def canonical(obj: dict) -> bytes:
 
 def read_json(path: Path) -> dict:
     obj = json.loads(path.read_text(encoding='utf-8'))
-    require(isinstance(obj, dict), f'expected object in {path.name}')
+    require(isinstance(obj, dict), f'Ожидается объект в {path.name}')
     return obj
 
 
@@ -93,20 +93,20 @@ def verify_shadow_file(path: Path, key: bytes) -> list[dict]:
     events: list[dict] = []
     with path.open('rb') as stream:
         for line_number, line in enumerate(stream, 1):
-            require(line.endswith(b'\n') and len(line) <= 2048, f'{path.name}:{line_number}: truncated/oversized event')
+            require(line.endswith(b'\n') and len(line) <= 2048, f'{path.name}:{line_number}: усечённое или слишком большое событие')
             try:
                 record = json.loads(line)
             except (ValueError, UnicodeError) as exc:
-                raise EvidenceError(f'{path.name}:{line_number}: invalid JSON') from exc
+                raise EvidenceError(f'{path.name}:{line_number}: некорректный JSON') from exc
             require(isinstance(record, dict), 'Запись теневого режима не является объектом')
             fields = {'schema', 'version', 'bootId', 'sequence', 'prevMac', 'timestampMs', 'sessionKey', 'nodeKey', 'outcome', 'reason', 'durationUs', 'mac'}
-            require(set(record) == fields, f'{path.name}:{line_number}: unsupported fields')
+            require(set(record) == fields, f'{path.name}:{line_number}: неподдерживаемые поля')
             signature = record.pop('mac')
-            require(isinstance(signature, str) and bool(HEX.fullmatch(signature)), 'invalid shadow MAC encoding')
+            require(isinstance(signature, str) and bool(HEX.fullmatch(signature)), 'Некорректное кодирование MAC теневого режима')
             expected = mac(key, canonical(record))
-            require(hmac.compare_digest(expected, signature), f'{path.name}:{line_number}: failed MAC')
+            require(hmac.compare_digest(expected, signature), f'{path.name}:{line_number}: проверка MAC не пройдена')
             require(record['schema'] == 'neverlauncher.guard-shadow/v1' and record['version'] == VERSION, 'Несовместимая схема или версия теневого режима')
-            require(isinstance(record['bootId'], str) and BOOT.fullmatch(record['bootId']), 'bad boot ID')
+            require(isinstance(record['bootId'], str) and BOOT.fullmatch(record['bootId']), 'Неверный идентификатор загрузки')
             require(boot is None or boot == record['bootId'], 'Смешанные идентификаторы загрузки')
             boot = record['bootId']
             require(type(record['sequence']) is int and record['sequence'] == line_number, 'Последовательность теневого режима отсутствует или воспроизведена повторно')
@@ -116,14 +116,14 @@ def verify_shadow_file(path: Path, key: bytes) -> list[dict]:
             for name in ('sessionKey', 'nodeKey'):
                 require(isinstance(record[name], str) and bool(HEX.fullmatch(record[name])), f'invalid {name}')
             require(record['outcome'] in ('allowed', 'revoked'), 'Неподдерживаемый результат теневого режима')
-            require(isinstance(record['reason'], str) and bool(SAFE.fullmatch(record['reason'])), 'sensitive/invalid reason')
+            require(isinstance(record['reason'], str) and bool(SAFE.fullmatch(record['reason'])), 'Причина содержит чувствительные данные или некорректна')
             require((record['reason'] == 'none') == (record['outcome'] == 'allowed'), 'Недопустимое сочетание результата и причины')
             require(type(record['durationUs']) is int and 0 <= record['durationUs'] <= 600_000_000, 'Недопустимая длительность проверки')
             record['mac'] = signature
             record['sourceFileSha256'] = None
             events.append(record)
             previous = signature
-    require(bool(events), f'{path.name}: empty shadow journal')
+    require(bool(events), f'{path.name}: пустой журнал теневого режима')
     return events
 
 
@@ -175,7 +175,7 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
                 and reviews_path.stat().st_nlink == 1 and
                 0 < reviews_path.stat().st_size <= 8 * 1024 * 1024 and
                 not any(p.is_symlink() for p in reviews_path.parents),
-                'review journal must be a bounded, nonlinked original file')
+                'Журнал проверки должен быть обычным файлом ограниченного размера, не символьной ссылкой')
         def no_duplicate_json_fields(pairs):
             obj = {}
             for key, value in pairs:
@@ -185,18 +185,18 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
         with reviews_path.open('rb') as f:
             for index, line in enumerate(f, 1):
                 require(line.endswith(b'\n') and len(line) <= 2048,
-                        f'review {index}: truncated/oversized incident record')
+                        f'review {index}: усечённая или слишком большая запись инцидента')
                 try:
                     row = json.loads(line, object_pairs_hook=no_duplicate_json_fields)
                 except (UnicodeError, json.JSONDecodeError) as exc:
                     raise EvidenceError(f'Проверка {index}: некорректный JSON инцидента') from exc
-                require(isinstance(row, dict) and set(row) == {'eventMac', 'verdict', 'reviewerId'}, f'review {index}: invalid fields')
+                require(isinstance(row, dict) and set(row) == {'eventMac', 'verdict', 'reviewerId'}, f'review {index}: некорректные поля')
                 evidence = row['eventMac']
-                require(isinstance(evidence, str) and bool(HEX.fullmatch(evidence)) and evidence in unique_macs, f'review {index}: unknown event')
-                require(row['verdict'] in ('false_positive', 'true_positive', 'inconclusive'), f'review {index}: invalid verdict')
+                require(isinstance(evidence, str) and bool(HEX.fullmatch(evidence)) and evidence in unique_macs, f'review {index}: неизвестное событие')
+                require(row['verdict'] in ('false_positive', 'true_positive', 'inconclusive'), f'review {index}: недопустимый вердикт')
                 require(isinstance(row['reviewerId'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{1,63}', row['reviewerId']) is not None,
-                        f'review {index}: invalid reviewer')
-                require(evidence not in reviews, f'review {index}: duplicate review')
+                        f'review {index}: некорректные данные проверяющего')
+                require(evidence not in reviews, f'review {index}: повторная проверка')
                 reviews[evidence] = row['verdict']
     invalid_reviews = [v for v in reviews if v not in {e['mac'] for e in revoked_events}]
     require(not invalid_reviews, 'Разбор должен относиться к фактически отозванному событию')
@@ -216,15 +216,15 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
         'reviewed': counts,
         'serverCheckP95Ms': round(percentile(durations, .95), 3),
         'files': files,
-        'notes': 'Observations from authenticated server heartbeats; not fresh client memory attestation. Manual incident review and independent real-player-hours evidence remain mandatory.',
+        'notes': 'Наблюдения основаны на подтверждённых серверных сигналах присутствия, а не на свежей аттестации памяти клиента. Требуются ручной разбор инцидентов и независимые сведения о реальных часах игры.',
     }
 
 
 def load_frame_capture(folder: Path) -> tuple[dict, list[float], dict]:
     details = read_json(folder / 'capture.json')
     for field in ('os', 'arch', 'cpu', 'gpu', 'minecraftVersion', 'loader', 'scene', 'buildSha256', 'sourceTool'):
-        require(isinstance(details.get(field), str) and details[field].strip(), f'missing capture {field}')
-    require(HEX.fullmatch(details['buildSha256']) is not None, 'invalid build SHA-256')
+        require(isinstance(details.get(field), str) and details[field].strip(), f'Отсутствует запись захвата {field}')
+    require(HEX.fullmatch(details['buildSha256']) is not None, 'Некорректный SHA-256 сборки')
     require(details['sourceTool'] in ('PresentMon', 'MangoHud', 'CapFrameX', 'RenderDoc', 'MinecraftFrameProfiler'), 'Для измерений кадров требуется известный инструмент реального захвата кадров')
     csvfile = folder / 'frames.csv'
     require(csvfile.is_file() and not csvfile.is_symlink() and csvfile.stat().st_size <= 64 * 1024 * 1024, 'Файл CSV с измерениями кадров отсутствует или повреждён')
@@ -255,7 +255,7 @@ def compare_performance(base: Path, protected: Path) -> dict:
         'guardP95RegressionPercent': round(change, 3), 'initialBudgetPercent': 3.0,
         'baseline': ah, 'protected': bh,
         'environment': a,
-        'notes': 'Only these two external frame capture files were measured; not a cross-hardware performance certification.',
+        'notes': 'Измерялись только два указанных внешних файла захвата кадров; это не сертификация производительности на разных конфигурациях оборудования.',
     }
 
 
@@ -266,7 +266,7 @@ def verify_game(work: Path, server_log: Path, username: str) -> dict:
     checks = result.get('checks', {})
     require(isinstance(game, dict) and game.get('client') == 'actual-mojang-client' and game.get('paperJoin') == 'passed', 'Не подтверждено реальное подключение клиента Mojang к серверу')
     for check in ('packageVerified', 'signedManifest', 'actualClient', 'paperJoin', 'sessionRevokeDeny'):
-        require(checks.get(check) is True, f'Minecraft E2E check failed: {check}')
+        require(checks.get(check) is True, f'Проверка Minecraft E2E не пройдена: {check}')
     require(game.get('loader') in ('vanilla', 'fabric', 'quilt', 'forge', 'neoforge'), 'Недопустимый загрузчик')
     if game['loader'] != 'vanilla':
         require(checks.get('loaderNativeClientJoin') is True, 'Клиент с модификациями не подключился к реальному серверу загрузчика')
@@ -278,11 +278,11 @@ def verify_game(work: Path, server_log: Path, username: str) -> dict:
     hashed = {}
     root = work.resolve()
     for name in evidence:
-        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,120}', name), 'unsafe evidence filename')
+        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,120}', name), 'Небезопасное имя файла свидетельства')
         target = work / name
-        require(target.is_file() and not target.is_symlink() and target.resolve().parent == root and target.stat().st_size > 0, f'missing real E2E evidence: {name}')
+        require(target.is_file() and not target.is_symlink() and target.resolve().parent == root and target.stat().st_size > 0, f'Отсутствует реальное свидетельство E2E: {name}')
         hashed[name] = file_hash(target)
-    require(server_log.is_file() and not server_log.is_symlink() and re.fullmatch(r'[A-Za-z0-9_]{3,16}', username) is not None, 'server log and valid Minecraft player identity required')
+    require(server_log.is_file() and not server_log.is_symlink() and re.fullmatch(r'[A-Za-z0-9_]{3,16}', username) is not None, 'Требуются журнал сервера и действительная учётная запись игрока Minecraft')
     # Сопоставляйте аутентифицированное разрешение сервера и фактическое сообщение о входе Minecraft
     # в одном захваченном серверном журнале, а не с поддельным main клиента.
     with server_log.open('r', encoding='utf-8', errors='replace') as log:
@@ -339,7 +339,7 @@ def run_jvm_suites(output: Path, only: set[str] | None = None) -> dict:
     status = 'PASS_JVM_REGRESSIONS_ONLY' if suites and all(v['status'] == 'PASS' for v in suites) else 'BLOCKED'
     return {'schema': 'neverlauncher.guard-adversarial-jvm/v1', 'version': VERSION,
             'status': status, 'suites': suites,
-            'notes': 'Real Java subprocess fixtures; not official Minecraft or user shadow-pilot certification.'}
+            'notes': 'Реальные тестовые Java-подпроцессы; это не сертификация официального Minecraft или пользовательского теневого пилота.'}
 
 
 def main() -> int:

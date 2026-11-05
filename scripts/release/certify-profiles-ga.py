@@ -94,7 +94,7 @@ def validate_test_events(output: str, required: tuple[str, ...]) -> None:
             problems.append(f"{test or 'package'}:skip")
         if test in required and action in {"pass", "fail", "skip"}:
             if test in terminal:
-                problems.append(f"{test}:duplicate result")
+                problems.append(f"{test}:повторяющийся результат")
             terminal[test] = action
     not_passed = {
         name: terminal.get(name, "missing")
@@ -149,14 +149,14 @@ def main() -> int:
         r"[a-fA-F0-9]{40}", sha
     ):
         print(
-            "Profile GA requires supported release version and exact 40-digit source SHA",
+            "Для Profile GA требуются поддерживаемая версия выпуска и точный 40-символьный SHA исходников",
             file=sys.stderr,
         )
         return 2
     expected_run = identity(version, sha, root=ROOT)
     if not os.getenv("LAUNCHER_TEST_POSTGRES_DSN"):
         print(
-            "GA certification requires LAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)",
+            "Для сертификации GA необходим LAUNCHER_TEST_POSTGRES_DSN (реальный PostgreSQL)",
             file=sys.stderr,
         )
         return 2

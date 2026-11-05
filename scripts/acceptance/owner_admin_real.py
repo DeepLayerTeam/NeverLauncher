@@ -357,7 +357,7 @@ def execute(args, report):
                 doc.get('repository') == 'postgres', 'Неверный реально работающий Backend стандартного режима')
         checkout = os.environ.get('GITHUB_SHA', '')
         require(not checkout or doc.get('sourceCommit') == checkout,
-                'deployed backend is not built from exact source commit')
+                'Развёрнутый Backend собран не из указанного коммита исходников')
         require(api.request('GET', '/api/v1/install/readiness').get('data', {}).get('bootstrapTokenConsumed') is False,
                 'Владелец уже существует; установка не является новой')
     check(report, 'real_https_postgres_ready', first_ready)

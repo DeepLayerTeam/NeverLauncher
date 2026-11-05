@@ -37,7 +37,7 @@ def die(message: str) -> None:
 def canonical_sha256(value: str) -> str:
     value = value.strip().lower()
     if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-        die(f"invalid SHA-256: {value!r}")
+        die(f"Некорректный SHA-256: {value!r}")
     return value
 
 
@@ -180,7 +180,7 @@ def safe_archive_name(name: str) -> str:
         return ""
     p = PurePosixPath(name)
     if p.is_absolute() or any(part in {"", ".", ".."} for part in p.parts):
-        die(f"unsafe archive entry: {name}")
+        die(f"Небезопасный элемент архива: {name}")
     return str(p)
 
 
@@ -198,7 +198,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         return
     if platform == "linux":
         if len(data) < 20 or data[:4] != b"\x7fELF" or data[4] != 2 or data[5] != 1:
-            die("bin/java is not little-endian ELF64")
+            die("bin/java не является 64-битным ELF с порядком байтов little-endian")
         machine = struct.unpack_from("<H", data, 18)[0]
         expected = 62 if arch == "x64" else 183
         if machine != expected:
@@ -206,7 +206,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         return
     if platform == "macos":
         if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
-            die("bin/java is not thin little-endian Mach-O64")
+            die("bin/java не является одноплатформенным 64-битным Mach-O с порядком байтов little-endian")
         cpu = struct.unpack_from("<I", data, 4)[0]
         expected = 0x01000007 if arch == "x64" else 0x0100000C
         if cpu != expected:
@@ -251,7 +251,7 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
             if member.issym():
                 link = member.linkname.replace("\\", "/")
                 if not link or PurePosixPath(link).is_absolute():
-                    die(f"unsafe JRE symlink: {member.name} -> {member.linkname}")
+                    die(f"Небезопасная символьная ссылка JRE: {member.name} -> {member.linkname}")
                 resolved = PurePosixPath(clean).parent.joinpath(link)
                 depth = 0
                 for part in resolved.parts:
@@ -265,7 +265,7 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
             if member.islnk():
                 link = safe_archive_name(member.linkname)
                 if not link:
-                    die(f"unsafe JRE hardlink: {member.name} -> {member.linkname}")
+                    die(f"Небезопасная жёсткая ссылка JRE: {member.name} -> {member.linkname}")
                 continue
             if not member.isfile():
                 continue

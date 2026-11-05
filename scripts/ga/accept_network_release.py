@@ -55,13 +55,13 @@ def read_json(path: Path) -> dict:
         path.is_file()
         and not path.is_symlink()
         and 0 < path.stat().st_size <= 16 * 1024 * 1024,
-        f"missing, linked or oversized evidence: {path}",
+        f"Свидетельство отсутствует, является ссылкой или превышает размер: {path}",
     )
 
     def unique(pairs):
         obj = {}
         for k, v in pairs:
-            require(k not in obj, f"duplicate JSON field {k}: {path.name}")
+            require(k not in obj, f"Повторяющееся поле JSON {k}: {path.name}")
             obj[k] = v
         return obj
 
@@ -86,7 +86,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
     rows = manifest.get("artifacts")
     require(
         type(rows) is list and len(rows) == len(TARGETS),
-        "incomplete bridge artifact cohort",
+        "Неполный набор артефактов Bridge",
     )
     require(
         [row.get("id") for row in rows if type(row) is dict] == list(TARGETS),
@@ -99,7 +99,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
         require(
             row.get("file") == filename
             and HEX.fullmatch(str(row.get("sha256"))) is not None,
-            f"{target}: wrong manifest name or digest",
+            f"{target}: неверное имя манифеста или хеш",
         )
         original = root / "artifacts/plugins" / filename
         shipped = release / filename
@@ -117,7 +117,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
             f"{target}: Итоговый JAR выпуска отличается от фактически сертифицированной сборки",
         )
         require(
-            shipped_hash not in seen, f"{target}: duplicate byte-identical runtime JAR"
+            shipped_hash not in seen, f"{target}: повторяющийся JAR Runtime с идентичным содержимым"
         )
         seen.add(shipped_hash)
         results[target] = shipped_hash
@@ -142,7 +142,7 @@ def verify_faults(runtime: Path, version: str, commit: str) -> None:
     )
     require(
         proof.get("logFile") == "network-faults-0420.go-test.jsonl",
-        "wrong host fault log",
+        "Неверный журнал отказа узла",
     )
     log = runtime / proof["logFile"]
     fresh = validate(log, commit, version)
@@ -158,7 +158,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
         result.get("version") == version
         and result.get("mode") == "full"
         and result.get("status") == "passed",
-        "full real Minecraft E2E not passed",
+        "Полная реальная проверка Minecraft E2E не пройдена",
     )
     checks = result.get("checks") or {}
     require(
@@ -179,7 +179,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
     require(
         type(evidence_names) is list
         and len(evidence_names) == len(set(evidence_names)),
-        "duplicate or malformed runtime evidence index",
+        "Повторяющийся или некорректный индекс свидетельств Runtime",
     )
     required = (
         "world-backup-0290.json",
@@ -242,7 +242,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
             raise ReleaseBlocked(f"{script}: истекло время проверки подтверждений") from exc
         require(
             proc.returncode == 0,
-            f"{script}: rejected real E2E evidence: {proc.stderr[-1000:]}",
+            f"{script}: отклонено реальное свидетельство E2E: {proc.stderr[-1000:]}",
         )
 
 
@@ -256,7 +256,7 @@ def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
     matrix = certify(root, runtime, "all")
     require(
         matrix.get("status") == "passed" and matrix.get("passedCount") == len(TARGETS),
-        "real JVM/Minecraft/Proxy matrix incomplete: "
+        "Неполная матрица реальных JVM/Minecraft/Proxy: "
         + ", ".join(
             f"{name}={matrix.get('cases', {}).get(name, {}).get('reason', 'no live proof')}"
             for name in TARGETS
@@ -272,7 +272,7 @@ def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
         )
         require(
             matrix["cases"][name].get("bridgeJarSha256") == hashes[name],
-            f"{name}: live proof not bound to final JAR bytes",
+            f"{name}: реальное подтверждение не привязано к финальным байтам JAR",
         )
     verify_faults(runtime, version, commit)
     verify_e2e_files(runtime, version, commit)

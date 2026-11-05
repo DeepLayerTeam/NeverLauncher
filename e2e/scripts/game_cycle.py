@@ -73,7 +73,7 @@ def file_manifest(pkg: dict, client_dir: Path) -> dict[str, str]:
     files = manifest.get("files")
     require(
         isinstance(files, list) and len(files) > 10,
-        "not a real Minecraft client package",
+        "Не является настоящим пакетом клиента Minecraft",
     )
     known: dict[str, str] = {}
     root = client_dir.resolve()
@@ -86,13 +86,13 @@ def file_manifest(pkg: dict, client_dir: Path) -> dict[str, str]:
             and "\\" not in rel
             and not rel.startswith("/")
             and all(x not in ("", ".", "..") for x in rel.split("/")),
-            "unsafe package path",
+            "Небезопасный путь к пакету",
         )
         require(
             isinstance(expected, str) and HEX.fullmatch(expected) is not None,
             "Недопустимый хеш пакета",
         )
-        require(rel not in known, f"duplicate package file: {rel}")
+        require(rel not in known, f"Повторяющийся файл пакета: {rel}")
         path = client_dir.joinpath(*rel.split("/"))
         require(
             path.is_file()
@@ -102,7 +102,7 @@ def file_manifest(pkg: dict, client_dir: Path) -> dict[str, str]:
         )
         require(
             path.stat().st_size == entry.get("size") and sha(path) == expected,
-            f"package bytes mismatch: {rel}",
+            f"Несовпадение содержимого пакета: {rel}",
         )
         known[rel] = expected
     return known
@@ -121,10 +121,10 @@ def identity(root: Path, version: str) -> str:
         text=True,
         check=True,
     )
-    require(proc.stdout.strip() == source_sha, "checkout HEAD differs from GITHUB_SHA")
+    require(proc.stdout.strip() == source_sha, "HEAD рабочей копии отличается от GITHUB_SHA")
     require(
         (root / "VERSION").read_text().strip() == version,
-        "product version differs from checkout",
+        "Версия продукта не соответствует рабочей копии",
     )
     return source_sha
 
@@ -286,14 +286,14 @@ def prepare(args: argparse.Namespace) -> None:
     require(
         read(install_dir / ".launcher/client-state.json").get("version")
         == updated_version,
-        "updater did not atomically advance installed version",
+        "Средство обновления не переключило установленную версию атомарно",
     )
     snapshot = updated_result.get("rollbackSnapshot")
     require(
         isinstance(snapshot, str)
         and bool(snapshot)
         and snapshot != installed.get("rollbackSnapshot"),
-        "transactional updater did not create a distinct rollback snapshot",
+        "Транзакционное обновление не создало отдельный снимок для отката",
     )
     write(
         work / "game-cycle-0364-state.json",
@@ -327,7 +327,7 @@ def rollback(args: argparse.Namespace) -> None:
         and state.get("status") == "updated-and-verified",
         "Нет завершённого реального обновления, которое можно откатить",
     )
-    require(state.get("clientCLIsha256") == sha(cli), "Go CLI changed since update")
+    require(state.get("clientCLIsha256") == sha(cli), "Исполняемый Go CLI изменился после обновления")
     require(
         state.get("sourceCommit") == identity(args.root, args.version),
         "Исходные файлы изменились после обновления",
@@ -336,7 +336,7 @@ def rollback(args: argparse.Namespace) -> None:
     client = work / "cycle-client"
     require(
         file_manifest(new, client).get(CHANGE_PATH) == state["changedResourceSha256"],
-        "updated client resource was tampered with",
+        "Обновлённый ресурс клиента был изменён посторонним образом",
     )
     restored = run(
         cli,
@@ -352,7 +352,7 @@ def rollback(args: argparse.Namespace) -> None:
     )
     require(
         restored.get("restoredSnapshot") == state["rollbackSnapshot"],
-        "wrong snapshot restored",
+        "Восстановлен неверный снимок",
     )
     run(
         cli,
@@ -361,7 +361,7 @@ def rollback(args: argparse.Namespace) -> None:
         "valid",
     )
     require(
-        not (client / CHANGE_PATH).exists(), "update-only resource survived rollback"
+        not (client / CHANGE_PATH).exists(), "Ресурс, добавленный обновлением, сохранился после отката"
     )
     require(
         file_manifest(base, client)
@@ -424,7 +424,7 @@ def finalize(args: argparse.Namespace) -> None:
         and initial_manifest.get("signature", {}).get("algorithm") == "Ed25519"
         and update_manifest.get("signature", {}).get("algorithm") == "Ed25519"
         and digests["manifest.json"] != digests["cycle-manifest-update.json"],
-        "two distinct signed releases not proven",
+        "Не подтверждены два разных подписанных выпуска",
     )
     require(
         read(work / "cycle-runtime-verify-update.json").get("status") == "ready",
@@ -434,24 +434,24 @@ def finalize(args: argparse.Namespace) -> None:
         actual = read(work / f"cycle-runtime-launch-{stage}.json")
         require(
             actual.get("success") is True or actual.get("timedOut") is True,
-            f"actual JVM launch not confirmed: {stage}",
+            f"Фактический запуск JVM не подтверждён: {stage}",
         )
         counters = read(work / f"cycle-join-{stage}.json")
         require(
             counters.get("allowedAfter", 0) > counters.get("allowedBefore", 0)
             and counters.get("joinedAfter", 0) > counters.get("joinedBefore", 0),
-            "new live Minecraft join not observed: " + stage,
+            "Не зафиксировано новое реальное подключение к Minecraft: " + stage,
         )
         log = (work / f"cycle-join-{stage}.log").read_text(encoding="utf-8")
         require(
             "launcher.join.allowed username=" + args.player in log
             and args.player + " joined the game" in log,
-            "real Paper/ServerBridge join not observed: " + stage,
+            "Реальное подключение через Paper/ServerBridge не зафиксировано: " + stage,
         )
     require(
         read(work / "cycle-verify-rollback.json").get("verify", {}).get("valid")
         is True,
-        "restored baseline package not valid",
+        "Восстановленный исходный пакет недействителен",
     )
     binaries = {
         "javaExecutable": args.java,
@@ -461,7 +461,7 @@ def finalize(args: argparse.Namespace) -> None:
     for name, path in binaries.items():
         require(
             path is not None and path.is_file() and path.stat().st_size > 0,
-            f"actual {name} binary missing",
+            f"actual {name} Отсутствует исполняемый файл",
         )
     write(
         work / "game-cycle-0364-result.json",

@@ -44,10 +44,10 @@ class FinalBundleTests(unittest.TestCase):
     def test_duplicate_unsigned_or_missing_binary_refused(self):
         sums = self.folder / 'SHA256SUMS'
         sums.write_text(sums.read_text() * 2)
-        with self.assertRaisesRegex(m.Blocked, 'duplicate'):
+        with self.assertRaisesRegex(m.Blocked, 'Повторяющаяся'):
             m.identity(self.folder, VERSION, COMMIT)
         sums.write_text('f' * 64 + '  other-file\n')
-        with self.assertRaisesRegex(m.Blocked, 'missing'):
+        with self.assertRaisesRegex(m.Blocked, 'отсутствует'):
             m.identity(self.folder, VERSION, COMMIT)
 
     def test_all_21_real_execution_steps_required(self):

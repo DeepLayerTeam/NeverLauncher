@@ -75,7 +75,7 @@ def package(cli: Path, private_key: Path, public_key: Path, output: Path) -> dic
         "schemaVersion": "1.0",
         "productVersion": version,
         "kind": "signed-java-examples",
-        "note": "These are integration test examples, not certified production/Gravit parity packages.",
+        "note": "Это примеры интеграционных тестов, а не сертифицированные рабочие пакеты с подтверждённой совместимостью Gravit.",
         "packages": records,
     }
     (output / "index.json").write_text(
@@ -96,7 +96,7 @@ def main():
         for record in manifest["packages"]:
             print(record["filename"], record["sha256"])
     except (OSError, ValueError, subprocess.CalledProcessError) as e:
-        parser.exit(1, f"package verification failed: {e}\n")
+        parser.exit(1, f"Проверка пакета не пройдена: {e}\n")
 
 
 if __name__ == "__main__":

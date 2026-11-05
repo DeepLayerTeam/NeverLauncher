@@ -185,7 +185,7 @@ def verify_update_payload_0410(
     )
     require(
         manifest_member in members,
-        "missing installed component update manifest: " + manifest_member,
+        "Отсутствует установленный манифест обновления компонентов: " + manifest_member,
     )
     update_bytes = members[manifest_member]
     update = json.loads(update_bytes, object_pairs_hook=_no_dupes)
@@ -196,12 +196,12 @@ def verify_update_payload_0410(
         and update.get("productVersion") == version
         and update.get("architecture") == arch
         and update.get("platform") == {"darwin": "macos"}.get(system, system),
-        "installed component update manifest identity mismatch",
+        "Идентификатор манифеста обновления установленного компонента не совпадает",
     )
     require(
         update.get("layout")
         == ("macos-app-bundle" if system == "darwin" else "adjacent-files"),
-        "installed component update layout mismatch",
+        "Структура манифеста обновления установленного компонента не соответствует ожидаемой",
     )
     expected_roles = {
         "desktop": "desktop-launcher",
@@ -253,7 +253,7 @@ def verify_update_payload_0410(
                 and not src.startswith("/")
                 and "\\" not in src
                 and all(part not in ("", ".", "..") for part in src.split("/")),
-                "unsafe installed update path for " + role,
+                "Небезопасный путь установленного обновления для " + role,
             )
             actual_member = prefix + src
             require(
@@ -276,7 +276,7 @@ def verify_update_payload_0410(
                 )
                 require(
                     actual_member == expected_path,
-                    "component update package manifest path mismatch",
+                    "Путь манифеста пакета обновления компонента не совпадает",
                 )
             else:
                 matching = [
@@ -311,7 +311,7 @@ def verify_update_payload_0410(
         and signature.get("manifestSha256") == hashlib.sha256(update_bytes).hexdigest()
         and isinstance(signature.get("signature"), str)
         and re.fullmatch("[a-f0-9]{128}", signature["signature"]) is not None,
-        "component set signature does not bind installed update manifest",
+        "Подпись набора компонентов не привязана к установленному манифесту обновления",
     )
     v2_path = (
         prefix
@@ -327,7 +327,7 @@ def verify_update_payload_0410(
         and v2.get("manifestSha256") == hashlib.sha256(update_bytes).hexdigest()
         and isinstance(v2.get("signature"), str)
         and re.fullmatch("[a-f0-9]{128}", v2["signature"]) is not None,
-        "delegated component signature does not bind installed update manifest",
+        "Делегированная подпись компонента не привязана к установленному манифесту обновления",
     )
     trust_policy = (
         prefix
@@ -677,7 +677,7 @@ def dry_run(
             and fields[1] not in expected
             and "/" not in fields[1]
             and "\\" not in fields[1],
-            "invalid SHA256SUMS entry",
+            "Некорректная запись SHA256SUMS",
         )
         expected[fields[1]] = fields[0]
     files = [p for p in bundle.iterdir() if p.is_file() and not p.is_symlink()]

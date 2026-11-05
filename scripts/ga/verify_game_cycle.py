@@ -76,7 +76,7 @@ def verify(
         and parent.get("mode") == "full"
         and parent.get("checks", {}).get("realGameUpdateRollback") is True
         and "game-cycle-0364-result.json" in parent.get("evidence", []),
-        "parent real-Minecraft result does not require 0.36.4 cycle",
+        "Родительский результат реального Minecraft не требует цикл версии 0.36.4",
     )
     require(
         game.get("schemaVersion") == SCHEMA
@@ -116,7 +116,7 @@ def verify(
     evidence = game.get("artifacts")
     require(
         isinstance(evidence, dict) and len(evidence) >= 20,
-        "incomplete game evidence index",
+        "Неполный индекс игровых свидетельств",
     )
     required_files = (
         "client-package.json",
@@ -185,12 +185,12 @@ def verify(
         == updated.get("signature", {}).get("publicKey")
         and bool(base["signature"].get("signature"))
         and bool(updated["signature"].get("signature")),
-        "signed runtime manifest evidence incomplete",
+        "Не хватает свидетельств подписанного манифеста Runtime",
     )
     require(
         load(root, "cycle-runtime-verify-update.json").get("signature", {}).get("valid")
         is True,
-        "update signature was not independently verified by Runtime",
+        "Подпись обновления не прошла независимую проверку Runtime",
     )
     before_files = {x["path"]: x["sha256"] for x in base.get("files", [])}
     after_files = {x["path"]: x["sha256"] for x in updated.get("files", [])}
@@ -206,7 +206,7 @@ def verify(
         and load(root, "cycle-rollback.json").get("status") == "rolled-back"
         and load(root, "cycle-verify-rollback.json").get("verify", {}).get("valid")
         is True,
-        "real Go updater or rollback failed",
+        "Реальное Go-обновление или откат завершились ошибкой",
     )
     for stage in ("update", "rollback"):
         launch = load(root, f"cycle-runtime-launch-{stage}.json")

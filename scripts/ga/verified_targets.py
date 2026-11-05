@@ -116,7 +116,7 @@ def verify_player_trace(
             "playerCycleId",
             "evidenceSha256",
         },
-        target + ": incomplete final-package player trace " + check,
+        target + ": неполный журнал игрока для финального пакета " + check,
     )
     require(
         trace["packageSha256"] == item["packageSha256"]
@@ -422,7 +422,7 @@ def verify(
             )
             trace = read_json(trace_path)
             require(
-                sha(trace_path) == meta["sha256"], target + ": changed trace " + check
+                sha(trace_path) == meta["sha256"], target + ": журнал событий изменился " + check
             )
             if check in security_checks(version):
                 # Уже проверено на предварительном этапе подписанного одобрения, включая сырые события

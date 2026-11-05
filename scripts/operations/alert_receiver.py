@@ -39,10 +39,10 @@ def read_secret(path):
         st = os.fstat(fd)
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
                 (stat.S_IMODE(st.st_mode) & 0o077) == 0 and 32 <= st.st_size <= 4096,
-                'unsafe token file')
+                'Небезопасный файл токена')
         token = os.read(fd, 4097).strip()
         require(32 <= len(token) <= 4096 and all(33 <= x <= 126 for x in token),
-                'unsafe bearer token')
+                'Небезопасный токен доступа')
         return token
     finally:
         os.close(fd)
@@ -150,9 +150,9 @@ def make_handler(folder, alert, webhook_token, reader_token):
                 return
             try:
                 n = int(self.headers.get('Content-Length', '0'))
-                require(0 < n <= 65536, 'oversized webhook')
+                require(0 < n <= 65536, 'Превышен допустимый размер webhook')
                 raw = self.rfile.read(n)
-                require(len(raw) == n, 'truncated webhook')
+                require(len(raw) == n, 'Webhook усечён')
                 data = json.loads(raw, object_pairs_hook=unique)
                 report = accept_alert(data, alert)
                 store(folder, report)

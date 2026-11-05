@@ -414,7 +414,7 @@ def assert_image_cohorts(reports, versions):
     # backend, остаются одинаковыми.
     for svc in ("admin", "ingress", "volume-init"):
         require(len({r["imageDigestRefs"].get(svc) for r in reports.values()}) == 1,
-                "hosts do not agree on pinned " + svc + " image")
+                "На узлах различаются закреплённые значения " + svc + " image")
     for version in PAIR:
         images = {reports[node]["imageDigestRefs"]["api"] for node in versions
                   if versions[node] == version}
@@ -456,7 +456,7 @@ def rollout(args):
             require(plan["nodeId"] == reports[label]["nodeId"] and
                     plan["sourceImage"] == reports[label]["imageDigestRefs"]["api"] and
                     plan["to"] == TARGET and multi.DIGEST_REGEX.fullmatch(plan["targetImage"]),
-                    "unverified staged target image on " + label)
+                    "Непроверенный образ целевой версии подготовлен на " + label)
             expected_targets.add(plan["targetImage"])
             initial_plans[label] = plan
         require(len(expected_targets) == 1, "Узлы не согласовали единую целевую контрольную сумму OCI")

@@ -38,15 +38,15 @@ def require(condition: bool, description: str) -> None:
 def read_json(root: Path, name: str) -> dict:
     path = root / name
     require(path.is_file() and not path.is_symlink() and 0 < path.stat().st_size <= 2_000_000,
-            f'missing/unsafe actual HTTP evidence: {name}')
+            f'Отсутствует фактическое HTTP-свидетельство или его использование небезопасно: {name}')
     def strict(pairs):
         doc = {}
         for k, v in pairs:
-            require(k not in doc, f'duplicate JSON field: {name}:{k}')
+            require(k not in doc, f'Повторяющееся поле JSON: {name}:{k}')
             doc[k] = v
         return doc
     doc = json.loads(path.read_text('utf-8'), object_pairs_hook=strict)
-    require(type(doc) is dict, f'non-object HTTP evidence: {name}')
+    require(type(doc) is dict, f'HTTP-свидетельство не является объектом: {name}')
     return doc
 
 
@@ -67,19 +67,19 @@ def canonical_uuid(raw: object) -> str:
 def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt: str = '') -> dict:
     require(root.is_dir() and not root.is_symlink(), 'Не найден каталог реальных E2E-проверок')
     require(HEX40.fullmatch(source) is not None or HEX64.fullmatch(source) is not None,
-            'missing exact source commit')
+            'Отсутствует точная фиксация исходного кода')
     base = verify_game_cycle(root, version, source, run_id, run_attempt)
     parent = read_json(root, 'result.json')
     require(parent.get('mode') == 'full' and parent.get('minecraft', {}).get('client') == 'actual-mojang-client' and
             parent.get('minecraft', {}).get('paperJoin') == 'passed' and
             parent.get('checks', {}).get('sessionRevokeDeny') is True,
-            'real player join/revocation missing')
+            'Не подтверждены реальное подключение игрока и отзыв доступа')
     issued = read_json(root, 'join-paper-real-client.json')
     fresh = read_json(root, 'join-paper-real-client-fresh.json')
     require(issued.get('data', {}).get('oneTime') is True and
             fresh.get('data', {}).get('oneTime') is True and
             issued['data'].get('ticketId') != fresh['data'].get('ticketId'),
-            'live launch did not receive separate one-time ticket')
+            'Реальный запуск не получил отдельный одноразовый билет')
     join = issued['data'].get('join', {})
     expected = {'username': join.get('username'), 'projectId': join.get('projectId'),
                 'profileId': join.get('profileId'), 'channel': join.get('channel'),
@@ -87,7 +87,7 @@ def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt:
     uuid = canonical_uuid(join.get('uuid'))
     require(expected == {'username': join['username'], 'projectId': 'e2e-project',
             'profileId': parent['minecraft']['profileId'], 'channel': 'stable',
-            'serverId': 'paper-e2e-p3'} and expected['username'], 'unexpected player/server fixture')
+            'serverId': 'paper-e2e-p3'} and expected['username'], 'Неожиданные тестовые данные игрока или сервера')
     proof = {}
     for case, (changed, reason) in CASES.items():
         name_req = f'player-0398-request-{case}.json'
@@ -97,26 +97,26 @@ def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt:
         status_file = root / f'player-0398-http-{case}.txt'
         require(status_file.is_file() and not status_file.is_symlink() and
                 status_file.read_text('ascii') == '403\n',
-                f'live negative HTTP status was not 403: {case}')
+                f'Отрицательный HTTP-сценарий вернул статус, отличный от 403: {case}')
         require(request.get('protocolVersion') == 2 and
                 all(request.get(k) == v for k, v in expected.items() if k != changed),
-                f'unexpected signed request fixture: {case}')
+                f'Неожиданные тестовые данные подписанного запроса: {case}')
         require(all(request.get(k) != expected.get(k) for k in [changed] if changed != 'uuid') and
                 (canonical_uuid(request.get('uuid')) != uuid if changed == 'uuid' and case == 'uuid-mismatch' else True),
-                f'negative case did not change expected field: {case}')
+                f'Отрицательный сценарий не изменил ожидаемое поле: {case}')
         if changed != 'uuid':
-            require(canonical_uuid(request.get('uuid')) == uuid, f'wrong UUID in negative case {case}')
+            require(canonical_uuid(request.get('uuid')) == uuid, f'Неверный UUID в отрицательном сценарии {case}')
         if case == 'invalid-uuid':
             require(request.get('uuid') == 'not-a-minecraft-uuid', 'Отсутствует тестовый набор с некорректным UUID')
         require(request.get('pluginVersion') == version and
                 HEX64.fullmatch(str(request.get('pluginSha256', ''))) is not None,
-                f'wrong actual bridge binary version/digest: {case}')
+                f'Неверная версия или хеш фактического исполняемого файла Bridge: {case}')
         payload = response.get('data')
         require(type(payload) is dict and payload.get('allowed') is False and
                 payload.get('reason') == reason and not payload.get('player') and
                 payload.get('serverId') == request['serverId'] and
                 payload.get('username') == request['username'],
-                f'{case} not rejected with exact server-side reason')
+                f'{case} Сервер не отклонил запрос с точной причиной отказа')
         proof[case] = {name_req: sha(root / name_req), name_resp: sha(root / name_resp),
                        status_file.name: sha(status_file)}
     allowed = read_json(root, 'validate-paper-e2e-p3-allow.json').get('data', {})
@@ -127,11 +127,11 @@ def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt:
             denied.get('allowed') is False and
             denied.get('reason') in ('launcher_session_or_handoff_missing_or_expired',
                                      'launcher_session_missing_or_expired'),
-            'real ticket was consumed by a negative test, replay succeeded or player UUID changed')
+            'Реальный билет использован отрицательным тестом, повтор запроса удался или UUID игрока изменился')
     # Настоящие подключение JVM к игре и откат независимо проверяются 0.36.4 по счётчикам, журналам,
     # подписанным манифестам, хешам бинарных файлов и идентичности исходников.
     require(type(base['artifactsVerified']) is int and base['artifactsVerified'] >= 20 and
-            base['realJoinsAfterUpdateAndRollback'] is True, 'game cycle not verified')
+            base['realJoinsAfterUpdateAndRollback'] is True, 'Игровой цикл не подтверждён')
     return {'status': 'verified', 'scope': 'real-local-Minecraft-player-negative-and-positive-0398',
             'version': version, 'sourceCommit': source, 'negativeCasesVerified': len(CASES),
             'expectedPlayerUUID': uuid, 'runtimeArtifactsVerified': base['artifactsVerified'],

@@ -237,7 +237,7 @@ def main() -> int:
         print(f"Одноузловая приёмка GA заблокирована: {err}", file=sys.stderr)
         return 2
     print(
-        "Independent signed GA evidence verified; release still requires BOM and release signing."
+        "Независимые подписанные свидетельства GA проверены; для выпуска всё ещё необходимы BOM и подпись релиза."
     )
     return 0
 

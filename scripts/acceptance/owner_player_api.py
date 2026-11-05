@@ -79,7 +79,7 @@ def run(base, email, password):
     _, health = api.request("GET", "/health")
     require(
         (ROOT / "VERSION").read_text().strip() in json.dumps(health),
-        "wrong backend version",
+        "Неверная версия Backend",
     )
     record("real-backend-health-0351")
 
@@ -92,7 +92,7 @@ def run(base, email, password):
         "POST", "/api/v1/admin/login", payload={"email": email, "password": password}
     )
     token = logged.get("token")
-    require(isinstance(token, str) and len(token) >= 16, "no real admin token")
+    require(isinstance(token, str) and len(token) >= 16, "Нет действительного токена администратора")
     _, player = api.request(
         "POST",
         "/api/v1/auth/login",
@@ -105,7 +105,7 @@ def run(base, email, password):
     access = player.get("data", {}).get("tokens", {}).get("accessToken")
     refresh = player.get("data", {}).get("tokens", {}).get("refreshToken")
     require(
-        isinstance(access, str) and isinstance(refresh, str), "no real player session"
+        isinstance(access, str) and isinstance(refresh, str), "Нет действительной сессии игрока"
     )
     record("real-admin-and-player-sign-in")
 
@@ -128,7 +128,7 @@ def run(base, email, password):
     )
     require(
         created.get("data", {}).get("project", {}).get("id") == project,
-        "project not created",
+        "Проект не был создан",
     )
     api.request(
         "PATCH",
@@ -140,7 +140,7 @@ def run(base, email, password):
     require(
         public.get("id") == project
         and public.get("description") == "real journey acceptance 0351",
-        "player-visible project readback mismatch",
+        "Данные проекта, доступные игроку, не совпадают с ожидаемыми",
     )
     record("owner-create-update-player-read-project")
 
@@ -162,7 +162,7 @@ def run(base, email, password):
     _, profiles = api.request("GET", "/api/v1/projects/" + project + "/profiles")
     require(
         any(x.get("id") == "test-vanilla" for x in profiles.get("items", [])),
-        "player cannot discover profile",
+        "Игрок не может найти профиль",
     )
     record("owner-create-player-discover-profile")
 

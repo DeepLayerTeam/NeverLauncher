@@ -77,7 +77,7 @@ def referenced_file(path):
 def load_inventory():
     data = json.loads((ROOT / CATALOG).read_text(encoding="utf-8"))
     require(
-        data.get("schemaVersion") == "launcher.user-journeys.v1", "wrong catalog format"
+        data.get("schemaVersion") == "launcher.user-journeys.v1", "Неверный формат каталога"
     )
     require(data.get("productVersion") == "0.35.1", "Неверная версия каталога")
     current = (ROOT / "VERSION").read_text().strip()
@@ -105,14 +105,14 @@ def load_inventory():
         require(
             j.get("name")
             == upstream[ident].get("name", upstream[ident].get("upstreamModule")),
-            "upstream name changed: " + ident,
+            "Изменилось имя источника: " + ident,
         )
         require(
             j.get("legacyStatus") == upstream[ident].get("status"),
-            "historic status mismatch: " + ident,
+            "Несовпадение исторического статуса: " + ident,
         )
         require(
-            j.get("actor") in ("player", "owner", "operator"), "missing actor: " + ident
+            j.get("actor") in ("player", "owner", "operator"), "Не указан исполнитель: " + ident
         )
         for field in ("entry", "action", "success", "negative", "limitations"):
             require(

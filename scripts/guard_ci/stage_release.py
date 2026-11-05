@@ -127,7 +127,7 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
             expected[name] = (digest, size, target_id, role)
     if seen_targets != set(EXPECTED_TARGETS):
         fail(
-            "Guard CI matrix does not contain the complete Linux/Windows/macOS target set"
+            "Матрица Guard CI содержит не полный набор целей Linux/Windows/macOS"
         )
     return expected
 
@@ -165,7 +165,7 @@ def main() -> int:
             continue
         if path.name in found:
             fail(
-                f"duplicate staged source for {path.name}: {found[path.name]} and {path}"
+                f"Повторяющийся подготовленный источник для {path.name}: {found[path.name]} and {path}"
             )
         found[path.name] = path
     missing = sorted(set(expected) - set(found))

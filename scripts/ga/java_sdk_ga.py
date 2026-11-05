@@ -251,7 +251,7 @@ def main() -> int:
         for name, path in publish(args.output, build=not args.skip_build).items():
             print(f"{name}: {path}")
     except (OSError, subprocess.CalledProcessError, RuntimeError, ValueError) as e:
-        parser.exit(1, f"Java SDK publication failed: {e}\n")
+        parser.exit(1, f"Публикация Java SDK завершилась ошибкой: {e}\n")
     return 0
 
 

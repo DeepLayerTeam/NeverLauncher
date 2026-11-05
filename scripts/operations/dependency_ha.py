@@ -363,11 +363,11 @@ def health(stats_result, *, redundant=True):
         counts[backend] = {'up': len(up), 'total': len(nodes), 'active': up}
         minimum = (required if redundant else 1)
         if len(up) < minimum:
-            issues.append(backend + ' has insufficient live healthy endpoints')
+            issues.append(backend + ' Недостаточно доступных исправных конечных точек')
         if backend in ('postgres_primary', 'redis_primary') and len(up) != 1:
             issues.append(backend + ' должен быть ровно один доступный для записи основной узел (разделение кластера или отсутствие лидера)')
     return {'backends': counts, 'issues': issues, 'healthy': not issues,
-            'scope': 'HAProxy live backend checks; not standalone proof of storage durability or upstream quorum'}
+            'scope': 'Проверены реальные Backend-узлы через HAProxy; это не самостоятельное подтверждение надёжности хранения или кворума вышестоящих сервисов'}
 
 
 def probe_edge(url):
@@ -507,7 +507,7 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
             'restorationReadinessObserved': recovery_observed,
             'observations': checks, 'failoverObserved': outcome,
             'testPassed': bool(stopped and restored and outcome and recovery_observed),
-            'limitation': 'stops one systemd service, not physical host; validate actual PG/Redis leader promotion and S3 replication separately'}
+            'limitation': 'Останавливается одна служба systemd, а не физический узел; отдельно проверьте переключение лидера PostgreSQL/Redis и репликацию S3'}
 
 
 
@@ -704,7 +704,7 @@ def edge_drill(sock, edge_url, nodes, cfg, target, deadline):
             'disrupted': stopped, 'restartCommandSucceeded': restored,
             'vipTransferredToSurvivor': moved, 'restorationReadinessObserved': recovery_observed,
             'observations': checks, 'testPassed': stopped and restored and moved and recovery_observed,
-            'limitation': 'VRRP unicast failover, NOT split-brain fencing or upstream durable quorum'}
+            'limitation': 'Переключение VRRP в одноадресном режиме не подтверждает защиту от split-brain или устойчивый кворум вышестоящих сервисов'}
 
 
 def main(argv=None):

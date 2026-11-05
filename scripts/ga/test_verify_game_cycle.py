@@ -62,27 +62,27 @@ class GameCycleVerifierFailClosed(unittest.TestCase):
         (self.root / "game-cycle-0364-result.json").write_text(json.dumps(self.proof))
 
     def test_missing_actual_files_is_blocked(self):
-        with self.assertRaisesRegex(ValueError, "incomplete"):
+        with self.assertRaisesRegex(ValueError, "Неполный индекс"):
             verify(self.root, "0.36.4", COMMIT)
 
     def test_wrong_source_sha_is_blocked(self):
-        with self.assertRaisesRegex(ValueError, "wrong version, source SHA"):
+        with self.assertRaisesRegex(ValueError, "неверную версию, SHA исходников"):
             verify(self.root, "0.36.4", "b" * 40)
 
     def test_wrong_attempt_is_blocked(self):
-        with self.assertRaisesRegex(ValueError, "stale run/attempt"):
+        with self.assertRaisesRegex(ValueError, "Устаревшее свидетельство запуска"):
             verify(self.root, "0.36.4", COMMIT, "1234", "2")
 
     def test_skipped_stage_is_blocked(self):
         self.proof["checks"]["rollbackMinecraftJVMJoin"] = False
         self.save()
-        with self.assertRaisesRegex(ValueError, "unverified"):
+        with self.assertRaisesRegex(ValueError, "не подтверждён"):
             verify(self.root, "0.36.4", COMMIT)
 
     def test_symlinked_report_is_blocked(self):
         (self.root / "result.json").unlink()
         (self.root / "result.json").symlink_to("game-cycle-0364-result.json")
-        with self.assertRaisesRegex(ValueError, "invalid/missing"):
+        with self.assertRaisesRegex(ValueError, "Некорректное или отсутствующее свидетельство"):
             verify(self.root, "0.36.4", COMMIT)
 
 
