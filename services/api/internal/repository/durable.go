@@ -15,8 +15,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-var ErrLeaseBusy = errors.New("durable scope lease busy")
-var ErrLeaseLost = errors.New("durable lease lost")
+var ErrLeaseBusy = errors.New("Аренда области длительных операций занята")
+var ErrLeaseLost = errors.New("Потеряна аренда для длительной операции")
 
 // PostgreSQL — единственный источник времени для распределённых аренд. Часы реплик
 // могут расходиться или скакать во время разделения сети и failover; сравнение или

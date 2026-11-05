@@ -16,7 +16,7 @@ import (
 )
 
 var ErrNotFound = errors.New("запись не найдена")
-var ErrImmutable = errors.New("published release immutable")
+var ErrImmutable = errors.New("Опубликованный релиз нельзя изменить")
 var ErrConflict = errors.New("repository conflict")
 
 // ErrStableRuntimeGate0341 — непреодолимая граница защиты релиза. В 0.34.1 нет
@@ -815,7 +815,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	existingUserIndex := -1
 	for i, existing := range r.users {
 		if strings.EqualFold(existing.Email, user.Email) && existing.ID != user.ID {
-			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: нормализованный адрес электронной почты уже используется другим пользователем Never", ErrConflict)
 		}
 		if existing.ID == user.ID {
 			if !strings.EqualFold(existing.Email, user.Email) {
@@ -830,7 +830,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 		}
 		if existing.Provider == identity.Provider && existing.Issuer == identity.Issuer && existing.Subject == identity.Subject {
 			if existing.UserID != user.ID {
-				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked", ErrConflict)
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: внешняя учётная запись уже привязана", ErrConflict)
 			}
 			canonical, err := r.GetUser(existing.UserID)
 			return canonical, existing, err

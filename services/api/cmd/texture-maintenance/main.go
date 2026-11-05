@@ -125,7 +125,7 @@ func run() error {
 				return err
 			}
 			if bad > 0 {
-				return fmt.Errorf("%d of %d texture objects failed integrity verification", bad, len(objects))
+				return fmt.Errorf("Проверку целостности не прошли %d из %d объектов текстур", bad, len(objects))
 			}
 			return nil
 		}

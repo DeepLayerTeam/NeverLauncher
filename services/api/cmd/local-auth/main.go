@@ -47,7 +47,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 			return err
 		}
 		if flags.NArg() != 0 || filepath.Base(*path) != "Database.json" {
-			return errors.New("provide exact FileAuthSystem Database.json with --file")
+			return errors.New("Укажите исходный Database.json FileAuthSystem через --file")
 		}
 		fd, err := os.Open(*path)
 		if err != nil {
@@ -76,7 +76,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 		defer cancel()
 		status, err := migrator.MigrationStatus(ctx)
 		if err != nil {
-			return fmt.Errorf("check schema: %w", err)
+			return fmt.Errorf("Ошибка проверки схемы: %w", err)
 		}
 		if !status.Compatible || len(status.Pending) != 0 {
 			return errors.New("В схеме базы данных отсутствуют миграции; импорт отклонён")
@@ -122,7 +122,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		return err
 	}
 	if base.Scheme != "https" && !(base.Scheme == "http" && (base.Hostname() == "localhost" || base.Hostname() == "127.0.0.1")) {
-		return errors.New("API must use HTTPS (or localhost for development)")
+		return errors.New("API должен использовать HTTPS (или localhost для разработки)")
 	}
 	if base.Host == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" {
 		return errors.New("Некорректное значение: API URL")
@@ -186,7 +186,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("API rejected %s with HTTP %d (details in server audit)", command, resp.StatusCode)
+		return fmt.Errorf("API отклонил запрос %s с кодом HTTP %d (подробности в журнале аудита сервера)", command, resp.StatusCode)
 	}
 	// Не допускайте, чтобы будущее поле API случайно экспортировало учётные
 	// данные.
@@ -214,12 +214,12 @@ func readPassword(r io.Reader) (string, error) {
 		return "", err
 	}
 	if len(raw) > 4096 {
-		return "", errors.New("password input too long")
+		return "", errors.New("Введённый пароль слишком длинный")
 	}
 	pwd := strings.TrimSuffix(string(raw), "\n")
 	pwd = strings.TrimSuffix(pwd, "\r")
 	if len(pwd) < 12 {
-		return "", errors.New("password must contain at least 12 bytes")
+		return "", errors.New("Пароль должен содержать не менее 12 байт")
 	}
 	return pwd, nil
 }

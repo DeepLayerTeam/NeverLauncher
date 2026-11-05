@@ -24,7 +24,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 	routing.State = strings.ToLower(strings.TrimSpace(routing.State))
 	routing.Health = strings.ToLower(strings.TrimSpace(routing.Health))
 	if serverID == "" || runtimeEpoch < 1 || len(routing.RuntimeID) != 64 || len(routing.Digest) != 64 || routing.Signature == "" {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: invalid routing snapshot", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: некорректный снимок маршрутизации", ErrConflict)
 	}
 	observedAt := time.UnixMilli(routing.ObservedAtUnixMillis).UTC()
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -48,10 +48,10 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 		return model.ServerBridgeRoutingSnapshot{}, err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(currentRuntimeID, routing.RuntimeID) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: routing runtime is not active", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: Runtime маршрутизации неактивен", ErrConflict)
 	}
 	if oldObserved.Valid && observedAt.Before(oldObserved.Time) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: stale routing snapshot", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: снимок маршрутизации устарел", ErrConflict)
 	}
 	if oldObserved.Valid && observedAt.Equal(oldObserved.Time) {
 		if strings.EqualFold(oldDigest, routing.Digest) {
@@ -59,7 +59,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 			routing.ObservedAt = oldObserved.Time
 			return routing, tx.Commit()
 		}
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: routing proof changed at same observation time", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: подтверждение маршрутизации изменилось при том же времени наблюдения", ErrConflict)
 	}
 	revision := oldRevision + 1
 	if revision < 1 {
@@ -72,7 +72,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 		return model.ServerBridgeRoutingSnapshot{}, err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: active runtime changed during routing update", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: во время обновления маршрутизации изменился активный Runtime", ErrConflict)
 	}
 	// После прекращения приёма маршрутов серверной частью немедленно аннулируйте ещё не использованные
 	// передачи, не дожидаясь их погашения. Сохранённое доказательство цели остаётся для аудита, но
@@ -110,7 +110,7 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
 	}
 	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	if sourceStatus != "active" || !isProxyBridgeKind0148(sourceKind) || sourceRuntimeEpoch < 1 || len(sourceRuntimeID) != 64 || !sourceHeartbeat.Valid || sourceHeartbeat.Time.Before(freshAfter) || !sourceRoutingObserved.Valid || sourceRoutingObserved.Time.Before(freshAfter) || sourceState != "ready" || !sourceAccepting || sourceHealth == "unhealthy" {
-		return nil, fmt.Errorf("%w: source proxy is not routable", ErrConflict)
+		return nil, fmt.Errorf("%w: исходный прокси недоступен для маршрутизации", ErrConflict)
 	}
 
 	rows, err := r.db.QueryContext(ctx, `SELECT n.id,n.name,n.kind,n.project_id,n.profile_id,n.runtime_id,n.runtime_epoch,n.routing_health,n.routing_state,n.routing_players_online,CASE WHEN n.operator_capacity_max IS NULL THEN n.routing_capacity_max WHEN n.routing_capacity_max=0 THEN n.operator_capacity_max ELSE LEAST(n.routing_capacity_max,n.operator_capacity_max) END,n.routing_revision,n.routing_digest,n.routing_observed_at,n.last_heartbeat_at,

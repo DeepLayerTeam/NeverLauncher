@@ -113,7 +113,7 @@ func sourceMethods(path, typ, receiver string) ([]string, error) {
 		}
 	}
 	if typ != "" {
-		return nil, fmt.Errorf("%s: missing interface %s", path, typ)
+		return nil, fmt.Errorf("%s: отсутствует интерфейс %s", path, typ)
 	}
 	return uniqueSorted(out), nil
 }

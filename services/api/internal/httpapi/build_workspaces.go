@@ -631,7 +631,7 @@ func buildDigest0226(ws repository.BuildWorkspace) (string, error) {
 }
 func (s Server) workspaceValidate0226(ws repository.BuildWorkspace) (string, error) {
 	if ws.State != "staged" && ws.State != "built" {
-		return "", errors.New("stage files before validation")
+		return "", errors.New("Сначала подготовьте файлы, затем выполняйте проверку")
 	}
 	files := selectedFiles0226(ws)
 	if len(files) == 0 {
@@ -642,7 +642,7 @@ func (s Server) workspaceValidate0226(ws repository.BuildWorkspace) (string, err
 		return "", err
 	}
 	if snapshot.Digest != ws.ProfileDigest || snapshot.Revision != ws.ProfileRevision {
-		return "", errors.New("profile revision changed; create a new workspace")
+		return "", errors.New("Ревизия профиля изменилась; создайте новое рабочее пространство")
 	}
 	manifests := make([]model.ManifestFile, 0, len(files))
 	for _, f := range files {

@@ -40,7 +40,7 @@ class SafeLocalTests(unittest.TestCase):
                 link.symlink_to(target.name)
             except OSError:
                 self.skipTest("symlink unavailable")
-            with self.assertRaisesRegex(RuntimeError, "symlink"):
+            with self.assertRaisesRegex(RuntimeError, "символической ссылкой"):
                 module.safe_local(root, "link.jar")
 
     def test_symlink_directory_rejected(self) -> None:
@@ -54,7 +54,7 @@ class SafeLocalTests(unittest.TestCase):
                 link.symlink_to(real.name, target_is_directory=True)
             except OSError:
                 self.skipTest("symlink unavailable")
-            with self.assertRaisesRegex(RuntimeError, "symlink"):
+            with self.assertRaisesRegex(RuntimeError, "символической ссылкой"):
                 module.safe_local(root, "libraries/a.jar")
 
 
@@ -159,7 +159,7 @@ class WebAuthnReplayProtectionTests(unittest.TestCase):
             second = module.APIClient("http://127.0.0.1:8080", "second")
             second.use_passkey_counter_file(counter)
             self.assertEqual(second.passkey_sign_count, 4)
-            with self.assertRaisesRegex(RuntimeError, "monotonically"):
+            with self.assertRaisesRegex(RuntimeError, "только увеличиваться"):
                 second.passkey_step_up(Path(tmp)/"helper", Path(tmp)/"state", sign_count=3)
             second.passkey_sign_count = 5
             second.persist_passkey_counter()
@@ -170,12 +170,12 @@ class WebAuthnReplayProtectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             counter = Path(tmp) / "passkey-counter.json"
             counter.write_text('{"signCount":-1}')
-            with self.assertRaisesRegex(RuntimeError, "invalid saved"):
+            with self.assertRaisesRegex(RuntimeError, "Недопустимое сохранённое"):
                 module.APIClient("http://127.0.0.1:8080", "token").use_passkey_counter_file(counter)
             counter.write_text('{"signCount":1}')
             link = Path(tmp) / "linked-counter.json"
             link.symlink_to(counter.name)
-            with self.assertRaisesRegex(RuntimeError, "symlink"):
+            with self.assertRaisesRegex(RuntimeError, "символической ссылкой"):
                 module.APIClient("http://127.0.0.1:8080", "token").use_passkey_counter_file(link)
 
 
@@ -243,7 +243,7 @@ class PasskeyStepUpTests(unittest.TestCase):
             state.write_text("{}\n", encoding="utf-8")
             client = self.Client()
             with patch.object(module.subprocess, "run", return_value=SimpleNamespace(returncode=1, stdout="", stderr="rejected")):
-                with self.assertRaisesRegex(RuntimeError, "assertion helper failed"):
+                with self.assertRaisesRegex(RuntimeError, "завершилась ошибкой"):
                     client.passkey_step_up(helper, state)
             self.assertEqual(client.passkey_sign_count, 0)
             self.assertEqual(client.token, "old-token")
@@ -251,7 +251,7 @@ class PasskeyStepUpTests(unittest.TestCase):
     def test_non_increasing_counter_is_rejected(self) -> None:
         client = self.Client()
         client.passkey_sign_count = 2
-        with self.assertRaisesRegex(RuntimeError, "monotonically"):
+        with self.assertRaisesRegex(RuntimeError, "только увеличиваться"):
             client.passkey_step_up(Path("missing"), Path("missing"), sign_count=2)
 
 

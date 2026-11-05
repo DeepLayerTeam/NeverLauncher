@@ -35,7 +35,7 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
             raise ValueError(f"Проверяемая программа не является Runtime CLI: {path}") from err
         if version != expected:
             raise ValueError(
-                f"baseline/candidate version mismatch: expected {expected}, got {version}"
+                f"Несоответствие версий базовой и проверяемой сборок: ожидалось {expected}, получено {version}"
             )
     if repetitions < 3:
         raise ValueError("Требуется не менее трёх повторений")

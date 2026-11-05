@@ -69,17 +69,17 @@ final class LoaderGuard0504 implements ClassFileTransformer {
         int classes;
         try { classes=Integer.parseInt(config.getProperty("loader.class.count", "0")); }
         catch(NumberFormatException ex) { throw new SecurityException("Guard: некорректное число классов загрузчика",ex); }
-        if(classes<0 || classes>4096) throw new SecurityException("Guard loader class limit exceeded");
+        if(classes<0 || classes>4096) throw new SecurityException("Guard: превышен лимит классов загрузчика");
         Map<String,String> classBytes=new HashMap<String,String>();
         for(int i=0;i<classes;i++) {
             String encoded=config.getProperty("loader.class."+i+".name");
             String hash=config.getProperty("loader.class."+i+".sha256");
             if(encoded==null || encoded.length()>2048 || hash==null || !hash.matches("[0-9a-f]{64}"))
-                throw new SecurityException("Guard loader class binding malformed");
+                throw new SecurityException("Guard: некорректная привязка класса загрузчика");
             String name=new String(Base64.getDecoder().decode(encoded),"UTF-8");
             if(name.length()>256 || !name.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+"))
-                throw new SecurityException("Guard loader class name invalid");
-            if(classBytes.put(name,hash)!=null) throw new SecurityException("Guard duplicated loader class hash");
+                throw new SecurityException("Guard: недопустимое имя класса загрузчика");
+            if(classBytes.put(name,hash)!=null) throw new SecurityException("Guard: обнаружен повторяющийся хеш класса загрузчика");
         }
         return new LoaderGuard0504(loader,sources,classBytes);
     }

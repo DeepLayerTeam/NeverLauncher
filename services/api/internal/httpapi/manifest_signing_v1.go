@@ -48,7 +48,7 @@ func (s Server) signManifest(manifest model.Manifest) (model.Manifest, error) {
 		names := append([]string{""}, presetIDs0248(*cat)...)
 		for _, name := range names {
 			if _, err := model.PreviewCatalogGraph0248(*cat, name); err != nil {
-				return model.Manifest{}, fmt.Errorf("component preset %q: %w", name, err)
+				return model.Manifest{}, fmt.Errorf("Предустановка компонентов %q: %w", name, err)
 			}
 		}
 	}

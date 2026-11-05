@@ -19,7 +19,7 @@ import uuid
 def required(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
-        raise RuntimeError(f"GA physical ServerBridge probe requires {name}")
+        raise RuntimeError(f"Для физической проверки ServerBridge GA требуется {name}")
     return value
 
 
@@ -37,7 +37,7 @@ def request(api: str, path: str, token: str, method="GET", payload=None, key=Non
             return result.get("data", result)
     except urllib.error.HTTPError as error:
         # Не раскрывайте bearer-токены и ответы, содержащие другие секреты.
-        raise RuntimeError(f"{method} {path} returned HTTP {error.code}") from error
+        raise RuntimeError(f"Запрос {method} {path} вернул HTTP {error.code}") from error
 
 
 def await_ack(api: str, path: str, token: str, command_id: str, deadline: float):
@@ -46,18 +46,18 @@ def await_ack(api: str, path: str, token: str, command_id: str, deadline: float)
             "command"
         ]
         if cmd.get("id") != command_id:
-            raise RuntimeError("ServerBridge ACK command identity mismatch")
+            raise RuntimeError("Идентификатор команды в подтверждении ServerBridge ACK не совпадает")
         status = cmd.get("status", "")
         if status == "succeeded":
             if not cmd.get("completedAt"):
-                raise RuntimeError("ServerBridge success lacks completedAt ACK")
+                raise RuntimeError("В успешном результате ServerBridge отсутствует подтверждение completedAt ACK")
             return cmd
         if status in ("failed", "unsupported", "expired", "indeterminate"):
-            raise RuntimeError(f"ServerBridge command {command_id} ended {status}")
+            raise RuntimeError(f"Команда ServerBridge {command_id} завершилась со статусом {status}")
         if status not in ("pending", "leased", "delivered"):
-            raise RuntimeError(f"Unknown ServerBridge command status: {status}")
+            raise RuntimeError(f"Неизвестный статус команды ServerBridge: {status}")
         time.sleep(2)
-    raise RuntimeError("Timed out waiting for real executed ServerBridge ACK")
+    raise RuntimeError("Превышено время ожидания подтверждения реально выполненной команды ServerBridge ACK")
 
 
 def execute(api: str, server: str, token: str, kind: str, payload: dict[str, str]):
@@ -81,14 +81,14 @@ def execute(api: str, server: str, token: str, kind: str, payload: dict[str, str
     command = first["command"]
     command_id = command.get("id")
     if not command_id or command.get("serverId") != server:
-        raise RuntimeError("ServerBridge returned an invalid command or server binding")
+        raise RuntimeError("ServerBridge вернул некорректную команду или привязку сервера")
     duplicate = request(api, path, token, "POST", body, key)
     if (
         duplicate["command"].get("id") != command_id
         or duplicate.get("idempotentReplay") is not True
     ):
         raise RuntimeError(
-            "Duplicate ServerBridge command request created another side effect"
+            "Повторный запрос команды ServerBridge вызвал дополнительное побочное действие"
         )
     await_ack(api, path, token, command_id, time.monotonic() + 185)
     print(f"[admin-ga-0220] {kind} executed with Bridge ACK, command={command_id}")
@@ -101,7 +101,7 @@ def main() -> None:
     server = required("E2E_SERVERBRIDGE_NODE_ID")
     if required("E2E_DESTRUCTIVE_STAGING_ACK") != "I_CONFIRM_DEDICATED_SERVER":
         raise RuntimeError(
-            "Refusing drain: not explicitly acknowledged as disposable Minecraft staging server"
+            "Остановка обслуживания запрещена: тестовый сервер Minecraft явно не подтверждён как временный"
         )
     overview = request(
         api,
@@ -112,7 +112,7 @@ def main() -> None:
     )
     matches = [n for n in overview.get("nodes", []) if n.get("id") == server]
     if len(matches) != 1:
-        raise RuntimeError("Bridge node not found in the operator project")
+        raise RuntimeError("Узел Bridge не найден в проекте оператора")
     node = matches[0]
     if (
         node.get("projectId") != project
@@ -121,11 +121,11 @@ def main() -> None:
         or node.get("protocolVersion") != 3
     ):
         raise RuntimeError(
-            "Dedicated ServerBridge v3 is not active/fresh in the selected project"
+            "Выделенный ServerBridge v3 неактивен или устарел в выбранном проекте"
         )
     runtime = str(node.get("runtimeId", ""))
     if len(runtime) != 64 or not all(c in "0123456789abcdefABCDEF" for c in runtime):
-        raise RuntimeError("Missing real ServerBridge runtime identity")
+        raise RuntimeError("Отсутствует реальный идентификатор Runtime ServerBridge")
     execute(api, server, token, "server.save", {})
     drain_attempted = False
     try:

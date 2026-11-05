@@ -1226,7 +1226,7 @@ pub extern "system" fn Agent_OnLoad(
             // Сохраняйте строгую блокировку при ошибках, но выводите достаточно сведений
             // для диагностики раннего EOF MEMORY_READY родительского процесса в Windows CI.
             eprintln!(
-                "Guard Sensor Memory Integrity refused readiness: active={} healthy={} executable_regions={} image_code_regions={}",
+                "Guard Sensor: проверка целостности памяти не подтвердила готовность: active={} healthy={} executable_regions={} image_code_regions={}",
                 snapshot.active, snapshot.healthy, snapshot.executable_regions, snapshot.image_code_regions
             );
             memory_integrity::shutdown();

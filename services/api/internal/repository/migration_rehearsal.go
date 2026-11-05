@@ -208,7 +208,7 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 		return empty, err
 	}
 	if err = tx.Commit(); err != nil {
-		return empty, fmt.Errorf("rehearsal commit uncertain; GET receipt before retry: %w", err)
+		return empty, fmt.Errorf("Сохранение репетиции не подтверждено; запросите подтверждение GET перед повтором: %w", err)
 	}
 	return v, nil
 }

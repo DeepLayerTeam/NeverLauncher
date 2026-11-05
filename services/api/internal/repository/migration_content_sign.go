@@ -30,7 +30,7 @@ func (r *SQLRepository) VerifyMigrationContentBeforeSign0337(ctx context.Context
 	for rows.Next() {
 		count++
 		if count > 1 {
-			return errors.New("multiple migration owners for release")
+			return errors.New("У релиза обнаружено несколько владельцев миграции")
 		}
 		var raw []byte
 		var runID string
@@ -47,7 +47,7 @@ func (r *SQLRepository) VerifyMigrationContentBeforeSign0337(ctx context.Context
 		var moduleRaw []byte
 		if e = r.db.QueryRowContext(ctx, `SELECT report FROM migration_modules_0338 WHERE run_id=$1`, runID).Scan(&moduleRaw); e != nil {
 			if errors.Is(e, sql.ErrNoRows) {
-				return errors.New("MIG08 module review required before signing migrated release")
+				return errors.New("Перед подписанием перенесённого релиза требуется проверка модулей MIG08")
 			}
 			return e
 		}
@@ -63,7 +63,7 @@ func (r *SQLRepository) VerifyMigrationContentBeforeSign0337(ctx context.Context
 }
 func checkMigrationContentSign0337(p gc.Plan, m model.Manifest) error {
 	if !p.Ready || p.Profile.Profile.ID != m.ProfileID {
-		return errors.New("migration profile not verified")
+		return errors.New("Профиль миграции не прошёл проверку")
 	}
 	expected := map[string]gc.File{}
 	for _, f := range p.Files {
@@ -75,12 +75,12 @@ func checkMigrationContentSign0337(p gc.Plan, m model.Manifest) error {
 	for _, f := range m.Files {
 		actual, ok := expected[f.Path]
 		if !ok || f.Size != actual.Size || f.SHA256 != actual.SHA256 || model.FileOwnership0224(f) != actual.Ownership {
-			return fmt.Errorf("migration content changed before signing: %s", f.Path)
+			return fmt.Errorf("Содержимое миграции изменилось перед подписанием: %s", f.Path)
 		}
 	}
 	if p.Optional != nil {
 		if !p.Optional.Ready || m.SchemaVersion != model.ManifestSchemaV3 || m.ComponentCatalog == nil || !reflect.DeepEqual(m.ComponentCatalog.Components, p.Optional.Catalog.Components) || !reflect.DeepEqual(m.ComponentCatalog.Categories, p.Optional.Catalog.Categories) || !reflect.DeepEqual(m.ComponentCatalog.Groups, p.Optional.Catalog.Groups) || !reflect.DeepEqual(m.ComponentCatalog.Presets, p.Optional.Catalog.Presets) {
-			return errors.New("Gravit optional catalog has not been applied and verified")
+			return errors.New("Каталог дополнительных компонентов Gravit не применён и не проверен")
 		}
 	}
 	return nil
@@ -91,7 +91,7 @@ func checkMigrationContentSign0337(p gc.Plan, m model.Manifest) error {
 func verifyModuleRelease0338(plan gc.Plan, report gm.Report) error {
 	if report.Format != gm.Format || report.SourceSHA256 != plan.SourceSHA256 || report.InventorySHA256 != plan.InventorySHA256 ||
 		!report.Ready || len(report.Blockers) > 0 || report.CutoverAllowed {
-		return errors.New("MIG08 module review blocks migrated release signing")
+		return errors.New("Проверка модулей MIG08 блокирует подписание перенесённого релиза")
 	}
 	return nil
 }

@@ -163,7 +163,7 @@ func sourcePaths(obj map[string]json.RawMessage, key string) ([]string, error) {
 		return nil, fmt.Errorf("Некорректное значение: %s пути", key)
 	}
 	if len(paths) > 4096 {
-		return nil, fmt.Errorf("%s path limit exceeded", key)
+		return nil, fmt.Errorf("Превышено ограничение длины пути %s", key)
 	}
 	out := make([]string, 0, len(paths))
 	for _, p := range paths {
@@ -247,7 +247,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	}
 	profileMeta, ok := meta[profilePath]
 	if !ok || profileMeta.Kind != "client_profile" {
-		return out, errors.New("profile not in verified inventory")
+		return out, errors.New("Профиль отсутствует в проверенном каталоге")
 	}
 	raw, e := sourceFile(z, profilePath, 1<<20)
 	if e != nil {
@@ -255,7 +255,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	}
 	sum := sha256.Sum256(raw)
 	if hex.EncodeToString(sum[:]) != profileMeta.SHA256 {
-		return out, errors.New("profile content differs from inventory")
+		return out, errors.New("Содержимое профиля отличается от каталога")
 	}
 	// Старый конвертер блокирует все непустые необязательные массивы. Извлеките их
 	// и независимо проверьте промышленным конвертером OptionalFile; лишь после этого
@@ -292,7 +292,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	// универсальный загрузчик заведомо пригодным к запуску.
 	loaderVersion := ""
 	if len(exactLoaderVersion) > 1 {
-		return out, errors.New("only one exact loader version is allowed")
+		return out, errors.New("Разрешена только одна точно указанная версия загрузчика")
 	}
 	if len(exactLoaderVersion) == 1 {
 		loaderVersion = exactLoaderVersion[0]
@@ -489,11 +489,11 @@ func (r *Reader) ReadVerified(ctx context.Context, item File) ([]byte, error) {
 		return nil, ctx.Err()
 	}
 	if item.Size > MaxFileBytes || !safeTarget(item.TargetPath) {
-		return nil, errors.New("file exceeds staging limits")
+		return nil, errors.New("Файл превышает ограничения подготовки")
 	}
 	f, ok := r.entries[item.SourcePath]
 	if !ok {
-		return nil, errors.New("file absent from source ZIP")
+		return nil, errors.New("Файл отсутствует в исходном ZIP")
 	}
 	if int64(f.UncompressedSize64) != item.Size {
 		return nil, errors.New("Обнаружено изменение: «source file size»")

@@ -64,7 +64,7 @@ def safe_bundle_extract(bundle, directory):
     total = 0
     with zipfile.ZipFile(bundle) as archive:
         if len(archive.infolist()) > 50000:
-            raise ValueError("server bundle has excessive entries")
+            raise ValueError("Комплект сервера содержит слишком много записей")
         names = set()
         for item in archive.infolist():
             name = item.filename
@@ -80,11 +80,11 @@ def safe_bundle_extract(bundle, directory):
                 or stat.S_IFMT(mode) not in (0, stat.S_IFDIR, stat.S_IFREG)
                 or name.rstrip("/") in names
             ):
-                raise ValueError("unsafe or duplicate server bundle path")
+                raise ValueError("Небезопасный или повторяющийся путь в комплекте сервера")
             names.add(name.rstrip("/"))
             total += item.file_size
             if total > 8 * 1024 * 1024 * 1024:
-                raise ValueError("server bundle uncompressed size exceeds limit")
+                raise ValueError("Размер распакованного комплекта сервера превышает лимит")
         # Нормализованные пути уже проверены; распаковывайте только в новый изолированный корневой каталог.
         for item in archive.infolist():
             target = directory.joinpath(*PurePosixPath(item.filename.rstrip("/")).parts)
@@ -101,16 +101,16 @@ def verify_matching_server(
 ):
     """Получать из журнала сервера подтверждения версии запуска, версии загрузчика и старта плагинов."""
     if CRASH.search(log):
-        raise RuntimeError("matching server fatal/crash state")
+        raise RuntimeError("Совместимый сервер находится в состоянии критической ошибки")
     match = BOOT_VERSION.search(log)
     if not match or match.group(1) != minecraft:
         raise RuntimeError(
-            "server boot did not positively confirm exact Minecraft version"
+            "При запуске сервера не подтверждена точная версия Minecraft"
         )
     if not BOOT_READY.search(log):
-        raise RuntimeError("server has not finished preparing its world")
+        raise RuntimeError("Сервер ещё не завершил подготовку мира")
     if loader not in ("vanilla", "fabric", "quilt", "forge", "neoforge"):
-        raise RuntimeError("unsupported staged Minecraft loader")
+        raise RuntimeError("Неподдерживаемый загрузчик Minecraft в подготовленном пакете")
     if loader != "vanilla":
         match = LOADER_MARKER[loader].search(log)
         if (
@@ -120,7 +120,7 @@ def verify_matching_server(
                 r"(?<![\d.])" + re.escape(loader_version) + r"(?![\d.])", match.group(0)
             )
         ):
-            raise RuntimeError("server loader/version not confirmed by actual boot log")
+            raise RuntimeError("Загрузчик или версия сервера не подтверждены реальным журналом запуска")
     if requires_bridge:
         match = BRIDGE_READY.search(log)
         if (
@@ -131,7 +131,7 @@ def verify_matching_server(
             )
         ):
             raise RuntimeError(
-                "required ServerBridge identity/version did not report startup"
+                "Обязательный ServerBridge не сообщил о запуске своей версии или идентификатора"
             )
     return True
 
@@ -149,7 +149,7 @@ class Rcon:
         while len(out) < count:
             chunk = sock.recv(count - len(out))
             if not chunk:
-                raise ConnectionError("RCON connection ended")
+                raise ConnectionError("Соединение RCON завершено")
             out.extend(chunk)
         return bytes(out)
 
@@ -157,17 +157,17 @@ class Rcon:
     def send(sock, number, kind, payload):
         body = struct.pack("<ii", number, kind) + payload.encode("utf-8") + b"\0\0"
         if len(body) > 4096:
-            raise ValueError("RCON request too long")
+            raise ValueError("Запрос RCON слишком длинный")
         sock.sendall(struct.pack("<i", len(body)) + body)
 
     @classmethod
     def recv(cls, sock):
         (length,) = struct.unpack("<i", cls.recv_exact(sock, 4))
         if not 10 <= length <= 1024 * 1024:
-            raise ValueError("invalid RCON packet length")
+            raise ValueError("Недопустимая длина пакета RCON")
         body = cls.recv_exact(sock, length)
         if body[-2:] != b"\0\0":
-            raise ValueError("invalid RCON packet terminator")
+            raise ValueError("Недопустимый завершающий маркер пакета RCON")
         req, kind = struct.unpack("<ii", body[:8])
         return req, kind, body[8:-2].decode("utf-8", "replace")
 
@@ -180,17 +180,17 @@ class Rcon:
                 request_id, kind, _ = self.recv(sock)
                 if request_id == -1:
                     raise PermissionError(
-                        "matching server RCON authentication rejected"
+                        "Сервер проверки отклонил авторизацию RCON"
                     )
                 if kind == 2:
                     if request_id != 5:
                         raise PermissionError(
-                            "matching server RCON authentication rejected"
+                            "Сервер проверки отклонил авторизацию RCON"
                         )
                     break
             else:
                 raise PermissionError(
-                    "matching server RCON authentication was not confirmed"
+                    "Авторизация RCON на совместимом сервере не подтверждена"
                 )
             self.send(sock, 6, 2, command_text)
             response = []
@@ -198,7 +198,7 @@ class Rcon:
             for _ in range(4):
                 request_id, _, part = self.recv(sock)
                 if request_id != 6:
-                    raise ValueError("RCON response identity mismatch")
+                    raise ValueError("Идентификатор в ответе RCON не совпадает")
                 response.append(part)
                 if len(part) < 3500:
                     break
@@ -215,17 +215,17 @@ def player_online(response, username):
 def parse_position(response):
     found = POSITION.search(response)
     if not found:
-        raise RuntimeError("server did not expose actual player position")
+        raise RuntimeError("Сервер не сообщил реальные координаты игрока")
     xyz = tuple(float(value) for value in found.groups())
     if not all(math.isfinite(v) and abs(v) < 30000000 for v in xyz):
-        raise RuntimeError("invalid server position values")
+        raise RuntimeError("Недопустимые координаты сервера")
     return xyz
 
 
 def parse_gametime(response):
     found = GAMETIME.search(response)
     if not found:
-        raise RuntimeError("server did not expose advancing game ticks")
+        raise RuntimeError("Сервер не подтвердил продвижение игровых тиков")
     return int(found.group(1))
 
 
@@ -285,19 +285,19 @@ class MatchingServer:
 
     def prepare(self):
         if self.root.exists():
-            raise ValueError("matching-server working root already exists")
+            raise ValueError("Рабочий корневой каталог совместимого сервера уже существует")
         self.root.mkdir(mode=0o700)
         if self.bundle:
             if not re.fullmatch("[0-9a-fA-F]{64}", self.bundle_sha):
-                raise ValueError("server bundle requires pinned SHA-256")
+                raise ValueError("Для комплекта сервера необходима закреплённая контрольная сумма SHA-256")
             if file_sha256(self.bundle).lower() != self.bundle_sha.lower():
-                raise ValueError("server bundle differs from pinned SHA-256")
+                raise ValueError("Комплект сервера не соответствует закреплённой контрольной сумме SHA-256")
             safe_bundle_extract(self.bundle, self.root)
             self.artifact_sha = self.bundle_sha.lower()
         else:
             if self.loader != "vanilla":
                 raise RuntimeError(
-                    "modded matching server requires a pinned complete server bundle"
+                    "Для совместимого сервера с модами нужен полный закреплённый комплект сервера"
                 )
             evidence = self.work / "matching-server-install.json"
             proc = subprocess.run(
@@ -318,16 +318,16 @@ class MatchingServer:
                 check=False,
             )
             if proc.returncode:
-                raise RuntimeError("Mojang matching server install failed")
+                raise RuntimeError("Не удалось установить совместимый сервер Mojang")
             installed = json.loads(evidence.read_text())
             if (
                 installed.get("status") != "installed-and-verified"
                 or installed.get("minecraftVersion") != self.minecraft
             ):
-                raise RuntimeError("Mojang server version or integrity not verified")
+                raise RuntimeError("Версия или целостность сервера Mojang не подтверждена")
             if file_sha256(self.root / "server.jar") != installed.get("sha256"):
                 raise RuntimeError(
-                    "downloaded Mojang server JAR changed after verification"
+                    "Загруженный JAR сервера Mojang изменился после проверки"
                 )
             self.artifact_sha = installed["sha256"]
         entry = self.server_entry or (
@@ -336,16 +336,16 @@ class MatchingServer:
             else "server.jar"
         )
         if not entry or "/" in entry or "\\" in entry or entry in (".", ".."):
-            raise ValueError("server executable must be a file at bundle root")
+            raise ValueError("Исполняемый файл сервера должен находиться в корне комплекта")
         if not (self.root / entry).is_file() or (self.root / entry).is_symlink():
-            raise RuntimeError("matching server executable missing from pinned bundle")
+            raise RuntimeError("В закреплённом комплекте отсутствует исполняемый файл совместимого сервера")
         self.entry = entry
         if self.requires_bridge:
             if not re.fullmatch(
                 r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9_.-]+)?", self.bridge_version
             ):
                 raise RuntimeError(
-                    "required ServerBridge needs an operator-pinned version"
+                    "Для обязательного ServerBridge требуется версия, закреплённая оператором"
                 )
             path = PurePosixPath(self.bridge_path)
             if (
@@ -359,11 +359,11 @@ class MatchingServer:
                 != self.bridge_sha.lower()
             ):
                 raise RuntimeError(
-                    "required ServerBridge binary missing or SHA-256 mismatch"
+                    "Обязательный исполняемый файл ServerBridge отсутствует или не совпадает SHA-256"
                 )
             if path.parts[0] != ("plugins" if self.loader == "vanilla" else "mods"):
                 raise RuntimeError(
-                    "ServerBridge must be in loader plugin/mod directory"
+                    "ServerBridge должен находиться в каталоге плагинов или модов загрузчика"
                 )
         (self.root / "eula.txt").write_text("eula=true\n")
         # Выделенный временный интеграционный сервер только для loopback в офлайн-режиме. Он НЕ
@@ -396,10 +396,10 @@ class MatchingServer:
     def start(self, timeout=180):
         if sys.platform == "win32" and self.entry.endswith(".sh"):
             raise RuntimeError(
-                "Windows matching server cannot execute POSIX run.sh; use pinned run.bat"
+                "Совместимый сервер Windows не может выполнить POSIX-файл run.sh; используйте закреплённый run.bat"
             )
         if sys.platform != "win32" and self.entry.endswith(".bat"):
-            raise RuntimeError("POSIX matching server cannot execute Windows run.bat")
+            raise RuntimeError("Совместимый сервер POSIX не может выполнить Windows-файл run.bat")
         command_line = (
             ["cmd.exe", "/d", "/c", self.entry, "nogui"]
             if self.entry.endswith(".bat")
@@ -421,10 +421,10 @@ class MatchingServer:
         limit = time.monotonic() + timeout
         while time.monotonic() < limit:
             if self.process.poll() is not None:
-                raise RuntimeError("matching server exited before world was ready")
+                raise RuntimeError("Совместимый сервер завершился до готовности мира")
             log = self.log_text()
             if CRASH.search(log):
-                raise RuntimeError("matching server crashed during boot")
+                raise RuntimeError("Совместимый сервер аварийно завершился при запуске")
             if BOOT_READY.search(log):
                 verify_matching_server(
                     log,
@@ -451,7 +451,7 @@ class MatchingServer:
                     # успешной аутентифицированной командой.
                     pass
             time.sleep(1)
-        raise TimeoutError("matching server did not prove world/loader readiness")
+        raise TimeoutError("Совместимый сервер не подтвердил готовность мира или загрузчика")
 
     def log_text(self):
         if not self.log_file.exists():
@@ -532,7 +532,7 @@ class GameplayObserver:
             or float(values[2]) < 0.12
         ):
             path.unlink(missing_ok=True)
-            raise RuntimeError("Minecraft world frame is not sufficiently rendered")
+            raise RuntimeError("Кадр мира Minecraft отрисован недостаточно полно")
         return file_sha256(path)
 
     def tick(self):

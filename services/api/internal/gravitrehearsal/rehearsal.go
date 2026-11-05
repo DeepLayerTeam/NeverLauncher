@@ -126,7 +126,7 @@ func Evaluate(v Report) (Report, error) {
 			return Report{}, errors.New("Некорректное значение: «source player»")
 		}
 		if _, ok := indexed[p.SourceID]; ok {
-			return Report{}, errors.New("duplicate source identity")
+			return Report{}, errors.New("Повторяющаяся учётная запись в источнике")
 		}
 		indexed[p.SourceID] = p
 	}

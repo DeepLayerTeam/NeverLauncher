@@ -16,7 +16,7 @@ func authIdentityConflict0293(err error) error {
 	if errors.As(err, &state) {
 		switch state.SQLState() {
 		case "23505", "23P01":
-			return fmt.Errorf("%w: auth identity uniqueness violation: %w", ErrConflict, err)
+			return fmt.Errorf("%w: нарушена уникальность учётной записи авторизации: %w", ErrConflict, err)
 		}
 	}
 	return err

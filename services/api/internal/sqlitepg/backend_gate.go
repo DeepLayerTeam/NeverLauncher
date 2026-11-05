@@ -44,7 +44,7 @@ func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 			return fmt.Errorf("Не удалось проверить подтверждения переключения: %w", err)
 		}
 		if count != 0 {
-			return errors.New("SQLite import present without verified HTTP/Coordinator cutover approval; refusing to start Backend (0.47.5)")
+			return errors.New("Обнаружен импорт SQLite без подтверждённого разрешения переключения HTTP/Coordinator; запуск Backend запрещён (0.47.5)")
 		}
 	}
 	return nil

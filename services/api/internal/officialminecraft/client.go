@@ -207,7 +207,7 @@ func (c *Client) Begin(ctx context.Context, clientID string) (DeviceCode, error)
 		return code, err
 	}
 	if code.DeviceCode == "" || code.UserCode == "" || code.ExpiresIn <= 0 || code.ExpiresIn > 1800 || code.VerificationURI == "" {
-		return DeviceCode{}, errors.New("incomplete Microsoft device-code response")
+		return DeviceCode{}, errors.New("Неполный ответ Microsoft для авторизации по коду устройства")
 	}
 	if code.Interval < 5 {
 		code.Interval = 5
@@ -374,7 +374,7 @@ func (c *Client) SelectCape(ctx context.Context, token, id string) (Profile, err
 		}
 	}
 	if !owned {
-		return Profile{}, errors.New("cape not owned by official Minecraft account")
+		return Profile{}, errors.New("Плащ не принадлежит официальной учётной записи Minecraft")
 	}
 	body, ct, err := jsonBody(map[string]string{"capeId": id})
 	if err != nil {
@@ -427,7 +427,7 @@ func (c *Client) ConfirmTexture0395(ctx context.Context, token, uuid, kind, valu
 			}
 		}
 	}
-	return Profile{}, errors.New("Minecraft Services has not confirmed updated texture state")
+	return Profile{}, errors.New("Minecraft Services не подтвердил обновление состояния текстуры")
 }
 
 func confirmedTexture0395(p Profile, kind, value string) bool {

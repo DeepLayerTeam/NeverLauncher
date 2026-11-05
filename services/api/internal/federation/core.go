@@ -87,7 +87,7 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 			}
 		}
 		if !roleExists {
-			return fmt.Errorf("connector %q auto-provision default role %q does not exist", meta.ID, policy.DefaultRole)
+			return fmt.Errorf("Коннектор %q: стандартная роль %q для автоматического создания отсутствует", meta.ID, policy.DefaultRole)
 		}
 	}
 	knownRoles := make(map[string]struct{})
@@ -99,10 +99,10 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 		externalValue = strings.TrimSpace(externalValue)
 		roleID = strings.TrimSpace(roleID)
 		if externalValue == "" || roleID == "" {
-			return fmt.Errorf("connector %q contains empty role mapping", meta.ID)
+			return fmt.Errorf("Коннектор %q содержит пустое сопоставление ролей", meta.ID)
 		}
 		if _, ok := knownRoles[roleID]; !ok {
-			return fmt.Errorf("connector %q role mapping target %q does not exist", meta.ID, roleID)
+			return fmt.Errorf("Коннектор %q: целевая роль сопоставления %q не существует", meta.ID, roleID)
 		}
 		normalizedMappings[externalValue] = roleID
 	}
@@ -110,7 +110,7 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.connectors[meta.ID]; exists {
-		return fmt.Errorf("connector %q already registered", meta.ID)
+		return fmt.Errorf("Коннектор %q уже зарегистрирован", meta.ID)
 	}
 	c.connectors[meta.ID] = connector
 	c.policies[meta.ID] = policy

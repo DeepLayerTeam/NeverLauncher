@@ -167,7 +167,7 @@ def capture_menu(wid, destination):
         ["identify", "-format", "%w %h %[entropy]", str(destination)], 6
     ).split()
     if len(meta) != 3:
-        raise RuntimeError("invalid X11 capture image")
+        raise RuntimeError("Некорректное изображение захвата X11")
     width, height, entropy = int(meta[0]), int(meta[1]), float(meta[2])
     if (
         width < 640

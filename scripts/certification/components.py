@@ -136,7 +136,7 @@ def assert_bytes(root: Path, doc: dict, expected: set[str]) -> None:
         if record["path"] not in expected:
             if local.exists():
                 raise AssertionError(
-                    f"unselected component was installed: {record['path']}"
+                    f"Установлен невыбранный компонент: {record['path']}"
                 )
             continue
         if (
@@ -185,7 +185,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
             assert_bytes(installation, doc, core)
             if (installation / "mods/sodium.jar").exists():
                 raise AssertionError(
-                    "optional component downloaded despite minimal preset"
+                    "Дополнительный компонент загружен вопреки минимальной предустановке"
                 )
             # Файл, созданный игроком, НЕЛЬЗЯ незаметно включать в подписанное владение.
             player = installation / "mods/user-created.txt"
@@ -293,7 +293,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     or conflict.read_bytes() != b"player-selected replacement"
                 ):
                     raise AssertionError(
-                        "unsafe ownership takeover / network-before-validation"
+                        "Небезопасный перехват владения или доступ к сети до проверки"
                     )
                 conflict.unlink()
             else:
@@ -307,7 +307,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 )
                 if len(server.metrics()["requests"]) != count:
                     raise AssertionError(
-                        "incompatible component initiated file transfer"
+                        "Несовместимый компонент инициировал передачу файлов"
                     )
             # Недоверенный выбор может ссылаться лишь на подписанные ID компонентов; он не может
             # отключать обязательный узел или добавлять неподписанный компонент.
@@ -324,7 +324,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 )
                 if len(server.metrics()["requests"]) != count:
                     raise AssertionError(
-                        "invalid selection was evaluated after network access"
+                        "Недопустимый выбор был проверен уже после обращения к сети"
                     )
             # Все платформы проверяют закрепление подписи с полностью неправильным ключом.
             count = len(server.metrics()["requests"])
@@ -375,7 +375,7 @@ def main() -> int:
     try:
         if not args.runtime.is_file() or not args.signer.is_file():
             raise RuntimeError(
-                "compiled runtime and test signer executables are required"
+                "Необходимы собранные исполняемые файлы Runtime и тестового подписывающего модуля"
             )
         result = certified_case(
             args.runtime.resolve(), args.signer.resolve(), version=args.product_version

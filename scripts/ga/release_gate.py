@@ -141,7 +141,7 @@ def check_report(
                 or report["httpRequests"] <= 0
             ):
                 raise ValueError(
-                    "native component runtime did not exercise verified HTTP install"
+                    "Нативный Runtime компонентов не выполнил проверенную установку по HTTP"
                 )
         elif subject == "minecraftRun":
             if report.get("actualClient") is not True or report.get("loader") not in (
@@ -164,7 +164,7 @@ def check_report(
                 or report.get("actualIntegration") is not True
             ):
                 raise ValueError(
-                    "ServerBridge live join/replay tests were not verified"
+                    "Реальные тесты подключения и повторного воспроизведения ServerBridge не прошли проверку"
                 )
     elif subject == "components":
         if (
@@ -179,7 +179,7 @@ def check_report(
             or report.get("catalogSchema") != "5.0"
         ):
             raise ValueError(
-                "optional components certification lacks signed v3/v5 catalogue"
+                "Для сертификации дополнительных компонентов отсутствует подписанный каталог v3/v5"
             )
         if (
             report.get("actualMinecraftClient") is not True
@@ -192,7 +192,7 @@ def check_report(
             checks.get(c) != "passed" for c in COMPONENT_GA_CHECKS
         ):
             raise ValueError(
-                "optional components certification has skipped/failed gates"
+                "В сертификации дополнительных компонентов есть пропущенные или неуспешные проверки"
             )
         if not SHA256.fullmatch(report.get("nativeEvidenceSha256", "")):
             raise ValueError("Отсутствует дайджест подтверждения нативного выполнения")
@@ -261,7 +261,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         }
     if not isinstance(checks, dict) or any(checks.get(c) != "passed" for c in expected):
         raise ValueError(
-            f"missing or failed required evidence checks: {sorted(expected)}"
+            f"Обязательные проверки доказательств отсутствуют или завершились ошибкой: {sorted(expected)}"
         )
     objects = doc.get("objects", {})
     required_objects = {
@@ -277,7 +277,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         )
     if not isinstance(objects, dict) or set(objects) != required_objects:
         raise ValueError(
-            f"exactly {len(required_objects)} attached artifact/proof objects required"
+            f"Требуется ровно {len(required_objects)} прикреплённых объектов артефактов и доказательств"
         )
     proofs = {}
     for name, obj in objects.items():
@@ -316,7 +316,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         or proofs["cleanMachine"].get("installerSha256") != installer_sha
     ):
         raise ValueError(
-            "signature or clean-machine evidence describes a different installer"
+            "Подпись или доказательства чистой установки относятся к другому установщику"
         )
     for name in ("osSignature", "cleanMachine"):
         if (

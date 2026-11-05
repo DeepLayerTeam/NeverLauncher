@@ -123,7 +123,7 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
         if needed.contains(&c.id){
             if !default_ids.contains(c.id.as_str()){
                 if (c.visible==Some(false)||c.limited) && !dependency_ids.contains(&c.id) {
-                    blockers.push(format!("component {} is now restricted and cannot be enabled manually",c.id));
+                    blockers.push(format!("Компонент {} теперь ограничен и не может быть включён вручную",c.id));
                 } else if c.visible!=Some(false) && !c.limited {changes.push(format!("+{}",c.id));}
             }
         }else if default_ids.contains(c.id.as_str()){

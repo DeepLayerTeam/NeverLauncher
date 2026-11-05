@@ -8,7 +8,7 @@ type InstanceLock struct{}
 
 func Acquire(p Plan) (*InstanceLock, error) {
 	if p.SingleInstance {
-		return nil, errors.New("production instance lock is only implemented for Linux")
+		return nil, errors.New("Блокировка экземпляра в промышленной среде реализована только для Linux")
 	}
 	return &InstanceLock{}, nil
 }

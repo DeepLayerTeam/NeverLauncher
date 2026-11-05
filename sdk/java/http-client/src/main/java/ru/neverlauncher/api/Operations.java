@@ -460,7 +460,7 @@ public final class Operations {
     result.put("put_projects_by_projectId_validation_policy",new Operation("PUT","/api/v1/projects/{projectId}/validation-policy"));
     result.put("put_release_drafts_by_draftId",new Operation("PUT","/api/v1/release-drafts/{draftId}"));
     result.put("put_server_bridge_servers_by_serverId_network_capacity",new Operation("PUT","/api/v1/server-bridge/servers/{serverId}/network-capacity"));
-    if (result.size() != 452) throw new IllegalStateException("duplicate OpenAPI operation ID");
+    if (result.size() != 452) throw new IllegalStateException("Повторяющийся идентификатор операции OpenAPI");
     return Map.copyOf(result);
   }
 }

@@ -116,7 +116,7 @@ def build(args: argparse.Namespace) -> None:
         ensure_clean_destination(args.package.resolve())
     elif args.package is not None or args.public_key is not None or args.nl is not None:
         raise PortError(
-            "a .nlext needs all of --private-key, --public-key, --package and --nl"
+            "Для .nlext необходимо указать все параметры: --private-key, --public-key, --package и --nl"
         )
 
     # The official source-port subset is built against our exact SDK, upstream Gravit JARs.

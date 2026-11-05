@@ -331,7 +331,7 @@ def run_game_launch(
             deadline = _time.monotonic() + max_seconds + 150
             while proc.poll() is None:
                 if _time.monotonic() > deadline:
-                    raise TimeoutError("lifecycle JVM hung")
+                    raise TimeoutError("JVM жизненного цикла зависла")
                 observer.tick()
                 _time.sleep(0.5)
         finally:

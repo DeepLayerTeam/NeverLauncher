@@ -37,7 +37,7 @@ type ExtensionEventStore interface {
 func newEventLeaseToken0206() (string, error) {
 	var raw [24]byte
 	if _, err := rand.Read(raw[:]); err != nil {
-		return "", fmt.Errorf("generate event delivery lease token: %w", err)
+		return "", fmt.Errorf("Не удалось создать токен аренды доставки события: %w", err)
 	}
 	return hex.EncodeToString(raw[:]), nil
 }
@@ -58,7 +58,7 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 		return model.ExtensionEvent{}, errors.New("Требуется: «extension event identity/type/aggregate/ordering/idempotency/source are»")
 	}
 	if len(in.ID) > 128 || len(in.Type) > 128 || len(in.OrderingKey) > 256 || len(in.IdempotencyKey) > 256 || len(in.AggregateID) > 256 || len(in.Source) > 128 {
-		return model.ExtensionEvent{}, errors.New("extension event metadata exceeds limits")
+		return model.ExtensionEvent{}, errors.New("Метаданные события расширения превышают установленные ограничения")
 	}
 	if in.SchemaVersion < 1 {
 		return model.ExtensionEvent{}, errors.New("extension event schemaVersion: требуется «positive»")
@@ -74,14 +74,14 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return model.ExtensionEvent{}, errors.New("extension event payload must contain exactly one JSON value")
+		return model.ExtensionEvent{}, errors.New("Содержимое события расширения должно содержать ровно одно значение JSON")
 	}
 	canonical, err := json.Marshal(payload)
 	if err != nil {
 		return model.ExtensionEvent{}, err
 	}
 	if len(canonical) > 1<<20 {
-		return model.ExtensionEvent{}, errors.New("extension event payload exceeds 1 MiB")
+		return model.ExtensionEvent{}, errors.New("Содержимое события расширения превышает 1 МиБ")
 	}
 	in.Payload = canonical
 	sum := sha256.Sum256(canonical)
@@ -136,12 +136,12 @@ func (r *MemoryRepository) PublishExtensionEvent(ctx context.Context, in model.E
 	for _, existing := range r.extensionEvents {
 		if existing.Type == in.Type && existing.IdempotencyKey == in.IdempotencyKey {
 			if existing.PayloadSHA256 != in.PayloadSHA256 || existing.AggregateID != in.AggregateID || existing.OrderingKey != in.OrderingKey {
-				return model.ExtensionEvent{}, false, fmt.Errorf("%w: event idempotency key reused with different content", ErrConflict)
+				return model.ExtensionEvent{}, false, fmt.Errorf("%w: ключ идемпотентности события повторно использован с другим содержимым", ErrConflict)
 			}
 			return existing, false, nil
 		}
 		if existing.ID == in.ID {
-			return model.ExtensionEvent{}, false, fmt.Errorf("%w: duplicate event id", ErrConflict)
+			return model.ExtensionEvent{}, false, fmt.Errorf("%w: повторяющийся идентификатор события", ErrConflict)
 		}
 	}
 	r.nextExtensionEventSequence++
@@ -478,7 +478,7 @@ func (r *SQLRepository) PublishExtensionEvent(ctx context.Context, in model.Exte
 			return model.ExtensionEvent{}, false, err
 		}
 		if in.PayloadSHA256 != desiredPayloadSHA || in.AggregateID != desiredAggregateID || in.OrderingKey != desiredOrderingKey {
-			return model.ExtensionEvent{}, false, fmt.Errorf("%w: event idempotency key reused with different content", ErrConflict)
+			return model.ExtensionEvent{}, false, fmt.Errorf("%w: ключ идемпотентности события повторно использован с другим содержимым", ErrConflict)
 		}
 	} else if err != nil {
 		return model.ExtensionEvent{}, false, err

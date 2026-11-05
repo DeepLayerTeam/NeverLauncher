@@ -57,7 +57,7 @@ def inspect_macho(
     data = path.read_bytes()
     if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
         raise RuntimeError(
-            f"{path}: production package requires thin 64-bit little-endian Mach-O"
+            f"{path}: для промышленного пакета требуется одиночный 64-битный Mach-O с порядком байтов little-endian"
         )
     cpu = struct.unpack_from("<I", data, 4)[0]
     meta = ARCHES[expected_arch]
@@ -215,7 +215,7 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         or payload.get("architecture") != arch
     ):
         raise RuntimeError(
-            "embedded macOS package manifest identity mismatch during finalization"
+            "При финализации обнаружено несоответствие идентификатора во встроенном манифесте пакета macOS"
         )
     artifacts = payload.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
@@ -224,7 +224,7 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         component = str(artifact.get("component", ""))
         if component not in COMPONENTS:
             raise RuntimeError(
-                f"unknown macOS package component during finalization: {component!r}"
+                f"При завершении сборки обнаружен неизвестный компонент пакета macOS: {component!r}"
             )
         bundle_path, canonical_pattern = COMPONENTS[component]
         source = app / bundle_path
@@ -251,14 +251,14 @@ def load_notary(
         return "", "not-requested", False, False, False
     if not path:
         raise RuntimeError(
-            "production evidence requires notarytool result JSON for both architectures"
+            "Для производственных доказательств требуется результат notarytool в JSON для обеих архитектур"
         )
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     submission_id = str(payload.get("id", "")).strip()
     status = str(payload.get("status", "")).strip()
     if not submission_id or status != "Accepted":
         raise RuntimeError(
-            f"notarytool result is not Accepted: id={submission_id!r} status={status!r}"
+            f"Результат notarytool не имеет статуса Accepted: id={submission_id!r}, status={status!r}"
         )
     return submission_id, status, True, True, True
 

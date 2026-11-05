@@ -199,7 +199,7 @@ func (r *SQLRepository) FinishTextureGC02511(ctx context.Context, b TextureGCLea
 		return err
 	}
 	if n != 1 {
-		return fmt.Errorf("GC lease expired, reclaimed or referenced for %s", b.Digest)
+		return fmt.Errorf("Аренда GC для %s истекла, была возвращена или на неё есть ссылка", b.Digest)
 	}
 	return nil
 }

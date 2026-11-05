@@ -89,7 +89,7 @@ func main() {
 func cleanUUID02512(id string) (string, error) {
 	id = strings.ToLower(strings.ReplaceAll(id, "-", ""))
 	if len(id) != 32 {
-		return "", errors.New("Minecraft UUID must contain 32 hex digits")
+		return "", errors.New("UUID Minecraft должен содержать 32 шестнадцатеричных символа")
 	}
 	for _, c := range id {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
@@ -107,7 +107,7 @@ func origin02512(raw string, allowLoopback bool) (*url.URL, error) {
 		return u, nil
 	}
 	if u.Scheme != "http" || !allowLoopback || !isLoopback02512(u.Hostname()) {
-		return nil, errors.New("HTTPS required; HTTP permitted only for explicit loopback test")
+		return nil, errors.New("Требуется HTTPS; HTTP допустим только для явно заданного локального теста")
 	}
 	return u, nil
 }
@@ -153,20 +153,20 @@ func checkTexture02512(ctx context.Context, c *http.Client, raw string, kind, mo
 		return errors.New("Некорректное значение: текстура URL")
 	}
 	if u.Scheme != "https" && !(loopback && u.Scheme == "http" && isLoopback02512(u.Hostname())) {
-		return errors.New("insecure texture URL")
+		return errors.New("Небезопасный URL текстуры")
 	}
 	if !domainAllowed02512(u.Hostname(), meta.SkinDomains) {
-		return errors.New("texture host not in authlib-injector allowlist")
+		return errors.New("Хост текстуры отсутствует в списке разрешённых authlib-injector")
 	}
 	if strings.ToLower(u.Hostname()) != strings.ToLower(origin.Hostname()) {
-		return errors.New("texture host differs from verified API origin; external fetch disallowed by probe")
+		return errors.New("Хост текстуры отличается от проверенного исходного адреса API; внешняя загрузка запрещена проверкой")
 	}
 	if u.Port() != origin.Port() {
-		return errors.New("texture port differs from API origin")
+		return errors.New("Порт текстуры отличается от порта исходного API")
 	}
 	const prefix = "/api/v1/textures/blob/"
 	if !strings.HasPrefix(u.Path, prefix) {
-		return errors.New("texture is not a managed blob")
+		return errors.New("Текстура не является управляемым двоичным объектом")
 	}
 	digest := strings.TrimPrefix(u.Path, prefix)
 	if len(digest) != 64 {
@@ -203,18 +203,18 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 	}
 	metadataRaw, err := fetch02512(ctx, client, origin.String()+"/")
 	if err != nil {
-		return report, fmt.Errorf("Yggdrasil metadata: %w", err)
+		return report, fmt.Errorf("Ошибка метаданных Yggdrasil: %w", err)
 	}
 	var metadata metadata02512
 	if err := json.Unmarshal(metadataRaw, &metadata); err != nil {
 		return report, err
 	}
 	if !domainAllowed02512(origin.Hostname(), metadata.SkinDomains) {
-		return report, errors.New("metadata does not allow the API origin")
+		return report, errors.New("Метаданные не разрешают исходный адрес API")
 	}
 	block, _ := pem.Decode([]byte(metadata.SignaturePublicKey))
 	if block == nil {
-		return report, errors.New("metadata missing PEM public key")
+		return report, errors.New("В метаданных отсутствует открытый ключ PEM")
 	}
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
@@ -236,7 +236,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, errors.New("Несовпадение: «profile identity»")
 	}
 	if len(profile.Properties) != 1 || profile.Properties[0].Name != "textures" || profile.Properties[0].Signature == "" {
-		return report, errors.New("profile lacks exactly one signed textures property")
+		return report, errors.New("В профиле отсутствует ровно одно подписанное свойство textures")
 	}
 	prop := profile.Properties[0]
 	digest := sha1.Sum([]byte(prop.Value))

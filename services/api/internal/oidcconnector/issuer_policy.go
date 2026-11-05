@@ -17,7 +17,7 @@ type ExactIssuerPolicy struct{}
 
 func (ExactIssuerPolicy) ValidateDiscoveryIssuer(configuredIssuer, discoveredIssuer string) error {
 	if strings.TrimSpace(discoveredIssuer) != strings.TrimSpace(configuredIssuer) {
-		return fmt.Errorf("discovery issuer mismatch: got %q", discoveredIssuer)
+		return fmt.Errorf("Издатель сервиса обнаружения не совпадает: получено %q", discoveredIssuer)
 	}
 	return nil
 }

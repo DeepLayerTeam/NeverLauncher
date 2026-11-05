@@ -245,12 +245,12 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	}
 	for _, p := range actualDirs {
 		if !dirs[p] {
-			return m, nil, fmt.Errorf("extra directory: %s", p)
+			return m, nil, fmt.Errorf("Лишний каталог: %s", p)
 		}
 	}
 	for _, p := range actualFiles {
 		if !files[p] {
-			return m, nil, fmt.Errorf("extra file: %s", p)
+			return m, nil, fmt.Errorf("Лишний файл: %s", p)
 		}
 	}
 	return m, raw, nil
@@ -271,7 +271,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 	report = MinimalBundleReport0377{Format: minimalBundleFormat0377, ManifestSHA256: hex.EncodeToString(h[:]), Files: len(m.Files), ReadyForBackendCutover: false}
 	pg, err := pgx.Connect(ctx, dsn)
 	if err != nil {
-		return report, fmt.Errorf("connect PostgreSQL (%T; DSN redacted)", err)
+		return report, fmt.Errorf("Ошибка подключения к PostgreSQL (%T; DSN скрыт)", err)
 	}
 	defer pg.Close(context.Background())
 	tx, err := pg.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
@@ -287,7 +287,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 		return report, err
 	}
 	if exists {
-		return report, errors.New("minimal PostgreSQL transfer exists; refusing overwrite")
+		return report, errors.New("Минимальный перенос PostgreSQL уже существует; перезапись запрещена")
 	}
 	if _, err = tx.Exec(ctx, "CREATE SCHEMA "+quoted(MinimalBundleSchema0377)); err != nil {
 		return report, err
@@ -341,7 +341,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 			return report, err
 		}
 		if hex.EncodeToString(digest.Sum(nil)) != f.SHA256 {
-			return report, fmt.Errorf("file changed during PostgreSQL transfer: %s", f.Path)
+			return report, fmt.Errorf("Файл изменился во время переноса в PostgreSQL: %s", f.Path)
 		}
 		report.Bytes += f.Bytes
 	}
@@ -370,10 +370,10 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 	}
 	h = sha256.Sum256(again)
 	if hex.EncodeToString(h[:]) != report.ManifestSHA256 {
-		return report, errors.New("manifest changed during import")
+		return report, errors.New("Манифест изменился во время импорта")
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return report, fmt.Errorf("PostgreSQL commit outcome needs reconciliation: %w", err)
+		return report, fmt.Errorf("Результат сохранения PostgreSQL требует сверки: %w", err)
 	}
 	return report, nil
 }
@@ -403,7 +403,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 	}
 	pg, e := pgx.Connect(ctx, dsn)
 	if e != nil {
-		return report, fmt.Errorf("connect PostgreSQL (%T; DSN redacted)", e)
+		return report, fmt.Errorf("Ошибка подключения к PostgreSQL (%T; DSN скрыт)", e)
 	}
 	defer pg.Close(context.Background())
 	tx, e := pg.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
@@ -443,7 +443,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 	for _, dir := range m.Directories {
 		if dir != "." {
 			if !legalPath0377(dir) {
-				return report, errors.New("illegal backup directory")
+				return report, errors.New("Недопустимый каталог резервной копии")
 			}
 			if err = os.Mkdir(filepath.Join(payload, filepath.FromSlash(dir)), 0700); err != nil {
 				return report, err
@@ -452,7 +452,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 	}
 	for _, f := range m.Files {
 		if !legalPath0377(f.Path) {
-			return report, errors.New("illegal path in imported manifest")
+			return report, errors.New("Недопустимый путь в импортированном манифесте")
 		}
 		var saved MinimalBundleFile0377
 		var mode int32
@@ -464,7 +464,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		}
 		saved.Mode = uint32(mode)
 		if saved != f {
-			return report, fmt.Errorf("PostgreSQL file metadata differs from manifest: %s", f.Path)
+			return report, fmt.Errorf("Метаданные файла PostgreSQL не совпадают с манифестом: %s", f.Path)
 		}
 		targetFile := filepath.Join(payload, filepath.FromSlash(f.Path))
 		out, e := os.OpenFile(targetFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)

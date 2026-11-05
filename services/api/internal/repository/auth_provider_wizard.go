@@ -33,7 +33,7 @@ type ManagedProviderStore02910 interface {
 	ActivateManagedProvider02910(context.Context, string, int64, int64, string, string) (ManagedProviderHead02910, error)
 }
 
-var ErrManagedProviderConflict02910 = errors.New("managed auth provider revision conflict")
+var ErrManagedProviderConflict02910 = errors.New("Конфликт ревизий управляемого провайдера авторизации")
 var ErrManagedProviderMissing02910 = errors.New("Не найдено: «managed auth provider revision»")
 
 // SQL-методы работают в транзакциях и сериализуют активации блокировкой строки head.

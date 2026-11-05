@@ -96,7 +96,7 @@ func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (
 		return false, nil
 	}
 	if len(seen) != len(expected) {
-		return true, fmt.Errorf("coordinator partial schema: found %d/%d objects", len(seen), len(expected))
+		return true, fmt.Errorf("Координатор: неполная схема, обнаружено объектов %d/%d", len(seen), len(expected))
 	}
 	return true, nil
 }
@@ -124,7 +124,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 		return e
 	})
 	if err != nil {
-		return nil, fmt.Errorf("coordinator schema preflight: %w", err)
+		return nil, fmt.Errorf("Ошибка предварительной проверки схемы координатора: %w", err)
 	}
 	if legacy {
 		if _, err = sqlitedurable.PreUpgradeBackup0472(ctx, path, "coordinator-v0-to-v1"); err != nil {
@@ -142,7 +142,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 				continue
 			}
 			if _, e := q.ExecContext(ctx, stmt); e != nil {
-				return fmt.Errorf("coordinator DDL: %w", e)
+				return fmt.Errorf("Ошибка DDL координатора: %w", e)
 			}
 		}
 		_, e := q.ExecContext(ctx, "INSERT INTO coord_meta(key,value) VALUES('version',?) ON CONFLICT(key) DO NOTHING", schemaVersion)
@@ -165,7 +165,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 		_, e := validateExistingSchema0471(ctx, q)
 		return e
 	}); err != nil {
-		return nil, fmt.Errorf("coordinator schema verification: %w", err)
+		return nil, fmt.Errorf("Ошибка проверки схемы координатора: %w", err)
 	}
 	if err = c.Health(ctx); err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (c *Coordinator) Health(ctx context.Context) error {
 			return err
 		}
 		if v != schemaVersion {
-			return fmt.Errorf("coordinator incompatible schema %d", v)
+			return fmt.Errorf("Координатор: несовместимая схема %d", v)
 		}
 		_, err := q.ExecContext(ctx, "UPDATE coord_meta SET value=value WHERE key='version'")
 		return err
@@ -234,7 +234,7 @@ WHERE coord_channels.expires_at<=? OR coord_channels.resume_after<=excluded.resu
 			return e
 		}
 		if n != 1 {
-			return errors.New("coordinator: stale channel cursor")
+			return errors.New("Координатор: курсор канала устарел")
 		}
 		return nil
 	})
@@ -278,7 +278,7 @@ func (c *Coordinator) AcquireCommandLease(ctx context.Context, serverID, command
 			return e
 		}
 		if fence == math.MaxInt64 {
-			return errors.New("coordinator: fence counter exhausted")
+			return errors.New("Координатор: исчерпан счётчик защиты операций")
 		}
 		fence++
 		if _, e = q.ExecContext(ctx, "INSERT INTO coord_lease_tokens(server_id,command_id,token_hash,fence) VALUES(?,?,?,?)", serverID, commandID, key, fence); e != nil {

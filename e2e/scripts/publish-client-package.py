@@ -29,7 +29,7 @@ class APIClient:
     def __init__(self, base_url: str, token: str) -> None:
         parsed = urlsplit(base_url.rstrip("/"))
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-            raise ValueError("--api must be an absolute http(s) URL")
+            raise ValueError("Параметр --api должен содержать абсолютный URL http(s)")
         self.scheme = parsed.scheme
         self.host = parsed.hostname
         self.port = parsed.port
@@ -53,12 +53,12 @@ class APIClient:
         следующем процессе — повторное воспроизведение, а не новая повторная аутентификация.
         """
         if path.is_symlink():
-            raise RuntimeError("refusing symlinked passkey counter file")
+            raise RuntimeError("Файл счётчика Passkey является символической ссылкой и отклонён")
         if path.exists():
             payload = json.loads(path.read_text(encoding="utf-8"))
             count = payload.get("signCount") if isinstance(payload, dict) else None
             if type(count) is not int or not 0 <= count < 2**32:
-                raise RuntimeError("invalid saved WebAuthn signCount")
+                raise RuntimeError("Недопустимое сохранённое значение WebAuthn signCount")
             self.passkey_sign_count = count
         self.passkey_counter_file = path
 
@@ -198,7 +198,7 @@ class APIClient:
 
     def set_upload_passkey(self, helper: Path, state: Path) -> None:
         if not helper.is_file() or not state.is_file():
-            raise RuntimeError("WebAuthn upload credentials are unavailable")
+            raise RuntimeError("Учётные данные загрузки WebAuthn недоступны")
         self.passkey_helper, self.passkey_state = helper, state
 
     def refresh_upload_auth_if_due(self, *, force: bool = False) -> None:
@@ -220,23 +220,23 @@ class APIClient:
         if sign_count is None:
             sign_count = self.passkey_sign_count + 1
         if sign_count <= self.passkey_sign_count:
-            raise RuntimeError("WebAuthn assertion counter must increase monotonically")
+            raise RuntimeError("Счётчик подтверждений WebAuthn должен только увеличиваться")
         if not helper.is_file():
-            raise RuntimeError(f"WebAuthn helper is unavailable: {helper}")
+            raise RuntimeError(f"Вспомогательная утилита WebAuthn недоступна: {helper}")
         if not state.is_file():
-            raise RuntimeError(f"WebAuthn state is unavailable: {state}")
+            raise RuntimeError(f"Состояние WebAuthn недоступно: {state}")
         begin = self.json("POST", "/api/v1/auth/passkeys/step-up/begin", {})
         if not isinstance(begin, dict) or not isinstance(begin.get("data"), dict):
-            raise RuntimeError(f"invalid passkey step-up begin response: {begin!r}")
+            raise RuntimeError(f"Некорректный ответ начала дополнительной проверки Passkey: {begin!r}")
         data = begin["data"]
         public_key = data.get("publicKey")
         if not isinstance(public_key, dict):
-            raise RuntimeError("passkey step-up response does not contain publicKey")
+            raise RuntimeError("В ответе дополнительной проверки Passkey отсутствует publicKey")
         transaction = str(data.get("transactionToken", ""))
         challenge = str(public_key.get("challenge", ""))
         if not transaction or not challenge:
             raise RuntimeError(
-                "passkey step-up response is missing transaction/challenge"
+                "В ответе дополнительной проверки Passkey отсутствуют транзакция или challenge"
             )
         proc = subprocess.run(
             [
@@ -255,20 +255,20 @@ class APIClient:
         )
         if proc.returncode != 0:
             raise RuntimeError(
-                f"WebAuthn assertion helper failed: {proc.stderr.strip()}"
+                f"Вспомогательная утилита подтверждения WebAuthn завершилась ошибкой: {proc.stderr.strip()}"
             )
         try:
             assertion = json.loads(proc.stdout)
         except json.JSONDecodeError as exc:
             raise RuntimeError(
-                "WebAuthn assertion helper returned invalid JSON"
+                "Вспомогательная утилита подтверждения WebAuthn вернула некорректный JSON"
             ) from exc
         complete = self.json(
             "POST", "/api/v1/auth/passkeys/step-up/complete", assertion
         )
         if not isinstance(complete, dict) or not isinstance(complete.get("data"), dict):
             raise RuntimeError(
-                f"invalid passkey step-up complete response: {complete!r}"
+                f"Некорректный ответ завершения дополнительной проверки Passkey: {complete!r}"
             )
         step_data = complete["data"]
         token = str(step_data.get("accessToken", ""))
@@ -279,7 +279,7 @@ class APIClient:
             or session.get("authStrength") != "phishing-resistant"
         ):
             raise RuntimeError(
-                "passkey step-up did not produce phishing-resistant access token"
+                "Дополнительная проверка Passkey не выдала токен доступа, устойчивый к фишингу"
             )
         self.token = token
         self.passkey_sign_count = sign_count
@@ -300,7 +300,7 @@ class APIClient:
         content = local_file.read_bytes()
         actual = hashlib.sha256(content).hexdigest()
         if actual.lower() != expected_sha256.lower() or len(content) != expected_size:
-            raise RuntimeError(f"local package file changed before upload: {path}")
+            raise RuntimeError(f"Локальный файл пакета изменился перед загрузкой: {path}")
         parts: list[bytes] = []
 
         def field(name: str, value: str) -> None:
@@ -321,7 +321,7 @@ class APIClient:
         parts.append(f"--{boundary}--\r\n".encode())
         body = b"".join(parts)
         if not self.project_id or not self.package_id:
-            raise RuntimeError("upload target is not initialized")
+            raise RuntimeError("Цель загрузки не инициализирована")
         endpoint = f"/api/v1/admin/projects/{quote(self.project_id, safe='')}/versions/{quote(self.package_id, safe='')}/files"
         status, raw = self._request(
             "POST",
@@ -344,7 +344,7 @@ class APIClient:
             remote_sha.lower() != expected_sha256.lower()
             or remote_size != expected_size
         ):
-            raise RuntimeError(f"backend checksum mismatch after upload: {path}")
+            raise RuntimeError(f"Контрольная сумма Backend после загрузки не совпадает: {path}")
         return parsed
 
     project_id = ""
@@ -354,20 +354,20 @@ class APIClient:
 def safe_local(root: Path, relative: str) -> Path:
     rel = Path(relative)
     if rel.is_absolute() or ".." in rel.parts or not relative or "\\" in relative:
-        raise RuntimeError(f"unsafe package path: {relative!r}")
+        raise RuntimeError(f"Небезопасный путь пакета: {relative!r}")
     resolved_root = root.resolve(strict=True)
     lexical = root
     for part in rel.parts:
         lexical = lexical / part
         if lexical.is_symlink():
-            raise RuntimeError(f"symlink package path is forbidden: {relative!r}")
+            raise RuntimeError(f"Путь пакета не может быть символической ссылкой: {relative!r}")
     candidate = (root / rel).resolve(strict=True)
     if candidate == resolved_root or resolved_root not in candidate.parents:
         raise RuntimeError(
-            f"package path escapes client root or resolves to root: {relative!r}"
+            f"Путь пакета выходит за пределы корня клиента либо указывает на сам корень: {relative!r}"
         )
     if not candidate.is_file():
-        raise RuntimeError(f"package path is not a regular file: {relative!r}")
+        raise RuntimeError(f"Путь пакета не указывает на обычный файл: {relative!r}")
     return candidate
 
 
@@ -389,10 +389,10 @@ def main() -> int:
     manifest = wrapper.get("manifest")
     settings = wrapper.get("manifestSettings")
     if not isinstance(manifest, dict) or not isinstance(settings, dict):
-        raise RuntimeError("client package must contain manifest and manifestSettings")
+        raise RuntimeError("Пакет клиента должен содержать manifest и manifestSettings")
     files = manifest.get("files")
     if not isinstance(files, list) or not files:
-        raise RuntimeError("client package does not contain files")
+        raise RuntimeError("Пакет клиента не содержит файлов")
     if args.quick_play:
         minecraft = settings.setdefault("minecraft", {})
         game_args = list(minecraft.get("gameArgs") or [])
@@ -421,7 +421,7 @@ def main() -> int:
         },
     )
     if not isinstance(created, dict) or not created.get("id"):
-        raise RuntimeError(f"version create response does not contain id: {created!r}")
+        raise RuntimeError(f"В ответе на создание версии отсутствует id: {created!r}")
     version_id = str(created["id"])
     client.project_id = project
     client.package_id = version_id
@@ -434,7 +434,7 @@ def main() -> int:
 
     if bool(args.webauthn_helper) != bool(args.webauthn_state):
         raise RuntimeError(
-            "--webauthn-helper and --webauthn-state must be provided together"
+            "Параметры --webauthn-helper и --webauthn-state необходимо указывать вместе"
         )
     if args.webauthn_helper and args.webauthn_state:
         client.set_upload_passkey(args.webauthn_helper, args.webauthn_state)
@@ -449,13 +449,13 @@ def main() -> int:
     total_bytes = 0
     for index, item in enumerate(files, 1):
         if not isinstance(item, dict):
-            raise RuntimeError("invalid file entry")
+            raise RuntimeError("Некорректная запись файла")
         relative = str(item["path"])
         expected_sha = str(item["sha256"])
         expected_size = int(item["size"])
         local_file = safe_local(args.client_dir, relative)
         if not local_file.is_file():
-            raise RuntimeError(f"package file missing: {relative}")
+            raise RuntimeError(f"Файл пакета отсутствует: {relative}")
         client.refresh_upload_auth_if_due()
         client.upload(
             relative,
@@ -490,7 +490,7 @@ def main() -> int:
         not isinstance(validated, dict)
         or validated.get("data", {}).get("status") != "valid"
     ):
-        raise RuntimeError(f"package validation did not pass: {validated!r}")
+        raise RuntimeError(f"Проверка пакета не пройдена: {validated!r}")
     client.json("POST", package_path + "/sign")
     client.json("POST", package_path + "/stage")
     integrity = client.json("POST", package_path + "/integrity-check")
@@ -498,7 +498,7 @@ def main() -> int:
         not isinstance(integrity, dict)
         or integrity.get("data", {}).get("result", {}).get("result") != "passed"
     ):
-        raise RuntimeError(f"package integrity check did not pass: {integrity!r}")
+        raise RuntimeError(f"Проверка целостности пакета не пройдена: {integrity!r}")
 
     if args.webauthn_helper and args.webauthn_state:
         print(

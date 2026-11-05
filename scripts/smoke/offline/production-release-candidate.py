@@ -119,25 +119,25 @@ def validate_native_layout(root: Path, marker: str) -> Path:
     преобразования путей оболочкой.
     """
     if not root.is_dir() or root.is_symlink():
-        raise ValueError("artifact root missing or symlink")
+        raise ValueError("Корень артефакта отсутствует либо является символической ссылкой")
     releases = [p for p in root.iterdir() if p.name.startswith("release-")]
     flat = root / marker
     if flat.is_file() and not flat.is_symlink():
         if releases or any(p.is_symlink() for p in root.iterdir()):
-            raise ValueError("mixed flat artifact or symlink")
+            raise ValueError("Смешанный плоский артефакт или символическая ссылка")
         return root
     expected = root / f"release-{VERSION}"
     if len(releases) != 1 or releases[0] != expected:
-        raise ValueError("expected exactly one versioned artifact payload")
+        raise ValueError("Ожидалось содержимое ровно одного версионированного артефакта")
     if not expected.is_dir() or expected.is_symlink():
-        raise ValueError("artifact payload missing or symlink")
+        raise ValueError("Содержимое артефакта отсутствует либо является символической ссылкой")
     nested = expected / marker
     if not nested.is_file() or nested.is_symlink():
-        raise ValueError("artifact marker missing or symlink")
+        raise ValueError("Маркер артефакта отсутствует либо является символической ссылкой")
     if any(p.is_file() or p.is_symlink() for p in root.iterdir()):
         raise ValueError("Неожиданное значение: «top-level artifact or symlink»")
     if any(p.is_symlink() for p in expected.iterdir()):
-        raise ValueError("nested artifact payload contains symlink")
+        raise ValueError("Внутреннее содержимое артефакта включает символическую ссылку")
     return expected
 
 

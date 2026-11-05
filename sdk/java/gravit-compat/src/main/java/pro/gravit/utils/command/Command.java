@@ -8,7 +8,7 @@ public abstract class Command {
     public abstract void invoke(String... args) throws Exception;
     protected final void verifyArgs(String[] args,int minimum){if(args.length<minimum)throw new IllegalArgumentException("Usage: "+getArgsDescription());}
     public final void invokeSubcommands(String... args)throws Exception {
-        verifyArgs(args,1);Command next=childCommands.get(args[0]);if(next==null)throw new IllegalArgumentException("unknown subcommand");
+        verifyArgs(args,1);Command next=childCommands.get(args[0]);if(next==null)throw new IllegalArgumentException("Неизвестная подкоманда");
         next.invoke(Arrays.copyOfRange(args,1,args.length));
     }
 }

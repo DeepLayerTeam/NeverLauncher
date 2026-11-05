@@ -24,7 +24,7 @@ SHA40 = re.compile(r"[0-9a-f]{40}\Z")
 def env(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
-        raise RuntimeError(f"owner browser E2E requires {name}; no synthetic fallback")
+        raise RuntimeError(f"Для E2E-сценария браузера владельца требуется {name}; искусственная замена недопустима")
     return value
 
 
@@ -36,7 +36,7 @@ def verify_receipt(receipt: dict, *, version: str, commit: str) -> None:
         or receipt.get("sourceCommit") != commit
         or receipt.get("scope") != "live-admin-browser-owner-cycle-0390"
     ):
-        raise RuntimeError("invalid owner browser E2E identity")
+        raise RuntimeError("Некорректный идентификатор E2E-сценария браузера владельца")
     required = {
         "project-created-in-admin",
         "profile-created-in-admin",
@@ -53,7 +53,7 @@ def verify_receipt(receipt: dict, *, version: str, commit: str) -> None:
         or len(checks) != len(required)
         or set(checks) != required
     ):
-        raise RuntimeError("owner browser E2E incomplete or duplicate checks")
+        raise RuntimeError("В E2E-сценарии браузера владельца проверки неполны или дублируются")
     if not all(
         isinstance(receipt.get(x), str) and receipt[x]
         for x in (
@@ -64,13 +64,13 @@ def verify_receipt(receipt: dict, *, version: str, commit: str) -> None:
             "finalReleaseId",
         )
     ):
-        raise RuntimeError("owner browser E2E lacks actual resource identifiers")
+        raise RuntimeError("В E2E-сценарии браузера владельца отсутствуют реальные идентификаторы ресурсов")
     if (
         not isinstance(receipt.get("initialRevision"), int)
         or not isinstance(receipt.get("finalRevision"), int)
         or receipt["finalRevision"] != receipt["initialRevision"] + 2
     ):
-        raise RuntimeError("owner browser E2E did not prove two channel revisions")
+        raise RuntimeError("E2E-сценарий браузера владельца не подтвердил две ревизии канала")
 
 
 async def main():
@@ -78,7 +78,7 @@ async def main():
 
     if env("E2E_OWNER_DESTRUCTIVE_ACK") != "OWNER_0390_DISPOSABLE_STAGING":
         raise RuntimeError(
-            "refusing destructive owner test without dedicated staging acknowledgement"
+            "Разрушающий тест владельца запрещён без специального подтверждения тестовой среды"
         )
     web, api = env("E2E_ADMIN_URL").rstrip("/"), env("E2E_API_URL").rstrip("/")
     admin, operator = env("E2E_ADMIN_TOKEN"), env("E2E_OPERATOR_TOKEN")
@@ -102,7 +102,7 @@ async def main():
         or good_draft == bad_draft
     ):
         raise RuntimeError(
-            "invalid commit, project isolation or contradictory fixtures"
+            "Некорректный коммит, нарушение изоляции проекта или противоречивые тестовые данные"
         )
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     receipt = {
@@ -128,7 +128,7 @@ async def main():
             response = await request.get(api + path, timeout=20000)
             if not response.ok:
                 raise RuntimeError(
-                    f"live preflight/read {path}: HTTP {response.status}"
+                    f"Реальная предварительная проверка или чтение {path}: HTTP {response.status}"
                 )
             body = await response.json()
             return body.get("data", body)
@@ -137,7 +137,7 @@ async def main():
             status = await data("/api/v1/status")
             if status.get("version") != version or status.get("sourceCommit") != commit:
                 raise RuntimeError(
-                    "staging Backend does not run exact candidate version/commit"
+                    "Тестовый Backend запущен не из точной проверяемой версии или коммита"
                 )
             heads = (
                 f"/api/v1/projects/{project}/profiles/{profile}/channels/{channel}/head"
@@ -148,7 +148,7 @@ async def main():
                 or original.get("profileId") != profile
                 or original.get("channel") != channel
             ):
-                raise RuntimeError("channel head fixture mismatch")
+                raise RuntimeError("Тестовый указатель последнего релиза канала не совпадает")
             receipt["initialRevision"] = original["revision"]
             for package_id, expected in ((good, True), (bad, False)):
                 pkg = await data(f"/api/v1/packages/{package_id}")
@@ -158,13 +158,13 @@ async def main():
                     or pkg.get("profileId") != profile
                     or pkg.get("channel") != channel
                 ):
-                    raise RuntimeError(f"foreign package fixture: {package_id}")
+                    raise RuntimeError(f"Тестовый пакет из другого проекта: {package_id}")
                 if (
                     validation.get("publishReadiness", {}).get("eligible")
                     is not expected
                 ):
                     raise RuntimeError(
-                        f"package preflight does not match real publish readiness: {package_id}"
+                        f"Предварительная проверка пакета не соответствует реальной готовности к публикации: {package_id}"
                     )
             drafts = await data(f"/api/v1/release-drafts?projectId={project}")
             found = {d.get("version"): d for d in drafts.get("items", [])}
@@ -175,7 +175,7 @@ async def main():
                 or found[bad_draft].get("packageId") != bad
             ):
                 raise RuntimeError(
-                    "saved Admin drafts do not match certified/broken fixtures"
+                    "Сохранённые черновики Admin не совпадают с сертифицированными и некорректными тестовыми данными"
                 )
             browser = await p.chromium.launch(headless=True)
             try:
@@ -231,7 +231,7 @@ async def main():
                 ).get_attribute("content")
                 if source != commit:
                     raise RuntimeError(
-                        "Admin JavaScript bundle is not from candidate commit"
+                        "Пакет JavaScript Admin собран не из проверяемого коммита"
                     )
                 await page.get_by_role(
                     "button", name=bad_draft, exact=False
@@ -245,10 +245,10 @@ async def main():
                 ).first.wait_for(timeout=20000)
                 if await page.get_by_role("button", name="Опубликовать").is_enabled():
                     raise RuntimeError(
-                        "invalid package unexpectedly publishable in Admin"
+                        "Некорректный пакет неожиданно допускается к публикации в Admin"
                     )
                 if (await data(heads))["revision"] != original["revision"]:
-                    raise RuntimeError("invalid package changed channel head")
+                    raise RuntimeError("Некорректный пакет изменил указатель последнего релиза канала")
                 receipt["checks"].append("bad-package-denied")
                 await page.get_by_role(
                     "button", name=good_draft, exact=False
@@ -279,7 +279,7 @@ async def main():
                     or published.get("revision") != original["revision"] + 1
                 ):
                     raise RuntimeError(
-                        "successful publish did not advance exact channel head"
+                        "Успешная публикация не обновила указатель последнего релиза канала"
                     )
                 receipt["checks"].extend(
                     ("good-package-published", "channel-head-confirmed")
@@ -302,7 +302,7 @@ async def main():
                     or rolled_back.get("releaseId") == good
                 ):
                     raise RuntimeError(
-                        "rollback did not produce a new confirmed release"
+                        "Откат не создал новый подтверждённый релиз"
                     )
                 receipt["checks"].append("rollback-confirmed")
                 receipt["finalRevision"] = rolled_back["revision"]
@@ -317,7 +317,7 @@ async def main():
                     )
                     if response.status != 403:
                         raise RuntimeError(
-                            f"foreign project access: HTTP {response.status}"
+                            f"Доступ к чужому проекту: HTTP {response.status}"
                         )
                 finally:
                     await denied.dispose()

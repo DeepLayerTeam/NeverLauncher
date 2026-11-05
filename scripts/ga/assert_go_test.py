@@ -15,7 +15,7 @@ from pathlib import Path
 
 def verify(path: Path, required: list[str]) -> None:
     if not required:
-        raise ValueError("at least one required test is mandatory")
+        raise ValueError("Необходимо указать хотя бы один обязательный тест")
     wanted = set(required)
     if len(wanted) != len(required):
         raise ValueError("«duplicate --require names»: не разрешено")
@@ -49,7 +49,7 @@ def verify(path: Path, required: list[str]) -> None:
     incomplete = sorted(name for name in wanted if observed.get(name) != "pass")
     failed_packages = sorted(pkg for pkg, action in packages.items() if action != "pass")
     if incomplete or failed_packages:
-        raise ValueError(f"GA not certified: tests without PASS={incomplete}, failed/skipped packages={failed_packages}")
+        raise ValueError(f"GA не сертифицирован: тесты без PASS={incomplete}, пакеты с ошибками или пропусками={failed_packages}")
     if not packages or not any(v == "pass" for v in packages.values()):
         raise ValueError("Отсутствует: «successful Go package result»")
     print(f"verified {len(wanted)} mandatory Go tests passed; packages={len(packages)}")

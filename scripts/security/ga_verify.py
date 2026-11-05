@@ -181,7 +181,7 @@ def verify_evidence(
                 raise ValueError(f"{tier}: отсутствуют успешно пройденные обязательные тесты")
         if seen != REQUIRED[tier]:
             raise ValueError(
-                f"{tier}: missing mandatory packages {REQUIRED[tier] - seen}"
+                f"{tier}: отсутствуют обязательные пакеты {REQUIRED[tier] - seen}"
             )
     else:
         checks = {}
@@ -204,7 +204,7 @@ def verify_evidence(
             checks[name] = result
         if set(checks) != MANUAL[tier]:
             raise ValueError(
-                f"{tier}: missing live scenarios: {MANUAL[tier] - set(checks)}"
+                f"{tier}: отсутствуют реальные сценарии: {MANUAL[tier] - set(checks)}"
             )
     return {"tier": tier, "sha256": hashlib.sha256(raw).hexdigest(), "status": "PASS"}
 
@@ -222,7 +222,7 @@ def verify_all(
         or not HEX64.fullmatch(source_sha)
     ):
         raise ValueError(
-            "32-byte trusted Ed25519 key, exact 40-digit git SHA and source fingerprint required"
+            "Необходимы доверенный 32-байтный ключ Ed25519, точный 40-символьный SHA Git и отпечаток исходников"
         )
     if len(paths) != len(TIERS):
         raise ValueError("Требуется: «seven independent signed tiers»")

@@ -48,7 +48,7 @@ def record(
         or artifact.is_symlink()
         or artifact.stat().st_size == 0
     ):
-        raise ValueError(f"{service}: the exact built plugin JAR is required")
+        raise ValueError(f"{service}: требуется точный собранный JAR плагина")
     # Тест Runtime должен быть привязан к фактическим байтам плагина, а не к
     # имени файла или декларации в сгенерированном манифесте сборки.
     jar_digest = digest(artifact)
@@ -56,12 +56,12 @@ def record(
         r"[a-f0-9]{40}|[a-f0-9]{64}", source_commit
     ):
         raise ValueError(
-            "0.42.0 requires an exact source commit for live certification"
+            "Для реальной сертификации 0.42.0 требуется точный коммит исходников"
         )
     # Независимое наблюдение: не выводите наличие процесса только из heartbeat HTTP.
     inspect = json.loads(run("docker", "inspect", "--type", "container", cid))
     if len(inspect) != 1:
-        raise ValueError("Docker must identify exactly one runtime container")
+        raise ValueError("Docker должен однозначно определить один контейнер Runtime")
     entry = inspect[0]
     state = entry.get("State") or {}
     health = state.get("Health") or {}
@@ -70,10 +70,10 @@ def record(
         and health.get("Status") == "healthy"
         and int(state.get("Pid") or 0) > 1
     ):
-        raise ValueError(f"{service}: container is not healthy and running")
+        raise ValueError(f"{service}: контейнер не работает или находится в неисправном состоянии")
     image = entry.get("Image")
     if not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
-        raise ValueError(f"{service}: missing immutable Docker image identity")
+        raise ValueError(f"{service}: отсутствует неизменяемый идентификатор образа Docker")
     top = run("docker", "top", cid, "-eo", "pid,comm")
     java_pids = []
     for row in top.splitlines()[1:]:
@@ -85,7 +85,7 @@ def record(
         ):
             java_pids.append(int(fields[0]))
     if len(java_pids) != 1:
-        raise ValueError(f"{service}: expected one live Java process, got {java_pids}")
+        raise ValueError(f"{service}: ожидался один активный процесс Java, получено: {java_pids}")
     # java -version выводит в stderr; сохраняйте лишь основную версию, без приватных аргументов.
     proc = subprocess.run(
         ["docker", "exec", cid, "java", "-version"],
@@ -97,7 +97,7 @@ def record(
     first_line = (proc.stderr or proc.stdout).splitlines()[0]
     match = re.search(r'\bversion "(\d+)', first_line)
     if not match or int(match.group(1)) < 21:
-        raise ValueError(f"{service}: wrong JVM: {first_line}")
+        raise ValueError(f"{service}: используется неверная JVM: {first_line}")
     logs = runtime / f"live-{service}-04113.log"
     log_proc = subprocess.run(
         ["docker", "logs", cid], check=True, capture_output=True, text=True, timeout=30
@@ -105,7 +105,7 @@ def record(
     logs.write_text(log_proc.stdout + log_proc.stderr, encoding="utf-8")
     log_data = logs.read_text(encoding="utf-8")
     if not re.search(r"Launcher .* Bridge .*heartbeat=true", log_data, re.I):
-        raise ValueError(f"{service}: no real ServerBridge heartbeat in JVM log")
+        raise ValueError(f"{service}: в журнале JVM отсутствует реальный сигнал работоспособности ServerBridge")
     allow = f"launcher.join.allowed username={player}"
     deny = f"launcher.join.denied username={player}"
     if (
@@ -114,7 +114,7 @@ def record(
         or log_data.index(deny) <= log_data.index(allow)
     ):
         raise ValueError(
-            f"{service}: missing ordered allow/revocation deny from platform"
+            f"{service}: платформа не подтвердила последовательность разрешения и отказа после отзыва"
         )
     probes = {}
     for outcome in ("allow", "deny"):
@@ -132,17 +132,17 @@ def record(
         if require_real_join and outcome == "allow":
             launch = json.loads(data)
             if launch.get("success") is not True and launch.get("timedOut") is not True:
-                raise ValueError("real client JVM did not launch")
+                raise ValueError("Реальная JVM клиента не запустилась")
         else:
             match = PROBE.search(data)
             if not match or int(match.group(1)) != port or match.group(2) != player:
                 raise ValueError(
-                    f"{service}: {outcome} network probe does not match the runtime"
+                    f"{service}: результат сетевой проверки {outcome} не соответствует Runtime"
                 )
         probes[outcome] = {"path": probe_path.name, "sha256": digest(probe_path)}
     if require_real_join:
         if f"{player} joined the game" not in log_data:
-            raise ValueError(f"{service}: no actual player join in game log")
+            raise ValueError(f"{service}: в игровом журнале отсутствует реальное подключение игрока")
     return {
         "schemaVersion": "1.0",
         "productVersion": version,

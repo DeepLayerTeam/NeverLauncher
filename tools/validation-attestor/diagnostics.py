@@ -76,7 +76,7 @@ def retain(
     worker_log: Path, directory: Path, run_id: str, ttl_hours: int = 168
 ) -> dict:
     if not re.fullmatch(r"[0-9a-f]{48}", run_id):
-        raise ValueError("invalid diagnostic run id")
+        raise ValueError("Недопустимый идентификатор диагностического запуска")
     if not 1 <= ttl_hours <= 720:
         raise ValueError("Срок хранения диагностики должен составлять от 1 до 720 часов")
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)

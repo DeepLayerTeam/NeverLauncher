@@ -14,7 +14,7 @@ public final class GravitCompatExtension implements Extension {
         String className;
         try(JarFile jar=new JarFile(java.nio.file.Path.of(code).toFile())) {
             Attributes attrs=jar.getManifest().getMainAttributes();
-            if(!GravitCompatExtension.class.getName().equals(attrs.getValue("Launcher-Extension-Class")))throw new SecurityException("not a Gravit compatibility package");
+            if(!GravitCompatExtension.class.getName().equals(attrs.getValue("Launcher-Extension-Class")))throw new SecurityException("Пакет не предназначен для совместимости с Gravit");
             className=attrs.getValue("Launcher-Gravit-Module-Class");
         }
         if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}")||className.contains("..")||className.startsWith("pro.gravit.launcher.")||className.startsWith("ru.launcher.sdk."))throw new SecurityException("Недопустимый класс перенесённого модуля Gravit");
@@ -24,7 +24,7 @@ public final class GravitCompatExtension implements Extension {
         LauncherModulesManager manager=new LauncherModulesManager(context.runtime());
         // Зависимости нужно перенести в манифест Extensions: не разрешайте незаметно внутренние модули Gravit.
         for(String dependency:module.getModuleInfo().dependencies) {
-            if(dependency==null||!dependency.isBlank())throw new UnsupportedOperationException("Gravit internal dependency requires an explicit port: "+dependency);
+            if(dependency==null||!dependency.isBlank())throw new UnsupportedOperationException("Внутренняя зависимость Gravit требует явного порта: "+dependency);
         }
         // Перенесённый исходник может выделять ресурсы во время
         // preInitAction()/init(). Если живой хост отклонил подписку на события или

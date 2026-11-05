@@ -124,7 +124,7 @@ class GitHubAPI:
     def bytes(self, url: str) -> bytes:
         if not url.startswith(API_ROOT + "/"):
             raise RuntimeError(
-                "artifact download must start from the GitHub API origin"
+                "Загрузка артефактов должна начинаться с исходного адреса GitHub API"
             )
         req = urllib.request.Request(
             url,
@@ -147,7 +147,7 @@ class GitHubAPI:
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(
-                f"GitHub artifact request failed for {url}: {exc}"
+                f"Ошибка запроса артефакта GitHub по адресу {url}: {exc}"
             ) from exc
 
 
@@ -207,7 +207,7 @@ def matrix_from_zip(raw: bytes, *, label: str) -> bytes:
             ]
             if len(candidates) != 1:
                 raise RuntimeError(
-                    f"{label} artifact must contain exactly one matrix.json, found {candidates}"
+                    f"Артефакт {label} должен содержать ровно один matrix.json; найдено: {candidates}"
                 )
             data = archive.read(candidates[0])
     except zipfile.BadZipFile as exc:
@@ -261,7 +261,7 @@ def fetch_matrix(
         return False
     if conclusion != "success":
         raise RuntimeError(
-            f"{label} exact-commit workflow run {run_id} concluded {conclusion!r}, refusing release fallback"
+            f"Рабочий процесс точного коммита {label} с запуском {run_id} завершился со статусом {conclusion!r}; резервная публикация запрещена"
         )
     if fresh_required(version):
         # Одного точного SHA недостаточно для актуальности: самый новый завершённый
@@ -278,7 +278,7 @@ def fetch_matrix(
         delta = datetime.now(timezone.utc) - stamp
         if not timedelta(0) <= delta <= timedelta(hours=24):
             raise RuntimeError(
-                f"{label} exact-commit workflow run is historical; rerun verification for this release"
+                f"Запуск рабочего процесса для точного коммита {label} устарел; повторите проверку этого релиза"
             )
 
     repo = urllib.parse.quote(repository, safe="/")
@@ -298,7 +298,7 @@ def fetch_matrix(
     ]
     if len(matches) != 1:
         raise RuntimeError(
-            f"{label} exact-commit run {run_id} must expose exactly one {expected_name!r} artifact"
+            f"Запуск {run_id} для точного коммита {label} должен предоставить ровно один артефакт {expected_name!r}"
         )
     archive_url = str(matches[0].get("archive_download_url", "")).strip()
     if not archive_url.startswith("https://api.github.com/"):
@@ -378,7 +378,7 @@ def main() -> int:
             break
         if time.monotonic() >= deadline:
             raise RuntimeError(
-                f"timed out waiting for exact-commit certifications: {', '.join(sorted(pending))}"
+                f"Превышено время ожидания сертификаций для точного коммита: {', '.join(sorted(pending))}"
             )
         time.sleep(args.poll_seconds)
 

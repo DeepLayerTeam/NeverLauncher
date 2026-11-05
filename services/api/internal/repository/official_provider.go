@@ -32,18 +32,18 @@ type OfficialProviderStore02611 interface {
 	ListOfficialProviderHistory02611(context.Context, int) ([]OfficialProviderRevision02611, error)
 }
 
-var ErrOfficialProviderConflict02611 = errors.New("official provider revision conflict")
+var ErrOfficialProviderConflict02611 = errors.New("Конфликт ревизий официального провайдера")
 var clientIDPattern02611 = regexp.MustCompile(`(?i)^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$`)
 
 func (v OfficialProviderSettings02611) Validate() error {
 	if v.Issuer != "consumers" {
-		return errors.New("only personal Microsoft accounts (consumers) are supported")
+		return errors.New("Поддерживаются только личные учётные записи Microsoft")
 	}
 	if v.ClientID != "" && (!clientIDPattern02611.MatchString(v.ClientID) || strings.EqualFold(v.ClientID, "00000000-0000-0000-0000-000000000000")) {
 		return errors.New("clientId: требуется «a registered public application UUID»")
 	}
 	if v.Enabled && v.ClientID == "" {
-		return errors.New("clientId is required for enabled provider")
+		return errors.New("Для включённого провайдера требуется clientId")
 	}
 	if v.Enabled && !v.BrowserEnabled && !v.DeviceEnabled {
 		return errors.New("at least one authentication flow: требуется «enabled»")
@@ -133,7 +133,7 @@ func (r *SQLRepository) SaveOfficialProvider02611(ctx context.Context, expected 
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO official_provider_history_02611(revision,client_id,enabled,browser_enabled,device_enabled,issuer,actor,reason,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, v.Revision, v.Settings.ClientID, v.Settings.Enabled, v.Settings.BrowserEnabled, v.Settings.DeviceEnabled, v.Settings.Issuer, v.Actor, v.Reason, v.CreatedAt)
 	if err != nil {
-		return OfficialProviderRevision02611{}, fmt.Errorf("provider audit persistence: %w", err)
+		return OfficialProviderRevision02611{}, fmt.Errorf("Не удалось сохранить аудит провайдера: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
 		return OfficialProviderRevision02611{}, err

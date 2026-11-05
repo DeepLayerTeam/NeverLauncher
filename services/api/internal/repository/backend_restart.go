@@ -60,7 +60,7 @@ func (r *SQLRepository) ClaimBackendRestart0289(ctx context.Context, actor, key,
 		return rec, true, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return rec, false, fmt.Errorf("claim backend restart: %w", err)
+		return rec, false, fmt.Errorf("Ошибка регистрации перезапуска Backend: %w", err)
 	}
 	err = r.db.QueryRowContext(ctx, `SELECT id,actor,instance_id,state,accepted_at FROM backend_restart_requests_0289 WHERE id=$1`, id).Scan(&rec.ID, &rec.Actor, &rec.InstanceID, &rec.State, &rec.AcceptedAt)
 	if errors.Is(err, sql.ErrNoRows) {

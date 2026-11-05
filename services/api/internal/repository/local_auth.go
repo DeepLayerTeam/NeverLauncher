@@ -85,29 +85,29 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 			return 0, err
 		}
 		if exists {
-			return 0, fmt.Errorf("FileAuth import conflict for account %q (existing Never account)", a.Username)
+			return 0, fmt.Errorf("Конфликт импорта FileAuth для учётной записи %q (учётная запись Never уже существует)", a.Username)
 		}
 		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM minecraft_profiles WHERE lower(name)=lower($1) OR uuid=$2)`, a.Username, a.UUID).Scan(&exists); err != nil {
 			return 0, err
 		}
 		if exists {
-			return 0, fmt.Errorf("FileAuth import conflict for Minecraft name/UUID %q", a.Username)
+			return 0, fmt.Errorf("Конфликт импорта FileAuth для имени/UUID Minecraft %q", a.Username)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at)
             VALUES($1,$2,$3,'player','active','{}'::jsonb,$4,now(),now(),now())`, id, a.Email, a.Username, a.PasswordHash); err != nil {
-			return 0, fmt.Errorf("import user %q: %w", a.Username, err)
+			return 0, fmt.Errorf("Ошибка импорта пользователя %q: %w", a.Username, err)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
             VALUES($1,$2,'local','launcher',$2,$3,$3,$4,'{}'::jsonb,now(),now())`, "identity-local-"+id, id, a.Email, a.Username); err != nil {
-			return 0, fmt.Errorf("import identity %q: %w", a.Username, err)
+			return 0, fmt.Errorf("Ошибка импорта учётной записи %q: %w", a.Username, err)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at)
             VALUES($1,$2,$3,'launcher','local',$2,'legacy-fileauth-v1',now(),now())`, id, a.UUID, a.Username); err != nil {
-			return 0, fmt.Errorf("import Minecraft UUID %q: %w", a.Username, err)
+			return 0, fmt.Errorf("Ошибка импорта UUID Minecraft %q: %w", a.Username, err)
 		}
 		// В аудит записываются только имя пользователя и UUID, но не хеш источника.
 		if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,created_at) VALUES($1,'local-import','auth:fileauth:import',$2,now())`, "fileauth-import-"+id, id); err != nil {
-			return 0, fmt.Errorf("import audit %q: %w", a.Username, err)
+			return 0, fmt.Errorf("Ошибка импорта журнала аудита %q: %w", a.Username, err)
 		}
 	}
 	if dryRun {

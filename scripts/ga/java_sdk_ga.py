@@ -110,7 +110,7 @@ def publish(output: Path, *, build: bool = True) -> dict[str, Path]:
     version = (ROOT / "VERSION").read_text().strip()
     if not VERSION.fullmatch(version):
         raise RuntimeError(
-            "canonical VERSION is not an acceptable Maven release version"
+            "Значение VERSION не подходит для выпуска Maven"
         )
     if build:
         for name, path in MODULES.items():
@@ -120,7 +120,7 @@ def publish(output: Path, *, build: bool = True) -> dict[str, Path]:
         output.is_symlink() or not output.is_dir() or any(output.iterdir())
     ):
         raise RuntimeError(
-            f"publication destination must be a new/empty directory: {output}"
+            f"Каталог назначения публикации должен быть новым или пустым: {output}"
         )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)
@@ -228,7 +228,7 @@ public final class Consumer {
                 != sidecar.read_text().strip()
             ):
                 raise RuntimeError(
-                    f"published Maven artifact digest mismatch: {payload}"
+                    f"Контрольная сумма опубликованного артефакта Maven не совпадает: {payload}"
                 )
         # Сохраняйте проверенный репозиторий, а не временные документы и классы потребителя.
         (staging / "maven").rename(output / "maven")

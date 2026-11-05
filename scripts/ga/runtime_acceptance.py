@@ -241,7 +241,7 @@ def main():
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     try:
-        require(ID.fullmatch(args.package_id), "invalid package ID")
+        require(ID.fullmatch(args.package_id), "Недопустимый идентификатор пакета")
         require(SOURCE.fullmatch(args.source_sha), "invalid source SHA")
         require(
             supported_runtime_release(args.version),

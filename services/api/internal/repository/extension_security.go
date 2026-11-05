@@ -53,7 +53,7 @@ func normalizeGrant0207(in model.ExtensionPermissionGrant) (model.ExtensionPermi
 		return model.ExtensionPermissionGrant{}, errors.New("Требуется: grantedBy")
 	}
 	if len(g.Reason) > 1000 {
-		return model.ExtensionPermissionGrant{}, errors.New("grant reason exceeds 1000 characters")
+		return model.ExtensionPermissionGrant{}, errors.New("Обоснование предоставления доступа превышает 1000 символов")
 	}
 	return g, nil
 }

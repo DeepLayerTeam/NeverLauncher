@@ -139,7 +139,7 @@ func main() {
 	var diagnostics *sentrydiag.Reporter
 	if sentrydiag.EnabledFromEnvironment() {
 		if os.Getenv("LAUNCHER_SENTRY_BACKEND_DSN") == "" {
-			log.Fatal("Sentry backend reporting enabled without DSN")
+			log.Fatal("Отправка отчётов Backend в Sentry включена без DSN")
 		}
 		var err error
 		diagnostics, err = sentrydiag.New(os.Getenv("LAUNCHER_SENTRY_BACKEND_DSN"), "launcher@"+version+"+"+commit, cfg.Environment)
@@ -168,7 +168,7 @@ func main() {
 	}
 	owner, err := deployment.Acquire(plan)
 	if err != nil {
-		log.Fatalf("deployment owner lock: %v", err)
+		log.Fatalf("Ошибка блокировки владельца развёртывания: %v", err)
 	}
 	defer owner.Close()
 	if plan.Mode == deployment.Standard || plan.Mode == deployment.NetworkHA {
@@ -176,11 +176,11 @@ func main() {
 		growth, probeErr := deployment.VerifyGrowth(ctx, cfg, plan)
 		cancel()
 		if probeErr != nil {
-			log.Fatalf("deployment infrastructure preflight failed closed: %v", probeErr)
+			log.Fatalf("Предварительная проверка инфраструктуры завершилась безопасным отказом: %v", probeErr)
 		}
-		log.Printf("deployment infrastructure verified PostgreSQL=%t RedisLease=%t S3RoundTrip=%t", growth.PostgreSQL, growth.RedisLease, growth.S3RoundTrip)
+		log.Printf("Инфраструктура развёртывания проверена: PostgreSQL=%t, RedisLease=%t, S3RoundTrip=%t", growth.PostgreSQL, growth.RedisLease, growth.S3RoundTrip)
 	}
-	log.Printf("deployment mode=%s repository=%s coordinator=%s storage=%s single_instance=%t reasons=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
+	log.Printf("Режим развёртывания=%s, репозиторий=%s, координатор=%s, хранилище=%s, один экземпляр=%t, причины=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
 	// Ни одна импортированная база SQLite Core не должна обслуживаться как живой
 	// Backend PostgreSQL до независимого настоящего одобрения совместимости
 	// HTTP/Coordinator/Extensions. Роль migrate, работающая только со схемой,
@@ -190,7 +190,7 @@ func main() {
 		gateErr := sqlitepg.RejectUnapprovedBackend0475(gateCtx, cfg.DatabaseDSN)
 		gateCancel()
 		if gateErr != nil {
-			log.Fatalf("SQLite/PostgreSQL cutover gate: %v", gateErr)
+			log.Fatalf("Ошибка проверки переключения SQLite/PostgreSQL: %v", gateErr)
 		}
 	}
 	repo := newRepository(cfg)
@@ -208,14 +208,14 @@ func main() {
 			if err != nil {
 				log.Fatalf("Ошибка: «database migration»: %v", err)
 			}
-			log.Printf("database schema ready migration=%s applied=%d/%d", status.Current, status.Applied, status.Total)
+			log.Printf("Схема базы данных готова: migration=%s, применено=%d/%d", status.Current, status.Applied, status.Total)
 		} else {
 			status, err := migrator.MigrationStatus(ctx)
 			if err != nil {
 				log.Fatalf("Ошибка: «database migration status»: %v", err)
 			}
 			if !status.Compatible || len(status.Pending) > 0 {
-				log.Fatalf("database schema incompatible/pending: current=%s pending=%v", status.Current, status.Pending)
+				log.Fatalf("Схема базы данных несовместима или ожидает миграции: current=%s, pending=%v", status.Current, status.Pending)
 			}
 		}
 	}
@@ -223,7 +223,7 @@ func main() {
 	if role.name == "migrate" {
 		// Одноразовая миграция схемы: без слушателя, расширений и аренд рабочих
 		// процессов.
-		log.Printf("database migration completed for %s; exiting without starting services", plan.Mode)
+		log.Printf("Миграция базы данных %s завершена; выход без запуска служб", plan.Mode)
 		return
 	}
 
@@ -270,7 +270,7 @@ func main() {
 	state := httpapi.NewRuntimeState()
 	lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv("LAUNCHER_BACKEND_SUPERVISED_RESTART") == "true" && (strings.EqualFold(cfg.RepositoryDriver, "postgres") || strings.EqualFold(cfg.RepositoryDriver, "postgresql") || strings.EqualFold(cfg.RepositoryDriver, "sql")))
 	if err != nil {
-		log.Fatalf("backend instance identity: %v", err)
+		log.Fatalf("Ошибка идентификатора экземпляра Backend: %v", err)
 	}
 	state.BackendLifecycle0289 = lifecycle
 	if err := state.ConfigureProductRuntime(cfg); err != nil {
@@ -289,7 +289,7 @@ func main() {
 	}
 	if strings.EqualFold(cfg.RepositoryDriver, "sqlite") {
 		if err := httpapi.ConfigureSQLiteRuntime0373(context.Background(), state, repo, cfg.AuthTokenSecret); err != nil {
-			log.Fatalf("SQLite runtime storage: %v", err)
+			log.Fatalf("Ошибка хранилища SQLite Runtime: %v", err)
 		}
 	}
 	if err := httpapi.BootstrapPersistence950(cfg, state); err != nil {
@@ -311,7 +311,7 @@ func main() {
 
 	secretKey, err := extensionsecurity.ParseKey(cfg.ExtensionSecretsKey)
 	if err != nil {
-		log.Fatalf("Extensions secrets key: %v", err)
+		log.Fatalf("Ошибка ключа секретов расширений: %v", err)
 	}
 	extSecurity, err := extensionsecurity.New(repo, secretKey)
 	if err != nil {
@@ -324,7 +324,7 @@ func main() {
 			log.Fatalf("Ошибка: «Extensions GA reconciliation»: %v", reconcileErr)
 		}
 		if len(report.Issues) > 0 {
-			log.Printf("Extensions GA reconciliation checked=%d healthy=%d disabled=%d issues=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
+			log.Printf("Сверка расширений GA: проверено=%d, исправно=%d, отключено=%d, проблем=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
 		}
 	}
 
@@ -380,11 +380,11 @@ func main() {
 		lifecycle := extensionlifecycle.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
 		host.SetCrashLoopHandler(func(ctx context.Context, key extensionhost.Key, reason string) {
 			if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: key.ExtensionID, Scope: key.Scope, ScopeID: key.ScopeID, Reason: reason, Source: "crash-loop"}); err != nil {
-				log.Printf("extension crash-loop emergency-disable persistence failed %s: %v", key.ExtensionID, err)
+				log.Printf("Не удалось сохранить экстренное отключение расширения при циклических сбоях %s: %v", key.ExtensionID, err)
 				return
 			}
 			if _, err := lifecycle.Disable(ctx, key.ExtensionID, extensionlifecycle.Scope{Scope: key.Scope, ScopeID: key.ScopeID}); err != nil {
-				log.Printf("extension crash-loop lifecycle disable failed %s: %v", key.ExtensionID, err)
+				log.Printf("Не удалось отключить жизненный цикл расширения при циклических сбоях %s: %v", key.ExtensionID, err)
 			}
 		})
 		if events != nil {
@@ -400,15 +400,15 @@ func main() {
 			_ = host.Close(ctx)
 		}()
 		for _, reconcileErr := range host.Reconcile(context.Background()) {
-			log.Printf("extension host reconcile: %v", reconcileErr)
+			log.Printf("Ошибка сверки хоста расширений: %v", reconcileErr)
 		}
-		log.Printf("Extensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
+		log.Printf("Хост расширений: protocol=%s, isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
 	}
 
 	if events != nil && role.workers {
 		events.Start(context.Background())
 		defer events.Close()
-		log.Printf("Extensions Event Bus protocol=%s", eventbus.ProtocolVersion)
+		log.Printf("Шина событий расширений: protocol=%s", eventbus.ProtocolVersion)
 	}
 
 	server := httpapi.Server{
@@ -437,7 +437,7 @@ func main() {
 			log.Fatalf("Ошибка: «durable control-plane initialization»: %v", durableErr)
 		}
 		defer durableCancel()
-		log.Printf("Durable control-plane worker active: publish, rollback and outbox (role=%s)", role.name)
+		log.Printf("Обработчик длительных операций активен: публикация, откат и исходящие сообщения (role=%s)", role.name)
 	}
 	if !role.api {
 		// Проверки рабочих процессов привязаны только к loopback: без публичных
@@ -450,7 +450,7 @@ func main() {
 	}
 
 	if noExtensions {
-		log.Printf("Extensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
+		log.Printf("Включён безопасный режим расширений (--no-extensions); хост расширений и обработка событий отключены")
 	}
 	log.Printf(
 		"Launcher API %s слушает %s repository=%s storage=%s environment=%s",
@@ -475,9 +475,9 @@ func main() {
 	defer signal.Stop(stop)
 	select {
 	case <-lifecycle.RestartRequested():
-		log.Printf("supervised restart requested for instance %s; draining HTTP", lifecycle.InstanceID)
+		log.Printf("Запрошен управляемый перезапуск экземпляра %s; завершаются HTTP-запросы", lifecycle.InstanceID)
 	case sig := <-stop:
-		log.Printf("shutdown signal: %s", sig)
+		log.Printf("Получен сигнал завершения работы: %s", sig)
 	case err := <-serveErr:
 		if err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
@@ -503,7 +503,7 @@ func newRepository(cfg config.Config) repository.Repository {
 	case "sqlite":
 		r, err := repository.OpenSQLiteHTTPRepository0372(context.Background(), cfg.DatabaseDSN, cfg.PublicURL)
 		if err != nil {
-			log.Fatalf("sqlite HTTP repository: %v", err)
+			log.Fatalf("Ошибка HTTP-репозитория SQLite: %v", err)
 		}
 		return r
 	default:

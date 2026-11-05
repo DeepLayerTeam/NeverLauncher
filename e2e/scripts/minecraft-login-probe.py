@@ -64,12 +64,12 @@ def decode_varint(data: bytes, offset: int = 0) -> tuple[int, int]:
     for index in range(5):
         pos = offset + index
         if pos >= len(data):
-            raise ProtocolError("truncated VarInt")
+            raise ProtocolError("Обрезанное значение VarInt")
         byte = data[pos]
         value |= (byte & 0x7F) << (7 * index)
         if not byte & 0x80:
             return value, pos + 1
-    raise ProtocolError("VarInt exceeds 5 bytes")
+    raise ProtocolError("Значение VarInt превышает 5 байт")
 
 
 def read_varint(sock: socket.socket) -> int:
@@ -77,22 +77,22 @@ def read_varint(sock: socket.socket) -> int:
     for index in range(5):
         raw = sock.recv(1)
         if not raw:
-            raise EOFError("peer closed while reading VarInt")
+            raise EOFError("Удалённая сторона закрыла соединение при чтении VarInt")
         byte = raw[0]
         value |= (byte & 0x7F) << (7 * index)
         if not byte & 0x80:
             return value
-    raise ProtocolError("VarInt exceeds 5 bytes")
+    raise ProtocolError("Значение VarInt превышает 5 байт")
 
 
 def read_exact(sock: socket.socket, length: int) -> bytes:
     if length < 0 or length > MAX_PACKET_LENGTH:
-        raise ProtocolError(f"invalid packet length: {length}")
+        raise ProtocolError(f"Недопустимая длина пакета: {length}")
     out = bytearray()
     while len(out) < length:
         chunk = sock.recv(length - len(out))
         if not chunk:
-            raise EOFError("peer closed while reading packet")
+            raise EOFError("Удалённая сторона закрыла соединение при чтении пакета")
         out.extend(chunk)
     return bytes(out)
 
@@ -110,7 +110,7 @@ def framed_packet(payload: bytes, compression_threshold: int | None) -> bytes:
     if compression_threshold is None:
         return packet(payload)
     if compression_threshold < 0:
-        raise ProtocolError(f"invalid compression threshold: {compression_threshold}")
+        raise ProtocolError(f"Недопустимый порог сжатия: {compression_threshold}")
     if len(payload) >= compression_threshold:
         compressed = zlib.compress(payload)
         body = varint(len(payload)) + compressed
@@ -136,17 +136,17 @@ def receive_packet(
         else:
             if data_length < compression_threshold:
                 raise ProtocolError(
-                    f"compressed packet declared {data_length} bytes below threshold {compression_threshold}"
+                    f"В сжатом пакете указан размер {data_length} байт ниже порога {compression_threshold}"
                 )
             try:
                 payload = zlib.decompress(encoded)
             except zlib.error as exc:
                 raise ProtocolError(
-                    f"invalid compressed Minecraft packet: {exc}"
+                    f"Некорректный сжатый пакет Minecraft: {exc}"
                 ) from exc
             if len(payload) != data_length:
                 raise ProtocolError(
-                    f"decompressed packet length mismatch: expected {data_length}, got {len(payload)}"
+                    f"Размер распакованного пакета не совпадает: ожидалось {data_length}, получено {len(payload)}"
                 )
 
     packet_id, offset = decode_varint(payload)
@@ -182,7 +182,7 @@ def enter_configuration(
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise ProtocolError("timed out before Login Finished")
+            raise ProtocolError("Превышено время ожидания до сообщения Login Finished")
         sock.settimeout(min(remaining, 2.0))
         try:
             packet_id, payload, received = receive_packet(sock, compression_threshold)
@@ -207,15 +207,15 @@ def enter_configuration(
                     wire_bytes,
                     "login-disconnect",
                 )
-            raise ProtocolError("server disconnected before CONFIGURATION")
+            raise ProtocolError("Сервер разорвал соединение до этапа CONFIGURATION")
         if packet_id == LOGIN_ENCRYPTION_REQUEST:
             raise ProtocolError(
-                "server requested online-mode encryption; E2E probe requires offline-mode runtime"
+                "Сервер запросил шифрование online-mode; для E2E-проверки требуется Runtime в offline-mode"
             )
         if packet_id == LOGIN_SET_COMPRESSION:
             threshold, offset = decode_varint(payload)
             if offset != len(payload):
-                raise ProtocolError("unexpected trailing bytes in Set Compression")
+                raise ProtocolError("Лишние байты после Set Compression")
             compression_threshold = threshold
             continue
         if packet_id == LOGIN_CUSTOM_QUERY:
@@ -233,13 +233,13 @@ def enter_configuration(
             # Пока ни одна среда E2E не запрашивает cookies при входе. Строгий
             # отказ не позволит безосновательно заявлять проверку CONFIGURATION,
             # если в протоколе появится обязательный шаг, не реализованный здесь.
-            raise ProtocolError("server requested an unsupported login cookie")
+            raise ProtocolError("Сервер запросил неподдерживаемый cookie авторизации")
         if packet_id == LOGIN_SUCCESS:
             acknowledgement = varint(SERVERBOUND_LOGIN_ACKNOWLEDGED)
             send_protocol_packet(sock, acknowledgement, compression_threshold)
             return packets_seen, compression_threshold, wire_bytes, "configuration"
 
-        raise ProtocolError(f"unexpected login packet id 0x{packet_id:02x}")
+        raise ProtocolError(f"Неожиданный идентификатор пакета авторизации 0x{packet_id:02x}")
 
 
 def hold_configuration_socket(sock: socket.socket, seconds: float) -> tuple[str, int]:
@@ -314,7 +314,7 @@ def drive_neoforge_configuration(
         if packet_id == CONFIG_CLIENTBOUND_PING:
             if len(payload) != 4:
                 raise ProtocolError(
-                    f"invalid configuration Ping payload length: {len(payload)}"
+                    f"Недопустимая длина данных Ping на этапе конфигурации: {len(payload)}"
                 )
             ping_id = struct.unpack(">i", payload)[0]
             response = varint(CONFIG_SERVERBOUND_PONG) + struct.pack(">i", ping_id)
@@ -325,7 +325,7 @@ def drive_neoforge_configuration(
         if packet_id == CONFIG_CLIENTBOUND_KEEP_ALIVE:
             if len(payload) != 8:
                 raise ProtocolError(
-                    f"invalid configuration KeepAlive payload length: {len(payload)}"
+                    f"Недопустимая длина данных KeepAlive на этапе конфигурации: {len(payload)}"
                 )
             response = varint(CONFIG_SERVERBOUND_KEEP_ALIVE) + payload
             send_protocol_packet(sock, response, compression_threshold)
@@ -342,10 +342,10 @@ def drive_neoforge_configuration(
 
     if pongs_sent == 0:
         raise ProtocolError(
-            "NeoForge CONFIGURATION prelude did not expose ClientboundPingPacket"
+            "В начале этапа CONFIGURATION NeoForge не обнаружен ClientboundPingPacket"
         )
     if known_packs_responses == 0:
-        raise ProtocolError("NeoForge CONFIGURATION did not reach Select Known Packs")
+        raise ProtocolError("Этап CONFIGURATION NeoForge не достиг сообщения Select Known Packs")
     return (
         "configuration-hold",
         wire_bytes,

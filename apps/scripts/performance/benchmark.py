@@ -73,7 +73,7 @@ def binary(path: Path, name: str) -> dict:
     if not path.is_file():
         raise ValueError(f"Исполняемый файл {name} не найден: {path}")
     if os.name != "nt" and not os.access(path, os.X_OK):
-        raise ValueError(f"{name} is not executable: {path}")
+        raise ValueError(f"{name}: файл не является исполняемым: {path}")
     return {
         "path": str(path),
         "sha256": hash_file(path),
@@ -121,7 +121,7 @@ class ProcessMonitor:
     def __init__(self, pid: int):
         if psutil is None:
             raise RuntimeError(
-                "psutil required for CPU/RAM measurements: pip install psutil==7.2.2"
+                "Для измерений процессора и памяти требуется psutil: pip install psutil==7.2.2"
             )
         self.parent = psutil.Process(pid)
         self.stop = Event()
@@ -234,7 +234,7 @@ def signed_manifest(signer: Path, folder: Path, manifest: dict) -> tuple[Path, s
         or not all(c in "0123456789abcdefABCDEF" for c in key)
     ):
         raise RuntimeError(
-            "real certification fixture signer rejected manifest: "
+            "Реальный подписывающий модуль тестовой сертификации отклонил манифест: "
             + result.stderr[-1000:]
         )
     return signed, key
@@ -318,7 +318,7 @@ def verify_10k(
             or any(x.get("status") != "ok" for x in statuses)
         ):
             raise RuntimeError(
-                "native verifier did not confirm every one of the benchmark files"
+                "Нативный проверяющий модуль подтвердил не все файлы измерения производительности"
             )
         rows.append({"run": index + 1, **observed})
     return {
@@ -442,7 +442,7 @@ def benchmark_download(
     available = shutil.disk_usage(work).free
     if available < int(size * 2.5) + 128 * MIB:
         raise RuntimeError(
-            f"insufficient free disk for {size_mib} MiB test (needs >=2.5x fixture size)"
+            f"Недостаточно свободного места для теста объёмом {size_mib} МиБ (необходимо не менее 2,5 размера тестовых данных)"
         )
     block = hashlib.shake_256(b"launcher-03511-incompressible-fixture").digest(MIB)
     digest = repeating_hash(block, size)
@@ -492,7 +492,7 @@ def benchmark_download(
                 raise RuntimeError("Независимая проверка SHA-256 загруженного файла выявила несовпадение")
             if wire < size or wire > size * 1.05:
                 raise RuntimeError(
-                    f"unexpected transferred wire bytes: {wire} vs {size}"
+                    f"Неожиданный объём переданных по сети данных: {wire} вместо {size}"
                 )
             rows.append(
                 {
@@ -521,7 +521,7 @@ def benchmark_download(
             )
             if warm_data.get("status") != "ready" or server.transferred != warm_before:
                 raise RuntimeError(
-                    "warm native update transferred network bytes or failed"
+                    "Повторное нативное обновление передало данные по сети либо завершилось ошибкой"
                 )
             rows[-1]["warmUpdate"] = {**warm, "wireBytes": 0}
             # Запуски с 10 ГиБ выполняйте последовательно с ограничением использования
@@ -565,7 +565,7 @@ def benchmark_startup(
                         if proc.poll() is not None:
                             stderr.seek(0)
                             raise RuntimeError(
-                                f"Desktop exited before UI-ready: {stderr.read()[-800:]}"
+                                f"Desktop завершился до готовности интерфейса: {stderr.read()[-800:]}"
                             )
                         time.sleep(0.015)
                     else:
@@ -575,7 +575,7 @@ def benchmark_startup(
                 elapsed_ms = (value["wallClockUnixNs"] - start_wall) / 1e6
                 if not 0 < elapsed_ms <= (end_mono - start_mono) / 1e6 + 250:
                     raise RuntimeError(
-                        "invalid UI-ready timestamp or clock discontinuity"
+                        "Недопустимая отметка времени готовности интерфейса или скачок системных часов"
                     )
                 resources = monitor.report()
                 resources["cpuCorePercentOfWallTime"] = (
@@ -633,7 +633,7 @@ def benchmark_api(
         and os.getenv("LAUNCHER_BENCH_ALLOW_REMOTE") != "YES"
     ):
         raise ValueError(
-            "non-loopback targets require LAUNCHER_BENCH_ALLOW_REMOTE=YES, only on systems you control"
+            "Для удалённых адресов необходимо задать LAUNCHER_BENCH_ALLOW_REMOTE=YES; используйте только на подконтрольных системах"
         )
     if (
         workers < 1
@@ -642,7 +642,7 @@ def benchmark_api(
         or requests_per_run > 10000
     ):
         raise ValueError(
-            "workers must be 1..64 and requests per run must be workers..10000"
+            "Число рабочих процессов должно быть от 1 до 64, а запросов за запуск — от числа процессов до 10000"
         )
     token = os.getenv("LAUNCHER_BENCH_AUTH_TOKEN")
     headers = {"Accept": "application/json", "User-Agent": "Launcher-Benchmark/0.35.11"}
@@ -689,7 +689,7 @@ def benchmark_api(
         ]
         if len(success) != len(observations):
             raise RuntimeError(
-                f"HTTP run {n + 1}: failed {len(observations) - len(success)} / {len(observations)} requests"
+                f"HTTP-запуск {n + 1}: неуспешных запросов {len(observations) - len(success)} из {len(observations)}"
             )
         row = {
             "run": n + 1,

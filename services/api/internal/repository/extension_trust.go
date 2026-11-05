@@ -114,7 +114,7 @@ func normalizeQuarantine02012(e model.ExtensionQuarantineEntry) (model.Extension
 		return e, errors.New("Некорректное значение: «quarantine package identity/SHA-256»")
 	}
 	if e.Reason == "" || len(e.Reason) > 1000 {
-		return e, errors.New("quarantine reason is required and limited to 1000 chars")
+		return e, errors.New("Причина карантина обязательна и не должна превышать 1000 символов")
 	}
 	e.ExtensionID = strings.ToLower(strings.TrimSpace(e.ExtensionID))
 	e.PublisherID = strings.ToLower(strings.TrimSpace(e.PublisherID))
@@ -139,7 +139,7 @@ func (r *MemoryRepository) SaveExtensionQuarantine(ctx context.Context, e model.
 	defer r.extensionMu.Unlock()
 	for _, cur := range r.extensionQuarantine {
 		if cur.ID == e.ID {
-			return model.ExtensionQuarantineEntry{}, fmt.Errorf("%w: quarantine id already exists", ErrConflict)
+			return model.ExtensionQuarantineEntry{}, fmt.Errorf("%w: идентификатор карантина уже существует", ErrConflict)
 		}
 	}
 	r.extensionQuarantine = append(r.extensionQuarantine, e)

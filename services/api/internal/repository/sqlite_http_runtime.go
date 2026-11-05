@@ -68,7 +68,7 @@ VALUES (?,1,1,?,?) ON CONFLICT(component) DO UPDATE SET sequence=sequence+1,sha2
 		return e
 	})
 	if err != nil {
-		r.failed = fmt.Errorf("runtime component %s commit: %w", name, err)
+		r.failed = fmt.Errorf("Ошибка сохранения компонента Runtime %s: %w", name, err)
 		return r.failed
 	}
 	return nil

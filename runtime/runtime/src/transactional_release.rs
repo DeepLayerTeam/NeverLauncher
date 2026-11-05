@@ -1707,7 +1707,7 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
         }
         safe_dir(&root,dest.parent().ok_or("Недопустимый путь архива конфликтов")?)?;
         if fs::symlink_metadata(&dest).is_ok(){return Err("Каталог назначения архива игрока уже существует".into())}
-        fs::rename(&source,&dest).map_err(|e|format!("preserve user file {}: {e}; previously moved files in {}",conflict.path,archive.display()))?;
+        fs::rename(&source,&dest).map_err(|e|format!("Не удалось сохранить пользовательский файл {}: {e}; ранее перемещённые файлы находятся в {}",conflict.path,archive.display()))?;
         if !matches_digest(&dest,&conflict.sha256,conflict.size){
             return Err(format!("Архивируемый файл игрока изменился во время сохранения: {}; архив оставлен в {}",conflict.path,archive.display()));
         }

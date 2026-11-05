@@ -188,7 +188,7 @@ func (r *SQLRepository) SaveMigrationIdentities0334(ctx context.Context, id stri
 		}
 	}
 	if e = tx.Commit(); e != nil {
-		return gi.Report{}, fmt.Errorf("identity commit uncertain; retry same source: %w", e)
+		return gi.Report{}, fmt.Errorf("Сохранение учётной записи не подтверждено; повторите с тем же источником: %w", e)
 	}
 	return identityReport0334(id, source, manifest, digest, mapped, sum), nil
 }

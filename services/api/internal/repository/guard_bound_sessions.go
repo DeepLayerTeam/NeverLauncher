@@ -76,7 +76,7 @@ func (r *SQLRepository) SaveGuardBoundSession0507(ctx context.Context, b GuardBo
 		return err
 	}
 	if !validPlayerCorrelation0197(b.CorrelationID) || b.JoinID == "" || b.UserID == "" || b.SessionID == "" || b.TrustedDeviceID == "" || b.BindingEpoch < 1 || b.JavaMajor < 1 || b.GuardPID < 1 || b.IssuedAt.IsZero() {
-		return fmt.Errorf("%w: invalid Guard session binding", ErrConflict)
+		return fmt.Errorf("%w: недопустимая привязка сессии Guard", ErrConflict)
 	}
 	// Только вставка. Повторно выданный билет не должен незаметно перезаписывать
 	// исходный подписанный план или идентичность учётной записи и устройства

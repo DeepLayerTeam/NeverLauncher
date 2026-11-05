@@ -63,7 +63,7 @@ func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, e
 	}
 	var extra any
 	if dec.Decode(&extra) != io.EOF {
-		return out, "", errors.New("PCR policy trailing data")
+		return out, "", errors.New("Лишние данные после политики PCR")
 	}
 	if out.Schema != "launcher/tpm-pcr-policy/v1" || len(out.Policies) == 0 || len(out.Policies) > 64 {
 		return out, "", errors.New("Некорректное значение: PCR политика schema/count")
@@ -92,7 +92,7 @@ func (p PCRPolicyFile0315) Find(id, platform string, now time.Time) (PCRPolicy03
 			return v, nil
 		}
 	}
-	return PCRPolicy0315{}, errors.New("PCR policy not active for device platform")
+	return PCRPolicy0315{}, errors.New("Политика PCR неактивна для платформы устройства")
 }
 func PCRIndices0315(p PCRPolicy0315) []int {
 	out := make([]int, 0, len(p.PCRs))

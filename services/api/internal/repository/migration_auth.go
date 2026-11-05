@@ -44,7 +44,7 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		return gc.Result{}, e
 	}
 	if len(credentials) == 0 || len(credentials) > gi.MaxAccounts {
-		return gc.Result{}, errors.New("empty/oversized credential set")
+		return gc.Result{}, errors.New("Набор учётных данных пуст или превышает допустимый размер")
 	}
 	tx, e := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if e != nil {
@@ -186,10 +186,10 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		// становиться кандидатом на импорт из-за удаления или изменения конфликтующей
 		// цели другим оператором. Нужна новая проверка MIG04.
 		if approved[i].status != m.Status || approved[i].user != m.TargetUserID {
-			return gc.Result{}, fmt.Errorf("UUID ownership changed since approved mapping for %s: %w", a.SourceID, mw.ErrConflict)
+			return gc.Result{}, fmt.Errorf("После утверждения сопоставления для %s изменился владелец UUID: %w", a.SourceID, mw.ErrConflict)
 		}
 		if m.Status == "blocked" {
-			return gc.Result{}, fmt.Errorf("blocked UUID mapping for %s: %w", a.SourceID, mw.ErrConflict)
+			return gc.Result{}, fmt.Errorf("Сопоставление UUID для %s заблокировано: %w", a.SourceID, mw.ErrConflict)
 		}
 		row := gc.Row{Provider: a.Provider, SourceID: a.SourceID, Username: a.Username, UUID: a.UUID}
 		if m.Status == "matched" {
@@ -204,7 +204,7 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 			result.ManualReset++
 		} else {
 			if c.PasswordHash == "" {
-				return gc.Result{}, errors.New("importable credential has no verifier")
+				return gc.Result{}, errors.New("У импортируемых учётных данных отсутствует средство проверки")
 			}
 			if strings.HasPrefix(c.PasswordHash, "$argon2id$") {
 				if c.Algorithm != "argon2id" || !fileauth.ValidateArgon2id(c.PasswordHash) {
@@ -270,7 +270,7 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		return gc.Result{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return gc.Result{}, fmt.Errorf("auth import commit uncertain; retry exact source: %w", e)
+		return gc.Result{}, fmt.Errorf("Сохранение импорта авторизации не подтверждено; повторите с тем же источником: %w", e)
 	}
 	return result, nil
 }

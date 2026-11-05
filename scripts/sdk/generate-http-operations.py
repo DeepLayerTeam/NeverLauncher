@@ -30,7 +30,7 @@ def outputs():
         # время на Java 17/21.
         java.append(f'    result.put({json.dumps(name)},new Operation({json.dumps(method)},{json.dumps(path)}));')
     go += ['}', '']; ts += ['} as const;', 'export type OperationId = keyof typeof OPERATIONS;', '']
-    java += ['    if (result.size() != '+str(len(OPS))+') throw new IllegalStateException("duplicate OpenAPI operation ID");',
+    java += ['    if (result.size() != '+str(len(OPS))+') throw new IllegalStateException("Повторяющийся идентификатор операции OpenAPI");',
              '    return Map.copyOf(result);', '  }', '}', '']
     return {'sdk/api/go/operations_generated.go': subprocess.run(['gofmt'], input='\n'.join(go).encode(),capture_output=True,check=True).stdout.decode(),
             'sdk/api/typescript/operations.generated.ts': '\n'.join(ts),

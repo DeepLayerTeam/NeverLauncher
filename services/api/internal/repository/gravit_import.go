@@ -112,7 +112,7 @@ func (r *SQLRepository) CreateGravitProfileWorkspace02210(ctx context.Context, p
 		return p, w, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO profile_revisions_0221(project_id,profile_id,revision,schema_version,digest,spec,created_at) VALUES($1,$2,1,'2.0',$3,$4::jsonb,$5)`, p.ProjectID, p.ID, snap.Digest, string(raw), now); err != nil {
-		return p, w, fmt.Errorf("persist imported profile snapshot: %w", err)
+		return p, w, fmt.Errorf("Не удалось сохранить снимок импортированного профиля: %w", err)
 	}
 	w.Revision, w.State, w.CreatedAt, w.UpdatedAt = 1, "importing", now, now
 	data, err := json.Marshal(w)

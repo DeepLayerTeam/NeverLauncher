@@ -245,7 +245,7 @@ fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
         let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное имя артефакта")?;
         let a=m.artifacts.iter().find(|a|{
             if canonical&&!a.package_path.is_empty(){Path::new(&a.package_path).file_name().and_then(|v|v.to_str())==Some(name)}else{a.name==name}
-        }).ok_or_else(||format!("artifact {name} missing from Linux package manifest"))?;
+        }).ok_or_else(||format!("Артефакт {name} отсутствует в манифесте пакета Linux"))?;
         let meta=std::fs::metadata(path).map_err(|e|e.to_string())?;
         if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Ошибка: «Linux package artifact verification»: {name}"))}
         if path == guard { verified_guard_hash=Some(a.sha256.to_ascii_lowercase()); }

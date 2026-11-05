@@ -15,7 +15,7 @@ public final class Json {
         Reader p = new Reader(input);
         Object result = p.value(0);
         p.white();
-        if (p.i != input.length()) throw new IllegalArgumentException("trailing JSON at " + p.i);
+        if (p.i != input.length()) throw new IllegalArgumentException("Лишние данные после JSON в позиции " + p.i);
         return result;
     }
     @SuppressWarnings("unchecked")
@@ -52,7 +52,7 @@ public final class Json {
             out.append('}');
         } else if (v instanceof Iterable<?> list) {
             out.append('['); boolean first=true; for (Object item:list) { if (!first) out.append(','); first=false; write(out,item,depth+1); } out.append(']');
-        } else throw new IllegalArgumentException("not JSON: " + v.getClass());
+        } else throw new IllegalArgumentException("Данные не являются JSON: " + v.getClass());
     }
     private static final class Reader {
         final String s; int i; int nodes;

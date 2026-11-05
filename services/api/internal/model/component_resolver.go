@@ -224,7 +224,7 @@ func matchRange0243(actual, expr string) (bool, error) {
 			}
 			required, e := parseSemver0243(version)
 			if e != nil {
-				return false, fmt.Errorf("bad range %q: %w", expr, e)
+				return false, fmt.Errorf("Некорректный диапазон %q: %w", expr, e)
 			}
 			comparison := cmpSemver0243(current, required)
 			pass := false

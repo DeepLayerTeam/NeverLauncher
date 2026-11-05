@@ -182,7 +182,7 @@ def collect_bundle(args, stage):
     ]
     if len(match) != 1:
         raise ValueError(
-            "signed installerTargets must pin exactly one platform Prestarter"
+            "Подписанный installerTargets должен однозначно закреплять один Prestarter для платформы"
         )
     check_binary_arch(args.prestarter, args.platform, args.arch)
     file_matches(args.prestarter, match[0]["prestarter"])
@@ -205,7 +205,7 @@ def collect_bundle(args, stage):
             else:
                 if target.exists():
                     raise ValueError(
-                        "offline source attempts to override signed installer files"
+                        "Автономный источник пытается заменить файлы подписанного установщика"
                     )
                 if p.stat().st_size > 3 << 30:
                     raise ValueError("Превышен допустимый размер: «offline object»")
@@ -323,7 +323,7 @@ def package_windows(args, stage, key, out, version):
         thumb = os.environ.get("LAUNCHER_WINDOWS_CERT_THUMBPRINT", "")
         if not thumb or not shutil.which("signtool"):
             raise RuntimeError(
-                "Authenticode certificate and signtool required for production"
+                "Для промышленной поставки необходимы сертификат Authenticode и signtool"
             )
         checked(
             "signtool",
@@ -490,7 +490,7 @@ def package_macos(args, stage, key, out, version):
         pkgid = os.environ.get("LAUNCHER_MACOS_INSTALLER_ID", "")
         if not args.unsigned_test and (not signid or not pkgid):
             raise RuntimeError(
-                "Developer ID Application and Installer identities required"
+                "Необходимы удостоверения Developer ID Application и Developer ID Installer"
             )
         if signid:
             # Закреплённый SHA-256 Prestarter вычисляется ДО подписания пакета. Prestarter уже ОБЯЗАН иметь подпись

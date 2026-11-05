@@ -22,7 +22,7 @@ const (
 )
 
 var ErrInvalid = errors.New("Некорректное значение: Minecraft текстура PNG")
-var ErrTooLarge = errors.New("texture size limit exceeded")
+var ErrTooLarge = errors.New("Превышен допустимый размер текстуры")
 
 type Result struct {
 	PNG    []byte
@@ -39,13 +39,13 @@ type Result struct {
 func Process(src io.Reader, kind, model string) (Result, error) {
 	var result Result
 	if kind != "skin" && kind != "cape" {
-		return result, fmt.Errorf("%w: invalid kind", ErrInvalid)
+		return result, fmt.Errorf("%w: недопустимый тип", ErrInvalid)
 	}
 	if model != "classic" && model != "slim" {
-		return result, fmt.Errorf("%w: invalid model", ErrInvalid)
+		return result, fmt.Errorf("%w: недопустимая модель", ErrInvalid)
 	}
 	if kind == "cape" && model != "classic" {
-		return result, fmt.Errorf("%w: capes have no slim model", ErrInvalid)
+		return result, fmt.Errorf("%w: для плаща не предусмотрена модель slim", ErrInvalid)
 	}
 	content, err := io.ReadAll(io.LimitReader(src, MaxEncodedBytes+1))
 	if err != nil {
@@ -65,13 +65,13 @@ func Process(src io.Reader, kind, model string) (Result, error) {
 	}
 	cfg, err := png.DecodeConfig(bytes.NewReader(content))
 	if err != nil {
-		return result, fmt.Errorf("%w: PNG header: %v", ErrInvalid, err)
+		return result, fmt.Errorf("%w: ошибка заголовка PNG: %v", ErrInvalid, err)
 	}
 	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > MaxDimension || cfg.Height > MaxDimension || int64(cfg.Width)*int64(cfg.Height) > MaxPixels {
 		return result, ErrTooLarge
 	}
 	if !validGeometry(kind, model, cfg.Width, cfg.Height) {
-		return result, fmt.Errorf("%w: unsupported Minecraft texture geometry", ErrInvalid)
+		return result, fmt.Errorf("%w: неподдерживаемые размеры текстуры Minecraft", ErrInvalid)
 	}
 	decoded, err := png.Decode(bytes.NewReader(content))
 	if err != nil {

@@ -149,7 +149,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 		!isSHA256Hex0134(metadataString0121(ticket.Metadata, "codeSetSha256")) ||
 		!isSHA256Hex0134(metadataString0121(ticket.Metadata, "hookSetSha256")) ||
 		!isSHA256Hex0134(metadataString0121(ticket.Metadata, "jvmStateSha256")) {
-		return errors.New("Continuous Guard ticket runtime evidence malformed")
+		return errors.New("Непрерывная проверка Guard: некорректные доказательства Runtime в билете")
 	}
 	major, err := strconv.ParseUint(metadataString0121(ticket.Metadata, "javaMajor"), 10, 32)
 	if err != nil || major == 0 {
@@ -166,7 +166,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	// Не допускайте, чтобы устаревшие или ранее проверенные ключи устройств
 	// переживали восстановление.
 	if metadataString0121(ticket.Metadata, "deviceKeyFingerprint") != device.KeyFingerprint || device.KeyFingerprint == "" {
-		return errors.New("Continuous Guard device key rotated or revoked")
+		return errors.New("Непрерывная проверка Guard: ключ устройства сменён или отозван")
 	}
 	version := metadataString0121(ticket.Metadata, "launcherVersion")
 	policies, err := s.guardReleasePolicies0134()
@@ -179,7 +179,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	}
 	allowed, _, err := policy.allowsArtifactPair0140(device.Platform, metadataString0121(ticket.Metadata, "guardSha256"), metadataString0121(ticket.Metadata, "launcherSha256"))
 	if err != nil || !allowed {
-		return errors.New("Continuous Guard artifact release revoked")
+		return errors.New("Непрерывная проверка Guard: релиз артефакта отозван")
 	}
 	evidence := guardContinuousEvidence01810{
 		JavaMajor:       uint32(major),
@@ -189,10 +189,10 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	}
 	digest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, evidence)
 	if err != nil {
-		return fmt.Errorf("Continuous Guard runtime policy revoked: %w", err)
+		return fmt.Errorf("Непрерывная проверка Guard: политика Runtime отозвана: %w", err)
 	}
 	if digest == "" || !hmac.Equal([]byte(digest), []byte(metadataString0121(ticket.Metadata, "runtimePolicySha256"))) {
-		return errors.New("Continuous Guard runtime policy changed after attestation")
+		return errors.New("Непрерывная проверка Guard: политика Runtime изменилась после аттестации")
 	}
 	// TTL билета в репозитории является авторитетным; часы клиента и прежняя
 	// оценка аппаратного корня не продлевают гарантии процесса.

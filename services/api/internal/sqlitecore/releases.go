@@ -161,7 +161,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 		return errors.New("Релиз должен иметь подпись Ed25519")
 	}
 	if m.RollbackSource != nil || m.GameReleaseGeneration != 0 || m.TrustEpoch != 0 {
-		return errors.New("DEP01 core does not implement game trust generation/rollback verification")
+		return errors.New("Ядро DEP01 не реализует проверку поколения доверия и отката игры")
 	}
 	pub, e := hex.DecodeString(m.Signature.PublicKey)
 	if e != nil || len(pub) != ed25519.PublicKeySize {

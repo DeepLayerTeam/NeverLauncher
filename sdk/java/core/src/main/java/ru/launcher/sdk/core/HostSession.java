@@ -171,7 +171,7 @@ public final class HostSession implements AutoCloseable {
             for(ByteBuffer chunk:chunks){
                 if(chunk.remaining()>limit-content.size()){
                     done=true;subscription.cancel();
-                    completion.completeExceptionally(new IOException("oversized host response"));
+                    completion.completeExceptionally(new IOException("Ответ хоста превышает допустимый размер"));
                     return;
                 }
                 byte[] bytes=new byte[chunk.remaining()];chunk.get(bytes);

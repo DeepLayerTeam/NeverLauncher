@@ -49,7 +49,7 @@ func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, clai
 	switch p.tenantMode {
 	case "organizations":
 		if tid == personalMicrosoftTenantID {
-			return fmt.Errorf("personal Microsoft account is not allowed by organizations authority")
+			return fmt.Errorf("Центр авторизации организации не разрешает личные учётные записи Microsoft")
 		}
 	case "consumers":
 		if tid != personalMicrosoftTenantID {
@@ -62,15 +62,15 @@ func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, clai
 	}
 	if len(p.allowedTenantIDs) > 0 {
 		if _, ok := p.allowedTenantIDs[tid]; !ok {
-			return fmt.Errorf("Microsoft tenant is not in allowedTenantIds")
+			return fmt.Errorf("Арендатор Microsoft отсутствует в allowedTenantIds")
 		}
 	}
 	instantiatedDiscovery := replaceTenantTemplate(strings.TrimSuffix(strings.TrimSpace(discoveredIssuer), "/"), tid)
 	if !strings.EqualFold(instantiatedDiscovery, issuer) {
-		return fmt.Errorf("Microsoft discovery issuer does not bind to token tenant")
+		return fmt.Errorf("Издатель, найденный через Microsoft discovery, не соответствует арендатору токена")
 	}
 	if strings.TrimSpace(signingKeyIssuer) == "" {
-		return fmt.Errorf("Microsoft signing key is missing issuer metadata")
+		return fmt.Errorf("У ключа подписи Microsoft отсутствуют метаданные издателя")
 	}
 	instantiatedKeyIssuer := replaceTenantTemplate(strings.TrimSuffix(strings.TrimSpace(signingKeyIssuer), "/"), tid)
 	if !strings.EqualFold(instantiatedKeyIssuer, issuer) {

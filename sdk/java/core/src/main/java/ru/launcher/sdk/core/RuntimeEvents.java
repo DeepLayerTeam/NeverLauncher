@@ -89,7 +89,7 @@ public final class RuntimeEvents implements AutoCloseable {
         return n.longValue();
     }
     private static String opt(Map<String,Object> raw,String key){
-        Object v=raw.get(key);if(v==null)return "";if(!(v instanceof String s)||s.length()>2048)throw new IllegalArgumentException("invalid event metadata "+key);return s;
+        Object v=raw.get(key);if(v==null)return "";if(!(v instanceof String s)||s.length()>2048)throw new IllegalArgumentException("Некорректные метаданные события "+key);return s;
     }
     private static <T> void run(Binding<T> binding,DetailedEnvelope<Object> raw)throws Exception {
         if(binding.schema()!=null)binding.schema().validate(raw.event().payload());

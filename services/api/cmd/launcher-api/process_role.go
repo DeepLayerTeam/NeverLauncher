@@ -111,7 +111,7 @@ func runWorkerProbe0455(addr string, last *atomic.Int64, backend http.Handler) e
 		if err != nil && err != http.ErrServerClosed {
 			return err
 		}
-		return errors.New("worker probe unexpectedly stopped")
+		return errors.New("Проверочный рабочий процесс неожиданно остановился")
 	}
 	return server.Close()
 }

@@ -19,19 +19,19 @@ def prepare(root: Path, minecraft_version: str) -> bool:
     if minecraft_version != "1.14.4":
         return False
     if not root.is_dir() or root.is_symlink():
-        raise ValueError("client root must be a real directory")
+        raise ValueError("Корневой каталог клиента должен быть настоящим каталогом")
     config_dir = root / "config"
     if config_dir.is_symlink():
-        raise ValueError("Forge config directory may not be a symlink")
+        raise ValueError("Каталог конфигурации Forge не может быть символической ссылкой")
     config_dir.mkdir(exist_ok=True)
     if not config_dir.is_dir() or config_dir.is_symlink():
-        raise ValueError("Forge config path is not a real directory")
+        raise ValueError("Путь конфигурации Forge не является реальным каталогом")
     output = config_dir / "fml.toml"
     if output.is_symlink():
-        raise ValueError("Forge fml.toml may not be a symlink")
+        raise ValueError("Файл Forge fml.toml не может быть символической ссылкой")
     if output.exists():
         if not output.is_file():
-            raise ValueError("Forge fml.toml is not a regular file")
+            raise ValueError("Файл Forge fml.toml не является обычным файлом")
         return False
     try:
         with output.open("x", encoding="utf-8", newline="\n") as stream:
@@ -39,7 +39,7 @@ def prepare(root: Path, minecraft_version: str) -> bool:
     except FileExistsError:
         # Конкурирующий писатель не должен заставить нас перезаписать его файл.
         if output.is_symlink() or not output.is_file():
-            raise ValueError("Forge fml.toml was replaced with an unsafe path")
+            raise ValueError("Файл Forge fml.toml заменён небезопасным путём")
         return False
     return True
 

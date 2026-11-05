@@ -106,7 +106,7 @@ func (r *SQLRepository) SaveMigrationCompatibility0332(ctx context.Context, runI
 		return gd.Report{}, err
 	}
 	if err = tx.Commit(); err != nil {
-		return gd.Report{}, fmt.Errorf("compatibility assessment commit uncertain; read saved result before retry: %w", err)
+		return gd.Report{}, fmt.Errorf("Сохранение оценки совместимости не подтверждено; прочитайте сохранённый результат перед повтором: %w", err)
 	}
 	return report, nil
 }

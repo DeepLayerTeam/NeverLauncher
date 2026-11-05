@@ -102,7 +102,7 @@ func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason s
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.f == nil {
-		return errors.New("Guard shadow journal closed")
+		return errors.New("Теневой журнал Guard закрыт")
 	}
 	// Имена, UUID, идентификаторы устройств, адреса и токены никогда не
 	// записываются в журнал. Псевдоним сеанса стабилен только для данного секрета,
@@ -136,7 +136,7 @@ func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason s
 		return err
 	}
 	if n != len(line) {
-		return fmt.Errorf("short Guard shadow journal write %d/%d", n, len(line))
+		return fmt.Errorf("Неполная запись в теневой журнал Guard: %d/%d", n, len(line))
 	}
 	if err = j.f.Sync(); err != nil {
 		return err

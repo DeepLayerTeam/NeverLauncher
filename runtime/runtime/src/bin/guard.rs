@@ -122,7 +122,7 @@ fn windows_protection_profile(args: &[String]) -> Result<WindowsProtectionProfil
 }
 
 fn required_flag(args: &[String], name: &str) -> Result<String, String> {
-    optional_flag(args, name)?.ok_or_else(|| format!("required argument {name} is missing"))
+    optional_flag(args, name)?.ok_or_else(|| format!("Отсутствует обязательный аргумент {name}"))
 }
 
 fn optional_flag(args: &[String], name: &str) -> Result<Option<String>, String> {

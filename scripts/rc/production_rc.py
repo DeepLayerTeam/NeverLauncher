@@ -237,7 +237,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
         r"go1\.(?:2[7-9]|[3-9]\d)\.", version.stdout
     ):
         raise GateError(
-            "real Go 1.27+ toolchain required (no replacement dependencies)"
+            "Требуется реальная среда Go 1.27+ (без подмены зависимостей)"
         )
     env = dict(env)
     env["TMPDIR"] = root
@@ -260,7 +260,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
                 cmd, cwd=API, env=env, capture_output=True, text=True, timeout=900
             )
         except subprocess.TimeoutExpired as exc:
-            raise GateError(f"{suite.name}: timed out") from exc
+            raise GateError(f"{suite.name}: превышено время ожидания") from exc
         receipts.append(validate_events(result.stdout, suite, result.returncode))
         print(f"{suite.name}: пройдено {receipts[-1]['count']} реальных тестов", flush=True)
     receipt = {

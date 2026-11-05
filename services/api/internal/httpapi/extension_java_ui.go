@@ -30,7 +30,7 @@ func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall
 		return nil, errors.New("Некорректное значение: Java UI параметры")
 	}
 	if args.Version != install.CurrentVersion || args.Generation != install.Generation || args.Version == "" {
-		return nil, errors.New("stale Java UI installation")
+		return nil, errors.New("Установка интерфейса Java устарела")
 	}
 	surface := "admin"
 	if strings.HasPrefix(r.URL.Path, "/api/v1/desktop/") {

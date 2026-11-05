@@ -61,7 +61,7 @@ func VerifyRegistration(cfg VerifyConfig, clientDataJSON, attestationObject, raw
 	}
 	v, consumed, err := decodeCBOR(attestationObject)
 	if err != nil {
-		return RegistrationResult{}, fmt.Errorf("attestation CBOR: %w", err)
+		return RegistrationResult{}, fmt.Errorf("Ошибка CBOR аттестации: %w", err)
 	}
 	if consumed != len(attestationObject) {
 		return RegistrationResult{}, errors.New("Объект аттестации содержит лишние данные в конце")
@@ -220,7 +220,7 @@ func parseAuthenticatorData(cfg VerifyConfig, b []byte, needAttested bool) (pars
 func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 	v, used, err := decodeCBOR(raw)
 	if err != nil {
-		return 0, nil, fmt.Errorf("COSE key: %w", err)
+		return 0, nil, fmt.Errorf("Ошибка ключа COSE: %w", err)
 	}
 	if used != len(raw) {
 		return 0, nil, errors.New("Лишние данные после ключа COSE")

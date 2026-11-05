@@ -16,8 +16,8 @@ type OfficialNeverLink0268 struct {
 	VerifiedAt    time.Time `json:"verifiedAt"`
 }
 
-var ErrOfficialLinkOwned0268 = errors.New("Minecraft account already linked to another Never identity")
-var ErrOfficialLinkAbsent0268 = errors.New("Minecraft account is not linked to this Never identity")
+var ErrOfficialLinkOwned0268 = errors.New("Учётная запись Minecraft уже привязана к другой учётной записи Never")
+var ErrOfficialLinkAbsent0268 = errors.New("Учётная запись Minecraft не привязана к этой учётной записи Never")
 
 type OfficialLinkStore0268 interface {
 	ListOfficialLinks0268(context.Context, string) ([]OfficialNeverLink0268, error)

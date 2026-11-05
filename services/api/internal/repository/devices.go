@@ -141,7 +141,7 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 	}
 	for _, existing := range r.trustedDevices {
 		if existing.KeyFingerprint == device.KeyFingerprint && existing.ID != device.ID {
-			return model.TrustedDevice{}, fmt.Errorf("%w: device key fingerprint is already registered", ErrConflict)
+			return model.TrustedDevice{}, fmt.Errorf("%w: отпечаток ключа устройства уже зарегистрирован", ErrConflict)
 		}
 	}
 	now := time.Now().UTC()
@@ -527,7 +527,7 @@ ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_st
 		var existingID, existingUser string
 		lookupErr := r.db.QueryRowContext(ctx, `SELECT id,user_id FROM trusted_devices WHERE key_fingerprint=$1`, device.KeyFingerprint).Scan(&existingID, &existingUser)
 		if lookupErr == nil {
-			return model.TrustedDevice{}, fmt.Errorf("%w: device key fingerprint is already registered", ErrConflict)
+			return model.TrustedDevice{}, fmt.Errorf("%w: отпечаток ключа устройства уже зарегистрирован", ErrConflict)
 		}
 		return model.TrustedDevice{}, err
 	}

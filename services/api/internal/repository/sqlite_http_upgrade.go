@@ -50,7 +50,7 @@ func strictObject0472(raw []byte) (map[string]json.RawMessage, error) {
 		}
 		name, ok := tok.(string)
 		if !ok {
-			return nil, errors.New("non-string JSON key")
+			return nil, errors.New("Ключ JSON не является строкой")
 		}
 		if _, ok = out[name]; ok {
 			return nil, fmt.Errorf("Обнаружен дубликат: «JSON property» %q", name)
@@ -135,7 +135,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 					return nil, fmt.Errorf("Некорректное значение: «legacy %s data»: %w", source, err)
 				}
 				if len(items) != 0 {
-					return nil, fmt.Errorf("cannot synthesize missing %s: populated %s", key, source)
+					return nil, fmt.Errorf("Невозможно восстановить отсутствующее поле %s: заполнено %s", key, source)
 				}
 			}
 		}
@@ -149,7 +149,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 	// срезе записей: создание пустых хешей паролей или токенов лишит доступа.
 	priv, err := strictObject0472(root["private0373"])
 	if err != nil {
-		return nil, fmt.Errorf("legacy auth state: %w", err)
+		return nil, fmt.Errorf("Ошибка прежнего состояния авторизации: %w", err)
 	}
 	privateFields := fieldMap0472(reflect.TypeOf(sqliteHTTPPrivate0373{}))
 	dependencies := map[string]string{
@@ -240,7 +240,7 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 			}
 			want, ok := expected[name]
 			if !ok || !ddl.Valid || normalizeHTTPDDL0472(ddl.String) != want {
-				err = fmt.Errorf("incompatible SQLite HTTP %s %s", typ, name)
+				err = fmt.Errorf("Несовместимая версия SQLite HTTP %s %s", typ, name)
 				break
 			}
 			seen[name] = true
@@ -274,7 +274,7 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 			return err
 		}
 		if count != 1 || version != 1 || seq < 1 {
-			return fmt.Errorf("incompatible SQLite HTTP version=%d sequence=%d rows=%d", version, seq, count)
+			return fmt.Errorf("Несовместимое состояние SQLite HTTP: version=%d, sequence=%d, rows=%d", version, seq, count)
 		}
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
@@ -302,14 +302,14 @@ func migrateHTTPSnapshot0472(ctx context.Context, store *sqlitedurable.Store, co
 		}
 		oldSum := sha256.Sum256(raw)
 		if version != 1 || seq < 1 || hex.EncodeToString(oldSum[:]) != oldSHA {
-			return errors.New("HTTP state changed during migration")
+			return errors.New("Во время миграции изменилось состояние HTTP")
 		}
 		reencoded, err := upgradeHTTPDocument0472(raw)
 		if err != nil {
 			return err
 		}
 		if !bytes.Equal(reencoded, converted) {
-			return errors.New("HTTP snapshot changed after backup")
+			return errors.New("Снимок HTTP изменился после резервного копирования")
 		}
 		for _, stmt := range append([]string{sqliteRuntimeDDL0373}, strings.Split(sqliteStablePermitDDL0374, ";")...) {
 			if strings.TrimSpace(stmt) == "" {
@@ -330,7 +330,7 @@ func migrateHTTPSnapshot0472(ctx context.Context, store *sqlitedurable.Store, co
 			return err
 		}
 		if n != 1 {
-			return errors.New("HTTP upgrade CAS failure")
+			return errors.New("Ошибка атомарного сравнения и замены (CAS) при обновлении HTTP")
 		}
 		return nil
 	})

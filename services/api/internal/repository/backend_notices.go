@@ -31,7 +31,7 @@ func ValidateBackendNotice0289(recipient, body string) error {
 	}
 	for _, c := range body {
 		if c < 32 && c != '\n' && c != '\t' {
-			return errors.New("notice contains control characters")
+			return errors.New("Уведомление содержит управляющие символы")
 		}
 	}
 	return nil
@@ -67,7 +67,7 @@ func (r *SQLRepository) EnqueueBackendNotice0289(ctx context.Context, actor, key
 	// Повтор ключа с другой полезной нагрузкой не должен незаметно возвращать
 	// успех.
 	if recipient != out.RecipientUserID || body != out.Body {
-		return BackendNotice0289{}, false, fmt.Errorf("notification idempotency key already used with different content: %w", ErrConflict)
+		return BackendNotice0289{}, false, fmt.Errorf("Ключ идемпотентности уведомления уже использован с другим содержимым: %w", ErrConflict)
 	}
 	return out, false, nil
 }

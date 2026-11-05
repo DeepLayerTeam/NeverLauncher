@@ -30,7 +30,7 @@ func isAuthAction(action string) bool {
 }
 func readAuthKey(path string) ([]byte, error) {
 	if path == "" {
-		return nil, errors.New("--key-file required (32 raw bytes or 64 hex characters, mode 0600)")
+		return nil, errors.New("Необходимо указать --key-file (32 байта или 64 шестнадцатеричных символа, права 0600)")
 	}
 	info, e := os.Lstat(path)
 	if e != nil {
@@ -48,7 +48,7 @@ func readAuthKey(path string) ([]byte, error) {
 	}
 	key, e := hex.DecodeString(strings.TrimSpace(string(raw)))
 	if e != nil || len(key) != 32 {
-		return nil, errors.New("MFA key must contain exactly 32 bytes or 64 hex characters")
+		return nil, errors.New("Ключ MFA должен содержать ровно 32 байта или 64 шестнадцатеричных символа")
 	}
 	return key, nil
 }

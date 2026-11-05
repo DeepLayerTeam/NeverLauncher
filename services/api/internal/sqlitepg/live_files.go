@@ -121,7 +121,7 @@ func verifyObject0474(ctx context.Context, store storage.Storage, obj fileObject
 	}
 	defer r.Close()
 	if size != obj.size {
-		return true, fmt.Errorf("object %s size differs: %d != %d", obj.path, size, obj.size)
+		return true, fmt.Errorf("Размер объекта %s не совпадает: %d != %d", obj.path, size, obj.size)
 	}
 	h, n, e := fileDigest0474(ctx, r)
 	if e != nil {
@@ -162,7 +162,7 @@ func safeExistingLocal0474(local *storage.LocalStorage, obj fileObject0474) erro
 			return fmt.Errorf("symlink in storage destination: %s", obj.path)
 		}
 		if i < len(candidates)-1 && !st.IsDir() {
-			return fmt.Errorf("non-directory storage path %s", obj.path)
+			return fmt.Errorf("Путь хранилища %s не является каталогом", obj.path)
 		}
 	}
 	return nil
@@ -266,7 +266,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 	report.Driver = dst.Driver()
 	pg, e := pgx.Connect(ctx, pgDSN)
 	if e != nil {
-		return report, fmt.Errorf("PostgreSQL connection: %w", e)
+		return report, fmt.Errorf("Ошибка подключения к PostgreSQL: %w", e)
 	}
 	defer pg.Close(context.Background())
 	// Предварительная проверка только на чтение; частичная миграция не может сделать квитанцию достоверной.
@@ -348,7 +348,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 				_, n, writeErr := dst.Save(o.project, o.version, o.path, &contextReader0474{ctx, r})
 				er = writeErr
 				if er == nil && n != o.size {
-					er = errors.New("remote write truncated")
+					er = errors.New("Неполная запись на удалённый узел")
 				}
 			}
 			er = errors.Join(er, r.Close())
@@ -359,7 +359,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		}
 		verified, er := verifyObject0474(ctx, dst, o)
 		if er != nil || !verified {
-			return report, fmt.Errorf("destination readback %s: %w", o.path, er)
+			return report, fmt.Errorf("Ошибка повторного чтения целевого файла %s: %w", o.path, er)
 		}
 		report.Checked++
 	}
@@ -369,7 +369,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		return report, e
 	}
 	if liveCount != report.Checked {
-		return report, errors.New("files catalog changed during copy")
+		return report, errors.New("Каталог файлов изменился во время копирования")
 	}
 	// Проверить, что при том же количестве строк метаданные каталога не изменились.
 	againRows, e := pg.Query(ctx, `SELECT project_id,version_id,path,size,sha256 FROM files ORDER BY project_id,version_id,path`)
@@ -394,7 +394,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		return report, e
 	}
 	if sha256.Sum256(currentJSON) != catalogSHA {
-		return report, errors.New("files catalog content changed during copy")
+		return report, errors.New("Содержимое каталога файлов изменилось во время копирования")
 	}
 	report.Verified = true
 	_, e = pg.Exec(ctx, `CREATE TABLE IF NOT EXISTS sqlite_file_receipts_0474(

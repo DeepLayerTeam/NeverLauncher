@@ -75,7 +75,7 @@ def review(paths: list[Path], revision: str) -> dict:
                 or len(case["steps"]) != len(expected_commands)
             ):
                 raise ValueError(
-                    f"failed/skipped E2E case {case.get('case')} on {platform}"
+                    f"Тест E2E {case.get('case')} на {platform} завершился ошибкой или был пропущен"
                 )
             for step, expected in zip(case["steps"], expected_commands):
                 command = step.get("command")
@@ -89,7 +89,7 @@ def review(paths: list[Path], revision: str) -> dict:
                             or not __import__("pathlib").Path(actual).is_absolute()
                         ):
                             raise ValueError(
-                                "E2E command contains non-absolute stage path"
+                                "Команда E2E содержит не абсолютный путь к этапу"
                             )
                     elif required == __import__("sys").executable:
                         if (
@@ -107,14 +107,14 @@ def review(paths: list[Path], revision: str) -> dict:
                     or not HASH.fullmatch(str(step.get("outputSha256", "")))
                 ):
                     raise ValueError(
-                        f"invalid/failed subprocess evidence: {case['case']}"
+                        f"Некорректные или неуспешные данные выполнения дочернего процесса: {case['case']}"
                     )
         found[platform] = len(results)
         # Утверждение подписывает точные байты доказательств, а не только число успешных тестов.
         digests[platform] = hashlib.sha256(path.read_bytes()).hexdigest()
     if set(found) != set(REQUIRED):
         raise ValueError(
-            f"missing required operating systems: {sorted(set(REQUIRED) - set(found))}"
+            f"Отсутствуют обязательные операционные системы: {sorted(set(REQUIRED) - set(found))}"
         )
     return {
         "release": "0.31.0",

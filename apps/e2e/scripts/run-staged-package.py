@@ -46,14 +46,14 @@ def sha_file(path):
 
 def checked_path(value):
     if not value or "\\" in value or "\x00" in value:
-        raise ValueError(f"unsafe manifest path: {value!r}")
+        raise ValueError(f"Небезопасный путь в манифесте: {value!r}")
     components = PurePosixPath(value).parts
     if (
         PurePosixPath(value).is_absolute()
         or any(p in (".", "..", "") for p in components)
         or "/".join(components) != value
     ):
-        raise ValueError(f"unsafe manifest path: {value!r}")
+        raise ValueError(f"Небезопасный путь в манифесте: {value!r}")
     return value
 
 
@@ -70,7 +70,7 @@ def request_json(base, relative, bearer, body=None):
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
         if resp.status not in (200, 201):
-            raise RuntimeError("unexpected API response")
+            raise RuntimeError("Неожиданный ответ API")
         return json.load(resp)
 
 
@@ -83,12 +83,12 @@ def download_exact(base, rel_url, bearer, target, size, expected):
         or parsed.fragment
         or not rel_url.startswith("/api/v1/staged-runs/")
     ):
-        raise ValueError("untrusted staged download URL")
+        raise ValueError("Недоверенный URL загрузки подготовленного пакета")
     if size < 0 or size > (8 << 30) or len(expected) != 64:
-        raise ValueError("invalid staged object metadata")
+        raise ValueError("Некорректные метаданные подготовленного объекта")
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists() or target.is_symlink():
-        raise ValueError("staged object destination already exists")
+        raise ValueError("Целевой файл подготовленного объекта уже существует")
     url = base.rstrip("/") + rel_url
     request = urllib.request.Request(
         url, headers={"Authorization": "Bearer " + bearer}, method="GET"
@@ -102,21 +102,21 @@ def download_exact(base, rel_url, bearer, target, size, expected):
             open(temporary, "xb") as stream,
         ):
             if response.status != 200:
-                raise ValueError("staged download failed")
+                raise ValueError("Ошибка загрузки подготовленного пакета")
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:
                     break
                 total += len(chunk)
                 if total > size:
-                    raise ValueError("staged object exceeds signed size")
+                    raise ValueError("Подготовленный объект превышает размер, указанный в подписи")
                 stream.write(chunk)
                 digest.update(chunk)
             stream.flush()
             os.fsync(stream.fileno())
         if total != size or digest.hexdigest() != expected.lower():
             raise ValueError(
-                "staged download differs from signed snapshot (size / sha256)"
+                "Загруженный файл отличается от подписанного снимка (размер / sha256)"
             )
         os.replace(temporary, target)
     finally:
@@ -137,10 +137,10 @@ def run_checked(cmd, result_file, env):
         )
     if proc.returncode:
         raise RuntimeError(
-            f"command failed rc={proc.returncode}: {cmd[1]} (see {result_file.with_suffix('.log').name})"
+            f"Команда завершилась с ошибкой, код={proc.returncode}: {cmd[1]} (см. {result_file.with_suffix('.log').name})"
         )
     if not result_file.is_file():
-        raise RuntimeError(f"command did not write evidence {result_file.name}")
+        raise RuntimeError(f"Команда не записала доказательства в {result_file.name}")
     return json.loads(result_file.read_text(encoding="utf-8"))
 
 
@@ -163,7 +163,7 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
             while proc.poll() is None:
                 if time.monotonic() >= until:
                     raise TimeoutError(
-                        "Runtime itself hung beyond its termination deadline"
+                        "Runtime завис и превысил срок принудительного завершения"
                     )
                 observer.tick()
                 time.sleep(0.5)
@@ -174,9 +174,9 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
             proc.wait(timeout=10)
             raise
     if proc.returncode:
-        raise RuntimeError(f"Runtime failed rc={proc.returncode}")
+        raise RuntimeError(f"Runtime завершился с ошибкой, код={proc.returncode}")
     if stdout_path.stat().st_size > 4 * 1024 * 1024:
-        raise RuntimeError("Runtime structured output exceeded limit")
+        raise RuntimeError("Структурированный вывод Runtime превысил допустимый объём")
     try:
         output = stdout_path.read_bytes()
         result = json.loads(output)
@@ -185,7 +185,7 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
             or not isinstance(result.get("timed_out"), bool)
             or not isinstance(result.get("success"), bool)
         ):
-            raise ValueError("Runtime returned no valid launch result")
+            raise ValueError("Runtime не вернул корректный результат запуска")
         result_file.write_bytes(output)
     finally:
         stdout_path.unlink(missing_ok=True)
@@ -203,14 +203,14 @@ def native_json(cmd, destination, env):
         check=False,
     )
     if len(completed.stdout) > 4 * 1024 * 1024:
-        raise RuntimeError("native component verification output oversized")
+        raise RuntimeError("Вывод нативной проверки компонентов превышает допустимый размер")
     if completed.returncode:
         raise RuntimeError(
-            "native component verification failed (see attestor diagnostics)"
+            "Нативная проверка компонентов завершилась ошибкой (см. диагностику аттестатора)"
         )
     obj = json.loads(completed.stdout)
     if isinstance(obj, dict) and (obj.get("success") is False or obj.get("error")):
-        raise RuntimeError("native component verification rejected selected preset")
+        raise RuntimeError("Нативная проверка компонентов отклонила выбранную предустановку")
     destination.write_text(json.dumps(obj, sort_keys=True, indent=2), encoding="utf-8")
     return obj
 
@@ -219,24 +219,24 @@ def execute(args):
     if not args.backend.startswith("https://") and not args.backend.startswith(
         ("http://127.0.0.1:", "http://localhost:")
     ):
-        raise ValueError("staged runtime requires HTTPS (localhost HTTP is test-only)")
+        raise ValueError("Для подготовленного Runtime требуется HTTPS (HTTP на localhost допускается только в тестах)")
     if not args.package_id or "/" in args.package_id:
-        raise ValueError("invalid package ID")
+        raise ValueError("Недопустимый идентификатор пакета")
     if args.admin_token_file:
         token_file = Path(args.admin_token_file)
         if not token_file.is_file() or token_file.is_symlink():
-            raise ValueError("operator token file unavailable")
+            raise ValueError("Файл токена оператора недоступен")
         if os.name != "nt" and token_file.stat().st_mode & 0o077:
-            raise ValueError("operator token file must be owner-only")
+            raise ValueError("Файл токена оператора должен быть доступен только владельцу")
         args.admin_token = token_file.read_text(encoding="utf-8").strip()
     if args.grant_file:
         grant_data = json.loads(Path(args.grant_file).read_text(encoding="utf-8"))
         if grant_data.get("packageId") != args.package_id:
-            raise ValueError("pre-issued grant bound to different staged package")
+            raise ValueError("Предварительно выданное разрешение привязано к другому подготовленному пакету")
     else:
         if not args.admin_token:
             raise ValueError(
-                "operator token required outside trusted attestation executor"
+                "За пределами доверенного исполнителя аттестации необходим токен оператора"
             )
         grant_data = request_json(
             args.backend,
@@ -268,11 +268,11 @@ def execute(args):
     )
     if host["status"] != "ready":
         raise RuntimeError(
-            "blocked: host capabilities unavailable: " + "; ".join(host["blockers"])
+            "Заблокировано: возможности системы недоступны: " + "; ".join(host["blockers"])
         )
     stage = work / "payload"
     if stage.exists():
-        raise ValueError("output/payload must be new for each run")
+        raise ValueError("Для каждого запуска необходимо создавать новые выходные данные и полезную нагрузку")
     stage.mkdir(mode=0o700)
     client_dir = work / "client"
     delivery_client_dir = work / "delivery-verified-client"
@@ -294,20 +294,20 @@ def execute(args):
             snapshot[k] != report[k]
             for k in ("runId", "packageId", "manifestSha256", "artifactSha256")
         ):
-            raise ValueError("server returned different run/snapshot identity")
+            raise ValueError("Сервер вернул другой идентификатор запуска или снимка")
         pkg = snapshot["package"]
         signed = snapshot["signedManifest"]
         if args.expected_version and pkg.get("version") != args.expected_version:
-            raise ValueError("staged package differs from exact source build version")
+            raise ValueError("Подготовленный пакет отличается от точной версии сборки исходников")
         # Обработчики выпуска обязаны явно проверять версию; прежние ручные диагностические пробы всё ещё могут
         # использовать этот скрипт для старых подготовленных пакетов.
         import re
         version_match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:[-+][A-Za-z0-9.-]+)?", pkg.get("version", ""))
         if not version_match:
-            raise ValueError("staged package has invalid version")
+            raise ValueError("У подготовленного пакета недопустимая версия")
         requires_exact_version = tuple(map(int, version_match.groups())) >= (0, 43, 14)
         if requires_exact_version and not args.expected_version:
-            raise ValueError("0.43.14+ staged package requires exact expected source version")
+            raise ValueError("Для подготовленного пакета версии 0.43.14+ требуется точная ожидаемая версия исходников")
         if (
             pkg["packageId"] != args.package_id
             or pkg["projectId"] != signed["projectId"]
@@ -315,22 +315,22 @@ def execute(args):
             or pkg["channel"] != signed["channel"]
             or pkg["version"] != signed["version"]
         ):
-            raise ValueError("staged snapshot release identity mismatch")
+            raise ValueError("Идентификатор релиза в подготовленном снимке не совпадает")
         if not pkg["files"]:
-            raise ValueError("staged release contains no installable client files")
+            raise ValueError("Подготовленный релиз не содержит файлов клиента для установки")
         manifest_files = {entry["path"]: entry for entry in signed["files"]}
         if len(manifest_files) != len(pkg["files"]):
-            raise ValueError("staged file count mismatch")
+            raise ValueError("Количество подготовленных файлов не совпадает")
         for item in pkg["files"]:
             name = checked_path(item["path"])
             if name not in manifest_files:
-                raise ValueError("file missing from signed manifest")
+                raise ValueError("Файл отсутствует в подписанном манифесте")
             source = manifest_files[name]
             if (
                 item["sha256"].lower() != source["sha256"].lower()
                 or item["size"] != source["size"]
             ):
-                raise ValueError("staged file metadata does not match signed manifest")
+                raise ValueError("Метаданные подготовленного файла не соответствуют подписанному манифесту")
             download_exact(
                 args.backend,
                 item["url"],
@@ -371,7 +371,7 @@ def execute(args):
             installed.get("status") != "applied-and-verified"
             or installed.get("packageId") != args.package_id
         ):
-            raise ValueError("updater did not verify exact package")
+            raise ValueError("Обновляющий модуль не подтвердил точную версию пакета")
         verify_path = work / "verified.json"
         verified = run_checked(
             [
@@ -392,7 +392,7 @@ def execute(args):
             "checkedFiles"
         ) != len(pkg["files"]):
             raise ValueError(
-                "installed package was not byte-identical to staged manifest"
+                "Установленный пакет побайтово отличается от подготовленного манифеста"
             )
         # Независимо материализованные байты CLI становятся источником для долговременной транзакции выпуска
         # нативного Runtime. Файлы не загружаются повторно по URL манифеста; в фактическую директорию запуска
@@ -401,11 +401,11 @@ def execute(args):
         selection = args.preset or ""
         if catalog and not selection:
             raise RuntimeError(
-                "component matrix target must choose its explicit signed preset"
+                "Для целевой конфигурации матрицы компонентов необходимо выбрать явную подписанную предустановку"
             )
         if not catalog and selection and selection != "default":
             raise RuntimeError(
-                "component selection supplied for package without signed catalog"
+                "Для пакета без подписанного каталога указан выбор компонентов"
             )
         native_selection = (
             ""
@@ -436,7 +436,7 @@ def execute(args):
             or adopted["importedFiles"] < 1
         ):
             raise RuntimeError(
-                "Runtime staged adoption was not a verified offline release transaction"
+                "Принятие Runtime подготовленного пакета не подтверждено как автономная транзакция релиза"
             )
         report["stages"][stage_name] = {
             "status": "passed",
@@ -515,7 +515,7 @@ def execute(args):
                     or resolved["plan"]["catalogDigest"] != catalog["digest"]
                 ):
                     raise RuntimeError(
-                        "component resolver did not verify signed catalog"
+                        "Средство разрешения компонентов не подтвердило подписанный каталог"
                     )
                 # Сверяйте промышленный резолвер Go с нативным установщиком на фактических подписанных байтах; файлы
                 # отдельных платформ могут быть намеренно исключены нативной проверкой.
@@ -523,14 +523,14 @@ def execute(args):
                 native_paths = {f["path"] for f in checked.get("files", [])}
                 if not native_paths <= planned:
                     raise RuntimeError(
-                        "native and Go catalog resolver disagree on installed paths"
+                        "Нативное средство и Go-средство разрешения каталога расходятся в путях установки"
                     )
             if (
                 checked.get("status") != "ready"
                 or not checked.get("files")
                 or any(f["status"] != "ok" for f in checked["files"])
             ):
-                raise RuntimeError("native resolver did not verify every selected file")
+                raise RuntimeError("Нативное средство разрешения не проверило все выбранные файлы")
             # Дайджест выбранного плана воспроизводится из неизменяемого манифеста и реально проверенных путей этой
             # целевой платформы.
             by_path = {f["path"]: f["sha256"] for f in signed["files"]}
@@ -561,7 +561,7 @@ def execute(args):
             )
         elif selection and selection != "default":
             raise RuntimeError(
-                "component selection supplied for package without signed catalog"
+                "Для пакета без подписанного каталога указан выбор компонентов"
             )
 
         if args.execution_mode == "headless":
@@ -586,7 +586,7 @@ def execute(args):
                     "detail": "GUI/runtime target not executed by headless worker",
                 }
             raise RuntimeError(
-                "blocked: headless runner completed manifest/files and materialization only"
+                "Заблокировано: тест без интерфейса проверил только манифест, файлы и подготовку данных"
             )
         stage_name = "startup"
         # Запускайте точно установленный выпуск обычным механизмом подписанного манифеста/запуска Runtime.
@@ -598,7 +598,7 @@ def execute(args):
             != args.pinned_public_key.lower()
         ):
             raise RuntimeError(
-                "staged release signing key does not match operator-pinned key"
+                "Ключ подписи подготовленного релиза не соответствует ключу, закреплённому оператором"
             )
         runtime_java = signed.get("runtime", {}).get("java", {})
         required_major = int(runtime_java.get("majorVersion", 0))
@@ -609,7 +609,7 @@ def execute(args):
             required_major = int(runtime_java["recommendedMajorVersion"])
         if required_major not in (8, 16, 17, 21, 25):
             raise RuntimeError(
-                f"unsupported pinned release Java major {required_major}"
+                f"Закреплённая версия Java {required_major} для релиза не поддерживается"
             )
         if args.java == "auto":
             from runtime_capabilities_03410 import host_identity
@@ -619,16 +619,16 @@ def execute(args):
             home = os.environ.get(f"JAVA_HOME_{required_major}_{envarch}", "")
             if not home:
                 raise RuntimeError(
-                    f"Java {required_major} is not installed on this runner"
+                    f"В тестовом окружении не установлена Java {required_major}"
                 )
             java_name = "java.exe" if sys.platform == "win32" else "java"
             selected_java = str((Path(home) / "bin" / java_name).resolve())
         else:
             selected_java = str(Path(args.java).resolve())
         if not Path(selected_java).is_file():
-            raise RuntimeError("selected Java binary unavailable")
+            raise RuntimeError("Выбранный исполняемый файл Java недоступен")
         if not Path(args.runtime).is_file():
-            raise RuntimeError("Runtime executable unavailable")
+            raise RuntimeError("Исполняемый файл Runtime недоступен")
         runtime_hash = sha_file(args.runtime)
         run_path = work / "runtime-launch.json"
         cmd = [
@@ -676,7 +676,7 @@ def execute(args):
                 "status": "blocked",
                 "detail": "GUI runtime did not start",
             }
-            raise RuntimeError("staged GUI validation blocked: " + observer.blocked)
+            raise RuntimeError("Проверка интерфейса подготовленного пакета заблокирована: " + observer.blocked)
         try:
             launched = run_runtime_observed(
                 cmd, run_path, subprocess_env, args.runtime_seconds + 150, observer
@@ -703,11 +703,11 @@ def execute(args):
             "evidenceSha256": sha_file(readiness_file),
         }
         if status == "failed":
-            raise RuntimeError("staged Minecraft startup failed: " + detail)
+            raise RuntimeError("Запуск Minecraft из подготовленного пакета завершился ошибкой: " + detail)
         if status == "blocked":
-            raise RuntimeError("staged Minecraft startup blocked: " + detail)
+            raise RuntimeError("Запуск Minecraft из подготовленного пакета заблокирован: " + detail)
         if not loader_ready:
-            raise RuntimeError("staged loader readiness failed: " + loader_detail)
+            raise RuntimeError("Проверка готовности загрузчика подготовленного пакета завершилась ошибкой: " + loader_detail)
 
         java_version_result = subprocess.run(
             [selected_java, "-version"],
@@ -718,7 +718,7 @@ def execute(args):
             check=False,
         )
         if java_version_result.returncode or not java_version_result.stdout:
-            raise RuntimeError("selected Java version cannot be verified")
+            raise RuntimeError("Не удалось проверить выбранную версию Java")
         java_version = java_version_result.stdout.decode(
             "utf-8", errors="replace"
         ).splitlines()[0]
@@ -783,7 +783,7 @@ def execute(args):
             or not loader
             or loader not in ("vanilla", "fabric", "quilt", "forge", "neoforge")
         ):
-            raise ValueError("unknown signed Minecraft version or loader")
+            raise ValueError("Неизвестная подписанная версия Minecraft или загрузчика")
         # Идентичность провайдера проверяется реальными учётными данными подписанного аккаунта, а не автономной
         # идентичностью или имитацией. Ошибка транспорта означает НЕОПРЕДЕЛЁННЫЙ результат.
         stage_name = "authentication"
@@ -793,7 +793,7 @@ def execute(args):
                 "detail": "V07 live provider credentials not supplied; offline gameplay is not authentication certification",
             }
             raise RuntimeError(
-                "live provider authentication required for staged certification"
+                "Для сертификации подготовленного пакета требуется реальная авторизация через провайдера"
             )
         if args.auth_mode == "official" and runtime_identity["guardMode"] != "disabled":
             report["stages"][stage_name] = {
@@ -801,7 +801,7 @@ def execute(args):
                 "detail": "official Guard-enabled target requires additional real Guard-policy proof",
             }
             raise RuntimeError(
-                "official Guard target cannot certify without independent policy proof"
+                "Официальную цель Guard нельзя сертифицировать без независимого доказательства соблюдения политики"
             )
         if args.auth_mode == "custom" and not args.server_bundle:
             report["stages"][stage_name] = {
@@ -809,7 +809,7 @@ def execute(args):
                 "detail": "custom authentication requires actual matching ServerBridge bundle",
             }
             raise RuntimeError(
-                "custom provider cannot use vanilla offline matching server"
+                "Пользовательский провайдер не может использовать автономный сервер проверки vanilla"
             )
         if args.auth_mode == "custom" and not args.guard_denied_credentials_file:
             report["stages"][stage_name] = {
@@ -817,7 +817,7 @@ def execute(args):
                 "detail": "custom auth requires live device/Guard trust-denied test identity",
             }
             raise RuntimeError(
-                "device/Guard trust cannot be certified without a negative live session"
+                "Доверие устройства и Guard нельзя сертифицировать без отрицательного теста реальной сессии"
             )
         try:
             auth_result, live_credential = run_probe(
@@ -862,7 +862,7 @@ def execute(args):
                 "status": "inconclusive",
                 "detail": "external authentication provider unavailable (not a successful certification)",
             }
-            raise RuntimeError("external authentication provider inconclusive")
+            raise RuntimeError("Результат проверки внешнего провайдера авторизации неоднозначен")
         except ProviderRejected:
             report["stages"][stage_name] = {
                 "status": "failed",
@@ -959,7 +959,7 @@ def execute(args):
                 "success"
             ):
                 raise RuntimeError(
-                    "Minecraft JVM exited unsuccessfully after matching-server launch"
+                    "JVM Minecraft завершилась с ошибкой после запуска совместимого сервера"
                 )
         except Exception as exc:
             launch_error = str(exc)
@@ -1039,7 +1039,7 @@ def execute(args):
         }
         if launch_error or game.status != "passed":
             raise RuntimeError(
-                "actual staged client gameplay failed: "
+                "Реальная игровая проверка подготовленного клиента завершилась ошибкой: "
                 + (
                     launch_error
                     or game.failure
@@ -1059,7 +1059,7 @@ def execute(args):
                 "detail": "V09 requires host-pinned prior release, different Java, and signed distribution-managed Java recovery",
             }
             raise RuntimeError(
-                "V09 baseline or Java replacement missing; runtime certification blocked"
+                "Отсутствует базовая версия V09 или замена Java; сертификация Runtime заблокирована"
             )
         lifecycle_path = run_lifecycle(
             args, work, pkg, signed, download_exact, selected_java, subprocess_env

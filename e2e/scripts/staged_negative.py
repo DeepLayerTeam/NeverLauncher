@@ -23,9 +23,9 @@ def _run(command: list[str], env: dict[str, str], timeout: int = 90) -> tuple[in
             stderr=subprocess.STDOUT, env=env, timeout=timeout, check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError("adversarial probe timed out; rejection not established") from exc
+        raise RuntimeError("Проверка обходов превысила время ожидания; факт отклонения не подтверждён") from exc
     if len(proc.stdout) > MAX_OUTPUT:
-        raise RuntimeError("adversarial probe diagnostic output exceeded bound")
+        raise RuntimeError("Диагностический вывод проверки обходов превысил лимит")
     return proc.returncode, proc.stdout
 
 
@@ -41,13 +41,13 @@ def _positive_runtime_verify(runtime: str, manifest: Path, key: str, env: dict[s
     rc, output = _run([runtime, "verify", "--manifest", str(manifest),
                        "--pinned-public-key", key], env)
     if rc:
-        raise RuntimeError("real Runtime cannot verify the unmodified signed manifest")
+        raise RuntimeError("Реальный Runtime не смог проверить неизменённый подписанный манифест")
     try:
         data = json.loads(output)
     except (ValueError, UnicodeError) as exc:
-        raise RuntimeError("real Runtime did not return valid signature proof") from exc
+        raise RuntimeError("Реальный Runtime не вернул действительное доказательство подписи") from exc
     if data.get("status") != "ready" or data.get("signature", {}).get("valid") is not True:
-        raise RuntimeError("real Runtime did not accept baseline signature")
+        raise RuntimeError("Реальный Runtime не принял исходную подпись")
 
 
 def reject_tampered_manifest(runtime: str, manifest: Path, key: str,
@@ -55,7 +55,7 @@ def reject_tampered_manifest(runtime: str, manifest: Path, key: str,
     _positive_runtime_verify(runtime, manifest, key, env)
     original = json.loads(manifest.read_text(encoding="utf-8"))
     if not isinstance(original, dict) or not isinstance(original.get("version"), str):
-        raise RuntimeError("staged signed manifest lacks version")
+        raise RuntimeError("В подготовленном подписанном манифесте отсутствует версия")
     attack = dict(original)
     attack["version"] = original["version"] + ".untrusted-04314"
     altered = work / "adversarial-manifest-04314.json"
@@ -64,7 +64,7 @@ def reject_tampered_manifest(runtime: str, manifest: Path, key: str,
         rc, _ = _run([runtime, "verify", "--manifest", str(altered),
                       "--pinned-public-key", key], env)
         if rc == 0:
-            raise RuntimeError("tampered signed manifest was accepted by the production Runtime")
+            raise RuntimeError("Производственный Runtime ошибочно принял изменённый подписанный манифест")
         return {"status": "denied", "baselineVerified": True,
                 "alteredManifestSha256": _digest(altered)}
     finally:
@@ -95,11 +95,11 @@ def reject_corrupted_client(cli: str, package: Path, client: Path,
             candidate = (path, entry)
             break
     if candidate is None:
-        raise RuntimeError("no installed required regular client file for corruption probe")
+        raise RuntimeError("Не найден обязательный установленный обычный файл клиента для проверки повреждения")
     path, entry = candidate
     baseline = _digest(path)
     if baseline != str(entry.get("sha256", "")).lower():
-        raise RuntimeError("selected client file is not initially byte verified")
+        raise RuntimeError("Для выбранного файла клиента отсутствует первоначальная побайтовая проверка")
     # Храните всё в изолированном рабочем процессе. Убитый тест может повредить
     # только этот ВРЕМЕННЫЙ клиент, но не настоящую установку пользователя.
     flags = os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
@@ -107,19 +107,19 @@ def reject_corrupted_client(cli: str, package: Path, client: Path,
     try:
         before = os.read(fd, 1)
         if len(before) != 1:
-            raise RuntimeError("client changed before adversarial probe")
+            raise RuntimeError("Клиент изменился до проверки обходов")
         os.lseek(fd, 0, os.SEEK_SET)
         os.write(fd, bytes((before[0] ^ 0x80,)))
         os.fsync(fd)
         if _digest(path) == baseline:
-            raise RuntimeError("client corruption was not applied")
+            raise RuntimeError("Намеренное повреждение клиента не было выполнено")
         try:
             rc, _ = _run([
                 cli, "client", "verify", "--package", str(package),
                 "--client-dir", str(client), "--output", str(work / "adversarial-client-result.json"),
             ], env)
             if rc == 0:
-                raise RuntimeError("corrupted installed file accepted by production CLI")
+                raise RuntimeError("Производственная CLI ошибочно приняла повреждённый установленный файл")
         finally:
             os.lseek(fd, 0, os.SEEK_SET)
             os.write(fd, before)
@@ -127,20 +127,20 @@ def reject_corrupted_client(cli: str, package: Path, client: Path,
     finally:
         os.close(fd)
     if _digest(path) != baseline:
-        raise RuntimeError("client file was not restored after negative probe")
+        raise RuntimeError("Файл клиента не восстановлен после отрицательной проверки")
     restored = work / "adversarial-restored-04314.json"
     rc, _ = _run([
         cli, "client", "verify", "--package", str(package),
         "--client-dir", str(client), "--output", str(restored),
     ], env)
     if rc or not restored.is_file():
-        raise RuntimeError("previously valid client did not recover after adversarial probe")
+        raise RuntimeError("Ранее исправный клиент не восстановился после проверки обходов")
     try:
         valid = json.loads(restored.read_text(encoding="utf-8"))
     except (ValueError, UnicodeError) as exc:
-        raise RuntimeError("client recovery verification returned invalid JSON") from exc
+        raise RuntimeError("Проверка восстановления клиента вернула некорректный JSON") from exc
     if valid.get("status") != "valid":
-        raise RuntimeError("client was not marked valid after restoration")
+        raise RuntimeError("После восстановления клиент не помечен как действительный")
     return {"status": "denied-and-restored", "filePath": entry["path"],
             "baselineSha256": baseline, "restoredFileSha256": _digest(path),
             "restoredVerificationSha256": _digest(restored)}

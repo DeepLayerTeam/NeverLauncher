@@ -207,7 +207,7 @@ func (r *RedisCoordinator) command(ctx context.Context, args ...string) (any, er
 	}
 	if r.db != 0 {
 		if err := writeRESP(conn, "SELECT", strconv.Itoa(r.db)); err != nil {
-			return nil, fmt.Errorf("Redis SELECT write failed: %w", err)
+			return nil, fmt.Errorf("Не удалось записать команду Redis SELECT: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
 			return nil, fmt.Errorf("Ошибка: Redis SELECT: %w", err)

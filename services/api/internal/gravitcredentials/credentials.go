@@ -96,7 +96,7 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 			return nil, closeErr
 		}
 		if len(data) > gi.MaxIdentityFile {
-			return nil, errors.New("credential file overflow")
+			return nil, errors.New("Файл учётных данных превышает допустимый размер")
 		}
 		if isFile {
 			// Используйте точный набор UUID/имён, уже проверенный gravitidentity. Старый
@@ -119,14 +119,14 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 		}
 	}
 	if len(out) != len(identities) {
-		return nil, errors.New("credential records differ from verified identity inventory")
+		return nil, errors.New("Записи учётных данных отличаются от проверенного каталога учётных записей")
 	}
 	seen := map[string]bool{}
 	for _, c := range out {
 		key := c.Provider + "\x00" + c.SourcePath + "\x00" + c.SourceID
 		a, ok := expected[key]
 		if !ok || a.Username != c.Username || a.UUID != c.UUID || seen[key] {
-			return nil, fmt.Errorf("credential identity differs from approved map: %s/%s", c.Provider, c.SourceID)
+			return nil, fmt.Errorf("Учётная запись в данных не соответствует утверждённому сопоставлению: %s/%s", c.Provider, c.SourceID)
 		}
 		seen[key] = true
 	}
@@ -155,7 +155,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		}
 		rawUUID, ok := key.(string)
 		if !ok {
-			return nil, errors.New("non-string FileAuth identity key")
+			return nil, errors.New("Ключ учётной записи FileAuth не является строкой")
 		}
 		uuid, err := gi.UUID(rawUUID)
 		if err != nil || seen[uuid] {
@@ -164,7 +164,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		seen[uuid] = true
 		account, ok := expected["fileauth\x00"+path+"\x00"+uuid]
 		if !ok {
-			return nil, errors.New("FileAuth UUID not found in verified identity map")
+			return nil, errors.New("UUID FileAuth не найден в проверенной карте учётных записей")
 		}
 		// MIG04 отклоняет повторяющиеся ключи в каждом объекте пользователя.
 		// Переиспользуйте этот проверенный источник, декодируя здесь только поле
@@ -230,14 +230,14 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 			break
 		}
 		if e != nil {
-			return nil, fmt.Errorf("SQL row %d: %w", line, e)
+			return nil, fmt.Errorf("Строка SQL %d: %w", line, e)
 		}
 		if len(rec) != len(header) {
 			return nil, fmt.Errorf("Несовпадение: «SQL row %d column»", line)
 		}
 		uuid, e := gi.UUID(rec[cols["uuid"]])
 		if e != nil {
-			return nil, fmt.Errorf("SQL row %d: %w", line, e)
+			return nil, fmt.Errorf("Строка SQL %d: %w", line, e)
 		}
 		c := Credential{Account: gi.Account{Provider: "sql", SourceID: rec[cols["id"]], Username: rec[cols["username"]], UUID: uuid, SourcePath: path}, State: "manual_reset", Reason: "no supported password verifier supplied"}
 		fcol, hasF := cols["password_format"]

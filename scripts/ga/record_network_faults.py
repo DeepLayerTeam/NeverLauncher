@@ -41,7 +41,7 @@ def network_gate_version(version: str) -> bool:
 def validate(log: Path, commit: str, version: str) -> dict:
     if not HEX_COMMIT.fullmatch(commit) or not network_gate_version(version):
         raise ValueError(
-            "exact source commit and supported product version >= 0.42.0 required"
+            "Требуется точный коммит исходников и поддерживаемая версия продукта не ниже 0.42.0"
         )
     if (
         not log.is_file()
@@ -71,7 +71,7 @@ def validate(log: Path, commit: str, version: str) -> dict:
             package_pass = True
     if not package_pass or any(seen.get(test) != "passed" for test in REQUIRED):
         raise ValueError(
-            "required real JVM/RemoteControl/WorldBackup tests not all completed: "
+            "Выполнены не все обязательные реальные тесты JVM/RemoteControl/WorldBackup: "
             + ", ".join(test for test in REQUIRED if seen.get(test) != "passed")
         )
     return {

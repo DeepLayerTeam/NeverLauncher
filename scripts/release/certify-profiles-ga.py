@@ -103,7 +103,7 @@ def validate_test_events(output: str, required: tuple[str, ...]) -> None:
     }
     if not_passed or problems:
         raise ValueError(
-            "mandatory tests missing, failed, skipped or duplicate: "
+            "Обязательные тесты отсутствуют, завершились ошибкой, пропущены или дублируются: "
             + json.dumps(
                 {"notPassed": not_passed, "problems": problems[:16]}, sort_keys=True
             )

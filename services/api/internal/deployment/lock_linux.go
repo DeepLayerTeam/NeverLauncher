@@ -40,7 +40,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 				}
 			}
 			if e != nil {
-				return nil, fmt.Errorf("instance lock parent %s: %w", current, e)
+				return nil, fmt.Errorf("Ошибка родительского каталога блокировки экземпляра %s: %w", current, e)
 			}
 			if st.Mode()&os.ModeSymlink != 0 || !st.IsDir() {
 				return nil, fmt.Errorf("Для «instance lock parent» %s требуется: настоящий каталог", current)
@@ -52,7 +52,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 		return nil, err
 	}
 	if st.Mode().Perm()&0022 != 0 {
-		return nil, errors.New("instance lock parent is group/world-writable")
+		return nil, errors.New("Родительский каталог блокировки экземпляра доступен для записи группе или всем пользователям")
 	}
 	if plan.requireLocalFS {
 		owner, ok := st.Sys().(*syscall.Stat_t)
@@ -69,14 +69,14 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 			return nil, fmt.Errorf("Блокировка экземпляра: требуется «verified local ext4/XFS/Btrfs, got fs type 0x%x»", fs.Type)
 		}
 		if fs.Flags&1 != 0 {
-			return nil, errors.New("instance lock filesystem is read-only")
+			return nil, errors.New("Файловая система блокировки экземпляра доступна только для чтения")
 		}
 	}
 	// O_NOFOLLOW и O_CLOEXEC предотвращают подмену символьной ссылки и наследование
 	// дескриптора дочерним процессом.
 	fd, err := syscall.Open(path, syscall.O_RDWR|syscall.O_CREAT|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("instance lock open: %w", err)
+		return nil, fmt.Errorf("Не удалось открыть блокировку экземпляра: %w", err)
 	}
 	file := os.NewFile(uintptr(fd), path)
 	fail := func(e error) (*InstanceLock, error) { _ = file.Close(); return nil, e }
@@ -94,7 +94,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 	// Обнаруживайте подмену пути между открытием и получением блокировки.
 	pathInfo, err := os.Lstat(path)
 	if err != nil || !os.SameFile(info, pathInfo) {
-		return fail(errors.New("instance lock pathname changed during acquisition"))
+		return fail(errors.New("Путь к блокировке экземпляра изменился во время получения"))
 	}
 	return &InstanceLock{file: file}, nil
 }

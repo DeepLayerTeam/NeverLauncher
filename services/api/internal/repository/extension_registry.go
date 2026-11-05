@@ -356,7 +356,7 @@ func (r *MemoryRepository) SaveExtensionRegistryPublisherKey(ctx context.Context
 			continue
 		}
 		if existing.PublisherID != key.PublisherID || existing.PublicKeyBase64 != key.PublicKeyBase64 {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: publisher key fingerprint already belongs to another key", ErrConflict)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: отпечаток ключа издателя уже принадлежит другому ключу", ErrConflict)
 		}
 		if existing.RevokedAt != nil && key.Active {
 			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("«%w: revoked publisher key»: запрещено «be reactivated»", ErrImmutable)
@@ -596,7 +596,7 @@ func (r *MemoryRepository) YankExtensionRegistryVersion(ctx context.Context, ext
 	}
 	extensionID, version, reason = strings.ToLower(strings.TrimSpace(extensionID)), strings.TrimSpace(version), strings.TrimSpace(reason)
 	if reason == "" || len(reason) > 500 {
-		return model.ExtensionRegistryVersion{}, errors.New("yank reason must contain 1..500 characters")
+		return model.ExtensionRegistryVersion{}, errors.New("Причина отзыва должна содержать от 1 до 500 символов")
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -607,7 +607,7 @@ func (r *MemoryRepository) YankExtensionRegistryVersion(ctx context.Context, ext
 		}
 		if item.YankedAt != nil {
 			if item.YankReason != reason {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yank state is irreversible", ErrImmutable)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: отзыв версии необратим", ErrImmutable)
 			}
 			return *item, nil
 		}
@@ -683,7 +683,7 @@ func (r *SQLRepository) SaveExtensionRegistryPublisherKey(ctx context.Context, k
 	existing, err := scanRegistryPublisherKey0203(r.db.QueryRowContext(ctx, `SELECT publisher_id,fingerprint,algorithm,public_key_base64,active,created_at,revoked_at FROM extension_registry_publisher_keys WHERE fingerprint=$1`, key.Fingerprint))
 	if err == nil {
 		if existing.PublisherID != key.PublisherID || existing.PublicKeyBase64 != key.PublicKeyBase64 {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: publisher key fingerprint already belongs to another key", ErrConflict)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: отпечаток ключа издателя уже принадлежит другому ключу", ErrConflict)
 		}
 		if existing.RevokedAt != nil && key.Active {
 			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("«%w: revoked publisher key»: запрещено «be reactivated»", ErrImmutable)
@@ -1042,7 +1042,7 @@ func (r *SQLRepository) YankExtensionRegistryVersion(ctx context.Context, extens
 	}
 	extensionID, version, reason = strings.ToLower(strings.TrimSpace(extensionID)), strings.TrimSpace(version), strings.TrimSpace(reason)
 	if reason == "" || len(reason) > 500 {
-		return model.ExtensionRegistryVersion{}, errors.New("yank reason must contain 1..500 characters")
+		return model.ExtensionRegistryVersion{}, errors.New("Причина отзыва должна содержать от 1 до 500 символов")
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -1058,7 +1058,7 @@ func (r *SQLRepository) YankExtensionRegistryVersion(ctx context.Context, extens
 	}
 	if yankedAt.Valid {
 		if existingReason != reason {
-			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yank state is irreversible", ErrImmutable)
+			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: отзыв версии необратим", ErrImmutable)
 		}
 	} else {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM extension_registry_channels WHERE extension_id=$1 AND version=$2`, extensionID, version); err != nil {

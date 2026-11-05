@@ -209,7 +209,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	cfg.HostAllowlist, err = normalizeHosts(cfg.HostAllowlist)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: %w", cfg.ID, err)
 	}
 	if !hostAllowed(strings.ToLower(issuer.Hostname()), cfg.HostAllowlist) {
 		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: хост issuer отсутствует в hostAllowlist", cfg.ID)
@@ -227,15 +227,15 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	requestTimeout, err := parseDuration(cfg.RequestTimeout, 8*time.Second, time.Second, 30*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q requestTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q, параметр requestTimeout: %w", cfg.ID, err)
 	}
 	connectTimeout, err := parseDuration(cfg.ConnectTimeout, 4*time.Second, 500*time.Millisecond, 15*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q connectTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q, параметр connectTimeout: %w", cfg.ID, err)
 	}
 	skew, err := parseDuration(cfg.ClockSkew, 60*time.Second, 0, 5*time.Minute)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("OIDC connector %q clockSkew: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q, параметр clockSkew: %w", cfg.ID, err)
 	}
 	if cfg.MaxResponseBytes == 0 {
 		cfg.MaxResponseBytes = 2 << 20
@@ -273,7 +273,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	for _, item := range []string{mapping.Subject, mapping.Email, mapping.Username, mapping.DisplayName, mapping.Groups, mapping.Roles} {
 		if err := validateClaimPath(item); err != nil {
-			return RuntimeConfig{}, fmt.Errorf("OIDC connector %q: %w", cfg.ID, err)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: %w", cfg.ID, err)
 		}
 	}
 	if len(cfg.RoleMappings) > 256 {
@@ -388,7 +388,7 @@ func parseDuration(raw string, def, min, max time.Duration) (time.Duration, erro
 		return 0, err
 	}
 	if d < min || d > max {
-		return 0, fmt.Errorf("must be between %s and %s", min, max)
+		return 0, fmt.Errorf("Значение должно быть в диапазоне от %s до %s", min, max)
 	}
 	return d, nil
 }

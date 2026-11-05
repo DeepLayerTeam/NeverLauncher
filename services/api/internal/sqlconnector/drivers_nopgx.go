@@ -8,5 +8,5 @@ import (
 )
 
 func openDatabase(cfg RuntimeConfig) (*sql.DB, error) {
-	return nil, fmt.Errorf("SQL auth database drivers are excluded by launcher_nopgx build tag")
+	return nil, fmt.Errorf("Драйверы SQL для базы авторизации исключены флагом сборки launcher_nopgx")
 }

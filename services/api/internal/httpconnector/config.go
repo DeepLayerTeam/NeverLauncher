@@ -204,13 +204,13 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		"resolve": cfg.Endpoints.Resolve, "logout": cfg.Endpoints.Logout, "health": cfg.Endpoints.Health,
 	} {
 		if err := validateEndpointPath(endpoint); err != nil {
-			return RuntimeConfig{}, fmt.Errorf("HTTP connector %q endpoint %s: %w", cfg.ID, name, err)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q, адрес %s: %w", cfg.ID, name, err)
 		}
 	}
 
 	secret, err := loadHMACSecret(cfg.HMAC)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: %w", cfg.ID, err)
 	}
 	if len(secret) < 32 {
 		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q: секрет HMAC должен содержать не менее 32 байт", cfg.ID)
@@ -238,19 +238,19 @@ func Normalize(input Config) (RuntimeConfig, error) {
 
 	maxSkew, err := parseDuration(cfg.HMAC.MaxClockSkew, 2*time.Minute, 5*time.Second, 10*time.Minute)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q hmac.maxClockSkew: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q, параметр hmac.maxClockSkew: %w", cfg.ID, err)
 	}
 	requestTimeout, err := parseDuration(cfg.RequestTimeout, 5*time.Second, 250*time.Millisecond, 30*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q requestTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q, параметр requestTimeout: %w", cfg.ID, err)
 	}
 	connectTimeout, err := parseDuration(cfg.ConnectTimeout, 3*time.Second, 100*time.Millisecond, 15*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q connectTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q, параметр connectTimeout: %w", cfg.ID, err)
 	}
 	idleTimeout, err := parseDuration(cfg.IdleConnTimeout, 45*time.Second, time.Second, 5*time.Minute)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q idleConnTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор HTTP %q, параметр idleConnTimeout: %w", cfg.ID, err)
 	}
 
 	if cfg.MaxResponseBytes == 0 {

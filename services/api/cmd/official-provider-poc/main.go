@@ -385,7 +385,7 @@ func verify(ctx context.Context, c providerClient, opt options, output io.Writer
 	}
 	if opt.ProbeServer != "" {
 		if !opt.RequireOnlineSession {
-			r.fail("server_online_mode_probe", errors.New("online sessionserver verification required before probing server"))
+			r.fail("server_online_mode_probe", errors.New("Перед проверкой сервера требуется онлайн-проверка через sessionserver"))
 			r.Result = "blocked"
 			return r
 		}

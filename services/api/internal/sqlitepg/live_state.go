@@ -88,7 +88,7 @@ func digestJSON0474(src map[string]any, field, digest string) (string, error) {
 	}
 	sum := sha256.Sum256([]byte(s))
 	if hex.EncodeToString(sum[:]) != h {
-		return "", fmt.Errorf("%s digest differs", field)
+		return "", fmt.Errorf("Контрольная сумма %s не совпадает", field)
 	}
 	return s, nil
 }
@@ -815,7 +815,7 @@ func moveState0474(ctx context.Context, tx pgx.Tx, receipt Report, report *LiveR
 			}
 			return r.apply(ctx, tx, s)
 		}); e != nil {
-			return fmt.Errorf("Core state %s -> %s: %w", r.source, r.target, e)
+			return fmt.Errorf("Ошибка перехода основного состояния %s -> %s: %w", r.source, r.target, e)
 		}
 		if r.source == "bridge_runtime" {
 			var n int64

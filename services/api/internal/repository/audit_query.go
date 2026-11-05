@@ -88,7 +88,7 @@ func (r *SQLRepository) QueryAudit(ctx context.Context, q AuditQuery) (AuditQuer
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT id,actor,action,target,ip,user_agent,created_at,correlation_id,reason_code,job_id FROM audit_events`+where+` ORDER BY created_at DESC,id DESC LIMIT $10 OFFSET $11`, append(args, q.Limit, q.Offset)...)
 	if err != nil {
-		return out, fmt.Errorf("query audit: %w", err)
+		return out, fmt.Errorf("Ошибка запроса журнала аудита: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {

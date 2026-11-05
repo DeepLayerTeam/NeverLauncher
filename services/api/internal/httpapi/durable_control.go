@@ -83,7 +83,7 @@ func (s Server) StartDurableControlPlaneWithReadiness0455(parent context.Context
 		select {
 		case <-done:
 		case <-time.After(20 * time.Second):
-			log.Printf("durable worker shutdown timed out; leases expire by PostgreSQL TTL")
+			log.Printf("Превышено время завершения фонового обработчика; аренды истекают по TTL PostgreSQL")
 		}
 	}, nil
 }
@@ -95,7 +95,7 @@ func (s Server) runDurableTick0213(ctx context.Context, cp repository.DurableCon
 	}
 	for _, job := range jobs {
 		if _, err := s.executeDurablePublishJob0213(ctx, cp, job, worker); err != nil {
-			log.Printf("durable publish job %s: %v", job.ID, err)
+			log.Printf("Ошибка длительного задания публикации %s: %v", job.ID, err)
 		}
 	}
 	rollbacks, err := cp.LeaseDurableJobs(ctx, durableRollbackKind0217, worker, 4, 60*time.Minute)
@@ -104,7 +104,7 @@ func (s Server) runDurableTick0213(ctx context.Context, cp repository.DurableCon
 	}
 	for _, job := range rollbacks {
 		if _, runErr := s.executeRollbackJob0217(ctx, cp, job, worker); runErr != nil {
-			log.Printf("durable rollback job %s: %v", job.ID, runErr)
+			log.Printf("Ошибка длительного задания отката %s: %v", job.ID, runErr)
 		}
 	}
 	return s.drainOutbox0213(ctx, cp, worker, 32)

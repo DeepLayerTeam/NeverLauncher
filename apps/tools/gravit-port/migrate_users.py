@@ -79,7 +79,7 @@ def role_plan(path, imported, users):
         user_id = "gravit-" + row["provider"] + "-" + u.replace("-", "")
         user = indexed.get(user_id)
         if not user or user.get("status") != "active" or user.get("roleId") != "player":
-            raise MigrationError("approved role target is not an imported active player")
+            raise MigrationError("Целевая учётная запись для назначенной роли не является импортированным активным игроком")
         prior = user.get("projectRoles") or {}
         if not isinstance(prior, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in prior.items()):
             raise MigrationError("Некорректное значение: существующие роли проекта")
@@ -100,7 +100,7 @@ class Backend:
         if parts.scheme != "https" or not parts.hostname or parts.username or parts.password or parts.path not in ("", "/") or parts.query or parts.fragment:
             raise MigrationError("Для серверной части требуется HTTPS-адрес без учётных данных и пути")
         if not token or "\n" in token or "\r" in token:
-            raise MigrationError("set a valid operator token in the environment")
+            raise MigrationError("Укажите действительный токен оператора в переменных окружения")
         self.url, self.token, self.timeout = url.rstrip("/"), token, timeout
         self.opener = build_opener(NoRedirect(), HTTPSHandler(context=ssl.create_default_context()))
 
@@ -108,7 +108,7 @@ class Backend:
         req_headers = {"Authorization": "Bearer " + self.token, "Accept": "application/json"}
         req_headers.update(headers or {})
         if source is not None and payload is not None:
-            raise MigrationError("cannot upload ZIP and JSON together")
+            raise MigrationError("Нельзя одновременно загрузить ZIP и JSON")
         def call(body):
             req = Request(self.url + path, data=body, method=method, headers=req_headers)
             try:
@@ -118,7 +118,7 @@ class Backend:
                     raw = resp.read(MAX_RESPONSE + 1)
             except HTTPError as exc:
                 # Do NOT echo a server error body (may contain secrets).
-                raise MigrationError("Backend rejected %s %s (HTTP %d)" % (method, path, exc.code)) from None
+                raise MigrationError("Backend отклонил запрос %s %s (HTTP %d)" % (method, path, exc.code)) from None
             except (OSError, URLError) as exc:
                 raise MigrationError("Ошибка передачи данных Backend: %s" % type(exc).__name__) from None
             if len(raw) > MAX_RESPONSE:
@@ -126,7 +126,7 @@ class Backend:
             try:
                 obj = json.loads(raw)
             except (ValueError, UnicodeError):
-                raise MigrationError("non-JSON Backend response") from None
+                raise MigrationError("Ответ Backend не содержит корректный JSON") from None
             if not isinstance(obj, dict):
                 raise MigrationError("Некорректный формат: ответ Backend")
             return obj.get("data", obj)
@@ -148,12 +148,12 @@ def verify_preview(inventory, identity, auth, run_id, digest):
     if inventory.get("sourceSha256") != digest or identity.get("sourceSha256") != digest or auth.get("sourceSha256") != digest:
         raise MigrationError("Хеш источника различается в перечне, учётных записях и учётных данных")
     if identity.get("runId") != run_id or auth.get("runId") != run_id:
-        raise MigrationError("incorrect migration run in response")
+        raise MigrationError("В ответе указан неверный запуск миграции")
     if identity.get("summary", {}).get("blocked") != 0:
         raise MigrationError("Сопоставление UUID заблокировано или содержит конфликты")
     rows = auth.get("rows")
     if not isinstance(rows, list) or len(rows) != len(identity.get("rows", [])) or not rows:
-        raise MigrationError("credential preview does not cover all mapped identities")
+        raise MigrationError("Предпросмотр учётных данных охватывает не все сопоставленные учётные записи")
     counts = {"imported": 0, "manual_reset": 0, "existing_unchanged": 0}
     by_uuid = set()
     for row in rows:
@@ -163,7 +163,7 @@ def verify_preview(inventory, identity, auth, run_id, digest):
         by_uuid.add(uuid)
         counts[row["state"]] += 1
     if any(auth.get({"imported": "imported", "manual_reset": "manualReset", "existing_unchanged": "existingUnchanged"}[key]) != n for key, n in counts.items()):
-        raise MigrationError("inconsistent credential counts")
+        raise MigrationError("Количество учётных данных не совпадает между источниками")
     return counts
 
 
@@ -191,11 +191,11 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     root = "/api/v1/admin/migration-runs/" + quote(run_id, safe="")
     inventory = api.request("GET", root + "/inventory")
     if inventory.get("sourceSha256") != digest or inventory.get("sourceBytes") != size:
-        raise MigrationError("source ZIP differs from persisted Backend inventory")
+        raise MigrationError("Исходный ZIP не совпадает с сохранённым каталогом Backend")
     mapped = api.request("POST", root + "/identities", source=source)
     verified = api.request("POST", root + "/identities/verify")
     if mapped.get("entriesSha256") != verified.get("entriesSha256") or mapped.get("summary") != verified.get("summary"):
-        raise MigrationError("identity mapping changed during verification")
+        raise MigrationError("Во время проверки изменилось сопоставление учётных записей")
     h = {"X-Gravit-Password-Format": password_format}
     preview = api.request("POST", root + "/credentials/preview", source=source, headers=h)
     if preview.get("dryRun") is not True:
@@ -205,25 +205,25 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     if mode == "prepare":
         return receipt
     if counts["manual_reset"] and not allow_resets:
-        raise MigrationError("manual password resets required; import withheld unless explicitly accepted")
+        raise MigrationError("Требуется ручной сброс паролей; импорт приостановлен до явного подтверждения")
     if counts["imported"] == 0:
         raise MigrationError("Нет новых учётных записей для переноса; доверие существующих пользователей Never изменять нельзя")
     imported = api.request("POST", root + "/credentials/import", source=source, headers={**h, "X-Migration-Import-Confirm": run_id})
     if imported.get("dryRun") or verify_preview(inventory, verified, imported, run_id, digest) != counts:
-        raise MigrationError("credential import differs from confirmed preview")
+        raise MigrationError("Импорт учётных данных не совпадает с подтверждённым предпросмотром")
     committed = api.request("GET", root + "/credentials")
     if committed.get("rows") != imported.get("rows") or committed.get("identitySha256") != imported.get("identitySha256"):
-        raise MigrationError("committed credential receipt differs from import response")
+        raise MigrationError("Подтверждение сохранённых учётных данных отличается от ответа импорта")
     receipt["status"] = "accounts_imported"
     trust_preview = api.request("POST", root + "/security/preview")
     if trust_preview.get("importedAccounts") != counts["imported"] or trust_preview.get("appliedAt") is not None:
         raise MigrationError("предварительный просмотр сброса доверия не совпадает с импортированные пользователи")
     trust = api.request("POST", root + "/security/activate", headers={"X-Migration-Trust-Confirm": run_id, "X-Migration-Fresh-Keys-Confirmed": "true"})
     if trust.get("importedAccounts") != counts["imported"] or trust.get("appliedAt") is None:
-        raise MigrationError("trust reset was not durably verified")
+        raise MigrationError("Сброс доверия не подтверждён в постоянном хранилище")
     durable = api.request("GET", root + "/security")
     if durable.get("importedAccounts") != counts["imported"] or not durable.get("verified"):
-        raise MigrationError("saved trust-reset report not verified")
+        raise MigrationError("Сохранённый отчёт о сбросе доверия не прошёл проверку")
     receipt["status"] = "trust_reset_verified"
     if texture_mapping_output:
         mapping = []
@@ -245,7 +245,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
         for uid, prior, desired in changes:
             updated = api.request("PATCH", "/api/v1/admin/users/" + quote(uid, safe=""), payload={"projectRoles": desired, "expectedProjectRoles": prior})
             if updated.get("id") != uid or updated.get("projectRoles") != desired:
-                raise MigrationError("project role update not confirmed")
+                raise MigrationError("Изменение роли в проекте не подтверждено")
             done += 1
         receipt["roleAssignments"] = done
         receipt["status"] = "roles_applied"

@@ -495,7 +495,7 @@ func validateFriendlyName117(v string) (string, error) {
 		return "Passkey", nil
 	}
 	if len([]rune(v)) > 80 {
-		return "", fmt.Errorf("friendlyName too long")
+		return "", fmt.Errorf("Значение friendlyName слишком длинное")
 	}
 	return v, nil
 }

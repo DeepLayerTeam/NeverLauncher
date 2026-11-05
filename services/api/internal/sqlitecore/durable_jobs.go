@@ -168,7 +168,7 @@ func claimJob(ctx context.Context, q sqlitedurable.Executor, id, worker string, 
 		return j, false, e
 	}
 	if j.LeaseFence == math.MaxInt64 {
-		return j, false, errors.New("durable fencing overflow")
+		return j, false, errors.New("Переполнение счётчика защиты длительных операций")
 	}
 	token, e := newLeaseToken()
 	if e != nil {

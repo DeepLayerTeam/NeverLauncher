@@ -23,7 +23,7 @@ def execute(cmd, timeout=90, env=None):
     )
     if r.returncode:
         raise ValueError(
-            f"{cmd[0]} signature check rejected artifact: {(r.stdout + r.stderr)[-700:]}"
+            f"Проверка подписи {cmd[0]} отклонила артефакт: {(r.stdout + r.stderr)[-700:]}"
         )
     return r.stdout + r.stderr
 
@@ -54,7 +54,7 @@ def verify(path: Path, signer: str):
         checked = execute(["pkgutil", "--check-signature", str(path.resolve())])
         if f"({signer})" not in checked or "Developer ID Installer:" not in checked:
             raise ValueError(
-                "macOS package is not signed by the pinned Developer ID Installer"
+                "Пакет macOS не подписан закреплённым удостоверением Developer ID Installer"
             )
         execute(
             [

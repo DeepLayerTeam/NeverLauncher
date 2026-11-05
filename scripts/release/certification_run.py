@@ -42,7 +42,7 @@ def _positive(value: str, name: str) -> int:
 def _timestamp(value: str) -> datetime:
     try:
         if not isinstance(value, str) or not value.endswith("Z"):
-            raise ValueError("not a UTC timestamp")
+            raise ValueError("Отметка времени указана не в UTC")
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
             raise ValueError("Отсутствует: «timezone»")

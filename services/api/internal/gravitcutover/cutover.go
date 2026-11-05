@@ -125,7 +125,7 @@ func VerifyRelease(m model.Manifest, trusted ed25519.PublicKey) (string, error) 
 	}
 	pub, err := hex.DecodeString(m.Signature.PublicKey)
 	if err != nil || len(pub) != ed25519.PublicKeySize || !ed25519.PublicKey(pub).Equal(trusted) {
-		return "", errors.New("release signer is not the current Never trusted key")
+		return "", errors.New("Подписант релиза не соответствует текущему доверенному ключу Never")
 	}
 	sig, err := hex.DecodeString(m.Signature.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {

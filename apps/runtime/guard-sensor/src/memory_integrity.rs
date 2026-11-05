@@ -267,14 +267,14 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                     if baseline.protect != current.protect {
                         state.healthy = false;
                         return Err(format!(
-                            "Guard Memory Integrity executable image protection drift at 0x{:X}: 0x{:X} -> 0x{:X}",
+                            "Guard: изменились права защиты исполняемого образа по адресу 0x{:X}: 0x{:X} -> 0x{:X}",
                             current.base, baseline.protect, current.protect
                         ));
                     }
                     if baseline.digest != current.digest {
                         state.healthy = false;
                         return Err(format!(
-                            "Guard Memory Integrity code-page drift at 0x{:X} ({} bytes)",
+                            "Guard: изменение кодовой страницы по адресу 0x{:X} ({} байт)",
                             current.base, current.size
                         ));
                     }
@@ -302,7 +302,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                     if !range_allowed(region, &state.allowed_dynamic) {
                         state.healthy = false;
                         return Err(format!(
-                            "Guard Memory Integrity detected executable private memory without observed VirtualAlloc/VirtualProtect provenance at 0x{:X} ({} bytes)",
+                            "Guard: обнаружена исполняемая частная память без подтверждённого происхождения через VirtualAlloc/VirtualProtect по адресу 0x{:X} ({} байт)",
                             region.base, region.size
                         ));
                     }
@@ -312,7 +312,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                 if !range_allowed(region, &state.allowed_mapped) {
                     state.healthy = false;
                     return Err(format!(
-                        "Guard Memory Integrity detected new executable mapped memory at 0x{:X} ({} bytes)",
+                        "Guard: обнаружена новая отображённая исполняемая память по адресу 0x{:X} ({} байт)",
                         region.base, region.size
                     ));
                 }
@@ -432,7 +432,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
 fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, String> {
     if region.size > MAX_HASHABLE_IMAGE_REGION {
         return Err(format!(
-            "Guard Memory Integrity executable image region exceeds hash limit at 0x{:X}: {} bytes",
+            "Guard: область исполняемого образа превышает лимит хеширования по адресу 0x{:X}: {} байт",
             region.base, region.size
         ));
     }
@@ -490,7 +490,7 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
             {
                 buffer.fill(0);
                 return Err(format!(
-                    "Guard Memory Integrity executable image mapping changed during read at 0x{:X}",
+                    "Guard: отображение исполняемого образа изменилось при чтении по адресу 0x{:X}",
                     region.base + offset
                 ));
             }
@@ -500,7 +500,7 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
         if !copied_all {
             buffer.fill(0);
             return Err(format!(
-                "Guard Memory Integrity executable image unreadable at 0x{:X}: {}",
+                "Guard: невозможно прочитать исполняемый образ по адресу 0x{:X}: {}",
                 region.base + offset, last_error
             ));
         }
@@ -527,7 +527,7 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
         || after.kind != MEM_IMAGE
     {
         return Err(format!(
-            "Guard Memory Integrity executable image mapping changed while hashing at 0x{:X}",
+            "Guard: отображение исполняемого образа изменилось во время хеширования по адресу 0x{:X}",
             region.base
         ));
     }
@@ -552,7 +552,7 @@ fn pin_image(address: usize) -> Result<PinnedModule, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "Guard Memory Integrity cannot retain executable image at 0x{address:X}: {}",
+            "Guard: не удалось сохранить исполняемый образ по адресу 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -564,7 +564,7 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
     if dropped != 0 {
         state.healthy = false;
         return Err(format!(
-            "Guard Memory Integrity transition ring overflow: dropped {dropped} events"
+            "Guard: переполнение кольцевого буфера переходов, потеряно событий: {dropped}"
         ));
     }
     let mut updated_dynamic = false;

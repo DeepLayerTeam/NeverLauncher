@@ -26,7 +26,7 @@ func (s Server) yggdrasilSigner0256() (*yggdrasiltexture.Signer, error) {
 	path := strings.TrimSpace(s.Config.YggdrasilSigningKeyFile)
 	if path == "" {
 		if config.IsProductionEnvironment(s.Config.Environment) {
-			return nil, errors.New("LAUNCHER_YGGDRASIL_RSA_KEY_FILE required in production")
+			return nil, errors.New("Для промышленной среды необходимо задать LAUNCHER_YGGDRASIL_RSA_KEY_FILE")
 		}
 		return yggdrasiltexture.DevelopmentSigner()
 	}

@@ -42,7 +42,7 @@ async def main():
         or any(c not in "0123456789abcdef" for c in expected_commit)
     ):
         raise AssertionError(
-            "E2E_EXPECTED_COMMIT must be a lowercase 40-digit SHA-1 commit ID"
+            "E2E_EXPECTED_COMMIT должен содержать 40-символьный SHA-1 коммита в нижнем регистре"
         )
     # Устаревшее тестовое развёртывание не является релиз-кандидатом этой версии исходников.
     async with async_playwright() as probe:
@@ -51,14 +51,14 @@ async def main():
             status = await request.get(api + "/api/v1/status", timeout=15000)
             if status.status != 200 or (await status.json()).get("version") != version:
                 raise AssertionError(
-                    f"Backend staging version mismatch: expected {version}, status {status.status}"
+                    f"Версия подготовленного Backend не совпадает: ожидалось {version}, status={status.status}"
                 )
             if (
                 expected_commit
                 and (await status.json()).get("sourceCommit") != expected_commit
             ):
                 raise AssertionError(
-                    "Backend staging source commit does not match candidate SHA"
+                    "Коммит исходников Backend в подготовленной версии не соответствует проверяемому SHA"
                 )
             readiness = await request.get(api + "/ready", timeout=15000)
             if (
@@ -66,7 +66,7 @@ async def main():
                 or (await readiness.json()).get("status") != "ready"
             ):
                 raise AssertionError(
-                    f"Backend not ready for GA E2E: {readiness.status}"
+                    f"Backend не готов к E2E-проверке GA: {readiness.status}"
                 )
         finally:
             await request.dispose()
@@ -118,7 +118,7 @@ async def main():
             )
             if created.status != 201:
                 raise AssertionError(
-                    f"Draft API create failed: {created.status} {await created.text()}"
+                    f"Не удалось создать черновик через API: {created.status} {await created.text()}"
                 )
             draft = (await created.json())["data"]
             draft_id = draft["id"]

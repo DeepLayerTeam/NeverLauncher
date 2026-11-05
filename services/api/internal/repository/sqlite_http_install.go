@@ -61,13 +61,13 @@ func (r *SQLiteHTTPRepository0372) InitializeMinimalInstallation0375(ctx context
 				return nil
 			}
 			if len(token) < 32 {
-				return errors.New("bootstrap token must have at least 32 characters")
+				return errors.New("Токен первоначальной настройки должен содержать не менее 32 символов")
 			}
 			_, e := q.ExecContext(ctx, `UPDATE http_installation_0375 SET token_hash=? WHERE singleton=1 AND token_hash=''`, minimalTokenDigest0375(token))
 			return e
 		}
 		if !used.Valid && !complete.Valid && token != "" && subtle.ConstantTimeCompare([]byte(hash), []byte(minimalTokenDigest0375(token))) != 1 {
-			return errors.New("bootstrap token differs from initialized installation")
+			return errors.New("Токен первоначальной настройки не совпадает с токеном инициализированной установки")
 		}
 		return nil
 	})
@@ -98,7 +98,7 @@ func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context
 		return model.User{}, r.failed
 	}
 	if len(r.mem.users) != 0 {
-		return model.User{}, errors.New("first administrator already exists")
+		return model.User{}, errors.New("Первый администратор уже создан")
 	}
 	token = strings.TrimSpace(token)
 	if token == "" {
@@ -159,7 +159,7 @@ func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context
 		return nil
 	})
 	if err != nil {
-		r.failed = fmt.Errorf("atomic bootstrap commit: %w", err)
+		r.failed = fmt.Errorf("Ошибка атомарного сохранения первоначальной настройки: %w", err)
 		return model.User{}, r.failed
 	}
 	r.seq++

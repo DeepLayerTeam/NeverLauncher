@@ -23,7 +23,7 @@ def release_id(version: str, commit: str) -> str:
     result = f"launcher@{version}+{commit}"
     if not RELEASE_RE.fullmatch(result):
         raise ValueError(
-            "release must include an exact SemVer and a 7..40 digit git SHA"
+            "Релиз должен содержать точную версию SemVer и SHA-коммита Git длиной от 7 до 40 символов"
         )
     return result
 
@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         or not args.jvm_jar
     ):
         parser.error(
-            "--jvm-mapping requires a UUID and --jvm-jar with embedded matching metadata"
+            "Параметр --jvm-mapping требует UUID и --jvm-jar с соответствующими встроенными метаданными"
         )
     if args.jvm_mapping:
         try:
@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
                 ]
                 if len(names) != 1 or bundle.getinfo(names[0]).file_size > 65536:
                     parser.error(
-                        "JVM JAR must contain exactly one bounded Sentry UUID metadata entry"
+                        "JAR JVM должен содержать ровно одну ограниченную запись метаданных UUID Sentry"
                     )
                 metadata = bundle.read(names[0]).decode("utf-8")
                 fields = dict(
@@ -122,13 +122,13 @@ def main(argv: list[str] | None = None) -> int:
         js_maps = sorted(assets.glob("*.js.map"))
         if not js_maps:
             parser.error(
-                "Vite JS source maps missing: build production assets before upload"
+                "Отсутствуют карты исходников Vite JS: соберите производственные ресурсы перед загрузкой"
             )
         for sm in js_maps:
             js = sm.with_suffix("")
             if not js.is_file() or js.is_symlink() or sm.is_symlink():
                 parser.error(
-                    f"map is not paired with an actual non-symlink bundle: {sm}"
+                    f"Файл карты не соответствует реальному пакету без символических ссылок: {sm}"
                 )
             try:
                 data = json.loads(sm.read_text())
@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             or path.is_symlink()
             or (path.is_file() and path.stat().st_size == 0)
         ):
-            parser.error(f"{name} not available: {path}")
+            parser.error(f"{name}: недоступно по пути {path}")
     # Загружайте до удаления карт; неудачные выгрузки сохраняют артефакты для повтора.
     command(args.cli, "releases", "new", release)
     if args.js_dist:

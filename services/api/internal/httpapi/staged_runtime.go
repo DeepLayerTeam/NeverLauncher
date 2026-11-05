@@ -370,7 +370,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 	if decodeErr == nil {
 		var extra any
 		if err := dec.Decode(&extra); err != io.EOF {
-			decodeErr = errors.New("trailing execution report")
+			decodeErr = errors.New("Лишние данные после отчёта о выполнении")
 		}
 	}
 	if decodeErr != nil {

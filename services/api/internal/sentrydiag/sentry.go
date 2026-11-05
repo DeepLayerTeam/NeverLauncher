@@ -33,7 +33,7 @@ func parseDSN(raw string) (destination, error) {
 		return destination{}, errors.New("Некорректное значение: DSN Sentry")
 	}
 	if u.User == nil || u.User.Username() == "" || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" {
-		return destination{}, errors.New("Sentry DSN lacks public key or host")
+		return destination{}, errors.New("В DSN Sentry отсутствует открытый ключ или хост")
 	}
 	if _, hasPassword := u.User.Password(); hasPassword {
 		return destination{}, errors.New("Не поддерживается: «Sentry DSN secret key»")
@@ -200,7 +200,7 @@ func (r *Reporter) send(ctx context.Context, e event) error {
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 				return nil
 			}
-			lastErr = fmt.Errorf("Sentry ingest HTTP %d", resp.StatusCode)
+			lastErr = fmt.Errorf("Sentry: ошибка приёма данных HTTP %d", resp.StatusCode)
 			if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable && resp.StatusCode != http.StatusGatewayTimeout {
 				return lastErr
 			}

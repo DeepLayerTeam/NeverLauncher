@@ -72,7 +72,7 @@ func (r *SQLRepository) CreateMigration0331(ctx context.Context, projectID, sour
 		}
 	}
 	if err = tx.Commit(); err != nil {
-		return mw.Run{}, fmt.Errorf("migration creation commit uncertain; retry with same key: %w", err)
+		return mw.Run{}, fmt.Errorf("Создание миграции не подтверждено; повторите с тем же ключом: %w", err)
 	}
 	return result, nil
 }
@@ -165,7 +165,7 @@ func (r *SQLRepository) CheckpointMigration0331(ctx context.Context, lease mw.Le
 		return mw.Run{}, err
 	}
 	if err = tx.Commit(); err != nil {
-		return mw.Run{}, fmt.Errorf("checkpoint commit uncertain; reread run before retry: %w", err)
+		return mw.Run{}, fmt.Errorf("Сохранение контрольной точки не подтверждено; перечитайте состояние запуска перед повтором: %w", err)
 	}
 	return v, nil
 }

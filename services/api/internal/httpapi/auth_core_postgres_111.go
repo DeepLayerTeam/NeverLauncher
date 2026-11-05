@@ -77,7 +77,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_sessions' AND column_name=$1)`, column).Scan(&exists); err != nil || !exists {
 			db.Close()
 			if err != nil {
-				return fmt.Errorf("session/device risk 0.12.6 schema check %s: %w", column, err)
+				return fmt.Errorf("Ошибка проверки схемы риска сессии/устройства 0.12.6 %s: %w", column, err)
 			}
 			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0015_session_device_risk_0126.sql", column)
 		}

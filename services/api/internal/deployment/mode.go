@@ -218,7 +218,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		}
 	}
 	if len(problems) != 0 {
-		return p, errors.New("deployment fail-closed: " + strings.Join(problems, "; "))
+		return p, errors.New("Развёртывание остановлено по принципу безопасного отказа: " + strings.Join(problems, "; "))
 	}
 	return p, nil
 }

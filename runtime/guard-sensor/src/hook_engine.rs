@@ -408,7 +408,7 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
                     restore_records(&mut applied);
                     state.healthy = false;
                     return Err(format!(
-                        "Guard Hook Engine detected pre-existing IAT target drift for {} in {}",
+                        "Guard Hook Engine: обнаружено ранее возникшее изменение цели IAT для {} в {}",
                         record.hook_name, record.module_path
                     ));
                 }

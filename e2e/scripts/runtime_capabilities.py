@@ -210,7 +210,7 @@ def _native_renderer():
 
 def evaluate(mode="gui", java=None):
     if mode not in ("headless", "gui"):
-        raise ValueError("invalid runtime execution mode")
+        raise ValueError("Недопустимый режим выполнения Runtime")
     ident = host_identity()
     capabilities = {
         "schemaVersion": "launcher.runner-capabilities.v1",

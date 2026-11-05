@@ -45,13 +45,13 @@ func safeURL(s string, remote bool) (string, error) {
 		return "", errors.New("Требуется: «absolute http(s) URL without credentials/fragment»")
 	}
 	if u.RawQuery != "" {
-		return "", errors.New("query parameters are forbidden (avoid replaying tokens)")
+		return "", errors.New("Параметры запроса запрещены во избежание повторного использования токенов")
 	}
 	if u.Path == "" {
 		u.Path = "/api/v1/status"
 	}
 	if u.Path != "/api/v1/status" && u.Path != "/ready" && u.Path != "/health" {
-		return "", errors.New("only read-only allowlisted endpoints can be benchmarked")
+		return "", errors.New("Замеры производительности разрешены только для одобренных конечных точек, доступных лишь для чтения")
 	}
 	if !remote {
 		host := u.Hostname()

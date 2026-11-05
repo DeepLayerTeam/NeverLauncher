@@ -214,7 +214,7 @@ func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error
 		}
 		key, err := decodeRuntimeValidationKey0212(val)
 		if err != nil {
-			return nil, fmt.Errorf("runtime validation key %q: %w", id, err)
+			return nil, fmt.Errorf("Ошибка ключа проверки Runtime %q: %w", id, err)
 		}
 		out[id] = key
 	}

@@ -31,7 +31,7 @@ def verify(evidence: Path, revision: str, public_key: Path, signature: Path) -> 
             raise ValueError(f"Данные одобрения релиза отсутствуют или некорректны: {p}")
         if p.resolve().is_relative_to(ROOT.resolve()):
             raise ValueError(
-                "approval trust anchors and signatures must be outside the source tree"
+                "Доверенные якоря и подписи утверждения должны находиться вне дерева исходников"
             )
     reports = sorted(evidence.rglob("integration-0310.json"))
     summary = review(reports, revision)

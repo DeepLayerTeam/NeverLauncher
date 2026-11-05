@@ -238,7 +238,7 @@ impl LinuxRuntimeGuard0508 {
             if !executable && !native_name(path) {return Ok(())}
             if trusted_system_library(path)? {return Ok(())}
             let expected=self.external.get(path).ok_or_else(||format!(
-                "Linux Guard external native module not approved: {}",path.display()))?;
+                "Linux Guard: внешний нативный модуль не одобрен: {}",path.display()))?;
             if &crate::guard_compatibility_0502::verified_external_native_hash(path)?!=expected {
                 return Err(format!("Изменён внешний оверлей Linux Guard: {}",path.display()));
             }

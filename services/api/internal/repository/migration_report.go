@@ -526,7 +526,7 @@ func (r *SQLRepository) ReviewMigrationReport03313(ctx context.Context, run, exp
 		return MigrationReview03313{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return MigrationReview03313{}, fmt.Errorf("RC report commit uncertain; query reviewed report before retry: %w", e)
+		return MigrationReview03313{}, fmt.Errorf("Сохранение отчёта RC не подтверждено; перед повтором запросите проверенный отчёт: %w", e)
 	}
 	return MigrationReview03313{Report: report, ReviewedBy: actor, EvidenceSHA256: evidence, EvidenceReference: reference, ReviewedAt: reviewedAt, Status: "rc_reviewed_not_ga_certified"}, nil
 }

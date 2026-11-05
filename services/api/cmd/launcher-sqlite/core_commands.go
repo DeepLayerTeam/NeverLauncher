@@ -59,7 +59,7 @@ func readPrivateJSON(path string, out any) error {
 	}
 	var extra any
 	if err = decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return errors.New("JSON input contains trailing data")
+		return errors.New("Входной JSON содержит лишние данные")
 	}
 	return nil
 }
@@ -177,7 +177,7 @@ func runCoreAction(args []string) int {
 		var key []byte
 		key, err = hex.DecodeString(strings.TrimSpace(*rootHex))
 		if err == nil && len(key) != ed25519.PublicKeySize {
-			err = errors.New("--trusted-root must be 32-byte hex Ed25519 public key")
+			err = errors.New("Параметр --trusted-root должен содержать открытый ключ Ed25519 длиной 32 байта в шестнадцатеричном виде")
 		}
 		if err == nil {
 			output, err = repo.PublishDraft(ctx, *project, *release, *expected, []ed25519.PublicKey{ed25519.PublicKey(key)}, *actor)

@@ -53,7 +53,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 		return nil, err
 	}
 	if len(data) > MaxDatabaseBytes {
-		return nil, errors.New("FileAuth database exceeds 16 MiB")
+		return nil, errors.New("База данных FileAuth превышает 16 МиБ")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	startToken, err := decoder.Token()
@@ -78,11 +78,11 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 		}
 		uuid := strings.ToLower(strings.TrimSpace(key))
 		if !uuidPattern.MatchString(uuid) || (src.UUID != "" && !strings.EqualFold(src.UUID, uuid)) {
-			return nil, errors.New("FileAuth key/UUID mismatch or invalid UUID")
+			return nil, errors.New("Ключ FileAuth не соответствует UUID либо UUID недопустим")
 		}
 		name := src.Username
 		if !usernamePattern.MatchString(name) {
-			return nil, errors.New("FileAuth username fails Minecraft naming rules")
+			return nil, errors.New("Имя пользователя FileAuth не соответствует правилам Minecraft")
 		}
 		if names[strings.ToLower(name)] || uuids[uuid] {
 			return nil, errors.New("Обнаружен дубликат: «FileAuth username or UUID»")
@@ -91,11 +91,11 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 		uuids[uuid] = true
 		encoded, err := EncodeCredential(format, src.Password)
 		if err != nil {
-			return nil, fmt.Errorf("FileAuth credential format invalid for %q: %w", name, err)
+			return nil, fmt.Errorf("Некорректный формат учётных данных FileAuth для %q: %w", name, err)
 		}
 		items = append(items, Account{UUID: uuid, Username: name, Email: strings.ToLower(name) + "@" + EmailDomain, PasswordHash: encoded})
 		if len(items) > MaxAccounts {
-			return nil, errors.New("FileAuth account count exceeds limit")
+			return nil, errors.New("Количество учётных записей FileAuth превышает лимит")
 		}
 	}
 	endToken, err := decoder.Token()
@@ -104,7 +104,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
-		return nil, errors.New("FileAuth Database.json contains trailing data")
+		return nil, errors.New("В Database.json FileAuth обнаружены лишние данные")
 	}
 	if len(items) == 0 {
 		return nil, errors.New("Пустое значение: «FileAuth account database»")
@@ -150,7 +150,7 @@ func EncodeCredential(format, hash string) (string, error) {
 		algorithm = strings.TrimSuffix(algorithm, "-hex")
 		length := map[string]int{"md5": 32, "sha1": 40, "sha256": 64, "sha512": 128}[algorithm]
 		if length == 0 || len(hash) != length {
-			return "", errors.New("digest length doesn't match selected algorithm")
+			return "", errors.New("Длина контрольной суммы не соответствует выбранному алгоритму")
 		}
 		raw, err := hex.DecodeString(hash)
 		if err != nil || len(raw)*2 != len(hash) {
@@ -173,7 +173,7 @@ func EncodeCredential(format, hash string) (string, error) {
 		}
 		cost := int(hash[4]-'0')*10 + int(hash[5]-'0')
 		if cost < 4 || cost > 16 {
-			return "", errors.New("bcrypt cost outside 4..16")
+			return "", errors.New("Параметр стоимости bcrypt находится вне диапазона 4..16")
 		}
 	case "argon2id":
 		if !ValidateArgon2id(hash) {

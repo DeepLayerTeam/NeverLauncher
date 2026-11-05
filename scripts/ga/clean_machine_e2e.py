@@ -94,7 +94,7 @@ def real_clean_install(
     if osname == "Linux":
         if os.geteuid() != 0:
             raise RuntimeError(
-                "dpkg clean-machine installation requires root inside disposable VM"
+                "Для чистой установки через dpkg требуются права root внутри временной виртуальной машины"
             )
         checked(["dpkg", "--install", installer], timeout=600)
         checked(
@@ -119,7 +119,7 @@ def real_clean_install(
         # аутентифицированную границу Desktop → Guard. Сертификация ОБЯЗАНА использовать
         # отдельный реальный GUI E2E Desktop/Guard в Windows.
         raise RuntimeError(
-            "Windows game-launch certification requires external Desktop/Guard GUI E2E; direct Runtime launch is not a valid security test"
+            "Сертификация запуска игры на Windows требует внешнего GUI E2E-теста Desktop/Guard; прямой запуск Runtime не считается действительной проверкой безопасности"
         )
     else:
         raise RuntimeError("Не поддерживается: «GA OS»")
@@ -191,7 +191,7 @@ def real_clean_install(
         for marker in ("LWJGL version", "OpenGL", "Setting user:", "Minecraft")
     ):
         raise RuntimeError(
-            "no recognizable Minecraft initialization evidence in real process log"
+            "В журнале реального процесса не найдены признаки инициализации Minecraft"
         )
     if not launched.get("timed_out") and not launched.get("success"):
         raise RuntimeError("Процесс Minecraft аварийно завершился до штатного выхода")

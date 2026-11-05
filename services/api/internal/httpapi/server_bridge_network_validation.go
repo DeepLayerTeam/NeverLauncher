@@ -20,7 +20,7 @@ func parseNetworkCapacity0288(data []byte) (*int, error) {
 		return nil, err
 	}
 	if dec.Decode(&struct{}{}) != io.EOF {
-		return nil, errors.New("trailing capacity JSON")
+		return nil, errors.New("Лишние данные после JSON с параметрами пропускной способности")
 	}
 	if n < 0 || n > 1000000 {
 		return nil, errors.New("capacityLimit: требуется «0..1000000»")

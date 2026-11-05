@@ -201,7 +201,7 @@ func (r *SQLRepository) StageMigrationCutover03311(ctx context.Context, runID st
 		return co.Route{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return co.Route{}, fmt.Errorf("cutover stage commit uncertain; GET before retry: %w", e)
+		return co.Route{}, fmt.Errorf("Сохранение этапа переключения не подтверждено; выполните GET перед повтором: %w", e)
 	}
 	return v, nil
 }
@@ -324,7 +324,7 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 		return co.Route{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return co.Route{}, fmt.Errorf("cutover commit uncertain; GET before retry: %w", e)
+		return co.Route{}, fmt.Errorf("Сохранение переключения не подтверждено; выполните GET перед повтором: %w", e)
 	}
 	return v, nil
 }
@@ -363,7 +363,7 @@ func (r *SQLRepository) CancelMigrationCutover03311(ctx context.Context, runID, 
 		return co.Route{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return co.Route{}, fmt.Errorf("cutover cancellation commit uncertain; GET before retry: %w", e)
+		return co.Route{}, fmt.Errorf("Сохранение отмены переключения не подтверждено; выполните GET перед повтором: %w", e)
 	}
 	return v, nil
 }

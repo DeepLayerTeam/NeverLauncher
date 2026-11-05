@@ -193,7 +193,7 @@ fn reject_debug_state(indicators: DebugIndicators) -> Result<(), String> {
         || !indicators.debug_flags_no_debug_inherit
     {
         return Err(format!(
-            "Guard Debug & Instrumentation Guard detected debugger boundary: local={}, remote={}, port={}, object={}, noDebugInherit={}",
+            "Guard: обнаружена граница отладчика: local={}, remote={}, port={}, object={}, noDebugInherit={}",
             indicators.debugger_present,
             indicators.remote_debugger_present,
             indicators.debug_port_present,

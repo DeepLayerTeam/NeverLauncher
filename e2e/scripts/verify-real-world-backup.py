@@ -35,17 +35,17 @@ def check_files(root):
     level_name = "world"
     properties = root / "server.properties"
     if not properties.is_file():
-        raise RuntimeError("real Paper server.properties was not copied")
+        raise RuntimeError("Файл server.properties реального сервера Paper не был скопирован")
     for line in properties.read_text(errors="replace").splitlines():
         if line.startswith("level-name="):
             level_name = line.partition("=")[2].strip()
     world = root / level_name
     if not (world / "level.dat").is_file():
-        raise RuntimeError("real Paper level.dat missing after graceful shutdown")
+        raise RuntimeError("После штатной остановки Paper отсутствует файл level.dat")
     players = sorted((world / "playerdata").glob("*.dat"))
     if not players:
         raise RuntimeError(
-            "no persisted real Minecraft player UUID data after client join"
+            "После входа клиента не сохранены реальные данные UUID игрока Minecraft"
         )
     plugin_root = root / "plugins"
     plugins = sorted(
@@ -56,7 +56,7 @@ def check_files(root):
     )
     if not plugins:
         raise RuntimeError(
-            "no real Minecraft plugin configuration/data files were persisted"
+            "Реальные файлы конфигурации или данных плагинов Minecraft не были сохранены"
         )
     chosen = [world / "level.dat", *players, *plugins]
     return {p.relative_to(root).as_posix(): digest(p) for p in chosen}
@@ -73,7 +73,7 @@ def main():
     parser.add_argument("--source-commit", default="")
     args = parser.parse_args()
     if not args.cli.is_file():
-        parser.error("compiled Launcher CLI not found")
+        parser.error("Не найдена собранная утилита Launcher CLI")
     compose = [
         "docker",
         "compose",
@@ -86,14 +86,14 @@ def main():
     ]
     paper = execute([*compose, "ps", "-q", "paper"]).strip()
     if not paper:
-        raise RuntimeError("real Paper container unavailable")
+        raise RuntimeError("Реальный контейнер Paper недоступен")
     # Docker SIGTERM НЕ доказывает сохранение Minecraft. Отправляйте настоящие аутентифицированные
     # консольные команды Minecraft по недоступному снаружи внутреннему каналу E2E RCON.
     flush = execute(
         [*compose, "exec", "-T", "paper", "rcon-cli", "save-all", "flush"], timeout=45
     )
     if not flush.strip():
-        raise RuntimeError("Paper did not acknowledge save-all flush")
+        raise RuntimeError("Paper не подтвердил сброс сохранённых данных командой save-all")
     execute([*compose, "exec", "-T", "paper", "rcon-cli", "stop"], timeout=45)
     deadline = time.monotonic() + 95
     while True:
@@ -103,11 +103,11 @@ def main():
         if not state.get("Running"):
             break
         if time.monotonic() >= deadline:
-            raise RuntimeError("Paper did not exit after Minecraft console stop")
+            raise RuntimeError("Paper не завершился после команды остановки в консоли Minecraft")
         time.sleep(1)
     if state.get("OOMKilled") or state.get("ExitCode") != 0:
         raise RuntimeError(
-            f"Paper shutdown did not complete cleanly: exit={state.get('ExitCode')} OOM={state.get('OOMKilled')}"
+            f"Завершение Paper прошло с ошибкой: exit={state.get('ExitCode')}, OOM={state.get('OOMKilled')}"
         )
     with tempfile.TemporaryDirectory(prefix="nl-real-world-0290-") as temp:
         root = Path(temp) / "paper-real"
@@ -125,7 +125,7 @@ def main():
         )
         backup_id = created["manifest"]["id"]
         if created["manifest"]["consistency"] != "confirmed-stopped":
-            raise RuntimeError("backup claims a different consistency policy")
+            raise RuntimeError("В резервной копии указана другая политика согласованности")
         execute([*base, "verify", *extra, "--id", backup_id], timeout=180)
         execute(
             [
@@ -144,7 +144,7 @@ def main():
         actual = check_files(restored)
         if actual != source:
             raise RuntimeError(
-                "restored real world/playerdata/plugin data differs from source"
+                "Восстановленные данные мира, игроков или плагинов отличаются от источника"
             )
         # Перезапись завершённого восстановления должна вызывать ошибку, а не молча проходить.
         second = subprocess.run(
@@ -164,7 +164,7 @@ def main():
             timeout=60,
         )
         if second.returncode == 0:
-            raise RuntimeError("restore unexpectedly overwrote an existing destination")
+            raise RuntimeError("Восстановление неожиданно перезаписало существующий целевой каталог")
         # Проверяйте реальное восстановление, а не простой перезапуск неизменённых данных
         # Paper. В одноразовом окружении Docker E2E повредите сохранённый инвентарь игрока в
         # ОСТАНОВЛЕННОМ исходном контейнере, затем верните в /data независимо проверенный
@@ -189,7 +189,7 @@ def main():
             )
             if digest(damaged / "player.dat") == source[player_file]:
                 raise RuntimeError(
-                    "failed to corrupt stopped-container player data before restore"
+                    "Не удалось намеренно повредить данные игрока в остановленном контейнере перед восстановлением"
                 )
         # Изолированное восстановление CLI публикуется атомарно. Тест затем
         # восстанавливает снимок на одноразовом томе Minecraft.
@@ -199,7 +199,7 @@ def main():
             execute([*compose, "cp", "paper:/data/.", str(applied)], timeout=180)
             if check_files(applied) != source:
                 raise RuntimeError(
-                    "Paper container data differs from restored snapshot"
+                    "Данные контейнера Paper отличаются от восстановленного снимка"
                 )
         # Повторное восстановление CLI уже отклонено выше; резервное копирование и
         # изолированное восстановление не запускают JVM автоматически. Верните в работу ТОТ
@@ -209,7 +209,7 @@ def main():
         execute([*compose, "up", "-d", "paper"], timeout=180)
         restarted = execute([*compose, "ps", "-q", "paper"]).strip()
         if not restarted:
-            raise RuntimeError("Paper container disappeared during recovery")
+            raise RuntimeError("Контейнер Paper исчез во время восстановления")
         for _ in range(120):
             state = json.loads(
                 execute(["docker", "inspect", "--format", "{{json .State}}", restarted])
@@ -220,11 +220,11 @@ def main():
             ):
                 break
             if not state.get("Running"):
-                raise RuntimeError("Paper failed to restart after world backup")
+                raise RuntimeError("Не удалось перезапустить Paper после резервного копирования мира")
             time.sleep(2)
         else:
             raise RuntimeError(
-                "Paper did not return to healthy state after world backup"
+                "После резервного копирования мира Paper не вернулся в работоспособное состояние"
             )
         report = {
             "schemaVersion": "launcher.server-control.real-world-restore.v1",

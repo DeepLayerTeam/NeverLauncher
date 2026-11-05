@@ -392,7 +392,7 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	}
 	defer conn.Close()
 	if _, err = conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
-		return fmt.Errorf("SQLite BEGIN IMMEDIATE: %w", err)
+		return fmt.Errorf("Ошибка SQLite BEGIN IMMEDIATE: %w", err)
 	}
 	active := true
 	defer func() {

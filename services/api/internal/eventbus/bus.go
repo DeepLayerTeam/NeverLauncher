@@ -23,7 +23,7 @@ const ProtocolVersion = "1.0"
 
 var (
 	ErrHookRejected      = errors.New("Синхронный хук расширения отклонил операцию")
-	ErrHookTimeout       = errors.New("extension sync hook timeout")
+	ErrHookTimeout       = errors.New("Превышено время ожидания синхронного обработчика расширения")
 	ErrPermanentDelivery = errors.New("Событие расширения окончательно отклонено")
 )
 
@@ -124,7 +124,7 @@ type Bus struct {
 func New(cfg Config, repo repository.Repository) (*Bus, error) {
 	store, ok := repo.(repository.ExtensionEventStore)
 	if !ok {
-		return nil, errors.New("repository does not implement durable Extensions event store")
+		return nil, errors.New("Репозиторий не реализует постоянное хранилище событий расширений")
 	}
 	return &Bus{cfg: cfg.normalized(), store: store}, nil
 }
@@ -248,7 +248,7 @@ func (b *Bus) Subscribe(ctx context.Context, sub model.ExtensionEventSubscriptio
 	if sub.Mode == model.ExtensionEventModeSync {
 		spec, _ := Spec(sub.EventType)
 		if !spec.SyncAllowed {
-			return model.ExtensionEventSubscription{}, fmt.Errorf("event %s is async-only", sub.EventType)
+			return model.ExtensionEventSubscription{}, fmt.Errorf("Событие %s допускает только асинхронную обработку", sub.EventType)
 		}
 	}
 	sub.Enabled = true

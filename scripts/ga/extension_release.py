@@ -53,15 +53,15 @@ def verify_matrix(path: Path) -> str:
             "limitations"
         ):
             raise ValueError(
-                f"module {m.get('id')}: missing explicit outcome/limitation"
+                f"Модуль {m.get('id')}: отсутствует явный результат или описание ограничения"
             )
         if m.get("status") == "verified":
             raise ValueError(
-                f"module {m['id']}: full equivalence needs separate module-specific live proof"
+                f"Модуль {m['id']}: для полной эквивалентности требуется отдельное реальное подтверждение для этого модуля"
             )
         if not m.get("sourceRefs") or not m.get("testRefs"):
             raise ValueError(
-                f"module {m['id']}: missing executable source/test references"
+                f"Модуль {m['id']}: отсутствуют ссылки на исполняемые исходники или тесты"
             )
         for rel in m["sourceRefs"] + m["testRefs"]:
             candidate = ROOT / rel
@@ -93,7 +93,7 @@ def certify(
     actual = validate(evidence, commit, version, run_id, attempt)
     if cert != actual:
         raise ValueError(
-            "extension certificate does not match the six raw JVM run results"
+            "Сертификат расширения не соответствует шести исходным результатам запуска JVM"
         )
     if cert.get("schemaVersion") != "launcher.extensions.acceptance.v1":
         raise ValueError("Не поддерживается: «extension acceptance certificate»")
@@ -118,12 +118,12 @@ def certify(
         )
         if proc.returncode != 0:
             raise ValueError(
-                f"{identifier}: package signing check failed: {proc.stderr[-600:]}"
+                f"{identifier}: проверка подписи пакета завершилась ошибкой: {proc.stderr[-600:]}"
             )
         with zipfile.ZipFile(package) as zf:
             if f"payload/{inner_jar}" not in zf.namelist():
                 raise ValueError(
-                    f"{identifier}: missing executable JAR in signed package"
+                    f"{identifier}: в подписанном пакете отсутствует исполняемый JAR"
                 )
             digest = hashlib.sha256(zf.read(f"payload/{inner_jar}")).hexdigest()
             if not re.fullmatch("[0-9a-f]{64}", digest):

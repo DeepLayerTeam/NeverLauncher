@@ -133,7 +133,7 @@ func (f *Fetcher) dialValidated(ctx context.Context, network, address string) (n
 	}
 	ips, err := f.lookup(ctx, host)
 	if err != nil || len(ips) == 0 || len(ips) > 32 {
-		return nil, fmt.Errorf("%w: DNS resolution rejected", ErrUnsafe)
+		return nil, fmt.Errorf("%w: DNS-разрешение отклонено", ErrUnsafe)
 	}
 	// Проверить ВСЕ записи A/AAAA до использования любой из них, предотвращая DNS-rebinding.
 	for _, ip := range ips {
@@ -149,7 +149,7 @@ func (f *Fetcher) dialValidated(ctx context.Context, network, address string) (n
 		}
 		lastErr = e
 	}
-	return nil, fmt.Errorf("%w: dial validated address: %v", ErrRemote, lastErr)
+	return nil, fmt.Errorf("%w: не удалось подключиться к проверенному адресу: %v", ErrRemote, lastErr)
 }
 
 // Fetch имеет жёсткие ограничения времени ответа, DNS, подключения, TLS и общего времени. Не используются прокси,
@@ -208,7 +208,7 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL, kind, model string) (textur
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, texturepng.MaxEncodedBytes+1))
 	if err != nil {
-		return empty, fmt.Errorf("%w: reading response: %v", ErrRemote, err)
+		return empty, fmt.Errorf("%w: ошибка чтения ответа: %v", ErrRemote, err)
 	}
 	if len(data) > texturepng.MaxEncodedBytes {
 		return empty, ErrTooLarge

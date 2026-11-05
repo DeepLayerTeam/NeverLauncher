@@ -115,7 +115,7 @@ func (r *SQLRepository) SaveMigrationPlan0442(ctx context.Context, p gp.Plan) (g
 		return gp.Plan{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return gp.Plan{}, fmt.Errorf("migration plan commit uncertain; reread plan before retry: %w", e)
+		return gp.Plan{}, fmt.Errorf("Сохранение плана миграции не подтверждено; перечитайте план перед повтором: %w", e)
 	}
 	return p, nil
 }

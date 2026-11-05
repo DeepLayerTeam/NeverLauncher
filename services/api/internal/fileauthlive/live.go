@@ -99,7 +99,7 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 		return in, errors.New("Некорректное значение: идентификатор действующего провайдера FileAuth")
 	}
 	if !fileauth.SupportedFormat(in.PasswordFormat) {
-		return in, fmt.Errorf("live FileAuth provider %q: unsupported explicit password format", in.ID)
+		return in, fmt.Errorf("Действующий провайдер FileAuth %q: явный формат пароля не поддерживается", in.ID)
 	}
 	if in.DatabasePath == "" || !filepath.IsAbs(in.DatabasePath) || !strings.EqualFold(filepath.Base(in.DatabasePath), "Database.json") {
 		return in, fmt.Errorf("Требуется: «live FileAuth provider %q: absolute Database.json path»", in.ID)
@@ -147,7 +147,7 @@ func NewLiveConnector(ctx context.Context, input LiveConfig, verifier func(passw
 	}
 	c := &LiveConnector{cfg: cfg, verify: verifier}
 	if _, err := c.current(ctx); err != nil {
-		return nil, fmt.Errorf("live FileAuth provider %q: %w", cfg.ID, err)
+		return nil, fmt.Errorf("Ошибка действующего провайдера FileAuth %q: %w", cfg.ID, err)
 	}
 	return c, nil
 }

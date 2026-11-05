@@ -146,14 +146,14 @@ def check_report(report: dict, name: str, target: str, commit: str) -> None:
         raise GateError(f"{target}/{name}: отчёт не соответствует фактическому выполнению")
     for check in REQUIRED_REPORTS[name]:
         if report.get(check) is not True:
-            raise GateError(f"{target}/{name}: {check} was not verified")
+            raise GateError(f"{target}/{name}: проверка {check} не подтверждена")
     if name == "gameplay":
         loaders = report.get("loaders")
         if not isinstance(loaders, list) or not LOADER_SET.issubset(
             set(str(v) for v in loaders)
         ):
             raise GateError(
-                f"{target}/gameplay: required real Minecraft loaders missing"
+                f"{target}/gameplay: отсутствуют обязательные реальные загрузчики Minecraft"
             )
     if name == "installer" and not report.get("trustedOSSigner"):
         raise GateError(f"{target}/installer: отсутствует доверенный сертификат подписи ОС")
@@ -236,7 +236,7 @@ def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
     found = {p.name for p in evidence.iterdir()}
     if found != TARGETS:
         raise GateError(
-            f"GA requires exactly six independent targets; missing={sorted(TARGETS - found)} extra={sorted(found - TARGETS)}"
+            f"Для GA требуется ровно шесть независимых целей; отсутствуют={sorted(TARGETS - found)}, лишние={sorted(found - TARGETS)}"
         )
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(trusted_public_key))
     checked = [

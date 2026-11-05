@@ -49,7 +49,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	}
 	pg, err := pgx.Connect(ctx, postgresDSN)
 	if err != nil {
-		return out, fmt.Errorf("connect PostgreSQL (%T; DSN redacted)", err)
+		return out, fmt.Errorf("Ошибка подключения к PostgreSQL (%T; DSN скрыт)", err)
 	}
 	defer pg.Close(context.Background())
 	tx, err := pg.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
@@ -105,13 +105,13 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	}
 	actual, err := sqlitedurable.VerifyBackup(ctx, tmp)
 	if err != nil {
-		return out, fmt.Errorf("reconstructed SQLite backup integrity: %w", err)
+		return out, fmt.Errorf("Ошибка проверки целостности восстановленной резервной копии SQLite: %w", err)
 	}
 	if actual.SHA256 != out.SnapshotSHA256 {
 		return out, errors.New("Несовпадение: «reconstructed SQLite SHA»")
 	}
 	if err = verifyRestoredCore(ctx, tmp); err != nil {
-		return out, fmt.Errorf("reconstructed application invariants: %w", err)
+		return out, fmt.Errorf("Ошибка проверки инвариантов восстановленного приложения: %w", err)
 	}
 	src, err := sql.Open("sqlite", "file:"+tmp+"?mode=ro&_pragma=foreign_keys(1)")
 	if err != nil {
@@ -123,7 +123,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 		err = requireCoreTables(defs)
 	}
 	if err == nil && len(out.Tables) != len(defs) {
-		err = errors.New("PostgreSQL table set differs from original SQLite snapshot")
+		err = errors.New("Набор таблиц PostgreSQL отличается от исходного снимка SQLite")
 	}
 	for _, table := range defs {
 		if err != nil {
@@ -133,7 +133,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	}
 	err = errors.Join(err, src.Close())
 	if err != nil {
-		return out, fmt.Errorf("PostgreSQL table parity: %w", err)
+		return out, fmt.Errorf("Ошибка сверки таблиц PostgreSQL: %w", err)
 	}
 	// Создать новую копию SQLite и JSON-метаданные, не уничтожая прежних данных.
 	// Жёсткая ссылка атомарна; при ошибке неполная пара удаляется. Проверка

@@ -145,10 +145,10 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		return RuntimeConfig{}, fmt.Errorf("Требуется: «SQL connector %q: dsn or dsnEnv»", cfg.ID)
 	}
 	if err := validateTableIdentifier(cfg.Table); err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор SQL %q: %w", cfg.ID, err)
 	}
 	if err := validateColumns(cfg.Columns); err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор SQL %q: %w", cfg.ID, err)
 	}
 	switch cfg.Password.Algorithm {
 	case "argon2id":
@@ -224,15 +224,15 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	connectTimeout, err := parseDurationDefault(cfg.ConnectTimeout, 5*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector %q connectTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор SQL %q, параметр connectTimeout: %w", cfg.ID, err)
 	}
 	queryTimeout, err := parseDurationDefault(cfg.QueryTimeout, 3*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector %q queryTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор SQL %q, параметр queryTimeout: %w", cfg.ID, err)
 	}
 	lifetime, err := parseDurationDefault(cfg.ConnMaxLifetime, 4*time.Minute)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector %q connMaxLifetime: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор SQL %q, параметр connMaxLifetime: %w", cfg.ID, err)
 	}
 	if cfg.MaxOpenConns <= 0 {
 		cfg.MaxOpenConns = 10

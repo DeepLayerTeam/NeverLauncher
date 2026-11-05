@@ -233,13 +233,13 @@ def authorize_project(
         raise DrillError("Некорректное имя проекта Docker Compose")
     if confirmation != project:
         raise DrillError(
-            "refusing destructive operation: --confirm must exactly match --project"
+            "Разрушающая операция отклонена: значение --confirm должно точно совпадать с --project"
         )
     if PROJECT_PATTERN.fullmatch(project):
         return
     if chaos_mode or not (production and approved):
         raise DrillError(
-            "production project requires explicit production mode and maintenance approval"
+            "Для рабочего проекта требуются явно выбранный производственный режим и разрешение на обслуживание"
         )
 
 
@@ -1073,7 +1073,7 @@ def restore_fresh(
     for item in (VOLUMES if "network-ha" in COMPOSE_PROFILES else manifest["volumes"]):
         if docker_volume_exists(volume_name(project, item)):
             raise DrillError(
-                "target already has state: fresh project required; refusing to overwrite"
+                "В целевой системе уже есть данные: требуется новый проект; перезапись отклонена"
             )
     # Проверяйте дамп PostgreSQL до любых изменений; отклоняйте существующие целевые контейнеры, даже если их
     # тома были вручную переименованы или удалены.

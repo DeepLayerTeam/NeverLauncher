@@ -93,7 +93,7 @@ func (c *Client) ExchangeAuthorizationCode(ctx context.Context, clientID, redire
 		return OAuthTokens{}, err
 	}
 	if result.AccessToken == "" || !strings.EqualFold(result.TokenType, "Bearer") || result.ExpiresIn <= 0 {
-		return OAuthTokens{}, errors.New("incomplete Microsoft authorization code token response")
+		return OAuthTokens{}, errors.New("Неполный ответ Microsoft с токеном по коду авторизации")
 	}
 	return result, nil
 }

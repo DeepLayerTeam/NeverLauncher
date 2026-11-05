@@ -206,7 +206,7 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
     let identity = inspect_jvm_identity()?;
     if !CERTIFIED_JAVA_MAJORS.contains(&identity.java_major) {
         return Err(format!(
-            "Guard JVM-Aware Protection unsupported Java major {}; certified majors are 8/16/17/21/25",
+            "Guard: основная версия Java {} не поддерживается; сертифицированы версии 8/16/17/21/25",
             identity.java_major
         ));
     }
@@ -817,7 +817,7 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
     let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
     if unsafe { GetModuleHandleExW(flags, address, &mut module) } == 0 || module.is_null() {
         return Err(format!(
-            "Guard JVM-Aware Protection cannot resolve Sensor module: {}",
+            "Guard: не удалось определить расположение модуля Sensor: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -834,7 +834,7 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
         || info.size_of_image == 0
     {
         return Err(format!(
-            "Guard JVM-Aware Protection cannot query Sensor module information: {}",
+            "Guard: не удалось получить сведения о модуле Sensor: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -903,7 +903,7 @@ fn inspect_jvm_identity() -> Result<JvmIdentity, String> {
         || info.size_of_image == 0
     {
         return Err(format!(
-            "Guard JVM-Aware Protection cannot query jvm.dll module information: {}",
+            "Guard: не удалось получить сведения о модуле jvm.dll: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -926,7 +926,7 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
         as usize;
     if length == 0 || length >= buffer.len() {
         return Err(format!(
-            "Guard JVM-Aware Protection cannot resolve jvm.dll path: {}",
+            "Guard: не удалось определить путь к jvm.dll: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -939,7 +939,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
     let size = unsafe { GetFileVersionInfoSizeW(path_w.as_ptr(), &mut handle) };
     if size == 0 {
         return Err(format!(
-            "Guard JVM-Aware Protection cannot read jvm.dll version resource: {}",
+            "Guard: не удалось прочитать ресурс версии jvm.dll: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -949,7 +949,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
     } == 0
     {
         return Err(format!(
-            "Guard JVM-Aware Protection cannot load jvm.dll version resource: {}",
+            "Guard: не удалось загрузить ресурс версии jvm.dll: {}",
             std::io::Error::last_os_error()
         ));
     }

@@ -101,7 +101,7 @@ func EvaluateApplied(applied map[string]string) (Status, error) {
 		}
 		if checksum != m.Checksum {
 			st.Compatible = false
-			return st, fmt.Errorf("checksum migration %s changed: database=%s binary=%s", version, checksum, m.Checksum)
+			return st, fmt.Errorf("Контрольная сумма миграции %s изменилась: database=%s, binary=%s", version, checksum, m.Checksum)
 		}
 	}
 	for _, m := range ms {
@@ -113,11 +113,11 @@ func EvaluateApplied(applied map[string]string) (Status, error) {
 	sort.Strings(st.Unverified)
 	if len(st.Unknown) > 0 {
 		st.Compatible = false
-		return st, fmt.Errorf("database contains migrations unknown to this binary: %s", strings.Join(st.Unknown, ","))
+		return st, fmt.Errorf("База данных содержит миграции, неизвестные этому исполняемому файлу: %s", strings.Join(st.Unknown, ","))
 	}
 	if len(st.Unverified) > 0 {
 		st.Compatible = false
-		return st, fmt.Errorf("database contains migrations without sealed checksum: %s; run migration apply with the matching binary", strings.Join(st.Unverified, ","))
+		return st, fmt.Errorf("База данных содержит миграции без зафиксированной контрольной суммы: %s; примените миграции соответствующим исполняемым файлом", strings.Join(st.Unverified, ","))
 	}
 	return st, nil
 }
@@ -164,7 +164,7 @@ func validateExistingBeforeApply(ctx context.Context, db *sql.DB, ms []Migration
 		}
 		expected, ok := known[version]
 		if !ok {
-			return fmt.Errorf("database contains migration %s unknown to this binary; refusing downgrade/apply", version)
+			return fmt.Errorf("База данных содержит неизвестную этому исполняемому файлу миграцию %s; откат или применение запрещены", version)
 		}
 		if checksum != "" && checksum != expected {
 			return fmt.Errorf("Несовпадение: «migration %s checksum»", version)
@@ -186,7 +186,7 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 	}
 	defer lockConn.Close()
 	if _, err := lockConn.ExecContext(ctx, `SELECT pg_advisory_lock(718033100100)`); err != nil {
-		return Status{}, fmt.Errorf("acquire migration advisory lock: %w", err)
+		return Status{}, fmt.Errorf("Не удалось получить рекомендательную блокировку миграции: %w", err)
 	}
 	defer func() {
 		unlockCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

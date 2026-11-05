@@ -393,7 +393,7 @@ pub async fn resolve_compatibility(
     };
     if raw_game_args.is_empty() {
         return Err(format!(
-            "Minecraft {} metadata does not contain executable arguments.game or minecraftArguments",
+            "Метаданные Minecraft {} не содержат аргументов запуска arguments.game или minecraftArguments",
             merged.id
         ));
     }
@@ -801,7 +801,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v2 requires exact Java {}",
+                "Метаданные Mojang для Minecraft {} не содержат javaVersion.majorVersion; для 0.17.0v2 требуется точная версия Java {}",
                 merged.id, expected
             )),
         };
@@ -815,7 +815,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v3 requires exact Java {}",
+                "Метаданные Mojang для Minecraft {} не содержат javaVersion.majorVersion; для 0.17.0v3 требуется точная версия Java {}",
                 merged.id, expected
             )),
         };
@@ -829,7 +829,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.6 requires exact Java {}",
+                "Метаданные Mojang для Minecraft {} не содержат javaVersion.majorVersion; для 0.16.6 требуется точная версия Java {}",
                 merged.id, expected
             )),
         };
@@ -843,7 +843,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.7 requires exact Java {}",
+                "Метаданные Mojang для Minecraft {} не содержат javaVersion.majorVersion; для 0.16.7 требуется точная версия Java {}",
                 merged.id, expected
             )),
         };
@@ -857,7 +857,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.8 requires exact Java {}",
+                "Метаданные Mojang для Minecraft {} не содержат javaVersion.majorVersion; для 0.16.8 требуется точная версия Java {}",
                 merged.id, expected
             )),
         };

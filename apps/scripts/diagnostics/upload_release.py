@@ -23,7 +23,7 @@ def release_id(version: str, commit: str) -> str:
     result = f"launcher@{version}+{commit}"
     if not RELEASE_RE.fullmatch(result):
         raise ValueError(
-            "release must include an exact SemVer and a 7..40 digit git SHA"
+            "Релиз должен содержать точную версию SemVer и SHA-коммита Git длиной от 7 до 40 символов"
         )
     return result
 
@@ -128,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
             js = sm.with_suffix("")
             if not js.is_file() or js.is_symlink() or sm.is_symlink():
                 parser.error(
-                    f"map is not paired with an actual non-symlink bundle: {sm}"
+                    f"Файл карты не соответствует реальному пакету без символических ссылок: {sm}"
                 )
             try:
                 data = json.loads(sm.read_text())
@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             or path.is_symlink()
             or (path.is_file() and path.stat().st_size == 0)
         ):
-            parser.error(f"{name} not available: {path}")
+            parser.error(f"{name}: недоступно по пути {path}")
     # Загружайте до удаления карт; неудачные выгрузки сохраняют артефакты для повтора.
     command(args.cli, "releases", "new", release)
     if args.js_dist:

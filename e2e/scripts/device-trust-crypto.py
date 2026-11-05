@@ -25,42 +25,42 @@ def run_bytes(*args: str, input_bytes: bytes | None = None) -> bytes:
 
 def read_der_length(data: bytes, pos: int) -> tuple[int, int]:
     if pos >= len(data):
-        raise ValueError("truncated DER length")
+        raise ValueError("Обрезанное поле длины DER")
     first = data[pos]
     pos += 1
     if first < 0x80:
         return first, pos
     count = first & 0x7F
     if count == 0 or count > 4 or pos + count > len(data):
-        raise ValueError("invalid DER length")
+        raise ValueError("Недопустимая длина DER")
     return int.from_bytes(data[pos : pos + count], "big"), pos + count
 
 
 def der_ecdsa_to_p1363(signature: bytes, width: int = 32) -> bytes:
     pos = 0
     if len(signature) < 2 or signature[pos] != 0x30:
-        raise ValueError("ECDSA signature is not a DER sequence")
+        raise ValueError("Подпись ECDSA не является последовательностью DER")
     pos += 1
     seq_len, pos = read_der_length(signature, pos)
     if pos + seq_len != len(signature):
-        raise ValueError("invalid DER sequence length")
+        raise ValueError("Недопустимая длина последовательности DER")
     values: list[bytes] = []
     for _ in range(2):
         if pos >= len(signature) or signature[pos] != 0x02:
-            raise ValueError("ECDSA signature integer is missing")
+            raise ValueError("В подписи ECDSA отсутствует целое число")
         pos += 1
         int_len, pos = read_der_length(signature, pos)
         if int_len == 0 or pos + int_len > len(signature):
-            raise ValueError("invalid ECDSA integer length")
+            raise ValueError("Недопустимая длина целого числа ECDSA")
         value = signature[pos : pos + int_len]
         pos += int_len
         while len(value) > 1 and value[0] == 0:
             value = value[1:]
         if len(value) > width:
-            raise ValueError("ECDSA integer exceeds curve width")
+            raise ValueError("Целое число ECDSA превышает ширину кривой")
         values.append(value.rjust(width, b"\0"))
     if pos != len(signature):
-        raise ValueError("trailing ECDSA signature data")
+        raise ValueError("Лишние данные после подписи ECDSA")
     return values[0] + values[1]
 
 

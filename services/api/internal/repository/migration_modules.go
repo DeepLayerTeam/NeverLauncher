@@ -94,7 +94,7 @@ func (r *SQLRepository) SaveMigrationModules0338(ctx context.Context, runID stri
 		return gm.Report{}, err
 	}
 	if err = tx.Commit(); err != nil {
-		return gm.Report{}, fmt.Errorf("module assessment commit uncertain; retry same source: %w", err)
+		return gm.Report{}, fmt.Errorf("Сохранение оценки модулей не подтверждено; повторите с тем же источником: %w", err)
 	}
 	return report, nil
 }

@@ -6,7 +6,7 @@ public final class Version implements Comparable<Version> {
     public final int major, minor, patch, build;
     public final Type type;
     public Version(int major,int minor,int patch,int build,Type type) {
-        if(major<0||minor<0||patch<0||build<0)throw new IllegalArgumentException("negative version component");
+        if(major<0||minor<0||patch<0||build<0)throw new IllegalArgumentException("Компонент версии не может быть отрицательным");
         this.major=major;this.minor=minor;this.patch=patch;this.build=build;this.type=java.util.Objects.requireNonNull(type);
     }
     public Version(int major,int minor,int patch,Type type){this(major,minor,patch,0,type);}

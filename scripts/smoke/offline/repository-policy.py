@@ -920,7 +920,7 @@ for required in ["ErrImmutable", 'Status == "published"']:
 # Конвейер выпуска разделён между package_product, блокировкой изменений,
 # обработчиками Admin и устойчивым обработчиком отката. Проверяйте настоящие
 # места выполнения, а не наличие всех слов в одном устаревшем монолите.
-for required in ["published release immutable", "http.StatusConflict"]:
+for required in ["Опубликованный релиз нельзя изменить", "http.StatusConflict"]:
     if required not in package_product:
         fail(f"HTTP package lifecycle immutable guard missing: {required}")
 if "lockPackageMutation" not in read("services/api/internal/httpapi/admin_handlers.go"):

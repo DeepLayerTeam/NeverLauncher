@@ -162,7 +162,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	if scheme == tpmECDSA {
 		schemeHash, err := p.u16()
 		if err != nil || schemeHash != tpmSHA256 {
-			return nil, nil, errors.New("TPM ECC scheme must use ECDSA SHA-256")
+			return nil, nil, errors.New("Схема ECC для TPM должна использовать ECDSA SHA-256")
 		}
 	} else if scheme != tpmNull {
 		return nil, nil, errors.New("Не поддерживается: схема подписи ECC в TPM")
@@ -214,7 +214,7 @@ func verifyTPMClockInfo(c *cursor) error {
 		return err
 	}
 	if info[16] != 1 {
-		return errors.New("TPM clock is not safe")
+		return errors.New("Часы TPM находятся в небезопасном состоянии")
 	}
 	_, err = c.take(8) // firmwareVersion
 	return err
@@ -279,7 +279,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 		return e
 	}
 	if h != tpmSHA256 {
-		return errors.New("TPM signature must use SHA-256")
+		return errors.New("Подпись TPM должна использовать SHA-256")
 	}
 	// TPM подписывает тело TPMS_ATTEST без внешнего поля длины TPM2B.
 	if len(attest) < 2 {

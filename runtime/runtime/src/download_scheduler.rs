@@ -322,7 +322,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
         // слота исходного хоста. Никогда не переходите по редиректам автоматически.
         .redirect(reqwest::redirect::Policy::none())
         .pool_max_idle_per_host(limits.per_host)
-        .build().map_err(|e| format!("download HTTP client: {e}"))?;
+        .build().map_err(|e| format!("Ошибка HTTP-клиента загрузки: {e}"))?;
     let mut result = DownloadResult { downloaded: 0, skipped: 0, failed: 0, repaired: 0,
         bytes_downloaded: 0, cache_hits: 0, bytes_reused: 0, failed_files: Vec::new(), messages: Vec::new() };
     let mut jobs = Vec::new();
@@ -479,7 +479,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
                 },
                 Err(e) => {
                     result.failed += 1;
-                    result.messages.push(format!("download worker panicked: {e}"));
+                    result.messages.push(format!("Аварийное завершение рабочего потока загрузки: {e}"));
                     stats.failed.fetch_add(1, Ordering::Relaxed);
                     stats.emit("failed-file", None, true);
                 },

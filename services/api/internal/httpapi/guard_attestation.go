@@ -356,7 +356,7 @@ func (p guardReleasePolicy0134) metadataForPlatform0140(platform string) (string
 	if p.PolicySchema == guardReleasePolicySchema0140 {
 		artifacts := p.PlatformArtifacts[kind]
 		if len(artifacts) == 0 {
-			return "", 0, false, fmt.Errorf("Guard release policy has no %s artifact set", kind)
+			return "", 0, false, fmt.Errorf("В политике выпуска Guard отсутствует набор артефактов %s", kind)
 		}
 		requireAuthenticode := artifacts[0].RequireAuthenticode
 		for _, artifact := range artifacts[1:] {
@@ -379,7 +379,7 @@ func (p guardReleasePolicy0134) allowsArtifactPair0140(platform, guardSHA256, la
 	if p.PolicySchema == guardReleasePolicySchema0140 {
 		artifacts := p.PlatformArtifacts[kind]
 		if len(artifacts) == 0 {
-			return false, false, fmt.Errorf("Guard release policy has no %s artifact set", kind)
+			return false, false, fmt.Errorf("В политике выпуска Guard отсутствует набор артефактов %s", kind)
 		}
 		for _, artifact := range artifacts {
 			if hmac.Equal([]byte(artifact.GuardSHA256), []byte(guardSHA256)) &&

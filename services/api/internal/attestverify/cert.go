@@ -14,7 +14,7 @@ func parseAKChain(e Evidence) (*x509.Certificate, *x509.CertPool, error) {
 	decodeOne := func(s string) (*x509.Certificate, error) {
 		b, rest := pem.Decode([]byte(s))
 		if b == nil || b.Type != "CERTIFICATE" || strings.TrimSpace(string(rest)) != "" {
-			return nil, errors.New("expected one PEM certificate")
+			return nil, errors.New("Ожидался ровно один сертификат PEM")
 		}
 		return x509.ParseCertificate(b.Bytes)
 	}

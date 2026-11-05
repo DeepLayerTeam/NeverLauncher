@@ -112,7 +112,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		for _, c := range cat.Components {
 			if c.Conditions != nil {
-				return fmt.Errorf("component %s has unsigned v4 conditions", c.ID)
+				return fmt.Errorf("Компонент %s содержит неподписанные условия v4", c.ID)
 			}
 		}
 		return nil
@@ -132,7 +132,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			return fmt.Errorf("component %s arch: %w", c.ID, err)
 		}
 		if v.JavaMajorMax != 0 && v.JavaMajorMin > v.JavaMajorMax {
-			return fmt.Errorf("component %s: inverted Java major range", c.ID)
+			return fmt.Errorf("Компонент %s: диапазон основных версий Java задан в обратном порядке", c.ID)
 		}
 		if v.JavaMajorMin > 99 || v.JavaMajorMax > 99 {
 			return fmt.Errorf("Компонент %s: недопустимая основная версия Java", c.ID)
@@ -150,12 +150,12 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 		}
 		if v.MinecraftVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.MinecraftVersionRange); err != nil {
-				return fmt.Errorf("component %s Minecraft range: %w", c.ID, err)
+				return fmt.Errorf("Диапазон версий Minecraft для компонента %s: %w", c.ID, err)
 			}
 		}
 		if v.LoaderVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.LoaderVersionRange); err != nil {
-				return fmt.Errorf("component %s loader range: %w", c.ID, err)
+				return fmt.Errorf("Диапазон версий загрузчика для компонента %s: %w", c.ID, err)
 			}
 		}
 	}

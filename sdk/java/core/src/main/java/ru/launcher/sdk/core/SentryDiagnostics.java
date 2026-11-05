@@ -39,7 +39,7 @@ public final class SentryDiagnostics {
                 throw new IllegalArgumentException("Некорректное значение: Sentry DSN");
             if (!"https".equals(uri.getScheme()) && !("http".equals(uri.getScheme()) &&
                   ("localhost".equals(uri.getHost()) || "127.0.0.1".equals(uri.getHost()) || "::1".equals(uri.getHost()))))
-                throw new IllegalArgumentException("Sentry requires HTTPS");
+                throw new IllegalArgumentException("Для Sentry требуется HTTPS");
             String rawPath = uri.getRawPath();
             if(rawPath==null || !rawPath.matches("(?:/[A-Za-z0-9_-]+)*/[0-9]{1,20}")) throw new IllegalArgumentException("Недопустимый проект Sentry");
             int last=rawPath.lastIndexOf('/');

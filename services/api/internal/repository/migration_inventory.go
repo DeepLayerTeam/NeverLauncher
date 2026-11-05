@@ -111,7 +111,7 @@ func (r *SQLRepository) SaveMigrationInventory0333(ctx context.Context, id strin
 		return inv.Inventory{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return inv.Inventory{}, fmt.Errorf("inventory commit uncertain; reread before retry: %w", e)
+		return inv.Inventory{}, fmt.Errorf("Сохранение каталога не подтверждено; перечитайте данные перед повтором: %w", e)
 	}
 	return report, nil
 }

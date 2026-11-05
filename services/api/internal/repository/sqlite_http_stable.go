@@ -211,7 +211,7 @@ func (r *SQLiteHTTPRepository0372) IssueStableRuntimePermit03411(ctx context.Con
 		return e
 	})
 	if e != nil {
-		return "", fmt.Errorf("persist sqlite stable grant: %w", e)
+		return "", fmt.Errorf("Не удалось сохранить постоянное разрешение SQLite: %w", e)
 	}
 	return token, nil
 }

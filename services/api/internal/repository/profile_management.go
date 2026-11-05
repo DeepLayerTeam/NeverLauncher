@@ -82,7 +82,7 @@ func (r *SQLRepository) CreateProfileExclusive0225(p model.Profile) (model.Profi
 	}
 	if _, err := tx.Exec(`INSERT INTO profile_revisions_0221(project_id,profile_id,revision,schema_version,digest,spec,created_at)
         VALUES($1,$2,1,'2.0',$3,$4::jsonb,$5)`, p.ProjectID, p.ID, shot.Digest, string(raw), now); err != nil {
-		return model.Profile{}, fmt.Errorf("persist profile revision: %w", err)
+		return model.Profile{}, fmt.Errorf("Не удалось сохранить ревизию профиля: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
 		return model.Profile{}, err

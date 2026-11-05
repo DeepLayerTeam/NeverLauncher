@@ -55,7 +55,7 @@ def atlas_ready(logs: Path) -> bool:
 
 def serve(args: argparse.Namespace) -> None:
     if not (1 <= args.backend_port <= 65535) or not (0 <= args.listen_port <= 65535):
-        raise ValueError("invalid port")
+        raise ValueError("Недопустимый порт")
     evidence = {
         "schemaVersion": "1.0",
         "status": "failed",

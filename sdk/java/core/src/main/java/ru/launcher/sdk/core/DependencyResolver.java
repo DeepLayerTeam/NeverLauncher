@@ -17,7 +17,7 @@ public final class DependencyResolver {
         return List.copyOf(ordered);
     }
     private static Map<String,ExtensionManifest> search(Map<String,List<ExtensionManifest>> available,Map<String,ExtensionManifest> selected,List<ExtensionManifest.Dependency> pending,int steps){
-        if(steps>10_000||selected.size()>512||pending.size()>8192)throw new IllegalArgumentException("dependency solver complexity limit exceeded");
+        if(steps>10_000||selected.size()>512||pending.size()>8192)throw new IllegalArgumentException("Превышен предел сложности разрешения зависимостей");
         if(pending.isEmpty())return selected;
         ExtensionManifest.Dependency next=pending.remove(0);
         ExtensionManifest present=selected.get(next.id());
@@ -39,7 +39,7 @@ public final class DependencyResolver {
         }return true;
     }
     private static void visit(String id,Map<String,ExtensionManifest> selected,Set<String> visited,Set<String> visiting,List<ExtensionManifest> ordered){
-        if(visited.contains(id))return;if(!visiting.add(id))throw new IllegalArgumentException("dependency cycle involving "+id);
+        if(visited.contains(id))return;if(!visiting.add(id))throw new IllegalArgumentException("Циклическая зависимость с участием "+id);
         ExtensionManifest m=selected.get(id);
         for(ExtensionManifest.Dependency dep:m.dependencies())if(selected.containsKey(dep.id()))visit(dep.id(),selected,visited,visiting,ordered);
         visiting.remove(id);visited.add(id);ordered.add(m);

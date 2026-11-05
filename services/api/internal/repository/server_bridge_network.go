@@ -101,7 +101,7 @@ func (r *SQLRepository) SetServerBridgeNetworkCapacity(ctx context.Context, serv
 		return 0, err
 	}
 	if serverID == "" || projectID == "" || len(runtimeID) != 64 || runtimeEpoch < 1 || expectedRevision < 0 || actor == "" || (limit != nil && (*limit < 0 || *limit > 1000000)) {
-		return 0, fmt.Errorf("%w: invalid network capacity request", ErrConflict)
+		return 0, fmt.Errorf("%w: недопустимый запрос сетевой пропускной способности", ErrConflict)
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

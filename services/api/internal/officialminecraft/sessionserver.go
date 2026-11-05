@@ -62,7 +62,7 @@ func (c *Client) VerifyOnlineSession(ctx context.Context, token string, profile 
 	// Minecraft.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return fmt.Errorf("create ephemeral online-mode challenge: %w", err)
+		return fmt.Errorf("Не удалось создать временный запрос проверки online-mode: %w", err)
 	}
 	der, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {

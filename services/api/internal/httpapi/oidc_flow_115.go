@@ -275,7 +275,7 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 		return tx, err
 	}
 	if len(raw) <= aead.NonceSize() {
-		return tx, errors.New("short OIDC transaction")
+		return tx, errors.New("Неполная транзакция OIDC")
 	}
 	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("Launcher/OIDC/0.11.5"))
 	if err != nil {
@@ -288,7 +288,7 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 		return tx, errors.New("Срок действия транзакции OIDC истёк")
 	}
 	if tx.ProviderID == "" || tx.RedirectURI == "" || tx.State == "" || tx.Nonce == "" || tx.PKCEVerifier == "" {
-		return tx, errors.New("incomplete OIDC transaction")
+		return tx, errors.New("Незавершённая транзакция OIDC")
 	}
 	return tx, nil
 }

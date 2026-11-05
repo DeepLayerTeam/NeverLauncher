@@ -112,7 +112,7 @@ func Load(now time.Time) (Policy, error) {
 		return out, e
 	}
 	if from.After(now.Add(5*time.Minute)) || !until.After(now) || until.Sub(from) > 30*24*time.Hour || !until.After(from) {
-		return out, errors.New("ServerBridge policy outside valid time window")
+		return out, errors.New("Политика ServerBridge находится вне допустимого временного интервала")
 	}
 	seen := make(map[string]struct{}, len(out.AllowedPlans))
 	for _, a := range out.AllowedPlans {

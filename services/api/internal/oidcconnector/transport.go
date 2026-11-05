@@ -23,7 +23,7 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 			return nil, nil, fmt.Errorf("Чтение: CA файл: %w", err)
 		}
 		if !roots.AppendCertsFromPEM(pemBytes) {
-			return nil, nil, fmt.Errorf("CA file contains no certificates")
+			return nil, nil, fmt.Errorf("Файл центра сертификации не содержит сертификатов")
 		}
 	}
 	dialer := &net.Dialer{Timeout: cfg.ConnectTimeoutValue, KeepAlive: 30 * time.Second}
@@ -35,14 +35,14 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 		}
 		host = strings.TrimSuffix(strings.ToLower(host), ".")
 		if !hostAllowed(host, cfg.HostAllowlist) {
-			return nil, fmt.Errorf("OIDC SSRF protection rejected host %q", host)
+			return nil, fmt.Errorf("Защита OIDC от SSRF отклонила хост %q", host)
 		}
 		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 		if err != nil {
-			return nil, fmt.Errorf("OIDC resolve %q: %w", host, err)
+			return nil, fmt.Errorf("Ошибка определения адреса OIDC %q: %w", host, err)
 		}
 		if len(ips) == 0 {
-			return nil, fmt.Errorf("OIDC host %q resolved to no addresses", host)
+			return nil, fmt.Errorf("Для хоста OIDC %q не найдено ни одного адреса", host)
 		}
 		var last error
 		for _, item := range ips {
@@ -70,11 +70,11 @@ func validateTargetIP(ip net.IP, allowed []*net.IPNet) error {
 		}
 	}
 	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return fmt.Errorf("OIDC SSRF protection rejected non-public address %s", ip)
+		return fmt.Errorf("Защита OIDC от SSRF отклонила непубличный адрес %s", ip)
 	}
 	if v4 := ip.To4(); v4 != nil {
 		if v4[0] == 0 || v4[0] >= 224 || v4[0] == 100 && (v4[1]&0xc0) == 64 || v4[0] == 192 && v4[1] == 0 && v4[2] == 0 || v4[0] == 198 && (v4[1] == 18 || v4[1] == 19) {
-			return fmt.Errorf("OIDC SSRF protection rejected special-use address %s", ip)
+			return fmt.Errorf("Защита OIDC от SSRF отклонила адрес специального назначения %s", ip)
 		}
 	}
 	return nil

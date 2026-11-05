@@ -23,13 +23,13 @@ public final class RuntimeStateMigrations {
         if(from.compareTo(to)>=0)throw new IllegalArgumentException("Миграции состояния должны увеличивать версию");
         Objects.requireNonNull(migration,"migration");
         if(steps.putIfAbsent(from,new Step(to,migration))!=null)
-            throw new IllegalArgumentException("duplicate migration starting at "+from);
+            throw new IllegalArgumentException("Повторяющаяся миграция начиная с "+from);
     }
     /** Вызывается только аутентифицированным хостом при обновлении после остановки старой версии. */
     synchronized Map<String,Object> apply(String fromVersion,String toVersion) throws Exception {
         SemVer from=SemVer.parse(fromVersion),target=SemVer.parse(toVersion);
-        if(from.compareTo(target)>=0)throw new IllegalArgumentException("migration requires increasing versions");
-        if(executing)throw new IllegalStateException("concurrent state migration");
+        if(from.compareTo(target)>=0)throw new IllegalArgumentException("Версии миграций должны возрастать");
+        if(executing)throw new IllegalStateException("Одновременная миграция состояния запрещена");
         executing=true;
         try{
             // Расширениям с прежней JSON-схемой миграция не нужна. Если зарегистрирован
@@ -38,7 +38,7 @@ public final class RuntimeStateMigrations {
             SemVer cursor=from;
             int applied=0;
             while(cursor.compareTo(target)<0){
-                if(++applied>32)throw new IllegalStateException("state migration chain too long");
+                if(++applied>32)throw new IllegalStateException("Цепочка миграций состояния слишком длинная");
                 Step step=steps.get(cursor);
                 if(step==null||step.target.compareTo(target)>0)
                     throw new IllegalStateException("Отсутствует миграция состояния с версии "+cursor+" to "+target);

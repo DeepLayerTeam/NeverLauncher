@@ -90,7 +90,7 @@ func snapshotFromGuardLaunchTicket0135(ticket model.DeviceChallenge) (minecraftI
 		"launcherSha256":    snapshot.LauncherSHA256,
 	} {
 		if !isSHA256Hex0134(value) {
-			return minecraftIntegritySnapshot0135{}, fmt.Errorf("Guard launch ticket %s malformed", label)
+			return minecraftIntegritySnapshot0135{}, fmt.Errorf("Некорректный билет запуска Guard %s", label)
 		}
 	}
 	if snapshot.LauncherVersion == "" || len(snapshot.LauncherVersion) > 64 || snapshot.VerifiedAt.IsZero() {

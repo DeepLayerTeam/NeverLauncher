@@ -90,7 +90,7 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 		return model.ExtensionLifecycleTransition{}, errors.New("non-absent current state: требуется «current version»")
 	}
 	if (in.CurrentState == model.ExtensionInstallStateEnabled) != in.Enabled {
-		return model.ExtensionLifecycleTransition{}, errors.New("enabled flag must match current state")
+		return model.ExtensionLifecycleTransition{}, errors.New("Флаг enabled должен соответствовать текущему состоянию")
 	}
 	if in.PackageIdentity != "" && !registryIdentity0203.MatchString(in.PackageIdentity) {
 		return model.ExtensionLifecycleTransition{}, errors.New("Некорректное значение: «desired package identity»")
@@ -206,7 +206,7 @@ func (r *MemoryRepository) TransitionExtensionInstall(ctx context.Context, trans
 		}
 		before = model.ExtensionInstall{ExtensionID: transition.ExtensionID, Scope: transition.Scope, ScopeID: transition.ScopeID, DesiredState: model.ExtensionInstallStateAbsent, CurrentState: model.ExtensionInstallStateAbsent, Generation: 0}
 	} else if before.Generation != transition.ExpectedGeneration {
-		return model.ExtensionInstall{}, fmt.Errorf("%w: lifecycle generation changed: expected=%d current=%d", ErrConflict, transition.ExpectedGeneration, before.Generation)
+		return model.ExtensionInstall{}, fmt.Errorf("%w: поколение жизненного цикла изменилось: ожидалось=%d, текущее=%d", ErrConflict, transition.ExpectedGeneration, before.Generation)
 	}
 	foundDesired := false
 	foundCurrent := transition.CurrentVersion == ""
@@ -352,7 +352,7 @@ func (r *SQLRepository) TransitionExtensionInstall(ctx context.Context, transiti
 		return model.ExtensionInstall{}, err
 	}
 	if before.Generation != transition.ExpectedGeneration {
-		return model.ExtensionInstall{}, fmt.Errorf("%w: lifecycle generation changed: expected=%d current=%d", ErrConflict, transition.ExpectedGeneration, before.Generation)
+		return model.ExtensionInstall{}, fmt.Errorf("%w: поколение жизненного цикла изменилось: ожидалось=%d, текущее=%d", ErrConflict, transition.ExpectedGeneration, before.Generation)
 	}
 	var desiredExists, currentExists bool
 	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM extension_versions WHERE extension_id=$1 AND version=$2)`, transition.ExtensionID, transition.DesiredVersion).Scan(&desiredExists); err != nil {

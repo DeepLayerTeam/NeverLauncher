@@ -78,7 +78,7 @@ func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candida
 		return err
 	}
 	if count != 1 {
-		return errors.New("fenced GC delete affected an unexpected number of rows")
+		return errors.New("Удаление GC с защитой аренды затронуло неожиданное количество строк")
 	}
 	return tx.Commit()
 }

@@ -21,7 +21,7 @@ const providerCredentialCipherVersion116 = "v1"
 func (s Server) providerCredentialRepository116() (repository.ProviderCredentialRepository, error) {
 	store, ok := s.Repo.(repository.ProviderCredentialRepository)
 	if !ok {
-		return nil, errors.New("repository does not support provider credentials")
+		return nil, errors.New("Репозиторий не поддерживает учётные данные провайдера")
 	}
 	return store, nil
 }
@@ -75,7 +75,7 @@ func (s Server) decryptProviderCredential116(item model.ProviderCredential) (str
 		return "", err
 	}
 	if len(raw) <= aead.NonceSize() {
-		return "", errors.New("provider credential ciphertext is truncated")
+		return "", errors.New("Зашифрованные учётные данные провайдера обрезаны")
 	}
 	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], providerCredentialAAD116(item.UserID, item.IdentityID, item.Provider, item.Subject))
 	if err != nil {
@@ -97,7 +97,7 @@ func (s Server) saveProviderCredential116(user model.User, identity model.AuthId
 		return err
 	}
 	if user.ID == "" || identity.ID == "" || identity.UserID != user.ID || identity.Provider == "" || identity.Subject == "" {
-		return errors.New("provider credential identity boundary is incomplete")
+		return errors.New("Неполная граница идентификации учётных данных провайдера")
 	}
 	encrypted, err := s.encryptProviderCredential116(user.ID, identity.ID, identity.Provider, identity.Subject, providerToken)
 	if err != nil {
@@ -111,7 +111,7 @@ func (s Server) saveProviderCredential116(user model.User, identity model.AuthId
 		item.LastRefreshedAt = time.Now().UTC()
 	}
 	if _, err := store.SaveProviderCredential(item); err != nil {
-		return fmt.Errorf("save provider credential: %w", err)
+		return fmt.Errorf("Не удалось сохранить учётные данные провайдера: %w", err)
 	}
 	return nil
 }

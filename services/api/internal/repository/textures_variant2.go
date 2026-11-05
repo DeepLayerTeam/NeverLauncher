@@ -40,7 +40,7 @@ type TextureUploadRepository0252 interface {
 	ReadTextureBlob0252(context.Context, string, model.MinecraftProfile, bool) (TextureBlob0252, bool, error)
 }
 
-var ErrGravitAlreadyImported02510 = errors.New("Gravit texture row already imported")
+var ErrGravitAlreadyImported02510 = errors.New("Запись текстуры Gravit уже импортирована")
 
 var ErrTextureUploadDenied0252 = errors.New("texture upload forbidden by policy")
 var ErrTextureUploadLimit0252 = errors.New("texture size exceeds project policy")
@@ -62,10 +62,10 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	}
 	if source == "managed-gravit-import" {
 		if len(input.GravitSourceID) < 1 || len(input.GravitSourceID) > 100 || len(input.GravitRowID) < 1 || len(input.GravitRowID) > 150 || len(input.GravitExternalUUID) < 1 || len(input.GravitOriginalHash) < 1 {
-			return zero, fmt.Errorf("incomplete Gravit import provenance")
+			return zero, fmt.Errorf("Неполные сведения о происхождении импорта Gravit")
 		}
 	} else if input.GravitSourceID != "" || input.GravitRowID != "" {
-		return zero, fmt.Errorf("Gravit provenance only valid for Gravit imports")
+		return zero, fmt.Errorf("Данные о происхождении Gravit допустимы только для импорта из Gravit")
 	}
 	if err := validateTextureSelection0251(input.Kind, input.Model, input.Visibility); err != nil {
 		return zero, err

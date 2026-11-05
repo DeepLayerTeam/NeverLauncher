@@ -205,7 +205,7 @@ func (p *securityPostgres111) importLegacyMFA(state securityState950) error {
 	for userID, legacy := range state.MFA {
 		rec := mfaRecord{PendingSecret: decryptString950(p.secret, legacy.PendingSecretEncrypted), ActiveSecret: decryptString950(p.secret, legacy.ActiveSecretEncrypted), Enabled: legacy.Enabled, Recovery: legacy.Recovery, UpdatedAt: legacy.UpdatedAt}
 		if err := p.saveMFA(userID, rec); err != nil {
-			return fmt.Errorf("migrate MFA %s: %w", userID, err)
+			return fmt.Errorf("Ошибка миграции MFA %s: %w", userID, err)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 		tx, err := p.db.BeginTx(ctx, nil)

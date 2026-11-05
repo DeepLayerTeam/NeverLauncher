@@ -79,7 +79,7 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 		return ws, errors.New("Для передачи результата Client Factory необходима пустая, ещё не собранная рабочая область")
 	}
 	if p.MinecraftVersion != ws.Settings.Minecraft.Version || p.Loader != ws.Settings.Minecraft.Loader || p.MinecraftVersion != job.Request.Minecraft || p.Loader != job.Request.Loader {
-		return ws, errors.New("factory Minecraft/loader differs from pinned workspace")
+		return ws, errors.New("Версия Minecraft или загрузчика в фабрике отличается от закреплённой в рабочем пространстве")
 	}
 	if p.Loader != "vanilla" && ((job.Request.Source != "modpack" && p.LoaderVersion != job.Request.LoaderVersion) || p.LoaderVersion != ws.Settings.Minecraft.LoaderVersion) {
 		return ws, errors.New("Версия загрузчика Client Factory отличается от закреплённой версии рабочей области")
@@ -94,7 +94,7 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 		return ws, errors.New("Настройки запуска рабочей области несовместимы с метаданными Client Factory")
 	}
 	if ws.Settings.Runtime.Launch.ClasspathStrategy != "" && ws.Settings.Runtime.Launch.ClasspathStrategy != "mojang" {
-		return ws, errors.New("factory delivery needs Mojang compatibility launch strategy")
+		return ws, errors.New("Для поставки фабрики требуется стратегия запуска, совместимая с Mojang")
 	}
 	metadata := strings.TrimSpace(p.Launch.ProfilePath)
 	if metadata == "" || p.Launch.MainClass == "" || !strings.HasSuffix(metadata, ".json") {
@@ -111,18 +111,18 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 		osName = "macos"
 	}
 	if osName != "windows" && osName != "linux" && osName != "macos" {
-		return ws, errors.New("unrecognized factory target")
+		return ws, errors.New("Неизвестная целевая платформа фабрики")
 	}
 	requested := strings.Split(job.Request.Target, "/")
 	if len(requested) != 2 || len(p.Targets) != 1 {
-		return ws, errors.New("factory target identity not uniquely pinned")
+		return ws, errors.New("Идентификатор целевой платформы фабрики задан неоднозначно")
 	}
 	targetOS := requested[0]
 	if targetOS == "darwin" {
 		targetOS = "osx"
 	}
 	if p.Targets[0].OS != targetOS || p.Targets[0].Arch != requested[1] {
-		return ws, errors.New("factory output target differs from requested OS/architecture")
+		return ws, errors.New("Целевая платформа выходного файла фабрики не соответствует запрошенным ОС и архитектуре")
 	}
 	files := make([]repository.BuildFile, 0, len(p.Outputs))
 	seen := map[string]bool{}
@@ -130,7 +130,7 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 	for _, f := range p.Outputs {
 		key := strings.ToLower(f.Path)
 		if seen[key] {
-			return ws, errors.New("case-insensitive factory output collision")
+			return ws, errors.New("Конфликт имён выходных файлов фабрики без учёта регистра")
 		}
 		seen[key] = true
 		if f.Path == metadata {
@@ -141,12 +141,12 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 		}
 		file := repository.BuildFile{Path: f.Path, Size: f.Size, SHA256: strings.ToLower(f.SHA256), Ownership: "required", Selected: true, TargetOS: []string{osName}}
 		if err := normalizeBuildFile0226(file); err != nil {
-			return ws, fmt.Errorf("factory output %s: %w", f.Path, err)
+			return ws, fmt.Errorf("Ошибка выходного файла фабрики %s: %w", f.Path, err)
 		}
 		files = append(files, file)
 	}
 	if !hasMetadata {
-		return ws, errors.New("factory executable version metadata is absent from verified outputs")
+		return ws, errors.New("В проверенных результатах отсутствуют метаданные версии исполняемого файла фабрики")
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	ws.Files = files

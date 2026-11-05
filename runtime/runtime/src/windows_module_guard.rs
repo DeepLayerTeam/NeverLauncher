@@ -351,7 +351,7 @@ mod imp {
             let (normalized, sha256) = policy.validate_loaded_module(&module.path)?;
             if !normalized.eq_ignore_ascii_case(&module.normalized_path) {
                 return Err(format!(
-                    "Module Guard baseline canonical path drift for {}",
+                    "Module Guard: канонический путь {} отличается от базового",
                     module.path.display()
                 ));
             }
@@ -783,7 +783,7 @@ mod imp {
                         Err("Module Guard получил некорректное событие выгрузки DLL".to_string())
                     } else if expected.remove(&event.base_address).is_none() {
                         Err(format!(
-                            "Module Guard observed unload for unknown module base 0x{:X}",
+                            "Module Guard: обнаружена выгрузка неизвестного модуля с базовым адресом 0x{:X}",
                             event.base_address
                         ))
                     } else {
@@ -1194,7 +1194,7 @@ mod imp {
         }
         if suspicious_thread_count != 0 {
             return Err(format!(
-                "Guard Thread & Process Integrity reported {suspicious_thread_count} suspicious threads"
+                "Guard: проверка потоков и процессов выявила подозрительные потоки: {suspicious_thread_count}"
             ));
         }
         Ok(crate::WindowsThreadProcessIntegrityReport {
@@ -1241,7 +1241,7 @@ mod imp {
             || !debug_flags_no_debug_inherit
         {
             return Err(format!(
-                "Guard Debug & Instrumentation Guard detected debugger state: flags=0x{:X}",
+                "Guard: обнаружены признаки отладки: flags=0x{:X}",
                 event.flags
             ));
         }
@@ -1315,7 +1315,7 @@ mod imp {
         }
         if foreign_executable_transition_count != 0 || unknown_executable_transition_count != 0 {
             return Err(format!(
-                "Guard JVM-Aware Protection reported untrusted executable transitions: foreign={foreign_executable_transition_count}, unknown={unknown_executable_transition_count}"
+                "Guard: обнаружены недоверенные переходы к исполняемому коду: foreign={foreign_executable_transition_count}, unknown={unknown_executable_transition_count}"
             ));
         }
         Ok(crate::WindowsJvmAwareProtectionReport {
@@ -1477,7 +1477,7 @@ mod imp {
                 ))?;
             if !normalized.eq_ignore_ascii_case(&module.normalized_path) {
                 return Err(format!(
-                    "Module Guard external snapshot canonical path drift at base 0x{:X}",
+                    "Module Guard: канонический путь внешнего снимка изменился по базовому адресу 0x{:X}",
                     module.base_address
                 ));
             }

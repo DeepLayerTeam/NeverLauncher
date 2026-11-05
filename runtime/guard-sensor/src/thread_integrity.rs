@@ -229,7 +229,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
     let mut has_entry = unsafe { Thread32First(snapshot.0, &mut entry) } != 0;
     if !has_entry {
         return Err(format!(
-            "Guard Thread Integrity cannot enumerate threads: {}",
+            "Guard: не удалось получить список потоков: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -286,7 +286,7 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
             return Ok(None);
         }
         return Err(format!(
-            "Guard Thread Integrity cannot query Win32 start address for live TID {thread_id}: NTSTATUS=0x{:08X}",
+            "Guard: не удалось получить адрес запуска Win32 для активного TID {thread_id}: NTSTATUS=0x{:08X}",
             status as u32
         ));
     }
@@ -301,7 +301,7 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
     };
     if queried == 0 {
         return Err(format!(
-            "Guard Thread Integrity cannot query start memory for TID {thread_id}: {}",
+            "Guard: не удалось получить сведения о памяти запуска для TID {thread_id}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -310,13 +310,13 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         || memory.protect & (PAGE_GUARD | PAGE_NOACCESS) != 0
     {
         return Err(format!(
-            "Guard Thread Integrity suspicious runtime transition: TID {thread_id} start 0x{:X} is not committed executable memory (state=0x{:X}, protect=0x{:X})",
+            "Guard: подозрительный переход Runtime: адрес запуска 0x{:X} потока TID {thread_id} не относится к выделенной исполняемой памяти (state=0x{:X}, protect=0x{:X})",
             start_address as usize, memory.state, memory.protect
         ));
     }
     if memory.kind != MEM_IMAGE {
         return Err(format!(
-            "Guard Thread Integrity suspicious runtime transition: TID {thread_id} starts from non-image executable memory at 0x{:X} (type=0x{:X})",
+            "Guard: подозрительный переход Runtime: TID {thread_id} запускается из исполняемой памяти, не принадлежащей образу, по адресу 0x{:X} (type=0x{:X})",
             start_address as usize, memory.kind
         ));
     }
@@ -342,7 +342,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "Guard Thread Integrity cannot resolve start module for 0x{address:X}: {}",
+            "Guard: не удалось определить модуль запуска по адресу 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -357,7 +357,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
     } as usize;
     if len == 0 || len >= buffer.len() {
         return Err(format!(
-            "Guard Thread Integrity cannot obtain start module path for 0x{address:X}: {}",
+            "Guard: не удалось получить путь к модулю запуска по адресу 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }

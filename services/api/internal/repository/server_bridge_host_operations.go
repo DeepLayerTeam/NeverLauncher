@@ -47,7 +47,7 @@ func (r *SQLRepository) CreateHostOperation0413(ctx context.Context, op HostOper
 		return HostOperation0413{}, false, err
 	}
 	if op.ID == "" || op.ServerID == "" || op.RequestDigest == "" || op.RemoteNodeID == "" || op.IdempotencyKey == "" {
-		return HostOperation0413{}, false, errors.New("host operation missing required fields")
+		return HostOperation0413{}, false, errors.New("В операции хоста отсутствуют обязательные поля")
 	}
 	before := op.HostBefore
 	if len(before) == 0 {
@@ -59,7 +59,7 @@ func (r *SQLRepository) CreateHostOperation0413(ctx context.Context, op HostOper
 		if errors.As(err, &sqlState) && sqlState.SQLState() == "23505" {
 			return HostOperation0413{}, false, ErrConflict
 		}
-		return HostOperation0413{}, false, fmt.Errorf("persist host command intent: %w", err)
+		return HostOperation0413{}, false, fmt.Errorf("Не удалось сохранить намерение выполнить команду хоста: %w", err)
 	}
 	count, err := result.RowsAffected()
 	if err != nil {

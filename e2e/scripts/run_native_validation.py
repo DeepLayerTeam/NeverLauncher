@@ -93,10 +93,10 @@ def verify_game_observations_04314(destination, expected_os, expected_arch):
     def read(name):
         path=target/name
         if not path.is_file() or path.is_symlink() or not 0 < path.stat().st_size <= 2*1024*1024:
-            raise ValueError("native game observation missing: " + name)
+            raise ValueError("Отсутствуют данные наблюдения за нативной игрой: " + name)
         data=json.loads(path.read_bytes())
         if not isinstance(data,dict):
-            raise ValueError("invalid native game observation: " + name)
+            raise ValueError("Некорректные данные наблюдения за нативной игрой: " + name)
         return data
     host=read('host-capabilities.json')
     if host.get('os') != expected_os or host.get('arch') != expected_arch or host.get('status') != 'ready':

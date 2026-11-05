@@ -14,7 +14,7 @@ import (
 
 func validAttestation0345(v model.ValidationAttestation0345) error {
 	if v.RunID == "" || v.PackageID == "" || v.ProjectID == "" || len(v.ManifestSHA256) != 64 || len(v.ArtifactSHA256) != 64 || len(v.Signature) < 80 || !json.Valid(v.Evidence) {
-		return errors.New("invalid attestation")
+		return errors.New("Некорректная аттестация")
 	}
 	return nil
 }

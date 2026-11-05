@@ -65,7 +65,7 @@ func randomName() string {
 }
 func Available() error {
 	if err := createProfile.Find(); err != nil {
-		return fmt.Errorf("AppContainer API: %w", err)
+		return fmt.Errorf("Ошибка API AppContainer: %w", err)
 	}
 	if err := initAttrs.Find(); err != nil {
 		return fmt.Errorf("Недоступно: STARTUPINFOEX: %w", err)
@@ -406,7 +406,7 @@ func Prepare(o Options) (*Handle, error) {
 		return fail(e)
 	}
 	if output, e := exec.Command(tool, o.PayloadRoot, "/grant", "*"+sid+":(OI)(CI)(RX)", "/T").CombinedOutput(); e != nil {
-		return fail(fmt.Errorf("package AppContainer ACL: %w: %s", e, string(output)))
+		return fail(fmt.Errorf("Ошибка ACL пакета AppContainer: %w: %s", e, string(output)))
 	}
 	pipeName := `\\.\pipe\LOCAL\Launcher-Extension-` + id
 	readyName := `\\.\pipe\LOCAL\Launcher-Ready-` + id

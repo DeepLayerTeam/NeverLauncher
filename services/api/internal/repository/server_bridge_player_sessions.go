@@ -111,7 +111,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 		return nil
 	}
 	if !validPlayerCorrelation0197(correlationID) {
-		return fmt.Errorf("%w: invalid player session correlation", ErrConflict)
+		return fmt.Errorf("%w: недопустимая связь сессии игрока", ErrConflict)
 	}
 	if redemption.SessionCorrelationID != "" && !strings.EqualFold(redemption.SessionCorrelationID, correlationID) {
 		return fmt.Errorf("Несовпадение: «%w: player session correlation»", ErrConflict)
@@ -191,12 +191,12 @@ func (r *SQLRepository) issuePlayerTransferTx0197(ctx context.Context, tx *sql.T
 		Scan(&status, &proxyNode, &proxyRuntime, &proxyEpoch, &sequence)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("%w: correlated player session not active", ErrConflict)
+			return fmt.Errorf("%w: связанная сессия игрока неактивна", ErrConflict)
 		}
 		return err
 	}
 	if status != "active" || proxyNode != h.SourceNodeID || (h.SourceRuntimeID != "" && (!strings.EqualFold(proxyRuntime, h.SourceRuntimeID) || proxyEpoch != h.SourceRuntimeEpoch)) {
-		return fmt.Errorf("%w: source proxy does not own correlated session", ErrConflict)
+		return fmt.Errorf("%w: исходный прокси не владеет связанной сессией", ErrConflict)
 	}
 	sequence++
 	h.TransferSequence = sequence
@@ -233,14 +233,14 @@ func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql
 		return err
 	}
 	if status != "active" || proxyNode != h.SourceNodeID || sequence != h.TransferSequence || h.TransferSequence < 1 {
-		return fmt.Errorf("%w: stale or cloned player transfer", ErrConflict)
+		return fmt.Errorf("%w: устаревший или дублированный перенос игрока", ErrConflict)
 	}
 	var transferStatus string
 	if err = tx.QueryRowContext(ctx, `SELECT status FROM server_bridge_player_transfers_v3 WHERE correlation_id=$1 AND sequence=$2 AND handoff_id=$3 FOR UPDATE`, correlationID, h.TransferSequence, h.ID).Scan(&transferStatus); err != nil {
 		return err
 	}
 	if transferStatus != "issued" {
-		return fmt.Errorf("%w: player transfer already consumed", ErrConflict)
+		return fmt.Errorf("%w: перенос игрока уже использован", ErrConflict)
 	}
 	verifiedAt := redemption.VerifiedAt
 	if verifiedAt.IsZero() {

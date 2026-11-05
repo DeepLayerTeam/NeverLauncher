@@ -22,7 +22,7 @@ func normalizeIntegrityResult0212(in model.IntegrityCheckResult) (model.Integrit
 	in.ArtifactDigest = strings.ToLower(strings.TrimSpace(in.ArtifactDigest))
 	in.Result = strings.ToLower(strings.TrimSpace(in.Result))
 	if in.ID == "" || in.PackageID == "" || in.ProjectID == "" || len(in.ManifestDigest) != 64 || len(in.ArtifactDigest) != 64 {
-		return model.IntegrityCheckResult{}, errors.New("integrity result identity/digests are incomplete")
+		return model.IntegrityCheckResult{}, errors.New("В результате проверки целостности отсутствуют данные об идентификаторе или хешах")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
 		return model.IntegrityCheckResult{}, errors.New("integrity result: требуется «passed or failed»")
@@ -45,7 +45,7 @@ func normalizeRuntimeValidation0212(in model.RuntimeValidationResult) (model.Run
 	in.EvidenceDigest = strings.ToLower(strings.TrimSpace(in.EvidenceDigest))
 	in.Result = strings.ToLower(strings.TrimSpace(in.Result))
 	if in.ID == "" || in.PackageID == "" || in.ProjectID == "" || len(in.ManifestDigest) != 64 || len(in.EvidenceDigest) != 64 || in.TargetID == "" || in.RunID == "" || in.SignerKeyID == "" || len(in.SignerKeyFingerprint) != 64 {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation identity/digests are incomplete")
+		return model.RuntimeValidationResult{}, errors.New("В проверке Runtime отсутствуют данные идентификатора или контрольных сумм")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
 		return model.RuntimeValidationResult{}, errors.New("runtime validation result: требуется «passed or failed»")

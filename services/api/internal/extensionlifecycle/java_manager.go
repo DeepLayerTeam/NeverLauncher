@@ -66,7 +66,7 @@ func (m *Manager) inspectPayload0305(ctx context.Context, root string, manifest 
 		}
 		jar, err := extensionjava.Inspect(full)
 		if err != nil {
-			return nil, fmt.Errorf("Java target %s: %w", target.Entrypoint, err)
+			return nil, fmt.Errorf("Целевая платформа Java %s: %w", target.Entrypoint, err)
 		}
 		for _, library := range jar.Libraries {
 			if !extensionresolver.Matches(manifest.API, library.APIConstraint) {
@@ -75,7 +75,7 @@ func (m *Manager) inspectPayload0305(ctx context.Context, root string, manifest 
 		}
 		runtime, err := extensionjava.ProbeRuntime(ctx, m.JavaExecutable, jar.MinimumJava)
 		if err != nil {
-			return nil, fmt.Errorf("Java target %s: %w", target.Entrypoint, err)
+			return nil, fmt.Errorf("Целевая платформа Java %s: %w", target.Entrypoint, err)
 		}
 		checks = append(checks, JavaCheck0305{Target: target.Kind, Class: jar.EntrypointClass, JavaMinimum: jar.MinimumJava, JavaAvailable: runtime.Feature, ClassCount: jar.ClassFiles})
 	}

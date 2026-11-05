@@ -72,7 +72,7 @@ def _windows_windows():
         return True
 
     if not user.EnumWindows(cb, 0):
-        raise OSError("EnumWindows failed")
+        raise OSError("Вызов EnumWindows завершился ошибкой")
     return found
 
 
@@ -101,7 +101,7 @@ def find_window(root_pid, java=None):
     elif sys.platform == "darwin":
         windows = _mac_windows()
     else:
-        raise RuntimeError("native window observer only supports Windows/macOS")
+        raise RuntimeError("Нативный наблюдатель окна поддерживает только Windows/macOS")
     for wid, pid in windows:
         if descendants_java(pid, root_pid, java):
             return wid, pid
@@ -125,7 +125,7 @@ def _native_bounds(wid):
         user.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(RECT)]
         user.GetWindowRect.restype = wintypes.BOOL
         if not user.GetWindowRect(wintypes.HWND(wid), ctypes.byref(rect)):
-            raise RuntimeError("window rectangle unavailable")
+            raise RuntimeError("Координаты прямоугольника окна недоступны")
         return (rect.left, rect.top, rect.right, rect.bottom)
     import Quartz
 
@@ -137,7 +137,7 @@ def _native_bounds(wid):
             x = int(bound["X"])
             y = int(bound["Y"])
             return (x, y, x + int(bound["Width"]), y + int(bound["Height"]))
-    raise RuntimeError("Minecraft window is no longer onscreen")
+    raise RuntimeError("Окно Minecraft больше не отображается на экране")
 
 
 def _foreground(wid):
@@ -165,10 +165,10 @@ def _capture(wid, destination):
         raise GUIUnavailable("Minecraft window not foreground; no safe GUI observation")
     bbox = _native_bounds(wid)
     if bbox[2] - bbox[0] < 640 or bbox[3] - bbox[1] < 400:
-        raise RuntimeError("Minecraft window dimensions too small")
+        raise RuntimeError("Размеры окна Minecraft слишком малы")
     image = ImageGrab.grab(bbox=bbox, all_screens=True)
     if image.width < 640 or image.height < 400:
-        raise RuntimeError("captured window dimensions too small")
+        raise RuntimeError("Размеры захваченного окна слишком малы")
     # Энтропия измеряется по реально отрисованному RGB-изображению, а не по заголовку окна.
     import math
 
@@ -178,10 +178,10 @@ def _capture(wid, destination):
         (count / total) * math.log2(count / total) for count in hist if count
     )
     if entropy < 0.5:
-        raise RuntimeError("window does not contain sufficiently rendered pixels")
+        raise RuntimeError("Окно не содержит достаточно отрисованных пикселей")
     image.save(destination, format="PNG")
     if destination.stat().st_size < 2048:
-        raise RuntimeError("insufficient rendered frame bytes")
+        raise RuntimeError("Недостаточно данных отрисованного кадра")
     return image.width, image.height, entropy
 
 
@@ -201,7 +201,7 @@ def capture_menu(wid, destination, menu):
                 check=False,
             )
             if cp.returncode:
-                raise RuntimeError("tesseract OCR unavailable")
+                raise RuntimeError("OCR-движок tesseract недоступен")
             text = cp.stdout.decode("utf-8", "replace")
             controls = sorted(k for k, rx in menu.items() if rx.search(text))
             if len(controls) >= 2:

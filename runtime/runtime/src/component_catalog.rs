@@ -472,7 +472,7 @@ fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<Stri
             for change in changes.split(','){
                 let (enable,id)=match change.as_bytes().first(){Some(b'+')=>(true,&change[1..]),Some(b'-')=>(false,&change[1..]),_=>return Err("Некорректное значение: «choice operator»".into())};
                 if !valid_id(id)||!seen.insert(id){return Err(format!("Некорректный или повторяющийся вариант компонента: {id}"))}
-                let c=cat.components.iter().find(|c|c.id==id).ok_or_else(||format!("unsigned component choice: {id}"))?;
+                let c=cat.components.iter().find(|c|c.id==id).ok_or_else(||format!("Выбран неподписанный компонент: {id}"))?;
                 if !enable&&c.required{return Err(format!("«required component»: запрещено «be disabled:» {id}"))}
                 if enable&&(c.visible==Some(false)||c.limited){return Err(format!("компонент: запрещено «be manually enabled:» {id}"))}
                 if enable {roots.insert(id.to_owned());}else{roots.remove(id);disabled.insert(id.to_owned());}
@@ -588,7 +588,7 @@ pub fn validate(m:&Manifest)->Result<(),String>{
     let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();
     for c in &cat.components{
         if !valid_id(&c.id)||!ids.insert(c.id.as_str())||c.name.trim().is_empty()||c.name.len()>256||c.name.chars().any(|c|matches!(c,'\0'|'\r'|'\n'))||c.files.is_empty()||c.files.len()>8192{return Err(format!("Некорректный или повторяющийся компонент {}",c.id))}
-        for path in &c.files{let key=path.to_ascii_lowercase();let f=files.get(&key).ok_or_else(||format!("undeclared component file: {path}"))?;
+        for path in &c.files{let key=path.to_ascii_lowercase();let f=files.get(&key).ok_or_else(||format!("Файл компонента не объявлен: {path}"))?;
             if f.path!=*path||f.required||file_ownership::effective_ownership(f)!="optional"||!owners.insert(key){return Err(format!("Некорректный или повторяющийся файл компонента: {path}"))}}
     }
     for f in &m.files{if file_ownership::effective_ownership(f)=="optional"&&!owners.contains(&f.path.to_ascii_lowercase()){return Err(format!("Дополнительный файл v3 не принадлежит ни одному компоненту: {}",f.path))}}

@@ -121,7 +121,7 @@ pub fn validate_windows_guard_policy_report(
     ] {
         if actual & required != required {
             return Err(format!(
-                "Guard Windows {name} policy does not satisfy profile {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
+                "Guard: политика Windows {name} не соответствует профилю {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
             ));
         }
     }
@@ -147,7 +147,7 @@ pub fn validate_windows_guard_policy_report(
             || !capability.satisfied
         {
             return Err(format!(
-                "Guard Windows capability {name} does not satisfy profile {expected_profile}"
+                "Guard: возможность Windows {name} не соответствует профилю {expected_profile}"
             ));
         }
     }
@@ -249,7 +249,7 @@ mod windows_impl {
         pub fn verify_process_tree(&self, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
             if root_pid != self.report.pid {
                 return Err(format!(
-                    "Guard process-tree root mismatch: policy={}, requested={root_pid}",
+                    "Guard: корень дерева процессов не соответствует политике: policy={}, requested={root_pid}",
                     self.report.pid
                 ));
             }
@@ -281,7 +281,7 @@ mod windows_impl {
             .ok_or_else(|| "В политике Guard для Windows отсутствуют сведения о ядре защиты".to_string())?;
         if actual_profile != profile {
             return Err(format!(
-                "Guard Windows Protection Core already initialized with profile {actual_profile}, requested {profile}"
+                "Guard: ядро защиты Windows уже инициализировано с профилем {actual_profile}, запрошен {profile}"
             ));
         }
         Ok(report)
@@ -417,7 +417,7 @@ mod windows_impl {
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "Guard process cannot be assigned to launcher lifetime Job Object: {}",
+                "Guard: не удалось привязать процесс к Job Object жизненного цикла лаунчера: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -489,7 +489,7 @@ mod windows_impl {
 
         if !capabilities.requirements_satisfied() {
             return Err(format!(
-                "Guard Windows protection profile {profile} cannot be enforced by this host capability set"
+                "Guard: набор возможностей системы не позволяет обеспечить профиль защиты Windows {profile}"
             ));
         }
 
@@ -626,7 +626,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard cannot enumerate runtime Job Object members: {}",
+                "Guard: не удалось получить список участников Job Object Runtime: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -634,7 +634,7 @@ mod windows_impl {
         let listed = u32::from_ne_bytes(buffer[4..8].try_into().expect("fixed header")) as usize;
         if assigned > listed || listed > MAX_JOB_PROCESS_IDS {
             return Err(format!(
-                "Guard Job Object process list is incomplete: assigned={assigned}, listed={listed}"
+                "Guard: список процессов Job Object неполон: assigned={assigned}, listed={listed}"
             ));
         }
         let required = 8usize
@@ -716,7 +716,7 @@ mod windows_impl {
             if process.is_null() {
                 if pid == root_pid {
                     return Err(format!(
-                        "Guard cannot open runtime root PID {pid} for Job Object verification: {}",
+                        "Guard: не удалось открыть корневой процесс Runtime с PID {pid} для проверки Job Object: {}",
                         std::io::Error::last_os_error()
                     ));
                 }
@@ -853,7 +853,7 @@ mod windows_impl {
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "Windows runtime process cannot be assigned to Guard Job Object: {}",
+                "Runtime Windows: не удалось назначить процесс в Guard Job Object: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -886,7 +886,7 @@ mod windows_impl {
         let actual_limits = observed.BasicLimitInformation.LimitFlags;
         if actual_limits & JOB_LIMITS_REQUIRED != JOB_LIMITS_REQUIRED {
             return Err(format!(
-                "Windows runtime Job Object limits are incomplete: required=0x{JOB_LIMITS_REQUIRED:08x}, actual=0x{actual_limits:08x}"
+                "Runtime Windows: ограничения Job Object заданы не полностью: required=0x{JOB_LIMITS_REQUIRED:08x}, actual=0x{actual_limits:08x}"
             ));
         }
         if actual_limits
@@ -957,7 +957,7 @@ mod windows_impl {
                     }
                     if previous_suspend_count == 0 {
                         return Err(format!(
-                            "Windows runtime process {pid} was not suspended during policy assignment"
+                            "Runtime Windows: процесс {pid} не был приостановлен при назначении политики"
                         ));
                     }
                     return Ok(());
@@ -966,7 +966,7 @@ mod windows_impl {
             has_entry = unsafe { Thread32Next(snapshot.0, &mut entry) } != 0;
         }
         Err(format!(
-            "Windows runtime primary thread not found while process {pid} is suspended"
+            "Runtime Windows: основной поток не найден при приостановленном процессе {pid}"
         ))
     }
 }

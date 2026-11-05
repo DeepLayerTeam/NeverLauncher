@@ -14,7 +14,7 @@ def selected_components(manifest, choice):
     cat = manifest.get("componentCatalog")
     if not cat:
         if choice != "default":
-            raise ValueError("selection without signed catalog")
+            raise ValueError("Выбор компонентов выполнен без подписанного каталога")
         return set(), {f["path"] for f in manifest["files"]}
     by_id = {c["id"]: c for c in cat["components"]}
     if len(by_id) != len(cat["components"]):
@@ -22,7 +22,7 @@ def selected_components(manifest, choice):
     if choice.startswith("@custom:v1:"):
         text = choice[len("@custom:v1:") :]
         if ":" not in text:
-            raise ValueError("bad custom selection syntax")
+            raise ValueError("Некорректный синтаксис пользовательского выбора")
         base, operations = text.split(":", 1)
     else:
         base = (
@@ -44,7 +44,7 @@ def selected_components(manifest, choice):
     if operations is not None and operations:
         changes = operations.split(",")
         if len(changes) > len(by_id):
-            raise ValueError("too many custom choices")
+            raise ValueError("Выбрано слишком много пользовательских вариантов")
         seen = set()
         for term in changes:
             if (
@@ -57,12 +57,12 @@ def selected_components(manifest, choice):
             ident = term[1:]
             seen.add(ident)
             if ident not in by_id:
-                raise ValueError("unsigned component in custom choice")
+                raise ValueError("В пользовательском выборе присутствует неподписанный компонент")
             c = by_id[ident]
             if term[0] == "-" and c.get("required"):
-                raise ValueError("required component disabled")
+                raise ValueError("Обязательный компонент отключён")
             if term[0] == "+" and (c.get("limited") or c.get("visible") is False):
-                raise ValueError("restricted component manually enabled")
+                raise ValueError("Ограниченный компонент включён вручную")
             if term[0] == "+":
                 roots.add(ident)
             else:
@@ -72,7 +72,7 @@ def selected_components(manifest, choice):
 
     def include(ident, chain):
         if ident in chain:
-            raise ValueError("dependency cycle")
+            raise ValueError("Обнаружена циклическая зависимость")
         if ident in selected:
             return
         c = by_id.get(ident)
@@ -90,13 +90,13 @@ def selected_components(manifest, choice):
         group = c.get("exclusiveGroup", "")
         if group:
             if group in groups:
-                raise ValueError("exclusive component group conflict")
+                raise ValueError("Конфликт взаимоисключающих групп компонентов")
             groups[group] = ident
         for conflict in c.get("conflicts", []):
             # The pinned native resolver enforces versionRange as well;
             # the attestor treats a selected conflict as safe by default.
             if conflict["id"] in selected and not conflict.get("versionRange"):
-                raise ValueError("conflicting selected components")
+                raise ValueError("Выбранные компоненты конфликтуют друг с другом")
     selected_files = set()
     all_owned = set()
     for c in cat["components"]:

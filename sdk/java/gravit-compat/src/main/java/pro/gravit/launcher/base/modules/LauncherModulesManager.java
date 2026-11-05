@@ -16,7 +16,7 @@ public final class LauncherModulesManager {
     public LauncherModulesManager(RuntimeServices runtime){this.runtime=Objects.requireNonNull(runtime);commandHandler=new CommandHandler(runtime.commands());}
     public CommandHandler getCommandHandler(){return commandHandler;}
     public synchronized <T extends LauncherModule.Event> boolean registerEvent(Class<T> type,LauncherModule.EventHandler<T> callback){
-        if(active)throw new IllegalStateException("event registration is closed after module init");
+        if(active)throw new IllegalStateException("После инициализации модуля регистрация событий закрыта");
         Objects.requireNonNull(callback);
         HostEvent annotation=type.getAnnotation(HostEvent.class);
         if(annotation==null)throw new UnsupportedOperationException("Событие Gravit не сопоставлено с Extensions: "+type.getName());

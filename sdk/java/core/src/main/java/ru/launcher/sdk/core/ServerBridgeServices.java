@@ -72,7 +72,7 @@ public final class ServerBridgeServices {
     public Server server(String projectId,String serverId)throws IOException,InterruptedException {
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));req.put("serverId",id(serverId,"serverId"));
         Server result=decodeServer(Json.object(call("bridge.server",req).get("server")));
-        if(!projectId.equals(result.projectId())||!serverId.equals(result.id()))throw new SecurityException("server scope changed");
+        if(!projectId.equals(result.projectId())||!serverId.equals(result.id()))throw new SecurityException("Область действия сервера изменилась");
         return result;
     }
     /** Ограниченный стабильный список проекта, отсортированный по ID. */
@@ -84,7 +84,7 @@ public final class ServerBridgeServices {
         List<Server> servers=new ArrayList<>();
         for(Object raw:items) {
             Server server=decodeServer(Json.object(raw));
-            if(!projectId.equals(server.projectId()))throw new SecurityException("cross-project ServerBridge result");
+            if(!projectId.equals(server.projectId()))throw new SecurityException("Получен результат ServerBridge из другого проекта");
             servers.add(server);
         }
         Integer next=null;
@@ -135,14 +135,14 @@ public final class ServerBridgeServices {
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));
         req.put("serverId",id(serverId,"serverId"));req.put("commandId",id(commandId,"commandId"));
         Command cmd=decodeCommand(Json.object(call("bridge.command.get",req).get("command")));
-        if(!serverId.equals(cmd.serverId())||!commandId.equals(cmd.id()))throw new SecurityException("command scope changed");
+        if(!serverId.equals(cmd.serverId())||!commandId.equals(cmd.id()))throw new SecurityException("Область действия команды изменилась");
         return cmd;
     }
     private static ServerEvent decodeEvent(Object value){
         Map<String,Object> m=Json.object(value);
         Map<String,Object> event=Json.object(m.get("event"));
         Map<String,Object> raw=Json.object(event.get("payload"));
-        if(raw.size()>32)throw new IllegalArgumentException("too many event fields");
+        if(raw.size()>32)throw new IllegalArgumentException("Слишком много полей события");
         Map<String,String> values=new LinkedHashMap<>();
         for(var item:raw.entrySet()) {
             if(!(item.getValue() instanceof String s)||s.length()>4096)throw new IllegalArgumentException("Недопустимое поле события");

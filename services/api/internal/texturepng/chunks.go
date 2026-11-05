@@ -49,11 +49,11 @@ func validateChunks(png []byte) error {
 			}
 			hasIEND = true
 		case "acTL", "fcTL", "fdAT":
-			return fmt.Errorf("%w: animated PNG is not a Minecraft texture", ErrInvalid)
+			return fmt.Errorf("%w: анимированный PNG не является допустимой текстурой Minecraft", ErrInvalid)
 		default:
 			// Отклонять неизвестные критические блоки (вспомогательные удаляются).
 			if chunkType[0] >= 'A' && chunkType[0] <= 'Z' && !bytes.Equal(chunkType, []byte("PLTE")) {
-				return fmt.Errorf("%w: unsupported critical chunk", ErrInvalid)
+				return fmt.Errorf("%w: неподдерживаемый критический блок PNG", ErrInvalid)
 			}
 		}
 		offset = dataEnd + 4

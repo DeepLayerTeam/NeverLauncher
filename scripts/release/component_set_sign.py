@@ -40,7 +40,7 @@ def signed_set(
             manifest["securityGeneration"] = generation
         if type(generation) is not int or generation <= 0 or generation > 2**64 - 1:
             raise ValueError(
-                "securityGeneration must be an explicitly provisioned positive uint64"
+                "securityGeneration должен быть явно заданным положительным значением uint64"
             )
     platform = manifest["platform"]
     components = {x["component"] for x in manifest["components"]}
@@ -105,7 +105,7 @@ def signed_set(
         if development:
             return raw, None
         raise RuntimeError(
-            "production component update requires LAUNCHER_COMPONENT_SET_ED25519_SEED"
+            "Для производственного обновления компонентов требуется LAUNCHER_COMPONENT_SET_ED25519_SEED"
         )
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -126,7 +126,7 @@ def signed_set(
     )
     if not expected_pub or expected_pub != actual_pub:
         raise RuntimeError(
-            "component-set signing key does not match embedded public trust root"
+            "Ключ подписи набора компонентов не соответствует встроенному открытому корню доверия"
         )
     signature = key.sign(raw)
     envelope = {
@@ -157,7 +157,7 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
     key_id = os.environ.get("LAUNCHER_COMPONENT_DELEGATED_KEY_ID", "").strip()
     if not all((root_hex, policy_file, seed, key_id)):
         raise RuntimeError(
-            "0.23.12 production signing requires offline trust root, signed policy, delegated seed and key ID"
+            "Для промышленного подписания 0.23.12 необходимы автономный корень доверия, подписанная политика, делегированный ключ и идентификатор ключа"
         )
     root = Ed25519PublicKey.from_public_bytes(bytes.fromhex(root_hex))
     policy_raw = Path(policy_file).read_bytes()

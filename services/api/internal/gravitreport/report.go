@@ -146,7 +146,7 @@ func Finalize(v Report) (Report, error) {
 	for _, a := range v.Identities {
 		k := a.Provider + "\x00" + a.SourceID
 		if a.Provider == "" || a.SourceID == "" || !validIdentityUUID(a.UUID) || seenIdentity[k] {
-			return Report{}, errors.New("invalid/duplicate identity in report")
+			return Report{}, errors.New("В отчёте обнаружена некорректная или повторяющаяся учётная запись")
 		}
 		seenIdentity[k] = true
 		if other, ok := seenUUID[a.UUID]; ok && other != k {

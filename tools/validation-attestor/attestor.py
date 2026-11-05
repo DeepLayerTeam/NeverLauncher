@@ -174,7 +174,7 @@ def sha(p):
 
 def read_json(p, limit=4 * 1024 * 1024):
     if not p.is_file() or p.is_symlink() or p.stat().st_size > limit:
-        raise ValueError("missing/oversized evidence: " + p.name)
+        raise ValueError("Доказательства отсутствуют или превышают допустимый размер: " + p.name)
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -1460,7 +1460,7 @@ def main():
         outcome = execute_matrix(cfg, cfg.package_id)
         print(json.dumps(outcome))
         if not outcome["allRequiredTargetsVerified"]:
-            raise RuntimeError("runtime matrix incomplete")
+            raise RuntimeError("Матрица Runtime заполнена не полностью")
         return
     check(
         cfg.tls_cert and cfg.tls_key and cfg.client_ca,

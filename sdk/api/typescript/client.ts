@@ -14,10 +14,10 @@ export function resolvePath(template: string, parameters: Record<string, string>
   const used = new Set<string>();
   const path = template.replace(/\{([^{}]+)\}/g, (_, name: string) => {
     const value = parameters[name]; used.add(name);
-    if (!value || value === '.' || value === '..' || /[/\\]/.test(value)) throw new Error(`invalid path parameter: ${name}`);
+    if (!value || value === '.' || value === '..' || /[/\\]/.test(value)) throw new Error(`Недопустимый параметр пути: ${name}`);
     return encodeURIComponent(value);
   });
-  for (const key of Object.keys(parameters)) if (!used.has(key)) throw new Error(`unexpected parameter: ${key}`);
+  for (const key of Object.keys(parameters)) if (!used.has(key)) throw new Error(`Неожиданный параметр: ${key}`);
   if (/[{}]/.test(path)) throw new Error('Не подставлено значение параметра маршрута');
   return path;
 }
@@ -128,10 +128,10 @@ export class NeverLauncherAPI {
     // Версия 0.45.11 не отправляла заголовок контракта; запасной источник — версия продукта в
     // /ready.
     const response = await this.transport(new URL('/ready', this.baseURL), { redirect: 'manual' });
-    if (!response.ok) throw new Error(`backend not ready: ${response.status}`);
+    if (!response.ok) throw new Error(`Backend не готов: ${response.status}`);
     const version = response.headers.get('X-Launcher-API-Contract');
-    if (version) { if (version !== CONTRACT_VERSION) throw new Error(`incompatible API contract: ${version}`); return; }
+    if (version) { if (version !== CONTRACT_VERSION) throw new Error(`Несовместимый контракт API: ${version}`); return; }
     const info = await response.json() as { version?: string };
-    if (!['0.45.11', '0.45.12'].includes(info.version ?? '')) throw new Error(`unsupported legacy backend: ${info.version}`);
+    if (!['0.45.11', '0.45.12'].includes(info.version ?? '')) throw new Error(`Устаревшая версия Backend не поддерживается: ${info.version}`);
   }
 }

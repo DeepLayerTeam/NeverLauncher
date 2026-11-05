@@ -23,7 +23,7 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	policy := microsoftIssuerPolicy{authorityBase: cfg.AuthorityBase, tenant: cfg.Tenant, tenantMode: cfg.TenantMode, allowedTenantIDs: cfg.AllowedTenantSet}
 	base, err := oidcconnector.NewWithIssuerPolicy(ctx, cfg.OIDC, policy)
 	if err != nil {
-		return nil, fmt.Errorf("Microsoft connector %q: %w", cfg.ID, err)
+		return nil, fmt.Errorf("Коннектор Microsoft %q: %w", cfg.ID, err)
 	}
 	return &Connector{cfg: cfg, oidc: base}, nil
 }

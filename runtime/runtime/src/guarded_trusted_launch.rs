@@ -111,7 +111,7 @@ fn prepare(root: &Path, project: &str, minecraft: &str, loader: &str, original_m
 }
 fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str,
    launch:Option<(&crate::Manifest,&crate::LaunchPlan)>) -> Result<Option<GuardedTrustedLaunch0503>, String> {
-    let canonical_root = fs::canonicalize(root).map_err(|e| format!("Guard Trusted JVM client root: {e}"))?;
+    let canonical_root = fs::canonicalize(root).map_err(|e| format!("Guard Trusted JVM: ошибка корневого каталога клиента: {e}"))?;
     let root = canonical_root.as_path();
     let active = root.join(ACTIVE);
     let meta = match fs::symlink_metadata(&active) {
@@ -160,7 +160,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
-    let mut file = options.open(&name).map_err(|e| format!("Guard Trusted JVM launch config create: {e}"))?;
+    let mut file = options.open(&name).map_err(|e| format!("Guard Trusted JVM: не удалось создать конфигурацию запуска: {e}"))?;
     if let Err(e) = file.write_all(config.as_bytes()).and_then(|_| file.sync_all()) {
         let _ = fs::remove_file(&name);
         return Err(format!("Не удалось записать конфигурацию запуска доверенной JVM для Guard: {e}"));

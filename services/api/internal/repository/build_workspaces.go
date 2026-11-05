@@ -112,7 +112,7 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 		return ErrConflict
 	}
 	if !reflect.DeepEqual(old.Settings, next.Settings) {
-		return fmt.Errorf("%w: workspace build settings are immutable; create a new workspace", ErrConflict)
+		return fmt.Errorf("%w: параметры сборки рабочего пространства нельзя изменить; создайте новое рабочее пространство", ErrConflict)
 	}
 	if old.State == "built" {
 		return ErrImmutable
@@ -137,7 +137,7 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 		return errors.New("Некорректное значение: «workspace state transition»")
 	}
 	if old.PackageID != "" && old.PackageID != next.PackageID {
-		return fmt.Errorf("%w: workspace package reservation is immutable", ErrConflict)
+		return fmt.Errorf("%w: резервирование пакета рабочего пространства нельзя изменить", ErrConflict)
 	}
 	return nil
 }

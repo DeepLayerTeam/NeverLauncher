@@ -40,7 +40,7 @@ func coordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor) (bool,
 		}
 		want, ok := expected[name]
 		if !ok || !sqlText.Valid || normalizeCoordinatorDDL0471(sqlText.String) != want {
-			err = fmt.Errorf("coordinator incompatible legacy object %s %s", kind, name)
+			err = fmt.Errorf("Координатор: несовместимый устаревший объект %s %s", kind, name)
 			break
 		}
 		seen[name] = true
@@ -95,7 +95,7 @@ func migrateCoordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor)
 			continue
 		}
 		if _, err = q.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("coordinator legacy DDL: %w", err)
+			return fmt.Errorf("Ошибка устаревшей DDL-схемы координатора: %w", err)
 		}
 	}
 	// Сохраняйте хеш токена действующей аренды и историю ограждений: обновление не
@@ -113,7 +113,7 @@ func migrateCoordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor)
 		return err
 	}
 	if v != schemaVersion {
-		return fmt.Errorf("coordinator migration version %d", v)
+		return fmt.Errorf("Версия миграции координатора %d", v)
 	}
 	_, err = validateExistingSchema0471(ctx, q)
 	return err

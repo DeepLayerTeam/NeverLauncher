@@ -39,15 +39,15 @@ public final class ExtensionRunner {
         String source=suppliedManifest==null?Files.readString(Path.of(manifestPath)):suppliedManifest;
         ExtensionManifest manifest=ExtensionManifest.parse(source);
         String kind=argv==null?"backend":"cli";
-        if(manifest.targets().stream().noneMatch(t->t.kind().equals(kind)))throw new IllegalArgumentException("Java extension requires "+kind+" target");
+        if(manifest.targets().stream().noneMatch(t->t.kind().equals(kind)))throw new IllegalArgumentException("Для расширения Java требуется "+kind+" target");
         if(!kind.equals(env.getOrDefault("LAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("Несовпадение целевого хоста");
         // Загрузка без инициализации не допускает выполнения статических
         // инициализаторов расширения, пока аутентифицированный хост не согласует API.
         try(BundledLibraries libraries=BundledLibraries.open(manifest.api())) {
         Class<?> type=Class.forName(className,false,libraries.classLoader());
-        if(!Extension.class.isAssignableFrom(type))throw new IllegalArgumentException("class does not implement Extension: "+className);
+        if(!Extension.class.isAssignableFrom(type))throw new IllegalArgumentException("Класс не реализует интерфейс Extension: "+className);
         Set<String> declared=declaredCommands(source);
-        if(argv!=null&&!declared.contains(argv[0]))throw new SecurityException("undeclared CLI command");
+        if(argv!=null&&!declared.contains(argv[0]))throw new SecurityException("Команда CLI не объявлена");
         java.util.concurrent.atomic.AtomicReference<ExtensionLifecycle> lifecycleRef=new java.util.concurrent.atomic.AtomicReference<>();
         try(HostSession host=HostSession.fromEnvironment(env,manifest);
             RuntimeServices services=new RuntimeServices(host,declared,declaredUIActions(source));
@@ -105,7 +105,7 @@ public final class ExtensionRunner {
             Set<String> names=new HashSet<>();
             for(Object item:items){
                 String id=Json.string(Json.object(item),"id",true);
-                if(!names.add(id))throw new IllegalArgumentException("duplicate signed UI action");
+                if(!names.add(id))throw new IllegalArgumentException("Повторяющееся подписанное действие интерфейса");
             }
             surfaces.put(kind,Set.copyOf(names));
         }
@@ -116,7 +116,7 @@ public final class ExtensionRunner {
         Object cli=raw.get("cli");if(cli==null)return Set.of();
         Map<String,Object> obj=Json.object(cli);Object commands=obj.get("commands");
         if(!(commands instanceof List<?> list))return Set.of();
-        Set<String> names=new HashSet<>();for(Object item:list){String name=Json.string(Json.object(item),"name",true);if(!names.add(name))throw new IllegalArgumentException("duplicate CLI command");}
+        Set<String> names=new HashSet<>();for(Object item:list){String name=Json.string(Json.object(item),"name",true);if(!names.add(name))throw new IllegalArgumentException("Повторная регистрация команды CLI");}
         return names;
     }
 }

@@ -48,7 +48,7 @@ def sign_attestation(
     )
     if actual_public != expected_public.lower():
         raise GateError(
-            "operator signing key differs from protected verification anchor"
+            "Ключ подписи оператора не соответствует защищённому проверочному якорю"
         )
     attestation = folder / "attestation.json"
     raw = attestation.read_bytes()

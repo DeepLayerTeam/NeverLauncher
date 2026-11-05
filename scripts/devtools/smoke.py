@@ -120,7 +120,7 @@ def main(cli):
                 line = p.stdout.readline()
                 if not line:
                     raise RuntimeError(
-                        "test identity server exited before startup: " + p.stderr.read()
+                        "Тестовый сервер идентификации завершился до запуска: " + p.stderr.read()
                     )
                 lines.append(line)
                 try:

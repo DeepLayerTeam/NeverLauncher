@@ -112,7 +112,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
         Object result;
         switch(method){
             case "health" -> {
-                if(!params.isEmpty())throw new IllegalArgumentException("health does not take parameters");
+                if(!params.isEmpty())throw new IllegalArgumentException("Метод health не принимает параметров");
                 String state=lifecycleState.get();
                 result=Map.of("state",state,"responsive","RUNNING".equals(state));
             }
@@ -126,7 +126,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 services.events().deliver(envelope,method.equals("hook.deliver"));
                 result=Map.of("accepted",true);
             }
-            default -> throw new IllegalArgumentException("unknown RPC method");
+            default -> throw new IllegalArgumentException("Неизвестный метод RPC");
         }
         return Map.of("protocolVersion","1.0","requestId",id,"ok",true,"result",result);
     }

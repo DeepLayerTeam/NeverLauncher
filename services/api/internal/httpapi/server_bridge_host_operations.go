@@ -83,7 +83,7 @@ func decodeHostAction0413(r *http.Request, w http.ResponseWriter) (string, error
 		return "", err
 	}
 	if err := dec.Decode(new(any)); err != io.EOF {
-		return "", errors.New("extra request body")
+		return "", errors.New("Лишние данные в теле запроса")
 	}
 	if req.Action != "start" && req.Action != "stop" && req.Action != "restart" {
 		return "", errors.New("Не поддерживается: действие хоста")

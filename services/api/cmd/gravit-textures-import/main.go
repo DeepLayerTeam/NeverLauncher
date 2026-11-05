@@ -88,13 +88,13 @@ func run() error {
 	approved := flag.String("approved-plan-sha256", "", "Для реального импорта требуется planSha256 из проверенного отчёта пробного запуска")
 	flag.Parse()
 	if *reportFile == "" || *sourceID == "" {
-		return errors.New("--report and --source-id are required")
+		return errors.New("Необходимо указать --report и --source-id")
 	}
 	if (*sourceJSON == "") == (*sourceDSN == "") {
-		return errors.New("choose exactly one of --source-json or --source-dsn")
+		return errors.New("Укажите только один источник: --source-json или --source-dsn")
 	}
 	if (*sourceRoot != "") == *sourceS3 {
-		return errors.New("choose exactly one of --source-root or --source-s3")
+		return errors.New("Укажите только один источник: --source-root или --source-s3")
 	}
 	if *sourceRoot != "" {
 		if _, err := os.Stat(*sourceRoot); err != nil {
@@ -109,7 +109,7 @@ func run() error {
 	defer cancel()
 	repo := repository.NewSQLRepository("pgx", destDSN, "").(*repository.SQLRepository)
 	if err := repo.Health(ctx); err != nil {
-		return fmt.Errorf("target database: %w", err)
+		return fmt.Errorf("Ошибка целевой базы данных: %w", err)
 	}
 	var sourceRows []texturegravit.SourceRow
 	var err error
@@ -119,7 +119,7 @@ func run() error {
 			return statErr
 		}
 		if fi.Size() > 32<<20 {
-			return errors.New("source export exceeds 32 MiB")
+			return errors.New("Экспорт исходных данных превышает 32 МиБ")
 		}
 		b, readErr := os.ReadFile(*sourceJSON)
 		if readErr != nil {
@@ -134,7 +134,7 @@ func run() error {
 		defer db.Close()
 		db.SetMaxOpenConns(2)
 		if err = db.PingContext(ctx); err != nil {
-			return fmt.Errorf("legacy PostgreSQL: %w", err)
+			return fmt.Errorf("Ошибка устаревшего PostgreSQL: %w", err)
 		}
 		sourceRows, err = texturegravit.ReadPostgres(ctx, db)
 	}
@@ -158,7 +158,7 @@ func run() error {
 	}
 	if !*dryRun {
 		if e = dst.Health(ctx); e != nil {
-			return fmt.Errorf("target storage: %w", e)
+			return fmt.Errorf("Ошибка целевого хранилища: %w", e)
 		}
 	}
 	var source texturegravit.Source
@@ -181,7 +181,7 @@ func run() error {
 		if !isApprovedTexturePlan0445(*approved) || report.PlanSHA256 != *approved {
 			runErr = errors.New("Для импорта в действующую систему укажите --approved-plan-sha256, совпадающий с текущим проверенным отчётом пробного запуска")
 		} else if !texturePreviewClean0445(report) {
-			runErr = errors.New("source preflight is incomplete; resolve failed/unmatched/ambiguous textures before live import")
+			runErr = errors.New("Предварительная проверка источника не завершена; перед реальным импортом устраните ошибки, несопоставленные и неоднозначные текстуры")
 		} else {
 			runner.DryRun = false
 			report, runErr = runner.Run(ctx, sourceRows)
@@ -231,7 +231,7 @@ func run() error {
 		return runErr
 	}
 	if report.Counts["blocked"] > 0 || report.Counts["unmatched"] > 0 || report.Counts["quarantined"] > 0 || report.Counts["skipped-existing"] > 0 {
-		return errors.New("migration incomplete: report contains blocked/unmatched/quarantined/skipped-existing rows")
+		return errors.New("Миграция не завершена: отчёт содержит заблокированные, несопоставленные, помещённые в карантин или пропущенные существующие записи")
 	}
 	return nil
 }

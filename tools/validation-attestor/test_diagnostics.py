@@ -38,7 +38,7 @@ class DiagnosticPrivacyTests(unittest.TestCase):
             folder=Path(base)/'world';folder.mkdir(mode=0o755)
             with self.assertRaisesRegex(ValueError,'owner-only'):
                 retain(worker,folder,'b'*48)
-            with self.assertRaisesRegex(ValueError,'invalid diagnostic run id'):
+            with self.assertRaisesRegex(ValueError,'Недопустимый идентификатор диагностического запуска'):
                 retain(worker,Path(base)/'private','../../secret')
 
 if __name__=='__main__':unittest.main()

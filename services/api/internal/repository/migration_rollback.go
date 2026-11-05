@@ -141,7 +141,7 @@ func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run stri
 		return rb.Result{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return rb.Result{}, fmt.Errorf("rollback plan commit uncertain; GET before retry: %w", e)
+		return rb.Result{}, fmt.Errorf("Сохранение плана отката не подтверждено; выполните GET перед повтором: %w", e)
 	}
 	return result, nil
 }
@@ -258,7 +258,7 @@ func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run st
 		return rb.Result{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return rb.Result{}, fmt.Errorf("rollback commit uncertain; GET before retry: %w", e)
+		return rb.Result{}, fmt.Errorf("Сохранение отката не подтверждено; выполните GET перед повтором: %w", e)
 	}
 	return result, nil
 }

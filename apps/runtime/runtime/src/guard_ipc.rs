@@ -544,7 +544,7 @@ impl GuardSupervisor {
             .ok_or_else(|| "Guard process boundary не инициализирован".to_string())?;
         if !handle.protection_profile.is_remote_attestation_eligible() {
             return Err(format!(
-                "Guard remote attestation requires aggressive Windows protection profile; active profile is {}",
+                "Guard: для удалённой аттестации требуется усиленный профиль защиты Windows; текущий профиль: {}",
                 handle.protection_profile
             ));
         }
