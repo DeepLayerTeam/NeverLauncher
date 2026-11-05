@@ -1,8 +1,8 @@
-"""Independent host-side verification of the signed component selection.
+"""Независимая проверка выбора подписанных компонентов на стороне хоста.
 
-This accepts component file paths or component IDs from the worker as
-truth. All optional ownership and the transitive closure derive from the
-immutable, verified staged release manifest.
+Пути и идентификаторы компонентов от исполнителя не принимаются на веру.
+Принадлежность необязательных компонентов и транзитивные зависимости
+определяются по неизменяемому проверенному манифесту подготовленного выпуска.
 """
 
 import re

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Compile an explicitly source-ported Gravit module into a real Extension.
+"""Компиляция модуля Gravit, явно перенесённого из исходного кода, в полноценное расширение.
 
-Does not load arbitrary Gravit JARs or attempt unsafe Java API emulation.
-Published packages must be signed and independently verified by CLI.
+Произвольные JAR-файлы Gravit не загружаются; небезопасная эмуляция Java API не выполняется.
+Опубликованные пакеты должны быть подписаны и независимо проверены через CLI.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def sources_in(directory: Path) -> list[Path]:
             raise PortError(f"Запрещено: символическая ссылка источника: {p}")
         if p.is_file():
             if p.suffix != ".java":
-                continue  # Non-Java assets are deliberately not embedded.
+                continue  # Ресурсы, отличные от Java, намеренно не включаются.
             if p.stat().st_size > 1 << 20 or not p.resolve().is_relative_to(source):
                 raise PortError(f"Небезопасное значение: исходный файл: {p}")
             result.append(p)

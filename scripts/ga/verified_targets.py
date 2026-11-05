@@ -124,7 +124,7 @@ def verify_player_trace(
         and re.fullmatch(r"[a-zA-Z0-9._:-]{16,128}", trace["playerCycleId"]) is not None
         and isinstance(trace["evidenceSha256"], str)
         and SHA.fullmatch(trace["evidenceSha256"]) is not None,
-        target + ": player test does not bind a real final-package run: " + check,
+        target + ": Проверка игрового клиента не связана с реальным запуском итогового пакета: " + check,
     )
     # Подписанная трассировка должна ссылаться на независимо сохранённый живой вывод оператора, а не
     # просто заявлять успех. Хешируйте сырые доказательства и журналы процессов; манифесты выпуска,
@@ -132,13 +132,13 @@ def verify_player_trace(
     folder = evidence / "targets" / target / "player-0400"
     require(
         folder.is_dir() and not folder.is_symlink(),
-        target + ": actual player execution evidence directory missing",
+        target + ": Отсутствует каталог свидетельств реального запуска игрового клиента",
     )
     report_path = folder / (check + ".json")
     report = read_json(report_path)
     require(
         sha(report_path) == trace["evidenceSha256"],
-        target + ": signed player evidence digest mismatch: " + check,
+        target + ": Контрольная сумма подписанного свидетельства работы клиента не совпадает: " + check,
     )
     require(
         set(report)
@@ -155,7 +155,7 @@ def verify_player_trace(
             "observed",
             "runtimeLogSha256",
         },
-        target + ": malformed actual player report: " + check,
+        target + ": Неверный формат отчёта о реальном запуске клиента: " + check,
     )
     for key, wanted in (
         ("schemaVersion", "launcher.player.final.0400.v1"),
@@ -170,7 +170,7 @@ def verify_player_trace(
     ):
         require(
             report.get(key) == wanted,
-            target + ": mismatched real execution field " + key + ": " + check,
+            target + ": Несоответствие поля реального выполнения " + key + ": " + check,
         )
     required = PLAYER_OBSERVATIONS_0400[check]
     observed = report["observed"]
@@ -178,7 +178,7 @@ def verify_player_trace(
         type(observed) is dict
         and set(observed) == set(required)
         and all(observed[name] is True for name in required),
-        target + ": actual player result absent or negative: " + check,
+        target + ": Результат реального запуска клиента отсутствует или отрицателен: " + check,
     )
     log_path = folder / (check + ".log")
     require(
@@ -188,7 +188,7 @@ def verify_player_trace(
         and isinstance(report["runtimeLogSha256"], str)
         and SHA.fullmatch(report["runtimeLogSha256"]) is not None
         and sha(log_path) == report["runtimeLogSha256"],
-        target + ": missing, corrupted or unsigned actual runtime log: " + check,
+        target + ": Журнал реального выполнения отсутствует, повреждён или не подписан: " + check,
     )
 
 
@@ -211,7 +211,7 @@ def read_file(path: Path, max_size=LIMIT) -> bytes:
         path.is_file()
         and not path.is_symlink()
         and 0 < path.stat().st_size <= max_size,
-        "missing, symlinked, empty or oversized file: " + str(path),
+        "Файл отсутствует, является символической ссылкой, пуст или слишком велик: " + str(path),
     )
     return path.read_bytes()
 
@@ -243,7 +243,7 @@ def utc(value):
     require(
         isinstance(value, str)
         and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", value),
-        "timestamp must be UTC second precision",
+        "Метка времени должна быть в UTC с точностью до секунды",
     )
     return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
@@ -271,19 +271,19 @@ def approval_data(
     require(
         cfg.ga_mode in ("legacy-ga036", "signed-ga-v2")
         and COMMIT.fullmatch(commit) is not None,
-        "stable GA policy and exact 40-character Git SHA required",
+        "Требуются неизменная политика финального выпуска и точный 40-символьный SHA Git",
     )
     key_raw = read_file(public_key, 4096).strip()
     # Явный открытый ключ Ed25519 в шестнадцатеричном формате, никогда не приватный ключ и не самоподписант GitHub CI.
     require(
         re.fullmatch(rb"[0-9a-fA-F]{64}", key_raw) is not None,
-        "trusted independently pinned operator key must contain 32 public bytes (hex)",
+        "Доверенный независимо закреплённый ключ оператора должен содержать 32 байта открытого ключа (hex)",
     )
     raw = read_file(evidence / "approval.json")
     signature_hex = read_file(evidence / "approval.sig", 256).strip()
     require(
         re.fullmatch(rb"[a-fA-F0-9]{128}", signature_hex) is not None,
-        "missing canonical 64-byte Ed25519 approval signature",
+        "Отсутствует каноническая 64-байтная подпись подтверждения Ed25519",
     )
     try:
         Ed25519PublicKey.from_public_bytes(bytes.fromhex(key_raw.decode())).verify(
@@ -303,20 +303,20 @@ def approval_data(
             "expiresAtUtc",
             "targets",
         },
-        "approval fields incomplete or unexpected",
+        "Поля подтверждения неполны или содержат неожиданные значения",
     )
     require(
         data["schemaVersion"] == cfg.approval_schema
         and data["version"] == version
         and data["commit"] == commit,
-        "approval is not for this release and exact commit",
+        "Подтверждение относится к другому выпуску или коммиту",
     )
     timestamp = now or datetime.now(timezone.utc)
     require(
         utc(data["issuedAtUtc"]) <= timestamp <= utc(data["expiresAtUtc"])
         and (utc(data["expiresAtUtc"]) - utc(data["issuedAtUtc"])).total_seconds()
         <= 7 * 86400,
-        "GA approval expired, future-dated, or valid too long",
+        "Подтверждение финального выпуска истекло, датировано будущим или имеет слишком долгий срок действия",
     )
     return data, raw, key_raw
 
@@ -343,12 +343,12 @@ def verify(
         and len(targets) == 6
         and {row.get("target") for row in targets if isinstance(row, dict)}
         == set(TARGETS),
-        "all six release targets must have independent approval; partial GA bundle prohibited",
+        "Все шесть целевых платформ выпуска должны иметь независимое подтверждение; неполный комплект финального выпуска запрещён",
     )
     # Не отправляйте незаметно седьмую платформу или неверный псевдоним архитектуры.
     require(
         bundle.is_dir() and not bundle.is_symlink(),
-        "real release staging directory required",
+        "Требуется реальный каталог подготовки выпуска",
     )
     # Выпуск с неуказанным платформенным пакетом не является одобренным подмножеством.
     permitted = {name for target in TARGETS for name in paths(version, target)}
@@ -387,7 +387,7 @@ def verify(
             and item["status"] == "certified"
             and isinstance(item["checks"], dict)
             and set(item["checks"]) == set(checks_for(version)),
-            target + ": incomplete GA target",
+            target + ": Неполная целевая платформа финального выпуска",
         )
         binary_name, package_name = paths(version, target)
         binary = bundle / binary_name
@@ -395,13 +395,13 @@ def verify(
         for path in (binary, package):
             require(
                 path.is_file() and not path.is_symlink() and path.stat().st_size > 0,
-                target + ": no real packaged executable or installer",
+                target + ": Отсутствует реальный упакованный исполняемый файл или установщик",
             )
         for field, path in (("binarySha256", binary), ("packageSha256", package)):
             require(
                 SHA.fullmatch(item[field]) is not None and sha(path) == item[field],
                 target
-                + ": signed approval does not match exact shipping bytes: "
+                + ": Подписанное подтверждение не соответствует точному содержимому поставки: "
                 + field,
             )
         cycle_ids = set()
@@ -412,13 +412,13 @@ def verify(
                 and set(meta) == {"sha256"}
                 and isinstance(meta["sha256"], str)
                 and SHA.fullmatch(meta["sha256"]) is not None,
-                target + ": missing independently approved " + check,
+                target + ": Отсутствует независимо подтверждённый " + check,
             )
             trace_path = evidence / "targets" / target / (check + ".json")
             require(
                 trace_path.resolve().is_relative_to(evidence.resolve())
                 and not trace_path.parent.is_symlink(),
-                target + ": unsafe trace directory",
+                target + ": Небезопасный каталог трассировки",
             )
             trace = read_json(trace_path)
             require(
@@ -446,7 +446,7 @@ def verify(
                         "artifactSha256",
                         "executionId",
                     },
-                    target + ": invalid trace fields " + check,
+                    target + ": Недопустимые поля трассировки " + check,
                 )
             if check in security_checks(version):
                 continue
@@ -462,12 +462,12 @@ def verify(
                 and trace["artifactSha256"] == item["binarySha256"]
                 and isinstance(trace["executionId"], str)
                 and re.fullmatch(r"[a-zA-Z0-9._:-]{8,128}", trace["executionId"]),
-                target + ": test does not attest actual approved binary: " + check,
+                target + ": Проверка не подтверждает фактически одобренный исполняемый файл: " + check,
             )
         if PLAYER_CHECKS_0400[0] in checks_for(version):
             require(
                 len(cycle_ids) == 1,
-                target + ": unrelated player runs cannot be combined into a pass",
+                target + ": Нельзя объединять несвязанные запуски клиента для получения положительного результата",
             )
         records.append(
             {
@@ -515,14 +515,14 @@ def main():
             approval, _, _ = approval_data(args.evidence, args.trusted_key, args.version, args.commit)
             verify_security(args.evidence, approval)
             print(
-                f"{args.version}: signed operator identity preflight accepted; exact bytes NOT YET checked"
+                f"{args.version}: Предварительная проверка подписанной личности оператора пройдена; точное совпадение байтов ЕЩЁ НЕ проверено"
             )
             return 0
         require(
-            args.output is not None, "required --output for exact-byte verification"
+            args.output is not None, "Для проверки точного совпадения байтов необходим параметр --output"
         )
         require(
-            args.bundle is not None, "required --bundle for exact-byte verification"
+            args.bundle is not None, "Для проверки точного совпадения байтов необходим параметр --bundle"
         )
         receipt = verify(
             args.bundle, args.evidence, args.trusted_key, args.version, args.commit
@@ -532,10 +532,10 @@ def main():
             json.dumps(receipt, sort_keys=True, indent=2) + "\n", encoding="utf-8"
         )
     except (Blocked, OSError, ValueError, TypeError, KeyError, InvalidSignature) as exc:
-        print(f"{args.version} GA BLOCKED: " + str(exc), file=sys.stderr)
+        print(f"{args.version} Финальный выпуск ЗАБЛОКИРОВАН: " + str(exc), file=sys.stderr)
         return 3
     print(
-        f"{args.version}: all six exact-byte targets independently signed and approved"
+        f"{args.version}: Все шесть платформ с точным совпадением байтов независимо подписаны и подтверждены"
     )
     return 0
 

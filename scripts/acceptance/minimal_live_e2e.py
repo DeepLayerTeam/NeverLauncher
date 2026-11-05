@@ -178,7 +178,7 @@ class RealAPI:
                         if expected_commit:
                             require(
                                 health.get("sourceCommit") == expected_commit,
-                                "running API source commit differs from CI checkout",
+                                "Исходный коммит работающего API отличается от рабочей копии CI",
                             )
                         return
                 except (OSError, TimeoutError):
@@ -246,7 +246,7 @@ def verify_project(port, identifier, token=None):
     versions = expect(port, "GET", "/api/v1/projects/" + identifier + "/versions", 200)
     require(
         isinstance(versions.get("items"), list) and versions["items"],
-        "draft release lost after restart",
+        "Черновик выпуска потерян после перезапуска",
     )
     if token:
         sessions = expect(
@@ -462,12 +462,12 @@ def run_acceptance(
             )
             require(
                 finished.get("data", {}).get("installationCompleted") is True,
-                "install did not complete",
+                "Установка не завершилась",
             )
             readiness = expect(port, "GET", "/api/v1/install/readiness", 200)
             require(
                 readiness.get("data", {}).get("installationCompleted") is True,
-                "install status not persisted",
+                "Состояние установки не сохранено",
             )
             verify_project(port, project, tokens["accessToken"])
             # Черновик никогда не должен незаметно выдаваться как опубликованный стабильный манифест.
@@ -593,7 +593,7 @@ def run_acceptance(
                 restored_blob.is_file()
                 and hashlib.sha256(restored_blob.read_bytes()).hexdigest()
                 == expected_blob_hash,
-                "project file changed across backup/restore",
+                "Файл проекта изменился после резервного копирования и восстановления",
             )
 
         step(report, "verify_and_restore_clean_host", restore)
@@ -763,7 +763,7 @@ def run_acceptance(
             )
             require(
                 p.returncode != 0 and not target.exists(),
-                "tampered backup modified target",
+                "Поддельная резервная копия изменила целевую систему",
             )
 
         step(report, "corruption_fail_closed", corrupted_bundle)

@@ -74,9 +74,9 @@ def sha(path: Path) -> str:
 
 def identity(bundle: Path, version: str, commit: str) -> dict:
     require(
-        bundle.is_dir() and not bundle.is_symlink(), "invalid release bundle directory"
+        bundle.is_dir() and not bundle.is_symlink(), "Недопустимый каталог комплекта выпуска"
     )
-    require(SHA40.fullmatch(commit) is not None, "invalid checkout SHA")
+    require(SHA40.fullmatch(commit) is not None, "Недопустимый SHA-код состояния репозитория")
     require(
         version == (HERE.parents[1] / "VERSION").read_text(encoding="utf-8").strip(),
         "requested version differs from checkout",
@@ -87,12 +87,12 @@ def identity(bundle: Path, version: str, commit: str) -> dict:
     for path in (manifest_path, sums_path, signature):
         require(
             path.is_file() and not path.is_symlink() and path.stat().st_size > 0,
-            "missing/unsafe signed release metadata: " + path.name,
+            "Отсутствуют или небезопасны метаданные подписанного выпуска: " + path.name,
         )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     require(
         manifest.get("version") == version and manifest.get("sourceCommit") == commit,
-        "manifest does not identify exact source/version",
+        "Манифест не указывает точный источник и версию",
     )
     digests = {}
     for line in sums_path.read_text(encoding="utf-8").splitlines():
@@ -146,7 +146,7 @@ def validate_live_report(data: dict, expected: dict) -> None:
             and row["durationMs"] >= 0
             for row in rows
         ),
-        "missing/failed live execution steps",
+        "Отсутствуют или завершились неудачно этапы реального выполнения",
     )
     require(
         {row["id"] for row in rows} == REQUIRED_CHECKS,
@@ -179,7 +179,7 @@ def main(argv=None) -> int:
             args.work_root.is_absolute()
             and args.work_root.is_dir()
             and not any(args.work_root.iterdir()),
-            "live E2E work root must be empty",
+            "Рабочий корневой каталог реальных E2E-проверок должен быть пустым",
         )
         live_path = args.report.with_name(args.report.stem + "-live.json")
         require(live_path != args.report, "Для отчётов требуются разные пути")

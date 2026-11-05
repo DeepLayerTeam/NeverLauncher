@@ -66,7 +66,7 @@ def read_json(path: Path) -> dict:
         return obj
 
     value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique)
-    require(type(value) is dict, f"expected JSON object: {path.name}")
+    require(type(value) is dict, f"Ожидался объект JSON: {path.name}")
     return value
 
 
@@ -90,7 +90,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
     )
     require(
         [row.get("id") for row in rows if type(row) is dict] == list(TARGETS),
-        "unexpected, duplicated or reordered release bridge target",
+        "Целевая платформа ServerBridge отсутствует в ожидаемом порядке, повторяется или не предусмотрена выпуском",
     )
     results = {}
     seen = set()
@@ -108,13 +108,13 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
                 item.is_file()
                 and not item.is_symlink()
                 and item.stat().st_size >= 1024,
-                f"{target}: missing/suspicious final Java artifact: {item}",
+                f"{target}: Отсутствует или вызывает сомнения итоговый артефакт Java: {item}",
             )
         original_hash = digest(original)
         shipped_hash = digest(shipped)
         require(
             original_hash == shipped_hash == row["sha256"],
-            f"{target}: final release JAR differs from actual certified build",
+            f"{target}: Итоговый JAR выпуска отличается от фактически сертифицированной сборки",
         )
         require(
             shipped_hash not in seen, f"{target}: duplicate byte-identical runtime JAR"
@@ -124,7 +124,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
     for name in ("BRIDGE_RELEASE_ALLOWLIST.json", "SERVERBRIDGE3_CERTIFICATION.json"):
         require(
             (release / name).is_file() and not (release / name).is_symlink(),
-            f"missing release security artifact: {name}",
+            f"Отсутствует артефакт безопасности выпуска: {name}",
         )
     return results
 
@@ -138,7 +138,7 @@ def verify_faults(runtime: Path, version: str, commit: str) -> None:
         and proof.get("sourceCommit") == commit
         and proof.get("status") == "passed"
         and proof.get("raceDetector") is True,
-        "live host/JVM/race fault report does not match exact release",
+        "Отчёт о сбоях хоста, JVM и состязательных условиях не соответствует точному выпуску",
     )
     require(
         proof.get("logFile") == "network-faults-0420.go-test.jsonl",
@@ -173,7 +173,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
                 "liveServerBridgeCore",
             )
         ),
-        "missing complete client/join/revoke/world-restore/update-rollback proof",
+        "Отсутствует полное подтверждение работы клиента, подключения, отзыва, восстановления мира и отката обновления",
     )
     evidence_names = result.get("evidence")
     require(
@@ -188,7 +188,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
     )
     require(
         all(name in evidence_names for name in required),
-        "missing runtime evidence in index",
+        "В индексе отсутствует свидетельство выполнения",
     )
     for name in required:
         read_json(runtime / name)
@@ -251,7 +251,7 @@ def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
     from scripts.ga.record_network_faults_0420 import network_gate_version
 
     require(network_gate_version(version), "Для сетевой проверки требуется версия не ниже 0.42.0")
-    require(COMMIT.fullmatch(commit) is not None, "real source commit SHA required")
+    require(COMMIT.fullmatch(commit) is not None, "Требуется SHA-код реального исходного коммита")
     hashes = verify_final_jars(root, release, version)
     matrix = certify(root, runtime, "all")
     require(
@@ -268,7 +268,7 @@ def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
         proof = read_json(proof_path)
         require(
             proof.get("sourceCommit") == commit,
-            f"{name}: live JVM evidence from different source commit",
+            f"{name}: Свидетельство работы JVM получено для другого исходного коммита",
         )
         require(
             matrix["cases"][name].get("bridgeJarSha256") == hashes[name],

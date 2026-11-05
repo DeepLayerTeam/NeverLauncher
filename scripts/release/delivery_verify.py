@@ -128,7 +128,7 @@ def verify_target(bundle: Path, target: str, name: str, version: str) -> dict:
         manifest_name=f'MACOS_PACKAGE_MANIFEST_{arch.upper()}.json'
         manifest_key=None
     if manifest_key:
-        if manifest_key not in files:raise ValueError(f'{name}: embedded package manifest missing')
+        if manifest_key not in files:raise ValueError(f'{name}: Отсутствует встроенный манифест пакета')
         manifest=json.loads(files[manifest_key])
         rows=manifest.get('artifacts')
         if not isinstance(rows,list) or len(rows)<len(EXPECTED[platform]):
@@ -189,7 +189,7 @@ def verify_bundle(bundle: Path, release_manifest: bool=False) -> dict:
         for target,row in targets.items():
             entry=byname.get(row['file'])
             if not entry or entry.get('status')!='present' or entry.get('required') is not True or entry.get('sha256','').lower()!=row['sha256'] or entry.get('size',entry.get('bytes'))!=row['bytes']:
-                raise ValueError(f'{target}: actual package missing/mismatched in RELEASE_MANIFEST')
+                raise ValueError(f'{target}: Реальный пакет отсутствует в RELEASE_MANIFEST или не соответствует ему')
         # Проверенный реестр шести пакетов является обязательной частью выпуска и сам
         # должен описывать те же измеренные финальные байты.
         ledger_path=bundle/'DELIVERY_VERIFIED_0462.json'

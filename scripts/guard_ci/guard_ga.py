@@ -95,10 +95,10 @@ def evidence_inventory(root: Path) -> dict[str, str]:
 def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Path,
              commit: str, publisher: str, *, now=None) -> dict:
     require(bool(COMMIT.fullmatch(commit)), 'Необходимо указать точный коммит исходников')
-    require(bool(IDENTITY.fullmatch(publisher)), 'publisher identity required')
+    require(bool(IDENTITY.fullmatch(publisher)), 'Требуется идентификатор издателя')
     key = regular(key_file, 32)
     sig = regular(signature_file, 64)
-    require(len(key) == 32 and len(sig) == 64, 'raw Ed25519 public key and detached signature required')
+    require(len(key) == 32 and len(sig) == 64, 'Требуются открытый ключ Ed25519 в двоичном виде и отдельная подпись')
     data = regular(approval_file, 512 * 1024)
     try:
         Ed25519PublicKey.from_public_bytes(key).verify(sig, DOMAIN + data)
@@ -106,12 +106,12 @@ def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Pa
         raise Blocked('Некорректная независимая подпись подтверждения Ed25519') from exc
     manifest = doc(approval_file)
     require(set(manifest) == {'schema', 'version', 'commit', 'reviewer', 'publisher', 'issuedAt', 'files'},
-            'approval fields must be exact')
+            'Поля подтверждения должны точно соответствовать ожидаемым')
     require(manifest['schema'] == SCHEMA and manifest['version'] == VERSION
             and manifest['commit'] == commit and manifest['publisher'] == publisher,
-            'approval is not for this exact release')
+            'Подтверждение относится не к этому точному выпуску')
     require(type(manifest['reviewer']) is str and bool(IDENTITY.fullmatch(manifest['reviewer']))
-            and manifest['reviewer'] != publisher, 'independent reviewer cannot be release publisher')
+            and manifest['reviewer'] != publisher, 'Независимый проверяющий не может быть издателем выпуска')
     try:
         timestamp = datetime.fromisoformat(manifest['issuedAt'].replace('Z', '+00:00'))
     except (AttributeError, TypeError, ValueError) as exc:
@@ -134,7 +134,7 @@ def verified_native(root: Path, commit: str, delivered: dict) -> dict:
         require(set(r) == {'schema', 'version', 'commit', 'target', 'status', 'packageSha256',
                            'releaseManifestSha256', 'nativeOS', 'nativeArch', 'verifier',
                            'publisherSigner', 'operator', 'executionId'},
-                target + ': invalid native certificate structure')
+                target + ': Недопустимая структура нативного сертификата')
         osname, arch = target.split('-')
         expected_os = {'windows': 'Windows', 'linux': 'Linux', 'darwin': 'Darwin'}[osname]
         expected_verifier = {'windows': 'authenticode-chain-timestamp',
@@ -146,9 +146,9 @@ def verified_native(root: Path, commit: str, delivered: dict) -> dict:
                 and r['verifier'] == expected_verifier,
                 target + ': native signing never passed on correct OS/CPU')
         require(r['packageSha256'] == delivered['targets'][target]['sha256'],
-                target + ': native signer did not check final package')
+                target + ': Нативный подписант не проверил итоговый пакет')
         require(r['releaseManifestSha256'] == file_hash(root / 'signed' / 'RELEASE_MANIFEST.json'),
-                target + ': signing receipt refers to another release manifest')
+                target + ': Квитанция подписи относится к другому манифесту выпуска')
         for field in ('publisherSigner', 'operator', 'executionId'):
             require(type(r[field]) is str and bool(IDENTITY.fullmatch(r[field])),
                     target + ': invalid ' + field)
@@ -170,7 +170,7 @@ def verified_jvm(root: Path) -> dict:
         require(report.get('schema') == 'neverlauncher.guard-adversarial-jvm/v1'
                 and report.get('version') == VERSION and report.get('status') == 'PASS_JVM_REGRESSIONS_ONLY'
                 and type(suites) is list and {s.get('name') for s in suites if isinstance(s, dict)} == minimum,
-                target + ': missing successful actual JVM tests')
+                target + ': Отсутствуют успешно пройденные реальные проверки JVM')
         for item in suites:
             require(item.get('status') == 'PASS' and type(item.get('exitCode')) is int and item['exitCode'] == 0
                     and type(item.get('testsRun')) is int and type(item.get('minimumTests')) is int
@@ -195,7 +195,7 @@ def verified_frame_times(root: Path, delivered: dict) -> dict:
         require(meta['os'] == {'darwin': 'macos'}.get(osname, osname)
                 and meta['arch'] in ({'x64': ('x64', 'amd64', 'x86_64'),
                                      'arm64': ('arm64', 'aarch64')}[arch]),
-                target + ': performance run is from different host architecture')
+                target + ': Измерение производительности выполнено на другой архитектуре хоста')
         require(meta.get('packageSha256') == delivered['targets'][target]['sha256'],
                 target + ': performance capture is not bound to final signed package')
         require(details['status'] == 'PASS_MEASURED', target + ': p95 времени кадра превышает допустимый предел')
@@ -224,21 +224,21 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
          commit: str, publisher: str, native_package_id: str, ci_run: str,
          shadow_key: Path, *, publishing_bundle: Path | None = None, now=None) -> dict:
     require((ROOT / 'VERSION').read_text(encoding='utf-8').strip() == VERSION,
-            'source VERSION must equal 0.51.0')
+            'Версия исходников VERSION должна быть 0.51.0')
     require(root.is_dir() and not root.is_symlink(), 'Отсутствует корень подтверждений')
     require(not shadow_key.resolve().is_relative_to(root.resolve()),
-            'private shadow journal verification key must remain outside evidence')
+            'Закрытый ключ проверки теневого журнала должен храниться отдельно от свидетельств')
     require(not trusted_key.resolve().is_relative_to(root.resolve()),
-            'independent reviewer trust anchor must remain outside evidence')
+            'Корневой ключ доверия независимого проверяющего должен храниться отдельно от свидетельств')
     # Проверяйте независимую подпись ДО трактовки доказательств, контролируемых злоумышленником.
     independent = approval(root, approve_file, approve_sig, trusted_key, commit, publisher, now=now)
     require(re.fullmatch(r'[A-Za-z0-9._:-]{1,128}', native_package_id) is not None
             and re.fullmatch(r'[1-9][0-9]*', ci_run) is not None,
-            'immutable native run identity required')
+            'Требуется неизменяемый идентификатор нативного запуска')
     release = verify_bundle(root / 'signed', release_manifest=True)
     require(release.get('version') == VERSION and release.get('releaseManifestMatchesAssets') is True
             and set(release.get('targets', {})) == set(TARGETS),
-            'final signed six-target distribution not verified')
+            'Итоговая подписанная поставка для шести платформ не проверена')
     if publishing_bundle is not None:
         require(evidence_inventory(root / 'signed') == evidence_inventory(publishing_bundle),
                 'publication candidate differs from independently reviewed final signed bytes')
@@ -248,7 +248,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
     for row in game['targets']:
         target = row['target']
         require(row['artifactSha256'] == release['targets'][target]['sha256'],
-                target + ': native game did not run final signed package')
+                target + ': Нативная игра не запустила итоговый подписанный пакет')
     jvm = verified_jvm(root)
     performance = verified_frame_times(root, release)
     games = verified_minecraft(root, release, commit)
@@ -256,7 +256,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
     require(pilot['status'] == 'EVIDENCE_REVIEW_REQUIRED' and pilot['observedGuardActiveHoursLowerBound'] >= 10000
             and pilot['unreviewedRevocations'] == 0
             and pilot['reviewed']['false_positive'] == 0 and pilot['reviewed']['inconclusive'] == 0,
-            '10,000 legitimate shadow player-hours and reviewed zero-false-positive incidents required')
+            'Требуются 10 000 часов теневого наблюдения за легитимными игроками и рассмотренные инциденты без ложноположительных срабатываний')
     # Эти серверные наблюдения не доказывают, что каждый час принадлежит настоящему
     # человеку. Другой независимый проверяющий подтверждает подлинность по источникам
     # ВНЕ этого низкопривилегированного журнала.
@@ -269,9 +269,9 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
             and certified['legitimatePlayerHours'] >= 10000
             and certified['legitimatePlayerHours'] <= pilot['observedGuardActiveHoursLowerBound']
             and certified.get('journalFiles') == pilot['files'],
-            'independently verified legitimate player-hours must match the observed journal')
+            'Независимо подтверждённые часы игры легитимных пользователей должны совпадать с журналом наблюдений')
     require(all(value['operator'] != independent['reviewer'] for value in native.values()),
-            'final reviewer cannot be a native test operator')
+            'Итоговый проверяющий не может быть оператором нативного тестирования')
     return {'schema': 'neverlauncher.guard.ga0510.verification.v1',
             'version': VERSION, 'commit': commit, 'status': 'independent-guard-acceptance-verified',
             'approvedBy': independent['reviewer'], 'approvalSha256': independent['approvalSha256'],

@@ -1137,7 +1137,7 @@ def restore_fresh(
         "target": project,
         "rtoSeconds": round(time.monotonic() - started, 3),
         "dataChecks": "snapshot SHA-256, archive member safety, pg_restore transaction",
-        "credentials": "provided externally via target environment",
+        "credentials": "передаётся извне через окружение целевой системы",
         "applicationVerified": False,
         "serverbridgeFenced": "network-ha" in COMPOSE_PROFILES,
         "redisRestored": False if "network-ha" in COMPOSE_PROFILES else None,

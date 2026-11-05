@@ -65,18 +65,18 @@ def load_json(path: Path) -> Any:
 def load_targets(path: Path) -> dict[str, Any]:
     payload = load_json(path)
     if not isinstance(payload, dict):
-        die("device trust targets document must be an object")
+        die("Документ целевых платформ доверия к устройствам должен содержать объект")
     if set(payload) != {"schemaVersion", "productVersion", "targets"}:
         die(
-            "device trust targets must contain only schemaVersion/productVersion/targets"
+            "Документ целевых платформ доверия к устройствам должен содержать только schemaVersion/productVersion/targets"
         )
     if payload.get("schemaVersion") != "1.0":
-        die("device trust targets schemaVersion must be 1.0")
+        die("Версия schemaVersion в документе доверия к устройствам должна быть 1.0")
     if str(payload.get("productVersion", "")).strip() != PRODUCT_VERSION:
-        die(f"device trust targets productVersion must match VERSION={PRODUCT_VERSION}")
+        die(f"Версия productVersion доверия к устройствам должна соответствовать VERSION={PRODUCT_VERSION}")
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:
-        die("device trust targets must contain a non-empty array")
+        die("Документ целевых платформ доверия к устройствам должен содержать непустой массив")
     allowed = {"id", "kind", "runner", "os", "arch", "required", "requiredChecks"}
     seen: set[str] = set()
     normalized: list[dict[str, Any]] = []
@@ -113,7 +113,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             or not checks
             or any(not isinstance(v, str) or not CHECK_RE.fullmatch(v) for v in checks)
         ):
-            die(f"{target_id}: requiredChecks must be a non-empty unique string array")
+            die(f"{target_id}: requiredChecks должен быть непустым массивом уникальных строк")
         if len(checks) != len(set(checks)):
             die(f"{target_id}: duplicate requiredChecks")
         missing = sorted(KIND_MANDATORY_CHECKS[kind] - set(checks))
@@ -153,12 +153,12 @@ def discover_results(
     found: dict[str, tuple[Path, dict[str, Any]]] = {}
     errors: list[str] = []
     if not root.exists():
-        return found, [f"results root does not exist: {root}"]
+        return found, [f"Корневой каталог результатов не существует: {root}"]
     for path in sorted(root.rglob("device-trust-result.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            errors.append(f"{path}: invalid result JSON: {exc}")
+            errors.append(f"{path}: Недопустимый JSON результата: {exc}")
             continue
         if not isinstance(payload, dict):
             errors.append(f"{path}: result must be an object")
@@ -206,7 +206,7 @@ def verify_result(
     elif target["arch"] != "runner-native":
         architectures = {"x86_64": {"x86_64", "amd64"}, "arm64": {"arm64", "aarch64"}}
         if runtime_arch.lower() not in architectures[target["arch"]]:
-            errors.append(f"runtimeArch {runtime_arch!r} is not target architecture {target['arch']!r}")
+            errors.append(f"runtimeArch {runtime_arch!r} не соответствует целевой архитектуре {target['arch']!r}")
     checks = result.get("checks")
     if not isinstance(checks, dict):
         errors.append("checks is missing")
@@ -228,15 +228,15 @@ def verify_result(
             )
         ):
             errors.append(
-                "evidence.files must be a non-empty safe-basename string array"
+                "evidence.files должен быть непустым массивом строк с безопасными именами файлов"
             )
         elif len(files) != len(set(files)):
             errors.append("evidence.files contains duplicates")
         elif "device-trust-result.json" in files:
-            errors.append("evidence.files cannot include device-trust-result.json")
+            errors.append("evidence.files не может включать device-trust-result.json")
         elif not isinstance(digests, dict) or set(digests) != set(files):
             errors.append(
-                "evidence.sha256 must contain exactly one digest for every evidence file"
+                "evidence.sha256 должен содержать ровно одну контрольную сумму для каждого файла свидетельства"
             )
         else:
             for name in files:
@@ -258,19 +258,19 @@ def verify_result(
     claims = result.get("claims")
     if target["kind"] == "protocol-e2e":
         if not isinstance(claims, dict):
-            errors.append("protocol result claims are missing")
+            errors.append("Отсутствуют заявленные результаты протокольных проверок")
         else:
             if claims.get("repository") != "postgresql":
                 errors.append("protocol E2E did not declare PostgreSQL repository")
             if claims.get("vendorHardwareProvenance") != "not-verified":
-                errors.append("protocol E2E must not claim vendor hardware provenance")
+                errors.append("Протокольная E2E-проверка не должна заявлять о подтверждённом производителе оборудования")
             if claims.get("privateKeyServerExposed") is not False:
                 errors.append(
-                    "protocol E2E must explicitly assert private key is not server-exposed"
+                    "Протокольная E2E-проверка должна явно подтвердить, что закрытый ключ недоступен серверу"
                 )
             if claims.get("deviceTrustRelease") != PRODUCT_VERSION:
                 errors.append(
-                    "protocol E2E is not bound to the current Device Trust release"
+                    "Протокольная E2E-проверка не привязана к текущему выпуску Device Trust"
                 )
     elif target["kind"] == "native-tests":
         limitations = result.get("limitations")
@@ -279,7 +279,7 @@ def verify_result(
             or "headless-ci-does-not-prove-os-secure-storage-runtime" not in limitations
         ):
             errors.append(
-                "native result must disclose secure-storage runtime limitation"
+                "Нативный результат должен указывать ограничения защищённого хранилища в среде выполнения"
             )
         claims = result.get("claims")
         if (
@@ -287,7 +287,7 @@ def verify_result(
             or claims.get("deviceTrustRelease") != PRODUCT_VERSION
         ):
             errors.append(
-                "native result is not bound to the current Device Trust release"
+                "Нативный результат не привязан к текущему выпуску Device Trust"
             )
     return errors
 
@@ -363,7 +363,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
         found = results.get(target["id"])
         if found is None:
             if target["required"]:
-                errors.append(f"missing required device trust result: {target['id']}")
+                errors.append(f"Отсутствует обязательный результат проверки доверия к устройствам: {target['id']}")
             records[target["id"]] = {
                 "targetId": target["id"],
                 "status": "missing",

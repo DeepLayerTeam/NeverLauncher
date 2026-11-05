@@ -52,7 +52,7 @@ class LiveHTTP:
                 and not u.query and not u.fragment and u.path in ('', '/')
                 and (u.scheme == 'https' or (u.scheme == 'http' and u.hostname in
                      ('localhost', '127.0.0.1', '::1'))),
-                'live endpoint must be HTTPS or loopback and contain no credentials')
+                'Адрес работающего сервиса должен использовать HTTPS либо локальный адрес обратной связи и не содержать учётных данных')
         self.base = origin.rstrip('/')
         self.opener = build_opener(ProxyHandler({}), NoRedirect(), HTTPSHandler(context=ssl.create_default_context()))
 
@@ -83,7 +83,7 @@ class LiveHTTP:
             response = json.loads(raw)
         except (UnicodeError, ValueError) as exc:
             raise Blocked('Действующая служба вернула ответ не в формате JSON: ' + path) from exc
-        require(type(response) is dict, 'invalid live service response: ' + path)
+        require(type(response) is dict, 'Недопустимый ответ работающего сервиса: ' + path)
         return response
 
 
@@ -108,14 +108,14 @@ def observed_join(cfg):
     import inventory_0521 as inv
     result_path = Path(cfg['gameCompatibilityResult'])
     require(result_path.is_absolute() and result_path.name == 'compatibility-result.json',
-            'native actual-game result required')
+            'Требуется результат реального игрового запуска на нативной платформе')
     record = inv.read_json(result_path)
     target_id = cfg['gameTargetId']
     table = matrix.load_targets(root/'compatibility/targets.json')
     targets = table['targets']
     matching = [t for t in targets if t['id'] == target_id]
     require(len(matching) == 1 and matching[0]['required'] and matching[0]['scope'] == 'client'
-            and not matching[0].get('matchingServer'), 'real-client live-join target required')
+            and not matching[0].get('matchingServer'), 'Требуется целевой сервер для реального подключения клиента')
     verified = inv.verify_compatibility(matching[0], (result_path, record),
                                         cfg['sourceCommit'], str(cfg['ciRunId']), cfg['ciRunAttempt'])
     return verified
@@ -123,28 +123,28 @@ def observed_join(cfg):
 
 def run(cfg, output):
     require(cfg.get('format') == SCHEMA and cfg.get('isolatedProject') is True,
-            'isolated staged deployment required before any modifying Java callback')
+            'Перед любым изменяющим обработчиком Java необходимо изолированное тестовое развёртывание')
     project = cfg.get('projectId')
-    require(type(project) is str and ID.fullmatch(project), 'invalid isolated project ID')
+    require(type(project) is str and ID.fullmatch(project), 'Недопустимый идентификатор изолированного проекта')
     token = os.environ.get('NL0528_JAVA_HOST_TOKEN', '')
     owner = os.environ.get('NL0528_OWNER_TOKEN', '')
     password = os.environ.get('NL0528_TEST_PASSWORD', '')
     require(all(len(s) >= 12 for s in (token, owner, password)),
-            'real Host, owner and test identity secrets required in protected environment')
+            'В защищённом окружении требуются реальные секреты хоста, владельца и тестовых учётных записей')
     require(type(cfg.get('testIdentifier')) is str and type(cfg.get('testUuid')) is str,
-            'real identity subject and original UUID required')
+            'Требуются реальный субъект учётной записи и исходный UUID')
     require(type(cfg.get('sourceCommit')) is str and re.fullmatch('[a-f0-9]{40}', cfg['sourceCommit']),
-            'exact Git commit required')
+            'Требуется точный коммит Git')
     backend = LiveHTTP(cfg['backendUrl'])
     status = backend.request('/api/v1/status', token=owner)
     require(status.get('version') == (Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'wrong running production Backend version')
     live_project = backend.request('/api/v1/projects/' + quote(project, safe=''), token=owner)
-    require(project in json.dumps(live_project, sort_keys=True), 'real project missing from Backend')
+    require(project in json.dumps(live_project, sort_keys=True), 'В Backend отсутствует реальный проект')
     host = LiveHTTP(cfg['hostUrl'])
     checks = []
     # 1) Настоящий провайдер идентичности расширения на установленном брокере.
     health = callback(host, token, 'auth.health')
-    require(health['result'].get('available') is True, 'Java identity provider not available')
+    require(health['result'].get('available') is True, 'Провайдер учётных записей Java недоступен')
     good = callback(host, token, 'auth.password', {'identifier':cfg['testIdentifier'], 'secret':password})
     uuid = good['result'].get('authentication', {}).get('identity', {}).get('subject')
     require(uuid == cfg['testUuid'], 'real Java identity provider changed UUID')
@@ -157,7 +157,7 @@ def run(cfg, output):
     library = Path(cfg['libraryFile'])
     library_hash = sha_file(str(library), max_size=256<<20)
     require(library_hash == cfg.get('librarySha256') and 0 < library.stat().st_size <= (512<<10),
-            'source Java library changed or exceeds the 512 KiB Java Host broker limit')
+            'Исходная библиотека Java изменилась или превышает ограничение посредника Java Host в 512 КиБ')
     require(type(cfg.get('libraryPath')) is str and cfg['libraryPath'].startswith(('libraries/','mods/','optional/'))
             and '..' not in cfg['libraryPath'] and '\\' not in cfg['libraryPath'],
             'library path outside controlled bundle')
@@ -209,12 +209,12 @@ def run(cfg, output):
                token=owner, expected=200, method='PATCH')
     approved = actual_profile()
     require(approved.get('loader') == 'fabric' and approved.get('description') == marker,
-            'real Backend did not persist the approved synchronous hook operation')
+            'Работающий Backend не сохранил подтверждённую синхронную операцию обработчика')
     denied = backend.request(admin_route,
              payload={'loader':'untrusted','loaderVersion':'x'},
              token=owner, expected=409, method='PATCH')
     require(actual_profile() == approved,
-            'rejected Java hook changed the persisted Go profile')
+            'Отклонённый обработчик Java изменил сохранённый профиль Go')
     checks.append('java-before-save-go-backend-commit-and-veto')
     # 4) Реестр, команды, конфигурация и миграция состояния в работающем Host.
     migrated = callback(host, token, 'state.migrate', {'fromVersion':'0.49.4','toVersion':'0.49.5'})
@@ -275,7 +275,7 @@ def main():
     os.umask(0o077)
     try:
         require(a.output.is_absolute() and a.output.parent.is_dir() and
-                not a.output.parent.is_symlink(), 'absolute output in existing directory required')
+                not a.output.parent.is_symlink(), 'Требуется абсолютный путь к выходному файлу в существующем каталоге')
         cfg=private_json(a.config)
         result=run(cfg,a.output)
         print('Реальные E2E-проверки Java:',result['checkCount'],'(требуется проверка)')

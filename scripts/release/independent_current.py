@@ -55,7 +55,7 @@ def expected_archives():
 
 def scan(directory: Path):
     require(directory.is_absolute() and directory.is_dir() and not directory.is_symlink(),
-            'absolute, non-symlinked actual payload directory required')
+            'Требуется абсолютный путь к каталогу реальных данных, не являющемуся символической ссылкой')
     expected = expected_archives()
     seen = {p.name for p in directory.iterdir()}
     require(seen == set(expected.values()), 'Требуются ровно шесть неподписанных архивов без лишних файлов')
@@ -71,15 +71,15 @@ def scan(directory: Path):
 
 def capture(directory: Path, builder: str, runner: str, commit: str, run_id: str, attempt: int):
     require(VERSION == '0.53.0', 'Требуется версия выпуска 0.53.0')
-    require(SHA.fullmatch(commit) and source_sha() == commit, 'checkout/source commit mismatch')
+    require(SHA.fullmatch(commit) and source_sha() == commit, 'Коммит рабочей копии не совпадает с исходным коммитом')
     require(all(ID.fullmatch(x or '') for x in (builder, runner, run_id)) and
-            type(attempt) is int and attempt > 0, 'invalid independent builder identity')
+            type(attempt) is int and attempt > 0, 'Недопустимый идентификатор независимого сборщика')
     return {'schema': SCHEMA, 'version': VERSION, 'commit': commit,
             'builder': builder, 'runner': runner, 'runId': run_id, 'attempt': attempt,
             'inputs': inputs(), 'targets': scan(directory)}
 
 def pinned_key(path: Path, pin: str):
-    require(re.fullmatch('[a-f0-9]{64}', pin or ''), 'independently pinned builder key required')
+    require(re.fullmatch('[a-f0-9]{64}', pin or ''), 'Требуется независимо закреплённый ключ сборщика')
     require(path.is_absolute() and path.is_file() and not path.is_symlink(), 'Небезопасный путь к ключу сборщика')
     raw = path.read_bytes()
     require(len(raw) <= 8192, 'Ключ сборщика превышает допустимый размер')
@@ -96,11 +96,11 @@ def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str
             a.get('runId') == b.get('runId') == run_id and
             a.get('attempt') == b.get('attempt') == attempt,
             'source, version or CI run differs')
-    require(source_sha() == commit and SHA.fullmatch(commit) is not None, 'checkout not exact source')
+    require(source_sha() == commit and SHA.fullmatch(commit) is not None, 'Рабочая копия не соответствует точному исходному состоянию')
     require(a.get('inputs') == b.get('inputs') == inputs(), 'Входные данные сборки изменились')
     require(a.get('builder') != b.get('builder') and a.get('runner') != b.get('runner') and
             all(ID.fullmatch(x or '') for x in (a.get('builder'), b.get('builder'), a.get('runner'), b.get('runner'))),
-            'independent builder/runner identities required')
+            'Требуются независимые идентификаторы сборщика и исполнителя')
     require(a.get('targets') == scan(dir_a) and b.get('targets') == scan(dir_b),
             'signed reports disagree with actual archive bytes')
     require(a['targets'] == b['targets'] and set(a['targets']) == TARGETS,

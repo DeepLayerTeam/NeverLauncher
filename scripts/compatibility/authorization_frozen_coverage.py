@@ -76,7 +76,7 @@ def validate_registry(doc: dict) -> None:
     ids = [row.get("id") for row in rows]
     if ids != expected:
         fail(
-            "requirement registry must contain ordered G01-G35 and M01-M19 exactly once"
+            "Реестр требований должен содержать упорядоченные G01–G35 и M01–M19 ровно по одному разу"
         )
 
     for row in rows:
@@ -103,7 +103,7 @@ def validate_registry(doc: dict) -> None:
             fail(f"Для {req_id} требуется свидетельство исходного компонента")
         if status in {"implemented", "partial"} and (not impl or not tests):
             fail(
-                f"{req_id} {status} coverage requires implementation and test evidence"
+                f"{req_id} {status} Для подтверждения охвата нужны реализация и свидетельства тестирования"
             )
         if (
             status in {"partial", "gap", "not-applicable"}
@@ -112,7 +112,7 @@ def validate_registry(doc: dict) -> None:
             fail(f"Для {req_id} со статусом {status} требуется явно указанный gapReason")
         if status in {"gap", "not-applicable"} and level != "source-reviewed":
             fail(
-                f"{req_id} {status} coverage may only claim source-reviewed verification"
+                f"{req_id} {status} Подтверждение охвата возможно только после проверки исходного кода"
             )
         for ref in impl:
             check_exists(ref, "implementationRef", req_id)
@@ -189,7 +189,7 @@ def validate_authorization_invariants() -> None:
         or 'requirePermission("project:read", s.v1Auth' in routes_auth
     ):
         fail(
-            "identity self-service is incorrectly coupled to global project permission"
+            "Самостоятельное управление учётной записью ошибочно зависит от глобального разрешения проекта"
         )
 
     for needle in [
@@ -228,7 +228,7 @@ def validate_authorization_invariants() -> None:
 def validate_hashes(doc: dict) -> None:
     sealed = doc.get("sealedFiles") or {}
     if not sealed:
-        fail("sealedFiles is empty")
+        fail("Список sealedFiles пуст")
     for rel, expected in sorted(sealed.items()):
         path = ROOT / rel
         if not path.is_file():
@@ -236,7 +236,7 @@ def validate_hashes(doc: dict) -> None:
         actual = sha256_file(path)
         if actual != expected:
             fail(
-                f"sealed source drift: {rel}: lock={expected} actual={actual}; run seal only after review"
+                f"Зафиксированные исходники изменились: {rel}: lock={expected} actual={actual}; run seal only after review"
             )
 
 
@@ -289,7 +289,7 @@ def validate_upstream(doc: dict) -> None:
         for ref in row.get("upstreamRefs") or []:
             if ref not in paths:
                 fail(
-                    f"{row['id']} upstream source ref is absent from locked {component}: {ref}"
+                    f"{row['id']} Ссылка на исходный источник отсутствует в закреплённом {component}: {ref}"
                 )
 
     upstream = doc.get("upstream", {}).get("gravitLauncher", {})
@@ -341,7 +341,7 @@ def validate_upstream(doc: dict) -> None:
 def seal(doc: dict) -> None:
     files = doc.get("sealPaths") or []
     if not files:
-        fail("sealPaths is empty")
+        fail("Список sealPaths пуст")
     hashes = {}
     for rel in files:
         path = ROOT / rel

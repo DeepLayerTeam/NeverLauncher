@@ -33,7 +33,7 @@ def require(ok, reason):
 def read_secret(path):
     p = Path(path)
     require(p.is_absolute() and not p.is_symlink() and not any(q.is_symlink() for q in p.parents),
-            'token must be an absolute non-symlink')
+            'Токен должен быть задан абсолютным путём, не являющимся символической ссылкой')
     fd = os.open(p, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
     try:
         st = os.fstat(fd)
@@ -56,9 +56,9 @@ def unique(pairs):
 
 def accept_alert(payload, expected):
     require(isinstance(payload, dict) and payload.get('status') == 'firing',
-            'expected actual firing Alertmanager webhook')
+            'Ожидался реальный webhook Alertmanager с активным оповещением')
     alerts = payload.get('alerts')
-    require(isinstance(alerts, list) and 1 <= len(alerts) <= 128, 'invalid Alertmanager alert count')
+    require(isinstance(alerts, list) and 1 <= len(alerts) <= 128, 'Недопустимое количество оповещений Alertmanager')
     matching = []
     for entry in alerts:
         if not isinstance(entry, dict) or entry.get('status') != 'firing' or \
@@ -66,7 +66,7 @@ def accept_alert(payload, expected):
             continue
         fingerprint = entry.get('fingerprint')
         require(isinstance(fingerprint, str) and FINGERPRINT.fullmatch(fingerprint),
-                'invalid alert fingerprint')
+                'Недопустимый отпечаток оповещения')
         try:
             start = datetime.fromisoformat(entry['startsAt'].replace('Z', '+00:00'))
             require(start.tzinfo is not None and start <= datetime.now(timezone.utc),

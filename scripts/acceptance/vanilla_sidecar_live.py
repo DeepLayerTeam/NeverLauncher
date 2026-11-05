@@ -26,7 +26,7 @@ def require(ok, message):
         raise Blocked(message)
 
 def file_hash(path):
-    require(path.is_file() and not path.is_symlink(), 'missing or unsafe physical file')
+    require(path.is_file() and not path.is_symlink(), 'Физический файл отсутствует или небезопасен')
     h = hashlib.sha256()
     with path.open('rb') as stream:
         for piece in iter(lambda: stream.read(1024 * 1024), b''):
@@ -34,7 +34,7 @@ def file_hash(path):
     return h.hexdigest()
 
 def recv_exact(sock, size):
-    require(0 <= size <= 1048576, 'invalid network payload size')
+    require(0 <= size <= 1048576, 'Недопустимый размер сетевых данных')
     chunks = bytearray()
     while len(chunks) < size:
         part = sock.recv(size-len(chunks))
@@ -43,7 +43,7 @@ def recv_exact(sock, size):
     return bytes(chunks)
 
 def varint(value):
-    require(0 <= value <= 0x7fffffff, 'invalid Minecraft VarInt')
+    require(0 <= value <= 0x7fffffff, 'Недопустимое значение Minecraft VarInt')
     out = bytearray()
     while value > 127:
         out.append((value & 127) | 128)
@@ -62,17 +62,17 @@ def read_varint(sock):
     raise Blocked('Слишком длинное значение VarInt Minecraft')
 
 def status(host, port, expected_minecraft):
-    require(host in ('127.0.0.1', '::1'), 'status must use local server interface')
+    require(host in ('127.0.0.1', '::1'), 'Запрос состояния должен использовать локальный интерфейс сервера')
     with socket.create_connection((host, port), timeout=5) as sock:
         sock.settimeout(5)
         host_raw = host.encode('ascii')
         handshake = varint(0) + varint(767) + varint(len(host_raw)) + host_raw + struct.pack('>H', port) + varint(1)
         sock.sendall(varint(len(handshake)) + handshake + b'\x01\x00')
         size = read_varint(sock)
-        require(2 <= size <= 65536, 'invalid Minecraft status frame')
+        require(2 <= size <= 65536, 'Недопустимый пакет состояния Minecraft')
         frame_id = read_varint(sock)
         size_json = read_varint(sock)
-        require(frame_id == 0 and 0 < size_json <= 65536 and size_json <= size, 'invalid Minecraft status reply')
+        require(frame_id == 0 and 0 < size_json <= 65536 and size_json <= size, 'Недопустимый ответ состояния Minecraft')
         raw = recv_exact(sock, size_json)
         reply = json.loads(raw)
         version = reply.get('version', {})
@@ -89,26 +89,26 @@ def rcon_packet(sock, request_id, command_type, body):
     payload = struct.pack('<ii', request_id, command_type) + raw + b'\0\0'
     sock.sendall(struct.pack('<i', len(payload)) + payload)
     length = struct.unpack('<i', recv_exact(sock, 4))[0]
-    require(10 <= length <= 1048576, 'invalid RCON response length')
+    require(10 <= length <= 1048576, 'Недопустимая длина ответа RCON')
     data = recv_exact(sock, length)
     rid, _ = struct.unpack('<ii', data[:8])
-    require(data[-2:] == b'\0\0', 'invalid RCON response terminator')
+    require(data[-2:] == b'\0\0', 'Недопустимый терминатор ответа RCON')
     return rid, data[8:-2].decode('utf-8', errors='strict')
 
 def rcon(host, port, password, command):
     require(host in ('127.0.0.1', '::1'), 'RCON must be loopback only')
-    require(bool(password) and len(password) >= 12, 'private RCON credential required')
+    require(bool(password) and len(password) >= 12, 'Требуются закрытые учётные данные RCON')
     with socket.create_connection((host, port), timeout=5) as sock:
         sock.settimeout(5)
         authid, _ = rcon_packet(sock, 39715, 3, password)
-        require(authid == 39715, 'real Minecraft RCON authentication rejected')
+        require(authid == 39715, 'Настоящий сервер Minecraft отклонил авторизацию RCON')
         rid, result = rcon_packet(sock, 39716, 2, command)
-        require(rid == 39716 and bool(result.strip()), 'real RCON command failed')
+        require(rid == 39716 and bool(result.strip()), 'Реальная команда RCON завершилась ошибкой')
         return result
 
 def inspect_process(pid, jar, expected_sha):
-    require(os.name == 'posix' and Path('/proc').is_dir(), 'native Linux process inspection required')
-    require(type(pid) is int and pid > 1, 'real sidecar JVM PID required')
+    require(os.name == 'posix' and Path('/proc').is_dir(), 'Требуется нативная проверка процессов Linux')
+    require(type(pid) is int and pid > 1, 'Требуется идентификатор PID реального вспомогательного процесса JVM')
     cmdfile = Path('/proc') / str(pid) / 'cmdline'
     require(cmdfile.is_file(), 'sidecar JVM process is not running')
     args = cmdfile.read_bytes().split(b'\x00')
@@ -116,16 +116,16 @@ def inspect_process(pid, jar, expected_sha):
     # Проверяйте путь JAR, переданный JVM, а не случайное совпадение подстроки.
     found = [os.fsdecode(args[i+1]) for i,a in enumerate(args[:-1]) if a == b'-jar']
     require(len(found) == 1 and Path(found[0]).resolve() == jar.resolve(), 'different executable sidecar JAR active')
-    require(file_hash(jar) == expected_sha, 'running sidecar file differs from verified release JAR')
+    require(file_hash(jar) == expected_sha, 'Запущенный файл вспомогательного процесса отличается от проверенного JAR выпуска')
 
 def verify(cfg, *, sleep=time.sleep):
     required = {'sidecarPid', 'sidecarJar', 'sidecarSha256', 'sidecarLog', 'serverLog',
                 'serverDir', 'minecraftPort', 'rconPort', 'minecraftVersion'}
     require(type(cfg) is dict and set(cfg) == required, 'Vanilla live host config fields incomplete')
-    require(cfg['minecraftVersion'] == '1.21.1', 'Vanilla target scope mismatch')
-    require(isinstance(cfg['sidecarSha256'], str) and HEX.fullmatch(cfg['sidecarSha256']), 'invalid sidecar digest')
+    require(cfg['minecraftVersion'] == '1.21.1', 'Несовпадение области действия целевой платформы Vanilla')
+    require(isinstance(cfg['sidecarSha256'], str) and HEX.fullmatch(cfg['sidecarSha256']), 'Недопустимая контрольная сумма вспомогательного процесса')
     jar, server_dir = Path(cfg['sidecarJar']), Path(cfg['serverDir'])
-    require(jar.is_absolute() and server_dir.is_absolute(), 'absolute sidecar/server paths required')
+    require(jar.is_absolute() and server_dir.is_absolute(), 'Требуются абсолютные пути к вспомогательному процессу и серверу')
     inspect_process(cfg['sidecarPid'], jar, cfg['sidecarSha256'])
     props = server_dir / 'server.properties'
     require(props.is_file() and not props.is_symlink(), 'Требуется настоящий файл Vanilla server.properties')
@@ -138,9 +138,9 @@ def verify(cfg, *, sleep=time.sleep):
     server_log = Path(cfg['serverLog']); sidecar_log = Path(cfg['sidecarLog'])
     for log in (server_log, sidecar_log):
         require(log.is_file() and not log.is_symlink() and log.stat().st_size <= 32<<20,
-                'missing/oversized/symlinked original server log')
+                'Исходный журнал сервера отсутствует, слишком велик или является символической ссылкой')
     require(server_log.resolve() == (server_dir / 'logs/latest.log').resolve(),
-            'log is not the current Vanilla server log')
+            'Указанный журнал не является текущим журналом сервера Vanilla')
     before_log = server_log.read_text(errors='replace')
     require('Starting minecraft server version 1.21.1' in before_log and
             re.search(r'Done \([0-9.]+s\)!', before_log), 'server startup/ready not witnessed')

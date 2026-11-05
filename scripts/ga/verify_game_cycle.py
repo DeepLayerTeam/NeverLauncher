@@ -41,7 +41,7 @@ def load(root: Path, name: str) -> dict:
     p = root / name
     require(
         p.is_file() and not p.is_symlink() and p.stat().st_size <= 32 * 1024 * 1024,
-        "invalid/missing JSON evidence: " + name,
+        "Некорректное или отсутствующее свидетельство JSON: " + name,
     )
 
     def unique(pairs):
@@ -67,7 +67,7 @@ def digest(path: Path) -> str:
 def verify(
     root: Path, version: str, source_sha: str, run_id: str = "", run_attempt: str = ""
 ) -> dict:
-    require(COMMIT.fullmatch(source_sha) is not None, "invalid expected commit")
+    require(COMMIT.fullmatch(source_sha) is not None, "Недопустимый ожидаемый коммит")
     game = load(root, "game-cycle-0364-result.json")
     parent = load(root, "result.json")
     require(
@@ -83,7 +83,7 @@ def verify(
         and game.get("status") == "passed"
         and game.get("version") == version
         and game.get("sourceCommit") == source_sha,
-        "cycle has wrong version, source SHA or status",
+        "Циклическая проверка имеет неверную версию, SHA исходников или статус",
     )
     if run_id:
         require(
@@ -91,13 +91,13 @@ def verify(
             and game.get("githubRunAttempt") == run_attempt
             and run_id.isdigit()
             and run_attempt.isdigit(),
-            "stale run/attempt evidence",
+            "Устаревшее свидетельство запуска или попытки",
         )
     checks = game.get("checks")
     require(
         isinstance(checks, dict)
         and all(checks.get(k) is True for k in REQUIRED_CHECKS),
-        "a required real execution is unverified",
+        "Обязательный реальный запуск не подтверждён",
     )
     binaries = game.get("executablesSha256", {})
     require(
@@ -106,12 +106,12 @@ def verify(
             HEX.fullmatch(str(binaries.get(k, "")))
             for k in ("javaExecutable", "Runtime", "paperServerBridge")
         ),
-        "missing real JVM/runtime/ServerBridge binary identity",
+        "Отсутствуют идентификаторы реальных исполняемых файлов JVM, Runtime или ServerBridge",
     )
     require(
         HEX.fullmatch(str(game.get("clientCLIsha256", "")))
         and HEX.fullmatch(str(game.get("changedResourceSha256", ""))),
-        "missing Go client or changed file digest",
+        "Отсутствует клиент Go или контрольная сумма изменённого файла",
     )
     evidence = game.get("artifacts")
     require(
@@ -141,7 +141,7 @@ def verify(
     )
     require(
         all(f in evidence for f in required_files),
-        "required game evidence file not indexed",
+        "Обязательный файл игрового свидетельства отсутствует в индексе",
     )
     for name, expected_sha in evidence.items():
         require(
@@ -149,11 +149,11 @@ def verify(
             and "/" not in name
             and "\\" not in name
             and name not in ("", ".", ".."),
-            "unsafe evidence file path",
+            "Небезопасный путь к файлу свидетельства",
         )
         require(
             isinstance(expected_sha, str) and HEX.fullmatch(expected_sha) is not None,
-            "invalid indexed evidence digest: " + name,
+            "Недопустимая контрольная сумма свидетельства в индексе: " + name,
         )
         p = root / name
         require(
@@ -161,7 +161,7 @@ def verify(
             and not p.is_symlink()
             and 0 < p.stat().st_size <= 256 * 1024 * 1024
             and digest(p) == expected_sha,
-            "missing or tampered runtime evidence: " + name,
+            "Свидетельство Runtime отсутствует или изменено: " + name,
         )
     base, updated = (
         load(root, "manifest.json"),
@@ -199,7 +199,7 @@ def verify(
         and CHANGE not in before_files
         and after_files.get(CHANGE) == game["changedResourceSha256"]
         and all(after_files.get(k) == v for k, v in before_files.items()),
-        "update does not match the single genuine changed client resource",
+        "Обновление не соответствует единственному действительно изменённому ресурсу клиента",
     )
     require(
         load(root, "cycle-update.json").get("status") == "applied-and-verified"
@@ -212,7 +212,7 @@ def verify(
         launch = load(root, f"cycle-runtime-launch-{stage}.json")
         require(
             launch.get("success") is True or launch.get("timedOut") is True,
-            f"actual Minecraft launch missing: {stage}",
+            f"Отсутствует подтверждение реального запуска Minecraft: {stage}",
         )
         counts = load(root, f"cycle-join-{stage}.json")
         require(
@@ -227,11 +227,11 @@ def verify(
             )
             and counts["allowedAfter"] > counts["allowedBefore"]
             and counts["joinedAfter"] > counts["joinedBefore"],
-            f"no new Paper join after {stage}",
+            f"Нет нового подключения к Paper после {stage}",
         )
         require(
             (root / f"cycle-game-{stage}.log").stat().st_size > 0,
-            f"no genuine Java game log after {stage}",
+            f"Нет подлинного игрового журнала Java после {stage}",
         )
     return {
         "status": "verified",

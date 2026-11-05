@@ -39,7 +39,7 @@ def sha(path: Path) -> str:
 
 def read(path: Path) -> dict:
     result = json.loads(path.read_text(encoding="utf-8"))
-    require(isinstance(result, dict), f"expected JSON object: {path.name}")
+    require(isinstance(result, dict), f"Ожидался объект JSON: {path.name}")
     return result
 
 
@@ -51,7 +51,7 @@ def write(path: Path, obj: dict) -> None:
 
 
 def run(cli: Path, args: list[str], out: Path, expected: str) -> dict:
-    require(cli.is_file(), "production Go CLI binary missing")
+    require(cli.is_file(), "Отсутствует исполняемый файл Go CLI промышленной сборки")
     cmd = [str(cli), "client", *args, "--output", str(out)]
     result = subprocess.run(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1800, check=False
@@ -78,7 +78,7 @@ def file_manifest(pkg: dict, client_dir: Path) -> dict[str, str]:
     known: dict[str, str] = {}
     root = client_dir.resolve()
     for entry in files:
-        require(isinstance(entry, dict), "invalid package file")
+        require(isinstance(entry, dict), "Недопустимый файл пакета")
         rel, expected = entry.get("path"), entry.get("sha256")
         require(
             isinstance(rel, str)
@@ -98,7 +98,7 @@ def file_manifest(pkg: dict, client_dir: Path) -> dict[str, str]:
             path.is_file()
             and not path.is_symlink()
             and path.resolve().is_relative_to(root),
-            f"package file missing or unsafe: {rel}",
+            f"Файл пакета отсутствует или небезопасен: {rel}",
         )
         require(
             path.stat().st_size == entry.get("size") and sha(path) == expected,
@@ -112,7 +112,7 @@ def identity(root: Path, version: str) -> str:
     source_sha = os.environ.get("GITHUB_SHA", "").strip()
     require(
         re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", source_sha) is not None,
-        "GITHUB_SHA required for genuine source identity",
+        "Для подтверждения подлинности исходников требуется GITHUB_SHA",
     )
     proc = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -136,7 +136,7 @@ def prepare(args: argparse.Namespace) -> None:
     original = old.get("manifest", {})
     require(
         old.get("manifestSettings") and original.get("version") == args.release,
-        "initial package is not the genuine Minecraft factory output",
+        "Исходный пакет не соответствует подлинному результату сборки клиента Minecraft",
     )
     require(
         original.get("projectId") == "e2e-project"
@@ -147,15 +147,15 @@ def prepare(args: argparse.Namespace) -> None:
     old_files = file_manifest(old, source)
     require(
         CHANGE_PATH not in old_files,
-        "update payload path is already owned by the baseline",
+        "Путь данных обновления уже принадлежит базовому выпуску",
     )
     require(
-        not (source / CHANGE_PATH).exists(), "update payload already exists in source"
+        not (source / CHANGE_PATH).exists(), "Данные обновления уже существуют в исходном каталоге"
     )
     install_dir, store = work / "cycle-client", work / "cycle-store"
     require(
         not install_dir.exists() and not store.exists(),
-        "cycle run must use fresh install/storage",
+        "Циклическая проверка должна использовать чистую установку и новое хранилище",
     )
     run(
         cli,
@@ -195,7 +195,7 @@ def prepare(args: argparse.Namespace) -> None:
     )
     require(
         file_manifest(old, install_dir) == old_files,
-        "installed baseline differs from Minecraft source",
+        "Установленная базовая версия отличается от исходных файлов Minecraft",
     )
 
     # Настоящий версионированный клиентский ресурс изменяется между релизами. Ресурсы,
@@ -231,7 +231,7 @@ def prepare(args: argparse.Namespace) -> None:
     )
     require(
         built.returncode == 0 and updated_path.is_file(),
-        "production package-build failed: " + built.stderr[-2000:],
+        "Не удалось собрать пакет промышленного выпуска: " + built.stderr[-2000:],
     )
     updated = read(updated_path)
     updated["manifestSettings"] = old["manifestSettings"]
@@ -241,7 +241,7 @@ def prepare(args: argparse.Namespace) -> None:
         len(new_files) == len(old_files) + 1
         and all(new_files[k] == digest for k, digest in old_files.items())
         and new_files.get(CHANGE_PATH) == sha(updated_resource),
-        "update must contain exactly one changed, independently hashed resource",
+        "Обновление должно содержать ровно один изменённый ресурс с независимой контрольной суммой",
     )
     run(
         cli,
@@ -281,7 +281,7 @@ def prepare(args: argparse.Namespace) -> None:
     )
     require(
         file_manifest(updated, install_dir) == new_files,
-        "update did not install exact files",
+        "Обновление не установило файлы с ожидаемым содержимым",
     )
     require(
         read(install_dir / ".launcher/client-state.json").get("version")
@@ -325,12 +325,12 @@ def rollback(args: argparse.Namespace) -> None:
     require(
         state.get("schemaVersion") == SCHEMA
         and state.get("status") == "updated-and-verified",
-        "no completed real update to rollback",
+        "Нет завершённого реального обновления, которое можно откатить",
     )
     require(state.get("clientCLIsha256") == sha(cli), "Go CLI changed since update")
     require(
         state.get("sourceCommit") == identity(args.root, args.version),
-        "source changed since update",
+        "Исходные файлы изменились после обновления",
     )
     base, new = read(args.package), read(work / "cycle-package-update.json")
     client = work / "cycle-client"
@@ -367,7 +367,7 @@ def rollback(args: argparse.Namespace) -> None:
         file_manifest(base, client)
         and read(client / ".launcher/client-state.json").get("version")
         == state["baselineVersion"],
-        "rollback failed to restore baseline state",
+        "Откат не восстановил исходное состояние",
     )
     state["status"] = "rolled-back-and-verified"
     write(work / "game-cycle-0364-state.json", state)
@@ -379,7 +379,7 @@ def finalize(args: argparse.Namespace) -> None:
     require(
         state.get("status") == "rolled-back-and-verified"
         and state.get("sourceCommit") == identity(args.root, args.version),
-        "rollback/source identity not verified",
+        "Соответствие отката исходным файлам не подтверждено",
     )
     files = [
         "client-package.json",
@@ -411,7 +411,7 @@ def finalize(args: argparse.Namespace) -> None:
         path = work / rel
         require(
             path.is_file() and not path.is_symlink() and path.stat().st_size > 0,
-            "missing real gameplay evidence: " + rel,
+            "Отсутствует подтверждение реального игрового процесса: " + rel,
         )
         digests[rel] = sha(path)
     initial_manifest, update_manifest = (
@@ -428,7 +428,7 @@ def finalize(args: argparse.Namespace) -> None:
     )
     require(
         read(work / "cycle-runtime-verify-update.json").get("status") == "ready",
-        "Runtime did not verify the update signature",
+        "Среда выполнения не подтвердила подпись обновления",
     )
     for stage in ("update", "rollback"):
         actual = read(work / f"cycle-runtime-launch-{stage}.json")

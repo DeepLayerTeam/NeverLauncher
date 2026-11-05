@@ -188,9 +188,9 @@ def canonical(obj):
 
 
 def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
-    """Independently check actual release bytes and native lifecycle diagnostics.
+    """Независимая проверка байтов выпуска и нативной диагностики жизненного цикла.
 
-    Trust a worker-supplied list of PASS assertions on its own.
+    Одного списка утверждений PASS от рабочего процесса недостаточно.
     """
     proof = read_json(work / "update-recovery.json")
     root = work / "lifecycle-validation"
@@ -1255,11 +1255,11 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
 
 
 def execute_matrix(cfg, package_id):
-    """Execute every required target on its OWN fresh staged grant and OCI job.
+    """Каждая обязательная платформа проверяется с отдельным новым разрешением и заданием OCI.
 
-    A failed case remains failed. A passing default cannot be substituted for a
-    missing preset. Unsupported OS/arch targets remain incomplete until a
-    real matching worker executes them; no synthetic pass is emitted.
+    Неуспешный сценарий нельзя подменять успехом набора настроек по умолчанию.
+    Для неподдерживаемых ОС и архитектур требуется подходящий реальный
+    исполнитель; до его запуска проверка остаётся незавершённой.
     """
     initial = request_json(
         cfg.backend,

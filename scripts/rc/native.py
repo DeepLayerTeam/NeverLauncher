@@ -115,7 +115,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
     runtime, signer = check_binary(runtime), check_binary(signer)
     require(rc_extended(version), "Версия кандидата в выпуск не совпадает")
     require(
-        re.fullmatch(r"[a-f0-9]{40}", commit) is not None, "missing exact source commit"
+        re.fullmatch(r"[a-f0-9]{40}", commit) is not None, "Отсутствует точный исходный коммит"
     )
     checkout = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -126,16 +126,16 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
     )
     require(
         checkout.returncode == 0 and checkout.stdout.strip() == commit,
-        "native tests do not match source checkout",
+        "Нативные тесты не соответствуют рабочей копии исходников",
     )
     help_result = pass_native(process(runtime, "--help"))
     require(
         help_result.get("version") == version,
-        "compiled runtime differs from canonical release version",
+        "Скомпилированная среда выполнения отличается от канонической версии выпуска",
     )
     require(
         "sync-local" in help_result.get("commands", []),
-        "real transactional sync command missing",
+        "Отсутствует реальная команда транзакционной синхронизации",
     )
     checks = ["binary-version-and-runtime-cli"]
     with tempfile.TemporaryDirectory(prefix="nl-rc-03514-") as tmp:
@@ -155,7 +155,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
             )
             require(
                 hash_file(manifest) and len(pubkey) == 64,
-                "real Ed25519 fixture signer failed",
+                "Не удалось подписать реальный тестовый образец Ed25519",
             )
             env = isolated_env(work / "cache")
             before = network.transferred
@@ -182,7 +182,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
             )
             require(
                 network.transferred - before >= size,
-                "no real network bytes transferred",
+                "Реальные данные по сети не передавались",
             )
             checks.append("signed-transactional-http-download-and-independent-sha256")
             pass_native(
@@ -215,7 +215,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
             )
             require(
                 network.transferred == before,
-                "identical installed release triggered another download",
+                "Уже установленный идентичный выпуск вызвал повторную загрузку",
             )
             checks.append("warm-update-without-network-download")
             # Повредите установленный файл, не изменяя его подписанный манифест.
@@ -236,7 +236,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                     pubkey,
                     env=env,
                 ),
-                "corrupt installed file considered ready",
+                "Повреждённый установленный файл ошибочно признан готовым",
             )
             checks.append("corrupt-file-rejected-by-native-verifier")
             pass_native(
@@ -304,7 +304,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                 "signedFixtureSha256": hash_file(manifest),
                 "fixtureBytes": size,
                 "checks": checks,
-                "certificationScope": "real native signed sync, verify, repair, rejection only; not Minecraft/GUI E2E",
+                "certificationScope": "Выполнены только реальные нативные проверки подписанной синхронизации, верификации, восстановления и отказа; E2E Minecraft/GUI не проводились",
                 "timestampUtc": datetime.now(timezone.utc).isoformat(),
                 "certificationRun": identity(version, commit, root=ROOT),
             }

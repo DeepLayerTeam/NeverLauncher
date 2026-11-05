@@ -39,7 +39,7 @@ version_check = subprocess.run(
     stderr=subprocess.STDOUT,
 )
 if version_check.returncode != 0:
-    fail("version metadata drift: " + version_check.stdout.strip())
+    fail("Расхождение метаданных версии: " + version_check.stdout.strip())
 
 dynamic_version_expectations = {
     "cli/cmd/launcher/main.go": 'var version = "dev"',
@@ -103,7 +103,7 @@ if set(api_files) != set(cli_files):
     missing_cli = sorted(set(api_files) - set(cli_files))
     missing_api = sorted(set(cli_files) - set(api_files))
     fail(
-        f"migration chain drift: missing-in-cli={missing_cli}, missing-in-api={missing_api}"
+        f"Расхождение цепочки миграций: отсутствует в CLI={missing_cli}, отсутствует в API={missing_api}"
     )
 else:
     for name in sorted(api_files):
@@ -237,7 +237,7 @@ if (
     fail("Параллельное выполнение проверок совместимости должно изолировать push от плановой сертификации")
 if "needs.compatibility-e2e.result != 'cancelled'" not in compatibility_workflow:
     fail(
-        "Compatibility publish must not convert a cancelled matrix into a failing check"
+        "Публикация данных совместимости не должна превращать отменённую матрицу в неуспешную проверку"
     )
 
 for forbidden in [
@@ -320,7 +320,7 @@ for required in ["func NewFederationCore(", "conformance.Run(ctx, local)"]:
 auth_session_postgres = read("services/api/internal/httpapi/auth_core_postgres_111.go")
 if "INSERT INTO auth_identities" in auth_session_postgres:
     fail(
-        "0.12.0 session issuance must not fabricate local identities; identity lifecycle belongs to canonical user/password operations"
+        "0.12.0 Выдача сессий не должна создавать фиктивные локальные учётные записи; их жизненный цикл управляется основными операциями с пользователями и паролями"
     )
 passkey_handlers = read("services/api/internal/httpapi/webauthn_handlers_117.go")
 if (
@@ -374,7 +374,7 @@ for required in [
 ]:
     if required not in desktop_device_keys:
         fail(
-            f"0.12.2 Desktop device key secure-storage implementation missing: {required}"
+            f"0.12.2 Не реализовано защищённое хранение ключа устройства Desktop: {required}"
         )
 for required in [
     "ensure_device_key",
@@ -399,7 +399,7 @@ for forbidden in [
 ]:
     if forbidden in desktop_ui:
         fail(
-            f"0.12.2 private device key material leaked into React/localStorage: {forbidden}"
+            f"0.12.2 Закрытый ключ устройства попал в React/localStorage: {forbidden}"
         )
 if "device-key-storage.py" not in preflight:
     fail("preflight не запускает 0.12.2 device key / OS secure storage gate")
@@ -457,7 +457,7 @@ if (
     or 'Assurance:         "attested"' in device_trust
 ):
     fail(
-        "0.12.3 self-reported hardware binding must not elevate server assurance before attestation"
+        "0.12.3 Заявленная самим клиентом привязка оборудования не должна повышать уровень доверия сервера до аттестации"
     )
 
 # В 0.12.4 аттестация вызов–ответ — отдельная одноразовая процедура сервера,
@@ -499,7 +499,7 @@ for forbidden in [
 ]:
     if forbidden in attestation_handler:
         fail(
-            f"0.12.4 attestation overstates authorization/vendor assurance: {forbidden}"
+            f"0.12.4 Аттестация завышает уровень подтверждения авторизации или поставщика: {forbidden}"
         )
 # В 0.12.5 управление и отзыв устройств: отзыв — необратимый переход
 # безопасности, а не удаление записи интерфейса. PostgreSQL должен
@@ -1070,7 +1070,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E validate_join nounset regression guard missing: {required}"
+            f"Отсутствует защита от регрессии nounset при проверке соединения Minecraft E2E: {required}"
         )
 for forbidden in [
     '$fingerprint_match" == "t"',
@@ -1088,7 +1088,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E PostgreSQL redemption/handoff boolean assertion missing: {required}"
+            f"Отсутствует проверка логического значения использования/передачи через PostgreSQL в Minecraft E2E: {required}"
         )
 for required in [
     "onboardAccessibility:false",
@@ -1097,7 +1097,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E pristine client may block Quick Play on first-run UI: {required}"
+            f"Чистый клиент Minecraft E2E может блокировать быстрый запуск в интерфейсе первого запуска: {required}"
         )
 for required in [
     "paper_bootstrap_hash_failure",
@@ -1109,7 +1109,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E Paper/Mojang bootstrap recovery hardening missing: {required}"
+            f"Отсутствует усиленная защита восстановления начальной загрузки Paper/Mojang в Minecraft E2E: {required}"
         )
 if (
     "compose down -v"
@@ -1141,7 +1141,7 @@ for required in [
 runtime_lib = read("runtime/runtime/src/lib.rs")
 if "#[serde(default)]\n    pub executable: bool," not in runtime_lib:
     fail(
-        "Runtime manifest signing payload must preserve executable=false exactly like Go ManifestFile"
+        "Данные подписи манифеста Runtime должны сохранять executable=false точно так же, как Go ManifestFile"
     )
 # Настоящий путь загрузки подписанных файлов: lib.rs → durable_downloads →
 # download_scheduler → http_resume → network_resilience. Проверка старых встроенных
@@ -1170,7 +1170,7 @@ for required in [
 ]:
     if required not in resume:
         fail(
-            f"Runtime verified HTTP downloader ignores rate-limit response: {required}"
+            f"Проверенный загрузчик HTTP среды выполнения игнорирует ответ об ограничении частоты запросов: {required}"
         )
 for required in ["network_resilience::retry_delay", "network_resilience::wait"]:
     if required not in scheduler:
@@ -1252,7 +1252,7 @@ for forbidden in [
 ]:
     if forbidden in compat_targets.lower():
         fail(
-            "compatibility/targets.json must never contain manually editable PASS state"
+            "compatibility/targets.json не должен содержать вручную редактируемый статус PASS"
         )
 for required in [
     "verify_result",
@@ -1308,7 +1308,7 @@ for required in [
         fail(f"Для «generic real-client E2E hardening» отсутствует обязательный компонент: {required}")
 if "LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}" not in e2e_compose:
     fail(
-        "E2E server profile must be bound to compatibility target instead of hard-coded Vanilla"
+        "Профиль сервера E2E должен соответствовать целевой платформе совместимости, а не быть жёстко привязан к Vanilla"
     )
 if (
     "symlink package path is forbidden" not in e2e_publish
@@ -1367,7 +1367,7 @@ for required in [
 ]:
     if required not in forge_runtime:
         fail(
-            f"Forge/NeoForge mutable Maven metadata retry hardening missing: {required}"
+            f"Отсутствует защита повторных запросов изменяемых метаданных Maven для Forge/NeoForge: {required}"
         )
 for required in [
     "TestNeoForgeMavenMetadataRetriesTransientNotFound",
@@ -1398,7 +1398,7 @@ for required in [
 ]:
     if required not in runtime_compat:
         fail(
-            f"Runtime NeoForge BootstrapLauncher module-isolation regression guard missing: {required}"
+            f"Отсутствует регрессионная защита изоляции модулей NeoForge BootstrapLauncher в Runtime: {required}"
         )
 if (
     "runtime record java path вышел за Managed Java root через symlink"
@@ -1439,7 +1439,7 @@ for required in [
 ]:
     if required not in vanilla_runtime and required not in stability_go:
         fail(
-            f"0.16.11 compatibility hardening missing cache/security primitive: {required}"
+            f"0.16.11 В усилении совместимости отсутствует механизм кеширования или безопасности: {required}"
         )
 for required in [
     "TestDownloadVanillaArtifactResumesVerifiedPartial",
@@ -1488,7 +1488,7 @@ for required in [
 ]:
     if required not in compat_release:
         fail(
-            f"compatibility release VERSION single-source contract missing: {required}"
+            f"Отсутствует требование единого источника VERSION для выпуска совместимости: {required}"
         )
 for required in [
     "--compatibility-matrix",
@@ -1528,7 +1528,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         not in compat_release
     ):
         fail(
-            "0.16.11 release certification does not bind compatibility hardening policy"
+            "0.16.11 Сертификация выпуска не привязана к политике усиления совместимости"
         )
     if "TestCompatibilityCertificationHardening01611Policy" not in compat_release_tests:
         fail("Отсутствует регрессионный тест «0.16.11 compatibility hardening release»")
@@ -1689,7 +1689,7 @@ for required in [
 ]:
     if required not in device_trust_e2e:
         fail(
-            f"0.12.9 PostgreSQL Device Trust E2E missing runtime primitive: {required}"
+            f"0.12.9 В PostgreSQL E2E для доверия к устройствам отсутствует механизм Runtime: {required}"
         )
 for required in [
     '"--transaction-token=$(jq -er',
@@ -1734,7 +1734,7 @@ if (
 ):
     fail("Проверка «0.12.9 Device Trust matrix gate» не подключена к preflight/CI")
 if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
-    fail("0.12.9 production/strict E2E wiring is incomplete")
+    fail("0.12.9 Связка строгих производственных E2E-проверок настроена не полностью")
 if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_gate:
     fail("Не завершена реализация «0.12.9+ mandatory Device Trust release gate»")
 
@@ -1782,7 +1782,7 @@ for required in [
     "migration-stabilization.json",
 ]:
     if required not in stabilization_upgrade_e2e:
-        fail(f"0.12.10 exact-upgrade E2E missing: {required}")
+        fail(f"0.12.10 Отсутствует E2E-проверка точного обновления: {required}")
 for required in [
     "migrationStabilization01210",
     "migration-upgrade-e2e.json",
@@ -1795,7 +1795,7 @@ if (
     or "migrationStabilization01210" not in device_trust_targets
 ):
     fail(
-        "0.12.10 public Device Trust policy is not aligned with VERSION/migration stabilization"
+        "0.12.10 Публичная политика доверия к устройствам не согласована с VERSION и стабилизацией миграции"
     )
 if (
     "migrationStabilization01210" not in device_trust_matrix
@@ -1813,14 +1813,14 @@ if (
     or "run-device-trust-migration-e2e.sh" not in device_trust_workflow
 ):
     fail(
-        "0.12.10 exact-upgrade E2E is not wired into release/CI/public Device Trust workflow"
+        "0.12.10 E2E-проверка точного обновления не подключена к процессам выпуска, CI и публичной политики доверия к устройствам"
     )
 if (
     "e2e/device-trust-migration-result/" not in ci
     or "e2e/device-trust-migration-result/" not in device_trust_workflow
 ):
     fail(
-        "0.12.10 migration evidence is not retained by CI/public Device Trust workflow"
+        "0.12.10 Свидетельства миграции не сохраняются процессами CI и публичной политики доверия к устройствам"
     )
 if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization_gate:
     fail("Не завершена реализация «0.12.10 mandatory migration stabilization release gate»")
@@ -2173,7 +2173,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         or "run-serverbridge-crypto-identity-migration-e2e.sh" not in ci
     ):
         fail(
-            "0.14.2 exact 0.14.1 -> 0.14.2 migration E2E is not wired into preflight/CI"
+            "0.14.2 Проверка E2E точной миграции 0.14.1 → 0.14.2 не подключена к предварительным проверкам и CI"
         )
     crypto_migration_e2e_0142 = read(
         "e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh"
@@ -2181,7 +2181,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     for forbidden in ["identity-enrollment-required||||||0||||t|t", 'invalidated|t"']:
         if forbidden in crypto_migration_e2e_0142:
             fail(
-                f"0.14.2 migration E2E compares PostgreSQL ::text boolean with obsolete token: {forbidden}"
+                f"0.14.2 E2E миграции сравнивает логическое значение PostgreSQL ::text с устаревшим значением: {forbidden}"
             )
     for required in [
         "identity-enrollment-required||||||0||||true|true",
@@ -2189,7 +2189,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     ]:
         if required not in crypto_migration_e2e_0142:
             fail(
-                f"0.14.2 migration E2E PostgreSQL boolean assertion missing: {required}"
+                f"0.14.2 В E2E миграции отсутствует проверка логического значения PostgreSQL: {required}"
             )
     if "Cryptographic Node Identities gate" not in crypto_gate_0142:
         fail("Не завершена реализация «0.14.2 mandatory cryptographic identity release gate»")
@@ -2245,7 +2245,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         or "run-one-time-join-ticket-migration-e2e.sh" not in ci
     ):
         fail(
-            "0.14.3 exact 0.14.2 -> 0.14.3 migration E2E is not wired into preflight/CI"
+            "0.14.3 Проверка E2E точной миграции 0.14.2 → 0.14.3 не подключена к предварительным проверкам и CI"
         )
     ticket_migration_e2e_0143 = read(
         "e2e/scripts/run-one-time-join-ticket-migration-e2e.sh"
@@ -2253,12 +2253,12 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
     for forbidden in ["invalidated|t|", "|t|64"]:
         if forbidden in ticket_migration_e2e_0143:
             fail(
-                f"0.14.3 migration E2E compares PostgreSQL ::text boolean with obsolete token: {forbidden}"
+                f"0.14.3 E2E миграции сравнивает логическое значение PostgreSQL ::text с устаревшим значением: {forbidden}"
             )
     for required in ["invalidated|true|", "|true|64"]:
         if required not in ticket_migration_e2e_0143:
             fail(
-                f"0.14.3 migration E2E PostgreSQL boolean assertion missing: {required}"
+                f"0.14.3 В E2E миграции отсутствует проверка логического значения PostgreSQL: {required}"
             )
     if "One-Time Join Tickets gate" not in ticket_gate_0143:
         fail("Не завершена реализация «0.14.3 mandatory one-time join ticket release gate»")
@@ -2553,7 +2553,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in production_release_workflow:
             fail(
-                f"0.15.5 Managed JRE production release staging is incomplete: {required}"
+                f"0.15.5 Подготовка управляемой JRE для промышленного выпуска не завершена: {required}"
             )
     for required in [
         "MANAGED_JRE_MANIFEST.json",
@@ -2631,7 +2631,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.16.5: пакет выпуска не включает подготовленные свидетельства Managed Java II")
     if "MANAGED_JAVA_II_EVIDENCE.json" not in release_bundle_0165:
         fail(
-            "0.16.5 release bundle required-artifact gate does not require Managed Java II evidence"
+            "0.16.5 Проверка обязательных артефактов выпуска не требует свидетельство Managed Java II"
         )
     if "Managed Java II gate: OK" not in managed_java_gate_0165:
         fail("Не завершена реализация «0.16.5 mandatory Managed Java II gate»")
@@ -2687,7 +2687,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.16.6 compatibility matrix Java 16/17 gate»: {required}")
     if "vanilla-1.17.1-1.20.4-java16-17-exact" not in release_0166:
         fail(
-            "0.16.6 release certification does not bind exact Java 16/17 Vanilla policy"
+            "0.16.6 Сертификация выпуска не привязана к точной политике Java 16/17 для Vanilla"
         )
     for required in [
         "TestJavaMajorFromVersionEnforcesJava16And17VanillaRange",
@@ -2721,7 +2721,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in vanilla_0167:
             fail(
-                f"0.16.7 Vanilla materializer exact-Java 21 path incomplete: {required}"
+                f"0.16.7 Не завершена реализация точного пути Java 21 в сборщике Vanilla: {required}"
             )
     for required in [
         "expected_java_major_for_vanilla_0167",
@@ -2790,7 +2790,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in vanilla_0168:
             fail(
-                f"0.16.8 Vanilla materializer exact-Java 25 path incomplete: {required}"
+                f"0.16.8 Не завершена реализация точного пути Java 25 в сборщике Vanilla: {required}"
             )
     for required in [
         "expected_java_major_for_vanilla_0168",
@@ -2886,7 +2886,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in vanilla_0169:
             fail(
-                f"0.16.9 Vanilla materializer architecture isolation incomplete: {required}"
+                f"0.16.9 Изоляция архитектур в сборщике Vanilla реализована не полностью: {required}"
             )
     for required in [
         "library_artifact_matches_environment",
@@ -2961,7 +2961,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in runtime_01610:
             fail(
-                f"0.16.10 Runtime direct matching-server launch incomplete: {required}"
+                f"0.16.10 Прямой запуск Runtime с подключением к соответствующему серверу реализован не полностью: {required}"
             )
     for required in [
         "runtime vanilla-server",
@@ -3371,7 +3371,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in stabilization_01510 and required not in rv2_01510:
             fail(
-                f"0.15.10 migration stabilization implementation incomplete: {required}"
+                f"0.15.10 Реализация стабилизации миграции не завершена: {required}"
             )
     for required in [
         "HighestReleaseManifestSHA256",
@@ -3440,7 +3440,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in rc_01511:
             fail(
-                f"0.15.11 Production Release Candidate implementation incomplete: {required}"
+                f"0.15.11 Реализация кандидата промышленного выпуска не завершена: {required}"
             )
     for required in [
         'case "candidate-verify":',
@@ -3463,7 +3463,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in build_01511:
             fail(
-                f"0.15.11 production build fail-closed integration incomplete: {required}"
+                f"0.15.11 Интеграция безопасного отказа при промышленной сборке не завершена: {required}"
             )
     for required in [
         "release-${VERSION}",
@@ -3523,7 +3523,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in pdr_0160:
             fail(
-                f"0.16.0 Production Delivery Release implementation incomplete: {required}"
+                f"0.16.0 Реализация промышленной поставки не завершена: {required}"
             )
     for required in [
         'case "production-verify":',
@@ -3544,7 +3544,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.16.0 production build integration»: {required}")
     if "PRODUCTION_DELIVERY_RELEASE.json" not in bundle_0160:
         fail(
-            "0.16.0 release-bundle gate does not require Production Delivery Release certification"
+            "0.16.0 Проверка комплекта выпуска не требует сертификацию промышленной поставки"
         )
     for required in [
         "production-delivery-release",
@@ -3567,7 +3567,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in pdr_tests_0160:
             fail(
-                f"0.16.0 Production Delivery Release regression tests missing: {required}"
+                f"0.16.0 Отсутствуют регрессионные тесты промышленной поставки: {required}"
             )
     if "Production Delivery Release 0.16.0 gate: OK" not in gate_0160:
         fail("Не завершена реализация «0.16.0 mandatory Production Delivery Release gate»")
@@ -3669,7 +3669,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in ga_vanilla_runtime_0170:
             fail(
-                f"0.17.0v3 Vanilla materializer exact-Java path incomplete: {required}"
+                f"0.17.0v3 Сборщик Vanilla: реализация точного пути Java не завершена: {required}"
             )
     for required in [
         "expected_java_major_for_vanilla_0170v3",
@@ -3694,7 +3694,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             or row.get("scope") != "client"
         ):
             fail(
-                f"0.17.0v3 required target invalid or missing: {minecraft} / Java {java_major}"
+                f"0.17.0v3 Обязательная целевая платформа недопустима или отсутствует: {minecraft} / Java {java_major}"
             )
     if (
         "minecraft-compatibility-II-ga-0170.py" not in preflight
@@ -3977,7 +3977,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]
     if len(forge_rows) != 43 or len({row.get("minecraft") for row in forge_rows}) != 43:
         fail(
-            "0.17.3 Forge target grid must contain exactly 43 unique processor-based releases"
+            "0.17.3 Матрица платформ Forge должна содержать ровно 43 уникальных выпуска с соответствующими процессорами"
         )
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in forge_rows}:
         fail("0.17.3: матрица целей Forge не покрывает Java 8/16/17/21/25")
@@ -4041,7 +4041,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ['alias = "clientreq"', "library.client_req == Some(false)"]:
         if required not in legacy_runtime_0174:
             fail(
-                f"0.17.4 Runtime legacy client library semantics incomplete: {required}"
+                f"0.17.4 Runtime: поддержка поведения библиотек старого клиента не завершена: {required}"
             )
     for required in [
         "mc in ('1.7.10', '1.12.2')",
@@ -4053,7 +4053,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in legacy_case_0174:
             fail(
-                f"0.17.4 Forge legacy actual-client certification incomplete: {required}"
+                f"0.17.4 Сертификация реального клиента старого Forge не завершена: {required}"
             )
     for required in [
         "FORGE_LEGACY_1122_0174",
@@ -4086,7 +4086,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         or legacy_rows[0].get("loaderVersion") != "latest-stable"
     ):
         fail(
-            "0.17.4 Forge 1.12.2 target must be latest-stable Java 8 client linux/x86_64"
+            "0.17.4 Для Forge 1.12.2 требуется клиент Linux x86_64 с последней стабильной Java 8"
         )
     for required in [
         "TestForgeLegacy1122V1UniversalInstaller",
@@ -4156,7 +4156,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in legacy_case_0175:
             fail(
-                f"0.17.5 Forge 1.7.10 actual-client certification incomplete: {required}"
+                f"0.17.5 Сертификация реального клиента Forge 1.7.10 не завершена: {required}"
             )
     for required in [
         "FORGE_LEGACY_1710_0175",
@@ -4189,7 +4189,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         or legacy_rows[0].get("loaderVersion") != "latest-stable"
     ):
         fail(
-            "0.17.5 Forge 1.7.10 target must be latest-stable Java 8 client linux/x86_64"
+            "0.17.5 Для Forge 1.7.10 требуется клиент Linux x86_64 с последней стабильной Java 8"
         )
     for required in [
         "TestForgeLegacy1710V1LaunchWrapperInstaller",
@@ -4305,7 +4305,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]
     if len(rows) != len(expected_neo):
         fail(
-            f"0.17.6 NeoForge grid requires exactly {len(expected_neo)} targets, got {len(rows)}"
+            f"0.17.6 Матрица NeoForge должна содержать ровно {len(expected_neo)} целевых платформ; получено {len(rows)}"
         )
     else:
         by_mc = {row.get("minecraft"): row for row in rows}
@@ -4380,7 +4380,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "readLoaderResolutionLock",
     ]:
         if required not in pin_lock_0177:
-            fail(f"Неполная реализация «0.17.7 loader resolution lock»: {required}")
+            fail(f"Неполная реализация «0.17.7 loader закреплённые версии зависимостей»: {required}")
     for required in [
         "resolveMetaLoaderVersionWithEvidence",
         "ResolutionPinned",
@@ -4428,7 +4428,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for loader in ["fabric", "quilt", "forge", "neoforge"]:
         if f"e2e/runtime/{loader}-resolution-lock.json" not in pin_workflow_0177:
             fail(
-                f"0.17.7 compatibility workflow does not retain {loader} resolution lock"
+                f"0.17.7 Процесс проверки совместимости не сохраняет {loader} закреплённые версии зависимостей"
             )
     for required in [
         "TestLoaderResolutionLockRoundTripAndTamperDetection",
@@ -4513,7 +4513,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in native_release_0178:
             fail(
-                f"0.17.8 release certification native enforcement incomplete: {required}"
+                f"0.17.8 Нативные требования сертификации выпуска реализованы не полностью: {required}"
             )
     for required in [
         "TestCompatibilityCertificationLoaderNativeE2E0178",
@@ -4601,7 +4601,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in platform_release_0179:
             fail(
-                f"0.17.9 release certification platform enforcement incomplete: {required}"
+                f"0.17.9 Платформенные требования сертификации выпуска реализованы не полностью: {required}"
             )
     for required in [
         "natives_directory: String",
@@ -4615,7 +4615,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in platform_workflow_0179:
             fail(
-                f"0.17.9 compatibility workflow platform wiring incomplete: {required}"
+                f"0.17.9 Подключение платформ в процессе проверки совместимости не завершено: {required}"
             )
     for required in [
         "test_validate_0179_requires_all_loader_platforms",
@@ -4807,7 +4807,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         or observed_blocked != blocked
     ):
         fail(
-            "0.17.11 requires 292 catalogue entries, 280 required certifications and 12 exact upstream exclusions"
+            "0.17.11 Требуются 292 записи каталога, 280 обязательных сертификаций и 12 исключений точных исходных артефактов"
         )
     if any(
         (row.get("os"), row.get("arch")) != ("linux", "x86_64")
@@ -4964,7 +4964,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in windows_policy_0181:
             fail(
-                f"0.18.1 Windows Protection Core II enforcement incomplete: {required}"
+                f"0.18.1 Применение политики Windows Protection Core II реализовано не полностью: {required}"
             )
     for required in [
         '.arg("--protection-profile")',
@@ -4974,7 +4974,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in windows_ipc_0181:
             fail(
-                f"0.18.1 Windows Protection Core II authenticated IPC integration incomplete: {required}"
+                f"0.18.1 Интеграция аутентифицированного IPC Windows Protection Core II не завершена: {required}"
             )
     for required in [
         "guard_compat_profile_enforces_its_runtime_capabilities",
@@ -4983,7 +4983,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in windows_test_0181:
             fail(
-                f"0.18.1 Windows Protection Core II integration regression missing: {required}"
+                f"0.18.1 Отсутствует интеграционная регрессионная проверка Windows Protection Core II: {required}"
             )
     if "Windows Protection Core II 0.18.1 gate: OK" not in windows_gate_0181:
         fail("Не завершена реализация «0.18.1 mandatory Windows Protection Core II gate»")
@@ -4994,7 +4994,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("Проверка «0.18.1 Windows Protection Core II gate» не подключена к preflight/CI")
     if "--test guard_windows" not in ci or "-D warnings" not in ci:
         fail(
-            "0.18.1 Windows Protection Core II lacks Windows compile/integration/clippy CI"
+            "0.18.1 Для Windows Protection Core II отсутствуют компиляция, интеграционные проверки или clippy в CI Windows"
         )
 
 
@@ -5056,7 +5056,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in sensor_supervisor_0182:
             fail(
-                f"0.18.2 Guard Sensor supervised launch integration incomplete: {required}"
+                f"0.18.2 Интеграция запуска под контролем Guard Sensor не завершена: {required}"
             )
     for required in [
         "GUARD_SENSOR_FILE_NAME",
@@ -5102,7 +5102,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in ci:
             fail(
-                f"0.18.2 Guard Sensor lacks Windows build/integration/clippy CI: {required}"
+                f"0.18.2 Для Guard Sensor отсутствуют сборка, интеграционные проверки или clippy в CI Windows: {required}"
             )
 
 
@@ -5174,7 +5174,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in module_test_0183:
             fail(
-                f"0.18.3 Module Guard Windows integration regression missing: {required}"
+                f"0.18.3 Отсутствует регрессионная интеграционная проверка Module Guard в Windows: {required}"
             )
     if "Module Guard 0.18.3 gate: OK" not in module_gate_0183:
         fail("Не завершена реализация «0.18.3 mandatory Module Guard gate»")
@@ -5225,7 +5225,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if forbidden in hook_engine_0184:
             fail(
-                f"0.18.4 Hook Engine uses forbidden cross/global-process primitive: {forbidden}"
+                f"0.18.4 Hook Engine использует запрещённый механизм межпроцессного или глобального доступа: {forbidden}"
             )
     for required in [
         "SENSOR_PROTOCOL_VERSION: u32 = 3",
@@ -5314,7 +5314,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if forbidden in memory_0185:
             fail(
-                f"0.18.5 Memory Integrity uses forbidden cross-process primitive: {forbidden}"
+                f"0.18.5 Memory Integrity использует запрещённый механизм межпроцессного доступа: {forbidden}"
             )
     for required in [
         "crate::memory_integrity::record_virtual_alloc",
@@ -5353,7 +5353,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in memory_test_0185:
             fail(
-                f"0.18.5 Memory Integrity Windows integration regression missing: {required}"
+                f"0.18.5 Отсутствует регрессионная интеграционная проверка Memory Integrity в Windows: {required}"
             )
     for required in [
         "JNI_OnLoad",
@@ -5416,7 +5416,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if forbidden in thread_sensor_0186:
             fail(
-                f"0.18.6 Thread Integrity uses forbidden cross-process primitive: {forbidden}"
+                f"0.18.6 Thread Integrity использует запрещённый механизм межпроцессного доступа: {forbidden}"
             )
     for required in [
         "MODULE_EVENT_REASON_THREAD_PROCESS_READY",
@@ -5450,7 +5450,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in thread_parent_0186:
             fail(
-                f"0.18.6 Thread & Process Integrity parent enforcement incomplete: {required}"
+                f"0.18.6 Контроль родительского процесса Thread & Process Integrity реализован не полностью: {required}"
             )
     for required in [
         "WindowsThreadProcessIntegrityReport",
@@ -5470,7 +5470,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in thread_test_0186:
             fail(
-                f"0.18.6 Thread & Process Integrity Windows integration regression missing: {required}"
+                f"0.18.6 Отсутствует регрессионная интеграционная проверка Thread & Process Integrity в Windows: {required}"
             )
     for required in [
         "JNI_OnLoad",
@@ -5494,7 +5494,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.6: для Thread Integrity в CI отсутствует проверка противодействия атакам на Windows")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail(
-            "0.18.6 Thread & Process Integrity lacks real Windows integration/clippy CI"
+            "0.18.6 Для Thread & Process Integrity отсутствуют реальные интеграционные проверки или clippy в CI Windows"
         )
 
 
@@ -5583,7 +5583,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in debug_test_0187:
             fail(
-                f"0.18.7 Debug Guard Windows integration regression missing: {required}"
+                f"0.18.7 Отсутствует регрессионная интеграционная проверка Debug Guard в Windows: {required}"
             )
     for required in [
         "DebugActiveProcess",
@@ -5769,7 +5769,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in continuous_test_0189:
             fail(
-                f"0.18.9 Continuous Guard Windows integration regression missing: {required}"
+                f"0.18.9 Отсутствует регрессионная интеграционная проверка Continuous Guard в Windows: {required}"
             )
     if "Continuous Guard 0.18.9 gate: OK" not in continuous_gate_0189:
         fail("Не завершена реализация «0.18.9 mandatory Continuous Guard gate»")
@@ -5839,7 +5839,7 @@ if (
     or "guard-windows-adversarial-ci-01811.py" not in ci
 ):
     fail(
-        "0.18.11 Windows Adversarial CI mandatory gate/self-tests are not wired into preflight/CI"
+        "0.18.11 Обязательные проверки и самотестирование негативных испытаний Windows не подключены к предварительным проверкам или CI"
     )
 if (
     "Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK"
@@ -5881,7 +5881,7 @@ for required in [
 ]:
     if required not in windows_protection_rc_01812:
         fail(
-            f"0.18.12 Windows Protection RC implementation missing invariant: {required}"
+            f"0.18.12 В реализации Windows Protection RC отсутствует обязательный инвариант: {required}"
         )
 for required in [
     "TestWindowsProtectionReleaseRequired01812",
@@ -5914,7 +5914,7 @@ if (
     or "verifyWindowsProtectionRelease01812(dir, ver)" not in production_candidate_01812
 ):
     fail(
-        "0.18.12 Production Release Candidate does not require/verify Windows Protection RC"
+        "0.18.12 Кандидат промышленного выпуска не требует и не проверяет кандидат защиты Windows"
     )
 if (
     "windows-protection-rc-adversarial-signed-production-boundary"
@@ -5931,7 +5931,7 @@ for required in [
 ]:
     if required not in production_release_workflow:
         fail(
-            f"0.18.12 production release workflow Windows Protection RC wiring missing: {required}"
+            f"0.18.12 Подключение Windows Protection RC к процессу промышленного выпуска отсутствует: {required}"
         )
 if (
     "guard-windows-protection-rc-01812.py" not in preflight
@@ -5939,7 +5939,7 @@ if (
     or "TestWindowsProtection" not in ci
 ):
     fail(
-        "0.18.12 Windows Protection RC mandatory gate/Go tests are not wired into preflight/CI"
+        "0.18.12 Обязательные Go-тесты защиты Windows RC не подключены к предварительным проверкам или CI"
     )
 if (
     "Windows Protection RC release certificate + production gates 0.18.12 gate: OK"
@@ -5979,7 +5979,7 @@ for required in [
 ]:
     if required not in windows_protection_ga_0190:
         fail(
-            f"0.19.0 Windows Protection GA implementation missing invariant: {required}"
+            f"0.19.0 В реализации финальной защиты Windows отсутствует обязательный инвариант: {required}"
         )
 for required in [
     "TestWindowsProtectionGARequired0190",
@@ -6011,7 +6011,7 @@ if (
     or "verifyWindowsProtectionGA0190(dir, ver)" not in production_candidate_01812
 ):
     fail(
-        "0.19.0 Production Release Candidate does not require/verify Windows Protection GA"
+        "0.19.0 Кандидат промышленного выпуска не требует и не проверяет финальную версию защиты Windows"
     )
 if (
     "windows-protection-ga-fail-closed-user-mode-boundary"
@@ -6026,7 +6026,7 @@ for required in [
 ]:
     if required not in production_release_workflow:
         fail(
-            f"0.19.0 production release workflow Windows Protection GA wiring missing: {required}"
+            f"0.19.0 Подключение финальной защиты Windows к процессу промышленного выпуска отсутствует: {required}"
         )
 for required in [
     "guardContinuousJoinPurpose01810",
@@ -6048,7 +6048,7 @@ if (
     or "TestWindowsProtectionGA" not in ci
 ):
     fail(
-        "0.19.0 Windows Protection GA mandatory gate/Go tests are not wired into preflight/CI"
+        "0.19.0 Обязательные Go-тесты финальной защиты Windows не подключены к предварительным проверкам или CI"
     )
 if (
     "Guard Windows Protection GA 0.19.0 production gate: OK"
@@ -6094,7 +6094,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in real_backup:
             fail(
-                f"0.29.0 actual Paper world restore implementation incomplete: {required}"
+                f"0.29.0 Реальное восстановление мира Paper реализовано не полностью: {required}"
             )
     for required in [
         "actual-mojang-client",
@@ -6117,7 +6117,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         or "server-control-ga, admin-ga-certification" not in release_pipeline
     ):
         fail(
-            "0.29.0 production release must depend on separately validated real Minecraft evidence"
+            "0.29.0 Промышленный выпуск должен зависеть от отдельно проверенных свидетельств реального запуска Minecraft"
         )
 
 if errors:

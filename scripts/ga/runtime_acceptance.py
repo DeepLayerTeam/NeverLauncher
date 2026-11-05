@@ -65,23 +65,23 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
     require(package.get("channel") == "stable", "Релиз не является стабильным")
     require(
         package.get("status") == "integrity-passed",
-        "release not staged with current integrity PASS",
+        "Выпуск не подготовлен с актуальным подтверждением целостности PASS",
     )
     require(isinstance(validations, dict), "Отсутствуют данные для проверки")
     integrity = validations.get("integrity")
     require(
         isinstance(integrity, dict) and integrity.get("result") == "passed",
-        "integrity verification failed",
+        "Проверка целостности не пройдена",
     )
     policy = validations.get("effectivePolicy")
     require(
         isinstance(policy, dict)
         and policy.get("source") == "production-runtime-gate-0.34.11"
         and policy.get("requiredLevel") == "trusted-runtime",
-        "not using trusted runtime evaluator",
+        "Не используется доверенный модуль оценки среды выполнения",
     )
     require(
-        policy.get("sourceSha") == source_sha, "source commit differs from GA release"
+        policy.get("sourceSha") == source_sha, "Исходный коммит отличается от коммита финального выпуска"
     )
     require(
         policy.get("publishEligible") is True,
@@ -91,7 +91,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         isinstance(report, dict)
         and report.get("packageId") == package_id
         and report.get("manualCertificationAllowed") is False,
-        "invalid audit report or manual certification",
+        "Недопустимый отчёт аудита или ручная сертификация",
     )
     coverage = report.get("coverage")
     require(
@@ -104,33 +104,33 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         isinstance(matrix, str)
         and SHA256.fullmatch(matrix)
         and coverage.get("matrixSha256") == matrix,
-        "required target matrix changed or missing",
+        "Матрица обязательных целевых платформ изменена или отсутствует",
     )
     count = policy.get("requiredTargets")
     require(
         type(count) is int
         and 0 < count <= 128
         and policy.get("verifiedTargets") == count,
-        "incomplete mandatory target count",
+        "Неполное количество обязательных целевых платформ",
     )
     require(
         coverage.get("required") == count and coverage.get("verified") == count,
-        "live target counts differ",
+        "Количество целевых платформ реального запуска не совпадает",
     )
     covered = policy.get("targetCoverage")
     require(
         isinstance(covered, dict)
         and len(covered) == count
         and all(ID.fullmatch(k) and v is True for k, v in covered.items()),
-        "missing or failed target",
+        "Целевая платформа отсутствует или проверка не пройдена",
     )
     require(
         coverage.get("targetCoverage") == covered,
-        "report and validation target coverage differs",
+        "Охват целевых платформ в отчёте и проверке не совпадает",
     )
     require(
         policy.get("targetBlockers") == {} and coverage.get("targetBlockers") == {},
-        "blocked targets remain",
+        "Остались заблокированные целевые платформы",
     )
     evidence = report.get("evidence")
     require(isinstance(evidence, list), "Отсутствует доверенная история подтверждений")
@@ -147,11 +147,11 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
             continue
         run_id = item.get("runId")
         require(
-            isinstance(run_id, str) and ID.fullmatch(run_id), "invalid trusted run ID"
+            isinstance(run_id, str) and ID.fullmatch(run_id), "Недопустимый идентификатор доверенного запуска"
         )
         require(
             timestamp(item.get("expiresAt")) > now + timedelta(minutes=15),
-            "evidence expires during GA release",
+            "Срок действия свидетельства истекает во время финального выпуска",
         )
         require(run_id not in run_ids, "Повторное использование аттестации среды выполнения")
         run_ids.add(run_id)
@@ -172,7 +172,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
                 )
                 for run in ids
             ),
-            "runtime stages missing for " + target,
+            "Отсутствуют этапы среды выполнения для " + target,
         )
     return {
         "schemaVersion": "launcher.ga-runtime-preflight.v1",
@@ -182,7 +182,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         "sourceSha": source_sha,
         "matrixSha256": matrix,
         "verifiedTargets": count,
-        "note": "This read-only snapshot does not authorize publishing; PostgreSQL rechecks at commit.",
+        "note": "Этот снимок только для чтения не разрешает публикацию; PostgreSQL повторно проверит данные при фиксации транзакции.",
     }
 
 
@@ -213,7 +213,7 @@ def get_json(backend, endpoint, bearer):
     data = json.loads(raw)
     require(
         isinstance(data, dict) and isinstance(data.get("data"), dict),
-        "missing Backend data",
+        "Отсутствуют данные Backend",
     )
     return data["data"]
 
@@ -242,10 +242,10 @@ def main():
     args = parser.parse_args()
     try:
         require(ID.fullmatch(args.package_id), "Недопустимый идентификатор пакета")
-        require(SOURCE.fullmatch(args.source_sha), "invalid source SHA")
+        require(SOURCE.fullmatch(args.source_sha), "Недопустимый SHA исходников")
         require(
             supported_runtime_release(args.version),
-            "release predates the protected runtime gate or has invalid version",
+            "Выпуск создан до внедрения защищённой проверки среды выполнения или имеет недопустимую версию",
         )
         url = urlsplit(args.backend)
         require(
@@ -256,12 +256,12 @@ def main():
             and not url.query
             and not url.fragment
             and not url.path.rstrip("/"),
-            "Backend must use a HTTPS origin",
+            "Backend должен использовать источник с HTTPS",
         )
         token = os.environ.get("NL_GA_OPERATOR_TOKEN", "").strip()
         require(
             bool(token) and "\n" not in token and "\r" not in token,
-            "missing protected read token",
+            "Отсутствует защищённый токен чтения",
         )
         base = "/api/v1/packages/" + quote(args.package_id, safe="")
         pkg = get_json(args.backend, base, token)
@@ -276,7 +276,7 @@ def main():
             json.dumps(decision, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
         print(
-            "GA runtime preflight: eligible for atomic Backend validation (not certified by CI)"
+            "Предварительная проверка среды выполнения: допускается атомарная проверка Backend (не является сертификацией CI)"
         )
         return 0
     except (Blocked, OSError, ValueError, json.JSONDecodeError) as ex:

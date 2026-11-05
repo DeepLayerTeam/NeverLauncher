@@ -244,7 +244,7 @@ def fetch_matrix(
     run = select_exact_run(workflow_runs(api, repository, workflow, commit), commit)
     if run is None:
         print(
-            f"[release-certification] {label}: exact-commit workflow run not visible yet",
+            f"[release-certification] {label}: Запуск процесса CI для точного коммита пока не обнаружен",
             flush=True,
         )
         return False
@@ -321,7 +321,7 @@ def fetch_matrix(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(matrix_raw)
     print(
-        f"[release-certification] {label}: accepted exact commit {commit} from run {run_id}",
+        f"[release-certification] {label}: Принят точный коммит {commit} from run {run_id}",
         flush=True,
     )
     return True

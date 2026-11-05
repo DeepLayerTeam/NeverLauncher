@@ -70,7 +70,7 @@ def json_object(path: Path) -> dict:
     def unique(pairs):
         result = {}
         for k, v in pairs:
-            require(k not in result, "duplicate field: " + k)
+            require(k not in result, "Повторяющееся поле: " + k)
             result[k] = v
         return result
 
@@ -95,13 +95,13 @@ def file_set(bundle: Path) -> dict[str, str]:
     sums = (bundle / "SHA256SUMS").read_text(encoding="utf-8")
     expected = {}
     for row in sums.splitlines():
-        require(bool(row), "empty line in SHA256SUMS")
+        require(bool(row), "Пустая строка в SHA256SUMS")
         match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._+-]*)", row)
-        require(match is not None, "malformed or unsafe SHA256SUMS entry")
+        require(match is not None, "Некорректная или небезопасная запись SHA256SUMS")
         digest, name = match.groups()
         require(
             name not in expected and name not in ("SHA256SUMS", "SHA256SUMS.sig"),
-            "duplicate/self-reference in SHA256SUMS",
+            "Повторяющаяся запись или ссылка на самого себя в SHA256SUMS",
         )
         expected[name] = digest
     require(len(expected) >= 20, "В выпуске недостаточно подписанных артефактов")
@@ -377,7 +377,7 @@ def validate(
         require(all((base,key,pin,index_pin,project)),
                 'Выпуск 0.53.0 ЗАБЛОКИРОВАН: отсутствуют независимые входные данные полной пользовательской приёмки GA')
         root=Path(base)
-        require(root.is_absolute() and root.is_dir(), '0.53.0 GA inbox unavailable')
+        require(root.is_absolute() and root.is_dir(), 'Недоступен каталог входящих подтверждений финального выпуска 0.53.0')
         try:
             verify_0530(root/'approval.json',root/'approval.sig',Path(key),pin,
                         root/'packages',root/'source-index.json',index_pin,
@@ -656,7 +656,7 @@ def main() -> int:
             from delivery_verify_0462 import verify_bundle
             current = verify_bundle(actual_bundle, True)['targets']
             certified = verify_bundle(certified_bundle, True)['targets']
-            require(current == certified, '0.48.0 actual package hashes differ from approved delivery')
+            require(current == certified, 'Фактические хеши пакетов 0.48.0 не совпадают с подтверждённой поставкой')
         result = (
             publish(a.repository, verified, Path(a.bundle))
             if a.action == "publish"

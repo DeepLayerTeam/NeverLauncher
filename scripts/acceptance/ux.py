@@ -64,12 +64,12 @@ def referenced_file(path):
         and not path.startswith("/")
         and "\\" not in path
         and ".." not in Path(path).parts,
-        "unexpected source/test path: " + repr(path),
+        "Неожиданный путь к исходникам или тестам: " + repr(path),
     )
     ref = (ROOT / path).resolve()
     require(
         ref.is_relative_to(ROOT) and ref.is_file(),
-        "missing or escaping source/test path: " + path,
+        "Путь к исходникам или тестам отсутствует либо выходит за разрешённые границы: " + path,
     )
     return ref
 
@@ -83,16 +83,16 @@ def load_inventory():
     current = (ROOT / "VERSION").read_text().strip()
     require(
         all(p.isdecimal() for p in current.split(".")) and len(current.split(".")) == 3,
-        "invalid product VERSION",
+        "Недопустимое значение VERSION продукта",
     )
     require(
         tuple(map(int, current.split("."))) >= (0, 35, 1),
-        "product predates the G/M acceptance baseline",
+        "Версия продукта предшествует базовому уровню приёмки G/M",
     )
     journeys = data.get("journeys")
     require(
         isinstance(journeys, list) and [x.get("id") for x in journeys] == IDS,
-        "required ordered unique G01-G35 + M01-M19 coverage missing",
+        "Отсутствует обязательный упорядоченный охват уникальных требований G01–G35 и M01–M19",
     )
     sources = data["baseline"]
     require(set(sources) == {"G", "M"}, "Отсутствует историческая базовая версия")
@@ -126,16 +126,16 @@ def load_inventory():
         )
         require(
             j.get("verification") == "not-run",
-            "catalog cannot contain claims of verification: " + ident,
+            "Каталог не должен содержать утверждений о выполненных проверках: " + ident,
         )
         require(
             j.get("acceptanceScope")
             in ("local-plus-target", "target-required", "security-exclusion"),
-            "invalid acceptance scope: " + ident,
+            "Недопустимая область приёмки: " + ident,
         )
         require(
             isinstance(j.get("testRefs"), list) and j["testRefs"],
-            "missing executable probe refs: " + ident,
+            "Отсутствуют ссылки на исполняемые проверки: " + ident,
         )
         for f in j["testRefs"] + j["implementationRefs"]:
             referenced_file(f)
@@ -147,7 +147,7 @@ def load_inventory():
             require(
                 j["acceptanceScope"] == "security-exclusion"
                 and j["operatorStep"].startswith("prohibited:"),
-                "M17 unsafe behavior must be explicitly forbidden",
+                "Небезопасное поведение M17 должно быть явно запрещено",
             )
     require(set(UX) == {f"UX{i:02}" for i in range(1, 13)}, "Сопоставление элементов UX неполное")
     require(
@@ -288,7 +288,7 @@ def execute(journeys, ids, timeout, report):
     atomic_report(report, document)
     failed = sum(x["status"] != "local-regression-passed" for x in outcome)
     print(
-        f"Local G/M regression: {len(outcome) - failed}/{len(outcome)} passed; target verification: NOT RUN"
+        f"Local G/M regression: {len(outcome) - failed}/{len(outcome)} пройдено; проверка целевой платформы: НЕ ВЫПОЛНЯЛАСЬ"
     )
     return 1 if failed else 0
 

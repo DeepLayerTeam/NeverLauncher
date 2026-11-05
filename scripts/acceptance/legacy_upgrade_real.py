@@ -39,11 +39,11 @@ def require(value, message):
 
 def private_json(path):
     require(path.is_absolute() and not any(p.is_symlink() for p in (path, *path.parents)),
-            'private path must be absolute with no symlink components')
+            'Закрытый путь должен быть абсолютным и не содержать символических ссылок')
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and st.st_uid == os.geteuid() and st.st_nlink == 1
             and not st.st_mode & 0o077 and 0 < st.st_size <= 131072,
-            'private input must be owner-only nonlinked regular JSON (<=128 KiB)')
+            'Закрытый входной файл должен быть обычным JSON размером не более 128 КиБ, без ссылок и с доступом только владельца')
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
     with os.fdopen(fd, 'rb') as f:
         first = os.fstat(f.fileno())
@@ -63,7 +63,7 @@ def private_json(path):
             result[name] = value
         return result
     value = json.loads(data, object_pairs_hook=unique)
-    require(type(value) is dict, 'private document must be an object')
+    require(type(value) is dict, 'Закрытый документ должен содержать объект')
     return value
 
 
@@ -73,18 +73,18 @@ def sha_file(name, *, max_size=8 << 30):
     require(not any(p.is_symlink() for p in (path, *path.parents)), 'linked file path')
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= max_size,
-            'invalid or linked source file')
+            'Недопустимый исходный файл или ссылка вместо файла')
     h = hashlib.sha256()
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
     with os.fdopen(fd, 'rb') as f:
         first = os.fstat(f.fileno())
         require((first.st_dev, first.st_ino, first.st_size, first.st_mtime_ns)
-                == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns), 'source file replaced')
+                == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns), 'Исходный файл был заменён')
         for part in iter(lambda: f.read(1 << 20), b''):
             h.update(part)
         last = os.fstat(f.fileno())
         require((last.st_dev, last.st_ino, last.st_size, last.st_mtime_ns)
-                == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns), 'source file mutated')
+                == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns), 'Исходный файл был изменён')
     return h.hexdigest()
 
 
@@ -92,24 +92,24 @@ def source_snapshot(cfg):
     paths = cfg.get('sourceFiles')
     require(type(paths) is dict and 1 <= len(paths) <= 24 and
             all(type(k) is str and re.fullmatch('[a-z][a-z0-9_-]{2,50}', k) for k in paths),
-            'source files and stable labels required')
+            'Требуются исходные файлы и неизменяемые метки')
     fingerprints = {key: sha_file(path) for key, path in sorted(paths.items())}
     source = cfg.get('storageRoot')
-    require(type(source) is str and source.startswith('/'), 'absolute original storage required')
+    require(type(source) is str and source.startswith('/'), 'Требуется абсолютный путь к исходному хранилищу')
     path = Path(source)
     require(path.is_dir() and not any(p.is_symlink() for p in (path, *path.parents)),
-            'original storage cannot be symlinked')
+            'Исходное хранилище не может быть символической ссылкой')
     store_sha, count, size = storage_fingerprint(path)
-    require(count > 0, 'real stored files required for acceptance')
+    require(count > 0, 'Для приёмки необходимы реальные файлы из хранилища')
     return {'files': fingerprints, 'storage': {'sha256': store_sha, 'count': count, 'size': size}}
 
 
 def live_snapshot(cfg):
     base, creds = cfg['baseUrl'], Path(cfg['ownerCredentials'])
     require(base.startswith('https://') or base.startswith('http://127.0.0.1:'),
-            'HTTPS or explicit loopback acceptance Backend required')
+            'Для приёмки требуется Backend с HTTPS либо явно заданным локальным адресом обратной связи')
     require(type(cfg.get('projectId')) is str and type(cfg.get('profileId')) is str and
-            type(cfg.get('channelId')) is str, 'project/profile/channel identity required')
+            type(cfg.get('channelId')) is str, 'Требуются идентификаторы проекта, профиля и канала')
     token, owner = live.owner_login(base, creds)
     rows = live.snapshot_api(base, token, cfg['projectId'], cfg['profileId'], cfg['channelId'])
     return {'owner': owner, 'project': cfg['projectId'], 'profile': cfg['profileId'],
@@ -117,7 +117,7 @@ def live_snapshot(cfg):
 
 
 def capture(cfg):
-    require(cfg.get('sourceVersion') in ORIGINAL, 'unsupported legacy source version')
+    require(cfg.get('sourceVersion') in ORIGINAL, 'Неподдерживаемая версия устаревшего источника')
     actual = live.running_version(cfg['baseUrl'])
     require(actual == cfg['sourceVersion'], 'original Backend version differs from actual running version')
     return {'schema': SCHEMA, 'phase': 'original', 'sourceVersion': actual,
@@ -127,26 +127,26 @@ def capture(cfg):
 def verify(cfg, baseline):
     require(baseline.get('schema') == SCHEMA and baseline.get('phase') == 'original'
             and baseline.get('sourceVersion') == cfg.get('sourceVersion') in ORIGINAL,
-            'capture must originate from approved historical version')
+            'Снимок должен быть получен из подтверждённой исторической версии')
     current = live.running_version(cfg['baseUrl'])
     require(current == (ROOT/'VERSION').read_text().strip(),
-            'migration target must be the running current Backend')
+            'Целью миграции должен быть работающий Backend текущей версии')
     # Снимайте снимок старых источников повторно; прежние записывающие процессы должны быть остановлены при переключении.
-    require(source_snapshot(cfg) == baseline['source'], 'original source files changed during migration')
+    require(source_snapshot(cfg) == baseline['source'], 'Исходные файлы изменились во время миграции')
     now = live_snapshot(cfg)
     require(now == baseline['identity'], 'user UUID/roles, project, profile, channel or API state changed')
     target = cfg.get('targetStorageRoot')
     require(type(target) is str and target.startswith('/'),
-            'absolute target storage required')
+            'Требуется абсолютный путь к целевому хранилищу')
     original_root = Path(cfg['storageRoot']).resolve(strict=True)
     target_root = Path(target).resolve(strict=True)
     require(original_root != target_root and not target_root.is_relative_to(original_root)
             and not original_root.is_relative_to(target_root),
-            'original and migrated storage must be distinct, non-nested roots')
+            'Исходное и перенесённое хранилища должны иметь разные, не вложенные друг в друга корневые каталоги')
     source = dict(cfg)
     source['storageRoot'] = target
     require(source_snapshot(source)['storage'] == baseline['source']['storage'],
-            'target storage differs from original file hashes')
+            'Контрольные суммы файлов целевого хранилища не совпадают с исходными')
     return {'schema': SCHEMA, 'phase': 'migrated', 'sourceVersion': baseline['sourceVersion'],
             'targetVersion': current, 'sourceCaptureSha256': cfg['sourceCaptureSha256'],
             'ownerId': now['owner']['id'], 'projectId': now['project'],
@@ -166,12 +166,12 @@ def main(argv=None):
         cfg = private_json(args.config)
         require(not args.output.exists() and args.output.is_absolute() and args.output.parent.is_dir()
                 and not args.output.parent.is_symlink() and not args.output.is_symlink(),
-                'new private output in existing directory required')
+                'Требуется новый закрытый выходной файл в существующем каталоге')
         require(cfg.get('format') == SCHEMA, 'wrong config format')
         if args.action == 'capture':
             result = capture(cfg)
         else:
-            require(args.source_capture is not None, 'original immutable capture required')
+            require(args.source_capture is not None, 'Требуется неизменяемый исходный снимок')
             baseline = private_json(args.source_capture)
             cfg['sourceCaptureSha256'] = sha_file(str(args.source_capture))
             result = verify(cfg, baseline)

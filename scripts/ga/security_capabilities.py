@@ -85,9 +85,9 @@ def ci_identity(run_id=None, run_attempt=None) -> tuple[str, int]:
     if isinstance(attempt, int):
         attempt = str(attempt)
     if not isinstance(rid, str) or not RUN_ID.fullmatch(rid):
-        blocked("current GITHUB_RUN_ID is required")
+        blocked("Требуется актуальное значение GITHUB_RUN_ID")
     if not isinstance(attempt, str) or not RUN_ID.fullmatch(attempt):
-        blocked("current GITHUB_RUN_ATTEMPT is required")
+        blocked("Требуется актуальное значение GITHUB_RUN_ATTEMPT")
     return rid, int(attempt)
 
 
@@ -108,17 +108,17 @@ def load_json(path: Path, limit: int = 1024 * 1024) -> dict:
     except (ValueError, UnicodeDecodeError) as exc:
         blocked("malformed JSON evidence: " + str(exc))
     if not isinstance(value, dict):
-        blocked("evidence object required")
+        blocked("Требуется объект свидетельства")
     return value
 
 
 def timestamp(value: str) -> datetime:
     if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", value):
-        blocked("UTC observation timestamp required")
+        blocked("Требуется временная метка наблюдения в UTC")
     try:
         return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError:
-        blocked("invalid UTC observation timestamp")
+        blocked("Недопустимая временная метка наблюдения в UTC")
 
 
 def expected_scope(check: str) -> str:
@@ -148,13 +148,13 @@ def verify_trace(
     try:
         osname, arch = target.split("-", 1)
     except ValueError:
-        blocked("invalid security platform target")
+        blocked("Недопустимая целевая платформа безопасности")
     if (osname, arch) not in {
         ("windows", "x64"), ("windows", "arm64"),
         ("linux", "x64"), ("linux", "arm64"),
         ("darwin", "x64"), ("darwin", "arm64"),
     }:
-        blocked("unapproved security platform target")
+        blocked("Неутверждённая целевая платформа безопасности")
     fields = {
         "schemaVersion", "version", "commit", "target", "kind", "status",
         "actualExecution", "simulated", "artifactSha256", "packageSha256",
@@ -162,7 +162,7 @@ def verify_trace(
         "runtimeLogSha256", "scenarios",
     }
     if set(trace) != fields:
-        blocked(target + ": missing/extra fields in " + check)
+        blocked(target + ": Отсутствуют или присутствуют лишние поля в " + check)
     expected_values = {
         "schemaVersion": SCHEMA, "version": version, "commit": commit,
         "target": target, "kind": check, "status": "passed",
@@ -174,9 +174,9 @@ def verify_trace(
         if type(trace[key]) is not type(expected) or trace[key] != expected:
             blocked(target + ": invalid " + key + " for " + check)
     if not isinstance(trace["executionId"], str) or not EXECUTION.fullmatch(trace["executionId"]):
-        blocked(target + ": invalid execution correlation for " + check)
+        blocked(target + ": Недопустимая корреляция выполнения для " + check)
     if not isinstance(trace["runtimeLogSha256"], str) or not SHA.fullmatch(trace["runtimeLogSha256"]):
-        blocked(target + ": invalid log hash for " + check)
+        blocked(target + ": Недопустимый хеш журнала для " + check)
     observation_time = timestamp(trace["observedAtUtc"])
     current_time = now or datetime.now(timezone.utc)
     # Независимое одобрение оператора должно выдаваться ПОСЛЕ наблюдавшегося исполнения.
@@ -185,21 +185,21 @@ def verify_trace(
     positive, negative = scenarios[check]
     expected_scenarios = {positive: "allowed", negative: "denied"}
     if trace["scenarios"] != expected_scenarios:
-        blocked(target + ": positive and negative scenario results required: " + check)
+        blocked(target + ": Требуются результаты положительного и отрицательного сценариев: " + check)
 
     log_dir = evidence / "targets" / target / "security-0431"
     if log_dir.is_symlink() or not log_dir.is_dir() or (log_dir / (check + ".jsonl")).is_symlink():
         blocked(target + ": unsafe security log path: " + check)
     log = log_dir / (check + ".jsonl")
     if not log.is_file() or not 0 < log.stat().st_size <= MAX_LOG:
-        blocked(target + ": missing/empty/oversized native observation log: " + check)
+        blocked(target + ": Журнал нативного наблюдения отсутствует, пуст или слишком велик: " + check)
     import hashlib
     raw_log = log.read_bytes()
     if hashlib.sha256(raw_log).hexdigest() != trace["runtimeLogSha256"]:
         blocked(target + ": altered security observation log: " + check)
     lines = raw_log.splitlines()
     if len(lines) != len(expected_scenarios):
-        blocked(target + ": missing or extra native observations: " + check)
+        blocked(target + ": Отсутствуют обязательные или присутствуют лишние нативные наблюдения: " + check)
     found = set()
     for line in lines:
         if not line:
@@ -220,7 +220,7 @@ def verify_trace(
             "packageSha256", "scenario", "observedDecision", "observedAtUtc",
             "actualExecution", "simulated",
         }:
-            blocked("invalid native event fields: " + check)
+            blocked("Недопустимые поля нативного события: " + check)
         scenario = event["scenario"]
         if not isinstance(scenario, str) or scenario not in expected_scenarios or scenario in found:
             blocked("duplicate or unrecognized security event: " + check)
@@ -247,10 +247,10 @@ def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_att
     issued_at = timestamp(approval["issuedAtUtc"])
     expires_at = timestamp(approval["expiresAtUtc"])
     if evidence.is_symlink() or (evidence / "targets").is_symlink():
-        blocked("security evidence root/target collection cannot be a symlink")
+        blocked("Корень свидетельств безопасности или набор целевых платформ не может быть символической ссылкой")
     targets = approval.get("targets")
     if not isinstance(targets, list) or len(targets) != 6:
-        blocked("six per-platform security certifications required")
+        blocked("Требуются шесть сертификатов безопасности по платформам")
     expected_targets = {
         "windows-x64", "windows-arm64", "linux-x64", "linux-arm64",
         "darwin-x64", "darwin-arm64",
@@ -263,14 +263,14 @@ def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_att
         target = row["target"]
         hashes = row.get("checks")
         if not isinstance(hashes, dict) or any(check not in hashes for check in mandatory):
-            blocked(target + ": missing mandatory security capability evidence")
+            blocked(target + ": Отсутствует обязательное свидетельство возможностей защиты")
         for check in mandatory:
             info = hashes[check]
             if not isinstance(info, dict) or set(info) != {"sha256"} or not isinstance(info["sha256"], str) or not SHA.fullmatch(info["sha256"]):
-                blocked(target + ": signed security evidence hash missing: " + check)
+                blocked(target + ": Отсутствует хеш подписанного свидетельства безопасности: " + check)
             directory = evidence / "targets" / target
             if directory.is_symlink() or not directory.is_dir():
-                blocked(target + ": unsafe security target directory")
+                blocked(target + ": Небезопасный каталог целевой платформы безопасности")
             path = directory / (check + ".json")
             trace = load_json(path)
             if hashlib.sha256(path.read_bytes()).hexdigest() != info["sha256"]:

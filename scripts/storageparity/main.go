@@ -373,7 +373,7 @@ func main() {
 		if !bytes.Equal(current, b) {
 			fatal(errors.New("storage dependency inventory drift: re-run go run ./scripts/storageparity -root .; review updated dependency map and parity coverage before merging"))
 		}
-		fmt.Printf("storage inventory verified: %d PostgreSQL-related files; HTTP methods=%d; SQLite name-overlap=%d (NOT semantic parity)\n", len(report.Dependencies), len(report.MethodSurface.Interface), len(report.MethodSurface.SameNames))
+		fmt.Printf("Инвентаризация хранилища проверена: файлов PostgreSQL — %d; методов HTTP — %d; пересечений имён SQLite — %d (НЕ подтверждает семантическую совместимость)\n", len(report.Dependencies), len(report.MethodSurface.Interface), len(report.MethodSurface.SameNames))
 		return
 	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
@@ -382,6 +382,6 @@ func main() {
 	if err := os.WriteFile(dest, b, 0644); err != nil {
 		fatal(err)
 	}
-	fmt.Printf("wrote %s: %d files; HTTP methods=%d; SQLite name-overlap=%d (not parity)\n", dest, len(report.Dependencies), len(report.MethodSurface.Interface), len(report.MethodSurface.SameNames))
+	fmt.Printf("Записано %s: файлов — %d; методов HTTP — %d; пересечений имён SQLite — %d (совместимость не подтверждена)\n", dest, len(report.Dependencies), len(report.MethodSurface.Interface), len(report.MethodSurface.SameNames))
 }
 func fatal(err error) { fmt.Fprintln(os.Stderr, "storageparity:", err); os.Exit(1) }

@@ -55,10 +55,10 @@ def export(runtime: Path, destination: Path) -> None:
             and p.resolve().is_relative_to(candidate_dir.resolve())
         ]
     found.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    output = ["Minecraft client diagnostics (bounded and redacted; no unfiltered logs)"]
+    output = ["Диагностика клиента Minecraft (с ограничением объёма и удалением конфиденциальных данных; без необработанных журналов)"]
     if not found:
         output.append(
-            "No certification log has been written (failure may predate JVM launch)."
+            "Журнал сертификации ещё не создан (сбой мог произойти до запуска JVM)."
         )
     for index, path in enumerate(found[:MAX_LOGS], start=1):
         output.append(f"--- certification {index}, last {MAX_BYTES} bytes ---")

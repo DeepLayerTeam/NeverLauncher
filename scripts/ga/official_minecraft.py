@@ -76,7 +76,7 @@ def strict_json(raw: bytes) -> dict:
         raw,
         object_pairs_hook=unique,
         parse_constant=lambda _v: (_ for _ in ()).throw(
-            GateError("invalid numeric constant")
+            GateError("Недопустимая числовая константа")
         ),
     )
     require(type(value) is dict, "Подтверждающие данные должны быть объектом JSON")
@@ -97,12 +97,12 @@ def file_bytes(
     require(
         isinstance(expected_digest, str)
         and SHA256.fullmatch(expected_digest) is not None,
-        "invalid evidence digest",
+        "Недопустимая контрольная сумма свидетельства",
     )
     path = folder / filename
     require(
         not folder.is_symlink() and not path.is_symlink() and path.is_file(),
-        "missing/symlinked evidence file",
+        "Файл свидетельства отсутствует или является символической ссылкой",
     )
     require(path.stat().st_size <= max_size, "Подтверждающие данные GA превышают допустимый размер")
     raw = path.read_bytes()
@@ -124,7 +124,7 @@ def checked_time(value: str, now: datetime) -> None:
         and now - timedelta(days=14)
         <= parsed.astimezone(timezone.utc)
         <= now + timedelta(minutes=5),
-        "missing/stale/future GA evidence",
+        "Свидетельство финального выпуска отсутствует, устарело или датировано будущим",
     )
 
 
@@ -136,13 +136,13 @@ def common_report(
         and report.get("productVersion") == version
         and report.get("target") == target
         and report.get("status") == "passed",
-        "report not bound to exact source/platform",
+        "Отчёт не привязан к точному источнику и платформе",
     )
     require(
         report.get("simulated") is False
         and report.get("mocked") is False
         and report.get("actualExecution") is True,
-        "missing affirmative live execution proof",
+        "Отсутствует подтверждение успешного реального запуска",
     )
     checked_time(report.get("observedUTC"), now)
 
@@ -175,12 +175,12 @@ def check_provider(
             for s in stages
             if isinstance(s, dict) and s.get("status") == "passed"
         },
-        "provider chain missing successful stage",
+        "В цепочке провайдера отсутствует успешно завершённый этап",
     )
     subject = report.get("minecraftProfileSHA256")
     require(
         isinstance(subject, str) and SUBJECT.fullmatch(subject) is not None,
-        "missing stable UUID digest",
+        "Отсутствует хеш постоянного UUID",
     )
     checked_time(report.get("timestampUTC"), now)
     return subject
@@ -225,7 +225,7 @@ def verify_target(
         and data.get("target") == target
         and data.get("status") == "passed"
         and data.get("gitTreeClean") is True,
-        "signed GA attestation does not match source and target",
+        "Подписанная аттестация финального выпуска не соответствует источнику и цели",
     )
     checked_time(data.get("observedUTC"), now)
     checks = data.get("checks")
@@ -233,7 +233,7 @@ def verify_target(
         type(checks) is dict
         and set(checks) == REQUIRED_CHECKS
         and all(v == "passed" for v in checks.values()),
-        "missing/failed/skipped GA acceptance check",
+        "Приёмочная проверка финального выпуска отсутствует, не пройдена или пропущена",
     )
     approval = data.get("externalApproval")
     require(
@@ -243,14 +243,14 @@ def verify_target(
         and approval.get("manuallyConfirmed") is True
         and isinstance(approval.get("recordId"), str)
         and 8 <= len(approval["recordId"]) <= 160,
-        "provider approval must be manually confirmed and independently attested",
+        "Подтверждение провайдера необходимо проверить вручную и независимо аттестовать",
     )
     checked_time(approval.get("confirmedUTC"), now)
     client = data.get("clientId")
     require(
         isinstance(client, str)
         and re.fullmatch(r"[a-fA-F0-9-]{36}", client) is not None,
-        "client ID missing from independently signed evidence",
+        "В независимо подписанном свидетельстве отсутствует идентификатор клиента",
     )
     objects = data.get("objects")
     require(
@@ -261,7 +261,7 @@ def verify_target(
     for label, reference in objects.items():
         require(
             type(reference) is dict and set(reference) == {"file", "sha256"},
-            "invalid attached proof reference",
+            "Недопустимая ссылка на приложенное подтверждение",
         )
         proofs[label] = strict_json(
             file_bytes(folder, reference["file"], reference["sha256"])
@@ -269,7 +269,7 @@ def verify_target(
     browser = check_provider(proofs["browser"], "browser", platform, arch, client, now)
     device = check_provider(proofs["device"], "device", platform, arch, client, now)
     require(
-        browser == device, "browser and device did not verify the same official account"
+        browser == device, "Браузер и устройство подтвердили разные официальные учётные записи"
     )
     for label, kind in (("vanilla", "vanilla"), ("modded", None)):
         proof = proofs[label]
@@ -348,12 +348,12 @@ def verify_all(
 ) -> dict:
     require(
         isinstance(commit, str) and GITSHA.fullmatch(commit) is not None,
-        "exact git SHA required",
+        "Требуется точный SHA Git",
     )
     require(
         isinstance(public_key_hex, str)
         and re.fullmatch(r"[0-9a-fA-F]{64}", public_key_hex) is not None,
-        "pinned Ed25519 public key required",
+        "Требуется закреплённый открытый ключ Ed25519",
     )
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex))
     now = now or datetime.now(timezone.utc)

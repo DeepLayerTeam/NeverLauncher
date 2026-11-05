@@ -50,13 +50,13 @@ def private_json(path: Path, max_size=32768):
     info = path.stat()
     require(info.st_uid == os.geteuid() and stat.S_ISREG(info.st_mode) and
             info.st_mode & 0o077 == 0 and 0 < info.st_size <= max_size,
-            'private input file owner/mode/size invalid (require 0600)')
+            'Недопустимый владелец, права или размер закрытого входного файла (требуются права 0600)')
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
     try:
         real = os.fstat(fd)
         require(real.st_uid == os.geteuid() and stat.S_ISREG(real.st_mode) and
                 real.st_mode & 0o077 == 0 and 0 < real.st_size <= max_size,
-                'private file changed during validation')
+                'Закрытый файл был изменён во время проверки')
         with os.fdopen(fd, 'rb', closefd=False) as stream:
             raw = stream.read(max_size + 1)
         require(len(raw) <= max_size, 'Закрытый входной файл превышает максимальный размер')
@@ -70,7 +70,7 @@ def private_json(path: Path, max_size=32768):
         return result
     try:
         parsed = json.loads(raw, object_pairs_hook=unique,
-            parse_constant=lambda item: (_ for _ in ()).throw(Blocked('invalid JSON constant')))
+            parse_constant=lambda item: (_ for _ in ()).throw(Blocked('Недопустимая константа JSON')))
     except (UnicodeError, ValueError):
         raise Blocked('Некорректные закрытые входные данные JSON') from None
     require(isinstance(parsed, dict), 'Закрытый JSON должен содержать объект')
@@ -106,7 +106,7 @@ class LiveAPI:
         parsed = urlsplit(origin)
         require(parsed.scheme == 'https' and parsed.hostname and not parsed.username and
                 not parsed.password and parsed.path in ('', '/') and not parsed.query and
-                not parsed.fragment, 'live acceptance requires exact HTTPS origin')
+                not parsed.fragment, 'Для приёмки действующей системы требуется точный HTTPS-адрес источника')
         self.origin = origin.rstrip('/')
         self.opener = build_opener(ProxyHandler({}), HTTPSHandler(context=ssl.create_default_context()), NoRedirect())
 
@@ -173,7 +173,7 @@ def auth_login(api, entry, provider):
     user = data.get('user') or {}
     tokens = data.get('tokens') or {}
     require(isinstance(user.get('id'), str) and user['id'] and user.get('status') == 'active',
-            'login missing active canonical Never identity')
+            'После входа отсутствует активная основная учётная запись Never')
     require(isinstance(tokens.get('accessToken'), str) and len(tokens['accessToken']) >= 32 and
             isinstance(tokens.get('refreshToken'), str) and len(tokens['refreshToken']) >= 32,
             'login did not issue real Never access/refresh pair')
@@ -193,7 +193,7 @@ def record(report, name, observations=None):
 
 def check_input(raw):
     require(raw.get('scope') == 'dedicated-disposable-accounts' and raw.get('allowIdentityMutation') is True,
-            'explicit opt-in for dedicated disposable test identities required')
+            'Требуется явное разрешение на использование отдельных временных тестовых учётных записей')
     local = credentials(raw.get('local'), 'local')
     secondary = credentials(raw.get('secondary'), 'secondary')
     sql = credentials(raw.get('sql'), 'SQL')
@@ -209,9 +209,9 @@ def check_input(raw):
     require(isinstance(official, dict) and official.get('userType') == 'msa' and
             official.get('authServerBaseUrl') == '' and
             isinstance(official.get('uuid'), str) and HEXUUID.fullmatch(official['uuid'].replace('-', '')),
-            'official Minecraft credentials/UUID required')
+            'Требуются официальные учётные данные Minecraft и UUID')
     require(all(isinstance(official.get(k), str) and official[k] for k in ('username', 'accessToken')),
-            'official Minecraft bearer/profile required')
+            'Требуются официальный токен доступа и профиль Minecraft')
     return local, secondary, sql, oidc, official
 
 
@@ -232,8 +232,8 @@ def prepare(api, raw, output):
     for item in (link, login):
         require(all(isinstance(item.get(k), str) and item[k] for k in ('authorizationUrl', 'transaction', 'state')),
                 'OIDC issuer did not return PKCE browser transaction')
-        require(item['authorizationUrl'].startswith('https://'), 'browser auth URL must be HTTPS')
-    require(link['state'] != login['state'], 'distinct OIDC flows reused the state')
+        require(item['authorizationUrl'].startswith('https://'), 'Адрес авторизации в браузере должен использовать HTTPS')
+    require(link['state'] != login['state'], 'Разные процессы авторизации OIDC повторно использовали одно и то же значение state')
     private_write(output, {'version': VERSION, 'origin': api.origin, 'providerId': oidc['providerId'],
                            'ownerSha256': user_digest(user['id']), 'generatedAt': int(time.time()),
                            'link': {**link, 'code': ''}, 'login': {**login, 'code': ''}})
@@ -243,18 +243,18 @@ def prepare(api, raw, output):
 def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     local, secondary, sql, oidc, official = check_input(raw)
     require(isinstance(source_commit, str) and COMMIT.fullmatch(source_commit), 'Необходимо указать точный коммит исходников')
-    require(isinstance(api_package_sha256, str) and SHA256.fullmatch(api_package_sha256), 'exact backend release package SHA-256 required')
+    require(isinstance(api_package_sha256, str) and SHA256.fullmatch(api_package_sha256), 'Требуется точная контрольная сумма SHA-256 пакета выпуска Backend')
     issued = proof.get('generatedAt')
     age = int(time.time()) - issued if isinstance(issued, int) else 1000000
     require(proof.get('version') == VERSION and proof.get('origin') == api.origin and
             proof.get('providerId') == oidc['providerId'] and 0 <= age < 600,
-            'OIDC browser proof is stale or belongs to another release/origin')
+            'Подтверждение браузерной авторизации OIDC устарело либо относится к другому выпуску или адресу источника')
     for key in ('link', 'login'):
         flow = proof.get(key)
         require(isinstance(flow, dict) and all(isinstance(flow.get(f), str) and flow[f] for f in ('state', 'transaction', 'code')),
-                'OIDC browser proof missing verified authorization code for ' + key)
+                'В подтверждении браузерной авторизации OIDC отсутствует проверенный код авторизации для ' + key)
     caps = api.request('GET', '/api/v1/auth/capabilities').get('data', {})
-    require(caps.get('toolVersion') == VERSION, 'live Backend release version does not match exact acceptance candidate')
+    require(caps.get('toolVersion') == VERSION, 'Версия действующего Backend не совпадает с проверяемым кандидатом выпуска')
     report = {'schema': 'neverlauncher.auth-identity-live.0525', 'productVersion': VERSION,
               'sourceCommit':source_commit, 'apiPackageSha256':api_package_sha256,
               'originSha256': hashlib.sha256(api.origin.encode()).hexdigest(), 'checks': [],
@@ -275,7 +275,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     api.request('POST', '/api/v1/auth/providers/' + quote(sql['providerId']) + '/link/password',
                 token=local_tokens['accessToken'], data={'identifier':sql['identifier'], 'password':sql['password']})
     sql_user, sql_tokens = auth_login(api, sql, sql['providerId'])
-    require(sql_user['id'] == owner, 'SQL login did not resolve the same explicitly linked canonical identity')
+    require(sql_user['id'] == owner, 'Вход через SQL не вернул ту же явно привязанную основную учётную запись')
     identities = api.request('GET','/api/v1/auth/identities',token=sql_tokens['accessToken'])['data']['items']
     require(any(row.get('provider') == sql['providerId'] and row.get('subject') for row in identities),
             'SQL provider proof did not persist a scoped linked identity')
@@ -290,7 +290,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     oidc_result = api.request('POST','/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/complete',
                 data={'state':login['state'],'transaction':login['transaction'],'code':login['code']})
     require(oidc_result.get('data',{}).get('user',{}).get('id') == owner,
-            'OIDC login changed the canonical Never UUID')
+            'Вход через OIDC изменил основной UUID Never')
     expect_denied(api,'POST','/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/complete',
                   data={'state':login['state'],'transaction':login['transaction'],'code':login['code']})
     record(report,'AUTH-OIDC-CANONICAL-ID-AND-REPLAY')
@@ -298,7 +298,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     # api.minecraftservices.com И sessionserver.mojang.com, не через локальную имитацию.
     proof_data = official_probe(official,'official')
     require(proof_data.get('providerJoin') == 'passed' and proof_data.get('providerHasJoined') == 'passed',
-            'real Microsoft/Minecraft online-mode join failed')
+            'Не удалось подключиться к реальному серверу Microsoft/Minecraft в режиме online-mode')
     record(report,'AUTH-OFFICIAL-MINECRAFT-JOIN', {'profileSha256':proof_data['profileSha256']})
     game_uuid = official['uuid'].replace('-','').lower()
     wrong_uuid = ('1' if game_uuid[0] != '1' else '2') + game_uuid[1:]
@@ -342,7 +342,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     api.request('POST','/api/v1/auth/logout',token=secondary_tokens['accessToken'])
     expect_denied(api,'GET','/api/v1/auth/sessions',token=secondary_tokens['accessToken'])
     record(report,'AUTH-LOGOUT-REVOKES-SESSION')
-    require(len(report['checks']) == 13, 'a required auth acceptance check was skipped')
+    require(len(report['checks']) == 13, 'Пропущена обязательная приёмочная проверка авторизации')
     report['finishedAt'] = int(time.time())
     report['status'] = 'passed-live-operator-observations-not-independent-ga'
     return report
@@ -364,7 +364,7 @@ def main(argv=None):
         if args.action == 'prepare-oidc':
             prepare(api,raw,args.output)
         else:
-            require(args.oidc_proof is not None, 'live OIDC browser proof file required')
+            require(args.oidc_proof is not None, 'Необходим файл подтверждения браузерной авторизации OIDC из действующей системы')
             proof = private_json(args.oidc_proof)
             result = live_run(api,raw,proof, args.source_commit, args.api_package_sha256)
             private_write(args.output,result)

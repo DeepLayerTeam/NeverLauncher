@@ -77,7 +77,7 @@ def verify(
         need(
             set(nr.get("checks", [])) >= REQUIRED_NATIVE
             and len(nr["checks"]) == len(set(nr["checks"])),
-            "missing actual runtime operations on " + system,
+            "Отсутствуют реальные операции среды выполнения на " + system,
         )
         need(
             all(
@@ -86,11 +86,11 @@ def verify(
             )
             and isinstance(nr.get("fixtureBytes"), int)
             and nr["fixtureBytes"] >= 128 * 1024,
-            "missing native executable/fixture fingerprints",
+            "Отсутствуют отпечатки нативного исполняемого файла или тестового образца",
         )
         need(
             "not Minecraft/GUI E2E" in nr.get("certificationScope", ""),
-            "native test must not claim live game certification",
+            "Нативный тест не должен заявлять о сертификации реального игрового запуска",
         )
         verify_run(nr, version, commit)
         native.append(
@@ -117,7 +117,7 @@ def verify(
             and dr["binarySizeBytes"] > 1_000_000
             and isinstance(dr.get("frontendAssets"), int)
             and dr["frontendAssets"] >= 2,
-            "missing actual compiled Desktop bundle",
+            "Отсутствует реально скомпилированный комплект Desktop",
         )
         verify_run(dr, version, commit)
         desktop.append(
@@ -136,7 +136,7 @@ def verify(
         and backend.get("realMinecraftCertification") is False
         and backend.get("nativeDesktopVerified") is False
         and backend.get("stablePublicationVerified") is False,
-        "missing true disposable owner/player Backend E2E",
+        "Отсутствует реальная E2E-проверка Backend с временными учётными записями владельца и игрока",
     )
     checks = backend.get("checks", [])
     need(
@@ -160,7 +160,7 @@ def verify(
         "realMinecraftCertified": False,
         "fullDisasterRecoveryCertified": False,
         "operatorSigned": False,
-        "releaseApproval": "NOT-GA: requires protected runtime, deployment, security and DR certification",
+        "releaseApproval": "НЕ ФИНАЛЬНЫЙ ВЫПУСК: необходима сертификация защищённой среды выполнения, развёртывания, безопасности и аварийного восстановления",
     }
 
 
@@ -187,7 +187,7 @@ def main():
         print("0.35.14 RC blocked: " + str(exc), file=sys.stderr)
         return 3
     print(
-        "0.35.14 source RC passed. Live Minecraft, protected production and DR are NOT certified."
+        "Кандидат 0.35.14 прошёл проверку исходников. Реальный Minecraft, защищённая промышленная среда и аварийное восстановление НЕ сертифицированы."
     )
     return 0
 

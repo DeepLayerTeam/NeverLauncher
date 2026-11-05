@@ -54,7 +54,7 @@ if release_from_0470; then
     LAUNCHER_REPRO_B_REPORT LAUNCHER_REPRO_B_SIG LAUNCHER_REPRO_B_KEY LAUNCHER_REPRO_B_DIR \
     LAUNCHER_REPRO_NATIVE_APPROVAL LAUNCHER_REPRO_NATIVE_APPROVAL_SIG LAUNCHER_REPRO_NATIVE_APPROVAL_KEY LAUNCHER_REPRO_NATIVE_REPORTS_DIR; do
     [[ -n "${!name:-}" ]] || {
-      echo "0.47.0 BLOCKED: missing ${name}; independent reproduction/native signing is mandatory" >&2
+      echo "0.47.0 ЗАБЛОКИРОВАНО: отсутствует ${name}; обязательны независимое воспроизведение и нативная подпись" >&2
       exit 2
     }
   done
@@ -66,12 +66,12 @@ fi
 COMPONENTS_GA_RECEIPT=""
 if [[ "${VERSION}" == "0.25.0" ]]; then
   for tool in python3 git; do
-    command -v "${tool}" >/dev/null 2>&1 || { echo "GA requires ${tool}" >&2; exit 2; }
+    command -v "${tool}" >/dev/null 2>&1 || { echo "Для финального выпуска требуется ${tool}" >&2; exit 2; }
   done
   GA_DIR="${LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR:-}"
   GA_PUB="${LAUNCHER_COMPONENT_GA_PUBLIC_KEY:-}"
   if [[ -z "${GA_DIR}" || -z "${GA_PUB}" || ! -d "${GA_DIR}" ]]; then
-    echo "0.25.0 GA requires signed evidence in LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR and a pinned LAUNCHER_COMPONENT_GA_PUBLIC_KEY" >&2
+    echo "0.25.0 Для финального выпуска нужны подписанные свидетельства в LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR и закреплённый ключ LAUNCHER_COMPONENT_GA_PUBLIC_KEY" >&2
     exit 2
   fi
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
@@ -81,7 +81,7 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
   fi
   SOURCE_COMMIT="${HEAD_COMMIT}"
   if [[ -n "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]]; then
-    echo "0.25.0 GA signing requires a clean, committed source tree" >&2
+    echo "0.25.0 Для подписи финального выпуска требуется чистое дерево исходников с зафиксированными изменениями" >&2
     exit 2
   fi
   COMPONENTS_GA_RECEIPT="$(mktemp)"
@@ -100,10 +100,10 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
   OFFICIAL_GA_DIR="${LAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR:-}"
   OFFICIAL_GA_PUB="${LAUNCHER_OFFICIAL_GA_PUBLIC_KEY:-}"
   [[ -d "${OFFICIAL_GA_DIR}" && -n "${OFFICIAL_GA_PUB}" ]] || {
-    echo "0.27.0 GA BLOCKED: six signed live official Minecraft attestations and a pinned operator public key are required" >&2
+    echo "0.27.0 Финальный выпуск ЗАБЛОКИРОВАН: нужны шесть подписанных подтверждений реальных проверок официального Minecraft и закреплённый открытый ключ оператора" >&2
     exit 2
   }
-  command -v git >/dev/null 2>&1 || { echo "GA requires git" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "Для финального выпуска требуется git" >&2; exit 2; }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
     echo "Коммит исходников официального выпуска GA не совпадает" >&2; exit 2;
@@ -123,15 +123,15 @@ fi
 # промышленное подписание. Проверяйте их до удаления результатов предыдущего выпуска.
 if [[ "${VERSION}" == "0.31.0" ]]; then
   for name in LAUNCHER_JAVA_GA_EVIDENCE_DIR LAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE LAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE; do
-    [[ -n "${!name:-}" ]] || { echo "0.31.0 GA BLOCKED: missing ${name}" >&2; exit 2; }
+    [[ -n "${!name:-}" ]] || { echo "0.31.0 Финальный выпуск ЗАБЛОКИРОВАН: отсутствует ${name}" >&2; exit 2; }
   done
-  command -v git >/dev/null 2>&1 || { echo "0.31.0 GA requires git" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "0.31.0 Для финального выпуска требуется git" >&2; exit 2; }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
-    echo "0.31.0 GA source commit mismatch" >&2; exit 2;
+    echo "0.31.0 Исходный коммит финального выпуска не совпадает с ожидаемым" >&2; exit 2;
   }
   [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
-    echo "0.31.0 GA signing requires a clean source checkout" >&2; exit 2;
+    echo "0.31.0 Для подписи финального выпуска требуется чистая рабочая копия" >&2; exit 2;
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
   python3 "${ROOT_DIR}/scripts/ga/verify_java_ga_0310.py" \
@@ -156,17 +156,17 @@ elif [[ "${GA_TARGET_MODE}" == "signed-ga-v2" ]]; then
 fi
 if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   [[ -n "${GA_TARGET_EVIDENCE_DIR}" && -n "${GA_TARGET_TRUSTED_KEY}" ]] || {
-    echo "${VERSION} GA BLOCKED: independent signed target evidence and pinned operator public key required" >&2
+    echo "${VERSION} Финальный выпуск ЗАБЛОКИРОВАН: нужны независимые подписанные свидетельства целевых платформ и закреплённый открытый ключ оператора" >&2
     exit 2
   }
-  command -v git >/dev/null 2>&1 || { echo "GA requires git" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "Для финального выпуска требуется git" >&2; exit 2; }
   GA_TARGET_HEAD="$(git -C "${ROOT_DIR}" rev-parse --verify HEAD)" || exit 2
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${GA_TARGET_HEAD}" ]] || {
-    echo "${VERSION} GA BLOCKED: source SHA differs from git HEAD" >&2; exit 2;
+    echo "${VERSION} Финальный выпуск ЗАБЛОКИРОВАН: SHA исходников отличается от git HEAD" >&2; exit 2;
   }
   SOURCE_COMMIT="${GA_TARGET_HEAD}"
   [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal -- ':!dist')" ]] || {
-    echo "${VERSION} GA BLOCKED: source checkout is not clean" >&2; exit 2;
+    echo "${VERSION} Финальный выпуск ЗАБЛОКИРОВАН: рабочая копия исходников содержит незакоммиченные изменения" >&2; exit 2;
   }
   python3 "${ROOT_DIR}/scripts/ga/verified_targets.py" \
     --preflight --evidence "${GA_TARGET_EVIDENCE_DIR}" \
@@ -183,16 +183,16 @@ if [[ "${VERSION}" == "0.33.0" ]]; then
   SINGLE_NODE_GA_DIR="${LAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR:-}"
   SINGLE_NODE_GA_PUBLIC_KEY="${LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE:-}"
   [[ -d "${SINGLE_NODE_GA_DIR}" && -f "${SINGLE_NODE_GA_PUBLIC_KEY}" ]] || {
-    echo "0.33.0 GA BLOCKED: signed live SQLite-only evidence and an independently pinned public key are mandatory" >&2; exit 2;
+    echo "0.33.0 Финальный выпуск ЗАБЛОКИРОВАН: обязательны подписанные реальные свидетельства режима SQLite-only и независимо закреплённый открытый ключ" >&2; exit 2;
   }
-  command -v git >/dev/null 2>&1 || { echo "0.33.0 GA requires git" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "0.33.0 Для финального выпуска требуется git" >&2; exit 2; }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)" || exit 2
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
-    echo "0.33.0 GA BLOCKED: source commit mismatch" >&2; exit 2;
+    echo "0.33.0 Финальный выпуск ЗАБЛОКИРОВАН: исходный коммит не совпадает с ожидаемым" >&2; exit 2;
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
   [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
-    echo "0.33.0 GA signing requires clean tracked and untracked sources" >&2; exit 2;
+    echo "0.33.0 Для подписи финального выпуска все отслеживаемые и неотслеживаемые исходники должны быть чистыми" >&2; exit 2;
   }
   SINGLE_NODE_GA_VERIFIED_DIR="$(mktemp -d)"
   trap 'rm -rf -- "${SINGLE_NODE_GA_VERIFIED_DIR}"' EXIT
@@ -780,7 +780,7 @@ if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' 
   EXT_RUN="${LAUNCHER_EXTENSION_ACCEPTANCE_RUN_ID:-}"
   EXT_ATTEMPT="${LAUNCHER_EXTENSION_ACCEPTANCE_RUN_ATTEMPT:-}"
   [[ -d "${EXT_EVIDENCE}" && -f "${EXT_KEY}" && -f "${EXT_PUBLIC}" && -n "${EXT_RUN}" && -n "${EXT_ATTEMPT}" ]] || {
-    echo "${VERSION} EXTENSION GA BLOCKED: requires six real platform reports, CI run/attempt and dedicated publisher signing identity" >&2
+    echo "${VERSION} Финальный выпуск расширений ЗАБЛОКИРОВАН: нужны шесть реальных отчётов платформ, запуск/попытка CI и отдельный идентификатор подписанта издателя" >&2
     exit 2
   }
   sh "${ROOT_DIR}/examples/extensions/java-host/build.sh"
@@ -926,12 +926,12 @@ if [[ "$(printf '%s\n' '0.46.0' "${VERSION}" | sort -V | head -n1)" == '0.46.0' 
   OPS_EVIDENCE="${LAUNCHER_OPERATIONS_GA_EVIDENCE_DIR:-}"
   OPS_TRUST="${LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE:-}"
   [[ -n "${OPS_EVIDENCE}" && -d "${OPS_EVIDENCE}" && -n "${OPS_TRUST}" && -f "${OPS_TRUST}" ]] || {
-    echo "0.46.0 GA BLOCKED: independently signed live operational acceptance and external operator trust anchor required" >&2
+    echo "0.46.0 Финальный выпуск ЗАБЛОКИРОВАН: нужны независимо подписанная эксплуатационная приёмка и внешний корневой ключ доверия оператора" >&2
     exit 2
   }
   for name in OPERATIONS_GA_0460.json OPERATIONS_GA_0460.sig; do
     [[ -s "${OPS_EVIDENCE}/${name}" && ! -L "${OPS_EVIDENCE}/${name}" ]] || {
-      echo "0.46.0 GA BLOCKED: missing/unsafe operations evidence ${name}" >&2; exit 2;
+      echo "0.46.0 Финальный выпуск ЗАБЛОКИРОВАН: отсутствует или небезопасно эксплуатационное свидетельство ${name}" >&2; exit 2;
     }
     cp -- "${OPS_EVIDENCE}/${name}" "${OUT_DIR}/${name}"
   done
@@ -1026,10 +1026,10 @@ if release_from_0470; then
 fi
 if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   [[ -s "${OUT_DIR}/${GA_RECEIPT}" && -s "${OUT_DIR}/${GA_APPROVAL}" && -s "${OUT_DIR}/${GA_SIGNATURE}" ]] || {
-    echo "${VERSION} GA BLOCKED: missing independently verified exact-byte approval" >&2; exit 2;
+    echo "${VERSION} Финальный выпуск ЗАБЛОКИРОВАН: отсутствует независимое подтверждение точного совпадения байтов" >&2; exit 2;
   }
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
-    echo "${VERSION} GA BLOCKED: all three protected publish certifications required" >&2; exit 2;
+    echo "${VERSION} Финальный выпуск ЗАБЛОКИРОВАН: необходимы все три сертификата защищённой публикации" >&2; exit 2;
   }
 fi
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then

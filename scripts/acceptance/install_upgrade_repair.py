@@ -64,7 +64,7 @@ def run(argv: list[str], *, expect_ok: bool, timeout: int = 900) -> dict:
 def valid_rel(value: str) -> Path:
     parsed = PurePosixPath(value)
     require(not parsed.is_absolute() and '..' not in parsed.parts and value not in ('', '.')
-            and '\\' not in value and '\x00' not in value, 'unsafe relative managed file')
+            and '\\' not in value and '\x00' not in value, 'Небезопасный относительный путь управляемого файла')
     return Path(*parsed.parts)
 
 
@@ -103,7 +103,7 @@ def main() -> int:
     parser.add_argument('--confirm', required=True)
     args = parser.parse_args()
     require(os.name == 'posix' and os.uname().sysname == 'Linux' and os.geteuid() == 0,
-            'real ENOSPC acceptance requires privileged isolated Linux runner')
+            'Для реальной проверки нехватки места (ENOSPC) требуется изолированный исполнитель Linux с повышенными привилегиями')
     require(args.confirm == 'DESTRUCTIVE-ISOLATED-0527', 'Отсутствует явное подтверждение изолированного исполнителя')
     require(1024 <= args.tmpfs_mib <= 65536, 'Размер tmpfs должен быть явно ограничен (1–64 ГиБ)')
     require(args.scratch_parent.is_absolute() and args.scratch_parent.is_dir()
@@ -198,22 +198,22 @@ def main() -> int:
             native('verify-installed')
             current = active(root)
             require(current['generation'] > old['generation'] and current['release'] != old['release'],
-                    'real update did not activate distinct signed release')
+                    'Реальное обновление не активировало отдельный подписанный выпуск')
             preserved()
             managed = root / relative
             require(managed.is_file() and not managed.is_symlink() and sha256(managed)==args.managed_repair_sha256,
                     'Исходный управляемый файл с ожидаемым SHA-256 отсутствует')
             managed.write_bytes(b'corrupted-installed-game-file-0527')
-            require(sha256(managed)!=args.managed_repair_sha256,'corruption fault did not occur')
+            require(sha256(managed)!=args.managed_repair_sha256,'Ожидаемый сбой из-за повреждения данных не произошёл')
             add_event(events,'repair-managed-file',native('repair',args.new_bundle))
             native('verify-installed')
-            require(sha256(managed)==args.managed_repair_sha256,'repair did not restore exact managed bytes')
+            require(sha256(managed)==args.managed_repair_sha256,'Восстановление не вернуло точное содержимое управляемых файлов')
             preserved()
             add_event(events,'rollback-to-old',native('rollback'))
             native('verify-installed')
             rolled = active(root)
             require(rolled['generation'] > current['generation'] and rolled['release'] == old['release'],
-                    'rollback did not activate previously signed release')
+                    'Откат не активировал ранее подписанный выпуск')
             preserved()
             add_event(events,'uninstall-preserve-saves',native('uninstall'))
             preserved()
