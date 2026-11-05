@@ -66,10 +66,10 @@ type payload02512 struct {
 
 func main() {
 	var opt options02512
-	flag.StringVar(&opt.Origin, "origin", "", "HTTPS API origin (no path)")
-	flag.StringVar(&opt.UUID, "uuid", "", "local Minecraft profile UUID")
-	flag.BoolVar(&opt.ExpectSkin, "expect-skin", true, "require an active managed skin")
-	flag.BoolVar(&opt.ExpectCape, "expect-cape", false, "require an active managed cape")
+	flag.StringVar(&opt.Origin, "origin", "", "исходный HTTPS-адрес API (без пути)")
+	flag.StringVar(&opt.UUID, "uuid", "", "UUID локального профиля Minecraft")
+	flag.BoolVar(&opt.ExpectSkin, "expect-skin", true, "требовать активный управляемый скин")
+	flag.BoolVar(&opt.ExpectCape, "expect-cape", false, "требовать активный управляемый плащ")
 	flag.BoolVar(&opt.AllowLoopbackHTTP, "allow-loopback-http", false, "permit http://127.0.0.1 for local disposable integration tests")
 	flag.Parse()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

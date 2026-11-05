@@ -936,7 +936,7 @@ export function AdminExtensions({
                   </strong>
                   <p className="muted">
                     {install.scope ?? "global"}{" "}
-                    {install.scopeId ? `· ${install.scopeId}` : ""} · generation{" "}
+                    {install.scopeId ? `· ${install.scopeId}` : ""} · поколение{" "}
                     {install.generation ?? 0}
                   </p>
                 </div>
@@ -945,12 +945,12 @@ export function AdminExtensions({
                 </span>
               </div>
               <p className="muted">
-                PID {runtime.pid ?? "—"} · restarts {runtime.restarts ?? 0} ·
+                PID {runtime.pid ?? "—"} · перезапусков {runtime.restarts ?? 0} ·
                 RSS{" "}
                 {runtime.memoryBytes
                   ? `${Math.round(runtime.memoryBytes / 1024 / 1024)} MiB`
                   : "—"}{" "}
-                · processes {runtime.processCount ?? "—"}
+                · процессов {runtime.processCount ?? "—"}
               </p>
               <section aria-label="Состояние защиты изоляции ОС">
                 <p>
@@ -1010,7 +1010,7 @@ export function AdminExtensions({
               <p className="muted">
                 Подписанный режим:{" "}
                 {String(
-                  item.manifest?.sandbox?.mode ?? "legacy / trusted-unconfined",
+                  item.manifest?.sandbox?.mode ?? "устаревший / доверенный без изоляции",
                 )}{" "}
                 · pid ≤ {item.manifest?.sandbox?.maxProcesses ?? "не задан"} ·
                 память ≤ {item.manifest?.sandbox?.maxMemoryBytes ?? "не задана"}{" "}

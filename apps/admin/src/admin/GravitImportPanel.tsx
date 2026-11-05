@@ -51,7 +51,7 @@ export function GravitImportPanel({backendUrl,token,projectId,onChanged}:{backen
   <label className="field"><span>Тип загрузчика (проверить вручную)</span><select value={loaderHint} onChange={e=>setLoaderHint(e.target.value)}>{['vanilla','fabric','quilt','forge','neoforge'].map(x=><option value={x} key={x}>{x}</option>)}</select></label>
   <div className="buttonRow"><button disabled={busy||!source||!id||!projectId} onClick={()=>void inspect()}>Проверить и построить отчёт</button>{report&&<button disabled={busy} onClick={downloadReport}>Скачать отчёт JSON</button>}</div>
   {report&&<div role="status">
-   <p><strong>{report.ready?'Все поля сопоставлены':'Требуется исправление источника или ручной перенос'}</strong>. Mapped: {report.summary.mapped}; transformed: {report.summary.transformed}; manual: {report.summary.manual}; blocked: {report.summary.blocked}</p>
+   <p><strong>{report.ready?'Все поля сопоставлены':'Требуется исправление источника или ручной перенос'}</strong>. Сопоставлено: {report.summary.mapped}; преобразовано: {report.summary.transformed}; вручную: {report.summary.manual}; заблокировано: {report.summary.blocked}</p>
    <p>SHA-256 источника: <code>{report.sourceSha256}</code></p>
    <div style={{maxHeight:360,overflowY:'auto'}}><table><thead><tr><th>Поле</th><th>Статус</th><th>Назначение и причина</th></tr></thead><tbody>{report.fields.map((f,i)=><tr key={`${f.field}-${i}`}><td><code>{f.field}</code></td><td>{f.status}</td><td>{f.target&&<code>{f.target}</code>} {f.reason}</td></tr>)}</tbody></table></div>
    {report.servers.length>0&&<p>Серверы ({report.servers.length}) перечислены для ручной регистрации в ServerBridge; конфигурация доступа автоматически не переносится.</p>}

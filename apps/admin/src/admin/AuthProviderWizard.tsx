@@ -300,7 +300,7 @@ export function AuthProviderWizard02910({
         <div aria-label="Отчёт о подключении">
           <h3>Проверка соединения</h3>
           <p>
-            Health: {test.healthy ? "OK" : "failed"} · Credentials:{" "}
+            Состояние: {test.healthy ? "OK" : "ошибка"} · Учётные данные:{" "}
             {test.credentialReferencesVerified
               ? "проверены без раскрытия"
               : "не проверены"}
@@ -354,13 +354,13 @@ export function AuthProviderWizard02910({
         heads.map((h) => (
           <div key={h.id} className="card" style={{ marginBottom: 12 }}>
             <strong>{h.id}</strong> · активен:{" "}
-            {h.activeRevision === 0 ? "disabled" : `#${h.activeRevision}`} ·
-            status:{" "}
+            {h.activeRevision === 0 ? "отключён" : `#${h.activeRevision}`} ·
+            состояние:{" "}
             {h.activeRevision === 0
-              ? "disabled"
+              ? "отключён"
               : health.find((x) => x.id === h.id)?.healthy === true
-                ? "healthy"
-                : "unverified / unavailable"}
+                ? "работает"
+                : "не проверен / недоступен"}
             <div className="buttonRow">
               <button disabled={busy} onClick={() => choose(h)}>
                 Редактировать
@@ -391,7 +391,7 @@ export function AuthProviderWizard02910({
                   <tr key={rev.revision}>
                     <td>
                       #{rev.revision}
-                      {rev.revision === h.activeRevision ? " (active)" : ""}
+                      {rev.revision === h.activeRevision ? " (активна)" : ""}
                     </td>
                     <td>{rev.kind}</td>
                     <td>{new Date(rev.createdAt).toLocaleString()}</td>

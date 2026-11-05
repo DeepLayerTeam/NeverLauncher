@@ -56,10 +56,10 @@ func main() {
 		defaultBundle = filepath.Clean(filepath.Join(defaultBundle, "..", "Resources", "bundle"))
 	}
 	opts := installer.Options{Root: root, Bundle: defaultBundle, TrustedKey: embeddedRootPublicKey}
-	f.StringVar(&opts.Root, "root", root, "absolute installation root")
-	f.StringVar(&opts.Bundle, "bundle", opts.Bundle, "directory containing signed bootstrap and Prestarter")
-	f.BoolVar(&opts.Offline, "offline", false, "install using verified offline source only")
-	f.BoolVar(&opts.NoStart, "no-start", false, "provision without Desktop start")
+	f.StringVar(&opts.Root, "root", root, "абсолютный путь к каталогу установки")
+	f.StringVar(&opts.Bundle, "bundle", opts.Bundle, "каталог с подписанными данными первоначального запуска и Prestarter")
+	f.BoolVar(&opts.Offline, "offline", false, "устанавливать только из проверенного автономного источника")
+	f.BoolVar(&opts.NoStart, "no-start", false, "подготовить установку без запуска Desktop")
 	f.Parse(os.Args[2:])
 	if (action == "install" || action == "update" || action == "verify") && opts.Bundle == defaultBundle && runtime.GOOS == "windows" {
 		unpacked, embeddedOffline, loadErr := unpackEmbedded()
@@ -96,12 +96,12 @@ func main() {
 	case "uninstall":
 		e = installer.Uninstall(opts)
 	default:
-		fmt.Fprintln(os.Stderr, "unknown action")
+		fmt.Fprintln(os.Stderr, "неизвестное действие")
 		os.Exit(2)
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, "NeverInstaller "+version+": "+e.Error())
 		os.Exit(1)
 	}
-	fmt.Println("NeverInstaller " + version + ": " + action + " complete")
+	fmt.Println("NeverInstaller " + version + ": действие " + action + " выполнено")
 }

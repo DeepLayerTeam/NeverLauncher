@@ -97,7 +97,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
  const entries=section==='components'?components:section==='categories'?categories:section==='groups'?groups:presets;
  return <article className="subcard componentEditor0248">
   <h4>Редактор графа компонентов · 0.24.8</h4>
-  <p className="muted">Manifest {snapshot.manifestSchemaVersion} · Catalog {snapshot.catalog?.schemaVersion} r{initialRevision} · SHA-256 {snapshot.catalog?.digest?.slice(0,16)}… · {snapshot.status}</p>
+  <p className="muted">Manifest {snapshot.manifestSchemaVersion} · Каталог {snapshot.catalog?.schemaVersion} r{initialRevision} · SHA-256 {snapshot.catalog?.digest?.slice(0,16)}… · {snapshot.status}</p>
   {!eligible&&<p role="alert" className="error">Редактирование доступно только в неподписанном Manifest v3. Создайте новый v3-пакет; подписанные и опубликованные релизы неизменяемы.</p>}
   <div className="buttonRow"><button disabled={busy||saving||dirty} onClick={()=>void load()}>Перечитать с Backend</button><button disabled={!dirty||busy||saving} onClick={()=>{if(window.confirm('Сбросить несохранённые изменения?')){setCatalog(initialCatalog(snapshot.catalog!));setPreview(null);setPreviewKey('')}}}>Сбросить правки</button></div>
   <fieldset disabled={!usable}>
@@ -164,9 +164,9 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
   {showGraph&&<div className="componentEditorGraph0248"><h5>Граф зависимостей и конфликтов</h5><ul>{components.map(c=><li key={c.id}><strong>{c.id}</strong>{c.dependencies?.length?' → '+c.dependencies.map(r=>r.id+(r.versionRange?' ('+r.versionRange+')':'')).join(', '):''}{c.conflicts?.length?' · конфликтует: '+c.conflicts.map(r=>r.id).join(', '):''}{c.exclusiveGroup?' · exclusive '+c.exclusiveGroup:''}</li>)}</ul></div>}
   <button onClick={()=>setShowGraph(v=>!v)}>{showGraph?'Скрыть граф':'Показать граф'}</button>
   {localErrors.length>0&&<div role="alert" className="error"><strong>Локальные замечания:</strong><ul>{localErrors.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}
-  {preview&&<div className="releaseEffect" role="status"><strong>{preview.valid?'Backend: проверка пройдена':'Backend: каталог недопустим'}</strong><p>Revision r{preview.revision} · digest <code>{preview.digest}</code></p>
+  {preview&&<div className="releaseEffect" role="status"><strong>{preview.valid?'Backend: проверка пройдена':'Backend: каталог недопустим'}</strong><p>Ревизия r{preview.revision} · хеш <code>{preview.digest}</code></p>
    {preview.errors.length>0&&<ul>{preview.errors.map((e,i)=><li key={i}>{e}</li>)}</ul>}
-   <h5>Проверка всех пресетов</h5><ul>{preview.presets.map((p,i)=><li key={i}>{p.preset||'(default)'}: {p.error||p.selected?.join(', ')||'пустой набор'}</li>)}</ul>
+   <h5>Проверка всех пресетов</h5><ul>{preview.presets.map((p,i)=><li key={i}>{p.preset||'(по умолчанию)'}: {p.error||p.selected?.join(', ')||'пустой набор'}</li>)}</ul>
    <p className="muted">Условия OS/Java/loader и permissions повторно проверяются native runtime при установке. Серверный граф-preview не является доказательством полномочий пользователя.</p>
   </div>}
   <div className="buttonRow"><button disabled={!usable||!!localErrors.length} onClick={()=>void runPreview()}>Проверить на Backend</button>

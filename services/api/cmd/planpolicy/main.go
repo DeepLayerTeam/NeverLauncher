@@ -16,9 +16,9 @@ import (
 
 func main() {
 	var payloadPath, keyPath, out string
-	flag.StringVar(&payloadPath, "policy", "", "raw JSON policy")
+	flag.StringVar(&payloadPath, "policy", "", "исходная политика в формате JSON")
 	flag.StringVar(&keyPath, "key", "", "offline Ed25519 seed/private key hex file")
-	flag.StringVar(&out, "out", "", "output signed envelope JSON")
+	flag.StringVar(&out, "out", "", "выходной JSON с подписанной оболочкой")
 	flag.Parse()
 	if payloadPath == "" || keyPath == "" || out == "" {
 		fmt.Fprintln(os.Stderr, "usage: planpolicy-02412 -policy policy.json -key private.hex -out signed.json")

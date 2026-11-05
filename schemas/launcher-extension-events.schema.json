@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://launcher.local/schemas/launcher-extension-events.schema.json",
-  "title": "Extensions Event Envelope",
+  "title": "Оболочка событий расширений",
   "type": "object",
   "additionalProperties": false,
   "required": ["sequence", "id", "type", "schemaVersion", "aggregateType", "aggregateId", "orderingKey", "idempotencyKey", "source", "payload", "payloadSha256", "occurredAt", "createdAt"],

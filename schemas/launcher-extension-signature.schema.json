@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://launcher.local/schemas/launcher-extension-signature.schema.json",
-  "title": "Launcher Extension Package Ed25519 Signature",
+  "title": "Подпись пакета расширения Launcher (Ed25519)",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "algorithm", "signingDomain", "packageIdentity", "keyFingerprint", "signature"],

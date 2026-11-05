@@ -79,6 +79,6 @@ export function TexturePreview0258({skin,cape,model='classic'}:{skin?:string;cap
       {!skin&&cape&&mode==='3d'&&<div className="textureCharacter0258" style={{transform:`rotateX(${pitch}deg) rotateY(${yaw}deg)`}}><Sprite0258 cube={cape0258} url={cape} view={mode}/></div>}
       {cape && mode==='2d' && <div className="textureCapeSwatch0258"><span>Плащ</span><div style={{width:10*UNIT,height:16*UNIT,...uvStyle0258(cape,{x:1,y:1,w:10,h:16},true)}}/></div>}
     </div>
-    <small>{mode==='3d'?'Потяните мышью для вращения модели.':'Фронтальная проекция, пиксели без сглаживания.'} · {model === 'slim' ? 'Slim (Alex)' : 'Classic (Steve)'}</small>
+    <small>{mode==='3d'?'Потяните мышью для вращения модели.':'Фронтальная проекция, пиксели без сглаживания.'} · {model === 'slim' ? 'Тонкая модель (Алекс)' : 'Классическая модель (Стив)'}</small>
   </section>;
 }

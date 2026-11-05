@@ -1492,9 +1492,9 @@ export function MigrationCenter0331({
                 SHA-256 манифеста: <code>{inventory.manifestSha256}</code>
               </p>
               <p>
-                Категории: {JSON.stringify(inventory.categories)}; auth
-                providers: {JSON.stringify(inventory.authProviders)}; optional
-                actions: {JSON.stringify(inventory.optionalActions)}
+                Категории: {JSON.stringify(inventory.categories)}; провайдеры
+                авторизации: {JSON.stringify(inventory.authProviders)}; дополнительные
+                действия: {JSON.stringify(inventory.optionalActions)}
               </p>
               <details>
                 <summary>Все файлы и контрольные суммы</summary>
@@ -1858,7 +1858,7 @@ export function MigrationCenter0331({
                 Профиль:{" "}
                 {contentPreview.ready ? "может быть перенесён" : "заблокирован"}
                 , каталог исходного клиента: <code>{contentPreview.sourceDirectory || "не определён"}</code>;
-                файлов: {contentPreview.files.length}; пропущено (не копируется): {contentPreview.skippedFiles?.length ?? 0}, optional:{" "}
+                файлов: {contentPreview.files.length}; пропущено (не копируется): {contentPreview.skippedFiles?.length ?? 0}, дополнительные:{" "}
                 {contentPreview.optional?.ready
                   ? "преобразованы"
                   : contentPreview.optional
@@ -2425,9 +2425,9 @@ export function MigrationCenter0331({
                 <code>{report03313.reportSha256}</code>
               </p>
               <p>
-                Transferred {report03313.counts.transferred}, transformed{" "}
-                {report03313.counts.transformed}, manual{" "}
-                {report03313.counts.manual}, blocked{" "}
+                Перенесено {report03313.counts.transferred}, преобразовано{" "}
+                {report03313.counts.transformed}, вручную{" "}
+                {report03313.counts.manual}, заблокировано{" "}
                 {report03313.counts.blocked}. UUID:{" "}
                 {report03313.identities.length}, решений:{" "}
                 {report03313.operatorDecisions.length}.

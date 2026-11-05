@@ -1,19 +1,11 @@
 # NeverLauncher 0.49.4 — перенос пользователей Gravit на работающем Backend
 
-This operator tool **executes the existing PostgreSQL-backed migration**, not
-an offline conversion or a new shadow user database. It requires an existing
-`prepared` Gravit migration run in `source_assessment` with an inventory of the
-**exact same** original ZIP. The 0.49.3 content migration is a separate step.
+Этот инструмент оператора **выполняет существующую миграцию с использованием PostgreSQL**, а не автономное преобразование и не создание параллельной базы пользователей. Для работы требуется существующий запуск миграции Gravit в состоянии `prepared` на этапе `source_assessment` с инвентаризацией **точно того же** исходного ZIP-архива. Перенос содержимого версии 0.49.3 выполняется отдельно.
 
-## миграция аккаунтов
+## Миграция аккаунтов
 
-1. Make a consistent backup of the Gravit auth source, Minecraft worlds,
-   original TextureProvider objects and target PostgreSQL. Stop the Gravit auth
-   writer before final cutover. Create a Gravit migration run and inventory its
-   original ZIP in the existing Migration Center. Set a separate NeverLauncher
-   JWT signer and Ed25519 manifest signing key; do not copy Gravit keys.
-2. Obtain a short-lived, properly permissioned operator API token through the
-   normal NeverLauncher login, and supply it **only through the environment**:
+1. Создайте согласованную резервную копию источника авторизации Gravit, миров Minecraft, исходных объектов TextureProvider и целевой базы PostgreSQL. Перед окончательным переключением остановите процесс Gravit, записывающий данные авторизации. Создайте запуск миграции Gravit и проведите инвентаризацию исходного ZIP через существующий Центр миграции. Настройте для NeverLauncher отдельный ключ подписи JWT и ключ Ed25519 для подписи манифестов; **не копируйте ключи Gravit**.
+2. Получите краткоживущий токен API оператора с необходимыми правами через обычный вход в NeverLauncher и передавайте его **только через переменную окружения**:
 
    ```sh
    export NEVERLAUNCHER_MIGRATION_TOKEN='your-current-operator-token'
@@ -24,14 +16,8 @@ an offline conversion or a new shadow user database. It requires an existing
        --receipt /private/gravit-users-preview.json
    ```
 
-   Use the **actual** supported password encoding of the upstream FileAuth
-   installation; unknown password hashes require a separate verified reset.
-   This prepare mode persists/revalidates an identity **mapping**, but does
-   not import passwords or revoke sessions. It is not a read-only database
-   operation. Inspect the preview's `manual_reset` and `existing_unchanged`
-   counts and manually verify any matches before migration.
-3. With the user records reviewed, run the actual import. Use a different
-   receipt path; the program refuses to overwrite evidence.
+   Укажите **фактически используемый** формат паролей исходной установки FileAuth. Неизвестные хеши требуют отдельного подтверждённого сброса пароля. Режим подготовки сохраняет и повторно проверяет **сопоставление идентичностей**, но не импортирует пароли и не отзывает сессии. Это не операция только для чтения базы данных. Проверьте в предварительном отчёте счётчики `manual_reset` и `existing_unchanged`, а также вручную подтвердите совпадения перед миграцией.
+3. После проверки записей пользователей выполните настоящий импорт. Укажите другой путь для отчёта: программа откажется перезаписывать существующие подтверждающие данные.
 
    ```sh
    python3 tools/gravit-port/migrate_users_0494.py \
@@ -42,46 +28,25 @@ an offline conversion or a new shadow user database. It requires an existing
        --receipt /private/gravit-users-import.json
    ```
 
-   The CLI verifies the original ZIP against the server inventory, maps UUIDs,
-   checks the same identities from the database, previews credentials, commits
-   supported hashes atomically, reads back the credential receipt, previews
-   trust revocation, activates it, and reads the verified reset receipt. Old
-   Gravit refresh tokens, live sessions and device keys are **never reused**.
-   The original password is never logged; supported legacy verifiers are
-   upgraded to Argon2id by the existing password-auth CAS path after login.
-   Existing Never identities remain untouched. If any user needs manual
-   password reset, the command blocks until `--allow-manual-resets` is given;
-   this does **not** create a password or enable login for that user.
+   CLI сверяет исходный ZIP с серверной инвентаризацией, сопоставляет UUID, проверяет те же идентичности в базе, предварительно проверяет учётные данные, атомарно записывает поддерживаемые хеши, считывает подтверждение записи, подготавливает отзыв доверия, активирует его и считывает подтверждённый результат сброса. Старые токены обновления Gravit, активные сессии и ключи устройств **никогда не переиспользуются**. Исходный пароль не записывается в журналы; поддерживаемые устаревшие средства проверки обновляют хеш до Argon2id через существующий механизм CAS после входа. Существующие идентичности NeverLauncher не изменяются. Если кому-то требуется ручной сброс пароля, команда блокируется до передачи `--allow-manual-resets`; этот параметр **не создаёт пароль и не разрешает вход** такому пользователю.
 
-## роли проекта (явная проверка и устойчивый к фишингу MFA)
+## Роли проекта (явная проверка и устойчивый к фишингу MFA)
 
-Gravit administrator/root permissions are **not** automatically trusted or
-translated to Never global owner/admin roles. To grant project-scoped roles
-**only for newly imported accounts**, supply an operator-reviewed file:
+Права администратора/root в Gravit **не признаются автоматически** и не преобразуются в глобальные роли owner/admin NeverLauncher. Чтобы назначить роли в рамках проекта **только новым импортированным аккаунтам**, передайте проверенный оператором файл:
 
 ```json
 {"projectId":"my-project","grants":[{"uuid":"11111111-2222-4333-8444-555555555555","roleId":"operator"}]}
 ```
 
-Add `--roles-file /private/approved-roles.json` to the import command. The CLI
-compares the current project-role map before each update (compare-and-swap),
-and uses the existing privileged user endpoint with recent phishing-resistant
-MFA; any stale or denied update stops the run. Grants are **not** automatic
-source-Gravit RBAC transfers, and only `viewer`, `player`, `developer`,
-`operator`, `owner` project roles are recognized. Run the import with a fresh
-admin token that satisfies the endpoint's MFA requirement.
+Добавьте к команде импорта `--roles-file /private/approved-roles.json`. Перед каждым изменением CLI сравнивает текущую карту проектных ролей (compare-and-swap) и использует существующий привилегированный endpoint пользователей, требующий недавней фишингоустойчивой MFA-проверки. Устаревшее состояние или отказ в доступе останавливают запуск. Назначения **не являются** автоматическим переносом RBAC из Gravit. Поддерживаются только проектные роли `viewer`, `player`, `developer`, `operator`, `owner`. Используйте свежий токен администратора, удовлетворяющий требованиям MFA данного endpoint.
 
-## скины и плащи
+## Скины и плащи
 
-`--texture-mapping-output` writes a private (0600) one-to-one source/target
-UUID map **only** for matched or successfully imported accounts. Use the
-existing **real** TextureProvider importer with that mapping and the actual
-upstream textures export/PNG objects. First run its dry-run, review
-`planSha256`, and explicitly approve it for import:
+`--texture-mapping-output` записывает приватную (0600) карту соответствия UUID «один к одному» **только** для сопоставленных или успешно импортированных аккаунтов. Используйте с ней существующий **рабочий** импортёр TextureProvider и настоящий экспорт текстур/PNG-объектов исходной системы. Сначала запустите пробный режим, проверьте `planSha256` и явно подтвердите план перед импортом:
 
 ```sh
-# Requires the compiled services/api/cmd/gravit-textures-import-02510 binary,
-# LAUNCHER_DATABASE_DSN and target storage configuration.
+# Требуется собранный бинарный файл services/api/cmd/gravit-textures-import-02510,
+# LAUNCHER_DATABASE_DSN и конфигурация целевого хранилища.
 gravit-textures-import-02510 --source-id source-one \
     --source-json /private/textures.json --source-root /private/gravit-png \
     --mapping /private/texture-map.json --dry-run \
@@ -94,17 +59,8 @@ gravit-textures-import-02510 --source-id source-one \
     --report /private/textures-import.json
 ```
 
-Texture import is a separate operation with PostgreSQL, verified PNG bytes and
-object storage; a successful account receipt does not imply that skins were
-imported. Verify counts, assignments and in-game skin/cape rendering before
-cutover. Do not reuse upstream private keys or browser sessions.
+Импорт текстур — отдельная операция с PostgreSQL, проверенными данными PNG и объектным хранилищем; успешный отчёт об аккаунтах **не означает**, что скины импортированы. Перед переключением проверьте количество объектов, назначения и отображение скинов/плащей в игре. Не переиспользуйте закрытые ключи или браузерные сессии исходной системы.
 
-## ошибка и повторная обработка
+## Ошибки и повторные попытки
 
-The API holds the durable receipts; after an interrupted request **query the
-Backend** before retrying. Credential import and trust reset both use
-idempotent, run-bound PostgreSQL receipts. Do not turn `manual_reset`,
-`existing_unchanged`, partial texture import or a failed role grant into
-cutover PASS. Run on an independently provisioned PostgreSQL test environment
-before production. This source patch does not certify signed installers or
-live official Minecraft login/joins.
+API хранит устойчивые подтверждения операций. Если запрос был прерван, **сначала запросите состояние Backend**, а затем повторяйте попытку. Импорт учётных данных и сброс доверия используют идемпотентные подтверждения PostgreSQL, привязанные к запуску. Не трактуйте `manual_reset`, `existing_unchanged`, частичный импорт текстур или неудачное назначение роли как успешное переключение (`PASS`). Перед промышленной эксплуатацией проверьте процедуру на независимо развёрнутом тестовом окружении PostgreSQL. Этот патч исходников не сертифицирует подписанные установщики, реальный официальный вход Minecraft или подключение к серверу.

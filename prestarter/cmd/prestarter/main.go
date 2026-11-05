@@ -30,16 +30,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, e)
 		os.Exit(2)
 	}
-	flag.StringVar(&opts.TrustPolicyPath, "trust-policy", "", "local root-signed delegated trust policy (never a remote URL)")
-	flag.StringVar(&opts.ConfigPath, "config", defaultConfig, "path to local signed bootstrap configuration")
-	flag.StringVar(&opts.Root, "root", defaultRoot, "absolute application data directory")
-	flag.StringVar(&opts.OfflineDir, "offline-dir", "", "optional local verified archive bundle")
-	flag.BoolVar(&opts.Offline, "offline", false, "prohibit network access")
-	flag.BoolVar(&opts.LaunchProfile, "launch-profile", false, "launch a signed offline-mode Minecraft profile")
-	flag.StringVar(&opts.Username, "username", "", "offline Minecraft username (requires --launch-profile)")
-	flag.BoolVar(&opts.NoDesktop, "no-desktop", false, "stage, recover and install only")
+	flag.StringVar(&opts.TrustPolicyPath, "trust-policy", "", "локальная делегированная политика доверия с подписью корневым ключом (не удалённый URL)")
+	flag.StringVar(&opts.ConfigPath, "config", defaultConfig, "путь к локальной подписанной конфигурации первоначального запуска")
+	flag.StringVar(&opts.Root, "root", defaultRoot, "абсолютный путь к каталогу данных приложения")
+	flag.StringVar(&opts.OfflineDir, "offline-dir", "", "необязательный локальный проверенный архив сборки")
+	flag.BoolVar(&opts.Offline, "offline", false, "запретить доступ к сети")
+	flag.BoolVar(&opts.LaunchProfile, "launch-profile", false, "запустить подписанный автономный профиль Minecraft")
+	flag.StringVar(&opts.Username, "username", "", "имя игрока Minecraft для автономного режима (нужен --launch-profile)")
+	flag.BoolVar(&opts.NoDesktop, "no-desktop", false, "только подготовить, восстановить и установить, без запуска Desktop")
 	var operatorKey string
-	flag.StringVar(&operatorKey, "operator-root-public-key", "", "explicit locally provisioned trust root for operator builds (cannot override an embedded key)")
+	flag.StringVar(&operatorKey, "operator-root-public-key", "", "явно заданный локальный корень доверия для операторской сборки (не может заменить встроенный ключ)")
 	flag.Parse()
 	opts.TrustedKey = embeddedRootPublicKey
 	if opts.TrustedKey == "" {

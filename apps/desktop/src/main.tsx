@@ -1933,7 +1933,7 @@ function App() {
       setDeviceTrustStatus(
         committed.keyBinding === "hardware"
           ? "rotated · требуется attestation"
-          : "rotated · verified",
+          : "обновлён · проверен",
       );
       log(
         `Device key ${mode === "rotate" ? "rotated" : "recovered"}: ${oldDeviceId} → ${data.device.id}; старый fingerprint оставлен permanent tombstone.`,
@@ -6355,11 +6355,11 @@ function AuthPanel({
                 </small>
                 {device.status === "revoked" && (
                   <small>
-                    revoked:{" "}
+                    отозван:{" "}
                     {device.revokedAt
                       ? new Date(device.revokedAt).toLocaleString()
                       : "—"}{" "}
-                    · {device.revokedReason || "reason n/a"}
+                    · {device.revokedReason || "причина не указана"}
                     {device.replacedByDeviceId
                       ? ` · replaced by ${device.replacedByDeviceId}`
                       : ""}

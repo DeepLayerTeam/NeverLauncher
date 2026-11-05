@@ -16,39 +16,39 @@ var version = "dev"
 
 const cliSchemaVersion = "1.0"
 
-const helpText = `Launcher CLI
+const helpText = `CLI Launcher
 
 Использование:
   nl <команда> [параметры]
 
 Основные команды:
   version                         показать версию CLI
-  manifest build|validate|diff    работа с client manifest
-  components validate|resolve|export|diff  подписанные компоненты, пресеты и JSON планы
-  update plan|apply|components|status|recover|migrate-state|self-test|component-self-test|stabilization-self-test transactional updater core
+  manifest build|validate|diff    работа с манифестом клиента
+  components validate|resolve|export|diff  подписанные компоненты, наборы и планы JSON
+  update plan|apply|components|status|recover|migrate-state|self-test|component-self-test|stabilization-self-test ядро транзакционного обновления
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
   runtime client-factory build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib|compat-inspect|compat-verify|compat-apply|legacy-inspect|legacy-run|trusted-install|trusted-verify|trusted-inspect|trusted-remove|guard-policy-install|guard-policy-verify|guard-policy-status|guard-policy-history|guard-policy-diagnose|guard-policy-rollback|inspect-modpack|import-modpack
-                                   reproducible Minecraft factory + verified MirrorHelper-equivalent operations
+                                   воспроизводимая сборка Minecraft и проверенные операции, аналогичные MirrorHelper
   runtime client-factory certify-keygen|certify-run|certify-verify|certify-matrix|certify-ga|ga-sign-join
-                                   Ed25519 signed real Minecraft runtime E2E certification
-  runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
-  loader ...                      loader tooling
+                                   сквозная сертификация реального запуска Minecraft с подписью Ed25519
+  runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  инструменты установки компонентов Minecraft
+  loader ...                      инструменты загрузчиков
   project validate|publish        операции проекта
-  api compatibility-check         проверить canonical OpenAPI
-  tenant ...                      tenant tooling
-  branding ...                    branding tooling
-  sdk ...                         SDK tooling
-  lan publish|discover|verify         DNS-SD/mDNS LAN backend discovery and pinned TLS verification
-  discord presence                    local Discord IPC Rich Presence and activity actions
-  devtools jar analyze|strip-debug; component test; auth serve  isolated test tooling (no production credentials)
-  module-parity audit [--run-tests] [--module M01,...]    audit real M01-M19 sources and regression tests
-  extension init|dev|test|build|template|validate|import-legacy|pack|sign|verify|inspect|registry|updates|trust|quarantine|emergency|recovery|ga|upgrade-source|installed|status|install|enable|disable|update|rollback|uninstall|host|cli|capabilities|permissions|permission-grant|permission-revoke|secrets|secret-set|secret-delete  Extensions tooling
-  x <namespace> <command>            выполнить namespaced CLI extension через Extension Host Protocol
-  plugin ...                      legacy compatibility alias
-  server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  Zero-Patch provisioning + host supervisor
-  server-bridge host remote init|tls-init|issue|revoke|rotate-key|serve|call  HTTPS RemoteControl with scoped service tokens
-  server-bridge host world-backup create|verify|restore|list  Consistent Minecraft worlds/plugins/config backup
+  api compatibility-check         проверить каноническую схему OpenAPI
+  tenant ...                      управление арендаторами
+  branding ...                    управление оформлением
+  sdk ...                         инструменты SDK
+  lan publish|discover|verify         обнаружение Backend в локальной сети через DNS-SD/mDNS и проверка закреплённого TLS
+  discord presence                    локальная интеграция Discord IPC, статус активности и действия
+  devtools jar analyze|strip-debug; component test; auth serve  изолированные инструменты тестирования (без промышленных учётных данных)
+  module-parity audit [--run-tests] [--module M01,...]    аудит реальных исходников M01–M19 и регрессионных тестов
+  extension init|dev|test|build|template|validate|import-legacy|pack|sign|verify|inspect|registry|updates|trust|quarantine|emergency|recovery|ga|upgrade-source|installed|status|install|enable|disable|update|rollback|uninstall|host|cli|capabilities|permissions|permission-grant|permission-revoke|secrets|secret-set|secret-delete  инструменты расширений
+  x <namespace> <command>            выполнить CLI-расширение с пространством имён через Extension Host Protocol
+  plugin ...                      псевдоним для совместимости с прежними версиями
+  server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  установка без изменения Minecraft и управляющий процесс хоста
+  server-bridge host remote init|tls-init|issue|revoke|rotate-key|serve|call  HTTPS RemoteControl с сервисными токенами ограниченного действия
+  server-bridge host world-backup create|verify|restore|list  согласованная резервная копия миров Minecraft, плагинов и конфигураций
 
 Backend / production:
   auth login|capabilities|accounts|roles|sessions|revoke|logout-all|session-policy|password-policy
@@ -60,7 +60,7 @@ Backend / production:
   db migrations|migration-doctor|migrate|auth-upgrade|status|validate|repository
   storage ...
   migrate gravit create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|dry-run-all|verify-dry-run-all|import-content-all|security|preview-security|activate-security|generate-keys --backend URL --token TOKEN
-                                   PostgreSQL workflow and live Gravit ZIP compatibility inspection (not source import)
+                                   сценарий PostgreSQL и проверка совместимости живого ZIP Gravit (не импорт источника)
   migrate ...
   production deployment|first-run|e2e
 

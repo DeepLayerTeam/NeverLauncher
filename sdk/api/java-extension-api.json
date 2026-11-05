@@ -76,9 +76,9 @@
     "DELETE /v1/events/subscriptions/{subscriptionId}"
   ],
   "rules": [
-    "Java backend extensions execute out-of-process only, via the established local authenticated host API.",
-    "Extensions manifest 2.0 signing and capability authorization remain authoritative.",
-    "Trusted Minecraft JVM plugins are separate explicitly approved full-access code, never implicitly sandboxed.",
-    "No Gravit JavaFX/LaunchServer internal API compatibility is claimed."
+    "Java-расширения Backend работают только в отдельных процессах через существующий локальный API хоста с проверкой подлинности.",
+    "Подпись манифеста расширения 2.0 и проверка разрешений возможностей остаются обязательными.",
+    "Доверенные плагины JVM Minecraft — отдельный код с полным доступом, требующий явного утверждения; он не считается автоматически изолированным.",
+    "Совместимость с внутренним API Gravit JavaFX/LaunchServer не заявляется."
   ]
 }

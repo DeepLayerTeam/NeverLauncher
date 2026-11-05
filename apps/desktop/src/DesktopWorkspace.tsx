@@ -293,7 +293,7 @@ export function ServersWorkspace0353({
       )}
       {autoEnter && (
         <p>
-          Auto-enter:{" "}
+          Автоподключение:{" "}
           {serverHost
             ? `${serverHost}:${serverPort}`
             : "не задан публичный игровой адрес"}

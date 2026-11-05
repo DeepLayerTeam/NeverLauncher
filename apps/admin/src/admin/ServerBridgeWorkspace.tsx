@@ -585,7 +585,7 @@ export function ServerBridgeWorkspace({
         <div>
           <h2>Операции ServerBridge</h2>
           <p className="muted">
-            Проект <code>{projectId}</code> · Protocol v3 frozen · данные
+            Проект <code>{projectId}</code> · Протокол v3 зафиксирован · данные
             обновляются каждые 15 секунд
           </p>
         </div>
@@ -738,7 +738,7 @@ export function ServerBridgeWorkspace({
                 {n.minecraftVersion || "версия неизвестна"}
               </span>
               <span>
-                Players:{" "}
+                Игроков:{" "}
                 {state.state === "fresh" &&
                 n.telemetry?.playersOnline != null &&
                 n.telemetry?.playersMax != null
@@ -763,8 +763,8 @@ export function ServerBridgeWorkspace({
             подготовки релиза, а не подтверждённая конфигурация игрового узла.
           </p>
           <p role="status">
-            {selectedNodeState?.label || "Нет данных"}; heartbeat:{" "}
-            {selectedNodeState?.heartbeat || "unknown"}; telemetry:{" "}
+            {selectedNodeState?.label || "Нет данных"}; пульс:{" "}
+            {selectedNodeState?.heartbeat || "unknown"}; телеметрия:{" "}
             {selectedNodeState?.telemetry || "unknown"}.
           </p>
           {node.profileId && !boundToProfile && (
@@ -802,7 +802,7 @@ export function ServerBridgeWorkspace({
               <dt>Пульс (heartbeat)</dt>
               <dd>
                 {timeLabel(node.lastHeartbeatAt)} ·{" "}
-                {usable ? "active" : "stale / unavailable"}
+                {usable ? "активен" : "устарел / недоступен"}
               </dd>
               <dt>Состояние</dt>
               <dd>
@@ -810,15 +810,15 @@ export function ServerBridgeWorkspace({
               </dd>
               <dt>Протокол</dt>
               <dd>
-                v{node.protocolVersion} · {node.protocolMode || "unknown"} ·{" "}
+                v{node.protocolVersion} · {node.protocolMode || "неизвестен"} ·{" "}
                 {node.protocolMigrationRequired
                   ? "нужна миграция"
-                  : "migration n/a"}
+                  : "миграция не требуется"}
               </dd>
               <dt>Плагин / целостность</dt>
               <dd>
                 {node.pluginVersion || "—"} ·{" "}
-                {node.integrityStatus || "unknown"}{" "}
+                {node.integrityStatus || "неизвестна"}{" "}
                 {node.upgradeRecommended ? " · рекомендуется обновление" : ""}
               </dd>
               <dt>Идентификатор Runtime</dt>
@@ -1415,7 +1415,7 @@ export function ServerBridgeWorkspace({
             <dd>{selectedCommand.type}</dd>
             <dt>Сервер / runtime</dt>
             <dd>
-              {selectedCommand.serverId} / epoch {selectedCommand.runtimeEpoch}
+              {selectedCommand.serverId} / эпоха {selectedCommand.runtimeEpoch}
             </dd>
             <dt>Попытка / sequence</dt>
             <dd>
@@ -1520,9 +1520,9 @@ export function ServerBridgeWorkspace({
       <details className="advanced">
         <summary>Диагностика Protocol v3, topology и audit</summary>
         <p className="muted">
-          {overview?.protocol?.status || "unknown"} · digest{" "}
+          {overview?.protocol?.status || "unknown"} · хеш{" "}
           <code>{overview?.protocol?.featureDigest || "unknown"}</code> ·
-          frozen: {String(overview?.protocol?.frozen ?? "unknown")}
+          зафиксирован: {String(overview?.protocol?.frozen ?? "unknown")}
         </p>
         <ResourceGrid
           section="server-bridge"

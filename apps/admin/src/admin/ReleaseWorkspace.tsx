@@ -835,7 +835,7 @@ export function ReleaseWorkspace({
           )}
           {draft && (
             <p>
-              Черновик: <code>{draft.id}</code> · revision {draft.revision}
+              Черновик: <code>{draft.id}</code> · ревизия {draft.revision}
             </p>
           )}
           <div className="buttonRow">
@@ -1259,8 +1259,8 @@ export function ReleaseWorkspace({
             <ul>
               {report.runtime.map((r, i) => (
                 <li key={i}>
-                  {r.targetId}: {r.result} (actual client:{" "}
-                  {String(r.actualClient)}, server join: {String(r.serverJoin)})
+                  {r.targetId}: {r.result} (фактический клиент:{" "}
+                  {String(r.actualClient)}, вход на сервер: {String(r.serverJoin)})
                 </li>
               ))}
             </ul>
@@ -1326,7 +1326,7 @@ export function ReleaseWorkspace({
                   ? "Все обязательные targets подтверждены"
                   : "Публикация заблокирована до подтверждения всех обязательных targets"}{" "}
                 · {report?.effectivePolicy?.verifiedTargets ?? 0}/
-                {report?.effectivePolicy?.requiredTargets ?? 0} · policy{" "}
+                {report?.effectivePolicy?.requiredTargets ?? 0} · политика{" "}
                 <code>
                   {report?.effectivePolicy?.matrixSha256 || "не настроена"}
                 </code>

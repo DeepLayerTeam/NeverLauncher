@@ -442,13 +442,13 @@ export function RegistryWorkspace({
 
   async function yankRegistryVersion(item: RegistryVersionView) {
     const reason = window.prompt(
-      `Причина yank ${item.extensionId}@${item.version}`,
-      "withdrawn by administrator",
+      `Причина отзыва версии ${item.extensionId}@${item.version}`,
+      "отозвана администратором",
     );
     if (
       !reason ||
       !confirmAction(
-        `Yank ${item.extensionId}@${item.version}`,
+        `Отозвать версию ${item.extensionId}@${item.version}`,
         `Исключить версию из новых установок. Причина: ${reason}`,
       )
     )
@@ -598,7 +598,7 @@ export function RegistryWorkspace({
           aria-label="ОС реестра"
           value={registryOS}
           onChange={(event) => setRegistryOS(event.target.value)}
-          placeholder="OS: linux"
+          placeholder="ОС: linux"
         />
         <input
           aria-label="Архитектура реестра"
@@ -816,7 +816,7 @@ export function RegistryWorkspace({
           <span className="muted">{extensionInstalls.length} установок</span>
         </div>
         <p className="muted" role="status">
-          OS sandbox:{" "}
+          Изоляция ОС:{" "}
           <strong>
             {sandboxDiagnostics0311?.enforced
               ? "isolated"
@@ -872,24 +872,24 @@ export function RegistryWorkspace({
                 return host ? (
                   <>
                     <p className="muted">
-                      Хост: <strong>{host.state}</strong> · trust{" "}
-                      <strong>{host.executionTrust ?? "неизвестно"}</strong> · OS
-                      sandbox {host.osSandbox ?? "none"} · healthy{" "}
+                      Хост: <strong>{host.state}</strong> · доверие{" "}
+                      <strong>{host.executionTrust ?? "неизвестно"}</strong> · изоляция
+                      ОС {host.osSandbox ?? "none"} · работоспособен{" "}
                       {host.healthy ? "да" : "нет"} · PID {host.pid ?? "—"} ·
-                      restarts {host.restarts} · RSS{" "}
+                      перезапусков {host.restarts} · RSS{" "}
                       {host.memoryBytes
                         ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB`
                         : "—"}{" "}
-                      · processes {host.processCount ?? "—"}
+                      · процессов {host.processCount ?? "—"}
                     </p>
                     <p className="muted">
-                      Isolation:{" "}
+                      Изоляция:{" "}
                       <strong>{host.isolationStatus ?? "неизвестно"}</strong> ·{" "}
                       {host.isolationReasonCodes?.join(", ") ||
                         "нет доказательств"}{" "}
-                      · effective:{" "}
+                      · действующие ограничения:{" "}
                       {host.effectiveRestrictions?.join(", ") || "неизвестно"};
-                      Network {host.networkSandbox ?? "none"}, FS{" "}
+                      Сеть {host.networkSandbox ?? "none"}, FS{" "}
                       {host.filesystemSandbox ?? "none"}.
                     </p>
                     {host.lastError && (

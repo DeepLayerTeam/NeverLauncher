@@ -191,7 +191,7 @@ export function BackendOperations0289({
       {status ? (
         <>
           <p>
-            Версия: <strong>{status.version}</strong> · commit:{" "}
+            Версия: <strong>{status.version}</strong> · коммит:{" "}
             <code>{status.commit}</code> · время работы: {status.uptimeSeconds} с
           </p>
           <p>
@@ -203,7 +203,7 @@ export function BackendOperations0289({
             <strong>
               {status.supervisedRestartEnabled ? "включён" : "отключён"}
             </strong>{" "}
-            · draining: {status.draining ? "да" : "нет"}
+            · завершение работы: {status.draining ? "да" : "нет"}
           </p>
           <table className="table">
             <thead>

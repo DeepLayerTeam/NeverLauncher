@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://launcher.local/schemas/launcher-extension-package.schema.json",
-  "title": "Launcher Extension Package Descriptor",
+  "title": "Описание пакета расширения Launcher",
   "type": "object",
   "additionalProperties": false,
   "required": [

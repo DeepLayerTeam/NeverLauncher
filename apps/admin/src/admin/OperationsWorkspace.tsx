@@ -442,7 +442,7 @@ export function OperationsWorkspace({
                 {recoverable.jobId ? (
                   <>
                     {" "}
-                    · Job: <code>{recoverable.jobId}</code>
+                    · Задание: <code>{recoverable.jobId}</code>
                   </>
                 ) : null}
               </p>
