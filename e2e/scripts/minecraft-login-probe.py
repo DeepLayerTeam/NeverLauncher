@@ -393,7 +393,7 @@ def main() -> int:
         raise SystemExit("Параметр --configuration-hold-seconds не может быть отрицательным")
     if args.drive_neoforge_configuration and not args.enter_configuration:
         raise SystemExit(
-            "--drive-neoforge-configuration requires --enter-configuration"
+            "для --drive-neoforge-configuration необходимо --enter-configuration"
         )
 
     handshake = (

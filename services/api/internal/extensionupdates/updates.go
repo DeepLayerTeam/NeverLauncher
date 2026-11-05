@@ -249,7 +249,7 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			cur := snapshots[item.ExtensionID]
 			if cur.CurrentState == model.ExtensionInstallStateEnabled && cur.Enabled {
 				if e := m.Host.Stop(ctx, hostKey02011(cur)); e != nil && !errors.Is(e, repository.ErrNotFound) && !errors.Is(e, extensionhost.ErrHostNotRunning) {
-					return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("stop %s: %w", item.ExtensionID, e))
+					return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("остановка %s: %w", item.ExtensionID, e))
 				}
 			}
 		}
@@ -267,7 +267,7 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 		}
 		key := extensionhost.Key{ExtensionID: item.ExtensionID, Scope: plan.Scope, ScopeID: plan.ScopeID}
 		if stateErr = state.SnapshotRuntimeState04810(ctx, key, tx.ID); stateErr != nil {
-			return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("checkpoint %s: %w", item.ExtensionID, stateErr))
+			return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("контрольная точка %s: %w", item.ExtensionID, stateErr))
 		}
 		tx.Plan.StateSnapshots = append(tx.Plan.StateSnapshots, item.ExtensionID)
 		if _, stateErr = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); stateErr != nil {

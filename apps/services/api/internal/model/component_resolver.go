@@ -289,7 +289,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	}
 	for _, c := range cat.Components {
 		if _, err := parseSemver0243(c.Version); err != nil {
-			return resolutionError0243("invalid_version", c.ID, "", fmt.Sprintf("component %s: %v", c.ID, err))
+			return resolutionError0243("invalid_version", c.ID, "", fmt.Sprintf("компонент %s: %v", c.ID, err))
 		}
 		if c.ExclusiveGroup != "" && !validComponentID0241(c.ExclusiveGroup) {
 			return resolutionError0243("invalid_group", c.ID, "", fmt.Sprintf("Компонент %s содержит некорректную группу взаимоисключения %q", c.ID, c.ExclusiveGroup))

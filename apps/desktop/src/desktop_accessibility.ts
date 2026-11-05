@@ -392,7 +392,7 @@ export const STRINGS0357 = {
     host: "Public game server",
     port: "Port",
     offline: "Offline (only when Manifest permits)",
-    sentry: "Автоматически отправлять обезличенные ошибки в Sentry (с согласия пользователя)",
+    sentry: "Automatically send anonymized errors to Sentry (with consent)",
     discord: "Show Discord activity",
     key: "Pinned Ed25519 key",
     validate: "Validate settings",

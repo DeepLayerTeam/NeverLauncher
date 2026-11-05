@@ -26,7 +26,7 @@ SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "[device-trust-e2e] required command missing: $1" >&2; exit 1; }; }
+need() { command -v "$1" >/dev/null 2>&1 || { echo "[device-trust-e2e] отсутствует необходимая команда: $1" >&2; exit 1; }; }
 for cmd in docker curl jq go psql python3 openssl sha256sum; do need "$cmd"; done
 docker compose version >/dev/null
 
@@ -165,7 +165,7 @@ wait_ready "$RESULT_DIR/release-readiness.json"
 EXPECTED_CURRENT_MIGRATION="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 CURRENT_MIGRATION="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ -n "$EXPECTED_CURRENT_MIGRATION" && "$CURRENT_MIGRATION" == "$EXPECTED_CURRENT_MIGRATION" ]] || {
-  echo "device-trust-e2e: current migration mismatch: db=$CURRENT_MIGRATION source=$EXPECTED_CURRENT_MIGRATION" >&2
+  echo "device-trust-e2e: несовпадение текущей миграции: db=$CURRENT_MIGRATION source=$EXPECTED_CURRENT_MIGRATION" >&2
   exit 1
 }
 jq -e --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="ready" and .checks.migrations==$migration and .repository=="postgres" and .checks.repository=="ok"' "$RESULT_DIR/release-readiness.json" >/dev/null
@@ -392,7 +392,7 @@ code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh 
 
 printf '[device-trust-e2e] require 0.12.9 -> current shipping migration upgrade evidence\n'
 MIGRATION_UPGRADE_EVIDENCE="$ROOT/e2e/device-trust-migration-result/migration-stabilization.json"
-[[ -f "$MIGRATION_UPGRADE_EVIDENCE" ]] || { echo '[device-trust-e2e] migration upgrade evidence missing; run run-device-trust-migration-e2e.sh first' >&2; exit 1; }
+[[ -f "$MIGRATION_UPGRADE_EVIDENCE" ]] || { echo '[device-trust-e2e] отсутствует подтверждение обновления миграции; сначала выполните run-device-trust-migration-e2e.sh first' >&2; exit 1; }
 jq -e --arg version "$VERSION" --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="passed" and .version==$version and .upgrade.fromMigration=="0017_device_key_recovery_rotation_0128" and .upgrade.toMigration==$migration and .upgrade.sealedChecksum==true and .upgrade.guardPurposeMigrationSealed==true and .ownershipEnforcement.constraints==7' "$MIGRATION_UPGRADE_EVIDENCE" >/dev/null
 cp "$MIGRATION_UPGRADE_EVIDENCE" "$RESULT_DIR/migration-upgrade-e2e.json"
 

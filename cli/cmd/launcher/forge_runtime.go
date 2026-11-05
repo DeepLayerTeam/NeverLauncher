@@ -1894,7 +1894,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		interrupted := entryMatches && (entry.State == "running" || entry.State == "failed")
 		allReady, err := processorOutputsMatch(pc, processor)
 		if err != nil {
-			return stats, fmt.Errorf("processor[%d] outputs: %w", index, err)
+			return stats, fmt.Errorf("процессор[%d]: выходные файлы: %w", index, err)
 		}
 		if allReady && entryMatches && len(processor.Outputs) > 0 {
 			recovered := entryMatches && (entry.State == "running" || entry.State == "failed")
@@ -1917,7 +1917,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		}
 		procJar, err := resolveProcessorArtifactPath(pc.ClientDir, processor.Jar)
 		if err != nil {
-			return stats, fmt.Errorf("processor[%d] jar: %w", index, err)
+			return stats, fmt.Errorf("процессор[%d]: JAR: %w", index, err)
 		}
 		mainClass, err := readJarMainClass(procJar)
 		if err != nil {
@@ -1927,7 +1927,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		for _, coordinate := range processor.Classpath {
 			resolved, err := resolveProcessorArtifactPath(pc.ClientDir, coordinate)
 			if err != nil {
-				return stats, fmt.Errorf("processor[%d] classpath %s: %w", index, coordinate, err)
+				return stats, fmt.Errorf("процессор[%d]: путь классов %s: %w", index, coordinate, err)
 			}
 			classpath = append(classpath, resolved)
 		}
@@ -1935,7 +1935,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		for _, arg := range processor.Args {
 			resolved, err := resolveProcessorToken(pc, arg)
 			if err != nil {
-				return stats, fmt.Errorf("processor[%d] arg %q: %w", index, arg, err)
+				return stats, fmt.Errorf("процессор[%d]: аргумент %q: %w", index, arg, err)
 			}
 			args = append(args, resolved)
 		}

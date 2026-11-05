@@ -190,7 +190,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
             die("bin/java.exe is not PE")
         peoff = struct.unpack_from("<I", data, 0x3C)[0]
         if peoff + 6 > len(data) or data[peoff : peoff + 4] != b"PE\0\0":
-            die("bin/java.exe has invalid PE header")
+            die("файл bin/java.exe содержит недопустимый заголовок PE")
         machine = struct.unpack_from("<H", data, peoff + 4)[0]
         expected = 0x8664 if arch == "x64" else 0xAA64
         if machine != expected:
@@ -220,7 +220,7 @@ def inspect_zip(path: Path, platform: str, arch: str) -> str:
     with zipfile.ZipFile(path, "r") as archive:
         infos = archive.infolist()
         if not infos or len(infos) > 100000:
-            die("invalid JRE zip entry count")
+            die("неверное количество файлов в ZIP-архиве JRE")
         for info in infos:
             clean = safe_archive_name(info.filename)
             if not clean or info.is_dir():
@@ -234,7 +234,7 @@ def inspect_zip(path: Path, platform: str, arch: str) -> str:
                 validate_binary(platform, arch, data)
                 found.append(clean)
     if len(found) != 1:
-        die(f"expected exactly one bin/java.exe, found {len(found)}")
+        die(f"ожидался ровно один файл bin/java.exe, найдено {len(found)}")
     return found[0]
 
 
@@ -243,7 +243,7 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
     with tarfile.open(path, "r:gz") as archive:
         members = archive.getmembers()
         if not members or len(members) > 100000:
-            die("invalid JRE tar entry count")
+            die("неверное количество файлов в TAR-архиве JRE")
         for member in members:
             clean = safe_archive_name(member.name)
             if not clean:
@@ -274,14 +274,14 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
                     die("bin/java size outside policy")
                 extracted = archive.extractfile(member)
                 if extracted is None:
-                    die("cannot read bin/java")
+                    die("не удалось прочитать bin/java")
                 data = extracted.read(MAX_JAVA_BINARY + 1)
                 if len(data) != member.size:
                     die("bin/java truncated in tar")
                 validate_binary(platform, arch, data)
                 found.append(clean)
     if len(found) != 1:
-        die(f"expected exactly one bin/java, found {len(found)}")
+        die(f"ожидался ровно один файл bin/java, найдено {len(found)}")
     return found[0]
 
 
@@ -332,7 +332,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
         )
         digest, size = sha256_file(path)
         if digest != asset["sourceSha256"] or size != asset["sourceSize"]:
-            die(f"post-download mismatch for {name}")
+            die(f"несовпадение после загрузки для {name}")
         targets.append(
             {
                 "platform": platform,

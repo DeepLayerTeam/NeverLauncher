@@ -489,9 +489,9 @@ if (
     "challenge-response-attestation.py" not in preflight
     or "scripts/smoke/offline/challenge-response-attestation.py" not in ci
 ):
-    fail("Проверка «0.12.4 challenge-response attestation gate» не подключена к preflight/CI")
+    fail("Проверка «0.12.4: аттестация по схеме запрос–ответ» не подключена к preflight/CI")
 if "Challenge-response attestation gate OK" not in attestation_gate:
-    fail("Не завершена реализация «0.12.4 challenge-response attestation gate»")
+    fail("Не завершена реализация «0.12.4: аттестация по схеме запрос–ответ»")
 for forbidden in [
     'authorizationElevation": true',
     'phishingResistantElevation": true',
@@ -546,9 +546,9 @@ if (
     "device-management-revocation.py" not in preflight
     or "scripts/smoke/offline/device-management-revocation.py" not in ci
 ):
-    fail("Проверка «0.12.5 device management gate» не подключена к preflight/CI")
+    fail("Проверка «0.12.5: управление устройствами» не подключена к preflight/CI")
 if "Device Management + Revocation gate OK" not in device_management_gate:
-    fail("Не завершена реализация «0.12.5 device management gate»")
+    fail("Не завершена реализация «0.12.5: управление устройствами»")
 
 # В 0.12.6 привязка Session <-> Device и интеграция рисков. Привязку определяет
 # сервер, старые токены не проходят при несовпадении binding_epoch, обновление
@@ -598,9 +598,9 @@ if (
     "session-device-risk-0126.py" not in preflight
     or "scripts/smoke/offline/session-device-risk-0126.py" not in ci
 ):
-    fail("Проверка «0.12.6 session/device risk gate» не подключена к preflight/CI")
+    fail("Проверка «0.12.6: риски сеанса и устройства» не подключена к preflight/CI")
 if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
-    fail("Не завершена реализация «0.12.6 session/device risk gate»")
+    fail("Не завершена реализация «0.12.6: риски сеанса и устройства»")
 
 # В 0.12.7 контроль доверия Minecraft/ServerBridge. Игровые данные несут
 # снимок доверенного устройства и привязки, а каждое серверное подтверждение
@@ -1603,12 +1603,12 @@ for required in [
     if required not in key_recovery_desktop:
         fail(f"Для «0.12.8 desktop replacement flow» отсутствует обязательный компонент: {required}")
 if key_recovery_migration_api != key_recovery_migration_cli:
-    fail("Обнаружено несовпадение «0.12.8 API/CLI migration 0017»")
+    fail("Обнаружено несовпадение «0.12.8 миграция API/CLI 0017»")
 if (
     "cross-platform-key-recovery-0128.py" not in preflight
     or "scripts/smoke/offline/cross-platform-key-recovery-0128.py" not in ci
 ):
-    fail("Проверка «0.12.8 key recovery gate» не подключена к preflight/CI")
+    fail("Проверка «0.12.8: восстановление ключа» не подключена к preflight/CI")
 
 
 # В 0.12.9: E2E доверенных устройств и публичная матрица доверия. PASS допустим только по
@@ -1628,7 +1628,7 @@ for required in [
     '"required": true',
 ]:
     if required not in device_trust_targets:
-        fail(f"Неполная реализация «0.12.9 public Device Trust targets»: {required}")
+        fail(f"Неполная реализация «0.12.9: публичные целевые платформы доверия к устройству»: {required}")
 for forbidden in [
     '"status": "passed"',
     '"status":"passed"',
@@ -1719,7 +1719,7 @@ for required in [
     "GITHUB_STEP_SUMMARY",
 ]:
     if required not in device_trust_workflow:
-        fail(f"Неполная реализация «0.12.9 public Device Trust workflow»: {required}")
+        fail(f"Неполная реализация «0.12.9: публичный процесс проверки доверия к устройству»: {required}")
 for required in [
     "hardware_generation_labels_are_scoped_and_rotate",
     "replacement_payload_is_canonical_and_user_scoped",
@@ -1789,7 +1789,7 @@ for required in [
     "0018_device_trust_stabilization_01210",
 ]:
     if required not in device_trust_e2e:
-        fail(f"Для «0.12.10 public Device Trust evidence» отсутствует обязательный компонент: {required}")
+        fail(f"Для «0.12.10: публичные свидетельства доверия к устройству» отсутствует обязательный компонент: {required}")
 if (
     '"productVersion": "' + VERSION + '"' not in device_trust_targets
     or "migrationStabilization01210" not in device_trust_targets
@@ -2167,7 +2167,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         "serverbridge-crypto-node-identities-0142.py" not in preflight
         or "serverbridge-crypto-node-identities-0142.py" not in ci
     ):
-        fail("Проверка «0.14.2 cryptographic node identity gate» не подключена к preflight/CI")
+        fail("Проверка «0.14.2: криптографическая идентичность узла» не подключена к preflight/CI")
     if (
         "run-serverbridge-crypto-identity-migration-e2e.sh" not in preflight
         or "run-serverbridge-crypto-identity-migration-e2e.sh" not in ci
@@ -2239,7 +2239,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         "serverbridge-one-time-join-tickets-0143.py" not in preflight
         or "serverbridge-one-time-join-tickets-0143.py" not in ci
     ):
-        fail("Проверка «0.14.3 one-time join ticket gate» не подключена к preflight/CI")
+        fail("Проверка «0.14.3: одноразовый билет подключения» не подключена к preflight/CI")
     if (
         "run-one-time-join-ticket-migration-e2e.sh" not in preflight
         or "run-one-time-join-ticket-migration-e2e.sh" not in ci

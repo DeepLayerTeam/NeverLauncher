@@ -98,7 +98,7 @@ public final class Agent {
                                 String owner = pluginDigest(hook);
                                 Set<String> allowed = ALLOWED_TRANSFORMS.get(owner);
                                 if (allowed == null || !allowed.contains(binary)) {
-                                    System.err.println("[Launcher Guard] unauthorized class transformation: " + binary);
+                                    System.err.println("[Launcher Guard] неразрешённое преобразование класса: " + binary);
                                     Runtime.getRuntime().halt(79); // JVM может скрывать исключения трансформатора
                                 }
                             }
@@ -109,7 +109,7 @@ public final class Agent {
                     }
                     return modified ? current : null;
                 } catch (Throwable ex) {
-                    System.err.println("[Launcher trusted JVM] transform rejected for " + name + ": " + ex);
+                    System.err.println("[Launcher trusted JVM] преобразование отклонено для " + name + ": " + ex);
                     if (guardPolicyActive) Runtime.getRuntime().halt(79);
                     return null; // устаревшее поведение обратных вызовов без Guard
                 } finally { IN_CALLBACK.remove(); }

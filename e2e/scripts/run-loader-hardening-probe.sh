@@ -19,7 +19,7 @@ LOCK="$CLIENT_DIR/.launcher/${LOADER}-resolution-lock.json"
 OUT_PACKAGE="$RUNTIME_DIR/loader-hardening-package.json"
 OUT_EVIDENCE="$RUNTIME_DIR/loader-hardening.json"
 
-case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] unsupported loader: $LOADER" >&2; exit 2 ;; esac
+case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
 [[ -x "$NL_BIN" ]] || { echo "[loader-hardening] CLI binary unavailable: $NL_BIN" >&2; exit 2; }
 [[ -f "$SOURCE_CLIENT_DIR/.launcher/${LOADER}-resolution-lock.json" ]] || {
   echo "[loader-hardening] initial resolution lock unavailable" >&2; exit 1;

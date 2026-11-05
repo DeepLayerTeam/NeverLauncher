@@ -15,12 +15,12 @@ PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 CLIENT_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-55}"
 PLAYER_USERNAME="NL_Cert_Client"
 
-[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[matching-e2e] invalid Minecraft version" >&2; exit 2; }
-[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[matching-e2e] invalid Java major" >&2; exit 2; }
+[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[matching-e2e] неверная версия Minecraft" >&2; exit 2; }
+[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[matching-e2e] неверный основной номер версии Java" >&2; exit 2; }
 [[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[matching-e2e] matching-server E2E is certified on linux/x86_64" >&2; exit 2; }
-[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[matching-e2e] target Java executable is unavailable: $JAVA_BIN" >&2; exit 2; }
+[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[matching-e2e] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
 for cmd in go cargo python3 xvfb-run; do
-  command -v "$cmd" >/dev/null 2>&1 || { echo "[matching-e2e] required command missing: $cmd" >&2; exit 1; }
+  command -v "$cmd" >/dev/null 2>&1 || { echo "[matching-e2e] отсутствует необходимая команда: $cmd" >&2; exit 1; }
 done
 
 rm -rf "$RUNTIME_DIR"
@@ -50,7 +50,7 @@ printf '[matching-e2e] build CLI and Runtime\n'
   go build -trimpath -ldflags "-X main.version=${PRODUCT_VERSION}" -o "$NL_BIN" ./cmd/launcher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
-[[ -x "$RUNTIME_BIN" ]] || { echo "[matching-e2e] Runtime binary is missing" >&2; exit 1; }
+[[ -x "$RUNTIME_BIN" ]] || { echo "[matching-e2e] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
 printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-package \
@@ -264,7 +264,7 @@ if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   done
   [[ -s "$RUNTIME_DIR/resource-ready-proxy.port" ]] || { echo '[matching-e2e] resource gate did not bind' >&2; exit 1; }
   CERT_PORT="$(cat "$RUNTIME_DIR/resource-ready-proxy.port")"
-  [[ "$CERT_PORT" =~ ^[0-9]{1,5}$ ]] || { echo '[matching-e2e] invalid gated client port' >&2; exit 1; }
+  [[ "$CERT_PORT" =~ ^[0-9]{1,5}$ ]] || { echo '[matching-e2e] недопустимый порт клиентского подключения с ограниченным доступом' >&2; exit 1; }
 fi
 
 printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"

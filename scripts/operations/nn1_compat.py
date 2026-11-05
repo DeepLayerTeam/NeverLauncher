@@ -138,7 +138,7 @@ def validate_schema(actual, catalog):
     unknown = sorted(actual.keys() - catalog.keys())
     drift = sorted(k for k in actual.keys() & catalog.keys() if actual[k] != catalog[k])
     require(not pending and not unknown and not drift,
-            "PostgreSQL schema not identical to both binaries' sealed catalog (pending=%d unknown=%d checksumDrift=%d)" %
+            "Схема PostgreSQL отличается от закреплённого каталога обеих версий (ожидают применения=%d неизвестных=%d расхождений контрольных сумм=%d)" %
             (len(pending), len(unknown), len(drift)))
     return {"checkedMigrations": len(catalog), "pending": 0, "unknown": 0, "checksumDrift": 0}
 
@@ -175,16 +175,16 @@ def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
                     and readiness.get("success") == readiness.get("sampled") == 3
                     and readiness.get("versionVerified") is True
                     and readiness.get("version") in pair,
-                    "live API/worker readiness version missing or unsupported on " + label + "/" + role)
+                    "на узле отсутствует или не поддерживается версия готовности API/обработчика: " + label + "/" + role)
             require(item.get("environment", {}).get("LAUNCHER_REPLICA_ID") == node_id + "-" + role,
-                    "incorrect live replica role identity on " + label)
+                    "неверный идентификатор роли действующей реплики на узле " + label)
             actual_versions.append(readiness["version"])
         require(actual_versions[0] == actual_versions[1], "Версии API и обработчика не совпадают на узле " + label)
         versions[label] = actual_versions[0]
         contracts = report.get("compatibility0516")
         require(isinstance(contracts, dict) and contracts.get("liveVersion") == actual_versions[0]
                 and contracts.get("apiStatus") == "ok" and contracts.get("bridgeProtocol") == 3,
-                "live HTTP compatibility probes missing for " + label)
+                "отсутствуют действующие HTTP-проверки совместимости для " + label)
         fingerprints = tuple(contracts.get(k) for k in (
             "loadersSHA256", "runtimeRequirementsSHA256", "bridgeContractSHA256"))
         require(all(re.fullmatch(r"[0-9a-f]{64}", value or "") for value in fingerprints),

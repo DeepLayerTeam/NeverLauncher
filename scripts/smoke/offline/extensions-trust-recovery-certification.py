@@ -43,7 +43,7 @@ for token in [
     "Ключ подписи артефакта отозван или неактивен",
     "Артефакт помещён в карантин",
 ]:
-    require(token in trust, f"trust engine missing {token}")
+    require(token in trust, f"отсутствует механизм проверки доверия {token}")
 host = read("services/api/internal/extensionhost/host_0205.go")
 for token in [
     "GetExtensionEmergencyDisable",
@@ -59,7 +59,7 @@ for token in [
     "SetExtensionEmergencyDisable",
     "ExtensionSafeMode",
 ]:
-    require(token in main, f"backend safe-mode/crash-loop integration missing {token}")
+    require(token in main, f"отсутствует интеграция Backend с безопасным режимом и обработкой повторных сбоев {token}")
 http = read("services/api/internal/httpapi/extension_trust_02012.go")
 for token in [
     "enforceExtensionTrustRuntime02012",
@@ -80,7 +80,7 @@ for token in [
     require(token in routes, f"route missing {token}")
 mal = read("services/api/internal/extensionpackage/malicious_02012_test.go")
 for token in ["traversal", "windows-device", "symlink", "case-collision"]:
-    require(token in mal, f"malicious package test missing {token}")
+    require(token in mal, f"отсутствует тест вредоносного пакета {token}")
 targets = json.loads(read("extensions/trust-recovery-targets-02012.json"))
 require(
     {x["os"] for x in targets["targets"] if x.get("required")}
@@ -95,7 +95,7 @@ for token in [
     "public-matrix",
     "go build ./cmd/launcher-api",
 ]:
-    require(token in workflow, f"cross-platform workflow missing {token}")
+    require(token in workflow, f"отсутствует кроссплатформенный рабочий процесс {token}")
 openapi = read("schemas/openapi.yaml")
 for token in [
     "/api/v1/admin/extension-trust/policy",

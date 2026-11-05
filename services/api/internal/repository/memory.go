@@ -17,7 +17,7 @@ import (
 
 var ErrNotFound = errors.New("запись не найдена")
 var ErrImmutable = errors.New("Опубликованный релиз нельзя изменить")
-var ErrConflict = errors.New("repository conflict")
+var ErrConflict = errors.New("конфликт в репозитории")
 
 // ErrStableRuntimeGate0341 — непреодолимая граница защиты релиза. В 0.34.1 нет
 // аттестованного исполнителя Runtime; старого подписанного JSON недостаточно.

@@ -126,10 +126,10 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			return fmt.Errorf("Компонент %s: неподдерживаемая схема условия %q", c.ID, v.SchemaVersion)
 		}
 		if err := validDistinct0244(v.OS, 8, func(s string) bool { return s == "windows" || s == "linux" || s == "macos" }); err != nil {
-			return fmt.Errorf("component %s OS: %w", c.ID, err)
+			return fmt.Errorf("компонент %s: ОС: %w", c.ID, err)
 		}
 		if err := validDistinct0244(v.Arch, 8, func(s string) bool { return s == "x86_64" || s == "aarch64" }); err != nil {
-			return fmt.Errorf("component %s arch: %w", c.ID, err)
+			return fmt.Errorf("компонент %s: архитектура: %w", c.ID, err)
 		}
 		if v.JavaMajorMax != 0 && v.JavaMajorMin > v.JavaMajorMax {
 			return fmt.Errorf("Компонент %s: диапазон основных версий Java задан в обратном порядке", c.ID)
@@ -138,15 +138,15 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			return fmt.Errorf("Компонент %s: недопустимая основная версия Java", c.ID)
 		}
 		if err := validDistinct0244(v.MinecraftVersions, 64, func(s string) bool { return len(s) > 0 && len(s) <= 80 && !strings.ContainsAny(s, " \t\r\n\x00") }); err != nil {
-			return fmt.Errorf("component %s Minecraft: %w", c.ID, err)
+			return fmt.Errorf("компонент %s: Minecraft: %w", c.ID, err)
 		}
 		if err := validDistinct0244(v.Loaders, 12, func(s string) bool {
 			return s == "vanilla" || s == "fabric" || s == "quilt" || s == "forge" || s == "neoforge"
 		}); err != nil {
-			return fmt.Errorf("component %s loader: %w", c.ID, err)
+			return fmt.Errorf("компонент %s: загрузчик: %w", c.ID, err)
 		}
 		if err := validDistinct0244(v.Permissions, 32, func(s string) bool { return validPermissionName0244(s) }); err != nil {
-			return fmt.Errorf("component %s permissions: %w", c.ID, err)
+			return fmt.Errorf("компонент %s: разрешения: %w", c.ID, err)
 		}
 		if v.MinecraftVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.MinecraftVersionRange); err != nil {
@@ -194,7 +194,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 			return "Версия Minecraft не совместима по SemVer: " + e.Error()
 		}
 		if !ok {
-			return fmt.Sprintf("Minecraft %q outside %q", env.MinecraftVersion, v.MinecraftVersionRange)
+			return fmt.Sprintf("версия Minecraft %q не входит в диапазон %q", env.MinecraftVersion, v.MinecraftVersionRange)
 		}
 	}
 	if len(v.Loaders) > 0 && !in0244(v.Loaders, strings.ToLower(env.Loader)) {
@@ -206,7 +206,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 			return "Версия загрузчика не совместима по SemVer: " + e.Error()
 		}
 		if !ok {
-			return fmt.Sprintf("loader %q outside %q", env.LoaderVersion, v.LoaderVersionRange)
+			return fmt.Sprintf("загрузчик %q не входит в диапазон %q", env.LoaderVersion, v.LoaderVersionRange)
 		}
 	}
 	for _, permission := range v.Permissions {

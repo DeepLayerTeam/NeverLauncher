@@ -441,7 +441,7 @@ func worldBackupWorlds02810(root string, requested []string) ([]string, error) {
 		selected[name] = true
 		info, err := os.Lstat(filepath.Join(root, name))
 		if err != nil {
-			return nil, fmt.Errorf("world %s: %w", name, err)
+			return nil, fmt.Errorf("игровой мир %s: %w", name, err)
 		}
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			return nil, fmt.Errorf("Для игрового мира %s необходим существующий каталог", name)

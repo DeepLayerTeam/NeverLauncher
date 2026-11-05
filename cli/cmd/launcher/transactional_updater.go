@@ -299,11 +299,11 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		}
 		if len(spec.Data) > 0 || (spec.Data != nil && spec.Size == 0) {
 			if err := writeUpdaterBytes0156(stagePath, spec.Data, mode); err != nil {
-				return nil, fmt.Errorf("stage %s: %w", spec.Path, err)
+				return nil, fmt.Errorf("этап %s: %w", spec.Path, err)
 			}
 		} else {
 			if err := copyUpdaterSource0156(spec.Source, stagePath, mode); err != nil {
-				return nil, fmt.Errorf("stage %s: %w", spec.Path, err)
+				return nil, fmt.Errorf("этап %s: %w", spec.Path, err)
 			}
 		}
 		if err := verifyUpdaterFile0156(stagePath, spec.Size, spec.SHA256); err != nil {

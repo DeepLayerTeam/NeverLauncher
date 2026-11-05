@@ -14,7 +14,7 @@ SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
 ADMIN_EMAIL="federation-e2e@launcher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "[federation-postgres-e2e] required command missing: $1" >&2; exit 1; }; }
+need() { command -v "$1" >/dev/null 2>&1 || { echo "[federation-postgres-e2e] отсутствует необходимая команда: $1" >&2; exit 1; }; }
 for cmd in docker curl jq go psql python3; do need "$cmd"; done
 docker compose version >/dev/null
 

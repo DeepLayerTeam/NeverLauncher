@@ -60,7 +60,7 @@ public record ExtensionManifest(String id, String name, SemVer version, String v
         }
         return new ExtensionManifest(id,Json.string(m,"name",true),SemVer.parse(Json.string(m,"version",true)),Json.string(m,"version",true),Json.string(m,"publisher",true),api,targets,perms,strings(m,"hooks"),deps,conflicts);
     }
-    private static void nameToken(String token,String kind){if(!token.matches("[a-z0-9][a-z0-9._:-]{1,127}"))throw new IllegalArgumentException("invalid "+kind+": "+token);}
+    private static void nameToken(String token,String kind){if(!token.matches("[a-z0-9][a-z0-9._:-]{1,127}"))throw new IllegalArgumentException("Недопустимый "+kind+": "+token);}
     private static String ident(String v){if(!ID.matcher(v).matches())throw new IllegalArgumentException("Некорректный идентификатор расширения: "+v);return v;}
     private static void validateRange(String range){new SemVer(1,2,3,List.of()).matches(range);}
     private static void checkKeys(Map<String,Object> m,Set<String> allowed){for(String k:m.keySet())if(!allowed.contains(k))throw new IllegalArgumentException("Неизвестное поле: "+k);}
@@ -73,6 +73,6 @@ public record ExtensionManifest(String id, String name, SemVer version, String v
     private static List<String> strings(Map<String,Object> m,String key){
         Object obj=m.get(key);if(obj==null)return List.of();if(!(obj instanceof List<?> list))throw new IllegalArgumentException(key+" должен быть массивом");
         if(list.size()>2048)throw new IllegalArgumentException(key+" превышает допустимый размер");
-        List<String> result=new ArrayList<>();for(Object value:list){if(!(value instanceof String s)||s.isBlank())throw new IllegalArgumentException("invalid "+key+" entry");result.add(s);}return result;
+        List<String> result=new ArrayList<>();for(Object value:list){if(!(value instanceof String s)||s.isBlank())throw new IllegalArgumentException("Недопустимый элемент поля "+key);result.add(s);}return result;
     }
 }

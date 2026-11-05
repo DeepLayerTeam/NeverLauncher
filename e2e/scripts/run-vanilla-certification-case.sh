@@ -13,16 +13,16 @@ PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
-[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[vanilla-cert] invalid Minecraft version" >&2; exit 2; }
-[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[vanilla-cert] invalid Java major" >&2; exit 2; }
+[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[vanilla-cert] неверная версия Minecraft" >&2; exit 2; }
+[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[vanilla-cert] неверный основной номер версии Java" >&2; exit 2; }
 case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[vanilla-cert] invalid target OS: $TARGET_OS" >&2; exit 2 ;; esac
 case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[vanilla-cert] invalid target arch: $TARGET_ARCH" >&2; exit 2 ;; esac
-[[ -n "$JAVA_BIN" && -f "$JAVA_BIN" ]] || { echo "[vanilla-cert] target Java executable is unavailable: $JAVA_BIN" >&2; exit 2; }
+[[ -n "$JAVA_BIN" && -f "$JAVA_BIN" ]] || { echo "[vanilla-cert] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
 for cmd in go cargo python3; do
-  command -v "$cmd" >/dev/null 2>&1 || { echo "[vanilla-cert] required command missing: $cmd" >&2; exit 1; }
+  command -v "$cmd" >/dev/null 2>&1 || { echo "[vanilla-cert] отсутствует необходимая команда: $cmd" >&2; exit 1; }
 done
 if [[ "$TARGET_OS" == "linux" ]]; then
-  command -v xvfb-run >/dev/null 2>&1 || { echo "[vanilla-cert] required command missing: xvfb-run" >&2; exit 1; }
+  command -v xvfb-run >/dev/null 2>&1 || { echo "[vanilla-cert] отсутствует необходимая команда: xvfb-run" >&2; exit 1; }
 fi
 
 rm -rf "$RUNTIME_DIR"
@@ -40,7 +40,7 @@ printf '[vanilla-cert] build CLI and Runtime for %s/%s\n' "$TARGET_OS" "$TARGET_
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
-[[ -f "$RUNTIME_BIN" ]] || { echo "[vanilla-cert] Runtime binary is missing" >&2; exit 1; }
+[[ -f "$RUNTIME_BIN" ]] || { echo "[vanilla-cert] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
 printf '[vanilla-cert] materialize Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
 "$NL_BIN" runtime vanilla-package \

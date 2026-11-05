@@ -48,7 +48,7 @@ public final class HostSession implements AutoCloseable {
         if(!required(env,"LAUNCHER_EXTENSION_HOST_PROTOCOL").equals("1.0")||!required(env,"LAUNCHER_EXTENSION_API_VERSION").equals("1.0"))throw new IllegalArgumentException("Несовместимые протокол или API хоста");
         return new HostSession(url,required(env,"LAUNCHER_EXTENSION_HOST_TOKEN"),id,required(env,"LAUNCHER_EXTENSION_INSTANCE_ID"));
     }
-    private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("missing "+key);return v;}
+    private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("Отсутствует обязательная переменная "+key);return v;}
     public synchronized void connect() throws IOException,InterruptedException {connect("",Set.of());}
     public synchronized void connect(String callbackUrl) throws IOException,InterruptedException {connect(callbackUrl,Set.of());}
     /**
@@ -98,7 +98,7 @@ public final class HostSession implements AutoCloseable {
         if(!(raw instanceof List<?> list)||list.size()>512)throw new IOException("Некорректный хост "+field);
         Set<String> result=new HashSet<>();
         for(Object item:list){
-            if(!(item instanceof String name)||name.length()>128||!name.matches("[a-z][a-z0-9.:-]*")||!result.add(name))throw new IOException("Некорректный хост "+field+" entry");
+            if(!(item instanceof String name)||name.length()>128||!name.matches("[a-z][a-z0-9.:-]*")||!result.add(name))throw new IOException("Некорректный элемент поля хоста "+field);
         }
         return Set.copyOf(result);
     }

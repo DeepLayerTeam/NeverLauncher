@@ -14,7 +14,7 @@ public final class ExtensionRunner {
     public static void main(String[] args) throws Exception {
         if(args.length==2){run(args[0],args[1],System.getenv());return;}
         if(args.length>=4&&args[0].equals("--cli")){runCli(args[1],args[2],System.getenv(),Arrays.copyOfRange(args,3,args.length));return;}
-        throw new IllegalArgumentException("usage: ExtensionRunner <manifest.json> <extension-class> OR --cli <manifest.json> <extension-class> <command> [args...]");
+        throw new IllegalArgumentException("Использование: ExtensionRunner <manifest.json> <extension-class> ИЛИ --cli <manifest.json> <extension-class> <command> [args...]");
     }
     public static void run(String manifestPath,String className,Map<String,String> env) throws Exception {
         launch(manifestPath,className,env,null,false,null);
@@ -92,7 +92,7 @@ public final class ExtensionRunner {
         }
         }
     }
-    private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("missing "+key);return v;}
+    private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("Отсутствует обязательная переменная "+key);return v;}
     private static Map<String,Set<String>> declaredUIActions(String source){
         Map<String,Object> manifest=Json.object(Json.parse(source));
         Map<String,Set<String>> surfaces=new HashMap<>();

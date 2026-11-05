@@ -36,7 +36,7 @@ func (c *Core) RefreshLinkedIdentity(userID, providerID, expectedID string, auth
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	issuer, err := model.CanonicalAuthIssuer(providerID, identity.Issuer)
 	if err != nil {
-		return model.AuthIdentity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "invalid authenticated issuer", err)
+		return model.AuthIdentity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "неверный аутентифицированный издатель токена", err)
 	}
 	linked, err := c.repo.GetAuthIdentityByIssuer(providerID, issuer, identity.Subject)
 	if errors.Is(err, repository.ErrNotFound) {

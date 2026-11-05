@@ -36,7 +36,7 @@ public final class BackendServices {
 
     private static String id(String value, String field) {
         if (value == null || value.isBlank() || value.length() > 128 || value.chars().anyMatch(c -> c < 32 || c == 127))
-            throw new IllegalArgumentException("invalid " + field);
+            throw new IllegalArgumentException("Недопустимое значение поля: " + field);
         return value;
     }
     private static Map<String,Object> request(String projectId) { return Map.of("projectId", id(projectId,"projectId")); }

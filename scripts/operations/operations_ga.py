@@ -175,7 +175,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
         require(name in manifest.get('requiredFiles', []) and any(
             f.get('name') == name and f.get('required') is True and f.get('status') == 'present' and
             f.get('sha256') == operational.sha(bundle/name) for f in manifest.get('artifacts',[])),
-            'independent approval missing from signed release manifest: '+name)
+            'в подписанном манифесте выпуска отсутствует независимое утверждение: '+name)
     return {'status': 'verified', 'version': document['version'], 'commit': document['sourceCommit']}
 
 

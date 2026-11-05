@@ -47,7 +47,7 @@ def json_file(path: Path, limit: int = 1024 * 1024) -> dict:
 
 
 def _checked_open(path: Path, limit: int):
-    """Pin source files to an inode; a replaced or linked source must block cutover."""
+    """Закрепляйте исходные файлы по inode: замена файла или символическая ссылка должны блокировать переключение."""
     try:
         st = path.lstat()
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,

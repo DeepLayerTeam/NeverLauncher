@@ -4863,7 +4863,7 @@ function App() {
               className="startupStatus0427"
               aria-live="polite"
               aria-label={
-                ui0357.locale === "ru" ? "Запуск клиента" : "Запуск клиента"
+                ui0357.locale === "ru" ? "Запуск клиента" : "Client launch"
               }
             >
               <span role={stage === "failed" ? "alert" : "status"}>

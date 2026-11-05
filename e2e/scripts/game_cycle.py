@@ -142,7 +142,7 @@ def prepare(args: argparse.Namespace) -> None:
         original.get("projectId") == "e2e-project"
         and original.get("profileId") == args.profile
         and original.get("channel") == "stable",
-        "project/profile/channel mismatch",
+        "несовпадение проекта, профиля или канала",
     )
     old_files = file_manifest(old, source)
     require(

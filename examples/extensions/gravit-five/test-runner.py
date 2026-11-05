@@ -103,7 +103,7 @@ def main():
     try:
         deadline=time.monotonic()+14
         while Broker.ready<1 and child.poll() is None and time.monotonic()<deadline:time.sleep(.04)
-        assert Broker.ready and child.poll() is None,child.communicate() if child.poll() is not None else 'host never became ready'
+        assert Broker.ready and child.poll() is None,child.communicate() if child.poll() is not None else 'хост так и не перешёл в состояние готовности'
         status,health=rpc('auth.health');assert status==200 and health['result']['available'],(status,health)
         status,good=rpc('auth.password',{'identifier':'bob','secret':'secret-password'});assert status==200 and good['result']['authentication']['identity']['subject']==UUID,(status,good)
         status,wrong=rpc('auth.password',{'identifier':'bob','secret':'wrong'});assert status==200 and wrong['result']['errorCode']=='invalid_credentials',(status,wrong)

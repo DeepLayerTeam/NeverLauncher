@@ -17,8 +17,8 @@ public final class JsonSchema {
         if(depth>24)throw new IllegalArgumentException("Превышена допустимая глубина схемы");
         for(String k:s.keySet())if(!KEYS.contains(k))throw new IllegalArgumentException("Неподдерживаемое ключевое слово JSON Schema: "+k);
         Object type=s.get("type");if(type!=null&&(!(type instanceof String v)||!Set.of("object","array","string","number","integer","boolean","null").contains(v)))throw new IllegalArgumentException("Неподдерживаемый тип схемы");
-        for(String k:List.of("minLength","maxLength","minItems","maxItems"))if(s.containsKey(k)&&(!(s.get(k) instanceof Number n)||n.longValue()<0||n.doubleValue()!=n.longValue()))throw new IllegalArgumentException("invalid "+k);
-        for(String k:List.of("minimum","maximum"))if(s.containsKey(k)&&!(s.get(k) instanceof Number))throw new IllegalArgumentException("invalid "+k);
+        for(String k:List.of("minLength","maxLength","minItems","maxItems"))if(s.containsKey(k)&&(!(s.get(k) instanceof Number n)||n.longValue()<0||n.doubleValue()!=n.longValue()))throw new IllegalArgumentException("Недопустимое значение поля: "+k);
+        for(String k:List.of("minimum","maximum"))if(s.containsKey(k)&&!(s.get(k) instanceof Number))throw new IllegalArgumentException("Недопустимое значение поля: "+k);
         if(s.containsKey("additionalProperties")&&!(s.get("additionalProperties") instanceof Boolean))throw new IllegalArgumentException("Поле additionalProperties должно быть логическим");
         if(s.containsKey("enum")&&!(s.get("enum") instanceof List<?>))throw new IllegalArgumentException("Поле enum должно быть массивом");
         if(s.containsKey("required")){if(!(s.get("required") instanceof List<?> keys))throw new IllegalArgumentException("Поле required должно быть массивом");for(Object key:keys)if(!(key instanceof String))throw new IllegalArgumentException("Массив required должен содержать строки");}

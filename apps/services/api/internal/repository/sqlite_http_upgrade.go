@@ -171,7 +171,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 		dep := dependencies[key]
 		var arr []json.RawMessage
 		if err = json.Unmarshal(root[dep], &arr); err != nil {
-			return nil, fmt.Errorf("legacy %s: %w", dep, err)
+			return nil, fmt.Errorf("устаревший источник %s: %w", dep, err)
 		}
 		if len(arr) > 0 {
 			return nil, fmt.Errorf("Отсутствует: «private auth field %s for %d persisted %s records»", key, len(arr), dep)

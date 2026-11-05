@@ -45,7 +45,7 @@ def validate(folder, source_commit, version, run_id, run_attempt):
             or report.get("runAttempt") != run_attempt
         ):
             raise ValueError(
-                f"{name}: invalid status, version, source commit or CI run identity"
+                f"{name}: неверный статус, версия, коммит источников или идентификатор запуска CI"
             )
         if tuple(map(int, version.split("."))) >= (0, 43, 0):
             audit = report.get("gravitMatrixAudit", {})

@@ -215,7 +215,7 @@ def preflight(values, mode, *, docker, tls_required=True):
             if key == "REDIS_PASSWORD" and mode != "network-ha":
                 continue
             if not re.fullmatch(r"[A-Za-z0-9._~-]{24,}", values[key]):
-                fail(f"{key} must be URL-safe and at least 24 characters")
+                fail(f"{key} должно состоять из безопасных для URL символов и иметь длину не менее 24 символов")
     if not docker and values.get("LAUNCHER_REPOSITORY_DRIVER") != "postgres":
         fail(
             "Нативный Backend должен использовать PostgreSQL; HTTP-хранилище только на SQLite не поддерживается"

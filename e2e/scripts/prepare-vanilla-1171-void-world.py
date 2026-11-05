@@ -30,7 +30,7 @@ class Reader:
 
     def take(self, n: int) -> bytes:
         if n < 0 or self.pos + n > len(self.data):
-            raise NBTError('truncated or invalid NBT length')
+            raise NBTError('обрезанное или недопустимое поле длины NBT')
         v = self.data[self.pos:self.pos + n]
         self.pos += n
         return v

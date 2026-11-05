@@ -250,7 +250,7 @@ func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, 
 	}
 	issuer, err := model.CanonicalAuthIssuer(meta.ID, auth.Identity.Issuer)
 	if err != nil {
-		return authconnector.Metadata{}, authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "invalid authenticated issuer", err)
+		return authconnector.Metadata{}, authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "неверный аутентифицированный издатель токена", err)
 	}
 	auth.Identity.Issuer = issuer
 	return meta, auth, nil
@@ -289,7 +289,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 	auth.Identity.Subject = strings.TrimSpace(auth.Identity.Subject)
 	issuer, err := model.CanonicalAuthIssuer(meta.ID, auth.Identity.Issuer)
 	if err != nil {
-		return Result{}, authconnector.WrapError(authconnector.ErrMisconfigured, "invalid authenticated issuer", err)
+		return Result{}, authconnector.WrapError(authconnector.ErrMisconfigured, "неверный аутентифицированный издатель токена", err)
 	}
 	linked, err := c.repo.GetAuthIdentityByIssuer(meta.ID, issuer, auth.Identity.Subject)
 	var user model.User

@@ -15,9 +15,9 @@ MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
 
-[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[fabric-cert] invalid Minecraft version" >&2; exit 2; }
+[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[fabric-cert] неверная версия Minecraft" >&2; exit 2; }
 [[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[fabric-cert] invalid Fabric loader selector" >&2; exit 2; }
-[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[fabric-cert] invalid Java major" >&2; exit 2; }
+[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[fabric-cert] неверный основной номер версии Java" >&2; exit 2; }
 certification_platform_validate "fabric-cert" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_BIN"
 
 rm -rf "$RUNTIME_DIR"
@@ -34,7 +34,7 @@ printf '[fabric-cert] build CLI and Runtime\n'
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
-[[ -f "$RUNTIME_BIN" ]] || { echo "[fabric-cert] Runtime binary is missing" >&2; exit 1; }
+[[ -f "$RUNTIME_BIN" ]] || { echo "[fabric-cert] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
 printf '[fabric-cert] materialize Fabric %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 materialize_loader_package() {

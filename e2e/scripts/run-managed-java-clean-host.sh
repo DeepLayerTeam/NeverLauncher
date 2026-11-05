@@ -13,7 +13,7 @@ digest="$3"
 major="$4"
 [[ -x "$runtime" && -f "$manifest" ]] || { echo 'runtime binary or manifest missing' >&2; exit 1; }
 [[ "$digest" =~ ^[0-9a-fA-F]{64}$ ]] || { echo 'manifest digest must be SHA-256' >&2; exit 1; }
-[[ "$major" =~ ^(8|16|17|21|25)$ ]] || { echo 'invalid Java major' >&2; exit 1; }
+[[ "$major" =~ ^(8|16|17|21|25)$ ]] || { echo 'неверный основной номер версии Java' >&2; exit 1; }
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/bin" "$work/runtimes"

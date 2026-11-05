@@ -164,7 +164,7 @@ func (c *LiveConnector) Close() error             { return nil }
 func (c *LiveConnector) Health(ctx context.Context) error {
 	_, err := c.current(ctx)
 	if err != nil {
-		return authconnector.WrapError(authconnector.ErrUnavailable, "live FileAuth source unavailable", err)
+		return authconnector.WrapError(authconnector.ErrUnavailable, "действующий источник FileAuth недоступен", err)
 	}
 	return nil
 }
@@ -247,7 +247,7 @@ func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnec
 	}
 	current, err := c.current(ctx)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "live FileAuth source unavailable", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "действующий источник FileAuth недоступен", err)
 	}
 	a, exists := current.byName[strings.ToLower(req.Identifier)]
 	// Используйте явно настроенный и проверенный верификатор; никогда не
@@ -271,7 +271,7 @@ func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnec
 func (c *LiveConnector) ResolveIdentity(ctx context.Context, req authconnector.ResolveRequest) (authconnector.Identity, error) {
 	current, err := c.current(ctx)
 	if err != nil {
-		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrUnavailable, "live FileAuth source unavailable", err)
+		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrUnavailable, "действующий источник FileAuth недоступен", err)
 	}
 	a, exists := current.byUUID[strings.ToLower(req.Subject)]
 	if !exists {

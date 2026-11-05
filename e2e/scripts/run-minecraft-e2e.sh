@@ -66,20 +66,20 @@ E2E_USER_AGENT="Launcher-E2E/${VERSION}"
 source "$SERVERBRIDGE_CRYPTO"
 
 case "$MODE" in full|compatibility) ;; *) echo "[e2e] unsupported mode: $MODE" >&2; exit 2 ;; esac
-case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[e2e] unsupported loader: $LOADER" >&2; exit 2 ;; esac
+case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[e2e] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
 if [[ "$LOADER" == "vanilla" ]]; then
   [[ -z "$LOADER_VERSION_SELECTOR" ]] || { echo "[e2e] Vanilla must not specify loader version" >&2; exit 2; }
 else
   LOADER_VERSION_SELECTOR="${LOADER_VERSION_SELECTOR:-latest-stable}"
 fi
-[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[e2e] invalid Minecraft version" >&2; exit 2; }
+[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[e2e] неверная версия Minecraft" >&2; exit 2; }
 [[ "$PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || { echo "[e2e] invalid profile id" >&2; exit 2; }
 if [[ -n "$LOADER_VERSION_SELECTOR" ]]; then
   [[ "$LOADER_VERSION_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[e2e] invalid loader version selector" >&2; exit 2; }
 fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
+need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] отсутствует необходимая команда: $1" >&2; exit 1; }; }
 for cmd in docker curl jq go cargo python3 gradle git mvn jar xvfb-run openssl psql; do need "$cmd"; done
 docker compose version >/dev/null
 
@@ -145,7 +145,7 @@ wait_http() {
 wait_healthy() {
   local service="$1" id status state
   id="$(compose ps -aq "$service")"
-  [[ -n "$id" ]] || { echo "[e2e] $service container not found" >&2; return 1; }
+  [[ -n "$id" ]] || { echo "[e2e] $service контейнер не найден" >&2; return 1; }
   for _ in $(seq 1 120); do
     status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || true)"
     [[ "$status" == "healthy" ]] && return 0
@@ -224,7 +224,7 @@ wait_bridge_routable() {
 capture_health_evidence() {
   local service="$1" id out
   id="$(compose ps -aq "$service")"
-  [[ -n "$id" ]] || { echo "[e2e] $service container not found for health evidence" >&2; return 1; }
+  [[ -n "$id" ]] || { echo "[e2e] $service контейнер для подтверждения работоспособности не найден" >&2; return 1; }
   out="$RUNTIME_DIR/health-$service.json"
   docker inspect --format '{{json .State.Health}}' "$id" > "$out"
   jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "$out" >/dev/null || {
@@ -281,7 +281,7 @@ materialize_pinned_bytesocks_dependency() {
   git -C "$source_dir" fetch --quiet --depth=1 origin "$BYTESOCKS_SOURCE_COMMIT"
   git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
   resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
-  [[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]] || { echo "[e2e] bytesocks source commit mismatch: $resolved_commit" >&2; return 1; }
+  [[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]] || { echo "[e2e] bytesocks несовпадение коммита исходников: $resolved_commit" >&2; return 1; }
 
   grep -Fq 'static BytesocksClient create(' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
     echo "[e2e] pinned bytesocks source is missing BytesocksClient.create API" >&2; return 1;
@@ -390,7 +390,7 @@ GRADLE
   git -C "$source_dir" fetch --quiet origin "refs/tags/$SPARK_SOURCE_TAG:refs/tags/$SPARK_SOURCE_TAG"
   git -C "$source_dir" checkout --quiet --detach "$SPARK_SOURCE_COMMIT"
   resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
-  [[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]] || { echo "[e2e] spark source commit mismatch: $resolved_commit" >&2; return 1; }
+  [[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]] || { echo "[e2e] spark несовпадение коммита исходников: $resolved_commit" >&2; return 1; }
   git -C "$source_dir" merge-base --is-ancestor "$SPARK_SOURCE_TAG" HEAD || { echo "[e2e] spark tag $SPARK_SOURCE_TAG is not an ancestor of pinned commit" >&2; return 1; }
   patch_count="$(git -C "$source_dir" rev-list --count "$SPARK_SOURCE_TAG..HEAD")"
   [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] spark patch version mismatch: $patch_count" >&2; return 1; }
@@ -473,10 +473,10 @@ GRADLE
   git -C "$source_dir" fetch --quiet --depth=1 origin "$FOLIA_SOURCE_COMMIT"
   git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
   resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
-  [[ "$resolved_commit" == "$FOLIA_SOURCE_COMMIT" ]] || { echo "[e2e] Folia source commit mismatch: $resolved_commit" >&2; return 1; }
+  [[ "$resolved_commit" == "$FOLIA_SOURCE_COMMIT" ]] || { echo "[e2e] Folia несовпадение коммита исходников: $resolved_commit" >&2; return 1; }
 
   resolved_mc="$(sed -n 's/^mcVersion=//p' "$source_dir/gradle.properties" | head -n1 | tr -d '\r')"
-  [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] Folia source targets Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
+  [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] исходный код Folia рассчитан на Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
 
   (
     # При применении патчей Paper/Folia paperweight создаёт вложенные Git-репозитории.
@@ -1172,7 +1172,7 @@ jq -e '.data.protocolVersion == 3 and .data.summary.protocolVersion == 3 and .da
 serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
 required_nodes=1
 [[ "$MODE" == "full" ]] && required_nodes=10
-(( serverbridge_nodes >= required_nodes )) || { echo "[e2e] expected PostgreSQL ServerBridge nodes" >&2; exit 1; }
+(( serverbridge_nodes >= required_nodes )) || { echo "[e2e] не найдены ожидаемые узлы PostgreSQL ServerBridge" >&2; exit 1; }
 VELOCITY_HEALTH="skipped"
 BUNGEECORD_HEALTH="skipped"
 WATERFALL_HEALTH="skipped"

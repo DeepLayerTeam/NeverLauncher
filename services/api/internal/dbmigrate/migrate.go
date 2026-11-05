@@ -246,7 +246,7 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		}
 		if _, err = tx.ExecContext(ctx, m.SQL); err != nil {
 			tx.Rollback()
-			return Status{}, fmt.Errorf("apply %s: %w", m.Version, err)
+			return Status{}, fmt.Errorf("применение %s: %w", m.Version, err)
 		}
 		if legacyID {
 			_, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(id,version,checksum,description,applied_at) VALUES($1,$1,$2,$3,$4)`, m.Version, m.Checksum, m.Description, time.Now().UTC())

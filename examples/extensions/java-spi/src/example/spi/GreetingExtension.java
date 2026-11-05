@@ -47,7 +47,7 @@ public final class GreetingExtension implements Extension {
                     }
                     public void stop(ProviderContext p) { live=false; System.out.println("SPI_PROVIDER_STOP:" + id); }
                     public String greet(String name) {
-                        if(!live)throw new IllegalStateException("provider is stopped");
+                        if(!live)throw new IllegalStateException("провайдер остановлен");
                         return greeting.apply(name);
                     }
                 }));

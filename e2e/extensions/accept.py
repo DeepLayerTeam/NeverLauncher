@@ -135,7 +135,7 @@ def main():
                     audit.get('auditStatus') != 'evidence-present-not-certified' or
                     any(row.get('status') not in ('partial', 'blocked') or
                         row.get('sourceValidated') is not True for row in rows)):
-                raise RuntimeError('Gravit CLI audit failed to validate 19 explicit module outcomes')
+                raise RuntimeError('проверка CLI Gravit не смогла подтвердить 19 заданных результатов модулей')
             report['gravitMatrixAudit'] = {
                 'status': 'source-verified-not-equivalent', 'modules': 19,
                 'sha256': sha(ROOT / 'compatibility/gravit/module-parity-04211.json')}
@@ -155,7 +155,7 @@ def main():
         report['status'] = 'pass'
     except Exception as error:
         report['failure'] = str(error)
-        print(f'Extension acceptance failed closed: {error}', file=sys.stderr, flush=True)
+        print(f'Приёмка расширений завершилась отказом по принципу fail-closed: {error}', file=sys.stderr, flush=True)
         returncode = 1
     else:
         print(f"PASS: real extension E2E, signed packages and negative cases on {args.target}")

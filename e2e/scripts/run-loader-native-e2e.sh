@@ -16,16 +16,16 @@ SERVER_PORT="25580"
 MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_LOADER_NATIVE_CLIENT_SECONDS:-150}"
 PLAYER_USERNAME="NL_Cert_Client"
 
-case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-native] unsupported loader: $LOADER" >&2; exit 2 ;; esac
-[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[loader-native] invalid Minecraft version" >&2; exit 2; }
+case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-native] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
+[[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[loader-native] неверная версия Minecraft" >&2; exit 2; }
 [[ "$LOADER_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,95}$ ]] || { echo "[loader-native] immutable loader version is required" >&2; exit 2; }
 case "$(printf '%s' "$LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[loader-native] mutable loader selector is forbidden" >&2; exit 2 ;; esac
 [[ "$CLIENT_PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$ ]] || { echo "[loader-native] invalid client profile id" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[loader-native] Java major is required" >&2; exit 2; }
-[[ -x "$JAVA_BIN" ]] || { echo "[loader-native] target Java executable is unavailable: $JAVA_BIN" >&2; exit 2; }
+[[ -x "$JAVA_BIN" ]] || { echo "[loader-native] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
 [[ "$SERVER_PORT" =~ ^[0-9]+$ ]] && (( SERVER_PORT > 0 && SERVER_PORT < 65536 )) || { echo "[loader-native] invalid server port" >&2; exit 2; }
 [[ "$MAX_RUNTIME_SECONDS" =~ ^[0-9]+$ ]] && (( MAX_RUNTIME_SECONDS >= 15 )) || { echo "[loader-native] invalid client runtime" >&2; exit 2; }
-for cmd in docker python3 cargo xvfb-run sha256sum jq; do command -v "$cmd" >/dev/null 2>&1 || { echo "[loader-native] required command missing: $cmd" >&2; exit 1; }; done
+for cmd in docker python3 cargo xvfb-run sha256sum jq; do command -v "$cmd" >/dev/null 2>&1 || { echo "[loader-native] отсутствует необходимая команда: $cmd" >&2; exit 1; }; done
 docker compose version >/dev/null
 
 case "$LOADER" in

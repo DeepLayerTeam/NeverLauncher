@@ -145,7 +145,7 @@ def log_health(client_dir, runtime_log, loader):
         return True, "vanilla: no mod-loader bootstrap required"
     pattern = LOADER.get(loader)
     if pattern is None:
-        return False, "unsupported signed loader: " + loader
+        return False, "неподдерживаемый подписанный загрузчик: " + loader
     return bool(pattern.search(combined)), (
         "loader bootstrap log observed"
         if pattern.search(combined)
@@ -227,7 +227,7 @@ class StartupObserver:
 
         caps = evaluate("gui", java_binary)
         if caps["status"] != "ready":
-            self.blocked = "; ".join(caps["blockers"]) or "GUI capability probe blocked"
+            self.blocked = "; ".join(caps["blockers"]) or "проверка возможностей графического интерфейса заблокирована"
 
     def tick(self):
         if self.blocked or self.failure or time.monotonic() - self.last_probe < 2:
@@ -318,7 +318,7 @@ class StartupObserver:
         ):
             return "failed", "Minecraft window disappeared or stopped responding"
         if not launch.get("timed_out") and not launch.get("success"):
-            return "failed", "Minecraft JVM failed before startup validation completed"
+            return "failed", "JVM Minecraft завершилась с ошибкой до окончания проверки запуска"
         return (
             "passed",
             f"game window PID {self.window_pid}, renderer frames and main-menu controls observed; {detail}",

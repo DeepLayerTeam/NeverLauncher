@@ -23,7 +23,7 @@ def require(ok, why):
         raise EvidenceError(why)
 
 def read(path):
-    require(path.is_file() and not path.is_symlink() and 0 < path.stat().st_size <= 2*1024*1024, f'missing/unsafe receipt: {path}')
+    require(path.is_file() and not path.is_symlink() and 0 < path.stat().st_size <= 2*1024*1024, f'отсутствующее или небезопасное подтверждение: {path}')
     obj = json.loads(path.read_text('utf-8'))
     require(isinstance(obj, dict), f'Подтверждение не является объектом: {path}')
     return obj

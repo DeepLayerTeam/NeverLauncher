@@ -77,7 +77,7 @@ func main() {
 	client := &http.Client{Timeout: 12 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	result, err := certify02512(ctx, client, opt)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "texture compatibility FAILED:", err)
+		fmt.Fprintln(os.Stderr, "проверка совместимости текстур НЕ ПРОЙДЕНА:", err)
 		os.Exit(1)
 	}
 	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {

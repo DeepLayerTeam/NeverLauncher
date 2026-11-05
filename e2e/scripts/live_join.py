@@ -68,7 +68,7 @@ def atomically_write(path, payload):
 def load_pinned_bundle(args):
     if args.loader == 'vanilla' and not args.pins:
         return '', '', '', ''
-    require(bool(args.pins), 'dedicated loader/legacy server bundle pins required; no bundle = BLOCKED')
+    require(bool(args.pins), 'для загрузчиков и устаревших серверов нужны закреплённые пакеты; без пакета статус BLOCKED')
     manifest = read_json(Path(args.pins).resolve())
     require(manifest.get('schema') == 'neverlauncher.compatibility-server/0.52.4', 'Схема закреплённых параметров сервера не совпадает')
     targets = manifest.get('targets')

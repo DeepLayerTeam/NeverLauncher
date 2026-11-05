@@ -13,7 +13,7 @@ if [[ -n "$PORT" ]]; then
   PUBLISH_PORT="127.0.0.1:${PORT}:5432"
 fi
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "[admin-hardening-02112] required command missing: $1" >&2; exit 1; }; }
+need() { command -v "$1" >/dev/null 2>&1 || { echo "[admin-hardening-02112] отсутствует необходимая команда: $1" >&2; exit 1; }; }
 for cmd in docker go; do need "$cmd"; done
 
 # Сохраняйте журналы ошибок в постоянном каталоге артефактов. Не
@@ -52,14 +52,14 @@ for attempt in 1 2 3; do
     fi
     echo "[admin-hardening-02112] PostgreSQL exited immediately after container creation" >&2
   else
-    echo "[admin-hardening-02112] docker run failed (attempt $attempt/3)" >&2
+    echo "[admin-hardening-02112] сбой docker run (попытка $attempt/3)" >&2
   fi
   cat "$START_LOG" >&2
   postgres_diagnostics
   if (( attempt < 3 )); then sleep "$attempt"; fi
 done
 if [[ "$STARTED" != true ]]; then
-  echo "[admin-hardening-02112] unable to start PostgreSQL after 3 attempts" >&2
+  echo "[admin-hardening-02112] не удалось запустить PostgreSQL после трёх попыток" >&2
   exit 1
 fi
 

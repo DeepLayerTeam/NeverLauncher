@@ -62,7 +62,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    assert JAR.is_file(), "build.sh must run first"
+    assert JAR.is_file(), "сначала необходимо выполнить build.sh"
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     env = dict(os.environ,
@@ -82,12 +82,12 @@ def main():
         deadline = time.monotonic() + 10
         while Handler.readies < 1 and child.poll() is None and time.monotonic() < deadline:
             time.sleep(0.05)
-        assert child.poll() is None and Handler.hellos == Handler.readies == 1, f"host did not reach ready: {child.poll()}"
+        assert child.poll() is None and Handler.hellos == Handler.readies == 1, f"хост не перешёл в состояние готовности: {child.poll()}"
         # Реально выполненный Extension.start() обязан разрешить вложенный байткод.
         deadline = time.monotonic() + 5
         while Handler.beats == 0 and child.poll() is None and time.monotonic() < deadline:
             time.sleep(0.05)
-        assert Handler.beats >= 1 and child.poll() is None, "live host heartbeat failed"
+        assert Handler.beats >= 1 and child.poll() is None, "не удалось получить сигнал работоспособности активного хоста"
         req = urllib.request.Request(Handler.callback + "/v1/rpc", headers={"Authorization": "Bearer callback-0482", "Content-Type": "application/json"},
             data=json.dumps({"protocolVersion": "1.0", "requestId": "p-0482", "method": "health", "params": {}, "deadlineMs": 1000}).encode())
         with urllib.request.urlopen(req, timeout=3) as reply:

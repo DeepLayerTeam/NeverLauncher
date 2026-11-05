@@ -14,7 +14,7 @@ BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "[guard-migration-e2e] required command missing: $1" >&2; exit 1; }; }
+need() { command -v "$1" >/dev/null 2>&1 || { echo "[guard-migration-e2e] отсутствует необходимая команда: $1" >&2; exit 1; }; }
 for cmd in docker psql go python3 sha256sum jq; do need "$cmd"; done
 docker compose version >/dev/null
 

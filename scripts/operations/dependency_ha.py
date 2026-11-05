@@ -365,7 +365,7 @@ def health(stats_result, *, redundant=True):
         if len(up) < minimum:
             issues.append(backend + ' has insufficient live healthy endpoints')
         if backend in ('postgres_primary', 'redis_primary') and len(up) != 1:
-            issues.append(backend + ' must have exactly one writable primary (split-brain or no leader)')
+            issues.append(backend + ' должен быть ровно один доступный для записи основной узел (разделение кластера или отсутствие лидера)')
     return {'backends': counts, 'issues': issues, 'healthy': not issues,
             'scope': 'HAProxy live backend checks; not standalone proof of storage durability or upstream quorum'}
 

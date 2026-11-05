@@ -532,7 +532,7 @@ def main(argv=None):
                 "Недопустимый абсолютный путь развёртывания или проект")
         if args.action == "cluster-roll":
             require(args.allow_update and args.pg_dsn_file and args.edge_url,
-                    "cluster-roll requires --allow-update --pg-dsn-file --edge-url")
+                    "для cluster-roll необходимы --allow-update, --pg-dsn-file и --edge-url")
             result = rollout(args)
         else:
             directory = Path(args.directory)

@@ -107,7 +107,7 @@ def main():
         assert Handler.storage>=1
         deadline=time.monotonic()+6
         while Handler.beats==0 and time.monotonic()<deadline: time.sleep(.05)
-        assert Handler.beats>0,'missing authenticated heartbeat'
+        assert Handler.beats>0,'отсутствует аутентифицированное сообщение о работоспособности'
         child.terminate()
         out,err=child.communicate(timeout=8)
         assert child.returncode in (0,143,-15),(out,err,child.returncode)

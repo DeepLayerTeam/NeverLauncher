@@ -171,7 +171,7 @@ def load_json(path: Path) -> dict:
     except Exception as exc:
         die(f"{path}: invalid JSON: {exc}")
     if not isinstance(data, dict):
-        die(f"{path}: root must be object")
+        die(f"{path}: корневое значение должно быть объектом")
     return data
 
 
@@ -264,7 +264,7 @@ def main() -> int:
         field = HASH_FIELDS[target]
         values = policy.get(field)
         if values != [digest]:
-            die(f"{target}: {field} must contain exactly the built JAR SHA-256")
+            die(f"{target}: {field} должен содержать только SHA-256 собранного JAR")
         if digest in seen_hashes:
             die(
                 f"{target}: artifact bytes are identical to {seen_hashes[digest]} (platform-matched release required)"
@@ -285,7 +285,7 @@ def main() -> int:
                     ]
                     if len(nested) != 1:
                         die(
-                            f"{target}: expected exactly one embedded bridge-common JAR"
+                            f"{target}: ожидался ровно один встроенный JAR bridge-common"
                         )
                     import io
 

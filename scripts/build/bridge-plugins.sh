@@ -83,7 +83,7 @@ done
 for platform in bukkit spigot paper purpur folia; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/bukkit/BukkitFamilyBridgePlugin.class$' || {
-    echo "[Launcher] Bukkit-family runtime classes missing from $(basename "$artifact")" >&2
+    echo "[Launcher] в файле отсутствуют классы Runtime семейства Bukkit: $(basename "$artifact")" >&2
     exit 1
   }
 done

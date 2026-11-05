@@ -33,24 +33,24 @@ public final class ServerBridgeServices {
     }
     private static String id(String value,String name) {
         if(value==null||!value.matches("[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"))
-            throw new IllegalArgumentException("invalid " + name);
+            throw new IllegalArgumentException("Недопустимый параметр: " + name);
         return value;
     }
     private static String str(Map<String,Object> m,String k){
         Object v=m.get(k);
         if(v==null)return "";
-        if(!(v instanceof String s))throw new IllegalArgumentException("invalid "+k);
+        if(!(v instanceof String s))throw new IllegalArgumentException("Недопустимое значение поля: "+k);
         return s;
     }
     private static String required(Map<String,Object> m,String k){return id(str(m,k),k);}
     private static long numeric(Map<String,Object> m,String k){
         Object v=m.get(k);
         if(!(v instanceof Number n)||n.doubleValue()!=n.longValue()||n.longValue()<0)
-            throw new IllegalArgumentException("invalid "+k);
+            throw new IllegalArgumentException("Недопустимое значение поля: "+k);
         return n.longValue();
     }
     private static int integer(Map<String,Object> m,String k){
-        long n=numeric(m,k);if(n>Integer.MAX_VALUE)throw new IllegalArgumentException("overflow "+k);
+        long n=numeric(m,k);if(n>Integer.MAX_VALUE)throw new IllegalArgumentException("Переполнение: "+k);
         return (int)n;
     }
     private static Server decodeServer(Map<String,Object> m){

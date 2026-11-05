@@ -176,7 +176,7 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "serverbridge-host-intent-" + stored.ID, Actor: stored.RequestedBy, Action: "serverbridge:host:intent:" + stored.Action, Target: stored.ServerID + ":" + stored.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	receipt, runErr := client.Execute(ctx, action, hostOperationWireKey0413(stored.ID))
 	if runErr != nil {
-		stored.Error = "remote command outcome unknown: " + runErr.Error()
+		stored.Error = "результат удалённой команды неизвестен: " + runErr.Error()
 	} else {
 		stored.RemoteReceipt, _ = json.Marshal(receipt)
 		if receipt.State == "indeterminate" {

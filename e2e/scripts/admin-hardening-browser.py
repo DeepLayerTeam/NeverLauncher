@@ -19,7 +19,7 @@ def required(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
         raise SystemExit(
-            f"[admin-hardening-02112]: отсутствует {name}; cannot certify browser E2E"
+            f"[admin-hardening-02112]: отсутствует {name}; невозможно подтвердить браузерный E2E"
         )
     return value
 
@@ -95,7 +95,7 @@ async def main():
                     "meta[name=launcher-source-commit]"
                 ).get_attribute("content")
                 assert source == expected_commit, (
-                    "Admin staging bundle source commit does not match candidate SHA"
+                    "коммит исходников подготовленного пакета Admin не совпадает с SHA кандидата"
                 )
             await page1.get_by_text("Черновики проекта").first.wait_for(timeout=20000)
             headers = {
@@ -199,7 +199,7 @@ async def main():
                 )
                 if deleted.status != 200:
                     print(
-                        f"[admin-hardening-02112] warning: failed to clean draft {draft_id}: {deleted.status}"
+                        f"[admin-hardening-02112] предупреждение: не удалось удалить черновик {draft_id}: {deleted.status}"
                     )
             await ctx.close()
         finally:

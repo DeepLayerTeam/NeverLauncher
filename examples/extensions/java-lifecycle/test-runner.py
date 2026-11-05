@@ -102,14 +102,14 @@ if __name__ == "__main__":
         while time.monotonic() < end and Handler.heartbeats < 1 and proc.poll() is None:
             time.sleep(0.1)
         assert proc.poll() is None and Handler.hello == 1 and Handler.heartbeats >= 1, (
-            "Java extension failed to negotiate and heartbeat"
+            "Java-расширение не смогло согласовать подключение и отправить сигнал работоспособности"
         )
         if os.name == "nt":
             # Windows TerminateProcess не выполняет обработчик завершения JVM. Проверьте
             # тот же lifecycle.stop() при неудачном heartbeat хоста.
             Handler.allow_heartbeat = False
             out, err = proc.communicate(timeout=12)
-            assert proc.returncode != 0, "lost host heartbeat should fail closed"
+            assert proc.returncode != 0, "при потере сигнала работоспособности хоста операция должна блокироваться"
         else:
             proc.send_signal(signal.SIGTERM)
             out, err = proc.communicate(timeout=6)
@@ -117,7 +117,7 @@ if __name__ == "__main__":
                 f"Java extension exited with {proc.returncode}: {err}"
             )
         assert "Java extension started" in out and "Java extension stopped" in out, (
-            f"lifecycle callbacks missing: {out}"
+            f"отсутствуют обратные вызовы жизненного цикла: {out}"
         )
         if os.name != "nt":
             assert not err.strip(), f"unexpected Java extension stderr: {err}"

@@ -385,7 +385,7 @@ func (h *Handle) Started() error {
 		}
 		s := strings.TrimSpace(string(buf[:n]))
 		if !strings.HasPrefix(s, "ready ") {
-			ready <- fmt.Errorf("sandbox-macos-helper-refused: %.110s", s)
+			ready <- fmt.Errorf("помощник изоляции macOS отклонил операцию: %.110s", s)
 			return
 		}
 		pid, e := strconv.Atoi(strings.TrimPrefix(s, "ready "))

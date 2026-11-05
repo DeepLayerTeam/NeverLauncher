@@ -196,7 +196,7 @@ if __name__ == "__main__":
             urllib.request.urlopen(request, timeout=3)
             raise AssertionError("Обработчик Java ошибочно принял некорректную схему события")
         except urllib.error.HTTPError as exc:
-            assert exc.code == 422, f"wrong invalid-event status: {exc.code}"
+            assert exc.code == 422, f"неверный статус недопустимого события: {exc.code}"
         with Handler.lock:
             assert Handler.state.get(("storage", "last-release")) == {
                 "version": "42.1.0"
@@ -215,7 +215,7 @@ if __name__ == "__main__":
             "version": "42.1.0"
         }, data
         assert Handler.hello == 2, (
-            "both JVM processes must authenticate with Go-compatible host protocol"
+            "оба процесса JVM должны проходить аутентификацию через совместимый с Go протокол хоста"
         )
         # Остановка здорового Backend не должна удалять долговечную подписку.
         p.send_signal(signal.SIGTERM)
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         ):
             time.sleep(0.05)
         assert restored.poll() is None and Handler.subscribed and Handler.callback, (
-            "backend failed to re-register durable subscription"
+            "Backend не смог повторно зарегистрировать постоянную подписку"
         )
         # Состоянием брокера владеет Go, а не любая из JVM Java: данные остаются доступными
         # после замены процесса, а новое событие снова их обновляет.
@@ -274,12 +274,12 @@ if __name__ == "__main__":
             timeout=12,
         )
         assert second_cli.returncode == 0, (
-            f"CLI after backend restart failed: {second_cli.stderr}"
+            f"CLI завершился с ошибкой после перезапуска Backend: {second_cli.stderr}"
         )
         assert json.loads(second_cli.stdout.strip())["lastRelease"] == {
             "version": "42.3.0"
         }
-        assert Handler.hello == 4, "each fresh JVM must authenticate with the host"
+        assert Handler.hello == 4, "каждая новая JVM должна проходить аутентификацию на хосте"
         assert Handler.removed == 0, (
             "normal lifecycle removed a persistent subscription"
         )

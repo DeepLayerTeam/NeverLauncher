@@ -1132,7 +1132,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) []error {
 		item, exists := desired[key.String()]
 		if !exists || item.CurrentState != model.ExtensionInstallStateEnabled || !item.Enabled || status.Version != item.CurrentVersion || status.Generation != item.Generation {
 			if err := s.Stop(ctx, key); err != nil {
-				errs = append(errs, fmt.Errorf("stop %s: %w", key.ExtensionID, err))
+				errs = append(errs, fmt.Errorf("остановка %s: %w", key.ExtensionID, err))
 			}
 		}
 	}
