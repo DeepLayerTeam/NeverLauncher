@@ -14,7 +14,7 @@ import (
 func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	projectID := strings.TrimSpace(r.URL.Query().Get("projectId"))
@@ -23,7 +23,7 @@ func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.authorizeClaims(r, claims, "project:read", projectID, "project", projectID).Allowed {
-		writeError(w, http.StatusForbidden, "project access denied")
+		writeError(w, http.StatusForbidden, "Доступ к проекту запрещён")
 		return
 	}
 	status := strings.TrimSpace(r.URL.Query().Get("status"))

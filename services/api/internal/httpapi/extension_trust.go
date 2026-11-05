@@ -60,7 +60,7 @@ func (s Server) extensionTrustPolicyGet02012(w http.ResponseWriter, r *http.Requ
 func (s Server) extensionTrustPolicyPut02012(w http.ResponseWriter, r *http.Request) {
 	var req trustPolicyWrite02012
 	if err := decodeSingleJSON0203(r, &req); err != nil {
-		writeError(w, 400, "invalid trust policy: "+err.Error())
+		writeError(w, 400, "Некорректная политика доверия: "+err.Error())
 		return
 	}
 	p, err := s.Repo.SaveExtensionTrustPolicy(r.Context(), model.ExtensionTrustPolicy{Mode: req.Mode, AllowedPublishers: req.AllowedPublishers})
@@ -70,7 +70,7 @@ func (s Server) extensionTrustPolicyPut02012(w http.ResponseWriter, r *http.Requ
 	}
 	blocked, sweepErr := s.enforceExtensionTrustRuntime02012(r.Context(), "trust-policy")
 	if sweepErr != nil {
-		writeError(w, 500, "trust policy saved but runtime enforcement failed: "+sweepErr.Error())
+		writeError(w, 500, "Политика доверия сохранена, но применение в Runtime завершилось ошибкой: "+sweepErr.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:trust:policy", p.Mode)
@@ -81,7 +81,7 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 	fingerprint := strings.ToLower(strings.TrimSpace(r.PathValue("fingerprint")))
 	key, err := s.Repo.RevokeExtensionRegistryPublisherKey(r.Context(), publisher, fingerprint)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "publisher key not found")
+		writeError(w, 404, "Ключ издателя не найден")
 		return
 	}
 	if err != nil {
@@ -93,7 +93,7 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 	versions, listErr := s.Repo.SearchExtensionRegistry(r.Context(), model.ExtensionRegistrySearch{IncludeYanked: true})
 	var quarantineErr error
 	if listErr != nil {
-		quarantineErr = fmt.Errorf("list signed artifacts for quarantine: %w", listErr)
+		quarantineErr = fmt.Errorf("Ошибка получения списка подписанных артефактов для карантина: %w", listErr)
 	} else {
 		for _, item := range versions {
 			if item.PublisherID != publisher || item.Artifact.SignatureKeyFingerprint != fingerprint {
@@ -156,18 +156,18 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 		var trustErr error
 		if err == nil {
 			if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
-				trustErr = errors.New("installed package identity does not match registry")
+				trustErr = errors.New("Идентичность установленного пакета не соответствует реестру")
 			} else {
 				decision, trustErr = extensiontrust.EvaluatePublication(ctx, s.Repo, publication)
 			}
 		} else if signed {
-			trustErr = errors.New("signed installation is missing its registry publication")
+			trustErr = errors.New("Для подписанной установки отсутствует запись о публикации в реестре")
 		}
 		if !quarantined && trustErr == nil && (err != nil || decision.Allowed) {
 			continue
 		}
 		if quarantined && trustErr == nil {
-			trustErr = errors.New("installed package is quarantined")
+			trustErr = errors.New("Установленный пакет находится в карантине")
 		}
 		reason := "extension trust rejected active installation"
 		if trustErr != nil {
@@ -184,7 +184,7 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 		}
 		if s.ExtensionHost != nil {
 			if stopErr := s.ExtensionHost.Stop(ctx, extensionhostKey02012(install.ExtensionID, scope)); stopErr != nil && !errors.Is(stopErr, extensionhost.ErrHostNotRunning) && !errors.Is(stopErr, repository.ErrNotFound) {
-				return blocked, fmt.Errorf("extension blocked persistently but host stop failed: %w", stopErr)
+				return blocked, fmt.Errorf("Расширение заблокировано постоянно, но остановить Host не удалось: %w", stopErr)
 			}
 		}
 		if _, err := s.lifecycleManager0204().Disable(ctx, install.ExtensionID, scope); err != nil && !errors.Is(err, repository.ErrNotFound) {

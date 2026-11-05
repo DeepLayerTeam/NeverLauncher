@@ -45,7 +45,7 @@ jobs:
           go-version-file: prestarter/go.mod
           cache-dependency-path: prestarter/go.sum
           cache: false
-      - name: Run genuine TLS network cut/resume and signed installer generation rollback
+      - name: Запустить подлинные TLS сети cut/resume и подписанных установщика generation отката
         working-directory: prestarter
         shell: bash
         run: |
@@ -53,14 +53,14 @@ jobs:
           go test -count=1 . -run 'Test(TLSDownloadInterruptedResumeExactSHA0527|TLSResumeRejectsWrongServerValidator0527)'
           go test -count=1 ./installer -run 'Test(InstallerRollback.*0527|InstallRepairUninstallKeepsGameData|TamperedSignedBundleRejected)'
           go build ./cmd/installer
-      - name: Run real updater stage/hash/recovery regressions and CLI compile
+      - name: Запустить реальные механизма обновления stage/hash/восстановления регрессии и Компиляция CLI
         working-directory: cli
         shell: bash
         run: |
           set -euo pipefail
           go test -count=1 ./cmd/launcher -run 'Test(Updater.*0527|TransactionalUpdater)'
           go build ./cmd/launcher
-      - name: Validate physical runner rejects malformed inputs
+      - name: Проверить physical исполнителя rejects malformed входных данных
         if: runner.os == 'Linux'
         run: |
           python3 -m unittest scripts/acceptance/test_install_upgrade_repair_0527.py -v
@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Execute signed old/new installers, real disconnect/ENOSPC, repair, rollback
+      - name: Выполнить подписанных old/новых installers, реального disconnect/ENOSPC, repair, отката
         env:
           NL_INSTALLER: ${{ vars.NL_0527_INSTALLER }}
           NL_INSTALLER_SHA256: ${{ vars.NL_0527_INSTALLER_SHA256 }}

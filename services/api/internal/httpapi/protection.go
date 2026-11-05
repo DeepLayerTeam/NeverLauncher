@@ -134,7 +134,7 @@ func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.Repo.GetUser(userID); err != nil {
-		writeError(w, http.StatusNotFound, "account not found")
+		writeError(w, http.StatusNotFound, "Учётная запись не найдена")
 		return
 	}
 	var input protectionBanInput0298

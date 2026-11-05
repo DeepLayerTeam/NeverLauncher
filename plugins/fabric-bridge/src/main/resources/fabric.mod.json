@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "launcher_fabric_bridge",
   "version": "${version}",
-  "name": "Launcher Fabric Server Bridge",
+  "name": "Серверный мост Launcher для Fabric",
   "description": "Серверная интеграция Launcher ServerBridge для Fabric 1.21.1.",
-  "authors": ["Launcher Team"],
+  "authors": ["Команда Launcher"],
   "license": "Apache-2.0",
   "environment": "server",
   "entrypoints": {

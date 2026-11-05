@@ -113,10 +113,10 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if ver.Manifest.Desktop == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension does not declare desktop contributions")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("Расширение не объявляет компоненты интерфейса Desktop")
 	}
 	if _, ok := desktopTarget0209(ver.Manifest); !ok {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension does not declare desktop target")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("Расширение не объявляет Desktop в качестве целевой среды")
 	}
 	if s.ExtensionSecurity == nil {
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("Недоступно: безопасность расширений")
@@ -142,7 +142,7 @@ func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Reque
 	}
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, 401, "invalid session")
+		writeError(w, 401, "Недействительная сессия")
 		return
 	}
 	installs, err := s.Repo.ListExtensionInstallStates(r.Context(), "", "")
@@ -193,7 +193,7 @@ func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Reque
 
 func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	scope, scopeID := securityScope0207(r)
@@ -204,7 +204,7 @@ func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Re
 	}
 	claims, _ := s.verifyAdminTokenFromRequest(r)
 	if install.Scope == "project" && !s.canAccessProject(claims, install.ScopeID) {
-		writeError(w, 403, "project access denied")
+		writeError(w, 403, "Доступ к проекту запрещён")
 		return
 	}
 	target, _ := desktopTarget0209(manifest)
@@ -221,7 +221,7 @@ func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Re
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			writeError(w, 404, "desktop entrypoint not found")
+			writeError(w, 404, "Точка входа Desktop не найдена")
 		} else {
 			writeError(w, 500, err.Error())
 		}
@@ -232,7 +232,7 @@ func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Re
 
 func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	scope, scopeID := securityScope0207(r)
@@ -243,11 +243,11 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	}
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, 401, "invalid session")
+		writeError(w, 401, "Недействительная сессия")
 		return
 	}
 	if install.Scope == "project" && !s.canAccessProject(claims, install.ScopeID) {
-		writeError(w, 403, "project access denied")
+		writeError(w, 403, "Доступ к проекту запрещён")
 		return
 	}
 	var req desktopExtensionRPCRequest0209
@@ -328,7 +328,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 			ProjectID string `json:"projectId"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || !projectAllowed(strings.TrimSpace(p.ProjectID)) {
-			respond(nil, errors.New("project access denied"))
+			respond(nil, errors.New("Доступ к проекту запрещён"))
 			return
 		}
 		if e := allow("project:read", p.ProjectID); e != nil {
@@ -345,7 +345,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 			ProjectID string `json:"projectId"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || !projectAllowed(strings.TrimSpace(p.ProjectID)) {
-			respond(nil, errors.New("project access denied"))
+			respond(nil, errors.New("Доступ к проекту запрещён"))
 			return
 		}
 		if e := allow("release:read", p.ProjectID); e != nil {
@@ -405,7 +405,7 @@ func (s Server) extensionCLICatalog0209(w http.ResponseWriter, r *http.Request) 
 
 func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	if s.ExtensionHost == nil {

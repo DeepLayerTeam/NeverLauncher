@@ -4,7 +4,7 @@
     "group": "ru.launcher",
     "id": "launcher_quilt_bridge",
     "version": "${version}",
-    "metadata": {"name": "Launcher Quilt Server Bridge", "description": "Адаптер ServerBridge для Quilt Loader"},
+    "metadata": {"name": "Серверный мост Launcher для Quilt", "description": "Адаптер ServerBridge для Quilt Loader"},
     "depends": [
       {"id": "quilt_loader", "versions": ">=0.26.0"},
       {"id": "minecraft", "versions": "~1.21.1"}

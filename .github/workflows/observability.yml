@@ -23,19 +23,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run real incident ZIP and webhook configuration regressions
+      - name: Запустить реальные incident ZIP и webhook конфигурации регрессии
         run: |
           set -euo pipefail
           python3 -m unittest scripts/operations/test_observability_0459.py -v
           python3 -m py_compile scripts/operations/observability_0459.py
           python3 scripts/version/manage.py check
-      - name: Validate Prometheus configuration and alerts with promtool
+      - name: Проверить конфигурацию Prometheus и оповещения через promtool
         run: |
           set -euo pipefail
           docker run --rm -v "$PWD/deploy/production/monitoring:/etc/prometheus:ro" --entrypoint /bin/promtool prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus-standard.yml
           docker run --rm -v "$PWD/deploy/production/monitoring:/etc/prometheus:ro" --entrypoint /bin/promtool prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus-network-ha.yml
           docker run --rm -v "$PWD/deploy/production/monitoring:/etc/prometheus:ro" --entrypoint /bin/promtool prom/prometheus:v2.55.1 check rules /etc/prometheus/alerts.yml
-      - name: Validate actual Alertmanager config and Compose overlay
+      - name: Проверить реальную конфигурацию Alertmanager и слой Compose
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/monitor"
@@ -50,7 +50,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Test actual HTTP status/correlation and worker readiness
+      - name: тестировать реального HTTP статуса/correlation и воркера готовности
         working-directory: services/api
         run: |
           set -euo pipefail

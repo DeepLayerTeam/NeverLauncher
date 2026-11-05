@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run fail-closed GA, release and signature regressions
+      - name: Запустить блокировка при ошибке GA, релиза и подписи регрессии
         shell: bash
         run: |
           set -euo pipefail
@@ -78,7 +78,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=42,<47'
-      - name: Freeze six actual final package bytes, signed by release authority
+      - name: Freeze шести реального финального пакета байтов, подписанных с релиза authority
         shell: bash
         run: |
           set -euo pipefail
@@ -133,7 +133,7 @@ jobs:
         with:
           name: ga0530-freeze-${{ inputs.source_commit }}
           path: ${{ runner.temp }}/ga0530-freeze
-      - name: Execute live E2E-01 to E2E-18 on independent physical/game lab
+      - name: Выполнить реальные E2E-01 для E2E-18 на независимая physical/игры лаборатории
         shell: bash
         run: |
           set -euo pipefail
@@ -157,7 +157,7 @@ jobs:
             --verifier-key "$VERIFIER_KEY" --verifier-pin "$VERIFIER_PIN" \
             --ga-report "$RUNNER_TEMP/ga0530-review/unused-ga.json" \
             --ga-sig "$RUNNER_TEMP/ga0530-review/unused-ga.sig"
-      - name: Preserve QA signature (raw private evidence is transferred via protected lab transport)
+      - name: Сохранить подпись QA (закрытые исходные подтверждения передаются по защищённому каналу лаборатории)
         uses: actions/upload-artifact@v4
         with:
           name: ga0530-qa-${{ inputs.source_commit }}
@@ -201,7 +201,7 @@ jobs:
         with:
           name: ga0530-qa-${{ inputs.source_commit }}
           path: ${{ runner.temp }}/ga0530-qa
-      - name: Replay original signed 280/native/soak/build and all 18 real E2E results
+      - name: Воспроизвести исходных подписанных 280/нативного/soak/сборку и все 18 реального E2E результатов
         shell: bash
         run: |
           set -euo pipefail
@@ -228,7 +228,7 @@ jobs:
             --ga-sig "$RUNNER_TEMP/ga0530-final/approval.sig"
           cp -- "$INBOX/source-index.json" "$RUNNER_TEMP/ga0530-final/source-index.json"
           cp -a -- "$INBOX/packages" "$RUNNER_TEMP/ga0530-final/packages"
-      - name: Publish exact independently certified unsigned-to-final binding for protected release
+      - name: Опубликовать точного независимо сертифицированных unsigned-to-final привязки для защищённые релиза
         uses: actions/upload-artifact@v4
         with:
           name: ga0530-final-${{ inputs.source_commit }}

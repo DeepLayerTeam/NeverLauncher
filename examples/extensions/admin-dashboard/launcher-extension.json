@@ -25,7 +25,7 @@
     "navigation": [
       {
         "id": "main-nav",
-        "label": "Admin Dashboard Example",
+        "label": "Пример панели администратора",
         "pageId": "main"
       }
     ],

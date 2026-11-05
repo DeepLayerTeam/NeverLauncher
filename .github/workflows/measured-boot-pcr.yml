@@ -25,10 +25,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: TPM quote cryptography and negative tests with race detector
+      - name: TPM quote cryptography и негативные тесты с детектор гонок
         working-directory: services/api
         run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline
-      - name: API and database packages compile
+      - name: Компиляция пакетов API и базы данных
         working-directory: services/api
         run: go test ./internal/httpapi ./internal/repository ./internal/dbmigrate -run '^$'
   windows-tpm-quote:
@@ -37,9 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: TPM Quote frame tests
+      - name: TPM Quote кадра тесты
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml measured_boot_0315_tests
-      - name: Full Windows native compile
+      - name: полные Windows нативного Скомпилировать
         run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
   linux-tpm-quote:
     runs-on: ubuntu-24.04
@@ -47,11 +47,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Linux native libraries
+      - name: Linux нативного библиотек
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
-      - name: TPM Quote frame and native CLI checks
+      - name: TPM Quote кадра и нативного CLI проверки
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml measured_boot_0315_tests
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Typecheck desktop
+      - name: Проверить типы Desktop
         working-directory: apps/desktop
         run: |
           npm ci

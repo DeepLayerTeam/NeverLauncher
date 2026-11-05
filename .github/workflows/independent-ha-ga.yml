@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run acceptance code and earlier HA regressions (not GA certification)
+      - name: Запустить приёмки code и earlier HA регрессии (не GA-сертификация)
         run: |
           set -euo pipefail
           python3 -m pip install 'PyYAML==6.0.3'
@@ -33,7 +33,7 @@ jobs:
             scripts/operations/test_cross_host_recovery_0519.py
           python3 -m py_compile scripts/operations/independent_ha_ga_0520.py scripts/operations/rolling_update_0520.py
           python3 scripts/version/manage.py check
-      - name: Ensure no CI fixture can print a false GA PASS
+      - name: Убедиться, что тестовые данные CI не могут выдать ложный статус GA PASS
         run: |
           set -euo pipefail
           set +e

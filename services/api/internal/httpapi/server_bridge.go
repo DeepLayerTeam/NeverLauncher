@@ -290,7 +290,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	if official {
 		store, ok := s.officialLinkStore0268()
 		if !ok {
-			writeError(w, http.StatusServiceUnavailable, "official identity store unavailable")
+			writeError(w, http.StatusServiceUnavailable, "Хранилище официальных идентификаторов недоступно")
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
@@ -298,7 +298,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		cancel()
 		req.OfficialMinecraftAccessToken = ""
 		if verifyErr != nil {
-			writeError(w, http.StatusForbidden, "official Minecraft identity not verified or linked")
+			writeError(w, http.StatusForbidden, "Официальная учётная запись Minecraft не проверена или не привязана")
 			return
 		}
 		officialProfile = model.MinecraftProfile{UUID: verified.ID, Name: verified.Name}
@@ -306,26 +306,26 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		req.IdentityRealm = "official"
 		required, guardErr := s.guardAttestationRequiredForSession0134(claims)
 		if guardErr != nil {
-			writeError(w, http.StatusPreconditionFailed, "Guard policy unavailable")
+			writeError(w, http.StatusPreconditionFailed, "Политика Guard недоступна")
 			return
 		}
 		var snapshot *minecraftIntegritySnapshot0135
 		if required {
 			challenge, consumeErr := s.consumeGuardLaunchTicket0134(r, claims, req.GuardAttestationTicket)
 			if consumeErr != nil {
-				writeError(w, http.StatusPreconditionFailed, "official launch attestation required")
+				writeError(w, http.StatusPreconditionFailed, "Требуется подтверждение официального запуска")
 				return
 			}
 			value, err := snapshotFromGuardLaunchTicket0135(challenge)
 			if err != nil {
-				writeError(w, http.StatusPreconditionFailed, "official launch integrity unavailable")
+				writeError(w, http.StatusPreconditionFailed, "Проверка целостности официального запуска недоступна")
 				return
 			}
 			snapshot = &value
 		}
 		proof, proofErr := officialJoinProof0397(claims.Sub, claims.SessionID, trust.TrustedDeviceID, trust.BindingEpoch, verified, snapshot, time.Now().UTC())
 		if proofErr != nil {
-			writeError(w, http.StatusPreconditionFailed, "official identity proof unavailable")
+			writeError(w, http.StatusPreconditionFailed, "Подтверждение официальной идентификации недоступно")
 			return
 		}
 		req.OfficialProof = proof
@@ -345,7 +345,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	var verifiedGuardTicket model.DeviceChallenge
 	if planPolicyRequired02412() && !continuousRequired {
-		writeError(w, http.StatusPreconditionFailed, "verified plan policy requires continuous Guard attestation")
+		writeError(w, http.StatusPreconditionFailed, "Политика проверенного плана требует непрерывного подтверждения Guard")
 		return
 	}
 	if continuousRequired {

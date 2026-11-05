@@ -27,13 +27,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned independent signature verifier
+      - name: Установить закреплённых независимая подписи верификатора
         run: python3 -m pip install cryptography==46.0.4
-      - name: Test signature tampering, stale/replayed approvals, blocked platform results
+      - name: тестировать подписи tampering, устаревших/replayed approvals, blocked платформы результатов
         run: PYTHONPATH=scripts/guard_ci python3 -m unittest scripts/guard_ci/test_guard_ga_0510.py -v
-      - name: Test version-specific real-package inventory
+      - name: Проверить инвентаризацию реальных пакетов конкретных версий
         run: python3 -m unittest discover -s scripts/release -p 'test_check_payload_0461.py' -v
-      - name: Test existing Guard shadow and frame evidence rejection
+      - name: тестировать существующих Guard shadow и кадра подтверждений отклонения
         run: python3 scripts/guard_ci/test_adversarial_pilot_05012.py
-      - name: Test existing six-native-game evidence verifier
+      - name: Проверить существующий верификатор подтверждений для шести нативных игровых платформ
         run: python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -v

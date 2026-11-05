@@ -36,21 +36,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Validate certification target definition
+      - name: Проверить сертификации целевой платформы definition
         shell: bash
         run: python3 scripts/compatibility/extensions_trust_02012.py validate
-      - name: Trust, malicious-package and crash-loop E2E
+      - name: Сквозные тесты доверия, вредоносных пакетов и циклических аварийных остановок
         shell: bash
         run: |
           (cd services/api && go test ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./cmd/launcher-api)
           (cd cli && go test ./internal/dbmigrate && go test ./cmd/launcher -run '^$')
-      - name: Build production binaries
+      - name: Собрать промышленной бинарных файлов
         shell: bash
         run: |
           (cd services/api && go build ./cmd/launcher-api)
           (cd cli && go build ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
-      - name: Write signed-by-run evidence input
+      - name: записи signed-by-run подтверждений input
         shell: bash
         run: |
           mkdir -p evidence
@@ -75,7 +75,7 @@ jobs:
           pattern: extensions-trust-evidence-*
           path: evidence-raw
           merge-multiple: true
-      - name: Aggregate fail-closed public matrix
+      - name: Объединить блокировка при ошибке публичной матрицы
         run: |
           python3 scripts/compatibility/extensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_TRUST_COMPATIBILITY.json --out-md EXTENSIONS_TRUST_COMPATIBILITY.md
       - uses: actions/upload-artifact@v4

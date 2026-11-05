@@ -21,7 +21,7 @@ func rollbackVersion0217(p rollbackPayload0217, jobID string) string {
 }
 func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p rollbackPayload0217) (model.ReleaseVersion, model.IntegrityCheckResult, error) {
 	if p.ProjectID != job.ProjectID || p.Channel != job.ResourceID || p.TargetID == "" || p.TargetManifestDigest == "" || p.TargetArtifactDigest == "" || p.ExpectedHeadRevision == nil {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback payload binding mismatch")
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Несовпадение привязки данных отката")
 	}
 	if err := s.workerAuthorized0217(ctx, job); err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
@@ -67,14 +67,14 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 		}
 	}
 	if target == nil || target.ProfileID != p.ProfileID || target.Channel != p.Channel || target.Version != p.ToVersion || target.Status != "published" {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback target is unavailable or not published")
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Целевой релиз для отката недоступен или не опубликован")
 	}
 	md, err := manifestDigest0212(target.Manifest)
 	if err != nil || md != p.TargetManifestDigest {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback source manifest drift")
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Манифест исходного релиза для отката изменился")
 	}
 	if err = s.verifyManifestSignature(target.Manifest); err != nil {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, fmt.Errorf("rollback source signature: %w", err)
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, fmt.Errorf("Подпись исходного релиза для отката: %w", err)
 	}
 	sourceFiles, err := s.Repo.ListFiles(p.ProjectID, target.ID)
 	if err != nil {
@@ -82,7 +82,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	}
 	fd, err := artifactDigest0212(sourceFiles)
 	if err != nil || fd != p.TargetArtifactDigest || len(sourceFiles) == 0 {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback source files drift")
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Файлы исходного релиза для отката изменились")
 	}
 	if created != nil && created.Status == "published" {
 		if !alreadyCommitted {
@@ -101,7 +101,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 		created = &newRelease
 	}
 	if created.ProjectID != p.ProjectID || created.ProfileID != p.ProfileID || created.Channel != p.Channel || created.Version != version {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback release identity conflict")
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Конфликт идентичности релиза отката")
 	}
 	files, err := s.Repo.ListFiles(p.ProjectID, created.ID)
 	if err != nil {
@@ -117,7 +117,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	for _, source := range sourceFiles {
 		if existing, ok := byPath[source.Path]; ok {
 			if existing.Size != source.Size || existing.SHA256 != source.SHA256 {
-				return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback copied file changed unexpectedly")
+				return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Скопированный файл отката неожиданно изменился")
 			}
 			continue
 		}
@@ -126,7 +126,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 		}
 		reader, size, openErr := s.Storage.Open(p.ProjectID, target.ID, source.Path)
 		if openErr != nil {
-			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, fmt.Errorf("rollback source storage: %w", openErr)
+			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, fmt.Errorf("Хранилище источника отката: %w", openErr)
 		}
 		_, copied, saveErr := s.Storage.Save(p.ProjectID, created.ID, source.Path, reader)
 		_ = reader.Close()
@@ -357,7 +357,7 @@ func (s Server) rollbackExecute0217(w http.ResponseWriter, r *http.Request) {
 	operation := operationRequest0217{Kind: durableRollbackKind0217, ProjectID: firstNonEmpty(req.ProjectID, queryDefault(r, "projectId", ""), queryDefault(r, "project", "")), ProfileID: firstNonEmpty(req.ProfileID, queryDefault(r, "profileId", "vanilla")), Channel: r.PathValue("channel"), ToVersion: firstNonEmpty(req.ToVersion, queryDefault(r, "toVersion", ""))}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	job, _, err := s.enqueueOperation0217(r, claims, operation)

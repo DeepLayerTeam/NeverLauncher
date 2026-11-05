@@ -19,7 +19,7 @@ func remoteKernelFence04112(dir string) (func(), error) {
 	}
 	if info, err := os.Lstat(path); err == nil {
 		if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-			return nil, errors.New("unsafe agent fence file")
+			return nil, errors.New("Небезопасный файл блокировки агента")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err

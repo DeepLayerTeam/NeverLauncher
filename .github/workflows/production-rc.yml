@@ -77,13 +77,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify RC scripts and canonical version
+      - name: Проверить RC скриптов и канонической версии
         run: |
           set -euo pipefail
           python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
           python3 scripts/version/manage.py check
           ( cd services/api && go mod download && go mod verify )
-      - name: Require a verified local SQLite filesystem
+      - name: Потребовать a подтверждённые локального SQLite файловой системы
         run: |
           set -euo pipefail
           install -d -m 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
@@ -91,7 +91,7 @@ jobs:
             ext2/ext3|ext4|xfs|btrfs) ;;
             *) echo 'RC BLOCKED: only a supported native ext4/xfs/btrfs volume is allowed' >&2; exit 2;;
           esac
-      - name: Start a real isolated MinIO S3 service
+      - name: Запустить a реального изолированных MinIO S3 service
         run: |
           set -euo pipefail
           docker run -d --name launcher-rc-minio \
@@ -119,11 +119,11 @@ jobs:
                            region_name=os.environ['LAUNCHER_RC_S3_REGION'])
           s3.create_bucket(Bucket=os.environ['LAUNCHER_RC_S3_BUCKET'])
           PY
-      - name: Execute strictly verified live release candidate tests
+      - name: Выполнить strictly подтверждённые реальные релиза кандидата тесты
         run: |
           set -euo pipefail
           python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/launcher-03216-rc.json"
-      - name: Upload actual passing RC test receipt only
+      - name: Загрузить артефакты реального passing RC тестировать квитанции только
         uses: actions/upload-artifact@v4
         with:
           name: launcher-03216-rc-${{ github.sha }}

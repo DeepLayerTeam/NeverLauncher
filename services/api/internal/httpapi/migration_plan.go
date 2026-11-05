@@ -94,7 +94,7 @@ func (s Server) migrationPlanGet0442(w http.ResponseWriter, r *http.Request) {
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {
@@ -145,7 +145,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {

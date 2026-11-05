@@ -27,7 +27,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache: false
 
-      - name: Resolve public matrix URL and release version
+      - name: Разрешить публичной матрицы URL и версии релиза
         shell: bash
         env:
           INPUT_MATRIX_URL: ${{ inputs.matrix_url }}
@@ -44,7 +44,7 @@ jobs:
           printf 'PUBLIC_MATRIX_URL=%s\n' "${MATRIX_URL}" >> "$GITHUB_ENV"
           printf 'PUBLIC_VERSION=%s\n' "${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Materialize external release trust inputs
+      - name: Материализовать внешнего релиза доверия входных данных
         shell: bash
         env:
           RELEASE_ROOT_PUBLIC_KEY_BASE64: ${{ secrets.LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64 }}
@@ -59,12 +59,12 @@ jobs:
           printf 'LAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/launcher-current-trust-policy.json" >> "$GITHUB_ENV"
           printf 'LAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/launcher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
 
-      - name: Build public E2E verifier
+      - name: Собрать публичный верификатор E2E
         working-directory: cli
         shell: bash
         run: go build -trimpath -ldflags "-s -w -X main.version=${PUBLIC_VERSION}" -o "$RUNNER_TEMP/nl" ./cmd/launcher
 
-      - name: Download and verify the public production release end-to-end
+      - name: Скачать и Проверить the публичной промышленного релиза сквозные
         shell: bash
         run: |
           set -euo pipefail
@@ -95,7 +95,7 @@ jobs:
             "$RUNNER_TEMP/nl" release production-verify "$RUNNER_TEMP/public-release"
           fi
 
-      - name: Upload public delivery E2E evidence
+      - name: Загрузить артефакты публичной доставки E2E подтверждений
         uses: actions/upload-artifact@v4
         with:
           name: launcher-public-delivery-e2e-${{ github.sha }}
@@ -103,7 +103,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Remove external trust material
+      - name: Удалить внешнего доверия материалов
         if: always()
         shell: bash
         run: |

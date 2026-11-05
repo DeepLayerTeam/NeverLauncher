@@ -24,20 +24,20 @@ const maxMultipartTexture0252 = texturepng.MaxEncodedBytes + 16*1024
 func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 	profile, user, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authenticated local Minecraft profile required")
+		writeError(w, http.StatusUnauthorized, "Необходим авторизованный локальный профиль Minecraft")
 		return
 	}
 	if _, ok := s.Repo.(repository.TextureUploadRepository0252); !ok || s.Storage == nil {
-		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище текстур недоступно")
 		return
 	}
 	kind := strings.ToLower(strings.TrimSpace(r.PathValue("kind")))
 	if kind != "skin" && kind != "cape" {
-		writeError(w, http.StatusBadRequest, "kind must be skin or cape")
+		writeError(w, http.StatusBadRequest, "Тип должен быть skin или cape")
 		return
 	}
 	if r.ContentLength > maxMultipartTexture0252 {
-		writeError(w, http.StatusRequestEntityTooLarge, "upload exceeds size limit")
+		writeError(w, http.StatusRequestEntityTooLarge, "Размер загрузки превышает ограничение")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartTexture0252)
@@ -51,7 +51,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 	sawFile := false
 	for count := 0; ; count++ {
 		if count >= 8 {
-			writeError(w, http.StatusBadRequest, "too many multipart parts")
+			writeError(w, http.StatusBadRequest, "Слишком много частей составного запроса")
 			return
 		}
 		part, nextErr := multipart.NextPart()
@@ -66,7 +66,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		if name == "file" {
 			if sawFile {
 				part.Close()
-				writeError(w, http.StatusBadRequest, "one PNG file required")
+				writeError(w, http.StatusBadRequest, "Необходимо передать один PNG-файл")
 				return
 			}
 			sawFile = true
@@ -77,7 +77,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if len(file) > texturepng.MaxEncodedBytes {
-				writeError(w, http.StatusRequestEntityTooLarge, "PNG exceeds size limit")
+				writeError(w, http.StatusRequestEntityTooLarge, "Размер PNG превышает ограничение")
 				return
 			}
 			continue
@@ -86,7 +86,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		case "model", "visibility", "expectedRevision", "profileUuid":
 		default:
 			part.Close()
-			writeError(w, http.StatusBadRequest, "unexpected multipart field")
+			writeError(w, http.StatusBadRequest, "Неожиданное поле составного запроса")
 			return
 		}
 		if _, duplicate := fields[name]; duplicate {
@@ -111,7 +111,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if fields["profileUuid"] != "" && minecraftID119(fields["profileUuid"]) != minecraftID119(profile.UUID) {
-		writeError(w, http.StatusForbidden, "Minecraft profile does not belong to account")
+		writeError(w, http.StatusForbidden, "Профиль Minecraft не принадлежит данной учётной записи")
 		return
 	}
 	revisionRaw, exists := fields["expectedRevision"]
@@ -164,7 +164,7 @@ func (s Server) textureBlobGet0252(w http.ResponseWriter, r *http.Request) {
 func (s Server) textureMineImage0252(w http.ResponseWriter, r *http.Request) {
 	profile, _, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	kind := r.PathValue("kind")
@@ -174,14 +174,14 @@ func (s Server) textureMineImage0252(w http.ResponseWriter, r *http.Request) {
 	}
 	repo, ok := s.textureRepository0251()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	items, err := repo.ListTextureAssignments0251(ctx, profile)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	for _, item := range items {
@@ -196,7 +196,7 @@ func (s Server) textureMineImage0252(w http.ResponseWriter, r *http.Request) {
 func (s Server) serveTextureBlob0252(w http.ResponseWriter, r *http.Request, digest string, profile model.MinecraftProfile, owner bool) {
 	repo, ok := s.Repo.(repository.TextureUploadRepository0252)
 	if !ok || s.Storage == nil {
-		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище текстур недоступно")
 		return
 	}
 	if len(digest) != 64 {

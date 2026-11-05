@@ -27,10 +27,10 @@ jobs:
         with: {go-version-file: cli/go.mod}
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21'}
-      - name: Real JVM and fixture Go tests
+      - name: Тесты настоящей JVM и тестовых данных Go
         run: go test -count=1 ./internal/devtools ./cmd/launcher -run 'Test(AnalyzeAndTransformJava|SuspiciousReferenceAndSignatures|JarZipTraversalRejected|RunProcessSanitized|RunTimeout|AuthFixtureIntegration|AuthExpiryAndListener|AuthTokenNotProductionJWT|DevTools03010)'
         working-directory: cli
-      - name: CLI build and vet
+      - name: CLI сборку и vet
         run: go build ./cmd/launcher && go vet ./internal/devtools ./cmd/launcher
         working-directory: cli
   linux-race-and-cli:
@@ -55,7 +55,7 @@ jobs:
         with: {go-version-file: cli/go.mod}
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21'}
-      - name: Install Linux OS sandbox and verify user namespaces
+      - name: Установить Linux ОС песочницы и Проверить пользователя пространств имён
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
       - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli

@@ -219,7 +219,7 @@ public final class LauncherForgeBridge {
         @Override
         public void start(ConfigurationTaskContext ctx) {
             if (username.isBlank()) {
-                ctx.getConnection().disconnect(Component.literal("Launcher could not resolve the login profile"));
+                ctx.getConnection().disconnect(Component.literal("Launcher не удалось определить игровой профиль"));
                 return;
             }
 
@@ -243,7 +243,7 @@ public final class LauncherForgeBridge {
         private void completeOnServerThread(ConfigurationTaskContext ctx, JoinValidationResult decision) {
             var server = ServerLifecycleHooks.getCurrentServer();
             if (server == null) {
-                ctx.getConnection().disconnect(Component.literal("Launcher server is not available"));
+                ctx.getConnection().disconnect(Component.literal("Сервер Launcher недоступен"));
                 return;
             }
 
@@ -281,7 +281,7 @@ public final class LauncherForgeBridge {
     private BridgeControlResult executeControl(net.minecraft.server.MinecraftServer server, BridgeControlCommand command) throws Exception {
         if (server == null) return BridgeControlResult.failed("minecraft_server_unavailable");
         if ("server.shutdown".equals(command.type())) {
-            String reason = safeLine(command.payload().getOrDefault("reason", "Shutdown requested by Launcher"), 512);
+            String reason = safeLine(command.payload().getOrDefault("reason", "Остановка по запросу Launcher"), 512);
             Thread thread = new Thread(() -> {
                 try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                 server.execute(() -> {
@@ -320,7 +320,7 @@ public final class LauncherForgeBridge {
                 if (!correlation.isBlank() && !runtime.matchesPlayerSession(username, correlation))
                     return BridgeControlResult.failed("player_session_changed");
                 if (!kickConfirmations.begin(username, player.getGameProfile().getId())) return BridgeControlResult.indeterminate("player_kick_already_pending");
-                try { player.connection.disconnect(Component.literal(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512))); }
+                try { player.connection.disconnect(Component.literal(safeLine(payload.getOrDefault("reason", "Отключено оператором сервера"), 512))); }
                 catch (RuntimeException e) { kickConfirmations.cancel(username); throw e; }
                 return BridgeControlResult.ok(Map.of("username", username, "uuid", uuid));
             }
@@ -344,7 +344,7 @@ public final class LauncherForgeBridge {
             case "ban.add", "ban.remove" -> {
                 String username = safeUsername(payload.get("username"));
                 boolean add = command.type().endsWith(".add");
-                String reason = add ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
+                String reason = add ? safeLine(payload.getOrDefault("reason", "Заблокировано оператором сервера"), 256) : "";
                 int code = executeMinecraftCommand(server, (add ? "ban " : "pardon ") + username + (reason.isBlank() ? "" : " " + reason));
                 return code >= 0 ? PlatformControlReadback.banEntry(server, username, add) : BridgeControlResult.failed("platform_command_rejected");
             }

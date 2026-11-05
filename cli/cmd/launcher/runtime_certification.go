@@ -121,7 +121,7 @@ func certReadPublic02712(path string) (ed25519.PublicKey, error) {
 }
 func factoryCertKeygen02712(privatePath, publicPath string) error {
 	if privatePath == "" || publicPath == "" || privatePath == publicPath {
-		return errors.New("--private-key and --public-key require separate paths")
+		return errors.New("Для --private-key и --public-key необходимы разные пути")
 	}
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -178,7 +178,7 @@ func certProfileID02712(plan factoryPlan0271) (string, error) {
 
 func certValidateProbe02712(plan factoryPlan0271, profile string, probe factoryProbe02712, log []byte, maxSeconds int) error {
 	if probe.Status != "passed" || probe.MinecraftVersion != profile || probe.MainClass != plan.Launch.MainClass || probe.RequiredJavaMajor != plan.Java.Major || probe.DetectedJavaMajor != plan.Java.Major || probe.ClasspathEntries < 1 {
-		return errors.New("runtime probe does not match pinned profile, Java or classpath")
+		return errors.New("Результат проверки Runtime не соответствует закреплённому профилю, Java или classpath")
 	}
 	if !probe.Success && !probe.TimedOut {
 		return errors.New("Ошибка процесса среды выполнения")
@@ -186,19 +186,19 @@ func certValidateProbe02712(plan factoryPlan0271, profile string, probe factoryP
 	// V03: проверки v1 не содержат достоверного наблюдения окна/визуализатора и перехода в главное
 	// меню. Тайм-аут, PID и маркер LWJGL не являются сертификацией. Никогда не подписывайте и не
 	// принимайте как PASS утверждение v1 об успешном запуске.
-	return errors.New("legacy runtime certificate v1 cannot establish GUI/main-menu readiness; use staged startup observer 0.34.3")
+	return errors.New("Устаревший сертификат Runtime v1 не подтверждает готовность интерфейса и главного меню; используйте наблюдатель поэтапного запуска 0.34.3")
 }
 func certHostTarget02712(target vanillaTarget) error {
 	actual := currentVanillaTarget()
 	if actual.OS != target.OS || actual.Arch != target.Arch {
-		return fmt.Errorf("runtime certification requires native runner %s/%s, got %s/%s", target.OS, target.Arch, actual.OS, actual.Arch)
+		return fmt.Errorf("Для сертификации Runtime необходим нативный исполнитель %s/%s, получен %s/%s", target.OS, target.Arch, actual.OS, actual.Arch)
 	}
 	return nil
 }
 func certFiles02712(dir string, cert factoryRuntimeCertificate02712) error {
 	for _, item := range []struct{ name, hash string }{{cert.ProbeFile, cert.ProbeSHA256}, {cert.LogFile, cert.LogSHA256}} {
 		if item.name == "" || filepath.Base(item.name) != item.name || !isSHA256Hex0271(item.hash) {
-			return errors.New("invalid evidence file reference")
+			return errors.New("Некорректная ссылка на файл подтверждения")
 		}
 		file := filepath.Join(dir, item.name)
 		st, err := os.Lstat(file)
@@ -213,7 +213,7 @@ func certFiles02712(dir string, cert factoryRuntimeCertificate02712) error {
 			return err
 		}
 		if sum != item.hash {
-			return fmt.Errorf("evidence digest mismatch: %s", item.name)
+			return fmt.Errorf("Хеш подтверждения не совпадает: %s", item.name)
 		}
 	}
 	return nil
@@ -228,7 +228,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if cert.Schema != factoryCertSchema02712 || cert.Status != "certified" || !isSHA256Hex0271(cert.PlanSHA256) || !isSHA256Hex0271(cert.JavaSHA256) || !isSHA256Hex0271(cert.RuntimeSHA256) {
-		return cert, errors.New("invalid runtime certificate")
+		return cert, errors.New("Некорректный сертификат Runtime")
 	}
 	pub, err := certReadPublic02712(publicKeyPath)
 	if err != nil {

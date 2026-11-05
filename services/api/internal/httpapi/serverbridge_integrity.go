@@ -65,30 +65,30 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 	policies := map[string]bridgeReleasePolicy0135{}
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
-		return nil, fmt.Errorf("invalid ServerBridge release allowlist: %w", err)
+		return nil, fmt.Errorf("Некорректный список разрешённых релизов ServerBridge: %w", err)
 	}
 	if _, v3 := probe["schemaVersion"]; v3 {
 		var document bridgeReleaseAllowlistDocument01912
 		if err := json.Unmarshal([]byte(raw), &document); err != nil {
-			return nil, fmt.Errorf("invalid ServerBridge 3 release allowlist: %w", err)
+			return nil, fmt.Errorf("Некорректный список разрешённых релизов ServerBridge 3: %w", err)
 		}
 		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != serverBridgeProtocolV3 || document.MinimumProtocolVersion != serverBridgeProtocolV3 ||
 			document.SecurityProfile != serverBridgeSecurityProfile01912 || !strings.EqualFold(document.SecurityCapabilityDigest, serverBridgeExpectedSecurityCapabilityDigest01912()) ||
 			!serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-			return nil, errors.New("ServerBridge 3 release allowlist security certification metadata is invalid")
+			return nil, errors.New("Метаданные сертификации безопасности списка релизов ServerBridge 3 недействительны")
 		}
 		policies = document.Releases
 	} else if err := json.Unmarshal([]byte(raw), &policies); err != nil {
-		return nil, fmt.Errorf("invalid legacy ServerBridge release allowlist: %w", err)
+		return nil, fmt.Errorf("Некорректный список разрешённых релизов устаревшего ServerBridge: %w", err)
 	}
 	if len(policies) == 0 {
-		return nil, errors.New("ServerBridge release allowlist is empty")
+		return nil, errors.New("Список разрешённых релизов ServerBridge пуст")
 	}
 	out := make(map[string]bridgeReleasePolicy0135, len(policies))
 	for version, policy := range policies {
 		version = strings.TrimSpace(version)
 		if version == "" || len(version) > 64 {
-			return nil, errors.New("ServerBridge release allowlist contains invalid version")
+			return nil, errors.New("Список разрешённых релизов ServerBridge содержит некорректную версию")
 		}
 		velocity, err := normalizeHashList0134(policy.VelocitySHA256)
 		if err != nil {

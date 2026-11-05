@@ -35,7 +35,7 @@ func (s Server) registerMigrationModulesRoutes0338(mux *http.ServeMux) {
 func (s Server) migrationModulesStore0338(w http.ResponseWriter) (migrationModulesStore0338, bool) {
 	v, ok := s.Repo.(migrationModulesStore0338)
 	if !ok {
-		writeError(w, 503, "Gravit MIG08 requires PostgreSQL")
+		writeError(w, 503, "Для Gravit MIG08 необходим PostgreSQL")
 		return nil, false
 	}
 	return v, true
@@ -77,7 +77,7 @@ func (s Server) migrationModulesAnalyze0338(w http.ResponseWriter, r *http.Reque
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {
@@ -91,7 +91,7 @@ func (s Server) migrationModulesAnalyze0338(w http.ResponseWriter, r *http.Reque
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "inventory upload capacity exhausted")
+		writeError(w, 429, "Исчерпана ёмкость загрузки инвентаризации")
 		return
 	}
 	snapshot, err := inventoryStore.GetMigrationInventory0333(r.Context(), run.ID)
@@ -100,12 +100,12 @@ func (s Server) migrationModulesAnalyze0338(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes || (r.ContentLength >= 0 && r.ContentLength != snapshot.SourceBytes) {
-		writeError(w, 413, "ZIP size differs from inventoried source")
+		writeError(w, 413, "Размер ZIP не соответствует инвентаризованному источнику")
 		return
 	}
 	file, n, digest, err := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if err != nil {
-		writeError(w, 413, "unable to spool source ZIP")
+		writeError(w, 413, "Не удалось сохранить исходный ZIP во временное хранилище")
 		return
 	}
 	defer func() { file.Close(); os.Remove(file.Name()) }()
@@ -115,7 +115,7 @@ func (s Server) migrationModulesAnalyze0338(w http.ResponseWriter, r *http.Reque
 	}
 	report, err := gm.Analyze(r.Context(), file, n, snapshot)
 	if err != nil {
-		writeError(w, 422, "module inspection: "+err.Error())
+		writeError(w, 422, "Проверка модулей: "+err.Error())
 		return
 	}
 	saved, err := store.SaveMigrationModules0338(r.Context(), run.ID, report)
@@ -162,14 +162,14 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "settings:manage", run.ProjectID, "project", run.ProjectID) {
 		return
 	}
 	if r.Header.Get("X-Migration-Modules-Confirm") != run.ID || r.Header.Get("X-Migration-Fresh-Keys-Confirmed") != "true" {
-		writeError(w, 400, "explicit migration run confirmation required")
+		writeError(w, 400, "Необходимо явно подтвердить запуск миграции")
 		return
 	}
 	report, err := store.GetMigrationModules0338(r.Context(), run.ID)
@@ -341,7 +341,7 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {

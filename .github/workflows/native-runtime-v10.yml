@@ -53,7 +53,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Install native GUI probe dependencies
+      - name: Установить нативного GUI Проверить зависимостей
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +64,7 @@ jobs:
           python e2e/scripts/test_runtime_capabilities_03410.py
           python e2e/scripts/test_staged_readiness_0343.py
           python e2e/scripts/test_staged_matching_0344.py
-      - name: Build production CLI and Runtime (not the game)
+      - name: Собрать промышленной CLI и Runtime (не the игры)
         shell: bash
         run: |
           set -euo pipefail
@@ -73,7 +73,7 @@ jobs:
           (cd cli && go build -o "$RUNNER_TEMP/nl-v10-tools/launcher${SUFFIX}" ./cmd/launcher)
           cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
           cp "runtime/runtime/target/release/runtime${SUFFIX}" "$RUNNER_TEMP/nl-v10-tools/runtime${SUFFIX}"
-      - name: Execute real staged package and export only redacted observations
+      - name: Выполнить реального промежуточного пакета и export только обезличенных наблюдений
         shell: bash
         env:
           BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
@@ -147,7 +147,7 @@ jobs:
           name: v10-native-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.mode }}-${{ github.run_id }}
           if-no-files-found: ignore
           path: ${{ runner.temp }}/nl-v10-reports/*.json
-      - name: Clean artifacts on persistent worker
+      - name: Очистить артефактов на постоянного воркера
         if: always()
         shell: bash
         run: |

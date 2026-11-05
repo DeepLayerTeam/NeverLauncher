@@ -29,15 +29,15 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Production Go package tests (real dependencies)
+      - name: промышленной Go пакета тесты (реальных зависимостей)
         run: go test -race ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
       - name: Статический анализ
         run: go vet ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
-      - name: API integration compile
+      - name: API интеграции Скомпилировать
         run: go build ./...
-      - name: Windows cross-build
+      - name: Кросс-компиляция для Windows
         run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/windowssandbox
-      - name: macOS cross-build arm64 and amd64
+      - name: Кросс-компиляция macOS для ARM64 и AMD64
         run: |
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox

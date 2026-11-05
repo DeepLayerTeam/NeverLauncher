@@ -152,11 +152,11 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     public final void onPreLogin(AsyncPlayerPreLoginEvent event) {
         RuntimeState state = runtime;
         if (maintenanceMode.get() || drainMode.get()) {
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, maintenanceMode.get() ? "Server is in maintenance mode" : "Server is draining");
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, maintenanceMode.get() ? "На сервере проводятся технические работы" : "Сервер завершает обслуживание подключений");
             return;
         }
         if (state == null) {
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "Launcher ServerBridge is not ready");
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "Мост Launcher ServerBridge ещё не готов");
             return;
         }
         String ip = event.getAddress() == null ? "" : event.getAddress().getHostAddress();
@@ -219,7 +219,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
         RuntimeState state = runtime;
         if (state == null) {
-            sender.sendMessage("Launcher ServerBridge is not initialized");
+            sender.sendMessage("Launcher ServerBridge не инициализирован");
             return true;
         }
         switch (sub) {
@@ -256,7 +256,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     triggerHeartbeat();
                     sender.sendMessage("Launcher bridge configuration reloaded; serverId=" + next.config.serverId + " nodeKeyFingerprint=" + next.identity.fingerprint());
                 } catch (Exception e) {
-                    sender.sendMessage("Launcher reload failed; previous runtime kept active: " + e.getMessage());
+                    sender.sendMessage("Не удалось перезагрузить Launcher; предыдущая среда Runtime продолжает работать: " + e.getMessage());
                 }
                 return true;
             }
@@ -592,7 +592,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             case "ban.add", "ban.remove" -> {
                 String username = safeUsername(payload.get("username"));
                 String root = type.endsWith(".add") ? "ban " : "pardon ";
-                String reason = type.endsWith(".add") ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
+                String reason = type.endsWith(".add") ? safeLine(payload.getOrDefault("reason", "Заблокировано оператором сервера"), 256) : "";
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), root + username + (reason.isBlank() ? "" : " " + reason));
                 if (!ok) return BridgeControlResult.failed("platform_command_rejected");
                 // Другие плагины могут переопределять диспетчер команд. Одного результата true недостаточно для
@@ -621,7 +621,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
 
     private BridgeControlResult executePlayerKick(BridgeControlCommand command) throws Exception {
         String username = safeUsername(command.payload().get("username"));
-        String reason = safeLine(command.payload().getOrDefault("reason", "Disconnected by server operator"), 512);
+        String reason = safeLine(command.payload().getOrDefault("reason", "Отключено оператором сервера"), 512);
         String correlation = command.payload().getOrDefault("sessionCorrelationId", "");
         CompletableFuture<BridgeControlResult> confirmation = new CompletableFuture<>();
         // Весь доступ к платформе передаётся соответствующему планировщику сервера. Ожидает удалённый обработчик

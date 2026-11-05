@@ -35,7 +35,7 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Compile maintenance and run real PostgreSQL + storage tests
+      - name: Скомпилировать обслуживания и Запустить реальной PostgreSQL + хранилища тесты
         working-directory: services/api
         env:
           TEST_PG_DSN_02511: postgres://texture_test:texture_test@localhost:5432/texture_test?sslmode=disable

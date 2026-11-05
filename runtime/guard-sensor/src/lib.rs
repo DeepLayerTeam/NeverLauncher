@@ -637,7 +637,7 @@ fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
 #[track_caller]
 fn guard_fail_closed_abort() -> ! {
     let site = std::panic::Location::caller();
-    eprintln!("Guard Sensor fail-closed abort: {}:{}", site.file(), site.line());
+    eprintln!("Guard Sensor: аварийная остановка при ошибке проверки: {}:{}", site.file(), site.line());
     std::process::abort();
 }
 
@@ -685,7 +685,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     .is_err()
     {
         channel.secret.zeroize();
-        eprintln!("Guard Sensor startup heartbeat write failed");
+        eprintln!("Guard Sensor: не удалось отправить сигнал активности при запуске");
         std::process::abort();
     }
 
@@ -865,7 +865,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 Err(err) => {
                     // Сохраняйте точную причину в stdout CI, даже если родитель не
                     // успел прочитать подписанный пакет вмешательства до abort.
-                    eprintln!("Guard JVM-Aware violation: {}", err.chars().take(240).collect::<String>());
+                    eprintln!("Guard JVM-Aware: обнаружено нарушение: {}", err.chars().take(240).collect::<String>());
                     let tamper = jvm_aware_tamper_event(&err);
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -959,7 +959,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 sequence,
                 event_chain,
             ) {
-                eprintln!("Guard Continuous Guard ACK violation: {}", err.chars().take(240).collect::<String>());
+                eprintln!("Guard Continuous Guard: нарушение подтверждения ACK: {}", err.chars().take(240).collect::<String>());
                 let tamper = continuous_guard::tamper_event(
                     MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
                     &err,
@@ -1237,7 +1237,7 @@ pub extern "system" fn Agent_OnLoad(
             return JNI_ERR;
         }
         Err(err) => {
-            eprintln!("Guard Sensor Memory Integrity initialization failed: {err}");
+            eprintln!("Guard Sensor: не удалось инициализировать проверку целостности памяти: {err}");
             memory_integrity::shutdown();
             let _ = hook_engine::shutdown_restore();
             jvm_awareness::shutdown();

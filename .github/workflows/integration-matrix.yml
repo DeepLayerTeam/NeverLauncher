@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
-      - name: Native SQLite WAL crash, compatibility, recovery and legacy regressions
+      - name: нативного SQLite WAL аварийного завершения, совместимости, восстановления и устаревшего регрессии
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/nl0478"; chmod 700 "$RUNNER_TEMP/nl0478"
@@ -75,7 +75,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Run real PostgreSQL migration to SQLRepository and read-back
+      - name: Запустить миграции на настоящей PostgreSQL для SQLRepository и проверить обратное чтение
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -94,17 +94,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Real Backend HTTP API authorization, publication and Admin routing tests
+      - name: Тесты авторизации, публикации и маршрутизации Admin на настоящем Backend HTTP API
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout=15m -run 'TestCanonicalAdminCRUDProductFlow|TestSecurityRealAuthHTTP02912|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable|TestImportedFileAuthLocalLoginAndAtomicRehash0295' -v ./internal/httpapi
-      - name: Admin UI actual production build and interactive component tests
+      - name: Admin интерфейса реального промышленная сборка и interactive компонента тесты
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm test
           npm run build
-      - name: Desktop component and client update tests against actual implementation
+      - name: Тесты компонентов Desktop и обновления клиента на реальной реализации
         working-directory: apps/desktop
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: cli/go.mod
-      - name: Verify HTTPS baseline manifest pin and build actual current CLI
+      - name: Проверить HTTPS базовой линии манифеста Закрепить и Собрать реального текущей CLI
         env:
           URL: ${{ inputs.baselines_url }}
           SHA: ${{ inputs.baselines_sha256 }}
@@ -133,7 +133,7 @@ jobs:
           (cd cli && go build -trimpath -ldflags "-X main.version=0.48.0" -o "$RUNNER_TEMP/launcher-0478" ./cmd/launcher)
           sudo chown root:root "$RUNNER_TEMP/launcher-0478"
           sudo chmod 0755 "$RUNNER_TEMP/launcher-0478"
-      - name: Execute installed native CLI upgrade for every old version, with exact-byte user-data verification
+      - name: Выполнить установленных нативного CLI обновления для каждого old версии, с exact-byte user-data проверки
         run: |
           set -euo pipefail
           sudo python3 scripts/integration/legacy_matrix_0478.py --manifest "$RUNNER_TEMP/baselines.json" --candidate-cli "$RUNNER_TEMP/launcher-0478" --out "$RUNNER_TEMP/legacy-0478.json"
@@ -161,11 +161,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14'
-      - name: Install live Minecraft / PostgreSQL / GUI prerequisites
+      - name: Установить реальные Minecraft / PostgreSQL / GUI предварительных условий
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libasound2t64 jq postgresql-client maven
-      - name: Real signed-release publication, auth, Desktop transactional update, Bridge JVM joins and Minecraft client
+      - name: Сквозные тесты реальной публикации подписанного релиза, авторизации, транзакционного обновления Desktop, подключений JVM через Bridge и клиента Minecraft
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
           LAUNCHER_E2E_LOADER: vanilla
@@ -202,7 +202,7 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
       - run: sudo apt-get update && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libasound2t64
-      - name: Materialize actual matching Mojang server and client, launch and confirm join
+      - name: Материализовать реального соответствующих Mojang сервера и клиента, запуска и Подтвердить подключения
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.mc }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.java }}
@@ -249,7 +249,7 @@ jobs:
       - run: |
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
-      - name: Login as existing owner, operate Admin UI, publish real signed package and verify rollback
+      - name: входа как существующих владельца, operate Admin интерфейса, Опубликовать реального подписанных пакета и Проверить отката
         run: |
           set -euo pipefail
           python3 e2e/scripts/owner-cycle-0390-browser.py
@@ -265,7 +265,7 @@ jobs:
     needs: [sqlite-and-faults, postgres-real, backend-admin-desktop, legacy-native-installed, real-full-minecraft, real-matching-minecraft, real-owner-browser]
     runs-on: ubuntu-24.04
     steps:
-      - name: Accept only when every real integration suite succeeded (never accept skipped suites)
+      - name: Accept только когда каждого реального интеграции набора succeeded (никогда accept пропущенных наборов)
         env:
           SQLITE: ${{ needs.sqlite-and-faults.result }}
           POSTGRES: ${{ needs.postgres-real.result }}

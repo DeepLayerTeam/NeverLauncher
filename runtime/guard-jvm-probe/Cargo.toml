@@ -1,7 +1,7 @@
 [package]
 name = "guard-jvm-probe"
 version = "0.53.0"
-description = "Windows-only Guard JVM-Aware Protection adversarial integration fixture"
+description = "Тестовый модуль атакующих проверок защиты JVM-Aware Guard в Windows"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"

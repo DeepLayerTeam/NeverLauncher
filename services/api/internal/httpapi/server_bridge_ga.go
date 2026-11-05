@@ -216,7 +216,7 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 	// или историю привилегированных команд через обзор проекта только для чтения.
 	claims, authErr := s.adminClaims(r)
 	if authErr != nil {
-		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия администратора")
 		return
 	}
 	projectByServer := make(map[string]string, len(servers))

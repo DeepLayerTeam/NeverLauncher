@@ -36,7 +36,7 @@ func (s Server) cutoverAccess03311(w http.ResponseWriter, r *http.Request) (migr
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return nil, "", false
 	}
 	if !s.authorizeProjectAction(w, r, claims, "settings:manage", run.ProjectID, "project", run.ProjectID) {

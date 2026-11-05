@@ -138,7 +138,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         ProxyBridgeRuntime current = runtime;
         if (current == null) {
             event.setCancelled(true);
-            event.setCancelReason(TextComponent.fromLegacyText("Launcher ServerBridge is not ready"));
+            event.setCancelReason(TextComponent.fromLegacyText("Мост Launcher ServerBridge ещё не готов"));
             return;
         }
         event.registerIntent(this);
@@ -179,7 +179,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         if (current == null || !current.confirmAuthenticatedPlayer(username, uuid)) {
             event.setCancelled(true);
             event.setCancelReason(TextComponent.fromLegacyText(
-                "Launcher authenticated Minecraft UUID does not match the launcher session"));
+                "Подтверждённый Minecraft UUID не совпадает с сессией Launcher"));
             getLogger().warning("launcher.join.uuid-denied username=" + username + " platform=" + expectedPlatform.id());
         }
     }
@@ -295,7 +295,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 if (!correlation.isBlank() && (runtime == null || !runtime.matchesPlayerSession(
                     username, player.getUniqueId() == null ? "" : player.getUniqueId().toString(), correlation)))
                     return BridgeControlResult.failed("player_session_changed");
-                player.disconnect(TextComponent.fromLegacyText(safeLine(payload.getOrDefault("reason", "Disconnected by proxy operator"), 512)));
+                player.disconnect(TextComponent.fromLegacyText(safeLine(payload.getOrDefault("reason", "Отключено оператором прокси-сервера"), 512)));
                 return BridgeControlResult.ok(Map.of("username", username));
             }
             case "message.broadcast" -> {
@@ -304,7 +304,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
             }
             case "server.shutdown" -> {
-                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by Launcher"), 512);
+                String reason = safeLine(payload.getOrDefault("reason", "Остановка по запросу Launcher"), 512);
                 getProxy().getScheduler().schedule(this, () -> getProxy().stop(reason), 1500L, TimeUnit.MILLISECONDS);
                 return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
             }
@@ -353,7 +353,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         public void execute(CommandSender sender, String[] args) {
             ProxyBridgeRuntime current = runtime;
             if (current == null) {
-                sender.sendMessage(TextComponent.fromLegacyText("Launcher ServerBridge is not initialized"));
+                sender.sendMessage(TextComponent.fromLegacyText("Launcher ServerBridge не инициализирован"));
                 return;
             }
             String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
@@ -376,7 +376,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         current.reload();
                         sender.sendMessage(TextComponent.fromLegacyText("Launcher bridge configuration reloaded; serverId=" + current.serverId() + " nodeKeyFingerprint=" + current.fingerprint()));
                     } catch (Exception e) {
-                        sender.sendMessage(TextComponent.fromLegacyText("Launcher reload failed; previous runtime kept active: " + e.getMessage()));
+                        sender.sendMessage(TextComponent.fromLegacyText("Не удалось перезагрузить Launcher; предыдущая среда Runtime продолжает работать: " + e.getMessage()));
                     }
                 }
                 case "diagnostics" -> {

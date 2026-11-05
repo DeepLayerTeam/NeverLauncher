@@ -30,7 +30,7 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-@Plugin(id = BridgeDefaults.VELOCITY_ID, name = "Launcher Velocity Bridge", version = BridgeDefaults.VERSION, authors = {"SkiF4er"})
+@Plugin(id = BridgeDefaults.VELOCITY_ID, name = "Мост Launcher для Velocity", version = BridgeDefaults.VERSION, authors = {"SkiF4er"})
 public final class LauncherVelocityBridge {
     private final Logger logger = Logger.getLogger("LauncherVelocityBridge");
     private final ProxyServer proxy;
@@ -110,7 +110,7 @@ public final class LauncherVelocityBridge {
         return EventTask.async(() -> {
             ProxyBridgeRuntime current = runtime;
             if (current == null) {
-                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text("Launcher ServerBridge is not ready")));
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text("Мост Launcher ServerBridge ещё не готов")));
                 return;
             }
             String username = event.getUsername();
@@ -142,7 +142,7 @@ public final class LauncherVelocityBridge {
         String authenticatedUUID = event.getPlayer().getUniqueId() == null ? "" : event.getPlayer().getUniqueId().toString();
         if (current == null || !current.confirmAuthenticatedPlayer(username, authenticatedUUID)) {
             event.setResult(LoginEvent.ComponentResult.denied(Component.text(
-                "Launcher authenticated Minecraft UUID does not match the launcher session")));
+                "Подтверждённый Minecraft UUID не совпадает с сессией Launcher")));
             logger.warning("launcher.join.uuid-denied username=" + username + " platform=velocity");
         }
     }
@@ -226,7 +226,7 @@ public final class LauncherVelocityBridge {
                 if (!correlation.isBlank() && (runtime == null || !runtime.matchesPlayerSession(
                     username, player.getUniqueId() == null ? "" : player.getUniqueId().toString(), correlation)))
                     return BridgeControlResult.failed("player_session_changed");
-                player.disconnect(Component.text(safeLine(payload.getOrDefault("reason", "Disconnected by proxy operator"), 512)));
+                player.disconnect(Component.text(safeLine(payload.getOrDefault("reason", "Отключено оператором прокси-сервера"), 512)));
                 return BridgeControlResult.ok(Map.of("username", username));
             }
             case "message.broadcast" -> {
@@ -236,7 +236,7 @@ public final class LauncherVelocityBridge {
                 return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
             }
             case "server.shutdown" -> {
-                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by Launcher"), 512);
+                String reason = safeLine(payload.getOrDefault("reason", "Остановка по запросу Launcher"), 512);
                 proxy.getScheduler().buildTask(this, () -> proxy.shutdown(Component.text(reason))).delay(1500, TimeUnit.MILLISECONDS).schedule();
                 return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
             }

@@ -30,7 +30,7 @@ func (s Server) migrationRehearsalGet03310(w http.ResponseWriter, r *http.Reques
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {
@@ -56,7 +56,7 @@ func (s Server) migrationRehearsalPost03310(w http.ResponseWriter, r *http.Reque
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "settings:manage", run.ProjectID, "project", run.ProjectID) {

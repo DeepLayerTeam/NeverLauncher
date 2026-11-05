@@ -37,26 +37,26 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Install ELF compiler and runtime dependencies
+      - name: Установить ELF компилятора и Runtime зависимостей
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libssl-dev
-      - name: Compile production runtime and Guard executables
+      - name: Скомпилировать промышленной Runtime и Guard исполняемых файлов
         run: |
           cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
-      - name: Real Linux /proc and injected ELF regressions
+      - name: Регрессионные тесты реальных /proc в Linux и внедрённых ELF
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
-      - name: Authenticated Linux Guard IPC and no-restart heartbeat
+      - name: Проверить авторизованный IPC Guard в Linux и сигнал активности без перезапуска
         env:
           XDG_RUNTIME_DIR: ${{ runner.temp }}/nl-guard-ipc
         run: |
           mkdir -p "$XDG_RUNTIME_DIR"
           chmod 700 "$XDG_RUNTIME_DIR"
           cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
-      - name: Real hardened and unhardened JVM scenarios
+      - name: Проверить настоящую JVM с усиленной защитой и без неё
         run: python3 scripts/tests/linux_runtime_guard_0508.py
-      - name: Existing signed-JAR/native and continuous JVM regressions
+      - name: существующих signed-JAR/нативного и continuous JVM регрессии
         run: |
           python3 scripts/tests/guard_runtime_integrity_0505.py
           python3 scripts/tests/continuous_game_protection_0506.py

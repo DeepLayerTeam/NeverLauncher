@@ -39,7 +39,7 @@ func postMigrationAuth0335(endpoint, token, sourcePath, algorithm, runID, out st
 		return e
 	}
 	if !stat.Mode().IsRegular() || stat.Size() < 1 || stat.Size() > 512<<20 {
-		return errors.New("source ZIP must be a regular file of 1..512 MiB")
+		return errors.New("Исходный ZIP должен быть обычным файлом размером от 1 до 512 МиБ")
 	}
 	request, e := http.NewRequest("POST", endpoint, f)
 	if e != nil {

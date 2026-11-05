@@ -33,13 +33,13 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Verify embedded catalogue and upgrade tests
+      - name: Проверить встроенного каталога и обновления тесты
         working-directory: cli
         run: |
           go test -race ./internal/authupgrade ./internal/dbmigrate
           go vet ./internal/authupgrade ./internal/dbmigrate
           go build -o /tmp/nl-upgrade ./cmd/launcher
-      - name: Reproduce upgrade from the exact 0.29.10 migration catalogue
+      - name: Воспроизвести обновления из the точного 0.29.10 миграции каталога
         run: |
           # Скопируйте каталог миграций CLI, исключив ТОЛЬКО 0086. Получится база
           # данных со всеми неизменяемыми миграциями по 0.29.10 включительно.
@@ -47,7 +47,7 @@ jobs:
           rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
           (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/launcher)
           /tmp/nl-prior db migrate apply
-      - name: Seed two isolated issuers before upgrade
+      - name: Seed двух изолированных issuers перед обновления
         run: |
           psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 <<'SQL'
           BEGIN;
@@ -62,7 +62,7 @@ jobs:
                  ('migration-b','7e58de9e-6dde-40ea-bfe6-16c85ae32972','Migration_B','launcher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32972','legacy-migration');
           COMMIT;
           SQL
-      - name: Actual PostgreSQL checkpoint, apply and verify
+      - name: Реальная PostgreSQL checkpoint, Применить и Проверить
         run: |
           /tmp/nl-upgrade db auth-upgrade preflight --snapshot /tmp/nl-identity.json --allow-provider oidc-smoke
           /tmp/nl-upgrade db auth-upgrade apply --snapshot /tmp/nl-identity.json --backup-confirmed --maintenance-confirmed
@@ -75,6 +75,6 @@ jobs:
           # автономной проверки.
           psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE users SET display_name='Changed' WHERE id='migration-a'"
           if /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json; then exit 1; fi
-      - name: Backend catalogue matches CLI byte-for-byte
+      - name: Проверить побайтовое совпадение каталога Backend с CLI
         run: |
           python3 scripts/build/embedded_cli_assets.py --check

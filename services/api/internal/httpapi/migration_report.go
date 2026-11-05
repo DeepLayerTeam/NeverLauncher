@@ -32,7 +32,7 @@ func (s Server) migrationReportAccess03313(w http.ResponseWriter, r *http.Reques
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return nil, "", false
 	}
 	if !s.authorizeProjectAction(w, r, claims, "settings:manage", run.ProjectID, "project", run.ProjectID) {

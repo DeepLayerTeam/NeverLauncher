@@ -39,12 +39,12 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Migration trust reset and real PostgreSQL integration
+      - name: миграции доверия reset и реальной PostgreSQL интеграции
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationSecurityTargetDerivation0336|TestMigrationSecurityTrustResetPostgres0336'
           go test -race -count=1 -timeout 5m ./internal/httpapi -run 'TestMigrationIndependentNeverSigners0336|TestMigrationTargetSteps0331'
-      - name: CLI tests
+      - name: CLI тесты
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestMigrationSecurityCLI0336|TestMigrationWorkflow0331'
   api-admin:

@@ -33,7 +33,7 @@ func migrationContentHeaders0337(r *http.Request) (profilePath, id, name, loader
 func (s Server) migrationContentStore0337(w http.ResponseWriter) (migrationContentStore0337, bool) {
 	store, ok := s.Repo.(migrationContentStore0337)
 	if !ok {
-		writeError(w, 503, "content import requires PostgreSQL")
+		writeError(w, 503, "Для импорта содержимого необходим PostgreSQL")
 		return nil, false
 	}
 	return store, true
@@ -45,7 +45,7 @@ func (s Server) migrationContentStatus0337(w http.ResponseWriter, r *http.Reques
 	}
 	pp := r.URL.Query().Get("profilePath")
 	if pp == "" {
-		writeError(w, 400, "profilePath query required")
+		writeError(w, 400, "Необходимо указать параметр запроса profilePath")
 		return
 	}
 	plan, ws, e := store.GetMigrationContent0337(r.Context(), r.PathValue("runId"), pp)
@@ -108,7 +108,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "release:prepare", run.ProjectID, "project", run.ProjectID) {
@@ -123,18 +123,18 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 	}
 	profilePath, profileID, name, loader, channel, version := migrationContentHeaders0337(r)
 	if len(profilePath) > 1024 || len(profileID) > 128 || len(name) > 120 || len(loader) > 24 || len(channel) > 128 || len(version) > 128 || profileID == "" || profilePath == "" || loader == "" || channel == "" || version == "" {
-		writeError(w, 400, "profile path, ID, loader, channel and version headers required")
+		writeError(w, 400, "Необходимо указать путь профиля, ID, загрузчик, канал и заголовки версии")
 		return
 	}
 	if commit && r.Header.Get("X-Migration-Content-Confirm") != run.ID {
-		writeError(w, 400, "explicit run ID confirmation required")
+		writeError(w, 400, "Необходимо явно подтвердить идентификатор запуска")
 		return
 	}
 	select {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "source upload capacity reached")
+		writeError(w, 429, "Превышена ёмкость для загрузки исходников")
 		return
 	}
 	snapshot, e := invStore.GetMigrationInventory0333(r.Context(), run.ID)
@@ -143,12 +143,12 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes || (r.ContentLength >= 0 && r.ContentLength != snapshot.SourceBytes) {
-		writeError(w, 413, "source size differs from inventory")
+		writeError(w, 413, "Размер исходника не соответствует инвентаризации")
 		return
 	}
 	src, n, digest, e := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if e != nil {
-		writeError(w, 413, "cannot spool verified source ZIP")
+		writeError(w, 413, "Не удалось сохранить проверенный исходный ZIP во временное хранилище")
 		return
 	}
 	defer func() { _ = src.Close(); _ = os.Remove(src.Name()) }()
@@ -315,7 +315,7 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 	}
 	claims, e := s.adminClaims(r)
 	if e != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if claims.Sub != ws.OwnerID || !s.authorizeProjectAction(w, r, claims, "release:prepare", ws.ProjectID, "project", ws.ProjectID) {

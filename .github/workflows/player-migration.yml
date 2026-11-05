@@ -18,10 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Rust tests including actual signed-manifest, source hashing and symlink defense
+      - name: "Тесты Rust: настоящий подписанный манифест, хеширование исходников и защита от символьных ссылок"
         working-directory: runtime/runtime
         run: cargo test --locked --lib player_migration_0339 -- --nocapture
-      - name: Compile desktop Tauri bridge
+      - name: Скомпилировать мост Desktop Tauri
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
@@ -36,7 +36,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Version and Desktop TypeScript build
+      - name: версии и Desktop TypeScript Собрать
         run: |
           python3 scripts/version/manage.py check
           cd apps/desktop

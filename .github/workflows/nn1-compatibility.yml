@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify real 0.51.5 SQL checksum lock and simulated mixed-version denial paths
+      - name: Проверить реального 0.51.5 SQL checksum блокировки и имитируемого mixed-version отказа путей
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
@@ -32,10 +32,10 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Exercise PostgreSQL schema migration checksum validation
+      - name: Протестировать PostgreSQL схемы миграции checksum валидации
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -count=1 ./internal/dbmigrate
-      - name: Verify aligned product versions
+      - name: Проверить aligned продукта версий
         run: python3 scripts/version/manage.py check

@@ -96,14 +96,14 @@ public final class LauncherVanillaBridge implements AutoCloseable {
             case "player.kick" -> {
                 if (!p.getOrDefault("sessionCorrelationId", "").isBlank())
                     yield BridgeControlResult.failed("session_specific_kick_unavailable_on_vanilla_sidecar");
-                yield okRcon("kick " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Disconnected by server operator"), 512));
+                yield okRcon("kick " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Отключено оператором сервера"), 512));
             }
             case "message.broadcast" -> okRcon("tellraw @a " + jsonText(text(p.getOrDefault("message", ""), 1024)));
             case "whitelist.add" -> observedRcon("whitelist.add", username(p.get("username")), "whitelist add " + username(p.get("username")));
             case "whitelist.remove" -> observedRcon("whitelist.remove", username(p.get("username")), "whitelist remove " + username(p.get("username")));
             case "whitelist.enable" -> okRcon("whitelist on");
             case "whitelist.disable" -> okRcon("whitelist off");
-            case "ban.add" -> observedRcon("ban.add", username(p.get("username")), "ban " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Banned by server operator"), 512));
+            case "ban.add" -> observedRcon("ban.add", username(p.get("username")), "ban " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Заблокировано оператором сервера"), 512));
             case "ban.remove" -> observedRcon("ban.remove", username(p.get("username")), "pardon " + username(p.get("username")));
             case "server.save" -> okRcon("save-all flush");
             case "server.maintenance" -> setRouteMode(true, Boolean.parseBoolean(p.getOrDefault("enabled", "false")));

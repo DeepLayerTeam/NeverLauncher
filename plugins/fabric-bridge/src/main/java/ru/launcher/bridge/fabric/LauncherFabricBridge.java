@@ -113,17 +113,17 @@ public final class LauncherFabricBridge implements ModInitializer {
                                    net.fabricmc.fabric.api.networking.v1.LoginPacketSender sender,
                                    net.fabricmc.fabric.api.networking.v1.ServerLoginNetworking.LoginSynchronizer synchronizer) {
         if (stopping.get()) {
-            handler.disconnect(Text.literal("Launcher ServerBridge is stopping"));
+            handler.disconnect(Text.literal("Launcher ServerBridge завершает работу"));
             return;
         }
         if (maintenanceMode.get() || drainMode.get()) {
-            handler.disconnect(Text.literal(maintenanceMode.get() ? "Server is in maintenance mode" : "Server is draining"));
+            handler.disconnect(Text.literal(maintenanceMode.get() ? "На сервере проводятся технические работы" : "Сервер завершает обслуживание подключений"));
             return;
         }
 
         LoginIdentity login = loginIdentity(handler);
         if (login.username.isBlank()) {
-            handler.disconnect(Text.literal("Launcher could not resolve the login profile"));
+            handler.disconnect(Text.literal("Launcher не удалось определить игровой профиль"));
             return;
         }
 
@@ -322,7 +322,7 @@ public final class LauncherFabricBridge implements ModInitializer {
             return drainMode.get() == enabled ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(enabled), "mode", "drain")) : BridgeControlResult.indeterminate("drain_mode_not_observed");
         }
         if ("server.shutdown".equals(command.type())) {
-            String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by Launcher"), 512);
+            String reason = safeLine(payload.getOrDefault("reason", "Остановка по запросу Launcher"), 512);
             Thread thread = new Thread(() -> {
                 try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                 RuntimeState current = state;
@@ -360,7 +360,7 @@ public final class LauncherFabricBridge implements ModInitializer {
                 if (!correlation.isBlank() && !runtime.matchesPlayerSession(username, correlation))
                     return BridgeControlResult.failed("player_session_changed");
                 if (!kickConfirmations.begin(username, player.getGameProfile().getId())) return BridgeControlResult.indeterminate("player_kick_already_pending");
-                try { player.networkHandler.disconnect(Text.literal(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512))); }
+                try { player.networkHandler.disconnect(Text.literal(safeLine(payload.getOrDefault("reason", "Отключено оператором сервера"), 512))); }
                 catch (RuntimeException e) { kickConfirmations.cancel(username); throw e; }
                 return BridgeControlResult.ok(Map.of("username", username, "uuid", uuid));
             }
@@ -384,7 +384,7 @@ public final class LauncherFabricBridge implements ModInitializer {
             case "ban.add", "ban.remove" -> {
                 String username = safeUsername(payload.get("username"));
                 boolean add = command.type().endsWith(".add");
-                String reason = add ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
+                String reason = add ? safeLine(payload.getOrDefault("reason", "Заблокировано оператором сервера"), 256) : "";
                 int code = executeMinecraftCommand(server, (add ? "ban " : "pardon ") + username + (reason.isBlank() ? "" : " " + reason));
                 return code >= 0 ? PlatformControlReadback.banEntry(server, username, add) : BridgeControlResult.failed("platform_command_rejected");
             }

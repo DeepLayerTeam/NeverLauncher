@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Real HTTP, cache, pause/resume, progress and bounded parallelism
+      - name: Тесты HTTP-загрузки, кеша, паузы, возобновления, прогресса и ограниченного параллелизма
         run: |
           cargo test --manifest-path runtime/runtime/Cargo.toml download_scheduler -- --nocapture
           cargo test --manifest-path runtime/runtime/Cargo.toml durable_downloads -- --nocapture
@@ -34,9 +34,9 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Install and compile desktop
+      - name: Установить и Скомпилировать Desktop
         working-directory: apps/desktop
         run: npm ci --ignore-scripts && npm run build
-      - name: Check download experience and safety recommendations
+      - name: Проверить Скачать experience и безопасности recommendations
         working-directory: apps/desktop
         run: npm run test:downloads

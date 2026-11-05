@@ -72,12 +72,12 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err = s.Repo.GetProject(project); err != nil {
-		writeError(w, 404, "project not found")
+		writeError(w, 404, "Проект не найден")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "release:prepare", project, "project", project) {

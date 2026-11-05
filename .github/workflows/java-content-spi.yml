@@ -31,7 +31,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - run: sh sdk/java/core/build.sh test
       - run: sh examples/extensions/java-content-spi/build.sh
-      - name: Real Java subprocess and callback smoke
+      - name: реального Java дочернего процесса и обратного вызова дымовых проверок
         run: python3 examples/extensions/java-content-spi/test-runner.py
   go-content:
     runs-on: ubuntu-24.04

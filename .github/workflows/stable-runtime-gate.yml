@@ -42,7 +42,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Verify backend runtime-gate, durable publish and migration guards
+      - name: Проверить контроль Runtime в Backend, надёжную публикацию и защиту миграций
         working-directory: services/api
         run: |
           go test -count=1 -timeout 25m ./internal/repository ./internal/httpapi ./internal/dbmigrate \
@@ -52,10 +52,10 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Typecheck production Admin gate UI
+      - name: Проверить типы промышленной Admin контрольного этапа интерфейса
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts
           npm run build
-      - name: Staged download integrity negative tests
+      - name: промежуточного Скачать целостности негативные тесты
         run: python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v

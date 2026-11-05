@@ -326,7 +326,7 @@ func ComponentName(role string) string {
 	case "guard":
 		return "guard" + exeSuffix()
 	}
-	panic("unvalidated component role")
+	panic("Роль компонента не прошла проверку")
 }
 func exeSuffix() string {
 	if runtime.GOOS == "windows" {

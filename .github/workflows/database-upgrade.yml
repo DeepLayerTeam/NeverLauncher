@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Actual SQLite restore and negative failure-path tests
+      - name: реального SQLite восстановления и негативные failure-path тесты
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade_0457.py -v
@@ -38,11 +38,11 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Compile real migration role and execute schema migration tests
+      - name: Скомпилировать реального миграции role и Выполнить схемы миграции тесты
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -race -count=1 ./internal/dbmigrate ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-api
           go build -trimpath -o "$RUNNER_TEMP/launcher-api" ./cmd/launcher-api
-      - name: Verify source version consistency
+      - name: Проверить согласованность версии исходников
         run: python3 scripts/version/manage.py check

@@ -47,21 +47,21 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 -m pip install 'cryptography>=43,<47'
-      - name: Source and metadata consistency
+      - name: исходников и метаданных согласованности
         run: |
           test -z "$(git status --porcelain)"
           python3 scripts/version/manage.py check
-      - name: Cryptographic GA verifier negative tests
+      - name: Негативные тесты криптографического верификатора GA
         run: python3 -m unittest discover -s scripts/security -p 'test_ga_verify_0320.py' -v
-      - name: Offline adversarial tests with race detector
+      - name: офлайн атакующих тесты с детектор гонок
         run: python3 scripts/security/certify_0320.py --tier offline --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-offline-0320.json"
-      - name: Production Backend build
+      - name: промышленной Backend Собрать
         working-directory: services/api
         run: |
           go vet ./...
           go test -count=1 ./internal/extensionhost ./internal/extensionpolicy ./internal/attestverify ./internal/trustbaseline ./internal/linuxsandbox
           go build ./...
-      - name: Upload signed-candidate evidence (NOT signed and NOT GA)
+      - name: Загрузить артефакты signed-candidate подтверждений (НЕ подписано и НЕ GA)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -79,7 +79,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Runtime session binding, policy revocation and ServerBridge joins
+      - name: Runtime сессии привязки, политики отзыва и ServerBridge joins
         run: python3 scripts/security/certify_0320.py --tier backend-security --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-backend-0320.json"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -95,7 +95,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Compile and test Windows restricted handle inheritance and Job path
+      - name: Скомпилировать и протестировать ограниченное наследование дескрипторов Windows и Job
         working-directory: services/api
         run: |
           go test -count=1 ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: macOS helper syntax and sandbox policy tests (not live isolation certification)
+      - name: macOS helper синтаксиса и песочницы политики тесты (не живое изоляции сертификации)
         run: |
           swiftc -parse macos/sandbox-helper/ExtensionSandbox.swift
           cd services/api
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Enforce namespaces, mounts, seccomp and cgroup.kill against descendants
+      - name: Применить пространств имён, mounts, seccomp и cgroup.kill против дочерних процессов
         run: python3 scripts/security/certify_0320.py --tier linux-live --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-linux-0320.json"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -146,7 +146,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: AppContainer token, handle allowlist, ACL, broker and Job containment
+      - name: Проверить токен AppContainer, список разрешённых дескрипторов, ACL, брокер и изоляцию Job
         shell: pwsh
         run: python scripts/security/certify_0320.py --tier windows-live --commit "$env:GITHUB_SHA" --output "$env:RUNNER_TEMP/security-windows-0320.json"
       - uses: actions/upload-artifact@v4
@@ -179,7 +179,7 @@ jobs:
           pattern: security-0320-approved-*
           path: dist/security-0320-approved
           merge-multiple: true
-      - name: Verify seven independently approved signed tiers for exact source and commit
+      - name: Проверить seven независимо разрешённых подписанных tiers для точного исходников и коммита
         env:
           TRUSTED_KEY: ${{ vars.LAUNCHER_SECURITY_GA_PUBLIC_KEY }}
         run: |
@@ -194,7 +194,7 @@ jobs:
           cmd=[sys.executable, 'scripts/security/ga_verify_0320.py', '--commit', os.environ['GITHUB_SHA'], '--source-sha256', source_fingerprint(), '--trusted-public-key', os.environ.get('TRUSTED_KEY',''), '--output', 'dist/security-0320-GA-verdict.json', '--evidence', *map(str,paths)]
           raise SystemExit(subprocess.call(cmd))
           PY
-      - name: Publish authenticated verdict
+      - name: Опубликовать авторизованных verdict
         if: always()
         uses: actions/upload-artifact@v4
         with:

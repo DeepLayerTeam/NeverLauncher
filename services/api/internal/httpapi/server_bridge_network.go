@@ -31,7 +31,7 @@ func (s Server) serverBridgeNetworkCapacity0288(w http.ResponseWriter, r *http.R
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия администратора")
 		return
 	}
 	if !s.authorizeClaims(r, claims, "project:read", node.ProjectID, "server", nodeID).Allowed {

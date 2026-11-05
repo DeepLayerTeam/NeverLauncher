@@ -74,7 +74,7 @@ public final class LauncherSpongeBridge {
     public void onAuth(Auth event) {
         LauncherApiClient current=api;
         if(current==null || stopping.get()){ deny(event,"Launcher ServerBridge unavailable"); return; }
-        if(maintenance.get() || draining.get()){ deny(event, maintenance.get()?"Server is in maintenance mode":"Server is draining"); return; }
+        if(maintenance.get() || draining.get()){ deny(event, maintenance.get()?"На сервере проводятся технические работы":"Сервер завершает обслуживание подключений"); return; }
         String username = profileString(event.profile(), "name");
         String uuid = profileString(event.profile(), "uniqueId");
         String ip = remoteIp(event);
@@ -139,7 +139,7 @@ public final class LauncherSpongeBridge {
                     if (!kickConfirmations.begin(username, session)) return BridgeControlResult.indeterminate("player_kick_already_pending");
                     tracked=true;
                 } catch (IllegalArgumentException ignored) { /* UUID профиля Sponge отсутствует: выполнение нельзя подтвердить. */ }
-                if (!invokeComponent(player,"kick",Component.text(safe(p.getOrDefault("reason","Disconnected by server operator"),512)))) {
+                if (!invokeComponent(player,"kick",Component.text(safe(p.getOrDefault("reason","Отключено оператором сервера"),512)))) {
                     if(tracked) kickConfirmations.cancel(username);
                     return BridgeControlResult.indeterminate("sponge_kick_dispatch_unconfirmed");
                 }

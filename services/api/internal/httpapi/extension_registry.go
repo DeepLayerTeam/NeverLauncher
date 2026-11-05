@@ -74,7 +74,7 @@ func (s Server) extensionRegistryPublishers0203(w http.ResponseWriter, r *http.R
 func (s Server) extensionRegistryPublisherCreate0203(w http.ResponseWriter, r *http.Request) {
 	var request registryPublisherWrite0203
 	if err := decodeSingleJSON0203(r, &request); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid publisher payload: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректные данные издателя: "+err.Error())
 		return
 	}
 	active := true
@@ -107,12 +107,12 @@ func (s Server) extensionRegistryPublisherKeyCreate0203(w http.ResponseWriter, r
 	publisherID := strings.ToLower(strings.TrimSpace(r.PathValue("publisherId")))
 	var request registryPublisherKeyWrite0203
 	if err := decodeSingleJSON0203(r, &request); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid publisher key payload: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректные данные ключа издателя: "+err.Error())
 		return
 	}
 	publicKey, err := base64.StdEncoding.DecodeString(strings.TrimSpace(request.PublicKeyBase64))
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
-		writeError(w, http.StatusBadRequest, "publicKeyBase64 must contain a raw 32-byte Ed25519 public key")
+		writeError(w, http.StatusBadRequest, "publicKeyBase64 должен содержать исходный 32-байтовый публичный ключ Ed25519")
 		return
 	}
 	digest := sha256.Sum256(publicKey)
@@ -122,7 +122,7 @@ func (s Server) extensionRegistryPublisherKeyCreate0203(w http.ResponseWriter, r
 	}
 	item, err := s.Repo.SaveExtensionRegistryPublisherKey(r.Context(), model.ExtensionRegistryPublisherKey{PublisherID: publisherID, Fingerprint: "sha256:" + hex.EncodeToString(digest[:]), Algorithm: "Ed25519", PublicKeyBase64: base64.StdEncoding.EncodeToString(publicKey), Active: active})
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry publisher not found")
+		writeError(w, http.StatusNotFound, "Издатель реестра не найден")
 		return
 	}
 	if errors.Is(err, repository.ErrConflict) || errors.Is(err, repository.ErrImmutable) {
@@ -151,7 +151,7 @@ func (s Server) extensionRegistrySearch0203(w http.ResponseWriter, r *http.Reque
 func (s Server) extensionRegistryExtension0203(w http.ResponseWriter, r *http.Request) {
 	item, err := s.Repo.GetExtensionRegistryExtension(r.Context(), r.PathValue("extensionId"))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry extension not found")
+		writeError(w, http.StatusNotFound, "Расширение в реестре не найдено")
 		return
 	}
 	if err != nil {
@@ -164,7 +164,7 @@ func (s Server) extensionRegistryExtension0203(w http.ResponseWriter, r *http.Re
 func (s Server) extensionRegistryVersion0203(w http.ResponseWriter, r *http.Request) {
 	item, err := s.Repo.GetExtensionRegistryVersion(r.Context(), r.PathValue("extensionId"), r.PathValue("version"))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry extension version not found")
+		writeError(w, http.StatusNotFound, "Версия расширения в реестре не найдена")
 		return
 	}
 	if err != nil {
@@ -222,7 +222,7 @@ func registryPublicKey0203(key model.ExtensionRegistryPublisherKey) (ed25519.Pub
 	}
 	raw, err := base64.StdEncoding.DecodeString(key.PublicKeyBase64)
 	if err != nil || len(raw) != ed25519.PublicKeySize {
-		return nil, errors.New("registry contains invalid Ed25519 public key")
+		return nil, errors.New("Реестр содержит недействительный публичный ключ Ed25519")
 	}
 	return ed25519.PublicKey(raw), nil
 }
@@ -230,7 +230,7 @@ func registryPublicKey0203(key model.ExtensionRegistryPublisherKey) (ed25519.Pub
 func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, extensionRegistryMaxUpload0203+int64(16<<20))
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid registry publish multipart body: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректное составное тело публикации в реестре: "+err.Error())
 		return
 	}
 	file, _, err := r.FormFile("artifact")

@@ -61,7 +61,7 @@ func (s Server) extensionHostLogs0205(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) extensionHostStart0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	if s.ExtensionHost == nil {
@@ -98,7 +98,7 @@ func (s Server) extensionHostStop0205(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	if s.ExtensionHost == nil {

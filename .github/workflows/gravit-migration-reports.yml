@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Deterministic report unit/race tests and PostgreSQL integration
+      - name: Deterministic отчёта модульных/тесты на состояние гонки и PostgreSQL интеграции
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitreport
@@ -49,7 +49,7 @@ jobs:
       - name: Полная сборка серверной части
         working-directory: services/api
         run: go build ./...
-      - name: CLI build and HTTP tests
+      - name: Сборка CLI и HTTP-тесты
         working-directory: cli
         run: |
           go test -count=1 ./cmd/launcher -run '^TestMigrationReportCLI03313$'
@@ -64,7 +64,7 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Contract and canonical version
+      - name: контракта и канонической версии
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check

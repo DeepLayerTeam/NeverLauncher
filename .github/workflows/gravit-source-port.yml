@@ -30,24 +30,24 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Check product version and public Java compatibility
+      - name: Проверить продукта версии и публичной Java совместимости
         run: |
           python3 scripts/version/manage.py check
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
-      - name: Compile real source ports and reject unsupported calls
+      - name: Скомпилировать реального исходников ports и Отклонить unsupported calls
         run: python3 -m unittest discover -s tools/gravit-port -p 'test_port.py' -v
-      - name: Real JVM host / events / durable storage / RPC / CLI
+      - name: реального JVM хоста / events / надёжного хранилища / RPC / CLI
         run: |
           sh examples/extensions/gravit-compat/build.sh
           python3 examples/extensions/gravit-compat/test-runner.py
-      - name: Build real CLI, inspect 19 modules, execute selected module tests
+      - name: Собрать реального CLI, Проверить 19 модулей, Выполнить selected модуля тесты
         run: |
           set -eu
           (cd cli && go test -count=1 -run '^TestLatest04211' ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --report "$RUNNER_TEMP/gravit-matrix.json"
           "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --module M02 --run-tests --require-tests --report "$RUNNER_TEMP/gravit-discord.json"
-      - name: Sign real source-ported .nlext and reject tampering
+      - name: Подписать настоящее перенесённое расширение .nlext и отклонить его модификации
         run: |
           set -eu
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/author.pem"

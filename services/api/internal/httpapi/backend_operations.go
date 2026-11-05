@@ -60,16 +60,16 @@ func (l *BackendLifecycle0289) IsDraining() bool {
 func (s Server) backendConfigReload0289(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.OperationalConfigStore)
 	if !ok {
-		writeError(w, 503, "operational config store unavailable")
+		writeError(w, 503, "Хранилище эксплуатационной конфигурации недоступно")
 		return
 	}
 	revision, err := store.GetOperationalConfig(r.Context())
 	if err != nil {
-		writeError(w, 503, "operational config store unavailable")
+		writeError(w, 503, "Хранилище эксплуатационной конфигурации недоступно")
 		return
 	}
 	if err := revision.Settings.Validate(); err != nil {
-		writeError(w, 503, "invalid operational configuration")
+		writeError(w, 503, "Некорректная эксплуатационная конфигурация")
 		return
 	}
 	s.audit(r, s.adminActor(r), "backend:config:reload", "revision")
@@ -80,7 +80,7 @@ func (s Server) backendInstanceStatus0289(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Cache-Control", "no-store")
 	l := s.State.BackendLifecycle0289
 	if l == nil {
-		writeError(w, 503, "backend lifecycle not initialized")
+		writeError(w, 503, "Жизненный цикл Backend не инициализирован")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -154,14 +154,14 @@ func (s Server) backendConnectedClients0289(w http.ResponseWriter, r *http.Reque
 	admins := backendRecentClients0289(s.State.AuthSessions.listFiltered118("", "", "active", ""), now, 5*time.Minute)
 	store, ok := s.Repo.(repository.BackendMinecraftClientStore0289)
 	if !ok {
-		writeError(w, 503, "launcher sessions store unavailable")
+		writeError(w, 503, "Хранилище сессий лаунчера недоступно")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 	launchers, err := store.ListRecentMinecraftClients0289(ctx, now, 5*time.Minute)
 	if err != nil {
-		writeError(w, 503, "launcher sessions unavailable")
+		writeError(w, 503, "Сессии лаунчера недоступны")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"adminSessions": admins, "launcherSessions": launchers,
@@ -180,12 +180,12 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 	// Нельзя завершать сервер, если его работу не контролирует явно настроенная служба
 	// перезапуска.
 	if l == nil || !l.Enabled {
-		writeError(w, 503, "restart requires an explicitly configured external process supervisor")
+		writeError(w, 503, "Для перезапуска необходимо явно настроить внешний управляющий процесс")
 		return
 	}
 	journal, ok := s.Repo.(repository.BackendRestartJournal)
 	if !ok {
-		writeError(w, 503, "restart requires a durable PostgreSQL command journal")
+		writeError(w, 503, "Для перезапуска необходим надёжный журнал команд PostgreSQL")
 		return
 	}
 	if os.Getenv("LAUNCHER_BACKEND_SUPERVISED_RESTART") != "true" {

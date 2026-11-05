@@ -53,14 +53,14 @@ type validationTarget0346 struct {
 
 func validTarget0346(t validationTarget0346) error {
 	if !validationPreset0348.MatchString(t.Preset) {
-		return errors.New("invalid configured preset selection")
+		return errors.New("Некорректный выбор настроенного пресета")
 	}
 	if t.AuthenticationMode != "official" && t.AuthenticationMode != "custom" {
-		return errors.New("required target must declare real authentication mode")
+		return errors.New("Обязательная целевая среда должна объявлять режим реальной авторизации")
 	}
 	for _, v := range []string{t.ID, t.ProjectID, t.ProfileID, t.Channel, t.Version, t.JavaVersion, t.OS, t.Arch, t.Loader, t.GuardMode, t.ServerPluginVersion, t.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
-			return errors.New("invalid configured target identity")
+			return errors.New("Некорректная идентификация настроенной целевой среды")
 		}
 	}
 	for _, v := range []string{t.ManifestSHA256, t.ArtifactSHA256, t.ResolvedPlanSHA256, t.BuildSHA, t.JavaSHA256, t.InstallAdapterSHA256, t.GuardPolicySHA256, t.ServerBridgeSHA256} {
@@ -69,7 +69,7 @@ func validTarget0346(t validationTarget0346) error {
 		}
 	}
 	if !(validationHex0345.MatchString(t.SourceSHA) || (len(t.SourceSHA) == 40 && strings.Trim(t.SourceSHA, "0123456789abcdef") == "")) {
-		return errors.New("invalid source pin")
+		return errors.New("Некорректная фиксация исходников")
 	}
 	return nil
 }
@@ -143,7 +143,7 @@ type validationFreshnessStore0346 interface {
 
 func validateFreshness0346(ctx context.Context, store validationFreshnessStore0346, p validationPayload0345, now time.Time, accepting bool) error {
 	if p.Audience != validationAudience0346 || p.Purpose != validationPurpose0346 {
-		return errors.New("wrong evidence audience or purpose")
+		return errors.New("Неверный адресат или назначение подтверждения")
 	}
 	challenge, err := store.GetValidationChallenge0346(ctx, p.RunID)
 	if err != nil {
@@ -154,14 +154,14 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 	}
 	issued, err := time.Parse(time.RFC3339Nano, p.IssuedAt)
 	if err != nil || !issued.Equal(challenge.IssuedAt) {
-		return errors.New("invalid signed challenge issue time")
+		return errors.New("Недопустимое время выдачи подписанного запроса проверки")
 	}
 	expires, err := time.Parse(time.RFC3339Nano, p.ExpiresAt)
 	if err != nil || !expires.After(issued) || expires.After(issued.Add(24*time.Hour)) || !now.Before(expires) {
-		return errors.New("attestation evidence expired or invalid")
+		return errors.New("Подтверждение аттестации истекло или недействительно")
 	}
 	if (accepting && !now.Before(challenge.ExpiresAt)) || now.Before(challenge.IssuedAt.Add(-5*time.Minute)) {
-		return errors.New("attestation challenge expired or not yet issued")
+		return errors.New("Запрос аттестации истёк или ещё не выдан")
 	}
 	started, err := time.Parse(time.RFC3339Nano, p.StartedAt)
 	if err != nil || started.Before(challenge.IssuedAt.Add(-5*time.Minute)) || started.After(challenge.ExpiresAt) {

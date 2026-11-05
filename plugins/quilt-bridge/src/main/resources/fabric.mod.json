@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "launcher_quilt_bridge",
   "version": "${version}",
-  "name": "Launcher Quilt Server Bridge",
+  "name": "Серверный мост Launcher для Quilt",
   "description": "Серверный адаптер Launcher ServerBridge для Quilt Loader.",
   "environment": "server",
   "entrypoints": {"main": ["ru.launcher.bridge.quilt.LauncherQuiltBridge"]},

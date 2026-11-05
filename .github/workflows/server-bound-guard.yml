@@ -37,18 +37,18 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Version and migration catalog
+      - name: версии и миграции каталога
         run: python3 scripts/version/manage.py check
-      - name: Compile actual API backend
+      - name: Скомпилировать фактический API Backend
         working-directory: services/api
         run: go build ./cmd/...
-      - name: Guard account/server/plan proof and live player tamper regressions
+      - name: Guard учётной записи/сервера/плана доказательства и реальные игрока модификации регрессии
         working-directory: services/api
         run: go test -count=1 -race -timeout=10m ./internal/httpapi -run '^TestGuardBoundSession0507'
-      - name: PostgreSQL actual sessions, pacing, revocation and runtime kick
+      - name: Проверить настоящие сессии PostgreSQL, ограничения частоты, отзыв и отключение из Runtime
         working-directory: services/api
         run: go test -count=1 -race -timeout=10m ./internal/repository -run '^TestServerBoundGuardPostgres0507$'
-      - name: Compile CLI and sealed migration catalog
+      - name: Скомпилировать CLI и запечатанного миграции каталога
         working-directory: cli
         run: go build ./cmd/... && go test -count=1 ./internal/dbmigrate
       - name: Статический анализ

@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Test restored world bytes, stale host admission and recovery safety
+      - name: тестировать restored мира байтов, устаревших хоста допуска и восстановления безопасности
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest -v \
@@ -30,7 +30,7 @@ jobs:
             scripts/operations/test_dr_03512.py \
             scripts/operations/test_multi_host_0512.py \
             scripts/operations/test_nn1_compat_0516.py
-      - name: Check Python syntax and release metadata
+      - name: Проверить Python синтаксиса и релиза метаданных
         run: |
           python3 -m py_compile scripts/operations/cross_host_recovery_0519.py
           python3 scripts/version/manage.py check

@@ -38,7 +38,7 @@ var dnsLabel = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])
 
 func names(hosts []string) ([]net.IP, []string, error) {
 	if len(hosts) == 0 || len(hosts) > 16 {
-		return nil, nil, errors.New("1-16 explicit --host SAN values required")
+		return nil, nil, errors.New("Необходимо указать от 1 до 16 SAN-значений через --host")
 	}
 	var ips []net.IP
 	var dns []string
@@ -73,7 +73,7 @@ func names(hosts []string) ([]net.IP, []string, error) {
 		dns = append(dns, k)
 	}
 	if len(ips)+len(dns) == 0 {
-		return nil, nil, errors.New("empty SAN list")
+		return nil, nil, errors.New("Список SAN пуст")
 	}
 	return ips, dns, nil
 }
@@ -118,21 +118,21 @@ func writeExclusive(path string, contents []byte, perm os.FileMode) error {
 // учётных данных оператор должен перенести ca.key в офлайн-хранилище.
 func Generate(directory string, hosts []string, days int) (result Result, err error) {
 	if days < 1 || days > 90 {
-		return result, errors.New("certificate lifetime must be 1-90 days")
+		return result, errors.New("Срок действия сертификата должен составлять от 1 до 90 дней")
 	}
 	ips, dns, err := names(hosts)
 	if err != nil {
 		return result, err
 	}
 	if directory == "" || !filepath.IsAbs(directory) {
-		return result, errors.New("--output-dir must be absolute")
+		return result, errors.New("Путь --output-dir должен быть абсолютным")
 	}
 	directory = filepath.Clean(directory)
 	if directory == string(filepath.Separator) {
-		return result, errors.New("output directory cannot be filesystem root")
+		return result, errors.New("Выходной каталог не может быть корнем файловой системы")
 	}
 	if e := os.Mkdir(directory, 0700); e != nil {
-		return result, fmt.Errorf("output directory must not already exist: %w", e)
+		return result, fmt.Errorf("Выходной каталог уже существует: %w", e)
 	}
 	success := false
 	defer func() {
@@ -232,7 +232,7 @@ func Generate(directory string, hosts []string, days int) (result Result, err er
 			return result, e
 		}
 		if _, e = cert.Verify(x509.VerifyOptions{Roots: pool, KeyUsages: []x509.ExtKeyUsage{item.usage}, DNSName: item.dns}); e != nil {
-			return result, fmt.Errorf("generated certificate verification: %w", e)
+			return result, fmt.Errorf("Проверка созданного сертификата: %w", e)
 		}
 	}
 	f, e := os.Open(directory)

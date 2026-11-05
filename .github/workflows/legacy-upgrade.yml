@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Existing installation, byte-exact backup and native updater tests
+      - name: существующих installation, byte-exact Резервная копия и нативного механизма обновления тесты
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \

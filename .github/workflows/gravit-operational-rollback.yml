@@ -41,13 +41,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Full migration API build and unit/race tests
+      - name: полные миграции API сборку и модульных/тесты на состояние гонки
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitrollback ./internal/gravitrehearsal
           go test -run '^$' ./internal/httpapi
           go test -race -count=1 ./internal/repository -run '^TestMigrationCutoverPostgres03311$'
-      - name: CLI tests and compilation
+      - name: CLI тесты и компиляции
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311|TestFence|TestRollbackBoundSnapshot0448'
       - uses: actions/setup-node@v4
@@ -60,7 +60,7 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: OpenAPI and version consistency
+      - name: OpenAPI и версии согласованности
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

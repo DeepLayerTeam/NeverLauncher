@@ -30,7 +30,7 @@ func (e *ExitError) Error() string { return e.Message }
 func Environment() (HostEnvironment, error) {
 	env := HostEnvironment{ExtensionId: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_ID")), ExtensionApiVersion: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_API_VERSION")), Version: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_VERSION")), Scope: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_SCOPE")), ScopeId: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_SCOPE_ID")), Target: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_TARGET")), HostUrl: strings.TrimRight(strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_HOST_URL")), "/"), HostToken: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_HOST_TOKEN")), CallbackToken: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_CALLBACK_TOKEN")), InstanceId: strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_INSTANCE_ID"))}
 	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
-		return HostEnvironment{}, errors.New("Launcher Extension Host environment is incomplete")
+		return HostEnvironment{}, errors.New("Окружение Launcher Extension Host настроено не полностью")
 	}
 	if env.Scope == "" {
 		env.Scope = "global"
@@ -86,7 +86,7 @@ func (c *Client) Hello(ctx context.Context) (HelloResponse, error) {
 		return HelloResponse{}, err
 	}
 	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
-		return HelloResponse{}, errors.New("Launcher Host hello identity/protocol mismatch")
+		return HelloResponse{}, errors.New("Launcher Host: идентификация или протокол приветствия не совпадает")
 	}
 	c.hello = out
 	return out, nil
@@ -97,7 +97,7 @@ func (c *Client) Log(ctx context.Context, level, message string, fields map[stri
 func (c *Client) Capability(ctx context.Context, name string, request, response any) error {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" || strings.Contains(name, "/") {
-		return errors.New("invalid capability name")
+		return errors.New("Некорректное имя разрешённой возможности")
 	}
 	return c.call(ctx, "/v1/capabilities/"+name, request, response)
 }

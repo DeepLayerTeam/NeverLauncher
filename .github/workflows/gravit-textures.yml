@@ -23,7 +23,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Compile migration CLI and run texture regression tests
+      - name: Скомпилировать CLI миграций и выполнить регрессионные тесты текстур
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/texturegravit ./cmd/gravit-textures-import-02510 ./internal/texturepng ./internal/storage ./internal/dbmigrate ./internal/repository

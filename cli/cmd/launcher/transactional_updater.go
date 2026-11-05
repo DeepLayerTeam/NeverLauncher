@@ -583,7 +583,7 @@ func removeUpdaterSwapTemp0527(path string) error {
 		return err
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("unsafe updater temporary file: %s", path)
+		return fmt.Errorf("Небезопасный временный файл обновления: %s", path)
 	}
 	if err := os.Remove(path); err != nil {
 		return err
@@ -611,7 +611,7 @@ func (u *transactionalUpdater0156) cleanTransactionTemps0527(journal *updaterJou
 				return err
 			}
 			if !info.Mode().IsRegular() {
-				return fmt.Errorf("unsafe updater temporary file: %s", tmp)
+				return fmt.Errorf("Небезопасный временный файл обновления: %s", tmp)
 			}
 			if err := os.Remove(tmp); err != nil {
 				return err

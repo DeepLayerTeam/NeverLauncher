@@ -20,11 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install native Tauri and TPM development libraries
+      - name: Установить нативного Tauri и TPM development библиотек
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
-      - name: Linux TPM negative tests and production desktop compilation
+      - name: Linux TPM негативные тесты и промышленной Desktop компиляции
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
@@ -36,6 +36,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Real X.509 and TPM binary fixture negative tests
+      - name: реального X.509 и TPM бинарного тестовых данных негативные тесты
         working-directory: services/api
         run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline

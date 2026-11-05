@@ -24,8 +24,8 @@ type officialLinkRequest0268 struct {
 	Confirm              bool   `json:"confirm"`
 }
 
-var errLinkProofMalformed0268 = errors.New("malformed Minecraft proof")
-var errLinkProofMismatch0268 = errors.New("Minecraft UUID proof mismatch")
+var errLinkProofMalformed0268 = errors.New("Некорректное подтверждение Minecraft")
+var errLinkProofMismatch0268 = errors.New("Несовпадение подтверждённого Minecraft UUID")
 
 type minecraftProfileVerifier0268 interface {
 	Profile(context.Context, string) (officialminecraft.Profile, error)
@@ -79,19 +79,19 @@ func (s Server) officialLinksGet0268(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "Never authentication required")
+		writeError(w, 401, "Требуется авторизация Never")
 		return
 	}
 	store, ok := s.officialLinkStore0268()
 	if !ok {
-		writeError(w, 503, "durable official identity store required")
+		writeError(w, 503, "Необходимо надёжное хранилище официальных идентификаторов")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	links, err := store.ListOfficialLinks0268(ctx, claims.Sub)
 	if err != nil {
-		writeError(w, 503, "official identity storage unavailable")
+		writeError(w, 503, "Хранилище официальных идентификаторов недоступно")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"links": links})
@@ -102,16 +102,16 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "Never authentication required")
+		writeError(w, 401, "Требуется авторизация Never")
 		return
 	}
 	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, 403, "recent Never login required to link an account")
+		writeError(w, 403, "Для привязки учётной записи необходим недавний вход в Never")
 		return
 	}
 	store, ok := s.officialLinkStore0268()
 	if !ok {
-		writeError(w, 503, "durable official identity store required")
+		writeError(w, 503, "Необходимо надёжное хранилище официальных идентификаторов")
 		return
 	}
 	if r.Header.Get("Content-Type") != "application/json" {
@@ -158,7 +158,7 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, 503, "official identity storage unavailable")
+		writeError(w, 503, "Хранилище официальных идентификаторов недоступно")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "official-minecraft:link", Target: link.MinecraftUUID, CreatedAt: time.Now().UTC()})
@@ -170,7 +170,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "Never authentication required")
+		writeError(w, 401, "Требуется авторизация Never")
 		return
 	}
 	if !freshNeverIdentity0268(claims, time.Now()) {
@@ -184,7 +184,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 	}
 	store, ok := s.officialLinkStore0268()
 	if !ok {
-		writeError(w, 503, "durable official identity store required")
+		writeError(w, 503, "Необходимо надёжное хранилище официальных идентификаторов")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -195,7 +195,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, 503, "official identity storage unavailable")
+		writeError(w, 503, "Хранилище официальных идентификаторов недоступно")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "official-minecraft:unlink", Target: uuid, CreatedAt: time.Now().UTC()})

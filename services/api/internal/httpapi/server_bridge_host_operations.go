@@ -53,7 +53,7 @@ func (s Server) hostOperationPreflight0413(w http.ResponseWriter, r *http.Reques
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия администратора")
 		return bridgeServerRecord{}, repository.HostOperation0413{}, nil, false
 	}
 	// Права на процессы хоста ГЛОБАЛЬНЫ; ролей проекта или областей игрового сервера недостаточно.

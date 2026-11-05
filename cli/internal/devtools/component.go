@@ -55,7 +55,7 @@ func (b *cappedBuffer) Write(p []byte) (int, error) {
 }
 func validJavaPath(s string) error {
 	if s == "" {
-		return errors.New("java executable required")
+		return errors.New("Необходимо указать исполняемый файл Java")
 	}
 	return nil
 }
@@ -66,13 +66,13 @@ func javaCommandArgs(jar, work string, heap int, appArgs []string) []string {
 func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult, error) {
 	res := ComponentResult{Isolation: opt.Isolation, ExitCode: -1}
 	if opt.Isolation != "process" && opt.Isolation != "sandbox" {
-		return res, errors.New("--isolation must be process or sandbox")
+		return res, errors.New("Параметр --isolation допускает только process или sandbox")
 	}
 	if opt.Timeout <= 0 || opt.Timeout > 2*time.Minute {
 		return res, errors.New("timeout must be 1s..2m")
 	}
 	if opt.HeapMB < 32 || opt.HeapMB > 2048 {
-		return res, errors.New("heap must be 32..2048 MiB")
+		return res, errors.New("Размер кучи должен составлять от 32 до 2048 МиБ")
 	}
 	if e := validJavaPath(opt.Java); e != nil {
 		return res, e
@@ -102,11 +102,11 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 	var cmd *exec.Cmd
 	if opt.Isolation == "sandbox" {
 		if runtime.GOOS != "linux" {
-			return res, errors.New("bubblewrap sandbox requires Linux")
+			return res, errors.New("Для песочницы bubblewrap необходим Linux")
 		}
 		bwrap, e := exec.LookPath("bwrap")
 		if e != nil {
-			return res, errors.New("sandbox unavailable: install bubblewrap; process isolation is NOT a security sandbox")
+			return res, errors.New("Песочница недоступна: установите bubblewrap. Изоляция процесса НЕ является песочницей безопасности")
 		}
 		args := []string{"--die-with-parent", "--new-session", "--unshare-all", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--dir", "/work", "--dir", "/app", "--dir", "/etc", "--dir", "/etc/ssl"}
 		for _, d := range []string{"/usr", "/lib", "/lib64", "/bin", "/etc/alternatives", "/etc/ssl/certs", "/etc/java"} {
@@ -156,7 +156,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		res.ExitCode = cmd.ProcessState.ExitCode()
 	}
 	if res.TimedOut {
-		return res, errors.New("component timed out and was terminated")
+		return res, errors.New("Время ожидания компонента истекло; его работа завершена")
 	}
 	if e != nil {
 		return res, fmt.Errorf("component exited: %w", e)

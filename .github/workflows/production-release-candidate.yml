@@ -439,15 +439,15 @@ jobs:
              .productVersion == $version and .sourceSha == $sha and
              .verifiedTargets > 0 and (.matrixSha256 | length) == 64' \
             runtime-ga-preflight/GA_RUNTIME_PREFLIGHT_0350.json >/dev/null
-      - name: Install Ed25519 verification dependency
+      - name: Установить зависимости проверки Ed25519
         run: python3 -m pip install 'cryptography>=43,<47'
-      - name: Test independent full GA replay and sealed publication bytes
+      - name: тестировать независимая полные GA Воспроизвести и запечатанного публикации байтов
         run: |
           python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
           python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -q
           python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -q
           python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
-      - name: Require fresh independent official Minecraft GA run
+      - name: Потребовать новый независимый запуск GA-проверки официального Minecraft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVIDENCE_RUN_ID: ${{ inputs.official_minecraft_ga_evidence_run_id }}
@@ -457,7 +457,7 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN_ID" > "$RUNNER_TEMP/official-ga-run.json"
           python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/official-ga-run.json" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
-      - name: Download independently signed live official Minecraft GA evidence
+      - name: Скачать независимо подписанных реальные официального Minecraft GA подтверждений
         uses: actions/download-artifact@v4
         with:
           pattern: official-minecraft-ga-0270-*
@@ -465,7 +465,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: official-minecraft-ga-raw
           merge-multiple: false
-      - name: Require six exact platform attestations; verify pinned operator signature
+      - name: Потребовать шести точного платформы attestations; Проверить закреплённых оператора подписи
         shell: bash
         env:
           APPROVED_OPERATOR_PUBLIC_KEY: ${{ vars.LAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
@@ -482,7 +482,7 @@ jobs:
             --attestations official-minecraft-ga-0270 \
             --public-key "$APPROVED_OPERATOR_PUBLIC_KEY" \
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/official-minecraft-ga-0270.json"
-      - name: Require approved same-commit protected Client Factory GA workflow
+      - name: Потребовать подтверждённый процесс Client Factory GA для того же коммита
         env:
           GA_RUN_ID: ${{ inputs.client_factory_ga_evidence_run_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -492,18 +492,18 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID"             --jq '{commit:.head_sha,conclusion:.conclusion,event:.event,path:.path}' > "$RUNNER_TEMP/client-factory-run.json"
           jq -e --arg commit "$GITHUB_SHA"             '.commit == $commit and .conclusion == "success" and .event == "workflow_dispatch" and (.path | endswith(".github/workflows/client-factory-ga-0280.yml"))'             "$RUNNER_TEMP/client-factory-run.json" >/dev/null
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID" > "$RUNNER_TEMP/client-factory-run-full.json"
-      - name: Require fresh independent Client Factory GA execution
+      - name: Потребовать нового независимая клиента Factory GA выполнения
         run: |
           python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/client-factory-run-full.json" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA" --workflow client-factory-ga-0280.yml
-      - name: Retrieve Client Factory protected GA evidence
+      - name: Retrieve клиента Factory защищённые GA подтверждений
         uses: actions/download-artifact@v4
         with:
           name: client-factory-ga-0280-${{ github.sha }}
           run-id: ${{ inputs.client_factory_ga_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: client-factory-ga-0280-evidence
-      - name: Verify signed Client Factory GA evidence without private keys
+      - name: Проверить подписанные подтверждения Client Factory GA без приватных ключей
         env:
           CLIENT_FACTORY_RUNTIME_PUBLIC_KEY: ${{ vars.LAUNCHER_FACTORY_RUNTIME_PUBLIC_KEY }}
           CLIENT_FACTORY_JOIN_PUBLIC_KEY: ${{ vars.LAUNCHER_FACTORY_JOIN_PUBLIC_KEY }}
@@ -512,22 +512,22 @@ jobs:
           test -n "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"
           test -n "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"
           python3 scripts/ga/verify_client_factory_0280.py             --evidence client-factory-ga-0280-evidence             --runtime-public-key "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"             --join-public-key "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"             --commit "$GITHUB_SHA" --version 0.28.0
-      - name: Verify exact-commit Admin GA result
+      - name: Проверить результат Admin GA для точного коммита
         uses: actions/download-artifact@v4
         with:
           name: launcher-admin-ga-${{ github.sha }}
           path: admin-ga-certification
-      - name: Reject missing or mismatched Admin GA certification
+      - name: Отклонить отсутствующих или mismatched Admin GA-сертификация
         run: |
           jq -e --arg commit "$GITHUB_SHA" --arg version "$(cat VERSION)" \
             '.status == "passed" and .commit == $commit and .productVersion == $version and (.adminBundle | length > 0) and (.checks | index("live-playwright-rbac-two-tabs-recovery") != null) and (.checks | index("postgresql-serverbridge-integration") != null) and (.checks | index("live-serverbridge-v3-save-drain-ack") != null)' \
             admin-ga-certification/admin-0220.json >/dev/null
-      - name: Download exact-commit Profile GA certification
+      - name: Скачать exact-commit профиля GA-сертификация
         uses: actions/download-artifact@v4
         with:
           name: launcher-profiles-ga-${{ github.sha }}
           path: profile-ga-certification
-      - name: Reject missing, skipped or mismatched Profile GA evidence
+      - name: Отклонить отсутствующих, пропущенных или mismatched профиля GA подтверждений
         run: |
           jq -e --arg commit "$GITHUB_SHA" --arg version "$(cat VERSION)" \
             '.status == "passed" and .commit == $commit and .productVersion == $version and
@@ -535,59 +535,59 @@ jobs:
               ([.suites[] | select(.status != "passed")] | length) == 0 and
               ([.suites[] | .tests | length] | min) > 0' \
             profile-ga-certification/profiles-0230.json >/dev/null
-      - name: Reject historical or partial active GA reports from another run/attempt
+      - name: Отклонить исторические или неполные активные отчёты GA от других запусков
         run: |
           python3 scripts/release/verify_current_certifications.py \
             --admin admin-ga-certification/admin-0220.json \
             --profiles profile-ga-certification/profiles-0230.json \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
-      - name: Download certified Linux Guard artifacts
+      - name: Скачать сертифицированных Linux Guard артефактов
         uses: actions/download-artifact@v4
         with:
           name: launcher-linux-guard-${{ github.sha }}
           path: guard-platform-artifacts/linux
-      - name: Download native Linux x64 + ARM64 production artifacts
+      - name: Скачать нативного Linux x64 + ARM64 промышленной артефактов
         uses: actions/download-artifact@v4
         with:
           pattern: launcher-linux-production-*-${{ github.sha }}
           path: linux-production-artifacts
           merge-multiple: true
-      - name: Download notarized macOS x64 + ARM64 production artifacts
+      - name: Скачать notarized macOS x64 + ARM64 промышленной артефактов
         uses: actions/download-artifact@v4
         with:
           name: launcher-macos-notarized-${{ github.sha }}
           path: macos-production-artifacts
-      - name: Download Managed JRE six-target production assets
+      - name: Скачать Managed JRE шести целевых платформ промышленной ресурсов
         uses: actions/download-artifact@v4
         with:
           name: launcher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts
-      - name: Download Authenticode Windows x64 + ARM64 production artifacts
+      - name: Скачать Authenticode Windows x64 + ARM64 промышленной артефактов
         uses: actions/download-artifact@v4
         with:
           name: launcher-windows-production-${{ github.sha }}
           path: windows-production-artifacts
-      - name: Download certified Windows Guard artifacts
+      - name: Скачать сертифицированные артефакты Guard для Windows
         uses: actions/download-artifact@v4
         with:
           name: launcher-windows-guard-${{ github.sha }}
           path: guard-platform-artifacts/windows
-      - name: Download certified macOS Guard artifacts
+      - name: Скачать сертифицированных macOS Guard артефактов
         uses: actions/download-artifact@v4
         with:
           name: launcher-macos-guard-${{ github.sha }}
           path: guard-platform-artifacts/macos
-      - name: Download Guard CI matrix
+      - name: Скачать матрицу проверок Guard CI
         uses: actions/download-artifact@v4
         with:
           name: launcher-guard-ci-matrix-${{ github.run_id }}
           path: guard-certification
-      - name: Download exact-commit Windows adversarial certificate
+      - name: Скачать сертификат атакующих проверок Windows для точного коммита
         uses: actions/download-artifact@v4
         with:
           name: guard-windows-adversarial-certificate-${{ github.sha }}
           path: windows-adversarial-certificate
-      - name: Wait for exact-commit Compatibility + Device Trust certifications
+      - name: Дождаться сертификации совместимости и доверия устройствам для точного коммита
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
@@ -621,13 +621,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Install release dependencies
+      - name: Установить релиза зависимостей
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev openssl
-      - name: Load approved production release signing identity (ephemeral)
+      - name: нагрузки разрешённых промышленного релиза подписания идентичности (ephemeral)
         shell: bash
         env:
           PRODUCTION_RELEASE_SIGNING_KEY: ${{ secrets.NL_PRODUCTION_RELEASE_PRIVATE_KEY_PEM }}
@@ -645,7 +645,7 @@ jobs:
           openssl pkey -in /tmp/launcher-release-private.pem -noout >/dev/null
           openssl pkey -pubin -in /tmp/launcher-release-root-public.pem -noout >/dev/null
           jq -e '.schemaVersion and .trustDomain' /tmp/launcher-release-trust-policy.json >/dev/null
-      - name: Load approved extension publisher identity for signed .nlext packages
+      - name: нагрузки разрешённых extension publisher идентичности для подписанных .nlext пакетов
         shell: bash
         env:
           EXTENSION_PUBLISHER_SIGNING_KEY: ${{ secrets.NL_EXTENSION_PUBLISHER_PRIVATE_KEY_PEM }}
@@ -662,7 +662,7 @@ jobs:
           openssl pkey -in "$RUNNER_TEMP/nl-extension-publisher-private.pem" -pubout -out "$RUNNER_TEMP/extension-derived-publisher.pem"
           openssl pkey -pubin -in "$RUNNER_TEMP/nl-extension-publisher-public.pem" -pubout -out "$RUNNER_TEMP/extension-normalized-publisher.pem"
           cmp "$RUNNER_TEMP/extension-normalized-publisher.pem" "$RUNNER_TEMP/extension-derived-publisher.pem"
-      - name: Download historical 0.25.0 Optional Components GA evidence packages
+      - name: Скачать исторических 0.25.0 необязательных компонентов GA подтверждений пакетов
         if: inputs.optional_components_ga_evidence_run_id != ''
         uses: actions/download-artifact@v4
         with:
@@ -671,7 +671,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: optional-components-ga-0250-raw
           merge-multiple: false
-      - name: Require exactly six historical Optional Components platform folders
+      - name: Потребовать exactly шести исторических необязательных компонентов платформы folders
         if: inputs.optional_components_ga_evidence_run_id != ''
         shell: bash
         run: |
@@ -682,12 +682,12 @@ jobs:
             test -d "$source"
             mv "$source" "optional-components-ga-0250/$target"
           done
-      - name: Download independently verified Single-Node GA evidence
+      - name: Скачать независимо подтверждённые Single-Node GA подтверждений
         uses: actions/download-artifact@v4
         with:
           name: launcher-single-node-ga-verified-${{ github.sha }}
           path: single-node-ga-approved
-      - name: Pin independent GA verification key for release signing
+      - name: Закрепить независимая GA проверки ключа для релиза подписания
         env:
           TRUSTED_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
         run: |
@@ -699,7 +699,7 @@ jobs:
           umask 077
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/launcher-single-node-ga.pub
           test -s single-node-ga-approved/SINGLE_NODE_GA_ATTESTATION.json
-      - name: Resolve mandatory independently trusted GA policy
+      - name: Разрешить обязательные независимо доверенные GA политики
         id: release-policy
         shell: bash
         env:
@@ -714,7 +714,7 @@ jobs:
             legacy-ga036) test -n "$HISTORIC_RUN"; test -z "$NEW_RUN" ;;
             *) echo 'production release cannot bypass independently signed target policy' >&2; exit 2 ;;
           esac
-      - name: Download current-release independently signed GA authorization
+      - name: Скачать current-release независимо подписанных GA авторизации
         if: steps.release-policy.outputs.mode == 'signed-ga-v2'
         uses: actions/download-artifact@v4
         with:
@@ -722,7 +722,7 @@ jobs:
           run-id: ${{ inputs.ga_operator_approval_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ga-protected-approval
-      - name: Download historical 0.36.0 independently signed GA authorization
+      - name: Скачать исторических 0.36.0 независимо подписанных GA авторизации
         if: steps.release-policy.outputs.mode == 'legacy-ga036'
         uses: actions/download-artifact@v4
         with:
@@ -730,7 +730,7 @@ jobs:
           run-id: ${{ inputs.ga036_operator_approval_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ga-protected-approval
-      - name: Pin independent GA operator verification key (NOT release signing key)
+      - name: Закрепить независимая GA оператора проверки ключа (не релиза ключа подписи)
         env:
           GA_MODE: ${{ steps.release-policy.outputs.mode }}
           HISTORIC_KEY: ${{ vars.NL_GA036_OPERATOR_PUBLIC_KEY_HEX }}
@@ -754,7 +754,7 @@ jobs:
             --preflight --evidence ga-protected-approval \
             --trusted-key "$RUNNER_TEMP/nl-ga-operator.pub" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
-      - name: Import independently signed Operations GA evidence 0.46.0
+      - name: Импортировать независимо подписанных операций GA подтверждений 0.46.0
         shell: bash
         env:
           OPS_JSON_B64: ${{ secrets.NL_OPERATIONS_GA_JSON_B64 }}
@@ -774,7 +774,7 @@ jobs:
           test -s "$RUNNER_TEMP/nl-ops-ga/OPERATIONS_GA_0460.json"
           test -s "$RUNNER_TEMP/nl-ops-ga/OPERATIONS_GA_0460.sig"
           test -s "$RUNNER_TEMP/nl-ops-ga.pub"
-      - name: Build and cryptographically verify complete release bundle
+      - name: Собрать и cryptographically Проверить полные релиза пакета
         env:
           LAUNCHER_OPERATIONS_GA_EVIDENCE_DIR: ${{ runner.temp }}/nl-ops-ga
           LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
@@ -814,7 +814,7 @@ jobs:
           LAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
           LAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
-      - name: Inspect real six-target package binaries and signed release manifest
+      - name: Проверить реального шести целевых платформ пакета бинарных файлов и подписанного релиза манифеста
         shell: bash
         run: |
           set -euo pipefail
@@ -827,7 +827,7 @@ jobs:
       # нельзя пересобирать код или подставлять фиктивный сервер. Это дополнительная
       # проверка сверх независимых доказательств GA для шести платформ и основного
       # CI.
-      - name: Required final-bundle SQLite install, crash, restart and restore E2E 0.38.0
+      - name: обязательной final-bundle SQLite Установить, аварийного завершения, перезапуска и восстановления E2E 0.38.0
         shell: bash
         run: |
           set -euo pipefail
@@ -862,7 +862,7 @@ jobs:
             --bridge-policy "$RUNNER_TEMP/nl-final-e2e-policies/bridge.json" \
             --work-root "$RUNNER_TEMP/nl-final-e2e-0380" \
             --report "$RUNNER_TEMP/nl-final-bundle-e2e-0380.json"
-      - name: Preserve exact-final-binary live E2E evidence
+      - name: Сохранить реальные E2E-подтверждения точного финального исполняемого файла
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -872,7 +872,7 @@ jobs:
             ${{ runner.temp }}/nl-final-bundle-e2e-0380-live.json
           if-no-files-found: error
           retention-days: 90
-      - name: Require current source production package rehearsal and publication dry-run
+      - name: Потребовать репетицию промышленной упаковки текущих исходников и пробную публикацию
         shell: bash
         run: |
           set -euo pipefail
@@ -885,7 +885,7 @@ jobs:
               '.schemaVersion == "launcher.release.publication-dry-run.v1" and .status == "passed" and .published == false and .version == $version and .commit == $commit and .runId == env.GITHUB_RUN_ID and .runAttempt == env.GITHUB_RUN_ATTEMPT and .filesCopied > 20' \
               "dist/.release-${VERSION}/PUBLICATION_DRY_RUN_0365.json" >/dev/null
           fi
-      - name: Upload independent publication dry-run result
+      - name: Загрузить результат независимой пробной публикации
         if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
@@ -893,7 +893,7 @@ jobs:
           path: dist/.release-*/PUBLICATION_DRY_RUN_0365.json
           if-no-files-found: error
           retention-days: 90
-      - name: Require exact-byte six-target signed approval inside signed release
+      - name: Потребовать exact-byte шести целевых платформ подписанных approval inside подписанного релиза
         shell: bash
         run: |
           set -euo pipefail
@@ -925,7 +925,7 @@ jobs:
           fi
           test -s "$DIR/$APPROVAL"
           test -s "$DIR/$SIG"
-      - name: Assert required production artifacts
+      - name: Подтвердить обязательной промышленной артефактов
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
@@ -1036,12 +1036,12 @@ jobs:
           test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
           test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 
-      - name: Resolve immutable final release directory
+      - name: Разрешить неизменяемых финального релиза directory
         id: final-release
         shell: bash
         run: |
           echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
-      - name: Upload immutable signed GA release for post-gate publication
+      - name: Загрузить неизменяемый подписанный GA-релиз для публикации после контроля
         uses: actions/upload-artifact@v4
         with:
           name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1066,7 +1066,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Require every production dependency to succeed on same SHA
+      - name: Потребовать каждого промышленной зависимости для succeed на того же SHA
         env:
           CI_NEEDS_JSON: ${{ toJSON(needs) }}
         shell: bash
@@ -1079,7 +1079,7 @@ jobs:
             --needs-json "$RUNNER_TEMP/required-production-needs.json" \
             --source-sha "$GITHUB_SHA" --version-file VERSION --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" --output required-production-evidence.json
-      - name: Publish required production status
+      - name: Опубликовать обязательной промышленной статуса
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -1105,9 +1105,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install independent GA signature verifier
+      - name: Установить независимая GA подписи верификатора
         run: python3 -m pip install cryptography==46.0.4
-      - name: Regression-check independent replay and exact-byte publication code
+      - name: Регрессионно проверить независимое воспроизведение и код публикации точных байтов
         run: |
           python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
           python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -q
@@ -1125,7 +1125,7 @@ jobs:
         with:
           name: launcher-publication-dry-run-${{ github.sha }}
           path: publication-dry-run
-      - name: Load pinned verification identities without access to private signing keys
+      - name: нагрузки закреплённых проверки identities без access для закрытого подписания ключей
         shell: bash
         env:
           TRUSTED_GA_PUBLIC_KEY: ${{ vars.NL_GA_OPERATOR_PUBLIC_KEY_HEX }}
@@ -1140,7 +1140,7 @@ jobs:
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-operator.pub"
           printf '%s\n' "$RELEASE_ROOT_PUBLIC_KEY" > "$RUNNER_TEMP/release-root.pub"
           printf '%s\n' "$RELEASE_TRUST_POLICY" > "$RUNNER_TEMP/trust-policy.json"
-      - name: Pin independent Operations GA public key for publication
+      - name: Закрепить независимый публичный ключ Operations GA для публикации
         shell: bash
         env:
           OPS_TRUSTED_PEM: ${{ vars.NL_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_PEM }}
@@ -1150,13 +1150,13 @@ jobs:
           test -n "$OPS_TRUSTED_PEM" || { echo '0.46.0 GA BLOCKED: public operations verification key missing' >&2; exit 2; }
           umask 077
           printf '%s\n' "$OPS_TRUSTED_PEM" > "$RUNNER_TEMP/nl-ops-ga.pub"
-      - name: Independently inspect downloaded signed release assets before publication
+      - name: независимо Проверить downloaded подписанного релиза ресурсов перед публикации
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/release/delivery_verify_0462.py \
             --bundle signed-release --release-manifest
-      - name: Retrieve independently signed 0.48.0 GA evidence from protected run
+      - name: Retrieve независимо подписанных 0.48.0 GA подтверждений из защищённые Запустить
         if: ${{ inputs.ga0480_evidence_run_id != '' }}
         uses: actions/download-artifact@v4
         with:
@@ -1164,7 +1164,7 @@ jobs:
           path: ga0480-independent
           run-id: ${{ inputs.ga0480_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Retrieve 0.51.0 independently reviewed final Guard evidence
+      - name: Получить независимо проверенные подтверждения финального Guard 0.51.0
         if: ${{ inputs.guard_0510_evidence_run_id != '' }}
         uses: actions/download-artifact@v4
         with:
@@ -1172,7 +1172,7 @@ jobs:
           path: guard-0510-independent
           run-id: ${{ inputs.guard_0510_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download protected 0.53.0 all-user-E2E signed approval and exact six final installers
+      - name: Скачать защищённые 0.53.0 all-user-E2E подписанных approval и точного шести финального installers
         if: ${{ inputs.ga0530_evidence_run_id != '' }}
         uses: actions/download-artifact@v4
         with:
@@ -1180,7 +1180,7 @@ jobs:
           path: ga0530-final
           run-id: ${{ inputs.ga0530_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Pin independent 0.53.0 final GA verifier key without a private signer
+      - name: Закрепить независимая 0.53.0 финального GA верификатора ключа без a закрытого подписывающего инструмента
         if: ${{ inputs.ga0530_evidence_run_id != '' }}
         shell: bash
         env:
@@ -1190,7 +1190,7 @@ jobs:
           test -n "$GA0530_VERIFIER_PUBLIC_PEM"
           umask 077
           printf '%s\n' "$GA0530_VERIFIER_PUBLIC_PEM" > "$RUNNER_TEMP/ga0530-verifier.pub"
-      - name: Mandatory independent Guard 0.51.0 exact-final-byte admission
+      - name: Обязательные независимые проверки допуска Guard 0.51.0 для точных финальных байтов
         shell: bash
         env:
           GUARD_EVIDENCE_RUN: ${{ inputs.guard_0510_evidence_run_id }}
@@ -1221,7 +1221,7 @@ jobs:
             --shadow-key "$RUNNER_TEMP/guard-shadow.key" \
             --publishing-bundle signed-release \
             --output "$RUNNER_TEMP/GUARD_GA0510.json"
-      - name: Re-verify signatures, exact bytes, all GA targets and same-run CI before publication
+      - name: Re-verify подписей, точного байтов, все GA целевых платформ и same-run CI перед публикации
         env:
           LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1265,7 +1265,7 @@ jobs:
             --cli "$CLI" --repository "$GITHUB_REPOSITORY" \
             "${EXTRA[@]}" \
             --output "$RUNNER_TEMP/PUBLICATION_0370.json"
-      - name: Record verified GitHub publication
+      - name: Зафиксировать подтверждённую публикацию на GitHub
         uses: actions/upload-artifact@v4
         with:
           name: launcher-publication-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}

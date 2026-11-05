@@ -59,23 +59,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install Ed25519 gate verification library
+      - name: Установить Ed25519 контрольного этапа проверки библиотеки
         run: python -m pip install 'cryptography>=43,<47'
-      - name: Provider chain / sessionserver tests (fault-injection only)
+      - name: Тесты цепочки провайдеров и sessionserver (только имитация отказов)
         run: go test -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Go race detector (supported runner)
+      - name: Go детектор гонок (поддерживаемых исполнителя)
         if: runner.os == 'Linux'
         run: go test -race -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Vet actual POC implementation
+      - name: Vet реального POC реализации
         run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Compile interactive live provider E2E binary
+      - name: Скомпилировать interactive реальные провайдера E2E бинарного
         run: go build -o "$RUNNER_TEMP/official-provider-poc${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/official-provider-poc
         shell: bash
-      - name: Operator-log evidence parser tests (not live evidence)
+      - name: Operator-log подтверждений парсера тесты (не фактических подтверждений)
         run: python ../../scripts/certification/test_official_game_join_02612.py
-      - name: Official 0.27.0 signed GA gate negative tests (fixture data only)
+      - name: официального 0.27.0 подписанных GA контрольного этапа негативные тесты (тестовых данных data только)
         run: python ../../scripts/ga/test_official_minecraft_0270.py
-      - name: Exact native installer binding negative tests (fixture data only)
+      - name: точного нативного установщика привязки негативные тесты (тестовых данных data только)
         run: python ../../scripts/ga/test_official_artifacts_0270.py
 
   native-runtime-and-desktop:
@@ -99,16 +99,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Test real native official identity paths
+      - name: тестировать реального нативного официального идентичности путей
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_
-      - name: Test launch mode isolation and runtime
+      - name: Проверить изоляцию режимов запуска и Runtime
         run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269
-      - name: Rust compilation (native platform)
+      - name: Rust компиляции (нативного платформы)
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: Install pinned Desktop dependencies
+      - name: Установить закреплённых Desktop зависимостей
         working-directory: apps/desktop
         run: npm ci
-      - name: Official / textures / launch / session lifecycle regressions
+      - name: Регрессионные проверки официальной авторизации, текстур, запуска и жизненного цикла сессии
         working-directory: apps/desktop
         shell: bash
         run: |
@@ -118,7 +118,7 @@ jobs:
           npm run test:launch-modes
           npm run test:components
           node --experimental-strip-types --test tests/startup_screen_0427.test.mjs
-      - name: Production renderer build
+      - name: Промышленная сборка интерфейса
         working-directory: apps/desktop
         run: npm run build
 
@@ -128,14 +128,14 @@ jobs:
     needs: [provider-chain-and-sessionserver, native-runtime-and-desktop]
     runs-on: ubuntu-24.04
     steps:
-      - name: Fail if any real compilation or test failed
+      - name: Блокировать if any реального компиляции или тестировать failed
         env:
           GO_RESULT: ${{ needs.provider-chain-and-sessionserver.result }}
           NATIVE_RESULT: ${{ needs.native-runtime-and-desktop.result }}
         run: |
           test "$GO_RESULT" = success
           test "$NATIVE_RESULT" = success
-      - name: Explicitly preserve live release blocker
+      - name: Explicitly Сохранить реальные релиза blocker
         run: |
           echo 'Automated preflight only: live own-app Microsoft/Xbox/Minecraft proof,'
           echo 'real vanilla and modded game joins, OS vault behavior and provider'

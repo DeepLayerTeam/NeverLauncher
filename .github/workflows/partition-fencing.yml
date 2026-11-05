@@ -45,14 +45,14 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Rebuild and test real repository with two independent PostgreSQL pools
+      - name: Rebuild и тестировать реального репозитория с двух независимая PostgreSQL pools
         working-directory: services/api
         run: |
           set -euo pipefail
           go mod download
           go test -race -count=1 ./internal/serverbridgeha
           go test -race -count=1 -run 'Test(PostgresPartitionFencing0514|PostgresExpiredLeaseFailClosed0514|ExpiredMutationAndJobFences0514|DurableScopeLeaseHasSingleDistributedOwner0213|DurableJobLeaseRecoversAcrossReplicaRestart0213)' ./internal/repository
-      - name: Confirm clean version metadata and Go formatting
+      - name: Подтвердить Очистить версии метаданных и Go форматирования
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check

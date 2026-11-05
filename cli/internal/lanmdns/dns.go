@@ -31,11 +31,11 @@ type question struct {
 func putName(b *bytes.Buffer, name string) error {
 	name = strings.TrimSuffix(name, ".")
 	if len(name) > 253 || name == "" {
-		return errors.New("invalid DNS name")
+		return errors.New("Недопустимое DNS-имя")
 	}
 	for _, label := range strings.Split(name, ".") {
 		if len(label) == 0 || len(label) > 63 {
-			return errors.New("invalid DNS label")
+			return errors.New("Недопустимая DNS-метка")
 		}
 		b.WriteByte(byte(len(label)))
 		b.WriteString(label)
@@ -137,7 +137,7 @@ func parsePacket(p []byte) ([]question, []record, error) {
 			return nil, nil, err
 		}
 		if at+4 > len(p) {
-			return nil, nil, errors.New("short DNS question")
+			return nil, nil, errors.New("Усечённый DNS-запрос")
 		}
 		qs = append(qs, question{name, binary.BigEndian.Uint16(p[at : at+2])})
 		at += 4
@@ -148,7 +148,7 @@ func parsePacket(p []byte) ([]question, []record, error) {
 			return nil, nil, err
 		}
 		if at+10 > len(p) {
-			return nil, nil, errors.New("short DNS record")
+			return nil, nil, errors.New("Усечённая DNS-запись")
 		}
 		typ := binary.BigEndian.Uint16(p[at : at+2])
 		class := binary.BigEndian.Uint16(p[at+2 : at+4])
@@ -156,7 +156,7 @@ func parsePacket(p []byte) ([]question, []record, error) {
 		size := int(binary.BigEndian.Uint16(p[at+8 : at+10]))
 		at += 10
 		if at+size > len(p) {
-			return nil, nil, errors.New("short DNS rdata")
+			return nil, nil, errors.New("Усечённые данные DNS-записи")
 		}
 		rr = append(rr, record{name, typ, class, ttl, p[at : at+size], at})
 		at += size

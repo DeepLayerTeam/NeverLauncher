@@ -40,14 +40,14 @@
     "navigation": [
       {
         "id": "main-nav",
-        "label": "Java controls",
+        "label": "Управление Java",
         "pageId": "main"
       }
     ],
     "actions": [
       {
         "id": "refresh",
-        "label": "Refresh via Java",
+        "label": "Обновить через Java",
         "pageId": "main",
         "placement": "toolbar"
       }
@@ -63,14 +63,14 @@
     "navigation": [
       {
         "id": "main-nav",
-        "label": "Java controls",
+        "label": "Управление Java",
         "pageId": "main"
       }
     ],
     "actions": [
       {
         "id": "refresh",
-        "label": "Refresh via Java",
+        "label": "Обновить через Java",
         "pageId": "main",
         "placement": "toolbar"
       }

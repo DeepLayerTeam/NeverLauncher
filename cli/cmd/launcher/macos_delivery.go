@@ -289,7 +289,7 @@ func readZipEntries0154(path string) (map[string][]byte, error) {
 			return nil, fmt.Errorf("duplicate macOS package zip entry %s", name)
 		}
 		if file.UncompressedSize64 > 512*1024*1024 {
-			return nil, fmt.Errorf("macOS package zip entry too large: %s", name)
+			return nil, fmt.Errorf("Элемент ZIP-пакета macOS слишком велик: %s", name)
 		}
 		r, err := file.Open()
 		if err != nil {
@@ -301,7 +301,7 @@ func readZipEntries0154(path string) (map[string][]byte, error) {
 			return nil, err
 		}
 		if len(data) > 512*1024*1024 {
-			return nil, fmt.Errorf("macOS package zip entry too large: %s", name)
+			return nil, fmt.Errorf("Элемент ZIP-пакета macOS слишком велик: %s", name)
 		}
 		entries[name] = data
 	}
@@ -375,7 +375,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 	for _, artifact := range manifest.Artifacts {
 		data, ok := entries[artifact.BundlePath]
 		if !ok {
-			return fmt.Errorf("macOS %s package missing %s", arch, artifact.BundlePath)
+			return fmt.Errorf("В пакете macOS %s отсутствует %s", arch, artifact.BundlePath)
 		}
 		sum, size := hashBytes0154(data)
 		if size != artifact.Size || !strings.EqualFold(sum, artifact.SHA256) {
@@ -399,7 +399,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		updatePath := "Launcher.app/Contents/Resources/" + componentUpdateManifestFile0157
 		updateRaw, ok := entries[updatePath]
 		if !ok {
-			return fmt.Errorf("macOS %s package missing %s", arch, updatePath)
+			return fmt.Errorf("В пакете macOS %s отсутствует %s", arch, updatePath)
 		}
 		var update componentUpdateManifest0157
 		if err := json.Unmarshal(updateRaw, &update); err != nil {

@@ -659,7 +659,7 @@ func clientPackageUpload(packagePath, clientDir, storageDir, prefix string) (map
 	var uploadedBytes int64
 	for _, file := range manifest.Files {
 		if protectedUpdatePath0224(file.Path) {
-			return nil, fmt.Errorf("client package cannot overwrite user data: %s", file.Path)
+			return nil, fmt.Errorf("Пакет клиента не может перезаписать пользовательские данные: %s", file.Path)
 		}
 		if err := validateClientPackagePath(file.Path); err != nil {
 			return nil, err
@@ -871,7 +871,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 	var appliedBytes int64
 	for _, file := range manifest.Files {
 		if protectedUpdatePath0224(file.Path) {
-			return nil, fmt.Errorf("client package cannot overwrite user data: %s", file.Path)
+			return nil, fmt.Errorf("Пакет клиента не может перезаписать пользовательские данные: %s", file.Path)
 		}
 		if err := validateClientPackagePath(file.Path); err != nil {
 			return nil, err

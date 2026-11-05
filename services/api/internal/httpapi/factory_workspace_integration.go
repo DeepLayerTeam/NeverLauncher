@@ -29,7 +29,7 @@ func factoryReadSource0401(root string, f struct {
 	Size   int64  `json:"size"`
 }, max int64) ([]byte, error) {
 	if f.Size < 0 || f.Size > max || len(f.SHA256) != 64 {
-		return nil, errors.New("invalid factory output size or SHA-256")
+		return nil, errors.New("Некорректный размер или хеш SHA-256 результата Client Factory")
 	}
 	if f.Path == "" || filepath.IsAbs(f.Path) || strings.ContainsAny(f.Path, "\\\x00") {
 		return nil, errors.New("Некорректное значение: результат Client Factory путь")
@@ -40,7 +40,7 @@ func factoryReadSource0401(root string, f struct {
 	full := root
 	for _, part := range strings.Split(f.Path, "/") {
 		if part == "" || part == "." || part == ".." {
-			return nil, errors.New("factory output path traversal")
+			return nil, errors.New("Обнаружен выход за пределы каталога в пути результата Client Factory")
 		}
 		full = filepath.Join(full, part)
 		st, err := os.Lstat(full)
@@ -48,7 +48,7 @@ func factoryReadSource0401(root string, f struct {
 			return nil, err
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return nil, errors.New("factory output contains symlink")
+			return nil, errors.New("Результат Client Factory содержит символическую ссылку")
 		}
 	}
 	file, err := os.Open(full)
@@ -69,29 +69,29 @@ func factoryReadSource0401(root string, f struct {
 	}
 	sum := sha256.Sum256(b)
 	if int64(len(b)) != f.Size || !strings.EqualFold(hex.EncodeToString(sum[:]), f.SHA256) {
-		return nil, fmt.Errorf("factory output changed: %s", f.Path)
+		return nil, fmt.Errorf("Результат Client Factory изменился: %s", f.Path)
 	}
 	return b, nil
 }
 
 func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView02710, job factoryBuilderJob02710, maxFileBytes int64) (repository.BuildWorkspace, error) {
 	if ws.State != "importing" || ws.PackageID != "" || len(ws.Files) > 0 {
-		return ws, errors.New("factory delivery requires an empty, unbuilt workspace")
+		return ws, errors.New("Для передачи результата Client Factory необходима пустая, ещё не собранная рабочая область")
 	}
 	if p.MinecraftVersion != ws.Settings.Minecraft.Version || p.Loader != ws.Settings.Minecraft.Loader || p.MinecraftVersion != job.Request.Minecraft || p.Loader != job.Request.Loader {
 		return ws, errors.New("factory Minecraft/loader differs from pinned workspace")
 	}
 	if p.Loader != "vanilla" && ((job.Request.Source != "modpack" && p.LoaderVersion != job.Request.LoaderVersion) || p.LoaderVersion != ws.Settings.Minecraft.LoaderVersion) {
-		return ws, errors.New("factory loader version differs from pinned workspace")
+		return ws, errors.New("Версия загрузчика Client Factory отличается от закреплённой версии рабочей области")
 	}
 	if p.Java.Major != ws.Settings.Runtime.Java.MajorVersion {
-		return ws, fmt.Errorf("factory requires Java %d, pinned workspace requires Java %d", p.Java.Major, ws.Settings.Runtime.Java.MajorVersion)
+		return ws, fmt.Errorf("Client Factory требует Java %d, а закреплённая рабочая область — Java %d", p.Java.Major, ws.Settings.Runtime.Java.MajorVersion)
 	}
 	if (ws.Settings.Minecraft.MainClass != "" && ws.Settings.Minecraft.MainClass != p.Launch.MainClass) ||
 		(ws.Settings.Runtime.Launch.MainClass != "" && ws.Settings.Runtime.Launch.MainClass != p.Launch.MainClass) ||
 		len(ws.Settings.Runtime.Launch.ClasspathEntries) != 0 || len(ws.Settings.Runtime.Launch.ModulepathEntries) != 0 ||
 		ws.Settings.Runtime.Launch.MainModule != "" || ws.Settings.Runtime.Launch.OfflineMode {
-		return ws, errors.New("workspace has launch overrides incompatible with factory metadata")
+		return ws, errors.New("Настройки запуска рабочей области несовместимы с метаданными Client Factory")
 	}
 	if ws.Settings.Runtime.Launch.ClasspathStrategy != "" && ws.Settings.Runtime.Launch.ClasspathStrategy != "mojang" {
 		return ws, errors.New("factory delivery needs Mojang compatibility launch strategy")

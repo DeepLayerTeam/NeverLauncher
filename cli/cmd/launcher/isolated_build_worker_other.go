@@ -21,5 +21,5 @@ func terminateWorkerTree0273(p *os.Process) {
 }
 
 func strictSandboxJavaCommand0273(_ context.Context, _ processorWorkerRequest0273, _ []string) (*exec.Cmd, error) {
-	return nil, errors.New("strict processor sandbox requires Linux bubblewrap")
+	return nil, errors.New("Для строгой изоляции процесса в Linux необходим bubblewrap")
 }

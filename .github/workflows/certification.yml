@@ -47,7 +47,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Check canonical version and source identity
+      - name: Проверить канонической версии и идентичности исходников
         shell: bash
         run: |
           set -euo pipefail
@@ -55,23 +55,23 @@ jobs:
           python3 scripts/version/manage.py check
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain --untracked-files=normal)"
-      - name: Fixture and release-gate unit tests
+      - name: тестовых данных и release-gate модульные тесты
         shell: bash
         run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
-      - name: Real Go resolver and signed plan policy tests
+      - name: реального Go resolver и подписанных плана политики тесты
         shell: bash
         run: |
           set -euo pipefail
           (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy02412)
           (cd services/api && go test -count=1 ./internal/httpapi -run '^TestVerifiedPlanHardwareDeviceSignatureAndBinding02412$')
           (cd cli && go test -count=1 ./cmd/launcher -run 'Test.*Components.*0249|TestComponent.*02310')
-      - name: Real Rust runtime and transactional/adversarial tests
+      - name: Тесты реального Rust Runtime, транзакций и атакующих сценариев
         shell: bash
         run: |
           set -euo pipefail
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
-      - name: Run signed v3 component lifecycle with loopback HTTP fault injection
+      - name: Запустить подписанных v3 компонента жизненного цикла с loopback HTTP сбоя injection
         shell: bash
         run: |
           set -euo pipefail
@@ -80,18 +80,18 @@ jobs:
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --signer "runtime/runtime/target/debug/examples/cert_sign_fixture${suffix}" \
             --output "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json"
-      - name: Install graphical dependencies for real Linux Minecraft
+      - name: Установить graphical зависимостей для реального Linux Minecraft
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'linux'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 mesa-vulkan-drivers libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Install software GL for Windows real client run
+      - name: Установить software GL для Windows реального клиента Запустить
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'windows'
         shell: pwsh
         run: |
           ./scripts/compatibility/install-windows-mesa.ps1 -Architecture '${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}' -JavaExecutable "$env:JAVA_HOME/bin/java.exe"
-      - name: Real Mojang Minecraft client launch (a mock success)
+      - name: Запустить настоящий клиент Minecraft от Mojang (ложный успех имитации не допускается)
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
         shell: bash
         env:
@@ -113,7 +113,7 @@ jobs:
           report=json.loads(p.read_text())
           assert report['status']=='passed' and report['checks']['actualClient'] is True, 'Minecraft did not actually launch'
           PY
-      - name: Build provenance-bound report (marks missing Guard/Bridge as passed)
+      - name: Создать отчёт с привязкой к происхождению (не засчитывать отсутствующие Guard/Bridge)
         if: success()
         shell: bash
         run: |
@@ -125,7 +125,7 @@ jobs:
             --bridge "dist/02413/bridge-${{ matrix.os }}-${{ matrix.arch }}.json" \
             --commit "$GITHUB_SHA" --target '${{ matrix.os }}-${{ matrix.arch }}' \
             --output "dist/02413/report-${{ matrix.os }}-${{ matrix.arch }}.json"
-      - name: Upload actual execution evidence (including partial failures)
+      - name: Загрузить артефакты реального выполнения подтверждений (включая partial отказов)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -157,20 +157,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Download all submitted platform evidence (no synthetic missing results)
+      - name: Скачать все submitted платформы подтверждений (без synthetic отсутствующих результатов)
         uses: actions/download-artifact@v4
         with:
           pattern: components-02413-*
           path: dist/platform-evidence-02413
           merge-multiple: false
-      - name: Enforce all six targets, real Minecraft and Guard/Bridge evidence
+      - name: Потребовать все шесть платформ, реальный Minecraft и подтверждения Guard/Bridge
         shell: bash
         run: |
           set -euo pipefail
           mapfile -d '' reports < <(find dist/platform-evidence-02413 -type f -name 'report-*.json' -print0)
           python3 scripts/certification/gate_02413.py --commit "$GITHUB_SHA" \
             --output dist/certification-02413-aggregate.json "${reports[@]}"
-      - name: Retain failed/incomplete verdict for audit
+      - name: Сохранить отрицательные и неполные заключения для аудита
         if: always()
         uses: actions/upload-artifact@v4
         with:

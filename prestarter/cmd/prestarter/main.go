@@ -45,7 +45,7 @@ func main() {
 	if opts.TrustedKey == "" {
 		opts.TrustedKey = operatorKey
 	} else if operatorKey != "" && operatorKey != embeddedRootPublicKey {
-		fmt.Fprintln(os.Stderr, "operator key conflicts with embedded root")
+		fmt.Fprintln(os.Stderr, "Ключ оператора конфликтует со встроенным корневым ключом")
 		os.Exit(2)
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -54,7 +54,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "neverprestarter "+version+": "+err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("Launcher bootstrap complete")
+	fmt.Println("Первоначальная настройка Launcher завершена")
 }
 
 func applicationRoot() (string, error) {

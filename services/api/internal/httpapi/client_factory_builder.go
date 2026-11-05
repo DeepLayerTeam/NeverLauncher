@@ -155,7 +155,7 @@ func factoryMutableSelector02710(version string) bool {
 }
 func factoryValidateRequest02710(r factoryBuilderRequest02710) error {
 	if factoryMutableSelector02710(r.Minecraft) || strings.Contains(r.Minecraft, "..") || !factoryMinecraft02710.MatchString(r.Minecraft) {
-		return errors.New("select an exact Minecraft version (no mutable selectors)")
+		return errors.New("Выберите точную версию Minecraft (изменяемые селекторы не допускаются)")
 	}
 	switch r.Loader {
 	case "vanilla", "fabric", "quilt", "forge", "neoforge":
@@ -163,7 +163,7 @@ func factoryValidateRequest02710(r factoryBuilderRequest02710) error {
 		return errors.New("Не поддерживается: загрузчик")
 	}
 	if r.Loader != "vanilla" && (factoryMutableSelector02710(r.LoaderVersion) || strings.Contains(r.LoaderVersion, "..") || !factoryVersion02710.MatchString(r.LoaderVersion)) {
-		return errors.New("enter an exact loader version")
+		return errors.New("Введите точную версию загрузчика")
 	}
 	if r.Target != "windows/x86_64" && r.Target != "windows/x86" && r.Target != "linux/x86_64" && r.Target != "linux/aarch64" && r.Target != "darwin/x86_64" && r.Target != "darwin/aarch64" {
 		return errors.New("Не поддерживается: цель")
@@ -208,7 +208,7 @@ func factoryInvoke02710(ctx context.Context, binary, dir string, log io.Writer, 
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Client Factory execution failed: %w", err)
+		return fmt.Errorf("Ошибка выполнения Client Factory: %w", err)
 	}
 	return nil
 }
@@ -336,7 +336,7 @@ func (s Server) factoryCreate02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ws.State == "built" {
-		writeError(w, 409, "cannot start factory after workspace is built")
+		writeError(w, 409, "Нельзя запускать Client Factory после завершения сборки рабочей области")
 		return
 	}
 	var req factoryBuilderRequest02710
@@ -345,15 +345,15 @@ func (s Server) factoryCreate02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Minecraft != ws.Settings.Minecraft.Version || req.Loader != ws.Settings.Minecraft.Loader {
-		writeError(w, 409, "requested Minecraft and loader must match the pinned Build Workspace")
+		writeError(w, 409, "Запрошенные версии Minecraft и загрузчика должны соответствовать закреплённой рабочей области сборки")
 		return
 	}
 	if ws.Settings.Minecraft.LoaderVersion != "" && req.Loader != "vanilla" && req.LoaderVersion != ws.Settings.Minecraft.LoaderVersion {
-		writeError(w, 409, "loader version differs from pinned Build Workspace")
+		writeError(w, 409, "Версия загрузчика отличается от закреплённой версии в рабочей области сборки")
 		return
 	}
 	if req.Source != "" && req.Source != "minecraft" {
-		writeError(w, 400, "modpack requires multipart upload")
+		writeError(w, 400, "Для модпака необходима составная загрузка (multipart)")
 		return
 	}
 	if err = factoryValidateRequest02710(req); err != nil {
@@ -362,7 +362,7 @@ func (s Server) factoryCreate02710(w http.ResponseWriter, r *http.Request) {
 	}
 	entries, listErr := os.ReadDir(filepath.Join(root, "jobs"))
 	if listErr != nil && !errors.Is(listErr, os.ErrNotExist) {
-		writeError(w, 503, "cannot inspect Client Factory storage")
+		writeError(w, 503, "Не удалось проверить хранилище Client Factory")
 		return
 	}
 	ownJobs := 0

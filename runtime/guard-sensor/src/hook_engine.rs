@@ -442,7 +442,7 @@ fn reconcile_after_library_load(module: *mut c_void) {
     // LWJGL может выделять исполняемый код сразу после загрузки. До обычного согласования IAT проверьте и
     // закрепите точный нативный образ; JVM-Aware heartbeat должен отказать, если регистрация отклонена.
     if let Err(err) = crate::jvm_awareness::register_loaded_native_dispatcher(module) {
-        eprintln!("Guard JVM-Aware native registration rejected: {err}");
+        eprintln!("Guard: отклонена нативная регистрация JVM-Aware: {err}");
     }
     // Само согласование перехватов может требовать операций загрузчика ОС. Никогда не ждите ENGINE_STATE
     // рекурсивно из обратного вызова LoadLibrary.
@@ -456,7 +456,7 @@ fn reconcile_after_library_load(module: *mut c_void) {
         // Ошибка установки перехвата не должна незаметно разрешать происхождение исполняемой памяти. Обязательный
         // heartbeat Hook Engine в обработчике приводит к отказу.
         state.healthy = false;
-        eprintln!("Guard Hook Engine post-load reconciliation failed: {err}");
+        eprintln!("Guard Hook Engine: ошибка согласования состояния после загрузки: {err}");
     }
 }
 

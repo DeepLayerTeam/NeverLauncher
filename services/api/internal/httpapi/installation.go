@@ -43,7 +43,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 			InitializeMinimalInstallation0375(context.Context, string, bool) error
 		})
 		if !ok {
-			return errors.New("SQLite repository missing minimal installation store")
+			return errors.New("В репозитории SQLite отсутствует минимальное хранилище установки")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -73,7 +73,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 	if state.TokenHash == "" {
 		if token == "" {
 			if isProdP0(cfg.Environment) {
-				return errors.New("fresh production installation requires LAUNCHER_BOOTSTRAP_TOKEN")
+				return errors.New("Для новой промышленной установки необходим LAUNCHER_BOOTSTRAP_TOKEN")
 			}
 			return nil
 		}
@@ -81,7 +81,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 		return err
 	}
 	if token != "" && subtle.ConstantTimeCompare([]byte(state.TokenHash), []byte(bootstrapTokenHashP0(token))) != 1 {
-		return errors.New("LAUNCHER_BOOTSTRAP_TOKEN does not match initialized installation token")
+		return errors.New("LAUNCHER_BOOTSTRAP_TOKEN не совпадает с инициализированным токеном установки")
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func (s Server) installationStateP0(ctx context.Context) (installationStateP0, e
 			MinimalInstallationStatus0375(context.Context) (string, bool, bool, error)
 		})
 		if !ok {
-			return installationStateP0{}, errors.New("missing SQLite installation reader")
+			return installationStateP0{}, errors.New("Отсутствует считыватель установки SQLite")
 		}
 		hash, used, completed, err := store.MinimalInstallationStatus0375(ctx)
 		return installationStateP0{TokenHash: hash, TokenUsedAt: sql.NullTime{Valid: used}, Completed: completed, CompletedAt: sql.NullTime{Valid: completed}}, err
@@ -123,7 +123,7 @@ func (s Server) installationStateP0(ctx context.Context) (installationStateP0, e
 
 func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error {
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
-		return errors.New("SQLite bootstrap token must be consumed atomically with first administrator")
+		return errors.New("Токен первоначальной настройки SQLite должен быть использован атомарно при создании первого администратора")
 	}
 	token = strings.TrimSpace(token)
 	if token == "" {
@@ -138,10 +138,10 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 			st.TokenHash = bootstrapTokenHashP0(s.Config.BootstrapToken)
 		}
 		if st.Completed || st.TokenUsedAt.Valid {
-			return errors.New("bootstrap token already consumed")
+			return errors.New("Токен первоначальной настройки уже использован")
 		}
 		if subtle.ConstantTimeCompare([]byte(st.TokenHash), []byte(hash)) != 1 {
-			return errors.New("invalid bootstrap token")
+			return errors.New("Недействительный токен первоначальной настройки")
 		}
 		st.TokenUsedAt = sql.NullTime{Time: time.Now().UTC(), Valid: true}
 		devInstallationP0.state = st
@@ -158,7 +158,7 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 	}
 	n, _ := res.RowsAffected()
 	if n != 1 {
-		return errors.New("invalid, consumed, or disabled bootstrap token")
+		return errors.New("Недействительный, уже использованный или отключённый токен первоначальной настройки")
 	}
 	return nil
 }
@@ -264,7 +264,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	}
 	supplied := bootstrapTokenHashP0(token)
 	if token == "" || subtle.ConstantTimeCompare([]byte(tokenHash), []byte(supplied)) != 1 {
-		return model.User{}, errors.New("invalid bootstrap token")
+		return model.User{}, errors.New("Недействительный токен первоначальной настройки")
 	}
 	var exists bool
 	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users LIMIT 1)`).Scan(&exists); err != nil {

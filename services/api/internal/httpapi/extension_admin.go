@@ -100,10 +100,10 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if ver.Manifest.Admin == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension does not declare admin contributions")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("Расширение не объявляет компоненты интерфейса Admin")
 	}
 	if _, ok := adminTarget0208(ver.Manifest); !ok {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension does not declare admin target")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("Расширение не объявляет Admin в качестве целевой среды")
 	}
 	if s.ExtensionSecurity == nil {
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("Недоступно: безопасность расширений")
@@ -125,7 +125,7 @@ func (s Server) adminExtensionCatalog0208(w http.ResponseWriter, r *http.Request
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия администратора")
 		return
 	}
 	installs, err := s.Repo.ListExtensionInstallStates(r.Context(), "", "")
@@ -214,7 +214,7 @@ func hardenAdminHTML0208(raw string) string {
 
 func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	id := r.PathValue("extensionId")
@@ -226,7 +226,7 @@ func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Requ
 	}
 	claims, _ := s.adminClaims(r)
 	if install.Scope == "project" && !s.adminUserCanProject0208(claims, install.ScopeID) {
-		writeError(w, http.StatusForbidden, "project access denied")
+		writeError(w, http.StatusForbidden, "Доступ к проекту запрещён")
 		return
 	}
 	target, _ := adminTarget0208(manifest)
@@ -243,7 +243,7 @@ func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Requ
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			writeError(w, 404, "admin entrypoint not found")
+			writeError(w, 404, "Точка входа Admin не найдена")
 		} else {
 			writeError(w, 500, err.Error())
 		}
@@ -254,7 +254,7 @@ func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Requ
 
 func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Включён безопасный режим расширений (--no-extensions)")
 		return
 	}
 	id := strings.ToLower(strings.TrimSpace(r.PathValue("extensionId")))
@@ -266,11 +266,11 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "invalid admin session")
+		writeError(w, 401, "Недействительная сессия администратора")
 		return
 	}
 	if install.Scope == "project" && !s.adminUserCanProject0208(claims, install.ScopeID) {
-		writeError(w, 403, "project access denied")
+		writeError(w, 403, "Доступ к проекту запрещён")
 		return
 	}
 	var req adminExtensionRPCRequest0208

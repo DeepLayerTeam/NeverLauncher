@@ -40,10 +40,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned TypeScript compiler
+      - name: Установить закреплённых TypeScript компилятора
         working-directory: sdk/api/typescript
         run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund --save-dev-exact typescript@5.8.3
-      - name: Run production SDK and five real Java-subprocess regressions
+      - name: Запустить промышленной SDK и five реального Java-subprocess регрессии
         shell: bash
         run: |
           set -euo pipefail
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Require real external host and exact pinned source
+      - name: Потребовать реального внешнего хоста и точного закреплённых исходников
         shell: bash
         run: |
           set -euo pipefail
@@ -92,7 +92,7 @@ jobs:
           doc=json.load(open(sys.argv[1]))
           assert doc.get('sourceCommit') == sys.argv[2]
           PY
-      - name: Execute installed JVM Host, 3 live Gravit projects and two historical upgrades
+      - name: Проверить установленный JVM Host, три действующих проекта Gravit и два исторических обновления
         shell: bash
         run: |
           set -euo pipefail

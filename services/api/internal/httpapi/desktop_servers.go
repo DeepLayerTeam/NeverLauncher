@@ -27,7 +27,7 @@ func (s Server) desktopProfileServers0229(w http.ResponseWriter, r *http.Request
 	// перечисляйте чужие проекты.
 	profiles, err := s.Repo.ListProfiles(projectID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		writeError(w, http.StatusNotFound, "Проект не найден")
 		return
 	}
 	found := false
@@ -38,7 +38,7 @@ func (s Server) desktopProfileServers0229(w http.ResponseWriter, r *http.Request
 		}
 	}
 	if !found {
-		writeError(w, http.StatusNotFound, "profile not found")
+		writeError(w, http.StatusNotFound, "Профиль не найден")
 		return
 	}
 	items := make([]desktopServer0229, 0)

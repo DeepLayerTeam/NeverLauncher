@@ -55,22 +55,22 @@ func safeSupportVersion03510(s string) bool {
 }
 func validateSupport03510(v playerSupportReport03510) error {
 	if v.SchemaVersion != "1.1" || !safeSupportVersion03510(v.LauncherVersion) {
-		return errors.New("unsupported diagnostic version")
+		return errors.New("Неподдерживаемая версия диагностики")
 	}
 	if !allowedSupportStages03510[v.Stage] || len(v.Events) > 10 {
 		return errors.New("invalid diagnostic stage/events")
 	}
 	if !map[string]bool{"windows": true, "linux": true, "macos": true, "android": true, "ios": true, "unknown": true}[v.OS] {
-		return errors.New("invalid operating system")
+		return errors.New("Некорректная операционная система")
 	}
 	if !map[string]bool{"x86": true, "x86_64": true, "aarch64": true, "arm": true, "unknown": true}[v.Arch] {
-		return errors.New("invalid architecture")
+		return errors.New("Недопустимая архитектура")
 	}
 	var total uint64
 	seen := map[string]bool{}
 	for _, e := range v.Events {
 		if !allowedSupportCodes03510[e.Code] || e.Count == 0 || e.Count > 80 || seen[e.Code] {
-			return errors.New("invalid event classification")
+			return errors.New("Некорректная классификация события")
 		}
 		seen[e.Code] = true
 		total += uint64(e.Count)
@@ -79,7 +79,7 @@ func validateSupport03510(v playerSupportReport03510) error {
 		return errors.New("Слишком много диагностических событий")
 	}
 	if v.GeneratedAtUnix == 0 {
-		return errors.New("missing diagnostic timestamp")
+		return errors.New("Отсутствует время диагностического события")
 	}
 	return nil
 }
@@ -106,16 +106,16 @@ func (s Server) playerSupportSubmit03510(w http.ResponseWriter, r *http.Request)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if e := dec.Decode(&submitted); e != nil || !submitted.Consent {
-		writeError(w, http.StatusBadRequest, "required explicit consent and valid diagnostic payload")
+		writeError(w, http.StatusBadRequest, "Необходимо явное согласие и корректные диагностические данные")
 		return
 	}
 	var extra any
 	if e := dec.Decode(&extra); e != io.EOF {
-		writeError(w, http.StatusBadRequest, "unexpected data after diagnostic payload")
+		writeError(w, http.StatusBadRequest, "Неожиданные данные после диагностического содержимого")
 		return
 	}
 	if e := validateSupport03510(submitted.Report); e != nil {
-		writeError(w, http.StatusBadRequest, "unsupported or unsafe diagnostic payload")
+		writeError(w, http.StatusBadRequest, "Неподдерживаемые или небезопасные диагностические данные")
 		return
 	}
 	dir := s.supportReportsDir03510()

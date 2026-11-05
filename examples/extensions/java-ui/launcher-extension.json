@@ -13,10 +13,10 @@
   ],
   "permissions":["ui:contribute","desktop:contribute","cli:contribute","storage:read","storage:write"],
   "admin":{"pages":[{"id":"main","title":"Управление Java"}],
-    "navigation":[{"id":"main-nav","label":"Java controls","pageId":"main"}],
-    "actions":[{"id":"refresh","label":"Refresh via Java","pageId":"main","placement":"toolbar"}]},
+    "navigation":[{"id":"main-nav","label":"Управление Java","pageId":"main"}],
+    "actions":[{"id":"refresh","label":"Обновить через Java","pageId":"main","placement":"toolbar"}]},
   "desktop":{"pages":[{"id":"main","title":"Управление Java"}],
-    "navigation":[{"id":"main-nav","label":"Java controls","pageId":"main"}],
-    "actions":[{"id":"refresh","label":"Refresh via Java","pageId":"main","placement":"toolbar"}]},
+    "navigation":[{"id":"main-nav","label":"Управление Java","pageId":"main"}],
+    "actions":[{"id":"refresh","label":"Обновить через Java","pageId":"main","placement":"toolbar"}]},
   "cli":{"namespace":"java-ui","commands":[{"name":"status","description":"Прочитать состояние выполнения Java-расширения"}]}
 }

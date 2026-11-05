@@ -27,7 +27,7 @@ const maxWorkspaceFiles0226 = 25000
 func (s Server) workspaceStore0226(w http.ResponseWriter) (repository.BuildWorkspaceStore, bool) {
 	store, ok := s.Repo.(repository.BuildWorkspaceStore)
 	if !ok {
-		writeError(w, 503, "build workspace persistence unavailable")
+		writeError(w, 503, "Хранилище рабочих областей сборки недоступно")
 	}
 	return store, ok
 }
@@ -38,16 +38,16 @@ func (s Server) ownedWorkspace0226(w http.ResponseWriter, r *http.Request, permi
 	}
 	ws, err := store.GetBuildWorkspace(r.Context(), r.PathValue("workspaceId"))
 	if err != nil {
-		writeError(w, 404, "workspace not found")
+		writeError(w, 404, "Рабочая область не найдена")
 		return store, ws, false
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return store, ws, false
 	}
 	if claims.Sub != ws.OwnerID || !s.authorizeClaims(r, claims, permission, ws.ProjectID, "project", ws.ProjectID).Allowed {
-		writeError(w, 404, "workspace not found")
+		writeError(w, 404, "Рабочая область не найдена")
 		return store, ws, false
 	}
 	return store, ws, true
@@ -60,7 +60,7 @@ func readJSON0226(w http.ResponseWriter, r *http.Request, max int64, target any)
 	}
 	var tail any
 	if err := d.Decode(&tail); err != io.EOF {
-		return errors.New("expected exactly one JSON object")
+		return errors.New("Ожидался ровно один объект JSON")
 	}
 	return nil
 }
@@ -85,19 +85,19 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 		req.Channel = "stable"
 	}
 	if req.ProjectID == "" || req.ProfileID == "" || req.Version == "" {
-		writeError(w, 400, "projectId, profileId and version are required")
+		writeError(w, 400, "Необходимо указать projectId, profileId и version")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "release:prepare", req.ProjectID, "project", req.ProjectID) {
 		return
 	}
 	if _, err = s.Repo.GetProject(req.ProjectID); err != nil {
-		writeError(w, 404, "project not found")
+		writeError(w, 404, "Проект не найден")
 		return
 	}
 	snapshot, err := repository.ReadProfileSnapshot(s.Repo, req.ProjectID, req.ProfileID)
@@ -185,7 +185,7 @@ func (s Server) workspaceList0226(w http.ResponseWriter, r *http.Request) {
 	projectID := r.URL.Query().Get("projectId")
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "release:prepare", projectID, "project", projectID) {

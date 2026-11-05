@@ -33,7 +33,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: test -z "$(gofmt -l cli/cmd/launcher/mirror_helper_parity_0274*.go cli/cmd/launcher/client_factory_0271.go cli/cmd/launcher/forge_runtime.go cli/cmd/launcher/main.go)"
-      - name: MirrorHelper-equivalent real command fixtures
+      - name: MirrorHelper-equivalent реального команды тестовых данных
         working-directory: cli
         shell: bash
         run: >-
@@ -46,7 +46,7 @@ jobs:
       - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
-      - name: Race detector on Linux
+      - name: Детектор гонок на Linux
         if: runner.os == 'Linux'
         working-directory: cli
         run: >-

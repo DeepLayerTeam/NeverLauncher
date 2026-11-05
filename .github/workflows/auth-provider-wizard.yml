@@ -34,12 +34,12 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Go format and Backend build
+      - name: Go формат и Backend Собрать
         working-directory: services/api
         run: |
           test -z "$(gofmt -l internal/repository/*02910*.go internal/federation/*02910*.go internal/httpapi/*02910*.go internal/sqlconnector/connector.go)"
           go build ./cmd/...
-      - name: Apply real PostgreSQL migrations
+      - name: Применить реальной PostgreSQL миграции
         working-directory: services/api
         env:
           LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
@@ -48,7 +48,7 @@ jobs:
           # промышленной среде.
           go test ./internal/dbmigrate -count=1
           psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
-      - name: Auth Provider Wizard unit, race and PostgreSQL integration tests
+      - name: авторизации провайдера Wizard модульных, гонок и PostgreSQL интеграционные тесты
         working-directory: services/api
         env:
           LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
@@ -60,12 +60,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Admin UI production build and tests
+      - name: Admin интерфейса промышленная сборка и тесты
         working-directory: apps/admin
         run: |
           npm ci
           npm test
           npm run build
-      - name: CLI migrations remain in sync
+      - name: Миграции CLI остаются в синхронизации
         working-directory: cli
         run: go test ./internal/dbmigrate

@@ -36,10 +36,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Linux Tauri dependencies
+      - name: Linux Tauri зависимостей
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
-      - name: Validate native signed offline binding
+      - name: Проверить нативного подписанных офлайн привязки
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml offline_policy_0358 --no-default-features
-      - name: Validate existing native realm separation
+      - name: Проверить существующее разделение нативных областей
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml launch_realm_0269_tests --no-default-features

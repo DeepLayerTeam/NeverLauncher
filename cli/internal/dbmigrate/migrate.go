@@ -22,7 +22,7 @@ type Migration struct{ Version, Checksum, SQL string }
 func List() ([]Migration, error) {
 	archive, err := zip.NewReader(bytes.NewReader(migrationArchive), int64(len(migrationArchive)))
 	if err != nil {
-		return nil, fmt.Errorf("invalid embedded SQL catalog: %w", err)
+		return nil, fmt.Errorf("Недопустимый встроенный каталог SQL: %w", err)
 	}
 	out := make([]Migration, 0, len(archive.File))
 	seen := make(map[string]bool, len(archive.File))
@@ -30,7 +30,7 @@ func List() ([]Migration, error) {
 		if entry.FileInfo().IsDir() || !strings.HasPrefix(entry.Name, "sql/") ||
 			strings.Count(entry.Name, "/") != 1 || !strings.HasSuffix(entry.Name, ".sql") ||
 			entry.UncompressedSize64 > 8<<20 || seen[entry.Name] {
-			return nil, fmt.Errorf("unsafe or duplicate embedded SQL migration: %s", entry.Name)
+			return nil, fmt.Errorf("Небезопасная или дублирующаяся встроенная SQL-миграция: %s", entry.Name)
 		}
 		seen[entry.Name] = true
 		rc, err := entry.Open()
@@ -46,7 +46,7 @@ func List() ([]Migration, error) {
 			return nil, closeErr
 		}
 		if len(b) > 8<<20 {
-			return nil, fmt.Errorf("migration %s exceeds maximum", entry.Name)
+			return nil, fmt.Errorf("Миграция %s превышает допустимый размер", entry.Name)
 		}
 		name := strings.TrimPrefix(entry.Name, "sql/")
 		sum := sha256.Sum256(b)
@@ -146,7 +146,7 @@ func runPSQL(ctx context.Context, psqlPath, dsn, script, action string) (string,
 	cmd.Stdin = strings.NewReader(script)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("psql migration %s failed: %w: %s", action, err, strings.TrimSpace(string(out)))
+		return string(out), fmt.Errorf("Ошибка выполнения psql-миграции %s: %w: %s", action, err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }

@@ -37,16 +37,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile SDK with --release 17 and run actual API tests
+      - name: Скомпилировать SDK с --релиза 17 и Запустить реального API тесты
         shell: bash
         run: sh sdk/java/core/build.sh test
-      - name: Build standalone executable Java host JAR
+      - name: Собрать standalone исполняемого файла Java хоста JAR
         shell: bash
         run: sh examples/extensions/java-host/build.sh
-      - name: Real JVM host/CLI, authenticated RPC and deadline integration
+      - name: реального JVM хоста/CLI, авторизованных RPC и deadline интеграции
         shell: bash
         run: python3 examples/extensions/java-host/test-runner.py
-      - name: Validate packed host classes
+      - name: Проверить packed хоста classes
         shell: bash
         run: |
           jar tf examples/extensions/java-host/build/package/backend/java-host.jar | grep -q 'ru/launcher/sdk/host/JavaExtensionHost.class'
@@ -63,20 +63,20 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Build Java executable test package
+      - name: Собрать Java исполняемого файла тестировать пакета
         run: sh examples/extensions/java-host/build.sh
-      - name: Real Go supervisor spawning Java (ready, RPC, CLI and hung callback kill)
+      - name: реального Go управляющего процесса spawning Java (ready, RPC, CLI и hung обратного вызова завершения)
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 -timeout 3m -run 'TestJava.*(0304|0422)'  ./internal/extensionhost
-      - name: Java recovery admission and cancelled late hello regression
+      - name: Регрессионные проверки восстановления допуска Java и отменённого запоздалого приветствия
         working-directory: services/api
         run: go test -race -count=1 -run '^TestJavaLateHelloCannotUndoOperatorStop0422$' ./internal/extensionhost
-      - name: Regression of existing Go extension host
+      - name: регрессии существующих Go extension хоста
         working-directory: services/api
         run: go test -count=1 ./internal/extensionhost
-      - name: Version validation
+      - name: версии валидации
         run: python3 scripts/version/manage.py check
   sign-and-verify-java-extension:
     runs-on: ubuntu-24.04
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Build a launchable signed .nlext and verify Ed25519
+      - name: Собрать a launchable подписанных .nlext и Проверить Ed25519
         run: |
           set -eu
           sh examples/extensions/java-host/build.sh
@@ -100,7 +100,7 @@ jobs:
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/java-host.nlext" --private-key "$RUNNER_TEMP/private.pem"
           "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/java-host.nlext" --public-key "$RUNNER_TEMP/public.pem"
           test -s "$RUNNER_TEMP/java-host.nlext"
-      - name: Legacy subprocess examples regression
+      - name: Регрессионные проверки примеров устаревших дочерних процессов
         run: |
           sh examples/extensions/java-runtime/build.sh
           python3 examples/extensions/java-runtime/test-runner.py

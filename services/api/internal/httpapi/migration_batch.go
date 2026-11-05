@@ -49,7 +49,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {

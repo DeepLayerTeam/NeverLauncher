@@ -23,7 +23,7 @@ func (s Server) profileRevisions0221(w http.ResponseWriter, r *http.Request) {
 	versions, err := reader.ListProfileRevisions(r.PathValue("projectId"), r.PathValue("profileId"))
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "profile not found")
+			writeError(w, http.StatusNotFound, "Профиль не найден")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, err.Error())

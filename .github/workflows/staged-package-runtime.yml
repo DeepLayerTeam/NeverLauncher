@@ -45,23 +45,23 @@ jobs:
             8
             17
             21
-      - name: Install graphics libraries
+      - name: Установить graphics библиотек
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng xdotool
-      - name: Reject false startup proof and verify runner operations
+      - name: Отклонить ложного запуска доказательства и Проверить исполнителя операций
         run: |
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_matching_0344.py
           python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_staged_lifecycle_0349.py
-      - name: Build CLI and Runtime executables only (build Minecraft client)
+      - name: Собрать исполняемые файлы CLI и Runtime без сборки клиента Minecraft
         run: |
           cd cli && go build -o ../nl ./cmd/launcher
           cd ..
           cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
-      - name: Execute exact staged contents via transactional installer and Runtime
+      - name: Выполнить точного промежуточного contents через транзакционных установщика и Runtime
         env:
           STAGED_BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
           STAGED_OPERATOR: ${{ secrets.NL_STAGED_RUNNER_OPERATOR_TOKEN }}
@@ -154,7 +154,7 @@ jobs:
               "${NEGATIVE_ARG[@]}" "${GUARD_ARG[@]}" \
               --server-bundle "$SERVER_BUNDLE" --server-sha256 "$SERVER_BUNDLE_SHA256" \
               --server-entry "$SERVER_ENTRY" --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA256" --bridge-version "$BRIDGE_VERSION"
-      - name: Upload redacted observational evidence (no grant or private key)
+      - name: Загрузить артефакты обезличенных observational подтверждений (без grant или закрытого ключа)
         if: always()
         uses: actions/upload-artifact@v4
         with:

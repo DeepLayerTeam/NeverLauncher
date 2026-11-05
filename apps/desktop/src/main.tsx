@@ -2126,7 +2126,7 @@ function App() {
       ) {
         throw new Error("Несовпадение запроса TPM, сеанса, эпохи или формата на сервере");
       }
-      setTpmStatus0313("TPM2_Certify: issuing native TPM command");
+      setTpmStatus0313("TPM2_Certify: выполняется нативная команда TPM");
       const evidence = await callTauri<{
         tpm2bPublic: string;
         tpm2bAttest: string;
@@ -3227,7 +3227,7 @@ function App() {
       const reason =
         result.messages?.[0] ||
         (result.failedFiles || [])[0] ||
-        "download failed";
+        "сбой загрузки";
       setTransferFailure0354(recovery0354(reason));
       setStage("failed");
       return false;
@@ -4060,7 +4060,7 @@ function App() {
     // Все остальные ошибки, включая отсутствующую или неверную политику, означают отказ по умолчанию.
     if (response.status === 412) {
       const body = await response.text();
-      if (body.includes("verified plan policy is disabled")) return undefined;
+      if (body.includes("политика проверенного плана отключена")) return undefined;
       throw new Error(`Запрос проверки плана ServerBridge отклонён: ${body}`);
     }
     const payload = await response.json().catch(() => null);
@@ -4863,7 +4863,7 @@ function App() {
               className="startupStatus0427"
               aria-live="polite"
               aria-label={
-                ui0357.locale === "ru" ? "Запуск клиента" : "Client startup"
+                ui0357.locale === "ru" ? "Запуск клиента" : "Запуск клиента"
               }
             >
               <span role={stage === "failed" ? "alert" : "status"}>
@@ -4876,7 +4876,7 @@ function App() {
                     <progress
                       max={100}
                       value={progress0354(downloadProgress)!.percent}
-                      aria-label={ui0357.locale === "ru" ? "Проверенные байты" : "Verified bytes"}
+                      aria-label={ui0357.locale === "ru" ? "Проверенные байты" : "Проверенные байты"}
                     />
                     <span>{progress0354(downloadProgress)!.verified} / {progress0354(downloadProgress)!.expected}</span>
                   </div>
@@ -4891,7 +4891,7 @@ function App() {
                 >
                   {ui0357.locale === "ru"
                     ? "Повторить проверку"
-                    : "Retry checks"}
+                    : "Повторить проверки"}
                 </button>
               )}
             </section>

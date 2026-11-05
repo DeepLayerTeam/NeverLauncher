@@ -6,12 +6,12 @@ use std::{env, fs, process};
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     if args.len() != 3 {
-        eprintln!("usage: cert_sign_fixture <unsigned.json> <signed.json>");
+        eprintln!("использование: cert_sign_fixture <unsigned.json> <signed.json>");
         process::exit(2);
     }
     let seed = match env::var("LAUNCHER_CERT_TEST_SEED") {
         Ok(v) if v.len() == 64 => v,
-        _ => { eprintln!("missing explicit 32-byte certification-only test seed"); process::exit(2); }
+        _ => { eprintln!("Отсутствует явно заданное 32-байтовое тестовое начальное значение для сертификации"); process::exit(2); }
     };
     let result = (|| -> Result<String, String> {
         let bytes = fs::read(&args[1]).map_err(|e| e.to_string())?;
@@ -24,6 +24,6 @@ fn main() {
     })();
     match result {
         Ok(key) => println!("{key}"),
-        Err(err) => { eprintln!("cert signing failed: {err}"); process::exit(1); }
+        Err(err) => { eprintln!("Ошибка подписи сертификата: {err}"); process::exit(1); }
     }
 }

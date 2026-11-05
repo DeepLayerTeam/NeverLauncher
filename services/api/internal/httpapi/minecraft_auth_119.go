@@ -399,7 +399,7 @@ func writeYggdrasilError119(w http.ResponseWriter, status int, message string) {
 func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request) {
 	var req yggdrasilAuthenticateRequest119
 	if decodeYggdrasil119(w, r, &req) != nil {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	result, err := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: strings.TrimSpace(req.Username), Secret: req.Password})
@@ -441,7 +441,7 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
 	var req yggdrasilRefreshRequest119
 	if decodeYggdrasil119(w, r, &req) != nil {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	old, profile, user, err := s.validateMinecraftToken119(req.AccessToken)
@@ -476,7 +476,7 @@ func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
 func (s Server) yggdrasilValidate119(w http.ResponseWriter, r *http.Request) {
 	var req yggdrasilTokenRequest119
 	if decodeYggdrasil119(w, r, &req) != nil {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	session, _, _, err := s.validateMinecraftToken119(req.AccessToken)
@@ -501,7 +501,7 @@ func (s Server) yggdrasilInvalidate119(w http.ResponseWriter, r *http.Request) {
 func (s Server) yggdrasilSignout119(w http.ResponseWriter, r *http.Request) {
 	var req yggdrasilSignoutRequest119
 	if decodeYggdrasil119(w, r, &req) != nil {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	result, err := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: strings.TrimSpace(req.Username), Secret: req.Password})
@@ -523,7 +523,7 @@ func (s Server) yggdrasilSignout119(w http.ResponseWriter, r *http.Request) {
 func (s Server) yggdrasilJoin119(w http.ResponseWriter, r *http.Request) {
 	var req yggdrasilJoinRequest119
 	if decodeYggdrasil119(w, r, &req) != nil {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос")
 		return
 	}
 	session, profile, _, err := s.validateMinecraftToken119(req.AccessToken)

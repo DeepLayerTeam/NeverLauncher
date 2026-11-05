@@ -62,21 +62,21 @@ func planEvidencePayload02412(e verifiedPlanEvidence02412) string {
 func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Request) {
 	claims, _, err := s.bridgeClaimsFromRequest910(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "player session required")
+		writeError(w, http.StatusUnauthorized, "Необходима сессия игрока")
 		return
 	}
 	if !planPolicyRequired02412() {
-		writeError(w, http.StatusPreconditionFailed, "verified plan policy is disabled")
+		writeError(w, http.StatusPreconditionFailed, "Политика проверенного плана отключена")
 		return
 	}
 	policy, err := loadPlanPolicy02412(time.Now().UTC())
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "signed plan policy unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Подписанная политика плана недоступна")
 		return
 	}
 	var req planChallengeRequest02412
 	if err = decodeDeviceJSON0121(w, r, &req, 4096); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid plan challenge request")
+		writeError(w, http.StatusBadRequest, "Некорректный запрос проверки плана")
 		return
 	}
 	if req.Channel == "" {
@@ -99,22 +99,22 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)
 	if !trust.Allowed {
-		writeError(w, http.StatusForbidden, "device trust required for verified plan")
+		writeError(w, http.StatusForbidden, "Для проверенного плана необходимо доверенное устройство")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, claims.TrustedDeviceID)
 	if err != nil || device.KeyAlgorithm != "p256" || device.KeyBinding != "hardware" {
-		writeError(w, http.StatusForbidden, "hardware-bound device key required")
+		writeError(w, http.StatusForbidden, "Требуется аппаратно привязанный ключ устройства")
 		return
 	}
 	challengeID, err := randomToken("plcid")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "challenge entropy unavailable")
+		writeError(w, http.StatusInternalServerError, "Не удалось получить случайные данные для проверки")
 		return
 	}
 	secret, err := randomToken("plc")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "challenge entropy unavailable")
+		writeError(w, http.StatusInternalServerError, "Не удалось получить случайные данные для проверки")
 		return
 	}
 	now := canonicalGuardAttestationTime0134(time.Now().UTC())

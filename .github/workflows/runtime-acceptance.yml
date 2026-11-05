@@ -42,13 +42,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Verify migration, transaction and adversarial guards in PostgreSQL
+      - name: Проверить миграции, транзакции и атакующих guards в PostgreSQL
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -count=1 -timeout 30m ./internal/dbmigrate ./internal/repository ./internal/httpapi \
             -run 'TestV11|TestV12|TestGA|TestGASource|TestStableSQL|TestStableRuntime|TestProductionGate|TestTrustedAttestation|TestV05|TestV08'
-      - name: Reject incomplete, stale, forged or mocked GA coverage
+      - name: Отклонить неполных, устаревших, поддельных или mocked GA покрытия
         run: python3 scripts/ga/test_runtime_acceptance_0350.py
   live-backend-acceptance:
     # Защищённое окружение разрешает только доступ к Backend API по токену на чтение.
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Check protected Backend evaluator and exact source revision
+      - name: Проверить защищённые Backend evaluator и точного ревизии исходников
         env:
           NL_GA_OPERATOR_TOKEN: ${{ secrets.NL_GA_OPERATOR_TOKEN }}
           NL_GA_BACKEND_URL: ${{ vars.NL_GA_BACKEND_URL }}

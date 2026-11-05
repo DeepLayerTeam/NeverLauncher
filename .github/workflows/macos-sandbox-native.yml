@@ -38,7 +38,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Validate signing inputs (no ad-hoc production substitute)
+      - name: Проверить подписания входных данных (без ad-hoc промышленной substitute)
         env:
           P12: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
           P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
@@ -49,7 +49,7 @@ jobs:
           test -n "$P12" && test -n "$P12_PASSWORD" && test -n "$SIGN_IDENTITY" && test -n "$TEAM_ID"
           [[ "$TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]
           [[ "$SIGN_IDENTITY" == 'Developer ID Application:'* ]]
-      - name: Import Developer ID signing identity
+      - name: Импортировать Developer ID подписания идентичности
         shell: bash
         env:
           P12: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
@@ -64,7 +64,7 @@ jobs:
           security import "$RUNNER_TEMP/sandbox-signing.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$PASS" "$KEYCHAIN"
           security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
-      - name: Build signed helper and native extension fixture
+      - name: Собрать подписанных helper и нативного extension тестовых данных
         env:
           SIGN_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
           TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
@@ -84,7 +84,7 @@ jobs:
           codesign --verify --strict "$RUNNER_TEMP/nl-mac-fixture/probe"
           echo "LAUNCHER_MACOS_SANDBOX_LIVE_FIXTURE=$RUNNER_TEMP/nl-mac-fixture/probe" >> "$GITHUB_ENV"
           echo "LAUNCHER_MACOS_SANDBOX_LIVE_ROOT=$RUNNER_TEMP/nl-mac-fixture" >> "$GITHUB_ENV"
-      - name: Run actual signed sandbox + descendant + watchdog tests
+      - name: Запустить реальные тесты подписанной песочницы, дочерних процессов и сторожевого процесса
         env:
           LAUNCHER_MACOS_SANDBOX_LIVE: '1'
         working-directory: services/api
@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           go test -count=1 -timeout 90s -v ./internal/macossandbox
           go test -count=1 ./internal/extensionhost ./internal/extensionpolicy
-      - name: Destroy imported signing material
+      - name: Уничтожить импортированные материалы подписи
         if: always()
         shell: bash
         run: |

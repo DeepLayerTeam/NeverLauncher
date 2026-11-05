@@ -141,7 +141,7 @@ func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request
 		if errors.Is(err, repository.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "package не найден")
 		} else {
-			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+			writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+err.Error())
 		}
 		return
 	}

@@ -75,7 +75,7 @@ func main() {
 	}
 
 	if opts.TrustedKey == "" {
-		fmt.Fprintln(os.Stderr, "unsigned neverinstaller: pinned trust root required")
+		fmt.Fprintln(os.Stderr, "Установщик neverinstaller не подписан: необходим закреплённый корневой ключ доверия")
 		os.Exit(2)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

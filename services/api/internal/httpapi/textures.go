@@ -48,14 +48,14 @@ func (s Server) textureMine0251(w http.ResponseWriter, r *http.Request) {
 	}
 	repo, ok := s.textureRepository0251()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	items, err := repo.ListTextureAssignments0251(ctx, profile)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
@@ -78,7 +78,7 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 	}
 	repo, ok := s.textureRepository0251()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	kind := strings.ToLower(strings.TrimSpace(r.PathValue("kind")))
@@ -127,7 +127,7 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if errors.Is(err, repository.ErrTextureRevisionConflict0251) {
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
+		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 		return
 	}
 	if errors.Is(err, repository.ErrNotFound) {
@@ -151,7 +151,7 @@ func (s Server) textureHistory0251(w http.ResponseWriter, r *http.Request) {
 	}
 	repo, ok := s.textureRepository0251()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)

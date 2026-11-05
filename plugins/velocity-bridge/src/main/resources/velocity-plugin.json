@@ -1,6 +1,6 @@
 {
   "id": "launcher-velocity-bridge",
-  "name": "Launcher Velocity Bridge",
+  "name": "Мост Launcher для Velocity",
   "version": "${version}",
   "description": "Интеграция Launcher ServerBridge/AuthBridge для прокси-уровня Velocity.",
   "authors": ["SkiF4er"],

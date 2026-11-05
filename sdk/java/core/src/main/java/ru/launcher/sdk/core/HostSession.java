@@ -103,7 +103,7 @@ public final class HostSession implements AutoCloseable {
         return Set.copyOf(result);
     }
     private static void validCapability(String name){
-        if(name==null||!name.matches("[a-z][a-z0-9.]{1,96}"))throw new IllegalArgumentException("invalid capability name");
+        if(name==null||!name.matches("[a-z][a-z0-9.]{1,96}"))throw new IllegalArgumentException("Некорректное имя разрешённой возможности");
     }
     private void requireConnected(){if(!connected||closed.get()||!healthy)throw new IllegalStateException("extension host session is not connected or healthy");}
     public void requireCapability(String name){

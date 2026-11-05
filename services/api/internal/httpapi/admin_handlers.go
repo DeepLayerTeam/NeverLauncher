@@ -457,7 +457,7 @@ func (s Server) adminPublish(w http.ResponseWriter, r *http.Request) {
 	}
 	unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+candidate.ID)
 	if lockErr != nil {
-		writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+		writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+lockErr.Error())
 		return
 	}
 	lookup, err := s.prepareAdminPublish0212(r, *candidate)
@@ -500,7 +500,7 @@ func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
 		req.Channel = "dev"
 	}
 	if req.ManifestSchemaVersion != "" && req.ManifestSchemaVersion != model.ManifestSchemaV2 && req.ManifestSchemaVersion != model.ManifestSchemaV3 {
-		writeError(w, http.StatusBadRequest, "unsupported manifestSchemaVersion")
+		writeError(w, http.StatusBadRequest, "Неподдерживаемая версия manifestSchemaVersion")
 		return
 	}
 	var release model.ReleaseVersion
@@ -510,7 +510,7 @@ func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
 			CreateVersionV3(string, string, string, string) (model.ReleaseVersion, error)
 		})
 		if !ok {
-			writeError(w, http.StatusInternalServerError, "v3 release creation unavailable")
+			writeError(w, http.StatusInternalServerError, "Создание релиза v3 недоступно")
 			return
 		}
 		release, err = creator.CreateVersionV3(r.PathValue("projectId"), req.ProfileID, req.Channel, req.Version)
@@ -540,7 +540,7 @@ func (s Server) adminVersionPublish(w http.ResponseWriter, r *http.Request) {
 		}
 		unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+item.ID)
 		if lockErr != nil {
-			writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+			writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+lockErr.Error())
 			return
 		}
 		lookup, prepareErr := s.prepareAdminPublish0212(r, item)
@@ -578,7 +578,7 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 	versionID := r.PathValue("versionId")
 	unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+versionID)
 	if lockErr != nil {
-		writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+		writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+lockErr.Error())
 		return
 	}
 	defer unlock()

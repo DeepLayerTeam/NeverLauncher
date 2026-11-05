@@ -39,7 +39,7 @@ func (m *sqliteRuntimeMutex0373) Lock() {
 	if m.poisoned != nil {
 		e := m.poisoned
 		m.mu.Unlock()
-		panic(fmt.Errorf("SQLite runtime unavailable: %w", e))
+		panic(fmt.Errorf("SQLite Runtime недоступен: %w", e))
 	}
 }
 func (m *sqliteRuntimeMutex0373) Unlock() {
@@ -47,7 +47,7 @@ func (m *sqliteRuntimeMutex0373) Unlock() {
 	if m.onUnlock != nil {
 		if err := m.onUnlock(); err != nil {
 			m.poisoned = err
-			panic(fmt.Errorf("SQLite runtime commit failed (operation must not succeed): %w", err))
+			panic(fmt.Errorf("Ошибка фиксации SQLite Runtime (операция не может считаться успешной): %w", err))
 		}
 	}
 }
@@ -127,14 +127,14 @@ type sqliteBridge0373 struct {
 // должен сохраняться между перезапусками и надёжно резервироваться.
 func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backend any, secret string) error {
 	if state == nil || state.AuthSessions == nil || state.Security == nil || state.Passkeys == nil || state.ServerBridge == nil {
-		return errors.New("SQLite runtime state missing")
+		return errors.New("Состояние SQLite Runtime отсутствует")
 	}
 	store, ok := backend.(sqliteRuntimeBackend0373)
 	if !ok {
 		return errors.New("Для SQLite среда выполнения требуется: SQLite HTTP репозиторий")
 	}
 	if len(secret) < 32 {
-		return errors.New("SQLite runtime requires at least 32 bytes of stable LAUNCHER_AUTH_TOKEN_SECRET")
+		return errors.New("Для SQLite Runtime необходимо минимум 32 байта постоянного LAUNCHER_AUTH_TOKEN_SECRET")
 	}
 	// Загрузите всё до привязки обработчиков изменений. Так при запуске
 	// отклоняются неправильные ключи, повреждённый шифртекст и несовместимые
@@ -144,7 +144,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		return err
 	}
 	if sessions.Version != 0 && sessions.Version != 1 {
-		return fmt.Errorf("unsupported SQLite sessions format %d", sessions.Version)
+		return fmt.Errorf("Неподдерживаемый формат сессий SQLite %d", sessions.Version)
 	}
 	if sessions.Version != 0 {
 		for id, item := range sessions.Sessions {
@@ -155,10 +155,10 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		for id, rec := range state.AuthSessions.sessions {
 			if rec.Status == "active" {
 				if rec.RefreshHash == "" || rec.RefreshFamily == "" {
-					return fmt.Errorf("SQLite active session %s missing refresh binding", id)
+					return fmt.Errorf("У активной сессии SQLite %s отсутствует привязка обновления", id)
 				}
 				if _, ok := sessions.Tokens[rec.RefreshHash]; !ok {
-					return fmt.Errorf("SQLite session %s missing refresh token", id)
+					return fmt.Errorf("У сессии SQLite %s отсутствует токен обновления", id)
 				}
 			}
 		}
@@ -169,7 +169,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		return err
 	}
 	if security.Version != 0 && security.Version != 1 {
-		return fmt.Errorf("unsupported SQLite security format %d", security.Version)
+		return fmt.Errorf("Неподдерживаемый формат безопасности SQLite %d", security.Version)
 	}
 	if security.Version != 0 {
 		state.Security.mfa = make(map[string]mfaRecord, len(security.MFA))

@@ -489,8 +489,8 @@ for (const action of ["preview", "activate", "verify"]) {
         );
         message(
           action === "activate"
-            ? "Security reset committed; new device enrollment required"
-            : "Security report received",
+            ? "Настройки безопасности сброшены. Необходима повторная регистрация устройства."
+            : "Отчёт о безопасности получен.",
         );
         if (action === "activate") {
           byId("migration-security-keys").checked = false;
@@ -659,8 +659,8 @@ for (const action of ["analyze", "get", "enroll"]) {
         throw new Error(json?.error?.message || `HTTP ${response.status}`);
       message(
         action === "enroll"
-          ? "ServerBridge node registered with new key; heartbeat required"
-          : "Module inspection received",
+          ? "Узел ServerBridge зарегистрирован с новым ключом. Ожидается сигнал активности."
+          : "Результаты проверки модулей получены.",
       );
     } catch (e) {
       message(e.message, true);
@@ -775,7 +775,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
         throw new Error(result?.error?.message || `HTTP ${response.status}`);
       message(
         op === "activate"
-          ? "Never channel switched; monitor and preserve MIG12 rollback ledger"
+          ? "Канал Never переключён. Контролируйте состояние и сохраните журнал отката MIG12."
           : `Переключение ${op}: сохранено`,
       );
     } catch (err) {
@@ -964,7 +964,7 @@ for (const action of ["report", "status", "review"]) {
       );
       message(
         data.status === "blocked"
-          ? "Certification blocked; examine actual evidence"
+          ? "Сертификация заблокирована. Изучите фактические подтверждения."
           : `RC ${data.status}; сертификат GA НЕ выпущен`,
       );
     } catch (err) {

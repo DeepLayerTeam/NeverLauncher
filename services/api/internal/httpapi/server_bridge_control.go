@@ -205,7 +205,7 @@ func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Req
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия администратора")
 		return
 	}
 	var req serverBridgeControlCreateRequest0195
@@ -322,7 +322,7 @@ func (s Server) serverBridgeControlGet0195(w http.ResponseWriter, r *http.Reques
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия администратора")
 		return
 	}
 	permission, known := authorization.GameCommandPermission(cmd.Type)

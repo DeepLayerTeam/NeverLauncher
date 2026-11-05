@@ -43,10 +43,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Install pinned compiler from Desktop lockfile
+      - name: Установить закреплённых компилятора из Desktop файла блокировки версий
         working-directory: apps/desktop
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Compile and test actual HTTP JSON/binary/stream client
+      - name: Скомпилировать и тестировать реального HTTP JSON/бинарного/stream клиента
         run: |
           ./apps/desktop/node_modules/.bin/tsc -p sdk/api/typescript/tsconfig.json
           node --test sdk/api/typescript/test/*.test.mjs

@@ -26,11 +26,11 @@ func OutsideBundle(bundle, key string) error {
 	}
 	bundleReal, err := filepath.EvalSymlinks(bundleAbs)
 	if err != nil {
-		return fmt.Errorf("resolve release bundle: %w", err)
+		return fmt.Errorf("Не удалось определить пакет релиза: %w", err)
 	}
 	keyReal, err := filepath.EvalSymlinks(keyAbs)
 	if err != nil {
-		return fmt.Errorf("resolve trusted key: %w", err)
+		return fmt.Errorf("Не удалось определить доверенный ключ: %w", err)
 	}
 	info, err := os.Stat(keyReal)
 	if err != nil {
@@ -47,7 +47,7 @@ func outside(bundle, key string) error {
 		return err
 	}
 	if rel == "." || rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return errors.New("release signing/verification key must be outside release bundle")
+		return errors.New("Ключ подписи и проверки релиза должен храниться вне пакета релиза")
 	}
 	return nil
 }

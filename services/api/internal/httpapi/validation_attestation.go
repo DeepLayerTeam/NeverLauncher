@@ -77,14 +77,14 @@ var stageArtifacts0345 = map[string]string{"materialization": "verified.json", "
 
 func validatePayload0345(p validationPayload0345) error {
 	if !validationPreset0348.MatchString(p.Preset) {
-		return errors.New("invalid signed preset selection")
+		return errors.New("Некорректный выбор подписанного пресета")
 	}
 	if p.SchemaVersion != validationSchema0345 {
-		return errors.New("invalid evidence schema")
+		return errors.New("Некорректная схема подтверждения")
 	}
 	for _, v := range []string{p.ManifestSHA256, p.ArtifactSHA256, p.ResolvedPlanSHA256, p.BuildSHA, p.RunnerImageSHA256, p.JavaSHA256, p.InstallAdapterSHA256, p.GuardPolicySHA256, p.ServerBridgeSHA256, p.RunNonce, p.TargetMatrixSHA256, p.SignerKeyID} {
 		if !validationHex0345.MatchString(v) {
-			return errors.New("invalid signed digest")
+			return errors.New("Некорректный подписанный хеш")
 		}
 	}
 	if !(validationHex0345.MatchString(p.SourceSHA) || (len(p.SourceSHA) == 40 && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(p.SourceSHA))) {
@@ -92,22 +92,22 @@ func validatePayload0345(p validationPayload0345) error {
 	}
 	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Audience, p.Purpose, p.TargetID, p.PackageVersion, p.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
-			return errors.New("invalid signed execution identity")
+			return errors.New("Недействительная подписанная идентификация запуска")
 		}
 	}
 	if p.AuthenticationMode != "official" && p.AuthenticationMode != "custom" {
-		return errors.New("unsupported real authentication target")
+		return errors.New("Неподдерживаемая целевая платформа реальной авторизации")
 	}
 	if len(p.Stages) != len(mandatoryStages0345) {
-		return errors.New("incomplete runtime stage matrix")
+		return errors.New("Матрица этапов Runtime заполнена не полностью")
 	}
 	for _, stage := range mandatoryStages0345 {
 		if p.Stages[stage] != "passed" {
-			return fmt.Errorf("required runtime stage %s is not passed", stage)
+			return fmt.Errorf("Обязательный этап Runtime %s не пройден", stage)
 		}
 	}
 	if len(p.ArtifactHashes) < 6 || len(p.ArtifactHashes) > 24 {
-		return errors.New("missing or excessive independently verified artifact digests")
+		return errors.New("Отсутствуют или избыточны независимо проверенные хеши артефактов")
 	}
 	for k, v := range p.ArtifactHashes {
 		if !validationToken0345.MatchString(k) || !validationHex0345.MatchString(v) {

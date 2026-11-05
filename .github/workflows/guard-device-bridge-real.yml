@@ -39,15 +39,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Real Go journal interoperability and hostile evidence tests
+      - name: Проверки совместимости журналов Go и вредоносных подтверждений
         run: |
           set -euo pipefail
           python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang_0529.py' -v
           python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real_0529.py' -v
           python3 scripts/guard_ci/test_adversarial_pilot_05012.py
-      - name: Production ServerBridge Java adapter-policy JVM tests
+      - name: Промышленные JVM-тесты политики Java-адаптеров ServerBridge
         run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
-      - name: Authorized loader and hostile JVM transformations in real child JVMs
+      - name: Authorized загрузчика и вредоносных JVM transformations в реального дочернего JVMs
         run: |
           set -euo pipefail
           python3 scripts/acceptance/guard_device_bridge_real_0529.py local \
@@ -60,7 +60,7 @@ jobs:
           assert len(d['guardJvm']['suites'])==1
           assert d['guardJvm']['suites'][0]['status']=='PASS'
           PY
-      - name: Current canonical version metadata and declared target scope
+      - name: текущей канонической версии метаданных и declared целевой платформы области действия
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Require protected private config and isolated Minecraft staging
+      - name: Потребовать защищённые закрытого конфигурации и изолированных Minecraft тестового окружения
         shell: bash
         run: |
           set -euo pipefail
@@ -85,7 +85,7 @@ jobs:
           test "$(stat -c %a /etc/neverlauncher/acceptance/guard-device-bridge-0529.json)" = 600
           test -d artifacts/plugins
           test "$(cat VERSION)" = 0.52.9
-      - name: Check real signed sessions, full 14-adapter cohort, Vanilla RCON and false positives
+      - name: Проверить реального подписанных сессий, полные 14-адаптера cohort, Vanilla RCON и ложного positives
         shell: bash
         run: |
           set -euo pipefail
@@ -101,6 +101,6 @@ jobs:
           assert d['independentGA'] is False
           assert d['deviceTrust']['nativeSecureStorageHardwareCertification'] is False
           PY
-      - name: Keep private evidence exclusively on acceptance host
+      - name: Keep закрытого подтверждений exclusively на приёмки хоста
         if: always()
         run: echo 'Raw private Guard, RCON and device evidence must never be uploaded as public CI artifacts.'

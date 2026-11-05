@@ -30,16 +30,16 @@ func textureServiceDecode0255(w http.ResponseWriter, r *http.Request, profile mo
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON request")
+		writeError(w, http.StatusBadRequest, "Некорректный JSON-запрос")
 		return input, false
 	}
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
-		writeError(w, http.StatusBadRequest, "one JSON object required")
+		writeError(w, http.StatusBadRequest, "Требуется один объект JSON")
 		return input, false
 	}
 	if input.ProfileUUID != "" && minecraftID119(input.ProfileUUID) != minecraftID119(profile.UUID) {
-		writeError(w, http.StatusForbidden, "Minecraft profile does not belong to account")
+		writeError(w, http.StatusForbidden, "Профиль Minecraft не принадлежит данной учётной записи")
 		return input, false
 	}
 	return input, true
@@ -48,15 +48,15 @@ func textureServiceDecode0255(w http.ResponseWriter, r *http.Request, profile mo
 func textureServiceError0255(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, repository.ErrTextureRevisionConflict0251):
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
+		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 	case errors.Is(err, repository.ErrTextureInUse0255):
-		writeError(w, http.StatusConflict, "selected texture must be reset before deletion")
+		writeError(w, http.StatusConflict, "Перед удалением необходимо сбросить выбор текстуры")
 	case errors.Is(err, repository.ErrTextureUploadDenied0252), errors.Is(err, repository.ErrTextureCapeDenied0251):
-		writeError(w, http.StatusForbidden, "texture selection is forbidden by policy")
+		writeError(w, http.StatusForbidden, "Выбор текстуры запрещён политикой")
 	case errors.Is(err, repository.ErrNotFound), errors.Is(err, repository.ErrTextureNotSelected0255):
-		writeError(w, http.StatusNotFound, "texture is not available for this account")
+		writeError(w, http.StatusNotFound, "Текстура недоступна для данной учётной записи")
 	default:
-		writeError(w, http.StatusServiceUnavailable, "texture database operation failed")
+		writeError(w, http.StatusServiceUnavailable, "Ошибка операции с базой данных текстур")
 	}
 }
 
@@ -68,17 +68,17 @@ func (s Server) textureServiceRepo0255() (repository.TextureServiceRepository025
 func (s Server) textureLibraryList0255(w http.ResponseWriter, r *http.Request) {
 	profile, _, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	repo, ok := s.textureServiceRepo0255()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	kind := r.URL.Query().Get("kind")
 	if kind != "" && kind != "skin" && kind != "cape" {
-		writeError(w, http.StatusBadRequest, "kind must be skin or cape")
+		writeError(w, http.StatusBadRequest, "Тип должен быть skin или cape")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -95,12 +95,12 @@ func (s Server) textureLibraryList0255(w http.ResponseWriter, r *http.Request) {
 func (s Server) textureSavedSelect0255(w http.ResponseWriter, r *http.Request) {
 	profile, user, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	repo, ok := s.textureServiceRepo0255()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	kind := r.PathValue("kind")
@@ -132,12 +132,12 @@ func (s Server) textureSavedSelect0255(w http.ResponseWriter, r *http.Request) {
 func (s Server) textureClear0255(w http.ResponseWriter, r *http.Request) {
 	profile, user, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	repo, ok := s.textureServiceRepo0255()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	kind := r.PathValue("kind")
@@ -173,12 +173,12 @@ func (s Server) textureClear0255(w http.ResponseWriter, r *http.Request) {
 func (s Server) textureSavedImage0255(w http.ResponseWriter, r *http.Request) {
 	profile, _, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	repo, ok := s.textureServiceRepo0255()
 	if !ok || s.Storage == nil {
-		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище текстур недоступно")
 		return
 	}
 	kind, digest := r.PathValue("kind"), r.PathValue("digest")
@@ -199,12 +199,12 @@ func (s Server) textureSavedImage0255(w http.ResponseWriter, r *http.Request) {
 func (s Server) textureSavedDelete0255(w http.ResponseWriter, r *http.Request) {
 	profile, user, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	repo, ok := s.textureServiceRepo0255()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	kind, digest := r.PathValue("kind"), strings.ToLower(r.PathValue("digest"))

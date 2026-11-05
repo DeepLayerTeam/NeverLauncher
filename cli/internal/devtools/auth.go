@@ -48,7 +48,7 @@ type FixtureServer struct {
 
 func NewFixtureServer(user string) (*FixtureServer, error) {
 	if user == "" || len(user) > 64 || strings.ContainsAny(user, " \t\r\n/:\\") {
-		return nil, errors.New("invalid fixture username")
+		return nil, errors.New("Некорректное тестовое имя пользователя")
 	}
 	f := &FixtureServer{user: user, revoked: make(map[string]bool), now: time.Now}
 	if _, e := rand.Read(f.secret[:]); e != nil {
@@ -104,30 +104,30 @@ func (f *FixtureServer) Issue(sub string, scopes []string, ttl time.Duration) (s
 func (f *FixtureServer) Verify(token string) (TestClaims, error) {
 	var claims TestClaims
 	if !strings.HasPrefix(token, TestTokenPrefix) || len(token) > 4096 {
-		return claims, errors.New("test token required")
+		return claims, errors.New("Необходим тестовый токен")
 	}
 	parts := strings.Split(strings.TrimPrefix(token, TestTokenPrefix), ".")
 	if len(parts) != 2 {
-		return claims, errors.New("malformed test token")
+		return claims, errors.New("Некорректный формат тестового токена")
 	}
 	mac := hmac.New(sha256.New, f.secret[:])
 	mac.Write([]byte(TestTokenPrefix + parts[0]))
 	sig, e := base64.RawURLEncoding.DecodeString(parts[1])
 	if e != nil || !hmac.Equal(sig, mac.Sum(nil)) {
-		return claims, errors.New("invalid test signature")
+		return claims, errors.New("Некорректная тестовая подпись")
 	}
 	payload, e := base64.RawURLEncoding.DecodeString(parts[0])
 	if e != nil || json.Unmarshal(payload, &claims) != nil {
-		return claims, errors.New("invalid test payload")
+		return claims, errors.New("Некорректные тестовые данные")
 	}
 	if claims.Issuer != "launcher.devtools.test-only" || claims.ExpiresAt <= f.now().Unix() || claims.IssuedAt > f.now().Unix()+1 {
-		return claims, errors.New("expired or incorrect test identity")
+		return claims, errors.New("Тестовая идентификация просрочена или не прошла проверку")
 	}
 	f.mu.Lock()
 	revoked := f.revoked[claims.ID]
 	f.mu.Unlock()
 	if revoked {
-		return claims, errors.New("revoked test identity")
+		return claims, errors.New("Тестовая идентификация отозвана")
 	}
 	return claims, nil
 }
@@ -145,7 +145,7 @@ func writeFixtureJSON(w http.ResponseWriter, status int, v any) {
 }
 func fixtureDecode(r *http.Request, v any) error {
 	if r.Header.Get("Content-Type") != "application/json" {
-		return errors.New("expected application/json")
+		return errors.New("Ожидался тип содержимого application/json")
 	}
 	d := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 8192))
 	d.DisallowUnknownFields()
@@ -154,7 +154,7 @@ func fixtureDecode(r *http.Request, v any) error {
 	}
 	var extra any
 	if e := d.Decode(&extra); e != io.EOF {
-		return errors.New("trailing or malformed JSON")
+		return errors.New("Дополнительные данные после JSON или неверный формат JSON")
 	}
 	return nil
 }
@@ -276,7 +276,7 @@ func ListenFixture(addr string, f *FixtureServer) (net.Listener, error) {
 	}
 	ip := net.ParseIP(host)
 	if ip == nil || !ip.IsLoopback() {
-		return nil, fmt.Errorf("fixture must bind a numeric loopback address, got %q", host)
+		return nil, fmt.Errorf("Тестовый стенд должен использовать числовой адрес loopback, получен %q", host)
 	}
 	return net.Listen("tcp", addr)
 }

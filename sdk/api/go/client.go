@@ -182,7 +182,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 	contract := resp.Header.Get("X-Launcher-API-Contract")
 	if contract != "" {
 		if contract != ContractVersion {
-			return fmt.Errorf("incompatible API contract: %q", contract)
+			return fmt.Errorf("Несовместимый контракт API: %q", contract)
 		}
 		return nil
 	}
@@ -193,7 +193,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 		return err
 	}
 	if info.Version != "0.45.11" && info.Version != "0.45.12" {
-		return fmt.Errorf("backend %q has no verified v1 compatibility", info.Version)
+		return fmt.Errorf("Совместимость Backend %q с v1 не подтверждена", info.Version)
 	}
 	return nil
 }

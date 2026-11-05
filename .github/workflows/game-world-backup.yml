@@ -25,10 +25,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Host supervisor and backup regression tests
+      - name: Регрессионные тесты управляющего процесса хоста и резервного копирования
         working-directory: cli
         run: go test -race ./cmd/launcher -run 'TestWorldBackup|TestServerBridgeHostStopSupervisedProcess01910' -count=1
-      - name: Build and exercise actual Host CLI
+      - name: Собрать и Протестировать реального хоста CLI
         working-directory: cli
         run: |
           go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
@@ -41,6 +41,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Cross-platform backup tests
+      - name: Кроссплатформенной Резервная копия тесты
         working-directory: cli
         run: go test ./cmd/launcher -run TestWorldBackup -count=1

@@ -37,7 +37,7 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 			continue
 		}
 		if entry.UncompressedSize64 > 4<<20 {
-			return nil, path, fmt.Errorf("embedded production template too large: %s", name)
+			return nil, path, fmt.Errorf("Встроенный шаблон промышленной конфигурации слишком велик: %s", name)
 		}
 		rc, err := entry.Open()
 		if err != nil {
@@ -52,7 +52,7 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 			return nil, path, closeErr
 		}
 		if len(data) > 4<<20 {
-			return nil, path, fmt.Errorf("embedded production template too large: %s", name)
+			return nil, path, fmt.Errorf("Встроенный шаблон промышленной конфигурации слишком велик: %s", name)
 		}
 		return data, "embedded:" + path, nil
 	}

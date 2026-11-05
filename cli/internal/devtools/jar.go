@@ -116,14 +116,14 @@ func (p *classParser) pool() (int, error) {
 		return 0, e
 	}
 	if major < 45 || major > 70 {
-		return 0, fmt.Errorf("unsupported class version %d", major)
+		return 0, fmt.Errorf("Неподдерживаемая версия класса %d", major)
 	}
 	count, e := p.u2()
 	if e != nil {
 		return 0, e
 	}
 	if count == 0 {
-		return 0, errors.New("empty constant pool")
+		return 0, errors.New("Пустой пул констант")
 	}
 	p.cp = make([]cpItem, count)
 	for i := 1; i < int(count); i++ {
@@ -163,7 +163,7 @@ func (p *classParser) pool() (int, error) {
 				v.a, e = p.u2()
 			}
 		default:
-			return 0, fmt.Errorf("unknown constant pool tag %d", t)
+			return 0, fmt.Errorf("Неизвестный тег пула констант %d", t)
 		}
 		if e != nil {
 			return 0, e
@@ -235,7 +235,7 @@ func (p *classParser) attributes(remove map[string]bool, code bool) ([]byte, int
 		raw, _ := p.take(int(length))
 		attr := p.utf(name)
 		if attr == "" {
-			return nil, 0, errors.New("invalid attribute name")
+			return nil, 0, errors.New("Недопустимое имя атрибута")
 		}
 		if remove[attr] {
 			removed++
@@ -288,7 +288,7 @@ func stripCode(raw []byte, cp []cpItem) ([]byte, int, error) {
 		return nil, 0, e
 	}
 	if q.i != len(raw) {
-		return nil, 0, errors.New("trailing Code attribute bytes")
+		return nil, 0, errors.New("Лишние байты после атрибута Code")
 	}
 	return append(head, tail...), n, nil
 }
@@ -353,7 +353,7 @@ func parseClass(raw []byte, strip bool, className string) ([]byte, int, int, []F
 	}
 	out = append(out, a...)
 	if p.i != len(raw) {
-		return nil, 0, 0, nil, errors.New("trailing classfile bytes")
+		return nil, 0, 0, nil, errors.New("Лишние байты после файла класса")
 	}
 	if !strip {
 		return nil, major, 0, findings, nil
@@ -415,7 +415,7 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 		seen[n] = true
 		total += f.UncompressedSize64
 		if f.UncompressedSize64 > maxEntryBytes || total > uint64(maxJarBytes) {
-			return report, nil, errors.New("JAR expansion limit exceeded")
+			return report, nil, errors.New("Превышен предел распаковки JAR")
 		}
 		u := strings.ToUpper(n)
 		if strings.HasPrefix(u, "META-INF/") && (strings.HasSuffix(u, ".SF") || strings.HasSuffix(u, ".RSA") || strings.HasSuffix(u, ".DSA") || strings.HasSuffix(u, ".EC")) {
@@ -423,7 +423,7 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 		}
 	}
 	if output != "" && report.Signed {
-		return report, nil, errors.New("refusing to transform a signed JAR: transformation would invalidate signatures")
+		return report, nil, errors.New("Преобразование подписанного JAR запрещено: оно нарушит действительность подписей")
 	}
 	var tmp *os.File
 	var zw *zip.Writer
@@ -436,11 +436,11 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 			return report, nil, e
 		}
 		if absIn == absOut {
-			return report, nil, errors.New("output must differ from input")
+			return report, nil, errors.New("Выходной файл должен отличаться от входного")
 		}
 		info, e := os.Lstat(output)
 		if e == nil {
-			return report, nil, fmt.Errorf("output already exists (%s)", info.Mode())
+			return report, nil, fmt.Errorf("Выходной файл уже существует (%s)", info.Mode())
 		}
 		if !os.IsNotExist(e) {
 			return report, nil, e
@@ -465,7 +465,7 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 			return report, nil, e
 		}
 		if len(b) > int(maxEntryBytes) {
-			return report, nil, errors.New("JAR entry overflow")
+			return report, nil, errors.New("Превышен допустимый размер элемента JAR")
 		}
 		isClass := strings.HasSuffix(f.Name, ".class") && !strings.HasSuffix(f.Name, "/")
 		if isClass {
@@ -503,7 +503,7 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 		}
 	}
 	if report.Classes == 0 {
-		return report, nil, errors.New("JAR has no class files")
+		return report, nil, errors.New("JAR не содержит файлов классов")
 	}
 	if report.Signed {
 		report.Warnings = append(report.Warnings, "JAR signatures are present; class analysis does not verify trust chains")

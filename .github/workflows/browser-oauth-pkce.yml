@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Verify OAuth exchange and account-bound flow
+      - name: Проверить обмен OAuth и сценарий с привязкой к учётной записи
         working-directory: services/api
         run: go test ./internal/httpapi ./internal/officialminecraft -run 'TestBrowserPKCE|TestOfficial|TestPKCE' -count=1
   desktop:
@@ -53,13 +53,13 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Renderer privacy and cancellation tests
+      - name: интерфейса privacy и cancellation тесты
         working-directory: apps/desktop
         run: |
           npm ci
           npm run test:official
           npm run build
-      - name: Loopback adversarial tests and native compile
+      - name: Loopback атакующих тесты и нативного Скомпилировать
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_browser_0263::tests -- --nocapture
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

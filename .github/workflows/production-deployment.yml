@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Python deployment tests
+      - name: Python развёртывания тесты
         run: |
           python3 -m py_compile scripts/install/production-deploy.py
           python3 -m unittest discover -s scripts/install -p "test_production*py" -v
@@ -32,13 +32,13 @@ jobs:
         with:
           go-version-file: installer/go.mod
           cache-dependency-path: installer/go.mod
-      - name: Signed installer tests
+      - name: подписанных установщика тесты
         working-directory: installer
         run: |
           go test -race ./...
           go vet ./...
           go build -o /tmp/launcher-install ./cmd/launcher-install
-      - name: Validate compose Standard and Network/HA overlays
+      - name: Проверить конфигурации Compose Standard, Network и HA
         shell: bash
         run: |
           set -euo pipefail

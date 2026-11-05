@@ -40,7 +40,7 @@ jobs:
         with:
           go-version: '1.23'
           cache: false
-      - name: Compile real bridge and run login/handoff negative tests
+      - name: Скомпилировать реального bridge и Запустить входа/handoff негативные тесты
         run: bash e2e/scripts/run-serverbridge-auth-integration-0287.sh
-      - name: Version metadata check
+      - name: версии метаданных Проверить
         run: python3 scripts/version/manage.py check

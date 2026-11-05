@@ -231,7 +231,7 @@ mod tests {
             assert!(ensure_no_symlinks(&root,&junction.join("core.jar")).is_err());
             std::fs::remove_dir(&junction).unwrap();
         } else {
-            eprintln!("NTFS junction creation unavailable; explicit Windows E2E required: {}",
+            eprintln!("Создание NTFS junction недоступно; необходимо отдельное E2E-тестирование Windows: {}",
                 String::from_utf8_lossy(&output.stderr));
         }
         std::fs::remove_dir_all(root).unwrap();

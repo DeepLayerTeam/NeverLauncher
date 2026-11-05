@@ -24,7 +24,7 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 	projectID, versionID := r.PathValue("projectId"), r.PathValue("versionId")
 	unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+versionID)
 	if lockErr != nil {
-		writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+		writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+lockErr.Error())
 		return
 	}
 	defer unlock()

@@ -72,20 +72,20 @@ type textureURLImport0254 struct {
 func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 	profile, user, err := s.ownedTextureProfile0251(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authenticated local Minecraft profile required")
+		writeError(w, http.StatusUnauthorized, "Необходим авторизованный локальный профиль Minecraft")
 		return
 	}
 	if s.Storage == nil {
-		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище текстур недоступно")
 		return
 	}
 	if _, ok := s.Repo.(repository.TextureUploadRepository0252); !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	kind := strings.ToLower(strings.TrimSpace(r.PathValue("kind")))
 	if kind != "skin" && kind != "cape" {
-		writeError(w, http.StatusBadRequest, "kind must be skin or cape")
+		writeError(w, http.StatusBadRequest, "Тип должен быть skin или cape")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
@@ -93,20 +93,20 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 	dec.DisallowUnknownFields()
 	var input textureURLImport0254
 	if err := dec.Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid import JSON")
+		writeError(w, http.StatusBadRequest, "Некорректный JSON импорта")
 		return
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		writeError(w, http.StatusBadRequest, "expected exactly one JSON object")
+		writeError(w, http.StatusBadRequest, "Ожидался ровно один объект JSON")
 		return
 	}
 	if input.ProfileUUID != "" && minecraftID119(input.ProfileUUID) != minecraftID119(profile.UUID) {
-		writeError(w, http.StatusForbidden, "Minecraft profile does not belong to account")
+		writeError(w, http.StatusForbidden, "Профиль Minecraft не принадлежит данной учётной записи")
 		return
 	}
 	if input.ExpectedRevision == nil || *input.ExpectedRevision < 0 {
-		writeError(w, http.StatusBadRequest, "nonnegative expectedRevision required")
+		writeError(w, http.StatusBadRequest, "Необходимо указать неотрицательное expectedRevision")
 		return
 	}
 	if input.Model == "" {
@@ -123,14 +123,14 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 	// ресурсов. StageTextureUpload0253 перепроверяет их под блокировкой БД.
 	selectionRepo, ok := s.textureRepository0251()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	preflightCtx, preflightCancel := context.WithTimeout(r.Context(), 5*time.Second)
 	assigned, preflightErr := selectionRepo.ListTextureAssignments0251(preflightCtx, profile)
 	preflightCancel()
 	if preflightErr != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База данных текстур недоступна")
 		return
 	}
 	currentRevision := int64(0)
@@ -141,7 +141,7 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if currentRevision != *input.ExpectedRevision {
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
+		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 		return
 	}
 	if !admitTextureURLImport0254(user.ID) {
@@ -179,7 +179,7 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profile model.MinecraftProfile, user model.User, normalized texturepng.Result, kind, modelName, visibility string, expected int64, action string) {
 	repo, ok := s.Repo.(repository.TextureUploadRepository0252)
 	if !ok || s.Storage == nil {
-		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище текстур недоступно")
 		return
 	}
 	// Резервируйте хеш и проверяйте владение, ревизию и квоту ДО долговременной
@@ -207,7 +207,7 @@ func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profi
 	stageCancel()
 	switch {
 	case errors.Is(stageErr, repository.ErrTextureRevisionConflict0251):
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
+		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 		return
 	case errors.Is(stageErr, repository.ErrTextureUploadDenied0252):
 		writeError(w, http.StatusForbidden, "texture upload denied by policy")
@@ -233,7 +233,7 @@ func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profi
 	updated, err := repo.UploadTexture0252(ctx, profile, input)
 	switch {
 	case errors.Is(err, repository.ErrTextureRevisionConflict0251):
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
+		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 		return
 	case errors.Is(err, repository.ErrTextureUploadDenied0252), errors.Is(err, repository.ErrTextureCapeDenied0251):
 		writeError(w, http.StatusForbidden, "texture upload is not permitted by policy")

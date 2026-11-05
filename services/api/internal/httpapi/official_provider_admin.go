@@ -105,7 +105,7 @@ func (s Server) officialProviderPut02611(w http.ResponseWriter, r *http.Request)
 	}
 	actor, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	changed, err := store.SaveOfficialProvider02611(r.Context(), update.ExpectedRevision, update.Settings, actor.Sub, update.Reason)

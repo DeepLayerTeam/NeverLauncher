@@ -31,14 +31,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Execute negative security and archive-integrity tests
+      - name: Выполнить негативные безопасности и archive-integrity тесты
         run: |
           python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
           python -m unittest discover -s scripts/operations -p 'test_standard_backup_0453.py' -v
           python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery_0454.py' -v
           python -m unittest discover -s scripts/operations -p 'test_chaos_0456.py' -v
           python -m unittest discover -s scripts/operations -p 'test_restore_accept_0456.py' -v
-      - name: Verify runner CLI and source syntax
+      - name: Проверить исполнителя CLI и синтаксиса исходников
         run: |
           python -m py_compile scripts/operations/dr_03512.py scripts/operations/chaos_0456.py scripts/operations/restore_accept_0456.py
           python scripts/operations/chaos_0456.py --help
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Build actual CLI and execute world snapshot/restore with SHA-256 verification
+      - name: Собрать фактический CLI и Выполнить мира snapshot/восстановления с SHA-256 проверки
         run: |
           cd cli
           go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
@@ -70,7 +70,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Check Go syntax and actual backup/restore regression
+      - name: Проверить Go синтаксиса и реального Резервная копия/восстановления регрессии
         working-directory: services/api
         run: |
           test -z "$(gofmt -l internal/httpapi/operations_backup.go)"

@@ -5,10 +5,10 @@ license="MIT"
 [[mods]]
 modId="launcher_serverbridge"
 version="${version}"
-displayName="Launcher NeoForge Server Bridge"
+displayName="Серверный мост Launcher для NeoForge"
 authors="Launcher"
 displayTest="IGNORE_SERVER_VERSION"
-description="Server-only Launcher ServerBridge for NeoForge 1.21.1."
+description="Серверный мост Launcher ServerBridge для NeoForge 1.21.1."
 displayURL="https://launcher.nevermine.ru/"
 
 [[dependencies.launcher_serverbridge]]

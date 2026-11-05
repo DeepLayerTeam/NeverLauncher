@@ -75,7 +75,7 @@ func run() error {
 }
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "branding verification failed:", err)
+		fmt.Fprintln(os.Stderr, "Ошибка проверки оформления:", err)
 		os.Exit(1)
 	}
 }

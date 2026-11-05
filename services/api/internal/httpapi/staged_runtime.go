@@ -63,7 +63,7 @@ type stagedRunWriter0342 interface {
 
 func (s Server) grantMAC0342(data []byte) ([]byte, error) {
 	if len(s.Config.AuthTokenSecret) < 24 {
-		return nil, errors.New("staged runner requires configured backend auth secret")
+		return nil, errors.New("Для поэтапного запуска необходимо настроить секрет авторизации Backend")
 	}
 	m := hmac.New(sha256.New, []byte("Launcher/staged-runtime/0.34.2\x00"+s.Config.AuthTokenSecret))
 	_, _ = m.Write(data)
@@ -84,25 +84,25 @@ func (s Server) parseGrant0342(token string) (stagedGrant0342, error) {
 	var g stagedGrant0342
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 || len(token) > 4096 {
-		return g, errors.New("invalid staging grant")
+		return g, errors.New("Некорректное разрешение на поэтапный запуск")
 	}
 	raw, e := base64.RawURLEncoding.DecodeString(parts[0])
 	if e != nil || len(raw) > 2048 {
-		return g, errors.New("invalid staging grant payload")
+		return g, errors.New("Некорректные данные разрешения на поэтапный запуск")
 	}
 	sig, e := base64.RawURLEncoding.DecodeString(parts[1])
 	if e != nil {
-		return g, errors.New("invalid staging grant signature")
+		return g, errors.New("Недействительная подпись разрешения на поэтапный запуск")
 	}
 	expected, e := s.grantMAC0342(raw)
 	if e != nil || !hmac.Equal(sig, expected) {
-		return g, errors.New("invalid staging grant signature")
+		return g, errors.New("Недействительная подпись разрешения на поэтапный запуск")
 	}
 	if e = json.Unmarshal(raw, &g); e != nil {
 		return g, e
 	}
 	if g.Schema != stagedGrantSchema0342 || g.RunID == "" || (g.Nonce != "" && (len(g.Nonce) != 64 || !hexSHA0342(g.Nonce))) || g.PackageID == "" || g.ProjectID == "" || len(g.ManifestSHA256) != 64 || len(g.ArtifactSHA256) != 64 || g.ExpiresAt <= time.Now().UTC().Unix() || g.ExpiresAt > time.Now().UTC().Add(2*time.Hour).Unix()+60 {
-		return g, errors.New("staging grant expired or invalid")
+		return g, errors.New("Разрешение на поэтапный запуск истекло или недействительно")
 	}
 	return g, nil
 }
@@ -112,7 +112,7 @@ func (s Server) stagedSnapshot0342(ctx context.Context, g stagedGrant0342) (pack
 		return lookup, err
 	}
 	if lookup.Release.ID != g.PackageID || lookup.Release.ProjectID != g.ProjectID || lookup.Release.Status != "integrity-passed" {
-		return lookup, errors.New("staged release is no longer eligible")
+		return lookup, errors.New("Подготовленный релиз больше не соответствует требованиям")
 	}
 	md, err := manifestDigest0212(lookup.Release.Manifest)
 	if err != nil {
@@ -123,7 +123,7 @@ func (s Server) stagedSnapshot0342(ctx context.Context, g stagedGrant0342) (pack
 		return lookup, err
 	}
 	if md != g.ManifestSHA256 || fd != g.ArtifactSHA256 {
-		return lookup, errors.New("staged release changed after grant issuance")
+		return lookup, errors.New("Подготовленный релиз изменился после выдачи разрешения")
 	}
 	if err = s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
 		return lookup, err

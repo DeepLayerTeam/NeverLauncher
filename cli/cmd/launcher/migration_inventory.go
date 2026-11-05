@@ -135,7 +135,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 		return e
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("source ZIP must be a regular file of 1..512 MiB")
+		return errors.New("Исходный ZIP должен быть обычным файлом размером от 1 до 512 МиБ")
 	}
 	u, e := url.Parse(endpoint)
 	if e != nil {

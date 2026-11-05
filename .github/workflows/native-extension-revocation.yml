@@ -50,20 +50,20 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Require actual architecture and OS
+      - name: Потребовать реального архитектуры и ОС
         shell: bash
         run: |
           set -euo pipefail
           test "$(go env GOOS)" = '${{ matrix.os }}'
           test "$(go env GOARCH)" = '${{ matrix.arch }}'
-      - name: Revoke actual running native CLI process and broker access
+      - name: отзыв реального running нативного CLI процесса и брокера access
         shell: bash
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -count=1 -timeout 5m -v ./internal/extensionhost \
             -run 'TestNativeCLIRevocationStopsRunningProcess04312|TestCLIAuthorityPreflightRejectsRevocation04312|TestBrokerResponseRevocation04312'
-      - name: Existing extension host and authorization regression suite
+      - name: существующих extension хоста и авторизации регрессии набора
         shell: bash
         working-directory: services/api
         run: |

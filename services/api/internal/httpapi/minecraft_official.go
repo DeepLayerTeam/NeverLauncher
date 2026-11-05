@@ -107,7 +107,7 @@ func officialOpen0257(secret, ticket string) (officialState0257, error) {
 		return state, errors.New("Некорректный официальный сеанс")
 	}
 	if state.Expires <= time.Now().Unix() || state.User == "" || state.Session == "" {
-		return state, errors.New("expired official session")
+		return state, errors.New("Срок действия официальной сессии истёк")
 	}
 	return state, nil
 }
@@ -142,19 +142,19 @@ func officialFail0257(w http.ResponseWriter, err error) {
 	var upstream *officialminecraft.ServiceError
 	switch {
 	case errors.Is(err, officialminecraft.ErrDenied), errors.Is(err, officialminecraft.ErrUnlicensed):
-		writeError(w, http.StatusForbidden, "official Minecraft account is not entitled or access was denied")
+		writeError(w, http.StatusForbidden, "У учётной записи Minecraft нет необходимого права доступа либо доступ запрещён")
 	case errors.Is(err, officialminecraft.ErrExpired):
-		writeError(w, http.StatusUnauthorized, "Microsoft authorization expired")
+		writeError(w, http.StatusUnauthorized, "Срок действия авторизации Microsoft истёк")
 	case errors.As(err, &upstream) && upstream.Status == 403 && upstream.Code == "invalid_app_registration":
-		writeError(w, http.StatusForbidden, "Minecraft Services rejected the registered application ID; provider approval required")
+		writeError(w, http.StatusForbidden, "Minecraft Services отклонила зарегистрированный ID приложения; требуется одобрение провайдера")
 	case errors.As(err, &upstream) && upstream.Status == 400 && (upstream.Code == "invalid_grant" || upstream.Code == "unauthorized_client"):
-		writeError(w, http.StatusUnauthorized, "Microsoft OAuth grant expired, rejected or app redirect not permitted")
+		writeError(w, http.StatusUnauthorized, "Разрешение Microsoft OAuth истекло, отклонено или адрес перенаправления приложения не разрешён")
 	case errors.As(err, &upstream) && upstream.Status == 404:
-		writeError(w, http.StatusForbidden, "official Minecraft Java profile not available")
+		writeError(w, http.StatusForbidden, "Официальный профиль Minecraft Java недоступен")
 	case errors.As(err, &upstream) && upstream.Status == 401:
-		writeError(w, http.StatusUnauthorized, "official Minecraft token expired or revoked")
+		writeError(w, http.StatusUnauthorized, "Официальный токен Minecraft истёк или отозван")
 	case errors.As(err, &upstream) && upstream.Status == 403:
-		writeError(w, http.StatusForbidden, "Minecraft Services rejected operation")
+		writeError(w, http.StatusForbidden, "Minecraft Services отклонила операцию")
 	case errors.As(err, &upstream) && upstream.Status == 429:
 		w.Header().Set("Retry-After", "30")
 		writeError(w, http.StatusTooManyRequests, "Minecraft Services rate limit")
@@ -189,7 +189,7 @@ func officialPollingAllowed0257(code string, interval time.Duration) bool {
 func (s Server) officialBegin0257(w http.ResponseWriter, r *http.Request) {
 	actor, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	policy, allowed := s.officialProviderPolicy02611(w, r, "device")
@@ -559,7 +559,7 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 		}
 		var extra any
 		if dec.Decode(&extra) != io.EOF {
-			writeError(w, 400, "one JSON object required")
+			writeError(w, 400, "Требуется один объект JSON")
 			return
 		}
 		owned, err := client.Profile(ctx, st.MinecraftToken)

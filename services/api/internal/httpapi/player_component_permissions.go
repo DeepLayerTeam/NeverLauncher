@@ -13,7 +13,7 @@ import (
 func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid session")
+		writeError(w, http.StatusUnauthorized, "Недействительная сессия")
 		return
 	}
 	projectID, profileID := r.PathValue("projectId"), r.PathValue("profileId")

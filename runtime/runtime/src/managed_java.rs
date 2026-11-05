@@ -1860,7 +1860,7 @@ mod tests {
         // При наличии настоящей JRE/JDK на машине разработчика или нативном CI-узле используется она. `javac` не требуется; поддерживается Java 8+.
         let check = Command::new("java").args(["-XshowSettings:properties", "-version"])
             .output().await;
-        let Ok(output) = check else { eprintln!("No Java on test host: skipping native JVM probe"); return; };
+        let Ok(output) = check else { eprintln!("Java отсутствует на тестовом хосте: проверка нативной JVM пропущена"); return; };
         if !output.status.success() { return; }
         let properties = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
         let Some(home) = java_property(&properties, "java.home") else { return; };

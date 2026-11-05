@@ -45,12 +45,12 @@ func wizardStore02910(s Server) (repository.ManagedProviderStore02910, bool) {
 func (s Server) wizardList02910(w http.ResponseWriter, r *http.Request) {
 	store, ok := wizardStore02910(s)
 	if !ok {
-		writeError(w, 503, "provider management unavailable")
+		writeError(w, 503, "Управление провайдерами недоступно")
 		return
 	}
 	heads, err := store.ListManagedProviders02910(r.Context())
 	if err != nil {
-		writeError(w, 503, "provider management unavailable")
+		writeError(w, 503, "Управление провайдерами недоступно")
 		return
 	}
 	if heads == nil {
@@ -66,7 +66,7 @@ func wizardRevision02910(req managedWizardRequest02910) repository.ManagedProvid
 func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 	var req managedWizardRequest02910
 	if err := decodeWizardBody02910(w, r, &req); err != nil {
-		writeError(w, 400, "invalid request")
+		writeError(w, 400, "Некорректный запрос")
 		return
 	}
 	v := wizardRevision02910(req)
@@ -74,7 +74,7 @@ func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 		v.Reason = "connection diagnostics"
 	}
 	if err := validateManagedSecrets02910(v); err != nil {
-		writeError(w, 400, "unsafe or invalid provider configuration")
+		writeError(w, 400, "Небезопасная или некорректная конфигурация провайдера")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
@@ -90,22 +90,22 @@ func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 func (s Server) wizardDraft02910(w http.ResponseWriter, r *http.Request) {
 	var req managedWizardRequest02910
 	if err := decodeWizardBody02910(w, r, &req); err != nil {
-		writeError(w, 400, "invalid request")
+		writeError(w, 400, "Некорректный запрос")
 		return
 	}
 	v := wizardRevision02910(req)
 	if err := validateManagedSecrets02910(v); err != nil {
-		writeError(w, 400, "unsafe or invalid provider configuration")
+		writeError(w, 400, "Небезопасная или некорректная конфигурация провайдера")
 		return
 	}
 	store, ok := wizardStore02910(s)
 	if !ok {
-		writeError(w, 503, "provider management unavailable")
+		writeError(w, 503, "Управление провайдерами недоступно")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	v.Actor = claims.Sub
@@ -126,17 +126,17 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 	}
 	store, ok := wizardStore02910(s)
 	if !ok {
-		writeError(w, 503, "provider management unavailable")
+		writeError(w, 503, "Управление провайдерами недоступно")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	heads, err := store.ListManagedProviders02910(r.Context())
 	if err != nil {
-		writeError(w, 503, "provider management unavailable")
+		writeError(w, 503, "Управление провайдерами недоступно")
 		return
 	}
 	var head *repository.ManagedProviderHead02910

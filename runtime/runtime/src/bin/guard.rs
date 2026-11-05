@@ -48,7 +48,7 @@ fn main() -> ExitCode {
     {
         Ok(runtime) => runtime,
         Err(err) => {
-            eprintln!("guard: failed to initialize async runtime: {err}");
+            eprintln!("guard: не удалось инициализировать асинхронный Runtime: {err}");
             return ExitCode::FAILURE;
         }
     };

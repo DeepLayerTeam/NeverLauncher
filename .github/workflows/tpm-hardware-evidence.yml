@@ -38,10 +38,10 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Compile real production backend
+      - name: Скомпилировать реального промышленной Backend
         working-directory: services/api
         run: go build ./cmd/...
-      - name: Real TPM Certify / Quote verifier and negative clock tests
+      - name: реального TPM Сертифицировать / Quote верификатора и негативные clock тесты
         working-directory: services/api
         shell: bash
         run: |
@@ -50,7 +50,7 @@ jobs:
           grep -q -- '--- PASS: TestCertifyUnsafeTPMClock0436' "$RUNNER_TEMP/tpm-verifier.log"
           grep -q -- '--- PASS: TestQuoteUnsafeTPMClock0436' "$RUNNER_TEMP/tpm-verifier.log"
           if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/tpm-verifier.log"; then exit 1; fi
-      - name: TPM hardware evidence against revoked/changed real PostgreSQL sessions
+      - name: TPM hardware подтверждений против revoked/изменённых реальной PostgreSQL сессий
         working-directory: services/api
         shell: bash
         run: |
@@ -58,10 +58,10 @@ jobs:
           go test -race -count=1 -timeout=8m -v ./internal/repository -run '^TestTPMProofCannotSurviveSessionRevocation0436$' 2>&1 | tee "$RUNNER_TEMP/tpm-postgres.log"
           grep -q -- '--- PASS: TestTPMProofCannotSurviveSessionRevocation0436' "$RUNNER_TEMP/tpm-postgres.log"
           if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/tpm-postgres.log"; then exit 1; fi
-      - name: Backend static analysis
+      - name: Backend статические analysis
         working-directory: services/api
         run: go vet ./internal/attestverify ./internal/repository ./internal/httpapi
-      - name: Publish actual test logs for security review
+      - name: Опубликовать реального тестировать журналов для аудита безопасности
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -78,7 +78,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-      - name: TPM binary parsing and Windows native code
+      - name: TPM бинарного парсинга и Windows нативного code
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
           cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
@@ -90,11 +90,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install native dependencies
+      - name: Установить нативного зависимостей
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
-      - name: TPM binary parsing and Linux native code
+      - name: TPM бинарного парсинга и Linux нативного code
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314

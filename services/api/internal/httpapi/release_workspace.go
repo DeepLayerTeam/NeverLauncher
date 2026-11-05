@@ -18,7 +18,7 @@ import (
 func (s Server) draftStore0218(w http.ResponseWriter) (repository.ReleaseDraftStore, bool) {
 	store, ok := s.Repo.(repository.ReleaseDraftStore)
 	if !ok {
-		writeError(w, 503, "release drafts unavailable")
+		writeError(w, 503, "Черновики релизов недоступны")
 		return nil, false
 	}
 	return store, true
@@ -26,7 +26,7 @@ func (s Server) draftStore0218(w http.ResponseWriter) (repository.ReleaseDraftSt
 func (s Server) draftClaims0218(w http.ResponseWriter, r *http.Request, projectID string) (authClaims, bool) {
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return claims, false
 	}
 	if !s.authorizeProjectAction(w, r, claims, "release:prepare", projectID, "project", projectID) {
@@ -43,7 +43,7 @@ func readDraftBody0218(w http.ResponseWriter, r *http.Request) (repository.Relea
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return draft, errors.New("expected one JSON object")
+		return draft, errors.New("Ожидался один объект JSON")
 	}
 	draft.ID = strings.TrimSpace(draft.ID)
 	draft.ProjectID = strings.TrimSpace(draft.ProjectID)
@@ -65,7 +65,7 @@ func (s Server) draftBinding0218(w http.ResponseWriter, r *http.Request, d repos
 	if d.JobID != "" {
 		cp, err := s.durableControlPlane0213()
 		if err != nil {
-			writeError(w, 503, "job store unavailable")
+			writeError(w, 503, "Хранилище заданий недоступно")
 			return false
 		}
 		job, err := cp.GetDurableJob(r.Context(), d.JobID)
@@ -83,7 +83,7 @@ func (s Server) draftCreate0218(w http.ResponseWriter, r *http.Request) {
 	}
 	d, err := readDraftBody0218(w, r)
 	if err != nil {
-		writeError(w, 400, "invalid draft: "+err.Error())
+		writeError(w, 400, "Некорректный черновик: "+err.Error())
 		return
 	}
 	claims, ok := s.draftClaims0218(w, r, d.ProjectID)
@@ -91,13 +91,13 @@ func (s Server) draftCreate0218(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.Repo.GetProject(d.ProjectID); err != nil {
-		writeError(w, 404, "project not found")
+		writeError(w, 404, "Проект не найден")
 		return
 	}
 	// Браузер не может задавать ID, владельца или ревизию.
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
-		writeError(w, 500, "ID allocation failed")
+		writeError(w, 500, "Не удалось выделить идентификатор")
 		return
 	}
 	d.ID = "draft-" + hex.EncodeToString(id[:])
@@ -115,7 +115,7 @@ func (s Server) draftCreate0218(w http.ResponseWriter, r *http.Request) {
 		d.Step = "project"
 	}
 	if d.JobID != "" {
-		writeError(w, 400, "new draft cannot reference a job")
+		writeError(w, 400, "Новый черновик не может ссылаться на задание")
 		return
 	}
 	if !s.draftBinding0218(w, r, d) {
@@ -159,7 +159,7 @@ func (s Server) ownedDraft0218(w http.ResponseWriter, r *http.Request) (reposito
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return store, d, false
 	}
 	if d.OwnerID != claims.Sub || !s.authorizeClaims(r, claims, "release:prepare", d.ProjectID, "project", d.ProjectID).Allowed {
@@ -202,7 +202,7 @@ func (s Server) draftUpdate0218(w http.ResponseWriter, r *http.Request) {
 	}
 	d, err := readDraftBody0218(w, r)
 	if err != nil {
-		writeError(w, 400, "invalid draft: "+err.Error())
+		writeError(w, 400, "Некорректный черновик: "+err.Error())
 		return
 	}
 	if d.Revision != old.Revision {

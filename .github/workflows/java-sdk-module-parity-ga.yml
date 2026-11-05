@@ -73,7 +73,7 @@ jobs:
             --cli "$RUNNER_TEMP/nl-0310$ext" \
             --report "$RUNNER_TEMP/integration-0310.json" \
             --timeout 300 --revision "$GITHUB_SHA"
-      - name: Publish verified Java 17 SDK as CI artifact
+      - name: Опубликовать подтверждённые Java 17 SDK как CI артефакта
         if: success() && matrix.label == 'linux'
         uses: actions/upload-artifact@v4
         with:

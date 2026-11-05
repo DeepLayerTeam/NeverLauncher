@@ -28,7 +28,7 @@ func (s Server) channelHeadGet0228(w http.ResponseWriter, r *http.Request) {
 	}
 	project := r.PathValue("projectId")
 	if !s.authorizeClaims(r, claims, "project:read", project, "project", project).Allowed {
-		writeError(w, http.StatusForbidden, "project access denied")
+		writeError(w, http.StatusForbidden, "Доступ к проекту запрещён")
 		return
 	}
 	head, err := s.channelHead0228(r.Context(), project, r.PathValue("profileId"), r.PathValue("channel"))

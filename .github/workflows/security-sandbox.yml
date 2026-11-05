@@ -38,7 +38,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Execute real HTTP capability authorization, revocation and CSP tests
+      - name: Выполнить реальные HTTP capability авторизации, отзыва и CSP тесты
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestDesktopBridgeRevocationAndGeneration0356|TestExtensionHTMLCSPPrecedesUntrustedMarkup0356|TestDesktopEntrypointServedFromEnabledGrantedInstall0209' -count=1
   native-validation:

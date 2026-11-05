@@ -12,7 +12,7 @@ async fn main() -> ExitCode {
             match serde_json::to_string_pretty(&value) {
                 Ok(text) => println!("{text}"),
                 Err(err) => {
-                    eprintln!("runtime: JSON output error: {err}");
+                    eprintln!("runtime: ошибка вывода JSON: {err}");
                     return ExitCode::FAILURE;
                 }
             }

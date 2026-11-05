@@ -64,7 +64,7 @@ func readOperationRequest0217(r *http.Request) (operationRequest0217, error) {
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return req, errors.New("expected a single JSON object")
+		return req, errors.New("Ожидался один объект JSON")
 	}
 	req.Kind = strings.TrimSpace(req.Kind)
 	req.ProjectID = strings.TrimSpace(req.ProjectID)
@@ -92,7 +92,7 @@ func (s Server) operationRegistryGet0217(w http.ResponseWriter, r *http.Request)
 func (s Server) validateOperation0217(ctx context.Context, r *http.Request, claims authClaims, req operationRequest0217) (operationSpec0217, json.RawMessage, map[string]any, error) {
 	spec, ok := operationRegistry0217[req.Kind]
 	if !ok {
-		return spec, nil, nil, errors.New("unsupported operation kind")
+		return spec, nil, nil, errors.New("Неподдерживаемый тип операции")
 	}
 	if req.Kind == durableRollbackKind0217 && req.ProfileID == "" {
 		req.ProfileID = "vanilla"
@@ -140,7 +140,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 			return spec, nil, nil, err
 		}
 		if !checksPassed0212(s.validatePackageFiles(lookup.Release, lookup.Files)) {
-			return spec, nil, nil, errors.New("package file integrity check failed")
+			return spec, nil, nil, errors.New("Проверка целостности файлов пакета завершилась ошибкой")
 		}
 		digest, err := manifestDigest0212(lookup.Release.Manifest)
 		if err != nil {
@@ -159,7 +159,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		return spec, b, map[string]any{"packageId": resourceID, "version": lookup.Release.Version, "channel": lookup.Release.Channel, "effect": "publish immutable package and advance channel"}, nil
 	}
 	if req.Channel == "" || req.ToVersion == "" {
-		return spec, nil, nil, errors.New("channel and toVersion are required")
+		return spec, nil, nil, errors.New("Необходимо указать канал и toVersion")
 	}
 	versions, err := s.Repo.ListVersions(req.ProjectID)
 	if err != nil {
@@ -177,17 +177,17 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		return spec, nil, nil, repository.ErrNotFound
 	}
 	if target.Status != "published" {
-		return spec, nil, nil, errors.New("rollback target must be a published immutable release")
+		return spec, nil, nil, errors.New("Цель отката должна быть опубликованным неизменяемым релизом")
 	}
 	if err = s.verifyManifestSignature(target.Manifest); err != nil {
-		return spec, nil, nil, fmt.Errorf("rollback target signature invalid: %w", err)
+		return spec, nil, nil, fmt.Errorf("Недействительная подпись релиза для отката: %w", err)
 	}
 	files, err := s.Repo.ListFiles(req.ProjectID, target.ID)
 	if err != nil {
 		return spec, nil, nil, err
 	}
 	if len(files) == 0 {
-		return spec, nil, nil, errors.New("rollback target has no canonical files")
+		return spec, nil, nil, errors.New("У целевого релиза отката нет канонических файлов")
 	}
 	md, err := manifestDigest0212(target.Manifest)
 	if err != nil {
@@ -228,7 +228,7 @@ func (s Server) operationValidate0217(w http.ResponseWriter, r *http.Request) {
 // Ошибки операций имеют стабильные машинные коды и рекомендации по восстановлению, общие
 // для Admin и CLI.
 func writeOperationError0217(w http.ResponseWriter, err error) {
-	code, status, advice := "validation-failed", http.StatusBadRequest, "Correct the invalid fields and validate again"
+	code, status, advice := "validation-failed", http.StatusBadRequest, "Исправьте некорректные поля и повторите проверку"
 	var refused publishBlocked0385
 	if errors.As(err, &refused) {
 		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": err.Error(), "action": "Review blockers, repair package and repeat preview", "blockers": refused.Blockers}})
@@ -361,7 +361,7 @@ func (s Server) operationExecute0217(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, ok := operationRegistry0217[req.Kind]; !ok {
-		writeError(w, 400, "unsupported operation kind")
+		writeError(w, 400, "Неподдерживаемый тип операции")
 		return
 	}
 	if !s.freshAuthAllowed117(w, r, "mfa", 5*time.Minute) {
@@ -396,7 +396,7 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return model.DurableJob{}, false
 	}
 	if !s.authorizeClaims(r, claims, "project:read", job.ProjectID, job.ResourceType, job.ResourceID).Allowed && claims.Sub != job.ActorID {
@@ -418,7 +418,7 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 func (s Server) operationRecover0388(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "authentication required")
+		writeError(w, http.StatusUnauthorized, "Требуется авторизация")
 		return
 	}
 	projectID := r.URL.Query().Get("projectId")
@@ -497,7 +497,7 @@ func (s Server) operationAttempts0217(w http.ResponseWriter, r *http.Request) {
 func (s Server) authorizeOperationMutation0217(w http.ResponseWriter, r *http.Request, job model.DurableJob) bool {
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return false
 	}
 	if !s.authorizeClaims(r, claims, job.Action, job.ProjectID, job.ResourceType, job.ResourceID).Allowed {

@@ -38,7 +38,7 @@ func validateOfficialBrowserRequest0263(v officialBrowserRequest0263) error {
 func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	policy, ok := s.officialProviderPolicy02611(w, r, "")
@@ -112,7 +112,7 @@ func validOfficialProfile0263(profile officialminecraft.Profile) bool {
 func (s Server) officialBrowserExchange0263(w http.ResponseWriter, r *http.Request) {
 	actor, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "authentication required")
+		writeError(w, 401, "Требуется авторизация")
 		return
 	}
 	policy, allowed := s.officialProviderPolicy02611(w, r, "browser")

@@ -18,7 +18,7 @@ func main() {
 	keyID := flag.String("key-id", "", "Идентификатор делегированного ключа подписи bootstrap")
 	flag.Parse()
 	if *payload == "" || *keyPath == "" || *out == "" {
-		fmt.Fprintln(os.Stderr, "--payload --private-key-file --out required")
+		fmt.Fprintln(os.Stderr, "Необходимо указать --payload, --private-key-file и --out")
 		os.Exit(2)
 	}
 	st, err := os.Stat(*keyPath)
@@ -26,7 +26,7 @@ func main() {
 		panic(err)
 	}
 	if st.Mode().Perm()&0077 != 0 {
-		panic("private key file must not be group/world accessible")
+		panic("Файл приватного ключа не должен быть доступен группе или другим пользователям")
 	}
 	raw, err := os.ReadFile(*keyPath)
 	if err != nil {
@@ -34,7 +34,7 @@ func main() {
 	}
 	seed, err := hex.DecodeString(string(trimSpace(raw)))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		panic("expected hex Ed25519 32-byte seed")
+		panic("Ожидается 32-байтовое начальное значение Ed25519 в hex-формате")
 	}
 	data, err := os.ReadFile(*payload)
 	if err != nil {
@@ -43,7 +43,7 @@ func main() {
 	var signed []byte
 	if *policyPath != "" {
 		if *rootKey == "" || *keyID == "" {
-			panic("delegated signing requires --root-public-key and --key-id")
+			panic("Для делегированной подписи необходимы --root-public-key и --key-id")
 		}
 		policy, e := os.ReadFile(*policyPath)
 		if e != nil {
@@ -52,7 +52,7 @@ func main() {
 		signed, err = prestarter.SignedEnvelopeDelegated(data, ed25519.NewKeyFromSeed(seed), policy, *rootKey, *keyID)
 	} else {
 		if *rootKey != "" || *keyID != "" {
-			panic("delegate fields require --trust-policy")
+			panic("Для параметров делегирования необходимо указать --trust-policy")
 		}
 		signed, err = prestarter.SignedEnvelope(data, ed25519.NewKeyFromSeed(seed))
 	}

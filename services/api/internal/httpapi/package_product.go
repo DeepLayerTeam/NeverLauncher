@@ -182,7 +182,7 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockCreate()
 	if req.ManifestSchemaVersion != "" && req.ManifestSchemaVersion != model.ManifestSchemaV2 && req.ManifestSchemaVersion != model.ManifestSchemaV3 {
-		writeError(w, http.StatusBadRequest, "unsupported manifestSchemaVersion")
+		writeError(w, http.StatusBadRequest, "Неподдерживаемая версия manifestSchemaVersion")
 		return
 	}
 	var release model.ReleaseVersion
@@ -191,7 +191,7 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 			CreateVersionV3(string, string, string, string) (model.ReleaseVersion, error)
 		})
 		if !ok {
-			writeError(w, http.StatusInternalServerError, "v3 release creation unavailable")
+			writeError(w, http.StatusInternalServerError, "Создание релиза v3 недоступно")
 			return
 		}
 		release, err = creator.CreateVersionV3(req.ProjectID, req.ProfileID, req.Channel, req.Version)
@@ -218,7 +218,7 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		}
 		release, err = s.Repo.UpdateVersionManifest(release.ProjectID, release.ID, manifest)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "unable to store selected Minecraft metadata: "+err.Error())
+			writeError(w, http.StatusInternalServerError, "Не удалось сохранить выбранные метаданные Minecraft: "+err.Error())
 			return
 		}
 	}
@@ -237,7 +237,7 @@ func (s Server) packageGet(w http.ResponseWriter, r *http.Request) {
 	if locator, ok := s.Repo.(repository.BuildPackageLocator0384); ok {
 		immutable, verifyErr := locator.MaterializedBuildForPackage0384(r.Context(), lookup.Release.ID)
 		if verifyErr != nil {
-			writeError(w, http.StatusServiceUnavailable, "cannot verify build package immutability")
+			writeError(w, http.StatusServiceUnavailable, "Не удалось проверить неизменяемость пакета сборки")
 			return
 		}
 		payload["immutableBuild"] = immutable
@@ -251,7 +251,7 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, repository.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "package не найден")
 		} else {
-			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+			writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+err.Error())
 		}
 		return
 	}
@@ -262,11 +262,11 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	if locator, ok := s.Repo.(repository.BuildPackageLocator0384); ok {
 		immutable, lookupErr := locator.MaterializedBuildForPackage0384(r.Context(), lookup.Release.ID)
 		if lookupErr != nil {
-			writeError(w, http.StatusServiceUnavailable, "cannot verify build package immutability")
+			writeError(w, http.StatusServiceUnavailable, "Не удалось проверить неизменяемость пакета сборки")
 			return
 		}
 		if immutable {
-			writeError(w, http.StatusConflict, "materialized build package files are immutable; create a new version")
+			writeError(w, http.StatusConflict, "Файлы сформированного пакета сборки неизменяемы; создайте новую версию")
 			return
 		}
 	}
@@ -301,7 +301,7 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	uploadSum := sha256.Sum256(payload)
 	uploadSHA := hex.EncodeToString(uploadSum[:])
 	if expected := strings.TrimSpace(r.FormValue("sha256")); expected != "" && !strings.EqualFold(expected, uploadSHA) {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "sha256 uploaded bytes mismatch", "expected": expected, "actual": uploadSHA}})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "SHA-256 загруженных данных не совпадает", "expected": expected, "actual": uploadSHA}})
 		return
 	}
 	contentExtensionID := strings.TrimSpace(r.FormValue("contentExtensionId"))
@@ -448,7 +448,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, repository.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "package не найден")
 		} else {
-			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+			writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+err.Error())
 		}
 		return
 	}
@@ -522,7 +522,7 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, repository.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "package не найден")
 		} else {
-			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+			writeError(w, http.StatusConflict, "Изменение пакета уже выполняется: "+err.Error())
 		}
 		return
 	}
