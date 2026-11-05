@@ -72,7 +72,7 @@ def accept_alert(payload, expected):
             require(start.tzinfo is not None and start <= datetime.now(timezone.utc),
                     'invalid alert firing start')
         except (KeyError, AttributeError, TypeError, ValueError) as exc:
-            raise Error('invalid Alertmanager event timestamp') from exc
+            raise Error('Некорректная временная метка события Alertmanager') from exc
         matching.append((fingerprint, start))
     require(len(matching) == 1, 'one unambiguous expected alert required')
     fingerprint, start = matching[0]

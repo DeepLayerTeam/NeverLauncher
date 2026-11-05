@@ -77,7 +77,7 @@ def endpoint(base: str, path: str, *, method='GET', payload=None, token=None):
             require(len(raw) <= MAX_RESPONSE, 'HTTP response too large')
             return json.loads(raw)
     except (HTTPError, URLError, TimeoutError) as exc:
-        raise AcceptanceError(f'live HTTP request failed: {method} {path} ({type(exc).__name__})') from exc
+        raise AcceptanceError(f'Не удалось выполнить HTTP-запрос: {method} {path} ({type(exc).__name__})') from exc
 
 
 def owner_login(base, credentials: Path):
@@ -182,7 +182,7 @@ def postgres_live_probe(path: Path, project: str, owner: str):
                                     '-v','project_id='+project, '-v','owner_id='+owner],
                                    input=sql, text=True, capture_output=True, env=env, timeout=20, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise AcceptanceError('cannot independently query deployed PostgreSQL using psql') from exc
+        raise AcceptanceError('Не удалось независимо проверить развёрнутую PostgreSQL через psql') from exc
     require(completed.returncode == 0 and completed.stdout.strip() == 'accepted', 'deployed PostgreSQL failed owner/project direct query')
 
 
@@ -258,7 +258,7 @@ def main(argv=None):
         print(f'0.48.0 live {a.action} completed')
         return 0
     except (OSError, ValueError, CutoverError, sqlite3.DatabaseError, KeyError, TypeError, json.JSONDecodeError) as exc:
-        print(f'0.48.0 live acceptance REJECTED: {type(exc).__name__}: {exc}', file=sys.stderr)
+        print(f'Приёмка реальной среды 0.48.0 отклонена: {type(exc).__name__}: {exc}', file=sys.stderr)
         return 2
 
 

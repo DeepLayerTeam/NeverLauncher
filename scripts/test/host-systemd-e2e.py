@@ -19,7 +19,7 @@ def wait_for(predicate, seconds=12):
         if value:
             return value
         time.sleep(0.04)
-    raise AssertionError("timed out waiting for supervisor")
+    raise AssertionError("Превышено время ожидания управляющего процесса")
 
 
 def main(binary):

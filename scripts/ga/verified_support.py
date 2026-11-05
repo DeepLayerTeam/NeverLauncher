@@ -33,13 +33,13 @@ def document(receipt: dict) -> dict:
     version = receipt['version']
     from release_policy import parsed
     if parsed(version)[0] < (0, 44, 0):
-        raise ValueError('verified 0.44.0+ support release required')
+        raise ValueError('Требуется проверенный выпуск поддержки не ниже 0.44.0')
     if (receipt.get('status') != 'approved-for-release-signing'
             or receipt.get('schemaVersion') != 'launcher.ga.verified-targets.v2'
             or not isinstance(receipt.get('targets'), list)
             or len(receipt['targets']) != 6
             or {entry['target'] for entry in receipt['targets']} != set(TARGETS)):
-        raise ValueError('support cannot be issued without six exact-byte certified targets')
+        raise ValueError('Нельзя выпускать поддержку без шести сертифицированных целей с точным совпадением байтов')
     capabilities = list(security_checks(version))
     checked = list(checks_for(version))
     outputs = []
@@ -47,7 +47,7 @@ def document(receipt: dict) -> dict:
         row = next(item for item in receipt['targets'] if item['target'] == target)
         if (row.get('checksPassed') != len(checked)
                 or row.get('securityCapabilitiesVerified') != capabilities):
-            raise ValueError(target + ': incomplete independently verified capabilities')
+            raise ValueError(target + ': набор независимо проверенных возможностей неполон')
         outputs.append({
             'target': target,
             'binarySha256': row['binarySha256'],
@@ -74,9 +74,9 @@ def serialize(report: dict) -> bytes:
 
 def check_file(path: Path, receipt: dict) -> None:
     if not path.is_file() or path.is_symlink() or path.stat().st_size > 2 * 1024 * 1024:
-        raise ValueError('missing or unsafe signed verified-support report')
+        raise ValueError('Подписанный отчёт о проверенной поддержке отсутствует или небезопасен')
     if path.read_bytes() != serialize(document(receipt)):
-        raise ValueError('published supported platform claims differ from independent GA replay')
+        raise ValueError('Заявленная поддержка платформ расходится с результатом независимого повторного выполнения GA')
 
 
 def main() -> int:
@@ -94,7 +94,7 @@ def main() -> int:
         args.output.write_bytes(serialize(document(receipt)))
     except (ValueError, OSError, KeyError, TypeError) as exc:
         args.output.unlink(missing_ok=True)
-        print('verified support 0.44.0 BLOCKED: ' + str(exc), file=sys.stderr)
+        print('Выпуск проверенной поддержки 0.44.0 заблокирован: ' + str(exc), file=sys.stderr)
         return 3
     return 0
 

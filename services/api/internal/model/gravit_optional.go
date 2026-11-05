@@ -143,7 +143,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 			continue
 		}
 		if _, dup := names[name]; dup {
-			note(label+".name", "blocked", "", "duplicate Gravit name")
+			note(label+".name", "blocked", "", "Повторяющееся имя Gravit")
 			continue
 		}
 		id := gravitID02411("gravit-", name)
@@ -165,7 +165,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		}
 		id := names[name]
 		c := CatalogComponent0241{ID: id, Name: name, Version: "1.0.0", Files: []string{}, Visible: func() *bool { b := true; return &b }()}
-		note(label+".name", "transformed", "components."+id+".id", "stable ID derived from exact Gravit name; version 1.0.0 is a migration placeholder")
+		note(label+".name", "transformed", "components."+id+".id", "Постоянный идентификатор получен из точного имени Gravit; версия 1.0.0 используется как значение при миграции")
 		known := map[string]bool{"name": true, "info": true, "mark": true, "visible": true, "limited": true, "permissions": true, "category": true, "subTreeLevel": true, "dependenciesFile": true, "conflictFile": true, "triggersList": true, "triggers": true, "actions": true, "groupFile": true, "isPreset": true}
 		if raw, has := obj["groupFile"]; has && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			entries, err := gravitArray02411(raw)
@@ -181,7 +181,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		}
 		for key := range obj {
 			if !known[key] {
-				note(label+"."+key, "blocked", "", "unrecognized Gravit optional semantics")
+				note(label+"."+key, "blocked", "", "Неизвестная семантика необязательного компонента Gravit")
 			}
 		}
 		if v, has := obj["info"]; has && !bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
@@ -211,7 +211,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						continue
 					}
 				}
-				note(label+"."+field, "mapped", "components."+id+"."+field, "boolean selection attribute")
+				note(label+"."+field, "mapped", "components."+id+"."+field, "Логический атрибут выбора")
 			}
 		}
 		if v, has := obj["permissions"]; has {
@@ -219,7 +219,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 			if !ok || n != 0 {
 				note(label+".permissions", "blocked", "", "Битовая маска разрешений Gravit не может предоставлять права Never")
 			} else {
-				note(label+".permissions", "mapped", "", "zero permissions")
+				note(label+".permissions", "mapped", "", "Нулевые разрешения")
 			}
 		}
 		if v, has := obj["category"]; has && !bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
@@ -233,7 +233,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					cat.Categories = append(cat.Categories, CatalogCategory0242{ID: cid, Name: s})
 					categories[cid] = true
 				}
-				note(label+".category", "transformed", "categories."+cid, "category name preserved")
+				note(label+".category", "transformed", "categories."+cid, "Название категории сохранено")
 			}
 		}
 		if v, has := obj["subTreeLevel"]; has {
@@ -277,7 +277,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					} else {
 						c.Conflicts = append(c.Conflicts, ComponentRequirement0243{ID: rid})
 					}
-					note(fld, "mapped", "components."+id, "resolved by exact source name to stable ID")
+					note(fld, "mapped", "components."+id, "Постоянный идентификатор определён по точному имени источника")
 				}
 			}
 		}
@@ -380,7 +380,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					}
 					for k := range t {
 						if !allowed[k] {
-							note(fld+"."+k, "blocked", "", "unknown trigger field")
+							note(fld+"."+k, "blocked", "", "Неизвестное поле условия срабатывания")
 						}
 					}
 					note(fld, "transformed", "components."+id+".conditions", "Обязательный триггер сопоставлен с подписанным условием доступности")
@@ -395,7 +395,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 			if e != nil {
 				note(label+".actions", "blocked", "", e.Error())
 			} else if len(actions) > 64 {
-				note(label+".actions", "blocked", "", "too many optional actions")
+				note(label+".actions", "blocked", "", "Слишком много необязательных действий")
 			} else {
 				type classPath02411 struct {
 					field string
@@ -422,7 +422,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							// Never поддерживает только основной classpath.
 							for k := range a {
 								if k != "type" && k != "args" && k != "useAltClasspath" {
-									note(fld+"."+k, "blocked", "", "unknown classpath action attribute")
+									note(fld+"."+k, "blocked", "", "Неизвестный атрибут действия с путём к классам")
 								}
 							}
 							var paths []string
@@ -471,7 +471,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 								continue
 							}
 							if !gravitSafePath02210(sourcePath) || gravitProtected02210(sourcePath) {
-								note(fld+".files."+sourcePath, "blocked", "", "unsafe/protected source path")
+								note(fld+".files."+sourcePath, "blocked", "", "Небезопасный или защищённый путь источника")
 								continue
 							}
 							exact := fileMap[strings.ToLower(sourcePath)]
@@ -482,12 +482,12 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							c.Files = append(c.Files, sourcePath)
 							c.Actions = append(c.Actions, ComponentAction0245{Type: "File", Path: sourcePath})
 							owned[strings.ToLower(sourcePath)] = true
-							note(fld+".files."+sourcePath, "mapped", "components."+id+".actions", "bound to actual SHA-256 optional file in draft release")
+							note(fld+".files."+sourcePath, "mapped", "components."+id+".actions", "Привязано к фактическому SHA-256 необязательного файла в черновике выпуска")
 						}
 					case "jvmargs", "clientargs":
 						for k := range a {
 							if k != "type" && k != "args" {
-								note(fld+"."+k, "blocked", "", "unknown argument action field")
+								note(fld+"."+k, "blocked", "", "Неизвестное поле действия с аргументами")
 							}
 						}
 						var args []string
@@ -510,7 +510,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							continue
 						}
 						c.Actions = append(c.Actions, ComponentAction0245{Type: kind, Args: args})
-						note(fld, "mapped", "components."+id+".actions", "safe signed argument action")
+						note(fld, "mapped", "components."+id+".actions", "Безопасное подписанное действие с аргументами")
 					default:
 						note(fld, "blocked", "", "Неподдерживаемый тип дополнительного действия "+typ)
 					}
@@ -529,7 +529,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							continue
 						}
 						c.Actions = append(c.Actions, ComponentAction0245{Type: "ClassPath", Path: p})
-						note(cp.field, "mapped", "components."+id+".actions", "primary classpath bound to signed, owned JAR")
+						note(cp.field, "mapped", "components."+id+".actions", "Основной путь к классам привязан к подписанному JAR, принадлежащему проекту")
 					}
 				}
 			}

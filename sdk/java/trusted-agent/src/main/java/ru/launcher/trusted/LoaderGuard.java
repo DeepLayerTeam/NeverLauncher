@@ -90,28 +90,28 @@ final class LoaderGuard0504 implements ClassFileTransformer {
         String expected=classBytes.get(binary);
         if(expected!=null) {
             if(original==null || !expected.equals(digestBytes(original)))
-                reject("loader class-byte mismatch before Trusted hooks: "+binary);
+                reject("Несоответствие байтов класса загрузчика до установки доверенных перехватчиков: "+binary);
         }
         String actual=classify(name);
         if(actual==null) return null;
-        if(!permitted(actual)) reject("loader mismatch: expected "+loader+" but observed "+actual+" in "+name);
+        if(!permitted(actual)) reject("Несоответствие загрузчика: ожидалось "+loader+", обнаружено "+actual+" in "+name);
         try {
             CodeSource code=protection==null?null:protection.getCodeSource();
             URL url=code==null?null:code.getLocation();
-            if(url==null || !"file".equalsIgnoreCase(url.getProtocol())) reject("loader code source missing: "+name);
+            if(url==null || !"file".equalsIgnoreCase(url.getProtocol())) reject("Не найден источник кода загрузчика: "+name);
             File file=new File(url.toURI());
             if(Files.isSymbolicLink(file.toPath()) || !Files.isRegularFile(file.toPath(),LinkOption.NOFOLLOW_LINKS))
-                reject("loader code source is not a regular file: "+name);
+                reject("Источник кода загрузчика не является обычным файлом: "+name);
             String canonical=file.getCanonicalPath();
             String sha=sources.get(canonical);
-            if(sha==null) reject("loader implementation JAR is not operator-authorized: "+name);
+            if(sha==null) reject("JAR загрузчика не разрешён администратором: "+name);
             synchronized(verified) {
                 if(!verified.contains(canonical)) {
-                    if(!sha.equals(digest(file))) reject("loader JAR changed before class definition: "+name);
+                    if(!sha.equals(digest(file))) reject("JAR загрузчика изменился до определения класса: "+name);
                     verified.add(canonical);
                 }
             }
-        } catch(Exception ex) { reject("loader evidence unavailable for "+name+": "+ex); }
+        } catch(Exception ex) { reject("Нет данных проверки загрузчика для "+name+": "+ex); }
         return null; // наблюдать за источником и разрешать его; не изменять байт-код загрузчика
     }
     private boolean permitted(String actual) {

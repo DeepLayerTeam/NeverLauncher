@@ -119,7 +119,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                         scan();
                         lastVerifiedNanos = System.nanoTime();
                     } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
-                    catch (Throwable e) { reject("continuous scan: " + e); }
+                    catch (Throwable e) { reject("Непрерывная проверка: " + e); }
                 }
             }
         }, "launcher-runtime-integrity-0505");
@@ -132,12 +132,12 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             @Override public void run() {
                 for (;;) {
                     try { Thread.sleep(1000); }
-                    catch (InterruptedException e) { reject("integrity watchdog interrupted"); }
-                    if (!watcher.isAlive()) reject("integrity watcher stopped while JVM running");
+                    catch (InterruptedException e) { reject("Проверка целостности прервана"); }
+                    if (!watcher.isAlive()) reject("Контроль целостности остановился во время работы JVM");
                     // Допускайте медленные диски и большие модпаки, но отклоняйте постоянно
                     // зависшее сканирование по монотонным часам, а не по настенному времени.
                     if (System.nanoTime() - lastVerifiedNanos > 90_000_000_000L)
-                        reject("integrity watcher deadline exceeded");
+                        reject("Превышено время ожидания проверки целостности");
                 }
             }
         }, "launcher-integrity-watchdog-0506");
@@ -278,13 +278,13 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             if (url==null || !"file".equalsIgnoreCase(url.getProtocol())) return null;
             Path path=new File(url.toURI()).toPath().toAbsolutePath().normalize();
             if (!path.startsWith(root)) return null;
-            if (!"code".equals(kinds.get(path))) reject("unapproved class origin: "+name+" from "+path);
+            if (!"code".equals(kinds.get(path))) reject("Неодобренный источник класса: "+name+" from "+path);
             // Проверяйте при определении класса, а не только один раз в premain: это
             // выявляет замену мода/JAR между периодическими проверками ФС.
             synchronized (verifiedOrigins) {
                 if (!verifiedOrigins.contains(path)) {check(path);verifiedOrigins.add(path);}
             }
-        } catch (Throwable e) { reject("class source verification: "+e); }
+        } catch (Throwable e) { reject("Проверка источника класса: "+e); }
         return null;
     }
     private static String digest(Path path) throws Exception {

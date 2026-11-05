@@ -22,33 +22,33 @@ def secure_name(name: str) -> None:
     path=PurePosixPath(name)
     if (not name or name.startswith('/') or '\\' in name or '\\x00' in name or ':' in name
             or '..' in path.parts or any(x == '' for x in name.rstrip('/').split('/'))):
-        raise ValueError('unsafe archive member: '+repr(name))
+        raise ValueError('Небезопасный элемент архива: '+repr(name))
 
 
 def inspect(path: Path) -> tuple[str,int]:
     if not path.is_file() or path.is_symlink() or path.stat().st_size < 4096:
-        raise ValueError('missing/non-production final package: '+path.name)
+        raise ValueError('Итоговый пакет отсутствует или не является промышленным: '+path.name)
     if path.name.endswith('.zip'):
         with zipfile.ZipFile(path) as z:
             members=z.infolist()
-            if not members: raise ValueError('empty installer: '+path.name)
+            if not members: raise ValueError('Пустой установщик: '+path.name)
             for x in members:
                 secure_name(x.filename)
                 mode=(x.external_attr>>16)&0o170000
                 if mode not in (0,stat.S_IFREG,stat.S_IFDIR):
-                    raise ValueError('unsafe entry type: '+x.filename)
+                    raise ValueError('Небезопасный тип элемента: '+x.filename)
             bad=z.testzip()
-            if bad: raise ValueError('corrupt ZIP entry: '+bad)
+            if bad: raise ValueError('Повреждённый элемент ZIP: '+bad)
     elif path.name.endswith('.tar.gz'):
         with tarfile.open(path,'r:gz') as t:
             members=t.getmembers()
-            if not members: raise ValueError('empty installer: '+path.name)
+            if not members: raise ValueError('Пустой установщик: '+path.name)
             for x in members:
                 secure_name(x.name)
                 if not (x.isfile() or x.isdir()):
-                    raise ValueError('unsafe TAR entry: '+x.name)
+                    raise ValueError('Небезопасный элемент TAR: '+x.name)
     else:
-        raise ValueError('unexpected installer format: '+path.name)
+        raise ValueError('Неожиданный формат установщика: '+path.name)
     hash=hashlib.sha256()
     with path.open('rb') as f:
         for chunk in iter(lambda:f.read(1024*1024),b''):hash.update(chunk)
@@ -58,17 +58,17 @@ def inspect(path: Path) -> tuple[str,int]:
 def inventory(bundle: Path) -> dict:
     version = (ROOT/'VERSION').read_text().strip()
     if CONTRACT.is_symlink() or not CONTRACT.is_file():
-        raise ValueError('missing canonical primary payload contract')
+        raise ValueError('Отсутствует канонический контракт основного содержимого')
     contract=json.loads(CONTRACT.read_text(encoding='utf-8'))
     if contract.get('version') != version:
-        raise ValueError('wrong release version for primary contract')
+        raise ValueError('Версия выпуска не соответствует основному контракту')
     targets=contract.get('targets',{})
     if set(targets)!={'windows-x64','windows-arm64','linux-x64','linux-arm64','darwin-x64','darwin-arm64'}:
-        raise ValueError('incomplete six-target contract')
-    if not bundle.is_dir() or bundle.is_symlink():raise ValueError('invalid staged release directory')
+        raise ValueError('Неполный контракт шести целевых платформ')
+    if not bundle.is_dir() or bundle.is_symlink():raise ValueError('Некорректный каталог подготовленного выпуска')
     result={}
     for target,name in sorted(targets.items()):
-        if not isinstance(name,str) or '/' in name or '\\' in name:raise ValueError('invalid package name')
+        if not isinstance(name,str) or '/' in name or '\\' in name:raise ValueError('Некорректное имя пакета')
         digest,size=inspect(bundle/name)
         result[target]={'file':name,'sha256':digest,'bytes':size}
     return {'schema':'neverlauncher.payload-observed.v1','version':contract['version'],
@@ -82,7 +82,7 @@ def main():
     try:
         print(json.dumps(inventory(args.staging_dir),indent=2,sort_keys=True))
     except (OSError,ValueError,KeyError,zipfile.BadZipFile,tarfile.TarError) as exc:
-        print('PAYLOAD BLOCKED: '+str(exc),file=sys.stderr)
+        print('Подготовка содержимого заблокирована: '+str(exc),file=sys.stderr)
         return 2
     return 0
 

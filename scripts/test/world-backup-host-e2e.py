@@ -56,7 +56,7 @@ try:
                 break
         time.sleep(0.05)
     else:
-        raise RuntimeError("host never started")
+        raise RuntimeError("Хост не запустился")
     create = cmd(
         "server-bridge",
         "host",

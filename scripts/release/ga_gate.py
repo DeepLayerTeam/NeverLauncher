@@ -68,7 +68,7 @@ def validate_signed_attestation(root: Path, approval: Path, signature: Path, key
     try:
         Ed25519PublicKey.from_public_bytes(key_raw).verify(sig, DOMAIN + raw)
     except (ValueError, InvalidSignature) as exc:
-        raise GateError('independent GA operator signature rejected') from exc
+        raise GateError('Независимая подпись оператора GA отклонена') from exc
     meta = json.loads(raw)
     require(meta.get('schema') == 'neverlauncher.ga0480.independent-operator.v1' and meta.get('version') == VERSION and meta.get('commit') == commit, 'operator approval not for this release/commit')
     files = meta.get('files')
@@ -116,7 +116,7 @@ def main(argv=None):
         print(json.dumps(result,sort_keys=True))
         return 0
     except (ValueError, OSError, KeyError, TypeError, RuntimeError, json.JSONDecodeError) as exc:
-        print(f'0.48.0 GA RELEASE BLOCKED: {type(exc).__name__}: {exc}',file=sys.stderr)
+        print(f'Выпуск 0.48.0 заблокирован проверкой GA: {type(exc).__name__}: {exc}',file=sys.stderr)
         return 2
 
 if __name__ == '__main__':

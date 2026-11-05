@@ -19,12 +19,12 @@ def _entry(rel: str) -> tuple[str, str] | None:
         name = rel.removeprefix(SQL_ALIAS)
         if name.endswith('.sql') and name and '/' not in name and '..' not in name:
             return SQL_BUNDLE, 'sql/' + name
-        raise ValueError(f'invalid embedded SQL path: {rel}')
+        raise ValueError(f'Некорректный путь к встроенному SQL: {rel}')
     if rel.startswith(TEMPLATE_ALIAS):
         name = rel.removeprefix(TEMPLATE_ALIAS)
         if name in {'docker-compose.yml', 'nginx.conf', 'env.production.example'}:
             return TEMPLATE_BUNDLE, 'production/' + name
-        raise ValueError(f'invalid embedded template path: {rel}')
+        raise ValueError(f'Некорректный путь к встроенному шаблону: {rel}')
     return None
 
 

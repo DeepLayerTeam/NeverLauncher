@@ -229,7 +229,7 @@ def execute(argv, timeout, log):
         os.chmod(log, 0o600)
         require(result.returncode == 0, 'Нативная команда завершилась ошибкой: ' + Path(str(argv[0])).name)
     except subprocess.TimeoutExpired as exc:
-        raise Blocked('native command timed out: ' + Path(str(argv[0])).name) from exc
+        raise Blocked('Превышено время ожидания нативной команды: ' + Path(str(argv[0])).name) from exc
     finally:
         raw.unlink(missing_ok=True)
     return {'sha256': file_hash(log), 'size': log.stat().st_size}
@@ -643,7 +643,7 @@ def main(argv=None):
         return 0
     except (Blocked, OSError, subprocess.SubprocessError, urllib.error.URLError,
             TypeError, KeyError) as exc:
-        print('0.52.2 NATIVE ACCEPTANCE BLOCKED: ' + str(exc), file=sys.stderr)
+        print('Нативная приёмка 0.52.2 заблокирована: ' + str(exc), file=sys.stderr)
         return 2
 
 

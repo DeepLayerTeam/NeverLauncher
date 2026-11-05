@@ -106,14 +106,14 @@ public class WorldLifecycle {
         runtime = root / ".launcher/server-bridge/host/runtime.json"
         for _ in range(120):
             if host.poll() is not None:
-                raise AssertionError("Java Host Supervisor exited before backup")
+                raise AssertionError("Управляющий процесс Java Host завершился до резервного копирования")
             if runtime.exists():
                 state = json.loads(runtime.read_text())
                 if state.get("status") == "running" and state.get("processPid", 0) > 0:
                     break
             time.sleep(0.1)
         else:
-            raise AssertionError("Java JVM did not reach running")
+            raise AssertionError("JVM Java не перешла в рабочее состояние")
         result = run(
             cli,
             "server-bridge",

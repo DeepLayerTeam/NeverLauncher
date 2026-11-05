@@ -66,12 +66,12 @@ public record ExtensionManifest(String id, String name, SemVer version, String v
     private static void checkKeys(Map<String,Object> m,Set<String> allowed){for(String k:m.keySet())if(!allowed.contains(k))throw new IllegalArgumentException("Неизвестное поле: "+k);}
     private static List<Map<String,Object>> records(Map<String,Object> m,String key,boolean required){
         Object obj=m.get(key);if(obj==null&&!required)return List.of();
-        if(!(obj instanceof List<?> list))throw new IllegalArgumentException(key+" must be an array");
+        if(!(obj instanceof List<?> list))throw new IllegalArgumentException(key+" должен быть массивом");
         if(list.size()>2048)throw new IllegalArgumentException(key+" превышает допустимый размер");
         List<Map<String,Object>> result=new ArrayList<>();for(Object value:list)result.add(Json.object(value));return result;
     }
     private static List<String> strings(Map<String,Object> m,String key){
-        Object obj=m.get(key);if(obj==null)return List.of();if(!(obj instanceof List<?> list))throw new IllegalArgumentException(key+" must be an array");
+        Object obj=m.get(key);if(obj==null)return List.of();if(!(obj instanceof List<?> list))throw new IllegalArgumentException(key+" должен быть массивом");
         if(list.size()>2048)throw new IllegalArgumentException(key+" превышает допустимый размер");
         List<String> result=new ArrayList<>();for(Object value:list){if(!(value instanceof String s)||s.isBlank())throw new IllegalArgumentException("invalid "+key+" entry");result.add(s);}return result;
     }

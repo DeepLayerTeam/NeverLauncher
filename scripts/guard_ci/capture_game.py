@@ -69,7 +69,7 @@ def main(argv=None):
         print(json.dumps({'status': 'verified-real-game-captured', **result}))
         return 0
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        print('Guard 0.51.0 real-game capture BLOCKED: ' + str(exc), file=sys.stderr)
+        print('Запись реальной игровой сессии Guard 0.51.0 заблокирована: ' + str(exc), file=sys.stderr)
         return 2
 
 

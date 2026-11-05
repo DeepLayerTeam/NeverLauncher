@@ -51,17 +51,17 @@ PROFILES = {
 
 def read(path: Path) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 2*1024*1024:
-        raise CertificationBlocked('GA report missing, symlinked or oversized')
+        raise CertificationBlocked('Отчёт GA отсутствует, является символической ссылкой или превышает допустимый размер')
     data = json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(data, dict):
-        raise CertificationBlocked('GA report must contain a JSON object')
+        raise CertificationBlocked('Отчёт GA должен содержать JSON-объект')
     return data
 
 
 def check_common(report: dict, version: str, commit: str):
     if (report.get('status') != 'passed' or report.get('productVersion') != version
             or report.get('commit') != commit):
-        raise CertificationBlocked('GA certification status/version/commit mismatch')
+        raise CertificationBlocked('Несоответствие статуса, версии или коммита сертификации GA')
     verify(report, version, commit)
 
 
@@ -70,38 +70,38 @@ def check_admin(report: dict, version: str, commit: str):
     checks = report.get('checks')
     required = ADMIN_CHECKS | ({'live-playwright-owner-cycle-0390'} if tuple(map(int, version.split('-', 1)[0].split('+', 1)[0].split('.')[:3])) >= (0,39,0) else set())
     if not isinstance(checks, list) or len(checks) != len(required) or set(checks) != required:
-        raise CertificationBlocked('Admin GA did not execute every mandatory live and build check')
+        raise CertificationBlocked('В Admin GA выполнены не все обязательные проверки рабочей среды и сборки')
     bundle = report.get('adminBundle')
     if not isinstance(bundle, dict) or 'index.html' not in bundle or len(bundle) < 2:
-        raise CertificationBlocked('Admin GA has no production bundle')
+        raise CertificationBlocked('В Admin GA отсутствует производственный пакет')
     if any(not isinstance(p, str) or not isinstance(h, str) or not re.fullmatch('[a-f0-9]{64}', h)
            or p.startswith('/') or '..' in Path(p).parts for p, h in bundle.items()):
-        raise CertificationBlocked('Admin GA bundle fingerprints malformed')
+        raise CertificationBlocked('Отпечатки пакета Admin GA некорректны')
     if not re.fullmatch('[a-f0-9]{64}', str(report.get('openapiSha256', ''))):
-        raise CertificationBlocked('Admin OpenAPI fingerprint missing')
+        raise CertificationBlocked('Отсутствует отпечаток Admin OpenAPI')
     if tuple(map(int, version.split('-', 1)[0].split('+', 1)[0].split('.')[:3])) >= (0,39,0) and not re.fullmatch('[a-f0-9]{64}', str(report.get('ownerCycleReceiptSha256', ''))):
-        raise CertificationBlocked('Owner 0.39.0 live browser E2E receipt fingerprint missing')
+        raise CertificationBlocked('Отсутствует отпечаток квитанции реального браузерного E2E-теста владельца 0.39.0')
 
 
 def check_profiles(report: dict, version: str, commit: str):
     check_common(report, version, commit)
     suites = report.get('suites')
     if not isinstance(suites, list) or len(suites) != len(PROFILES):
-        raise CertificationBlocked('profile GA must contain all real suites')
+        raise CertificationBlocked('Приёмка профилей GA должна включать все реальные наборы тестов')
     found = set()
     for suite in suites:
         if not isinstance(suite, dict) or suite.get('status') != 'passed':
-            raise CertificationBlocked('failed or malformed profile GA suite')
+            raise CertificationBlocked('Набор тестов профилей GA не пройден или некорректен')
         key = suite.get('id')
         if key not in PROFILES or key in found:
-            raise CertificationBlocked('unexpected or duplicate profile GA suite')
+            raise CertificationBlocked('Неожиданный или повторяющийся набор тестов профилей GA')
         found.add(key)
         tests = suite.get('tests')
         if not isinstance(tests, list) or len(tests) != len(PROFILES[key]) or set(tests) != PROFILES[key]:
-            raise CertificationBlocked('profile GA suite skipped required real tests')
+            raise CertificationBlocked('В наборе тестов профилей GA пропущены обязательные реальные тесты')
         command = suite.get('command')
         if not isinstance(command, list) or command[:5] != ['go','test','-json','-race','-count=1']:
-            raise CertificationBlocked('profile GA suite did not record a real Go race-test command')
+            raise CertificationBlocked('В наборе тестов профилей GA не зафиксирована реальная команда Go race-test')
 
 
 def main() -> int:
@@ -112,14 +112,14 @@ def main() -> int:
     p.add_argument('--version', required=True)
     a = p.parse_args()
     if (ROOT / 'VERSION').read_text().strip() != a.version:
-        p.error('checkout version differs from requested version')
+        p.error('Версия рабочей копии не соответствует запрошенной версии')
     try:
         check_admin(read(a.admin), a.version, a.commit)
         check_profiles(read(a.profiles), a.version, a.commit)
     except (OSError, ValueError, TypeError, KeyError) as e:
         print('ACTIVE GA BLOCKED: '+str(e), file=sys.stderr)
         return 2
-    print('Active Admin/Profile GA passed: exact version, commit, run, attempt and real suites')
+    print('Действующая GA для Admin и профилей пройдена: подтверждены точная версия, коммит, запуск, попытка и реальные тесты')
     return 0
 
 if __name__ == '__main__':

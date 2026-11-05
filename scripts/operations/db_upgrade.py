@@ -59,7 +59,7 @@ def lock(directory: Path):
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise UpgradeError('another database upgrade is running') from exc
+            raise UpgradeError('Другое обновление базы данных уже выполняется') from exc
         yield
     finally:
         os.close(fd)
@@ -100,7 +100,7 @@ def wait_loopback_ready(url: str, *, timeout: int = 90, expected_version: str | 
         except (URLError, HTTPError, TimeoutError, ValueError, OSError):
             pass
         time.sleep(1)
-    raise UpgradeError('SQLite backend did not become ready after schema upgrade')
+    raise UpgradeError('Backend SQLite не перешёл в состояние готовности после обновления схемы')
 
 
 def run_minimal_backup(root: Path, destination: Path, service_user: str):
@@ -218,8 +218,8 @@ def upgrade_sqlite(root: Path, destination: Path, binary: Path, env: Path,
                         exec_checked(['systemctl', 'start', service], timeout=90)
                         wait_loopback_ready(ready_url, expected_version=source_version)
                 except Exception as recovery:
-                    raise UpgradeError('SQLite migration failed AND automatic recovery was not verified; service stopped') from recovery
-                raise UpgradeError('SQLite migration failed; previous backup restored and original service verified') from primary
+                    raise UpgradeError('Миграция SQLite завершилась ошибкой, автоматическое восстановление не подтверждено; служба остановлена') from recovery
+                raise UpgradeError('Миграция SQLite завершилась ошибкой; восстановлена предыдущая резервная копия и проверена исходная служба') from primary
     finally:
         if not backup_verified and originally_active:
             # Изменения БД ещё не предпринимались. Возобновляйте только в случае сбоя до
@@ -256,7 +256,7 @@ def validate_source_target(source: Path, target: Path, network_ha: bool):
                  'LAUNCHER_STORAGE_S3_ENDPOINT', 'LAUNCHER_STORAGE_S3_ACCESS_KEY',
                  'LAUNCHER_STORAGE_S3_SECRET_KEY', 'REDIS_PASSWORD'):
         if before.get(name) != after.get(name):
-            raise UpgradeError(f'upgrade cannot change {name}; rotate separately')
+            raise UpgradeError(f'Обновление не может изменить {name}; выполните ротацию отдельно')
     if network_ha:
         require(before.get('LAUNCHER_STORAGE_S3_BUCKET'), 'HA upgrade requires configured S3')
     return before['LAUNCHER_IMAGE_TAG']
@@ -367,8 +367,8 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
                 reset_postgres(project, source, snapshot_dir)
                 resume(project, source, original, expected=source_version, network_ha=network_ha)
             except Exception as recovery:
-                raise UpgradeError('migration failed AND recovery was not verified; services must remain stopped') from recovery
-            raise UpgradeError('migration failed; old database, volumes and API restored and verified') from primary
+                raise UpgradeError('Миграция завершилась ошибкой, восстановление не подтверждено; службы должны оставаться остановленными') from recovery
+            raise UpgradeError('Миграция завершилась ошибкой; прежняя БД, тома и API восстановлены и проверены') from primary
 
 
 def main(argv=None):
@@ -403,7 +403,7 @@ def main(argv=None):
         return 0
     except (UpgradeError, dr.DrillError, OSError, ValueError, sqlite3.Error,
             subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
-        print('database upgrade failed closed: ' + str(exc), file=sys.stderr)
+        print('Обновление БД остановлено с отказом по умолчанию: ' + str(exc), file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

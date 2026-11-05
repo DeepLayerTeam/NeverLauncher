@@ -61,7 +61,7 @@ public final class Json {
         char next() { if (i>=s.length()) throw err("Неожиданное значение: «end»"); return s.charAt(i++); }
         IllegalArgumentException err(String m) { return new IllegalArgumentException(m+" at " + i); }
         Object value(int depth) {
-            if (depth>64 || ++nodes>100_000) throw err("JSON nesting/size limit");
+            if (depth>64 || ++nodes>100_000) throw err("Превышен предел вложенности или размера JSON");
             white(); if(i>=s.length())throw err("Отсутствует: «value»");
             char c=s.charAt(i);
             if(c=='{') { i++; white(); Map<String,Object> m=new LinkedHashMap<>(); if(i<s.length()&&s.charAt(i)=='}') {i++;return m;}
@@ -77,14 +77,14 @@ public final class Json {
             boolean fraction=false;
             if(i<s.length()&&s.charAt(i)=='.'){fraction=true;i++;if(i>=s.length()||!digit(s.charAt(i)))throw err("fraction");while(i<s.length()&&digit(s.charAt(i)))i++;}
             if(i<s.length()&&(s.charAt(i)=='e'||s.charAt(i)=='E')){fraction=true;i++;if(i<s.length()&&(s.charAt(i)=='+'||s.charAt(i)=='-'))i++;if(i>=s.length()||!digit(s.charAt(i)))throw err("exponent");while(i<s.length()&&digit(s.charAt(i)))i++;}
-            try { if(fraction){double n=Double.parseDouble(s.substring(start,i));if(!Double.isFinite(n))throw err("nonfinite number");return n;}return Long.parseLong(s.substring(start,i)); }
+            try { if(fraction){double n=Double.parseDouble(s.substring(start,i));if(!Double.isFinite(n))throw err("Число не является конечным");return n;}return Long.parseLong(s.substring(start,i)); }
             catch(NumberFormatException e){throw err("Некорректное значение: «number»");}
         }
         boolean digit(char c){return c>='0'&&c<='9';}
         String str(){if(next()!='"')throw err("Ожидалась кавычка");StringBuilder b=new StringBuilder();while(i<s.length()) {
             char c=next();if(c=='"')return b.toString();if(c<32)throw err("control in string");if(c!='\\'){b.append(c);continue;}
             switch(next()){case '"'->b.append('"');case '\\'->b.append('\\');case '/'->b.append('/');case 'b'->b.append('\b');case 'f'->b.append('\f');case 'n'->b.append('\n');case 'r'->b.append('\r');case 't'->b.append('\t');
-                case 'u'->{if(i+4>s.length())throw err("unicode escape");int cp;try{cp=Integer.parseInt(s.substring(i,i+4),16);}catch(NumberFormatException e){throw err("unicode escape");}i+=4;b.append((char)cp);}default->throw err("Некорректное значение: «escape»");}
-            }throw err("unterminated string");}
+                case 'u'->{if(i+4>s.length())throw err("Некорректная Unicode-последовательность");int cp;try{cp=Integer.parseInt(s.substring(i,i+4),16);}catch(NumberFormatException e){throw err("Некорректная Unicode-последовательность");}i+=4;b.append((char)cp);}default->throw err("Некорректное значение: «escape»");}
+            }throw err("Незавершённый строковый литерал");}
     }
 }

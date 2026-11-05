@@ -80,7 +80,7 @@ def fsync_dir(directory):
 
 def replace_private(path: Path, data: dict):
     if path.is_symlink():
-        raise ChaosError('unsafe state symlink')
+        raise ChaosError('Небезопасная символическая ссылка на состояние')
     payload = (json.dumps(data, sort_keys=True, indent=2) + '\n').encode()
     fd, name = tempfile.mkstemp(prefix='.chaos-05110-', dir=path.parent)
     try:
@@ -103,7 +103,7 @@ def read_state(path):
                 'invalid chaos recovery journal')
         return data
     except (OSError, ValueError, TypeError) as exc:
-        raise ChaosError('missing or invalid private recovery journal') from exc
+        raise ChaosError('Закрытый журнал восстановления отсутствует или некорректен') from exc
 
 
 @contextmanager
@@ -118,7 +118,7 @@ def lock_for(directory):
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise ChaosError('another chaos/recovery operation owns this directory') from exc
+            raise ChaosError('Этот каталог уже занят другой операцией аварийного тестирования или восстановления') from exc
         yield
     finally:
         os.close(fd)
@@ -128,7 +128,7 @@ def invoke(argv, timeout=40):
     try:
         p = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise ChaosError('required command failed or timed out') from exc
+        raise ChaosError('Обязательная команда завершилась ошибкой или превысила время ожидания') from exc
     require(p.returncode == 0 and len(p.stdout) <= MAX_OUTPUT, 'command failed or output too large')
     return p.stdout.decode('utf-8', 'strict').strip()
 
@@ -466,7 +466,7 @@ def manual_recover(args, nodes):
                               args.project, 'local-heal')
         require(response.get('healed') is True, 'remote network restoration failed')
     else:
-        raise ChaosError('unknown disruption in journal')
+        raise ChaosError('Неизвестный тип нарушения в журнале')
     assert_baseline(nodes, args.multi_host_script, args.directory, args.project,
                     endpoint_url(args.edge_url))
     state_path.unlink()

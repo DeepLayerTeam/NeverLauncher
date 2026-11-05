@@ -29,13 +29,13 @@ def main():
             completed=subprocess.run(['go','build','-trimpath','-buildvcs=false','-mod=readonly','-o',str(executable),'./cmd/launcher'],
                                      cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
             if completed.returncode:
-                print('LOCAL GO REPRO BLOCKED: '+completed.stderr[-3000:],file=sys.stderr)
+                print('Локальная проверка воспроизводимости Go заблокирована: '+completed.stderr[-3000:],file=sys.stderr)
                 return 2
             hashes.append(hashlib.sha256(executable.read_bytes()).hexdigest())
         if hashes[0]!=hashes[1]:
-            print('LOCAL GO REPRO FAIL: real binaries differ '+str(hashes),file=sys.stderr)
+            print('Локальная проверка воспроизводимости Go не пройдена: реальные исполняемые файлы различаются '+str(hashes),file=sys.stderr)
             return 2
-        print('LOCAL GO REPRO PASS: real CLI built twice from separate paths and mtimes: '+hashes[0])
+        print('Локальная проверка воспроизводимости Go пройдена: реальный CLI собран дважды из разных путей и с разным временем изменения: '+hashes[0])
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

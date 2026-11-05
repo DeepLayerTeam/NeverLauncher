@@ -25,41 +25,41 @@ def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path
     if target not in contract()['targets']:
         raise ValueError('Неподдерживаемая целевая платформа')
     if not mapping:
-        raise ValueError('empty unsigned payload')
+        raise ValueError('Неподписанное содержимое пусто')
     # Используйте точные имена файлов из текущего проверенного контракта выпуска.
     version=(Path(__file__).resolve().parents[2]/'VERSION').read_text(encoding='utf-8').strip()
     if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version):
-        raise ValueError('unsafe product version')
+        raise ValueError('Небезопасное обозначение версии продукта')
     current_contract=contract()
     if current_contract['version'] != version:
-        raise ValueError('release version differs from unsigned payload contract')
+        raise ValueError('Версия выпуска не соответствует контракту неподписанного содержимого')
     expected=current_contract['targets'][target]
     paths=set()
     for arc,path in mapping.items():
         safe_member(arc)
         if arc in paths:
-            raise ValueError('duplicate member')
+            raise ValueError('Повторяющийся элемент')
         paths.add(arc)
         if not path.is_file() or path.is_symlink() or path.stat().st_size==0:
-            raise ValueError('missing/unsafe compiled input: '+str(path))
+            raise ValueError('Скомпилированный исходный файл отсутствует или небезопасен: '+str(path))
         # Проверяйте все настоящие элементы на наличие символьных ссылок в
         # промежуточных компонентах пути.
         current=path.absolute()
         for parent in (current,*current.parents):
             if parent.is_symlink():
-                raise ValueError('symlink in unsigned input path: '+str(parent))
+                raise ValueError('Символическая ссылка в пути неподписанных входных файлов: '+str(parent))
     expected_binaries={'windows':('launcher-desktop.exe','guard.exe','runtime.exe','guard-sensor.dll','launcher-cli.exe'),
                        'linux':('launcher/launcher-cli','launcher/launcher-api','launcher/launcher-desktop','launcher/guard','launcher/runtime'),
                        'darwin':('Launcher.app/Contents/MacOS/launcher-desktop','Launcher.app/Contents/Helpers/guard','Launcher.app/Contents/Helpers/runtime','Launcher.app/Contents/Helpers/launcher-cli')}
     if not set(expected_binaries['darwin' if platform=='macos' else platform]).issubset(mapping):
-        raise ValueError('one or more compiled native components missing')
+        raise ValueError('Отсутствует один или несколько скомпилированных нативных компонентов')
     # Для нативных платформ имена архивов намеренно соответствуют ОКОНЧАТЕЛЬНОМУ
     # пакету; неподписанные пакеты должны храниться в другом неизменяемом корне
     # staging.
     out_dir.mkdir(parents=True,exist_ok=True)
     out=out_dir/expected
     if out.exists():
-        raise ValueError('refusing to overwrite immutable unsigned artifact: '+str(out))
+        raise ValueError('Отказ перезаписывать неизменяемый неподписанный артефакт: '+str(out))
     # Проверяйте все настоящие бинарники, а не только выбранный основной
     # исполняемый файл.
     for name in expected_binaries['darwin' if platform=='macos' else platform]:
@@ -104,15 +104,15 @@ def main():
         mapping={}
         for item in args.file:
             if '=' not in item:
-                raise ValueError('invalid --file mapping')
+                raise ValueError('Некорректное сопоставление --file')
             member,source=item.split('=',1)
             if member in mapping:
-                raise ValueError('duplicate --file mapping')
+                raise ValueError('Повторяющееся сопоставление --file')
             mapping[member]=Path(source)
         out=make_package(args.platform,args.arch,args.out_dir,mapping)
         print(f'UNSIGNED PAYLOAD {out} sha256={hashlib.sha256(out.read_bytes()).hexdigest()}')
     except (OSError,ValueError,tarfile.TarError) as exc:
-        print('UNSIGNED PACKAGE BLOCKED: '+str(exc),file=sys.stderr)
+        print('Создание неподписанного пакета заблокировано: '+str(exc),file=sys.stderr)
         return 2
     return 0
 

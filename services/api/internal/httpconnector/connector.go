@@ -192,10 +192,10 @@ func (c *Connector) validateIdentityResponse(response identityResponse, expected
 		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-провайдер вернул недопустимый субъект учётной записи")
 	}
 	if expectedSubject != "" && response.Subject != expectedSubject {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider changed subject during identity resolution")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-поставщик авторизации изменил идентификатор субъекта во время проверки личности")
 	}
 	if len(response.Email) > 512 || len(response.Username) > 512 || len(response.DisplayName) > 1024 || len(response.ProviderToken) > 16384 {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider returned oversized identity fields")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-поставщик авторизации вернул слишком большие поля учётной записи")
 	}
 	groups, err := strictNormalizeStrings(response.Groups, 256, 256)
 	if err != nil {

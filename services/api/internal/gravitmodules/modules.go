@@ -206,7 +206,7 @@ func parseWrapper(raw []byte, p, sha string) Wrapper {
 	var extra any
 	if decoder.Decode(&extra) != io.EOF {
 		w.Status = "blocked"
-		w.Reason = "multiple JSON documents"
+		w.Reason = "Обнаружено несколько JSON-документов"
 		return w
 	}
 	for _, key := range []string{"serverName", "name"} {

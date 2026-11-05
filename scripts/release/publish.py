@@ -352,7 +352,7 @@ def validate(
         try:
             verify_bundle(bundle, True)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise Blocked('0.46.2+ delivery binary inspection failed') from exc
+            raise Blocked('Проверка исполняемых файлов поставки 0.46.2+ не пройдена') from exc
     if parsed(version)[0] >= (0, 46, 0):
         # Устаревший CLI до версии 0.46 не может разрешать публикацию. До ЛЮБОЙ записи на GitHub или создания
         # черновика проверяйте независимую эксплуатационную приёмку по доверенным ключам в текущем процессе
@@ -364,7 +364,7 @@ def validate(
         try:
             verify_public(bundle, Path(operator_key), release_key)
         except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
-            raise Blocked('0.46.0 GA BLOCKED: independent operations evidence validation failed') from exc
+            raise Blocked('GA 0.46.0 заблокирована: независимая проверка свидетельств эксплуатации не пройдена') from exc
     if version == '0.53.0':
         # Явно подтвердите допуск ещё до попытки публикации на GitHub. Защищённая среда выпуска предоставляет
         # одобренные исходные пакеты только для чтения и отдельный закреплённый ключ независимого проверяющего.
@@ -383,7 +383,7 @@ def validate(
                         root/'packages',root/'source-index.json',index_pin,
                         bundle.absolute(),commit,project)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise Blocked('0.53.0 FULL REAL USER ACCEPTANCE GA BLOCKED: '+str(exc)) from exc
+            raise Blocked('Полная реальная пользовательская приёмка GA 0.53.0 заблокирована: '+str(exc)) from exc
     verify_ci(json_object(ci), version, commit, run_id, attempt)
     approval = verify_ga(bundle, ga_key, version, commit, run_id, attempt)
     dry = json_object(dryrun)
@@ -536,7 +536,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
                 try:
                     verify_bundle(remote, True)
                 except (OSError, ValueError, KeyError, TypeError) as exc:
-                    raise Blocked('0.46.2+ remote draft binary inspection failed') from exc
+                    raise Blocked('Проверка исполняемых файлов удалённого черновика выпуска 0.46.2+ не пройдена') from exc
         # Допуск к публикации требует второй полной проверки выпуска на серверной стороне.
         metadata = json.loads(
             github(

@@ -103,7 +103,7 @@ def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Pa
     try:
         Ed25519PublicKey.from_public_bytes(key).verify(sig, DOMAIN + data)
     except (ValueError, InvalidSignature) as exc:
-        raise Blocked('independent Ed25519 approval signature invalid') from exc
+        raise Blocked('Некорректная независимая подпись подтверждения Ed25519') from exc
     manifest = doc(approval_file)
     require(set(manifest) == {'schema', 'version', 'commit', 'reviewer', 'publisher', 'issuedAt', 'files'},
             'approval fields must be exact')
@@ -115,7 +115,7 @@ def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Pa
     try:
         timestamp = datetime.fromisoformat(manifest['issuedAt'].replace('Z', '+00:00'))
     except (AttributeError, TypeError, ValueError) as exc:
-        raise Blocked('invalid reviewer timestamp') from exc
+        raise Blocked('Некорректная временная метка проверяющего') from exc
     now = now or datetime.now(timezone.utc)
     require(timestamp.tzinfo is not None and now - timedelta(hours=72) <= timestamp <= now + timedelta(minutes=1),
             'review is stale or future-dated')
@@ -299,7 +299,7 @@ def main(argv=None) -> int:
     p.add_argument('--output', required=True, type=Path)
     args = p.parse_args(argv)
     if args.output.resolve().is_relative_to(args.evidence_root.resolve()):
-        print('GUARD 0.51.0 PRODUCTION GA BLOCKED: receipt cannot modify signed evidence tree', file=sys.stderr)
+        print('GUARD 0.51.0: производственная приёмка заблокирована — квитанция не может изменять дерево подписанных свидетельств', file=sys.stderr)
         return 2
     args.output.unlink(missing_ok=True)
     try:

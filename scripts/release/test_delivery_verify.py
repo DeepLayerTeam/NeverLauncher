@@ -37,7 +37,7 @@ class ReleaseDeliveryTests(unittest.TestCase):
         for platform,fn in [('windows',pe),('darwin',macho),('linux',elf)]:
             for arch in ('x64','arm64'):
                 delivery.exe_arch(fn(arch),platform,arch)
-                with self.assertRaisesRegex(ValueError,'architecture'):
+                with self.assertRaisesRegex(ValueError,r'(?:architecture|архитектура)'):
                     delivery.exe_arch(fn(arch),platform,'arm64' if arch=='x64' else 'x64')
         with self.assertRaisesRegex(ValueError,'Authenticode'):
             delivery.exe_arch(pe('x64',False),'windows','x64')
@@ -58,7 +58,7 @@ class ReleaseDeliveryTests(unittest.TestCase):
             with zipfile.ZipFile(archive,'w') as z:
                 for row in records:z.writestr(row['name'],pe('arm64') if row['name']=='guard.exe' else pe('x64'))
                 z.writestr('WINDOWS_PACKAGE_MANIFEST.json',json.dumps(manifest))
-            with self.assertRaisesRegex(ValueError,'architecture'):
+            with self.assertRaisesRegex(ValueError,r'(?:architecture|архитектура)'):
                 delivery.verify_target(root,'windows-x64',archive.name,'0.46.2')
     def test_linux_tar_manifest_and_payload_mismatch(self):
         with tempfile.TemporaryDirectory() as td:

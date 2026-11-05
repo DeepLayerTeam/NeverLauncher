@@ -54,7 +54,7 @@ def command(args, *, timeout, cwd=ROOT):
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               timeout=timeout, check=True)
     except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
-        raise Blocked('required executable regression failed: '+ ' '.join(Path(x).name for x in args[:3])) from exc
+        raise Blocked('Обязательная проверка регрессий исполняемого кода не пройдена: '+ ' '.join(Path(x).name for x in args[:3])) from exc
     require(len(result.stdout)+len(result.stderr)<(8<<20), 'unbounded local test output')
     return hashlib.sha256(result.stdout+result.stderr).hexdigest()
 
@@ -116,7 +116,7 @@ def live_run(cfg):
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, timeout=4200, check=True)
     except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
-        raise Blocked('real three-project Gravit verification failed') from exc
+        raise Blocked('Реальная проверка миграции трёх проектов Gravit не пройдена') from exc
     grav_report=private_json(grav_dir/'acceptance-0500.json')
     classes={'fileauth-single','sql-modded','proxy-network'}
     require(grav_report.get('status')=='LIVE_CHECKS_PASSED_REVIEW_REQUIRED'

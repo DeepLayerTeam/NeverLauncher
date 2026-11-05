@@ -90,7 +90,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		}
 		var n int
 		if err := json.Unmarshal(raw, &n); err != nil || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-			report(field, "blocked", "", "expected an integer")
+			report(field, "blocked", "", "Ожидается целое число")
 			return 0, false
 		}
 		return n, true
@@ -106,21 +106,21 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 			return nil, false
 		}
 		if len(v) > 4096 {
-			report(field, "blocked", "", "too many entries")
+			report(field, "blocked", "", "Превышено допустимое количество элементов")
 			return nil, false
 		}
 		return v, true
 	}
 	title, ok := stringField("title")
 	if ok {
-		report("title", "mapped", "profile.name", "display title")
+		report("title", "mapped", "profile.name", "Отображаемое название")
 	}
 	if title == "" {
-		report("title", "blocked", "profile.name", "nonempty title required")
+		report("title", "blocked", "profile.name", "Необходимо указать непустое название")
 	}
 	desc, ok := stringField("info")
 	if ok {
-		report("info", "mapped", "profile.description", "display description")
+		report("info", "mapped", "profile.description", "Отображаемое описание")
 	}
 	if profileName == "" {
 		profileName = title
@@ -133,7 +133,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	}
 	version, ok := stringField("version")
 	if ok {
-		report("version", "mapped", "settings.minecraft.version", "Minecraft version")
+		report("version", "mapped", "settings.minecraft.version", "Версия Minecraft")
 	}
 	if version == "" {
 		report("version", "blocked", "settings.minecraft.version", "Необходимо указать версию Minecraft")
@@ -142,7 +142,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	mainClass, ok := stringField("mainClass")
 	if ok {
 		out.Settings.Runtime.Launch.MainClass = mainClass
-		report("mainClass", "mapped", "settings.runtime.launch.mainClass", "Java entrypoint")
+		report("mainClass", "mapped", "settings.runtime.launch.mainClass", "Точка входа Java")
 	}
 	if !gravitJavaClass02210.MatchString(mainClass) {
 		report("mainClass", "blocked", "settings.runtime.launch.mainClass", "Необходимо корректное полное имя главного класса Java")
@@ -156,7 +156,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	switch loaderHint {
 	case "vanilla", "fabric", "quilt", "forge", "neoforge":
 	default:
-		report("loaderHint", "blocked", "profile.loader", "unsupported loader hint")
+		report("loaderHint", "blocked", "profile.loader", "Указан неподдерживаемый загрузчик")
 	}
 	out.Settings.Minecraft.Loader = loaderHint
 	out.Profile = Profile{ID: profileID, ProjectID: projectID, Name: profileName, Description: desc, Loader: loaderHint, Preset: "custom"}
@@ -167,38 +167,38 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	}
 	if v, ok := stringField("uuid"); ok {
 		if len(v) < 8 || len(v) > 64 {
-			report("uuid", "blocked", "", "invalid source UUID")
+			report("uuid", "blocked", "", "Некорректный UUID исходного профиля")
 		} else {
-			report("uuid", "transformed", "sourceSha256", "source UUID is not reused as Never profile identity")
+			report("uuid", "transformed", "sourceSha256", "UUID источника не используется в качестве идентификатора профиля Never")
 		}
 	}
 	if v, ok := stringField("dir"); ok {
 		if !gravitSafePath02210(v) {
-			report("dir", "blocked", "", "unsafe source installation directory")
+			report("dir", "blocked", "", "Небезопасный каталог установки в источнике")
 		} else {
 			report("dir", "manual", "", "Каталог источника выбирается при импорте рабочей области, а не как путь к файлу клиента")
 		}
 	}
 	if v, ok := stringField("assetDir"); ok {
 		if !gravitSafePath02210(v) {
-			report("assetDir", "blocked", "", "unsafe assets directory")
+			report("assetDir", "blocked", "", "Небезопасный каталог ресурсов")
 		} else {
 			out.Settings.Directories.Assets = v
-			report("assetDir", "mapped", "settings.directories.assets", "asset directory")
+			report("assetDir", "mapped", "settings.directories.assets", "Каталог ресурсов")
 		}
 	}
 	if v, ok := stringField("assetIndex"); ok {
 		if v == "" {
-			report("assetIndex", "blocked", "", "empty asset index")
+			report("assetIndex", "blocked", "", "Индекс ресурсов пуст")
 		} else {
 			report("assetIndex", "manual", "", "При подготовке ресурсов Minecraft необходимо указать метаданные индекса ресурсов")
 		}
 	}
 	if v, ok := integerField("sortIndex"); ok {
 		if v == 0 {
-			report("sortIndex", "mapped", "", "default sort position")
+			report("sortIndex", "mapped", "", "Позиция сортировки по умолчанию")
 		} else {
-			report("sortIndex", "manual", "", "Never Profile v2 has no persistent sort index")
+			report("sortIndex", "manual", "", "Never Profile v2 не поддерживает постоянный индекс сортировки")
 		}
 	}
 	for _, key := range []string{"minJavaVersion", "recommendJavaVersion", "maxJavaVersion"} {
@@ -209,7 +209,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 			}
 			target := "settings.runtime.java."
 			status := "mapped"
-			reason := "Java version bound"
+			reason := "Ограничение версии Java"
 			switch key {
 			case "minJavaVersion":
 				out.Settings.Runtime.Java.MinimumMajorVersion = v
@@ -242,9 +242,9 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if json.Unmarshal(v, &b) != nil || bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
 			report("warnMissJavaVersion", "blocked", "", "Ожидается логическое значение")
 		} else if b {
-			report("warnMissJavaVersion", "manual", "", "Never enforces Java constraints rather than warning and continuing")
+			report("warnMissJavaVersion", "manual", "", "Never принудительно проверяет ограничения Java, а не продолжает работу с предупреждением")
 		} else {
-			report("warnMissJavaVersion", "transformed", "settings.runtime.java", "Never enforces Java constraints")
+			report("warnMissJavaVersion", "transformed", "settings.runtime.java", "Never принудительно проверяет ограничения Java")
 		}
 	}
 	for _, key := range []string{"jvmArgs", "clientArgs"} {
@@ -256,7 +256,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 					continue
 				}
 				out.Settings.Runtime.JVMArgs = values
-				report(key, "mapped", "settings.runtime.jvmArgs", "preserved ordered JVM argument array; project publisher must approve custom arguments")
+				report(key, "mapped", "settings.runtime.jvmArgs", "Порядок аргументов JVM сохранён; дополнительные аргументы должен одобрить издатель проекта")
 			} else {
 				unsafe := ""
 				protected := map[string]bool{"--accesstoken": true, "--uuid": true, "--username": true, "--usertype": true, "--xuid": true, "--clientid": true, "--gamedir": true, "--assetsdir": true}
@@ -268,11 +268,11 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 					}
 				}
 				if unsafe != "" {
-					report(key, "blocked", "settings.minecraft.gameArgs", "reserved or unsafe Minecraft launch argument "+unsafe)
+					report(key, "blocked", "settings.minecraft.gameArgs", "Зарезервированный или небезопасный аргумент запуска Minecraft: "+unsafe)
 					continue
 				}
 				out.Settings.Minecraft.GameArgs = values
-				report(key, "mapped", "settings.minecraft.gameArgs", "preserved ordered client arguments; auth/session arguments remain runtime-owned")
+				report(key, "mapped", "settings.minecraft.gameArgs", "Порядок аргументов клиента сохранён; аргументами авторизации и сеанса управляет Runtime")
 			}
 		}
 	}
@@ -283,7 +283,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 				continue
 			}
 			if key == "altClassPath" {
-				report(key, "mapped", "", "empty alternate classpath")
+				report(key, "mapped", "", "Альтернативный путь к классам пуст")
 				continue
 			}
 			good := true
@@ -291,25 +291,25 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 			for _, entry := range v {
 				normalized := strings.ToLower(entry)
 				if seenPaths[normalized] {
-					report(key, "blocked", "", "duplicate classpath entry: "+entry)
+					report(key, "blocked", "", "Повторяющаяся запись пути к классам: "+entry)
 					good = false
 					break
 				}
 				seenPaths[normalized] = true
 				if !gravitSafePath02210(entry) || gravitProtected02210(entry) {
-					report(key, "blocked", "", "unsafe classpath entry: "+entry)
+					report(key, "blocked", "", "Небезопасная запись пути к классам: "+entry)
 					good = false
 					break
 				}
 				if !strings.HasSuffix(strings.ToLower(entry), ".jar") {
-					report(key, "blocked", "", "directory/non-JAR classpath requires enumerating signed JAR files: "+entry)
+					report(key, "blocked", "", "Для каталога или файла не в формате JAR необходимо перечислить подписанные JAR-файлы: "+entry)
 					good = false
 					break
 				}
 			}
 			if good {
 				out.Settings.Runtime.Launch.ClasspathEntries = v
-				report(key, "transformed", "settings.runtime.launch.classpathEntries", "ordered JAR list; each JAR must be staged with SHA-256 before publication")
+				report(key, "transformed", "settings.runtime.launch.classpathEntries", "Упорядоченный список JAR: перед публикацией каждый файл должен быть подготовлен с SHA-256")
 			}
 		}
 	}
@@ -319,18 +319,18 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	if raw, ok := root["classLoaderConfig"]; ok {
 		var v string
 		if json.Unmarshal(raw, &v) != nil {
-			report("classLoaderConfig", "blocked", "", "expected string")
+			report("classLoaderConfig", "blocked", "", "Ожидается строка")
 		} else if v == "SYSTEM_ARGS" {
-			report("classLoaderConfig", "transformed", "settings.runtime.launch", "native JVM process launch; confirm equivalent main class and bootstrap")
+			report("classLoaderConfig", "transformed", "settings.runtime.launch", "Нативный запуск процесса JVM: необходимо подтвердить эквивалентность главного класса и загрузки")
 		} else {
-			report("classLoaderConfig", "blocked", "", "unsupported Gravit classloader "+v+"; Never will not execute foreign launcher bootstrap")
+			report("classLoaderConfig", "blocked", "", "Неподдерживаемый загрузчик классов Gravit: "+v+"; Never не будет выполнять начальную загрузку стороннего лаунчера")
 		}
 	}
 	for _, key := range []string{"compatClasses", "updateOptional"} {
 		if raw, ok := root[key]; ok {
 			var list []json.RawMessage
 			if json.Unmarshal(raw, &list) != nil || list == nil {
-				report(key, "blocked", "", "expected array")
+				report(key, "blocked", "", "Ожидается массив")
 			} else if len(list) > 0 {
 				for i, item := range list {
 					field := fmt.Sprintf("%s[%d]", key, i)
@@ -345,7 +345,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 										if json.Unmarshal(a, &action) == nil {
 											var kind string
 											_ = json.Unmarshal(action["type"], &kind)
-											report(fmt.Sprintf("%s.actions[%d]", field, j), "blocked", "", "unsupported optional action "+kind+"; manual port with dependency/conflict semantics required")
+											report(fmt.Sprintf("%s.actions[%d]", field, j), "blocked", "", "Неподдерживаемое необязательное действие: "+kind+"; требуется ручной перенос с сохранением зависимостей и конфликтов")
 										}
 									}
 								}
@@ -355,7 +355,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 					report(field, "blocked", "", "Дополнительные действия или запуск совместимости нельзя безопасно воспроизвести")
 				}
 			} else {
-				report(key, "mapped", "", "empty array")
+				report(key, "mapped", "", "Пустой массив")
 			}
 		}
 	}
@@ -371,12 +371,12 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		for _, raw := range v {
 			pattern, good := gravitFilePattern02210(raw)
 			if !good {
-				report(key, "blocked", "", "unsafe file rule: "+raw)
+				report(key, "blocked", "", "Небезопасное правило обработки файла: "+raw)
 				valid = false
 				continue
 			}
 			if key != "updateExclusions" && gravitProtected02210(raw) {
-				report(key, "blocked", "", "Gravit attempts to update user-owned path: "+raw)
+				report(key, "blocked", "", "Gravit пытается обновить путь, принадлежащий пользователю: "+raw)
 				valid = false
 				continue
 			}
@@ -385,7 +385,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 				rule = FileRule{Pattern: pattern, Action: "exclude", Ownership: "user-owned"}
 			}
 			if prior, exists := policy[pattern]; exists && prior.Action != rule.Action {
-				report(key, "blocked", "", "contradictory ownership at "+pattern)
+				report(key, "blocked", "", "Конфликт принадлежности по пути "+pattern)
 				valid = false
 				continue
 			}
@@ -394,13 +394,13 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if valid {
 			status := "transformed"
 			target := "settings.fileRules"
-			reason := "managed Gravit update converted to non-destructive Never verify rules; actual hashes required"
+			reason := "Управляемое обновление Gravit преобразовано в безопасные правила проверки Never; требуются фактические хеши"
 			if key == "updateExclusions" {
-				reason = "exclusions translated to user-owned protection"
+				reason = "Исключения преобразованы в защиту файлов, принадлежащих пользователю"
 			}
 			if len(v) == 0 {
 				status = "mapped"
-				reason = "empty file rule list"
+				reason = "Список правил файлов пуст"
 			}
 			report(key, status, target, reason)
 		}
@@ -422,7 +422,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	if raw, ok := root["settings"]; ok {
 		fields, e := gravitObject02210(raw)
 		if e != nil {
-			report("settings", "blocked", "", "expected settings object")
+			report("settings", "blocked", "", "Ожидается объект настроек")
 		} else {
 			for k, v := range fields {
 				switch k {
@@ -432,7 +432,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 						report("settings.ram", "blocked", "", "Объём RAM должен быть неотрицательным целым числом")
 					} else {
 						out.Settings.Runtime.Memory.RecommendedMb = n
-						report("settings.ram", "transformed", "settings.runtime.memory.recommendedMb", "zero means automatic")
+						report("settings.ram", "transformed", "settings.runtime.memory.recommendedMb", "Ноль означает автоматический выбор")
 					}
 				case "autoEnter", "fullScreen":
 					var b bool
@@ -441,10 +441,10 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 					} else if b {
 						report("settings."+k, "manual", "", "Настройки рабочей области сборки не могут принудительно менять предпочтения пользователя Desktop")
 					} else {
-						report("settings."+k, "mapped", "", "disabled by default; no workspace override required")
+						report("settings."+k, "mapped", "", "По умолчанию отключено; переопределять настройки рабочей области не требуется")
 					}
 				default:
-					report("settings."+k, "blocked", "", "unknown settings key")
+					report("settings."+k, "blocked", "", "Неизвестный параметр настроек")
 				}
 			}
 		}
@@ -452,12 +452,12 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	if raw, ok := root["servers"]; ok {
 		var servers []map[string]json.RawMessage
 		if json.Unmarshal(raw, &servers) != nil || servers == nil {
-			report("servers", "blocked", "", "expected server array")
+			report("servers", "blocked", "", "Ожидается массив серверов")
 		} else {
 			if len(servers) > 128 {
-				report("servers", "blocked", "", "too many servers")
+				report("servers", "blocked", "", "Превышено допустимое количество серверов")
 			} else if len(servers) == 0 {
-				report("servers", "mapped", "", "empty list")
+				report("servers", "mapped", "", "Пустой список")
 			} else {
 				defaults := 0
 				for i, s := range servers {
@@ -480,14 +480,14 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 						switch k {
 						case "name", "serverAddress", "serverPort", "isDefault", "protocol", "socketPing":
 						default:
-							report(label+"."+k, "blocked", "", "unrecognized server behavior")
+							report(label+"."+k, "blocked", "", "Неизвестный режим работы сервера")
 						}
 					}
 					out.Servers = append(out.Servers, GravitServer02210{Name: name, Address: address, Port: port, Default: d})
 					report(label, "manual", "serverBrowser", "Создайте сервер Never ServerBridge в рамках проекта и профиля; записи серверов Gravit напрямую в реестр не импортируются")
 				}
 				if defaults > 1 {
-					report("servers", "blocked", "", "multiple default servers")
+					report("servers", "blocked", "", "Указано несколько серверов по умолчанию")
 				}
 			}
 		}
@@ -499,7 +499,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		} else if limited {
 			report("limited", "blocked", "", "Ограничение разрешений Gravit требует явных ACL Never; импорт сам по себе не выдаёт доступ")
 		} else {
-			report("limited", "mapped", "", "unrestricted source profile")
+			report("limited", "mapped", "", "Исходный профиль не имеет ограничений")
 		}
 	}
 	if raw, ok := root["properties"]; ok {

@@ -30,17 +30,17 @@ class OperatorError(Exception):
 def ensure_https(url: str) -> str:
     parsed=urllib.parse.urlsplit(url)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
-        raise OperatorError('alert receiver must be a trusted HTTPS endpoint without credentials or fragment')
+        raise OperatorError('Приёмник оповещений должен быть доверенной конечной точкой HTTPS без учётных данных и фрагмента')
     hostname=parsed.hostname
     if hostname.lower() in ('localhost', 'localhost.localdomain') or hostname.endswith('.local'):
-        raise OperatorError('webhook endpoint cannot be local')
+        raise OperatorError('Адрес вебхука не может быть локальным')
     try:
         addr=ipaddress.ip_address(hostname)
         if not addr.is_global:
-            raise OperatorError('webhook IP must be globally routable')
+            raise OperatorError('IP-адрес вебхука должен иметь глобальную маршрутизацию')
     except ValueError:
         if '.' not in hostname:
-            raise OperatorError('webhook must use a fully qualified domain')
+            raise OperatorError('Вебхук должен использовать полное доменное имя')
     return url
 
 def configure(args):
@@ -49,12 +49,12 @@ def configure(args):
     if filename:
         source=Path(filename)
         if not source.is_file() or source.is_symlink() or source.stat().st_mode & 0o077:
-            raise OperatorError('webhook URL file must be a private regular file (0600)')
+            raise OperatorError('Файл с URL вебхука должен быть обычным закрытым файлом с правами 0600')
         raw_url=source.read_text(encoding='utf-8').strip()
     url=ensure_https(raw_url)
     target=Path(args.output).expanduser().absolute()
     if target.is_symlink() or (target.exists() and not target.is_file()):
-        raise OperatorError('refusing symlink/non-file destination')
+        raise OperatorError('Символическая ссылка или нестандартный целевой файл не допускаются')
     target.parent.mkdir(parents=True,exist_ok=True)
     data={"global":{"resolve_timeout":"5m"},
           "route":{"receiver":"operator-webhook","group_by":["alertname"],"group_wait":"30s","group_interval":"5m","repeat_interval":"4h"},
@@ -73,7 +73,7 @@ def configure(args):
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
     # Не выводите URL вебхука: в его пути могут быть секретные данные.
-    print('Alertmanager configuration written. Ensure container group can read it:',target)
+    print('Конфигурация Alertmanager записана. Убедитесь, что группа контейнера может её прочитать:',target)
     print('LAUNCHER_MONITOR_GID=',os.getgid(),sep='')
 
 def run_compose(prefix, extra, *, timeout=30, max_bytes=2_000_000):
@@ -81,11 +81,11 @@ def run_compose(prefix, extra, *, timeout=30, max_bytes=2_000_000):
     try:
         p=subprocess.run(cmd, capture_output=True,timeout=timeout,check=False)
     except (OSError,subprocess.TimeoutExpired):
-        raise OperatorError('Docker Compose command failed or timed out') from None
+        raise OperatorError('Команда Docker Compose завершилась ошибкой или превысила время ожидания') from None
     if p.returncode:
-        raise OperatorError('Docker Compose command returned a nonzero exit code')
+        raise OperatorError('Команда Docker Compose завершилась с ненулевым кодом')
     if len(p.stdout)>max_bytes:
-        raise OperatorError('Compose output exceeded its safe limit')
+        raise OperatorError('Вывод Compose превышает безопасный предел')
     return p.stdout.decode('utf-8','replace')
 
 def sanitize_status(raw):
@@ -98,7 +98,7 @@ def sanitize_status(raw):
     except json.JSONDecodeError:
         for line in raw.splitlines():
             try:parsed.append(json.loads(line))
-            except json.JSONDecodeError:raise OperatorError('unsupported Compose ps JSON output') from None
+            except json.JSONDecodeError:raise OperatorError('Неподдерживаемый JSON-вывод Compose ps') from None
     answer=[]
     for item in parsed:
         if not isinstance(item,dict): continue
@@ -161,12 +161,12 @@ def build_bundle(status, logs, metrics, version):
 
 def incident(args):
     output=Path(args.output).expanduser().absolute()
-    if output.exists() or output.is_symlink():raise OperatorError('incident output must not already exist')
-    if not output.parent.is_dir():raise OperatorError('output parent does not exist')
+    if output.exists() or output.is_symlink():raise OperatorError('Целевой отчёт об инциденте не должен существовать')
+    if not output.parent.is_dir():raise OperatorError('Родительский каталог результата не существует')
     prefix=['-f',str(Path(args.compose).absolute()),'-p',args.project]
     if args.overlay:prefix.extend(['-f',str(Path(args.overlay).absolute())])
     status=sanitize_status(run_compose(prefix,['ps','--format','json']))
-    if not status:raise OperatorError('no known running Compose services were found')
+    if not status:raise OperatorError('Не найдены известные запущенные службы Compose')
     services=[s['Service'] for s in status if s.get('Service') in ('api','api-b','worker-a','worker-b','nginx') and s.get('State')=='running']
     logs={}
     for svc in services:
@@ -192,7 +192,7 @@ def incident(args):
         os.rename(tmp,output)
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
-    print('Incident collected:',output,'sha256:',digest)
+    print('Данные инцидента собраны:',output,'sha256:',digest)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -212,8 +212,8 @@ def main():
     try:
         if args.operation=='configure':configure(args)
         else:
-            if not re.fullmatch(r'[a-zA-Z0-9_.-]{1,64}',args.project):raise OperatorError('invalid Compose project')
-            if not re.fullmatch(r'[1-9][0-9]?[mhd]',args.since):raise OperatorError('since must be short relative duration (15m)')
+            if not re.fullmatch(r'[a-zA-Z0-9_.-]{1,64}',args.project):raise OperatorError('Некорректный проект Compose')
+            if not re.fullmatch(r'[1-9][0-9]?[mhd]',args.since):raise OperatorError('Параметр since должен быть коротким относительным интервалом (например, 15m)')
             incident(args)
     except OperatorError as err:
         # Детали ошибки намеренно не содержат stdout команды и секретов.

@@ -82,7 +82,7 @@ def verify(
     if gate == 'required-production-ci' and version_at_least_0370(version):
         downstream = {'publish-release'}
         if not downstream <= all_jobs:
-            raise GateFailure('missing mandatory post-gate publication job')
+            raise GateFailure('Отсутствует обязательное задание публикации после контрольной проверки')
     expected = all_jobs - {gate} - downstream
     if gate not in all_jobs or not expected:
         raise GateFailure("Отсутствует обязательное проверочное задание или список обязательных заданий пуст")

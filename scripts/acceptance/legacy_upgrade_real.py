@@ -176,10 +176,10 @@ def main(argv=None):
             cfg['sourceCaptureSha256'] = sha_file(str(args.source_capture))
             result = verify(cfg, baseline)
         write_secure(args.output, (json.dumps(result, sort_keys=True, indent=2) + '\n').encode())
-        print('LIVE historical migration', args.action, 'completed; independent review still required')
+        print('Реальная миграция исторических данных', args.action, 'завершена; независимая проверка ещё требуется')
         return 0
     except (ValueError, KeyError, OSError, TypeError, json.JSONDecodeError) as exc:
-        print('BLOCKED legacy migration: ' + type(exc).__name__ + ': ' + str(exc), file=sys.stderr)
+        print('Миграция предыдущей версии заблокирована: ' + type(exc).__name__ + ': ' + str(exc), file=sys.stderr)
         return 2
 
 

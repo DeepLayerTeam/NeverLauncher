@@ -104,7 +104,7 @@ def exclusive(directory: Path):
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise LegacyUpgradeError('another legacy upgrade is active') from exc
+            raise LegacyUpgradeError('Уже выполняется другое обновление с предыдущей версии') from exc
         yield
     finally:
         os.close(fd)
@@ -188,7 +188,7 @@ def enumerate_data(root: Path, names: list[str]):
     for left in names:
         for right in names:
             if left != right and (right.startswith(left.rstrip('/') + '/')):
-                raise LegacyUpgradeError('overlapping protected data paths')
+                raise LegacyUpgradeError('Пересекающиеся пути защищённых данных')
     result = {}
     for rel in names:
         base = validate_data_path(root, rel)
@@ -208,7 +208,7 @@ def enumerate_data(root: Path, names: list[str]):
                 result[entry] = {'kind': 'file', 'size': st.st_size, 'sha256': sha_file(path),
                                  'mode': stat.S_IMODE(st.st_mode)}
             else:
-                raise LegacyUpgradeError('symlink or special file in user data: ' + entry)
+                raise LegacyUpgradeError('Символическая ссылка или специальный файл в данных пользователя: ' + entry)
     require(result, 'no old user data located; supply --data for the actual installation layout')
     require(len(json.dumps(result)) < MAX_INVENTORY, 'user inventory too large')
     return result
@@ -333,8 +333,8 @@ def jar_metadata_version(jar: Path):
                 if isinstance(version, str) and re.fullmatch(r'0\.\d+\.\d+', version):
                     return version
     except (zipfile.BadZipFile, OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise LegacyUpgradeError('Bridge JAR metadata unreadable') from exc
-    raise LegacyUpgradeError('Bridge JAR has no recognized embedded release; do not guess its version')
+        raise LegacyUpgradeError('Не удалось прочитать метаданные JAR моста') from exc
+    raise LegacyUpgradeError('В JAR моста не найдено распознаваемой встроенной версии; не определяйте её предположительно')
 
 
 def bridge_jar_update(root: Path, args, source: str):
@@ -409,8 +409,8 @@ def bridge_jar_update(root: Path, args, source: str):
             native.run(['systemctl', 'start', args.service], timeout=90)
             require(native.systemctl_is_active(args.service), 'old Bridge JAR restart failed')
         except Exception as restore_exc:
-            raise LegacyUpgradeError('Bridge update AND rollback failed; keep server offline') from restore_exc
-        raise LegacyUpgradeError('Bridge update failed; prior JAR restored') from exc
+            raise LegacyUpgradeError('Обновление и откат моста завершились ошибкой; не запускайте сервер') from restore_exc
+        raise LegacyUpgradeError('Обновление моста завершилось ошибкой; предыдущий JAR восстановлен') from exc
 
 
 def determine_source(mode, root, args):
@@ -433,7 +433,7 @@ def determine_source(mode, root, args):
     elif mode == 'host':
         detected = native_binary_version(Path(args.install))
     else:
-        raise LegacyUpgradeError('unsupported upgrade mode')
+        raise LegacyUpgradeError('Неподдерживаемый режим обновления')
     if args.from_version:
         require(args.from_version == detected, 'declared source release differs from installed release')
     return detected
@@ -573,7 +573,7 @@ def main(argv=None):
         print(json.dumps(execute(args), ensure_ascii=False, sort_keys=True, indent=2))
         return 0
     except (LegacyUpgradeError, native.ComponentError, OSError, subprocess.TimeoutExpired, ValueError, UnicodeError) as exc:
-        print('legacy upgrade blocked: ' + str(exc), file=sys.stderr)
+        print('Обновление с предыдущей версии заблокировано: ' + str(exc), file=sys.stderr)
         return 1
 
 

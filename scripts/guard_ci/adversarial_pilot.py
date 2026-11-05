@@ -189,7 +189,7 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
                 try:
                     row = json.loads(line, object_pairs_hook=no_duplicate_json_fields)
                 except (UnicodeError, json.JSONDecodeError) as exc:
-                    raise EvidenceError(f'review {index}: invalid incident JSON') from exc
+                    raise EvidenceError(f'Проверка {index}: некорректный JSON инцидента') from exc
                 require(isinstance(row, dict) and set(row) == {'eventMac', 'verdict', 'reviewerId'}, f'review {index}: invalid fields')
                 evidence = row['eventMac']
                 require(isinstance(evidence, str) and bool(HEX.fullmatch(evidence)) and evidence in unique_macs, f'review {index}: unknown event')
@@ -234,7 +234,7 @@ def load_frame_capture(folder: Path) -> tuple[dict, list[float], dict]:
         require(rows.fieldnames is not None and 'frameTimeMs' in rows.fieldnames, 'frames.csv must contain frameTimeMs measured data')
         for row in rows:
             try: value = float(row['frameTimeMs'])
-            except (ValueError, TypeError) as exc: raise EvidenceError('invalid frame time') from exc
+            except (ValueError, TypeError) as exc: raise EvidenceError('Некорректное время кадра') from exc
             require(math.isfinite(value) and 0.05 <= value <= 5000.0, 'invalid recorded frame time')
             values.append(value)
             require(len(values) <= 2_000_000, 'too many frames')

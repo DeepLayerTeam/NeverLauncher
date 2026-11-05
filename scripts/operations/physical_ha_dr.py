@@ -107,10 +107,10 @@ def invoke(args, timeout=20, allow_fail=False):
     except (OSError, subprocess.TimeoutExpired):
         if allow_fail:
             return None
-        raise Blocked('remote control unavailable')
+        raise Blocked('Удалённое управление недоступно')
     require(len(cp.stdout) < 256_000, 'remote output too large')
     if cp.returncode and not allow_fail:
-        raise Blocked('remote command rejected')
+        raise Blocked('Удалённая команда отклонена')
     return cp.stdout.decode('utf-8', 'strict') if cp.returncode == 0 else None
 
 def ssh(target, command, timeout=20, allow_fail=False):
@@ -324,7 +324,7 @@ def alert_delivery(args, started):
         except (OSError, ValueError, TypeError, KeyError, Blocked):
             pass
         time.sleep(2)
-    raise Blocked('no real external downstream alert delivery observed')
+    raise Blocked('Не обнаружено фактической внешней доставки оповещений')
 
 def live_fault(args):
     nodes = multi.parse_nodes(args.node)

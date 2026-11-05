@@ -116,7 +116,7 @@ func (c *Connector) BeginBrowserAuth(ctx context.Context, req authconnector.Brow
 }
 func (c *Connector) CompleteBrowserAuth(ctx context.Context, cb authconnector.BrowserAuthCallback) (authconnector.Authentication, error) {
 	if !c.cfg.RedirectAllowed(cb.RedirectURI) || strings.TrimSpace(cb.Code) == "" || len(cb.Code) > 8192 || len(cb.PKCEVerifier) < 43 || len(cb.PKCEVerifier) > 128 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid OIDC authorization response")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Некорректный ответ авторизации OIDC")
 	}
 	tok, err := c.exchangeCode(ctx, cb)
 	if err != nil {
@@ -208,11 +208,11 @@ func (c *Connector) EndSessionURL(postLogoutRedirectURI string) (string, error) 
 	endpoint := c.discovery.EndSessionEndpoint
 	c.mu.RUnlock()
 	if strings.TrimSpace(endpoint) == "" {
-		return "", authconnector.NewError(authconnector.ErrUnsupported, "OIDC provider does not advertise end_session_endpoint")
+		return "", authconnector.NewError(authconnector.ErrUnsupported, "Поставщик OIDC не объявляет end_session_endpoint")
 	}
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return "", authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC end_session_endpoint is invalid", err)
+		return "", authconnector.WrapError(authconnector.ErrMisconfigured, "Некорректный end_session_endpoint поставщика OIDC", err)
 	}
 	if v := strings.TrimSpace(postLogoutRedirectURI); v != "" {
 		q := u.Query()
@@ -249,10 +249,10 @@ func (c *Connector) doTokenRequest(ctx context.Context, endpoint string, form ur
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, c.cfg.MaxResponseBytes+1))
 	if err != nil {
-		return tokenResponse{}, authconnector.WrapError(authconnector.ErrUnavailable, "read OIDC token response", err)
+		return tokenResponse{}, authconnector.WrapError(authconnector.ErrUnavailable, "Чтение ответа с токеном OIDC", err)
 	}
 	if int64(len(body)) > c.cfg.MaxResponseBytes {
-		return tokenResponse{}, authconnector.NewError(authconnector.ErrUnavailable, "OIDC token response exceeds configured limit")
+		return tokenResponse{}, authconnector.NewError(authconnector.ErrUnavailable, "Ответ с токеном OIDC превышает настроенный предел")
 	}
 	var out tokenResponse
 	dec := json.NewDecoder(strings.NewReader(string(body)))
@@ -262,7 +262,7 @@ func (c *Connector) doTokenRequest(ctx context.Context, endpoint string, form ur
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 || out.Error != "" {
 		code := strings.TrimSpace(out.Error)
-		message := "OIDC token endpoint rejected grant"
+		message := "Конечная точка токенов OIDC отклонила предоставление доступа"
 		if code != "" {
 			message += ": " + code
 		}
@@ -403,14 +403,14 @@ func (c *Connector) doJSON(req *http.Request, out any) error {
 		return err
 	}
 	if int64(len(body)) > c.cfg.MaxResponseBytes {
-		return authconnector.NewError(authconnector.ErrUnavailable, "OIDC upstream response exceeds configured limit")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Ответ вышестоящего сервера OIDC превышает настроенный предел")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return authconnector.NewError(authconnector.ErrUnavailable, fmt.Sprintf("Внешний провайдер OIDC вернул HTTP %d", resp.StatusCode))
 	}
 	ct := strings.ToLower(resp.Header.Get("Content-Type"))
 	if ct != "" && !strings.Contains(ct, "application/json") && !strings.Contains(ct, "+json") {
-		return authconnector.NewError(authconnector.ErrMisconfigured, "OIDC upstream returned non-JSON content type")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "Вышестоящий сервер OIDC вернул ответ не в формате JSON")
 	}
 	dec := json.NewDecoder(strings.NewReader(string(body)))
 	dec.UseNumber()

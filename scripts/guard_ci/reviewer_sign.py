@@ -65,7 +65,7 @@ def main(argv=None):
                               a.release_operator, a.commit, a.approval, a.signature)))
         return 0
     except (OSError, ValueError, TypeError) as exc:
-        print('Independent review not signed: ' + str(exc), file=sys.stderr)
+        print('Независимая проверка не подписана: ' + str(exc), file=sys.stderr)
         return 2
 
 

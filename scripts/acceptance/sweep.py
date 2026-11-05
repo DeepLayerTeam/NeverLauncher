@@ -73,7 +73,7 @@ def signed_soak(root: Path, pubkey: Path, pin: str, commit: str, run_id: str, at
     try:
         key.verify(sig, ('neverlauncher.soak.real.' + inventory.VERSION + '\x00').encode() + inventory.canonical(summary))
     except InvalidSignature as exc:
-        raise Blocked('independent soak attestation signature invalid') from exc
+        raise Blocked('Некорректная независимая подпись свидетельства длительного тестирования') from exc
     return raw_soak(root, commit, run_id, attempt, kind)
 
 def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
@@ -222,11 +222,11 @@ def main():
                    'minecraft':verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)}
         require(a.output.is_absolute() and not a.output.exists(), 'new absolute report filename required')
         inventory.write_exclusive(a.output,(json.dumps(doc,sort_keys=True,indent=2)+'\n').encode())
-        print('PASS: real observations replayed; independent final GA remains BLOCKED')
+        print('PASS: реальные наблюдения воспроизведены; независимая итоговая GA остаётся заблокированной')
         return 0
     except (Blocked, inventory.Blocked, native.Blocked, reproducible.Blocked, OSError,
             ValueError, TypeError, KeyError, InvalidSignature) as exc:
-        print('FULL COMPATIBILITY SWEEP BLOCKED: '+str(exc),file=sys.stderr)
+        print('Полная проверка совместимости заблокирована: '+str(exc),file=sys.stderr)
         return 3
 
 if __name__ == '__main__':

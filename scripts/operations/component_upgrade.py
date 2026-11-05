@@ -445,7 +445,7 @@ def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Pat
     try:
         report = json.loads(output)
     except ValueError as exc:
-        raise ComponentError('native updater did not return JSON report') from exc
+        raise ComponentError('Нативный модуль обновления не вернул JSON-отчёт') from exc
     must(isinstance(report, dict) and report.get('status') == 'committed'
          and report.get('toVersion') == target_version, 'Нативный обновлятор не зафиксировал требуемую версию')
     # Существующая проверка пакета обновления проверяет хеши каждого файла, подпись,

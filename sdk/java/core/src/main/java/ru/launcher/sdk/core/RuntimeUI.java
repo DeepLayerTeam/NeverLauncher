@@ -68,7 +68,7 @@ public final class RuntimeUI implements AutoCloseable {
             return Map.of("key",name,"value",value==null?"":value);
         }
         if("ui.settings.put".equals(method)){
-            Object value=Objects.requireNonNull(request.get("value"),"settings JSON null not supported");
+            Object value=Objects.requireNonNull(request.get("value"),"Значение null в JSON настроек не поддерживается");
             setting.schema().validate(value);
             config.put(storageKey,value,setting.schema());
             return Map.of("saved",true,"key",name);

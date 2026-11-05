@@ -47,7 +47,7 @@ class LiveHTTP:
             u = urlsplit(origin)
             good_port = u.port is None or 1 <= u.port <= 65535
         except (TypeError, ValueError):
-            raise Blocked('invalid live HTTPS endpoint') from None
+            raise Blocked('Некорректный адрес действующей конечной точки HTTPS') from None
         require(bool(u.hostname) and good_port and not u.username and not u.password
                 and not u.query and not u.fragment and u.path in ('', '/')
                 and (u.scheme == 'https' or (u.scheme == 'http' and u.hostname in
@@ -74,7 +74,7 @@ class LiveHTTP:
         except HTTPError as exc:
             status, raw = exc.code, exc.read((4 << 20) + 1)
         except (URLError, TimeoutError) as exc:
-            raise Blocked('live JVM/Backend HTTP unreachable: ' + type(exc).__name__) from exc
+            raise Blocked('HTTP-подключение к работающей JVM/Backend недоступно: ' + type(exc).__name__) from exc
         require(len(raw) <= (4 << 20), 'unbounded live HTTP response')
         if isinstance(expected, int):
             expected = (expected,)
@@ -82,7 +82,7 @@ class LiveHTTP:
         try:
             response = json.loads(raw)
         except (UnicodeError, ValueError) as exc:
-            raise Blocked('live service returned non-JSON: ' + path) from exc
+            raise Blocked('Действующая служба вернула ответ не в формате JSON: ' + path) from exc
         require(type(response) is dict, 'invalid live service response: ' + path)
         return response
 
@@ -278,11 +278,11 @@ def main():
                 not a.output.parent.is_symlink(), 'absolute output in existing directory required')
         cfg=private_json(a.config)
         result=run(cfg,a.output)
-        print('JAVA LIVE E2E checks:',result['checkCount'],'(review required)')
+        print('Реальные E2E-проверки Java:',result['checkCount'],'(требуется проверка)')
         return 0
     except (Blocked, OSError, ValueError, KeyError, TypeError, DatabaseError, zipfile.BadZipFile,
             subprocess.CalledProcessError) as exc:
-        print('BLOCKED Java live acceptance:',type(exc).__name__,str(exc),file=sys.stderr)
+        print('Реальная приёмка Java заблокирована:',type(exc).__name__,str(exc),file=sys.stderr)
         return 2
 
 

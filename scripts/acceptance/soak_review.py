@@ -20,16 +20,16 @@ DOMAIN = ('neverlauncher.soak.real.' + inventory.VERSION + '\x00').encode()
 def sign(a):
     raw_soak(a.report_dir, a.commit, a.run_id, a.attempt, a.mode)
     if a.private_key.resolve().is_relative_to(ROOT):
-        raise ValueError('reviewer signing key must be outside source checkout')
+        raise ValueError('Ключ подписи проверяющего должен находиться вне рабочей копии исходников')
     key_file = safe_file(a.private_key,8192)
     if key_file.stat().st_mode & 0o077:
-        raise ValueError('private signer key must be mode 0600')
+        raise ValueError('У закрытого ключа подписанта должны быть права 0600')
     key = serialization.load_pem_private_key(key_file.read_bytes(),password=None)
     pub = public_key(a.public_key,a.pin)
     if not isinstance(key,Ed25519PrivateKey) or key.public_key().public_bytes(
         serialization.Encoding.Raw,serialization.PublicFormat.Raw) != pub.public_bytes(
         serialization.Encoding.Raw,serialization.PublicFormat.Raw):
-        raise ValueError('independent signing key mismatch')
+        raise ValueError('Несоответствие независимого ключа подписи')
     from inventory_0521 import read_json
     payload = read_json(a.report_dir / 'soak.json')
     dest = a.report_dir / 'soak.sig'
@@ -49,10 +49,10 @@ def main():
     a=p.parse_args()
     try:
         sign(a)
-        print('PASS: independently reviewed actual soak observations signed (NOT GA)')
+        print('PASS: фактические результаты длительного тестирования независимо проверены и подписаны (НЕ GA)')
         return 0
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        print('SOAK REVIEW BLOCKED: ' + str(exc),file=sys.stderr)
+        print('Проверка результатов длительного тестирования заблокирована: ' + str(exc),file=sys.stderr)
         return 3
 
 if __name__=='__main__':

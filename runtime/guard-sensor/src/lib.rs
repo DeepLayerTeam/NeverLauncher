@@ -765,7 +765,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 Ok(snapshot) if snapshot.active && snapshot.healthy => {}
                 Ok(_) => {
                     let tamper = debug_instrumentation_tamper_event(
-                        "Guard Debug & Instrumentation Guard became inactive/unhealthy",
+                        "Защита от отладки и инструментирования Guard неактивна или неисправна",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -800,7 +800,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 }
                 Ok(_) => {
                     let tamper = thread_process_tamper_event(
-                        "Guard Thread & Process Integrity became inactive/unhealthy",
+                        "Контроль целостности потоков и процессов Guard неактивен или неисправен",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -850,7 +850,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 }
                 Ok(_) => {
                     let tamper = jvm_aware_tamper_event(
-                        "Guard JVM-Aware Protection became inactive/unhealthy",
+                        "Защита JVM Guard неактивна или неисправна",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -938,7 +938,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 None => {
                     let tamper = continuous_guard::tamper_event(
                         MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
-                        "Continuous Guard guard-sequence overflow",
+                        "Переполнение последовательности событий Continuous Guard",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -1044,7 +1044,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     }
                 }
                 Ok(_) => {
-                    let tamper = memory_tamper_event("Guard Memory Integrity became inactive/unhealthy");
+                    let tamper = memory_tamper_event("Контроль целостности памяти Guard неактивен или неисправен");
                     let _ = write_module_event(
                         &mut channel.stream,
                         &channel.secret,
@@ -1105,7 +1105,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 }
                 Ok(_) => {
                     let tamper = debug_instrumentation_tamper_event(
-                        "Guard Debug & Instrumentation Guard became inactive/unhealthy",
+                        "Защита от отладки и инструментирования Guard неактивна или неисправна",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,

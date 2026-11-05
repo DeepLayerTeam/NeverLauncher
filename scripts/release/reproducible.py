@@ -75,7 +75,7 @@ def atomic_json(path: Path, data: dict) -> None:
 
 def load_json(path: Path) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 16*1024*1024:
-        raise ValueError(f'untrusted or missing JSON: {path}')
+        raise ValueError(f'JSON отсутствует или не является доверенным: {path}')
     obj = json.loads(path.read_bytes())
     if not isinstance(obj, dict):
         raise ValueError('Корневой элемент JSON должен быть объектом')
@@ -90,7 +90,7 @@ def contract() -> dict:
         raise ValueError('Неполный контракт набора файлов для шести платформ')
     for target, filename in data['targets'].items():
         if not isinstance(filename, str) or filename != Path(filename).name or '/' in filename or '\\' in filename:
-            raise ValueError(f'unsafe target filename: {target}')
+            raise ValueError(f'Небезопасное имя целевого файла: {target}')
     return data
 
 
@@ -99,7 +99,7 @@ def require_path(root: Path, name: str) -> Path:
         raise ValueError('Каталог артефактов отсутствует или небезопасен')
     path = root / name
     if path.is_symlink() or not path.is_file() or path.stat().st_size < 128:
-        raise ValueError(f'missing or non-production artifact: {name}')
+        raise ValueError(f'Артефакт отсутствует или не предназначен для промышленной эксплуатации: {name}')
     return path
 
 
@@ -270,7 +270,7 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
         raise ValueError('Неподдерживаемые доказательные данные неподписанной сборки')
     for k in ('version','commit','inputBaselineSha256','contractSha256'):
         if a.get(k) != b.get(k):
-            raise ValueError(f'independent inputs differ: {k}')
+            raise ValueError(f'Независимые входные данные различаются: {k}')
     if a['version'] != RELEASE_VERSION or not HEX.fullmatch(a['commit']):
         raise ValueError('Некорректный идентификатор источника релиза')
     if a['inputBaselineSha256'] != sha256_file(BASELINE_PATH) or a['contractSha256'] != sha256_file(CONTRACT_PATH):
@@ -390,9 +390,9 @@ def main() -> int:
             result=link(c,apr,Path(args.signed_dir),a_key=Path(args.a_key),b_key=Path(args.b_key),approval_key=Path(args.approval_key),native_reports_dir=Path(args.native_reports_dir))
             atomic_json(Path(args.out),result)
     except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError,zipfile.BadZipFile,tarfile.TarError,InvalidSignature) as exc:
-        print('REPRODUCIBILITY BLOCKED: '+str(exc),file=sys.stderr)
+        print('Проверка воспроизводимости заблокирована: '+str(exc),file=sys.stderr)
         return 2
-    print(f'PASS: reproducibility {args.cmd} completed; evidence must still satisfy the next release gate')
+    print(f'PASS: проверка воспроизводимости {args.cmd} завершена; свидетельства ещё должны пройти следующий выпускной контроль')
     return 0
 
 if __name__=='__main__':

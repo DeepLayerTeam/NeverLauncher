@@ -74,7 +74,7 @@ def inputs() -> list[str]:
             # Внешние зависимости нельзя незаметно добавлять к входным данным с привязкой
             # к версии.
             if path.name in SUFFIXES:
-                raise ValueError('symlink in release inputs: '+str(path))
+                raise ValueError('Символическая ссылка во входных файлах выпуска: '+str(path))
             continue
         if path.is_file() and path.name in SUFFIXES:
             result.add(path.relative_to(ROOT).as_posix())
@@ -88,13 +88,13 @@ def inputs() -> list[str]:
     ):
         for path in (ROOT/folder).glob(pattern):
             if path.is_symlink():
-                raise ValueError('symlink in release sources: '+str(path))
+                raise ValueError('Символическая ссылка в исходниках выпуска: '+str(path))
             result.add(path.relative_to(ROOT).as_posix())
     for path in (ROOT/'.github/workflows').glob('*.yml'):
         if path.is_symlink(): raise ValueError('symlink in workflow: '+str(path))
         result.add(path.relative_to(ROOT).as_posix())
     for path in (ROOT/'plugins').rglob('*.gradle.kts'):
-        if path.is_symlink(): raise ValueError('symlink in Gradle build: '+str(path))
+        if path.is_symlink(): raise ValueError('Символическая ссылка в сборке Gradle: '+str(path))
         result.add(path.relative_to(ROOT).as_posix())
     for path in ('settings.gradle.kts','build.gradle.kts','gradle.properties'):
         if (ROOT/path).exists(): result.add(path)
@@ -105,7 +105,7 @@ def record() -> dict:
     files = {}
     for rel in inputs():
         path = ROOT/rel
-        if not path.is_file() or path.is_symlink(): raise ValueError('missing required input: '+rel)
+        if not path.is_file() or path.is_symlink(): raise ValueError('Отсутствует обязательный входной файл: '+rel)
         raw = path.read_bytes()
         files[rel] = {'sha256':hashlib.sha256(raw).hexdigest(), 'size':len(raw)}
     return {'schema':'neverlauncher.input-baseline.v1', 'release':(ROOT/'VERSION').read_text().strip(),
@@ -114,12 +114,12 @@ def record() -> dict:
 
 def verify(snapshot: dict, current: dict) -> None:
     if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != current.get('release'):
-        raise ValueError('unrecognized input baseline or release')
+        raise ValueError('Неизвестная исходная база или версия выпуска')
     if current != snapshot:
         old = snapshot.get('files', {})
         new = current['files']
         changed = sorted(set(old)^set(new) | {k for k in old.keys() & new.keys() if old[k] != new[k]})
-        raise ValueError('release input drift (including lockfiles): '+', '.join(changed[:20]))
+        raise ValueError('Изменились входные файлы выпуска, включая файлы фиксации зависимостей: '+', '.join(changed[:20]))
 
 
 def main():
@@ -135,10 +135,10 @@ def main():
             print(f'frozen {len(snapshot["files"])} real source inputs')
         else:
             verify(json.loads(BASELINE.read_text(encoding='utf8')),snapshot)
-            print(f'PASS: {len(snapshot["files"])} pinned source inputs unchanged')
+            print(f'PASS: {len(snapshot["files"])} закреплённых исходных файлов не изменились')
         return 0
     except (ValueError, OSError, KeyError) as exc:
-        print('INPUT BASELINE BLOCKED: '+str(exc),file=sys.stderr)
+        print('Проверка исходной базы заблокирована: '+str(exc),file=sys.stderr)
         return 2
 
 if __name__=='__main__':raise SystemExit(main())

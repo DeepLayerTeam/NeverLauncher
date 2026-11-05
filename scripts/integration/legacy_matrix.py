@@ -159,7 +159,7 @@ def main(argv=None):
         args.out.write_text(json.dumps(payload, indent=2, sort_keys=True)+'\n')
         return 0
     except (MatrixError, upgrade.LegacyUpgradeError, ValueError, OSError, json.JSONDecodeError, subprocess.TimeoutExpired, zipfile.BadZipFile) as e:
-        print(f'legacy matrix 0.48.0 FAILED: {e}', file=sys.stderr)
+        print(f'Матрица совместимости с предыдущими версиями 0.48.0 не прошла проверку: {e}', file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

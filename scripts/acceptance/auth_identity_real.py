@@ -72,7 +72,7 @@ def private_json(path: Path, max_size=32768):
         parsed = json.loads(raw, object_pairs_hook=unique,
             parse_constant=lambda item: (_ for _ in ()).throw(Blocked('invalid JSON constant')))
     except (UnicodeError, ValueError):
-        raise Blocked('invalid private JSON input') from None
+        raise Blocked('Некорректные закрытые входные данные JSON') from None
     require(isinstance(parsed, dict), 'private JSON must be an object')
     return parsed
 
@@ -125,13 +125,13 @@ class LiveAPI:
         except HTTPError as error:
             status, raw = error.code, error.read(262145)
         except (URLError, OSError, TimeoutError):
-            raise Blocked('real HTTPS Backend transport/certificate failed') from None
+            raise Blocked('Ошибка соединения или сертификата HTTPS Backend') from None
         require(len(raw) <= 262144, 'oversized Backend response')
         require(status in expected, f'{method} {route.split("?")[0]} returned HTTP {status}, expected {expected}')
         try:
             parsed = json.loads(raw)
         except (UnicodeError, ValueError):
-            raise Blocked('Backend returned non-JSON response') from None
+            raise Blocked('Backend вернул ответ не в формате JSON') from None
         require(isinstance(parsed, dict), 'Backend returned non-object response')
         return parsed
 
@@ -167,7 +167,7 @@ def auth_login(api, entry, provider):
             offset = digest[-1] & 15
             payload['totp'] = str((int.from_bytes(digest[offset:offset+4], 'big') & 0x7fffffff) % 1000000).zfill(6)
         except (ValueError, TypeError):
-            raise Blocked('invalid private test-account TOTP secret') from None
+            raise Blocked('Некорректный TOTP-секрет тестовой учётной записи') from None
     doc = api.request('POST', '/api/v1/auth/login', data=payload)
     data = doc.get('data') or {}
     user = data.get('user') or {}
@@ -237,7 +237,7 @@ def prepare(api, raw, output):
     private_write(output, {'version': VERSION, 'origin': api.origin, 'providerId': oidc['providerId'],
                            'ownerSha256': user_digest(user['id']), 'generatedAt': int(time.time()),
                            'link': {**link, 'code': ''}, 'login': {**login, 'code': ''}})
-    print('OIDC authorization URLs and sealed transactions written to private 0600 file. Complete both browser flows and add each code to the file.')
+    print('URL авторизации OIDC и защищённые транзакции записаны в закрытый файл с правами 0600. Завершите обе процедуры в браузере и добавьте полученные коды в файл.')
 
 
 def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
@@ -368,7 +368,7 @@ def main(argv=None):
             proof = private_json(args.oidc_proof)
             result = live_run(api,raw,proof, args.source_commit, args.api_package_sha256)
             private_write(args.output,result)
-            print('REAL AUTH E2E OBSERVATIONS PASSED; independent native/release GA remains BLOCKED')
+            print('Реальные E2E-проверки авторизации прошли; независимая нативная и выпускная приёмка GA остаётся заблокированной')
         return 0
     except (Blocked, ProviderUnavailable, ProviderRejected, ProviderMisconfigured, KeyError, TypeError, ValueError) as error:
         # Не печатайте тела исключений источника, bearer-токены и идентичности.

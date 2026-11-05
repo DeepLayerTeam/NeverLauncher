@@ -86,7 +86,7 @@ def read_json(path, *, private=False):
     try:
         result = json.loads(path.read_bytes(), object_pairs_hook=unique)
     except (UnicodeError, ValueError) as exc:
-        raise Blocked('invalid evidence JSON') from exc
+        raise Blocked('Некорректный JSON свидетельств') from exc
     require(isinstance(result, dict), 'evidence root must be object')
     return result
 
@@ -136,7 +136,7 @@ def execute(path, args, timeout, *, json_output=True):
         completed = subprocess.run([sys.executable, str(path), *args], timeout=timeout,
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise Blocked('live operation failed or timed out: ' + path.name) from exc
+        raise Blocked('Реальная операция завершилась ошибкой или превысила время ожидания: ' + path.name) from exc
     require(completed.returncode == 0 and len(completed.stdout) <= MAX_JSON,
             'live operation did not pass: ' + path.name)
     if not json_output:
@@ -145,7 +145,7 @@ def execute(path, args, timeout, *, json_output=True):
     try:
         response = json.loads(completed.stdout, object_pairs_hook=unique)
     except (UnicodeError, ValueError) as exc:
-        raise Blocked('live operation did not return verified JSON: ' + path.name) from exc
+        raise Blocked('Реальная операция не вернула проверенный JSON: ' + path.name) from exc
     require(isinstance(response, dict), 'live operation returned unexpected result')
     return response
 
@@ -320,7 +320,7 @@ def stage(args):
         details = validate_recovery(Path(args.recovery_work), args.maximum_rto,
                                     args.maximum_sample_rpo, nodes)
     else:
-        raise Blocked('unsupported live acceptance stage')
+        raise Blocked('Неподдерживаемый этап приёмки реальной среды')
     after = observe(args, expected=VERSION)
     if before is not None:
         require(after['postgresCatalogSha256'] == before['postgresCatalogSha256'],

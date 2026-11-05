@@ -19,7 +19,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		return capabilityResult0205{status: status, err: errors.New(text)}
 	}
 	if ctx.Err() != nil {
-		return denied(http.StatusGatewayTimeout, "backend service deadline exceeded")
+		return denied(http.StatusGatewayTimeout, "Превышено время ожидания серверной службы")
 	}
 	permission := "project:read"
 	if strings.HasPrefix(name, "channel.") || strings.HasPrefix(name, "release.") {
@@ -33,7 +33,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		var err error
 		projectID, err = s.scopedProject(st, req.ProjectID)
 		if err != nil {
-			return denied(http.StatusForbidden, "project scope denied")
+			return denied(http.StatusForbidden, "Доступ к области проекта запрещён")
 		}
 	} else if st.key.Scope != "global" || strings.TrimSpace(req.ProjectID) != "" {
 		return denied(http.StatusForbidden, "Для списка всех проектов расширению необходим глобальный уровень доступа")
@@ -46,7 +46,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		return denied(http.StatusForbidden, "permission "+permission+" not granted")
 	}
 	if ctx.Err() != nil {
-		return denied(http.StatusGatewayTimeout, "backend service deadline exceeded")
+		return denied(http.StatusGatewayTimeout, "Превышено время ожидания серверной службы")
 	}
 	if name != "project.list" {
 		if _, e := s.repo.GetProject(projectID); e != nil {
@@ -62,7 +62,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	case "profile.list", "profile.get":
 		profiles, e := s.repo.ListProfiles(projectID)
 		if e != nil {
-			return denied(http.StatusInternalServerError, "profile repository unavailable")
+			return denied(http.StatusInternalServerError, "Хранилище профилей недоступно")
 		}
 		// Дополнительная защита от некорректного адаптера репозитория, смешивающего
 		// арендаторов.
@@ -74,7 +74,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		}
 		if name == "profile.get" {
 			if req.ProfileID == "" {
-				return denied(http.StatusBadRequest, "profileId required")
+				return denied(http.StatusBadRequest, "Необходимо указать profileId")
 			}
 			for _, p := range scoped {
 				if p.ID == req.ProfileID {
@@ -88,7 +88,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	case "channel.list", "channel.get":
 		channels, e := s.repo.ListChannels(projectID)
 		if e != nil {
-			return denied(http.StatusInternalServerError, "channel repository unavailable")
+			return denied(http.StatusInternalServerError, "Хранилище каналов недоступно")
 		}
 		scoped := make([]model.ReleaseChannel, 0, len(channels))
 		for _, c := range channels {
@@ -98,7 +98,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		}
 		if name == "channel.get" {
 			if req.Name == "" {
-				return denied(http.StatusBadRequest, "channel name required")
+				return denied(http.StatusBadRequest, "Необходимо указать название канала")
 			}
 			for _, c := range scoped {
 				if c.Name == req.Name {
@@ -148,7 +148,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		}
 		durable, ok := s.repo.(repository.DurableControlPlane)
 		if !ok {
-			return denied(http.StatusServiceUnavailable, "durable jobs unavailable")
+			return denied(http.StatusServiceUnavailable, "Система долговременных заданий недоступна")
 		}
 		job, e := durable.GetDurableJob(ctx, req.Name)
 		// Никакого оракула существования других проектов. Никогда не возвращайте

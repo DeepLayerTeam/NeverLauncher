@@ -200,7 +200,7 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 			serverJars++
 			r.ServerJarSHA256 = fileHashes[n]
 			if f.UncompressedSize64 > maxJarBytes {
-				r.finding("SERVER_JAR_TOO_LARGE", "blocked", "version", n, "server JAR exceeds 256 MiB bounded manifest inspection limit")
+				r.finding("SERVER_JAR_TOO_LARGE", "blocked", "version", n, "Размер серверного JAR превышает предел проверки манифеста в 256 МиБ")
 				continue
 			}
 			version, ok, e := jarManifestVersionFile(ctx, f)
@@ -219,17 +219,17 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 				continue
 			}
 			r.Components = append(r.Components, Component{Kind: "module_config", Path: n, Status: "manual", Type: "json"})
-			r.finding("MODULE_CONFIG_REVIEW", "manual", "module_config", n, "module-specific settings require manual compatibility review")
+			r.finding("MODULE_CONFIG_REVIEW", "manual", "module_config", n, "Настройки модуля требуют ручной проверки совместимости")
 		}
 	}
 	if serverJars > 1 {
-		r.finding("MULTIPLE_SERVER_JARS", "blocked", "version", "", "multiple LaunchServer.jar entries make binary provenance ambiguous")
+		r.finding("MULTIPLE_SERVER_JARS", "blocked", "version", "", "Несколько файлов LaunchServer.jar не позволяют однозначно определить происхождение сборки")
 	}
 	if launchConfigs > 1 {
-		r.finding("MULTIPLE_LAUNCHSERVERS", "blocked", "launchserver", "", "multiple LaunchServer.json configs make source identity ambiguous")
+		r.finding("MULTIPLE_LAUNCHSERVERS", "blocked", "launchserver", "", "Несколько конфигураций LaunchServer.json не позволяют однозначно определить источник")
 	}
 	if runtimeConfigs > 1 {
-		r.finding("MULTIPLE_RUNTIMES", "blocked", "runtime", "", "multiple runtime configs make source identity ambiguous")
+		r.finding("MULTIPLE_RUNTIMES", "blocked", "runtime", "", "Несколько конфигураций Runtime не позволяют однозначно определить источник")
 	}
 	if !foundLaunch {
 		r.finding("LAUNCHSERVER_MISSING", "blocked", "launchserver", "", "Необходим файл LaunchServer.json")
@@ -374,7 +374,7 @@ func (r *Report) inspectLaunch(p string, obj map[string]json.RawMessage) {
 		for _, name := range keys {
 			pair, valid := rawObject(auth[name])
 			if !valid {
-				r.finding("AUTH_ENTRY_INVALID", "blocked", "auth", p, "auth provider record must be an object")
+				r.finding("AUTH_ENTRY_INVALID", "blocked", "auth", p, "Запись поставщика авторизации должна быть объектом")
 				continue
 			}
 			var isDefault bool
@@ -384,17 +384,17 @@ func (r *Report) inspectLaunch(p string, obj map[string]json.RawMessage) {
 			}
 			core, valid := rawObject(pair["core"])
 			if !valid {
-				r.finding("AUTH_CORE_MISSING", "blocked", "auth", p, "auth provider core is missing")
+				r.finding("AUTH_CORE_MISSING", "blocked", "auth", p, "Не задан основной модуль поставщика авторизации")
 				continue
 			}
 			typ := readType(core)
 			switch typ {
 			case "sql", "mysql", "postgresql", "postgres", "file", "fileauthsystem", "memory", "reject", "null", "merge", "minecraft", "microsoft":
-				r.finding("AUTH_REQUIRES_MAPPING", "manual", "auth", p, "auth core "+typ+" requires a dedicated credential and UUID migration review")
+				r.finding("AUTH_REQUIRES_MAPPING", "manual", "auth", p, "Основной модуль авторизации "+typ+" требует отдельной проверки переноса учётных данных и UUID")
 			case "":
-				r.finding("AUTH_TYPE_MISSING", "blocked", "auth", p, "auth core type is required")
+				r.finding("AUTH_TYPE_MISSING", "blocked", "auth", p, "Необходимо указать тип основного модуля авторизации")
 			default:
-				r.finding("UNKNOWN_AUTH_PROVIDER", "blocked", "auth", p, "unknown auth core type (name and secret values are never recorded)")
+				r.finding("UNKNOWN_AUTH_PROVIDER", "blocked", "auth", p, "Неизвестный тип основного модуля авторизации (имена и секреты не сохраняются)")
 			}
 			if t, exists := pair["textureProvider"]; exists {
 				provider, valid := rawObject(t)
@@ -408,23 +408,23 @@ func (r *Report) inspectLaunch(p string, obj map[string]json.RawMessage) {
 			}
 		}
 		if defaults != 1 {
-			r.finding("AUTH_DEFAULT_AMBIGUOUS", "blocked", "auth", p, "exactly one default authentication provider is required")
+			r.finding("AUTH_DEFAULT_AMBIGUOUS", "blocked", "auth", p, "Необходимо указать ровно одного поставщика авторизации по умолчанию")
 		}
 	}
 	for _, key := range []string{"protectHandler", "permissionsHandler", "hwidHandler", "components", "netty"} {
 		if raw, ok := obj[key]; ok {
 			if m, valid := rawObject(raw); !valid {
-				r.finding("LAUNCHSERVER_OBJECT_INVALID", "blocked", "launchserver", p, key+" must be an object")
+				r.finding("LAUNCHSERVER_OBJECT_INVALID", "blocked", "launchserver", p, key+" должен быть объектом")
 			} else if key == "protectHandler" || key == "permissionsHandler" || key == "hwidHandler" {
 				if typ := readType(m); typ != "" && typ != "none" && typ != "void" {
-					r.finding("SECURITY_REVIEW", "manual", "launchserver", p, key+" handler requires manual security review")
+					r.finding("SECURITY_REVIEW", "manual", "launchserver", p, key+": обработчик требует ручной проверки безопасности")
 				}
 			}
 		}
 	}
 	for _, key := range []string{"authProvider", "authHandler", "textureProvider"} {
 		if _, ok := obj[key]; ok {
-			r.finding("LEGACY_AUTH_SCHEMA", "blocked", "launchserver", p, "legacy auth schema detected: "+key)
+			r.finding("LEGACY_AUTH_SCHEMA", "blocked", "launchserver", p, "Обнаружена устаревшая схема авторизации: "+key)
 		}
 	}
 }
@@ -432,13 +432,13 @@ func (r *Report) inspectProfile(p string, obj map[string]json.RawMessage) {
 	for _, k := range []string{"title", "version", "mainClass"} {
 		var s string
 		if e := json.Unmarshal(obj[k], &s); e != nil || s == "" {
-			r.finding("PROFILE_FIELD_INVALID", "blocked", "client_profile", p, "missing/invalid profile field: "+k)
+			r.finding("PROFILE_FIELD_INVALID", "blocked", "client_profile", p, "Поле профиля отсутствует или некорректно: "+k)
 		}
 	}
 	for _, k := range []string{"classPath", "jvmArgs", "clientArgs", "update", "updateVerify", "updateExclusions"} {
 		if v, exists := obj[k]; exists {
 			if uint64(len(v)) > maxConfigBytes {
-				r.finding("PROFILE_FIELD_TOO_LARGE", "blocked", "client_profile", p, k+" exceeds inspection limit")
+				r.finding("PROFILE_FIELD_TOO_LARGE", "blocked", "client_profile", p, k+" превышает предел проверки")
 			}
 		}
 	}
@@ -448,7 +448,7 @@ func (r *Report) inspectProfile(p string, obj map[string]json.RawMessage) {
 		}
 	}
 	if _, ok := obj["servers"]; ok {
-		r.finding("PROFILE_SERVERS_REVIEW", "manual", "client_profile", p, "server entries require target connectivity verification")
+		r.finding("PROFILE_SERVERS_REVIEW", "manual", "client_profile", p, "Для записей серверов необходимо проверить доступность целевых узлов")
 	}
 }
 func (r *Report) inspectRuntime(p string, obj map[string]json.RawMessage) {
@@ -463,7 +463,7 @@ func (r *Report) inspectRuntime(p string, obj map[string]json.RawMessage) {
 }
 func (r *Report) inspectWrapper(p string, obj map[string]json.RawMessage) {
 	if len(obj) == 0 {
-		r.finding("WRAPPER_EMPTY", "manual", "server_wrapper", p, "empty wrapper config")
+		r.finding("WRAPPER_EMPTY", "manual", "server_wrapper", p, "Конфигурация оболочки пуста")
 	}
 	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "Учётные данные и корневые ключи доверия ServerWrapper необходимо заменить средствами Never ServerBridge")
 }
@@ -572,7 +572,7 @@ func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 		return
 	}
 	if len(options) > 4096 {
-		r.finding("OPTIONALS_EXCESS", "blocked", "client_profile", p, "too many optional elements")
+		r.finding("OPTIONALS_EXCESS", "blocked", "client_profile", p, "Слишком много необязательных элементов")
 		return
 	}
 	for _, entry := range options {

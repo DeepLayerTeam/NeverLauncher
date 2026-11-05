@@ -43,10 +43,10 @@ class PackerTests(unittest.TestCase):
                 src=inputs/name;src.write_bytes(fixture.fake_binary('linux','x64'));src.chmod(0o755)
                 mapping['launcher/'+name]=src
             out=make_package('linux','x64',root/'out',mapping)
-            with self.assertRaisesRegex(ValueError,'overwrite'):
+            with self.assertRaisesRegex(ValueError,'перезаписывать'):
                 make_package('linux','x64',root/'out',mapping)
             (inputs/'launcher-cli').write_bytes(fixture.fake_binary('linux','arm64'))
-            with self.assertRaisesRegex(ValueError,'architecture mismatch'):
+            with self.assertRaisesRegex(ValueError,'архитектура'):
                 make_package('linux','x64',root/'out-other',mapping)
 
 if __name__=='__main__':unittest.main()

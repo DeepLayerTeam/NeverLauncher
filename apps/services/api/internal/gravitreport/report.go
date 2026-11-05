@@ -150,14 +150,14 @@ func Finalize(v Report) (Report, error) {
 		}
 		seenIdentity[k] = true
 		if other, ok := seenUUID[a.UUID]; ok && other != k {
-			v.Blockers = append(v.Blockers, "identity UUID collision: "+a.UUID)
+			v.Blockers = append(v.Blockers, "Конфликт UUID учётных записей: "+a.UUID)
 		}
 		seenUUID[a.UUID] = k
 		if a.Status != "matched" && a.Status != "imported" {
-			v.Blockers = append(v.Blockers, "identity not resolved: "+a.Provider+"/"+a.SourceID)
+			v.Blockers = append(v.Blockers, "Не удалось определить учётную запись: "+a.Provider+"/"+a.SourceID)
 		}
 		if a.TargetUserID == "" {
-			v.Blockers = append(v.Blockers, "identity has no Never user: "+a.Provider+"/"+a.SourceID)
+			v.Blockers = append(v.Blockers, "Учётная запись не связана с пользователем Never: "+a.Provider+"/"+a.SourceID)
 		}
 	}
 	sort.Slice(v.Identities, func(i, j int) bool {
@@ -191,17 +191,17 @@ func Finalize(v Report) (Report, error) {
 	}
 	for _, stage := range required {
 		if stages[stage] != "verified" {
-			v.Blockers = append(v.Blockers, stage+": required stage not verified")
+			v.Blockers = append(v.Blockers, stage+": обязательный этап не проверен")
 		}
 	}
 	if !validDigest(v.SourceSHA256) || !validDigest(v.InventorySHA256) {
-		v.Blockers = append(v.Blockers, "unverified source/inventory digests")
+		v.Blockers = append(v.Blockers, "Не подтверждены хеши источника или инвентаризации")
 	}
 	if len(v.Identities) == 0 {
 		v.Blockers = append(v.Blockers, "Нет подтверждённых учётных записей игроков")
 	}
 	if v.Counts["blocked"] > 0 {
-		v.Blockers = append(v.Blockers, "inventory contains blocked components")
+		v.Blockers = append(v.Blockers, "В инвентаризации найдены заблокированные компоненты")
 	}
 	sort.Slice(v.Evidence, func(i, j int) bool { return v.Evidence[i].Stage < v.Evidence[j].Stage })
 	sort.Slice(v.Decisions, func(i, j int) bool { return v.Decisions[i].Sequence < v.Decisions[j].Sequence })

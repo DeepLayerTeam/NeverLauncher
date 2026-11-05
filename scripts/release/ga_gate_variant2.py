@@ -50,11 +50,11 @@ def verify_approval(evidence_root: Path, approval: Path, signature: Path, key: P
     try:
         Ed25519PublicKey.from_public_bytes(key_raw).verify(sig, DOMAIN + raw)
     except (InvalidSignature, ValueError) as exc:
-        raise Blocked('independent review signature invalid') from exc
+        raise Blocked('Некорректная подпись независимой проверки') from exc
     try:
         meta = json.loads(raw)
     except (UnicodeError, ValueError) as exc:
-        raise Blocked('approval not valid JSON') from exc
+        raise Blocked('Подтверждение не является корректным JSON') from exc
     require(type(meta) is dict and meta.get('schema') == APPROVAL_SCHEMA
             and meta.get('version') == VERSION and meta.get('commitSha') == acceptance['commitSha']
             and meta.get('targetReleaseSha256') == acceptance['targetReleaseSha256']

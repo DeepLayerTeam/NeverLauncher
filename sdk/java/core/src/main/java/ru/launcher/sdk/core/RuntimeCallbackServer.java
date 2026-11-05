@@ -46,12 +46,12 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     public String url(){return "http://127.0.0.1:"+server.getAddress().getPort();}
     private void handle(HttpExchange exchange,String kind){
         try {
-            if(!accepting.get()){respond(exchange,503,Map.of("error","extension shutting down"));return;}
+            if(!accepting.get()){respond(exchange,503,Map.of("error","Расширение завершает работу"));return;}
             if(!exchange.getRemoteAddress().getAddress().isLoopbackAddress()){respond(exchange,403,Map.of("error","Требуется локальный адрес обратной петли"));return;}
             String header=exchange.getRequestHeaders().getFirst("Authorization");
             byte[] expected=("Bearer "+token).getBytes(StandardCharsets.UTF_8);
-            if(header==null||!MessageDigest.isEqual(expected,header.getBytes(StandardCharsets.UTF_8))){respond(exchange,401,Map.of("error","not authorized"));return;}
-            if(!exchange.getRequestMethod().equals("POST")||!exchange.getRequestURI().getPath().equals("/v1/"+kind)){respond(exchange,405,Map.of("error","not allowed"));return;}
+            if(header==null||!MessageDigest.isEqual(expected,header.getBytes(StandardCharsets.UTF_8))){respond(exchange,401,Map.of("error","Авторизация отсутствует"));return;}
+            if(!exchange.getRequestMethod().equals("POST")||!exchange.getRequestURI().getPath().equals("/v1/"+kind)){respond(exchange,405,Map.of("error","Операция запрещена"));return;}
             int bodyLimit=(kind.equals("events")||kind.equals("hooks"))?MAX_EVENT_BODY:MAX_BODY;
             byte[] body=exchange.getRequestBody().readNBytes(bodyLimit+1);
             if(body.length>bodyLimit){respond(exchange,413,Map.of("error","Размер обратного вызова превышает ограничение транспорта"));return;}
@@ -77,16 +77,16 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             Future<Object> future;
             try{future=handlers.submit(()->{
                 if(!accepting.get() || (!"health".equals(method) && !"RUNNING".equals(lifecycleState.get())))
-                    throw new IllegalStateException("extension is stopping");
+                    throw new IllegalStateException("Расширение останавливается");
                 return dispatch(kind,data);
             });pending.add(future);if(!accepting.get())future.cancel(true);}
-            catch(RejectedExecutionException ex){respond(exchange,503,Map.of("error","callback queue full"));return;}
+            catch(RejectedExecutionException ex){respond(exchange,503,Map.of("error","Очередь обратных вызовов переполнена"));return;}
             try{respond(exchange,200,future.get(millis,TimeUnit.MILLISECONDS));}
-            catch(TimeoutException ex){future.cancel(true);respond(exchange,504,Map.of("error","callback deadline exceeded"));}
-            catch(CancellationException ex){respond(exchange,503,Map.of("error","callback cancelled during shutdown"));}
+            catch(TimeoutException ex){future.cancel(true);respond(exchange,504,Map.of("error","Превышено время ожидания обратного вызова"));}
+            catch(CancellationException ex){respond(exchange,503,Map.of("error","Обратный вызов отменён при завершении работы"));}
             catch(ExecutionException ex){
                 Throwable cause=ex.getCause();
-                if(!accepting.get()){respond(exchange,503,Map.of("error","extension shutting down"));return;}
+                if(!accepting.get()){respond(exchange,503,Map.of("error","Расширение завершает работу"));return;}
                 if(kind.equals("events")){
                     if(cause instanceof RuntimeEvents.PermanentFailure || cause instanceof IllegalArgumentException){
                         respond(exchange,422,Map.of("code","EVENT_REJECTED","error","Событие окончательно отклонено"));

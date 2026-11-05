@@ -122,13 +122,13 @@ class HTTPS:
         except HTTPError as exc:
             code, raw = exc.code, exc.read(1024 * 1024 + 1)
         except (URLError, OSError, TimeoutError) as exc:
-            raise Blocked('HTTPS connection/certificate failed: ' + type(exc).__name__) from None
+            raise Blocked('Ошибка соединения или сертификата HTTPS: ' + type(exc).__name__) from None
         require(len(raw) <= 1024 * 1024 and code in expected,
                 f'{method} {route.split("?")[0]}: HTTP {code}, expected {expected}')
         try:
             parsed = json.loads(raw)
         except (ValueError, UnicodeError):
-            raise Blocked('malformed Backend JSON response') from None
+            raise Blocked('Некорректный JSON-ответ Backend') from None
         require(type(parsed) is dict, 'non-object Backend JSON')
         return parsed
 
@@ -219,7 +219,7 @@ def host_action(api, server_id, token, action):
             return refreshed
         require(state in ('accepted', 'indeterminate'), 'remote JVM action rejected or failed')
         time.sleep(2)
-    raise Blocked('real remote JVM action was not verified succeeded: ' + action)
+    raise Blocked('Не подтверждено успешное выполнение реального действия удалённой JVM: ' + action)
 
 
 def totp_now(secret, at=None):
@@ -275,7 +275,7 @@ def real_game_command(api, server_id, token):
         require(status in ('pending', 'leased', 'accepted', 'delivered'),
                 'game agent command failed, expired or was refused')
         time.sleep(2)
-    raise Blocked('real Minecraft game agent did not acknowledge console command')
+    raise Blocked('Игровой агент Minecraft не подтвердил консольную команду')
 
 
 def run_host(api, server_id, token, marker):
@@ -407,7 +407,7 @@ def execute(args, report):
             except (Blocked, KeyError):
                 pass
             time.sleep(2)
-        raise Blocked('real signed ServerBridge heartbeat was not observed after registration')
+        raise Blocked('После регистрации не обнаружен подписанный сигнал активности ServerBridge')
     check(report, 'pinned_serverbridge_registration_and_live_heartbeat', register_live_server)
     mfa_token = check(report, 'real_totp_enrollment_and_fresh_mfa_session',
                       lambda: establish_real_mfa(api, args.email, password))
@@ -461,7 +461,7 @@ def main(argv=None):
         # НИКОГДА не включайте серверные ответы, секреты и значения окружения в опубликованные артефакты.
         report['failureType'] = type(exc).__name__
         report['failure'] = 'real installation/owner/host operation failed; consult private runner logs'
-        print('BLOCKED owner/admin E2E: ' + type(exc).__name__, file=sys.stderr)
+        print('E2E-проверка владельца и администратора заблокирована: ' + type(exc).__name__, file=sys.stderr)
     finally:
         report['finishedAt'] = datetime.now(timezone.utc).isoformat()
         save_report(args.report.absolute(), report)

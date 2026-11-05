@@ -101,7 +101,7 @@ class ReproTests(unittest.TestCase):
     def test_missing_target_and_wrong_architecture_blocked(self):
         name=repro.contract()['targets']['windows-x64']
         (self.a/name).unlink()
-        with self.assertRaisesRegex(ValueError,'missing'):
+        with self.assertRaisesRegex(ValueError,'Артефакт отсутствует'):
             repro.capture(self.a,builder='a',runner='1',commit=self.commit)
         create_bundle(self.a)
         with zipfile.ZipFile(self.a/name,'a') as z:

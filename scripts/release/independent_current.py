@@ -147,10 +147,10 @@ def main():
                           a.commit, a.run_id, a.attempt)
         require(not a.out.exists(), 'refusing to overwrite comparison/receipt')
         atomic_json(a.out, doc)
-        print('PASS: exact unsigned payloads independently checked; final native GA NOT established')
+        print('PASS: точные байты неподписанного содержимого независимо проверены; итоговая нативная GA НЕ подтверждена')
         return 0
     except (Blocked, OSError, ValueError, TypeError, KeyError, subprocess.CalledProcessError) as exc:
-        print('INDEPENDENT BUILD BLOCKED: ' + str(exc), file=sys.stderr)
+        print('Независимая сборка заблокирована: ' + str(exc), file=sys.stderr)
         return 3
 
 if __name__ == '__main__':

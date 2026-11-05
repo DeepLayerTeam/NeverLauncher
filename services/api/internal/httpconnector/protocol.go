@@ -134,7 +134,7 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 	}
 	mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
-		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP auth provider returned non-JSON content type")
+		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-поставщик авторизации вернул ответ не в формате JSON")
 	}
 	limited := io.LimitReader(resp.Body, c.cfg.MaxResponseBytes+1)
 	responseBody, err := io.ReadAll(limited)
@@ -188,7 +188,7 @@ func (c *signedClient) verifyResponse(resp *http.Response, expectedNonce string,
 		return authconnector.NewError(authconnector.ErrUnavailable, "Не удалось проверить подпись ответа HTTP-провайдера")
 	}
 	if !c.consumeNonce(nonce, time.Now().UTC()) {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response replay detected")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Обнаружен повтор ранее полученного ответа HTTP-поставщика авторизации")
 	}
 	return nil
 }
@@ -226,7 +226,7 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	case http.StatusNotFound:
 		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP-учётная запись не найдена")
 	case http.StatusConflict:
-		return authconnector.NewError(authconnector.ErrConflict, "HTTP identity conflict")
+		return authconnector.NewError(authconnector.ErrConflict, "Конфликт учётных записей HTTP")
 	case http.StatusTooManyRequests, http.StatusRequestTimeout, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return &authconnector.Error{Code: authconnector.ErrUnavailable, Message: "HTTP-провайдер аутентификации временно недоступен", Temporary: true}
 	}
@@ -241,7 +241,7 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	case "identity_not_found":
 		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP-учётная запись не найдена")
 	case "conflict":
-		return authconnector.NewError(authconnector.ErrConflict, "HTTP identity conflict")
+		return authconnector.NewError(authconnector.ErrConflict, "Конфликт учётных записей HTTP")
 	default:
 		return authconnector.NewError(authconnector.ErrMisconfigured, "HTTP-провайдер вернул неподдерживаемый статус ошибки")
 	}

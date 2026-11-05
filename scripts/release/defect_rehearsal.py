@@ -156,7 +156,7 @@ def verify_signature(doc, sig_path, public_path, pin, domain):
     try:
         key.verify(sig, domain + inventory.canonical(doc))
     except InvalidSignature as e:
-        raise Blocked('signature invalid or report changed') from e
+        raise Blocked('Подпись некорректна или отчёт изменён') from e
     return key
 
 def sealed_freeze(path, sig, key, pin, commit, project, packages, index, index_sha):
@@ -341,11 +341,11 @@ def main():
                 signed=read(a.rehearsal)
                 verify_signature(signed,a.rehearsal_sig,a.review_key,a.review_pin,REHEARSAL_DOMAIN)
                 require(doc==signed,'raw evidence or regressions differ from independently signed rehearsal')
-        print('PASS: exact bytes and raw live evidence independently rechecked; GA NOT granted')
+        print('PASS: точные байты и исходные свидетельства реальной среды независимо перепроверены; GA НЕ предоставлена')
         return 0
     except (Blocked,inventory.Blocked,native.Blocked,sweep.Blocked, OSError,ValueError,
             KeyError,TypeError,subprocess.CalledProcessError,subprocess.TimeoutExpired) as exc:
-        print('REHEARSAL BLOCKED: '+str(exc),file=sys.stderr)
+        print('Репетиционная проверка заблокирована: '+str(exc),file=sys.stderr)
         return 3
 
 if __name__=='__main__':

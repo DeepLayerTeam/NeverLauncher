@@ -108,10 +108,10 @@ def main(argv=None):
             owner(a.path, a.version, a.commit)
         else:
             legacy(a.path, a.version)
-        print(f'0.48.0 REAL EVIDENCE PASS: {a.type}')
+        print(f'0.48.0: фактические свидетельства проверены — {a.type}')
         return 0
     except (EvidenceError, OSError, ValueError, KeyError, TypeError) as e:
-        print(f'0.48.0 EVIDENCE REJECTED: {e}', file=sys.stderr)
+        print(f'0.48.0: свидетельства отклонены — {e}', file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

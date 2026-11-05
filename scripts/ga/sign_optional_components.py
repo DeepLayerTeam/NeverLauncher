@@ -86,9 +86,9 @@ def main() -> int:
         sign_existing_attestation(args.folder, args.private_key,
                                  trusted_key_hex=args.trusted_ga_public_key, commit=args.commit)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        print(f'GA attestation not signed: {exc}', file=sys.stderr)
+        print(f'Свидетельство приёмки GA не подписано: {exc}', file=sys.stderr)
         return 1
-    print('Signed and independently verified GA evidence for', args.folder.name)
+    print('Подписаны и независимо проверены свидетельства GA для', args.folder.name)
     return 0
 
 

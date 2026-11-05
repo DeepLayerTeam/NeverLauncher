@@ -302,13 +302,13 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	converted.Profile.LoaderVersion = loaderVersion
 	converted.Settings.Minecraft.LoaderVersion = loaderVersion
 	if loader != "vanilla" && loaderVersion == "" {
-		out.Blockers = append(out.Blockers, "exact loader version required for "+loader)
+		out.Blockers = append(out.Blockers, "Требуется точная версия загрузчика для "+loader)
 	}
 	if loader == "vanilla" && loaderVersion != "" {
 		out.Blockers = append(out.Blockers, "Профиль Vanilla не может указывать версию загрузчика")
 	}
 	if normalized, normalizeErr := model.NormalizeProfileV2(converted.Profile); normalizeErr != nil {
-		out.Blockers = append(out.Blockers, "launch profile invalid: "+normalizeErr.Error())
+		out.Blockers = append(out.Blockers, "Некорректный профиль запуска: "+normalizeErr.Error())
 	} else {
 		converted.Profile = normalized
 	}
@@ -380,14 +380,14 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 			continue
 		}
 		if !safeTarget(target) || f.Size > MaxFileBytes {
-			out.Blockers = append(out.Blockers, "unsafe/oversized client member: "+f.Path)
+			out.Blockers = append(out.Blockers, "Небезопасный или слишком большой файл клиента: "+f.Path)
 			continue
 		}
 		clientTree := strings.HasPrefix(f.Path, prefixes[0]) || strings.HasPrefix(f.Path, prefixes[1])
 		if clientTree && (matchesFileRule(target, ownerExcluded) || protectedClientFile(target) || hiddenClientFile(target)) {
 			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "Путь клиента принадлежит игроку или защищён"})
 			if classpath[target] {
-				out.Blockers = append(out.Blockers, "classpath references protected user data: "+target)
+				out.Blockers = append(out.Blockers, "Путь к классам ссылается на защищённые данные пользователя: "+target)
 			}
 			continue
 		}
@@ -397,12 +397,12 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		}
 		fold := strings.ToLower(target)
 		if prior, duplicate := used[fold]; duplicate {
-			out.Blockers = append(out.Blockers, "destination collision between "+prior+" and "+f.Path)
+			out.Blockers = append(out.Blockers, "Конфликт целевого пути между "+prior+" and "+f.Path)
 			continue
 		}
 		used[fold] = f.Path
 		if strings.HasSuffix(f.Path, "/") || len(f.SHA256) != 64 {
-			out.Blockers = append(out.Blockers, "invalid member: "+f.Path)
+			out.Blockers = append(out.Blockers, "Некорректный элемент: "+f.Path)
 			continue
 		}
 		out.Files = append(out.Files, File{SourcePath: f.Path, TargetPath: target, Size: f.Size, SHA256: f.SHA256, Ownership: "required"})
@@ -411,7 +411,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		}
 		if optionalFiles[target] {
 			if classpath[target] {
-				out.Blockers = append(out.Blockers, "optional file is required by base classpath: "+target)
+				out.Blockers = append(out.Blockers, "Базовый путь к классам требует необязательный файл: "+target)
 			}
 			optionalCandidates = append(optionalCandidates, model.ManifestFile{Path: target, SHA256: f.SHA256, Size: f.Size, Ownership: "optional", Required: false})
 		}
@@ -419,10 +419,10 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	sort.Slice(out.Files, func(i, j int) bool { return out.Files[i].TargetPath < out.Files[j].TargetPath })
 	sort.Slice(out.SkippedFiles, func(i, j int) bool { return out.SkippedFiles[i].SourcePath < out.SkippedFiles[j].SourcePath })
 	if clientFiles == 0 {
-		out.Blockers = append(out.Blockers, "no managed files for selected Gravit client directory: "+sourceDirectory)
+		out.Blockers = append(out.Blockers, "В выбранном каталоге клиента Gravit нет управляемых файлов: "+sourceDirectory)
 	}
 	if len(out.Files) > MaxImportFiles {
-		out.Blockers = append(out.Blockers, "client file limit exceeded")
+		out.Blockers = append(out.Blockers, "Превышено допустимое количество файлов клиента")
 	}
 	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("[]")) && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
 		migrated, e := model.ConvertGravitOptionalView02411(raw, model.NewComponentCatalog0241(nil, 1), optionalCandidates)
@@ -453,7 +453,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	}
 	for _, p := range converted.Settings.Runtime.Launch.ClasspathEntries {
 		if !selected[p] {
-			out.Blockers = append(out.Blockers, "missing classpath library: "+p)
+			out.Blockers = append(out.Blockers, "Отсутствует библиотека из пути к классам: "+p)
 		}
 	}
 	fdata, e := json.Marshal(out.Files)

@@ -38,10 +38,10 @@ def assert_host(target):
     osname, arch = target.split('-')
     actual = platform.system()
     if actual != {'windows': 'Windows', 'linux': 'Linux', 'darwin': 'Darwin'}[osname]:
-        raise ValueError('native signing requires the exact target operating system')
+        raise ValueError('Для нативного подписания необходима целевая операционная система')
     machine = platform.machine().lower()
     if machine not in {'x64': ('amd64', 'x86_64', 'x64'), 'arm64': ('arm64', 'aarch64')}[arch]:
-        raise ValueError('native signing requires exact hardware architecture, not emulation')
+        raise ValueError('Для нативного подписания нужна целевая аппаратная архитектура, а не эмуляция')
     return actual, arch
 
 
@@ -52,14 +52,14 @@ def validate_os(target: str, archive: Path, *, signer: str) -> str:
         # На платформе нет механизма подписи кода ОС. Закреплённая подпись выпуска Ed25519
         # отдельно проверяется производственным CLI, не на этом этапе ОС.
         if not re.fullmatch(r'[A-Za-z0-9 ._:@-]{3,128}', signer):
-            raise ValueError('pinned publisher identity required')
+            raise ValueError('Необходимо закрепить идентификатор издателя')
         return 'production-cli-release-trust'
     if osname == 'windows':
         if not re.fullmatch(r'[A-Fa-f0-9]{40}', signer):
-            raise ValueError('pinned Authenticode SHA-1 certificate thumbprint required')
+            raise ValueError('Необходимо закрепить SHA-1 отпечаток сертификата Authenticode')
         for name in EXPECTED['windows']:
             if name not in members:
-                raise ValueError('missing native Windows executable ' + name)
+                raise ValueError('Отсутствует нативный исполняемый файл Windows: ' + name)
         with tempfile.TemporaryDirectory(prefix='nl-guard-win-sign-') as temp:
             # Нативные API читают реально извлечённый PE-файл, а не метаданные ZIP.
             for name in EXPECTED['windows']:
@@ -73,20 +73,20 @@ def validate_os(target: str, archive: Path, *, signer: str) -> str:
                 run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script], env=env)
         return 'authenticode-chain-timestamp'
     if not re.fullmatch(r'[A-Z0-9]{10}', signer):
-        raise ValueError('pinned Apple Developer Team ID required')
+        raise ValueError('Необходимо закрепить идентификатор команды Apple Developer')
     for command in ('ditto', 'codesign', 'xcrun', 'spctl'):
         if shutil.which(command) is None:
-            raise ValueError('missing native macOS signature validation tool: ' + command)
+            raise ValueError('Отсутствует нативный инструмент проверки подписи macOS: ' + command)
     with tempfile.TemporaryDirectory(prefix='nl-guard-mac-sign-') as temp:
         # read_archive отклоняет символьные ссылки и обход путей до извлечения.
         run(['ditto', '-xk', str(archive), temp])
         app = Path(temp) / 'Launcher.app'
         if not app.is_dir():
-            raise ValueError('real signed Launcher.app missing')
+            raise ValueError('Не найдено фактически подписанное приложение Launcher.app')
         run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)])
         actual_signer = run(['codesign', '-dv', '--verbose=4', str(app)])
         if 'TeamIdentifier=' + signer not in actual_signer:
-            raise ValueError('signed app has different Apple Developer Team ID')
+            raise ValueError('У подписанного приложения другой идентификатор команды Apple Developer')
         run(['spctl', '--assess', '--type', 'execute', '--verbose=2', str(app)])
         run(['xcrun', 'stapler', 'validate', str(app)])
     return 'codesign-gatekeeper-notarized'
@@ -95,14 +95,14 @@ def validate_os(target: str, archive: Path, *, signer: str) -> str:
 def verify(target: str, bundle: Path, commit: str, signer: str, operator: str, execution: str,
            cli: Path, public_key: Path, trust_policy: Path, operator_key: Path) -> dict:
     if target not in SUPPORTED or not re.fullmatch(r'[0-9a-f]{40}', commit):
-        raise ValueError('invalid target or source commit')
+        raise ValueError('Некорректный целевой или исходный коммит')
     for value in (signer, operator, execution):
         if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:@ -]{2,127}', value):
-            raise ValueError('real signer/operator/execution identity required')
+            raise ValueError('Необходимо указать фактические данные подписанта, оператора и запуска')
     native, arch = assert_host(target)
     release = verify_bundle(bundle, release_manifest=True)
     if release['version'] != VERSION:
-        raise ValueError('final package is not version 0.51.0')
+        raise ValueError('Версия итогового пакета отличается от 0.51.0')
     # Криптографическая проверка распространяемого выпуска использует внешние доверенные корни
     # и СКОМПИЛИРОВАННЫЙ CLI выпуска до нативной проверки подписи ОС.
     run_verify(cli, bundle, public_key, trust_policy, operator_key)
@@ -138,10 +138,10 @@ def main(argv=None):
                       a.trust_policy, a.operations_public_key)
         a.output.parent.mkdir(parents=True, exist_ok=True)
         a.output.write_text(json.dumps(data, sort_keys=True, indent=2) + '\n', encoding='utf-8')
-        print(a.target + ': real native signature verified; independent approval still required')
+        print(a.target + ': нативная подпись проверена; независимое подтверждение ещё необходимо')
         return 0
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
-        print('GUARD 0.51.0 native signing BLOCKED: ' + str(exc), file=sys.stderr)
+        print('GUARD 0.51.0: нативное подписание заблокировано: ' + str(exc), file=sys.stderr)
         return 2
 
 

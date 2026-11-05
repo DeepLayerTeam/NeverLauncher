@@ -54,7 +54,7 @@ def parse_json(raw):
     try:
         return json.loads(raw, object_pairs_hook=strict_object)
     except (UnicodeError, ValueError, TypeError):
-        raise Blocked('invalid JSON from an external component') from None
+        raise Blocked('Некорректный JSON от внешнего компонента') from None
 
 
 def sha(raw):
@@ -107,8 +107,8 @@ class API:
         try:
             port = parts.port
         except ValueError:
-            raise Blocked('invalid HTTPS origin port') from None
-        need(port is None or 1 <= port <= 65535, 'invalid HTTPS origin port')
+            raise Blocked('Некорректный порт HTTPS-источника') from None
+        need(port is None or 1 <= port <= 65535, 'Некорректный порт HTTPS-источника')
         need(parts.scheme == 'https' and parts.hostname and not parts.username and not parts.password
              and parts.path in ('', '/') and not parts.query and not parts.fragment,
              'production acceptance requires a clean HTTPS origin')
@@ -134,7 +134,7 @@ class API:
         except HTTPError as exc:
             status, raw = exc.code, exc.read(min(limit, 4096) + 1)
         except (OSError, URLError, TimeoutError):
-            raise Blocked('TLS/HTTPS Backend request failed') from None
+            raise Blocked('Ошибка TLS/HTTPS-запроса к Backend') from None
         need(status in expected and len(raw) <= limit,
              f'{method} {route.split("?")[0]} returned unexpected HTTP status {status} / size')
         return raw
@@ -266,7 +266,7 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
                 except subprocess.TimeoutExpired:
                     proc.terminate()
                     proc.wait(timeout=20)
-                    raise Blocked('client launch exceeded native Runtime deadline')
+                    raise Blocked('Запуск клиента превысил срок ожидания нативного Runtime')
                 need(proc.returncode == 0, 'native game launcher failed after join')
             response = parse_json((Path(temp) / 'client-result.json').read_bytes())
             need(isinstance(response, dict) and response.get('success') is True,
@@ -275,7 +275,7 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
         try:
             server.rcon.query('save-all flush')
         except (OSError, ValueError, RuntimeError):
-            raise Blocked('Minecraft world save through RCON was not acknowledged') from None
+            raise Blocked('Сохранение мира Minecraft через RCON не было подтверждено') from None
         try:
             server.rcon.query('stop')
         except (OSError, ValueError, RuntimeError):

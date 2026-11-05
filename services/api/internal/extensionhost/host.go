@@ -718,7 +718,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 			return errors.New("Расширение завершилось во время запуска")
 		}
 		if err := s.reconcileManifestSubscriptions0206(ctx, st); err != nil {
-			s.failProcess(st, "event subscription reconcile failed: "+err.Error(), true)
+			s.failProcess(st, "Не удалось согласовать подписки на события: "+err.Error(), true)
 			return err
 		}
 		return nil
@@ -731,10 +731,10 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		}
 		return errors.New(msg)
 	case <-timer.C:
-		s.failProcess(st, "startup hello timeout", true)
+		s.failProcess(st, "Превышено время ожидания приветствия при запуске", true)
 		return fmt.Errorf("Время ожидания запуска хоста расширений истекло через %s", s.cfg.StartupTimeout)
 	case <-ctx.Done():
-		s.failProcess(st, "startup cancelled", true)
+		s.failProcess(st, "Запуск отменён", true)
 		return ctx.Err()
 	}
 }
@@ -754,7 +754,7 @@ func (s *Supervisor) abortUnstarted0422(st *processState, cause error) error {
 	close(st.doneCh)
 	st.mu.Unlock()
 	s.removeProcessToken(st)
-	s.addLog(st, "host", "error", "launch failed: "+cause.Error(), nil)
+	s.addLog(st, "host", "error", "Ошибка запуска: "+cause.Error(), nil)
 	if st.javaScratch != "" {
 		_ = os.RemoveAll(st.javaScratch)
 	}
@@ -1015,7 +1015,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		}
 		failed.mu.Lock()
 		startupFailure := failed.state == "failed" ||
-			(failed.state == "stopped" && (strings.HasPrefix(failed.lastError, "startup hello timeout") || strings.HasPrefix(failed.lastError, "event subscription reconcile failed")))
+			(failed.state == "stopped" && (strings.HasPrefix(failed.lastError, "Превышено время ожидания приветствия при запуске") || strings.HasPrefix(failed.lastError, "event subscription reconcile failed")))
 		failed.mu.Unlock()
 		s.mu.RLock()
 		permitted := s.processes[k] == failed && s.recoveryEpoch[k] == epoch
@@ -1342,7 +1342,7 @@ func (s *Supervisor) monitorOnce(now time.Time) {
 			continue
 		}
 		if !hello.IsZero() && now.Sub(hb) > s.cfg.HeartbeatTimeout {
-			s.failProcess(st, "heartbeat timeout", false)
+			s.failProcess(st, "Превышено время ожидания сигнала активности", false)
 			continue
 		}
 		if state == "running" {
@@ -1466,7 +1466,7 @@ type helloRequest struct {
 // Ошибки совместимости SDK 1.0 доступны в машинно-читаемом виде. Старые
 // клиенты понимают HTTP-статус; ни одно прежнее поле hello не удаляется.
 func helloConflict0421(w http.ResponseWriter, code string) {
-	jsonResponse(w, http.StatusConflict, map[string]string{"error": "host hello rejected", "code": code})
+	jsonResponse(w, http.StatusConflict, map[string]string{"error": "Приветствие хоста отклонено", "code": code})
 }
 
 func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {

@@ -888,7 +888,7 @@ def main(argv=None):
             compose_run(args)
     elif args.action == "install":
         if not args.bundle or not args.trusted_key:
-            fail("native install requires --bundle and independent --trusted-key")
+            fail("Для нативной установки обязательны --bundle и независимый --trusted-key")
         native_install(args)
     else:
         # Проверяйте подтверждение разрушительного действия ДО изменения файлов или служб.

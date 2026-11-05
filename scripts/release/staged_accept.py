@@ -24,7 +24,7 @@ MAX_ASSET_BYTES=2*1024*1024*1024
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise ValueError('staging redirects are forbidden')
+        raise ValueError('Перенаправления на этапе подготовки выпуска запрещены')
 
 
 def file_hash(path: Path) -> str:
@@ -38,9 +38,9 @@ def require_remote(base_url: str, version: str) -> str:
     p=urllib.parse.urlsplit(base_url)
     if (p.scheme!='https' or not p.hostname or p.username or p.password
             or p.query or p.fragment or '%' in p.path or any(s in ('.','..') for s in p.path.split('/'))):
-        raise ValueError('staging origin must be immutable HTTPS path without credentials/query/fragment')
+        raise ValueError('Источник подготовки выпуска должен иметь неизменяемый HTTPS-путь без учётных данных, запроса и фрагмента')
     if ('v'+version not in p.path.split('/') and version not in p.path.split('/')):
-        raise ValueError('staging origin must contain exact version path segment')
+        raise ValueError('Источник подготовки выпуска должен содержать точную версию в сегменте пути')
     return base_url.rstrip('/')+'/'
 
 
@@ -50,37 +50,37 @@ def compare_downloaded(local: Path, base_url: str, dst: Path, version: str):
     files=[]
     for path in sorted(local.iterdir()):
         if path.is_symlink() or (not path.is_file()):
-            raise ValueError('release contains symlink/non-regular input: '+path.name)
+            raise ValueError('Выпуск содержит символическую ссылку или нестандартный файл: '+path.name)
         if '/' in path.name or '\\' in path.name or path.name in ('.','..'):
-            raise ValueError('unsafe release asset path')
+            raise ValueError('Небезопасный путь к ресурсу выпуска')
         size=path.stat().st_size
-        if size<=0 or size>MAX_ASSET_BYTES:raise ValueError('invalid local asset size: '+path.name)
+        if size<=0 or size>MAX_ASSET_BYTES:raise ValueError('Некорректный размер локального ресурса: '+path.name)
         target=dst/path.name
         req=urllib.request.Request(url+urllib.parse.quote(path.name,safe=''),headers={'Accept-Encoding':'identity'},method='GET')
         with opener.open(req,timeout=40) as res:
             if res.status!=200 or res.headers.get('Content-Encoding','identity')!='identity':
-                raise ValueError('invalid staging HTTP response: '+path.name)
+                raise ValueError('Некорректный HTTP-ответ при подготовке выпуска: '+path.name)
             total=0
             with target.open('xb') as out:
                 while True:
                     chunk=res.read(1024*1024)
                     if not chunk:break
                     total+=len(chunk)
-                    if total>size:raise ValueError('oversized remote file: '+path.name)
+                    if total>size:raise ValueError('Удалённый файл слишком велик: '+path.name)
                     out.write(chunk)
         if total!=size or file_hash(target)!=file_hash(path):
-            raise ValueError('remote file differs from sealed local release: '+path.name)
+            raise ValueError('Удалённый файл отличается от защищённого локального выпуска: '+path.name)
         files.append({'name':path.name,'sha256':file_hash(target),'size':size})
     return files
 
 
 def run_verify(cli: Path, bundle: Path, public: Path, policy: Path, operator: Path):
     if not cli.is_file() or not public.is_file() or not policy.is_file() or not operator.is_file():
-        raise ValueError('production CLI and external release/operator verification keys are mandatory')
+        raise ValueError('Обязательны промышленный CLI и внешние ключи проверки выпуска и оператора')
     for secret in (public,policy,operator):
-        if secret.is_symlink():raise ValueError('external trust input must be a regular file')
+        if secret.is_symlink():raise ValueError('Внешний файл доверия должен быть обычным файлом')
     if operator.resolve().is_relative_to(bundle.resolve()):
-        raise ValueError('operator trust anchor must not be inside release bundle')
+        raise ValueError('Корневой доверенный ключ оператора не должен находиться внутри пакета выпуска')
     with tempfile.TemporaryDirectory(prefix='nl462-trust-') as td:
         env={**os.environ,'LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE':str(operator.resolve())}
         for argv in (
@@ -126,6 +126,6 @@ def main() -> int:
         print(json.dumps(accept(args.bundle,args.base_url,args.cli,args.public_key,args.trust_policy,args.operator_key,args.report),sort_keys=True))
         return 0
     except (OSError,ValueError,subprocess.CalledProcessError,subprocess.TimeoutExpired,urllib.error.URLError,KeyError,TypeError) as exc:
-        print('STAGED ACCEPTANCE BLOCKED: '+str(exc),file=sys.stderr)
+        print('Приёмка подготовленного выпуска заблокирована: '+str(exc),file=sys.stderr)
         return 2
 if __name__=='__main__':raise SystemExit(main())

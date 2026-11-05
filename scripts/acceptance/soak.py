@@ -121,7 +121,7 @@ def run_game_subprocess(log, env, timeout):
         except subprocess.TimeoutExpired:
             os.killpg(child.pid, signal.SIGKILL)
             child.wait(timeout=30)
-            raise Blocked('Minecraft E2E exceeded session timeout; process group terminated')
+            raise Blocked('Превышено время ожидания игрового E2E-сеанса Minecraft; группа процессов завершена')
         finally:
             handle.flush()
             os.fsync(handle.fileno())
@@ -297,7 +297,7 @@ def main():
         return a.action(a)
     except (Blocked, OSError, ValueError, subprocess.TimeoutExpired, AssertionError,
             json.JSONDecodeError) as exc:
-        print('REAL SOAK BLOCKED: '+str(exc), file=sys.stderr)
+        print('Длительная проверка в реальной среде заблокирована: '+str(exc), file=sys.stderr)
         return 3
 
 if __name__ == '__main__':

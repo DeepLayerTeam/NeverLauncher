@@ -109,13 +109,13 @@ func Evaluate(v Report) (Report, error) {
 	blocks := []string{}
 	add := func(s string) { blocks = append(blocks, s) }
 	if !digest.MatchString(v.Source.WorldSHA256) || !digest.MatchString(v.Target.WorldSHA256) || v.Source.WorldSHA256 != v.Target.WorldSHA256 {
-		add("world snapshot checksum differs")
+		add("Контрольная сумма снимка мира не совпадает")
 	}
 	if v.Source.Loader == "" || v.Source.Loader != v.Target.Loader {
 		add("Несовпадение загрузчика Minecraft")
 	}
 	if !digest.MatchString(v.Source.OptionalPresetSHA256) || v.Source.OptionalPresetSHA256 != v.Target.OptionalPresetSHA256 {
-		add("optional preset differs")
+		add("Набор необязательных компонентов отличается")
 	}
 	if len(v.Source.Players) == 0 || len(v.Source.Players) > 20000 || len(v.Target.Players) > 20000 {
 		return Report{}, errors.New("Не поддерживается: «rehearsal population»")
@@ -144,22 +144,22 @@ func Evaluate(v Report) (Report, error) {
 			continue
 		}
 		if p.UUID != before.UUID {
-			add("UUID differs: " + p.SourceID)
+			add("UUID отличается: " + p.SourceID)
 		}
 		if p.InventorySHA256 != before.InventorySHA256 {
-			add("inventory differs: " + p.SourceID)
+			add("Содержимое инвентаря отличается: " + p.SourceID)
 		}
 		if p.PermissionsSHA256 != before.PermissionsSHA256 {
-			add("permissions differ: " + p.SourceID)
+			add("Разрешения отличаются: " + p.SourceID)
 		}
 		if p.Economy != before.Economy {
-			add("economy differs: " + p.SourceID)
+			add("Данные экономики отличаются: " + p.SourceID)
 		}
 		if p.SkinSHA256 != before.SkinSHA256 {
-			add("skin differs: " + p.SourceID)
+			add("Скин отличается: " + p.SourceID)
 		}
 		if p.Admin != before.Admin {
-			add("admin privileges differ: " + p.SourceID)
+			add("Права администратора отличаются: " + p.SourceID)
 		}
 	}
 	for id := range indexed {
@@ -183,7 +183,7 @@ func Evaluate(v Report) (Report, error) {
 			add("Проверка завершилась ошибкой: " + p.Name)
 		}
 		if (p.Name == "login" || p.Name == "join") && !uuidSeen[p.UUID] {
-			add("probe returned unknown UUID: " + p.Name)
+			add("Проверка вернула неизвестный UUID: " + p.Name)
 		}
 	}
 	for _, name := range RequiredProbes {
@@ -224,7 +224,7 @@ func Evaluate(v Report) (Report, error) {
 				}
 			}
 			if !found {
-				add("live join identity not verified by probe: " + name)
+				add("Проверка не подтвердила личность при подключении к действующему серверу: " + name)
 			}
 		}
 		start, e1 := time.Parse(time.RFC3339Nano, live.StartedAt)

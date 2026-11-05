@@ -41,6 +41,6 @@ if __name__ == '__main__':
     for rel,body in outputs().items():
         dest=ROOT/rel
         if a.check:
-            if not dest.exists() or dest.read_text()!=body:raise SystemExit(f'generated SDK drift: {rel}')
+            if not dest.exists() or dest.read_text()!=body:raise SystemExit(f'Сгенерированный SDK отличается от ожидаемого: {rel}')
         else: dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body)
     print(f'{len(OPS)} OpenAPI operations: generated SDK registries {"checked" if a.check else "written"}')

@@ -39,7 +39,7 @@ def fresh(timestamp: str, now: datetime):
     try:
         dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
     except (ValueError, AttributeError) as exc:
-        raise ValueError('invalid acceptance timestamp') from exc
+        raise ValueError('Некорректная временная метка приёмки') from exc
     require(dt.tzinfo is not None and now - timedelta(days=14) <= dt <= now + timedelta(minutes=5),
             'expired, future or naive operational acceptance timestamp')
 
@@ -137,7 +137,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     signature = base64.b64decode(load('OPERATIONS_GA_0460.sig', 1024).strip(), validate=True)
     require(len(signature) == 64, 'bad operations GA signature length')
     try: pub.verify(signature, DOMAIN + raw)
-    except InvalidSignature as exc: raise ValueError('independent operator signature invalid') from exc
+    except InvalidSignature as exc: raise ValueError('Некорректная независимая подпись оператора') from exc
     document = json.loads(raw)
     manifest = json.loads(load('RELEASE_MANIFEST.json', 16*1024*1024))
     bom = json.loads(load('RELEASE_BOM.json', 16*1024*1024))
@@ -227,7 +227,7 @@ def main():
         except Exception:
             target.unlink(missing_ok=True)
             raise
-        print('Operational acceptance signed; still requires final release and native platform validation')
+        print('Эксплуатационная приёмка подписана; ещё необходимы итоговый выпуск и проверка нативных платформ')
     except (ValueError, OSError, operational.Rejected) as exc:
         print('GA BLOCKED: ' + str(exc), file=sys.stderr)
         return 2

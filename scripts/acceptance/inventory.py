@@ -378,7 +378,7 @@ def command_sign(args):
     envelope = {'payload': payload, 'signatureEd25519': key.sign(raw).hex(),
                 'publicKeySha256': args.public_key_sha256}
     write_exclusive(args.output.resolve(), canonical(envelope) + b'\n')
-    print('independent CI evidence sealed (NOT final native package / GA): ' + str(args.output))
+    print('Независимые свидетельства CI подписаны (это НЕ окончательный нативный пакет и не GA): ' + str(args.output))
     return 0
 
 
@@ -393,10 +393,10 @@ def command_verify(args):
     try:
         key.verify(bytes.fromhex(sealed['signatureEd25519']), DOMAIN + canonical(sealed['payload']))
     except (InvalidSignature, TypeError, ValueError) as exc:
-        raise Blocked('independent signature verification failed') from exc
+        raise Blocked('Независимая проверка подписи завершилась ошибкой') from exc
     require(sealed['payload'] == signed_payload(args),
             'signed evidence differs from replayed raw observations or current catalogs')
-    print('PASS: independently signed 280-target CI observations replayed; GA remains BLOCKED')
+    print('PASS: повторно проверены подписанные результаты CI для 280 целей; GA остаётся заблокированной')
     return 0
 
 
@@ -426,7 +426,7 @@ def main():
     try:
         return args.action(args)
     except (Blocked, OSError, TypeError, KeyError, ValueError) as exc:
-        print('ACCEPTANCE BLOCKED: ' + str(exc), file=sys.stderr)
+        print('Приёмка заблокирована: ' + str(exc), file=sys.stderr)
         return 3
 
 

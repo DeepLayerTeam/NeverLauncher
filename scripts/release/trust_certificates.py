@@ -121,7 +121,7 @@ def main():
     a = p.parse_args()
     root_seed = os.environ.get('LAUNCHER_TRUST_ROOT_ED25519_SEED', '')
     if not root_seed:
-        p.error('offline root signing seed is required')
+        p.error('Требуется исходный материал корневого ключа для автономного подписания')
     try:
         print(json.dumps(rotate(signed_policy=a.signed_policy, expected_sha256=a.expected_sha256,
                                 output=a.output, root_public=a.root_public, root_seed=root_seed,

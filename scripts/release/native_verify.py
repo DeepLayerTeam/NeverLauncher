@@ -40,7 +40,7 @@ def normalize_pe(unsigned: bytes, signed: bytes) -> None:
     конечной выровненной таблице WIN_CERTIFICATE.
     """
     if len(unsigned)<512 or len(signed)<len(unsigned):
-        raise ValueError('truncated PE signing transformation')
+        raise ValueError('Преобразование PE при подписании обрезано')
     def offsets(payload):
         if payload[:2]!=b'MZ':raise ValueError('Недопустимый заголовок PE DOS')
         off=struct.unpack_from('<I',payload,0x3c)[0]
@@ -48,7 +48,7 @@ def normalize_pe(unsigned: bytes, signed: bytes) -> None:
             raise ValueError('Недопустимый заголовок подписи PE')
         return off+24+64,off+24+112+4*8
     ck_a,sec_a=offsets(unsigned);ck_b,sec_b=offsets(signed)
-    if (ck_a,sec_a)!=(ck_b,sec_b):raise ValueError('PE layout changed during signing')
+    if (ck_a,sec_a)!=(ck_b,sec_b):raise ValueError('Разметка PE изменилась при подписании')
     u=bytearray(unsigned);s=bytearray(signed)
     original_dir=struct.unpack_from('<II',u,sec_a)
     cert_off,cert_size=struct.unpack_from('<II',s,sec_b)
@@ -58,16 +58,16 @@ def normalize_pe(unsigned: bytes, signed: bytes) -> None:
         arr[ck_a:ck_a+4]=b'\0'*4
         arr[sec_a:sec_a+8]=b'\0'*8
     if u!=s[:len(u)] or any(s[len(u):cert_off]):
-        raise ValueError('signer altered executable bytes outside Authenticode metadata')
+        raise ValueError('Подписант изменил байты исполняемого файла вне метаданных Authenticode')
     # Любые данные после сертификата требуют отдельного объявления и проверки.
     if cert_off+cert_size!=len(s):
-        raise ValueError('unsigned trailing data after Authenticode certificate')
+        raise ValueError('Неподписанные дополнительные данные после сертификата Authenticode')
 
 
 def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli: Path,
                   public_key: Path, trust_policy: Path, trust_state: Path) -> dict:
     if target not in TARGETS:
-        raise ValueError('target not in release contract')
+        raise ValueError('Целевая платформа отсутствует в контракте выпуска')
     plat,arch=target.split('-',1)
     expected_os={'windows':'Windows','darwin':'Darwin','linux':'Linux'}[plat]
     if platform.system()!=expected_os:
@@ -90,7 +90,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
     if plat=='linux':
         for name in binary_names:
             if unsigned_files[name]!=signed_files[name]:
-                raise ValueError('Linux package changed executable bytes after unsigned capture: '+name)
+                raise ValueError('Исполняемые байты пакета Linux изменились после фиксации неподписанного содержимого: '+name)
         actual_check='release-ed25519-and-digest-verified'
     elif plat=='windows':
         signtool=shutil.which('signtool.exe')

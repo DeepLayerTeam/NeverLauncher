@@ -26,17 +26,17 @@ def timestamp() -> tuple[int, int, int, int, int, int]:
     except (ValueError, OverflowError, OSError) as exc:
         raise ValueError('Некорректное значение: SOURCE_DATE_EPOCH') from exc
     if not 1980 <= dt.year <= 2107:
-        raise ValueError('SOURCE_DATE_EPOCH outside ZIP supported dates')
+        raise ValueError('SOURCE_DATE_EPOCH вне диапазона дат, поддерживаемого ZIP')
     return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second // 2 * 2)
 
 
 def safe_member(name: str) -> str:
     if (not name or '\\' in name or '\\x00' in name or name.startswith('/')
             or name.endswith('/') or ':' in name):
-        raise ValueError('unsafe ZIP member name')
+        raise ValueError('Небезопасное имя элемента ZIP')
     parts = PurePosixPath(name).parts
     if any(part in ('.', '..', '') for part in name.split('/')) or not parts:
-        raise ValueError('unsafe ZIP member path')
+        raise ValueError('Небезопасный путь элемента ZIP')
     return name
 
 
@@ -47,25 +47,25 @@ def safe_file(root: Path, rel: str) -> tuple[Path, int]:
         current = current / part
         mode = current.lstat().st_mode
         if stat.S_ISLNK(mode):
-            raise ValueError(f'symlink forbidden in release payload: {rel}')
+            raise ValueError(f'Символические ссылки запрещены в содержимом выпуска: {rel}')
     mode = current.stat().st_mode
     if not stat.S_ISREG(mode):
-        raise ValueError(f'non-regular release payload: {rel}')
+        raise ValueError(f'Нестандартный файл в содержимом выпуска: {rel}')
     return current, mode
 
 
 def write_zip(root: Path, output: Path, members: list[tuple[str, str]]) -> None:
     """Элементы содержат относительный исходный путь и путь назначения внутри архива."""
     if not root.is_dir() or root.is_symlink():
-        raise ValueError('unsafe release source directory')
+        raise ValueError('Небезопасный исходный каталог выпуска')
     moment = timestamp()
     normalized = sorted((safe_member(arc), rel) for rel, arc in members)
     if len({arc for arc, _ in normalized}) != len(normalized):
-        raise ValueError('duplicate release archive member')
+        raise ValueError('Повторяющийся элемент архива выпуска')
     # Промышленная упаковка исходников складывает результат в ROOT/dist; это
     # безопасно, пока этот результат не входит во входные данные того же архива.
     if any((root / rel).resolve() == output.resolve() for _, rel in normalized):
-        raise ValueError('release archive cannot contain itself')
+        raise ValueError('Архив выпуска не может содержать самого себя')
     output.parent.mkdir(parents=True, exist_ok=True)
     temp = output.with_name(output.name + '.partial')
     try:

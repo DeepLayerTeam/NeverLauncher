@@ -81,7 +81,7 @@ def path_file(path, limit=16<<20):
     try:
         return rehearsal.safe(Path(path),limit)
     except (OSError, rehearsal.Blocked) as exc:
-        raise Blocked('unsafe/missing original evidence: '+str(path)) from exc
+        raise Blocked('Исходные свидетельства отсутствуют или небезопасны: '+str(path)) from exc
 
 def read(path):
     doc = rehearsal.read(Path(path))
@@ -378,7 +378,7 @@ def main(argv=None):
                     serialization.PublicFormat.Raw)==public.public_bytes(serialization.Encoding.Raw,
                     serialization.PublicFormat.Raw),'QA signer differs from pinned independent QA key')
             sign(a.qa_report,a.qa_sig,report,secret,DOMAIN)
-            print('18 real E2E groups independently observed; final GA approval still BLOCKED')
+            print('Независимо проверены 18 групп реальных E2E-тестов; итоговое подтверждение GA ещё заблокировано')
         elif a.action=='approve':
             need(a.verifier_private_key is not None,'separate final verifier signing key required')
             report=approval(a)
@@ -388,16 +388,16 @@ def main(argv=None):
                     serialization.PublicFormat.Raw)==public.public_bytes(serialization.Encoding.Raw,
                     serialization.PublicFormat.Raw),'verifier signer differs from approved verifier key')
             sign(a.ga_report,a.ga_sig,report,secret,FINAL_DOMAIN)
-            print('INDEPENDENT FULL REAL ACCEPTANCE PASS: signed exact-byte GA approval')
+            print('Независимая полная приёмка в реальной среде пройдена: подписано подтверждение GA с точным совпадением байтов')
         else:
             approved=approval(a)
             signed=verify_signed(a.ga_report,a.ga_sig,a.verifier_key,a.verifier_pin,FINAL_DOMAIN)
             need(approved==signed and signed['status']=='PASS', 'GA signature or live evidence changed')
-            print('GA RELEASE GATE PASS: final packages and all 18 real E2E groups independently verified')
+            print('Выпускной контроль GA пройден: итоговые пакеты и все 18 групп реальных E2E-тестов независимо проверены')
         return 0
     except (Blocked,rehearsal.Blocked,inventory.Blocked,OSError,ValueError,TypeError,
             KeyError,subprocess.TimeoutExpired,subprocess.CalledProcessError,InvalidSignature) as exc:
-        print('0.53.0 FULL USER ACCEPTANCE BLOCKED: '+type(exc).__name__+': '+str(exc),file=sys.stderr)
+        print('Полная пользовательская приёмка 0.53.0 заблокирована: '+type(exc).__name__+': '+str(exc),file=sys.stderr)
         return 3
 
 if __name__=='__main__':

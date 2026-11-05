@@ -21,20 +21,20 @@ class InputsGuardTests(unittest.TestCase):
         baseline=json.loads(guard.BASELINE.read_text())
         current=json.loads(json.dumps(baseline))
         current['release']='999.0.0'
-        with self.assertRaisesRegex(ValueError, 'unrecognized input baseline'):
+        with self.assertRaisesRegex(ValueError, 'Неизвестная исходная база'):
             guard.verify(baseline,current)
     def test_modified_lockfile_fails_closed(self):
         baseline=json.loads(guard.BASELINE.read_text())
         mutated=json.loads(json.dumps(baseline))
         path='apps/desktop/package-lock.json'
         mutated['files'][path]['sha256']='0'*64
-        with self.assertRaisesRegex(ValueError,'input drift'):
+        with self.assertRaisesRegex(ValueError,'Изменились входные файлы'):
             guard.verify(baseline,mutated)
     def test_addition_or_deletion_of_input_fails_closed(self):
         baseline=json.loads(guard.BASELINE.read_text())
         mutated=json.loads(json.dumps(baseline))
         mutated['files'].pop('services/api/go.mod')
-        with self.assertRaisesRegex(ValueError,'input drift'):
+        with self.assertRaisesRegex(ValueError,'Изменились входные файлы'):
             guard.verify(baseline,mutated)
 
 if __name__=='__main__':unittest.main()

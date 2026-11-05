@@ -22,7 +22,7 @@ static PROCESS_HOST_SLOTS: OnceLock<Mutex<HashMap<String, Weak<Semaphore>>>> = O
 
 fn process_host_permit_map(hosts: impl Iterator<Item = String>) -> HashMap<String, Arc<Semaphore>> {
     let mut guard = PROCESS_HOST_SLOTS.get_or_init(|| Mutex::new(HashMap::new()))
-        .lock().expect("process host limit lock poisoned");
+        .lock().expect("Блокировка лимита загрузок для хоста повреждена");
     guard.retain(|_, gate| gate.strong_count() != 0);
     let mut entries = HashMap::new();
     for host in hosts {
@@ -148,7 +148,7 @@ impl Statistics {
         let transferred = self.transferred.load(Ordering::Relaxed);
         let verified = self.verified.load(Ordering::Relaxed);
         let (speed, in_flight) = {
-            let mut metrics = self.metrics.lock().expect("download metrics lock poisoned");
+            let mut metrics = self.metrics.lock().expect("Блокировка метрик загрузки повреждена");
             if metrics.samples.back().is_none_or(|(previous, _)| now.duration_since(*previous) >= Duration::from_millis(250)) {
                 metrics.samples.push_back((now, transferred));
             }
@@ -252,12 +252,12 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
             network_resilience::check(&control)?;
             // При каждом повторе прогресс учитывается заново. Никогда не считайте
             // повторные или некорректные сетевые байты установленными данными.
-            stats.metrics.lock().expect("download metrics lock poisoned")
+            stats.metrics.lock().expect("Блокировка метрик загрузки повреждена")
                 .in_flight.insert(job.file.path.clone(), 0);
             let outcome = crate::http_resume::download_verified_controlled(client, root, &requested,
                 &job.target, |bytes| {
                     stats.transferred.fetch_add(bytes, Ordering::Relaxed);
-                    let mut metrics = stats.metrics.lock().expect("download metrics lock poisoned");
+                    let mut metrics = stats.metrics.lock().expect("Блокировка метрик загрузки повреждена");
                     let active = metrics.in_flight.entry(job.file.path.clone()).or_insert(0);
                     *active = active.saturating_add(bytes).min(job.file.size);
                     drop(metrics);
@@ -458,7 +458,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
             stats.active.fetch_sub(1, Ordering::Relaxed);
             match outcome {
                 Ok((path, size, Ok(_cache_hit))) => {
-                    stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
+                    stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
                     stats.verified.fetch_add(size, Ordering::Relaxed);
                     result.downloaded += 1;
                     result.repaired += 1;
@@ -466,11 +466,11 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
                     stats.emit("verified", Some(&path), true);
                 },
                 Ok((path, _, Err(e))) if e == "download paused" || e == "download cancelled" => {
-                    stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
+                    stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
                     // Долговременный журнал и все проверенные частичные файлы сохраняются.
                 },
                 Ok((path, _, Err(e))) => {
-                    stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
+                    stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
                     result.failed += 1;
                     result.failed_files.push(path.clone());
                     result.messages.push(e);

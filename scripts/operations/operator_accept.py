@@ -50,7 +50,7 @@ def run(args, *, timeout=30):
         proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                               timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise AcceptanceError('required command unavailable or timed out: ' + args[0]) from exc
+        raise AcceptanceError('Обязательная команда недоступна или превысила время ожидания: ' + args[0]) from exc
     require(proc.returncode == 0, 'required command failed: ' + args[0])
     require(len(proc.stdout) <= 512 * 1024, 'command output exceeds safety limit')
     return proc.stdout
@@ -61,7 +61,7 @@ def inspect_url(value):
         parsed = urllib.parse.urlsplit(value)
         port = parsed.port
     except ValueError as exc:
-        raise AcceptanceError('invalid public readiness URL') from exc
+        raise AcceptanceError('Некорректный публичный URL проверки готовности') from exc
     require(parsed.scheme == 'https' and parsed.hostname and not parsed.username and
             not parsed.password and parsed.path in ('', '/ready') and not parsed.query and
             not parsed.fragment and port in (None, 443),
@@ -79,12 +79,12 @@ def ready(url, expected_version, repository, storage, *, opener=None):
                     'HTTPS readiness is not JSON')
             raw = response.read(MAX_HTTP + 1)
     except (OSError, ValueError) as exc:
-        raise AcceptanceError('public HTTPS readiness failed') from exc
+        raise AcceptanceError('Публичная проверка готовности HTTPS не пройдена') from exc
     require(len(raw) <= MAX_HTTP, 'readiness payload too large')
     try:
         payload = json.loads(raw)
     except (UnicodeError, ValueError) as exc:
-        raise AcceptanceError('invalid readiness JSON') from exc
+        raise AcceptanceError('Некорректный JSON состояния готовности') from exc
     require(isinstance(payload, dict), 'invalid readiness body')
     require(payload.get('status') == 'ready', 'backend is not ready')
     require(payload.get('version') == expected_version, 'running backend version mismatch')
@@ -110,7 +110,7 @@ def parse_ps(raw):
         entries = (json.loads(txt) if txt.startswith('[') else
                    [json.loads(line) for line in txt.splitlines()]) if txt else []
     except (UnicodeError, ValueError) as exc:
-        raise AcceptanceError('invalid Docker Compose ps response') from exc
+        raise AcceptanceError('Некорректный ответ Docker Compose ps') from exc
     if isinstance(entries, dict):
         entries = [entries]
     require(isinstance(entries, list), 'invalid Compose service inventory')
@@ -131,7 +131,7 @@ def checked_origin(value):
     try:
         port = url.port
     except ValueError as exc:
-        raise AcceptanceError('invalid deployment origin') from exc
+        raise AcceptanceError('Некорректный источник развёртывания') from exc
     require(url.scheme == 'https' and url.hostname and not url.username and
             not url.password and url.path in ('', '/') and not url.query and
             not url.fragment and port in (None, 443),
@@ -188,7 +188,7 @@ def probe_compose(project, env, mode):
             try:
                 internal = json.loads(output)
             except (UnicodeError, ValueError) as exc:
-                raise AcceptanceError(name + ' returned invalid readiness JSON') from exc
+                raise AcceptanceError(name + ' вернул некорректный JSON состояния готовности') from exc
             require(internal.get('status') == 'ready' and internal.get('repository') == 'postgres',
                     name + ' is not ready against PostgreSQL')
             require(internal.get('storage') == 's3', name + ' does not use shared S3')
@@ -214,7 +214,7 @@ def probe_minimal(root):
             require(connection.execute('PRAGMA foreign_key_check').fetchone() is None,
                     name + ' foreign-key violations')
         except sqlite3.Error as exc:
-            raise AcceptanceError(name + ' could not be read') from exc
+            raise AcceptanceError(name + ' не удалось прочитать') from exc
         finally:
             connection.close()
         checked[name] = 'integrity + foreign keys ok'

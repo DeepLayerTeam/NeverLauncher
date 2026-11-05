@@ -228,7 +228,7 @@ def main() -> int:
             if mounted:
                 # Никогда не удаляйте файлы при смонтированной закрытой файловой системе.
                 subprocess.run(['umount',str(mountpoint)],check=True,stdout=subprocess.DEVNULL)
-    print('0.52.7 real physical installer acceptance PASS; receipt saved privately')
+    print('Приёмка физического установщика 0.52.7 прошла; квитанция сохранена в закрытом хранилище')
     return 0
 
 if __name__ == '__main__':
@@ -236,5 +236,5 @@ if __name__ == '__main__':
         raise SystemExit(main())
     except (AcceptanceError, OSError, subprocess.SubprocessError) as err:
         # Не раскрывайте полную диагностику дочерних процессов и сырые токены провайдера.
-        print(f'0.52.7 physical acceptance BLOCKED/FAIL: {err.__class__.__name__}: {err}',file=__import__('sys').stderr)
+        print(f'Приёмка физической установки 0.52.7 заблокирована или не пройдена: {err.__class__.__name__}: {err}',file=__import__('sys').stderr)
         raise SystemExit(1)

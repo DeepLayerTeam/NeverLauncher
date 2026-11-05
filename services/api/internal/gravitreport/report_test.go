@@ -57,7 +57,7 @@ func TestMissingAndBlockedCannotPass(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if !strings.Contains(strings.Join(r.Blockers, "/"), "collision") {
+	if !strings.Contains(strings.Join(r.Blockers, "/"), "Конфликт UUID") {
 		t.Fatal(r.Blockers)
 	}
 }
@@ -87,7 +87,7 @@ func TestManualCutoverCannotBeReviewed0340(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if r.Status != "blocked" || !strings.Contains(strings.Join(r.Blockers, ";"), "cutover: required stage not verified") {
+	if r.Status != "blocked" || !strings.Contains(strings.Join(r.Blockers, ";"), "cutover: обязательный этап не проверен") {
 		t.Fatalf("unsafe RC review: %+v", r)
 	}
 	a.Evidence[len(a.Evidence)-2].State = "verified"

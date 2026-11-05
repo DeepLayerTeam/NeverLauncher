@@ -769,7 +769,7 @@ def main(argv=None):
     except (HAError, multi.DeploymentError, inventory.InventoryError, OSError, ValueError) as exc:
         # Намеренно не выводите необработанную конфигурацию и закрытые учётные
         # данные.
-        print('dependency HA operation unavailable: ' + type(exc).__name__, file=sys.stderr)
+        print('Операция высокой доступности зависимостей недоступна: ' + type(exc).__name__, file=sys.stderr)
         return 2
 
 if __name__ == '__main__':
