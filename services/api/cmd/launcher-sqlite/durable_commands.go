@@ -35,7 +35,7 @@ func runDurableAction(args []string) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *db == "" || *input == "" || *timeout <= 0 {
-		fmt.Fprintln(os.Stderr, "--db and --input 0600 JSON are required")
+		fmt.Fprintln(os.Stderr, "необходимы --db и --input с JSON-файлом прав доступа 0600")
 		return 2
 	}
 	var req struct {

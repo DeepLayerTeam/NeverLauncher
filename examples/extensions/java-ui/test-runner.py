@@ -96,7 +96,7 @@ if __name__=="__main__":
         cli=subprocess.run(["java","-jar",str(jar),"status"],env=env(server,"cli"),capture_output=True,text=True,timeout=15)
         assert cli.returncode==0,(cli.stderr,cli.stdout)
         assert json.loads(cli.stdout)["extension"]==EXPECTED["id"],cli.stdout
-        print("PASS: real Java JAR, Admin/Desktop callbacks, settings via Host broker, CLI, denied actions and auth")
+        print("PASS: реальный JAR Java, обратные вызовы Admin и Desktop, настройки через брокер хоста, CLI, запрет действий и авторизация")
     finally:
         if proc.poll() is None:proc.send_signal(signal.SIGTERM)
         try:proc.communicate(timeout=8)

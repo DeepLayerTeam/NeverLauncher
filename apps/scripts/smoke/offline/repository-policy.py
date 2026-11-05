@@ -110,7 +110,7 @@ else:
         api_digest = hashlib.sha256(api_files[name].read_bytes()).digest()
         cli_digest = hashlib.sha256(cli_files[name]).digest()
         if api_digest != cli_digest:
-            fail(f"migration checksum drift between Backend and CLI: {name}")
+            fail(f"контрольные суммы миграций Backend и CLI не совпадают: {name}")
 if "0011_auth_federation_release_0120.sql" not in api_files:
     fail("0.12.0 отсутствует миграция выпуска Auth Federation")
 release_migration = api_files["0011_auth_federation_release_0120.sql"].read_text(
@@ -701,7 +701,7 @@ for required in [
     "replay old refresh",
 ]:
     if required not in federation_e2e:
-        fail(f"federation PostgreSQL E2E missing stabilization check: {required}")
+        fail(f"в сквозных проверках федерации PostgreSQL отсутствует проверка стабилизации: {required}")
 if 'case "production", "prod", "e2e-production"' not in config_go:
     fail("config: e2e-production должен проходить production validation")
 
@@ -1964,7 +1964,7 @@ if (
     "launch заблокирован: Guard Windows Integrity Evidence v1 недоступен"
     not in desktop_0132
 ):
-    fail("0.13.2 Desktop launch is not fail-closed on integrity evidence collection")
+    fail("0.13.2 запуск Desktop не блокируется при ошибке сбора свидетельств целостности")
 if (
     "guard-integrity-evidence-0132.py" not in preflight
     or "guard-integrity-evidence-0132.py" not in ci
@@ -2014,7 +2014,7 @@ if (
     "launch заблокирован: Guard Windows process policy verification failed"
     not in desktop_0133
 ):
-    fail("0.13.3 Desktop launch is not fail-closed on process policy verification")
+    fail("0.13.3 запуск Desktop не блокируется при ошибке проверки политики процессов")
 if (
     "guard-process-policy-0133.py" not in preflight
     or "guard-process-policy-0133.py" not in ci
@@ -2297,7 +2297,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "DELIVERY_MANIFEST.json" not in read(
         "scripts/smoke/release-required/release-bundle.sh"
     ):
-        fail("0.15.1 publish gate does not require DELIVERY_MANIFEST.json")
+        fail("0.15.1 проверка публикации не требует DELIVERY_MANIFEST.json")
     if (
         "delivery-manifest-platform-architecture-0151.py" not in preflight
         or "delivery-manifest-platform-architecture-0151.py" not in ci
@@ -2371,7 +2371,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ci:
             fail(f"0.15.3 Linux native CI matrix — не завершено: {required}")
     if "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR" not in production_release_workflow:
-        fail("0.15.3 Linux production release staging is not wired")
+        fail("0.15.3 подготовка промышленного выпуска Linux не подключена")
     for required in [
         "LINUX_PRODUCTION_EVIDENCE.json",
         "LINUX_PACKAGE_MANIFEST_X64.json",
@@ -2605,7 +2605,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in managed_java_0165:
             fail(f"0.16.5 Managed Java II runtime — не завершено: {required}")
     if "--major <8|16|17|21|25>" not in managed_java_cli_0165:
-        fail("0.16.5 Managed Java II CLI does not expose all certified majors")
+        fail("0.16.5 CLI управляемой Java II не поддерживает все сертифицированные основные версии")
     for required in [
         "for major in 8 16 17 21 25",
         "java ensure",
@@ -2626,9 +2626,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.16.5 Managed Java II — проверка не подключена к предварительным проверкам и CI")
     if "managed-java-II-8-16-17-21-25" not in release_commands_0165:
-        fail("0.16.5 release certification does not require Managed Java II")
+        fail("0.16.5 сертификация выпуска не требует управляемую Java II")
     if "MANAGED_JAVA_II_EVIDENCE.json" not in release_builder_0165:
-        fail("0.16.5 release bundle does not stage Managed Java II evidence")
+        fail("0.16.5 набор выпуска не содержит свидетельств управляемой Java II")
     if "MANAGED_JAVA_II_EVIDENCE.json" not in release_bundle_0165:
         fail(
             "0.16.5 Проверка обязательных артефактов выпуска не требует свидетельство Managed Java II"
@@ -2756,7 +2756,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in matrix_0167:
             fail(f"0.16.7 compatibility matrix Java 21 — проверка не завершена: {required}")
     if "vanilla-1.20.5-1.21.10-java21-exact" not in release_0167:
-        fail("0.16.7 release certification does not bind exact Java 21 Vanilla policy")
+        fail("0.16.7 сертификация выпуска не привязана к политике Vanilla для Java 21")
     for required in [
         "TestJavaMajorFromVersionEnforcesJava21VanillaRange",
         "TestInstallVanilla0167RejectsWrongJavaBeforeArtifactDownload",
@@ -2811,7 +2811,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in matrix_0168:
             fail(f"0.16.8 compatibility matrix Java 25 — проверка не завершена: {required}")
     if "vanilla-26.1.x-26.3-java25-exact" not in release_0168:
-        fail("0.16.8 release certification does not bind exact Java 25 Vanilla policy")
+        fail("0.16.8 сертификация выпуска не привязана к политике Vanilla для Java 25")
     for required in [
         "TestJavaMajorFromVersionEnforcesJava25VanillaRange",
         "TestInstallVanilla0168RejectsWrongJavaBeforeArtifactDownload",
@@ -2868,7 +2868,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "platform-runtime.json",
     ]:
         if required not in workflow_0169:
-            fail(f"0.16.9 compatibility workflow is not host-bound: {required}")
+            fail(f"0.16.9 проверка совместимости не привязана к хосту: {required}")
     for required in ["platform-runtime.json", "platformMatched", "runner mismatch"]:
         if required not in compat_case_0169:
             fail(f"0.16.9 platform evidence — не завершено: {required}")
@@ -2895,9 +2895,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in runtime_compat_0169:
             fail(f"0.16.9 Runtime native filtering — не завершено: {required}")
     if "base.join(platform).join(arch)" not in runtime_core_0169:
-        fail("0.16.9 Runtime does not isolate natives by OS/architecture")
+        fail("0.16.9 Runtime не изолирует нативные библиотеки по ОС и архитектуре")
     if "cross-platform-vanilla-windows-linux-macos-x64-arm64" not in release_0169:
-        fail("0.16.9 release certification does not bind cross-platform Vanilla policy")
+        fail("0.16.9 сертификация выпуска не привязана к кроссплатформенной политике Vanilla")
     for required in [
         "TestVanillaRuleAndNativeClassifierMatchTargetArchitecture",
         "cross_platform_native_classifier_is_architecture_bound",
@@ -3074,7 +3074,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.15.6 updater — проверка не подключена к предварительным проверкам и CI")
     if ci.count("update self-test") < 4:
-        fail("0.15.6 updater native runtime self-tests are missing from CI")
+        fail("0.15.6 в CI отсутствуют самопроверки нативного Runtime обновлятора")
 
 # В 0.15.7: транзакционное обновление Desktop/Guard/Runtime подключает ядро 0.15.6
 # к настоящему самообновлению, сохраняя подписи платформ и границы пакетов.
@@ -3177,7 +3177,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.15.7 component updater — проверка не подключена к предварительным проверкам и CI")
     if ci.count("update component-self-test") < 4:
-        fail("0.15.7 native component updater self-tests are missing from CI")
+        fail("0.15.7 в CI отсутствуют самопроверки обновлятора нативных компонентов")
 
 
 # В 0.15.8: Release Verification v2 связывает подписи выпусков с политикой доверия,
@@ -3325,7 +3325,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         "DEVICE_TRUST_CERTIFICATION.json" not in dt_release
         or "deviceTrustCertificationRequired" not in dt_release
     ):
-        fail("0.13.0 release bundle lacks Device Trust certification enforcement")
+        fail("0.13.0 набор выпуска не требует сертификации доверия к устройствам")
     if (
         "exact-commit-public-device-trust-matrix" not in dt_runtime
         or "0018_device_trust_stabilization_01210" not in dt_runtime
@@ -3334,7 +3334,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     if "deviceTrustRelease0130" not in dt_targets_0130:
         fail("0.13.0 публичный Device Trust targets do not require release acceptance")
     if "LAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
-        fail("0.13.0 build-release cannot embed Device Trust matrix")
+        fail("0.13.0 build-release не может включить матрицу Device Trust")
     if (
         "device-trust-release-0130.py" not in preflight
         or "device-trust-release-0130.py" not in ci
@@ -3477,7 +3477,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in artifact_layout_01511:
             fail(f"0.15.11 exact artifact layout resolver — не завершено: {required}")
     if "PRODUCTION_RELEASE_CANDIDATE.json" not in bundle_gate_01511:
-        fail("0.15.11 release-bundle gate does not require candidate certification")
+        fail("0.15.11 проверка набора выпуска не требует сертификации кандидата")
     for required in [
         "TestProductionReleaseCandidate01511BindsExactCohort",
         "TestProductionReleaseCandidate01511RejectsInjectedFile",
@@ -3769,9 +3769,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         len(fabric_rows) != 48
         or len({row.get("minecraft") for row in fabric_rows}) != 48
     ):
-        fail("0.17.1 Fabric target grid must contain exactly 48 unique stable releases")
+        fail("0.17.1 матрица Fabric должна содержать ровно 48 уникальных стабильных выпусков")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in fabric_rows}:
-        fail("0.17.1 Fabric target grid does not cover Java 8/16/17/21/25")
+        fail("0.17.1 матрица Fabric не охватывает Java 8/16/17/21/25")
     for required in [
         "test_validate_accepts_fabric_compatibility_ii_0171_grid",
         "test_validate_rejects_missing_fabric_release_0171",
@@ -3863,9 +3863,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         and row.get("arch") == "x86_64"
     ]
     if len(quilt_rows) != 48 or len({row.get("minecraft") for row in quilt_rows}) != 48:
-        fail("0.17.2 Quilt target grid must contain exactly 48 unique stable releases")
+        fail("0.17.2 матрица Quilt должна содержать ровно 48 уникальных стабильных выпусков")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in quilt_rows}:
-        fail("0.17.2 Quilt target grid does not cover Java 8/16/17/21/25")
+        fail("0.17.2 матрица Quilt не охватывает Java 8/16/17/21/25")
     for required in [
         "test_validate_accepts_quilt_compatibility_ii_0172_grid",
         "test_validate_rejects_missing_quilt_release_0172",
@@ -3922,7 +3922,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         or '"installer": "launcher-forge-materializer"' not in forge_api_0173
         or '"adapter": "compatibility-engine"' not in forge_api_0173
     ):
-        fail("0.17.3 Forge loader catalog still advertises a planned adapter")
+        fail("0.17.3 каталог Forge всё ещё содержит запланированный адаптер")
     for required in [
         "runForgeProcessors",
         "clientProcessorCount",
@@ -3980,9 +3980,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             "0.17.3 Матрица платформ Forge должна содержать ровно 43 уникальных выпуска с соответствующими процессорами"
         )
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in forge_rows}:
-        fail("0.17.3 Forge target grid does not cover Java 8/16/17/21/25")
+        fail("0.17.3 матрица Forge не охватывает Java 8/16/17/21/25")
     if {row.get("minecraft") for row in forge_rows}.intersection({"1.13", "1.13.1"}):
-        fail("0.17.3 Forge Modern must not certify pre-processor Forge 1.13/1.13.1")
+        fail("0.17.3 Forge Modern не должен сертифицировать старый Forge 1.13/1.13.1 до появления процессорного установщика")
     for required in [
         "test_validate_accepts_forge_modern_0173_grid",
         "test_validate_rejects_missing_forge_release_0173",
@@ -4077,7 +4077,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         and row.get("minecraft") == "1.12.2"
     ]
     if len(legacy_rows) != 1:
-        fail("0.17.4 Forge legacy target grid must contain exactly one 1.12.2 row")
+        fail("0.17.4 матрица устаревшего Forge должна содержать ровно одну строку для 1.12.2 row")
     elif (
         legacy_rows[0].get("javaMajor") != 8
         or legacy_rows[0].get("scope") != "client"
@@ -4180,7 +4180,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         and row.get("minecraft") == "1.7.10"
     ]
     if len(legacy_rows) != 1:
-        fail("0.17.5 Forge legacy target grid must contain exactly one 1.7.10 row")
+        fail("0.17.5 матрица устаревшего Forge должна содержать ровно одну строку для 1.7.10 row")
     elif (
         legacy_rows[0].get("javaMajor") != 8
         or legacy_rows[0].get("scope") != "client"
@@ -4310,7 +4310,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     else:
         by_mc = {row.get("minecraft"): row for row in rows}
         if set(by_mc) != set(expected_neo):
-            fail("0.17.6 NeoForge required release set mismatch")
+            fail("0.17.6 набор обязательных выпусков NeoForge не совпадает")
         else:
             for mc, java in expected_neo.items():
                 row = by_mc[mc]
@@ -4327,7 +4327,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         '"adapter": "compatibility-engine", "installer": "launcher-neoforge-materializer", "managedJava": true'
         not in neo_api_0176
     ):
-        fail("0.17.6 NeoForge public loader catalog still advertises a placeholder")
+        fail("0.17.6 NeoForge публичный каталог загрузчиков всё ещё содержит заглушку")
     for required in ["neoforge-install.json", "neoforge-certification.json"]:
         if required not in neo_workflow_0176:
             fail(f"0.17.6 NeoForge CI raw evidence — отсутствует: {required}")
@@ -4813,7 +4813,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         (row.get("os"), row.get("arch")) != ("linux", "x86_64")
         for row in unavailable_rows
     ):
-        fail("0.17.11 blocked target platform is not linux/x86_64")
+        fail("0.17.11 заблокированная целевая платформа не равна linux/x86_64")
     expected_family_counts = {
         "vanilla": 109,
         "fabric": 53,
@@ -4826,7 +4826,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         for loader in expected_family_counts
     }
     if actual_family_counts != expected_family_counts:
-        fail(f"0.17.11 loader family coverage mismatch: {actual_family_counts}")
+        fail(f"0.17.11 покрытие семейств загрузчиков не совпадает: {actual_family_counts}")
     for required in [
         "TestLoaderCompatibilityReleaseCertificate01711Complete",
         "TestLoaderCompatibilityReleaseCertificate01711RejectsTamperedRoot",
@@ -4927,12 +4927,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ga_tests_0180:
             fail(f"0.18.0 GA — отсутствует регрессионный тест: {required}")
     if "Loader Compatibility GA 0.18.0 gate: OK" not in ga_gate_0180:
-        fail("0.18.0 mandatory Loader Compatibility GA — проверка не завершена")
+        fail("0.18.0 mandatory приёмка совместимости загрузчиков — проверка не завершена")
     if (
         "loader-compatibility-ga-0180.py" not in preflight
         or "loader-compatibility-ga-0180.py" not in ci
     ):
-        fail("0.18.0 Loader Compatibility GA — проверка не подключена к предварительным проверкам и CI")
+        fail("0.18.0 приёмка совместимости загрузчиков — проверка не подключена к предварительным проверкам и CI")
 
 
 # В 0.18.1: Windows Protection Core II делает профиль Guard и модель
@@ -5048,7 +5048,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             "authenticate_sensor_or_kill(sensor_bootstrap, &mut child)"
         ) < 2
     ):
-        fail("Guard Sensor is not enforced in both direct JVM launch paths")
+        fail("Guard Sensor не обязателен в обоих путях прямого запуска JVM")
     for required in [
         "prepare_sensor_command_for_game(&mut command, root, manifest)",
         "authenticate_sensor_or_kill(sensor_bootstrap, &mut child)",
@@ -5184,7 +5184,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.18.3 Module Guard — проверка не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.3 Module Guard lacks real Windows integration/clippy CI")
+        fail("0.18.3 для Module Guard отсутствуют реальные проверки Windows и Clippy в CI")
 
 
 # В 0.18.4: Aggressive Hook Engine I — настоящий внутрипроцессный перехват IAT с
@@ -5273,7 +5273,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.18.4 Hook Engine — проверка не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.4 Hook Engine lacks Windows integration/clippy CI")
+        fail("0.18.4 для Hook Engine отсутствуют проверки Windows и Clippy в CI")
 
 
 # В 0.18.5: Memory Integrity постоянно исследует исполняемую память
@@ -5374,9 +5374,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "runtime/guard-memory-probe/Cargo.toml" not in ci
         or "GUARD_MEMORY_PROBE_DLL" not in ci
     ):
-        fail("0.18.5 Memory Integrity lacks adversarial Windows probe CI")
+        fail("0.18.5 для Memory Integrity отсутствует проверка попыток обхода защиты Windows в CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.5 Memory Integrity lacks real Windows integration/clippy CI")
+        fail("0.18.5 для Memory Integrity отсутствуют реальные проверки Windows и Clippy в CI")
 
 
 # В 0.18.6: Thread & Process Integrity постоянно проверяет источники Win32-потоков
@@ -5491,7 +5491,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "runtime/guard-thread-probe/Cargo.toml" not in ci
         or "GUARD_THREAD_PROBE_DLL" not in ci
     ):
-        fail("0.18.6 Thread Integrity lacks adversarial Windows probe CI")
+        fail("0.18.6 для Thread Integrity отсутствует проверка попыток обхода защиты Windows в CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail(
             "0.18.6 Для Thread & Process Integrity отсутствуют реальные интеграционные проверки или clippy в CI Windows"
@@ -5532,7 +5532,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "NtSetInformationThread",
     ]:
         if forbidden in debug_sensor_0187:
-            fail(f"0.18.7 Sensor uses forbidden anti-analysis primitive: {forbidden}")
+            fail(f"0.18.7 датчик использует запрещённый механизм противодействия анализу: {forbidden}")
     for required in [
         "MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY",
         "MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT",
@@ -5604,9 +5604,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "runtime/guard-debug-probe/Cargo.toml" not in ci
         or "GUARD_DEBUG_PROBE_EXE" not in ci
     ):
-        fail("0.18.7 Debug Guard lacks adversarial debugger probe CI")
+        fail("0.18.7 для Debug Guard отсутствует проверка отладочных атак в CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.7 Debug Guard lacks real Windows integration/clippy CI")
+        fail("0.18.7 для Debug Guard отсутствуют реальные проверки Windows и Clippy в CI")
 
 
 # В 0.18.8: JVM-Aware Protection связывает переходы исполняемой памяти MEM_PRIVATE
@@ -5779,9 +5779,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.18.9 Continuous Guard — проверка не подключена к предварительным проверкам и CI")
     if "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat" not in ci:
-        fail("0.18.9 Continuous Guard lacks real Windows heartbeat integration CI")
+        fail("0.18.9 для Continuous Guard отсутствует реальная проверка сигналов активности Windows в CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.9 Continuous Guard lacks real Windows integration/clippy CI")
+        fail("0.18.9 для Continuous Guard отсутствуют реальные проверки Windows и Clippy в CI")
 
 
 # В 0.18.11: Windows Adversarial CI выполняет настоящие атакующие тесты Windows/JVM для каждой
@@ -5804,7 +5804,7 @@ for scenario_id, scenario_type in (
     # Проверяйте исполняемые объявления сценариев независимо от форматирования.
     pattern = r'Scenario\(\s*"' + re.escape(scenario_id) + r'"\s*,\s*"' + scenario_type + r'"'
     if not re.search(pattern, adversarial_runner_01811):
-        fail(f"0.18.11 Windows Adversarial CI missing {scenario_type} scenario: {scenario_id}")
+        fail(f"0.18.11 в Windows Adversarial CI отсутствует {scenario_type} scenario: {scenario_id}")
 for required in (
     "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
     '"WINDOWS_ADVERSARIAL_CERTIFICATE.json"',
@@ -6076,7 +6076,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verify_server_control_0290.py",
     ]:
         if required not in game_e2e:
-            fail(f"0.29.0 real Minecraft E2E lacks world restoration gate: {required}")
+            fail(f"0.29.0 в реальных сквозных проверках Minecraft отсутствует проверка восстановления мира: {required}")
     for required in [
         "docker",
         "paper:/data/.",
@@ -6111,7 +6111,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verify_server_control_0290.py" not in pipeline
         or "world-backup-0290.json" not in pipeline
     ):
-        fail("0.29.0 CI must execute and retain the real Paper world restoration gate")
+        fail("0.29.0 CI должен выполнять проверку реального восстановления мира Paper и сохранять результат")
     if (
         "server-control-ga:" not in release_pipeline
         or "server-control-ga, admin-ga-certification" not in release_pipeline
@@ -6121,7 +6121,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         )
 
 if errors:
-    print("[Launcher] repository policy: FAILED", file=sys.stderr)
+    print("[Launcher] политика репозитория: ОШИБКА", file=sys.stderr)
     for item in errors:
         print(f" - {item}", file=sys.stderr)
     sys.exit(1)

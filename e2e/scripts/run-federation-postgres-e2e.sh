@@ -41,7 +41,7 @@ wait_http() {
     sleep 1
   done
   compose logs "$service" >&2 || true
-  echo "[federation-postgres-e2e] timeout waiting for $url" >&2
+  echo "[federation-postgres-e2e] превышено время ожидания $url" >&2
   return 1
 }
 json_post() {

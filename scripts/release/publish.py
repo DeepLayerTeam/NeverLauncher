@@ -637,7 +637,7 @@ def main() -> int:
         # байтов. Блокируйте публикацию до новой независимой GA-приёмки точных байтов; изменение VERSION не
         # заменяет доказательства миграции, игры, совместимости старых клиентов и подписания.
         if re.fullmatch(r"0\.48\.(?:[1-9][0-9]*)", a.version):
-            raise Blocked("0.48.x patch release: требуется fresh, commit-bound independent migration, legacy, game and signed-delivery GA admission; existing 0.48.0 evidence cannot certify new executable bytes")
+            raise Blocked("0.48.x patch release: требуется fresh, commit-bound independent migration, legacy, game and signed-delivery GA admission; existing 0.48.0 evidence не удалось сертифицировать new executable bytes")
         if a.version == "0.48.0":
             require(all((a.ga0480_evidence_dir, a.ga0480_approval,
                          a.ga0480_signature, a.ga0480_trusted_key)),

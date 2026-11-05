@@ -267,7 +267,7 @@ if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   [[ "$CERT_PORT" =~ ^[0-9]{1,5}$ ]] || { echo '[matching-e2e] недопустимый порт клиентского подключения с ограниченным доступом' >&2; exit 1; }
 fi
 
-printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
+printf '[matching-e2e] запуск реального клиента Mojang %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
 # На размещённом Linux-агенте нет устройства ALSA. OpenAL Soft постоянно ищет
 # отсутствующее оборудование при первоначальной перезагрузке ресурсов, замедляя
 # модели блоков, когда клиент 1.17.1 уже получает чанки. Используйте настоящий

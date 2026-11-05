@@ -86,7 +86,7 @@ def pinned_key(path: Path, pin: str):
     key = serialization.load_pem_public_key(raw)
     require(isinstance(key, Ed25519PublicKey), 'Требуется ключ сборщика Ed25519')
     der = key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
-    require(hashlib.sha256(der).hexdigest() == pin, 'builder public key pin mismatch')
+    require(hashlib.sha256(der).hexdigest() == pin, 'закреплённый открытый ключ сборщика не совпадает')
     return key
 
 def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str, attempt: int):

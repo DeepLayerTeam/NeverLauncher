@@ -156,7 +156,7 @@ func (r *responseStatus) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // пользователей и ID.
 func (m *HTTPMetrics) Prometheus(w io.Writer) {
 	s := m.Snapshot(time.Now())
-	fmt.Fprintln(w, "# HELP launcher_http_requests_60s Requests observed in the last 60 seconds\n# TYPE launcher_http_requests_60s gauge")
+	fmt.Fprintln(w, "# HELP launcher_http_requests_60s Запросы за последние 60 секунд\n# TYPE launcher_http_requests_60s gauge")
 	fmt.Fprintf(w, "launcher_http_requests_60s %d\n", s.Requests)
 	fmt.Fprintln(w, "# TYPE launcher_http_5xx_60s gauge")
 	fmt.Fprintf(w, "launcher_http_5xx_60s %d\n", s.Failures)

@@ -196,7 +196,7 @@ def verify_target(
 ) -> dict:
     target = f"{platform}-{arch}"
     folder = root / target
-    require(folder.is_dir() and not folder.is_symlink(), f"missing {target} evidence")
+    require(folder.is_dir() and not folder.is_symlink(), f"отсутствует свидетельство для {target} в целевом каталоге")
     att = folder / "attestation.json"
     sig = folder / "attestation.sig"
     require(

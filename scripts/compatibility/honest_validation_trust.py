@@ -43,11 +43,11 @@ def validate_frozen_coverage_registry() -> dict:
         fail("Изменена структура или последовательность зафиксированного реестра G01-G35/M01-M19")
     for row in rows:
         if not row.get("owner") or not row.get("upstreamRefs"):
-            fail(f"{row.get('id')} lost owner/upstream source evidence")
+            fail(f"{row.get('id')} отсутствуют данные о владельце и исходном источнике")
         if row.get("status") in {"implemented", "partial"} and (
             not row.get("implementationRefs") or not row.get("testRefs")
         ):
-            fail(f"{row.get('id')} lost implementation/test evidence")
+            fail(f"{row.get('id')} отсутствуют свидетельства реализации и тестов")
     return doc
 
 

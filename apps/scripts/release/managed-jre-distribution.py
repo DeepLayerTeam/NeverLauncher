@@ -64,7 +64,7 @@ def request_json(url: str) -> object:
             die("Перенаправление Adoptium понизило защищённое соединение HTTPS")
         payload = response.read(16 * 1024 * 1024 + 1)
         if len(payload) > 16 * 1024 * 1024:
-            die("Adoptium metadata response too large")
+            die("ответ метаданных Adoptium превышает допустимый размер")
     return json.loads(payload)
 
 
@@ -99,7 +99,7 @@ def resolve_asset(major: int, vendor_os: str, vendor_arch: str) -> dict:
                 link = https_url(str(package["link"]))
                 size = int(package["size"])
                 if size <= 0 or size > MAX_ARCHIVE:
-                    die(f"Adoptium archive size outside policy: {size}")
+                    die(f"размер архива Adoptium не соответствует политике: {size}")
                 return {
                     "releaseName": str(asset["release_name"]),
                     "semver": str(version.get("semver") or asset["release_name"]),
@@ -159,7 +159,7 @@ def download_exact(
                     break
                 written += len(chunk)
                 if written > expected_size or written > MAX_ARCHIVE:
-                    die("JRE download exceeded declared size")
+                    die("загрузка JRE превысила заявленный размер")
                 digest.update(chunk)
                 out.write(chunk)
             out.flush()
@@ -180,37 +180,37 @@ def safe_archive_name(name: str) -> str:
         return ""
     p = PurePosixPath(name)
     if p.is_absolute() or any(part in {"", ".", ".."} for part in p.parts):
-        die(f"unsafe archive entry: {name}")
+        die(f"небезопасная запись архива: {name}")
     return str(p)
 
 
 def validate_binary(platform: str, arch: str, data: bytes) -> None:
     if platform == "windows":
         if len(data) < 0x40 or data[:2] != b"MZ":
-            die("bin/java.exe is not PE")
+            die("bin/java.exe не является файлом PE")
         peoff = struct.unpack_from("<I", data, 0x3C)[0]
         if peoff + 6 > len(data) or data[peoff : peoff + 4] != b"PE\0\0":
             die("файл bin/java.exe содержит недопустимый заголовок PE")
         machine = struct.unpack_from("<H", data, peoff + 4)[0]
         expected = 0x8664 if arch == "x64" else 0xAA64
         if machine != expected:
-            die(f"bin/java.exe PE machine=0x{machine:04x}, expected 0x{expected:04x}")
+            die(f"bin/java.exe: архитектура PE=0x{machine:04x}, expected 0x{expected:04x}")
         return
     if platform == "linux":
         if len(data) < 20 or data[:4] != b"\x7fELF" or data[4] != 2 or data[5] != 1:
-            die("bin/java is not little-endian ELF64")
+            die("bin/java не является файлом ELF64 с порядком байтов little-endian")
         machine = struct.unpack_from("<H", data, 18)[0]
         expected = 62 if arch == "x64" else 183
         if machine != expected:
-            die(f"bin/java ELF machine={machine}, expected {expected}")
+            die(f"bin/java: архитектура ELF={machine}, expected {expected}")
         return
     if platform == "macos":
         if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
-            die("bin/java is not thin little-endian Mach-O64")
+            die("bin/java не является файлом Mach-O64 с порядком байтов little-endian")
         cpu = struct.unpack_from("<I", data, 4)[0]
         expected = 0x01000007 if arch == "x64" else 0x0100000C
         if cpu != expected:
-            die(f"bin/java Mach-O cputype=0x{cpu:08x}, expected 0x{expected:08x}")
+            die(f"bin/java: тип процессора Mach-O=0x{cpu:08x}, expected 0x{expected:08x}")
         return
     die(f"unsupported platform {platform}")
 
@@ -227,10 +227,10 @@ def inspect_zip(path: Path, platform: str, arch: str) -> str:
                 continue
             if clean.lower().endswith("/bin/java.exe"):
                 if info.file_size <= 0 or info.file_size > MAX_JAVA_BINARY:
-                    die("bin/java.exe size outside policy")
+                    die("размер bin/java.exe не соответствует политике")
                 data = archive.read(info)
                 if len(data) != info.file_size:
-                    die("bin/java.exe truncated in zip")
+                    die("bin/java.exe в ZIP обрезан")
                 validate_binary(platform, arch, data)
                 found.append(clean)
     if len(found) != 1:
@@ -251,7 +251,7 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
             if member.issym():
                 link = member.linkname.replace("\\", "/")
                 if not link or PurePosixPath(link).is_absolute():
-                    die(f"unsafe JRE symlink: {member.name} -> {member.linkname}")
+                    die(f"небезопасная символьная ссылка JRE: {member.name} -> {member.linkname}")
                 resolved = PurePosixPath(clean).parent.joinpath(link)
                 depth = 0
                 for part in resolved.parts:
@@ -260,24 +260,24 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
                     elif part not in {"", "."}:
                         depth += 1
                     if depth < 0:
-                        die(f"JRE symlink escapes archive root: {member.name}")
+                        die(f"символьная ссылка JRE указывает за пределы корня архива: {member.name}")
                 continue
             if member.islnk():
                 link = safe_archive_name(member.linkname)
                 if not link:
-                    die(f"unsafe JRE hardlink: {member.name} -> {member.linkname}")
+                    die(f"небезопасная жёсткая ссылка JRE: {member.name} -> {member.linkname}")
                 continue
             if not member.isfile():
                 continue
             if clean.lower().endswith("/bin/java"):
                 if member.size <= 0 or member.size > MAX_JAVA_BINARY:
-                    die("bin/java size outside policy")
+                    die("размер bin/java не соответствует политике")
                 extracted = archive.extractfile(member)
                 if extracted is None:
                     die("не удалось прочитать bin/java")
                 data = extracted.read(MAX_JAVA_BINARY + 1)
                 if len(data) != member.size:
-                    die("bin/java truncated in tar")
+                    die("bin/java в TAR обрезан")
                 validate_binary(platform, arch, data)
                 found.append(clean)
     if len(found) != 1:

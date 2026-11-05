@@ -43,11 +43,11 @@ case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[compat] unsupported target a
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[compat] Необходимо указать основную версию Java" >&2; exit 2; }
 [[ -n "$JAVA_BIN" ]] || { echo "[compat] Целевой исполняемый файл Java недоступен" >&2; exit 2; }
 if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
-  echo "[compat] integration scope currently requires linux/x86_64; cross-platform targets use client scope" >&2
+  echo "[compat] для интеграционных проверок сейчас требуется linux/x86_64; другие платформы проверяются на стороне клиента" >&2
   exit 2
 fi
 if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" && "$LOADER" != "quilt" && "$LOADER" != "forge" && "$LOADER" != "neoforge" ]]; then
-  echo "[compat] client scope is supported for Vanilla, Fabric, Quilt and Forge targets" >&2
+  echo "[compat] клиентская область поддерживает целевые версии Vanilla, Fabric, Quilt и Forge" >&2
   exit 2
 fi
 

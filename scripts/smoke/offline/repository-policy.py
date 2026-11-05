@@ -4927,12 +4927,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ga_tests_0180:
             fail(f"Отсутствуют регрессионные тесты «0.18.0 GA»: {required}")
     if "Loader Compatibility GA 0.18.0 gate: OK" not in ga_gate_0180:
-        fail("Не завершена реализация «0.18.0 mandatory Loader Compatibility GA gate»")
+        fail("Не завершена реализация обязательной проверки совместимости загрузчиков 0.18.0")
     if (
         "loader-compatibility-ga-0180.py" not in preflight
         or "loader-compatibility-ga-0180.py" not in ci
     ):
-        fail("Проверка «0.18.0 Loader Compatibility GA gate» не подключена к preflight/CI")
+        fail("Проверка совместимости загрузчиков 0.18.0 не подключена к предварительным проверкам релиза и CI")
 
 
 # В 0.18.1: Windows Protection Core II делает профиль Guard и модель

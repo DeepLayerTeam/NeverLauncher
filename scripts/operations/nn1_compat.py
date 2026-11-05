@@ -55,7 +55,7 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
         versions[name] = checksum
     # Пока активен хотя бы один экземпляр 0.51.5, новые миграции развёртывать
     # нельзя.
-    require(digest.hexdigest() == CATALOG_SHA256_0515, "0.51.5 catalog changed; mixed version schema safety not established")
+    require(digest.hexdigest() == CATALOG_SHA256_0515, "0.51.5 каталог изменился; безопасность схемы при смешанных версиях не подтверждена")
     return versions, digest.hexdigest()
 
 

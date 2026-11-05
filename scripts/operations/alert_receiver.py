@@ -50,7 +50,7 @@ def read_secret(path):
 def unique(pairs):
     obj = {}
     for key, value in pairs:
-        require(key not in obj, 'duplicate event field')
+        require(key not in obj, 'повторяющееся поле события')
         obj[key] = value
     return obj
 

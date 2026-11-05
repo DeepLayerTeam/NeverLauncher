@@ -206,7 +206,7 @@ def main() -> int:
         IndexError,
         json.JSONDecodeError,
     ) as exc:
-        parser.exit(1, f"[live] cannot certify {args.service}: {exc}\n")
+        parser.exit(1, f"[live] не удалось сертифицировать {args.service}: {exc}\n")
     target = args.runtime / f"live-{args.service}-04113.json"
     # Атомарная запись, чтобы сбой не раскрывал частичную сертификацию.
     tmp = target.with_suffix(".json.tmp")

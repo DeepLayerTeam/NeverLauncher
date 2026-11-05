@@ -121,7 +121,7 @@ def serve(args):
         signal.signal(signal.SIGINT, stop)
     try:
         server.prepare().start(timeout=200)
-        print('[live-join] native dedicated server booted and RCON/game ticks verified', flush=True)
+        print('[live-join] выделенный сервер запущен, RCON и игровые такты проверены', flush=True)
         atomically_write(runtime / 'live-server-ready.json', {
             'schema': 'neverlauncher.compatibility-server-ready/0.52.4',
             **run_binding(),
@@ -147,7 +147,7 @@ def serve(args):
                         time.sleep(1.2)
                         after = parse_gametime(server.rcon.query('time query gametime'))
                         if after > before and player_online(server.rcon.query('list'), PLAYER):
-                            print('[live-join] real player observed online with advancing ticks', flush=True)
+                            print('[live-join] реальный игрок обнаружен в сети, игровые такты продолжаются', flush=True)
                             atomically_write(runtime / 'live-server-witness.json', {
                                 'schema': 'neverlauncher.compatibility-join-witness/0.52.4',
                                 **run_binding(),

@@ -121,7 +121,7 @@ if __name__ == "__main__":
         )
         if os.name != "nt":
             assert not err.strip(), f"unexpected Java extension stderr: {err}"
-        print("PASS: real Java subprocess hello, PID, heartbeat, lifecycle stop")
+        print("PASS: реальный подпроцесс Java, приветствие, PID, сигнал активности и остановка")
     finally:
         if proc.poll() is None:
             proc.kill()

@@ -157,7 +157,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
             all(isinstance(v, str) and SHA.fullmatch(v) for v in stages.values()),
             'Отсутствуют исходные контрольные суммы свидетельств операторской приёмки')
     apis = [c['sourceSha256'] for c in bom.get('components', []) if c.get('sourceFile') == 'schemas/openapi.yaml']
-    require(apis == [document.get('openApiV1Sha256')], 'approved API differs from pinned source in release BOM')
+    require(apis == [document.get('openApiV1Sha256')], 'утверждённый API отличается от закреплённого источника в составе релиза')
     targets = document.get('targets')
     require(isinstance(targets, dict) and len(targets) == 6, 'Необходимо аттестовать шесть итоговых установщиков')
     for os_name, arch, filename in (

@@ -375,7 +375,7 @@ def accept_verify(args):
     ensure(inst['secondOperator'] == upgrade['secondOperator'] == restore['secondOperator'] == fail['secondOperator'],
            'Идентификатор второго оператора различается между этапами')
     ensure(all(records[name]['release'] == VERSION for name in records), 'Несовпадение релиза в квитанции')
-    ensure(inst['installedVersion'] == VERSION and upgrade['to'] == VERSION, 'install/upgrade target release differs')
+    ensure(inst['installedVersion'] == VERSION and upgrade['to'] == VERSION, 'целевой выпуск установки или обновления не совпадает')
     ensure(restore['recoveredVersion'] == upgrade['from'], 'При восстановлении не использована контрольная точка исходной версии')
     ensure(all(records[name]['firstOperator'] == inst['firstOperator'] for name in records),
            'Идентификатор первого оператора различается между этапами')

@@ -20,4 +20,4 @@ python3 scripts/java/package_dependencies_0482.py --host "$work/build/host-unbun
   --output "$work/build/package/backend/java-dependencies.jar" \
   --library "org.example:greeter@1.2.3@>=1.0 <2.0@$work/build/greeter.jar"
 cp "$work/launcher-extension.json" "$work/build/package/launcher-extension.json"
-echo "Built executable dependency extension: $work/build/package/backend/java-dependencies.jar"
+echo "Собрано исполняемое расширение зависимостей: $work/build/package/backend/java-dependencies.jar"

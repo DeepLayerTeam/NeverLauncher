@@ -66,7 +66,7 @@ func workerProbeHandler0455(last *atomic.Int64, backend http.Handler) http.Handl
 		// локальных инструментов расследования инцидентов.
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		if workerReady0455(last, time.Now()) {
-			_, _ = fmt.Fprint(w, "# HELP launcher_worker_poll_fresh Last durable PostgreSQL poll was recent\n# TYPE launcher_worker_poll_fresh gauge\nlauncher_worker_poll_fresh 1\n")
+			_, _ = fmt.Fprint(w, "# HELP launcher_worker_poll_fresh Последний опрос надёжного состояния PostgreSQL выполнен недавно\n# TYPE launcher_worker_poll_fresh gauge\nlauncher_worker_poll_fresh 1\n")
 		} else {
 			_, _ = fmt.Fprint(w, "# TYPE launcher_worker_poll_fresh gauge\nlauncher_worker_poll_fresh 0\n")
 		}

@@ -63,7 +63,7 @@ def check_java_arch(expected):
     proc = run(['java', '-XshowSettings:properties', '-version'])
     match = re.search(r'^\s*os\.arch\s*=\s*([^\s]+)', proc.stderr, re.MULTILINE)
     if not match:
-        raise RuntimeError('Java runtime did not publish os.arch')
+        raise RuntimeError('среда выполнения Java не сообщила os.arch')
     arch = match.group(1).lower()
     actual = ('arm64' if arch in ('aarch64', 'arm64') else
               'x64' if arch in ('amd64', 'x86_64') else None)
@@ -94,7 +94,7 @@ def negative_signatures(cli, stage, tmpdir, name):
                 changed = True
             output.writestr(item, payload)
         if not changed:
-            raise RuntimeError(f"{name}: signed package has no JAR payload to tamper")
+            raise RuntimeError(f"{name}: в подписанном пакете нет JAR-файла для проверки защиты от изменения")
     run([cli, 'extension', 'verify', corrupted, '--public-key', public], success=False)
     return {'sha256': sha(package), 'wrongKeyDenied': True, 'tamperDenied': True}
 
@@ -120,7 +120,7 @@ def main():
         run([sys.executable, 'scripts/version/manage.py', 'check'])
         cli = args.cli.resolve(strict=True)
         if not cli.is_file():
-            raise RuntimeError('CLI is not a regular file')
+            raise RuntimeError('CLI не является обычным файлом')
         report['cliSha256'] = sha(cli)
         # Проверьте 19 реальных ссылок на исходники и тесты модулей собранным CLI; сохраняйте
         # статусы частичного выполнения и блокировки, не выдавая фиктивную совместимость.
@@ -158,7 +158,7 @@ def main():
         print(f'Приёмка расширений завершилась отказом по принципу fail-closed: {error}', file=sys.stderr, flush=True)
         returncode = 1
     else:
-        print(f"PASS: real extension E2E, signed packages and negative cases on {args.target}")
+        print(f"PASS: реальные сквозные проверки расширений, подписанных пакетов и негативных сценариев для {args.target}")
         returncode = 0
     args.evidence.parent.mkdir(parents=True, exist_ok=True)
     args.evidence.write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')

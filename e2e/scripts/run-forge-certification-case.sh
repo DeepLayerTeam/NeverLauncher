@@ -36,7 +36,7 @@ cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin run
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
 [[ -f "$RUNTIME_BIN" ]] || { echo "[forge-cert] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
-printf '[forge-cert] materialize Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
+printf '[forge-cert] подготовка Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 materialize_loader_package() {
   "$NL_BIN" runtime forge-package \
     --minecraft "$MINECRAFT_VERSION" \
@@ -163,7 +163,7 @@ python3 "$ROOT/e2e/scripts/prepare-legacy-forge-config.py" \
 
 certification_live_start forge "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 
-printf '[forge-cert] launch actual Forge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
+printf '[forge-cert] запуск реального профиля клиента Forge %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/forge-certification.json" \

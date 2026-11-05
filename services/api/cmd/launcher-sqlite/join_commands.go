@@ -64,7 +64,7 @@ func runJoinAction(args []string) int {
 	}
 	if action == "join-keygen" {
 		if *keyFile == "" {
-			fmt.Fprintln(os.Stderr, "--key-file required")
+			fmt.Fprintln(os.Stderr, "необходим параметр --key-file")
 			return 2
 		}
 		dir := filepath.Dir(*keyFile)
@@ -145,7 +145,7 @@ func runJoinAction(args []string) int {
 		return 2
 	}
 	if _, e := os.Stat(*db); e != nil {
-		fmt.Fprintln(os.Stderr, "existing database required:", e)
+		fmt.Fprintln(os.Stderr, "требуется существующая база данных:", e)
 		return 1
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
@@ -229,7 +229,7 @@ func runJoinAction(args []string) int {
 		output, e = repo.PruneExpiredReplayNonces(ctx)
 	}
 	if e != nil {
-		fmt.Fprintln(os.Stderr, "SQLite join refused:", e)
+		fmt.Fprintln(os.Stderr, "соединение SQLite отклонено:", e)
 		return 1
 	}
 	if e = json.NewEncoder(os.Stdout).Encode(output); e != nil {

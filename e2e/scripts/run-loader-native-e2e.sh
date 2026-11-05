@@ -19,7 +19,7 @@ PLAYER_USERNAME="NL_Cert_Client"
 case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-native] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[loader-native] неверная версия Minecraft" >&2; exit 2; }
 [[ "$LOADER_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,95}$ ]] || { echo "[loader-native] Необходимо указать фиксированную версию загрузчика" >&2; exit 2; }
-case "$(printf '%s' "$LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[loader-native] mutable loader selector is forbidden" >&2; exit 2 ;; esac
+case "$(printf '%s' "$LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[loader-native] изменяемый селектор загрузчика запрещён" >&2; exit 2 ;; esac
 [[ "$CLIENT_PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$ ]] || { echo "[loader-native] invalid client profile id" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[loader-native] Java major is required" >&2; exit 2; }
 [[ -x "$JAVA_BIN" ]] || { echo "[loader-native] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
@@ -64,7 +64,7 @@ for _ in $(seq 1 120); do
 done
 compose logs --no-color loader-native > "$RUNTIME_DIR/loader-native-server.log" 2>&1 || true
 if [[ "$HEALTH" != healthy ]]; then
-  echo "[loader-native] dedicated server did not become healthy" >&2
+  echo "[loader-native] выделенный сервер не перешёл в исправное состояние" >&2
   cat "$RUNTIME_DIR/loader-native-server.log" >&2
   exit 1
 fi
@@ -100,7 +100,7 @@ pauseOnLostFocus:false
 OPTIONS
 fi
 
-printf '[loader-native] launch actual %s client profile %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
+printf '[loader-native] запуск реального %s client profile %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 export LIBGL_ALWAYS_SOFTWARE=1

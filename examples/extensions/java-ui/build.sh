@@ -18,4 +18,4 @@ cp "$folder/build/package/backend/workspace.jar" "$folder/build/package/cli/work
 cp "$folder/admin/index.html" "$folder/build/package/admin/index.html"
 cp "$folder/desktop/index.html" "$folder/build/package/desktop/index.html"
 cp "$folder/launcher-extension.json" "$folder/build/package/launcher-extension.json"
-echo "Built real Java Admin/Desktop/CLI extension in $folder/build/package"
+echo "Реальное расширение Java для Admin/Desktop/CLI собрано в $folder/build/package"

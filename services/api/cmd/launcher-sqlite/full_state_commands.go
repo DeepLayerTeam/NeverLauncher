@@ -49,7 +49,7 @@ func runFullStateAction(args []string) int {
 		return 2
 	}
 	if flags.NArg() != 0 || *db == "" || *input == "" || *timeout <= 0 {
-		fmt.Fprintln(os.Stderr, "--db and --input 0600 JSON required")
+		fmt.Fprintln(os.Stderr, "необходимы --db и --input с JSON-файлом прав доступа 0600")
 		return 2
 	}
 	var in struct {
@@ -144,7 +144,7 @@ func runFullStateAction(args []string) int {
 		output, e = repo.GetExtensionState326(ctx, in.ID, in.Scope, in.ScopeID, in.Key)
 	}
 	if e != nil {
-		fmt.Fprintln(os.Stderr, "sqlite 326 operation rejected:", e)
+		fmt.Fprintln(os.Stderr, "операция SQLite 326 отклонена:", e)
 		return 1
 	}
 	returnError := json.NewEncoder(os.Stdout).Encode(output)

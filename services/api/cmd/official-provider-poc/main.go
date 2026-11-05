@@ -435,7 +435,7 @@ func main() {
 	protocol := flag.Int("protocol", 0, "Версия протокола Minecraft для --probe-server, например 767 для 1.21")
 	flag.Parse()
 	if *server != "" && (!*online || *protocol < 1 || *protocol > 1000000) {
-		fmt.Fprintln(os.Stderr, "--probe-server requires --online-session=true and a positive --protocol")
+		fmt.Fprintln(os.Stderr, "для --probe-server необходимы --online-session=true и положительное значение --protocol")
 		os.Exit(2)
 	}
 	if *timeout <= 0 || *timeout > 30*time.Minute {

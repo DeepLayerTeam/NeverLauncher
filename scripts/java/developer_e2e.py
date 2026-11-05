@@ -61,7 +61,7 @@ def verified_repo(repo: Path) -> dict[str, Path]:
                 raise ValueError(f'Некорректные или пустые классы в {jar}')
             for name in members:
                 if name.startswith('/') or '..' in name.split('/') or '\\' in name:
-                    raise ValueError(f'unsafe entry in {jar}: {name}')
+                    raise ValueError(f'небезопасная запись в {jar}: {name}')
                 if name.endswith('.class'):
                     header = binary.read(name)[:8]
                     if len(header) < 8 or header[:4] != b'\xca\xfe\xba\xbe' or int.from_bytes(header[6:8], 'big') > 61:
@@ -128,12 +128,12 @@ def main() -> None:
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
-    print('ПРОЙДЕНО: независимая проверка публичного SDK 0.48.12 на Java 17, Host, RPC Admin/Desktop, CLI и негативных сценариев безопасности')
+    print('PASS: независимая проверка публичного SDK 0.48.12 на Java 17, Host, RPC Admin/Desktop, CLI и негативных сценариев безопасности')
 
 
 if __name__ == '__main__':
     try:
         main()
     except (OSError, RuntimeError, ValueError, AssertionError, subprocess.CalledProcessError, subprocess.TimeoutExpired, zipfile.BadZipFile) as err:
-        print(f'FAIL: independent Java developer E2E: {err}', file=sys.stderr)
+        print(f'ОШИБКА: независимая сквозная проверка разработчика Java: {err}', file=sys.stderr)
         sys.exit(1)

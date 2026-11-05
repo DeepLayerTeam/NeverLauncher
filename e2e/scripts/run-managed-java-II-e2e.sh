@@ -8,7 +8,7 @@ RUNTIME_ROOT="${WORK_DIR}/runtimes"
 EVIDENCE="${WORK_DIR}/MANAGED_JAVA_II_EVIDENCE.json"
 
 if [[ ! -x "${RUNTIME_BIN}" ]]; then
-  echo "runtime binary not executable: ${RUNTIME_BIN}" >&2
+  echo "исполняемый файл Runtime не имеет права на выполнение: ${RUNTIME_BIN}" >&2
   exit 1
 fi
 
@@ -91,4 +91,4 @@ data["status"]="passed"
 open(p,"w",encoding="utf-8").write(json.dumps(data, indent=2)+"\n")
 PY
 
-echo "Managed Java II E2E: Java 8/16/17/21/25 install + cache verification passed"
+echo "сквозная проверка управляемой Java II: установка Java 8/16/17/21/25 и проверка кеша пройдены"

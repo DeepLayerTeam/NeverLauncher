@@ -204,7 +204,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		}
 		return json.NewEncoder(output).Encode(map[string]any{"accounts": clean})
 	}
-	_, err = fmt.Fprintf(output, "%s: success; sessions and auditing handled by Backend\n", command)
+	_, err = fmt.Fprintf(output, "%s: успешно; сеансами и аудитом управляет Backend\n", command)
 	return err
 }
 

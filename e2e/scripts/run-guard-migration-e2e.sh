@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[guard-migration-e2e] materialize exact 0.13.9 database (0001..0019)\n'
+printf '[guard-migration-e2e] подготовка точной базы данных версии 0.13.9 (0001..0019)\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -69,7 +69,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0019_minecraft_serverbridge_integrity_0135" ]] || { echo "Неожиданная миграция до обновления: $latest_before" >&2; exit 1; }
 
-printf '[guard-migration-e2e] seed valid 0.13.9 state plus an ambiguous partial Guard snapshot\n'
+printf '[guard-migration-e2e] создание корректного состояния 0.13.9 и неоднозначного неполного снимка Guard\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
@@ -109,17 +109,17 @@ SQL
 
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/launcher )
 
-printf '[guard-migration-e2e] prove 0020 refuses ambiguous 0.13.9 state\n'
+printf '[guard-migration-e2e] проверка отказа миграции 0020 для неоднозначного состояния 0.13.9\n'
 if "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" >"$RUNTIME_DIR/migrate-invalid.log" 2>&1; then
-  echo '[guard-migration-e2e] 0020 unexpectedly accepted a partial Guard snapshot' >&2
+  echo '[guard-migration-e2e] миграция 0020 неожиданно приняла неполный снимок Guard' >&2
   exit 1
 fi
 if psql "$DB_DSN" -Atqc "SELECT count(*) FROM schema_migrations WHERE version='0020_guard_migration_compatibility_stabilization_01310'" | grep -qx '1'; then
-  echo '[guard-migration-e2e] failed migration was recorded as applied' >&2
+  echo '[guard-migration-e2e] неудачная миграция ошибочно отмечена как применённая' >&2
   exit 1
 fi
 
-printf '[guard-migration-e2e] repair ambiguous legacy row explicitly, then apply and verify through current migration\n'
+printf '[guard-migration-e2e] явное исправление неоднозначной старой строки, применение и проверка до текущей миграции\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET guard_sha256='' WHERE id='gmig-partial'" >/dev/null
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.log"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
@@ -136,13 +136,13 @@ identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema
 serverbridge_table_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('server_bridge_nodes_v2','server_bridge_join_tickets_v2','server_bridge_textures_v2')")"
 [[ "$serverbridge_table_count" == "3" ]]
 
-printf '[guard-migration-e2e] prove snapshot shape/freshness constraints are live\n'
+printf '[guard-migration-e2e] проверка действия ограничений структуры и актуальности снимка\n'
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET integrity_verified=FALSE WHERE id='gmig-valid'" >/dev/null 2>&1; then
-  echo '[guard-migration-e2e] snapshot shape constraint allowed verified flag downgrade with hashes retained' >&2
+  echo '[guard-migration-e2e] ограничение структуры снимка допустило снятие отметки проверки при сохранённых хешах' >&2
   exit 1
 fi
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET integrity_verified_at=created_at-interval '10 minutes' WHERE id='gmig-valid'" >/dev/null 2>&1; then
-  echo '[guard-migration-e2e] snapshot freshness constraint allowed stale attestation' >&2
+  echo '[guard-migration-e2e] ограничение актуальности снимка допустило устаревшую аттестацию' >&2
   exit 1
 fi
 constraint_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM pg_constraint WHERE conname IN ('minecraft_sessions_guard_snapshot_shape_01310','minecraft_sessions_guard_snapshot_freshness_01310')")"

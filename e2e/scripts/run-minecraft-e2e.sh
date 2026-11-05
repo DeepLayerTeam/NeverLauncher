@@ -138,7 +138,7 @@ wait_http() {
     if curl -fsS "$url" >/dev/null 2>&1; then return 0; fi
     sleep 2
   done
-  echo "[e2e] timeout waiting for $url" >&2
+  echo "[e2e] превышено время ожидания $url" >&2
   compose logs launcher-api >&2 || true
   return 1
 }
@@ -153,7 +153,7 @@ wait_healthy() {
     [[ "$state" == "exited" || "$state" == "dead" ]] && break
     sleep 3
   done
-  echo "[e2e] $service did not become healthy" >&2
+  echo "[e2e] $service не перешёл в исправное состояние" >&2
   docker inspect --format '[e2e] state={{.State.Status}} exitCode={{.State.ExitCode}} oomKilled={{.State.OOMKilled}} error={{printf "%q" .State.Error}}' "$id" >&2 || true
   compose logs --no-color "$service" >&2 || true
   return 1
@@ -176,7 +176,7 @@ wait_paper_healthy_with_bootstrap_recovery() {
       return 1
     fi
     compose logs --no-color paper > "$RUNTIME_DIR/paper-bootstrap-hash-failure-attempt-${attempt}.log" 2>&1 || true
-    echo "[e2e] Paper/Mojang bootstrap hash mismatch; cleaning only bootstrap JARs and retrying (${attempt}/3)" >&2
+    echo "[e2e] хеш загрузочных файлов Paper/Mojang не совпадает; удаляются только загрузочные JAR, выполняется повторная попытка (${attempt}/3)" >&2
     reset_paper_bootstrap_jars
   done
   return 1
@@ -189,7 +189,7 @@ wait_bridge_heartbeat() {
     fi
     sleep 2
   done
-  echo "[e2e] $service Launcher bridge did not report successful heartbeat" >&2
+  echo "[e2e] $service мост Launcher не сообщил об успешном сигнале активности" >&2
   compose logs "$service" >&2 || true
   return 1
 }
@@ -210,12 +210,12 @@ wait_bridge_routable() {
       FROM server_bridge_nodes_v2 n
       WHERE n.id = '$node_id'" 2>/dev/null)" || true
     if [[ "$state" == active\|ready\|healthy\|t\|*\|t\|t\|t || "$state" == active\|ready\|degraded\|t\|*\|t\|t\|t ]]; then
-      printf '[e2e] %s is accepting authenticated v3 routing requests: %s\n' "$service" "$state"
+      printf '[e2e] %s принимает аутентифицированные запросы маршрутизации v3: %s\n' "$service" "$state"
       return 0
     fi
     sleep 2
   done
-  echo "[e2e] $service did not become routable after signed heartbeats; last state: $state" >&2
+  echo "[e2e] $service не стал доступен для маршрутизации после подписанных сигналов активности; последнее состояние: $state" >&2
   psql "$DB_DSN" -AtF '|' -c "SELECT id,status,runtime_epoch,runtime_id,routing_state,routing_health,routing_accepting,routing_observed_at,last_heartbeat_at FROM server_bridge_nodes_v2 WHERE id='$node_id'" >&2 || true
   compose logs --tail=80 "$service" >&2 || true
   return 1
@@ -228,7 +228,7 @@ capture_health_evidence() {
   out="$RUNTIME_DIR/health-$service.json"
   docker inspect --format '{{json .State.Health}}' "$id" > "$out"
   jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "$out" >/dev/null || {
-    echo "[e2e] $service health evidence is not healthy" >&2
+    echo "[e2e] $service свидетельство состояния показывает неисправность" >&2
     cat "$out" >&2
     return 1
   }
@@ -253,7 +253,7 @@ wait_log() {
     if compose logs --no-color "$service" 2>&1 | grep -Fq "$pattern"; then return 0; fi
     sleep 1
   done
-  echo "[e2e] $service log marker missing: $pattern" >&2
+  echo "[e2e] $service отсутствует маркер журнала: $pattern" >&2
   compose logs "$service" >&2 || true
   return 1
 }
@@ -274,7 +274,7 @@ materialize_pinned_bytesocks_dependency() {
   local source_dir="$RUNTIME_DIR/bytesocks-source" maven_repo="$RUNTIME_DIR/spark-build-maven"
   local resolved_commit build_jar installed_jar artifact_sha maven_dir
 
-  printf '[e2e] materialize pinned compatible bytesocks %s from %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
+  printf '[e2e] подготовка закреплённой совместимой версии bytesocks %s from %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$BYTESOCKS_SOURCE_REPOSITORY"
@@ -284,16 +284,16 @@ materialize_pinned_bytesocks_dependency() {
   [[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]] || { echo "[e2e] bytesocks несовпадение коммита исходников: $resolved_commit" >&2; return 1; }
 
   grep -Fq 'static BytesocksClient create(' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
-    echo "[e2e] pinned bytesocks source is missing BytesocksClient.create API" >&2; return 1;
+    echo "[e2e] в закреплённом источнике bytesocks отсутствует BytesocksClient.create API" >&2; return 1;
   }
   grep -Fq 'String channelId();' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
-    echo "[e2e] pinned bytesocks source is missing channelId API" >&2; return 1;
+    echo "[e2e] в закреплённом источнике bytesocks отсутствует channelId API" >&2; return 1;
   }
   grep -Fq '<artifactId>Java-WebSocket</artifactId>' "$source_dir/pom.xml" || {
-    echo "[e2e] pinned bytesocks source is missing Java-WebSocket dependency" >&2; return 1;
+    echo "[e2e] в закреплённом источнике bytesocks отсутствует Java-WebSocket dependency" >&2; return 1;
   }
   grep -Fq '<version>1.5.4</version>' "$source_dir/pom.xml" || {
-    echo "[e2e] pinned bytesocks source has unexpected Java-WebSocket version" >&2; return 1;
+    echo "[e2e] в закреплённом источнике bytesocks неожиданная версия Java-WebSocket" >&2; return 1;
   }
 
   (
@@ -306,10 +306,10 @@ materialize_pinned_bytesocks_dependency() {
   local jar_contents="$RUNTIME_DIR/bytesocks-jar-contents.txt"
   jar tf "$build_jar" > "$jar_contents"
   grep -Fxq 'me/lucko/bytesocks/client/BytesocksClient.class' "$jar_contents" || {
-    echo "[e2e] pinned bytesocks artifact is missing BytesocksClient.class" >&2; return 1;
+    echo "[e2e] в закреплённом артефакте bytesocks отсутствует BytesocksClient.class" >&2; return 1;
   }
   grep -Fxq 'me/lucko/bytesocks/client/BytesocksClientImpl.class' "$jar_contents" || {
-    echo "[e2e] pinned bytesocks artifact is missing BytesocksClientImpl.class" >&2; return 1;
+    echo "[e2e] в закреплённом артефакте bytesocks отсутствует BytesocksClientImpl.class" >&2; return 1;
   }
   rm -f "$jar_contents"
 
@@ -380,7 +380,7 @@ gradle.beforeProject { project ->
 }
 GRADLE
 
-  printf '[e2e] materialize pinned spark-paper %s from %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
+  printf '[e2e] подготовка закреплённого spark-paper %s from %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$SPARK_SOURCE_REPOSITORY"
@@ -396,7 +396,7 @@ GRADLE
   [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] spark patch version mismatch: $patch_count" >&2; return 1; }
 
   grep -Fq "me.lucko:bytesocks-java-client:$BYTESOCKS_MAVEN_VERSION" "$source_dir/spark-common/build.gradle" || {
-    echo "[e2e] pinned spark source no longer requires expected bytesocks snapshot" >&2; return 1;
+    echo "[e2e] закреплённый исходник spark больше не требует ожидаемый снимок bytesocks" >&2; return 1;
   }
 
   (
@@ -466,7 +466,7 @@ gradle.beforeProject { project ->
 }
 GRADLE
 
-  printf '[e2e] materialize pinned Folia %s runtime from %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
+  printf '[e2e] подготовка закреплённой Folia %s runtime from %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
   rm -rf "$source_dir"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$FOLIA_SOURCE_REPOSITORY"
@@ -497,8 +497,8 @@ GRADLE
   # Проверяйте строго, чтобы устаревший или посторонний JAR не помог пройти запуск.
   mapfile -t candidates < <(find "$source_dir/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
   if (( ${#candidates[@]} != 1 )); then
-    echo "[e2e] expected exactly one Folia paperclip JAR, found ${#candidates[@]}" >&2
-    printf '[e2e] Folia build candidate: %s\n' "${candidates[@]:-<none>}" >&2
+    echo "[e2e] ожидался ровно один JAR Folia paperclip, найдено ${#candidates[@]}" >&2
+    printf '[e2e] кандидат сборки Folia: %s\n' "${candidates[@]:-<none>}" >&2
     return 1
   fi
   build_jar="${candidates[0]}"
@@ -518,7 +518,7 @@ GRADLE
   rm -rf "$source_dir" "$build_maven_repo" "$init_script"
 }
 
-printf '[e2e] build real ServerBridge artifacts\n'
+printf '[e2e] сборка реальных артефактов ServerBridge\n'
 bash "$ROOT/scripts/build/bridge-plugins.sh"
 BRIDGE_ALLOWLIST_JSON="$(tr -d '\r\n' < "$ROOT/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json")"
 write_env_file
@@ -536,7 +536,7 @@ if [[ "$MODE" == "full" ]]; then
   materialize_pinned_folia_runtime
 fi
 
-printf '[e2e] start PostgreSQL and apply production migrations explicitly\n'
+printf '[e2e] запуск PostgreSQL и явное применение промышленных миграций\n'
 compose up -d postgres
 wait_healthy postgres
 (
@@ -545,18 +545,18 @@ wait_healthy postgres
 )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN"
 
-printf '[e2e] start production-configured API with auto-migrate disabled\n'
+printf '[e2e] запуск API с промышленной конфигурацией и отключённой автоматической миграцией\n'
 compose up -d --build launcher-api
 wait_http "$API/health"
 
-printf '[e2e] one-time bootstrap and canonical /api/v1 login\n'
+printf '[e2e] однократная начальная настройка и вход через канонический /api/v1\n'
 curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -H "X-Launcher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
   -d "{\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"E2E Owner\",\"password\":\"$ADMIN_PASSWORD\",\"actor\":\"github-actions\"}" \
   "$API/api/v1/install/bootstrap-admin" > "$RUNTIME_DIR/bootstrap.json"
 LOGIN="$(curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
 ACCESS_TOKEN="$(jq -er '.token' <<<"$LOGIN")"
 
-printf '[e2e] bind canonical launcher session to a real Ed25519 trusted-device key for 0.12.7 gameplay trust\n'
+printf '[e2e] привязка канонического сеанса Launcher к реальному доверенному ключу устройства Ed25519 for 0.12.7 gameplay trust\n'
 DEVICE_KEY="$RUNTIME_DIR/device-trust-ed25519.pem"
 DEVICE_MESSAGE="$RUNTIME_DIR/device-trust-message.bin"
 DEVICE_SIGNATURE="$RUNTIME_DIR/device-trust-signature.bin"
@@ -575,7 +575,7 @@ DEVICE_COMPLETE="$(jq -cn \
   '{challengeId:$challengeId,deviceId:$deviceId,challenge:$challenge,publicKey:$publicKey,signature:$signature}')"
 ACCESS_TOKEN="$(json_post "$API/api/v1/auth/devices/register/complete" "$ACCESS_TOKEN" "$DEVICE_COMPLETE" | jq -er '.data.accessToken')"
 
-printf '[e2e] register real WebAuthn P-256 passkey for fresh release-publish step-up\n'
+printf '[e2e] регистрация реального ключа доступа WebAuthn P-256 for fresh release-publish step-up\n'
 PASSKEY_STATE="$RUNTIME_DIR/publish-passkey-state.json"
 PASSKEY_KEY="$RUNTIME_DIR/publish-passkey-p256.pem"
 PASSKEY_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$ACCESS_TOKEN" '{}')"
@@ -656,11 +656,11 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] start core Paper + Velocity runtimes; auxiliary bridge runtimes are certified sequentially to keep CI memory bounded\n'
+  printf '[e2e] запуск основных сред Paper и Velocity; auxiliary bridge runtimes are certified sequentially to keep CI memory bounded\n'
   compose up -d velocity paper
   SERVICES=(velocity paper)
 else
-  printf '[e2e] compatibility mode: start real Paper 1.21.1 only\n'
+  printf '[e2e] режим совместимости: запуск только реального Paper 1.21.1\n'
   compose up -d paper
   SERVICES=(paper)
 fi
@@ -675,7 +675,7 @@ for service in "${SERVICES[@]}"; do
 done
 
 CLIENT_PACKAGE="$RUNTIME_DIR/client-package.json"
-printf '[e2e] materialize real Minecraft %s / %s client\n' "$MINECRAFT_VERSION" "$LOADER"
+printf '[e2e] подготовка реального Minecraft %s / %s client\n' "$MINECRAFT_VERSION" "$LOADER"
 PACKAGE_ARGS=(
   --minecraft "$MINECRAFT_VERSION"
   --client-dir "$RUNTIME_DIR/materialized-client"
@@ -747,7 +747,7 @@ if [[ "$LOADER" == "vanilla" ]]; then
   [[ -z "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] Vanilla unexpectedly resolved loaderVersion=$RESOLVED_LOADER_VERSION" >&2; exit 1; }
 else
   [[ -n "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] loader version was not resolved" >&2; exit 1; }
-  case "$(printf '%s' "$RESOLVED_LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[e2e] mutable loader selector leaked into release" >&2; exit 1 ;; esac
+  case "$(printf '%s' "$RESOLVED_LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[e2e] изменяемый селектор загрузчика попал в выпуск" >&2; exit 1 ;; esac
 
   # 0.17.8: сертификация больше не ограничивается клиентом. Запустите чистый
   # выделенный сервер с точной неизменяемой версией загрузчика выше и потребуйте
@@ -758,7 +758,7 @@ else
   bash "$ROOT/e2e/scripts/run-loader-native-e2e.sh"
 fi
 
-printf '[e2e] upload the full real Minecraft package through canonical /api/v1 and publish signed immutable release\n'
+printf '[e2e] загрузка полного реального пакета Minecraft через канонический /api/v1 и публикация подписанного неизменяемого выпуска\n'
 python3 "$ROOT/e2e/scripts/publish-client-package.py" \
   --api "$API" \
   --token "$ACCESS_TOKEN" \
@@ -779,7 +779,7 @@ jq -e --arg key "$PINNED_PUBLIC_KEY" --arg version "$RELEASE_VERSION" --arg mc "
   '.version == $version and .minecraft.version == $mc and .minecraft.loader == $loader and ((($loader == "vanilla") and ((.minecraft.loaderVersion // "") == "")) or (($loader != "vanilla") and .minecraft.loaderVersion == $resolved)) and .runtime.launch.classpathStrategy == "compatibility" and .signature.algorithm == "Ed25519" and .signature.publicKey == $key and (.signature.signature|length == 128)' \
   "$RUNTIME_DIR/manifest.json" >/dev/null
 
-printf '[e2e] Runtime pinned Ed25519 verify -> clean sync from Backend -> actual Minecraft client launch\n'
+printf '[e2e] проверка закреплённого ключа Ed25519 в Runtime → чистая синхронизация с Backend → запуск реального клиента Minecraft\n'
 (
   cd "$ROOT"
   cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- verify \
@@ -802,7 +802,7 @@ joinedFirstServer:true
 pauseOnLostFocus:false
 OPTIONS
 
-printf '[e2e] establish hardware-attested Guard-bound Minecraft session for integrity-enforced joins\n'
+printf '[e2e] создание аппаратно аттестованного сеанса Minecraft с привязкой к Guard для входа с проверкой целостности\n'
 HW_LOGIN="$(json_post "$API/api/v1/auth/login" '' "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" '{email:$email,password:$password,deviceId:"minecraft-compat-guard"}')")"
 HW_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$HW_LOGIN")"
 HW_USER_ID="$(jq -er '.data.session.userId' <<<"$HW_LOGIN")"
@@ -858,7 +858,7 @@ build_join_body() {
   jq -cn --arg username "$PLAYER_USERNAME" --arg server "$server_id" --arg profile "$PROFILE_ID" --arg token "$MINECRAFT_ACCESS_TOKEN" '{username:$username,serverId:$server,projectId:"e2e-project",profileId:$profile,channel:"stable",minecraftAccessToken:$token}'
 }
 
-printf '[e2e] create real launcher session and connect the actual Minecraft client to Paper 1.21.1\n'
+printf '[e2e] создание реального сеанса Launcher и подключение клиента Minecraft к Paper 1.21.1\n'
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_")) and .data.join.issuedIdentityEpoch >= 1 and (.data.join.issuedKeyFingerprint | length) == 64' "$RUNTIME_DIR/join-paper-real-client.json" >/dev/null
 validate_join() {
@@ -946,7 +946,7 @@ wait_log paper "$PLAYER_USERNAME joined the game"
 # Go с присоединением JVM. Другие проверки совместимости имеют меньшую
 # область; полный CI E2E не может пройти без этого пути.
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head -1)" == "0.36.4" ]]; then
-  printf '[e2e] execute genuine 0.36.4 production client lifecycle on Mojang files\n'
+  printf '[e2e] выполнение реального промышленного жизненного цикла клиента 0.36.4 на файлах Mojang\n'
   cycle_args=(--root "$ROOT" --work "$RUNTIME_DIR" --package "$CLIENT_PACKAGE" --cli "$RUNTIME_DIR/nl" --version "$VERSION" --profile "$PROFILE_ID")
   python3 "$ROOT/e2e/scripts/game_cycle_0364.py" prepare "${cycle_args[@]}" \
     --source "$RUNTIME_DIR/materialized-client" --release "$RELEASE_VERSION"
@@ -1009,14 +1009,14 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
     )
     jq -e '.success == true or .timedOut == true' "$RUNTIME_DIR/cycle-runtime-launch-${stage}.json" >/dev/null
     test -s "$RUNTIME_DIR/cycle-client/logs/latest.log" || {
-      echo "[e2e] actual Minecraft JVM latest.log missing after $stage" >&2; exit 2;
+      echo "[e2e] отсутствует latest.log реальной JVM Minecraft после $stage" >&2; exit 2;
     }
     cp "$RUNTIME_DIR/cycle-client/logs/latest.log" "$RUNTIME_DIR/cycle-game-${stage}.log"
     compose logs --no-color paper > "$RUNTIME_DIR/cycle-join-${stage}.log" 2>&1
     after_allowed="$(cycle_join_counts allowed)"
     after_joined="$(cycle_join_counts joined)"
     (( after_allowed > before_allowed && after_joined > before_joined )) || {
-      echo "[e2e] no new genuine ServerBridge/Paper JVM join after $stage" >&2
+      echo "[e2e] нет нового реального подключения JVM через ServerBridge/Paper после $stage" >&2
       exit 2
     }
     jq -n --argjson a "$before_allowed" --argjson b "$after_allowed" \
@@ -1034,7 +1034,7 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
     --bridge "$ROOT/artifacts/plugins/launcher-paper-bridge-${VERSION}.jar"
 fi
 
-printf '[e2e] revoke launcher session and verify subsequent joins are denied\n'
+printf '[e2e] отзыв сеанса Launcher и проверка запрета последующих подключений\n'
 json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e2e-p3","reason":"e2e-revoke"}' > "$RUNTIME_DIR/revoke-paper-real-client.json"
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-paper-deny.txt"
@@ -1044,7 +1044,7 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] verify zero-patch proxy -> backend one-time handoff and runtime-learned topology\n'
+  printf '[e2e] проверка прокси без изменений → одноразовая передача Backend и топология, обнаруженная при выполнении\n'
   json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body velocity-e2e-p3)" > "$RUNTIME_DIR/join-velocity-handoff-source.json"
   validate_join velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" allow
   handoff_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg target "paper-e2e-p3" '{protocolVersion:2,username:$username,targetServer:$target}')"
@@ -1060,7 +1060,7 @@ if [[ "$MODE" == "full" ]]; then
   curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"
   jq -e '.data.sourceOfTruth == "postgresql" and .data.mode == "runtime-learned-zero-patch" and ([.data.items[] | select(.sourceNodeId == "velocity-e2e-p3" and .targetNodeId == "paper-e2e-p3")] | length) == 1' "$RUNTIME_DIR/serverbridge-topology.json" >/dev/null
 
-  printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
+  printf '[e2e] сохранение протокольных проверок разрешения/отзыва для Velocity и всех серверных мостов\n'
   flow_for_server() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
     local -a allow_probe_mode=() deny_probe_mode=()
@@ -1126,7 +1126,7 @@ if [[ "$MODE" == "full" ]]; then
 
   certify_aux_bridge() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5"
-    printf '[e2e] certify %s runtime in bounded-memory isolation\n' "$service"
+    printf '[e2e] сертификация среды %s в изоляции с ограниченной памятью\n' "$service"
     compose up -d "$service"
     if [[ "$service" == "paper" ]]; then
       wait_paper_healthy_with_bootstrap_recovery
@@ -1231,7 +1231,7 @@ if [[ "$MODE" == "full" ]]; then
   jq -c '.checks.liveServerBridgeCore = true | .evidence += ["live-matrix-core-04113.json"]' \
     "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-04113-tmp.json"
   mv "$RUNTIME_DIR/result-04113-tmp.json" "$RUNTIME_DIR/result.json"
-  echo '[e2e] real JVM + network probes verified for 10 core targets; bukkit/quilt/sponge/vanilla are NOT certified by this suite' >&2
+  echo '[e2e] проверки реальной JVM и сети пройдены for 10 core targets; bukkit/quilt/sponge/vanilla are NOT certified by this suite' >&2
 fi
 # 0.50.12: сохраните реальный журнал Paper, пока Docker ещё работает. Должны
 # присутствовать и разрешение ServerBridge на вход, и настоящее соединение

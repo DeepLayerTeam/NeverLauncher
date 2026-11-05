@@ -21,4 +21,4 @@ java -ea -cp "$WORK/classes" ru.launcher.bridge.common.BridgeAuthResponse0287Tes
   cd "$ROOT/services/api"
   GOPROXY=off go test ./internal/bridgeidentity -count=1
 )
-echo "ServerBridge 0.28.7 Authlib/Join verification source tests passed"
+echo "ServerBridge 0.28.7 проверки исходного кода Authlib/Join прошли"

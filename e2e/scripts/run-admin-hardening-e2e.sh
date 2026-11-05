@@ -27,7 +27,7 @@ cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 postgres_diagnostics() {
-  echo "[admin-hardening-02112] PostgreSQL container diagnostics:" >&2
+  echo "[admin-hardening-02112] диагностика контейнера PostgreSQL:" >&2
   docker ps -a --filter "name=^/${CONTAINER}$" \
     --format 'name={{.Names}} status={{.Status}} ports={{.Ports}}' >&2 || true
   docker logs --tail 70 "$CONTAINER" >&2 || true
@@ -40,7 +40,7 @@ postgres_diagnostics() {
 STARTED=false
 for attempt in 1 2 3; do
   cleanup
-  echo "[admin-hardening-02112] starting isolated PostgreSQL (attempt $attempt/3)"
+  echo "[admin-hardening-02112] запуск изолированного PostgreSQL (attempt $attempt/3)"
   if docker run -d --name "$CONTAINER" \
       -e POSTGRES_DB=launcher \
       -e POSTGRES_USER=launcher \
@@ -50,7 +50,7 @@ for attempt in 1 2 3; do
       STARTED=true
       break
     fi
-    echo "[admin-hardening-02112] PostgreSQL exited immediately after container creation" >&2
+    echo "[admin-hardening-02112] PostgreSQL завершился сразу после создания контейнера" >&2
   else
     echo "[admin-hardening-02112] сбой docker run (попытка $attempt/3)" >&2
   fi
@@ -69,12 +69,12 @@ if [[ -z "$PORT" ]]; then
   PORT="$(docker inspect -f '{{ (index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort }}' "$CONTAINER" 2>>"$START_LOG")" || {
     cat "$START_LOG" >&2
     postgres_diagnostics
-    echo "[admin-hardening-02112] could not inspect the published PostgreSQL port" >&2
+    echo "[admin-hardening-02112] не удалось определить опубликованный порт PostgreSQL" >&2
     exit 1
   }
   if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( 10#$PORT < 1 || 10#$PORT > 65535 )); then
     postgres_diagnostics
-    echo "[admin-hardening-02112] Docker returned an invalid PostgreSQL host port" >&2
+    echo "[admin-hardening-02112] Docker вернул некорректный порт хоста PostgreSQL" >&2
     exit 1
   fi
 fi
@@ -87,7 +87,7 @@ for _ in $(seq 1 60); do
     break
   fi
   if [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)" != true ]]; then
-    echo "[admin-hardening-02112] PostgreSQL container terminated before becoming ready" >&2
+    echo "[admin-hardening-02112] контейнер PostgreSQL завершился до перехода в состояние готовности" >&2
     break
   fi
   sleep 1
@@ -95,7 +95,7 @@ done
 if [[ "$READY" != true ]]; then
   cat "$READY_LOG" >&2 || true
   postgres_diagnostics
-  echo "[admin-hardening-02112] PostgreSQL did not become ready within 60 seconds" >&2
+  echo "[admin-hardening-02112] PostgreSQL не перешёл в состояние готовности за 60 секунд" >&2
   exit 1
 fi
 

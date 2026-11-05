@@ -102,4 +102,4 @@ for token in [
     "/api/v1/admin/extension-recovery/restore",
 ]:
     require(token in openapi, f"Отсутствует описание в OpenAPI: {token}")
-print("Extensions Trust, Recovery & Certification 0.20.12 offline gate OK")
+print("Доверие к расширениям, восстановление и сертификация 0.20.12: автономная проверка пройдена")

@@ -29,7 +29,7 @@ for executable in tar gzip; do
 done
 python="$(command -v python3)"
 if [[ -n "$(PATH="$work/bin" command -v java 2>/dev/null || :)" ]]; then
-  echo 'test PATH unexpectedly contains java' >&2
+  echo 'тестовая переменная PATH неожиданно содержит java' >&2
   exit 1
 fi
 run_ensure() {

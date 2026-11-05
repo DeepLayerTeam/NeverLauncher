@@ -65,7 +65,7 @@ func run(args []string) int {
 		return 2
 	}
 	if *path == "" || flags.NArg() != 0 || *timeout <= 0 {
-		fmt.Fprintln(os.Stderr, "--db and positive --timeout are required; no positional args")
+		fmt.Fprintln(os.Stderr, "необходимы --db и положительный --timeout; позиционные аргументы не допускаются")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)

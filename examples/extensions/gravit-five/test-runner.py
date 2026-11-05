@@ -114,7 +114,7 @@ def main():
             assert status==200 and bad['result']['errorCode']=='unsupported',(status,bad)
         finally:
             Broker.docs['config','legacy-identities']['bob']['scheme']='pbkdf2-sha256'
-        print('PASS 1: live Java identity provider verifies PBKDF2, immutable UUID and unsupported-hash denial')
+        print('PASS 1: действующий провайдер Java проверяет PBKDF2, неизменяемый UUID и отказ для неподдерживаемого хеша')
         status,asset=rpc('content.source.resolve',{'projectId':'demo-project','path':'libraries/game.jar'});assert status==200 and asset['result']['asset']['sha256']==FILEHASH,(status,asset)
         status,package=rpc('content.package.prepare',{'projectId':'demo-project','name':'modpack.zip','dataBase64':base64.b64encode(once_zip()).decode()})
         assert status==200 and package['result']['requiresSigning'],(status,package)
@@ -133,11 +133,11 @@ def main():
             assert status==200 and denied['result']['errorCode'] in ('content_unavailable','content_denied'),(status,denied)
         finally:
             Broker.docs['config','legacy-assets']['libraries/game.jar']['sha256']=original
-        print('PASS 2: live pre-sign ZIP packaging, integrity enforcement and cross-project denial')
+        print('PASS 2: реальная упаковка ZIP перед подписью, контроль целостности и запрет доступа между проектами')
         assert hook('fabric','0.16.0')[0]==200
         assert hook('fabric','')[0]==422
         assert hook('untrusted','x')[0]==422
-        print('PASS 3: actual authenticated JVM sync callback permits and vetoes profile before mutation')
+        print('PASS 3: аутентифицированный обратный вызов JVM разрешает или запрещает профиль до изменения')
         status,denied=rpc('auth.health',token='revoked-token');assert status==401,(status,denied)
         status,migrated=rpc('state.migrate',{'fromVersion':'0.49.4','toVersion':'0.49.5'});assert status==200 and migrated['result']['applied'],(status,migrated)
         assert Broker.docs['storage','ported-settings']['schema']==2
@@ -145,15 +145,15 @@ def main():
         result=subprocess.run(['java','-jar',str(cli.resolve()),'ported-save'],env=run_env(server.server_port,'cli'),capture_output=True,text=True,timeout=14)
         assert result.returncode==0,(result.stdout,result.stderr)
         assert Broker.docs['storage','ported-settings']['updates']==2
-        print('PASS 5: CLI command/registry/config/state migration backed by host storage')
+        print('PASS 5: команда CLI и миграция реестра, конфигурации и состояния с хранением на хосте')
         # Имитируйте документированный откат контрольной точки Go, затем проверьте статус через свежий CLI.
         saved=copy.deepcopy(Broker.docs);Broker.docs['storage','ported-settings']={'updates':1}
         status=subprocess.run(['java','-jar',str(cli.resolve()),'ported-status'],env=run_env(server.server_port,'cli'),capture_output=True,text=True,timeout=14)
         assert status.returncode==0 and json.loads(status.stdout)['config']=={'updates':1},(status.stdout,status.stderr)
         Broker.docs=saved
         test_game_hook()
-        print('PASS 4: real premain transforms net.minecraft class in actual JVM; wrong digest fails launch')
-        print('LOCAL E2E PASS: five Java source-port behaviors; simulated host, not full production certification')
+        print('PASS 4: реальный premain преобразует класс net.minecraft в JVM; неверная контрольная сумма блокирует запуск')
+        print('ЛОКАЛЬНЫЕ СКВОЗНЫЕ ПРОВЕРКИ ПРОЙДЕНЫ: пять сценариев переноса Java; хост имитируется, полноценная промышленная сертификация не проводилась')
     finally:
         if child.poll() is None:
             child.terminate()

@@ -127,7 +127,7 @@ func main() {
 			}
 			return
 		default:
-			fmt.Fprintf(os.Stderr, "unknown diagnostic %q (expected deployment, device-trust or extension-sandbox; OS=%s)\n", os.Args[2], runtime.GOOS)
+			fmt.Fprintf(os.Stderr, "неизвестный диагностический режим %q (допустимые значения: deployment, device-trust или extension-sandbox; ОС=%s)\n", os.Args[2], runtime.GOOS)
 			os.Exit(2)
 		}
 	}

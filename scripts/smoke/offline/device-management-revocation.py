@@ -87,9 +87,9 @@ need('scripts/contracts/generate_openapi.py', [
 ])
 
 if errors:
-    print('Device Management + Revocation gate FAILED:', file=sys.stderr)
+    print('проверка управления устройствами и отзывов НЕ ПРОЙДЕНА:', file=sys.stderr)
     for item in errors:
         print(' - ' + item, file=sys.stderr)
     raise SystemExit(1)
 
-print('Device Management + Revocation gate OK: permanent device tombstones cascade to sessions, refresh families, Minecraft sessions, challenges and ServerBridge joins')
+print('проверка управления устройствами и отзывов пройдена: permanent device tombstones cascade to sessions, refresh families, Minecraft sessions, challenges and ServerBridge joins')

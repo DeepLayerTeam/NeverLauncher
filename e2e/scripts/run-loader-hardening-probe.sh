@@ -22,7 +22,7 @@ OUT_EVIDENCE="$RUNTIME_DIR/loader-hardening.json"
 case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
 [[ -x "$NL_BIN" ]] || { echo "[loader-hardening] CLI binary unavailable: $NL_BIN" >&2; exit 2; }
 [[ -f "$SOURCE_CLIENT_DIR/.launcher/${LOADER}-resolution-lock.json" ]] || {
-  echo "[loader-hardening] initial resolution lock unavailable" >&2; exit 1;
+  echo "[loader-hardening] исходная блокировка разрешения зависимостей недоступна" >&2; exit 1;
 }
 rm -rf "$CLIENT_DIR"
 cp -R "$SOURCE_CLIENT_DIR" "$CLIENT_DIR"

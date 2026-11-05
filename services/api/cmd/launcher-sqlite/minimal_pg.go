@@ -21,7 +21,7 @@ func runMinimalPG0377(command string, args []string) int {
 		return 2
 	}
 	if *bundle == "" || !*acknowledge || *timeout <= 0 || *env == "" || strings.ContainsAny(*env, "=\x00 \n") || flags.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "--bundle, --ack-no-backend-cutover, positive --timeout and valid --dsn-env are required")
+		fmt.Fprintln(os.Stderr, "необходимы --bundle, --ack-no-backend-cutover, положительный --timeout и корректный --dsn-env")
 		return 2
 	}
 	dsn := os.Getenv(*env)

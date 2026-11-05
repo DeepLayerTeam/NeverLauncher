@@ -69,7 +69,7 @@ wait_http() {
     sleep 1
   done
   compose logs api-a >&2 || true
-  echo "[device-trust-e2e] timeout waiting for Backend" >&2
+  echo "[device-trust-e2e] превышено время ожидания Backend" >&2
   return 1
 }
 wait_ready() {
@@ -82,7 +82,7 @@ wait_ready() {
     fi
     sleep 1
   done
-  echo "[device-trust-e2e] Backend readiness stayed non-200 (last HTTP ${code:-curl-error})" >&2
+  echo "[device-trust-e2e] Backend не вернул HTTP 200 для готовности (last HTTP ${code:-curl-error})" >&2
   [[ -s "$out" ]] && cat "$out" >&2 || true
   compose logs api-a >&2 || true
   return 1
@@ -136,7 +136,7 @@ refresh_payload() {
 sanitize_registration() { jq '{data:{device:.data.device,session:(.data.session|del(.refreshToken?)),accessTokenIssued:(.data.accessToken|type=="string")}}'; }
 sanitize_rotation() { jq '{data:{mode:.data.mode,oldDevice:.data.oldDevice,device:.data.device,session:.data.session,oldFingerprintPermanentTombstone:.data.oldFingerprintPermanentTombstone,revokedSessions:.data.revokedSessions,revokedRefreshFamilies:.data.revokedRefreshFamilies,revokedMinecraftSessions:.data.revokedMinecraftSessions,invalidatedChallenges:.data.invalidatedChallenges,invalidatedBridgeJoins:.data.invalidatedBridgeJoins,accessTokenIssued:(.data.accessToken|type=="string")}}'; }
 
-printf '[device-trust-e2e] build CLI, start PostgreSQL/Redis, apply sealed migrations\n'
+printf '[device-trust-e2e] сборка CLI, запуск PostgreSQL/Redis и применение закреплённых миграций\n'
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/launcher )
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
@@ -149,7 +149,7 @@ psql "$DB_DSN" -Atqc 'select 1' >/dev/null
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210' AND checksum<>''")" == "1" ]]
 
-printf '[device-trust-e2e] start production PostgreSQL Backend and bootstrap account\n'
+printf '[device-trust-e2e] запуск промышленного PostgreSQL Backend и создание начальной учётной записи\n'
 compose up -d --build api-a
 wait_http
 curl -fsS -H 'Content-Type: application/json' -H "X-Launcher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
@@ -158,7 +158,7 @@ curl -fsS -H 'Content-Type: application/json' -H "X-Launcher-Bootstrap-Token: $B
 repo_driver="$(psql "$DB_DSN" -Atqc "SELECT current_database()")"
 [[ "$repo_driver" == "launcher" ]]
 
-printf '[device-trust-e2e] verify 0.13.0 runtime release/readiness contract\n'
+printf '[device-trust-e2e] проверка контракта выпуска/готовности Runtime 0.13.0\n'
 curl -fsS "$API/api/v1/auth/capabilities" > "$RESULT_DIR/release-capabilities.json"
 jq -e --arg version "$VERSION" '.data.deviceTrustRelease.status=="released" and .data.deviceTrustRelease.releaseVersion=="0.13.0" and .data.deviceTrustRelease.runtimeVersion==$version and .data.deviceTrustRelease.schemaMigration=="0018_device_trust_stabilization_01210" and .data.deviceTrustRelease.schemaFrozen==true and .data.deviceTrustRelease.enforcement.sessionDeviceBinding==true and .data.deviceTrustRelease.enforcement.deviceBoundRefresh==true and .data.deviceTrustRelease.enforcement.riskActions==true and .data.deviceTrustRelease.enforcement.minecraftServerBridge==true and .data.deviceTrustRelease.releaseCertification.required==true and .data.deviceTrustRelease.attestation.vendorProvenance=="not-remotely-verified"' "$RESULT_DIR/release-capabilities.json" >/dev/null
 wait_ready "$RESULT_DIR/release-readiness.json"
@@ -170,7 +170,7 @@ CURRENT_MIGRATION="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migra
 }
 jq -e --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="ready" and .checks.migrations==$migration and .repository=="postgres" and .checks.repository=="ok"' "$RESULT_DIR/release-readiness.json" >/dev/null
 
-printf '[device-trust-e2e] real Ed25519 registration, binding epoch and replay protection\n'
+printf '[device-trust-e2e] реальная регистрация Ed25519, эпоха привязки и защита от повтора\n'
 LOGIN1="$(login dt-primary)"
 ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$LOGIN1")"
 REFRESH1="$(jq -er '.data.tokens.refreshToken' <<<"$LOGIN1")"
@@ -210,7 +210,7 @@ ACCESS1R="$(jq -er '.data.tokens.accessToken' <<<"$REFRESH_OK1")"
 REFRESH2="$(jq -er '.data.tokens.refreshToken' <<<"$REFRESH_OK1")"
 [[ "$REFRESH2" != "$REFRESH1" ]]
 
-printf '[device-trust-e2e] ServerBridge node is registered; software device launch remains Guard fail-closed\n'
+printf '[device-trust-e2e] узел ServerBridge зарегистрирован; запуск с программным ключом устройства по-прежнему блокируется Guard\n'
 json_post "$API/api/v1/install/first-project" "$ACCESS1R" '{"projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable","version":"0.0.1-device-trust","actor":"device-trust-e2e"}' > "$RUNTIME_DIR/first-project.json"
 SERVER_REG_BODY="$(jq -cn --arg publicKey "$SERVER_NODE_PUBLIC" '{id:"dt-e2e-paper",name:"Device Trust E2E Paper",kind:"paper",projectId:"dt-e2e-project",profileId:"vanilla",keyAlgorithm:"ed25519",publicKey:$publicKey}')"
 SERVER_REG="$(json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS1R" "$SERVER_REG_BODY")"
@@ -259,14 +259,14 @@ REFRESH_OK2="$(json_post "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "
 ACCESS2R="$(jq -er '.data.tokens.accessToken' <<<"$REFRESH_OK2")"
 REFRESH3="$(jq -er '.data.tokens.refreshToken' <<<"$REFRESH_OK2")"
 
-printf '[device-trust-e2e] old fingerprint remains a permanent tombstone\n'
+printf '[device-trust-e2e] старый отпечаток остаётся постоянной отметкой об отзыве\n'
 TOMB_LOGIN="$(login dt-tombstone)"; TOMB_ACCESS="$(jq -er '.data.tokens.accessToken' <<<"$TOMB_LOGIN")"
 TOMB_BEGIN="$(json_post "$API/api/v1/auth/devices/register/begin" "$TOMB_ACCESS" "$(jq -cn --arg v "$VERSION" '{name:"Old key reuse attempt",platform:"linux",clientVersion:$v,keyAlgorithm:"ed25519",keyBinding:"software"}')")"
 TOMB_SIG="$(sign_payload ed25519 "$KEY1" "$(jq -er '.data.signingPayload' <<<"$TOMB_BEGIN")")"
 TOMB_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$TOMB_BEGIN")" --arg dev "$(jq -er '.data.deviceId' <<<"$TOMB_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$TOMB_BEGIN")" --arg pub "$PUB1" --arg sig "$TOMB_SIG" '{challengeId:$id,deviceId:$dev,challenge:$ch,publicKey:$pub,signature:$sig}')"
 code="$(request_code POST "$API/api/v1/auth/devices/register/complete" "$TOMB_ACCESS" "$TOMB_BODY" "$RESULT_DIR/old-key-tombstone.json")"; expect_code 409 "$code" 'revoked fingerprint was re-enrolled'
 
-printf '[device-trust-e2e] risk integration persists drift and blocks sensitive gameplay until step-up\n'
+printf '[device-trust-e2e] модуль риска сохраняет отклонения и блокирует чувствительные игровые действия до дополнительной проверки\n'
 RISK_LOGIN="$(login dt-risk)"; RISK_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$RISK_LOGIN")"; RISK_SESSION="$(jq -er '.data.session.id' <<<"$RISK_LOGIN")"
 RISK_BEGIN="$(json_post "$API/api/v1/auth/devices/$DEVICE2/verify/begin" "$RISK_ACCESS_PRE" '{}')"
 RISK_SIG="$(sign_payload ed25519 "$KEY2" "$(jq -er '.data.signingPayload' <<<"$RISK_BEGIN")")"
@@ -278,7 +278,7 @@ jq -e --arg sid "$RISK_SESSION" '.data.items[] | select(.id==$sid) | .riskAction
 jq --arg sid "$RISK_SESSION" '{data:{session:(.data.items[]|select(.id==$sid)|{id,riskState,riskScore,riskAction,riskReasons})}}' "$RUNTIME_DIR/risk-sessions.json" > "$RESULT_DIR/risk-step-up.json"
 code="$(request_code POST "$API/api/v1/session/join" "$RISK_ACCESS" '{"username":"RiskPlayer","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$RUNTIME_DIR/risk-join-denied.json" "$RISK_UA")"; expect_code 428 "$code" 'elevated-risk gameplay join'
 
-printf '[device-trust-e2e] P-256 hardware-bound protocol attestation, without claiming vendor provenance\n'
+printf '[device-trust-e2e] аттестация аппаратно привязанного протокола P-256 без утверждений о происхождении производителя\n'
 HW_LOGIN="$(login dt-hardware)"; HW_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$HW_LOGIN")"
 HW_KEY="$RUNTIME_DIR/keys/device-hardware-p256.pem"
 openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out "$HW_KEY" >/dev/null 2>&1
@@ -297,7 +297,7 @@ HW_ACCESS_ATTESTED="$(jq -er '.data.accessToken' <<<"$ATT_OK")"
 jq -e '.data.attestationState=="verified" and .data.device.assurance=="challenge-response-attested" and .data.hardwareProvenance=="not-verified" and .data.authorizationElevation==false' <<<"$ATT_OK" >/dev/null
 jq '{data:{device:.data.device,attestationState:.data.attestationState,attestationMethod:.data.attestationMethod,hardwareProvenance:.data.hardwareProvenance,authorizationElevation:.data.authorizationElevation,phishingResistantElevation:.data.phishingResistantElevation}}' <<<"$ATT_OK" > "$RESULT_DIR/p256-attestation.json"
 
-printf '[device-trust-e2e] hardware-attested Linux session obtains one-time Guard ticket and integrity-bound Minecraft token\n'
+printf '[device-trust-e2e] аппаратно аттестованный сеанс Linux получает одноразовый билет Guard и токен Minecraft с привязкой к целостности\n'
 HW_SESSION="$(jq -er '.data.session.id' <<<"$HW_COMPLETE")"
 HW_EPOCH="$(jq -er '.data.session.bindingEpoch' <<<"$HW_COMPLETE")"
 HW_FINGERPRINT="$(jq -er '.data.device.keyFingerprint' <<<"$HW_COMPLETE")"
@@ -338,7 +338,7 @@ jq '{data:{profile:.data.profile,integrity:.data.integrity}}' <<<"$MC_SESSION" >
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/attest/complete" "$HW_ACCESS_ATTESTED" "$ATT_BODY" "$RUNTIME_DIR/attestation-replay.json")"; expect_code 401 "$code" 'attestation replay'
 code="$(request_code POST "$API/api/v1/auth/devices/key-recovery/begin" "$HW_ACCESS_ATTESTED" '{}' "$RESULT_DIR/recovery-step-up-required.json")"; expect_code 428 "$code" 'recovery without phishing-resistant step-up'
 
-printf '[device-trust-e2e] real WebAuthn assertion unlocks key recovery, then old hardware identity is tombstoned\n'
+printf '[device-trust-e2e] реальное подтверждение WebAuthn разрешает восстановление ключа; старая аппаратная идентичность отзывается\n'
 PASS_LOGIN="$(login dt-passkey-bootstrap)"; PASS_ACCESS="$(jq -er '.data.tokens.accessToken' <<<"$PASS_LOGIN")"
 PK_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$PASS_ACCESS" '{}')"
 PK_STATE="$RUNTIME_DIR/keys/passkey-state.json"; PK_KEY="$RUNTIME_DIR/keys/passkey-p256.pem"
@@ -381,7 +381,7 @@ code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" ''
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RESULT_DIR/recovery-replay.json")"; expect_code 404 "$code" 'recovery challenge replay after source-device tombstone'
 jq -e '.error.code==404 and .error.message=="активное исходное устройство не найдено"' "$RESULT_DIR/recovery-replay.json" >/dev/null
 
-printf '[device-trust-e2e] permanent device revoke cascades to access and refresh credentials\n'
+printf '[device-trust-e2e] постоянный отзыв устройства распространяется на токены доступа и обновления\n'
 REVOKE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/revoke" "$ACCESS2R" '{"reason":"device-trust-e2e-revoke"}')"
 jq -e '.data.device.status=="revoked" and .data.reEnrollmentRequiresNewKey==true and .data.revokedRefreshFamilies>=1' <<<"$REVOKE" >/dev/null
 jq '{data:{device:.data.device,alreadyRevoked:.data.alreadyRevoked,revokedSessions:.data.revokedSessions,revokedRefreshFamilies:.data.revokedRefreshFamilies,revokedMinecraftSessions:.data.revokedMinecraftSessions,invalidatedChallenges:.data.invalidatedChallenges,invalidatedBridgeJoins:.data.invalidatedBridgeJoins,reEnrollmentRequiresNewKey:.data.reEnrollmentRequiresNewKey}}' <<<"$REVOKE" > "$RESULT_DIR/revocation.json"
@@ -390,13 +390,13 @@ REVOKED_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE2" "
 REVOKED_REFRESH_SIG="$(sign_payload ed25519 "$KEY2" "$REVOKED_REFRESH_PAYLOAD")"
 code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH3" --arg device "$DEVICE2" --arg sig "$REVOKED_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/revoked-refresh.json")"; expect_code 401 "$code" 'revoked device refresh survived'
 
-printf '[device-trust-e2e] require 0.12.9 -> current shipping migration upgrade evidence\n'
+printf '[device-trust-e2e] требуются свидетельства обновления с миграции 0.12.9 до текущей поставляемой\n'
 MIGRATION_UPGRADE_EVIDENCE="$ROOT/e2e/device-trust-migration-result/migration-stabilization.json"
 [[ -f "$MIGRATION_UPGRADE_EVIDENCE" ]] || { echo '[device-trust-e2e] отсутствует подтверждение обновления миграции; сначала выполните run-device-trust-migration-e2e.sh first' >&2; exit 1; }
 jq -e --arg version "$VERSION" --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="passed" and .version==$version and .upgrade.fromMigration=="0017_device_key_recovery_rotation_0128" and .upgrade.toMigration==$migration and .upgrade.sealedChecksum==true and .upgrade.guardPurposeMigrationSealed==true and .ownershipEnforcement.constraints==7' "$MIGRATION_UPGRADE_EVIDENCE" >/dev/null
 cp "$MIGRATION_UPGRADE_EVIDENCE" "$RESULT_DIR/migration-upgrade-e2e.json"
 
-printf '[device-trust-e2e] verify runtime really used PostgreSQL and migrations remain sealed\n'
+printf '[device-trust-e2e] проверка фактического использования PostgreSQL и неизменности закреплённых миграций\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE user_id='$USER_ID'")" -ge 4 ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE id='$DEVICE1' AND status='revoked' AND replaced_by_device_id='$DEVICE2' AND replacement_reason='rotate'")" == "1" ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE id='$HW_DEVICE' AND status='revoked' AND replaced_by_device_id='$REC_DEVICE' AND replacement_reason='recover'")" == "1" ]]
@@ -437,7 +437,7 @@ jq -n \
 
 # Убедитесь, что публичные свидетельства случайно не содержат bearer-токены, refresh-токены или закрытые ключи.
 if grep -RIEq 'accessToken"[[:space:]]*:[[:space:]]*"|refreshToken"[[:space:]]*:[[:space:]]*"|BEGIN (EC |ED25519 |)PRIVATE KEY' "$RESULT_DIR"; then
-  echo '[device-trust-e2e] secret material leaked into public evidence' >&2
+  echo '[device-trust-e2e] секретные данные попали в общедоступные свидетельства' >&2
   exit 1
 fi
 printf '[device-trust-e2e] PASS %s\n' "$(cat "$RESULT_DIR/device-trust-result.json")"

@@ -219,12 +219,12 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		select {
 		case result <- cb:
 			if cb.Err != nil {
-				fmt.Fprint(w, "Sign-in declined. Return to the terminal.\n")
+				fmt.Fprint(w, "Вход отклонён. Вернитесь в терминал.\n")
 			} else {
 				fmt.Fprint(w, "Авторизация получена. Вернитесь в терминал.\n")
 			}
 		default:
-			http.Error(w, "Already handled", http.StatusConflict)
+			http.Error(w, "Запрос уже обработан", http.StatusConflict)
 		}
 	})
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second, MaxHeaderBytes: 8 << 10}
@@ -273,7 +273,7 @@ func deviceGrant(ctx context.Context, c providerClient, opt options, output io.W
 	if err != nil {
 		return officialminecraft.OAuthTokens{}, err
 	}
-	fmt.Fprintln(output, "Microsoft device verification URL:", code.VerificationURI)
+	fmt.Fprintln(output, "Адрес проверки устройства Microsoft:", code.VerificationURI)
 	fmt.Fprintln(output, "Введите этот одноразовый код пользователя:", code.UserCode)
 	fmt.Fprintln(output, "Никогда не вводите пароль Microsoft в Launcher.")
 	expiry := time.NewTimer(time.Duration(code.ExpiresIn) * time.Second)
@@ -435,7 +435,7 @@ func main() {
 	protocol := flag.Int("protocol", 0, "Версия протокола Minecraft для --probe-server, например 767 для 1.21")
 	flag.Parse()
 	if *server != "" && (!*online || *protocol < 1 || *protocol > 1000000) {
-		fmt.Fprintln(os.Stderr, "--probe-server requires --online-session=true and a positive --protocol")
+		fmt.Fprintln(os.Stderr, "для --probe-server необходимы --online-session=true и положительное значение --protocol")
 		os.Exit(2)
 	}
 	if *timeout <= 0 || *timeout > 30*time.Minute {

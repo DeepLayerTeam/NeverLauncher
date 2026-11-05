@@ -71,7 +71,7 @@ func (c *Collector) Prometheus(w io.Writer) {
 	if r.Verified {
 		verified = 1
 	}
-	fmt.Fprintln(w, "# HELP launcher_capacity_sample_verified 1 if last operational probe succeeded and is fresh\n# TYPE launcher_capacity_sample_verified gauge")
+	fmt.Fprintln(w, "# HELP launcher_capacity_sample_verified 1, если последняя эксплуатационная проверка прошла и её результат актуален\n# TYPE launcher_capacity_sample_verified gauge")
 	fmt.Fprintf(w, "launcher_capacity_sample_verified %d\n", verified)
 	fmt.Fprintf(w, "# TYPE launcher_capacity_go_heap_bytes gauge\nlauncher_capacity_go_heap_bytes %d\n", r.GoHeapBytes)
 	fmt.Fprintf(w, "# TYPE launcher_capacity_goroutines gauge\nlauncher_capacity_goroutines %d\n", r.Goroutines)

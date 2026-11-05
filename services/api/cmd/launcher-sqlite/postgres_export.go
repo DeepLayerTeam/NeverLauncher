@@ -22,7 +22,7 @@ func runPGExport(args []string) int {
 		return 2
 	}
 	if *target == "" || *timeout <= 0 || !*acknowledge || flags.NArg() != 0 || *env == "" || strings.ContainsAny(*env, "=\x00 \n") {
-		fmt.Fprintln(os.Stderr, "--backup, --ack-no-backend-cutover, positive --timeout, and a valid --dsn-env are required")
+		fmt.Fprintln(os.Stderr, "необходимы --backup, --ack-no-backend-cutover, положительный --timeout и корректный --dsn-env")
 		return 2
 	}
 	dsn := os.Getenv(*env)

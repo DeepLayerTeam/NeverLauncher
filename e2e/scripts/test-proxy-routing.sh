@@ -17,4 +17,4 @@ javac --release 21 -encoding UTF-8 -d "$work/classes" "$work/generated/ru/launch
 for test in BridgeAuthResponse0287Test BridgeControlJournal0412Test BridgeControlResult0411Test PlatformControlReadback0416Test ProxyRoutes0417Test; do
   java -ea -cp "$work/classes" "ru.launcher.bridge.common.$test"
 done
-printf 'Proxy routing 0.41.7 Java production source regression PASS\n'
+printf 'регрессионная проверка промышленного исходного кода Java для маршрутизации прокси 0.41.7: PASS\n'

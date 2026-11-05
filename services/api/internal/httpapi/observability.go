@@ -121,23 +121,23 @@ func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 	// Сборщик ёмкости опрашивает SQL отдельно; сбор метрик никогда не должен
 	// разветвляться в чтения полных таблиц через ORM на пути запроса.
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-	_, _ = fmt.Fprintf(w, "# HELP launcher_info Backend identity\n# TYPE launcher_info gauge\nlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
+	_, _ = fmt.Fprintf(w, "# HELP launcher_info Сведения о серверном компоненте\n# TYPE launcher_info gauge\nlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
 	if s.Capacity != nil {
 		s.Capacity.Prometheus(w)
 	}
 	var memory runtime.MemStats
 	runtime.ReadMemStats(&memory)
-	_, _ = fmt.Fprintf(w, "# HELP launcher_process_uptime_seconds Seconds since backend process started\n# TYPE launcher_process_uptime_seconds gauge\nlauncher_process_uptime_seconds %.3f\n", time.Since(metricsStart0459).Seconds())
-	_, _ = fmt.Fprintf(w, "# HELP launcher_process_goroutines Goroutines in backend\n# TYPE launcher_process_goroutines gauge\nlauncher_process_goroutines %d\n", runtime.NumGoroutine())
-	_, _ = fmt.Fprintf(w, "# HELP launcher_process_heap_alloc_bytes Allocated Go heap bytes\n# TYPE launcher_process_heap_alloc_bytes gauge\nlauncher_process_heap_alloc_bytes %d\n", memory.HeapAlloc)
+	_, _ = fmt.Fprintf(w, "# HELP launcher_process_uptime_seconds Секунды с момента запуска серверного процесса\n# TYPE launcher_process_uptime_seconds gauge\nlauncher_process_uptime_seconds %.3f\n", time.Since(metricsStart0459).Seconds())
+	_, _ = fmt.Fprintf(w, "# HELP launcher_process_goroutines Количество горутин серверного компонента\n# TYPE launcher_process_goroutines gauge\nlauncher_process_goroutines %d\n", runtime.NumGoroutine())
+	_, _ = fmt.Fprintf(w, "# HELP launcher_process_heap_alloc_bytes Байты выделенной памяти в куче Go\n# TYPE launcher_process_heap_alloc_bytes gauge\nlauncher_process_heap_alloc_bytes %d\n", memory.HeapAlloc)
 
 	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
 		if ha, err := s.State.ServerBridge.haStatus0149(); err == nil {
-			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_nodes_active Active ServerBridge nodes\n# TYPE launcher_serverbridge_nodes_active gauge\nlauncher_serverbridge_nodes_active %d\n", ha.NodesActive)
-			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_nodes_fresh Fresh ServerBridge nodes\n# TYPE launcher_serverbridge_nodes_fresh gauge\nlauncher_serverbridge_nodes_fresh %d\n", ha.NodesFresh)
-			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_topology_fresh Fresh runtime-learned topology edges\n# TYPE launcher_serverbridge_topology_fresh gauge\nlauncher_serverbridge_topology_fresh %d\n", ha.TopologyFresh)
-			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_handoffs_active Active one-time handoffs\n# TYPE launcher_serverbridge_handoffs_active gauge\nlauncher_serverbridge_handoffs_active %d\n", ha.ActiveHandoffs)
-			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_expired_nonce_backlog Expired replay nonces waiting for HA maintenance\n# TYPE launcher_serverbridge_expired_nonce_backlog gauge\nlauncher_serverbridge_expired_nonce_backlog %d\n", ha.ExpiredNonceBacklog)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_nodes_active Активные узлы ServerBridge\n# TYPE launcher_serverbridge_nodes_active gauge\nlauncher_serverbridge_nodes_active %d\n", ha.NodesActive)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_nodes_fresh Узлы ServerBridge с актуальными данными\n# TYPE launcher_serverbridge_nodes_fresh gauge\nlauncher_serverbridge_nodes_fresh %d\n", ha.NodesFresh)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_topology_fresh Актуальные связи топологии, обнаруженные во время работы\n# TYPE launcher_serverbridge_topology_fresh gauge\nlauncher_serverbridge_topology_fresh %d\n", ha.TopologyFresh)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_handoffs_active Активные одноразовые передачи управления\n# TYPE launcher_serverbridge_handoffs_active gauge\nlauncher_serverbridge_handoffs_active %d\n", ha.ActiveHandoffs)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_expired_nonce_backlog Просроченные одноразовые значения защиты от повтора, ожидающие обслуживания HA\n# TYPE launcher_serverbridge_expired_nonce_backlog gauge\nlauncher_serverbridge_expired_nonce_backlog %d\n", ha.ExpiredNonceBacklog)
 		}
 	}
 }

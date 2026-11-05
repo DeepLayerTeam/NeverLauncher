@@ -151,15 +151,15 @@ psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,d
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-guard-continuous-v2','dtmig-user','dtmig-new','guard-continuous-join-v2',repeat('2',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null
 
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_sessions SET trusted_device_id='dtmig-new',device_trust_state='verified',device_verified_at=now() WHERE id='dtmig-other-session'" >/dev/null 2>&1; then
-  echo '[device-trust-migration-e2e] cross-user auth session/device binding unexpectedly succeeded' >&2
+  echo '[device-trust-migration-e2e] неожиданно разрешена привязка сеанса и устройства разных пользователей' >&2
   exit 1
 fi
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE trusted_devices SET replaced_by_device_id='dtmig-other-device' WHERE id='dtmig-old'" >/dev/null 2>&1; then
-  echo '[device-trust-migration-e2e] cross-user replacement link unexpectedly succeeded' >&2
+  echo '[device-trust-migration-e2e] неожиданно разрешена ссылка замены для разных пользователей' >&2
   exit 1
 fi
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET trusted_device_id='dtmig-other-device' WHERE id='dtmig-mc-unbound'" >/dev/null 2>&1; then
-  echo '[device-trust-migration-e2e] cross-user Minecraft device snapshot unexpectedly succeeded' >&2
+  echo '[device-trust-migration-e2e] неожиданно получен снимок устройства Minecraft другого пользователя' >&2
   exit 1
 fi
 

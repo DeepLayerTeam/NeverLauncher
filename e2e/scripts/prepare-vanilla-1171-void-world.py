@@ -162,7 +162,7 @@ def main() -> int:
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
-    print('[matching-e2e] server-generated 1.17.1 level.dat overworld changed to void (air-only)')
+    print('[matching-e2e] созданный сервером файл level.dat 1.17.1 изменён: обычный мир заменён пустотой (только воздух)')
     return 0
 
 

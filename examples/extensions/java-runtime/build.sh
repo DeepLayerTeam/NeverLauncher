@@ -12,4 +12,4 @@ cp launcher-extension.json build/package/launcher-extension.json
 cp backend/bin/java-runtime build/package/backend/bin/java-runtime
 cp cli/bin/java-runtime build/package/cli/bin/java-runtime
 chmod 0755 build/package/backend/bin/java-runtime build/package/cli/bin/java-runtime
-printf '%s\n' 'Prepared real Java backend + CLI targets in build/package (sign with nl extension pack).'
+printf '%s\n' 'Реальные цели Java Backend и CLI подготовлены в build/package (подпишите через nl extension pack).'

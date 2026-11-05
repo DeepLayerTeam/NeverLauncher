@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[serverbridge-v2-migration] materialize exact 0.14.0 database (0001..0020)\n'
+printf '[serverbridge-v2-migration] подготовка точной базы данных 0.14.0 (0001..0020)\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -68,7 +68,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0020_guard_migration_compatibility_stabilization_01310" ]]
 
-printf '[serverbridge-v2-migration] seed recoverable 0.14.0 snapshot state\n'
+printf '[serverbridge-v2-migration] создание восстанавливаемого снимка состояния 0.14.0\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 INSERT INTO projects(id,name,default_channel) VALUES ('legacy-project','Legacy Project','stable');
 INSERT INTO launcher_persistence_snapshots_950(kind,schema_version,payload,created_at)

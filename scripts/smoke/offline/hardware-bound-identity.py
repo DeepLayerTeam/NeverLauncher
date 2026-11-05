@@ -79,9 +79,9 @@ if migration_api != migration_cli:
     errors.append('migration 0013 differs between API and CLI catalogs')
 
 if errors:
-    print('Hardware-bound identity gate FAILED:', file=sys.stderr)
+    print('проверка идентичности с аппаратной привязкой НЕ ПРОЙДЕНА:', file=sys.stderr)
     for item in errors:
         print(' - ' + item, file=sys.stderr)
     raise SystemExit(1)
 
-print('Hardware-bound identity gate OK: P-256 HSM path is wired, software fallback is explicit, hardware binding alone does not forge remote provenance')
+print('проверка идентичности с аппаратной привязкой пройдена: P-256 HSM path is wired, software fallback is explicit, hardware binding alone does not forge remote provenance')

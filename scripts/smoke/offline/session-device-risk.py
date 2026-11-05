@@ -146,7 +146,7 @@ if (
     errors.append("0015 migration drift: API и CLI содержат разные SQL")
 
 if errors:
-    print("Session <-> Device binding + risk integration gate FAILED:", file=sys.stderr)
+    print("проверка привязки сеанса к устройству и интеграции рисков НЕ ПРОЙДЕНА:", file=sys.stderr)
     for item in errors:
         print(" - " + item, file=sys.stderr)
     raise SystemExit(1)

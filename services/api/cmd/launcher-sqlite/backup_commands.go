@@ -37,7 +37,7 @@ func runBackupAction(args []string) int {
 		return 2
 	}
 	if *backup == "" {
-		fmt.Fprintln(os.Stderr, "--backup required")
+		fmt.Fprintln(os.Stderr, "необходим параметр --backup")
 		return 2
 	}
 	if (action == "backup" || action == "pre-upgrade" || action == "restore") && *db == "" {
@@ -45,7 +45,7 @@ func runBackupAction(args []string) int {
 		return 2
 	}
 	if *replace && action != "restore" {
-		fmt.Fprintln(os.Stderr, "--replace only allowed with restore")
+		fmt.Fprintln(os.Stderr, "параметр --replace разрешён только при восстановлении")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)

@@ -128,7 +128,7 @@ def main():
                                 operation=a.operation, key_id=a.key_id,
                                 private_key_output=a.private_key_output), sort_keys=True))
     except Exception as err:
-        p.exit(2, f'certificate operation rejected: {err}\n')
+        p.exit(2, f'операция с сертификатом отклонена: {err}\n')
 
 
 if __name__ == '__main__':

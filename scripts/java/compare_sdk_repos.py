@@ -18,6 +18,6 @@ if __name__ == '__main__':
         left, right = tree(sys.argv[1]), tree(sys.argv[2])
         if not left or left != right:
             raise ValueError('Публикация SDK в Maven невоспроизводима либо в ней отсутствуют файлы')
-        print(f'PASS: {len(left)} SDK publication files byte-for-byte identical')
+        print(f'PASS: {len(left)} файлов публикации SDK побайтово совпадают')
     except ValueError as err:
         sys.exit(f'FAIL: {err}')

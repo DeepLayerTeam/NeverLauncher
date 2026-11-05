@@ -88,7 +88,7 @@ func runCoreAction(args []string) int {
 		return 2
 	}
 	if _, err := os.Stat(*db); err != nil {
-		fmt.Fprintln(os.Stderr, "run core-init first:", err)
+		fmt.Fprintln(os.Stderr, "сначала выполните core-init:", err)
 		return 1
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)

@@ -111,7 +111,7 @@ def main():
         child.terminate()
         out,err=child.communicate(timeout=8)
         assert child.returncode in (0,143,-15),(out,err,child.returncode)
-        print('PASS: actual java -jar / host hello+ready / selected ContentProvider / source+texture+metadata+package+delivery RPC / CLI real storage read with SHA / heartbeat / graceful process stop')
+        print('PASS: запуск java -jar, готовность хоста, выбранный ContentProvider, RPC содержимого и доставки, чтение хранилища с SHA, сигнал активности и штатное завершение')
     finally:
         if child.poll() is None:
             child.kill();child.communicate(timeout=4)
