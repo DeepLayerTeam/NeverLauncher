@@ -437,7 +437,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, errors.New("source snapshot changed during import")
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return report, fmt.Errorf("Для «PostgreSQL commit outcome» требуется: «reconciled before retry:» %w", err)
+		return report, fmt.Errorf("PostgreSQL commit outcome: требуется «reconciled before retry:» %w", err)
 	}
 	return report, nil
 }

@@ -39,7 +39,7 @@ def digest(path: Path) -> str:
 def audit() -> None:
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     if not legacy_admin_supported(version):
-        raise RuntimeError(f"Для «Admin GA audit» требуется «version >=0.22.0, got» {version}")
+        raise RuntimeError(f"Admin GA audit: требуется «version >=0.22.0, got» {version}")
     run(sys.executable, "scripts/version/manage.py", "check")
     run(sys.executable, "scripts/contracts/validate-openapi.py")
     run(sys.executable, "scripts/smoke/offline/repository-policy.py")

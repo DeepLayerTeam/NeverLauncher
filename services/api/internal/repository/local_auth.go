@@ -19,7 +19,7 @@ type PasswordCAS0295 interface {
 
 func (r *MemoryRepository) ReplacePasswordIfMatch0295(_ context.Context, userID, priorHash, newHash string) (bool, error) {
 	if newHash == "" || !strings.HasPrefix(newHash, "$argon2id$") {
-		return false, errors.New("Для «new local password hash» требуется: Argon2id")
+		return false, errors.New("new local password hash: требуется Argon2id")
 	}
 	for i := range r.users {
 		if r.users[i].ID == userID {

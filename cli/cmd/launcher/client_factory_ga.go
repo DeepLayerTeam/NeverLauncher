@@ -76,7 +76,7 @@ func factoryReadJoinEvidence0280(path string) (factoryJoinEvidence0280, string, 
 func factorySignJoin0280(evidence, privatePath, ver, commit, out string) (factoryJoinAttestation0280, error) {
 	var a factoryJoinAttestation0280
 	if ver != "0.28.0" || !factoryCommit0280.MatchString(commit) || out == "" || out == "-" {
-		return a, errors.New("Для «GA join signing» требуется «release 0.28.0, exact 40-character commit and output file»")
+		return a, errors.New("GA join signing: требуется «release 0.28.0, exact 40-character commit and output file»")
 	}
 	_, sha, err := factoryReadJoinEvidence0280(evidence)
 	if err != nil {
@@ -163,7 +163,7 @@ func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinP
 	}
 	certs, err := certifyMatrix02712(matrix, clientPub, "", true)
 	if err != nil {
-		return report, fmt.Errorf("runtime matrix: %w", err)
+		return report, fmt.Errorf("Ошибка матрицы среды выполнения: %w", err)
 	}
 	// Одного тестового примера семейства недостаточно для матрицы GA. Требуйте
 	// реальный сертификат для всех пяти семейств и всех запрошенных целей.
@@ -172,7 +172,7 @@ func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinP
 	}
 	join, sha, err := factoryVerifyJoin0280(joinEvidence, joinAttestation, joinPub, ver, commit)
 	if err != nil {
-		return report, fmt.Errorf("matching-server join: %w", err)
+		return report, fmt.Errorf("Ошибка подключения к соответствующему серверу: %w", err)
 	}
 	report.Status = "passed"
 	report.CertifiedTargets = certs.Passed
@@ -183,7 +183,7 @@ func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinP
 }
 func handleFactoryGA0280(args []string) error {
 	if len(args) == 0 {
-		return errors.New("require certify-ga|ga-sign-join")
+		return errors.New("Требуется команда certify-ga или ga-sign-join")
 	}
 	t := args[1:]
 	switch args[0] {

@@ -63,7 +63,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	}
 	root, e := hex.DecodeString(strings.TrimSpace(rootHex))
 	if e != nil || len(root) != 32 {
-		return p, "", errors.New("Для «trusted embedded root» требуется: «32-byte Ed25519»")
+		return p, "", errors.New("trusted embedded root: требуется «32-byte Ed25519»")
 	}
 	var env TrustPolicyEnvelope
 	if e = decodeStrict(raw, &env); e != nil {
@@ -122,7 +122,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		if k.Status == "verify-only" {
 			u, e := strictTime02312(k.VerifyUntil)
 			if e != nil || !u.After(t) || u.Sub(t) > 90*24*time.Hour || u.After(expiry) {
-				return p, "", errors.New("Некорректное значение: «finite key overlap»")
+				return p, "", errors.New("Некорректное значение: ограниченный период пересечения действия ключей")
 			}
 		}
 		if k.Status == "active" {

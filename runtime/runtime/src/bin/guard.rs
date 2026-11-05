@@ -134,7 +134,7 @@ fn optional_flag(args: &[String], name: &str) -> Result<Option<String>, String> 
                 .get(index + 1)
                 .ok_or_else(|| format!("argument {name} requires a value"))?;
             if found.replace(value.clone()).is_some() {
-                return Err(format!("Для аргумент {name} требуется: «specified only once»"));
+                return Err(format!("Аргумент {name} можно указывать только один раз"));
             }
             index += 2;
         } else {

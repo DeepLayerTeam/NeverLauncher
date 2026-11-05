@@ -209,12 +209,12 @@ def validate_preflight(env: dict[str, str]) -> str:
     if missing:
         raise GateError("Отсутствует: «live dependencies:»" + ", ".join(missing))
     if env.get("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1":
-        raise GateError("Для «SQLite supported filesystem» требуется: «required, not skipped»")
+        raise GateError("SQLite supported filesystem: требуется «required, not skipped»")
     root = Path(env["LAUNCHER_SQLITE_TEST_ROOT"])
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
-        raise GateError("Для «SQLite test volume» требуется: «an existing absolute directory»")
+        raise GateError("SQLite test volume: требуется «an existing absolute directory»")
     if root.stat().st_mode & 0o077:
-        raise GateError("Для «SQLite test root» требуется: приватные права 0700")
+        raise GateError("SQLite test root: требуется приватные права 0700")
     return str(root.resolve())
 
 

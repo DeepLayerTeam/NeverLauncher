@@ -162,17 +162,17 @@ func (s Server) adminProfileCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	profile := model.Profile{ID: req.ID, ProjectID: projectID, Name: req.Name, Description: optionalProfileString0382(req.Description), Loader: firstNonEmpty(req.Loader, "vanilla"), MinecraftVersion: optionalProfileString0382(req.MinecraftVersion), LoaderVersion: optionalProfileString0382(req.LoaderVersion), JavaMajor: optionalProfileInt0382(req.JavaMajor), Preset: optionalProfileString0382(req.Preset), IsDefault: optionalProfileBool0382(req.IsDefault)}
 	if err := s.beforeProfileSave0495(r, "create", profile); err != nil {
-		writeError(w, http.StatusConflict, "profile policy rejected or unavailable")
+		writeError(w, http.StatusConflict, "Политика профиля отклонена или недоступна")
 		return
 	}
 	creator, ok := s.Repo.(profileCreator0225)
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "exclusive profile creation unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Исключительное создание профиля недоступно")
 		return
 	}
 	saved, err := creator.CreateProfileExclusive0225(profile)
 	if errors.Is(err, repository.ErrConflict) {
-		writeError(w, http.StatusConflict, "profile already exists")
+		writeError(w, http.StatusConflict, "Профиль уже существует")
 		return
 	}
 	if err != nil {
@@ -234,7 +234,7 @@ func (s Server) adminProfileUpdate(w http.ResponseWriter, r *http.Request) {
 		profile.IsDefault = *req.IsDefault
 	}
 	if req.ExpectedRevision != nil && *req.ExpectedRevision != profile.Revision {
-		writeError(w, http.StatusConflict, "profile revision conflict")
+		writeError(w, http.StatusConflict, "Конфликт ревизий профиля")
 		return
 	}
 	profile.Revision = 0
@@ -242,13 +242,13 @@ func (s Server) adminProfileUpdate(w http.ResponseWriter, r *http.Request) {
 		profile.Revision = *req.ExpectedRevision
 	}
 	if err := s.beforeProfileSave0495(r, "update", profile); err != nil {
-		writeError(w, http.StatusConflict, "profile policy rejected or unavailable")
+		writeError(w, http.StatusConflict, "Политика профиля отклонена или недоступна")
 		return
 	}
 	saved, err := s.Repo.SaveProfile(profile)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			writeError(w, http.StatusConflict, "profile revision conflict")
+			writeError(w, http.StatusConflict, "Конфликт ревизий профиля")
 			return
 		}
 		writeError(w, http.StatusBadRequest, err.Error())

@@ -227,7 +227,7 @@ func configureServerBridgeHost01910(args []string) error {
 			javaArgsFile = detectModernForgeArgsFile01910(root, detection.Platform)
 		}
 		if javaArgsFile == "" {
-			return errors.New("Для «java-args-file mode» требуется «--java-args-file or a detected Forge/NeoForge unix_args/win_args file»")
+			return errors.New("java-args-file mode: требуется «--java-args-file or a detected Forge/NeoForge unix_args/win_args file»")
 		}
 		javaArgsFile, err = hostResolveInsideRoot01910(root, javaArgsFile, true)
 		if err != nil {
@@ -604,7 +604,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		return err
 	}
 	if hostOwnIdentity0282() == "" {
-		return errors.New("Для «Host Supervisor» требуется «verifiable process identity on this OS»")
+		return errors.New("Host Supervisor: требуется «verifiable process identity on this OS»")
 	}
 	sessionID, err := randomHostSessionID01910()
 	if err != nil {
@@ -1295,7 +1295,7 @@ func positiveIntFlag01910(args []string, name string, fallback int) (int, error)
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed <= 0 {
-		return 0, fmt.Errorf("Для «%s» требуется: «a positive integer»", name)
+		return 0, fmt.Errorf("%s: требуется «a positive integer»", name)
 	}
 	return parsed, nil
 }
@@ -1307,7 +1307,7 @@ func positiveOrZeroIntFlag01910(args []string, name string, fallback int) (int, 
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed < 0 {
-		return 0, fmt.Errorf("Для «%s» требуется: «a non-negative integer»", name)
+		return 0, fmt.Errorf("%s: требуется «a non-negative integer»", name)
 	}
 	return parsed, nil
 }

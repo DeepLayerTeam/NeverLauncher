@@ -194,10 +194,10 @@ impl Statistics {
 }
 
 fn file_host(url: &str) -> Result<String, String> {
-    let parsed = reqwest::Url::parse(url).map_err(|e| format!("Некорректное значение: «download URL»: {e}"))?;
+    let parsed = reqwest::Url::parse(url).map_err(|e| format!("Некорректное значение: URL скачивания: {e}"))?;
     if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() ||
         !parsed.username().is_empty() || parsed.password().is_some() || parsed.fragment().is_some() {
-        return Err("Небезопасное значение: «download URL»".into());
+        return Err("Небезопасное значение: URL скачивания".into());
     }
     Ok(format!("{}://{}:{}", parsed.scheme(), parsed.host_str().unwrap_or_default(),
         parsed.port_or_known_default().unwrap_or(0)))

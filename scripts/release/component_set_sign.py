@@ -35,7 +35,7 @@ def signed_set(
         ):
             value = os.environ["LAUNCHER_COMPONENT_SECURITY_GENERATION"].strip()
             if not value.isascii() or not value.isdigit():
-                raise ValueError("Для «component security generation» требуется: «decimal»")
+                raise ValueError("component security generation: требуется «decimal»")
             generation = int(value)
             manifest["securityGeneration"] = generation
         if type(generation) is not int or generation <= 0 or generation > 2**64 - 1:
@@ -112,7 +112,7 @@ def signed_set(
 
     seed_bytes = bytes.fromhex(seed)
     if len(seed_bytes) != 32:
-        raise ValueError("Для «Ed25519 seed» требуется: «exactly 32 bytes in hexadecimal»")
+        raise ValueError("Ed25519 seed: требуется «exactly 32 bytes in hexadecimal»")
     key = Ed25519PrivateKey.from_private_bytes(seed_bytes)
     expected_pub = (
         os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "").strip().lower()

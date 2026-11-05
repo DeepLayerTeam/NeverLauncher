@@ -200,7 +200,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		return nil
 	}
 	if strings.ContainsAny(version, "-+") {
-		return errors.New("Для «GA 0.36.1+ BLOCKED: release» требуется: «stable SemVer»")
+		return errors.New("GA 0.36.1+ BLOCKED: release: требуется «stable SemVer»")
 	}
 	if !gaCommit0361.MatchString(commit) {
 		return errors.New("Для GA требуется «exact source SHA in release manifest»")
@@ -219,7 +219,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	}
 	keyHex := strings.TrimSpace(string(pubRaw))
 	if len(keyHex) != 64 {
-		return errors.New("Для «operator GA key» требуется: «32-byte raw public key hex»")
+		return errors.New("operator GA key: требуется «32-byte raw public key hex»")
 	}
 	keyBytes, err := hex.DecodeString(keyHex)
 	if err != nil {
@@ -307,7 +307,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		for _, r := range receipt.Targets {
 			if r.Target == t.Target {
 				if matching || r.Binary != binaryName || r.Package != packageName || r.BinarySHA != t.BinarySHA || r.PackageSHA != t.PackageSHA || r.Checks != len(gaCheckNames0361) {
-					return fmt.Errorf("Несовпадение: «GA receipt»: %s", t.Target)
+					return fmt.Errorf("Несовпадение: подтверждение приёмки GA: %s", t.Target)
 				}
 				matching = true
 			}

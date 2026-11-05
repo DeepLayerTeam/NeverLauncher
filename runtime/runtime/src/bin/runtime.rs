@@ -166,7 +166,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
         #[cfg(unix)] {
             use std::os::unix::fs::PermissionsExt;
             if meta.permissions().mode() & 0o077 != 0 {
-                return Err("Для файл учётных данных аутентификации требуется: «0600»".into());
+                return Err("Для файла учётных данных аутентификации требуются права доступа 0600".into());
             }
         }
         let raw = std::fs::read(&path).map_err(|_| "credential file unreadable")?;
@@ -174,7 +174,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
              .map_err(|_| "Некорректное значение: «Minecraft credential identity»")?)
     } else { None };
     if creds.is_some() && server_port.is_none() {
-        return Err("Для «authenticated validation» требуется «a matching server»".into());
+        return Err("authenticated validation: требуется «a matching server»".into());
     }
     let mut result = launch_with_timeout_matching_authenticated(
         &manifest, &root, optional_flag(args, "--java"), optional_flag(args, "--username"),

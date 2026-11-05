@@ -70,7 +70,7 @@ pub fn initialize() -> Result<DebugInstrumentationSnapshot, String> {
     let snapshot = snapshot_for_state(&state);
     *DEBUG_STATE
         .lock()
-        .map_err(|_| "Guard Debug & Instrumentation Guard state lock poisoned".to_string())? =
+        .map_err(|_| "Повреждена блокировка состояния защиты от отладки Guard".to_string())? =
         Some(state);
     Ok(snapshot)
 }
@@ -80,12 +80,12 @@ pub fn reconcile_and_verify() -> Result<DebugInstrumentationSnapshot, String> {
     reject_debug_state(indicators)?;
     let mut guard = DEBUG_STATE
         .lock()
-        .map_err(|_| "Guard Debug & Instrumentation Guard state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния защиты от отладки Guard".to_string())?;
     let state = guard
         .as_mut()
         .ok_or_else(|| "Guard Debug & Instrumentation Guard is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("Guard Debug & Instrumentation Guard is not active/healthy".to_string());
+        return Err("Защита Guard от отладки и инструментирования не активна или работает некорректно".to_string());
     }
     state.last = indicators;
     state.integrity_check_count = state.integrity_check_count.saturating_add(1);

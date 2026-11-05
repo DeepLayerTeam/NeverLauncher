@@ -117,11 +117,11 @@ func Load(now time.Time) (Policy, error) {
 	seen := make(map[string]struct{}, len(out.AllowedPlans))
 	for _, a := range out.AllowedPlans {
 		if !isHexLength(a.ReleaseSignature, 128) || !isHexLength(a.CatalogDigest, 64) || !isHexLength(a.PlanSHA256, 64) || a.ServerID == "" || a.ProjectID == "" || a.ProfileID == "" || a.Channel == "" || strings.ContainsAny(a.ServerID+a.ProjectID+a.ProfileID+a.Channel, "\n\r") {
-			return out, errors.New("Некорректное значение: «signed plan allowlist entry»")
+			return out, errors.New("Некорректное значение: запись списка разрешений подписанного плана")
 		}
 		k := a.ServerID + "/" + a.ProjectID + "/" + a.ProfileID + "/" + a.Channel + "/" + a.PlanSHA256
 		if _, ok := seen[k]; ok {
-			return out, errors.New("Обнаружен дубликат: «signed plan allowlist entry»")
+			return out, errors.New("Обнаружен дубликат: запись списка разрешений подписанного плана")
 		}
 		seen[k] = struct{}{}
 	}

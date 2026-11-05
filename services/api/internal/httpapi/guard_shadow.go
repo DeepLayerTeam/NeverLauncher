@@ -36,10 +36,10 @@ type guardShadowJournal05012 struct {
 
 func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShadowJournal05012, error) {
 	if len(version) > 48 || !guardShadowVersion05012.MatchString(version) {
-		return nil, errors.New("Для «Guard shadow» требуется «a valid running product version»")
+		return nil, errors.New("Для теневой режим Guard требуется «a valid running product version»")
 	}
 	if !filepath.IsAbs(directory) || !filepath.IsAbs(keyFile) {
-		return nil, errors.New("Для «Guard shadow directory/key» требуется: «absolute»")
+		return nil, errors.New("Guard shadow directory/key: требуется «absolute»")
 	}
 	di, err := os.Lstat(directory)
 	if err != nil || !di.IsDir() || di.Mode()&os.ModeSymlink != 0 || di.Mode().Perm()&0077 != 0 {
@@ -47,7 +47,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	ki, err := os.Lstat(keyFile)
 	if err != nil || !ki.Mode().IsRegular() || ki.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Для «Guard shadow key» требуется: «a private regular file»")
+		return nil, errors.New("Ключ теневого режима Guard: требуется «a private regular file»")
 	}
 	raw, err := os.ReadFile(keyFile)
 	if err != nil {
@@ -55,7 +55,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	key, err := hex.DecodeString(strings.TrimSpace(string(raw)))
 	if err != nil || len(key) != 32 {
-		return nil, errors.New("Для «Guard shadow key» требуется: «exactly 32 random bytes in hex»")
+		return nil, errors.New("Ключ теневого режима Guard: требуется «exactly 32 random bytes in hex»")
 	}
 	var boot [16]byte
 	if _, err = rand.Read(boot[:]); err != nil {
@@ -159,7 +159,7 @@ func recordGuardShadow05012(version, nodeID, correlation, outcome, reason string
 		return nil
 	}
 	if directory == "" || keyFile == "" {
-		return errors.New("Для «Guard shadow» требуется «both directory and key file»")
+		return errors.New("Для теневой режим Guard требуется «both directory and key file»")
 	}
 	guardShadowGlobal05012.once.Do(func() {
 		guardShadowGlobal05012.journal, guardShadowGlobal05012.err = newGuardShadowJournal05012(directory, keyFile, version)

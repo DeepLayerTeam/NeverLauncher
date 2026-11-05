@@ -80,7 +80,7 @@ def run_local(args: argparse.Namespace) -> int:
     runtime = Path(args.runtime).resolve(strict=True)
     guard = Path(args.guard).resolve(strict=True)
     if not runtime.is_file() or not guard.is_file():
-        raise ValueError("Для «native Runtime and Guard executables» требуется: файлы")
+        raise ValueError("native Runtime and Guard executables: требуется файлы")
     command = [str(runtime), "guard-inventory", "--guard-executable", str(guard)]
     if args.java:
         command.extend(("--java", args.java))

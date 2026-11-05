@@ -196,7 +196,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 			if v, has := obj[field]; has {
 				b, ok := gravitBool02411(v)
 				if !ok {
-					note(label+"."+field, "blocked", "", "expected boolean")
+					note(label+"."+field, "blocked", "", "Ожидается логическое значение")
 					continue
 				}
 				switch field {

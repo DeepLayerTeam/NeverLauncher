@@ -97,7 +97,7 @@ func verifyClientInstallation(packagePath, clientDir string) (clientVerifyResult
 	expected := make(map[string]ClientPackageFile, len(manifest.Files))
 	for _, file := range manifest.Files {
 		if protectedUpdatePath0224(file.Path) {
-			return result, fmt.Errorf("client package may not own user data: %s", file.Path)
+			return result, fmt.Errorf("Пакет клиента не может владеть пользовательскими данными: %s", file.Path)
 		}
 		if err := validateClientPackagePath(file.Path); err != nil {
 			return result, err
@@ -210,7 +210,7 @@ func repairClientInstallation(packagePath, storageDir, clientDir string, include
 				return err
 			}
 			if !after.Valid {
-				return fmt.Errorf("repair post-verify failed: missing=%v corrupted=%v", after.Missing, after.Corrupted)
+				return fmt.Errorf("Проверка после восстановления завершилась ошибкой: отсутствуют=%v, повреждены=%v", after.Missing, after.Corrupted)
 			}
 			return nil
 		},
@@ -313,7 +313,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 	}
 	safetyID, err := createClientSnapshot(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("safety snapshot: %w", err)
+		return nil, fmt.Errorf("Ошибка страхового снимка: %w", err)
 	}
 
 	filesRoot := filepath.Join(targetDir, "files")
@@ -321,10 +321,10 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 	wanted := make(map[string]bool, len(snap.Files)+1)
 	for _, rel := range snap.Files {
 		if protectedUpdatePath0224(rel) {
-			return nil, fmt.Errorf("snapshot tries to restore user data: %s", rel)
+			return nil, fmt.Errorf("Снимок пытается восстановить пользовательские данные: %s", rel)
 		}
 		if err := validateUpdaterPath0156(rel); err != nil {
-			return nil, fmt.Errorf("snapshot %s contains invalid path %s: %w", snap.ID, rel, err)
+			return nil, fmt.Errorf("Снимок %s содержит некорректный путь %s: %w", snap.ID, rel, err)
 		}
 		src := filepath.Join(filesRoot, filepath.FromSlash(rel))
 		sum, size, err := hashFile(src)
@@ -336,7 +336,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 			return nil, err
 		}
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("Для файл снимка требуется: «regular:» %s", rel)
+			return nil, fmt.Errorf("Файл снимка должен быть обычным файлом: %s", rel)
 		}
 		files = append(files, updaterFileSpec0156{Path: rel, Source: src, Size: size, SHA256: sum, Executable: info.Mode().Perm()&0o111 != 0})
 		wanted[rel] = true

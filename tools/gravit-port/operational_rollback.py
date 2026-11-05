@@ -63,7 +63,7 @@ def systemd_state(unit: str) -> dict:
         out = subprocess.run(["systemctl", "show", unit, "--property=ActiveState,SubState,UnitFileState",
                               "--no-pager"], stdin=subprocess.DEVNULL, capture_output=True, timeout=8, check=True)
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        raise co.Blocked("Не удалось проверить «systemd service»" + unit) from exc
+        raise co.Blocked("Не удалось проверить служба systemd" + unit) from exc
     result = dict(line.split("=", 1) for line in out.stdout.decode("utf-8", "replace").splitlines() if "=" in line)
     require(all(result.get(field) for field in ("ActiveState", "SubState", "UnitFileState")),
             "incomplete systemd response for " + unit)

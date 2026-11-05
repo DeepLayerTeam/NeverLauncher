@@ -98,7 +98,7 @@ func LoadTarget(path, serverID string) (Target, error) {
 	}
 	u, err := url.Parse(t.URL)
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Path != "" && u.Path != "/" || u.RawQuery != "" || u.Fragment != "" {
-		return empty, errors.New("Для «host target» требуется: «an HTTPS origin»")
+		return empty, errors.New("host target: требуется «an HTTPS origin»")
 	}
 	return t, nil
 }

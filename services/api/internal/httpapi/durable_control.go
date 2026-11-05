@@ -157,7 +157,7 @@ func (s Server) enqueuePublishJob0213(r *http.Request, lookup packageLookup) (mo
 		idempotencyKey = "auto:" + claims.Sub + ":" + lookup.Release.ID + ":" + manifestDigest
 	}
 	if len(idempotencyKey) > 240 {
-		return model.DurableJob{}, false, errors.New("Idempotency-Key too long")
+		return model.DurableJob{}, false, errors.New("Заголовок Idempotency-Key слишком длинный")
 	}
 	job := model.DurableJob{
 		Kind:           durablePublishJobKind0213,
@@ -262,7 +262,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 
 	lookup, err := s.lookupPackage(job.ResourceID)
 	if err != nil {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "package not found")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Пакет не найден")
 		return model.ReleaseVersion{}, err
 	}
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)

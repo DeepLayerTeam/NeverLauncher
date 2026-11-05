@@ -233,7 +233,7 @@ func readObject(data []byte) (map[string]json.RawMessage, error) {
 	}
 	var obj map[string]json.RawMessage
 	if e := json.Unmarshal(data, &obj); e != nil || obj == nil {
-		return nil, errors.New("expected JSON object")
+		return nil, errors.New("Ожидается объект JSON")
 	}
 	return obj, nil
 }
@@ -506,7 +506,7 @@ func Spool(ctx context.Context, source io.Reader) (*os.File, int64, string, erro
 		return cleanup(e)
 	}
 	if n == 0 {
-		return cleanup(errors.New("Пустое значение: «Gravit source ZIP»"))
+		return cleanup(errors.New("Пустое значение: исходный ZIP-архив Gravit"))
 	}
 	if e = f.Sync(); e != nil {
 		return cleanup(e)

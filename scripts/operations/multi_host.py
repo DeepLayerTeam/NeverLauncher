@@ -151,7 +151,7 @@ def resolved_compose(directory, project, *, env_file=None):
             raise DeploymentError("only port 443 of local ingress may be published")
         host_ip = str(bind.get("host_ip", ""))
         if not host_ip or host_ip in ("0.0.0.0", "::", "127.0.0.1"):
-            raise DeploymentError("Для «ingress» требуется «an explicit reachable, restricted interface IP»")
+            raise DeploymentError("ingress: требуется «an explicit reachable, restricted interface IP»")
     for name in ("api", "worker"):
         if not services[name].get("healthcheck"):
             raise DeploymentError("Отсутствует: «readiness healthcheck for»" + name)
@@ -161,10 +161,10 @@ def resolved_compose(directory, project, *, env_file=None):
     tls_targets = ("/etc/launcher/tls/fullchain.pem", "/etc/launcher/tls/privkey.pem")
     tls_volumes = [v for v in services["ingress"].get("volumes", []) if v.get("target") in tls_targets]
     if sorted(v["target"] for v in tls_volumes) != sorted(tls_targets):
-        raise DeploymentError("Для «both host TLS certificate and key» требуется: «bind-mounted»")
+        raise DeploymentError("both host TLS certificate and key: требуется «bind-mounted»")
     for volume in tls_volumes:
         if volume.get("type") != "bind" or volume.get("read_only") is not True:
-            raise DeploymentError("Для «host TLS credentials» требуется: «read-only file binds»")
+            raise DeploymentError("host TLS credentials: требуется «read-only file binds»")
         check_secure_file(Path(volume["source"]), strict=volume["target"].endswith("privkey.pem"))
     machine = inventory.machine_identity()
     if not machine:
@@ -257,7 +257,7 @@ def local_compat_observe_0516(directory, project):
         except ValueError as exc:
             raise DeploymentError("Некорректное значение: «HTTP API compatibility response»") from exc
         if not isinstance(data, dict):
-            raise DeploymentError("Для «HTTP API compatibility response» требуется: объект JSON")
+            raise DeploymentError("HTTP API compatibility response: требуется объект JSON")
         return data
     v = running["api"]["readiness"]["version"]
     status = get("/api/v1/status")
@@ -312,7 +312,7 @@ def remote_call(target, installed_script, directory, project, mode, *, growth=Tr
     if not HOST_REGEX.fullmatch(target) or target.startswith("-"):
         raise DeploymentError("Некорректное значение: «SSH target»")
     if not installed_script.startswith("/") or not directory.startswith("/"):
-        raise DeploymentError("Для «installed script and deployment directory» требуется: «absolute paths»")
+        raise DeploymentError("installed script and deployment directory: требуется «absolute paths»")
     if any("\n" in s or "\r" in s for s in (installed_script, directory)):
         raise DeploymentError("Некорректное значение: «remote path»")
     args = ["python3", installed_script, mode, "--directory", directory, "--project", project,
@@ -344,7 +344,7 @@ def parse_nodes(specs):
     for spec in specs:
         name, sep, host = spec.partition("=")
         if not sep or not LABEL_REGEX.fullmatch(name) or not HOST_REGEX.fullmatch(host) or host.startswith("-") or name in nodes:
-            raise DeploymentError("Для «each --node» требуется: «a unique label=trusted-ssh-host»")
+            raise DeploymentError("each --node: требуется «a unique label=trusted-ssh-host»")
         if host in nodes.values():
             raise DeploymentError("same SSH target specified more than once")
         nodes[name] = host
@@ -385,7 +385,7 @@ def validate_edge_url(url):
     except ValueError as exc:
         raise DeploymentError("Некорректное значение: «external load balancer URL»") from exc
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment or parsed.query or parsed.path not in ("", "/", "/ready"):
-        raise DeploymentError("Для «external load balancer URL» требуется: «an HTTPS origin or /ready without credentials»")
+        raise DeploymentError("external load balancer URL: требуется «an HTTPS origin or /ready without credentials»")
     return url
 
 
@@ -549,7 +549,7 @@ def main(argv=None):
                                                      "local-observe", growth=not args.skip_growth), args.edge_url)
         else:
             if not args.allow_disruption or not args.edge_url or not args.failed_node:
-                raise DeploymentError("Для «cluster-drill» требуется «--allow-disruption --failed-node and --edge-url»")
+                raise DeploymentError("cluster-drill: требуется «--allow-disruption --failed-node and --edge-url»")
             validate_edge_url(args.edge_url)
             report = outage_drill(nodes, args.remote_script, args.directory, args.project,
                                   args.edge_url, args.failed_node)

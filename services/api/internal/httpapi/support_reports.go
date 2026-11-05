@@ -120,11 +120,11 @@ func (s Server) playerSupportSubmit03510(w http.ResponseWriter, r *http.Request)
 	}
 	dir := s.supportReportsDir03510()
 	if e := os.MkdirAll(dir, 0700); e != nil {
-		writeError(w, http.StatusServiceUnavailable, "support storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище обращений поддержки недоступно")
 		return
 	}
 	if meta, e := os.Lstat(dir); e != nil || !meta.IsDir() || meta.Mode()&os.ModeSymlink != 0 {
-		writeError(w, http.StatusServiceUnavailable, "support storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище обращений поддержки недоступно")
 		return
 	}
 	entries, e := os.ReadDir(dir)
@@ -146,7 +146,7 @@ func (s Server) playerSupportSubmit03510(w http.ResponseWriter, r *http.Request)
 	}
 	file, e := os.CreateTemp(dir, ".support-*")
 	if e != nil {
-		writeError(w, http.StatusServiceUnavailable, "support storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище обращений поддержки недоступно")
 		return
 	}
 	temp := file.Name()
@@ -165,7 +165,7 @@ func (s Server) playerSupportSubmit03510(w http.ResponseWriter, r *http.Request)
 		e = os.Rename(temp, filepath.Join(dir, id+".json"))
 	}
 	if e != nil {
-		writeError(w, http.StatusServiceUnavailable, "support storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище обращений поддержки недоступно")
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"id": id, "status": "received", "message": "Report submitted with explicit consent"})
@@ -177,7 +177,7 @@ func (s Server) operatorSupportList03510(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if e != nil {
-		writeError(w, http.StatusServiceUnavailable, "support storage unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище обращений поддержки недоступно")
 		return
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() > entries[j].Name() })

@@ -83,7 +83,7 @@ mod imp {
             }
             let no_new_privs = unsafe { libc::prctl(libc::PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0) } == 1;
             let dumpable_disabled = unsafe { libc::prctl(libc::PR_GET_DUMPABLE, 0, 0, 0, 0) } == 0;
-            if !no_new_privs || !dumpable_disabled { return Err("Ошибка: «Linux production hardening verification»".into()); }
+            if !no_new_privs || !dumpable_disabled { return Err("Ошибка: проверка промышленного усиления защиты Linux".into()); }
             Ok(LinuxProductionHardeningReport {
                 hardening_version: GUARD_LINUX_HARDENING_VERSION,
                 pid: std::process::id(), enforced: true, no_new_privs, dumpable_disabled,
@@ -130,7 +130,7 @@ mod imp {
 
     pub fn terminate_runtime_process_group(pid: u32) -> Result<(), String> {
         if pid == 0 || pid > i32::MAX as u32 {
-            return Err("Некорректное значение: «Linux runtime process group PID»".to_string());
+            return Err("Некорректное значение: PID группы процессов среды выполнения Linux".to_string());
         }
         let rc = unsafe { libc::kill(-(pid as libc::pid_t), libc::SIGKILL) };
         if rc == 0 {
@@ -140,7 +140,7 @@ mod imp {
         if err.raw_os_error() == Some(libc::ESRCH) {
             return Ok(());
         }
-        Err(format!("Ошибка: «Linux kill process group» {pid}: {err}"))
+        Err(format!("Ошибка: завершение группы процессов Linux {pid}: {err}"))
     }
 
     pub fn runtime_policy(child: &mut Child) -> Result<LinuxRuntimeProcessPolicyReport, String> {
@@ -150,7 +150,7 @@ mod imp {
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
         if pgid < 0 { return Err(os_err("Ошибка: «Linux getpgid»")); }
         let own_process_group = pgid as u32 == pid;
-        if !no_new_privs || !own_process_group { return Err("Ошибка: «Linux runtime process policy verification»".into()); }
+        if !no_new_privs || !own_process_group { return Err("Ошибка: проверка политики процессов среды выполнения Linux".into()); }
         Ok(LinuxRuntimeProcessPolicyReport {
             schema: "runtime/linux-process-policy/v1".into(), policy_version: 1, pid,
             enforced: true, no_new_privs, parent_death_signal: true, own_process_group,

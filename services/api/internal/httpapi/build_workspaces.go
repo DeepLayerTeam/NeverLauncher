@@ -102,7 +102,7 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 	}
 	snapshot, err := repository.ReadProfileSnapshot(s.Repo, req.ProjectID, req.ProfileID)
 	if err != nil {
-		writeError(w, 400, "profile not found or invalid: "+err.Error())
+		writeError(w, 400, "Профиль не найден или некорректен: "+err.Error())
 		return
 	}
 	// Идентичность сервера не является отпечатком инструмента, задаваемым
@@ -313,7 +313,7 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 	}
 	var expected int64
 	if _, err = fmt.Sscan(r.FormValue("revision"), &expected); err != nil || expected != ws.Revision {
-		writeError(w, 409, "workspace revision conflict")
+		writeError(w, 409, "Конфликт ревизий рабочего пространства")
 		return
 	}
 	src, header, err := r.FormFile("file")
@@ -427,7 +427,7 @@ func (s Server) workspaceRemoveFile0384(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if req.Revision != ws.Revision {
-		writeError(w, 409, "workspace revision conflict")
+		writeError(w, 409, "Конфликт ревизий рабочего пространства")
 		return
 	}
 	index := -1
@@ -573,7 +573,7 @@ func (s Server) workspaceStage0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ws.Revision != req.Revision {
-		writeError(w, 409, "workspace revision conflict")
+		writeError(w, 409, "Конфликт ревизий рабочего пространства")
 		return
 	}
 	selected := map[string]bool{}
@@ -700,7 +700,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ws.Revision != req.Revision {
-		writeError(w, 409, "workspace revision conflict")
+		writeError(w, 409, "Конфликт ревизий рабочего пространства")
 		return
 	}
 	digest, err := s.workspaceValidate0226(ws)

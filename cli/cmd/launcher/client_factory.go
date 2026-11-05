@@ -143,7 +143,7 @@ func (r *factoryRecorder0271) recordSource(s factorySource0271) error {
 	defer r.mu.Unlock()
 	if prev, exists := r.sources[s.Path]; exists {
 		if prev.SHA256 != s.SHA256 || prev.Size != s.Size {
-			return fmt.Errorf("source %s changed during the same install", s.Path)
+			return fmt.Errorf("Источник %s изменился во время установки", s.Path)
 		}
 		return nil // одни и те же байты могут использоваться несколькими адаптерами
 	}
@@ -161,7 +161,7 @@ func (r *factoryRecorder0271) recordTasks(tasks []vanillaDownloadTask, files []v
 	for _, t := range tasks {
 		f, ok := byPath[t.Path]
 		if !ok {
-			return fmt.Errorf("factory source %s not downloaded", t.Path)
+			return fmt.Errorf("Источник сборочного конвейера %s не скачан", t.Path)
 		}
 		if err := r.recordSource(factorySource0271{Path: t.Path, Kind: t.Kind, URL: t.URL, SHA1: strings.ToLower(f.SHA1), SHA256: f.SHA256, Size: f.Size}); err != nil {
 			return err
@@ -181,7 +181,7 @@ func (r *factoryRecorder0271) recordProcessor(pc forgeProcessorContext, index in
 		}
 		rel, err := filepath.Rel(pc.ClientDir, full)
 		if err != nil || validateVanillaRelativePath(filepath.ToSlash(rel)) != nil {
-			return fmt.Errorf("processor[%d] output escapes client root: %s", index, token)
+			return fmt.Errorf("Вывод процессора [%d] выходит за пределы корневого каталога клиента: %s", index, token)
 		}
 		sum, size, err := hashFile(full)
 		if err != nil {
@@ -256,7 +256,7 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 		return errors.New("Версия загрузчика Client Factory не закреплена")
 	}
 	if p.Resolution != nil && p.Resolution.ResolvedVersion != "" && p.Resolution.ResolvedVersion != p.LoaderVersion {
-		return errors.New("factory loader resolution version disagrees with plan")
+		return errors.New("Версия загрузчика сборочного конвейера не совпадает с планом")
 	}
 	seen := map[string]bool{}
 	for _, o := range p.Outputs {
@@ -311,13 +311,13 @@ func scanFactoryOutputs0271(root string) ([]factoryOutput0271, error) {
 			return filepath.SkipDir
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("symlink is not allowed in reproducible factory output: %s", normalized)
+			return fmt.Errorf("Символическая ссылка запрещена в воспроизводимом результате сборки: %s", normalized)
 		}
 		if d.IsDir() {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return fmt.Errorf("nonregular factory output %s", normalized)
+			return fmt.Errorf("Выходной объект сборки %s не является обычным файлом", normalized)
 		}
 		if err := validateVanillaRelativePath(normalized); err != nil {
 			return err
@@ -343,7 +343,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 		lock := defaultLoaderResolutionLockPath(root, p.Loader)
 		raw, err := os.ReadFile(lock)
 		if err != nil {
-			return fmt.Errorf("loader resolution lock: %w", err)
+			return fmt.Errorf("Ошибка блокировки разрешения версии загрузчика: %w", err)
 		}
 		if sha256HexBytes(raw) != p.LoaderResolutionSHA256 {
 			return errors.New("Обнаружено изменение: блокировка выбора загрузчика")
@@ -353,7 +353,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 			return err
 		}
 		if resolution.ResolutionSourceSHA256 != p.Resolution.SourceSHA256 || resolution.PayloadSHA256 != p.Resolution.PayloadSHA256 || resolution.RuntimeProfileSHA256 != p.Resolution.ProfileSHA256 || (p.Resolution.ResolvedVersion != "" && resolution.ResolvedVersion != p.Resolution.ResolvedVersion) || (p.Resolution.LoaderMaven != "" && resolution.LoaderMaven != p.Resolution.LoaderMaven) || (p.Resolution.IntermediaryMaven != "" && resolution.IntermediaryMaven != p.Resolution.IntermediaryMaven) {
-			return errors.New("loader resolution details differ from InstallPlan")
+			return errors.New("Данные о загрузчике отличаются от InstallPlan")
 		}
 	}
 	for _, src := range p.Sources {
@@ -381,17 +381,17 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 	}
 	for i, a := range actual {
 		if a != p.Outputs[i] {
-			return fmt.Errorf("factory output mismatch: expected %+v got %+v", p.Outputs[i], a)
+			return fmt.Errorf("Результат сборки не совпадает: ожидалось %+v, получено %+v", p.Outputs[i], a)
 		}
 	}
 	if err := verifyLegacyLaunch0278(root, p); err != nil {
-		return fmt.Errorf("legacy launch verification: %w", err)
+		return fmt.Errorf("Ошибка проверки запуска прежней версии: %w", err)
 	}
 	if err := verifyCompat0279(root, p); err != nil {
 		return fmt.Errorf("authlib/classloader verification: %w", err)
 	}
 	if err := verifyAuthlibProvenance0279(root, p); err != nil {
-		return fmt.Errorf("authlib provenance verification: %w", err)
+		return fmt.Errorf("Ошибка проверки происхождения authlib: %w", err)
 	}
 	return nil
 }
@@ -412,7 +412,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Для Client Factory необходимо указать --minecraft")
 	}
 	if !o.StrictUpstream {
-		return o, errors.New("Для «Client Factory» требуется «strict upstream checksum verification»")
+		return o, errors.New("Client Factory: требуется «strict upstream checksum verification»")
 	}
 	if o.Workers == 0 {
 		o.Workers = 12
@@ -460,7 +460,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Допустимый диапазон для тайм-аут процессора: 1s–1h")
 	}
 	if o.ProcessorSandbox != "" && o.ProcessorSandbox != "process" && o.ProcessorSandbox != "required" {
-		return o, errors.New("Для «processor sandbox» требуется: «process or required»")
+		return o, errors.New("processor sandbox: требуется «process or required»")
 	}
 	return o, nil
 }
@@ -491,7 +491,7 @@ func acquireFactoryLock0271(dst string) (func(), error) {
 	}
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
-		return nil, fmt.Errorf("factory client directory is locked (%s): %w", lockPath, err)
+		return nil, fmt.Errorf("Каталог клиента сборочного конвейера заблокирован (%s): %w", lockPath, err)
 	}
 	_, _ = fmt.Fprintf(f, "pid=%d\nstarted=%s\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339Nano))
 	if err = f.Sync(); err != nil {
@@ -528,14 +528,14 @@ func copyFactoryExisting0271(from, to string) error {
 			return nil
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("source contains symlink %s", rel)
+			return fmt.Errorf("Источник содержит символическую ссылку %s", rel)
 		}
 		dest := filepath.Join(to, rel)
 		if d.IsDir() {
 			return os.MkdirAll(dest, 0o755)
 		}
 		if !d.Type().IsRegular() {
-			return fmt.Errorf("source contains nonregular file %s", rel)
+			return fmt.Errorf("Источник содержит объект, который не является обычным файлом: %s", rel)
 		}
 		fin, err := os.Open(src)
 		if err != nil {
@@ -593,28 +593,28 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	if hasPrior {
 		if !o.UpgradeAdapters {
 			if err := requireCurrentFactoryAdapters02711(prior); err != nil {
-				return factoryPlan0271{}, fmt.Errorf("explicit adapter upgrade required (--upgrade-adapters): %w", err)
+				return factoryPlan0271{}, fmt.Errorf("Необходимо явно разрешить обновление адаптера (--upgrade-adapters): %w", err)
 			}
 		}
 		if prior.Loader != o.Loader {
-			return factoryPlan0271{}, fmt.Errorf("locked loader %s is not %s", prior.Loader, o.Loader)
+			return factoryPlan0271{}, fmt.Errorf("Закреплённый загрузчик %s не соответствует %s", prior.Loader, o.Loader)
 		}
 		if o.Minecraft != prior.MinecraftVersion && !isMutableMinecraft0271(o.Minecraft) {
-			return factoryPlan0271{}, errors.New("locked Minecraft version differs from requested version")
+			return factoryPlan0271{}, errors.New("Закреплённая версия Minecraft отличается от запрошенной")
 		}
 		if o.Loader != "vanilla" && o.LoaderVersion != prior.LoaderVersion && !isMutableLoaderSelector(o.LoaderVersion) {
-			return factoryPlan0271{}, errors.New("locked loader version differs from requested version")
+			return factoryPlan0271{}, errors.New("Закреплённая версия загрузчика отличается от запрошенной")
 		}
 		if len(o.Targets) != len(prior.Targets) {
-			return factoryPlan0271{}, errors.New("locked targets differ")
+			return factoryPlan0271{}, errors.New("Закреплённые целевые платформы отличаются")
 		}
 		for i, t := range o.Targets {
 			if t != prior.Targets[i] {
-				return factoryPlan0271{}, errors.New("locked target differs")
+				return factoryPlan0271{}, errors.New("Закреплённая целевая платформа отличается")
 			}
 		}
 		if err := verifyFactoryPlan0271(dst, prior); err != nil {
-			return factoryPlan0271{}, fmt.Errorf("existing factory build is corrupt: %w", err)
+			return factoryPlan0271{}, fmt.Errorf("Существующая сборка повреждена: %w", err)
 		}
 		o.Minecraft = prior.MinecraftVersion
 		if o.Loader != "vanilla" {
@@ -626,7 +626,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 			return factoryPlan0271{}, err
 		}
 		if len(entries) > 0 {
-			return factoryPlan0271{}, errors.New("Для «factory» требуется «an empty destination or an existing verified install-plan; use a separate directory»")
+			return factoryPlan0271{}, errors.New("factory: требуется «an empty destination or an existing verified install-plan; use a separate directory»")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return factoryPlan0271{}, err
@@ -742,15 +742,15 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		// Порядок и метаданные источников можно наблюдать повторно, но ранее закреплённые
 		// результаты и идентичность загрузчика неизменны. Это настоящее воспроизведение.
 		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) || !reflect.DeepEqual(p.Legacy, prior.Legacy) {
-			return factoryPlan0271{}, errors.New("rebuild changed pinned runtime identity")
+			return factoryPlan0271{}, errors.New("Повторная сборка изменила закреплённую идентичность среды выполнения")
 		}
 		if !o.UpgradeAdapters {
 			if len(p.Outputs) != len(prior.Outputs) {
-				return factoryPlan0271{}, errors.New("rebuild changed output count")
+				return factoryPlan0271{}, errors.New("Повторная сборка изменила число выходных файлов")
 			}
 			for i := range p.Outputs {
 				if p.Outputs[i] != prior.Outputs[i] {
-					return factoryPlan0271{}, fmt.Errorf("rebuild changed %s", p.Outputs[i].Path)
+					return factoryPlan0271{}, fmt.Errorf("Повторная сборка изменила %s", p.Outputs[i].Path)
 				}
 			}
 			// Сохраняйте исходное доказательство только при повторе с неизменным адаптером.
@@ -767,7 +767,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		return factoryPlan0271{}, err
 	}
 	if hasPrior && !o.UpgradeAdapters && p.ReproducibilitySHA256 != prior.ReproducibilitySHA256 {
-		return factoryPlan0271{}, errors.New("rebuild identity differs from lockfile")
+		return factoryPlan0271{}, errors.New("Идентичность повторной сборки отличается от файла блокировки")
 	}
 	rawPlan, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
@@ -817,7 +817,7 @@ func rejectFactoryOutputPath0271(root, output string) error {
 
 func handleRuntimeFactory0271(args []string) error {
 	if len(args) < 1 {
-		return errors.New("Для «runtime client-factory» требуется build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib")
+		return errors.New("runtime client-factory: требуется build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib")
 	}
 	mode := args[0]
 	if mode == "certify-ga" || mode == "ga-sign-join" {

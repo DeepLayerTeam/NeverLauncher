@@ -59,7 +59,7 @@ func VerifyGrowth(ctx context.Context, cfg config.Config, plan Plan) (GrowthRepo
 		}
 		r.S3RoundTrip = true
 	} else if plan.Mode == NetworkHA {
-		return r, errors.New("Для «Network/HA» требуется «tested shared S3»")
+		return r, errors.New("Network/HA: требуется «tested shared S3»")
 	}
 	r.CheckedAt = time.Now().UTC()
 	return r, nil

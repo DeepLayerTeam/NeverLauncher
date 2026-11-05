@@ -25,7 +25,7 @@ struct Watermark { epoch: u64, digest: String, root_sha256: String }
 
 fn parse_utc(timestamp: &str) -> Result<i64,String> {
     let x=timestamp.as_bytes();
-    if x.len()!=20 || x[4]!=b'-' || x[7]!=b'-' || x[10]!=b'T' || x[13]!=b':' || x[16]!=b':' || x[19]!=b'Z' {return Err("Для метка времени доверия требуется: «canonical YYYY-MM-DDTHH:MM:SSZ»".into())}
+    if x.len()!=20 || x[4]!=b'-' || x[7]!=b'-' || x[10]!=b'T' || x[13]!=b':' || x[16]!=b':' || x[19]!=b'Z' {return Err("Временная метка доверия должна иметь канонический формат YYYY-MM-DDTHH:MM:SSZ".into())}
     let num=|from:usize,to:usize| -> Result<i64,String> {
         let b=&x[from..to];if !b.iter().all(u8::is_ascii_digit) {return Err("Некорректное значение: «trust timestamp digit»".into())}
         std::str::from_utf8(b).unwrap().parse::<i64>().map_err(|e|e.to_string())
@@ -71,7 +71,7 @@ fn read_policy(root_key:&str)->Result<(Policy,String),String>{
         if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("Некорректное значение: «trust role/key status»".into())}
         if hex::decode(&k.public_key).map_err(|e|e.to_string())?.len()!=32 || !seen.insert(k.public_key.to_ascii_lowercase()) {return Err("trust key duplicated/invalid".into())}
         let start=parse_utc(&k.not_before)?;if start>expires{return Err("trust key starts after policy expiry".into())}
-        if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректное значение: «finite key overlap»".into())}}
+        if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректное значение: ограниченный период пересечения действия ключей".into())}}
     }
     Ok((p,hex::encode(Sha256::digest(&payload))))
 }
@@ -145,7 +145,7 @@ pub fn check_launch(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),Stri
     if manifest.trust_epoch>p.epoch {return Err("game release references future trust policy".into())}
     if let Some(stored)=accepted {
        let pubkey=hex::decode(root_key).map_err(|e|e.to_string())?;
-       if stored.root_sha256!=hex::encode(Sha256::digest(pubkey)) {return Err("Обнаружено изменение: «game trust root»".into())}
+       if stored.root_sha256!=hex::encode(Sha256::digest(pubkey)) {return Err("Обнаружено изменение: корневой ключ доверия игры".into())}
     }
     Ok(())
 }

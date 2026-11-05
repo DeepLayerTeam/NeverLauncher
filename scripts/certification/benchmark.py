@@ -159,7 +159,7 @@ def main():
         or clean.stdout.strip()
         or not re.fullmatch(r"[0-9a-f]{40}", rev.stdout.strip())
     ):
-        raise RuntimeError("Для «benchmark publication» требуется «a clean Git HEAD»")
+        raise RuntimeError("benchmark publication: требуется «a clean Git HEAD»")
     result.update(
         commit=rev.stdout.strip(),
         productVersion="0.24.0",

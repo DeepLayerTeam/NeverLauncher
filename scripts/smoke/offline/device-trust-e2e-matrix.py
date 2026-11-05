@@ -29,7 +29,7 @@ try:
 except ValueError as exc:
     raise SystemExit(f"Некорректное значение VERSION: {version}") from exc
 if version_tuple < (0, 12, 9):
-    raise SystemExit(f"Для версия требуется: «>= 0.12.9, got» {version}")
+    raise SystemExit(f"Версия: требуется «>= 0.12.9, got» {version}")
 
 targets_path = ROOT / "device-trust/targets.json"
 targets = json.loads(read("device-trust/targets.json"))
@@ -39,7 +39,7 @@ rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) < 4:
     raise SystemExit("public Device Trust matrix is missing mandatory baseline targets")
 if any(row.get("required") is not True for row in rows):
-    raise SystemExit("Для «every Device Trust target» требуется: «required»")
+    raise SystemExit("every Device Trust target: требуется «required»")
 if any("status" in row or "passed" in row for row in rows):
     raise SystemExit("«Device Trust targets»: запрещено «contain editable pass/fail state»")
 expected = {

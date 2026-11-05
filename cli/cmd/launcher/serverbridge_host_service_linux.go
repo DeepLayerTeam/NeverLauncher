@@ -74,7 +74,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 		return "", errors.New("invalid component")
 	}
 	if !filepath.IsAbs(spec.Root) || !filepath.IsAbs(spec.Binary) {
-		return "", errors.New("Для «service root and binary» требуется: «absolute»")
+		return "", errors.New("service root and binary: требуется «absolute»")
 	}
 	root, err := hostUnitValue02811(spec.Root)
 	if err != nil {
@@ -142,7 +142,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	}
 	if spec.Scope == "system" {
 		if spec.User == "" || spec.User == "root" || spec.User == "0" || !hostServiceName02811.MatchString(spec.Group) {
-			return "", errors.New("Для «system service» требуется «an explicitly selected non-root --service-user»")
+			return "", errors.New("system service: требуется «an explicitly selected non-root --service-user»")
 		}
 		unit += "User=" + spec.User + "\nGroup=" + spec.Group + "\nProtectSystem=strict\nProtectHome=read-only\nPrivateTmp=yes\nProtectKernelTunables=yes\nProtectKernelModules=yes\nProtectControlGroups=yes\nCapabilityBoundingSet=\nAmbientCapabilities=\nReadWritePaths=" + root + "\n"
 	}
@@ -192,7 +192,7 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 		return nil
 	}
 	if os.Geteuid() != 0 {
-		return errors.New("Для «system service installation» требуется «root; no implicit privilege escalation»")
+		return errors.New("system service installation: требуется «root; no implicit privilege escalation»")
 	}
 	if !hostServiceName02811.MatchString(spec.User) {
 		return errors.New("--service-user must name an existing unprivileged account")
@@ -246,7 +246,7 @@ func hostServiceHandle02811(args []string) error {
 	unit := filepath.Base(path)
 	if action != "install" {
 		if action == "uninstall" && scope == "system" && os.Geteuid() != 0 {
-			return errors.New("Для «system service removal» требуется корневой каталог")
+			return errors.New("system service removal: требуется корневой каталог")
 		}
 		if action == "uninstall" {
 			data, readErr := os.ReadFile(path)
@@ -368,7 +368,7 @@ func hostServiceHandle02811(args []string) error {
 		}
 		stat, ok := keyInfo.Sys().(*syscall.Stat_t)
 		if !ok || stat.Uid != uint32(uid) || keyInfo.Mode().Perm()&0400 == 0 {
-			return errors.New("Для «remote TLS private key» требуется: «readable and owned by the selected non-root service account»")
+			return errors.New("remote TLS private key: требуется «readable and owned by the selected non-root service account»")
 		}
 	}
 	if spec.Scope == "system" {

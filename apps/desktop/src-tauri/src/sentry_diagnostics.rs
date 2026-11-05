@@ -13,14 +13,14 @@ struct Destination { ingest: String, key: String, dsn: String }
 
 fn destination(dsn: &str) -> Result<Destination, String> {
     let u = reqwest::Url::parse(dsn).map_err(|_| "Некорректное значение: DSN Sentry".to_string())?;
-    let host = u.host_str().ok_or("Sentry DSN host missing")?;
+    let host = u.host_str().ok_or("В DSN Sentry не указан хост")?;
     if u.scheme() != "https" && !(u.scheme() == "http" && (host == "localhost" || host == "127.0.0.1" || host == "[::1]")) {
-        return Err("Для «Sentry ingest» требуется HTTPS".into());
+        return Err("Для отправка событий в Sentry требуется HTTPS".into());
     }
     let key = u.username();
     if key.is_empty() || u.password().is_some() || u.query().is_some() || u.fragment().is_some() { return Err("Некорректное значение: учётные данные DSN Sentry".into()); }
-    let segments: Vec<_> = u.path_segments().ok_or("invalid Sentry path")?.collect();
-    let project = segments.last().ok_or("missing project ID")?;
+    let segments: Vec<_> = u.path_segments().ok_or("Некорректный путь Sentry")?.collect();
+    let project = segments.last().ok_or("Отсутствует идентификатор проекта")?;
     if project.is_empty() || project.len() > 20 || !project.bytes().all(|c| c.is_ascii_digit()) { return Err("Некорректное значение: идентификатор проекта Sentry".into()); }
     let prefix = if segments.len() > 1 { format!("/{}", segments[..segments.len()-1].join("/")) } else { String::new() };
     let port = u.port().map(|p| format!(":{p}")).unwrap_or_default();
@@ -63,10 +63,10 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
       // Источник приёма настроен оператором. Ответ 30x не должен
       // перенаправлять конверт или заголовок X-Sentry-Auth другому источнику.
       .redirect(reqwest::redirect::Policy::none())
-      .timeout(Duration::from_secs(3)).build().map_err(|_|"Не удалось создать «diagnostics client»")?
+      .timeout(Duration::from_secs(3)).build().map_err(|_|"Не удалось создать клиент диагностики")?
       .post(&dest.ingest).header("Content-Type","application/x-sentry-envelope")
       .header("X-Sentry-Auth",format!("Sentry sentry_version=7,sentry_client=launcher.desktop/0.30.9,sentry_key={}",dest.key))
-      .body(envelope).send().await.map_err(|_|"Ошибка: «diagnostic transport»")?;
+      .body(envelope).send().await.map_err(|_|"Ошибка: транспорт диагностики")?;
     if !response.status().is_success() {return Err(format!("Sentry HTTP {}",response.status().as_u16()))}
     Ok(())
 }

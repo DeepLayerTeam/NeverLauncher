@@ -399,7 +399,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	// незакреплённый локальный установщик и не позволяйте обходить им закреплённый lock.
 	if opts.InstallerSourceFile != "" {
 		if !isSHA256Hex0271(opts.InstallerSourceSHA256) {
-			return forgeMaterializeResult{}, errors.New("Для «local installer» требуется «exact --installer-sha256»")
+			return forgeMaterializeResult{}, errors.New("local installer: требуется «exact --installer-sha256»")
 		}
 		if _, err := mirrorCheckedHash0274(opts.InstallerSourceFile, opts.InstallerSourceSHA256); err != nil {
 			return forgeMaterializeResult{}, err

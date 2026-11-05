@@ -37,7 +37,7 @@ func ParseVersion(raw string) (Version, error) {
 	v := Version{Major: vals[0], Minor: vals[1], Patch: vals[2], Raw: raw}
 	if len(corePre) == 2 {
 		if corePre[1] == "" {
-			return Version{}, fmt.Errorf("Некорректное значение: «semver prerelease» %q", raw)
+			return Version{}, fmt.Errorf("Некорректное значение: предварительная версия SemVer %q", raw)
 		}
 		v.Pre = strings.Split(corePre[1], ".")
 	}

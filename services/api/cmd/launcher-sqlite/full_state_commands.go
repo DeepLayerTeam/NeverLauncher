@@ -29,7 +29,7 @@ func readPackageFile(path string) ([]byte, error) {
 		return nil, e
 	}
 	if !s.Mode().IsRegular() || s.Size() <= 0 || s.Size() > 16<<20 || s.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Для «package input» требуется: «private regular file 1..16 MiB»")
+		return nil, errors.New("Данные пакета должны находиться в закрытом обычном файле размером от 1 до 16 МиБ")
 	}
 	f, e := os.Open(path)
 	if e != nil {

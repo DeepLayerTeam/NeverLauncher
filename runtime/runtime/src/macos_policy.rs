@@ -180,7 +180,7 @@ mod imp {
             let executable = std::env::current_exe().map_err(|err| format!("Ошибка: «resolve current executable»: {err}"))?;
             let signature = verify_macos_code_signature(&executable)?;
             if !signature.valid || !signature.hardened_runtime || !signature.library_validation {
-                return Err("Для «macOS production hardening» требуется «a valid Hardened Runtime signature with library validation»".to_string());
+                return Err("macOS production hardening: требуется «a valid Hardened Runtime signature with library validation»".to_string());
             }
             Ok(MacOSProductionHardeningReport {
                 hardening_version: GUARD_MACOS_HARDENING_VERSION,

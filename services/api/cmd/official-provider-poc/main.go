@@ -191,7 +191,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		if r.Method != "GET" || r.Host != expectedHost {
-			http.Error(w, "Некорректное значение: «callback»", http.StatusBadRequest)
+			http.Error(w, "Некорректное значение: обратный вызов", http.StatusBadRequest)
 			return
 		}
 		params := r.URL.Query()
@@ -199,7 +199,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 			(len(params["code"]) != 1 && len(params["error"]) != 1) ||
 			(len(params["code"]) > 0 && len(params["error"]) > 0) ||
 			len(params["code"]) > 1 || len(params["error"]) > 1 {
-			http.Error(w, "Некорректное значение: «callback»", http.StatusBadRequest)
+			http.Error(w, "Некорректное значение: обратный вызов", http.StatusBadRequest)
 			return
 		}
 		got := params.Get("state")
@@ -213,7 +213,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		} else {
 			cb.Code = r.URL.Query().Get("code")
 			if cb.Code == "" || len(cb.Code) > 4096 || strings.ContainsAny(cb.Code, "\r\n") {
-				cb.Err = errors.New("Некорректное значение: «authorization callback»")
+				cb.Err = errors.New("Некорректное значение: обратный вызов авторизации")
 			}
 		}
 		select {
@@ -315,7 +315,7 @@ func verify(ctx context.Context, c providerClient, opt options, output io.Writer
 		return r
 	}
 	if opt.Flow != "browser" && opt.Flow != "device" {
-		r.fail("oauth_flow", errors.New("Некорректное значение: «flow»"))
+		r.fail("oauth_flow", errors.New("Некорректное значение: процесс"))
 		return r
 	}
 	r.pass("client_id_format_valid")

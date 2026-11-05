@@ -56,7 +56,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		return result, err
 	}
 	if !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return result, errors.New("Для «state snapshot tree» требуется: настоящий каталог")
+		return result, errors.New("Дерево снимка состояния должно быть настоящим каталогом")
 	}
 	paths := make([]string, 0, 128)
 	err = filepath.WalkDir(dir, func(p string, entry os.DirEntry, e error) error {
@@ -74,7 +74,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		}
 		rel, e := filepath.Rel(dir, p)
 		if e != nil || rel == "." || filepath.IsAbs(rel) {
-			return errors.New("Некорректное значение: «snapshot member»")
+			return errors.New("Некорректное значение: элемент снимка")
 		}
 		if child == "world" && rel == "session.lock" {
 			result.excluded = append(result.excluded, filepath.ToSlash(filepath.Join(child, rel)))
@@ -90,7 +90,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		return result, err
 	}
 	if len(paths) == 0 && child == "world" {
-		return result, errors.New("Пустое значение: «Minecraft world tree»")
+		return result, errors.New("Пустое значение: дерево мира Minecraft")
 	}
 	sort.Strings(paths)
 	h := sha256.New()
@@ -147,7 +147,7 @@ func stateRoster(root string) ([]string, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 8<<20 {
-		return nil, errors.New("Некорректное значение: «UUID roster»")
+		return nil, errors.New("Некорректное значение: список UUID")
 	}
 	f, err := os.Open(p)
 	if err != nil {
@@ -172,7 +172,7 @@ func stateRoster(root string) ([]string, error) {
 		return nil, err
 	}
 	if len(uuids) == 0 {
-		return nil, errors.New("Пустое значение: «player UUID roster»")
+		return nil, errors.New("Пустое значение: список UUID игроков")
 	}
 	sort.Strings(uuids)
 	return uuids, nil
@@ -209,7 +209,7 @@ func auditState(source, target string) (StateAudit, error) {
 		return a, err
 	}
 	if srcRoot == tgtRoot {
-		return a, errors.New("Для «source and target snapshots» требуется: «separate»")
+		return a, errors.New("Для исходный и целевой снимки требуется: «separate»")
 	}
 	for _, pair := range [][2]string{{srcRoot, tgtRoot}, {tgtRoot, srcRoot}} {
 		rel, relErr := filepath.Rel(pair[0], pair[1])
@@ -217,7 +217,7 @@ func auditState(source, target string) (StateAudit, error) {
 			return a, relErr
 		}
 		if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-			return a, errors.New("«source and target snapshot directories»: запрещено «be nested»")
+			return a, errors.New("каталоги исходного и целевого снимков: запрещено «be nested»")
 		}
 	}
 	a.SourceUUIDs, err = stateRoster(source)
@@ -262,7 +262,7 @@ func auditState(source, target string) (StateAudit, error) {
 
 func executeStateAudit(source, target, output string) error {
 	if !filepath.IsAbs(output) {
-		return errors.New("Требуется: «absolute audit output path»")
+		return errors.New("Требуется: абсолютный путь вывода аудита")
 	}
 	result, err := auditState(source, target)
 	if err != nil {

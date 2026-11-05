@@ -112,11 +112,11 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 	for _, f := range z.File {
 		p := strings.TrimSuffix(f.Name, "/")
 		if !safePath(p) || f.Mode()&os.ModeSymlink != 0 || f.Flags&1 != 0 || (f.Method != zip.Store && f.Method != zip.Deflate) {
-			return "", false, false, errors.New("Небезопасное значение: «JAR member»")
+			return "", false, false, errors.New("Небезопасное значение: запись JAR-архива")
 		}
 		k := strings.ToLower(p)
 		if seen[k] {
-			return "", false, false, errors.New("Обнаружен дубликат: «JAR member»")
+			return "", false, false, errors.New("Обнаружен дубликат: запись JAR-архива")
 		}
 		seen[k] = true
 		if f.FileInfo().IsDir() {

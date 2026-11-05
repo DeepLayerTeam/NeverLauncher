@@ -40,7 +40,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	}
 	db, err := sql.Open(driver, cfg.DatabaseDSN)
 	if err != nil {
-		return fmt.Errorf("auth core postgres open: %w", err)
+		return fmt.Errorf("Ошибка подключения ядра аутентификации к PostgreSQL: %w", err)
 	}
 	db.SetMaxOpenConns(20)
 	db.SetMaxIdleConns(10)
@@ -49,7 +49,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
 		db.Close()
-		return fmt.Errorf("auth core postgres ping: %w", err)
+		return fmt.Errorf("Ошибка проверки подключения ядра аутентификации к PostgreSQL: %w", err)
 	}
 	// Строго отказывайте, если миграции отключены или не создали нормализованную схему.
 	for _, table := range []string{"auth_sessions", "refresh_token_families", "refresh_tokens", "mfa_methods", "recovery_codes", "auth_events", "webauthn_credentials", "webauthn_challenges", "mfa_policies"} {
@@ -57,7 +57,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || !exists {
 			db.Close()
 			if err != nil {
-				return fmt.Errorf("auth core schema check %s: %w", table, err)
+				return fmt.Errorf("Ошибка проверки схемы ядра аутентификации %s: %w", table, err)
 			}
 			return fmt.Errorf("auth core schema table %s отсутствует; примените database migrations", table)
 		}
@@ -67,7 +67,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_sessions' AND column_name=$1)`, column).Scan(&exists); err != nil || !exists {
 			db.Close()
 			if err != nil {
-				return fmt.Errorf("session management 2.0 schema check %s: %w", column, err)
+				return fmt.Errorf("Ошибка проверки схемы управления сессиями 2.0 %s: %w", column, err)
 			}
 			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0008_session_management_2_0118.sql", column)
 		}

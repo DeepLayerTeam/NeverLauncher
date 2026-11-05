@@ -218,7 +218,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	if decodeErr != nil {
 		if e := s.saveValidationDecision03412(r.Context(), r.PathValue("packageId"), "", "attestation", "rejected",
 			"malformed-evidence", digestValidationAttempt03412(incoming)); e != nil {
-			writeError(w, 503, "validation audit unavailable")
+			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
 		writeError(w, 400, "malformed validation evidence")
@@ -230,7 +230,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		auditErr := s.saveValidationDecision03412(r.Context(), r.PathValue("packageId"), signed.Evidence.RunID,
 			"attestation", "rejected", validationDecisionReason03412(err), safeValidationDecisionDigest03412(signed))
 		if auditErr != nil {
-			writeError(w, 503, "validation audit unavailable")
+			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{Actor: s.adminActor(r), Action: "validation-attestation:rejected", Target: r.PathValue("packageId"), JobID: signed.Evidence.RunID, ReasonCode: "attestation-invalid-0345", CreatedAt: time.Now().UTC()})
@@ -299,7 +299,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		attestorKey, errAttestor := base64.RawURLEncoding.DecodeString(s.Config.ValidationAttestationPublicKey0345)
 		manifestKey, errManifest := hex.DecodeString(lookup.Release.Manifest.Signature.PublicKey)
 		if errAttestor == nil && errManifest == nil && bytes.Equal(attestorKey, manifestKey) {
-			deny(errors.New("Для «attestation signer» требуется: «distinct from release signing key»"))
+			deny(errors.New("attestation signer: требуется «distinct from release signing key»"))
 			return
 		}
 	}

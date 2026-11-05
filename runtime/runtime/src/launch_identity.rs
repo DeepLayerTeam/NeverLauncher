@@ -32,7 +32,7 @@ pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<Game
             let loopback = url.host_str().is_some_and(|v| matches!(v,"localhost"|"127.0.0.1"|"[::1]"));
             if (url.scheme() != "https" && !(url.scheme()=="http" && loopback)) ||
                 url.username() != "" || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
-                return Err("Для «Yggdrasil authentication» требуется «HTTPS or loopback HTTP»".into());
+                return Err("Yggdrasil authentication: требуется «HTTPS or loopback HTTP»".into());
             }
             Ok(GameIdentity::Yggdrasil)
         }
@@ -87,7 +87,7 @@ pub fn pin_game_identity(plan:&mut LaunchPlan, version:&str, credentials:Option<
             if supports_user_type(version) {plan.game_args.extend(["--userType".into(),c.user_type.clone()]);}
         }
         None => {
-            if !valid_name(offline_username) {return Err("Для «offline Minecraft username» требуется: «3-16 ASCII letters/digits/underscore»".into());}
+            if !valid_name(offline_username) {return Err("Имя игрока Minecraft в автономном режиме должно содержать от 3 до 16 букв ASCII, цифр или символов подчёркивания".into());}
             // Офлайн-игра не получает учётных данных провайдера и не может сформировать
             // доказательство подключения sessionserver для сервера с online-mode.
             plan.game_args.extend(["--username".into(),offline_username.into(),"--accessToken".into(),"0".into()]);

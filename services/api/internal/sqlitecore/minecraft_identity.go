@@ -91,7 +91,7 @@ func (a *Auth) MinecraftIdentity(ctx context.Context, userID string) (p model.Mi
 // пользователя немедленно аннулирует токен через auth_epoch.
 func (a *Auth) IssueMinecraftSession(ctx context.Context, Access string, ttl time.Duration) (string, string, error) {
 	if ttl <= 0 || ttl > 24*time.Hour {
-		return "", "", errors.New("Для «Minecraft token TTL» требуется: «<=24h»")
+		return "", "", errors.New("Minecraft token TTL: требуется «<=24h»")
 	}
 	principal, e := a.ValidateAccess(ctx, Access)
 	if e != nil {

@@ -60,7 +60,7 @@ func ValidatePersistenceConfig950(cfg config.Config) error {
 		return nil
 	}
 	if isProduction950(cfg.Environment) && isMemoryRepository950(cfg.RepositoryDriver) {
-		return errors.New("production forbids in-memory repository: use PostgreSQL or SQLite single-node")
+		return errors.New("В промышленном режиме нельзя использовать хранилище в памяти: выберите PostgreSQL или SQLite на одном узле")
 	}
 	return nil
 }

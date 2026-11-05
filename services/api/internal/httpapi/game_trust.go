@@ -48,7 +48,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 	}
 	root, e := hex.DecodeString(rootHex)
 	if e != nil || len(root) != 32 {
-		return p, errors.New("Некорректное значение: «game trust root»")
+		return p, errors.New("Некорректное значение: корневой ключ доверия игры")
 	}
 	stat, e := os.Lstat(path)
 	if e != nil {

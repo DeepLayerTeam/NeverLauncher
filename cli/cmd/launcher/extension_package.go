@@ -737,7 +737,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	var total uint64
 	for _, entry := range reader.File {
 		if err := validateExtensionArchivePath0202(entry.Name); err != nil {
-			return nil, fmt.Errorf("Небезопасное значение: «.nlext entry» %q: %w", entry.Name, err)
+			return nil, fmt.Errorf("Небезопасное значение: запись пакета .nlext %q: %w", entry.Name, err)
 		}
 		fold := strings.ToLower(entry.Name)
 		if previous, exists := caseFolded[fold]; exists {

@@ -275,7 +275,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 			return fmt.Errorf("Недоступно: политика: %w", e)
 		}
 		if !ok {
-			return fmt.Errorf("Доступ запрещён: «extension capability» %s", permission)
+			return fmt.Errorf("Доступ запрещён: разрешённая возможность расширения %s", permission)
 		}
 		return nil
 	}
@@ -288,7 +288,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	switch req.Method {
 	case "java.action.invoke", "java.settings.get", "java.settings.put":
 		if !s.authorizeClaims(r, claims, "extension:manage", "", "extension", install.ExtensionID).Allowed {
-			respond(nil, errors.New("Доступ запрещён: «user extension:manage»"))
+			respond(nil, errors.New("Доступ запрещён: разрешение пользователя extension:manage"))
 			return
 		}
 		result, callErr := s.invokeJavaUI0489(r, install, req.Method, req.Params, claims.Sub, claims.Email)

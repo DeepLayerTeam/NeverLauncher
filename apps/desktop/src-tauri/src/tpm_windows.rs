@@ -39,48 +39,48 @@ fn check(status: i32, where_: &str) -> Result<(),String> {
 }
 fn open_provider() -> Result<OwnedNCrypt,String> {
     let mut handle = 0;
-    check(unsafe { NCryptOpenStorageProvider(&mut handle,wide(PCP).as_ptr(),0) },"TPM Platform provider unavailable")?;
+    check(unsafe { NCryptOpenStorageProvider(&mut handle,wide(PCP).as_ptr(),0) },"Провайдер платформы TPM недоступен")?;
     if handle == 0 { return Err("Пустой дескриптор PCP".into()); }
     Ok(OwnedNCrypt(handle))
 }
 fn open_key(p: &OwnedNCrypt, name: &str, flags: u32) -> Result<OwnedNCrypt,String> {
     if name.is_empty() || name.len() > 250 || name.contains('\0') { return Err("Некорректное имя ключа PCP".into()); }
     let mut handle = 0;
-    check(unsafe { NCryptOpenKey(p.0,&mut handle,wide(name).as_ptr(),0,flags) },"named TPM PCP key not found")?;
+    check(unsafe { NCryptOpenKey(p.0,&mut handle,wide(name).as_ptr(),0,flags) },"Именованный ключ TPM PCP не найден")?;
     if handle == 0 { return Err("Пустой дескриптор ключа PCP".into()); }
     Ok(OwnedNCrypt(handle))
 }
 fn property(handle: usize, name: &str, limit: usize) -> Result<Vec<u8>,String> {
     let prop = wide(name);
     let mut n: u32 = 0;
-    check(unsafe { NCryptGetProperty(handle,prop.as_ptr(),ptr::null_mut(),0,&mut n,0) },"PCP property size")?;
-    if n == 0 || n as usize > limit { return Err("Неожиданное значение: «PCP property size»".into()); }
+    check(unsafe { NCryptGetProperty(handle,prop.as_ptr(),ptr::null_mut(),0,&mut n,0) },"Размер свойства PCP")?;
+    if n == 0 || n as usize > limit { return Err("Неожиданное значение: размер свойства PCP".into()); }
     let mut out = vec![0u8;n as usize];
-    check(unsafe { NCryptGetProperty(handle,prop.as_ptr(),out.as_mut_ptr(),n,&mut n,0) },"PCP property read")?;
+    check(unsafe { NCryptGetProperty(handle,prop.as_ptr(),out.as_mut_ptr(),n,&mut n,0) },"Ошибка чтения свойства PCP")?;
     out.truncate(n as usize);
     Ok(out)
 }
 fn key_handle(key: &OwnedNCrypt) -> Result<u32,String> {
     let value = property(key.0, PLATFORM_HANDLE, 16)?;
-    if value.len() != 4 && value.len() != 8 { return Err("Не поддерживается: «PCP TPM key handle encoding»".into()); }
-    let h = u32::from_le_bytes(value[..4].try_into().map_err(|_|"Некорректное значение: «key handle»")?);
-    if !(0x8000_0000..=0x80ff_ffff).contains(&h) { return Err("PCP did not return a loaded transient TPM object".into()); }
+    if value.len() != 4 && value.len() != 8 { return Err("Не поддерживается: кодирование дескриптора ключа TPM PCP".into()); }
+    let h = u32::from_le_bytes(value[..4].try_into().map_err(|_|"Некорректное значение: дескриптор ключа")?);
+    if !(0x8000_0000..=0x80ff_ffff).contains(&h) { return Err("PCP не вернул загруженный временный объект TPM".into()); }
     Ok(h)
 }
 fn context_handle(provider: &OwnedNCrypt) -> Result<usize,String> {
     let value = property(provider.0, PLATFORM_HANDLE, 16)?;
-    if value.len() != std::mem::size_of::<usize>() { return Err("Неожиданное значение: «TBS context handle size»".into()); }
+    if value.len() != std::mem::size_of::<usize>() { return Err("Неожиданное значение: размер дескриптора контекста TBS".into()); }
     let mut bytes = [0u8;std::mem::size_of::<usize>()]; bytes.copy_from_slice(&value);
     let h = usize::from_ne_bytes(bytes);
-    if h == 0 { return Err("Отсутствует: «TBS context»".into()); }
+    if h == 0 { return Err("Отсутствует: контекст TBS".into()); }
     Ok(h)
 }
 fn submit(context: usize, bytes: &[u8]) -> Result<Vec<u8>,String> {
     let mut result = vec![0u8;16384];
     let mut length = result.len() as u32;
     let status = unsafe { Tbsip_Submit_Command(context,0,200,bytes.as_ptr(),bytes.len() as u32,result.as_mut_ptr(),&mut length) };
-    if status != 0 { return Err(format!("Ошибка: «TBS command submission»: 0x{status:08x}")); }
-    if length < 10 || length as usize > result.len() { return Err("TBS returned invalid TPM frame length".into()); }
+    if status != 0 { return Err(format!("Ошибка: отправка команды через TBS: 0x{status:08x}")); }
+    if length < 10 || length as usize > result.len() { return Err("TBS вернул некорректную длину кадра TPM".into()); }
     result.truncate(length as usize);
     Ok(result)
 }
@@ -90,14 +90,14 @@ pub fn certify(
     ak_key_name: &str, ak_certificate_pem: &str, intermediates_pem: Vec<String>
 ) -> Result<WindowsTPMEvidence0313,String> {
     let extra = URL_SAFE_NO_PAD.decode(extra_b64url)
-        .map_err(|_|"Некорректное значение: «backend TPM qualifying data»")?;
-    let extra: [u8;32] = extra.try_into().map_err(|_|"TPM qualifying data must have 32 bytes")?;
-    if registered_sec1.len() != 65 || registered_sec1[0] != 4 { return Err("expected registered P-256 device key".into()); }
-    if ak_key_name == device_key_name { return Err("Для «AK and subject» требуется: «different TPM keys»".into()); }
+        .map_err(|_|"Некорректное значение: проверочные данные TPM от серверной части")?;
+    let extra: [u8;32] = extra.try_into().map_err(|_|"Проверочные данные TPM должны содержать 32 байта")?;
+    if registered_sec1.len() != 65 || registered_sec1[0] != 4 { return Err("Требуется зарегистрированный ключ устройства P-256".into()); }
+    if ak_key_name == device_key_name { return Err("Ключ AK и проверяемый субъект: требуется разные ключи TPM".into()); }
     if ak_certificate_pem.len() > 16384 || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
        !ak_certificate_pem.contains("-----END CERTIFICATE-----") ||
        intermediates_pem.len() > 8 || intermediates_pem.iter().any(|p| p.len() > 16384) {
-        return Err("Некорректное значение: «AK X.509 provisioning material»".into());
+        return Err("Некорректное значение: материалы инициализации сертификата X.509 для AK".into());
     }
     let provider = open_provider()?;
     let subject = open_key(&provider,device_key_name,0)?;
@@ -108,11 +108,11 @@ pub fn certify(
         .or_else(|_| open_key(&provider,ak_key_name,0x20))?; // NCRYPT_MACHINE_KEY_FLAG
     let subject_handle = key_handle(&subject)?;
     let ak_handle = key_handle(&ak)?;
-    if subject_handle == ak_handle { return Err("AK and subject TPM handles identical".into()); }
+    if subject_handle == ak_handle { return Err("Дескрипторы AK и проверяемого объекта TPM совпадают".into()); }
     let tbs = context_handle(&provider)?;
     let pub_response = submit(tbs,&read_public_command(subject_handle))?;
     let (public, actual_sec1) = parse_public_response(&pub_response)?;
-    if actual_sec1.as_slice() != registered_sec1 { return Err("«PCP TPM object» не совпадает с «registered key: no assurance granted»".into()); }
+    if actual_sec1.as_slice() != registered_sec1 { return Err("объект TPM, управляемый PCP не совпадает с зарегистрированный ключ без подтверждения доверия".into()); }
     let response = submit(tbs,&certify_command(subject_handle,ak_handle,&extra))?;
     let (attest,signature) = parse_certify_response(&response,&extra)?;
     Ok(WindowsTPMEvidence0313 {
@@ -135,12 +135,12 @@ pub struct WindowsTPMQuote0315 {
 }
 pub fn quote0315(extra_b64url:&str,selection:&str,ak_key_name:&str,
     ak_certificate_pem:&str,intermediates_pem:Vec<String>) -> Result<WindowsTPMQuote0315,String> {
-    let data=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: «TPM Quote qualifier»")?;
-    let extra:[u8;32]=data.try_into().map_err(|_|"TPM Quote qualifier must contain 32 bytes")?;
+    let data=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: проверочный параметр TPM Quote")?;
+    let extra:[u8;32]=data.try_into().map_err(|_|"Проверочный параметр TPM Quote должен содержать 32 байта")?;
     if ak_certificate_pem.len()>16384 || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
        !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
        intermediates_pem.iter().any(|s|s.len()>16384 || !s.contains("-----BEGIN CERTIFICATE-----")) {
-        return Err("Требуется: «issuer-certified AK»".into());
+        return Err("Требуется: сертифицированный издателем ключ AK".into());
     }
     let indices=crate::tpm_wire_0313::parse_pcr_selection_0315(selection)?;
     let provider=open_provider()?;

@@ -41,7 +41,7 @@ def request_live(url, payload=None, bearer="", form=False):
         MINECRAFT + "/authentication/login_with_xbox",
         MINECRAFT + "/minecraft/profile",
     ):
-        raise AccountRejected("Недоверенное значение: «provider endpoint»")
+        raise AccountRejected("Недоверенное значение: конечная точка провайдера")
     body = None
     headers = {"Accept": "application/json"}
     if bearer:
@@ -84,9 +84,9 @@ def request_live(url, payload=None, bearer="", form=False):
             "official provider denied dedicated test account"
         ) from None
     except (urllib.error.URLError, TimeoutError, OSError):
-        raise ExternalOutage("Недоступно: «official provider transport»") from None
+        raise ExternalOutage("Недоступно: транспорт официального провайдера") from None
     except (UnicodeError, ValueError):
-        raise AccountRejected("Некорректный формат: «official provider response»") from None
+        raise AccountRejected("Некорректный формат: ответ официального провайдера") from None
 
 
 def require_token(response, name):
@@ -99,7 +99,7 @@ def require_token(response, name):
 def refresh_file_atomic(path, new_token):
     path = Path(path)
     if not path.is_file() or path.is_symlink() or path.stat().st_mode & 0o077:
-        raise AccountRejected("Для «host refresh token file» требуется: «private regular file»")
+        raise AccountRejected("Файл токена обновления на хосте: требуется приватный обычный файл")
     fd, tmp = tempfile.mkstemp(prefix=".nl-refresh-", dir=path.parent)
     try:
         os.fchmod(fd, 0o600)
@@ -120,14 +120,14 @@ def refresh_file_atomic(path, new_token):
 
 def issue_minecraft_credentials(client_id, refresh_token_file, output):
     if not re.fullmatch(r"[0-9a-fA-F-]{36}", client_id):
-        raise AccountRejected("Отсутствует: «dedicated Microsoft public-client ID»")
+        raise AccountRejected("Отсутствует: отдельный идентификатор публичного клиента Microsoft")
     token_file = Path(refresh_token_file)
     if (
         not token_file.is_file()
         or token_file.is_symlink()
         or token_file.stat().st_mode & 0o077
     ):
-        raise AccountRejected("Для «refresh token file» требуется: «private host file»")
+        raise AccountRejected("Файл токена обновления: требуется приватный файл хоста")
     refresh = token_file.read_text().strip()
     require_token({"t": refresh}, "t")
     oauth = request_live(

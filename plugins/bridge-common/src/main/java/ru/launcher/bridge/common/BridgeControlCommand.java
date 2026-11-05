@@ -124,9 +124,9 @@ public record BridgeControlCommand(
                     case 'b' -> out.append('\b'); case 'f' -> out.append('\f'); case 'n' -> out.append('\n');
                     case 'r' -> out.append('\r'); case 't' -> out.append('\t');
                     case 'u' -> {
-                        if (p[0] + 4 > text.length()) throw new IllegalArgumentException("invalid unicode escape");
+                        if (p[0] + 4 > text.length()) throw new IllegalArgumentException("Некорректная Unicode-последовательность");
                         try { out.append((char) Integer.parseInt(text.substring(p[0], p[0] + 4), 16)); }
-                        catch (NumberFormatException ex) { throw new IllegalArgumentException("invalid unicode escape", ex); }
+                        catch (NumberFormatException ex) { throw new IllegalArgumentException("Некорректная Unicode-последовательность", ex); }
                         p[0] += 4;
                     }
                     default -> throw new IllegalArgumentException("unsupported escape");

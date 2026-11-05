@@ -25,7 +25,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := authrequest.Decode(r.Body, &req); err != nil {
 		if errors.Is(err, authrequest.ErrTooLarge) {
-			writeError(w, http.StatusRequestEntityTooLarge, "auth request exceeds 16 KiB")
+			writeError(w, http.StatusRequestEntityTooLarge, "Размер запроса аутентификации превышает 16 КиБ")
 		} else {
 			writeError(w, http.StatusBadRequest, "некорректный JSON")
 		}
@@ -278,7 +278,7 @@ func (s Server) adminUserUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ProjectRoles != nil {
 		if req.ExpectedProjectRoles != nil && !maps.Equal(previousProjectRoles, req.ExpectedProjectRoles) {
-			writeError(w, http.StatusConflict, "project role assignments were changed by another administrator; reload user before retry")
+			writeError(w, http.StatusConflict, "Назначения ролей проекта изменены другим администратором; обновите данные пользователя и повторите попытку")
 			return
 		}
 		if err := s.validateProjectMemberships0387(req.ProjectRoles); err != nil {

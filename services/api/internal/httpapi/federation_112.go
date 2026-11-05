@@ -51,7 +51,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		}
 	}
 	if err != nil || !localpassword.Verify(req.Secret, user.PasswordHash) {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	if user.Status != "active" {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "local identity disabled")

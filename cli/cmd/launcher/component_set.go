@@ -143,12 +143,12 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 		if item.Component == "updater" {
 			updaterCount++
 			if !item.Executable {
-				return errors.New("Для «updater helper» требуется: «executable»")
+				return errors.New("updater helper: требуется «executable»")
 			}
 		}
 	}
 	if updaterCount != 1 {
-		return errors.New("Для «component-set» требуется «exactly one updater helper in supportFiles»")
+		return errors.New("component-set: требуется «exactly one updater helper in supportFiles»")
 	}
 	roles["updater"] = true
 	byRole := map[string]componentProtocol02310{}
@@ -199,7 +199,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 			found[key] = true
 			target, ok := byRole[req.Component]
 			if !ok || req.Minimum == 0 || target.Provides[req.Protocol] < req.Minimum {
-				return fmt.Errorf("Для «%s» требуется «unavailable %s >=» %d", name, key, req.Minimum)
+				return fmt.Errorf("%s: требуется «unavailable %s >=» %d", name, key, req.Minimum)
 			}
 			valid := false
 			for _, need := range mandatory {

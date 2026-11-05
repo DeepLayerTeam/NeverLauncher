@@ -11,7 +11,7 @@ core = tuple(
     int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3]
 )
 if core < (0, 18, 0):
-    raise SystemExit(f"Для «Loader Compatibility GA» требуется «VERSION>=0.18.0, got» {version}")
+    raise SystemExit(f"Loader Compatibility GA: требуется «VERSION>=0.18.0, got» {version}")
 
 
 def read(rel: str) -> str:

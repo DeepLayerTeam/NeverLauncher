@@ -42,21 +42,21 @@ ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,31}$")
 def load(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("schemaVersion") != "1.0":
-        raise SystemExit("Для «ServerBridge targets schemaVersion» требуется: «1.0»")
+        raise SystemExit("ServerBridge targets schemaVersion: требуется «1.0»")
     if str(data.get("productVersion", "")) != VERSION:
         raise SystemExit(
             f"ServerBridge targets productVersion must equal VERSION={VERSION}"
         )
     if data.get("protocolVersion") != 3:
-        raise SystemExit("Для «ServerBridge targets protocolVersion» требуется: «3»")
+        raise SystemExit("ServerBridge targets protocolVersion: требуется «3»")
     rows = data.get("targets")
     if not isinstance(rows, list) or not rows:
-        raise SystemExit("Для «ServerBridge targets» требуется: «a non-empty array»")
+        raise SystemExit("ServerBridge targets: требуется «a non-empty array»")
     allowed = {"id", "family", "role", "minecraft", "coverage", "required"}
     ids: list[str] = []
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
-            raise SystemExit(f"Для «target #{i}» требуется: объект")
+            raise SystemExit(f"target #{i}: требуется объект")
         unknown = set(row) - allowed
         if unknown:
             raise SystemExit(f"target #{i} has unknown fields: {sorted(unknown)}")

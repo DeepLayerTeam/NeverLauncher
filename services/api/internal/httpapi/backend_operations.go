@@ -189,42 +189,42 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if os.Getenv("LAUNCHER_BACKEND_SUPERVISED_RESTART") != "true" {
-		writeError(w, 503, "external supervised restart is not enabled")
+		writeError(w, 503, "Внешний контролируемый перезапуск не включён")
 		return
 	}
 	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "invalid authentication")
+		writeError(w, 401, "Ошибка аутентификации")
 		return
 	}
 	if _, err = repository.BackendRestartKey0289(claims.Sub, key); err != nil {
-		writeError(w, 400, "Idempotency-Key must be 16-128 ASCII letters/digits/-/_/. characters")
+		writeError(w, 400, "Заголовок Idempotency-Key должен содержать 16–128 символов ASCII: буквы, цифры, дефис, подчёркивание или точку")
 		return
 	}
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2048))
 	dec.DisallowUnknownFields()
 	var req backendRestartRequest0289
 	if err = dec.Decode(&req); err != nil {
-		writeError(w, 400, "invalid restart request")
+		writeError(w, 400, "Некорректный запрос перезапуска")
 		return
 	}
 	var trailing any
 	if err = dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		writeError(w, 400, "unexpected trailing data")
+		writeError(w, 400, "Неожиданные данные в конце запроса")
 		return
 	}
 	if req.InstanceID != l.InstanceID || req.Confirmation != "RESTART "+l.InstanceID {
-		writeError(w, 409, "runtime identity or explicit confirmation mismatch")
+		writeError(w, 409, "Идентичность среды выполнения или явное подтверждение не совпадает")
 		return
 	}
 	rec, claimed, err := journal.ClaimBackendRestart0289(r.Context(), claims.Sub, key, l.InstanceID)
 	if errors.Is(err, repository.ErrConflict) {
-		writeError(w, 409, "restart for this runtime already accepted with another idempotency key")
+		writeError(w, 409, "Перезапуск этой среды выполнения уже принят с другим ключом идемпотентности")
 		return
 	}
 	if err != nil {
-		writeError(w, 503, "cannot durably record restart request")
+		writeError(w, 503, "Не удалось сохранить запрос перезапуска в постоянном хранилище")
 		return
 	}
 	if !claimed {
@@ -255,29 +255,29 @@ type backendNoticeWrite0289 struct {
 func (s Server) backendSendNotice0289(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.BackendNoticeStore0289)
 	if !ok {
-		writeError(w, 503, "durable backend notification store unavailable")
+		writeError(w, 503, "Постоянное хранилище уведомлений серверной части недоступно")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "not authenticated")
+		writeError(w, 401, "Пользователь не аутентифицирован")
 		return
 	}
 	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if _, err = repository.BackendRestartKey0289(claims.Sub, key); err != nil {
-		writeError(w, 400, "invalid Idempotency-Key")
+		writeError(w, 400, "Некорректный Idempotency-Key")
 		return
 	}
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2048))
 	dec.DisallowUnknownFields()
 	var req backendNoticeWrite0289
 	if err = dec.Decode(&req); err != nil {
-		writeError(w, 400, "invalid notice JSON")
+		writeError(w, 400, "Некорректный JSON уведомления")
 		return
 	}
 	var extra any
 	if err = dec.Decode(&extra); !errors.Is(err, io.EOF) {
-		writeError(w, 400, "unexpected JSON fields")
+		writeError(w, 400, "Неожиданные поля JSON")
 		return
 	}
 	req.UserID = strings.TrimSpace(req.UserID)
@@ -287,16 +287,16 @@ func (s Server) backendSendNotice0289(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user, err := s.Repo.GetUser(req.UserID); err != nil || user.Status != "active" {
-		writeError(w, 404, "recipient user not found or inactive")
+		writeError(w, 404, "Получатель не найден или неактивен")
 		return
 	}
 	notice, created, err := store.EnqueueBackendNotice0289(r.Context(), claims.Sub, key, req.UserID, req.Message)
 	if errors.Is(err, repository.ErrConflict) {
-		writeError(w, 409, "idempotency key already used with different notification")
+		writeError(w, 409, "Ключ идемпотентности уже использован для другого уведомления")
 		return
 	}
 	if err != nil {
-		writeError(w, 503, "could not save notification")
+		writeError(w, 503, "Не удалось сохранить уведомление")
 		return
 	}
 	if created {
@@ -307,17 +307,17 @@ func (s Server) backendSendNotice0289(w http.ResponseWriter, r *http.Request) {
 func (s Server) backendInbox0289(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.BackendNoticeStore0289)
 	if !ok {
-		writeError(w, 503, "backend inbox unavailable")
+		writeError(w, 503, "Входящая очередь серверной части недоступна")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "not authenticated")
+		writeError(w, 401, "Пользователь не аутентифицирован")
 		return
 	}
 	items, err := store.ListBackendNotices0289(r.Context(), claims.Sub)
 	if err != nil {
-		writeError(w, 503, "backend inbox unavailable")
+		writeError(w, 503, "Входящая очередь серверной части недоступна")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
@@ -326,32 +326,32 @@ func (s Server) backendInbox0289(w http.ResponseWriter, r *http.Request) {
 func (s Server) backendNoticeAck0289(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.BackendNoticeStore0289)
 	if !ok {
-		writeError(w, 503, "backend inbox unavailable")
+		writeError(w, 503, "Входящая очередь серверной части недоступна")
 		return
 	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
-		writeError(w, 401, "not authenticated")
+		writeError(w, 401, "Пользователь не аутентифицирован")
 		return
 	}
 	id := r.PathValue("noticeId")
 	if len(id) != 64 {
-		writeError(w, 404, "notice not found")
+		writeError(w, 404, "Уведомление не найдено")
 		return
 	}
 	for _, c := range id {
 		if !strings.ContainsRune("0123456789abcdef", c) {
-			writeError(w, 404, "notice not found")
+			writeError(w, 404, "Уведомление не найдено")
 			return
 		}
 	}
 	success, err := store.AckBackendNotice0289(r.Context(), claims.Sub, id)
 	if err != nil {
-		writeError(w, 503, "unable to acknowledge notice")
+		writeError(w, 503, "Не удалось подтвердить получение уведомления")
 		return
 	}
 	if !success {
-		writeError(w, 404, "notice not found or already acknowledged")
+		writeError(w, 404, "Уведомление не найдено или уже подтверждено")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"status": "acknowledged", "id": id})

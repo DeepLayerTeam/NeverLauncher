@@ -99,7 +99,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		}
 		meta, ok := expected[entry.Name]
 		if !ok {
-			return fmt.Errorf("Неожиданное значение: «export file» %q", entry.Name)
+			return fmt.Errorf("Неожиданное значение: файл экспорта %q", entry.Name)
 		}
 		r, e := entry.Open()
 		if e != nil {
@@ -115,7 +115,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 			return closeErr
 		}
 		if n != meta.Size || hex.EncodeToString(h.Sum(nil)) != meta.SHA256 {
-			return fmt.Errorf("Обнаружено изменение: «export file»: %q", entry.Name)
+			return fmt.Errorf("Обнаружено изменение: файл экспорта: %q", entry.Name)
 		}
 	}
 	if len(seen) != len(expected)+1 {
@@ -125,10 +125,10 @@ func verifyGravitExport0333(name, manifestHash string) error {
 }
 func postGravitInventory0333(endpoint, token, sourcePath, out string, export bool) error {
 	if sourcePath == "" {
-		return errors.New("Для «inventory/export» требуется «--source /path/to/gravit.zip»")
+		return errors.New("inventory/export: требуется «--source /path/to/gravit.zip»")
 	}
 	if export && out == "" {
-		return errors.New("Для «export» требуется «--output /path/to/private-export.zip»")
+		return errors.New("export: требуется «--output /path/to/private-export.zip»")
 	}
 	st, e := os.Stat(sourcePath)
 	if e != nil {
@@ -144,7 +144,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Для экспорт источника требуется «HTTPS except explicit loopback IP»")
+			return errors.New("Для экспорта источника необходим HTTPS, кроме явно указанного IP-адреса локального интерфейса")
 		}
 	}
 	source, e := os.Open(sourcePath)

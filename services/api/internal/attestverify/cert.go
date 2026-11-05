@@ -32,7 +32,7 @@ func parseAKChain(e Evidence) (*x509.Certificate, *x509.CertPool, error) {
 			return nil, nil, err
 		}
 		if !c.IsCA {
-			return nil, nil, errors.New("Для «intermediate» требуется: CA")
+			return nil, nil, errors.New("intermediate: требуется CA")
 		}
 		p.AddCert(c)
 	}

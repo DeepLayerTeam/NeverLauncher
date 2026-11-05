@@ -73,7 +73,7 @@ func (s Server) textureDomains0256() ([]string, error) {
 	}
 	host := strings.ToLower(u.Hostname())
 	if u.Path != "" && u.Path != "/" {
-		return nil, errors.New("Для публичный URL требуется: «API origin without path»")
+		return nil, errors.New("Публичный URL: требуется «API origin without path»")
 	}
 	if u.Scheme != "https" && (config.IsProductionEnvironment(s.Config.Environment) || u.Scheme != "http") {
 		return nil, errors.New("texture origin must use HTTPS")

@@ -220,7 +220,7 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	code := strings.ToLower(strings.TrimSpace(envelope.Error.Code))
 	switch status {
 	case http.StatusUnauthorized:
-		return authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	case http.StatusForbidden:
 		return authconnector.NewError(authconnector.ErrIdentityDisabled, "HTTP identity is disabled")
 	case http.StatusNotFound:
@@ -235,7 +235,7 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	}
 	switch code {
 	case "invalid_credentials":
-		return authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	case "identity_disabled":
 		return authconnector.NewError(authconnector.ErrIdentityDisabled, "HTTP identity is disabled")
 	case "identity_not_found":

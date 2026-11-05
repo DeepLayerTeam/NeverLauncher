@@ -163,7 +163,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	if !coverage.Eligible {
 		if e := s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "blocked",
 			"required-targets-incomplete", safeValidationDecisionDigest03412(coverage.TargetBlockers)); e != nil {
-			return "", coverage, errors.New("Недоступно: «stable runtime gate audit»")
+			return "", coverage, errors.New("Недоступно: аудит допуска стабильной среды выполнения")
 		}
 		return "", coverage, fmt.Errorf("Доступ запрещён: «stable runtime gate»: %v", coverage.TargetBlockers)
 	}
@@ -189,7 +189,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	// Пригодность записывается, но один допуск НИКОГДА не доказывает публикацию.
 	if e = s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "eligible",
 		"checked-before-commit", safeValidationDecisionDigest03412(coverage.Runs)); e != nil {
-		return "", coverage, errors.New("Недоступно: «stable runtime gate audit»")
+		return "", coverage, errors.New("Недоступно: аудит допуска стабильной среды выполнения")
 	}
 	return token, coverage, nil
 }

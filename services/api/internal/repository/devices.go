@@ -137,7 +137,7 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
 	if device.Status != "active" || device.TrustState != "verified" {
-		return model.TrustedDevice{}, fmt.Errorf("Для «%w: device enrollment» требуется: «active»", ErrConflict)
+		return model.TrustedDevice{}, fmt.Errorf("%w: device enrollment: требуется «active»", ErrConflict)
 	}
 	for _, existing := range r.trustedDevices {
 		if existing.KeyFingerprint == device.KeyFingerprint && existing.ID != device.ID {
@@ -503,7 +503,7 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 		return model.TrustedDevice{}, err
 	}
 	if device.Status != "active" || device.TrustState != "verified" {
-		return model.TrustedDevice{}, fmt.Errorf("Для «%w: device enrollment» требуется: «active»", ErrConflict)
+		return model.TrustedDevice{}, fmt.Errorf("%w: device enrollment: требуется «active»", ErrConflict)
 	}
 	if ctx == nil {
 		ctx = context.Background()

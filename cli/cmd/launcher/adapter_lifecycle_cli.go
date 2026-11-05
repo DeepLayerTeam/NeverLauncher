@@ -28,7 +28,7 @@ func handleRuntimeFactoryAdapters02711(args []string) error {
 	}
 	if dir == "" {
 		if args[0] == "adapter-verify" {
-			return errors.New("Для «adapter-verify» требуется --client-dir")
+			return errors.New("adapter-verify: требуется --client-dir")
 		}
 		keys := make([]string, 0, len(factoryAdapterDefinitions02711))
 		for id := range factoryAdapterDefinitions02711 {

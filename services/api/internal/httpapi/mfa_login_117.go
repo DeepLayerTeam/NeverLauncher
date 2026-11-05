@@ -58,7 +58,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 		if suppliedSecondFactor {
 			ok, reason := s.State.Security.verifySecondFactor(user.ID, totp, recovery)
 			if !ok {
-				return loginMFAResult117{}, errors.New("Некорректное значение: «local second factor»")
+				return loginMFAResult117{}, errors.New("Некорректное значение: локальный второй фактор аутентификации")
 			}
 			switch reason {
 			case "totp-ok":
@@ -72,7 +72,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 		} else if passkeys > 0 {
 			return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 		} else {
-			return loginMFAResult117{}, errors.New("Требуется: «local second factor»")
+			return loginMFAResult117{}, errors.New("Требуется: локальный второй фактор аутентификации")
 		}
 	}
 

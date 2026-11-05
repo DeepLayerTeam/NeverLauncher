@@ -100,7 +100,7 @@ func factoryConfig02710() (string, string, error) {
 		return "", "", err
 	}
 	if stat, err = os.Lstat(root); err != nil || !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 || stat.Mode().Perm()&0022 != 0 {
-		return "", "", errors.New("Для «Client Factory root» требуется: «a private directory, not a symlink»")
+		return "", "", errors.New("Client Factory root: требуется «a private directory, not a symlink»")
 	}
 	return binary, root, nil
 }

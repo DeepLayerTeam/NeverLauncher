@@ -149,7 +149,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		return out, fmt.Errorf("components require Manifest v3, got %q", out.Wire.SchemaVersion)
 	}
 	if len(out.Wire.ComponentCatalog) == 0 || len(out.Wire.Files) == 0 || len(out.Wire.ProfileSnapshot) == 0 {
-		return out, errors.New("Для «v3 manifest» требуется «catalog, files and profile snapshot»")
+		return out, errors.New("v3 manifest: требуется «catalog, files and profile snapshot»")
 	}
 	if e = json.Unmarshal(data, &out.Manifest); e != nil {
 		return out, e
@@ -493,7 +493,7 @@ func executeComponents0249(args []string) error {
 	// CLI намеренно НЕ имеет параметра --permissions: утверждения из локального флага не являются серверными правами.
 	if cmd == "diff" {
 		if *old == "" || *newPath == "" {
-			return errors.New("Для «components diff» требуется «--old and --new»")
+			return errors.New("components diff: требуется «--old and --new»")
 		}
 		okOld := *oldPub
 		if okOld == "" {

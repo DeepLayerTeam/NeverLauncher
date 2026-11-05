@@ -26,11 +26,11 @@ type browserNonceStore0525 interface {
 func (s Server) claimBrowserTransaction0525(w http.ResponseWriter, r *http.Request, tx oidcTransaction115) bool {
 	store, ok := s.Repo.(browserNonceStore0525)
 	if !ok || store == nil {
-		writeError(w, http.StatusServiceUnavailable, "durable browser authentication replay protection unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Постоянное хранилище защиты от повторного использования браузерной аутентификации недоступно")
 		return false
 	}
 	if tx.ProviderID == "" || tx.State == "" || tx.ExpiresAt <= time.Now().UTC().Unix() {
-		writeError(w, http.StatusUnauthorized, "browser transaction invalid or expired")
+		writeError(w, http.StatusUnauthorized, "Браузерная транзакция некорректна или срок её действия истёк")
 		return false
 	}
 	// Одно и то же состояние нельзя поглотить через другую точку входа, режим привязки
@@ -49,9 +49,9 @@ func (s Server) claimBrowserTransaction0525(w http.ResponseWriter, r *http.Reque
 		return true
 	}
 	if errors.Is(err, repository.ErrConflict) {
-		writeError(w, http.StatusUnauthorized, "browser transaction already used")
+		writeError(w, http.StatusUnauthorized, "Браузерная транзакция уже использована")
 	} else {
-		writeError(w, http.StatusServiceUnavailable, "browser transaction replay store unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище защиты от повторного выполнения браузерной транзакции недоступно")
 	}
 	return false
 }

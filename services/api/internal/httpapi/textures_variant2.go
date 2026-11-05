@@ -169,7 +169,7 @@ func (s Server) textureMineImage0252(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.PathValue("kind")
 	if kind != "skin" && kind != "cape" {
-		writeError(w, http.StatusBadRequest, "invalid kind")
+		writeError(w, http.StatusBadRequest, "Недопустимый тип")
 		return
 	}
 	repo, ok := s.textureRepository0251()

@@ -63,7 +63,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		return p, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 4<<20 {
-		return p, errors.New("Для «permissions file» требуется: «a regular JSON file <= 4MiB»")
+		return p, errors.New("permissions file: требуется «a regular JSON file <= 4MiB»")
 	}
 	b, err := os.ReadFile(file)
 	if err != nil {
@@ -143,7 +143,7 @@ func readModpackReceipt0276(dir string) (modpackReport0275, factoryPlan0271, err
 		return report, p, err
 	}
 	if err = requireCurrentFactoryAdapters02711(p); err != nil {
-		return report, p, fmt.Errorf("Для «modpack publication» требуется «current install adapters:» %w", err)
+		return report, p, fmt.Errorf("modpack publication: требуется «current install adapters:» %w", err)
 	}
 	receipt := filepath.Join(dir, filepath.FromSlash(modpackEvidencePath0275))
 	st, err := os.Lstat(receipt)

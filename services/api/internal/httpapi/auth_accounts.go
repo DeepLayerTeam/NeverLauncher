@@ -76,7 +76,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	var req authLoginRequest
 	if err := authrequest.Decode(r.Body, &req); err != nil {
 		if errors.Is(err, authrequest.ErrTooLarge) {
-			writeError(w, http.StatusRequestEntityTooLarge, "auth request exceeds 16 KiB")
+			writeError(w, http.StatusRequestEntityTooLarge, "Размер запроса аутентификации превышает 16 КиБ")
 		} else {
 			writeError(w, http.StatusBadRequest, "некорректный JSON")
 		}
@@ -185,7 +185,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	var req authRefreshRequest
 	if err := authrequest.Decode(r.Body, &req); err != nil {
 		if errors.Is(err, authrequest.ErrTooLarge) {
-			writeError(w, http.StatusRequestEntityTooLarge, "auth request exceeds 16 KiB")
+			writeError(w, http.StatusRequestEntityTooLarge, "Размер запроса аутентификации превышает 16 КиБ")
 		} else {
 			writeError(w, http.StatusBadRequest, "некорректный JSON")
 		}
@@ -216,7 +216,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	if preview.TrustedDeviceID != "" {
 		device, err := s.Repo.GetTrustedDevice(preview.UserID, preview.TrustedDeviceID)
 		if err != nil || device.Status != "active" || device.TrustState != "verified" || preview.DeviceTrustState != "verified" {
-			writeError(w, http.StatusUnauthorized, "device trust revoked")
+			writeError(w, http.StatusUnauthorized, "Доверие к устройству отозвано")
 			return
 		}
 		if err := s.verifyRefreshDeviceProof0126(r, req.RefreshToken, strings.TrimSpace(req.DeviceID), strings.TrimSpace(req.DeviceSignature), preview); err != nil {
@@ -260,14 +260,14 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	// всё равно отклонится; лучше отклонить сам refresh, а не сообщать об успехе.
 	currentBinding, live := s.State.AuthSessions.get(session.ID, session.UserID)
 	if !live || !sameDeviceBinding0432(currentBinding, session) {
-		writeError(w, http.StatusUnauthorized, "device binding changed during refresh")
+		writeError(w, http.StatusUnauthorized, "Привязка устройства изменилась во время обновления")
 		return
 	}
 	if session.TrustedDeviceID != "" {
 		device, err := s.Repo.GetTrustedDevice(session.UserID, session.TrustedDeviceID)
 		if err != nil || device.Status != "active" || device.TrustState != "verified" {
 			s.State.AuthSessions.revoke(session.ID, "device-revoked-during-refresh")
-			writeError(w, http.StatusUnauthorized, "device trust revoked during refresh")
+			writeError(w, http.StatusUnauthorized, "Доверие к устройству отозвано во время обновления")
 			return
 		}
 	}

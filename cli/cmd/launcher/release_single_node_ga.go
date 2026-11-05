@@ -53,7 +53,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		publicKeyFile = os.Getenv("LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE")
 	}
 	if strings.TrimSpace(publicKeyFile) == "" {
-		return errors.New("Для «0.33.0 GA» требуется «independent LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE»")
+		return errors.New("0.33.0 GA: требуется «independent LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE»")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, publicKeyFile); err != nil {
 		return err

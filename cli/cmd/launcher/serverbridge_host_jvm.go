@@ -80,7 +80,7 @@ func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) (
 			} else if info.Mode().IsRegular() && strings.EqualFold(filepath.Ext(path), ".jar") {
 				item, err = hostResolveInsideRoot01910(root, path, true)
 			} else {
-				return nil, fmt.Errorf("Для путь JVM %q требуется: «a directory or .jar file»", item)
+				return nil, fmt.Errorf("Путь JVM %q: требуется «a directory or .jar file»", item)
 			}
 			if err != nil {
 				return nil, fmt.Errorf("JVM path %q: %w", path, err)
@@ -153,7 +153,7 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 			return errors.New("«main-class mode»: запрещено «mix jar/argfile launch settings»")
 		}
 		if !hostJavaClass0283.MatchString(config.MainClass) || len(config.Classpath) == 0 || config.Module != "" || len(config.Modulepath) != 0 {
-			return errors.New("Для «java-main-class» требуется «--main-class and --classpath-entry; modulepath is not supported in this mode»")
+			return errors.New("java-main-class: требуется «--main-class and --classpath-entry; modulepath is not supported in this mode»")
 		}
 	case "java-module":
 		if config.ServerJar != "" || config.JavaArgsFile != "" {
@@ -163,7 +163,7 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 			return errors.New("Java modules require Java 9 or newer")
 		}
 		if !hostJavaModule0283.MatchString(config.Module) || len(config.Modulepath) == 0 || len(config.Classpath) != 0 {
-			return errors.New("Для «java-module» требуется «--module and --modulepath-entry; classpath is not supported in this mode»")
+			return errors.New("java-module: требуется «--module and --modulepath-entry; classpath is not supported in this mode»")
 		}
 		if config.MainClass != "" && !hostJavaClass0283.MatchString(config.MainClass) {
 			return errors.New("Некорректное значение: «module main class»")

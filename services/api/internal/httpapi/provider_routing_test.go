@@ -28,7 +28,7 @@ func (f apiRouteFixture0293) Health(context.Context) error { return nil }
 func (f apiRouteFixture0293) AuthenticatePassword(_ context.Context, req authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	*f.calls++
 	if f.reject || req.Secret != "verified" {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid password")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Некорректный пароль")
 	}
 	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "other-account", Issuer: "https://external.test", Email: req.Identifier}, AuthMethods: []string{"password"}}, nil
 }

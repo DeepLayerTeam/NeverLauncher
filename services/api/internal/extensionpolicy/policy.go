@@ -33,10 +33,10 @@ func normalizedSet(values []string, check func(string) bool) ([]string, error) {
 	m := make(map[string]bool, len(values))
 	for _, v := range values {
 		if v == "" || strings.TrimSpace(v) != v || v != strings.ToLower(v) || !check(v) {
-			return nil, fmt.Errorf("Некорректное значение: «sandbox grant» %q", v)
+			return nil, fmt.Errorf("Некорректное значение: разрешение изолированной среды %q", v)
 		}
 		if m[v] {
-			return nil, fmt.Errorf("Обнаружен дубликат: «sandbox grant» %q", v)
+			return nil, fmt.Errorf("Обнаружен дубликат: разрешение изолированной среды %q", v)
 		}
 		m[v] = true
 	}
@@ -73,10 +73,10 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 	} // устаревшие пакеты сохраняют явно заданный режим без изоляции
 	p := *in
 	if p.Version != "1" {
-		return nil, errors.New("Для «sandbox.version» требуется: «1»")
+		return nil, errors.New("sandbox.version: требуется «1»")
 	}
 	if p.Mode != "isolated" && p.Mode != "trusted" {
-		return nil, errors.New("Для «sandbox.mode» требуется: «isolated or trusted»")
+		return nil, errors.New("sandbox.mode: требуется «isolated or trusted»")
 	}
 	var err error
 	if p.FilesystemRead, err = normalizedSet(p.FilesystemRead, func(v string) bool { return v == "package" || fsGrant(v) && v != "scratch" }); err != nil {
@@ -98,7 +98,7 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, errors.New("sandbox IPC rate/output limit exceeds host maximum")
 	}
 	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
-		return nil, errors.New("Для «isolated sandbox» требуется «finite process, memory, CPU and time limits»")
+		return nil, errors.New("isolated sandbox: требуется «finite process, memory, CPU and time limits»")
 	}
 	return &p, nil
 }

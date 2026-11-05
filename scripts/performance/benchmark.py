@@ -276,7 +276,7 @@ def verify_10k(
     repetitions: int = 3,
 ) -> dict:
     if count < 1 or count > 100_000 or repetitions < 1:
-        raise ValueError("Для «count and repetitions» требуется: «positive»")
+        raise ValueError("count and repetitions: требуется «positive»")
     root = work / "files"
     (root / "libraries/benchmark").mkdir(parents=True, exist_ok=True)
     entries = []
@@ -750,7 +750,7 @@ def main() -> int:
     if args.runtime and not args.signer:
         parser.error("--runtime requires --signer")
     if args.runtime and any(n < 1 or n > 10240 for n in args.download_mib):
-        parser.error("Для «download sizes» требуется: «in 1..10240 MiB»")
+        parser.error("download sizes: требуется «in 1..10240 MiB»")
     if (
         args.download_mib
         and args.runtime

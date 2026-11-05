@@ -183,7 +183,7 @@ func guardCompatAuthorizeRollback05011(root, key, file string) error {
 		return err
 	}
 	if old == nil {
-		return errors.New("Для откат требуется «an installed signed Guard policy»")
+		return errors.New("Откат: требуется «an installed signed Guard policy»")
 	}
 	st, err := os.Lstat(file)
 	if err != nil {

@@ -553,7 +553,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		return fmt.Errorf("Не поддерживается: «Windows signing mode» %q", evidence.SigningMode)
 	}
 	if requireSigned && !productionSigned {
-		return errors.New("Для «production publish» требуется «Authenticode+RFC3161 Windows signing»")
+		return errors.New("Для промышленной публикации Windows требуется подпись Authenticode с меткой времени RFC 3161")
 	}
 	if productionSigned {
 		if evidence.Signer == nil || !windowsCertThumbprintRE0152.MatchString(evidence.Signer.Thumbprint) || strings.TrimSpace(evidence.TimestampServer) == "" {
@@ -572,7 +572,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 
 	delivery, err := readDeliveryManifest0151(dir)
 	if err != nil {
-		return fmt.Errorf("Для «Windows signing» требуется «delivery manifest:» %w", err)
+		return fmt.Errorf("Windows signing: требуется «delivery manifest:» %w", err)
 	}
 	deliveryByName := map[string]DeliveryArtifact{}
 	for _, artifact := range delivery.Artifacts {

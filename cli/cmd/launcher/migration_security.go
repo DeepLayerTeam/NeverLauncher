@@ -22,11 +22,11 @@ func postMigrationSecurity0336(endpoint, token, runID, out string, activate bool
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Для «security reset» требуется «HTTPS (or explicit local IP loopback)»")
+			return errors.New("security reset: требуется «HTTPS (or explicit local IP loopback)»")
 		}
 	}
 	if activate && confirmation != runID {
-		return errors.New("Для «activate-security» требуется «--confirm with exact --run ID; provision new independent Never keys first»")
+		return errors.New("activate-security: требуется «--confirm with exact --run ID; provision new independent Never keys first»")
 	}
 	req, err := http.NewRequest(http.MethodPost, endpoint, nil)
 	if err != nil {

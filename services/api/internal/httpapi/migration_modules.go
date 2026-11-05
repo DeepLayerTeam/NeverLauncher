@@ -419,7 +419,7 @@ func decodeMigrationEnrollment0446(r io.Reader, req *moduleEnrollmentRequest0338
 	}
 	var other any
 	if err := dec.Decode(&other); err != io.EOF {
-		return errors.New("trailing enrollment JSON")
+		return errors.New("Лишние данные после JSON регистрации")
 	}
 	return nil
 }

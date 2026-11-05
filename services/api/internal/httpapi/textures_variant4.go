@@ -105,7 +105,7 @@ func (s Server) textureSavedSelect0255(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.PathValue("kind")
 	if kind != "skin" && kind != "cape" {
-		writeError(w, http.StatusBadRequest, "invalid kind")
+		writeError(w, http.StatusBadRequest, "Недопустимый тип")
 		return
 	}
 	input, ok := textureServiceDecode0255(w, r, profile)
@@ -142,7 +142,7 @@ func (s Server) textureClear0255(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.PathValue("kind")
 	if kind != "skin" && kind != "cape" {
-		writeError(w, http.StatusBadRequest, "invalid kind")
+		writeError(w, http.StatusBadRequest, "Недопустимый тип")
 		return
 	}
 	input, ok := textureServiceDecode0255(w, r, profile)

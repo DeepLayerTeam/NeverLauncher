@@ -240,7 +240,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	if v, ok := root["warnMissJavaVersion"]; ok {
 		var b bool
 		if json.Unmarshal(v, &b) != nil || bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
-			report("warnMissJavaVersion", "blocked", "", "expected boolean")
+			report("warnMissJavaVersion", "blocked", "", "Ожидается логическое значение")
 		} else if b {
 			report("warnMissJavaVersion", "manual", "", "Never enforces Java constraints rather than warning and continuing")
 		} else {
@@ -437,7 +437,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 				case "autoEnter", "fullScreen":
 					var b bool
 					if json.Unmarshal(v, &b) != nil || bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
-						report("settings."+k, "blocked", "", "expected boolean")
+						report("settings."+k, "blocked", "", "Ожидается логическое значение")
 					} else if b {
 						report("settings."+k, "manual", "", "Desktop user preference cannot be enforced by Build Workspace settings")
 					} else {
@@ -495,7 +495,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	if raw, ok := root["limited"]; ok {
 		var limited bool
 		if json.Unmarshal(raw, &limited) != nil || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-			report("limited", "blocked", "", "expected boolean")
+			report("limited", "blocked", "", "Ожидается логическое значение")
 		} else if limited {
 			report("limited", "blocked", "", "Gravit permission restriction needs explicit Never ACL; cannot grant access by importing")
 		} else {

@@ -65,7 +65,7 @@ func validTarget0346(t validationTarget0346) error {
 	}
 	for _, v := range []string{t.ManifestSHA256, t.ArtifactSHA256, t.ResolvedPlanSHA256, t.BuildSHA, t.JavaSHA256, t.InstallAdapterSHA256, t.GuardPolicySHA256, t.ServerBridgeSHA256} {
 		if !validationHex0345.MatchString(v) {
-			return errors.New("missing/invalid target SHA-256 pin")
+			return errors.New("Отсутствует или некорректен закреплённый SHA-256 целевой платформы")
 		}
 	}
 	if !(validationHex0345.MatchString(t.SourceSHA) || (len(t.SourceSHA) == 40 && strings.Trim(t.SourceSHA, "0123456789abcdef") == "")) {

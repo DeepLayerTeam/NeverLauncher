@@ -145,7 +145,7 @@ def run_cases(
     if len(names) != len(set(names)) or not names or any(x not in CASES for x in names):
         raise ValueError("unknown, duplicate or empty test case list")
     if timeout <= 0:
-        raise ValueError("Для «timeout» требуется: «positive»")
+        raise ValueError("timeout: требуется «positive»")
     report_path = report_path.resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {

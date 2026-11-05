@@ -74,7 +74,7 @@ pub(super) fn plan_digest(
     let signature = manifest.signature.as_ref()
         .ok_or("v2 deterministic launch requires an owner-signed manifest")?;
     if signature.algorithm != "Ed25519" || signature.signature.len() != 128 {
-        return Err("Для «v2 deterministic launch» требуется «an Ed25519 owner signature»".into());
+        return Err("v2 deterministic launch: требуется «an Ed25519 owner signature»".into());
     }
     let normalize = |item: &str| normalize(item, root, credentials);
     let environment_allowlist = plan.environment_allowlist.iter()

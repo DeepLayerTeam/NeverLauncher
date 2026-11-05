@@ -111,7 +111,7 @@ func handleDevTools03010(args []string) error {
 			return errors.New("test identity policy denied: set LAUNCHER_DEVTOOLS_TEST_MODE=1 and --ack-test-only")
 		}
 		if *duration < time.Second || *duration > 30*time.Minute {
-			return errors.New("Для «fixture duration» требуется: «1s..30m»")
+			return errors.New("fixture duration: требуется «1s..30m»")
 		}
 		fixture, e := devtools.NewFixtureServer(*user)
 		if e != nil {

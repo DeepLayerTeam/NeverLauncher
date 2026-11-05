@@ -264,7 +264,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 			e = e<<8 | int(b)
 		}
 		if e < 3 {
-			return 0, nil, errors.New("Некорректное значение: «RSA exponent»")
+			return 0, nil, errors.New("Некорректное значение: показатель степени RSA")
 		}
 		return alg, &rsa.PublicKey{N: new(big.Int).SetBytes(n), E: e}, nil
 	case 1: // OKP / Ed25519

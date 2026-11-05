@@ -74,13 +74,13 @@ func verifyGravBatchDigest0492(b gravBatch0492) error {
 	}
 	sum := sha256.Sum256(raw)
 	if hex.EncodeToString(sum[:]) != expected {
-		return errors.New("Несовпадение: «multi-profile report integrity checksum»")
+		return errors.New("Несовпадение: контрольная сумма отчёта по нескольким профилям")
 	}
 	return nil
 }
 func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string) error {
 	if source == "" || mapping == "" {
-		return errors.New("Для «dry-run-all» требуется «--source and --mapping»")
+		return errors.New("dry-run-all: требуется «--source and --mapping»")
 	}
 	uri, err := url.Parse(endpoint)
 	if err != nil {
@@ -89,7 +89,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	if uri.Scheme != "https" {
 		ip := net.ParseIP(uri.Hostname())
 		if uri.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Для «migration source» требуется «HTTPS except IP loopback»")
+			return errors.New("Источник миграции: требуется HTTPS, кроме локального loopback-адреса")
 		}
 	}
 	mf, err := os.Lstat(mapping)
@@ -97,7 +97,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if !mf.Mode().IsRegular() || mf.Size() < 2 || mf.Size() > 12288 {
-		return errors.New("Для «mapping» требуется: «a regular JSON file at most 12 KiB»")
+		return errors.New("Для сопоставление требуется: «a regular JSON file at most 12 KiB»")
 	}
 	raw, err := os.ReadFile(mapping)
 	if err != nil {
@@ -121,7 +121,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
-		return errors.New("trailing mapping data")
+		return errors.New("Лишние данные после карты сопоставления")
 	}
 	if len(rows) == 0 || len(rows) > 32 {
 		return errors.New("Для сопоставление требуется: 1..32 профили")
@@ -143,7 +143,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("Для источник требуется: «regular ZIP of 1..512 MiB»")
+		return errors.New("Источник: требуется «regular ZIP of 1..512 MiB»")
 	}
 	req, err := http.NewRequest("POST", endpoint, sourceFile)
 	if err != nil {
@@ -167,7 +167,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return errors.New("Превышен допустимый размер: «dry-run response»")
 	}
 	if res.StatusCode != 200 {
-		return fmt.Errorf("dry-run-all HTTP %d: %s", res.StatusCode, string(body))
+		return fmt.Errorf("Пробный запуск всех миграций вернул HTTP %d: %s", res.StatusCode, string(body))
 	}
 	var value gravBatchResponse0492
 	if err = json.Unmarshal(body, &value); err != nil {
@@ -218,7 +218,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		fmt.Println(string(body))
 	}
 	if current.Status == "blocked" {
-		return errors.New("BLOCKED: review per-profile failures; nothing has been imported")
+		return errors.New("ЗАБЛОКИРОВАНО: проверьте ошибки каждого профиля; импорт не выполнялся")
 	}
 	if report != "" {
 		fmt.Println("Verified dry-run against live Backend and source: " + current.BatchSHA256)

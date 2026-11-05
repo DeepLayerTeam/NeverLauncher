@@ -239,7 +239,7 @@ func bridgeWaitHostExit02812(root string) error {
 			return fmt.Errorf("Не удалось проверить «old host lock:» %w", err)
 		}
 		if !hostIdentityMatches0282(lock.PID, lock.Identity) {
-			return errors.New("Для «stale Host lock» требуется «explicit reconciliation»")
+			return errors.New("stale Host lock: требуется «explicit reconciliation»")
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -266,7 +266,7 @@ func bridgeRollout02812(args []string) error {
 	managed := oldErr == nil
 	host := hostPaths01910(root)
 	if _, err := readServerBridgeHostConfig01910(host["config"]); err != nil {
-		return fmt.Errorf("Для «rollout» требуется «configured Host Supervisor:» %w", err)
+		return fmt.Errorf("Для поэтапное развёртывание требуется «configured Host Supervisor:» %w", err)
 	}
 	wasRunning := false
 	if runtimeState, err := readServerBridgeHostRuntime01910(host["runtime"]); err == nil {
@@ -336,7 +336,7 @@ func bridgeRollout02812(args []string) error {
 			}
 		}
 		if e := bridgeWaitHostExit02812(root); e != nil {
-			return fmt.Errorf("Ошибка: «rollout»: %v; rollback BLOCKED pending supervisor exit: %w", problem, e)
+			return fmt.Errorf("Ошибка: поэтапное развёртывание: %v; rollback BLOCKED pending supervisor exit: %w", problem, e)
 		}
 		state, e := readBridgeProvisionState0199(existingPath)
 		if e != nil {

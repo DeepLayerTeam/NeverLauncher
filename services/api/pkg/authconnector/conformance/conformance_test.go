@@ -23,7 +23,7 @@ func (c *behaviorConnector) Metadata() authconnector.Metadata {
 func (c *behaviorConnector) Health(context.Context) error { return nil }
 func (c *behaviorConnector) AuthenticatePassword(_ context.Context, r authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	if r.Identifier != "test-user" || r.Secret != c.password {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	return authconnector.Authentication{Identity: authconnector.Identity{Issuer: c.issuer, Subject: c.subject}, ProviderToken: "token-one", AuthMethods: []string{"password"}}, nil
 }

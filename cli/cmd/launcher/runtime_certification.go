@@ -87,7 +87,7 @@ func certResolveExecutable02712(name string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() {
-		return "", errors.New("Для «executable» требуется: «a regular file (no symlink)»")
+		return "", errors.New("executable: требуется «a regular file (no symlink)»")
 	}
 	return full, nil
 }
@@ -313,7 +313,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if err := rejectFactoryOutputPath0271(clientDir, privateKeyPath); err != nil {
-		return cert, fmt.Errorf("Для ключ подписи требуется: «outside client:» %w", err)
+		return cert, fmt.Errorf("Ключ подписи: требуется «outside client:» %w", err)
 	}
 	plan, err := readFactoryPlan0271(clientDir)
 	if err != nil {
@@ -326,7 +326,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if len(plan.Targets) != 1 {
-		return cert, errors.New("Для «certification» требуется «a single OS/arch target; certify each target separately»")
+		return cert, errors.New("Для сертификация требуется «a single OS/arch target; certify each target separately»")
 	}
 	target := plan.Targets[0]
 	if err = certHostTarget02712(target); err != nil {
@@ -497,7 +497,7 @@ func (b *boundedWriter02712) Write(p []byte) (int, error) {
 }
 func handleRuntimeCertification02712(args []string) error {
 	if len(args) == 0 {
-		return errors.New("Для «certification» требуется «certify-keygen|certify-run|certify-verify»")
+		return errors.New("Для сертификация требуется «certify-keygen|certify-run|certify-verify»")
 	}
 	tail := args[1:]
 	switch args[0] {

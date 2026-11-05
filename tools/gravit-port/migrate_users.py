@@ -44,10 +44,10 @@ def source_hash(path):
 def canonical_uuid(value):
     normalized = value.strip().lower().replace("-", "")
     if len(normalized) != 32 or any(c not in "0123456789abcdef" for c in normalized):
-        raise MigrationError("Некорректное значение: «UUID in approved role map»")
+        raise MigrationError("Некорректное значение: UUID в утверждённой карте ролей")
     result = "-".join([normalized[:8], normalized[8:12], normalized[12:16], normalized[16:20], normalized[20:]])
     if not UUID.fullmatch(result) or normalized == "0" * 32:
-        raise MigrationError("Некорректное значение: «role-map UUID»")
+        raise MigrationError("Некорректное значение: UUID карты ролей")
     return result
 
 
@@ -61,7 +61,7 @@ def role_plan(path, imported, users):
     project = raw["projectId"]
     grants = raw["grants"]
     if not isinstance(project, str) or not project or project == "*" or not isinstance(grants, list) or len(grants) > 200000:
-        raise MigrationError("Некорректное значение: «project role mapping»")
+        raise MigrationError("Некорректное значение: сопоставление ролей проекта")
     allowed = {"viewer", "player", "developer", "operator", "owner"}
     rows = {canonical_uuid(r["uuid"]): r for r in imported if r.get("state") == "imported"}
     indexed = {u.get("id"): u for u in users}
@@ -69,7 +69,7 @@ def role_plan(path, imported, users):
     seen = set()
     for g in grants:
         if not isinstance(g, dict) or set(g) != {"uuid", "roleId"}:
-            raise MigrationError("Некорректное значение: «individual role approval»")
+            raise MigrationError("Некорректное значение: отдельное утверждение роли")
         u = canonical_uuid(g["uuid"])
         role = g["roleId"]
         if u in seen or u not in rows or not isinstance(role, str) or role not in allowed:
@@ -82,7 +82,7 @@ def role_plan(path, imported, users):
             raise MigrationError("approved role target is not an imported active player")
         prior = user.get("projectRoles") or {}
         if not isinstance(prior, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in prior.items()):
-            raise MigrationError("Некорректное значение: «existing project roles»")
+            raise MigrationError("Некорректное значение: существующие роли проекта")
         desired = {**prior, project: role}
         changes.append((user_id, prior, desired))
     return changes
@@ -114,7 +114,7 @@ class Backend:
             try:
                 with self.opener.open(req, timeout=self.timeout) as resp:
                     if resp.status != 200:
-                        raise MigrationError("Неожиданное значение: «Backend response status»")
+                        raise MigrationError("Неожиданное значение: статус ответа серверной части")
                     raw = resp.read(MAX_RESPONSE + 1)
             except HTTPError as exc:
                 # Do NOT echo a server error body (may contain secrets).
@@ -159,7 +159,7 @@ def verify_preview(inventory, identity, auth, run_id, digest):
     for row in rows:
         uuid = canonical_uuid(row.get("uuid", ""))
         if uuid in by_uuid or row.get("provider") not in ("sql", "fileauth") or row.get("state") not in counts:
-            raise MigrationError("Обнаружен дубликат: «or unsupported credential outcome»")
+            raise MigrationError("Обнаружен дубликат: либо неподдерживаемый результат проверки учётных данных")
         by_uuid.add(uuid)
         counts[row["state"]] += 1
     if any(auth.get({"imported": "imported", "manual_reset": "manualReset", "existing_unchanged": "existingUnchanged"}[key]) != n for key, n in counts.items()):
@@ -217,7 +217,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     receipt["status"] = "accounts_imported"
     trust_preview = api.request("POST", root + "/security/preview")
     if trust_preview.get("importedAccounts") != counts["imported"] or trust_preview.get("appliedAt") is not None:
-        raise MigrationError("«trust-reset preview» не совпадает с «imported users»")
+        raise MigrationError("предварительный просмотр сброса доверия не совпадает с импортированные пользователи")
     trust = api.request("POST", root + "/security/activate", headers={"X-Migration-Trust-Confirm": run_id, "X-Migration-Fresh-Keys-Confirmed": "true"})
     if trust.get("importedAccounts") != counts["imported"] or trust.get("appliedAt") is None:
         raise MigrationError("trust reset was not durably verified")
@@ -233,7 +233,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
                 continue
             u = canonical_uuid(row["uuid"])
             if u in seen:
-                raise MigrationError("Обнаружен дубликат: «texture identity»")
+                raise MigrationError("Обнаружен дубликат: идентичность текстуры")
             seen.add(u)
             mapping.append({"source_uuid": u, "target_uuid": u})
         atomic_receipt(texture_mapping_output, mapping)
@@ -266,9 +266,9 @@ def main(argv=None):
     p.add_argument("--receipt", required=True)
     args = p.parse_args(argv)
     if not RUN_ID.fullmatch(args.run_id):
-        p.error("Некорректное значение: «run ID»")
+        p.error("Некорректное значение: идентификатор запуска")
     if args.mode == "import" and not args.fresh_keys_confirmed:
-        p.error("Для «import» требуется --fresh-keys-confirmed")
+        p.error("Импорт: требуется --fresh-keys-confirmed")
     if args.mode == "prepare" and (args.roles_file or args.allow_manual_resets or args.texture_mapping_output):
         p.error("role changes and reset acceptance require import mode")
     token = os.environ.get("NEVERLAUNCHER_MIGRATION_TOKEN", "")

@@ -26,7 +26,7 @@ func verifyExecutable(c Check) error {
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 || info.Size() <= 0 || info.Size() > 128<<20 {
-		return errors.New("Для «GA check» требуется: «an executable, bounded, regular file (no symlink)»")
+		return errors.New("Для проверки GA требуется обычный исполняемый файл ограниченного размера без символических ссылок")
 	}
 	actual, err := shaFile(c.Command[0], 128<<20)
 	if err != nil {
@@ -40,7 +40,7 @@ func verifyExecutable(c Check) error {
 
 func preserveEvidence(dir, name, source, expected string, receipt []byte) error {
 	if !referenceCheck(name) {
-		return errors.New("Неизвестное значение: «GA check»")
+		return errors.New("Неизвестное значение: проверка GA")
 	}
 	info, err := os.Lstat(source)
 	if err != nil {
@@ -124,7 +124,7 @@ func verifyEvidence(b Bundle, dir string) error {
 		return err
 	}
 	if !info.IsDir() || info.Mode().Perm()&0077 != 0 {
-		return errors.New("Для каталог подтверждающих данных требуется: приватные права 0700")
+		return errors.New("Каталог подтверждающих данных: требуется приватные права 0700")
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -173,7 +173,7 @@ func verifyEvidence(b Bundle, dir string) error {
 		if check.Name == "uuid-world-plugin-data" {
 			auditRaw, readErr := os.ReadFile(evidence)
 			if readErr != nil || len(auditRaw) > maxDocument || validateStateAuditEvidence(auditRaw, probe) != nil {
-				return errors.New("«retained state audit» не совпадает с «signed receipt»")
+				return errors.New("сохранённый аудит состояния не совпадает с подписанное подтверждение")
 			}
 			if len(probe.SourceUUIDs) == 0 || len(probe.SourceUUIDs) != len(probe.TargetUUIDs) || !digest(probe.SourceWorldSHA256) || probe.SourceWorldSHA256 != probe.TargetWorldSHA256 || !digest(probe.SourcePluginSHA256) || probe.SourcePluginSHA256 != probe.TargetPluginSHA256 {
 				return errors.New("incomplete world/identity cross-check")
@@ -183,7 +183,7 @@ func verifyEvidence(b Bundle, dir string) error {
 			sort.Strings(source)
 			sort.Strings(target)
 			if !bytes.Equal([]byte(strings.Join(source, "\n")), []byte(strings.Join(target, "\n"))) {
-				return errors.New("Несовпадение: «source/target UUID»")
+				return errors.New("Несовпадение: UUID источника и цели")
 			}
 			for i, id := range source {
 				if id == "" || (i > 0 && id == source[i-1]) {
@@ -215,7 +215,7 @@ func loadTrustedKey(filename string) (ed25519.PublicKey, error) {
 	}
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
-		return nil, errors.New("Для «trusted key» требуется: Ed25519")
+		return nil, errors.New("Доверенный ключ: требуется Ed25519")
 	}
 	return pub, nil
 }
@@ -246,7 +246,7 @@ func verifyCohort(keyFile string, cohort map[string]CohortInput) error {
 	for _, class := range referenceClasses {
 		input, ok := cohort[class]
 		if !ok || input.Certificate == "" || input.EvidenceDir == "" {
-			return fmt.Errorf("Отсутствует: «reference class» %s", class)
+			return fmt.Errorf("Отсутствует: класс ссылок %s", class)
 		}
 		b, err := readCertificate(input.Certificate)
 		if err != nil {

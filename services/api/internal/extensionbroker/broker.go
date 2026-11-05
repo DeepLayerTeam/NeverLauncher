@@ -45,11 +45,11 @@ func ParseRoots(raw string) (map[string]string, error) {
 	}
 	for name, path := range roots {
 		if !resource.MatchString(name) || !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.ContainsRune(path, 0) || path == "/" {
-			return nil, fmt.Errorf("Некорректное значение: «shared root» %q: %w", name, ErrDenied)
+			return nil, fmt.Errorf("Некорректное значение: общий корневой каталог %q: %w", name, ErrDenied)
 		}
 		f, err := openDirectory(path)
 		if err != nil {
-			return nil, fmt.Errorf("Недоступно: «shared root» %q: %w", name, err)
+			return nil, fmt.Errorf("Недоступно: общий корневой каталог %q: %w", name, err)
 		}
 		_ = f.Close()
 	}

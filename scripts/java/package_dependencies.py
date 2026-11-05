@@ -38,7 +38,7 @@ def bundle(host: Path, output: Path, specs: list[str]) -> None:
         identities.add(coord)
         data = Path(filename).read_bytes()
         if not 0 < len(data) <= 16 * 1024 * 1024:
-            raise ValueError("Для «library JAR» требуется: «1..16 MiB»")
+            raise ValueError("library JAR: требуется «1..16 MiB»")
         total += len(data)
         if total > 64 * 1024 * 1024:
             raise ValueError("Превышен допустимый размер: «library collection»")

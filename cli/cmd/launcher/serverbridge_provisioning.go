@@ -826,7 +826,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	allowPath := filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json")
 	raw, err := os.ReadFile(allowPath)
 	if err != nil {
-		return "", errors.New("Для «production provisioning» требуется sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
+		return "", errors.New("production provisioning: требуется sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
 	}
 	var document serverBridgeReleaseAllowlist01912
 	if err := json.Unmarshal(raw, &document); err != nil {
@@ -1044,7 +1044,7 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		return bridgeIdentityMaterial0199{}, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("Для «node identity» требуется: «a regular non-symlink file:» %s", path)
+		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity: требуется «a regular non-symlink file:» %s", path)
 	}
 	if err := verifyNodeIdentityPermissions0199(path, info); err != nil {
 		return bridgeIdentityMaterial0199{}, err
@@ -1122,13 +1122,13 @@ func enrollServerBridge0199(args []string) error {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "backend": backend, "endpoint": endpoint, "request": body, "keyFingerprint": req.KeyFingerprint})
 	}
 	if backend == "" {
-		return errors.New("Для «enroll» требуется «--backend or backendUrl in enrollment-request.json»")
+		return errors.New("enroll: требуется «--backend or backendUrl in enrollment-request.json»")
 	}
 	if err := bridgeEndpointSecure02812(backend); err != nil {
 		return err
 	}
 	if token == "" {
-		return errors.New("Для «enroll» требуется «--token or LAUNCHER_TOKEN»")
+		return errors.New("enroll: требуется «--token or LAUNCHER_TOKEN»")
 	}
 	payload, err := httpJSONWithAuth("POST", backend+endpoint, body, token)
 	if err != nil && !rotate {
@@ -1162,14 +1162,14 @@ func serverBridgeMigrateV30200(args []string) error {
 	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	current, err := readBridgeProvisionState0199(statePath)
 	if err != nil {
-		return errors.New("Для «server-bridge migrate-v3» требуется «an existing managed ServerBridge installation; run `nl server-bridge install` first»")
+		return errors.New("server-bridge migrate-v3: требуется «an existing managed ServerBridge installation; run `nl server-bridge install` first»")
 	}
 	if compareSemver0199(version, "0.20.0") < 0 {
-		return fmt.Errorf("Для «server-bridge migrate-v3» требуется «nl >= 0.20.0; current CLI is» %s", version)
+		return fmt.Errorf("server-bridge migrate-v3: требуется «nl >= 0.20.0; current CLI is» %s", version)
 	}
 	targetVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
 	if compareSemver0199(targetVersion, "0.20.0") < 0 {
-		return fmt.Errorf("Для «ServerBridge 3 GA migration target» требуется: «>= 0.20.0, got» %s", targetVersion)
+		return fmt.Errorf("ServerBridge 3 GA migration target: требуется «>= 0.20.0, got» %s", targetVersion)
 	}
 
 	backend := strings.TrimRight(firstNonEmpty0199(flagValue(args, "--backend", ""), os.Getenv("LAUNCHER_BACKEND_URL")), "/")
@@ -1179,7 +1179,7 @@ func serverBridgeMigrateV30200(args []string) error {
 		}
 	}
 	if backend == "" {
-		return errors.New("Для «server-bridge migrate-v3» требуется «a Backend URL to verify Protocol v3 GA capability before replacing the artifact»")
+		return errors.New("server-bridge migrate-v3: требуется «a Backend URL to verify Protocol v3 GA capability before replacing the artifact»")
 	}
 	capURL := backend + "/api/v1/server-bridge/capabilities?protocols=3&features=" + strings.Join([]string{
 		"protocol.capability-negotiation", "protocol.feature-flags", "protocol.rolling-upgrade-v2",
@@ -1323,7 +1323,7 @@ func rollbackServerBridge0199(args []string) error {
 	if txID == "" {
 		state, err := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 		if err != nil {
-			return errors.New("Для откат требуется «--transaction or an active managed ServerBridge state»")
+			return errors.New("Откат: требуется «--transaction or an active managed ServerBridge state»")
 		}
 		txID = state.TransactionID
 	}
@@ -1332,7 +1332,7 @@ func rollbackServerBridge0199(args []string) error {
 	}
 	current, currentErr := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 	if currentErr != nil || current.TransactionID != txID {
-		return errors.New("Для откат требуется «the currently active transaction (reconcile changes before rollback)»")
+		return errors.New("Откат: требуется «the currently active transaction (reconcile changes before rollback)»")
 	}
 	txPath := bridgeTransactionPath0199(root, txID)
 	raw, err := os.ReadFile(txPath)
@@ -1350,7 +1350,7 @@ func rollbackServerBridge0199(args []string) error {
 		return err
 	}
 	if tx.CompletedAt == "" {
-		return errors.New("Для «incomplete transaction» требуется «manual reconciliation»")
+		return errors.New("incomplete transaction: требуется «manual reconciliation»")
 	}
 	if tx.RolledBackAt != "" {
 		return fmt.Errorf("transaction %s is already rolled back", tx.ID)

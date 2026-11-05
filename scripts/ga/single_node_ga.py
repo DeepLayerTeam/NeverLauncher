@@ -73,7 +73,7 @@ def strict_json(raw: bytes) -> dict:
 
     data = json.loads(raw, object_pairs_hook=no_duplicate)
     if not isinstance(data, dict):
-        raise Blocked("expected JSON object")
+        raise Blocked("Ожидается объект JSON")
     return data
 
 
@@ -87,7 +87,7 @@ def public_key(raw: bytes) -> Ed25519PublicKey:
     if raw.lstrip().startswith(b"-----BEGIN"):
         key = serialization.load_pem_public_key(raw)
         if not isinstance(key, Ed25519PublicKey):
-            raise Blocked("Для «the independent key» требуется: Ed25519")
+            raise Blocked("the independent key: требуется Ed25519")
         return key
     value = raw.strip().decode("ascii")
     try:
@@ -95,7 +95,7 @@ def public_key(raw: bytes) -> Ed25519PublicKey:
     except ValueError:
         key_raw = base64.b64decode(value, validate=True)
     if len(key_raw) != 32:
-        raise Blocked("Для «independent Ed25519 public key» требуется: «32 bytes»")
+        raise Blocked("independent Ed25519 public key: требуется «32 bytes»")
     return Ed25519PublicKey.from_public_bytes(key_raw)
 
 

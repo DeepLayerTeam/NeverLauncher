@@ -149,7 +149,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	}
 	files, err = s.Repo.ListFiles(p.ProjectID, created.ID)
 	if err != nil || len(files) != len(sourceFiles) {
-		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback incomplete file set")
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("Набор файлов для отката неполон")
 	}
 	if err = s.workerAuthorized0217(ctx, job); err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
@@ -302,7 +302,7 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	}
 	if publishJob.Status != model.DurableJobStatusSucceeded {
 		if publishJob.Status == model.DurableJobStatusFailed || publishJob.Status == model.DurableJobStatusRevoked || publishJob.Status == model.DurableJobStatusDead {
-			err = fmt.Errorf("rollback publish job %s: %s", publishJob.Status, publishJob.LastError)
+			err = fmt.Errorf("Ошибка публикации отката в задании %s: %s", publishJob.Status, publishJob.LastError)
 			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, err.Error())
 			return nil, err
 		}
@@ -321,7 +321,7 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 		return nil, err
 	}
 	if actualHead.ReleaseID != release.ID || actualHead.Revision != *p.ExpectedHeadRevision+1 {
-		return nil, fmt.Errorf("rollback channel head is not the committed release: %w", repository.ErrConflict)
+		return nil, fmt.Errorf("Текущий релиз канала не совпадает с зафиксированным релизом при откате: %w", repository.ErrConflict)
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "channel:rollback", Target: job.ID + ":" + release.ID, JobID: job.ID, CorrelationID: job.ID, ReasonCode: "executed", CreatedAt: time.Now().UTC()})
 	return map[string]any{"status": "rolled-back-as-new-validated-immutable-release", "projectId": p.ProjectID, "profileId": p.ProfileID, "channel": p.Channel, "targetVersion": p.ToVersion, "rollbackVersion": release.Version, "packageId": release.ID, "release": release, "jobId": publishJob.ID}, nil

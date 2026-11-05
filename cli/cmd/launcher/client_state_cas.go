@@ -20,7 +20,7 @@ func clientStateSHA2560228(root string) (string, error) {
 		return "", err
 	}
 	if !info.Mode().IsRegular() {
-		return "", errors.New("Для «client state» требуется: обычный файл")
+		return "", errors.New("client state: требуется обычный файл")
 	}
 	raw, err := os.ReadFile(file)
 	if err != nil {

@@ -210,7 +210,7 @@ public final class BridgeAuthResponse0287 {
                 String key = string();
                 space(); expect(':');
                 Object val = value(depth);
-                if (output.containsKey(key)) throw new IllegalArgumentException("duplicate JSON key");
+                if (output.containsKey(key)) throw new IllegalArgumentException("Повторяющийся ключ JSON");
                 output.put(key, val);
                 space();
                 char sep = next();
@@ -248,9 +248,9 @@ public final class BridgeAuthResponse0287 {
                     case 'r' -> out.append('\r');
                     case 't' -> out.append('\t');
                     case 'u' -> {
-                        if (index + 4 > input.length()) throw new IllegalArgumentException("invalid unicode escape");
+                        if (index + 4 > input.length()) throw new IllegalArgumentException("Некорректная Unicode-последовательность");
                         String hex = input.substring(index, index + 4);
-                        if (!hex.matches("[0-9a-fA-F]{4}")) throw new IllegalArgumentException("invalid unicode escape");
+                        if (!hex.matches("[0-9a-fA-F]{4}")) throw new IllegalArgumentException("Некорректная Unicode-последовательность");
                         out.append((char) Integer.parseInt(hex, 16));
                         index += 4;
                     }
@@ -268,22 +268,22 @@ public final class BridgeAuthResponse0287 {
             if (input.charAt(index) == '-') index++;
             int digits = index;
             while (index < input.length() && Character.isDigit(input.charAt(index))) index++;
-            if (digits == index) throw new IllegalArgumentException("invalid JSON number");
+            if (digits == index) throw new IllegalArgumentException("Некорректное число JSON");
             if (index < input.length() && input.charAt(index) == '.') {
                 index++;
                 digits = index;
                 while (index < input.length() && Character.isDigit(input.charAt(index))) index++;
-                if (digits == index) throw new IllegalArgumentException("invalid JSON number");
+                if (digits == index) throw new IllegalArgumentException("Некорректное число JSON");
             }
             if (index < input.length() && (input.charAt(index) == 'e' || input.charAt(index) == 'E')) {
                 index++;
                 if (index < input.length() && (input.charAt(index) == '+' || input.charAt(index) == '-')) index++;
                 digits = index;
                 while (index < input.length() && Character.isDigit(input.charAt(index))) index++;
-                if (digits == index) throw new IllegalArgumentException("invalid JSON number");
+                if (digits == index) throw new IllegalArgumentException("Некорректное число JSON");
             }
             try { return Double.valueOf(input.substring(start, index)); }
-            catch (NumberFormatException e) { throw new IllegalArgumentException("invalid JSON number", e); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("Некорректное число JSON", e); }
         }
     }
 }

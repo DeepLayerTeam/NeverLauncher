@@ -277,12 +277,12 @@ func reportVerified(r Report) error {
 		return e
 	}
 	if hash(b) != d {
-		return errors.New("Несовпадение: «migration report checksum»")
+		return errors.New("Несовпадение: контрольная сумма отчёта миграции")
 	}
 	stages := map[string]string{}
 	for _, ev := range r.Evidence {
 		if _, ok := stages[ev.Stage]; ok {
-			return errors.New("Обнаружен дубликат: «report stage»")
+			return errors.New("Обнаружен дубликат: этап отчёта")
 		}
 		stages[ev.Stage] = ev.State
 	}
@@ -302,7 +302,7 @@ func reportVerified(r Report) error {
 		}
 	}
 	if !active {
-		return errors.New("Отсутствует: «active validated migration cutover scope»")
+		return errors.New("Отсутствует: активная проверенная область переключения миграции")
 	}
 	for _, id := range r.Identities {
 		if id.Status != "imported" && id.Status != "matched" || id.TargetUserID == "" {
@@ -380,7 +380,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			return "", "", errors.New("multiple LaunchServer jars")
 		}
 		if f.UncompressedSize64 == 0 || f.UncompressedSize64 > 32<<20 || f.CompressedSize64 == 0 {
-			return "", "", errors.New("Небезопасное значение: «LaunchServer jar size»")
+			return "", "", errors.New("Небезопасное значение: размер JAR LaunchServer")
 		}
 		reader, e := f.Open()
 		if e != nil {
@@ -413,7 +413,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			b, e := io.ReadAll(io.LimitReader(read, (64<<10)+1))
 			read.Close()
 			if e != nil || uint64(len(b)) != item.UncompressedSize64 {
-				return "", "", errors.New("Некорректное значение: «jar manifest»")
+				return "", "", errors.New("Некорректное значение: манифест JAR")
 			}
 			manifest = string(b)
 		}
@@ -444,7 +444,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 		jarHash = hash(data)
 		ver = strings.TrimPrefix(ver, "v")
 		if !gravit57.MatchString(ver) {
-			return "", "", errors.New("Не поддерживается: «JAR version»")
+			return "", "", errors.New("Не поддерживается: версия JAR")
 		}
 		found = ver
 	}
@@ -472,7 +472,7 @@ func validatePlan(p Plan) error {
 		return errors.New("Отсутствуют или некорректны идентификаторы запуска, проекта, источника, ключа подписи либо SHA-256 коммита")
 	}
 	if !filepath.IsAbs(p.SourceArchive) || !filepath.IsAbs(p.SigningKey) || !filepath.IsAbs(p.SnapshotSourceDir) || !filepath.IsAbs(p.SnapshotTargetDir) || filepath.Clean(p.SnapshotSourceDir) == filepath.Clean(p.SnapshotTargetDir) {
-		return errors.New("Для «source archive and signer key paths» требуется: «absolute»")
+		return errors.New("Для пути к исходному архиву и ключу подписи требуется: «absolute»")
 	}
 	if githubSHA := os.Getenv("GITHUB_SHA"); githubSHA != "" && githubSHA != p.CommitSHA {
 		return errors.New("plan commit differs from checked-out CI commit")
@@ -489,7 +489,7 @@ func validatePlan(p Plan) error {
 	}
 	for _, n := range requiredForClass(p.ReferenceClass) {
 		if !seen[n] {
-			return fmt.Errorf("Отсутствует: «mandatory check»: %s", n)
+			return fmt.Errorf("Отсутствует: обязательная проверка: %s", n)
 		}
 	}
 	return nil
@@ -553,7 +553,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 		return result, fmt.Errorf("%s: missing, false or unbound check evidence", c.Name)
 	}
 	if !filepath.IsAbs(probe.EvidenceFile) {
-		return result, fmt.Errorf("Для «%s: evidence path» требуется: «absolute»", c.Name)
+		return result, fmt.Errorf("%s: evidence path: требуется «absolute»", c.Name)
 	}
 	info, e := os.Stat(probe.EvidenceFile)
 	if e != nil || info.ModTime().Before(started.Add(-2*time.Second)) || info.ModTime().After(time.Now().Add(time.Minute)) {
@@ -608,7 +608,7 @@ func signingKey(filename string) (ed25519.PrivateKey, error) {
 		return nil, e
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Для «GA private key» требуется: «regular and owner-only (0600)»")
+		return nil, errors.New("Для закрытый ключ GA требуется: «regular and owner-only (0600)»")
 	}
 	b, e := os.ReadFile(filename)
 	if e != nil {
@@ -624,7 +624,7 @@ func signingKey(filename string) (ed25519.PrivateKey, error) {
 	}
 	k, ok := key.(ed25519.PrivateKey)
 	if !ok {
-		return nil, errors.New("Для «signer» требуется: «independent Ed25519 key»")
+		return nil, errors.New("Для подписант требуется: независимый ключ Ed25519")
 	}
 	return k, nil
 }
@@ -655,7 +655,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 		return e
 	}
 	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.45.0\x00"), raw...), signature) {
-		return errors.New("Некорректное значение: «GA signature»")
+		return errors.New("Некорректное значение: подпись GA")
 	}
 	seen := map[string]bool{}
 	for _, c := range b.Checks {
@@ -746,7 +746,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if r.RunID != p.RunID || r.ProjectID != p.ProjectID || r.SourceSHA256 != source {
-		return errors.New("«source ZIP, project or run» не совпадает с «database report»")
+		return errors.New("ZIP источника, проект или запуск не совпадает с отчёт базы данных")
 	}
 	// Bind the tested release to an actually active cutover, not merely
 	// a release ID or digest invented by the operator's test scripts.
@@ -774,7 +774,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	seen := map[string]bool{}
 	for _, id := range r.Identities {
 		if seen[id.UUID] {
-			return errors.New("Обнаружен дубликат: «UUID in migration report»")
+			return errors.New("Обнаружен дубликат: UUID в отчёте миграции")
 		}
 		seen[id.UUID] = true
 		uuids = append(uuids, id.UUID)
@@ -927,7 +927,7 @@ func runMain(args []string) error {
 		}
 		key, ok := anyKey.(ed25519.PublicKey)
 		if !ok {
-			return errors.New("Для «trusted key» требуется: Ed25519")
+			return errors.New("Доверенный ключ: требуется Ed25519")
 		}
 		if e = verifyBundle(b, key); e != nil {
 			return e
@@ -961,6 +961,6 @@ func runMain(args []string) error {
 		}
 		return verifyCohort(*key, cohort)
 	default:
-		return fmt.Errorf("Неизвестное значение: «subcommand» %q", cmd)
+		return fmt.Errorf("Неизвестное значение: подкоманда %q", cmd)
 	}
 }

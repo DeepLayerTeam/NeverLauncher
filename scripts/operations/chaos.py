@@ -43,21 +43,21 @@ def check_scope(project: str, confirm: str, env_file: Path, ready_url: str, s3_u
     if not env_file.is_file() or env_file.is_symlink():
         raise dr.DrillError("Требуется: «regular Compose env-file»")
     if (env_file.stat().st_mode & 0o077) != 0:
-        raise dr.DrillError("Для «Compose env-file» требуется: «mode 0600 or more restrictive»")
+        raise dr.DrillError("Compose env-file: требуется «mode 0600 or more restrictive»")
     if not re.fullmatch(r"nl-dr-[a-z0-9][a-z0-9-]{0,50}", bucket):
-        raise dr.DrillError("Для «S3 bucket» требуется: «isolated nl-dr-* bucket»")
+        raise dr.DrillError("S3 bucket: требуется «isolated nl-dr-* bucket»")
     parsed = urlsplit(s3_url)
     if (parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or not parsed.port
             or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/")):
-        raise dr.DrillError("Для «S3 test endpoint» требуется: «explicit IPv4 loopback HTTP port»")
+        raise dr.DrillError("S3 test endpoint: требуется «explicit IPv4 loopback HTTP port»")
     dr.validate_ready_url(ready_url)
     # Публичная HTTPS-точка может быть не loopback. Не принимайте производственный DNS как
     # доказательство: локальный вход лаборатории должен явно привязываться к loopback.
     rp = urlsplit(ready_url)
     if rp.hostname not in ("127.0.0.1", "localhost", "::1"):
-        raise dr.DrillError("Для «chaos public readiness endpoint» требуется: «loopback»")
+        raise dr.DrillError("chaos public readiness endpoint: требуется «loopback»")
     if rp.scheme != "https":
-        raise dr.DrillError("Для «HA readiness» требуется: «HTTPS with trusted certificate»")
+        raise dr.DrillError("HA readiness: требуется «HTTPS with trusted certificate»")
     if not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"):
         raise dr.DrillError("set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for isolated S3")
     if dotenv_value(env_file, "LAUNCHER_STORAGE_S3_BUCKET") != bucket:
@@ -276,7 +276,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
     if report.exists() or report.is_symlink():
         raise dr.DrillError("Файл отчёта уже существует; перезапись запрещена")
     if not report.parent.is_dir() or report.parent.is_symlink():
-        raise dr.DrillError("Для «report parent» требуется: «existing real directory»")
+        raise dr.DrillError("report parent: требуется «existing real directory»")
     check_services(project, env_file)
     check_lab_endpoint(project, env_file, s3_url)
     poll(lambda: public_ready(ready_url), True, limit, "initial HA readiness")

@@ -35,7 +35,7 @@ func durableHash(raw []byte) (string, error) {
 		raw = []byte(`{}`)
 	}
 	if len(raw) > 1024*1024 || !json.Valid(raw) {
-		return "", errors.New("Для «durable payload» требуется: «valid JSON <=1MiB»")
+		return "", errors.New("durable payload: требуется «valid JSON <=1MiB»")
 	}
 	// Сохраняйте точные байты JSON: повтор обязан передавать идентичную исходную
 	// полезную нагрузку.
@@ -90,13 +90,13 @@ func (r *Repository) GetDurableJob(ctx context.Context, id string) (j model.Dura
 // Ключи идемпотентности не удаляются автоматически; повтор после сбоя требует учёта сохранённого состояния.
 func (r *Repository) EnqueueDurableJob(ctx context.Context, j model.DurableJob, _ time.Duration) (out model.DurableJob, created bool, err error) {
 	if !durableFieldsNonempty(j.Kind, j.ActorType, j.ActorID, j.Action, j.ResourceType, j.ResourceID, j.IdempotencyKey) || (j.ProjectID != "" && !durableFieldsNonempty(j.ProjectID)) {
-		return out, false, errors.New("Для «durable job» требуется «valid identity/action/resource/idempotency»")
+		return out, false, errors.New("durable job: требуется «valid identity/action/resource/idempotency»")
 	}
 	if j.MaxAttempts == 0 {
 		j.MaxAttempts = 8
 	}
 	if j.MaxAttempts < 1 || j.MaxAttempts > 100 {
-		return out, false, errors.New("Для «maxAttempts» требуется: «1..100»")
+		return out, false, errors.New("Для значение maxAttempts требуется: «1..100»")
 	}
 	if len(j.Payload) == 0 {
 		j.Payload = []byte(`{}`)

@@ -137,7 +137,7 @@ func modrinthSelectProjectVersion0274(ctx context.Context, client *http.Client, 
 }
 func resolveModrinthMods0274(ctx context.Context, base string, rootVersion string, plan factoryPlan0271) ([]mirrorArtifact0274, error) {
 	if plan.Loader == "vanilla" {
-		return nil, errors.New("Для «Modrinth mod installation» требуется «a mod loader»")
+		return nil, errors.New("Modrinth mod installation: требуется «a mod loader»")
 	}
 	if err := modrinthID0274(rootVersion); err != nil {
 		return nil, err

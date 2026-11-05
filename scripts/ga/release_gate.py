@@ -337,7 +337,7 @@ def verify_all(root: Path, public_key_hex: str, commit: str, version="0.24.0") -
     if not GITSHA.fullmatch(commit):
         raise ValueError("exact 40-byte git commit is mandatory")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", public_key_hex):
-        raise ValueError("Для «trusted attestation key» требуется: «32 raw bytes in hex»")
+        raise ValueError("trusted attestation key: требуется «32 raw bytes in hex»")
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex))
     results = []
     for platform, arch in sorted(TARGETS):

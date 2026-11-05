@@ -30,7 +30,7 @@ def package(cli: Path, private_key: Path, public_key: Path, output: Path) -> dic
     if not cli.is_file() or not private_key.is_file() or not public_key.is_file():
         raise ValueError("expected real CLI and key files")
     if output.is_symlink() or (output.exists() and any(output.iterdir())):
-        raise ValueError("Для «output» требуется: «an empty regular directory»")
+        raise ValueError("output: требуется «an empty regular directory»")
     output.mkdir(parents=True, exist_ok=True)
     version = (ROOT / "VERSION").read_text().strip()
     if version != "0.31.0":

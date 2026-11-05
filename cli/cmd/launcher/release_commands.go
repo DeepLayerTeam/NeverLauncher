@@ -251,14 +251,14 @@ func handleRelease(args []string) error {
 		return nil
 	case "distribution-verify":
 		if len(args) < 2 {
-			return errors.New("Для «release distribution-verify» требуется «release bundle directory»")
+			return errors.New("release distribution-verify: требуется «release bundle directory»")
 		}
 		ver, err := releaseBundleVersion(args[1])
 		if err != nil {
 			return err
 		}
 		if !distributionRequired04511(ver) {
-			return fmt.Errorf("Для «signed distribution verification» требуется «0.45.11+:» %s", ver)
+			return fmt.Errorf("signed distribution verification: требуется «0.45.11+:» %s", ver)
 		}
 		if err := verifyReleaseBOM03214(args[1], ver); err != nil {
 			return err
@@ -577,7 +577,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			missing = append(missing, "guard CI matrix")
 		}
 		if len(missing) > 0 {
-			return fmt.Errorf("Для «0.15.11+ production release candidate» требуется «complete certification cohort:» %s", strings.Join(missing, ", "))
+			return fmt.Errorf("0.15.11+ production release candidate: требуется «complete certification cohort:» %s", strings.Join(missing, ", "))
 		}
 	}
 	if strings.TrimSpace(compatibilityMatrixPath) != "" {
@@ -1599,7 +1599,7 @@ func readManifest(path string) (Manifest, error) {
 		return Manifest{}, err
 	}
 	if manifest.SchemaVersion == "3.0" {
-		return Manifest{}, errors.New("Для «Manifest v3 component catalog» требуется «native Runtime 0.24.1; legacy CLI updater cannot safely apply this release»")
+		return Manifest{}, errors.New("Manifest v3 component catalog: требуется «native Runtime 0.24.1; legacy CLI updater cannot safely apply this release»")
 	}
 	if manifest.ProjectID == "" || manifest.ProfileID == "" || manifest.Version == "" {
 		return Manifest{}, errors.New("manifest не содержит обязательные поля projectId, profileId или version")

@@ -108,7 +108,7 @@ func (r *Repository) CommitFencedJob(ctx context.Context, jobID, jobToken, scope
 		return
 	}
 	if apply == nil || fence <= 0 {
-		return out, errors.New("Для «fenced commit» требуется «nonnil DB mutation and epoch»")
+		return out, errors.New("fenced commit: требуется «nonnil DB mutation and epoch»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()
@@ -184,7 +184,7 @@ func enqueueOutbox(ctx context.Context, q sqlitedurable.Executor, v model.Durabl
 		v.MaxAttempts = 8
 	}
 	if v.MaxAttempts < 1 || v.MaxAttempts > 100 {
-		return out, false, errors.New("Для «maxAttempts» требуется: «1..100»")
+		return out, false, errors.New("Для значение maxAttempts требуется: «1..100»")
 	}
 	if len(v.Payload) == 0 {
 		v.Payload = []byte(`{}`)

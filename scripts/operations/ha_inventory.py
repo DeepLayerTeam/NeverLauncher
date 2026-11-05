@@ -385,9 +385,9 @@ def probe_public_edge(url, samples):
     except ValueError as exc:
         raise InventoryError("Некорректное значение: «HTTPS edge URL»") from exc
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
-        raise InventoryError("Для «edge URL» требуется: «HTTPS without embedded credentials or fragment»")
+        raise InventoryError("edge URL: требуется «HTTPS without embedded credentials or fragment»")
     if parsed.path not in ("", "/", "/ready") or parsed.query:
-        raise InventoryError("Для «edge URL» требуется: «an origin or /ready (no query)»")
+        raise InventoryError("edge URL: требуется «an origin or /ready (no query)»")
     target = url.rstrip("/") + ("/ready" if parsed.path in ("", "/") else "")
     opener = urllib.request.build_opener(NoRedirect())
     durations = []
@@ -518,7 +518,7 @@ def remote_node(target, remote_script, project, samples, growth):
     if not SSH_RE.fullmatch(target) or target.startswith("-"):
         raise InventoryError("Некорректное значение: «SSH target»")
     if not remote_script.startswith("/") or "\n" in remote_script:
-        raise InventoryError("Для «remote script» требуется: «an absolute installed path»")
+        raise InventoryError("remote script: требуется «an absolute installed path»")
     command = ["python3", remote_script, "node", "--project", project,
                "--samples", str(samples), "--output", "-"]
     if not growth:
@@ -596,7 +596,7 @@ def main(argv=None):
         if not PROJECT_RE.fullmatch(args.project):
             raise InventoryError("Некорректное значение: «Docker Compose project name»")
         if not 1 <= args.samples <= 20:
-            raise InventoryError("Для «samples» требуется: «between 1 and 20»")
+            raise InventoryError("samples: требуется «between 1 and 20»")
         if args.mode == "node":
             result = node_inventory(args.project, args.samples, not args.skip_growth, args.source_root)
             write_report(args.output, result)
@@ -605,7 +605,7 @@ def main(argv=None):
         for spec in args.node:
             name, sep, target = spec.partition("=")
             if not sep or not LABEL_RE.fullmatch(name) or not target or name in nodes:
-                raise InventoryError("Для «each --node» требуется: «a unique name=SSH-target or name=local»")
+                raise InventoryError("each --node: требуется «a unique name=SSH-target or name=local»")
             if target == "local":
                 nodes[name] = node_inventory(args.project, args.samples, not args.skip_growth, args.source_root)
             else:

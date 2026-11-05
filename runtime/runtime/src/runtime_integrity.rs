@@ -70,7 +70,7 @@ pub fn from_verified_launch(manifest:&Manifest,plan:&LaunchPlan,root:&Path,guard
     let selected=crate::component_catalog_0241::active_files(manifest,
         crate::transactional_release::active_preset_for_manifest(manifest,root).as_deref())?;
     for path in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
-        let absolute=fs::canonicalize(path).map_err(|e|format!("Отсутствует: «Guard runtime classpath»: {e}"))?;
+        let absolute=fs::canonicalize(path).map_err(|e|format!("Отсутствует: путь классов среды выполнения Guard: {e}"))?;
         let rel=absolute.strip_prefix(root).map_err(|_|"Guard runtime classpath outside signed root")?;
         let name=rel.to_string_lossy().replace('\\',"/");
         let file=manifest.files.iter().find(|f|f.path.replace('\\',"/")==name && super::manifest_file_applies(f) &&

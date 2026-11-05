@@ -425,7 +425,7 @@ func packaging940Verify(dir string) (map[string]any, error) {
 			expected, rel := parts[0], parts[1]
 			actual, _, err := hashFile(filepath.Join(dir, filepath.FromSlash(rel)))
 			if err != nil {
-				errs = append(errs, "cannot hash "+rel+": "+err.Error())
+				errs = append(errs, "Не удалось вычислить хеш: "+rel+": "+err.Error())
 				continue
 			}
 			if actual != expected {
@@ -435,7 +435,7 @@ func packaging940Verify(dir string) (map[string]any, error) {
 			verified++
 		}
 	} else {
-		errs = append(errs, "cannot read SHA256SUMS: "+err.Error())
+		errs = append(errs, "Не удалось прочитать SHA256SUMS: "+err.Error())
 	}
 	status := "verified"
 	if len(errs) > 0 {

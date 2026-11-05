@@ -50,7 +50,7 @@ func ParsePrivateKey(pemBytes []byte) (*Signer, error) {
 		return nil, errors.New("Не поддерживается: ключ подписи PEM тип")
 	}
 	if key.N.BitLen() < 2048 {
-		return nil, errors.New("Для «RSA key» требуется: «at least 2048 bits»")
+		return nil, errors.New("RSA key: требуется «at least 2048 bits»")
 	}
 	if err := key.Validate(); err != nil {
 		return nil, fmt.Errorf("Некорректное значение: RSA ключ подписи: %w", err)

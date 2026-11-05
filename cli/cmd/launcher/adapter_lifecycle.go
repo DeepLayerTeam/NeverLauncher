@@ -54,7 +54,7 @@ func factoryAdapterPinByID02711(id string) (factoryAdapterPin02711, error) {
 	for _, filename := range files {
 		contents, err := factoryAdapterSources02711.ReadFile(filename)
 		if err != nil {
-			return factoryAdapterPin02711{}, fmt.Errorf("embedded adapter implementation %q: %w", filename, err)
+			return factoryAdapterPin02711{}, fmt.Errorf("Ошибка встроенной реализации адаптера %q: %w", filename, err)
 		}
 		_, _ = h.Write([]byte(filename + "\x00"))
 		_, _ = h.Write(contents)
@@ -83,7 +83,7 @@ func validateFactoryAdapterPins02711(p factoryPlan0271) error {
 		return nil
 	}
 	if len(p.AdapterPins) != len(p.Steps) {
-		return errors.New("incomplete factory adapter pin set")
+		return errors.New("Неполный набор закреплённых адаптеров сборочного конвейера")
 	}
 	seen := map[string]bool{}
 	for i, pin := range p.AdapterPins {
@@ -97,7 +97,7 @@ func validateFactoryAdapterPins02711(p factoryPlan0271) error {
 
 func requireCurrentFactoryAdapters02711(p factoryPlan0271) error {
 	if len(p.AdapterPins) == 0 {
-		return errors.New("legacy install-plan has no versioned adapter evidence; rebuild with --upgrade-adapters=true")
+		return errors.New("Прежний план установки не содержит версионированных данных об адаптерах; пересоберите с --upgrade-adapters=true")
 	}
 	if err := validateFactoryAdapterPins02711(p); err != nil {
 		return err
@@ -105,7 +105,7 @@ func requireCurrentFactoryAdapters02711(p factoryPlan0271) error {
 	current := currentFactoryAdapterPins02711(p.Loader)
 	for i, old := range p.AdapterPins {
 		if old != current[i] {
-			return fmt.Errorf("adapter %q changed from version %s SHA-256 %s to version %s SHA-256 %s; revalidate with --upgrade-adapters=true", old.ID, old.Version, old.ImplementationSHA256, current[i].Version, current[i].ImplementationSHA256)
+			return fmt.Errorf("Адаптер %q изменён: версия %s, SHA-256 %s → версия %s, SHA-256 %s; повторите проверку с --upgrade-adapters=true", old.ID, old.Version, old.ImplementationSHA256, current[i].Version, current[i].ImplementationSHA256)
 		}
 	}
 	return nil
@@ -121,7 +121,7 @@ func checkAdapterUpgradeSources02711(old, next []factorySource0271) error {
 	}
 	for _, s := range next {
 		if previous, ok := known[s.Path]; ok && (previous.SHA256 != s.SHA256 || previous.Size != s.Size) {
-			return fmt.Errorf("adapter upgrade modified locked source %s", s.Path)
+			return fmt.Errorf("Обновление адаптера изменило заблокированный источник %s", s.Path)
 		}
 	}
 	return nil
@@ -162,7 +162,7 @@ func invalidateFactoryProcessorRecovery02711(staging, loader string) error {
 			return err
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("installer directory contains symlink %s", path)
+			return fmt.Errorf("Каталог установщика содержит символическую ссылку %s", path)
 		}
 		if !d.IsDir() && d.Name() == "processor-journal.json" {
 			if !d.Type().IsRegular() {

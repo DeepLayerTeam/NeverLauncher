@@ -59,13 +59,13 @@ func normalizeGuardRuntimeProfiles0317(input []guardRuntimeProfile0317) ([]guard
 		profile.CodeSetSHA256 = strings.ToLower(strings.TrimSpace(profile.CodeSetSHA256))
 		profile.HookSetSHA256 = strings.ToLower(strings.TrimSpace(profile.HookSetSHA256))
 		if !isSHA256Hex0134(profile.ModuleSetSHA256) {
-			return nil, errors.New("Для «moduleSetSha256» требуется: хеш SHA-256")
+			return nil, errors.New("moduleSetSha256: требуется хеш SHA-256")
 		}
 		if profile.CodeSetSHA256 != "" && !isSHA256Hex0134(profile.CodeSetSHA256) {
-			return nil, errors.New("Для «codeSetSha256» требуется: хеш SHA-256")
+			return nil, errors.New("codeSetSha256: требуется хеш SHA-256")
 		}
 		if profile.HookSetSHA256 != "" && !isSHA256Hex0134(profile.HookSetSHA256) {
-			return nil, errors.New("Для «hookSetSha256» требуется: хеш SHA-256")
+			return nil, errors.New("hookSetSha256: требуется хеш SHA-256")
 		}
 		key := fmt.Sprintf("%d:%s:%s:%s", profile.JavaMajor, profile.ModuleSetSHA256, profile.CodeSetSHA256, profile.HookSetSHA256)
 		if seen[key] {
@@ -114,7 +114,7 @@ func verifyGuardRuntimePolicy0317(policy guardReleasePolicy0134, platform string
 		return "", err
 	}
 	if kind != "windows" {
-		return "", errors.New("Для «continuous Guard runtime verification» требуется Windows")
+		return "", errors.New("continuous Guard runtime verification: требуется Windows")
 	}
 	profiles := policy.RuntimeProfiles[kind]
 	if len(profiles) == 0 {

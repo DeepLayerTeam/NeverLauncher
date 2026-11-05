@@ -66,7 +66,7 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 			return nil, 0, 0, err
 		}
 		if !utf8.Valid(text) {
-			return nil, 0, 0, errors.New("Для блокировка библиотек требуется: UTF-8")
+			return nil, 0, 0, errors.New("Блокировка библиотек: требуется UTF-8")
 		}
 		lines = strings.Split(strings.TrimSuffix(string(text), "\n"), "\n")
 		if len(lines) == 0 || len(lines) == 1 && lines[0] == "" {

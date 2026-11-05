@@ -166,7 +166,7 @@ func migrationImportAll0493(args []string) error {
 	run, confirm := strings.TrimSpace(flagValue(args, "--run", "")), strings.TrimSpace(flagValue(args, "--confirm", ""))
 	source, mapping, report := flagValue(args, "--source", ""), flagValue(args, "--mapping", ""), flagValue(args, "--report", "")
 	if backend == "" || token == "" || run == "" || confirm != run || source == "" || mapping == "" || report == "" {
-		return errors.New("Для «import-content-all» требуется «--backend --token --run --confirm (same run) --source --mapping --report»")
+		return errors.New("import-content-all: требуется «--backend --token --run --confirm (same run) --source --mapping --report»")
 	}
 	if _, err := migrationURL0493(backend); err != nil {
 		return err
@@ -231,7 +231,7 @@ func migrationImportAll0493(args []string) error {
 		return err
 	}
 	if !ss.Mode().IsRegular() || ss.Size() < 1 || ss.Size() > 512<<20 {
-		return errors.New("Для источник требуется: «a regular 1..512 MiB ZIP»")
+		return errors.New("Источник: требуется «a regular 1..512 MiB ZIP»")
 	}
 	h := sha256.New()
 	if _, err = io.Copy(h, sf); err != nil {
@@ -266,7 +266,7 @@ func migrationImportAll0493(args []string) error {
 		var plan migrationLivePlan0493
 		if exists {
 			if !resume {
-				return errors.New("Для «partially imported workspace» требуется --resume=true")
+				return errors.New("partially imported workspace: требуется --resume=true")
 			}
 			_, err = migrationJSON0493(client, "GET", base+"/dry-run", token, "", nil, &plan, false)
 		} else {

@@ -84,16 +84,16 @@ func validateManifestFilePolicy0224(m Manifest) error {
 		switch manifestOwnership0224(f) {
 		case "required", "managed", "optional", "user-owned", "generated":
 		default:
-			return fmt.Errorf("Неизвестное значение: «ownership» %q", f.Ownership)
+			return fmt.Errorf("Неизвестное значение: принадлежность файла %q", f.Ownership)
 		}
 		if (f.Ownership == "user-owned" || f.Ownership == "generated") && f.Required {
-			return fmt.Errorf("«protected file»: запрещено «be required» %q", f.Path)
+			return fmt.Errorf("защищённый файл: запрещено «be required» %q", f.Path)
 		}
 		if f.Ownership == "required" && !f.Required || f.Ownership == "optional" && f.Required {
 			return fmt.Errorf("required/ownership conflict at %q", f.Path)
 		}
 		if protectedUpdatePath0224(f.Path) && manifestOwnership0224(f) != "user-owned" && manifestOwnership0224(f) != "generated" {
-			return fmt.Errorf("«protected file»: запрещено «be updated» %q", f.Path)
+			return fmt.Errorf("защищённый файл: запрещено «be updated» %q", f.Path)
 		}
 	}
 	for i, r := range m.FileRules {

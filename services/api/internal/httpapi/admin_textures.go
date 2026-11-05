@@ -122,7 +122,7 @@ func (s Server) adminTextureExceptions0259(w http.ResponseWriter, r *http.Reques
 	}
 	user := strings.TrimSpace(r.URL.Query().Get("userId"))
 	if len(user) > 128 {
-		writeError(w, 400, "invalid user ID")
+		writeError(w, 400, "Некорректный идентификатор пользователя")
 		return
 	}
 	result, err := repo.ListTextureExceptions0259(r.Context(), project, user)
@@ -144,7 +144,7 @@ func (s Server) adminTextureExceptionPut0259(w http.ResponseWriter, r *http.Requ
 	}
 	user := strings.TrimSpace(r.PathValue("userId"))
 	if user == "" || len(user) > 128 {
-		writeError(w, 400, "invalid user ID")
+		writeError(w, 400, "Некорректный идентификатор пользователя")
 		return
 	}
 	req, ok := adminTextureRead0259[repository.TextureException0259](w, r)
@@ -152,7 +152,7 @@ func (s Server) adminTextureExceptionPut0259(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if req.UserID != "" && req.UserID != user {
-		writeError(w, 400, "user ID mismatch")
+		writeError(w, 400, "Идентификатор пользователя не совпадает")
 		return
 	}
 	claims, err := s.adminClaims(r)
@@ -214,7 +214,7 @@ func (s Server) adminTexturePlayerHistory0259(w http.ResponseWriter, r *http.Req
 	}
 	user := strings.TrimSpace(r.PathValue("userId"))
 	if user == "" || len(user) > 128 {
-		writeError(w, 400, "invalid user ID")
+		writeError(w, 400, "Некорректный идентификатор пользователя")
 		return
 	}
 	result, err := repo.ListTexturePlayerHistory0259(r.Context(), project, user)

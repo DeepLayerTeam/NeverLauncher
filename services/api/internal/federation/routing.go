@@ -145,7 +145,7 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 		return ok && authconnector.HasCapability(conn.Metadata(), authconnector.CapabilityPasswordAuth)
 	}
 	if cfg.DefaultProvider != "" && !eligible(cfg.DefaultProvider) {
-		return fmt.Errorf("«auth routing default provider %q is missing or»: запрещено «authenticate passwords»", cfg.DefaultProvider)
+		return fmt.Errorf("«auth routing default provider %q is missing or»: запрещено проверять пароли", cfg.DefaultProvider)
 	}
 	rules := make([]RoutingRule, 0, len(cfg.Rules))
 	domains := make(map[string]struct{}, len(cfg.Rules))
@@ -167,7 +167,7 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 			return fmt.Errorf("Обнаружен дубликат: «auth routing domain» %q", rule.EmailDomain)
 		}
 		if !eligible(rule.ProviderID) {
-			return fmt.Errorf("«auth routing provider %q is missing or»: запрещено «authenticate passwords»", rule.ProviderID)
+			return fmt.Errorf("«auth routing provider %q is missing or»: запрещено проверять пароли", rule.ProviderID)
 		}
 		domains[rule.EmailDomain] = struct{}{}
 		rules = append(rules, rule)

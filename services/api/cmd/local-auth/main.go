@@ -70,7 +70,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 			MigrationStatus(context.Context) (dbmigrate.Status, error)
 		})
 		if !ok {
-			return errors.New("Недоступно: «PostgreSQL migration checker»")
+			return errors.New("Недоступно: проверка миграции PostgreSQL")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -83,7 +83,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 		}
 		importer, ok := repo.(repository.FileAuthImporter0295)
 		if !ok {
-			return errors.New("Недоступно: «PostgreSQL atomic importer»")
+			return errors.New("Недоступно: атомарный импорт PostgreSQL")
 		}
 		count, err := importer.ImportFileAuth0295(ctx, records, !*apply)
 		if err != nil {
@@ -138,7 +138,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		method, path = "GET", "/api/v1/admin/users"
 	case "create":
 		if *email == "" || strings.Contains(*email, "@"+fileauth.EmailDomain) || (*role != "player" && *role != "viewer") {
-			return errors.New("Для «create» требуется «--email and an unprivileged --role (player|viewer)»")
+			return errors.New("create: требуется «--email and an unprivileged --role (player|viewer)»")
 		}
 		password, err := readPassword(input)
 		if err != nil {

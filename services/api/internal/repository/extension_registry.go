@@ -30,7 +30,7 @@ func normalizeRegistryPublisher0203(in model.ExtensionRegistryPublisher) (model.
 	in.ID = strings.ToLower(strings.TrimSpace(in.ID))
 	in.Name = strings.TrimSpace(in.Name)
 	if !registryPublisherID0203.MatchString(in.ID) {
-		return model.ExtensionRegistryPublisher{}, fmt.Errorf("Некорректное значение: «registry publisher id» %q", in.ID)
+		return model.ExtensionRegistryPublisher{}, fmt.Errorf("Некорректное значение: идентификатор издателя в реестре %q", in.ID)
 	}
 	if in.Name == "" || len(in.Name) > 160 {
 		return model.ExtensionRegistryPublisher{}, errors.New("Имя издателя в реестре должно содержать от 1 до 160 символов")
@@ -44,7 +44,7 @@ func normalizeRegistryPublisherKey0203(in model.ExtensionRegistryPublisherKey) (
 	in.Algorithm = strings.TrimSpace(in.Algorithm)
 	in.PublicKeyBase64 = strings.TrimSpace(in.PublicKeyBase64)
 	if !registryPublisherID0203.MatchString(in.PublisherID) {
-		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("Некорректное значение: «registry publisher id» %q", in.PublisherID)
+		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("Некорректное значение: идентификатор издателя в реестре %q", in.PublisherID)
 	}
 	if in.Algorithm == "" {
 		in.Algorithm = "Ed25519"

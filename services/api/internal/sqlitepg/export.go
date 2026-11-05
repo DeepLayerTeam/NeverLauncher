@@ -34,11 +34,11 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 		return out, err
 	}
 	if dest == "/" {
-		return out, errors.New("Небезопасное значение: «SQLite destination»")
+		return out, errors.New("Небезопасное значение: целевая база данных SQLite")
 	}
 	parent := filepath.Dir(dest)
 	if st, e := os.Lstat(parent); e != nil || !st.IsDir() || st.Mode().Perm()&0077 != 0 {
-		return out, errors.New("Для «SQLite destination» требуется: «in a private 0700 existing directory»")
+		return out, errors.New("Для целевая база данных SQLite требуется: «in a private 0700 existing directory»")
 	}
 	for _, suffix := range []string{"", ".json", "-wal", "-shm", "-journal"} {
 		if _, e := os.Lstat(dest + suffix); e == nil {

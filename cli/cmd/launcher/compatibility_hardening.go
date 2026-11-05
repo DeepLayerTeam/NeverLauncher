@@ -192,10 +192,10 @@ func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaReso
 	}
 	var metadata vanillaVersionMetadata
 	if err := json.Unmarshal(payload, &metadata); err != nil {
-		return vanillaResolvedMetadata{}, fmt.Errorf("Некорректное значение: «cached version.json»: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Некорректное значение: кэшированный файл version.json: %w", err)
 	}
 	if metadata.ID != "" && metadata.ID != resolved {
-		return vanillaResolvedMetadata{}, fmt.Errorf("Несовпадение: «cached version.json id»: %s != %s", metadata.ID, resolved)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Несовпадение: идентификатор в кэшированном version.json: %s != %s", metadata.ID, resolved)
 	}
 	return vanillaResolvedMetadata{
 		Selected:  MojangManifestVersion{ID: resolved, Type: record.ReleaseType, URL: record.VersionURL, SHA1: strings.ToLower(record.VersionSHA1)},

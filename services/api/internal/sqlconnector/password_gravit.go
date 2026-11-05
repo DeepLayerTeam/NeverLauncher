@@ -61,7 +61,7 @@ func verifyGravitDigest(secret, encoded string, cfg PasswordConfig) (bool, error
 			err = errors.New("non-canonical digest base64")
 		}
 	default:
-		return false, errors.New("Для «digest encoding» требуется: «configured as hex or base64»")
+		return false, errors.New("digest encoding: требуется «configured as hex or base64»")
 	}
 	if err != nil || len(expected) != h.Size() {
 		return false, errors.New("Некорректное значение: «digest encoding or length»")

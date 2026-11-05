@@ -93,7 +93,7 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 	}
 	snapshot, err := inv.ValidateSource(ctx, src, size, digest)
 	if err != nil {
-		return Report{}, fmt.Errorf("Некорректное значение: «Gravit source ZIP»: %w", err)
+		return Report{}, fmt.Errorf("Некорректное значение: исходный ZIP-архив Gravit: %w", err)
 	}
 	fileList, err := json.Marshal(snapshot.Files)
 	if err != nil {
@@ -343,7 +343,7 @@ func readObject(f *zip.File) (map[string]json.RawMessage, error) {
 		return nil, errors.New("Некорректное значение: объект JSON")
 	}
 	if v == nil {
-		return nil, errors.New("Для «JSON root» требуется: объект")
+		return nil, errors.New("JSON root: требуется объект")
 	}
 	var trailing any
 	if e = dec.Decode(&trailing); e != io.EOF {
@@ -631,7 +631,7 @@ func rejectDuplicateJSON0332(d *json.Decoder) error {
 				return errors.New("Некорректное значение: ключ JSON")
 			}
 			if seen[key] {
-				return errors.New("duplicate JSON key")
+				return errors.New("Повторяющийся ключ JSON")
 			}
 			seen[key] = true
 			if len(seen) > 65536 {

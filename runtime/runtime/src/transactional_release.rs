@@ -218,7 +218,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
 // ранее активный релиз точно совпадает с релизом, установленным этой точкой.
 fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Option<Journal>, String> {
     if completed.state != "complete" {
-        return Err("Для «rollback checkpoint» требуется «a completed switch»".into());
+        return Err("rollback checkpoint: требуется «a completed switch»".into());
     }
     let Some(previous) = completed.previous.as_ref() else {
         // При чистой установке откатываться не к чему.
@@ -818,13 +818,13 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     fs::create_dir_all(root).map_err(|e|format!("create runtime root: {e}"))?;
     let root=root.canonicalize().map_err(|e|format!("Недоступно: «runtime root»: {e}"))?;
     if root.starts_with(&source) || source.starts_with(&root) {
-        return Err("Для «source and transactional runtime root» требуется: «disjoint»".into());
+        return Err("source and transactional runtime root: требуется «disjoint»".into());
     }
     recover(&root,key).await?;
     release_generations::check(&root,manifest)?;
     crate::trust_policy::check(&root,manifest,key)?;
     if pointer(&root)?.active.is_some() {
-        return Err("Для «offline staged adoption» требуется «a new, empty runtime release root»".into());
+        return Err("offline staged adoption: требуется «a new, empty runtime release root»".into());
     }
     // Эксклюзивная блокировка переключения удерживается при фиксации; ни неучтённый
     // рабочий файл, ни изменённый подготовленный файл нельзя незаметно принять.
@@ -888,7 +888,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
             }
         }
         let active = pointer(&root)?.active.ok_or("no active release")?;
-        if active.manifest.game_release_generation > 0 { return Err("Для «game rollback» требуется «a NEW signed gameReleaseGeneration; publish the old content as a new release»".into()); }
+        if active.manifest.game_release_generation > 0 { return Err("game rollback: требуется «a NEW signed gameReleaseGeneration; publish the old content as a new release»".into()); }
         if active.id != j.next.id { return Err("last-known-good is not the previous active release".into()); }
         if !verify_installed(&root, &active)? { return Err("current release was modified; refusing to overwrite local changes".into()); }
         // Публикуйте намерение переключения до первого восстановления, чтобы отключение

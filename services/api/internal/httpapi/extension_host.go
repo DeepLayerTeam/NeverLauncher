@@ -21,14 +21,14 @@ func extensionHostKey0205(r *http.Request) extensionhost.Key {
 
 func (s Server) extensionHosts0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений отключён")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocolVersion": extensionhost.ProtocolVersion, "executionTrust": "legacy-unisolated", "isolationStatus": "unsupported", "isolationReasonCodes": []string{"extension-os-sandbox-not-enforced"}, "isolationDiagnostics": s.ExtensionHost.IsolationDiagnostics0311(), "resourceIsolation": s.ExtensionHost.ResourceIsolation(), "osSandbox": "none", "networkSandbox": "none", "filesystemSandbox": "none", "limits": s.ExtensionHost.Limits(), "items": s.ExtensionHost.List()}})
 }
 func (s Server) extensionHostDetail0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений отключён")
 		return
 	}
 	item, err := s.ExtensionHost.Get(extensionHostKey0205(r))
@@ -44,7 +44,7 @@ func (s Server) extensionHostDetail0205(w http.ResponseWriter, r *http.Request) 
 }
 func (s Server) extensionHostLogs0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений отключён")
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -65,7 +65,7 @@ func (s Server) extensionHostStart0205(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.ExtensionHost == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений отключён")
 		return
 	}
 	key := extensionHostKey0205(r)
@@ -84,7 +84,7 @@ func (s Server) extensionHostStart0205(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) extensionHostStop0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений отключён")
 		return
 	}
 	key := extensionHostKey0205(r)
@@ -102,7 +102,7 @@ func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if s.ExtensionHost == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений отключён")
 		return
 	}
 	key := extensionHostKey0205(r)

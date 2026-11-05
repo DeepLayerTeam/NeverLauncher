@@ -380,7 +380,7 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
         return Err("Миграция защищённого хранилища ОС не завершена: отсутствует активный слот учётной записи".into());
     }
     // Удаляйте прежние учётные данные ТОЛЬКО после проверки читаемой замены.
-    let migrated = read(&slot)?.ok_or("OS vault migration incomplete")?;
+    let migrated = read(&slot)?.ok_or("Миграция хранилища учётных данных ОС не завершена")?;
     if normalized_uuid(&migrated.profile.id)? != uuid {
         return Err("Несовпадение идентификаторов при миграции защищённого хранилища ОС".into());
     }
@@ -731,7 +731,7 @@ impl IdentityManager {
         }
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
-        let (slot,mut record)=selected_record(&id)?.ok_or("Official Minecraft account not selected")?;
+        let (slot,mut record)=selected_record(&id)?.ok_or("Не выбрана официальная учётная запись Minecraft")?;
         if normalized_uuid(&record.profile.id)?!=expected || record.native.is_none() {
             return Err("Выбранная нативная учётная запись Minecraft изменилась; переподключитесь и повторите попытку".into());
         }
@@ -739,7 +739,7 @@ impl IdentityManager {
         if normalized_uuid(&record.profile.id)?!=expected {
             return Err("UUID Minecraft изменился перед авторизацией на сервере".into());
         }
-        let official_token=Zeroizing::new(record.native.as_ref().ok_or("Minecraft account unavailable")?.minecraft_token.clone());
+        let official_token=Zeroizing::new(record.native.as_ref().ok_or("Учётная запись Minecraft недоступна")?.minecraft_token.clone());
         let mut url=base.clone();
         url.set_path("/api/v1/session/join");url.set_query(None);url.set_fragment(None);
         let body=json!({
@@ -760,9 +760,9 @@ impl IdentityManager {
         let bytes=response.bytes().await.map_err(|_|"Ответ ServerBridge недоступен")?;
         if bytes.len()>32*1024 {return Err("Ответ подключения ServerBridge превышает допустимый размер".into());}
         let payload:Value=serde_json::from_slice(&bytes).map_err(|_|"Недопустимый ответ ServerBridge")?;
-        let join=payload.pointer("/data/join").ok_or("ServerBridge join missing")?;
+        let join=payload.pointer("/data/join").ok_or("Отсутствует пропуск для подключения ServerBridge")?;
         let returned_uuid=join.get("uuid").and_then(Value::as_str).ok_or("ServerBridge UUID missing")?;
-        let returned_name=join.get("username").and_then(Value::as_str).ok_or("ServerBridge name missing")?;
+        let returned_name=join.get("username").and_then(Value::as_str).ok_or("Отсутствует имя ServerBridge")?;
         if normalized_uuid(returned_uuid)?!=expected || returned_name!=record.profile.name ||
             join.get("identityRealm").and_then(Value::as_str)!=Some("official") ||
             join.get("oneTime").and_then(Value::as_bool)!=Some(true) ||

@@ -46,7 +46,7 @@ extern "system" {
 pub fn reset_event_chain() -> Result<(), String> {
     let mut chain = SENSOR_EVENT_CHAIN
         .lock()
-        .map_err(|_| "Continuous Guard event-chain lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка цепочки событий непрерывной защиты Guard".to_string())?;
     chain.fill(0);
     Ok(())
 }
@@ -55,13 +55,13 @@ pub fn current_event_chain() -> Result<[u8; 32], String> {
     SENSOR_EVENT_CHAIN
         .lock()
         .map(|chain| *chain)
-        .map_err(|_| "Continuous Guard event-chain lock poisoned".to_string())
+        .map_err(|_| "Повреждена блокировка цепочки событий непрерывной защиты Guard".to_string())
 }
 
 pub fn advance_event_chain(packet: &[u8]) -> Result<[u8; 32], String> {
     let mut chain = SENSOR_EVENT_CHAIN
         .lock()
-        .map_err(|_| "Continuous Guard event-chain lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка цепочки событий непрерывной защиты Guard".to_string())?;
     let mut digest = Sha256::new();
     digest.update(b"Launcher Continuous Guard sensor-event-chain v1\0");
     digest.update(*chain);
@@ -77,7 +77,7 @@ pub fn cross_check_event(reason: u32, last_guard_sequence: u64) -> Result<RawMod
     let encoded = hex::encode(chain);
     let wide = encoded.encode_utf16().collect::<Vec<_>>();
     if wide.len() > MODULE_PATH_WCHARS {
-        return Err("Continuous Guard digest exceeds event payload capacity".to_string());
+        return Err("Хеш непрерывной защиты Guard не помещается в данные события".to_string());
     }
     let mut event = RawModuleEvent {
         reason,
@@ -137,7 +137,7 @@ pub fn wait_for_guard_ack(
             break;
         }
         if Instant::now() >= deadline {
-            return Err("Continuous Guard Guard-ACK heartbeat timeout".to_string());
+            return Err("Превышено время ожидания сигнала активности Guard-ACK".to_string());
         }
         thread::sleep(GUARD_ACK_POLL);
     }

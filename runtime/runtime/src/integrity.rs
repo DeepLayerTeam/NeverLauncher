@@ -124,7 +124,7 @@ fn core_bytes(evidence: &GuardIntegrityEvidence) -> Result<Vec<u8>, String> {
         guard: &evidence.guard,
         launcher: &evidence.launcher,
     })
-    .map_err(|err| format!("Ошибка: «Guard integrity evidence serialization»: {err}"))
+    .map_err(|err| format!("Ошибка: сериализация данных о целостности Guard: {err}"))
 }
 
 #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
@@ -143,12 +143,12 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         || evidence.schema == GUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA
         || evidence.schema == GUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA;
     if !schema_ok || evidence.evidence_version != GUARD_INTEGRITY_EVIDENCE_VERSION {
-        return Err("Несовпадение: «Guard integrity evidence schema/version»".to_string());
+        return Err("Несовпадение: схема и версия данных о целостности Guard".to_string());
     }
     if evidence.evidence_id.len() != 32
         || !evidence.evidence_id.bytes().all(|value| value.is_ascii_hexdigit())
     {
-        return Err("Guard integrity evidence id malformed".to_string());
+        return Err("Некорректный идентификатор данных проверки целостности Guard".to_string());
     }
     for (label, value) in [
         ("evidenceSha256", evidence.evidence_sha256.as_str()),
@@ -165,26 +165,26 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         ),
     ] {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(format!("Guard integrity evidence {label} malformed"));
+            return Err(format!("Некорректное поле {label} в данных проверки целостности Guard"));
         }
     }
     if evidence.guard.pid == 0 || evidence.launcher.pid == 0 {
-        return Err("Guard integrity evidence contains zero PID".to_string());
+        return Err("В данных проверки целостности Guard указан нулевой PID".to_string());
     }
     if !evidence.boundary.parent_matches
         || evidence.boundary.expected_parent_pid != evidence.boundary.observed_parent_pid
         || evidence.launcher.pid != evidence.boundary.expected_parent_pid
     {
-        return Err("Несовпадение: «Guard integrity evidence process boundary»".to_string());
+        return Err("Несовпадение: граница процесса для данных о целостности Guard".to_string());
     }
     if evidence.schema == GUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA {
         let guard = evidence.guard.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
         let launcher = evidence.launcher.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing launcher security state".to_string())?;
         if !guard.no_new_privs || !guard.dumpable_disabled || !guard.parent_death_signal {
-            return Err("Linux Guard security state is not enforced".to_string());
+            return Err("Состояние защиты Guard в Linux не обеспечивается".to_string());
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
-            return Err("Несовпадение: «Linux Guard/launcher uid/gid boundary»".to_string());
+            return Err("Несовпадение: разграничение UID/GID Guard и лаунчера в Linux".to_string());
         }
     }
     if evidence.schema == GUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA {
@@ -192,10 +192,10 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         let launcher = evidence.launcher.macos.as_ref().ok_or_else(|| "macOS integrity evidence missing launcher security state".to_string())?;
         if !guard.code_signature_valid || !guard.hardened_runtime || !guard.library_validation
             || !launcher.code_signature_valid || !launcher.hardened_runtime || !launcher.library_validation {
-            return Err("macOS code-signing/Hardened Runtime state is not enforced".to_string());
+            return Err("Подпись кода и Hardened Runtime в macOS не подтверждены".to_string());
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
-            return Err("Несовпадение: «macOS Guard/launcher uid/gid boundary»".to_string());
+            return Err("Несовпадение: разграничение UID/GID Guard и лаунчера в macOS".to_string());
         }
     }
     Ok(())
@@ -651,7 +651,7 @@ mod windows_impl {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_secs())
-            .map_err(|err| format!("system clock error: {err}"))
+            .map_err(|err| format!("Ошибка системных часов: {err}"))
     }
 }
 
@@ -787,10 +787,10 @@ mod linux_impl {
     }
     fn observed_parent_pid(pid: u32) -> Result<u32, String> { status_u32(&proc_status(pid)?, "PPid:").ok_or_else(|| "PPid missing in /proc status".into()) }
     fn process_start_ticks(pid: u32) -> Result<u64, String> {
-        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("Ошибка: «read /proc/{pid}/stat»: {e}"))?;
+        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("Ошибка: чтение /proc/{pid}/stat: {e}"))?;
         let end=stat.rfind(')').ok_or_else(|| "malformed /proc stat".to_string())?;
         let rest=stat.get(end+2..).ok_or_else(|| "malformed /proc stat".to_string())?;
-        rest.split_whitespace().nth(19).ok_or_else(|| "starttime missing".to_string())?.parse().map_err(|_| "Некорректное значение: «process starttime»".to_string())
+        rest.split_whitespace().nth(19).ok_or_else(|| "Отсутствует время запуска процесса".to_string())?.parse().map_err(|_| "Некорректное значение: время запуска процесса".to_string())
     }
     fn pdeathsig(pid: u32) -> bool {
         if pid != std::process::id() {
@@ -816,7 +816,7 @@ mod linux_impl {
         })
     }
     fn modules(pid: u32, primary: &Path) -> Result<ModuleSetEvidence,String> {
-        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("Ошибка: «read maps»: {e}"))?;
+        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("Ошибка: чтение карты памяти процесса: {e}"))?;
         let mut files=BTreeMap::<String,String>::new();
         for line in maps.lines() {
             let Some(raw)=line.split_whitespace().last() else { continue; };
@@ -833,13 +833,13 @@ mod linux_impl {
         Ok(ModuleSetEvidence { module_count: files.len() as u32, module_set_sha256: hex::encode(h.finalize()), non_system_module_names: non_system })
     }
     fn process(pid:u32)->Result<ProcessIntegrityEvidence,String>{
-        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("Ошибка: «read exe link»: {e}"))?;
+        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("Ошибка: чтение ссылки на исполняемый файл: {e}"))?;
         let meta=std::fs::metadata(&image).map_err(|e|format!("metadata {} failed: {e}",image.display()))?;
         let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
         Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), macos:None, })
     }
     pub fn collect(expected_parent_pid:u32)->Result<GuardIntegrityEvidence,String>{
-        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux Guard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Несовпадение родительского процесса Guard в Linux: ожидался PID {expected_parent_pid}, обнаружен {observed}")); }
         let mut id=[0u8;16]; OsRng.fill_bytes(&mut id);
         let collected=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?.as_secs();
         let mut evidence=GuardIntegrityEvidence{ schema:GUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA.into(), evidence_version:1, evidence_id:hex::encode(id), collected_at_unix:collected, boundary:BoundaryEvidence{expected_parent_pid,observed_parent_pid:observed,parent_matches:true}, guard:process(guard_pid)?, launcher:process(expected_parent_pid)?, evidence_sha256:String::new(), session_proof:String::new() };
@@ -903,7 +903,7 @@ mod macos_impl {
     }
 
     fn bsd_info(pid: u32) -> Result<ProcBsdInfo, String> {
-        if pid == 0 || pid > i32::MAX as u32 { return Err("Некорректное значение: «macOS process PID»".to_string()); }
+        if pid == 0 || pid > i32::MAX as u32 { return Err("Некорректное значение: PID процесса macOS".to_string()); }
         let mut info: ProcBsdInfo = unsafe { std::mem::zeroed() };
         let size = std::mem::size_of::<ProcBsdInfo>();
         let read = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0, &mut info as *mut _ as *mut c_void, size as libc::c_int) };
@@ -920,7 +920,7 @@ mod macos_impl {
         let len = len as usize;
         buffer.truncate(len);
         if buffer.last() == Some(&0) { buffer.pop(); }
-        let value = String::from_utf8(buffer).map_err(|_| "macOS process path is not UTF-8".to_string())?;
+        let value = String::from_utf8(buffer).map_err(|_| "Путь к процессу macOS не имеет кодировки UTF-8".to_string())?;
         Ok(PathBuf::from(value))
     }
 
@@ -951,7 +951,7 @@ mod macos_impl {
         let info = bsd_info(pid)?;
         let path = image_path(pid)?;
         let metadata = std::fs::metadata(&path).map_err(|err| format!("metadata {} failed: {err}", path.display()))?;
-        if !metadata.is_file() { return Err(format!("«macOS process image {}»: требуется обычный файл", path.display())); }
+        if !metadata.is_file() { return Err(format!("образ процесса macOS {}: требуется обычный файл", path.display())); }
         let image_sha256 = sha256_file(&path)?;
         let modified = metadata.modified().ok().and_then(|value| value.duration_since(UNIX_EPOCH).ok()).map(|value| value.as_millis() as u64).unwrap_or(0);
         let signature = verify_macos_code_signature(&path)?;
@@ -980,7 +980,7 @@ mod macos_impl {
     pub fn collect(expected_parent_pid: u32) -> Result<GuardIntegrityEvidence, String> {
         let guard_pid = std::process::id();
         let observed = bsd_info(guard_pid)?.pbi_ppid;
-        if observed != expected_parent_pid { return Err(format!("macOS Guard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        if observed != expected_parent_pid { return Err(format!("Несовпадение родительского процесса Guard в macOS: ожидался PID {expected_parent_pid}, обнаружен {observed}")); }
         let mut evidence_id = [0u8; 16];
         OsRng.fill_bytes(&mut evidence_id);
         let collected_at_unix = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|err| err.to_string())?.as_secs();

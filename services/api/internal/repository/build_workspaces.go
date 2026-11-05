@@ -128,7 +128,7 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 		}
 	case "built":
 		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {
-			return errors.New("Для «built workspace» требуется «staged inputs, package and SHA-256 build digest»")
+			return errors.New("built workspace: требуется «staged inputs, package and SHA-256 build digest»")
 		}
 		if _, err := hex.DecodeString(next.BuildDigest); err != nil {
 			return errors.New("Некорректное значение: «build digest»")

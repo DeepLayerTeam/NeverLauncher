@@ -84,14 +84,14 @@ func verifyDesktopPackage(dir string) error {
 	}
 	for _, item := range manifest.Platforms {
 		if item.Status != "packaged" || item.Artifact == "" || item.SHA256 == "" || item.Size <= 0 {
-			return fmt.Errorf("Некорректное значение: «desktop artifact metadata»: %s", item.Artifact)
+			return fmt.Errorf("Некорректное значение: метаданные артефакта Desktop: %s", item.Artifact)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, item.Artifact))
 		if err != nil {
 			return err
 		}
 		if size != item.Size || !strings.EqualFold(sum, item.SHA256) {
-			return fmt.Errorf("Несовпадение: «desktop artifact checksum/size»: %s", item.Artifact)
+			return fmt.Errorf("Несовпадение: контрольная сумма и размер артефакта Desktop: %s", item.Artifact)
 		}
 		if !strings.EqualFold(expectedLines[item.Artifact], sum) {
 			return fmt.Errorf("Несовпадение: SHA256SUMS.desktop: %s", item.Artifact)

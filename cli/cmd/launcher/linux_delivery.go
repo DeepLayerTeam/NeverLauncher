@@ -235,7 +235,7 @@ func readTarGz0153(path string) (map[string][]byte, map[string]int64, error) {
 		}
 		clean := filepath.ToSlash(filepath.Clean(hdr.Name))
 		if strings.HasPrefix(clean, "../") || clean == ".." || strings.HasPrefix(hdr.Name, "/") {
-			return nil, nil, fmt.Errorf("Небезопасное значение: «tar entry» %q", hdr.Name)
+			return nil, nil, fmt.Errorf("Небезопасное значение: запись TAR-архива %q", hdr.Name)
 		}
 		if hdr.Typeflag == tar.TypeDir {
 			continue
@@ -244,14 +244,14 @@ func readTarGz0153(path string) (map[string][]byte, map[string]int64, error) {
 			return nil, nil, fmt.Errorf("Не поддерживается: «tar entry type for» %s", hdr.Name)
 		}
 		if _, duplicate := files[clean]; duplicate {
-			return nil, nil, fmt.Errorf("Обнаружен дубликат: «tar entry» %s", clean)
+			return nil, nil, fmt.Errorf("Обнаружен дубликат: запись TAR-архива %s", clean)
 		}
 		data, err := io.ReadAll(io.LimitReader(tr, 512*1024*1024+1))
 		if err != nil {
 			return nil, nil, err
 		}
 		if len(data) > 512*1024*1024 {
-			return nil, nil, fmt.Errorf("Превышен допустимый размер: «tar entry»: %s", clean)
+			return nil, nil, fmt.Errorf("Превышен допустимый размер: запись TAR-архива: %s", clean)
 		}
 		files[clean] = data
 		modes[clean] = hdr.Mode & 0o777
@@ -490,7 +490,7 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 	if bindDelivery {
 		delivery, err := readDeliveryManifest0151(dir)
 		if err != nil {
-			return fmt.Errorf("Для «Linux production evidence» требуется «delivery manifest:» %w", err)
+			return fmt.Errorf("Linux production evidence: требуется «delivery manifest:» %w", err)
 		}
 		deliveryByName = map[string]DeliveryArtifact{}
 		for _, artifact := range delivery.Artifacts {

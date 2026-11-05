@@ -73,7 +73,7 @@ func worldBackupHandle02810(args []string) error {
 	}
 	if action == "gate-recover" {
 		if flagValue(args, "--confirm", "") != "stale-gate" {
-			return errors.New("Для «gate-recover» требуется «--confirm stale-gate; reconcile Host Supervisor/JVM first»")
+			return errors.New("gate-recover: требуется «--confirm stale-gate; reconcile Host Supervisor/JVM first»")
 		}
 		return worldBackupHostGateRecover04110(root)
 	}
@@ -224,7 +224,7 @@ func worldBackupPrivateDir02810(path string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
-		return errors.New("Для «world backup directory» требуется: «a private non-symlink directory (0700)»")
+		return errors.New("world backup directory: требуется «a private non-symlink directory (0700)»")
 	}
 	return nil
 }
@@ -300,7 +300,7 @@ func worldBackupReadJSON02810(path string, v any) error {
 		return err
 	}
 	if !check.Mode().IsRegular() {
-		return errors.New("Для «backup metadata» требуется: «a real regular file»")
+		return errors.New("backup metadata: требуется «a real regular file»")
 	}
 	f, err := os.Open(path)
 	if err != nil {

@@ -239,7 +239,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		return state, err
 	}
 	if tok != json.Delim('{') {
-		return state, errors.New("Для «SQLite HTTP snapshot» требуется: объект")
+		return state, errors.New("SQLite HTTP snapshot: требуется объект")
 	}
 	seen := make(map[string]struct{}, len(expected))
 	for decoder.More() {
@@ -252,10 +252,10 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 			return state, errors.New("SQLite HTTP snapshot property is not a string")
 		}
 		if _, ok = expected[name]; !ok {
-			return state, fmt.Errorf("Неизвестное значение: «SQLite HTTP snapshot field» %q", name)
+			return state, fmt.Errorf("Неизвестное значение: поле снимка HTTP SQLite %q", name)
 		}
 		if _, ok = seen[name]; ok {
-			return state, fmt.Errorf("Обнаружен дубликат: «SQLite HTTP snapshot field» %q", name)
+			return state, fmt.Errorf("Обнаружен дубликат: поле снимка HTTP SQLite %q", name)
 		}
 		seen[name] = struct{}{}
 		var value json.RawMessage
@@ -305,7 +305,7 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 		return err
 	}
 	if token != json.Delim('{') {
-		return errors.New("Для «SQLite HTTP private state» требуется: объект")
+		return errors.New("SQLite HTTP private state: требуется объект")
 	}
 	seen := map[string]struct{}{}
 	for d.More() {
@@ -318,10 +318,10 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 			return errors.New("SQLite HTTP private property is not a string")
 		}
 		if _, ok = expected[key]; !ok {
-			return fmt.Errorf("Неизвестное значение: «SQLite HTTP private property» %q", key)
+			return fmt.Errorf("Неизвестное значение: приватное свойство HTTP SQLite %q", key)
 		}
 		if _, ok = seen[key]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «SQLite HTTP private property» %q", key)
+			return fmt.Errorf("Обнаружен дубликат: приватное свойство HTTP SQLite %q", key)
 		}
 		seen[key] = struct{}{}
 		var value json.RawMessage

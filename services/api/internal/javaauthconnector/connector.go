@@ -146,7 +146,7 @@ func decodeProof(raw json.RawMessage) (authconnector.Authentication, error) {
 }
 func (c *Connector) AuthenticatePassword(ctx context.Context, req authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	if strings.TrimSpace(req.Identifier) == "" || len(req.Identifier) > 512 || req.Secret == "" || len(req.Secret) > 4096 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	response, err := c.rpc(ctx, "auth.password", map[string]string{"identifier": req.Identifier, "secret": req.Secret})
 	if err != nil {

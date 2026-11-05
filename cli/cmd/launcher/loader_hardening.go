@@ -269,7 +269,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 		return vanillaDownloadedFile{}, err
 	}
 	if !compatibilitySHA256RE.MatchString(strings.ToLower(strings.TrimSpace(expectedSHA256))) {
-		return vanillaDownloadedFile{}, errors.New("Для «pinned artifact» требуется SHA-256")
+		return vanillaDownloadedFile{}, errors.New("pinned artifact: требуется SHA-256")
 	}
 	if max <= 0 || max > maxCompatibilityArtifact {
 		max = maxCompatibilityArtifact

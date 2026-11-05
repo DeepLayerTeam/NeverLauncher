@@ -41,7 +41,7 @@ func (a *Auth) revokeSessionTx(ctx context.Context, q sqlitedurable.Executor, id
 
 func (a *Auth) RevokeSession(ctx context.Context, userID, sessionID, reason string) error {
 	if userID == "" || sessionID == "" || strings.TrimSpace(reason) == "" {
-		return errors.New("Для «revocation» требуется «owner, session and reason»")
+		return errors.New("revocation: требуется «owner, session and reason»")
 	}
 	return a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var owner string

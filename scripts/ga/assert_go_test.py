@@ -27,7 +27,7 @@ def verify(path: Path, required: list[str]) -> None:
             continue
         obj = json.loads(line)
         if not isinstance(obj, dict):
-            raise ValueError("Для «go test JSON line» требуется: «object»")
+            raise ValueError("go test JSON line: требуется «object»")
         action = obj.get("Action")
         test = obj.get("Test")
         pkg = obj.get("Package")

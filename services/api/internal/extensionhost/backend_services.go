@@ -50,7 +50,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	}
 	if name != "project.list" {
 		if _, e := s.repo.GetProject(projectID); e != nil {
-			return denied(http.StatusNotFound, "project not found")
+			return denied(http.StatusNotFound, "Проект не найден")
 		}
 	}
 	switch name {
@@ -81,7 +81,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 					return capabilityResult0205{value: map[string]any{"profile": p}, status: http.StatusOK}
 				}
 			}
-			return denied(http.StatusNotFound, "profile not found")
+			return denied(http.StatusNotFound, "Профиль не найден")
 		}
 		sort.Slice(scoped, func(i, j int) bool { return scoped[i].ID < scoped[j].ID })
 		return pagedBackend0484(scoped, req)
@@ -105,14 +105,14 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 					return capabilityResult0205{value: map[string]any{"channel": c}, status: http.StatusOK}
 				}
 			}
-			return denied(http.StatusNotFound, "channel not found")
+			return denied(http.StatusNotFound, "Канал не найден")
 		}
 		sort.Slice(scoped, func(i, j int) bool { return scoped[i].Name < scoped[j].Name })
 		return pagedBackend0484(scoped, req)
 	case "release.page":
 		releases, e := s.repo.ListVersions(projectID)
 		if e != nil {
-			return denied(http.StatusInternalServerError, "release repository unavailable")
+			return denied(http.StatusInternalServerError, "Репозиторий релизов недоступен")
 		}
 		// Список не передаёт потенциально крупный подписанный манифест каждого
 		// элемента. Полный манифест одной записи запрашивайте через release.get.
@@ -134,14 +134,14 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		}
 		releases, e := s.repo.ListVersions(projectID)
 		if e != nil {
-			return denied(http.StatusInternalServerError, "release repository unavailable")
+			return denied(http.StatusInternalServerError, "Репозиторий релизов недоступен")
 		}
 		for _, v := range releases {
 			if v.ProjectID == projectID && v.ID == req.Name {
 				return capabilityResult0205{value: map[string]any{"release": v}, status: http.StatusOK}
 			}
 		}
-		return denied(http.StatusNotFound, "release not found")
+		return denied(http.StatusNotFound, "Релиз не найден")
 	case "job.get":
 		if req.Name == "" || len(req.Name) > 128 {
 			return denied(http.StatusBadRequest, "job id required")

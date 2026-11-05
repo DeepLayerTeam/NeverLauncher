@@ -30,7 +30,7 @@ func TestRemoteLifecycle0413(t *testing.T) {
 	session := "initial"
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer "+strings.Repeat("x", 40) {
-			http.Error(w, "unauthorized", 401)
+			http.Error(w, "Пользователь не авторизован", 401)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

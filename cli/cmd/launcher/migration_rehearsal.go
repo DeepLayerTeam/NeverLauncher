@@ -122,7 +122,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 		return probe, e
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0111 == 0 {
-		return probe, errors.New("Для «probe» требуется: «executable regular file»")
+		return probe, errors.New("Для проверочный запуск требуется: «executable regular file»")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()

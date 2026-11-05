@@ -199,7 +199,7 @@ func (r *RedisCoordinator) command(ctx context.Context, args ...string) (any, er
 		}
 		auth = append(auth, r.password)
 		if err := writeRESP(conn, auth...); err != nil {
-			return nil, fmt.Errorf("Ошибка: «Redis AUTH write»: %w", err)
+			return nil, fmt.Errorf("Ошибка: отправка команды Redis AUTH: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
 			return nil, fmt.Errorf("Ошибка: Redis AUTH: %w", err)
@@ -214,7 +214,7 @@ func (r *RedisCoordinator) command(ctx context.Context, args ...string) (any, er
 		}
 	}
 	if err := writeRESP(conn, args...); err != nil {
-		return nil, fmt.Errorf("Ошибка: «Redis command write»: %w", err)
+		return nil, fmt.Errorf("Ошибка: отправка команды Redis: %w", err)
 	}
 	v, err := readRESP(reader)
 	if err != nil {
@@ -271,7 +271,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 			return nil, err
 		}
 		if string(buf[n:]) != "\r\n" {
-			return nil, errors.New("Некорректный формат: «Redis bulk string»")
+			return nil, errors.New("Некорректный формат: строка Redis в пакетном формате")
 		}
 		return string(buf[:n]), nil
 	case '*':

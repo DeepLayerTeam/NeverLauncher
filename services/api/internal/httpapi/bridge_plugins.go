@@ -220,7 +220,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	guardChecked, guardRevoked, guardErr := s.recheckServerBoundGuard0507(r, serverID)
 	if guardErr != nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-session-recheck-unavailable"), Actor: server.ID, Action: "guard:session:recheck-unavailable", Target: serverID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusServiceUnavailable, "Guard Session recheck unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Повторная проверка сессии Guard недоступна")
 		return
 	}
 	// Обслуживание выполняется при возможности и никогда не должно портить правильный
@@ -626,7 +626,7 @@ func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion
 		return fmt.Errorf("Не найдено: узел ServerBridge")
 	}
 	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) {
-		return fmt.Errorf("server bridge node identity/type is not active")
+		return fmt.Errorf("Идентичность или тип узла ServerBridge неактивны")
 	}
 	server.ProtocolVersion = protocolVersion
 	server.LastHeartbeatAt = time.Now().UTC()

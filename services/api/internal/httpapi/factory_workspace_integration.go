@@ -196,7 +196,7 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	defer unlock()
 	ws, err = store.GetBuildWorkspace(r.Context(), ws.ID)
 	if err != nil || ws.Revision != req.Revision {
-		writeError(w, 409, "workspace revision conflict")
+		writeError(w, 409, "Конфликт ревизий рабочего пространства")
 		return
 	}
 	p, err := factoryLoadPlan02710(dir)

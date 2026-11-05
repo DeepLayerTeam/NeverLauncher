@@ -736,7 +736,7 @@ async fn resume_download_job(app: tauri::AppHandle, root: String, pinned_public_
     // Подменённый каталог не совпадёт с областью доступа и будет отклонён.
     let manifest=runtime::durable_downloads::pending_manifest_for_permissions_0392(
         &PathBuf::from(&root),&pinned_public_key).await?
-        .ok_or("no signed download job to resume")?;
+        .ok_or("Нет подписанного задания скачивания для возобновления")?;
     let mut grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
     grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
     let sink: runtime::ProgressSink = Arc::new(move |progress| {
@@ -881,7 +881,7 @@ fn check_offline_owner_binding_0358(
 async fn verified_offline_owner_0358() -> Result<(DesktopConfig, signed_first_run_0352::Provisioning0352), String> {
     let cfg = load_desktop_config().await?;
     let owner = signed_first_run_0352::load(&desktop_config_dir()?)?
-        .ok_or("offline denied: an owner-signed bootstrap bundle is required")?;
+        .ok_or("Автономный запуск запрещён: требуется начальный пакет с подписью владельца")?;
     Ok((cfg, owner))
 }
 
@@ -950,7 +950,7 @@ async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_
     // полностью проверенный выпуск.
     verify_offline_files_0358(&manifest, &root, &pinned_public_key, &cfg.component_preset).await?;
     let path = desktop_manifest_cache_path_0229(&root)?;
-    let dir = path.parent().ok_or("missing cache directory")?;
+    let dir = path.parent().ok_or("Отсутствует каталог кэша")?;
     fs::create_dir_all(dir).await.map_err(|e| e.to_string())?;
     if let Ok(meta) = fs::symlink_metadata(&path).await {
         if meta.file_type().is_symlink() { return Err("Небезопасный файл кеша манифестов".into()); }
@@ -1011,13 +1011,13 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
     let empty=||VerifiedComponentScope0392{project_id:manifest.project_id.clone(),profile_id:manifest.profile_id.clone(),
        channel:manifest.channel.clone(),catalog_digest:digest.clone(),valid_until:0,permissions:Default::default()};
     if !needs_grant {return Ok(empty());}
-    let cat=catalog.ok_or("Отсутствует: «conditional component catalog»")?;
+    let cat=catalog.ok_or("Отсутствует: каталог компонентов с условиями")?;
     let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"Недопустимый URL Backend")?;
     if origin.scheme()!="https" || origin.username()!="" || origin.password().is_some() ||
        origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
         return Err("Для права доступа к компоненту требуется HTTPS-адрес Backend".into());
     }
-    let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("component entitlement requires Never login")?;
+    let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("Для доступа к компоненту требуется вход в учётную запись Never")?;
     if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("Неполный аутентифицированный сеанс Never".into())}
     let mut url=origin.clone();
     {let mut segments=url.path_segments_mut().map_err(|_|"Недопустимые сегменты URL Backend")?;
@@ -1094,7 +1094,7 @@ async fn save_installed_component_choice_0247_inner_0392(
 )->Result<(),String>{
     let chosen=runtime::transactional_release::matching_installed_preset_0247(
         &manifest,&PathBuf::from(root),&pinned_public_key)?
-        .ok_or("cannot save a component choice for a different/uninstalled release")?;
+        .ok_or("Нельзя сохранить выбор компонентов для другого или неустановленного релиза")?;
     if chosen.unwrap_or_default()!=component_preset {
         return Err("Выбор установленного компонента отличается от запрошенной настройки".into());
     }
@@ -1129,7 +1129,7 @@ struct NativePlanEvidence02412 {
 #[tauri::command]
 async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)->Result<NativePlanEvidence02412,String>{
     let scope=installed_component_scope_0392(&request.root,&request.pinned_public_key).await?
-        .ok_or("no installed signed release")?;
+        .ok_or("Нет установленного подписанного релиза")?;
     runtime::component_catalog_0241::with_verified_component_scope_0392(scope, async {
     runtime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let NativePlanChallenge02412 {backend_url,user_id,device_id,session_id,binding_epoch,
@@ -1143,14 +1143,14 @@ async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)-
         }
         let root_path=PathBuf::from(root);
         let (manifest,preset)=runtime::transactional_release::verified_active_selection_02410(
-            &root_path,&pinned_public_key)?.ok_or("no verified installed release")?;
+            &root_path,&pinned_public_key)?.ok_or("Нет установленного релиза с подтверждённой подписью")?;
         if manifest.schema_version!="3.0"||manifest.project_id!=project_id||manifest.profile_id!=profile_id||manifest.channel!=channel {
             return Err("Установленный подписанный выпуск не соответствует запрошенной области сервера".into());
         }
         // verified_active_selection проверяет SHA-256 каждого установленного управляемого файла.
         let plan=runtime::resolved_download_0246::resolve(&manifest,preset.as_deref())?;
-        let catalog_digest=manifest.component_catalog.as_ref().ok_or("Требуется: «v3 catalog»")?.digest.clone();
-        let release_signature=manifest.signature.as_ref().ok_or("unsigned installed release")?.signature.to_ascii_lowercase();
+        let catalog_digest=manifest.component_catalog.as_ref().ok_or("Требуется: каталог v3")?.digest.clone();
+        let release_signature=manifest.signature.as_ref().ok_or("Установленный релиз не подписан")?.signature.to_ascii_lowercase();
         if catalog_digest.len()!=64||release_signature.len()!=128{return Err("Неверно сформированные измерения подписанного выпуска".into());}
         let canonical=format!("Launcher-Verified-Component-Plan-v1\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
             challenge_id,challenge,user_id,device_id,session_id,binding_epoch,server_id,project_id,profile_id,channel,
@@ -1183,11 +1183,11 @@ async fn active_selection_02410(root:String,pinned_public_key:String)->Result<Op
 #[tauri::command]
 async fn export_component_selection_02410(root:String,pinned_public_key:String)->Result<String,String>{
     let scope=installed_component_scope_0392(&root,&pinned_public_key).await?
-        .ok_or("no installed signed release to export")?;
+        .ok_or("Нет установленного подписанного релиза для экспорта")?;
     runtime::component_catalog_0241::with_verified_component_scope_0392(scope,async {
     runtime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let (manifest,preset)=runtime::transactional_release::verified_active_selection_02410(
-            &PathBuf::from(root),&pinned_public_key)?.ok_or("no installed signed release to export")?;
+            &PathBuf::from(root),&pinned_public_key)?.ok_or("Нет установленного подписанного релиза для экспорта")?;
         runtime::component_selection_02410::export_from_installed_02410(&manifest,preset.as_deref())
     }).await.map_err(|e|format!("Ошибка задачи экспорта выбора: {e}"))?
     }).await
@@ -1293,7 +1293,7 @@ async fn preview_release_requirements_0359(
     let target_scope=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
     runtime::component_catalog_0241::with_verified_component_scope_0392(target_scope,async {
     runtime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
-        let target_signature=manifest.signature.as_ref().ok_or("signed manifest required")?.signature.clone();
+        let target_signature=manifest.signature.as_ref().ok_or("Требуется подписанный манифест")?.signature.clone();
         let Some((old,preset))=active else {
             return Ok(ReleaseRequirements0359{installed_version:None,target_version:manifest.version,target_signature:target_signature.clone(),
                 changes:Vec::new(),proposed_preset:None,blockers:Vec::new(),requires_confirmation:false});
@@ -1321,7 +1321,7 @@ async fn preview_release_requirements_0359(
         }
         let a=&old.runtime.memory;let b=&manifest.runtime.memory;
         if (a.minimum_mb,a.recommended_mb,a.maximum_mb)!=(b.minimum_mb,b.recommended_mb,b.maximum_mb){
-            changes.push(format!("RAM min/recommended/max (MiB): {}/{}/{} → {}/{}/{}",
+            changes.push(format!("Оперативная память: минимум/рекомендуется/максимум (МиБ): {}/{}/{} → {}/{}/{}",
                 a.minimum_mb,a.recommended_mb,a.maximum_mb,b.minimum_mb,b.recommended_mb,b.maximum_mb));
         }
         if old.minecraft.version!=manifest.minecraft.version || old.minecraft.loader!=manifest.minecraft.loader {
@@ -1729,15 +1729,15 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
     // после выхода их процессов.
     let helper_stage_root = if cfg!(target_os = "windows") {
         std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
-            .ok_or("LOCALAPPDATA unavailable for updater staging")?
+            .ok_or("Переменная LOCALAPPDATA недоступна для подготовки обновления")?
             .join("Launcher").join("updater-helpers")
     } else if cfg!(target_os = "macos") {
         std::env::var_os("HOME").map(PathBuf::from)
-            .ok_or("HOME unavailable for updater staging")?
+            .ok_or("Переменная HOME недоступна для подготовки обновления")?
             .join("Library").join("Caches").join("Launcher").join("updater-helpers")
     } else {
         std::env::var_os("XDG_RUNTIME_DIR").or_else(|| std::env::var_os("HOME"))
-            .map(PathBuf::from).ok_or("no private user directory for updater staging")?
+            .map(PathBuf::from).ok_or("Нет закрытого пользовательского каталога для подготовки обновления")?
             .join(".launcher").join("updater-helpers")
     };
     std::fs::create_dir_all(&helper_stage_root)
@@ -1959,13 +1959,13 @@ async fn open_game_directory(root: String) -> Result<String, String> {
 fn recover_components_before_desktop02310() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let exe = std::fs::canonicalize(exe).map_err(|e| e.to_string())?;
-    let bin_dir = exe.parent().ok_or("Desktop executable has no parent directory")?;
+    let bin_dir = exe.parent().ok_or("Не удалось определить каталог исполняемого файла Desktop")?;
     let root = if cfg!(target_os = "macos") {
         bin_dir.parent().and_then(std::path::Path::parent).and_then(std::path::Path::parent)
-            .ok_or("invalid macOS .app path")?
+            .ok_or("Некорректный путь к приложению .app в macOS")?
     } else { bin_dir };
     let helper = if cfg!(target_os = "macos") {
-        bin_dir.parent().ok_or("invalid macOS Contents path")?.join("Helpers").join(launcher_update_helper_name())
+        bin_dir.parent().ok_or("Некорректный путь к каталогу Contents в macOS")?.join("Helpers").join(launcher_update_helper_name())
     } else { bin_dir.join(launcher_update_helper_name()) };
     if !helper.is_file() { return Ok(()); } // В конфигурации только с Prestarter отсутствует средство обновления CLI.
     let hm = std::fs::symlink_metadata(&helper).map_err(|e| e.to_string())?;
@@ -1977,10 +1977,10 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
         .arg(root)
         .output().map_err(|e| format!("Не удалось получить состояние восстановления компонентов: {e}"))?;
     if !status.status.success() {
-        return Err(format!("component journal check failed: {}", String::from_utf8_lossy(&status.stderr)));
+        return Err(format!("Проверка журнала компонентов завершилась ошибкой: {}", String::from_utf8_lossy(&status.stderr)));
     }
     let report: serde_json::Value = serde_json::from_slice(&status.stdout)
-        .map_err(|e| format!("Некорректное значение: «component update status»: {e}"))?;
+        .map_err(|e| format!("Некорректное значение: состояние обновления компонентов: {e}"))?;
     if report.get("status").and_then(serde_json::Value::as_str) != Some("recovery-required") { return Ok(()); }
     let staged = create_staged_updater_helper02310(&helper, bin_dir)?;
     std::process::Command::new(staged)
@@ -1989,7 +1989,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
         .args(["--wait-pid", &std::process::id().to_string(), "--restart-desktop"])
         .arg(&exe)
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-        .spawn().map_err(|e| format!("Не удалось запустить «component recovery:» {e}"))?;
+        .spawn().map_err(|e| format!("Не удалось запустить восстановление компонентов: {e}"))?;
     std::process::exit(0);
 }
 
@@ -2007,7 +2007,7 @@ async fn player_migration_preview_0339(
 ) -> Result<runtime::player_migration_0339::PlayerMigrationPreview0339, String> {
     tokio::task::spawn_blocking(move || runtime::player_migration_0339::preview(
         &manifest, &pinned_public_key, std::path::Path::new(&legacy_root), component_preset.as_deref(),
-    )).await.map_err(|e| format!("Ошибка: «migration preview worker»: {e}"))?
+    )).await.map_err(|e| format!("Ошибка: обработчик предварительного просмотра миграции: {e}"))?
 }
 
 #[tauri::command]
@@ -2033,44 +2033,44 @@ fn benchmark_ui_ready_03511() -> Result<(), String> {
     };
     let path = std::path::PathBuf::from(filename);
     if !path.is_absolute() {
-        return Err("Для «benchmark marker» требуется «an absolute path»".into());
+        return Err("Для маркер теста производительности требуется абсолютный путь".into());
     }
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH)
         .map_err(|_| "Недоступно: системные часы".to_string())?.as_nanos();
     let mut file = std::fs::OpenOptions::new().write(true).create_new(true)
-        .open(&path).map_err(|_| "«benchmark marker»: запрещено «be created»".to_string())?;
+        .open(&path).map_err(|_| "маркер теста производительности: запрещено «be created»".to_string())?;
     write!(file, "{{\"wallClockUnixNs\":{nanos},\"stage\":\"react-first-paint\"}}")
-        .map_err(|_| "Ошибка: «benchmark marker write»".to_string())?;
-    file.sync_all().map_err(|_| "Ошибка: «benchmark marker sync»".to_string())?;
+        .map_err(|_| "Ошибка: запись маркера теста производительности".to_string())?;
+    file.sync_all().map_err(|_| "Ошибка: синхронизация маркера теста производительности".to_string())?;
     Ok(())
 }
 
 fn main() {
     sentry_diagnostics_0309::install_panic_hook();
     if let Err(err) = recover_components_before_desktop02310() {
-        eprintln!("Ошибка: «Launcher component-set recovery gate»: {err}");
+        eprintln!("Ошибка: контроль восстановления набора компонентов Launcher: {err}");
         std::process::exit(71);
     }
     #[cfg(windows)]
     if let Err(err) = runtime::ensure_windows_production_hardening() {
-        eprintln!("Ошибка: «Launcher Desktop Windows production hardening»: {err}");
+        eprintln!("Ошибка: промышленное усиление защиты Launcher Desktop в Windows: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "linux")]
     if let Err(err) = runtime::linux_policy::ensure_linux_production_hardening() {
-        eprintln!("Ошибка: «Launcher Desktop Linux production hardening»: {err}");
+        eprintln!("Ошибка: промышленное усиление защиты Launcher Desktop в Linux: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "macos")]
     if let Err(err) = runtime::macos_policy::ensure_macos_production_hardening() {
-        eprintln!("Ошибка: «Launcher Desktop macOS production hardening»: {err}");
+        eprintln!("Ошибка: промышленное усиление защиты Launcher Desktop в macOS: {err}");
         std::process::exit(70);
     }
 
     if let Err(err)=initialize_desktop_game_trust_02312(){
-        eprintln!("Launcher Desktop trust configuration refused: {err}");
+        eprintln!("Конфигурация доверия Launcher Desktop отклонена: {err}");
         std::process::exit(71);
     }
     tauri::Builder::default()

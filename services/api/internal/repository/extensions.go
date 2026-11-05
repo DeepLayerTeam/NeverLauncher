@@ -75,18 +75,18 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		target.Kind = strings.ToLower(strings.TrimSpace(target.Kind))
 		target.Entrypoint = strings.TrimSpace(target.Entrypoint)
 		if target.Kind != "backend" && target.Kind != "admin" && target.Kind != "desktop" && target.Kind != "cli" {
-			return model.ExtensionManifest{}, "", fmt.Errorf("Не поддерживается: «extension target» %q", target.Kind)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Не поддерживается: целевая платформа расширения %q", target.Kind)
 		}
 		if target.Entrypoint == "" || strings.HasPrefix(target.Entrypoint, "/") || strings.Contains(target.Entrypoint, "\\") {
 			return model.ExtensionManifest{}, "", fmt.Errorf("target %s has invalid entrypoint", target.Kind)
 		}
 		for _, part := range strings.Split(target.Entrypoint, "/") {
 			if part == "" || part == "." || part == ".." {
-				return model.ExtensionManifest{}, "", fmt.Errorf("Для «target %s entrypoint» требуется: «a clean relative path»", target.Kind)
+				return model.ExtensionManifest{}, "", fmt.Errorf("target %s entrypoint: требуется «a clean relative path»", target.Kind)
 			}
 		}
 		if _, duplicate := seenTargets[target.Kind]; duplicate {
-			return model.ExtensionManifest{}, "", fmt.Errorf("Обнаружен дубликат: «extension target» %q", target.Kind)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Обнаружен дубликат: целевая платформа расширения %q", target.Kind)
 		}
 		seenTargets[target.Kind] = struct{}{}
 		targets = append(targets, target)
@@ -140,7 +140,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 			return model.ExtensionManifest{}, "", fmt.Errorf("расширение: запрещено «depend on itself»")
 		}
 		if dep.Version == "" || len(dep.Version) > 128 {
-			return model.ExtensionManifest{}, "", fmt.Errorf("Для «dependency» %s требуется «a version constraint»", dep.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Для зависимость %s требуется ограничение версии", dep.ID)
 		}
 		if _, ok := seenDeps[dep.ID]; ok {
 			return model.ExtensionManifest{}, "", fmt.Errorf("Обнаружен дубликат: зависимость %q", dep.ID)
@@ -159,10 +159,10 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 			return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: «conflict id» %q", conflict.ID)
 		}
 		if conflict.Version == "" || len(conflict.Version) > 128 {
-			return model.ExtensionManifest{}, "", fmt.Errorf("Для «conflict» %s требуется «a version constraint»", conflict.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Для конфликт %s требуется ограничение версии", conflict.ID)
 		}
 		if _, ok := seenConflicts[conflict.ID]; ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("Обнаружен дубликат: «conflict» %q", conflict.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Обнаружен дубликат: конфликт %q", conflict.ID)
 		}
 		seenConflicts[conflict.ID] = struct{}{}
 		conflicts = append(conflicts, conflict)
@@ -260,12 +260,12 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 		item.Scope = "global"
 	}
 	if item.Scope != "global" && item.Scope != "project" {
-		return model.ExtensionInstall{}, fmt.Errorf("Для «extension install scope» требуется: «global or project»")
+		return model.ExtensionInstall{}, fmt.Errorf("extension install scope: требуется «global or project»")
 	}
 	if item.Scope == "global" {
 		item.ScopeID = ""
 	} else if item.ScopeID == "" {
-		return model.ExtensionInstall{}, fmt.Errorf("Для «project extension install» требуется «scopeId»")
+		return model.ExtensionInstall{}, fmt.Errorf("project extension install: требуется «scopeId»")
 	}
 	if item.Source == "" {
 		item.Source = "local"
@@ -834,10 +834,10 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminContributionID0208(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
-			return fmt.Errorf("Некорректное значение: «admin page» %q", p.ID)
+			return fmt.Errorf("Некорректное значение: страница Admin %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «admin page» %q", p.ID)
+			return fmt.Errorf("Обнаружен дубликат: страница Admin %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -848,13 +848,13 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminContributionID0208(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
-			return fmt.Errorf("Некорректное значение: «admin navigation» %q", n.ID)
+			return fmt.Errorf("Некорректное значение: навигация Admin %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
 			return fmt.Errorf("admin navigation %s references unknown page %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «admin navigation» %q", n.ID)
+			return fmt.Errorf("Обнаружен дубликат: навигация Admin %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -868,13 +868,13 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 			w.Height = 280
 		}
 		if !validAdminContributionID0208(w.ID) || w.Title == "" || len(w.Title) > 120 || w.Height < 160 || w.Height > 1200 {
-			return fmt.Errorf("Некорректное значение: «admin widget» %q", w.ID)
+			return fmt.Errorf("Некорректное значение: виджет Admin %q", w.ID)
 		}
 		if _, ok := pages[w.PageID]; !ok {
 			return fmt.Errorf("admin widget %s references unknown page %s", w.ID, w.PageID)
 		}
 		if _, ok := seen[w.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «admin widget» %q", w.ID)
+			return fmt.Errorf("Обнаружен дубликат: виджет Admin %q", w.ID)
 		}
 		seen[w.ID] = struct{}{}
 	}
@@ -889,13 +889,13 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 			x.Placement = "toolbar"
 		}
 		if !validAdminContributionID0208(x.ID) || x.Label == "" || len(x.Label) > 80 || (x.Placement != "toolbar" && x.Placement != "dashboard") {
-			return fmt.Errorf("Некорректное значение: «admin action» %q", x.ID)
+			return fmt.Errorf("Некорректное значение: действие Admin %q", x.ID)
 		}
 		if _, ok := pages[x.PageID]; !ok {
 			return fmt.Errorf("admin action %s references unknown page %s", x.ID, x.PageID)
 		}
 		if _, ok := seen[x.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «admin action» %q", x.ID)
+			return fmt.Errorf("Обнаружен дубликат: действие Admin %q", x.ID)
 		}
 		seen[x.ID] = struct{}{}
 	}
@@ -924,10 +924,10 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminContributionID0208(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
-			return fmt.Errorf("Некорректное значение: «desktop page» %q", p.ID)
+			return fmt.Errorf("Некорректное значение: страница Desktop %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «desktop page» %q", p.ID)
+			return fmt.Errorf("Обнаружен дубликат: страница Desktop %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -938,13 +938,13 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminContributionID0208(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
-			return fmt.Errorf("Некорректное значение: «desktop navigation» %q", n.ID)
+			return fmt.Errorf("Некорректное значение: навигация Desktop %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
 			return fmt.Errorf("desktop navigation %s references unknown page %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «desktop navigation» %q", n.ID)
+			return fmt.Errorf("Обнаружен дубликат: навигация Desktop %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -959,13 +959,13 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 			a.Placement = "toolbar"
 		}
 		if !validAdminContributionID0208(a.ID) || a.Label == "" || len(a.Label) > 80 || (a.Placement != "toolbar" && a.Placement != "page") {
-			return fmt.Errorf("Некорректное значение: «desktop action» %q", a.ID)
+			return fmt.Errorf("Некорректное значение: действие Desktop %q", a.ID)
 		}
 		if _, ok := pages[a.PageID]; !ok {
 			return fmt.Errorf("desktop action %s references unknown page %s", a.ID, a.PageID)
 		}
 		if _, ok := seen[a.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «desktop action» %q", a.ID)
+			return fmt.Errorf("Обнаружен дубликат: действие Desktop %q", a.ID)
 		}
 		seen[a.ID] = struct{}{}
 	}
@@ -997,10 +997,10 @@ func normalizeCLIContributions0209(c *model.ExtensionCLIContributions) error {
 		cmd.Description = strings.TrimSpace(cmd.Description)
 		cmd.Usage = strings.TrimSpace(cmd.Usage)
 		if !validAdminContributionID0208(cmd.Name) || len(cmd.Description) > 240 || len(cmd.Usage) > 240 {
-			return fmt.Errorf("Некорректное значение: «cli command» %q", cmd.Name)
+			return fmt.Errorf("Некорректное значение: команда CLI %q", cmd.Name)
 		}
 		if _, ok := seen[cmd.Name]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «cli command» %q", cmd.Name)
+			return fmt.Errorf("Обнаружен дубликат: команда CLI %q", cmd.Name)
 		}
 		seen[cmd.Name] = struct{}{}
 	}

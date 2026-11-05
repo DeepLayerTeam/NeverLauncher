@@ -41,7 +41,7 @@ func fetchExtensionCLICatalog0209(backend, token string) ([]extensionCLICatalogI
 	}
 	data, ok := payload["data"]
 	if !ok {
-		return nil, errors.New("extension CLI catalog response has no data")
+		return nil, errors.New("В ответе каталога CLI-расширений отсутствуют данные")
 	}
 	raw, err := json.Marshal(data)
 	if err != nil {
@@ -245,7 +245,7 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		return fmt.Errorf("Команда расширения завершилась ошибкой: %s", msg)
 	}
 	if envelope.Data.ExitCode != 0 {
-		return fmt.Errorf("extension command exited with code %d", envelope.Data.ExitCode)
+		return fmt.Errorf("Команда расширения завершилась с кодом %d", envelope.Data.ExitCode)
 	}
 	return nil
 }

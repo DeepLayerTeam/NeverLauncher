@@ -62,30 +62,30 @@ pub fn preview_diagnostics_bundle_03510(stage: String, logs: Vec<String>, sessio
     let at = now()?;
     let report = make_report(logs, stage, at);
     let token = hex::encode(rand::random::<[u8; 24]>());
-    *session.0.lock().map_err(|_| "Недоступно: «diagnostics preview»")? = Some(PendingPreview {token: token.clone(), report: report.clone(), created: at});
+    *session.0.lock().map_err(|_| "Недоступно: предварительный просмотр диагностики")? = Some(PendingPreview {token: token.clone(), report: report.clone(), created: at});
     Ok(DiagnosticPreview03510{review_token:token,report})
 }
 fn write_private_bundle(base: &Path, report: &PlayerReport03510) -> Result<String, String> {
-    fs::create_dir_all(base).map_err(|_| "cannot prepare diagnostics directory")?;
-    let meta = fs::symlink_metadata(base).map_err(|_| "diagnostics directory inaccessible")?;
+    fs::create_dir_all(base).map_err(|_| "Не удалось подготовить каталог диагностики")?;
+    let meta = fs::symlink_metadata(base).map_err(|_| "Каталог диагностики недоступен")?;
     if !meta.is_dir() || meta.file_type().is_symlink() { return Err("Небезопасное значение: каталог диагностики".into()); }
-    #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(base,fs::Permissions::from_mode(0o700)).map_err(|_|"cannot restrict diagnostics directory")?; }
+    #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(base,fs::Permissions::from_mode(0o700)).map_err(|_|"Не удалось ограничить доступ к каталогу диагностики")?; }
     let file_id = hex::encode(rand::random::<[u8; 16]>());
     let name = format!("launcher-player-{file_id}.json");
     let path = base.join(&name);
     let mut opts = OpenOptions::new(); opts.write(true).create_new(true);
     #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; opts.mode(0o600); }
-    let mut file = opts.open(&path).map_err(|_| "Не удалось создать «diagnostics file»")?;
-    let content = serde_json::to_vec_pretty(report).map_err(|_| "Ошибка: «diagnostics serialization»")?;
+    let mut file = opts.open(&path).map_err(|_| "Не удалось создать файл диагностики")?;
+    let content = serde_json::to_vec_pretty(report).map_err(|_| "Ошибка: сериализация диагностических данных")?;
     let result = file.write_all(&content).and_then(|_| file.sync_all());
-    if result.is_err() { let _ = fs::remove_file(&path); return Err("cannot safely save diagnostics".into()); }
+    if result.is_err() { let _ = fs::remove_file(&path); return Err("Не удалось безопасно сохранить диагностику".into()); }
     Ok(path.to_string_lossy().into_owned())
 }
 #[tauri::command]
 pub fn export_diagnostics_bundle_03510(review_token: String, session: State<'_, DiagnosticsSession03510>) -> Result<super::DiagnosticsExportResult, String> {
-    let mut guard=session.0.lock().map_err(|_|"Недоступно: «diagnostics preview»")?;
-    let preview=guard.as_ref().ok_or("Create a new diagnostic preview first")?;
-    if preview.token != review_token || now()?.saturating_sub(preview.created) > 600 {return Err("Diagnostic preview expired; review again".into());}
+    let mut guard=session.0.lock().map_err(|_|"Недоступно: предварительный просмотр диагностики")?;
+    let preview=guard.as_ref().ok_or("Сначала создайте новый предварительный просмотр диагностики")?;
+    if preview.token != review_token || now()?.saturating_sub(preview.created) > 600 {return Err("Срок действия предварительного просмотра диагностики истёк; проверьте данные повторно".into());}
     let report=preview.report.clone();
     // Отчёт записывается только в принадлежащий приложению каталог
     // конфигурации, а не в произвольный путь рендерера или каталог игры.

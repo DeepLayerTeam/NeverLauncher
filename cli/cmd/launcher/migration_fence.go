@@ -170,7 +170,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, err
 	}
 	if !fenceDigest0448.MatchString(expected) {
-		return sourceFenceEvidence0448{}, errors.New("Требуется: «expected rehearsal snapshot SHA-256»")
+		return sourceFenceEvidence0448{}, errors.New("Требуется: ожидаемый SHA-256 снимка пробной миграции")
 	}
 	if time.Since(state.StoppedAt) > 15*time.Minute || time.Until(state.StoppedAt) > time.Minute {
 		return sourceFenceEvidence0448{}, errors.New("source stop evidence expired or future-dated")
@@ -200,7 +200,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 8<<20 || st.Size() == 0 || st.ModTime().Before(state.StoppedAt.Add(-time.Second)) {
-		return sourceFenceEvidence0448{}, errors.New("Для «snapshot» требуется: «a fresh regular export after stopping source»")
+		return sourceFenceEvidence0448{}, errors.New("snapshot: требуется «a fresh regular export after stopping source»")
 	}
 	if err := readFenceFile0448(snapshotPath, 8<<20, &snapshot); err != nil {
 		return sourceFenceEvidence0448{}, err

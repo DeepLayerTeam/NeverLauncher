@@ -295,7 +295,7 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 func (s Server) oidcAEAD115() (cipher.AEAD, error) {
 	secret := strings.TrimSpace(s.Config.AuthTokenSecret)
 	if secret == "" {
-		return nil, errors.New("Пустое значение: «auth token secret»")
+		return nil, errors.New("Пустое значение: секрет токена аутентификации")
 	}
 	key := sha256.Sum256([]byte("Launcher/OIDC/transaction/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])

@@ -223,14 +223,14 @@ func ProbeRuntime(ctx context.Context, javaBinary string, requiredFeature int) (
 		}
 	} else {
 		if !filepath.IsAbs(javaBinary) {
-			return RuntimeInfo{}, errors.New("Для «configured Java executable» требуется: «absolute»")
+			return RuntimeInfo{}, errors.New("Для настроенный исполняемый файл Java требуется: «absolute»")
 		}
 		st, err := os.Lstat(javaBinary)
 		if err != nil {
 			return RuntimeInfo{}, err
 		}
 		if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
-			return RuntimeInfo{}, errors.New("Для «configured Java executable» требуется: «regular, not symlink»")
+			return RuntimeInfo{}, errors.New("Для настроенный исполняемый файл Java требуется: «regular, not symlink»")
 		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

@@ -80,7 +80,7 @@ func LoadLiveConfigs(jsonValue, filePath string) ([]LiveConfig, error) {
 			return nil, err
 		}
 		if seen[cfg.ID] {
-			return nil, fmt.Errorf("Обнаружен дубликат: «live FileAuth provider id» %q", cfg.ID)
+			return nil, fmt.Errorf("Обнаружен дубликат: идентификатор действующего провайдера FileAuth %q", cfg.ID)
 		}
 		seen[cfg.ID] = true
 		configs[i] = cfg
@@ -96,7 +96,7 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 	in.Provisioning.Mode = strings.ToLower(strings.TrimSpace(in.Provisioning.Mode))
 	in.Provisioning.DefaultRole = strings.TrimSpace(in.Provisioning.DefaultRole)
 	if !providerIDPattern.MatchString(in.ID) || in.ID == "local" {
-		return in, errors.New("Некорректное значение: «live FileAuth provider id»")
+		return in, errors.New("Некорректное значение: идентификатор действующего провайдера FileAuth")
 	}
 	if !fileauth.SupportedFormat(in.PasswordFormat) {
 		return in, fmt.Errorf("live FileAuth provider %q: unsupported explicit password format", in.ID)
@@ -181,7 +181,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if !before.Mode().IsRegular() || before.Mode().Perm()&0007 != 0 {
-		return nil, errors.New("Для файл Database.json системы FileAuth требуется: «a regular file without world permissions»")
+		return nil, errors.New("Файл Database.json системы FileAuth: требуется «a regular file without world permissions»")
 	}
 	f, err := os.Open(c.cfg.DatabasePath)
 	if err != nil {
@@ -243,7 +243,7 @@ func liveIdentity(a fileauth.Account) authconnector.Identity {
 
 func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	if len(req.Secret) == 0 || len(req.Secret) > 4096 || !liveUsernamePattern.MatchString(req.Identifier) {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	current, err := c.current(ctx)
 	if err != nil {
@@ -253,7 +253,7 @@ func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnec
 	// Используйте явно настроенный и проверенный верификатор; никогда не
 	// переходите на другой алгоритм или существующий аккаунт Never.
 	if !exists || !c.verify(req.Secret, a.PasswordHash) {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	// Проверка пароля, особенно PHPass/Argon2id, может быть дорогой. Источник могли
 	// отозвать или заменить во время верификации. Не авторизуйте устаревший снимок,

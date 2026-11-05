@@ -48,7 +48,7 @@ func editorLookup0248(s Server, packageID string) (packageLookup, error) {
 func (s Server) componentCatalogGet0248(w http.ResponseWriter, r *http.Request) {
 	lookup, err := editorLookup0248(s, r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package not found")
+		writeError(w, http.StatusNotFound, "Пакет не найден")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
@@ -74,7 +74,7 @@ func readCatalogRequest0248(w http.ResponseWriter, r *http.Request) (componentEd
 		return req, errors.New("Требуется: expectedRevision")
 	}
 	if req.Catalog.SchemaVersion != model.ComponentCatalogSchema0245 {
-		return req, errors.New("Для «component editor» требуется «signed catalog schema 5.0»")
+		return req, errors.New("component editor: требуется «signed catalog schema 5.0»")
 	}
 	return req, nil
 }
@@ -119,7 +119,7 @@ func presetIDs0248(cat model.ComponentCatalog0241) []string {
 func (s Server) componentCatalogPreview0248(w http.ResponseWriter, r *http.Request) {
 	lookup, err := editorLookup0248(s, r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package not found")
+		writeError(w, http.StatusNotFound, "Пакет не найден")
 		return
 	}
 	req, err := readCatalogRequest0248(w, r)
@@ -149,7 +149,7 @@ func (s Server) componentCatalogSave0248(w http.ResponseWriter, r *http.Request)
 	}
 	defer unlock()
 	if lookup.Release.ID != r.PathValue("packageId") {
-		writeError(w, http.StatusNotFound, "package not found")
+		writeError(w, http.StatusNotFound, "Пакет не найден")
 		return
 	}
 	if lookup.Release.Status != "draft" {

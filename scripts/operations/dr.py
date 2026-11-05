@@ -439,7 +439,7 @@ def s3_options(endpoint: str | None) -> list[str]:
         or endpoint.startswith("http://127.0.0.1:")
         or endpoint.startswith("http://localhost:")
     ):
-        raise DrillError("Для «S3 endpoint» требуется: «HTTPS or local loopback»")
+        raise DrillError("S3 endpoint: требуется «HTTPS or local loopback»")
     return ["--endpoint-url", endpoint] if endpoint else []
 
 
@@ -514,10 +514,10 @@ def parse_world_args(values: list[str]) -> dict[str, Path]:
     for entry in values:
         name, separator, path = entry.partition("=")
         if not separator or not WORLD_NAME.fullmatch(name) or name in result or not path:
-            raise DrillError("Для «world option» требуется: «unique NAME=/absolute/path»")
+            raise DrillError("world option: требуется «unique NAME=/absolute/path»")
         location = Path(path)
         if not location.is_absolute() or location.is_symlink():
-            raise DrillError("Для «world path» требуется: «an absolute real path»")
+            raise DrillError("world path: требуется «an absolute real path»")
         result[name] = Path(os.path.abspath(location))
     return result
 
@@ -525,7 +525,7 @@ def parse_world_args(values: list[str]) -> dict[str, Path]:
 def safe_world_backup(folder: Path) -> dict:
     """Независимо сверять по байтам настоящий формат Go world-backup/v1."""
     if not folder.is_dir() or folder.is_symlink() or not WORLD_BACKUP_ID.fullmatch(folder.name):
-        raise DrillError("Для «world backup» требуется: «an ID directory, without symlinks»")
+        raise DrillError("world backup: требуется «an ID directory, without symlinks»")
     manifest = folder / "manifest.json"
     if manifest.is_symlink() or not manifest.is_file() or manifest.stat().st_size > 32 * 1024 * 1024:
         raise DrillError("Отсутствует: «or unsafe world manifest»")
@@ -793,7 +793,7 @@ def snapshot(
 ) -> dict:
     authorize_project(project, confirm, production=production, approved=approved)
     if "network-ha" in COMPOSE_PROFILES and not world_backups:
-        raise DrillError("Для «network-ha» требуется «verified world backups»")
+        raise DrillError("network-ha: требуется «verified world backups»")
     if dest.exists():
         raise DrillError("snapshot destination already exists; will not overwrite")
     if not env_file.is_file() or env_file.is_symlink():
@@ -914,7 +914,7 @@ def snapshot(
 
 def verify_snapshot(folder: Path) -> dict:
     if not folder.is_dir() or folder.is_symlink():
-        raise DrillError("Для «snapshot» требуется: настоящий каталог")
+        raise DrillError("snapshot: требуется настоящий каталог")
     manifest_file = folder / "manifest.json"
     if manifest_file.is_symlink() or not manifest_file.is_file() or manifest_file.stat().st_size > 16 * 1024 * 1024:
         raise DrillError("Небезопасное значение: «or oversized snapshot manifest»")
@@ -968,7 +968,7 @@ def validate_ready_url(url: str) -> None:
     if (parsed.path != "/ready" or parsed.query or parsed.fragment
             or parsed.username or parsed.password or not parsed.hostname
             or parsed.scheme not in ("https", "http")):
-        raise DrillError("Для «readiness URL» требуется: «an HTTPS /ready or loopback HTTP /ready»")
+        raise DrillError("readiness URL: требуется «an HTTPS /ready or loopback HTTP /ready»")
     if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
         raise DrillError("insecure non-loopback readiness endpoint refused")
 
@@ -1053,13 +1053,13 @@ def restore_fresh(
             raise DrillError("«legacy Redis-bearing Network-HA snapshots»: запрещено «be restored safely»")
         validate_world_destinations(manifest["worlds"], world_destinations or {}, folder)
     elif manifest.get("schema") == 3:
-        raise DrillError("Для «network-ha snapshot» требуется --network-ha")
+        raise DrillError("network-ha snapshot: требуется --network-ha")
     # На новом хосте может использоваться то же ИМЯ проекта. Совпадение имён не означает наличия прежних
     # томов; подходят только проверенные пустые цели.
     if not env_file.is_file() or env_file.is_symlink():
         raise DrillError("Compose environment file missing or symlinked")
     if not ready_url:
-        raise DrillError("Для «restore-fresh» требуется «an actual application readiness endpoint»")
+        raise DrillError("restore-fresh: требуется «an actual application readiness endpoint»")
     validate_ready_url(ready_url)
     if manifest.get("schema") in (2, 3) and target_release(env_file) != manifest.get("version"):
         raise DrillError("target image version differs from backup; restore exact version first")
@@ -1203,7 +1203,7 @@ def chaos(
     if not (
         url.startswith("http://127.0.0.1:") or url.startswith("http://localhost:")
     ) or not url.endswith("/ready"):
-        raise DrillError("Для «chaos readiness URL» требуется: «loopback /ready»")
+        raise DrillError("chaos readiness URL: требуется «loopback /ready»")
     await_readiness(url, expected=True, limit=30)
     outcomes = []
     for svc in ("postgres", "redis") if network_ha else ("postgres",):
@@ -1291,11 +1291,11 @@ def main() -> int:
         if args.network_ha and args.action == "restore-fresh" and world_backups:
             raise DrillError("world backups are only valid for backup")
         if not args.network_ha and (world_backups or world_destinations):
-            raise DrillError("Для «world recovery» требуется --network-ha")
+            raise DrillError("world recovery: требуется --network-ha")
         if args.network_ha and args.action == "backup" and not args.s3_source_bucket:
-            raise DrillError("Для «network-ha backup» требуется --s3-source-bucket")
+            raise DrillError("network-ha backup: требуется --s3-source-bucket")
         if args.action == "restore-fresh" and not args.ready_url:
-            raise DrillError("Для «restore-fresh» требуется «--ready-url to verify the actual backend»")
+            raise DrillError("restore-fresh: требуется «--ready-url to verify the actual backend»")
         if args.action == "verify":
             verified = verify_snapshot(args.snapshot)
             pg_validate(args.snapshot / "database.dump")

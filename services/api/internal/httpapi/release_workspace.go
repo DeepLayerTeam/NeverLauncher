@@ -179,7 +179,7 @@ func (s Server) draftJob0218(w http.ResponseWriter, r *http.Request) {
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
 	if !ok {
-		writeError(w, 503, "operation journal unavailable")
+		writeError(w, 503, "Журнал операций недоступен")
 		return
 	}
 	job, err := journal.FindOperationByKey(r.Context(), "package-publish", d.OwnerID, "release-workspace-"+d.ID)

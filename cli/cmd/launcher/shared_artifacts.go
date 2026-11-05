@@ -49,7 +49,7 @@ func sharedArtifactsContext0277(ctx context.Context, cacheDir, clientDir string)
 		return ctx, err
 	}
 	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-		return ctx, errors.New("Для «shared cache root» требуется: настоящий каталог")
+		return ctx, errors.New("shared cache root: требуется настоящий каталог")
 	}
 	return context.WithValue(ctx, sharedArtifactsKey0277{}, &sharedArtifacts0277{root: root}), nil
 }
@@ -66,7 +66,7 @@ func eligibleSharedArtifact0277(kind string) bool {
 }
 func (c *sharedArtifacts0277) locate(sha string) (string, error) {
 	if !validSHA1Hex(sha) {
-		return "", errors.New("Для «shared cache» требуется «verified SHA-1»")
+		return "", errors.New("shared cache: требуется «verified SHA-1»")
 	}
 	sha = strings.ToLower(sha)
 	return secureClientDestination(c.root, "sha1/"+sha[:2]+"/"+sha)

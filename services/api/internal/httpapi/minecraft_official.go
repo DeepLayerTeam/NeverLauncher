@@ -210,7 +210,7 @@ func (s Server) officialBegin0257(w http.ResponseWriter, r *http.Request) {
 	state := officialState0257{Kind: "pending", User: actor.Sub, Session: actor.SessionID, Expires: time.Now().Add(time.Duration(challenge.ExpiresIn) * time.Second).Unix(), DeviceCode: challenge.DeviceCode, Interval: challenge.Interval}
 	ticket, err := officialSeal0257(s.Config.AuthTokenSecret, state)
 	if err != nil {
-		writeError(w, 503, "secure official session unavailable")
+		writeError(w, 503, "Защищённая официальная сессия недоступна")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"verificationUri": challenge.VerificationURI, "userCode": challenge.UserCode, "message": challenge.Message, "intervalSeconds": challenge.Interval, "expiresIn": challenge.ExpiresIn, "flow": ticket})
@@ -255,7 +255,7 @@ func (s Server) officialContinue0257(w http.ResponseWriter, state officialState0
 	state.NextPoll = time.Now().Add(time.Duration(delay) * time.Second).Unix()
 	sealed, err := officialSeal0257(s.Config.AuthTokenSecret, state)
 	if err != nil {
-		writeError(w, 503, "secure official session unavailable")
+		writeError(w, 503, "Защищённая официальная сессия недоступна")
 		return
 	}
 	w.Header().Set("Retry-After", strconv.Itoa(delay))
@@ -365,7 +365,7 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	}
 	ticket, err := officialSeal0257(s.Config.AuthTokenSecret, linked)
 	if err != nil {
-		writeError(w, 503, "secure official session unavailable")
+		writeError(w, 503, "Защищённая официальная сессия недоступна")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": profile, "session": ticket, "expiresAt": linked.Expires})
@@ -416,7 +416,7 @@ func (s Server) officialAuthorized0257(w http.ResponseWriter, r *http.Request) (
 		st.MinecraftExpires = time.Now().Add(time.Duration(mc.ExpiresIn) * time.Second).Unix()
 		ticket, e := officialSeal0257(s.Config.AuthTokenSecret, st)
 		if e != nil {
-			writeError(w, 503, "secure official session unavailable")
+			writeError(w, 503, "Защищённая официальная сессия недоступна")
 			return st, nil, false
 		}
 		w.Header().Set("X-Official-Minecraft-Session", ticket)
@@ -436,7 +436,7 @@ func (s Server) officialProfile0257(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !strings.EqualFold(profile.ID, st.UUID) {
-		writeError(w, 403, "official Minecraft identity mismatch")
+		writeError(w, 403, "Идентичность официального профиля Minecraft не совпадает")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": profile})
@@ -568,7 +568,7 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !strings.EqualFold(owned.ID, st.UUID) {
-			writeError(w, 403, "official Minecraft identity mismatch")
+			writeError(w, 403, "Идентичность официального профиля Minecraft не совпадает")
 			return
 		}
 		found := false
@@ -623,7 +623,7 @@ func (s Server) officialLaunchCredentials0257(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if !strings.EqualFold(profile.ID, st.UUID) {
-		writeError(w, 403, "official Minecraft identity mismatch")
+		writeError(w, 403, "Идентичность официального профиля Minecraft не совпадает")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "username": profile.Name, "uuid": profile.ID, "accessToken": st.MinecraftToken, "userType": "msa", "authServerBaseUrl": ""})

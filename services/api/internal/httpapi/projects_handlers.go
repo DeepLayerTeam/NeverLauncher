@@ -85,7 +85,7 @@ func (s Server) file(w http.ResponseWriter, r *http.Request) {
 	// публичную доставку файлов пакета, даже в локальных установках для
 	// разработки.
 	if strings.HasPrefix(r.PathValue("version"), "ws-") {
-		writeError(w, http.StatusNotFound, "file not found")
+		writeError(w, http.StatusNotFound, "Файл не найден")
 		return
 	}
 	// Подготовленный пакет не является публичным содержимым. Раньше общий файловый
@@ -95,7 +95,7 @@ func (s Server) file(w http.ResponseWriter, r *http.Request) {
 	published := false
 	releases, releaseErr := s.Repo.ListVersions(r.PathValue("projectId"))
 	if releaseErr != nil {
-		writeError(w, http.StatusNotFound, "file not found")
+		writeError(w, http.StatusNotFound, "Файл не найден")
 		return
 	}
 	for _, release := range releases {
@@ -105,7 +105,7 @@ func (s Server) file(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !published {
-		writeError(w, http.StatusNotFound, "file not found")
+		writeError(w, http.StatusNotFound, "Файл не найден")
 		return
 	}
 	reader, size, err := s.Storage.Open(r.PathValue("projectId"), r.PathValue("version"), r.PathValue("path"))

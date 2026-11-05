@@ -40,16 +40,16 @@ pub struct PresenceRequest {
 fn validate(req: &PresenceRequest) -> Result<(), String> {
     if !(17..=20).contains(&req.application_id.len())
         || !req.application_id.bytes().all(|c| c.is_ascii_digit()) {
-        return Err("Для «Discord application ID» требуется: «a decimal snowflake»".into());
+        return Err("Идентификатор приложения Discord: требуется десятичный идентификатор Discord Snowflake".into());
     }
     if req.details.chars().count() > 128 || req.state.chars().count() > 128 {
-        return Err("Discord activity fields exceed 128 characters".into());
+        return Err("Поля активности Discord превышают 128 символов".into());
     }
     if let Some(url) = req.action_url.as_deref().filter(|s| !s.is_empty()) {
-        let parsed = reqwest::Url::parse(url).map_err(|_| "Некорректное значение: «Discord action URL»")?;
+        let parsed = reqwest::Url::parse(url).map_err(|_| "Некорректное значение: URL действия Discord")?;
         if parsed.scheme() != "https" || parsed.host_str().is_none()
             || !parsed.username().is_empty() || parsed.password().is_some() {
-            return Err("Discord activity actions require public HTTPS URLs".into());
+            return Err("Для действий в активности Discord необходимы публичные HTTPS-адреса".into());
         }
     }
     Ok(())
@@ -85,35 +85,35 @@ async fn connect() -> Result<Box<dyn Socket>, String> {
             }
         }
     }
-    Err("Недоступно: «Discord desktop client IPC»".into())
+    Err("Недоступно: IPC настольного клиента Discord".into())
 }
 
 impl Connection {
     async fn send(&mut self, opcode: u32, body: &Value) -> Result<(), String> {
         let payload = serde_json::to_vec(body).map_err(|e| e.to_string())?;
-        if payload.len() > MAX_FRAME { return Err("Discord payload is oversized".into()); }
+        if payload.len() > MAX_FRAME { return Err("Размер данных Discord превышает ограничение".into()); }
         let mut frame = Vec::with_capacity(8 + payload.len());
         frame.extend_from_slice(&opcode.to_le_bytes());
         frame.extend_from_slice(&(payload.len() as u32).to_le_bytes());
         frame.extend_from_slice(&payload);
         timeout(IO_TIMEOUT, self.socket.write_all(&frame)).await
-            .map_err(|_| "Discord IPC write timed out")?
-            .map_err(|e| format!("Discord IPC write: {e}"))
+            .map_err(|_| "Превышено время записи в IPC Discord")?
+            .map_err(|e| format!("Ошибка записи в IPC Discord: {e}"))
     }
 
     async fn receive(&mut self) -> Result<(u32, Value), String> {
         let mut header = [0u8; 8];
         timeout(IO_TIMEOUT, self.socket.read_exact(&mut header)).await
-            .map_err(|_| "Discord IPC header timed out")?
-            .map_err(|e| format!("Discord IPC header: {e}"))?;
+            .map_err(|_| "Превышено время ожидания заголовка IPC Discord")?
+            .map_err(|e| format!("Ошибка заголовка IPC Discord: {e}"))?;
         let opcode = u32::from_le_bytes(header[0..4].try_into().unwrap());
         let length = u32::from_le_bytes(header[4..8].try_into().unwrap()) as usize;
         if length > MAX_FRAME { return Err("Превышен допустимый размер: кадр IPC Discord".into()); }
         let mut body = vec![0u8; length];
         timeout(IO_TIMEOUT, self.socket.read_exact(&mut body)).await
-            .map_err(|_| "Discord IPC response timed out")?
-            .map_err(|e| format!("Discord IPC response: {e}"))?;
-        let parsed = serde_json::from_slice(&body).map_err(|e| format!("Discord IPC JSON: {e}"))?;
+            .map_err(|_| "Превышено время ожидания ответа IPC Discord")?
+            .map_err(|e| format!("Ошибка ответа IPC Discord: {e}"))?;
+        let parsed = serde_json::from_slice(&body).map_err(|e| format!("Ошибка JSON в IPC Discord: {e}"))?;
         Ok((opcode, parsed))
     }
 
@@ -123,9 +123,9 @@ impl Connection {
         session.send(0, &json!({"v": 1, "client_id": application_id})).await?;
         for _ in 0..8 {
             let (opcode, message) = session.receive().await?;
-            if opcode == 2 { return Err("Discord closed handshake".into()); }
+            if opcode == 2 { return Err("Discord закрыл соединение при установлении сеанса".into()); }
             if message.get("evt").and_then(Value::as_str) == Some("ERROR") {
-                return Err(format!("Discord rejected handshake: {}", message["data"]));
+                return Err(format!("Discord отклонил установление соединения: {}", message["data"]));
             }
             if opcode == 1 && message.get("evt").and_then(Value::as_str) == Some("READY") {
                 return Ok(session);
@@ -141,10 +141,10 @@ impl Connection {
             "args": {"pid": std::process::id(), "activity": activity}})).await?;
         for _ in 0..16 {
             let (opcode, message) = self.receive().await?;
-            if opcode == 2 { return Err("Discord IPC closed".into()); }
+            if opcode == 2 { return Err("IPC-соединение с Discord закрыто".into()); }
             if message.get("nonce").and_then(Value::as_str) != Some(nonce.as_str()) { continue; }
             if message.get("evt").and_then(Value::as_str) == Some("ERROR") {
-                return Err(format!("Discord rejected activity: {}", message["data"]));
+                return Err(format!("Discord отклонил обновление активности: {}", message["data"]));
             }
             if message.get("cmd").and_then(Value::as_str) == Some("SET_ACTIVITY") {
                 return Ok(());
@@ -155,7 +155,7 @@ impl Connection {
 }
 
 fn transport_failure(message: &str) -> bool {
-    message.starts_with("Discord IPC ") || message == "Discord IPC closed"
+    message.starts_with("Discord IPC ") || message == "IPC-соединение с Discord закрыто"
 }
 
 #[tauri::command]
@@ -204,8 +204,8 @@ mod tests {
     use super::*;
     #[test]
     fn transport_retry_never_retries_explicit_rpc_error() {
-        assert!(transport_failure("Discord IPC header timed out"));
-        assert!(transport_failure("Discord IPC closed"));
+        assert!(transport_failure("Превышено время ожидания заголовка IPC Discord"));
+        assert!(transport_failure("IPC-соединение с Discord закрыто"));
         assert!(!transport_failure("Discord rejected activity: invalid client"));
     }
     #[test]

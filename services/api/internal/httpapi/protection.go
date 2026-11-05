@@ -120,12 +120,12 @@ type protectionBanInput0298 struct {
 func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		writeError(w, http.StatusUnauthorized, "Пользователь не авторизован")
 		return
 	}
 	store, ok := s.protectionBanStore0298()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "protection store unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище данных защиты недоступно")
 		return
 	}
 	userID := strings.TrimSpace(r.PathValue("userId"))
@@ -164,12 +164,12 @@ func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 func (s Server) adminProtectionUnban0298(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		writeError(w, http.StatusUnauthorized, "Пользователь не авторизован")
 		return
 	}
 	store, ok := s.protectionBanStore0298()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "protection store unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище данных защиты недоступно")
 		return
 	}
 	userID := strings.TrimSpace(r.PathValue("userId"))
@@ -188,12 +188,12 @@ func (s Server) adminProtectionUnban0298(w http.ResponseWriter, r *http.Request)
 func (s Server) adminProtectionBans0298(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.protectionBanStore0298()
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "protection store unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище данных защиты недоступно")
 		return
 	}
 	bans, err := store.ListProtectionBans(r.Context())
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "protection store unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище данных защиты недоступно")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": bans})

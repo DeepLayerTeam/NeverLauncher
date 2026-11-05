@@ -30,7 +30,7 @@ def _no_duplicate_keys(items):
 
 def _read_policy(path: Path):
     if path.is_symlink() or not path.is_file():
-        raise ValueError("Для «trust policy source» требуется: обычный файл без символических ссылок")
+        raise ValueError("trust policy source: требуется обычный файл без символических ссылок")
     with path.open("rb") as stream:
         payload = stream.read(96 * 1024 + 1)
     if len(payload) > 96 * 1024:
@@ -59,7 +59,7 @@ def _read_policy(path: Path):
     if issued >= expires:
         raise ValueError("trust policy validity interval inverted")
     if not isinstance(value.get("keys"), list) or not value["keys"]:
-        raise ValueError("Для политика доверия требуется «delegated keys»")
+        raise ValueError("Политика доверия: требуется «delegated keys»")
     seen = set()
     for key in value["keys"]:
         if not isinstance(key, dict) or not isinstance(key.get("id"), str) or not key["id"]:
@@ -89,7 +89,7 @@ def sign_policy(
         raise ValueError("refusing to replace symlink or directory trust policy")
     seed = bytes.fromhex(seed_hex)
     if len(seed) != 32:
-        raise ValueError("Для «root seed» требуется: «32 bytes»")
+        raise ValueError("root seed: требуется «32 bytes»")
     private = Ed25519PrivateKey.from_private_bytes(seed)
     actual = (
         private.public_key()

@@ -61,7 +61,7 @@ func verifyLocalPath(path string) error {
 	}
 	if f, e := os.Lstat(path); e == nil {
 		if !f.Mode().IsRegular() || f.Mode()&os.ModeSymlink != 0 {
-			return errors.New("Для «sqlite file» требуется: «regular and a symlink»")
+			return errors.New("sqlite file: требуется «regular and a symlink»")
 		}
 		if f.Mode().Perm()&0077 != 0 {
 			return fmt.Errorf("sqlite file permissions %04o unsafe", f.Mode().Perm())
@@ -112,7 +112,7 @@ func exclusiveLock(name string) (*os.File, error) {
 	f := os.NewFile(uintptr(fd), name)
 	info, err := f.Stat()
 	if err == nil && (!info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0) {
-		err = errors.New("Для «sqlite owner lock» требуется: «regular and mode 0600»")
+		err = errors.New("sqlite owner lock: требуется «regular and mode 0600»")
 	}
 	if err == nil {
 		st, ok := info.Sys().(*syscall.Stat_t)

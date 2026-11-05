@@ -37,7 +37,7 @@ func readAuthKey(path string) ([]byte, error) {
 		return nil, e
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 128 {
-		return nil, errors.New("Для «MFA key» требуется: «private regular file (0600; <=128 bytes)»")
+		return nil, errors.New("Ключ MFA должен храниться в обычном файле с правами 0600 и размером не более 128 байт")
 	}
 	raw, e := os.ReadFile(path)
 	if e != nil {
@@ -91,7 +91,7 @@ func runAuthAction(args []string) int {
 		return 2
 	}
 	if _, e := os.Stat(*db); e != nil {
-		fmt.Fprintln(os.Stderr, "Для «auth» требуется «existing SQLite DB»", e)
+		fmt.Fprintln(os.Stderr, "Для аутентификации необходима существующая база данных SQLite", e)
 		return 1
 	}
 	key, e := readAuthKey(*keyPath)

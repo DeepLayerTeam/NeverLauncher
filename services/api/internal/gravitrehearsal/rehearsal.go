@@ -176,7 +176,7 @@ func Evaluate(v Report) (Report, error) {
 			return Report{}, errors.New("Некорректное значение: «probe evidence binding»")
 		}
 		if _, ok := results[p.Name]; ok {
-			return Report{}, errors.New("Обнаружен дубликат: «probe»")
+			return Report{}, errors.New("Обнаружен дубликат: проверочный запуск")
 		}
 		results[p.Name] = true
 		if !p.Passed {

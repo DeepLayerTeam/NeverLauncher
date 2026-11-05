@@ -188,7 +188,7 @@ func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (
 				return e
 			}
 			if count == 0 && (u.RoleID != "owner" || u.Status != "active") {
-				return errors.New("Для «first user» требуется: «an active owner»")
+				return errors.New("first user: требуется «an active owner»")
 			}
 		}
 		now := nowNS()

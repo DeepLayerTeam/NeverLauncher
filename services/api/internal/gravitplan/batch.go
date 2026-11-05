@@ -64,14 +64,14 @@ func BatchDigest0492(b Batch0492) (string, error) {
 }
 func VerifyBatch0492(b Batch0492) error {
 	if b.Format != BatchFormat0492 || len(b.BatchSHA256) != 64 || len(b.SourceSHA256) != 64 || len(b.TargetSHA256) != 64 || b.ProfileCount != len(b.Profiles) || b.ProfileCount < 1 || b.ProfileCount > MaxProfiles0492 {
-		return errors.New("Некорректное значение: «multi-profile dry-run»")
+		return errors.New("Некорректное значение: пробная миграция нескольких профилей")
 	}
 	digest, err := BatchDigest0492(b)
 	if err != nil {
 		return err
 	}
 	if digest != b.BatchSHA256 {
-		return errors.New("Обнаружено изменение: «multi-profile dry-run»")
+		return errors.New("Обнаружено изменение: пробная миграция нескольких профилей")
 	}
 	return nil
 }
@@ -95,7 +95,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		}
 	}
 	if len(available) == 0 || len(available) != len(destinations) {
-		return out, fmt.Errorf("Для «every Gravit profile» требуется: «mapped exactly once: source has %d, request has» %d", len(available), len(destinations))
+		return out, fmt.Errorf("every Gravit profile: требуется «mapped exactly once: source has %d, request has» %d", len(available), len(destinations))
 	}
 	mapped, ids := make(map[string]bool), make(map[string]bool)
 	for _, d := range destinations {

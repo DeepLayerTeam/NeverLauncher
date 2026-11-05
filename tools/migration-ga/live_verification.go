@@ -16,7 +16,7 @@ import (
 // or revised inventory cannot be hidden by a valid historical signature.
 func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) error {
 	if strings.TrimSpace(token) == "" {
-		return errors.New("Для «live GA check» требуется «a backend token»")
+		return errors.New("Проверка GA на действующей системе: требуется токен серверной части")
 	}
 	if err := checkBackendURL(p.Backend); err != nil {
 		return err
@@ -86,7 +86,7 @@ func verifyCohortLive(ctx context.Context, inputs map[string]CohortInput, plans 
 		// have been rotated/removed since certification. Validate the fields
 		// that bind the source, commit and backend instead.
 		if p.ReferenceClass != class || !commitHash(p.CommitSHA) || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) {
-			return errors.New("Некорректное значение: «live reference plan»")
+			return errors.New("Некорректное значение: действующий эталонный план")
 		}
 		b, err := readCertificate(inputs[class].Certificate)
 		if err != nil {

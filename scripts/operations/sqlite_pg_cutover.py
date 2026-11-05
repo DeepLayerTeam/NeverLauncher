@@ -340,7 +340,7 @@ class Operator:
         if not self.work.exists():
             self.work.mkdir(mode=0o700, parents=True)
         if self.work.stat().st_mode & 0o077:
-            raise CutoverError("Для «work directory» требуется: приватные права 0700")
+            raise CutoverError("work directory: требуется приватные права 0700")
         if self.state_path.exists():
             private_file(self.state_path)
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
@@ -410,7 +410,7 @@ class Operator:
         if not self.a.units or len(set(self.a.units)) != len(self.a.units):
             raise CutoverError("Требуется: «at least one explicit systemd service and no duplicate units»")
         if not self.env[self.a.dsn_env]:
-            raise CutoverError("Для «target PostgreSQL DSN» требуется: «supplied via an environment variable»")
+            raise CutoverError("target PostgreSQL DSN: требуется «supplied via an environment variable»")
         private_file(Path(self.a.source_env))
         cfg = parse_env(Path(self.a.source_env))
         if cfg.get("LAUNCHER_REPOSITORY_DRIVER", "").lower() != "sqlite":
@@ -428,12 +428,12 @@ class Operator:
         if self.a.coordinator_db:
             private_file(Path(self.a.coordinator_db))
         if cfg.get("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") and cfg["LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"] != self.a.coordinator_db:
-            raise CutoverError("Для «Coordinator path» требуется: «explicitly supplied and match the source configuration»")
+            raise CutoverError("Coordinator path: требуется «explicitly supplied and match the source configuration»")
         sources = [self.a.core_db, self.a.http_db]
         if self.a.coordinator_db:
             sources.append(self.a.coordinator_db)
         if len({Path(v).resolve() for v in sources}) != len(sources):
-            raise CutoverError("Для «SQLite Core, HTTP and Coordinator» требуется: «separate databases»")
+            raise CutoverError("SQLite Core, HTTP and Coordinator: требуется «separate databases»")
         # ЭТО НЕПРЕОДОЛИМАЯ НЕСОВМЕСТИМОСТЬ в 0.47.4. Обход запрещён даже при пустом HTTP-снимке: закрытые данные
         # авторизации, координатора, подписи, установки и Runtime не имеют канонического сопоставления в
         # PostgreSQL.
@@ -512,11 +512,11 @@ class Operator:
         src = Path(self.a.storage_source)
         dst = Path(self.a.storage_target)
         if not src.is_absolute() or not dst.is_absolute():
-            raise CutoverError("Для «source and target storage roots» требуется: «absolute»")
+            raise CutoverError("source and target storage roots: требуется «absolute»")
         src_path, dst_path = src.resolve(), dst.resolve()
         if (src_path == dst_path or src_path.is_relative_to(dst_path)
                 or dst_path.is_relative_to(src_path)):
-            raise CutoverError("Для «source and PostgreSQL storage» требуется: «disjoint trees»")
+            raise CutoverError("source and PostgreSQL storage: требуется «disjoint trees»")
         if self.work.is_relative_to(src_path) or self.work.is_relative_to(dst_path):
             raise CutoverError("«private migration journal»: запрещено «be inside storage»")
         refuse_symlink(dst)

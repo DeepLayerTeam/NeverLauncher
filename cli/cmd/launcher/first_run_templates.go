@@ -25,12 +25,12 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 		return data, path, err
 	}
 	if name != "docker-compose.yml" && name != "nginx.conf" && name != "env.production.example" {
-		return nil, "", fmt.Errorf("Неизвестное значение: «production template»: %q", name)
+		return nil, "", fmt.Errorf("Неизвестное значение: промышленный шаблон: %q", name)
 	}
 	path := "production/" + name
 	archive, err := zip.NewReader(bytes.NewReader(productionTemplates), int64(len(productionTemplates)))
 	if err != nil {
-		return nil, path, fmt.Errorf("Некорректное значение: «embedded production templates»: %w", err)
+		return nil, path, fmt.Errorf("Некорректное значение: встроенные промышленные шаблоны: %w", err)
 	}
 	for _, entry := range archive.File {
 		if entry.Name != path {
@@ -56,5 +56,5 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 		}
 		return data, "embedded:" + path, nil
 	}
-	return nil, path, fmt.Errorf("Отсутствует: «embedded production template» %s", name)
+	return nil, path, fmt.Errorf("Отсутствует: встроенный промышленный шаблон %s", name)
 }

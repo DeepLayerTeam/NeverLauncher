@@ -20,7 +20,7 @@ public final class Json {
     }
     @SuppressWarnings("unchecked")
     public static Map<String,Object> object(Object value) {
-        if (!(value instanceof Map<?,?>)) throw new IllegalArgumentException("expected JSON object");
+        if (!(value instanceof Map<?,?>)) throw new IllegalArgumentException("Ожидается объект JSON");
         return (Map<String,Object>) value;
     }
     public static String string(Map<String,Object> map, String key, boolean required) {

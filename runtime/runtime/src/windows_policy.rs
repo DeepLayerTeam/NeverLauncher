@@ -254,7 +254,7 @@ mod windows_impl {
                 ));
             }
             if self.report.breakaway_allowed || !self.report.assigned_to_job {
-                return Err("Для «Guard process-tree verification» требуется «a non-breakaway Job Object»".to_string());
+                return Err("Guard process-tree verification: требуется «a non-breakaway Job Object»".to_string());
             }
             verify_process_tree_for_job(self._job.raw(), root_pid)
         }
@@ -608,7 +608,7 @@ mod windows_impl {
             ));
         }
         if in_job == 0 {
-            return Err("Для «Guard Windows Protection Core» требуется «launcher Job Object lifetime binding»".to_string());
+            return Err("Guard Windows Protection Core: требуется «launcher Job Object lifetime binding»".to_string());
         }
         Ok(true)
     }

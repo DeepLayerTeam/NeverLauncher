@@ -19,7 +19,7 @@ import (
 // Проверка сумм миграций остаётся за существующим dbmigrate.
 func handleAuthUpgrade02911(args []string) error {
 	if len(args) == 0 {
-		return errors.New("Для «db auth-upgrade» требуется «preflight|apply|verify»")
+		return errors.New("db auth-upgrade: требуется «preflight|apply|verify»")
 	}
 	action := args[0]
 	if action != "preflight" && action != "apply" && action != "verify" {
@@ -43,7 +43,7 @@ func handleAuthUpgrade02911(args []string) error {
 		return errors.New("--snapshot must name an existing or new checkpoint file")
 	}
 	if action == "apply" && (!*backup || !*maintenance) {
-		return errors.New("Для «apply» требуется --backup-confirmed and --maintenance-confirmed; Launcher cannot create or verify an off-host backup automatically")
+		return errors.New("apply: требуется --backup-confirmed and --maintenance-confirmed; Launcher cannot create or verify an off-host backup automatically")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -67,22 +67,22 @@ func handleAuthUpgrade02911(args []string) error {
 		return err
 	}
 	if err := authupgrade.Compare(expected, current); err != nil {
-		return fmt.Errorf("pre-upgrade preservation failure: %w", err)
+		return fmt.Errorf("Не удалось сохранить состояние перед обновлением: %w", err)
 	}
 	if action == "apply" {
 		if _, err := dbmigrate.ApplyWithPSQL(ctx, *psql, *dsn); err != nil {
-			return fmt.Errorf("migration apply failed; restore only from verified backup if necessary: %w", err)
+			return fmt.Errorf("Применение миграции завершилось ошибкой; при необходимости восстановите данные только из проверенной резервной копии: %w", err)
 		}
 	}
 	if _, err := dbmigrate.VerifyWithPSQL(ctx, *psql, *dsn); err != nil {
-		return fmt.Errorf("target migration checksums not verified: %w", err)
+		return fmt.Errorf("Контрольные суммы целевой миграции не проверены: %w", err)
 	}
 	post, err := authupgrade.ScanPSQL(ctx, *psql, *dsn, expected.AllowedProviders)
 	if err != nil {
 		return err
 	}
 	if err := authupgrade.Compare(expected, post); err != nil {
-		return fmt.Errorf("POST-UPGRADE IDENTITY DRIFT: %w", err)
+		return fmt.Errorf("После обновления изменена идентичность компонента: %w", err)
 	}
 	printJSON(map[string]any{"status": "verified", "action": action, "checkpoint": *snapshot, "identity": post.Identity, "migrations": "sealed and current", "message": "No identity/UUID ownership drift detected. Re-enable traffic only after external-provider and Minecraft smoke tests."})
 	return nil

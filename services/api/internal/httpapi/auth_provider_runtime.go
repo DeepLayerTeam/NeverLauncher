@@ -79,7 +79,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 		return err
 	}
 	if identity.ID != v.ID {
-		return errors.New("provider id and config id must match")
+		return errors.New("Идентификаторы провайдера и конфигурации должны совпадать")
 	}
 	// До сохранения любого JSON применяйте строгую схему настоящего коннектора; иначе
 	// неизвестные поля могут протащить необработанные учётные данные в историю.
@@ -143,7 +143,7 @@ func createManagedProvider02910(ctx context.Context, v repository.ManagedProvide
 			return out, err
 		}
 		if cfg.DSNEnv == "" {
-			return out, errors.New("SQL provider must use dsnEnv")
+			return out, errors.New("SQL-провайдер должен использовать dsnEnv")
 		}
 		normalized, err := sqlconnector.Normalize(cfg)
 		if err != nil {
@@ -167,7 +167,7 @@ func createManagedProvider02910(ctx context.Context, v repository.ManagedProvide
 			return out, err
 		}
 		if cfg.HMAC.SecretEnv == "" {
-			return out, errors.New("HTTP provider must use hmac.secretEnv")
+			return out, errors.New("HTTP-провайдер должен использовать hmac.secretEnv")
 		}
 		c, err := httpconnector.New(ctx, cfg)
 		if err != nil {
@@ -209,12 +209,12 @@ func createManagedProvider02910(ctx context.Context, v repository.ManagedProvide
 		conn = c
 		policy = federation.ProviderPolicy{AutoProvision: c.ProvisioningMode() == "jit", DefaultRole: c.DefaultRole(), RoleMappings: c.RoleMappings()}
 	default:
-		return out, errors.New("Не поддерживается: «provider kind»")
+		return out, errors.New("Не поддерживается: тип провайдера")
 	}
 	report := conformance.Run(ctx, conn)
 	if !report.Passed {
 		_ = closeManaged02910(conn)
-		return out, errors.New("live connector failed SDK conformance")
+		return out, errors.New("Действующий коннектор не прошёл проверку совместимости с SDK")
 	}
 	out.Connector = conn
 	out.Policy = policy
@@ -285,7 +285,7 @@ func (s Server) withManagedProviders02910(next http.Handler) http.Handler {
 		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 		defer cancel()
 		if err := s.syncManagedProviders02910(ctx); err != nil {
-			writeError(w, http.StatusServiceUnavailable, "auth provider runtime cannot be synchronized")
+			writeError(w, http.StatusServiceUnavailable, "Не удалось синхронизировать среду выполнения провайдера аутентификации")
 			return
 		}
 		next.ServeHTTP(w, r)

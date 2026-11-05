@@ -49,13 +49,13 @@ func handleMigrationWorkflow0331(args []string) error {
 		token := backendToken(args)
 		run := strings.TrimSpace(flagValue(args, "--run", ""))
 		if backend == "" || token == "" || run == "" {
-			return errors.New("Для «dry-run-all» требуется «--backend, --token and --run»")
+			return errors.New("dry-run-all: требуется «--backend, --token and --run»")
 		}
 		prior := ""
 		if command == "verify-dry-run-all" {
 			prior = flagValue(args, "--report", "")
 			if prior == "" {
-				return errors.New("Для «verify-dry-run-all» требуется --report")
+				return errors.New("verify-dry-run-all: требуется --report")
 			}
 		}
 		return migrationBatchCLI0492(backend+"/api/v1/admin/migration-runs/"+url.PathEscape(run)+"/dry-run-all", token, flagValue(args, "--source", ""), flagValue(args, "--mapping", ""), prior, flagValue(args, "--output", ""))
@@ -63,7 +63,7 @@ func handleMigrationWorkflow0331(args []string) error {
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	if backend == "" || token == "" {
-		return errors.New("Для «migrate gravit» требуется «--backend and --token (or LAUNCHER_TOKEN)»")
+		return errors.New("migrate gravit: требуется «--backend and --token (or LAUNCHER_TOKEN)»")
 	}
 	out := flagValue(args, "--output", "")
 	base := backend + "/api/v1/admin/migration-runs"
@@ -75,7 +75,7 @@ func handleMigrationWorkflow0331(args []string) error {
 		project := strings.TrimSpace(flagValue(args, "--project", ""))
 		key := strings.TrimSpace(flagValue(args, "--key", ""))
 		if project == "" || len(key) < 8 {
-			return errors.New("Для «create» требуется «--project and a stable --key (8+ characters) for network retry safety»")
+			return errors.New("create: требуется «--project and a stable --key (8+ characters) for network retry safety»")
 		}
 		method = "POST"
 		path = base
@@ -204,7 +204,7 @@ func handleMigrationWorkflow0331(args []string) error {
 // размером запроса. Backend никогда не получает путь хоста или сырые секреты в JSON.
 func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out string) error {
 	if sourcePath == "" {
-		return errors.New("Для «assess» требуется «--source /path/to/gravit-installation.zip»")
+		return errors.New("assess: требуется «--source /path/to/gravit-installation.zip»")
 	}
 	if len(claimedVersion) > 40 {
 		return errors.New("Некорректное значение: --version")

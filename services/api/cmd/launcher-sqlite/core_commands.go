@@ -45,7 +45,7 @@ func readPrivateJSON(path string, out any) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() > 1048576 || st.Size() == 0 {
-		return errors.New("Для «input» требуется: «private regular file (mode 0600; max 1 MiB)»")
+		return errors.New("Входные данные должны находиться в обычном файле с правами 0600 размером до 1 МиБ")
 	}
 	f, err := os.Open(abs)
 	if err != nil {
@@ -131,7 +131,7 @@ func runCoreAction(args []string) int {
 			}
 			err = readPrivateJSON(*input, &v)
 			if err == nil && (v.RoleID == "" || v.Status == "") {
-				err = errors.New("Для «user JSON» требуется «roleId and status»")
+				err = errors.New("Для JSON пользователя требуется идентификатор роли и статус")
 			}
 			if err == nil && v.ID != "" {
 				var old model.User

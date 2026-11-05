@@ -20,7 +20,7 @@ func ParseRoots(raw string) (map[string]string, error) {
 		return nil, e
 	}
 	if len(m) != 0 {
-		return nil, errors.New("Для «shared filesystem broker» требуется «kernel-enforced, handle-relative file access on this platform»")
+		return nil, errors.New("shared filesystem broker: требуется «kernel-enforced, handle-relative file access on this platform»")
 	}
 	return map[string]string{}, nil
 }

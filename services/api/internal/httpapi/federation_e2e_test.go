@@ -22,7 +22,7 @@ func (c federationMatrixPasswordConnector01110) Metadata() authconnector.Metadat
 func (c federationMatrixPasswordConnector01110) Health(context.Context) error { return nil }
 func (c federationMatrixPasswordConnector01110) AuthenticatePassword(_ context.Context, req authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	if req.Secret != "secret" {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	return authconnector.Authentication{
 		Identity:    authconnector.Identity{Subject: "subject-" + c.id, Email: c.id + "@matrix.invalid", Username: c.id, DisplayName: "Matrix " + c.id},

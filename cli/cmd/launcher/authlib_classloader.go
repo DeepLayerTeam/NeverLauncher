@@ -76,7 +76,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 	}
 	// Запретите приём слишком большого, хотя и синтаксически допустимого, документа JSON.
 	if st, err := file.Stat(); err != nil || st.Size() > 1<<20 {
-		return input, errors.New("compatibility request exceeds 1 MiB")
+		return input, errors.New("Размер запроса совместимости превышает 1 МиБ")
 	}
 	base := filepath.Dir(path)
 	for i := range input.Classpath {
@@ -99,7 +99,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 
 func compatValidateJar0279(path, digest, prefix string) error {
 	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(strings.ToLower(path), ".jar") {
-		return fmt.Errorf("Для «compatibility JAR» требуется: «under %s:» %q", prefix, path)
+		return fmt.Errorf("compatibility JAR: требуется «under %s:» %q", prefix, path)
 	}
 	if err := validateVanillaRelativePath(path); err != nil {
 		return err
@@ -199,7 +199,7 @@ func validAddOpens0279(op string) bool {
 func verifyCompatibilityJar0279(path string, agent bool) error {
 	reader, err := zip.OpenReader(path)
 	if err != nil {
-		return fmt.Errorf("compatibility file is not a JAR: %w", err)
+		return fmt.Errorf("Файл совместимости не является JAR: %w", err)
 	}
 	defer reader.Close()
 	if len(reader.File) == 0 || len(reader.File) > 65536 {
@@ -216,14 +216,14 @@ func verifyCompatibilityJar0279(path string, agent bool) error {
 			return err
 		}
 		if !entry.Mode().IsRegular() {
-			return fmt.Errorf("nonregular compatibility JAR entry %s", entry.Name)
+			return fmt.Errorf("Запись %s в JAR совместимости не является обычным файлом", entry.Name)
 		}
 		if names[entry.Name] {
 			return fmt.Errorf("Повторяющийся элемент JAR совместимости: %s", entry.Name)
 		}
 		names[entry.Name] = true
 		if entry.UncompressedSize64 > 512<<20 || total+entry.UncompressedSize64 > 512<<20 {
-			return errors.New("compatibility JAR expanded content exceeds 512 MiB")
+			return errors.New("Распакованные данные JAR совместимости превышают 512 МиБ")
 		}
 		total += entry.UncompressedSize64
 		if strings.EqualFold(entry.Name, "META-INF/MANIFEST.MF") && agent {
@@ -256,7 +256,7 @@ func verifyCompatibilityJar0279(path string, agent bool) error {
 		}
 	}
 	if agent && !foundPremain {
-		return errors.New("Java agent JAR lacks a valid Premain-Class manifest attribute")
+		return errors.New("В JAR агента Java отсутствует корректный атрибут Premain-Class манифеста")
 	}
 	return nil
 }
@@ -274,7 +274,7 @@ func readCompatReceipt0279(root string) (*compatLock0279, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 1<<20 {
-		return nil, errors.New("Для «compatibility receipt» требуется: «a small regular file»")
+		return nil, errors.New("compatibility receipt: требуется «a small regular file»")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -287,7 +287,7 @@ func readCompatReceipt0279(root string) (*compatLock0279, error) {
 		return nil, err
 	}
 	if err := d.Decode(new(any)); err != io.EOF {
-		return nil, errors.New("extra receipt data")
+		return nil, errors.New("Лишние данные подтверждения")
 	}
 	if err := compatValidateLock0279(&lock); err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ func readCompatReceipt0279(root string) (*compatLock0279, error) {
 func verifyCompat0279(root string, p factoryPlan0271) error {
 	if p.Compatibility == nil {
 		if _, err := os.Lstat(compatReceiptFile0279(root)); err == nil {
-			return errors.New("unlocked compatibility receipt")
+			return errors.New("Подтверждение совместимости не закреплено")
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
@@ -307,7 +307,7 @@ func verifyCompat0279(root string, p factoryPlan0271) error {
 		return err
 	}
 	if p.Java.Major != p.Compatibility.JavaMajor {
-		return errors.New("compatibility Java version differs from InstallPlan")
+		return errors.New("Версия Java в проверке совместимости отличается от InstallPlan")
 	}
 	actual, err := readCompatReceipt0279(root)
 	if err != nil {
@@ -322,7 +322,7 @@ func verifyCompat0279(root string, p factoryPlan0271) error {
 			return err
 		}
 		if _, err := mirrorCheckedHash0274(full, sum); err != nil {
-			return fmt.Errorf("compatibility artifact %s: %w", rel, err)
+			return fmt.Errorf("Ошибка артефакта совместимости %s: %w", rel, err)
 		}
 		return verifyCompatibilityJar0279(full, strings.HasPrefix(rel, ".launcher/compat/agents/"))
 	}
@@ -353,7 +353,7 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 	}
 	lock := compatLock0279{SchemaVersion: compatSchema0279, AuthMode: req.AuthMode, JavaMajor: p.Java.Major, ParentInstallPlanSHA256: p.ReproducibilitySHA256, AddOpens: req.AddOpens}
 	if req.AuthMode == "yggdrasil" && !allowAuthAgent {
-		return nil, errors.New("Для «custom Yggdrasil agent» требуется «--allow-auth-agent true»")
+		return nil, errors.New("custom Yggdrasil agent: требуется «--allow-auth-agent true»")
 	}
 	actions := []mirrorAction0274{}
 	install := func(entry compatInputArtifact0279, prefix string) (compatArtifact0279, error) {
@@ -362,7 +362,7 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 			return result, err
 		}
 		if entry.SourceFile == "" {
-			return result, errors.New("local sourceFile required for pinned compatibility JAR")
+			return result, errors.New("Для закреплённого JAR совместимости необходим локальный sourceFile")
 		}
 		dst, err := secureClientDestination(stage, entry.Path)
 		if err != nil {
@@ -451,7 +451,7 @@ func compatJVMArgs0279(root string, p factoryPlan0271) ([]string, []string, erro
 }
 func handleRuntimeCompat0279(args []string) error {
 	if len(args) == 0 {
-		return errors.New("compatibility commands: compat-inspect|compat-verify|compat-apply")
+		return errors.New("Команды совместимости: compat-inspect|compat-verify|compat-apply")
 	}
 	flags := args[1:]
 	dir := flagValue(flags, "--client-dir", "")
@@ -478,7 +478,7 @@ func handleRuntimeCompat0279(args []string) error {
 	case "compat-apply":
 		inputFile := flagValue(flags, "--file", "")
 		if inputFile == "" {
-			return errors.New("Для «compat-apply» требуется --file")
+			return errors.New("compat-apply: требуется --file")
 		}
 		request, err := compatReadRequest0279(inputFile)
 		if err != nil {
@@ -591,12 +591,12 @@ func verifyAuthlibProvenance0279(root string, p factoryPlan0271) error {
 	}
 	receipt, ok := known[authlibProvenancePath0279]
 	if !ok || receipt.SHA256 != sha256HexBytes(raw) || receipt.Size != int64(len(raw)) {
-		return errors.New("authlib provenance not pinned in InstallPlan")
+		return errors.New("Источник authlib не закреплён в InstallPlan")
 	}
 	prior := map[string]string{}
 	for i, item := range history.Changes {
 		if last, has := prior[item.Path]; has && last != item.BeforeSHA256 {
-			return fmt.Errorf("broken authlib transformation chain for %s", item.Path)
+			return fmt.Errorf("Нарушена цепочка преобразования authlib для %s", item.Path)
 		}
 		prior[item.Path] = item.AfterSHA256
 		if item.Rule != "authlib-class-overlay.sha256.v1" || !strings.HasPrefix(item.Path, "libraries/com/mojang/authlib/") || !strings.HasSuffix(item.Path, ".jar") || !isSHA256Hex0271(item.BeforeSHA256) || !isSHA256Hex0271(item.AfterSHA256) || !isSHA256Hex0271(item.PatchSHA256) {
@@ -604,7 +604,7 @@ func verifyAuthlibProvenance0279(root string, p factoryPlan0271) error {
 		}
 		patchRel := ".launcher/compat/patches/" + item.PatchSHA256 + ".jar"
 		if pinned, ok := known[patchRel]; !ok || pinned.SHA256 != item.PatchSHA256 {
-			return fmt.Errorf("unlocked authlib patch bytes %s", patchRel)
+			return fmt.Errorf("Данные патча authlib %s не закреплены", patchRel)
 		}
 		patchPath, err := secureClientDestination(root, patchRel)
 		if err != nil {
@@ -619,7 +619,7 @@ func verifyAuthlibProvenance0279(root string, p factoryPlan0271) error {
 				return err
 			}
 			if _, err := mirrorCheckedHash0274(dest, item.AfterSHA256); err != nil {
-				return fmt.Errorf("authlib provenance target: %w", err)
+				return fmt.Errorf("Ошибка целевого источника authlib: %w", err)
 			}
 		}
 	}

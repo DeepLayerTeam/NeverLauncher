@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 4):
-    raise SystemExit(f"Для «Forge Legacy 1.12.2» требуется «VERSION>=0.17.4, got» {version}")
+    raise SystemExit(f"Forge Legacy 1.12.2: требуется «VERSION>=0.17.4, got» {version}")
 
 
 def read(rel: str) -> str:
@@ -46,7 +46,7 @@ if (
     or row.get("os") != "linux"
     or row.get("arch") != "x86_64"
 ):
-    raise SystemExit("Для «Forge Legacy 1.12.2» требуется: «Java 8 client linux/x86_64»")
+    raise SystemExit("Forge Legacy 1.12.2: требуется «Java 8 client linux/x86_64»")
 if row.get("loaderVersion") != "latest-stable":
     raise SystemExit(
         "Forge Legacy 1.12.2 must use latest-stable selector with immutable resolved evidence"

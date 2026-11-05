@@ -33,7 +33,7 @@ func migrationSigner0336(cfg config.Config) (string, string, error) {
 	}
 	active := strings.TrimSpace(keys[kid])
 	if len(active) < 32 {
-		return "", "", errors.New("Для «active Never JWT secret» требуется: «independently provisioned (min 32 bytes)»")
+		return "", "", errors.New("active Never JWT secret: требуется «independently provisioned (min 32 bytes)»")
 	}
 	for other, name := range keys {
 		if other != kid && name == active {
@@ -41,11 +41,11 @@ func migrationSigner0336(cfg config.Config) (string, string, error) {
 		}
 	}
 	if strings.EqualFold(active, strings.TrimSpace(cfg.ManifestSigningPrivateKey)) {
-		return "", "", errors.New("Для «JWT and Ed25519 signing secrets» требуется: «independent»")
+		return "", "", errors.New("JWT and Ed25519 signing secrets: требуется «independent»")
 	}
 	seed, err := hex.DecodeString(strings.TrimSpace(cfg.ManifestSigningPrivateKey))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return "", "", errors.New("Для «new Never Ed25519 manifest signing seed» требуется: «configured»")
+		return "", "", errors.New("new Never Ed25519 manifest signing seed: требуется «configured»")
 	}
 	public := ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey)
 	digest := sha256.Sum256(public)

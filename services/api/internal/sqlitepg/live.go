@@ -52,7 +52,7 @@ type liveRule0473 struct {
 func instant0473(v any, optional bool) (any, error) {
 	n, ok := v.(int64)
 	if !ok {
-		return nil, fmt.Errorf("Для «timestamp» требуется: «SQLite integer, got» %T", v)
+		return nil, fmt.Errorf("timestamp: требуется «SQLite integer, got» %T", v)
 	}
 	if n == 0 && optional {
 		return nil, nil
@@ -183,7 +183,7 @@ func validateCatalog0473(ctx context.Context, tx pgx.Tx) error {
 	}
 	rows, err := tx.Query(ctx, `SELECT version,checksum FROM schema_migrations`)
 	if err != nil {
-		return fmt.Errorf("Для «PostgreSQL migrations» требуется: «applied first:» %w", err)
+		return fmt.Errorf("PostgreSQL migrations: требуется «applied first:» %w", err)
 	}
 	applied := map[string]string{}
 	for rows.Next() {
@@ -738,7 +738,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 		return report, err
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return report, fmt.Errorf("Для «live import commit outcome» требуется: «reconciled:» %w", err)
+		return report, fmt.Errorf("live import commit outcome: требуется «reconciled:» %w", err)
 	}
 	return report, nil
 }

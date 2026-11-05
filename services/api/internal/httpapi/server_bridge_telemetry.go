@@ -235,10 +235,10 @@ func (b *serverBridgeStore) saveTelemetry0193(serverID string, runtimeEpoch int6
 		return fmt.Errorf("Не найдено: узел ServerBridge")
 	}
 	if server.Status != "active" || server.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(server.RuntimeID, telemetry.RuntimeID) {
-		return fmt.Errorf("%w: telemetry runtime is not active", repository.ErrConflict)
+		return fmt.Errorf("%w: среда выполнения телеметрии неактивна", repository.ErrConflict)
 	}
 	if server.Telemetry != nil && server.Telemetry.RuntimeEpoch == runtimeEpoch && telemetry.SampledAtUnixMillis <= server.Telemetry.SampledAtUnixMillis {
-		return fmt.Errorf("%w: duplicate or stale telemetry sample", repository.ErrConflict)
+		return fmt.Errorf("%w: повторное или устаревшее измерение телеметрии", repository.ErrConflict)
 	}
 	copyValue := telemetry
 	copyValue.Metrics = append([]string(nil), telemetry.Metrics...)

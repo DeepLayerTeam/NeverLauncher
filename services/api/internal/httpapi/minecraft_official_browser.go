@@ -159,7 +159,7 @@ func (s Server) officialBrowserExchange0263(w http.ResponseWriter, r *http.Reque
 	}
 	ticket, err := officialSeal0257(s.Config.AuthTokenSecret, linked)
 	if err != nil {
-		writeError(w, 503, "secure official session unavailable")
+		writeError(w, 503, "Защищённая официальная сессия недоступна")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{

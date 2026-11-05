@@ -56,18 +56,18 @@ async fn probe_java(java: &Path) -> Result<u32, String> {
         .env_remove("JDK_JAVA_OPTIONS")
         .kill_on_drop(true);
     let output = timeout(Duration::from_secs(8), cmd.output()).await
-        .map_err(|_| "Java version probe exceeded 8 seconds".to_string())?
-        .map_err(|err| format!("Java process failed to start: {err}"))?;
-    if !output.status.success() { return Err(format!("Java version probe exited with {}", output.status)); }
+        .map_err(|_| "Проверка версии Java превысила 8 секунд".to_string())?
+        .map_err(|err| format!("Не удалось запустить процесс Java: {err}"))?;
+    if !output.status.success() { return Err(format!("Проверка версии Java завершилась с кодом {}", output.status)); }
     let text = String::from_utf8_lossy(&output.stderr);
-    java_major(&text).ok_or_else(|| "Java did not return a recognizable java.version property".into())
+    java_major(&text).ok_or_else(|| "Java не вернула распознаваемое свойство java.version".into())
 }
 
 fn validate_version_id(version: &str) -> Result<(), String> {
     if version.is_empty() || version.len() > 160 ||
        !version.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_' | b'+')) ||
        version == "." || version == ".." || version.starts_with('.') {
-        return Err("Для версия Minecraft требуется: «a single safe version ID»".into());
+        return Err("Для Minecraft требуется безопасный идентификатор версии без пробелов и специальных путей".into());
     }
     Ok(())
 }
@@ -76,18 +76,18 @@ fn inspect_installed_version(root: &Path, version: &str) -> Result<String, Strin
     validate_version_id(version)?;
     let base = root.canonicalize().map_err(|err| format!("Недоступно: корневой каталог Minecraft: {err}"))?;
     let metadata = base.join("versions").join(version).join(format!("{version}.json"));
-    let resolved = metadata.canonicalize().map_err(|err| format!("Недоступно: «Minecraft version JSON»: {err}"))?;
+    let resolved = metadata.canonicalize().map_err(|err| format!("Недоступно: JSON-файл версии Minecraft: {err}"))?;
     if !resolved.starts_with(base.join("versions")) {
-        return Err("Minecraft metadata escapes game root".into());
+        return Err("Путь к метаданным Minecraft выходит за пределы каталога игры".into());
     }
     let file = std::fs::File::open(&resolved).map_err(|err| err.to_string())?;
     if file.metadata().map_err(|err| err.to_string())?.len() > 2 * 1024 * 1024 {
-        return Err("Minecraft version JSON exceeds 2 MiB".into());
+        return Err("JSON-файл версии Minecraft превышает 2 МиБ".into());
     }
     let metadata: serde_json::Value = serde_json::from_reader(file)
         .map_err(|err| format!("Некорректное значение: метаданные Minecraft: {err}"))?;
     let main = metadata.get("mainClass").and_then(|v| v.as_str())
-        .ok_or("Minecraft metadata missing mainClass")?;
+        .ok_or("В метаданных Minecraft отсутствует mainClass")?;
     // Имя загрузчика здесь обозначает только установленные метаданные, а НЕ
     // успешный запуск или совместимость инструментации Runtime/Guard.
     let lower = main.to_ascii_lowercase();
@@ -110,7 +110,7 @@ pub async fn collect_guard_inventory_0501(
     let java = java.unwrap_or_else(|| PathBuf::from(if cfg!(windows) { "java.exe" } else { "java" }));
     let java_major = match probe_java(&java).await {
         Ok(major) => {
-            checks.push(check("java.execution", "PASS", format!("Java process executed and reported major {major}")));
+            checks.push(check("java.execution", "PASS", format!("Java успешно запущена; основная версия: {major}")));
             Some(major)
         }
         Err(err) => { checks.push(check("java.execution", "BLOCKED", err)); None }
@@ -118,20 +118,20 @@ pub async fn collect_guard_inventory_0501(
     let mut loader = None;
     match (game_root.as_deref(), minecraft_version.as_deref()) {
         (Some(root), Some(version)) => match inspect_installed_version(root, version) {
-            Ok(found) => { loader = Some(found.clone()); checks.push(check("minecraft.loader.metadata", "PASS", format!("Parsed installed version metadata; mainClass identifies {found}; no game was launched"))); },
+            Ok(found) => { loader = Some(found.clone()); checks.push(check("minecraft.loader.metadata", "PASS", format!("Метаданные установленной версии прочитаны; mainClass указывает на {found}; игра не запускалась"))); },
             Err(err) => checks.push(check("minecraft.loader.metadata", "BLOCKED", err)),
         },
-        (None, None) => checks.push(check("minecraft.loader.metadata", "BLOCKED", "Supply --game-root and --minecraft-version for installed loader inspection")),
-        _ => checks.push(check("minecraft.loader.metadata", "BLOCKED", "Both --game-root and --minecraft-version are required")),
+        (None, None) => checks.push(check("minecraft.loader.metadata", "BLOCKED", "Для проверки установленного загрузчика укажите --game-root и --minecraft-version")),
+        _ => checks.push(check("minecraft.loader.metadata", "BLOCKED", "Необходимо одновременно указать --game-root и --minecraft-version")),
     }
     let supervisor = guard_executable.map(GuardSupervisor::with_executable).unwrap_or_default();
     match supervisor.ensure_started().await {
         Err(err) => {
             checks.push(check("guard.authenticated-ipc", "BLOCKED", err));
-            checks.push(check("guard.process-policy", "BLOCKED", "Guard IPC not established"));
-            checks.push(check("guard.integrity-evidence", "BLOCKED", "Guard IPC not established"));
-            checks.push(check("guard.remote-attestation", "BLOCKED", "Guard IPC not established"));
-            checks.push(check("guard.release-package", "BLOCKED", "Guard executable identity not verified"));
+            checks.push(check("guard.process-policy", "BLOCKED", "IPC-соединение с Guard не установлено"));
+            checks.push(check("guard.integrity-evidence", "BLOCKED", "IPC-соединение с Guard не установлено"));
+            checks.push(check("guard.remote-attestation", "BLOCKED", "IPC-соединение с Guard не установлено"));
+            checks.push(check("guard.release-package", "BLOCKED", "Идентичность исполняемого файла Guard не подтверждена"));
         }
         Ok(status) => {
             let authenticated = status.authenticated && status.secure_pipe_acl &&

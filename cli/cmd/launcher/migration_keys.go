@@ -17,7 +17,7 @@ import (
 // ответы API. Автоматическое развёртывание не выполняется.
 func generateNeverMigrationKeys0336(path string) (err error) {
 	if path == "" {
-		return errors.New("Для «generate-keys» требуется «--output /secure/private/key-material.json»")
+		return errors.New("generate-keys: требуется «--output /secure/private/key-material.json»")
 	}
 	var token [32]byte
 	var seed [32]byte

@@ -148,7 +148,7 @@ impl Drop for PinnedModule {
 pub fn initialize() -> Result<ThreadIntegritySnapshot, String> {
     let current = enumerate_threads()?;
     if current.is_empty() {
-        return Err("Guard Thread Integrity found no JVM threads at startup".to_string());
+        return Err("При запуске Guard не обнаружил потоков JVM".to_string());
     }
     let baseline_threads = current.len().min(u32::MAX as usize) as u32;
     let state = ThreadIntegrityState {
@@ -163,7 +163,7 @@ pub fn initialize() -> Result<ThreadIntegritySnapshot, String> {
     let snapshot = snapshot_for_state(&state);
     *THREAD_STATE
         .lock()
-        .map_err(|_| "Guard Thread Integrity state lock poisoned".to_string())? = Some(state);
+        .map_err(|_| "Повреждена блокировка состояния контроля потоков Guard".to_string())? = Some(state);
     Ok(snapshot)
 }
 
@@ -171,12 +171,12 @@ pub fn reconcile_and_verify() -> Result<ThreadIntegritySnapshot, String> {
     let observed = enumerate_threads()?;
     let mut guard = THREAD_STATE
         .lock()
-        .map_err(|_| "Guard Thread Integrity state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния контроля потоков Guard".to_string())?;
     let state = guard
         .as_mut()
         .ok_or_else(|| "Guard Thread Integrity is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("Guard Thread Integrity is not active/healthy".to_string());
+        return Err("Контроль потоков Guard не активен или работает некорректно".to_string());
     }
 
     for (thread_id, record) in &observed {
@@ -244,7 +244,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
         has_entry = unsafe { Thread32Next(snapshot.0, &mut entry) } != 0;
     }
     if result.is_empty() {
-        return Err("Guard Thread Integrity observed zero live JVM threads".to_string());
+        return Err("Контроль потоков Guard не обнаружил работающих потоков JVM".to_string());
     }
     Ok(result)
 }
@@ -366,7 +366,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
         .replace('/', "\\")
         .to_ascii_lowercase();
     if value.is_empty() {
-        return Err("Guard Thread Integrity resolved an empty start module path".to_string());
+        return Err("Контроль потоков Guard получил пустой путь к модулю запуска".to_string());
     }
     Ok(value)
 }

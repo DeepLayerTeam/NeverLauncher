@@ -31,27 +31,27 @@ def run(*cmd: str, cwd: Path = ROOT) -> None:
     try:
         subprocess.run(cmd, cwd=cwd, check=True)
     except (subprocess.CalledProcessError, OSError) as exc:
-        raise PortError(f"Ошибка: «tool»: {cmd[0]} ({exc})") from exc
+        raise PortError(f"Ошибка: инструмент: {cmd[0]} ({exc})") from exc
 
 
 def sources_in(directory: Path) -> list[Path]:
     if not directory.is_dir() or directory.is_symlink():
-        raise PortError("Для источник требуется: настоящий каталог")
+        raise PortError("Источник: требуется настоящий каталог")
     source = directory.resolve(strict=True)
     result: list[Path] = []
     for p in sorted(source.rglob("*")):
         if p.is_symlink():
-            raise PortError(f"Запрещено: «source symlink»: {p}")
+            raise PortError(f"Запрещено: символическая ссылка источника: {p}")
         if p.is_file():
             if p.suffix != ".java":
                 continue  # Non-Java assets are deliberately not embedded.
             if p.stat().st_size > 1 << 20 or not p.resolve().is_relative_to(source):
-                raise PortError(f"Небезопасное значение: «source file»: {p}")
+                raise PortError(f"Небезопасное значение: исходный файл: {p}")
             result.append(p)
         elif not p.is_dir():
-            raise PortError(f"Не поддерживается: «source entry»: {p}")
+            raise PortError(f"Не поддерживается: запись источника: {p}")
     if not result or len(result) > 1000:
-        raise PortError("expected 1..1000 Java source files")
+        raise PortError("Ожидается от 1 до 1000 исходных файлов Java")
     return result
 
 
@@ -59,16 +59,16 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
     try:
         doc = json.loads(raw)
     except (ValueError, UnicodeDecodeError) as exc:
-        raise PortError(f"Некорректное значение: «extension manifest»: {exc}") from exc
+        raise PortError(f"Некорректное значение: манифест расширения: {exc}") from exc
     if (
         not isinstance(doc, dict)
         or doc.get("schemaVersion") != "2.0"
         or doc.get("api") != "1.0"
     ):
-        raise PortError("expected a schemaVersion 2.0 / api 1.0 extension manifest")
+        raise PortError("Ожидается манифест расширения со schemaVersion 2.0 и api 1.0")
     targets = doc.get("targets")
     if not isinstance(targets, list) or not targets:
-        raise PortError("Для «extension manifest» требуется «backend/cli target»")
+        raise PortError("Манифест расширения: требуется целевая среда Backend/CLI")
     if any(
         not isinstance(t, dict)
         or t.get("kind") not in ("backend", "cli")
@@ -86,7 +86,7 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
 
 def ensure_clean_destination(path: Path) -> None:
     if path.is_symlink() or path.exists():
-        raise PortError(f"destination already exists (refusing overwrite): {path}")
+        raise PortError(f"Целевой объект уже существует, перезапись запрещена: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -97,22 +97,22 @@ def build(args: argparse.Namespace) -> None:
         raise PortError("Некорректное значение: «or reserved Gravit module class name»")
     entrypoint = "backend/gravit-port.jar"
     if args.manifest.is_symlink():
-        raise PortError("Запрещено: «manifest symlink»")
+        raise PortError("Запрещено: символическая ссылка манифеста")
     manifest_file = args.manifest.resolve(strict=True)
     if not manifest_file.is_file() or manifest_file.stat().st_size > 1 << 20:
-        raise PortError("Для манифест требуется: «a regular non-symlink file under 1 MiB»")
+        raise PortError("Манифест: требуется «a regular non-symlink file under 1 MiB»")
     raw_manifest = manifest_file.read_bytes()
     validate_manifest(raw_manifest, entrypoint)
     sources = sources_in(args.source)
     if args.output.is_symlink() or (
         args.package is not None and args.package.is_symlink()
     ):
-        raise PortError("Запрещено: «output symlink»")
+        raise PortError("Запрещено: символическая ссылка результата")
     destination = args.output.resolve()
     ensure_clean_destination(destination)
     if args.private_key is not None:
         if args.package is None or args.public_key is None or args.nl is None:
-            raise PortError("Для «signing» требуется «--package, --nl and --public-key»")
+            raise PortError("Для подписание требуется «--package, --nl and --public-key»")
         ensure_clean_destination(args.package.resolve())
     elif args.package is not None or args.public_key is not None or args.nl is not None:
         raise PortError(
@@ -124,7 +124,7 @@ def build(args: argparse.Namespace) -> None:
     core = ROOT / "sdk/java/core/build/classes"
     adapter = ROOT / "sdk/java/gravit-compat/build/classes"
     if not (core / "ru/launcher/sdk/host/JavaExtensionHost.class").is_file():
-        raise PortError("Java SDK host did not build")
+        raise PortError("Не удалось собрать хост Java SDK")
     with tempfile.TemporaryDirectory(
         prefix="gravit-port-", dir=destination.parent
     ) as tmp:
@@ -156,7 +156,7 @@ def build(args: argparse.Namespace) -> None:
         )
         main = classes.joinpath(*args.module_class.split(".")).with_suffix(".class")
         if not main.is_file():
-            raise PortError(f"module class not generated: {args.module_class}")
+            raise PortError(f"Класс модуля не создан: {args.module_class}")
         # javap inspects bytecode without initializing or executing an untrusted class.
         javap = (
             str(Path(os.environ["JAVA_HOME"]) / "bin/javap")
@@ -177,7 +177,7 @@ def build(args: argparse.Namespace) -> None:
                 check=True,
             ).stdout
         except (subprocess.CalledProcessError, OSError) as exc:
-            raise PortError(f"unable to inspect compiled module class: {exc}") from exc
+            raise PortError(f"Не удалось проверить скомпилированный класс модуля: {exc}") from exc
         if not re.search(
             r"\bclass\s+"
             + re.escape(args.module_class)
@@ -194,7 +194,7 @@ def build(args: argparse.Namespace) -> None:
                 or (adapter / rel).exists()
                 or rel.startswith(("pro/gravit/", "ru/launcher/sdk/"))
             ):
-                raise PortError(f"module attempts to override host/SDK class: {rel}")
+                raise PortError(f"Модуль пытается переопределить класс хоста или SDK: {rel}")
         stage = work / "package"
         (stage / "backend").mkdir(parents=True)
         mf = work / "MANIFEST.MF"
@@ -225,14 +225,14 @@ def build(args: argparse.Namespace) -> None:
         with zipfile.ZipFile(jpath) as archive:
             names = archive.namelist()
             if len(names) != len(set(names)):
-                raise PortError("Обнаружен дубликат: «JAR entries»")
+                raise PortError("Обнаружен дубликат: записи JAR-архива")
             for name in (
                 "ru/launcher/sdk/host/JavaExtensionHost.class",
                 "ru/launcher/sdk/gravit/GravitCompatExtension.class",
                 args.module_class.replace(".", "/") + ".class",
             ):
                 if name not in names:
-                    raise PortError("Отсутствует: «executable JAR class:»" + name)
+                    raise PortError("Отсутствует: исполняемый класс JAR:" + name)
         (stage / "launcher-extension.json").write_bytes(raw_manifest)
         # Publish the build directory only after the actual compilation and JAR verification.
         stage.rename(destination)

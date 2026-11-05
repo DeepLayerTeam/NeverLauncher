@@ -19,14 +19,14 @@ import (
 // производственного развёртывания. Он никогда не подделывает неизменённые данные игроков.
 func handleMigrationRollback03312(args []string) error {
 	if len(args) == 0 {
-		return errors.New("Для откат требуется «rollback-plan|rollback-commit|rollback-status»")
+		return errors.New("Откат: требуется «rollback-plan|rollback-commit|rollback-status»")
 	}
 	cmd := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	run := flagValue(args, "--run", "")
 	token := backendToken(args)
 	if backend == "" || run == "" || token == "" {
-		return errors.New("Для откат требуется: --backend --run --token")
+		return errors.New("Откат: требуется --backend --run --token")
 	}
 	u, e := url.Parse(backend)
 	if e != nil {
@@ -35,7 +35,7 @@ func handleMigrationRollback03312(args []string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Для откат требуется «HTTPS or local loopback»")
+			return errors.New("Откат: требуется «HTTPS or local loopback»")
 		}
 	}
 	path := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run) + "/rollbacks"
@@ -43,18 +43,18 @@ func handleMigrationRollback03312(args []string) error {
 		return cutoverRequest03311("GET", path+"/"+url.PathEscape(flagValue(args, "--profile-id", ""))+"/"+url.PathEscape(flagValue(args, "--channel", "")), token, run, nil, false, flagValue(args, "--output", ""))
 	}
 	if flagValue(args, "--confirm", "") != run || flagValue(args, "--writer-fenced", "") != "true" {
-		return errors.New("Для откат требуется «exact --confirm run and --writer-fenced true»")
+		return errors.New("Откат: требуется «exact --confirm run and --writer-fenced true»")
 	}
 	revision, e := strconv.ParseInt(flagValue(args, "--expected-revision", ""), 10, 64)
 	if e != nil || revision < 1 {
-		return errors.New("Для откат требуется «positive --expected-revision»")
+		return errors.New("Откат: требуется «positive --expected-revision»")
 	}
 	body := map[string]any{"profileId": flagValue(args, "--profile-id", ""), "channel": flagValue(args, "--channel", ""), "expectedRevision": revision}
 	switch cmd {
 	case "rollback-plan", "rollback-commit":
 		file := flagValue(args, "--snapshot", "")
 		if file == "" {
-			return errors.New("Для откат требуется «--snapshot JSON from independently fenced live deployment»")
+			return errors.New("Откат: требуется «--snapshot JSON from independently fenced live deployment»")
 		}
 		snapshot, snapshotHash, e := rollbackReadSnapshot0448(file)
 		if e != nil {
@@ -79,7 +79,7 @@ func handleMigrationRollback03312(args []string) error {
 			path += "/plan"
 		} else {
 			if flagValue(args, "--source-writer-fenced", "") != "true" {
-				return errors.New("Для «commit» требуется «independently fenced source writer»")
+				return errors.New("commit: требуется «independently fenced source writer»")
 			}
 			body["planSha256"] = flagValue(args, "--plan-sha256", "")
 			body["sourceWriterFenced"] = true
@@ -124,7 +124,7 @@ func rollbackReadSnapshot0448(path string) (any, string, error) {
 		return nil, "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > 8<<20 {
-		return nil, "", errors.New("Для «rollback snapshot» требуется: «a regular JSON file up to 8 MiB»")
+		return nil, "", errors.New("rollback snapshot: требуется «a regular JSON file up to 8 MiB»")
 	}
 	raw, err := io.ReadAll(io.LimitReader(f, (8<<20)+1))
 	if err != nil {

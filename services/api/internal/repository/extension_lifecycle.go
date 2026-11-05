@@ -27,10 +27,10 @@ func normalizeLifecycleScope0204(scope, scopeID string) (string, string, error) 
 		scopeID = ""
 	case "project":
 		if scopeID == "" {
-			return "", "", errors.New("Для «project extension lifecycle» требуется «scopeId»")
+			return "", "", errors.New("project extension lifecycle: требуется «scopeId»")
 		}
 	default:
-		return "", "", errors.New("Для «extension lifecycle scope» требуется: «global or project»")
+		return "", "", errors.New("extension lifecycle scope: требуется «global or project»")
 	}
 	return scope, scopeID, nil
 }
@@ -69,10 +69,10 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 		return model.ExtensionLifecycleTransition{}, fmt.Errorf("Некорректное значение: «lifecycle operation» %q", in.Operation)
 	}
 	if in.DesiredVersion == "" || !extensionSemver0201.MatchString(in.DesiredVersion) {
-		return model.ExtensionLifecycleTransition{}, errors.New("Для «desired lifecycle version» требуется: «semver»")
+		return model.ExtensionLifecycleTransition{}, errors.New("desired lifecycle version: требуется «semver»")
 	}
 	if in.CurrentVersion != "" && !extensionSemver0201.MatchString(in.CurrentVersion) {
-		return model.ExtensionLifecycleTransition{}, errors.New("Для «current lifecycle version» требуется: «semver or empty»")
+		return model.ExtensionLifecycleTransition{}, errors.New("current lifecycle version: требуется «semver or empty»")
 	}
 	in.DesiredState, err = normalizeLifecycleState0204(in.DesiredState)
 	if err != nil {
@@ -87,7 +87,7 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 			return model.ExtensionLifecycleTransition{}, errors.New("«absent current state»: запрещено «have version/package/enabled»")
 		}
 	} else if in.CurrentVersion == "" {
-		return model.ExtensionLifecycleTransition{}, errors.New("Для «non-absent current state» требуется «current version»")
+		return model.ExtensionLifecycleTransition{}, errors.New("non-absent current state: требуется «current version»")
 	}
 	if (in.CurrentState == model.ExtensionInstallStateEnabled) != in.Enabled {
 		return model.ExtensionLifecycleTransition{}, errors.New("enabled flag must match current state")

@@ -120,7 +120,7 @@ func (s Server) requireGuardBoundJoin0507(r *http.Request, join bridgeJoinRecord
 	if handoff && join.ServerID != b.ServerID {
 		policy, err := loadPlanPolicy02412(time.Now().UTC())
 		if err != nil || !planMatches02412(policy, join.ServerID, b.ProjectID, b.ProfileID, b.Channel, b.ReleaseSignature, b.CatalogSHA256, b.PlanSHA256) {
-			return errors.New("Guard Session handoff target is not signed for this build")
+			return errors.New("Целевой узел передачи сессии Guard не подписан для этой сборки")
 		}
 	}
 	return s.verifyGuardBoundState0507(r, b)

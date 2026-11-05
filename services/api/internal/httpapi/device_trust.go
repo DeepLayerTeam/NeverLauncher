@@ -169,7 +169,7 @@ func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSigna
 	switch key.algorithm {
 	case "ed25519":
 		if len(b) != ed25519.SignatureSize || !ed25519.Verify(key.ed25519Key, []byte(payload), b) {
-			return errors.New("Некорректное значение: «device proof signature»")
+			return errors.New("Некорректное значение: подпись подтверждения устройства")
 		}
 	case "p256":
 		if len(b) != 64 {
@@ -179,7 +179,7 @@ func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSigna
 		r := new(big.Int).SetBytes(b[:32])
 		s := new(big.Int).SetBytes(b[32:])
 		if r.Sign() <= 0 || s.Sign() <= 0 || !ecdsa.Verify(key.p256Key, h[:], r, s) {
-			return errors.New("Некорректное значение: «device proof signature»")
+			return errors.New("Некорректное значение: подпись подтверждения устройства")
 		}
 	default:
 		return errors.New("Не поддерживается: алгоритм ключа устройства")

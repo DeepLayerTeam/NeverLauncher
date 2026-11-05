@@ -198,7 +198,7 @@ func remoteSecureDir0284(dir string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("Для каталог состояния удалённого сервиса требуется: «a private real directory:» %s", dir)
+		return fmt.Errorf("Каталог состояния удалённого сервиса: требуется «a private real directory:» %s", dir)
 	}
 	return nil
 }
@@ -208,7 +208,7 @@ func remoteCheckFile0284(path string) error {
 		return err
 	}
 	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("Для «remote secret/state» требуется: «a private regular file:» %s", path)
+		return fmt.Errorf("remote secret/state: требуется «a private regular file:» %s", path)
 	}
 	return nil
 }
@@ -1082,7 +1082,7 @@ func remoteCall0284(args []string) error {
 		// другим хостом либо с новым ключом идемпотентности после неопределённого результата ввода-вывода.
 		key := flagValue(args, "--idempotency-key", "")
 		if !remoteIdempotency0284.MatchString(key) {
-			return errors.New("Для «receipt recovery» требуется «the original --idempotency-key (16-128 safe characters)»")
+			return errors.New("receipt recovery: требуется «the original --idempotency-key (16-128 safe characters)»")
 		}
 		method = http.MethodGet
 		path = "/v1/host/receipts/" + key

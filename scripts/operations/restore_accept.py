@@ -43,7 +43,7 @@ def exposure_seconds(snapshot_time: str, incident: datetime) -> float:
 
 def write_report(path: Path, report: dict) -> None:
     if path.exists() or path.is_symlink() or not path.parent.is_dir() or path.parent.is_symlink():
-        raise dr.DrillError("Для «report target» требуется: «new path in existing directory»")
+        raise dr.DrillError("report target: требуется «new path in existing directory»")
     with tempfile.NamedTemporaryFile("w", dir=path.parent, encoding="utf-8",
                                      prefix=".restore-report-", delete=False) as out:
         stage = Path(out.name)
@@ -66,12 +66,12 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
         raise dr.DrillError("report exists")
     manifest = dr.verify_snapshot(snapshot)
     if manifest.get("schema") != 3 or manifest.get("mode") != "network-ha":
-        raise dr.DrillError("Для «fresh-host acceptance» требуется «verified Network-HA snapshot»")
+        raise dr.DrillError("fresh-host acceptance: требуется «verified Network-HA snapshot»")
     if manifest.get("version") != dr.target_release(env_file):
         raise dr.DrillError("restore version must match snapshot, not target upgrade version")
     upper_bound = exposure_seconds(manifest["createdUtc"], incident)
     if bool(checkpoint) != bool(checksum):
-        raise dr.DrillError("Для «checkpoint token and SHA-256» требуется: «supplied together»")
+        raise dr.DrillError("checkpoint token and SHA-256: требуется «supplied together»")
     if checkpoint and (not re.fullmatch(r"[0-9a-f]{32}", checkpoint)
                        or not re.fullmatch(r"[0-9a-f]{64}", checksum or "")):
         raise dr.DrillError("Некорректное значение: «checkpoint token/digest»")

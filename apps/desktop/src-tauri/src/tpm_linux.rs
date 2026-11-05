@@ -35,7 +35,7 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
        !s[2..4].eq_ignore_ascii_case("81") {
         return Err("В Linux ключ AK должен иметь постоянный дескриптор TPM вида 0x81xxxxxx".into());
     }
-    let n=u32::from_str_radix(&s[2..],16).map_err(|_|"Некорректное значение: «AK handle»")?;
+    let n=u32::from_str_radix(&s[2..],16).map_err(|_|"Некорректное значение: дескриптор AK")?;
     Ok(format!("0x{n:08x}"))
 }
 
@@ -44,7 +44,7 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
 // только стандартные каталоги приложений XDG; путь от frontend принимать нельзя.
 fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
     if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b=='-') {
-        return Err("Некорректное значение: «hardware-enclave TPM label»".into());
+        return Err("Некорректное значение: метка аппаратного хранилища TPM".into());
     }
     let home=std::env::var_os("HOME").ok_or("HOME is unavailable")?;
     let config=std::env::var_os("XDG_CONFIG_HOME").filter(|v| Path::new(v).is_absolute())
@@ -55,7 +55,7 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
         let public=dir.join(format!("{label}.tpm_pub"));
         let private=dir.join(format!("{label}.tpm_priv"));
         if !public.exists() && !private.exists() { continue; }
-        if found.is_some() { return Err("ambiguous TPM key directory (signed and unsigned)".into()); }
+        if found.is_some() { return Err("Неоднозначное содержимое каталога ключей TPM: есть подписанные и неподписанные данные".into()); }
         let p=read_bounded_regular(&public,MAX_BLOB)?;
         let s=read_bounded_regular(&private,MAX_BLOB)?;
         found=Some((p,s));
@@ -65,19 +65,19 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
 
 fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> {
     // Никаких символических ссылок. Нельзя незаметно использовать данные другого UID.
-    let md=fs::symlink_metadata(path).map_err(|e|format!("Отсутствует: «TPM device blob»: {e}"))?;
+    let md=fs::symlink_metadata(path).map_err(|e|format!("Отсутствует: двоичные данные устройства TPM: {e}"))?;
     if !md.file_type().is_file() || md.uid() != unsafe { libc::geteuid() } || md.len()==0 || md.len() as usize>maximum ||
        md.mode() & 0o022 != 0 {
-        return Err("Для «TPM key blob» требуется: «an owned, non-group/world-writable regular file»".into());
+        return Err("Для двоичные данные ключа TPM требуется: «an owned, non-group/world-writable regular file»".into());
     }
     // Проверка обычного файла предотвращает прямое следование симлинку; Linux
     // O_NOFOLLOW закрывает гонку переименования в симлинк между stat и open.
     let mut opts=OpenOptions::new();
     opts.read(true).custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
-    let mut f=opts.open(path).map_err(|e|format!("Не удалось открыть «TPM key blob:» {e}"))?;
+    let mut f=opts.open(path).map_err(|e|format!("Не удалось открыть данные ключа TPM: {e}"))?;
     let fdmd=f.metadata().map_err(|e|e.to_string())?;
     if !fdmd.is_file() || fdmd.uid()!=md.uid() || fdmd.ino()!=md.ino() || fdmd.len()!=md.len() {
-        return Err("TPM key blob changed while opening".into());
+        return Err("Данные ключа TPM изменились во время открытия".into());
     }
     use std::io::Read;
     let mut bytes=Vec::new();
@@ -99,7 +99,7 @@ impl TempTPMDir {
                     return Ok(Self(path));
                 },
                 Err(e) if e.kind()==std::io::ErrorKind::AlreadyExists => continue,
-                Err(e)=>return Err(format!("Не удалось создать «TPM workspace:» {e}")),
+                Err(e)=>return Err(format!("Не удалось создать рабочий каталог TPM: {e}")),
             }
         }
         Err("cannot allocate unique TPM workspace".into())
@@ -108,7 +108,7 @@ impl TempTPMDir {
     fn write(&self, name: &str, bytes: &[u8]) -> Result<PathBuf,String> {
         let path=self.file(name);
         let mut f=OpenOptions::new().write(true).create_new(true).mode(0o600).open(&path)
-            .map_err(|e|format!("Не удалось создать «temporary TPM input:» {e}"))?;
+            .map_err(|e|format!("Не удалось создать временные входные данные TPM: {e}"))?;
         f.write_all(bytes).map_err(|e|e.to_string())?;
         Ok(path)
     }
@@ -130,19 +130,19 @@ fn tool(program: &str, args: &[String]) -> Result<(),String> {
     loop {
         match child.try_wait() {
             Ok(Some(status)) if status.success() => return Ok(()),
-            Ok(Some(status)) => return Err(format!("{program} returned {status} (TPM/authorization/firmware failure)")),
+            Ok(Some(status)) => return Err(format!("{program} завершился с состоянием {status} (ошибка TPM, авторизации или прошивки)")),
             Ok(None) if began.elapsed() < Duration::from_secs(MAX_TOOL_SECONDS) => thread::sleep(Duration::from_millis(20)),
             Ok(None) => {
                 let _=child.kill(); let _=child.wait();
-                return Err(format!("{program} timed out"));
+                return Err(format!("Превышено время выполнения {program}"));
             },
-            Err(e) => { let _=child.kill();let _=child.wait();return Err(format!("{program} wait failed: {e}")); }
+            Err(e) => { let _=child.kill();let _=child.wait();return Err(format!("Ошибка ожидания {program}: {e}")); }
         }
     }
 }
 fn arglist(parts: &[&str]) -> Vec<String> { parts.iter().map(|s|s.to_string()).collect() }
 fn bytes_from(path: &Path, cap: usize) -> Result<Vec<u8>,String> {
-    read_bounded_regular(path,cap).map_err(|e|format!("TPM output unreadable: {e}"))
+    read_bounded_regular(path,cap).map_err(|e|format!("Не удалось прочитать вывод TPM: {e}"))
 }
 fn to_tpm2b(bytes: &[u8], limit: usize) -> Result<Vec<u8>,String> {
     if bytes.is_empty() || bytes.len()>limit || bytes.len()>u16::MAX as usize {return Err("Некорректная длина блока TPM".into());}
@@ -165,7 +165,7 @@ fn validate_outputs(public: &[u8], att: &[u8], sig: &[u8], registered: &[u8], ex
     read_frame.extend_from_slice(&[0;4]);read_frame.extend_from_slice(&read_params);
     let (pub_checked,point)=crate::tpm_wire_0313::parse_public_response(&read_frame)?;
     if pub_checked!=public || point.as_slice()!=registered {
-        return Err("TPM identity public key differs from registered key".into());
+        return Err("Публичный ключ идентичности TPM отличается от зарегистрированного ключа".into());
     }
     let mut params=att.to_vec();params.extend_from_slice(sig);
     let mut response=Vec::new();response.extend_from_slice(&0x8002u16.to_be_bytes());
@@ -183,13 +183,13 @@ pub fn certify(
 ) -> Result<LinuxTPMEvidence0314,String> {
     if !Path::new("/dev/tpmrm0").exists() {return Err("Менеджер ресурсов TPM Linux (/dev/tpmrm0) недоступен".into());}
     if registered_sec1.len()!=65 || registered_sec1[0]!=4 {return Err("Необходим зарегистрированный публичный ключ P-256".into());}
-    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: «server TPM qualifier»")?;
-    let extra: [u8;32]=extra.try_into().map_err(|_|"Для «TPM qualifier» требуется: «SHA-256 (32 bytes)»")?;
+    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: проверочный параметр TPM от сервера")?;
+    let extra: [u8;32]=extra.try_into().map_err(|_|"Для проверочный параметр TPM требуется: «SHA-256 (32 bytes)»")?;
     let ak=parse_ak_handle(ak_handle)?;
     if ak_certificate_pem.len()>MAX_CERT || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
        !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
        intermediates_pem.iter().any(|p|p.len()>MAX_CERT || !p.contains("-----BEGIN CERTIFICATE-----")) {
-        return Err("Требуется: «issuer-certified AK X.509 PEM»".into());
+        return Err("Требуется: сертификат X.509 PEM для AK, подтверждённый издателем".into());
     }
     let (pub_blob,priv_blob)=device_blobs(device_label)?;
     // Публичный ключ — TPMT_PUBLIC (не TPM2B_PUBLIC) от hardware-enclave. Обёрнутый
@@ -217,7 +217,7 @@ pub fn certify(
     tool("tpm2_load", &arglist(&["-Q","-C",&path(&parent),"-u",&path(&pub_path),"-r",&path(&private_path),"-c",&path(&subject)]))?;
     tool("tpm2_readpublic", &arglist(&["-Q","-c",&path(&subject),"-f","tss","-o",&path(&read_pub)]))?;
     let loaded_public=bytes_from(&read_pub,MAX_BLOB+2)?;
-    if loaded_public!=public {return Err("loaded TPM object public area differs from sealed identity".into());}
+    if loaded_public!=public {return Err("Открытая область загруженного объекта TPM отличается от защищённой идентичности".into());}
     // AK — отдельный постоянный объект TPM, зарегистрированный в доверенном для TPM центре
     // сертификации. Собственная TPM-подпись Certify и цепочка AK проверяются удалённо.
     tool("tpm2_certify", &arglist(&["-Q","-c",&path(&subject),"-C",&ak,"-g","sha256",
@@ -265,7 +265,7 @@ pub struct LinuxTPMQuote0315 {
     pub intermediates_pem: Vec<String>,
 }
 fn pcr_indices0315(selection: &str) -> Result<Vec<u8>,String> {
-    let indices=selection.strip_prefix("sha256:").ok_or("only SHA-256 PCR bank supported")?;
+    let indices=selection.strip_prefix("sha256:").ok_or("Поддерживается только банк PCR с SHA-256")?;
     let mut values=Vec::new();
     for component in indices.split(',') {
         if component.len()>2 || component.len()==0 || (component.starts_with('0') && component!="0") ||
@@ -282,14 +282,14 @@ pub fn quote0315(
     ak_certificate_pem: &str, intermediates_pem: Vec<String>,
 ) -> Result<LinuxTPMQuote0315,String> {
     if !Path::new("/dev/tpmrm0").exists() {return Err("Недоступно: менеджер ресурсов TPM".into());}
-    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: «server Quote qualifier»")?;
-    let extra: [u8;32]=extra.try_into().map_err(|_|"Quote qualifier must contain 32 bytes")?;
+    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"Некорректное значение: проверочный параметр Quote от сервера")?;
+    let extra: [u8;32]=extra.try_into().map_err(|_|"Проверочные данные Quote должны содержать 32 байта")?;
     let ak=parse_ak_handle(ak_handle)?;
     let indices=pcr_indices0315(pcr_selection)?;
     if ak_certificate_pem.len()>MAX_CERT || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
        !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
        intermediates_pem.iter().any(|c|c.len()>MAX_CERT || !c.contains("-----BEGIN CERTIFICATE-----")) {
-        return Err("Требуется: «issuer-certified AK»".into());
+        return Err("Требуется: сертифицированный издателем ключ AK".into());
     }
     let dir=TempTPMDir::new()?;
     let nonce=dir.write("nonce.bin",&extra)?;

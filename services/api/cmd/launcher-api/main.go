@@ -144,7 +144,7 @@ func main() {
 		var err error
 		diagnostics, err = sentrydiag.New(os.Getenv("LAUNCHER_SENTRY_BACKEND_DSN"), "launcher@"+version+"+"+commit, cfg.Environment)
 		if err != nil {
-			log.Fatalf("Некорректное значение: «backend Sentry configuration»: %v", err)
+			log.Fatalf("Некорректное значение: настройка Sentry на сервере: %v", err)
 		}
 	}
 	defer diagnostics.Close()
@@ -154,7 +154,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if role.name == "migrate" && !cfg.DatabaseAutoMigrate {
-		log.Fatal("Для «migration role» требуется «LAUNCHER_DATABASE_AUTO_MIGRATE=true»")
+		log.Fatal("Для миграции необходимо установить LAUNCHER_DATABASE_AUTO_MIGRATE=true")
 	}
 	if err := httpapi.ValidatePersistenceConfig950(cfg); err != nil {
 		log.Fatal(err)

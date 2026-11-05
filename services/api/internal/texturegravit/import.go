@@ -132,7 +132,7 @@ func LoadMappings(data []byte) (map[string]string, error) {
 
 func LoadJSON(data []byte) ([]SourceRow, error) {
 	if len(data) == 0 || len(data) > 32<<20 {
-		return nil, errors.New("Для экспорт источника требуется: «at most 32 MiB»")
+		return nil, errors.New("Экспорт источника: требуется «at most 32 MiB»")
 	}
 	var rows []SourceRow
 	if err := json.Unmarshal(data, &rows); err != nil {

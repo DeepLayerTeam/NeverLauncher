@@ -77,7 +77,7 @@ def certify(
     java: str, expected_major: int, expected_os: str, expected_arch: str
 ) -> dict[str, Any]:
     if expected_major <= 0:
-        raise ValueError("Для «expected Java major» требуется: «positive»")
+        raise ValueError("expected Java major: требуется «positive»")
     expected_os = normalize_os(expected_os)
     expected_arch = normalize_arch(expected_arch)
     if expected_os not in {"linux", "windows", "macos"}:

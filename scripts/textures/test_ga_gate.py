@@ -174,7 +174,7 @@ class TextureGAGate0260Tests(unittest.TestCase):
         ).hexdigest()
         self.write_json(folder / "attestation.json", attestation)
         self.sign(folder)
-        with self.assertRaisesRegex(GateError, "duplicate JSON key"):
+        with self.assertRaisesRegex(GateError, "Повторяющийся ключ JSON"):
             verify(self.root, COMMIT, self.public)
 
 

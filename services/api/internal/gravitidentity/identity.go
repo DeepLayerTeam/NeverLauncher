@@ -115,7 +115,7 @@ func uniqueUserFields(raw []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	tok, err := dec.Token()
 	if err != nil || tok != json.Delim('{') {
-		return errors.New("Для «FileAuth user» требуется: объект JSON")
+		return errors.New("FileAuth user: требуется объект JSON")
 	}
 	seen := map[string]bool{}
 	for dec.More() {

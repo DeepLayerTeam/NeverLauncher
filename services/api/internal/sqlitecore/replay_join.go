@@ -94,7 +94,7 @@ func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (
 	}
 	key, e := hex.DecodeString(input.PublicKeyHex)
 	if e != nil || len(key) != ed25519.PublicKeySize {
-		return out, errors.New("Для «Ed25519 public key» требуется: «32 bytes in hex»")
+		return out, errors.New("Публичный ключ Ed25519: требуется «32 bytes in hex»")
 	}
 	digest := sha256.Sum256(key)
 	fingerprint := hex.EncodeToString(digest[:])

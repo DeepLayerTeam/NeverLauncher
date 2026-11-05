@@ -76,7 +76,7 @@ func ValidatePlan(p PlanInput) error {
 }
 func ValidateCommit(c CommitInput) error {
 	if !id.MatchString(c.ProfileID) || !id.MatchString(c.Channel) || c.ExpectedRevision < 1 || !sha.MatchString(c.PlanSHA256) || !c.SourceWriterFenced || !c.NeverWriterFenced || !sha.MatchString(c.CurrentEvidenceSHA256) {
-		return errors.New("Для «rollback commit» требуется «matching plan and both independently fenced writers»")
+		return errors.New("rollback commit: требуется «matching plan and both independently fenced writers»")
 	}
 	return nil
 }

@@ -45,14 +45,14 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 		return report, err
 	}
 	if len(raw) > 2<<20 {
-		return report, errors.New("Превышен допустимый размер: «certification matrix»")
+		return report, errors.New("Превышен допустимый размер: матрица сертификации")
 	}
 	var m factoryMatrix02712
 	if err = json.Unmarshal(raw, &m); err != nil {
 		return report, err
 	}
 	if m.Schema != "launcher.factory.certification-matrix.v1" || len(m.Targets) == 0 || len(m.Targets) > 100 {
-		return report, errors.New("Некорректное значение: «certification matrix»")
+		return report, errors.New("Некорректное значение: матрица сертификации")
 	}
 	report = factoryMatrixReport02712{Schema: "launcher.factory.certification-report.v1", Total: len(m.Targets), Status: "failed", Results: make([]factoryMatrixResult02712, 0, len(m.Targets))}
 	seen := map[string]bool{}

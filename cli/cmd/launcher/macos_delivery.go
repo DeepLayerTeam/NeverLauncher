@@ -280,13 +280,13 @@ func readZipEntries0154(path string) (map[string][]byte, error) {
 	for _, file := range zr.File {
 		name := filepath.ToSlash(filepath.Clean(file.Name))
 		if name == "." || name == ".." || strings.HasPrefix(name, "../") || strings.HasPrefix(file.Name, "/") {
-			return nil, fmt.Errorf("Небезопасное значение: «macOS package zip entry» %q", file.Name)
+			return nil, fmt.Errorf("Небезопасное значение: запись ZIP-архива macOS %q", file.Name)
 		}
 		if file.FileInfo().IsDir() {
 			continue
 		}
 		if _, duplicate := entries[name]; duplicate {
-			return nil, fmt.Errorf("Обнаружен дубликат: «macOS package zip entry» %s", name)
+			return nil, fmt.Errorf("Обнаружен дубликат: запись ZIP-архива macOS %s", name)
 		}
 		if file.UncompressedSize64 > 512*1024*1024 {
 			return nil, fmt.Errorf("Элемент ZIP-пакета macOS слишком велик: %s", name)
@@ -583,7 +583,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 		return fmt.Errorf("Не поддерживается: «macOS signing mode» %q", evidence.SigningMode)
 	}
 	if requireNotarized && !production {
-		return errors.New("Для «production publish» требуется «Developer ID + Apple notarization for macOS x64 and ARM64»")
+		return errors.New("Для публикации промышленного релиза требуется подпись Developer ID и нотариальное заверение Apple для macOS x64 и ARM64")
 	}
 	if production {
 		if !macOSTeamIDRE0154.MatchString(evidence.TeamID) {
@@ -602,7 +602,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 	}
 	delivery, err := readDeliveryManifest0151(dir)
 	if err != nil {
-		return fmt.Errorf("Для «macOS notarization evidence» требуется «delivery manifest:» %w", err)
+		return fmt.Errorf("macOS notarization evidence: требуется «delivery manifest:» %w", err)
 	}
 	deliveryByName := map[string]DeliveryArtifact{}
 	for _, artifact := range delivery.Artifacts {

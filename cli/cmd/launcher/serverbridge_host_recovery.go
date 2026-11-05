@@ -295,7 +295,7 @@ func newHostRollingWriter0282(path string, max int64, backups int) (*hostRolling
 	}
 
 	if max < 1024 || backups < 0 || backups > 32 {
-		return nil, errors.New("Некорректное значение: «rolling log limits»")
+		return nil, errors.New("Некорректное значение: ограничения размера журналов ротации")
 	}
 	writer := &hostRollingWriter0282{path: path, max: max, backups: backups}
 	err := writer.open()
@@ -303,7 +303,7 @@ func newHostRollingWriter0282(path string, max int64, backups int) (*hostRolling
 }
 func (w *hostRollingWriter0282) open() error {
 	if info, err := os.Lstat(w.path); err == nil && !info.Mode().IsRegular() {
-		return fmt.Errorf("refusing to write to non-regular log %s", w.path)
+		return fmt.Errorf("Запись в журнал %s запрещена: это не обычный файл", w.path)
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -344,7 +344,7 @@ func (w *hostRollingWriter0282) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.file == nil {
-		return 0, errors.New("log closed")
+		return 0, errors.New("Журнал закрыт")
 	}
 	written := 0
 	for len(p) > 0 {

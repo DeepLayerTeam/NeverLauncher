@@ -59,10 +59,10 @@ func windowsProtectionGARequired0190(ver string) bool {
 
 func windowsProtectionGAStableVersion0190(ver string) error {
 	if !windowsProtectionGARequired0190(ver) {
-		return fmt.Errorf("Для «Windows Protection GA» требуется «0.19.0+, got» %s", ver)
+		return fmt.Errorf("Для выпуск защиты Windows уровня GA требуется «0.19.0+, got» %s", ver)
 	}
 	if strings.ContainsAny(strings.TrimSpace(ver), "-+") {
-		return fmt.Errorf("Для «Windows Protection GA» требуется «stable immutable SemVer without prerelease/build suffix:» %q", ver)
+		return fmt.Errorf("Для выпуск защиты Windows уровня GA требуется «stable immutable SemVer without prerelease/build suffix:» %q", ver)
 	}
 	return nil
 }
@@ -158,7 +158,7 @@ func buildWindowsProtectionGADocument0190(dir, ver string) (windowsProtectionGAC
 		return windowsProtectionGACertificate0190{}, err
 	}
 	if rc.Status != windowsProtectionReleaseStatus01812 || rc.ProtectionProfile != "aggressive" || rc.ScenarioExecutions != 55 {
-		return windowsProtectionGACertificate0190{}, errors.New("Для «Windows Protection GA» требуется «a complete aggressive RC certificate»")
+		return windowsProtectionGACertificate0190{}, errors.New("Для выпуск защиты Windows уровня GA требуется «a complete aggressive RC certificate»")
 	}
 	if err := verifyWindowsUserModeOnlyPackages0190(dir, ver); err != nil {
 		return windowsProtectionGACertificate0190{}, err

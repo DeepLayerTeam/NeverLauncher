@@ -41,7 +41,7 @@ func (c dualIssuerConnector02912) AuthenticatePassword(_ context.Context, req au
 	case "valid-password-issuer-b":
 		issuer = "https://issuer-b.example.test"
 	default:
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid password")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Некорректный пароль")
 	}
 	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "same-subject", Issuer: issuer, Email: "shared@example.test"}, AuthMethods: []string{"password"}, ProviderToken: "upstream-secret-for-" + issuer}, nil
 }

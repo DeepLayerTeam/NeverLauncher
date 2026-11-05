@@ -119,7 +119,7 @@ def run(
 ) -> dict:
     check_args(source, target, source_ready, target_ready, env_file, snapshot)
     if network_ha and (not s3_source or not s3_target or s3_source == s3_target):
-        raise OperationsBlocked("Для «network-ha» требуется «distinct source/target S3 buckets»")
+        raise OperationsBlocked("network-ha: требуется «distinct source/target S3 buckets»")
     common = ["--env-file", str(env_file)] + (["--network-ha"] if network_ha else [])
     backup = [
         "backup",

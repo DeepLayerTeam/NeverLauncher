@@ -88,7 +88,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 	var record pgAudit0491
 	exe, err := exec.LookPath(opts.PSQL)
 	if err != nil {
-		return record, "", fmt.Errorf("Отсутствует: «psql executable»: %w", err)
+		return record, "", fmt.Errorf("Отсутствует: исполняемый файл psql: %w", err)
 	}
 	executableSHA, err := shaFile(exe, 256<<20)
 	if err != nil {
@@ -114,10 +114,10 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 		return record, "", fmt.Errorf("read-only PostgreSQL transaction failed (psql exit: %v)", err)
 	} // redact stderr: may include DSN
 	if stdout.Len() > 16<<10 {
-		return record, "", errors.New("Превышен допустимый размер: «PostgreSQL audit response»")
+		return record, "", errors.New("Превышен допустимый размер: ответ аудита PostgreSQL")
 	}
 	if err = json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &record); err != nil {
-		return record, "", errors.New("Некорректное значение: «PostgreSQL JSON readback»")
+		return record, "", errors.New("Некорректное значение: JSON, прочитанный из PostgreSQL")
 	}
 	if record.ReadOnly != "on" || record.Project != opts.Project || record.Migration == nil || record.Extension == nil {
 		return record, "", errors.New("PostgreSQL missing project/migration/extension or transaction not read-only")
@@ -194,7 +194,7 @@ func auditGet0491(ctx context.Context, client *http.Client, endpoint, token stri
 		return err
 	}
 	if len(raw) == 0 || string(raw) == "null" {
-		return errors.New("Пустое значение: «Backend projection»")
+		return errors.New("Пустое значение: представление данных на сервере")
 	}
 	return json.Unmarshal(raw, out)
 }
@@ -207,7 +207,7 @@ func auditProbe0491(ctx context.Context, client *http.Client, endpoint, token st
 	request.Header.Set("Authorization", "Bearer "+token)
 	response, err := client.Do(request)
 	if err != nil {
-		return result, fmt.Errorf("Ошибка: «Java probe request»: %w", err)
+		return result, fmt.Errorf("Ошибка: запрос проверочного запуска Java: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
@@ -227,7 +227,7 @@ func auditProbe0491(ctx context.Context, client *http.Client, endpoint, token st
 		return result, err
 	}
 	if len(envelope.Data) == 0 || string(envelope.Data) == "null" {
-		return result, errors.New("Отсутствует: «Java probe payload»")
+		return result, errors.New("Отсутствует: данные проверочного запуска Java")
 	}
 	if err = json.Unmarshal(envelope.Data, &result); err != nil {
 		return result, err

@@ -342,7 +342,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	var total uint64
 	for _, entry := range reader.File {
 		if err := validateArchivePath0203(entry.Name); err != nil {
-			return nil, fmt.Errorf("Небезопасное значение: «.nlext entry» %q: %w", entry.Name, err)
+			return nil, fmt.Errorf("Небезопасное значение: запись пакета .nlext %q: %w", entry.Name, err)
 		}
 		fold := strings.ToLower(entry.Name)
 		if previous, exists := caseFolded[fold]; exists {

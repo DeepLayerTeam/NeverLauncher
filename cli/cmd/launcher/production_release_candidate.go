@@ -79,7 +79,7 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 func normalizeSourceCommit01511(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if !sourceCommitRE01511.MatchString(value) {
-		return "", fmt.Errorf("Для «production release candidate» требуется «exact 40/64-hex source commit, got» %q", value)
+		return "", fmt.Errorf("Для промышленный релиз-кандидат требуется «exact 40/64-hex source commit, got» %q", value)
 	}
 	return value, nil
 }
@@ -169,7 +169,7 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	for _, file := range []string{compatibilityCertificationReleaseFile, deviceTrustCertificationReleaseFile, guardCICertificationReleaseFile} {
 		certCommit, err := readCertificationCommit01511(filepath.Join(dir, file))
 		if err != nil {
-			return fmt.Errorf("Для «production release candidate» требуется «%s with exact source commit:» %w", file, err)
+			return fmt.Errorf("Для промышленный релиз-кандидат требуется «%s with exact source commit:» %w", file, err)
 		}
 		if !strings.EqualFold(certCommit, commit) {
 			return fmt.Errorf("%s source commit mismatch: candidate=%s certification=%s", file, commit, certCommit)

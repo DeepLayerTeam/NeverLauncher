@@ -21,7 +21,7 @@ from review_integration_0310 import review, REVISION
 
 def verify(evidence: Path, revision: str, public_key: Path, signature: Path) -> dict:
     if not REVISION.fullmatch(revision):
-        raise ValueError("Для «revision» требуется: «a full lowercase Git SHA»")
+        raise ValueError("revision: требуется «a full lowercase Git SHA»")
     if (ROOT / "VERSION").read_text(encoding="utf8").strip() != "0.31.0":
         raise ValueError("GA approval only applies to VERSION 0.31.0")
     if not evidence.is_dir() or evidence.is_symlink():

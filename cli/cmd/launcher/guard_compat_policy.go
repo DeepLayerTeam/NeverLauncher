@@ -85,7 +85,7 @@ func guardCompatDecode0502[T any](data []byte, out *T) error {
 	}
 	var extra any
 	if err := d.Decode(&extra); err != io.EOF {
-		return errors.New("Guard compatibility JSON trailing content")
+		return errors.New("Лишние данные после JSON совместимости Guard")
 	}
 	return nil
 }
@@ -126,7 +126,7 @@ func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, 
 	if b, err = hex.DecodeString(text); err != nil || len(b) != ed25519.PublicKeySize {
 		b, err = base64.StdEncoding.DecodeString(text)
 		if err != nil {
-			return nil, "", errors.New("Для «Guard compatibility key» требуется: «32-byte hex or base64»")
+			return nil, "", errors.New("Ключ совместимости Guard: требуется «32-byte hex or base64»")
 		}
 	}
 	if len(b) != ed25519.PublicKeySize {
@@ -179,7 +179,7 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 	}
 	current := now.Unix()
 	if p.IssuedAt > current+300 || p.ExpiresAt <= current || p.IssuedAt <= 0 || p.ExpiresAt <= p.IssuedAt || p.ExpiresAt-p.IssuedAt > 90*86400 {
-		return errors.New("Guard compatibility policy expired, future-issued or exceeds validity")
+		return errors.New("Срок действия политики совместимости Guard истёк, ещё не наступил или превышает допустимое значение")
 	}
 	if len(p.Artifacts) > 4096 || len(p.Transformations) > 4096 || len(p.LoaderClassBytes) > 4096 || len(p.ExternalNativeModules) > 64 || len(p.RevokedDigests) > 4096 || len(p.RevokedTransforms) > 4096 {
 		return errors.New("Список совместимости Guard превышает допустимый размер")
@@ -197,7 +197,7 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 		}
 		key := a.Kind + ":" + strings.ToLower(a.Path)
 		if seen[key] {
-			return errors.New("Guard compatibility duplicate artifact")
+			return errors.New("Повторяющийся артефакт совместимости Guard")
 		}
 		seen[key] = true
 		if a.Kind == "java-plugin" {
@@ -206,34 +206,34 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 	}
 	for _, t := range p.Transformations {
 		if t.ID == "" || len(t.ID) > 256 || strings.ContainsAny(t.ID, "\x00\r\n") || !guardCompatHex0502(t.OwnerSHA256) || seen["transform:"+t.ID] {
-			return errors.New("Guard compatibility transformation invalid/duplicated")
+			return errors.New("Преобразование совместимости Guard некорректно или повторяется")
 		}
 		if !digests[t.OwnerSHA256] {
-			return errors.New("Guard compatibility transformation owner not authorized")
+			return errors.New("Владелец преобразования совместимости Guard не авторизован")
 		}
 		seen["transform:"+t.ID] = true
 	}
 	for _, cls := range p.LoaderClassBytes {
 		if !guardCompatClassName0504(cls.Class) || !guardCompatHex0502(cls.SHA256) || seen["loader-class:"+cls.Class] {
-			return errors.New("Guard loader class-byte binding invalid/duplicated")
+			return errors.New("Привязка байтов классов загрузчика Guard некорректна или повторяется")
 		}
 		seen["loader-class:"+cls.Class] = true
 	}
 	for _, external := range p.ExternalNativeModules {
 		if !guardCompatExternalNativePath05010(external.Path) || !guardCompatHex0502(external.SHA256) || seen["external:"+external.Path] {
-			return errors.New("Guard external native module path/digest invalid or duplicated")
+			return errors.New("Путь или хеш внешнего нативного модуля Guard некорректен либо повторяется")
 		}
 		seen["external:"+external.Path] = true
 	}
 	for _, s := range p.RevokedDigests {
 		if !guardCompatHex0502(s) || seen["revoked:"+s] {
-			return errors.New("Guard compatibility revoked digest invalid/duplicated")
+			return errors.New("Отозванный хеш совместимости Guard некорректен или повторяется")
 		}
 		seen["revoked:"+s] = true
 	}
 	for _, s := range p.RevokedTransforms {
 		if s == "" || len(s) > 256 || seen["revoked-transform:"+s] {
-			return errors.New("Guard compatibility revoked transformation invalid/duplicated")
+			return errors.New("Отозванное преобразование совместимости Guard некорректно или повторяется")
 		}
 		seen["revoked-transform:"+s] = true
 	}
@@ -287,7 +287,7 @@ func guardCompatExternalNativeHash05010(path string) (string, error) {
 }
 func guardCompatPath0502(root, rel string) (string, error) {
 	if !guardCompatRel0502(rel) {
-		return "", errors.New("Некорректное значение: «Guard compatibility relative path»")
+		return "", errors.New("Некорректное значение: относительный путь совместимости Guard")
 	}
 	return secureClientDestination(root, rel)
 }
@@ -301,7 +301,7 @@ func guardCompatRead0502(root, rel string, max int64) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > max {
-		return nil, fmt.Errorf("Guard compatibility unsafe file %s", rel)
+		return nil, fmt.Errorf("Небезопасный файл совместимости Guard: %s", rel)
 	}
 	return os.ReadFile(path)
 }
@@ -354,7 +354,7 @@ func guardCompatInstall0502(root, policyFile, keyFile string) error {
 		return err
 	}
 	if err = os.Mkdir(lock, 0700); err != nil {
-		return fmt.Errorf("Guard compatibility concurrent/stale policy install lock: %w", err)
+		return fmt.Errorf("Конфликт блокировки установки устаревшей или параллельной политики совместимости Guard: %w", err)
 	}
 	defer os.Remove(lock)
 	v, err := guardCompatVerifiedBytes0502(root, keyFile, raw, time.Now())
@@ -470,7 +470,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 	p := v.Policy
 	for _, name := range []string{"JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS"} {
 		if opts := strings.ToLower(os.Getenv(name)); strings.Contains(opts, "-javaagent:") || strings.Contains(opts, "-agentpath:") || strings.Contains(opts, "-agentlib:") || strings.Contains(opts, "-xrunjdwp:") {
-			return fmt.Errorf("Guard compatibility rejected injected JVM options from %s", name)
+			return fmt.Errorf("Политика совместимости Guard отклонила внедрённые параметры JVM из %s", name)
 		}
 	}
 	if p.ProjectID != project || p.Minecraft != minecraft || !strings.EqualFold(p.Loader, loader) {
@@ -487,20 +487,20 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 	}
 	for _, a := range p.Artifacts {
 		if revoked[a.SHA256] {
-			return fmt.Errorf("Guard compatibility artifact revoked: %s", a.Path)
+			return fmt.Errorf("Артефакт совместимости Guard отозван: %s", a.Path)
 		}
 		actual, err := guardCompatHashFile0502(root, a.Path)
 		if err != nil {
-			return fmt.Errorf("Guard compatibility missing %s: %w", a.Path, err)
+			return fmt.Errorf("Отсутствует файл совместимости Guard %s: %w", a.Path, err)
 		}
 		if actual != a.SHA256 {
-			return fmt.Errorf("Несовпадение: «Guard compatibility digest»: %s", a.Path)
+			return fmt.Errorf("Несовпадение: хеш совместимости Guard: %s", a.Path)
 		}
 		authorized[a.Kind+":"+strings.ToLower(a.Path)] = a
 	}
 	for _, ext := range p.ExternalNativeModules {
 		if revoked[ext.SHA256] {
-			return fmt.Errorf("Guard external native module revoked: %s", ext.Path)
+			return fmt.Errorf("Внешний нативный модуль Guard отозван: %s", ext.Path)
 		}
 		actual, err := guardCompatExternalNativeHash05010(ext.Path)
 		if err != nil {
@@ -512,7 +512,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 	}
 	for _, tr := range p.Transformations {
 		if revokedTransform[tr.ID] || revoked[tr.OwnerSHA256] {
-			return fmt.Errorf("Guard compatibility transformation revoked: %s", tr.ID)
+			return fmt.Errorf("Преобразование совместимости Guard отозвано: %s", tr.ID)
 		}
 	}
 	required := map[string]bool{}
@@ -548,7 +548,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 				return walkErr
 			}
 			if entry.Type()&os.ModeSymlink != 0 {
-				return fmt.Errorf("Запрещено: «Guard compatibility symlink»: %s", path)
+				return fmt.Errorf("Запрещено: символическая ссылка совместимости Guard: %s", path)
 			}
 			if entry.IsDir() {
 				return nil
@@ -571,7 +571,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 	}
 	for wanted := range required {
 		if _, ok := authorized[wanted]; !ok {
-			return fmt.Errorf("Guard compatibility unauthorized code %s", wanted)
+			return fmt.Errorf("Код %s не разрешён политикой совместимости Guard", wanted)
 		}
 	}
 	return nil

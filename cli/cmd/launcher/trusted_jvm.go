@@ -55,7 +55,7 @@ func trustedBytes0306(z *zip.File, capBytes int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(b)) > capBytes {
-		return nil, errors.New("Превышен допустимый размер: «trusted entry»")
+		return nil, errors.New("Превышен допустимый размер: доверенная запись")
 	}
 	return b, nil
 }
@@ -86,7 +86,7 @@ func trustedAnchor0306(root, key string) error {
 		return err
 	}
 	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-		return errors.New("Для «trusted JVM public key» требуется: «outside the Minecraft client root»")
+		return errors.New("Доверенный публичный ключ JVM должен находиться вне корневого каталога клиента Minecraft")
 	}
 	return nil
 }
@@ -136,7 +136,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		return record, nil, err
 	}
 	if result["signed"] != true {
-		return record, nil, errors.New("Для «trusted JVM» требуется «signed .nlext»")
+		return record, nil, errors.New("Для доверенной JVM необходим подписанный пакет .nlext")
 	}
 	analysis, err := analyzeExtensionPackage0202(archive)
 	if err != nil {
@@ -154,7 +154,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		}
 		rel := strings.TrimPrefix(name, prefix)
 		if rel != "agent.jar" && !(strings.HasPrefix(rel, "plugins/") && strings.HasSuffix(rel, ".jar") && len(strings.Split(rel, "/")) == 2) {
-			return record, nil, fmt.Errorf("Не поддерживается: «trusted payload»: %q", name)
+			return record, nil, fmt.Errorf("Не поддерживается: доверенные данные: %q", name)
 		}
 		if count++; count > 17 {
 			return record, nil, errors.New("Превышено число доверенных JAR")
@@ -286,7 +286,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 		return nil, "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 8192 {
-		return nil, "", errors.New("Некорректное значение: «trusted active record»")
+		return nil, "", errors.New("Некорректное значение: доверенная активная запись")
 	}
 	raw, err := os.ReadFile(active)
 	if err != nil {
@@ -302,7 +302,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 		return nil, "", errors.New("extra trusted record data")
 	}
 	if rec.Schema != trustedSchema0306 || rec.ApprovedAccess != "full-minecraft-jvm" || !isSHA256Hex0271(rec.PackageSHA256) {
-		return nil, "", errors.New("Некорректное значение: «trusted record»")
+		return nil, "", errors.New("Некорректное значение: доверенная запись")
 	}
 	if err := trustedAnchor0306(root, key); err != nil {
 		return nil, "", err
@@ -335,7 +335,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 			return nil, "", err
 		}
 		if trustedDigest0306(actual) != trustedDigest0306(b) {
-			return nil, "", fmt.Errorf("Обнаружено изменение: «trusted JAR»: %s", name)
+			return nil, "", fmt.Errorf("Обнаружено изменение: доверенный JAR: %s", name)
 		}
 	}
 	return &rec, release, nil
@@ -358,7 +358,7 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 		return nil, "", nil, err
 	}
 	if originalMain == "" || strings.ContainsAny(originalMain, "\r\n\x00") {
-		return nil, "", nil, errors.New("Некорректное значение: «Minecraft main class»")
+		return nil, "", nil, errors.New("Некорректное значение: главный класс Minecraft")
 	}
 	var config strings.Builder
 	fmt.Fprintf(&config, "main=%s\n", base64.StdEncoding.EncodeToString([]byte(originalMain)))
@@ -458,6 +458,6 @@ func handleTrustedJVM0306(args []string) error {
 		printJSON(map[string]any{"disabled": true})
 		return nil
 	default:
-		return fmt.Errorf("Неизвестное значение: «trusted JVM command» %q", args[0])
+		return fmt.Errorf("Неизвестное значение: команда доверенной JVM %q", args[0])
 	}
 }

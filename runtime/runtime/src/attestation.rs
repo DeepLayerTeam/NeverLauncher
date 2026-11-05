@@ -118,7 +118,7 @@ pub(crate) fn validate_attestation_shape(attestation: &GuardRemoteAttestation) -
         && attestation.schema != GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA)
         || attestation.attestation_version != GUARD_REMOTE_ATTESTATION_VERSION
     {
-        return Err("Несовпадение: «Guard remote attestation schema/version»".to_string());
+        return Err("Несовпадение: схема и версия удалённой аттестации Guard".to_string());
     }
     if attestation.challenge_id.is_empty() || attestation.challenge_id.len() > 160 {
         return Err("Guard remote attestation challengeId malformed".to_string());
@@ -138,7 +138,7 @@ pub(crate) fn validate_attestation_shape(attestation: &GuardRemoteAttestation) -
         return Err("Guard remote attestation process policy is not enforced".to_string());
     }
     if attestation.collected_at_unix != attestation.evidence.collected_at_unix {
-        return Err("Несовпадение: «Guard remote attestation collection timestamp»".to_string());
+        return Err("Несовпадение: время сбора удалённой аттестации Guard".to_string());
     }
     Ok(())
 }

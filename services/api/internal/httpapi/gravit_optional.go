@@ -20,7 +20,7 @@ type gravitOptionalPreviewRequest02411 struct {
 func (s Server) componentCatalogGravitPreview02411(w http.ResponseWriter, r *http.Request) {
 	lookup, err := editorLookup0248(s, r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package not found")
+		writeError(w, http.StatusNotFound, "Пакет не найден")
 		return
 	}
 	if lookup.Release.Status != "draft" || lookup.Release.Manifest.SchemaVersion != model.ManifestSchemaV3 {
@@ -37,7 +37,7 @@ func (s Server) componentCatalogGravitPreview02411(w http.ResponseWriter, r *htt
 	}
 	var trailing any
 	if err = d.Decode(&trailing); err != io.EOF {
-		writeError(w, http.StatusBadRequest, "unexpected trailing data")
+		writeError(w, http.StatusBadRequest, "Неожиданные данные в конце запроса")
 		return
 	}
 	existing := lookup.Release.Manifest.ComponentCatalog

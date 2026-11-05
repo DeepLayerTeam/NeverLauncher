@@ -119,7 +119,7 @@ impl ProcessSupervisor {
     ) -> Result<ProcessStatus, String> {
         verify_manifest_signature(manifest, pinned_public_key)?;
         if let Some(p) = preferences.as_ref() {
-            if !p.offline && credentials.is_none() { return Err("Для «online launch» требуется «a valid Minecraft session»".into()); }
+            if !p.offline && credentials.is_none() { return Err("online launch: требуется «a valid Minecraft session»".into()); }
         }
         tokio::fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
         let client_release_lease = crate::transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
@@ -141,7 +141,7 @@ impl ProcessSupervisor {
         }
         crate::managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
         if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
-            return Err("Для «Guard Trusted JVM» требуется «a classpath Minecraft main»".into());
+            return Err("Guard Trusted JVM: требуется «a classpath Minecraft main»".into());
         }
         let trusted = crate::guarded_trusted_launch_0503::prepare_verified(
             root, &manifest.project_id, &manifest.minecraft.version,
@@ -448,18 +448,18 @@ impl ProcessSupervisor {
             {
                 let pid = process.id().ok_or("runtime PID missing")?;
                 if crate::linux_policy::terminate_runtime_process_group(pid).is_err() {
-                    process.start_kill().map_err(|err| format!("Ошибка: «runtime termination»: {err}"))?;
+                    process.start_kill().map_err(|err| format!("Ошибка: завершение среды выполнения: {err}"))?;
                 }
             }
             #[cfg(target_os = "macos")]
             {
                 let pid = process.id().ok_or("runtime PID missing")?;
                 if crate::macos_policy::terminate_runtime_process_group(pid).is_err() {
-                    process.start_kill().map_err(|err| format!("Ошибка: «runtime termination»: {err}"))?;
+                    process.start_kill().map_err(|err| format!("Ошибка: завершение среды выполнения: {err}"))?;
                 }
             }
             #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
-            process.start_kill().map_err(|err| format!("Ошибка: «runtime termination»: {err}"))?;
+            process.start_kill().map_err(|err| format!("Ошибка: завершение среды выполнения: {err}"))?;
         }
         drop(process);
         self.status(id).await

@@ -25,7 +25,7 @@ func normalizeIntegrityResult0212(in model.IntegrityCheckResult) (model.Integrit
 		return model.IntegrityCheckResult{}, errors.New("integrity result identity/digests are incomplete")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.IntegrityCheckResult{}, errors.New("Для «integrity result» требуется: «passed or failed»")
+		return model.IntegrityCheckResult{}, errors.New("integrity result: требуется «passed or failed»")
 	}
 	if in.CheckedAt.IsZero() {
 		in.CheckedAt = time.Now().UTC()
@@ -48,10 +48,10 @@ func normalizeRuntimeValidation0212(in model.RuntimeValidationResult) (model.Run
 		return model.RuntimeValidationResult{}, errors.New("runtime validation identity/digests are incomplete")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.RuntimeValidationResult{}, errors.New("Для «runtime validation result» требуется: «passed or failed»")
+		return model.RuntimeValidationResult{}, errors.New("runtime validation result: требуется «passed or failed»")
 	}
 	if in.Result == "passed" && (!in.ActualClient || in.ExitCode != 0) {
-		return model.RuntimeValidationResult{}, errors.New("Для «runtime validation pass» требуется «actual client evidence with exit code 0»")
+		return model.RuntimeValidationResult{}, errors.New("runtime validation pass: требуется «actual client evidence with exit code 0»")
 	}
 	if in.FinishedAt.IsZero() || in.StartedAt.IsZero() || in.FinishedAt.Before(in.StartedAt) {
 		return model.RuntimeValidationResult{}, errors.New("Некорректное значение: «runtime validation timestamps are»")
@@ -250,13 +250,13 @@ func normalizeProjectValidationPolicy0212(in model.ProjectValidationPolicy) (mod
 	in.ProjectID = strings.TrimSpace(in.ProjectID)
 	in.RequiredLevel = strings.ToLower(strings.TrimSpace(in.RequiredLevel))
 	if in.ProjectID == "" {
-		return model.ProjectValidationPolicy{}, errors.New("Для «project validation policy» требуется «projectId»")
+		return model.ProjectValidationPolicy{}, errors.New("project validation policy: требуется «projectId»")
 	}
 	if in.RequiredLevel == "" {
 		in.RequiredLevel = "integrity"
 	}
 	if in.RequiredLevel != "integrity" && in.RequiredLevel != "runtime" {
-		return model.ProjectValidationPolicy{}, errors.New("Для «required validation level» требуется: «integrity or runtime»")
+		return model.ProjectValidationPolicy{}, errors.New("required validation level: требуется «integrity or runtime»")
 	}
 	if in.UpdatedAt.IsZero() {
 		in.UpdatedAt = time.Now().UTC()

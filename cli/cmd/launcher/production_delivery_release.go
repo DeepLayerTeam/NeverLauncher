@@ -56,7 +56,7 @@ func productionDeliveryReleaseRequired0160(ver string) bool {
 func stableProductionVersion0160(ver string) error {
 	ver = strings.TrimSpace(ver)
 	if !productionDeliveryReleaseRequired0160(ver) {
-		return fmt.Errorf("Для «production delivery release» требуется «version >=0.16.0, got» %q", ver)
+		return fmt.Errorf("Для промышленный выпуск пакета доставки требуется «version >=0.16.0, got» %q", ver)
 	}
 	if strings.ContainsAny(ver, "-+") {
 		return fmt.Errorf("production delivery release must use immutable GA SemVer without prerelease/build suffix: %q", ver)
@@ -203,7 +203,7 @@ func expectedProductionTargets0160() []DeliveryTarget {
 
 func validateProductionTargets0160(targets []DeliveryTarget) error {
 	if len(targets) != 6 {
-		return fmt.Errorf("Для «production delivery release» требуется «exactly six published targets, got» %d", len(targets))
+		return fmt.Errorf("Для промышленный выпуск пакета доставки требуется «exactly six published targets, got» %d", len(targets))
 	}
 	actual := append([]DeliveryTarget(nil), targets...)
 	sort.Slice(actual, func(i, j int) bool {

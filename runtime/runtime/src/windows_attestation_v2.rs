@@ -241,7 +241,7 @@ pub fn collect_windows_continuous_evidence_v2(
     status: &ProcessStatus,
 ) -> Result<WindowsContinuousEvidenceV2, String> {
     if status.id != process_id || status.state != "running" {
-        return Err("Для «Guard Attestation v2» требуется «the requested running runtime process»".to_string());
+        return Err("Guard Attestation v2: требуется «the requested running runtime process»".to_string());
     }
     let runtime_pid = status.pid.ok_or_else(|| "Guard Attestation v2 runtime PID unavailable".to_string())?;
     let sensor: &WindowsSensorReport = status.windows_sensor.as_ref().ok_or_else(|| {

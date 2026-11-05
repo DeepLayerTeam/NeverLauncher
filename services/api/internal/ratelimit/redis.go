@@ -93,12 +93,12 @@ func (r *RedisLimiter) Allow(ctx context.Context, key string, limit int, window 
 	}
 	items, ok := value.([]any)
 	if !ok || len(items) != 2 {
-		return Result{}, fmt.Errorf("Неожиданное значение: «Redis rate-limit response»: %v", value)
+		return Result{}, fmt.Errorf("Неожиданное значение: ответ Redis для ограничения частоты запросов: %v", value)
 	}
 	count, ok1 := items[0].(int64)
 	ttl, ok2 := items[1].(int64)
 	if !ok1 || !ok2 {
-		return Result{}, fmt.Errorf("Некорректное значение: «Redis rate-limit response»: %v", value)
+		return Result{}, fmt.Errorf("Некорректное значение: ответ Redis для ограничения частоты запросов: %v", value)
 	}
 	remaining := limit - int(count)
 	if remaining < 0 {
@@ -129,7 +129,7 @@ func (r *RedisLimiter) command(ctx context.Context, args ...string) (any, error)
 		}
 		auth = append(auth, r.password)
 		if err := writeRESP(conn, auth...); err != nil {
-			return nil, fmt.Errorf("Ошибка: «Redis AUTH write»: %w", err)
+			return nil, fmt.Errorf("Ошибка: отправка команды Redis AUTH: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
 			return nil, fmt.Errorf("Ошибка: Redis AUTH: %w", err)
@@ -144,7 +144,7 @@ func (r *RedisLimiter) command(ctx context.Context, args ...string) (any, error)
 		}
 	}
 	if err := writeRESP(conn, args...); err != nil {
-		return nil, fmt.Errorf("Ошибка: «Redis command write»: %w", err)
+		return nil, fmt.Errorf("Ошибка: отправка команды Redis: %w", err)
 	}
 	value, err := readRESP(reader)
 	if err != nil {
@@ -202,7 +202,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 			return nil, err
 		}
 		if string(buf[n:]) != "\r\n" {
-			return nil, errors.New("Некорректный формат: «Redis bulk string»")
+			return nil, errors.New("Некорректный формат: строка Redis в пакетном формате")
 		}
 		return string(buf[:n]), nil
 	case '*':

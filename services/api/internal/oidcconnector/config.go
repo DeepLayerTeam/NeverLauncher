@@ -327,11 +327,11 @@ func (c RuntimeConfig) RedirectAllowed(v string) bool {
 func (c RuntimeConfig) AlgAllowed(v string) bool { _, ok := c.allowedIDTokenAlgSet[v]; return ok }
 func validateProviderID(v string) error {
 	if v == "" {
-		return errors.New("Требуется: «OIDC connector id»")
+		return errors.New("Требуется: идентификатор коннектора OIDC")
 	}
 	for _, r := range v {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return fmt.Errorf("Некорректное значение: «OIDC connector id» %q", v)
+			return fmt.Errorf("Некорректное значение: идентификатор коннектора OIDC %q", v)
 		}
 	}
 	return nil

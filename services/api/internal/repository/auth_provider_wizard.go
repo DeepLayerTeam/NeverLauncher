@@ -192,7 +192,7 @@ func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 	switch v.Kind {
 	case "sql", "http", "oidc", "microsoft", "java":
 	default:
-		return errors.New("Некорректное значение: «provider kind»")
+		return errors.New("Некорректное значение: тип провайдера")
 	}
 	if len(v.Config) == 0 || len(v.Config) > 32768 || !json.Valid(v.Config) {
 		return errors.New("invalid configuration")

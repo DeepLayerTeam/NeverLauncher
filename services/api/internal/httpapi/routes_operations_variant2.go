@@ -122,7 +122,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		// Предпросмотр не должен проверять один канал, пока устойчивая задача
 		// публикует в другой канал, записанный в пакете.
 		if (req.ProfileID != "" && lookup.Release.ProfileID != req.ProfileID) || (req.Channel != "" && lookup.Release.Channel != req.Channel) {
-			return spec, nil, nil, fmt.Errorf("package profile/channel differs from requested channel: %w", repository.ErrConflict)
+			return spec, nil, nil, fmt.Errorf("Профиль или канал пакета не совпадает с запрошенным каналом: %w", repository.ErrConflict)
 		}
 		if lookup.Release.Status == "published" {
 			return spec, nil, nil, repository.ErrImmutable
@@ -282,7 +282,7 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 		key = strings.TrimSpace(req.IdempotencyKey)
 	}
 	if len(key) > 240 {
-		return model.DurableJob{}, false, errors.New("Idempotency-Key too long")
+		return model.DurableJob{}, false, errors.New("Заголовок Idempotency-Key слишком длинный")
 	}
 	if key != "" {
 		if journal, ok := s.Repo.(repository.OperationJournal); ok {
@@ -329,7 +329,7 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 	}
 
 	if len(operationKey0217(r, req, claims.Sub, raw)) > 240 {
-		return model.DurableJob{}, false, errors.New("Idempotency-Key too long")
+		return model.DurableJob{}, false, errors.New("Заголовок Idempotency-Key слишком длинный")
 	}
 	resourceID := req.ResourceID
 	if spec.Kind == durableRollbackKind0217 {
@@ -391,7 +391,7 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 	}
 	job, err := cp.GetDurableJob(r.Context(), r.PathValue("operationId"))
 	if err != nil {
-		writeError(w, 404, "operation not found")
+		writeError(w, 404, "Операция не найдена")
 		return model.DurableJob{}, false
 	}
 	claims, err := s.adminClaims(r)
@@ -400,12 +400,12 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 		return model.DurableJob{}, false
 	}
 	if !s.authorizeClaims(r, claims, "project:read", job.ProjectID, job.ResourceType, job.ResourceID).Allowed && claims.Sub != job.ActorID {
-		writeError(w, 404, "operation not found")
+		writeError(w, 404, "Операция не найдена")
 		return model.DurableJob{}, false
 	}
 	// Доступ владельца по-прежнему ограничен текущими правами исходного проекта.
 	if !s.authorizeClaims(r, claims, job.Action, job.ProjectID, job.ResourceType, job.ResourceID).Allowed && claims.Sub == job.ActorID && !s.authorizeClaims(r, claims, "project:read", job.ProjectID, "project", job.ProjectID).Allowed {
-		writeError(w, 404, "operation not found")
+		writeError(w, 404, "Операция не найдена")
 		return model.DurableJob{}, false
 	}
 	w.Header().Set("X-Correlation-ID", job.ID)
@@ -436,15 +436,15 @@ func (s Server) operationRecover0388(w http.ResponseWriter, r *http.Request) {
 	job, err := journal.FindOperationByKey(r.Context(), kind, claims.Sub, key)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "operation not found")
+			writeError(w, http.StatusNotFound, "Операция не найдена")
 			return
 		}
-		writeError(w, http.StatusServiceUnavailable, "operation journal unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Журнал операций недоступен")
 		return
 	}
 	if job.ProjectID != projectID || job.Kind != kind || job.ActorID != claims.Sub ||
 		!s.authorizeClaims(r, claims, "project:read", projectID, "project", projectID).Allowed {
-		writeError(w, http.StatusNotFound, "operation not found")
+		writeError(w, http.StatusNotFound, "Операция не найдена")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
@@ -481,7 +481,7 @@ func (s Server) operationAttempts0217(w http.ResponseWriter, r *http.Request) {
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
 	if !ok {
-		writeError(w, 503, "operation journal unavailable")
+		writeError(w, 503, "Журнал операций недоступен")
 		return
 	}
 	attempts, err := journal.ListOperationAttempts(r.Context(), job.ID)
@@ -516,7 +516,7 @@ func (s Server) operationCancel0217(w http.ResponseWriter, r *http.Request) {
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
 	if !ok {
-		writeError(w, 503, "operation journal unavailable")
+		writeError(w, 503, "Журнал операций недоступен")
 		return
 	}
 	claims, _ := s.adminClaims(r)
@@ -538,7 +538,7 @@ func (s Server) operationRetry0217(w http.ResponseWriter, r *http.Request) {
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
 	if !ok {
-		writeError(w, 503, "operation journal unavailable")
+		writeError(w, 503, "Журнал операций недоступен")
 		return
 	}
 	claims, _ := s.adminClaims(r)

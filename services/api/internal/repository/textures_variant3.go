@@ -25,7 +25,7 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
 		return nil, errors.New("Некорректное значение: «texture driver»")
 	}
 	if limit < 1 || limit > 100 {
-		return nil, errors.New("Для «texture GC batch» требуется: «between 1 and 100»")
+		return nil, errors.New("Пакет удаления неиспользуемых текстур: требуется «between 1 and 100»")
 	}
 	rows, err := r.db.QueryContext(ctx, `WITH candidates AS (
    SELECT b.digest FROM texture_blobs b WHERE b.storage_driver=$1

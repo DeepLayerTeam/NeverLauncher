@@ -139,7 +139,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	// FixedTPM, FixedParent, SensitiveDataOrigin, Sign; RSA и экзотические варианты ECC намеренно
 	// исключены.
 	if typ != tpmECC || hash != tpmSHA256 || attrs&(1<<1|1<<4|1<<5|1<<18) != (1<<1|1<<4|1<<5|1<<18) {
-		return nil, nil, errors.New("Для ключ TPM требуется: «a fixed TPM-origin signing ECC P-256 key»")
+		return nil, nil, errors.New("Ключ TPM: требуется «a fixed TPM-origin signing ECC P-256 key»")
 	}
 	policy, e := p.tpm2b(64)
 	if e != nil {
@@ -165,7 +165,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 			return nil, nil, errors.New("TPM ECC scheme must use ECDSA SHA-256")
 		}
 	} else if scheme != tpmNull {
-		return nil, nil, errors.New("Не поддерживается: «TPM ECC signing scheme»")
+		return nil, nil, errors.New("Не поддерживается: схема подписи ECC в TPM")
 	}
 	curve, e := p.u16()
 	if e != nil {

@@ -860,7 +860,7 @@ func (b *serverBridgeStore) createJoin(user model.User, canonical model.Minecraf
 		bindingEpoch = 1
 	}
 	if server.IdentityEpoch < 1 || len(server.KeyFingerprint) != 64 {
-		return bridgeJoinRecord{}, fmt.Errorf("server bridge node cryptographic identity is not enrolled")
+		return bridgeJoinRecord{}, fmt.Errorf("Криптографическая идентичность узла ServerBridge не зарегистрирована")
 	}
 	ticketID, err := newServerBridgeJoinTicketID0143()
 	if err != nil {
@@ -888,7 +888,7 @@ func (b *serverBridgeStore) createJoin(user model.User, canonical model.Minecraf
 	current := b.servers[req.ServerID]
 	if current.ID == "" || current.Status != "active" || current.IdentityEpoch != server.IdentityEpoch ||
 		!strings.EqualFold(current.KeyFingerprint, server.KeyFingerprint) {
-		return bridgeJoinRecord{}, fmt.Errorf("server bridge node identity changed while issuing join ticket")
+		return bridgeJoinRecord{}, fmt.Errorf("Идентичность узла ServerBridge изменилась во время выдачи пропуска для входа")
 	}
 	b.joins[b.joinKey(username, req.ServerID)] = join
 	b.textures[uuid] = b.textureForLocked(uuid, username)

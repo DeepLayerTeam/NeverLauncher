@@ -24,7 +24,7 @@ func (r *MemoryRepository) UpdateDraftComponentCatalog0248(projectID, versionID 
 			return model.ReleaseVersion{}, ErrImmutable
 		}
 		if release.Manifest.ComponentCatalog == nil || release.Manifest.ComponentCatalog.Revision != expected || cat.Revision != expected+1 {
-			return model.ReleaseVersion{}, errors.New("Обнаружено изменение: «catalog revision»")
+			return model.ReleaseVersion{}, errors.New("Обнаружено изменение: ревизия каталога")
 		}
 		candidate := cloneManifest0222(release.Manifest)
 		candidate.ComponentCatalog = &cat
@@ -64,7 +64,7 @@ func (r *SQLRepository) UpdateDraftComponentCatalog0248(projectID, versionID str
 		return model.ReleaseVersion{}, ErrImmutable
 	}
 	if found.Manifest.ComponentCatalog == nil || found.Manifest.ComponentCatalog.Revision != expected || cat.Revision != expected+1 {
-		return model.ReleaseVersion{}, errors.New("Обнаружено изменение: «catalog revision»")
+		return model.ReleaseVersion{}, errors.New("Обнаружено изменение: ревизия каталога")
 	}
 	next := found.Manifest
 	next.ComponentCatalog = &cat

@@ -358,7 +358,7 @@ func (s Server) extensionRegistryYank0203(w http.ResponseWriter, r *http.Request
 	}
 	item, err := s.Repo.YankExtensionRegistryVersion(r.Context(), r.PathValue("extensionId"), r.PathValue("version"), request.Reason)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry version not found")
+		writeError(w, http.StatusNotFound, "Версия в реестре не найдена")
 		return
 	}
 	if errors.Is(err, repository.ErrImmutable) {
@@ -381,7 +381,7 @@ func (s Server) extensionRegistryChannelSet0203(w http.ResponseWriter, r *http.R
 	}
 	item, err := s.Repo.SetExtensionRegistryChannel(r.Context(), r.PathValue("extensionId"), r.PathValue("channel"), request.Version)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry version not found")
+		writeError(w, http.StatusNotFound, "Версия в реестре не найдена")
 		return
 	}
 	if errors.Is(err, repository.ErrConflict) {
@@ -399,7 +399,7 @@ func (s Server) extensionRegistryChannelSet0203(w http.ResponseWriter, r *http.R
 func (s Server) extensionRegistryArtifact0203(w http.ResponseWriter, r *http.Request) {
 	item, err := s.Repo.GetExtensionRegistryVersion(r.Context(), r.PathValue("extensionId"), r.PathValue("version"))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry version not found")
+		writeError(w, http.StatusNotFound, "Версия в реестре не найдена")
 		return
 	}
 	if err != nil {
@@ -483,7 +483,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Request) {
 	item, err := s.Repo.GetExtensionRegistryVersion(r.Context(), r.PathValue("extensionId"), r.PathValue("version"))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "registry version not found")
+		writeError(w, http.StatusNotFound, "Версия в реестре не найдена")
 		return
 	}
 	if err != nil {

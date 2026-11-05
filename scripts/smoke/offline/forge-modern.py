@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 3):
-    raise SystemExit(f"Для «Forge Modern» требуется «VERSION>=0.17.3, got» {version}")
+    raise SystemExit(f"Forge Modern: требуется «VERSION>=0.17.3, got» {version}")
 
 
 def read(rel: str) -> str:

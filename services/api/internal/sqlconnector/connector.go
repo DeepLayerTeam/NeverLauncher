@@ -123,7 +123,7 @@ func (c *Connector) Health(ctx context.Context) error {
 func (c *Connector) AuthenticatePassword(ctx context.Context, request authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	identifier := strings.TrimSpace(request.Identifier)
 	if identifier == "" || request.Secret == "" || len(identifier) > 512 || len(request.Secret) > 4096 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	args := make([]any, c.identifierArgs)
 	for i := range args {
@@ -148,7 +148,7 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, request authconnec
 		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "SQL password hash cannot be verified", err)
 	}
 	if !valid {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	mapped, err := c.mapIdentity(identity)
 	if err != nil {
@@ -246,7 +246,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 	}
 	if len(found) == 0 {
 		// Намеренно используйте ту же публичную ошибку, что и при неверном пароле, чтобы избежать определения существования учётных записей.
-		return rowIdentity{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return rowIdentity{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	if strings.TrimSpace(found[0].subject) == "" || strings.TrimSpace(found[0].passwordHash) == "" {
 		return rowIdentity{}, authconnector.NewError(authconnector.ErrMisconfigured, "SQL identity has empty subject or password hash")

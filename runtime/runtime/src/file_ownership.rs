@@ -100,8 +100,8 @@ pub fn validate_policy(m: &Manifest) -> Result<(), String> {
     for f in &m.files {
         if !valid_path(&f.path, false) || !seen.insert(f.path.to_ascii_lowercase()) { return Err(format!("duplicate/unsafe file path: {}", f.path)) }
         let ownership = effective_ownership(f);
-        if !valid_ownership(ownership) { return Err(format!("Неизвестное значение: «ownership»: {ownership}")) }
-        if matches!(ownership, "user-owned" | "generated") && f.required { return Err(format!("«user-owned/generated file»: запрещено «be required: {}»", f.path)) }
+        if !valid_ownership(ownership) { return Err(format!("Неизвестное значение: принадлежность файла: {ownership}")) }
+        if matches!(ownership, "user-owned" | "generated") && f.required { return Err(format!("Пользовательский или созданный файл не может быть обязательным: {}", f.path)) }
         if !f.ownership.is_empty() && ((ownership == "required" && !f.required) || (ownership == "optional" && f.required)) { return Err(format!("conflicting required/ownership: {}",f.path)) }
         if protected(&f.path) && !matches!(ownership, "user-owned" | "generated") { return Err(format!("user data is protected: {}", f.path)) }
     }

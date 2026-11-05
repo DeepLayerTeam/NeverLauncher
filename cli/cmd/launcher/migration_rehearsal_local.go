@@ -19,7 +19,7 @@ func handleMigrationRehearsalLocal04910(args []string) error {
 	inventory := flagValue(args, "--inventory-sha256", "")
 	output := flagValue(args, "--output", "")
 	if output == "" || output == "-" {
-		return errors.New("Для «rehearse-local» требуется «a new private --output file (no stdout evidence)»")
+		return errors.New("rehearse-local: требуется «a new private --output file (no stdout evidence)»")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()

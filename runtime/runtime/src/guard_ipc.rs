@@ -530,7 +530,7 @@ impl GuardSupervisor {
             return Err("Guard attestation challengeId malformed".to_string());
         }
         if challenge.is_empty() || challenge.len() > 4096 {
-            return Err("Guard attestation challenge malformed".to_string());
+            return Err("Некорректный проверочный запрос аттестации Guard".to_string());
         }
         let request = GuardAttestationRequest {
             challenge_id: challenge_id.to_string(),
@@ -628,7 +628,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         )
     })?;
     if manifest_link_metadata.file_type().is_symlink() || !manifest_link_metadata.is_file() {
-        return Err("Для манифест пакета Windows требуется: обычный файл без символических ссылок".to_string());
+        return Err("Манифест пакета Windows должен быть обычным файлом без символических ссылок".to_string());
     }
     let metadata = std::fs::metadata(&manifest_path).map_err(|err| {
         format!(
@@ -851,7 +851,7 @@ async fn client_authenticate(
         lifetime_job_enforced: false,
         package_manifest_verified: false,
         started_at_unix: challenge.started_at_unix,
-        message: "Guard Windows process boundary authenticated; process policy and production hardening enforced".to_string(),
+        message: "Граница процесса Guard в Windows подтверждена; политика процессов и промышленная защита активны".to_string(),
     };
     Ok((pipe, session_key, status))
 }
@@ -922,7 +922,7 @@ async fn send_command_inner(
     handle.next_sequence = handle
         .next_sequence
         .checked_add(1)
-        .ok_or_else(|| "Guard IPC sequence exhausted".to_string())?;
+        .ok_or_else(|| "Исчерпана последовательность IPC Guard".to_string())?;
     let payload: Value = serde_json::from_str(&response.payload)
         .map_err(|err| format!("Guard IPC response payload повреждён: {err}"))?;
     if response.ok {
@@ -1429,7 +1429,7 @@ async fn serve_authenticated_session(
     loop {
         let request: RequestEnvelope = match read_frame(server).await {
             Ok(value) => value,
-            Err(err) if err == "Guard IPC peer closed connection" => return Ok(()),
+            Err(err) if err == "Другая сторона IPC Guard закрыла соединение" => return Ok(()),
             Err(err) => return Err(err),
         };
         if request.protocol_version != GUARD_PROTOCOL_VERSION {
@@ -1491,7 +1491,7 @@ async fn serve_authenticated_session(
                     lifetime_job_enforced: false,
                     package_manifest_verified: false,
                     started_at_unix,
-                    message: "Guard Windows process boundary authenticated; process policy and production hardening enforced".to_string(),
+                    message: "Граница процесса Guard в Windows подтверждена; политика процессов и промышленная защита активны".to_string(),
                 })
                 .map_err(|err| format!("Ошибка: сериализация состояния Guard: {err}"))?,
                 false,
@@ -1587,7 +1587,7 @@ async fn serve_authenticated_session(
         }
         expected_sequence = expected_sequence
             .checked_add(1)
-            .ok_or_else(|| "Guard IPC sequence exhausted".to_string())?;
+            .ok_or_else(|| "Исчерпана последовательность IPC Guard".to_string())?;
     }
 }
 
@@ -1617,7 +1617,7 @@ where
     let mut bytes = serde_json::to_vec(value)
         .map_err(|err| format!("Ошибка: «Guard IPC serialization»: {err}"))?;
     if bytes.len() > MAX_FRAME_BYTES {
-        return Err("Guard IPC frame exceeds limit".to_string());
+        return Err("Кадр IPC Guard превышает допустимый размер".to_string());
     }
     bytes.push(b'\n');
     writer
@@ -1644,13 +1644,13 @@ where
             .await
             .map_err(|err| format!("Ошибка: «Guard IPC read»: {err}"))?;
         if read == 0 {
-            return Err("Guard IPC peer closed connection".to_string());
+            return Err("Другая сторона IPC Guard закрыла соединение".to_string());
         }
         if one[0] == b'\n' {
             break;
         }
         if bytes.len() >= MAX_FRAME_BYTES {
-            return Err("Guard IPC frame exceeds limit".to_string());
+            return Err("Кадр IPC Guard превышает допустимый размер".to_string());
         }
         bytes.push(one[0]);
     }
@@ -1837,7 +1837,7 @@ fn now_unix() -> Result<u64, String> {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs())
-        .map_err(|err| format!("system clock error: {err}"))
+        .map_err(|err| format!("Ошибка системных часов: {err}"))
 }
 
 pub fn guard_executable_name() -> &'static str {

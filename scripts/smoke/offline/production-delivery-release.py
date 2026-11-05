@@ -24,7 +24,7 @@ if triple(VERSION) < (0, 16, 0):
         f"Production Delivery Release gate requires VERSION>=0.16.0, got {VERSION}"
     )
 if "-" in VERSION or "+" in VERSION:
-    raise SystemExit(f"Для «Production Delivery Release» требуется «GA SemVer, got» {VERSION}")
+    raise SystemExit(f"Production Delivery Release: требуется «GA SemVer, got» {VERSION}")
 
 impl = (ROOT / "cli/cmd/launcher/production_delivery_release_0160.go").read_text(
     encoding="utf-8"

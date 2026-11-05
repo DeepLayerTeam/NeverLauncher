@@ -30,7 +30,7 @@ func worldBackupPersistCohortHold0518(root, holdID, backupID string) error {
 		return fmt.Errorf("unverifiable cohort gate owner: %w", err)
 	}
 	if owner.Purpose != "backup" || owner.PID != os.Getpid() || owner.ProcessIdentity != hostOwnIdentity0282() {
-		return errors.New("Для «cohort hold» требуется: «installed by current world-backup gate owner»")
+		return errors.New("Блокировка группы перехода должна принадлежать текущему владельцу блокировки резервного копирования миров")
 	}
 	path := filepath.Join(gate, worldCohortHoldFile0518)
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
@@ -60,7 +60,7 @@ func worldBackupPersistCohortHold0518(root, holdID, backupID string) error {
 
 func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	if !worldCohortID0518.MatchString(holdID) {
-		return errors.New("Для релиз требуется «a 32-character hexadecimal --hold-id»")
+		return errors.New("Для релиза необходим --hold-id из 32 шестнадцатеричных символов")
 	}
 	gate := worldBackupHostGatePath04110(root)
 	info, err := os.Lstat(gate)
@@ -68,7 +68,7 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
-		return errors.New("Небезопасное значение: «cohort gate directory»")
+		return errors.New("Небезопасное значение: каталог контрольной блокировки группы")
 	}
 	var owner worldHostGate04110
 	if err = worldBackupReadJSON02810(filepath.Join(gate, "owner.json"), &owner); err != nil {
@@ -95,7 +95,7 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	if !holdInfo.Mode().IsRegular() || !os.SameFile(holdInfo, linkInfo) ||
 		holdInfo.Mode().Perm()&0077 != 0 || holdInfo.Size() != 66 {
 		fd.Close()
-		return errors.New("Небезопасное значение: «cohort hold token»")
+		return errors.New("Небезопасное значение: токен блокировки группы")
 	}
 	buf := make([]byte, 66)
 	n, err := io.ReadFull(fd, buf)

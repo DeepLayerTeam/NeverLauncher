@@ -64,28 +64,28 @@ fn safe_file(root:&Path,relative_name:&str,max:u64)->Result<Vec<u8>,String>{
  let mut path=root.to_path_buf();
  for part in relative_name.split('/') {
   path.push(part);
-  let meta=fs::symlink_metadata(&path).map_err(|e|format!("Guard compatibility missing {}: {e}",path.display()))?;
-  if meta.file_type().is_symlink(){return Err("Guard compatibility symlink refused".into())}
+  let meta=fs::symlink_metadata(&path).map_err(|e|format!("Отсутствует файл совместимости Guard {}: {e}",path.display()))?;
+  if meta.file_type().is_symlink(){return Err("Символическая ссылка в совместимости Guard отклонена".into())}
  }
  let meta=fs::symlink_metadata(&path).map_err(|e|e.to_string())?;
- if !meta.is_file() || meta.len()>max {return Err("Некорректное значение: «Guard compatibility file type/size»".into())}
+ if !meta.is_file() || meta.len()>max {return Err("Некорректное значение: тип и размер файла совместимости Guard".into())}
  fs::read(&path).map_err(|e|e.to_string())
 }
 fn external_key(root:&Path)->Result<([u8;32],String),String>{
  let key_path=std::env::var(PUBLIC_KEY).map_err(|_|format!("external {PUBLIC_KEY} required"))?;
  let path=Path::new(&key_path);
  let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
- if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>1024 {return Err("Guard compatibility unsafe public key file".into())}
+ if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>1024 {return Err("Небезопасный файл публичного ключа совместимости Guard".into())}
  let root=fs::canonicalize(root).map_err(|e|e.to_string())?;
  let canonical=fs::canonicalize(path).map_err(|e|e.to_string())?;
- if canonical.starts_with(&root){return Err("Guard compatibility key inside client tree".into())}
+ if canonical.starts_with(&root){return Err("Ключ совместимости Guard расположен внутри каталога клиента".into())}
  let source=fs::read_to_string(path).map_err(|e|e.to_string())?;
  let text=source.trim();
  let raw=hex::decode(text).ok().filter(|b|b.len()==32)
   .or_else(||STANDARD.decode(text).ok().filter(|b|b.len()==32))
   .ok_or("Guard compatibility Ed25519 public key must be 32-byte hex/base64")?;
  let digest=sha(&raw);
- Ok((raw.try_into().map_err(|_|"Guard compatibility key size".to_string())?,digest))
+ Ok((raw.try_into().map_err(|_|"Недопустимый размер ключа совместимости Guard".to_string())?,digest))
 }
 fn now()->Result<i64,String>{SystemTime::now().duration_since(UNIX_EPOCH).map(|x|x.as_secs() as i64).map_err(|e|e.to_string())}
 fn load(root:&Path)->Result<Option<Verified>,String>{
@@ -102,48 +102,48 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
  };
  let (root_key,root_digest)=external_key(root)?;
  let env:Envelope=serde_json::from_slice(&installed).map_err(|e|e.to_string())?;
- if env.schema_version!=SCHEMA{return Err("Неизвестное значение: «Guard compatibility envelope»".into())}
+ if env.schema_version!=SCHEMA{return Err("Неизвестное значение: контейнер политики совместимости Guard".into())}
  let payload=STANDARD.decode(&env.payload).map_err(|e|e.to_string())?;
- if payload.is_empty() || payload.len()>192*1024{return Err("Guard compatibility invalid payload size".into())}
+ if payload.is_empty() || payload.len()>192*1024{return Err("Некорректный размер данных совместимости Guard".into())}
  let signature_bytes=hex::decode(&env.signature).map_err(|e|e.to_string())?;
- let sig:[u8;64]=signature_bytes.try_into().map_err(|_|"Guard compatibility invalid signature length".to_string())?;
+ let sig:[u8;64]=signature_bytes.try_into().map_err(|_|"Некорректная длина подписи совместимости Guard".to_string())?;
  let key=VerifyingKey::from_bytes(&root_key).map_err(|e|e.to_string())?;
  let mut signed=DOMAIN.to_vec();signed.extend_from_slice(&payload);
- key.verify(&signed,&Signature::from_bytes(&sig)).map_err(|_|"Некорректное значение: «Guard compatibility signature»".to_string())?;
+ key.verify(&signed,&Signature::from_bytes(&sig)).map_err(|_|"Некорректное значение: подпись политики совместимости Guard".to_string())?;
  let p:Policy=serde_json::from_slice(&payload).map_err(|e|e.to_string())?;
  let current=now()?;
  if p.schema_version!=SCHEMA || p.epoch==0 || p.project_id.is_empty() || p.minecraft.is_empty() || p.loader.is_empty() ||
   p.issued_at<=0 || p.issued_at>current+300 || p.expires_at<=current || p.expires_at<=p.issued_at || p.expires_at-p.issued_at>90*86400 ||
   p.artifacts.len()>4096 || p.transformations.len()>4096 || p.loader_class_bytes.len()>4096 || p.external_native_modules.len()>64 || p.revoked_digests.len()>4096 || p.revoked_transformations.len()>4096 {
-  return Err("Некорректное значение: «Guard compatibility scope, validity or list limits»".into())
+  return Err("Некорректное значение: область действия, срок действия или ограничение списка политики совместимости Guard".into())
  }
  let mut paths=HashSet::new();let mut plugin_digests=HashSet::new();
  for a in &p.artifacts {
   if !["mod","java-agent","java-plugin","native-library","loader-library"].contains(&a.kind.as_str()) || !relative(&a.path) || !is_sha(&a.sha256) ||
-   !paths.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){return Err("Guard compatibility artifact invalid/duplicate".into())}
+   !paths.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){return Err("Некорректный или повторяющийся артефакт совместимости Guard".into())}
   if a.kind=="java-plugin"{plugin_digests.insert(&a.sha256);}
  }
  let mut external_paths=HashSet::new();
  for m in &p.external_native_modules {
   if !is_sha(&m.sha256) || !valid_external_native_path(&m.path) ||
      !external_paths.insert(m.path.clone()) || p.revoked_digests.contains(&m.sha256) {
-   return Err("Guard external overlay path/hash invalid, duplicated or revoked".into())
+   return Err("Путь или хеш внешнего слоя Guard некорректен, повторяется или отозван".into())
   }
  }
  let mut ids=HashSet::new();
  for t in &p.transformations {
   if t.id.is_empty() || t.id.len()>256 || !is_sha(&t.owner_sha256) || !plugin_digests.contains(&t.owner_sha256) || !ids.insert(&t.id){
-   return Err("Guard compatibility transformation invalid/duplicate".into())
+   return Err("Некорректное или повторяющееся преобразование совместимости Guard".into())
   }
  }
  let mut class_names=HashSet::new();
  for c in &p.loader_class_bytes {
   if !class_binary_name(&c.name) || !is_sha(&c.sha256) || !class_names.insert(&c.name) {
-   return Err("Guard loader class-byte binding invalid/duplicate".into())
+   return Err("Некорректная или повторяющаяся привязка байт классов загрузчика Guard".into())
   }
  }
  if p.revoked_digests.iter().any(|d|!is_sha(d)) || p.revoked_transformations.iter().any(|t|t.is_empty()) {
-  return Err("Guard compatibility invalid revocation".into())
+  return Err("Некорректная запись об отзыве совместимости Guard".into())
  }
  let floor_path=root.join(FLOOR);
  if !floor_path.exists(){return Err("Отсутствует: состояние принятой эпохи совместимости Guard".into())}
@@ -151,7 +151,7 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
   let bytes=safe_file(root,FLOOR,4096)?;
   let floor:Floor=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
   if floor.root_sha256!=root_digest || floor.epoch>p.epoch || (floor.epoch==p.epoch && floor.digest!=sha(&payload)) {
-   return Err("Guard compatibility root change, rollback or equivocation".into())
+   return Err("Обнаружена смена корня доверия, откат или противоречие политики совместимости Guard".into())
   }
  }
  Ok(Some(Verified{policy:p,digest:sha(&payload)}))
@@ -194,7 +194,7 @@ impl GamePolicy0503 {
    .ok_or_else(||format!("Guard compatibility {kind} not signed for this game: {relative_path}"))?;
   if self.policy.revoked_digests.contains(&artifact.sha256){return Err("Guard compatibility trusted code revoked".into())}
   validate_safe_path(root,&artifact.path,512*1024*1024)?;
-  if actual_sha(&root.join(&artifact.path))?!=artifact.sha256{return Err("Обнаружено изменение: «Guard compatibility trusted code digest»".into())}
+  if actual_sha(&root.join(&artifact.path))?!=artifact.sha256{return Err("Обнаружено изменение: хеш доверенного кода совместимости Guard".into())}
   Ok(())
  }
  /// Классы загрузчика Runtime должны происходить из независимо подписанных JAR-библиотек
@@ -211,12 +211,12 @@ impl GamePolicy0503 {
   for a in self.policy.artifacts.iter().filter(|a|a.kind=="loader-library") {
    if self.policy.revoked_digests.contains(&a.sha256) {return Err("Guard loader library revoked".into())}
    validate_safe_path(root,&a.path,512*1024*1024)?;
-   if actual_sha(&root.join(&a.path))?!=a.sha256 {return Err("Обнаружено изменение: «Guard loader library»".into())}
-   if !a.path.to_ascii_lowercase().ends_with(".jar") {return Err("Для «Guard loader library» требуется: «a JAR»".into())}
+   if actual_sha(&root.join(&a.path))?!=a.sha256 {return Err("Обнаружено изменение: библиотека загрузчика Guard".into())}
+   if !a.path.to_ascii_lowercase().ends_with(".jar") {return Err("Библиотека загрузчика Guard должна иметь формат JAR".into())}
    result.push((fs::canonicalize(root.join(&a.path)).map_err(|e|e.to_string())?,a.sha256.clone()));
   }
-  if kind!="vanilla" && result.is_empty(){return Err("Для «Guard modded Trusted JVM» требуется «signed loader-library JARs»".into())}
-  if kind=="vanilla" && !result.is_empty(){return Err("«Guard vanilla profile»: запрещено «authorize loader libraries»".into())}
+  if kind!="vanilla" && result.is_empty(){return Err("Для доверенной JVM Guard с модами требуются подписанные JAR-библиотеки загрузчика".into())}
+  if kind=="vanilla" && !result.is_empty(){return Err("Для профиля Vanilla Guard запрещено разрешать библиотеки загрузчика".into())}
   if result.len()>128 {return Err("Guard too many loader libraries".into())}
   Ok(result)
  }
@@ -234,7 +234,7 @@ impl GamePolicy0503 {
 pub fn verified_for_game(root:&Path,project:&str,minecraft:&str,loader:&str)->Result<Option<GamePolicy0503>,String>{
  let Some(v)=load(root)? else{return Ok(None)};
  if v.policy.project_id!=project || v.policy.minecraft!=minecraft || !v.policy.loader.eq_ignore_ascii_case(loader) {
-  return Err("Несовпадение: «Guard compatibility trusted game scope»".into())
+  return Err("Несовпадение: доверенная область игры в политике совместимости Guard".into())
  }
  Ok(Some(GamePolicy0503{policy:v.policy,digest:v.digest}))
 }
@@ -266,7 +266,7 @@ fn validate_safe_path(root:&Path,rel:&str,max:u64)->Result<(),String>{
  for component in rel.split('/') {
   path.push(component);
   let meta=fs::symlink_metadata(&path).map_err(|e|e.to_string())?;
-  if meta.file_type().is_symlink(){return Err("Guard compatibility symlink refused".into())}
+  if meta.file_type().is_symlink(){return Err("Символическая ссылка в совместимости Guard отклонена".into())}
  }
  let st=fs::symlink_metadata(&path).map_err(|e|e.to_string())?;
  if !st.is_file() || st.len()>max{return Err("Guard compatibility unsafe artifact".into())}
@@ -274,7 +274,7 @@ fn validate_safe_path(root:&Path,rel:&str,max:u64)->Result<(),String>{
 }
 fn actual_sha(path:&Path)->Result<String,String>{
  let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
- if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>512*1024*1024 {return Err("Некорректное значение: «Guard compatibility artifact»".into())}
+ if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>512*1024*1024 {return Err("Некорректное значение: артефакт совместимости Guard".into())}
  let mut f=fs::File::open(path).map_err(|e|e.to_string())?;
  let mut digest=Sha256::new();
  let mut buf=[0u8;65536];
@@ -312,7 +312,7 @@ fn require_candidates(root:&Path,dir:&Path,kind:&str,extensions:&[&str],approved
 /// требуется подписанная политика. Для привязки у сертификации нет манифеста проекта.
 pub fn refuse_unscoped_launch(root:&Path)->Result<(),String>{
  if root.join(POLICY).exists() || root.join(FLOOR).exists() || std::env::var(REQUIRED).ok().as_deref()==Some("1") {
-  return Err("совместимость Guard: запрещено «authorize unscoped native game certification»".into())
+  return Err("совместимость Guard: запрещено разрешать нативную сертификацию игры без привязки к области".into())
  }
  Ok(())
 }
@@ -330,7 +330,7 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
    }
   }
  }
- if p.project_id!=project || p.minecraft!=minecraft || !p.loader.eq_ignore_ascii_case(loader){return Err("Несовпадение: «Guard compatibility launch scope»".into())}
+ if p.project_id!=project || p.minecraft!=minecraft || !p.loader.eq_ignore_ascii_case(loader){return Err("Несовпадение: область запуска в политике совместимости Guard".into())}
  let mut approved=HashMap::new();
  for a in &p.artifacts {
   if p.revoked_digests.contains(&a.sha256){return Err(format!("Guard compatibility artifact revoked: {}",a.path))}

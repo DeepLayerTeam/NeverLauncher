@@ -468,7 +468,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
-			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "package validation failed", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
+			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "Проверка пакета завершилась ошибкой", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 			return
 		}
 	}
@@ -538,7 +538,7 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
-			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "package validation failed", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
+			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "Проверка пакета завершилась ошибкой", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 			return
 		}
 	}
@@ -577,7 +577,7 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
-			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "package validation failed", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
+			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "Проверка пакета завершилась ошибкой", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 			return
 		}
 	}

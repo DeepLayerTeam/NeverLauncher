@@ -80,11 +80,11 @@ def real_clean_install(
     if not re.fullmatch("[0-9a-f]{64}", public_key):
         raise ValueError("Требуется: «pinned public key»")
     if not re.fullmatch("[a-zA-Z0-9_]{3,16}", username):
-        raise ValueError("Для «offline Minecraft username» требуется: «3-16 safe characters»")
+        raise ValueError("Для имя игрока Minecraft в автономном режиме требуется: «3-16 safe characters»")
     if not re.fullmatch("[a-f0-9]{40}", benchmark_commit):
         raise ValueError("Для точный коммит исходников требуется: «supplied»")
     if root.exists() and any(root.iterdir()):
-        raise RuntimeError("Для «GA clean-machine test» требуется «an EMPTY installation root»")
+        raise RuntimeError("GA clean-machine test: требуется «an EMPTY installation root»")
     if os.environ.get("JAVA_HOME"):
         raise RuntimeError("Для JAVA_HOME требуется: «unset for clean machine bootstrap test»")
     if not signed_manifest.is_file() or signed_manifest.is_symlink():

@@ -66,7 +66,7 @@ fn safe_source(source: &Path) -> Result<PathBuf, String> {
     // Выбранный вручную корневой каталог должен существовать. Не создавайте его незаметно и не проходите по симлинку.
     let meta = fs::symlink_metadata(source).map_err(|e| format!("legacy directory: {e}"))?;
     if !meta.is_dir() || meta.file_type().is_symlink() {
-        return Err("Для «legacy root» требуется: «an existing real directory»".into());
+        return Err("legacy root: требуется «an existing real directory»".into());
     }
     let root = fs::canonicalize(source).map_err(|e| e.to_string())?;
     if !root.is_absolute() { return Err("legacy root is not absolute".into()); }

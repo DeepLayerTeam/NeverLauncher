@@ -40,7 +40,7 @@ func strictObject0472(raw []byte) (map[string]json.RawMessage, error) {
 		return nil, err
 	}
 	if tok != json.Delim('{') {
-		return nil, errors.New("expected JSON object")
+		return nil, errors.New("Ожидается объект JSON")
 	}
 	out := map[string]json.RawMessage{}
 	for dec.More() {

@@ -33,7 +33,7 @@ fn read(root: &Path) -> Result<Option<Watermark>, String> {
                 let raw=fs::read(&path).map_err(|e|e.to_string())?;
                 let candidate=serde_json::from_slice::<Watermark>(&raw)
                     .map_err(|_|"game generation slot is corrupted".to_string())?;
-                if !valid(&candidate) {return Err("Некорректное значение: «game generation slot»".into());}
+                if !valid(&candidate) {return Err("Некорректное значение: слот поколения игры".into());}
                 if let Some(ref previous)=best {
                     if previous.generation==candidate.generation && previous.manifest_digest!=candidate.manifest_digest {
                         return Err("conflicting game generation records".into());

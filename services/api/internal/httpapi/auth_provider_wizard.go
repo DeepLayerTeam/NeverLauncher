@@ -111,7 +111,7 @@ func (s Server) wizardDraft02910(w http.ResponseWriter, r *http.Request) {
 	v.Actor = claims.Sub
 	saved, err := store.SaveManagedProviderDraft02910(r.Context(), v)
 	if err != nil {
-		writeError(w, 503, "provider draft could not be saved")
+		writeError(w, 503, "Не удалось сохранить черновик провайдера")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "auth-provider:draft", Target: v.ID + ":" + strconv.FormatInt(saved.Revision, 10), CreatedAt: time.Now().UTC()})
@@ -121,7 +121,7 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 	id := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	var req managedActivationRequest02910
 	if err := decodeWizardBody02910(w, r, &req); err != nil || req.Revision < 0 || req.ExpectedActiveRevision < 0 || len(strings.TrimSpace(req.Reason)) < 3 || len(req.Reason) > 500 || strings.ContainsAny(req.Reason, "\r\n\x00") {
-		writeError(w, 400, "invalid revision or reason")
+		writeError(w, 400, "Некорректная ревизия или причина")
 		return
 	}
 	store, ok := wizardStore02910(s)
@@ -147,11 +147,11 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if head == nil {
-		writeError(w, 404, "unknown provider")
+		writeError(w, 404, "Неизвестный провайдер")
 		return
 	}
 	if head.ActiveRevision != req.ExpectedActiveRevision {
-		writeError(w, 409, "active revision changed; reload before applying")
+		writeError(w, 409, "Активная ревизия изменилась; обновите данные перед применением")
 		return
 	}
 	// Кандидат проверяется НА ЖИВОМ провайдере до переключения устойчивого указателя. Это
@@ -165,35 +165,35 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if candidate == nil {
-			writeError(w, 404, "unknown revision")
+			writeError(w, 404, "Неизвестная ревизия")
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 		probe, probeErr := createManagedProvider02910(ctx, *candidate, s.ExtensionHost)
 		cancel()
 		if probeErr != nil {
-			writeError(w, 422, "provider connection or SDK conformance failed; active settings unchanged")
+			writeError(w, 422, "Подключение провайдера или проверка совместимости SDK завершились ошибкой; активные настройки не изменены")
 			return
 		}
 		// Не разрешайте провайдеру из БД переопределять источник, настроенный через env.
 		if _, exists := s.Federation.Connector(id); exists && s.Federation.ManagedRevision(id) == 0 {
 			_ = closeManaged02910(probe.Connector)
-			writeError(w, 409, "provider is managed by bootstrap configuration")
+			writeError(w, 409, "Провайдер управляется начальной конфигурацией")
 			return
 		}
 		_ = closeManaged02910(probe.Connector)
 	}
 	changed, err := store.ActivateManagedProvider02910(r.Context(), id, req.Revision, req.ExpectedActiveRevision, claims.Sub, strings.TrimSpace(req.Reason))
 	if errors.Is(err, repository.ErrManagedProviderConflict02910) {
-		writeError(w, 409, "active revision changed; reload before applying")
+		writeError(w, 409, "Активная ревизия изменилась; обновите данные перед применением")
 		return
 	}
 	if errors.Is(err, repository.ErrManagedProviderMissing02910) {
-		writeError(w, 404, "unknown provider or revision")
+		writeError(w, 404, "Неизвестный провайдер или ревизия")
 		return
 	}
 	if err != nil {
-		writeError(w, 503, "activation transaction failed")
+		writeError(w, 503, "Транзакция активации завершилась ошибкой")
 		return
 	}
 	// Загружайте сейчас, а не только при следующем запросе авторизации. Если
@@ -202,7 +202,7 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 	syncErr := s.syncManagedProviders02910(r.Context())
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "auth-provider:activate", Target: id + ":" + strconv.FormatInt(req.Revision, 10), CreatedAt: time.Now().UTC()})
 	if syncErr != nil {
-		writeError(w, 503, "active revision committed but runtime could not synchronize; rollback through Admin")
+		writeError(w, 503, "Активная ревизия сохранена, но среду выполнения не удалось синхронизировать; выполните откат через Admin")
 		return
 	}
 	writeJSON(w, 200, changed)
@@ -215,7 +215,7 @@ func (s Server) wizardStatus02910(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 	defer cancel()
 	if err := s.syncManagedProviders02910(ctx); err != nil {
-		writeError(w, 503, "managed auth providers cannot be synchronized")
+		writeError(w, 503, "Не удалось синхронизировать управляемые провайдеры аутентификации")
 		return
 	}
 	type health struct {

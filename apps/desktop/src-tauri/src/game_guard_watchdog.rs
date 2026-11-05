@@ -32,28 +32,28 @@ fn validate_guard_identity_0438(
         || status.pid == 0 || status.parent_pid != std::process::id()
         || status.started_at_unix == 0 || status.started_at_unix > now.saturating_add(5)
     {
-        return Err("Guard not authenticated, hardened, or bound to launcher".into());
+        return Err("Guard не аутентифицирован, не защищён или не привязан к лаунчеру".into());
     }
     if !policy.enforced || policy.pid != status.pid || policy.policy_version != status.process_policy_version {
-        return Err("Guard live process policy changed or was disabled".into());
+        return Err("Политика работающего процесса Guard изменилась или была отключена".into());
     }
     #[cfg(windows)]
     if status.process_policy_version != runtime::GUARD_WINDOWS_PROCESS_POLICY_VERSION
         || status.hardening_version != runtime::GUARD_WINDOWS_HARDENING_VERSION
         || policy.windows.is_none() {
-        return Err("Некорректное значение: «Windows Guard process protection policy»".into());
+        return Err("Некорректное значение: политика защиты процесса Guard в Windows".into());
     }
     #[cfg(target_os = "linux")]
     if status.process_policy_version != runtime::GUARD_LINUX_PROCESS_POLICY_VERSION
         || status.hardening_version != runtime::GUARD_LINUX_HARDENING_VERSION
         || policy.linux.is_none() {
-        return Err("Некорректное значение: «Linux Guard process protection policy»".into());
+        return Err("Некорректное значение: политика защиты процесса Guard в Linux".into());
     }
     #[cfg(target_os = "macos")]
     if status.process_policy_version != runtime::GUARD_MACOS_PROCESS_POLICY_VERSION
         || status.hardening_version != runtime::GUARD_MACOS_HARDENING_VERSION
         || policy.macos.is_none() {
-        return Err("Некорректное значение: «macOS Guard process protection policy»".into());
+        return Err("Некорректное значение: политика защиты процесса Guard в macOS".into());
     }
     if !evidence.boundary.parent_matches
         || evidence.boundary.expected_parent_pid != status.parent_pid
@@ -62,7 +62,7 @@ fn validate_guard_identity_0438(
         || evidence.launcher.pid != std::process::id()
         || !evidence_fresh_0438(now, evidence.collected_at_unix)
     {
-        return Err("Guard evidence not fresh or not bound to running launcher".into());
+        return Err("Данные Guard устарели или не привязаны к работающему лаунчеру".into());
     }
     let identity = GuardIdentity0438 {
         pid: status.pid,
@@ -71,7 +71,7 @@ fn validate_guard_identity_0438(
         launcher_image_sha256: evidence.launcher.image_sha256.clone(),
     };
     if previous.is_some_and(|baseline| baseline != &identity) {
-        return Err("Guard process restarted or signed process image changed during gameplay".into());
+        return Err("Процесс Guard перезапустился либо его подписанный образ изменился во время игры".into());
     }
     Ok(identity)
 }
@@ -82,7 +82,7 @@ fn evidence_fresh_0438(now: u64, observed: u64) -> bool {
 
 fn now_secs() -> Result<u64, String> {
     SystemTime::now().duration_since(UNIX_EPOCH)
-        .map(|v| v.as_secs()).map_err(|_| "System clock before Unix epoch".into())
+        .map(|v| v.as_secs()).map_err(|_| "Системное время раньше начала эпохи Unix".into())
 }
 
 async fn collect_guard_identity_0438(
@@ -99,35 +99,35 @@ async fn collect_guard_identity_0438(
     let identity = validate_guard_identity_0438(&status, &policy, &evidence, previous, now_secs()?)?;
     let after = guard.status().await?;
     if after.pid != identity.pid || after.started_at_unix != identity.started_at_unix {
-        return Err("Guard changed identity while probing live game".into());
+        return Err("Идентичность Guard изменилась при проверке работающей игры".into());
     }
     Ok(identity)
 }
 
 pub(crate) async fn baseline_guard_0438(guard: &GuardSupervisor) -> Result<GuardIdentity0438, String> {
     timeout(PROBE_DEADLINE, collect_guard_identity_0438(guard, None))
-        .await.map_err(|_| "Guard pre-launch live probe timeout".to_string())?
+        .await.map_err(|_| "Превышено время проверки Guard перед запуском".to_string())?
 }
 
 #[cfg(windows)]
 fn check_windows_game_sensor_0438(status: &ProcessStatus) -> Result<(), String> {
-    let sensor = status.windows_sensor.as_ref().ok_or("Game sensor report missing")?;
+    let sensor = status.windows_sensor.as_ref().ok_or("Отсутствует отчёт игрового датчика")?;
     if !sensor.authenticated || !sensor.loaded_before_main || Some(sensor.pid) != status.pid {
-        return Err("Game sensor lost authentication or process binding".into());
+        return Err("Игровой датчик утратил аутентификацию или привязку к процессу".into());
     }
     let module = &sensor.module_guard;
     if !module.active || !module.healthy || module.violation_count != 0 || module.dropped_event_count != 0 {
-        return Err("Game module guard reported an integrity violation".into());
+        return Err("Защита игровых модулей обнаружила нарушение целостности".into());
     }
     let now_ms = now_secs()?.saturating_mul(1000);
     if module.heartbeat_count == 0 || module.last_heartbeat_unix_ms == 0
         || module.last_heartbeat_unix_ms > now_ms.saturating_add(2_000)
         || now_ms.saturating_sub(module.last_heartbeat_unix_ms) > 10_000
     {
-        return Err("Game module guard heartbeat is absent or stale".into());
+        return Err("Сигнал активности защиты игровых модулей отсутствует или устарел".into());
     }
     if module.continuous_guard.active && !module.continuous_guard.healthy {
-        return Err("Continuous Guard game sensor is unhealthy".into());
+        return Err("Датчик непрерывной защиты Guard работает некорректно".into());
     }
     Ok(())
 }
@@ -148,7 +148,7 @@ async fn probe_live_game_0438(
         return Ok(());
     }
     if after.pid != before.pid || after.started_at != before.started_at {
-        return Err("Обнаружено изменение: «Game process identity»".into());
+        return Err("Обнаружено изменение: идентичность игрового процесса".into());
     }
     #[cfg(windows)]
     check_windows_game_sensor_0438(&after)?;
@@ -178,7 +178,7 @@ pub(crate) fn start_game_watchdog_0438(
             let failure = match result {
                 Ok(Ok(())) => continue,
                 Ok(Err(error)) => error,
-                Err(_) => "Guard runtime verification timed out".into(),
+                Err(_) => "Превышено время проверки среды выполнения Guard".into(),
             };
             // Никаких повторов или льготного периода с разрешением по умолчанию: устаревшие или
             // недоступные доказательства Guard не позволяют продолжать активную игровую сессию.

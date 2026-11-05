@@ -101,7 +101,7 @@ func cleanUUID02512(id string) (string, error) {
 func origin02512(raw string, allowLoopback bool) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || u.Opaque != "" {
-		return nil, errors.New("Для источник URL требуется: «an HTTP(S) origin without path, credentials or query»")
+		return nil, errors.New("URL источника должен содержать только схему HTTP(S) и хост, без пути, учётных данных и параметров запроса")
 	}
 	if u.Scheme == "https" {
 		return u, nil
@@ -126,14 +126,14 @@ func fetch02512(ctx context.Context, c *http.Client, raw string) ([]byte, error)
 		return nil, fmt.Errorf("GET %s HTTP %d", req.URL.Path, resp.StatusCode)
 	}
 	if resp.ContentLength > maxResponse02512 {
-		return nil, errors.New("Превышен допустимый размер: «profile or texture response»")
+		return nil, errors.New("Превышен допустимый размер: ответ профиля или текстуры")
 	}
 	content, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse02512+1))
 	if err != nil {
 		return nil, err
 	}
 	if len(content) > maxResponse02512 {
-		return nil, errors.New("Превышен допустимый размер: «profile or texture response»")
+		return nil, errors.New("Превышен допустимый размер: ответ профиля или текстуры")
 	}
 	return content, nil
 }
@@ -222,7 +222,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 	}
 	key, ok := pub.(*rsa.PublicKey)
 	if !ok || key.N.BitLen() < 2048 {
-		return report, errors.New("Для «authlib-injector signing key» требуется: «RSA >= 2048 bits»")
+		return report, errors.New("authlib-injector signing key: требуется «RSA >= 2048 bits»")
 	}
 	raw, err := fetch02512(ctx, client, origin.String()+"/sessionserver/session/minecraft/profile/"+uid+"?unsigned=false")
 	if err != nil {
@@ -270,7 +270,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 			continue
 		}
 		if kind == "SKIN" && entry.Metadata.Model != "" && entry.Metadata.Model != "slim" {
-			return report, errors.New("Для «Minecraft skin model» требуется: «default or slim»")
+			return report, errors.New("Minecraft skin model: требуется «default or slim»")
 		}
 		model := "classic"
 		if entry.Metadata.Model == "slim" {

@@ -325,7 +325,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 		return model.ServerBridgeRuntimeTransition{}, err
 	}
 	if protocolVersion != 3 {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("Для «runtime identity» требуется «ServerBridge protocol v3»")
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("runtime identity: требуется «ServerBridge protocol v3»")
 	}
 	id = strings.TrimSpace(id)
 	kind = strings.ToLower(strings.TrimSpace(kind))
@@ -487,7 +487,7 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 		return err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(currentRuntimeID, telemetry.RuntimeID) {
-		return fmt.Errorf("%w: telemetry runtime is not active", ErrConflict)
+		return fmt.Errorf("%w: среда выполнения телеметрии неактивна", ErrConflict)
 	}
 	telemetry.RuntimeEpoch = runtimeEpoch
 	payload, err = json.Marshal(telemetry)
@@ -1029,7 +1029,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	// Передачи управления устаревшего v2 не подтверждают текущую пропускную способность маршрутизации. После
 	// установки ограничения оператором разрешены только передачи v3, привязанные к Runtime.
 	if targetOperatorCapacity.Valid && !routingV3 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Для «%w: operator capacity» требуется «runtime-bound routing»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: operator capacity: требуется «runtime-bound routing»", ErrConflict)
 	}
 	if routingV3 {
 		if len(targetRuntimeID) != 64 || targetRuntimeEpoch < 1 || targetRouteRevision < 1 || len(targetRouteDigest) != 64 || targetRouteSignature == "" ||
@@ -1110,10 +1110,10 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	// продолжают передачу по схеме до 0.19.7, не создавая фиктивную идентичность процесса.
 	lifecycleTransfer := sourceJoin.ProtocolVersion >= 3 && targetProtocolVersion >= 3 && routingV3 && len(h.SourceRuntimeID) == 64 && h.SourceRuntimeEpoch > 0 && len(h.TargetRuntimeID) == 64 && h.TargetRuntimeEpoch > 0
 	if sourceJoin.ProtocolVersion >= 3 && !lifecycleTransfer {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Для «%w: v3 handoff» требуется «runtime-bound player session»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: v3 handoff: требуется «runtime-bound player session»", ErrConflict)
 	}
 	if expectedCorrelation != "" && !lifecycleTransfer {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Для «%w: player session transfer» требуется «v3 runtime-bound source and target»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: player session transfer: требуется «v3 runtime-bound source and target»", ErrConflict)
 	}
 	if lifecycleTransfer {
 		h.SessionCorrelationID = strings.ToLower(strings.TrimSpace(sourceJoin.SessionCorrelationID))

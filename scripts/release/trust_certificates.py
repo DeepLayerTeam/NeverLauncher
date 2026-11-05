@@ -67,7 +67,7 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
             raise CertificateError("Обнаружен дубликат: «key ID or no private key destination»")
         private_key_output = Path(private_key_output)
         if private_key_output.exists() or private_key_output.is_symlink() or private_key_output == output:
-            raise CertificateError("Для «private seed destination» требуется: «new»")
+            raise CertificateError("private seed destination: требуется «new»")
         private = Ed25519PrivateKey.generate()
         pub = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
         existing['keys'].append({'id': key_id, 'role': 'component', 'status': 'active', 'publicKey': pub,

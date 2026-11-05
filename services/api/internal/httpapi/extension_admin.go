@@ -178,7 +178,7 @@ func (s Server) adminExtensionCatalog0208(w http.ResponseWriter, r *http.Request
 func safeAdminEntrypoint0208(root, entry string) (string, error) {
 	entry = filepath.Clean(filepath.FromSlash(strings.TrimSpace(entry)))
 	if entry == "." || filepath.IsAbs(entry) || entry == ".." || strings.HasPrefix(entry, ".."+string(filepath.Separator)) {
-		return "", errors.New("Некорректное значение: «admin entrypoint»")
+		return "", errors.New("Некорректное значение: точка входа Admin")
 	}
 	rootAbs, err := filepath.Abs(root)
 	if err != nil {
@@ -196,7 +196,7 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 		return "", err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return "", errors.New("Для «admin entrypoint» требуется: обычный файл без символических ссылок")
+		return "", errors.New("Для точка входа Admin требуется: обычный файл без символических ссылок")
 	}
 	if info.Size() > maxAdminEntrypointBytes0208 {
 		return "", errors.New("admin entrypoint exceeds 2 MiB")
@@ -302,7 +302,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			return fmt.Errorf("Недоступно: политика: %w", e)
 		}
 		if !ok {
-			return fmt.Errorf("Доступ запрещён: «extension capability» %s", permission)
+			return fmt.Errorf("Доступ запрещён: разрешённая возможность расширения %s", permission)
 		}
 		return nil
 	}
@@ -315,7 +315,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		// сеанс только для чтения не должен превращать возможности расширения в
 		// пользовательские привилегии.
 		if !s.authorizeClaims(r, claims, "extension:manage", "", "extension", install.ExtensionID).Allowed {
-			respond(nil, errors.New("Доступ запрещён: «user extension:manage»"))
+			respond(nil, errors.New("Доступ запрещён: разрешение пользователя extension:manage"))
 			return
 		}
 		result, callErr := s.invokeJavaUI0489(r, install, method, req.Params, claims.Sub, claims.Email)
@@ -351,11 +351,11 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !adminExtensionProjectAllowed0208(install, p.ProjectID) {
-			respond(nil, errors.New("Доступ запрещён: «extension project scope»"))
+			respond(nil, errors.New("Доступ запрещён: область проекта для расширения"))
 			return
 		}
 		if !s.adminUserCanProject0208(claims, p.ProjectID) {
-			respond(nil, errors.New("Доступ запрещён: «user project access»"))
+			respond(nil, errors.New("Доступ запрещён: доступ пользователя к проекту"))
 			return
 		}
 		if err := allow("release:read", p.ProjectID); err != nil {
@@ -408,11 +408,11 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !adminExtensionProjectAllowed0208(install, p.ProjectID) {
-			respond(nil, errors.New("Доступ запрещён: «extension project scope»"))
+			respond(nil, errors.New("Доступ запрещён: область проекта для расширения"))
 			return
 		}
 		if !s.adminUserCanProject0208(claims, p.ProjectID) {
-			respond(nil, errors.New("Доступ запрещён: «user project access»"))
+			respond(nil, errors.New("Доступ запрещён: доступ пользователя к проекту"))
 			return
 		}
 		if err := allow("telemetry:write", p.ProjectID); err != nil {

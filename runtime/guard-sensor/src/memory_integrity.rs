@@ -232,19 +232,19 @@ pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
     let snapshot = snapshot_for_regions(&state, &regions);
     *MEMORY_STATE
         .lock()
-        .map_err(|_| "Guard Memory Integrity state lock poisoned".to_string())? = Some(state);
+        .map_err(|_| "Повреждена блокировка состояния контроля памяти Guard".to_string())? = Some(state);
     Ok(snapshot)
 }
 
 pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
     let mut guard = MEMORY_STATE
         .lock()
-        .map_err(|_| "Guard Memory Integrity state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния контроля памяти Guard".to_string())?;
     let state = guard
         .as_mut()
         .ok_or_else(|| "Guard Memory Integrity is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("Guard Memory Integrity is not active/healthy".to_string());
+        return Err("Контроль целостности памяти Guard не активен или работает некорректно".to_string());
     }
 
     drain_transitions(state)?;
@@ -333,12 +333,12 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
 pub fn drain_pending_transitions() -> Result<(), String> {
     let mut guard = MEMORY_STATE
         .lock()
-        .map_err(|_| "Guard Memory Integrity state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния контроля памяти Guard".to_string())?;
     let state = guard
         .as_mut()
         .ok_or_else(|| "Guard Memory Integrity is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("Guard Memory Integrity is not active/healthy".to_string());
+        return Err("Контроль целостности памяти Guard не активен или работает некорректно".to_string());
     }
     drain_transitions(state)
 }
@@ -404,7 +404,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
         let base = info.base_address as usize;
         let size = info.region_size;
         if size == 0 {
-            return Err("Guard Memory Integrity VirtualQuery returned zero region size".to_string());
+            return Err("VirtualQuery вернул нулевой размер области при проверке памяти Guard".to_string());
         }
         if info.state == MEM_COMMIT
             && is_executable(info.protect)
@@ -422,7 +422,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
             .checked_add(size)
             .ok_or_else(|| "Guard Memory Integrity address-space overflow".to_string())?;
         if next <= cursor {
-            return Err("Guard Memory Integrity VirtualQuery did not advance".to_string());
+            return Err("VirtualQuery не перешёл к следующей области при проверке памяти Guard".to_string());
         }
         cursor = next;
     }

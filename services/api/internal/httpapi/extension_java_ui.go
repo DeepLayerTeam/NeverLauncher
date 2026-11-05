@@ -40,7 +40,7 @@ func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall
 	switch method {
 	case "java.action.invoke":
 		if args.ActionID == "" || len(args.Payload) == 0 || len(args.Payload) > 24<<10 || args.Payload[0] != '{' || !json.Valid(args.Payload) {
-			return nil, errors.New("Для «UI action» требуется «bounded JSON payload»")
+			return nil, errors.New("UI action: требуется «bounded JSON payload»")
 		}
 		payload["actionId"] = args.ActionID
 		payload["payload"] = json.RawMessage(args.Payload)

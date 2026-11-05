@@ -90,13 +90,13 @@ fn expected_range(response: &reqwest::Response, start: u64, total: u64) -> Resul
     // Строгий разбор единственного диапазона. Без произвольного общего размера, multipart и неудовлетворимых диапазонов.
     let value = response.headers().get(CONTENT_RANGE)
         .ok_or("206 response without Content-Range")?
-        .to_str().map_err(|_| "Некорректное значение: «Content-Range encoding»")?;
+        .to_str().map_err(|_| "Некорректное значение: кодирование заголовка Content-Range")?;
     let range = value.strip_prefix("bytes ").ok_or("invalid Content-Range unit")?;
     let (bounds, total_str) = range.split_once('/').ok_or("invalid Content-Range")?;
     let (low, high) = bounds.split_once('-').ok_or("invalid Content-Range bounds")?;
-    let first = low.parse::<u64>().map_err(|_| "Некорректное значение: «Content-Range start»")?;
-    let last = high.parse::<u64>().map_err(|_| "Некорректное значение: «Content-Range end»")?;
-    let complete = total_str.parse::<u64>().map_err(|_| "Некорректное значение: «Content-Range total»")?;
+    let first = low.parse::<u64>().map_err(|_| "Некорректное значение: начальная позиция Content-Range")?;
+    let last = high.parse::<u64>().map_err(|_| "Некорректное значение: конечная позиция Content-Range")?;
+    let complete = total_str.parse::<u64>().map_err(|_| "Некорректное значение: общий размер Content-Range")?;
     if first != start || last < first || complete != total || last >= total {
         return Err(format!("Небезопасное значение: Content-Range: {value}, requested {start}-/{total}"));
     }

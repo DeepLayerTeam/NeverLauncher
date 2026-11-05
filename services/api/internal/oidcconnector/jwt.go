@@ -264,7 +264,7 @@ func publicKey(k jwk) (any, error) {
 			e = e<<8 + int(b)
 		}
 		if e < 3 {
-			return nil, errors.New("Некорректное значение: «RSA exponent»")
+			return nil, errors.New("Некорректное значение: показатель степени RSA")
 		}
 		return &rsa.PublicKey{N: new(big.Int).SetBytes(nBytes), E: e}, nil
 	case "EC":

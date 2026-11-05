@@ -144,7 +144,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 	dec := json.NewDecoder(bytes.NewReader(data))
 	start, err := dec.Token()
 	if err != nil || start != json.Delim('{') {
-		return nil, errors.New("Для файл Database.json системы FileAuth требуется: «a UUID-keyed object»")
+		return nil, errors.New("Файл Database.json системы FileAuth: требуется «a UUID-keyed object»")
 	}
 	out := []Credential{}
 	seen := make(map[string]bool)

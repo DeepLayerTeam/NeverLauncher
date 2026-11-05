@@ -88,13 +88,13 @@ func parseSemver0243(source string) (semver0243, error) {
 	pre := strings.SplitN(raw[0], "-", 2)
 	if len(pre) == 2 {
 		if !semverIdentifiers0243(pre[1], true) {
-			return result, fmt.Errorf("Некорректное значение: «semver prerelease» %q", source)
+			return result, fmt.Errorf("Некорректное значение: предварительная версия SemVer %q", source)
 		}
 		result.pre = strings.Split(pre[1], ".")
 	}
 	parts := strings.Split(pre[0], ".")
 	if len(parts) != 3 {
-		return result, fmt.Errorf("Для семантическая версия требуется: «MAJOR.MINOR.PATCH:» %q", source)
+		return result, fmt.Errorf("Семантическая версия: требуется «MAJOR.MINOR.PATCH:» %q", source)
 	}
 	nums := []*uint64{&result.major, &result.minor, &result.patch}
 	for i, part := range parts {
@@ -207,7 +207,7 @@ func matchRange0243(actual, expr string) (bool, error) {
 	for _, alternative := range strings.Split(expr, "||") {
 		tokens := strings.Fields(alternative)
 		if len(tokens) == 0 || len(tokens) > 16 {
-			return false, fmt.Errorf("Некорректное значение: «version range» %q", expr)
+			return false, fmt.Errorf("Некорректное значение: диапазон версий %q", expr)
 		}
 		ok := true
 		for _, token := range tokens {

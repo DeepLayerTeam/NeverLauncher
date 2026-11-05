@@ -141,11 +141,11 @@ func validateArgon2idPHC(encoded string) error {
 func bcryptCost(encoded string) (int, error) {
 	parts := strings.Split(encoded, "$")
 	if len(parts) < 4 {
-		return 0, errors.New("Некорректное значение: «bcrypt hash»")
+		return 0, errors.New("Некорректное значение: хеш bcrypt")
 	}
 	cost, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return 0, errors.New("Некорректное значение: «bcrypt cost»")
+		return 0, errors.New("Некорректное значение: стоимость вычисления bcrypt")
 	}
 	return cost, nil
 }

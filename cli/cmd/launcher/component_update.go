@@ -557,7 +557,7 @@ func componentUpdateInstallRoot0157(currentDesktop, explicitRoot string, manifes
 	currentDesktop = strings.TrimSpace(currentDesktop)
 	if manifest.Layout == "macos-app-bundle" {
 		if currentDesktop == "" {
-			return "", "", errors.New("Для «macOS component update» требуется --current-desktop")
+			return "", "", errors.New("macOS component update: требуется --current-desktop")
 		}
 		abs, err := filepath.Abs(currentDesktop)
 		if err != nil {
@@ -583,7 +583,7 @@ func componentUpdateInstallRoot0157(currentDesktop, explicitRoot string, manifes
 		return root, "", err
 	}
 	if currentDesktop == "" {
-		return "", "", errors.New("Для «component update» требуется «--root or --current-desktop»")
+		return "", "", errors.New("component update: требуется «--root or --current-desktop»")
 	}
 	abs, err := filepath.Abs(currentDesktop)
 	if err != nil {

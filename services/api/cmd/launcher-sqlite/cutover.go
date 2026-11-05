@@ -31,7 +31,7 @@ func runPGCutoverCheck0475(args []string) int {
 	}
 	dsn := os.Getenv(*dsnEnv)
 	if dsn == "" {
-		fmt.Fprintln(os.Stderr, "Пустое значение: «PostgreSQL DSN env»")
+		fmt.Fprintln(os.Stderr, "Пустое значение: переменная окружения с DSN PostgreSQL")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)

@@ -70,12 +70,12 @@ func (s Server) authTPMCertifyBegin0312(w http.ResponseWriter, r *http.Request) 
 	}
 	challengeID, err := randomToken("htc")
 	if err != nil {
-		writeError(w, 500, "random challenge unavailable")
+		writeError(w, 500, "Не удалось создать случайный проверочный запрос")
 		return
 	}
 	challenge, err := randomToken("htn")
 	if err != nil {
-		writeError(w, 500, "random challenge unavailable")
+		writeError(w, 500, "Не удалось создать случайный проверочный запрос")
 		return
 	}
 	expires := canonicalDeviceAttestationTime0124(now.Add(hardwareChallengeTTL0312))

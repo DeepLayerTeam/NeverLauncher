@@ -253,7 +253,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	for i, expectedID := range targets {
 		item := cert.Artifacts[i]
 		if item.ID != expectedID {
-			return fmt.Errorf("Для «%s artifact #%d» требуется: «%s, got» %s", expectedRelease, i+1, expectedID, item.ID)
+			return fmt.Errorf("%s artifact #%d: требуется «%s, got» %s", expectedRelease, i+1, expectedID, item.ID)
 		}
 		expectedFile := fmt.Sprintf("launcher-%s-bridge-%s.jar", expectedID, ver)
 		if item.File != expectedFile || item.Bytes <= 0 {

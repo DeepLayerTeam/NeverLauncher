@@ -72,7 +72,7 @@ func (c *Connector) Health(ctx context.Context) error {
 func (c *Connector) AuthenticatePassword(ctx context.Context, req authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	identifier := strings.TrimSpace(req.Identifier)
 	if identifier == "" || req.Secret == "" || len(identifier) > 512 || len(req.Secret) > 4096 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	envelope, err := baseRequest()
 	if err != nil {

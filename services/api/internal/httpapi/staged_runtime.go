@@ -160,7 +160,7 @@ func (s Server) authorizeStaged0342(w http.ResponseWriter, r *http.Request) (sta
 func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 	lookup, err := s.lookupPackage(r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package not found")
+		writeError(w, http.StatusNotFound, "Пакет не найден")
 		return
 	}
 	if lookup.Release.Status != "integrity-passed" {
@@ -376,7 +376,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 	if decodeErr != nil {
 		if e := s.saveValidationDecision03412(r.Context(), g.PackageID, g.RunID, "staged-report", "rejected",
 			"malformed-observation", digestValidationAttempt03412(incoming)); e != nil {
-			writeError(w, 503, "validation audit unavailable")
+			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
 		writeError(w, 400, "invalid execution report")
@@ -386,7 +386,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 		// Даже неверный отчёт раннера является попыткой, а не сертификацией.
 		if s.saveValidationDecision03412(r.Context(), g.PackageID, g.RunID, "staged-report", "rejected",
 			"invalid-observation", safeValidationDecisionDigest03412(p)) != nil {
-			writeError(w, 503, "validation audit unavailable")
+			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
 		writeError(w, 409, err.Error())

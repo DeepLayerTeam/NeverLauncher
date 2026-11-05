@@ -228,9 +228,9 @@ def verify_target(
 
 def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
     if not COMMIT.fullmatch(commit):
-        raise GateError("Для «expected Git commit» требуется: «40 lowercase hex digits»")
+        raise GateError("expected Git commit: требуется «40 lowercase hex digits»")
     if not re.fullmatch("[a-f0-9]{64}", trusted_public_key):
-        raise GateError("Для «trusted independent Ed25519 public key» требуется: «32-byte hex»")
+        raise GateError("trusted independent Ed25519 public key: требуется «32-byte hex»")
     if evidence.is_symlink() or not evidence.is_dir():
         raise GateError("missing/unsafe evidence directory")
     found = {p.name for p in evidence.iterdir()}

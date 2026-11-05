@@ -63,7 +63,7 @@ def verify_config(path, key, policy_path=None):
     if env.get("schemaVersion") == "2.0":
         policy_path = policy_path or path.with_name("trust-policy.signed.json")
         if not policy_path.is_file() or policy_path.is_symlink():
-            raise ValueError("Для «delegated config» требуется «local signed trust policy»")
+            raise ValueError("delegated config: требуется «local signed trust policy»")
         penv = json.loads(policy_path.read_text("utf-8"))
         if penv.get("schemaVersion") != "1.0":
             raise ValueError("Не поддерживается: конверт политики доверия")
@@ -243,16 +243,16 @@ def apply_windows_brand_icon(executable, branding):
     if not asset:
         return
     if sys.platform != "win32":
-        raise RuntimeError("Для «Windows icon resources» требуется: «written on a Windows release runner»")
+        raise RuntimeError("Windows icon resources: требуется «written on a Windows release runner»")
     import ctypes
     from ctypes import wintypes
 
     png = base64.b64decode(asset, validate=True)
     if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError("Для «signed brand icon» требуется: PNG")
+        raise ValueError("signed brand icon: требуется PNG")
     width, height = struct.unpack_from(">II", png, 16)
     if not (1 <= width <= 256 and 1 <= height <= 256):
-        raise ValueError("Для «Windows native icon» требуется: «at most 256x256 PNG»")
+        raise ValueError("Windows native icon: требуется «at most 256x256 PNG»")
     group = struct.pack("<HHHBBBBHHIH", 0, 1, 1, width % 256, height % 256, 0, 0, 1, 32, len(png), 1)
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     begin = kernel.BeginUpdateResourceW
@@ -434,7 +434,7 @@ def package_linux(args, stage, key, out, version):
 
 def package_macos(args, stage, key, out, version):
     if sys.platform != "darwin":
-        raise RuntimeError("Для «macOS signed package» требуется «macOS runner»")
+        raise RuntimeError("macOS signed package: требуется «macOS runner»")
     with tempfile.TemporaryDirectory() as tmp:
         app = pathlib.Path(tmp) / "Launcher.app"
         macos = app / "Contents" / "MacOS"
@@ -474,7 +474,7 @@ def package_macos(args, stage, key, out, version):
             # iconutil создаёт фактическую иконку Finder/Dock; загрузка неподписанной иконки после установки как
             # запасной вариант не допускается.
             if not shutil.which("sips") or not shutil.which("iconutil"):
-                raise RuntimeError("Для «macOS icon creation» требуется «sips and iconutil»")
+                raise RuntimeError("macOS icon creation: требуется «sips and iconutil»")
             source = pathlib.Path(tmp) / "brand-icon.png"
             source.write_bytes(base64.b64decode(branding["iconPng"], validate=True))
             iconset = pathlib.Path(tmp) / "Brand.iconset"

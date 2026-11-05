@@ -53,13 +53,13 @@ type validationEvidenceSummary03412 struct {
 func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationAuditStore03412)
 	if !ok {
-		writeError(w, 503, "validation audit unavailable")
+		writeError(w, 503, "Журнал проверок недоступен")
 		return
 	}
 	pkg := r.PathValue("packageId")
 	lookup, err := s.lookupPackage(pkg)
 	if err != nil {
-		writeError(w, 404, "package not found")
+		writeError(w, 404, "Пакет не найден")
 		return
 	}
 	before := int64(0)

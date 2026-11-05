@@ -33,7 +33,7 @@ const (
 
 var (
 	ErrClosed        = errors.New("sqlite storage closed")
-	ErrCommitUnknown = errors.New("Для «sqlite durable commit returned an error; outcome» требуется: «reconciled before replay»")
+	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome: требуется «reconciled before replay»")
 	ErrPoisoned      = errors.New("sqlite transaction state uncertain; close store and reconcile with a fresh connection before serving requests")
 )
 
@@ -66,7 +66,7 @@ type WALStatus struct {
 
 func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	if strings.TrimSpace(opt.Path) == "" || strings.ContainsAny(opt.Path, "\x00?\n") || strings.HasPrefix(strings.ToLower(opt.Path), "file:") || strings.HasPrefix(opt.Path, ":") {
-		return nil, fmt.Errorf("Для «sqlite» требуется «a local filesystem path (no URI/in-memory DB)»")
+		return nil, fmt.Errorf("sqlite: требуется «a local filesystem path (no URI/in-memory DB)»")
 	}
 	path, err := filepath.Abs(opt.Path)
 	if err != nil {
@@ -76,13 +76,13 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 		opt.BusyTimeout = 5 * time.Second
 	}
 	if opt.BusyTimeout < time.Millisecond || opt.BusyTimeout > 60*time.Second {
-		return nil, fmt.Errorf("Для «busy timeout» требуется: «in [1ms,60s]»")
+		return nil, fmt.Errorf("busy timeout: требуется «in [1ms,60s]»")
 	}
 	if opt.Readers == 0 {
 		opt.Readers = DefaultReaders
 	}
 	if opt.Readers < 1 || opt.Readers > 16 {
-		return nil, fmt.Errorf("Для «readers» требуется: «1..16»")
+		return nil, fmt.Errorf("readers: требуется «1..16»")
 	}
 	if err = verifyLocalPath(path); err != nil {
 		return nil, err

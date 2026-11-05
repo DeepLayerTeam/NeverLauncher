@@ -307,9 +307,9 @@ pub fn initialize() -> Result<HookEngineSnapshot, String> {
     resolve_canonical_targets()?;
     let mut state = ENGINE_STATE
         .lock()
-        .map_err(|_| "Guard Hook Engine state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния механизма перехвата Guard".to_string())?;
     if state.active {
-        return Err("Guard Hook Engine already active".to_string());
+        return Err("Механизм перехвата Guard уже активен".to_string());
     }
     state.records.clear();
     state.seen_modules.clear();
@@ -317,7 +317,7 @@ pub fn initialize() -> Result<HookEngineSnapshot, String> {
     reconcile_locked(&mut state)?;
     if state.records.is_empty() {
         restore_records(&mut state.records);
-        return Err("Guard Hook Engine found no eligible JVM/native IAT targets".to_string());
+        return Err("Механизм перехвата Guard не обнаружил допустимых целей IAT для JVM или нативного кода".to_string());
     }
     state.active = true;
     state.healthy = true;
@@ -328,9 +328,9 @@ pub fn initialize() -> Result<HookEngineSnapshot, String> {
 pub fn reconcile_and_verify() -> Result<HookEngineSnapshot, String> {
     let mut state = ENGINE_STATE
         .lock()
-        .map_err(|_| "Guard Hook Engine state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния механизма перехвата Guard".to_string())?;
     if !state.active || !state.healthy {
-        return Err("Guard Hook Engine is not active/healthy".to_string());
+        return Err("Механизм перехвата Guard не активен или работает некорректно".to_string());
     }
     reconcile_locked(&mut state)?;
     verify_locked(&mut state)?;
@@ -340,7 +340,7 @@ pub fn reconcile_and_verify() -> Result<HookEngineSnapshot, String> {
 pub fn shutdown_restore() -> Result<(), String> {
     let mut state = ENGINE_STATE
         .lock()
-        .map_err(|_| "Guard Hook Engine state lock poisoned".to_string())?;
+        .map_err(|_| "Повреждена блокировка состояния механизма перехвата Guard".to_string())?;
     let mut errors = Vec::new();
     for record in state.records.iter().rev() {
         let Ok(_module_pin) = pin_module(record.module_base) else {
@@ -370,13 +370,13 @@ fn resolve_canonical_targets() -> Result<(), String> {
     let ntdll = wide_null("ntdll.dll");
     let ntdll = unsafe { GetModuleHandleW(ntdll.as_ptr()) };
     if kernel32.is_null() || ntdll.is_null() {
-        return Err("«Guard Hook Engine»: запрещено «resolve kernel32.dll/ntdll.dll»".to_string());
+        return Err("механизм перехвата Guard: запрещено «resolve kernel32.dll/ntdll.dll»".to_string());
     }
     for spec in hook_specs() {
         let module = if spec.name.starts_with("Nt") { ntdll } else { kernel32 };
         let address = unsafe { GetProcAddress(module, spec.c_name.as_ptr().cast()) };
         if address.is_null() && !spec.optional {
-            return Err(format!("«Guard Hook Engine»: запрещено «resolve {}»", spec.name));
+            return Err(format!("механизм перехвата Guard: запрещено «resolve {}»", spec.name));
         }
         spec.canonical.store(address, Ordering::Release);
     }
@@ -522,11 +522,11 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     let size = module.size;
     let dos_signature = read_u16(base, size, 0)?;
     if dos_signature != IMAGE_DOS_SIGNATURE {
-        return Err(format!("Guard Hook Engine invalid DOS header in {}", module.path));
+        return Err(format!("Некорректный заголовок DOS в файле {}", module.path));
     }
     let nt_offset = read_u32(base, size, 0x3C)? as usize;
     if read_u32(base, size, nt_offset)? != IMAGE_NT_SIGNATURE {
-        return Err(format!("Guard Hook Engine invalid PE header in {}", module.path));
+        return Err(format!("Некорректный заголовок PE в файле {}", module.path));
     }
     let optional = nt_offset
         .checked_add(24)
@@ -624,7 +624,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
             }
             index = index.saturating_add(1);
             if index > 65_536 {
-                return Err(format!("Guard Hook Engine excessive import table in {}", module.path));
+                return Err(format!("Превышен допустимый размер таблицы импорта в файле {}", module.path));
             }
         }
         descriptor_offset += 20;
@@ -640,7 +640,7 @@ fn read_hook_slot(slot: usize) -> usize {
 
 fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     if slot % std::mem::align_of::<AtomicUsize>() != 0 {
-        return Err("Guard Hook Engine unaligned IAT slot".to_string());
+        return Err("Обнаружена запись IAT без требуемого выравнивания".to_string());
     }
     let mut old_protect = 0u32;
     let ok = unsafe {
@@ -818,7 +818,7 @@ fn checked_range(size: usize, offset: usize, length: usize) -> Result<(), String
         .checked_add(length)
         .ok_or_else(|| "Guard Hook Engine PE range overflow".to_string())?;
     if offset > size || end > size {
-        Err("Guard Hook Engine PE range outside mapped image".to_string())
+        Err("Область PE выходит за пределы отображённого образа".to_string())
     } else {
         Ok(())
     }
@@ -844,7 +844,7 @@ fn read_pointer_value(base: usize, size: usize, offset: usize, pointer_size: usi
             checked_range(size, offset, 4)?;
             Ok(unsafe { std::ptr::read_unaligned((base + offset) as *const u32) } as u64)
         }
-        _ => Err("Guard Hook Engine unsupported pointer size".to_string()),
+        _ => Err("Механизм перехвата Guard не поддерживает размер указателя".to_string()),
     }
 }
 
@@ -856,14 +856,14 @@ fn read_ascii(base: usize, size: usize, offset: usize, max: usize) -> Result<Str
         let value = unsafe { *((base + offset + index) as *const u8) };
         if value == 0 {
             return String::from_utf8(bytes)
-                .map_err(|_| "Guard Hook Engine invalid non-ASCII import name".to_string());
+                .map_err(|_| "Некорректное имя импорта, содержащее символы вне ASCII".to_string());
         }
         if !value.is_ascii() {
-            return Err("Guard Hook Engine invalid import name".to_string());
+            return Err("Некорректное имя импорта".to_string());
         }
         bytes.push(value);
     }
-    Err("Guard Hook Engine unterminated import name".to_string())
+    Err("Имя импорта не завершено нулевым байтом".to_string())
 }
 
 fn wide_null(value: &str) -> Vec<u16> {

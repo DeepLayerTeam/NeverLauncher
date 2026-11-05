@@ -69,7 +69,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		return res, errors.New("Параметр --isolation допускает только process или sandbox")
 	}
 	if opt.Timeout <= 0 || opt.Timeout > 2*time.Minute {
-		return res, errors.New("Для «timeout» требуется: «1s..2m»")
+		return res, errors.New("timeout: требуется «1s..2m»")
 	}
 	if opt.HeapMB < 32 || opt.HeapMB > 2048 {
 		return res, errors.New("Размер кучи должен составлять от 32 до 2048 МиБ")

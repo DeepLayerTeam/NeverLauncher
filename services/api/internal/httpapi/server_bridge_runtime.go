@@ -219,7 +219,7 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("Не найдено: узел ServerBridge")
 	}
 	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) || !strings.EqualFold(server.KeyFingerprint, runtime.NodeKeyFingerprint) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("server bridge node identity/type is not active")
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("Идентичность или тип узла ServerBridge неактивны")
 	}
 	if server.RuntimeID == runtime.RuntimeID {
 		if server.RuntimeIdentityDigest == "" || !strings.EqualFold(server.RuntimeIdentityDigest, runtime.IdentityDigest) {

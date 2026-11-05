@@ -46,7 +46,7 @@ def validate_targets(path: Path):
         "windows",
         "macos",
     }:
-        raise SystemExit("Для «required Extensions GA OS set» требуется: «linux/windows/macos»")
+        raise SystemExit("required Extensions GA OS set: требуется «linux/windows/macos»")
     expected = {
         "packageFormatVersion": "1.0",
         "manifestSchemaVersion": "2.0",

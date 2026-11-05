@@ -58,7 +58,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	startToken, err := decoder.Token()
 	if err != nil || startToken != json.Delim('{') {
-		return nil, errors.New("Для файл Database.json системы FileAuth требуется: «a UUID-keyed JSON object»")
+		return nil, errors.New("Файл Database.json системы FileAuth: требуется «a UUID-keyed JSON object»")
 	}
 	items := make([]Account, 0)
 	names := map[string]bool{}
@@ -70,7 +70,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return nil, errors.New("Для «FileAuth JSON keys» требуется: «strings»")
+			return nil, errors.New("FileAuth JSON keys: требуется «strings»")
 		}
 		var src rawUser
 		if err := decoder.Decode(&src); err != nil {
@@ -166,10 +166,10 @@ func EncodeCredential(format, hash string) (string, error) {
 		}
 	case "bcrypt":
 		if len(hash) != 60 || !(strings.HasPrefix(hash, "$2a$") || strings.HasPrefix(hash, "$2b$") || strings.HasPrefix(hash, "$2y$")) {
-			return "", errors.New("Некорректное значение: «bcrypt hash»")
+			return "", errors.New("Некорректное значение: хеш bcrypt")
 		}
 		if hash[4] < '0' || hash[4] > '1' || hash[5] < '0' || hash[5] > '9' || hash[6] != '$' {
-			return "", errors.New("Некорректное значение: «bcrypt cost»")
+			return "", errors.New("Некорректное значение: стоимость вычисления bcrypt")
 		}
 		cost := int(hash[4]-'0')*10 + int(hash[5]-'0')
 		if cost < 4 || cost > 16 {

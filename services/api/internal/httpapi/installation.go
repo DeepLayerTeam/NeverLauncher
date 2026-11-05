@@ -215,7 +215,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, errors.New("Требуется: «email and password are»")
 	}
 	if len(password) < 12 {
-		return model.User{}, errors.New("Для «bootstrap admin password» требуется: «at least 12 characters»")
+		return model.User{}, errors.New("bootstrap admin password: требуется «at least 12 characters»")
 	}
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()
@@ -232,7 +232,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		if len(s.Repo.ListUsers()) > 0 {
-			return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")
+			return model.User{}, errors.New("Создание начального администратора отключено после появления первого пользователя")
 		}
 		if err := s.consumeBootstrapTokenP0(ctx, token); err != nil {
 			return model.User{}, err
@@ -260,7 +260,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, err
 	}
 	if completed || used.Valid {
-		return model.User{}, errors.New("bootstrap token already consumed or installation completed")
+		return model.User{}, errors.New("Начальный токен уже использован либо установка завершена")
 	}
 	supplied := bootstrapTokenHashP0(token)
 	if token == "" || subtle.ConstantTimeCompare([]byte(tokenHash), []byte(supplied)) != 1 {
@@ -271,7 +271,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, err
 	}
 	if exists {
-		return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")
+		return model.User{}, errors.New("Создание начального администратора отключено после появления первого пользователя")
 	}
 	rolesRaw := `{}`
 	_, err = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at) VALUES($1,$2,$3,'owner','active',$4::jsonb,$5,$6,$6,$6)`, user.ID, user.Email, user.DisplayName, rolesRaw, user.PasswordHash, now)

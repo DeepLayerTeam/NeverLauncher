@@ -53,12 +53,12 @@ func (s Server) authMeasuredBootBegin0315(w http.ResponseWriter, r *http.Request
 	}
 	idChallenge, err := randomToken("mpc")
 	if err != nil {
-		writeError(w, 500, "random challenge unavailable")
+		writeError(w, 500, "Не удалось создать случайный проверочный запрос")
 		return
 	}
 	secret, err := randomToken("mpn")
 	if err != nil {
-		writeError(w, 500, "random challenge unavailable")
+		writeError(w, 500, "Не удалось создать случайный проверочный запрос")
 		return
 	}
 	expires := canonicalDeviceAttestationTime0124(now.Add(measuredBootTTL0315))

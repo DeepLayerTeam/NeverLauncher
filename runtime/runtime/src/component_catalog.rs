@@ -355,7 +355,7 @@ fn parse_semver_0243(value:&str)->Result<Semver0243,String>{
     let (base,pre)=before_build.split_once('-').map_or((before_build,None),|(a,b)|(a,Some(b)));
     let pre=if let Some(pre)=pre {if !valid_semver_ids_0243(pre,true){return Err(format!("Некорректное значение: «prerelease in» {value:?}"))}pre.split('.').map(str::to_string).collect()} else {Vec::new()};
     let parts:Vec<_>=base.split('.').collect();
-    if parts.len()!=3{return Err(format!("Для семантическая версия требуется: «MAJOR.MINOR.PATCH:» {value:?}"))}
+    if parts.len()!=3{return Err(format!("Некорректная семантическая версия {value:?}; ожидается формат MAJOR.MINOR.PATCH"))}
     let mut nums=[0u64;3];
     for (i,v) in parts.iter().enumerate(){
         if v.is_empty()||(v.len()>1&&v.starts_with('0'))||!v.bytes().all(|b|b.is_ascii_digit()){return Err(format!("Некорректное значение: семантическая версия {value:?}"))}
@@ -392,7 +392,7 @@ fn matches_range_0243(actual:&str,expression:&str)->Result<bool,String>{
     let mut any_matched=false;
     for branch in expression.split("||"){
         let parts:Vec<&str>=branch.split_whitespace().collect();
-        if parts.is_empty()||parts.len()>16{return Err(format!("Некорректное значение: «version range» {expression:?}"))}
+        if parts.is_empty()||parts.len()>16{return Err(format!("Некорректное значение: диапазон версий {expression:?}"))}
         let mut all=true;
         for token in parts {
             if token=="*"{continue}
@@ -580,8 +580,8 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
 }
 
 pub fn validate(m:&Manifest)->Result<(),String>{
-    if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("Для «componentCatalog» требуется «manifest v3»".into())}return Ok(())}
-    let cat=m.component_catalog.as_ref().ok_or("Для «v3» требуется «signed componentCatalog»")?;
+    if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog: требуется «manifest v3»".into())}return Ok(())}
+    let cat=m.component_catalog.as_ref().ok_or("v3: требуется «signed componentCatalog»")?;
     if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0"|"5.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else if cat.schema_version=="4.0"{digest_v4(cat)}else{crate::component_actions_0245::digest_v5(cat)}){return Err("Некорректное значение: «v3 component snapshot/digest»".into())}
     validate_topology(cat)?;
     crate::component_actions_0245::validate_actions(cat)?;

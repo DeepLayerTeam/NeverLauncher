@@ -52,7 +52,7 @@ type SQLiteExtensionState struct {
 func packageDigest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
 func (r *Repository) PutPackage(ctx context.Context, data []byte, actor string) (out StoredPackage, created bool, err error) {
 	if len(data) == 0 || len(data) > maxPackageBytes {
-		return out, false, errors.New("Для пакет требуется: «1..16MiB»")
+		return out, false, errors.New("Пакет: требуется «1..16MiB»")
 	}
 	digest := packageDigest(data)
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -107,7 +107,7 @@ func (r *Repository) RegisterExtensionPublisher(ctx context.Context, id, keyHex,
 	}
 	key, e := hex.DecodeString(keyHex)
 	if e != nil || len(key) != ed25519.PublicKeySize {
-		return errors.New("Для «publisher» требуется «Ed25519 public key»")
+		return errors.New("publisher: требуется публичный ключ Ed25519")
 	}
 	digest := packageDigest(key)
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -306,7 +306,7 @@ func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExten
 		return out, errors.New("Некорректное значение: «extension install operation»")
 	}
 	if v.State == "enabled" && (v.Version == "" || !isHex256(v.PackageDigest)) {
-		return out, errors.New("Для «enabled extension» требуется «verified package»")
+		return out, errors.New("enabled extension: требуется «verified package»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		if e := authorizedExtensionActor(ctx, q, v.Scope, v.ScopeID, v.Actor); e != nil {

@@ -177,7 +177,7 @@ func readBridgeProtocolBody0191(r io.Reader) ([]byte, bridgeProtocolEnvelope0191
 		return nil, bridgeProtocolEnvelope0191{}, err
 	}
 	if len(body) > 128*1024 {
-		return nil, bridgeProtocolEnvelope0191{}, fmt.Errorf("serverbridge request body exceeds 128 KiB")
+		return nil, bridgeProtocolEnvelope0191{}, fmt.Errorf("Тело запроса ServerBridge превышает 128 КиБ")
 	}
 	var envelope bridgeProtocolEnvelope0191
 	if err := json.Unmarshal(body, &envelope); err != nil {
@@ -194,7 +194,7 @@ func decodeBridgeContract0191(body []byte, target any) error {
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		if err == nil {
-			return fmt.Errorf("multiple JSON values in ServerBridge payload")
+			return fmt.Errorf("В данных ServerBridge передано несколько JSON-значений")
 		}
 		return err
 	}

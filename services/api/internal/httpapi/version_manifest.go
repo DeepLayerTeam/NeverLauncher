@@ -153,7 +153,7 @@ func validateCompatibilityManifest(manifest model.Manifest) error {
 		// Черновики могут быть неполными, но ни один пакет не дойдёт до публикации
 		// без Runtime или с некорректной эффективной командной строкой.
 		if manifest.Runtime.Java.MajorVersion <= 0 {
-			return errors.New("Для «v2 publish» требуется «runtime.java.majorVersion»")
+			return errors.New("v2 publish: требуется «runtime.java.majorVersion»")
 		}
 		if err := model.ValidateRuntimeConstraints0223(manifest); err != nil {
 			return err

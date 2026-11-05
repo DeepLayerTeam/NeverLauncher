@@ -43,14 +43,14 @@ func decodeProfileWrite0225(r *http.Request, out any) error {
 	}
 	var extra any
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return errors.New("only one JSON object is allowed")
+		return errors.New("Разрешён только один объект JSON")
 	}
 	return nil
 }
 
 func (s Server) profileSnapshotAt0225(project, id string, revision int64) (model.ProfileSnapshot, error) {
 	if revision < 0 {
-		return model.ProfileSnapshot{}, errors.New("Для «revision» требуется: «positive»")
+		return model.ProfileSnapshot{}, errors.New("revision: требуется «positive»")
 	}
 	if revision == 0 {
 		return repository.ReadProfileSnapshot(s.Repo, project, id)
@@ -74,13 +74,13 @@ func (s Server) profileSnapshotAt0225(project, id string, revision int64) (model
 func (s Server) saveNewProfile0225(w http.ResponseWriter, r *http.Request, profile model.Profile, action string) {
 	creator, ok := s.Repo.(profileCreator0225)
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "exclusive profile creation unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Исключительное создание профиля недоступно")
 		return
 	}
 	saved, err := creator.CreateProfileExclusive0225(profile)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			writeError(w, http.StatusConflict, "profile already exists")
+			writeError(w, http.StatusConflict, "Профиль уже существует")
 			return
 		}
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -172,7 +172,7 @@ func readRevision0225(s string) (int64, error) {
 	}
 	n, err := strconv.ParseInt(s, 10, 64)
 	if err != nil || n < 1 {
-		return 0, errors.New("Для «revision» требуется: «positive integer»")
+		return 0, errors.New("revision: требуется «positive integer»")
 	}
 	return n, nil
 }

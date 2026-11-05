@@ -19,7 +19,7 @@ func normalizeTrustPolicy02012(p model.ExtensionTrustPolicy) (model.ExtensionTru
 		p.Mode = model.ExtensionTrustModeStrict
 	}
 	if p.Mode != model.ExtensionTrustModeStrict && p.Mode != model.ExtensionTrustModeAudit {
-		return model.ExtensionTrustPolicy{}, errors.New("Для «extension trust policy mode» требуется: «strict or audit»")
+		return model.ExtensionTrustPolicy{}, errors.New("extension trust policy mode: требуется «strict or audit»")
 	}
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(p.AllowedPublishers))
@@ -54,7 +54,7 @@ func normalizeEmergencyScope02012(scope, scopeID string) (string, string, error)
 	if scope == "project" && scopeID != "" {
 		return scope, scopeID, nil
 	}
-	return "", "", errors.New("Для «scope» требуется: «global or project with scopeId»")
+	return "", "", errors.New("scope: требуется «global or project with scopeId»")
 }
 
 func (r *MemoryRepository) GetExtensionTrustPolicy(ctx context.Context) (model.ExtensionTrustPolicy, error) {

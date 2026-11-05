@@ -28,7 +28,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	// перезапуск.
 	if strings.EqualFold(strings.TrimSpace(cfg.RepositoryDriver), "sqlite") {
 		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" {
-			return fmt.Errorf("Для «SQLite HTTP backend» требуется «durable SQLite coordinator path»")
+			return fmt.Errorf("SQLite HTTP backend: требуется «durable SQLite coordinator path»")
 		}
 		if filepath.Clean(cfg.SQLiteCoordinatorPath) == filepath.Clean(cfg.DatabaseDSN) {
 			return fmt.Errorf("SQLite repository and coordinator require distinct lockable files")

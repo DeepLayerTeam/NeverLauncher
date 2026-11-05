@@ -42,11 +42,11 @@ func readVarInt(r *bufio.Reader) (int, error) {
 			return n, nil
 		}
 	}
-	return 0, errors.New("Превышен допустимый размер: «protocol varint»")
+	return 0, errors.New("Превышен допустимый размер: переменное целое протокола")
 }
 func writeFrame(w io.Writer, body []byte) error {
 	if len(body) > 32767 {
-		return errors.New("Превышен допустимый размер: «packet»")
+		return errors.New("Превышен допустимый размер: пакет")
 	}
 	frame := putVarInt(nil, len(body))
 	frame = append(frame, body...)
@@ -56,11 +56,11 @@ func writeFrame(w io.Writer, body []byte) error {
 func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	host, portText, err := net.SplitHostPort(address)
 	if err != nil || host == "" {
-		return errors.New("Для «server address» требуется: «host:port»")
+		return errors.New("Адрес сервера: требуется хост:порт")
 	}
 	port, err := strconv.Atoi(portText)
 	if err != nil || port < 1 || port > 65535 || protocol < 1 || protocol > 1000000 {
-		return errors.New("Некорректное значение: «server port or protocol»")
+		return errors.New("Некорректное значение: порт или протокол сервера")
 	}
 	if protocol < 764 {
 		return errors.New("probe supports Minecraft 1.20.2+ only")
@@ -68,7 +68,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
 	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		return errors.New("Ошибка: «server TCP connection»")
+		return errors.New("Ошибка: TCP-соединение с сервером")
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(8 * time.Second))
@@ -84,7 +84,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	payload = binary.BigEndian.AppendUint16(payload, uint16(port))
 	payload = putVarInt(payload, 2) // next state Login
 	if err := writeFrame(conn, payload); err != nil {
-		return errors.New("Ошибка: «server handshake»")
+		return errors.New("Ошибка: установление соединения с сервером")
 	}
 	login := putVarInt(nil, 0)
 	name := "NLProbe26" // не настоящее имя пользователя допустимого игрока
@@ -98,7 +98,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 		return errors.New("probe supports Minecraft 1.20.2+ protocols only")
 	}
 	if err := writeFrame(conn, login); err != nil {
-		return errors.New("Ошибка: «server login start»")
+		return errors.New("Ошибка: начало входа на сервер")
 	}
 	reader := bufio.NewReaderSize(conn, 8192)
 	size, err := readVarInt(reader)
