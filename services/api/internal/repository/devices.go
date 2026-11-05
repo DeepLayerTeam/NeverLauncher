@@ -353,7 +353,7 @@ func (r *MemoryRepository) RevokeOtherTrustedDevices(ctx context.Context, userID
 	userID = strings.TrimSpace(userID)
 	exceptDeviceID = strings.TrimSpace(exceptDeviceID)
 	if userID == "" || exceptDeviceID == "" {
-		return model.DeviceRevocationBatch{}, errors.New("Требуется: «user id and preserved device id are»")
+		return model.DeviceRevocationBatch{}, errors.New("Требуется: идентификатор пользователя и сохранённый идентификатор устройства")
 	}
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
@@ -722,7 +722,7 @@ func (r *SQLRepository) RevokeOtherTrustedDevices(ctx context.Context, userID, e
 	userID = strings.TrimSpace(userID)
 	exceptDeviceID = strings.TrimSpace(exceptDeviceID)
 	if userID == "" || exceptDeviceID == "" {
-		return model.DeviceRevocationBatch{}, errors.New("Требуется: «user id and preserved device id are»")
+		return model.DeviceRevocationBatch{}, errors.New("Требуется: идентификатор пользователя и сохранённый идентификатор устройства")
 	}
 	if ctx == nil {
 		ctx = context.Background()

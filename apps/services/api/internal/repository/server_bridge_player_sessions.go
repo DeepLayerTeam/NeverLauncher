@@ -183,7 +183,7 @@ func (r *SQLRepository) issuePlayerTransferTx0197(ctx context.Context, tx *sql.T
 	}
 	correlationID := strings.ToLower(strings.TrimSpace(h.SessionCorrelationID))
 	if expectedCorrelation != "" && !strings.EqualFold(expectedCorrelation, correlationID) {
-		return fmt.Errorf("Несовпадение: «%w: session correlation proof»", ErrConflict)
+		return fmt.Errorf("Несовпадение: %w: подтверждение привязки сеанса", ErrConflict)
 	}
 	var status, proxyNode, proxyRuntime string
 	var proxyEpoch, sequence int64

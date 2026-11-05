@@ -30,7 +30,7 @@ func normalizeLifecycleScope0204(scope, scopeID string) (string, string, error) 
 			return "", "", errors.New("project extension lifecycle: требуется «scopeId»")
 		}
 	default:
-		return "", "", errors.New("extension lifecycle scope: требуется «global or project»")
+		return "", "", errors.New("extension lifecycle scope: требуется глобальная область или область проекта")
 	}
 	return scope, scopeID, nil
 }

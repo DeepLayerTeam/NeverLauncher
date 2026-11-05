@@ -63,12 +63,12 @@ def _read_policy(path: Path):
     seen = set()
     for key in value["keys"]:
         if not isinstance(key, dict) or not isinstance(key.get("id"), str) or not key["id"]:
-            raise ValueError("Некорректное значение: «delegated key»")
+            raise ValueError("Некорректное значение: делегированный ключ")
         if key["id"] in seen:
             raise ValueError("Обнаружен дубликат: «delegated key ID»")
         seen.add(key["id"])
         if key.get("status") not in ("active", "revoked"):
-            raise ValueError("Некорректное значение: «delegated key status»")
+            raise ValueError("Некорректное значение: статус делегированного ключа")
         if not isinstance(key.get("role"), str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", key["role"]):
             raise ValueError("Некорректное значение: «delegated key role»")
         public = key.get("publicKey")
@@ -77,7 +77,7 @@ def _read_policy(path: Path):
         try:
             bytes.fromhex(public)
         except ValueError as err:
-            raise ValueError("Некорректное значение: «delegated public key»") from err
+            raise ValueError("Некорректное значение: делегированный открытый ключ") from err
     return payload
 
 
@@ -89,7 +89,7 @@ def sign_policy(
         raise ValueError("Замена политики доверия, которая является символической ссылкой или каталогом, отклонена")
     seed = bytes.fromhex(seed_hex)
     if len(seed) != 32:
-        raise ValueError("root seed: требуется «32 bytes»")
+        raise ValueError("Исходное значение корневого ключа должно содержать 32 байта")
     private = Ed25519PrivateKey.from_private_bytes(seed)
     actual = (
         private.public_key()

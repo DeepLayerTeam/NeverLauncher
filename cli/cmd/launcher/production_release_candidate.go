@@ -79,7 +79,7 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 func normalizeSourceCommit01511(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if !sourceCommitRE01511.MatchString(value) {
-		return "", fmt.Errorf("Для промышленный релиз-кандидат требуется «exact 40/64-hex source commit, got» %q", value)
+		return "", fmt.Errorf("Для промышленный релиз-кандидат требуется хеш исходного коммита из 40 или 64 шестнадцатеричных знаков; получено %q", value)
 	}
 	return value, nil
 }
@@ -106,7 +106,7 @@ func productionReleaseCandidateCohort01511(dir string) ([]productionReleaseCandi
 		}
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("Некорректное значение: «release candidate cohort path» %q", name)
+			return nil, fmt.Errorf("Некорректное значение: путь к группе кандидатов на выпуск %q", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
@@ -169,7 +169,7 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	for _, file := range []string{compatibilityCertificationReleaseFile, deviceTrustCertificationReleaseFile, guardCICertificationReleaseFile} {
 		certCommit, err := readCertificationCommit01511(filepath.Join(dir, file))
 		if err != nil {
-			return fmt.Errorf("Для промышленный релиз-кандидат требуется «%s with exact source commit:» %w", file, err)
+			return fmt.Errorf("Для промышленный релиз-кандидат требуется %s с точным идентификатором исходного коммита: %w", file, err)
 		}
 		if !strings.EqualFold(certCommit, commit) {
 			return fmt.Errorf("Коммит исходников %s не совпадает: кандидат=%s, сертификация=%s", file, commit, certCommit)
@@ -238,7 +238,7 @@ func writeProductionReleaseCandidateDocument01511(dir, ver, sourceCommit string)
 		return err
 	}
 	if len(cohort) == 0 {
-		return errors.New("Пустое значение: «production release candidate cohort»")
+		return errors.New("Пустое значение: группа кандидатов промышленного выпуска")
 	}
 	cert := productionReleaseCandidate01511{
 		SchemaVersion: "1.0",
@@ -282,14 +282,14 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 		return "", err
 	}
 	if cert.SchemaVersion != "1.0" || cert.Product != "Launcher" || cert.Version != ver || cert.Status != "production-release-candidate" {
-		return "", errors.New("Несовпадение: «production release candidate metadata»")
+		return "", errors.New("Несовпадение: метаданные кандидата промышленного выпуска")
 	}
 	if _, err := time.Parse(time.RFC3339, cert.CreatedAt); err != nil {
-		return "", fmt.Errorf("Некорректное значение: «production release candidate createdAt»: %w", err)
+		return "", fmt.Errorf("Некорректное значение: дата создания кандидата промышленного выпуска: %w", err)
 	}
 	expectedGates := productionReleaseCandidateRequiredGates01511(ver)
 	if len(cert.RequiredGates) != len(expectedGates) {
-		return "", errors.New("Несовпадение: «production release candidate required gate set»")
+		return "", errors.New("Несовпадение: набор обязательных проверок кандидата промышленного выпуска")
 	}
 	for i := range expectedGates {
 		if cert.RequiredGates[i] != expectedGates[i] {
@@ -311,7 +311,7 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 	}
 	digest := productionReleaseCandidateCohortDigest01511(actualCohort)
 	if !strings.EqualFold(digest, strings.TrimSpace(cert.CohortSHA256)) {
-		return "", errors.New("Несовпадение: «production release candidate cohortSha256»")
+		return "", errors.New("Несовпадение: контрольная сумма группы кандидатов промышленного выпуска (cohortSha256)")
 	}
 	return commit, nil
 }

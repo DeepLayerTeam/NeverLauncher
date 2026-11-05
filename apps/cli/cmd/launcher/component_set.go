@@ -84,10 +84,10 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 	signaturePath := filepath.Join(filepath.Dir(manifestPath), componentSetSignatureFile02310)
 	info, err := os.Lstat(signaturePath)
 	if err != nil {
-		return fmt.Errorf("Отсутствует: «component-set signature»: %w", err)
+		return fmt.Errorf("Отсутствует: подпись набора компонентов: %w", err)
 	}
 	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 2048 {
-		return errors.New("Небезопасное значение: «component-set signature file»")
+		return errors.New("Небезопасное значение: файл подписи набора компонентов")
 	}
 	sigRaw, err := os.ReadFile(signaturePath)
 	if err != nil {
@@ -98,7 +98,7 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 		return err
 	}
 	if envelope.SchemaVersion != "1.0" || envelope.Algorithm != "ed25519" {
-		return errors.New("Не поддерживается: «component-set signature»")
+		return errors.New("Не поддерживается: подпись набора компонентов")
 	}
 	raw, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -106,11 +106,11 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 	}
 	digest := sha256.Sum256(raw)
 	if envelope.ManifestSHA256 != hex.EncodeToString(digest[:]) {
-		return errors.New("Несовпадение: «component-set manifest digest»")
+		return errors.New("Несовпадение: контрольная сумма манифеста набора компонентов")
 	}
 	signature, err := hex.DecodeString(envelope.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize || !ed25519.Verify(ed25519.PublicKey(key), raw, signature) {
-		return errors.New("Некорректное значение: «component-set Ed25519 signature»")
+		return errors.New("Некорректное значение: подпись Ed25519 набора компонентов")
 	}
 	return nil
 }
@@ -120,7 +120,7 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 // реализаций протоколов Guard v4, sensor v3 и updater v2.
 func validateComponentProtocols02310(manifest componentUpdateManifest0157) error {
 	if manifest.ComponentSet == nil || manifest.ComponentSet.SchemaVersion != "1.0" {
-		return errors.New("Отсутствует: «component-set protocol matrix»")
+		return errors.New("Отсутствует: матрица протоколов набора компонентов")
 	}
 	required := map[string]map[string]uint32{
 		"desktop": {"guard-ipc": 4},
@@ -143,12 +143,12 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 		if item.Component == "updater" {
 			updaterCount++
 			if !item.Executable {
-				return errors.New("updater helper: требуется «executable»")
+				return errors.New("updater helper: требуется исполняемый файл")
 			}
 		}
 	}
 	if updaterCount != 1 {
-		return errors.New("component-set: требуется «exactly one updater helper in supportFiles»")
+		return errors.New("component-set: требуется ровно один исполняемый помощник обновления в supportFiles")
 	}
 	roles["updater"] = true
 	byRole := map[string]componentProtocol02310{}
@@ -161,7 +161,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 			return fmt.Errorf("Повторяющаяся роль протокола компонента: %q", item.Component)
 		}
 		if len(item.Provides) != len(expected) {
-			return fmt.Errorf("Неожиданное значение: «protocol declarations for» %s", item.Component)
+			return fmt.Errorf("Неожиданное значение: объявления протоколов для %s", item.Component)
 		}
 		for proto, n := range expected {
 			if item.Provides[proto] != n {
@@ -188,7 +188,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 	for name, item := range byRole {
 		mandatory := edges[name]
 		if len(item.Requires) != len(mandatory) {
-			return fmt.Errorf("«%s protocol requirements» не совпадает с «compiled compatibility policy»", name)
+			return fmt.Errorf("требования к протоколам %s не совпадает с скомпилированная политика совместимости", name)
 		}
 		found := map[string]bool{}
 		for _, req := range item.Requires {
@@ -199,7 +199,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 			found[key] = true
 			target, ok := byRole[req.Component]
 			if !ok || req.Minimum == 0 || target.Provides[req.Protocol] < req.Minimum {
-				return fmt.Errorf("%s: требуется «unavailable %s >=» %d", name, key, req.Minimum)
+				return fmt.Errorf("%s: требуется недоступный %s версии не ниже %d", name, key, req.Minimum)
 			}
 			valid := false
 			for _, need := range mandatory {

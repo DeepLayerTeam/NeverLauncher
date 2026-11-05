@@ -25,7 +25,7 @@ func normalizeIntegrityResult0212(in model.IntegrityCheckResult) (model.Integrit
 		return model.IntegrityCheckResult{}, errors.New("Идентификатор и контрольные суммы результата проверки целостности неполны")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.IntegrityCheckResult{}, errors.New("integrity result: требуется «passed or failed»")
+		return model.IntegrityCheckResult{}, errors.New("integrity result: требуется пройдено или не пройдено")
 	}
 	if in.CheckedAt.IsZero() {
 		in.CheckedAt = time.Now().UTC()
@@ -48,7 +48,7 @@ func normalizeRuntimeValidation0212(in model.RuntimeValidationResult) (model.Run
 		return model.RuntimeValidationResult{}, errors.New("Идентификатор и контрольные суммы проверки среды выполнения неполны")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation result: требуется «passed or failed»")
+		return model.RuntimeValidationResult{}, errors.New("runtime validation result: требуется пройдено или не пройдено")
 	}
 	if in.Result == "passed" && (!in.ActualClient || in.ExitCode != 0) {
 		return model.RuntimeValidationResult{}, errors.New("runtime validation pass: требуется «actual client evidence with exit code 0»")

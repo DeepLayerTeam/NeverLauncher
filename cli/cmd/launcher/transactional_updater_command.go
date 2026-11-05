@@ -175,7 +175,7 @@ func runUpdaterSelfTest0156() (map[string]any, error) {
 		return nil, fmt.Errorf("Самопроверка применения изменений: %w", err)
 	}
 	if raw, _ := os.ReadFile(oldPath); string(raw) != "new-launcher" {
-		return nil, errors.New("Несовпадение: «commit self-test: launcher bytes»")
+		return nil, errors.New("Несовпадение: самопроверка фиксации обновления: содержимое лаунчера")
 	}
 	if _, err := os.Stat(obsoletePath); !errors.Is(err, os.ErrNotExist) {
 		return nil, errors.New("Самопроверка применения изменений: устаревший файл не удалён")

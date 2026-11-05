@@ -21,7 +21,7 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 		return verifyArgon2idSystem(secret, encoded), nil
 	case "bcrypt":
 		if !strings.HasPrefix(encoded, "$2a$") && !strings.HasPrefix(encoded, "$2b$") && !strings.HasPrefix(encoded, "$2y$") {
-			return false, errors.New("Некорректное значение: «bcrypt hash prefix»")
+			return false, errors.New("Некорректное значение: префикс хеша bcrypt")
 		}
 		cost, err := bcryptCost(encoded)
 		if err != nil {
@@ -49,7 +49,7 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 		}
 		return verifyLegacySHA256(secret, encoded), nil
 	default:
-		return false, fmt.Errorf("Не поддерживается: «password algorithm» %q", cfg.Algorithm)
+		return false, fmt.Errorf("Не поддерживается: алгоритм хеширования пароля %q", cfg.Algorithm)
 	}
 }
 
@@ -95,10 +95,10 @@ func consumePasswordWork(secret string, cfg PasswordConfig) {
 func validateArgon2idPHC(encoded string) error {
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
-		return errors.New("Некорректное значение: «argon2id PHC string»")
+		return errors.New("Некорректное значение: строка PHC алгоритма argon2id")
 	}
 	if parts[2] != "v=19" {
-		return fmt.Errorf("Не поддерживается: «argon2 version» %q", parts[2])
+		return fmt.Errorf("Не поддерживается: версия argon2 %q", parts[2])
 	}
 	var memory uint64
 	var iterations uint64
@@ -106,11 +106,11 @@ func validateArgon2idPHC(encoded string) error {
 	for _, parameter := range strings.Split(parts[3], ",") {
 		pair := strings.SplitN(parameter, "=", 2)
 		if len(pair) != 2 {
-			return errors.New("Некорректное значение: «argon2id parameters»")
+			return errors.New("Некорректное значение: параметры argon2id")
 		}
 		value, err := strconv.ParseUint(pair[1], 10, 32)
 		if err != nil || value == 0 {
-			return errors.New("Некорректное значение: «argon2id parameter value»")
+			return errors.New("Некорректное значение: значение параметра argon2id")
 		}
 		switch pair[0] {
 		case "m":
@@ -122,18 +122,18 @@ func validateArgon2idPHC(encoded string) error {
 		}
 	}
 	if memory == 0 || iterations == 0 || parallelism == 0 {
-		return errors.New("Требуется: «argon2id parameters m/t/p are»")
+		return errors.New("Требуется: параметры m/t/p алгоритма argon2id")
 	}
 	if memory > 1024*1024 || iterations > 20 || parallelism > 32 {
 		return errors.New("Параметры argon2id превышают безопасные ограничения Launcher")
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil || len(salt) < 8 {
-		return errors.New("Некорректное значение: «argon2id salt»")
+		return errors.New("Некорректное значение: соль argon2id")
 	}
 	digest, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil || len(digest) < 16 || len(digest) > 128 {
-		return errors.New("Некорректное значение: «argon2id digest»")
+		return errors.New("Некорректное значение: хеш argon2id")
 	}
 	return nil
 }
@@ -158,7 +158,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 	if strings.HasPrefix(encoded, "$pbkdf2-sha256$") {
 		parts := strings.Split(encoded, "$")
 		if len(parts) != 5 {
-			return false, errors.New("Некорректное значение: «pbkdf2-sha256 hash»")
+			return false, errors.New("Некорректное значение: хеш pbkdf2-sha256")
 		}
 		parsed, err := strconv.Atoi(parts[2])
 		if err != nil {
@@ -167,7 +167,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		iterations = parsed
 		salt, err = decodeBase64Flexible(parts[3])
 		if err != nil {
-			return false, errors.New("Некорректное значение: «pbkdf2 salt»")
+			return false, errors.New("Некорректное значение: соль pbkdf2")
 		}
 		expected, err = decodeBase64Flexible(parts[4])
 		if err != nil {
@@ -176,7 +176,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 	} else if strings.HasPrefix(encoded, "pbkdf2_sha256$") {
 		parts := strings.Split(encoded, "$")
 		if len(parts) != 4 {
-			return false, errors.New("Некорректное значение: «Django pbkdf2_sha256 hash»")
+			return false, errors.New("Некорректное значение: хеш Django pbkdf2_sha256")
 		}
 		parsed, err := strconv.Atoi(parts[1])
 		if err != nil {
@@ -189,7 +189,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 			return false, errors.New("Некорректное значение: дайджест PBKDF2")
 		}
 	} else {
-		return false, errors.New("Не поддерживается: «pbkdf2-sha256 hash format»")
+		return false, errors.New("Не поддерживается: формат хеша pbkdf2-sha256")
 	}
 	if iterations < minIterations {
 		return false, fmt.Errorf("Число итераций pbkdf2 %d ниже настроенного минимума %d", iterations, minIterations)
@@ -198,7 +198,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		return false, errors.New("Число итераций pbkdf2 превышает безопасный предел Launcher")
 	}
 	if len(salt) < 8 || len(expected) < 16 || len(expected) > 128 {
-		return false, errors.New("Некорректное значение: «pbkdf2 salt/digest length»")
+		return false, errors.New("Некорректное значение: длина соли или хеша pbkdf2")
 	}
 	actual := pbkdf2SHA256([]byte(secret), salt, iterations, len(expected))
 	return subtle.ConstantTimeCompare(actual, expected) == 1, nil

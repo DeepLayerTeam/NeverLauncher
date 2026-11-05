@@ -209,14 +209,14 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		expectedSchema = "1.1"
 	}
 	if cert.SchemaVersion != expectedSchema || cert.Release != expectedRelease || cert.Version != ver || cert.ProtocolVersion != expectedProtocol || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
-		return fmt.Errorf("Несовпадение: «%s certification metadata»", expectedRelease)
+		return fmt.Errorf("Несовпадение: метаданные сертификации %s", expectedRelease)
 	}
 	if serverBridgeGARequired0200(ver) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc") || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
-		return errors.New("Несовпадение: «ServerBridge 3 GA certification metadata»")
+		return errors.New("Несовпадение: метаданные финальной сертификации ServerBridge 3")
 	}
 	if serverBridgeSecurityCertificationRequired01912(ver) {
 		if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
-			return errors.New("Несовпадение: «ServerBridge 3 security certification metadata»")
+			return errors.New("Несовпадение: метаданные сертификации безопасности ServerBridge 3")
 		}
 	}
 	targets := serverBridgeReleaseTargetsForVersion0150(ver)
@@ -235,10 +235,10 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 			return fmt.Errorf("Некорректное значение: BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 		}
 		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-			return errors.New("Несовпадение: «ServerBridge 3 release allowlist security metadata»")
+			return errors.New("Несовпадение: метаданные безопасности списка разрешённых артефактов ServerBridge 3")
 		}
 		if serverBridgeGARequired0200(ver) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
-			return errors.New("Несовпадение: «ServerBridge 3 GA release allowlist metadata»")
+			return errors.New("Несовпадение: метаданные списка разрешённых артефактов финального выпуска ServerBridge 3")
 		}
 		allow = document.Releases
 	} else if err := json.Unmarshal(allowRaw, &allow); err != nil {
@@ -253,7 +253,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	for i, expectedID := range targets {
 		item := cert.Artifacts[i]
 		if item.ID != expectedID {
-			return fmt.Errorf("%s artifact #%d: требуется «%s, got» %s", expectedRelease, i+1, expectedID, item.ID)
+			return fmt.Errorf("%s artifact #%d: требуется %s; получено %s", expectedRelease, i+1, expectedID, item.ID)
 		}
 		expectedFile := fmt.Sprintf("launcher-%s-bridge-%s.jar", expectedID, ver)
 		if item.File != expectedFile || item.Bytes <= 0 {
@@ -273,7 +273,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		seen[normalized] = struct{}{}
 		values := policy[serverBridge2AllowlistFields0150[expectedID]]
 		if len(values) != 1 || !strings.EqualFold(strings.TrimSpace(values[0]), item.SHA256) {
-			return fmt.Errorf("«%s: release allowlist» не совпадает с «certified artifact»", expectedID)
+			return fmt.Errorf("список разрешённых артефактов %s не совпадает с сертифицированный артефакт", expectedID)
 		}
 	}
 	return nil

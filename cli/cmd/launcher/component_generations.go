@@ -48,7 +48,7 @@ func loadComponentWatermark02311(root string) (componentGenerationRecord02311, e
 		}
 		found = true
 		if !info.Mode().IsRegular() || info.Size() > 4096 {
-			return current, errors.New("Некорректное значение: «component generation slot: nonregular/oversized»")
+			return current, errors.New("Некорректное значение: слот поколения компонентов: файл не является обычным или превышает допустимый размер")
 		}
 		raw, err := os.ReadFile(path)
 		if err != nil {
@@ -189,7 +189,7 @@ func reconcileInstalledComponentGeneration02311(root string) error {
 			full := filepath.Join(verifyRoot, filepath.FromSlash(item.TargetPath))
 			info, err := os.Lstat(full)
 			if err != nil || !info.Mode().IsRegular() {
-				return fmt.Errorf("«component %s path is missing or»: требуется обычный файл", item.Component)
+				return fmt.Errorf("путь компонента %s отсутствует или: требуется обычный файл", item.Component)
 			}
 			if err := verifyUpdaterFile0156(full, item.Size, item.SHA256); err != nil {
 				return fmt.Errorf("Нельзя согласовать непроверенный установленный компонент %s: %w", item.Component, err)

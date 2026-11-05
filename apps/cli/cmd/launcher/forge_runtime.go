@@ -399,7 +399,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	// незакреплённый локальный установщик и не позволяйте обходить им закреплённый lock.
 	if opts.InstallerSourceFile != "" {
 		if !isSHA256Hex0271(opts.InstallerSourceSHA256) {
-			return forgeMaterializeResult{}, errors.New("local installer: требуется «exact --installer-sha256»")
+			return forgeMaterializeResult{}, errors.New("local installer: требуется точное значение --installer-sha256")
 		}
 		if _, err := mirrorCheckedHash0274(opts.InstallerSourceFile, opts.InstallerSourceSHA256); err != nil {
 			return forgeMaterializeResult{}, err
@@ -412,7 +412,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 			return forgeMaterializeResult{}, err
 		}
 		if installerSHA1 != "" && !strings.EqualFold(installerSHA1, sha1sum) {
-			return forgeMaterializeResult{}, errors.New("Несовпадение: «local installer SHA-1»")
+			return forgeMaterializeResult{}, errors.New("Несовпадение: SHA-1 локального установщика")
 		}
 		installerSHA1 = sha1sum
 		if _, err := os.Lstat(installerPath); errors.Is(err, os.ErrNotExist) {
@@ -1022,7 +1022,7 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 	}
 	if len(acceptable) > 0 {
 		if !acceptable[strings.ToLower(actualSHA1)] {
-			return fmt.Errorf("Несовпадение: «Forge legacy universal JAR SHA-1»: %s", actualSHA1)
+			return fmt.Errorf("Несовпадение: SHA-1 универсального JAR старой версии Forge: %s", actualSHA1)
 		}
 		return nil
 	}
@@ -1072,7 +1072,7 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 	}
 	if !isMutableLoaderSelector(requested) {
 		if err := validateForgeLikeVersionToken0272(requested); err != nil {
-			return "", "", "", "", fmt.Errorf("Некорректное значение: «explicit %s version»: %w", loader, err)
+			return "", "", "", "", fmt.Errorf("Некорректное значение: явно заданная версия %s: %w", loader, err)
 		}
 	}
 	metadataURL := strings.TrimSpace(metadataOverride)
@@ -1651,13 +1651,13 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 				return nil, err
 			}
 			if artifact.SHA1 != "" && !strings.EqualFold(artifact.SHA1, sha1sum) {
-				return nil, fmt.Errorf("Несовпадение: «local library %s SHA-1»", lib.Name)
+				return nil, fmt.Errorf("Несовпадение: SHA-1 локальной библиотеки %s", lib.Name)
 			}
 			if artifact.SHA1 == "" && hasLegacySHA1Checksums(lib.Checksums) && !legacySHA1Matches(lib.Checksums, sha1sum) {
 				return nil, fmt.Errorf("local legacy library %s SHA-1 не совпадает ни с одним checksums", lib.Name)
 			}
 			if artifact.Size > 0 && artifact.Size != size {
-				return nil, fmt.Errorf("Несовпадение: «local library %s size»", lib.Name)
+				return nil, fmt.Errorf("Несовпадение: размер локальной библиотеки %s", lib.Name)
 			}
 			artifact.Path = rel
 			artifact.SHA1 = sha1sum
@@ -2261,7 +2261,7 @@ func javaMajorVersion(javaPath string) (int, error) {
 	defer cancel()
 	output, err := exec.CommandContext(ctx, javaPath, "-version").CombinedOutput()
 	if err != nil {
-		return 0, fmt.Errorf("Ошибка: «java -version»: %w: %s", err, strings.TrimSpace(string(output)))
+		return 0, fmt.Errorf("Ошибка: проверка версии командой java -version: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	text := string(output)
 	start := strings.Index(text, `"`)

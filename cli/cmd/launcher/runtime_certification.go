@@ -72,7 +72,7 @@ func certHashFile02712(path string) (string, error) {
 }
 func certResolveExecutable02712(name string) (string, error) {
 	if strings.TrimSpace(name) == "" {
-		return "", errors.New("Требуется: «executable»")
+		return "", errors.New("Требуется: исполняемый файл")
 	}
 	full, err := exec.LookPath(name)
 	if err != nil {
@@ -167,11 +167,11 @@ func certProfileID02712(plan factoryPlan0271) (string, error) {
 		return "", err
 	}
 	if !strings.HasPrefix(profile, "versions/") || !strings.HasSuffix(profile, ".json") {
-		return "", errors.New("Некорректное значение: «profile path»")
+		return "", errors.New("Некорректное значение: путь профиля")
 	}
 	id := strings.TrimSuffix(filepath.Base(profile), ".json")
 	if filepath.ToSlash(filepath.Join("versions", id, id+".json")) != profile {
-		return "", errors.New("Неожиданное значение: «profile path»")
+		return "", errors.New("Неожиданное значение: путь профиля")
 	}
 	return id, nil
 }

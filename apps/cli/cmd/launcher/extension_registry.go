@@ -285,10 +285,10 @@ func extensionRegistryPullCLI0203(backend, token, id, versionValue, dest string)
 		return err
 	}
 	if expected := strings.Trim(resp.Header.Get("ETag"), `"`); expected != "" && !strings.EqualFold(expected, hex.EncodeToString(h.Sum(nil))) {
-		return errors.New("«downloaded registry artifact SHA-256» не совпадает с ETag")
+		return errors.New("контрольная сумма SHA-256 артефакта, загруженного из реестра не совпадает с ETag")
 	}
 	if resp.ContentLength >= 0 && size != resp.ContentLength {
-		return errors.New("Несовпадение: «downloaded registry artifact size»")
+		return errors.New("Несовпадение: размер артефакта, загруженного из реестра")
 	}
 	if err := tmp.Sync(); err != nil {
 		return err

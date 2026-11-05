@@ -20,7 +20,7 @@ func hostProcessIdentity0282(pid int) (string, error) {
 	}
 	end := strings.LastIndexByte(string(raw), ')')
 	if end == -1 {
-		return "", fmt.Errorf("Некорректное значение: «proc stat»")
+		return "", fmt.Errorf("Некорректное значение: данные статистики процесса")
 	}
 	fields := strings.Fields(string(raw[end+1:]))
 	if len(fields) < 20 || fields[0] == "Z" || fields[0] == "X" {

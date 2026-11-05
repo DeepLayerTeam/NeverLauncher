@@ -76,11 +76,11 @@ func ValidatePublishAddress(raw string) (*url.URL, error) {
 func instanceName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if len(name) == 0 || len(name) > 40 {
-		return "", errors.New("Некорректное значение: «instance label»")
+		return "", errors.New("Некорректное значение: метка экземпляра")
 	}
 	for _, r := range name {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
-			return "", errors.New("Для экземпляр требуется: «ASCII alphanumeric / - / _»")
+			return "", errors.New("Для имени экземпляра допустимы только ASCII-буквы, цифры, дефис и подчёркивание")
 		}
 	}
 	return name + "." + Service, nil

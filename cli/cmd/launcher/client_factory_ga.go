@@ -76,7 +76,7 @@ func factoryReadJoinEvidence0280(path string) (factoryJoinEvidence0280, string, 
 func factorySignJoin0280(evidence, privatePath, ver, commit, out string) (factoryJoinAttestation0280, error) {
 	var a factoryJoinAttestation0280
 	if ver != "0.28.0" || !factoryCommit0280.MatchString(commit) || out == "" || out == "-" {
-		return a, errors.New("GA join signing: требуется «release 0.28.0, exact 40-character commit and output file»")
+		return a, errors.New("GA join signing: требуется выпуск 0.28.0, точный 40-символьный идентификатор коммита и выходной файл")
 	}
 	_, sha, err := factoryReadJoinEvidence0280(evidence)
 	if err != nil {
@@ -114,7 +114,7 @@ func factoryVerifyJoin0280(evidence, attestation, publicKey, ver, commit string)
 		return e, "", err
 	}
 	if a.Schema != factoryGASchema0280 || a.Version != ver || a.Commit != commit || !factoryCommit0280.MatchString(a.Commit) || a.EvidenceSHA256 != sha {
-		return e, "", errors.New("«server join attestation» не совпадает с «exact release, commit or evidence»")
+		return e, "", errors.New("свидетельство подтверждения подключения к серверу не совпадает с точная версия выпуска, коммит или свидетельство")
 	}
 	issued, err := time.Parse(time.RFC3339, a.CreatedAt)
 	if err != nil || issued.After(time.Now().Add(5*time.Minute)) || time.Since(issued) > 30*24*time.Hour {
@@ -125,7 +125,7 @@ func factoryVerifyJoin0280(evidence, attestation, publicKey, ver, commit string)
 		return e, "", err
 	}
 	if a.PublicKey != base64.StdEncoding.EncodeToString(pub) {
-		return e, "", errors.New("Недоверенное значение: «server join signing key»")
+		return e, "", errors.New("Недоверенное значение: ключ подписи подтверждения подключения к серверу")
 	}
 	sig, err := base64.StdEncoding.DecodeString(a.Signature)
 	if err != nil {
@@ -136,14 +136,14 @@ func factoryVerifyJoin0280(evidence, attestation, publicKey, ver, commit string)
 		return e, "", err
 	}
 	if !ed25519.Verify(pub, msg, sig) {
-		return e, "", errors.New("Некорректное значение: «server join signature»")
+		return e, "", errors.New("Некорректное значение: подпись подтверждения подключения к серверу")
 	}
 	return e, sha, nil
 }
 func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinPub, ver, commit string) (factoryGAReport0280, error) {
 	report := factoryGAReport0280{Schema: "launcher.factory.ga-report.v1", Status: "blocked", Version: ver, Commit: commit}
 	if ver != "0.28.0" || !factoryCommit0280.MatchString(commit) {
-		return report, errors.New("Для GA требуется «exact v0.28.0 and commit SHA»")
+		return report, errors.New("Для GA требуется точная версия v0.28.0 и SHA коммита")
 	}
 	if clientPub != "" && joinPub != "" {
 		runtimeKey, runtimeErr := certReadPublic02712(clientPub)
@@ -155,11 +155,11 @@ func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinP
 			return report, joinErr
 		}
 		if string(runtimeKey) == string(joinKey) {
-			return report, errors.New("Для GA требуется «an independent server-join trust root»")
+			return report, errors.New("Для GA требуется независимый корневой ключ доверия подключения к серверу")
 		}
 	}
 	if matrix == "" || clientPub == "" || joinEvidence == "" || joinAttestation == "" || joinPub == "" {
-		return report, errors.New("Для GA требуется «independent runtime matrix and signed matching-server join evidence»")
+		return report, errors.New("Для GA требуется независимая матрица среды выполнения и подписанное свидетельство подключения к соответствующему серверу")
 	}
 	certs, err := certifyMatrix02712(matrix, clientPub, "", true)
 	if err != nil {

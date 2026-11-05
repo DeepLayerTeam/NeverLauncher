@@ -136,6 +136,6 @@ event_source = (
 ).read_text(encoding="utf-8")
 for event_type in sorted(required_types):
     if f'"{event_type}"' not in event_source:
-        raise SystemExit(f"Отсутствует: «event type» {event_type}")
+        raise SystemExit(f"Отсутствует: тип события {event_type}")
 
 print("ServerBridge 0.19.4: проверка последовательного потока событий: PASS")

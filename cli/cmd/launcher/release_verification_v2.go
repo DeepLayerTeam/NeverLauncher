@@ -181,15 +181,15 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 	active := 0
 	for _, k := range p.Keys {
 		if strings.TrimSpace(k.ID) == "" || k.Purpose != "release-signing" || !strings.EqualFold(k.Algorithm, "Ed25519") {
-			return p, fmt.Errorf("Некорректное значение: «trust key record» %q", k.ID)
+			return p, fmt.Errorf("Некорректное значение: запись доверенного ключа %q", k.ID)
 		}
 		pubRaw, err := hex.DecodeString(strings.TrimSpace(k.PublicKey))
 		if err != nil || len(pubRaw) != ed25519.PublicKeySize {
-			return p, fmt.Errorf("Некорректное значение: «trust key %s publicKey»", k.ID)
+			return p, fmt.Errorf("Некорректное значение: открытый ключ %s записи доверия", k.ID)
 		}
 		fp := fingerprintEd255190158(ed25519.PublicKey(pubRaw))
 		if !strings.EqualFold(fp, k.Fingerprint) {
-			return p, fmt.Errorf("Несовпадение: «trust key %s fingerprint»", k.ID)
+			return p, fmt.Errorf("Несовпадение: отпечаток доверенного ключа %s", k.ID)
 		}
 		if seenID[k.ID] || seenFP[strings.ToLower(fp)] {
 			return p, errors.New("trust policy содержит duplicate key id/fingerprint")
@@ -200,7 +200,7 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 			active++
 		case "verify-only", "revoked":
 		default:
-			return p, fmt.Errorf("Некорректное значение: «trust key %s status»: %s", k.ID, k.Status)
+			return p, fmt.Errorf("Некорректное значение: статус доверенного ключа %s: %s", k.ID, k.Status)
 		}
 	}
 	if active == 0 {
@@ -230,7 +230,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 	}
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(policy.RootSignature.Signature))
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return "", errors.New("Некорректное значение: «trust policy root signature encoding»")
+		return "", errors.New("Некорректное значение: кодировка корневой подписи политики доверия")
 	}
 	payload, err := releaseTrustPolicyPayload0158(policy)
 	if err != nil {
@@ -282,12 +282,12 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 			if k.VerifyUntil != "" {
 				end, e := time.Parse(time.RFC3339Nano, k.VerifyUntil)
 				if e != nil || !end.After(retired) || end.After(limit) {
-					return nil, fmt.Errorf("Некорректное значение: «finite release key overlap»: %s", id)
+					return nil, fmt.Errorf("Некорректное значение: ограниченный период одновременного действия ключей выпуска: %s", id)
 				}
 				limit = end
 			}
 			if !time.Now().UTC().Before(limit) {
-				return nil, fmt.Errorf("Истёк срок действия: «release key overlap»: %s", id)
+				return nil, fmt.Errorf("Истёк срок действия: пересечение сроков действия ключей выпуска: %s", id)
 			}
 		}
 		raw, _ := hex.DecodeString(k.PublicKey)
@@ -493,7 +493,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	}
 	sum := sha256.Sum256(sums)
 	if !strings.EqualFold(env.SHA256, hex.EncodeToString(sum[:])) {
-		return releaseVerificationV2Context{}, errors.New("Несовпадение: «Release v2 SHA256SUMS digest»")
+		return releaseVerificationV2Context{}, errors.New("Несовпадение: контрольная сумма SHA256SUMS для выпуска v2")
 	}
 	manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
 	if err != nil {
@@ -501,7 +501,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	}
 	manifestSum := sha256.Sum256(manifestRaw)
 	if !strings.EqualFold(env.ReleaseManifestSHA256, hex.EncodeToString(manifestSum[:])) {
-		return releaseVerificationV2Context{}, errors.New("Несовпадение: «Release v2 RELEASE_MANIFEST digest»")
+		return releaseVerificationV2Context{}, errors.New("Несовпадение: контрольная сумма RELEASE_MANIFEST для выпуска v2")
 	}
 	var m struct {
 		Version string `json:"version"`
@@ -510,11 +510,11 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, err
 	}
 	if env.ReleaseVersion != m.Version {
-		return releaseVerificationV2Context{}, errors.New("Несовпадение: «Release v2 version binding»")
+		return releaseVerificationV2Context{}, errors.New("Несовпадение: привязка версии выпуска v2")
 	}
 	sig, err := base64.StdEncoding.DecodeString(env.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return releaseVerificationV2Context{}, errors.New("Некорректное значение: «Release v2 signature encoding»")
+		return releaseVerificationV2Context{}, errors.New("Некорректное значение: кодировка подписи выпуска v2")
 	}
 	payload, err := releaseSignaturePayload0158(env)
 	if err != nil {

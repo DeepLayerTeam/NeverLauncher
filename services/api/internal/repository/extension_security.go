@@ -22,7 +22,7 @@ func normalizeSecurityScope0207(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("extension security scope: требуется «global or project»")
+		return "", "", errors.New("extension security scope: требуется глобальная область или область проекта")
 	}
 	if scope == "global" {
 		scopeID = ""

@@ -1096,7 +1096,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	h.BindingEpoch = sourceJoin.BindingEpoch
 	expectedCorrelation := strings.ToLower(strings.TrimSpace(h.SessionCorrelationID))
 	if expectedCorrelation != "" && !strings.EqualFold(expectedCorrelation, sourceJoin.SessionCorrelationID) {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Несовпадение: «%w: session correlation proof»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("Несовпадение: %w: подтверждение привязки сеанса", ErrConflict)
 	}
 	h.MinecraftSessionID = sourceJoin.MinecraftSessionID
 	if sourceJoin.IdentityRealm == "official" && !sourceJoin.OnlineModeVerified {

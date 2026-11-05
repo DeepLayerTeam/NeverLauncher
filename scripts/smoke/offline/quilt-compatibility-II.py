@@ -67,7 +67,7 @@ for minecraft, java_major in expected.items():
             f"Quilt {minecraft} must be Java {java_major} scope={expected_scope}"
         )
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
-        raise SystemExit(f"Для Quilt {minecraft} требуется: «certified on linux/x86_64»")
+        raise SystemExit(f"Для Quilt {minecraft} требуется сертификация на linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
         raise SystemExit(
             f"Quilt {minecraft} must resolve latest-stable at execution time"

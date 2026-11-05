@@ -311,7 +311,7 @@ func verifyDeviceTrustCertificationInBundle(dir, ver string) error {
 		return errors.New("DEVICE_TRUST_CERTIFICATION не соответствует embedded matrix/targets")
 	}
 	if strings.Join(stored.RequiredTargetIDs, "\x00") != strings.Join(expected.RequiredTargetIDs, "\x00") || strings.Join(stored.PassedTargetIDs, "\x00") != strings.Join(expected.PassedTargetIDs, "\x00") {
-		return errors.New("Несовпадение: «DEVICE_TRUST_CERTIFICATION target sets»")
+		return errors.New("Несовпадение: наборы целевых платформ DEVICE_TRUST_CERTIFICATION")
 	}
 	return nil
 }

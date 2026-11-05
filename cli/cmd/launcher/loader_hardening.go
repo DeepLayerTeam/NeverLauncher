@@ -219,7 +219,7 @@ func fetchLoaderProfileWithCache(ctx context.Context, client *http.Client, root,
 		if data, err := loadLoaderPayloadCacheBytes(root, loader, minecraft, source, pinned.PayloadSHA256, max); err == nil {
 			return data, true, cacheOnly, nil
 		} else if cacheOnly {
-			return nil, false, false, fmt.Errorf("Ошибка: «loader cache-only recovery»: %w", err)
+			return nil, false, false, fmt.Errorf("Ошибка: восстановление загрузчика только из локального кеша: %w", err)
 		}
 	}
 	if cacheOnly {
@@ -255,7 +255,7 @@ func restorePinnedInstallerFromCache(root, loader, minecraft, source, expectedSH
 		return vanillaDownloadedFile{}, err
 	}
 	if actualSize != size || !strings.EqualFold(sha256sum, expectedSHA256) {
-		return vanillaDownloadedFile{}, errors.New("Несовпадение: «restored installer cache verification»")
+		return vanillaDownloadedFile{}, errors.New("Несовпадение: проверка восстановленного кеша установщика")
 	}
 	rel, err := filepath.Rel(root, destination)
 	if err != nil {
@@ -300,7 +300,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 	closeErr := out.Close()
 	if copyErr != nil || syncErr != nil || closeErr != nil {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("Ошибка: «pinned artifact write»: %v %v %v", copyErr, syncErr, closeErr)
+		return vanillaDownloadedFile{}, fmt.Errorf("Ошибка: запись зафиксированного артефакта: %v %v %v", copyErr, syncErr, closeErr)
 	}
 	if written <= 0 || written > max {
 		_ = os.Remove(tmp)

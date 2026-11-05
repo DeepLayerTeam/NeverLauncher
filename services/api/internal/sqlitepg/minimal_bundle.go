@@ -81,7 +81,7 @@ func privateFile0377(p string, directory bool) error {
 		return err
 	}
 	if st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("Небезопасное значение: «non-private file or directory» %s", p)
+		return fmt.Errorf("Небезопасное значение: файл или каталог без ограниченного доступа %s", p)
 	}
 	if directory && !st.IsDir() {
 		return fmt.Errorf("Указанный путь не является каталогом: %s", p)
@@ -127,7 +127,7 @@ func checkSQLite0377(ctx context.Context, p string) error {
 		return err
 	}
 	if failed {
-		return errors.New("Ошибка: «SQLite foreign_key_check»")
+		return errors.New("Ошибка: проверка внешних ключей SQLite")
 	}
 	return nil
 }
@@ -148,7 +148,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 		return m, nil, err
 	}
 	if len(raw) > 32*1024*1024 {
-		return m, nil, errors.New("Превышен допустимый размер: «minimal manifest»")
+		return m, nil, errors.New("Превышен допустимый размер: минимальный манифест")
 	}
 	if err = privateFile0377(filepath.Join(bundle, "manifest.json"), false); err != nil {
 		return m, nil, err
@@ -163,7 +163,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	files := map[string]bool{}
 	for i, d := range m.Directories {
 		if i > 0 && (!legalPath0377(d) || d <= "." || d <= m.Directories[i-1]) {
-			return m, nil, errors.New("Некорректное значение: «or unordered directory in minimal bundle»")
+			return m, nil, errors.New("Некорректное значение: или каталог с нарушенным порядком в минимальном комплекте")
 		}
 		if d != "." {
 			if err = privateFile0377(filepath.Join(payload, filepath.FromSlash(d)), true); err != nil {
@@ -175,7 +175,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	foundHTTP, foundCoord, foundEnv := false, false, false
 	for i, f := range m.Files {
 		if !legalPath0377(f.Path) || (i > 0 && f.Path <= m.Files[i-1].Path) || (f.Kind != "sqlite" && f.Kind != "file") || f.Bytes < 0 || len(f.SHA256) != 64 || f.Mode > 0700 || f.Mode&0077 != 0 {
-			return m, nil, errors.New("Небезопасное значение: «or unordered minimal bundle file»")
+			return m, nil, errors.New("Небезопасное значение: или файл минимального комплекта с нарушенным порядком")
 		}
 		file := filepath.Join(payload, filepath.FromSlash(f.Path))
 		if err = privateFile0377(file, false); err != nil {
@@ -193,7 +193,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 			return m, nil, e
 		}
 		if n != f.Bytes || digest != f.SHA256 {
-			return m, nil, fmt.Errorf("Несовпадение: «minimal file digest»: %s", f.Path)
+			return m, nil, fmt.Errorf("Несовпадение: контрольная сумма файла минимального комплекта: %s", f.Path)
 		}
 		if f.Kind == "sqlite" {
 			if err = checkSQLite0377(ctx, file); err != nil {
@@ -212,7 +212,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 		files[f.Path] = true
 	}
 	if !foundHTTP || !foundCoord || !foundEnv {
-		return m, nil, errors.New("Отсутствует: «required minimal databases or configuration»")
+		return m, nil, errors.New("Отсутствует: обязательные БД или конфигурация минимального комплекта")
 	}
 	actualDirs := []string{"."}
 	actualFiles := []string{}
@@ -241,7 +241,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	sort.Strings(actualDirs)
 	sort.Strings(actualFiles)
 	if len(actualDirs) != len(dirs) || len(actualFiles) != len(files) {
-		return m, nil, errors.New("Отсутствует: «or unexpected files in minimal backup»")
+		return m, nil, errors.New("Отсутствует: или посторонние файлы в минимальной резервной копии")
 	}
 	for _, p := range actualDirs {
 		if !dirs[p] {
@@ -383,7 +383,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 // как рабочий PostgreSQL Backend.
 func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" || target == "" {
-		return report, errors.New("Требуется: «PostgreSQL DSN and target»")
+		return report, errors.New("Требуется: строка подключения PostgreSQL и целевая база")
 	}
 	dest, e := filepath.Abs(target)
 	if e != nil {
@@ -418,7 +418,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 	}
 	sum := sha256.Sum256(raw)
 	if hex.EncodeToString(sum[:]) != receipt {
-		return report, errors.New("Несовпадение: «minimal manifest integrity»")
+		return report, errors.New("Несовпадение: целостность минимального манифеста")
 	}
 	var m MinimalBundleManifest0377
 	if err = json.Unmarshal(raw, &m); err != nil {

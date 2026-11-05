@@ -187,7 +187,7 @@ func worldBackupDisjoint02810(a, b string) error {
 			return err
 		}
 		if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
-			return errors.New("«world backup paths»: запрещено «overlap server root, backup store, or restore destination»")
+			return errors.New("пути резервных копий игрового мира: запрещено пересекаться с корнем сервера, хранилищем копий или каталогом восстановления")
 		}
 	}
 	return nil
@@ -224,7 +224,7 @@ func worldBackupPrivateDir02810(path string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
-		return errors.New("world backup directory: требуется «a private non-symlink directory (0700)»")
+		return errors.New("Каталог резервного копирования игрового мира: требуется закрытый каталог с правами 0700, не являющийся символической ссылкой")
 	}
 	return nil
 }
@@ -238,7 +238,7 @@ func worldBackupRandom02810() (string, error) {
 func worldBackupLockAcquire02810(dir string) (func(), error) {
 	identity := hostOwnIdentity0282()
 	if identity == "" {
-		return nil, errors.New("Для резервная копия требуется «verifiable host process identity»")
+		return nil, errors.New("Для резервного копирования необходим проверяемый идентификатор процесса хоста")
 	}
 	nonce, err := worldBackupRandom02810()
 	if err != nil {
@@ -277,7 +277,7 @@ func worldBackupLockAcquire02810(dir string) (func(), error) {
 			return nil, e
 		}
 		if !fi.Mode().IsRegular() {
-			return nil, errors.New("«world backup lock»: требуется обычный файл")
+			return nil, errors.New("блокировка резервного копирования игрового мира: требуется обычный файл")
 		}
 		var existing worldBackupLock02810
 		if err := worldBackupReadJSON02810(path, &existing); err != nil {
@@ -300,7 +300,7 @@ func worldBackupReadJSON02810(path string, v any) error {
 		return err
 	}
 	if !check.Mode().IsRegular() {
-		return errors.New("backup metadata: требуется «a real regular file»")
+		return errors.New("Метаданные резервной копии: требуется существующий обычный файл")
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -377,10 +377,10 @@ func worldBackupQuiesce02810(root, policy string) error {
 		return errors.New("Остановка процесса Minecraft не подтверждена")
 	}
 	if current.Status == "starting" || current.Status == "running" || current.Status == "restarting" {
-		return fmt.Errorf("Небезопасное значение: «host runtime state» %s", current.Status)
+		return fmt.Errorf("Небезопасное значение: состояние среды выполнения хоста %s", current.Status)
 	}
 	if hostIdentityMatches0282(current.SupervisorPID, current.SupervisorIdentity) {
-		return errors.New("«supervisor is still running;»: запрещено «guarantee no restart during backup»")
+		return errors.New("Контроллер процессов всё ещё запущен: нельзя гарантировать отсутствие перезапуска во время резервного копирования")
 	}
 	if current.Status == "crashed" || current.Status == "failed" || current.Status == "restarting" {
 		return errors.New("Мир после сбоя не подтверждён как согласованный источник резервной копии")
@@ -444,7 +444,7 @@ func worldBackupWorlds02810(root string, requested []string) ([]string, error) {
 			return nil, fmt.Errorf("world %s: %w", name, err)
 		}
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("Для «world» %s требуется: настоящий каталог", name)
+			return nil, fmt.Errorf("Для игрового мира %s необходим существующий каталог", name)
 		}
 		worlds = append(worlds, name)
 	}
@@ -484,7 +484,7 @@ func worldBackupCollect02810(root string, sources []string) ([]worldBackupEntry0
 			}
 			rel = filepath.ToSlash(rel)
 			if !worldBackupValidRelative02810(rel) {
-				return fmt.Errorf("Некорректное значение: «relative source path» %s", rel)
+				return fmt.Errorf("Некорректное значение: относительный путь к источнику %s", rel)
 			}
 			info, err := os.Lstat(path)
 			if err != nil {
@@ -497,7 +497,7 @@ func worldBackupCollect02810(root string, sources []string) ([]worldBackupEntry0
 				ent.Type = "file"
 				ent.Size = info.Size()
 			} else {
-				return fmt.Errorf("Небезопасное значение: «world backup entry»: %s (symlink or special file)", rel)
+				return fmt.Errorf("Небезопасное значение: запись резервной копии игрового мира: %s (символическая ссылка или специальный файл)", rel)
 			}
 			entries = append(entries, ent)
 			return nil
@@ -508,7 +508,7 @@ func worldBackupCollect02810(root string, sources []string) ([]worldBackupEntry0
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
 	if len(entries) == 0 {
-		return nil, errors.New("Пустое значение: «backup selection»")
+		return nil, errors.New("Пустое значение: выбор резервной копии")
 	}
 	return entries, nil
 }
@@ -667,22 +667,22 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 	var total int64
 	for _, w := range m.Worlds {
 		if !worldBackupValidRelative02810(w) || strings.Contains(w, "/") || worlds[w] {
-			return errors.New("Некорректное значение: «world selection»")
+			return errors.New("Некорректное значение: выбор игрового мира")
 		}
 		worlds[w] = true
 	}
 	for _, e := range m.Entries {
 		if !worldBackupValidRelative02810(e.Path) || found[e.Path] != "" || e.Mode > 0777 {
-			return fmt.Errorf("Некорректное значение: «or duplicate manifest entry»: %q", e.Path)
+			return fmt.Errorf("Некорректная или повторяющаяся запись манифеста: %q", e.Path)
 		}
 		if e.Type != "dir" && e.Type != "file" {
-			return errors.New("Некорректное значение: «backup entry type»")
+			return errors.New("Некорректное значение: тип записи резервной копии")
 		}
 		if e.Type == "dir" && (e.Size != 0 || e.SHA256 != "") {
-			return errors.New("Некорректное значение: «directory metadata»")
+			return errors.New("Некорректное значение: метаданные каталога")
 		}
 		if e.Type == "file" && (e.Size < 0 || len(e.SHA256) != 64) {
-			return errors.New("Некорректное значение: «file metadata»")
+			return errors.New("Некорректное значение: метаданные файла")
 		}
 		if e.Type == "file" {
 			if _, err := hex.DecodeString(e.SHA256); err != nil {
@@ -703,7 +703,7 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 		found[e.Path] = e.Type
 	}
 	if total != m.TotalBytes {
-		return errors.New("Несовпадение: «manifest byte count»")
+		return errors.New("Несовпадение: размер манифеста в байтах")
 	}
 	for w := range worlds {
 		if found[w] != "dir" {
@@ -762,7 +762,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		rel = filepath.ToSlash(rel)
 		e, ok := expected[rel]
 		if !ok {
-			return fmt.Errorf("Неожиданное значение: «backup payload entry» %s", rel)
+			return fmt.Errorf("Неожиданное значение: элемент данных резервной копии %s", rel)
 		}
 		fi, err := os.Lstat(path)
 		if err != nil {
@@ -770,7 +770,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		}
 		if e.Type == "dir" {
 			if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("Некорректное значение: «backup directory» %s", rel)
+				return fmt.Errorf("Некорректное значение: каталог резервной копии %s", rel)
 			}
 		} else {
 			if !fi.Mode().IsRegular() || fi.Size() != e.Size {
@@ -797,7 +797,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		return m, err
 	}
 	if count != len(expected) {
-		return m, errors.New("Отсутствует: «backup payload entries»")
+		return m, errors.New("Отсутствует: элементы данных резервной копии")
 	}
 	return m, nil
 }
@@ -817,7 +817,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 		return err
 	}
 	if _, err = os.Lstat(abs); err == nil {
-		return errors.New("Запрещено: «restore destination already exists; overwrite»")
+		return errors.New("Каталог восстановления уже существует: перезапись запрещена")
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return err

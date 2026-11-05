@@ -1772,14 +1772,14 @@ mod imp {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("модуль защиты Guard: запрещено «open {} for hashing:» {err}", path.display()))?;
+            .map_err(|err| format!("Модуль защиты Guard: не удалось открыть {} для вычисления хеша: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("модуль защиты Guard: запрещено «hash {}:» {err}", path.display()))?;
+                .map_err(|err| format!("Модуль защиты Guard: не удалось вычислить хеш {}: {err}", path.display()))?;
             if read == 0 {
                 break;
             }

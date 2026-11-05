@@ -20,7 +20,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	}
 	if commit {
 		if len(planSHA) != 64 {
-			return errors.New("content import: требуется «a pinned --plan-sha256 from dry-run»")
+			return errors.New("content import: требуется зафиксированная контрольная сумма --plan-sha256 из пробного запуска")
 		}
 		if _, err := hex.DecodeString(planSHA); err != nil {
 			return errors.New("Некорректное значение: план миграции SHA-256")
@@ -33,7 +33,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Gravit content transfer: требуется «HTTPS or local loopback IP»")
+			return errors.New("Gravit content transfer: требуется HTTPS или локальный IP-адрес обратной связи")
 		}
 	}
 	f, e := os.Open(source)
@@ -46,7 +46,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 		return e
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("Для ZIP требуется: «a regular file of 1..512 MiB»")
+		return errors.New("ZIP-архив должен быть обычным файлом размером от 1 до 512 МиБ")
 	}
 	r, e := http.NewRequest("POST", endpoint, f)
 	if e != nil {

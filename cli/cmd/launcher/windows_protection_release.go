@@ -106,50 +106,50 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 		return err
 	}
 	if cert.SchemaVersion != "1.0" || cert.Kind != "launcher-windows-adversarial-certification" || cert.ProductVersion != ver {
-		return errors.New("Несовпадение: «Windows adversarial certificate identity»")
+		return errors.New("Несовпадение: идентификатор сертификата негативных испытаний Windows")
 	}
 	if !strings.EqualFold(cert.Repository, windowsProtectionRepository01812) {
-		return fmt.Errorf("Несовпадение: «Windows adversarial certificate repository»: %q", cert.Repository)
+		return fmt.Errorf("Несовпадение: репозиторий в сертификате негативных испытаний Windows: %q", cert.Repository)
 	}
 	certCommit, err := normalizeSourceCommit01511(cert.Commit)
 	if err != nil || !strings.EqualFold(certCommit, commit) {
-		return errors.New("Несовпадение: «Windows adversarial certificate source commit»")
+		return errors.New("Несовпадение: исходный коммит в сертификате негативных испытаний Windows")
 	}
 	if cert.Platform != "windows-x86_64" {
-		return fmt.Errorf("Несовпадение: «Windows adversarial certificate platform»: %q", cert.Platform)
+		return fmt.Errorf("Несовпадение: платформа в сертификате негативных испытаний Windows: %q", cert.Platform)
 	}
 	if _, err := strconv.ParseUint(strings.TrimSpace(cert.RunID), 10, 64); err != nil {
-		return fmt.Errorf("Некорректное значение: «Windows adversarial certificate runId»: %q", cert.RunID)
+		return fmt.Errorf("Некорректное значение: идентификатор запуска в сертификате негативных испытаний Windows: %q", cert.RunID)
 	}
 	expectedJava := []int{8, 16, 17, 21, 25}
 	if len(cert.JavaMajors) != len(expectedJava) || len(cert.JavaEvidence) != len(expectedJava) {
-		return errors.New("Несовпадение: «Windows adversarial certificate Java cohort size»")
+		return errors.New("Несовпадение: размер группы Java в сертификате негативных испытаний Windows")
 	}
 	for i, major := range expectedJava {
 		if cert.JavaMajors[i] != major || cert.JavaEvidence[i].JavaMajor != major || !sha256RE01812.MatchString(strings.ToLower(cert.JavaEvidence[i].EvidenceRootSHA256)) {
-			return fmt.Errorf("Несовпадение: «Windows adversarial certificate Java %d evidence»", major)
+			return fmt.Errorf("Несовпадение: свидетельство Java %d из сертификата негативных испытаний Windows", major)
 		}
 	}
 	if cert.RequiredJavaMajorCount != 5 || cert.PassedJavaMajorCount != 5 || cert.ScenarioExecutions != 55 {
-		return errors.New("Несовпадение: «Windows adversarial certificate execution cohort»")
+		return errors.New("Несовпадение: группа запусков из сертификата негативных испытаний Windows")
 	}
 	expectedCompatibility := []string{"sensor-early-load", "trusted-module-lifecycle", "continuous-cross-check", "job-bound-process-tree", "hotspot-jit"}
 	expectedAdversarial := []string{"unsigned-module", "code-page-drift", "private-exec-thread", "startup-instrumentation", "live-debugger", "foreign-executable-allocation"}
 	if len(cert.CompatibilityScenarios) != len(expectedCompatibility) || len(cert.AdversarialScenarios) != len(expectedAdversarial) {
-		return errors.New("Несовпадение: «Windows adversarial certificate scenario set size»")
+		return errors.New("Несовпадение: число сценариев сертификата негативных испытаний Windows")
 	}
 	for i := range expectedCompatibility {
 		if cert.CompatibilityScenarios[i] != expectedCompatibility[i] {
-			return fmt.Errorf("Несовпадение: «Windows adversarial compatibility scenario #%d»", i+1)
+			return fmt.Errorf("Несовпадение: сценарий совместимости негативных испытаний Windows №%d", i+1)
 		}
 	}
 	for i := range expectedAdversarial {
 		if cert.AdversarialScenarios[i] != expectedAdversarial[i] {
-			return fmt.Errorf("Несовпадение: «Windows adversarial scenario #%d»", i+1)
+			return fmt.Errorf("Несовпадение: сценарий негативных испытаний Windows №%d", i+1)
 		}
 	}
 	if !sha256RE01812.MatchString(strings.ToLower(cert.EvidenceRootSHA256)) {
-		return errors.New("Некорректное значение: «Windows adversarial certificate evidence root»")
+		return errors.New("Некорректное значение: корневое свидетельство сертификата негативных испытаний Windows")
 	}
 	rootMaterial := make([]map[string]any, 0, len(cert.JavaEvidence))
 	for _, row := range cert.JavaEvidence {
@@ -161,7 +161,7 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 	}
 	rootDigest := sha256.Sum256(canonical)
 	if !strings.EqualFold(hex.EncodeToString(rootDigest[:]), cert.EvidenceRootSHA256) {
-		return errors.New("Несовпадение: «Windows adversarial certificate aggregate evidence root»")
+		return errors.New("Несовпадение: корневое сводное свидетельство сертификата негативных испытаний Windows")
 	}
 	for _, key := range []string{
 		"allCertifiedJavaMajorsPassed", "allCompatibilityScenariosPassed", "allAdversarialScenariosDetected",
@@ -172,7 +172,7 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 		}
 	}
 	if cert.Policy != "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification" {
-		return fmt.Errorf("Несовпадение: «Windows adversarial certificate policy»: %q", cert.Policy)
+		return fmt.Errorf("Несовпадение: политика сертификата негативных испытаний Windows: %q", cert.Policy)
 	}
 	return nil
 }
@@ -230,7 +230,7 @@ func windowsProtectionArtifacts01812(dir, ver string) ([]windowsProtectionArtifa
 		seen[name] = true
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("Некорректное значение: «Windows protection artifact path»: %q", name)
+			return nil, fmt.Errorf("Некорректное значение: путь к артефакту защиты Windows: %q", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
@@ -258,7 +258,7 @@ func windowsProtectionBoundaryDigest01812(ver, commit, repository, runID, advers
 
 func buildWindowsProtectionReleaseDocument01812(dir, ver, expectedCommit string) (windowsProtectionReleaseCertificate01812, error) {
 	if !windowsProtectionReleaseRequired01812(ver) {
-		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Protection RC: требуется «0.18.12+, got» %s", ver)
+		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Protection RC: требуется версия не ниже 0.18.12; получено %s", ver)
 	}
 	commit, err := normalizeSourceCommit01511(expectedCommit)
 	if err != nil {
@@ -335,19 +335,19 @@ func verifyWindowsProtectionRelease01812(dir, ver string) error {
 		return err
 	}
 	if cert.SchemaVersion != expected.SchemaVersion || cert.Product != expected.Product || cert.Version != expected.Version || cert.Status != expected.Status || cert.ProtectionProfile != "aggressive" {
-		return errors.New("Несовпадение: «Windows Protection RC metadata»")
+		return errors.New("Несовпадение: метаданные кандидата защиты Windows")
 	}
 	if !strings.EqualFold(cert.SourceCommit, expected.SourceCommit) || !strings.EqualFold(cert.Repository, expected.Repository) || cert.AdversarialRunID != expected.AdversarialRunID {
-		return errors.New("Несовпадение: «Windows Protection RC source/repository/run binding»")
+		return errors.New("Несовпадение: привязка источника, репозитория или запуска кандидата защиты Windows")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, cert.CreatedAt); err != nil {
-		return fmt.Errorf("Некорректное значение: «Windows Protection RC createdAt»: %w", err)
+		return fmt.Errorf("Некорректное значение: время создания кандидата защиты Windows: %w", err)
 	}
 	if !strings.EqualFold(cert.AdversarialCertificateSHA256, expected.AdversarialCertificateSHA256) || !strings.EqualFold(cert.AdversarialEvidenceRootSHA256, expected.AdversarialEvidenceRootSHA256) {
-		return errors.New("Несовпадение: «Windows Protection RC adversarial evidence binding»")
+		return errors.New("Несовпадение: привязка свидетельств негативных испытаний кандидата защиты Windows")
 	}
 	if cert.ScenarioExecutions != 55 || len(cert.JavaMajors) != len(expected.JavaMajors) {
-		return errors.New("Несовпадение: «Windows Protection RC Java/adversarial cohort»")
+		return errors.New("Несовпадение: группа Java/негативных испытаний кандидата защиты Windows")
 	}
 	for i := range expected.JavaMajors {
 		if cert.JavaMajors[i] != expected.JavaMajors[i] {
@@ -355,17 +355,17 @@ func verifyWindowsProtectionRelease01812(dir, ver string) error {
 		}
 	}
 	if len(cert.RequiredCapabilities) != len(expected.RequiredCapabilities) || len(cert.Artifacts) != len(expected.Artifacts) {
-		return errors.New("Несовпадение: «Windows Protection RC capability/artifact cohort size»")
+		return errors.New("Несовпадение: число возможностей или артефактов кандидата защиты Windows")
 	}
 	for i := range expected.RequiredCapabilities {
 		if cert.RequiredCapabilities[i] != expected.RequiredCapabilities[i] {
-			return fmt.Errorf("Несовпадение: «Windows Protection RC capability #%d»", i+1)
+			return fmt.Errorf("Несовпадение: возможность кандидата защиты Windows №%d", i+1)
 		}
 	}
 	for i := range expected.Artifacts {
 		a, b := cert.Artifacts[i], expected.Artifacts[i]
 		if a.Name != b.Name || a.Size != b.Size || !strings.EqualFold(a.SHA256, b.SHA256) {
-			return fmt.Errorf("Несовпадение: «Windows Protection RC artifact»: %s", b.Name)
+			return fmt.Errorf("Несовпадение: артефакт кандидата защиты Windows: %s", b.Name)
 		}
 	}
 	for key, value := range expected.Invariants {

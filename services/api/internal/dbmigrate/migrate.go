@@ -167,7 +167,7 @@ func validateExistingBeforeApply(ctx context.Context, db *sql.DB, ms []Migration
 			return fmt.Errorf("База данных содержит неизвестную этому исполняемому файлу миграцию %s; откат или применение запрещены", version)
 		}
 		if checksum != "" && checksum != expected {
-			return fmt.Errorf("Несовпадение: «migration %s checksum»", version)
+			return fmt.Errorf("Несовпадение: контрольная сумма миграции %s", version)
 		}
 	}
 	return rows.Err()
@@ -227,7 +227,7 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		if err == nil {
 			if checksum != "" && checksum != m.Checksum {
 				tx.Rollback()
-				return Status{}, fmt.Errorf("Несовпадение: «migration %s checksum»", m.Version)
+				return Status{}, fmt.Errorf("Несовпадение: контрольная сумма миграции %s", m.Version)
 			}
 			if checksum == "" {
 				if _, err = tx.ExecContext(ctx, `UPDATE schema_migrations SET checksum=$2,description=CASE WHEN description='' THEN $3 ELSE description END WHERE version=$1 AND checksum=''`, m.Version, m.Checksum, m.Description); err != nil {

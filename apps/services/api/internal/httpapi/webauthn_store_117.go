@@ -106,7 +106,7 @@ func (s *passkeyStore117) consumeChallenge(token, purpose string) (webauthnChall
 	h := tokenHash117(strings.TrimSpace(token))
 	rec, ok := s.challenges[h]
 	if !ok || rec.Purpose != purpose || !rec.UsedAt.IsZero() || rec.ExpiresAt.Before(time.Now().UTC()) {
-		return webauthnChallenge117{}, errors.New("Истёк срок действия: «WebAuthn transaction invalid or»")
+		return webauthnChallenge117{}, errors.New("Транзакция WebAuthn недействительна или срок её действия истёк")
 	}
 	rec.UsedAt = time.Now().UTC()
 	s.challenges[h] = rec
@@ -308,7 +308,7 @@ func (p *passkeyPostgres117) consumeChallenge(token, purpose string) (webauthnCh
 	var raw []byte
 	err = tx.QueryRowContext(ctx, `SELECT id,user_id,purpose,challenge,metadata,created_at,expires_at FROM webauthn_challenges WHERE token_hash=$1 AND purpose=$2 AND used_at IS NULL AND expires_at>now() FOR UPDATE`, tokenHash117(strings.TrimSpace(token)), purpose).Scan(&rec.ID, &user, &rec.Purpose, &rec.Challenge, &raw, &rec.CreatedAt, &rec.ExpiresAt)
 	if err != nil {
-		return webauthnChallenge117{}, errors.New("Истёк срок действия: «WebAuthn transaction invalid or»")
+		return webauthnChallenge117{}, errors.New("Транзакция WebAuthn недействительна или срок её действия истёк")
 	}
 	rec.UserID = user.String
 	_ = json.Unmarshal(raw, &rec.Metadata)

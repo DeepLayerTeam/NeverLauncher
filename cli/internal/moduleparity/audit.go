@@ -117,7 +117,7 @@ func SafeRepoFile(root, relative string) (string, error) {
 			return "", fmt.Errorf("Отсутствует путь к подтверждающим данным %q: %w", relative, err)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return "", fmt.Errorf("Запрещено: «symlink evidence»: %q", relative)
+			return "", fmt.Errorf("Запрещено: свидетельства через символические ссылки: %q", relative)
 		}
 	}
 	info, err := os.Stat(p)
@@ -374,7 +374,7 @@ func nearestGoModule(root, relative string) (directory, goPackage string, err er
 			return current, pkg, nil
 		}
 		if current == "." || current == "" {
-			return "", "", fmt.Errorf("Отсутствует: «Go module for» %s", relative)
+			return "", "", fmt.Errorf("Отсутствует: модуль Go для %s", relative)
 		}
 		current = filepath.Dir(current)
 	}

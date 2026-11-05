@@ -806,11 +806,11 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 		}
 		if serverBridgeSecurityCertificationRequired01912(artifactVersion) {
 			if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
-				return "", errors.New("Несовпадение: «ServerBridge 3 security certification metadata»")
+				return "", errors.New("Несовпадение: метаданные сертификации безопасности ServerBridge 3")
 			}
 		}
 		if serverBridgeGARequired0200(artifactVersion) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
-			return "", errors.New("Несовпадение: «ServerBridge 3 GA certification metadata»")
+			return "", errors.New("Несовпадение: метаданные финальной сертификации ServerBridge 3")
 		}
 		for _, item := range cert.Artifacts {
 			if item.ID != platform {
@@ -833,10 +833,10 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 		return "", fmt.Errorf("Некорректное значение: %s: %w", allowPath, err)
 	}
 	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-		return "", errors.New("Несовпадение: «ServerBridge 3 release allowlist security metadata»")
+		return "", errors.New("Несовпадение: метаданные безопасности списка разрешённых артефактов ServerBridge 3")
 	}
 	if serverBridgeGARequired0200(artifactVersion) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
-		return "", errors.New("Несовпадение: «ServerBridge 3 GA release allowlist metadata»")
+		return "", errors.New("Несовпадение: метаданные списка разрешённых артефактов финального выпуска ServerBridge 3")
 	}
 	policy := document.Releases[artifactVersion]
 	if policy == nil {
@@ -1557,10 +1557,10 @@ func replaceFile0199(tempName, dst string) error {
 		return err
 	}
 	if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-		return fmt.Errorf("Ошибка: «replace %s: rename»: %v; remove destination failed: %w", dst, err, removeErr)
+		return fmt.Errorf("Ошибка: замена %s: переименование: %v; remove destination failed: %w", dst, err, removeErr)
 	}
 	if retryErr := os.Rename(tempName, dst); retryErr != nil {
-		return fmt.Errorf("Ошибка: «replace %s: rename»: %v; retry failed: %w", dst, err, retryErr)
+		return fmt.Errorf("Ошибка: замена %s: переименование: %v; retry failed: %w", dst, err, retryErr)
 	}
 	return nil
 }

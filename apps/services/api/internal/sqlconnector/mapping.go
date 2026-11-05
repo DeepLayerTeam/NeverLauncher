@@ -78,7 +78,7 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 	}
 	if len(types) != len(selected) {
 		rows.Close()
-		return nil, errors.New("Несовпадение: «SQL mapped column count»")
+		return nil, errors.New("Несовпадение: число сопоставленных столбцов SQL")
 	}
 	for i, col := range types {
 		selected[i].DatabaseType = strings.ToUpper(col.DatabaseTypeName())

@@ -39,7 +39,7 @@ func sharedArtifactsContext0277(ctx context.Context, cacheDir, clientDir string)
 		return ctx, err
 	}
 	if pathContained0277(root, client) || pathContained0277(client, root) {
-		return ctx, errors.New("«shared cache and client directory»: запрещено «overlap»")
+		return ctx, errors.New("общий кеш и каталог клиента: запрещено «overlap»")
 	}
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return ctx, err
@@ -66,7 +66,7 @@ func eligibleSharedArtifact0277(kind string) bool {
 }
 func (c *sharedArtifacts0277) locate(sha string) (string, error) {
 	if !validSHA1Hex(sha) {
-		return "", errors.New("shared cache: требуется «verified SHA-1»")
+		return "", errors.New("shared cache: требуется проверенный SHA-1")
 	}
 	sha = strings.ToLower(sha)
 	return secureClientDestination(c.root, "sha1/"+sha[:2]+"/"+sha)
@@ -90,11 +90,11 @@ func (c *sharedArtifacts0277) restore(ctx context.Context, dst, sha string, expe
 		return false, "", 0, fmt.Errorf("Элемент кеша %s не является обычным файлом", sha)
 	}
 	if expectedSize > 0 && st.Size() != expectedSize {
-		return false, "", 0, fmt.Errorf("Несовпадение: «cached artifact size»: %s", sha)
+		return false, "", 0, fmt.Errorf("Несовпадение: размер артефакта в кеше: %s", sha)
 	}
 	valid, digest, size := existingFileMatchesSHA1(src, sha, expectedSize)
 	if !valid {
-		return false, "", 0, fmt.Errorf("Несовпадение: «cached artifact checksum»: %s", sha)
+		return false, "", 0, fmt.Errorf("Несовпадение: контрольная сумма артефакта в кеше: %s", sha)
 	}
 	if err := ctx.Err(); err != nil {
 		return false, "", 0, err
@@ -146,7 +146,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 		return err
 	}
 	if !isSHA256Hex0271(digest) {
-		return errors.New("Некорректное значение: «SHA-256 for shared cache input»")
+		return errors.New("Некорректное значение: SHA-256 входного файла общего кеша")
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0700); err != nil {
 		return err
@@ -157,7 +157,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 		}
 		ok, got, size := existingFileMatchesSHA1(dst, sha, expectedSize)
 		if !ok || got != digest || size != expectedSize {
-			return fmt.Errorf("Некорректное значение: «existing shared cache entry»: %s", sha)
+			return fmt.Errorf("Некорректное значение: существующая запись общего кеша: %s", sha)
 		}
 		return nil
 	} else if !errors.Is(e, os.ErrNotExist) {
@@ -206,7 +206,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 	}
 	ok, other, size := existingFileMatchesSHA1(dst, sha, expectedSize)
 	if !ok || other != digest || size != expectedSize {
-		return errors.New("Несовпадение: «concurrent cache entry integrity»")
+		return errors.New("Несовпадение: целостность записи кеша при одновременном доступе")
 	}
 	return nil
 }

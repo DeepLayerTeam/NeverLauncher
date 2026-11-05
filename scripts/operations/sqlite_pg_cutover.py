@@ -192,7 +192,7 @@ def run_cmd(args, *, env=None):
     try:
         return json.loads(p.stdout)
     except (ValueError, UnicodeError) as exc:
-        raise CutoverError(f"Некорректное значение: «JSON response from» {args[0]}") from exc
+        raise CutoverError(f"Некорректное значение: JSON-ответ от {args[0]}") from exc
 
 
 def parse_env(path: Path):

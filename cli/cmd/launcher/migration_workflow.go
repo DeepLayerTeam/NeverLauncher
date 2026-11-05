@@ -188,7 +188,7 @@ func handleMigrationWorkflow0331(args []string) error {
 			body = map[string]any{}
 		}
 	default:
-		return fmt.Errorf("Неизвестное значение: «migrate gravit command»: %s", command)
+		return fmt.Errorf("Неизвестное значение: команда миграции Gravit: %s", command)
 	}
 	result, err := httpJSONWithAuth(method, path, body, token)
 	if err != nil {
@@ -214,7 +214,7 @@ func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out s
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 64<<20 {
-		return errors.New("Для ZIP требуется: «a regular file of 1..64 MiB»")
+		return errors.New("Для ZIP-архива требуется: обычный файл размером от 1 до 64 МиБ")
 	}
 	u, err := url.Parse(endpoint)
 	if err != nil {

@@ -137,7 +137,7 @@ func (r *factoryRecorder0271) recordSource(s factorySource0271) error {
 		return err
 	}
 	if s.URL == "" || !isSHA256Hex0271(s.SHA256) || s.Size < 0 {
-		return fmt.Errorf("Некорректное значение: «recorded source» %s", s.Path)
+		return fmt.Errorf("Некорректное значение: зафиксированный источник %s", s.Path)
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -286,7 +286,7 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 		return err
 	}
 	if digest != p.ReproducibilitySHA256 {
-		return fmt.Errorf("Несовпадение: «factory plan digest»: %s != %s", p.ReproducibilitySHA256, digest)
+		return fmt.Errorf("Несовпадение: контрольная сумма плана сборки клиента: %s != %s", p.ReproducibilitySHA256, digest)
 	}
 	return nil
 }
@@ -369,7 +369,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 			return err
 		}
 		if sum != src.SHA256 || size != src.Size {
-			return fmt.Errorf("Обнаружено изменение: «factory internal source»: %s", src.Path)
+			return fmt.Errorf("Обнаружено изменение: внутренний источник сборки клиента: %s", src.Path)
 		}
 	}
 	actual, err := scanFactoryOutputs0271(root)
@@ -412,7 +412,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Для Client Factory необходимо указать --minecraft")
 	}
 	if !o.StrictUpstream {
-		return o, errors.New("Client Factory: требуется «strict upstream checksum verification»")
+		return o, errors.New("Client Factory: требуется строгая проверка контрольной суммы исходного источника")
 	}
 	if o.Workers == 0 {
 		o.Workers = 12
@@ -460,7 +460,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Допустимый диапазон для тайм-аут процессора: 1s–1h")
 	}
 	if o.ProcessorSandbox != "" && o.ProcessorSandbox != "process" && o.ProcessorSandbox != "required" {
-		return o, errors.New("processor sandbox: требуется «process or required»")
+		return o, errors.New("processor sandbox: требуется настройка процесса или обязательные параметры")
 	}
 	return o, nil
 }
@@ -626,7 +626,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 			return factoryPlan0271{}, err
 		}
 		if len(entries) > 0 {
-			return factoryPlan0271{}, errors.New("factory: требуется «an empty destination or an existing verified install-plan; use a separate directory»")
+			return factoryPlan0271{}, errors.New("factory: требуется пустой каталог назначения или ранее проверенный план установки; используйте отдельный каталог")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return factoryPlan0271{}, err

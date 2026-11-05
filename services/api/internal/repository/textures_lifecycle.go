@@ -108,7 +108,7 @@ func (r *SQLRepository) ClaimTextureGarbage02511(ctx context.Context, driver str
 		return nil, err
 	}
 	if limit < 1 || limit > 100 {
-		return nil, errors.New("Пакет удаления неиспользуемых текстур: требуется «between 1 and 100»")
+		return nil, errors.New("Пакет удаления неиспользуемых текстур: требуется от 1 до 100")
 	}
 	// Каждая заявка получает уникальный токен, поэтому один воркер не может завершить чужую
 	// аренду.

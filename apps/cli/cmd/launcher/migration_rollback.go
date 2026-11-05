@@ -35,7 +35,7 @@ func handleMigrationRollback03312(args []string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Откат: требуется «HTTPS or local loopback»")
+			return errors.New("Откат: требуется HTTPS или локальный адрес обратной связи")
 		}
 	}
 	path := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run) + "/rollbacks"
@@ -43,11 +43,11 @@ func handleMigrationRollback03312(args []string) error {
 		return cutoverRequest03311("GET", path+"/"+url.PathEscape(flagValue(args, "--profile-id", ""))+"/"+url.PathEscape(flagValue(args, "--channel", "")), token, run, nil, false, flagValue(args, "--output", ""))
 	}
 	if flagValue(args, "--confirm", "") != run || flagValue(args, "--writer-fenced", "") != "true" {
-		return errors.New("Откат: требуется «exact --confirm run and --writer-fenced true»")
+		return errors.New("Откат: требуется точный идентификатор запуска --confirm и --writer-fenced true")
 	}
 	revision, e := strconv.ParseInt(flagValue(args, "--expected-revision", ""), 10, 64)
 	if e != nil || revision < 1 {
-		return errors.New("Откат: требуется «positive --expected-revision»")
+		return errors.New("Откат: требуется положительный номер --expected-revision")
 	}
 	body := map[string]any{"profileId": flagValue(args, "--profile-id", ""), "channel": flagValue(args, "--channel", ""), "expectedRevision": revision}
 	switch cmd {
@@ -79,7 +79,7 @@ func handleMigrationRollback03312(args []string) error {
 			path += "/plan"
 		} else {
 			if flagValue(args, "--source-writer-fenced", "") != "true" {
-				return errors.New("commit: требуется «independently fenced source writer»")
+				return errors.New("commit: требуется независимо заблокированный процесс записи источника")
 			}
 			body["planSha256"] = flagValue(args, "--plan-sha256", "")
 			body["sourceWriterFenced"] = true
@@ -91,7 +91,7 @@ func handleMigrationRollback03312(args []string) error {
 			path += "/commit"
 		}
 	default:
-		return errors.New("Неизвестное значение: «rollback command»")
+		return errors.New("Неизвестное значение: команда отката")
 	}
 	// Повторно используйте производственный HTTP-клиент с тайм-аутами и отключёнными перенаправлениями. В
 	// отличие от MIG11 здесь обязательны оба дополнительных заголовка ограждения.
@@ -124,7 +124,7 @@ func rollbackReadSnapshot0448(path string) (any, string, error) {
 		return nil, "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > 8<<20 {
-		return nil, "", errors.New("rollback snapshot: требуется «a regular JSON file up to 8 MiB»")
+		return nil, "", errors.New("rollback snapshot: требуется обычный JSON-файл размером не более 8 МиБ")
 	}
 	raw, err := io.ReadAll(io.LimitReader(f, (8<<20)+1))
 	if err != nil {

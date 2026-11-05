@@ -359,7 +359,7 @@ func (r *MemoryRepository) SaveExtensionRegistryPublisherKey(ctx context.Context
 			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: отпечаток ключа издателя уже принадлежит другому ключу", ErrConflict)
 		}
 		if existing.RevokedAt != nil && key.Active {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("«%w: revoked publisher key»: запрещено «be reactivated»", ErrImmutable)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: ключ издателя отозван: запрещено быть активировано повторно", ErrImmutable)
 		}
 		key.CreatedAt = existing.CreatedAt
 		r.extensionRegistryKeys[i] = key
@@ -443,7 +443,7 @@ func (r *MemoryRepository) PublishExtensionRegistryVersion(ctx context.Context, 
 				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: версия в реестре неизменяема", ErrImmutable)
 			}
 			if existing.YankedAt != nil {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("«%w: yanked registry version»: запрещено «be republished»", ErrImmutable)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: версия удалена из реестра: запрещено быть опубликовано повторно", ErrImmutable)
 			}
 			existing.Channels = mergeRegistryChannels0203(r.extensionRegistryVersions, publication.Manifest.ID, publication.Manifest.Version, publication.Channels)
 			r.extensionRegistryVersions[i].Channels = existing.Channels
@@ -563,7 +563,7 @@ func (r *MemoryRepository) SetExtensionRegistryChannel(ctx context.Context, exte
 	for i := range r.extensionRegistryVersions {
 		if r.extensionRegistryVersions[i].ExtensionID == extensionID && r.extensionRegistryVersions[i].Version == version {
 			if r.extensionRegistryVersions[i].YankedAt != nil {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("«%w:»: запрещено «target a yanked version»", ErrConflict)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("«%w:»: запрещено использовать удалённую из реестра версию", ErrConflict)
 			}
 			target = i
 		}
@@ -686,7 +686,7 @@ func (r *SQLRepository) SaveExtensionRegistryPublisherKey(ctx context.Context, k
 			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: отпечаток ключа издателя уже принадлежит другому ключу", ErrConflict)
 		}
 		if existing.RevokedAt != nil && key.Active {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("«%w: revoked publisher key»: запрещено «be reactivated»", ErrImmutable)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: ключ издателя отозван: запрещено быть активировано повторно", ErrImmutable)
 		}
 		_, err = r.db.ExecContext(ctx, `UPDATE extension_registry_publisher_keys SET active=$3 WHERE publisher_id=$1 AND fingerprint=$2`, key.PublisherID, key.Fingerprint, key.Active)
 		if err != nil {
@@ -839,7 +839,7 @@ WHERE rv.extension_id=$1 AND rv.version=$2 FOR UPDATE`, publication.Manifest.ID,
 			return model.ExtensionRegistryVersion{}, err
 		}
 		if yanked {
-			return model.ExtensionRegistryVersion{}, fmt.Errorf("«%w: yanked registry version»: запрещено «be republished»", ErrImmutable)
+			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: версия удалена из реестра: запрещено быть опубликовано повторно", ErrImmutable)
 		}
 	} else if errors.Is(err, sql.ErrNoRows) {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_versions(extension_id,version,publisher_id) VALUES($1,$2,$3)`, publication.Manifest.ID, publication.Manifest.Version, publication.PublisherID); err != nil {
@@ -1024,7 +1024,7 @@ func (r *SQLRepository) SetExtensionRegistryChannel(ctx context.Context, extensi
 	} else if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	} else if yanked {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("«%w:»: запрещено «target a yanked version»", ErrConflict)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("«%w:»: запрещено использовать удалённую из реестра версию", ErrConflict)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_channels(extension_id,channel,version) VALUES($1,$2,$3)
 ON CONFLICT(extension_id,channel) DO UPDATE SET version=EXCLUDED.version,updated_at=now()`, extensionID, channel, version); err != nil {

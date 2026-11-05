@@ -582,14 +582,14 @@ mod windows_impl {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("Guard: запрещено «open {} for hashing:» {err}", path.display()))?;
+            .map_err(|err| format!("Guard: не удалось открыть {} для вычисления хеша: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("Guard: запрещено «hash {}:» {err}", path.display()))?;
+                .map_err(|err| format!("Guard: не удалось вычислить хеш {}: {err}", path.display()))?;
             if read == 0 {
                 break;
             }
@@ -780,7 +780,7 @@ mod linux_impl {
     }
 
     fn proc_status(pid: u32) -> Result<String, String> {
-        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("Ошибка: «read /proc/{pid}/status»: {e}"))
+        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("Не удалось прочитать /proc/{pid}/status: {e}"))
     }
     fn status_u32(status: &str, key: &str) -> Option<u32> {
         status.lines().find_map(|l| l.strip_prefix(key)).and_then(|v| v.split_whitespace().next()).and_then(|v| v.parse().ok())

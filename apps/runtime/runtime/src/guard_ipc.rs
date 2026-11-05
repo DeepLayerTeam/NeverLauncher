@@ -1678,7 +1678,7 @@ fn random_id() -> String {
 fn decode_hex_32(value: &str, field: &str) -> Result<[u8; 32], String> {
     let raw = hex::decode(value).map_err(|_| format!("Поле IPC Guard {field} не является корректной шестнадцатеричной строкой"))?;
     if raw.len() != 32 {
-        return Err(format!("Для «Guard IPC» {field} требуется: «32 bytes»"));
+        return Err(format!("Поле {field} в Guard IPC должно содержать 32 байта"));
     }
     let mut out = [0u8; 32];
     out.copy_from_slice(&raw);

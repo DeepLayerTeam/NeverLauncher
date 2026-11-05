@@ -239,7 +239,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		return out, e
 	}
 	if !safeTarget(profilePath) || !strings.HasPrefix(strings.ToLower(profilePath), "profiles/") || !strings.HasSuffix(strings.ToLower(profilePath), ".json") {
-		return out, errors.New("Требуется: «explicit profiles/*.json source path»")
+		return out, errors.New("Требуется: явный путь к исходному файлу profiles/*.json")
 	}
 	meta := map[string]inv.File{}
 	for _, f := range saved.Files {
@@ -268,7 +268,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
 		var vals []json.RawMessage
 		if e = json.Unmarshal(optionRaw, &vals); e != nil || vals == nil {
-			return out, errors.New("Некорректное значение: «optional array»")
+			return out, errors.New("Некорректное значение: необязательный массив")
 		}
 		if len(vals) > 0 {
 			obj["updateOptional"] = json.RawMessage(`[]`)
@@ -322,7 +322,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	}
 	stem := strings.TrimSuffix(path.Base(profilePath), path.Ext(profilePath))
 	if stem == "" || stem == "." {
-		return out, errors.New("Некорректное значение: «profile basename»")
+		return out, errors.New("Некорректное значение: имя файла профиля")
 	}
 	// Поле `dir` профиля Gravit определяет клиентское дерево и не обязательно
 	// совпадает с именем JSON-файла (переименования распространены). Если `dir` указан
@@ -331,11 +331,11 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	sourceDirectory := stem
 	if dirRaw, exists := obj["dir"]; exists {
 		if e = json.Unmarshal(dirRaw, &sourceDirectory); e != nil || !safeSourceDirectory(sourceDirectory) {
-			return out, errors.New("Некорректное значение: «Gravit client dir»")
+			return out, errors.New("Некорректное значение: каталог клиента Gravit")
 		}
 	}
 	if !safeSourceDirectory(sourceDirectory) {
-		return out, errors.New("Некорректное значение: «Gravit client directory»")
+		return out, errors.New("Некорректное значение: каталог клиента Gravit")
 	}
 	out.SourceDirectory = sourceDirectory
 	prefixes := []string{"updates/" + sourceDirectory + "/", "clients/" + sourceDirectory + "/"}
@@ -478,7 +478,7 @@ func NewReader(src io.ReaderAt, size int64) (*Reader, error) {
 	entries := make(map[string]*zip.File, len(z.File))
 	for _, f := range z.File {
 		if _, duplicate := entries[f.Name]; duplicate {
-			return nil, errors.New("Обнаружен дубликат: «ZIP member»")
+			return nil, errors.New("Обнаружен дубликат: элемент ZIP-архива")
 		}
 		entries[f.Name] = f
 	}
@@ -496,7 +496,7 @@ func (r *Reader) ReadVerified(ctx context.Context, item File) ([]byte, error) {
 		return nil, errors.New("Файл отсутствует в исходном ZIP")
 	}
 	if int64(f.UncompressedSize64) != item.Size {
-		return nil, errors.New("Обнаружено изменение: «source file size»")
+		return nil, errors.New("Обнаружено изменение: размер исходного файла")
 	}
 	stream, e := f.Open()
 	if e != nil {
@@ -512,7 +512,7 @@ func (r *Reader) ReadVerified(ctx context.Context, item File) ([]byte, error) {
 	}
 	h := sha256.Sum256(b)
 	if int64(len(b)) != item.Size || hex.EncodeToString(h[:]) != item.SHA256 {
-		return nil, fmt.Errorf("Несовпадение: «content checksum»: %q", item.SourcePath)
+		return nil, fmt.Errorf("Несовпадение: контрольная сумма содержимого: %q", item.SourcePath)
 	}
 	if e = ctx.Err(); e != nil {
 		return nil, e

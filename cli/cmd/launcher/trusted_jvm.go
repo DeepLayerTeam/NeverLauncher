@@ -43,7 +43,7 @@ type trustedPlugin0306 struct {
 func trustedPath0306(root, rel string) (string, error) { return secureClientDestination(root, rel) }
 func trustedBytes0306(z *zip.File, capBytes int64) ([]byte, error) {
 	if z.UncompressedSize64 > uint64(capBytes) || !z.Mode().IsRegular() {
-		return nil, errors.New("«trusted package entry exceeds size or»: требуется обычный файл")
+		return nil, errors.New("файл доверенного пакета превышает допустимый размер или: требуется обычный файл")
 	}
 	r, err := z.Open()
 	if err != nil {
@@ -64,7 +64,7 @@ func trustedDigest0306(b []byte) string { sum := sha256.Sum256(b); return hex.En
 // Никогда не доверяйте ключу издателя, поставленному вместе с клиентом.
 func trustedAnchor0306(root, key string) error {
 	if key == "" {
-		return fmt.Errorf("Требуется: «external %s trust anchor»", trustedPublicKeyEnv0306)
+		return fmt.Errorf("Требуется: внешний корневой ключ доверия %s", trustedPublicKeyEnv0306)
 	}
 	if err := trustedRegular0306(key); err != nil {
 		return err
@@ -429,7 +429,7 @@ func handleTrustedJVM0306(args []string) error {
 		}
 		archive := flagValue(args[1:], "--package", "")
 		if archive == "" || key == "" {
-			return errors.New("Требуется: «signed --package and external --public-key»")
+			return errors.New("Требуется: подписанный пакет --package и внешний открытый ключ --public-key")
 		}
 		rec, err := trustedInstall0306(root, archive, key)
 		if err != nil {

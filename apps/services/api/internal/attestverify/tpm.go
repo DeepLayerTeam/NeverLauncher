@@ -103,7 +103,7 @@ func decode(s string, limit int) ([]byte, error) {
 	}
 	b, e := base64.RawURLEncoding.Strict().DecodeString(s)
 	if e != nil || len(b) == 0 || len(b) > limit {
-		return nil, errors.New("Некорректное значение: «evidence base64url»")
+		return nil, errors.New("Некорректное значение: свидетельство в формате base64url")
 	}
 	return b, nil
 }
@@ -139,7 +139,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	// FixedTPM, FixedParent, SensitiveDataOrigin, Sign; RSA и экзотические варианты ECC намеренно
 	// исключены.
 	if typ != tpmECC || hash != tpmSHA256 || attrs&(1<<1|1<<4|1<<5|1<<18) != (1<<1|1<<4|1<<5|1<<18) {
-		return nil, nil, errors.New("Ключ TPM: требуется «a fixed TPM-origin signing ECC P-256 key»")
+		return nil, nil, errors.New("Ключ TPM: требуется фиксированный ключ подписи ECC P-256, созданный в TPM")
 	}
 	policy, e := p.tpm2b(64)
 	if e != nil {
@@ -176,7 +176,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 	if symmetric != tpmNull || curve != tpmNISTP256 || kdf != tpmNull {
-		return nil, nil, errors.New("Не поддерживается: «TPM ECC public parameters»")
+		return nil, nil, errors.New("Не поддерживается: открытые параметры ECC TPM")
 	}
 	x, e := p.tpm2b(32)
 	if e != nil {
@@ -187,7 +187,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 	if len(x) != 32 || len(y) != 32 || p.end() != nil {
-		return nil, nil, errors.New("Некорректное значение: «TPM P-256 point encoding»")
+		return nil, nil, errors.New("Некорректное значение: кодировка точки P-256 TPM")
 	}
 	point := make([]byte, 65)
 	point[0] = 4
@@ -195,7 +195,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	copy(point[33:], y)
 	X, Y := elliptic.Unmarshal(elliptic.P256(), point)
 	if X == nil || Y == nil {
-		return nil, nil, errors.New("Некорректное значение: «TPM ECC point»")
+		return nil, nil, errors.New("Некорректное значение: точка ECC TPM")
 	}
 	h := sha256.Sum256(payload)
 	name := make([]byte, 34)
@@ -261,7 +261,7 @@ func parseAttest(raw []byte, expected [32]byte, name []byte) error {
 		return e
 	}
 	if !bytes.Equal(certified, name) {
-		return errors.New("Несовпадение: «certified key name»")
+		return errors.New("Несовпадение: имя сертифицированного ключа")
 	}
 	if _, e = t.tpm2b(128); e != nil {
 		return e
@@ -283,7 +283,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 	}
 	// TPM подписывает тело TPMS_ATTEST без внешнего поля длины TPM2B.
 	if len(attest) < 2 {
-		return errors.New("Пустое значение: «TPM attest»")
+		return errors.New("Пустое значение: аттестация TPM")
 	}
 	digest := sha256.Sum256(attest[2:])
 	switch alg {
@@ -301,7 +301,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 			return e
 		}
 		if c.end() != nil || len(r) == 0 || len(s) == 0 || !ecdsa.Verify(pub, digest[:], new(big.Int).SetBytes(r), new(big.Int).SetBytes(s)) {
-			return errors.New("Некорректное значение: «TPM ECDSA certify signature»")
+			return errors.New("Некорректное значение: подпись сертификации ECDSA TPM")
 		}
 	case tpmRSASSA, tpmRSAPSS:
 		pub, ok := public.(*rsa.PublicKey)
@@ -321,10 +321,10 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 			e = rsa.VerifyPSS(pub, crypto.SHA256, digest[:], sig, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: crypto.SHA256})
 		}
 		if e != nil {
-			return errors.New("Некорректное значение: «TPM RSA certify signature»")
+			return errors.New("Некорректное значение: подпись сертификации RSA TPM")
 		}
 	default:
-		return errors.New("Не поддерживается: «TPM AK signature scheme»")
+		return errors.New("Не поддерживается: схема подписи ключа аттестации TPM")
 	}
 	return nil
 }

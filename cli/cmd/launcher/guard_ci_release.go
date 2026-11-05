@@ -375,10 +375,10 @@ func verifyGuardCIArtifactsInDir(dir string, artifacts []releaseGuardCertifiedAr
 		}
 		actual, size, err := hashFile(filepath.Join(dir, artifact.Name))
 		if err != nil {
-			return fmt.Errorf("Отсутствует: «certified Guard artifact» %s: %w", artifact.Name, err)
+			return fmt.Errorf("Отсутствует: сертифицированный артефакт Guard %s: %w", artifact.Name, err)
 		}
 		if size != artifact.Size || !strings.EqualFold(actual, artifact.SHA256) {
-			return fmt.Errorf("Несовпадение: «certified Guard artifact»: %s", artifact.Name)
+			return fmt.Errorf("Несовпадение: сертифицированный артефакт Guard: %s", artifact.Name)
 		}
 	}
 	return nil

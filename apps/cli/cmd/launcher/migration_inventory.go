@@ -44,7 +44,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		return e
 	}
 	if len(z.File) == 0 || len(z.File) > 30001 {
-		return errors.New("Некорректное значение: «export entry count»")
+		return errors.New("Некорректное значение: количество записей экспорта")
 	}
 	seen := make(map[string]bool, len(z.File))
 	var manifest sourceManifest0333
@@ -54,7 +54,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 			continue
 		}
 		if entry.UncompressedSize64 > 16<<20 {
-			return errors.New("Превышен допустимый размер: «export manifest»")
+			return errors.New("Превышен допустимый размер: манифест экспорта")
 		}
 		r, e := entry.Open()
 		if e != nil {
@@ -85,13 +85,13 @@ func verifyGravitExport0333(name, manifestHash string) error {
 	expected := make(map[string]exportedSourceFile0333, len(manifest.Files))
 	for _, v := range manifest.Files {
 		if _, ok := expected[v.Path]; ok {
-			return errors.New("Обнаружен дубликат: «path in export manifest»")
+			return errors.New("Обнаружен дубликат: путь в манифесте экспорта")
 		}
 		expected[v.Path] = v
 	}
 	for _, entry := range z.File {
 		if seen[entry.Name] {
-			return errors.New("Обнаружен дубликат: «export member»")
+			return errors.New("Обнаружен дубликат: элемент экспорта")
 		}
 		seen[entry.Name] = true
 		if entry.Name == ".migration/inventory.json" {

@@ -810,7 +810,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("Требуется: «federated user id/email and provider/subject are»")
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("Требуется: идентификатор или почта пользователя и идентификатор провайдера/субъекта")
 	}
 	existingUserIndex := -1
 	for i, existing := range r.users {
@@ -1254,7 +1254,7 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 	item.Subject = strings.TrimSpace(item.Subject)
 	item.EncryptedRefreshToken = strings.TrimSpace(item.EncryptedRefreshToken)
 	if item.UserID == "" || item.IdentityID == "" || item.Provider == "" || item.Subject == "" || item.EncryptedRefreshToken == "" {
-		return model.ProviderCredential{}, fmt.Errorf("Требуется: «provider credential fields are»")
+		return model.ProviderCredential{}, fmt.Errorf("Требуется: поля учётных данных провайдера")
 	}
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.ProviderCredential{}, err
@@ -1267,7 +1267,7 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 		}
 	}
 	if !matched {
-		return model.ProviderCredential{}, fmt.Errorf("Несовпадение: «provider credential identity»")
+		return model.ProviderCredential{}, fmt.Errorf("Несовпадение: идентификатор учётных данных провайдера")
 	}
 	now := time.Now().UTC()
 	for i := range r.providerCredentials {
@@ -1361,7 +1361,7 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 		item.IdentityVersion = "independent-v1"
 	}
 	if item.UserID == "" || item.UUID == "" || item.Name == "" {
-		return model.MinecraftProfile{}, fmt.Errorf("Требуется: «minecraft profile fields are»")
+		return model.MinecraftProfile{}, fmt.Errorf("Требуется: поля профиля Minecraft")
 	}
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.MinecraftProfile{}, err
@@ -1396,7 +1396,7 @@ func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (mo
 	}
 	item.AccessTokenHash = strings.TrimSpace(item.AccessTokenHash)
 	if item.ID == "" || item.UserID == "" || item.NeverSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
-		return model.MinecraftSession{}, fmt.Errorf("Требуется: «minecraft session fields are»")
+		return model.MinecraftSession{}, fmt.Errorf("Требуется: поля сессии Minecraft")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {
@@ -1509,7 +1509,7 @@ func (r *MemoryRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
 	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
 	item.ServerID = strings.TrimSpace(item.ServerID)
 	if item.Username == "" || item.ProfileUUID == "" || item.UserID == "" || item.MinecraftSessionID == "" || item.ServerID == "" {
-		return fmt.Errorf("Требуется: «minecraft join fields are»")
+		return fmt.Errorf("Требуется: поля подключения Minecraft")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {

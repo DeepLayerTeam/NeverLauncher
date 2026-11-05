@@ -99,7 +99,7 @@ func rehearsalRead03310(root, sub string, limit int64) ([]byte, error) {
 		return nil, e
 	}
 	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > limit {
-		return nil, errors.New("Некорректное значение: «staging evidence file size»")
+		return nil, errors.New("Некорректное значение: размер файла свидетельства тестового окружения")
 	}
 	return io.ReadAll(io.LimitReader(f, limit+1))
 }
@@ -122,7 +122,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 		return probe, e
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0111 == 0 {
-		return probe, errors.New("Для проверочный запуск требуется: «executable regular file»")
+		return probe, errors.New("Для проверочный запуск требуется: обычный исполняемый файл")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
@@ -189,7 +189,7 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 		return report, e
 	}
 	if real == "/" || real == filepath.Dir(real) {
-		return report, errors.New("Небезопасное значение: «staging root»")
+		return report, errors.New("Небезопасное значение: корневой каталог тестового окружения")
 	}
 	marker, e := rehearsalRead03310(real, ".migration-stage.json", 8192)
 	if e != nil {
@@ -205,7 +205,7 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 		return report, e
 	}
 	if stage.Format != "never/migration-stage/v1" || stage.RunID != run || !rehearsalStageID03310.MatchString(stage.StageID) || !stage.Isolated {
-		return report, errors.New("Некорректное значение: «isolated staging marker»")
+		return report, errors.New("Некорректное значение: маркер изолированного тестового окружения")
 	}
 	a, e := rehearsalRead03310(real, "source-snapshot.json", 4<<20)
 	if e != nil {

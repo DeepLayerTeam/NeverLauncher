@@ -28,7 +28,7 @@ func gravHash(algorithm string) (hash.Hash, error) {
 	case "sha512":
 		return sha512.New(), nil
 	default:
-		return nil, fmt.Errorf("Не поддерживается: «Gravit digest» %q", algorithm)
+		return nil, fmt.Errorf("Не поддерживается: контрольная сумма Gravit %q", algorithm)
 	}
 }
 
@@ -52,7 +52,7 @@ func verifyGravitDigest(secret, encoded string, cfg PasswordConfig) (bool, error
 	switch cfg.DigestEncoding {
 	case "hex":
 		if len(encoded) != h.Size()*2 {
-			return false, errors.New("Некорректное значение: «digest hex length»")
+			return false, errors.New("Некорректное значение: длина хеша в шестнадцатеричной записи")
 		}
 		expected, err = hex.DecodeString(encoded)
 	case "base64":
@@ -61,10 +61,10 @@ func verifyGravitDigest(secret, encoded string, cfg PasswordConfig) (bool, error
 			err = errors.New("Неканоническая кодировка base64 контрольной суммы")
 		}
 	default:
-		return false, errors.New("digest encoding: требуется «configured as hex or base64»")
+		return false, errors.New("digest encoding: требуется задано в формате hex или base64")
 	}
 	if err != nil || len(expected) != h.Size() {
-		return false, errors.New("Некорректное значение: «digest encoding or length»")
+		return false, errors.New("Некорректное значение: кодировка или длина хеша")
 	}
 	h.Write([]byte(secret))
 	computed := h.Sum(nil)
@@ -87,7 +87,7 @@ const phpassAlphabet = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 // Чрезмерная стоимость отклоняется до выполнения работы для защиты от DoS.
 func verifyPHPass(secret, encoded string) (bool, error) {
 	if len(encoded) != 34 || !(strings.HasPrefix(encoded, "$P$") || strings.HasPrefix(encoded, "$H$")) {
-		return false, errors.New("Некорректное значение: «PHPass portable hash format»")
+		return false, errors.New("Некорректное значение: переносимый формат хеша PHPass")
 	}
 	countLog2 := strings.IndexByte(phpassAlphabet, encoded[3])
 	if countLog2 < 7 || countLog2 > 17 {
@@ -96,12 +96,12 @@ func verifyPHPass(secret, encoded string) (bool, error) {
 	salt := encoded[4:12]
 	for i := 0; i < len(salt); i++ {
 		if strings.IndexByte(phpassAlphabet, salt[i]) < 0 {
-			return false, errors.New("Некорректное значение: «PHPass salt»")
+			return false, errors.New("Некорректное значение: соль PHPass")
 		}
 	}
 	for i := 12; i < len(encoded); i++ {
 		if strings.IndexByte(phpassAlphabet, encoded[i]) < 0 {
-			return false, errors.New("Некорректное значение: «PHPass encoding»")
+			return false, errors.New("Некорректное значение: кодировка PHPass")
 		}
 	}
 	input := append([]byte(salt), []byte(secret)...)

@@ -64,14 +64,14 @@ func rehearsalReadLiveConfig0447(root string) (rehearsalLiveConfig0447, error) {
 		return cfg, errors.New("В конфигурации реального сеанса обнаружены лишние данные")
 	}
 	if !rehearsalPlayerName0447.MatchString(cfg.PlayerName) || !rehearsalUUID0447.MatchString(cfg.PlayerUUID) || len(cfg.ClientArgs) > 128 || cfg.TimeoutSeconds < 10 || cfg.TimeoutSeconds > 600 {
-		return cfg, errors.New("Некорректное значение: «player, client arguments or timeout»")
+		return cfg, errors.New("Некорректное значение: игрок, аргументы клиента или время ожидания")
 	}
 	if cfg.ClientPath == "" || cfg.RCONPasswordFile == "" {
-		return cfg, errors.New("Требуется: «clientPath and rconPasswordFile»")
+		return cfg, errors.New("Требуется: поля clientPath и rconPasswordFile")
 	}
 	for _, s := range cfg.ClientArgs {
 		if len(s) > 4096 || strings.ContainsRune(s, 0) {
-			return cfg, errors.New("Некорректное значение: «client argument»")
+			return cfg, errors.New("Некорректное значение: аргумент клиента")
 		}
 	}
 	host, port, err := net.SplitHostPort(cfg.RCONAddress)
@@ -81,7 +81,7 @@ func rehearsalReadLiveConfig0447(root string) (rehearsalLiveConfig0447, error) {
 	ip := net.ParseIP(host)
 	n, err := strconv.Atoi(port)
 	if ip == nil || !ip.IsLoopback() || err != nil || n <= 0 || n > 65535 {
-		return cfg, errors.New("Для RCON требуется: «on a numeric loopback address and valid port»")
+		return cfg, errors.New("Для RCON требуется: на числовом локальном адресе обратной связи с допустимым портом")
 	}
 	return cfg, nil
 }
@@ -105,14 +105,14 @@ func rehearsalRCONRead0447(r io.Reader) (int32, int32, string, error) {
 	}
 	n := binary.LittleEndian.Uint32(prefix[:])
 	if n < 10 || n > 16384 {
-		return 0, 0, "", errors.New("Некорректное значение: «RCON packet length»")
+		return 0, 0, "", errors.New("Некорректное значение: длина пакета RCON")
 	}
 	raw := make([]byte, n)
 	if _, err := io.ReadFull(r, raw); err != nil {
 		return 0, 0, "", err
 	}
 	if raw[len(raw)-1] != 0 || raw[len(raw)-2] != 0 {
-		return 0, 0, "", errors.New("Некорректное значение: «RCON terminator»")
+		return 0, 0, "", errors.New("Некорректное значение: терминатор RCON")
 	}
 	return int32(binary.LittleEndian.Uint32(raw[:4])), int32(binary.LittleEndian.Uint32(raw[4:8])), string(raw[8 : len(raw)-2]), nil
 }
@@ -121,7 +121,7 @@ func rehearsalRCONList0447(ctx context.Context, address, password string) (strin
 	dialer := net.Dialer{Timeout: 3 * time.Second}
 	c, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		return "", fmt.Errorf("Недоступно: «staging RCON»: %w", err)
+		return "", fmt.Errorf("Недоступно: RCON тестового окружения: %w", err)
 	}
 	defer c.Close()
 	if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 4*time.Second {
@@ -161,7 +161,7 @@ func rehearsalRCONList0447(ctx context.Context, address, password string) (strin
 			return text, nil
 		}
 	}
-	return "", errors.New("Отсутствует: «RCON list uuids response»")
+	return "", errors.New("Отсутствует: ответ RCON со списком UUID")
 }
 func rehearsalRCONHasPlayer0447(result, name, uuid string) bool {
 	// Команда Java Edition /list uuids выводит `PlayerName (uuid)`. Не принимайте UUID
@@ -180,7 +180,7 @@ func rehearsalHashFile0447(path string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return "", errors.New("Некорректное значение: «client executable size»")
+		return "", errors.New("Некорректное значение: размер исполняемого файла клиента")
 	}
 	h := sha256.New()
 	if _, err = io.Copy(h, io.LimitReader(f, (512<<20)+1)); err != nil {
@@ -228,7 +228,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	}
 	password := strings.TrimRight(string(passwordBytes), "\r\n")
 	if password == "" || strings.ContainsAny(password, "\r\n\x00") {
-		return proof, noverify, noop, errors.New("Некорректное значение: «staging RCON credential»")
+		return proof, noverify, noop, errors.New("Некорректное значение: учётные данные RCON тестового окружения")
 	}
 	defer func() {
 		for i := range passwordBytes {
@@ -259,7 +259,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	cmd.Stderr = io.Discard
 	if err = cmd.Start(); err != nil {
 		stop()
-		return proof, noverify, noop, fmt.Errorf("Ошибка: «client launch»: %w", err)
+		return proof, noverify, noop, fmt.Errorf("Ошибка: запуск клиента: %w", err)
 	}
 	exited := make(chan error, 1)
 	finished := make(chan struct{})

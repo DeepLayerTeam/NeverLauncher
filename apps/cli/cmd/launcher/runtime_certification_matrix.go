@@ -77,7 +77,7 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 		record := factoryMatrixResult02712{ID: t.ID, Status: "failed"}
 		cert, verifyErr := certVerify02712(dir, certPath, pubPath)
 		if verifyErr == nil && (cert.Loader != t.Loader || cert.MinecraftVersion != t.Minecraft || cert.Target.OS != t.OS || cert.Target.Arch != t.Arch) {
-			verifyErr = errors.New("«certificate identity» не совпадает с «required matrix target»")
+			verifyErr = errors.New("идентификатор сертификата не совпадает с обязательная целевая платформа матрицы")
 		}
 		if verifyErr != nil {
 			record.Reason = verifyErr.Error()

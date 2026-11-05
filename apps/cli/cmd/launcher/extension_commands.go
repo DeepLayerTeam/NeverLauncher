@@ -301,7 +301,7 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		return CanonicalExtensionManifest0201{}, "", errors.New("api обязателен")
 	}
 	if !supportedExtensionAPI0210(m.API) {
-		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Не поддерживается: «extension api %q; expected 1.0 (legacy 3.7 is accepted only for 0.20 compatibility)»", m.API)
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Не поддерживается: API расширения %q; ожидается 1.0 (устаревшая версия 3.7 допускается только для совместимости с 0.20)", m.API)
 	}
 	if len(m.Targets) == 0 {
 		return CanonicalExtensionManifest0201{}, "", errors.New("targets должен содержать хотя бы одну цель")

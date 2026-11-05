@@ -120,11 +120,11 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 	switch next.State {
 	case "importing":
 		if next.BuildDigest != "" {
-			return errors.New("«importing workspace»: запрещено «retain build digest»")
+			return errors.New("«importing workspace»: запрещено сохранять контрольную сумму сборки")
 		}
 	case "staged":
 		if next.BuildDigest != "" {
-			return errors.New("«staged workspace»: запрещено «retain build digest»")
+			return errors.New("«staged workspace»: запрещено сохранять контрольную сумму сборки")
 		}
 	case "built":
 		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {

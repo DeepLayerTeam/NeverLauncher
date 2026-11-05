@@ -161,10 +161,10 @@ func validateLoaderGASupportPolicy0180() error {
 		}
 	}
 	if !legacy["1.7.10"] || !legacy["1.12.2"] || len(legacy) != 2 {
-		return fmt.Errorf("Несовпадение: «Loader Compatibility GA legacy Forge surface»: %v", legacy)
+		return fmt.Errorf("Несовпадение: проверка совместимости старых версий Forge для финального выпуска: %v", legacy)
 	}
 	if len(loaderGASupportSHA2560180()) != 64 {
-		return fmt.Errorf("Некорректное значение: «Loader Compatibility GA support digest»")
+		return fmt.Errorf("Некорректное значение: контрольная сумма подтверждённой совместимости загрузчиков")
 	}
 	return nil
 }

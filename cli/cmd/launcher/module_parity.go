@@ -111,7 +111,7 @@ func handleModuleParity0301(args []string) error {
 		}
 		registry, err = moduleparity.LoadCurrentMatrix(root)
 	default:
-		return fmt.Errorf("Не поддерживается: «module parity baseline» %q", baseline)
+		return fmt.Errorf("Не поддерживается: исходная матрица соответствия модулей %q", baseline)
 	}
 	if err != nil {
 		return err

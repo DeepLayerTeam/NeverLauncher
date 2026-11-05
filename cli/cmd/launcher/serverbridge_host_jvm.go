@@ -150,14 +150,14 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 		}
 	case "java-main-class":
 		if config.ServerJar != "" || config.JavaArgsFile != "" {
-			return errors.New("«main-class mode»: запрещено «mix jar/argfile launch settings»")
+			return errors.New("«main-class mode»: запрещено одновременное использование параметров запуска jar и argfile")
 		}
 		if !hostJavaClass0283.MatchString(config.MainClass) || len(config.Classpath) == 0 || config.Module != "" || len(config.Modulepath) != 0 {
 			return errors.New("java-main-class: требуется «--main-class and --classpath-entry; modulepath is not supported in this mode»")
 		}
 	case "java-module":
 		if config.ServerJar != "" || config.JavaArgsFile != "" {
-			return errors.New("«module mode»: запрещено «mix jar/argfile launch settings»")
+			return errors.New("«module mode»: запрещено одновременное использование параметров запуска jar и argfile")
 		}
 		if config.JavaMajor > 0 && config.JavaMajor < 9 {
 			return errors.New("Для модулей Java необходима Java 9 или новее")

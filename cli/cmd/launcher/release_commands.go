@@ -520,7 +520,7 @@ func httpJSONWithHeaders(method, url string, body any, headers map[string]string
 	payload := map[string]any{}
 	if len(strings.TrimSpace(string(data))) > 0 {
 		if err := json.Unmarshal(data, &payload); err != nil {
-			return nil, fmt.Errorf("Некорректное значение: «JSON response from» %s: %w", url, err)
+			return nil, fmt.Errorf("Некорректное значение: JSON-ответ от %s: %w", url, err)
 		}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

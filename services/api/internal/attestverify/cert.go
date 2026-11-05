@@ -9,7 +9,7 @@ import (
 
 func parseAKChain(e Evidence) (*x509.Certificate, *x509.CertPool, error) {
 	if len(e.AKCertificatePEM) > 12000 || len(e.IntermediatesPEM) > 6 {
-		return nil, nil, errors.New("Превышен допустимый размер: «AK certificate chain»")
+		return nil, nil, errors.New("Превышен допустимый размер: цепочка сертификатов ключа аттестации")
 	}
 	decodeOne := func(s string) (*x509.Certificate, error) {
 		b, rest := pem.Decode([]byte(s))

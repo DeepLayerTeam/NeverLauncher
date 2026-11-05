@@ -153,12 +153,12 @@ func inspectMacOSMachOBytes0154(data []byte) (macOSMachOInfo0154, error) {
 		info.Architecture = "arm64"
 		info.CPUTypeText = "CPU_TYPE_ARM64"
 	default:
-		return macOSMachOInfo0154{}, fmt.Errorf("Не поддерживается: «Mach-O cputype=0x%08X»", cpuType)
+		return macOSMachOInfo0154{}, fmt.Errorf("Не поддерживается: тип процессора Mach-O cputype=0x%08X", cpuType)
 	}
 	ncmds := int(binary.LittleEndian.Uint32(data[16:20]))
 	sizeofcmds := int(binary.LittleEndian.Uint32(data[20:24]))
 	if ncmds <= 0 || sizeofcmds <= 0 || 32+sizeofcmds > len(data) {
-		return macOSMachOInfo0154{}, errors.New("Некорректное значение: «Mach-O load-command table»")
+		return macOSMachOInfo0154{}, errors.New("Некорректное значение: таблица команд загрузки Mach-O")
 	}
 	offset := 32
 	for i := 0; i < ncmds; i++ {
@@ -168,7 +168,7 @@ func inspectMacOSMachOBytes0154(data []byte) (macOSMachOInfo0154, error) {
 		cmd := binary.LittleEndian.Uint32(data[offset : offset+4])
 		cmdSize := int(binary.LittleEndian.Uint32(data[offset+4 : offset+8]))
 		if cmdSize < 8 || offset+cmdSize > len(data) || offset+cmdSize > 32+sizeofcmds {
-			return macOSMachOInfo0154{}, errors.New("Некорректное значение: «Mach-O load command size»")
+			return macOSMachOInfo0154{}, errors.New("Некорректное значение: размер команды загрузки Mach-O")
 		}
 		if cmd == 0x1d { // LC_CODE_SIGNATURE
 			if cmdSize < 16 {
@@ -223,7 +223,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 		return MacOSPackageManifest0154{}, "", err
 	}
 	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Platform != "macos" || manifest.Architecture != arch || manifest.CPUType != cpuText || manifest.RustTarget != rustTarget || manifest.PackageFormat != "zip" || manifest.PackageArtifact != expectedPackage || manifest.BundleIdentifier != "ru.skif4er.launcher" || strings.TrimSpace(manifest.MinimumSystemVersion) == "" || manifest.HashBindingMode != "final-artifact-sha256" {
-		return MacOSPackageManifest0154{}, "", fmt.Errorf("Несовпадение: «macOS %s package manifest identity/schema»", arch)
+		return MacOSPackageManifest0154{}, "", fmt.Errorf("Несовпадение: идентификатор или схема манифеста пакета macOS %s", arch)
 	}
 	expected := expectedMacOSArtifacts0154(arch)
 	expectedBundlePaths := expectedMacOSBundlePaths0154()
@@ -235,7 +235,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 		expectedName, ok := expected[artifact.Component]
 		expectedBundlePath := expectedBundlePaths[artifact.Component]
 		if !ok || artifact.Name != expectedName || artifact.BundlePath != expectedBundlePath || artifact.Architecture != arch || artifact.CPUType != cpuText || strings.Contains(artifact.BundlePath, "..") {
-			return MacOSPackageManifest0154{}, "", fmt.Errorf("Несовпадение: «macOS %s package artifact identity»: %s", arch, artifact.Name)
+			return MacOSPackageManifest0154{}, "", fmt.Errorf("Несовпадение: идентификатор артефакта пакета macOS %s: %s", arch, artifact.Name)
 		}
 		if seen[artifact.Component] {
 			return MacOSPackageManifest0154{}, "", fmt.Errorf("Повторяющийся компонент пакета macOS %s: %s", arch, artifact.Component)
@@ -254,17 +254,17 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 		}
 		macho, err := inspectMacOSMachOFile0154(path)
 		if err != nil || macho.Architecture != arch || macho.CPUTypeText != cpuText || !macho.HasCodeSignature {
-			return MacOSPackageManifest0154{}, "", fmt.Errorf("Ошибка: «macOS %s artifact %s Mach-O/code-signature validation»: %v", arch, artifact.Name, err)
+			return MacOSPackageManifest0154{}, "", fmt.Errorf("Ошибка: проверка Mach-O и цифровой подписи артефакта macOS %s: %s: %v", arch, artifact.Name, err)
 		}
 		if !artifact.CodeSigned || !artifact.HardenedRuntime {
 			return MacOSPackageManifest0154{}, "", fmt.Errorf("Для артефакта macOS %s (%s) отсутствуют подтверждения подписи и Hardened Runtime", arch, artifact.Name)
 		}
 		if requireSigned {
 			if !macOSTeamIDRE0154.MatchString(artifact.TeamID) || !strings.EqualFold(artifact.TeamID, expectedTeamID) {
-				return MacOSPackageManifest0154{}, "", fmt.Errorf("Несовпадение: «macOS %s artifact %s Team ID»", arch, artifact.Name)
+				return MacOSPackageManifest0154{}, "", fmt.Errorf("Несовпадение: идентификатор команды подписи для артефакта macOS %s: %s", arch, artifact.Name)
 			}
 		} else if strings.TrimSpace(artifact.TeamID) == "" {
-			return MacOSPackageManifest0154{}, "", fmt.Errorf("Отсутствует: «macOS %s artifact %s Team ID/mode marker»", arch, artifact.Name)
+			return MacOSPackageManifest0154{}, "", fmt.Errorf("Отсутствует: идентификатор команды или режим подписи артефакта macOS %s: %s", arch, artifact.Name)
 		}
 	}
 	return manifest, manifestHash, nil
@@ -311,7 +311,7 @@ func readZipEntries0154(path string) (map[string][]byte, error) {
 func verifyEmbeddedMacOSPackageManifest0154(raw []byte, external MacOSPackageManifest0154, arch string) (MacOSPackageManifest0154, error) {
 	var embedded MacOSPackageManifest0154
 	if err := json.Unmarshal(raw, &embedded); err != nil {
-		return MacOSPackageManifest0154{}, fmt.Errorf("Некорректное значение: «macOS %s embedded package manifest»: %w", arch, err)
+		return MacOSPackageManifest0154{}, fmt.Errorf("Некорректное значение: встроенный манифест пакета macOS %s: %w", arch, err)
 	}
 	if embedded.SchemaVersion != external.SchemaVersion ||
 		embedded.Product != external.Product ||
@@ -326,7 +326,7 @@ func verifyEmbeddedMacOSPackageManifest0154(raw []byte, external MacOSPackageMan
 		embedded.MinimumSystemVersion != external.MinimumSystemVersion ||
 		embedded.HashBindingMode != "codesign+external-release-policy" ||
 		len(embedded.Artifacts) != len(external.Artifacts) {
-		return MacOSPackageManifest0154{}, fmt.Errorf("Несовпадение: «macOS %s embedded package manifest identity/schema»", arch)
+		return MacOSPackageManifest0154{}, fmt.Errorf("Несовпадение: идентификатор или схема встроенного манифеста пакета macOS %s", arch)
 	}
 
 	externalByComponent := make(map[string]MacOSPackageArtifact0154, len(external.Artifacts))
@@ -355,7 +355,7 @@ func verifyEmbeddedMacOSPackageManifest0154(raw []byte, external MacOSPackageMan
 func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageManifest0154, manifestHash string, evidencePackage MacOSNotarizedPackage0154) error {
 	packageName, manifestName := expectedMacOSPackage0154(ver, arch)
 	if evidencePackage.Name != packageName || evidencePackage.Manifest != manifestName || !strings.EqualFold(evidencePackage.ManifestSHA256, manifestHash) {
-		return fmt.Errorf("Несовпадение: «macOS %s package evidence identity»", arch)
+		return fmt.Errorf("Несовпадение: идентификатор свидетельства пакета macOS %s", arch)
 	}
 	packagePath, err := safeDeliveryArtifactPath(dir, packageName)
 	if err != nil {
@@ -403,14 +403,14 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		}
 		var update componentUpdateManifest0157
 		if err := json.Unmarshal(updateRaw, &update); err != nil {
-			return fmt.Errorf("Некорректное значение: «macOS %s component update manifest»: %w", arch, err)
+			return fmt.Errorf("Некорректное значение: манифест обновления компонентов macOS %s: %w", arch, err)
 		}
 		expectedTrust := "adhoc-development"
 		if evidencePackage.NotaryStatus == "Accepted" && evidencePackage.Stapled && evidencePackage.StaplerValidated && evidencePackage.GatekeeperAccepted {
 			expectedTrust = "developer-id-notarized"
 		}
 		if update.SchemaVersion != "1.0" || update.Product != "Launcher" || update.ProductVersion != ver || update.Platform != "macos" || update.Architecture != arch || update.Layout != "macos-app-bundle" || update.BundleName != "Launcher.app" || update.TrustMode != expectedTrust || len(update.Components) != 3 {
-			return fmt.Errorf("Несовпадение: «macOS %s component update manifest identity»", arch)
+			return fmt.Errorf("Несовпадение: идентификатор манифеста обновления компонентов macOS %s", arch)
 		}
 		byComponent := map[string]MacOSPackageArtifact0154{}
 		for _, row := range embeddedManifest.Artifacts {
@@ -476,12 +476,12 @@ func verifyMacOSDeliveryAllowlist0154(dir, ver string, evidence MacOSNotarizatio
 	}
 	release, ok := doc.Releases[ver]
 	if doc.SchemaVersion != "3.0" || !ok || release.ProtocolVersion != 4 {
-		return errors.New("Несовпадение: «macOS delivery allowlist identity/schema»")
+		return errors.New("Несовпадение: идентификатор или схема списка разрешённых поставок macOS")
 	}
 	policy, ok := release.Platforms["macos"]
 	expectedMode := evidence.SigningMode
 	if !ok || policy.SigningMode != expectedMode || len(policy.Artifacts) != 2 {
-		return errors.New("Несовпадение: «macOS delivery allowlist platform metadata»")
+		return errors.New("Несовпадение: метаданные платформы в списке разрешённых поставок macOS")
 	}
 	expected := map[string]string{}
 	for _, target := range evidence.Targets {
@@ -540,24 +540,24 @@ func verifyMacOSNativePackage0154(packagePath, expectedTeamID string) error {
 	// расширенные атрибуты и прикреплённый билет нотариального заверения
 	// сохранились после распаковки перед проверками stapler/Gatekeeper пакета .app.
 	if output, err := exec.Command(ditto, "-x", "-k", packagePath, tmp).CombinedOutput(); err != nil {
-		return fmt.Errorf("Ошибка: «ditto package extraction»: %w: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Ошибка: распаковка пакета утилитой ditto: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	app := filepath.Join(tmp, "Launcher.app")
 	if output, err := exec.Command(codesign, "--verify", "--deep", "--strict", "--verbose=2", app).CombinedOutput(); err != nil {
-		return fmt.Errorf("Ошибка: «codesign verify»: %w: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Ошибка: проверка подписи утилитой codesign: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	if output, err := exec.Command(xcrun, "stapler", "validate", app).CombinedOutput(); err != nil {
-		return fmt.Errorf("Ошибка: «stapler validate»: %w: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Ошибка: проверка билета нотариального удостоверения утилитой stapler: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	if output, err := exec.Command(spctl, "--assess", "--type", "execute", "--verbose=2", app).CombinedOutput(); err != nil {
-		return fmt.Errorf("Ошибка: «Gatekeeper assessment»: %w: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Ошибка: проверка системой Gatekeeper: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	output, err := exec.Command(codesign, "-dv", "--verbose=4", app).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("Ошибка: «codesign display»: %w: %s", err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Ошибка: просмотр данных подписи через codesign: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	if !strings.Contains(string(output), "TeamIdentifier="+expectedTeamID) || !strings.Contains(string(output), "runtime") {
-		return errors.New("Несовпадение: «native macOS package Team ID/Hardened Runtime»")
+		return errors.New("Несовпадение: Team ID или Hardened Runtime нативного пакета macOS")
 	}
 	return nil
 }
@@ -575,12 +575,12 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 		return err
 	}
 	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Platform != "macos" {
-		return errors.New("Несовпадение: «macOS notarization evidence identity/schema»")
+		return errors.New("Несовпадение: идентификатор или схема свидетельства нотариального удостоверения macOS")
 	}
 	production := evidence.SigningMode == "developer-id-notarized"
 	development := evidence.SigningMode == "adhoc-development"
 	if !production && !development {
-		return fmt.Errorf("Не поддерживается: «macOS signing mode» %q", evidence.SigningMode)
+		return fmt.Errorf("Не поддерживается: режим подписи macOS %q", evidence.SigningMode)
 	}
 	if requireNotarized && !production {
 		return errors.New("Для публикации промышленного релиза требуется подпись Developer ID и нотариальное заверение Apple для macOS x64 и ARM64")
@@ -594,7 +594,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 	}
 	if _, err := time.Parse(time.RFC3339Nano, evidence.GeneratedAt); err != nil {
 		if _, fallbackErr := time.Parse(time.RFC3339, evidence.GeneratedAt); fallbackErr != nil {
-			return errors.New("Некорректное значение: «macOS notarization evidence generatedAt»")
+			return errors.New("Некорректное значение: время создания свидетельства нотариального удостоверения macOS")
 		}
 	}
 	if len(evidence.Targets) != 2 {
@@ -602,7 +602,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 	}
 	delivery, err := readDeliveryManifest0151(dir)
 	if err != nil {
-		return fmt.Errorf("macOS notarization evidence: требуется «delivery manifest:» %w", err)
+		return fmt.Errorf("Нотариальное свидетельство macOS: требуется манифест поставки: %w", err)
 	}
 	deliveryByName := map[string]DeliveryArtifact{}
 	for _, artifact := range delivery.Artifacts {
@@ -611,10 +611,10 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 	seen := map[string]bool{}
 	for _, target := range evidence.Targets {
 		if target.Architecture != "x64" && target.Architecture != "arm64" {
-			return fmt.Errorf("Не поддерживается: «macOS evidence architecture» %s", target.Architecture)
+			return fmt.Errorf("Не поддерживается: архитектура в свидетельстве macOS %s", target.Architecture)
 		}
 		if seen[target.Architecture] {
-			return fmt.Errorf("Обнаружен дубликат: «macOS evidence target» %s", target.Architecture)
+			return fmt.Errorf("Обнаружен дубликат: целевая платформа в свидетельстве macOS %s", target.Architecture)
 		}
 		seen[target.Architecture] = true
 		rustTarget, _, cpuText, err := macOSTargetMetadata0154(target.Architecture)
@@ -622,14 +622,14 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 			return err
 		}
 		if target.RustTarget != rustTarget || target.CPUType != cpuText {
-			return fmt.Errorf("Несовпадение: «macOS %s target metadata»", target.Architecture)
+			return fmt.Errorf("Несовпадение: метаданные целевой платформы macOS %s", target.Architecture)
 		}
 		manifest, manifestHash, err := verifyMacOSPackageManifest0154(dir, ver, target.Architecture, production, evidence.TeamID)
 		if err != nil {
 			return err
 		}
 		if len(target.Artifacts) != len(manifest.Artifacts) {
-			return fmt.Errorf("Несовпадение: «macOS %s evidence artifact count»", target.Architecture)
+			return fmt.Errorf("Несовпадение: количество артефактов в свидетельстве macOS %s", target.Architecture)
 		}
 		expectedArtifacts := map[string]MacOSPackageArtifact0154{}
 		for _, artifact := range manifest.Artifacts {
@@ -638,7 +638,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 		for _, artifact := range target.Artifacts {
 			expected, ok := expectedArtifacts[artifact.Component]
 			if !ok || artifact != expected {
-				return fmt.Errorf("Несовпадение: «macOS %s evidence artifact»: %s", target.Architecture, artifact.Name)
+				return fmt.Errorf("Несовпадение: артефакт свидетельства macOS %s: %s", target.Architecture, artifact.Name)
 			}
 			deliveryArtifact, ok := deliveryByName[artifact.Name]
 			if !ok || deliveryArtifact.Platform != "macos" || deliveryArtifact.Architecture != target.Architecture || deliveryArtifact.Size != artifact.Size || !strings.EqualFold(deliveryArtifact.SHA256, artifact.SHA256) {
@@ -650,7 +650,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 		}
 		packageDelivery, ok := deliveryByName[target.Package.Name]
 		if !ok || packageDelivery.Platform != "macos" || packageDelivery.Architecture != target.Architecture || packageDelivery.Size != target.Package.Size || !strings.EqualFold(packageDelivery.SHA256, target.Package.SHA256) {
-			return fmt.Errorf("Несовпадение: «macOS package %s delivery binding»", target.Package.Name)
+			return fmt.Errorf("Несовпадение: привязка поставки пакета macOS %s", target.Package.Name)
 		}
 		manifestDelivery, ok := deliveryByName[target.Package.Manifest]
 		if !ok {

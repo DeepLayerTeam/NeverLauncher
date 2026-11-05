@@ -95,7 +95,7 @@ def public_key(raw: bytes) -> Ed25519PublicKey:
     except ValueError:
         key_raw = base64.b64decode(value, validate=True)
     if len(key_raw) != 32:
-        raise Blocked("independent Ed25519 public key: требуется «32 bytes»")
+        raise Blocked("Независимый открытый ключ Ed25519 должен содержать 32 байта")
     return Ed25519PublicKey.from_public_bytes(key_raw)
 
 

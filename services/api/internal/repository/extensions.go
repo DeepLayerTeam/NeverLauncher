@@ -260,7 +260,7 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 		item.Scope = "global"
 	}
 	if item.Scope != "global" && item.Scope != "project" {
-		return model.ExtensionInstall{}, fmt.Errorf("extension install scope: требуется «global or project»")
+		return model.ExtensionInstall{}, fmt.Errorf("extension install scope: требуется глобальная область или область проекта")
 	}
 	if item.Scope == "global" {
 		item.ScopeID = ""

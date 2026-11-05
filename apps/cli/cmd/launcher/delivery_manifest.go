@@ -396,11 +396,11 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 	for _, target := range manifest.PublishedTargets {
 		canonical, err := canonicalDeliveryTarget(target.Platform, target.Architecture)
 		if err != nil || canonical.Platform == "any" || canonical.Platform != target.Platform || canonical.Architecture != target.Architecture {
-			return fmt.Errorf("Некорректное значение: «published delivery target»: %s/%s", target.Platform, target.Architecture)
+			return fmt.Errorf("Некорректное значение: опубликованная целевая платформа поставки: %s/%s", target.Platform, target.Architecture)
 		}
 		key := target.Platform + "/" + target.Architecture
 		if _, duplicate := publishedTargets[key]; duplicate {
-			return fmt.Errorf("Обнаружен дубликат: «published delivery target» %s", key)
+			return fmt.Errorf("Обнаружен дубликат: опубликованная целевая платформа поставки %s", key)
 		}
 		publishedTargets[key] = struct{}{}
 	}
@@ -634,7 +634,7 @@ func handleDelivery(args []string) error {
 		if platform == "" && arch == "" {
 			target, err = currentDeliveryTarget()
 		} else if platform == "" || arch == "" {
-			return errors.New("delivery resolve: требуется «both --platform and --arch when overriding host target»")
+			return errors.New("delivery resolve: требуется оба параметра --platform и --arch при переопределении платформы хоста")
 		} else {
 			target, err = canonicalDeliveryTarget(platform, arch)
 		}

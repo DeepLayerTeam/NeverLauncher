@@ -688,7 +688,7 @@ func installVerify(args []string) error {
 	for id, endpoint := range map[string]string{"health": "/health", "ready": "/ready"} {
 		payload, err := httpJSON("GET", backend+endpoint, nil)
 		if err != nil {
-			return fmt.Errorf("Ошибка: «install verify» %s: %w", id, err)
+			return fmt.Errorf("Ошибка: проверка установки %s: %w", id, err)
 		}
 		checks[id] = payload
 	}
@@ -699,7 +699,7 @@ func installVerify(args []string) error {
 	} {
 		payload, err := httpJSONWithAuth("GET", backend+endpoint, nil, token)
 		if err != nil {
-			return fmt.Errorf("Ошибка: «install verify» %s: %w", id, err)
+			return fmt.Errorf("Ошибка: проверка установки %s: %w", id, err)
 		}
 		checks[id] = payload
 	}

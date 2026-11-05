@@ -36,7 +36,7 @@ func handleMigrationReport03313(args []string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Отчёт: требуется «HTTPS or local loopback»")
+			return errors.New("Отчёт: требуется HTTPS или локальный адрес обратной связи")
 		}
 	}
 	endpoint := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run) + "/report"
@@ -48,13 +48,13 @@ func handleMigrationReport03313(args []string) error {
 		endpoint += "/review"
 	case "report-review":
 		if flagValue(args, "--confirm", "") != run {
-			return errors.New("Проверка: требуется «exact --confirm run ID»")
+			return errors.New("Проверка: требуется точный идентификатор запуска в параметре --confirm")
 		}
 		hash := flagValue(args, "--report-sha256", "")
 		evidence := flagValue(args, "--evidence-sha256", "")
 		ref := flagValue(args, "--evidence-reference", "")
 		if !reportDigest03313(hash) || !reportDigest03313(evidence) || len(ref) < 8 || len(ref) > 256 {
-			return errors.New("Проверка: требуется «SHA-256 of report and independent test evidence plus reference»")
+			return errors.New("Проверка: требуется SHA-256 отчёта, независимого свидетельства проверки и ссылка")
 		}
 		body, e = json.Marshal(map[string]string{"reportSha256": hash, "evidenceSha256": evidence, "evidenceReference": ref})
 		if e != nil {
@@ -63,7 +63,7 @@ func handleMigrationReport03313(args []string) error {
 		endpoint += "/review"
 		method = "POST"
 	default:
-		return fmt.Errorf("Неизвестное значение: «report command» %q", command)
+		return fmt.Errorf("Неизвестное значение: команда отчёта %q", command)
 	}
 	req, e := http.NewRequest(method, endpoint, bytes.NewReader(body))
 	if e != nil {
@@ -85,11 +85,11 @@ func handleMigrationReport03313(args []string) error {
 		return e
 	}
 	if len(data) >= 32<<20 {
-		return errors.New("Превышен допустимый размер: «report response»")
+		return errors.New("Превышен допустимый размер: ответ службы отчётов")
 	}
 	var result map[string]any
 	if e = json.Unmarshal(data, &result); e != nil {
-		return fmt.Errorf("Некорректное значение: «report JSON HTTP» %d", res.StatusCode)
+		return fmt.Errorf("Некорректное значение: HTTP-ответ с отчётом JSON, код %d", res.StatusCode)
 	}
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		return fmt.Errorf("Ошибка HTTP %d при получении отчёта: %v", res.StatusCode, result["error"])

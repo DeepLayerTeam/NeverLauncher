@@ -63,7 +63,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	}
 	root, e := hex.DecodeString(strings.TrimSpace(rootHex))
 	if e != nil || len(root) != 32 {
-		return p, "", errors.New("trusted embedded root: требуется «32-byte Ed25519»")
+		return p, "", errors.New("trusted embedded root: требуется ключ Ed25519 длиной 32 байта")
 	}
 	var env TrustPolicyEnvelope
 	if e = decodeStrict(raw, &env); e != nil {
@@ -101,23 +101,23 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	active := 0
 	for _, k := range p.Keys {
 		if k.ID == "" || len(k.ID) > 100 || !validTrustID02312(k.ID) || (k.Role != "bootstrap" && k.Role != "component" && k.Role != "game" && k.Role != "release") {
-			return p, "", errors.New("Некорректное значение: «delegated key id/role»")
+			return p, "", errors.New("Некорректное значение: идентификатор или роль делегированного ключа")
 		}
 		key, e := hex.DecodeString(k.PublicKey)
 		if e != nil || len(key) != 32 {
-			return p, "", errors.New("Некорректное значение: «delegated public key»")
+			return p, "", errors.New("Некорректное значение: делегированный открытый ключ")
 		}
 		if ids[k.ID] || pubs[strings.ToLower(k.PublicKey)] {
-			return p, "", errors.New("Обнаружен дубликат: «delegated key»")
+			return p, "", errors.New("Обнаружен дубликат: делегированный ключ")
 		}
 		ids[k.ID] = true
 		pubs[strings.ToLower(k.PublicKey)] = true
 		if k.Status != "active" && k.Status != "verify-only" && k.Status != "revoked" {
-			return p, "", errors.New("Некорректное значение: «delegated key status»")
+			return p, "", errors.New("Некорректное значение: статус делегированного ключа")
 		}
 		t, e := strictTime02312(k.NotBefore)
 		if e != nil || t.After(expiry) {
-			return p, "", errors.New("Некорректное значение: «delegated key activation»")
+			return p, "", errors.New("Некорректное значение: активация делегированного ключа")
 		}
 		if k.Status == "verify-only" {
 			u, e := strictTime02312(k.VerifyUntil)

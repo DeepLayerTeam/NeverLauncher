@@ -36,7 +36,7 @@ func handleMigrationCutover03311(args []string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Для переключение на новую систему требуется «HTTPS or local loopback»")
+			return errors.New("Для переключение на новую систему требуется HTTPS или локальный адрес обратной связи")
 		}
 	}
 	endpoint := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run) + "/cutovers"
@@ -64,7 +64,7 @@ func handleMigrationCutover03311(args []string) error {
 			return errors.New("Для активация требуется --expected-revision")
 		}
 		if flagValue(args, "--source-fenced", "") != "true" {
-			return errors.New("Для активация требуется «explicit --source-fenced true after stopping the external Gravit writer»")
+			return errors.New("Для активация требуется явный флаг --source-fenced true после остановки внешнего процесса записи Gravit")
 		}
 		// Читает подлинную квитанцию проверки на исходной системе. Произвольный
 		// 64-символьный хеш больше не проходит предварительную проверку CLI.
@@ -79,7 +79,7 @@ func handleMigrationCutover03311(args []string) error {
 		if receipt.Format != "never/gravit-source-stop/v1" || receipt.RunID != run || receipt.ProfileID != profile || receipt.Channel != channel ||
 			receipt.UnitState != "inactive" || (receipt.UnitFileState != "masked" && receipt.UnitFileState != "masked-runtime") ||
 			time.Since(receipt.CheckedAt) > 10*time.Minute || time.Until(receipt.CheckedAt) > time.Minute || !fenceDigest0448.MatchString(receipt.SnapshotSHA256) {
-			return errors.New("Некорректное значение: «source fence receipt scope, status or freshness»")
+			return errors.New("Некорректное значение: область действия, статус или актуальность квитанции блокировки источника")
 		}
 		canonical, hashErr := json.Marshal(receipt)
 		if hashErr != nil {
@@ -99,7 +99,7 @@ func handleMigrationCutover03311(args []string) error {
 		body = map[string]any{"profileId": profile, "channel": channel, "expectedRevision": rev}
 		endpoint += "/cancel"
 	default:
-		return fmt.Errorf("Неизвестное значение: «cutover command» %s", cmd)
+		return fmt.Errorf("Неизвестное значение: команда переключения %s", cmd)
 	}
 	return cutoverRequest03311("POST", endpoint, token, run, body, fenced, flagValue(args, "--output", ""))
 }

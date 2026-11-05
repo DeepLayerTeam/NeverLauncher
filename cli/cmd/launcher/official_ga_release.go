@@ -27,7 +27,7 @@ func verifyOfficialGAReceipt0270(dir, version, expectedCommit string) error {
 	path := filepath.Join(dir, officialGACertification0270)
 	fi, err := os.Lstat(path)
 	if err != nil || !fi.Mode().IsRegular() || fi.Size() > 32*1024 {
-		return errors.New("Некорректное значение: «official Minecraft GA signed receipt missing or»")
+		return errors.New("Некорректное значение: подписанная квитанция финальной сертификации официального Minecraft отсутствует или")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {

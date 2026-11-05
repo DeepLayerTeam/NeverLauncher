@@ -752,7 +752,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		if failed {
 			_ = os.RemoveAll(stagingDir)
-			return vanillaInstallResult{}, fmt.Errorf("Ошибка: «native staging %s hash verification»", key)
+			return vanillaInstallResult{}, fmt.Errorf("Ошибка: проверка хеша нативного тестового окружения %s", key)
 		}
 		if err := os.MkdirAll(filepath.Dir(finalDir), 0o755); err != nil {
 			_ = os.RemoveAll(stagingDir)
@@ -1074,7 +1074,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		hashed, hashErr := io.Copy(io.MultiWriter(h1, h256), prefix)
 		closeErr := prefix.Close()
 		if hashErr != nil || closeErr != nil || hashed != resumeOffset {
-			return vanillaDownloadedFile{}, fmt.Errorf("Ошибка: «%s: partial prefix hash»", task.Path)
+			return vanillaDownloadedFile{}, fmt.Errorf("Ошибка: %s: частичный хеш префикса", task.Path)
 		}
 		out, err = os.OpenFile(tmp, os.O_WRONLY|os.O_APPEND, 0o644)
 	} else {
@@ -1279,7 +1279,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		src.Close()
 		if copyErr != nil || syncErr != nil || closeErr != nil {
 			_ = os.Remove(tmp)
-			return nil, fmt.Errorf("Ошибка: «native %s extraction»", entry.Name)
+			return nil, fmt.Errorf("Ошибка: распаковка нативного пакета %s", entry.Name)
 		}
 		if copied != int64(entry.UncompressedSize64) || copied > maxCompatibilityNativeEntry {
 			_ = os.Remove(tmp)
@@ -1599,7 +1599,7 @@ func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([
 	case "aarch64":
 		classifierArch = "arm64"
 	default:
-		return nil, fmt.Errorf("Не поддерживается: «LWJGL Windows architecture»: %s", arch)
+		return nil, fmt.Errorf("Не поддерживается: архитектура LWJGL для Windows: %s", arch)
 	}
 	prefix := "windows/" + classifierArch + "/org/lwjgl/"
 	aliases := make([]string, 0)
@@ -1610,7 +1610,7 @@ func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([
 		}
 		base := path.Base(clean)
 		if base == "." || base == ".." || strings.ContainsAny(base, "\\/") {
-			return nil, fmt.Errorf("Некорректное значение: «LWJGL Windows native name»: %q", base)
+			return nil, fmt.Errorf("Некорректное значение: имя нативной библиотеки LWJGL для Windows: %q", base)
 		}
 		from, err := secureClientDestination(root, clean)
 		if err != nil {
@@ -1630,7 +1630,7 @@ func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([
 			return nil, err
 		}
 		if len(data) == 0 || int64(len(data)) > maxCompatibilityNativeEntry {
-			return nil, fmt.Errorf("Некорректное значение: «LWJGL Windows native size»: %s", base)
+			return nil, fmt.Errorf("Некорректное значение: размер нативной библиотеки LWJGL для Windows: %s", base)
 		}
 		if err := writeAtomicBytes(to, data, 0o644); err != nil {
 			return nil, err
@@ -1669,7 +1669,7 @@ func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]s
 		}
 		base := path.Base(clean)
 		if base == "." || base == ".." || strings.ContainsAny(base, "\\/") {
-			return nil, fmt.Errorf("Некорректное значение: «LWJGL macOS native name»: %q", base)
+			return nil, fmt.Errorf("Некорректное значение: имя нативной библиотеки LWJGL для macOS: %q", base)
 		}
 		from, err := secureClientDestination(root, clean)
 		if err != nil {
@@ -1684,7 +1684,7 @@ func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]s
 			return nil, err
 		}
 		if len(data) == 0 || int64(len(data)) > maxCompatibilityNativeEntry {
-			return nil, fmt.Errorf("Некорректное значение: «LWJGL macOS native size»: %s", base)
+			return nil, fmt.Errorf("Некорректное значение: размер нативной библиотеки LWJGL для macOS: %s", base)
 		}
 		if existing, err := os.Lstat(to); err == nil {
 			if !existing.Mode().IsRegular() || existing.Size() != int64(len(data)) {
@@ -1722,7 +1722,7 @@ func flattenLWJGLARM64Natives(root string, extracted []string) ([]string, error)
 		}
 		base := path.Base(clean)
 		if strings.ContainsAny(base, "\\/") || base == "." || base == ".." {
-			return nil, fmt.Errorf("Некорректное значение: «LWJGL native name»: %s", base)
+			return nil, fmt.Errorf("Некорректное значение: имя нативной библиотеки LWJGL: %s", base)
 		}
 		from, err := secureClientDestination(root, clean)
 		if err != nil {
@@ -1742,7 +1742,7 @@ func flattenLWJGLARM64Natives(root string, extracted []string) ([]string, error)
 			return nil, err
 		}
 		if int64(len(data)) > maxCompatibilityNativeEntry {
-			return nil, fmt.Errorf("Превышен допустимый размер: «LWJGL native alias»: %s", base)
+			return nil, fmt.Errorf("Превышен допустимый размер: псевдоним нативной библиотеки LWJGL: %s", base)
 		}
 		if err := writeAtomicBytes(to, data, 0o644); err != nil {
 			return nil, err
@@ -1973,7 +1973,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v2 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Несовпадение: «Minecraft %s: Mojang metadata Java»: 0.17.0v2 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Несовпадение: метаданные Java для Minecraft %s от Mojang: 0.17.0v2 expected %d, got %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
@@ -1982,7 +1982,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v3 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Несовпадение: «Minecraft %s: Mojang metadata Java»: 0.17.0v3 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Несовпадение: метаданные Java для Minecraft %s от Mojang: 0.17.0v3 expected %d, got %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}

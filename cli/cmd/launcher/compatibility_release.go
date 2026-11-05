@@ -759,7 +759,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				fabricJava[target.JavaMajor] = true
 			}
 			if fabricCount != len(fabricCompatibilityII0171) {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Fabric Compatibility II 0.17.1: требуется «exactly %d stable release targets; got» %d", len(fabricCompatibilityII0171), fabricCount)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Fabric Compatibility II 0.17.1: требуется ровно %d целевых платформ стабильного выпуска; получено %d", len(fabricCompatibilityII0171), fabricCount)
 			}
 			for minecraft, javaMajor := range fabricCompatibilityII0171 {
 				target, ok := fabricTargets[minecraft]
@@ -774,7 +774,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Fabric %s 0.17.1: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric %s 0.17.1: требуется «loaderVersion=latest-stable selector»", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric %s 0.17.1: требуется выбор версии загрузчика loaderVersion=latest-stable", minecraft)
 				}
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
@@ -799,7 +799,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				quiltJava[target.JavaMajor] = true
 			}
 			if quiltCount != len(quiltCompatibilityII0172) {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Quilt Compatibility II 0.17.2: требуется «exactly %d stable release targets; got» %d", len(quiltCompatibilityII0172), quiltCount)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Quilt Compatibility II 0.17.2: требуется ровно %d целевых платформ стабильного выпуска; получено %d", len(quiltCompatibilityII0172), quiltCount)
 			}
 			for minecraft, javaMajor := range quiltCompatibilityII0172 {
 				target, ok := quiltTargets[minecraft]
@@ -814,7 +814,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Quilt %s 0.17.2: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt %s 0.17.2: требуется «loaderVersion=latest-stable selector»", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt %s 0.17.2: требуется выбор версии загрузчика loaderVersion=latest-stable", minecraft)
 				}
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
@@ -868,7 +868,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Forge %s 0.17.3: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge %s 0.17.3: требуется «loaderVersion=latest-stable selector»", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge %s 0.17.3: требуется выбор версии загрузчика loaderVersion=latest-stable", minecraft)
 				}
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
@@ -885,14 +885,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 				legacyCount++
 				if target.JavaMajor != 8 || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4: требуется «Java 8 scope=client linux/x86_64, got Java %d scope=%s %s/%s»", target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4: требуется Java 8 в клиентской среде linux/x86_64; получено Java %d, область %s, платформа %s/%s", target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
-					return releaseCompatibilityCertification{}, errors.New("Forge Legacy 1.12.2 0.17.4: требуется «loaderVersion=latest-stable selector»")
+					return releaseCompatibilityCertification{}, errors.New("Forge Legacy 1.12.2 0.17.4: требуется выбор версии загрузчика loaderVersion=latest-stable")
 				}
 			}
 			if legacyCount != 1 {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4: требуется «exactly one required target; got» %d", legacyCount)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4: требуется ровно одна обязательная целевая платформа; получено %d", legacyCount)
 			}
 		}
 
@@ -904,14 +904,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 				legacyCount++
 				if target.JavaMajor != 8 || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.7.10 0.17.5: требуется «Java 8 scope=client linux/x86_64, got Java %d scope=%s %s/%s»", target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.7.10 0.17.5: требуется Java 8 в клиентской среде linux/x86_64; получено Java %d, область %s, платформа %s/%s", target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
-					return releaseCompatibilityCertification{}, errors.New("Forge Legacy 1.7.10 0.17.5: требуется «loaderVersion=latest-stable selector»")
+					return releaseCompatibilityCertification{}, errors.New("Forge Legacy 1.7.10 0.17.5: требуется выбор версии загрузчика loaderVersion=latest-stable")
 				}
 			}
 			if legacyCount != 1 {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.7.10 0.17.5: требуется «exactly one required target; got» %d", legacyCount)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.7.10 0.17.5: требуется ровно одна обязательная целевая платформа; получено %d", legacyCount)
 			}
 		}
 
@@ -931,7 +931,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				neoForgeJava[target.JavaMajor] = true
 			}
 			if neoForgeCount != len(neoForgeCompatibilityII0176) {
-				return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6: требуется «exactly %d stable release targets; got» %d", len(neoForgeCompatibilityII0176), neoForgeCount)
+				return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6: требуется ровно %d целевых платформ стабильного выпуска; получено %d", len(neoForgeCompatibilityII0176), neoForgeCount)
 			}
 			for minecraft, javaMajor := range neoForgeCompatibilityII0176 {
 				target, ok := neoForgeTargets[minecraft]
@@ -946,7 +946,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение NeoForge %s 0.17.6: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge %s 0.17.6: требуется «loaderVersion=latest-stable selector»", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge %s 0.17.6: требуется выбор версии загрузчика loaderVersion=latest-stable", minecraft)
 				}
 			}
 			for _, major := range []int{17, 21, 25} {
@@ -975,11 +975,11 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					}
 					seen[key] = true
 					if target.JavaMajor != anchor.JavaMajor || target.Scope != "client" || target.LoaderVersion != "latest-stable" {
-						return releaseCompatibilityCertification{}, fmt.Errorf("Для «Cross-platform Loaders 0.17.9» %s %s требуется «Java %d scope=client loaderVersion=latest-stable on» %s", loader, anchor.Minecraft, anchor.JavaMajor, key)
+						return releaseCompatibilityCertification{}, fmt.Errorf("Для кроссплатформенные загрузчики 0.17.9 %s %s требуется «Java %d scope=client loaderVersion=latest-stable on» %s", loader, anchor.Minecraft, anchor.JavaMajor, key)
 					}
 				}
 				if count != len(expectedPlatforms) || len(seen) != len(expectedPlatforms) {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Для «Cross-platform Loaders 0.17.9» %s %s требуется «%d platform targets; got» %d", loader, anchor.Minecraft, len(expectedPlatforms), count)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Для кроссплатформенные загрузчики 0.17.9 %s %s требуется «%d platform targets; got» %d", loader, anchor.Minecraft, len(expectedPlatforms), count)
 				}
 			}
 		}
