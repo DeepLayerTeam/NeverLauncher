@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Execute the final Gravit migration acceptance against *live* external systems.
+"""Проводить окончательную приёмку миграции Gravit на *живых* внешних системах.
 
-Never executes Gravit JARs. The existing Go Migration GA verifier must validate
-signed 36-check evidence and re-query PostgreSQL-backed Backend; then all 19
-approved module behavior probes run as real, hash-pinned executables. This tool
-cannot manufacture Minecraft sessions, signed installers or reviewer approval.
+JAR-файлы Gravit никогда не запускаются. Существующий Go-валидатор Migration GA обязан проверить
+подписанные свидетельства 36 проверок и повторно опросить Backend на PostgreSQL; затем все 19
+одобренных проверок поведения модулей запускаются как реальные исполняемые файлы с закреплёнными
+хешами. Утилита не может создавать сеансы Minecraft, подписанные установщики или одобрение
+рецензента.
 """
 from __future__ import annotations
 

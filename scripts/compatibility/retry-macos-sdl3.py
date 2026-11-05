@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Return 0 only for a reproducible class of native macOS SDL 3 startup aborts.
+"""Возвращать 0 только для воспроизводимого класса ошибок аварийного запуска SDL 3 на нативной macOS.
 
-This is a *retry eligibility* check, never a compatibility success check. A
-second real client launch must pass the unchanged launcher certification.
+Это проверка *допуска повторной попытки*, а не успеха совместимости. Второй настоящий запуск клиента
+должен пройти неизменённую сертификацию лаунчера.
 """
 
 from __future__ import annotations

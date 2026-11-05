@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed certification report for 0.24.13. Never synthesizes test evidence.
+"""Отчёт о сертификации 0.24.13 с блокировкой при неопределённости. Никогда не создаёт синтетические
+свидетельства тестов.
 
-Actual Minecraft client launch and the exact six-target platform matrix are
-mandatory for certification. Missing or failed checks remain INCOMPLETE/FAILED.
-This JSON does not replace separately signed clean-machine GA attestations.
+Для сертификации обязательны настоящий запуск клиента Minecraft и точная матрица шести целевых
+платформ. Отсутствующие или неуспешные проверки остаются INCOMPLETE/FAILED. Этот JSON не заменяет
+отдельно подписанные GA-аттестации на чистых машинах.
 """
 
 from __future__ import annotations

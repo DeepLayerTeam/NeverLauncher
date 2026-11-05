@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run native OS checks on final staged signed packages, not JSON declarations.
+"""Выполнять нативные проверки ОС для финальных подготовленных подписанных пакетов, а не JSON-деклараций.
 
-Invoke separately on supported Windows/macOS/Linux native operator machines.
-This only reports the actual checks completed. A third independent operator
-must audit the unsigned->signed transformation and sign its approval separately.
+Запускать отдельно на поддерживаемых нативных машинах оператора Windows/macOS/Linux. Отчёт содержит
+только реально выполненные проверки. Третий независимый оператор должен проверить переход от
+неподписанных к подписанным байтам и отдельно подписать одобрение.
 """
 from __future__ import annotations
 
@@ -33,11 +33,11 @@ def call(argv: list[str]) -> None:
 
 
 def normalize_pe(unsigned: bytes, signed: bytes) -> None:
-    """Verify signtool only appended WIN_CERTIFICATE and touched PE metadata.
+    """Проверить, что signtool лишь добавил WIN_CERTIFICATE и изменил метаданные PE.
 
-    The timestamped signature naturally changes each time, so compare the
-    unmodified executable pages and allow only the checksum, certificate
-    directory and the trailing aligned WIN_CERTIFICATE table to differ.
+    Временная метка подписи закономерно меняется, поэтому нужно сравнивать неизменённые страницы
+    исполняемого файла, допуская отличия только в контрольной сумме, каталоге сертификатов и
+    конечной выровненной таблице WIN_CERTIFICATE.
     """
     if len(unsigned)<512 or len(signed)<len(unsigned):
         raise ValueError('truncated PE signing transformation')

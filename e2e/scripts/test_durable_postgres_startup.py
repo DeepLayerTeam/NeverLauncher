@@ -1,7 +1,7 @@
-"""Contract tests for the isolated PostgreSQL container bootstrapping in E2E.
+"""Контрактные тесты начальной подготовки изолированного контейнера PostgreSQL для E2E.
 
-Only the Docker and Go command boundaries are mocked. The actual Bash script,
-including set -e and its port handling, executes unchanged.
+Имитируются только границы команд Docker и Go. Настоящий Bash-скрипт, включая set -e и обработку
+портов, выполняется без изменений.
 """
 
 import os

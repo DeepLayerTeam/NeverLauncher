@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Record evidence from *running* Docker JVM and actual authenticated game probes.
+"""Записать свидетельства из *работающей* Docker JVM и настоящих аутентифицированных игровых проверок.
 
-Not a simulator: invoking this program without Docker, a live JVM, real probe output,
-and ServerBridge's log markers fails closed.
+Это не симулятор: вызов без Docker, живой JVM, настоящего вывода проверок и маркеров журнала
+ServerBridge блокируется.
 """
 
 from __future__ import annotations

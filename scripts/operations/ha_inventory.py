@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.51.1: read-only, *live* HA inventory and failure-domain audit.
+"""NeverLauncher 0.51.1: инвентаризация *живого* HA и аудит доменов отказа только для чтения.
 
-Requires Docker on each inspected host and optional SSH for remote hosts. It
-never changes containers, databases, leases or files in the installation.
-Growth diagnostics use the existing real PG advisory-lock, Redis lease and S3
-round-trip probes (which create and remove uniquely named temporary objects).
-No secret, Docker environment block, raw logs or URL credentials are exported.
+Требуется Docker на каждом проверяемом хосте и необязательно SSH для удалённых. Контейнеры, БД,
+аренды и файлы установки никогда не меняются. Для диагностики масштабирования используются настоящие
+проверки advisory lock PG, аренды Redis и обратной записи S3 (создаются и удаляются уникальные
+временные объекты). Секреты, блоки окружения Docker, исходные журналы и учётные данные URL не
+экспортируются.
 
-This is a baseline *detector*, not a certificate of physical HA or partition
-safety. Indeterminate evidence is explicitly UNVERIFIED, never PASS.
+Это базовый *детектор*, а не сертификат физического HA или безопасности разделения сети.
+Неопределённые свидетельства явно UNVERIFIED, но не PASS.
 """
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def utc_now():
 
 
 def execute(argv, timeout=12, allowed_codes=(0,)):
-    """All argv are explicit; no subprocess shell or stdout/stderr in errors."""
+    """Все аргументы argv задаются явно; не использовать оболочку подпроцесса и не включать stdout/stderr в ошибки."""
     try:
         proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               timeout=timeout, check=False)
@@ -167,11 +167,11 @@ def classify_container(raw, project):
 
 
 def docker_ready(container_id, count):
-    """Probe actual HTTP readiness, retaining the binary version for mixed-rollout gates.
+    """Проверять настоящую готовность HTTP с сохранением версии бинарного файла для допусков смешанных выпусков.
 
-    Older response shapes remain observable but cannot qualify for N/N-1
-    compatibility; the version must come from the running process, never image
-    tags, Compose environment, a local VERSION file or a status-only probe.
+    Старые формы ответа остаются наблюдаемыми, но не подходят для совместимости N/N-1. Версия должна
+    поступать от работающего процесса, а не из тегов образа, окружения Compose, локального
+    VERSION-файла или проверки только статуса.
     """
     durations = []
     failures = 0
@@ -259,7 +259,7 @@ def probe_redis(container_id):
 
 
 def source_state_inventory(root):
-    """Source-traced risk inventory; never asserts that runtime state is shared."""
+    """Перечень рисков с прослеживаемыми источниками; не утверждать, что состояние Runtime общее."""
     files = {
         "runtime": root / "services/api/internal/httpapi/runtime_state.go",
         "persistence": root / "services/api/internal/httpapi/persistence.go",
@@ -575,20 +575,20 @@ def write_report(path, payload):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     subs = parser.add_subparsers(dest="mode", required=True)
-    local = subs.add_parser("node", help="inspect actual Docker processes on this host")
+    local = subs.add_parser("node", help="Проверить настоящие процессы Docker на этом хосте")
     local.add_argument("--project", required=True)
     local.add_argument("--samples", type=int, default=3)
-    local.add_argument("--skip-growth", action="store_true", help="mark dependency round-trip unverified")
-    local.add_argument("--source-root", type=Path, help="include source-traced replica-local state inventory")
+    local.add_argument("--skip-growth", action="store_true", help="Отметить проверку зависимостей как неподтверждённую")
+    local.add_argument("--source-root", type=Path, help="Включить инвентаризацию локального состояния реплик с прослеживаемым источником")
     local.add_argument("--output", required=True)
-    cluster = subs.add_parser("cluster", help="collect node inventories over SSH and find live SPOFs")
+    cluster = subs.add_parser("cluster", help="Собрать инвентаризацию узлов через SSH и найти реальные единые точки отказа (SPOF)")
     cluster.add_argument("--project", required=True)
     cluster.add_argument("--node", action="append", required=True,
-                         help="name=local or name=trusted-ssh-user@host (repeat on distinct hosts)")
+                         help="name=local или name=trusted-ssh-user@host (повторять на разных хостах)")
     cluster.add_argument("--remote-script", default="/opt/launcher/scripts/operations/ha_inventory_0511.py")
     cluster.add_argument("--samples", type=int, default=3)
     cluster.add_argument("--skip-growth", action="store_true")
-    cluster.add_argument("--edge-url", help="real public HTTPS origin or /ready")
+    cluster.add_argument("--edge-url", help="Настоящий публичный HTTPS-адрес или /ready")
     cluster.add_argument("--source-root", type=Path)
     cluster.add_argument("--output", required=True)
     args = parser.parse_args(argv)

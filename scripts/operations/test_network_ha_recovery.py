@@ -1,5 +1,6 @@
-"""Real filesystem recovery tests; Docker/PostgreSQL orchestration uses controlled doubles.
-Live two-host PostgreSQL, S3, JVM and ServerBridge runs require the HA acceptance runner.
+"""Тесты восстановления настоящей файловой системы; оркестрация Docker/PostgreSQL использует
+управляемые заменители.
+Для живых запусков двух хостов PostgreSQL, S3, JVM и ServerBridge нужен HA-раннер приёмки.
 """
 import hashlib
 import io

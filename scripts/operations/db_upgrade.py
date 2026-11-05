@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""0.45.7 controlled schema upgrade for existing minimal SQLite and Compose PostgreSQL.
+"""0.45.7: управляемое обновление схемы для существующей минимальной SQLite и Compose PostgreSQL.
 
-Perform a cold, verified, independently stored backup before executing the *real*
-new backend migration role. A failed migration/restored-service readiness returns
-the old schema and application (or stays stopped if recovery cannot be verified).
-This tool must run on the database owner host during an approved maintenance window.
+Перед выполнением *настоящей* роли миграции нового Backend нужно создать холодную проверенную
+резервную копию, хранящуюся независимо. Неудачная миграция или проверка готовности восстановленной
+службы возвращает старую схему и приложение (либо оставляет всё остановленным, если восстановление
+нельзя подтвердить). Утилита выполняется на хосте владельца БД в одобренное окно обслуживания.
 """
 from __future__ import annotations
 
@@ -124,10 +124,11 @@ def run_sqlite_migration(binary: Path, env: Path, root: Path, service_user: str)
 
 
 def switch_native_service(binary: Path, service: str, *, unit_root: Path = Path('/etc/systemd/system')) -> Path:
-    """Persist a verified executable for systemd; only one managed release override.
+    """Закрепить проверенный исполняемый файл для systemd; допускается только одна управляемая замена
+параметров выпуска.
 
-    The old ExecStart is restored by deleting this drop-in on failure. A crash
-    after writing it leaves the old service stopped, not a misleading success.
+    Старый ExecStart восстанавливается удалением этого drop-in после ошибки. Сбой после записи
+    оставляет старую службу остановленной, а не создаёт ложное свидетельство успеха.
     """
     require(service == 'launcher.service', 'only managed launcher.service is eligible')
     require(re.fullmatch(r'/[A-Za-z0-9_./-]+', str(binary)) is not None, 'unsupported binary path')
@@ -373,14 +374,14 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='mode', required=True)
-    sqlite_p = sub.add_parser('sqlite', help='stop systemd service, snapshot, migrate and recover minimal installation')
+    sqlite_p = sub.add_parser('sqlite', help="Остановить службу systemd, сделать снимок, мигрировать и восстановить минимальную установку")
     for name in ('root', 'backup', 'binary', 'env'):
         sqlite_p.add_argument('--' + name, type=Path, required=True)
     sqlite_p.add_argument('--service', default='launcher.service')
     sqlite_p.add_argument('--service-user', default='launcher')
     sqlite_p.add_argument('--expect-schema', type=int, default=327)
     sqlite_p.add_argument('--ready-url', default='http://127.0.0.1:8080/ready')
-    standard = sub.add_parser('postgres', help='full-state Standard Compose upgrade with rollback')
+    standard = sub.add_parser('postgres', help="Полное обновление Standard Compose с откатом")
     standard.add_argument('--project', required=True)
     standard.add_argument('--confirm', required=True)
     standard.add_argument('--source-env', type=Path, required=True)

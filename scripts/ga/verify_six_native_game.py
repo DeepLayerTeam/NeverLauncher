@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Enforce six independent native Minecraft observations in the production CI run.
+"""Требовать шесть независимых нативных наблюдений Minecraft в производственном CI.
 
-Consumes raw observational outputs produced by the actual Windows, Linux and
-macOS GUI workers. They are NOT independent operator-signed GA certificates;
-that second authorization remains mandatory in verified_targets.py. This gate
-prevents a green matrix from being treated as proof when a native worker failed
-to upload a complete positive and adversarial execution record.
+Используются исходные наблюдения настоящих GUI-исполнителей Windows, Linux и macOS. Это НЕ
+независимые подписанные оператором сертификаты GA; второе разрешение по-прежнему обязательно в
+verified_targets.py. Шлюз не позволит считать зелёную матрицу доказательством, если нативный
+исполнитель не загрузил полную запись положительного и атакующего запусков.
 """
 from __future__ import annotations
 

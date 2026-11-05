@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""0.35.14 executable native acceptance, not a synthetic test result.
+"""0.35.14: исполняемая нативная приёмка, а не синтетический результат теста.
 
-Uses the actual compiled Runtime and its fixture-only Ed25519 signer.
-Performs signed HTTPS-independent localhost transport, transactional repair,
-cache re-use, signature/fingerprint tampering and independently hashes files.
-This is NOT a Minecraft launch or protected release attestation.
+Использует настоящий скомпилированный Runtime и тестовый подписант Ed25519. Проверяются подписанный
+локальный транспорт без зависимости от HTTPS, транзакционное восстановление, повторное использование
+кэша, подмена подписи/отпечатка и независимое хеширование файлов. Это НЕ запуск Minecraft и не
+аттестация защищённого выпуска.
 """
 
 from __future__ import annotations

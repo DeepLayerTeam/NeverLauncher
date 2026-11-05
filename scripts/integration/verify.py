@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail-closed verification of native 0.48.0 acceptance evidence.
+"""Проверка нативных свидетельств приёмки 0.48.0 с блокировкой при неопределённости.
 
-Never creates a pass receipt. Input comes from independently executed native
-upgrade, real Admin browser, SQL/Backend/ServerBridge and real JVM test runners.
+Квитанция об успехе никогда не создаётся. Входные данные берутся из независимо выполненного
+нативного обновления, настоящего браузера Admin, SQL/Backend/ServerBridge и JVM-раннеров.
 """
 from __future__ import annotations
 import argparse

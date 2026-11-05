@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Sign actual four-stage operational acceptance for a staged six-platform release.
+"""Подписать настоящую четырёхэтапную эксплуатационную приёмку подготовленного выпуска для шести платформ.
 
-Run ONLY after independently executing the required install, upgrade, restore and
-failover on actual hosts. This tool verifies those receipts and reads final
-package bytes. Signature verification and authorization also run in the Go
-release signer/verifier; this utility cannot grant release status by itself.
+Запускать ТОЛЬКО после независимого выполнения обязательных установки, обновления, восстановления и
+переключения при отказе на настоящих хостах. Утилита проверяет квитанции и читает финальные байты
+пакетов. Проверка подписей и авторизация также выполняются Go-подписантом/валидатором; сама утилита
+не присваивает статус выпуска.
 """
 from __future__ import annotations
 import argparse
@@ -111,10 +111,10 @@ def atomic_private(path: Path, content: bytes):
 
 
 def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
-    """Independent consumer/publisher verification; no private reports needed.
+    """Независимая проверка потребителя/издателя; закрытые отчёты не нужны.
 
-    This is deliberately separate from the bundled CLI to prevent a stale
-    pre-0.46 launcher binary from authorizing an incomplete operations release.
+    Намеренно отделена от поставляемого CLI, чтобы устаревший бинарный Launcher до 0.46 не мог
+    разрешить неполный эксплуатационный выпуск.
     """
     require(bundle.is_dir() and not bundle.is_symlink(), 'release bundle missing')
     require(public_key_file.resolve().is_relative_to(bundle.resolve()) is False,

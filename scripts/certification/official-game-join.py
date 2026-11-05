@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verify evidence from an ACTUAL official Minecraft Java client/server login.
+"""Проверить свидетельства НАСТОЯЩЕГО входа официального клиента Minecraft Java на сервер.
 
-Runs only on operator-supplied server.properties, server log, and LIVE provider
-POC output. Never launches a fake Minecraft provider or alters online-mode.
-This is a local evidence consistency check, not a cryptographic attestation.
+Используются только предоставленные оператором server.properties, серверный журнал и ЖИВОЙ вывод POC
+провайдера. Подставной провайдер Minecraft не запускается, online-mode не меняется. Это локальная
+проверка согласованности свидетельств, а не криптографическая аттестация.
 """
 
 import argparse

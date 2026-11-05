@@ -1,4 +1,4 @@
-"""0.48.0 acceptance verifier adversarial tests (no fabricated positive E2E)."""
+"""Атакующие тесты валидатора приёмки 0.48.0 (без выдуманных положительных E2E)."""
 import hashlib
 import json
 from pathlib import Path

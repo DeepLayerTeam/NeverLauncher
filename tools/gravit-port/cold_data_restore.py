@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Restore verified cold Minecraft world/user files, never live DBs.
+"""Восстанавливать проверенные холодные файлы миров/пользователей Minecraft, но никогда — работающие БД.
 
-Only works after operational_rollback_04912.py fence, with both game writer
-services masked/inactive and HAProxy auth/game ingress closed. The replaced
-folder is retained for manual recovery. Does not reconcile plugin databases.
+Работает только после блокирующего этапа operational_rollback_04912.py, когда обе службы записи
+игровых данных замаскированы/остановлены, а входной трафик авторизации и игры в HAProxy закрыт.
+Заменённая папка сохраняется для ручного восстановления. Базы плагинов не согласовываются.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def ensure_dir(path: Path):
 
 
 def entries(root: Path):
-    """Enumerate without following links; no device files or hard-linked files."""
+    """Перечислять объекты без перехода по ссылкам; исключать устройства и файлы с жёсткими ссылками."""
     ensure_dir(root)
     results = []
     total = 0
@@ -223,7 +223,8 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
 
 
 def recover(target: Path, manifest: dict, directory: Path, run_id: str):
-    """Reconcile durable rename journal after kill/power loss; never overwrite data."""
+    """После прерывания процесса или питания согласовывать устойчивый журнал переименований; никогда не
+перезаписывать данные."""
     files = validate_manifest(manifest, run_id)
     journal = directory / "file-restore-state.json"
     state = co.document(journal, 16384)

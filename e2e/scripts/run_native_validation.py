@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""V10 independent native worker: fresh job dir, bounded execution, redacted export.
+"""Независимый нативный исполнитель V10: свежий каталог задания, ограниченное исполнение, экспорт без секретов.
 
-This is an OBSERVATIONAL runner. It never signs or uploads ValidationEvidence.
-Only the independent attestation host can sign evidence from trusted execution.
+Это НАБЛЮДАТЕЛЬНЫЙ раннер. Он не подписывает и не загружает ValidationEvidence. Свидетельства
+доверенного выполнения подписывает только независимый хост аттестации.
 """
 import argparse
 import json
@@ -84,10 +84,10 @@ def export_reports(work, destination):
 
 
 def verify_game_observations_04314(destination, expected_os, expected_arch):
-    """Fail closed on incomplete native positive/negative observations.
+    """Блокировать при неполных положительных/отрицательных нативных наблюдениях.
 
-    These unsigned worker observations are NOT GA credentials. Their role is to
-    reject skipped/mismatched native jobs before independent attestation.
+    Эти неподписанные наблюдения исполнителя НЕ являются учётными данными GA. Они нужны, чтобы
+    отклонять пропущенные или не совпадающие нативные задания до независимой аттестации.
     """
     target=Path(destination)
     def read(name):

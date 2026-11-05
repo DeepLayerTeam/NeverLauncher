@@ -14,7 +14,7 @@ from aggregate_04212 import TARGETS, CASES, validate
 
 
 class FinalExtensionReleaseTests(unittest.TestCase):
-    """All synthetic records in this test are fixtures, never production evidence."""
+    """Все синтетические записи этого теста — только фикстуры, не производственные свидетельства."""
 
     def setUp(self):
         self.scope = tempfile.TemporaryDirectory()

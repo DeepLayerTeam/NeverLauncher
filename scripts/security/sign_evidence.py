@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Offline, authorized security-signoff step (NOT called by test CI).
+"""Автономный авторизованный этап утверждения безопасности (НЕ запускается тестовым CI).
 
-Private Ed25519 PKCS#8 key stays on the approver's controlled workstation.
-No private key is generated, stored, checked into source or printed by CI.
+Закрытый ключ Ed25519 PKCS#8 остаётся на подконтрольной утверждающему стороне рабочей станции. CI
+никогда не генерирует, не хранит, не коммитит и не выводит закрытый ключ.
 """
 
 import argparse

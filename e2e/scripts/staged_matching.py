@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Actual matching-server and gameplay observations for an immutable staged client.
+"""Реальные наблюдения подходящего сервера и игрового процесса для неизменяемого подготовленного клиента.
 
-Not release attestation. Never count TCP, the login line, a fabricated JSON report,
-or a runner-side server command as proof of client gameplay.
+Не аттестация выпуска. Никогда не считать TCP, строку входа, сфабрикованный JSON-отчёт или серверную
+команду раннера доказательством клиентского игрового процесса.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ def file_sha256(path):
 
 
 def safe_bundle_extract(bundle, directory):
-    """Pinned complete server distribution, never downloaded or rebuilt by worker."""
+    """Закреплённый полный дистрибутив сервера; исполнитель его никогда не загружает и не пересобира."""
     total = 0
     with zipfile.ZipFile(bundle) as archive:
         if len(archive.infolist()) > 50000:
@@ -99,7 +99,7 @@ def safe_bundle_extract(bundle, directory):
 def verify_matching_server(
     log, minecraft, loader, loader_version="", requires_bridge=False, bridge_version=""
 ):
-    """Positive boot version, loader version and plugin startup from this server log."""
+    """Получать из журнала сервера подтверждения версии запуска, версии загрузчика и старта плагинов."""
     if CRASH.search(log):
         raise RuntimeError("matching server fatal/crash state")
     match = BOOT_VERSION.search(log)
@@ -137,7 +137,7 @@ def verify_matching_server(
 
 
 class Rcon:
-    """Minecraft Source RCON, with authenticated loopback connection per query."""
+    """Minecraft Source RCON с аутентификацией каждого подключения через loopback."""
 
     def __init__(self, port, password):
         self.port = port
@@ -483,7 +483,7 @@ class MatchingServer:
 
 
 class GameplayObserver:
-    """Independent server-side RCON + PID-bound GUI action + client log evidence."""
+    """Независимые серверные свидетельства RCON, GUI-действия с привязкой к PID и журнал клиента."""
 
     def __init__(
         self, server, client_dir, java, loader, username, output, run_id, started_at

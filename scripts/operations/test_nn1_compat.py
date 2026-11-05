@@ -1,4 +1,5 @@
-"""0.51.6 live N/N-1 admission regressions (no fixture result is GA evidence)."""
+"""Регрессионные проверки допуска N/N-1 на реальных системах 0.51.6 (результаты фикстур не являются
+свидетельствами GA)."""
 from __future__ import annotations
 
 import hashlib

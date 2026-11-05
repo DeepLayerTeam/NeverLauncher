@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Sign the final Linux Guard package manifest using the existing component-release key.
+"""Подписать финальный манифест Linux-пакета Guard существующим ключом выпуска компонентов.
 
-The domain prefix prevents reusing a signature produced for a component-set
-manifest as a valid Guard package signature (or vice versa).
+Префикс домена не позволяет переиспользовать подпись манифеста набора компонентов как действительную
+подпись пакета Guard (или наоборот).
 """
 from __future__ import annotations
 

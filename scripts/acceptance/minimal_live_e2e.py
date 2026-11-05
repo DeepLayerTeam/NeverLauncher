@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Minimal acceptance: real Go API process, real SQLite and HTTP.
+"""Минимальная приёмка: настоящий процесс Go API, настоящие SQLite и HTTP.
 
-No mocked server or evidence. Runs a clean install, auth, durable mutation,
-SIGTERM restart, SIGKILL restart, offline backup, verified restore and corruption
-rejection. Fails closed; output contains test assertions, never credentials.
+Нет имитации сервера или свидетельств. Проверяются чистая установка, аутентификация, устойчивое
+изменение, перезапуски SIGTERM/SIGKILL, автономное резервное копирование, проверенное восстановление
+и отклонение повреждений. Ошибки блокируют продолжение; вывод содержит утверждения тестов, но не
+секреты.
 
-For isolated CI tests the Guard/Bridge policies must be explicitly supplied.
-Those policies are configuration INPUTS, not publication attestations. This
-suite does not certify Minecraft launches, stable GA or HA deployment.
+Для изолированных CI-тестов политики Guard/Bridge нужно передавать явно. Это ВХОДНЫЕ параметры
+конфигурации, а не аттестации публикации. Набор не сертифицирует запуск Minecraft, стабильный GA или
+развёртывание HA.
 """
 
 from __future__ import annotations
@@ -260,7 +261,7 @@ def verify_project(port, identifier, token=None):
 
 
 def owner_admin_crud_0523(port, email, password):
-    """Real authenticated admin mutations against the installed SQLite Backend."""
+    """Настоящие аутентифицированные изменения администратора в установленном Backend на SQLite."""
     login = expect(port, 'POST', '/api/v1/admin/login', 200,
                    {'email': email, 'password': password})
     token = login.get('token')

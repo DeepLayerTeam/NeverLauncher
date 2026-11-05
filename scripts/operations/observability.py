@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Real private Alertmanager provisioning and sanitized on-host incident collection.
+"""Настоящая закрытая настройка Alertmanager и сбор санитизированных инцидентов на хосте.
 
-No Compose environment, secret material, access tokens, or request URLs are
-collected. Commands are read-only and output is created 0600 with atomic rename.
+Не собираются окружение Compose, секреты, токены доступа или URL запросов. Команды доступны только
+для чтения; вывод создаётся с правами 0600 и атомарным переименованием.
 """
 from __future__ import annotations
 import argparse
@@ -197,11 +197,11 @@ def incident(args):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='operation',required=True)
-    conf=sub.add_parser('configure',help='Generate private production Alertmanager config')
+    conf=sub.add_parser('configure',help="Создать закрытую производственную конфигурацию Alertmanager")
     conf.add_argument('--webhook-url',default=os.environ.get('LAUNCHER_ALERT_WEBHOOK_URL',''))
     conf.add_argument('--output',required=True)
-    conf.add_argument('--webhook-url-file',help='Private 0600 file; avoids exposing secret receiver path in argv')
-    take=sub.add_parser('incident',help='Collect redacted, read-only Compose incident ZIP')
+    conf.add_argument('--webhook-url-file',help="Закрытый файл 0600; не раскрывает секретный путь получателя через argv")
+    take=sub.add_parser('incident',help="Собрать архив ZIP инцидента Compose только для чтения с удалёнными секретами")
     take.add_argument('--compose',default='deploy/production/docker-compose.yml')
     take.add_argument('--overlay')
     take.add_argument('--project',required=True)

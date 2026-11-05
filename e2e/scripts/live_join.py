@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Real version-matched Minecraft multiplayer compatibility observation.
+"""Наблюдение настоящей совместимости мультиплеера Minecraft с совпадающими версиями.
 
-An ephemeral, localhost-bound dedicated server is started from a verified Mojang
-server JAR, or an independently SHA-256 pinned loader server distribution. No
-client process / timeout alone can satisfy this gate. The server-side RCON and
-console join observations are taken while the game client is actually online.
+Запускается временный выделенный сервер, привязанный к localhost, из проверенного серверного JAR
+Mojang или дистрибутива серверного загрузчика с независимо закреплённым SHA-256. Одного клиентского
+процесса/тайм-аута недостаточно для шлюза. Серверные наблюдения RCON и входа в консоли фиксируются,
+когда игровой клиент действительно онлайн.
 """
 from __future__ import annotations
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Non-production fixtures for the *real* Guard 0.51.0 release gate.
+"""Непроизводственные фикстуры для *настоящего* шлюза выпуска Guard 0.51.0.
 
-All positive test receipts here are isolated unit fixtures; no test fixture may
-be reused as a real independent acceptance or production certificate.
+Все положительные тестовые квитанции здесь — изолированные модульные фикстуры. Ни одну из них нельзя
+повторно использовать как свидетельство реальной независимой приёмки или производственный
+сертификат.
 """
 from __future__ import annotations
 from datetime import datetime, timedelta, timezone

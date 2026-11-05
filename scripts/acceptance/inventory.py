@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Fail-closed 0.52.1 acceptance inventory and independently signed evidence replay.
+"""Приёмочная инвентаризация 0.52.1 с блокировкой при неопределённости и повторной проверкой независимо
+подписанных свидетельств.
 
-A source-compiled CI compatibility run is NOT a final native-package/GA run.
-Inventory observes raw Minecraft executions and lists every other mandatory
-acceptance target as BLOCKED until its own independently verified live run.
-Signing is offline, only after a complete 280-target raw-evidence replay; a
-signed review is still not a 0.53.0 GA authorization.
+Запуск совместимости CI, собранный из исходников, НЕ является финальной проверкой нативных
+пакетов/GA. Инвентаризация наблюдает исходные запуски Minecraft и оставляет каждую другую
+обязательную цель в BLOCKED до её собственного независимо проверенного реального запуска. Подписание
+— офлайн и только после полной повторной проверки свидетельств по 280 целям; даже подписанный обзор
+не равен разрешению GA 0.53.0.
 """
 from __future__ import annotations
 
@@ -135,7 +136,8 @@ def catalogs():
 
 
 def locate_result_roots(results_root: Path):
-    """Only exact exported result basenames; refuse duplicate IDs/unsafe trees."""
+    """Принимать только точные базовые имена экспортированных результатов; отклонять дублирующиеся ID и
+небезопасные деревья."""
     if not results_root.exists():
         return {}, []
     require(results_root.is_absolute() and results_root.is_dir() and not results_root.is_symlink(),
@@ -158,7 +160,7 @@ def locate_result_roots(results_root: Path):
 
 
 def verify_runtime_bytes(target, result_path: Path):
-    """Recheck real certification results, never only top-level ``checks: true``."""
+    """Повторно проверять реальные результаты сертификации, а не только верхнеуровневое ``checks: true``."""
     runtime = (result_path.parent.parent / 'runtime' if result_path.parent.name == 'compatibility-result'
                else result_path.parent / 'runtime')
     base = read_json(runtime / 'result.json')

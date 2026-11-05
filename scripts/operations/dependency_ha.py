@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""HAProxy/VRRP edge and dependency HA for NeverLauncher 0.51.3.
+"""Граничный HAProxy/VRRP и отказоустойчивость зависимостей NeverLauncher 0.51.3.
 
-Runs on a load-balancer host. Each of two LB hosts runs independently with
-identical upstreams; an unicast VRRP VIP moves between hosts. PostgreSQL uses
-Patroni /primary (not a TCP-open test), Redis uses an authenticated TLS INFO
-replication master check, and S3 uses a quorum-aware health endpoint.
+Запускается на хосте балансировщика. Каждый из двух LB-хостов работает независимо с одинаковыми
+upstream; unicast VRRP VIP переходит между ними. Для PostgreSQL используется Patroni /primary (не
+просто открытый TCP), для Redis — аутентифицированная проверка TLS INFO основного узла репликации,
+для S3 — эндпоинт здоровья с учётом кворума.
 
-Upstream database/sentinel/storage cluster replication and fencing are not
-implemented by this proxy: they MUST be configured and tested separately.
+Репликация и fencing кластеров БД/Sentinel/хранилища этим прокси не реализуются: их НЕОБХОДИМО
+отдельно настроить и протестировать.
 """
 from __future__ import annotations
 
@@ -512,7 +512,7 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
 
 
 def storage_credentials(env):
-    """Read private, narrow-prefix S3 probe credentials only when probing."""
+    """Читать закрытые учётные данные S3 с узким префиксом только непосредственно при проверке."""
     bucket = env.get('HA_S3_BUCKET', '')
     region = env.get('HA_S3_REGION', '')
     if not re.fullmatch(r'[a-z0-9][a-z0-9.-]{2,62}', bucket) or not re.fullmatch(r'[a-z0-9-]{2,40}', region):
@@ -538,7 +538,7 @@ def signature(key, message):
 
 
 def aws_sigv4(method, path, host, payload, creds, now=None):
-    """AWS SigV4 headers for one restricted path-style S3 probe request."""
+    """Заголовки AWS SigV4 для одного ограниченного запроса проверки S3 в режиме path-style."""
     now = now or datetime.datetime.now(datetime.timezone.utc)
     amz_date = now.strftime('%Y%m%dT%H%M%SZ')
     short = now.strftime('%Y%m%d')
@@ -564,7 +564,7 @@ def aws_sigv4(method, path, host, payload, creds, now=None):
 
 
 class PinnedHTTPS(http.client.HTTPSConnection):
-    """Direct gateway IP, stable SNI/Host, real system-trusted TLS validation."""
+    """Прямой IP шлюза, постоянный SNI/Host и реальная проверка TLS через системное хранилище доверия."""
     def __init__(self, hostname, address, port, ca):
         self.address = address
         super().__init__(hostname, port=port, timeout=8,
@@ -598,10 +598,10 @@ def s3_request(cfg, creds, gateway, method, key, payload=b''):
 
 
 def s3_object_probe(cfg, creds, gateways):
-    """Write gateway A, read gateway B and vice versa; verify deletion.
+    """Записать через шлюз A, прочитать через B и наоборот; проверить удаление.
 
-    A passing per-gateway HEAD request cannot prove a common bucket namespace.
-    A signed cross-gateway write/read/delete check can, for this observation.
+    Успешный HEAD на каждом шлюзе не доказывает общее пространство имён бакета. Подписанная
+    межшлюзовая проверка записи/чтения/удаления может подтвердить его для данного наблюдения.
     """
     if not gateways:
         raise HAError('no live S3 gateway to probe')
@@ -659,7 +659,7 @@ def remote_owns_vip(target, vip, interface):
 
 
 def edge_drill(sock, edge_url, nodes, cfg, target, deadline):
-    """Run on standby LB; stop active peer HAProxy and observe real VIP move."""
+    """Выполнять на резервном балансировщике: остановить HAProxy активного узла и наблюдать реальный перенос VIP."""
     initial = health(stats(sock), redundant=True)
     if not initial['healthy']:
         raise HAError('healthy redundant backend baseline required')
@@ -721,7 +721,7 @@ def main(argv=None):
     parser.add_argument('--target')
     parser.add_argument('--deadline', type=int, default=90)
     parser.add_argument('--allow-disruption', action='store_true')
-    parser.add_argument('--output', help='new private JSON report file or -')
+    parser.add_argument('--output', help="Новый закрытый файл JSON-отчёта или -")
     args = parser.parse_args(argv)
     try:
         if args.mode == 'render':

@@ -1,4 +1,4 @@
-"""0.51.2 deployment executor regression tests. No false live-HA claims."""
+"""Регрессионные тесты исполнителя развёртывания 0.51.2. Не выдавать их за подтверждение реального HA."""
 from __future__ import annotations
 
 import copy

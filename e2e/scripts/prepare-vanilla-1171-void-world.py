@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Rewrite the *generated* 1.17.1 flat-world NBT for the matching-server test.
+"""Переписать *сгенерированный* NBT плоского мира 1.17.1 для теста подходящего сервера.
 
-Minecraft 1.17.1 may silently reject the flat generator JSON in server.properties
-(MC-195468). Change only the overworld's existing level.dat generator after
-letting the real dedicated server create its own correct NBT registry structure.
-The dedicated server must be fully stopped before this script runs.
+Minecraft 1.17.1 может молча отклонить JSON генератора плоского мира в server.properties
+(MC-195468). Менять только существующий генератор level.dat обычного мира после того, как настоящий
+выделенный сервер сам создаст корректную структуру реестра NBT. Перед запуском скрипта сервер должен
+быть полностью остановлен.
 """
 from __future__ import annotations
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Minimal deterministic-shape WebAuthn test authenticator for Launcher E2E.
+"""Минимальный тестовый аутентификатор WebAuthn с детерминированной структурой для E2E Launcher.
 
-This is test-only code. It generates a P-256 credential, emits a standards-shaped
-none-attestation registration response, and signs assertion ceremonies with the
-private key kept under the E2E runtime directory.
+Код только для тестов. Создаёт учётные данные P-256, выдаёт ответ регистрации none-attestation
+нормативной структуры и подписывает подтверждения закрытым ключом, хранящимся в каталоге E2E
+Runtime.
 """
 
 from __future__ import annotations

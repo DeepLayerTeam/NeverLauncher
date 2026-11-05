@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Assertions against actual Docker Compose merged configuration for 0.45.5.
+"""Утверждения по реальной объединённой конфигурации Docker Compose для 0.45.5.
 
-Run with docker compose config --format json; static overlay YAML alone is not
-sufficient, since Compose extends/merge can silently preserve shared volumes.
+Запускать через docker compose config --format json. Одного статического overlay YAML недостаточно:
+extends/merge Compose может незаметно сохранить общие тома.
 """
 import json
 import sys

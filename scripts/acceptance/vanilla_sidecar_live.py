@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Active Vanilla 1.21.1 + production sidecar check on the *live Linux host*.
+"""Проверка работающего Vanilla 1.21.1 и производственного sidecar на *живом Linux-хосте*.
 
-The probe talks to a real Minecraft status socket and a password-protected
-loopback RCON, inspects a running Java sidecar process, and rehashes its JAR.
-It never starts a substitute server or accepts a status JSON as evidence.
+Проверка обращается к настоящему сокету состояния Minecraft и защищённому паролем локальному RCON,
+изучает запущенный Java-процесс sidecar и повторно вычисляет хеш его JAR. Подменный сервер не
+запускается, JSON состояния не принимается за доказательство.
 """
 from __future__ import annotations
 import hashlib

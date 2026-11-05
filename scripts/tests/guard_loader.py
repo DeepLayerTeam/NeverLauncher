@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Execute real JVM agent/loader-code-source integration checks using synthetic JARs.
-This is not a Minecraft or upstream loader E2E run.
+"""Проверка настоящей интеграции JVM-агента/загрузчика с источником классов на синтетических JAR.
+Это не E2E Minecraft или upstream-загрузчика.
 """
 import base64
 import hashlib

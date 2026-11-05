@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Verify the actual platform signature of a distribution installer.
+"""Проверить настоящую платформенную подпись дистрибутивного установщика.
 
-Must run on the package's native OS with an externally pinned publisher identity.
-No unsigned test mode; a matching digest alone is not a signature check.
+Выполнять на нативной ОС пакета с внешне закреплённой идентичностью издателя. Нет режима
+неподписанного теста: одного совпадающего дайджеста недостаточно для проверки подписи.
 """
 
 from __future__ import annotations

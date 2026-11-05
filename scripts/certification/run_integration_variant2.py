@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Execute real Launcher 0.31.0 subprocess acceptance cases.
+"""Запуск настоящих сценариев приёмки Launcher 0.31.0 через подпроцессы.
 
-This runner executes a fixed, audited command allowlist. It never turns source
-presence or a skipped test into a pass, and its report is not a Gravit parity
-certificate. No credentials, raw subprocess output or secrets are persisted.
+Раннер выполняет фиксированный проверенный список разрешённых команд. Наличие исходника или
+пропущенный тест не превращаются в успех; отчёт не является сертификатом паритета Gravit. Учётные
+данные, исходный вывод подпроцессов и секреты не сохраняются.
 """
 
 from __future__ import annotations
@@ -263,12 +263,12 @@ def run_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--cases", default=",".join(CASES), help="comma-separated exact case IDs"
+        "--cases", default=",".join(CASES), help="Точные ID сценариев через запятую"
     )
     parser.add_argument("--report", type=Path)
     parser.add_argument("--timeout", type=float, default=240)
     parser.add_argument(
-        "--cli", default="", help="absolute path for building/running nl"
+        "--cli", default="", help="Абсолютный путь для сборки/запуска nl"
     )
     parser.add_argument("--revision", default="unknown")
     parser.add_argument("--list", action="store_true")

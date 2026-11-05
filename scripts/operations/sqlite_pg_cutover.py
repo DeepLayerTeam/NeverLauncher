@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.47.5: fail-closed, resumable offline SQLite Core migration.
+"""NeverLauncher 0.47.5: автономная возобновляемая миграция SQLite Core с блокировкой при неопределённости.
 
-This does not translate the independent SQLite HTTP/Coordinator state. Such an
-installation is explicitly ineligible for Backend cutover until that conversion
-is implemented and tested. Never infer PostgreSQL readiness from a staging row.
+Она не переносит независимое состояние SQLite HTTP/Coordinator. Такая установка явно не допускается
+к переключению Backend, пока преобразование не реализовано и не протестировано. Нельзя выводить
+готовность PostgreSQL по промежуточной строке.
 """
 from __future__ import annotations
 
@@ -76,11 +76,11 @@ def write_secure(path: Path, payload: bytes):
 
 
 def enough_space(path: Path, required_bytes: int, reason: str):
-    """Fail before destructive work, reserving 20% + 64 MiB for WAL/metadata.
+    """Отклонять до опасных действий, резервируя 20% + 64 МиБ для WAL/метаданных.
 
-    A full filesystem can cause an SQLite online backup or filesystem copy to
-    fail half-way through. This is a *preflight*, not a substitute for checking
-    and fsyncing the actual result. Check the filesystem containing the target.
+    Переполненная файловая система может прервать резервное копирование SQLite или копирование файла
+    на полпути. Это *предварительная* проверка, а не замена проверки и fsync настоящего результата.
+    Проверять файловую систему целевого пути.
     """
     if required_bytes < 0:
         raise CutoverError("invalid storage size estimate")
@@ -109,10 +109,10 @@ def sqlite_size_on_disk(path: Path) -> int:
 
 
 def storage_fingerprint(root: Path) -> tuple[str, int, int]:
-    """Hash every local blob and its relative name; reject symlink/device input.
+    """Хешировать каждый локальный blob и его относительное имя; отклонять входные ссылки/устройства.
 
-    Called before and after copying, including during resume. Merely comparing
-    file counts does not detect same-size/same-count source mutations.
+    Вызывается до и после копирования, в том числе при возобновлении. Одно сравнение количества
+    файлов не выявляет изменений источника того же размера и количества.
     """
     refuse_symlink(root)
     if not root.is_dir():
@@ -154,7 +154,7 @@ def storage_fingerprint(root: Path) -> tuple[str, int, int]:
 
 
 def check_stage_chain(state: dict):
-    """Only a prefix of durable stage receipts may be replayed after a crash."""
+    """После сбоя можно повторно воспроизвести только префикс устойчивых квитанций этапов."""
     completed = state.get("completed")
     if not isinstance(completed, list) or completed != list(STAGES[:len(completed)]):
         raise CutoverError("corrupt or out-of-order migration stage journal")
@@ -196,7 +196,7 @@ def run_cmd(args, *, env=None):
 
 
 def parse_env(path: Path):
-    """Small strict systemd EnvironmentFile subset, not shell interpolation."""
+    """Небольшое строго ограниченное подмножество systemd EnvironmentFile, без подстановок оболочки."""
     private_file(path)
     items = {}
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -217,7 +217,7 @@ def parse_env(path: Path):
 
 
 def change_env(path: Path, target_dsn: str, driver: str, storage_path: str):
-    """Preserves comments and existing unrelated settings; no shell execution."""
+    """Сохранять комментарии и не связанные с задачей настройки; не выполнять оболочку."""
     private_file(path)
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     changes = {
@@ -265,7 +265,7 @@ def validate_sqlite_backup(path: Path):
 
 
 def verify_http_snapshot(path: Path):
-    """Validate the committed HTTP snapshot, not just SQLite page integrity."""
+    """Проверять зафиксированный снимок HTTP, а не только целостность страниц SQLite."""
     private_file(path)
     with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         exists = db.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='http_repository_state_0372'").fetchone()[0]
@@ -563,12 +563,12 @@ class Operator:
         return {"backendStarted": True}
 
     def health_check(self):
-        """Authenticate the existing owner and read their project over the real
-        switched Backend before declaring the migration operator complete.
+        """Аутентифицировать существующего владельца и прочитать его проект через настоящий переключённый
+Backend до объявления завершения миграции оператором.
 
-        This is additional *online* verification, not permission to bypass the
-        earlier domain-parity cutover gate. On error, new PG writes may exist:
-        callers stop writers but must never automatically revert to SQLite.
+        Это дополнительная *онлайновая* проверка, а не разрешение обойти прежний шлюз паритета
+        доменов. При ошибке новые записи PG уже могут существовать: вызывающие стороны останавливают
+        службы записи, но никогда не откатываются автоматически к SQLite.
         """
         import urllib.request
         from urllib.parse import quote, urlsplit

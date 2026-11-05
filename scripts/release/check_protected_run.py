@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Require fresh, completed, exact-commit protected GitHub workflow execution.
+"""Требовать свежий завершённый защищённый workflow GitHub на точном коммите.
 
-Use on GitHub API run metadata before consuming independently signed old-format
-attestations. Old workflow results may stay archived but cannot satisfy a new
-0.36.2+ release invocation merely because their source SHA is the same.
+Проверяется по метаданным запуска GitHub API до использования независимо подписанных аттестаций
+старого формата. Старые результаты workflow могут храниться в архиве, но не подтверждают новый
+выпуск 0.36.2+ только из-за совпадения SHA исходников.
 """
 from __future__ import annotations
 import argparse

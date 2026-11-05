@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Measure actual fresh-host Network-HA restore against a verified snapshot.
+"""Измерять реальное восстановление Network-HA на новом хосте по проверенному снимку.
 
-RTO starts at the operator-supplied incident timestamp, includes response and
-restore time. RPO upper bound is the age of the accepted snapshot at the
-incident; cannot certify unobserved writes. Optionally confirm a PostgreSQL
-acknowledged canary survived and match restored S3/world bytes (DR runner).
+RTO отсчитывается от времени инцидента, переданного оператором, и включает реакцию и восстановление.
+Верхняя оценка RPO — возраст принятого снимка на момент инцидента; нельзя сертифицировать
+ненаблюдавшиеся записи. При необходимости проверяется сохранность подтверждённого PostgreSQL canary
+и совпадение восстановленных байтов S3/мира (DR-раннер).
 """
 from __future__ import annotations
 
@@ -132,9 +132,9 @@ def main() -> int:
     parser.add_argument("--target-s3-bucket", required=True)
     parser.add_argument("--s3-endpoint")
     parser.add_argument("--world-destination", action="append", default=[], metavar="NAME=/absolute/fresh/world")
-    parser.add_argument("--incident-utc", required=True, help="real incident ISO 8601 timestamp with timezone")
-    parser.add_argument("--checkpoint-token", help="acknowledged PostgreSQL canary token before backup")
-    parser.add_argument("--checkpoint-sha256", help="acknowledged PostgreSQL canary content SHA-256")
+    parser.add_argument("--incident-utc", required=True, help="Реальная временная метка инцидента ISO 8601 с часовым поясом")
+    parser.add_argument("--checkpoint-token", help="Подтверждённый токен PostgreSQL canary до резервирования")
+    parser.add_argument("--checkpoint-sha256", help="SHA-256 содержимого подтверждённого PostgreSQL canary")
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     try:

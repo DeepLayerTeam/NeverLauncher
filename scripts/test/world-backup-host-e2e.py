@@ -1,7 +1,7 @@
 import argparse, json, os, pathlib, shutil, subprocess, tempfile, time
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--cli", required=True, help="path to built nl CLI executable")
+parser.add_argument("--cli", required=True, help="Путь к собранному исполняемому файлу CLI nl")
 nl = str(pathlib.Path(parser.parse_args().cli).resolve())
 base = pathlib.Path(tempfile.mkdtemp(prefix="nl-world-e2e-"))
 root = base / "server"

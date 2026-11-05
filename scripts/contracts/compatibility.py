@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Fail on breaking changes relative to the deployed 0.45.11 OpenAPI v1 baseline.
+"""Завершаться с ошибкой при нарушающих совместимость изменениях относительно развёрнутой базовой
+OpenAPI v1 версии 0.45.11.
 
-Baseline contains actual published operations/schemas, not a list of asserted statuses.
+Базовая версия содержит реальные опубликованные операции и схемы, а не список заявленных статусов.
 """
 import json
 import sys

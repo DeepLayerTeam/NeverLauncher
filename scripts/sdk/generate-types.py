@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate Extensions SDK protocol types from sdk/api/extension-host-protocol.json.
+"""Сгенерировать типы протокола SDK расширений из sdk/api/extension-host-protocol.json.
 
-The generator intentionally supports only the small, auditable primitive type vocabulary
-used by the Host/Admin/Desktop protocol. Generated files are deterministic.
+Генератор намеренно поддерживает только небольшой проверяемый набор примитивных типов, применяемых в
+протоколах Host/Admin/Desktop. Сгенерированные файлы детерминированы.
 """
 
 from __future__ import annotations

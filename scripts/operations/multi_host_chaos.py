@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""0.51.10: execute recoverable fault injection on independently managed Docker hosts.
+"""0.51.10: восстановимая инъекция сбоев на независимо управляемых Docker-хостах.
 
-A planned partition disconnects the real API and worker containers from their
-Docker network, not merely a simulated readiness flag. Host-outage drills use
-the existing real multi-host stop/start. A durable local journal permits manual
-reconnection after SSH/operator termination; the orchestration always attempts
-restoration and refuses to publish PASS without checking every node afterward.
+Запланированное разделение отключает реальные контейнеры API/worker от сети Docker, а не только
+имитированный флаг готовности. Сценарии отказа хоста используют штатные реальные остановку/запуск
+нескольких хостов. Устойчивый локальный журнал позволяет вручную переподключить сеть после
+завершения SSH/оператора; оркестрация всегда пытается восстановить работу и отказывает в PASS без
+повторной проверки всех узлов.
 
-Physical power-off, storage quorum fencing, and Minecraft JVM continuity are
-NOT proven by these faults. Use a disposable/test project with explicit consent.
+Эти сбои НЕ доказывают физическое отключение питания, fencing кворума хранилища или непрерывность
+Minecraft JVM. Использовать одноразовый/тестовый проект с явным согласием.
 """
 from __future__ import annotations
 
@@ -152,10 +152,10 @@ def local_compose_id(directory, project, role, *, allow_detached=False):
 
 
 def local_network_aliases(container_id, network, role):
-    """Preserve Compose service DNS after Docker's manual disconnect/connect.
+    """Сохранять DNS служб Compose после ручного отключения/подключения сети Docker.
 
-    Without explicit aliases the surviving ingress can still return 502 even
-    when the container's network attachment appears nominally restored.
+    Без явных псевдонимов сохранившийся ingress может возвращать 502, даже когда сетевое подключение
+    контейнера формально восстановлено.
     """
     raw = json.loads(invoke(['docker', 'inspect', container_id], 20))
     require(isinstance(raw, list) and len(raw) == 1, 'container inspect invalid')
@@ -532,11 +532,11 @@ def render_monitor(args):
 
 
 def run_suite(args, nodes):
-    """Repeat both real failure modes on every verified physical Docker host.
+    """Повторять оба реальных сценария отказа на каждом проверенном физическом Docker-хосте.
 
-    Stop immediately on any failed case; never proceed with an unrecovered node.
-    Each case has separate durable intent, detailed evidence and a SHA-256 in the
-    suite summary, so a later operator can independently inspect exact results.
+    Немедленно останавливаться после любой ошибки; не продолжать с невосстановленным узлом. Каждый
+    сценарий имеет отдельное устойчивое намерение, подробные свидетельства и SHA-256 в сводке
+    набора, чтобы другой оператор мог независимо изучить точные результаты.
     """
     home = Path(args.suite_directory).absolute()
     require(home.is_dir() and not home.is_symlink() and home.stat().st_uid == os.geteuid() and

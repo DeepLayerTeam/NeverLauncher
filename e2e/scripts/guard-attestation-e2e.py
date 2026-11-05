@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Build a valid Linux Guard attestation for the PostgreSQL protocol E2E.
+"""Создать корректную Linux-аттестацию Guard для протокольного E2E PostgreSQL.
 
-This is a protocol fixture, not a provenance claim: the backend still verifies
-challenge freshness, the P-256 device signature, exact allowlisted Guard/Desktop
-hash pair, process-boundary fields, evidence/attestation digests and one-time
-launch-ticket consumption.
+Это протокольная фикстура, не заявление о происхождении: Backend по-прежнему проверяет свежесть
+challenge, подпись устройства P-256, точную разрешённую пару хешей Guard/Desktop, поля границы
+процесса, дайджесты свидетельства/аттестации и одноразовое использование launch-ticket.
 """
 
 from __future__ import annotations

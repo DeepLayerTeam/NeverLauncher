@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Executable 0.35.1 G/M user-journey inventory and local acceptance runner.
+"""Исполняемый перечень пользовательских сценариев G/M 0.35.1 и локальный инструмент приёмки.
 
-Local test success NEVER means a real Minecraft, Desktop or signed GA certification.
-The runtime reads existing test implementations; there are no synthetic green probes.
+Успех локальных тестов НИКОГДА не означает сертификацию настоящего Minecraft, Desktop или
+подписанного GA. Runtime читает существующие тестовые реализации; синтетических «зелёных» проверок
+нет.
 """
 
 import argparse
@@ -56,7 +57,7 @@ def require(ok, message):
 
 
 def referenced_file(path):
-    """Resolve an audit ref without traversing outside the source checkout."""
+    """Разрешить ссылку аудита без выхода за пределы рабочей копии исходников."""
     require(
         isinstance(path, str)
         and path.startswith(ALLOWED)
@@ -156,7 +157,7 @@ def load_inventory():
 
 
 def plan_test(path):
-    """Dispatch ONLY existing test files, never shell-evaluate catalog data."""
+    """Запускать ТОЛЬКО существующие тестовые файлы, никогда не исполнять данные каталога через оболочку."""
     ref = referenced_file(path)
     if path.endswith("_test.go") or path.endswith("test.go"):
         # Тесты пакета Go выполняются в своём существующем контексте модуля. Выбранный тестовый
@@ -296,11 +297,11 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("command", choices=["audit", "run"])
     p.add_argument(
-        "--ids", default="", help="comma-separated G/M IDs for run; default all"
+        "--ids", default="", help="ID G/M через запятую для запуска; по умолчанию все"
     )
     p.add_argument("--timeout", type=int, default=900)
     p.add_argument(
-        "--report", type=Path, help="required for run, keep outside repository"
+        "--report", type=Path, help="Обязательно для запуска; хранить вне репозитория"
     )
     args = p.parse_args(argv)
     try:

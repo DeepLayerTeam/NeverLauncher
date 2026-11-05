@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""V10 host capability detection. A missing display never means the game failed.
+"""Определение возможностей хоста V10. Отсутствие дисплея не означает сбой игры.
 
-No capability may be asserted by environment variables or caller-provided JSON.
-Capabilities are observed on the worker itself before any Minecraft launch.
+Ни одну возможность нельзя утверждать по переменным окружения или переданному вызывающей стороной
+JSON. Возможности наблюдаются непосредственно у исполнителя до запуска Minecraft.
 """
 
 from __future__ import annotations
@@ -168,7 +168,7 @@ def _native_display():
 
 
 def _native_renderer():
-    """Create a REAL hidden OpenGL context; GPU inventory is not enough."""
+    """Создать НАСТОЯЩИЙ скрытый контекст OpenGL; одного списка GPU недостаточно."""
     try:
         import glfw
         from OpenGL import GL

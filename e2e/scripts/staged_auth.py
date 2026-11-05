@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Live V07 authentication probes. NEVER evidence from mocks/offline gameplay.
+"""Живые проверки аутентификации V07. НИКОГДА не использовать свидетельства из имитаций или автономной игры.
 
-Runs inside a pre-approved isolated worker using dedicated, short-lived test
-identities. Credentials are injected as read-only files by the host attestor.
-Only redacted outcomes and provider identity digests may leave the worker.
+Работает в заранее одобренном изолированном исполнителе с выделенными краткоживущими тестовыми
+идентификаторами. Учётные данные внедряются как файлы только для чтения хостовым аттестатором.
+Покидать исполнитель могут только результаты без секретов и дайджесты идентичности провайдера.
 """
 from __future__ import annotations
 import hashlib
@@ -155,11 +155,11 @@ def run_probe(mode,credentials_path,negative_path=None,expected_backend=None):
     return (official_probe(c,mode) if mode=='official' else custom_probe(c,negative)),c
 
 def guard_denial_probe(active, denied_path):
-    """A real device/trust/Guard denied identity, provisioned by test operator.
+    """Реальная идентичность с отказом по политике устройства/доверия/Guard, подготовленная тестовым оператором.
 
-    A missing negative test identity can NEVER be replaced by a mocked 403.
-    This identity must have a token which remains valid but is denied by the
-    backend's live gameplay-trust policy on join.
+    Отсутствующую идентичность для отрицательного теста НИКОГДА нельзя заменить имитированным HTTP
+    403. Её токен должен оставаться действительным, но вход должен отклоняться живой политикой
+    доверия к игровому процессу Backend.
     """
     p=Path(denied_path)
     if not p.is_file() or p.is_symlink() or p.stat().st_size>16384:

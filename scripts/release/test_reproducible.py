@@ -1,5 +1,5 @@
-"""No network, passwords, real certificates or invented production PASS receipts.
-Fixtures are synthetic files used ONLY to test the fail-closed verifier.
+"""Без сети, паролей, настоящих сертификатов или выдуманных производственных PASS-квитанций.
+Синтетические файлы-фикстуры используются ТОЛЬКО для проверки валидатора, блокирующего при неопределённости.
 """
 from __future__ import annotations
 import hashlib

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Native, single-host SQLite installer for the Launcher API.
+"""Нативный установщик API Launcher на одном хосте с SQLite.
 
-Requires an already-built API binary and actual platform policy JSON files.
-This program does not manufacture signing evidence or turn off production gates.
+Требуются предварительно собранный бинарный файл API и реальные JSON-политики платформы. Программа
+не создаёт свидетельства подписания и не отключает производственные шлюзы.
 """
 
 import argparse
@@ -188,7 +188,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     init = sub.add_parser(
-        "init", help="create private, persistent minimal installation"
+        "init", help="Создать закрытую постоянную минимальную установку"
     )
     init.add_argument("--root", type=Path, required=True)
     init.add_argument("--binary", type=Path, required=True)
@@ -207,20 +207,20 @@ def main(argv=None):
         p.add_argument("--binary", type=Path, required=True)
     # Согласованное офлайновое обслуживание. Используйте ту же точку входа установщика, но запускайте
     # изолированный механизм копирования вместо загрузки секретов API в окружение.
-    b = sub.add_parser("backup", help="offline consistent SQLite + files snapshot")
+    b = sub.add_parser("backup", help="Автономный согласованный снимок SQLite и файлов")
     b.add_argument("--root", type=Path, required=True)
     b.add_argument("--destination", type=Path)
     v = sub.add_parser(
-        "backup-verify", help="validate all snapshot bytes and SQLite integrity"
+        "backup-verify", help="Проверить каждый байт снимка и целостность SQLite"
     )
     v.add_argument("--bundle", type=Path, required=True)
-    r = sub.add_parser("restore", help="restore to a new, empty installation root")
+    r = sub.add_parser("restore", help="Восстановить только в новый пустой корень установки")
     r.add_argument("--bundle", type=Path, required=True)
     r.add_argument("--target-root", type=Path, required=True)
     # Переносимые аутентифицированные снимки вне хоста обрабатываются выделенной
     # потоковой реализацией AES-GCM; секреты не передаются через argv.
     for name in ("backup-portable", "export-portable", "verify-portable", "restore-portable"):
-        portable = sub.add_parser(name, help="encrypted off-host backup transfer")
+        portable = sub.add_parser(name, help="Зашифрованная передача резервной копии на другой хост")
         portable.add_argument("--passphrase-file", type=Path, required=True)
         if name == "backup-portable":
             portable.add_argument("--root", type=Path, required=True)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Executable JVM integrity regression against actual file digests, mappings and live mutation.
-Synthetic game and native library only: not a Minecraft server/join certification.
+"""Исполняемая регрессия целостности JVM на реальных хешах файлов, отображениях памяти и изменениях во
+время работы.
+Только синтетическая игра и нативная библиотека; не сертификация сервера/входа Minecraft.
 """
 import base64
 import hashlib

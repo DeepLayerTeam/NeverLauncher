@@ -389,7 +389,7 @@ class MatrixToolTests(unittest.TestCase):
     def test_windows_mesa_installer_has_unambiguous_variable_interpolation(
         self,
     ) -> None:
-        """Catch the PowerShell parser error that blocked every Windows E2E shard."""
+        """Выявлять ошибку парсера PowerShell, которая блокировала все сегменты Windows E2E."""
         script = (ROOT / "scripts/compatibility/install-windows-mesa.ps1").read_text(
             encoding="utf-8"
         )
@@ -402,7 +402,7 @@ class MatrixToolTests(unittest.TestCase):
         self.assertIn("System.Management.Automation.Language.Parser", workflow)
 
     def test_canonical_upstream_catalogue_policies(self) -> None:
-        """Keep all 292 declared targets without pretending 12 unavailable ones passed."""
+        """Сохранять все 292 заявленные цели, не выдавая 12 недоступных за успешно прошедшие."""
         for rel in (
             "scripts/smoke/offline/quilt-compatibility-II-0172.py",
             "scripts/smoke/offline/neoforge-compatibility-II-0176.py",

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Run-scoped provenance for executed RC and GA checks.
+"""Происхождение выполненных проверок RC и GA с привязкой к конкретному запуску.
 
-For 0.36.2+ a passed JSON receipt from a previous run, even at the same
-commit, cannot certify the current attempt. This is *not* an operator
-signature or a substitute for the independent exact-byte GA approval.
+Начиная с 0.36.2 успешная JSON-квитанция прежнего запуска, даже на том же коммите, не сертифицирует
+текущую попытку. Это *не* подпись оператора и не замена независимого одобрения GA по точным байтам.
 """
 
 from __future__ import annotations
@@ -60,7 +59,7 @@ def identity(
     root: Path | None = None,
     now: datetime | None = None,
 ) -> dict:
-    """Stamp only a freshly executed test runner after successful execution."""
+    """Помечать результат только после действительно выполненного и успешного запуска тестового раннера."""
     if not required(version):
         return {}
     env = os.environ if env is None else env

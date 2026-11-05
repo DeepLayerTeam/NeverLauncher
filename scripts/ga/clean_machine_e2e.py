@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Run a *real* clean-VM native-install -> Managed Java -> Minecraft launch.
+"""Выполнить *настоящую* цепочку на чистой VM: нативная установка -> Managed Java -> запуск Minecraft.
 
-No stub runtimes or fake JVMs: the installed runtime binary performs
-manifest signature verification, real Java provisioning, sync and game launch.
-This must run inside a disposable OS VM with a graphical session and a signed
-offline-capable Minecraft profile; not on a developer workstation.
+Никаких заглушек Runtime или поддельных JVM: установленный бинарный Runtime проверяет подпись
+манифеста, реально подготавливает Java, синхронизирует файлы и запускает игру. Требуется одноразовая
+VM ОС с графическим сеансом и подписанным профилем Minecraft для автономной работы, а не рабочая
+станция разработчика.
 """
 
 from __future__ import annotations

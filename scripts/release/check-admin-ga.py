@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail-closed, executable GA source audit for Admin 0.22.0.
+"""Исполняемый аудит исходников GA Admin 0.22.0 с блокировкой при неопределённости.
 
-Checks immutable migration parity and actual SDK regeneration, not only references
-in docs/manifests. The full certification runner performs builds and live E2E.
+Проверяется неизменность паритета миграций и настоящая повторная генерация SDK, а не только ссылки в
+документации/манифестах. Полный раннер сертификации выполняет сборки и живые E2E.
 """
 from __future__ import annotations
 

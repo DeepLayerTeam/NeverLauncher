@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Real Minecraft session soak and HTTPS control-plane load, no simulated PASS.
+"""Настоящие длительные сеансы Minecraft и нагрузка управляющего HTTPS, без синтетического PASS.
 
-`game` executes the existing complete Mojang/loader/server E2E repeatedly;
-individual raw results are replayed by inventory_0521 before they are archived.
-`http` executes real concurrent authenticated TLS requests against a disposable
-Standard/HA lab; an unreachable or throttled service fails the threshold.
-Both record wall/monotonic durations and raw hashed evidence. Not a GA receipt.
+`game` многократно выполняет имеющийся полный E2E Mojang/загрузчика/сервера; исходные результаты по
+каждому прогону повторно проверяются inventory_0521 до архивации. `http` посылает реальные
+параллельные аутентифицированные TLS-запросы в одноразовую лабораторию Standard/HA; недоступная или
+ограничивающая запросы служба не проходит порог. Оба режима фиксируют реальное и монотонное время, а
+также исходные хешированные свидетельства. Не является квитанцией GA.
 """
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ def session_archive(target, destination: Path, args):
     return verified
 
 def run_game_subprocess(log, env, timeout):
-    """Kill the whole Minecraft/server subprocess group after a timeout."""
+    """По тайм-ауту завершать всю группу подпроцессов Minecraft/сервера."""
     with log.open('xb') as handle:
         child = subprocess.Popen(['bash', 'e2e/scripts/run-compatibility-case.sh'],
                                  cwd=ROOT, env=env, stdout=handle, stderr=subprocess.STDOUT,

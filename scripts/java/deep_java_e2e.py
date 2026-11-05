@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Compile THREE independent extensions using published Java SDK binary artifacts.
+"""Скомпилировать ТРИ независимых расширения из опубликованных бинарных артефактов Java SDK.
 
-Runs real JVM subprocess integration cases (Admin/Desktop/CLI, content SPI,
-versioned library SPI); intentionally does not claim installed signed-package,
-PostgreSQL, Go RBAC or native sandbox certification. Never uses SDK source-tree
-class directories on javac's classpath. No network access required.
+Запускаются настоящие JVM-интеграционные подпроцессы (Admin/Desktop/CLI, content SPI, versioned
+library SPI). Не заявляется сертификация установленных подписанных пакетов, PostgreSQL, Go RBAC или
+нативной песочницы. Каталоги классов SDK из дерева исходников никогда не попадают в classpath javac.
+Сеть не нужна.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ FIXTURES = ROOT / 'examples/extensions'
 
 def binary_jar(core: Path, sources: list[Path], main: str, dest: Path,
                work: Path, additional_classpath: list[Path] | None = None) -> None:
-    """No hidden classpath or ambient build/classes; external SDK bytes only."""
+    """Без скрытого classpath или фонового build/classes; только байты внешнего SDK."""
     classes = work / 'compiled'
     classes.mkdir(parents=True)
     cp = os.pathsep.join([str(core), *map(str, additional_classpath or [])])

@@ -1,6 +1,6 @@
-"""Regression tests for production physical 0.52.10 HA/DR operations.
+"""Регрессионные тесты промышленной физической эксплуатации HA/DR 0.52.10.
 
-Test doubles exercise failure handling only; they are NOT physical evidence.
+Тестовые заменители проверяют только обработку ошибок; они НЕ являются физическими свидетельствами.
 """
 import argparse
 from datetime import datetime, timedelta, timezone

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Final-byte acceptance sweep. Replays real evidence, never converts CI to GA.
+"""Итоговая приёмочная проверка финальных байтов. Повторно проверяет настоящие свидетельства, никогда
+не превращая CI в GA.
 
-`minecraft` executes all 280 deep per-target verifiers on raw runner output.
-`full` additionally replays six final native installs, six actual native GUI
-runs, independent signed six-target rebuilds, 5 one-hour gameplay soaks, and
-an hour of real HTTPS load. Separate independent GA authorization is required.
+`minecraft` запускает все 280 глубоких проверок по сырым результатам целевых раннеров. `full`
+дополнительно повторно проверяет шесть финальных нативных установок, шесть настоящих запусков GUI на
+нативных системах, шесть независимо подписанных пересборок, пять часовых игровых прогонов и час
+реальной HTTPS-нагрузки. Нужно отдельное независимое разрешение GA.
 """
 from __future__ import annotations
 

@@ -1,9 +1,9 @@
-"""Native Windows/macOS GUI observations. Linux/X11 remains in staged_readiness.
+"""Нативные GUI-наблюдения Windows/macOS. Linux/X11 остаётся в staged_readiness.
 
-Windows requires an unlocked interactive desktop. macOS needs Screen Recording
-and Accessibility grants for the dedicated validation worker user. Never use a
-window title alone: verify its PID descends from the launched Runtime and
-its executable is the selected Java binary.
+Windows требует разблокированного интерактивного рабочего стола. Для macOS пользователь выделенного
+валидирующего исполнителя должен иметь разрешения записи экрана и специальных возможностей. Одного
+заголовка окна недостаточно: проверить, что его PID — потомок запущенного Runtime, а исполняемый
+файл соответствует выбранному Java.
 """
 
 import ctypes
@@ -17,7 +17,7 @@ import time
 
 
 class GUIUnavailable(RuntimeError):
-    """The host GUI/input infrastructure is unavailable, not Minecraft failure."""
+    """Недоступна инфраструктура GUI/ввода хоста; это не означает сбой Minecraft."""
 
 
 def descendants_java(pid, ancestor, java):

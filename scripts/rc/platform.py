@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Inspect *built* production Desktop and frontend bytes on the active OS.
+"""Проверить *собранные* производственные байты Desktop и фронтенда на текущей ОС.
 
-Called only AFTER cargo build --release and npm run build succeed; never
-returns pass for a missing executable or a static manifest-only checkout.
+Вызывается только ПОСЛЕ успеха cargo build --release и npm run build; при отсутствии исполняемого
+файла или наличии лишь статического манифеста без сборки PASS не возвращается.
 """
 
 import argparse

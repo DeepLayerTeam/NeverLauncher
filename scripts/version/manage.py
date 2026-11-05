@@ -197,7 +197,7 @@ def command_set(value: str) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Launcher canonical version manager")
+    parser = argparse.ArgumentParser(description="Менеджер канонической версии Launcher")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("get")
     sub.add_parser("check")

@@ -112,11 +112,11 @@ def bash_path(path: Path) -> str:
 
 
 def validate_native_layout(root: Path, marker: str) -> Path:
-    """Windows-native equivalent of resolve-artifact-payload.sh.
+    """Нативный эквивалент resolve-artifact-payload.sh для Windows.
 
-    Git Bash /c/... paths from Python subprocesses can be interpreted by
-    different bash installations (Git for Windows versus WSL). Validate the
-    exact same release layout without depending on shell path translation.
+    Пути Git Bash вида /c/... из Python-подпроцессов могут по-разному трактоваться установленными
+    bash (Git for Windows и WSL). Проверять ту же структуру выпуска без зависимости от
+    преобразования путей оболочкой.
     """
     if not root.is_dir() or root.is_symlink():
         raise ValueError("artifact root missing or symlink")

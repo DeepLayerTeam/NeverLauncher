@@ -1,8 +1,8 @@
-"""Read canonical CLI-embedded resources in source smoke tests without file mirrors.
+"""Читать канонические встроенные ресурсы CLI в smoke-тестах исходников без файловых зеркал.
 
-The shipped CLI uses the same two deterministic ZIP bundles. Release and CI
-also run `embedded_cli_assets.py --check` to ensure every member matches the
-single canonical source; tests below inspect the *actual embedded payload*.
+Поставляемый CLI использует те же два детерминированных ZIP-пакета. Выпуск и CI также запускают
+`embedded_cli_assets.py --check`, чтобы каждый элемент соответствовал единственному каноническому
+источнику; тесты ниже изучают *настоящую встроенную полезную нагрузку*.
 """
 from __future__ import annotations
 from pathlib import Path

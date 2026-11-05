@@ -522,12 +522,12 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Launcher Windows adversarial CI runner and certifier"
+        description="CI-раннер Windows Launcher для атакующих проверок и сертификации"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser(
-        "run", help="run live adversarial/compatibility scenarios for one Java major"
+        "run", help="Запустить реальные атакующие и совместимые сценарии для одной основной версии Java"
     )
     run.add_argument("--java-major", type=int, required=True)
     run.add_argument("--sensor", type=Path, required=True)
@@ -543,7 +543,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.set_defaults(func=cmd_run)
 
     aggregate = sub.add_parser(
-        "aggregate", help="validate all Java results and issue certification"
+        "aggregate", help="Проверить все результаты Java и выпустить сертификат"
     )
     aggregate.add_argument("--results-root", type=Path, required=True)
     aggregate.add_argument("--repository", required=True)

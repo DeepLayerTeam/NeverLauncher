@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Capture and independently re-read a *real* 0.36.0/0.46.0 NeverLauncher migration.
+"""Зафиксировать и независимо перечитать *настоящую* миграцию NeverLauncher 0.36.0/0.46.0.
 
-Capture is performed on an isolated ORIGINAL install before freezing writers;
-verify is performed on the migrated running 0.52.8 Backend. No mock, no
-``status: passed`` from untrusted input, and no credentials in reports. A
-historical source without the real API routes fails closed (not compatible).
-This is an acceptance witness, not a data migrator or a GA signature.
+Фиксация выполняется на изолированной ИСХОДНОЙ установке до остановки записывающих служб; проверка —
+на перенесённом работающем Backend 0.52.8. Без имитаций, ``status: passed`` из недоверенного ввода и
+учётных данных в отчётах. Исторический источник без настоящих API-маршрутов блокируется как
+несовместимый. Это свидетельство приёмки, не переносчик данных и не подпись GA.
 """
 from __future__ import annotations
 

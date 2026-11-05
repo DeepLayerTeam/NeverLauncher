@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed Gravit/ Never operational rollback across PostgreSQL and HAProxy.
+"""Безопасный при неопределённости операционный откат Gravit/NeverLauncher через PostgreSQL и HAProxy.
 
-This does NOT roll back live world files or start old Gravit writers: an operator
-must reconcile worlds/players/plugin DBs and prove both independent writers
-are stopped before running plan/commit. Runtime proxy state is not durable.
+Он НЕ откатывает файлы работающих миров и не запускает старые службы записи Gravit: до plan/commit
+оператор должен согласовать миры, игроков, БД плагинов и доказать остановку обеих независимых служб
+записи. Состояние прокси Runtime не является долговременным.
 """
 from __future__ import annotations
 
@@ -181,7 +181,7 @@ def fence(cfg, cut, directory, cfg_hash, proxy):
 
 
 def typed_digest(snapshot: dict) -> str:
-    """Match Go gravitrehearsal.SnapshotDigest's field order and JSON encoding."""
+    """Повторять порядок полей и кодирование JSON из Go-функции gravitrehearsal.SnapshotDigest."""
     required = ("worldSha256", "loader", "optionalPresetSha256", "players")
     pfields = ("sourceId", "uuid", "inventorySha256", "permissionsSha256", "economy", "skinSha256", "admin")
     require(set(snapshot) == set(required) and isinstance(snapshot["players"], list), "unexpected snapshot fields")

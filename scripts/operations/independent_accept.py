@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Execute independent NeverLauncher acceptance against real Linux services.
+"""Провести независимую приёмку NeverLauncher на реальных Linux-службах.
 
-Four mutually exclusive operational stages. Each stage invokes production
-install/upgrade/restore/chaos commands (not mock readiness or a declarative
-plan), checks their results and publishes a private, immutable success receipt.
-Failure never produces a PASS receipt; existing recovery/fencing belongs to
-the underlying operational tool. Network failover is restricted to nl-dr labs.
-The operator must arrange actual independent machines, passwords and snapshots.
+Четыре взаимоисключающих эксплуатационных этапа. Каждый вызывает производственные команды
+установки/обновления/восстановления/хаос-тестов (не имитацию готовности и не декларативный план),
+проверяет результаты и публикует закрытую неизменяемую квитанцию успеха. При ошибке PASS никогда не
+выдаётся; восстановление/fencing выполняет базовая эксплуатационная утилита. Сетевое переключение
+ограничено лабораториями nl-dr. Оператор должен организовать настоящие независимые машины, пароли и
+снимки.
 """
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ def report_target(path: Path):
 
 
 def invoke(argv: list[str], *, timeout: int = 2400, json_result: bool = False):
-    """Execute allowlisted existing entrypoint; stdout/stderr not echoed (secrets)."""
+    """Запускать существующую разрешённую точку входа; не выводить stdout/stderr (секреты)."""
     ensure(argv[0] == sys.executable and Path(argv[1]).resolve() in (INSTALL, UPGRADE, DR, CHAOS, LIVE),
            'unsupported operational entrypoint')
     try:
@@ -173,11 +173,11 @@ def assert_fresh_compose_project(project: str):
 
 def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
                      expected_version: str, totp_file: Path | None = None) -> dict:
-    """Real trusted HTTPS login and authorized read of a pre-existing project.
+    """Настоящий доверенный HTTPS-вход и авторизованное чтение существующего проекта.
 
-    No tokens/passwords/HTTP response bodies are written to evidence. A passkey
-    continuation is deliberately BLOCKED, never reported as an authenticated
-    session. TOTP is read from a 0600 file and used once.
+    Токены, пароли и тела HTTP-ответов не записываются в свидетельства. Продолжение passkey
+    намеренно BLOCKED и не выдаётся за аутентифицированный сеанс. TOTP однократно читается из файла
+    с правами 0600.
     """
     live.checked_origin(url.removesuffix('/ready'))
     ensure('@' in email and 0 < len(email) <= 254 and not any(c.isspace() for c in email),
@@ -410,7 +410,7 @@ def parser_make():
     sub = p.add_subparsers(dest='stage', required=True)
     def common(which):
         c = sub.add_parser(which)
-        c.add_argument('--primary-operator', required=True, help='OS login name of primary operator')
+        c.add_argument('--primary-operator', required=True, help="Имя учётной записи ОС основного оператора")
         c.add_argument('--report', type=Path, required=True)
         return c
     install = common('install-standard')

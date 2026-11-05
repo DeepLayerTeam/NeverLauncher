@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Platform-neutral source guardrails for Windows native-memory provenance fixes.
+"""Независимые от платформы ограничения исходников для исправлений происхождения нативной памяти Windows.
 
-These contract tests complement, but cannot replace, Windows/ARM64 integration.
+Эти контрактные тесты дополняют, но не заменяют интеграцию Windows/ARM64.
 """
 
 from pathlib import Path
@@ -59,7 +59,7 @@ class WindowsPostloadProvenanceTests(unittest.TestCase):
 
 
 class WindowsGuardRaceRegressionTests(unittest.TestCase):
-    """Source-level contract checks; native semantics require Windows CI."""
+    """Контрактные проверки по исходникам; нативная семантика требует Windows CI."""
 
     def test_trusted_system_and_jre_dispatchers_validate_exact_loaded_path(self):
         source = (ROOT / "runtime/guard-sensor/src/jvm_awareness.rs").read_text(

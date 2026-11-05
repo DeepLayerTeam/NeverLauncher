@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Bundle pinned offline JAR dependencies inside a Java Extension Host JAR.
+"""Включить закреплённые автономные зависимости JAR внутрь Java Extension Host JAR.
 
-This creates the runtime layout checked independently by the Go installer and
-by the Java Host. The output still needs the normal signed .nlext packaging.
-No Maven/network resolution is performed at installation or startup.
+Создаётся структура Runtime, которую независимо проверяют Go-установщик и Java Host. Результат всё
+ещё требует обычной упаковки в подписанный .nlext. При установке и запуске разрешение Maven/сети не
+выполняется.
 """
 import argparse
 import hashlib

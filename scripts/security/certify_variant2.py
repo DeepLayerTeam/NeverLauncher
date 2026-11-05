@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Execute mandatory 0.32.0 tests, bound to exact source and Git commit.
+"""Запустить обязательные тесты 0.32.0, привязанные к точным исходникам и коммиту Git.
 
-No synthetic PASS reports for physical TPM, signed macOS helper or third-party
-compatibility are produced. Those need independent, signed live evidence.
+Синтетические отчёты PASS для физического TPM, подписанного помощника macOS или совместимости
+сторонних компонентов не создаются. Для них требуются независимые подписанные свидетельства работы
+на реальных системах.
 """
 
 import argparse

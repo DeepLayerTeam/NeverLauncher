@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""E2E pack/sign/verify with disposable issuer keys; negative trust test.
+"""E2E упаковки, подписи и проверки с одноразовыми ключами издателя; отрицательная проверка доверия.
 
-Disposable keys authenticate this TEST ONLY; they do not certify production.
+Одноразовые ключи удостоверяют ТОЛЬКО ЭТОТ ТЕСТ, но не сертифицируют производство.
 """
 import argparse
 from pathlib import Path

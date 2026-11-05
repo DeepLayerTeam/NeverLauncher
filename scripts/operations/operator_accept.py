@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Read-only live operator acceptance for NeverLauncher 0.45.13.
+"""Приёмка оператора только для чтения на живых системах NeverLauncher 0.45.13.
 
-Runs against existing processes and checks real readiness and storage ownership.
-Does not create users, migrate schemas, reset leases or publish a success result
-on partial failure. All output is allowlisted; no environment, HTTP bodies on
-failure, Docker inspect data or raw command stderr are copied into reports.
+Работает с существующими процессами и проверяет настоящую готовность и владельца хранилища. Не
+создаёт пользователей, не мигрирует схемы, не сбрасывает аренды и не публикует успех при частичной
+ошибке. Весь вывод ограничен белым списком: окружение, HTTP-тела при сбое, данные Docker inspect и
+исходный stderr команд не попадают в отчёты.
 """
 from __future__ import annotations
 
@@ -282,10 +282,10 @@ def atomic_report(output, report):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
-    sub.add_parser('docs-check', help='resolve operator links and required executable paths')
-    live = sub.add_parser('live', help='read-only actual backend/worker/DB acceptance')
+    sub.add_parser('docs-check', help="Разрешить операторские ссылки и пути к обязательным исполняемым файлам")
+    live = sub.add_parser('live', help="Настоящая приёмка Backend/worker/БД только для чтения")
     live.add_argument('--mode', choices=CHECKS.keys(), required=True)
-    live.add_argument('--url', required=True, help='public CA-validated HTTPS origin or /ready')
+    live.add_argument('--url', required=True, help="Публичный HTTPS-адрес с проверенной CA либо /ready")
     live.add_argument('--version', default=VERSION.read_text().strip())
     live.add_argument('--project')
     live.add_argument('--env-file', type=Path)

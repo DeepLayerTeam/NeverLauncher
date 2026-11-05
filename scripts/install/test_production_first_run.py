@@ -1,7 +1,7 @@
-"""0.45.1: real TLS, one-time admin and verified deployment acceptance tests.
+"""0.45.1: приёмочные тесты настоящего TLS, одноразового администратора и проверенного развёртывания.
 
-No fake HTTP server is ever accepted as evidence of a real production install.
-The network simulation here only tests fail-closed orchestration.
+Подставной HTTP-сервер никогда не принимается как свидетельство реальной промышленной установки.
+Сетевая имитация используется лишь для проверки блокировки оркестрации при ошибке.
 """
 import importlib.util
 import json

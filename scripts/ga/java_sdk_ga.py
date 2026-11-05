@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build real Java SDK Maven artifacts and validate them with a downstream JVM.
+"""Собрать настоящие Maven-артефакты Java SDK и проверить их в сторонней JVM.
 
-No network, Maven installation or signing key required. This produces a local
-staging Maven repository, not a public Maven Central publication or a GA receipt.
+Не требуются сеть, установленный Maven или ключ подписи. Создаётся локальный промежуточный
+Maven-репозиторий, а не публикация в Maven Central или квитанция GA.
 """
 
 from __future__ import annotations
@@ -241,10 +241,10 @@ def main() -> int:
         "--output",
         type=Path,
         required=True,
-        help="new or empty local Maven staging directory",
+        help="Новый либо пустой локальный промежуточный каталог Maven",
     )
     parser.add_argument(
-        "--skip-build", action="store_true", help="reuse precompiled classes (CI only)"
+        "--skip-build", action="store_true", help="Повторно использовать заранее скомпилированные классы (только CI)"
     )
     args = parser.parse_args()
     try:

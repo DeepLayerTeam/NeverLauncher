@@ -1,7 +1,7 @@
-"""Regression tests for fail-closed 0.22.0 live Bridge acceptance rules.
+"""Регрессионные тесты правил живой приёмки Bridge 0.22.0 с блокировкой при неопределённости.
 
-Mocks are restricted to this unit test; the GA runner executes the unmocked
-script separately against the real staging API and Minecraft ServerBridge.
+Имитации ограничены этим модульным тестом; раннер GA отдельно запускает немодифицированный скрипт на
+настоящем staging API и Minecraft ServerBridge.
 """
 import importlib.util
 import pathlib

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed GA release preflight using live Backend's trusted evaluator.
+"""Предварительная проверка выпуска GA с блокировкой при неопределённости через доверенный оценщик
+живого Backend.
 
-This is NOT a certificate or a substitute for the atomic PostgreSQL head gate.
-Nothing on this CI worker can sign ValidationEvidence or grant publication.
+Это НЕ сертификат и не замена атомарному шлюзу текущего состояния PostgreSQL. Ничто на данном
+CI-исполнителе не может подписывать ValidationEvidence или разрешать публикацию.
 """
 
 import argparse
@@ -53,7 +54,8 @@ def timestamp(value):
 
 
 def assess(package, validations, report, package_id, version, source_sha, now=None):
-    """Checks independent API views. Fail closed on missing, stale or synthetic coverage."""
+    """Проверять независимые представления API. При отсутствии, устаревании или синтетическом покрытии
+блокировать выпуск."""
     now = now or datetime.now(timezone.utc)
     require(
         isinstance(package, dict) and package.get("packageId") == package_id,
@@ -217,10 +219,10 @@ def get_json(backend, endpoint, bearer):
 
 
 def supported_runtime_release(version: str) -> bool:
-    """The trusted runtime gate is mandatory for ALL releases after 0.35.0.
+    """Доверенный шлюз Runtime обязателен для ВСЕХ выпусков после 0.35.0.
 
-    Historical fixtures remain valid for 0.35.0, while the current protected
-    evaluator must recheck the *actual* staged version and commit every time.
+    Исторические фикстуры остаются допустимыми для 0.35.0, но текущий защищённый оценщик обязан
+    каждый раз перепроверять *настоящие* подготовленные версию и коммит.
     """
     matched = re.fullmatch(
         r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"

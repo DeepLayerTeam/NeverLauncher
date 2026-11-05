@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Destructive *physical* 0.52.7 E2E for two real signed offline installers.
+"""Разрушающий *физический* E2E 0.52.7 для двух настоящих подписанных автономных установщиков.
 
-Runs inside a new, private tmpfs mount on a dedicated Linux runner. A release
-binary with its embedded production trust root is mandatory; this script never
-supplies a replacement key, bypasses signature checks or forges a game run.
+Выполняется в новом закрытом монтировании tmpfs на выделенном Linux-раннере. Обязателен бинарный
+файл выпуска со встроенным производственным корнем доверия. Скрипт никогда не подменяет ключ, не
+обходит проверку подписи и не подделывает игровой запуск.
 """
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def main() -> int:
     parser.add_argument('--new-bundle', type=Path, required=True)
     parser.add_argument('--new-config-sha256', required=True)
     parser.add_argument('--managed-repair-file', required=True,
-                        help='relative path of installed verified game/Runtime file to corrupt and repair')
+                        help="Относительный путь к установленному проверенному файлу игры/Runtime для повреждения и восстановления")
     parser.add_argument('--managed-repair-sha256', required=True)
     parser.add_argument('--tmpfs-mib', type=int, required=True)
     parser.add_argument('--scratch-parent', type=Path, required=True)

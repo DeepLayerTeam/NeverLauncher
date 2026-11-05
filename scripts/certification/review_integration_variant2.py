@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail-closed review of *executed* cross-platform Launcher release gates.
+"""Приёмка выполненных кроссплатформенных проверок выпуска Launcher с блокировкой при неопределённости.
 
-Evidence is emitted by run_integration_0310.py and collected from CI jobs.
-Passing these tests does not prove full M01-M19 or live Minecraft parity.
+Свидетельства создаются run_integration_0310.py и собираются из CI-заданий. Успех не доказывает
+полный паритет M01–M19 или настоящего Minecraft.
 """
 
 import argparse
@@ -133,7 +133,7 @@ def main():
         "--evidence",
         type=Path,
         required=True,
-        help="directory containing the three OS reports",
+        help="Каталог с отчётами трёх ОС",
     )
     p.add_argument("--revision", required=True)
     p.add_argument("--output", type=Path, required=True)

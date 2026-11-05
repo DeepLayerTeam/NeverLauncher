@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""0.52.9 actual Guard/Device Trust/ServerBridge acceptance executor.
+"""Исполнитель настоящей приёмки Guard/Device Trust/ServerBridge 0.52.9.
 
-Local mode executes *production* Java and Guard JVM processes. Live mode
-consumes the ORIGINAL private native/protocol/JVM logs and actively probes a
-running Vanilla sidecar, while re-running verification of 10 other Docker JVMs.
-A success here is pending external review; it is never permission to publish GA.
+Локальный режим запускает *производственные* Java и Guard JVM-процессы. Живой режим использует
+ИСХОДНЫЕ закрытые журналы нативных компонентов/протокола/JVM и активно проверяет работающий Vanilla
+sidecar, одновременно повторно проверяя десять других Docker JVM. Успех требует дальнейшего внешнего
+рассмотрения и никогда не разрешает публиковать GA.
 """
 from __future__ import annotations
 import argparse

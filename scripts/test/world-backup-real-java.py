@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Executable JVM process + supervised stop + real file bytes + isolated recovery.
-This is a Java host integration test, NOT a Minecraft Paper JAR certification.
+"""Исполняемый JVM-процесс, контролируемая остановка, настоящие байты файлов и изолированное восстановление.
+Это интеграционный тест Java-хоста, а НЕ сертификация Minecraft Paper JAR.
 """
 
 import argparse

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build genuine OS installer artifacts from an Ed25519-verified branded bundle.
+"""Собрать настоящие установщики ОС из фирменного пакета, проверенного по Ed25519.
 
-No platform artifact is reported as production signed unless its platform
-signature (Authenticode, Apple Developer ID, detached GPG) verifies.
-Windows is a single-file .exe with a compiled-in verified bundle. Linux builds
-.deb; macOS builds a signed .app inside a signed .pkg. No Java is required.
+Артефакт платформы не объявляется промышленно подписанным без проверки платформенной подписи
+(Authenticode, Apple Developer ID, отдельная GPG). Windows — один .exe со встроенным
+скомпилированным проверенным пакетом; Linux собирает .deb; macOS — подписанное .app внутри
+подписанного .pkg. Java не требуется.
 """
 
 from __future__ import annotations
@@ -234,10 +234,10 @@ def collect_bundle(args, stage):
 
 
 def apply_windows_brand_icon(executable, branding):
-    """Write the signed project's PNG as a native PE RT_GROUP_ICON.
+    """Записать PNG подписанного проекта как нативную иконку PE RT_GROUP_ICON.
 
-    Performed before Authenticode signing, using Windows kernel APIs directly;
-    modifying a signed PE after signing would invalidate Authenticode.
+    Делается до Authenticode-подписи через Windows Kernel API; изменение уже подписанного PE сделало
+    бы Authenticode недействительной.
     """
     asset = branding.get("iconPng")
     if not asset:
@@ -559,14 +559,14 @@ def main():
     p.add_argument("--platform", choices=TARGETS, required=True)
     p.add_argument("--arch", choices=ARCH, required=True)
     p.add_argument(
-        "--project", required=True, help="signed project name in package IDs"
+        "--project", required=True, help="Подписанное название проекта в ID пакетов"
     )
     p.add_argument("--version", required=True)
     p.add_argument("--config", type=pathlib.Path, required=True)
     p.add_argument(
         "--trust-policy",
         type=pathlib.Path,
-        help="locally provisioned root-signed delegated trust policy for v2 config",
+        help="Локально предоставленная делегированная политика доверия для v2 config, подписанная корнем",
     )
     p.add_argument("--prestarter", type=pathlib.Path, required=True)
     p.add_argument("--root-key-file", type=pathlib.Path, required=True)
@@ -575,7 +575,7 @@ def main():
     p.add_argument(
         "--unsigned-test",
         action="store_true",
-        help="only for CI/test packages; NEVER a production release",
+        help="Только для пакетов CI/тестов; НИКОГДА не для производственного выпуска",
     )
     args = p.parse_args()
     if not re.fullmatch("[a-z0-9][a-z0-9-]{1,45}", args.project):

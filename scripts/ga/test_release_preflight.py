@@ -1,4 +1,4 @@
-"""The production signer must not remove build output if 0.25.0 GA is absent."""
+"""Производственный подписывающий компонент не должен удалять результаты сборки при отсутствии GA 0.25.0."""
 
 from pathlib import Path
 import os

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""0.52.3: destructive, disposable Standard owner + real RemoteControl acceptance.
+"""0.52.3: разрушающая приёмка одноразового владельца Standard и реального RemoteControl.
 
-Requires a dedicated Linux Docker host, a VALIDATED HTTPS certificate chain,
-real PostgreSQL and a registered, pinned RemoteControl Minecraft host. This
-runs the product's production installer, never a fake HTTP backend. A failure,
-missing MFA, unobserved command or missing user-data marker blocks the run.
-The tester owns the isolated Compose namespace; it does not delete volumes.
+Необходимы выделенный Docker-хост Linux, ПРОВЕРЕННАЯ цепочка сертификатов HTTPS, настоящий
+PostgreSQL и зарегистрированный закреплённый Minecraft-хост RemoteControl. Запускается промышленный
+установщик продукта, а не подставной HTTP Backend. Ошибка, отсутствие MFA, ненаблюдавшаяся команда
+или пропущенный маркер пользовательских данных блокируют запуск. Тестировщик владеет изолированным
+пространством имён Compose, но не удаляет тома.
 """
 from __future__ import annotations
 
@@ -223,7 +223,7 @@ def host_action(api, server_id, token, action):
 
 
 def totp_now(secret, at=None):
-    """RFC 6238 TOTP used only to enroll ephemeral 0.52.3 test owner."""
+    """TOTP по RFC 6238 используется только для регистрации временного тестового владельца 0.52.3."""
     when = int(time.time() if at is None else at) // 30
     key = base64.b32decode(secret.upper() + '=' * (-len(secret) % 8), casefold=True)
     mac = hmac.new(key, struct.pack('>Q', when), hashlib.sha1).digest()
@@ -233,7 +233,7 @@ def totp_now(secret, at=None):
 
 
 def establish_real_mfa(api, email, password):
-    """Enroll a genuine TOTP credential then obtain a freshly stepped-up JWT."""
+    """Зарегистрировать настоящий секрет TOTP, затем получить новый JWT после повторной проверки подлинности."""
     access = login(api, email, password)
     response = api.request('POST', '/api/v1/auth/totp/enroll', token=access, data={})
     secret = response.get('data', {}).get('secret')
@@ -255,7 +255,7 @@ def establish_real_mfa(api, email, password):
 
 
 def real_game_command(api, server_id, token):
-    """Issue an allowlisted console command and wait for a real game-agent ACK."""
+    """Отправить разрешённую консольную команду и дождаться реального ACK игрового агента."""
     route = f'/api/v1/server-bridge/servers/{quote(server_id)}/control'
     request = {'type': 'server.console', 'payload': {'command': 'list'},
                'idempotencyKey': 'owner0523-console-' + secrets.token_hex(12),
@@ -436,16 +436,16 @@ def execute(args, report):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--env', type=Path, required=True, help='private existing Standard production .env; unique Compose project')
+    p.add_argument('--env', type=Path, required=True, help="Существующий закрытый производственный .env Standard; уникальный проект Compose")
     p.add_argument('--email', required=True)
     p.add_argument('--password-file', type=Path, required=True)
-    p.add_argument('--server-id', required=True, help='dedicated REAL Minecraft ServerBridge node')
+    p.add_argument('--server-id', required=True, help="Выделенный НАСТОЯЩИЙ узел Minecraft ServerBridge")
     p.add_argument('--bridge-registration-file', type=Path, required=True,
-                   help='private JSON: real node ID/kind/Ed25519 public key (never private key)')
-    p.add_argument('--world-marker', type=Path, required=True, help='existing persistent user-data file on dedicated host')
+                   help="Закрытый JSON: ID/тип реального узла и открытый ключ Ed25519 (никогда не закрытый)")
+    p.add_argument('--world-marker', type=Path, required=True, help="Существующий устойчивый файл пользовательских данных на выделенном хосте")
     p.add_argument('--report', type=Path, required=True)
     p.add_argument('--isolated-destructive-acceptance', action='store_true',
-                   help='acknowledge start/stop/restart of real dedicated Minecraft host and Docker project')
+                   help="Подтвердить запуск, остановку и перезапуск настоящего выделенного Minecraft-хоста и проекта Docker")
     args = p.parse_args(argv)
     report = {'schemaVersion': 'neverlauncher.owner-admin-real-e2e.0.52.3',
               'productVersion': VERSION, 'status': 'blocked', 'startedAt': datetime.now(timezone.utc).isoformat(),

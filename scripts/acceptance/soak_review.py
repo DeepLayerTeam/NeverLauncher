@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Independent signer for independently rechecked, actual 0.52.12 soaks.
+"""Независимое подписание повторно проверенных настоящих длительных прогонов 0.52.12.
 
-Run this on a separate protected reviewer host. It rechecks *each* original
-Minecraft session before signing. The signing key must stay outside checkout.
+Запускать на отдельном защищённом хосте рецензента. Перед подписью повторно проверяется *каждый*
+исходный сеанс Minecraft. Ключ подписи не должен находиться в рабочей копии репозитория.
 """
 import argparse
 from pathlib import Path

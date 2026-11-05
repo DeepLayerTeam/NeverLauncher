@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed, independently Ed25519-authorized Launcher 0.31.0 GA gate.
+"""Шлюз GA Launcher 0.31.0 с блокировкой при неопределённости и независимым одобрением Ed25519.
 
-The operator signs the *exact* cross-platform review JSON emitted by CI, not
-an untrusted user-supplied success flag. This is a release approval gate, not
-proof of full binary compatibility with every upstream Gravit JAR.
+Оператор подписывает *точный* кроссплатформенный JSON-обзор, выданный CI, а не недоверенный флаг
+успеха от пользователя. Это шлюз одобрения выпуска, а не доказательство полной бинарной
+совместимости со всеми upstream JAR Gravit.
 """
 
 from __future__ import annotations

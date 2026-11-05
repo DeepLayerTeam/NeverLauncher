@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Capture and independently replay exact unsigned 0.52.12 native payloads.
+"""Зафиксировать и независимо повторить точные неподписанные нативные пакеты 0.52.12.
 
-The builder must have built six *actual* OS/CPU packages through the native
-release scripts. No generated manifests, placeholder executables or local
-fixtures can satisfy the archive inspector. Each builder signs independently.
-The comparison reopens all 12 archives, verifies all contents and signatures.
-This does NOT certify native OS signatures or final installers; 0.52.2 does.
+Сборочный узел должен создать шесть *настоящих* пакетов ОС/CPU штатными нативными скриптами.
+Сгенерированные манифесты, фиктивные исполняемые файлы или локальные фикстуры не удовлетворяют
+инспектору архива. Каждый сборочный узел подписывает независимо. Сравнение повторно открывает все 12
+архивов и проверяет содержимое и подписи. Это НЕ сертифицирует нативные подписи ОС или финальные
+установщики — за них отвечает 0.52.2.
 """
 from __future__ import annotations
 

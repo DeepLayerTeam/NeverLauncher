@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""0.52.2 real six-OS final branded-installer acceptance.
+"""Приёмка 0.52.2 окончательных фирменных установщиков для шести ОС на реальных системах.
 
-The source index is pinned OUTSIDE the downloaded index by SHA-256. Every
-package is fetched over HTTPS, hash checked, authenticated by the operating
-system's native signature verifier, installed and executed on the *matching*
-native, disposable runner. No simulated package or cross-build can pass.
-CI observations are NOT independent GA/physical-machine certification.
+Исходный индекс закреплён по SHA-256 ВНЕ загружаемого индекса. Каждый пакет загружается по HTTPS,
+сверяется по хешу, проверяется штатным механизмом подписей ОС, устанавливается и запускается на
+*соответствующем* нативном одноразовом раннере. Имитированный пакет или кросс-сборка не проходят
+проверку. Наблюдения CI НЕ заменяют независимую сертификацию GA/физической машины.
 """
 from __future__ import annotations
 
@@ -458,10 +457,10 @@ def aggregate(a):
 
 
 def build_index(a):
-    """Operator-side checksum inventory of the actual six final release files.
+    """Перечень контрольных сумм шести фактических финальных файлов выпуска на стороне оператора.
 
-    Creating the index does NOT authorize any package. An independent operator
-    must pin its SHA-256 outside the download channel before native acceptance.
+    Само создание индекса НЕ разрешает использование пакетов. До нативной приёмки независимый
+    оператор должен закрепить SHA-256 вне канала загрузки.
     """
     require(a.packages.is_absolute() and a.packages.is_dir() and not a.packages.is_symlink(),
             'actual final package directory required')

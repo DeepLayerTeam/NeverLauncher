@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the real unsigned Java developer package from published Maven SDK JARs.
+"""Собрать настоящий неподписанный пакет Java-разработчика из опубликованных Maven JAR SDK.
 
-The result is suitable for `nl extension pack --private-key ...`; this script
-intentionally never asserts a trusted signature or installs the package.
+Результат подходит для `nl extension pack --private-key ...`; скрипт намеренно не утверждает наличие
+доверенной подписи и не устанавливает пакет.
 """
 from __future__ import annotations
 import argparse

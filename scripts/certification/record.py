@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Capture 0.24.13 per-target evidence. Missing real attestations remain missing.
+"""Сбор свидетельств по целям для 0.24.13. Отсутствующие настоящие аттестации остаются отсутствующими.
 
-This collector never creates Guard or ServerBridge attestations. To set these
-checks to passed, provide a separately obtained, target/commit-bound report;
-local unit tests cannot substitute for process/join verification.
+Сборщик не создаёт аттестации Guard или ServerBridge. Для успешного статуса этих проверок требуется
+отдельно полученный отчёт с привязкой к цели/коммиту; локальные модульные тесты не заменяют проверку
+процесса и входа в игру.
 """
 
 from __future__ import annotations

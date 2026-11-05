@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Execute adversarial probes against real staged Runtime and CLI binaries.
+"""Выполнять проверки противодействия атакам на настоящих подготовленных бинарных файлах Runtime и CLI.
 
-Run only inside the disposable staged validation worker after a successful
-matching-server gameplay observation. No fixture can count as runtime evidence.
-The installed client is restored and independently reverified after corruption.
+Запускать только в одноразовом подготовленном валидирующем исполнителе после успешного наблюдения
+игры на подходящем сервере. Ни одна фикстура не является свидетельством Runtime. После повреждения
+установленный клиент восстанавливается и независимо перепроверяется.
 """
 from __future__ import annotations
 
@@ -149,7 +149,7 @@ def reject_corrupted_client(cli: str, package: Path, client: Path,
 def execute(runtime: str, cli: str, signed_manifest: Path, key: str,
             package: Path, client: Path, package_files: list[dict],
             work: Path, env: dict[str, str]) -> dict:
-    """Do not sign these results; bind their digest to genuine gameplay proof."""
+    """Не подписывать эти результаты; связывать их хеш с подлинным подтверждением игрового процесса."""
     signed = reject_tampered_manifest(runtime, signed_manifest, key, work, env)
     damaged = reject_corrupted_client(cli, package, client, package_files, work, env)
     return {"schemaVersion": "launcher.adversarial-gameplay.04314.v1",

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Upload only existing, reproducibly built Sentry artifacts; fail closed on mismatches.
+"""Загружать только существующие воспроизводимо собранные артефакты Sentry; при несовпадении
+блокировать операцию.
 
-Supply credentials through environment SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT.
-No credentials, symbols or source maps are ever written into a release archive.
+Учётные данные передаются через SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT. Учётные данные,
+символы и карты исходников никогда не записываются в архив выпуска.
 """
 
 import argparse
@@ -35,29 +36,29 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", required=True)
     parser.add_argument(
-        "--commit", required=True, help="Full git SHA from the build being published"
+        "--commit", required=True, help="Полный SHA Git публикуемой сборки"
     )
     parser.add_argument(
-        "--js-dist", type=Path, help="Vite dist/ with hidden .js.map files"
+        "--js-dist", type=Path, help="Каталог Vite dist/ со скрытыми файлами .js.map"
     )
     parser.add_argument(
         "--native-symbols",
         type=Path,
-        help="Path to unstripped PDB, dSYM or ELF symbols",
+        help="Путь к символам PDB, dSYM или ELF без удаления отладочной информации",
     )
     parser.add_argument(
         "--jvm-mapping",
         type=Path,
-        help="Actual ProGuard/R8 mapping.txt, if obfuscation was used",
+        help="Настоящий ProGuard/R8 mapping.txt, если применялось обфусцирование",
     )
     parser.add_argument(
         "--mapping-uuid",
-        help="UUID embedded in the matching JVM build; required for --jvm-mapping",
+        help="UUID внутри соответствующей сборки JVM; обязателен для --jvm-mapping",
     )
     parser.add_argument(
         "--jvm-jar",
         type=Path,
-        help="Built JVM JAR containing META-INF/sentry-debug-meta.properties",
+        help="Собранный JVM JAR с META-INF/sentry-debug-meta.properties",
     )
     parser.add_argument("--cli", default="sentry-cli")
     args = parser.parse_args(argv)

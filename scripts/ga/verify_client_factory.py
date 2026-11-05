@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail-closed inspection of independent Client Factory GA CI artifacts.
+"""Инспекция независимых CI-артефактов Client Factory GA с блокировкой при неопределённости.
 
-Does not replace verification of the actual Minecraft files on the original
-runner: requires the separately approved *successful* exact-commit CI run.
+Не заменяет проверку настоящих Minecraft-файлов у исходного раннера: нужен отдельно одобренный
+*успешный* CI-запуск точного коммита.
 """
 
 import argparse

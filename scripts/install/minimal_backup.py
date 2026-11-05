@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Offline, transactional backup/verify/restore for a Launcher minimal installation.
+"""Автономное транзакционное резервное копирование, проверка и восстановление минимальной установки Launcher.
 
-All application writers MUST be stopped. This tool takes the exact Linux flock
-used by the API and its SQLite owner locks; it never pretends a live file copy is
-consistent with the SQLite commit point. Bundles contain plaintext credentials:
-keep them private and encrypt when copying off-host. Checksums detect damage,
-not a malicious adversary who can rewrite both data and manifest.
+Все службы записи приложения ДОЛЖНЫ быть остановлены. Утилита берёт тот же Linux flock, что и API, и
+блокировки владельца SQLite; она не выдаёт живое копирование за согласованное с моментом фиксации
+SQLite. Пакеты содержат незашифрованные учётные данные: храните их закрыто и шифруйте при переносе с
+хоста. Контрольные суммы обнаруживают повреждения, но не злоумышленника, способного переписать и
+данные, и манифест.
 """
 
 import argparse
@@ -72,7 +72,7 @@ def check_path(path, *, directory=False, owner=True):
 
 
 def publish_new_directory(source, destination):
-    """Linux renameat2(RENAME_NOREPLACE): another process cannot replace the target."""
+    """Linux renameat2(RENAME_NOREPLACE): другой процесс не может подменить цель."""
     libc = ctypes.CDLL(None, use_errno=True)
     renameat2 = libc.renameat2
     renameat2.argtypes = (
@@ -142,7 +142,7 @@ def read_install(root):
 
 @contextmanager
 def offline_locks(root):
-    """Lock in same order every time. API's flock is mandatory, not just PID polling."""
+    """Всегда соблюдать одинаковый порядок блокировок. Обязателен flock API, одной проверки PID недостаточно."""
     with ExitStack() as stack:
         for relative in (
             "storage/.launcher-api.owner.lock",
@@ -241,7 +241,8 @@ def file_record(path, relative, kind):
 
 
 def paths_in(root):
-    """Enumerate every file under minimal root, except separately stored backups and SQLite ephemera."""
+    """Перечислить все файлы минимальной установки, кроме отдельно хранимых резервных копий и временных
+файлов SQLite."""
     dirs = ["."]
     files = []
     for current, names, filenames in os.walk(root, topdown=True, followlinks=False):
@@ -554,15 +555,15 @@ def restore(bundle, target_root):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    b = sub.add_parser("backup", help="stop API first; immutable, consistent snapshot")
+    b = sub.add_parser("backup", help="Сначала остановить API; неизменяемый согласованный снимок")
     b.add_argument("--root", type=Path, required=True)
     b.add_argument("--destination", type=Path)
     v = sub.add_parser(
-        "verify", help="verify every byte and SQLite integrity before restore"
+        "verify", help="Перед восстановлением проверить каждый байт и целостность SQLite"
     )
     v.add_argument("--bundle", type=Path, required=True)
     r = sub.add_parser(
-        "restore", help="restore only into a new, absent installation root"
+        "restore", help="Восстанавливать только в новый отсутствующий корень установки"
     )
     r.add_argument("--bundle", type=Path, required=True)
     r.add_argument("--target-root", type=Path, required=True)

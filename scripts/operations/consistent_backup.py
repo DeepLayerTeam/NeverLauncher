@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.51.8: real multi-host cold-cohort backup + PostgreSQL WAL/PITR.
+"""NeverLauncher 0.51.8: настоящее холодное копирование многохостовой группы и PostgreSQL WAL/PITR.
 
-Requires an existing pgBackRest repository with continuous WAL archiving, a
-versioned S3 bucket, separate hosts with the 0.51.8 agent installed, and stopped
-Minecraft worlds. No hot backup is advertised as a cross-system transaction.
+Требуются готовый репозиторий pgBackRest с непрерывной архивацией WAL, версионируемый бакет S3,
+отдельные хосты с агентом 0.51.8 и остановленные миры Minecraft. Горячая копия не выдаётся за
+межсистемную транзакцию.
 
-This tool captures a *single frozen application cohort*, not an arbitrary PG
-point in time. Postgres PITR to any other timestamp has no corresponding S3 or
-world snapshot, and MUST NOT be used as an automatically coherent restore.
+Утилита фиксирует *единую замороженную группу приложения*, а не произвольный момент времени PG. PITR
+PostgreSQL на другое время не имеет соответствующего снимка S3 или миров и НЕ ДОЛЖЕН использоваться
+для автоматически согласованного восстановления.
 """
 from __future__ import annotations
 

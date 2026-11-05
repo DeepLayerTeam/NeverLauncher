@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed 0.51.0 Guard GA gate over FINAL signed installer bytes.
+"""Шлюз Guard GA 0.51.0 с блокировкой при неопределённости на ФИНАЛЬНЫХ байтах подписанного установщика.
 
-The gate consumes independent, real-platform execution artifacts. It never
-manufactures test results, signatures, player-hours or release approval. A
-reviewer must sign the exact evidence tree using an externally pinned key.
+Шлюз потребляет независимые артефакты реальных запусков на платформе. Он никогда не придумывает
+результаты тестов, подписи, игровые часы или одобрение выпуска. Рецензент обязан подписать точное
+дерево свидетельств внешним закреплённым ключом.
 """
 from __future__ import annotations
 
@@ -295,7 +295,7 @@ def main(argv=None) -> int:
     p.add_argument('--native-package-id', required=True)
     p.add_argument('--native-ci-run', required=True)
     p.add_argument('--shadow-key', required=True, type=Path)
-    p.add_argument('--publishing-bundle', type=Path, help='actual release directory about to be published')
+    p.add_argument('--publishing-bundle', type=Path, help="Каталог реального выпуска, который планируется опубликовать")
     p.add_argument('--output', required=True, type=Path)
     args = p.parse_args(argv)
     if args.output.resolve().is_relative_to(args.evidence_root.resolve()):

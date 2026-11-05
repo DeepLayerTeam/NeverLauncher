@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Real package-writer + byte-inspection tests for the 0.41 updater path.
+"""Настоящие тесты записи пакета и проверки байтов пути обновления 0.41.
 
-Temporary synthetic executables check archive layout and hash linking; they
-are never represented as native-signing or Minecraft-launch certificates.
+Временные синтетические исполняемые файлы проверяют структуру архива и связность хешей; они никогда
+не выдаются за сертификаты нативной подписи или запуска Minecraft.
 """
 
 from __future__ import annotations

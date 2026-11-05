@@ -21,7 +21,7 @@ TEST_MARKERS = {
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create machine-verifiable native Device Trust result")
+    parser = argparse.ArgumentParser(description="Создать машинно-проверяемый нативный результат Device Trust")
     parser.add_argument("--target-id", required=True)
     parser.add_argument("--os", required=True)
     parser.add_argument("--arch", required=True)

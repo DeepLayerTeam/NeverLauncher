@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Validate actually produced six-platform staging payload, never synthesize receipts.
+"""Проверять реально созданный промежуточный пакет для шести платформ, никогда не синтезируя квитанции.
 
-This is not a signing/GA gate: signature and independent operator gates are
-mandatory and performed separately by the existing release machinery.
+Это не шлюз подписи/GA: проверки подписей и независимого оператора обязательны и выполняются
+отдельно существующей системой выпуска.
 """
 from __future__ import annotations
 import argparse

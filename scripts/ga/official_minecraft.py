@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed, offline verification of independent live official-Minecraft GA evidence.
+"""Автономная проверка независимых живых официальных свидетельств Minecraft GA с блокировкой при
+неопределённости.
 
-An authorized operator signs exact bytes of each attestation OUTSIDE this repo.
-This program NEVER creates approval, private keys, test reports, or signatures.
-Every referenced evidence file is content-addressed inside its own target folder.
+Уполномоченный оператор подписывает точные байты каждой аттестации ВНЕ репозитория. Программа
+НИКОГДА не создаёт одобрений, закрытых ключей, отчётов тестов или подписей. Каждый упомянутый файл
+свидетельств адресуется по содержимому внутри собственного каталога цели.
 """
 
 from __future__ import annotations

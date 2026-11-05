@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Deterministic loopback HTTP fault injector for real runtime / bootstrap tests.
+"""Детерминированная локальная инъекция HTTP-сбоев для настоящих тестов Runtime и начальной загрузки.
 
-Routes are deliberately restricted to pre-seeded in-memory objects. No remote
-fetch, external listener, user supplied filesystem reads, or test-only bypass of
-runtime verification. Each request is captured for transferable byte accounting.
+Маршруты намеренно ограничены заранее подготовленными объектами в памяти. Нет удалённой загрузки,
+внешнего слушателя, чтения пользовательских файлов или обхода проверки Runtime ради тестов. Каждый
+запрос фиксируется для переносимого учёта байтов.
 """
 from __future__ import annotations
 

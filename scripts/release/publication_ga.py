@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Production publication guard for 0.53.0.
+"""Защита производственной публикации 0.53.0.
 
-Verify the exact 18-group independent verifier signature and compare all six
-signed installers with BOTH the separately pinned distribution index and the
-actual files being published. Never accept a merely completed CI workflow.
+Проверять точную подпись независимого валидатора 18 групп и сопоставлять все шесть подписанных
+установщиков И с отдельно закреплённым индексом дистрибуции, И с реально публикуемыми файлами. Сам
+факт завершения CI-workflow не принимается.
 """
 from __future__ import annotations
 import hashlib

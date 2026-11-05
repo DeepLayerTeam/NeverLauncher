@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Run executable extension acceptance and signed-package attacks on the current OS.
+"""Запустить исполняемую приёмку расширений и атаки на подписанные пакеты на текущей ОС.
 
-Results describe observed local execution only. A missing binary, OS mismatch,
-Java mismatch, failed subprocess or absent signature check makes the job fail.
+Результаты описывают только наблюдаемое локальное исполнение. Отсутствующий бинарный файл,
+несоответствие ОС/Java, неуспешный подпроцесс или пропущенная проверка подписи делают задание
+неуспешным.
 """
 
 import argparse

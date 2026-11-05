@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.51.2: execute and verify a real multi-Docker-host deployment.
+"""NeverLauncher 0.51.2: выполнить и проверить настоящее развёртывание на нескольких Docker-хостах.
 
-Every host runs its own API, worker, Admin and HTTPS ingress against shared
-external PostgreSQL, Redis and S3. This program never provisions those external
-services or mistakes two containers on one host for two failure domains.
+На каждом хосте собственные API, worker, Admin и HTTPS ingress с общими внешними PostgreSQL, Redis и
+S3. Программа не развёртывает эти внешние службы и не путает два контейнера одного хоста с двумя
+доменами отказа.
 
-Modes local-check/local-up/local-observe are run *on each host*; cluster-check,
-cluster-up and cluster-drill run from a trusted operator machine via pinned SSH
-host keys. Cluster drill disrupts one host's product containers and restores
-those containers even on verification failure. No raw Docker config or secrets
-are printed or persisted in reports.
+Режимы local-check/local-up/local-observe запускаются *на каждом хосте*; cluster-check, cluster-up и
+cluster-drill — с доверенной операторской машины через закреплённые SSH-ключи хостов. Кластерная
+репетиция нарушает работу контейнеров продукта одного хоста и восстанавливает их даже при ошибке
+проверки. Исходная конфигурация Docker и секреты не печатаются и не сохраняются в отчётах.
 """
 from __future__ import annotations
 
@@ -40,7 +39,7 @@ class DeploymentError(Exception):
 
 
 def run(argv, *, cwd=None, timeout=30, codes=(0,)):
-    """Never expose stderr, stdout, environment, or commands in failures."""
+    """При ошибках никогда не раскрывать stderr, stdout, окружение или команды."""
     try:
         p = subprocess.run(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                            timeout=timeout, check=False)
@@ -231,10 +230,10 @@ def live_observe(directory, project, *, growth=True):
 
 
 def local_compat_observe_0516(directory, project):
-    """Real HTTP API, Bridge and worker probes inside pinned running images.
+    """Настоящие проверки HTTP API, Bridge и worker внутри закреплённых работающих образов.
 
-    This is purposefully a separate, read-only mode. Ordinary cluster checks
-    continue to reject different image digests during deploy/chaos drills.
+    Это намеренно отдельный режим только для чтения. Обычные кластерные проверки по-прежнему
+    отклоняют разные дайджесты образов при развёртывании и хаос-тестах.
     """
     import hashlib
     report = live_observe(directory, project, growth=True)
@@ -492,13 +491,13 @@ def main(argv=None):
                                          "cluster-check", "cluster-up", "cluster-verify", "cluster-drill", "local-compat-observe"))
     parser.add_argument("--directory", default="/opt/launcher/deploy/production")
     parser.add_argument("--project", default="launcher")
-    parser.add_argument("--node", action="append", default=[], help="label=ssh-user@host (repeat)")
+    parser.add_argument("--node", action="append", default=[], help="label=ssh-user@host (повторяемый параметр)")
     parser.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host_0512.py")
-    parser.add_argument("--edge-url", help="external HTTPS load-balancer origin or /ready")
-    parser.add_argument("--failed-node", help="node label to disrupt during cluster-drill")
-    parser.add_argument("--allow-disruption", action="store_true", help="required for cluster-drill")
+    parser.add_argument("--edge-url", help="Внешний адрес HTTPS-балансировщика или /ready")
+    parser.add_argument("--failed-node", help="Метка узла для отключения во время cluster-drill")
+    parser.add_argument("--allow-disruption", action="store_true", help="Обязательно для cluster-drill")
     parser.add_argument("--skip-growth", action="store_true")
-    parser.add_argument("--output", required=True, help="new report path or - for JSON stdout")
+    parser.add_argument("--output", required=True, help="Новый путь отчёта или - для JSON в stdout")
     args = parser.parse_args(argv)
     try:
         directory = Path(args.directory)

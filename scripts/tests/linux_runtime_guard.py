@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Real OpenJDK Linux process-policy and signed-mod regressions for 0.50.8.
+"""Настоящие регрессии Linux/OpenJDK по политикам процессов и подписанным модам для 0.50.8.
 
-The process tests use an actual JVM and OS prctl/setpgid/RLIMIT_CORE. They do
-not claim to certify a real Minecraft join or native Rust Guard build.
+Тесты процессов используют настоящую JVM и системные prctl/setpgid/RLIMIT_CORE. Они не утверждают
+сертификацию реального входа Minecraft или нативной сборки Rust Guard.
 """
 import base64
 import ctypes

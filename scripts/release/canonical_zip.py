@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Production ZIP writer with stable, explicitly documented metadata.
+"""Производственная запись ZIP со стабильными, явно документированными метаданными.
 
-The release timestamp is SOURCE_DATE_EPOCH (UTC), rounded down to the ZIP
-2-second precision. The default is the ZIP epoch, making no VCS requirement.
-Only regular files are accepted; symlinks and unusual filesystem nodes fail
-closed, including when an intermediate path is a symlink.
+Временная метка выпуска — SOURCE_DATE_EPOCH (UTC), округлённая вниз до двухсекундной точности ZIP.
+По умолчанию используется эпоха ZIP, без зависимости от VCS. Принимаются только обычные файлы;
+символьные ссылки и необычные объекты ФС приводят к отказу, в том числе ссылки в промежуточных
+путях.
 """
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def safe_file(root: Path, rel: str) -> tuple[Path, int]:
 
 
 def write_zip(root: Path, output: Path, members: list[tuple[str, str]]) -> None:
-    """members contain (relative source, destination archive path)."""
+    """Элементы содержат относительный исходный путь и путь назначения внутри архива."""
     if not root.is_dir() or root.is_symlink():
         raise ValueError('unsafe release source directory')
     moment = timestamp()

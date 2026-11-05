@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Bind independently approved live GA targets to the EXACT six shipped packages.
+"""Привязать независимо одобренные живые цели GA к ТОЧНЫМ шести поставляемым пакетам.
 
-Run after the protected Windows/Linux/macOS signed artifacts have been imported,
-but before release manifest generation and Ed25519 signing. No fallback names.
+Запускать после импорта защищённых подписанных артефактов Windows/Linux/macOS, но до генерации
+манифеста выпуска и Ed25519-подписи. Без резервных имён файлов.
 """
 
 from __future__ import annotations

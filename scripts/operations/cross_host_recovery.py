@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""0.51.9: recover a frozen 0.51.8 cohort onto *new* Docker/game/PG hosts.
+"""0.51.9: восстановить замороженную группу 0.51.8 на *новых* хостах Docker/игры/PG.
 
-Usage: prepare -> replay-postgres -> admit. Run prepare/admit on a private
-operator; run replay-postgres as the PostgreSQL OS user on the isolated new DB
-host. It cannot fence the original environment; an independently enforced
-source-fencing gate is mandatory before replay promotion and public admission.
+Порядок: prepare -> replay-postgres -> admit. prepare/admit выполняет оператор из закрытой среды,
+replay-postgres — системный пользователь PostgreSQL на изолированном новом хосте БД. Утилита не
+может изолировать исходную среду: перед продвижением воспроизведения и публичным допуском обязателен
+отдельно обеспеченный шлюз отсечения источника.
 """
 from __future__ import annotations
 
@@ -366,10 +366,10 @@ def replay_postgres(args):
             "next": "start PostgreSQL through the approved HA service manager before admit"}
 
 def audit_recovery(ledger_file, pg_env, incident):
-    """Optional sampled RPO based on an *external* immutable ack ledger.
+    """Необязательная выборочная оценка RPO на основе *внешнего* неизменяемого реестра подтверждений.
 
-    Source ledger must cover actual confirmed audit event IDs; never assume
-    absence of audit loss proves preservation of unaudited S3/world data.
+    Реестр источника обязан охватывать реально подтверждённые ID событий аудита. Нельзя считать
+    отсутствие потерь аудита доказательством сохранности неаудированных данных S3/миров.
     """
     ledger = cb.read_private_json(Path(ledger_file))
     require(ledger.get("schema") == "neverlauncher.dr-ack-ledger/v1", "unsupported ack ledger")

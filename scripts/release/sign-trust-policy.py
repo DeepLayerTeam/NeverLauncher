@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Offline root signing for cross-component key delegation.
+"""Автономная корневая подпись для делегирования ключей между компонентами.
 
-The root seed must come from a protected release environment. It is never
-shipped to clients or included in a branded bundle.
+Корневой seed должен поступать из защищённой среды выпуска. Он никогда не поставляется клиентам и не
+включается в фирменный пакет.
 """
 
 import argparse
@@ -138,7 +138,7 @@ def main():
     parser.add_argument(
         "--root-key-hex",
         required=True,
-        help="already provisioned root PUBLIC key, never from downloaded metadata",
+        help="Предварительно предоставленный корневой ОТКРЫТЫЙ ключ, никогда не из загруженных метаданных",
     )
     args = parser.parse_args()
     seed = os.environ.get("LAUNCHER_TRUST_ROOT_ED25519_SEED", "")

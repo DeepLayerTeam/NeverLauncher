@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verify actual final Guard release on a *native* OS/CPU and emit a hash-bound receipt.
+"""Проверить реальный финальный выпуск Guard на *нативной* ОС/CPU и выдать квитанцию, привязанную к хешу.
 
-This tool is deliberately separate from the independent reviewer signature.
-It refuses cross-compiled/non-native targets and never bypasses OS signature
-validation. All trust anchors are external to the release package.
+Утилита намеренно отделена от подписи независимого рецензента. Она отклоняет
+кросс-собранные/ненативные цели и никогда не обходит проверку подписи ОС. Все якоря доверия
+находятся вне пакета выпуска.
 """
 from __future__ import annotations
 import argparse

@@ -150,7 +150,7 @@ def copy_verified(src: Path, dst: Path, digest: str, size: int, context: str) ->
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Stage exact Guard CI-certified artifacts into a release bundle"
+        description="Поместить точные сертифицированные CI-артефакты Guard в пакет выпуска"
     )
     parser.add_argument("--matrix", type=Path, required=True)
     parser.add_argument("--artifacts-root", type=Path, required=True)

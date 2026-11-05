@@ -1,7 +1,7 @@
-"""Offline negative cases for the live Docker evidence collector.
+"""Автономные отрицательные сценарии для сборщика свидетельств живого Docker.
 
-Mocked Docker responses are ONLY used to test fail-closed behavior; they must
-never be submitted as runtime certificates.
+Имитированные ответы Docker используются ТОЛЬКО для проверки блокировки при ошибке; их никогда
+нельзя подавать как сертификаты Runtime.
 """
 
 import importlib.util

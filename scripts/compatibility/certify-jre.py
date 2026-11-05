@@ -161,7 +161,7 @@ def certify(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Certify the exact JRE binary used by a Launcher compatibility target"
+        description="Сертифицировать точный бинарный JRE, используемый целью совместимости Launcher"
     )
     parser.add_argument("--java", required=True)
     parser.add_argument("--major", required=True, type=int)

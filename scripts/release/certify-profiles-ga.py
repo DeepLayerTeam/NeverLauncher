@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed profile/workspace GA certification against actual executables and PostgreSQL.
+"""Сертификация GA профилей/рабочих пространств по настоящим исполняемым файлам и PostgreSQL с
+блокировкой при неопределённости.
 
-This is not a substitute for the cross-platform signed release bundle. A run
-must exercise real Go tests (including a database), not rely on a generated
-manifest or inspect source text for test names.
+Не заменяет кроссплатформенный подписанный пакет выпуска. Нужно выполнить настоящие Go-тесты
+(включая базу данных), а не полагаться на сгенерированный манифест или искать названия тестов в
+исходниках.
 """
 
 from __future__ import annotations

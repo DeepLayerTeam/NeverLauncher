@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Verify the *published* NeverLauncher Java SDK through a real JVM Host subprocess.
+"""Проверить *опубликованный* Java SDK NeverLauncher через настоящий подпроцесс JVM Host.
 
-This tool NEVER compiles consumers against src-tree classes and never signs a
-package. Trust and installation remain controlled by the existing CLI/Backend.
+Утилита НИКОГДА не компилирует потребителей на классах дерева src и не подписывает пакет. Доверие и
+установка контролируются существующими CLI/Backend.
 """
 from __future__ import annotations
 

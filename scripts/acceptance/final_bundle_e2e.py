@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Exercise the *shipped* Linux x64 API from a signed release bundle.
+"""Проверить *поставляемый* Linux x64 API из подписанного пакета выпуска.
 
-Run AFTER final packaging/signing, and before publication. The external result
-is an ordinary CI receipt, not a GA signature or a substitute for independent
-platform certifications. Neither this runner nor its evidence changes the
-signed bundle's bytes. A failed/absent test blocks release-bundle's CI job.
+Запускать ПОСЛЕ финальной упаковки/подписания, но до публикации. Внешний результат — обычная
+квитанция CI, а не подпись GA и не замена независимых платформенных сертификатов. Ни раннер, ни
+свидетельства не меняют байты подписанного пакета. Неудачный или отсутствующий тест блокирует
+CI-задание release-bundle.
 """
 
 from __future__ import annotations

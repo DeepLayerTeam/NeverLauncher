@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Offline independent-review helper: sign EXACT final Guard evidence tree.
+"""Автономный помощник независимой проверки: подписать ТОЧНОЕ финальное дерево свидетельств Guard.
 
-Run on the independent reviewer's machine only, with an external Ed25519 PEM
-private key, after inspecting actual native, Minecraft and pilot outputs. This
-command never changes Guard enforcement or declares GA; the GA gate verifies
-all evidence and separately checks the pinned reviewer's public key.
+Запускать только на машине независимого рецензента с внешним закрытым ключом Ed25519 PEM после
+изучения настоящих результатов нативных запусков, Minecraft и пилота. Команда не меняет
+принудительные политики Guard и не объявляет GA; шлюз GA проверяет все свидетельства и отдельно
+сверяет закреплённый публичный ключ рецензента.
 """
 from __future__ import annotations
 import argparse

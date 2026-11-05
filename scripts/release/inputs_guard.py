@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Release baseline guard for actual tool inputs in the current release tree.
+"""Защита исходных входных данных базового выпуска в текущем дереве релиза.
 
-This is deliberately a *source-input* guard, not a false claim that native
-compilers, network packages or output binaries were independently verified.
-CI can run `verify` before AND after each build; an input change fails closed
-unless a deliberate reviewed rebaseline occurs in source control.
+Это именно проверка *исходных входных файлов*, а не ложное заявление о независимой проверке нативных
+компиляторов, сетевых пакетов или бинарных результатов. CI может запускать `verify` ДО и ПОСЛЕ
+каждой сборки; изменение входа блокирует продолжение, пока в контроле версий не будет намеренно
+пересмотрена базовая версия.
 """
 from __future__ import annotations
 import argparse

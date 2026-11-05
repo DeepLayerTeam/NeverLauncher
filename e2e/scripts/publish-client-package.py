@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Publish a materialized Never client package through the canonical admin API.
+"""Опубликовать материализованный клиентский пакет Never через канонический Admin API.
 
-The script is intentionally E2E-oriented: every local file is re-hashed before
-upload, every backend response hash/size is compared with the package manifest,
-and the release is published only after all artifacts and runtime settings have
-been accepted by the Backend API.
+Скрипт намеренно ориентирован на E2E: каждый локальный файл повторно хешируется перед загрузкой;
+хеш/размер каждого ответа Backend сравнивается с манифестом пакета. Выпуск публикуется только после
+принятия всех артефактов и настроек Runtime через Backend API.
 """
 
 from __future__ import annotations
@@ -48,10 +47,10 @@ class APIClient:
         self.passkey_refreshed_at = 0.0
 
     def use_passkey_counter_file(self, path: Path) -> None:
-        """Persist test WebAuthn signCount across real publish invocations.
+        """Сохранять тестовый счётчик WebAuthn signCount между настоящими запусками публикации.
 
-        The authenticator credential is shared by consecutive E2E releases. A
-        reset to 1 on the next process is a replay, not a fresh step-up.
+        Учётные данные аутентификатора общие для последовательных выпусков E2E. Сброс до 1 при
+        следующем процессе — повторное воспроизведение, а не новая повторная аутентификация.
         """
         if path.is_symlink():
             raise RuntimeError("refusing symlinked passkey counter file")

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Publish an already-signed Launcher GA bundle to GitHub Releases.
+"""Опубликовать уже подписанный GA-пакет Launcher в GitHub Releases.
 
-Fail closed before writing, stage as draft, round-trip download *every* release
-asset, and only then switch the verified draft to public. GitHub publication
-credentials are never used in the earlier build/GA jobs.
+При ошибке блокировать до записи, сначала создать черновик, повторно загрузить *каждый* ресурс
+выпуска и лишь затем открыть проверенный черновик публично. Учётные данные публикации GitHub никогда
+не используются на предыдущих этапах сборки/GA.
 """
 
 from __future__ import annotations
@@ -159,7 +159,7 @@ def verify_ci(report: dict, version: str, commit: str, run_id: int, attempt: int
 def verify_security_archive(
     bundle: Path, approval: dict, run_id: int, attempt: int, *, now=None
 ) -> None:
-    """Recheck SHA256SUMS-protected raw observations before publication."""
+    """Перед публикацией повторно проверять исходные наблюдения, защищённые SHA256SUMS."""
     archive_path = bundle / "SECURITY_CAPABILITY_EVIDENCE_0431.zip"
     require(
         archive_path.is_file() and not archive_path.is_symlink()

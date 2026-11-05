@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run a three-project Gravit import, *real* Minecraft rehearsal and signed client update.
+"""Запустить импорт трёх проектов Gravit, *настоящую* репетицию Minecraft и обновление подписанного клиента.
 
-Only existing NeverLauncher CLI runtime paths are used. Rehearsal after update
-is an intentionally LOCAL witness: the MIG10 Backend receipt is immutable.
-This tool cannot sign GA, forge receipts, or perform production cutover.
+Используются только существующие рабочие пути CLI NeverLauncher. Репетиция после обновления
+специально служит ЛОКАЛЬНЫМ свидетельством: квитанция MIG10 Backend неизменяема. Утилита не
+подписывает GA, не подделывает квитанции и не выполняет промышленное переключение.
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def json_file(path: Path, limit: int = 1024 * 1024) -> dict:
 
 
 def _checked_open(path: Path, limit: int):
-    """Pin source files to an inode; a replaced or linked source must block cutover."""
+    """Привязывать исходные файлы к inode; замена файла или появление ссылки должны блокировать переключение."""
     try:
         st = path.lstat()
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,

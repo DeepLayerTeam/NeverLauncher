@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build, Ed25519-sign and VERIFY runnable Java Extensions example packages.
+"""Собрать, подписать Ed25519 и ПРОВЕРИТЬ работающие примеры пакетов Java Extensions.
 
-The output is a verified signed *example*, not a platform parity certificate.
-Production issuer trust must be configured separately on the installed backend.
+Результат — проверенный подписанный *пример*, а не сертификат паритета платформ. Доверие к
+промышленному издателю должно настраиваться отдельно на установленном Backend.
 """
 
 from __future__ import annotations

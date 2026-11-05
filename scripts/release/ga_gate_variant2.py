@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.50.0 Gravit GA promotion on verified final release bytes.
+"""Продвижение NeverLauncher 0.50.0 Gravit GA по проверенным финальным байтам выпуска.
 
-No self-attestation. The final signer must be a *different* independent operator;
-all prior live Migration GA checks and the 19 real module tests must be rerun
-before this command can accept an externally signed approval.
+Самоаттестация запрещена. Финальным подписантом должен быть *другой* независимый оператор; все
+прежние живые проверки Migration GA и 19 настоящих тестов модулей должны быть повторены до принятия
+внешне подписанного одобрения.
 """
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def require(value: bool, reason: str):
 
 
 def verify_approval(evidence_root: Path, approval: Path, signature: Path, key: Path, acceptance: dict) -> dict:
-    """Verify detached Ed25519 approval over every retained file and final asset."""
+    """Проверять отдельную подпись одобрения Ed25519 для каждого сохранённого файла и финального артефакта."""
     require(evidence_root.is_absolute() and evidence_root.is_dir() and not evidence_root.is_symlink(),
             'absolute real evidence root required')
     raw = ga.regular(approval, 128 << 10, private=True)

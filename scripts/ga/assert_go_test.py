@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed witness for GA: enforce PASS (not SKIP/absence) for named live Go tests.
+"""Свидетельство GA с блокировкой при неопределённости: требовать PASS (не SKIP/отсутствие) для
+указанных живых Go-тестов.
 
-Reads unmodified `go test -json` output. This is an assertion over actual
-executions, not an attestation or a replacement for the test runner exit code.
+Читает неизменённый вывод `go test -json`. Это проверка фактических запусков, а не аттестация и не
+замена кода завершения тестового раннера.
 """
 from __future__ import annotations
 

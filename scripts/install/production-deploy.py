@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Launcher 0.32.13 DEP09 production deployment (Linux).
+"""Launcher 0.32.13 DEP09: промышленное развёртывание (Linux).
 
-Standard Compose = PostgreSQL + SQLite coordinator, Redis optional.
-Native = signed installer bundle + root-owned release + systemd.
-No production SQLite-only backend or automatic live SQLite->PostgreSQL cutover.
+Standard Compose = PostgreSQL и координатор SQLite; Redis необязателен.
+Native = подписанный пакет установщика, выпуск под владельцем root и systemd.
+Нет производственного Backend только с SQLite и автоматического живого переключения SQLite->PostgreSQL.
 """
 
 import argparse
@@ -236,7 +236,7 @@ def preflight(values, mode, *, docker, tls_required=True):
 
 
 def host_preflight(*, fresh):
-    """Validate the actual Linux host and Docker daemon before manipulating data."""
+    """Проверять настоящий Linux-хост и демон Docker до любых манипуляций с данными."""
     if sys.platform != "linux" or os.uname().machine.lower() not in (
         "x86_64", "amd64", "aarch64", "arm64"
     ):
@@ -266,7 +266,7 @@ def host_preflight(*, fresh):
 
 
 def tls_paths(values):
-    """Verify actual trust-chain, hostname, expiry and private-key match before Compose."""
+    """До Compose проверить настоящую цепочку доверия, имя хоста, срок действия и соответствие закрытого ключа."""
     cert = Path(values["LAUNCHER_TLS_CERT_PATH"])
     key = Path(values["LAUNCHER_TLS_KEY_PATH"])
     if not cert.is_absolute() or not key.is_absolute() or cert == key:
@@ -301,7 +301,7 @@ def tls_paths(values):
 
 
 def public_json(url, *, payload=None, headers=None, expected_status=None):
-    """No proxies, redirects, insecure TLS, implicit retries or credential output."""
+    """Без прокси, перенаправлений, небезопасного TLS, неявных повторов и вывода учётных данных."""
     if urllib.parse.urlsplit(url).scheme != "https":
         fail("refusing public operation without HTTPS")
 
@@ -348,7 +348,7 @@ def verify_public_ready(values, expected_version=None):
 
 
 def bootstrap_first_admin(args):
-    """Actually create, authenticate and verify the one-time admin on running API."""
+    """Создать, аутентифицировать и проверить одноразового администратора в реально запущенном API."""
     env = Path(args.env).resolve(strict=True)
     safe_file(env, private=True)
     safe_directory(env.parent)
@@ -536,7 +536,7 @@ def require_root():
 
 
 def no_symlinks_or_mounts(path):
-    """Walk before deletion; never follow links or cross mount points."""
+    """Перед удалением обходить дерево без перехода по ссылкам и без пересечения точек монтирования."""
     path = Path(path)
     if not path.exists() and not path.is_symlink():
         return
@@ -859,13 +859,13 @@ def main(argv=None):
     cp.add_argument(
         "--backup-confirmed",
         action="store_true",
-        help="operator has verified external DB/blob backup before image upgrade",
+        help="Оператор проверил внешнюю копию БД/blob до обновления образа",
     )
     cp.add_argument("--purge-data", action="store_true")
     cp.add_argument("--confirm", default="")
-    cp.add_argument("--email", help="first administrator email")
+    cp.add_argument("--email", help="Электронная почта первого администратора")
     cp.add_argument("--display-name", default="Administrator")
-    cp.add_argument("--password-file", help="private mode-0600 file holding initial admin password")
+    cp.add_argument("--password-file", help="Закрытый файл с начальным паролем администратора, права 0600")
     np = sub.add_parser("native")
     np.add_argument("action", choices=["install", "uninstall"])
     np.add_argument("--installer", default="/usr/local/bin/launcher-install")

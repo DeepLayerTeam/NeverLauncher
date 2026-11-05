@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Execute independent HA acceptance against real NeverLauncher 0.52.0 systems.
+"""Независимая приёмка HA на реальных системах NeverLauncher 0.52.0.
 
-No simulated result, offline manifest, or unit-test output can grant GA. The
-operator runs live multi-host chaos, rolling update and recovered-site probes
-through existing production commands. Every stage has a private, exclusive
-receipt bound to an exact package set, source commit and independent observer.
-A final GA decision is deliberately BLOCKED until independently signed evidence
-for *physical* outage, infrastructure partition, dependencies, notifications,
-game worlds and final native packages is available. The Python unit tests in CI
-never generate production receipts.
+Симулированный результат, автономный манифест или вывод модульных тестов не разрешают GA. Оператор
+запускает живые многохостовые хаос-тесты, поэтапные обновления и проверки восстановленного узла
+штатными производственными командами. Каждый этап имеет закрытую эксклюзивную квитанцию с привязкой
+к точному набору пакетов, исходному коммиту и независимому наблюдателю. Итоговое GA намеренно
+BLOCKED, пока не получены независимо подписанные свидетельства *физического* отказа, разделения
+инфраструктуры, зависимостей, уведомлений, миров и финальных нативных пакетов. Модульные
+Python-тесты в CI никогда не выдают производственные квитанции.
 """
 from __future__ import annotations
 

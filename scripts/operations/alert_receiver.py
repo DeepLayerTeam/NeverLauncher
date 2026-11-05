@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Independent Alertmanager webhook delivery evidence for physical HA drills.
+"""Независимое подтверждение доставки вебхуков Alertmanager при физических HA-учениях.
 
-Listen ONLY on loopback behind a separately operated, verified HTTPS proxy.
-Use distinct 0600 bearer tokens for Alertmanager POST and reviewer GET. A
-successful GET reads a *durably persisted* event received from the real webhook
-beforehand; querying Alertmanager's own /alerts API never counts as delivery.
+Слушать ТОЛЬКО loopback за отдельно управляемым проверенным HTTPS-прокси. Для POST Alertmanager и
+GET рецензента использовать разные bearer-токены с правами файлов 0600. Успешный GET читает
+*устойчиво сохранённое* событие, ранее пришедшее по настоящему вебхуку; запрос собственного /alerts
+API Alertmanager не считается доставкой.
 """
 from __future__ import annotations
 import argparse

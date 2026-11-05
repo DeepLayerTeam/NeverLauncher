@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Bind executed six-target extension acceptance to the *actual* signed .nlext files.
+"""Привязать выполненную приёмку расширений для шести целей к *реальным* подписанным файлам .nlext.
 
-CI run provenance is checked here; authentication of the CI artifact is supplied by
-GitHub Actions' same-run, immutable artifact provenance and protected release job.
-This receipt does not impersonate an independently operator-signed attestation.
+Здесь проверяется происхождение запуска CI; подлинность CI-артефакта обеспечивают неизменяемые
+артефакты того же запуска GitHub Actions и защищённое задание выпуска. Квитанция не выдаётся за
+независимо подписанную оператором аттестацию.
 """
 
 from __future__ import annotations

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Run actual Guard regressions; verify signed server observations and real game witnesses.
+"""Выполнить настоящие регрессионные проверки Guard; проверить подписанные серверные наблюдения и
+реальные игровые свидетельства.
 
-No synthetic certification: absent software, live players, real Minecraft artifacts,
-reviewed incidents, or measured game frames are BLOCKED, never counted as PASS.
+Никакой синтетической сертификации: при отсутствии ПО, живых игроков, настоящих артефактов
+Minecraft, рассмотренных инцидентов или измеренных кадров игры результат BLOCKED, а не PASS.
 """
 from __future__ import annotations
 
@@ -344,19 +345,19 @@ def run_jvm_suites(output: Path, only: set[str] | None = None) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
-    p = sub.add_parser('run-jvm', help='execute actual Java Agent negative and compatibility tests')
+    p = sub.add_parser('run-jvm', help="Выполнить настоящие отрицательные тесты Java Agent и проверки совместимости")
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--only', choices=[row[0] for row in SUITES], action='append')
-    p = sub.add_parser('analyze-shadow', help='verify server-authenticated HMAC shadow journal, count actual observations')
+    p = sub.add_parser('analyze-shadow', help="Проверить серверно-аутентифицированный теневой журнал HMAC и подсчитать реальные наблюдения")
     p.add_argument('--journal-dir', type=Path, required=True)
     p.add_argument('--key-file', type=Path, required=True)
     p.add_argument('--reviews', type=Path)
     p.add_argument('--output', type=Path, required=True)
-    p = sub.add_parser('compare-frame-times', help='compare two actual instrumented game-frame captures')
+    p = sub.add_parser('compare-frame-times', help="Сопоставить два настоящих захвата кадров игры с инструментированием")
     p.add_argument('--baseline', type=Path, required=True)
     p.add_argument('--guard', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
-    p = sub.add_parser('verify-game', help='validate existing real Minecraft E2E result and Paper join log')
+    p = sub.add_parser('verify-game', help="Проверить существующий реальный результат Minecraft E2E и журнал входа Paper")
     p.add_argument('--work', type=Path, required=True)
     p.add_argument('--paper-log', type=Path, required=True)
     p.add_argument('--username', required=True)

@@ -357,7 +357,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Launcher macOS x64/ARM64 production package helper"
+        description="Помощник производственной упаковки Launcher macOS x64/ARM64"
     )
     sub = parser.add_subparsers(dest="command", required=True)
     manifest = sub.add_parser("manifest")

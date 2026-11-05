@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Negative/positive tests for actual package inspection and signed GA binding.
-Synthetic PE/ELF/Mach-O fixtures exercise parsing; not a platform-signing claim.
+"""Положительные и отрицательные тесты реальной инспекции пакетов и привязки подписанного GA.
+Синтетические фикстуры PE/ELF/Mach-O проверяют парсинг, но не подтверждают подписи платформ.
 """
 
 from datetime import datetime, timedelta, timezone

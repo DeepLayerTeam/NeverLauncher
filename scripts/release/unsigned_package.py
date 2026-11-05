@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Package exact unsigned *built* binaries before platform signing.
+"""Упаковать точные неподписанные *собранные* бинарные файлы перед подписанием платформой.
 
-Invoked by the real native packaging scripts after build/arch inspection and
-before Authenticode/codesign. Does not generate placeholder executables or keys.
-The same input files, paths and modes produce the same package bytes on either
-builder. All emitted packages are additionally checked by reproducible_0470.
+Вызывается настоящими скриптами нативной упаковки после проверки сборки/архитектуры и до
+Authenticode/codesign. Не создаёт фиктивные исполняемые файлы или ключи. Одинаковые входные файлы,
+пути и режимы дают побайтово идентичный пакет на разных сборочных узлах. Все выпущенные пакеты
+дополнительно проверяет reproducible_0470.
 """
 from __future__ import annotations
 import argparse
@@ -98,7 +98,7 @@ def main():
     p.add_argument('--platform',choices=('windows','linux','macos'),required=True)
     p.add_argument('--arch',choices=('x64','arm64'),required=True)
     p.add_argument('--out-dir',type=Path,required=True)
-    p.add_argument('--file',action='append',required=True,help='archive/member/path=/absolute/compiled/file')
+    p.add_argument('--file',action='append',required=True,help="archive/member/path=/absolute/compiled/file")
     args=p.parse_args()
     try:
         mapping={}

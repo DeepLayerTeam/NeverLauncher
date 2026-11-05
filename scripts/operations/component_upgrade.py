@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Operational component cutover, reusing NeverLauncher's actual updaters.
+"""Эксплуатационное переключение компонентов через настоящие обновляющие механизмы NeverLauncher.
 
-Standard: validated PostgreSQL cold checkpoint, API/Admin image switch and rollback.
-Linux host: byte-verified CLI/ServerBridge update with crash-safe atomic replacement.
-Desktop: delegate verified production component package to `nl update components`.
-Extensions: invoke existing transactional server-side extension updater with fresh MFA.
-No automatic database migrations, no bypass of release signatures or trust gates.
+Standard: проверенная холодная контрольная точка PostgreSQL, переключение и откат образов API/Admin.
+Linux host: обновление CLI/ServerBridge с проверкой байтов и атомарной заменой, безопасной при сбое.
+Desktop: передать проверенный промышленный пакет компонентов в `nl update components`.
+Extensions: вызвать существующий транзакционный серверный обновляющий механизм расширений со свежим MFA.
+Нет автоматических миграций БД или обхода подписей выпуска и шлюзов доверия.
 """
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def image_id(tag):
 
 
 def verify_service_image(project, env, service, expected_version):
-    """Check the actual running container ID, not merely a mutable image tag."""
+    """Проверять ID настоящего работающего контейнера, а не изменяемый тег образа."""
     image_type = 'admin' if service == 'admin' else 'api'
     expected = image_id(f'launcher-{image_type}:{expected_version}')
     container = dr.compose(project, env, 'ps', '-q', service, timeout=30).stdout.decode('ascii').strip()
@@ -197,7 +197,8 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
 
 @contextmanager
 def network_overlay():
-    """Scope HA Compose configuration: no global mutation leaks into other operations."""
+    """Ограничить конфигурацию HA Compose текущей операцией: глобальные изменения не должны затрагивать
+другие операции."""
     old_files = dr.COMPOSE_FILES[:]
     old_profiles = dr.COMPOSE_PROFILES[:]
     try:
@@ -230,10 +231,10 @@ def restore_ha_roles(project, env, *, expected):
 def network_ha(project, confirm, source, target, snapshot, world_backups,
                s3_bucket, s3_endpoint, *, production=False, approved=False,
                source_version=SOURCE, target_version=TARGET):
-    """Cold component-only cutover; never restores old Redis leases or rewinds PG.
+    """Холодное переключение только компонентов; никогда не восстанавливать старые аренды Redis и не откатывать PG.
 
-    World writers must already be stopped; DR validates their cold backups.
-    This does NOT upgrade PostgreSQL schemas and is not a rolling upgrade.
+    Службы записи миров уже должны быть остановлены; DR проверяет их холодные копии. Схемы
+    PostgreSQL НЕ обновляются; это не поэтапное обновление.
     """
     dr.authorize_project(project, confirm, production=production, approved=approved)
     assert_same_config(source, target, source_version=source_version, target_version=target_version)
@@ -295,10 +296,10 @@ def fsync_dir(path):
 
 def host_binary(component, source: Path, install: Path, checksum, *, service=None, ready_url=None,
                 source_version=SOURCE, target_version=TARGET, backup_tag='0458'):
-    """Atomic executable replacement with verified rollback on service failure.
+    """Атомарная замена исполняемого файла с проверенным откатом при отказе службы.
 
-    Must be run as root in a controlled maintenance window; the old executable
-    is moved to a private backup next to its installed path (same filesystem).
+    Выполнять от root в управляемое окно обслуживания; старый файл перемещается в закрытую резервную
+    копию рядом с установленным путём (та же ФС).
     """
     must(os.geteuid() == 0, 'host executable upgrade requires root')
     must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'0\.\d+\.\d+', target_version),
@@ -374,10 +375,10 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
 
 def rollback_linux_host(component, install: Path, expected_previous_sha, *, service=None,
                         ready_url='http://127.0.0.1:8080/ready', source_version=SOURCE, backup_tag='0458'):
-    """Explicit recovery after a process crash or a completed-but-bad rollout.
+    """Явное восстановление после сбоя процесса или завершённого, но неудачного развёртывания.
 
-    Never accept an unidentified `.previous` byte sequence. A rollback keeps
-    the 0.45.8 executable in a separate `.failed` file for incident analysis.
+    Никогда не принимать неопознанную последовательность байтов `.previous`. При откате исполняемый
+    файл 0.45.8 сохраняется отдельно как `.failed` для анализа инцидента.
     """
     must(os.geteuid() == 0, 'host rollback requires root')
     must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'\d{4}', backup_tag),
@@ -432,7 +433,8 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
 
 
 def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Path, *, target_version=TARGET):
-    """Calls the existing signed transactional component updater; not an alternate installer."""
+    """Вызывает существующий подписанный транзакционный механизм обновления компонентов, а не
+альтернативный установщик."""
     must(root.is_absolute() and root.is_dir() and not root.is_symlink(), 'existing client installation root required')
     must(delivery.is_file() and not delivery.is_symlink(), 'independently approved delivery manifest required')
     checked_file(package, checksum)
@@ -477,7 +479,7 @@ def extensions(cli: Path, backend: str, coords: list[str], channel: str):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
-    standard_cmd = sub.add_parser('standard', help='upgrade Standard API/Admin Compose images with cold backup and rollback')
+    standard_cmd = sub.add_parser('standard', help="Обновить образы Standard API/Admin Compose с холодной копией и откатом")
     for key in ('project', 'confirm', 'source-env', 'target-env', 'backup'):
         standard_cmd.add_argument('--' + key, required=True,
                                   type=Path if key.endswith('env') or key == 'backup' else str)
@@ -485,7 +487,7 @@ def main(argv=None):
     standard_cmd.add_argument('--to-version', default=TARGET)
     standard_cmd.add_argument('--production-source', action='store_true')
     standard_cmd.add_argument('--maintenance-approved', action='store_true')
-    ha = sub.add_parser('network-ha', help='cold upgrade of both APIs, both workers and Admin with world/S3 checkpoint')
+    ha = sub.add_parser('network-ha', help="Холодное обновление обоих API, обоих worker и Admin с контрольной точкой мира/S3")
     for key in ('project', 'confirm', 'source-env', 'target-env', 'backup', 's3-bucket'):
         ha.add_argument('--' + key, required=True, type=Path if key.endswith('env') or key == 'backup' else str)
     ha.add_argument('--s3-endpoint')
@@ -494,26 +496,26 @@ def main(argv=None):
     ha.add_argument('--to-version', default=TARGET)
     ha.add_argument('--production-source', action='store_true')
     ha.add_argument('--maintenance-approved', action='store_true')
-    native = sub.add_parser('linux-host', help='atomically upgrade real root-owned CLI/ServerBridge executable')
+    native = sub.add_parser('linux-host', help="Атомарно обновить настоящий исполняемый файл CLI/ServerBridge с владельцем root")
     native.add_argument('--component', choices=sorted(COMPONENTS), required=True)
     native.add_argument('--source', type=Path, required=True)
     native.add_argument('--install', type=Path, required=True)
     native.add_argument('--sha256', required=True)
-    native.add_argument('--service', help='systemd unit for ServerBridge or minimal API')
-    native.add_argument('--ready-url', default='http://127.0.0.1:8080/ready', help='minimal API readiness probe')
-    rollback = sub.add_parser('rollback-linux-host', help='recover pinned previous host executable after failed/crashed upgrade')
+    native.add_argument('--service', help="Служба systemd для ServerBridge или минимального API")
+    native.add_argument('--ready-url', default='http://127.0.0.1:8080/ready', help="Минимальная проверка готовности API")
+    rollback = sub.add_parser('rollback-linux-host', help="Восстановить закреплённый прежний исполняемый файл после сбойного обновления")
     rollback.add_argument('--component', choices=sorted(COMPONENTS), required=True)
     rollback.add_argument('--install', type=Path, required=True)
     rollback.add_argument('--previous-sha256', required=True)
     rollback.add_argument('--service')
     rollback.add_argument('--ready-url', default='http://127.0.0.1:8080/ready')
-    client = sub.add_parser('client', help='install signed Desktop/Runtime/Guard update via existing CLI')
+    client = sub.add_parser('client', help="Установить подписанное обновление Desktop/Runtime/Guard штатным CLI")
     client.add_argument('--cli', type=Path, required=True)
     client.add_argument('--package', type=Path, required=True)
     client.add_argument('--sha256', required=True)
     client.add_argument('--delivery-manifest', type=Path, required=True)
     client.add_argument('--root', type=Path, required=True)
-    ext = sub.add_parser('extensions', help='use real server-side extension transaction and health verification')
+    ext = sub.add_parser('extensions', help="Использовать настоящую серверную транзакцию расширения и проверку здоровья")
     ext.add_argument('--cli', type=Path, required=True)
     ext.add_argument('--backend', required=True)
     ext.add_argument('--channel', default='stable')

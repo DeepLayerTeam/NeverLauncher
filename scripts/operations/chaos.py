@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Real Docker-backed fault injection for isolated NeverLauncher Network-HA labs.
+"""Реальная инъекция сбоев на Docker для изолированных лабораторий NeverLauncher Network-HA.
 
-Uses the running PostgreSQL and S3, records acknowledged durable canaries,
-interrupts real dependencies and one worker's network, and verifies recovery.
-Does not infer a production SLA from synthetic canaries. Never runs on a
-non-isolated Compose project or against an unverified S3 endpoint.
+Используются работающие PostgreSQL и S3, фиксируются подтверждённые устойчивые canary, прерываются
+настоящие зависимости и сеть одного worker, затем проверяется восстановление. Производственный SLA
+не выводится из синтетических canary. Не запускается в неизолированном проекте Compose или на
+непроверенном S3-эндпоинте.
 """
 from __future__ import annotations
 
@@ -337,8 +337,8 @@ def main() -> int:
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--ready-url", required=True,
-                        help="trusted HTTPS ready URL on loopback of isolated ingress")
-    parser.add_argument("--s3-endpoint", required=True, help="loopback S3 lab endpoint, e.g. http://127.0.0.1:19000")
+                        help="Доверенный HTTPS URL готовности на loopback изолированного ingress")
+    parser.add_argument("--s3-endpoint", required=True, help="Лабораторный S3-эндпоинт loopback, например http://127.0.0.1:19000")
     parser.add_argument("--s3-bucket", required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--timeout", type=int, default=120)

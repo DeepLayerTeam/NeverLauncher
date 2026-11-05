@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Sign independently reviewed live GA evidence using a protected operator key.
+"""Подписать независимо рассмотренные живые свидетельства GA защищённым ключом оператора.
 
-Never create or publish a private key here. This refuses to sign missing, stale,
-self-contradictory or synthetic evidence, using the same semantic gate as CI.
+Никогда не создавать и не публиковать здесь закрытый ключ. Отказываемся подписывать отсутствующие,
+устаревшие, противоречивые или синтетические свидетельства по тем же смысловым правилам, что и CI.
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def main() -> int:
     parser.add_argument(
         "--public-key",
         required=True,
-        help="public signing anchor pinned outside repository",
+        help="Публичный якорь подписи, закреплённый вне репозитория",
     )
     parser.add_argument("--commit", required=True)
     args = parser.parse_args()

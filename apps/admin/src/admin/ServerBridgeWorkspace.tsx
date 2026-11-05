@@ -1502,7 +1502,7 @@ export function ServerBridgeWorkspace({
             }
           }}
           columns={[
-            { field: "id", title: "Command ID" },
+            { field: "id", title: "ID команды" },
             { field: "serverId", title: "Сервер", facet: true },
             { field: "type", title: "Операция", facet: true },
             { field: "lifecycle", title: "Статус", facet: true },

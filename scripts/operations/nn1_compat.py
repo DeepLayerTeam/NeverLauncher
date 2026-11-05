@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""0.51.6: fail-closed *live* mixed-version API/worker + PostgreSQL admission.
+"""0.51.6: допуск *живой* смешанной версии API/worker и PostgreSQL с блокировкой при неопределённости.
 
-Supports specifically the audited 0.51.5 -> 0.51.6 pairing. Does not apply
-DDL or update containers; the rolling controller is a later release. Operators
-must run this from an independently trusted host with access to the active
-PostgreSQL writer and SSH access to both Docker hosts. Never trust container
-labels or a version file as proof of the running process version.
+Поддерживается только проверенная пара 0.51.5 -> 0.51.6. DDL не применяется, контейнеры не
+обновляются; контроллер поэтапного обновления относится к следующему выпуску. Запускать с независимо
+доверенного хоста с доступом к активному PostgreSQL writer и по SSH к обоим Docker-хостам. Метки
+контейнера и VERSION-файл не доказывают версию работающего процесса.
 """
 from __future__ import annotations
 
@@ -217,13 +216,13 @@ def verify(args):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Live 0.51.5/0.51.6 API/worker and PostgreSQL mixed-version admission")
-    ap.add_argument("--node", action="append", required=True, help="label=ssh-user@node (repeat)")
+    ap = argparse.ArgumentParser(description="Допуск смешанных версий API/worker и PostgreSQL 0.51.5/0.51.6 на живой системе")
+    ap.add_argument("--node", action="append", required=True, help="label=ssh-user@node (повторяемый параметр)")
     ap.add_argument("--directory", default="/opt/launcher/deploy/production")
     ap.add_argument("--project", default="launcher")
     ap.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host_0512.py")
     ap.add_argument("--edge-url", required=True)
-    ap.add_argument("--pg-dsn-file", type=Path, required=True, help="single private 0600 postgres:// URL; never use argv credentials")
+    ap.add_argument("--pg-dsn-file", type=Path, required=True, help="Один закрытый URL postgres:// с правами 0600; не передавать секреты в argv")
     ap.add_argument("--require-mixed", action="store_true")
     ap.add_argument("--output", required=True)
     args = ap.parse_args(argv)

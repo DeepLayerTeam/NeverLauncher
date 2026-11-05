@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Delay the 1.17.1 multiplayer handshake until the real client built its blocks atlas.
+"""Задержать рукопожатие мультиплеера 1.17.1, пока настоящий клиент не построит атлас блоков.
 
-This is a localhost-only, byte-for-byte TCP forwarder, not a simulated client
-or a certification shortcut. The server still must log a real player join,
-Runtime must stay healthy, and evidence must prove the gate opened.
+Это TCP-перенаправитель только для localhost с передачей байтов без изменений, а не имитация клиента
+или обход сертификации. Сервер обязан зафиксировать настоящий вход игрока, Runtime — оставаться
+работоспособным, а свидетельства — доказывать открытие шлюза.
 """
 
 from __future__ import annotations

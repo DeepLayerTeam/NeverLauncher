@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Run the shipped Rust Guard diagnostic or combine independent native reports.
+"""Запустить поставляемую Rust-диагностику Guard либо объединить независимые нативные отчёты.
 
-Reports are *observations*, never game-session acceptance or signed GA receipts.
-The matrix keeps absent platforms and unexercised sensors explicitly BLOCKED.
+Отчёты — *наблюдения*, а не приёмка игровых сеансов или подписанные квитанции GA. В матрице
+отсутствующие платформы и непроверенные сенсоры явно остаются BLOCKED.
 """
 from __future__ import annotations
 
@@ -161,7 +161,7 @@ def merge(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    local = sub.add_parser("local", help="execute the actual Guard IPC native probe")
+    local = sub.add_parser("local", help="Выполнить настоящую нативную проверку IPC Guard")
     local.add_argument("--runtime", required=True)
     local.add_argument("--guard", required=True)
     local.add_argument("--java")
@@ -169,7 +169,7 @@ def main() -> int:
     local.add_argument("--minecraft-version")
     local.add_argument("--output", required=True)
     local.set_defaults(handler=run_local)
-    matrix = sub.add_parser("matrix", help="combine native reports without fabricating missing platforms")
+    matrix = sub.add_parser("matrix", help="Объединить нативные отчёты без выдумывания отсутствующих платформ")
     matrix.add_argument("--output", required=True)
     matrix.add_argument("reports", nargs="*")
     matrix.set_defaults(handler=merge)

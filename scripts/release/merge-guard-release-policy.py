@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Merge platform Guard release-policy fragments into one production policy.
+"""Объединить фрагменты политики выпуска Guard для платформ в единую производственную политику.
 
-The command is intentionally fail-closed: all three platforms must be present for
-0.14.x, hashes must be canonical SHA-256, Windows must require Authenticode, and
-macOS must originate from the Developer ID + notarization production path.
+Команда намеренно блокирует при неопределённости: для 0.14.x должны присутствовать все три
+платформы, хеши должны быть каноническими SHA-256; Windows требует Authenticode, а macOS должна
+использовать производственный путь Developer ID с нотариализацией.
 """
 
 from __future__ import annotations

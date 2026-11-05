@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Capture a verified real Minecraft E2E *already executed* on a native host.
+"""Зафиксировать проверенный реальный E2E Minecraft, *уже выполненный* на нативном хосте.
 
-This cannot produce a passing result from dummy main classes or fake launcher
-status. It validates the actual Mojang client, loader, ServerBridge permission
-and Paper join witnesses before emitting the exact final-package correlation.
+Нельзя получить успешный результат из пустых main-классов или поддельного статуса лаунчера. До
+выдачи точной корреляции с финальным пакетом проверяются настоящий клиент Mojang, загрузчик,
+разрешения ServerBridge и свидетельства входа на Paper.
 """
 from __future__ import annotations
 import argparse

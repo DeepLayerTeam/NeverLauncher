@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed execution gate for Launcher 0.32.16.
+"""Шлюз запуска Launcher 0.32.16 с блокировкой при неопределённости.
 
-Runs real Go tests (including the live PostgreSQL, Redis and S3 paths) and
-checks individual Go JSON test events. A clean process exit with skipped,
-missing or unexecuted tests is NOT certification. Evidence is local and is
-not a cryptographic attestation or permission to publish a GA release.
+Запускает настоящие Go-тесты (включая живые PostgreSQL, Redis и S3) и проверяет отдельные
+JSON-события Go-тестов. Чистое завершение процесса при пропущенных, отсутствующих или невыполненных
+тестах НЕ является сертификацией. Свидетельства локальные и не служат криптографической аттестацией
+или разрешением публиковать GA.
 """
 
 from __future__ import annotations

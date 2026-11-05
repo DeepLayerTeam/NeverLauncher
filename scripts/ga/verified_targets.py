@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Independently signed, exact-byte per-target GA authorization for all GA releases.
+"""Независимо подписанное разрешение GA по точным байтам для каждой цели всех GA-выпусков.
 
-Invoked after staging REAL installers and BEFORE the existing release signer.
-An RC test receipt, unsigned CI artifact, or asserted status alone cannot authorize
-GA. Operator signature must bind actual package and executable hashes and nine
-independent live acceptance records per shipped platform/architecture.
-For 0.40.0+ the signed approval additionally binds six complete player-journey
-checks (both identity modes, component graph, textures and recovery) to the
-exact packaged client, not just the source-compiled desktop executable.
+Вызывается ПОСЛЕ подготовки НАСТОЯЩИХ установщиков и ДО штатного подписанта выпуска. Квитанция RC,
+неподписанный CI-артефакт или заявленный статус сами по себе не разрешают GA. Подпись оператора
+должна связывать настоящие хеши пакета и исполняемого файла, а также девять независимых реальных
+приёмочных записей на каждую поставляемую платформу/архитектуру. Начиная с 0.40.0 одобрение
+дополнительно привязывает шесть полных пользовательских сценариев (оба режима идентификации, граф
+компонентов, текстуры и восстановление) к точному упакованному клиенту, а не только к собранному из
+исходников Desktop.
 """
 
 from __future__ import annotations
@@ -266,7 +266,7 @@ def paths(version, target):
 def approval_data(
     evidence: Path, public_key: Path, version: str, commit: str, *, now=None
 ):
-    """Cryptographic preflight prior to staging; full byte-check occurs after build."""
+    """Криптографическая предварительная проверка до подготовки пакета; полная проверка байтов — после сборки."""
     cfg = policy(version)
     require(
         cfg.ga_mode in ("legacy-ga036", "signed-ga-v2")
@@ -505,7 +505,7 @@ def main():
     parser.add_argument(
         "--preflight",
         action="store_true",
-        help="verify signed identity before expensive build; NOT GA approval",
+        help="Проверить подписанную идентичность до затратной сборки; НЕ одобрение GA",
     )
     args = parser.parse_args()
     if args.output:

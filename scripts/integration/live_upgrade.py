@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Independent, LIVE old-installation -> PostgreSQL acceptance on an isolated host.
+"""Независимая приёмка перехода со СТАРОЙ работающей установки на PostgreSQL на изолированном хосте.
 
-`capture` runs against the ORIGINAL running backend. `verify` runs after the
-operator's cutover, on the SAME isolated host. No acceptance can be produced
-from a synthetic SQL receipt, /ready alone, or a bare self-reported PASS flag.
-The original databases are never modified by this tool. Output is 0600 because
-project snapshots may contain private information.
+`capture` работает на ИСХОДНОМ запущенном Backend. `verify` выполняется после переключения
+оператором на ТОМ ЖЕ изолированном хосте. Приёмка невозможна по синтетической SQL-квитанции, одному
+/ready или произвольному флагу PASS. Исходные базы утилита никогда не изменяет. Вывод имеет права
+0600, поскольку снимки проектов могут содержать закрытые сведения.
 """
 from __future__ import annotations
 

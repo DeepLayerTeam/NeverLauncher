@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verify actual `go test -json -race` events for 0.42 host/JVM/fault tests.
+"""Проверить реальные события `go test -json -race` для тестов хоста/JVM/отказов 0.42.
 
-This validator is not a replacement for Minecraft E2E. It verifies that every
-required production-path Go test really passed, with no skips or test-run
-failures, and binds the original Go output to its SHA-256 and source commit.
+Валидатор не заменяет Minecraft E2E. Он убеждается, что все обязательные Go-тесты промышленного пути
+действительно прошли без пропусков и ошибок запуска, и привязывает исходный вывод Go к SHA-256 и
+исходному коммиту.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ HEX_COMMIT = re.compile(r"^[a-f0-9]{40}$|^[a-f0-9]{64}$")
 
 
 def network_gate_version(version: str) -> bool:
-    """The 0.42.0 live gate stays mandatory for all subsequent product versions."""
+    """Реальный шлюз 0.42.0 остаётся обязательным для всех последующих версий продукта."""
     match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?", version)
     return match is not None and tuple(map(int, match.groups()[:3])) >= (0, 42, 0)
 

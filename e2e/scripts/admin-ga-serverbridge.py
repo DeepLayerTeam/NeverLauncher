@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Live ServerBridge v3 operational acceptance against a disposable Minecraft server.
+"""Настоящая эксплуатационная приёмка ServerBridge v3 на одноразовом сервере Minecraft.
 
-Requires a real online Bridge adapter and a freshly MFA-authenticated project
-operator. Never falls back to fabricated ACKs or test-only HTTP endpoints.
+Нужны работающий онлайн-адаптер Bridge и оператор проекта со свежей MFA-аутентификацией. Поддельные
+ACK или тестовые HTTP-эндпоинты не используются.
 """
 
 from __future__ import annotations

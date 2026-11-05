@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Real JDK process verifies 0.50.6's independent Java integrity watcher.
-This is NOT an actual Minecraft launch or an OS-native Guard certification.
+"""Настоящий процесс JDK проверяет независимый Java-монитор целостности 0.50.6.
+Это НЕ реальный запуск Minecraft и не нативная сертификация Guard для ОС.
 """
 import base64,hashlib,os,pathlib,shutil,subprocess,tempfile,unittest
 

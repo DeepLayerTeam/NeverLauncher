@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Two-phase, fail-closed Gravit production ingress cutover on local HAProxy.
+"""Двухфазное промышленное переключение входящего трафика Gravit через локальный HAProxy с блокировкой
+при неопределённости.
 
-The API (PostgreSQL) remains authoritative for release routing and identity.
-HAProxy's admin socket is authoritative for the configured ingress backends.
-These two systems do not share a transaction: any ambiguity leaves ingress in
-MAINT and requires operator reconciliation, not automatic old-world replay.
+API (PostgreSQL) остаётся авторитетным источником маршрутизации выпусков и идентификации.
+Административный сокет HAProxy является источником истины для настроенных входных Backend. У систем
+нет общей транзакции: при любой неоднозначности вход остаётся в состоянии MAINT и требует ручного
+согласования оператором, а не автоматического воспроизведения старого мира.
 """
 from __future__ import annotations
 
@@ -123,7 +124,7 @@ def validate(config: dict, journal_dir: Path):
 
 
 class Proxy:
-    """Real HAProxy runtime socket. No shell and no network-admin credentials."""
+    """Настоящий управляющий сокет HAProxy. Без оболочки и сетевых административных учётных данных."""
     def __init__(self, path: str):
         self.path = path
 

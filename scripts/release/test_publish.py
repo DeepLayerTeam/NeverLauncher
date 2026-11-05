@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Production publication acceptance: real Ed25519 fixture and remote-byte failures.
+"""Приёмка производственной публикации: настоящая фикстура Ed25519 и ошибки удалённых байтов.
 
-The native package fixtures are deliberately synthetic; this suite does not
-attest that the actual platforms or GitHub production runners have passed.
+Нативные фикстуры пакетов намеренно синтетические; набор не подтверждает успешность настоящих
+платформ или производственных раннеров GitHub.
 """
 
 import hashlib

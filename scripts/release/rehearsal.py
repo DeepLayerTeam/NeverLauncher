@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verify final six-platform packages against independently signed GA approval.
+"""Проверить финальные пакеты для шести платформ по независимо подписанному одобрению GA.
 
-`certify` executes BEFORE release manifest signing. `dry-run` copies the signed
-release to an isolated publication directory and invokes the real CLI publish
-validator on the copied files; neither action uploads or promotes a release.
+`certify` выполняется ДО подписи манифеста выпуска. `dry-run` копирует подписанный выпуск в
+изолированный каталог публикации и запускает настоящий CLI-валидатор публикации на копии. Ни одно
+действие не загружает и не продвигает выпуск.
 """
 
 from __future__ import annotations
@@ -171,11 +171,11 @@ def unpack(path: Path) -> dict[str, bytes]:
 def verify_update_payload_0410(
     members: dict[str, bytes], manifest: dict, system: str, arch: str, version: str
 ) -> None:
-    """Check that the *shipped* component updater can consume this exact installer.
+    """Проверить, что *поставляемый* обновляющий компонент может использовать именно этот установщик.
 
-    A successfully signed installer with a stale component update manifest cannot
-    be repaired or rolled back safely. The outer GA signature binds the package;
-    this independently verifies the inner install/update byte graph.
+    Успешно подписанный установщик с устаревшим манифестом обновлений нельзя безопасно исправить или
+    откатить. Внешняя подпись GA связывает пакет; эта проверка независимо сверяет внутренний граф
+    байтов установки/обновления.
     """
     prefix = {"windows": "", "linux": "launcher/", "darwin": "Launcher.app/"}[system]
     manifest_member = (

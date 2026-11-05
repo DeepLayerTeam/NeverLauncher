@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Launcher 0.35.11: real process/network performance measurements.
+"""Launcher 0.35.11: реальные замеры производительности процессов и сети.
 
-Every native measurement executes a supplied compiled Launcher binary. No
-simulation of native command timings is permitted. Fixtures are synthetic and
-clearly identified; measurements of an actual Minecraft distribution require a
-separate supplied signed manifest and installed files.
+Каждая нативная проверка запускает предоставленный скомпилированный Launcher. Имитировать
+длительность нативных команд запрещено. Фикстуры синтетические и явно обозначены; для замеров
+настоящего дистрибутива Minecraft дополнительно нужны предоставленные подписанный манифест и
+установленные файлы.
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ def metadata() -> dict:
 
 
 class ProcessMonitor:
-    """Samples actual process-tree CPU and RSS; fails without psutil."""
+    """Измерять фактическую загрузку CPU и RSS дерева процессов; без psutil завершаться с ошибкой."""
 
     def __init__(self, pid: int):
         if psutil is None:
@@ -332,7 +332,7 @@ def verify_10k(
 
 
 class RepeatingRangeServer:
-    """Actual localhost HTTP Range/200 network transport; bounded RAM and verified wire bytes."""
+    """Настоящая передача HTTP Range/200 через localhost; ограниченная память и проверенные полученные байты."""
 
     def __init__(self, block: bytes, size: int):
         if not block or size < 1:
@@ -716,15 +716,15 @@ def benchmark_api(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runtime", type=Path, help="compiled runtime executable")
+    parser.add_argument("--runtime", type=Path, help="Скомпилированный исполняемый файл Runtime")
     parser.add_argument(
-        "--signer", type=Path, help="compiled runtime cert_sign_fixture example"
+        "--signer", type=Path, help="Скомпилированный пример Runtime cert_sign_fixture"
     )
     parser.add_argument(
-        "--desktop", type=Path, help="compiled Tauri Desktop executable"
+        "--desktop", type=Path, help="Скомпилированный исполняемый файл Tauri Desktop"
     )
     parser.add_argument(
-        "--api-url", help="read-only API URL, actual backend must be running"
+        "--api-url", help="URL API только для чтения; настоящий Backend должен работать"
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repetitions", type=int, default=3)
@@ -733,10 +733,10 @@ def main() -> int:
     parser.add_argument(
         "--confirm-large",
         action="store_true",
-        help="explicitly allow 1 and 10 GiB real network/disk writes",
+        help="Явно разрешить реальные сетевые/дисковые записи объёмом 1 и 10 ГиБ",
     )
     parser.add_argument(
-        "--api-pid", type=int, help="local Backend process PID for CPU/RAM measurements"
+        "--api-pid", type=int, help="PID локального процесса Backend для измерения CPU/RAM"
     )
     parser.add_argument("--api-requests", type=int, default=100)
     parser.add_argument("--api-workers", type=int, default=8)

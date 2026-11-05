@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Real signed-release lifecycle fault testing using the production CLI/updater and Runtime.
+"""Настоящие испытания отказов жизненного цикла подписанного выпуска через производственные
+CLI/обновляющий компонент и Runtime.
 
-The baseline is an externally pinned, independently signed prior release. No
-mock installer, synthetic success, test-only updater hook or mutable stable
-channel pointer is used. A missing baseline or Java replacement is BLOCKED.
+Базовая версия — внешне закреплённый независимо подписанный предыдущий выпуск. Не используются
+подставной установщик, синтетический успех, тестовые хуки обновляющего компонента или изменяемый
+указатель стабильного канала. Отсутствующая базовая версия или замена Java дают BLOCKED.
 """
 
 import hashlib
@@ -218,7 +219,7 @@ class _InterruptHandler(http.server.BaseHTTPRequestHandler):
 
 
 def interrupted_download(actual_file, download_exact, scratch):
-    """Exercise actual signed downloader against half-closed HTTP with REAL staged bytes."""
+    """Проверить настоящий подписанный загрузчик при полуразорванном HTTP на РЕАЛЬНЫХ подготовленных байтах."""
     payload = actual_file.read_bytes()
     require(
         len(payload) >= 2,
@@ -368,7 +369,7 @@ def run_game_launch(
 
 
 def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java, env):
-    """Actual CLI transactions on isolated installation, previous signed bytes, and JVM launches."""
+    """Настоящие CLI-транзакции на изолированной установке, прежние подписанные байты и запуски JVM."""
     work = Path(work)
     root = work / "lifecycle-validation"
     root.mkdir(mode=0o700, parents=True, exist_ok=False)
@@ -727,9 +728,10 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
 def interrupt_and_recover(
     cli, prior_path, current_path, source_root, parent, env, target_phase
 ):
-    """Kill the real updater after a durable journal transition, then run its production recovery.
+    """Завершить настоящий обновляющий компонент после устойчивого перехода журнала, затем запустить
+штатное восстановление.
 
-    A phase not observed is INCONCLUSIVE, never converted into a PASS.
+    Ненаблюдавшийся этап — INCONCLUSIVE, он никогда не превращается в PASS.
     """
     require(target_phase in ("staging", "committing"), "invalid fault phase")
     case = parent / ("interrupted-" + target_phase)

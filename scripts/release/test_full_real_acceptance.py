@@ -1,6 +1,6 @@
-"""Adversarial tests of the executable 18-group GA release gate.
+"""Тесты противодействия обходам исполняемого шлюза GA с 18 группами.
 
-All fixtures are verifier-only inputs, NOT evidence of real user acceptance.
+Все фикстуры — входы только валидатора, НЕ свидетельства реальной пользовательской приёмки.
 """
 from __future__ import annotations
 import hashlib

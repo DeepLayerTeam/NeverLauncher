@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Real signed-manifest Runtime E2E. Requires compiled Rust executables.
+"""Настоящий E2E Runtime с подписанным манифестом. Требуются скомпилированные исполняемые файлы Rust.
 
-Covers poisoned mirror fallback, concurrent scheduler, live vs installed digest,
-cache-only second profile, and rejection of tampered Ed25519 manifest.
+Покрываются переключение после отравленного зеркала, конкурентный планировщик, дайджест работающего
+и установленного компонентов, второй профиль только из кэша и отклонение подменённого манифеста
+Ed25519.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from fault_server import FaultServer, Object
 
 
 def payload(index: int, size: int = 65536) -> bytes:
-    """Deterministic incompressible bytes without randomness or external fixtures."""
+    """Детерминированные несжимаемые байты без случайности и внешних фикстур."""
     return b"".join(
         hashlib.sha256(f"file:{index}:{n}".encode()).digest()
         for n in range((size + 31) // 32)

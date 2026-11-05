@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Destructive 0.52.6 acceptance using real HTTPS API, signed native Runtime and a Minecraft JVM.
+"""Разрушающая приёмка 0.52.6 на реальном HTTPS API, подписанном нативном Runtime и JVM Minecraft.
 
-Requires an isolated project with an already-uploaded v3/schema-5 draft (real
-files), recent phishing-resistant/MFA administrator token, a local Minecraft
-player, and independent SHA-256 pins for native binaries. It does not create
-attestations or bypass release policy. Incomplete validation remains BLOCKED.
+Нужен изолированный проект с уже загруженным черновиком v3/schema-5 (реальные файлы), свежий токен
+администратора с MFA/защитой от фишинга, локальный игрок Minecraft и независимые SHA-256 хеши
+нативных файлов. Утилита не создаёт аттестации и не обходит правила выпуска. Неполная проверка
+остаётся BLOCKED.
 """
 from __future__ import annotations
 

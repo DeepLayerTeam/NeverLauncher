@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Real browser + real Backend hardening checks. No stub endpoints or mocked replies.
+"""Настоящий браузер и проверки защиты настоящего Backend. Без endpoint-заглушек и имитированных ответов.
 
-Run against a dedicated disposable Launcher instance; creates/deletes one
-release draft. E2E_ADMIN_URL, E2E_API_URL, E2E_ADMIN_TOKEN,
-E2E_OPERATOR_TOKEN, E2E_PROJECT_ID and E2E_FOREIGN_PROJECT_ID are required.
+Запускать на выделенном одноразовом экземпляре Launcher; создаётся и удаляется один черновик
+выпуска. Обязательны E2E_ADMIN_URL, E2E_API_URL, E2E_ADMIN_TOKEN, E2E_OPERATOR_TOKEN, E2E_PROJECT_ID
+и E2E_FOREIGN_PROJECT_ID.
 """
 
 from __future__ import annotations

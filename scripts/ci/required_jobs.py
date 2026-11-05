@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed aggregate of actual GitHub Actions `needs` job conclusions.
+"""Обязательная сводная проверка реальных итогов заданий GitHub Actions `needs` с блокировкой при
+неопределённости.
 
-The workflow is the source of the required job set, not a manually maintained
-allowlist that can accidentally omit a new security/packaging job.
+Сам workflow определяет обязательный набор заданий, а не вручную поддерживаемый список разрешений,
+который может случайно пропустить новую проверку безопасности или упаковки.
 """
 from __future__ import annotations
 

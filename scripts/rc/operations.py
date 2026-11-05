@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Execute ACTUAL isolated Docker full-state backup, fresh restore and chaos.
+"""Выполнить НАСТОЯЩИЕ изолированные полное резервное копирование Docker, восстановление на чистой
+установке и хаос-тесты.
 
-Never uses a production Compose project. Must be launched on a staging host
-with real isolated services already running and external writers fenced.
-Restores into a DIFFERENT empty project and checks the real readiness endpoint;
-this is not evidence of production HA, credential recovery or game E2E.
+Промышленный проект Compose никогда не используется. Запускать на staging-хосте с уже работающими
+изолированными службами и отсечёнными внешними писателями. Восстанавливать в ДРУГОЙ пустой проект и
+проверять реальный эндпоинт готовности; это не свидетельство производственного HA, восстановления
+учётных данных или игрового E2E.
 """
 
 from __future__ import annotations

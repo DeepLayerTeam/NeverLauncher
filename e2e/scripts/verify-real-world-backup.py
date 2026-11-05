@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Exercise actual Paper world backup/restore after an actual Minecraft join.
+"""Проверить настоящее резервное копирование/восстановление мира Paper после настоящего входа в Minecraft.
 
-Runs on the disposable Docker Compose E2E network, NOT a production host.
-Intentionally refuses a missing playerdata file, unsuccessful server exit,
-missing plugin configuration, bad hashes, and overwriting restored data.
+Работает в одноразовой сети E2E Docker Compose, НЕ на производственном хосте. Намеренно отклоняет
+отсутствие файла playerdata, неуспешное завершение сервера, отсутствие конфигурации плагина,
+неправильные хеши и перезапись восстановленных данных.
 """
 
 import argparse

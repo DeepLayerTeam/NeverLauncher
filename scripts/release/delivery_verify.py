@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Verify real six-target delivery binaries and their package manifests.
+"""Проверить настоящие бинарные файлы поставки для шести целей и манифесты их пакетов.
 
-This is an additional binary-integrity gate, *not* a substitute for OS
-Authenticode/codesign validation, independent operator approval or E2E tests.
+Это дополнительный шлюз целостности бинарных файлов, *не* замена проверкам ОС Authenticode/codesign,
+независимому одобрению оператора или E2E-тестам.
 """
 from __future__ import annotations
 import argparse

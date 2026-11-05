@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Perform physical 0.52.10 HA/DR experiments, NOT Docker-only simulations.
+"""Проводить физические эксперименты HA/DR 0.52.10, а НЕ симуляции только на Docker.
 
-Run from an independent Linux observer on disposable HA hardware. Fail closed
-if BMC, router, alert receiver, surviving hosts or restored world disagree.
-Journal physical mutations before executing them and recover via `heal`.
+Запускать с независимого Linux-наблюдателя на одноразовом оборудовании HA. Блокировать при
+расхождениях BMC, маршрутизатора, получателя оповещений, уцелевших хостов или восстановленного мира.
+До физических изменений записывать их в журнал; восстановление через `heal`.
 """
 from __future__ import annotations
 import argparse
@@ -537,7 +537,7 @@ def game_restore(args):
     return output(args, result)
 
 def dependency_drill(args):
-    """Execute a genuine HAProxy/Patroni/Redis/S3 disruption and revalidate it."""
+    """Выполнить настоящий отказ HAProxy/Patroni/Redis/S3 и повторно его проверить."""
     require(args.allow_disruption == 'I-ACCEPT-PHYSICAL-OUTAGE',
             'live dependency failover needs explicit disruption approval')
     require(args.service in ('patroni', 'redis-server', 'minio') and args.backend_server and

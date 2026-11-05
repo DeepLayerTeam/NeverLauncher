@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""0.48.0 in-place legacy upgrade using the existing production updaters.
+"""0.48.0: обновление унаследованной установки на месте штатными промышленными обновляющими компонентами.
 
-Operators provide independently pinned signed packages/images. No source-tree
-installation, replacement demo config, trust-policy bypass or implicit DB migration.
-A private byte-for-byte backup of selected *user data* is created BEFORE any
-native updater runs; the journal refuses unsafe automatic replay after a crash.
+Операторы предоставляют независимо закреплённые подписанные пакеты/образы. Никакой установки из
+дерева исходников, подставной демо-конфигурации, обхода политики доверия или неявной миграции БД.
+Закрытая побайтовая копия выбранных *пользовательских данных* создаётся ДО запуска любого нативного
+обновления. Журнал запрещает опасное автоматическое воспроизведение после сбоя.
 """
 from __future__ import annotations
 
@@ -126,7 +126,7 @@ def read_json(path: Path):
 
 
 def client_source_version(root: Path, *, allow_target=False):
-    """Use the native component-state record, not user-written demo manifests."""
+    """Использовать штатную запись состояния компонента, а не пользовательские демонстрационные манифесты."""
     path = root / '.launcher' / 'component-update-state.json'
     require(path.is_file() and not path.is_symlink(),
             'no existing native component-update-state; legacy layout requires separate verified conversion')
@@ -140,7 +140,7 @@ def client_source_version(root: Path, *, allow_target=False):
 
 
 def prestarter_source(root: Path):
-    """Validate existing redundant installer slots; native verify-installed checks signatures."""
+    """Проверять существующие резервные слоты установщика; штатный verify-installed проверяет подписи."""
     base = root / '.launcher-installer'
     checked_dir(base)
     slots = []
@@ -183,7 +183,7 @@ def validate_data_path(root: Path, relative: str):
 
 
 def enumerate_data(root: Path, names: list[str]):
-    """Inspect every byte that is claimed protected; reject symlinks/devices."""
+    """Проверять каждый заявленный защищённым байт; отклонять символьные ссылки и устройства."""
     require(len(set(names)) == len(names), 'duplicate protected user data path')
     for left in names:
         for right in names:
@@ -215,7 +215,7 @@ def enumerate_data(root: Path, names: list[str]):
 
 
 def copy_data(root: Path, snapshot: Path, original: dict):
-    """Independent copies, never hard links into mutable installation."""
+    """Создавать независимые копии, а не жёсткие ссылки на изменяемую установку."""
     for name, info in sorted(original.items(), key=lambda it: (it[0].count('/'), it[0])):
         dst = snapshot / name
         if info['kind'] == 'dir':
@@ -310,7 +310,7 @@ def host_update(root: Path, args, source):
 
 
 def jar_metadata_version(jar: Path):
-    """Read the real installed plugin descriptor; unknown formats fail closed."""
+    """Читать реальный дескриптор установленного плагина; при неизвестном формате запрещать продолжение."""
     require(jar.is_file() and not jar.is_symlink(), 'installed Bridge plugin missing')
     try:
         with zipfile.ZipFile(jar) as archive:
@@ -461,7 +461,7 @@ def backend_upgrade(args):
 
 
 def rollback_host(args):
-    """Recover a 0.48.0 Linux executable using the original pinned backup receipt."""
+    """Восстановить Linux-файл 0.48.0 из исходной закреплённой квитанции резервирования."""
     require(args.root and args.install and args.component in ('api', 'cli', 'bridge'),
             'host rollback requires existing root, installed binary and component')
     root = checked_dir(Path(args.root).absolute())
@@ -552,10 +552,10 @@ def execute(args):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['backend', 'client', 'prestarter', 'host', 'bridge-jar', 'rollback-host'])
-    parser.add_argument('--root', help='existing installation (no new install)')
-    parser.add_argument('--backup', required=True, help='new external directory under protected 0700 parent')
-    parser.add_argument('--data', action='append', help='relative immutable user-data path; repeat for all user directories')
-    parser.add_argument('--from-version', help='independently pinned old release, checked against installed state')
+    parser.add_argument('--root', help="Существующая установка (не новая)")
+    parser.add_argument('--backup', required=True, help="Новый внешний каталог под защищённым родителем с правами 0700")
+    parser.add_argument('--data', action='append', help="Относительный неизменяемый путь пользовательских данных; повторить для всех каталогов")
+    parser.add_argument('--from-version', help="Независимо закреплённый старый выпуск, проверенный по установленному состоянию")
     parser.add_argument('--cli'); parser.add_argument('--cli-sha256')
     parser.add_argument('--package'); parser.add_argument('--sha256'); parser.add_argument('--installer-sha256')
     parser.add_argument('--delivery-manifest'); parser.add_argument('--installer'); parser.add_argument('--bundle')

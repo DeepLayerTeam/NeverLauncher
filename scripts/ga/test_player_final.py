@@ -1,7 +1,7 @@
-"""Exercise the production, independently signed final-package player gate.
+"""Проверить производственный шлюз игрока для финального пакета с независимой подписью.
 
-These temporary signed fixtures verify rejection behavior only. They are not
-player certifications and must never be packaged as release evidence.
+Временные подписанные фикстуры проверяют только отказоустойчивость. Они не являются сертификатами
+игроков и никогда не должны входить в свидетельства выпуска.
 """
 
 from __future__ import annotations

@@ -38,7 +38,7 @@ class InventoryTests(unittest.TestCase):
         self.fake = fixture_matrix.MatrixToolTests('test_aggregate_accepts_bound_multiversion_java_evidence')
 
     def make(self, target):
-        """Fabricated data only to exercise the verifier, NOT a game run."""
+        """Искусственные данные предназначены только для проверки валидатора, НЕ для игрового запуска."""
         doc = copy.deepcopy(self.fake.passing_result(target, commit=COMMIT))
         doc['runId'] = RUN_ID
         doc['runAttempt'] = 1

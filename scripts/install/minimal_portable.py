@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Authenticated, streaming transfer for the existing offline minimal backup.
+"""Аутентифицированная потоковая передача существующей автономной минимальной резервной копии.
 
-An encrypted archive is portable across Linux hosts. AES-256-GCM authenticates
-all archive bytes; scrypt derives the key from an independently transported
-passphrase file. Never publish a decrypted or partially restored installation.
-Requires Python cryptography >= 41 on both hosts.
+Зашифрованный архив переносим между Linux-хостами. AES-256-GCM аутентифицирует все байты архива;
+scrypt выводит ключ из файла пароля, передаваемого независимым каналом. Нельзя публиковать
+расшифрованную или частично восстановленную установку. На обоих хостах требуется Python cryptography
+>= 41.
 """
 
 import argparse
@@ -165,7 +165,7 @@ def _decrypt_to(archive_path, target, secret):
 
 
 def _extract_authenticated(tar_path, destination):
-    """Never call tarfile.extractall on attacker-controlled content."""
+    """Никогда не вызывать tarfile.extractall для содержимого, контролируемого атакующим."""
     seen = set()
     with tarfile.open(tar_path, mode="r:") as archive:
         for member in archive:

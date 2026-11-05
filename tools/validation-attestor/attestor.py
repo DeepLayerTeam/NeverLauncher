@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Independent host-side V04/V06 attestor. Execute inside the worker.
+"""Независимый аттестатор V04/V06 на стороне хоста. Выполняется внутри исполнителя.
 
-An operator-controlled, non-root host invokes ONLY the pre-approved OCI image
-by digest. The Ed25519 private key stays in this host process, in OCI,
-CI, Docker environment, network or mounted volumes. Only verified on-disk
-observations from this execution are signed, not uploaded JSON from callers.
+Контролируемый оператором непривилегированный хост запускает ТОЛЬКО предварительно одобренный
+OCI-образ по дайджесту. Закрытый ключ Ed25519 остаётся в этом процессе хоста, в OCI, CI, окружении
+Docker, сети или смонтированных томах. Подписываются только проверенные наблюдения файлов на диске
+из этого запуска, а не загруженные вызывающими сторонами JSON.
 """
 
 import argparse
@@ -122,7 +122,7 @@ def needs_adversarial_gameplay(version):
 
 
 def verify_adversarial_gameplay_04314(work, signed_manifest, snapshot, game):
-    """Independent host: bind negative probes to staged bytes and game proof."""
+    """Независимый хост: привязывать отрицательные проверки к подготовленным байтам и подтверждению игрового запуска."""
     proof = read_json(work / "adversarial-gameplay-04314.json")
     assertion = game.get("adversarialGameplay04314")
     check(isinstance(assertion, dict) and assertion.get("status") == "passed"
@@ -188,9 +188,9 @@ def canonical(obj):
 
 
 def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
-    """Independently check actual release bytes and native lifecycle diagnostics.
+    """Независимо проверять настоящие байты выпуска и диагностику нативного жизненного цикла.
 
-    Trust a worker-supplied list of PASS assertions on its own.
+    Сам по себе список утверждений PASS, переданный исполнителем, принимается на доверие.
     """
     proof = read_json(work / "update-recovery.json")
     root = work / "lifecycle-validation"
@@ -365,7 +365,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
 
 
 def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridge_sha):
-    """Only run after a trusted, pinned OCI container has exited successfully."""
+    """Запускать только после успешного завершения доверенного OCI-контейнера с закреплённым образом."""
     report = read_json(work / "staged-execution.json")
     check(
         report["schemaVersion"] == "launcher.staged-runtime-run.v1",
@@ -1255,11 +1255,11 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
 
 
 def execute_matrix(cfg, package_id):
-    """Execute every required target on its OWN fresh staged grant and OCI job.
+    """Для КАЖДОЙ обязательной цели запускать собственный новый подготовленный допуск и OCI-задание.
 
-    A failed case remains failed. A passing default cannot be substituted for a
-    missing preset. Unsupported OS/arch targets remain incomplete until a
-    real matching worker executes them; no synthetic pass is emitted.
+    Неуспешный сценарий остаётся неуспешным. Успешный сценарий по умолчанию не заменяет
+    отсутствующий пресет. Неподдерживаемые сочетания ОС/архитектуры остаются незавершёнными, пока их
+    не выполнит реальный подходящий исполнитель; синтетический PASS не выдаётся.
     """
     initial = request_json(
         cfg.backend,
@@ -1348,67 +1348,67 @@ def main():
     p.add_argument(
         "--operator-token-file",
         required=True,
-        help="0600 host-only credential file; enters worker",
+        help="Файл учётных данных только для хоста с правами 0600; передаётся исполнителю",
     )
     p.add_argument(
         "--signing-key",
         required=True,
-        help="Host-only Ed25519 PKCS8 PEM, permission 0600",
+        help="Ed25519 PKCS8 PEM только для хоста, права доступа 0600",
     )
     p.add_argument(
-        "--image", required=True, help="Trusted fully pinned image name@sha256:..."
+        "--image", required=True, help="Доверенное имя образа с полным закреплённым дайджестом name@sha256:..."
     )
     p.add_argument("--auth-mode", choices=("official", "custom"), required=True)
     p.add_argument(
-        "--credentials-file", default="", help="Custom-Yggdrasil test-session JSON only"
+        "--credentials-file", default="", help="Только JSON тестового сеанса Custom-Yggdrasil"
     )
     p.add_argument(
         "--official-client-id",
         default="",
-        help="Dedicated Microsoft public-client app ID",
+        help="ID выделенного публичного приложения Microsoft",
     )
     p.add_argument(
         "--official-refresh-token-file",
         default="",
-        help="Host-only authorized test account refresh token, 0600",
+        help="Авторизованный refresh-токен тестовой учётной записи только на хосте, права 0600",
     )
     p.add_argument(
         "--negative-credentials-file",
         default="",
-        help="Separate live session for custom revocation",
+        help="Отдельный живой сеанс для проверки отзыва Custom",
     )
     p.add_argument(
         "--guard-denied-credentials-file",
         default="",
-        help="Real live policy-denied session",
+        help="Настоящий живой сеанс, отклоняемый политикой",
     )
     p.add_argument(
         "--previous-bundle-file",
         required=True,
-        help="Host-approved actual previous signed release ZIP",
+        help="Одобренный хостом настоящий ZIP предыдущего подписанного выпуска",
     )
     p.add_argument(
-        "--previous-sha", required=True, help="SHA-256 of prior-release bundle"
+        "--previous-sha", required=True, help="SHA-256 пакета предыдущего выпуска"
     )
     p.add_argument(
         "--replacement-java-home",
         required=True,
-        help="Host-approved different JDK/JRE directory",
+        help="Одобренный хостом каталог другой версии JDK/JRE",
     )
     p.add_argument(
         "--managed-java-manifest-file",
         required=True,
-        help="Pinned production Temurin distribution manifest; archive in same directory",
+        help="Закреплённый манифест промышленного дистрибутива Temurin; архив в том же каталоге",
     )
     p.add_argument(
         "--managed-java-sha",
         required=True,
-        help="SHA-256 of pinned Managed JRE manifest",
+        help="SHA-256 закреплённого манифеста Managed JRE",
     )
     p.add_argument(
         "--server-bundle-file",
         default="",
-        help="Host-pinned complete matching server ZIP",
+        help="Полный ZIP соответствующего сервера, закреплённый на хосте",
     )
     p.add_argument("--server-sha", default="")
     p.add_argument("--server-entry", default="")
@@ -1422,12 +1422,12 @@ def main():
     p.add_argument(
         "--diagnostics-dir",
         required=True,
-        help="Host-only 0700 redacted worker diagnostic spool",
+        help="Закрытый диагностический каталог исполнителя с правами 0700 и удалёнными секретами",
     )
     p.add_argument("--diagnostics-ttl-hours", type=int, default=168)
     p.add_argument("--engine", choices=("podman",), default="podman")
     p.add_argument(
-        "--package-id", help="One-shot attestation; omit for the mTLS service"
+        "--package-id", help="Разовая аттестация; не указывать для службы mTLS"
     )
     p.add_argument("--listen", default="127.0.0.1:8845")
     p.add_argument("--tls-cert", default="")

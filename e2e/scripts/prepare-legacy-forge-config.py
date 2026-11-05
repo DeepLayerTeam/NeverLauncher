@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Seed Forge 1.14.4's first-launch FML config before NightConfig 3.6.0 loads it.
+"""Создать исходную конфигурацию FML первого запуска Forge 1.14.4 до загрузки NightConfig 3.6.0.
 
-This old NightConfig release may throw ConcurrentModificationException when
-correcting a missing defaultConfigPath on a fresh client. Only create a missing
-file; never overwrite an existing player's Forge configuration.
+Эта старая версия NightConfig может выбросить ConcurrentModificationException при исправлении
+отсутствующего defaultConfigPath на новом клиенте. Создавать только отсутствующий файл; никогда не
+перезаписывать существующую конфигурацию Forge игрока.
 """
 import argparse
 from pathlib import Path

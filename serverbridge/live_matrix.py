@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed *runtime* certification of ServerBridge 0.41.13.
+"""Сертификация *работающего* ServerBridge 0.41.13 с блокировкой при неопределённости.
 
-Reads evidence written while a real Docker JVM is running, plus independently
-persisted network probes and unmodified runtime logs. Build-only, unit and
-client-only certifications never satisfy this gate.
+Читаются свидетельства, записанные во время работы настоящей Docker JVM, отдельно сохранённые
+сетевые проверки и неизменённые журналы Runtime. Сертификация только сборки, модульных тестов или
+одного клиента этому шлюзу не удовлетворяет.
 """
 
 from __future__ import annotations

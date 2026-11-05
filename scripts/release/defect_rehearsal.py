@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Freeze and independently rehearse an exact 0.52.12 release candidate.
+"""Зафиксировать и независимо репетировать точный кандидат выпуска 0.52.12.
 
-No manifest-only/receipt-only success: every rehearsal reopens six signed final
-package BYTES, executes source regressions, and replays the complete raw
-0.52.12 compatibility/native/reproducibility/soak evidence with the existing
-live validators. A separately signed issue-tracker export supplies the P0/P1
-closure decision. Missing real external runs BLOCK rehearsal and never become
-GA by the presence of this script.
+Никакого успеха только по манифесту/квитанции: каждая репетиция повторно открывает БАЙТЫ шести
+финальных подписанных пакетов, выполняет регрессии исходников и проверяет все исходные свидетельства
+0.52.12 по совместимости, нативным запускам, воспроизводимости и длительным прогонам штатными живыми
+валидаторами. Отдельно подписанный экспорт трекера дефектов определяет закрытие P0/P1. Отсутствие
+настоящих внешних запусков БЛОКИРУЕТ репетицию и не превращается в GA из-за присутствия скрипта.
 """
 from __future__ import annotations
 

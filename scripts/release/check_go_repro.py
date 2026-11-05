@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build a real NeverLauncher Go CLI twice with distinct source roots/mtimes.
+"""Дважды собрать настоящий Go CLI NeverLauncher с разными корнями исходников и временем файлов.
 
-This is a LOCAL regression, not the externally signed six-target proof.
-No simulated executable or provided fixture can satisfy this check.
+Это ЛОКАЛЬНАЯ регрессионная проверка, а не внешне подписанное подтверждение шести платформ.
+Имитированный исполняемый файл или предоставленная фикстура не удовлетворяют проверке.
 """
 from __future__ import annotations
 import hashlib

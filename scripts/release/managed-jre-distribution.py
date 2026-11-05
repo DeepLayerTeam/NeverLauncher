@@ -395,7 +395,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build Launcher Managed JRE Distribution from exact Eclipse Temurin vendor archives"
+        description="Собрать дистрибутив Managed JRE Launcher из точных архивов поставщика Eclipse Temurin"
     )
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--version", required=True)

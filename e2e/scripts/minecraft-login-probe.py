@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Minimal Minecraft Java login probe used for bridge allow/revoke/deny coverage.
+"""Минимальная проверка входа Minecraft Java для сценариев Bridge allow/revoke/deny.
 
-The primary release gate launches the actual Mojang client. This probe is
-kept only for fast protocol-level bridge checks after session issuance or
-revocation; it is not accepted as evidence of Minecraft client compatibility.
+Основной шлюз выпуска запускает настоящий клиент Mojang. Эта проверка оставлена только для быстрых
+протокольных проверок Bridge после выдачи или отзыва сеанса; она не принимается как доказательство
+совместимости клиента Minecraft.
 
-Forge and NeoForge run their pre-world Launcher gates in Minecraft's
-CONFIGURATION phase. --enter-configuration performs the LOGIN -> CONFIGURATION
-transition. --drive-neoforge-configuration additionally completes NeoForge's
-vanilla-client prelude (Ping/Pong and Select Known Packs) without entering PLAY.
+Forge и NeoForge выполняют свои предмировые шлюзы Launcher в фазе CONFIGURATION Minecraft.
+--enter-configuration выполняет переход LOGIN -> CONFIGURATION. --drive-neoforge-configuration
+дополнительно завершает вступительную последовательность vanilla-клиента NeoForge (Ping/Pong и
+Select Known Packs), не переходя в PLAY.
 """
 
 from __future__ import annotations
@@ -264,12 +264,11 @@ def drive_neoforge_configuration(
     compression_threshold: int | None,
     seconds: float,
 ) -> tuple[str, int, int, int, int]:
-    """Drive the NeoForge 1.21.1 vanilla-client CONFIGURATION prelude.
+    """Выполнить вступительную последовательность CONFIGURATION vanilla-клиента NeoForge 1.21.1.
 
-    NeoForge waits for Pong(0) before runConfiguration(), then vanilla's
-    SynchronizeRegistriesTask waits for ServerboundSelectKnownPacks. Replying
-    to those protocol-native packets is sufficient to let server-only
-    configuration tasks (including Launcher) execute without a client mod.
+    NeoForge ожидает Pong(0) перед runConfiguration(), затем vanilla SynchronizeRegistriesTask
+    ожидает ServerboundSelectKnownPacks. Ответов на эти штатные пакеты протокола достаточно, чтобы
+    серверные задачи конфигурации (включая Launcher) выполнились без клиентского мода.
     """
     deadline = time.monotonic() + max(0.0, seconds)
     wire_bytes = 0
@@ -362,26 +361,25 @@ def main() -> int:
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--username", required=True)
     parser.add_argument(
-        "--protocol", type=int, default=767, help="Minecraft 1.21.1 protocol"
+        "--protocol", type=int, default=767, help="Протокол Minecraft 1.21.1"
     )
     parser.add_argument(
         "--enter-configuration",
         action="store_true",
-        help="complete LOGIN through Login Acknowledged and hold CONFIGURATION open",
+        help="Завершить LOGIN через Login Acknowledged, оставив CONFIGURATION открытой",
     )
     parser.add_argument("--login-timeout-seconds", type=float, default=8.0)
     parser.add_argument("--configuration-hold-seconds", type=float, default=8.0)
     parser.add_argument(
         "--drive-neoforge-configuration",
         action="store_true",
-        help="reply to NeoForge 1.21.1 CONFIGURATION Ping and Select Known Packs packets",
+        help="Ответить на пакеты CONFIGURATION Ping и Select Known Packs для NeoForge 1.21.1",
     )
     parser.add_argument(
         "--allow-pre-configuration-disconnect",
         action="store_true",
         help=(
-            "treat LOGIN disconnect/EOF/reset before Login Acknowledged as a successful "
-            "transport terminal; callers must still assert the Launcher deny marker"
+            "Считать отключение/EOF/сброс LOGIN до Login Acknowledged успешным завершением транспорта; вызывающий код всё равно должен проверить маркер отказа Launcher"
         ),
     )
     args = parser.parse_args()

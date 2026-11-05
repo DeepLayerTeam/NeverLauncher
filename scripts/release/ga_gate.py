@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""0.48.0 final release admission: independently signed LIVE acceptance + actual delivery.
+"""Финальный допуск выпуска 0.48.0: независимо подписанная ЖИВАЯ приёмка и настоящая поставка.
 
-An attestation alone never makes a failed migration pass. Require all native
-artifacts, a complete live owner/storage/PG acceptance, actual historical
-upgrades and two real Mojang client/server versions. This verifier consumes
-EXTERNAL outputs; it does not synthesize evidence or bypass SQLite cutover.
+Одна аттестация не превращает неудачную миграцию в успешную. Нужны все нативные артефакты, полная
+живая приёмка владельца/хранилища/PG, настоящие исторические обновления и две реальные версии
+клиента/сервера Mojang. Валидатор использует ВНЕШНИЕ результаты, не синтезирует свидетельства и не
+обходит переключение SQLite.
 """
 from __future__ import annotations
 

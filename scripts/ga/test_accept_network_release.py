@@ -1,7 +1,7 @@
-"""Negative regressions for exact-byte final package and Go crash evidence.
+"""Отрицательные регрессии для точных байтов финального пакета и свидетельств сбоев Go.
 
-These deliberately synthetic fixtures are local tests; they cannot count as
-real Minecraft/JVM/Proxy certification for a release.
+Намеренно синтетические фикстуры — локальные тесты; их нельзя засчитывать как настоящую сертификацию
+Minecraft/JVM/Proxy для выпуска.
 """
 
 import hashlib

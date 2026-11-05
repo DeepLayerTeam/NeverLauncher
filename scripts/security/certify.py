@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Launcher 0.31.14 adversarial test executor and evidence gate.
+"""Launcher 0.31.14: исполнитель проверок противодействия атакам и шлюз свидетельств.
 
-Runs real Go test executables (never parses source text as proof of success).
-A skipped/absent required test, unsupported runtime or failing command is BLOCKED
-or FAIL, never PASS. The release gate requires separate live-platform evidence.
+Запускаются настоящие Go-тесты (текст исходников не считается доказательством успеха). Пропущенный
+или отсутствующий обязательный тест, неподдерживаемый Runtime либо неуспешная команда дают BLOCKED
+или FAIL, но не PASS. Шлюзу выпуска требуются отдельные свидетельства с реальных платформ.
 """
 
 import argparse

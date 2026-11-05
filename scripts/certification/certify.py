@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed 0.24.0 certification runner. Writes reproducible evidence, not promises.
+"""Раннер сертификации 0.24.0 с блокировкой при неопределённости. Создаёт воспроизводимые
+свидетельства, а не обещания.
 
-local: run accessible tests and record missing gates as incomplete;
-full: require exact git SHA, clean source, Rust/Go integration, real JVM,
-Windows file-lock E2E, signed bootstrap and same-stand 0.23.0 benchmark.
+local: выполнять доступные тесты и помечать отсутствующие проверки как неполные;
+full: требовать точный SHA Git, чистые исходники, интеграцию Rust/Go, настоящую JVM, Windows E2E с
+блокировкой файлов, подписанную начальную загрузку и сравнение с 0.23.0 на том же стенде.
 """
 
 from __future__ import annotations

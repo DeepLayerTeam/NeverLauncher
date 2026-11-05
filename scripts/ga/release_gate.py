@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verify *signed* six-platform GA evidence and the exact artifacts it describes.
+"""Проверить *подписанные* свидетельства GA для шести платформ и описанные ими точные артефакты.
 
-Only an authorized release CI signing key may produce an accepted attestation.
-This verifier cannot create attestations or label unsigned packages as GA.
-Evidence is deliberately external to source code and bound to one exact SHA.
+Принятую аттестацию может создать только разрешённый ключ подписи CI выпуска. Валидатор не создаёт
+аттестации и не называет неподписанные пакеты GA. Свидетельства намеренно внешние к исходникам и
+привязаны к одному точному SHA.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ def strict_json(raw: bytes) -> dict:
 def load_attested_file(
     folder: Path, name: str, digest: str, *, binary: bool = False
 ) -> bytes:
-    """Only direct, ordinary files inside the target folder are eligible."""
+    """Подходят только обычные файлы непосредственно в целевом каталоге."""
     if not name or Path(name).name != name or name in {".", ".."}:
         raise ValueError(f"unsafe artifact path: {name!r}")
     if not SHA256.fullmatch(digest):

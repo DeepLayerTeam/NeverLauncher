@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Executable Manifest v3 component certification against the *real* runtime binary.
+"""Исполняемая сертификация компонентов Manifest v3 на *настоящем* бинарном файле Runtime.
 
-No mocked client, fake success, arbitrary downloaded manifests or embedded private
-release keys. The signer example accepts a certification-only test seed. This suite
-uses a temporary installation and an HTTP fault server bound to loopback.
+Без имитаций клиента, ложных успехов, произвольных загруженных манифестов и встроенных закрытых
+ключей выпуска. Пример подписанта принимает тестовый seed только для сертификации. Набор использует
+временную установку и локальный HTTP-сервер для инъекции сбоев.
 """
 
 from __future__ import annotations

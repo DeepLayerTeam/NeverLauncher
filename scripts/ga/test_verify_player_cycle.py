@@ -1,5 +1,5 @@
-"""Verifier regressions use synthetic fixtures ONLY to test rejection logic;
-these unit tests are not live-Minecraft evidence or player certification.
+"""Регрессионные тесты валидатора используют синтетические фикстуры ТОЛЬКО для логики отклонения;
+эти модульные тесты не являются свидетельствами живого Minecraft или сертификацией игрока.
 """
 from __future__ import annotations
 

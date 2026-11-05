@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fail closed on a reused, partial, skipped or stale active Admin/Profile GA receipt.
+"""Блокировать повторно использованную, частичную, пропущенную или устаревшую квитанцию активной GA
+Admin/Profile.
 
-Receipt authenticity comes from the current GitHub Actions run artifacts and
-restricted CI execution; this parser does not replace signed operator approval.
+Подлинность квитанции устанавливается по артефактам текущего GitHub Actions и защищённому исполнению
+CI; этот парсер не заменяет подписанное одобрение оператора.
 """
 from __future__ import annotations
 

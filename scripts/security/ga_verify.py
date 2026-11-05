@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail-closed GA signoff for exact-source, independently signed live evidence.
+"""Безопасное подтверждение GA по точным исходникам и независимо подписанным реальным свидетельствам.
 
-This *verifies* reports; it cannot manufacture hardware/OS evidence. The signing
-private key is held by the release security approver, never by build/test jobs.
+Утилита *проверяет* отчёты, но не может создавать свидетельства оборудования/ОС. Закрытый ключ
+подписи хранится у ответственного за безопасность выпуска, а не в заданиях сборки или тестирования.
 """
 
 from __future__ import annotations

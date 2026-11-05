@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Execute the *released staged bytes*, not an upstream/Client Factory rebuild.
+"""Выполнять *подготовленные байты выпуска*, а не пересборку upstream/Client Factory.
 
-Must run on an isolated CI host with a real GUI renderer for startup. A report
-from this script is observational, never accepted as stable certification.
+Для запуска нужен изолированный CI-хост с настоящим GUI-рендерером. Отчёт скрипта — наблюдение и
+никогда не принимается как стабильная сертификация.
 """
 
 import argparse
@@ -193,7 +193,7 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
 
 
 def native_json(cmd, destination, env):
-    """Execute pinned Runtime with bounded structured stdout; no shell."""
+    """Запускать закреплённый Runtime с ограниченным структурированным stdout; без оболочки."""
     completed = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
@@ -1114,16 +1114,16 @@ def main():
     parser.add_argument(
         "--admin-token-file",
         default="",
-        help="Owner-only operator token file (avoid process-argument secrets)",
+        help="Файл токена оператора доступен только владельцу (не передавать секреты через argv)",
     )
     parser.add_argument(
         "--grant-file",
         default="",
-        help="Limited staged grant injected by trusted host; not operator admin credentials",
+        help="Ограниченный промежуточный допуск от доверенного хоста; не административные данные оператора",
     )
     parser.add_argument("--package-id", required=True)
     parser.add_argument("--expected-version", default="",
-                        help="Exact expected signed product version for native GA validation")
+                        help="Точная ожидаемая подписанная версия продукта для нативной проверки GA")
     parser.add_argument("--output", required=True)
     parser.add_argument("--cli", required=True)
     parser.add_argument("--runtime", required=True)
@@ -1134,83 +1134,83 @@ def main():
     parser.add_argument(
         "--preset",
         default="",
-        help="Backend-required named preset or signed @custom selection",
+        help="Обязательный именованный пресет Backend или подписанный выбор @custom",
     )
     parser.add_argument(
         "--auth-mode",
         choices=("official", "custom"),
         default="",
-        help="Actual provider, never mock/offline certification",
+        help="Настоящий провайдер; не имитация и не автономная сертификация",
     )
     parser.add_argument(
         "--credentials-file",
         default="",
-        help="Host-injected real short-lived Minecraft credential JSON",
+        help="Настоящий краткоживущий JSON учётных данных Minecraft, внедрённый хостом",
     )
     parser.add_argument(
         "--negative-credentials-file",
         default="",
-        help="Separate revocable custom-auth test session",
+        help="Отдельный отзывный тестовый сеанс Custom Auth",
     )
     parser.add_argument(
         "--guard-denied-credentials-file",
         default="",
-        help="Separate live trust-denied test identity",
+        help="Отдельная живая тестовая идентичность с отказом по доверию",
     )
     parser.add_argument(
         "--previous-bundle",
         default="",
-        help="Host-pinned ZIP of real previous signed release including exact staged files",
+        help="Закреплённый хостом ZIP реального предыдущего подписанного выпуска с точными подготовленными файлами",
     )
     parser.add_argument(
         "--previous-sha256",
         default="",
-        help="SHA-256 of host-approved previous release ZIP",
+        help="SHA-256 ZIP предыдущего выпуска, одобренного хостом",
     )
     parser.add_argument(
         "--replacement-java",
         default="",
-        help="Different actual Java binary, same required major, for lifecycle launch",
+        help="Другой настоящий бинарный Java той же требуемой основной версии для жизненного цикла",
     )
     parser.add_argument(
         "--managed-java-manifest",
         default="",
-        help="Approved local pinned Managed JRE distribution manifest and its archive",
+        help="Одобренный локальный закреплённый манифест Managed JRE и его архив",
     )
     parser.add_argument(
         "--managed-java-sha256",
         default="",
-        help="SHA-256 of pinned Managed JRE distribution manifest",
+        help="SHA-256 закреплённого манифеста дистрибутива Managed JRE",
     )
     parser.add_argument(
         "--server-bundle",
         default="",
-        help="Pinned server ZIP containing matching loader runtime; Vanilla can use official verified server download",
+        help="Закреплённый ZIP сервера с подходящим Runtime загрузчика; Vanilla допускает официальную проверенную загрузку сервера",
     )
     parser.add_argument(
         "--server-sha256",
         default="",
-        help="Operator-pinned SHA-256 for full server distribution",
+        help="Закреплённый оператором SHA-256 полного дистрибутива сервера",
     )
     parser.add_argument(
         "--server-entry",
         default="",
-        help="Launcher at bundle root: server.jar or run.sh",
+        help="Запускатель в корне пакета: server.jar или run.sh",
     )
     parser.add_argument(
         "--bridge-path",
         default="",
-        help="Required ServerBridge mod/plugin path inside pinned server bundle",
+        help="Обязательный путь мода/плагина ServerBridge внутри закреплённого пакета сервера",
     )
     parser.add_argument(
         "--bridge-sha256",
         default="",
-        help="Operator-pinned SHA-256 of the real bridge mod/plugin",
+        help="Закреплённый оператором SHA-256 настоящего мода/плагина Bridge",
     )
     parser.add_argument(
         "--bridge-version",
         default="",
-        help="Operator-pinned ServerBridge version observed in the actual server log",
+        help="Версия ServerBridge, закреплённая оператором и наблюдавшаяся в реальном журнале сервера",
     )
     parser.add_argument("--server-startup-seconds", type=int, default=180)
     parser.add_argument("--gameplay-seconds", type=int, default=120)

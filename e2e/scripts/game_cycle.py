@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Run genuine Launcher client install/update/rollback against real Minecraft files.
+"""Выполнить настоящие установку, обновление и откат клиента Launcher на реальных файлах Minecraft.
 
-The calling Minecraft E2E owns PostgreSQL, API, signed publishing, the JVM and
-ServerBridge. This runner executes the production Go client commands on the
-very same Mojang/loader tree and binds their results to exact bytes. No
-simulated client, fake network join or pre-canned certification is accepted.
+Вызывающий Minecraft E2E владеет PostgreSQL, API, подписанной публикацией, JVM и ServerBridge.
+Раннер исполняет производственные Go-команды клиента на том же дереве Mojang/загрузчика и
+привязывает результаты к точным байтам. Имитированные клиенты, поддельные сетевые входы или заранее
+подготовленные сертификаты не принимаются.
 """
 
 from __future__ import annotations

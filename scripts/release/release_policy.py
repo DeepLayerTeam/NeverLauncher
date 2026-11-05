@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Trusted, executable release-policy decisions shared by build/GA/RC.
+"""Доверенные исполняемые решения о правилах выпуска, общие для сборки/GA/RC.
 
-Never load policy thresholds or signing domains from an unsigned build artifact.
-The legacy 0.36.0 format remains immutable. Every newer stable version uses a
-new signature domain and its own exact-version/commit/byte-bound approval.
+Никогда не загружать пороги политики или домены подписания из неподписанного артефакта сборки.
+Унаследованный формат 0.36.0 остаётся неизменным. Каждая более новая стабильная версия использует
+новый домен подписи и собственное одобрение, привязанное к точной версии, коммиту и байтам.
 """
 
 from __future__ import annotations

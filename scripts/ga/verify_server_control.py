@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed validation of CI-produced real Minecraft and Paper restore evidence.
+"""Проверка настоящих свидетельств Minecraft и восстановления Paper от CI с блокировкой при неопределённости.
 
-The authoritative execution is e2e/scripts/run-minecraft-e2e.sh. This verifier
-cannot manufacture evidence or replace a real E2E run: it examines the files
-left by that job, rejects skipped/substituted reports and mismatched commits.
+Авторитетный запуск — e2e/scripts/run-minecraft-e2e.sh. Валидатор не создаёт свидетельства и не
+заменяет реальный E2E: изучает файлы задания, отвергает пропущенные/подменённые отчёты и
+несовпадающие коммиты.
 """
 
 import argparse

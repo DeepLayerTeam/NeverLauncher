@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""0.53.0: execute and independently verify real end-user GA acceptance.
+"""0.53.0: выполнить и независимо проверить настоящую пользовательскую приёмку GA.
 
-The release approver must supply actual independently obtained final packages,
-source checkout, real live-runner inputs, an independent signed defect export,
-and raw 280/native/soak/build evidence. This process never fabricates success:
-missing results block; only a separate verifier's signed approval can open the
-release gate, and it is bound to exact source and final signed package bytes.
+Утверждающий выпуск должен предоставить реальные независимо полученные финальные пакеты, рабочую
+копию исходников, входы настоящих раннеров, независимо подписанный экспорт дефектов и исходные
+свидетельства 280 целей, нативных запусков, длительных прогонов и сборок. Успех никогда не
+выдумывается: недостающие результаты блокируют выпуск. Только подписанное одобрение отдельного
+валидатора открывает шлюз выпуска и привязывается к точным исходникам и байтам финального
+подписанного пакета.
 """
 from __future__ import annotations
 
@@ -162,7 +163,7 @@ def strict_plan(doc, commit, pin):
     return doc
 
 def assert_observed(name, doc, commit):
-    """Require exact successful live format, no local/mock or partial PASS."""
+    """Требовать точный формат успешного реального результата: без локальных/имитированных и частичных PASS."""
     expected={
       'minimal':('passed','productVersion',20),
       'standard':('passed','productVersion',14),
@@ -216,7 +217,8 @@ def assert_observed(name, doc, commit):
     if name=='auth': need(doc.get('sourceCommit')==commit, 'other commit official auth')
 
 def execute(plan, work, commit, pin):
-    """Execute real, dedicated lab runners once; no user-specified executable or shell."""
+    """Однократно запускать настоящие раннеры выделенной лаборатории; не принимать заданные пользователем
+исполняемые файлы или команды оболочки."""
     need(work.is_absolute() and work.is_dir() and not work.is_symlink(), 'private work directory required')
     need(not any(work.iterdir()), 'work directory must be empty: no old evidence reuse')
     data=strict_plan(read(plan),commit,pin)

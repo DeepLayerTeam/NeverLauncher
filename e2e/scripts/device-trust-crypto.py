@@ -127,7 +127,7 @@ def sign(algorithm: str, key: Path, payload: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Launcher Device Trust E2E crypto helper"
+        description="Криптографический помощник Device Trust E2E Launcher"
     )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("public")

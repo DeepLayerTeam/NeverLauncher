@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Execute 0.51.10 -> 0.52.0 multi-host rolling API/worker updates.
+"""Выполнить поэтапное многохостовое обновление API/worker 0.51.10 -> 0.52.0.
 
-Install this script on the trusted operator AND each Docker host. Put a
-0600 .env.rolling-target-0520 on each host with only LAUNCHER_API_IMAGE
-changed to an independently verified, digest-pinned 0.52.0 image.
+Установить скрипт у доверенного оператора И на каждом Docker-хосте. Поместить файл 0600
+.env.rolling-target-0520 на каждом хосте, изменив только LAUNCHER_API_IMAGE на независимо
+проверенный образ 0.52.0 с закреплённым дайджестом.
 
-The operator holds a PostgreSQL session advisory lock throughout the rollout.
-For every host: verify a healthy peer, pull target before disruption, stop
-worker/API with grace, atomically switch the local env, recreate only the local
-worker/API, verify real process versions/Bridge and live PostgreSQL, then
-move to the next host. Ingress/Admin on that host are not recreated.
+Весь процесс оператор удерживает advisory lock сеанса PostgreSQL. Для каждого хоста: проверить
+здорового соседа, загрузить целевой образ до нарушения работы, корректно остановить worker/API,
+атомарно сменить локальное окружение, пересоздать только локальные worker/API, проверить реальные
+версии процессов/Bridge и живой PostgreSQL, затем перейти к следующему хосту. Ingress/Admin данного
+хоста не пересоздаются.
 
-No migrations, full-cluster shutdown, world/JVM migrations, blind command
-retries, or modifications to shared secrets occur here. Rollback restores
-only prior API/worker images; never restores old PostgreSQL data.
+Нет миграций, остановки всего кластера, переносов миров/JVM, слепых повторов команд или изменений
+общих секретов. Откат возвращает только прежние образы API/worker, но никогда — прежние данные
+PostgreSQL.
 """
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def require(ok, reason):
 
 
 def secure(path):
-    """Only single-link private regular files, never symlinks or devices."""
+    """Только закрытые обычные файлы с одной жёсткой ссылкой; никакие символьные ссылки или устройства."""
     try:
         st = path.lstat()
     except OSError as exc:
@@ -83,7 +83,7 @@ def sync_directory(directory):
 
 
 def atomic_write(path, content):
-    """Crash-safe file replacement; content is never printed or passed as argv."""
+    """Атомарная замена файла с защитой от сбоев; содержимое никогда не выводится и не передаётся через argv."""
     require(path.parent.is_dir() and not path.parent.is_symlink(), "invalid deployment directory")
     fd, tmp = tempfile.mkstemp(prefix=".rolling-tmp-", dir=path.parent)
     try:
@@ -320,7 +320,7 @@ def remote(target, script, directory, project, operation, *, timeout=540):
 
 
 class PGAdvisoryLock:
-    """One session-scoped PostgreSQL advisory lock across all SSH operations."""
+    """Одна PostgreSQL advisory lock на время сеанса для всех операций SSH."""
     def __init__(self, dsn_file):
         self.dsn_file = dsn_file
         self.process = None
@@ -368,7 +368,7 @@ class PGAdvisoryLock:
 
 
 class EdgeMonitor:
-    """Observe external TLS /ready throughout a local-host cutover."""
+    """Во время переключения локального хоста наблюдать внешний TLS-эндпоинт /ready."""
     def __init__(self, url):
         self.url = url
         self.stop = threading.Event()

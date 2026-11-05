@@ -1,6 +1,6 @@
-"""Real signed-input fixture tests for full GA bundle / independent replay.
+"""Тесты настоящих подписанных входных фикстур для полного GA-пакета и независимого повторного воспроизведения.
 
-Fixtures exercise actual Ed25519 verification and final-byte checks, not games.
+Фикстуры проверяют реальную верификацию Ed25519 и финальных байтов, а не игры.
 """
 from __future__ import annotations
 from datetime import timedelta, datetime, timezone

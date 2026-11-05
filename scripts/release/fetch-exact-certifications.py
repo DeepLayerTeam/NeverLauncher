@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch exact-commit Compatibility and Device Trust certification matrices.
+"""Получить матрицы сертификации Compatibility и Device Trust для точного коммита.
 
-This helper is intentionally fail-closed. It only accepts successful workflow
-runs for the requested commit and validates the downloaded public matrix before
-release assembly. It never falls back to a previous successful run.
+Помощник намеренно блокирует при неопределённости. Он принимает только успешные workflow-запуски для
+запрошенного коммита и до сборки выпуска проверяет загруженную публичную матрицу. Возврата к
+предыдущему успешному запуску нет.
 """
 
 from __future__ import annotations

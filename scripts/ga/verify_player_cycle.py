@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Require a genuine Minecraft JVM join/update/rollback and live negative ServerBridge responses.
+"""Требовать настоящий вход JVM Minecraft, обновление/откат и живые отрицательные ответы ServerBridge.
 
-This verifier consumes the exact outputs of run-minecraft-e2e.sh, rather than
-creating success evidence. It is a LOCAL/Yggdrasil player gate; the independently
-signed Microsoft online-mode certification remains a separate required gate.
+Валидатор использует точные результаты run-minecraft-e2e.sh, а не создаёт свидетельства успеха. Это
+локальный/Yggdrasil шлюз игрока; независимая подписанная сертификация Microsoft online-mode остаётся
+отдельным обязательным шлюзом.
 """
 from __future__ import annotations
 

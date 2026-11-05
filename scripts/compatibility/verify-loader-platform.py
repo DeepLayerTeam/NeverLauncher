@@ -30,7 +30,7 @@ def load(path: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Verify loader package native materialization for one OS/architecture"
+        description="Проверить нативную материализацию пакета загрузчика для одной ОС/архитектуры"
     )
     parser.add_argument("--install", type=Path, required=True)
     parser.add_argument("--certification", type=Path, required=True)

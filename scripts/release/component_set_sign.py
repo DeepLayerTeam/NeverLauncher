@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the authenticated 0.23.10 component protocol set and detached signature.
+"""Собрать аутентифицированный набор протокольных компонентов 0.23.10 и отдельную подпись.
 
-The release signing seed is never written to disk. Public verification key is
-pinned separately into the updater binary during trusted build.
+Seed подписи выпуска никогда не записывается на диск. Открытый ключ проверки отдельно закрепляется в
+бинарном файле обновляющего компонента при доверенной сборке.
 """
 
 from __future__ import annotations
@@ -140,9 +140,9 @@ def signed_set(
 
 
 def sign_delegated_set(manifest_bytes: bytes, now=None):
-    """Sign the exact v1-compatible manifest with a separately delegated key.
+    """Подписать точный манифест, совместимый с v1, отдельным делегированным ключом.
 
-    All trust comes from the pre-provisioned release root, never the package.
+    Всё доверие исходит от предварительно предоставленного корня выпуска, а не от пакета.
     """
     import base64
     import datetime

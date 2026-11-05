@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Verify independently signed *real* 0.33.0 single-node GA evidence.
+"""Проверить независимо подписанные *настоящие* свидетельства GA 0.33.0 на одном узле.
 
-There is intentionally no 'certify by declaration' or 'generate passing evidence'
-mode. An independent operator must sign the literal bytes of a report from
-an actual installed SQLite-only HTTP deployment. Never sign a build if that
-report or its exact-commit RC results are unavailable.
+Здесь намеренно нет режима «сертифицировать декларацией» или «создать успешные свидетельства».
+Независимый оператор должен подписать буквальные байты отчёта реального установленного
+HTTP-развёртывания только с SQLite. Нельзя подписывать сборку, если недоступны этот отчёт или
+результаты RC точного коммита.
 """
 
 from __future__ import annotations

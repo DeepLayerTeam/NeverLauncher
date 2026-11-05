@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""NeverLauncher reproducible-delivery verifier: actual archive bytes, not declarations.
+"""Проверка воспроизводимой поставки NeverLauncher: реальные байты архивов, а не заявления.
 
-capture: independently inspect *real* unsigned artifacts (six targets and every member).
-compare: independently authenticate and re-read two builders' artifacts; zero drift.
-link: require an externally signed OS-native acceptance of the exact final signed
-      installers and their linkage to the successfully compared unsigned bytes.
+capture: независимо изучать *настоящие* неподписанные артефакты (шесть целей и каждый элемент).
+compare: независимо аутентифицировать и повторно прочитать артефакты двух сборочных узлов; нулевое
+расхождение.
+link: требовать внешне подписанную нативную приёмку ОС для точных финальных подписанных установщиков
+и их связи с успешно сопоставленными неподписанными байтами.
 
-Neither the capture nor the presence of an Ed25519 signature proves that an OS
-signature or Minecraft startup is valid. The native signer/operator must perform
-its checks and sign the exact-byte approval; missing evidence always fails.
+Ни сбор свидетельств, ни наличие подписи Ed25519 не доказывают корректность подписи ОС или запуска
+Minecraft. Нативный подписывающий компонент/оператор должен выполнить проверки и подписать одобрение
+точных байтов; отсутствие свидетельств всегда означает отказ.
 """
 from __future__ import annotations
 
@@ -103,7 +104,7 @@ def require_path(root: Path, name: str) -> Path:
 
 
 def inspect_exe(head: bytes, platform: str, architecture: str) -> None:
-    """Inspect untrusted unsigned executable headers without needing OS toolchains."""
+    """Проверять заголовки недоверенных неподписанных исполняемых файлов без системных инструментов сборки ОС."""
     if len(head) < 256:
         raise ValueError('truncated executable')
     if platform == 'linux':
@@ -139,7 +140,7 @@ def inspect_exe(head: bytes, platform: str, architecture: str) -> None:
 
 
 def visit_archive(path: Path, platform: str, architecture: str) -> dict:
-    """Hash every member and reject links, duplicates, unbounded decompression."""
+    """Хешировать каждый элемент архива; отклонять ссылки, дубликаты и распаковку без ограничения объёма."""
     names = set()
     entries = {}
     total = 0

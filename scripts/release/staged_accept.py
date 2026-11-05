@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Download previously signed release bytes from staging/public HTTPS and accept them.
+"""Скачать ранее подписанные байты выпуска через staging/public HTTPS и принять их.
 
-Requires a pre-existing signed local bundle, pinned verification keys, and the
-production CLI verifier. Never issues acceptance for files not downloaded.
+Нужны существующий подписанный локальный пакет, закреплённые ключи проверки и производственный
+CLI-валидатор. Для незагруженных файлов приёмка не выдаётся.
 """
 from __future__ import annotations
 import argparse

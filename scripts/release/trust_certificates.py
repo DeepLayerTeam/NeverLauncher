@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Offline delegated release certificate ISSUE/REVOKE on a pinned signed policy.
+"""Автономная выдача/отзыв делегированного сертификата выпуска на закреплённой подписанной политике.
 
-The root anchor is passed explicitly, never learned from the policy. Epoch
-increases on every mutation. This uses the production trust signing code, and
-all existing component verification/revocation rules continue to apply.
+Корневой якорь передаётся явно, а не извлекается из политики. Эпоха увеличивается при каждом
+изменении. Используется производственный код подписания доверия; действующие правила проверки
+компонентов и отзыва продолжают применяться.
 """
 
 import argparse

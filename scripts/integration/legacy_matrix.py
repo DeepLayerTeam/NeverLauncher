@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Execute native 0.48.0 host upgrades against independently pinned old installations.
+"""Проводить нативные обновления хостов 0.48.0 на независимо закреплённых старых установках.
 
-No fixtures are generated here. Each manifest entry is a real, previously
-installed Linux launcher CLI tree (ZIP) with a runnable prior-version binary.
-Missing/unsupported baseline is an error, not a skip or simulated success.
+Здесь не генерируются фикстуры. Каждая запись манифеста — настоящее ранее установленное дерево CLI
+Launcher на Linux (ZIP) с запускаемым бинарным файлом прежней версии. Отсутствующая/неподдерживаемая
+базовая версия — ошибка, а не пропуск или имитация успеха.
 """
 from __future__ import annotations
 import argparse

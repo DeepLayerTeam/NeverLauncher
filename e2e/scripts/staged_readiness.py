@@ -1,9 +1,9 @@
-"""Real Linux/X11 Minecraft menu observation for a staged Runtime process.
+"""Настоящее наблюдение меню Minecraft Linux/X11 у подготовленного процесса Runtime.
 
-No file supplied by the game, CI job or caller can assert PASS. The observer
-correlates the window's OS PID to the actual Runtime child, captures two
-independently rendered frames and recognizes visible menu controls. Unsupported
-hosts remain blocked (never interpreted as incompatible Minecraft builds).
+Ни файл игры, ни задание CI, ни вызывающая сторона не могут утверждать PASS. Наблюдатель
+сопоставляет PID окна ОС с настоящим дочерним процессом Runtime, захватывает два независимо
+отрисованных кадра и распознаёт видимые элементы меню. Неподдерживаемые хосты остаются
+заблокированными (это не трактуется как несовместимость сборки Minecraft).
 """
 
 from __future__ import annotations

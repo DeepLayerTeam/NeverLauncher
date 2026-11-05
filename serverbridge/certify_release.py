@@ -177,7 +177,7 @@ def load_json(path: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Certify a built Launcher ServerBridge 3 release cohort"
+        description="Сертифицировать собранную группу выпуска Launcher ServerBridge 3"
     )
     ap.add_argument("--artifacts", type=Path, default=ROOT / "artifacts/plugins")
     ap.add_argument("--out", type=Path)

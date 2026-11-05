@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Final, fail-closed acceptance for the *built* 0.42.0 ServerBridge network.
+"""Итоговая приёмка с блокировкой при неопределённости для *собранной* сети ServerBridge 0.42.0.
 
-This is an executable release boundary, not a producer of certifications.
-It inspects the exact copied release JARs, independently recorded real
-Minecraft/JVM/Proxy evidence, real Paper world restore and player/rollback
-flows. A successful unit test, signed manifest or build alone cannot pass.
+Это исполняемая граница выпуска, а не генератор сертификатов. Проверяются точные скопированные
+JAR-файлы выпуска, независимо записанные реальные свидетельства Minecraft/JVM/Proxy, настоящее
+восстановление мира Paper и сценарии игрока/отката. Одного успешного модульного теста, подписанного
+манифеста или сборки недостаточно.
 """
 
 from __future__ import annotations

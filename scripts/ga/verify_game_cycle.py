@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed verification of current-source real Minecraft update/rollback evidence.
+"""Проверка свидетельств реального обновления/отката Minecraft по текущим исходникам с блокировкой при
+неопределённости.
 
-Only reads evidence produced by run-minecraft-e2e.sh. A verified JSON report
-cannot substitute for a genuine runner; this independently checks byte hashes,
-version, run identity, current signed manifests and new join evidence.
+Читает только вывод run-minecraft-e2e.sh. Даже проверенный JSON-отчёт не заменяет настоящего
+раннера: независимо проверяются хеши байтов, версия, идентификатор запуска, текущие подписанные
+манифесты и новые свидетельства входа.
 """
 
 from __future__ import annotations

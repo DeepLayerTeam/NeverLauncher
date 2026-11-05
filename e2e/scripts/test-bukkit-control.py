@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Run the shipping Bukkit/Folia command handlers against a deterministic API simulator.
+"""Запустить поставляемые обработчики команд Bukkit/Folia на детерминированном имитаторе API.
 
-This is an offline concurrency/command regression test, NOT a substitute for real
-Paper/Purpur/Spigot/Folia server certification. Uses Java 21 with no network.
+Это автономная регрессия конкурентности и команд, НЕ замена настоящей сертификации серверов
+Paper/Purpur/Spigot/Folia. Используется Java 21 без сети.
 """
 
 import pathlib

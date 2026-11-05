@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Package only independently approved, validated raw 0.43.1+ security evidence.
+"""Упаковать только независимо одобренные и проверенные исходные свидетельства безопасности 0.43.1+.
 
-The resulting archive becomes an ordinary *signed release asset*. Its raw
-traces and execution observations are reverified before public publication.
-Never put tokens or hardware identifiers in these strictly structured logs.
+Полученный архив становится обычным *подписанным ресурсом выпуска*. Его исходные трассы и наблюдения
+исполнения перепроверяются до публичной публикации. Не помещать токены или аппаратные идентификаторы
+в эти строго структурированные журналы.
 """
 from __future__ import annotations
 

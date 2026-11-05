@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Launcher 0.21.1 authorization/frozen-coverage release gate.
+"""Шлюз выпуска Launcher 0.21.1 по авторизации и зафиксированному покрытию.
 
-This gate is intentionally executable rather than documentation-only. It seals the
-security-sensitive source files, checks the G01-G35/M01-M19 evidence registry,
-asserts authorization invariants in the shipping router/repository code, and can
-verify the pinned Gravit v5.7.12 -> v5.7.13 upstream delta directly against GitHub.
+Это исполняемая проверка, а не только документация. Она опечатывает чувствительные к безопасности
+исходники, проверяет реестр свидетельств G01-G35/M01-M19, утверждает инварианты авторизации в
+поставляемом маршрутизаторе/репозитории и может напрямую сверять закреплённую upstream-разницу
+Gravit v5.7.12 -> v5.7.13 с GitHub.
 """
 
 from __future__ import annotations
@@ -363,7 +363,7 @@ def main() -> None:
     p_validate.add_argument(
         "--online",
         action="store_true",
-        help="also verify immutable Gravit refs/delta against GitHub",
+        help="Дополнительно проверить неизменяемые ссылки/изменения Gravit через GitHub",
     )
     sub.add_parser("seal")
     args = parser.parse_args()

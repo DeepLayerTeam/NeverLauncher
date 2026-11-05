@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Launcher 0.21.2 Honest Validation & Trust Boundaries release gate.
+"""Шлюз выпуска Launcher 0.21.2: честная валидация и границы доверия.
 
-This is an executable source-policy gate for the production 0.21.2 behavior. It
-preserves the frozen G01-G35/M01-M19 upstream registry from 0.21.1 while
-checking that current publication, runtime-evidence, device-trust and extension
-host paths cannot overstate their evidence level.
+Это исполняемый контроль политики исходников для производственного поведения 0.21.2. Он сохраняет
+замороженный upstream-реестр G01-G35/M01-M19 из 0.21.1 и проверяет, что текущие пути публикации,
+свидетельств Runtime, доверия устройств и Host расширений не преувеличивают уровень доказательств.
 """
 
 from __future__ import annotations

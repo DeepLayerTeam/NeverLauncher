@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Real Admin browser journey on DESTRUCTIVE dedicated staging.
+"""Настоящий браузерный сценарий Admin на РАЗРУШАЮЩЕМ выделенном staging.
 
-All mutations occur through rendered Admin controls. The staging operator must
-prepare a certified immutable package and a broken package, each bound to saved
-Admin release drafts in the SAME isolated project/profile/channel. This runner
-never manufactures signatures, runtime evidence, or a positive publish result.
+Все изменения выполняются через отображаемые элементы Admin. Оператор staging должен подготовить
+сертифицированный неизменяемый пакет и неисправный пакет; оба привязаны к сохранённым черновикам
+выпуска Admin в ОДНОМ изолированном проекте/профиле/канале. Раннер не создаёт подписи, свидетельства
+Runtime или положительные результаты публикации.
 """
 
 from __future__ import annotations

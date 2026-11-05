@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Real Go, TypeScript and Java SDK E2E against one verified HTTPS API.
+"""Реальный E2E SDK Go, TypeScript и Java на едином проверенном HTTPS API.
 
-The endpoint must serve JSON, plaintext and real binary assets. The sha256
-of the binary asset is pinned independently of SDK outputs. No test-only HTTP
-server or stub transport can satisfy this production acceptance scenario.
+Эндпоинт должен возвращать JSON, обычный текст и настоящие бинарные ресурсы. SHA-256 бинарного
+ресурса закрепляется независимо от вывода SDK. Тестовый HTTP-сервер или транспорт-заглушка не могут
+удовлетворить сценарию производственной приёмки.
 """
 from __future__ import annotations
 import argparse

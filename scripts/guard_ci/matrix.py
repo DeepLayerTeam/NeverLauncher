@@ -619,7 +619,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Launcher cross-platform Guard CI certification matrix"
+        description="Кроссплатформенная CI-матрица сертификации Guard Launcher"
     )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")

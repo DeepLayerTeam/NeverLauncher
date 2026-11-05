@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Sign an independently produced 0.25.0 GA attestation in an approved CI.
+"""Подписать независимо полученную аттестацию GA 0.25.0 в одобренном CI.
 
-This tool never generates 'passed' check results, test receipts, installers or
-release signing keys. It validates all evidence before issuing the signature.
+Утилита никогда не создаёт успешные результаты проверок, тестовые квитанции, установщики или ключи
+подписи выпуска. Перед подписью проверяются все свидетельства.
 """
 from __future__ import annotations
 

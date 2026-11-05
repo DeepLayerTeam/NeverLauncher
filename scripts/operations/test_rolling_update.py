@@ -1,6 +1,6 @@
-"""Regression tests for executable 0.51.7 rollout and crash recovery.
+"""Регрессионные тесты исполняемого развёртывания 0.51.7 и восстановления после сбоя.
 
-Mocks model Docker/SSH health outputs; these tests are not multi-host GA evidence.
+Имитации моделируют ответы состояния Docker/SSH; это не свидетельства многохостового GA.
 """
 from __future__ import annotations
 

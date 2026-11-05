@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test fail-closed API acceptance transport (mock only for NEGATIVE tests).
+"""Проверка транспорта приёмки API с блокировкой при сбое (имитация только для ОТРИЦАТЕЛЬНЫХ тестов).
 
-Real integration is run separately on a compiled Backend by CI.
+Настоящую интеграцию CI отдельно запускает на скомпилированном Backend.
 """
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util

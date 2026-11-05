@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Explicit OFFLINE FileAuthSystem Database.json maintenance.
+"""Явное обслуживание FileAuthSystem Database.json в режиме OFFLINE.
 
-Requires Gravit/other writers STOPPED. NeverLauncher live federation remains
-read-only; this utility edits the authoritative file with an operator-pinned
-SHA256, an exclusive local lock and a durable preimage backup. Sessions.json,
-roles, keys and imported session credentials are never touched. Linux/POSIX.
+Требуется ОСТАНОВИТЬ Gravit и другие службы записи. Рабочая федерация NeverLauncher остаётся только
+для чтения; утилита изменяет авторитетный файл с закреплённым оператором SHA256, эксклюзивной
+локальной блокировкой и надёжной резервной копией предыдущего состояния. Sessions.json, роли, ключи
+и импортированные учётные данные сеансов не затрагиваются. Linux/POSIX.
 """
 
 import argparse

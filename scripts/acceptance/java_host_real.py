@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Run five real Java source-port behaviors against an installed isolated JVM Host.
+"""Запустить пять реальных сценариев переноса Java-исходников в установленном изолированном JVM Host.
 
-The Host and Broker must already be deployed; the script does not start a mock
-broker. It calls the Host callback over authenticated loopback/TLS and reads
-back the installed Backend project. The agent case executes a JVM and checks
-that a digest-pinned agent transforms an actual class; Minecraft/Guard live
-compatibility must still be evidenced separately. No GA signature is emitted.
+Host и Broker должны быть уже развёрнуты; имитация брокера не запускается. Скрипт вызывает обратный
+вызов Host через аутентифицированный loopback/TLS и повторно читает установленный проект Backend.
+Сценарий агента запускает JVM и проверяет, что агент с закреплённым дайджестом преобразует настоящий
+класс. Совместимость с живыми Minecraft/Guard требует отдельных свидетельств. Подпись GA не
+выдаётся.
 """
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def callback(host, token, method, params=None, *, expected=200):
 
 
 def observed_join(cfg):
-    """Require raw Minecraft 0.52.4 evidence; no standalone PASS fields."""
+    """Требовать исходные свидетельства Minecraft 0.52.4, а не отдельные поля PASS."""
     import sys
     from pathlib import Path
     root = Path(__file__).resolve().parents[2]
@@ -248,11 +248,11 @@ def run(cfg, output):
 
 
 def agent_digest_from_game(cfg):
-    """Check game agent binding only inside independently hashed client cert.
+    """Проверять привязку игрового агента только внутри независимо хешированного сертификата клиента.
 
-    No extra free-form ``agentHash`` in a JSON report can satisfy this check.
-    Current plain client certification without this actual launch observation is
-    intentionally BLOCKED: an ordinary Minecraft join proves no agent ran.
+    Произвольное дополнительное поле ``agentHash`` в JSON-отчёте не удовлетворяет проверке.
+    Сертификация обычного клиента без наблюдения настоящего запуска намеренно получает BLOCKED:
+    простой вход в Minecraft не доказывает запуск агента.
     """
     from pathlib import Path
     root = Path(cfg['gameCompatibilityResult'])

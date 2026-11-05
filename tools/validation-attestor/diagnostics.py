@@ -1,7 +1,7 @@
-"""Trusted-host-only diagnostic retention. Export raw runner stdout.
+"""Хранение диагностики только на доверенном хосте. Экспорт исходного stdout раннера.
 
-Diagnostics are not certification: the attestor signs separately verified
-runtime artifacts; this spool only retains redacted operational logs.
+Диагностика не является сертификацией: аттестатор отдельно подписывает проверенные артефакты
+Runtime. Эта очередь хранит только операционные журналы с удалёнными секретами.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -47,7 +47,7 @@ def redact(text: str) -> str:
 
 
 def prune(folder: Path, now: datetime):
-    """Expire only files created by this service, follow symlinks."""
+    """Удалять по сроку хранения только файлы, созданные этой службой; обрабатывать символические ссылки."""
     for path in folder.iterdir():
         if path.is_symlink() or not re.fullmatch(
             r"[a-f0-9]{48}\.(?:log|json)", path.name

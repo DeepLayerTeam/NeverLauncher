@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Enforce live, independently signed security capability evidence for GA 0.43.1+.
+"""Требовать живые независимо подписанные свидетельства возможностей безопасности для GA 0.43.1+.
 
-Security claims are not inferred from platform manifests or generic `security`
-checks. Each required capability has both a successful authorized scenario and
-an independently observed denied scenario. The approval's Ed25519 signature
-binds the raw trace; the trace binds the raw execution log and final package
-bytes. A missing/unsupported/skipped result cannot become a certification.
+Возможности безопасности не выводятся из платформенных манифестов или общих проверок `security`. Для
+каждой обязательной возможности нужны успешный разрешённый сценарий и независимо наблюдаемый отказ.
+Подпись Ed25519 одобрения привязывает исходную трассу; трасса — исходный журнал исполнения и
+финальные байты пакета. Отсутствующий, неподдерживаемый или пропущенный результат не может стать
+сертификатом.
 """
 
 from __future__ import annotations
@@ -240,7 +240,7 @@ def verify_trace(
 
 
 def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_attempt=None) -> None:
-    """Fail during *preflight* without any staged bundle; full gate checks bytes."""
+    """Останавливать предварительную проверку без подготовленного пакета; полный шлюз отдельно проверяет байты."""
     if not required(approval["version"]):
         return
     current = now or datetime.now(timezone.utc)

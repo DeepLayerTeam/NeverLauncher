@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail-closed verifier for independently signed Launcher 0.26.0 GA evidence.
+"""Валидатор независимо подписанных свидетельств GA Launcher 0.26.0 с блокировкой при неопределённости.
 
-This tool NEVER generates or signs release attestations. Passing unit tests,
-self-reported JSON or a successful simulated login do not certify a release.
+Утилита НИКОГДА не генерирует и не подписывает аттестации выпуска. Успешные модульные тесты,
+самодекларированный JSON или удачный имитированный вход не сертифицируют выпуск.
 """
 
 from __future__ import annotations
@@ -254,7 +254,7 @@ def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(
-        description="Verify external signed real-world texture GA evidence"
+        description="Проверить внешние подписанные свидетельства GA текстур из реальной среды"
     )
     p.add_argument("--evidence", required=True, type=Path)
     p.add_argument("--commit", required=True)

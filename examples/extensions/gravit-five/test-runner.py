@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Five native Java port flows; real JVM host/RPC, controlled simulated Go broker.
-No signed .nlext, real PostgreSQL, Minecraft account or public release is certified.
+"""Пять сценариев переноса нативных Java-модулей; настоящий JVM-хост/RPC и управляемый имитатор Go-брокера.
+Здесь не сертифицируются подписанные .nlext, настоящий PostgreSQL, учётная запись Minecraft или
+публичный выпуск.
 """
 import base64, copy, hashlib, hmac, http.server, io, json, os, pathlib, subprocess, tempfile, threading, time, urllib.error, urllib.request, zipfile
 ROOT=pathlib.Path(__file__).resolve().parent

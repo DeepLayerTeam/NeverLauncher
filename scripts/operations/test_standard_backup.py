@@ -1,7 +1,8 @@
-"""Standard backup regression: real SQLite/tar bytes and fail-closed Docker orchestration.
+"""Регрессия резервного копирования Standard: настоящие байты SQLite/tar и блокирующая при ошибке
+оркестрация Docker.
 
-The Docker invocations are mocked here; the external two-host live restore is
-explicitly separate. These tests never mark a PostgreSQL integration as PASS.
+Вызовы Docker здесь имитируются; реальное восстановление на двух внешних хостах — отдельный
+сценарий. Эти тесты никогда не помечают интеграцию PostgreSQL как PASS.
 """
 import io
 import json

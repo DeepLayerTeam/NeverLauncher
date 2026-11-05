@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""0.35.1 live API journey against a disposable, running Launcher Backend.
+"""Проверка пользовательского сценария через живой API 0.35.1 на запущенном временном Backend Launcher.
 
-Calls real authentication and CRUD handlers, no mocks. Requires explicit opt-in
-because it CREATES a project. It cannot certify Minecraft, Desktop or stable GA.
+Вызываются настоящие обработчики аутентификации и CRUD, без имитаций. Требуется явное согласие,
+поскольку создаётся проект. Нельзя использовать как сертификат Minecraft, Desktop или стабильного
+GA.
 """
 
 import argparse
@@ -236,7 +237,7 @@ def main():
     p.add_argument(
         "--isolated-test-instance",
         action="store_true",
-        help="acknowledge this will mutate a disposable local Backend",
+        help="Подтвердить, что операция изменит одноразовый локальный Backend",
     )
     p.add_argument("--output", required=True, type=Path)
     args = p.parse_args()

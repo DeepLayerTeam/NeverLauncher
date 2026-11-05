@@ -1,8 +1,8 @@
-"""0.47.7 fault-injection checks against the real offline operator code.
+"""0.47.7: проверки инъекции отказов в настоящем автономном операторском коде.
 
-Use SQLite files rather than an in-memory mock for backup/integrity/rollback.
-PG faults are injected at the subprocess boundary; PostgreSQL integration
-requires the separate Go + SQLRepository environment, not claimed here.
+Для резервирования/целостности/отката используются SQLite-файлы, а не имитация в памяти. Сбои PG
+внедряются на границе подпроцесса; интеграция PostgreSQL требует отдельного окружения Go +
+SQLRepository и здесь не утверждается.
 """
 from __future__ import annotations
 

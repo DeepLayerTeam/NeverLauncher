@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build and verify the two deterministic, independently embedded CLI resource bundles.
+"""Собрать и проверить два детерминированных, независимо встроенных пакета ресурсов CLI.
 
-Canonical sources: services/api/internal/dbmigrate/sql and deploy/production.
-`--check` is read-only and fails closed on missing/stale resources; `--write`
-regenerates bundles as an explicit source change before CI/release review.
+Канонические источники: services/api/internal/dbmigrate/sql и deploy/production.
+`--check` ничего не меняет и блокирует при отсутствии/устаревании ресурсов; `--write` явно
+перегенерирует пакеты как изменение исходников до проверки CI/выпуска.
 """
 from __future__ import annotations
 import argparse
@@ -65,8 +65,8 @@ def verify_or_write(write: bool) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--check", action="store_true", help="verify bundles without modification (default)")
-    group.add_argument("--write", action="store_true", help="generate bundles from canonical sources")
+    group.add_argument("--check", action="store_true", help="Проверить пакеты без изменений (по умолчанию)")
+    group.add_argument("--write", action="store_true", help="Создать пакеты из канонических источников")
     args = parser.parse_args()
     try:
         verify_or_write(write=args.write)

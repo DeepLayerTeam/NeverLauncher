@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Controlled same-host baseline Never 0.23.0 vs current Runtime.
+"""Контролируемое сравнение на одном хосте: базовый Never 0.23.0 и текущий Runtime.
 
-Requires actual *compiled* 0.23.0 executable. Never reports a "win" against a
-synthetic sequential Python client; Gravit measurements are a separate run.
+Нужен настоящий *скомпилированный* исполняемый файл 0.23.0. Нельзя объявлять «победу» над
+синтетическим последовательным Python-клиентом; замеры Gravit выполняются отдельно.
 """
 
 from __future__ import annotations

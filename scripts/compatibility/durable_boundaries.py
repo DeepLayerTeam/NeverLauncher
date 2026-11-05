@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Launcher 0.21.3 Durable Boundaries & Certification release gate.
+"""Шлюз выпуска Launcher 0.21.3: устойчивые границы и сертификация.
 
-This gate verifies the concrete 0.21.3 implementation is wired into the
-production publish path: durable jobs, idempotency, distributed fencing,
-transactional outbox, single-use runtime nonces, live authorization rechecks
-and restart recovery. It intentionally rejects a tables-only implementation.
+Проверяется подключение конкретной реализации 0.21.3 к промышленному пути публикации: устойчивые
+задачи, идемпотентность, распределённые блокировки, транзакционный outbox, одноразовые nonce
+Runtime, повторная проверка прав в реальном времени и восстановление после перезапуска. Реализация
+только из таблиц намеренно отклоняется.
 """
 
 from __future__ import annotations

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Execute and replay the 0.52.8 Java, SDK and migration acceptance.
+"""Выполнить и повторно проверить приёмку Java, SDK и миграции 0.52.8.
 
-Local exercises actual Java subprocesses, Go/TS/Java HTTP clients and migration
-negative tests. Live invokes the existing three-project Gravit GA verifier (36
-live checks and 19 module probes), the installed JVM Host and both historical
-NeverLauncher upgrade witnesses; all must operate on real external systems.
-Missing infrastructure FAILS, not a fabricated pass or an optional skip.
-Reports are private and are not independent production GA signatures.
+Локальный режим запускает настоящие Java-подпроцессы, HTTP-клиенты Go/TS/Java и отрицательные тесты
+миграций. Реальный режим вызывает существующий валидатор GA Gravit для трёх проектов (36 живых
+проверок и 19 проверок модулей), установленный JVM Host и оба исторических свидетельства обновления
+NeverLauncher; всё должно выполняться на настоящих внешних системах. Недоступная инфраструктура даёт
+FAIL, а не выдуманный PASS или пропуск. Отчёты закрытые и не являются независимыми промышленными
+подписями GA.
 """
 from __future__ import annotations
 

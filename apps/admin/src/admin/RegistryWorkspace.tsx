@@ -562,7 +562,7 @@ export function RegistryWorkspace({
             aria-label="Область проекта расширения"
             value={extensionScopeId}
             onChange={(event) => setExtensionScopeId(event.target.value)}
-            placeholder="Project ID"
+            placeholder="ID проекта"
           />
         )}
         <button

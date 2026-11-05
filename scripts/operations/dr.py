@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Docker Compose Standard/Network-HA full-state cold backup, restore and DR checks.
+"""Docker Compose Standard/Network-HA: полное холодное резервное копирование, восстановление и DR-проверки.
 
-Standard backup freezes all application writers, verifies PostgreSQL has no other
-client sessions, dumps PostgreSQL and captures storage, factory, backups and the
-SQLite coordinator as one maintenance-window snapshot. Restores only to an empty
-project and verifies volume readback and database restore. External secrets/TLS
-files are NOT exported: recover them from an approved separate secret manager.
+Резервирование Standard замораживает все службы записи приложения, убеждается в отсутствии других
+клиентских сеансов PostgreSQL, создаёт дамп PostgreSQL и фиксирует хранилище, factory, резервные
+копии и координатор SQLite как единый снимок в окне обслуживания. Восстановление выполняется только
+в пустой проект с проверкой чтения томов и БД. Внешние секреты/файлы TLS НЕ экспортируются: их
+восстанавливают из одобренного отдельного менеджера секретов.
 """
 
 from __future__ import annotations
@@ -114,7 +114,7 @@ def compose(
 
 
 def compose_states(project: str, env_file: Path) -> dict[str, str]:
-    """Read actual Docker Compose container states; do not guess from exit codes."""
+    """Читать настоящие состояния контейнеров Docker Compose, не делать выводы только по кодам завершения."""
     result = compose(project, env_file, "ps", "--all", "--format", "json", timeout=45)
     raw = result.stdout.decode("utf-8", errors="strict").strip()
     if not raw:
@@ -170,7 +170,7 @@ def assert_quiescent(project: str, env_file: Path) -> str:
 
 
 def verify_coordinator(archive_path: Path) -> None:
-    """Validate WAL-aware recovered SQLite coordinator, not merely tar checksums."""
+    """Проверять восстановленный SQLite-координатор с учётом WAL, а не только контрольные суммы tar."""
     if "network-ha" in COMPOSE_PROFILES:
         return
     safe_tar(archive_path)
@@ -317,7 +317,7 @@ def docker_tar_backup(volume: str, output: Path) -> None:
 
 
 def tar_digests(path: Path) -> dict[str, dict]:
-    """Stream every restored volume file and compare actual bytes, not tar headers."""
+    """Потоково читать каждый восстановленный файл тома и сравнивать реальные байты, а не заголовки tar."""
     safe_tar(path)
     result = {}
     with tarfile.open(path, "r:gz") as archive:
@@ -523,7 +523,7 @@ def parse_world_args(values: list[str]) -> dict[str, Path]:
 
 
 def safe_world_backup(folder: Path) -> dict:
-    """Independently verify the actual Go world-backup/v1 payload byte by byte."""
+    """Независимо сверять по байтам настоящий формат Go world-backup/v1."""
     if not folder.is_dir() or folder.is_symlink() or not WORLD_BACKUP_ID.fullmatch(folder.name):
         raise DrillError("world backup must be an ID directory, without symlinks")
     manifest = folder / "manifest.json"
@@ -974,7 +974,7 @@ def validate_ready_url(url: str) -> None:
 
 
 def target_release(env_file: Path) -> str | None:
-    """Get release used for restore without shell-expanding an untrusted env file."""
+    """Определять выпуск для восстановления без раскрытия недоверенного env-файла оболочке."""
     result = None
     for line in env_file.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
@@ -989,7 +989,7 @@ def target_release(env_file: Path) -> str | None:
 
 
 def check_restored_backend(project: str, env_file: Path, *, version: str | None, storage: str, timeout: int = 120, service: str = "api") -> dict:
-    """Read the actual RESTORED API container, not a possibly stale public DNS route."""
+    """Читать фактически ВОССТАНОВЛЕННЫЙ контейнер API, а не потенциально устаревший публичный DNS-маршрут."""
     started = time.monotonic()
     while time.monotonic() - started < timeout:
         try:
@@ -1249,8 +1249,8 @@ def main() -> int:
     parser.add_argument(
         "action", choices=["backup", "verify", "restore-fresh", "chaos"]
     )
-    parser.add_argument("--project", help="isolated docker compose project, nl-dr-*")
-    parser.add_argument("--confirm", help="exact project name required for mutation")
+    parser.add_argument("--project", help="Изолированный проект docker compose, nl-dr-*")
+    parser.add_argument("--confirm", help="Точное имя проекта обязательно для изменений")
     parser.add_argument("--env-file", type=Path)
     parser.add_argument("--snapshot", type=Path, required=True)
     parser.add_argument("--ready-url")
@@ -1260,24 +1260,24 @@ def main() -> int:
     parser.add_argument("--s3-endpoint")
     parser.add_argument("--world-backup", action="append", default=[],
                         metavar="NAME=/absolute/path/backup-id",
-                        help="previously stopped, verified Go CLI world backup on operator's mounted filesystem")
+                        help="Ранее остановленная проверенная копия мира Go CLI на смонтированной ФС оператора")
     parser.add_argument("--world-destination", action="append", default=[],
                         metavar="NAME=/absolute/fresh/server-root",
-                        help="fresh host-mounted destination; never auto-starts the game JVM")
+                        help="Новая цель на смонтированном хранилище хоста; JVM игры автоматически не запускается")
     parser.add_argument(
         "--production-source",
         action="store_true",
-        help="allow backup on explicitly approved maintenance-window source",
+        help="Разрешить резервирование явно одобренного источника в окно обслуживания",
     )
     parser.add_argument(
         "--production-target",
         action="store_true",
-        help="allow restore to explicitly approved fresh target; does not overwrite",
+        help="Разрешить восстановление на явно одобренную новую цель; без перезаписи",
     )
     parser.add_argument(
         "--maintenance-approved",
         action="store_true",
-        help="explicit operator acknowledgement: all writers fenced, downtime approved",
+        help="Явное подтверждение оператора: все службы записи отсечены, простой согласован",
     )
     args = parser.parse_args()
     if args.network_ha:

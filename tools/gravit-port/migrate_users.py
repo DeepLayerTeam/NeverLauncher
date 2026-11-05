@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Run the real Gravit identity/credential/trust migration against a live API.
+"""Выполнить настоящую миграцию учётных записей, секретов и доверия Gravit через работающий API.
 
-Preconditions: an existing prepared migration run with persisted Gravit ZIP
-inventory (and PostgreSQL). This tool never deserializes password verifiers,
-accepts Gravit sessions, or imports a Gravit administrator role. Roles require
-an individually approved mapping and a current passkey-authenticated admin token.
+Предусловия: уже подготовленный запуск миграции с сохранённой инвентаризацией ZIP Gravit (и
+PostgreSQL). Утилита никогда не десериализует верификаторы паролей, не принимает сеансы Gravit и не
+импортирует роль администратора Gravit. Для ролей нужны индивидуально одобренные сопоставления и
+действующий токен администратора, аутентифицированный passkey.
 """
 import argparse
 import hashlib
@@ -52,7 +52,8 @@ def canonical_uuid(value):
 
 
 def role_plan(path, imported, users):
-    """Require explicit per-UUID approval; never elevate matched Never users."""
+    """Требовать явного одобрения для каждого UUID; не повышать привилегии уже сопоставленных пользователей
+NeverLauncher."""
     if not path:
         return []
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -89,7 +90,7 @@ def role_plan(path, imported, users):
 
 
 class NoRedirect(HTTPRedirectHandler):
-    """A redirected Bearer request could otherwise disclose the operator token."""
+    """Перенаправленный Bearer-запрос иначе может раскрыть токен оператора."""
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
 
@@ -254,15 +255,15 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--backend", required=True, help="HTTPS origin of running NeverLauncher API")
+    p.add_argument("--backend", required=True, help="HTTPS-адрес работающего API NeverLauncher")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-zip", required=True)
     p.add_argument("--mode", choices=["prepare", "import"], default="prepare")
-    p.add_argument("--password-format", default="", help="explicit supported FileAuth verifier format")
+    p.add_argument("--password-format", default="", help="Явно поддерживаемый формат верификатора FileAuth")
     p.add_argument("--allow-manual-resets", action="store_true")
-    p.add_argument("--fresh-keys-confirmed", action="store_true", help="operator confirms independently provisioned Never signing/JWT keys")
-    p.add_argument("--roles-file", help="approved explicit UUID->project role grants (import only, recent passkey MFA required)")
-    p.add_argument("--texture-mapping-output", help="verified UUID map for gravit-textures-import-02510 (import only)")
+    p.add_argument("--fresh-keys-confirmed", action="store_true", help="Оператор подтверждает независимо предоставленные ключи подписи/JWT Never")
+    p.add_argument("--roles-file", help="Одобренные явные назначения ролей UUID->project (только импорт, требуется свежая passkey MFA)")
+    p.add_argument("--texture-mapping-output", help="Проверенная карта UUID для gravit-textures-import-02510 (только импорт)")
     p.add_argument("--receipt", required=True)
     args = p.parse_args(argv)
     if not RUN_ID.fullmatch(args.run_id):
