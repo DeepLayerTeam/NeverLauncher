@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0",
   "id": "ru.example.launcher.desktop-tool",
-  "name": "Desktop Tool Example",
+  "name": "Пример инструмента Desktop",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
   "api": "1.0",
@@ -19,7 +19,7 @@
     "pages": [
       {
         "id": "main",
-        "title": "Desktop Tool Example"
+        "title": "Пример инструмента Desktop"
       }
     ],
     "navigation": [

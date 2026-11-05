@@ -141,7 +141,7 @@ func (r *SQLRepository) SaveMigrationIdentities0334(ctx context.Context, id stri
 	}
 	if e == nil && prevDigest != digest {
 		return gi.Report{}, mw.ErrConflict
-	} // never silently overwrite an approved source map
+	} // Никогда не перезаписывать утверждённую карту источника без явного уведомления.
 	targets, e := migrationIdentityTargets0334(ctx, tx)
 	if e != nil {
 		return gi.Report{}, e

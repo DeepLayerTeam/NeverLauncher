@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0",
   "id": "ru.example.launcher.backend-health",
-  "name": "Backend Health Example",
+  "name": "Пример проверки состояния Backend",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
   "api": "1.0",

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "2.0",
   "id": "org.example.java-lifecycle",
-  "name": "Java Lifecycle Example",
+  "name": "Пример жизненного цикла Java",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
-  "description": "Java SDK Core example with start, cancellation and stop callbacks",
+  "description": "Пример Java SDK Core с обратными вызовами запуска, отмены и остановки",
   "api": "1.0",
   "targets": [{"kind":"backend","entrypoint":"backend/bin/java-lifecycle"}],
   "permissions": []

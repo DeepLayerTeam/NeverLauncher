@@ -1,10 +1,10 @@
 {
   "schemaVersion": "2.0",
   "id": "org.launcher.trusted-jvm-sample",
-  "name": "Trusted Minecraft JVM Hook Example",
+  "name": "Пример доверенного хука JVM Minecraft",
   "version": "0.30.6",
   "publisher": "Launcher",
-  "description": "Signed trusted Java agent and classloader plugin (full JVM access)",
+  "description": "Подписанный доверенный Java-агент и плагин загрузчика классов (полный доступ к JVM)",
   "api": "1.0",
   "targets": [{"kind": "backend", "entrypoint": "trusted/agent.jar"}],
   "permissions": []

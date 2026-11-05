@@ -14,6 +14,16 @@ CURRENT = ROOT / 'schemas/openapi.yaml'
 METHODS = {'get','post','put','patch','delete'}
 
 
+def contract_shape(value):
+    """Сравнивать машинные поля контракта, исключая переводимые описания документации."""
+    if isinstance(value, dict):
+        return {key: contract_shape(item) for key, item in value.items()
+                if key not in ('description', 'summary', 'title')}
+    if isinstance(value, list):
+        return [contract_shape(item) for item in value]
+    return value
+
+
 def check(old, new):
     errors = []
     if old.get('info', {}).get('version') != new.get('info', {}).get('version'):
@@ -31,7 +41,7 @@ def check(old, new):
             before_params = {(p.get('name'),p.get('in')):p for p in operation.get('parameters', [])}
             after_params = {(p.get('name'),p.get('in')):p for p in current.get('parameters', [])}
             for key, param in before_params.items():
-                if key not in after_params or after_params[key].get('schema') != param.get('schema'):
+                if key not in after_params or contract_shape(after_params[key].get('schema')) != contract_shape(param.get('schema')):
                     errors.append(f'{label}: existing parameter changed: {key}')
             for key, param in after_params.items():
                 if key not in before_params and param.get('required'):
@@ -43,7 +53,7 @@ def check(old, new):
             if old_body and not new_body:
                 errors.append(f'{label}: request body removed')
             for media, schema in old_body.get('content', {}).items():
-                if new_body.get('content', {}).get(media, {}).get('schema') != schema.get('schema'):
+                if contract_shape(new_body.get('content', {}).get(media, {}).get('schema')) != contract_shape(schema.get('schema')):
                     errors.append(f'{label}: request schema/media changed: {media}')
             for status, response in operation.get('responses', {}).items():
                 if status not in current.get('responses', {}):
@@ -52,15 +62,15 @@ def check(old, new):
                     old_media = response.get('content', {})
                     new_media = current['responses'][status].get('content', {})
                     for media, schema in old_media.items():
-                        if media not in new_media or schema.get('schema') != new_media[media].get('schema'):
+                        if media not in new_media or contract_shape(schema.get('schema')) != contract_shape(new_media[media].get('schema')):
                             errors.append(f'{label}: changed response media/schema: {status} {media}')
     prev = old.get('components', {}).get('schemas', {})
     now = new.get('components', {}).get('schemas', {})
     for name, schema in prev.items():
-        if name not in now or schema != now[name]:
+        if name not in now or contract_shape(schema) != contract_shape(now[name]):
             errors.append(f'public schema changed: {name} (requires compatibility review)')
     for name, response in old.get('components', {}).get('responses', {}).items():
-        if new.get('components', {}).get('responses', {}).get(name) != response:
+        if contract_shape(new.get('components', {}).get('responses', {}).get(name)) != contract_shape(response):
             errors.append(f'public response changed: {name}')
     return errors
 

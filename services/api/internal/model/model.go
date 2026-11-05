@@ -664,7 +664,7 @@ type ServerBridgeJoinTicket struct {
 	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
 	IdentityRealm          string    `json:"identityRealm,omitempty"`
 	OfficialProof          string    `json:"-"`
-	OnlineModeVerified     bool      `json:"onlineModeVerified,omitempty"` // Verified snapshot; never includes a bearer.
+	OnlineModeVerified     bool      `json:"onlineModeVerified,omitempty"` // Проверенный снимок состояния; никогда не содержит bearer-токен.
 	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
 	ProtocolVersion        int       `json:"protocolVersion"`
 	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`

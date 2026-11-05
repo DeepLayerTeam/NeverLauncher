@@ -41,7 +41,7 @@ export function launchPreferences(settings: LocalLaunchSettings, memory: { minim
   const min = Math.max(512, memory?.minimumMb || 512);
   const max = Math.min(32768, memory?.maximumMb || 32768);
   if (!Number.isInteger(settings.memoryMb) || settings.memoryMb < min || settings.memoryMb > max || max < min)
-    throw new Error(`RAM must be between ${min} and ${max} MB`);
+    throw new Error(`Объём ОЗУ должен быть от ${min} до ${max} МБ`);
   if (!Number.isInteger(settings.screenWidth) || settings.screenWidth < 640 || settings.screenWidth > 7680 ||
       !Number.isInteger(settings.screenHeight) || settings.screenHeight < 480 || settings.screenHeight > 4320)
     throw new Error('Разрешение экрана выходит за допустимые пределы');

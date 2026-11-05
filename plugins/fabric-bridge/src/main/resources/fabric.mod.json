@@ -3,7 +3,7 @@
   "id": "launcher_fabric_bridge",
   "version": "${version}",
   "name": "Launcher Fabric Server Bridge",
-  "description": "Server-only Launcher ServerBridge integration for Fabric 1.21.1.",
+  "description": "Серверная интеграция Launcher ServerBridge для Fabric 1.21.1.",
   "authors": ["Launcher Team"],
   "license": "Apache-2.0",
   "environment": "server",

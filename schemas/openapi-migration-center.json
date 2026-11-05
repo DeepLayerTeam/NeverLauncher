@@ -6,7 +6,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "create (Never baseline, not completed Gravit migration)",
+        "summary": "Создать (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -14,7 +14,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -35,13 +35,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "requestBody": {
@@ -81,7 +81,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "list (Never baseline, not completed Gravit migration)",
+        "summary": "Получить список (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -89,7 +89,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -113,13 +113,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "parameters": [
@@ -140,7 +140,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "read (Never baseline, not completed Gravit migration)",
+        "summary": "Прочитать (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -148,7 +148,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -169,13 +169,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "parameters": [
@@ -212,10 +212,10 @@
           }
         ],
         "operationId": "migration0332_get_compatibility",
-        "summary": "Read the last stored Gravit source assessment",
+        "summary": "Прочитать последнюю сохранённую оценку источника Gravit",
         "responses": {
           "200": {
-            "description": "Sanitized persisted assessment, not a cutover permit",
+            "description": "Очищенная сохранённая оценка; не даёт разрешения на переключение",
             "content": {
               "application/json": {
                 "schema": {
@@ -236,10 +236,10 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Permission settings:manage required"
+            "description": "Требуется разрешение settings:manage"
           },
           "404": {
-            "description": "Assessment does not exist"
+            "description": "Оценка не существует"
           }
         }
       },
@@ -273,7 +273,7 @@
           }
         ],
         "operationId": "migration0332_assess_compatibility",
-        "summary": "Inspect Gravit configuration ZIP, journal sanitized report",
+        "summary": "Проверить ZIP конфигурации Gravit и записать очищенный отчёт в журнал",
         "requestBody": {
           "required": true,
           "content": {
@@ -288,7 +288,7 @@
         },
         "responses": {
           "200": {
-            "description": "Sanitized persisted assessment, not a cutover permit",
+            "description": "Очищенная сохранённая оценка; не даёт разрешения на переключение",
             "content": {
               "application/json": {
                 "schema": {
@@ -312,22 +312,22 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Permission settings:manage required"
+            "description": "Требуется разрешение settings:manage"
           },
           "409": {
-            "description": "Source version claim conflict or migration not prepared"
+            "description": "Конфликт заявленной версии источника или миграция не подготовлена"
           },
           "413": {
-            "description": "ZIP exceeds 64 MiB"
+            "description": "ZIP превышает 64 МиБ"
           },
           "415": {
-            "description": "Expected application/zip"
+            "description": "Ожидается application/zip"
           },
           "422": {
-            "description": "Invalid or unsafe archive"
+            "description": "Недопустимый или небезопасный архив"
           },
           "503": {
-            "description": "PostgreSQL report storage unavailable"
+            "description": "Хранилище отчётов PostgreSQL недоступно"
           }
         }
       }
@@ -338,7 +338,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Return imported profile/workspace state with staged file progress",
+        "summary": "Вернуть состояние импортированного профиля и рабочей области с ходом подготовки файлов",
         "security": [
           {
             "BearerAuth": []
@@ -366,7 +366,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified operation result and retained migration report",
+            "description": "Проверенный результат операции и сохранённый отчёт о миграции",
             "content": {
               "application/json": {
                 "schema": {
@@ -387,16 +387,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Permission denied"
+            "description": "Доступ запрещён"
           },
           "409": {
-            "description": "Source changed, resource conflict or invalid workflow state"
+            "description": "Источник изменён, возник конфликт ресурсов или некорректное состояние процесса"
           },
           "422": {
-            "description": "Profile or optional conversion blocked"
+            "description": "Профиль или необязательное преобразование заблокированы"
           },
           "503": {
-            "description": "PostgreSQL/workspace storage unavailable"
+            "description": "Хранилище PostgreSQL или рабочей области недоступно"
           }
         }
       }
@@ -407,7 +407,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Apply validated optional catalog to unsigned Never draft after workspace build",
+        "summary": "Применить проверенный необязательный каталог к неподписанному черновику Never после сборки рабочей области",
         "security": [
           {
             "BearerAuth": []
@@ -435,7 +435,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified operation result and retained migration report",
+            "description": "Проверенный результат операции и сохранённый отчёт о миграции",
             "content": {
               "application/json": {
                 "schema": {
@@ -456,19 +456,19 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Permission denied"
+            "description": "Доступ запрещён"
           },
           "409": {
-            "description": "Source changed, resource conflict or invalid workflow state"
+            "description": "Источник изменён, возник конфликт ресурсов или некорректное состояние процесса"
           },
           "422": {
-            "description": "Profile or optional conversion blocked"
+            "description": "Профиль или необязательное преобразование заблокированы"
           },
           "503": {
-            "description": "PostgreSQL/workspace storage unavailable"
+            "description": "Хранилище PostgreSQL или рабочей области недоступно"
           }
         },
-        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
+        "description": "Требуется явное подтверждение ID запуска; подписание и публикация остаются отдельными операциями с повышенными требованиями доверия."
       }
     },
     "/api/v1/admin/migration-runs/{runId}/content/import": {
@@ -477,7 +477,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Atomically reserve Never profile/workspace and stage verified encrypted source content",
+        "summary": "Атомарно зарезервировать профиль и рабочую область Never и подготовить проверенное зашифрованное содержимое источника",
         "security": [
           {
             "BearerAuth": []
@@ -496,7 +496,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified operation result and retained migration report",
+            "description": "Проверенный результат операции и сохранённый отчёт о миграции",
             "content": {
               "application/json": {
                 "schema": {
@@ -517,16 +517,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Permission denied"
+            "description": "Доступ запрещён"
           },
           "409": {
-            "description": "Source changed, resource conflict or invalid workflow state"
+            "description": "Источник изменён, возник конфликт ресурсов или некорректное состояние процесса"
           },
           "422": {
-            "description": "Profile or optional conversion blocked"
+            "description": "Профиль или необязательное преобразование заблокированы"
           },
           "503": {
-            "description": "PostgreSQL/workspace storage unavailable"
+            "description": "Хранилище PostgreSQL или рабочей области недоступно"
           }
         },
         "requestBody": {
@@ -540,7 +540,7 @@
             }
           }
         },
-        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
+        "description": "Требуется явное подтверждение ID запуска; подписание и публикация остаются отдельными операциями с повышенными требованиями доверия."
       }
     },
     "/api/v1/admin/migration-runs/{runId}/content/preview": {
@@ -549,7 +549,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Inspect and hash-check a Gravit ClientProfile and its real client files",
+        "summary": "Проверить Gravit ClientProfile и реальные файлы клиента, включая контрольные суммы",
         "security": [
           {
             "BearerAuth": []
@@ -568,7 +568,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified operation result and retained migration report",
+            "description": "Проверенный результат операции и сохранённый отчёт о миграции",
             "content": {
               "application/json": {
                 "schema": {
@@ -589,16 +589,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Permission denied"
+            "description": "Доступ запрещён"
           },
           "409": {
-            "description": "Source changed, resource conflict or invalid workflow state"
+            "description": "Источник изменён, возник конфликт ресурсов или некорректное состояние процесса"
           },
           "422": {
-            "description": "Profile or optional conversion blocked"
+            "description": "Профиль или необязательное преобразование заблокированы"
           },
           "503": {
-            "description": "PostgreSQL/workspace storage unavailable"
+            "description": "Хранилище PostgreSQL или рабочей области недоступно"
           }
         },
         "requestBody": {
@@ -620,7 +620,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read durable auth import receipt; never exposes hashes",
+        "summary": "Прочитать устойчивую квитанцию импорта учётных данных; хеши никогда не раскрываются",
         "security": [
           {
             "BearerAuth": []
@@ -639,7 +639,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized credential migration result. No passwords or password hashes.",
+            "description": "Очищенный результат переноса учётных данных — без паролей и их хешей.",
             "content": {
               "application/json": {
                 "schema": {
@@ -660,16 +660,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run or inventory missing"
+            "description": "Запуск или инвентаризация отсутствуют"
           },
           "409": {
-            "description": "Invalid workflow state or source changed"
+            "description": "Недопустимое состояние процесса или источник изменён"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -680,7 +680,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Transactionally import new Gravit users, UUIDs and password verifiers",
+        "summary": "Импортировать новых пользователей Gravit, UUID и проверочные значения паролей в одной транзакции",
         "security": [
           {
             "BearerAuth": []
@@ -703,13 +703,13 @@
             "schema": {
               "type": "string"
             },
-            "description": "Exact migration run ID to authorize irreversible account creation"
+            "description": "Точный ID запуска миграции, разрешающий необратимое создание учётных записей"
           },
           {
             "name": "X-Gravit-Password-Format",
             "in": "header",
             "required": false,
-            "description": "Explicit algorithm for FileAuthSystem; not needed for normalized SQL CSV which includes password_format per row",
+            "description": "Явный алгоритм FileAuthSystem; для нормализованного SQL CSV не нужен, поскольку каждая строка содержит password_format",
             "schema": {
               "type": "string",
               "enum": [
@@ -742,7 +742,7 @@
         },
         "responses": {
           "200": {
-            "description": "Sanitized credential migration result. No passwords or password hashes.",
+            "description": "Очищенный результат переноса учётных данных — без паролей и их хешей.",
             "content": {
               "application/json": {
                 "schema": {
@@ -763,25 +763,25 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run or inventory missing"
+            "description": "Запуск или инвентаризация отсутствуют"
           },
           "409": {
-            "description": "Invalid workflow state or source changed"
+            "description": "Недопустимое состояние процесса или источник изменён"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           },
           "422": {
-            "description": "Unsupported or malformed credential source; no accounts written"
+            "description": "Неподдерживаемый или повреждённый источник учётных данных; записи не созданы"
           },
           "413": {
-            "description": "ZIP above the bounded source upload limit"
+            "description": "ZIP превышает установленный предел загрузки источника"
           },
           "415": {
-            "description": "Expected application/zip"
+            "description": "Ожидается application/zip"
           }
         }
       }
@@ -792,7 +792,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Dry-run new Gravit local account creation without any writes",
+        "summary": "Проверить создание локальных учётных записей Gravit без записи данных",
         "security": [
           {
             "BearerAuth": []
@@ -812,7 +812,7 @@
             "name": "X-Gravit-Password-Format",
             "in": "header",
             "required": false,
-            "description": "Explicit algorithm for FileAuthSystem; not needed for normalized SQL CSV which includes password_format per row",
+            "description": "Явный алгоритм FileAuthSystem; для нормализованного SQL CSV не нужен, поскольку каждая строка содержит password_format",
             "schema": {
               "type": "string",
               "enum": [
@@ -845,7 +845,7 @@
         },
         "responses": {
           "200": {
-            "description": "Sanitized credential migration result. No passwords or password hashes.",
+            "description": "Очищенный результат переноса учётных данных — без паролей и их хешей.",
             "content": {
               "application/json": {
                 "schema": {
@@ -866,25 +866,25 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run or inventory missing"
+            "description": "Запуск или инвентаризация отсутствуют"
           },
           "409": {
-            "description": "Invalid workflow state or source changed"
+            "description": "Недопустимое состояние процесса или источник изменён"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           },
           "422": {
-            "description": "Unsupported or malformed credential source; no accounts written"
+            "description": "Неподдерживаемый или повреждённый источник учётных данных; записи не созданы"
           },
           "413": {
-            "description": "ZIP above the bounded source upload limit"
+            "description": "ZIP превышает установленный предел загрузки источника"
           },
           "415": {
-            "description": "Expected application/zip"
+            "description": "Ожидается application/zip"
           }
         }
       }
@@ -895,7 +895,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "List all cutover scopes and their real routing state (no source fencing inference)",
+        "summary": "Показать все области переключения и их фактическое состояние маршрутизации (без предположений о блокировке исходного источника)",
         "security": [
           {
             "BearerAuth": []
@@ -914,7 +914,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persisted scoped cutovers",
+            "description": "Сохранённые переключения отдельных областей",
             "content": {
               "application/json": {
                 "schema": {
@@ -938,7 +938,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "503": {
-            "description": "Persistence unavailable"
+            "description": "Постоянное хранилище недоступно"
           }
         }
       }
@@ -949,7 +949,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Atomic Never channel-head CAS switch after separately operated source writer fencing (operator attestation, not automatic source verification; MFA required)",
+        "summary": "Атомарно переключить указатель канала Never через CAS после независимой блокировки записи в источник (подтверждение оператора, а не автоматическая проверка; требуется MFA)",
         "security": [
           {
             "BearerAuth": []
@@ -968,7 +968,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Durable scoped cutover state",
+            "description": "Постоянное состояние переключения отдельной области",
             "content": {
               "application/json": {
                 "schema": {
@@ -986,16 +986,16 @@
             }
           },
           "400": {
-            "description": "Invalid request or missing confirmation"
+            "description": "Недопустимый запрос или отсутствует подтверждение"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+            "description": "Конфликт записывающего процесса, нет репетиции или изменилась ревизия канала"
           },
           "503": {
-            "description": "PostgreSQL or signer unavailable"
+            "description": "PostgreSQL или служба подписания недоступны"
           }
         },
         "requestBody": {
@@ -1051,7 +1051,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Cancel only unactivated staged scopes; never restore published worlds or release pointers (MFA required)",
+        "summary": "Отменить только неактивированные подготовленные области; не восстанавливать опубликованные миры и указатели выпусков (требуется MFA)",
         "security": [
           {
             "BearerAuth": []
@@ -1070,7 +1070,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Durable scoped cutover state",
+            "description": "Постоянное состояние переключения отдельной области",
             "content": {
               "application/json": {
                 "schema": {
@@ -1088,16 +1088,16 @@
             }
           },
           "400": {
-            "description": "Invalid request or missing confirmation"
+            "description": "Недопустимый запрос или отсутствует подтверждение"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+            "description": "Конфликт записывающего процесса, нет репетиции или изменилась ревизия канала"
           },
           "503": {
-            "description": "PostgreSQL or signer unavailable"
+            "description": "PostgreSQL или служба подписания недоступны"
           }
         },
         "requestBody": {
@@ -1138,7 +1138,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Fence concurrent Never channel publication and pin a MIG10-approved signed release (requires MFA and X-Migration-Cutover-Confirm)",
+        "summary": "Заблокировать конкурентную публикацию канала Never и закрепить подписанный выпуск, одобренный MIG10 (требуются MFA и X-Migration-Cutover-Confirm)",
         "security": [
           {
             "BearerAuth": []
@@ -1157,7 +1157,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Durable scoped cutover state",
+            "description": "Постоянное состояние переключения отдельной области",
             "content": {
               "application/json": {
                 "schema": {
@@ -1175,16 +1175,16 @@
             }
           },
           "400": {
-            "description": "Invalid request or missing confirmation"
+            "description": "Недопустимый запрос или отсутствует подтверждение"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+            "description": "Конфликт записывающего процесса, нет репетиции или изменилась ревизия канала"
           },
           "503": {
-            "description": "PostgreSQL or signer unavailable"
+            "description": "PostgreSQL или служба подписания недоступны"
           }
         },
         "requestBody": {
@@ -1235,7 +1235,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "events (Never baseline, not completed Gravit migration)",
+        "summary": "События (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -1243,7 +1243,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -1287,13 +1287,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "parameters": [
@@ -1323,7 +1323,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "execute (Never baseline, not completed Gravit migration)",
+        "summary": "Выполнить (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -1331,7 +1331,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -1352,13 +1352,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "parameters": [
@@ -1406,7 +1406,7 @@
             }
           }
         ],
-        "summary": "Export identical source file content with canonical manifest; contains credentials",
+        "summary": "Экспортировать идентичное содержимое исходных файлов с каноническим манифестом; содержит учётные данные",
         "requestBody": {
           "required": true,
           "content": {
@@ -1421,7 +1421,7 @@
         },
         "responses": {
           "200": {
-            "description": "ZIP archive; confidential source content",
+            "description": "ZIP-архив с конфиденциальным содержимым источника",
             "headers": {
               "X-Migration-Manifest-SHA256": {
                 "schema": {
@@ -1443,22 +1443,22 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run/inventory not found"
+            "description": "Запуск или инвентаризация не найдены"
           },
           "409": {
-            "description": "Run not prepared or source digest incompatible"
+            "description": "Запуск не подготовлен или дайджест источника несовместим"
           },
           "413": {
-            "description": "Source ZIP exceeds 512 MiB"
+            "description": "ZIP источника превышает 512 МиБ"
           },
           "415": {
-            "description": "application/zip required"
+            "description": "Требуется application/zip"
           },
           "422": {
-            "description": "Unsafe or corrupt source ZIP"
+            "description": "Небезопасный или повреждённый ZIP источника"
           }
         }
       }
@@ -1469,7 +1469,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read persisted UUID mapping and collisions",
+        "summary": "Прочитать сохранённое сопоставление UUID и сведения о коллизиях",
         "security": [
           {
             "BearerAuth": []
@@ -1488,7 +1488,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified sanitized identity map; no passwords or sessions",
+            "description": "Проверенная очищенная карта идентификаторов без паролей и сеансов",
             "content": {
               "application/json": {
                 "schema": {
@@ -1509,16 +1509,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run or inventory missing"
+            "description": "Запуск или инвентаризация отсутствуют"
           },
           "409": {
-            "description": "Invalid workflow state or source changed"
+            "description": "Недопустимое состояние процесса или источник изменён"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       },
@@ -1527,7 +1527,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Scan real FileAuth and SQL identity data from identical pinned source ZIP",
+        "summary": "Просканировать реальные данные FileAuth и SQL из идентичного закреплённого ZIP источника",
         "security": [
           {
             "BearerAuth": []
@@ -1558,7 +1558,7 @@
         },
         "responses": {
           "200": {
-            "description": "Verified sanitized identity map; no passwords or sessions",
+            "description": "Проверенная очищенная карта идентификаторов без паролей и сеансов",
             "content": {
               "application/json": {
                 "schema": {
@@ -1579,25 +1579,25 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run or inventory missing"
+            "description": "Запуск или инвентаризация отсутствуют"
           },
           "409": {
-            "description": "Invalid workflow state or source changed"
+            "description": "Недопустимое состояние процесса или источник изменён"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           },
           "413": {
-            "description": "Bounded source ZIP too large"
+            "description": "ZIP источника слишком велик"
           },
           "415": {
-            "description": "application/zip required"
+            "description": "Требуется application/zip"
           },
           "422": {
-            "description": "Source identity format invalid or unsupported"
+            "description": "Неверный или неподдерживаемый формат идентификаторов источника"
           }
         }
       }
@@ -1608,7 +1608,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Reconcile persisted source UUID map against current Never identities",
+        "summary": "Сопоставить сохранённую карту UUID источника с текущими идентификаторами Never",
         "security": [
           {
             "BearerAuth": []
@@ -1627,7 +1627,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified sanitized identity map; no passwords or sessions",
+            "description": "Проверенная очищенная карта идентификаторов без паролей и сеансов",
             "content": {
               "application/json": {
                 "schema": {
@@ -1648,16 +1648,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run or inventory missing"
+            "description": "Запуск или инвентаризация отсутствуют"
           },
           "409": {
-            "description": "Invalid workflow state or source changed"
+            "description": "Недопустимое состояние процесса или источник изменён"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -1684,10 +1684,10 @@
             }
           }
         ],
-        "summary": "Read saved sanitized source inventory",
+        "summary": "Прочитать сохранённую очищенную инвентаризацию источника",
         "responses": {
           "200": {
-            "description": "Sanitized persisted file inventory",
+            "description": "Очищенная сохранённая инвентаризация файлов",
             "content": {
               "application/json": {
                 "schema": {
@@ -1708,22 +1708,22 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run/inventory not found"
+            "description": "Запуск или инвентаризация не найдены"
           },
           "409": {
-            "description": "Run not prepared or source digest incompatible"
+            "description": "Запуск не подготовлен или дайджест источника несовместим"
           },
           "413": {
-            "description": "Source ZIP exceeds 512 MiB"
+            "description": "ZIP источника превышает 512 МиБ"
           },
           "415": {
-            "description": "application/zip required"
+            "description": "Требуется application/zip"
           },
           "422": {
-            "description": "Unsafe or corrupt source ZIP"
+            "description": "Небезопасный или повреждённый ZIP источника"
           }
         }
       },
@@ -1748,7 +1748,7 @@
             }
           }
         ],
-        "summary": "Inspect and hash source ZIP and durably journal inventory",
+        "summary": "Проверить и хешировать ZIP источника, надёжно записать инвентаризацию в журнал",
         "requestBody": {
           "required": true,
           "content": {
@@ -1763,7 +1763,7 @@
         },
         "responses": {
           "200": {
-            "description": "Sanitized persisted file inventory",
+            "description": "Очищенная сохранённая инвентаризация файлов",
             "content": {
               "application/json": {
                 "schema": {
@@ -1784,22 +1784,22 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "Run/inventory not found"
+            "description": "Запуск или инвентаризация не найдены"
           },
           "409": {
-            "description": "Run not prepared or source digest incompatible"
+            "description": "Запуск не подготовлен или дайджест источника несовместим"
           },
           "413": {
-            "description": "Source ZIP exceeds 512 MiB"
+            "description": "ZIP источника превышает 512 МиБ"
           },
           "415": {
-            "description": "application/zip required"
+            "description": "Требуется application/zip"
           },
           "422": {
-            "description": "Unsafe or corrupt source ZIP"
+            "description": "Небезопасный или повреждённый ZIP источника"
           }
         }
       }
@@ -1810,7 +1810,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read persisted sanitized module and ServerWrapper assessment",
+        "summary": "Прочитать сохранённую очищенную оценку модулей и ServerWrapper",
         "security": [
           {
             "BearerAuth": []
@@ -1845,7 +1845,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized report or fresh ServerBridge identity receipt",
+            "description": "Очищенный отчёт или свежая квитанция идентификации ServerBridge",
             "content": {
               "application/json": {
                 "schema": {
@@ -1866,16 +1866,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Operator permission / MFA required"
+            "description": "Требуются полномочия оператора и MFA"
           },
           "409": {
-            "description": "Source conflict, critical module blocker or duplicate node"
+            "description": "Конфликт источника, критическая блокировка модуля или дублирующийся узел"
           },
           "422": {
-            "description": "Unrecognized source or invalid request"
+            "description": "Неизвестный источник или недопустимый запрос"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -1886,7 +1886,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Inspect hash-pinned Gravit JARs and wrapper configuration without executing code",
+        "summary": "Проверить закреплённые по хешу JAR Gravit и конфигурацию оболочки без запуска кода",
         "security": [
           {
             "BearerAuth": []
@@ -1921,7 +1921,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized report or fresh ServerBridge identity receipt",
+            "description": "Очищенный отчёт или свежая квитанция идентификации ServerBridge",
             "content": {
               "application/json": {
                 "schema": {
@@ -1942,16 +1942,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Operator permission / MFA required"
+            "description": "Требуются полномочия оператора и MFA"
           },
           "409": {
-            "description": "Source conflict, critical module blocker or duplicate node"
+            "description": "Конфликт источника, критическая блокировка модуля или дублирующийся узел"
           },
           "422": {
-            "description": "Unrecognized source or invalid request"
+            "description": "Неизвестный источник или недопустимый запрос"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         },
         "requestBody": {
@@ -1973,7 +1973,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Enroll reviewed ServerWrapper replacement with independent Ed25519 identity and fresh MFA",
+        "summary": "Зарегистрировать проверенную замену ServerWrapper с независимой идентификацией Ed25519 и новым подтверждением MFA",
         "security": [
           {
             "BearerAuth": []
@@ -2008,7 +2008,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized report or fresh ServerBridge identity receipt",
+            "description": "Очищенный отчёт или свежая квитанция идентификации ServerBridge",
             "content": {
               "application/json": {
                 "schema": {
@@ -2029,16 +2029,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Operator permission / MFA required"
+            "description": "Требуются полномочия оператора и MFA"
           },
           "409": {
-            "description": "Source conflict, critical module blocker or duplicate node"
+            "description": "Конфликт источника, критическая блокировка модуля или дублирующийся узел"
           },
           "422": {
-            "description": "Unrecognized source or invalid request"
+            "description": "Неизвестный источник или недопустимый запрос"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         },
         "requestBody": {
@@ -2087,7 +2087,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "pause (Never baseline, not completed Gravit migration)",
+        "summary": "Приостановить (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -2095,7 +2095,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -2116,13 +2116,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "parameters": [
@@ -2154,7 +2154,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read latest isolated rehearsal evidence",
+        "summary": "Прочитать последние доказательства изолированной репетиции",
         "security": [
           {
             "BearerAuth": []
@@ -2172,7 +2172,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified server-side rehearsal report and blockers",
+            "description": "Проверенный серверный отчёт о репетиции и блокирующих проблемах",
             "content": {
               "application/json": {
                 "schema": {
@@ -2191,16 +2191,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "No permission / fresh MFA required"
+            "description": "Нет разрешения или требуется новое подтверждение MFA"
           },
           "404": {
-            "description": "No rehearsal"
+            "description": "Репетиция отсутствует"
           },
           "409": {
-            "description": "Conflict or missing migration prerequisites"
+            "description": "Конфликт или отсутствуют предварительные условия миграции"
           },
           "503": {
-            "description": "Repository unavailable"
+            "description": "Репозиторий недоступен"
           }
         }
       },
@@ -2209,7 +2209,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Validate and save operator-executed isolated rehearsal evidence (fresh MFA)",
+        "summary": "Проверить и сохранить доказательства изолированной репетиции, проведённой оператором (новое MFA)",
         "security": [
           {
             "BearerAuth": []
@@ -2227,7 +2227,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verified server-side rehearsal report and blockers",
+            "description": "Проверенный серверный отчёт о репетиции и блокирующих проблемах",
             "content": {
               "application/json": {
                 "schema": {
@@ -2246,16 +2246,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "No permission / fresh MFA required"
+            "description": "Нет разрешения или требуется новое подтверждение MFA"
           },
           "404": {
-            "description": "No rehearsal"
+            "description": "Репетиция отсутствует"
           },
           "409": {
-            "description": "Conflict or missing migration prerequisites"
+            "description": "Конфликт или отсутствуют предварительные условия миграции"
           },
           "503": {
-            "description": "Repository unavailable"
+            "description": "Репозиторий недоступен"
           }
         },
         "requestBody": {
@@ -2288,7 +2288,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Regenerate and hash Migration Center evidence from committed PostgreSQL receipts",
+        "summary": "Пересоздать и хешировать доказательства Migration Center из зафиксированных квитанций PostgreSQL",
         "security": [
           {
             "BearerAuth": []
@@ -2306,7 +2306,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized migration report or reviewed receipt",
+            "description": "Очищенный отчёт о миграции или проверенная квитанция",
             "content": {
               "application/json": {
                 "schema": {
@@ -2317,7 +2317,7 @@
                   "properties": {
                     "data": {
                       "type": "object",
-                      "description": "Server-generated report with SHA-256 and blockers"
+                      "description": "Сформированный сервером отчёт с SHA-256 и блокирующими проблемами"
                     }
                   }
                 }
@@ -2328,16 +2328,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Forbidden"
+            "description": "Запрещено"
           },
           "404": {
-            "description": "Unknown run or not reviewed"
+            "description": "Неизвестный или непроверенный запуск"
           },
           "409": {
-            "description": "Digest or readiness conflict"
+            "description": "Конфликт дайджеста или готовности"
           },
           "503": {
-            "description": "Store unavailable"
+            "description": "Хранилище недоступно"
           }
         }
       }
@@ -2348,7 +2348,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read immutable RC review (not GA certificate)",
+        "summary": "Прочитать неизменяемую проверку RC (не сертификат GA)",
         "security": [
           {
             "BearerAuth": []
@@ -2366,7 +2366,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized migration report or reviewed receipt",
+            "description": "Очищенный отчёт о миграции или проверенная квитанция",
             "content": {
               "application/json": {
                 "schema": {
@@ -2377,7 +2377,7 @@
                   "properties": {
                     "data": {
                       "type": "object",
-                      "description": "Server-generated report with SHA-256 and blockers"
+                      "description": "Сформированный сервером отчёт с SHA-256 и блокирующими проблемами"
                     }
                   }
                 }
@@ -2388,16 +2388,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Forbidden"
+            "description": "Запрещено"
           },
           "404": {
-            "description": "Unknown run or not reviewed"
+            "description": "Неизвестный или непроверенный запуск"
           },
           "409": {
-            "description": "Digest or readiness conflict"
+            "description": "Конфликт дайджеста или готовности"
           },
           "503": {
-            "description": "Store unavailable"
+            "description": "Хранилище недоступно"
           }
         }
       },
@@ -2406,7 +2406,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "MFA-gated, fail-closed immutable operator review (not GA)",
+        "summary": "Неизменяемая проверка оператором с MFA и отказом по умолчанию (не GA)",
         "security": [
           {
             "BearerAuth": []
@@ -2432,7 +2432,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized migration report or reviewed receipt",
+            "description": "Очищенный отчёт о миграции или проверенная квитанция",
             "content": {
               "application/json": {
                 "schema": {
@@ -2443,7 +2443,7 @@
                   "properties": {
                     "data": {
                       "type": "object",
-                      "description": "Server-generated report with SHA-256 and blockers"
+                      "description": "Сформированный сервером отчёт с SHA-256 и блокирующими проблемами"
                     }
                   }
                 }
@@ -2454,16 +2454,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Forbidden"
+            "description": "Запрещено"
           },
           "404": {
-            "description": "Unknown run or not reviewed"
+            "description": "Неизвестный или непроверенный запуск"
           },
           "409": {
-            "description": "Digest or readiness conflict"
+            "description": "Конфликт дайджеста или готовности"
           },
           "503": {
-            "description": "Store unavailable"
+            "description": "Хранилище недоступно"
           }
         },
         "requestBody": {
@@ -2505,7 +2505,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "resume (Never baseline, not completed Gravit migration)",
+        "summary": "Возобновить (базовая реализация Never, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -2513,7 +2513,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Persistent execution state",
+            "description": "Постоянное состояние выполнения",
             "content": {
               "application/json": {
                 "schema": {
@@ -2534,13 +2534,13 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "Global settings:manage required"
+            "description": "Требуется глобальное разрешение settings:manage"
           },
           "409": {
-            "description": "State conflict or leased by another worker"
+            "description": "Конфликт состояния или ресурс арендован другим обработчиком"
           },
           "503": {
-            "description": "PostgreSQL store unavailable"
+            "description": "Хранилище PostgreSQL недоступно"
           }
         },
         "parameters": [
@@ -2572,7 +2572,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Atomic CAS restore of Never release pointer; never overwrites worlds or restarts Gravit",
+        "summary": "Атомарно восстановить указатель выпуска Never через CAS; не перезаписывает миры и не перезапускает Gravit",
         "security": [
           {
             "BearerAuth": []
@@ -2652,7 +2652,7 @@
         },
         "responses": {
           "200": {
-            "description": "Reconciled durable rollback state",
+            "description": "Согласованное постоянное состояние отката",
             "content": {
               "application/json": {
                 "schema": {
@@ -2670,16 +2670,16 @@
             }
           },
           "400": {
-            "description": "Invalid evidence or missing external fencing confirmation"
+            "description": "Неверные доказательства или нет подтверждения внешней блокировки записи"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Changed world/user data, revision race, or stale plan"
+            "description": "Изменились данные мира или пользователей, конфликт ревизий либо устаревший план"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -2690,7 +2690,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Compare a fresh fenced-live snapshot with MIG10; reject all unreconciled changes",
+        "summary": "Сравнить свежий снимок работающего источника с блокировкой записи и MIG10; отклонить все несогласованные изменения",
         "security": [
           {
             "BearerAuth": []
@@ -2760,7 +2760,7 @@
         },
         "responses": {
           "200": {
-            "description": "Reconciled durable rollback state",
+            "description": "Согласованное постоянное состояние отката",
             "content": {
               "application/json": {
                 "schema": {
@@ -2778,16 +2778,16 @@
             }
           },
           "400": {
-            "description": "Invalid evidence or missing external fencing confirmation"
+            "description": "Неверные доказательства или нет подтверждения внешней блокировки записи"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Changed world/user data, revision race, or stale plan"
+            "description": "Изменились данные мира или пользователей, конфликт ревизий либо устаревший план"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -2798,7 +2798,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read durable rollback plan and result",
+        "summary": "Прочитать постоянный план и результат отката",
         "security": [
           {
             "BearerAuth": []
@@ -2835,7 +2835,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Reconciled durable rollback state",
+            "description": "Согласованное постоянное состояние отката",
             "content": {
               "application/json": {
                 "schema": {
@@ -2853,16 +2853,16 @@
             }
           },
           "400": {
-            "description": "Invalid evidence or missing external fencing confirmation"
+            "description": "Неверные доказательства или нет подтверждения внешней блокировки записи"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Changed world/user data, revision race, or stale plan"
+            "description": "Изменились данные мира или пользователей, конфликт ревизий либо устаревший план"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -2873,7 +2873,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Read and revalidate a committed security reset",
+        "summary": "Прочитать и повторно проверить зафиксированный сброс безопасности",
         "security": [
           {
             "BearerAuth": []
@@ -2892,7 +2892,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "description": "Очищенный постоянный отчёт о сбросе безопасности — без секретов и старых доверенных якорей",
             "content": {
               "application/json": {
                 "schema": {
@@ -2913,16 +2913,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "No committed security reset"
+            "description": "Зафиксированный сброс безопасности отсутствует"
           },
           "409": {
-            "description": "Source/identity signer state conflict"
+            "description": "Конфликт состояния источника или службы подписания идентификаторов"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -2933,7 +2933,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Commit all revocations, audit and durable receipt atomically",
+        "summary": "Атомарно зафиксировать все отзывы, аудит и постоянную квитанцию",
         "security": [
           {
             "BearerAuth": []
@@ -2952,7 +2952,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "description": "Очищенный постоянный отчёт о сбросе безопасности — без секретов и старых доверенных якорей",
             "content": {
               "application/json": {
                 "schema": {
@@ -2973,16 +2973,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "No committed security reset"
+            "description": "Зафиксированный сброс безопасности отсутствует"
           },
           "409": {
-            "description": "Source/identity signer state conflict"
+            "description": "Конфликт состояния источника или службы подписания идентификаторов"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -2993,7 +2993,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Dry-run security revocation with full transactional preconditions",
+        "summary": "Проверить отзыв полномочий безопасности без выполнения изменений, с полными транзакционными условиями",
         "security": [
           {
             "BearerAuth": []
@@ -3012,7 +3012,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "description": "Очищенный постоянный отчёт о сбросе безопасности — без секретов и старых доверенных якорей",
             "content": {
               "application/json": {
                 "schema": {
@@ -3033,16 +3033,16 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "settings:manage required"
+            "description": "Требуется settings:manage"
           },
           "404": {
-            "description": "No committed security reset"
+            "description": "Зафиксированный сброс безопасности отсутствует"
           },
           "409": {
-            "description": "Source/identity signer state conflict"
+            "description": "Конфликт состояния источника или службы подписания идентификаторов"
           },
           "503": {
-            "description": "PostgreSQL unavailable"
+            "description": "PostgreSQL недоступен"
           }
         }
       }
@@ -3354,7 +3354,7 @@
         },
         "ready": {
           "type": "boolean",
-          "description": "All identities matched; DOES NOT authorize cutover"
+          "description": "Все идентификаторы сопоставлены; переключение НЕ разрешено"
         },
         "rows": {
           "type": "array",
@@ -3458,7 +3458,7 @@
         },
         "complete": {
           "type": "boolean",
-          "description": "Only credential processing completed; does not authorize cutover"
+          "description": "Обработка только учётных данных завершена; переключение не разрешено"
         },
         "dryRun": {
           "type": "boolean"

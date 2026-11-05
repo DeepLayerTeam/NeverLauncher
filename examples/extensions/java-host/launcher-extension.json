@@ -1,10 +1,10 @@
 {
   "schemaVersion": "2.0",
   "id": "org.example.java-host",
-  "name": "Java Extension Host Example",
+  "name": "Пример хоста Java-расширения",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
-  "description": "Executable signed JAR with authenticated Go/Java RPC, lifecycle and CLI",
+  "description": "Исполняемый подписанный JAR с аутентифицированным Go/Java RPC, управлением жизненным циклом и CLI",
   "api": "1.0",
   "targets": [
     {"kind": "backend", "entrypoint": "backend/java-host.jar"},
@@ -14,9 +14,9 @@
   "cli": {
     "namespace": "javahost",
     "commands": [
-      {"name": "status", "description": "Get Java extension status"},
-      {"name": "echo", "description": "Return arguments as JSON"},
-      {"name": "hang", "description": "Supervisor resilience test; only in demonstration extension"}
+      {"name": "status", "description": "Получить состояние Java-расширения"},
+      {"name": "echo", "description": "Вернуть аргументы в формате JSON"},
+      {"name": "hang", "description": "Тест устойчивости контроллера; доступен только в демонстрационном расширении"}
     ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0",
   "id": "org.example.java-developer",
-  "name": "Java Developer SDK 0.48.12 Example",
+  "name": "Пример Java Developer SDK 0.48.12",
   "version": "0.48.12",
   "publisher": "NeverLauncher Examples",
   "api": "1.0",
@@ -34,7 +34,7 @@
     "pages": [
       {
         "id": "main",
-        "title": "Java controls"
+        "title": "Управление Java"
       }
     ],
     "navigation": [
@@ -57,7 +57,7 @@
     "pages": [
       {
         "id": "main",
-        "title": "Java controls"
+        "title": "Управление Java"
       }
     ],
     "navigation": [
@@ -81,7 +81,7 @@
     "commands": [
       {
         "name": "status",
-        "description": "Read the Java extension runtime state"
+        "description": "Прочитать состояние выполнения Java-расширения"
       }
     ]
   }

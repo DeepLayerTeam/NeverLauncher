@@ -2,7 +2,7 @@
   "id": "launcher-velocity-bridge",
   "name": "Launcher Velocity Bridge",
   "version": "${version}",
-  "description": "Launcher ServerBridge/AuthBridge integration for Velocity proxy-layer.",
+  "description": "Интеграция Launcher ServerBridge/AuthBridge для прокси-уровня Velocity.",
   "authors": ["SkiF4er"],
   "main": "ru.launcher.bridge.velocity.LauncherVelocityBridge"
 }

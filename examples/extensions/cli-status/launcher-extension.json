@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0",
   "id": "ru.example.launcher.cli-status",
-  "name": "CLI Status Example",
+  "name": "Пример проверки состояния через CLI",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
   "api": "1.0",
@@ -19,7 +19,7 @@
     "commands": [
       {
         "name": "status",
-        "description": "Show extension status",
+        "description": "Показать состояние расширения",
         "usage": "nl x example status"
       }
     ]

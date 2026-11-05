@@ -1,10 +1,10 @@
 {
   "schemaVersion": "2.0",
   "id": "org.example.gravit-port",
-  "name": "Gravit Port Compatibility Example",
+  "name": "Пример совместимости переноса Gravit",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
-  "description": "Signed and runnable Gravit-style Java module backed by real Go events, storage and CLI",
+  "description": "Подписанный исполняемый Java-модуль в стиле Gravit с реальными событиями Go, хранилищем и CLI",
   "api": "1.0",
   "targets": [
     {"kind":"backend","entrypoint":"backend/gravit-port.jar"},
@@ -12,6 +12,6 @@
   ],
   "permissions": ["events:subscribe","release:read","storage:read","storage:write","cli:contribute"],
   "cli": {"namespace":"gravitport","commands":[
-    {"name":"status","description":"Report the latest published release received by the module"}
+    {"name":"status","description":"Показать последний опубликованный выпуск, полученный модулем"}
   ]}
 }

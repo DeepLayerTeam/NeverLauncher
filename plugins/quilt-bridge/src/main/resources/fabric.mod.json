@@ -3,7 +3,7 @@
   "id": "launcher_quilt_bridge",
   "version": "${version}",
   "name": "Launcher Quilt Server Bridge",
-  "description": "Server-only Launcher ServerBridge adapter for Quilt Loader.",
+  "description": "Серверный адаптер Launcher ServerBridge для Quilt Loader.",
   "environment": "server",
   "entrypoints": {"main": ["ru.launcher.bridge.quilt.LauncherQuiltBridge"]},
   "mixins": ["launcher.quilt.mixins.json"],

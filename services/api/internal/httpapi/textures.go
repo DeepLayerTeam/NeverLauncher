@@ -63,7 +63,7 @@ func (s Server) textureMine0251(w http.ResponseWriter, r *http.Request) {
 }
 
 type textureSelectionChange0251 struct {
-	ProfileUUID      string `json:"profileUuid,omitempty"` // optional assertion, never an authorization mechanism
+	ProfileUUID      string `json:"profileUuid,omitempty"` // Необязательное подтверждение, никогда не служит механизмом авторизации.
 	ExpectedRevision int64  `json:"expectedRevision"`
 	Model            string `json:"model"`
 	Visibility       string `json:"visibility"`

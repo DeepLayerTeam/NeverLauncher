@@ -63,7 +63,7 @@ func TestBuildWorkspaceDirectoryStageAndMaterialize0226(t *testing.T) {
 			}
 		}
 	}
-	upload("saves/world/level.dat", "secret", ws.Data.Revision, 400) // never a managed path
+	upload("saves/world/level.dat", "secret", ws.Data.Revision, 400) // Никогда не использовать как управляемый путь.
 	upload("mods/client.jar", "jar-test", ws.Data.Revision, 201)
 	upload("assets/indexes/demo.json", "{}", ws.Data.Revision, 201)
 	upload("mods/stale.jar", "old", 1, 409) // устаревшая запись CAS не может перезаписать данные

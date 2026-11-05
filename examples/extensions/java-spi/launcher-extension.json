@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0",
   "id": "org.example.java-spi",
-  "name": "Java SPI Runtime Integration",
+  "name": "Интеграция Java SPI с Runtime",
   "version": "0.1.0",
   "publisher": "NeverLauncher Examples",
   "api": "1.0",
@@ -10,5 +10,5 @@
     {"kind":"cli","entrypoint":"cli/java-spi.jar"}
   ],
   "permissions": ["storage:read", "cli:contribute"],
-  "cli": {"namespace":"javaspi","commands":[{"name":"greet","description":"Invoke or select the active Java SPI greeting provider"}]}
+  "cli": {"namespace":"javaspi","commands":[{"name":"greet","description":"Вызвать или выбрать активный провайдер приветствия Java SPI"}]}
 }

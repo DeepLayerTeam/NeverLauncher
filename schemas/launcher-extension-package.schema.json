@@ -45,7 +45,7 @@
         "1.0",
         "3.7"
       ],
-      "description": "Extension API v1. New 0.21+ publications MUST use 1.0; 3.7 is a read/run compatibility alias for immutable 0.20.x artifacts."
+      "description": "API расширений v1. Новые публикации 0.21+ ОБЯЗАНЫ использовать 1.0; значение 3.7 поддерживается лишь как совместимый псевдоним чтения и запуска неизменяемых артефактов 0.20.x."
     },
     "buildEpoch": {
       "type": "integer",

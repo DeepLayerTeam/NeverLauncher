@@ -628,7 +628,7 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 func controlWireExpiry0285(cmd model.ServerBridgeControlCommand) int64 {
 	expires := cmd.ExpiresAt.UnixMilli()
 	if cmd.LeaseUntil.IsZero() {
-		return 0 // fail closed if a repository returned no lease timestamp
+		return 0 // Запрещать доступ по умолчанию, если репозиторий не вернул время аренды.
 	}
 	if leaseExpiry := cmd.LeaseUntil.UnixMilli(); leaseExpiry < expires {
 		return leaseExpiry

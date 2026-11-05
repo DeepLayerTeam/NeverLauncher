@@ -225,7 +225,7 @@ def path_parameters(path):
                 "name": "idempotencyKey",
                 "in": "query",
                 "required": True,
-                "description": "Original key; lookup never retries a mutation and is restricted to the original actor and current project permission.",
+                "description": "Исходный ключ; чтение не повторяет операцию изменения и разрешено лишь первоначальному инициатору с действующим разрешением на проект.",
                 "schema": {"type": "string", "minLength": 8, "maxLength": 240},
             },
         ]
@@ -235,14 +235,14 @@ def path_parameters(path):
                 "name": "protocols",
                 "in": "query",
                 "required": False,
-                "description": "Comma-separated protocol versions offered by the bridge, highest preference first.",
+                "description": "Версии протокола, предлагаемые мостом через запятую, начиная с наиболее предпочтительной.",
                 "schema": {"type": "string", "example": "3,2"},
             },
             {
                 "name": "features",
                 "in": "query",
                 "required": False,
-                "description": "Comma-separated Protocol v3 feature identifiers supported by the bridge.",
+                "description": "Идентификаторы возможностей Protocol v3, поддерживаемых мостом, через запятую.",
                 "schema": {
                     "type": "string",
                     "example": "protocol.capability-negotiation,protocol.feature-flags",
@@ -261,14 +261,14 @@ def path_parameters(path):
                 "name": "channelId",
                 "in": "query",
                 "required": True,
-                "description": "Stable 128-bit control-channel id persisted by the active runtime across Backend endpoint failover.",
+                "description": "Постоянный 128-битный ID канала управления, сохраняемый активным Runtime при переключении Backend.",
                 "schema": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
             },
             {
                 "name": "resumeAfter",
                 "in": "query",
                 "required": True,
-                "description": "Highest delivery sequence durably acknowledged by this runtime channel.",
+                "description": "Максимальный порядковый номер доставки, надёжно подтверждённый этим каналом Runtime.",
                 "schema": {"type": "integer", "minimum": 0},
             },
         ]
@@ -579,7 +579,7 @@ def path_parameters(path):
                 "name": "projectId",
                 "in": "query",
                 "required": False,
-                "description": "Empty or absent = global local Minecraft policy; project ID = project-scoped policy.",
+                "description": "Пустое или отсутствующее значение = глобальная политика локального Minecraft; ID проекта = политика отдельного проекта.",
                 "schema": {"type": "string", "maxLength": 128},
             }
         )
@@ -983,19 +983,19 @@ for method, path in routes:
     }
     if path == "/api/user/profile/{uuid}/{kind}":
         op["description"] = (
-            "Yggdrasil/authlib-injector profile-owned texture PUT/DELETE; requires Minecraft Bearer session token, uses the normalized PNG service, returns 204 on success."
+            "PUT/DELETE текстуры профиля Yggdrasil/authlib-injector; требуется Bearer-токен сеанса Minecraft, используется служба нормализации PNG, при успехе возвращается 204."
         )
     if path == "/api/v1/session/join":
         op["description"] = (
-            "Launcher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
+            "Одноразовые пропуска Launcher 0.14.3 для присоединения: выдаёт краткосрочное разрешение ServerBridge, привязанное к идентификатору, которое может быть использовано лишь один раз активной криптографической идентичностью узла."
         )
     elif path == "/sessionserver/session/minecraft/hasJoined":
         op["description"] = (
-            "Consumes a Yggdrasil-compatible one-time join authorization. The first valid hasJoined succeeds; replay returns no join."
+            "Использует одноразовое разрешение присоединения, совместимое с Yggdrasil. Первый корректный hasJoined успешен, повторное использование не возвращает присоединение."
         )
     if path.startswith("/api/v1/minecraft/official/"):
         op["description"] = (
-            "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session."
+            "Официальные операции Microsoft/Xbox/Minecraft Java (0.25.7). Идентификаторы Never/Yggdrasil и файлы текстур не используются. Всегда требуется Bearer-токен Never; операции связанного аккаунта также требуют официального сеанса AES-GCM, привязанного к текущему сеансу Never."
         )
     params = path_parameters(path)
     if path.startswith("/api/v1/me/textures/"):
@@ -1011,7 +1011,7 @@ for method, path in routes:
                 "in": "header",
                 "required": True,
                 "schema": {"type": "string", "minLength": 1},
-                "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token).",
+                "description": "Непрозрачное зашифрованное состояние Device Flow или связанного сеанса Minecraft (НЕ токен доступа).",
             }
         )
     if params:
@@ -1159,10 +1159,10 @@ for method, path in routes:
         )
     )
     if success == "204":
-        op["responses"][success] = {"description": "Success"}
+        op["responses"][success] = {"description": "Успешно"}
     else:
         op["responses"][success] = {
-            "description": "Success",
+            "description": "Успешно",
             "content": {
                 ctype: {
                     "schema": (
@@ -1175,17 +1175,17 @@ for method, path in routes:
         }
     if path == "/api/v1/minecraft/official/device/poll" and method == "post":
         op["responses"]["202"] = {
-            "description": "Microsoft authorization pending; use returned flow and Retry-After."
+            "description": "Авторизация Microsoft ещё ожидается; используйте возвращённый сценарий и Retry-After."
         }
     if path.startswith("/api/v1/minecraft/official/"):
         op["responses"]["403"] = {
-            "description": "Official Minecraft ownership, account or cape not authorized."
+            "description": "Нет разрешения на официальный аккаунт Minecraft, владение или плащ."
         }
         op["responses"]["429"] = {
-            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+            "description": "Превышен предел частоты опроса Microsoft или Minecraft Services."
         }
         op["responses"]["502"] = {
-            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+            "description": "Microsoft, Xbox Live или Minecraft Services недоступны либо вернули некорректный ответ."
         }
     if path == "/api/profiles/minecraft" and method == "post":
         op["responses"]["200"]["content"]["application/json"]["schema"] = {
@@ -1200,12 +1200,12 @@ for method, path in routes:
             },
         }
     if path == "/api/user/profile/{uuid}/{kind}":
-        op["responses"]["403"] = {"description": "Upload or cape permission denied"}
+        op["responses"]["403"] = {"description": "Отказано в загрузке или изменении плаща"}
         op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
         op["responses"]["413"] = {
-            "description": "PNG too large or project quota exceeded"
+            "description": "Размер PNG слишком велик или превышена квота проекта"
         }
-        op["responses"]["422"] = {"description": "Invalid Minecraft PNG"}
+        op["responses"]["422"] = {"description": "Недопустимый PNG-файл Minecraft"}
         op["responses"]["503"] = {"$ref": "#/components/responses/ServiceUnavailable"}
     if path in (
         "/api/v1/me/textures/{kind}/upload",
@@ -1213,30 +1213,30 @@ for method, path in routes:
     ):
         op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
         op["responses"]["413"] = {
-            "description": "Image exceeds upload or project limit"
+            "description": "Изображение превышает предел загрузки или квоту проекта"
         }
         op["responses"]["422"] = {
-            "description": "PNG cannot be decoded or has invalid Minecraft dimensions"
+            "description": "PNG не декодируется или содержит недопустимые для Minecraft размеры"
         }
         op["responses"]["403"] = {
-            "description": "Texture upload denied by project policy"
+            "description": "Загрузка текстуры запрещена политикой проекта"
         }
     if path == "/api/v1/me/textures/{kind}/import":
         op["responses"]["429"] = {
-            "description": "Import rate or concurrency limit exceeded"
+            "description": "Превышен предел частоты или параллельности импорта"
         }
         op["responses"]["502"] = {
-            "description": "Remote origin failed the bounded HTTPS fetch"
+            "description": "Удалённый источник не прошёл ограниченную по ресурсам HTTPS-загрузку"
         }
     if path.startswith("/api/v1/me/textures"):
         op["responses"]["503"] = {"$ref": "#/components/responses/ServiceUnavailable"}
         if method == "patch":
-            op["responses"]["403"] = {"description": "Foreign Minecraft profile"}
-            op["responses"]["404"] = {"description": "Assignment does not exist"}
+            op["responses"]["403"] = {"description": "Посторонний профиль Minecraft"}
+            op["responses"]["404"] = {"description": "Назначение не существует"}
             op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
     if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
         op["responses"]["200"] = {
-            "description": "Idempotent replay of the same queued command",
+            "description": "Идемпотентное повторное получение той же команды из очереди",
             "content": {
                 "application/json": {
                     "schema": ref("ServerBridgeControlCommandResponseV3")
@@ -1248,7 +1248,7 @@ for method, path in routes:
         and method == "get"
     ):
         op["responses"]["204"] = {
-            "description": "No command currently available for this runtime"
+            "description": "Сейчас для этого Runtime нет доступных команд"
         }
     if sec:
         op["responses"]["401"] = {"$ref": "#/components/responses/Unauthorized"}
@@ -1331,7 +1331,7 @@ schemas = {
                 "type": "string",
                 "format": "uri",
                 "maxLength": 2048,
-                "description": "Public HTTPS URL (DNS hostname, TCP 443 only), no redirects, max 4 MiB PNG.",
+                "description": "Публичный HTTPS-адрес (имя DNS, только TCP 443), без перенаправлений; PNG до 4 МиБ.",
             },
             "expectedRevision": {"type": "integer", "minimum": 0},
             "model": {
@@ -1346,7 +1346,7 @@ schemas = {
             },
             "profileUuid": {
                 "type": "string",
-                "description": "Optional ownership assertion; never an identity selector",
+                "description": "Необязательное подтверждение владения; не используется для выбора идентификатора",
             },
         },
     },
@@ -1357,12 +1357,12 @@ schemas = {
             "file": {
                 "type": "string",
                 "format": "binary",
-                "description": "Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels.",
+                "description": "Полностью декодированный и нормализованный PNG Minecraft; не более 4 МиБ в сжатом виде и 1024×1024 пикселей.",
             },
             "expectedRevision": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "0 for first assignment; otherwise latest revision",
+                "description": "0 — первое назначение; иначе последняя ревизия",
             },
             "model": {
                 "type": "string",
@@ -1376,7 +1376,7 @@ schemas = {
             },
             "profileUuid": {
                 "type": "string",
-                "description": "Optional owner assertion, never used to determine identity",
+                "description": "Необязательное подтверждение владельца, никогда не используется для определения идентификатора",
             },
         },
     },
@@ -1403,7 +1403,7 @@ schemas = {
         "properties": {
             "profileUuid": {
                 "type": "string",
-                "description": "Optional caller assertion; server derives the actual UUID from the authenticated account.",
+                "description": "Необязательное утверждение вызывающей стороны; сервер получает настоящий UUID из аутентифицированной учётной записи.",
             },
             "expectedRevision": {"type": "integer", "minimum": 1},
             "model": {"type": "string", "enum": ["classic", "slim"]},
@@ -1538,7 +1538,7 @@ schemas = {
         "properties": {
             "publicKeyBase64": {
                 "type": "string",
-                "description": "Raw 32-byte Ed25519 public key encoded as standard Base64.",
+                "description": "Исходный 32-байтный открытый ключ Ed25519 в стандартном Base64.",
             },
             "active": {"type": "boolean"},
         },
@@ -1573,11 +1573,11 @@ schemas = {
         "properties": {
             "version": {
                 "type": "string",
-                "description": "Exact registry version for install/update.",
+                "description": "Точная версия реестра для установки или обновления.",
             },
             "channel": {
                 "type": "string",
-                "description": "Registry channel used when version is omitted; defaults to stable for install/update.",
+                "description": "Канал реестра, используемый при отсутствии версии; по умолчанию stable для установки или обновления.",
             },
             "scope": {
                 "type": "string",
@@ -1586,7 +1586,7 @@ schemas = {
             },
             "scopeId": {
                 "type": "string",
-                "description": "Required when scope=project.",
+                "description": "Требуется, когда scope=project.",
             },
         },
         "additionalProperties": False,
@@ -1622,7 +1622,7 @@ schemas = {
             "scopeId": {"type": "string"},
             "valueBase64": {
                 "type": "string",
-                "description": "Secret plaintext encoded as standard Base64; never returned by list/read admin APIs.",
+                "description": "Открытый текст секрета в стандартном Base64; никогда не возвращается API администратора для списка и чтения.",
             },
         },
         "additionalProperties": False,
@@ -1698,11 +1698,11 @@ schemas = {
             "refreshToken": {"type": "string", "minLength": 1},
             "deviceId": {
                 "type": "string",
-                "description": "Required for a session already bound to a trusted device",
+                "description": "Требуется для сеанса, уже привязанного к доверенному устройству",
             },
             "deviceSignature": {
                 "type": "string",
-                "description": "base64url signature by the current trusted-device key over the canonical Launcher Session Device Binding v1 refresh payload",
+                "description": "Подпись base64url текущим ключом доверенного устройства по каноническому сообщению обновления Launcher Session Device Binding v1",
             },
         },
     },
@@ -1970,7 +1970,7 @@ schemas = {
             "publicKey": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_-]{43}$",
-                "description": "Raw 32-byte Ed25519 public key encoded as unpadded base64url. The private key never leaves the ServerBridge node.",
+                "description": "Исходный 32-байтный открытый ключ Ed25519 в base64url без заполнения. Закрытый ключ никогда не покидает узел ServerBridge.",
             },
         },
         "additionalProperties": False,
@@ -1983,7 +1983,7 @@ schemas = {
             "publicKey": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_-]{43}$",
-                "description": "Replacement raw Ed25519 public key encoded as unpadded base64url.",
+                "description": "Новый открытый ключ Ed25519 в base64url без заполнения.",
             },
         },
         "additionalProperties": False,
@@ -2004,11 +2004,11 @@ schemas = {
             "channel": {"type": "string", "default": "stable"},
             "minecraftAccessToken": {
                 "type": "string",
-                "description": "Minecraft access token whose integrity-verified session is bound to this ServerBridge join when Guard enforcement applies",
+                "description": "Токен доступа Minecraft, чей проверенный на целостность сеанс привязан к этому присоединению ServerBridge при включённой защите Guard",
             },
             "continuousGuardTicket": {
                 "type": "string",
-                "description": "Single-use Attestation v2 ticket required for integrity-enforced Windows ServerBridge join",
+                "description": "Одноразовый пропуск Attestation v2 для присоединения Windows ServerBridge с обязательной проверкой целостности",
             },
         },
     },
@@ -2071,11 +2071,11 @@ schemas = {
             "challenge": {"type": "string", "minLength": 1},
             "publicKey": {
                 "type": "string",
-                "description": "Device public key encoded as base64url: raw Ed25519 (32 bytes) or uncompressed SEC1 P-256 (65 bytes)",
+                "description": "Открытый ключ устройства в base64url: исходный Ed25519 (32 байта) или несжатый SEC1 P-256 (65 байт)",
             },
             "signature": {
                 "type": "string",
-                "description": "Device proof signature encoded as base64url: Ed25519 (64 bytes) or raw P-256 IEEE P1363 r||s (64 bytes)",
+                "description": "Подпись подтверждения устройства в base64url: Ed25519 (64 байта) или исходный P-256 IEEE P1363 r||s (64 байта)",
             },
         },
     },
@@ -2460,7 +2460,7 @@ schemas = {
             "pluginSha256": {
                 "type": "string",
                 "pattern": "^[0-9a-fA-F]{64}$",
-                "description": "SHA-256 of the running ServerBridge JAR",
+                "description": "SHA-256 запущенного JAR ServerBridge",
             },
             "hostname": {"type": "string"},
             "playersOnline": {"type": "integer", "minimum": 0},
@@ -2734,7 +2734,7 @@ schemas = {
             "pluginSha256": {
                 "type": "string",
                 "pattern": "^[0-9a-fA-F]{64}$",
-                "description": "SHA-256 of the running ServerBridge JAR",
+                "description": "SHA-256 запущенного JAR ServerBridge",
             },
             "runtime": ref("ServerBridgeRuntimeIdentityV3"),
             "telemetry": ref("ServerBridgeTelemetryV3"),
@@ -2881,7 +2881,7 @@ schemas = {
             "sessionCorrelationId": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{64}$",
-                "description": "Player Session Integration 3 correlation proof; required when session.player-lifecycle-v3 is negotiated",
+                "description": "Подтверждение корреляции Player Session Integration 3; требуется при согласованной возможности session.player-lifecycle-v3",
             },
         },
         "additionalProperties": False,
@@ -2973,7 +2973,7 @@ schemas = {
             "launcherVersion": {"type": "string", "minLength": 1, "maxLength": 64},
             "attestation": {
                 "type": "object",
-                "description": "Windows Guard Attestation v2 containing base v1 attestation and fresh Continuous Guard evidence",
+                "description": "Windows Guard Attestation v2 с базовой аттестацией v1 и свежими доказательствами Continuous Guard",
                 "additionalProperties": True,
             },
             "signature": {"type": "string", "minLength": 1},
@@ -2986,7 +2986,7 @@ schemas = {
             "clientToken": {"type": "string"},
             "guardAttestationTicket": {
                 "type": "string",
-                "description": "Single-use Guard 0.13.4 launch ticket required when Guard Attestation enforcement is enabled",
+                "description": "Одноразовый пропуск запуска Guard 0.13.4 при обязательной проверке Guard Attestation",
             },
         },
     },
@@ -3063,7 +3063,7 @@ schemas = {
             "pluginSha256": {
                 "type": "string",
                 "pattern": "^[0-9a-fA-F]{64}$",
-                "description": "Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement",
+                "description": "Текущий SHA-256 JAR ServerBridge; должен совпадать с принятым измерением heartbeat",
             },
         },
         "additionalProperties": False,
@@ -3098,7 +3098,7 @@ schemas = {
             "pluginSha256": {
                 "type": "string",
                 "pattern": "^[0-9a-fA-F]{64}$",
-                "description": "Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement",
+                "description": "Текущий SHA-256 JAR ServerBridge; должен совпадать с принятым измерением heartbeat",
             },
         },
         "additionalProperties": False,
@@ -3138,31 +3138,31 @@ spec = {
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Launcher-Node-Id",
-                "description": "ServerBridge node id included in the Ed25519 canonical request.",
+                "description": "ID узла ServerBridge в каноническом запросе Ed25519.",
             },
             "NodeKeyFingerprint": {
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Launcher-Node-Key-Fingerprint",
-                "description": "Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key.",
+                "description": "Отпечаток SHA-256 зарегистрированного открытого ключа Ed25519 в нижнем регистре.",
             },
             "NodeTimestamp": {
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Launcher-Node-Timestamp",
-                "description": "Unix timestamp in seconds; must be within the ServerBridge signing window.",
+                "description": "Временная отметка Unix в секундах; должна попадать в окно подписания ServerBridge.",
             },
             "NodeNonce": {
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Launcher-Node-Nonce",
-                "description": "Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection.",
+                "description": "Новый nonce base64url без заполнения, однократно потребляемый защитой от повтора PostgreSQL.",
             },
             "NodeSignature": {
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-Launcher-Node-Signature",
-                "description": "Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge.",
+                "description": "Подпись Ed25519 в base64url без заполнения по старому домену Node-v1 или каноническому домену подписания Protocol v3, согласованному мостом.",
             },
             "BootstrapToken": {
                 "type": "apiKey",
@@ -3173,27 +3173,27 @@ spec = {
         "schemas": schemas,
         "responses": {
             "BadRequest": {
-                "description": "Invalid request",
+                "description": "Недопустимый запрос",
                 "content": {"application/json": {"schema": ref("Error")}},
             },
             "Unauthorized": {
-                "description": "Authentication required, node signature invalid, or signed request outside the accepted timestamp window",
+                "description": "Требуется аутентификация, подпись узла неверна или подписанный запрос выходит за допустимое временное окно",
                 "content": {"application/json": {"schema": ref("Error")}},
             },
             "Conflict": {
-                "description": "The signed node request nonce or one-time join ticket has already been consumed",
+                "description": "Nonce подписанного запроса узла или одноразовый пропуск присоединения уже использован",
                 "content": {"application/json": {"schema": ref("Error")}},
             },
             "PayloadTooLarge": {
-                "description": "The signed request body exceeds the ServerBridge authentication limit",
+                "description": "Подписанное тело запроса превышает предел аутентификации ServerBridge",
                 "content": {"application/json": {"schema": ref("Error")}},
             },
             "ServiceUnavailable": {
-                "description": "Required ServerBridge persistence or nonce replay protection is unavailable",
+                "description": "Требуемое хранилище ServerBridge или защита nonce от повторного использования недоступны",
                 "content": {"application/json": {"schema": ref("Error")}},
             },
             "UpgradeRequired": {
-                "description": "No compatible ServerBridge Protocol v2/v3 contract or required v3 feature set was negotiated",
+                "description": "Не удалось согласовать совместимый контракт ServerBridge Protocol v2/v3 или обязательный набор возможностей v3",
                 "content": {"application/json": {"schema": ref("Error")}},
             },
         },

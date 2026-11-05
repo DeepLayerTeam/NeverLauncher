@@ -1,7 +1,7 @@
 {
   "schemaVersion":"2.0",
   "id":"org.example.java-ui",
-  "name":"Java Admin Desktop CLI example",
+  "name":"Пример Java для Admin, Desktop и CLI",
   "version":"0.1.0",
   "publisher":"NeverLauncher Examples",
   "api":"1.0",
@@ -12,11 +12,11 @@
     {"kind":"cli","entrypoint":"cli/workspace.jar"}
   ],
   "permissions":["ui:contribute","desktop:contribute","cli:contribute","storage:read","storage:write"],
-  "admin":{"pages":[{"id":"main","title":"Java controls"}],
+  "admin":{"pages":[{"id":"main","title":"Управление Java"}],
     "navigation":[{"id":"main-nav","label":"Java controls","pageId":"main"}],
     "actions":[{"id":"refresh","label":"Refresh via Java","pageId":"main","placement":"toolbar"}]},
-  "desktop":{"pages":[{"id":"main","title":"Java controls"}],
+  "desktop":{"pages":[{"id":"main","title":"Управление Java"}],
     "navigation":[{"id":"main-nav","label":"Java controls","pageId":"main"}],
     "actions":[{"id":"refresh","label":"Refresh via Java","pageId":"main","placement":"toolbar"}]},
-  "cli":{"namespace":"java-ui","commands":[{"name":"status","description":"Read the Java extension runtime state"}]}
+  "cli":{"namespace":"java-ui","commands":[{"name":"status","description":"Прочитать состояние выполнения Java-расширения"}]}
 }

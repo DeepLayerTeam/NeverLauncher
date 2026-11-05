@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0",
   "id": "ru.example.launcher.admin-dashboard",
-  "name": "Admin Dashboard Example",
+  "name": "Пример панели администратора",
   "version": "0.1.0",
   "publisher": "Launcher Examples",
   "api": "1.0",
@@ -19,7 +19,7 @@
     "pages": [
       {
         "id": "main",
-        "title": "Admin Dashboard Example"
+        "title": "Пример панели администратора"
       }
     ],
     "navigation": [
@@ -32,7 +32,7 @@
     "dashboardWidgets": [
       {
         "id": "summary",
-        "title": "Admin Dashboard Example",
+        "title": "Пример панели администратора",
         "pageId": "main",
         "height": 280
       }

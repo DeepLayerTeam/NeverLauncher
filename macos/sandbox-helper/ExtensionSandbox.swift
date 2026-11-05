@@ -205,7 +205,7 @@ private func run() throws {
             while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
             break
         }
-        usleep(20_000) // 20 ms, not a substitute for a kernel process-count cap.
+        usleep(20_000) // 20 мс — не замена ограничению числа процессов на уровне ядра.
     }
     _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: (path as NSString).deletingLastPathComponent))
     if violated { exit(126) }
