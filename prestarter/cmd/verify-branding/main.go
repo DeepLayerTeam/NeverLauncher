@@ -20,7 +20,7 @@ func run() error {
 	policyFile := flag.String("trust-policy", "", "Необязательная делегированная политика доверия с подписью корневого ключа")
 	flag.Parse()
 	if *config == "" || *rootFile == "" {
-		return errors.New("--config and --root-key-file required")
+		return errors.New("Обязательны параметры --config и --root-key-file")
 	}
 	read := func(path string, max int64) ([]byte, error) {
 		info, e := os.Lstat(path)
@@ -28,7 +28,7 @@ func run() error {
 			return nil, e
 		}
 		if !info.Mode().IsRegular() || info.Size() > max {
-			return nil, fmt.Errorf("unsafe or oversized file %s", path)
+			return nil, fmt.Errorf("Небезопасный файл или файл чрезмерного размера: %s", path)
 		}
 		return os.ReadFile(path)
 	}
@@ -47,7 +47,7 @@ func run() error {
 	var policy *prestarter.TrustPolicy
 	if *policyFile != "" {
 		if envelope.SchemaVersion != "2.0" {
-			return errors.New("legacy bootstrap cannot be used with delegated trust policy")
+			return errors.New("Устаревший bootstrap нельзя использовать с делегированной политикой доверия")
 		}
 		p, e := read(*policyFile, 128*1024)
 		if e != nil {
@@ -59,7 +59,7 @@ func run() error {
 		}
 		policy = &verified
 	} else if envelope.SchemaVersion == "2.0" {
-		return errors.New("delegated bootstrap requires --trust-policy")
+		return errors.New("Для делегированного bootstrap необходим параметр --trust-policy")
 	}
 	cfg, digest, e := prestarter.VerifyEnvelopeWithPolicy(raw, strings.TrimSpace(string(root)), policy)
 	if e != nil {

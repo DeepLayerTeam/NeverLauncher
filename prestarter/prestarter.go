@@ -73,10 +73,10 @@ type installer struct {
 
 func Run(ctx context.Context, opts Options) error {
 	if opts.ConfigPath == "" || opts.Root == "" {
-		return errors.New("--config and --root are required")
+		return errors.New("Обязательны параметры --config и --root")
 	}
 	if opts.TrustedKey == "" {
-		return errors.New("embedded or explicitly provisioned root public key required")
+		return errors.New("Требуется встроенный или явно установленный корневой публичный ключ")
 	}
 	raw, e := os.ReadFile(opts.ConfigPath)
 	if e != nil {
@@ -115,7 +115,7 @@ func Run(ctx context.Context, opts Options) error {
 		}
 		policyBytes, err := os.ReadFile(policyFile)
 		if err != nil {
-			return fmt.Errorf("delegated bootstrap needs locally provisioned root-signed policy: %w", err)
+			return fmt.Errorf("Для делегированного bootstrap требуется локально установленная политика с подписью корневого ключа: %w", err)
 		}
 		policy, err := AcceptTrustPolicy(filepath.Join(store.root, "trust"), opts.TrustedKey, policyBytes, time.Now().UTC())
 		if err != nil {
@@ -124,7 +124,7 @@ func Run(ctx context.Context, opts Options) error {
 		cfg, digest, e = VerifyEnvelopeWithPolicy(raw, opts.TrustedKey, &policy)
 	} else {
 		if st, err := readPolicyState02312(filepath.Join(store.root, "trust", "trust-state.json")); err != nil || st.Epoch > 0 {
-			return errors.New("legacy bootstrap refused after delegated trust activation")
+			return errors.New("После активации делегированного доверия устаревший bootstrap запрещён")
 		}
 		cfg, digest, e = VerifyEnvelope(raw, opts.TrustedKey)
 	}
@@ -132,7 +132,7 @@ func Run(ctx context.Context, opts Options) error {
 		return e
 	}
 	if env.SchemaVersion == "2.0" && !strings.EqualFold(cfg.ProfilePublicKey, opts.TrustedKey) {
-		return errors.New("delegated game trust root must match pinned bootstrap root")
+		return errors.New("Делегированный корневой ключ доверия игры должен совпадать с закреплённым корневым ключом bootstrap")
 	}
 	target, e := cfg.SelectTarget()
 	if e != nil {
@@ -140,10 +140,10 @@ func Run(ctx context.Context, opts Options) error {
 	}
 	// На Windows производственный Desktop требует аутентифицированную границу супервизора Guard до запуска игры. Нельзя предоставлять менее защищённый прямой путь CLI, обходящий эту границу.
 	if opts.LaunchProfile && runtime.GOOS == "windows" {
-		return errors.New("Windows profile launch must be initiated in Desktop (Guard supervisor required)")
+		return errors.New("В Windows запуск профиля должен выполняться через Desktop (требуется контроллер Guard)")
 	}
 	if opts.Username != "" && !validUsername(opts.Username) {
-		return errors.New("invalid offline Minecraft username")
+		return errors.New("Недопустимое автономное имя пользователя Minecraft")
 	}
 	p := &installer{root: root, key: opts.TrustedKey, store: store, config: cfg, digest: digest, rawConfig: raw, target: target, launcherRoot: filepath.Join(root, "launcher"), gameRoot: filepath.Join(root, "profiles", cfg.ProjectID, cfg.ProfileID)}
 	if e = safeMkdir(p.launcherRoot); e != nil {
@@ -172,12 +172,12 @@ func Run(ctx context.Context, opts Options) error {
 		if active, currentErr := p.current(); currentErr == nil && active.Release == installed.Release {
 			if previous != nil {
 				if restoreErr := p.activate(active, *previous); restoreErr != nil {
-					return fmt.Errorf("bootstrap failed: %v; last-known-good activation failed: %w", e, restoreErr)
+					return fmt.Errorf("Ошибка bootstrap: %v; не удалось активировать последнюю исправную версию: %w", e, restoreErr)
 				}
 			} else {
 				// При первичной установке нет последнего исправного слота. Не оставляйте активным выпуск, не прошедший проверку, Java или синхронизацию. Проверенные по хешу байты останутся в кэше для дальнейшего восстановления.
 				if rollbackErr := p.deactivateFailedFirstRun(active); rollbackErr != nil {
-					return fmt.Errorf("bootstrap failed: %v; initial activation rollback failed: %w", e, rollbackErr)
+					return fmt.Errorf("Ошибка bootstrap: %v; не удалось откатить первоначальную активацию: %w", e, rollbackErr)
 				}
 			}
 		}
@@ -194,7 +194,7 @@ func validateInputRoot(offline, root string) error {
 		return e
 	}
 	if abs == root || strings.HasPrefix(root, abs+string(os.PathSeparator)) {
-		return errors.New("install root cannot be inside offline source")
+		return errors.New("Корневой каталог установки не должен находиться внутри автономного источника")
 	}
 	return nil
 }
@@ -230,7 +230,7 @@ func (p *installer) cleanupInterruptedStages() error {
 			return err
 		}
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("unsafe interrupted bootstrap staging entry")
+			return errors.New("Небезопасная запись в промежуточной области прерванного bootstrap")
 		}
 		if err := os.RemoveAll(path); err != nil {
 			return err
@@ -263,7 +263,7 @@ func (p *installer) installComponents(ctx context.Context, previous *activeRecor
 	for _, component := range p.target.Components {
 		source, e := p.store.artifact(ctx, component.Artifact, filepath.Join("components", ComponentName(component.Name)))
 		if e != nil {
-			return record, fmt.Errorf("component %s: %w", component.Name, e)
+			return record, fmt.Errorf("Компонент %s: %w", component.Name, e)
 		}
 		destination := filepath.Join(stage, ComponentName(component.Name))
 		if e = durableCopy(source, destination, component.Artifact, true); e != nil {
@@ -283,7 +283,7 @@ func (p *installer) installComponents(ctx context.Context, previous *activeRecor
 		return record, e
 	}
 	if !p.releaseValid(record) {
-		return record, errors.New("installed component release failed post-install verification")
+		return record, errors.New("Установленный выпуск компонента не прошёл проверку после установки")
 	}
 	return record, nil
 }
@@ -313,7 +313,7 @@ func (p *installer) verifyConfig(raw []byte) (Config, string, error) {
 		return VerifyEnvelopeWithPolicy(raw, p.key, &policy)
 	}
 	if state, err := readPolicyState02312(filepath.Join(p.store.root, "trust", "trust-state.json")); err != nil || state.Epoch > 0 {
-		return Config{}, "", errors.New("legacy bootstrap blocked after delegated trust activation")
+		return Config{}, "", errors.New("Устаревший bootstrap заблокирован после активации делегированного доверия")
 	}
 	return VerifyEnvelope(raw, p.key)
 }
@@ -363,13 +363,13 @@ func (p *installer) current() (*activeRecord, error) {
 		}
 	}
 	if result == nil {
-		return nil, errors.New("no verified previous component release")
+		return nil, errors.New("Нет проверенного предыдущего выпуска компонента")
 	}
 	return result, nil
 }
 func (p *installer) activate(previous *activeRecord, desired activeRecord) error {
 	if !p.releaseValid(desired) {
-		return errors.New("refusing activation of unverified components")
+		return errors.New("Активация непроверенных компонентов запрещена")
 	}
 	if previous != nil && previous.Digest == desired.Digest && previous.ConfigSHA256 == desired.ConfigSHA256 {
 		return nil
@@ -379,7 +379,7 @@ func (p *installer) activate(previous *activeRecord, desired activeRecord) error
 		desired.Generation = previous.Generation + 1
 	}
 	if desired.Generation == 0 {
-		return errors.New("generation overflow")
+		return errors.New("Переполнение номера поколения")
 	}
 	before := ""
 	if previous != nil {
@@ -399,7 +399,7 @@ func (p *installer) activate(previous *activeRecord, desired activeRecord) error
 // deactivateFailedFirstRun очищает только активацию поколения 1, созданную текущим запуском. Более поздняя активация или существующий слот восстановления никогда не удаляются. Блокировка процесса инициализации сериализует изменения состояния.
 func (p *installer) deactivateFailedFirstRun(active *activeRecord) error {
 	if active == nil || active.Generation != 1 {
-		return errors.New("initial activation generation mismatch")
+		return errors.New("Несовпадение поколения первоначальной активации")
 	}
 	slot := filepath.Join(p.launcherRoot, "active-1.json")
 	data, err := os.ReadFile(slot)
@@ -411,7 +411,7 @@ func (p *installer) deactivateFailedFirstRun(active *activeRecord) error {
 		return err
 	}
 	if stored != *active {
-		return errors.New("initial activation changed during rollback")
+		return errors.New("Состояние первоначальной активации изменилось во время отката")
 	}
 	if err = os.Remove(slot); err != nil {
 		return err
@@ -428,7 +428,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	desktopBin := filepath.Join(release, ComponentName("desktop"))
 	manifestPath, e := p.prepareRecord(ctx, p.config.Manifest, "profile-manifest.json")
 	if e != nil {
-		return fmt.Errorf("profile manifest: %w", e)
+		return fmt.Errorf("Манифест профиля: %w", e)
 	}
 	// Используйте существующий проверяющий подписи Runtime ДО чтения настроек Java из профиля или установки игровых данных.
 	var gameTrustEnv []string
@@ -437,7 +437,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	}
 	output, e := runChild(ctx, runtimeBin, gameTrustEnv, "verify", "--manifest", manifestPath, "--pinned-public-key", p.config.ProfilePublicKey)
 	if e != nil {
-		return fmt.Errorf("profile signature verification: %w (%s)", e, output)
+		return fmt.Errorf("Проверка подписи профиля: %w (%s)", e, output)
 	}
 	var profile manifestIdentity
 	raw, e := os.ReadFile(manifestPath)
@@ -448,13 +448,13 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		return e
 	}
 	if profile.ProjectID != p.config.ProjectID || profile.ProfileID != p.config.ProfileID || profile.Channel != p.config.Channel {
-		return errors.New("signed profile does not match bootstrap identity")
+		return errors.New("Подписанный профиль не соответствует идентификатору bootstrap")
 	}
 	if opts.LaunchProfile && (!profile.Runtime.Launch.OfflineMode || !validUsername(opts.Username)) {
-		return errors.New("direct profile launch requires signed offlineMode and --username (3–16 characters); authenticated profiles launch through Desktop")
+		return errors.New("Прямой запуск профиля требует подписанного offlineMode и --username (3–16 символов); профили с авторизацией запускаются через Desktop")
 	}
 	if profile.Runtime.Java.Major == 0 || profile.Runtime.Java.Distribution != "temurin" {
-		return errors.New("unsupported signed Managed Java requirement")
+		return errors.New("Неподдерживаемое подписанное требование Managed Java")
 	}
 	javaManifest, e := p.prepareJavaManifest(ctx, opts)
 	if e != nil {
@@ -470,22 +470,22 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	major := strconv.FormatUint(uint64(profile.Runtime.Java.Major), 10)
 	result, e := runChild(ctx, runtimeBin, env, "java", "ensure", "--major", major, "--distribution", profile.Runtime.Java.Distribution, "--manifest", javaManifest, "--manifest-sha256", p.config.JavaManifest.SHA256)
 	if e != nil {
-		return fmt.Errorf("Managed Java installation: %w (%s)", e, result)
+		return fmt.Errorf("Установка Managed Java: %w (%s)", e, result)
 	}
 	var java javaResult
 	if e = json.Unmarshal([]byte(result), &java); e != nil {
-		return fmt.Errorf("Managed Java output: %w", e)
+		return fmt.Errorf("Результат Managed Java: %w", e)
 	}
 	if java.Major != profile.Runtime.Java.Major || java.Distribution != "temurin" || java.JavaExecutable == "" {
-		return errors.New("Managed Java did not return verified runtime for signed profile")
+		return errors.New("Managed Java не вернула проверенную среду выполнения для подписанного профиля")
 	}
 	// Подписанный локальный манифест уже доступен: повторная загрузка неподписанного манифеста не требуется.
 	result, e = runChild(ctx, runtimeBin, env, "sync-local", "--manifest", manifestPath, "--root", p.gameRoot, "--pinned-public-key", p.config.ProfilePublicKey)
 	if e != nil {
-		return fmt.Errorf("profile installation/recovery: %w (%s)", e, result)
+		return fmt.Errorf("Установка или восстановление профиля: %w (%s)", e, result)
 	}
 	if !opts.NoDesktop && p.config.BackendURL == "" {
-		return errors.New("signed bootstrap backendUrl is required for unattended Desktop first run")
+		return errors.New("Для первого запуска Desktop без участия пользователя требуется подписанный backendUrl в bootstrap")
 	}
 	if !opts.NoDesktop {
 		// Установка без интерфейса и прямой запуск CLI не должны изменять или требовать каталог начальной настройки Desktop. Он нужен только для запуска Desktop.
@@ -498,7 +498,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		cmd.Env = mergeEnv(env)
 		cmd.Dir = release
 		if e := cmd.Start(); e != nil {
-			return fmt.Errorf("Desktop start: %w", e)
+			return fmt.Errorf("Запуск Desktop: %w", e)
 		}
 		if e := cmd.Process.Release(); e != nil {
 			return e
@@ -507,13 +507,13 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if opts.LaunchProfile {
 		result, e = runChild(ctx, runtimeBin, env, "launch", "--manifest", manifestPath, "--root", p.gameRoot, "--username", opts.Username, "--pinned-public-key", p.config.ProfilePublicKey)
 		if e != nil {
-			return fmt.Errorf("profile launch: %w (%s)", e, result)
+			return fmt.Errorf("Запуск профиля: %w (%s)", e, result)
 		}
 		var launched struct {
 			Success bool `json:"success"`
 		}
 		if e = json.Unmarshal([]byte(result), &launched); e != nil || !launched.Success {
-			return fmt.Errorf("Minecraft process failed despite Runtime CLI exit success: %s", result)
+			return fmt.Errorf("Процесс Minecraft завершился с ошибкой, хотя Runtime CLI сообщил об успешном завершении: %s", result)
 		}
 	}
 	return nil
@@ -571,14 +571,14 @@ func (p *installer) ensureDesktopConfig(username string, offline bool) (string, 
 			return "", err
 		}
 	} else if _, err := os.Lstat(filepath.Join(dir, "trust-policy.signed.json")); err == nil {
-		return "", errors.New("legacy bootstrap cannot replace delegated desktop provisioning")
+		return "", errors.New("Устаревший bootstrap не может заменить делегированную подготовку Desktop")
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
 	path := filepath.Join(dir, "config.json")
 	if stat, err := os.Lstat(path); err == nil {
 		if !stat.Mode().IsRegular() || stat.Size() > 1024*1024 {
-			return "", errors.New("unsafe existing Desktop configuration")
+			return "", errors.New("Небезопасная существующая конфигурация Desktop")
 		}
 		return dir, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -665,11 +665,11 @@ func (p *installer) prepareJavaManifest(ctx context.Context, opts Options) (stri
 		}
 		return p.config.JavaManifest.URL, nil
 	}
-	return "", errors.New("offline Java distribution manifest (and archives) must be in managed-jre/")
+	return "", errors.New("Автономный манифест дистрибутива Java (и архивы) должен находиться в managed-jre/")
 }
 func decodeManifestIdentity(raw []byte, identity *manifestIdentity) error {
 	if len(raw) > 16*1024*1024 {
-		return errors.New("game manifest too large")
+		return errors.New("Манифест игры превышает допустимый размер")
 	}
 	return json.Unmarshal(raw, identity)
 }
@@ -680,7 +680,7 @@ const maxChildOutput = 8 * 1024 * 1024
 
 func (w *limitedOutput) Write(p []byte) (int, error) {
 	if len(p) > maxChildOutput-w.Len() {
-		return 0, errors.New("child process output exceeded limit")
+		return 0, errors.New("Вывод дочернего процесса превысил ограничение")
 	}
 	return w.Buffer.Write(p)
 }

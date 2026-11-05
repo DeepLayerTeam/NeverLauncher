@@ -91,15 +91,15 @@ func decodeStrict(data []byte, dest any) error {
 	}
 	var extra any
 	if err := dec.Decode(&extra); err == nil {
-		return errors.New("trailing JSON value")
+		return errors.New("После JSON обнаружено лишнее значение")
 	} else if !errors.Is(err, io.EOF) {
-		return fmt.Errorf("trailing JSON: %w", err)
+		return fmt.Errorf("Лишние данные после JSON: %w", err)
 	}
 	return nil
 }
 func SignedEnvelope(payload []byte, private ed25519.PrivateKey) ([]byte, error) {
 	if len(private) != ed25519.PrivateKeySize {
-		return nil, errors.New("Ed25519 signing key must be 64 bytes")
+		return nil, errors.New("Ключ подписи Ed25519 должен содержать 64 байта")
 	}
 	var cfg Config
 	if err := decodeStrict(payload, &cfg); err != nil {
@@ -117,31 +117,31 @@ func VerifyEnvelope(data []byte, pinnedKeyHex string) (Config, string, error) {
 func VerifyEnvelopeWithPolicy(data []byte, pinnedKeyHex string, policy *TrustPolicy) (Config, string, error) {
 	var cfg Config
 	if len(data) > maxConfigBytes {
-		return cfg, "", errors.New("signed config too large")
+		return cfg, "", errors.New("Подписанная конфигурация превышает допустимый размер")
 	}
 	pinnedKeyHex = strings.TrimSpace(pinnedKeyHex)
 	key, err := hex.DecodeString(pinnedKeyHex)
 	if err != nil || len(key) != ed25519.PublicKeySize {
-		return cfg, "", errors.New("trusted key must be pre-provisioned 32-byte Ed25519 hex")
+		return cfg, "", errors.New("Доверенный ключ должен быть предварительно установленным 32-байтовым ключом Ed25519 в hex")
 	}
 	var envelope Envelope
 	if err := decodeStrict(data, &envelope); err != nil {
 		return cfg, "", err
 	}
 	if envelope.SchemaVersion != "1.0" && envelope.SchemaVersion != "2.0" {
-		return cfg, "", errors.New("unsupported envelope schema")
+		return cfg, "", errors.New("Неподдерживаемая схема подписанного контейнера")
 	}
 	if envelope.SchemaVersion == "2.0" {
 		if policy == nil || envelope.TrustEpoch != policy.Epoch {
-			return cfg, "", errors.New("root-signed delegated bootstrap policy/epoch required")
+			return cfg, "", errors.New("Требуется делегированная политика bootstrap с подписью корневого ключа и указанием эпохи")
 		}
 		if envelope.KeyID == "" {
-			return cfg, "", errors.New("bootstrap signer keyId missing")
+			return cfg, "", errors.New("Отсутствует keyId ключа подписи bootstrap")
 		}
 	}
 	raw, err := base64.StdEncoding.DecodeString(envelope.Payload)
 	if err != nil || len(raw) > maxConfigBytes {
-		return cfg, "", errors.New("invalid signed payload")
+		return cfg, "", errors.New("Недопустимое подписанное содержимое")
 	}
 	sig, err := hex.DecodeString(envelope.Signature)
 	if envelope.SchemaVersion == "2.0" {
@@ -162,11 +162,11 @@ func VerifyEnvelopeWithPolicy(data []byte, pinnedKeyHex string, policy *TrustPol
 			break
 		}
 		if !delegated {
-			return cfg, "", errors.New("bootstrap signer not delegated by signed policy")
+			return cfg, "", errors.New("Ключ подписи bootstrap не делегирован подписанной политикой")
 		}
 	}
 	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(ed25519.PublicKey(key), bootstrapSignaturePayload02312(raw, envelope), sig) {
-		return cfg, "", errors.New("signed bootstrap config failed Ed25519 verification")
+		return cfg, "", errors.New("Подписанная конфигурация bootstrap не прошла проверку Ed25519")
 	}
 	if err := decodeStrict(raw, &cfg); err != nil {
 		return cfg, "", err
@@ -194,83 +194,83 @@ func validDigest(s string) bool {
 }
 func validateArtifact(a Artifact) error {
 	if !validDigest(a.SHA256) || a.Size < 1 || a.Size > int64(3<<30) {
-		return errors.New("invalid artifact digest/size")
+		return errors.New("Недопустимый хеш или размер артефакта")
 	}
 	u, e := url.Parse(a.URL)
 	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" {
-		return fmt.Errorf("artifact URL must be fixed HTTPS without credentials/fragment/query: %q", a.URL)
+		return fmt.Errorf("URL артефакта должен быть постоянным HTTPS-адресом без учётных данных, фрагмента и параметров запроса: %q", a.URL)
 	}
 	return nil
 }
 func (c Config) Validate() error {
 	if c.SchemaVersion != "1.0" || !validID(c.ProjectID) || !validID(c.ProfileID) || !validID(c.Channel) {
-		return errors.New("invalid bootstrap identity")
+		return errors.New("Недопустимая идентификация bootstrap")
 	}
 	if c.BackendURL != "" {
 		u, e := url.Parse(c.BackendURL)
 		if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
-			return errors.New("backendUrl must be HTTPS without credentials or fragment")
+			return errors.New("backendUrl должен использовать HTTPS и не содержать учётных данных или фрагмента")
 		}
 	}
 	if c.ServerID != "" && !validID(c.ServerID) {
-		return errors.New("invalid serverId")
+		return errors.New("Недопустимый serverId")
 	}
 	if c.AutoEnter && (c.ServerID == "" || c.ServerHost == "" || c.ServerPort == 0) {
-		return errors.New("autoEnter needs a signed serverId, public serverHost and serverPort")
+		return errors.New("Для autoEnter необходимы подписанный serverId, публичный serverHost и serverPort")
 	}
 	if c.ServerHost != "" {
 		if len(c.ServerHost) > 253 || strings.Contains(c.ServerHost, "..") || strings.HasPrefix(c.ServerHost, ".") || strings.HasSuffix(c.ServerHost, ".") {
-			return errors.New("invalid signed serverHost")
+			return errors.New("Недопустимое подписанное значение serverHost")
 		}
 		for _, part := range strings.Split(c.ServerHost, ".") {
 			if part == "" || len(part) > 63 || part[0] == '-' || part[len(part)-1] == '-' {
-				return errors.New("invalid signed serverHost label")
+				return errors.New("Недопустимая метка подписанного имени serverHost")
 			}
 			for _, c := range part {
 				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-') {
-					return errors.New("invalid signed serverHost character")
+					return errors.New("Недопустимый символ подписанного имени serverHost")
 				}
 			}
 		}
 	}
 	if c.Manifest.Size > 16*1024*1024 || c.JavaManifest.Size > 8*1024*1024 {
-		return errors.New("bootstrap manifest size limit exceeded")
+		return errors.New("Превышен предельный размер манифеста bootstrap")
 	}
 	if !validDigest(c.Manifest.SHA256) || !validDigest(c.JavaManifest.SHA256) {
-		return errors.New("manifest digest must be pinned")
+		return errors.New("Хеш манифеста должен быть закреплён")
 	}
 	if b, e := hex.DecodeString(c.ProfilePublicKey); e != nil || len(b) != 32 {
-		return errors.New("invalid signed profile public key")
+		return errors.New("Недопустимый подписанный публичный ключ профиля")
 	}
 	if e := validateArtifact(c.Manifest); e != nil {
-		return fmt.Errorf("game manifest: %w", e)
+		return fmt.Errorf("Манифест игры: %w", e)
 	}
 	if e := validateArtifact(c.JavaManifest); e != nil {
-		return fmt.Errorf("Java distribution manifest: %w", e)
+		return fmt.Errorf("Манифест дистрибутива Java: %w", e)
 	}
 	if len(c.Targets) == 0 || len(c.Targets) > 24 {
-		return errors.New("no supported target")
+		return errors.New("Нет поддерживаемой целевой платформы")
 	}
 	seen := map[string]bool{}
 	for _, t := range c.Targets {
 		if (t.OS != "linux" && t.OS != "windows" && t.OS != "darwin") || (t.Arch != "amd64" && t.Arch != "arm64") {
-			return errors.New("unsupported OS/arch in bootstrap config")
+			return errors.New("В конфигурации bootstrap указана неподдерживаемая ОС или архитектура")
 		}
 		id := t.OS + "/" + t.Arch
 		if seen[id] {
-			return errors.New("duplicate platform target")
+			return errors.New("Повторяющаяся целевая платформа")
 		}
 		seen[id] = true
 		found := map[string]bool{}
 		if len(t.Components) != 3 {
-			return fmt.Errorf("%s: require exactly runtime, desktop, guard components", id)
+			return fmt.Errorf("%s: требуются ровно три компонента: runtime, desktop и guard", id)
 		}
 		for _, a := range t.Components {
 			if a.Name != "runtime" && a.Name != "desktop" && a.Name != "guard" {
-				return fmt.Errorf("invalid component role: %s", a.Name)
+				return fmt.Errorf("Недопустимая роль компонента: %s", a.Name)
 			}
 			if found[a.Name] {
-				return errors.New("duplicate component")
+				return errors.New("Повторяющийся компонент")
 			}
 			found[a.Name] = true
 			if e := validateArtifact(a.Artifact); e != nil {
@@ -279,7 +279,7 @@ func (c Config) Validate() error {
 		}
 		for _, role := range []string{"runtime", "desktop", "guard"} {
 			if !found[role] {
-				return fmt.Errorf("missing component %s", role)
+				return fmt.Errorf("Отсутствует компонент %s", role)
 			}
 		}
 	}
@@ -292,11 +292,11 @@ func (c Config) Validate() error {
 	for _, target := range c.InstallerTargets {
 		id := target.OS + "/" + target.Arch
 		if installerTargets[id] || !seen[id] {
-			return fmt.Errorf("duplicate/unknown installer target %s", id)
+			return fmt.Errorf("Повторяющаяся или неизвестная целевая платформа установщика: %s", id)
 		}
 		installerTargets[id] = true
 		if err := validateArtifact(target.Prestarter); err != nil {
-			return fmt.Errorf("invalid prestarter for %s: %w", id, err)
+			return fmt.Errorf("Недопустимый Prestarter для %s: %w", id, err)
 		}
 	}
 	return nil
@@ -307,7 +307,7 @@ func (c Config) InstallerFor(osName, arch string) (Artifact, error) {
 			return target.Prestarter, nil
 		}
 	}
-	return Artifact{}, fmt.Errorf("no signed prestarter for %s/%s", osName, arch)
+	return Artifact{}, fmt.Errorf("Для %s/%s отсутствует подписанный Prestarter", osName, arch)
 }
 func (c Config) SelectTarget() (Target, error) {
 	for _, t := range c.Targets {
@@ -315,7 +315,7 @@ func (c Config) SelectTarget() (Target, error) {
 			return t, nil
 		}
 	}
-	return Target{}, fmt.Errorf("unsupported platform %s/%s", runtime.GOOS, runtime.GOARCH)
+	return Target{}, fmt.Errorf("Неподдерживаемая платформа %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 func ComponentName(role string) string {
 	switch role {
@@ -336,7 +336,7 @@ func exeSuffix() string {
 }
 func safeRoot(root string) (string, error) {
 	if !filepath.IsAbs(root) {
-		return "", errors.New("installation root must be absolute")
+		return "", errors.New("Корневой путь установки должен быть абсолютным")
 	}
 	cleaned := filepath.Clean(root)
 	if e := os.MkdirAll(cleaned, 0700); e != nil {
@@ -347,7 +347,7 @@ func safeRoot(root string) (string, error) {
 		return "", e
 	}
 	if resolved != cleaned {
-		return "", errors.New("installation root must not include symlinks/junctions")
+		return "", errors.New("Корневой путь установки не должен содержать символические ссылки или точки соединения")
 	}
 	return cleaned, nil
 }

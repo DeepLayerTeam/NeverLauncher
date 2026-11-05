@@ -1755,7 +1755,7 @@ function App() {
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Passkey step-up begin: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать дополнительную проверку passkey: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -1788,7 +1788,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Passkey step-up complete: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить дополнительную проверку passkey: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2005,7 +2005,7 @@ function App() {
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Device attestation begin: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать аттестацию устройства: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -2052,7 +2052,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Device attestation complete: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить аттестацию устройства: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2101,7 +2101,7 @@ function App() {
     }
     if (tpmBusy0313) return;
     setTpmBusy0313(true);
-    setTpmStatus0313("TPM2_Certify: challenge requested");
+    setTpmStatus0313("TPM2_Certify: запрос проверки отправлен");
     try {
       const url = `/api/v1/auth/devices/${encodeURIComponent(deviceKey.deviceId)}/tpm-certify`;
       const response = await postDeviceJson(
@@ -2110,7 +2110,7 @@ function App() {
       );
       if (!response.ok)
         throw new Error(
-          `TPM begin rejected HTTP ${response.status}: ${(await response.text()).slice(0, 350)}`,
+          `Начало проверки TPM отклонено (HTTP ${response.status}): ${(await response.text()).slice(0, 350)}`,
         );
       const payload = await response.json();
       const challenge = payload.data ?? payload;
@@ -2163,7 +2163,7 @@ function App() {
       );
       if (!completed.ok)
         throw new Error(
-          `TPM verifier rejected evidence HTTP ${completed.status}: ${(await completed.text()).slice(0, 350)}`,
+          `Проверяющая сторона TPM отклонила свидетельство (HTTP ${completed.status}): ${(await completed.text()).slice(0, 350)}`,
         );
       const resultJson = await completed.json();
       const result = resultJson.data ?? resultJson;
@@ -2226,7 +2226,7 @@ function App() {
       );
       if (!began.ok)
         throw new Error(
-          `PCR policy / TPM Certify prerequisite rejected HTTP ${began.status}: ${(await began.text()).slice(0, 350)}`,
+          `Проверка обязательного условия политики PCR / TPM Certify отклонена (HTTP ${began.status}): ${(await began.text()).slice(0, 350)}`,
         );
       const beginJson = await began.json();
       const challenge = beginJson.data ?? beginJson;
@@ -2276,7 +2276,7 @@ function App() {
       );
       if (!completed.ok)
         throw new Error(
-          `TPM Quote verifier rejected HTTP ${completed.status}: ${(await completed.text()).slice(0, 350)}`,
+          `Проверяющая сторона отклонила TPM Quote (HTTP ${completed.status}): ${(await completed.text()).slice(0, 350)}`,
         );
       const completedJson = await completed.json();
       const result = completedJson.data ?? completedJson;
@@ -2323,7 +2323,7 @@ function App() {
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Device registration begin: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать регистрацию устройства: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -2367,7 +2367,7 @@ function App() {
     }
     if (!completeResponse.ok)
       throw new Error(
-        `Device registration complete: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить регистрацию устройства: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2406,7 +2406,7 @@ function App() {
     }
     if (!beginResponse.ok)
       throw new Error(
-        `Device verification begin: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать проверку устройства: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -2436,7 +2436,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Device verification complete: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить проверку устройства: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2505,7 +2505,7 @@ function App() {
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
     if (!response.ok)
-      throw new Error(`Device list: ${response.status} ${response.statusText}`);
+      throw new Error(`Ошибка получения списка устройств: ${response.status} ${response.statusText}`);
     const payload = await response.json();
     const data = payload.data ?? payload;
     setManagedDevices(Array.isArray(data.items) ? data.items : []);
@@ -2528,7 +2528,7 @@ function App() {
     );
     if (!response.ok)
       throw new Error(
-        `Device rename: ${response.status} ${response.statusText}`,
+        `Ошибка переименования устройства: ${response.status} ${response.statusText}`,
       );
     await loadManagedDevices(authSession);
     log(`Trusted device ${device.id} переименован.`);
@@ -2551,7 +2551,7 @@ function App() {
     );
     if (!response.ok)
       throw new Error(
-        `Device revoke: ${response.status} ${response.statusText}`,
+        `Ошибка отзыва устройства: ${response.status} ${response.statusText}`,
       );
     const payload = await response.json();
     const data = payload.data ?? payload;
@@ -2591,7 +2591,7 @@ function App() {
     );
     if (!response.ok)
       throw new Error(
-        `Revoke other devices: ${response.status} ${response.statusText}`,
+        `Ошибка отзыва остальных устройств: ${response.status} ${response.statusText}`,
       );
     const payload = await response.json();
     const data = payload.data ?? payload;
@@ -4061,12 +4061,12 @@ function App() {
     if (response.status === 412) {
       const body = await response.text();
       if (body.includes("verified plan policy is disabled")) return undefined;
-      throw new Error(`ServerBridge plan challenge denied: ${body}`);
+      throw new Error(`Запрос проверки плана ServerBridge отклонён: ${body}`);
     }
     const payload = await response.json().catch(() => null);
     if (!response.ok)
       throw new Error(
-        `ServerBridge plan challenge failed: ${response.status} ${JSON.stringify(payload)}`,
+        `Не удалось получить запрос проверки плана ServerBridge: ${response.status} ${JSON.stringify(payload)}`,
       );
     const challenge = payload?.data;
     if (
@@ -4452,7 +4452,7 @@ function App() {
         body: JSON.stringify({ consent: true, report }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(`Backend HTTP ${response.status}`);
+      if (!response.ok) throw new Error(`Ошибка HTTP Backend: ${response.status}`);
       if (!/^[a-f0-9]{32}$/.test(String(payload.id || "")))
         throw new Error(
           "Backend не подтвердил идентификатор отчёта. Проверьте поддержку перед повтором.",

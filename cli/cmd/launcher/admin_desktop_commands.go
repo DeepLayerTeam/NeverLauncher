@@ -326,7 +326,7 @@ func packaging940Prepare(srcRoot, outDir string) error {
 	}
 	sort.Slice(entries, func(i, j int) bool { return fmt.Sprint(entries[i]["path"]) < fmt.Sprint(entries[j]["path"]) })
 	if len(entries) < 5 {
-		return fmt.Errorf("production packaging source incomplete: only %d artifacts collected", len(entries))
+		return fmt.Errorf("Недостаточно исходных файлов для производственного пакета: найдено только %d артефактов", len(entries))
 	}
 	if err := writeJSONFile(filepath.Join(absOut, "SBOM.spdx.json"), packaging940SBOM(entries)); err != nil {
 		return err
@@ -352,7 +352,7 @@ func packaging940Prepare(srcRoot, outDir string) error {
 		return err
 	}
 	if len(checksums) == 0 {
-		return errors.New("SHA256SUMS is empty")
+		return errors.New("Файл SHA256SUMS пуст")
 	}
 	if err := os.WriteFile(filepath.Join(absOut, "SHA256SUMS"), []byte(strings.Join(checksums, "\n")+"\n"), 0o644); err != nil {
 		return err

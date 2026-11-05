@@ -43,7 +43,7 @@ func (i *installation) createShortcut(r record, cfg prestarter.Config) error {
 	}
 	iconPath, err := materializeBrandIcon(base, cfg.Branding)
 	if err != nil {
-		return fmt.Errorf("signed brand icon: %w", err)
+		return fmt.Errorf("Подписанный значок бренда: %w", err)
 	}
 	var contents string
 	if runtime.GOOS == "windows" {

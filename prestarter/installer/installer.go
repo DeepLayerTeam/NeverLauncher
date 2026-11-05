@@ -42,7 +42,7 @@ func regular(path string, limit int64) ([]byte, error) {
 		return nil, e
 	}
 	if !st.Mode().IsRegular() || st.Size() > limit {
-		return nil, errors.New("unsafe or oversized regular file")
+		return nil, errors.New("Небезопасный обычный файл или файл чрезмерного размера")
 	}
 	return os.ReadFile(path)
 }
@@ -52,7 +52,7 @@ func verifyFile(path string, a prestarter.Artifact) error {
 		return e
 	}
 	if !st.Mode().IsRegular() || st.Size() != a.Size {
-		return errors.New("unexpected file size or type")
+		return errors.New("Неожиданный размер или тип файла")
 	}
 	f, e := os.Open(path)
 	if e != nil {
@@ -62,7 +62,7 @@ func verifyFile(path string, a prestarter.Artifact) error {
 	h := sha256.New()
 	n, e := io.Copy(h, io.LimitReader(f, a.Size+1))
 	if e != nil || n != a.Size || hex.EncodeToString(h.Sum(nil)) != a.SHA256 {
-		return errors.New("SHA-256 mismatch")
+		return errors.New("Несовпадение SHA-256")
 	}
 	return nil
 }
@@ -76,7 +76,7 @@ func secureDir(dir string) error {
 			return e
 		}
 		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-			return errors.New("symlink in managed installation path")
+			return errors.New("Символическая ссылка в пути управляемой установки")
 		}
 		if filepath.Dir(p) == p {
 			break
@@ -176,12 +176,12 @@ func copyPolicy02312(src, dst string, raw []byte) error {
 func VerifyBundle(bundle, key string, offline bool) (prestarter.Config, string, error) {
 	var empty prestarter.Config
 	if !filepath.IsAbs(bundle) {
-		return empty, "", errors.New("bundle must be absolute")
+		return empty, "", errors.New("Путь к пакету должен быть абсолютным")
 	}
 	path := filepath.Clean(bundle)
 	real, e := filepath.EvalSymlinks(path)
 	if e != nil || real != path {
-		return empty, "", errors.New("missing or symlinked bundle")
+		return empty, "", errors.New("Пакет отсутствует или является символической ссылкой")
 	}
 	raw, e := regular(filepath.Join(path, "bootstrap.signed.json"), 1024*1024)
 	if e != nil {
@@ -199,7 +199,7 @@ func VerifyBundle(bundle, key string, offline bool) (prestarter.Config, string, 
 		return empty, "", e
 	}
 	if e = verifyFile(filepath.Join(path, binaryName()), art); e != nil {
-		return empty, "", fmt.Errorf("signed Prestarter: %w", e)
+		return empty, "", fmt.Errorf("Подписанный Prestarter: %w", e)
 	}
 	if offline {
 		if e = verifyOffline(path, cfg); e != nil {
@@ -215,20 +215,20 @@ func verifyOffline(dir string, cfg prestarter.Config) error {
 	}
 	for _, a := range append(append([]prestarter.Component{}, target.Components...), prestarter.Component{Name: "manifest", Artifact: cfg.Manifest}) {
 		if e = verifyFile(filepath.Join(dir, "objects", a.SHA256), a.Artifact); e != nil {
-			return fmt.Errorf("offline %s: %w", a.Name, e)
+			return fmt.Errorf("Автономный компонент %s: %w", a.Name, e)
 		}
 	}
 	if e = verifyFile(filepath.Join(dir, "managed-jre", "manifest.json"), cfg.JavaManifest); e != nil {
-		return fmt.Errorf("offline Java manifest: %w", e)
+		return fmt.Errorf("Автономный манифест Java: %w", e)
 	}
 	return nil
 }
 func newInstall(opts Options) (*installation, error) {
 	if opts.TrustedKey == "" {
-		return nil, errors.New("embedded trust root required")
+		return nil, errors.New("Требуется встроенный корневой ключ доверия")
 	}
 	if !filepath.IsAbs(opts.Root) {
-		return nil, errors.New("absolute root required")
+		return nil, errors.New("Требуется абсолютный корневой путь")
 	}
 	root := filepath.Clean(opts.Root)
 	if e := secureDir(root); e != nil {
@@ -241,7 +241,7 @@ func newInstall(opts Options) (*installation, error) {
 // исполняемый файл и офлайновые объекты должны по-прежнему совпадать.
 func (i *installation) verifiedSlot(slot string) (*record, error) {
 	if slot != "active-0.json" && slot != "active-1.json" {
-		return nil, errors.New("invalid installer activation slot")
+		return nil, errors.New("Недопустимый слот активации установщика")
 	}
 	buf, err := regular(filepath.Join(i.base, slot), 16384)
 	if err != nil {
@@ -249,23 +249,23 @@ func (i *installation) verifiedSlot(slot string) (*record, error) {
 	}
 	var r record
 	if err := json.Unmarshal(buf, &r); err != nil || r.Generation == 0 || r.Release == "" || strings.ContainsAny(r.Release, "/\\") || strings.Contains(r.Release, "..") || len(r.ConfigHash) != 64 || len(r.BinaryHash) != 64 {
-		return nil, errors.New("invalid installation activation record")
+		return nil, errors.New("Недопустимая запись активации установки")
 	}
 	releaseDir := filepath.Join(i.base, "releases", r.Release)
 	raw, err := regular(filepath.Join(releaseDir, "bootstrap.signed.json"), 1024*1024)
 	if err != nil || digest(raw) != r.ConfigHash {
-		return nil, errors.New("installed bootstrap is missing or corrupted")
+		return nil, errors.New("Установленный bootstrap отсутствует или повреждён")
 	}
 	cfg, id, err := verifyBundleConfig02312(releaseDir, raw, i.key)
 	if err != nil || id+"-"+runtime.GOOS+"-"+runtime.GOARCH != r.Release {
-		return nil, errors.New("installed bootstrap signature or platform mismatch")
+		return nil, errors.New("Несовпадение подписи или платформы установленного bootstrap")
 	}
 	art, err := cfg.InstallerFor(runtime.GOOS, runtime.GOARCH)
 	if err != nil || art.SHA256 != r.BinaryHash || verifyFile(filepath.Join(releaseDir, binaryName()), art) != nil {
-		return nil, errors.New("installed Prestarter signature/hash mismatch")
+		return nil, errors.New("Несовпадение подписи или хеша установленного Prestarter")
 	}
 	if r.Offline && verifyOffline(filepath.Join(i.base, "offline", r.Release), cfg) != nil {
-		return nil, errors.New("retained offline objects are incomplete or corrupted")
+		return nil, errors.New("Сохранённые автономные объекты неполные или повреждены")
 	}
 	return &r, nil
 }
@@ -282,7 +282,7 @@ func (i *installation) current() (*record, error) {
 		}
 	}
 	if result == nil {
-		return nil, errors.New("no verified installed release")
+		return nil, errors.New("Нет проверенного установленного выпуска")
 	}
 	return result, nil
 }
@@ -296,7 +296,7 @@ func copyTree(src, dst string) error {
 			return e
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("symlink in offline bundle")
+			return errors.New("Символическая ссылка в автономном пакете")
 		}
 		rel, e := filepath.Rel(src, path)
 		if e != nil {
@@ -307,7 +307,7 @@ func copyTree(src, dst string) error {
 			return secureDir(target)
 		}
 		if !info.Mode().IsRegular() || info.Size() > 3<<30 {
-			return errors.New("unsupported offline entry")
+			return errors.New("Неподдерживаемый объект автономного пакета")
 		}
 		return copyFile(path, target, 0600)
 	})
@@ -384,7 +384,7 @@ func (i *installation) store(bundle string, cfg prestarter.Config, id string, of
 	}
 	installedRaw, e = regular(filepath.Join(release, "bootstrap.signed.json"), 1024*1024)
 	if e != nil || digest(installedRaw) != rec.ConfigHash {
-		return rec, errors.New("installed signed config corrupted")
+		return rec, errors.New("Установленная подписанная конфигурация повреждена")
 	}
 	if offline {
 		offlineBase := filepath.Join(i.base, "offline")
@@ -421,7 +421,7 @@ func (i *installation) provision(ctx context.Context, r record, noStart bool) er
 	config := filepath.Join(dir, "bootstrap.signed.json")
 	raw, e := regular(config, 1024*1024)
 	if e != nil || digest(raw) != r.ConfigHash {
-		return errors.New("signed config damaged")
+		return errors.New("Подписанная конфигурация повреждена")
 	}
 	cfg, _, e := verifyBundleConfig02312(dir, raw, i.key)
 	if e != nil {
@@ -450,7 +450,7 @@ func (i *installation) provision(ctx context.Context, r record, noStart bool) er
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if e = cmd.Run(); e != nil {
-		return fmt.Errorf("Prestarter failed: %w", e)
+		return fmt.Errorf("Ошибка Prestarter: %w", e)
 	}
 	return nil
 }
@@ -478,7 +478,7 @@ func install(ctx context.Context, opts Options, updateOnly bool) error {
 	prev, prevErr := i.current()
 	if updateOnly {
 		if prevErr != nil {
-			return fmt.Errorf("update requires verified existing installation: %w", prevErr)
+			return fmt.Errorf("Для обновления необходима проверенная существующая установка: %w", prevErr)
 		}
 		previousPath := filepath.Join(i.base, "releases", prev.Release)
 		previousRaw, readErr := regular(filepath.Join(previousPath, "bootstrap.signed.json"), 1024*1024)
@@ -490,7 +490,7 @@ func install(ctx context.Context, opts Options, updateOnly bool) error {
 			return verifyErr
 		}
 		if previousCfg.ProjectID != cfg.ProjectID || previousCfg.ProfileID != cfg.ProfileID || previousCfg.Channel != cfg.Channel || previousCfg.ProfilePublicKey != cfg.ProfilePublicKey {
-			return errors.New("signed update changes project, profile, channel or pinned game trust")
+			return errors.New("Подписанное обновление изменяет проект, профиль, канал или закреплённое доверие игры")
 		}
 	}
 	rec, e := i.store(opts.Bundle, cfg, id, opts.Offline)
@@ -502,7 +502,7 @@ func install(ctx context.Context, opts Options, updateOnly bool) error {
 		rec.Generation = prev.Generation + 1
 	}
 	if rec.Generation == 0 {
-		return errors.New("generation overflow")
+		return errors.New("Переполнение номера поколения")
 	}
 	// Сначала подготовка, затем фиксация. Подписанный Prestarter может отказать при установке
 	// Managed Java или восстановлении игры. Преждевременная смена указателя при отключении
@@ -574,7 +574,7 @@ func Rollback(ctx context.Context, opts Options) error {
 		return err
 	}
 	if active.Generation == ^uint64(0) {
-		return errors.New("generation overflow")
+		return errors.New("Переполнение номера поколения")
 	}
 	priorSlot := "active-0.json"
 	if active.Generation%2 == 0 {
@@ -582,10 +582,10 @@ func Rollback(ctx context.Context, opts Options) error {
 	}
 	previous, err := i.verifiedSlot(priorSlot)
 	if err != nil {
-		return fmt.Errorf("previous signed generation unavailable: %w", err)
+		return fmt.Errorf("Предыдущее подписанное поколение недоступно: %w", err)
 	}
 	if previous.Generation >= active.Generation || previous.Release == active.Release {
-		return errors.New("no distinct, older verified release to roll back to")
+		return errors.New("Нет отдельного проверенного старого выпуска для отката")
 	}
 	oldDir := filepath.Join(i.base, "releases", active.Release)
 	newDir := filepath.Join(i.base, "releases", previous.Release)
@@ -606,10 +606,10 @@ func Rollback(ctx context.Context, opts Options) error {
 		return err
 	}
 	if activeCfg.ProjectID != previousCfg.ProjectID || activeCfg.ProfileID != previousCfg.ProfileID || activeCfg.Channel != previousCfg.Channel || activeCfg.ProfilePublicKey != previousCfg.ProfilePublicKey {
-		return errors.New("rollback changes project, profile, channel or pinned game trust")
+		return errors.New("Откат изменяет проект, профиль, канал или закреплённое доверие игры")
 	}
 	if err := i.provision(ctx, *previous, opts.NoStart); err != nil {
-		return fmt.Errorf("rollback provisioning failed, active generation not changed: %w", err)
+		return fmt.Errorf("Подготовка отката не удалась; активное поколение не изменилось: %w", err)
 	}
 	if err := i.createShortcut(*previous, previousCfg); err != nil {
 		_ = i.createShortcut(*active, activeCfg)
@@ -673,7 +673,7 @@ func Repair(ctx context.Context, opts Options) error {
 			return Install(ctx, opts)
 		}
 	}
-	return fmt.Errorf("no verified repair source: %w", recErr)
+	return fmt.Errorf("Нет проверенного источника для восстановления: %w", recErr)
 }
 func Uninstall(opts Options) error {
 	i, e := newInstall(opts)
@@ -691,7 +691,7 @@ func Uninstall(opts Options) error {
 			return err
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return errors.New("unexpected symlink in installer directory")
+			return errors.New("Неожиданная символическая ссылка в каталоге установщика")
 		}
 		return nil
 	}); e != nil {

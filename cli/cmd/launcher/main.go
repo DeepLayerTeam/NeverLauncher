@@ -559,7 +559,7 @@ func handleUpdate(args []string) error {
 			// Вызывающая сторона передала установленный исполняемый файл
 			// Desktop, а не произвольный внешний URL или бинарник из пакета.
 			if _, e := os.Stat(target); e != nil {
-				return fmt.Errorf("recovered Desktop is missing: %w", e)
+				return fmt.Errorf("Восстановленный Desktop отсутствует: %w", e)
 			}
 			if e := verifyRestartedComponentSet02310(root, target); e != nil {
 				return e
@@ -568,7 +568,7 @@ func handleUpdate(args []string) error {
 			cmd.Dir = filepath.Dir(target)
 			cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
 			if e := cmd.Start(); e != nil {
-				return fmt.Errorf("restart recovered Desktop: %w", e)
+				return fmt.Errorf("Ошибка перезапуска восстановленного Desktop: %w", e)
 			}
 			report["restartedPid"] = cmd.Process.Pid
 			_ = cmd.Process.Release()

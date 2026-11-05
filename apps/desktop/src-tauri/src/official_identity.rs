@@ -377,12 +377,12 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
         if dir.active.is_none() { dir.active = Some(uuid); }
         save_directory(id, &dir)?;
     } else if existing.is_none() {
-        return Err("OS vault migration incomplete: active account slot missing".into());
+        return Err("Миграция защищённого хранилища ОС не завершена: отсутствует активный слот учётной записи".into());
     }
     // Удаляйте прежние учётные данные ТОЛЬКО после проверки читаемой замены.
     let migrated = read(&slot)?.ok_or("OS vault migration incomplete")?;
     if normalized_uuid(&migrated.profile.id)? != uuid {
-        return Err("OS vault migration identity mismatch".into());
+        return Err("Несовпадение идентификаторов при миграции защищённого хранилища ОС".into());
     }
     delete(id)
 }
@@ -669,7 +669,7 @@ impl IdentityManager {
         if result.data.get("profile").is_some() {
             let profile = Self::profile(&result.data)?;
             if !record.profile.id.eq_ignore_ascii_case(&profile.id) {
-                return Err("Minecraft identity mismatch".into());
+                return Err("Несовпадение идентификаторов Minecraft".into());
             }
             record.profile = profile;
             changed = true;
@@ -700,7 +700,7 @@ impl IdentityManager {
             self.native_validate(&base,&slot,access,&mut record,false).await?;
             let token=&record.native.as_ref().unwrap().minecraft_token;
             let profile=self.provider.texture(token,operation,cape_id,skin).await.map_err(|e|e.message().to_string())?;
-            if !profile.id.eq_ignore_ascii_case(&record.profile.id) {return Err("Minecraft official UUID mismatch".into());}
+            if !profile.id.eq_ignore_ascii_case(&record.profile.id) {return Err("Несовпадение официального UUID Minecraft".into());}
             record.profile=profile.clone();
             save(&slot,&record)?;
             return Ok(profile);
@@ -717,7 +717,7 @@ impl IdentityManager {
         };
         let (response, record) = self.associated(&base, &id, access, path, method, body, skin).await?;
         let profile = Self::profile(&response.data)?;
-        if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Minecraft identity mismatch".into()); }
+        if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Несовпадение идентификаторов Minecraft".into()); }
         Ok(profile)
     }
     // Создание официального билета ServerBridge только в нативном процессе. Интерфейс
@@ -727,17 +727,17 @@ impl IdentityManager {
         let (base,id)=self.verified_scope(&req.backend_url,&req.token,&req.session_id).await?;
         let expected=normalized_uuid(&req.expected_uuid)?;
         if req.server_id.is_empty() || req.project_id.is_empty() || req.profile_id.is_empty() || req.channel.is_empty() {
-            return Err("ServerBridge join requires a real project, profile, channel and server".into());
+            return Err("Для подключения через ServerBridge необходимы действительные проект, профиль, канал и сервер".into());
         }
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let (slot,mut record)=selected_record(&id)?.ok_or("Official Minecraft account not selected")?;
         if normalized_uuid(&record.profile.id)?!=expected || record.native.is_none() {
-            return Err("Selected native Minecraft account changed; reconnect and retry".into());
+            return Err("Выбранная нативная учётная запись Minecraft изменилась; переподключитесь и повторите попытку".into());
         }
         self.native_validate(&base,&slot,&req.token,&mut record,false).await?;
         if normalized_uuid(&record.profile.id)?!=expected {
-            return Err("Minecraft UUID changed before server authorization".into());
+            return Err("UUID Minecraft изменился перед авторизацией на сервере".into());
         }
         let official_token=Zeroizing::new(record.native.as_ref().ok_or("Minecraft account unavailable")?.minecraft_token.clone());
         let mut url=base.clone();
@@ -751,15 +751,15 @@ impl IdentityManager {
             "planEvidence":req.plan_evidence,
         });
         let response=self.client.post(url).bearer_auth(&req.token).json(&body).send().await
-            .map_err(|_|"ServerBridge join request unavailable")?;
+            .map_err(|_|"Запрос подключения ServerBridge недоступен")?;
         let status=response.status();
-        if !status.is_success() {return Err(format!("ServerBridge rejected official Minecraft identity (HTTP {})",status.as_u16()));}
+        if !status.is_success() {return Err(format!("ServerBridge отклонил официальную учётную запись Minecraft (HTTP {})",status.as_u16()));}
         if response.content_length().is_some_and(|len|len>32*1024) {
-            return Err("Invalid ServerBridge join response size".into());
+            return Err("Недопустимый размер ответа подключения ServerBridge".into());
         }
-        let bytes=response.bytes().await.map_err(|_|"ServerBridge response unavailable")?;
-        if bytes.len()>32*1024 {return Err("ServerBridge join response too large".into());}
-        let payload:Value=serde_json::from_slice(&bytes).map_err(|_|"Invalid ServerBridge response")?;
+        let bytes=response.bytes().await.map_err(|_|"Ответ ServerBridge недоступен")?;
+        if bytes.len()>32*1024 {return Err("Ответ подключения ServerBridge превышает допустимый размер".into());}
+        let payload:Value=serde_json::from_slice(&bytes).map_err(|_|"Недопустимый ответ ServerBridge")?;
         let join=payload.pointer("/data/join").ok_or("ServerBridge join missing")?;
         let returned_uuid=join.get("uuid").and_then(Value::as_str).ok_or("ServerBridge UUID missing")?;
         let returned_name=join.get("username").and_then(Value::as_str).ok_or("ServerBridge name missing")?;
@@ -768,7 +768,7 @@ impl IdentityManager {
             join.get("oneTime").and_then(Value::as_bool)!=Some(true) ||
             join.get("serverId").and_then(Value::as_str)!=Some(req.server_id.as_str()) ||
             payload.pointer("/data/status").and_then(Value::as_str)!=Some("joined") {
-            return Err("ServerBridge did not authorize the selected official identity".into());
+            return Err("ServerBridge не авторизовал выбранную официальную учётную запись".into());
         }
         Ok(OfficialServerJoinResult0397{username:record.profile.name,uuid:expected,server_id:req.server_id})
     }
@@ -1124,13 +1124,13 @@ impl IdentityManager {
         if !dir.ids.contains(&uuid) {return Err("Minecraft-аккаунт не найден".into());}
         let slot = account_slot(&id, &uuid)?;
         let mut record=read(&slot)?.ok_or("Minecraft-аккаунт отсутствует в OS vault")?;
-        if normalized_uuid(&record.profile.id)? != uuid {return Err("Minecraft identity mismatch".into());}
+        if normalized_uuid(&record.profile.id)? != uuid {return Err("Несовпадение идентификаторов Minecraft".into());}
         if record.native.is_some() {
             self.native_validate(&base, &slot, access, &mut record, false).await?;
         } else {
             let response=self.request(&base,access,"/profile",Method::GET,Some(&record.ticket),None,None).await?;
             let fresh=Self::profile(&response.data)?;
-            if normalized_uuid(&fresh.id)? != uuid {return Err("Minecraft identity mismatch".into());}
+            if normalized_uuid(&fresh.id)? != uuid {return Err("Несовпадение идентификаторов Minecraft".into());}
             record.profile=fresh;
             if let Some(rotated)=response.rotation.as_ref() {record.ticket.zeroize();record.ticket=rotated.clone();}
             save(&slot,&record)?;
@@ -1151,7 +1151,7 @@ impl IdentityManager {
             // Ротацией старых аккаунтов управляет Backend. Никогда не передавайте билет в интерфейс.
             let result=self.request(&base,access,"/profile",Method::GET,Some(&record.ticket),None,None).await?;
             let fresh=Self::profile(&result.data)?;
-            if normalized_uuid(&fresh.id)? != normalized_uuid(&record.profile.id)? {return Err("Minecraft UUID mismatch".into());}
+            if normalized_uuid(&fresh.id)? != normalized_uuid(&record.profile.id)? {return Err("Несовпадение UUID Minecraft".into());}
             record.profile=fresh;
             if let Some(ticket)=result.rotation.as_ref() {record.ticket.zeroize();record.ticket=ticket.clone();}
             save(&slot,&record)?;

@@ -196,7 +196,7 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
            source.game_release_generation >= manifest.game_release_generation ||
            source.manifest_sha256.len() != 64 ||
            !source.manifest_sha256.bytes().all(|c| c.is_ascii_hexdigit()) {
-            return Err("invalid signed game rollback source/generation".into());
+            return Err("Недопустимый источник или поколение отката подписанной игры".into());
         }
     }
     match (manifest.schema_version.as_str(), manifest.profile_snapshot.as_ref()) {
@@ -205,7 +205,7 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
             if snapshot.schema_version != "2.0" || snapshot.revision == 0 ||
                snapshot.spec.project_id != manifest.project_id || snapshot.spec.id != manifest.profile_id ||
                snapshot.spec.name.is_empty() || snapshot.spec.loader.is_empty() {
-                return Err("invalid v2 profile snapshot identity".into());
+                return Err("Недопустимый идентификатор снимка профиля v2".into());
             }
             use sha2::{Sha256, Digest};
             let sep = "\0";
@@ -214,13 +214,13 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
                 snapshot.spec.loader.as_str(), snapshot.spec.preset.as_str(),
                 if snapshot.spec.is_default {"true"} else {"false"}].join(sep);
             let actual = hex::encode(Sha256::digest(digest_payload.as_bytes()));
-            if snapshot.digest != actual {return Err("v2 profile snapshot digest mismatch".into());}
+            if snapshot.digest != actual {return Err("Несовпадение хеша снимка профиля v2".into());}
             validate_runtime_constraints_0223(manifest)?;
             file_ownership::validate_policy(manifest)?;
             component_catalog_0241::validate(manifest)?;
             Ok(())
         }
-        _ => Err(format!("unsupported manifest schema or missing profileSnapshot: {}", manifest.schema_version)),
+        _ => Err(format!("Неподдерживаемая схема манифеста или отсутствует profileSnapshot: {}", manifest.schema_version)),
     }
 }
 
@@ -480,24 +480,24 @@ pub struct LaunchPreferences {
 }
 
 pub fn validate_launch_preferences(manifest: &Manifest, p: &LaunchPreferences, authenticated: bool) -> Result<(), String> {
-    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") { return Err("Desktop launch preferences require a signed v2/v3 Manifest".into()); }
+    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") { return Err("Для настроек запуска Desktop необходим подписанный манифест v2/v3".into()); }
     if p.offline {
         if authenticated || !manifest.runtime.launch.offline_mode {
-            return Err("offline launch is not authorized by the signed profile".into());
+            return Err("Автономный запуск не разрешён подписанным профилем".into());
         }
-        if p.auto_enter { return Err("offline mode cannot auto-enter a protected server".into()); }
+        if p.auto_enter { return Err("В автономном режиме нельзя автоматически подключаться к защищённому серверу".into()); }
     }
     if let Some(memory) = p.memory_mb {
         let policy = &manifest.runtime.memory;
         if memory < policy.minimum_mb.max(512) || memory > (if policy.maximum_mb > 0 { policy.maximum_mb.min(32768) } else { 32768 }) {
-            return Err(format!("RAM {memory} MB is outside signed profile limits"));
+            return Err(format!("ОЗУ {memory} МБ не соответствует ограничениям подписанного профиля"));
         }
-        if policy.minimum_mb > memory { return Err("RAM lower than minimum memory".into()); }
+        if policy.minimum_mb > memory { return Err("Размер ОЗУ меньше минимально допустимого".into()); }
     }
-    if p.width.is_some() != p.height.is_some() { return Err("resolution width and height must be supplied together".into()); }
+    if p.width.is_some() != p.height.is_some() { return Err("Ширина и высота разрешения должны указываться вместе".into()); }
     if let (Some(width), Some(height)) = (p.width, p.height) {
         if !(640..=7680).contains(&width) || !(480..=4320).contains(&height) {
-            return Err("resolution outside supported bounds".into());
+            return Err("Разрешение выходит за пределы поддерживаемых значений".into());
         }
     }
     if p.auto_enter {
@@ -508,9 +508,9 @@ pub fn validate_launch_preferences(manifest: &Manifest, p: &LaunchPreferences, a
             !label.as_bytes().last().is_some_and(u8::is_ascii_alphanumeric) ||
             !label.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
         }) {
-            return Err("invalid server address for auto-enter".into());
+            return Err("Недопустимый адрес сервера для автоматического подключения".into());
         }
-        if p.server_port.unwrap_or(0) == 0 { return Err("auto-enter requires a valid server port".into()); }
+        if p.server_port.unwrap_or(0) == 0 { return Err("Для автоматического подключения требуется допустимый порт сервера".into()); }
     }
     Ok(())
 }
@@ -735,19 +735,19 @@ pub async fn download_missing_files_with_preset(manifest:&Manifest,root:&Path,pi
 // байтов и восстанавливайте его при неудачной замене.
 async fn replace_verified_managed_file_0224(part: &Path, target: &Path) -> Result<(), String> {
     #[cfg(not(windows))]
-    { fs::rename(part,target).await.map_err(|e| format!("managed file switch {}: {e}",target.display())) }
+    { fs::rename(part,target).await.map_err(|e| format!("Переключение управляемого файла {}: {e}",target.display())) }
     #[cfg(windows)]
     {
-        if !target.exists() { return fs::rename(part,target).await.map_err(|e| format!("managed file switch {}: {e}",target.display())); }
+        if !target.exists() { return fs::rename(part,target).await.map_err(|e| format!("Переключение управляемого файла {}: {e}",target.display())); }
         let name = target.file_name().ok_or("invalid managed filename")?.to_string_lossy();
         let backup = target.with_file_name(format!("{name}.nlbackup-{}-{}",std::process::id(),now_unix()?));
-        if std::fs::symlink_metadata(&backup).is_ok() {return Err("managed backup collision".into());}
-        fs::rename(target,&backup).await.map_err(|e| format!("managed backup {}: {e}",target.display()))?;
+        if std::fs::symlink_metadata(&backup).is_ok() {return Err("Конфликт с резервной копией управляемого файла".into());}
+        fs::rename(target,&backup).await.map_err(|e| format!("Резервная копия управляемого файла {}: {e}",target.display()))?;
         if let Err(err)=fs::rename(part,target).await {
-            fs::rename(&backup,target).await.map_err(|restore|format!("managed replacement failed: {err}; restore failed: {restore}; backup {}",backup.display()))?;
-            return Err(format!("managed replacement failed: {err}"));
+            fs::rename(&backup,target).await.map_err(|restore|format!("Ошибка замены управляемого файла: {err}; восстановление не удалось: {restore}; резервная копия {}",backup.display()))?;
+            return Err(format!("Ошибка замены управляемого файла: {err}"));
         }
-        fs::remove_file(&backup).await.map_err(|e| format!("managed replacement installed but backup cleanup failed {}: {e}",backup.display()))
+        fs::remove_file(&backup).await.map_err(|e| format!("Замена управляемого файла установлена, но очистка резервной копии {} не удалась: {e}",backup.display()))
     }
 }
 
@@ -803,7 +803,7 @@ pub async fn clean_unused_files(manifest: &Manifest, root: &Path, pinned_public_
             file_ownership::ensure_no_symlinks(root, &p)?;
             let target = quarantine.join(&rel);
             if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
-            std::fs::rename(&p, &target).map_err(|e| format!("failed to quarantine {rel}: {e}"))?;
+            std::fs::rename(&p, &target).map_err(|e| format!("Не удалось поместить {rel} в карантин: {e}"))?;
             result.moved += 1;
             result.messages.push(format!("{rel} → {}", target.display()));
         }
@@ -995,7 +995,7 @@ pub async fn certify_vanilla_compatibility(
         if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }
         let _ = child.kill().await;
         let _ = child.wait().await;
-        return Err(format!("Linux runtime/process policy enforcement failed: {reason}"));
+        return Err(format!("Ошибка применения политики процесса Runtime в Linux: {reason}"));
     }
     #[cfg(windows)]
     sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
@@ -1017,19 +1017,19 @@ pub async fn certify_vanilla_compatibility(
     // равен None; ранее сбои SDL/GLFW в macOS не давали полезных сведений.
     if !timed_out && !success {
         let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
-            .map_err(|e| format!("cannot append certification exit diagnostics: {e}"))?;
+            .map_err(|e| format!("Не удалось дополнить диагностику завершения сертификации: {e}"))?;
         #[cfg(unix)]
         {
             use std::os::unix::process::ExitStatusExt;
             let signal = status.as_ref().and_then(|value| value.signal());
             writeln!(diagnostics, "--- runtime exit --- code={:?} signal={:?}",
                 status.as_ref().and_then(|value| value.code()), signal)
-                .map_err(|e| format!("cannot write certification exit diagnostics: {e}"))?;
+                .map_err(|e| format!("Не удалось записать диагностику завершения сертификации: {e}"))?;
         }
         #[cfg(not(unix))]
         writeln!(diagnostics, "--- runtime exit --- code={:?}",
             status.as_ref().and_then(|value| value.code()))
-            .map_err(|e| format!("cannot write certification exit diagnostics: {e}"))?;
+            .map_err(|e| format!("Не удалось записать диагностику завершения сертификации: {e}"))?;
     }
     let exit_code = status.and_then(|value| value.code());
     // 0xE3 — специальный код завершения Guard при строгом отказе.
@@ -1044,14 +1044,14 @@ pub async fn certify_vanilla_compatibility(
         if !guard.last_violation.is_empty() {
             let bounded = guard.last_violation.chars().take(1024).collect::<String>();
             let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
-                .map_err(|e| format!("cannot append Guard certification diagnostics: {e}"))?;
+                .map_err(|e| format!("Не удалось дополнить диагностические данные сертификации Guard: {e}"))?;
             writeln!(diagnostics, "--- Guard fail-closed ---\n{bounded}")
-                .map_err(|e| format!("cannot write Guard certification diagnostics: {e}"))?;
+                .map_err(|e| format!("Не удалось записать диагностические данные сертификации Guard: {e}"))?;
         } else if exit_code == Some(0xE3) {
             let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
-                .map_err(|e| format!("cannot append Guard certification diagnostics: {e}"))?;
+                .map_err(|e| format!("Не удалось дополнить диагностические данные сертификации Guard: {e}"))?;
             writeln!(diagnostics, "--- Guard fail-closed ---\nGuard terminated the runtime without a recorded violation")
-                .map_err(|e| format!("cannot write Guard certification diagnostics: {e}"))?;
+                .map_err(|e| format!("Не удалось записать диагностические данные сертификации Guard: {e}"))?;
         }
     }
     let finished_at = now_unix()?;
@@ -1132,7 +1132,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         create_launch_plan(manifest, root, java_path, username).await?
     };
     if let Some(port) = matching_server {
-        if port == 0 { return Err("matching server port cannot be zero".into()); }
+        if port == 0 { return Err("Сопоставленный порт сервера не может быть равен нулю".into()); }
         let preferences = LaunchPreferences {
             auto_enter: true, server_host: Some("127.0.0.1".into()),
             server_port: Some(port), ..Default::default()
@@ -1157,7 +1157,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     // до завершения дочернего процесса; Drop удалит её при любой ошибке.
     // Точку входа модуля Java нельзя передавать через обёртку classpath.
     if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
-        return Err("Guard Trusted JVM requires a classpath Minecraft main; module entrypoint is unsupported".into());
+        return Err("Для Guard Trusted JVM нужна точка входа Minecraft через classpath; модульная точка входа не поддерживается".into());
     }
     let _trusted = guarded_trusted_launch_0503::prepare_verified(root, &manifest.project_id,
         &manifest.minecraft.version, &manifest.minecraft.loader, &plan.main_class, manifest, &plan)?;
@@ -1173,14 +1173,14 @@ pub async fn launch_with_timeout_matching_authenticated(
     #[cfg(target_os = "linux")]
     {
         let daemon = linux_guard::GuardSupervisor::new();
-        daemon.ensure_started().await.map_err(|e|format!("Linux Guard startup failed: {e}"))?;
+        daemon.ensure_started().await.map_err(|e|format!("Не удалось запустить Guard в Linux: {e}"))?;
         daemon.ping_running().await?;
         live_guard.bind_linux_guard_daemon(daemon)?;
     }
     #[cfg(target_os = "macos")]
     {
         let daemon = macos_guard::GuardSupervisor::new();
-        daemon.ensure_started().await.map_err(|e| format!("macOS Guard startup failed: {e}"))?;
+        daemon.ensure_started().await.map_err(|e| format!("Не удалось запустить Guard в macOS: {e}"))?;
         daemon.ping_running().await?;
         live_guard.bind_macos_guard_daemon(daemon)?;
     }
@@ -1224,7 +1224,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }
         let _ = child.kill().await;
         let _ = child.wait().await;
-        return Err(format!("Linux Guard game process validation failed: {reason}"));
+        return Err(format!("Проверка игрового процесса Guard в Linux не пройдена: {reason}"));
     }
 
     #[cfg(target_os = "macos")]
@@ -1235,7 +1235,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         if let Some(pid) = child.id() { let _ = macos_policy::terminate_runtime_process_group(pid); }
         let _ = child.kill().await;
         let _ = child.wait().await;
-        return Err(format!("macOS Guard game process validation failed: {reason}"));
+        return Err(format!("Проверка игрового процесса Guard в macOS не пройдена: {reason}"));
     }
 
     let guarded_exit = continuous_game_protection_0506::wait_protected(
@@ -1396,7 +1396,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         let java = &manifest.runtime.java;
         if (java.minimum_major_version > 0 && required_java < java.minimum_major_version) ||
            (java.maximum_major_version > 0 && required_java > java.maximum_major_version) {
-            return Err("selected Java falls outside profile major version range".into());
+            return Err("Выбранная Java не соответствует диапазону основных версий профиля".into());
         }
     }
 
@@ -1433,7 +1433,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     // выбранную учётную запись. Это окончательный источник игровых аргументов авторизации.
     launch_identity_0269::pin_game_identity(&mut plan, &manifest.minecraft.version, credentials, &offline_username_0269)?;
     if credentials.is_none() && launch_identity_0269::forbidden_auth_agent(&plan.jvm_args) {
-        return Err("offline game may not load an online authentication injector".into());
+        return Err("Автономная игра не может загружать агент сетевой авторизации".into());
     }
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         // Идентичность воспроизводимого плана охватывает разрешённые метаданные, порядок и
@@ -1447,7 +1447,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
 // В версии v2 выбор каталога нативных файлов платформы зависит только от путей
 // подписанного релиза, а не от того, какие каталоги случайно появились локально.
 fn signed_platform_natives_directory_0227(manifest: &Manifest, root: &Path, base: &Path) -> Result<PathBuf, String> {
-    let prefix = base.strip_prefix(root).map_err(|_| "native directory outside client root")?
+    let prefix = base.strip_prefix(root).map_err(|_| "Каталог нативных библиотек расположен за пределами корневого каталога клиента")?
         .to_string_lossy().replace('\\', "/");
     let os = match std::env::consts::OS { "macos" => "osx", "windows" => "windows", "linux" => "linux", _ => return Ok(base.to_path_buf()) };
     let arch = match std::env::consts::ARCH { "x86_64" => "x86_64", "aarch64" => "aarch64", "x86" => "x86", "arm" => "arm", _ => "" };
@@ -1535,27 +1535,27 @@ fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &Minec
     match identity(Some(credentials))? {
         GameIdentity::Official => {
             if forbidden_auth_agent(&plan.jvm_args) {
-                return Err("Official Minecraft must use Mojang sessionserver; authlib-injector is forbidden".into());
+                return Err("Официальный Minecraft должен использовать Mojang sessionserver; authlib-injector запрещён".into());
             }
         }
         GameIdentity::Yggdrasil => {
-            if forbidden_auth_agent(&plan.jvm_args) {return Err("Yggdrasil auth agent must be supplied exclusively by Runtime".into());}
+            if forbidden_auth_agent(&plan.jvm_args) {return Err("Агент авторизации Yggdrasil должен предоставляться исключительно Runtime".into());}
             let mut injector: Option<PathBuf> = None;
             for file in &manifest.files {
                 let normalized = file.path.replace('\\', "/");
                 let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
                 if filename.starts_with("authlib-injector") && filename.ends_with(".jar") && file.required && manifest_file_applies(file) &&
                     !matches!(file.ownership.as_str(),"user-owned"|"generated") {
-                    if injector.is_some() {return Err("multiple signed authlib-injector agents".into());}
+                    if injector.is_some() {return Err("Обнаружено несколько подписанных агентов authlib-injector".into());}
                     injector = Some(safe_join(root, &file.path)?);
                 }
             }
             let path=injector.ok_or("Yggdrasil online launch requires a required, signed authlib-injector JAR")?;
-            if !tokio_path_exists119(&path) {return Err("signed authlib-injector is missing".into());}
+            if !tokio_path_exists119(&path) {return Err("Подписанный authlib-injector отсутствует".into());}
             let base=credentials.auth_server_base_url.trim_end_matches('/');
             plan.jvm_args.push(format!("-javaagent:{}={}",path.to_string_lossy(),base));
         }
-        GameIdentity::Offline => return Err("authenticated launch cannot use offline identity".into()),
+        GameIdentity::Offline => return Err("Запуск с авторизацией не может использовать автономный идентификатор".into()),
     }
     Ok(())
 }
@@ -1591,16 +1591,16 @@ fn validate_runtime_constraints_0223(m: &Manifest) -> Result<(), String> {
        (j.maximum_major_version != 0 && j.major_version > j.maximum_major_version) ||
        (j.recommended_major_version != 0 && j.minimum_major_version != 0 && j.recommended_major_version < j.minimum_major_version) ||
        (j.recommended_major_version != 0 && j.maximum_major_version != 0 && j.recommended_major_version > j.maximum_major_version) {
-        return Err("runtime.java major version range is inconsistent".into());
+        return Err("Диапазон основных версий runtime.java противоречив".into());
     }
     let mem = &m.runtime.memory;
     if (mem.maximum_mb != 0 && mem.minimum_mb > mem.maximum_mb) ||
        (mem.recommended_mb != 0 && mem.minimum_mb != 0 && mem.recommended_mb < mem.minimum_mb) ||
        (mem.maximum_mb != 0 && mem.recommended_mb > mem.maximum_mb) {
-        return Err("runtime.memory minimum/recommended/maximum MB order invalid".into());
+        return Err("Неверный порядок минимальной, рекомендуемой и максимальной памяти runtime.memory (МБ)".into());
     }
     if !matches!(launch.classpath_strategy.trim().to_ascii_lowercase().as_str(), "" | "manifest" | "libraries" | "compatibility" | "mojang") {
-        return Err("unsupported runtime.launch.classpathStrategy".into());
+        return Err("Неподдерживаемая стратегия runtime.launch.classpathStrategy".into());
     }
     validate_memory_arguments_0223(mem, &m.runtime.jvm_args)?;
     let files: HashSet<&str> = m.files.iter().filter(|f| f.required).map(|f| f.path.as_str()).collect();
@@ -1610,15 +1610,15 @@ fn validate_runtime_constraints_0223(m: &Manifest) -> Result<(), String> {
            path.contains('\0') || path.contains('\r') || path.contains('\n') ||
            path.split('/').any(|part| part.is_empty() || part == "." || part == "..") ||
            !path.to_ascii_lowercase().ends_with(".jar") || !files.contains(path.as_str()) || !seen.insert(path) {
-            return Err(format!("invalid/unsigned/duplicate launch JAR path: {path}"));
+            return Err(format!("Недопустимый, неподписанный или повторяющийся путь JAR запуска: {path}"));
         }
     }
     if launch.main_module.is_empty() != launch.modulepath_entries.is_empty() {
-        return Err("mainModule and modulepathEntries must be set together".into());
+        return Err("mainModule и modulepathEntries должны задаваться вместе".into());
     }
     if !launch.main_module.is_empty() {
         let valid = regex::Regex::new(r"^[A-Za-z_][A-Za-z0-9_.]*(/[A-Za-z_$][A-Za-z0-9_.$]*)?$").map_err(|e| e.to_string())?;
-        if !valid.is_match(&launch.main_module) { return Err("invalid mainModule".into()); }
+        if !valid.is_match(&launch.main_module) { return Err("Недопустимый mainModule".into()); }
     }
     let valid_environment = regex::Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").map_err(|e| e.to_string())?;
     let mut env_names = HashSet::new();
@@ -1626,11 +1626,11 @@ fn validate_runtime_constraints_0223(m: &Manifest) -> Result<(), String> {
         let upper = name.to_ascii_uppercase();
         if !valid_environment.is_match(name) || !env_names.insert(upper.clone()) ||
            matches!(upper.as_str(), "JAVA_TOOL_OPTIONS" | "_JAVA_OPTIONS" | "JDK_JAVA_OPTIONS" | "CLASSPATH") {
-            return Err(format!("invalid/unsafe/duplicate environment allowlist key {name}"));
+            return Err(format!("Недопустимый, небезопасный или повторяющийся ключ разрешённой переменной окружения: {name}"));
         }
     }
     for arg in &m.minecraft.game_args {
-        if arg.contains('\0') || arg.contains('\r') || arg.contains('\n') { return Err("invalid game argument".into()); }
+        if arg.contains('\0') || arg.contains('\r') || arg.contains('\n') { return Err("Недопустимый аргумент игры".into()); }
     }
     Ok(())
 }
@@ -1645,16 +1645,16 @@ fn parse_heap_arg_0223(arg: &str) -> Result<Option<(char, u64)>, String> {
         _ => payload,
     };
     if digits.is_empty() || digits.starts_with('0') || !digits.bytes().all(|c| c.is_ascii_digit()) {
-        return Err(format!("invalid heap argument {arg}"));
+        return Err(format!("Недопустимый аргумент памяти кучи {arg}"));
     }
-    let value = digits.parse::<u64>().map_err(|_| format!("invalid heap argument {arg}"))?;
+    let value = digits.parse::<u64>().map_err(|_| format!("Недопустимый аргумент памяти кучи {arg}"))?;
     // Переводите в МБ с проверяемым умножением и округлением вверх для k/bytes.
     let mb = match payload.chars().last() {
         Some('k') => value.checked_add(1023).map(|v| v / 1024),
         Some('m') => Some(value),
         Some('g') => value.checked_mul(1024),
         _ => value.checked_add(1048575).map(|v| v / 1048576),
-    }.ok_or_else(|| format!("heap argument overflow: {arg}"))?;
+    }.ok_or_else(|| format!("Переполнение значения аргумента памяти кучи: {arg}"))?;
     Ok(Some((heap_type, mb)))
 }
 
@@ -1664,23 +1664,23 @@ fn validate_memory_arguments_0223(mem: &MemoryInfo, args: &[String]) -> Result<(
     for arg in args {
         let lower = arg.to_ascii_lowercase();
         if arg.trim().is_empty() || arg.contains('\0') || arg.contains('\r') || arg.contains('\n') {
-            return Err("invalid JVM argument".into());
+            return Err("Недопустимый аргумент JVM".into());
         }
         if matches!(lower.as_str(), "-cp" | "-classpath" | "--class-path" | "--module-path" | "--patch-module" | "--upgrade-module-path" | "-p" | "-m" | "--module" | "-jar") ||
             ["-xbootclasspath", "--class-path=", "--module-path=", "--patch-module", "--upgrade-module-path", "-javaagent:", "-agentpath:", "-agentlib:", "-xx:onerror=", "-xx:onoutofmemoryerror="].iter().any(|v| lower.starts_with(v)) {
-            return Err(format!("JVM entrypoint/path/agent override prohibited: {arg}"));
+            return Err(format!("Переопределение точки входа, пути или агента JVM запрещено: {arg}"));
         }
         if let Some((kind, mb)) = parse_heap_arg_0223(arg)? {
             if (mem.minimum_mb > 0 && mb < mem.minimum_mb as u64) ||
                (mem.maximum_mb > 0 && mb > mem.maximum_mb as u64) {
-                return Err(format!("heap argument outside profile limits: {arg}"));
+                return Err(format!("Аргумент памяти кучи выходит за пределы профиля: {arg}"));
             }
             let slot = if kind == 's' { &mut xms } else { &mut xmx };
-            if slot.replace(mb).is_some() { return Err(format!("duplicate heap argument: {arg}")); }
+            if slot.replace(mb).is_some() { return Err(format!("Повторяющийся аргумент памяти кучи: {arg}")); }
         }
     }
     if let (Some(min), Some(max)) = (xms, xmx) {
-        if min > max { return Err("-Xms exceeds -Xmx".into()); }
+        if min > max { return Err("Значение -Xms превышает -Xmx".into()); }
     }
     Ok(())
 }
@@ -1689,7 +1689,7 @@ fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -
     let launch = &m.runtime.launch;
     for name in launch.classpath_entries.iter().chain(launch.modulepath_entries.iter()) {
         if !m.files.iter().any(|file| file.path == *name && file.required && manifest_file_applies(file)) {
-            return Err(format!("signed runtime path not applicable to current platform: {name}"));
+            return Err(format!("Подписанный путь Runtime не подходит для текущей платформы: {name}"));
         }
     }
     if !launch.classpath_entries.is_empty() {
@@ -1702,7 +1702,7 @@ fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -
         plan.classpath_entries.clear();
     }
     if plan.main_module.is_empty() && plan.classpath_entries.is_empty() {
-        return Err("launch requires signed classpath entries or mainModule".into());
+        return Err("Для запуска необходимы подписанные записи classpath или mainModule".into());
     }
     Ok(())
 }
@@ -1711,12 +1711,12 @@ fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -
 // подписанного Manifest, иначе изменённые метаданные Mojang или пропавшие JAR
 // незаметно изменят одинаковый по виду план при действительной подписи.
 async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &LaunchPlan, metadata_paths: &[String]) -> Result<(), String> {
-    let canonical_root = root.canonicalize().map_err(|e| format!("client root is unavailable: {e}"))?;
+    let canonical_root = root.canonicalize().map_err(|e| format!("Корневой каталог клиента недоступен: {e}"))?;
     let mut paths = HashSet::<String>::new();
     for absolute in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
         let absolute = Path::new(absolute);
         let rel = absolute.strip_prefix(root).or_else(|_| absolute.strip_prefix(&canonical_root))
-            .map_err(|_| format!("launch JAR outside client root: {}", absolute.display()))?;
+            .map_err(|_| format!("JAR запуска находится за пределами корневого каталога клиента: {}", absolute.display()))?;
         let rel = rel.to_str().ok_or("non-UTF8 JAR path")?.replace('\\', "/");
         paths.insert(rel);
     }
@@ -1727,15 +1727,15 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
     for rel in paths.iter().chain(metadata_paths.iter()) {
         let declared = manifest.files.iter().find(|file| file.path == *rel && manifest_file_applies(file) &&
            (file.required || (manifest.schema_version=="3.0" && active.contains(rel.as_str()))))
-            .ok_or_else(|| format!("launch input is not a selected signed artifact: {rel}"))?;
+            .ok_or_else(|| format!("Входной файл запуска не входит в выбранные подписанные артефакты: {rel}"))?;
         if metadata_paths.contains(rel) && !declared.required {
-            return Err(format!("compatibility metadata cannot be optional: {rel}"));
+            return Err(format!("Метаданные совместимости обязательны: {rel}"));
         }
         let location = safe_join(&canonical_root, rel)?;
         file_ownership::ensure_no_symlinks(&canonical_root, &location)?;
-        let metadata = fs::metadata(&location).await.map_err(|e| format!("launch input missing {rel}: {e}"))?;
+        let metadata = fs::metadata(&location).await.map_err(|e| format!("Отсутствует входной файл запуска {rel}: {e}"))?;
         if !metadata.is_file() || metadata.len() != declared.size || !sha256_file(&location).await?.eq_ignore_ascii_case(&declared.sha256) {
-            return Err(format!("launch input does not match signed size/SHA-256: {rel}"));
+            return Err(format!("Входной файл запуска не соответствует подписанным размеру или SHA-256: {rel}"));
         }
     }
     Ok(())

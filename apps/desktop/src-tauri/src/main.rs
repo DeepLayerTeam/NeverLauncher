@@ -61,7 +61,7 @@ struct DesktopNativeUI0357 {
 #[tauri::command]
 fn desktop_native_ui_info_0357(window: tauri::WebviewWindow) -> Result<DesktopNativeUI0357, String> {
     let factor = window.scale_factor().map_err(|err| err.to_string())?;
-    if !factor.is_finite() || factor <= 0.0 {return Err("Invalid native display scale".into());}
+    if !factor.is_finite() || factor <= 0.0 {return Err("Недопустимый масштаб нативного экрана".into());}
     Ok(DesktopNativeUI0357 { os: std::env::consts::OS, scale_factor: factor })
 }
 
@@ -71,7 +71,7 @@ fn parse_desktop_window_action_0357(action: &str) -> Result<DesktopWindowAction0
     match action {
         "minimize" => Ok(DesktopWindowAction0357::Minimize),
         "toggleMaximized" => Ok(DesktopWindowAction0357::ToggleMaximized),
-        _ => Err("Unsupported desktop window action".into()),
+        _ => Err("Неподдерживаемое действие с окном Desktop".into()),
     }
 }
 
@@ -171,7 +171,7 @@ fn validate_launch_realm_0269(
             !preferences.is_some_and(|p|p.offline) => Ok(()),
         LaunchRealm0269::Offline if !official && credentials.is_none() &&
             preferences.is_some_and(|p|p.offline) => Ok(()),
-        _ => Err("Minecraft launch auth mode and credentials disagree".into()),
+        _ => Err("Режим авторизации запуска Minecraft не соответствует учётным данным".into()),
     }
 }
 
@@ -271,7 +271,7 @@ async fn windows_tpm_certify_0313(
             &backend_url, &user_id, &device_id, &tpm_extra_data_sha256,
             &ak_key_name, &ak_certificate_pem, intermediates_pem,
         )
-    }).await.map_err(|e| format!("TPM evidence worker failed: {e}"))?
+    }).await.map_err(|e| format!("Ошибка обработчика свидетельств TPM: {e}"))?
 }
 
 #[tauri::command]
@@ -285,7 +285,7 @@ async fn linux_tpm_certify_0314(
             &backend_url,&user_id,&device_id,&tpm_extra_data_sha256,
             &ak_handle,&ak_certificate_pem,intermediates_pem,
         )
-    }).await.map_err(|e|format!("Linux TPM evidence worker failed: {e}"))?
+    }).await.map_err(|e|format!("Ошибка обработчика свидетельств TPM в Linux: {e}"))?
 }
 
 #[tauri::command]
@@ -295,7 +295,7 @@ async fn measured_boot_quote_0315(
 )->Result<serde_json::Value,String>{
  tokio::task::spawn_blocking(move || device_keys::measured_boot_quote_0315(
   &backend_url,&user_id,&device_id,&tpm_extra_data_sha256,&pcr_selection,&ak_key,&ak_certificate_pem,intermediates_pem,
- )).await.map_err(|e|format!("Quote TPM worker failed: {e}"))?
+ )).await.map_err(|e|format!("Ошибка обработчика TPM Quote: {e}"))?
 }
 
 #[tauri::command]
@@ -313,7 +313,7 @@ async fn device_key_status(backend_url: String, user_id: String) -> Result<Optio
 #[tauri::command]
 async fn macos_trust_status_0316(backend_url: String, user_id: String) -> Result<device_keys::MacOSTrustStatus0316, String> {
     tokio::task::spawn_blocking(move || device_keys::macos_trust_status_0316(&backend_url, &user_id))
-        .await.map_err(|e| format!("macOS trust probe worker failed: {e}"))?
+        .await.map_err(|e| format!("Ошибка обработчика проверки доверия macOS: {e}"))?
 }
 
 #[tauri::command]
@@ -464,9 +464,9 @@ fn initialize_desktop_game_trust_02312() -> Result<(),String> {
     let cfg:DesktopConfig=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
     if cfg.trust_policy_path.is_empty() {return Ok(())}
     let target=PathBuf::from(&cfg.trust_policy_path);
-    if !target.is_absolute(){return Err("trust policy location must be absolute".into())}
+    if !target.is_absolute(){return Err("Путь к политике доверия должен быть абсолютным".into())}
     let meta=std::fs::symlink_metadata(&target).map_err(|e|e.to_string())?;
-    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("unsafe trust policy source".into())}
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("Небезопасный источник политики доверия".into())}
     std::env::set_var("LAUNCHER_GAME_TRUST_POLICY_FILE",&target);
     Ok(())
 }
@@ -505,19 +505,19 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
 }
 
 fn validate_desktop_config_schema_0359(schema:&str)->Result<(),String>{
-    match schema{"1.0"|"1.1"=>Ok(()), _=>Err(format!("Desktop config version {schema} is unsupported; preferences were not overwritten"))}
+    match schema{"1.0"|"1.1"=>Ok(()), _=>Err(format!("Версия конфигурации Desktop {schema} не поддерживается; настройки не перезаписаны"))}
 }
 async fn preserve_legacy_config_0359(path:&std::path::Path)->Result<(),String>{
     let backup=path.with_file_name("config.pre-0359.json");
     match fs::symlink_metadata(&backup).await {
         Ok(meta) if meta.is_file() && !meta.file_type().is_symlink()=>return Ok(()),
-        Ok(_)=>return Err("unsafe legacy Desktop settings backup".into()),
+        Ok(_)=>return Err("Небезопасная резервная копия прежних настроек Desktop".into()),
         Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
         Err(e)=>return Err(e.to_string()),
     }
     let meta=fs::symlink_metadata(path).await.map_err(|e|e.to_string())?;
     if !meta.is_file()||meta.file_type().is_symlink()||meta.len()>1024*1024 {
-        return Err("unsafe legacy Desktop settings source".into());
+        return Err("Небезопасный источник прежних настроек Desktop".into());
     }
     let bytes=fs::read(path).await.map_err(|e|e.to_string())?;
     use tokio::io::AsyncWriteExt;
@@ -527,7 +527,7 @@ async fn preserve_legacy_config_0359(path:&std::path::Path)->Result<(),String>{
         Ok(f)=>f,
         Err(e) if e.kind()==std::io::ErrorKind::AlreadyExists=>{
             let meta=fs::symlink_metadata(&backup).await.map_err(|e|e.to_string())?;
-            if !meta.is_file()||meta.file_type().is_symlink(){return Err("unsafe legacy Desktop backup collision".into());}
+            if !meta.is_file()||meta.file_type().is_symlink(){return Err("Конфликт с небезопасной резервной копией прежнего Desktop".into());}
             return Ok(());
         },
         Err(e)=>return Err(e.to_string()),
@@ -752,7 +752,7 @@ async fn release_permission_scopes_0393(root:&str,key:&str,include_lkg:bool)->Re
     let root_path=PathBuf::from(root);let signed_key=key.to_owned();
     let manifests=tokio::task::spawn_blocking(move ||
         runtime::transactional_release::release_manifests_for_permissions_0393(&root_path,&signed_key,include_lkg))
-        .await.map_err(|e|format!("read signed release catalogs: {e}"))??;
+        .await.map_err(|e|format!("Ошибка чтения каталогов подписанных выпусков: {e}"))??;
     let mut grants=Vec::with_capacity(manifests.len());
     for manifest in manifests {
         grants.push(component_permissions_for_manifest_0392(&manifest,key).await?);
@@ -769,15 +769,15 @@ async fn reconcile_component_preference_0393(root:&str,key:&str)->Result<(),Stri
         runtime::component_catalog_0241::spawn_blocking_with_permissions_0392({
             let root=root.to_owned();let key=key.to_owned();
             move || runtime::transactional_release::verified_active_selection_02410(&PathBuf::from(root),&key)
-        }).await.map_err(|e|format!("read restored selection: {e}"))?
+        }).await.map_err(|e|format!("Ошибка чтения восстановленного выбора: {e}"))?
     }).await?;
     let Some((manifest,preset))=active else{return Ok(())};
     let mut cfg=load_desktop_config().await?;
     if cfg.project_id!=manifest.project_id || cfg.profile_id!=manifest.profile_id || cfg.channel!=manifest.channel ||
-       cfg.pinned_public_key!=key {return Err("restored release does not match signed desktop binding".into());}
+       cfg.pinned_public_key!=key {return Err("Восстановленный выпуск не соответствует подписанной привязке Desktop".into());}
     let saved_root=PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|e.to_string())?;
     let actual_root=PathBuf::from(root).canonicalize().map_err(|e|e.to_string())?;
-    if saved_root!=actual_root {return Err("restored release is outside desktop game directory".into());}
+    if saved_root!=actual_root {return Err("Восстановленный выпуск находится за пределами игрового каталога Desktop".into());}
     let installed=preset.unwrap_or_default();
     let update_offline_cache=cfg.onboarding_completed && manifest.runtime.launch.offline_mode;
     if cfg.component_preset!=installed {
@@ -800,7 +800,7 @@ async fn rollback_client_release(root: String, pinned_public_key: String) -> Res
     let cfg=load_desktop_config().await?;
     if cfg.pinned_public_key!=pinned_public_key || PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|e.to_string())?!=
         PathBuf::from(&root).canonicalize().map_err(|e|e.to_string())? {
-        return Err("rollback outside configured signed game directory".into());
+        return Err("Откат за пределы настроенного подписанного игрового каталога запрещён".into());
     }
     let grants=release_permission_scopes_0393(&root,&pinned_public_key,true).await?;
     runtime::component_catalog_0241::with_verified_release_scopes_0393(grants,async {
@@ -833,7 +833,7 @@ async fn ensure_profile_managed_java(manifest: Manifest, pinned_public_key: Stri
     let java = &manifest.runtime.java;
     if java.major_version == 0 || (java.minimum_major_version > 0 && java.major_version < java.minimum_major_version)
         || (java.maximum_major_version > 0 && java.major_version > java.maximum_major_version) {
-        return Err("Signed profile Java major is outside the supported range".into());
+        return Err("Основная версия Java в подписанном профиле не входит в поддерживаемый диапазон".into());
     }
     runtime::ensure_managed_java(java.major_version, &java.distribution, None).await
 }
@@ -861,19 +861,19 @@ fn check_offline_owner_binding_0358(
         !cfg.pinned_public_key.eq_ignore_ascii_case(key) ||
         cfg.project_id != owner.project_id || cfg.profile_id != owner.profile_id ||
         cfg.channel != owner.channel {
-        return Err("offline denied: project/profile/channel or pinned key does not match signed owner bundle".into());
+        return Err("Автономный запуск запрещён: проект, профиль, канал или закреплённый ключ не соответствует подписанному пакету владельца".into());
     }
     if !manifest.runtime.launch.offline_mode ||
         (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") {
-        return Err("offline denied: signed game profile does not allow local offline play".into());
+        return Err("Автономный запуск запрещён: подписанный профиль игры не разрешает локальную игру без сети".into());
     }
     if require_installed && (!cfg.onboarding_completed || cfg.onboarding_bootstrap_digest != owner.digest) {
-        return Err("offline denied: complete the signed first-run installation online first".into());
+        return Err("Автономный запуск запрещён: сначала завершите первоначальную подписанную установку с подключением к сети".into());
     }
-    let requested = PathBuf::from(root).canonicalize().map_err(|e|format!("offline game directory unavailable: {e}"))?;
-    let saved = PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|format!("offline saved game directory unavailable: {e}"))?;
+    let requested = PathBuf::from(root).canonicalize().map_err(|e|format!("Автономный игровой каталог недоступен: {e}"))?;
+    let saved = PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|format!("Сохранённый автономный игровой каталог недоступен: {e}"))?;
     if requested != saved {
-        return Err("offline denied: game directory differs from the installed signed profile".into());
+        return Err("Автономный запуск запрещён: игровой каталог отличается от установленного подписанного профиля".into());
     }
     Ok(())
 }
@@ -890,9 +890,9 @@ async fn verify_offline_files_0358(manifest: &Manifest, root: &str, key: &str, p
     let selected = if preset.is_empty() { None } else { Some(preset) };
     runtime::transactional_release::ensure_active_preset(manifest, &path, key, selected).await?;
     let checks = runtime::check_files_with_preset(manifest, &path, selected).await?;
-    if checks.is_empty() {return Err("offline denied: installed release has no verified managed files".into());}
+    if checks.is_empty() {return Err("Автономный запуск запрещён: в установленном выпуске нет проверенных управляемых файлов".into());}
     if let Some(broken) = checks.iter().find(|f|f.status != "ok") {
-        return Err(format!("offline denied: {} ({}) is not verified; reconnect and repair the installation", broken.path, broken.status));
+        return Err(format!("Автономный запуск запрещён: {} ({}) не проверен; подключитесь к сети и восстановите установку", broken.path, broken.status));
     }
     Ok(())
 }
@@ -915,7 +915,7 @@ fn matching_offline_release_0358(requested: &Manifest, cached: &Manifest) -> Res
         requested.channel != cached.channel || requested.version != cached.version ||
         requested.signature.as_ref().map(|v|(&v.signature,&v.public_key)) !=
             cached.signature.as_ref().map(|v|(&v.signature,&v.public_key)) {
-        return Err("offline denied: requested release differs from verified local cache".into());
+        return Err("Автономный запуск запрещён: запрошенный выпуск отличается от проверенного локального кеша".into());
     }
     Ok(())
 }
@@ -923,10 +923,10 @@ fn matching_offline_release_0358(requested: &Manifest, cached: &Manifest) -> Res
 // Кешированные манифесты не становятся доверенными только из-за нахождения на диске. Любое автономное
 // чтение повторно проверяет подпись Ed25519 по закреплённому ключу.
 fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
-    let root = PathBuf::from(root).canonicalize().map_err(|e| format!("client root unavailable: {e}"))?;
+    let root = PathBuf::from(root).canonicalize().map_err(|e| format!("Корневой каталог клиента недоступен: {e}"))?;
     let dir = root.join(".launcher");
     if let Ok(meta) = std::fs::symlink_metadata(&dir) {
-        if meta.file_type().is_symlink() || !meta.is_dir() { return Err("unsafe manifest cache directory".into()); }
+        if meta.file_type().is_symlink() || !meta.is_dir() { return Err("Небезопасный каталог кеша манифестов".into()); }
     }
     Ok(dir.join("signed-manifest.json"))
 }
@@ -937,12 +937,12 @@ async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_
     let (cfg, owner) = verified_offline_owner_0358().await?;
     // Кешированным выпуском для повторного запуска может стать только установленный и проверенный профиль,
     // явно разрешающий автономный режим.
-    if !manifest.runtime.launch.offline_mode { return Err("offline cache disabled by signed profile policy".into()); }
+    if !manifest.runtime.launch.offline_mode { return Err("Автономный кеш отключён политикой подписанного профиля".into()); }
     // Идентичность владельца проверяется до обращения к дисковому кешу.
     if owner.project_id != manifest.project_id || owner.profile_id != manifest.profile_id ||
         owner.channel != manifest.channel || !owner.pinned_public_key.eq_ignore_ascii_case(&pinned_public_key) ||
         !cfg.pinned_public_key.eq_ignore_ascii_case(&pinned_public_key) {
-        return Err("offline cache denied: owner bundle scope or pinned key mismatch".into());
+        return Err("Доступ к автономному кешу запрещён: несоответствие области пакета владельца или закреплённого ключа".into());
     }
     // Не создавайте произвольные каталоги по целевым путям кеша, переданным визуализатором.
     check_offline_owner_binding_0358(&cfg, &owner, &manifest, &root, &pinned_public_key, true)?;
@@ -953,7 +953,7 @@ async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_
     let dir = path.parent().ok_or("missing cache directory")?;
     fs::create_dir_all(dir).await.map_err(|e| e.to_string())?;
     if let Ok(meta) = fs::symlink_metadata(&path).await {
-        if meta.file_type().is_symlink() { return Err("unsafe manifest cache file".into()); }
+        if meta.file_type().is_symlink() { return Err("Небезопасный файл кеша манифестов".into()); }
     }
     let value = serde_json::to_vec(&manifest).map_err(|e| e.to_string())?;
     let tmp = dir.join(format!("signed-manifest.{}.{}.tmp", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_nanos()));
@@ -968,10 +968,10 @@ async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_
     #[cfg(windows)]
     if fs::metadata(&path).await.is_ok() {
         let backup = tmp.with_extension("previous");
-        fs::rename(&path, &backup).await.map_err(|e| format!("cannot preserve previous manifest cache: {e}"))?;
+        fs::rename(&path, &backup).await.map_err(|e| format!("Не удалось сохранить предыдущий кеш манифестов: {e}"))?;
         if let Err(err) = fs::rename(&tmp, &path).await {
             let _ = fs::rename(&backup, &path).await;
-            return Err(format!("manifest cache replacement failed: {err}"));
+            return Err(format!("Не удалось заменить кеш манифестов: {err}"));
         }
         let _ = fs::remove_file(&backup).await;
         return Ok(());
@@ -982,14 +982,14 @@ async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_
 #[tauri::command]
 async fn load_cached_desktop_manifest(root: String, pinned_public_key: String, project_id: String, profile_id: String, channel: String) -> Result<Manifest, String> {
     let path = desktop_manifest_cache_path_0229(&root)?;
-    let meta = fs::symlink_metadata(&path).await.map_err(|e| format!("no cached manifest: {e}"))?;
-    if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 16 * 1024 * 1024 { return Err("unsafe manifest cache file".into()); }
+    let meta = fs::symlink_metadata(&path).await.map_err(|e| format!("Нет кешированного манифеста: {e}"))?;
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 16 * 1024 * 1024 { return Err("Небезопасный файл кеша манифестов".into()); }
     let manifest: Manifest = serde_json::from_slice(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     runtime::verify_manifest_signature(&manifest, &pinned_public_key)?;
     let (cfg, owner) = verified_offline_owner_0358().await?;
     check_offline_owner_binding_0358(&cfg, &owner, &manifest, &root, &pinned_public_key, true)?;
     if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") || manifest.project_id != project_id || manifest.profile_id != profile_id || manifest.channel != channel || !manifest.runtime.launch.offline_mode {
-        return Err("cached manifest is not authorized for this profile/channel in offline mode".into());
+        return Err("Кешированный манифест не разрешён для этого профиля и канала в автономном режиме".into());
     }
     Ok(manifest)
 }
@@ -1005,48 +1005,48 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
     let cfg=load_desktop_config().await?;
     if cfg.project_id!=manifest.project_id || cfg.profile_id!=manifest.profile_id ||
        cfg.channel!=manifest.channel || cfg.pinned_public_key!=pinned {
-        return Err("component permission scope differs from bound desktop profile".into());
+        return Err("Область разрешений компонента отличается от привязанного профиля Desktop".into());
     }
     let needs_grant=catalog.is_some_and(|cat|cat.components.iter().any(|c|c.conditions.as_ref().is_some_and(|v|!v.permissions.is_empty())));
     let empty=||VerifiedComponentScope0392{project_id:manifest.project_id.clone(),profile_id:manifest.profile_id.clone(),
        channel:manifest.channel.clone(),catalog_digest:digest.clone(),valid_until:0,permissions:Default::default()};
     if !needs_grant {return Ok(empty());}
     let cat=catalog.ok_or("missing conditional component catalog")?;
-    let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"invalid backend URL")?;
+    let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"Недопустимый URL Backend")?;
     if origin.scheme()!="https" || origin.username()!="" || origin.password().is_some() ||
        origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
-        return Err("component entitlement requires an HTTPS backend origin".into());
+        return Err("Для права доступа к компоненту требуется HTTPS-адрес Backend".into());
     }
     let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("component entitlement requires Never login")?;
-    if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("incomplete authenticated Never session".into())}
+    if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("Неполный аутентифицированный сеанс Never".into())}
     let mut url=origin.clone();
-    {let mut segments=url.path_segments_mut().map_err(|_|"invalid backend URL segments")?;
+    {let mut segments=url.path_segments_mut().map_err(|_|"Недопустимые сегменты URL Backend")?;
       segments.pop_if_empty(); segments.extend(&["api","v1","projects",&manifest.project_id,"profiles",&manifest.profile_id,"component-permissions"]);}
     url.query_pairs_mut().append_pair("channel",&manifest.channel).append_pair("catalogDigest",&cat.digest);
     let client=reqwest::Client::builder().timeout(Duration::from_secs(10)).redirect(reqwest::redirect::Policy::none())
-         .build().map_err(|_|"component permission HTTP client unavailable")?;
+         .build().map_err(|_|"HTTP-клиент проверки разрешений компонентов недоступен")?;
     let response=client.get(url).bearer_auth(&session.access_token).header(reqwest::header::CACHE_CONTROL,"no-store")
-          .send().await.map_err(|_|"component permission backend unavailable")?;
-    if !response.status().is_success(){return Err(format!("component authorization denied by server: {}",response.status()));}
-    if response.content_length().is_some_and(|v|v>64*1024){return Err("oversized component authorization response".into());}
-    let bytes=response.bytes().await.map_err(|_|"invalid component authorization response")?;
-    if bytes.len()>64*1024{return Err("oversized component authorization response".into())}
+          .send().await.map_err(|_|"Backend проверки разрешений компонентов недоступен")?;
+    if !response.status().is_success(){return Err(format!("Сервер отказал в авторизации компонента: {}",response.status()));}
+    if response.content_length().is_some_and(|v|v>64*1024){return Err("Ответ авторизации компонента превышает допустимый размер".into());}
+    let bytes=response.bytes().await.map_err(|_|"Недопустимый ответ авторизации компонента")?;
+    if bytes.len()>64*1024{return Err("Ответ авторизации компонента превышает допустимый размер".into())}
     #[derive(Deserialize)]#[serde(rename_all="camelCase",deny_unknown_fields)]
     struct Reply { project_id:String,profile_id:String,channel:String,catalog_digest:String,
         subject:String,session_id:String,valid_until:i64,permissions:Vec<String> }
-    let granted:Reply=serde_json::from_slice(&bytes).map_err(|_|"malformed component authorization response")?;
-    let now=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_|"invalid system clock")?.as_secs() as i64;
+    let granted:Reply=serde_json::from_slice(&bytes).map_err(|_|"Неверно сформированный ответ авторизации компонента")?;
+    let now=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_|"Недопустимое системное время")?.as_secs() as i64;
     if granted.project_id!=manifest.project_id || granted.profile_id!=manifest.profile_id || granted.channel!=manifest.channel ||
        granted.catalog_digest!=cat.digest || granted.subject!=session.user_id || granted.session_id!=session.session_id ||
        granted.valid_until<=now || granted.valid_until>now+1800 {
-        return Err("component permission response scope, session or lifetime mismatch".into());
+        return Err("В ответе разрешений компонента не совпадает область действия, сеанс или срок действия".into());
     }
     let allowed_names:std::collections::HashSet<&str>=cat.components.iter().filter_map(|c|c.conditions.as_ref())
          .flat_map(|c|c.permissions.iter().map(String::as_str)).collect();
     let mut rights=std::collections::HashSet::new();
     for permission in granted.permissions {
         if !allowed_names.contains(permission.as_str())||!rights.insert(permission){
-            return Err("unexpected/duplicate component permission in response".into());
+            return Err("В ответе обнаружено неожиданное или повторяющееся разрешение компонента".into());
         }
     }
     Ok(VerifiedComponentScope0392{project_id:manifest.project_id.clone(),profile_id:manifest.profile_id.clone(),
@@ -1061,7 +1061,7 @@ async fn installed_component_scope_0392(root:&str,pinned:&str)
     let root=PathBuf::from(root);let key=pinned.to_owned();
     let manifest=tokio::task::spawn_blocking(move ||
         runtime::transactional_release::active_manifest_for_permissions_0392(&root,&key))
-        .await.map_err(|_|"component installed scope task failed")??;
+        .await.map_err(|_|"Ошибка задачи проверки области установленных компонентов")??;
     match manifest {Some(m)=>Ok(Some(component_permissions_for_manifest_0392(&m,pinned).await?)),None=>Ok(None)}
 }
 #[tauri::command]
@@ -1096,12 +1096,12 @@ async fn save_installed_component_choice_0247_inner_0392(
         &manifest,&PathBuf::from(root),&pinned_public_key)?
         .ok_or("cannot save a component choice for a different/uninstalled release")?;
     if chosen.unwrap_or_default()!=component_preset {
-        return Err("installed component choice differs from requested preference".into());
+        return Err("Выбор установленного компонента отличается от запрошенной настройки".into());
     }
-    if component_preset.len()>8192 {return Err("component choice too large".into())}
+    if component_preset.len()>8192 {return Err("Слишком большой набор выбранных компонентов".into())}
     if config.project_id!=manifest.project_id || config.profile_id!=manifest.profile_id
         || config.game_directory!=root || config.pinned_public_key!=pinned_public_key {
-        return Err("desktop settings mismatch signed installed profile, directory or key".into());
+        return Err("Настройки Desktop не соответствуют подписанному установленному профилю, каталогу или ключу".into());
     }
     config.component_preset=component_preset;
     save_desktop_config(config).await?;
@@ -1136,22 +1136,22 @@ async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)-
             server_id,project_id,profile_id,channel,root,pinned_public_key,challenge_id,challenge,guard_attestation_sha256}=request;
         if [ &user_id,&device_id,&session_id,&server_id,&project_id,&profile_id,&channel,&challenge_id,&challenge ].iter()
             .any(|v|v.is_empty()||v.len()>160||v.contains('\n')||v.contains('\r')) {
-            return Err("invalid verified plan identity/challenge".to_string());
+            return Err("Недопустимый идентификатор или запрос проверки подтверждённого плана".to_string());
         }
         if guard_attestation_sha256.len()!=64|| !guard_attestation_sha256.bytes().all(|b|b.is_ascii_hexdigit() && !b.is_ascii_uppercase()){
-            return Err("invalid continuous Guard attestation digest".into());
+            return Err("Недопустимый хеш непрерывной аттестации Guard".into());
         }
         let root_path=PathBuf::from(root);
         let (manifest,preset)=runtime::transactional_release::verified_active_selection_02410(
             &root_path,&pinned_public_key)?.ok_or("no verified installed release")?;
         if manifest.schema_version!="3.0"||manifest.project_id!=project_id||manifest.profile_id!=profile_id||manifest.channel!=channel {
-            return Err("installed signed release does not match requested server scope".into());
+            return Err("Установленный подписанный выпуск не соответствует запрошенной области сервера".into());
         }
         // verified_active_selection проверяет SHA-256 каждого установленного управляемого файла.
         let plan=runtime::resolved_download_0246::resolve(&manifest,preset.as_deref())?;
         let catalog_digest=manifest.component_catalog.as_ref().ok_or("v3 catalog required")?.digest.clone();
         let release_signature=manifest.signature.as_ref().ok_or("unsigned installed release")?.signature.to_ascii_lowercase();
-        if catalog_digest.len()!=64||release_signature.len()!=128{return Err("malformed signed release measurements".into());}
+        if catalog_digest.len()!=64||release_signature.len()!=128{return Err("Неверно сформированные измерения подписанного выпуска".into());}
         let canonical=format!("Launcher-Verified-Component-Plan-v1\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
             challenge_id,challenge,user_id,device_id,session_id,binding_epoch,server_id,project_id,profile_id,channel,
             release_signature,catalog_digest,plan.sha256,guard_attestation_sha256);
@@ -1159,7 +1159,7 @@ async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)-
         Ok(NativePlanEvidence02412{challenge_id,challenge,user_id,device_id,session_id,binding_epoch,
             server_id,project_id,profile_id,channel,release_signature,catalog_digest,
             plan_sha256:plan.sha256,guard_attestation_sha256,signature:signer.signature})
-    }).await.map_err(|e|format!("native verified plan task failed: {e}"))?
+    }).await.map_err(|e|format!("Ошибка нативной задачи проверки подтверждённого плана: {e}"))?
     }).await
 }
 
@@ -1176,7 +1176,7 @@ async fn active_selection_02410(root:String,pinned_public_key:String)->Result<Op
         let state=runtime::transactional_release::verified_active_selection_02410(
             &PathBuf::from(root),&pinned_public_key)?;
         Ok(state.map(|(manifest,preset)|ActiveSelection02410{manifest,component_preset:preset.unwrap_or_default()}))
-    }).await.map_err(|e|format!("read active selection task failed: {e}"))?
+    }).await.map_err(|e|format!("Ошибка задачи чтения активного выбора: {e}"))?
     }).await
 }
 
@@ -1189,7 +1189,7 @@ async fn export_component_selection_02410(root:String,pinned_public_key:String)-
         let (manifest,preset)=runtime::transactional_release::verified_active_selection_02410(
             &PathBuf::from(root),&pinned_public_key)?.ok_or("no installed signed release to export")?;
         runtime::component_selection_02410::export_from_installed_02410(&manifest,preset.as_deref())
-    }).await.map_err(|e|format!("export selection task failed: {e}"))?
+    }).await.map_err(|e|format!("Ошибка задачи экспорта выбора: {e}"))?
     }).await
 }
 
@@ -1204,7 +1204,7 @@ async fn preview_component_migration_02410(
         runtime::component_catalog_0241::spawn_blocking_with_permissions_0392(move ||
             runtime::transactional_release::verified_active_selection_02410(
                 &PathBuf::from(root),&pinned_public_key))
-            .await.map_err(|e|format!("component migration read failed: {e}"))?
+            .await.map_err(|e|format!("Ошибка чтения миграции компонентов: {e}"))?
     }).await?;
     let Some((source,preset))=installed else{return Ok(None)};
     if source.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
@@ -1287,7 +1287,7 @@ async fn preview_release_requirements_0359(
             runtime::component_catalog_0241::spawn_blocking_with_permissions_0392(move ||
                 runtime::transactional_release::verified_active_selection_02410(
                     &PathBuf::from(existing_root),&existing_key))
-                .await.map_err(|e|format!("read previous installed selection: {e}"))?
+                .await.map_err(|e|format!("Не удалось прочитать предыдущий выбор установленных компонентов: {e}"))?
         }).await?
     }else{None};
     let target_scope=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
@@ -1300,7 +1300,7 @@ async fn preview_release_requirements_0359(
         };
         if (old.project_id.as_str(),old.profile_id.as_str(),old.channel.as_str())!=
            (manifest.project_id.as_str(),manifest.profile_id.as_str(),manifest.channel.as_str()){
-            return Err("updated manifest is not for the installed project/profile/channel".into());
+            return Err("Обновлённый манифест не относится к установленному проекту, профилю и каналу".into());
         }
         if old.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
            manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key)){
@@ -1359,7 +1359,7 @@ async fn preview_release_requirements_0359(
         if changes.is_empty(){changes.push("Опубликован новый подписанный релиз; проверьте изменения файлов перед установкой".into());}
         Ok(ReleaseRequirements0359{installed_version:Some(old.version),target_version:manifest.version,
             target_signature,changes,proposed_preset,blockers,requires_confirmation:true})
-    }).await.map_err(|e|format!("requirements task failed: {e}"))?
+    }).await.map_err(|e|format!("Ошибка задачи проверки требований: {e}"))?
     }).await
 }
 
@@ -1367,12 +1367,12 @@ async fn validate_native_conflict_scope_0359(manifest:&Manifest,root:&str,key:&s
     let cfg=load_desktop_config().await?;
     if cfg.pinned_public_key!=key || cfg.project_id!=manifest.project_id ||
        cfg.profile_id!=manifest.profile_id || cfg.channel!=manifest.channel {
-        return Err("player conflict operation is outside the verified desktop project/profile/channel".into());
+        return Err("Операция разрешения конфликта игрока выходит за пределы проверенных проекта, профиля и канала Desktop".into());
     }
-    std::fs::create_dir_all(&cfg.game_directory).map_err(|e|format!("game directory unavailable: {e}"))?;
-    let configured=std::fs::canonicalize(&cfg.game_directory).map_err(|e|format!("game directory unavailable: {e}"))?;
-    let requested=std::fs::canonicalize(root).map_err(|e|format!("requested game directory unavailable: {e}"))?;
-    if configured!=requested {return Err("conflict operation cannot move files outside the active game directory".into());}
+    std::fs::create_dir_all(&cfg.game_directory).map_err(|e|format!("Игровой каталог недоступен: {e}"))?;
+    let configured=std::fs::canonicalize(&cfg.game_directory).map_err(|e|format!("Игровой каталог недоступен: {e}"))?;
+    let requested=std::fs::canonicalize(root).map_err(|e|format!("Запрошенный игровой каталог недоступен: {e}"))?;
+    if configured!=requested {return Err("Операция разрешения конфликта не может перемещать файлы за пределы активного игрового каталога".into());}
     Ok(())
 }
 
@@ -1468,7 +1468,7 @@ async fn launch_minecraft_inner_0392(
         matching_offline_release_0358(&manifest, &cached)?;
         let (cfg, _) = verified_offline_owner_0358().await?;
         if component_preset.as_deref().unwrap_or("") != cfg.component_preset {
-            return Err("offline denied: selected component preset differs from installed configuration".into());
+            return Err("Автономный запуск запрещён: выбранный набор компонентов отличается от установленной конфигурации".into());
         }
     }
     #[cfg(windows)]
@@ -1560,20 +1560,20 @@ async fn launch_minecraft_inner_0392(
     // Никогда не принимайте MSA-токены из JS. Только нативный менеджер получает официальные игровые учётные
     // данные и передаёт их непосредственно в Runtime.
     if minecraft_credentials.as_ref().is_some_and(|v| v.user_type == "msa") {
-        return Err("Official Minecraft launch tokens cannot be supplied by renderer".into());
+        return Err("Токены запуска официального Minecraft нельзя передавать из интерфейса рендеринга".into());
     }
     if official_identity.is_some() && minecraft_credentials.is_some() {
-        return Err("Mixed Minecraft identities are forbidden".into());
+        return Err("Смешивание идентификаторов Minecraft запрещено".into());
     }
     if official_identity.is_some() && preferences.as_ref().is_some_and(|v| v.offline) {
-        return Err("Official Minecraft launch cannot be offline".into());
+        return Err("Официальный запуск Minecraft не может выполняться без сети".into());
     }
     let minecraft_credentials = if let Some(context) = official_identity {
         let credentials=official_manager.launch_credentials(&context.backend_url, &context.token, &context.session_id).await?;
         // Для запуска игры должна использоваться та же учётная запись, что выбрана для авторизации ServerBridge,
         // даже при асинхронном переключении хранилища.
         if credentials.uuid.replace('-', "").to_ascii_lowercase()!=context.expected_uuid.replace('-', "").to_ascii_lowercase() {
-            return Err("Official launch UUID differs from authorized ServerBridge identity".into());
+            return Err("UUID официального запуска отличается от авторизованной идентификации ServerBridge".into());
         }
         Some(credentials)
     } else { minecraft_credentials };
@@ -1587,7 +1587,7 @@ async fn launch_minecraft_inner_0392(
     } else {
         match preferences {
             Some(p) if p.offline => supervisor.start_with_preferences(&manifest, &PathBuf::from(root), java_path, username, p, &pinned_public_key).await,
-            _ => Err("online launch requires authenticated credentials; offline must be explicitly authorized".into()),
+            _ => Err("Для сетевого запуска необходимы подтверждённые учётные данные; автономный запуск должен быть явно разрешён".into()),
         }
     }?;
     game_guard_watchdog_0438::start_game_watchdog_0438(
@@ -1722,7 +1722,7 @@ async fn guard_guard_attestation_v2(
 fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::path::Path) -> Result<PathBuf, String> {
     let helper_meta = std::fs::symlink_metadata(helper).map_err(|e| e.to_string())?;
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() {
-        return Err("unsafe native updater helper".into());
+        return Err("Небезопасный нативный вспомогательный процесс обновления".into());
     }
     // Самообновление не должно перезаписывать исполняемый образ работающего обновлятора. Запускайте отдельную
     // подготовленную копию, а не соседний действующий бинарник CLI. Следующее обновление очищает старые копии
@@ -1744,7 +1744,7 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
         .map_err(|e| format!("не удалось подготовить updater helper staging: {e}"))?;
     let stage_meta = std::fs::symlink_metadata(&helper_stage_root).map_err(|e| e.to_string())?;
     if !stage_meta.file_type().is_dir() || stage_meta.file_type().is_symlink() {
-        return Err("updater staging directory is not a safe directory".into());
+        return Err("Промежуточный каталог обновления небезопасен".into());
     }
     for entry in std::fs::read_dir(&helper_stage_root).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
@@ -1758,12 +1758,12 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
     let mut nonce = [0u8; 16];
     rand::rngs::OsRng.fill_bytes(&mut nonce);
     let helper_stage_dir = helper_stage_root.join(hex::encode(nonce));
-    std::fs::create_dir(&helper_stage_dir).map_err(|e| format!("updater staging: {e}"))?;
+    std::fs::create_dir(&helper_stage_dir).map_err(|e| format!("Подготовка области обновления: {e}"))?;
     let staged_helper = helper_stage_dir.join(launcher_update_helper_name());
-    std::fs::copy(&helper, &staged_helper).map_err(|e| format!("updater helper copy: {e}"))?;
+    std::fs::copy(&helper, &staged_helper).map_err(|e| format!("Копирование вспомогательного файла обновления: {e}"))?;
     let copied = std::fs::metadata(&staged_helper).map_err(|e| e.to_string())?;
     if !copied.is_file() || copied.len() != helper_meta.len() {
-        return Err("updater helper staging verification failed".into());
+        return Err("Проверка промежуточной области вспомогательного файла обновления не пройдена".into());
     }
     fn digest_file(path: &std::path::Path) -> Result<Vec<u8>, String> {
         use std::io::Read;
@@ -1778,7 +1778,7 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
         Ok(hash.finalize().to_vec())
     }
     if digest_file(helper)? != digest_file(&staged_helper)? {
-        return Err("staged updater helper SHA-256 mismatch".into());
+        return Err("Несовпадение SHA-256 подготовленного вспомогательного файла обновления".into());
     }
     Ok(staged_helper)
 }
@@ -1913,11 +1913,11 @@ async fn validate_desktop_settings(game_directory: String, java_path: Option<Str
 // корректную HTTPS-ссылку в СИСТЕМНОМ браузере.
 fn validate_external_https_0356(raw: &str) -> Result<reqwest::Url, String> {
     if raw.len() > 2048 || raw.bytes().any(|b| b.is_ascii_control() || b == b'\\') || !raw.starts_with("https://") {
-        return Err("Only HTTPS external links are permitted".into());
+        return Err("Разрешены только внешние ссылки HTTPS".into());
     }
-    let url = reqwest::Url::parse(raw).map_err(|_| "Invalid external URL")?;
+    let url = reqwest::Url::parse(raw).map_err(|_| "Недопустимый внешний URL")?;
     if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
-        return Err("Unsafe external URL".into());
+        return Err("Небезопасный внешний URL".into());
     }
     Ok(url)
 }
@@ -1929,8 +1929,8 @@ async fn open_external_https_0356(url: String) -> Result<(), String> {
     #[cfg(windows)] { cmd = Command::new("rundll32"); cmd.arg("url.dll,FileProtocolHandler").arg(url.as_str()); }
     #[cfg(target_os = "macos")] { cmd = Command::new("open"); cmd.arg(url.as_str()); }
     #[cfg(target_os = "linux")] { cmd = Command::new("xdg-open"); cmd.arg(url.as_str()); }
-    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))] { return Err("Unsupported OS".into()); }
-    let mut child = cmd.kill_on_drop(false).spawn().map_err(|_| "Could not open system browser".to_string())?;
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))] { return Err("Неподдерживаемая ОС".into()); }
+    let mut child = cmd.kill_on_drop(false).spawn().map_err(|_| "Не удалось открыть системный браузер".to_string())?;
     tokio::spawn(async move { let _ = child.wait().await; });
     Ok(())
 }
@@ -1942,14 +1942,14 @@ async fn open_game_directory(root: String) -> Result<String, String> {
     let configured = load_desktop_config().await?;
     let allowed = PathBuf::from(configured.game_directory.trim());
     if !allowed.is_absolute() || !PathBuf::from(root.trim()).is_absolute() {
-        return Err("Game directory must be an absolute configured path".into());
+        return Err("Игровой каталог должен быть абсолютным настроенным путём".into());
     }
-    fs::create_dir_all(&allowed).await.map_err(|e| format!("Could not prepare game directory: {e}"))?;
+    fs::create_dir_all(&allowed).await.map_err(|e| format!("Не удалось подготовить игровой каталог: {e}"))?;
     let safe = fs::canonicalize(&allowed).await.map_err(|e| e.to_string())?;
-    let requested = fs::canonicalize(root.trim()).await.map_err(|_| "Game directory does not exist")?;
-    if requested != safe || !safe.is_dir() { return Err("Path is not the active configured game directory".into()); }
+    let requested = fs::canonicalize(root.trim()).await.map_err(|_| "Игровой каталог не существует")?;
+    if requested != safe || !safe.is_dir() { return Err("Путь не соответствует активному настроенному игровому каталогу".into()); }
     let mut command = if cfg!(target_os="windows") { let mut c=Command::new("explorer"); c.arg(&safe); c } else if cfg!(target_os="macos") { let mut c=Command::new("open"); c.arg(&safe); c } else { let mut c=Command::new("xdg-open"); c.arg(&safe); c };
-    command.spawn().map_err(|e| format!("Could not open game directory: {e}"))?;
+    command.spawn().map_err(|e| format!("Не удалось открыть игровой каталог: {e}"))?;
     Ok(safe.to_string_lossy().to_string())
 }
 
@@ -1970,12 +1970,12 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
     if !helper.is_file() { return Ok(()); } // В конфигурации только с Prestarter отсутствует средство обновления CLI.
     let hm = std::fs::symlink_metadata(&helper).map_err(|e| e.to_string())?;
     if !hm.file_type().is_file() || hm.file_type().is_symlink() {
-        return Err("unsafe installed updater helper".into());
+        return Err("Небезопасный установленный вспомогательный файл обновления".into());
     }
     let status = std::process::Command::new(&helper)
         .args(["update", "status", "--root"])
         .arg(root)
-        .output().map_err(|e| format!("component recovery status failed: {e}"))?;
+        .output().map_err(|e| format!("Не удалось получить состояние восстановления компонентов: {e}"))?;
     if !status.status.success() {
         return Err(format!("component journal check failed: {}", String::from_utf8_lossy(&status.stderr)));
     }

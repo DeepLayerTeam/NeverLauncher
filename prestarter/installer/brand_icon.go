@@ -44,7 +44,7 @@ func materializeBrandIcon(dir string, brand *prestarter.Branding) (string, error
 		}
 	}
 	if w < 1 || h < 1 {
-		return "", fmt.Errorf("invalid icon dimensions")
+		return "", fmt.Errorf("Недопустимые размеры значка")
 	}
 	resized := image.NewNRGBA(image.Rect(0, 0, w, h))
 	for y := 0; y < h; y++ {

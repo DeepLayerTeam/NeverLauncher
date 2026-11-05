@@ -41,7 +41,7 @@ func removeWindowsShortcut(path, managedRoot string) error {
 		return e
 	}
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return errors.New("refusing to delete user-modified Windows shortcut")
+		return errors.New("Удаление изменённого пользователем ярлыка Windows запрещено")
 	}
 	return os.Remove(path)
 }

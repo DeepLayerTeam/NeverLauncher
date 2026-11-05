@@ -36,7 +36,7 @@ func newStorage(root, offlineDir string, offline bool) (*storage, error) {
 	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, DialContext: dialer.DialContext, TLSHandshakeTimeout: 12 * time.Second, ResponseHeaderTimeout: 25 * time.Second, MaxIdleConns: 10, MaxIdleConnsPerHost: 3}
 	client := &http.Client{Transport: transport, CheckRedirect: func(r *http.Request, via []*http.Request) error {
 		if len(via) >= 5 || r.URL.Scheme != "https" {
-			return errors.New("unsafe HTTPS redirect")
+			return errors.New("Небезопасное перенаправление HTTPS")
 		}
 		return nil
 	}}
@@ -44,7 +44,7 @@ func newStorage(root, offlineDir string, offline bool) (*storage, error) {
 }
 func safeExistingDir(path string) (string, error) {
 	if !filepath.IsAbs(path) {
-		return "", errors.New("offline directory must be absolute")
+		return "", errors.New("Путь к автономному каталогу должен быть абсолютным")
 	}
 	cleaned := filepath.Clean(path)
 	resolved, e := filepath.EvalSymlinks(cleaned)
@@ -52,11 +52,11 @@ func safeExistingDir(path string) (string, error) {
 		return "", e
 	}
 	if resolved != cleaned {
-		return "", errors.New("offline directory is a symlink/junction")
+		return "", errors.New("Автономный каталог является символической ссылкой или точкой соединения")
 	}
 	meta, e := os.Stat(cleaned)
 	if e != nil || !meta.IsDir() {
-		return "", errors.New("offline directory missing")
+		return "", errors.New("Автономный каталог отсутствует")
 	}
 	return cleaned, nil
 }
@@ -76,7 +76,7 @@ func hashFile(path string, expected Artifact) bool {
 }
 func durableCopy(source, destination string, expected Artifact, executable bool) error {
 	if !hashFile(source, expected) {
-		return errors.New("source SHA-256 mismatch")
+		return errors.New("Несовпадение SHA-256 исходного файла")
 	}
 	parent := filepath.Dir(destination)
 	if e := safeMkdir(parent); e != nil {
@@ -113,7 +113,7 @@ func durableCopy(source, destination string, expected Artifact, executable bool)
 		return e
 	}
 	if !hashFile(tmp, expected) {
-		return errors.New("changed source SHA-256 mismatch")
+		return errors.New("SHA-256 исходного файла изменился и не совпадает с ожидаемым")
 	}
 	if e = atomicReplace(tmp, destination); e != nil {
 		return e
@@ -132,7 +132,7 @@ func safeMkdir(dir string) error {
 			return e
 		}
 		if m.Mode()&os.ModeSymlink != 0 || !m.IsDir() {
-			return fmt.Errorf("non-directory or symlink path: %s", current)
+			return fmt.Errorf("Путь не является каталогом либо содержит символическую ссылку: %s", current)
 		}
 		parent := filepath.Dir(current)
 		if parent == current {
@@ -171,7 +171,7 @@ func (s *storage) artifact(ctx context.Context, art Artifact, offlineName string
 		}
 	}
 	if s.offline {
-		return "", fmt.Errorf("offline cache missing SHA-256 %s", art.SHA256)
+		return "", fmt.Errorf("В автономном кеше отсутствует объект с SHA-256 %s", art.SHA256)
 	}
 	// Частичные файлы детерминированно индексируются по дайджесту, не по URL. До
 	// запроса HTTP Range обязателен соответствующий валидатор.
@@ -185,7 +185,7 @@ func (s *storage) artifact(ctx context.Context, art Artifact, offlineName string
 		failure = s.fetch(ctx, art, part, meta)
 		if failure == nil {
 			if !hashFile(part, art) {
-				failure = errors.New("component SHA-256 mismatch")
+				failure = errors.New("Несовпадение SHA-256 компонента")
 				os.Remove(part)
 				os.Remove(meta)
 			} else {
@@ -207,7 +207,7 @@ func (s *storage) artifact(ctx context.Context, art Artifact, offlineName string
 			}
 		}
 	}
-	return "", fmt.Errorf("download %s: %w", art.SHA256, failure)
+	return "", fmt.Errorf("Ошибка загрузки %s: %w", art.SHA256, failure)
 }
 func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath string) error {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Minute)
@@ -217,7 +217,7 @@ func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath str
 	for _, name := range []string{part, metaPath} {
 		if st, err := os.Lstat(name); err == nil {
 			if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
-				return errors.New("unsafe partial download entry")
+				return errors.New("Небезопасная запись частично загруженного файла")
 			}
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
@@ -250,29 +250,29 @@ func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath str
 	}
 	defer res.Body.Close()
 	if res.Header.Get("Content-Encoding") != "" && res.Header.Get("Content-Encoding") != "identity" {
-		return errors.New("unsafe Content-Encoding")
+		return errors.New("Небезопасное значение Content-Encoding")
 	}
 	if start > 0 {
 		if res.StatusCode == http.StatusOK || res.StatusCode == http.StatusRequestedRangeNotSatisfiable {
 			os.Remove(part)
 			os.Remove(metaPath)
-			return errors.New("range rejected; discarded partial")
+			return errors.New("Запрос диапазона отклонён; частично загруженный файл удалён")
 		}
 		low, high, total, ok := parseContentRange(res.Header.Get("Content-Range"))
 		if res.StatusCode != http.StatusPartialContent || !ok || low != start || total != art.Size || high < low || high >= art.Size || res.ContentLength >= 0 && res.ContentLength != high-low+1 || res.Header.Get("ETag") != validator {
 			os.Remove(part)
 			os.Remove(metaPath)
-			return errors.New("invalid 206 range or validator; discarded partial")
+			return errors.New("Недопустимый диапазон HTTP 206 или валидатор; частично загруженный файл удалён")
 		}
 	} else {
 		if res.StatusCode == http.StatusTooManyRequests || res.StatusCode == http.StatusRequestTimeout || res.StatusCode >= 500 {
-			return fmt.Errorf("retryable HTTP %d", res.StatusCode)
+			return fmt.Errorf("Временная ошибка HTTP %d; возможен повтор", res.StatusCode)
 		}
 		if res.StatusCode != http.StatusOK || res.Header.Get("Content-Range") != "" {
-			return fmt.Errorf("expected HTTP 200, got %d", res.StatusCode)
+			return fmt.Errorf("Ожидался HTTP 200, получен %d", res.StatusCode)
 		}
 		if res.ContentLength >= 0 && res.ContentLength != art.Size {
-			return errors.New("signed content length mismatch")
+			return errors.New("Размер содержимого не совпадает с подписанным значением")
 		}
 	}
 	etag := res.Header.Get("ETag")
@@ -305,10 +305,10 @@ func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath str
 	if written+start > art.Size {
 		os.Remove(part)
 		os.Remove(metaPath)
-		return errors.New("body longer than signed size")
+		return errors.New("Тело ответа больше размера, указанного в подписи")
 	}
 	if written+start < art.Size {
-		return errors.New("body ended before signed size")
+		return errors.New("Тело ответа завершилось до достижения размера, указанного в подписи")
 	}
 	return nil
 }

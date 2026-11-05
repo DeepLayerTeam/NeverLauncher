@@ -47,7 +47,7 @@ type trustPolicyState struct {
 
 func strictTime02312(s string) (time.Time, error) {
 	if s == "" {
-		return time.Time{}, errors.New("missing policy time")
+		return time.Time{}, errors.New("В политике отсутствует время")
 	}
 	t, e := time.Parse("2006-01-02T15:04:05Z", s)
 	if e != nil {
@@ -58,32 +58,32 @@ func strictTime02312(s string) (time.Time, error) {
 func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, string, error) {
 	var p TrustPolicy
 	if len(raw) == 0 || len(raw) > 128*1024 {
-		return p, "", errors.New("trust policy absent/oversized")
+		return p, "", errors.New("Политика доверия отсутствует или превышает допустимый размер")
 	}
 	root, e := hex.DecodeString(strings.TrimSpace(rootHex))
 	if e != nil || len(root) != 32 {
-		return p, "", errors.New("trusted embedded root must be 32-byte Ed25519")
+		return p, "", errors.New("Встроенный доверенный корневой ключ Ed25519 должен содержать 32 байта")
 	}
 	var env TrustPolicyEnvelope
 	if e = decodeStrict(raw, &env); e != nil {
 		return p, "", e
 	}
 	if env.SchemaVersion != "1.0" {
-		return p, "", errors.New("trust policy envelope version")
+		return p, "", errors.New("Недопустимая версия контейнера политики доверия")
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) > 96*1024 {
-		return p, "", errors.New("invalid trust policy payload")
+		return p, "", errors.New("Недопустимое содержимое политики доверия")
 	}
 	sig, e := hex.DecodeString(env.RootSignature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte(trustPolicyPrefix02312), payload...), sig) {
-		return p, "", errors.New("root-signed policy verification failed")
+		return p, "", errors.New("Проверка политики, подписанной корневым ключом, не пройдена")
 	}
 	if e = decodeStrict(payload, &p); e != nil {
 		return p, "", e
 	}
 	if p.SchemaVersion != "1.0" || p.Domain != trustPolicyDomain02312 || p.Epoch == 0 || len(p.Keys) == 0 || len(p.Keys) > 128 {
-		return p, "", errors.New("policy schema/domain/keys invalid")
+		return p, "", errors.New("Недопустимая схема, область действия или ключи политики")
 	}
 	issued, e := strictTime02312(p.IssuedAt)
 	if e != nil {
@@ -94,34 +94,34 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		return p, "", e
 	}
 	if issued.After(now.Add(5*time.Minute)) || !expiry.After(now) || !expiry.After(issued) || expiry.Sub(issued) > 90*24*time.Hour {
-		return p, "", errors.New("trust policy expired, future-dated or validity exceeds 90 days")
+		return p, "", errors.New("Политика доверия истекла, датирована будущим или действует более 90 дней")
 	}
 	ids, pubs := map[string]bool{}, map[string]bool{}
 	active := 0
 	for _, k := range p.Keys {
 		if k.ID == "" || len(k.ID) > 100 || !validTrustID02312(k.ID) || (k.Role != "bootstrap" && k.Role != "component" && k.Role != "game" && k.Role != "release") {
-			return p, "", errors.New("invalid delegated key id/role")
+			return p, "", errors.New("Недопустимый идентификатор или роль делегированного ключа")
 		}
 		key, e := hex.DecodeString(k.PublicKey)
 		if e != nil || len(key) != 32 {
-			return p, "", errors.New("delegated public key invalid")
+			return p, "", errors.New("Недопустимый делегированный публичный ключ")
 		}
 		if ids[k.ID] || pubs[strings.ToLower(k.PublicKey)] {
-			return p, "", errors.New("duplicate delegated key")
+			return p, "", errors.New("Повторяющийся делегированный ключ")
 		}
 		ids[k.ID] = true
 		pubs[strings.ToLower(k.PublicKey)] = true
 		if k.Status != "active" && k.Status != "verify-only" && k.Status != "revoked" {
-			return p, "", errors.New("invalid delegated key status")
+			return p, "", errors.New("Недопустимый статус делегированного ключа")
 		}
 		t, e := strictTime02312(k.NotBefore)
 		if e != nil || t.After(expiry) {
-			return p, "", errors.New("invalid delegated key activation")
+			return p, "", errors.New("Недопустимое время активации делегированного ключа")
 		}
 		if k.Status == "verify-only" {
 			u, e := strictTime02312(k.VerifyUntil)
 			if e != nil || !u.After(t) || u.Sub(t) > 90*24*time.Hour || u.After(expiry) {
-				return p, "", errors.New("invalid finite key overlap")
+				return p, "", errors.New("Недопустимый ограниченный период одновременного действия ключей")
 			}
 		}
 		if k.Status == "active" {
@@ -129,7 +129,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		}
 	}
 	if active == 0 {
-		return p, "", errors.New("no active delegated keys")
+		return p, "", errors.New("Нет действующих делегированных ключей")
 	}
 	digest := sha256.Sum256(payload)
 	return p, hex.EncodeToString(digest[:]), nil
@@ -140,24 +140,24 @@ func (p TrustPolicy) Authorize(role, id, pubHex string, signedAt, timeNow time.T
 			continue
 		}
 		if k.Status == "revoked" {
-			return fmt.Errorf("%s key %s revoked", role, id)
+			return fmt.Errorf("Ключ %s (%s) отозван", role, id)
 		}
 		if requireActive && k.Status != "active" {
-			return fmt.Errorf("%s signer %s retired", role, id)
+			return fmt.Errorf("Подписывающий ключ %s (%s) выведен из эксплуатации", role, id)
 		}
 		t, _ := strictTime02312(k.NotBefore)
 		if signedAt.Before(t) || signedAt.After(timeNow.Add(5*time.Minute)) {
-			return errors.New("signature timestamp outside delegated key validity")
+			return errors.New("Время подписи выходит за пределы срока действия делегированного ключа")
 		}
 		if k.Status == "verify-only" {
 			until, _ := strictTime02312(k.VerifyUntil)
 			if !signedAt.Before(until) || !timeNow.Before(until) {
-				return errors.New("delegated key overlap window ended")
+				return errors.New("Период одновременного действия делегированных ключей завершился")
 			}
 		}
 		return nil
 	}
-	return fmt.Errorf("%s signer %s not delegated by trusted root", role, id)
+	return fmt.Errorf("Подписывающий ключ %s (%s) не делегирован доверенным корневым ключом", role, id)
 }
 func SignedTrustPolicy(payload []byte, rootPrivate ed25519.PrivateKey) ([]byte, error) {
 	var p TrustPolicy
@@ -165,7 +165,7 @@ func SignedTrustPolicy(payload []byte, rootPrivate ed25519.PrivateKey) ([]byte, 
 		return nil, e
 	}
 	if len(rootPrivate) != 64 {
-		return nil, errors.New("root private key must be 64 bytes")
+		return nil, errors.New("Приватный корневой ключ должен содержать 64 байта")
 	}
 	sig := ed25519.Sign(rootPrivate, append([]byte(trustPolicyPrefix02312), payload...))
 	return json.Marshal(TrustPolicyEnvelope{"1.0", base64.StdEncoding.EncodeToString(payload), hex.EncodeToString(sig)})
@@ -180,7 +180,7 @@ func readPolicyState02312(path string) (trustPolicyState, error) {
 		return st, e
 	}
 	if len(b) > 4096 || decodeStrict(b, &st) != nil || st.Epoch == 0 || len(st.Digest) != 64 || len(st.RootSHA256) != 64 {
-		return st, errors.New("trust policy state corrupted")
+		return st, errors.New("Состояние политики доверия повреждено")
 	}
 	return st, nil
 }
@@ -200,7 +200,7 @@ func AcceptTrustPolicy(path, rootHex string, raw []byte, now time.Time) (TrustPo
 		return p, e
 	}
 	if previous.Epoch > p.Epoch || (previous.Epoch == p.Epoch && previous.Epoch > 0 && previous.Digest != digest) || (previous.Epoch > 0 && previous.RootSHA256 != hex.EncodeToString(fp[:])) {
-		return p, errors.New("trust policy rollback/equivocation/root change")
+		return p, errors.New("Обнаружен откат, противоречивое состояние политики доверия или смена корневого ключа")
 	}
 	if e = os.MkdirAll(path, 0o700); e != nil {
 		return p, e
@@ -257,7 +257,7 @@ func writeTrustAtomic02312(path string, value any) error {
 // а Prestarter не применяет метод доверия при первом использовании.
 func SignedEnvelopeDelegated(payload []byte, private ed25519.PrivateKey, policyRaw []byte, rootHex, keyID string) ([]byte, error) {
 	if len(private) != ed25519.PrivateKeySize {
-		return nil, errors.New("invalid delegated private key")
+		return nil, errors.New("Недопустимый делегированный приватный ключ")
 	}
 	var config Config
 	if e := decodeStrict(payload, &config); e != nil {
@@ -267,7 +267,7 @@ func SignedEnvelopeDelegated(payload []byte, private ed25519.PrivateKey, policyR
 		return nil, e
 	}
 	if !strings.EqualFold(config.ProfilePublicKey, rootHex) {
-		return nil, errors.New("game trust root not pinned to bootstrap root")
+		return nil, errors.New("Корневой ключ доверия игры не закреплён за корневым ключом bootstrap")
 	}
 	policy, _, e := VerifyTrustPolicy(policyRaw, rootHex, time.Now().UTC())
 	if e != nil {
