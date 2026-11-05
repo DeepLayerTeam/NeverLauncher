@@ -221,7 +221,7 @@ func normalizeEmergency02012(e model.ExtensionEmergencyDisable) (model.Extension
 	e.Reason = strings.TrimSpace(e.Reason)
 	e.Source = strings.TrimSpace(e.Source)
 	if !extensionID0201.MatchString(e.ExtensionID) {
-		return e, errors.New("invalid extension id")
+		return e, errors.New("Некорректное значение: ID расширения")
 	}
 	if e.Reason == "" || len(e.Reason) > 1000 {
 		return e, errors.New("emergency disable reason is required")

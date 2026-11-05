@@ -160,13 +160,13 @@ func factoryValidateRequest02710(r factoryBuilderRequest02710) error {
 	switch r.Loader {
 	case "vanilla", "fabric", "quilt", "forge", "neoforge":
 	default:
-		return errors.New("unsupported loader")
+		return errors.New("Не поддерживается: загрузчик")
 	}
 	if r.Loader != "vanilla" && (factoryMutableSelector02710(r.LoaderVersion) || strings.Contains(r.LoaderVersion, "..") || !factoryVersion02710.MatchString(r.LoaderVersion)) {
 		return errors.New("enter an exact loader version")
 	}
 	if r.Target != "windows/x86_64" && r.Target != "windows/x86" && r.Target != "linux/x86_64" && r.Target != "linux/aarch64" && r.Target != "darwin/x86_64" && r.Target != "darwin/aarch64" {
-		return errors.New("unsupported target")
+		return errors.New("Не поддерживается: цель")
 	}
 	return nil
 }
@@ -223,7 +223,7 @@ func factoryLoadPlan02710(dir string) (factoryPlanView02710, error) {
 		return p, err
 	}
 	if len(p.ReproducibilitySHA256) != 64 || len(p.Outputs) == 0 {
-		return p, errors.New("incomplete CLI InstallPlan")
+		return p, errors.New("Неполные данные: CLI InstallPlan")
 	}
 	return p, nil
 }
@@ -616,7 +616,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 		}
 		if path == ".launcher/install-plan.json" && (stat.Size() > 8<<20 || total+stat.Size() > maxExportBytes) {
 			file.Close()
-			return "", errors.New("InstallPlan too large")
+			return "", errors.New("Превышен допустимый размер: InstallPlan")
 		}
 		entry, e := archive.Create(path)
 		if e != nil {

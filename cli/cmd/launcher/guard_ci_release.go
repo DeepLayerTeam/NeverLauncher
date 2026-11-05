@@ -151,7 +151,7 @@ func embedGuardCICertification(out, matrixPath, targetsPath, ver, expectedCommit
 	}
 	targetsRaw, err := os.ReadFile(targetsPath)
 	if err != nil {
-		return fmt.Errorf("read Guard CI targets: %w", err)
+		return fmt.Errorf("Чтение: цели Guard CI: %w", err)
 	}
 	certification, err := validateGuardCIEvidence(matrixRaw, targetsRaw, ver, expectedCommit)
 	if err != nil {
@@ -301,7 +301,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не имеет валидный PASS/exitCode=0", id)
 		}
 		if result.Runner != target.Runner || result.OS != target.OS || result.Arch != target.Arch || strings.TrimSpace(result.RuntimeArch) == "" || result.Repository != matrix.Repository || result.Commit != matrix.Commit || result.RunID != matrix.RunID {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s identity/commit/runId mismatch", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Несоответствие: Guard CI цель %s identity/commit/runId", id)
 		}
 		for _, check := range target.RequiredChecks {
 			if result.Checks == nil || result.Checks[check] != true {

@@ -34,7 +34,7 @@ func decodeWizardBody02910(w http.ResponseWriter, r *http.Request, out any) erro
 	}
 	var extra any
 	if err := d.Decode(&extra); err != io.EOF {
-		return errors.New("trailing request")
+		return errors.New("Обнаружены лишние данные после: запрос")
 	}
 	return nil
 }

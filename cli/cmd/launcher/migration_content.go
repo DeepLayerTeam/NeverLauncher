@@ -16,14 +16,14 @@ import (
 
 func postMigrationContent0337(endpoint, token, source, run, profilePath, profileID, name, loader, channel, version, out string, commit bool, planSHA, loaderVersion string) error {
 	if source == "" || profilePath == "" || profileID == "" || loader == "" || channel == "" || version == "" {
-		return errors.New("--source --profile-path --profile-id --loader --channel --version required")
+		return errors.New("Требуется: --source --profile-path --profile-id --loader --channel --version")
 	}
 	if commit {
 		if len(planSHA) != 64 {
 			return errors.New("content import requires a pinned --plan-sha256 from dry-run")
 		}
 		if _, err := hex.DecodeString(planSHA); err != nil {
-			return errors.New("invalid migration plan SHA-256")
+			return errors.New("Некорректное значение: план миграции SHA-256")
 		}
 	}
 	u, e := url.Parse(endpoint)

@@ -154,7 +154,7 @@ func decodeDevicePublicKey0123(raw, algorithm string) (decodedDevicePublicKey012
 		}
 		out.p256Key = &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
 	default:
-		return decodedDevicePublicKey0123{}, errors.New("unsupported device key algorithm")
+		return decodedDevicePublicKey0123{}, errors.New("Не поддерживается: алгоритм ключа устройства")
 	}
 	sum := sha256.Sum256(b)
 	out.fingerprint = hex.EncodeToString(sum[:])
@@ -182,7 +182,7 @@ func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSigna
 			return errors.New("device proof signature is invalid")
 		}
 	default:
-		return errors.New("unsupported device key algorithm")
+		return errors.New("Не поддерживается: алгоритм ключа устройства")
 	}
 	return nil
 }

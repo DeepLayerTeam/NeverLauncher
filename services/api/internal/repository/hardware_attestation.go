@@ -15,7 +15,7 @@ func validHardwareEvidence0312(v model.DeviceHardwareEvidence) bool {
 
 func (r *MemoryRepository) SaveHardwareEvidence(_ context.Context, e model.DeviceHardwareEvidence) error {
 	if !validHardwareEvidence0312(e) {
-		return errors.New("invalid hardware evidence")
+		return errors.New("Некорректное значение: аппаратные свидетельства")
 	}
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
@@ -54,7 +54,7 @@ func (r *SQLRepository) SaveHardwareEvidence(ctx context.Context, e model.Device
 		return err
 	}
 	if !validHardwareEvidence0312(e) {
-		return errors.New("invalid hardware evidence")
+		return errors.New("Некорректное значение: аппаратные свидетельства")
 	}
 	if ctx == nil {
 		ctx = context.Background()

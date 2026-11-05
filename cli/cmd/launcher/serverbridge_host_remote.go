@@ -314,7 +314,7 @@ func remoteParseSources0284(values []string) ([]*net.IPNet, error) {
 			}
 			_, n, err := net.ParseCIDR(s)
 			if err != nil {
-				return nil, fmt.Errorf("invalid source CIDR %q", s)
+				return nil, fmt.Errorf("Некорректное значение: источник CIDR %q", s)
 			}
 			networks = append(networks, n)
 		}
@@ -1003,7 +1003,7 @@ func remoteHandle0284(args []string) error {
 			}
 			pool := x509.NewCertPool()
 			if !pool.AppendCertsFromPEM(pem) {
-				return errors.New("invalid client CA")
+				return errors.New("Некорректное значение: клиент CA")
 			}
 			config.ClientCAs = pool
 			config.ClientAuth = tls.RequireAndVerifyClientCert
@@ -1022,7 +1022,7 @@ func remoteHandle0284(args []string) error {
 }
 func remoteReadTokenFile0284(path string) (string, error) {
 	if path == "" {
-		return "", errors.New("--token-file required")
+		return "", errors.New("Требуется: --token-file")
 	}
 	if err := remoteCheckFile0284(path); err != nil {
 		return "", err
@@ -1052,7 +1052,7 @@ func remoteCall0284(args []string) error {
 		return err
 	}
 	if !certs.AppendCertsFromPEM(pem) {
-		return errors.New("invalid CA file")
+		return errors.New("Некорректное значение: CA файл")
 	}
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: certs}
 	if cert, key := flagValue(args, "--client-cert", ""), flagValue(args, "--client-key", ""); cert != "" || key != "" {

@@ -52,7 +52,7 @@ func (d *cborDecoder) read() (any, error) {
 		return out, nil
 	case 4:
 		if n > 1024 {
-			return nil, errors.New("CBOR: array too large")
+			return nil, errors.New("Превышен допустимый размер: CBOR: массив")
 		}
 		out := make([]any, 0, int(n))
 		for j := uint64(0); j < n; j++ {
@@ -65,7 +65,7 @@ func (d *cborDecoder) read() (any, error) {
 		return out, nil
 	case 5:
 		if n > 1024 {
-			return nil, errors.New("CBOR: map too large")
+			return nil, errors.New("Превышен допустимый размер: CBOR: карта")
 		}
 		out := make(map[any]any, int(n))
 		for j := uint64(0); j < n; j++ {

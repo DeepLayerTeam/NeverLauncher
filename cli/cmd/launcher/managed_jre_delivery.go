@@ -134,7 +134,7 @@ func readManagedJREManifest0155(dir string) (ManagedJREManifest0155, string, err
 	}
 	var manifest ManagedJREManifest0155
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return ManagedJREManifest0155{}, "", fmt.Errorf("invalid %s: %w", managedJREManifestFile0155, err)
+		return ManagedJREManifest0155{}, "", fmt.Errorf("Некорректное значение: %s: %w", managedJREManifestFile0155, err)
 	}
 	sum, _, err := hashFile(path)
 	return manifest, sum, err
@@ -147,7 +147,7 @@ func readManagedJREEvidence0155(dir string) (ManagedJREEvidence0155, error) {
 	}
 	var evidence ManagedJREEvidence0155
 	if err := json.Unmarshal(raw, &evidence); err != nil {
-		return ManagedJREEvidence0155{}, fmt.Errorf("invalid %s: %w", managedJREEvidenceFile0155, err)
+		return ManagedJREEvidence0155{}, fmt.Errorf("Некорректное значение: %s: %w", managedJREEvidenceFile0155, err)
 	}
 	return evidence, nil
 }
@@ -375,7 +375,7 @@ func verifyManagedJREArchive0155(dir string, target ManagedJRETarget0155) error 
 		return fmt.Errorf("Managed JRE %s/%s is not the exact vendor archive", target.Platform, target.Architecture)
 	}
 	if !validHTTPSURL0155(target.SourceURL) {
-		return fmt.Errorf("Managed JRE %s/%s sourceUrl must be HTTPS", target.Platform, target.Architecture)
+		return fmt.Errorf("Требуемый формат для Managed JRE %s/%s sourceUrl: HTTPS", target.Platform, target.Architecture)
 	}
 	var javaEntry string
 	if target.Platform == "windows" {
@@ -407,7 +407,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 		return err
 	}
 	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Distribution != "temurin" || manifest.Vendor != "Eclipse Adoptium" || manifest.MajorVersion != managedJREMajor0155 || strings.TrimSpace(manifest.GeneratedAt) == "" {
-		return errors.New("Managed JRE manifest identity/schema mismatch")
+		return errors.New("Несоответствие: Managed JRE манифест identity/schema")
 	}
 	expected := expectedManagedJRETargets0155(ver)
 	if len(manifest.Targets) != len(expected) {
@@ -425,7 +425,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 			return fmt.Errorf("unexpected Managed JRE target %s archive=%s", key, target.Archive)
 		}
 		if _, duplicate := targetByKey[key]; duplicate {
-			return fmt.Errorf("duplicate Managed JRE target %s", key)
+			return fmt.Errorf("Обнаружен дубликат: Managed JRE цель %s", key)
 		}
 		expectedVendorOS := map[string]string{"windows": "windows", "linux": "linux", "macos": "mac"}[target.Platform]
 		expectedVendorArch := map[string]string{"x64": "x64", "arm64": "aarch64"}[target.Architecture]

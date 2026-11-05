@@ -217,7 +217,7 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 		ttl = 30 * time.Second
 	}
 	if strings.TrimSpace(worker) == "" {
-		return model.DurableJob{}, errors.New("worker id required")
+		return model.DurableJob{}, errors.New("Требуется: воркер ID")
 	}
 	var current model.DurableJob
 	var err error
@@ -445,7 +445,7 @@ func (r *SQLRepository) FailDurableJob(ctx context.Context, id, leaseToken, work
 
 func (r *SQLRepository) TerminateDurableJob(ctx context.Context, id, leaseToken, terminalStatus, reason string) (model.DurableJob, error) {
 	if terminalStatus != model.DurableJobStatusRevoked && terminalStatus != model.DurableJobStatusFailed && terminalStatus != model.DurableJobStatusDead {
-		return model.DurableJob{}, errors.New("invalid terminal job status")
+		return model.DurableJob{}, errors.New("Некорректное значение: конечный статус задания")
 	}
 	if err := r.check(); err != nil {
 		return model.DurableJob{}, err

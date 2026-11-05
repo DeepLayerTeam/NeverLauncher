@@ -80,14 +80,14 @@ func Digest(v Report) (string, error) {
 }
 func Verify(v Report) error {
 	if v.Format != Format || v.RunID == "" || v.ProjectID == "" || !validDigest(v.ReportSHA256) {
-		return errors.New("invalid migration report")
+		return errors.New("Некорректное значение: отчёт о миграции")
 	}
 	expected, e := Digest(v)
 	if e != nil {
 		return e
 	}
 	if expected != v.ReportSHA256 {
-		return errors.New("migration report digest mismatch")
+		return errors.New("Несоответствие: отчёт о миграции дайджест")
 	}
 	return nil
 }

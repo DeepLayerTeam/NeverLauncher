@@ -176,7 +176,7 @@ func migrationImportAll0493(args []string) error {
 		return err
 	}
 	if len(b) > 16<<20 {
-		return errors.New("migration report too large")
+		return errors.New("Превышен допустимый размер: отчёт о миграции")
 	}
 	var receipt gravBatchResponse0492
 	if err = json.Unmarshal(b, &receipt); err != nil {
@@ -271,7 +271,7 @@ func migrationImportAll0493(args []string) error {
 			_, err = migrationJSON0493(client, "GET", base+"/dry-run", token, "", nil, &plan, false)
 		} else {
 			if progressed && i == 0 {
-				return errors.New("unexpected state")
+				return errors.New("Неожиданное состояние")
 			}
 			fields := map[string]string{"X-Gravit-Profile-Path": row.Destination.ProfilePath, "X-Profile-ID": row.Destination.ProfileID, "X-Profile-Name": row.Destination.ProfileName, "X-Loader": row.Destination.Loader, "X-Loader-Version": row.Destination.LoaderVersion, "X-Channel": row.Destination.Channel, "X-Version": row.Destination.Version}
 			_, err = migrationJSON0493(client, "POST", base+"/dry-run", token, source, fields, &plan, false)

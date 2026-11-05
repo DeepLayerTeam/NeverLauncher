@@ -81,7 +81,7 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 		return errors.New("--fresh-keys-confirmed required: newly generated independent Never Ed25519 keypair")
 	}
 	if run == "" || wrapper == "" || id == "" || kind == "" || profile == "" || key == "" {
-		return errors.New("--run --wrapper --server-id --kind --profile-id --public-key required")
+		return errors.New("Требуется: --run --wrapper --server-id --kind --profile-id --public-key")
 	}
 	body := map[string]string{"wrapperPath": wrapper, "id": id, "name": name, "kind": kind, "profileId": profile, "publicKey": key}
 	raw, err := json.Marshal(body)
@@ -124,7 +124,7 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 // сохранённой квитанции регистрации недостаточно для подтверждения готовности игры.
 func migrationBridgeStatus0446(endpoint, token, wrapper, out string) error {
 	if wrapper == "" {
-		return errors.New("--wrapper required")
+		return errors.New("Требуется: --wrapper")
 	}
 	if err := migrationModuleEndpoint0338(endpoint); err != nil {
 		return err
@@ -158,7 +158,7 @@ func migrationBridgeStatus0446(endpoint, token, wrapper, out string) error {
 		return err
 	}
 	if payload.Data.ServerID == "" || payload.Data.State == "" {
-		return errors.New("missing ServerBridge live state")
+		return errors.New("Отсутствует актуальное состояние ServerBridge")
 	}
 	if out != "" {
 		if err = writePrivateIdentityReport0334(out, payload); err != nil {

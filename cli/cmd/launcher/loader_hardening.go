@@ -164,7 +164,7 @@ func verifyLoaderPayloadCache(root, loader, minecraft, source, expectedSHA256 st
 	}
 	if record.SchemaVersion != loaderPayloadCacheSchema || record.Loader != strings.ToLower(strings.TrimSpace(loader)) || record.MinecraftVersion != strings.TrimSpace(minecraft) || record.SourceURL != strings.TrimSpace(source) || !strings.EqualFold(record.PayloadSHA256, expectedSHA256) || record.Size <= 0 || record.Size > max {
 		_, _ = quarantineCompatibilityArtifact(root, recordRel, "loader payload cache identity/integrity metadata mismatch")
-		err = errors.New("loader payload cache identity mismatch")
+		err = errors.New("Несоответствие: идентификатор кеша данных загрузчика")
 		return
 	}
 	info, statErr := os.Lstat(payloadPath)
@@ -174,13 +174,13 @@ func verifyLoaderPayloadCache(root, loader, minecraft, source, expectedSHA256 st
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Size() != record.Size {
 		_, _ = quarantineCompatibilityArtifact(root, payloadRel, "loader payload cache file type/size mismatch")
-		err = errors.New("loader payload cache payload metadata mismatch")
+		err = errors.New("Несоответствие: метаданные кеша данных загрузчика")
 		return
 	}
 	ok, _, gotSize := existingFileMatchesSHA256(payloadPath, expectedSHA256)
 	if !ok || gotSize != record.Size {
 		_, _ = quarantineCompatibilityArtifact(root, payloadRel, "loader payload cache SHA-256 mismatch")
-		err = errors.New("loader payload cache SHA-256 mismatch")
+		err = errors.New("Несоответствие: SHA-256 кеша данных загрузчика")
 		return
 	}
 	// Обновляйте время доступа проверенных данных, чтобы будущие реализации сборщика мусора могли использовать mtime.

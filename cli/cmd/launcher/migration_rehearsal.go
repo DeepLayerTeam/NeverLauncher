@@ -145,7 +145,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	dec := json.NewDecoder(bytes.NewReader(stdout.Bytes()))
 	dec.DisallowUnknownFields()
 	if e = dec.Decode(&output); e != nil {
-		return probe, fmt.Errorf("invalid %s JSON: %w", name, e)
+		return probe, fmt.Errorf("Некорректное значение: %s JSON: %w", name, e)
 	}
 	var trailing any
 	if dec.Decode(&trailing) != io.EOF {

@@ -71,7 +71,7 @@ func LoadLiveConfigs(jsonValue, filePath string) ([]LiveConfig, error) {
 		return nil, errors.New("trailing data in live FileAuth provider configuration")
 	}
 	if len(configs) > 16 {
-		return nil, errors.New("too many live FileAuth providers")
+		return nil, errors.New("Слишком много активных провайдеров FileAuth")
 	}
 	seen := map[string]bool{}
 	for i := range configs {

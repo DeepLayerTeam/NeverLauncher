@@ -448,7 +448,7 @@ func (s Server) importExtensionRecoveryState02012(ctx context.Context, state mod
 			}
 			item, err := s.Repo.GetExtensionRegistryVersion(ctx, wanted.ExtensionID, wanted.CurrentVersion)
 			if err != nil {
-				return counts, fmt.Errorf("restore %s@%s: %w", wanted.ExtensionID, wanted.CurrentVersion, err)
+				return counts, fmt.Errorf("Восстановление: %s@%s: %w", wanted.ExtensionID, wanted.CurrentVersion, err)
 			}
 			scope := extensionlifecycle.Scope{Scope: wanted.Scope, ScopeID: wanted.ScopeID}
 			cur, curErr := s.Repo.GetExtensionInstallState(ctx, wanted.ExtensionID, wanted.Scope, wanted.ScopeID)
@@ -461,7 +461,7 @@ func (s Server) importExtensionRecoveryState02012(ctx context.Context, state mod
 				got = cur
 			}
 			if err != nil {
-				return counts, fmt.Errorf("restore %s: %w", wanted.ExtensionID, err)
+				return counts, fmt.Errorf("Восстановление: %s: %w", wanted.ExtensionID, err)
 			}
 			if wanted.CurrentState == model.ExtensionInstallStateEnabled && wanted.Enabled {
 				if _, err = mgr.Enable(ctx, got.ExtensionID, scope); err != nil {

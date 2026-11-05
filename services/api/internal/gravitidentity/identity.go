@@ -55,13 +55,13 @@ type Report struct {
 func UUID(s string) (string, error) {
 	s = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(s), "-", ""))
 	if !uuidPattern.MatchString(s) || s == strings.Repeat("0", 32) {
-		return "", errors.New("invalid Minecraft UUID")
+		return "", errors.New("Некорректный UUID Minecraft")
 	}
 	return s[0:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:], nil
 }
 func normalized(a Account) (Account, error) {
 	if !usernamePattern.MatchString(a.Username) {
-		return a, fmt.Errorf("invalid Minecraft username %q", a.Username)
+		return a, fmt.Errorf("Некорректное значение: имя пользователя Minecraft %q", a.Username)
 	}
 	if a.SourceID == "" || len(a.SourceID) > 256 || strings.TrimSpace(a.SourceID) != a.SourceID {
 		return a, errors.New("missing/invalid stable source account ID")
@@ -156,7 +156,7 @@ func parseFileAuth(b []byte, pathname string) ([]Account, error) {
 		return nil, e
 	}
 	if len(root) > MaxAccounts {
-		return nil, errors.New("too many FileAuth accounts")
+		return nil, errors.New("Превышено число учётных записей FileAuth")
 	}
 	accounts := make([]Account, 0, len(root))
 	for key, raw := range root {
@@ -229,7 +229,7 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 		}
 		out = append(out, a)
 		if len(out) > MaxAccounts {
-			return nil, errors.New("too many SQL accounts")
+			return nil, errors.New("Слишком много учётных записей SQL")
 		}
 	}
 	return out, nil
@@ -289,7 +289,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		}
 		accounts = append(accounts, parsed...)
 		if len(accounts) > MaxAccounts {
-			return nil, errors.New("too many source accounts")
+			return nil, errors.New("Слишком много исходных учётных записей")
 		}
 	}
 	if selected == 0 {

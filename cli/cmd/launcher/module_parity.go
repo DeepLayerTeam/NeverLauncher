@@ -68,7 +68,7 @@ func handleModuleParity0301(args []string) error {
 			continue
 		}
 		if len(part) != 3 || part[0] != 'M' || part[1] < '0' || part[1] > '1' || part[2] < '0' || part[2] > '9' || part == "M00" {
-			return fmt.Errorf("invalid --module %q", part)
+			return fmt.Errorf("Некорректное значение: --module %q", part)
 		}
 		selected[part] = true
 	}
@@ -125,7 +125,7 @@ func handleModuleParity0301(args []string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("unknown module %s", name)
+			return fmt.Errorf("Неизвестное значение: модуль %s", name)
 		}
 	}
 	execute := paritySwitch0301(args, "--run-tests")

@@ -55,7 +55,7 @@ func fetchExtensionCLICatalog0209(backend, token string) ([]extensionCLICatalogI
 		return nil, err
 	}
 	if envelope.Protocol != extensionCLIProtocol0209 {
-		return nil, fmt.Errorf("unsupported extension CLI protocol %q", envelope.Protocol)
+		return nil, fmt.Errorf("Протокол CLI расширения не поддерживается: %q", envelope.Protocol)
 	}
 	return envelope.Items, nil
 }
@@ -223,7 +223,7 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		} `json:"error"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("invalid CLI extension response: %w", err)
+		return fmt.Errorf("Некорректный ответ CLI расширения: %w", err)
 	}
 	if envelope.Data.Stdout != "" {
 		fmt.Print(envelope.Data.Stdout)
@@ -242,7 +242,7 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		if msg == "" {
 			msg = resp.Status
 		}
-		return fmt.Errorf("extension command failed: %s", msg)
+		return fmt.Errorf("Команда расширения завершилась ошибкой: %s", msg)
 	}
 	if envelope.Data.ExitCode != 0 {
 		return fmt.Errorf("extension command exited with code %d", envelope.Data.ExitCode)

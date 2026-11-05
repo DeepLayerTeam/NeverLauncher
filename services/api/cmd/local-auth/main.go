@@ -63,7 +63,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 			dsn = strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_URL"))
 		}
 		if dsn == "" {
-			return errors.New("LAUNCHER_DATABASE_DSN is required")
+			return errors.New("Требуется: LAUNCHER_DATABASE_DSN")
 		}
 		repo := repository.NewSQLRepository("pgx", dsn, "")
 		migrator, ok := repo.(interface {
@@ -125,7 +125,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		return errors.New("API must use HTTPS (or localhost for development)")
 	}
 	if base.Host == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" {
-		return errors.New("invalid API URL")
+		return errors.New("Некорректное значение: API URL")
 	}
 	token := strings.TrimSpace(os.Getenv(*tokenEnv))
 	if token == "" {
@@ -158,7 +158,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		payload = map[string]any{"password": password}
 	case "disable", "enable":
 		if *userID == "" {
-			return fmt.Errorf("%s requires --user-id", command)
+			return fmt.Errorf("Для %s требуется: --user-id", command)
 		}
 		method, path = "POST", "/api/v1/admin/users/"+url.PathEscape(*userID)+"/"+command
 	}

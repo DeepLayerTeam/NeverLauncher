@@ -31,7 +31,7 @@ func run() error {
 			return err
 		}
 		if len(flags.Args()) > 0 {
-			return fmt.Errorf("unexpected arguments")
+			return fmt.Errorf("Неожиданные аргументы команды")
 		}
 		v, err := installer.Verify(*bundle, *key)
 		if err != nil {
@@ -73,7 +73,7 @@ func run() error {
 			return err
 		}
 		if len(f.Args()) > 0 {
-			return fmt.Errorf("unexpected arguments")
+			return fmt.Errorf("Неожиданные аргументы команды")
 		}
 		return installer.WriteSystemdUnit(*out, *binary, *envFile)
 	case "bootstrap-owner":

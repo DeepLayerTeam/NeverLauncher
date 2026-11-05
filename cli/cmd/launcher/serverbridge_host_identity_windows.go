@@ -17,7 +17,7 @@ var hostCloseHandle0282 = hostKernel320282.NewProc("CloseHandle")
 
 func hostProcessIdentity0282(pid int) (string, error) {
 	if pid <= 0 {
-		return "", fmt.Errorf("invalid pid")
+		return "", fmt.Errorf("Некорректное значение: PID")
 	}
 	h, _, e := hostOpenProcess0282.Call(hostProcessQueryLimitedInformation0282, 0, uintptr(uint32(pid)))
 	if h == 0 {

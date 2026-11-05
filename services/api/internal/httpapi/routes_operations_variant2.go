@@ -98,14 +98,14 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		req.ProfileID = "vanilla"
 	}
 	if req.ProjectID == "" {
-		return spec, nil, nil, errors.New("projectId is required")
+		return spec, nil, nil, errors.New("Необходимо указать projectId")
 	}
 	resourceID := req.ResourceID
 	if req.Kind == durableRollbackKind0217 {
 		resourceID = req.Channel
 	}
 	if resourceID == "" {
-		return spec, nil, nil, errors.New("resourceId/channel is required")
+		return spec, nil, nil, errors.New("Требуется: resourceId/channel")
 	}
 	decision := s.authorizeClaims(r, claims, spec.Action, req.ProjectID, spec.ResourceType, resourceID)
 	if !decision.Allowed {

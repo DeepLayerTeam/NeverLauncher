@@ -279,7 +279,7 @@ func verifyRestoredCore(ctx context.Context, backup string) error {
 func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error) {
 	report := Report{Format: importVersion, PostgreSQLSchema: Schema, ReadyForBackendCutover: false}
 	if strings.TrimSpace(postgresDSN) == "" {
-		return report, errors.New("PostgreSQL DSN is required")
+		return report, errors.New("Требуется: PostgreSQL DSN")
 	}
 	manifest, err := sqlitedurable.VerifyBackup(ctx, backupPath)
 	if err != nil {
@@ -365,7 +365,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 			return report, e
 		}
 		if _, err = tx.Exec(ctx, stmt); err != nil {
-			return report, fmt.Errorf("create %s: %w", t.Name, err)
+			return report, fmt.Errorf("Создание: %s: %w", t.Name, err)
 		}
 	}
 	for _, t := range tableDefs {

@@ -13,7 +13,7 @@ func validMeasuredBoot0315(e model.MeasuredBootEvidence0315) bool {
 }
 func (r *MemoryRepository) SaveMeasuredBoot0315(_ context.Context, e model.MeasuredBootEvidence0315) error {
 	if !validMeasuredBoot0315(e) {
-		return errors.New("invalid measured-boot evidence")
+		return errors.New("Некорректное значение: свидетельства измеренной загрузки")
 	}
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
@@ -51,7 +51,7 @@ func (r *SQLRepository) SaveMeasuredBoot0315(ctx context.Context, e model.Measur
 		return err
 	}
 	if !validMeasuredBoot0315(e) {
-		return errors.New("invalid measured-boot evidence")
+		return errors.New("Некорректное значение: свидетельства измеренной загрузки")
 	}
 	if ctx == nil {
 		ctx = context.Background()

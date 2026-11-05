@@ -156,7 +156,7 @@ func provenanceSourceCommit01511(path string) (string, error) {
 		} `json:"predicate"`
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return "", fmt.Errorf("invalid PROVENANCE.json: %w", err)
+		return "", fmt.Errorf("Некорректное значение: PROVENANCE.JSON: %w", err)
 	}
 	return normalizeSourceCommit01511(payload.Predicate.BuildDefinition.ExternalParameters.SourceCommit)
 }
@@ -271,11 +271,11 @@ func writeProductionReleaseCandidate01511(dir, ver, sourceCommit string, strict 
 func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, productionReleaseCandidateFile01511))
 	if err != nil {
-		return "", fmt.Errorf("read %s: %w", productionReleaseCandidateFile01511, err)
+		return "", fmt.Errorf("Чтение: %s: %w", productionReleaseCandidateFile01511, err)
 	}
 	var cert productionReleaseCandidate01511
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return "", fmt.Errorf("invalid %s: %w", productionReleaseCandidateFile01511, err)
+		return "", fmt.Errorf("Некорректное значение: %s: %w", productionReleaseCandidateFile01511, err)
 	}
 	commit, err := normalizeSourceCommit01511(cert.SourceCommit)
 	if err != nil {

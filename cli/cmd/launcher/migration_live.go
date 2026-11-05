@@ -76,7 +76,7 @@ func rehearsalReadLiveConfig0447(root string) (rehearsalLiveConfig0447, error) {
 	}
 	host, port, err := net.SplitHostPort(cfg.RCONAddress)
 	if err != nil {
-		return cfg, errors.New("invalid RCON address")
+		return cfg, errors.New("Некорректное значение: RCON адрес")
 	}
 	ip := net.ParseIP(host)
 	n, err := strconv.Atoi(port)
@@ -88,7 +88,7 @@ func rehearsalReadLiveConfig0447(root string) (rehearsalLiveConfig0447, error) {
 
 func rehearsalRCONPacket0447(w io.Writer, id, kind int32, body string) error {
 	if len(body) > 4096 {
-		return errors.New("RCON request too large")
+		return errors.New("Запрос RCON превышает допустимый размер")
 	}
 	raw := make([]byte, 14+len(body))
 	binary.LittleEndian.PutUint32(raw[:4], uint32(len(raw)-4))
@@ -192,7 +192,7 @@ func rehearsalHashFile0447(path string) (string, error) {
 func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsalSnapshot03310) (rehearsalLiveWitness0447, func() error, func(), error) {
 	var proof rehearsalLiveWitness0447
 	noop := func() {}
-	noverify := func() error { return errors.New("no live session") }
+	noverify := func() error { return errors.New("Нет активного сеанса") }
 	cfg, err := rehearsalReadLiveConfig0447(root)
 	if err != nil {
 		return proof, noverify, noop, err

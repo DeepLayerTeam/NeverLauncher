@@ -94,7 +94,7 @@ var sourceIDFormat = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,99}$`)
 func CanonicalUUID(raw string) (string, error) {
 	s := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(raw), "-", ""))
 	if !uuidHex.MatchString(s) {
-		return "", errors.New("invalid source Minecraft UUID")
+		return "", errors.New("Некорректное значение: источник UUID Minecraft")
 	}
 	return s[:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:], nil
 }
@@ -155,7 +155,7 @@ func ReadPostgres(ctx context.Context, db *sql.DB) ([]SourceRow, error) {
 	output := make([]SourceRow, 0)
 	for rows.Next() {
 		if len(output) >= 100000 {
-			return nil, errors.New("too many source records (max 100000)")
+			return nil, errors.New("Слишком много исходных записей (максимум 100000)")
 		}
 		var r SourceRow
 		if err = rows.Scan(&r.ID, &r.UserUUID, &r.TextureType, &r.FileHash, &r.FileURL, &r.Metadata); err != nil {
@@ -182,7 +182,7 @@ func ValidateObjectKey(key string) error {
 // имя хоста из file_url не используются как ключ S3.
 func RenderKey(template, kind, hash string) (string, error) {
 	if kind != "skin" && kind != "cape" || !shaHex.MatchString(hash) {
-		return "", errors.New("invalid texture kind/hash")
+		return "", errors.New("Некорректное значение: текстура kind/hash")
 	}
 	if template == "" {
 		template = "%kind%/%hash%.png"
@@ -251,7 +251,7 @@ func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 		return out, errors.New("source ID, source reader, destination and database required")
 	}
 	if len(rows) > 100000 {
-		return out, errors.New("too many texture rows")
+		return out, errors.New("Слишком много строк с текстурами")
 	}
 	fingerprint, err := r.PlanSHA256(rows)
 	if err != nil {
@@ -398,7 +398,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 				}
 				modelName = "slim"
 			} else if name != "" && !strings.EqualFold(name, "default") && !strings.EqualFold(name, "classic") {
-				return fail("quarantined", errors.New("unsupported skin model"))
+				return fail("quarantined", errors.New("Не поддерживается: модель скина"))
 			}
 		}
 	}
@@ -438,7 +438,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	}
 	processed, err := texturepng.Process(bytes.NewReader(payload), rec.Kind, modelName)
 	if err != nil {
-		return fail("quarantined", fmt.Errorf("invalid PNG: %w", err))
+		return fail("quarantined", fmt.Errorf("Некорректное значение: PNG: %w", err))
 	}
 	rec.NormalizedDigest = processed.Digest
 	if r.DryRun {
@@ -511,7 +511,7 @@ func (s LocalSource) Open(ctx context.Context, key string) (io.ReadCloser, error
 	}
 	if !stat.Mode().IsRegular() || stat.Size() > texturepng.MaxEncodedBytes {
 		f.Close()
-		return nil, errors.New("not a regular PNG file within size limit")
+		return nil, errors.New("Файл PNG не является обычным файлом допустимого размера")
 	}
 	return f, nil
 }

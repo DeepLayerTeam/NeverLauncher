@@ -31,17 +31,17 @@ type RedisLimiter struct {
 func NewRedis(rawURL string) (*RedisLimiter, error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" {
-		return nil, errors.New("Redis URL is empty")
+		return nil, errors.New("Пустое значение: Redis URL")
 	}
 	if !strings.Contains(rawURL, "://") {
 		rawURL = "redis://" + rawURL
 	}
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid Redis URL: %w", err)
+		return nil, fmt.Errorf("Некорректное значение: Redis URL: %w", err)
 	}
 	if parsed.Scheme != "redis" && parsed.Scheme != "rediss" {
-		return nil, fmt.Errorf("unsupported Redis scheme %q", parsed.Scheme)
+		return nil, fmt.Errorf("Не поддерживается: схема Redis %q", parsed.Scheme)
 	}
 	address := parsed.Host
 	if !strings.Contains(address, ":") {
@@ -51,7 +51,7 @@ func NewRedis(rawURL string) (*RedisLimiter, error) {
 	if value := strings.Trim(strings.TrimSpace(parsed.Path), "/"); value != "" {
 		db, err = strconv.Atoi(value)
 		if err != nil || db < 0 {
-			return nil, fmt.Errorf("invalid Redis database %q", value)
+			return nil, fmt.Errorf("Некорректное значение: база данных Redis %q", value)
 		}
 	}
 	username, password := "", ""
@@ -61,7 +61,7 @@ func NewRedis(rawURL string) (*RedisLimiter, error) {
 	}
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, fmt.Errorf("invalid Redis address %q: %w", address, err)
+		return nil, fmt.Errorf("Некорректное значение: адрес Redis %q: %w", address, err)
 	}
 	return &RedisLimiter{address: address, username: username, password: password, db: db, tls: parsed.Scheme == "rediss", serverName: host, dialTimeout: 2 * time.Second}, nil
 }
@@ -75,7 +75,7 @@ func (r *RedisLimiter) Health(ctx context.Context) error {
 	}
 	pong, ok := value.(string)
 	if !ok || !strings.EqualFold(pong, "PONG") {
-		return fmt.Errorf("unexpected Redis PING response: %v", value)
+		return fmt.Errorf("Неожиданное значение: ответ Redis PING: %v", value)
 	}
 	return nil
 }
@@ -132,7 +132,7 @@ func (r *RedisLimiter) command(ctx context.Context, args ...string) (any, error)
 			return nil, fmt.Errorf("Redis AUTH write failed: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
-			return nil, fmt.Errorf("Redis AUTH failed: %w", err)
+			return nil, fmt.Errorf("Ошибка: Redis AUTH: %w", err)
 		}
 	}
 	if r.db != 0 {
@@ -140,7 +140,7 @@ func (r *RedisLimiter) command(ctx context.Context, args ...string) (any, error)
 			return nil, fmt.Errorf("Redis SELECT write failed: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
-			return nil, fmt.Errorf("Redis SELECT failed: %w", err)
+			return nil, fmt.Errorf("Ошибка: Redis SELECT: %w", err)
 		}
 	}
 	if err := writeRESP(conn, args...); err != nil {
@@ -148,7 +148,7 @@ func (r *RedisLimiter) command(ctx context.Context, args ...string) (any, error)
 	}
 	value, err := readRESP(reader)
 	if err != nil {
-		return nil, fmt.Errorf("Redis command failed: %w", err)
+		return nil, fmt.Errorf("Ошибка: Redis команда: %w", err)
 	}
 	return value, nil
 }
@@ -223,7 +223,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 		}
 		return items, nil
 	default:
-		return nil, fmt.Errorf("unknown Redis RESP prefix %q", prefix)
+		return nil, fmt.Errorf("Неизвестное значение: префикс Redis RESP %q", prefix)
 	}
 }
 
@@ -233,7 +233,7 @@ func readLine(r *bufio.Reader) (string, error) {
 		return "", err
 	}
 	if !strings.HasSuffix(line, "\r\n") {
-		return "", errors.New("malformed Redis response")
+		return "", errors.New("Неправильный формат: Redis ответ")
 	}
 	return strings.TrimSuffix(line, "\r\n"), nil
 }

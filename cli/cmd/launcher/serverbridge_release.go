@@ -192,11 +192,11 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	certFile := serverBridgeCertificationReleaseFile(ver)
 	raw, err := os.ReadFile(filepath.Join(dir, certFile))
 	if err != nil {
-		return fmt.Errorf("read %s: %w", certFile, err)
+		return fmt.Errorf("Чтение: %s: %w", certFile, err)
 	}
 	var cert serverBridge2Certification0150
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return fmt.Errorf("invalid %s: %w", certFile, err)
+		return fmt.Errorf("Некорректное значение: %s: %w", certFile, err)
 	}
 	expectedRelease := "ServerBridge 2"
 	expectedProtocol := 2
@@ -226,13 +226,13 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 
 	allowRaw, err := os.ReadFile(filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json"))
 	if err != nil {
-		return fmt.Errorf("read BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+		return fmt.Errorf("Чтение: BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 	}
 	var allow map[string]map[string][]string
 	if serverBridgeSecurityCertificationRequired01912(ver) {
 		var document serverBridgeReleaseAllowlist01912
 		if err := json.Unmarshal(allowRaw, &document); err != nil {
-			return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+			return fmt.Errorf("Некорректное значение: BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 		}
 		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
 			return errors.New("ServerBridge 3 release allowlist security metadata mismatch")
@@ -242,7 +242,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		}
 		allow = document.Releases
 	} else if err := json.Unmarshal(allowRaw, &allow); err != nil {
-		return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+		return fmt.Errorf("Некорректное значение: BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 	}
 	if len(allow) != 1 || allow[ver] == nil {
 		return errors.New("ServerBridge release allowlist must contain only exact bundle version")
@@ -264,7 +264,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 			return fmt.Errorf("%s: hash release artifact: %w", expectedID, err)
 		}
 		if !strings.EqualFold(actual, item.SHA256) || size != item.Bytes {
-			return fmt.Errorf("%s: certification hash/size mismatch", expectedID)
+			return fmt.Errorf("Несоответствие: %s: сертификация hash/size", expectedID)
 		}
 		normalized := strings.ToLower(strings.TrimSpace(item.SHA256))
 		if _, ok := seen[normalized]; ok {

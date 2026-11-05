@@ -160,7 +160,7 @@ func sourcePaths(obj map[string]json.RawMessage, key string) ([]string, error) {
 	}
 	var paths []string
 	if e := json.Unmarshal(b, &paths); e != nil || paths == nil {
-		return nil, fmt.Errorf("invalid %s paths", key)
+		return nil, fmt.Errorf("Некорректное значение: %s пути", key)
 	}
 	if len(paths) > 4096 {
 		return nil, fmt.Errorf("%s path limit exceeded", key)
@@ -168,7 +168,7 @@ func sourcePaths(obj map[string]json.RawMessage, key string) ([]string, error) {
 	out := make([]string, 0, len(paths))
 	for _, p := range paths {
 		if !safeTarget(p) {
-			return nil, fmt.Errorf("unsafe %s path: %q", key, p)
+			return nil, fmt.Errorf("Небезопасный объект: %s путь: %q", key, p)
 		}
 		if !strings.HasSuffix(strings.ToLower(p), ".jar") && !strings.Contains(path.Base(p), ".") {
 			p += "/**"
@@ -203,7 +203,7 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 		}
 		return b, nil
 	}
-	return nil, errors.New("missing source file")
+	return nil, errors.New("Отсутствует: исходный файл")
 }
 
 // Prepare сверяет все исходные данные с зафиксированной инвентаризацией MIG03,

@@ -84,7 +84,7 @@ func normalizeDeliveryPlatform(value string) (string, error) {
 	case "any", "all", "*":
 		return "any", nil
 	default:
-		return "", fmt.Errorf("unsupported delivery platform %q", value)
+		return "", fmt.Errorf("Не поддерживается: платформа поставки %q", value)
 	}
 }
 
@@ -99,7 +99,7 @@ func normalizeDeliveryArchitecture(value string) (string, error) {
 	case "any", "all", "*":
 		return "any", nil
 	default:
-		return "", fmt.Errorf("unsupported delivery architecture %q", value)
+		return "", fmt.Errorf("Не поддерживается: архитектура поставки %q", value)
 	}
 }
 
@@ -240,7 +240,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339Nano),
 	}
 	if manifest.Version == "" {
-		return DeliveryManifest{}, errors.New("delivery manifest version is empty")
+		return DeliveryManifest{}, errors.New("Не указана версия манифеста поставки")
 	}
 	targets := map[string]DeliveryTarget{}
 	for _, item := range items {
@@ -273,7 +273,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 			return DeliveryManifest{}, err
 		}
 		if size <= 0 {
-			return DeliveryManifest{}, fmt.Errorf("delivery artifact %s is empty", name)
+			return DeliveryManifest{}, fmt.Errorf("Артефакт поставки %s пуст", name)
 		}
 		target := deliveryArtifactTarget(name)
 		component := deliveryArtifactComponent(name)
@@ -323,7 +323,7 @@ func readDeliveryManifest0151(dir string) (DeliveryManifest, error) {
 	}
 	var manifest DeliveryManifest
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return DeliveryManifest{}, fmt.Errorf("invalid %s: %w", deliveryManifestFile0151, err)
+		return DeliveryManifest{}, fmt.Errorf("Некорректное значение: %s: %w", deliveryManifestFile0151, err)
 	}
 	return manifest, nil
 }
@@ -335,7 +335,7 @@ func validDeliverySHA256(value string) bool {
 
 func safeDeliveryArtifactPath(dir, name string) (string, error) {
 	if strings.TrimSpace(name) == "" || filepath.IsAbs(name) {
-		return "", fmt.Errorf("invalid delivery artifact path %q", name)
+		return "", fmt.Errorf("Некорректное значение: путь артефакта поставки %q", name)
 	}
 	clean := filepath.Clean(name)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
@@ -366,7 +366,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 			return fmt.Errorf("delivery manifest contains circular/control artifact %s", artifact.Name)
 		}
 		if _, exists := seenNames[artifact.Name]; exists {
-			return fmt.Errorf("duplicate delivery artifact %s", artifact.Name)
+			return fmt.Errorf("Обнаружен дубликат: артефакт поставки %s", artifact.Name)
 		}
 		seenNames[artifact.Name] = struct{}{}
 		if strings.TrimSpace(artifact.Component) == "" || strings.TrimSpace(artifact.Format) == "" || artifact.Size <= 0 || !validDeliverySHA256(artifact.SHA256) {
@@ -385,7 +385,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 			return fmt.Errorf("delivery artifact %s unavailable: %w", artifact.Name, err)
 		}
 		if size != artifact.Size || !strings.EqualFold(actual, artifact.SHA256) {
-			return fmt.Errorf("delivery artifact %s checksum/size mismatch", artifact.Name)
+			return fmt.Errorf("Контрольная сумма или размер артефакта поставки %s не совпадает", artifact.Name)
 		}
 		if target.Platform != "any" {
 			actualTargets[target.Platform+"/"+target.Architecture] = target

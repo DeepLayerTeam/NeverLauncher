@@ -105,7 +105,7 @@ func (p *classParser) pool() (int, error) {
 		return 0, e
 	}
 	if magic != 0xcafebabe {
-		return 0, errors.New("not a JVM classfile")
+		return 0, errors.New("Файл не является классом JVM")
 	}
 	_, e = p.u2()
 	if e != nil {
@@ -372,7 +372,7 @@ func loadJar(file string) (*zip.ReadCloser, string, error) {
 	}
 	if !s.Mode().IsRegular() {
 		f.Close()
-		return nil, "", errors.New("JAR must be a regular file")
+		return nil, "", errors.New("Требуется обычный файл: JAR")
 	}
 	if s.Size() > maxJarBytes {
 		f.Close()
@@ -400,17 +400,17 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 	report.Warnings = []string{}
 	report.Entries = len(reader.File)
 	if report.Entries > maxEntries {
-		return report, nil, errors.New("too many JAR entries")
+		return report, nil, errors.New("Слишком много элементов JAR")
 	}
 	seen := make(map[string]bool)
 	var total uint64
 	for _, f := range reader.File {
 		n := f.Name
 		if n == "" || strings.HasPrefix(n, "/") || strings.Contains(n, "\\") || path.Clean(n) != strings.TrimSuffix(n, "/") || strings.HasPrefix(n, "../") || strings.Contains(n, "/../") || f.Mode()&os.ModeSymlink != 0 {
-			return report, nil, fmt.Errorf("unsafe JAR entry %q", n)
+			return report, nil, fmt.Errorf("Небезопасный объект: JAR элемент %q", n)
 		}
 		if seen[n] {
-			return report, nil, fmt.Errorf("duplicate JAR entry %q", n)
+			return report, nil, fmt.Errorf("Обнаружен дубликат: JAR элемент %q", n)
 		}
 		seen[n] = true
 		total += f.UncompressedSize64

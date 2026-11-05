@@ -102,7 +102,7 @@ func digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(
 func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool, err error) {
 	z, e := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	if e != nil {
-		return "", false, false, fmt.Errorf("invalid module JAR: %w", e)
+		return "", false, false, fmt.Errorf("Некорректное значение: модуль JAR: %w", e)
 	}
 	if len(z.File) == 0 || len(z.File) > maxJarEntries {
 		return "", false, false, errors.New("JAR entry count outside bounds")
@@ -132,7 +132,7 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 		lower := strings.ToLower(p)
 		if lower == "meta-inf/manifest.mf" {
 			if f.UncompressedSize64 > 64<<10 {
-				return "", false, false, errors.New("manifest too large")
+				return "", false, false, errors.New("Превышен допустимый размер: манифест")
 			}
 			data, er := readFile(ctx, f, 64<<10)
 			if er != nil {
@@ -324,7 +324,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		}
 		b, err := readFile(ctx, f, limit)
 		if err != nil {
-			return Report{}, fmt.Errorf("cannot read %s: %w", p, err)
+			return Report{}, fmt.Errorf("Не удалось прочитать %s: %w", p, err)
 		}
 		sha := digest(b)
 		if sha != entry.SHA256 {

@@ -138,7 +138,7 @@ func stopSourceWriter0448(ctx context.Context, state sourceFenceState0448, outpu
 		return errors.New("absolute output required")
 	}
 	if _, err := os.Lstat(output); err == nil {
-		return errors.New("output already exists")
+		return errors.New("Уже существует: результат")
 	} else if !os.IsNotExist(err) {
 		return err
 	}

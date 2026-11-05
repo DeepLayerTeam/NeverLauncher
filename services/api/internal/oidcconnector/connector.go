@@ -485,7 +485,7 @@ func claimStrings(claims map[string]any, path string) ([]string, error) {
 		out := []string{}
 		seen := map[string]struct{}{}
 		if len(x) > 256 {
-			return nil, errors.New("too many values")
+			return nil, errors.New("Превышено допустимое число значений")
 		}
 		for _, raw := range x {
 			s, ok := raw.(string)

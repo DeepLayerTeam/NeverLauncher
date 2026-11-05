@@ -188,7 +188,7 @@ func checkExistingRegularFile(path string) error {
 		return err
 	}
 	if !f.Mode().IsRegular() || f.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("sqlite database must be a regular file")
+		return fmt.Errorf("Требуется обычный файл: SQLite база данных")
 	}
 	if f.Mode().Perm()&0077 != 0 {
 		return fmt.Errorf("sqlite database %s has unsafe permissions %04o; require 0600", path, f.Mode().Perm())

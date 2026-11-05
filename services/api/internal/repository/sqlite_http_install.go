@@ -102,7 +102,7 @@ func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context
 	}
 	token = strings.TrimSpace(token)
 	if token == "" {
-		return model.User{}, errors.New("bootstrap token required")
+		return model.User{}, errors.New("Требуется: токен начальной загрузки")
 	}
 	// Проверяйте токен до изменения кэша. Повторяйте проверку внутри
 	// WRITE-транзакции, исключая гонку с будущим отдельным потребителем.

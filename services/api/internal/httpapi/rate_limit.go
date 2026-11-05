@@ -19,7 +19,7 @@ import (
 func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	trusted, err := newTrustedProxySet(cfg.TrustedProxyCIDRs)
 	if err != nil {
-		return fmt.Errorf("invalid LAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
+		return fmt.Errorf("Некорректное значение: LAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
 	}
 	s.TrustedProxies = trusted
 	s.ServerBridgeHARequired = cfg.ServerBridgeHARequired

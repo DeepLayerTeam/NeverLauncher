@@ -40,7 +40,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	}
 	pg, err := pgx.Connect(ctx, dsn)
 	if err != nil {
-		return result, fmt.Errorf("cannot connect to PostgreSQL (credentials redacted): %w", err)
+		return result, fmt.Errorf("Не удалось подключиться к PostgreSQL (учётные данные скрыты): %w", err)
 	}
 	defer pg.Close(context.Background())
 	// Квитанция и счётчики должны относиться к одному снимку БД. Получить

@@ -134,7 +134,7 @@ func Evaluate(v Report) (Report, error) {
 	uuidSeen := map[string]bool{}
 	for _, p := range v.Target.Players {
 		if seen[p.SourceID] || uuidSeen[p.UUID] {
-			return Report{}, errors.New("duplicate target identity/UUID")
+			return Report{}, errors.New("Обнаружен дубликат: ID целиentity/UUID")
 		}
 		seen[p.SourceID] = true
 		uuidSeen[p.UUID] = true
@@ -168,7 +168,7 @@ func Evaluate(v Report) (Report, error) {
 		}
 	}
 	if len(v.Probes) > 32 {
-		return Report{}, errors.New("too many probes")
+		return Report{}, errors.New("Превышено допустимое число проверок")
 	}
 	results := map[string]bool{}
 	for _, p := range v.Probes {

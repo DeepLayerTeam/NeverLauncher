@@ -90,7 +90,7 @@ func Verify(p Plan) error {
 		return e
 	}
 	if d != p.PlanSHA256 {
-		return errors.New("migration plan checksum mismatch")
+		return errors.New("Несоответствие: план миграции контрольная сумма")
 	}
 	return nil
 }

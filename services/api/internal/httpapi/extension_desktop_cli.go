@@ -119,7 +119,7 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension does not declare desktop target")
 	}
 	if s.ExtensionSecurity == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension security unavailable")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("Недоступно: безопасность расширений")
 	}
 	projectID := ""
 	if install.Scope == "project" {

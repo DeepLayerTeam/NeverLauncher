@@ -37,7 +37,7 @@ func OutsideBundle(bundle, key string) error {
 		return err
 	}
 	if !info.Mode().IsRegular() {
-		return errors.New("trusted key must be a regular file")
+		return errors.New("Требуется обычный файл: доверенный ключ")
 	}
 	return outside(bundleReal, keyReal)
 }

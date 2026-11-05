@@ -169,7 +169,7 @@ func (b *Bus) Publish(ctx context.Context, in PublishInput) (model.ExtensionEven
 func buildEvent0206(in PublishInput) (model.ExtensionEvent, error) {
 	t := strings.ToLower(strings.TrimSpace(in.Type))
 	if _, ok := specs0206[t]; !ok {
-		return model.ExtensionEvent{}, fmt.Errorf("unsupported extension event type %q", t)
+		return model.ExtensionEvent{}, fmt.Errorf("Не поддерживается: тип события расширения %q", t)
 	}
 	raw, err := json.Marshal(in.Payload)
 	if err != nil {
@@ -201,7 +201,7 @@ func randomID0206() (string, error) {
 func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 	spec, ok := Spec(in.Type)
 	if !ok {
-		return fmt.Errorf("unsupported extension event type %q", in.Type)
+		return fmt.Errorf("Не поддерживается: тип события расширения %q", in.Type)
 	}
 	if !spec.SyncAllowed {
 		return fmt.Errorf("event %s cannot be used as sync hook", in.Type)
@@ -243,7 +243,7 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 
 func (b *Bus) Subscribe(ctx context.Context, sub model.ExtensionEventSubscription) (model.ExtensionEventSubscription, error) {
 	if _, ok := Spec(sub.EventType); !ok {
-		return model.ExtensionEventSubscription{}, fmt.Errorf("unsupported extension event type %q", sub.EventType)
+		return model.ExtensionEventSubscription{}, fmt.Errorf("Не поддерживается: тип события расширения %q", sub.EventType)
 	}
 	if sub.Mode == model.ExtensionEventModeSync {
 		spec, _ := Spec(sub.EventType)

@@ -11,7 +11,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-var ErrTextureNotSelected0255 = errors.New("no selected texture")
+var ErrTextureNotSelected0255 = errors.New("Текстура не выбрана")
 var ErrTextureInUse0255 = errors.New("texture is still selected")
 
 // TextureSavedItem0255 — проверенный PNG конкретной учётной записи, а не

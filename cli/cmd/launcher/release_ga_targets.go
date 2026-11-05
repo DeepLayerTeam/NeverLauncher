@@ -121,7 +121,7 @@ func gaUniqueJSON0361(raw []byte) error {
 			_, err := d.Token()
 			return err
 		default:
-			return errors.New("unexpected JSON delimiter")
+			return errors.New("Неожиданное значение: разделитель JSON")
 		}
 	}
 	if err := parse(); err != nil {
@@ -143,7 +143,7 @@ func gaDecode0361(raw []byte, out interface{}) error {
 		return err
 	}
 	if _, err := d.Token(); err != io.EOF {
-		return errors.New("trailing JSON content")
+		return errors.New("Обнаружены лишние данные после: JSON содержимое")
 	}
 	return nil
 }

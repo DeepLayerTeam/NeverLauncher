@@ -104,10 +104,10 @@ func rejectDuplicateRoutingKeys0293(dec *json.Decoder) error {
 			}
 			key, ok := token.(string)
 			if !ok {
-				return errors.New("invalid JSON object key")
+				return errors.New("Некорректное значение: объект JSON ключ")
 			}
 			if _, exists := seen[key]; exists {
-				return fmt.Errorf("duplicate key %q", key)
+				return fmt.Errorf("Обнаружен дубликат: ключ %q", key)
 			}
 			seen[key] = struct{}{}
 			if err := rejectDuplicateRoutingKeys0293(dec); err != nil {
@@ -121,7 +121,7 @@ func rejectDuplicateRoutingKeys0293(dec *json.Decoder) error {
 			}
 		}
 	default:
-		return errors.New("unexpected JSON delimiter")
+		return errors.New("Неожиданное значение: разделитель JSON")
 	}
 	_, err = dec.Token()
 	return err

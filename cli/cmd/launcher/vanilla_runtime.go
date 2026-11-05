@@ -1114,7 +1114,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	}
 	if task.SHA1 != "" && !strings.EqualFold(gotSHA1, task.SHA1) {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: SHA-1 mismatch", task.Path)
+		return vanillaDownloadedFile{}, fmt.Errorf("Несоответствие: %s: SHA-1", task.Path)
 	}
 	if _, err := secureClientDestination(root, task.Path); err != nil {
 		_ = os.Remove(tmp)
@@ -1395,7 +1395,7 @@ func fetchBytesVerified(ctx context.Context, client *http.Client, source, expect
 	if expectedSHA1 != "" {
 		sum := sha1.Sum(data)
 		if !strings.EqualFold(hex.EncodeToString(sum[:]), expectedSHA1) {
-			return nil, errors.New("SHA-1 mismatch")
+			return nil, errors.New("Несоответствие: SHA-1")
 		}
 	}
 	return data, nil
@@ -1651,7 +1651,7 @@ func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]s
 	case "aarch64":
 		archToken = "arm64"
 	default:
-		return nil, fmt.Errorf("unsupported LWJGL macOS architecture: %s", arch)
+		return nil, fmt.Errorf("Не поддерживается: LWJGL архитектура macOS: %s", arch)
 	}
 	prefixes := []string{"macos/" + archToken + "/org/lwjgl/", "osx/" + archToken + "/org/lwjgl/"}
 	aliases := make([]string, 0)

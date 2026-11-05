@@ -201,7 +201,7 @@ func worldBackupNoSymlinkAncestors02810(path string) error {
 				return fmt.Errorf("symlink in path: %s", path)
 			}
 			if !fi.IsDir() {
-				return fmt.Errorf("not a directory: %s", path)
+				return fmt.Errorf("Указанный путь не является каталогом: %s", path)
 			}
 		}
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -315,7 +315,7 @@ func worldBackupReadJSON02810(path string, v any) error {
 		return err
 	}
 	if !fi.Mode().IsRegular() || fi.Size() > 32<<20 {
-		return errors.New("invalid backup metadata file")
+		return errors.New("Некорректное значение: метаданные резервной копии файл")
 	}
 	dec := json.NewDecoder(io.LimitReader(f, 32<<20))
 	dec.DisallowUnknownFields()
@@ -323,7 +323,7 @@ func worldBackupReadJSON02810(path string, v any) error {
 		return err
 	}
 	if dec.Decode(new(any)) != io.EOF {
-		return errors.New("trailing backup metadata")
+		return errors.New("Обнаружены лишние данные после: метаданные резервной копии")
 	}
 	return nil
 }
@@ -344,7 +344,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("cannot establish host state: %w", err)
+		return fmt.Errorf("Не удалось определить состояние хоста: %w", err)
 	}
 	if state.ProcessPID > 0 {
 		if !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
@@ -660,7 +660,7 @@ func worldBackupCreate02810(root, dir string, requested []string, policy string)
 }
 func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 	if m.Schema != worldBackupSchema02810 || !worldBackupID02810.MatchString(m.ID) || m.Consistency != "confirmed-stopped" || len(m.Worlds) == 0 || len(m.Entries) == 0 || len(m.Entries) > 1000000 {
-		return errors.New("invalid world backup manifest")
+		return errors.New("Некорректное значение: мир манифест резервной копии")
 	}
 	found := map[string]string{}
 	worlds := map[string]bool{}
@@ -774,7 +774,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 			}
 		} else {
 			if !fi.Mode().IsRegular() || fi.Size() != e.Size {
-				return fmt.Errorf("invalid file size/type %s", rel)
+				return fmt.Errorf("Некорректное значение: файл size/type %s", rel)
 			}
 			f, err := os.Open(path)
 			if err != nil {

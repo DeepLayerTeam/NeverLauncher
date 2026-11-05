@@ -76,11 +76,11 @@ func officialSeal0257(secret string, state officialState0257) (string, error) {
 func officialOpen0257(secret, ticket string) (officialState0257, error) {
 	var state officialState0257
 	if len(secret) < 24 || len(ticket) > 8192 {
-		return state, errors.New("invalid official session")
+		return state, errors.New("Некорректный официальный сеанс")
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(ticket)
 	if err != nil {
-		return state, errors.New("invalid official session")
+		return state, errors.New("Некорректный официальный сеанс")
 	}
 	key := sha256.Sum256([]byte("launcher/official-minecraft/aes-gcm/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
@@ -92,11 +92,11 @@ func officialOpen0257(secret, ticket string) (officialState0257, error) {
 		return state, err
 	}
 	if len(raw) < aead.NonceSize()+aead.Overhead() {
-		return state, errors.New("invalid official session")
+		return state, errors.New("Некорректный официальный сеанс")
 	}
 	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("launcher-official-0257"))
 	if err != nil {
-		return state, errors.New("invalid official session")
+		return state, errors.New("Некорректный официальный сеанс")
 	}
 	defer func() {
 		for i := range plain {
@@ -104,7 +104,7 @@ func officialOpen0257(secret, ticket string) (officialState0257, error) {
 		}
 	}()
 	if err = json.Unmarshal(plain, &state); err != nil {
-		return state, errors.New("invalid official session")
+		return state, errors.New("Некорректный официальный сеанс")
 	}
 	if state.Expires <= time.Now().Unix() || state.User == "" || state.Session == "" {
 		return state, errors.New("expired official session")

@@ -48,7 +48,7 @@ type trustPolicyState struct {
 
 func strictTime02312(s string) (time.Time, error) {
 	if s == "" {
-		return time.Time{}, errors.New("missing policy time")
+		return time.Time{}, errors.New("Отсутствует: временная метка политики")
 	}
 	t, e := time.Parse("2006-01-02T15:04:05Z", s)
 	if e != nil {
@@ -74,17 +74,17 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) > 96*1024 {
-		return p, "", errors.New("invalid trust policy payload")
+		return p, "", errors.New("Некорректное значение: данные политики доверия")
 	}
 	sig, e := hex.DecodeString(env.RootSignature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte(trustPolicyPrefix02312), payload...), sig) {
-		return p, "", errors.New("root-signed policy verification failed")
+		return p, "", errors.New("Проверка политики с корневой подписью завершилась ошибкой")
 	}
 	if e = decodeStrict(payload, &p); e != nil {
 		return p, "", e
 	}
 	if p.SchemaVersion != "1.0" || p.Domain != trustPolicyDomain02312 || p.Epoch == 0 || len(p.Keys) == 0 || len(p.Keys) > 128 {
-		return p, "", errors.New("policy schema/domain/keys invalid")
+		return p, "", errors.New("Некорректное значение: схема, домен или ключи политики")
 	}
 	issued, e := strictTime02312(p.IssuedAt)
 	if e != nil {
@@ -130,7 +130,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		}
 	}
 	if active == 0 {
-		return p, "", errors.New("no active delegated keys")
+		return p, "", errors.New("Нет активных делегированных ключей")
 	}
 	digest := sha256.Sum256(payload)
 	return p, hex.EncodeToString(digest[:]), nil
@@ -141,7 +141,7 @@ func (p TrustPolicy) Authorize(role, id, pubHex string, signedAt, timeNow time.T
 			continue
 		}
 		if k.Status == "revoked" {
-			return fmt.Errorf("%s key %s revoked", role, id)
+			return fmt.Errorf("Отозвано: %s ключ %s", role, id)
 		}
 		if requireActive && k.Status != "active" {
 			return fmt.Errorf("%s signer %s retired", role, id)
@@ -166,7 +166,7 @@ func SignedTrustPolicy(payload []byte, rootPrivate ed25519.PrivateKey) ([]byte, 
 		return nil, e
 	}
 	if len(rootPrivate) != 64 {
-		return nil, errors.New("root private key must be 64 bytes")
+		return nil, errors.New("Требуемый размер для закрытый корневой ключ: 64 байт")
 	}
 	sig := ed25519.Sign(rootPrivate, append([]byte(trustPolicyPrefix02312), payload...))
 	return json.Marshal(TrustPolicyEnvelope{"1.0", base64.StdEncoding.EncodeToString(payload), hex.EncodeToString(sig)})
@@ -261,7 +261,7 @@ func decodeStrict(data []byte, dest any) error {
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return errors.New("unexpected trailing policy JSON")
+		return errors.New("Лишние данные после JSON политики")
 	}
 	return nil
 }

@@ -66,7 +66,7 @@ func readLoaderResolutionLock(path, loader, minecraft, selector string) (*loader
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read loader resolution lock: %w", err)
+		return nil, fmt.Errorf("Чтение: выбор загрузчика блокировка: %w", err)
 	}
 	var lock loaderResolutionLock
 	if err := json.Unmarshal(raw, &lock); err != nil {
@@ -174,7 +174,7 @@ func persistLoaderResolutionLock(path string, lock loaderResolutionLock) (loader
 	}
 	raw = append(raw, '\n')
 	if err := writeAtomicBytes(path, raw, 0o600); err != nil {
-		return loaderResolutionLock{}, "", fmt.Errorf("write loader resolution lock: %w", err)
+		return loaderResolutionLock{}, "", fmt.Errorf("Запись: выбор загрузчика блокировка: %w", err)
 	}
 	return lock, sha256HexBytes(raw), nil
 }

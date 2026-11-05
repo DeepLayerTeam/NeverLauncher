@@ -253,12 +253,12 @@ func loadCanonicalExtension0201(path string) (CanonicalExtensionManifest0201, st
 	dec.DisallowUnknownFields()
 	var manifest CanonicalExtensionManifest0201
 	if err := dec.Decode(&manifest); err != nil {
-		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("decode %s: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("Декодирование: %s: %w", path, err)
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); err != io.EOF {
 		if err == nil {
-			err = errors.New("trailing JSON value")
+			err = errors.New("Лишнее значение после JSON")
 		}
 		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("%s contains trailing JSON data: %w", path, err)
 	}
@@ -575,7 +575,7 @@ func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionM
 	var trailing any
 	if err := dec.Decode(&trailing); err != io.EOF {
 		if err == nil {
-			err = errors.New("trailing JSON value")
+			err = errors.New("Лишнее значение после JSON")
 		}
 		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("Устаревший манифест %s содержит лишние данные JSON в конце: %w", path, err)
 	}

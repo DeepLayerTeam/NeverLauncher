@@ -155,10 +155,10 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 	for _, item := range manifest.ComponentSet.Protocols {
 		expected, ok := required[item.Component]
 		if !ok || !roles[item.Component] {
-			return fmt.Errorf("unexpected component protocol role %q", item.Component)
+			return fmt.Errorf("Неожиданная роль протокола компонента: %q", item.Component)
 		}
 		if _, duplicate := byRole[item.Component]; duplicate {
-			return fmt.Errorf("duplicate component protocol role %q", item.Component)
+			return fmt.Errorf("Повторяющаяся роль протокола компонента: %q", item.Component)
 		}
 		if len(item.Provides) != len(expected) {
 			return fmt.Errorf("unexpected protocol declarations for %s", item.Component)
@@ -172,7 +172,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 	}
 	for name := range required {
 		if _, ok := byRole[name]; !ok {
-			return fmt.Errorf("missing protocol role %s", name)
+			return fmt.Errorf("Отсутствует роль протокола: %s", name)
 		}
 	}
 	// Эти связи обязательны, даже если манифест пытается их опустить.
@@ -194,7 +194,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 		for _, req := range item.Requires {
 			key := req.Component + "/" + req.Protocol
 			if found[key] {
-				return fmt.Errorf("duplicate protocol dependency %s", key)
+				return fmt.Errorf("Повторяющаяся зависимость протокола: %s", key)
 			}
 			found[key] = true
 			target, ok := byRole[req.Component]

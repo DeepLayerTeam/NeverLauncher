@@ -89,7 +89,7 @@ func readWindowsProtectionRCCertificate0190(dir, ver string) (windowsProtectionR
 	}
 	var cert windowsProtectionReleaseCertificate01812
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return cert, "", fmt.Errorf("invalid %s: %w", windowsProtectionReleaseFile01812, err)
+		return cert, "", fmt.Errorf("Некорректное значение: %s: %w", windowsProtectionReleaseFile01812, err)
 	}
 	sum, _, err := hashFile(path)
 	return cert, strings.ToLower(sum), err
@@ -234,11 +234,11 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, windowsProtectionGAFile0190))
 	if err != nil {
-		return fmt.Errorf("read %s: %w", windowsProtectionGAFile0190, err)
+		return fmt.Errorf("Чтение: %s: %w", windowsProtectionGAFile0190, err)
 	}
 	var cert windowsProtectionGACertificate0190
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return fmt.Errorf("invalid %s: %w", windowsProtectionGAFile0190, err)
+		return fmt.Errorf("Некорректное значение: %s: %w", windowsProtectionGAFile0190, err)
 	}
 	expected, err := buildWindowsProtectionGADocument0190(dir, ver)
 	if err != nil {
@@ -261,7 +261,7 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	}
 	for i := range expected.JavaMajors {
 		if cert.JavaMajors[i] != expected.JavaMajors[i] {
-			return fmt.Errorf("Windows Protection GA Java major #%d mismatch", i+1)
+			return fmt.Errorf("Несоответствие: Windows защита GA основная версия Java #%d", i+1)
 		}
 	}
 	for i := range expected.RequiredCapabilities {
@@ -281,7 +281,7 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 		}
 	}
 	if !strings.EqualFold(cert.BoundarySHA256, expected.BoundarySHA256) || cert.CertificateID != "sha256:"+strings.ToLower(expected.BoundarySHA256) {
-		return errors.New("Windows Protection GA boundary/certificateId mismatch")
+		return errors.New("Несоответствие: Windows защита GA boundary/certificateId")
 	}
 	return nil
 }

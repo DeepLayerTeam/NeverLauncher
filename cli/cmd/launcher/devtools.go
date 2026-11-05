@@ -105,7 +105,7 @@ func handleDevTools03010(args []string) error {
 			return e
 		}
 		if f.NArg() != 0 {
-			return errors.New("unexpected args")
+			return errors.New("Неожиданные аргументы команды")
 		}
 		if !*ack || os.Getenv("LAUNCHER_DEVTOOLS_TEST_MODE") != "1" {
 			return errors.New("test identity policy denied: set LAUNCHER_DEVTOOLS_TEST_MODE=1 and --ack-test-only")

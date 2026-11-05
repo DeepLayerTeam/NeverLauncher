@@ -75,7 +75,7 @@ func validTarget0346(t validationTarget0346) error {
 }
 func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA, artifactSHA string) ([]validationTarget0346, string, error) {
 	if strings.TrimSpace(raw) == "" {
-		return nil, "", errors.New("runtime target policy is not configured")
+		return nil, "", errors.New("Не настроено: целевая среда выполнения политика")
 	}
 	decoder := json.NewDecoder(strings.NewReader(raw))
 	decoder.DisallowUnknownFields()
@@ -147,7 +147,7 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 	}
 	challenge, err := store.GetValidationChallenge0346(ctx, p.RunID)
 	if err != nil {
-		return errors.New("no backend-issued attestation challenge")
+		return errors.New("Backend не выдал проверочный запрос для аттестации")
 	}
 	if p.RunNonce != challenge.Nonce || p.PackageID != challenge.PackageID || p.ManifestSHA256 != challenge.ManifestSHA256 || p.ArtifactSHA256 != challenge.ArtifactSHA256 || p.TargetMatrixSHA256 != challenge.TargetMatrixSHA256 {
 		return errors.New("attestation challenge/snapshot/target policy mismatch")

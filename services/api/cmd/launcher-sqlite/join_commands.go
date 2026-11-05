@@ -31,7 +31,7 @@ func isJoinAction(v string) bool {
 }
 func readNodeKey(path string) (ed25519.PrivateKey, error) {
 	if path == "" {
-		return nil, errors.New("--key-file required")
+		return nil, errors.New("Требуется: --key-file")
 	}
 	info, e := os.Lstat(path)
 	if e != nil {
@@ -45,7 +45,7 @@ func readNodeKey(path string) (ed25519.PrivateKey, error) {
 		return nil, e
 	}
 	if len(raw) != 64 || !ed25519.PrivateKey(raw).Public().(ed25519.PublicKey).Equal(ed25519.PublicKey(raw[32:])) {
-		return nil, errors.New("invalid Ed25519 key")
+		return nil, errors.New("Некорректное значение: Ed25519 ключ")
 	}
 	return ed25519.PrivateKey(raw), nil
 }

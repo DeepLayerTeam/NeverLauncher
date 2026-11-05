@@ -24,7 +24,7 @@ var (
 	ErrRemote   = errors.New("remote texture request failed")
 	ErrRedirect = errors.New("texture redirects are forbidden")
 	ErrTooLarge = errors.New("remote texture is too large")
-	ErrBusy     = errors.New("too many concurrent texture fetches")
+	ErrBusy     = errors.New("Слишком много одновременных загрузок текстур")
 )
 
 // Запрещать адреса, не полностью охватываемые netip.IsGlobalUnicast, включая

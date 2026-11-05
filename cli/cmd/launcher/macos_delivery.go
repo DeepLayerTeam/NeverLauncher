@@ -109,7 +109,7 @@ func macOSTargetMetadata0154(arch string) (rustTarget string, cpuType uint32, cp
 	case "arm64":
 		return "aarch64-apple-darwin", 0x0100000c, "CPU_TYPE_ARM64", nil
 	default:
-		return "", 0, "", fmt.Errorf("unsupported macOS architecture %q", arch)
+		return "", 0, "", fmt.Errorf("Не поддерживается: архитектура macOS %q", arch)
 	}
 }
 
@@ -203,7 +203,7 @@ func readMacOSPackageManifest0154(dir, arch string) (MacOSPackageManifest0154, s
 	}
 	var manifest MacOSPackageManifest0154
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return MacOSPackageManifest0154{}, "", fmt.Errorf("invalid %s: %w", manifestName, err)
+		return MacOSPackageManifest0154{}, "", fmt.Errorf("Некорректное значение: %s: %w", manifestName, err)
 	}
 	sum, _, err := hashFile(path)
 	if err != nil {
@@ -250,7 +250,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 			return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s artifact %s: %w", arch, artifact.Name, err)
 		}
 		if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
-			return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s artifact %s checksum/size mismatch", arch, artifact.Name)
+			return MacOSPackageManifest0154{}, "", fmt.Errorf("Несоответствие: macOS %s артефакт %s checksum/size", arch, artifact.Name)
 		}
 		macho, err := inspectMacOSMachOFile0154(path)
 		if err != nil || macho.Architecture != arch || macho.CPUTypeText != cpuText || !macho.HasCodeSignature {
@@ -366,7 +366,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		return err
 	}
 	if evidencePackage.Size <= 0 || evidencePackage.Size != actualSize || !validDeliverySHA256(evidencePackage.SHA256) || !strings.EqualFold(evidencePackage.SHA256, actualHash) {
-		return fmt.Errorf("macOS %s package checksum/size mismatch", arch)
+		return fmt.Errorf("Несоответствие: macOS %s пакет checksum/size", arch)
 	}
 	entries, err := readZipEntries0154(packagePath)
 	if err != nil {
@@ -446,7 +446,7 @@ func readMacOSNotarizationEvidence0154(dir string) (MacOSNotarizationEvidence015
 	}
 	var evidence MacOSNotarizationEvidence0154
 	if err := json.Unmarshal(raw, &evidence); err != nil {
-		return MacOSNotarizationEvidence0154{}, fmt.Errorf("invalid %s: %w", macOSNotarizationEvidenceFile0154, err)
+		return MacOSNotarizationEvidence0154{}, fmt.Errorf("Некорректное значение: %s: %w", macOSNotarizationEvidenceFile0154, err)
 	}
 	return evidence, nil
 }

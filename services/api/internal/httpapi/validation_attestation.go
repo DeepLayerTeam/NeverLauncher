@@ -88,7 +88,7 @@ func validatePayload0345(p validationPayload0345) error {
 		}
 	}
 	if !(validationHex0345.MatchString(p.SourceSHA) || (len(p.SourceSHA) == 40 && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(p.SourceSHA))) {
-		return errors.New("invalid source SHA")
+		return errors.New("Некорректное значение: источник SHA")
 	}
 	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Audience, p.Purpose, p.TargetID, p.PackageVersion, p.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
@@ -212,7 +212,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	decodeErr := dec.Decode(&signed)
 	if decodeErr == nil {
 		if e := dec.Decode(&extra); e != io.EOF {
-			decodeErr = errors.New("trailing evidence")
+			decodeErr = errors.New("Обнаружены лишние данные после: свидетельство")
 		}
 	}
 	if decodeErr != nil {
@@ -289,7 +289,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if lookup.Release.Status != "integrity-passed" {
-		deny(errors.New("not an integrity-passed staged package"))
+		deny(errors.New("Подготовленный пакет не прошёл проверку целостности"))
 		return
 	}
 	// Ключ проверки НИКОГДА не должен быть ключом подписи релиза или манифеста
@@ -314,11 +314,11 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if e = s.verifyManifestSignature(lookup.Release.Manifest); e != nil {
-		deny(errors.New("manifest signature invalid"))
+		deny(errors.New("Некорректное значение: подпись манифеста"))
 		return
 	}
 	if !manifestFilesMatch0212(lookup.Release.Manifest, lookup.Files) {
-		deny(errors.New("manifest/file mismatch"))
+		deny(errors.New("Несоответствие: manifest/file"))
 		return
 	}
 	check, e := s.Repo.LatestIntegrityCheck(r.Context(), p.PackageID)
@@ -343,7 +343,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		}
 	}
 	if !matched {
-		deny(errors.New("no persisted execution run for attestation"))
+		deny(errors.New("Не найден сохранённый запуск для аттестации"))
 		return
 	}
 	// Повторно проверьте текущую целевую политику и отзыв ключа после дорогих проверок

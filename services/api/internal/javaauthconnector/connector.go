@@ -44,7 +44,7 @@ func New(cfg Config, host *extensionhost.Supervisor) (*Connector, error) {
 		return nil, e
 	}
 	if host == nil {
-		return nil, errors.New("Java extension host unavailable")
+		return nil, errors.New("Недоступно: Java хост расширений")
 	}
 	return &Connector{config: cfg, host: host}, nil
 }

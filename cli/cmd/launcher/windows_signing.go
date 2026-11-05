@@ -135,14 +135,14 @@ func expectedWindowsPackage0152(ver, arch string) (string, string) {
 
 func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 	if len(data) < 0x40 || data[0] != 'M' || data[1] != 'Z' {
-		return windowsPEInfo0152{}, errors.New("not a PE file: DOS header is missing")
+		return windowsPEInfo0152{}, errors.New("Неверный формат PE: отсутствует заголовок DOS")
 	}
 	peOffset := int(binary.LittleEndian.Uint32(data[0x3c:0x40]))
 	if peOffset < 0x40 || peOffset+24 > len(data) {
 		return windowsPEInfo0152{}, errors.New("invalid PE header offset")
 	}
 	if !bytes.Equal(data[peOffset:peOffset+4], []byte{'P', 'E', 0, 0}) {
-		return windowsPEInfo0152{}, errors.New("invalid PE signature")
+		return windowsPEInfo0152{}, errors.New("Некорректное значение: PE подпись")
 	}
 	machine := binary.LittleEndian.Uint16(data[peOffset+4 : peOffset+6])
 	arch := ""
@@ -185,10 +185,10 @@ func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 		certLength := int(binary.LittleEndian.Uint32(data[certOffset : certOffset+4]))
 		certType := binary.LittleEndian.Uint16(data[certOffset+6 : certOffset+8])
 		if certLength < 8 || certLength > certSize || certOffset+certLength > len(data) {
-			return windowsPEInfo0152{}, errors.New("invalid WIN_CERTIFICATE length")
+			return windowsPEInfo0152{}, errors.New("Некорректное значение: WIN_CERTIFICATE длина")
 		}
 		if certType != 0x0002 {
-			return windowsPEInfo0152{}, fmt.Errorf("unsupported WIN_CERTIFICATE type 0x%04X", certType)
+			return windowsPEInfo0152{}, fmt.Errorf("Не поддерживается: WIN_CERTIFICATE тип 0x%04X", certType)
 		}
 		hasSignature = true
 	}
@@ -262,7 +262,7 @@ func readWindowsSigningEvidence0152(dir string) (WindowsSigningEvidence0152, err
 	}
 	var evidence WindowsSigningEvidence0152
 	if err := json.Unmarshal(raw, &evidence); err != nil {
-		return WindowsSigningEvidence0152{}, fmt.Errorf("invalid %s: %w", windowsSigningEvidenceFile0152, err)
+		return WindowsSigningEvidence0152{}, fmt.Errorf("Некорректное значение: %s: %w", windowsSigningEvidenceFile0152, err)
 	}
 	return evidence, nil
 }
@@ -281,7 +281,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		return fmt.Errorf("Windows %s package: %w", arch, err)
 	}
 	if target.Package.Size != actualPackageSize || !strings.EqualFold(target.Package.SHA256, actualPackageHash) {
-		return fmt.Errorf("Windows %s package checksum/size mismatch", arch)
+		return fmt.Errorf("Несоответствие: Windows %s пакет checksum/size", arch)
 	}
 	manifestPath, err := safeDeliveryArtifactPath(dir, target.Package.Manifest)
 	if err != nil {
@@ -292,7 +292,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		return fmt.Errorf("Windows %s package manifest: %w", arch, err)
 	}
 	if !strings.EqualFold(target.Package.ManifestSHA256, actualManifestHash) {
-		return fmt.Errorf("Windows %s package manifest checksum mismatch", arch)
+		return fmt.Errorf("Несоответствие: Windows %s пакет контрольная сумма манифеста", arch)
 	}
 	manifestRaw, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -488,7 +488,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 		} `json:"releases"`
 	}
 	if err := json.Unmarshal(raw, &root); err != nil {
-		return fmt.Errorf("invalid %s: %w", windowsDeliveryAllowlistFile0152, err)
+		return fmt.Errorf("Некорректное значение: %s: %w", windowsDeliveryAllowlistFile0152, err)
 	}
 	release, ok := root.Releases[ver]
 	if root.SchemaVersion != "2.0" || !ok || release.ProtocolVersion != 4 {

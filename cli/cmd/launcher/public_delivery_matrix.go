@@ -406,7 +406,7 @@ func publicHTTPClient0159(baseURL string, allowHTTP bool) (*http.Client, error) 
 		Timeout: 10 * time.Minute,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
-				return errors.New("too many public delivery redirects")
+				return errors.New("Превышено допустимое число перенаправлений при публичной поставке")
 			}
 			if !publicRedirectHostAllowed0159(base.Hostname(), req.URL.Hostname()) {
 				return errors.New("public delivery redirect changed to untrusted host")
@@ -514,7 +514,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	start := time.Now().UTC()
 	report := PublicDeliveryE2EReport0159{SchemaVersion: "1.0", Product: "Launcher", MatrixURL: matrixURL, StartedAt: start.Format(time.RFC3339Nano), Status: "failed"}
 	if strings.TrimSpace(downloadDir) == "" {
-		return report, errors.New("public E2E requires --download-dir")
+		return report, errors.New("Для открытый E2E требуется: --download-dir")
 	}
 	if st, err := os.Stat(downloadDir); err == nil && st.IsDir() {
 		items, _ := os.ReadDir(downloadDir)
@@ -568,7 +568,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	}
 	for label, candidate := range map[string]string{"root public key": rootPublicKey, "current trust policy": currentTrustPolicy, "trust state": trustState} {
 		if strings.TrimSpace(candidate) == "" {
-			return report, fmt.Errorf("public E2E requires external %s", label)
+			return report, fmt.Errorf("Для открытый E2E требуется: внешний %s", label)
 		}
 		absCandidate, err := filepath.Abs(candidate)
 		if err == nil && (absCandidate == absDownload || strings.HasPrefix(absCandidate, absDownload+string(os.PathSeparator))) {

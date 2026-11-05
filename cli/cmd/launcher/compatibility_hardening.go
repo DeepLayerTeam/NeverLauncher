@@ -167,13 +167,13 @@ func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaReso
 		return vanillaResolvedMetadata{}, fmt.Errorf("metadata cache record JSON: %w", err)
 	}
 	if record.SchemaVersion != compatibilityMetadataCacheSchema || record.ResolvedVersion != resolved || strings.TrimSpace(record.ManifestURL) != strings.TrimSpace(manifestURL) {
-		return vanillaResolvedMetadata{}, errors.New("metadata cache identity mismatch")
+		return vanillaResolvedMetadata{}, errors.New("Идентификатор кеша метаданных не совпадает")
 	}
 	if err := validateSHA1Hex(record.VersionSHA1); err != nil {
 		return vanillaResolvedMetadata{}, err
 	}
 	if len(record.VersionJSONSHA256) != 64 || !isHex(record.VersionJSONSHA256) || record.VersionSize <= 0 || record.VersionSize > 32<<20 {
-		return vanillaResolvedMetadata{}, errors.New("metadata cache integrity fields invalid")
+		return vanillaResolvedMetadata{}, errors.New("Некорректное значение: поля целостности кеша метаданных")
 	}
 	if err := validateRemoteURL(record.VersionURL); err != nil {
 		return vanillaResolvedMetadata{}, fmt.Errorf("metadata cache version URL: %w", err)
@@ -183,12 +183,12 @@ func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaReso
 		return vanillaResolvedMetadata{}, err
 	}
 	if int64(len(payload)) != record.VersionSize {
-		return vanillaResolvedMetadata{}, errors.New("metadata cache size mismatch")
+		return vanillaResolvedMetadata{}, errors.New("Размер кеша метаданных не совпадает")
 	}
 	h1 := sha1.Sum(payload)
 	h256 := sha256.Sum256(payload)
 	if !strings.EqualFold(hex.EncodeToString(h1[:]), record.VersionSHA1) || !strings.EqualFold(hex.EncodeToString(h256[:]), record.VersionJSONSHA256) {
-		return vanillaResolvedMetadata{}, errors.New("metadata cache checksum mismatch")
+		return vanillaResolvedMetadata{}, errors.New("Контрольная сумма кеша метаданных не совпадает")
 	}
 	var metadata vanillaVersionMetadata
 	if err := json.Unmarshal(payload, &metadata); err != nil {

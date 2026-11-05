@@ -14,7 +14,7 @@ import (
 // монотонно.
 func (r *MemoryRepository) SaveValidationChallenge0346(_ context.Context, c model.ValidationChallenge0346) error {
 	if c.RunID == "" || c.Nonce == "" || c.PackageID == "" || c.ExpiresAt.Before(c.IssuedAt) || len(c.TargetMatrixSHA256) != 64 {
-		return errors.New("invalid validation challenge")
+		return errors.New("Некорректное значение: проверочный запрос")
 	}
 	r.validationMu.Lock()
 	defer r.validationMu.Unlock()
@@ -48,7 +48,7 @@ func (r *MemoryRepository) IsValidationKeyRevoked0346(_ context.Context, fingerp
 }
 func (r *MemoryRepository) RevokeValidationKey0346(_ context.Context, fingerprint, actor, reason string) error {
 	if len(fingerprint) != 64 || strings.TrimSpace(reason) == "" || strings.TrimSpace(actor) == "" {
-		return errors.New("invalid validation key revocation")
+		return errors.New("Некорректное значение: отзыв ключа проверки")
 	}
 	r.validationMu.Lock()
 	defer r.validationMu.Unlock()
@@ -63,7 +63,7 @@ func (r *SQLRepository) SaveValidationChallenge0346(ctx context.Context, c model
 		return err
 	}
 	if c.RunID == "" || c.Nonce == "" || c.PackageID == "" || !c.ExpiresAt.After(c.IssuedAt) || len(c.TargetMatrixSHA256) != 64 {
-		return errors.New("invalid validation challenge")
+		return errors.New("Некорректное значение: проверочный запрос")
 	}
 	res, err := r.db.ExecContext(ctx, `INSERT INTO package_validation_challenges_0346(run_id,nonce,package_id,project_id,manifest_sha256,artifact_sha256,target_matrix_sha256,issued_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT DO NOTHING`, c.RunID, c.Nonce, c.PackageID, c.ProjectID, c.ManifestSHA256, c.ArtifactSHA256, c.TargetMatrixSHA256, c.IssuedAt, c.ExpiresAt)
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *SQLRepository) RevokeValidationKey0346(ctx context.Context, id, actor, 
 		return err
 	}
 	if len(id) != 64 || strings.TrimSpace(actor) == "" || strings.TrimSpace(reason) == "" {
-		return errors.New("invalid validation key revocation")
+		return errors.New("Некорректное значение: отзыв ключа проверки")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

@@ -90,7 +90,7 @@ func extensionUpgradeSource0210(args []string) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&manifest); err != nil {
-		return fmt.Errorf("decode %s: %w", manifestPath, err)
+		return fmt.Errorf("Декодирование: %s: %w", manifestPath, err)
 	}
 	previousAPI := strings.TrimSpace(manifest.API)
 	if !supportedExtensionAPI0210(previousAPI) {

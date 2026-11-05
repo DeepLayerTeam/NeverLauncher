@@ -83,13 +83,13 @@ func handleMigrationWorkflow0331(args []string) error {
 	case "list":
 		project := strings.TrimSpace(flagValue(args, "--project", ""))
 		if project == "" {
-			return errors.New("list requires --project")
+			return errors.New("Для список требуется: --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
 	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals", "modules", "analyze-modules", "enroll-serverbridge", "serverbridge-status":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
-			return fmt.Errorf("%s requires --run", command)
+			return fmt.Errorf("Для %s требуется: --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
 		if command == "modules" || command == "analyze-modules" || command == "enroll-serverbridge" || command == "serverbridge-status" {
@@ -109,7 +109,7 @@ func handleMigrationWorkflow0331(args []string) error {
 			path += "/content"
 			pp := flagValue(args, "--profile-path", "")
 			if pp == "" {
-				return errors.New("content requires --profile-path profiles/name.json")
+				return errors.New("Для содержимое требуется: --profile-path profiles/name.json")
 			}
 			if command == "content" {
 				path += "?profilePath=" + url.QueryEscape(pp)
@@ -207,7 +207,7 @@ func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out s
 		return errors.New("assess requires --source /path/to/gravit-installation.zip")
 	}
 	if len(claimedVersion) > 40 {
-		return errors.New("invalid --version")
+		return errors.New("Некорректное значение: --version")
 	}
 	info, err := os.Stat(sourcePath)
 	if err != nil {

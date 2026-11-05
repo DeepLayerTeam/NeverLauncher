@@ -542,13 +542,13 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			return releaseCompatibilityCertification{}, errors.New("compatibility target без id")
 		}
 		if _, exists := targetByID[id]; exists {
-			return releaseCompatibilityCertification{}, fmt.Errorf("duplicate compatibility target: %s", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся цель совместимости: %s", id)
 		}
 		if !allowedLoaders[target.Loader] {
 			return releaseCompatibilityCertification{}, fmt.Errorf("unsupported loader in compatibility target %s: %s", id, target.Loader)
 		}
 		if strings.TrimSpace(target.Minecraft) == "" || strings.TrimSpace(target.OS) == "" || strings.TrimSpace(target.Arch) == "" {
-			return releaseCompatibilityCertification{}, fmt.Errorf("incomplete compatibility target: %s", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Неполные данные о целевой совместимости: %s", id)
 		}
 		if enhanced {
 			if target.JavaMajor <= 0 {

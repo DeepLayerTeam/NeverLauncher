@@ -45,7 +45,7 @@ func RestoreTextureObject0253(ctx context.Context, store Storage, digest string,
 		return "", 0, err
 	}
 	if !info.Mode().IsRegular() {
-		return "", 0, errors.New("unsafe existing texture object")
+		return "", 0, errors.New("Небезопасный объект: существующий объект текстуры")
 	}
 	f, err := os.Open(filePath)
 	if err != nil {

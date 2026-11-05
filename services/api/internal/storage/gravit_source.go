@@ -15,11 +15,11 @@ import (
 // URL Gravit file_url ДОЛЖНЫ передаваться сюда или загружаться напрямую.
 func (s *S3Storage) OpenGravitSourceObject02510(ctx context.Context, key string) (io.ReadCloser, error) {
 	if key == "" || len(key) > 512 || strings.HasPrefix(key, "/") || strings.Contains(key, "\\") || strings.ContainsAny(key, "\x00\r\n") {
-		return nil, errors.New("invalid S3 object key")
+		return nil, errors.New("Некорректное значение: ключ объекта S3")
 	}
 	for _, piece := range strings.Split(key, "/") {
 		if piece == "" || piece == "." || piece == ".." {
-			return nil, errors.New("unsafe S3 object key")
+			return nil, errors.New("Небезопасный объект: ключ объекта S3")
 		}
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, 20*time.Second)

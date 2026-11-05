@@ -278,7 +278,7 @@ func configureServerBridgeHost01910(args []string) error {
 	for _, assignment := range multiFlagValues01910(args, "--env") {
 		parts := strings.SplitN(assignment, "=", 2)
 		if len(parts) != 2 {
-			return errors.New("--env requires KEY=VALUE")
+			return errors.New("Для --env требуется: KEY=VALUE")
 		}
 		if err := validateHostEnvKey0282(parts[0]); err != nil {
 			return err
@@ -395,7 +395,7 @@ func resolveServerBridgeHostJava01910(explicit string, allowCustom bool) (string
 		}
 		return filepath.Clean(resolved), major, nil
 	}
-	return "", 0, fmt.Errorf("no usable Java/JRE found: %s", strings.Join(failures, "; "))
+	return "", 0, fmt.Errorf("Не обнаружена пригодная Java/JRE: %s", strings.Join(failures, "; "))
 }
 
 func selectServerJar01910(root, platform string) (string, error) {
@@ -472,7 +472,7 @@ func detectModernForgeArgsFile01910(root, platform string) string {
 
 func hostResolveInsideRoot01910(root, raw string, mustExist bool) (string, error) {
 	if strings.TrimSpace(raw) == "" {
-		return "", errors.New("path is empty")
+		return "", errors.New("Пустое значение: путь")
 	}
 	path := raw
 	if !filepath.IsAbs(path) {
@@ -494,7 +494,7 @@ func hostResolveInsideRoot01910(root, raw string, mustExist bool) (string, error
 		realRoot, rootErr := filepath.EvalSymlinks(root)
 		realPath, pathErr := filepath.EvalSymlinks(path)
 		if rootErr != nil || pathErr != nil {
-			return "", errors.New("cannot resolve server-root path safely")
+			return "", errors.New("Не удалось безопасно определить корневой путь сервера")
 		}
 		realRel, relErr := filepath.Rel(realRoot, realPath)
 		if relErr != nil || realRel == ".." || strings.HasPrefix(realRel, ".."+string(filepath.Separator)) {
@@ -873,7 +873,7 @@ func serverBridgeHostCommand01910(config serverBridgeHostConfig01910) ([]string,
 		}
 		args = append(args, "@"+config.JavaArgsFile)
 	default:
-		return nil, fmt.Errorf("unsupported host launch mode %q", config.LaunchMode)
+		return nil, fmt.Errorf("Не поддерживается: режим запуска хоста %q", config.LaunchMode)
 	}
 	args = append(args, config.ServerArgs...)
 	return append([]string{config.JavaPath}, args...), nil
@@ -1095,7 +1095,7 @@ func logsServerBridgeHost01910(args []string) error {
 	}
 	if err := printTail01910(path, lines); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("log stream does not exist yet: %s", path)
+			return fmt.Errorf("Поток журналирования ещё не существует: %s", path)
 		}
 		return err
 	}

@@ -28,11 +28,11 @@ type BackendRestartRecord0289 struct {
 
 func BackendRestartKey0289(actor, key string) (string, error) {
 	if actor == "" || len(key) < 16 || len(key) > 128 {
-		return "", errors.New("invalid restart idempotency key")
+		return "", errors.New("Некорректное значение: ключ идемпотентности перезапуска")
 	}
 	for _, c := range key {
 		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.') {
-			return "", errors.New("invalid restart idempotency key")
+			return "", errors.New("Некорректное значение: ключ идемпотентности перезапуска")
 		}
 	}
 	sum := sha256.Sum256([]byte(actor + "\x00" + key))

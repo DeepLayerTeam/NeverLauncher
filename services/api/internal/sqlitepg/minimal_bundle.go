@@ -84,10 +84,10 @@ func privateFile0377(p string, directory bool) error {
 		return fmt.Errorf("unsafe non-private file or directory %s", p)
 	}
 	if directory && !st.IsDir() {
-		return fmt.Errorf("not a directory: %s", p)
+		return fmt.Errorf("Указанный путь не является каталогом: %s", p)
 	}
 	if !directory && (!st.Mode().IsRegular() || st.Sys() == nil) {
-		return fmt.Errorf("not a regular file: %s", p)
+		return fmt.Errorf("Указанный путь не является обычным файлом: %s", p)
 	}
 	return nil
 }
@@ -157,7 +157,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 		return m, nil, err
 	}
 	if m.Format != minimalBundleFormat0377 || len(m.SourceRoot) == 0 || !filepath.IsAbs(m.SourceRoot) || len(m.Directories) == 0 || m.Directories[0] != "." {
-		return m, nil, errors.New("not a supported minimal offline backup")
+		return m, nil, errors.New("Неподдерживаемый формат минимальной автономной резервной копии")
 	}
 	dirs := map[string]bool{".": true}
 	files := map[string]bool{}
@@ -261,7 +261,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 // Она изменяет рабочую схему PostgreSQL Repository.
 func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" {
-		return report, errors.New("PostgreSQL DSN required")
+		return report, errors.New("Необходимо указать DSN PostgreSQL")
 	}
 	m, raw, err := verifyMinimalBundle0377(ctx, bundle)
 	if err != nil {
@@ -390,7 +390,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		return report, e
 	}
 	if _, e = os.Lstat(dest); e == nil {
-		return report, errors.New("target already exists")
+		return report, errors.New("Уже существует: цель")
 	} else if !os.IsNotExist(e) {
 		return report, e
 	}

@@ -162,7 +162,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		}
 		parsed, err := strconv.Atoi(parts[2])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 iteration count")
+			return false, errors.New("Некорректное значение: число итераций PBKDF2")
 		}
 		iterations = parsed
 		salt, err = decodeBase64Flexible(parts[3])
@@ -171,7 +171,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		}
 		expected, err = decodeBase64Flexible(parts[4])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 digest")
+			return false, errors.New("Некорректное значение: дайджест PBKDF2")
 		}
 	} else if strings.HasPrefix(encoded, "pbkdf2_sha256$") {
 		parts := strings.Split(encoded, "$")
@@ -180,13 +180,13 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		}
 		parsed, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 iteration count")
+			return false, errors.New("Некорректное значение: число итераций PBKDF2")
 		}
 		iterations = parsed
 		salt = []byte(parts[2])
 		expected, err = decodeBase64Flexible(parts[3])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 digest")
+			return false, errors.New("Некорректное значение: дайджест PBKDF2")
 		}
 	} else {
 		return false, errors.New("unsupported pbkdf2-sha256 hash format")

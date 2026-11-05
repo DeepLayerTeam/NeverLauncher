@@ -960,7 +960,7 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 			return fail(fmt.Errorf("%s отсутствует в backup archive", item.Path))
 		}
 		if got.Size != item.Size || !strings.EqualFold(got.SHA256, item.SHA256) {
-			return fail(fmt.Errorf("%s: checksum/size mismatch", item.Path))
+			return fail(fmt.Errorf("Несоответствие: %s: checksum/size", item.Path))
 		}
 	}
 	for name := range actual {

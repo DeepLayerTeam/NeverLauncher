@@ -35,7 +35,7 @@ func handleExtensionSDK02010(command string, args []string) error {
 	case "dev":
 		return extensionDev02010(args)
 	default:
-		return fmt.Errorf("unknown Extensions SDK command %q", command)
+		return fmt.Errorf("Неизвестная команда Extensions SDK: %q", command)
 	}
 }
 
@@ -256,7 +256,7 @@ func extensionBuildCommand02010(args []string) error {
 		built = append(built, target.Kind)
 	}
 	if len(built) == 0 {
-		return errors.New("no matching extension target to build")
+		return errors.New("Не найдена подходящая цель сборки расширения")
 	}
 	printJSON(map[string]any{"built": true, "extensionId": manifest.ID, "version": manifest.Version, "targets": built, "sdkRoot": sdkRoot})
 	return nil
@@ -292,7 +292,7 @@ func buildTarget02010(root string, target CanonicalExtensionTarget0201, sdkRoot 
 		}
 		return nil
 	default:
-		return fmt.Errorf("unsupported target %s", target.Kind)
+		return fmt.Errorf("Не поддерживается: цель %s", target.Kind)
 	}
 }
 
@@ -615,7 +615,7 @@ func extensionDev02010(args []string) error {
 		}
 	}
 	if target == nil {
-		return fmt.Errorf("extension does not declare target %s", targetName)
+		return fmt.Errorf("Расширение не объявляет цель %s", targetName)
 	}
 	if err := buildTarget02010(root, *target, discoverSDKRoot02010(root, flagValue(args, "--sdk-root", ""))); err != nil {
 		return err

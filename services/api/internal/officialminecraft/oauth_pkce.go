@@ -58,7 +58,7 @@ func (c *Client) AuthorizationURL(clientID, redirect, state, challenge string) (
 		return "", err
 	}
 	if len(state) < 32 || len(state) > 256 || !regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(state) {
-		return "", errors.New("invalid OAuth state")
+		return "", errors.New("Некорректное значение: OAuth состояние")
 	}
 	if len(challenge) != 43 || !regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(challenge) {
 		return "", errors.New("invalid S256 challenge")
@@ -108,7 +108,7 @@ func (c *Client) EntitlementCount(ctx context.Context, token string) (int, error
 		} `json:"items"`
 	}
 	if token == "" {
-		return 0, errors.New("missing Minecraft token")
+		return 0, errors.New("Отсутствует: Minecraft токен")
 	}
 	if err := c.request(ctx, "GET", c.minecraft+"/entitlements/mcstore", token, "", nil, &reply); err != nil {
 		return 0, err

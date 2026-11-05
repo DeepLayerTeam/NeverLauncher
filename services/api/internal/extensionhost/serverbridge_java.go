@@ -254,11 +254,11 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		}
 		username := strings.TrimSpace(req.Username)
 		if len(username) < 3 || len(username) > 16 {
-			return denied(http.StatusBadRequest, errors.New("invalid Minecraft username"))
+			return denied(http.StatusBadRequest, errors.New("Некорректное значение: имя пользователя Minecraft"))
 		}
 		for _, c := range username {
 			if !(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_') {
-				return denied(http.StatusBadRequest, errors.New("invalid Minecraft username"))
+				return denied(http.StatusBadRequest, errors.New("Некорректное значение: имя пользователя Minecraft"))
 			}
 		}
 		ticket, err := repo.GetActiveServerBridgeJoinTicket(ctx, username, serverID, time.Now().UTC())
@@ -348,7 +348,7 @@ func (s *Supervisor) revalidateBridge0488(ctx context.Context, st *processState,
 		var ok bool
 		permission, ok = authorization.GameCommandPermission(strings.ToLower(strings.TrimSpace(req.CommandType)))
 		if !ok {
-			return errors.New("unsupported command")
+			return errors.New("Не поддерживается: команда")
 		}
 	}
 	if name == "bridge.access.ticket" {
@@ -371,7 +371,7 @@ func (s *Supervisor) revalidateBridge0488(ctx context.Context, st *processState,
 		}
 		permission, ok = authorization.GameCommandPermission(command.Type)
 		if !ok {
-			return errors.New("unsupported command")
+			return errors.New("Не поддерживается: команда")
 		}
 	}
 	_, err = s.bridgeAuthorization0488(ctx, st, projectID, permission)

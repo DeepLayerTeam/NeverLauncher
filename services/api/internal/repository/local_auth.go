@@ -75,7 +75,7 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 	}
 	for _, a := range accounts {
 		if err := fileauth.ValidateAccount(a); err != nil {
-			return 0, fmt.Errorf("invalid FileAuth account %q: %w", a.Username, err)
+			return 0, fmt.Errorf("Некорректное значение: FileAuth учётная запись %q: %w", a.Username, err)
 		}
 		id := "gravit-fileauth-" + strings.ReplaceAll(a.UUID, "-", "")
 		// Никогда не обновляйте и не объединяйте существующую учётную запись Never на

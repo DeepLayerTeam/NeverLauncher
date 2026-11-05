@@ -35,7 +35,7 @@ func List() ([]Migration, error) {
 		seen[entry.Name] = true
 		rc, err := entry.Open()
 		if err != nil {
-			return nil, fmt.Errorf("open migration %s: %w", entry.Name, err)
+			return nil, fmt.Errorf("Открытие: миграция %s: %w", entry.Name, err)
 		}
 		b, readErr := io.ReadAll(io.LimitReader(rc, 8<<20+1))
 		closeErr := rc.Close()

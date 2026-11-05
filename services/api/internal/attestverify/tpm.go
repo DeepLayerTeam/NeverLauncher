@@ -239,7 +239,7 @@ func parseAttest(raw []byte, expected [32]byte, name []byte) error {
 		return e
 	}
 	if magic != tpmMagic || typ != tpmCertify {
-		return errors.New("not a TPM2 certify attestation")
+		return errors.New("Данные не являются аттестацией TPM2 Certify")
 	}
 	signer, e := t.tpm2b(128)
 	if e != nil {
@@ -251,7 +251,7 @@ func parseAttest(raw []byte, expected [32]byte, name []byte) error {
 		return e
 	}
 	if !bytes.Equal(extra, expected[:]) {
-		return errors.New("TPM attestation nonce/session/binding mismatch")
+		return errors.New("Несоответствие: TPM аттестация nonce/session/binding")
 	}
 	if e = verifyTPMClockInfo(&t); e != nil {
 		return e
@@ -306,7 +306,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 	case tpmRSASSA, tpmRSAPSS:
 		pub, ok := public.(*rsa.PublicKey)
 		if !ok || pub.N.BitLen() < 2048 {
-			return errors.New("unsupported RSA AK")
+			return errors.New("Не поддерживается: RSA AK")
 		}
 		sig, e := c.tpm2b(1024)
 		if e != nil {

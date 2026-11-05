@@ -44,13 +44,13 @@ func normalizeGrant0207(in model.ExtensionPermissionGrant) (model.ExtensionPermi
 		return model.ExtensionPermissionGrant{}, err
 	}
 	if !extensionID0201.MatchString(g.ExtensionID) {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("invalid extension id %q", g.ExtensionID)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("Некорректное значение: ID расширения %q", g.ExtensionID)
 	}
 	if !extensionPermission0201.MatchString(g.Permission) {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("invalid extension permission %q", g.Permission)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("Некорректное значение: разрешение расширения %q", g.Permission)
 	}
 	if g.GrantedBy == "" || len(g.GrantedBy) > 255 {
-		return model.ExtensionPermissionGrant{}, errors.New("grantedBy is required")
+		return model.ExtensionPermissionGrant{}, errors.New("Требуется: grantedBy")
 	}
 	if len(g.Reason) > 1000 {
 		return model.ExtensionPermissionGrant{}, errors.New("grant reason exceeds 1000 characters")
@@ -70,7 +70,7 @@ func normalizeSecret0207(in model.ExtensionSecret) (model.ExtensionSecret, error
 		return model.ExtensionSecret{}, err
 	}
 	if !extensionID0201.MatchString(s.ExtensionID) {
-		return model.ExtensionSecret{}, fmt.Errorf("invalid extension id %q", s.ExtensionID)
+		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: ID расширения %q", s.ExtensionID)
 	}
 	if !extensionSecretName0207.MatchString(s.Name) {
 		return model.ExtensionSecret{}, fmt.Errorf("invalid extension secret name %q", s.Name)

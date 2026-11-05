@@ -89,7 +89,7 @@ func linuxTargetMetadata0153(arch string) (machine uint16, machineText string, e
 	case "arm64":
 		return 183, "EM_AARCH64", nil
 	default:
-		return 0, "", fmt.Errorf("unsupported Linux architecture %q", arch)
+		return 0, "", fmt.Errorf("Не поддерживается: архитектура Linux %q", arch)
 	}
 }
 
@@ -109,7 +109,7 @@ func expectedLinuxPackage0153(ver, arch string) (string, string) {
 
 func inspectLinuxELFBytes0153(data []byte) (linuxELFInfo0153, error) {
 	if len(data) < 64 || data[0] != 0x7f || data[1] != 'E' || data[2] != 'L' || data[3] != 'F' {
-		return linuxELFInfo0153{}, errors.New("not an ELF file")
+		return linuxELFInfo0153{}, errors.New("Файл не соответствует формату ELF")
 	}
 	if data[4] != 2 {
 		return linuxELFInfo0153{}, fmt.Errorf("unsupported ELF class %d; 64-bit required", data[4])
@@ -131,7 +131,7 @@ func inspectLinuxELFBytes0153(data []byte) (linuxELFInfo0153, error) {
 		info.Architecture = "arm64"
 		info.MachineText = "EM_AARCH64"
 	default:
-		return linuxELFInfo0153{}, fmt.Errorf("unsupported ELF e_machine=%d", machine)
+		return linuxELFInfo0153{}, fmt.Errorf("Не поддерживается: ELF e_machine=%d", machine)
 	}
 	return info, nil
 }
@@ -153,7 +153,7 @@ func readLinuxPackageManifest0153(dir, arch string) (LinuxPackageManifest0153, s
 	}
 	var manifest LinuxPackageManifest0153
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return LinuxPackageManifest0153{}, "", fmt.Errorf("invalid %s: %w", manifestName, err)
+		return LinuxPackageManifest0153{}, "", fmt.Errorf("Некорректное значение: %s: %w", manifestName, err)
 	}
 	sum, _, err := hashFile(path)
 	if err != nil {
@@ -201,7 +201,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s artifact %s: %w", arch, artifact.Name, err)
 		}
 		if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
-			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s artifact %s checksum/size mismatch", arch, artifact.Name)
+			return LinuxPackageManifest0153{}, "", fmt.Errorf("Несоответствие: Linux %s артефакт %s checksum/size", arch, artifact.Name)
 		}
 		elf, err := inspectLinuxELFFile0153(path)
 		if err != nil || elf.Architecture != arch || elf.MachineText != expectedMachine {
@@ -270,7 +270,7 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 		return LinuxProductionPackage0153{}, err
 	}
 	if packageSize <= 0 {
-		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package is empty", arch)
+		return LinuxProductionPackage0153{}, fmt.Errorf("Пустое значение: Linux %s пакет", arch)
 	}
 	files, modes, err := readTarGz0153(packagePath)
 	if err != nil {
@@ -408,7 +408,7 @@ func readLinuxProductionEvidence0153(dir string) (LinuxProductionEvidence0153, e
 	}
 	var evidence LinuxProductionEvidence0153
 	if err := json.Unmarshal(raw, &evidence); err != nil {
-		return LinuxProductionEvidence0153{}, fmt.Errorf("invalid %s: %w", linuxProductionEvidenceFile0153, err)
+		return LinuxProductionEvidence0153{}, fmt.Errorf("Некорректное значение: %s: %w", linuxProductionEvidenceFile0153, err)
 	}
 	return evidence, nil
 }
@@ -500,10 +500,10 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 	seen := map[string]bool{}
 	for _, target := range evidence.Targets {
 		if target.Architecture != "x64" && target.Architecture != "arm64" {
-			return fmt.Errorf("unsupported Linux evidence architecture %s", target.Architecture)
+			return fmt.Errorf("Не поддерживается: архитектура свидетельств Linux %s", target.Architecture)
 		}
 		if seen[target.Architecture] {
-			return fmt.Errorf("duplicate Linux evidence target %s", target.Architecture)
+			return fmt.Errorf("Обнаружен дубликат: цель свидетельств Linux %s", target.Architecture)
 		}
 		seen[target.Architecture] = true
 		actualTarget, err := buildLinuxProductionTarget0153(dir, ver, target.Architecture)

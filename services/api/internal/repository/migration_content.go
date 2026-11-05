@@ -171,7 +171,7 @@ func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, o
 		return BuildWorkspace{}, e
 	}
 	if e = tx.Commit(); e != nil {
-		return BuildWorkspace{}, fmt.Errorf("commit migration profile/workspace: %w", e)
+		return BuildWorkspace{}, fmt.Errorf("Фиксация: миграция profile/workspace: %w", e)
 	}
 	return ws, nil
 }

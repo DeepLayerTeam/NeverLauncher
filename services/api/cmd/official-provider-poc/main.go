@@ -263,7 +263,7 @@ func openBrowser(addr string) error {
 	case "linux":
 		cmd = exec.Command("xdg-open", addr)
 	default:
-		return errors.New("no supported browser launcher")
+		return errors.New("Не найден поддерживаемый механизм запуска браузера")
 	}
 	return cmd.Run()
 }

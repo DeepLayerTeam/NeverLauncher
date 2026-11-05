@@ -87,7 +87,7 @@ func (r *Repository) PutPackage(ctx context.Context, data []byte, actor string) 
 }
 func (r *Repository) ReadPackage(ctx context.Context, digest string) (payload []byte, err error) {
 	if !isHex256(digest) {
-		return nil, errors.New("invalid SHA-256 digest")
+		return nil, errors.New("Некорректное значение: SHA-256 дайджест")
 	}
 	err = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		e := q.QueryRowContext(ctx, `SELECT data FROM package_blobs WHERE digest=?`, digest).Scan(&payload)
@@ -199,7 +199,7 @@ func (r *Repository) PublishExtensionPackage(ctx context.Context, input Extensio
 	}
 	sig, e := hex.DecodeString(input.SignatureHex)
 	if e != nil || len(sig) != ed25519.SignatureSize {
-		return out, errors.New("invalid Ed25519 signature")
+		return out, errors.New("Некорректное значение: Ed25519 подпись")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		if e := authorizedExtensionActor(ctx, q, "global", "", actor); e != nil {

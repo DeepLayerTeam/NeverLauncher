@@ -45,7 +45,7 @@ func (s *Supervisor) revalidateCapability04312(ctx context.Context, st *processS
 		return err
 	}
 	if !allowed {
-		return fmt.Errorf("%s revoked", permission)
+		return fmt.Errorf("Отозвано: %s", permission)
 	}
 	if name == "http.fetch" && req.SecretName != "" {
 		secretAllowed, err := s.permissionAllowed0207(ctx, st, "secrets:read", st.key.ScopeID)

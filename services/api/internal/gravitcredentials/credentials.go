@@ -190,7 +190,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		}
 		out = append(out, c)
 		if len(out) > gi.MaxAccounts {
-			return nil, errors.New("too many FileAuth accounts")
+			return nil, errors.New("Превышено число учётных записей FileAuth")
 		}
 	}
 	if end, err := dec.Token(); err != nil || end != json.Delim('}') {
@@ -198,7 +198,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return nil, errors.New("trailing FileAuth JSON data")
+		return nil, errors.New("Обнаружены лишние данные после: FileAuth данные JSON")
 	}
 	return out, nil
 }
@@ -220,7 +220,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 	}
 	for _, field := range []string{"id", "username", "uuid"} {
 		if _, ok := cols[field]; !ok {
-			return nil, fmt.Errorf("missing SQL %s", field)
+			return nil, fmt.Errorf("Отсутствует: SQL %s", field)
 		}
 	}
 	out := []Credential{}
@@ -258,7 +258,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 		}
 		out = append(out, c)
 		if len(out) > gi.MaxAccounts {
-			return nil, errors.New("too many SQL credentials")
+			return nil, errors.New("Слишком много учётных данных SQL")
 		}
 	}
 	return out, nil

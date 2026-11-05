@@ -45,7 +45,7 @@ func names(hosts []string) ([]net.IP, []string, error) {
 	seen := make(map[string]bool)
 	for _, raw := range hosts {
 		if raw == "" || strings.TrimSpace(raw) != raw || strings.ContainsAny(raw, "\x00\r\n/\\:*?@") && net.ParseIP(raw) == nil {
-			return nil, nil, fmt.Errorf("invalid TLS host %q", raw)
+			return nil, nil, fmt.Errorf("Некорректное значение: TLS хост %q", raw)
 		}
 		if ip := net.ParseIP(raw); ip != nil {
 			k := ip.String()
@@ -57,12 +57,12 @@ func names(hosts []string) ([]net.IP, []string, error) {
 			continue
 		}
 		if len(raw) > 253 || strings.HasSuffix(raw, ".") || strings.Contains(raw, "..") {
-			return nil, nil, fmt.Errorf("invalid DNS SAN %q", raw)
+			return nil, nil, fmt.Errorf("Некорректное значение: DNS SAN %q", raw)
 		}
 		labels := strings.Split(raw, ".")
 		for _, l := range labels {
 			if !dnsLabel.MatchString(l) {
-				return nil, nil, fmt.Errorf("invalid DNS SAN %q", raw)
+				return nil, nil, fmt.Errorf("Некорректное значение: DNS SAN %q", raw)
 			}
 		}
 		k := strings.ToLower(raw)

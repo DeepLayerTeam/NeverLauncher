@@ -381,7 +381,7 @@ func parseStringList(raw string) ([]string, error) {
 // элементы в кавычках, а не выдаёт незаметно неправильные имена ролей или групп.
 func parsePostgresArray(raw string) ([]string, error) {
 	if len(raw) < 2 || raw[0] != '{' || raw[len(raw)-1] != '}' {
-		return nil, errors.New("invalid PostgreSQL array")
+		return nil, errors.New("Некорректное значение: PostgreSQL массив")
 	}
 	body := raw[1 : len(raw)-1]
 	if body == "" {

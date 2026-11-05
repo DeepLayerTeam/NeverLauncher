@@ -66,7 +66,7 @@ func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, e
 		return out, "", errors.New("PCR policy trailing data")
 	}
 	if out.Schema != "launcher/tpm-pcr-policy/v1" || len(out.Policies) == 0 || len(out.Policies) > 64 {
-		return out, "", errors.New("invalid PCR policy schema/count")
+		return out, "", errors.New("Некорректное значение: PCR политика schema/count")
 	}
 	seen := map[string]bool{}
 	for _, p := range out.Policies {

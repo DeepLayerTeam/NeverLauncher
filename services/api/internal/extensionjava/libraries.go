@@ -102,7 +102,7 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 		}
 		contents, err := readBounded0482(file, 16<<20)
 		if err != nil {
-			return nil, 0, 0, fmt.Errorf("read %s: %w", name, err)
+			return nil, 0, 0, fmt.Errorf("Чтение: %s: %w", name, err)
 		}
 		total += int64(len(contents))
 		if total > 64<<20 {

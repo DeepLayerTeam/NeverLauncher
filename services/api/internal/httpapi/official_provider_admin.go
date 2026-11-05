@@ -81,7 +81,7 @@ func readOfficialProviderUpdate02611(w http.ResponseWriter, r *http.Request) (of
 	}
 	var extra any
 	if err := d.Decode(&extra); err != io.EOF {
-		return data, errors.New("trailing JSON payload")
+		return data, errors.New("Обнаружены лишние данные после: JSON данные")
 	}
 	data.Reason = strings.TrimSpace(data.Reason)
 	if data.ExpectedRevision < 0 || len(data.Reason) < 3 || len(data.Reason) > 500 || strings.ContainsAny(data.Reason, "\r\n\x00") {

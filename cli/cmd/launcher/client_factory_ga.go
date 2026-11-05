@@ -168,7 +168,7 @@ func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinP
 	// Одного тестового примера семейства недостаточно для матрицы GA. Требуйте
 	// реальный сертификат для всех пяти семейств и всех запрошенных целей.
 	if certs.Total < 5 || certs.Failed != 0 {
-		return report, errors.New("incomplete client runtime certification")
+		return report, errors.New("Сертификация клиентской среды выполнения не завершена")
 	}
 	join, sha, err := factoryVerifyJoin0280(joinEvidence, joinAttestation, joinPub, ver, commit)
 	if err != nil {
@@ -197,6 +197,6 @@ func handleFactoryGA0280(args []string) error {
 		}
 		return writeOrPrintJSON(flagValue(t, "--output", "-"), report)
 	default:
-		return fmt.Errorf("unknown Client Factory GA command %q", args[0])
+		return fmt.Errorf("Неизвестная команда Client Factory GA: %q", args[0])
 	}
 }

@@ -143,7 +143,7 @@ func strictJSON0203(data []byte, out any) error {
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return errors.New("trailing JSON value")
+			return errors.New("Лишнее значение после JSON")
 		}
 		return err
 	}
@@ -182,7 +182,7 @@ func validateArchivePath0203(name string) error {
 
 func readEntry0203(entry *zip.File, limit int64) ([]byte, error) {
 	if entry == nil {
-		return nil, errors.New("missing ZIP entry")
+		return nil, errors.New("Отсутствует: ZIP элемент")
 	}
 	if entry.UncompressedSize64 > uint64(limit) {
 		return nil, fmt.Errorf("Элемент %s превышает ограничение размера", entry.Name)
@@ -270,7 +270,7 @@ type spdxDocument0203 struct {
 func validateSBOM0203(data []byte, manifest model.ExtensionManifest, canonicalDigest string, payload PackagePayload, buildTime time.Time) error {
 	var doc spdxDocument0203
 	if err := strictJSON0203(data, &doc); err != nil {
-		return fmt.Errorf("decode SBOM.spdx.json: %w", err)
+		return fmt.Errorf("Декодирование: SBOM.spdx.json: %w", err)
 	}
 	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://launcher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
 		return errors.New("Метаданные документа SBOM.spdx.json не соответствуют пакету")
@@ -455,7 +455,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var descriptor Descriptor
 	if err := strictJSON0203(descriptorBytes, &descriptor); err != nil {
-		return nil, fmt.Errorf("decode launcher-package.json: %w", err)
+		return nil, fmt.Errorf("Декодирование: launcher-package.json: %w", err)
 	}
 	if descriptor.Format != formatName0203 || descriptor.FormatVersion != formatVersion0203 || descriptor.BuildEpoch < 315532800 {
 		return nil, errors.New("Неподдерживаемое или недопустимое описание пакета .nlext")
@@ -492,7 +492,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var signature Signature
 	if err := strictJSON0203(signatureBytes, &signature); err != nil {
-		return nil, fmt.Errorf("decode signature.ed25519: %w", err)
+		return nil, fmt.Errorf("Декодирование: signature.ed25519: %w", err)
 	}
 	if signature.SchemaVersion != "1.0" || signature.Algorithm != "Ed25519" || signature.SigningDomain != signingDomain0203() || signature.PackageIdentity != descriptor.PackageIdentity {
 		return nil, errors.New("Метаданные signature.ed25519 не соответствуют идентификатору или формату пакета")

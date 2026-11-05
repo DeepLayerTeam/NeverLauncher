@@ -41,7 +41,7 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 		}
 		pem, err := os.ReadFile(cfg.MTLS.CAFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("read mTLS CA file: %w", err)
+			return nil, nil, fmt.Errorf("Чтение: mTLS CA файл: %w", err)
 		}
 		if !roots.AppendCertsFromPEM(pem) {
 			return nil, nil, errors.New("mTLS CA file contains no valid certificates")

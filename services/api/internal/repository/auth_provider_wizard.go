@@ -187,7 +187,7 @@ func (r *MemoryRepository) ActivateManagedProvider02910(_ context.Context, id st
 }
 func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 	if len(v.ID) < 2 || len(v.ID) > 64 || v.ID == "local" || strings.Trim(v.ID, "abcdefghijklmnopqrstuvwxyz0123456789-_.") != "" {
-		return fmt.Errorf("invalid provider id")
+		return fmt.Errorf("Некорректное значение: провайдер ID")
 	}
 	switch v.Kind {
 	case "sql", "http", "oidc", "microsoft", "java":

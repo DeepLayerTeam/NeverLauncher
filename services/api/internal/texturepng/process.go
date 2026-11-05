@@ -21,7 +21,7 @@ const (
 	MaxDimension    = 1024
 )
 
-var ErrInvalid = errors.New("invalid Minecraft texture PNG")
+var ErrInvalid = errors.New("Некорректное значение: Minecraft текстура PNG")
 var ErrTooLarge = errors.New("texture size limit exceeded")
 
 type Result struct {
@@ -49,7 +49,7 @@ func Process(src io.Reader, kind, model string) (Result, error) {
 	}
 	content, err := io.ReadAll(io.LimitReader(src, MaxEncodedBytes+1))
 	if err != nil {
-		return result, fmt.Errorf("read PNG: %w", err)
+		return result, fmt.Errorf("Чтение: PNG: %w", err)
 	}
 	if len(content) > MaxEncodedBytes {
 		return result, ErrTooLarge

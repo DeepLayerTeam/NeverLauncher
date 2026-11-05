@@ -186,7 +186,7 @@ func scanGo(root, rel string) (File, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, b, 0)
 	if err != nil {
-		return File{}, fmt.Errorf("parse %s: %w", rel, err)
+		return File{}, fmt.Errorf("Разбор: %s: %w", rel, err)
 	}
 	findings := map[string]Finding{}
 	add := func(kind string, pos token.Pos) {

@@ -67,7 +67,7 @@ func strictObject0472(raw []byte) (map[string]json.RawMessage, error) {
 	var tail any
 	if err = dec.Decode(&tail); !errors.Is(err, io.EOF) {
 		if err == nil {
-			err = errors.New("trailing JSON values")
+			err = errors.New("Обнаружены лишние данные после: JSON значения")
 		}
 		return nil, err
 	}

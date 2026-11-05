@@ -101,7 +101,7 @@ func certPrivateKey02712(path string) (ed25519.PrivateKey, error) {
 		return nil, err
 	}
 	if len(key) != ed25519.PrivateKeySize {
-		return nil, errors.New("invalid Ed25519 private key")
+		return nil, errors.New("Некорректное значение: Ed25519 закрытый ключ")
 	}
 	return ed25519.PrivateKey(key), nil
 }
@@ -115,7 +115,7 @@ func certReadPublic02712(path string) (ed25519.PublicKey, error) {
 		return nil, err
 	}
 	if len(pub) != ed25519.PublicKeySize {
-		return nil, errors.New("invalid Ed25519 public key")
+		return nil, errors.New("Некорректное значение: Ed25519 открытый ключ")
 	}
 	return ed25519.PublicKey(pub), nil
 }
@@ -181,7 +181,7 @@ func certValidateProbe02712(plan factoryPlan0271, profile string, probe factoryP
 		return errors.New("runtime probe does not match pinned profile, Java or classpath")
 	}
 	if !probe.Success && !probe.TimedOut {
-		return errors.New("runtime process failed")
+		return errors.New("Ошибка процесса среды выполнения")
 	}
 	// V03: проверки v1 не содержат достоверного наблюдения окна/визуализатора и перехода в главное
 	// меню. Тайм-аут, PID и маркер LWJGL не являются сертификацией. Никогда не подписывайте и не
@@ -206,7 +206,7 @@ func certFiles02712(dir string, cert factoryRuntimeCertificate02712) error {
 			return err
 		}
 		if !st.Mode().IsRegular() {
-			return errors.New("evidence must be a regular file")
+			return errors.New("Требуется обычный файл: свидетельство")
 		}
 		sum, err := certHashFile02712(file)
 		if err != nil {
@@ -262,7 +262,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if cert.PlanSHA256 != plan.ReproducibilitySHA256 || cert.Loader != plan.Loader || cert.LoaderVersion != plan.LoaderVersion || cert.MinecraftVersion != plan.MinecraftVersion || cert.JavaMajor != plan.Java.Major {
-		return cert, errors.New("certificate does not match current InstallPlan")
+		return cert, errors.New("Сертификат не соответствует текущему InstallPlan")
 	}
 	profile, err := certProfileID02712(plan)
 	if err != nil {
@@ -510,7 +510,7 @@ func handleRuntimeCertification02712(args []string) error {
 		}
 		client := flagValue(tail, "--client-dir", "")
 		if client == "" {
-			return errors.New("--client-dir required")
+			return errors.New("Требуется: --client-dir")
 		}
 		cert, err := certRun02712(context.Background(), client, flagValue(tail, "--runtime", ""), flagValue(tail, "--java", ""), flagValue(tail, "--runtime-sha256", ""), flagValue(tail, "--private-key", ""), flagValue(tail, "--output", ""), seconds)
 		if err != nil {
@@ -529,7 +529,7 @@ func handleRuntimeCertification02712(args []string) error {
 	case "certify-verify":
 		client := flagValue(tail, "--client-dir", "")
 		if client == "" {
-			return errors.New("--client-dir required")
+			return errors.New("Требуется: --client-dir")
 		}
 		cert, err := certVerify02712(client, flagValue(tail, "--certificate", ""), flagValue(tail, "--public-key", ""))
 		if err != nil {

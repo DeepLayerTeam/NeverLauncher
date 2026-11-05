@@ -1272,7 +1272,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return err
 		}
 		if err := commitTrustState0158(ctx); err != nil {
-			return fmt.Errorf("commit release trust state: %w", err)
+			return fmt.Errorf("Фиксация: релиз состояние доверия: %w", err)
 		}
 		return nil
 	}

@@ -63,7 +63,7 @@ func ValidateSignedFiles0249(files []ManifestFile) error {
 		}
 		lower := strings.ToLower(f.Path)
 		if seen[lower] {
-			return fmt.Errorf("duplicate signed file path %q", f.Path)
+			return fmt.Errorf("Повторяющийся путь подписанного файла %q", f.Path)
 		}
 		seen[lower] = true
 		own := FileOwnership0224(f)

@@ -117,21 +117,21 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err = decoder.Decode(&rows); err != nil {
-		return fmt.Errorf("invalid mapping: %w", err)
+		return fmt.Errorf("Некорректное значение: сопоставление: %w", err)
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
 		return errors.New("trailing mapping data")
 	}
 	if len(rows) == 0 || len(rows) > 32 {
-		return errors.New("mapping requires 1..32 profiles")
+		return errors.New("Для сопоставление требуется: 1..32 профили")
 	}
 	encoded, err := json.Marshal(rows)
 	if err != nil {
 		return err
 	}
 	if len(encoded) > 12288 {
-		return errors.New("mapping too large")
+		return errors.New("Превышен допустимый размер: сопоставление")
 	}
 	sourceFile, err := os.Open(source)
 	if err != nil {

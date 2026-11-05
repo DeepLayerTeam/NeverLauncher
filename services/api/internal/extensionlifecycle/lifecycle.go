@@ -103,11 +103,11 @@ func normalizeScope0204(scope Scope) (Scope, error) {
 func safeExtensionID0204(id string) (string, error) {
 	id = strings.ToLower(strings.TrimSpace(id))
 	if id == "" || len(id) > 128 {
-		return "", errors.New("invalid extension id")
+		return "", errors.New("Некорректное значение: ID расширения")
 	}
 	for _, r := range id {
 		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
-			return "", errors.New("invalid extension id")
+			return "", errors.New("Некорректное значение: ID расширения")
 		}
 	}
 	return id, nil
@@ -403,7 +403,7 @@ func activateStaged0204(current, stage, backup string) (func(), error) {
 			return nil, err
 		}
 		if pathExists0204(backup) {
-			return nil, errors.New("extension backup path already exists")
+			return nil, errors.New("Уже существует: резервная копия расширения путь")
 		}
 		if err := os.Rename(current, backup); err != nil {
 			return nil, err
@@ -433,7 +433,7 @@ func deactivateCurrent0204(current, backup string) (func(), error) {
 		return nil, err
 	}
 	if pathExists0204(backup) {
-		return nil, errors.New("extension backup path already exists")
+		return nil, errors.New("Уже существует: резервная копия расширения путь")
 	}
 	if err := os.Rename(current, backup); err != nil {
 		return nil, err

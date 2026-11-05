@@ -406,7 +406,7 @@ func (r *MemoryRepository) AttestTrustedDevice(ctx context.Context, userID, devi
 			continue
 		}
 		if strings.ToLower(strings.TrimSpace(method)) != "challenge-response-v1" || attestedAt.IsZero() || !expiresAt.After(attestedAt) {
-			return model.TrustedDevice{}, errors.New("invalid attestation result")
+			return model.TrustedDevice{}, errors.New("Некорректное значение: результат аттестации")
 		}
 		item.AttestationState = "verified"
 		item.AttestationMethod = "challenge-response-v1"
@@ -996,7 +996,7 @@ func (r *SQLRepository) AttestTrustedDevice(ctx context.Context, userID, deviceI
 	}
 	method = strings.ToLower(strings.TrimSpace(method))
 	if method != "challenge-response-v1" || attestedAt.IsZero() || !expiresAt.After(attestedAt) {
-		return model.TrustedDevice{}, errors.New("invalid attestation result")
+		return model.TrustedDevice{}, errors.New("Некорректное значение: результат аттестации")
 	}
 	res, err := r.db.ExecContext(ctx, `UPDATE trusted_devices SET attestation_state='verified',attestation_method=$3,attested_at=$4,attestation_expires_at=$5,assurance='challenge-response-attested',last_verified_at=$4,updated_at=$4 WHERE id=$1 AND user_id=$2 AND status='active' AND trust_state='verified'`, strings.TrimSpace(deviceID), strings.TrimSpace(userID), method, attestedAt.UTC(), expiresAt.UTC())
 	if err != nil {

@@ -174,7 +174,7 @@ func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {
 		return p, err
 	}
 	if _, err := fmt.Sscan(maxText, &p.MaxConnections); err != nil {
-		return p, fmt.Errorf("invalid max_connections: %w", err)
+		return p, fmt.Errorf("Некорректное значение: max_connections: %w", err)
 	}
 	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM pg_stat_activity WHERE backend_type='client backend'").Scan(&p.ActiveConnections); err != nil {
 		return p, err

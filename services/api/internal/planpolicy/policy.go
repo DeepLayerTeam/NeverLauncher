@@ -76,7 +76,7 @@ func Load(now time.Time) (Policy, error) {
 		return out, e
 	}
 	if !info.Mode().IsRegular() || info.Size() > 256*1024 {
-		return out, errors.New("unsafe ServerBridge policy file")
+		return out, errors.New("Небезопасный объект: ServerBridge файл политики")
 	}
 	raw, e := os.ReadFile(path)
 	if e != nil {

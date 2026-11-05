@@ -92,7 +92,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 	}
 	executableSHA, err := shaFile(exe, 256<<20)
 	if err != nil {
-		return record, "", fmt.Errorf("cannot authenticate psql executable: %w", err)
+		return record, "", fmt.Errorf("Не удалось подтвердить подлинность исполняемого файла psql: %w", err)
 	}
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 	sql := `BEGIN READ ONLY;\nSELECT json_build_object(\n` +
@@ -337,7 +337,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 }
 func matchIntegrationSnapshot0491(opts liveIntegrationOptions0491, run migrationAuditRun0491, pg pgAudit0491, host hostAudit0491) error {
 	if pg.Migration == nil || pg.Extension == nil {
-		return errors.New("incomplete PostgreSQL migration/extension state")
+		return errors.New("Неполные данные: PostgreSQL migration/extension состояние")
 	}
 	m, e := pg.Migration, pg.Extension
 	if m.ID != run.ID || m.ProjectID != run.ProjectID || m.SourceKind != run.SourceKind || m.Status != run.Status || m.Step != run.Step || m.Revision != run.Revision {

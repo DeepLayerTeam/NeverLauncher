@@ -170,7 +170,7 @@ func (a *Auth) ValidateMinecraftSession(ctx context.Context, raw string) (model.
 // сеанс. Владение сеансом проверяется в той же транзакции.
 func (a *Auth) RevokeMinecraftSession(ctx context.Context, userID, id, reason string) error {
 	if userID == "" || id == "" || strings.TrimSpace(reason) == "" {
-		return errors.New("owner/session/reason required")
+		return errors.New("Требуется: owner/session/reason")
 	}
 	return a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var owner string

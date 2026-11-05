@@ -106,7 +106,7 @@ func normalizeSubscription0206(in model.ExtensionEventSubscription) (model.Exten
 		in.ScopeID = ""
 	}
 	if !extensionID0201.MatchString(in.ExtensionID) {
-		return model.ExtensionEventSubscription{}, fmt.Errorf("invalid extension id %q", in.ExtensionID)
+		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: ID расширения %q", in.ExtensionID)
 	}
 	if in.Scope != "global" && in.Scope != "project" {
 		return model.ExtensionEventSubscription{}, errors.New("subscription scope must be global or project")

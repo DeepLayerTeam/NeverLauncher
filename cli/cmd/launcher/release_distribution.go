@@ -50,7 +50,7 @@ func bindDistributionSBOM04511(document map[string]any, dir, ver string) error {
 	}
 	packages, ok := document["packages"].([]sbomPackage)
 	if !ok {
-		return errors.New("SPDX packages missing")
+		return errors.New("Отсутствует: SPDX пакеты")
 	}
 	relationships, ok := document["relationships"].([]sbomRelationship)
 	if !ok {
@@ -86,7 +86,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 			return e
 		}
 		if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > 64*1024*1024 {
-			return fmt.Errorf("unsafe %s", name)
+			return fmt.Errorf("Небезопасный объект: %s", name)
 		}
 		raw, e := os.ReadFile(p)
 		if e != nil {
@@ -109,7 +109,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		return fmt.Errorf("SPDX: %w", err)
 	}
 	if sbom.SPDXVersion != "SPDX-2.3" || sbom.SPDXID != "SPDXRef-DOCUMENT" {
-		return errors.New("not an SPDX 2.3 document")
+		return errors.New("Документ не соответствует формату SPDX 2.3")
 	}
 	ids := map[string]bool{}
 	found := map[string]bool{}

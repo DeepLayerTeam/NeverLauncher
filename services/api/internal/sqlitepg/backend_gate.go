@@ -16,7 +16,7 @@ import (
 // Обычные установки PostgreSQL без импорта SQLite не затрагиваются.
 func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 	if strings.TrimSpace(dsn) == "" {
-		return errors.New("PostgreSQL DSN required")
+		return errors.New("Необходимо указать DSN PostgreSQL")
 	}
 	pg, err := pgx.Connect(ctx, dsn)
 	if err != nil {
@@ -26,7 +26,7 @@ func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 	for _, name := range []string{"public.sqlite_live_receipts_0473", Schema + ".migration_receipt"} {
 		var present bool
 		if err := pg.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, name).Scan(&present); err != nil {
-			return fmt.Errorf("cannot inspect cutover state: %w", err)
+			return fmt.Errorf("Не удалось проверить состояние переключения: %w", err)
 		}
 		if !present {
 			continue
@@ -41,7 +41,7 @@ func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 			err = pg.QueryRow(ctx, `SELECT count(*) FROM `+qualified("migration_receipt")).Scan(&count)
 		}
 		if err != nil {
-			return fmt.Errorf("cannot inspect cutover receipts: %w", err)
+			return fmt.Errorf("Не удалось проверить подтверждения переключения: %w", err)
 		}
 		if count != 0 {
 			return errors.New("SQLite import present without verified HTTP/Coordinator cutover approval; refusing to start Backend (0.47.5)")

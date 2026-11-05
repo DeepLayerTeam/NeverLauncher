@@ -45,7 +45,7 @@ func ValidateURL(raw string) (*url.URL, error) {
 	}
 	port, err := strconv.Atoi(u.Port())
 	if err != nil || port < 1 || port > 65535 {
-		return nil, errors.New("invalid LAN TLS port")
+		return nil, errors.New("Некорректное значение: LAN TLS порт")
 	}
 	return u, nil
 }

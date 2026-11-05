@@ -161,10 +161,10 @@ func readLegacyProfile0278(root, rel string) (MojangVersionFile, string, error) 
 		return profile, "", err
 	}
 	if err = json.Unmarshal(raw, &profile); err != nil {
-		return profile, "", fmt.Errorf("invalid version profile %s: %w", rel, err)
+		return profile, "", fmt.Errorf("Некорректное значение: профиль версии %s: %w", rel, err)
 	}
 	if strings.TrimSpace(profile.ID) == "" || strings.TrimSpace(profile.MainClass) == "" {
-		return profile, "", fmt.Errorf("incomplete legacy profile %s", rel)
+		return profile, "", fmt.Errorf("Неполные данные: устаревший профиль %s", rel)
 	}
 	return profile, sha256HexBytes(raw), nil
 }
@@ -197,7 +197,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		return nil, nil
 	}
 	if javaMajor != 8 {
-		return nil, fmt.Errorf("legacy %s %s requires Java 8", loader, minecraft)
+		return nil, fmt.Errorf("Для устаревший %s %s требуется: Java 8", loader, minecraft)
 	}
 	parentRel := filepath.ToSlash(filepath.Join("versions", minecraft, minecraft+".json"))
 	parent, parentHash, err := readLegacyProfile0278(root, parentRel)
@@ -320,7 +320,7 @@ func addLegacyClasspath0278(root string, target *legacyTarget0278, rel string) e
 	}
 	st, err := os.Lstat(full)
 	if err != nil {
-		return fmt.Errorf("missing classpath artifact %s: %w", rel, err)
+		return fmt.Errorf("Отсутствует: артефакт пути классов %s: %w", rel, err)
 	}
 	if !st.Mode().IsRegular() {
 		return fmt.Errorf("classpath artifact is not regular %s", rel)
@@ -421,14 +421,14 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		return err
 	}
 	if p.Legacy == nil {
-		return errors.New("no legacy adapter in InstallPlan")
+		return errors.New("В InstallPlan отсутствует адаптер устаревшей версии")
 	}
 	t, err := currentLegacyTarget0278(p.Legacy)
 	if err != nil {
 		return err
 	}
 	if username == "" {
-		return errors.New("--username is required")
+		return errors.New("Требуется: --username")
 	}
 	if javaExecutable == "" {
 		javaExecutable = "java"
@@ -560,7 +560,7 @@ func handleRuntimeLegacy0278(args []string) error {
 	}
 	dir := flagValue(args[1:], "--client-dir", "")
 	if dir == "" {
-		return errors.New("--client-dir required")
+		return errors.New("Требуется: --client-dir")
 	}
 	switch args[0] {
 	case "legacy-inspect":
@@ -588,6 +588,6 @@ func handleRuntimeLegacy0278(args []string) error {
 		}
 		return runLegacyClient0278(ctx, dir, flagValue(args[1:], "--java", "java"), flagValue(args[1:], "--username", ""), flagValue(args[1:], "--uuid", ""))
 	default:
-		return fmt.Errorf("unknown legacy command %s", args[0])
+		return fmt.Errorf("Неизвестное значение: устаревшая команда %s", args[0])
 	}
 }

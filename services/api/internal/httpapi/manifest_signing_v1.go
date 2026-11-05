@@ -68,7 +68,7 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	}
 	declaredPublicKey, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.PublicKey))
 	if err != nil || len(declaredPublicKey) != ed25519.PublicKeySize {
-		return errors.New("invalid manifest public key")
+		return errors.New("Некорректное значение: манифест открытый ключ")
 	}
 	configured := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE")) != "" || strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY")) != ""
 	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")

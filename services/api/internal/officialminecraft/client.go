@@ -30,7 +30,7 @@ var ErrPending = errors.New("authorization_pending")
 var ErrSlowDown = errors.New("slow_down")
 var ErrExpired = errors.New("expired_token")
 var ErrDenied = errors.New("access_denied")
-var ErrUnlicensed = errors.New("no accessible Minecraft Java profile")
+var ErrUnlicensed = errors.New("Нет доступного Java-профиля Minecraft")
 
 type Client struct {
 	http                                            *http.Client
@@ -178,7 +178,7 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 			return errors.New("empty official Minecraft response")
 		}
 		if err := json.Unmarshal(b, out); err != nil {
-			return fmt.Errorf("invalid official Minecraft JSON: %w", err)
+			return fmt.Errorf("Некорректное значение: официальный Minecraft JSON: %w", err)
 		}
 	}
 	return nil
@@ -226,7 +226,7 @@ func (c *Client) Complete(ctx context.Context, clientID, deviceCode string) (OAu
 		return tokens, err
 	}
 	if tokens.AccessToken == "" || tokens.TokenType != "Bearer" {
-		return OAuthTokens{}, errors.New("incomplete Microsoft tokens")
+		return OAuthTokens{}, errors.New("Неполные данные: Microsoft токены")
 	}
 	return tokens, nil
 }
@@ -254,7 +254,7 @@ func (c *Client) Exchange(ctx context.Context, microsoftToken string) (Minecraft
 // завершилась ошибкой, не записывая токены доступа в файлы свидетельств.
 func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, stagePassed func(string)) (MinecraftToken, error) {
 	if microsoftToken == "" {
-		return MinecraftToken{}, errors.New("missing Microsoft access token")
+		return MinecraftToken{}, errors.New("Отсутствует: Microsoft токен доступа")
 	}
 	var xbl struct {
 		Token         string `json:"Token"`
@@ -307,7 +307,7 @@ func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, 
 		return MinecraftToken{}, err
 	}
 	if result.AccessToken == "" || result.TokenType != "Bearer" || result.ExpiresIn <= 0 {
-		return MinecraftToken{}, errors.New("invalid Minecraft access token")
+		return MinecraftToken{}, errors.New("Некорректное значение: Minecraft токен доступа")
 	}
 	if stagePassed != nil {
 		stagePassed("minecraft_token")

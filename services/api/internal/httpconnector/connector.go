@@ -227,7 +227,7 @@ func baseRequest() (requestEnvelope, error) {
 
 func strictNormalizeStrings(values []string, maxItems, maxLength int) ([]string, error) {
 	if len(values) > maxItems {
-		return nil, fmt.Errorf("too many values")
+		return nil, fmt.Errorf("Превышено допустимое число значений")
 	}
 	result := make([]string, 0, len(values))
 	seen := map[string]struct{}{}

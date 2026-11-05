@@ -25,7 +25,7 @@ func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, 
 	}
 	sum := sha256.Sum256(png)
 	if hex.EncodeToString(sum[:]) != digest {
-		return "", 0, errors.New("texture SHA-256 mismatch")
+		return "", 0, errors.New("Несоответствие: текстура SHA-256")
 	}
 	if len(png) == 0 || len(png) > 4<<20 {
 		return "", 0, errors.New("invalid texture payload size")

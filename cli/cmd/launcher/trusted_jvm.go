@@ -157,14 +157,14 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 			return record, nil, fmt.Errorf("unsupported trusted payload: %q", name)
 		}
 		if count++; count > 17 {
-			return record, nil, errors.New("too many trusted JARs")
+			return record, nil, errors.New("Превышено число доверенных JAR")
 		}
 		b, err := trustedBytes0306(entry, 32<<20)
 		if err != nil {
 			return record, nil, err
 		}
 		if _, err = zip.NewReader(bytes.NewReader(b), int64(len(b))); err != nil {
-			return record, nil, fmt.Errorf("invalid trusted JAR %s: %w", rel, err)
+			return record, nil, fmt.Errorf("Некорректное значение: доверенный JAR %s: %w", rel, err)
 		}
 		// Проверка структуры не допускает попадания некорректных архивов в JVM.
 		temp, err := os.CreateTemp("", "nl-trusted-*.jar")
@@ -419,7 +419,7 @@ func handleTrustedJVM0306(args []string) error {
 	}
 	root := flagValue(args[1:], "--client-dir", "")
 	if root == "" {
-		return errors.New("--client-dir required")
+		return errors.New("Требуется: --client-dir")
 	}
 	key := flagValue(args[1:], "--public-key", os.Getenv(trustedPublicKeyEnv0306))
 	switch args[0] {
@@ -443,7 +443,7 @@ func handleTrustedJVM0306(args []string) error {
 			return err
 		}
 		if rec == nil {
-			return errors.New("no trusted JVM agent installed")
+			return errors.New("Не установлен доверенный агент JVM")
 		}
 		printJSON(rec)
 		return nil

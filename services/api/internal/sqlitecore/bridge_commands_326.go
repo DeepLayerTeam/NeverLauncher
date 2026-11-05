@@ -141,7 +141,7 @@ func bridgePayload(payload map[string]string) (string, string, error) {
 		payload = map[string]string{}
 	}
 	if len(payload) > 32 {
-		return "", "", errors.New("too many command parameters")
+		return "", "", errors.New("Слишком много параметров команды")
 	}
 	for k, v := range payload {
 		if k == "" || len(k) > 80 || len(v) > 2048 || strings.ContainsAny(k, "\x00\r\n") || strings.ContainsRune(v, '\x00') {

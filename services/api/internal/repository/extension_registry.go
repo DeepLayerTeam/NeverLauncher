@@ -129,7 +129,7 @@ func normalizeRegistryChannels0203(values []string) ([]string, error) {
 			continue
 		}
 		if !registryChannel0203.MatchString(value) {
-			return nil, fmt.Errorf("invalid registry channel %q", value)
+			return nil, fmt.Errorf("Некорректное значение: канал реестра %q", value)
 		}
 		if _, ok := seen[value]; ok {
 			continue
@@ -555,7 +555,7 @@ func (r *MemoryRepository) SetExtensionRegistryChannel(ctx context.Context, exte
 	}
 	extensionID, channel, version = strings.ToLower(strings.TrimSpace(extensionID)), strings.ToLower(strings.TrimSpace(channel)), strings.TrimSpace(version)
 	if !registryChannel0203.MatchString(channel) {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("invalid registry channel %q", channel)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("Некорректное значение: канал реестра %q", channel)
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -1011,7 +1011,7 @@ func (r *SQLRepository) SetExtensionRegistryChannel(ctx context.Context, extensi
 	}
 	extensionID, channel, version = strings.ToLower(strings.TrimSpace(extensionID)), strings.ToLower(strings.TrimSpace(channel)), strings.TrimSpace(version)
 	if !registryChannel0203.MatchString(channel) {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("invalid registry channel %q", channel)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("Некорректное значение: канал реестра %q", channel)
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {

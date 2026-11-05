@@ -128,7 +128,7 @@ func verifyObject0474(ctx context.Context, store storage.Storage, obj fileObject
 		return true, e
 	}
 	if n != obj.size || h != obj.hash {
-		return true, fmt.Errorf("object %s SHA-256 mismatch", obj.path)
+		return true, fmt.Errorf("Несоответствие: объект %s SHA-256", obj.path)
 	}
 	return true, nil
 }

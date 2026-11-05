@@ -68,14 +68,14 @@ func runInternalProcessorWorker0273() error {
 		return err
 	}
 	if len(input) > workerRequestLimit0273 {
-		return errors.New("worker request too large")
+		return errors.New("Превышен допустимый размер: запрос рабочего процесса")
 	}
 	var req processorWorkerRequest0273
 	if err := json.Unmarshal(input, &req); err != nil {
 		return err
 	}
 	if !filepath.IsAbs(req.Java) || !filepath.IsAbs(req.Directory) || !filepath.IsAbs(req.TempDirectory) || req.HeapMiB < 128 || req.HeapMiB > 8192 || req.TimeoutSeconds < 1 || req.TimeoutSeconds > 3600 || len(req.Args) < 3 || len(req.Args) > 4096 {
-		return errors.New("invalid build worker request")
+		return errors.New("Некорректное значение: запрос рабочего процесса сборки")
 	}
 	if err := limitWorkerResources0273(req.TimeoutSeconds); err != nil {
 		return fmt.Errorf("resource limits: %w", err)
@@ -107,7 +107,7 @@ func runInternalProcessorWorker0273() error {
 		if ctx.Err() != nil {
 			return fmt.Errorf("java timed out: %w", ctx.Err())
 		}
-		return fmt.Errorf("java processor failed: %w", err)
+		return fmt.Errorf("Ошибка: Java процессор: %w", err)
 	}
 	return nil
 }

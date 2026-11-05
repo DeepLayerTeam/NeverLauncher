@@ -73,7 +73,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		}
 		digest := sha256.Sum256([]byte(strings.TrimSuffix(string(b), "\n")))
 		if hex.EncodeToString(digest[:]) != manifestHash || manifest.ManifestSHA256 != "" {
-			return errors.New("export manifest digest mismatch")
+			return errors.New("Несоответствие: экспорт дайджест манифеста")
 		}
 		hasManifest = true
 		break
@@ -189,7 +189,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	}
 	expected := response.Header.Get("X-Migration-Manifest-SHA256")
 	if len(expected) != 64 {
-		return errors.New("missing manifest checksum")
+		return errors.New("Отсутствует: контрольная сумма манифеста")
 	}
 	dir := filepath.Dir(out)
 	tmp, e := os.CreateTemp(dir, ".gravit-export-*.tmp")

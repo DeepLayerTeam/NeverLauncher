@@ -635,7 +635,7 @@ func (s Server) workspaceValidate0226(ws repository.BuildWorkspace) (string, err
 	}
 	files := selectedFiles0226(ws)
 	if len(files) == 0 {
-		return "", errors.New("no files staged")
+		return "", errors.New("Нет подготовленных файлов")
 	}
 	snapshot, err := repository.ReadProfileSnapshot(s.Repo, ws.ProjectID, ws.ProfileID)
 	if err != nil {

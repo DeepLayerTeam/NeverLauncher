@@ -16,11 +16,11 @@ const textureVersion0252 = "sha256"
 
 func texturePath0252(digest string) (string, error) {
 	if len(digest) != 64 {
-		return "", errors.New("invalid texture digest")
+		return "", errors.New("Некорректный дайджест текстуры")
 	}
 	for _, c := range digest {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return "", errors.New("invalid texture digest")
+			return "", errors.New("Некорректный дайджест текстуры")
 		}
 	}
 	return digest[:2] + "/" + digest + ".png", nil
@@ -36,7 +36,7 @@ func SaveTexture0252(store Storage, digest string, png []byte) (string, int64, e
 	}
 	sum := sha256.Sum256(png)
 	if hex.EncodeToString(sum[:]) != digest {
-		return "", 0, errors.New("texture checksum mismatch")
+		return "", 0, errors.New("Контрольная сумма текстуры не совпадает")
 	}
 	if local, ok := store.(*LocalStorage); ok {
 		return local.saveTextureAtomic0252(path, png)
@@ -89,7 +89,7 @@ func (s *LocalStorage) saveTextureAtomic0252(path string, png []byte) (string, i
 		existingSum := sha256.Sum256(existing)
 		expected := sha256.Sum256(png)
 		if existingSum != expected {
-			return "", 0, errors.New("texture digest object mismatch")
+			return "", 0, errors.New("Несоответствие: дайджест текстуры объект")
 		}
 	}
 	if dir, err := os.Open(filepath.Dir(dest)); err == nil {

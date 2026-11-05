@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	errSessionNotFound118 = errors.New("session not found")
+	errSessionNotFound118 = errors.New("Сеанс не найден")
 	errSessionName118     = errors.New("invalid session device name")
 )
 

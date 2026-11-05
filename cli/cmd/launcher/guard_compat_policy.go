@@ -109,7 +109,7 @@ func guardCompatRel0502(rel string) bool {
 }
 func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, error) {
 	if keyFile == "" {
-		return nil, "", fmt.Errorf("Guard compatibility external %s required", guardCompatKeyEnv0502)
+		return nil, "", fmt.Errorf("Для совместимости Guard требуется внешний параметр %s", guardCompatKeyEnv0502)
 	}
 	if err := trustedAnchor0306(root, keyFile); err != nil {
 		return nil, "", err
@@ -119,7 +119,7 @@ func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, 
 		return nil, "", err
 	}
 	if len(raw) > 1024 {
-		return nil, "", errors.New("Guard compatibility public key too large")
+		return nil, "", errors.New("Открытый ключ совместимости Guard превышает допустимый размер")
 	}
 	text := strings.TrimSpace(string(raw))
 	var b []byte
@@ -130,7 +130,7 @@ func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, 
 		}
 	}
 	if len(b) != ed25519.PublicKeySize {
-		return nil, "", errors.New("invalid Guard compatibility Ed25519 public key length")
+		return nil, "", errors.New("Некорректное значение: длина открытого ключа Ed25519 для совместимости Guard")
 	}
 	hash := sha256.Sum256(b)
 	return ed25519.PublicKey(b), hex.EncodeToString(hash[:]), nil
@@ -138,7 +138,7 @@ func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, 
 func guardCompatVerifiedBytes0502(root, keyFile string, raw []byte, now time.Time) (guardCompatVerified0502, error) {
 	var result guardCompatVerified0502
 	if len(raw) > 256*1024 {
-		return result, errors.New("Guard compatibility envelope too large")
+		return result, errors.New("Контейнер совместимости Guard превышает допустимый размер")
 	}
 	key, rootDigest, err := guardCompatPublicKey0502(root, keyFile)
 	if err != nil {
@@ -149,18 +149,18 @@ func guardCompatVerifiedBytes0502(root, keyFile string, raw []byte, now time.Tim
 		return result, err
 	}
 	if envelope.Schema != guardCompatSchema0502 {
-		return result, errors.New("unknown Guard compatibility envelope")
+		return result, errors.New("Неизвестное значение: контейнер совместимости Guard")
 	}
 	payload, err := base64.StdEncoding.Strict().DecodeString(envelope.Payload)
 	if err != nil || len(payload) > 192*1024 || len(payload) == 0 {
-		return result, errors.New("invalid Guard compatibility payload")
+		return result, errors.New("Некорректные данные политики совместимости Guard")
 	}
 	sig, err := hex.DecodeString(envelope.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return result, errors.New("invalid Guard compatibility signature length")
+		return result, errors.New("Недопустимая длина подписи совместимости Guard")
 	}
 	if !ed25519.Verify(key, append([]byte(guardCompatDomain0502), payload...), sig) {
-		return result, errors.New("Guard compatibility signature verification failed")
+		return result, errors.New("Проверка подписи совместимости Guard завершилась ошибкой")
 	}
 	var p guardCompatPolicy0502
 	if err = guardCompatDecode0502(payload, &p); err != nil {
@@ -175,14 +175,14 @@ func guardCompatVerifiedBytes0502(root, keyFile string, raw []byte, now time.Tim
 func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 	if p.Schema != guardCompatSchema0502 || p.Epoch == 0 || p.ProjectID == "" || p.Minecraft == "" || p.Loader == "" ||
 		len(p.ProjectID) > 128 || len(p.Minecraft) > 128 || len(p.Loader) > 64 {
-		return errors.New("Guard compatibility scope invalid")
+		return errors.New("Некорректная область действия политики совместимости Guard")
 	}
 	current := now.Unix()
 	if p.IssuedAt > current+300 || p.ExpiresAt <= current || p.IssuedAt <= 0 || p.ExpiresAt <= p.IssuedAt || p.ExpiresAt-p.IssuedAt > 90*86400 {
 		return errors.New("Guard compatibility policy expired, future-issued or exceeds validity")
 	}
 	if len(p.Artifacts) > 4096 || len(p.Transformations) > 4096 || len(p.LoaderClassBytes) > 4096 || len(p.ExternalNativeModules) > 64 || len(p.RevokedDigests) > 4096 || len(p.RevokedTransforms) > 4096 {
-		return errors.New("Guard compatibility list too large")
+		return errors.New("Список совместимости Guard превышает допустимый размер")
 	}
 	seen := map[string]bool{}
 	digests := map[string]bool{}
@@ -190,10 +190,10 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 		switch a.Kind {
 		case "mod", "java-agent", "java-plugin", "native-library", "loader-library":
 		default:
-			return fmt.Errorf("unknown Guard compatibility artifact kind %q", a.Kind)
+			return fmt.Errorf("Неизвестное значение: тип артефакта совместимости Guard %q", a.Kind)
 		}
 		if !guardCompatRel0502(a.Path) || !guardCompatHex0502(a.SHA256) {
-			return errors.New("Guard compatibility artifact path/digest invalid")
+			return errors.New("Некорректный путь или дайджест артефакта совместимости Guard")
 		}
 		key := a.Kind + ":" + strings.ToLower(a.Path)
 		if seen[key] {
@@ -254,7 +254,7 @@ func guardCompatExternalNativePath05010(path string) bool {
 }
 func guardCompatExternalNativeHash05010(path string) (string, error) {
 	if !guardCompatExternalNativePath05010(path) {
-		return "", errors.New("invalid external native path")
+		return "", errors.New("Некорректное значение: внешний нативный путь")
 	}
 	current := "/"
 	for _, component := range strings.Split(path, "/")[1:] {
@@ -272,7 +272,7 @@ func guardCompatExternalNativeHash05010(path string) (string, error) {
 		return "", err
 	}
 	if !stat.Mode().IsRegular() || stat.Size() > 512<<20 {
-		return "", errors.New("external native module invalid")
+		return "", errors.New("Некорректное значение: внешний нативный модуль")
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -318,7 +318,7 @@ func guardCompatFloorRead0502(root string) (*guardCompatFloor0502, error) {
 		return nil, err
 	}
 	if floor.Epoch == 0 || !guardCompatHex0502(floor.Digest) || !guardCompatHex0502(floor.RootSHA256) {
-		return nil, errors.New("Guard compatibility anti-rollback state corrupt")
+		return nil, errors.New("Состояние защиты от отката политики совместимости Guard повреждено")
 	}
 	return &floor, nil
 }
@@ -328,7 +328,7 @@ func guardCompatAgainstFloor0502(root string, v guardCompatVerified0502) error {
 		return err
 	}
 	if floor != nil && (floor.RootSHA256 != v.RootSHA256 || floor.Epoch > v.Policy.Epoch || (floor.Epoch == v.Policy.Epoch && floor.Digest != v.Digest)) {
-		return errors.New("Guard compatibility root change, rollback or equivocation")
+		return errors.New("Обнаружено изменение корня доверия, откат или противоречивое состояние политики совместимости Guard")
 	}
 	return nil
 }
@@ -338,7 +338,7 @@ func guardCompatInstall0502(root, policyFile, keyFile string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 256*1024 {
-		return errors.New("unsafe Guard compatibility policy input")
+		return errors.New("Небезопасный объект: входные данные политики совместимости Guard")
 	}
 	raw, err := os.ReadFile(policyFile)
 	if err != nil {
@@ -424,7 +424,7 @@ func guardCompatHashFile0502(root, rel string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 512<<20 {
-		return "", fmt.Errorf("unsafe Guard compatibility payload %s", rel)
+		return "", fmt.Errorf("Небезопасный объект: данные совместимости Guard %s", rel)
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -474,7 +474,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 		}
 	}
 	if p.ProjectID != project || p.Minecraft != minecraft || !strings.EqualFold(p.Loader, loader) {
-		return errors.New("Guard compatibility policy scope does not match installed game")
+		return errors.New("Область действия политики совместимости Guard не соответствует установленной игре")
 	}
 	authorized := map[string]guardCompatArtifact0502{}
 	revoked := map[string]bool{}
@@ -582,7 +582,7 @@ func guardCompatInspect0502(root, key string) (map[string]any, error) {
 		return nil, err
 	}
 	if v == nil {
-		return nil, errors.New("Guard compatibility policy not installed")
+		return nil, errors.New("Политика совместимости Guard не установлена")
 	}
 	kinds := map[string]int{}
 	for _, a := range v.Policy.Artifacts {
@@ -596,14 +596,14 @@ func handleGuardCompat0502(args []string) error {
 	}
 	root := flagValue(args[1:], "--client-dir", "")
 	if root == "" {
-		return errors.New("--client-dir required")
+		return errors.New("Требуется: --client-dir")
 	}
 	key := flagValue(args[1:], "--public-key", os.Getenv(guardCompatKeyEnv0502))
 	switch args[0] {
 	case "guard-policy-install", "guard-policy-rollback":
 		file := flagValue(args[1:], "--policy", "")
 		if file == "" {
-			return errors.New("signed --policy required")
+			return errors.New("Требуется подписанный файл политики --policy")
 		}
 		if args[0] == "guard-policy-rollback" {
 			if err := guardCompatAuthorizeRollback05011(root, key, file); err != nil {
@@ -633,6 +633,6 @@ func handleGuardCompat0502(args []string) error {
 		printJSON(report)
 		return nil
 	default:
-		return errors.New("unknown Guard compatibility operation")
+		return errors.New("Неизвестная операция политики совместимости Guard")
 	}
 }

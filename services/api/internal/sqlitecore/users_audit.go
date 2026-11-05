@@ -274,7 +274,7 @@ func sameBindings(a, b map[string]string) bool {
 // несвязанные поля, включая роли в проектах, без перезаписи.
 func (r *Repository) UpdatePassword(ctx context.Context, id, hash, actor string) error {
 	if actor == "" || id == "" {
-		return errors.New("actor/user required")
+		return errors.New("Требуется: actor/user")
 	}
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		res, e := q.ExecContext(ctx, `UPDATE users SET password_hash=?,password_updated_at=?,updated_at=?,auth_epoch=auth_epoch+1 WHERE id=?`, hash, nowNS(), nowNS(), id)
@@ -293,7 +293,7 @@ func (r *Repository) UpdatePassword(ctx context.Context, id, hash, actor string)
 }
 func (r *Repository) SetUserDisabled(ctx context.Context, id string, disabled bool, actor string) error {
 	if actor == "" || id == "" {
-		return errors.New("actor/user required")
+		return errors.New("Требуется: actor/user")
 	}
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		state := "active"

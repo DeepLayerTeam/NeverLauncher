@@ -495,7 +495,7 @@ func (s Server) verifyPasskeyAssertion117(input webauthnAssertionJSON117, challe
 		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("passkey user mismatch")
 	}
 	if len(userHandle) > 0 && !hmac.Equal(userHandle, s.webauthnUserHandle117(credential.UserID)) {
-		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("userHandle mismatch")
+		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("Несоответствие: userHandle")
 	}
 	result, err := wa.VerifyAssertion(s.webauthnVerifyConfig117(challenge), client, authData, sig, credential.PublicKeyCOSE, credential.SignCount, credential.BackupEligible)
 	return credential, result, err
@@ -538,15 +538,15 @@ func decodeRegistrationCredential117(c webauthnRegistrationJSON117) ([]byte, []b
 	}
 	raw, err := decodeWebAuthnB64117(firstNonEmpty(c.RawID, c.ID), 2048)
 	if err != nil {
-		return nil, nil, nil, errors.New("rawId invalid")
+		return nil, nil, nil, errors.New("Некорректное значение: rawId")
 	}
 	client, err := decodeWebAuthnB64117(c.Response.ClientDataJSON, 64*1024)
 	if err != nil {
-		return nil, nil, nil, errors.New("clientDataJSON invalid")
+		return nil, nil, nil, errors.New("Некорректное значение: clientDataJSON")
 	}
 	att, err := decodeWebAuthnB64117(c.Response.AttestationObject, 256*1024)
 	if err != nil {
-		return nil, nil, nil, errors.New("attestationObject invalid")
+		return nil, nil, nil, errors.New("Некорректное значение: attestationObject")
 	}
 	return raw, client, att, nil
 }
@@ -602,7 +602,7 @@ func decodeJSONLimited117(r *http.Request, dst any) error {
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
 		if err == nil {
-			return errors.New("multiple JSON values are not allowed")
+			return errors.New("Несколько значений JSON недопустимы")
 		}
 		return err
 	}

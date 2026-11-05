@@ -508,7 +508,7 @@ func loadClientSnapshot(root, target string) (string, clientLifecycleSnapshot, e
 		return "", clientLifecycleSnapshot{}, err
 	}
 	if snap.ID != id {
-		return "", clientLifecycleSnapshot{}, errors.New("snapshot id mismatch")
+		return "", clientLifecycleSnapshot{}, errors.New("Идентификатор снимка не совпадает")
 	}
 	return dir, snap, nil
 }
@@ -575,7 +575,7 @@ func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 		return fmt.Errorf("%s: source unavailable: %w", file.Path, err)
 	}
 	if size != file.Size || !strings.EqualFold(sum, file.SHA256) {
-		return fmt.Errorf("%s: source checksum/size mismatch", file.Path)
+		return fmt.Errorf("Несоответствие: %s: контрольная сумма или размер источника", file.Path)
 	}
 	if err := copyFileAtomic(src, dst); err != nil {
 		return err

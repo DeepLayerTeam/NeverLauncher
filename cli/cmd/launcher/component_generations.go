@@ -82,7 +82,7 @@ func writeComponentWatermark02311(root string, item componentGenerationRecord023
 		return err
 	}
 	if old.Generation > item.Generation {
-		return errors.New("cannot decrease component security watermark")
+		return errors.New("Нельзя понизить отметку уровня безопасности компонентов")
 	}
 	if old.Generation == item.Generation {
 		if old.ManifestDigest != item.ManifestDigest {
@@ -135,7 +135,7 @@ func commitComponentGeneration02311(root string, m componentUpdateManifest0157) 
 		return err
 	}
 	if !present || st.SecurityGeneration != m.SecurityGeneration || st.ManifestDigest != componentDigest02311(m) {
-		return errors.New("cannot record generation until committed component state matches signed set")
+		return errors.New("Нельзя записать поколение, пока зафиксированное состояние компонентов не соответствует подписанному набору")
 	}
 	return writeComponentWatermark02311(root, componentGenerationRecord02311{Generation: st.SecurityGeneration, ManifestDigest: st.ManifestDigest})
 }
@@ -192,7 +192,7 @@ func reconcileInstalledComponentGeneration02311(root string) error {
 				return fmt.Errorf("component %s path is missing or is not a regular file", item.Component)
 			}
 			if err := verifyUpdaterFile0156(full, item.Size, item.SHA256); err != nil {
-				return fmt.Errorf("cannot reconcile unverified installed component %s: %w", item.Component, err)
+				return fmt.Errorf("Нельзя согласовать непроверенный установленный компонент %s: %w", item.Component, err)
 			}
 		}
 		return writeComponentWatermark02311(root, componentGenerationRecord02311{Generation: st.SecurityGeneration, ManifestDigest: st.ManifestDigest})

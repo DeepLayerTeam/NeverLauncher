@@ -126,7 +126,7 @@ func validName(n string, isDir bool) error {
 	}
 	p := strings.TrimSuffix(n, "/")
 	if path.Clean(p) != p || p == "." || p == ".." || strings.HasPrefix(p, "../") || len(n) > 2048 {
-		return fmt.Errorf("unsafe ZIP path %q", n)
+		return fmt.Errorf("Небезопасный объект: ZIP путь %q", n)
 	}
 	if isDir != strings.HasSuffix(n, "/") {
 		return fmt.Errorf("invalid ZIP directory marker %q", n)
@@ -151,7 +151,7 @@ func safeFiles(z *zip.Reader) ([]*zip.File, error) {
 		}
 		n := strings.ToLower(strings.TrimSuffix(f.Name, "/"))
 		if _, ok := seen[n]; ok {
-			return nil, fmt.Errorf("duplicate ZIP path %q", f.Name)
+			return nil, fmt.Errorf("Обнаружен дубликат: ZIP путь %q", f.Name)
 		}
 		seen[n] = struct{}{}
 		names[n] = isDir
@@ -256,7 +256,7 @@ func uniqueJSON(d *json.Decoder) error {
 			}
 			seen[s] = true
 			if len(seen) > 100000 {
-				return errors.New("JSON object too large")
+				return errors.New("Превышен допустимый размер: объект JSON")
 			}
 			if e := uniqueJSON(d); e != nil {
 				return e
@@ -269,7 +269,7 @@ func uniqueJSON(d *json.Decoder) error {
 		for d.More() {
 			i++
 			if i > 100000 {
-				return errors.New("JSON array too large")
+				return errors.New("Превышен допустимый размер: JSON массив")
 			}
 			if e := uniqueJSON(d); e != nil {
 				return e
@@ -371,7 +371,7 @@ func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest 
 	// запросами или поступить от недоверенного обработчика; закрепляйте точные байты архива.
 	for _, c := range sourceDigest {
 		if !strings.ContainsRune("0123456789abcdef", c) {
-			return Inventory{}, errors.New("invalid source SHA-256")
+			return Inventory{}, errors.New("Некорректное значение: источник SHA-256")
 		}
 	}
 	sourceHash := sha256.New()

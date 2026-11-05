@@ -427,7 +427,7 @@ func checkManifest0473(src map[string]any) error {
 	}
 	for field, val := range map[string]string{"project_id": m.ProjectID, "profile_id": m.ProfileID, "channel": m.Channel, "version": m.Version} {
 		if src[field] != val {
-			return fmt.Errorf("manifest %s mismatch", field)
+			return fmt.Errorf("Несоответствие: манифест %s", field)
 		}
 	}
 	if src["status"] == "published" && m.Signature == nil {
@@ -534,7 +534,7 @@ func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, 
 func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASecrets0474) (LiveReport0473, error) {
 	report := LiveReport0473{Format: liveImportVersion0473}
 	if strings.TrimSpace(postgresDSN) == "" {
-		return report, errors.New("PostgreSQL DSN required")
+		return report, errors.New("Необходимо указать DSN PostgreSQL")
 	}
 	pg, err := pgx.Connect(ctx, postgresDSN)
 	if err != nil {
@@ -660,7 +660,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 				}
 				if rule.source == "users" {
 					if epoch, ok := row["auth_epoch"].(int64); !ok || epoch < 1 {
-						return fmt.Errorf("invalid user auth_epoch %v", row["auth_epoch"])
+						return fmt.Errorf("Некорректное значение: пользователь auth_epoch %v", row["auth_epoch"])
 					}
 					dst["core_auth_epoch_0474"] = row["auth_epoch"]
 					dst["project_roles"] = "{}"

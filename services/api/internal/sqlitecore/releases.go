@@ -33,7 +33,7 @@ func scanRelease(s interface{ Scan(...any) error }) (model.ReleaseVersion, error
 		return v, e
 	}
 	if v.ProjectID != v.Manifest.ProjectID || v.ProfileID != v.Manifest.ProfileID || v.Channel != v.Manifest.Channel || v.Version != v.Manifest.Version {
-		return v, errors.New("release/manifest identity mismatch")
+		return v, errors.New("Несоответствие: release/manifest идентификатор")
 	}
 	v.PublishedAt = ts(published)
 	return v, nil
@@ -76,7 +76,7 @@ func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, chan
 	channel = strings.TrimSpace(channel)
 	version = strings.TrimSpace(version)
 	if projectID == "" || profileID == "" || channel == "" || version == "" {
-		return out, errors.New("project/profile/channel/version required")
+		return out, errors.New("Требуется: project/profile/channel/version")
 	}
 	id := fmt.Sprintf("%s-%s-%s", projectID, profileID, version)
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -155,7 +155,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	// записью опубликованного head канала требуйте минимальные исполняемые
 	// метаданные.
 	if strings.TrimSpace(m.Minecraft.Version) == "" || m.Runtime.Java.MajorVersion == 0 || (m.Runtime.Launch.MainClass == "" && m.Minecraft.MainClass == "") {
-		return errors.New("cannot publish incomplete Minecraft/runtime launch metadata")
+		return errors.New("Нельзя публиковать неполные метаданные запуска Minecraft и среды выполнения")
 	}
 	if m.Signature == nil || !strings.EqualFold(m.Signature.Algorithm, "Ed25519") {
 		return errors.New("release must have Ed25519 signature")
@@ -165,11 +165,11 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	}
 	pub, e := hex.DecodeString(m.Signature.PublicKey)
 	if e != nil || len(pub) != ed25519.PublicKeySize {
-		return errors.New("invalid Ed25519 public key")
+		return errors.New("Некорректное значение: Ed25519 открытый ключ")
 	}
 	sig, e := hex.DecodeString(m.Signature.Signature)
 	if e != nil || len(sig) != ed25519.SignatureSize {
-		return errors.New("invalid Ed25519 signature")
+		return errors.New("Некорректное значение: Ed25519 подпись")
 	}
 	trusted := false
 	for _, root := range roots {

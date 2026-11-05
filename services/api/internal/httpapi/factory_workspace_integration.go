@@ -32,10 +32,10 @@ func factoryReadSource0401(root string, f struct {
 		return nil, errors.New("invalid factory output size or SHA-256")
 	}
 	if f.Path == "" || filepath.IsAbs(f.Path) || strings.ContainsAny(f.Path, "\\\x00") {
-		return nil, errors.New("invalid factory output path")
+		return nil, errors.New("Некорректное значение: результат Client Factory путь")
 	}
 	if stat, err := os.Lstat(root); err != nil || !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("invalid factory output root")
+		return nil, errors.New("Некорректное значение: результат Client Factory корень")
 	}
 	full := root
 	for _, part := range strings.Split(f.Path, "/") {
@@ -61,7 +61,7 @@ func factoryReadSource0401(root string, f struct {
 		return nil, err
 	}
 	if !stat.Mode().IsRegular() || stat.Size() != f.Size {
-		return nil, errors.New("factory output size/type mismatch")
+		return nil, errors.New("Несоответствие: результат Client Factory size/type")
 	}
 	b, err := io.ReadAll(io.LimitReader(file, f.Size+1))
 	if err != nil {

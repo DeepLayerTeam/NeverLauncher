@@ -25,7 +25,7 @@ func validateChunks(png []byte) error {
 		content := png[begin:dataEnd]
 		actualCRC := binary.BigEndian.Uint32(png[dataEnd:])
 		if crc32.ChecksumIEEE(content) != actualCRC {
-			return fmt.Errorf("%w: CRC mismatch", ErrInvalid)
+			return fmt.Errorf("Несоответствие: %w: CRC", ErrInvalid)
 		}
 		for _, c := range chunkType {
 			if !(c >= 'A' && c <= 'Z') && !(c >= 'a' && c <= 'z') {

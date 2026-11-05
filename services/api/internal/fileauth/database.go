@@ -66,7 +66,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 	for decoder.More() {
 		keyToken, err := decoder.Token()
 		if err != nil {
-			return nil, fmt.Errorf("invalid FileAuth key: %w", err)
+			return nil, fmt.Errorf("Некорректное значение: FileAuth ключ: %w", err)
 		}
 		key, ok := keyToken.(string)
 		if !ok {
@@ -74,7 +74,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 		}
 		var src rawUser
 		if err := decoder.Decode(&src); err != nil {
-			return nil, fmt.Errorf("invalid FileAuth user: %w", err)
+			return nil, fmt.Errorf("Некорректное значение: FileAuth пользователь: %w", err)
 		}
 		uuid := strings.ToLower(strings.TrimSpace(key))
 		if !uuidPattern.MatchString(uuid) || (src.UUID != "" && !strings.EqualFold(src.UUID, uuid)) {
@@ -139,7 +139,7 @@ func EncodeCredential(format, hash string) (string, error) {
 			raw, err = base64.URLEncoding.Strict().DecodeString(hash)
 		}
 		if err != nil || len(raw) != 32 || (base64.RawURLEncoding.EncodeToString(raw) != hash && base64.URLEncoding.EncodeToString(raw) != hash) {
-			return "", errors.New("invalid SHA256 Base64URL digest")
+			return "", errors.New("Некорректное значение: SHA256 Base64URL дайджест")
 		}
 		hash = hex.EncodeToString(raw)
 		format = "sha256-hex"
@@ -159,7 +159,7 @@ func EncodeCredential(format, hash string) (string, error) {
 		hash = strings.ToLower(hash)
 	case "phpass":
 		if len(hash) != 34 || !(strings.HasPrefix(hash, "$P$") || strings.HasPrefix(hash, "$H$")) {
-			return "", errors.New("invalid PHPass hash")
+			return "", errors.New("Некорректное значение: PHPass хеш")
 		}
 		if !validPHPass(hash) {
 			return "", errors.New("unsafe or malformed PHPass hash")

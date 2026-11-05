@@ -129,7 +129,7 @@ func VerifyRelease(m model.Manifest, trusted ed25519.PublicKey) (string, error) 
 	}
 	sig, err := hex.DecodeString(m.Signature.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return "", errors.New("invalid release signature")
+		return "", errors.New("Некорректное значение: подпись релиза")
 	}
 	bare := m
 	bare.Signature = nil

@@ -57,10 +57,10 @@ func decodeJavaPreparedContent0486(raw json.RawMessage) ([]byte, error) {
 // провайдера возврат к неподписанным непреобразованным байтам запрещён.
 func (s Server) prepareJavaPackageFile0486(ctx context.Context, extensionID, projectID, filename string, raw []byte) ([]byte, error) {
 	if s.ExtensionHost == nil {
-		return nil, errors.New("Java extension Host unavailable")
+		return nil, errors.New("Недоступно: Java хост расширений")
 	}
 	if !contentExtensionID0486.MatchString(extensionID) {
-		return nil, errors.New("invalid content extension ID")
+		return nil, errors.New("Некорректное значение: содержимое ID расширения")
 	}
 	if projectID == "" || filename == "" {
 		return nil, errors.New("package project and path required")

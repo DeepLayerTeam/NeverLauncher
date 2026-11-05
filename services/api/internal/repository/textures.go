@@ -38,11 +38,11 @@ func scanTextureAssignment0251(row interface{ Scan(...any) error }) (model.Textu
 func canonicalUUID0251(raw string) (string, error) {
 	s := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(raw), "-", ""))
 	if len(s) != 32 {
-		return "", fmt.Errorf("invalid Minecraft UUID")
+		return "", fmt.Errorf("Некорректный UUID Minecraft")
 	}
 	for _, c := range s {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return "", fmt.Errorf("invalid Minecraft UUID")
+			return "", fmt.Errorf("Некорректный UUID Minecraft")
 		}
 	}
 	return s[:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:], nil
@@ -173,7 +173,7 @@ func validateTextureSelection0251(kind, skinModel, visibility string) error {
 		return fmt.Errorf("unsupported texture kind")
 	}
 	if skinModel != "classic" && skinModel != "slim" {
-		return fmt.Errorf("unsupported skin model")
+		return fmt.Errorf("Не поддерживается: модель скина")
 	}
 	if kind == "cape" && skinModel != "classic" {
 		return fmt.Errorf("cape cannot use slim model")
@@ -291,7 +291,7 @@ func (r *SQLRepository) ListTextureRevisions0251(ctx context.Context, profile mo
 		return nil, err
 	}
 	if kind != "skin" && kind != "cape" {
-		return nil, fmt.Errorf("unsupported kind")
+		return nil, fmt.Errorf("Не поддерживается: тип")
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT v.assignment_id,v.revision,v.snapshot,v.actor_user_id,v.reason,v.event,v.created_at
       FROM texture_assignment_revisions v JOIN texture_assignments a ON a.id=v.assignment_id
@@ -321,7 +321,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 		return err
 	}
 	if profile.Realm != "local" || profile.Issuer != "launcher" {
-		return fmt.Errorf("not a local Minecraft profile")
+		return fmt.Errorf("Профиль не является локальным профилем Minecraft")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

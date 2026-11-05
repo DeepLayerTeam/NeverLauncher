@@ -168,7 +168,7 @@ func verifyEvidence(b Bundle, dir string) error {
 		}
 		sum, err := shaFile(evidence, 128<<20)
 		if err != nil || sum != check.EvidenceSHA256 {
-			return fmt.Errorf("%s evidence SHA-256 mismatch", check.Name)
+			return fmt.Errorf("Несоответствие: %s свидетельство SHA-256", check.Name)
 		}
 		if check.Name == "uuid-world-plugin-data" {
 			auditRaw, readErr := os.ReadFile(evidence)
@@ -183,7 +183,7 @@ func verifyEvidence(b Bundle, dir string) error {
 			sort.Strings(source)
 			sort.Strings(target)
 			if !bytes.Equal([]byte(strings.Join(source, "\n")), []byte(strings.Join(target, "\n"))) {
-				return errors.New("source/target UUID mismatch")
+				return errors.New("Несоответствие: source/target UUID")
 			}
 			for i, id := range source {
 				if id == "" || (i > 0 && id == source[i-1]) {
@@ -215,7 +215,7 @@ func loadTrustedKey(filename string) (ed25519.PublicKey, error) {
 	}
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
-		return nil, errors.New("trusted key must be Ed25519")
+		return nil, errors.New("Требуемый формат для доверенный ключ: Ed25519")
 	}
 	return pub, nil
 }

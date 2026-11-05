@@ -82,7 +82,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		}
 		paths = append(paths, rel)
 		if len(paths) > stateMaxFiles {
-			return errors.New("too many snapshot files")
+			return errors.New("Слишком много файлов снимка")
 		}
 		return nil
 	})

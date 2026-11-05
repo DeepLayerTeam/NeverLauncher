@@ -127,7 +127,7 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 	}
 	token = strings.TrimSpace(token)
 	if token == "" {
-		return errors.New("bootstrap token required")
+		return errors.New("Требуется: токен начальной загрузки")
 	}
 	hash := bootstrapTokenHashP0(token)
 	if isMemoryRepository950(s.Config.RepositoryDriver) {

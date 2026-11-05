@@ -128,7 +128,7 @@ func (a *extensionPackageAnalysis0202) Close() error {
 
 func handleExtensionPackage0202(args []string) error {
 	if len(args) == 0 {
-		return errors.New("extension package command missing")
+		return errors.New("Отсутствует: команда управления пакетом расширения")
 	}
 	switch args[0] {
 	case "pack":
@@ -611,7 +611,7 @@ func extensionSBOMBytes0202(manifest CanonicalExtensionManifest0201, canonicalDi
 func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0201, canonicalDigest string, payload ExtensionPackagePayload0202, buildTime time.Time) error {
 	var doc extensionSPDXDocument0202
 	if err := decodeStrictJSON0202(data, &doc); err != nil {
-		return fmt.Errorf("decode SBOM.spdx.json: %w", err)
+		return fmt.Errorf("Декодирование: SBOM.spdx.json: %w", err)
 	}
 	pkgID := "SPDXRef-Package-Extension"
 	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://launcher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
@@ -846,7 +846,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	}
 	var descriptor ExtensionPackageDescriptor0202
 	if err := decodeStrictJSON0202(descriptorBytes, &descriptor); err != nil {
-		return nil, fmt.Errorf("decode launcher-package.json: %w", err)
+		return nil, fmt.Errorf("Декодирование: launcher-package.json: %w", err)
 	}
 	if descriptor.Format != extensionPackageFormat0202 || descriptor.FormatVersion != extensionPackageFormatVersion0202 {
 		return nil, fmt.Errorf("unsupported .nlext format %q/%q", descriptor.Format, descriptor.FormatVersion)
@@ -893,7 +893,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		}
 		var envelope ExtensionPackageSignature0202
 		if err := decodeStrictJSON0202(signatureBytes, &envelope); err != nil {
-			return nil, fmt.Errorf("decode signature.ed25519: %w", err)
+			return nil, fmt.Errorf("Декодирование: signature.ed25519: %w", err)
 		}
 		if envelope.SchemaVersion != "1.0" || envelope.Algorithm != "Ed25519" || envelope.SigningDomain != extensionSigningDomain0202() || envelope.PackageIdentity != descriptor.PackageIdentity {
 			return nil, errors.New("signature.ed25519 metadata не соответствует package identity/format")
@@ -940,7 +940,7 @@ func decodeStrictJSON0202(data []byte, out any) error {
 	var trailing any
 	if err := dec.Decode(&trailing); err != io.EOF {
 		if err == nil {
-			return errors.New("trailing JSON value")
+			return errors.New("Лишнее значение после JSON")
 		}
 		return err
 	}

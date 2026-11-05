@@ -74,10 +74,10 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		return zero, fmt.Errorf("invalid verified PNG")
 	}
 	if input.Driver != "local" && input.Driver != "s3" {
-		return zero, fmt.Errorf("invalid storage driver")
+		return zero, fmt.Errorf("Некорректное значение: драйвер хранилища")
 	}
 	if !strings.HasPrefix(input.ObjectKey, "texture-blobs/sha256/"+input.Digest[:2]+"/") || !strings.HasSuffix(input.ObjectKey, "/"+input.Digest+".png") {
-		return zero, fmt.Errorf("invalid texture object key")
+		return zero, fmt.Errorf("Некорректное значение: объект текстуры ключ")
 	}
 	for _, c := range input.Digest {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {

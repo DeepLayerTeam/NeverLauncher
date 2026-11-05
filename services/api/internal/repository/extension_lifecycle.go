@@ -48,7 +48,7 @@ func normalizeLifecycleState0204(v string) (string, error) {
 func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (model.ExtensionLifecycleTransition, error) {
 	in.ExtensionID = strings.ToLower(strings.TrimSpace(in.ExtensionID))
 	if !extensionID0201.MatchString(in.ExtensionID) {
-		return model.ExtensionLifecycleTransition{}, fmt.Errorf("invalid extension id %q", in.ExtensionID)
+		return model.ExtensionLifecycleTransition{}, fmt.Errorf("Некорректное значение: ID расширения %q", in.ExtensionID)
 	}
 	var err error
 	in.Scope, in.ScopeID, err = normalizeLifecycleScope0204(in.Scope, in.ScopeID)

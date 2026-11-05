@@ -126,7 +126,7 @@ func bomCheckSourceVersion03214(name, rel, ver string, raw []byte) error {
 			return err
 		}
 		if obj.ProductVersion != ver {
-			return fmt.Errorf("%s productVersion mismatch", name)
+			return fmt.Errorf("Несоответствие: %s productVersion", name)
 		}
 	case rel == "schemas/openapi.yaml":
 		if !strings.Contains(s, "Launcher "+ver+".") {
@@ -273,7 +273,7 @@ func verifyReleaseBOM03214(dir, ver string) error {
 	for i, e := range actual {
 		expected := bom.Artifacts[i]
 		if e != expected || !bomSHA03214(expected.SHA256) {
-			return fmt.Errorf("BOM artifact mismatch: actual=%s expected=%s", e.File, expected.File)
+			return fmt.Errorf("Несоответствие: BOM артефакт: фактически=%s ожидалось=%s", e.File, expected.File)
 		}
 	}
 	return bomCheckRequiredArtifacts03214(dir, ver, bom.Artifacts)

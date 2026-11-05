@@ -25,12 +25,12 @@ func normalizeUpdateScope02011(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("scope must be global or project")
+		return "", "", errors.New("Область действия должна иметь значение global или project")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("project scope requires scopeId")
+		return "", "", errors.New("Для области проекта необходимо указать scopeId")
 	}
 	return scope, scopeID, nil
 }

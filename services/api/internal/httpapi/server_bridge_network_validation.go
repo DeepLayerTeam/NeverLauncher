@@ -9,7 +9,7 @@ import (
 
 func parseNetworkCapacity0288(data []byte) (*int, error) {
 	if len(data) == 0 {
-		return nil, errors.New("capacityLimit required")
+		return nil, errors.New("Требуется: capacityLimit")
 	}
 	if string(data) == "null" {
 		return nil, nil

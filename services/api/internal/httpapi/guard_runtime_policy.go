@@ -45,7 +45,7 @@ func guardRuntimePolicyRequired0317(version string) bool {
 
 func normalizeGuardRuntimeProfiles0317(input []guardRuntimeProfile0317) ([]guardRuntimeProfile0317, error) {
 	if len(input) > 32 {
-		return nil, errors.New("too many Guard runtime profiles (max 32)")
+		return nil, errors.New("Слишком много профилей среды выполнения Guard (максимум 32)")
 	}
 	out := make([]guardRuntimeProfile0317, 0, len(input))
 	seen := make(map[string]bool, len(input))
@@ -175,7 +175,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	}
 	policy, ok := policies[version]
 	if !ok {
-		return errors.New("Continuous Guard release revoked")
+		return errors.New("Отозвано: непрерывный релиз Guard")
 	}
 	allowed, _, err := policy.allowsArtifactPair0140(device.Platform, metadataString0121(ticket.Metadata, "guardSha256"), metadataString0121(ticket.Metadata, "launcherSha256"))
 	if err != nil || !allowed {

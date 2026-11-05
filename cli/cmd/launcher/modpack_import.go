@@ -247,12 +247,12 @@ func loaderFromCurse0275(m curseIndex0275) (string, string, string, error) {
 		if strings.HasPrefix(strings.ToLower(id), name+"-") {
 			v := id[len(name)+1:]
 			if v == "" || isMutableLoaderSelector(v) {
-				return "", "", "", errors.New("invalid CurseForge loader version")
+				return "", "", "", errors.New("Некорректное значение: CurseForge версия загрузчика")
 			}
 			return mc, name, v, nil
 		}
 	}
-	return "", "", "", fmt.Errorf("unsupported CurseForge loader %q", id)
+	return "", "", "", fmt.Errorf("Не поддерживается: CurseForge загрузчик %q", id)
 }
 func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *zip.ReadCloser, error) {
 	var spec modpackSpec0275
@@ -478,7 +478,7 @@ func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir stri
 		}
 	}
 	if len(paths) == 0 {
-		return "", "", 0, errors.New("no permitted download URL: manual verified artifact required")
+		return "", "", 0, errors.New("Нет разрешённого URL загрузки: требуется вручную проверенный артефакт")
 	}
 	var last error
 	for _, raw := range paths {
@@ -524,9 +524,9 @@ func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir stri
 			} else if n != f.Size {
 				err = errors.New("Несовпадение размера файла")
 			} else if f.SHA1 != "" && !strings.EqualFold(f.SHA1, hex.EncodeToString(h1.Sum(nil))) {
-				err = errors.New("SHA-1 mismatch")
+				err = errors.New("Несоответствие: SHA-1")
 			} else if f.SHA512 != "" && !strings.EqualFold(f.SHA512, hex.EncodeToString(h512.Sum(nil))) {
-				err = errors.New("SHA-512 mismatch")
+				err = errors.New("Несоответствие: SHA-512")
 			} else if f.SHA256 != "" && !strings.EqualFold(f.SHA256, hex.EncodeToString(h256.Sum(nil))) {
 				err = errors.New("SHA-256 mismatch")
 			}
@@ -692,7 +692,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	report := modpackReportFromSpec0275(spec)
 	report.Distribution = distribution
 	if destination == "" {
-		return report, errors.New("--client-dir required")
+		return report, errors.New("Требуется: --client-dir")
 	}
 	abs, err := filepath.Abs(destination)
 	if err != nil {

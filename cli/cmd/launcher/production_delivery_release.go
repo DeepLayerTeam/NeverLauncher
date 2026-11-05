@@ -294,11 +294,11 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, productionDeliveryReleaseFile0160))
 	if err != nil {
-		return "", fmt.Errorf("read %s: %w", productionDeliveryReleaseFile0160, err)
+		return "", fmt.Errorf("Чтение: %s: %w", productionDeliveryReleaseFile0160, err)
 	}
 	var doc productionDeliveryRelease0160
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		return "", fmt.Errorf("invalid %s: %w", productionDeliveryReleaseFile0160, err)
+		return "", fmt.Errorf("Некорректное значение: %s: %w", productionDeliveryReleaseFile0160, err)
 	}
 	commit, err := normalizeSourceCommit01511(doc.SourceCommit)
 	if err != nil {

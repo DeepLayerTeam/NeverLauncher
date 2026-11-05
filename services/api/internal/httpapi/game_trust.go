@@ -55,7 +55,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 		return p, e
 	}
 	if !stat.Mode().IsRegular() || stat.Size() > 128*1024 {
-		return p, errors.New("unsafe game policy file")
+		return p, errors.New("Небезопасный объект: игра файл политики")
 	}
 	raw, e := os.ReadFile(path)
 	if e != nil {
@@ -70,7 +70,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) > 96*1024 {
-		return p, errors.New("invalid game trust policy payload")
+		return p, errors.New("Некорректное значение: игра данные политики доверия")
 	}
 	sig, e := hex.DecodeString(env.RootSignature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte("Launcher-Trust-Policy-v1\n"), payload...), sig) {

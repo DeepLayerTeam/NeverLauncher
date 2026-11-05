@@ -165,24 +165,24 @@ func recomputeGuardAttestationV2SHA25601810(a guardRemoteAttestationV201810) str
 
 func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now time.Time) error {
 	if e.Schema != guardContinuousEvidenceSchema01810 || e.EvidenceVersion != guardContinuousEvidenceVersion01810 || !validGuardProcessID0317(e.ProcessID) || e.RuntimePID == 0 {
-		return errors.New("Guard Attestation v2 continuous evidence schema/identity mismatch")
+		return errors.New("Несоответствие схемы или идентификатора свидетельств непрерывной проверки Guard Attestation v2")
 	}
 	if e.SensorProtocolVersion != 3 || e.ModuleGuardVersion != 1 || e.ContinuousGuardVersion != 1 {
-		return errors.New("Guard Attestation v2 continuous component version mismatch")
+		return errors.New("Несовпадение версии компонента непрерывной проверки Guard Attestation v2")
 	}
 	if !e.SensorAuthenticated || !e.SensorLoadedBeforeMain || !e.ModuleGuardHealthy || !e.HookEngineHealthy || !e.MemoryIntegrityHealthy || !e.ThreadProcessIntegrityHealthy || !e.JobBound || !e.DebugInstrumentationHealthy || !e.JVMAwareHealthy || !e.ContinuousGuardHealthy {
-		return errors.New("Guard Attestation v2 continuous protection is not healthy")
+		return errors.New("Непрерывная защита Guard Attestation v2 работает некорректно")
 	}
 	if e.ModuleEventCount == 0 || e.ModuleLastSequence == 0 || e.SensorHeartbeatCount == 0 || e.GuardHeartbeatCount == 0 || e.CrossCheckCount == 0 || e.LastSensorSequence == 0 || e.LastGuardSequence == 0 {
-		return errors.New("Guard Attestation v2 continuous counters are not armed")
+		return errors.New("Счётчики непрерывной проверки Guard Attestation v2 не активированы")
 	}
 	if e.SensorHeartbeatCount != e.GuardHeartbeatCount || e.SensorHeartbeatCount != e.CrossCheckCount {
-		return errors.New("Guard Attestation v2 Sensor/Guard heartbeat counters diverged")
+		return errors.New("Счётчики активности Sensor и Guard для Guard Attestation v2 не совпадают")
 	}
 	switch e.JavaMajor {
 	case 8, 16, 17, 21, 25:
 	default:
-		return errors.New("Guard Attestation v2 Java major is not certified")
+		return errors.New("Основная версия Java не сертифицирована для Guard Attestation v2")
 	}
 	for label, value := range map[string]string{
 		"module event chain":  e.ModuleEventChainSHA256,
@@ -207,11 +207,11 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 	maxFuture := nowMS + 2_000
 	maxStale := uint64(guardContinuousMaxStaleness01810 / time.Millisecond)
 	if e.CollectedAtUnixMS > maxFuture || nowMS > e.CollectedAtUnixMS+maxStale || nowMS > e.LastSensorHeartbeatUnixMS+maxStale || nowMS > e.LastGuardHeartbeatUnixMS+maxStale || e.LastSensorHeartbeatUnixMS > e.CollectedAtUnixMS+2_000 || e.LastGuardHeartbeatUnixMS > e.CollectedAtUnixMS+2_000 {
-		return errors.New("Guard Attestation v2 continuous evidence is stale")
+		return errors.New("Свидетельства непрерывной проверки Guard Attestation v2 устарели")
 	}
 	expected := recomputeGuardContinuousEvidenceSHA25601810(e)
 	if !hmac.Equal([]byte(expected), []byte(strings.ToLower(strings.TrimSpace(e.EvidenceSHA256)))) {
-		return errors.New("Guard Attestation v2 continuous evidence digest mismatch")
+		return errors.New("Дайджест свидетельств непрерывной проверки Guard Attestation v2 не совпадает")
 	}
 	return nil
 }
@@ -222,13 +222,13 @@ func validateGuardAttestationV201810(a guardRemoteAttestationV201810, challengeI
 	}
 	expectedChallenge := deviceChallengeHash0121(challenge)
 	if !hmac.Equal([]byte(expectedChallenge), []byte(strings.ToLower(strings.TrimSpace(a.ChallengeSHA256)))) {
-		return errors.New("Guard Attestation v2 challenge hash mismatch")
+		return errors.New("Хеш проверочного запроса Guard Attestation v2 не совпадает")
 	}
 	if !isSHA256Hex0134(a.AttestationSHA256) {
 		return errors.New("Guard Attestation v2 digest malformed")
 	}
 	if a.BaseAttestation.ChallengeID != a.ChallengeID || !hmac.Equal([]byte(a.BaseAttestation.ChallengeSHA256), []byte(a.ChallengeSHA256)) {
-		return errors.New("Guard Attestation v2 base challenge binding mismatch")
+		return errors.New("Несоответствие привязки базового проверочного запроса Guard Attestation v2")
 	}
 	if err := validateGuardAttestation0134(a.BaseAttestation, challengeID, challenge, policy, platform, now, challengeCreatedAt); err != nil {
 		return fmt.Errorf("Guard Attestation v2 base verification failed: %w", err)
@@ -237,18 +237,18 @@ func validateGuardAttestationV201810(a guardRemoteAttestationV201810, challengeI
 		return err
 	}
 	if a.CollectedAtUnixMS != a.ContinuousEvidence.CollectedAtUnixMS {
-		return errors.New("Guard Attestation v2 collection timestamp mismatch")
+		return errors.New("Не совпадает временная метка сбора данных Guard Attestation v2")
 	}
 	baseCollectedMS := a.BaseAttestation.CollectedAtUnix * 1000
 	if a.CollectedAtUnixMS+5_000 < baseCollectedMS || baseCollectedMS+5_000 < a.CollectedAtUnixMS {
-		return errors.New("Guard Attestation v2 base/continuous collection windows diverged")
+		return errors.New("Окна сбора базовых и непрерывных свидетельств Guard Attestation v2 различаются")
 	}
 	if a.ContinuousEvidence.RuntimePID == a.BaseAttestation.Evidence.Guard.PID || a.ContinuousEvidence.RuntimePID == a.BaseAttestation.Evidence.Launcher.PID {
-		return errors.New("Guard Attestation v2 runtime PID collides with Guard/Desktop boundary")
+		return errors.New("PID среды выполнения Guard Attestation v2 пересекает границу процессов Guard и Desktop")
 	}
 	expected := recomputeGuardAttestationV2SHA25601810(a)
 	if !hmac.Equal([]byte(expected), []byte(strings.ToLower(strings.TrimSpace(a.AttestationSHA256)))) {
-		return errors.New("Guard Attestation v2 digest verification failed")
+		return errors.New("Проверка дайджеста Guard Attestation v2 не пройдена")
 	}
 	return nil
 }
@@ -491,7 +491,7 @@ func (s Server) consumeGuardContinuousJoinTicket01810(r *http.Request, claims au
 	raw = strings.TrimSpace(raw)
 	parts := strings.Split(raw, ".")
 	if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" || len(raw) > 512 {
-		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket malformed")
+		return model.DeviceChallenge{}, errors.New("Некорректный билет непрерывной проверки Guard")
 	}
 	if strings.TrimSpace(claims.TrustedDeviceID) == "" {
 		return model.DeviceChallenge{}, errors.New("Текущий сеанс не привязан к доверенному устройству")
@@ -499,13 +499,13 @@ func (s Server) consumeGuardContinuousJoinTicket01810(r *http.Request, claims au
 	now := time.Now().UTC()
 	ticket, err := s.Repo.ConsumeDeviceChallenge(r.Context(), parts[0], claims.Sub, claims.TrustedDeviceID, guardContinuousJoinPurpose01810, deviceChallengeHash0121(parts[1]), now)
 	if err != nil {
-		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket invalid, expired or already used")
+		return model.DeviceChallenge{}, errors.New("Билет непрерывной проверки Guard недействителен, просрочен или уже использован")
 	}
 	if metadataString0121(ticket.Metadata, "sessionId") != claims.SessionID || metadataString0121(ticket.Metadata, "bindingEpoch") != strconv.FormatInt(claims.BindingEpoch, 10) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "attestationSha256")) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "continuousEvidenceSha256")) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "baseAttestationSha256")) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "guardSha256")) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "launcherSha256")) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "sensorEventChainSha256")) || !isSHA256Hex0134(metadataString0121(ticket.Metadata, "lastCrossCheckSha256")) {
-		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket session/evidence binding mismatch")
+		return model.DeviceChallenge{}, errors.New("Несоответствие привязки билета Guard к сеансу и свидетельствам")
 	}
 	if runtimePID, err := strconv.ParseUint(metadataString0121(ticket.Metadata, "runtimePid"), 10, 32); err != nil || runtimePID == 0 {
-		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket runtime binding malformed")
+		return model.DeviceChallenge{}, errors.New("Некорректная привязка билета Guard к среде выполнения")
 	}
 	// Билет не остаётся авторитетным бесконечно. Перед допуском к подключению
 	// повторно проверяйте устройство, пригодность сеанса и ТЕКУЩИЕ списки
@@ -518,7 +518,7 @@ func (s Server) consumeGuardContinuousJoinTicket01810(r *http.Request, claims au
 
 func validateContinuousGuardTicketForMinecraftSession01810(ticket model.DeviceChallenge, session model.MinecraftSession) error {
 	if strings.TrimSpace(session.ID) == "" || !session.IntegrityVerified {
-		return errors.New("Minecraft integrity session is not verified")
+		return errors.New("Целостность сеанса Minecraft не подтверждена")
 	}
 	if !session.CreatedAt.IsZero() && ticket.CreatedAt.Before(session.CreatedAt.Add(-guardAttestationClockSkew0134)) {
 		return errors.New("Continuous Guard runtime evidence predates Minecraft session")

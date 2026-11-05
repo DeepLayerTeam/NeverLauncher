@@ -32,7 +32,7 @@ func worldBackupHostGateAcquire04110(root, purpose string) (func(), error) {
 	}
 	identity := hostOwnIdentity0282()
 	if identity == "" {
-		return nil, errors.New("cannot prove gate owner OS process identity")
+		return nil, errors.New("Не удалось подтвердить идентификатор процесса ОС, владеющего блокировкой")
 	}
 	path := worldBackupHostGatePath04110(root)
 	parent := filepath.Dir(path)
@@ -103,7 +103,7 @@ func worldBackupHostGateRecover04110(root string) error {
 	paths := hostPaths01910(root)
 	state, stateErr := readServerBridgeHostRuntime01910(paths["runtime"])
 	if stateErr != nil && !errors.Is(stateErr, os.ErrNotExist) {
-		return fmt.Errorf("cannot reconcile JVM state: %w", stateErr)
+		return fmt.Errorf("Не удалось согласовать состояние JVM: %w", stateErr)
 	}
 	if stateErr == nil {
 		if hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) ||

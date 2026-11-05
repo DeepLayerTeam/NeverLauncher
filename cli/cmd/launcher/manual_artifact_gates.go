@@ -81,7 +81,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		return p, errors.New("unsupported permission schema or invalid pack SHA256")
 	}
 	if len(p.Grants) > 4000 {
-		return p, errors.New("too many permission grants")
+		return p, errors.New("Превышено допустимое число предоставленных разрешений")
 	}
 	unique := map[string]bool{}
 	for _, g := range p.Grants {
@@ -99,7 +99,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		}
 		u, _ := url.Parse(g.EvidenceURL)
 		if u.Scheme != "https" {
-			return p, fmt.Errorf("%s: evidence URL must be HTTPS", g.Path)
+			return p, fmt.Errorf("Требуемый формат для %s: свидетельство URL: HTTPS", g.Path)
 		}
 		if unique[strings.ToLower(g.Path)] {
 			return p, fmt.Errorf("duplicate permission entry for %q", g.Path)
@@ -303,7 +303,7 @@ func handlePermissionGates0276(args []string) error {
 	flags := args[1:]
 	dir := flagValue(flags, "--client-dir", "")
 	if dir == "" {
-		return errors.New("--client-dir required")
+		return errors.New("Требуется: --client-dir")
 	}
 	permissions := flagValue(flags, "--permissions-file", "")
 	output := flagValue(flags, "--output", "")

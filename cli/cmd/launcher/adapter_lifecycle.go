@@ -130,7 +130,7 @@ func checkAdapterUpgradeSources02711(old, next []factorySource0271) error {
 func factoryAdapterTargetCheck02711(p factoryPlan0271) error {
 	for _, target := range p.Targets {
 		if _, err := normalizeVanillaTarget(target); err != nil {
-			return fmt.Errorf("unsupported build target %s/%s: %w", target.OS, target.Arch, err)
+			return fmt.Errorf("Не поддерживается: цель сборки %s/%s: %w", target.OS, target.Arch, err)
 		}
 	}
 	// Классические варианты Forge 1.7.10 и 1.12.2 намеренно используют Java 8. Для
@@ -166,7 +166,7 @@ func invalidateFactoryProcessorRecovery02711(staging, loader string) error {
 		}
 		if !d.IsDir() && d.Name() == "processor-journal.json" {
 			if !d.Type().IsRegular() {
-				return fmt.Errorf("invalid processor journal type %s", path)
+				return fmt.Errorf("Некорректное значение: тип журнала процессора %s", path)
 			}
 			return os.Remove(path)
 		}

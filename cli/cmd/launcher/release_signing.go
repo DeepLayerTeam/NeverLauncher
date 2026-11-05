@@ -317,7 +317,7 @@ func verifyDetachedEd25519(path, signaturePath, publicKeyPath string) (map[strin
 		return nil, errors.New("detached signature должна быть base64 или hex")
 	}
 	if len(sig) != ed25519.SignatureSize || !ed25519.Verify(pub, data, sig) {
-		return nil, errors.New("Ed25519 signature verification failed")
+		return nil, errors.New("Проверка подписи Ed25519 завершилась ошибкой")
 	}
 	digest := sha256.Sum256(data)
 	pubDigest := sha256.Sum256(pub)
@@ -356,7 +356,7 @@ func verifyDetachedFileWithKey(path, signaturePath string, publicKey ed25519.Pub
 		return err
 	}
 	if len(sig) != ed25519.SignatureSize || !ed25519.Verify(publicKey, data, sig) {
-		return errors.New("Ed25519 detached signature verification failed")
+		return errors.New("Проверка отделённой подписи Ed25519 завершилась ошибкой")
 	}
 	return nil
 }

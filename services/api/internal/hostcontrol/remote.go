@@ -185,7 +185,7 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 }
 func (c *Client) Execute(ctx context.Context, action, key string) (Receipt, error) {
 	if action != "start" && action != "stop" && action != "restart" {
-		return Receipt{}, errors.New("invalid host action")
+		return Receipt{}, errors.New("Некорректное значение: действие хоста")
 	}
 	if len(key) < 16 || len(key) > 128 {
 		return Receipt{}, errors.New("invalid host idempotency key")
@@ -215,7 +215,7 @@ var ErrReceiptNotFound04112 = errors.New("remote host receipt not found")
 
 func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Receipt, error) {
 	if action != "start" && action != "stop" && action != "restart" {
-		return Receipt{}, errors.New("invalid host action")
+		return Receipt{}, errors.New("Некорректное значение: действие хоста")
 	}
 	if len(key) < 16 || len(key) > 128 {
 		return Receipt{}, errors.New("invalid receipt key")

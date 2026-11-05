@@ -106,7 +106,7 @@ COMMIT;
 // psql. stdout разбирается потоково; секреты в отчёты не записываются.
 func ScanPSQL(ctx context.Context, executable, dsn string, allow []string) (Checkpoint, error) {
 	if strings.TrimSpace(dsn) == "" {
-		return Checkpoint{}, errors.New("LAUNCHER_DATABASE_DSN is required")
+		return Checkpoint{}, errors.New("Требуется: LAUNCHER_DATABASE_DSN")
 	}
 	if executable == "" {
 		executable = "psql"

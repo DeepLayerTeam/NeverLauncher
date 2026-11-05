@@ -37,7 +37,7 @@ func validHexAudit03412(v string) bool {
 
 func (r *MemoryRepository) SaveValidationAttempt03412(_ context.Context, e model.ValidationAttempt03412) error {
 	if !validValidationAttempt03412(e) {
-		return errors.New("invalid validation attempt")
+		return errors.New("Некорректное значение: попытка проверки")
 	}
 	r.validationMu.Lock()
 	defer r.validationMu.Unlock()
@@ -68,7 +68,7 @@ func (r *SQLRepository) SaveValidationAttempt03412(ctx context.Context, e model.
 		return err
 	}
 	if !validValidationAttempt03412(e) {
-		return errors.New("invalid validation attempt")
+		return errors.New("Некорректное значение: попытка проверки")
 	}
 	if ctx == nil {
 		ctx = context.Background()

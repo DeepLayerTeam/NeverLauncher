@@ -173,13 +173,13 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 			return releaseDeviceTrustCertification{}, errors.New("Device Trust target без id")
 		}
 		if _, exists := targetByID[id]; exists {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("duplicate Device Trust target: %s", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Обнаружен дубликат: цель Device Trust: %s", id)
 		}
 		if target.Kind != "protocol-e2e" && target.Kind != "native-tests" {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("unsupported Device Trust target kind %s: %s", id, target.Kind)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Тип цели Device Trust %s не поддерживается: %s", id, target.Kind)
 		}
 		if strings.TrimSpace(target.OS) == "" || strings.TrimSpace(target.Arch) == "" || strings.TrimSpace(target.Runner) == "" {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("incomplete Device Trust target: %s", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Неполные данные: цель Device Trust: %s", id)
 		}
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {

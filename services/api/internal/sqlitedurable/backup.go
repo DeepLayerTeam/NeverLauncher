@@ -293,7 +293,7 @@ func OnlineBackup(ctx context.Context, source, destination string) (m BackupMani
 func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 	var m BackupManifest
 	if path == "" {
-		return m, errors.New("backup path required")
+		return m, errors.New("Необходимо указать путь к резервной копии")
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {

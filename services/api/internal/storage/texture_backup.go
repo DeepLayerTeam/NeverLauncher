@@ -36,7 +36,7 @@ func validateBackupObject0253(store Storage, b TextureBackupObject0253) error {
 		return err
 	}
 	if b.Driver != store.Driver() || b.ObjectKey != want || b.ByteSize < 1 || b.ByteSize > 4<<20 {
-		return errors.New("invalid texture backup metadata")
+		return errors.New("Некорректное значение: резервная копия текстур метаданные")
 	}
 	return nil
 }
@@ -51,7 +51,7 @@ func backupBytes0253(store Storage, obj TextureBackupObject0253) ([]byte, error)
 	}
 	defer body.Close()
 	if sz >= 0 && sz != obj.ByteSize {
-		return nil, errors.New("texture backup size mismatch")
+		return nil, errors.New("Размер резервной копии текстур не совпадает с ожидаемым")
 	}
 	payload, err := io.ReadAll(io.LimitReader(body, 4<<20+1))
 	if err != nil {
@@ -59,7 +59,7 @@ func backupBytes0253(store Storage, obj TextureBackupObject0253) ([]byte, error)
 	}
 	sum := sha256.Sum256(payload)
 	if int64(len(payload)) != obj.ByteSize || hex.EncodeToString(sum[:]) != obj.Digest {
-		return nil, errors.New("texture backup checksum mismatch")
+		return nil, errors.New("Несовпадение контрольной суммы резервной копии текстур")
 	}
 	return payload, nil
 }
@@ -69,14 +69,14 @@ func backupBytes0253(store Storage, obj TextureBackupObject0253) ([]byte, error)
 // Назначение не должно существовать; данные копии доступны только владельцу (0600).
 func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBackupObject0253, destination string) error {
 	if destination == "" {
-		return errors.New("backup path required")
+		return errors.New("Необходимо указать путь к резервной копии")
 	}
 	dest, err := filepath.Abs(destination)
 	if err != nil {
 		return err
 	}
 	if _, err := os.Lstat(dest); err == nil {
-		return errors.New("backup destination already exists")
+		return errors.New("Целевой каталог резервной копии уже существует")
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -101,7 +101,7 @@ func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBac
 			return err
 		}
 		if visited[obj.Digest] {
-			return errors.New("duplicate texture backup digest")
+			return errors.New("Повторяющийся дайджест резервной копии текстур")
 		}
 		visited[obj.Digest] = true
 		payload, err := backupBytes0253(store, obj)
@@ -149,7 +149,7 @@ func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBac
 		return err
 	}
 	if _, err := os.Lstat(dest); err == nil {
-		return errors.New("backup destination occupied")
+		return errors.New("Место назначения резервной копии занято")
 	}
 	if err := os.Rename(stage, dest); err != nil {
 		return err
@@ -193,14 +193,14 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		return 0, closeErr
 	}
 	if len(data) > 16<<20 {
-		return 0, errors.New("backup manifest too large")
+		return 0, errors.New("Манифест резервной копии превышает допустимый размер")
 	}
 	var man textureBackupManifest0253
 	if err := json.Unmarshal(data, &man); err != nil {
 		return 0, err
 	}
 	if man.Format != 1 {
-		return 0, errors.New("unsupported texture backup format")
+		return 0, errors.New("Формат резервной копии текстур не поддерживается")
 	}
 	// Эта команда восстанавливает *полный* закреплённый набор объектов БД, а не
 	// частичный набор best-effort, который может незаметно оставить рабочие профили без
@@ -211,7 +211,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 			return 0, err
 		}
 		if _, duplicate := allowed[b.Digest]; duplicate {
-			return 0, errors.New("duplicate database inventory digest")
+			return 0, errors.New("Повторяющийся дайджест реестра базы данных")
 		}
 		allowed[b.Digest] = b
 	}
@@ -224,7 +224,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 			return 0, err
 		}
 		if visited[obj.Digest] {
-			return 0, errors.New("duplicate backup object")
+			return 0, errors.New("Повторяющийся объект резервной копии")
 		}
 		visited[obj.Digest] = true
 		if expected, ok := allowed[obj.Digest]; !ok || expected != obj {
@@ -254,7 +254,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 			return restored, err
 		}
 		if key != obj.ObjectKey || n != obj.ByteSize {
-			return restored, errors.New("restored object metadata differs")
+			return restored, errors.New("Метаданные восстановленного объекта не совпадают")
 		}
 		// Не доверять только результату операции записи хранилища. Повторно прочитать
 		// через настроенный локальный/S3 путь и проверить всё содержимое.
@@ -285,7 +285,7 @@ func checkRestoreFile0253(snapshot string, obj TextureBackupObject0253) error {
 		return err
 	}
 	if n != obj.ByteSize || hex.EncodeToString(hash.Sum(nil)) != obj.Digest {
-		return errors.New("backup file checksum mismatch")
+		return errors.New("Несовпадение контрольной суммы файла резервной копии")
 	}
 	return nil
 }

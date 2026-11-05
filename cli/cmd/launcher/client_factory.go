@@ -232,19 +232,19 @@ func readFactoryPlan0271(root string) (factoryPlan0271, error) {
 }
 func validateFactoryPlan0271(p factoryPlan0271) error {
 	if p.SchemaVersion != factoryPlanSchema0271 {
-		return fmt.Errorf("unsupported factory schema %q", p.SchemaVersion)
+		return fmt.Errorf("Неподдерживаемая схема Client Factory: %q", p.SchemaVersion)
 	}
 	if p.Loader != "vanilla" && p.Loader != "fabric" && p.Loader != "quilt" && p.Loader != "forge" && p.Loader != "neoforge" {
-		return errors.New("unknown factory loader")
+		return errors.New("Неизвестный загрузчик Client Factory")
 	}
 	if strings.TrimSpace(p.MinecraftVersion) == "" || isMutableMinecraft0271(p.MinecraftVersion) || p.Java.Major < 1 || p.Launch.MainClass == "" {
-		return errors.New("incomplete factory launch identity")
+		return errors.New("Недостаточно данных об идентичности запуска Client Factory")
 	}
 	if p.MinecraftReleaseType != "" && p.MinecraftReleaseType != "release" && p.MinecraftReleaseType != "snapshot" && p.MinecraftReleaseType != "old_beta" && p.MinecraftReleaseType != "old_alpha" {
-		return fmt.Errorf("invalid Minecraft release type %q", p.MinecraftReleaseType)
+		return fmt.Errorf("Некорректное значение: тип релиза Minecraft %q", p.MinecraftReleaseType)
 	}
 	if len(p.Targets) == 0 || !reflect.DeepEqual(p.Steps, factorySteps0271(p.Loader)) || len(p.Sources) == 0 || len(p.Outputs) == 0 {
-		return errors.New("factory plan has no targets, executable steps or outputs")
+		return errors.New("План Client Factory не содержит целевых платформ, исполняемых шагов или результатов")
 	}
 	if err := factoryAdapterTargetCheck02711(p); err != nil {
 		return err
@@ -253,7 +253,7 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 		return err
 	}
 	if p.Loader != "vanilla" && (p.LoaderVersion == "" || isMutableLoaderSelector(p.LoaderVersion) || !isSHA256Hex0271(p.LoaderResolutionSHA256) || p.Resolution == nil || !isSHA256Hex0271(p.Resolution.SourceSHA256) || !isSHA256Hex0271(p.Resolution.PayloadSHA256) || !isSHA256Hex0271(p.Resolution.ProfileSHA256)) {
-		return errors.New("factory loader is not pinned")
+		return errors.New("Версия загрузчика Client Factory не закреплена")
 	}
 	if p.Resolution != nil && p.Resolution.ResolvedVersion != "" && p.Resolution.ResolvedVersion != p.LoaderVersion {
 		return errors.New("factory loader resolution version disagrees with plan")
@@ -271,14 +271,14 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 	seenSources := map[string]bool{}
 	for _, s := range p.Sources {
 		if seenSources[s.Path] {
-			return fmt.Errorf("duplicate factory source %s", s.Path)
+			return fmt.Errorf("Обнаружен дубликат: источник Client Factory %s", s.Path)
 		}
 		seenSources[s.Path] = true
 		if err := validateVanillaRelativePath(s.Path); err != nil {
 			return err
 		}
 		if s.URL == "" || !isSHA256Hex0271(s.SHA256) || s.Size < 0 || (s.SHA1 != "" && !validSHA1Hex(s.SHA1)) {
-			return fmt.Errorf("invalid factory source %s", s.Path)
+			return fmt.Errorf("Некорректный источник Client Factory: %s", s.Path)
 		}
 	}
 	digest, err := factoryDigest0271(p)
@@ -377,7 +377,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 		return err
 	}
 	if len(actual) != len(p.Outputs) {
-		return fmt.Errorf("factory output count mismatch: locked=%d actual=%d", len(p.Outputs), len(actual))
+		return fmt.Errorf("Число результатов Client Factory не совпадает: закреплено=%d, фактически=%d", len(p.Outputs), len(actual))
 	}
 	for i, a := range actual {
 		if a != p.Outputs[i] {
@@ -403,13 +403,13 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 	switch o.Loader {
 	case "vanilla", "fabric", "quilt", "forge", "neoforge":
 	default:
-		return o, fmt.Errorf("unsupported factory adapter %s", o.Loader)
+		return o, fmt.Errorf("Неподдерживаемый адаптер Client Factory: %s", o.Loader)
 	}
 	if strings.TrimSpace(o.ClientDir) == "" {
-		return o, errors.New("factory --client-dir required")
+		return o, errors.New("Для Client Factory необходимо указать --client-dir")
 	}
 	if strings.TrimSpace(o.Minecraft) == "" {
-		return o, errors.New("factory --minecraft required")
+		return o, errors.New("Для Client Factory необходимо указать --minecraft")
 	}
 	if !o.StrictUpstream {
 		return o, errors.New("Client Factory requires strict upstream checksum verification")
@@ -418,7 +418,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		o.Workers = 12
 	}
 	if o.Workers < 1 || o.Workers > 64 {
-		return o, errors.New("workers must be between 1 and 64")
+		return o, errors.New("Допустимый диапазон для воркеры: 1–64")
 	}
 	if o.LoaderVersion == "" && o.Loader != "vanilla" {
 		o.LoaderVersion = "latest-stable"
@@ -457,7 +457,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		o.ProcessorTimeout = 10 * time.Minute
 	}
 	if o.ProcessorTimeout < time.Second || o.ProcessorTimeout > time.Hour {
-		return o, errors.New("processor timeout must be between 1s and 1h")
+		return o, errors.New("Допустимый диапазон для тайм-аут процессора: 1s–1h")
 	}
 	if o.ProcessorSandbox != "" && o.ProcessorSandbox != "process" && o.ProcessorSandbox != "required" {
 		return o, errors.New("processor sandbox must be process or required")
@@ -511,7 +511,7 @@ func copyFactoryExisting0271(from, to string) error {
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("factory destination is not a regular directory")
+		return errors.New("Каталог назначения Client Factory не является обычным каталогом")
 	}
 	return filepath.WalkDir(from, func(src string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -587,7 +587,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	defer release()
 	prior, readErr := readFactoryPlan0271(dst)
 	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
-		return factoryPlan0271{}, fmt.Errorf("cannot trust existing install-plan: %w", readErr)
+		return factoryPlan0271{}, fmt.Errorf("Не удалось подтвердить доверие к существующему InstallPlan: %w", readErr)
 	}
 	hasPrior := readErr == nil
 	if hasPrior {
@@ -684,7 +684,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		installerRel := filepath.ToSlash(filepath.Join(".launcher", "installers", o.Loader, sanitizeVersionToken(result.ArtifactVersion), "installer.jar"))
 		pinned, e := readLoaderResolutionLock(defaultLoaderResolutionLockPath(staging, o.Loader), o.Loader, vanilla.MinecraftVersion, o.LoaderVersion)
 		if e != nil || pinned == nil {
-			return factoryPlan0271{}, fmt.Errorf("missing Forge installer evidence: %v", e)
+			return factoryPlan0271{}, fmt.Errorf("Отсутствует свидетельство установки Forge: %v", e)
 		}
 		if e = rec.recordSource(factorySource0271{Path: installerRel, Kind: o.Loader + "-installer", URL: pinned.PayloadURL, SHA256: pinned.PayloadSHA256, Size: factoryFileSize0271(filepath.Join(staging, filepath.FromSlash(installerRel)))}); e != nil {
 			return factoryPlan0271{}, e
@@ -853,7 +853,7 @@ func handleRuntimeFactory0271(args []string) error {
 	args = args[1:]
 	dir := strings.TrimSpace(flagValue(args, "--client-dir", ""))
 	if dir == "" {
-		return errors.New("--client-dir required")
+		return errors.New("Требуется: --client-dir")
 	}
 	if err := rejectFactoryOutputPath0271(dir, flagValue(args, "--output", "")); err != nil {
 		return err
@@ -893,6 +893,6 @@ func handleRuntimeFactory0271(args []string) error {
 		}
 		return writeOrPrintJSON(flagValue(args, "--output", ""), p)
 	default:
-		return fmt.Errorf("unknown client-factory command %s", mode)
+		return fmt.Errorf("Неизвестная команда Client Factory: %s", mode)
 	}
 }

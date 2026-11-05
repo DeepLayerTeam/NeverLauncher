@@ -219,7 +219,7 @@ func ipForInterface() ([]net.IP, error) {
 		}
 	}
 	if len(ips) == 0 {
-		return nil, errors.New("no usable IPv4 LAN interface")
+		return nil, errors.New("Не найден подходящий интерфейс локальной сети IPv4")
 	}
 	return ips, nil
 }

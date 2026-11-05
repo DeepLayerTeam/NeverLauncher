@@ -43,7 +43,7 @@ func CanonicalAPIVersion(raw string) (string, error) {
 	case "3.7", "3.7.0":
 		return ExtensionAPIVersion, nil
 	case "":
-		return "", errors.New("extension api is required")
+		return "", errors.New("Необходимо указать API расширения")
 	default:
 		return "", fmt.Errorf("unsupported extension api %q; expected %s (legacy %s is accepted only for 0.20 compatibility)", raw, ExtensionAPIVersion, LegacyExtensionAPIVersion)
 	}

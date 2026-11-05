@@ -86,7 +86,7 @@ func rejectDuplicateJSON0249(data []byte) error {
 					return errors.New("expected JSON object key")
 				}
 				if seen[name] {
-					return fmt.Errorf("duplicate JSON key %q", name)
+					return fmt.Errorf("Обнаружен дубликат: ключ JSON %q", name)
 				}
 				seen[name] = true
 				if e = walk(depth + 1); e != nil {
@@ -109,7 +109,7 @@ func rejectDuplicateJSON0249(data []byte) error {
 		return e
 	}
 	if _, e := d.Token(); e != io.EOF {
-		return errors.New("trailing JSON data")
+		return errors.New("Лишние данные после JSON")
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 			return out, e
 		}
 		if !ed25519.Verify(key, payload, sig) {
-			return out, errors.New("Ed25519 manifest signature invalid")
+			return out, errors.New("Некорректное значение: Ed25519 подпись манифеста")
 		}
 		out.SignatureVerified = true
 	}
@@ -196,14 +196,14 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 	seen := make(map[string]bool, len(out.Manifest.Files))
 	for _, f := range out.Manifest.Files {
 		if f.Path == "" || f.Size < 0 || len(f.SHA256) != 64 {
-			return out, fmt.Errorf("invalid signed file metadata %q", f.Path)
+			return out, fmt.Errorf("Некорректные метаданные подписанного файла %q", f.Path)
 		}
 		if _, e = hex.DecodeString(f.SHA256); e != nil {
 			return out, fmt.Errorf("file %q invalid SHA-256", f.Path)
 		}
 		lower := strings.ToLower(f.Path)
 		if seen[lower] {
-			return out, fmt.Errorf("duplicate signed file path %q", f.Path)
+			return out, fmt.Errorf("Повторяющийся путь подписанного файла %q", f.Path)
 		}
 		seen[lower] = true
 	}
@@ -441,7 +441,7 @@ func executeComponents0249(args []string) error {
 	}
 	cmd := args[0]
 	if cmd != "validate" && cmd != "resolve" && cmd != "export" && cmd != "diff" {
-		return fmt.Errorf("unknown components command %q", cmd)
+		return fmt.Errorf("Неизвестная команда управления компонентами: %q", cmd)
 	}
 	fs := flag.NewFlagSet("components "+cmd, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -468,7 +468,7 @@ func executeComponents0249(args []string) error {
 		*manifest = fs.Arg(0)
 	}
 	if cmd != "diff" && *manifest == "" {
-		return errors.New("--manifest is required")
+		return errors.New("Требуется: --manifest")
 	}
 	if *javaMajor > 99 {
 		return errors.New("--java-major outside supported range")
@@ -577,7 +577,7 @@ func executeComponents0249(args []string) error {
 			Files             []cm.ManifestFile       `json:"files"`
 		}{"1.0", input.SignatureVerified, input.Wire.Version, *cat, input.Manifest.Files})
 	}
-	return errors.New("unsupported components command")
+	return errors.New("Команда управления компонентами не поддерживается")
 }
 
 // Все команды возвращают стабильный JSON-объект ошибки с кодом

@@ -12,7 +12,7 @@ import (
 // Временные тики старта процесса в ядре Linux вместе с boot ID исключают путаницу при повторном использовании PID и перезагрузке.
 func hostProcessIdentity0282(pid int) (string, error) {
 	if pid <= 0 {
-		return "", fmt.Errorf("invalid pid")
+		return "", fmt.Errorf("Некорректное значение: PID")
 	}
 	raw, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 	if err != nil {

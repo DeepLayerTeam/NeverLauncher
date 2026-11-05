@@ -49,7 +49,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		return model.ExtensionManifest{}, "", fmt.Errorf("unsupported extension schemaVersion %q; expected %s", m.SchemaVersion, extensioncontract.ManifestSchemaVersion)
 	}
 	if !extensionID0201.MatchString(m.ID) {
-		return model.ExtensionManifest{}, "", fmt.Errorf("invalid extension id %q", m.ID)
+		return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: ID расширения %q", m.ID)
 	}
 	if m.Name == "" || len(m.Name) > 160 {
 		return model.ExtensionManifest{}, "", fmt.Errorf("extension name must contain 1..160 characters")
@@ -61,7 +61,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		return model.ExtensionManifest{}, "", fmt.Errorf("extension version %q is not supported semver", m.Version)
 	}
 	if m.API == "" || len(m.API) > 64 {
-		return model.ExtensionManifest{}, "", fmt.Errorf("extension api is required")
+		return model.ExtensionManifest{}, "", fmt.Errorf("Необходимо указать API расширения")
 	}
 	if _, err := extensioncontract.CanonicalAPIVersion(m.API); err != nil {
 		return model.ExtensionManifest{}, "", err
@@ -103,7 +103,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 				continue
 			}
 			if validator != nil && !validator.MatchString(value) {
-				return nil, fmt.Errorf("invalid %s %q", field, value)
+				return nil, fmt.Errorf("Некорректное значение: %s %q", field, value)
 			}
 			if _, ok := seen[value]; ok {
 				continue
@@ -134,7 +134,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		dep.ID = strings.ToLower(strings.TrimSpace(dep.ID))
 		dep.Version = strings.TrimSpace(dep.Version)
 		if !extensionID0201.MatchString(dep.ID) {
-			return model.ExtensionManifest{}, "", fmt.Errorf("invalid dependency id %q", dep.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: зависимость ID %q", dep.ID)
 		}
 		if dep.ID == m.ID {
 			return model.ExtensionManifest{}, "", fmt.Errorf("extension cannot depend on itself")
@@ -143,7 +143,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 			return model.ExtensionManifest{}, "", fmt.Errorf("dependency %s requires a version constraint", dep.ID)
 		}
 		if _, ok := seenDeps[dep.ID]; ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("duplicate dependency %q", dep.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Обнаружен дубликат: зависимость %q", dep.ID)
 		}
 		seenDeps[dep.ID] = struct{}{}
 		deps = append(deps, dep)
@@ -251,10 +251,10 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 	item.Version = strings.TrimSpace(item.Version)
 	item.Source = strings.TrimSpace(item.Source)
 	if !extensionID0201.MatchString(item.ExtensionID) {
-		return model.ExtensionInstall{}, fmt.Errorf("invalid extension id %q", item.ExtensionID)
+		return model.ExtensionInstall{}, fmt.Errorf("Некорректное значение: ID расширения %q", item.ExtensionID)
 	}
 	if !extensionSemver0201.MatchString(item.Version) {
-		return model.ExtensionInstall{}, fmt.Errorf("invalid extension version %q", item.Version)
+		return model.ExtensionInstall{}, fmt.Errorf("Некорректное значение: версия расширения %q", item.Version)
 	}
 	if item.Scope == "" {
 		item.Scope = "global"

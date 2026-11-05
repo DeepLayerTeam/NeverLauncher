@@ -86,7 +86,7 @@ func (f *FixtureServer) Issue(sub string, scopes []string, ttl time.Duration) (s
 		}
 	}
 	if len(scopes) > 16 {
-		return "", errors.New("too many test scopes")
+		return "", errors.New("Слишком много областей тестирования")
 	}
 	var nonce [16]byte
 	if _, e := rand.Read(nonce[:]); e != nil {

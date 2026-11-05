@@ -236,7 +236,7 @@ func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorA
 
 func mirrorTransactional0274(ctx context.Context, dir string, operate func(string) ([]mirrorAction0274, error)) (factoryPlan0271, error) {
 	if strings.TrimSpace(dir) == "" {
-		return factoryPlan0271{}, errors.New("--client-dir is required")
+		return factoryPlan0271{}, errors.New("Требуется: --client-dir")
 	}
 	dst, err := filepath.Abs(dir)
 	if err != nil {
@@ -979,7 +979,7 @@ func handleRuntimeMirror0274(args []string) error {
 			return err
 		}
 		if dir == "" {
-			return errors.New("--client-dir required")
+			return errors.New("Требуется: --client-dir")
 		}
 		// Запрещайте неявные обновления существующего клиента. Новые рабочие пространства
 		// собираются в отдельном каталоге, затем проверяется каждый артефакт.
@@ -1006,11 +1006,11 @@ func handleRuntimeMirror0274(args []string) error {
 		}
 		workers, err := strconv.Atoi(flagValue(flags, "--workers", "12"))
 		if err != nil {
-			return fmt.Errorf("invalid --workers: %w", err)
+			return fmt.Errorf("Некорректное значение: --workers: %w", err)
 		}
 		processorTimeout, err := time.ParseDuration(flagValue(flags, "--processor-timeout", "10m"))
 		if err != nil {
-			return fmt.Errorf("invalid --processor-timeout: %w", err)
+			return fmt.Errorf("Некорректное значение: --processor-timeout: %w", err)
 		}
 		options := factoryBuildOptions0271{
 			Loader: ws.Loader, Minecraft: ws.Minecraft, LoaderVersion: ws.LoaderVersion, Targets: targets,

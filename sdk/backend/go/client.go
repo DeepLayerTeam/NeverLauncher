@@ -115,7 +115,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, input any, out
 	}
 	if output != nil && len(bytes.TrimSpace(data)) != 0 {
 		if err := json.Unmarshal(data, output); err != nil {
-			return fmt.Errorf("decode %s: %w", path, err)
+			return fmt.Errorf("Декодирование: %s: %w", path, err)
 		}
 	}
 	return nil

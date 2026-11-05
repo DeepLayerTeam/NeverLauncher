@@ -49,7 +49,7 @@ func hostJavaListFlag0283(args []string, single, repeated string) []string {
 
 func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) ([]string, error) {
 	if len(raw) > 128 {
-		return nil, errors.New("too many JVM path entries (maximum 128)")
+		return nil, errors.New("Превышено число элементов пути JVM (максимум 128)")
 	}
 	result := make([]string, 0, len(raw))
 	seen := make(map[string]bool, len(raw))
@@ -169,14 +169,14 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 			return errors.New("invalid module main class")
 		}
 	default:
-		return fmt.Errorf("unsupported host launch mode %q", config.LaunchMode)
+		return fmt.Errorf("Не поддерживается: режим запуска хоста %q", config.LaunchMode)
 	}
 	return nil
 }
 
 func hostValidateJvmArguments0283(jvm, server []string) error {
 	if len(jvm) > 96 || len(server) > 128 {
-		return errors.New("too many JVM or game arguments")
+		return errors.New("Слишком много аргументов JVM или игры")
 	}
 	for _, arg := range jvm {
 		if len(arg) > 256 || !hostJvmHeap0283.MatchString(arg) && !hostJvmNumber0283.MatchString(arg) && !hostJvmBoolean0283.MatchString(arg) && !hostJvmProperty0283.MatchString(arg) {

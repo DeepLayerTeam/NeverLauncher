@@ -23,7 +23,7 @@ func handleAuthUpgrade02911(args []string) error {
 	}
 	action := args[0]
 	if action != "preflight" && action != "apply" && action != "verify" {
-		return fmt.Errorf("unknown auth-upgrade command %q", action)
+		return fmt.Errorf("Неизвестное значение: команда обновления авторизации %q", action)
 	}
 	flags := flag.NewFlagSet("auth-upgrade "+action, flag.ContinueOnError)
 	dsn := flags.String("dsn", os.Getenv("LAUNCHER_DATABASE_DSN"), "DSN PostgreSQL (используйте LAUNCHER_DATABASE_DSN)")
@@ -37,7 +37,7 @@ func handleAuthUpgrade02911(args []string) error {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return errors.New("unexpected arguments")
+		return errors.New("Неожиданные аргументы команды")
 	}
 	if *snapshot == "" {
 		return errors.New("--snapshot must name an existing or new checkpoint file")
@@ -93,11 +93,11 @@ type providerIDs02911 []string
 func (p *providerIDs02911) String() string { return strings.Join(*p, ",") }
 func (p *providerIDs02911) Set(v string) error {
 	if v == "" || len(v) > 128 || strings.TrimSpace(v) != v || strings.ContainsAny(v, "\r\n\x00") {
-		return errors.New("invalid provider ID")
+		return errors.New("Некорректный ID провайдера")
 	}
 	for _, existing := range *p {
 		if existing == v {
-			return errors.New("duplicate --allow-provider")
+			return errors.New("Параметр --allow-provider указан несколько раз")
 		}
 	}
 	*p = append(*p, v)

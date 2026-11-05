@@ -158,10 +158,10 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 		}
 		err = r.persist(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("create sqlite HTTP state: %w", err)
+			return nil, fmt.Errorf("Создание: SQLite HTTP состояние: %w", err)
 		}
 	case err != nil:
-		return nil, fmt.Errorf("read sqlite HTTP state: %w", err)
+		return nil, fmt.Errorf("Чтение: SQLite HTTP состояние: %w", err)
 	case ver != 1:
 		return nil, fmt.Errorf("unsupported SQLite HTTP state format %d", ver)
 	case r.seq < 1:
@@ -210,7 +210,7 @@ func (r *SQLiteHTTPRepository0372) persist(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("commit SQLite HTTP state: %w", err)
+		return fmt.Errorf("Фиксация: SQLite HTTP состояние: %w", err)
 	}
 	r.seq++
 	r.digest = digest

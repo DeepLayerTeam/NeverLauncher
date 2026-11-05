@@ -765,11 +765,11 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 	file := filepath.Base(abs)
 	expectedPrefix := "launcher-" + platform + "-bridge-"
 	if !strings.HasPrefix(file, expectedPrefix) || !strings.HasSuffix(file, ".jar") {
-		return bridgeArtifact0199{}, fmt.Errorf("artifact filename does not match detected platform %s: %s", platform, file)
+		return bridgeArtifact0199{}, fmt.Errorf("Имя файла артефакта не соответствует определённой платформе %s: %s", platform, file)
 	}
 	artifactVersion := extractBridgeVersion0199(file, platform)
 	if requestedVersion != "" && requestedVersion != "dev" && artifactVersion != requestedVersion {
-		return bridgeArtifact0199{}, fmt.Errorf("artifact version %s does not match requested %s", artifactVersion, requestedVersion)
+		return bridgeArtifact0199{}, fmt.Errorf("Версия артефакта %s не совпадает с запрошенной %s", artifactVersion, requestedVersion)
 	}
 	if err := verifyBridgeArtifactShape0199(abs, platform); err != nil {
 		return bridgeArtifact0199{}, err
@@ -794,7 +794,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	if raw, err := os.ReadFile(certPath); err == nil {
 		var cert serverBridge2Certification0150
 		if err := json.Unmarshal(raw, &cert); err != nil {
-			return "", fmt.Errorf("invalid %s: %w", certPath, err)
+			return "", fmt.Errorf("Некорректное значение: %s: %w", certPath, err)
 		}
 		targets := serverBridgeReleaseTargetsForVersion0150(artifactVersion)
 		expectedSchema := "1.0"
@@ -830,7 +830,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	}
 	var document serverBridgeReleaseAllowlist01912
 	if err := json.Unmarshal(raw, &document); err != nil {
-		return "", fmt.Errorf("invalid %s: %w", allowPath, err)
+		return "", fmt.Errorf("Некорректное значение: %s: %w", allowPath, err)
 	}
 	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
 		return "", errors.New("ServerBridge 3 release allowlist security metadata mismatch")
@@ -924,7 +924,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 	}
 	r, err := zip.OpenReader(path)
 	if err != nil {
-		return fmt.Errorf("invalid ServerBridge JAR %s: %w", path, err)
+		return fmt.Errorf("Некорректное значение: ServerBridge JAR %s: %w", path, err)
 	}
 	defer r.Close()
 	entries := make(map[string]*zip.File, len(r.File))

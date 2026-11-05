@@ -26,7 +26,7 @@ func handleMigrationRollback03312(args []string) error {
 	run := flagValue(args, "--run", "")
 	token := backendToken(args)
 	if backend == "" || run == "" || token == "" {
-		return errors.New("rollback requires --backend --run --token")
+		return errors.New("Для откат требуется: --backend --run --token")
 	}
 	u, e := url.Parse(backend)
 	if e != nil {

@@ -21,7 +21,7 @@ func hostNotify02811(message string) error {
 		return nil
 	}
 	if !strings.HasPrefix(socket, "/") && !strings.HasPrefix(socket, "@") {
-		return fmt.Errorf("invalid NOTIFY_SOCKET")
+		return fmt.Errorf("Некорректное значение: NOTIFY_SOCKET")
 	}
 	addr := &net.UnixAddr{Name: socket, Net: "unixgram"}
 	conn, err := net.DialUnix("unixgram", nil, addr)

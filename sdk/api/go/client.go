@@ -39,7 +39,7 @@ var segment = regexp.MustCompile(`\{([^{}]+)\}`)
 func New(baseURL, token string) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil || u == nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" && u.Path != "/" {
-		return nil, errors.New("invalid API base URL")
+		return nil, errors.New("Некорректное значение: API базовый URL")
 	}
 	host := u.Hostname()
 	ip := net.ParseIP(host)
@@ -80,7 +80,7 @@ func Path(template string, params map[string]string) (string, error) {
 func (c *Client) Call(ctx context.Context, operationID string, params map[string]string, query url.Values, request any, response any, idempotencyKey string) error {
 	op, ok := Operations[operationID]
 	if !ok {
-		return fmt.Errorf("unknown OpenAPI operation: %s", operationID)
+		return fmt.Errorf("Неизвестное значение: OpenAPI операция: %s", operationID)
 	}
 	path, err := Path(op.Path, params)
 	if err != nil {
@@ -157,7 +157,7 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 	}
 	if response != nil && len(bytes.TrimSpace(data)) > 0 {
 		if err := json.Unmarshal(data, response); err != nil {
-			return fmt.Errorf("decode API response: %w", err)
+			return fmt.Errorf("Декодирование: API ответ: %w", err)
 		}
 	}
 	return nil
@@ -204,7 +204,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 func (c *Client) CallRaw(ctx context.Context, operationID string, params map[string]string, query url.Values, body []byte, contentType, idempotencyKey string) ([]byte, error) {
 	op, ok := Operations[operationID]
 	if !ok {
-		return nil, fmt.Errorf("unknown OpenAPI operation: %s", operationID)
+		return nil, fmt.Errorf("Неизвестное значение: OpenAPI операция: %s", operationID)
 	}
 	path, err := Path(op.Path, params)
 	if err != nil {
@@ -272,7 +272,7 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 func (c *Client) CallStream(ctx context.Context, operationID string, params map[string]string, query url.Values, requestReader io.Reader, contentType string, responseWriter io.Writer, maxResponseBytes int64, idempotencyKey string) (int64, error) {
 	op, ok := Operations[operationID]
 	if !ok {
-		return 0, fmt.Errorf("unknown OpenAPI operation: %s", operationID)
+		return 0, fmt.Errorf("Неизвестное значение: OpenAPI операция: %s", operationID)
 	}
 	path, err := Path(op.Path, params)
 	if err != nil {

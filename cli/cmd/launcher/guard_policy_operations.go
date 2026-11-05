@@ -129,10 +129,10 @@ func guardHistoryRead05011(root, key string, active *guardCompatVerified0502) ([
 		}
 		v, err := guardCompatHistoricalVerify05011(root, key, raw)
 		if err != nil {
-			return nil, fmt.Errorf("invalid Guard history %s: %w", entry.Name(), err)
+			return nil, fmt.Errorf("Некорректное значение: история Guard %s: %w", entry.Name(), err)
 		}
 		if guardHistoryName05011(v) != entry.Name() {
-			return nil, errors.New("Guard history filename/content mismatch")
+			return nil, errors.New("Несоответствие: история Guard filename/content")
 		}
 		if currentRoot != "" && currentRoot != v.RootSHA256 {
 			return nil, errors.New("Guard history trust anchor changed")
@@ -190,7 +190,7 @@ func guardCompatAuthorizeRollback05011(root, key, file string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 256*1024 {
-		return errors.New("unsafe rollback file")
+		return errors.New("Небезопасный объект: файл отката")
 	}
 	raw, err := os.ReadFile(file)
 	if err != nil {

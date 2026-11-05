@@ -148,7 +148,7 @@ func verifyBridgeRuntime02812(local bridgeVerification02812, req bridgeEnrollmen
 	}
 	when, err := time.Parse(time.RFC3339Nano, field("lastHeartbeatAt"))
 	if err != nil || when.After(now.Add(30*time.Second)) || now.Sub(when) > 90*time.Second {
-		return local, errors.New("no fresh attested ServerBridge heartbeat")
+		return local, errors.New("Нет актуального аттестованного сигнала активности ServerBridge")
 	}
 	version, _ := node["protocolVersion"].(float64)
 	if version < 3 || field("runtimeId") == "" {
@@ -261,7 +261,7 @@ func bridgeRollout02812(args []string) error {
 	existingPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	old, oldErr := readBridgeProvisionState0199(existingPath)
 	if oldErr != nil && !errors.Is(oldErr, os.ErrNotExist) {
-		return fmt.Errorf("cannot read current install: %w", oldErr)
+		return fmt.Errorf("Не удалось прочитать текущую установку: %w", oldErr)
 	}
 	managed := oldErr == nil
 	host := hostPaths01910(root)

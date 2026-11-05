@@ -47,7 +47,7 @@ func makeStorage(driver, path, endpoint, bucket, region, key, secret, pathStyle 
 		}
 		return storage.NewS3Storage(storage.S3Config{Endpoint: endpoint, Bucket: bucket, Region: region, AccessKey: key, SecretKey: secret, PathStyle: ps})
 	default:
-		return nil, errors.New("unsupported storage driver")
+		return nil, errors.New("Не поддерживается: драйвер хранилища")
 	}
 }
 func isApprovedTexturePlan0445(d string) bool {
@@ -103,7 +103,7 @@ func run() error {
 	}
 	destDSN := strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_DSN"))
 	if destDSN == "" {
-		return errors.New("LAUNCHER_DATABASE_DSN required")
+		return errors.New("Требуется: LAUNCHER_DATABASE_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 	defer cancel()

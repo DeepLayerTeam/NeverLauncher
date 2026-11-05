@@ -106,7 +106,7 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension does not declare admin target")
 	}
 	if s.ExtensionSecurity == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension security unavailable")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("Недоступно: безопасность расширений")
 	}
 	allowed, err := s.ExtensionSecurity.Allowed(r.Context(), id, install.CurrentVersion, install.Scope, install.ScopeID, "ui:contribute", install.ScopeID)
 	if err != nil {
@@ -295,7 +295,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	}
 	allow := func(permission, projectID string) error {
 		if s.ExtensionSecurity == nil {
-			return errors.New("extension security unavailable")
+			return errors.New("Недоступно: безопасность расширений")
 		}
 		ok, e := s.ExtensionSecurity.Allowed(r.Context(), install.ExtensionID, install.CurrentVersion, install.Scope, install.ScopeID, permission, projectID)
 		if e != nil {
@@ -347,7 +347,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			ProjectID string `json:"projectId"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || strings.TrimSpace(p.ProjectID) == "" {
-			respond(nil, errors.New("projectId required"))
+			respond(nil, errors.New("Требуется: projectId"))
 			return
 		}
 		if !adminExtensionProjectAllowed0208(install, p.ProjectID) {

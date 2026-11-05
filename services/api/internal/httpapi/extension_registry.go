@@ -55,7 +55,7 @@ func decodeSingleJSON0203(r *http.Request, out any) error {
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return errors.New("trailing JSON value")
+			return errors.New("Лишнее значение после JSON")
 		}
 		return err
 	}

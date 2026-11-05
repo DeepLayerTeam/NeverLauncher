@@ -67,7 +67,7 @@ func validatedHash0474(src map[string]any, name string) (string, error) {
 		return "", e
 	}
 	if len(s) != 64 {
-		return "", fmt.Errorf("invalid %s length", name)
+		return "", fmt.Errorf("Некорректное значение: %s длина", name)
 	}
 	if _, e = hex.DecodeString(s); e != nil {
 		return "", fmt.Errorf("invalid %s hex", name)
@@ -288,7 +288,7 @@ func totpWithSecrets0474(ctx context.Context, tx pgx.Tx, s map[string]any, keys 
 		return e
 	}
 	if status != "active" && status != "pending" {
-		return errors.New("unknown TOTP status")
+		return errors.New("Неизвестное значение: TOTP статус")
 	}
 	step, e := mustInt0474(s, "last_step")
 	if e != nil {
@@ -369,7 +369,7 @@ func minecraftSession0474(ctx context.Context, tx pgx.Tx, s map[string]any) erro
 		return e
 	}
 	if status != "active" && status != "revoked" {
-		return errors.New("unknown Minecraft session state")
+		return errors.New("Неизвестное значение: сеанс Minecraft состояние")
 	}
 	// После миграции токены доступа другого центра недействительны.
 	_, e = tx.Exec(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,core_original_status_0474,core_original_reason_0474)

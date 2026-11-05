@@ -277,7 +277,7 @@ func reportVerified(r Report) error {
 		return e
 	}
 	if hash(b) != d {
-		return errors.New("migration report checksum mismatch")
+		return errors.New("Несоответствие: отчёт о миграции контрольная сумма")
 	}
 	stages := map[string]string{}
 	for _, ev := range r.Evidence {
@@ -368,7 +368,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 	}
 	defer outer.Close()
 	if len(outer.File) > 30000 {
-		return "", "", errors.New("too many source ZIP entries")
+		return "", "", errors.New("Превышено число элементов исходного ZIP")
 	}
 	found := ""
 	jarHash := ""
@@ -380,7 +380,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			return "", "", errors.New("multiple LaunchServer jars")
 		}
 		if f.UncompressedSize64 == 0 || f.UncompressedSize64 > 32<<20 || f.CompressedSize64 == 0 {
-			return "", "", errors.New("unsafe LaunchServer jar size")
+			return "", "", errors.New("Небезопасный объект: LaunchServer JAR размер")
 		}
 		reader, e := f.Open()
 		if e != nil {
@@ -413,12 +413,12 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			b, e := io.ReadAll(io.LimitReader(read, (64<<10)+1))
 			read.Close()
 			if e != nil || uint64(len(b)) != item.UncompressedSize64 {
-				return "", "", errors.New("invalid jar manifest")
+				return "", "", errors.New("Некорректное значение: JAR манифест")
 			}
 			manifest = string(b)
 		}
 		if manifest == "" {
-			return "", "", errors.New("missing LaunchServer jar manifest")
+			return "", "", errors.New("Отсутствует: LaunchServer JAR манифест")
 		}
 		product := ""
 		ver := ""
@@ -444,7 +444,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 		jarHash = hash(data)
 		ver = strings.TrimPrefix(ver, "v")
 		if !gravit57.MatchString(ver) {
-			return "", "", errors.New("unsupported JAR version")
+			return "", "", errors.New("Не поддерживается: JAR версия")
 		}
 		found = ver
 	}
@@ -640,7 +640,7 @@ func seal(b Bundle, key ed25519.PrivateKey) (Bundle, error) {
 }
 func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	if b.Format != format || b.Version != version || !referenceClassValid(b.ReferenceClass) || !commitHash(b.CommitSHA) || !gravit57.MatchString(b.SourceVersion) || !digest(b.TrustedGravitJarSHA256) || !digest(b.TargetReleaseSHA256) || !digest(b.ReportSHA256) || !digest(b.SourceSHA256) || b.RunID == "" || b.ProjectID == "" || b.ReviewedBy == "" || !digest(b.ReviewEvidenceSHA256) || len(b.Checks) != len(requiredForClass(b.ReferenceClass)) {
-		return errors.New("incomplete GA certificate")
+		return errors.New("Неполные данные: GA сертификат")
 	}
 	key, e := base64.StdEncoding.DecodeString(b.PublicKey)
 	if e != nil || !bytes.Equal(key, public) {
@@ -655,7 +655,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 		return e
 	}
 	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.45.0\x00"), raw...), signature) {
-		return errors.New("invalid GA signature")
+		return errors.New("Некорректное значение: GA подпись")
 	}
 	seen := map[string]bool{}
 	for _, c := range b.Checks {
@@ -681,7 +681,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 // без перезаписи в целевой файловой системе.
 func writePrivate(path string, data []byte) error {
 	if path == "" {
-		return errors.New("output path is required")
+		return errors.New("Необходимо указать путь вывода")
 	}
 	dir := filepath.Dir(path)
 	f, e := os.CreateTemp(dir, ".migration-ga-*")
@@ -723,7 +723,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return errors.New("a separate absolute evidence directory is required")
 	}
 	if strings.TrimSpace(token) == "" {
-		return errors.New("missing LAUNCHER_MIGRATION_GA_TOKEN")
+		return errors.New("Отсутствует: LAUNCHER_MIGRATION_GA_TOKEN")
 	}
 	source, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
@@ -927,7 +927,7 @@ func runMain(args []string) error {
 		}
 		key, ok := anyKey.(ed25519.PublicKey)
 		if !ok {
-			return errors.New("trusted key must be Ed25519")
+			return errors.New("Требуемый формат для доверенный ключ: Ed25519")
 		}
 		if e = verifyBundle(b, key); e != nil {
 			return e

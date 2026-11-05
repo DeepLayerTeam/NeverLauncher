@@ -118,7 +118,7 @@ func readComponentUpdateManifest0157(path string) (componentUpdateManifest0157, 
 	}
 	var manifest componentUpdateManifest0157
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return componentUpdateManifest0157{}, fmt.Errorf("invalid %s: %w", componentUpdateManifestFile0157, err)
+		return componentUpdateManifest0157{}, fmt.Errorf("Некорректное значение: %s: %w", componentUpdateManifestFile0157, err)
 	}
 	return manifest, nil
 }
@@ -365,11 +365,11 @@ func extractComponentPackage0157(packagePath, dst string) error {
 
 func safeExtractPath0157(root, name string) (string, error) {
 	if name == "" || strings.ContainsRune(name, '\x00') || filepath.IsAbs(name) || strings.Contains(name, "\\") {
-		return "", fmt.Errorf("unsafe package entry %q", name)
+		return "", fmt.Errorf("Небезопасный объект: элемент пакета %q", name)
 	}
 	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(name)))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || clean != strings.TrimSuffix(name, "/") {
-		return "", fmt.Errorf("unsafe package entry %q", name)
+		return "", fmt.Errorf("Небезопасный объект: элемент пакета %q", name)
 	}
 	return filepath.Join(root, filepath.FromSlash(clean)), nil
 }
@@ -766,11 +766,11 @@ func readComponentTreeJournal0157(u *transactionalUpdater0156, id string) (*comp
 
 func safeComponentTreePath0157(u *transactionalUpdater0156, rel string) (string, error) {
 	if rel == "" || filepath.IsAbs(rel) || strings.Contains(rel, "\\") {
-		return "", fmt.Errorf("unsafe component tree path %q", rel)
+		return "", fmt.Errorf("Небезопасный объект: путь в дереве компонентов %q", rel)
 	}
 	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
 	if clean != rel || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(strings.ToLower(clean), ".launcher/") {
-		return "", fmt.Errorf("unsafe component tree path %q", rel)
+		return "", fmt.Errorf("Небезопасный объект: путь в дереве компонентов %q", rel)
 	}
 	return filepath.Join(u.root, filepath.FromSlash(clean)), nil
 }

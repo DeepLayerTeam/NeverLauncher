@@ -257,7 +257,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		n, _ := m[int64(-1)].([]byte)
 		eBytes, _ := m[int64(-2)].([]byte)
 		if len(n) < 256 || len(eBytes) == 0 || len(eBytes) > 4 {
-			return 0, nil, errors.New("invalid RSA key")
+			return 0, nil, errors.New("Некорректное значение: RSA ключ")
 		}
 		e := 0
 		for _, b := range eBytes {
@@ -274,7 +274,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		crv, _ := intValue(m[int64(-1)])
 		x, _ := m[int64(-2)].([]byte)
 		if crv != 6 || len(x) != ed25519.PublicKeySize {
-			return 0, nil, errors.New("invalid Ed25519 key")
+			return 0, nil, errors.New("Некорректное значение: Ed25519 ключ")
 		}
 		return alg, ed25519.PublicKey(append([]byte(nil), x...)), nil
 	default:

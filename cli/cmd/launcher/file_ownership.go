@@ -78,7 +78,7 @@ func validateManifestFilePolicy0224(m Manifest) error {
 		}
 		key := strings.ToLower(f.Path)
 		if seen[key] {
-			return fmt.Errorf("duplicate file %q", f.Path)
+			return fmt.Errorf("Обнаружен дубликат: файл %q", f.Path)
 		}
 		seen[key] = true
 		switch manifestOwnership0224(f) {
@@ -110,7 +110,7 @@ func validateManifestFilePolicy0224(m Manifest) error {
 			return fmt.Errorf("invalid include rule %q", r.Pattern)
 		}
 		if r.Action == "verify" && (r.Ownership == "user-owned" || r.Ownership == "generated") {
-			return fmt.Errorf("cannot verify user-owned/generated data %q", r.Pattern)
+			return fmt.Errorf("Не удалось проверить пользовательские или сгенерированные данные %q", r.Pattern)
 		}
 		if r.Action == "exclude" && r.Ownership != "user-owned" && r.Ownership != "generated" {
 			return fmt.Errorf("invalid exclude rule %q", r.Pattern)

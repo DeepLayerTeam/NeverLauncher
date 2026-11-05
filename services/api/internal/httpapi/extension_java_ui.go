@@ -16,7 +16,7 @@ import (
 // вызывающим идентичность.
 func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall, method string, raw json.RawMessage, actorID, actorEmail string) (json.RawMessage, error) {
 	if s.ExtensionHost == nil {
-		return nil, errors.New("Java extension host unavailable")
+		return nil, errors.New("Недоступно: Java хост расширений")
 	}
 	var args struct {
 		Version    string          `json:"version"`
@@ -27,7 +27,7 @@ func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall
 		Value      json.RawMessage `json:"value"`
 	}
 	if err := json.Unmarshal(raw, &args); err != nil {
-		return nil, errors.New("invalid Java UI parameters")
+		return nil, errors.New("Некорректное значение: Java UI параметры")
 	}
 	if args.Version != install.CurrentVersion || args.Generation != install.Generation || args.Version == "" {
 		return nil, errors.New("stale Java UI installation")

@@ -59,12 +59,12 @@ func normalizeScope(s Scope) (Scope, error) {
 		s.Scope = "global"
 	}
 	if s.Scope != "global" && s.Scope != "project" {
-		return s, errors.New("scope must be global or project")
+		return s, errors.New("Область действия должна иметь значение global или project")
 	}
 	if s.Scope == "global" {
 		s.ScopeID = ""
 	} else if s.ScopeID == "" {
-		return s, errors.New("project scope requires scopeId")
+		return s, errors.New("Для области проекта необходимо указать scopeId")
 	}
 	return s, nil
 }
@@ -221,7 +221,7 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 		}
 	}
 	if len(roots) == 0 {
-		return model.ExtensionUpdatePlan{}, errors.New("no installed extensions or update roots")
+		return model.ExtensionUpdatePlan{}, errors.New("Отсутствуют установленные расширения или корневые каталоги обновлений")
 	}
 	pins, err := r.Repo.ListExtensionUpdatePins(ctx, scope.Scope, scope.ScopeID)
 	if err != nil {

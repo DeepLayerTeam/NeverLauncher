@@ -34,7 +34,7 @@ func isCoreAction(action string) bool {
 
 func readPrivateJSON(path string, out any) error {
 	if path == "" {
-		return errors.New("--input required")
+		return errors.New("Требуется: --input")
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {

@@ -190,7 +190,7 @@ func validateAccessTokenHash(claims map[string]any, alg, accessToken string) err
 	}
 	got := base64.RawURLEncoding.EncodeToString(digest[:len(digest)/2])
 	if got != want {
-		return errors.New("ID token at_hash mismatch")
+		return errors.New("Несоответствие: ID токен at_hash")
 	}
 	return nil
 }

@@ -14,7 +14,7 @@ func handleDurableOperation0217(args []string) error {
 		return errors.New("operation subcommands: registry, validate, execute, status, attempts, cancel, retry")
 	}
 	if adminBackendURL(args) == "" {
-		return errors.New("--backend is required")
+		return errors.New("Требуется: --backend")
 	}
 	out := flagValue(args, "--output", "")
 	var result map[string]any

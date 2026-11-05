@@ -172,7 +172,7 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 		return p, fmt.Errorf("trust policy JSON: %w", err)
 	}
 	if p.SchemaVersion != releaseSignatureSchema0158 || p.TrustDomain != releaseTrustDomain0158 || p.Epoch == 0 {
-		return p, errors.New("trust policy schema/domain/epoch invalid")
+		return p, errors.New("Некорректное значение: политика доверия schema/domain/epoch")
 	}
 	if len(p.Keys) == 0 {
 		return p, errors.New("trust policy не содержит release keys")
@@ -237,7 +237,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 		return "", err
 	}
 	if !ed25519.Verify(root, payload, sig) {
-		return "", errors.New("trust policy root signature verification failed")
+		return "", errors.New("Проверка корневой подписи политики доверия завершилась ошибкой")
 	}
 	if t, err := time.Parse(time.RFC3339Nano, policy.IssuedAt); err != nil || t.After(now.Add(5*time.Minute)) {
 		return "", errors.New("trust policy issuedAt invalid или находится в будущем")
@@ -245,10 +245,10 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 	if strings.TrimSpace(policy.ExpiresAt) != "" {
 		t, err := time.Parse(time.RFC3339Nano, policy.ExpiresAt)
 		if err != nil {
-			return "", errors.New("trust policy expiresAt invalid")
+			return "", errors.New("Некорректное значение: политика доверия expiresAt")
 		}
 		if enforceCurrentValidity && !now.Before(t) {
-			return "", errors.New("trust policy expired")
+			return "", errors.New("Истёк срок действия: политика доверия")
 		}
 	}
 	return fp, nil
@@ -309,7 +309,7 @@ func loadTrustState0158(path string) (releaseTrustState0158, error) {
 		return s, err
 	}
 	if (s.SchemaVersion != releaseSignatureSchema0158 && s.SchemaVersion != releaseTrustStateSchema01510) || s.TrustDomain != releaseTrustDomain0158 {
-		return s, errors.New("release trust state schema/domain invalid")
+		return s, errors.New("Некорректное значение: релиз состояние доверия schema/domain")
 	}
 	if s.HighestReleaseManifestSHA256 != "" && !validSHA256Hex0157(s.HighestReleaseManifestSHA256) {
 		return s, errors.New("release trust state contains invalid manifest digest")
@@ -467,7 +467,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		}
 	}
 	if err != nil || signedAt.After(now.Add(5*time.Minute)) {
-		return releaseVerificationV2Context{}, errors.New("release signature signedAt invalid")
+		return releaseVerificationV2Context{}, errors.New("Некорректное значение: подпись релиза signedAt")
 	}
 
 	// Политика на момент выпуска должна указывать, что подписант активен. Текущая политика
@@ -521,7 +521,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, err
 	}
 	if !ed25519.Verify(pub, payload, sig) {
-		return releaseVerificationV2Context{}, errors.New("Release v2 Ed25519 verification failed")
+		return releaseVerificationV2Context{}, errors.New("Проверка подписи Ed25519 выпуска v2 завершилась ошибкой")
 	}
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), pub); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Release v2 provenance: %w", err)
@@ -614,7 +614,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 	if v := flagValue(args, "--expires-hours", ""); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
-			return nil, errors.New("--expires-hours invalid")
+			return nil, errors.New("Некорректное значение: --expires-hours")
 		}
 		expiresHours = n
 	}

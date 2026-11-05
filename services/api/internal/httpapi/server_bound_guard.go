@@ -37,11 +37,11 @@ func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPl
 	m := verified.Metadata
 	major, err := strconv.Atoi(metadataString0121(m, "javaMajor"))
 	if err != nil || major < 1 {
-		return repository.GuardBoundSession0507{}, errors.New("invalid Guard Java major")
+		return repository.GuardBoundSession0507{}, errors.New("Некорректное значение: Guard основная версия Java")
 	}
 	pid, err := strconv.ParseInt(metadataString0121(m, "runtimePid"), 10, 64)
 	if err != nil || pid < 1 {
-		return repository.GuardBoundSession0507{}, errors.New("invalid Guard process id")
+		return repository.GuardBoundSession0507{}, errors.New("Некорректное значение: Guard процесс ID")
 	}
 	b := repository.GuardBoundSession0507{
 		CorrelationID: join.SessionCorrelationID, JoinID: join.ID, UserID: join.UserID, SessionID: join.SessionID,
@@ -68,7 +68,7 @@ func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPl
 		!isSHA256Hex0134(b.DeviceKeyFingerprint) || !isSHA256Hex0134(b.GuardSHA256) || !isSHA256Hex0134(b.LauncherSHA256) ||
 		!isSHA256Hex0134(b.RuntimePolicySHA256) || !isSHA256Hex0134(b.ModuleSetSHA256) || !isSHA256Hex0134(b.CodeSetSHA256) ||
 		!isSHA256Hex0134(b.HookSetSHA256) || !isSHA256Hex0134(b.JVMStateSHA256) {
-		return repository.GuardBoundSession0507{}, errors.New("malformed Guard session digest")
+		return repository.GuardBoundSession0507{}, errors.New("Неправильный формат: сеанс Guard дайджест")
 	}
 	if join.IdentityRealm != "local" && join.IdentityRealm != "official" {
 		return repository.GuardBoundSession0507{}, errors.New("unknown Minecraft identity realm")

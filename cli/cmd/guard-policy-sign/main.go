@@ -41,7 +41,7 @@ func main() {
 	case "revoke", "rollback":
 		err = operatorRevise05011(*mode, *current, *previous, *key, *out, *revokeDigest, *revokeTransform, time.Now())
 	default:
-		err = errors.New("unknown --mode")
+		err = errors.New("Неизвестное значение параметра --mode")
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "guard-policy-sign:", err)

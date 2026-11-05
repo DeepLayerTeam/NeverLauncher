@@ -40,11 +40,11 @@ func run() error {
 		return errors.New("--command must be backup, restore, gc or verify")
 	}
 	if (*command == "backup" || *command == "restore") && *backup == "" {
-		return errors.New("--backup directory required")
+		return errors.New("Требуется: --backup каталог")
 	}
 	dsn := strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_DSN"))
 	if dsn == "" {
-		return errors.New("LAUNCHER_DATABASE_DSN required")
+		return errors.New("Требуется: LAUNCHER_DATABASE_DSN")
 	}
 	driver := env("LAUNCHER_STORAGE_DRIVER", "local")
 	var store storage.Storage
@@ -59,7 +59,7 @@ func run() error {
 		}
 		store = s
 	default:
-		return fmt.Errorf("invalid storage driver %q", driver)
+		return fmt.Errorf("Некорректное значение: драйвер хранилища %q", driver)
 	}
 	repo := repository.NewSQLRepository("pgx", dsn, "").(*repository.SQLRepository)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)

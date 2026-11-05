@@ -23,7 +23,7 @@ const sqliteRuntimeDDL0373 = `CREATE TABLE IF NOT EXISTS http_runtime_components
 
 func (r *SQLiteHTTPRepository0372) ReadRuntimeComponent0373(ctx context.Context, name string) ([]byte, bool, error) {
 	if !runtimeComponentAllowed0373(name) {
-		return nil, false, fmt.Errorf("invalid runtime component %q", name)
+		return nil, false, fmt.Errorf("Некорректное значение: компонент среды выполнения %q", name)
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -43,18 +43,18 @@ func (r *SQLiteHTTPRepository0372) ReadRuntimeComponent0373(ctx context.Context,
 		return nil, false, err
 	}
 	if version != 1 {
-		return nil, false, fmt.Errorf("unsupported runtime component version %d", version)
+		return nil, false, fmt.Errorf("Не поддерживается: компонент среды выполнения версия %d", version)
 	}
 	sha := sha256.Sum256(data)
 	if hex.EncodeToString(sha[:]) != digest {
-		return nil, false, errors.New("runtime component digest mismatch")
+		return nil, false, errors.New("Несоответствие: компонент среды выполнения дайджест")
 	}
 	return data, true, nil
 }
 
 func (r *SQLiteHTTPRepository0372) WriteRuntimeComponent0373(ctx context.Context, name string, data []byte) error {
 	if !runtimeComponentAllowed0373(name) {
-		return fmt.Errorf("invalid runtime component %q", name)
+		return fmt.Errorf("Некорректное значение: компонент среды выполнения %q", name)
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()

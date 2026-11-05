@@ -103,7 +103,7 @@ func hasCoreColumn0472(ctx context.Context, q sqlitedurable.Executor, table, col
 		}
 		if name == column {
 			if strings.ToUpper(t) != typ {
-				err = fmt.Errorf("unexpected %s.%s type %q", table, column, t)
+				err = fmt.Errorf("Неожиданное значение: %s.%s тип %q", table, column, t)
 				break
 			}
 			found = true

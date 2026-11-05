@@ -67,10 +67,10 @@ func ParseKey(raw string) ([]byte, error) {
 }
 func New(repo repository.Repository, key []byte) (*Manager, error) {
 	if repo == nil {
-		return nil, errors.New("extension security repository is required")
+		return nil, errors.New("Необходимо указать репозиторий безопасности расширений")
 	}
 	if len(key) != 0 && len(key) != 32 {
-		return nil, errors.New("extension secrets key must be 32 bytes")
+		return nil, errors.New("Ключ секретов расширений должен содержать 32 байта")
 	}
 	return &Manager{repo: repo, key: append([]byte(nil), key...)}, nil
 }
@@ -213,7 +213,7 @@ func (m *Manager) Grant(ctx context.Context, extensionID, version, scope, scopeI
 	}
 	permission = strings.ToLower(strings.TrimSpace(permission))
 	if !IsKnownPermission(permission) {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("unknown permission %q", permission)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("Неизвестное значение: разрешение %q", permission)
 	}
 	requested, err := m.Requested(ctx, extensionID, version)
 	if err != nil {
@@ -235,12 +235,12 @@ func normalizeScope0207(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("scope must be global or project")
+		return "", "", errors.New("Область действия должна иметь значение global или project")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("project scope requires scopeId")
+		return "", "", errors.New("Для области проекта необходимо указать scopeId")
 	}
 	return scope, scopeID, nil
 }
@@ -262,7 +262,7 @@ func (m *Manager) SetSecret(ctx context.Context, extensionID, scope, scopeID, na
 		}
 	}
 	if len(m.key) != 32 {
-		return model.ExtensionSecretMetadata{}, errors.New("extension secrets broker is not configured")
+		return model.ExtensionSecretMetadata{}, errors.New("Брокер секретов расширений не настроен")
 	}
 	if len(plaintext) == 0 || len(plaintext) > 1<<20 {
 		return model.ExtensionSecretMetadata{}, errors.New("secret value must contain 1..1048576 bytes")
@@ -295,7 +295,7 @@ func (m *Manager) GetSecret(ctx context.Context, extensionID, scope, scopeID, na
 	extensionID = strings.ToLower(strings.TrimSpace(extensionID))
 	name = strings.TrimSpace(name)
 	if len(m.key) != 32 {
-		return nil, errors.New("extension secrets broker is not configured")
+		return nil, errors.New("Брокер секретов расширений не настроен")
 	}
 	s, err := m.repo.GetExtensionSecret(ctx, extensionID, scope, scopeID, name)
 	if err != nil {
@@ -314,7 +314,7 @@ func (m *Manager) GetSecret(ctx context.Context, extensionID, scope, scopeID, na
 	}
 	plain, err := gcm.Open(nil, s.Nonce, s.Ciphertext, secretAAD(s.ExtensionID, s.Scope, s.ScopeID, s.Name))
 	if err != nil {
-		return nil, errors.New("extension secret authentication failed")
+		return nil, errors.New("Проверка подлинности секрета расширения не пройдена")
 	}
 	return plain, nil
 }

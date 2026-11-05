@@ -76,7 +76,7 @@ func validateSupport03510(v playerSupportReport03510) error {
 		total += uint64(e.Count)
 	}
 	if total > 80 {
-		return errors.New("too many diagnostic events")
+		return errors.New("Слишком много диагностических событий")
 	}
 	if v.GeneratedAtUnix == 0 {
 		return errors.New("missing diagnostic timestamp")

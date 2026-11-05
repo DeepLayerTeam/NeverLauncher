@@ -86,7 +86,7 @@ func decodeHostAction0413(r *http.Request, w http.ResponseWriter) (string, error
 		return "", errors.New("extra request body")
 	}
 	if req.Action != "start" && req.Action != "stop" && req.Action != "restart" {
-		return "", errors.New("unsupported host action")
+		return "", errors.New("Не поддерживается: действие хоста")
 	}
 	return req.Action, nil
 }

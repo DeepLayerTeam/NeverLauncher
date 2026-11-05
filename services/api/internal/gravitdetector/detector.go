@@ -340,7 +340,7 @@ func readObject(f *zip.File) (map[string]json.RawMessage, error) {
 	var v map[string]json.RawMessage
 	dec := json.NewDecoder(bytes.NewReader(b))
 	if e = dec.Decode(&v); e != nil {
-		return nil, errors.New("invalid JSON object")
+		return nil, errors.New("Некорректное значение: объект JSON")
 	}
 	if v == nil {
 		return nil, errors.New("JSON root must be an object")
@@ -473,7 +473,7 @@ func (r *Report) inspectWrapper(p string, obj map[string]json.RawMessage) {
 // внутри HTTP-worker усилила бы расход памяти при параллельных загрузках.
 func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool, error) {
 	if entry.UncompressedSize64 > maxJarBytes {
-		return "", false, errors.New("JAR too large")
+		return "", false, errors.New("Превышен допустимый размер: JAR")
 	}
 	tmp, err := os.CreateTemp("", "gravit-jar-manifest-*.tmp")
 	if err != nil {
@@ -499,7 +499,7 @@ func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool,
 		return "", false, err
 	}
 	if written != int64(entry.UncompressedSize64) {
-		return "", false, errors.New("JAR size mismatch")
+		return "", false, errors.New("Несоответствие: JAR размер")
 	}
 	z, err := zip.NewReader(tmp, written)
 	if err != nil {
@@ -624,18 +624,18 @@ func rejectDuplicateJSON0332(d *json.Decoder) error {
 		for d.More() {
 			keyToken, e := d.Token()
 			if e != nil {
-				return errors.New("invalid JSON object")
+				return errors.New("Некорректное значение: объект JSON")
 			}
 			key, ok := keyToken.(string)
 			if !ok {
-				return errors.New("invalid JSON key")
+				return errors.New("Некорректное значение: ключ JSON")
 			}
 			if seen[key] {
 				return errors.New("duplicate JSON key")
 			}
 			seen[key] = true
 			if len(seen) > 65536 {
-				return errors.New("too many JSON object keys")
+				return errors.New("Слишком много ключей объекта JSON")
 			}
 			if e = rejectDuplicateJSON0332(d); e != nil {
 				return e
@@ -649,7 +649,7 @@ func rejectDuplicateJSON0332(d *json.Decoder) error {
 		i := 0
 		for d.More() {
 			if i > 100000 {
-				return errors.New("too many array elements")
+				return errors.New("Слишком много элементов массива")
 			}
 			if err := rejectDuplicateJSON0332(d); err != nil {
 				return err
@@ -661,7 +661,7 @@ func rejectDuplicateJSON0332(d *json.Decoder) error {
 			return errors.New("JSON array not closed")
 		}
 	default:
-		return errors.New("invalid JSON delimiter")
+		return errors.New("Некорректное значение: разделитель JSON")
 	}
 	return nil
 }

@@ -79,7 +79,7 @@ func supported(s Stage) bool {
 }
 func (e *Engine) Register(priority int, mandatory bool, stages []Stage, h Handler) error {
 	if e == nil || h == nil || strings.TrimSpace(h.Name()) == "" || len(stages) == 0 {
-		return errors.New("invalid protection handler")
+		return errors.New("Некорректное значение: обработчик защиты")
 	}
 	match := make(map[Stage]bool, len(stages))
 	for _, s := range stages {
@@ -92,7 +92,7 @@ func (e *Engine) Register(priority int, mandatory bool, stages []Stage, h Handle
 	defer e.mu.Unlock()
 	for _, existing := range e.handlers {
 		if existing.handler.Name() == h.Name() {
-			return errors.New("duplicate protection handler")
+			return errors.New("Обнаружен дубликат: обработчик защиты")
 		}
 	}
 	e.handlers = append(e.handlers, entry{priority: priority, mandatory: mandatory, stages: match, handler: h})

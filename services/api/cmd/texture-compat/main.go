@@ -93,7 +93,7 @@ func cleanUUID02512(id string) (string, error) {
 	}
 	for _, c := range id {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return "", errors.New("invalid Minecraft UUID")
+			return "", errors.New("Некорректный UUID Minecraft")
 		}
 	}
 	return id, nil
@@ -150,7 +150,7 @@ func domainAllowed02512(host string, domains []string) bool {
 func checkTexture02512(ctx context.Context, c *http.Client, raw string, kind, model string, meta metadata02512, origin *url.URL, loopback bool) error {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.Opaque != "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Scheme != origin.Scheme && !(u.Scheme == "https" && origin.Scheme == "http") {
-		return errors.New("invalid texture URL")
+		return errors.New("Некорректное значение: текстура URL")
 	}
 	if u.Scheme != "https" && !(loopback && u.Scheme == "http" && isLoopback02512(u.Hostname())) {
 		return errors.New("insecure texture URL")
@@ -181,13 +181,13 @@ func checkTexture02512(ctx context.Context, c *http.Client, raw string, kind, mo
 	}
 	sum := sha256.Sum256(content)
 	if hex.EncodeToString(sum[:]) != digest {
-		return errors.New("texture SHA-256 does not match public URL")
+		return errors.New("Не совпадает: текстура SHA-256; ожидается открытый URL")
 	}
 	// Используйте тот же полный парсер и ограничения геометрии, что и при
 	// промышленной загрузке: CRC, анимация, хвостовые байты, ограничения пикселей и
 	// настоящее распаковывание.
 	if _, err := texturepng.Process(bytes.NewReader(content), kind, model); err != nil {
-		return fmt.Errorf("invalid managed %s PNG: %w", kind, err)
+		return fmt.Errorf("Некорректное значение: управляемый %s PNG: %w", kind, err)
 	}
 	return nil
 }

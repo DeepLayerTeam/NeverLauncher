@@ -20,7 +20,7 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 	if cfg.CAFile != "" {
 		pemBytes, err := os.ReadFile(cfg.CAFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("read CA file: %w", err)
+			return nil, nil, fmt.Errorf("Чтение: CA файл: %w", err)
 		}
 		if !roots.AppendCertsFromPEM(pemBytes) {
 			return nil, nil, fmt.Errorf("CA file contains no certificates")
@@ -57,7 +57,7 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 			last = err
 		}
 		if last == nil {
-			last = fmt.Errorf("no permitted addresses")
+			last = fmt.Errorf("Нет разрешённых адресов")
 		}
 		return nil, last
 	}
