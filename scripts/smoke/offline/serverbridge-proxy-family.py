@@ -149,12 +149,12 @@ require(
     [
         'case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia"'
     ],
-    "Backend server kind enforcement",
+    "Проверка типа сервера в Backend",
 )
 require(
     integrity,
     ["BungeeCordSHA256", "WaterfallSHA256", 'case "bungeecord":', 'case "waterfall":'],
-    "Backend proxy artifact integrity policy",
+    "Политика целостности артефактов прокси Backend",
 )
 for kind in ("velocity", "bungeecord", "waterfall"):
     require(
@@ -198,7 +198,7 @@ require(
         "WaterfallSHA256",
         "для 0.14.5+",
     ],
-    "production configuration validation",
+    "Проверка производственной конфигурации",
 )
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
@@ -239,7 +239,7 @@ require(
         "launcher-waterfall-bridge.jar",
         "proxyFamilyRuntime:true",
     ],
-    "real proxy runtime E2E",
+    "Сквозная проверка настоящего Runtime прокси",
 )
 require(
     compose_e2e,

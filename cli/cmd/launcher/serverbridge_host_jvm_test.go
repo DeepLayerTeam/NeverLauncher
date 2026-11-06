@@ -248,7 +248,7 @@ func TestJVM0283RealJavaClasspathAndModule(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !strings.Contains(string(stdout), "ACTUAL_JAVA_E2E") {
-				t.Fatalf("real Java main not executed, stdout=%s", stdout)
+				t.Fatalf("Главный класс настоящего Java-приложения не запущен; stdout=%s", stdout)
 			}
 		})
 	}

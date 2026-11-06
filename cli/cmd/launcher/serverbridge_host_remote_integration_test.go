@@ -41,7 +41,7 @@ func TestRemoteControlSystemdReadyAndDrain0498(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !strings.Contains(string(b[:n]), expect) {
-			t.Fatalf("systemd notification = %q, want %s", b[:n], expect)
+			t.Fatalf("Уведомление systemd = %q, ожидалось %s", b[:n], expect)
 		}
 	}
 	read("READY=1")

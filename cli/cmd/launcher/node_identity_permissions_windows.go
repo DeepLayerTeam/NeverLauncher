@@ -54,6 +54,6 @@ foreach ($rule in $acl.Access) {
     if ($allowed -notcontains $sid) { throw ('ACL идентификатора узла содержит другого субъекта: ' + $sid) }
     if ($sid -eq $me -and $rule.AccessControlType -eq 'Allow') { $ownerRule = $true }
 }
-if (-not $ownerRule) { throw 'node identity ACL does not grant access to current user' }
+if (-not $ownerRule) { throw 'ACL идентификации узла не предоставляет доступ текущему пользователю' }
 `)
 }

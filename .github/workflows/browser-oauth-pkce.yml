@@ -53,13 +53,13 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: интерфейс privacy и cancellation тесты
+      - name: Проверить конфиденциальность и отмену операций интерфейса
         working-directory: apps/desktop
         run: |
           npm ci
           npm run test:official
           npm run build
-      - name: Loopback проверки на обход тесты и нативные Скомпилировать
+      - name: Запустить тесты обхода loopback и выполнить нативную сборку
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_browser_0263::tests -- --nocapture
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

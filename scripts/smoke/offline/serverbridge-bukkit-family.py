@@ -145,7 +145,7 @@ require(
     [
         'case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia"'
     ],
-    "Backend server kind enforcement",
+    "Проверка типа сервера в Backend",
 )
 require(
     integrity,
@@ -210,7 +210,7 @@ require(
         "FoliaSHA256",
         "для 0.14.4+",
     ],
-    "production configuration validation",
+    "Проверка производственной конфигурации",
 )
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")

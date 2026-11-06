@@ -125,7 +125,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 		t.Fatalf("expected shared cache hits, got %d", second.SharedCacheHits)
 	}
 	if libraryRequests.Load() != 1 || nativeRequests.Load() != 1 || assetRequests.Load() != 1 {
-		t.Fatal("shared cache missed and contacted offline artifact endpoint")
+		t.Fatal("Общий кеш не сработал: выполнен запрос к автономному источнику артефактов")
 	}
 	for _, f := range second.Files {
 		if (f.Kind == "library" || f.Kind == "native-archive" || f.Kind == "asset") && !f.Cached {
@@ -177,7 +177,7 @@ func TestSharedArtifacts0277ConcurrentAndUnsafeRoots(t *testing.T) {
 		target := filepath.Join(root, fmt.Sprintf("target-%d", i))
 		hit, sha, size, err := cas.restore(ctx, target, sha1hex(data), int64(len(data)))
 		if err != nil || !hit || sha != hex.EncodeToString(sum[:]) || size != int64(len(data)) {
-			t.Fatalf("restoration failed: %v", err)
+			t.Fatalf("Ошибка восстановления: %v", err)
 		}
 	}
 	if _, err := sharedArtifactsContext0277(ctx, filepath.Join(root, "client", "nested"), filepath.Join(root, "client")); err == nil {
@@ -206,31 +206,31 @@ func TestNativeExtraction0277RejectsConflictingOutputs(t *testing.T) {
 	}
 	got, err := os.ReadFile(filepath.Join(dest, "lib.dll"))
 	if err != nil || string(got) != "correct" {
-		t.Fatal("native file corrupted after conflict")
+		t.Fatal("Нативный файл повреждён после конфликта")
 	}
 }
 func TestNativeClassifier0277UnknownArchitectureFailClosed(t *testing.T) {
 	targets := []vanillaTarget{{OS: "linux", Arch: "x86_64"}, {OS: "linux", Arch: "aarch64"}, {OS: "windows", Arch: "x86"}, {OS: "osx", Arch: "aarch64"}}
 	for _, target := range targets {
 		if libraryArtifactAppliesToTarget("example:artifact:1.0:natives-linux-unknown", target) {
-			t.Fatalf("unknown native accepted: %+v", target)
+			t.Fatalf("Принята неизвестная нативная библиотека: %+v", target)
 		}
 	}
 	if !libraryArtifactAppliesToTarget("org.lwjgl:lwjgl:3.3.3:natives-macos-arm64", vanillaTarget{OS: "osx", Arch: "aarch64"}) {
-		t.Fatal("macos arm64 native not selected")
+		t.Fatal("Нативная библиотека macOS arm64 не выбрана")
 	}
 	if !libraryArtifactAppliesToTarget("org.example:legacy:1:natives-windows", vanillaTarget{OS: "windows", Arch: "x86"}) {
-		t.Fatal("legacy x86 target excluded")
+		t.Fatal("Исключена устаревшая целевая платформа x86")
 	}
 	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl:3.3.3:natives-windows-arm64", vanillaTarget{OS: "windows", Arch: "x86_64"}) {
-		t.Fatal("arm64 native installed on x64")
+		t.Fatal("Нативная библиотека arm64 установлена на x64")
 	}
 }
 
 func TestVanillaLibraries0277ConflictPerTarget(t *testing.T) {
 	libs := []MojangLibrary{{Name: "com.example:engine:1.0"}, {Name: "com.example:engine:2.0"}}
 	if err := validateVanillaLibraryConflicts0277(libs, []vanillaTarget{{OS: "linux", Arch: "x86_64"}}); err == nil {
-		t.Fatal("conflicting classpath revisions accepted")
+		t.Fatal("Приняты конфликтующие версии пути к классам")
 	}
 	libs[1].Rules = []map[string]any{{"action": "allow", "os": map[string]any{"name": "windows"}}}
 	if err := validateVanillaLibraryConflicts0277(libs, []vanillaTarget{{OS: "linux", Arch: "x86_64"}}); err != nil {

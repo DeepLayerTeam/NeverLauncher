@@ -81,7 +81,7 @@ func TestMirrorPortablePathCollision0497(t *testing.T) {
 	}
 	_, err := mirrorAddArtifacts0274(context.Background(), stage, entries, "install-mods")
 	if err == nil || !strings.Contains(err.Error(), "collision") {
-		t.Fatalf("expected case-insensitive collision: %v", err)
+		t.Fatalf("Ожидалось совпадение имён без учёта регистра: %v", err)
 	}
 }
 
@@ -113,17 +113,17 @@ func TestMirrorHelper0274ModsTransactionAndRecovery(t *testing.T) {
 	content, _ = json.Marshal(artifact)
 	os.WriteFile(manifest, content, 0600)
 	if err := handleRuntimeMirror0274([]string{"install-mods", "--client-dir", root, "--manifest", manifest}); err == nil {
-		t.Fatal("wrong hash must fail")
+		t.Fatal("Некорректный хеш должен приводить к ошибке")
 	}
 	if _, err := os.Stat(filepath.Join(root, "mods", "bad.jar")); !os.IsNotExist(err) {
-		t.Fatal("failed transaction modified live client")
+		t.Fatal("Неуспешная транзакция изменила рабочий клиент")
 	}
 	after, err := readFactoryPlan0271(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if after.ReproducibilitySHA256 != oldDigest {
-		t.Fatal("failed transaction changed plan")
+		t.Fatal("Неуспешная транзакция изменила план")
 	}
 	// Отклоняйте обход исходного пути до установки.
 	artifact[0].Path = "mods/../../bad.jar"
@@ -161,7 +161,7 @@ func TestMirrorHelper0274DedupeWithoutClasspathModification(t *testing.T) {
 	first, _ := os.Stat(filepath.Join(root, "libraries/a/1/a-1.jar"))
 	second, _ := os.Stat(filepath.Join(root, "libraries/b/2/b-2.jar"))
 	if !os.SameFile(first, second) {
-		t.Fatal("duplicate library jars were not deduplicated")
+		t.Fatal("Повторяющиеся JAR-библиотеки не были объединены")
 	}
 	if before.Outputs[0] != p.Outputs[0] {
 		t.Fatal("content unexpectedly changed")
@@ -172,7 +172,7 @@ func TestMirrorHelper0274DedupeWithoutClasspathModification(t *testing.T) {
 		t.Fatal(err)
 	}
 	if p.ReproducibilitySHA256 != previous {
-		t.Fatal("idempotent dedup changed lock")
+		t.Fatal("Повторное объединение изменило файл фиксации зависимостей")
 	}
 }
 func TestMirrorHelper0274PatchAuthlibVerifiedBytes(t *testing.T) {
@@ -219,7 +219,7 @@ func TestMirrorHelper0274PatchAuthlibVerifiedBytes(t *testing.T) {
 	if _, err = mirrorTransactional0274(context.Background(), root, func(stage string) ([]mirrorAction0274, error) {
 		return mirrorPatchAuthlib0274(stage, target, patchFile, mirrorSHA0274(expected), mirrorSHA0274(badPatch), mirrorSHA0274(expected))
 	}); err == nil {
-		t.Fatal("unauthorized patch entry accepted")
+		t.Fatal("Принята неавторизованная запись патча")
 	}
 }
 func TestMirrorHelper0274InstallerDownloadPinning(t *testing.T) {
@@ -233,7 +233,7 @@ func TestMirrorHelper0274InstallerDownloadPinning(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := handleRuntimeMirror0274(args); err != nil {
-		t.Fatal("verified cache should be idempotent: ", err)
+		t.Fatal("Проверенный кеш должен обрабатываться идемпотентно: ", err)
 	}
 	file := filepath.Join(cache, "forge", "1.21.1-52.0.1", "installer.jar")
 	if err := os.WriteFile(file, []byte("tampered"), 0600); err != nil {
@@ -282,7 +282,7 @@ func TestMirrorHelper0274WorkspaceAppliesActualVanillaWithMods(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := handleRuntimeMirror0274(args); err == nil {
-		t.Fatal("existing published dir should reject reapplication")
+		t.Fatal("Повторное применение должно отклоняться для существующего опубликованного каталога")
 	}
 	workspace.Mods[0].SHA256 = strings.Repeat("0", 64)
 	data, _ = json.Marshal(workspace)
@@ -290,10 +290,10 @@ func TestMirrorHelper0274WorkspaceAppliesActualVanillaWithMods(t *testing.T) {
 	broken := filepath.Join(folder, "client-broken")
 	args = []string{"apply-workspace", "--file", workspaceFile, "--client-dir", broken, "--version-manifest", server.URL + "/manifest.json", "--asset-base-url", server.URL + "/assets"}
 	if err := handleRuntimeMirror0274(args); err == nil {
-		t.Fatal("wrong workspace mod hash accepted")
+		t.Fatal("Принят некорректный хеш мода рабочего пространства")
 	}
 	if _, err := os.Stat(broken); !os.IsNotExist(err) {
-		t.Fatal("failed workspace published partial client")
+		t.Fatal("Неуспешная сборка рабочего пространства опубликовала неполный клиент")
 	}
 }
 
@@ -338,7 +338,7 @@ func TestMirrorHelper0274LaunchVerifiedLocalForgeInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if plan.Loader != "forge" || len(plan.Processors) == 0 || plan.LoaderVersion != "52.0.1" {
-		t.Fatal("installer did not execute processor pipeline")
+		t.Fatal("Установщик не выполнил последовательность обработчиков")
 	}
 	if err := verifyFactoryPlan0271(root, plan); err != nil {
 		t.Fatal(err)
@@ -374,14 +374,14 @@ func TestMirrorHelper0274LWJGLCoordinateAndProfileRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(parsed.Libraries) != 1 || parsed.Libraries[0].Name != coord {
-		t.Fatalf("LWJGL not added to runtime profile: %s", profile)
+		t.Fatalf("LWJGL не добавлен в профиль Runtime: %s", profile)
 	}
 	if err := handleRuntimeMirror0274(args); err == nil {
-		t.Fatal("duplicate coordinate must be rejected")
+		t.Fatal("Повторяющаяся координата зависимости должна отклоняться")
 	}
 	args[5] = "org.evil:fake:1.0" // args[4] = --coordinate, args[5] = value
 	if err := handleRuntimeMirror0274(args); err == nil {
-		t.Fatal("unrelated group accepted as LWJGL")
+		t.Fatal("Посторонняя группа принята за LWJGL")
 	}
 }
 
@@ -421,7 +421,7 @@ func TestMirrorHelper0274ModrinthRequiredDependencyResolution(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(mods) != 2 || mods[0].VersionID != "childVer" || mods[1].VersionID != "rootVer" {
-		t.Fatalf("unexpected dependency ordering: %+v", mods)
+		t.Fatalf("Неожиданный порядок зависимостей: %+v", mods)
 	}
 	stage := t.TempDir()
 	actions, err := mirrorAddArtifacts0274(context.Background(), stage, mods, "install-mods")
@@ -429,13 +429,13 @@ func TestMirrorHelper0274ModrinthRequiredDependencyResolution(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(actions) != 2 || actions[0].ProjectID != "childProj" || actions[1].VersionID != "rootVer" {
-		t.Fatalf("missing provenance: %+v", actions)
+		t.Fatalf("Отсутствуют сведения о происхождении: %+v", actions)
 	}
 	if _, err := mirrorCheckedHash0274(filepath.Join(stage, "mods/child.jar"), mirrorSHA0274(dependency)); err != nil {
 		t.Fatal(err)
 	}
 	plan.Loader = "forge"
 	if _, err = resolveModrinthMods0274(context.Background(), server.URL, "rootVer", plan); err == nil {
-		t.Fatal("incompatible loader version accepted")
+		t.Fatal("Принята несовместимая версия загрузчика")
 	}
 }

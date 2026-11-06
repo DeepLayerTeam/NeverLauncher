@@ -67,7 +67,7 @@ jobs:
           grep -q -- '--- PASS: TestConcurrentRevokedRecoveryOnlyOneKeyWins0435' "$RUNNER_TEMP/recovery-postgres.log"
           grep -q -- '--- PASS: TestRevokedDeviceRecoveryTransactionPostgres0435' "$RUNNER_TEMP/recovery-postgres.log"
           if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/recovery-http.log" "$RUNNER_TEMP/recovery-postgres.log"; then
-            echo 'Recovery verification was skipped or failed' >&2; exit 1
+            echo 'Проверка восстановления пропущена или завершилась ошибкой' >&2; exit 1
           fi
       - name: Загрузить исходные восстановление выполнение журналы
         if: always()

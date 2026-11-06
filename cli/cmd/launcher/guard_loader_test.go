@@ -14,7 +14,7 @@ func TestGuardLoader0504SignedSourceAndRevocation(t *testing.T) {
 	p.Artifacts = []guardCompatArtifact0502{library}
 	out, err := guardLoaderConfig0504(root, p)
 	if err != nil || !strings.Contains(out, "loader.id=fabric\nloader.count=1") || !strings.Contains(out, library.SHA256) {
-		t.Fatalf("signed code denied: %v %s", err, out)
+		t.Fatalf("Подписанный код отклонён: %v %s", err, out)
 	}
 	p.RevokedDigests = []string{library.SHA256}
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
@@ -32,11 +32,11 @@ func TestGuardLoader0504RejectUnboundOrUnsupportedLoaders(t *testing.T) {
 	root := t.TempDir()
 	p := policyFixture0502()
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("unbound Fabric loader accepted")
+		t.Fatal("Принят загрузчик Fabric без привязки")
 	}
 	p.Loader = "neoforge"
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("unbound NeoForge loader accepted")
+		t.Fatal("Принят загрузчик NeoForge без привязки")
 	}
 	p.Loader = "vanilla"
 	if out, err := guardLoaderConfig0504(root, p); err != nil || !strings.Contains(out, "loader.count=0") {
@@ -44,7 +44,7 @@ func TestGuardLoader0504RejectUnboundOrUnsupportedLoaders(t *testing.T) {
 	}
 	p.Loader = "custom-loader"
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("unknown loader accepted")
+		t.Fatal("Принят неизвестный загрузчик")
 	}
 }
 func TestGuardLoader0504RejectSymlinkAndNonJAR(t *testing.T) {
@@ -52,7 +52,7 @@ func TestGuardLoader0504RejectSymlinkAndNonJAR(t *testing.T) {
 	p := policyFixture0502()
 	p.Artifacts = []guardCompatArtifact0502{artifact0502(t, root, "loader-library", "libraries/not-a-jar.txt", "fake")}
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("non JAR loader accepted")
+		t.Fatal("Принят загрузчик, не являющийся JAR-файлом")
 	}
 	a := artifact0502(t, root, "loader-library", "libraries/real.jar", "real")
 	p.Artifacts = []guardCompatArtifact0502{{Kind: "loader-library", Path: "libraries/link.jar", SHA256: a.SHA256}}

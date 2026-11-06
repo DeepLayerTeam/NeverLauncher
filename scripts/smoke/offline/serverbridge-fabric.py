@@ -69,7 +69,7 @@ require(
         '"clientModRequired": false',
         '"fabric-api": ">=0.116.0+1.21.1"',
     ],
-    "Fabric server-only metadata",
+    "Метаданные Fabric только для сервера",
 )
 
 mixins = read("plugins/fabric-bridge/src/main/resources/launcher.fabric.mixins.json")
@@ -79,7 +79,7 @@ accessor = read(
 require(
     mixins,
     ["ServerLoginNetworkHandlerAccessor", '"required": true', '"JAVA_21"'],
-    "Fabric login accessor mixin",
+    "Миксин доступа ко входу Fabric",
 )
 require(
     accessor,
@@ -126,7 +126,7 @@ require(backend, ['"folia", "fabric"'], "Backend Fabric kind enforcement")
 require(
     integrity,
     ["FabricSHA256", 'case "fabric":', "policy.FabricSHA256"],
-    "Backend Fabric integrity policy",
+    "Политика целостности Fabric в Backend",
 )
 require(
     config,
@@ -135,7 +135,7 @@ require(
         "FabricSHA256",
         "для 0.14.6+ должна содержать fabricSha256",
     ],
-    "production Fabric release policy",
+    "Политика выпуска Fabric для производственной среды",
 )
 require(
     manifest,
@@ -192,7 +192,7 @@ require(release, ["paper purpur folia fabric"], "release bundle Fabric artifact"
 require(
     release_cli,
     ['"launcher-fabric-bridge-" + ver + ".jar"'],
-    "release verification Fabric artifact",
+    "Проверка артефакта Fabric для релиза",
 )
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
@@ -222,7 +222,7 @@ require(
         "fabricServerBridge:true",
         "health-fabric.json",
     ],
-    "real Fabric runtime E2E",
+    "Сквозная проверка настоящего Runtime Fabric",
 )
 require(
     compose_e2e,

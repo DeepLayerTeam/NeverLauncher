@@ -1120,7 +1120,7 @@ mod tests {
         #[cfg(unix)]{
             use std::os::unix::fs::MetadataExt;
             assert_eq!(fs::metadata(root.join("mods/core.jar")).unwrap().ino(),inode_before,
-                "unchanged managed file must not be replaced");
+                "Неизменённый управляемый файл не должен заменяться");
         }
         assert_eq!(fs::read(root.join("mods/sodium.jar")).unwrap(),b"SODIUM");
         assert_eq!(fs::read(root.join("mods/shader.jar")).unwrap(),b"SHADER");
@@ -1205,7 +1205,7 @@ mod tests {
         let active=pointer(&root).unwrap().active.unwrap();
         assert_eq!(active.plan_sha256,Some(resolved_download_0246::resolve(&m,None).unwrap().sha256));
         assert!(rollback(&root,&key).await.unwrap_err().contains("no last-known-good"),
-            "repair of an initial installation must not advertise corrupt bytes as last-known-good");
+            "Восстановление начальной установки не должно считать повреждённые данные последней работоспособной версией");
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         fs::remove_dir_all(root).unwrap();
     }

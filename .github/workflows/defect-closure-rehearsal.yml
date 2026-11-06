@@ -125,7 +125,7 @@ jobs:
         with:
           name: frozen-candidate-05212-${{ inputs.source_commit }}
           path: ${{ runner.temp }}/freeze-05212
-      - name: Запустить реальные регрессионные проверки и Повторить originals из все final-byte E2E источники
+      - name: Запустить регрессионные проверки и воспроизвести исходные данные всех E2E-проверок итоговых пакетов
         env:
           APPROVED_COMMIT: ${{ inputs.source_commit }}
           APPROVED_PROJECT: ${{ inputs.project }}

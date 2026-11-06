@@ -56,7 +56,7 @@ jobs:
                --secrets "$RUNNER_TEMP/not-provided.json" \
                --oidc-proof "$RUNNER_TEMP/not-provided-oidc.json" \
                --output "$RUNNER_TEMP/false-pass.json"; then
-            echo 'FAIL: missing live credentials accepted' >&2
+            echo 'ОШИБКА: отсутствие реальных учётных данных не было отклонено' >&2
             exit 1
           fi
           test ! -e "$RUNNER_TEMP/false-pass.json"

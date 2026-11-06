@@ -12,7 +12,7 @@ func TestAdminContributions0208RequireUIGrantAndStandaloneHTML(t *testing.T) {
 		t.Fatalf("valid admin contributions rejected: %v", err)
 	}
 	if got.Admin == nil || got.Admin.DashboardWidgets[0].Height != 320 {
-		t.Fatalf("admin contributions lost: %#v", got.Admin)
+		t.Fatalf("Потеряны расширения панели администратора: %#v", got.Admin)
 	}
 	bad := base
 	bad.Permissions = []string{"project:read"}

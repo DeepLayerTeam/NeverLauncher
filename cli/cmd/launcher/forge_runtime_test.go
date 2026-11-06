@@ -141,7 +141,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			}
 			installerPath := filepath.Join(dir, ".launcher", "installers", loader, sanitizeVersionToken(second.ArtifactVersion), "installer.jar")
 			if err := os.Remove(installerPath); err != nil {
-				t.Fatalf("remove local installer before cache recovery: %v", err)
+				t.Fatalf("Удаление локального установщика перед восстановлением из кеша: %v", err)
 			}
 			installerUp.Store(false)
 			third, err := installForgeLike(context.Background(), forgeMaterializeOptions{
@@ -209,7 +209,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			seenProfile, seenGenerated := false, false
 			for _, file := range pkg.Files {
 				if strings.HasPrefix(file.Path, ".launcher/") {
-					t.Fatalf("local installer state leaked into package: %s", file.Path)
+					t.Fatalf("Состояние локального установщика попало в пакет: %s", file.Path)
 				}
 				seenProfile = seenProfile || file.Path == result.ProfilePath
 				seenGenerated = seenGenerated || file.Path == "libraries/"+generatedRel
@@ -234,7 +234,7 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 
 	loaderVersion, artifactVersion, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "forge", "1.20.1", "latest-stable", server.URL+"/forge.xml")
 	if err != nil || loaderVersion != "47.4.0" || artifactVersion != "1.20.1-47.4.0" {
-		t.Fatalf("forge selection: %q %q %v", loaderVersion, artifactVersion, err)
+		t.Fatalf("Выбор Forge: %q %q %v", loaderVersion, artifactVersion, err)
 	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.1", "latest-stable", server.URL+"/neo-legacy.xml")
 	if err != nil || loaderVersion != "1.20.1-47.1.79" || artifactVersion != "1.20.1-47.1.79" {
@@ -242,7 +242,7 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/neo.xml")
 	if err != nil || loaderVersion != "21.1.105" || artifactVersion != "21.1.105" {
-		t.Fatalf("neoforge selection: %q %q %v", loaderVersion, artifactVersion, err)
+		t.Fatalf("Выбор NeoForge: %q %q %v", loaderVersion, artifactVersion, err)
 	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "26.2", "latest-stable", server.URL+"/neo.xml")
 	if err != nil || loaderVersion != "26.2.0.75" || artifactVersion != "26.2.0.75" {
@@ -252,10 +252,10 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 		t.Fatal("incompatible NeoForge/Minecraft explicit version accepted")
 	}
 	if got := forgeInstallerURL("neoforge", "1.20.1", "1.20.1-47.1.79"); !strings.Contains(got, "/net/neoforged/forge/1.20.1-47.1.79/forge-1.20.1-47.1.79-installer.jar") {
-		t.Fatalf("unexpected NeoForge 1.20.1 installer URL: %s", got)
+		t.Fatalf("Неожиданный URL установщика NeoForge 1.20.1: %s", got)
 	}
 	if got := forgeInstallerURL("neoforge", "26.2", "26.2.0.75"); !strings.Contains(got, "/net/neoforged/neoforge/26.2.0.75/neoforge-26.2.0.75-installer.jar") {
-		t.Fatalf("unexpected NeoForge modern installer URL: %s", got)
+		t.Fatalf("Неожиданный URL современного установщика NeoForge: %s", got)
 	}
 }
 
@@ -272,13 +272,13 @@ func TestNeoForgeMavenMetadataRetriesTransientNotFound(t *testing.T) {
 
 	loaderVersion, artifactVersion, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL)
 	if err != nil {
-		t.Fatalf("transient metadata 404 was not retried: %v", err)
+		t.Fatalf("Временная ошибка метаданных 404 не вызвала повтор запроса: %v", err)
 	}
 	if loaderVersion != "21.1.252" || artifactVersion != "21.1.252" {
-		t.Fatalf("unexpected NeoForge version after metadata retry: %q %q", loaderVersion, artifactVersion)
+		t.Fatalf("Неожиданная версия NeoForge после повторного запроса метаданных: %q %q", loaderVersion, artifactVersion)
 	}
 	if got := requests.Load(); got != 3 {
-		t.Fatalf("metadata request count=%d, want 3", got)
+		t.Fatalf("Количество запросов метаданных: %d, ожидалось 3", got)
 	}
 }
 
@@ -300,16 +300,16 @@ func TestNeoForgeMavenMetadataRetriesSemanticallyIncompleteSnapshot(t *testing.T
 
 	loaderVersion, artifactVersion, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/maven-metadata.xml")
 	if err != nil {
-		t.Fatalf("semantically incomplete NeoForge metadata was not retried: %v", err)
+		t.Fatalf("Повторный запрос неполных метаданных NeoForge не выполнен: %v", err)
 	}
 	if loaderVersion != "21.1.252" || artifactVersion != "21.1.252" {
-		t.Fatalf("unexpected NeoForge version after semantic metadata retry: %q %q", loaderVersion, artifactVersion)
+		t.Fatalf("Неожиданная версия NeoForge после повторного запроса неполных метаданных: %q %q", loaderVersion, artifactVersion)
 	}
 	if got := requests.Load(); got != 2 {
-		t.Fatalf("metadata request count=%d, want 2", got)
+		t.Fatalf("Количество запросов метаданных: %d, ожидалось 2", got)
 	}
 	if got := refreshed.Load(); got != 1 {
-		t.Fatalf("semantic retry did not bypass mutable metadata cache: refresh requests=%d", got)
+		t.Fatalf("Повторный запрос не обошёл изменяемый кеш метаданных: запросов обновления — %d", got)
 	}
 }
 

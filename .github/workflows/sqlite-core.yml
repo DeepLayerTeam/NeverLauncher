@@ -64,6 +64,6 @@ jobs:
           assert project['id']=='ci-project' and project['name']=='CI Project'
           PY
           if "$RUNNER_TEMP/launcher-sqlite" core-status --db "$RUNNER_TEMP/sqlite-core/nonexistent.sqlite"; then
-            echo 'core-status incorrectly initialized a nonexistent database' >&2
+            echo 'Команда core-status ошибочно инициализировала несуществующую базу данных' >&2
             exit 1
           fi

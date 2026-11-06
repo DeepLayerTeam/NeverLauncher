@@ -142,7 +142,7 @@ require(
         'side="SERVER"',
         'versionRange="[1.21.1,1.21.2)"',
     ],
-    "Forge server-only metadata",
+    "Метаданные Forge только для сервера",
 )
 require(
     read("plugins/neoforge-bridge/src/main/resources/META-INF/neoforge.mods.toml"),
@@ -151,7 +151,7 @@ require(
         'side="SERVER"',
         'versionRange="[1.21.1,1.21.2)"',
     ],
-    "NeoForge server-only metadata",
+    "Метаданные NeoForge только для сервера",
 )
 backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")

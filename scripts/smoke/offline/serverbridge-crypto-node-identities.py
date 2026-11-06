@@ -138,12 +138,12 @@ require(
         "X-Launcher-Node-Signature",
         "identity.sign(canonical)",
     ],
-    "ServerBridge Java request signing",
+    "Подписание запросов Java ServerBridge",
 )
 require(
     java_config,
     ["identity.file", "LAUNCHER_NODE_IDENTITY_FILE"],
-    "ServerBridge identity configuration",
+    "Настройки идентификации ServerBridge",
 )
 if "X-Launcher-Server-Token" in java_client or "server.token" in java_config:
     raise SystemExit(
@@ -162,7 +162,7 @@ require(
         "serverbridge_node_fingerprint_mismatch",
         "existing node identity was replaceable through registration",
     ],
-    "cryptographic identity regression tests",
+    "Регрессионные тесты криптографической идентификации",
 )
 
 openapi = read("schemas/openapi.yaml")
@@ -175,7 +175,7 @@ require(
         '"RotateNodeIdentityRequest"',
         '"const": "ed25519"',
     ],
-    "OpenAPI node identity contract",
+    "Контракт OpenAPI для идентификации узла",
 )
 if '"ServerToken"' in openapi or "X-Launcher-Server-Token" in openapi:
     raise SystemExit(

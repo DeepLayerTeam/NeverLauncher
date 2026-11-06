@@ -40,7 +40,7 @@ jobs:
         env:
           PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "WINDOWS_CODESIGN_PFX_BASE64 secret is required" }
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "Необходим секрет WINDOWS_CODESIGN_PFX_BASE64" }
           $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\launcher-codesign.pfx", $bytes)
       - name: Установка зависимости для подписи набора компонентов

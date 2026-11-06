@@ -47,7 +47,7 @@ jobs:
             --world-marker "$RUNNER_TEMP/missing-world.dat" \
             --report "$RUNNER_TEMP/owner-0523-blocked.json" \
             --isolated-destructive-acceptance; then
-              echo 'FAIL: missing physical Minecraft host accepted as PASS' >&2
+              echo 'ОШИБКА: отсутствие физического узла Minecraft признано успешной проверкой' >&2
               exit 1
           fi
           python3 - "$RUNNER_TEMP/owner-0523-blocked.json" <<'PY'

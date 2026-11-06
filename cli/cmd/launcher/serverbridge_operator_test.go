@@ -31,7 +31,7 @@ func TestBridgeVerifyLocalAndRuntime02812(t *testing.T) {
 	backend := "http://127.0.0.1:8080"
 	root, local, req := fixtureBridge02812(t, backend)
 	if !local.LocalVerified || local.RuntimeVerified {
-		t.Fatal("runtime must not be certified by local artifact alone")
+		t.Fatal("Runtime нельзя сертифицировать только по локальному артефакту")
 	}
 	when := time.Now().UTC().Format(time.RFC3339Nano)
 	node := map[string]any{"id": req.ID, "kind": req.Kind, "projectId": req.ProjectID, "keyFingerprint": req.KeyFingerprint, "pluginVersion": local.Version, "pluginSha256": local.ArtifactSHA256, "protocolVersion": float64(3), "runtimeId": strings.Repeat("a", 64), "lastHeartbeatAt": when, "status": "active", "integrityStatus": "verified"}
@@ -52,7 +52,7 @@ func TestBridgeVerifyLocalAndRuntime02812(t *testing.T) {
 			c[tc.field] = tc.value
 			_, err := verifyBridgeRuntime02812(local, req, map[string]any{"data": map[string]any{"items": []any{c}}}, time.Now().UTC())
 			if err == nil {
-				t.Fatal("invalid live state certified")
+				t.Fatal("Сертифицировано недопустимое состояние работающей системы")
 			}
 		})
 	}
@@ -82,7 +82,7 @@ func TestBridgeRuntimeVerifyAuthenticatedHTTP02812(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !tokenSeen {
-		t.Fatal("authenticated backend GET not executed")
+		t.Fatal("Аутентифицированный запрос GET к Backend не выполнен")
 	}
 	if err := verifyServerBridge02812([]string{"verify", "--server-root", root, "--offline"}); err != nil {
 		t.Fatal(err)
@@ -132,12 +132,12 @@ func TestBridgeOperatorMutualExclusion02812(t *testing.T) {
 func TestBridgeRejectsPlainHTTPAndOutsidePaths02812(t *testing.T) {
 	for _, endpoint := range []string{"http://example.org", "https://user:pw@example.org", "https://example.org/?token=secret", "http://10.0.0.1:8080"} {
 		if bridgeEndpointSecure02812(endpoint) == nil {
-			t.Fatalf("unsafe endpoint accepted: %q", endpoint)
+			t.Fatalf("Принята небезопасная конечная точка: %q", endpoint)
 		}
 	}
 	for _, endpoint := range []string{"https://example.org", "http://127.0.0.1:8080", "http://localhost:8080"} {
 		if err := bridgeEndpointSecure02812(endpoint); err != nil {
-			t.Fatalf("safe endpoint rejected: %q: %v", endpoint, err)
+			t.Fatalf("Безопасная конечная точка отклонена: %q: %v", endpoint, err)
 		}
 	}
 	root := t.TempDir()
@@ -169,10 +169,10 @@ func TestBridgeRejectsForgedWorldTransaction02812(t *testing.T) {
 	tx.Changes = append(tx.Changes, bridgeProvisionChange0199{Path: world})
 	writeJSONSecure0199(txPath, tx, 0o600)
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root}); err == nil {
-		t.Fatal("world file supplied by tampered journal accepted")
+		t.Fatal("Принят файл игрового мира из изменённого журнала")
 	}
 	if raw, _ := os.ReadFile(world); string(raw) != "inventory" {
-		t.Fatal("world file was changed")
+		t.Fatal("Файл игрового мира изменён")
 	}
 }
 
@@ -186,6 +186,6 @@ func TestBridgeDryRunDoesNotTakeOperatorLock02812(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199))); !os.IsNotExist(err) {
-		t.Fatal("dry run created mutable state")
+		t.Fatal("Пробный запуск создал изменяемое состояние")
 	}
 }

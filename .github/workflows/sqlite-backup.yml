@@ -73,5 +73,5 @@ jobs:
               f.seek(0); f.write(b'XXXX'); f.flush()
           PY
           if "$exe" backup-verify --backup "$RUNNER_TEMP/dep06/backups/initial.db"; then
-            echo 'ERROR: tampered snapshot verified'; exit 1
+            echo 'ОШИБКА: изменённый снимок прошёл проверку'; exit 1
           fi

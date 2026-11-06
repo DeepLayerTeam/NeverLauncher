@@ -19,7 +19,7 @@ async fn missing_selected_legacy_optional_is_not_ready() {
     let result = runtime::check_files_with_preset(&manifest, &root, None).await;
     std::fs::remove_dir_all(&root).expect("cleanup");
     let files = result.expect("проверить отсутствие выбранных файлов");
-    assert!(!files.is_empty(), "must actually inspect files");
+    assert!(!files.is_empty(), "Необходимо фактически проверить файлы");
     assert!(files.iter().all(|file| file.status == "missing"),
         "missing selected optional files must never be accepted as ready: {files:?}");
 }

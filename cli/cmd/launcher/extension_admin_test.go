@@ -9,10 +9,10 @@ func TestCanonicalAdminContributions0208(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Admin == nil || len(got.Admin.Navigation) != 1 {
-		t.Fatalf("admin contributions lost: %#v", got.Admin)
+		t.Fatalf("Потеряны расширения панели администратора: %#v", got.Admin)
 	}
 	m.Targets[0].Entrypoint = "admin/index.js"
 	if _, _, err := normalizeCanonicalExtension0201(m); err == nil {
-		t.Fatal("JS admin entrypoint accepted")
+		t.Fatal("Принята точка входа JS для панели администратора")
 	}
 }

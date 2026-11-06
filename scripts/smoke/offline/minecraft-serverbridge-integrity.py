@@ -61,7 +61,7 @@ require(
         "LauncherVersion",
         "IntegrityVerifiedAt",
     ],
-    "MinecraftSession persisted integrity snapshot",
+    "Сохранённый снимок целостности MinecraftSession",
 )
 
 minecraft = read(
@@ -77,7 +77,7 @@ require(
         "evaluateServerBridgeJoinIntegrity0135",
         "requireMinecraftIntegrityForBridgeSession0135",
     ],
-    "live Minecraft integrity enforcement",
+    "Проверка целостности работающего Minecraft",
 )
 
 auth = read("services/api/internal/httpapi/minecraft_auth_119.go")
@@ -203,7 +203,7 @@ require(
         "stop_runtime_process",
         "minecraftCredentials.accessToken",
     ],
-    "Desktop Minecraft→ServerBridge post-launch integrity binding",
+    "Привязка целостности Desktop Minecraft к ServerBridge после запуска",
 )
 
 config = read("services/api/internal/config/config.go")
@@ -216,7 +216,7 @@ require(
         "paperSha256",
         "purpurSha256",
     ],
-    "production ServerBridge release policy",
+    "Политика выпуска ServerBridge для производственной среды",
 )
 
 build = read("scripts/build/bridge-plugins.sh")
@@ -229,13 +229,13 @@ require(
         "PURPUR_SHA256",
         '"sha256":"${VELOCITY_SHA256}"',
     ],
-    "release JAR hash generation",
+    "Формирование хеша JAR для релиза",
 )
 release = read("scripts/release/build-release.sh")
 require(
     release,
     ["BRIDGE_RELEASE_ALLOWLIST.json", "BRIDGE_PLUGIN_MANIFEST.json"],
-    "release bundle ServerBridge integrity artifacts",
+    "Артефакты целостности ServerBridge в релизном пакете",
 )
 
 openapi = read("schemas/openapi.yaml")

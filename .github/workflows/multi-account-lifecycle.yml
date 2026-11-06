@@ -27,7 +27,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-14]
     steps:
       - uses: actions/checkout@v4
-      - name: нативные Linux зависимости
+      - name: Установить нативные зависимости Linux
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -38,9 +38,9 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: нативные учётная запись каталог, миграция, безопасности тесты
+      - name: Проверить нативный каталог учётных записей, миграции и безопасность
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
-      - name: нативные провайдер обновление и идентичность тесты
+      - name: Проверить нативное обновление провайдера и идентификацию
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests
       - name: Скомпилировать Rust/Tauri
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
@@ -50,9 +50,9 @@ jobs:
       - name: Проверить интерфейс выбора и выхода из учётных записей
         working-directory: apps/desktop
         run: npm run test:official
-      - name: текстуры интеграция регрессионные проверки
+      - name: Запустить регрессионные проверки интеграции текстур
         working-directory: apps/desktop
         run: npm run test:textures
-      - name: пакет Desktop
+      - name: Собрать пакет Desktop
         working-directory: apps/desktop
         run: npm run build

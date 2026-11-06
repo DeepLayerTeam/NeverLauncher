@@ -52,17 +52,17 @@ func TestMirrorInstallerCacheRepair0427(t *testing.T) {
 		"--source-file", source, "--sha256", art.SHA256,
 		"--output", filepath.Join(root, "repair.json"),
 	}); err != nil {
-		t.Fatalf("CLI cache repair: %v", err)
+		t.Fatalf("Восстановление кеша через CLI: %v", err)
 	}
 	if _, err := mirrorCheckedHash0274(dest, art.SHA256); err != nil {
-		t.Fatalf("CLI did not restore verified bytes: %v", err)
+		t.Fatalf("CLI не восстановил проверенные данные: %v", err)
 	}
 	if err := os.Remove(dest); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(source, dest); err == nil {
 		if err := mirrorEnsureInstaller0427(context.Background(), dest, art); err == nil {
-			t.Fatal("accepted symlink cache entry")
+			t.Fatal("Принята символическая ссылка в кеше")
 		}
 	}
 }

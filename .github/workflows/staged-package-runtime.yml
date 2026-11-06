@@ -44,18 +44,18 @@ jobs:
             8
             17
             21
-      - name: Установить graphics библиотеки
+      - name: Установить графические библиотеки
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng xdotool
-      - name: Отклонить ложные запуск proof и Проверить агент операции
+      - name: Отклонить ложные доказательства запуска и проверить операции агента
         run: |
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_matching_0344.py
           python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_staged_lifecycle_0349.py
-      - name: сборка CLI и Runtime исполняемые файлы только (сборка Minecraft клиент)
+      - name: Собрать исполняемые файлы CLI и Runtime без сборки клиента Minecraft
         run: |
           cd cli && go build -o ../nl ./cmd/launcher
           cd ..
@@ -89,8 +89,8 @@ jobs:
           export LIBGL_ALWAYS_SOFTWARE=1
           # Только диагностика CI: краткоживущие данные staging; доверенную официальную
           # цепочку OAuth выполняет независимый аттестатор.
-          [[ "$AUTH_MODE" == official || "$AUTH_MODE" == custom ]] || { echo 'real V07 provider mode missing' >&2; exit 2; }
-          [[ -n "$AUTH_CREDENTIAL" ]] || { echo 'live staging credential missing; mock prohibited' >&2; exit 2; }
+          [[ "$AUTH_MODE" == official || "$AUTH_MODE" == custom ]] || { echo 'Отсутствует реальный режим провайдера V07' >&2; exit 2; }
+          [[ -n "$AUTH_CREDENTIAL" ]] || { echo 'Отсутствуют учётные данные реального промежуточного стенда; имитация запрещена' >&2; exit 2; }
           umask 077
           AUTH_DIR="$(mktemp -d "$RUNNER_TEMP/nl-auth.XXXXXXXX")"
           trap 'rm -rf "$AUTH_DIR"' EXIT
@@ -98,7 +98,7 @@ jobs:
           NEGATIVE_ARG=()
           GUARD_ARG=()
           if [[ "$AUTH_MODE" == custom ]]; then
-            [[ -n "$AUTH_NEGATIVE" && -n "$AUTH_GUARD_DENIED" ]] || { echo 'custom auth negative sessions missing' >&2; exit 2; }
+            [[ -n "$AUTH_NEGATIVE" && -n "$AUTH_GUARD_DENIED" ]] || { echo 'Отсутствуют негативные сценарии сеансов пользовательской авторизации' >&2; exit 2; }
             printf '%s' "$AUTH_NEGATIVE" > "$AUTH_DIR/negative.json"
             printf '%s' "$AUTH_GUARD_DENIED" > "$AUTH_DIR/guard-denied.json"
             NEGATIVE_ARG=(--negative-credentials-file "$AUTH_DIR/negative.json")
@@ -106,17 +106,17 @@ jobs:
           fi
           # Предыдущий релиз должен быть утверждённым, независимо подписанным и
           # неизменяемым пакетом. Установка только текущей версии не проходит V09.
-          [[ "$PREVIOUS_BUNDLE_URL" == https://* ]] || { echo 'V09 prior signed release HTTPS URL missing' >&2; exit 2; }
-          [[ "$PREVIOUS_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 prior release SHA256 missing' >&2; exit 2; }
-          [[ -n "$REPLACEMENT_JAVA" && -x "$REPLACEMENT_JAVA" ]] || { echo 'V09 distinct Java binary missing' >&2; exit 2; }
+          [[ "$PREVIOUS_BUNDLE_URL" == https://* ]] || { echo 'Отсутствует HTTPS-адрес предыдущего подписанного релиза V09' >&2; exit 2; }
+          [[ "$PREVIOUS_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Отсутствует SHA-256 предыдущего релиза V09' >&2; exit 2; }
+          [[ -n "$REPLACEMENT_JAVA" && -x "$REPLACEMENT_JAVA" ]] || { echo 'Отсутствует отдельный исполняемый файл Java для V09' >&2; exit 2; }
           curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --max-time 600 --output "$RUNNER_TEMP/previous-signed-release.zip" "$PREVIOUS_BUNDLE_URL"
           echo "$PREVIOUS_BUNDLE_SHA256  $RUNNER_TEMP/previous-signed-release.zip" | sha256sum -c - >/dev/null
           # Тот же промышленный установщик управляемой Java в Runtime должен
           # поместить в карантин и переустановить намеренно повреждённый подписанный бинарный файл Java.
-          [[ "$MANAGED_JRE_BUNDLE_URL" == https://* ]] || { echo 'V09 pinned Managed JRE bundle URL missing' >&2; exit 2; }
-          [[ "$MANAGED_JRE_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE bundle SHA256 missing' >&2; exit 2; }
-          [[ "$MANAGED_JRE_MANIFEST_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE manifest SHA256 missing' >&2; exit 2; }
+          [[ "$MANAGED_JRE_BUNDLE_URL" == https://* ]] || { echo 'Отсутствует URL закреплённого пакета управляемой JRE V09' >&2; exit 2; }
+          [[ "$MANAGED_JRE_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Отсутствует SHA-256 пакета управляемой JRE V09' >&2; exit 2; }
+          [[ "$MANAGED_JRE_MANIFEST_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Отсутствует SHA-256 манифеста управляемой JRE V09' >&2; exit 2; }
           curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --max-time 600 --output "$RUNNER_TEMP/managed-jre-bundle.zip" "$MANAGED_JRE_BUNDLE_URL"
           echo "$MANAGED_JRE_BUNDLE_SHA256  $RUNNER_TEMP/managed-jre-bundle.zip" | sha256sum -c - >/dev/null
@@ -128,8 +128,8 @@ jobs:
           # закреплённый серверный дистрибутив. Нельзя подменять его клиентом.
           SERVER_BUNDLE=""
           if [[ -n "$SERVER_BUNDLE_URL" ]]; then
-            [[ "$SERVER_BUNDLE_URL" == https://* ]] || { echo 'server bundle URL requires HTTPS' >&2; exit 1; }
-            [[ "$SERVER_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'server bundle SHA-256 is missing' >&2; exit 1; }
+            [[ "$SERVER_BUNDLE_URL" == https://* ]] || { echo 'URL серверного пакета должен использовать HTTPS' >&2; exit 1; }
+            [[ "$SERVER_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Отсутствует SHA-256 серверного пакета' >&2; exit 1; }
             SERVER_BUNDLE="$RUNNER_TEMP/staged-matching-server.zip"
             curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
               --max-time 300 --output "$SERVER_BUNDLE" "$SERVER_BUNDLE_URL"

@@ -72,7 +72,7 @@ jobs:
                   target.writestr(member, data)
           PY
           if "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/tampered.nlext" --public-key "$RUNNER_TEMP/author.pub"; then
-            echo 'SECURITY FAILURE: tampered Gravit package was accepted' >&2
+            echo 'ОШИБКА БЕЗОПАСНОСТИ: изменённый пакет Gravit был принят' >&2
             exit 1
           fi
       - uses: actions/upload-artifact@v4

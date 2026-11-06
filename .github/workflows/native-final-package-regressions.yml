@@ -32,9 +32,9 @@ jobs:
         with:
           go-version-file: prestarter/go.mod
           cache-dependency-path: prestarter/go.sum
-      - name: Установить проверка подпись зависимость
+      - name: Установить зависимость для проверки подписей
         run: python3 -m pip install 'cryptography>=42,<47'
-      - name: Проверить реальные исходный версия и синтаксис
+      - name: Проверить версию исходников и синтаксис
         run: |
           python3 scripts/version/manage.py check
           python3 -m py_compile scripts/acceptance/native_packages_0522.py scripts/release/build-branded-installers.py
@@ -53,6 +53,6 @@ jobs:
              --commit "$GITHUB_SHA" --project test-project \
              --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
              --disposable-runner --output "$RUNNER_TEMP/fake-native"; then
-            echo 'FAILED: self-proclaimed runner was accepted as final native package' >&2
+            echo 'ОШИБКА: неподтверждённый исполнитель принят за окончательный нативный пакет' >&2
             exit 1
           fi

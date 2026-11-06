@@ -60,7 +60,7 @@ func TestComponentUpdateAdjacentCommit0157(t *testing.T) {
 		}
 	}
 	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))); err != nil {
-		t.Fatalf("component update state missing: %v", err)
+		t.Fatalf("Отсутствует состояние обновления компонента: %v", err)
 	}
 }
 
@@ -89,14 +89,14 @@ func TestComponentTreePostVerifyFailureRollsBack0157(t *testing.T) {
 		return errors.New("forced post-verify failure")
 	})
 	if err == nil {
-		t.Fatal("expected rollback error")
+		t.Fatal("Ожидалась ошибка отката")
 	}
 	body, readErr := os.ReadFile(old)
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
 	if string(body) != "old-desktop" {
-		t.Fatalf("rollback did not restore old app: %q", body)
+		t.Fatalf("Откат не восстановил прежнее приложение: %q", body)
 	}
 }
 

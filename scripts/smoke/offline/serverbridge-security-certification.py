@@ -145,7 +145,7 @@ require(
         "serverbridge3-security-01912",
         "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
     ],
-    "ServerBridge 3 release allowlist",
+    "Разрешённый список релиза ServerBridge 3",
 )
 require(
     cert,

@@ -19,14 +19,14 @@ func TestGuardPolicyOperations05011HistoryDiagnoseAndRollback(t *testing.T) {
 	}
 	report, err := guardCompatOperation05011(root, key, []string{"guard-policy-diagnose"})
 	if err != nil || report["status"] != "pass" {
-		t.Fatalf("valid diagnostic: %v %v", report, err)
+		t.Fatalf("Результат диагностики: %v %v", report, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "mods", "rogue.jar"), []byte("rogue"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	report, err = guardCompatOperation05011(root, key, []string{"guard-policy-diagnose"})
 	if err == nil || report["status"] != "blocked" {
-		t.Fatal("foreign mod not diagnosed")
+		t.Fatal("Посторонний мод не обнаружен диагностикой")
 	}
 	if err := os.Remove(filepath.Join(root, "mods", "rogue.jar")); err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestGuardPolicyOperations05011HistoryDiagnoseAndRollback(t *testing.T) {
 	}
 	// Без новой подписи в более высокой эпохе нельзя восстановить предыдущую политику.
 	if err := guardCompatAuthorizeRollback05011(root, key, first); err == nil {
-		t.Fatal("old epoch rollback accepted")
+		t.Fatal("Принят откат к старой эпохе")
 	}
 	p.Epoch = 3
 	p.RevokedDigests = nil
@@ -65,7 +65,7 @@ func TestGuardPolicyOperations05011HistoryDiagnoseAndRollback(t *testing.T) {
 	}
 	report, err = guardCompatOperation05011(root, key, []string{"guard-policy-history"})
 	if err != nil || len(report["items"].([]guardHistoryItem05011)) != 3 {
-		t.Fatalf("rollback history: %v %v", report, err)
+		t.Fatalf("История откатов: %v %v", report, err)
 	}
 }
 
@@ -128,6 +128,6 @@ func TestGuardPolicyOperations05011ExpiredPolicyCanRotate(t *testing.T) {
 	}
 	report, err := guardCompatOperation05011(root, key, []string{"guard-policy-diagnose", "--project", "another"})
 	if err == nil || !strings.Contains(report["detail"].(string), "scope") {
-		t.Fatal("wrong project scope not diagnosed")
+		t.Fatal("Неверная область проекта не обнаружена диагностикой")
 	}
 }

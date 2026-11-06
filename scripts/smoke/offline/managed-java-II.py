@@ -57,7 +57,7 @@ require(
         'subprocess.run([java, "-version"]',
         "MANAGED_JAVA_II_EVIDENCE.json",
     ],
-    "Managed Java II executable E2E",
+    "Сквозная проверка исполняемой Managed Java II",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -68,7 +68,7 @@ require(
         "run-managed-java-II-e2e.sh",
         "MANAGED_JAVA_II_EVIDENCE.json",
     ],
-    "Managed Java II CI wiring",
+    "Подключение Managed Java II к CI",
 )
 
 preflight = read("scripts/release/preflight.sh")

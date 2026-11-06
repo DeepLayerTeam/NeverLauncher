@@ -90,7 +90,7 @@ fn compile_module_probe(javac: &Path, directory: &Path) {
         directory.join("ModuleGuardProbe.java"),
         r#"public final class ModuleGuardProbe {
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
+        if (args.length != 1) throw new IllegalArgumentException("Необходимо указать путь к нативной DLL");
         System.load(args[0]);
         // Полная проверка целостности Hook Engine запускается каждые две секунды.
         // Раннер Java 17 Windows CI должен успеть выполнить две аутентифицированные
@@ -115,7 +115,7 @@ fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
         directory.join("MemoryIntegrityProbe.java"),
         r#"public final class MemoryIntegrityProbe {
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
+        if (args.length != 1) throw new IllegalArgumentException("Необходимо указать путь к нативной DLL");
         System.load(args[0]);
         Thread.sleep(8000L);
     }
@@ -181,7 +181,7 @@ fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
         directory.join("ThreadIntegrityProbe.java"),
         r#"public final class ThreadIntegrityProbe {
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
+        if (args.length != 1) throw new IllegalArgumentException("Необходимо указать путь к нативной DLL");
         System.load(args[0]);
         Thread.sleep(12000L);
     }
@@ -235,7 +235,7 @@ fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
         directory.join("JvmAwareForeignExecProbe.java"),
         r#"public final class JvmAwareForeignExecProbe {
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
+        if (args.length != 1) throw new IllegalArgumentException("Необходимо указать путь к нативной DLL");
         System.load(args[0]);
         Thread.sleep(12000L);
     }

@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Проверить сертификация цель definition
+      - name: Проверить определение целевой сертификации
         shell: bash
         run: python3 scripts/compatibility/extensions_trust_02012.py validate
       - name: Проверить доверие, вредоносные пакеты и циклы аварийных перезапусков
@@ -44,7 +44,7 @@ jobs:
         run: |
           (cd services/api && go test ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./cmd/launcher-api)
           (cd cli && go test ./internal/dbmigrate && go test ./cmd/launcher -run '^$')
-      - name: сборка промышленные исполняемые файлы
+      - name: Собрать исполняемые файлы для производственной среды
         shell: bash
         run: |
           (cd services/api && go build ./cmd/launcher-api)
@@ -75,7 +75,7 @@ jobs:
           pattern: extensions-trust-evidence-*
           path: evidence-raw
           merge-multiple: true
-      - name: объединить с отказом по умолчанию публичные матрица
+      - name: Сформировать публичную матрицу с блокировкой при ошибках
         run: |
           python3 scripts/compatibility/extensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_TRUST_COMPATIBILITY.json --out-md EXTENSIONS_TRUST_COMPATIBILITY.md
       - uses: actions/upload-artifact@v4

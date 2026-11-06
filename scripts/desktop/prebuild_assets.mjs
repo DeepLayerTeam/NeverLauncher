@@ -18,31 +18,31 @@ export async function scanDist03011(dist, allowSentryMaps = false) {
       const name = join(dir, entry);
       const stat = await lstat(name);
       if (stat.isSymbolicLink())
-        throw Error(`symlink in distribution: ${entry}`);
+        throw Error(`В дистрибутиве обнаружена символическая ссылка: ${entry}`);
       if (stat.isDirectory()) {
         await visit(name);
         continue;
       }
-      if (!stat.isFile()) throw Error(`non-file in distribution: ${entry}`);
+      if (!stat.isFile()) throw Error(`В дистрибутиве обнаружен объект, не являющийся файлом: ${entry}`);
       const path = relative(base, name).split("\\").join("/");
       if (path === INDEX) continue;
       if (/\.map$/i.test(path)) {
         if (!allowSentryMaps)
           throw Error(
-            `source map must be uploaded to Sentry, not shipped: ${path}`,
+            `Карту исходников необходимо загрузить в Sentry, а не включать в дистрибутив: ${path}`,
           );
         continue;
       }
       if (!allowed.test(path))
-        throw Error(`unexpected distributable asset: ${path}`);
+        throw Error(`В дистрибутиве обнаружен непредусмотренный ресурс: ${path}`);
       const data = await readFile(name);
-      if (!data.length) throw Error(`empty asset: ${path}`);
+      if (!data.length) throw Error(`Пустой ресурс: ${path}`);
       if (
         path.startsWith("assets/") &&
         !hashed.test(path) &&
         /\.(js|css)$/.test(path)
       )
-        throw Error(`uncacheable asset filename: ${path}`);
+        throw Error(`Имя файла ресурса не поддерживает кеширование: ${path}`);
       entries.push({ path, size: data.length, sha256: sha(data) });
     }
   }
@@ -51,7 +51,7 @@ export async function scanDist03011(dist, allowSentryMaps = false) {
     !entries.some((e) => e.path === "index.html") ||
     !entries.some((e) => e.path.endsWith(".js"))
   )
-    throw Error("missing index.html or Vite JS build output");
+    throw Error("Отсутствует index.html или результат сборки JavaScript через Vite");
   return {
     schemaVersion: "1.0",
     product: "Launcher Desktop",
@@ -85,7 +85,7 @@ export async function verifyDist03011(dist) {
   );
   const actual = await scanDist03011(dist);
   if (JSON.stringify(manifest) !== JSON.stringify(actual))
-    throw Error("desktop prebuilt assets corrupted, missing or stale");
+    throw Error("Ресурсы сборки Desktop повреждены, отсутствуют или устарели");
   return actual;
 }
 if (
@@ -95,7 +95,7 @@ if (
   const [command, option, path] = process.argv.slice(2);
   if (!["pack", "verify"].includes(command) || option !== "--dist" || !path) {
     console.error(
-      "usage: node prebuild_assets_03011.mjs pack|verify --dist <vite-dist>",
+      "Использование: node prebuild_assets_03011.mjs pack|verify --dist <vite-dist>",
     );
     process.exitCode = 2;
   } else {
@@ -104,7 +104,7 @@ if (
         command === "pack"
           ? await packDist03011(path)
           : await verifyDist03011(path);
-      console.log(`${command}: ${result.assets.length} verified build assets`);
+      console.log(`${command}: проверено ресурсов сборки — ${result.assets.length}`);
     } catch (err) {
       console.error(String(err));
       process.exitCode = 1;

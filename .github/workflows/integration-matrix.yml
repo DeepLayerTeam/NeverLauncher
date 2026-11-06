@@ -126,8 +126,8 @@ jobs:
           SHA: ${{ inputs.baselines_sha256 }}
         run: |
           set -euo pipefail
-          [[ "$URL" == https://* ]] || { echo 'HTTPS baseline URL required' >&2; exit 1; }
-          [[ "$SHA" =~ ^[0-9a-f]{64}$ ]] || { echo 'invalid pinned baseline SHA-256' >&2; exit 1; }
+          [[ "$URL" == https://* ]] || { echo 'Необходим HTTPS-адрес базовой версии' >&2; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{64}$ ]] || { echo 'Некорректный закреплённый SHA-256 базовой версии' >&2; exit 1; }
           curl --proto '=https' --tlsv1.2 --fail --location --max-time 120 "$URL" -o "$RUNNER_TEMP/baselines.json"
           echo "$SHA  $RUNNER_TEMP/baselines.json" | sha256sum --check --status
           (cd cli && go build -trimpath -ldflags "-X main.version=0.48.0" -o "$RUNNER_TEMP/launcher-0478" ./cmd/launcher)

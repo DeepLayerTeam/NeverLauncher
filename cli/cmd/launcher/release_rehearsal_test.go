@@ -10,7 +10,7 @@ import (
 
 func TestRehearsal0365RequiredAndSignedReceipt(t *testing.T) {
 	if !rehearsalRequired0365("0.36.5") || !rehearsalRequired0365("0.37.0") || rehearsalRequired0365("0.36.4") {
-		t.Fatal("rehearsal policy version switch is unsafe")
+		t.Fatal("Переключение версии политики во время репетиции небезопасно")
 	}
 	t.Setenv("GITHUB_RUN_ID", "7654321")
 	t.Setenv("GITHUB_RUN_ATTEMPT", "1")

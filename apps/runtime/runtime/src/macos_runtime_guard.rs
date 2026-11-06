@@ -183,7 +183,7 @@ mod tests {
             .unwrap();
         let compiled = Command::new(javac).arg(fixture.join("GuardHold.java"))
             .status().expect("Запуск javac");
-        assert!(compiled.success(), "javac fixture failed");
+        assert!(compiled.success(), "Ошибка подготовки тестового Java-кода через javac");
         let mut command = Command::new(&java);
         command.args(["-cp",fixture.to_str().unwrap(),"GuardHold"]);
         command.stdout(Stdio::null()).stderr(Stdio::null());

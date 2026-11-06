@@ -160,7 +160,7 @@ func TestServerBridgeInstallIdentityEnrollmentAndRollback0199(t *testing.T) {
 		t.Fatalf("state=%+v", state)
 	}
 	if !fileExists0199(state.ArtifactPath) || !fileExists0199(state.ConfigPath) || !fileExists0199(state.IdentityPath) {
-		t.Fatalf("managed files missing: %+v", state)
+		t.Fatalf("Отсутствуют управляемые файлы: %+v", state)
 	}
 	info, err := os.Stat(state.IdentityPath)
 	if err != nil {
@@ -179,21 +179,21 @@ func TestServerBridgeInstallIdentityEnrollmentAndRollback0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(reqRaw), "privateKey") || strings.Contains(string(reqRaw), "privateKeyPkcs8") {
-		t.Fatal("enrollment request leaked private key")
+		t.Fatal("Запрос регистрации раскрыл закрытый ключ")
 	}
 	var req bridgeEnrollmentRequest0199
 	if err := json.Unmarshal(reqRaw, &req); err != nil {
 		t.Fatal(err)
 	}
 	if req.ID != "paper-prod" || req.Kind != "paper" || req.ProjectID != "prod" || req.ProfileID != "survival" || req.KeyFingerprint != identity.Fingerprint || req.PublicKey != identity.PublicKey {
-		t.Fatalf("enrollment request mismatch: %+v", req)
+		t.Fatalf("Несовпадение запроса регистрации: %+v", req)
 	}
 
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", state.TransactionID}); err != nil {
 		t.Fatal(err)
 	}
 	if fileExists0199(state.ArtifactPath) || fileExists0199(state.ConfigPath) || fileExists0199(state.IdentityPath) || fileExists0199(statePath) {
-		t.Fatal("initial install rollback did not restore pre-install filesystem")
+		t.Fatal("Откат первоначальной установки не восстановил исходную файловую систему")
 	}
 }
 
@@ -261,7 +261,7 @@ func TestServerBridgeUpgradeRollbackPreservesIdentity0199(t *testing.T) {
 		t.Fatalf("rollback did not restore 0.19.8 state/artifact: %+v", restored)
 	}
 	if fileExists0199(after.ArtifactPath) {
-		t.Fatalf("rollback left upgraded artifact behind: %s", after.ArtifactPath)
+		t.Fatalf("После отката остался артефакт обновлённой версии: %s", after.ArtifactPath)
 	}
 	identityRestored, err := loadNodeIdentityPublic0199(restored.IdentityPath)
 	if err != nil {
@@ -281,7 +281,7 @@ func TestServerBridgeDryRunDoesNotMutate0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199))); !os.IsNotExist(err) {
-		t.Fatalf("dry-run mutated server root: %v", err)
+		t.Fatalf("Пробный запуск изменил корневой каталог сервера: %v", err)
 	}
 }
 
@@ -295,7 +295,7 @@ func TestServerBridgeReleaseTargetCohortIncludesUniversalAdapters0199(t *testing
 			}
 		}
 		if !found {
-			t.Fatalf("release verifier missing %s", id)
+			t.Fatalf("В средстве проверки релиза отсутствует %s", id)
 		}
 		if serverBridge2AllowlistFields0150[id] == "" {
 			t.Fatalf("release verifier missing allowlist field for %s", id)
@@ -376,7 +376,7 @@ func TestServerBridgeMigrateV3GA0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if receipt["fromVersion"] != "0.19.12" || receipt["toVersion"] != "0.20.0" || receipt["protocolTo"] != "v3-ga-frozen" {
-		t.Fatalf("unexpected migration receipt: %#v", receipt)
+		t.Fatalf("Неожиданная квитанция миграции: %#v", receipt)
 	}
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", after.TransactionID}); err != nil {
 		t.Fatal(err)

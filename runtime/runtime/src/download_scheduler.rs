@@ -728,7 +728,7 @@ mod concurrent_operations_tests {
         assert_eq!(right.unwrap().downloaded, 8);
         assert!(peak.load(Ordering::SeqCst) >= 2);
         assert!(peak.load(Ordering::SeqCst) <= PROCESS_HOST_LIMIT,
-            "independent operations exceeded the process-wide host budget");
+            "Независимые операции превысили общий лимит запросов процесса к узлу");
         server.abort();
         fs::remove_dir_all(first).await.unwrap();
         fs::remove_dir_all(second).await.unwrap();

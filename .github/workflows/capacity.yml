@@ -46,6 +46,6 @@ jobs:
       - name: Проверить, что тест производительности только для чтения отклоняет неподтверждённый запуск
         run: |
           if /tmp/launcher-capacity-bench --url http://127.0.0.1:8080/api/v1/status; then
-            echo 'FAIL: benchmark ran without --confirm' >&2
+            echo 'ОШИБКА: тест производительности запущен без --confirm' >&2
             exit 1
           fi

@@ -29,4 +29,4 @@ jobs:
           python3 scripts/operations/ha_inventory_0511.py node --project definitely-not-running-0511 --output /tmp/ha-0511-absent.json
           rc=$?
           set -e
-          if [ "$rc" -eq 0 ]; then echo 'FAIL: absent live topology reported success'; exit 1; fi
+          if [ "$rc" -eq 0 ]; then echo 'ОШИБКА: отсутствие реальной топологии ошибочно признано успешной проверкой'; exit 1; fi

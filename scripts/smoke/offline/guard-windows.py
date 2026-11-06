@@ -86,7 +86,7 @@ require(
         "launch заблокирован: Guard Windows boundary",
         "guard_status",
     ],
-    "Desktop fail-closed Guard launch",
+    "Запуск Desktop с блокировкой при ошибке Guard",
 )
 
 integration = read("runtime/runtime/tests/guard_windows.rs")
@@ -99,7 +99,7 @@ require(
         "supervisor.ping().await",
         "supervisor.shutdown().await",
     ],
-    "Guard Windows integration test",
+    "Интеграционный тест Guard для Windows",
 )
 
 package = read("scripts/release/build-windows-desktop.ps1")

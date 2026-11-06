@@ -28,11 +28,11 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Запустить безопасности граница тесты (без skips)
+      - name: Запустить проверки границ безопасности без пропусков
         run: go test -count=1 ./internal/model ./internal/trustbaseline ./internal/repository ./internal/extensionhost ./internal/httpapi
-      - name: Скомпилировать фактические Backend
+      - name: Собрать настоящий Backend
         run: go build -o launcher-api-diag.exe ./cmd/launcher-api
-      - name: Проверить оба диагностика и с отказом по умолчанию flags
+      - name: Проверить диагностические параметры и флаги блокировки при ошибке
         shell: bash
         run: |
           set -euo pipefail

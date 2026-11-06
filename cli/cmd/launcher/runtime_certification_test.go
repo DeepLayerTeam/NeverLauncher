@@ -147,7 +147,7 @@ func TestRuntimeCertification02712MatrixRejectsMissingOrUnsigned(t *testing.T) {
 		t.Fatalf("матрица приняла отсутствие подтверждения Runtime: %+v %v", report, err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "report.json")); err != nil {
-		t.Fatalf("missing failure report: %v", err)
+		t.Fatalf("Отсутствует отчёт об ошибке: %v", err)
 	}
 	if _, err := certifyMatrix02712(matrix, "missing.pub", "", true); err == nil {
 		t.Fatal("matrix without five required families accepted")

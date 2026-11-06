@@ -14,7 +14,7 @@ func TestMigrationCutover03311RejectsUnsafeTransportAndMissingConfirmation(t *te
 	}
 	for _, args := range tests {
 		if err := handleMigrationCutover03311(args); err == nil {
-			t.Fatalf("unsafe request accepted: %v", args)
+			t.Fatalf("Принят небезопасный запрос: %v", args)
 		}
 	}
 }

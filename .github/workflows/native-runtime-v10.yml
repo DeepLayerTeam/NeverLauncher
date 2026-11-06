@@ -119,7 +119,7 @@ jobs:
               ARGS+=(--negative-credentials-file "$AUTH_DIR/negative.json"
                 --guard-denied-credentials-file "$AUTH_DIR/guard.json")
             fi
-            [[ "$PREVIOUS_URL" == https://* && "$PREVIOUS_SHA" =~ ^[[:xdigit:]]{64}$ ]] || { echo 'BLOCKED: pinned previous release missing'; exit 3; }
+            [[ "$PREVIOUS_URL" == https://* && "$PREVIOUS_SHA" =~ ^[[:xdigit:]]{64}$ ]] || { echo 'ЗАБЛОКИРОВАНО: отсутствует закреплённая предыдущая версия'; exit 3; }
             curl --fail --location --proto '=https' --proto-redir '=https' --max-time 600 \
               --output "$RUNNER_TEMP/previous-release.zip" "$PREVIOUS_URL"
             echo "$PREVIOUS_SHA  $RUNNER_TEMP/previous-release.zip" | sha256sum -c -
@@ -135,7 +135,7 @@ jobs:
             echo 'V10 target BLOCKED / INCONCLUSIVE, not a Minecraft compatibility failure' >> "$GITHUB_STEP_SUMMARY"
             exit 3
           elif [[ "$RESULT" -eq 0 ]]; then
-            echo 'V10 observational execution complete; NOT trusted certification' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Наблюдательное выполнение V10 завершено; это НЕ доверенная сертификация' >> "$GITHUB_STEP_SUMMARY"
           else
             exit "$RESULT"
           fi

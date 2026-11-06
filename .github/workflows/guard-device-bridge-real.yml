@@ -103,4 +103,4 @@ jobs:
           PY
       - name: Keep закрытые свидетельства exclusively на приёмка хост
         if: always()
-        run: echo 'Raw private Guard, RCON and device evidence must never be uploaded as public CI artifacts.'
+        run: echo 'Закрытые данные Guard, RCON и устройств запрещено публиковать в артефактах CI.'

@@ -86,7 +86,7 @@ jobs:
         env:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: |
-          [[ "$SOURCE_RUN_ID" =~ ^[0-9]{5,20}$ ]] || { echo 'an explicit numeric source_run_id is required'; exit 1; }
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]{5,20}$ ]] || { echo 'Необходимо явно указать числовое значение source_run_id'; exit 1; }
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
@@ -100,8 +100,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(go env GOOS)" = '${{ matrix.platform }}' || { echo 'wrong production OS'; exit 1; }
-          test "$(go env GOARCH)" = '${{ matrix.arch }}' || { echo 'wrong production architecture'; exit 1; }
+          test "$(go env GOOS)" = '${{ matrix.platform }}' || { echo 'Несоответствие операционной системы производственной сборки'; exit 1; }
+          test "$(go env GOARCH)" = '${{ matrix.arch }}' || { echo 'Несоответствие архитектуры производственной сборки'; exit 1; }
           (cd prestarter && go test -count=1 ./...)
       - name: Получить утверждённые подписанные первый запуск входные данные
         uses: actions/download-artifact@v4
@@ -124,11 +124,11 @@ jobs:
           PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
           PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
         run: |
-          if (!$env:PFX_BASE64 -or !$env:PFX_PASSWORD) { throw 'Windows signing secrets required' }
+          if (!$env:PFX_BASE64 -or !$env:PFX_PASSWORD) { throw 'Отсутствуют секреты для подписания Windows' }
           [IO.File]::WriteAllBytes('signing.pfx', [Convert]::FromBase64String($env:PFX_BASE64))
           $pass = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
           $cert = Import-PfxCertificate -FilePath signing.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pass
-          if (!$cert.Thumbprint) { throw 'No signing certificate imported' }
+          if (!$cert.Thumbprint) { throw 'Сертификат подписи не импортирован' }
           Add-Content $env:GITHUB_ENV "LAUNCHER_WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)"
           Remove-Item signing.pfx
       - name: Импортировать macOS Apple сертификаты

@@ -29,7 +29,7 @@ func TestDownloadVanillaArtifactResumesVerifiedPartial(t *testing.T) {
 	var ranged atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Range"); got != fmt.Sprintf("bytes=%d-", len(prefix)) {
-			t.Errorf("unexpected Range header: %q", got)
+			t.Errorf("Неожиданный заголовок Range: %q", got)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -48,14 +48,14 @@ func TestDownloadVanillaArtifactResumesVerifiedPartial(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ranged.Load() || !result.Resumed || result.Cached {
-		t.Fatalf("expected verified resume, got %+v", result)
+		t.Fatalf("Ожидалось проверенное возобновление загрузки, получено %+v", result)
 	}
 	got, err := os.ReadFile(dest)
 	if err != nil || string(got) != string(payload) {
 		t.Fatalf("final payload mismatch: %q / %v", got, err)
 	}
 	if _, err := os.Stat(dest + ".nlpart"); !os.IsNotExist(err) {
-		t.Fatalf("partial file survived publish: %v", err)
+		t.Fatalf("После публикации остался частично загруженный файл: %v", err)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestDownloadVanillaArtifactQuarantinesCorruptCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Quarantined {
-		t.Fatalf("corrupt cache was not quarantined: %+v", result)
+		t.Fatalf("Повреждённый кеш не помещён в карантин: %+v", result)
 	}
 	got, err := os.ReadFile(dest)
 	if err != nil || string(got) != string(payload) {
@@ -100,7 +100,7 @@ func TestDownloadVanillaArtifactQuarantinesCorruptCache(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("quarantine does not contain broken artifact")
+		t.Fatal("В карантине отсутствует повреждённый артефакт")
 	}
 }
 
@@ -148,7 +148,7 @@ func TestVanillaMetadataRecoveryExactVersionOnly(t *testing.T) {
 		t.Fatalf("exact-version recovery failed: %+v / %v", second, err)
 	}
 	if _, err := resolveVanillaMetadataWithRecovery(context.Background(), server.Client(), root, server.URL+"/manifest.json", "latest-release"); err == nil {
-		t.Fatal("latest-release unexpectedly recovered from stale metadata cache")
+		t.Fatal("Последний релиз неожиданно получен из устаревшего кеша метаданных")
 	}
 }
 
@@ -165,7 +165,7 @@ func TestFetchVanillaArtifactResponseRestartsWhenRangeIgnored(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resumed || resp.StatusCode != http.StatusOK {
-		t.Fatalf("Range-ignore response must restart from zero: resumed=%v status=%d", resumed, resp.StatusCode)
+		t.Fatalf("При игнорировании Range загрузка должна начинаться заново: возобновление=%v, статус=%d", resumed, resp.StatusCode)
 	}
 }
 
@@ -238,10 +238,10 @@ func TestVanillaMetadataRecoveryDoesNotResurrectMissingAuthoritativeVersion(t *t
 
 	root := t.TempDir()
 	if _, err := resolveVanillaMetadataWithRecovery(context.Background(), server.Client(), root, server.URL+"/manifest.json", "1.20.4"); err != nil {
-		t.Fatalf("initial cache population failed: %v", err)
+		t.Fatalf("Не удалось первоначально заполнить кеш: %v", err)
 	}
 	serveVersion.Store(false)
 	if _, err := resolveVanillaMetadataWithRecovery(context.Background(), server.Client(), root, server.URL+"/manifest.json", "1.20.4"); err == nil {
-		t.Fatal("authoritative manifest removal unexpectedly resurrected stale cached version")
+		t.Fatal("После удаления версии из официального манифеста восстановилась устаревшая версия из кеша")
 	}
 }

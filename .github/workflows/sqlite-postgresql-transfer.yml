@@ -89,5 +89,5 @@ jobs:
           assert r['sqliteSchema']==326
           PY
           if "$RUNNER_TEMP/nl-sqlite" sqlite-to-postgres --backup "$TMPDIR/cli/backup.db" --ack-staging-only; then
-             echo 'ERROR: existing staging schema was overwritten'; exit 1
+             echo 'ОШИБКА: существующая промежуточная схема перезаписана'; exit 1
           fi

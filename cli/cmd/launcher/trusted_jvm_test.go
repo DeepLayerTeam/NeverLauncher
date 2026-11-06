@@ -46,14 +46,14 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = trustedInstall0306(t.TempDir(), packagePath, publicKey); err == nil {
-		t.Fatal("unsigned trusted package accepted")
+		t.Fatal("Принят доверенный пакет без подписи")
 	}
 	if _, err = signExtensionPackage0202(packagePath, packagePath, privateKey, false); err != nil {
 		t.Fatal(err)
 	}
 	root := compatFixture0279(t)
 	if err := handleTrustedJVM0306([]string{"trusted-install", "--client-dir", root, "--package", packagePath, "--public-key", publicKey}); err == nil {
-		t.Fatal("missing full JVM approval accepted")
+		t.Fatal("Принято отсутствие полного разрешения JVM")
 	}
 	if _, err = trustedInstall0306(root, packagePath, publicKey); err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = trustedInstall0306(root, packagePath, insideKey); err == nil {
-		t.Fatal("client-controlled trust key accepted")
+		t.Fatal("Принят ключ доверия, управляемый клиентом")
 	}
 
 	t.Setenv(trustedPublicKeyEnv0306, publicKey)
@@ -73,7 +73,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	}
 	defer cleanup()
 	if len(jvm) != 1 || !strings.HasPrefix(jvm[0], "-javaagent:") || main != "ru.launcher.trusted.MinecraftMain" {
-		t.Fatalf("invalid launch: %v %s", jvm, main)
+		t.Fatalf("Некорректный запуск: %v %s", jvm, main)
 	}
 	marker := filepath.Join(t.TempDir(), "hooks.log")
 	game := filepath.Join(t.TempDir(), "game.log")
@@ -83,7 +83,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	command := exec.Command("java", commandArgs...)
 	output, err := command.CombinedOutput()
 	if err != nil {
-		t.Fatalf("actual agent JVM failed: %v: %s", err, output)
+		t.Fatalf("Ошибка работы настоящего агента JVM: %v: %s", err, output)
 	}
 	b, err := os.ReadFile(marker)
 	if err != nil {
@@ -92,11 +92,11 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	logged := string(b)
 	for _, s := range []string{"agent-ready:", "before:example.FixtureGame:2", "transform:net.minecraft.client.Minecraft", "after:ok"} {
 		if !strings.Contains(logged, s) {
-			t.Fatalf("missing %s from hooks: %s", s, logged)
+			t.Fatalf("В обработчиках отсутствует %s: %s", s, logged)
 		}
 	}
 	if actual, err := os.ReadFile(game); err != nil || string(actual) != "game-started" {
-		t.Fatalf("Minecraft main never ran: %q %v", actual, err)
+		t.Fatalf("Главный класс Minecraft не был запущен: %q %v", actual, err)
 	}
 	// Настоящий устаревший лаунчер обязан добавлять подписанный агент, не считая
 	// пользовательские флаги JVM разрешением на инъекцию произвольных агентов.
@@ -116,7 +116,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !strings.Contains(string(argv), "-javaagent:") || !strings.Contains(string(argv), "ru.launcher.trusted.MinecraftMain") {
-			t.Fatalf("legacy launcher did not execute trusted integration: %s", argv)
+			t.Fatalf("Устаревший лаунчер не выполнил доверенную интеграцию: %s", argv)
 		}
 	}
 
@@ -125,14 +125,14 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	failArgs[len(failArgs)-1] = "fail"
 	failureRun := exec.Command("java", failArgs...)
 	if out, err := failureRun.CombinedOutput(); err == nil {
-		t.Fatalf("Minecraft failure suppressed: %s", out)
+		t.Fatalf("Ошибка Minecraft была скрыта: %s", out)
 	}
 	afterCrash, err := os.ReadFile(marker)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(afterCrash), "after:failed") {
-		t.Fatalf("crash hook not called: %s", afterCrash)
+		t.Fatalf("Обработчик сбоя не вызван: %s", afterCrash)
 	}
 	rec, release, err := trustedLoad0306(root, publicKey)
 	if err != nil || rec == nil {
@@ -159,7 +159,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, _, err = trustedPrepare0306(root, "example.FixtureGame"); err == nil {
-		t.Fatal("wrong trust anchor accepted")
+		t.Fatal("Принят некорректный корневой ключ доверия")
 	}
 	t.Setenv(trustedPublicKeyEnv0306, "")
 	if _, _, _, err = trustedPrepare0306(root, "example.FixtureGame"); err == nil {

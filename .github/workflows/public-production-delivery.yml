@@ -51,8 +51,8 @@ jobs:
           RELEASE_TRUST_POLICY_BASE64: ${{ secrets.LAUNCHER_RELEASE_TRUST_POLICY_BASE64 }}
         run: |
           set -euo pipefail
-          test -n "${RELEASE_ROOT_PUBLIC_KEY_BASE64:-}" || { echo "missing LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64" >&2; exit 2; }
-          test -n "${RELEASE_TRUST_POLICY_BASE64:-}" || { echo "missing LAUNCHER_RELEASE_TRUST_POLICY_BASE64" >&2; exit 2; }
+          test -n "${RELEASE_ROOT_PUBLIC_KEY_BASE64:-}" || { echo "Отсутствует LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64" >&2; exit 2; }
+          test -n "${RELEASE_TRUST_POLICY_BASE64:-}" || { echo "Отсутствует LAUNCHER_RELEASE_TRUST_POLICY_BASE64" >&2; exit 2; }
           printf '%s' "$RELEASE_ROOT_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/launcher-release-root-public.pem"
           printf '%s' "$RELEASE_TRUST_POLICY_BASE64" | base64 --decode > "$RUNNER_TEMP/launcher-current-trust-policy.json"
           printf 'LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=%s\n' "$RUNNER_TEMP/launcher-release-root-public.pem" >> "$GITHUB_ENV"

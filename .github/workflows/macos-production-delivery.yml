@@ -129,13 +129,13 @@ jobs:
             EXTRACT="$(mktemp -d)"
             unzip -q "$ZIP" -d "$EXTRACT"
             APP="$EXTRACT/Launcher.app"
-            test -d "$APP" || { echo "missing app in final ZIP" >&2; exit 2; }
+            test -d "$APP" || { echo "В итоговом ZIP отсутствует приложение" >&2; exit 2; }
             codesign --verify --deep --strict --verbose=2 "$APP"
             spctl --assess --type execute --verbose=2 "$APP"
             xcrun stapler validate "$APP"
             rm -rf "$EXTRACT"
           done
-      - name: Удалить imported подписание данные
+      - name: Удалить импортированные данные подписи
         if: always()
         shell: bash
         run: |

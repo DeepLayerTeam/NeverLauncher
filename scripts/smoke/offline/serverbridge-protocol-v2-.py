@@ -87,7 +87,7 @@ require(
         "serverBridgeProtocolV2",
         "consumeJoinV2(join, redemption)",
     ],
-    "ServerBridge v2 endpoint enforcement",
+    "Применение ограничений конечных точек ServerBridge v2",
 )
 java = read(
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java"
@@ -103,7 +103,7 @@ require(
 require(
     defaults,
     ["PROTOCOL_VERSION = 3", "LEGACY_PROTOCOL_VERSION = 2"],
-    "ServerBridge Java v3 current + v2 rolling constants",
+    "Текущие константы Java ServerBridge v3 и константы последовательного обновления v2",
 )
 contract_tests = read(
     "services/api/internal/httpapi/server_bridge_protocol_0191_test.go"
@@ -115,7 +115,7 @@ require(
         "Protocol v2 contract must reject Protocol v3 feature field",
         "v2 rolling heartbeat",
     ],
-    "ServerBridge v2 rolling regression tests",
+    "Регрессионные тесты последовательного обновления ServerBridge v2",
 )
 
 tests = read("services/api/internal/httpapi/server_bridge_test.go") + read(
@@ -128,7 +128,7 @@ require(
         "legacy bridge protocol accepted",
         "http.StatusUpgradeRequired",
     ],
-    "ServerBridge v2 regression tests",
+    "Регрессионные тесты ServerBridge v2",
 )
 
 e2e = read("e2e/scripts/run-minecraft-e2e.sh")
@@ -140,7 +140,7 @@ require(
         "status='consumed'",
         'sourceOfTruth == "postgresql"',
     ],
-    "Minecraft PostgreSQL ServerBridge E2E",
+    "Сквозная проверка Minecraft, PostgreSQL и ServerBridge",
 )
 
 print(

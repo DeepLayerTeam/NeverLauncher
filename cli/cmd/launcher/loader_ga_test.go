@@ -36,7 +36,7 @@ func TestLoaderGASupport0180ExactCertifiedSurface(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(loaderGASupportEntries0180()) != 163 {
-		t.Fatalf("GA support entries=%d want=163", len(loaderGASupportEntries0180()))
+		t.Fatalf("Записей поддержки GA: %d, ожидалось 163", len(loaderGASupportEntries0180()))
 	}
 	if len(loaderGASupportSHA2560180()) != 64 {
 		t.Fatalf("недопустимый хеш поддержки GA %q", loaderGASupportSHA2560180())

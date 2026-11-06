@@ -12,7 +12,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 	root := t.TempDir()
 	before, err := clientStateSHA2560228(root)
 	if err != nil || before != "absent" {
-		t.Fatalf("empty state: %s %v", before, err)
+		t.Fatalf("Пустое состояние: %s %v", before, err)
 	}
 	dir := filepath.Join(root, ".launcher")
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -77,7 +77,7 @@ func TestClientStateActivationHappensAfterVerifiedFiles0228(t *testing.T) {
 				return readErr
 			}
 			if string(raw) != `{"version":"old"}` {
-				return fmt.Errorf("client active pointer switched before validation: %s", raw)
+				return fmt.Errorf("Указатель активной версии клиента переключён до проверки: %s", raw)
 			}
 			return nil
 		},

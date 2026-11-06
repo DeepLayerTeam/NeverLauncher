@@ -221,7 +221,7 @@ func TestImportAllRejectsStaleTargetAndTamperedInputs0493(t *testing.T) {
 func TestImportAllURL0493(t *testing.T) {
 	for _, raw := range []string{"http://example.com", "https://name:password@host", "http://localhost", "ftp://example.com", "https://example.com/?token=1"} {
 		if _, err := migrationURL0493(raw); err == nil {
-			t.Fatal(fmt.Sprintf("unsafe URL accepted: %s", raw))
+			t.Fatal(fmt.Sprintf("Принят небезопасный URL: %s", raw))
 		}
 	}
 	for _, raw := range []string{"http://127.0.0.1:8080", "https://example.com"} {

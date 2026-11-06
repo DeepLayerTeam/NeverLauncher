@@ -136,7 +136,7 @@ jobs:
             [ref]$tokens, [ref]$parseErrors) | Out-Null
           if ($parseErrors.Count -ne 0) {
             $parseErrors | ForEach-Object { Write-Error $_.ToString() }
-            throw 'Invalid Windows Mesa installer syntax'
+            throw 'Некорректный синтаксис установщика Mesa для Windows'
           }
       - name: Установка проверенной программной реализации OpenGL для сквозных тестов клиента Windows
         if: runner.os == 'Windows' && matrix.scope == 'client'
@@ -349,7 +349,7 @@ jobs:
             [ref]$tokens, [ref]$parseErrors) | Out-Null
           if ($parseErrors.Count -ne 0) {
             $parseErrors | ForEach-Object { Write-Error $_.ToString() }
-            throw 'Invalid Windows Mesa installer syntax'
+            throw 'Некорректный синтаксис установщика Mesa для Windows'
           }
       - name: Установка проверенной программной реализации OpenGL для сквозных тестов клиента Windows
         if: runner.os == 'Windows' && matrix.scope == 'client'

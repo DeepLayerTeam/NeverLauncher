@@ -69,7 +69,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить промышленные Go форматирование
+      - name: Проверить форматирование производственного Go-кода
         run: test -z "$(gofmt -l pkg/authconnector internal/httpapi/mfa_login_117.go internal/httpapi/oidc_flow_115.go internal/httpapi/admin_handlers.go internal/httpapi/*0296*.go)"
       - name: "Собрать реальные Backend и CLI"
         run: go build ./cmd/...
@@ -77,7 +77,7 @@ jobs:
         run: go test -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation ./internal/httpapi ./internal/repository
       - name: Проверить гарантии провайдеров и жизненный цикл учётных данных с детектором гонок
         run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpapi ./internal/federation -run '0296|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestHTTPLoginUsesRegisteredExternalConnector112|TestFederationE2E01110CanonicalSessionMatrix'
-      - name: реальные SQL/PostgreSQL MySQL MariaDB устаревшие сопоставление login
+      - name: Проверить реальное сопоставление устаревших хешей при входе в PostgreSQL, MySQL и MariaDB
         env:
           LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
           LAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false

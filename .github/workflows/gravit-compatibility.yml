@@ -39,13 +39,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Gravit detector тесты и SQL репозиторий интеграция
+      - name: Проверить обнаружение Gravit и интеграцию SQL-репозитория
         working-directory: services/api
         run: go test -race -count=1 -timeout 5m ./internal/gravitdetector ./internal/repository ./internal/httpapi -run 'Test.*0332|Test.*0441|TestMigration.*0331'
       - name: "Проверить загрузку CLI, обратную совместимость и базовые тесты"
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestGravitCompatibilityCLI0332|TestMigrationWorkflowCLI0331'
-      - name: канонические API контракт и версия
+      - name: Проверить канонический контракт API и версию
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

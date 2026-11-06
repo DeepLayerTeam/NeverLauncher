@@ -57,9 +57,9 @@ jobs:
           EXPECTED_OS: ${{ matrix.os }}
         run: |
           set -euo pipefail
-          test "$(go env GOOS)" = "$EXPECTED_OS" || { echo 'FAIL: wrong native operating system'; exit 1; }
-          test "$(go env GOARCH)" = "$EXPECTED_ARCH" || { echo 'FAIL: emulated or wrong native architecture'; exit 1; }
-          test "$(rustc -vV | sed -n 's/^host: //p')" = "$(python3 -c 'import os; o=os.getenv("EXPECTED_OS"); a=os.getenv("EXPECTED_ARCH"); print(("aarch64" if a=="arm64" else "x86_64") + "-" + ("pc-windows-msvc" if o=="windows" else "unknown-linux-gnu" if o=="linux" else "apple-darwin"))')" || { echo 'FAIL: Rust host is not native target'; exit 1; }
+          test "$(go env GOOS)" = "$EXPECTED_OS" || { echo 'ОШИБКА: несоответствие нативной операционной системы'; exit 1; }
+          test "$(go env GOARCH)" = "$EXPECTED_ARCH" || { echo 'ОШИБКА: эмуляция или несоответствие нативной архитектуры'; exit 1; }
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "$(python3 -c 'import os; o=os.getenv("EXPECTED_OS"); a=os.getenv("EXPECTED_ARCH"); print(("aarch64" if a=="arm64" else "x86_64") + "-" + ("pc-windows-msvc" if o=="windows" else "unknown-linux-gnu" if o=="linux" else "apple-darwin"))')" || { echo 'ОШИБКА: целевая платформа Rust не совпадает с платформой узла'; exit 1; }
       - name: "Нативные тесты Go для сборки клиента и загрузчиков игры"
         working-directory: cli
         shell: bash

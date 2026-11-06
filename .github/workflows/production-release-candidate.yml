@@ -471,7 +471,7 @@ jobs:
           APPROVED_OPERATOR_PUBLIC_KEY: ${{ vars.LAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          test -n "${APPROVED_OPERATOR_PUBLIC_KEY}" || { echo 'missing protected GA verification key' >&2; exit 2; }
+          test -n "${APPROVED_OPERATOR_PUBLIC_KEY}" || { echo 'Отсутствует защищённый ключ проверки GA' >&2; exit 2; }
           mkdir -p official-minecraft-ga-0270
           for target in windows-amd64 windows-arm64 linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
             source="official-minecraft-ga-raw/official-minecraft-ga-0270-${target}"
@@ -482,7 +482,7 @@ jobs:
             --attestations official-minecraft-ga-0270 \
             --public-key "$APPROVED_OPERATOR_PUBLIC_KEY" \
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/official-minecraft-ga-0270.json"
-      - name: Потребовать утверждённую защищённую GA Client фабрика для того же коммита
+      - name: Потребовать утверждённую защищённую фабрику клиента GA для того же коммита
         env:
           GA_RUN_ID: ${{ inputs.client_factory_ga_evidence_run_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -492,18 +492,18 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID"             --jq '{commit:.head_sha,conclusion:.conclusion,event:.event,path:.path}' > "$RUNNER_TEMP/client-factory-run.json"
           jq -e --arg commit "$GITHUB_SHA"             '.commit == $commit and .conclusion == "success" and .event == "workflow_dispatch" and (.path | endswith(".github/workflows/client-factory-ga-0280.yml"))'             "$RUNNER_TEMP/client-factory-run.json" >/dev/null
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID" > "$RUNNER_TEMP/client-factory-run-full.json"
-      - name: Потребовать новый независимый запуск GA Client фабрика
+      - name: Потребовать новый независимый запуск фабрики клиента GA
         run: |
           python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/client-factory-run-full.json" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA" --workflow client-factory-ga-0280.yml
-      - name: Получить защищённые свидетельства GA Client фабрика
+      - name: Получить защищённые доказательства фабрики клиента GA
         uses: actions/download-artifact@v4
         with:
           name: client-factory-ga-0280-${{ github.sha }}
           run-id: ${{ inputs.client_factory_ga_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: client-factory-ga-0280-evidence
-      - name: Проверить подписанные свидетельства GA Client фабрика без закрытых ключей
+      - name: Проверить подписанные доказательства фабрики клиента GA без закрытых ключей
         env:
           CLIENT_FACTORY_RUNTIME_PUBLIC_KEY: ${{ vars.LAUNCHER_FACTORY_RUNTIME_PUBLIC_KEY }}
           CLIENT_FACTORY_JOIN_PUBLIC_KEY: ${{ vars.LAUNCHER_FACTORY_JOIN_PUBLIC_KEY }}
@@ -557,7 +557,7 @@ jobs:
         with:
           name: launcher-macos-notarized-${{ github.sha }}
           path: macos-production-artifacts
-      - name: Скачать промышленные артефакты управляемая JRE для шести платформ
+      - name: Скачать производственные артефакты управляемой JRE для шести платформ
         uses: actions/download-artifact@v4
         with:
           name: launcher-managed-jre-${{ github.sha }}
@@ -712,7 +712,7 @@ jobs:
           case "$MODE" in
             signed-ga-v2) test -n "$NEW_RUN"; test -z "$HISTORIC_RUN" ;;
             legacy-ga036) test -n "$HISTORIC_RUN"; test -z "$NEW_RUN" ;;
-            *) echo 'production release cannot bypass independently signed target policy' >&2; exit 2 ;;
+            *) echo 'Производственный релиз не может обходить независимо подписанную политику целевой платформы' >&2; exit 2 ;;
           esac
       - name: Скачать независимо подписанное разрешение GA для текущего релиза
         if: steps.release-policy.outputs.mode == 'signed-ga-v2'
@@ -743,7 +743,7 @@ jobs:
           else
             KEY="$CURRENT_KEY"
           fi
-          [[ "$KEY" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'missing independently pinned 32-byte Ed25519 operator key' >&2; exit 2; }
+          [[ "$KEY" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Отсутствует независимо закреплённый 32-байтовый ключ оператора Ed25519' >&2; exit 2; }
           umask 077
           printf '%s\n' "$KEY" > "$RUNNER_TEMP/nl-ga-operator.pub"
           test -s ga-protected-approval/approval.json
@@ -764,7 +764,7 @@ jobs:
           set -euo pipefail
           if [[ "$(cat VERSION)" != '0.46.3' ]]; then exit 0; fi
           test -n "$OPS_JSON_B64" && test -n "$OPS_SIG_B64" && test -n "$OPS_TRUSTED_PEM" || {
-            echo '0.46.0 GA BLOCKED: second-operator signed evidence not supplied to protected production environment' >&2; exit 2;
+            echo '0.46.0 GA ЗАБЛОКИРОВАН: в защищённую производственную среду не переданы доказательства с подписью второго оператора' >&2; exit 2;
           }
           umask 077
           mkdir -p "$RUNNER_TEMP/nl-ops-ga"
@@ -908,7 +908,7 @@ jobs:
             SIG=GA_TARGET_APPROVAL.sig
             SCHEMA=launcher.ga.verified-targets.v2
           else
-            echo 'missing mandatory signed GA policy' >&2; exit 2
+            echo 'Отсутствует обязательная подписанная политика GA' >&2; exit 2
           fi
           REQUIRED_CHECKS="$(python3 -c 'import sys;sys.path.insert(0,"scripts/ga");from verified_targets import checks_for;print(len(checks_for(sys.argv[1])))' "$VERSION")"
           SECURITY_CHECKS="$(python3 -c 'import sys;sys.path.insert(0,"scripts/ga");from security_capabilities_0431 import checks;print(len(checks(sys.argv[1])))' "$VERSION")"
@@ -1144,7 +1144,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$(cat VERSION)" != '0.46.3' ]]; then exit 0; fi
-          test -n "$OPS_TRUSTED_PEM" || { echo '0.46.0 GA BLOCKED: public operations verification key missing' >&2; exit 2; }
+          test -n "$OPS_TRUSTED_PEM" || { echo '0.46.0 GA ЗАБЛОКИРОВАН: отсутствует открытый ключ проверки операций' >&2; exit 2; }
           umask 077
           printf '%s\n' "$OPS_TRUSTED_PEM" > "$RUNNER_TEMP/nl-ops-ga.pub"
       - name: Независимо проверить скачанные подписанные артефакты релиза до публикации
@@ -1199,9 +1199,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$(cat VERSION)" != '0.51.0' ]]; then exit 0; fi
-          [[ "$GUARD_EVIDENCE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 BLOCKED: independent evidence run missing'; exit 2; }
-          [[ "$GUARD_NATIVE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 BLOCKED: native game run missing'; exit 2; }
-          [[ "$GUARD_REVIEWER_PUBLIC_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: pinned independent reviewer key missing'; exit 2; }
+          [[ "$GUARD_EVIDENCE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует независимый запуск сбора доказательств'; exit 2; }
+          [[ "$GUARD_NATIVE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует нативный запуск игры'; exit 2; }
+          [[ "$GUARD_REVIEWER_PUBLIC_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует закреплённый ключ независимого проверяющего'; exit 2; }
           [[ "$GUARD_SHADOW_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: HMAC shadow key unavailable'; exit 2; }
           test -n "$GUARD_RELEASE_OPERATOR"
           umask 077
@@ -1234,7 +1234,7 @@ jobs:
           VERSION="$(cat VERSION)"
           EXTRA=()
           if [[ "$VERSION" == '0.48.0' ]]; then
-            [[ "$NL0480_TRUSTED_KEY_HEX" =~ ^[a-fA-F0-9]{64}$ ]] || { echo '0.48.0 trusted independent operator key missing' >&2; exit 2; }
+            [[ "$NL0480_TRUSTED_KEY_HEX" =~ ^[a-fA-F0-9]{64}$ ]] || { echo '0.48.0: отсутствует доверенный ключ независимого оператора' >&2; exit 2; }
             umask 077
             printf '%s' "$NL0480_TRUSTED_KEY_HEX" | xxd -r -p > "$RUNNER_TEMP/ga0480-operator.key"
             test -s ga0480-independent/approval.json
