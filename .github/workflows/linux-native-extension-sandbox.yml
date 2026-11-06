@@ -21,10 +21,10 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: песочница и расширение хост модульные тесты
+      - name: Модульные тесты песочницы и хоста расширений
         working-directory: services/api
         run: go test -race -count=1 ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost ./internal/extensionlifecycle
-      - name: Проверить сборка и безопасности политика
+      - name: Проверить сборку и политику безопасности
         working-directory: services/api
         run: go vet ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
 # Аппаратная приёмка ядра требует отдельного собственного агента с

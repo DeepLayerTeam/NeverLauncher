@@ -71,7 +71,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Проверить форматирование производственного Go-кода
         run: test -z "$(gofmt -l pkg/authconnector internal/httpapi/mfa_login_117.go internal/httpapi/oidc_flow_115.go internal/httpapi/admin_handlers.go internal/httpapi/*0296*.go)"
-      - name: "Собрать реальные Backend и CLI"
+      - name: "Собрать рабочие Backend и CLI"
         run: go build ./cmd/...
       - name: Проверить подписанные HTTP/OIDC/Microsoft-запросы и регрессии авторизации Runtime API
         run: go test -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation ./internal/httpapi ./internal/repository

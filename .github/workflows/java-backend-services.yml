@@ -43,8 +43,8 @@ jobs:
       - name: Проверить брокер настоящего хоста, границы репозитория, отзыв прав и скрытие данных в заданиях
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost -run 'TestJavaBackendServicesBroker0484'
-      - name: существующие broker и безопасности регрессионные проверки
+      - name: Выполнить регрессионные проверки существующего брокера и безопасности
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity
-      - name: канонические product версия
+      - name: Проверить каноническую версию продукта
         run: python3 scripts/version/manage.py check

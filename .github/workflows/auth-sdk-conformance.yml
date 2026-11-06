@@ -41,7 +41,7 @@ jobs:
         run: test -z "$(gofmt -l pkg/authconnector internal/federation/core.go internal/httpconnector/config.go internal/httpconnector/connector_test.go internal/oidcconnector/config.go internal/oidcconnector/connector_test.go internal/microsoftconnector/config.go internal/microsoftconnector/connector_test.go internal/sqlconnector/config.go)"
       - name: Проверить SDK, федерацию и соответствие реальному подписанному протоколу
         run: go test -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/repository ./internal/model ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/sqlconnector
-      - name: проверки гонок для соответствие и эмитент связь
+      - name: Проверить гонки при соблюдении контракта и связи с поставщиком данных
         run: go test -race -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector
       - name: "Скомпилировать Backend API с SDK v2"
         run: go build ./cmd/...

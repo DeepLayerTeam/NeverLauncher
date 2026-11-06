@@ -50,7 +50,7 @@ jobs:
           fstype=$(stat -f -c '%T' "$RUNNER_TEMP/nl-03211")
           case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Неподдерживаемая файловая система $fstype"; exit 1;; esac
           echo "TMPDIR=$RUNNER_TEMP/nl-03211" >> "$GITHUB_ENV"
-      - name: статический проверки и полные нативные зависимости
+      - name: Выполнить статические проверки и установить все нативные зависимости
         shell: bash
         run: |
           set -euo pipefail

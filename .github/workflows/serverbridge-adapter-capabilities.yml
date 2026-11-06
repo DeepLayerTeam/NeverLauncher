@@ -46,7 +46,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: фактические Java промышленные источники / 14 адаптер политики
+      - name: Проверить промышленные исходники Java и политики 14 адаптеров
         run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
       - name: "Регрессионные проверки безопасности протокола Java v3 (без запуска Minecraft)"
         run: bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh

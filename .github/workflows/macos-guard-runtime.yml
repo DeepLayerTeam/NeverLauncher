@@ -35,7 +35,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Потребовать нативные хост и подписанные JDK
+      - name: Требовать нативный хост и подписанный JDK
         run: |
           test "$(uname -m)" = '${{ matrix.arch }}'
           codesign --verify --strict --verbose=2 "$JAVA_HOME/bin/java"

@@ -64,9 +64,9 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: контракт и канонические версия
+      - name: Проверить контракт и каноническую версию
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
-      - name: явные RC limitation
+      - name: Проверить явные ограничения кандидата на выпуск
         run: echo 'CI unit/integration success is not evidence of a real isolated Gravit/Minecraft E2E or production certification.'

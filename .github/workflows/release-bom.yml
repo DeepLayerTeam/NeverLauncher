@@ -46,12 +46,12 @@ jobs:
           cache: false
       - name: "Синхронизация версий и проверка исходников релиза"
         run: python3 scripts/version/manage.py check
-      - name: реальные Go BOM тесты и проверки гонок
+      - name: Выполнить реальные Go-тесты состава компонентов (BOM) и проверки гонок
         working-directory: cli
         run: |
           go test -race ./cmd/launcher -run '^TestReleaseBOM03214' -count=1 -v
           go vet ./cmd/launcher
-      - name: подписанные распространение пакет привязка и негативные тесты
+      - name: Проверить привязку подписанных дистрибутивов к пакетам и отрицательные сценарии
         working-directory: cli
         run: go test -race ./cmd/launcher -run '^TestReleaseDistribution04511' -count=1 -v
       - name: Проверить bash точка входа

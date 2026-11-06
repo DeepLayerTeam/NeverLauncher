@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: сборка промышленный API
+      - name: Собрать промышленную версию API
         working-directory: services/api
         run: go build ./cmd/...
       - name: "Проверить оценку риска HWID и реальное восстановление PostgreSQL между репликами"

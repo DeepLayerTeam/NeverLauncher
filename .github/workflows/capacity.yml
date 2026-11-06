@@ -29,7 +29,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache: true
           cache-dependency-path: services/api/go.sum
-      - name: версия метаданные
+      - name: Проверить метаданные версии
         run: python3 scripts/version/manage.py check
       - name: Проверить метрики ёмкости и гонки в ограниченных тестах нагрузки
         working-directory: services/api

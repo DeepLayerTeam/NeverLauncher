@@ -42,7 +42,7 @@ jobs:
       - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
-      - name: устаревшие фабрика гонки тесты
+      - name: Проверить гонки прежней реализации фабрики
         if: runner.os == 'Linux'
         working-directory: cli
         run: go test -race ./cmd/launcher -run 'TestLegacyAdapters0278|TestClientFactory0271' -count=1 -timeout=6m

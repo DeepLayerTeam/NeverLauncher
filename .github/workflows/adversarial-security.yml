@@ -36,7 +36,7 @@ jobs:
         run: python3 scripts/security/certify_03114.py --tier offline --output "$RUNNER_TEMP/03114-offline.json"
       - name: "Проверить Guard Runtime и ServerBridge на обход проверки сеанса"
         run: python3 scripts/security/certify_03114.py --tier backend-security --output "$RUNNER_TEMP/03114-backend-security.json"
-      - name: полные промышленные зависимость сборка
+      - name: Собрать промышленные зависимости и выполнить полную сборку
         working-directory: services/api
         run: |
           go vet ./internal/attestverify ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker ./internal/linuxsandbox
@@ -60,7 +60,7 @@ jobs:
       - name: Собрать песочницу Windows и протокол взаимодействия с хостом
         working-directory: services/api
         run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
-      - name: промышленный API сборка
+      - name: Выполнить промышленную сборку API
         working-directory: services/api
         run: go build ./...
   darwin-cross-compile:

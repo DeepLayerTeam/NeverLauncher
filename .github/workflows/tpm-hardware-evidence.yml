@@ -61,7 +61,7 @@ jobs:
       - name: "Статический анализ Backend"
         working-directory: services/api
         run: go vet ./internal/attestverify ./internal/repository ./internal/httpapi
-      - name: Опубликовать фактические Проверить журналы для безопасности проверка
+      - name: Опубликовать журналы фактических проверок безопасности
         if: always()
         uses: actions/upload-artifact@v4
         with:

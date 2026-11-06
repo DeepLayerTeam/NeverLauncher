@@ -32,7 +32,7 @@ jobs:
         with:
           go-version-file: installer/go.mod
           cache-dependency-path: installer/go.mod
-      - name: подписанные установщик тесты
+      - name: Выполнить тесты подписанного установщика
         working-directory: installer
         run: |
           go test -race ./...

@@ -52,7 +52,7 @@ jobs:
       - name: "Интеграция CLI"
         working-directory: cli
         run: go test -race -count=1 -timeout 5m ./cmd/launcher
-      - name: OpenAPI и версии
+      - name: Проверить OpenAPI и версии
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Проверить фактические сбой оркестрация, восстановление безопасность и prior HA код
+      - name: Проверить реальные сбои оркестрации, безопасное восстановление и прежнюю реализацию HA
         run: |
           set -euo pipefail
           python3 -m pip install 'PyYAML==6.0.3'

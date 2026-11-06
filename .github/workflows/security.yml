@@ -18,12 +18,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: автономные границы доверия регрессионная проверка проверки
+      - name: Выполнить автономные регрессионные проверки границ доверия
         run: |
           python3 scripts/smoke/offline/device-key-storage.py
           python3 scripts/smoke/offline/hardware-bound-identity.py
           python3 scripts/smoke/offline/challenge-response-attestation.py
           python3 scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py
           python3 scripts/smoke/offline/guard-integrity-evidence-0132.py
-      - name: канонические OpenAPI безопасности контракты
+      - name: Проверить канонические контракты безопасности OpenAPI
         run: python3 scripts/contracts/validate-openapi.py

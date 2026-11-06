@@ -60,7 +60,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-14]
     steps:
       - uses: actions/checkout@v4
-      - name: "Нативные зависимости Linux"
+      - name: "Установить нативные зависимости для Linux"
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update

@@ -44,7 +44,7 @@ jobs:
         working-directory: cli
         shell: bash
         run: go test -count=1 -timeout 4m -run '^TestTrustedJVM0306' ./cmd/launcher
-      - name: существующие authlib/classloader устаревшие регрессионная проверка
+      - name: Выполнить регрессионные проверки прежних интеграций authlib и загрузчиков классов
         working-directory: cli
         shell: bash
         run: go test -count=1 -timeout 4m -run '^TestAuthlibClassloader0279' ./cmd/launcher

@@ -52,7 +52,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить Go форматирование
+      - name: Проверить форматирование Go
         run: test -z "$(gofmt -l internal/fileauth internal/fileauthlive internal/localpassword internal/repository/local_auth_0295* internal/httpapi/local_auth_0295_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth-0295)"
       - name: Проверить реальный парсер FileAuth, векторы хеширования и вход со старым паролем
         run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/localpassword ./internal/httpapi -run '(0295|0426)$'

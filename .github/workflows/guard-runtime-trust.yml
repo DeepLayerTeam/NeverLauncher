@@ -39,7 +39,7 @@ jobs:
       - name: Статический анализ Go (vet)
         working-directory: services/api
         run: go vet ./internal/httpapi
-      - name: детектор гонок и Повторить/политика отзыв тесты
+      - name: Проверить гонки, повторные операции и отзыв политик
         if: matrix.os == 'ubuntu-24.04'
         working-directory: services/api
         run: go test -race -count=1 -run 'TestRuntimePolicy0317|TestGuardProcessID0317|TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810' ./internal/httpapi

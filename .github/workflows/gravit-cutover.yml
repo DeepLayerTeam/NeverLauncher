@@ -46,7 +46,7 @@ jobs:
           go test -race -count=1 ./internal/gravitcutover
           go test -race -count=1 ./internal/repository -run '^TestMigrationCutoverPostgres03311$'
           go test -run '^$' ./internal/httpapi
-      - name: CLI компиляция и тесты
+      - name: Собрать CLI и запустить тесты
         working-directory: cli
         run: go test -count=1 ./cmd/launcher -run 'TestMigrationCutover03311|TestMigrationWorkflow0331|TestFence|TestRollbackBoundSnapshot0448'
       - uses: actions/setup-node@v4
@@ -54,12 +54,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: React промышленную сборку
+      - name: Выполнить промышленную сборку React
         working-directory: apps/admin
         run: |
           npm ci
           npm run build
-      - name: версия и API
+      - name: Проверить версию и API
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

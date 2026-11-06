@@ -44,7 +44,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: "Нативные зависимости Desktop/Tauri для Linux"
+      - name: "Установить нативные зависимости Desktop/Tauri в Linux"
         if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -69,7 +69,7 @@ jobs:
           mkdir -p ../dist/arm64-native-check
           SUFFIX=''; test '${{ matrix.os }}' != windows || SUFFIX='.exe'
           go build -trimpath -o "../dist/arm64-native-check/launcher${SUFFIX}" ./cmd/launcher
-      - name: "Проверка архитектуры управляемая Java и разрешения метаданных"
+      - name: "Проверка архитектуры управляемой Java и разрешения метаданных"
         shell: bash
         run: |
           set -euo pipefail

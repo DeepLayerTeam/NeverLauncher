@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: версия метаданные, нативные auditor и негативные тесты
+      - name: Проверить метаданные версии, нативный аудитор и отрицательные тесты
         run: |
           python3 scripts/version/manage.py check
           (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run '^TestAudit0301|^TestModuleParityCLI0301' )

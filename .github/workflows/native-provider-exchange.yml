@@ -27,7 +27,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-14]
     steps:
       - uses: actions/checkout@v4
-      - name: Linux системные предпосылки
+      - name: Установить системные зависимости Linux
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -46,7 +46,7 @@ jobs:
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
       - name: Компиляция Rust
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: интерфейс регрессионные проверки
+      - name: Выполнить регрессионные проверки интерфейса
         working-directory: apps/desktop
         run: |
           npm ci

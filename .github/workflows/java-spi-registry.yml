@@ -54,12 +54,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: сборка реальные SPI расширение архив
+      - name: Собрать архив с реальным SPI-расширением
         run: sh examples/extensions/java-spi/build.sh
       - name: Проверить предварительные условия и конфликты закреплённых JAR
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-spi/build/package/backend/java-spi.jar
         run: go test -race -count=1 ./internal/extensionjava
-      - name: Проверить все канонические релиз метаданные
+      - name: Проверить все канонические метаданные релиза
         run: python3 scripts/version/manage.py check

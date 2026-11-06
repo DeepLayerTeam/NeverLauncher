@@ -46,7 +46,7 @@ jobs:
       - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
-      - name: детектор гонок на Linux
+      - name: Запустить детектор гонок в Linux
         if: runner.os == 'Linux'
         working-directory: cli
         run: >-

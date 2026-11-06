@@ -62,12 +62,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: сборка фактические встроенные зависимость пакет
+      - name: Собрать пакет с реальными встроенными зависимостями
         run: sh examples/extensions/java-dependencies/build.sh
       - name: "Проверить настоящие JAR и сценарии обхода библиотек до активации"
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
         run: go test -race -count=1 ./internal/extensionjava
-      - name: Проверить канонические product версия метаданные
+      - name: Проверить канонические метаданные версии продукта
         run: python3 scripts/version/manage.py check

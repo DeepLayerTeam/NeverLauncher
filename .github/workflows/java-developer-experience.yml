@@ -63,7 +63,7 @@ jobs:
       - name: "Скомпилировать тот же клиент публичного SDK с помощью Gradle"
         shell: bash
         run: gradle --no-daemon -p examples/extensions/java-developer-04812 -PneverLauncherSdkVersion="$(cat VERSION)" classes
-      - name: кроссплатформенный SDK версия проверка
+      - name: Проверить версии кроссплатформенного SDK
         shell: bash
         run: python3 scripts/version/manage.py check
       - uses: actions/upload-artifact@v4

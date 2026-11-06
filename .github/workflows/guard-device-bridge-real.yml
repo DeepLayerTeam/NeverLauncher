@@ -60,7 +60,7 @@ jobs:
           assert len(d['guardJvm']['suites'])==1
           assert d['guardJvm']['suites'][0]['status']=='PASS'
           PY
-      - name: текущие канонические версия метаданные и declared цель scope
+      - name: Проверить метаданные текущей канонической версии и объявленную область действия цели
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check

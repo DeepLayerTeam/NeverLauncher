@@ -58,7 +58,7 @@ jobs:
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/launcher-api)
           (cd services/api && go build ./cmd/launcher-api)
 
-      - name: CLI и SDK тесты
+      - name: Запустить тесты CLI и SDK
         shell: bash
         run: |
           (cd cli && go test ./internal/dbmigrate ./cmd/launcher)

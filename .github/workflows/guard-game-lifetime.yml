@@ -63,5 +63,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: существующие проверки безопасности и новые 0.43.8 отказ сценарии
+      - name: Запустить прежние проверки безопасности и новые сценарии отказов 0.43.8
         run: python3 -m unittest discover -s scripts/ga -p 'test_security_capabilities_0431.py' -v

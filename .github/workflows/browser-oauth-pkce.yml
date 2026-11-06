@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
-      - name: Нативные зависимости Linux
+      - name: Установить нативные зависимости для Linux
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update

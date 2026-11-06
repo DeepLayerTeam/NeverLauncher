@@ -58,7 +58,7 @@ jobs:
       - name: Проверить тестовые данные и модульные тесты допуска к выпуску
         shell: bash
         run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
-      - name: Проверить реальный разрешитель Go и политику подписанных планов
+      - name: Проверить действующий разрешитель Go и политику подписанных планов
         shell: bash
         run: |
           set -euo pipefail

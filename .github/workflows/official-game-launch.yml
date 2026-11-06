@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Linux Tauri нативные предпосылки
+      - name: Установить нативные зависимости Tauri для Linux
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update

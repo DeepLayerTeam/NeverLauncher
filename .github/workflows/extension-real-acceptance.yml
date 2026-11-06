@@ -97,7 +97,7 @@ jobs:
           pattern: extensions-04212-*
           path: evidence
           merge-multiple: true
-      - name: с отказом по умолчанию свидетельства тесты
+      - name: Проверить свидетельства с блокировкой по умолчанию
         run: python3 -m unittest discover -s e2e/extensions -p 'test_*.py' -v
       - name: "Потребовать успешной проверки всех шести платформ и супервизора Go"
         env:

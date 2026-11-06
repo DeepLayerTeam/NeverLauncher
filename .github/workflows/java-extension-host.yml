@@ -46,7 +46,7 @@ jobs:
       - name: "Проверить JVM-хост, CLI, аутентифицированные RPC и тайм-ауты"
         shell: bash
         run: python3 examples/extensions/java-host/test-runner.py
-      - name: Проверить packed хост классы
+      - name: Проверить упакованные классы хоста
         shell: bash
         run: |
           jar tf examples/extensions/java-host/build/package/backend/java-host.jar | grep -q 'ru/launcher/sdk/host/JavaExtensionHost.class'
@@ -73,10 +73,10 @@ jobs:
       - name: Проверить восстановление Java и отклонение запоздалого приветствия
         working-directory: services/api
         run: go test -race -count=1 -run '^TestJavaLateHelloCannotUndoOperatorStop0422$' ./internal/extensionhost
-      - name: регрессионная проверка существующие Go расширение хост
+      - name: Выполнить регрессионные проверки существующего хоста Go-расширений
         working-directory: services/api
         run: go test -count=1 ./internal/extensionhost
-      - name: версия проверка
+      - name: Проверить версию
         run: python3 scripts/version/manage.py check
   sign-and-verify-java-extension:
     runs-on: ubuntu-24.04

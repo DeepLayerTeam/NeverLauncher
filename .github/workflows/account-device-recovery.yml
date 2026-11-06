@@ -54,7 +54,7 @@ jobs:
         run: |
           go build ./cmd/...
           go vet ./internal/httpapi ./internal/repository
-      - name: реальные восстановление и отзыв регрессионные проверки (ошибка на отсутствующие или пропущенные тесты)
+      - name: Проверить реальное восстановление и отзыв доступа (отсутствие или пропуск тестов считается ошибкой)
         working-directory: services/api
         shell: bash
         run: |

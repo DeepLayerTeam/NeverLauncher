@@ -136,20 +136,20 @@ func Probe(ctx context.Context, opt Options) Report {
 	}
 	if r.Traffic.Requests >= 20 {
 		if r.Traffic.P95Seconds > HTTPP95Warning.Seconds() {
-			r.issue("warning", "http.p95", fmt.Sprintf("%.3fs", r.Traffic.P95Seconds), "p95 превышает 1 с за последние 60 секунд", "Profile hot handlers and DB queries; scale Backend only after checking shared dependencies")
+			r.issue("warning", "http.p95", fmt.Sprintf("%.3fs", r.Traffic.P95Seconds), "p95 превышает 1 с за последние 60 секунд", "Проверьте медленные обработчики HTTP и запросы к базе данных; масштабируйте Backend только после проверки общих зависимостей")
 		}
 		if r.Traffic.ErrorRatio >= .05 {
 			r.issue("critical", "http.5xx", fmt.Sprintf("%.1f%%", 100*r.Traffic.ErrorRatio), "Доля ответов 5xx за последние 60 секунд достигла 5 %", "Проверьте журналы и готовность системы перед добавлением реплик")
 		}
 		if r.Traffic.ThrottleRatio >= .10 {
-			r.issue("warning", "http.429", fmt.Sprintf("%.1f%%", 100*r.Traffic.ThrottleRatio), "429 >= 10% in last 60s", "Проанализируйте подозрительный трафик и повторные запросы клиентов; увеличивайте лимиты только на основе проверенных данных")
+			r.issue("warning", "http.429", fmt.Sprintf("%.1f%%", 100*r.Traffic.ThrottleRatio), "Доля ответов 429 достигла 10 % за последние 60 секунд", "Проанализируйте подозрительный трафик и повторные запросы клиентов; увеличивайте лимиты только на основе проверенных данных")
 		}
 	}
 	return r
 }
 func (r *Report) evaluatePostgres(p PostgreSQL) {
 	if p.MaxConnections > 0 && float64(p.ActiveConnections)/float64(p.MaxConnections) >= ConnectionsWarningFraction {
-		r.issue("warning", "postgres.connections", fmt.Sprintf("%d/%d", p.ActiveConnections, p.MaxConnections), ">= 80% max_connections", "Устраните утечки и простаивающие соединения, настройте ограниченные пулы; рассмотрите PgBouncer перед увеличением числа реплик API")
+		r.issue("warning", "postgres.connections", fmt.Sprintf("%d/%d", p.ActiveConnections, p.MaxConnections), "Использовано не менее 80 % от max_connections", "Устраните утечки и простаивающие соединения, настройте ограниченные пулы; рассмотрите PgBouncer перед увеличением числа реплик API")
 	}
 	if p.PendingJobs >= QueueWarningSize {
 		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), "Не менее 500 ожидающих заданий", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")

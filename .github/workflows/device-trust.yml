@@ -137,7 +137,7 @@ jobs:
         with:
           pattern: device-trust-*
           path: device-trust-results
-      - name: объединить точного коммита доверие матрица
+      - name: Объединить матрицу доверия для точного коммита
         shell: bash
         run: |
           set +e

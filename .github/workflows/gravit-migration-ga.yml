@@ -143,7 +143,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Потребовать три изолированные reference проекты и закрытые свидетельства хранилище
+      - name: Требовать три изолированных эталонных проекта и защищённое хранилище свидетельств
         shell: bash
         run: |
           set -euo pipefail
@@ -167,7 +167,7 @@ jobs:
           # публикуются как потенциально открытый артефакт CI.
           base="$(mktemp -d "$MIGRATION_GA_EVIDENCE_ROOT/run-XXXXXXXX")"
           printf '%s\n' "$base" > "$RUNNER_TEMP/migration-ga/evidence-location"
-      - name: Выполнить обязательные положительные и отрицательные E2E проверки для все три классы
+      - name: Выполнить обязательные положительные и отрицательные сквозные проверки всех трёх классов
         shell: bash
         run: |
           set -euo pipefail

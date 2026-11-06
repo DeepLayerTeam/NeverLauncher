@@ -32,12 +32,12 @@ jobs:
         with: {go-version-file: cli/go.mod}
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: версия и нативные parity проверки
+      - name: Проверить версию и согласованность нативных реализаций
         run: |
           python3 scripts/version/manage.py check
           (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run 'TestAudit0301|TestAudit0302PinnedBaseline|TestModuleParityCLI0301|TestModuleParity03011')
           (cd cli && go vet ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
-      - name: все модули have реальные источники и запускаемый Проверить свидетельства
+      - name: Проверить наличие настоящих исходников и исполняемых свидетельств у всех модулей
         run: |
           mkdir -p parity-reports
           "$RUNNER_TEMP/nl" module-parity audit --report parity-reports/03011.json

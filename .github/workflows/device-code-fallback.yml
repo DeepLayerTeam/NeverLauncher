@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
-      - name: Нативные зависимости Linux
+      - name: Установить нативные зависимости для Linux
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -41,7 +41,7 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: интерфейс тесты и промышленную сборку
+      - name: Проверить интерфейс и выполнить промышленную сборку
         working-directory: apps/desktop
         run: |
           npm ci

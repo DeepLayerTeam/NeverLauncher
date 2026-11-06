@@ -51,7 +51,7 @@ jobs:
       - name: Нативные сетевые тесты CLI и тесты ZIP
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestGravitSource.*0333|TestGravitCompatibilityCLI0332|TestMigrationWorkflowCLI0331'
-      - name: OpenAPI и метаданные выпуска
+      - name: Проверить OpenAPI и метаданные выпуска
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check

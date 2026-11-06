@@ -36,7 +36,7 @@ jobs:
           go test ./cmd/launcher
           -run 'TestModpack0275|TestClientFactory0271|TestMirrorHelper0274|TestModernLoader0272|TestProcessorWorker0273'
           -count=1 -timeout=5m
-      - name: статический проверки
+      - name: Выполнить статические проверки
         working-directory: cli
         run: go vet ./cmd/launcher
       - name: Сборка CLI

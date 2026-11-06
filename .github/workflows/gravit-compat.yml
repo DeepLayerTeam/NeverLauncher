@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: сборка реальные адаптер JAR
+      - name: Собрать работающие JAR адаптеров
         run: sh examples/extensions/gravit-compat/build.sh
       - name: "Отклонить неподдерживаемые или отсутствующие классы входа Gravit и проверить настоящие JAR"
         working-directory: services/api

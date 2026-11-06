@@ -27,7 +27,7 @@ jobs:
         with: {go-version-file: cli/go.mod}
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21'}
-      - name: реальные JVM и тестовая фикстура Go тесты
+      - name: Запустить Go-тесты с реальной JVM и тестовыми фикстурами
         run: go test -count=1 ./internal/devtools ./cmd/launcher -run 'Test(AnalyzeAndTransformJava|SuspiciousReferenceAndSignatures|JarZipTraversalRejected|RunProcessSanitized|RunTimeout|AuthFixtureIntegration|AuthExpiryAndListener|AuthTokenNotProductionJWT|DevTools03010)'
         working-directory: cli
       - name: "Сборка CLI и запуск go vet"

@@ -30,7 +30,7 @@ jobs:
       - name: Собрать SDK и запустить интеграционные тесты HTTP-хоста Java
         shell: bash
         run: bash sdk/java/core/build.sh test
-      - name: Скомпилировать реальные пример
+      - name: Скомпилировать работающие примеры
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/java-example"
@@ -38,7 +38,7 @@ jobs:
       - name: "Проверить соответствие манифеста схеме поставляемого расширения"
         shell: bash
         run: python3 -m json.tool examples/extensions/java-lifecycle/launcher-extension.json >/dev/null
-      - name: Проверить создан SDK артефакт
+      - name: Проверить созданный артефакт SDK
         shell: bash
         run: jar tf sdk/java/core/build/launcher-java-sdk-core.jar | grep -q 'ru/launcher/sdk/core/ExtensionRunner.class'
   java-process-e2e:

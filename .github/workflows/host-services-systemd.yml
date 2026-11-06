@@ -19,10 +19,10 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: гонки и регрессионная проверка тесты
+      - name: Выполнить регрессионные тесты и проверки гонок
         working-directory: cli
         run: go test -race ./cmd/launcher -run 'TestHostSystemd|TestHostService|TestServerBridgeHost|TestWorldBackup|TestRemoteGracefulStop|TestRemoteSystemdGivesDrain|TestReleaseSigningRejects|TestReleaseDetached' -count=1
-      - name: нативные TLS сертификаты и релиз ключ границы
+      - name: Проверить нативные сертификаты TLS и границы ключей релиза
         working-directory: cli
         run: go test -race ./internal/remotetls ./internal/releasekeypaths -count=1
       - name: "Проверить CLI, sd_notify и корректное завершение по SIGTERM (E2E)"

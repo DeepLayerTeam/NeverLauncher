@@ -41,7 +41,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: полные миграция API сборка и модульный/гонки тесты
+      - name: Полностью собрать API миграции и запустить модульные тесты и проверки гонок
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitrollback ./internal/gravitrehearsal
@@ -60,7 +60,7 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: OpenAPI и версия согласованность
+      - name: Проверить согласованность OpenAPI и версии
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

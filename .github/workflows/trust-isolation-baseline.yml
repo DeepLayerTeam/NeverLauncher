@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Запустить проверки границ безопасности без пропусков
         run: go test -count=1 ./internal/model ./internal/trustbaseline ./internal/repository ./internal/extensionhost ./internal/httpapi
-      - name: Собрать настоящий Backend
+      - name: Собрать рабочую серверную часть
         run: go build -o launcher-api-diag.exe ./cmd/launcher-api
       - name: Проверить диагностические параметры и флаги блокировки при ошибке
         shell: bash

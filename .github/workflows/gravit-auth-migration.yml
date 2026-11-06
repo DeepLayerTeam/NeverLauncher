@@ -45,7 +45,7 @@ jobs:
           go test -race -count=1 -timeout 5m ./internal/gravitcredentials ./internal/gravitidentity ./internal/gravitinventory ./internal/fileauth ./internal/localpassword
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationAuthAtomicIdempotent0335|TestMigrationIdentityTransactional0334|TestMigrationDurability0331|TestMigratedSQLUserIDDoesNotCollideAcrossSources0444'
           go test -count=1 -timeout 5m ./internal/httpapi -run 'TestImportedFileAuthLocalLoginAndAtomicRehash0295|TestMigrationTargetSteps0331'
-      - name: CLI сборки и тесты
+      - name: Собрать CLI и запустить тесты
         working-directory: cli
         run: go test -count=1 ./cmd/launcher
   contract-admin:
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: OpenAPI и product версия
+      - name: Проверить OpenAPI и версию продукта
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

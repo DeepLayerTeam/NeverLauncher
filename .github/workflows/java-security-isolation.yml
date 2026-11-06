@@ -45,6 +45,6 @@ jobs:
         with:
           go-version: '1.27.3'
           cache-dependency-path: services/api/go.sum
-      - name: расширение хост интеграция и гонки
+      - name: Проверить интеграцию хоста расширений и гонки
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity ./internal/extensionbroker

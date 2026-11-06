@@ -47,13 +47,13 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 -m pip install 'cryptography>=43,<47'
-      - name: исходный и метаданные согласованность
+      - name: Проверить согласованность исходников и метаданных
         run: |
           test -z "$(git status --porcelain)"
           python3 scripts/version/manage.py check
       - name: Провести негативные тесты криптографического GA-верификатора
         run: python3 -m unittest discover -s scripts/security -p 'test_ga_verify_0320.py' -v
-      - name: автономные проверки на обход тесты с детектор гонок
+      - name: Проверить попытки обхода автономными тестами с детектором гонок
         run: python3 scripts/security/certify_0320.py --tier offline --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-offline-0320.json"
       - name: "Промышленная сборка Backend"
         working-directory: services/api

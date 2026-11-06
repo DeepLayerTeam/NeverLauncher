@@ -48,7 +48,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: dtolnay/rust-toolchain@stable
-      - name: реальные политика/агент интеграция регрессионные проверки
+      - name: Проверить регрессии реальной интеграции политик и агента
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1
       - name: "Автономные тесты подписи и генерации ключей"

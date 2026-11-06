@@ -57,5 +57,5 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm run build
-      - name: подготовленные Скачать целостность негативные тесты
+      - name: Выполнить отрицательные тесты целостности загруженных подготовленных пакетов
         run: python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v

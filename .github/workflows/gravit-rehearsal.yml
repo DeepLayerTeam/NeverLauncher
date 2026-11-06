@@ -55,7 +55,7 @@ jobs:
         run: go test -race -count=1 ./cmd/launcher -run 'TestRehearsal|TestRehearseLocal04910'
       - name: Проверить группу из трёх проектов на синтетических данных (без сертификации GA)
         run: python3 -m unittest discover -s tools/gravit-port -p 'test_rehearse_cohort_04910.py' -v
-      - name: контракт и версия
+      - name: Проверить контракт и версию
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

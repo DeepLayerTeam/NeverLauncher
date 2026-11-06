@@ -85,10 +85,10 @@ jobs:
       - name: "Проверить реальный HTTP-брокер Go, постоянное хранение, разрешения, отзыв и безопасность"
         working-directory: services/api
         run: go test -race -count=1 -run 'TestRuntime.*0303' ./internal/extensionhost
-      - name: Go хост регрессионная проверка тесты
+      - name: Выполнить регрессионные тесты хоста Go
         working-directory: services/api
         run: go test -count=1 ./internal/extensionhost
-      - name: устойчивые EventBus Повторить, очередь lease и JSON целостность регрессионные проверки
+      - name: Проверить устойчивость EventBus, повторы, аренду задач очереди и целостность JSON
         working-directory: services/api
         run: go test -race -count=1 -run 'Test.*(0206|0423)' ./internal/eventbus ./internal/repository
       - name: Проверить сохранение документов брокером между перезапусками супервизоров

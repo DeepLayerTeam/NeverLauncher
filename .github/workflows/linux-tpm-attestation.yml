@@ -36,6 +36,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: реальные X.509 и TPM исполняемый файл тестовая фикстура негативные тесты
+      - name: Выполнить отрицательные тесты с настоящими исполняемыми фикстурами X.509 и TPM
         working-directory: services/api
         run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline

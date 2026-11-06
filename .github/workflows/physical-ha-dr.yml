@@ -163,6 +163,6 @@ jobs:
           from pathlib import Path
           assert doc['status']=='PASS' and doc['version']==Path('VERSION').read_text().strip()
           PY
-      - name: состояние приёмка граница accurately
+      - name: Точно проверить границы приёмки и состояние системы
         run: |
           echo 'Получено свидетельство проверки на реальном оборудовании. Независимая приёмка подписанной версии 0.53.0 GA по-прежнему заблокирована отдельно.' >> "$GITHUB_STEP_SUMMARY"
