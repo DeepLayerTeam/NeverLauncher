@@ -13,7 +13,7 @@ func TestDesktopProfileServers0229ScopeAndPublicResponse(t *testing.T) {
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("catalog HTTP %d: %s", res.Code, res.Body.String())
+		t.Fatalf("ответ каталога HTTP %d: %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), `"items":`) {
 		t.Fatalf("Некорректный формат пустого каталога: %s", res.Body.String())

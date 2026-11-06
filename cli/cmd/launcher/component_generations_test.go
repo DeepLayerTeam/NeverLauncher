@@ -52,7 +52,7 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	}
 	floor, err := loadComponentWatermark02311(root)
 	if err != nil || floor.Generation != 7 {
-		t.Fatalf("floor=%+v %v", floor, err)
+		t.Fatalf("минимально разрешённая версия: %+v %v", floor, err)
 	}
 	// Повторное применение точно того же установленного подписанного набора безопасно: восстановление идемпотентно.
 	if err := checkComponentGeneration02311(root, m); err != nil {

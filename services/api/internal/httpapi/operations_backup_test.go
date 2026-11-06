@@ -38,7 +38,7 @@ func TestCanonicalOperationsBackupFlow(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), "created") {
-		t.Fatalf("backup create => %d %s", res.Code, res.Body.String())
+		t.Fatalf("создание резервной копии: %d %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		BackupID string `json:"backupId"`
@@ -96,7 +96,7 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 		BackupID string `json:"backupId"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &created); err != nil || created.BackupID == "" {
-		t.Fatalf("backupId: %v %s", err, res.Body.String())
+		t.Fatalf("идентификатор резервной копии: %v %s", err, res.Body.String())
 	}
 
 	if _, _, err := store.Save("demo-project", "demo-project-vanilla-3.4.0", "README.txt", strings.NewReader("after-backup")); err != nil {
@@ -109,7 +109,7 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 	res = httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("restore => %d %s", res.Code, res.Body.String())
+		t.Fatalf("восстановление: %d %s", res.Code, res.Body.String())
 	}
 	reader, _, err := store.Open("demo-project", "demo-project-vanilla-3.4.0", "README.txt")
 	if err != nil {

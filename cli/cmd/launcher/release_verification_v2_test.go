@@ -119,7 +119,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if p2.Epoch != 2 {
-		t.Fatalf("epoch=%d want 2", p2.Epoch)
+		t.Fatalf("эпоха=%d, ожидалось 2", p2.Epoch)
 	}
 	foundOld := false
 	for _, k := range p2.Keys {

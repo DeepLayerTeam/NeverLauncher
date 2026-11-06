@@ -15,7 +15,7 @@ func TestBackendRecentClients0289(t *testing.T) {
 	}
 	got := backendRecentClients0289(clients, now, 5*time.Minute)
 	if len(got) != 1 || got[0].SessionID != "live" {
-		t.Fatalf("recent sessions=%+v", got)
+		t.Fatalf("последние сеансы: %+v", got)
 	}
 }
 func TestBackendLifecycle0289(t *testing.T) {

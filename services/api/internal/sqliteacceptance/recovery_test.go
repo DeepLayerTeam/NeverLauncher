@@ -110,7 +110,7 @@ func TestThreeDatabaseChild0471(t *testing.T) {
 	}
 	allowed, err := coord.Allow(ctx, "crash-client", 1, time.Hour)
 	if err != nil || !allowed.Allowed {
-		t.Fatalf("first grant: %+v %v", allowed, err)
+		t.Fatalf("первое предоставление доступа: %+v %v", allowed, err)
 	}
 	// Без Close, WAL-checkpoint и очистки уровня процесса.
 	os.Exit(71)

@@ -38,7 +38,7 @@ func TestSHA1WithRSASignatureAndPEM0256(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := signer.VerifyValue(value+"A", signed); err == nil {
-		t.Fatal("signature must bind exact Base64 payload")
+		t.Fatal("подпись должна относиться к точному содержимому Base64")
 	}
 	block, _ := pem.Decode([]byte(signer.PublicPEM))
 	if block == nil || block.Type != "PUBLIC KEY" {
@@ -57,7 +57,7 @@ func TestSHA1WithRSASignatureAndPEM0256(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := LoadFile(filename); err == nil {
-		t.Fatal("exposed private key must be rejected")
+		t.Fatal("раскрытый закрытый ключ должен отклоняться")
 	}
 }
 func mustPKCS80256(t *testing.T, k *rsa.PrivateKey) []byte {
@@ -74,14 +74,14 @@ func TestBadKey0256(t *testing.T) {
 	}
 	k, _ := rsa.GenerateKey(rand.Reader, 1024)
 	if _, err := ParsePrivateKey(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)})); err == nil {
-		t.Fatal("weak RSA key accepted")
+		t.Fatal("слабый ключ RSA ошибочно принят")
 	}
 	k2048, _ := rsa.GenerateKey(rand.Reader, 2048)
 	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k2048)})
 	if _, err := ParsePrivateKey(append(pemBytes, []byte("other")...)); err == nil {
-		t.Fatal("trailing material accepted")
+		t.Fatal("посторонние данные в конце ошибочно приняты")
 	}
 	if _, err := ParsePrivateKey([]byte(strings.Repeat("x", 1024))); err == nil {
-		t.Fatal("garbage accepted")
+		t.Fatal("некорректные данные ошибочно приняты")
 	}
 }

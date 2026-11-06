@@ -25,7 +25,7 @@ func TestControlDomains0281ClosedDispatchTable(t *testing.T) {
 		}
 		domain, ok := ControlActionDomain(got)
 		if !ok || domain != DomainGame {
-			t.Fatalf("%s escaped Game domain: %q", kind, domain)
+			t.Fatalf("%s вышел за пределы игрового домена: %q", kind, domain)
 		}
 	}
 	for _, kind := range []string{"", "server.shell", "host.exec", "host.restart", "backend.restart", "server.restart", "MESSAGE.BROADCAST", "message.broadcast;host.exec"} {
@@ -94,7 +94,7 @@ func TestControlDomains0281InstanceRightsRequireGlobalScope(t *testing.T) {
 	for _, action := range []string{BackendControl, HostProcess, HostExec} {
 		denied := svc.Authorize(context.Background(), actor, action, Scope{Kind: ScopeProject, ProjectID: "alpha"}, Resource{Kind: "host", ProjectID: "alpha"})
 		if denied.Allowed || denied.ReasonCode != "instance-scope-required" {
-			t.Fatalf("%s unexpectedly permitted in project scope: %+v", action, denied)
+			t.Fatalf("%s неожиданно разрешён в области проекта: %+v", action, denied)
 		}
 		allowed := svc.Authorize(context.Background(), actor, action, Scope{Kind: ScopeGlobal}, Resource{Kind: "host"})
 		if !allowed.Allowed {

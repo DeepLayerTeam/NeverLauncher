@@ -35,7 +35,7 @@ func TestPublishReadiness0385ExplainsBrokenPackageAndBlocksPreview(t *testing.T)
 	id := payload.Data.PackageID
 	read := send("GET", "/api/v1/packages/"+id+"/validations", "")
 	if read.Code != http.StatusOK {
-		t.Fatalf("read: %d %s", read.Code, read.Body.String())
+		t.Fatalf("чтение: %d %s", read.Code, read.Body.String())
 	}
 	var response struct {
 		Data struct {
@@ -77,7 +77,7 @@ func TestPublishRefusal0385KeepsIndividualTargetReasons(t *testing.T) {
 	rec := httptest.NewRecorder()
 	writeOperationError0217(rec, publishBlocked0385{Blockers: []publishBlocker0385{{"stable-runtime-target-blocked", "linux-amd64", "missing attestation", "Run real target"}}})
 	if rec.Code != http.StatusConflict {
-		t.Fatalf("status %d", rec.Code)
+		t.Fatalf("статус: %d", rec.Code)
 	}
 	var result struct {
 		Error struct {
@@ -103,7 +103,7 @@ func TestStableReadiness0385RequiresIndependentRuntimeEvidence(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("validation: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("проверка корректности: %d %s", rec.Code, rec.Body.String())
 	}
 	var payload struct {
 		Data struct {

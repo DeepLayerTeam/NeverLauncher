@@ -14,7 +14,7 @@ func bomFixtures03214(t *testing.T) (source, dir string) {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
-		t.Fatal("runtime.Caller")
+		t.Fatal("не удалось получить сведения о вызывающем коде через runtime.Caller")
 	}
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.."))
 	source = t.TempDir()

@@ -14,7 +14,7 @@ func TestServerBridgeHandoffID0148Uses192BitsOfCSPRNGMaterial(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		id, err := newServerBridgeHandoffID0148()
 		if err != nil {
-			t.Fatalf("new handoff id: %v", err)
+			t.Fatalf("идентификатор новой передачи: %v", err)
 		}
 		if !strings.HasPrefix(id, "ho_") {
 			t.Fatalf("Неожиданный префикс передачи соединения: %q", id)

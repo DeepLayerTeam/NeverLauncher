@@ -145,10 +145,10 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	f.commit.StableGateToken03411 = token
 	published, err := f.repo.CommitDurablePublish(ctx, f.commit)
 	if err != nil || published.Status != "published" {
-		t.Fatalf("verified stable publish: %+v %v", published, err)
+		t.Fatalf("проверенная стабильная публикация: %+v %v", published, err)
 	}
 	if _, err = f.repo.CommitDurablePublish(ctx, f.commit); err == nil {
-		t.Fatal("replayed publish")
+		t.Fatal("публикация выполнена повторно")
 	}
 	head, err = f.repo.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 	if err != nil || head.Revision != 1 || head.ReleaseID != f.rel.ID {

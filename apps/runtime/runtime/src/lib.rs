@@ -2031,7 +2031,7 @@ mod tests {
             let chain = vec!["1.21.1".to_string(), profile.to_string()];
             assert!(minecraft_supports_quick_play_for_resolution(profile, &chain), "{profile}");
             if !profile.starts_with("1.") {
-                assert!(!minecraft_supports_quick_play_multiplayer(profile), "regression must exercise modded IDs");
+                assert!(!minecraft_supports_quick_play_multiplayer(profile), "Регрессионный тест должен проверять идентификаторы модифицированных сборок");
             }
         }
         let legacy = vec!["1.16.4".to_string(), "1.16.4-forge-35.1.37".to_string()];
@@ -2167,7 +2167,7 @@ mod tests {
         verify_manifest_signature(&manifest, &key).expect("проверка версии v2");
         let mut altered_runtime = manifest.clone();
         altered_runtime.runtime.java.minimum_major_version = 16;
-        assert!(verify_manifest_signature(&altered_runtime, &key).is_err(), "Java policy is covered by the Ed25519 signature");
+        assert!(verify_manifest_signature(&altered_runtime, &key).is_err(), "Политика Java должна защищаться подписью Ed25519");
         manifest.profile_snapshot.as_mut().unwrap().spec.name = "Forged".into();
         assert!(verify_manifest_signature(&manifest, &key).is_err());
         manifest.profile_snapshot = None;

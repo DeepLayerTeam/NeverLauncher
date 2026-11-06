@@ -123,6 +123,6 @@ func TestHWIDPostgresStaleAppealAndHardwareChange0433(t *testing.T) {
 	}
 	got, err := a.GetHWID0299(ctx, userID, deviceID, now.Add(7*time.Second))
 	if err != nil || got.State != "recognized" || got.Baseline != z {
-		t.Fatalf("cross-replica owner confirm: %#v %v", got, err)
+		t.Fatalf("подтверждение владельца между репликами: %#v %v", got, err)
 	}
 }

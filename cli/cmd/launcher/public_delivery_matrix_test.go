@@ -53,7 +53,7 @@ func TestPublicProductionDeliveryMatrix0159CoversSixTargets(t *testing.T) {
 		t.Fatalf("targets=%d", len(matrix.Targets))
 	}
 	if len(matrix.Assets) != len(manifest.Artifacts) {
-		t.Fatalf("assets=%d delivery=%d", len(matrix.Assets), len(manifest.Artifacts))
+		t.Fatalf("ресурсов=%d, доставлено=%d", len(matrix.Assets), len(manifest.Artifacts))
 	}
 	for _, target := range matrix.Targets {
 		if target.CLI == "" || target.Desktop == "" || target.Guard == "" || target.Runtime == "" || target.Package == "" || target.ManagedJRE == "" {

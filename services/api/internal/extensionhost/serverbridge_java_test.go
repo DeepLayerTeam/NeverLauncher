@@ -29,7 +29,7 @@ func TestJavaBridgeControlValidation0488(t *testing.T) {
 	} {
 		_, err := bridgePayload0488(tc.kind, tc.payload)
 		if (err == nil) != tc.allowed {
-			t.Errorf("%s %+v expected allowed=%v got %v", tc.kind, tc.payload, tc.allowed, err)
+			t.Errorf("%s %+v: ожидалось разрешение=%v, получено=%v", tc.kind, tc.payload, tc.allowed, err)
 		}
 	}
 }

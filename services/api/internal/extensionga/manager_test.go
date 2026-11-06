@@ -20,6 +20,6 @@ func TestValidateEmptyRepository0210(t *testing.T) {
 		t.Fatalf("Неожиданно получен пустой отчёт: %+v", report)
 	}
 	if report.Contract.ExtensionAPIVersion != extensioncontract.ExtensionAPIVersion {
-		t.Fatalf("contract API=%q", report.Contract.ExtensionAPIVersion)
+		t.Fatalf("контракт API: %q", report.Contract.ExtensionAPIVersion)
 	}
 }

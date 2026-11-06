@@ -80,7 +80,7 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	}
 	r2, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || r1.Revision != r2.Revision {
-		t.Fatalf("replay revision %d -> %d: %v", r1.Revision, r2.Revision, e)
+		t.Fatalf("повторное воспроизведение ревизии %d -> %d: %v", r1.Revision, r2.Revision, e)
 	}
 	if _, e = repo.SaveMigrationIdentities0334(ctx, run.ID, source.SourceSHA256, source.ManifestSHA256, []gi.Account{{Provider: "fileauth", SourceID: uuid, Username: "SomeoneElse", UUID: uuid, SourcePath: records[0].SourcePath}}); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("Ошибочно принято изменённое сопоставление источников: %v", e)

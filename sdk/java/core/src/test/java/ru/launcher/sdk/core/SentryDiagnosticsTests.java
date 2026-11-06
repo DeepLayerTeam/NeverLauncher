@@ -16,7 +16,7 @@ public final class SentryDiagnosticsTests {
       RuntimeException e=new RuntimeException("Bearer abc123 user@example.com /home/john/password");
       SentryDiagnostics.report(e,Map.of("LAUNCHER_SENTRY_JVM_ENABLED","true","LAUNCHER_SENTRY_JVM_DSN",dsn,"LAUNCHER_SENTRY_RELEASE","launcher@0.30.9"));
       String text=received.poll(5,TimeUnit.SECONDS);if(text==null)throw new AssertionError("отсутствует пакет диагностики Sentry");
-      for(String secret:List.of("abc123","user@example.com","/home/john"))if(text.contains(secret))throw new AssertionError("privacy leak "+secret);
+      for(String secret:List.of("abc123","user@example.com","/home/john"))if(text.contains(secret))throw new AssertionError("Обнаружена утечка конфиденциальных данных: "+secret);
       if(!text.contains("launcher@0.30.9")||!text.contains("RuntimeException"))throw new AssertionError("неполное событие");
       Thread.UncaughtExceptionHandler old=Thread.getDefaultUncaughtExceptionHandler();
       try {

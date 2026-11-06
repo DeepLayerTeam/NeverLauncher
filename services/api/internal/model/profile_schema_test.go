@@ -21,7 +21,7 @@ func TestProfileV2DeterministicSnapshots(t *testing.T) {
 	p.UpdatedAt = p.UpdatedAt.Add(12345)
 	two := SnapshotProfile(p)
 	if one.Digest != two.Digest || one.Revision != two.Revision {
-		t.Fatalf("nondeterministic digest: %+v != %+v", one, two)
+		t.Fatalf("недетерминированный дайджест: %+v != %+v", one, two)
 	}
 	if err := ValidateProfileSnapshot(one, "demo", "forge"); err != nil {
 		t.Fatal(err)

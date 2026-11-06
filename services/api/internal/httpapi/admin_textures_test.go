@@ -10,7 +10,7 @@ func TestTextureAdminRBAC0259(t *testing.T) {
 	admin := loginAdmin(t, h)
 	rr := request0211(t, h, "POST", "/api/v1/admin/users", admin, `{"email":"textures-viewer@example.test","displayName":"Viewer","roleId":"player","password":"test-password-0259"}`)
 	if rr.Code != http.StatusCreated {
-		t.Fatalf("setup user: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("создание учётной записи для настройки: %d %s", rr.Code, rr.Body.String())
 	}
 	viewer := loginUser0211(t, h, "textures-viewer@example.test", "test-password-0259")
 	for _, tc := range []struct{ method, path, body string }{

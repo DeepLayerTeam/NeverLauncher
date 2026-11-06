@@ -25,7 +25,7 @@ func TestBusWorkerRestartResumesDurableDelivery0423(t *testing.T) {
 		Source: "test", Payload: map[string]any{"generation": 1},
 	})
 	if err != nil || !inserted {
-		t.Fatalf("publish inserted=%v: %v", inserted, err)
+		t.Fatalf("публикация добавлена=%v: %v", inserted, err)
 	}
 	first.Start(ctx) // обработчик рассылки не зарегистрирован; доставка должна оставаться в ожидании
 	first.Close()
@@ -35,7 +35,7 @@ func TestBusWorkerRestartResumesDurableDelivery0423(t *testing.T) {
 	}
 	subs, err := resumed.Subscriptions(ctx, sub.ExtensionID, sub.Scope, sub.ScopeID)
 	if err != nil || len(subs) != 1 || subs[0].ID != sub.ID {
-		t.Fatalf("subscription lost on worker restart: %+v %v", subs, err)
+		t.Fatalf("подписка потеряна после перезапуска обработчика: %+v %v", subs, err)
 	}
 	dispatcher := &testDispatcher0206{}
 	resumed.SetDispatcher(dispatcher)
@@ -48,13 +48,13 @@ func TestBusWorkerRestartResumesDurableDelivery0423(t *testing.T) {
 		dispatcher.mu.Unlock()
 		if len(got) > 0 {
 			if len(got) != 1 || got[0] != event.Sequence {
-				t.Fatalf("recovery changed delivery identity: %v", got)
+				t.Fatalf("восстановление изменило идентификатор доставки: %v", got)
 			}
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("pending delivery not resumed by replacement EventBus worker")
+	t.Fatal("новый обработчик EventBus не возобновил ожидающую доставку")
 }
 
 type blockingDispatch0423 struct {
@@ -106,14 +106,14 @@ func TestEventBatchLeasesAtDispatchTime0423(t *testing.T) {
 	select {
 	case <-dispatcher.started:
 	case <-time.After(time.Second):
-		t.Fatal("first callback never started")
+		t.Fatal("первый обработчик обратного вызова не запустился")
 	}
 	// Другой worker должен иметь возможность захватить независимый второй ключ
 	// порядка: наш заблокированный worker ещё не арендовал его.
 	pending, err := repo.LeaseExtensionEventDeliveries(ctx, 1, time.Now().Add(time.Second))
 	if err != nil || len(pending) != 1 || pending[0].Event.AggregateID != "p2" {
 		close(dispatcher.release)
-		t.Fatalf("second delivery was pre-leased: %+v err=%v", pending, err)
+		t.Fatalf("вторая доставка получила аренду раньше времени: %+v; ошибка=%v", pending, err)
 	}
 	if err := repo.CompleteExtensionEventDelivery(ctx, pending[0].Delivery.ID, pending[0].Delivery.LeaseToken, time.Now()); err != nil {
 		t.Fatal(err)
@@ -122,6 +122,6 @@ func TestEventBatchLeasesAtDispatchTime0423(t *testing.T) {
 	select {
 	case <-finished:
 	case <-time.After(time.Second):
-		t.Fatal("worker failed to finish")
+		t.Fatal("обработчик не завершил работу")
 	}
 }

@@ -58,6 +58,6 @@ func TestHostControlBridgeCorrelation0413(t *testing.T) {
 	}
 	b, _ := json.Marshal(hostOperationOutput0413(op, node, false))
 	if !bytes.Contains(b, []byte("hostState")) || !bytes.Contains(b, []byte("bridge")) {
-		t.Fatal("no correlated state")
+		t.Fatal("отсутствует связанное состояние")
 	}
 }

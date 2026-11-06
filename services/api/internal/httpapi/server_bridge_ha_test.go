@@ -51,7 +51,7 @@ func TestServerBridgeRateLimitUsesDedicatedDistributedBudget0149(t *testing.T) {
 		res := httptest.NewRecorder()
 		h.ServeHTTP(res, req)
 		if got := res.Header().Get("X-RateLimit-Scope"); got != "serverbridge" {
-			t.Fatalf("scope=%q", got)
+			t.Fatalf("область доступа: %q", got)
 		}
 		if i == 0 && res.Code != http.StatusNoContent {
 			t.Fatalf("Код первого запроса=%d", res.Code)

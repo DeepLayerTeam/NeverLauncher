@@ -49,11 +49,11 @@ func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
 	}
 	mine, err := repo.ListOfficialLinks0268(ctx, a)
 	if err != nil || len(mine) != 1 {
-		t.Fatalf("owner list: %#v %v", mine, err)
+		t.Fatalf("список владельца: %#v %v", mine, err)
 	}
 	other, err := repo.ListOfficialLinks0268(ctx, b)
 	if err != nil || len(other) != 0 {
-		t.Fatalf("other owner list: %#v %v", other, err)
+		t.Fatalf("список другого владельца: %#v %v", other, err)
 	}
 	if err := repo.RemoveOfficialLink0268(ctx, b, uuid); !errors.Is(err, ErrOfficialLinkAbsent0268) {
 		t.Fatalf("Удаление записи неверного владельца: %v", err)

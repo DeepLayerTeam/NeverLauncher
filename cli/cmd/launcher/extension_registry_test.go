@@ -15,19 +15,19 @@ func TestExtensionRegistrySearchCLI0203(t *testing.T) {
 	var seen bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/extension-registry/extensions" {
-			t.Fatalf("path=%s", r.URL.Path)
+			t.Fatalf("путь: %s", r.URL.Path)
 		}
 		if r.Method != http.MethodGet {
 			t.Fatalf("Метод=%s", r.Method)
 		}
 		if r.Header.Get("Authorization") != "Bearer registry-token" {
-			t.Fatalf("authorization=%q", r.Header.Get("Authorization"))
+			t.Fatalf("авторизация: %q", r.Header.Get("Authorization"))
 		}
 		q := r.URL.Query()
 		expected := map[string]string{"q": "sample", "channel": "stable", "launcherVersion": "0.20.3", "os": "linux", "arch": "amd64"}
 		for key, value := range expected {
 			if q.Get(key) != value {
-				t.Fatalf("query %s=%q want %q", key, q.Get(key), value)
+				t.Fatalf("запрос %s=%q, ожидалось %q", key, q.Get(key), value)
 			}
 		}
 		seen = true
@@ -59,7 +59,7 @@ func TestExtensionRegistrySearchCLI0203(t *testing.T) {
 func TestExtensionRegistryInstallCLI0203(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/extension-registry/extensions/example.registry-extension/versions/1.2.3/install" {
-			t.Fatalf("path=%s", r.URL.Path)
+			t.Fatalf("путь: %s", r.URL.Path)
 		}
 		if r.Method != http.MethodPost {
 			t.Fatalf("Метод=%s", r.Method)
@@ -69,7 +69,7 @@ func TestExtensionRegistryInstallCLI0203(t *testing.T) {
 			t.Fatal(err)
 		}
 		if body["scope"] != "project" || body["scopeId"] != "project-a" {
-			t.Fatalf("body=%v", body)
+			t.Fatalf("тело ответа: %v", body)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"data":{"status":"installed","verified":true}}`)

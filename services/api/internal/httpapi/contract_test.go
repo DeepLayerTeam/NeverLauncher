@@ -64,7 +64,7 @@ func TestCanonicalCRUDUsesSingleContractVersion(t *testing.T) {
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("login: %d %s", res.Code, res.Body.String())
+		t.Fatalf("вход: %d %s", res.Code, res.Body.String())
 	}
 	var session struct {
 		Token string `json:"token"`

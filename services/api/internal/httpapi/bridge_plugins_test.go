@@ -21,14 +21,14 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
 		if res.Code != http.StatusOK {
-			t.Fatalf("GET %s => %d %s", path, res.Code, res.Body.String())
+			t.Fatalf("GET-запрос %s: %d %s", path, res.Code, res.Body.String())
 		}
 	}
 
 	identity := newTestBridgeNodeIdentity0142(t)
 	res := registerTestBridgeNode0142(t, handler, adminToken, "velocity-940", "Velocity 940", "velocity", "demo-project", "vanilla", identity)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("register => %d %s", res.Code, res.Body.String())
+		t.Fatalf("регистрация: %d %s", res.Code, res.Body.String())
 	}
 
 	// Protocol v2 согласуется в сетевом протоколе, а не только объявляется метаданными.
@@ -47,6 +47,6 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "heartbeat-accepted") {
-		t.Fatalf("heartbeat => %d %s", res.Code, res.Body.String())
+		t.Fatalf("проверка активности: %d %s", res.Code, res.Body.String())
 	}
 }

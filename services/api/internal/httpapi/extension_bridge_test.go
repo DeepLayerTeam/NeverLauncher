@@ -81,7 +81,7 @@ func TestDesktopBridgeRevocationAndGeneration0356(t *testing.T) {
 		result, _ := data["result"].(map[string]any)
 		allowed := status == 200 && result["authorized"] == true
 		if allowed != want {
-			t.Fatalf("version=%s gen=%d action=%s status=%d body=%v", version, generation, action, status, body)
+			t.Fatalf("версия=%s, поколение=%d, действие=%s, статус=%d, тело ответа=%v", version, generation, action, status, body)
 		}
 	}
 	check("1.0.0", install.Generation, "tauri.openGameDirectory", true)

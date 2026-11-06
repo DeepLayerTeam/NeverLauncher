@@ -21,7 +21,7 @@ func TestNormalizeServerBridgeControlFailure(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			normalized := normalizeServerBridgeControlFailure(tc.input)
 			if len(normalized) != tc.length || !utf8.ValidString(normalized) {
-				t.Fatalf("normalized bytes=%d valid=%v; want %d", len(normalized), utf8.ValidString(normalized), tc.length)
+				t.Fatalf("нормализованных байт=%d, корректность=%v; ожидалось %d", len(normalized), utf8.ValidString(normalized), tc.length)
 			}
 			if normalized != normalizeServerBridgeControlFailure(normalized) {
 				t.Fatal("Нарушена идемпотентность нормализации")

@@ -86,7 +86,7 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 	identity := newTestBridgeNodeIdentity0142(t)
 	res := registerTestBridgeNode0142(t, handler, adminToken, "paper-0191", "Paper 0191", "paper", "demo-project", "vanilla", identity)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("register => %d %s", res.Code, res.Body.String())
+		t.Fatalf("регистрация: %d %s", res.Code, res.Body.String())
 	}
 
 	// Старый мост 0.19.0/v2 остаётся разрешённым при постепенном развёртывании.
@@ -96,7 +96,7 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"protocolVersion":2`) {
-		t.Fatalf("v2 rolling heartbeat => %d %s", res.Code, res.Body.String())
+		t.Fatalf("проверка активности при последовательном обновлении v2: %d %s", res.Code, res.Body.String())
 	}
 
 	// v3 без согласованных флагов возможностей отклоняется.

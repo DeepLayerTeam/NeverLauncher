@@ -38,7 +38,7 @@ func TestExtensionsRegistryHTTP0203(t *testing.T) {
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), `"deeplayer.team"`) {
-		t.Fatalf("publisher: %d %s", res.Code, res.Body.String())
+		t.Fatalf("издатель: %d %s", res.Code, res.Body.String())
 	}
 
 	public, _, err := ed25519.GenerateKey(rand.Reader)
@@ -52,7 +52,7 @@ func TestExtensionsRegistryHTTP0203(t *testing.T) {
 	res = httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), `"algorithm":"Ed25519"`) {
-		t.Fatalf("key: %d %s", res.Code, res.Body.String())
+		t.Fatalf("ключ: %d %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/extension-registry/extensions?q=missing&launcherVersion=0.20.3&os=linux&arch=amd64", nil)
@@ -60,7 +60,7 @@ func TestExtensionsRegistryHTTP0203(t *testing.T) {
 	res = httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"count":0`) {
-		t.Fatalf("search: %d %s", res.Code, res.Body.String())
+		t.Fatalf("поиск: %d %s", res.Code, res.Body.String())
 	}
 }
 

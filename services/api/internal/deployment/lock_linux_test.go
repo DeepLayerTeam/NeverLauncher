@@ -52,7 +52,7 @@ func TestLockInDifferentProcess(t *testing.T) {
 	cmd.Env = append(os.Environ(), "LAUNCHER_DEPLOYMENT_LOCK_TEST_PATH="+plan.LockPath)
 	data, childErr := cmd.CombinedOutput()
 	if childErr != nil {
-		t.Fatalf("child failed %v: %s", childErr, data)
+		t.Fatalf("дочерний процесс завершился с ошибкой %v: %s", childErr, data)
 	}
 	if err := lock.Close(); err != nil {
 		t.Fatal(err)

@@ -86,7 +86,7 @@ func TestSessionManagement118RiskRenameAndProviderRevoke(t *testing.T) {
 		t.Fatalf("Уровень риска не повышен: %#v", observed)
 	}
 	if got := store.revokeFiltered118("", "oidc-main", "", "compromised-provider:oidc-main"); got != 1 {
-		t.Fatalf("provider revoke=%d", got)
+		t.Fatalf("отзыв доступа провайдера: %d", got)
 	}
 	items := store.listByUser(user.ID)
 	var compromised bool

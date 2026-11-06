@@ -43,11 +43,11 @@ func TestJavaPermanentRejectionDeadLettersImmediately0487(t *testing.T) {
 	// элемент в очередь.
 	_, inserted, err := bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "permanent", Source: "java", Payload: map[string]any{"k": 1}})
 	if err != nil || inserted {
-		t.Fatalf("replay inserted=%v err=%v", inserted, err)
+		t.Fatalf("повторная доставка добавлена=%v; ошибка=%v", inserted, err)
 	}
 	bus.processBatch(ctx)
 	if d.calls != 1 {
-		t.Fatal("dead-letter was re-executed")
+		t.Fatal("сообщение из очереди неуспешных доставок выполнено повторно")
 	}
 }
 func TestJavaSyncPoliciesFailClosed0487(t *testing.T) {
@@ -60,12 +60,12 @@ func TestJavaSyncPoliciesFailClosed0487(t *testing.T) {
 	bus.SetDispatcher(&permanentDispatcher0487{})
 	err = bus.DispatchSync(ctx, PublishInput{Type: "release.before-publish", ProjectID: "p1", AggregateType: "release", AggregateID: "r1", IdempotencyKey: "blocked", Payload: map[string]any{"signed": false}})
 	if !errors.Is(err, ErrHookRejected) {
-		t.Fatalf("expected rejection: %v", err)
+		t.Fatalf("ожидалось отклонение: %v", err)
 	}
 	cancelled, cancel := context.WithDeadline(ctx, time.Now().Add(-time.Second))
 	defer cancel()
 	err = bus.DispatchSync(cancelled, PublishInput{Type: "release.before-publish", ProjectID: "p1", AggregateType: "release", AggregateID: "r1", IdempotencyKey: "cancelled", Payload: map[string]any{}})
 	if err == nil {
-		t.Fatal("cancelled hook accepted")
+		t.Fatal("отменённый обработчик события ошибочно принят")
 	}
 }

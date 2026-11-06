@@ -50,7 +50,7 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 	}
 	listed, err := repo.ListBuildWorkspaces(ctx, "demo-project", "admin")
 	if err != nil || len(listed) != 1 || listed[0].State != "built" {
-		t.Fatalf("owner list: %#v %v", listed, err)
+		t.Fatalf("список владельца: %#v %v", listed, err)
 	}
 	foreign, err := repo.ListBuildWorkspaces(ctx, "demo-project", "not-admin")
 	if err != nil || len(foreign) != 0 {

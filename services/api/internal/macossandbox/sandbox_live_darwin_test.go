@@ -43,7 +43,7 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 			}
 			defer h.Close()
 			if err = h.Cmd.Start(); err != nil {
-				t.Fatalf("exec signed helper: %v", err)
+				t.Fatalf("запуск подписанного вспомогательного процесса: %v", err)
 			}
 			startedErr := h.Started()
 			if startedErr != nil {

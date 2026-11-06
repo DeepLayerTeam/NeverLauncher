@@ -88,7 +88,7 @@ func makeForgeTestJar0404(t *testing.T, className, source string, withMainManife
 	}
 	cmd := exec.Command("javac", "-d", work, name)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("javac: %s: %v", output, err)
+		t.Fatalf("ошибка компилятора javac: %s: %v", output, err)
 	}
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

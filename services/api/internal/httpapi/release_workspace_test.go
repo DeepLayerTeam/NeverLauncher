@@ -24,7 +24,7 @@ func TestReleaseWorkspaceDraftOwnershipAndResume0218(t *testing.T) {
 	}
 	res := call("POST", "/api/v1/release-drafts", `{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"0.21.8-test","minecraftVersion":"1.21.1","loader":"vanilla","step":"build","ownerId":"attacker","id":"injected"}`, true)
 	if res.Code != 201 {
-		t.Fatalf("create=%d %s", res.Code, res.Body.String())
+		t.Fatalf("создание: %d %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		Data struct {
@@ -47,16 +47,16 @@ func TestReleaseWorkspaceDraftOwnershipAndResume0218(t *testing.T) {
 	}
 	update := fmt.Sprintf(`{"id":%q,"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"0.21.8-test","minecraftVersion":"1.21.1","loader":"vanilla","step":"verify","revision":1}`, id)
 	if res = call("PUT", "/api/v1/release-drafts/"+id, update, true); res.Code != 200 {
-		t.Fatalf("save=%d %s", res.Code, res.Body.String())
+		t.Fatalf("сохранение: %d %s", res.Code, res.Body.String())
 	}
 	if res = call("PUT", "/api/v1/release-drafts/"+id, update, true); res.Code != 409 {
 		t.Fatalf("Устаревшая ревизия=%d %s", res.Code, res.Body.String())
 	}
 	if res = call("GET", "/api/v1/release-drafts/"+id, "", true); res.Code != 200 || !strings.Contains(res.Body.String(), `"revision":2`) {
-		t.Fatalf("resume=%d %s", res.Code, res.Body.String())
+		t.Fatalf("возобновление: %d %s", res.Code, res.Body.String())
 	}
 	if res = call("DELETE", "/api/v1/release-drafts/"+id, "", true); res.Code != 200 {
-		t.Fatalf("delete=%d %s", res.Code, res.Body.String())
+		t.Fatalf("удаление: %d %s", res.Code, res.Body.String())
 	}
 	if res = call("GET", "/api/v1/release-drafts/"+id, "", true); res.Code != 404 {
 		t.Fatalf("После удаления=%d", res.Code)

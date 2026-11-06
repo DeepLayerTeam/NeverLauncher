@@ -18,7 +18,7 @@ func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 	}
 	// Явная координация SQLite не требует Redis при отключённом HA.
 	if e := ValidateProduction(cfg); e != nil {
-		t.Fatalf("single-node validation: %v", e)
+		t.Fatalf("проверка одиночного узла: %v", e)
 	}
 	cfg.ServerBridgeHARequired = true
 	if e := ValidateProduction(cfg); e == nil || !strings.Contains(e.Error(), "SQLite single-node") {
@@ -27,12 +27,12 @@ func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 	cfg.ServerBridgeHARequired = false
 	cfg.RateLimitFailClosed = false
 	if e := ValidateProduction(cfg); e == nil {
-		t.Fatal("fail-open must be rejected")
+		t.Fatal("режим разрешения доступа при ошибке должен быть запрещён")
 	}
 	cfg.RateLimitFailClosed = true
 	cfg.SQLiteCoordinatorPath = "./state.db"
 	if e := ValidateProduction(cfg); e == nil {
-		t.Fatal("relative SQLite path must be rejected")
+		t.Fatal("относительный путь SQLite должен отклоняться")
 	}
 }
 
@@ -47,15 +47,15 @@ func TestProductionMinimalSQLiteAccepted0375(t *testing.T) {
 		RateLimitEnabled: true, RateLimitFailClosed: true, RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
 	}
 	if err := ValidateProduction(cfg); err != nil {
-		t.Fatalf("production minimal must accept verified SQLite-only topology: %v", err)
+		t.Fatalf("минимальный производственный режим должен принимать проверенную конфигурацию только с SQLite: %v", err)
 	}
 	cfg.RedisURL = "redis://127.0.0.1:6379"
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("minimal must reject Redis")
+		t.Fatal("минимальный режим должен отклонять Redis")
 	}
 	cfg.RedisURL = ""
 	cfg.DeploymentMode = "auto"
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("implicit SQLite production selection must fail")
+		t.Fatal("неявный выбор SQLite в производственном режиме должен завершаться ошибкой")
 	}
 }

@@ -14,11 +14,11 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	owner := loginAdmin(t, h)
 	other := request0211(t, h, http.MethodPost, "/api/v1/admin/projects", owner, `{"id":"other-0387","name":"Other"}`)
 	if other.Code != http.StatusCreated {
-		t.Fatalf("project: %d %s", other.Code, other.Body.String())
+		t.Fatalf("проект: %d %s", other.Code, other.Body.String())
 	}
 	made := request0211(t, h, http.MethodPost, "/api/v1/admin/users", owner, `{"email":"operator-0387@example.test","displayName":"Operator","roleId":"player","password":"operator-pass-0387"}`)
 	if made.Code != http.StatusCreated {
-		t.Fatalf("user: %d %s", made.Code, made.Body.String())
+		t.Fatalf("пользователь: %d %s", made.Code, made.Body.String())
 	}
 	var user struct {
 		ID string `json:"id"`
@@ -47,7 +47,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	owner, _ = registerTestPasskey117(t, h, owner)
 	grant := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"demo-project":"operator"},"expectedProjectRoles":{}}`)
 	if grant.Code != http.StatusOK {
-		t.Fatalf("grant: %d %s", grant.Code, grant.Body.String())
+		t.Fatalf("предоставление доступа: %d %s", grant.Code, grant.Body.String())
 	}
 	stale := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"demo-project":"viewer"},"expectedProjectRoles":{}}`)
 	if stale.Code != http.StatusConflict {
@@ -83,7 +83,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	revoke := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{},"expectedProjectRoles":{"demo-project":"operator"}}`)
 	if revoke.Code != http.StatusOK {
-		t.Fatalf("revoke: %d %s", revoke.Code, revoke.Body.String())
+		t.Fatalf("отзыв доступа: %d %s", revoke.Code, revoke.Body.String())
 	}
 	blocked = request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"after-revoke"}`)
 	if blocked.Code == http.StatusOK {

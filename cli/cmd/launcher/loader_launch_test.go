@@ -180,11 +180,11 @@ func compileFixtureJar0403(t *testing.T, dir, className, source string, classpat
 	}
 	args = append(args, sourcePath)
 	if out, err := exec.Command("javac", args...).CombinedOutput(); err != nil {
-		t.Fatalf("javac: %v: %s", err, out)
+		t.Fatalf("ошибка компилятора javac: %v: %s", err, out)
 	}
 	jarPath := outputDir + ".jar"
 	if out, err := exec.Command("jar", "--create", "--file", jarPath, "-C", outputDir, ".").CombinedOutput(); err != nil {
-		t.Fatalf("jar: %v: %s", err, out)
+		t.Fatalf("ошибка упаковки JAR: %v: %s", err, out)
 	}
 	return jarPath
 }

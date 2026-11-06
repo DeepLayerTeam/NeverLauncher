@@ -65,7 +65,7 @@ func TestRemoteFaultReadOnlyReceipt04112(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		r := remoteRequest0284(t, a, token, http.MethodGet, "/v1/host/receipts/"+key, "", "", "127.0.0.1:1000")
 		if r.Code != http.StatusOK || !strings.Contains(r.Body.String(), `"succeeded"`) {
-			t.Fatalf("GET %d: %s", r.Code, r.Body.String())
+			t.Fatalf("ответ GET: %d: %s", r.Code, r.Body.String())
 		}
 	}
 	if effects.Load() != 1 {

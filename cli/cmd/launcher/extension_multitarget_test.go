@@ -63,7 +63,7 @@ func TestExtensionPackageFourTargets0209(t *testing.T) {
 	}
 	defer analysis.Close()
 	if len(analysis.Manifest.Targets) != 4 {
-		t.Fatalf("targets=%#v", analysis.Manifest.Targets)
+		t.Fatalf("целевые платформы: %#v", analysis.Manifest.Targets)
 	}
 	kinds := make([]string, 0, len(analysis.Manifest.Targets))
 	for _, target := range analysis.Manifest.Targets {

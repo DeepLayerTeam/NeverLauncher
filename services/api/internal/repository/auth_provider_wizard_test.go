@@ -17,11 +17,11 @@ func TestManagedProviderRevisionsAndRollbacks02910(t *testing.T) {
 	}
 	first, err := r.SaveManagedProviderDraft02910(ctx, v)
 	if err != nil || first.Revision != 1 {
-		t.Fatalf("first revision: %+v %v", first, err)
+		t.Fatalf("первая ревизия: %+v %v", first, err)
 	}
 	second, err := r.SaveManagedProviderDraft02910(ctx, v)
 	if err != nil || second.Revision != 2 {
-		t.Fatalf("second revision: %+v %v", second, err)
+		t.Fatalf("вторая ревизия: %+v %v", second, err)
 	}
 	if _, err = r.ActivateManagedProvider02910(ctx, "company", 1, 0, "admin", "Initial rollout"); err != nil {
 		t.Fatal(err)
@@ -37,7 +37,7 @@ func TestManagedProviderRevisionsAndRollbacks02910(t *testing.T) {
 	}
 	active, err := r.ListActiveManagedProviders02910(ctx)
 	if err != nil || len(active) != 1 || active[0].Revision != 1 {
-		t.Fatalf("rollback runtime: %+v %v", active, err)
+		t.Fatalf("откат среды исполнения: %+v %v", active, err)
 	}
 	if _, err = r.ActivateManagedProvider02910(ctx, "company", 0, 1, "admin", "Disable provider"); err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestManagedProviderConcurrentCAS02910(t *testing.T) {
 		}
 	}
 	if success != 1 || conflict != 1 {
-		t.Fatalf("CAS outcomes: success=%d conflict=%d", success, conflict)
+		t.Fatalf("результаты CAS: успешно=%d, конфликтов=%d", success, conflict)
 	}
 }
 func TestManagedProviderRejectsUnsafeMetadata02910(t *testing.T) {

@@ -74,7 +74,7 @@ func TestCoordinatorUpgrade0472PreservesLeasesAndIsIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if channel != 1 || lease != 1 || token != 1 || rate != 1 {
-		t.Fatalf("lost rows %d %d %d %d", channel, lease, token, rate)
+		t.Fatalf("потеряны строки: %d %d %d %d", channel, lease, token, rate)
 	}
 	if err = c.Close(); err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestCoordinatorUpgrade0472PreservesLeasesAndIsIdempotent(t *testing.T) {
 	defer c.Close()
 	more, _ := filepath.Glob(filepath.Join(filepath.Dir(path), "pre-upgrade-backups", "*.sqlite"))
 	if len(more) != 1 {
-		t.Fatal("migration repeated")
+		t.Fatal("миграция была выполнена повторно")
 	}
 	if _, err = os.Stat(backups[0] + ".json"); err != nil {
 		t.Fatal(err)

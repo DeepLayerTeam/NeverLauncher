@@ -57,7 +57,7 @@ func TestHostOperationsPostgres0413(t *testing.T) {
 	}
 	op.Action = "stop"
 	if _, _, err = b.CreateHostOperation0413(ctx, op); !errors.Is(err, ErrConflict) {
-		t.Fatalf("digest conflict: %v", err)
+		t.Fatalf("конфликт дайджеста: %v", err)
 	}
 	op.Action = "restart"
 	op.IdempotencyKey = "different-idem-key-0413"

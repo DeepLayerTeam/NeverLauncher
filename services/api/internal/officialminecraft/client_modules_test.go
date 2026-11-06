@@ -30,7 +30,7 @@ func TestMojangProfileTransientRetry0427(t *testing.T) {
 	c.minecraft = server.URL
 	p, err := c.Profile(context.Background(), "token")
 	if err != nil || p.Name != "Player" || calls.Load() != 3 {
-		t.Fatalf("profile retry %+v %v count=%d", p, err, calls.Load())
+		t.Fatalf("повторная загрузка профиля: %+v %v; попыток=%d", p, err, calls.Load())
 	}
 }
 func TestMojangWritesNeverAutomaticallyRetried0427(t *testing.T) {
@@ -45,7 +45,7 @@ func TestMojangWritesNeverAutomaticallyRetried0427(t *testing.T) {
 	c.microsoft = server.URL
 	_, err := c.Complete(context.Background(), "client", "device-code")
 	if err == nil || !strings.Contains(err.Error(), "temporarily_unavailable") || calls.Load() != 1 {
-		t.Fatalf("POST retried %v %d", err, calls.Load())
+		t.Fatalf("POST-запрос неожиданно повторён: %v %d", err, calls.Load())
 	}
 }
 
@@ -69,7 +69,7 @@ func TestMojangProfileIdentityValidation0496(t *testing.T) {
 		srv.Close()
 		shouldPass := tc.name == "ValidName" && len(tc.id) == 32
 		if shouldPass != (err == nil) {
-			t.Fatalf("profile validation name=%q id=%q err=%v", tc.name, tc.id, err)
+			t.Fatalf("проверка профиля: имя=%q, идентификатор=%q, ошибка=%v", tc.name, tc.id, err)
 		}
 	}
 }

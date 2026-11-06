@@ -57,7 +57,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != 201 {
-		t.Fatalf("upload: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("загрузка: %d %s", rr.Code, rr.Body.String())
 	}
 	for _, action := range []string{"validate", "sign", "stage", "integrity-check", "publish"} {
 		req = httptest.NewRequest("POST", "/api/v1/packages/"+id+"/"+action, nil)
@@ -84,7 +84,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 		rr = httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
 		if rr.Code != 200 {
-			t.Fatalf("rollback %d: %d %s", i, rr.Code, rr.Body.String())
+			t.Fatalf("откат %d: %d %s", i, rr.Code, rr.Body.String())
 		}
 		var received struct {
 			Data struct {

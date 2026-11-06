@@ -22,7 +22,7 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 	}
 	rows, err := r.ListReleaseDrafts(ctx, "demo-project", "owner-a")
 	if err != nil || len(rows) != 1 {
-		t.Fatalf("owner list: %v %#v", err, rows)
+		t.Fatalf("список владельца: %v %#v", err, rows)
 	}
 	rows, err = r.ListReleaseDrafts(ctx, "demo-project", "owner-b")
 	if err != nil || len(rows) != 0 {

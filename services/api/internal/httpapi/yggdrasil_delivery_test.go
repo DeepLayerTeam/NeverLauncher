@@ -95,7 +95,7 @@ func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
 	}
 	v := decodeTexture0394(t, body)
 	if v["profileId"] != minecraftID119(profile.UUID) {
-		t.Fatalf("identity mismatch: %#v", v)
+		t.Fatalf("несовпадение идентификатора: %#v", v)
 	}
 	textures := v["textures"].(map[string]any)
 	if textures["SKIN"].(map[string]any)["metadata"].(map[string]any)["model"] != "slim" || textures["CAPE"].(map[string]any)["url"] != r.texture.CapeURL {

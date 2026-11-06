@@ -77,10 +77,10 @@ public class JvmLifecycleFixture {
 		t.Fatal(err)
 	}
 	if out, err := exec.Command(javac, "-d", classes, source).CombinedOutput(); err != nil {
-		t.Fatalf("javac: %v: %s", err, out)
+		t.Fatalf("ошибка компилятора javac: %v: %s", err, out)
 	}
 	if out, err := exec.Command(jar, "--create", "--file", filepath.Join(root, "paper.jar"), "--main-class", "JvmLifecycleFixture", "-C", classes, ".").CombinedOutput(); err != nil {
-		t.Fatalf("jar: %v: %s", err, out)
+		t.Fatalf("ошибка упаковки JAR: %v: %s", err, out)
 	}
 	args := []string{"--server-root", root, "--platform", "paper", "--java", java, "--server-jar", "paper.jar", "--restart-policy", "on-failure", "--max-restarts", fmt.Sprint(restarts), "--restart-backoff-ms", "50", "--stop-timeout-seconds", "2", "--server-arg", mode}
 	if err := configureServerBridgeHost01910(args); err != nil {

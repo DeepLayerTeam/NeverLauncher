@@ -43,7 +43,7 @@ func TestVerifiedPlanHardwareDeviceSignatureAndBinding02412(t *testing.T) {
 	wrong = e
 	wrong.SessionID = "other-session"
 	if err := verifyDeviceSignature0123(decoded, planEvidencePayload02412(wrong), e.Signature); err == nil {
-		t.Fatal("session swapped")
+		t.Fatal("сеанс неожиданно заменён")
 	}
 	wrong = e
 	wrong.GuardAttestationSHA256 = strings.Repeat("0", 64)

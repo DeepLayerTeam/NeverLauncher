@@ -22,7 +22,7 @@ func TestExtensionLifecycleInstallCLI0204(t *testing.T) {
 			t.Fatal(err)
 		}
 		if body["scope"] != "project" || body["scopeId"] != "project-a" || body["version"] != "1.2.3" {
-			t.Fatalf("body=%v", body)
+			t.Fatalf("тело ответа: %v", body)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"data":{"status":"installed"}}`)
@@ -44,7 +44,7 @@ func TestExtensionLifecycleUpdateChannelCLI0204(t *testing.T) {
 			t.Fatal(err)
 		}
 		if body["scope"] != "global" || body["channel"] != "beta" {
-			t.Fatalf("body=%v", body)
+			t.Fatalf("тело ответа: %v", body)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"data":{"status":"updated"}}`)
@@ -61,7 +61,7 @@ func TestExtensionLifecycleStatusCLI0204(t *testing.T) {
 			t.Fatalf("Запрос=%s %s", r.Method, r.URL.Path)
 		}
 		if r.URL.Query().Get("scope") != "project" || r.URL.Query().Get("scopeId") != "project-a" {
-			t.Fatalf("query=%s", r.URL.RawQuery)
+			t.Fatalf("запрос: %s", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"data":{"install":{"extensionId":"example.lifecycle"}}}`)

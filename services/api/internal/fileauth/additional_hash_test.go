@@ -41,7 +41,7 @@ func TestAdditionalHashAllSupportedDoubleDigest0426(t *testing.T) {
 			}
 			stored, err := EncodeCredential(format, expected)
 			if err != nil {
-				t.Fatalf("%s cannot import: %v", format, err)
+				t.Fatalf("не удалось импортировать %s: %v", format, err)
 			}
 			if alg, hash, ok := DecodeCredential(stored); !ok || alg != format || hash != expected {
 				t.Fatalf("При сохранении потерян %s", format)

@@ -79,7 +79,7 @@ func TestSQLCSVAndCrossSourceCollision334(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(accounts) != 2 {
-		t.Fatalf("got %d", len(accounts))
+		t.Fatalf("получено: %d", len(accounts))
 	}
 	mapped, summary := Reconcile(accounts, nil)
 	if summary["blocked"] != 2 {

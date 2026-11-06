@@ -51,7 +51,7 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 	}
 	wantFamilies := map[string]int{"vanilla": 109, "fabric": 53, "quilt": 53, "forge": 50, "neoforge": 27}
 	if len(cert.LoaderFamilies) != len(wantFamilies) {
-		t.Fatalf("families=%d want=%d", len(cert.LoaderFamilies), len(wantFamilies))
+		t.Fatalf("семейств=%d, ожидалось=%d", len(cert.LoaderFamilies), len(wantFamilies))
 	}
 	for _, family := range cert.LoaderFamilies {
 		want, ok := wantFamilies[family.Loader]
@@ -59,7 +59,7 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 			t.Fatalf("неожиданное семейство загрузчиков %s", family.Loader)
 		}
 		if family.RequiredTargets != want || family.PassedTargets != want {
-			t.Fatalf("%s coverage=%d/%d want=%d/%d", family.Loader, family.PassedTargets, family.RequiredTargets, want, want)
+			t.Fatalf("%s: покрытие=%d/%d, ожидалось=%d/%d", family.Loader, family.PassedTargets, family.RequiredTargets, want, want)
 		}
 		if len(family.EvidenceRootSHA256) != 64 {
 			t.Fatalf("%s: недопустимый корневой каталог свидетельств: %s", family.Loader, family.EvidenceRootSHA256)
@@ -70,7 +70,7 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 	}
 	for name, passed := range cert.Invariants {
 		if !passed {
-			t.Fatalf("invariant %s=false", name)
+			t.Fatalf("нарушен инвариант %s=false", name)
 		}
 	}
 	if !strings.HasPrefix(cert.CertificateID, "sha256:") || len(cert.CertificateID) != len("sha256:")+64 {

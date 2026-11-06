@@ -127,7 +127,7 @@ func TestFactoryReadSource0401(t *testing.T) {
 	}
 	if err = os.Symlink(filepath.Join(root, "somewhere"), filepath.Join(root, filepath.FromSlash(path))); err == nil {
 		if _, err = factoryReadSource0401(root, f, 1024); err == nil {
-			t.Fatal("accepted symlink")
+			t.Fatal("символическая ссылка была ошибочно принята")
 		}
 	}
 }

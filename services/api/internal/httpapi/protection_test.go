@@ -31,7 +31,7 @@ func TestProtectionBlocksAuthLaunchJoinAndRestoresAfterUnban0298(t *testing.T) {
 	}
 	for _, stage := range []protection.Stage{protection.BeforeAuth, protection.AfterAuth, protection.BeforeLaunch, protection.BeforeJoin} {
 		if decision := server.evaluateProtection0298(ctx, protection.Request{Stage: stage, UserID: userID}); decision.Action != protection.Deny || decision.Reason != "account_banned" {
-			t.Fatalf("ban bypassed %s: %+v", stage, decision)
+			t.Fatalf("запрет обойдён для %s: %+v", stage, decision)
 		}
 	}
 	if _, err := repo.RevokeProtectionBan(ctx, userID, "admin"); err != nil {
@@ -64,18 +64,18 @@ func TestProtectionBanUnbanLiveHTTP0298(t *testing.T) {
 	admin, _ = registerTestPasskey117(t, handler, admin)
 	created := request0211(t, handler, http.MethodPost, "/api/v1/admin/users", admin, `{"email":"ban0298@example.test","displayName":"Ban Test","roleId":"player","password":"safe-password-0298"}`)
 	if created.Code != http.StatusCreated {
-		t.Fatalf("user create: %d %s", created.Code, created.Body.String())
+		t.Fatalf("создание пользователя: %d %s", created.Code, created.Body.String())
 	}
 	var account struct {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(created.Body.Bytes(), &account); err != nil || account.ID == "" {
-		t.Fatalf("account: %v %s", err, created.Body.String())
+		t.Fatalf("учётная запись: %v %s", err, created.Body.String())
 	}
 	player := loginUser0211(t, handler, "ban0298@example.test", "safe-password-0298")
 	banned := request0211(t, handler, http.MethodPost, "/api/v1/admin/protection/users/"+account.ID+"/ban", admin, `{"reason":"confirmed session abuse"}`)
 	if banned.Code != http.StatusOK {
-		t.Fatalf("ban: %d %s", banned.Code, banned.Body.String())
+		t.Fatalf("блокировка: %d %s", banned.Code, banned.Body.String())
 	}
 	if res := request0211(t, handler, http.MethodGet, "/api/v1/auth/sessions", player, ""); res.Code != http.StatusUnauthorized {
 		t.Fatalf("Блокировка не отозвала действующий токен: %d %s", res.Code, res.Body.String())
@@ -86,7 +86,7 @@ func TestProtectionBanUnbanLiveHTTP0298(t *testing.T) {
 	}
 	lifted := request0211(t, handler, http.MethodPost, "/api/v1/admin/protection/users/"+account.ID+"/unban", admin, `{}`)
 	if lifted.Code != http.StatusOK {
-		t.Fatalf("unban: %d %s", lifted.Code, lifted.Body.String())
+		t.Fatalf("снятие блокировки: %d %s", lifted.Code, lifted.Body.String())
 	}
 	recovered := request0211(t, handler, http.MethodPost, "/api/v1/admin/login", "", `{"email":"ban0298@example.test","password":"safe-password-0298"}`)
 	if recovered.Code != http.StatusOK {

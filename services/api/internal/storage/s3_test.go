@@ -31,7 +31,7 @@ func TestS3SaveStreamsAndSignsPayload(t *testing.T) {
 			t.Errorf("Метод=%s", r.Method)
 		}
 		if r.URL.Path != "/bucket/project/version/libraries/test.jar" {
-			t.Errorf("path=%s", r.URL.Path)
+			t.Errorf("путь: %s", r.URL.Path)
 		}
 		body, err := io.ReadAll(r.Body)
 		if err != nil {

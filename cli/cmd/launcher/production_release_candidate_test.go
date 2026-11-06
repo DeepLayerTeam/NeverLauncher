@@ -41,7 +41,7 @@ func TestProductionReleaseCandidate01511BindsExactCohort(t *testing.T) {
 		t.Fatal(err)
 	}
 	if commit != testSourceCommit01511 {
-		t.Fatalf("source commit=%s", commit)
+		t.Fatalf("исходный коммит: %s", commit)
 	}
 	// Конверты подписей создаются после сертификации кандидата и намеренно не входят в набор до подписания.
 	if err := os.WriteFile(filepath.Join(dir, "SHA256SUMS.sig"), []byte("signature"), 0o644); err != nil {

@@ -31,7 +31,7 @@ func TestStatusAndHealthExposeSourceCommit0220(t *testing.T) {
 			t.Fatal(err)
 		}
 		if status.Version != "0.22.0" || status.SourceCommit != source {
-			t.Fatalf("%s returned wrong build identity: %+v", item.path, status)
+			t.Fatalf("%s вернул неверный идентификатор сборки: %+v", item.path, status)
 		}
 	}
 }

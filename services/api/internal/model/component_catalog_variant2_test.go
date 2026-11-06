@@ -59,7 +59,7 @@ func TestComponentCatalogTopologyOperational0242(t *testing.T) {
 	if parsed.ComponentCatalog.Digest != m.ComponentCatalog.Digest {
 		t.Fatal("После сериализации и десериализации JSON изменился хеш")
 	}
-	t.Logf("v2 Go digest fixture: %s", m.ComponentCatalog.Digest)
+	t.Logf("тестовый дайджест Go версии v2: %s", m.ComponentCatalog.Digest)
 }
 func TestComponentTopologyTamperAndCycles0242(t *testing.T) {
 	cases := []struct {

@@ -39,7 +39,7 @@ func TestServerBridgeGA0200OverviewAndPublicMatrix(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("overview => %d %s", res.Code, res.Body.String())
+		t.Fatalf("обзор: %d %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
 	for _, want := range []string{`"release":"ServerBridge 3 GA"`, `"status":"ga-frozen"`, `"v2Mode":"compatibility-deprecated"`, `"featureDigest":"` + serverBridgeV3FrozenFeatureDigest0200 + `"`, `"nodes":`, `"topology":`, `"control":`, `"audit":`} {
@@ -52,12 +52,12 @@ func TestServerBridgeGA0200OverviewAndPublicMatrix(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("matrix => %d %s", res.Code, res.Body.String())
+		t.Fatalf("матрица: %d %s", res.Code, res.Body.String())
 	}
 	body = res.Body.String()
 	for _, want := range []string{`"protocolV3Frozen":true`, `"protocolV2Mode":"compatibility-deprecated"`, `"migrationCommand":"nl server-bridge migrate-v3"`, `"id":"quilt"`, `"id":"sponge"`, `"id":"vanilla"`} {
 		if !strings.Contains(body, want) {
-			t.Fatalf("matrix missing %s: %s", want, body)
+			t.Fatalf("в матрице отсутствует %s: %s", want, body)
 		}
 	}
 }

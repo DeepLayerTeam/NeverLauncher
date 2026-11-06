@@ -24,7 +24,7 @@ func TestLoaderGASupport0180ExactCertifiedSurface(t *testing.T) {
 	for _, tc := range cases {
 		entry, ok := loaderGASupport0180(tc.loader, tc.minecraft)
 		if !ok || entry.JavaMajor != tc.java || entry.Legacy != tc.legacy {
-			t.Fatalf("%s/%s support=%+v ok=%v, want java=%d legacy=%v", tc.loader, tc.minecraft, entry, ok, tc.java, tc.legacy)
+			t.Fatalf("%s/%s: поддержка=%+v, результат=%v; ожидались Java=%d и устаревший режим=%v", tc.loader, tc.minecraft, entry, ok, tc.java, tc.legacy)
 		}
 	}
 	for _, tc := range [][2]string{{"fabric", "1.13.2"}, {"quilt", "1.13.2"}, {"forge", "1.12.1"}, {"forge", "1.20.5"}, {"neoforge", "1.20"}, {"neoforge", "26.3"}} {

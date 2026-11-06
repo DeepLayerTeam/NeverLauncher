@@ -28,10 +28,10 @@ func TestCoreTOTPCryptographicRewrap0474(t *testing.T) {
 	}
 	old := sourceAEAD.Seal(nonce, nonce, seed, []byte("Launcher/TOTP/0.32.3"))
 	if _, err = rewrapTOTP0474(old, MFASecrets0474{}); err == nil {
-		t.Fatal("accepted missing secrets")
+		t.Fatal("отсутствующие секреты ошибочно приняты")
 	}
 	if _, err = rewrapTOTP0474(old, MFASecrets0474{SQLiteMFAKey: bytes.Repeat([]byte{0x43}, 32), PostgreSQLSecret: "destination-secret"}); err == nil {
-		t.Fatal("accepted wrong Core MFA key")
+		t.Fatal("неверный ключ многофакторной проверки Core ошибочно принят")
 	}
 	encrypted, err := rewrapTOTP0474(old, MFASecrets0474{SQLiteMFAKey: coreKey, PostgreSQLSecret: "destination-secret"})
 	if err != nil {
@@ -56,6 +56,6 @@ func TestCoreTOTPCryptographicRewrap0474(t *testing.T) {
 	}
 	expected := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(seed)
 	if string(restored) != expected {
-		t.Fatalf("MFA seed changed on migration")
+		t.Fatalf("секрет многофакторной проверки изменился при миграции")
 	}
 }

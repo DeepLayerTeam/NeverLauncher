@@ -48,7 +48,7 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 	}
 	response := request0211(t, api, http.MethodGet, "/api/v1/minecraft/official/browser/config", token, "")
 	if response.Code != http.StatusOK {
-		t.Fatalf("verified config: %d %s", response.Code, response.Body.String())
+		t.Fatalf("проверенная конфигурация: %d %s", response.Code, response.Body.String())
 	}
 	if response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("Подтверждение личности нельзя кешировать")

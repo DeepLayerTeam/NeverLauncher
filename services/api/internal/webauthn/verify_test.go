@@ -29,7 +29,7 @@ func TestRegistrationAndAssertionES256(t *testing.T) {
 	cfg := VerifyConfig{RPID: rpID, Origins: map[string]struct{}{origin: {}}, Challenge: challenge, RequireUV: true}
 	registration, err := VerifyRegistration(cfg, clientCreate, attestation, credID)
 	if err != nil {
-		t.Fatalf("registration failed: %v", err)
+		t.Fatalf("ошибка регистрации: %v", err)
 	}
 	if registration.Algorithm != -7 {
 		t.Fatalf("algorithm=%d", registration.Algorithm)
@@ -46,7 +46,7 @@ func TestRegistrationAndAssertionES256(t *testing.T) {
 	}
 	assertion, err := VerifyAssertion(cfg, clientGet, authGet, sig, registration.PublicKeyCOSE, 0, false)
 	if err != nil {
-		t.Fatalf("assertion failed: %v", err)
+		t.Fatalf("проверка утверждения завершилась ошибкой: %v", err)
 	}
 	if assertion.SignCount != 1 || !assertion.UserVerified {
 		t.Fatalf("Неожиданное утверждение: %+v", assertion)
@@ -69,11 +69,11 @@ func TestAssertionRejectsReplayAndWrongOrigin(t *testing.T) {
 	sig, _ := ecdsa.SignASN1(rand.Reader, key, digest[:])
 	cfg := VerifyConfig{RPID: rpID, Origins: map[string]struct{}{origin: {}}, Challenge: challenge, RequireUV: true}
 	if _, err := VerifyAssertion(cfg, client, auth, sig, cose, 5, false); err == nil {
-		t.Fatal("non-increasing sign counter must be rejected")
+		t.Fatal("неувеличивающийся счётчик подписей должен отклоняться")
 	}
 	wrong := testClientData(t, "webauthn.get", challenge, "https://evil.example")
 	if _, err := VerifyAssertion(cfg, wrong, auth, sig, cose, 0, false); err == nil {
-		t.Fatal("wrong origin must be rejected")
+		t.Fatal("неверный источник должен отклоняться")
 	}
 }
 
@@ -89,7 +89,7 @@ func TestZeroCounterAuthenticatorIsAllowed(t *testing.T) {
 	sig, _ := ecdsa.SignASN1(rand.Reader, key, d[:])
 	cfg := VerifyConfig{RPID: rpID, Origins: map[string]struct{}{origin: {}}, Challenge: challenge, RequireUV: true}
 	if _, err := VerifyAssertion(cfg, client, auth, sig, testCOSEES256(key), 0, false); err != nil {
-		t.Fatalf("zero counter authenticator should be accepted: %v", err)
+		t.Fatalf("аутентификатор с нулевым счётчиком должен приниматься: %v", err)
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 func TestBackendRestartKey0289(t *testing.T) {
 	a, err := BackendRestartKey0289("operator-1", "0123456789abcdef")
 	if err != nil || len(a) != 64 {
-		t.Fatalf("valid key: %v %s", err, a)
+		t.Fatalf("действительный ключ: %v %s", err, a)
 	}
 	b, _ := BackendRestartKey0289("operator-2", "0123456789abcdef")
 	if a == b {

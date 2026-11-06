@@ -52,7 +52,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), "mods/example.jar") {
-		t.Fatalf("upload file => %d %s", res.Code, res.Body.String())
+		t.Fatalf("загрузка файла: %d %s", res.Code, res.Body.String())
 	}
 
 	// Smoke-проверка до подписи и подготовки обязана завершаться отказом при ошибке.
@@ -127,7 +127,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 		return rr
 	}
 	if rr := upload("before-publish"); rr.Code != http.StatusCreated {
-		t.Fatalf("upload => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("загрузка: %d %s", rr.Code, rr.Body.String())
 	}
 	for _, suffix := range []string{"validate", "sign", "stage", "smoke-test", "publish"} {
 		req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+id+"/"+suffix, nil)

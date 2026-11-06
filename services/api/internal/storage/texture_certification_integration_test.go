@@ -38,7 +38,7 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	// проверяет реальное неизменяемое хранилище байтов и его многоэтапный жизненный цикл.
 	for i := 0; i < 2; i++ {
 		if _, _, err := PutTextureImmutable0253(ctx, store, digest, content); err != nil {
-			t.Fatalf("conditional PUT #%d: %v", i, err)
+			t.Fatalf("условный PUT-запрос №%d: %v", i, err)
 		}
 	}
 	obj := textureFixture0253(content)

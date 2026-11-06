@@ -12,7 +12,7 @@ func TestCallbackServerRequiresToken(t *testing.T){
   s,err:=c.StartCallbackServer(func(context.Context,EventEnvelope)error{return nil},nil);if err!=nil{t.Fatal(err)}
   defer s.Close(context.Background())
   req,_:=http.NewRequest(http.MethodPost,s.URL+"/v1/events",nil)
-  resp,err:=http.DefaultClient.Do(req);if err!=nil{t.Fatal(err)};defer resp.Body.Close();if resp.StatusCode!=http.StatusUnauthorized{t.Fatalf("status=%d",resp.StatusCode)}
+  resp,err:=http.DefaultClient.Do(req);if err!=nil{t.Fatal(err)};defer resp.Body.Close();if resp.StatusCode!=http.StatusUnauthorized{t.Fatalf("статус: %d",resp.StatusCode)}
 }
 func TestEnvironmentRejectsIncompleteHost(t *testing.T){
   t.Setenv("LAUNCHER_EXTENSION_HOST_URL","");t.Setenv("LAUNCHER_EXTENSION_HOST_TOKEN","");t.Setenv("LAUNCHER_EXTENSION_ID","");t.Setenv("LAUNCHER_EXTENSION_INSTANCE_ID","")

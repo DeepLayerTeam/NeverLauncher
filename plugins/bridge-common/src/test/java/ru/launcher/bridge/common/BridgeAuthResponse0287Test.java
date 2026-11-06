@@ -26,9 +26,9 @@ public final class BridgeAuthResponse0287Test {
             + "\"handoffId\":\"ho_" + "b".repeat(32) + "\",\"expiresAt\":\"" + Instant.now().plusSeconds(30) + "\"}";
     }
     public static void main(String[] args) {
-        assertAllowed(true, BridgeAuthResponse0287.join(200, join(validJoin()), "proxy-1", "player", UUID.replace("-", "")), "valid direct join");
+        assertAllowed(true, BridgeAuthResponse0287.join(200, join(validJoin()), "proxy-1", "player", UUID.replace("-", "")), "разрешённое прямое подключение");
         assertAllowed(true, BridgeAuthResponse0287.join(200, join(validJoin().replace("direct-ticket", "proxy-handoff")), "proxy-1", "Player", ""), "UUID до входа неизвестен");
-        assertAllowed(false, BridgeAuthResponse0287.join(403, join(validJoin()), "proxy-1", "Player", UUID), "HTTP forbidden");
+        assertAllowed(false, BridgeAuthResponse0287.join(403, join(validJoin()), "proxy-1", "Player", UUID), "HTTP: доступ запрещён");
         assertAllowed(false, BridgeAuthResponse0287.join(200, "{\"error\":{\"allowed\":true},\"data\":{\"allowed\":false}}", "proxy-1", "Player", UUID), "Вложенное внедрение разрешённого поля");
         assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin().replace("\"allowed\":true", "\"allowed\":true,\"allowed\":true")), "proxy-1", "Player", UUID), "Дублирование разрешённого ключа");
         assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin()), "different-node", "Player", UUID), "Ответ постороннего узла");
@@ -36,14 +36,14 @@ public final class BridgeAuthResponse0287Test {
         assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin()), "proxy-1", "Player", "123e4567-e89b-42d3-a456-426614174001"), "Неверный авторизованный UUID");
         assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin().replace("\"player\":", "\"ignoredPlayer\":")), "proxy-1", "Player", UUID), "Отсутствует авторитетная идентичность");
         assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin().replace(CORRELATION, "invalid")), "proxy-1", "Player", UUID), "Отсутствует идентификатор корреляции");
-        assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin().replace("\"direct-ticket\"", "\"admin-override\"")), "proxy-1", "Player", UUID), "untrusted authorization");
-        assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin()) + "{}", "proxy-1", "Player", UUID), "trailing JSON");
+        assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin().replace("\"direct-ticket\"", "\"admin-override\"")), "proxy-1", "Player", UUID), "недоверенная авторизация");
+        assertAllowed(false, BridgeAuthResponse0287.join(200, join(validJoin()) + "{}", "proxy-1", "Player", UUID), "дополнительные данные после JSON");
         assertAllowed(true, BridgeAuthResponse0287.handoff(201, join(validHandoff()), "proxy-1", "Player", "paper-2", CORRELATION), "Подписанный ответ передачи игрока");
         assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff()), "proxy-1", "Player", "paper-3", CORRELATION), "Посторонняя цель передачи игрока");
         assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff()), "proxy-1", "Player", "paper-2", "c".repeat(64)), "Неверный сеанс передачи игрока");
-        assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replace("handoff-created", "not-created")), "proxy-1", "Player", "paper-2", CORRELATION), "uncommitted handoff");
+        assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replace("handoff-created", "not-created")), "proxy-1", "Player", "paper-2", CORRELATION), "неподтверждённая передача сеанса");
         assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replace("ho_" + "b".repeat(32), "ho_weak")), "proxy-1", "Player", "paper-2", CORRELATION), "Некорректный идентификатор передачи");
-        assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replaceAll("(?<=expiresAt\\\":\\\")[^\\\"]+", Instant.now().minusSeconds(1).toString())), "proxy-1", "Player", "paper-2", CORRELATION), "expired handoff");
+        assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replaceAll("(?<=expiresAt\\\":\\\")[^\\\"]+", Instant.now().minusSeconds(1).toString())), "proxy-1", "Player", "paper-2", CORRELATION), "истёкшая передача сеанса");
         checks++;
         if (!BridgeAuthResponse0287.matchesAuthenticatedUUID(UUID, UUID.replace("-", ""))) throw new AssertionError("действительный подтверждённый UUID отклонён");
         checks++;

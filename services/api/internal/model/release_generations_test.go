@@ -18,7 +18,7 @@ func TestSignedGameReleaseGeneration02311(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(body), `"gameReleaseGeneration":9`) || !strings.Contains(string(body), `"rollbackSource"`) {
-		t.Fatalf("unsigned fields: %s", body)
+		t.Fatalf("неподписанные поля: %s", body)
 	}
 	old := base
 	old.GameReleaseGeneration = 8

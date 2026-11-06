@@ -109,7 +109,7 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 	}
 	q := authURL.Query()
 	if q.Get("code_challenge_method") != "S256" || !strings.Contains(" "+q.Get("scope")+" ", " offline_access ") {
-		t.Fatalf("Microsoft authorization URL lacks PKCE/offline_access: %s", start.AuthorizationURL)
+		t.Fatalf("в адресе авторизации Microsoft отсутствует PKCE или offline_access: %s", start.AuthorizationURL)
 	}
 	auth, err := connector.CompleteBrowserAuth(context.Background(), authconnector.BrowserAuthCallback{
 		RedirectURI: "https://launcher.example.test/callback", Code: "code", State: strings.Repeat("s", 43), Nonce: expectedNonce, PKCEVerifier: verifier,
@@ -118,7 +118,7 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 		t.Fatal(err)
 	}
 	if auth.Identity.Subject != strings.ToLower(testTenantID+":"+testObjectID) || auth.ProviderToken != "refresh-1" || auth.Identity.Email != "player@example.test" {
-		t.Fatalf("unexpected Microsoft authentication: %+v", auth)
+		t.Fatalf("неожиданный результат авторизации Microsoft: %+v", auth)
 	}
 	refreshed, err := connector.Refresh(context.Background(), auth.ProviderToken)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 	}
 	logout, err := connector.ProviderLogoutURL("https://launcher.example.test/signed-out")
 	if err != nil || !strings.Contains(logout, "post_logout_redirect_uri=") {
-		t.Fatalf("unexpected logout URL %q err=%v", logout, err)
+		t.Fatalf("неожиданный адрес выхода %q; ошибка=%v", logout, err)
 	}
 	if _, err := connector.ProviderLogoutURL("https://evil.example/signed-out"); err == nil {
 		t.Fatal("Ожидался отказ незарегистрированному перенаправлению после выхода")
@@ -144,7 +144,7 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 		},
 	})
 	if !report.Passed {
-		t.Fatalf("signed Microsoft browser+refresh conformance failed: %+v", report)
+		t.Fatalf("проверка подписанной авторизации Microsoft в браузере и обновления токена не прошла: %+v", report)
 	}
 }
 

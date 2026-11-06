@@ -43,7 +43,7 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 	state.Security.mu.Unlock()
 	token, rec, err := state.Security.createOneTimeToken(user.ID, user.Email, "password-reset", time.Hour)
 	if err != nil || rec.TokenHash == "" {
-		t.Fatalf("token create: %v", err)
+		t.Fatalf("ошибка создания токена: %v", err)
 	}
 	challengeToken, err := state.Passkeys.createChallenge(user.ID, "register", []byte("test-challenge"), map[string]any{"challenge": "testing"})
 	if err != nil {

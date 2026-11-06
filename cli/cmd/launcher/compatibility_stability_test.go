@@ -28,7 +28,7 @@ func TestCompatibilityGETRetriesTransientStatus(t *testing.T) {
 
 	resp, err := compatibilityGET(context.Background(), server.Client(), server.URL, "Launcher/test")
 	if err != nil {
-		t.Fatalf("compatibilityGET: %v", err)
+		t.Fatalf("запрос совместимости GET: %v", err)
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)

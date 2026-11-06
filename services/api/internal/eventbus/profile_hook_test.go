@@ -19,11 +19,11 @@ func TestProfileBeforeSaveVeto0495(t *testing.T) {
 	profile := model.Profile{ID: "p1", ProjectID: "project1", Loader: "fabric", LoaderVersion: "0.16.0"}
 	bus.SetDispatcher(&testDispatcher0206{reject: true})
 	if err := bus.BeforeProfileSave(ctx, "owner", "update", profile); !errors.Is(err, ErrHookRejected) {
-		t.Fatalf("veto was not enforced: %v", err)
+		t.Fatalf("запрет обработчика события не применён: %v", err)
 	}
 	bus.SetDispatcher(nil)
 	if err := bus.BeforeProfileSave(ctx, "owner", "update", profile); err == nil {
-		t.Fatal("missing hook dispatcher must block mutation")
+		t.Fatal("отсутствие диспетчера обработчиков событий должно блокировать изменение")
 	}
 	bus.SetDispatcher(&testDispatcher0206{})
 	if err := bus.BeforeProfileSave(ctx, "owner", "update", profile); err != nil {

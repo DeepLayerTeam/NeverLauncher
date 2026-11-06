@@ -9,7 +9,7 @@ func TestAdminComponentGraphPreview0248(t *testing.T) {
 	manifest := signedActionsFixture0245()
 	ids, err := PreviewCatalogGraph0248(*manifest.ComponentCatalog, "quality")
 	if err != nil || strings.Join(ids, ",") != "core,performance.sodium,shaders" {
-		t.Fatalf("resolved preview %v: %v", ids, err)
+		t.Fatalf("расчёт предварительного просмотра %v: %v", ids, err)
 	}
 	invalid := *manifest.ComponentCatalog
 	invalid.Components = append([]CatalogComponent0241(nil), invalid.Components...)

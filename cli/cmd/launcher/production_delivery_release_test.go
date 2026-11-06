@@ -50,7 +50,7 @@ func TestProductionDeliveryRelease0160BindsCandidateAndAnchors(t *testing.T) {
 		t.Fatal(err)
 	}
 	if commit != testSourceCommit0160 {
-		t.Fatalf("commit=%s", commit)
+		t.Fatalf("коммит: %s", commit)
 	}
 	if err := os.WriteFile(filepath.Join(dir, managedJREEvidenceFile0155), []byte("tampered\n"), 0o644); err != nil {
 		t.Fatal(err)

@@ -29,7 +29,7 @@ func registerTestPasskey117(t *testing.T, h http.Handler, token string) (string,
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("passkey begin => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("начало регистрации ключа доступа: %d %s", rr.Code, rr.Body.String())
 	}
 	var begin struct {
 		Data struct {
@@ -96,7 +96,7 @@ func registerTestPasskey117(t *testing.T, h http.Handler, token string) (string,
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusCreated {
-		t.Fatalf("passkey complete => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("завершение регистрации ключа доступа: %d %s", rr.Code, rr.Body.String())
 	}
 	var complete struct {
 		Data struct {
@@ -115,7 +115,7 @@ func passkeyLogin117(t *testing.T, h http.Handler, fixture testPasskey117) strin
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("passkey login begin => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("начало входа по ключу доступа: %d %s", rr.Code, rr.Body.String())
 	}
 	var begin struct {
 		Data struct {
@@ -156,7 +156,7 @@ func passkeyLogin117(t *testing.T, h http.Handler, fixture testPasskey117) strin
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("passkey login complete => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("завершение входа по ключу доступа: %d %s", rr.Code, rr.Body.String())
 	}
 	var out struct {
 		Data struct {
@@ -274,7 +274,7 @@ func TestPhishingResistantPolicyBlocksSessionUntilPasskey117(t *testing.T) {
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("set policy => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("установка политики: %d %s", rr.Code, rr.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"admin@launcher.local","password":"admin","deviceId":"policy-test"}`))
@@ -305,7 +305,7 @@ func TestPhishingResistantPolicyBlocksSessionUntilPasskey117(t *testing.T) {
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK || !bytes.Contains(rr.Body.Bytes(), []byte(`"authStrength":"phishing-resistant"`)) {
-		t.Fatalf("passkey MFA continuation => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("продолжение многофакторной проверки по ключу доступа: %d %s", rr.Code, rr.Body.String())
 	}
 }
 

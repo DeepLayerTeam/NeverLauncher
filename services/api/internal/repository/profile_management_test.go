@@ -79,7 +79,7 @@ func TestConcurrentExclusiveProfileCreation0225(t *testing.T) {
 	}
 	wg.Wait()
 	if successes != 1 || conflicts != workers-1 {
-		t.Fatalf("exclusive creation: success=%d conflicts=%d", successes, conflicts)
+		t.Fatalf("эксклюзивное создание: успешно=%d, конфликтов=%d", successes, conflicts)
 	}
 	found, _ := r.ListProfiles("demo-project")
 	for _, item := range found {

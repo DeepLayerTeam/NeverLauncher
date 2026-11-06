@@ -51,13 +51,13 @@ func TestAdversarialSignedPolicyEscalation03114(t *testing.T) {
 			attack(&candidate)
 			digest, err := ApprovalDigest(candidate)
 			if err == nil && digest == approved {
-				t.Fatal("foreign approval digest accepted")
+				t.Fatal("принят дайджест подтверждения другого расширения")
 			}
 			if err := RequireReview(base, candidate, approved); err == nil {
-				t.Fatal("old approval authorized mutated policy")
+				t.Fatal("старое подтверждение разрешило изменённую политику")
 			}
 			if err := RequireReview(base, candidate, ""); err == nil {
-				t.Fatal("silent auto escalation accepted")
+				t.Fatal("допущено скрытое автоматическое повышение привилегий")
 			}
 		})
 	}
@@ -71,16 +71,16 @@ func TestAdversarialCrossExtensionApprovalWithoutPolicyDelta03114(t *testing.T) 
 	after.ID = "attacker.different"
 	after.Version = "1.2.0"
 	if changed, err := ChangesRequireApproval(before, after); !changed || err == nil {
-		t.Fatal("direct change assessment failed to reject cross-extension transition")
+		t.Fatal("проверка изменения не запретила переход между расширениями")
 	}
 	if err := RequireReview(before, after, ""); err == nil {
-		t.Fatal("different extension ID accepted as policy-preserving update")
+		t.Fatal("чужой идентификатор расширения принят как обновление без изменения политики")
 	}
 	candidate, err := ApprovalDigest(after)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := RequireReview(before, after, candidate); err == nil {
-		t.Fatal("even a matching signed digest must not cross extension identity")
+		t.Fatal("даже совпадающий подписанный дайджест не должен переноситься между расширениями")
 	}
 }

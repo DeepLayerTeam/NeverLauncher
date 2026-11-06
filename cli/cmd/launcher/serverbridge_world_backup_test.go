@@ -51,7 +51,7 @@ func TestWorldBackupCreateVerifyRestore02810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if m.TotalBytes == 0 || m.Consistency != "confirmed-stopped" {
-		t.Fatalf("manifest: %+v", m)
+		t.Fatalf("манифест: %+v", m)
 	}
 	source := filepath.Join(store, m.ID)
 	if _, err := worldBackupVerify02810(source); err != nil {

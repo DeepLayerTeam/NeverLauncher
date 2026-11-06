@@ -36,7 +36,7 @@ func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
 		t.Fatal("Исходный подписанный манифест изменён")
 	}
 	if err := validatePackageCandidate0526(lookup); err != nil {
-		t.Fatalf("valid fixture: %v", err)
+		t.Fatalf("корректные тестовые данные: %v", err)
 	}
 
 	// Удаление принадлежащего пакету необязательного JAR должно нарушить проверку

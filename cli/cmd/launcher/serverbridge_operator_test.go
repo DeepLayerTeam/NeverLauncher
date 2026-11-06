@@ -37,7 +37,7 @@ func TestBridgeVerifyLocalAndRuntime02812(t *testing.T) {
 	node := map[string]any{"id": req.ID, "kind": req.Kind, "projectId": req.ProjectID, "keyFingerprint": req.KeyFingerprint, "pluginVersion": local.Version, "pluginSha256": local.ArtifactSHA256, "protocolVersion": float64(3), "runtimeId": strings.Repeat("a", 64), "lastHeartbeatAt": when, "status": "active", "integrityStatus": "verified"}
 	result, err := verifyBridgeRuntime02812(local, req, map[string]any{"data": map[string]any{"items": []any{node}}}, time.Now().UTC())
 	if err != nil || !result.RuntimeVerified || result.Status != "healthy" {
-		t.Fatalf("runtime=%+v err=%v", result, err)
+		t.Fatalf("среда исполнения=%+v, ошибка=%v", result, err)
 	}
 	cases := []struct {
 		name, field string

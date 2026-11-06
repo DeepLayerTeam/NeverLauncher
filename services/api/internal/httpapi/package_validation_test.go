@@ -88,7 +88,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("upload => %d %s", res.Code, res.Body.String())
+		t.Fatalf("загрузка: %d %s", res.Code, res.Body.String())
 	}
 
 	for _, suffix := range []string{"validate", "sign", "stage", "integrity-check"} {
@@ -136,7 +136,7 @@ func TestLegacySmokeIsIntegrityOnly0212(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("legacy smoke => %d %s", res.Code, res.Body.String())
+		t.Fatalf("проверка совместимости с прежней версией: %d %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
 	for _, required := range []string{`"validationKind":"integrity"`, `"runtimeExecuted":false`, `"runtimeStatus":"not-checked"`} {

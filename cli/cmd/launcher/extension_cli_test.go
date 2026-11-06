@@ -36,7 +36,7 @@ func TestExtensionCLINamespaceCatalogAndInvoke0209(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(items) != 1 || items[0].CLI.Namespace != "ops" {
-		t.Fatalf("catalog=%#v", items)
+		t.Fatalf("каталог: %#v", items)
 	}
 	if err := invokeExtensionNamespace0209(srv.URL, "token", items, "ops", "status", "global", "", nil); err != nil {
 		t.Fatal(err)

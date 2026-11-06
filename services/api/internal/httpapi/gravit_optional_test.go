@@ -67,7 +67,7 @@ func TestGravitOptionalPreviewSaveLifecycle02411(t *testing.T) {
 		} `json:"data"`
 	}
 	if e := json.Unmarshal(preview.Body.Bytes(), &result); e != nil || !result.Data.CanApply || len(result.Data.Migration.SourceSHA256) != 64 {
-		t.Fatalf("preview invalid %v %s", e, preview.Body.String())
+		t.Fatalf("неверные данные предварительного просмотра: %v %s", e, preview.Body.String())
 	}
 	commit, _ := json.Marshal(map[string]any{"expectedRevision": 1, "catalog": result.Data.Migration.Catalog})
 	saved := request("PUT", path, commit, "application/json")
@@ -76,7 +76,7 @@ func TestGravitOptionalPreviewSaveLifecycle02411(t *testing.T) {
 	}
 	stale := request("POST", path+"/gravit-preview", makeReq(1, source), "application/json")
 	if stale.Code != 409 {
-		t.Fatalf("stale accepted %d", stale.Code)
+		t.Fatalf("устаревшие данные ошибочно приняты: %d", stale.Code)
 	}
 	blocked := request("POST", path+"/gravit-preview", makeReq(2, `{"updateOptional":[{"name":"Bad","actions":[{"type":"file","files":{"mods/nei.jar":"mods/evil.jar"}}]}]}`), "application/json")
 	if blocked.Code != 200 || !strings.Contains(blocked.Body.String(), `"canApply":false`) {

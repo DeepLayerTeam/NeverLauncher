@@ -223,7 +223,7 @@ test("Нативное ожидание кода устройства автом
           expiresIn: 900,
         };
       if (cmd === "official_identity_wait_device_0264") return profile;
-      throw new Error("unexpected native command " + cmd);
+      throw new Error("Неожиданная нативная команда: " + cmd);
     },
   );
   await c.begin();
@@ -407,7 +407,7 @@ test("0.26.7: отклонённое переключение не подмен�
     async (cmd) => {
       if (cmd === "official_identity_status_0262") return p;
       if (cmd === "official_identity_select_0267")
-        throw new Error("Minecraft UUID mismatch");
+        throw new Error("Несовпадение UUID Minecraft");
       throw Error(cmd);
     },
   );

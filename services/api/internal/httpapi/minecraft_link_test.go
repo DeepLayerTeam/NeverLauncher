@@ -60,7 +60,7 @@ func TestOfficialLinkProviderProof0268(t *testing.T) {
 			fixture := &minecraftVerifierFixture0268{token: token, profile: tc.profile, err: tc.providerErr}
 			_, err := verifiedLinkProfile0268(context.Background(), fixture, tc.access, tc.expected)
 			if (err == nil) != tc.ok {
-				t.Fatalf("provider validation: %v", err)
+				t.Fatalf("проверка провайдера: %v", err)
 			}
 			if fixture.calls != tc.calls {
 				t.Fatalf("Провайдер вызван %d раз", fixture.calls)

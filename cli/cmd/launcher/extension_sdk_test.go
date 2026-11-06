@@ -64,7 +64,7 @@ func TestLocalDevHost02010DenyByDefaultAndHandshake(t *testing.T) {
 	hello := `{"protocolVersion":"1.0","instanceId":"` + host.instance + `","extensionId":"ru.example.dev"}`
 	resp := do("/v1/hello", hello)
 	if resp.StatusCode != 200 {
-		t.Fatalf("hello=%d", resp.StatusCode)
+		t.Fatalf("ответ приветствия: %d", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 	resp = do("/v1/capabilities/project.get", `{"projectId":"dev-project"}`)
@@ -96,7 +96,7 @@ func TestLocalDevHost02010ExplicitGrant(t *testing.T) {
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode != 200 {
-		t.Fatalf("hello=%d", resp.StatusCode)
+		t.Fatalf("ответ приветствия: %d", resp.StatusCode)
 	}
 	req, _ = http.NewRequest(http.MethodPost, host.url()+"/v1/capabilities/project.get", strings.NewReader(`{"projectId":"dev-project"}`))
 	req.Header.Set("Authorization", "Bearer "+host.token)
@@ -107,7 +107,7 @@ func TestLocalDevHost02010ExplicitGrant(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		t.Fatalf("project.get=%d", resp.StatusCode)
+		t.Fatalf("чтение проекта: %d", resp.StatusCode)
 	}
 }
 

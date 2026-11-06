@@ -37,7 +37,7 @@ func TestRecoverOriginalOperation0388(t *testing.T) {
 	}
 	path := "/api/v1/operations/recover?projectId=demo-project&kind=package-publish&idempotencyKey=recovery-lost-ack-0388"
 	if r := lookup(path, ""); r.Code != 401 {
-		t.Fatalf("anonymous read: %d %s", r.Code, r.Body.String())
+		t.Fatalf("анонимное чтение: %d %s", r.Code, r.Body.String())
 	}
 	for _, bad := range []string{
 		"/api/v1/operations/recover?projectId=other-project&kind=package-publish&idempotencyKey=recovery-lost-ack-0388",

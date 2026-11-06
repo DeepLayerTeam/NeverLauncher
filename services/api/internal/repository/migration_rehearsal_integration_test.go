@@ -120,7 +120,7 @@ func TestMigrationRehearsal03310(t *testing.T) {
 	}
 	after, e := r.GetMigration0331(ctx, runID)
 	if e != nil || before.Revision != after.Revision {
-		t.Fatalf("duplicate event %v", e)
+		t.Fatalf("дублирующееся событие: %v", e)
 	}
 	report.Probes[0].Passed = false
 	if _, e = r.SaveMigrationRehearsal03310(ctx, runID, report); !errors.Is(e, mw.ErrConflict) {

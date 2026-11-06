@@ -17,12 +17,12 @@ func TestHardening02112NegativeRBAC(t *testing.T) {
 	admin := loginAdmin(t, h)
 	made := request0211(t, h, http.MethodPost, "/api/v1/admin/projects", admin, `{"id":"hardening-other","name":"Other","defaultChannel":"stable"}`)
 	if made.Code != http.StatusCreated {
-		t.Fatalf("project: %d %s", made.Code, made.Body.String())
+		t.Fatalf("проект: %d %s", made.Code, made.Body.String())
 	}
 	admin, _ = registerTestPasskey117(t, h, admin)
 	made = request0211(t, h, http.MethodPost, "/api/v1/admin/users", admin, `{"email":"hardening-operator@example.test","displayName":"Operator","roleId":"player","password":"hardening-password","projectRoles":{"demo-project":"operator"}}`)
 	if made.Code != http.StatusCreated {
-		t.Fatalf("user: %d %s", made.Code, made.Body.String())
+		t.Fatalf("пользователь: %d %s", made.Code, made.Body.String())
 	}
 	token := loginUser0211(t, h, "hardening-operator@example.test", "hardening-password")
 	cases := []struct {

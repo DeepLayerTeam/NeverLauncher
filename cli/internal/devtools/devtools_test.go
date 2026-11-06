@@ -29,7 +29,7 @@ func makeTestJar(t *testing.T, signed bool, source string) string {
 	cmd := exec.Command("javac", "-g", "Fixture.java")
 	cmd.Dir = d
 	if out, e := cmd.CombinedOutput(); e != nil {
-		t.Fatalf("javac: %s %v", out, e)
+		t.Fatalf("ошибка компилятора javac: %s %v", out, e)
 	}
 	f, e := os.Create(filepath.Join(d, "fixture.jar"))
 	if e != nil {

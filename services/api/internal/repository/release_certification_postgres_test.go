@@ -109,7 +109,7 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 		}
 	}
 	if success != 1 || conflicts != 1 {
-		t.Fatalf("cross-replica workspace CAS success=%d conflicts=%d", success, conflicts)
+		t.Fatalf("CAS рабочей области между репликами: успешно=%d, конфликтов=%d", success, conflicts)
 	}
 	pinned, err := a.GetBuildWorkspace(ctx, w.ID)
 	if err != nil {

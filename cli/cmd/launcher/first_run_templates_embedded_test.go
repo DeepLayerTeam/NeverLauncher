@@ -13,11 +13,11 @@ func TestEmbeddedProductionTemplatesFromCanonicalSource(t *testing.T) {
 	for _, name := range []string{"docker-compose.yml", "nginx.conf", "env.production.example"} {
 		got, source, err := readCanonicalProductionTemplate(name)
 		if err != nil {
-			t.Fatalf("embedded %s: %v", name, err)
+			t.Fatalf("встроенный ресурс %s: %v", name, err)
 		}
 		want, err := os.ReadFile(filepath.Join("..", "..", "..", "deploy", "production", name))
 		if err != nil {
-			t.Fatalf("canonical %s: %v", name, err)
+			t.Fatalf("эталонный ресурс %s: %v", name, err)
 		}
 		if !bytes.Equal(got, want) {
 			t.Errorf("Встроенный %s отличается от эталона", name)

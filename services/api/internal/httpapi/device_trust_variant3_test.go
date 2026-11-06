@@ -169,7 +169,7 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 		t.Helper()
 		code, body := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", unbound, map[string]any{"name": name})
 		if code != http.StatusOK {
-			t.Fatalf("begin status=%d %#v", code, body)
+			t.Fatalf("состояние начала операции: %d %#v", code, body)
 		}
 		public, private, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {

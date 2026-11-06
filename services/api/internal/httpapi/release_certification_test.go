@@ -36,7 +36,7 @@ func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 	}
 	preview := call("inspect-gravit", request("", source))
 	if preview.Code != 200 {
-		t.Fatalf("preview: %d %s", preview.Code, preview.Body.String())
+		t.Fatalf("предварительный просмотр: %d %s", preview.Code, preview.Body.String())
 	}
 	var report struct {
 		Data struct {
@@ -59,7 +59,7 @@ func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 	}
 	imported := call("import-gravit", request(report.Data.SHA, source))
 	if imported.Code != 201 {
-		t.Fatalf("commit: %d %s", imported.Code, imported.Body.String())
+		t.Fatalf("фиксация: %d %s", imported.Code, imported.Body.String())
 	}
 	var saved struct {
 		Data struct {

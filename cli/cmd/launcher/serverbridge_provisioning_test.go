@@ -121,10 +121,10 @@ func TestServerBridgeDetectPaper0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Platform != "paper" || got.Confidence != "high" {
-		t.Fatalf("detection=%+v", got)
+		t.Fatalf("результат обнаружения: %+v", got)
 	}
 	if got.InstallDir != filepath.Join(root, "plugins") {
-		t.Fatalf("installDir=%s", got.InstallDir)
+		t.Fatalf("каталог установки: %s", got.InstallDir)
 	}
 }
 
@@ -237,7 +237,7 @@ func TestServerBridgeUpgradeRollbackPreservesIdentity0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if after.Version != "0.19.9" || after.TransactionID == "" {
-		t.Fatalf("upgrade state=%+v", after)
+		t.Fatalf("состояние обновления: %+v", after)
 	}
 	if fileExists0199(oldArtifact) {
 		t.Fatalf("Старый артефакт моста не был заменён транзакционно: %s", oldArtifact)
@@ -357,7 +357,7 @@ func TestServerBridgeMigrateV3GA0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if after.Version != "0.20.0" {
-		t.Fatalf("migration version=%s", after.Version)
+		t.Fatalf("версия миграции: %s", after.Version)
 	}
 	identityAfter, err := loadNodeIdentityPublic0199(after.IdentityPath)
 	if err != nil {
@@ -386,7 +386,7 @@ func TestServerBridgeMigrateV3GA0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if restored.Version != "0.19.12" {
-		t.Fatalf("rollback version=%s", restored.Version)
+		t.Fatalf("версия отката: %s", restored.Version)
 	}
 	identityRestored, err := loadNodeIdentityPublic0199(restored.IdentityPath)
 	if err != nil {

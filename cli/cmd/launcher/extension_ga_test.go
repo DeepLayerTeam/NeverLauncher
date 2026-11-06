@@ -31,7 +31,7 @@ func TestExtensionUpgradeSource0210(t *testing.T) {
 		t.Fatal(err)
 	}
 	if upgraded.API != "1.0" {
-		t.Fatalf("api=%s", upgraded.API)
+		t.Fatalf("API: %s", upgraded.API)
 	}
 	got, err := os.ReadFile(filepath.Join(dir, "backend", "go.mod"))
 	if err != nil {

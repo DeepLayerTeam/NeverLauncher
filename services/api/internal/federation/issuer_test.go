@@ -64,7 +64,7 @@ func TestLegacyIssuerRequiresExplicitLink0291(t *testing.T) {
 		t.Fatalf("Старая учётная запись перехвачена или затенена: %v", err)
 	}
 	if _, err := core.LinkAuthenticatedIdentity("admin", "multi", proof); err != nil {
-		t.Fatal("explicit migration link", err)
+		t.Fatal("явная ссылка миграции", err)
 	}
 	result, err := core.AuthenticatePassword(context.Background(), "multi", authconnector.PasswordRequest{Identifier: proof.Identity.Issuer})
 	if err != nil || result.User.ID != "admin" {

@@ -39,7 +39,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	// Явная политика целостности проекта намеренно не действует для stable.
 	rr := send(http.MethodPut, "/api/v1/projects/demo-project/validation-policy", `{"requiredLevel":"integrity"}`)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("set integrity: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("установка политики целостности: %d %s", rr.Code, rr.Body.String())
 	}
 	publish()
 
@@ -72,7 +72,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	// Даже переключение общепроектной политики на runtime не открывает stable.
 	rr = send(http.MethodPut, "/api/v1/projects/demo-project/validation-policy", `{"requiredLevel":"runtime","requireServerJoin":true}`)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("set runtime: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("настройка среды исполнения: %d %s", rr.Code, rr.Body.String())
 	}
 	publish()
 	rr = send(http.MethodGet, "/api/v1/packages/"+packageID+"/validations", "")

@@ -24,12 +24,12 @@ func TestFileCatalogDigest0475IncludesEveryField(t *testing.T) {
 		t.Fatal(e)
 	}
 	if string(aa) == string(bb) || string(aa) == string(cc) || !strings.Contains(string(aa), "a.jar") {
-		t.Fatalf("catalog serialization omits SHA/path: %s", aa)
+		t.Fatalf("при сериализации каталога потеряны SHA или путь: %s", aa)
 	}
 }
 
 func TestCutoverCheck0475FailsBeforeNetwork(t *testing.T) {
 	if _, err := VerifyCutover0475(context.Background(), "", "bad", "p", "owner@example.invalid"); err == nil {
-		t.Fatal("accepted invalid receipt or empty DSN")
+		t.Fatal("принята недействительная квитанция или пустая строка подключения DSN")
 	}
 }

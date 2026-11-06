@@ -118,7 +118,7 @@ func TestRedisCoordinatorFencesCommandOwnership01911(t *testing.T) {
 	}
 	verified, err := coordinator.VerifyCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA)
 	if err != nil || !verified {
-		t.Fatalf("verify owner A: %v %v", verified, err)
+		t.Fatalf("проверка владельца A: %v %v", verified, err)
 	}
 	if err := coordinator.ReleaseCommandLease(context.Background(), "paper-main", "ctl-1", ownerB, tokenB); err != nil {
 		t.Fatal(err)

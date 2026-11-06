@@ -78,7 +78,7 @@ func TestRevocationTerminalPostgres0434(t *testing.T) {
 	}
 	revoked, err := b.RevokeTrustedDevice(ctx, uid, did, "stolen-key")
 	if err != nil || revoked.Device.Status != "revoked" {
-		t.Fatalf("device revoke: %+v %v", revoked, err)
+		t.Fatalf("отзыв устройства: %+v %v", revoked, err)
 	}
 	if revoked.RevokedSessions != 1 || revoked.RevokedMinecraftSessions != 1 ||
 		len(revoked.RevokedSessionIDs) != 1 || revoked.RevokedSessionIDs[0] != sid {
@@ -92,7 +92,7 @@ func TestRevocationTerminalPostgres0434(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sessionState != "revoked" || minecraftState != "revoked" {
-		t.Fatalf("cascade session=%s Minecraft=%s", sessionState, minecraftState)
+		t.Fatalf("каскадный отзыв: сеанс=%s, Minecraft=%s", sessionState, minecraftState)
 	}
 	if _, err := a.SaveTrustedDevice(ctx, device); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Устаревшая запись устройства прошла успешно: %v", err)

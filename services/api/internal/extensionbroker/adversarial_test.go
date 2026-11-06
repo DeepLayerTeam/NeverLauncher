@@ -33,10 +33,10 @@ func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 	} {
 
 		if _, err := Read(root, path); err == nil {
-			t.Errorf("read escaped: %q", path)
+			t.Errorf("чтение вышло за допустимые пределы: %q", path)
 		}
 		if err := Write(root, path, payload); err == nil {
-			t.Errorf("write escaped: %q", path)
+			t.Errorf("запись вышла за допустимые пределы: %q", path)
 		}
 	}
 	if err := os.Symlink(private, filepath.Join(root, "escape")); err != nil {

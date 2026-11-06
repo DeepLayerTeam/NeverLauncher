@@ -11,7 +11,7 @@ func TestChannelHeadCASPublishAndRead0228(t *testing.T) {
 	ctx := context.Background()
 	empty, err := r.GetChannelHead(ctx, "demo-project", "vanilla", "dev")
 	if err != nil || empty.Revision != 0 || empty.ReleaseID != "" {
-		t.Fatalf("initial head: %+v %v", empty, err)
+		t.Fatalf("начальное состояние ветки: %+v %v", empty, err)
 	}
 	first, err := r.CreateVersion("demo-project", "vanilla", "dev", "0228-v1")
 	if err != nil {
@@ -23,7 +23,7 @@ func TestChannelHeadCASPublishAndRead0228(t *testing.T) {
 	}
 	published, err := r.PublishVersionWithManifestCAS(first.ProjectID, first.ProfileID, first.Channel, first.Version, first.Manifest, 0)
 	if err != nil || published.Status != "published" {
-		t.Fatalf("initial publish %+v %v", published, err)
+		t.Fatalf("начальная публикация: %+v %v", published, err)
 	}
 	h, err := r.GetChannelHead(ctx, "demo-project", "vanilla", "dev")
 	if err != nil || h.Revision != 1 || h.ReleaseID != first.ID {
@@ -53,7 +53,7 @@ func TestChannelHeadsProfileIsolated0228(t *testing.T) {
 	r := NewMemoryRepository("http://127.0.0.1")
 	h, err := r.GetChannelHead(context.Background(), "demo-project", "vanilla", "stable")
 	if err != nil || h.Revision != 1 || h.Version != "3.4.0" {
-		t.Fatalf("bootstrapped stable head: %+v %v", h, err)
+		t.Fatalf("инициализированная стабильная ветка: %+v %v", h, err)
 	}
 	empty, err := r.GetChannelHead(context.Background(), "demo-project", "fabric", "stable")
 	if err != nil || empty.Revision != 0 {

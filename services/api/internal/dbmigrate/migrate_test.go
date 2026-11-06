@@ -751,7 +751,7 @@ func TestDependencyConflictMigrationGuard0243(t *testing.T) {
 	}
 	for _, phrase := range []string{"('1.0','2.0','3.0')", "published release cannot be rewritten", "release profileSnapshot is pinned", "release snapshot not found in immutable history"} {
 		if !strings.Contains(string(b), phrase) {
-			t.Fatalf("0063 guard missing %q", phrase)
+			t.Fatalf("в миграции 0063 отсутствует защита %q", phrase)
 		}
 	}
 }

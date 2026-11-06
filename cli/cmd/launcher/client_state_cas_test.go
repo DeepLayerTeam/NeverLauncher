@@ -23,7 +23,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 	}
 	after, err := clientStateSHA2560228(root)
 	if err != nil || after == before {
-		t.Fatalf("updated hash %q %v", after, err)
+		t.Fatalf("хеш обновлён: %q %v", after, err)
 	}
 	u, err := newTransactionalUpdater0156(root)
 	if err != nil {
@@ -35,7 +35,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, "client-state.json"))
 	if err != nil || string(raw) != `{"version":"1"}` {
-		t.Fatalf("state mutated: %s %v", raw, err)
+		t.Fatalf("состояние неожиданно изменилось: %s %v", raw, err)
 	}
 	_, err = u.apply(updaterRequest0156{Root: root, Namespace: "client-package", FromVersion: "1", ToVersion: "2", ExpectedStateSHA256: after})
 	if err != nil {

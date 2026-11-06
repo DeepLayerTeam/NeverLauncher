@@ -29,7 +29,7 @@ func TestAdapterCapabilities0286RejectOverclaimAndHybrid(t *testing.T) {
 	for _, tc := range cases {
 		err := verifyAdapterCapabilities0286(tc.platform, tc.brand, tc.caps)
 		if (err == nil) != tc.good {
-			t.Errorf("%s %v: err=%v want good=%v", tc.platform, tc.caps, err, tc.good)
+			t.Errorf("%s %v: ошибка=%v; ожидалась успешная проверка=%v", tc.platform, tc.caps, err, tc.good)
 		}
 	}
 }

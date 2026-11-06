@@ -85,7 +85,7 @@ func TestResolverRequiredOptionalPinAndChannelFallback02011(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := r.Resolve(context.Background(), Scope{Scope: "global"}, []model.ExtensionUpdateRoot{{ExtensionID: "app.main", Channel: "beta"}}); err == nil {
-		t.Fatal("incompatible pin was accepted")
+		t.Fatal("принята несовместимая закреплённая версия")
 	}
 }
 
@@ -104,7 +104,7 @@ func TestResolverBacktracksOnConflict02011(t *testing.T) {
 		versions[item.ExtensionID] = item.ToVersion
 	}
 	if versions["tool.main"] != "1.0.0" {
-		t.Fatalf("resolver did not backtrack to stable conflict-free version: %v", versions)
+		t.Fatalf("механизм разрешения зависимостей не вернулся к стабильной версии без конфликтов: %v", versions)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestResolverCycleDetection02011(t *testing.T) {
 	f.publish(t, "cycle.bbb", "1.0.0", []string{"stable"}, []model.ExtensionDependency{{ID: "cycle.aaa", Version: "^1.0.0"}}, nil)
 	r := New(f.repo, Environment{LauncherVersion: "0.20.11", APIVersion: "3.7", OS: "linux", Architecture: "amd64"})
 	if _, err := r.Resolve(context.Background(), Scope{Scope: "global"}, []model.ExtensionUpdateRoot{{ExtensionID: "cycle.aaa"}}); err == nil {
-		t.Fatal("dependency cycle was accepted")
+		t.Fatal("циклическая зависимость ошибочно принята")
 	}
 }
 
@@ -133,7 +133,7 @@ func TestResolverRejectsIncompatiblePlatformAndAPI02011(t *testing.T) {
 	}
 	r := New(f.repo, Environment{LauncherVersion: "0.20.11", APIVersion: "3.7", OS: "linux", Architecture: "amd64"})
 	if _, err := r.Resolve(context.Background(), Scope{Scope: "global"}, []model.ExtensionUpdateRoot{{ExtensionID: id}}); err == nil {
-		t.Fatal("incompatible API/OS candidate was accepted")
+		t.Fatal("принят кандидат с несовместимым API или ОС")
 	}
 	_ = fmt.Sprintf("%v", time.Now()) // Детерминированные импорты проверяются инструментами gofmt/vet.
 }

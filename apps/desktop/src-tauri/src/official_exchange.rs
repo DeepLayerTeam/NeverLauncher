@@ -440,7 +440,7 @@ mod tests {
                     }
                 }
                 let wire=String::from_utf8_lossy(&req).to_string();
-                assert!(wire.starts_with(expected),"unexpected mock provider endpoint");
+                assert!(wire.starts_with(expected),"Неожиданный адрес тестового провайдера");
                 collected.push(wire);
                 let (status,body)=if reply.starts_with("403:") {("403 Forbidden",&reply[4..])}
                     else if reply.starts_with("400:") {("400 Bad Request",&reply[4..])}

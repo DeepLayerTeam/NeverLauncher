@@ -46,7 +46,7 @@ func TestCanonicalAdminCRUDProductFlow(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), "operator@example.test") {
-		t.Fatalf("create user => %d %s", res.Code, res.Body.String())
+		t.Fatalf("создание пользователя: %d %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		ID string `json:"id"`

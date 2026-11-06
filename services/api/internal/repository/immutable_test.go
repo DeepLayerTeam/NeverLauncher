@@ -24,15 +24,15 @@ func TestPublishedReleaseImmutableAtRepositoryLayer(t *testing.T) {
 		t.Fatalf("status=%s", release.Status)
 	}
 	if _, err = repo.UpdateVersionStatus("demo-project", release.ID, "draft"); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("status mutation err=%v", err)
+		t.Fatalf("ошибка изменения состояния=%v", err)
 	}
 	if _, err = repo.UpdateVersionManifest("demo-project", release.ID, release.Manifest); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("manifest mutation err=%v", err)
+		t.Fatalf("ошибка изменения манифеста=%v", err)
 	}
 	if _, err = repo.AddFile(model.FileObject{ProjectID: "demo-project", VersionID: release.ID, Path: "mods/b.jar", Size: 1, SHA256: "11", Required: true}); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("file mutation err=%v", err)
+		t.Fatalf("ошибка изменения файла=%v", err)
 	}
 	if _, err = repo.PublishVersionWithManifest("demo-project", "vanilla", "dev", "immutable-repo-v4", release.Manifest); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("republish err=%v", err)
+		t.Fatalf("ошибка повторной публикации=%v", err)
 	}
 }

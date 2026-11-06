@@ -145,13 +145,13 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 func TestDeliveryManifestClassifiesGuardSensor0182(t *testing.T) {
 	name := "guard-sensor-windows-arm64.dll"
 	if got := deliveryArtifactComponent(name); got != "sensor" {
-		t.Fatalf("sensor component=%q", got)
+		t.Fatalf("компонент датчика: %q", got)
 	}
 	target := deliveryArtifactTarget(name)
 	if target.Platform != "windows" || target.Architecture != "arm64" {
-		t.Fatalf("sensor target=%+v", target)
+		t.Fatalf("цель датчика: %+v", target)
 	}
 	if got := deliveryArtifactFormat(name); got != "dll" {
-		t.Fatalf("sensor format=%q", got)
+		t.Fatalf("формат датчика: %q", got)
 	}
 }

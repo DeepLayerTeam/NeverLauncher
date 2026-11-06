@@ -86,7 +86,7 @@ func TestLegacy0406ExecutableForgeLaunchAndClasspathPrecedence(t *testing.T) {
 		args = append(args, file)
 		out, err := exec.Command(javac, args...).CombinedOutput()
 		if err != nil {
-			t.Fatalf("javac: %v: %s", err, out)
+			t.Fatalf("ошибка компилятора javac: %v: %s", err, out)
 		}
 	}
 	packageJar := func(classes, rel string) string {
@@ -96,7 +96,7 @@ func TestLegacy0406ExecutableForgeLaunchAndClasspathPrecedence(t *testing.T) {
 			t.Fatal(err)
 		}
 		if out, err := exec.Command(jar, "cf", dest, "-C", classes, ".").CombinedOutput(); err != nil {
-			t.Fatalf("jar: %v: %s", err, out)
+			t.Fatalf("ошибка упаковки JAR: %v: %s", err, out)
 		}
 		return dest
 	}

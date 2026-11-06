@@ -57,7 +57,7 @@ func TestComponentCatalogEditorLifecycle0248(t *testing.T) {
 	path := "/api/v1/packages/" + id + "/component-catalog"
 	state := invoke("GET", path, nil, "")
 	if state.Code != 200 || !strings.Contains(state.Body.String(), `"revision":1`) {
-		t.Fatalf("load editor: %d %s", state.Code, state.Body.String())
+		t.Fatalf("загрузка редактора: %d %s", state.Code, state.Body.String())
 	}
 	body := []byte(`{"expectedRevision":1,"catalog":{"schemaVersion":"5.0","revision":1,"digest":"","components":[{"id":"sodium","name":"Sodium","files":["mods/sodium.jar"],"version":"1.0.0","visible":true}],"presets":[{"id":"optimized","name":"Optimized","components":["sodium"]}],"defaultPreset":"optimized"}}`)
 	preview := invoke("POST", path+"/preview", body, "application/json")

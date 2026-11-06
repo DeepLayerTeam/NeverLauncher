@@ -64,7 +64,7 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 	}
 	response.Body.Close()
 	if response.StatusCode != 204 {
-		t.Fatalf("HTTP %d", response.StatusCode)
+		t.Fatalf("неожиданный HTTP-ответ: %d", response.StatusCode)
 	}
 	tr.CloseIdleConnections()
 	// Никогда не принимайте клиентов без разрешённого клиентского сертификата.
