@@ -24,7 +24,7 @@ func TestDigestStableAndTamper(t *testing.T) {
 		t.Fatal(e)
 	}
 	if one.Status != "review_required" || one.Counts["transferred"] != 1 {
-		t.Fatalf("bad report %+v", one)
+		t.Fatalf("Некорректный отчёт: %+v", one)
 	}
 	if e = Verify(one); e != nil {
 		t.Fatal(e)
@@ -65,7 +65,7 @@ func TestDuplicateInvalidEvidence(t *testing.T) {
 	a := baseline()
 	a.Evidence = []Evidence{{Stage: "auth", State: "verified"}, {Stage: "auth", State: "verified"}}
 	if _, e := Finalize(a); e == nil {
-		t.Fatal("duplicate evidence accepted")
+		t.Fatal("Повторяющееся доказательство ошибочно принято")
 	}
 	a = baseline()
 	a.Items[0].SHA256 = "spoof"
@@ -104,6 +104,6 @@ func TestUnknownEvidenceStateBlocks0340(t *testing.T) {
 	a := baseline()
 	a.Evidence = []Evidence{{Stage: "cutover", State: "fully_compatible"}}
 	if _, e := Finalize(a); e == nil {
-		t.Fatal("unknown status accepted")
+		t.Fatal("Неизвестный статус ошибочно принят")
 	}
 }

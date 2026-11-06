@@ -24,7 +24,7 @@ func TestGravitOptionalMigrationRealCatalog02411(t *testing.T) {
 		t.Fatalf("migration: %v %+v", err, result.Fields)
 	}
 	if len(result.Catalog.Components) != 2 || len(result.Catalog.Categories) != 1 {
-		t.Fatalf("bad topology %+v", result.Catalog)
+		t.Fatalf("Некорректная топология: %+v", result.Catalog)
 	}
 	a, b := result.Catalog.Components[0], result.Catalog.Components[1]
 	if !a.Default || len(a.Actions) != 1 || a.Actions[0].Type != "File" || a.Conditions == nil || a.Conditions.OS[0] != "windows" {
@@ -101,7 +101,7 @@ func TestGravitOptionalRejectDuplicatesAndTamper02411(t *testing.T) {
 	}
 	m.ComponentCatalog.Components[0].Actions[0].Path = "mods/evil.jar"
 	if ValidateManifestSchema(m) == nil {
-		t.Fatal("unsigned action mutation accepted")
+		t.Fatal("Неподписанное изменение действия ошибочно принято")
 	}
 }
 
@@ -114,7 +114,7 @@ func TestGravitOptionalClassPathAndBoundedJava02411(t *testing.T) {
 	}
 	c := r.Catalog.Components[0]
 	if len(c.Actions) != 2 || c.Actions[1].Type != "ClassPath" || c.Conditions.JavaMajorMax != 21 || c.Conditions.Arch[0] != "x86_64" {
-		t.Fatalf("unexpected classpath/trigger %+v", c)
+		t.Fatalf("Неожиданный путь классов или условие запуска: %+v", c)
 	}
 	m := validSignedV3Catalog0241()
 	m.Files = gravitOptionalFiles02411()[:1]

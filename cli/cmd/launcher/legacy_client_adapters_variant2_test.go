@@ -32,7 +32,7 @@ func TestLegacy0406ChildOptionsOverrideWithoutDroppingParent(t *testing.T) {
 	}
 	for _, pair := range [][2]string{{"--username", "Forge Player"}, {"--version", "${version_name}"}, {"--gameDir", "${game_directory}"}, {"--accessToken", "${auth_access_token}"}, {"--tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker"}} {
 		if !find(pair[0], pair[1]) {
-			t.Fatalf("missing %q: %v", pair, combined)
+			t.Fatalf("Не найден файл или компонент %q: %v", pair, combined)
 		}
 	}
 	if count := strings.Count(strings.Join(combined, " "), "--username"); count != 1 {

@@ -131,7 +131,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	stale := original
 	stale.Name = "stale write"
 	if _, err = s.SaveProfile(stale); !s.IsConflict(err) {
-		t.Fatalf("stale revision not rejected: %v", err)
+		t.Fatalf("Устаревшая ревизия не отклонена: %v", err)
 	}
 	history, err := s.ListProfileRevisions(id, "client")
 	if err != nil || len(history) != 2 || history[0].Revision != 1 || history[1].Revision != 2 {
@@ -176,13 +176,13 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		t.Fatalf("SaveUser: %v", err)
 	}
 	if u.ProjectRoles[id] != "owner" {
-		t.Fatalf("role binding missing: %+v", u.ProjectRoles)
+		t.Fatalf("Отсутствует привязка роли: %+v", u.ProjectRoles)
 	}
 	// Отключение аккаунта критично для безопасности: оно должно сохраняться и не должно
 	// стирать привязки ролей проекта или случайно включать пользователя при чтении устаревших данных.
 	disabled, err := s.SetUserDisabled(u.ID, true)
 	if err != nil || disabled.Status != "disabled" || disabled.ProjectRoles[id] != "owner" {
-		t.Fatalf("disable failed/roles lost: %+v / %v", disabled, err)
+		t.Fatalf("Отключение завершилось ошибкой, роли потеряны: %+v / %v", disabled, err)
 	}
 	if err := s.Close(); err != nil {
 		t.Fatalf("close: %v", err)

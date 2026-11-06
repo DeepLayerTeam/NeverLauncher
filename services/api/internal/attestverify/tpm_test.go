@@ -190,13 +190,13 @@ func TestRootRevocationAndPlatform0312(t *testing.T) {
 	config.Roots[0].Status = "revoked"
 	reload(config)
 	if _, err := Verify(ev, b, store, time.Now()); err == nil {
-		t.Fatal("revoked root accepted")
+		t.Fatal("Отозванный корневой ключ ошибочно принят")
 	}
 	config.Roots[0].Status = "active"
 	config.Roots[0].Platforms = []string{"windows"}
 	reload(config)
 	if _, err := Verify(ev, b, store, time.Now()); err == nil {
-		t.Fatal("cross-platform root accepted")
+		t.Fatal("Корневой путь другой платформы ошибочно принят")
 	}
 	config.Roots[0].Platforms = []string{"linux"}
 	reload(config)
@@ -247,7 +247,7 @@ func TestLinuxHardwareEnclaveECDSAKeyScheme0314(t *testing.T) {
 			corrupted := append([]byte(nil), orig...)
 			corrupted[tc.offset] = tc.value
 			if _, _, err := parsePublic(corrupted); err == nil {
-				t.Fatal("unsupported TPM ECC scheme/hash accepted")
+				t.Fatal("Неподдерживаемая схема или хеш TPM ECC ошибочно приняты")
 			}
 		})
 	}

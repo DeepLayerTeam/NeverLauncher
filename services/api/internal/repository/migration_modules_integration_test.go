@@ -84,9 +84,9 @@ func TestMigrationModuleReportImmutable0338(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = r.RecordMigrationWrapperEnrollment0338(ctx, run.ID, "wrapper.json", "new-node", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"); e != nil {
-		t.Fatalf("replay failed: %v", e)
+		t.Fatalf("Ошибка повторного воспроизведения: %v", e)
 	}
 	if e = r.RecordMigrationWrapperEnrollment0338(ctx, run.ID, "wrapper.json", "different", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed key accepted: %v", e)
+		t.Fatalf("Изменённый ключ ошибочно принят: %v", e)
 	}
 }

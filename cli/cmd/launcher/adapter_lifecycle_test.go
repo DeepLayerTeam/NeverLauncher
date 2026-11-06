@@ -87,7 +87,7 @@ func TestAdapterLifecycle02711ExplicitUpgradeAndSourceIntegrity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = executeFactoryBuild0271(context.Background(), opts); err != nil {
-		t.Fatalf("current version replay failed: %v", err)
+		t.Fatalf("Не удалось повторно воспроизвести текущую версию: %v", err)
 	}
 	// Имитируйте ранее собранный клиент со старым адаптером, внутренне
 	// согласованным дайджестом плана и неизменными файлами на диске.

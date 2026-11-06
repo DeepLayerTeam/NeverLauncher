@@ -56,6 +56,6 @@ func TestAuthIdentityCollisionPostgres0293(t *testing.T) {
 	}
 	stable, err := b.GetAuthIdentityByIssuer(linked.Provider, linked.Issuer, linked.Subject)
 	if err != nil || stable.UserID != first || stable.ID != linked.ID {
-		t.Fatalf("canonical identity changed: %+v %v", stable, err)
+		t.Fatalf("Каноническая идентичность неожиданно изменилась: %+v %v", stable, err)
 	}
 }

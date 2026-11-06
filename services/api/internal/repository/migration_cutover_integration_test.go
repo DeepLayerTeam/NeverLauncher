@@ -177,7 +177,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	mutated.Current.Players[0].Economy = "101"
 	blocked, e := r.PlanMigrationRollback03312(ctx, runID, mutated)
 	if e != nil || blocked.Ready || len(blocked.Blockers) == 0 {
-		t.Fatalf("changed player data accepted: %+v %v", blocked, e)
+		t.Fatalf("Изменённые данные игрока ошибочно приняты: %+v %v", blocked, e)
 	}
 	plan, e := r.PlanMigrationRollback03312(ctx, runID, planInput)
 	if e != nil || !plan.Ready || plan.State != "planned" {

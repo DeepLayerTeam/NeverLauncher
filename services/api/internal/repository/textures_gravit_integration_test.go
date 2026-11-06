@@ -79,7 +79,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 	}
 	already, _, _, e = r.GravitImportState02510(ctx, input.GravitSourceID, input.GravitRowID, p, "skin")
 	if e != nil || !already {
-		t.Fatalf("receipt missing: %v", e)
+		t.Fatalf("Отсутствует квитанция: %v", e)
 	}
 	if _, e = r.UploadTexture0252(ctx, p, input); !errors.Is(e, ErrGravitAlreadyImported02510) {
 		t.Fatalf("reimport mutation allowed: %v", e)

@@ -44,7 +44,7 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 		SID string `json:"sid"`
 	}
 	if err = json.Unmarshal(claimsRaw, &claims); err != nil || claims.Sub == "" || claims.SID == "" {
-		t.Fatalf("invalid test JWT claims: %v", err)
+		t.Fatalf("Некорректные поля тестового JWT: %v", err)
 	}
 	response := request0211(t, api, http.MethodGet, "/api/v1/minecraft/official/browser/config", token, "")
 	if response.Code != http.StatusOK {

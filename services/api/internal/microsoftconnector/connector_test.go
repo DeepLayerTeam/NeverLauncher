@@ -125,7 +125,7 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 		t.Fatal(err)
 	}
 	if refreshed.Identity.Subject != auth.Identity.Subject || refreshed.ProviderToken != "refresh-2" {
-		t.Fatalf("unexpected refresh result: %+v", refreshed)
+		t.Fatalf("Неожиданный результат обновления токена: %+v", refreshed)
 	}
 	logout, err := connector.ProviderLogoutURL("https://launcher.example.test/signed-out")
 	if err != nil || !strings.Contains(logout, "post_logout_redirect_uri=") {

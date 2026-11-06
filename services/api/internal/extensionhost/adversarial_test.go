@@ -39,7 +39,7 @@ func TestAdversarialHostReconnectAndBurst03114(t *testing.T) {
 		} else if code == 429 {
 			rejected++
 		} else {
-			t.Fatalf("unexpected HTTP code %d", code)
+			t.Fatalf("Неожиданный код HTTP %d", code)
 		}
 	}
 	if accepted != 8 || rejected != 24 {

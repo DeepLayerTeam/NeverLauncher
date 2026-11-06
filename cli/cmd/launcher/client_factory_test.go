@@ -61,7 +61,7 @@ func TestClientFactory0271VanillaTransactionReplayAndTampering(t *testing.T) {
 		t.Fatalf("rebuild incorrectly resolved latest or invalidated pinned inputs: %v", err)
 	}
 	if second.ReproducibilitySHA256 != first.ReproducibilitySHA256 {
-		t.Fatal("replay identity changed")
+		t.Fatal("Идентичность изменилась при повторном воспроизведении")
 	}
 	jar := filepath.Join(dir, "versions", "fixture-1", "fixture-1.jar")
 	if err := os.WriteFile(jar, []byte("tampered"), 0o644); err != nil {

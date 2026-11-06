@@ -93,7 +93,7 @@ func TestAuthenticatePasswordJITProvisionsCanonicalUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.User.RoleID != "player" || result.Identity.Provider != "website" || result.Identity.Subject != "42" {
-		t.Fatalf("unexpected JIT result: %+v", result)
+		t.Fatalf("Неожиданный результат JIT: %+v", result)
 	}
 	if result.User.PasswordHash != "" {
 		t.Fatal("JIT federated user unexpectedly has a local password")

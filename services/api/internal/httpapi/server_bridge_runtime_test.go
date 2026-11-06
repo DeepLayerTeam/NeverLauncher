@@ -52,7 +52,7 @@ func TestServerBridgeRuntimeIdentity0192VerifiesNodeBoundProcessIdentity(t *test
 
 	verified, err := validateAndVerifyBridgeRuntime0192(server, req, time.Now().UTC())
 	if err != nil {
-		t.Fatalf("valid runtime identity rejected: %v", err)
+		t.Fatalf("Корректная идентичность Runtime ошибочно отклонена: %v", err)
 	}
 	if verified.RuntimeID != runtimeContract.RuntimeID || verified.NodeKeyFingerprint != identity.Fingerprint || verified.ProcessID != 48120 {
 		t.Fatalf("verified runtime mismatch: %+v", verified)
@@ -67,7 +67,7 @@ func TestServerBridgeRuntimeIdentity0192VerifiesNodeBoundProcessIdentity(t *test
 	tampered.ProcessID++
 	req.Runtime = &tampered
 	if _, err := validateAndVerifyBridgeRuntime0192(server, req, time.Now().UTC()); err == nil || !strings.Contains(err.Error(), "runtime_id_binding_invalid") {
-		t.Fatalf("tampered process identity accepted: %v", err)
+		t.Fatalf("Подменённая идентичность процесса ошибочно принята: %v", err)
 	}
 
 	// Сведения обнаружения защищены подписью Ed25519 среды выполнения.

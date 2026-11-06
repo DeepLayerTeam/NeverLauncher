@@ -22,7 +22,7 @@ func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 	}
 	cfg.ServerBridgeHARequired = true
 	if e := ValidateProduction(cfg); e == nil || !strings.Contains(e.Error(), "SQLite single-node") {
-		t.Fatalf("HA not rejected: %v", e)
+		t.Fatalf("Недопустимая конфигурация HA не отклонена: %v", e)
 	}
 	cfg.ServerBridgeHARequired = false
 	cfg.RateLimitFailClosed = false

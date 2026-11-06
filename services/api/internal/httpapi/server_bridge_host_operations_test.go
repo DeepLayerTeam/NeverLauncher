@@ -27,7 +27,7 @@ func TestHostControlValidation0413(t *testing.T) {
 		}
 	}
 	if hostKey0413.MatchString("bad") || hostKey0413.MatchString("aaa;rm -rf") || !hostKey0413.MatchString("host-action-key-00001") {
-		t.Fatal("unsafe host key validation")
+		t.Fatal("Небезопасная проверка ключа хоста")
 	}
 }
 func TestHostControlBridgeCorrelation0413(t *testing.T) {
@@ -38,7 +38,7 @@ func TestHostControlBridgeCorrelation0413(t *testing.T) {
 	}
 	node.RuntimeID = "old"
 	if hostReady0413("restart", op, node) {
-		t.Fatal("old bridge runtime accepted")
+		t.Fatal("Устаревшая среда выполнения ServerBridge ошибочно принята")
 	}
 	node.RuntimeID = "new"
 	node.LastHeartbeatAt = op.CreatedAt.Add(-time.Second)

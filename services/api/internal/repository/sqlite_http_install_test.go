@@ -35,7 +35,7 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 		t.Fatal(err)
 	}
 	if created.ID != "admin" {
-		t.Fatal("wrong owner")
+		t.Fatal("Неверный владелец")
 	}
 	if _, err = r.BootstrapMinimalAdmin0375(ctx, user, identity, token, "installer"); err == nil {
 		t.Fatal("token reused")
@@ -69,7 +69,7 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 		t.Fatalf("owner password hash lost on restart: %v", err)
 	}
 	if _, err = r.GetAuthIdentity("local", "admin"); err != nil {
-		t.Fatalf("identity not persisted: %v", err)
+		t.Fatalf("Идентичность не сохранена: %v", err)
 	}
 	if _, err = r.BootstrapMinimalAdmin0375(ctx, user, identity, token, "installer"); err == nil {
 		t.Fatal("bootstrap reopened after restart")

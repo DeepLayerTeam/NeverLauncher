@@ -44,7 +44,7 @@ func TestCanonicalOperationsBackupFlow(t *testing.T) {
 		BackupID string `json:"backupId"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &created); err != nil || created.BackupID == "" {
-		t.Fatalf("backupId missing: %v %s", err, res.Body.String())
+		t.Fatalf("Отсутствует идентификатор резервной копии: %v %s", err, res.Body.String())
 	}
 
 	for _, step := range []struct{ method, path string }{
@@ -121,6 +121,6 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(data) != "before-backup" {
-		t.Fatalf("storage restore mismatch: %q", string(data))
+		t.Fatalf("Содержимое после восстановления хранилища не совпадает: %q", string(data))
 	}
 }

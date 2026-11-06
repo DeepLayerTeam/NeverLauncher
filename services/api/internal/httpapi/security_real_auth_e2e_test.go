@@ -144,7 +144,7 @@ func TestSecurityRealAuthHTTP02912(t *testing.T) {
 			t.Fatal(err)
 		}
 		if response.Data.Tokens.RefreshToken == "" || response.Data.Tokens.AccessToken == "" || response.Data.Session.ID == "" {
-			t.Fatalf("missing tokens: %s", data)
+			t.Fatalf("Отсутствуют токены: %s", data)
 		}
 		return response
 	}

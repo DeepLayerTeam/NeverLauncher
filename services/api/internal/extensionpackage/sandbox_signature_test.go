@@ -61,7 +61,7 @@ func TestSignedManifestSandboxPolicy0318(t *testing.T) {
 		}
 	}
 	if !changed {
-		t.Fatal("manifest missing")
+		t.Fatal("Отсутствует манифест")
 	}
 	if err = zw.Close(); err != nil {
 		t.Fatal(err)

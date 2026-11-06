@@ -122,7 +122,7 @@ func TestWorldBackupRequiresStoppedHost02810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := worldBackupQuiesce02810(root, "stopped"); err == nil {
-		t.Fatal("active server not rejected")
+		t.Fatal("Активный сервер не был отклонён")
 	}
 	if err := worldBackupQuiesce02810(root, "stop"); err == nil {
 		t.Fatal("unverified supervisor accepted")
@@ -141,6 +141,6 @@ func TestWorldBackupRejectsForgedManifest02810(t *testing.T) {
 	}
 	m.Entries = append(m.Entries, m.Entries[1])
 	if worldBackupManifestValid02810(m) == nil {
-		t.Fatal("duplicate entry accepted")
+		t.Fatal("Повторяющаяся запись ошибочно принята")
 	}
 }

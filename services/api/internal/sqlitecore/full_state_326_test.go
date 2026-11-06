@@ -46,7 +46,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	bad := in
 	bad.Version = "1.0.1"
 	if _, e = r.PublishExtensionPackage(ctx, bad, "owner"); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("signature replay accepted: %v", e)
+		t.Fatalf("Повторное воспроизведение подписи ошибочно разрешено: %v", e)
 	}
 	// Побеждает один CAS-писатель. Каждое поколение сохраняет историю происхождения
 	// только с добавлением.
@@ -102,11 +102,11 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	defer r.Close()
 	raw, e := r.ReadPackage(ctx, pkg.Digest)
 	if e != nil || string(raw) != string(data) {
-		t.Fatalf("package lost: %v", e)
+		t.Fatalf("Пакет потерян: %v", e)
 	}
 	restored, e := r.GetExtensionState326(ctx, in.ExtensionID, "global", "", "settings")
 	if e != nil || restored.Generation != 1 {
-		t.Fatalf("state lost: %v %+v", e, restored)
+		t.Fatalf("Состояние потеряно: %v %+v", e, restored)
 	}
 	if e = r.SetExtensionPublisherActive(ctx, "publisher", "owner", false); e != nil {
 		t.Fatal(e)
@@ -116,7 +116,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 		t.Fatalf("publisher revoke must disable: %v %+v", e, installed)
 	}
 	if _, e = r.ApplyExtensionInstall326(ctx, inst, 4); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("revoked publisher install accepted: %v", e)
+		t.Fatalf("Установка от отозванного издателя ошибочно разрешена: %v", e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -152,7 +152,7 @@ func TestFullStateBridgeSignedRuntimeNoRedelivery(t *testing.T) {
 	}
 	c.Payload = map[string]string{"message": "danger"}
 	if _, _, e = r.CreateBridgeCommand(ctx, c); !errors.Is(e, ErrDurableIdempotency) {
-		t.Fatalf("changed request accepted: %v", e)
+		t.Fatalf("Изменённый запрос ошибочно принят: %v", e)
 	}
 	signLease := func(worker string) NodeProof {
 		return signJoinProof(t, priv, "control-lease", 1, bridgeLeasePayload(runtime, 1, worker, 0, time.Second))

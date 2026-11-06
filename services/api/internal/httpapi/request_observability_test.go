@@ -34,7 +34,7 @@ func TestAccessLog0459PreservesCorrelationAndStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	if record["status"] != float64(409) || record["correlation_id"] != id || record["route_group"] != "api" {
-		t.Fatalf("unexpected log: %v", record)
+		t.Fatalf("Неожиданное содержимое журнала: %v", record)
 	}
 	if strings.Contains(stream.String(), "abc123") || strings.Contains(stream.String(), "should-not-log") || strings.Contains(stream.String(), "spoofed") {
 		t.Fatal("log leaked untrusted data")

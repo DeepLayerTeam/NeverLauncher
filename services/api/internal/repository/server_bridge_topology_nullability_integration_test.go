@@ -55,7 +55,7 @@ func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
 	}
 	edges, err := r.ListServerBridgeTopology(ctx)
 	if err != nil {
-		t.Fatalf("topology read of legacy nodes failed: %v", err)
+		t.Fatalf("Не удалось прочитать топологию устаревших узлов: %v", err)
 	}
 	for _, edge := range edges {
 		if edge.SourceNodeID != ids[0] || edge.TargetNodeID != ids[1] {

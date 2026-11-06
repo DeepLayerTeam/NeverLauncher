@@ -23,17 +23,17 @@ func TestExclusiveProfileCreationAndHistory0225(t *testing.T) {
 		t.Fatal(err)
 	}
 	if actual.Revision != 1 || actual.IsDefault || actual.Digest != model.ProfileDigest(model.ProfileSpecOf(actual)) {
-		t.Fatalf("invalid first revision: %+v", actual)
+		t.Fatalf("Недопустимая первая ревизия: %+v", actual)
 	}
 	if _, err := r.CreateProfileExclusive0225(p); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected duplicate conflict: %v", err)
 	}
 	history, err := r.ListProfileRevisions("demo-project", "vanilla-copy")
 	if err != nil || len(history) != 1 || history[0].Digest != actual.Digest {
-		t.Fatalf("missing revision: %v %+v", err, history)
+		t.Fatalf("Отсутствует ревизия: %v %+v", err, history)
 	}
 	if _, err := r.CreateProfileExclusive0225(model.Profile{ProjectID: "missing", ID: "other", Name: "Test", Loader: "vanilla"}); err == nil {
-		t.Fatal("unknown project accepted")
+		t.Fatal("Неизвестный проект ошибочно принят")
 	}
 	// Клон автономен; изменения оригинала не переписывают его первый снимок.
 	original, err := r.ListProfiles("demo-project")

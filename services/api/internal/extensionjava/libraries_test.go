@@ -64,7 +64,7 @@ func TestActualCompiledDependencyHost0482(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.ClassFiles < 3 || len(info.Libraries) != 1 || info.Libraries[0].Version != "1.2.3" || info.EntrypointClass != "example.extension.DependencyExtension" {
-		t.Fatalf("unexpected actual runtime package %+v", info)
+		t.Fatalf("Неожиданный пакет фактической среды выполнения: %+v", info)
 	}
 }
 

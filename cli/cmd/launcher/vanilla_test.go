@@ -22,7 +22,7 @@ func TestVanilla0402NativeDuplicateIsPublishedOnce(t *testing.T) {
 		{"org.example:two:1.0", "lib/two.jar", "libshared.so", "same-bytes"},
 	})
 	if install.Status != "installed-and-verified" {
-		t.Fatalf("unexpected install result: %+v", install)
+		t.Fatalf("Неожиданный результат установки: %+v", install)
 	}
 	nativePath := "natives/linux/x86_64/libshared.so"
 	count := 0

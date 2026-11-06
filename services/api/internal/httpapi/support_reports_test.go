@@ -50,7 +50,7 @@ func TestSupportReportSubmitRequiresLoginAndConsent03510(t *testing.T) {
 	resp = httptest.NewRecorder()
 	handler.ServeHTTP(resp, req)
 	if resp.Code != http.StatusBadRequest {
-		t.Fatalf("no-consent accepted: %d", resp.Code)
+		t.Fatalf("Отсутствие согласия ошибочно принято: %d", resp.Code)
 	}
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/diagnostics/reports", strings.NewReader(strings.Replace(body, "\"consent\":false", "\"consent\":true", 1)))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -64,7 +64,7 @@ func TestSupportReportSubmitRequiresLoginAndConsent03510(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(returned["id"].(string)) != 32 {
-		t.Fatal("missing server-generated support ID")
+		t.Fatal("Отсутствует выданный сервером идентификатор поддержки")
 	}
 
 	id := returned["id"].(string)

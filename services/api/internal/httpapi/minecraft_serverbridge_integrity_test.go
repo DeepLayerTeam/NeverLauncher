@@ -101,7 +101,7 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 		t.Fatalf("validate-join without current artifact measurement accepted: %d %s", missing.Code, missing.Body.String())
 	}
 	if valid := validate(true); valid.Code != http.StatusOK || !strings.Contains(valid.Body.String(), `"allowed":true`) {
-		t.Fatalf("integrity-bound validate-join rejected: %d %s", valid.Code, valid.Body.String())
+		t.Fatalf("Запрос подключения с подтверждённой целостностью ошибочно отклонён: %d %s", valid.Code, valid.Body.String())
 	}
 
 	rotatedIdentity := newTestBridgeNodeIdentity0142(t)
@@ -152,7 +152,7 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 		t.Fatal(err)
 	}
 	if decision := s.evaluateMinecraftIntegrity0135(session); !decision.Allowed || !decision.Required {
-		t.Fatalf("valid integrity snapshot rejected: %+v", decision)
+		t.Fatalf("Корректный снимок целостности ошибочно отклонён: %+v", decision)
 	}
 	join := bridgeJoinRecord{UserID: session.UserID, SessionID: session.NeverSessionID, TrustedDeviceID: session.TrustedDeviceID, BindingEpoch: session.BindingEpoch, MinecraftSessionID: session.ID}
 	if _, decision := s.evaluateServerBridgeJoinIntegrity0135(join); !decision.Allowed {

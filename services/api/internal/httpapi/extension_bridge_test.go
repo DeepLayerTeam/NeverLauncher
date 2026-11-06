@@ -70,7 +70,7 @@ func TestDesktopBridgeRevocationAndGeneration0356(t *testing.T) {
 		srv.requireDesktopExtensionAuth0209(srv.desktopExtensionRPC0209).ServeHTTP(rec, req)
 		var result map[string]any
 		if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
-			t.Fatalf("invalid response %v: %s", err, rec.Body.String())
+			t.Fatalf("Некорректный ответ %v: %s", err, rec.Body.String())
 		}
 		return rec.Code, result
 	}

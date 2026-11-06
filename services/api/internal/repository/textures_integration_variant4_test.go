@@ -87,6 +87,6 @@ func TestTextureURLImportProvenance0254(t *testing.T) {
 	input.Source = "url-direct"
 	input.ExpectedRevision = 1
 	if _, err = repo.UploadTexture0252(ctx, owner, input); err == nil {
-		t.Fatal("unsupported source was accepted")
+		t.Fatal("Неподдерживаемый источник ошибочно принят")
 	}
 }

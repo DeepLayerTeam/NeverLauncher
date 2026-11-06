@@ -99,7 +99,7 @@ func TestPlanDeterminismAndNoSecret0442(t *testing.T) {
 	tampered := p
 	tampered.TargetSHA256 = strings.Repeat("b", 64)
 	if Verify(tampered) == nil {
-		t.Fatal("tampered plan accepted")
+		t.Fatal("Подменённый план ошибочно принят")
 	}
 }
 func TestPlanBlocksDestinationAndSourceChanges0442(t *testing.T) {
@@ -143,7 +143,7 @@ func TestPlanExcludesPlayerFiles0443(t *testing.T) {
 		}
 		seen = true
 		if item.Status != "excluded" || item.Target != "" || item.Reason == "" {
-			t.Fatalf("unsafe operation on player-owned file: %+v", item)
+			t.Fatalf("Небезопасная операция с файлом игрока: %+v", item)
 		}
 	}
 	if !seen {

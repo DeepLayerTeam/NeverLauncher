@@ -44,7 +44,7 @@ func TestPendingProviderCredential0296SealedUntilPasskeyProof(t *testing.T) {
 		t.Fatal("provider credential stored before Never WebAuthn proof")
 	}
 	if err := api.commitPendingProviderCredential0296(user, identity.Provider, identity.ID, sealed+"tampered"); err == nil {
-		t.Fatal("tampered AEAD token accepted")
+		t.Fatal("Подменённый AEAD-токен ошибочно принят")
 	}
 	if err := api.commitPendingProviderCredential0296(user, identity.Provider, "different-identity", sealed); err == nil {
 		t.Fatal("wrong identity accepted")

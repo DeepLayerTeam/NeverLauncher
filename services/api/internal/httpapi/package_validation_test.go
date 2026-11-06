@@ -120,7 +120,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 		t.Fatal(err)
 	}
 	if validations.Data.Integrity.Result != "passed" || len(validations.Data.Integrity.ManifestDigest) != 64 {
-		t.Fatalf("unexpected integrity result: %s", res.Body.String())
+		t.Fatalf("Неожиданный результат проверки целостности: %s", res.Body.String())
 	}
 	return packageID, validations.Data.Integrity.ManifestDigest
 }

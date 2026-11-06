@@ -144,7 +144,7 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	cfg.ProjectID = "other-project"
 	sign(hijack, cfg, script1)
 	if err := Update(context.Background(), opts); err == nil {
-		t.Fatal("cross-project update accepted")
+		t.Fatal("Межпроектное обновление ошибочно разрешено")
 	}
 	if err := VerifyInstalled(opts); err != nil {
 		t.Fatal(err)

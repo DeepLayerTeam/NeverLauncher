@@ -79,7 +79,7 @@ func TestResolverRequiredOptionalPinAndChannelFallback02011(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(plan.Items) != 2 || plan.Items[0].ExtensionID != "lib.core" || plan.Items[0].ToVersion != "1.5.0" || plan.Items[1].ExtensionID != "app.main" {
-		t.Fatalf("unexpected plan: %+v", plan.Items)
+		t.Fatalf("Неожиданный план: %+v", plan.Items)
 	}
 	if _, err := f.repo.SetExtensionUpdatePin(context.Background(), model.ExtensionUpdatePin{ExtensionID: "lib.core", Scope: "global", Version: "2.0.0"}); err != nil {
 		t.Fatal(err)

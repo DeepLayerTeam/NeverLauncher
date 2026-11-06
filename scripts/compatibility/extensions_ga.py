@@ -147,7 +147,7 @@ def aggregate(
     out_certificate.write_text(
         json.dumps(cert, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    print(f"Extensions GA certified: {len(results)}/{len(results)} targets")
+    print(f"Сертификация GA расширений завершена: {len(results)}/{len(results)} целевых платформ")
 
 
 def main():

@@ -52,7 +52,7 @@ func TestMigrationReportPostgres03313(t *testing.T) {
 		t.Fatal(e)
 	}
 	if first.ReportSHA256 != second.ReportSHA256 || first.Status != "blocked" || len(first.Blockers) < 8 {
-		t.Fatalf("missing evidence not blocked: %+v", first)
+		t.Fatalf("Отсутствие доказательств не привело к блокировке: %+v", first)
 	}
 	if strings.Contains(string(first.ReportSHA256), "password") {
 		t.Fatal("secret in hash")
@@ -61,7 +61,7 @@ func TestMigrationReportPostgres03313(t *testing.T) {
 		t.Fatalf("premature review accepted: %v", e)
 	}
 	if _, e = r.GetReviewedMigrationReport03313(ctx, run.ID); !errors.Is(e, mw.ErrNotFound) {
-		t.Fatalf("missing receipt was not missing: %v", e)
+		t.Fatalf("Отсутствующая квитанция ошибочно помечена как присутствующая: %v", e)
 	}
 	// Неизменяемость SQL проверяется даже привилегированным UPDATE в той же
 	// транзакции; после отката тестовые данные не остаются.

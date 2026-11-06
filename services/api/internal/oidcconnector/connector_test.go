@@ -86,14 +86,14 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 	authURL, _ := url.Parse(start.AuthorizationURL)
 	q := authURL.Query()
 	if q.Get("response_type") != "code" || q.Get("code_challenge_method") != "S256" || q.Get("nonce") != expectedNonce || q.Get("state") != strings.Repeat("s", 43) {
-		t.Fatalf("unexpected authorization URL: %s", start.AuthorizationURL)
+		t.Fatalf("Неожиданный адрес авторизации: %s", start.AuthorizationURL)
 	}
 	auth, err := c.CompleteBrowserAuth(context.Background(), authconnector.BrowserAuthCallback{RedirectURI: "https://launcher.example.test/callback", Code: "code-1", State: strings.Repeat("s", 43), Nonce: expectedNonce, PKCEVerifier: verifier})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if auth.Identity.Subject != "user-42" || auth.Identity.Email != "player@example.test" || auth.Identity.DisplayName != "OIDC Player" || auth.ProviderToken != "refresh-1" {
-		t.Fatalf("unexpected auth: %+v", auth)
+		t.Fatalf("Неожиданный результат аутентификации: %+v", auth)
 	}
 	if len(auth.Identity.Roles) != 1 || auth.Identity.Roles[0] != "member" {
 		t.Fatalf("userinfo claims not merged: %+v", auth.Identity)
@@ -173,6 +173,6 @@ func TestJWTRejectsAudienceAndIssuerMismatch(t *testing.T) {
 	base["iss"] = "https://evil.example"
 	raw = signRS256Test(t, key, "k", base)
 	if _, err := verifyIDToken(raw, keys, cfg, "n", true); err == nil {
-		t.Fatal("expected issuer mismatch")
+		t.Fatal("Несовпадение ожидаемого издателя")
 	}
 }

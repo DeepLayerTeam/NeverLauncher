@@ -40,6 +40,6 @@ func TestOfficialProviderPayloadValidation02611(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/official-provider", strings.NewReader(body))
 	_, err := readOfficialProviderUpdate02611(httptest.NewRecorder(), req)
 	if err == nil {
-		t.Fatal("unsupported issuer accepted")
+		t.Fatal("Неподдерживаемый издатель ошибочно принят")
 	}
 }

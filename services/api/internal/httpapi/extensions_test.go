@@ -64,6 +64,6 @@ func TestExtensionsCoreHTTP0201(t *testing.T) {
 	res = httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusConflict {
-		t.Fatalf("immutable version mutation must conflict: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Изменение неизменяемой версии должно вызывать конфликт: %d %s", res.Code, res.Body.String())
 	}
 }

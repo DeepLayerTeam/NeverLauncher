@@ -25,7 +25,7 @@ func TestNetworkCapacityValidation0288(t *testing.T) {
 			continue
 		}
 		if (value == nil) != tc.nilValue {
-			t.Errorf("%q: nil mismatch", tc.in)
+			t.Errorf("Для %q обнаружено несовпадение с nil", tc.in)
 			continue
 		}
 		if value != nil && *value != tc.value {

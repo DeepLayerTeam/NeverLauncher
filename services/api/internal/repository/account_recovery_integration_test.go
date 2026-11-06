@@ -79,7 +79,7 @@ func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := repo.ReplaceTrustedDeviceKey(ctx, userID, oldID, sessionID, "recover", "premature-recover", next, time.Now().UTC()); !errors.Is(err, ErrConflict) {
-		t.Fatalf("pre-revocation authentication accepted: %v", err)
+		t.Fatalf("Аутентификация до отзыва ошибочно принята: %v", err)
 	}
 	if _, err := repo.db.ExecContext(ctx, `UPDATE auth_sessions SET auth_time=now() WHERE id=$1`, sessionID); err != nil {
 		t.Fatal(err)

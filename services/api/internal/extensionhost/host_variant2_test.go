@@ -207,7 +207,7 @@ func TestSanitizedEnvironmentNeverForwardsSecrets0205(t *testing.T) {
 		t.Fatal("backend secrets leaked to extension environment")
 	}
 	if !strings.Contains(joined, "LAUNCHER_EXTENSION_HOST_TOKEN=token") {
-		t.Fatal("host token missing")
+		t.Fatal("Отсутствует токен хоста")
 	}
 }
 
@@ -233,7 +233,7 @@ func TestEventSubscriptionPermissionBoundary0206(t *testing.T) {
 	s := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
 	st := &processState{key: Key{ExtensionID: manifest.ID, Scope: "global"}, install: model.ExtensionInstall{ExtensionID: manifest.ID, Scope: "global", CurrentVersion: "1.0.0"}, manifest: manifest}
 	if err := s.validateEventPermission0206(st, "project.saved", model.ExtensionEventModeAsync); err != nil {
-		t.Fatalf("async permission rejected: %v", err)
+		t.Fatalf("Разрешение на асинхронную операцию ошибочно отклонено: %v", err)
 	}
 	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err == nil {
 		t.Fatal("sync subscription accepted without granted events:sync")

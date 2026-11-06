@@ -221,7 +221,7 @@ func TestCanonicalOpenAPICompatibilityCheck(t *testing.T) {
 	}
 	openapi := filepath.Join(root, "schemas", "openapi.yaml")
 	if err := handleAPI([]string{"compatibility-check", "--openapi", openapi}); err != nil {
-		t.Fatalf("canonical compatibility-check failed: %v", err)
+		t.Fatalf("Каноническая проверка совместимости завершилась ошибкой: %v", err)
 	}
 }
 

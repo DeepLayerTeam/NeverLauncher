@@ -124,7 +124,7 @@ func TestReleaseDistribution04511RejectsForgedBindings(t *testing.T) {
 				t.Fatal(e)
 			}
 			if e = verifyDistributionSupplyChain04511(dir, ver); e == nil {
-				t.Fatalf("tampered %s accepted", name)
+				t.Fatalf("Подменённый объект %s ошибочно принят", name)
 			}
 			if e = os.WriteFile(p, old, 0600); e != nil {
 				t.Fatal(e)

@@ -2518,7 +2518,7 @@ export function MigrationCenter0331({
             <p>SHA-256 инвентаря файлов: <code>{compatibility.filesSha256}</code></p>
           )}
           {compatibility.serverJarSha256 && (
-            <p>SHA-256 LaunchServer.jar: <code>{compatibility.serverJarSha256}</code> (требует внешнего подтверждения происхождения)</p>
+            <p>SHA-256 файла LaunchServer.jar: <code>{compatibility.serverJarSha256}</code> (требует внешнего подтверждения происхождения)</p>
           )}
           {compatibility.categories && (
             <p>Разделы: {Object.entries(compatibility.categories).map(([name, count]) => `${name}: ${count}`).join("; ")}. Наличие файла не означает успешный перенос.</p>

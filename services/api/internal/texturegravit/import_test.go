@@ -88,7 +88,7 @@ func TestSourceHashAndCorruption02510(t *testing.T) {
 		t.Fatal("digest mismatch accepted")
 	}
 	if err := VerifySourceHash("garbage", b); err == nil {
-		t.Fatal("non hash accepted")
+		t.Fatal("Значение, не являющееся хешем, ошибочно принято")
 	}
 }
 func createFixture02510(t *testing.T) (Runner, []SourceRow, *databaseFake) {
@@ -122,7 +122,7 @@ func TestEndToEndImportAndIdempotency02510(t *testing.T) {
 		t.Fatal(e)
 	}
 	if report.Counts["imported"] != 1 || db.stage != 1 || db.upload != 1 || len(report.Rows[0].NormalizedDigest) != 64 {
-		t.Fatalf("unexpected import: %+v", report)
+		t.Fatalf("Неожиданный результат импорта: %+v", report)
 	}
 	second, e := r.Run(context.Background(), rows)
 	if e != nil {

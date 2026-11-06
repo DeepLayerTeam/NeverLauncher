@@ -171,6 +171,6 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 		t.Fatal(err)
 	}
 	if rollback.Data.TargetVersion != "immutable-v4-test" || rollback.Data.RollbackVersion == "" || rollback.Data.RollbackVersion == rollback.Data.TargetVersion || rollback.Data.Status != "rolled-back-as-new-validated-immutable-release" {
-		t.Fatalf("unexpected immutable rollback response: %+v", rollback.Data)
+		t.Fatalf("Неожиданный ответ при откате неизменяемого релиза: %+v", rollback.Data)
 	}
 }

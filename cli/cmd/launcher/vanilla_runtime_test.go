@@ -168,7 +168,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	}
 	for _, rel := range required {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-			t.Fatalf("missing %s: %v", rel, err)
+			t.Fatalf("Не найден файл или компонент %s: %v", rel, err)
 		}
 	}
 

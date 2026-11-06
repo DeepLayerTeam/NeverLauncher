@@ -84,7 +84,7 @@ func TestSQLiteHTTPDevicesJobsExtensionsRestart0373(t *testing.T) {
 	defer db.Close()
 	item, err := db.GetTrustedDevice("user-1", "device-1")
 	if err != nil || item.Status != "revoked" {
-		t.Fatalf("revocation lost: %+v %v", item, err)
+		t.Fatalf("Данные об отзыве потеряны: %+v %v", item, err)
 	}
 	// Некорректные имена компонентов не должны читать или изменять произвольные
 	// таблицы SQLite.

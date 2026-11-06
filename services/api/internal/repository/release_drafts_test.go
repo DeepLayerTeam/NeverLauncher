@@ -35,7 +35,7 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 		t.Fatalf("update: %+v %v", stored, err)
 	}
 	if _, err = r.UpdateReleaseDraft(ctx, update); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale write: %v", err)
+		t.Fatalf("Обнаружена запись устаревших данных: %v", err)
 	}
 	hijack := stored
 	hijack.OwnerID = "owner-b"

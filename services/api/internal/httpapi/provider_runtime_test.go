@@ -98,7 +98,7 @@ func TestProviderRuntimeParity0296AdminPasswordCredentialAndMFA(t *testing.T) {
 		t.Fatalf("provider credential not persisted correctly: err=%v", err)
 	}
 	if rec, found := api.State.AuthSessions.get(body.SessionID, "admin"); !found || rec.AuthStrength != "single-factor" {
-		t.Fatalf("bad session assurance: %+v %v", rec, found)
+		t.Fatalf("Некорректный уровень доверия к сессии: %+v %v", rec, found)
 	}
 }
 

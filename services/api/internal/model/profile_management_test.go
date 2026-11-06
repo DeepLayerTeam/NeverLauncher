@@ -39,7 +39,7 @@ func TestProfilePortableRoundtripAndIsolation0225(t *testing.T) {
 	}
 	decoded.Snapshot.Spec.Loader = "forge"
 	if _, err := ImportProfile0225(decoded, "other-project", "tampered", "Tampered"); err == nil {
-		t.Fatal("tampered digest accepted")
+		t.Fatal("Подменённый хеш ошибочно принят")
 	}
 	decoded.Snapshot = source
 	decoded.Format = "unknown"

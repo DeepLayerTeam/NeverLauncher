@@ -74,7 +74,7 @@ func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
 	}
 	authURL, _ := url.Parse(begin.Data.AuthorizationURL)
 	if authURL.Query().Get("code_challenge_method") != "S256" {
-		t.Fatalf("PKCE S256 missing: %s", begin.Data.AuthorizationURL)
+		t.Fatalf("Отсутствует подтверждение PKCE S256: %s", begin.Data.AuthorizationURL)
 	}
 	completeBody, _ := json.Marshal(map[string]any{"code": "fixture-code", "state": begin.Data.State, "transaction": begin.Data.Transaction})
 	completeReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oidc/oidc-fixture/complete", strings.NewReader(string(completeBody)))
@@ -107,6 +107,6 @@ func TestOIDCTransactionTamperIsRejected(t *testing.T) {
 	raw[len(raw)-1] ^= 0x01
 	tampered := base64.RawURLEncoding.EncodeToString(raw)
 	if _, err := s.openOIDCTransaction115(tampered); err == nil {
-		t.Fatal("tampered transaction was accepted")
+		t.Fatal("Подменённая транзакция ошибочно принята")
 	}
 }

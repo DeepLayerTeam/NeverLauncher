@@ -59,7 +59,7 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 		}
 		var x rehearsalReport03310
 		if e := json.NewDecoder(r.Body).Decode(&x); e != nil || len(x.Probes) != 7 || x.LiveSession == nil || x.Ready || x.CutoverAllowed {
-			t.Errorf("bad payload %v %+v", e, x)
+			t.Errorf("Некорректная полезная нагрузка: %v %+v", e, x)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"data":{"ready":false,"cutoverAllowed":false}}`))
@@ -172,9 +172,9 @@ func TestRehearsalLiveNoSyntheticSession0447(t *testing.T) {
 	cfgBytes, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: "bin/client", PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: "example.com:25575", RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
 	write("live-session.json", string(cfgBytes), 0600)
 	if _, _, _, err := rehearsalLaunchLive0447(context.Background(), dir, src); err == nil {
-		t.Fatal("remote RCON accepted")
+		t.Fatal("Удалённый доступ через RCON ошибочно разрешён")
 	}
 	if rehearsalRCONHasPlayer0447("Eve ("+uuid+")", "Steve", uuid) {
-		t.Fatal("UUID of wrong player accepted")
+		t.Fatal("UUID другого игрока ошибочно принят")
 	}
 }

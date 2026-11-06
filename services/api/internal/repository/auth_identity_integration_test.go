@@ -81,7 +81,7 @@ func TestCanonicalIssuerPostgres0291(t *testing.T) {
 	}
 	profile.UUID = "0d011234-aaaa-4bbb-8ccc-123400002912"
 	if _, err := b.SaveMinecraftProfile(profile); !errors.Is(err, ErrConflict) {
-		t.Fatalf("unexpected UUID mutation: %v", err)
+		t.Fatalf("Неожиданное изменение UUID: %v", err)
 	}
 	if _, err := b.db.ExecContext(ctx, `UPDATE minecraft_profiles SET uuid=$1 WHERE user_id=$2`, profile.UUID, users[0]); err == nil {
 		t.Fatal("direct SQL UUID mutation bypassed trigger")

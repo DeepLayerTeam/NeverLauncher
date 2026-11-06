@@ -28,10 +28,10 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
-		t.Fatalf("unexpected status: %+v", st)
+		t.Fatalf("Неожиданный статус: %+v", st)
 	}
 	if st.Current != "0116_server_bound_guard_sessions_0507" {
-		t.Fatalf("unexpected current migration %q", st.Current)
+		t.Fatalf("Неожиданная текущая миграция %q", st.Current)
 	}
 }
 
@@ -739,7 +739,7 @@ func TestComponentTopologyDatabaseGuard0242(t *testing.T) {
 	}
 	for _, term := range []string{"('1.0','2.0')", "published release cannot be rewritten", "release profileSnapshot is pinned", "release snapshot not found in immutable history", "invalid v3 component catalog snapshot"} {
 		if !strings.Contains(string(b), term) {
-			t.Fatalf("missing DB guard %s", term)
+			t.Fatalf("Отсутствует защита базы данных %s", term)
 		}
 	}
 }

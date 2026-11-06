@@ -67,7 +67,7 @@ func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 		case item.err == nil:
 			success++
 			if item.rev.Revision != initial.Revision+1 {
-				t.Errorf("unexpected revision: %+v", item.rev)
+				t.Errorf("Неожиданная ревизия: %+v", item.rev)
 			}
 		case errors.Is(item.err, ErrConflict):
 			conflict++

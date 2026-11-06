@@ -63,7 +63,7 @@ func TestSignedTextureProtocol0256(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(meta.SkinDomains) != 2 || meta.SkinDomains[0] != "api.example.test" {
-		t.Fatalf("unexpected allowlist: %v", meta.SkinDomains)
+		t.Fatalf("Неожиданный список разрешённых значений: %v", meta.SkinDomains)
 	}
 	block, _ := pem.Decode([]byte(meta.SignaturePublickey))
 	if block == nil {

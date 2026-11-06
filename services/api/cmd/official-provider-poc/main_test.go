@@ -174,7 +174,7 @@ func TestReportExclusivePrivateAndAtomicEnoughForProof(t *testing.T) {
 		t.Fatal(err)
 	}
 	if parsed.Schema != "launcher.official-provider-poc.v1" {
-		t.Fatal("wrong report schema")
+		t.Fatal("Неверная схема отчёта")
 	}
 }
 
@@ -188,7 +188,7 @@ func TestSessionserviceFailureAlwaysBlocksPOC(t *testing.T) {
 	}
 	last := r.Stages[len(r.Stages)-1]
 	if last.Name != "sessionserver_join_has_joined" || last.ErrorCode != "online_mode_identity_mismatch" {
-		t.Fatalf("unexpected stage %+v", last)
+		t.Fatalf("Неожиданный этап: %+v", last)
 	}
 }
 
@@ -201,6 +201,6 @@ func TestOAuthCallbackRejectsDuplicateStateWithoutConsumingGrant(t *testing.T) {
 		t.Fatalf("later legitimate callback rejected: %+v", r)
 	}
 	if status := <-p.duplicateCallback; status != http.StatusBadRequest {
-		t.Fatalf("duplicate state accepted: %d", status)
+		t.Fatalf("Повторяющееся состояние ошибочно принято: %d", status)
 	}
 }

@@ -536,7 +536,7 @@ export function AdminExtensions({
               current.host.state === "failed"))
         )
           throw new Error(
-            "Host не подтвердил новое состояние; проверьте журнал, прежде чем повторять команду",
+            "Хост не подтвердил новое состояние; проверьте журнал, прежде чем повторять команду",
           );
       }
       const inventory = await api<ManagerData>(
@@ -545,7 +545,7 @@ export function AdminExtensions({
         token,
       );
       if (!Array.isArray(inventory.items))
-        throw new Error("Не удалось обновить состояние Manager");
+        throw new Error("Не удалось обновить состояние менеджера расширений");
       setManager(inventory);
       setOperationResult({ target: id, action, output });
     } catch (e) {
@@ -717,7 +717,7 @@ export function AdminExtensions({
     <section className="adminExtensionsWorkspace">
       <div className="registryHeading">
         <div>
-          <h2>Расширения Admin</h2>
+          <h2>Расширения панели управления</h2>
           <p className="muted">
             UI extensions работают только в sandboxed iframe. Скрипт extension
             не загружается в основной React bundle; данные доступны только через

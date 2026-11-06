@@ -39,7 +39,7 @@ func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	raw, _ := base64.RawURLEncoding.DecodeString(parts[0])
 	var header authTokenHeader118
 	if json.Unmarshal(raw, &header) != nil || header.Kid != "old" || header.Alg != "HS256" {
-		t.Fatalf("bad JWT header: %s", raw)
+		t.Fatalf("Некорректный заголовок JWT: %s", raw)
 	}
 	claims, err := s.verifyAdminToken(token)
 	if err != nil || claims.Iss != "https://issuer.example.test" || claims.Aud != "launcher-api" || claims.JTI == "" {

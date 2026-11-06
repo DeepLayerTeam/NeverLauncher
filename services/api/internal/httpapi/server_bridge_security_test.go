@@ -38,7 +38,7 @@ func TestServerBridgeProtocolV3NodeCanonicalRejectsTamper01912(t *testing.T) {
 	canonical := serverBridgeNodeRequestCanonical01912(req, body, "node-01912", fp, "1770000000", "nonce-01912", strings.Repeat("a", 64), serverBridgeExpectedSecurityCapabilityDigest01912())
 	sig := ed25519.Sign(priv, []byte(canonical))
 	if !ed25519.Verify(pub, []byte(canonical), sig) {
-		t.Fatal("valid node signature rejected")
+		t.Fatal("Корректная подпись узла ошибочно отклонена")
 	}
 
 	for name, mutated := range map[string]string{
@@ -76,12 +76,12 @@ func TestServerBridgeProtocolV3EventRejectsTamper01912(t *testing.T) {
 	tampered := raw
 	tampered.CapabilityDigest = strings.Repeat("0", 64)
 	if _, err := validateBridgeEvent0194("paper-01912", runtime, fp, tampered, pub, time.Now().UTC(), true); err == nil {
-		t.Fatal("tampered v3 event capability binding accepted")
+		t.Fatal("Подменённая привязка возможностей события v3 ошибочно принята")
 	}
 	tampered = raw
 	tampered.RuntimeID = strings.Repeat("d", 64)
 	if _, err := validateBridgeEvent0194("paper-01912", runtime, fp, tampered, pub, time.Now().UTC(), true); err == nil {
-		t.Fatal("tampered v3 event runtime binding accepted")
+		t.Fatal("Подменённая привязка Runtime события v3 ошибочно принята")
 	}
 }
 
@@ -113,7 +113,7 @@ func TestServerBridge3AllowlistRejectsTamperedBridge01912(t *testing.T) {
 		t.Fatalf("certified bridge rejected: %+v", decision)
 	}
 	if decision := srv.validateBridgePluginMeasurement0135(server, "paper", "0.19.12", strings.Repeat("f", 64)); decision.Allowed || decision.Reason != "bridge_integrity_hash_rejected" {
-		t.Fatalf("tampered bridge accepted: %+v", decision)
+		t.Fatalf("Подменённая конфигурация моста ошибочно принята: %+v", decision)
 	}
 }
 

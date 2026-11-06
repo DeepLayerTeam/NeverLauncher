@@ -16,7 +16,7 @@ func TestPrivateJSONRejectsUnsafeFiles(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if e := readPrivateJSON(p, &v); e == nil {
-		t.Fatal("public JSON input accepted")
+		t.Fatal("Публичный JSON-ввод ошибочно принят")
 	}
 	if e := os.Chmod(p, 0600); e != nil {
 		t.Fatal(e)
@@ -35,6 +35,6 @@ func TestPrivateJSONRejectsUnsafeFiles(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := readPrivateJSON(link, &v); e == nil {
-		t.Fatal("symlink JSON input accepted")
+		t.Fatal("JSON-ввод через символьную ссылку ошибочно принят")
 	}
 }

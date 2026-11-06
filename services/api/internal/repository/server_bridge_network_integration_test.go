@@ -80,12 +80,12 @@ func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 		if s.NodeID == target {
 			found = true
 			if s.Routable || s.Reason != "operator-capacity-zero" || s.OperatorCapacityMax == nil || *s.OperatorCapacityMax != 0 {
-				t.Fatalf("wrong network state: %+v", s)
+				t.Fatalf("Неверное состояние сети: %+v", s)
 			}
 		}
 	}
 	if !found {
-		t.Fatal("missing target network state")
+		t.Fatal("Отсутствует состояние целевой сети")
 	}
 	edges, err := r.ListServerBridgeTopology(ctx)
 	if err != nil {
@@ -96,12 +96,12 @@ func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 		if e.SourceNodeID == source && e.TargetNodeID == target {
 			edgeFound = true
 			if e.Status != "operator-capacity-full" {
-				t.Fatalf("wrong topology status: %s", e.Status)
+				t.Fatalf("Неверный статус топологии: %s", e.Status)
 			}
 		}
 	}
 	if !edgeFound {
-		t.Fatal("topology edge missing")
+		t.Fatal("Отсутствует связь в топологии")
 	}
 	five := 5
 	rev, err = r.SetServerBridgeNetworkCapacity(ctx, target, project, runtime, 1, 1, &five, "integration-test", now)

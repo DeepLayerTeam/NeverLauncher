@@ -144,7 +144,7 @@ func TestSingleOwnerAndChannel(t *testing.T) {
 	ctx := context.Background()
 	if second, e := Open(ctx, path); e == nil {
 		_ = second.Close()
-		t.Fatal("second owner accepted")
+		t.Fatal("Второй владелец ошибочно принят")
 	}
 	p := serverbridgeha.ChannelPresence{ReplicaID: "api-1", ServerID: "server", RuntimeID: "runtime", ChannelID: "channel", ResumeAfter: 17, BackendAddress: "localhost:8080"}
 	if e := c.TouchChannel(ctx, p, 10*time.Second); e != nil {
@@ -164,7 +164,7 @@ func TestFailClosedParameters(t *testing.T) {
 	c := openTestCoordinator(t, path)
 	ctx := context.Background()
 	if _, e := c.Allow(ctx, "a", 0, time.Minute); !errors.Is(e, ErrInvalid) {
-		t.Fatalf("invalid limit: %v", e)
+		t.Fatalf("Недопустимое ограничение: %v", e)
 	}
 	if _, e := c.AcquireCommandLease(ctx, "a", "b", "c", "", time.Second); !errors.Is(e, ErrInvalid) {
 		t.Fatalf("empty token: %v", e)

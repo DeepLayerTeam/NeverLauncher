@@ -201,7 +201,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		t.Fatalf("successful GC left blob row: %v %v", exists, err)
 	}
 	if err := r.DeleteTextureWithLease02512(ctx, gc, func(context.Context, string) error { called++; return nil }); err == nil || called != 2 {
-		t.Fatal("replay accepted")
+		t.Fatal("Повторное воспроизведение ошибочно разрешено")
 	}
 
 }

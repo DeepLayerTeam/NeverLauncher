@@ -45,7 +45,7 @@ func TestCompareRefusesPostSwitchWrites(t *testing.T) {
 	p, r = fixture()
 	p.Current.Players = append(p.Current.Players, p.Current.Players[0])
 	if _, e = Compare(p, r, r.RunID); e == nil {
-		t.Fatal("duplicate accepted")
+		t.Fatal("Дубликат ошибочно принят")
 	}
 	p, r = fixture()
 	p.EvidenceReference = "different/evidence"

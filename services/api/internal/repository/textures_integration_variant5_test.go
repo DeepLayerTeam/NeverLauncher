@@ -72,7 +72,7 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first.Revision != 1 || !first.Active {
-		t.Fatalf("bad first upload: %+v", first)
+		t.Fatalf("Ошибка первой загрузки: %+v", first)
 	}
 	library, err := r.ListSavedTextures0255(ctx, alice, "skin")
 	if err != nil || len(library) != 1 || library[0].Digest != digest {
@@ -100,7 +100,7 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 		t.Fatalf("active item deletion: %v", err)
 	}
 	if _, err = r.SelectSavedTexture0255(ctx, alice, "skin", digest, 0, "slim", "public"); !errors.Is(err, ErrTextureRevisionConflict0251) {
-		t.Fatalf("missing CAS: %v", err)
+		t.Fatalf("Отсутствует механизм CAS: %v", err)
 	}
 	selected, err := r.SelectSavedTexture0255(ctx, alice, "skin", digest, 1, "slim", "private")
 	if err != nil || selected.Revision != 2 || selected.Model != "slim" {
@@ -138,10 +138,10 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	}
 	history, err := r.ListTextureRevisions0251(ctx, alice, "skin")
 	if err != nil || len(history) != 5 {
-		t.Fatalf("history lost: %d %v", len(history), err)
+		t.Fatalf("История потеряна: %d %v", len(history), err)
 	}
 	if history[0].Event != "delete" || history[1].Event != "select" || history[2].Event != "reset" {
-		t.Fatalf("unexpected event order: %+v", history)
+		t.Fatalf("Неожиданный порядок событий: %+v", history)
 	}
 	var owners int
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blob_owners WHERE user_id='alice'`).Scan(&owners); err != nil || owners != 0 {
@@ -189,7 +189,7 @@ func TestTextureServiceValidation0255(t *testing.T) {
 		}
 	}
 	if !validTextureDigest0255("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef") {
-		t.Fatal("valid sha256 rejected")
+		t.Fatal("Корректный SHA-256 ошибочно отклонён")
 	}
 	if validTextureKind0255("official") || validTextureKind0255("SKIN") {
 		t.Fatal("invalid texture kind accepted")

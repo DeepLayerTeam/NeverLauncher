@@ -87,7 +87,7 @@ func TestInventoryExportRoundtrip0333(t *testing.T) {
 		}
 		if f.Name == ManifestPath {
 			if !bytes.Contains(v, []byte(inv.SourceSHA256)) {
-				t.Fatal("manifest source hash missing")
+				t.Fatal("Отсутствует хеш источника манифеста")
 			}
 			continue
 		}
@@ -130,7 +130,7 @@ func TestInventoryDetectsCRCAndMalformedConfig0333(t *testing.T) {
 	b := fixture0333(t, map[string]string{"LaunchServer.json": `{"auth":{"a":{},"a":{}}}`})
 	h := sha256.Sum256(b)
 	if _, e := Inspect(context.Background(), bytes.NewReader(b), int64(len(b)), hex.EncodeToString(h[:])); e == nil {
-		t.Fatal("duplicate keys accepted")
+		t.Fatal("Повторяющиеся ключи ошибочно приняты")
 	}
 	good := fixture0333(t, map[string]string{"assets/file": "abcdefg0123456789"})
 	damaged := append([]byte{}, good...)
@@ -197,7 +197,7 @@ func TestSourceDigestAndWrapperBinary0441(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bytes.Contains(b, []byte("NO_REPORT_LEAK")) {
-		t.Fatal("module secret leaked")
+		t.Fatal("Произошла утечка секрета модуля")
 	}
 	if _, err := Inspect(context.Background(), bytes.NewReader(source), int64(len(source)), strings.Repeat("a", 64)); err == nil {
 		t.Fatal("inventory accepted caller-forged source SHA")

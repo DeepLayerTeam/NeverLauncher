@@ -56,7 +56,7 @@ func TestUnsupportedMacOSResourcePolicyRefusedBeforeExecution04311(t *testing.T)
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_HELPER", "")
 	_, err := Prepare(Options{Policy: Policy{MaxMemoryBytes: 256 << 20, MaxProcesses: 4, MaxCPUPercent: 50, TimeoutSeconds: 60}, HostHandler: http.NotFoundHandler(), HostURL: "http://127.0.0.1:3000"})
 	if err == nil {
-		t.Fatal("unsupported multi-process macOS sandbox accepted")
+		t.Fatal("Неподдерживаемая многопроцессная песочница macOS ошибочно принята")
 	}
 	if !strings.Contains(err.Error(), "helper") { // Отсутствие вспомогательного процесса само по себе приводит к отказу по умолчанию.
 		t.Fatalf("unexpected error for unsigned isolated mode: %v", err)

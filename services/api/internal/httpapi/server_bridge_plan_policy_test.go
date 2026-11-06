@@ -48,6 +48,6 @@ func TestVerifiedPlanHardwareDeviceSignatureAndBinding02412(t *testing.T) {
 	wrong = e
 	wrong.GuardAttestationSHA256 = strings.Repeat("0", 64)
 	if err := verifyDeviceSignature0123(decoded, planEvidencePayload02412(wrong), e.Signature); err == nil {
-		t.Fatal("Guard binding changed")
+		t.Fatal("Привязка Guard неожиданно изменилась")
 	}
 }

@@ -37,7 +37,7 @@ def die(message: str) -> None:
 def canonical_sha256(value: str) -> str:
     value = value.strip().lower()
     if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-        die(f"invalid SHA-256: {value!r}")
+        die(f"некорректный SHA-256: {value!r}")
     return value
 
 
@@ -212,7 +212,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         if cpu != expected:
             die(f"bin/java: тип процессора Mach-O=0x{cpu:08x}, expected 0x{expected:08x}")
         return
-    die(f"unsupported platform {platform}")
+    die(f"неподдерживаемая платформа {platform}")
 
 
 def inspect_zip(path: Path, platform: str, arch: str) -> str:

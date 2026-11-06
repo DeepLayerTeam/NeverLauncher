@@ -79,7 +79,7 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 		var response map[string]any
 		if res.StatusCode == 200 {
 			if e = json.Unmarshal(body, &response); e != nil {
-				t.Fatalf("invalid JSON: %s %v", body, e)
+				t.Fatalf("Некорректный JSON: %s %v", body, e)
 			}
 		}
 		return res.StatusCode, response
@@ -111,7 +111,7 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 				}
 			}
 			if value["projectId"] != "demo-project" {
-				t.Fatalf("wrong job project: %v", value)
+				t.Fatalf("Задание связано с неверным проектом: %v", value)
 			}
 		}
 	}

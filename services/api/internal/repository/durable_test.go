@@ -123,7 +123,7 @@ func TestDurablePublishCommitAndOutbox0213(t *testing.T) {
 		t.Fatal(err)
 	}
 	if published.Status != "published" {
-		t.Fatalf("unexpected release status %q", published.Status)
+		t.Fatalf("Неожиданный статус релиза %q", published.Status)
 	}
 	stored, err := r.GetDurableJob(ctx, job.ID)
 	if err != nil || stored.Status != model.DurableJobStatusSucceeded {

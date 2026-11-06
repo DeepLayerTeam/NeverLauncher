@@ -108,7 +108,7 @@ func TestJavaRuntimeProbe0305(t *testing.T) {
 	}
 	write("11.0.20")
 	if _, err := ProbeRuntime(context.Background(), java, 17); err == nil {
-		t.Fatal("Java 11 accepted")
+		t.Fatal("Неподдерживаемая Java 11 ошибочно принята")
 	}
 	if _, err := ProbeRuntime(context.Background(), "relative-java", 17); err == nil {
 		t.Fatal("relative binary path accepted")

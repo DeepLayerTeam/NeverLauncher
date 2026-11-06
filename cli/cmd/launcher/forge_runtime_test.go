@@ -98,7 +98,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				"libraries/" + generatedRel,
 			} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-					t.Fatalf("missing %s: %v", rel, err)
+					t.Fatalf("Не найден файл или компонент %s: %v", rel, err)
 				}
 			}
 			gotGenerated, err := os.ReadFile(filepath.Join(dir, "libraries", filepath.FromSlash(generatedRel)))
@@ -151,10 +151,10 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, LoaderCacheOnly: true, HTTPClient: server.Client(),
 			})
 			if err != nil {
-				t.Fatalf("cache-only installer/processor recovery failed: %v", err)
+				t.Fatalf("Не удалось восстановить установщик или обработчик из кеша: %v", err)
 			}
 			if !third.ResolutionPinned || !third.LoaderCacheOnly || !third.InstallerCacheHit || !third.UpstreamRecoveryUsed || third.ProcessorRan != 0 || third.ProcessorSkipped != 1 || third.ProcessorRecovered != 1 || !compatibilitySHA256RE.MatchString(third.ProcessorJournalSHA256) {
-				t.Fatalf("invalid installer/processor recovery evidence: %+v", third)
+				t.Fatalf("Некорректные доказательства восстановления установщика или обработчика: %+v", third)
 			}
 
 			// Восстановление также должно учитывать прерванный процессор, результат которого нельзя
@@ -404,7 +404,7 @@ func TestForgeInstallV1ProcessorTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.HasSuffix(filepath.ToSlash(artifact), "libraries/net/minecraftforge/forge/1.20.1-47.4.23/forge-1.20.1-47.4.23-client.jar") {
-		t.Fatalf("InstallV1 artifact token mismatch: %q", artifact)
+		t.Fatalf("Несовпадение токена артефакта InstallV1: %q", artifact)
 	}
 	if _, err := resolveProcessorToken(pc, "{UNKNOWN}"); err == nil {
 		t.Fatal("unknown processor token accepted")
@@ -487,7 +487,7 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.InstallMode != "legacy-v1-universal" || result.MainClass != "net.minecraft.launchwrapper.Launch" || result.ProcessorCount != 0 {
-		t.Fatalf("unexpected legacy install result: %+v", result)
+		t.Fatalf("Неожиданный результат установки устаревшей версии: %+v", result)
 	}
 	if result.LegacyUniversalSHA1 != universalSHA1 || result.LegacyUniversalSHA256 == "" {
 		t.Fatalf("legacy universal evidence mismatch: %+v", result)
@@ -502,7 +502,7 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		".launcher/forge-install.json",
 	} {
 		if _, err := os.Stat(filepath.Join(clientDir, filepath.FromSlash(rel))); err != nil {
-			t.Fatalf("missing legacy Forge artifact %s: %v", rel, err)
+			t.Fatalf("Отсутствует артефакт старой версии Forge %s: %v", rel, err)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(clientDir, "libraries/com/example/serverlib/1.0/serverlib-1.0.jar")); !os.IsNotExist(err) {
@@ -576,10 +576,10 @@ func TestForgeLegacy1710V1LaunchWrapperInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.InstallMode != "legacy-v1-universal" || result.MainClass != "net.minecraft.launchwrapper.Launch" {
-		t.Fatalf("unexpected Forge 1.7.10 result: %+v", result)
+		t.Fatalf("Неожиданный результат для Forge 1.7.10: %+v", result)
 	}
 	if result.LegacyTweaker != "cpw.mods.fml.common.launcher.FMLTweaker" || result.LegacyBaseVersion != "1.7.10" || !result.LegacyProfileNormalized {
-		t.Fatalf("Forge 1.7.10 legacy evidence mismatch: %+v", result)
+		t.Fatalf("Несоответствие исторических доказательств для Forge 1.7.10: %+v", result)
 	}
 	profileOnDisk, err := os.ReadFile(filepath.Join(clientDir, filepath.FromSlash(result.ProfilePath)))
 	if err != nil {

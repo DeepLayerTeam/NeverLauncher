@@ -310,7 +310,7 @@ func TestAuthlibClassloader0279ModuleArgumentsAndVerifiedHashes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(classpath) != 0 || len(flags) != 4 || flags[0] != "--module-path" || flags[2] != "--add-opens" || flags[3] != "java.base/java.lang=ALL-UNNAMED" {
-		t.Fatalf("wrong JVM flags: %v %v", flags, classpath)
+		t.Fatalf("Неверные флаги JVM: %v %v", flags, classpath)
 	}
 	if !strings.Contains(flags[1], "example.jar") {
 		t.Fatalf("modulepath missing: %v", flags)

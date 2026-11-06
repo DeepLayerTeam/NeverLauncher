@@ -101,6 +101,6 @@ func TestMinecraftUUIDImmutableMemory0291(t *testing.T) {
 	}
 	saved, err := r.GetMinecraftProfileByUser("admin")
 	if err != nil || saved.UUID != uuid {
-		t.Fatalf("game UUID changed: %+v, %v", saved, err)
+		t.Fatalf("Игровой UUID неожиданно изменился: %+v, %v", saved, err)
 	}
 }

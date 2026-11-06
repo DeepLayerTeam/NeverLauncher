@@ -61,7 +61,7 @@ func TestOfficialBridgeProfileRequiresLinkedProviderIdentity0397(t *testing.T) {
 				t.Fatalf("verified %v expected success=%t", err, tc.success)
 			}
 			if tc.success && (got.ID != uuid || got.Name != account.Name) {
-				t.Fatalf("wrong profile: %+v", got)
+				t.Fatalf("Неверный профиль: %+v", got)
 			}
 		})
 	}
@@ -83,7 +83,7 @@ func TestOfficialBridgeProofIsNonSecretAndBound0397(t *testing.T) {
 		t.Fatal(err)
 	}
 	if proof.UserID != "user" || proof.NeverSessionID != "auth-session" || proof.ProfileUUID != profile.ID || proof.BindingEpoch != 7 {
-		t.Fatal("wrong proof binding")
+		t.Fatal("Неверная привязка доказательства")
 	}
 	if proof.ExpiresAt.Before(now.Add(11*time.Hour)) || proof.ExpiresAt.After(now.Add(13*time.Hour)) {
 		t.Fatal("proxy handoff verification window incorrect")

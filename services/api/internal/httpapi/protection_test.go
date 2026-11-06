@@ -82,7 +82,7 @@ func TestProtectionBanUnbanLiveHTTP0298(t *testing.T) {
 	}
 	refused := request0211(t, handler, http.MethodPost, "/api/v1/admin/login", "", `{"email":"ban0298@example.test","password":"safe-password-0298"}`)
 	if refused.Code != http.StatusForbidden {
-		t.Fatalf("ban did not block new login: %d %s", refused.Code, refused.Body.String())
+		t.Fatalf("Блокировка не предотвратила новый вход: %d %s", refused.Code, refused.Body.String())
 	}
 	lifted := request0211(t, handler, http.MethodPost, "/api/v1/admin/protection/users/"+account.ID+"/unban", admin, `{}`)
 	if lifted.Code != http.StatusOK {

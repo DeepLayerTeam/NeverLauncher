@@ -61,7 +61,7 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 	conflict := base
 	conflict.ID = "workspace-conflict-" + project
 	if _, _, err := b.CreateGravitProfileWorkspace02210(ctx, profile, conflict); !errors.Is(err, ErrConflict) {
-		t.Fatalf("duplicate import accepted: %v", err)
+		t.Fatalf("Повторный импорт ошибочно принят: %v", err)
 	}
 	if _, err := a.GetBuildWorkspace(ctx, conflict.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("partial import: %v", err)

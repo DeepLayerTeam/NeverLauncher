@@ -27,15 +27,15 @@ func TestOfficialTicketsBoundAndTamperProof0257(t *testing.T) {
 	raw, _ := base64.RawURLEncoding.DecodeString(ticket)
 	raw[len(raw)-1] ^= 0x80
 	if _, err = officialOpen0257(secret, base64.RawURLEncoding.EncodeToString(raw)); err == nil {
-		t.Fatal("modified ticket accepted")
+		t.Fatal("Изменённый тикет ошибочно принят")
 	}
 	if _, err = officialOpen0257("a-different-long-server-secret-012345", ticket); err == nil {
-		t.Fatal("different server key accepted")
+		t.Fatal("Ключ другого сервера ошибочно принят")
 	}
 	st.Expires = time.Now().Add(-time.Second).Unix()
 	expired, _ := officialSeal0257(secret, st)
 	if _, err = officialOpen0257(secret, expired); err == nil {
-		t.Fatal("expired ticket accepted")
+		t.Fatal("Просроченный тикет ошибочно принят")
 	}
 	if _, err = officialSeal0257("short", st); err == nil {
 		t.Fatal("weak secret accepted")

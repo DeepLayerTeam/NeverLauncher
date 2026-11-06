@@ -92,7 +92,7 @@ json_post() {
   tmp="$(mktemp "$RUNTIME_DIR/http-json-post.XXXXXX")"
   code="$(request_code POST "$url" "$token" "$body" "$tmp")"
   if [[ ! "$code" =~ ^2[0-9][0-9]$ ]]; then
-    echo "[device-trust-e2e] POST ${url#${API}} failed: HTTP $code" >&2
+    echo "[device-trust-e2e] запрос POST ${url#${API}} завершился ошибкой: HTTP $code" >&2
     [[ -s "$tmp" ]] && cat "$tmp" >&2 || true
     # Оставляйте производственные ответы общими, но показывайте в CI обёрнутую серверную
     # стадию PostgreSQL, чтобы можно было диагностировать строго отклонённую транзакцию.

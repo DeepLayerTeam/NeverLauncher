@@ -34,7 +34,7 @@ func TestDurableJobIdempotencyConcurrentLeaseAndCrash(t *testing.T) {
 	other := newDurableJob("request-123")
 	other.Payload = []byte(`{"hello":"different"}`)
 	if _, _, e = r.EnqueueDurableJob(ctx, other, 0); !errors.Is(e, ErrDurableIdempotency) {
-		t.Fatalf("different payload not rejected: %v", e)
+		t.Fatalf("Другая полезная нагрузка не была отклонена: %v", e)
 	}
 	var winners atomic.Int32
 	var wg sync.WaitGroup
@@ -226,7 +226,7 @@ func TestOutboxAtLeastOnceRestartAndIdempotentDelivery(t *testing.T) {
 		t.Fatalf("redelivery %+v %v", next, e)
 	}
 	if e = r.CompleteOutboxEvent(ctx, ev.ID, batch[0].LeaseToken); !errors.Is(e, ErrDurableLeaseLost) {
-		t.Fatalf("old delivery accepted: %v", e)
+		t.Fatalf("Устаревший пакет доставки ошибочно принят: %v", e)
 	}
 	if e = r.CompleteOutboxEvent(ctx, ev.ID, next[0].LeaseToken); e != nil {
 		t.Fatal(e)

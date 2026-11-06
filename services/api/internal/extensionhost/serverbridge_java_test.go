@@ -67,7 +67,7 @@ func TestJavaBridgeResponseRedaction0488(t *testing.T) {
 	out := bridgeNodeView0488(n)
 	for _, secret := range []string{"tokenHash", "publicKey", "keyFingerprint", "pluginSha256", "identityDigest"} {
 		if _, ok := out[secret]; ok {
-			t.Fatalf("node credential leaked: %s", secret)
+			t.Fatalf("Произошла утечка учётных данных узла: %s", secret)
 		}
 	}
 	cmd := model.ServerBridgeControlCommand{ID: "c1", ServerID: "s1", Type: "message.broadcast", Payload: map[string]string{"message": "private"}, LeaseToken: "lease-secret", RequestedBy: "actor"}

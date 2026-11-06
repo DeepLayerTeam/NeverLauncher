@@ -254,7 +254,7 @@ func TestDeliveryLeaseFencingRejectsStaleAck0206(t *testing.T) {
 		t.Fatalf("stale lease ACK should conflict, got %v", err)
 	}
 	if err := repo.CompleteExtensionEventDelivery(ctx, second[0].Delivery.ID, second[0].Delivery.LeaseToken, time.Now()); err != nil {
-		t.Fatalf("current lease ACK failed: %v", err)
+		t.Fatalf("Не удалось подтвердить текущую аренду: %v", err)
 	}
 }
 

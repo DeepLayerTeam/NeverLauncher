@@ -12,7 +12,7 @@ func TestExtensionHostCLI0205(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		if r.Header.Get("Authorization") != "Bearer host-token" {
-			t.Fatalf("missing auth: %q", r.Header.Get("Authorization"))
+			t.Fatalf("Отсутствуют данные аутентификации: %q", r.Header.Get("Authorization"))
 		}
 		if calls == 1 {
 			if r.Method != http.MethodGet || r.URL.Path != "/api/v1/admin/extension-hosts" {

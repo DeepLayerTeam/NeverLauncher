@@ -19,7 +19,7 @@ func TestMinimalBundle077Validation(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	if _, _, err := verifyMinimalBundle0377(ctx, dir); err == nil {
-		t.Fatal("empty backup accepted")
+		t.Fatal("Пустая резервная копия ошибочно принята")
 	}
 	if _, err := ImportMinimalBundle0377(ctx, dir, ""); err == nil {
 		t.Fatal("Принята пустая строка подключения DSN")
@@ -167,7 +167,7 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = ImportMinimalBundle0377(ctx, input, dsn); err == nil {
-		t.Fatal("tampered source accepted")
+		t.Fatal("Подменённый источник ошибочно принят")
 	}
 }
 

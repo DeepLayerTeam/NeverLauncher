@@ -23,7 +23,7 @@ func TestEmbeddedProductionTemplatesFromCanonicalSource(t *testing.T) {
 			t.Errorf("embedded %s differs from canonical", name)
 		}
 		if !strings.HasPrefix(source, "embedded:") {
-			t.Errorf("unexpected source %s", source)
+			t.Errorf("Неожиданный источник: %s", source)
 		}
 	}
 	if _, _, err := readCanonicalProductionTemplate("../VERSION"); err == nil {

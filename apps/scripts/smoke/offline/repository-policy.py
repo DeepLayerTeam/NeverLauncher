@@ -2952,7 +2952,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if target not in targets_01610:
             fail(f"0.16.10 matching-server target — отсутствует: {target}")
     if targets_01610.count('"matchingServer": true') < 5:
-        fail("0.16.10 targets do not bind five representative matching-server pairs")
+        fail("В версии 0.16.10 цели не привязаны к пяти контрольным парам совместимых серверов")
     for required in [
         "--server",
         "--server-port",
@@ -2999,7 +2999,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in workflow_01610:
             fail(f"0.16.10 workflow matching-server evidence — не завершено: {required}")
     if "actual-client-e2e-II-real-clients-matching-mojang-servers" not in release_01610:
-        fail("0.16.10 release certification does not bind matching-server policy")
+        fail("Сертификация релиза 0.16.10 не привязывает политику совместимых серверов")
     for required in [
         "TestInstallVanillaServerMaterializesVerifiedMatchingServer",
         "test_validate_rejects_missing_matching_server_target_01610",
@@ -4322,7 +4322,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                     or row.get("arch") != "x86_64"
                     or row.get("loaderVersion") != "latest-stable"
                 ):
-                    fail(f"0.17.6 NeoForge {mc} target binding mismatch")
+                    fail(f"Несовпадение привязки цели NeoForge {mc} в версии 0.17.6")
     if (
         '"adapter": "compatibility-engine", "installer": "launcher-neoforge-materializer", "managedJava": true'
         not in neo_api_0176

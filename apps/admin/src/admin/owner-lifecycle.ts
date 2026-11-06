@@ -112,7 +112,7 @@ export function saveOwnerPending(
     pending.before.profileId !== pending.intent.profileId ||
     pending.before.channel !== pending.intent.channel
   )
-    throw Error("Недопустимый owner intent");
+    throw Error("Недопустимая операция владельца");
   storage.setItem(key, JSON.stringify(pending));
 }
 export function clearOwnerPending(
@@ -158,7 +158,7 @@ export async function observeOwnerOperation(
         : pending.intent.channel) ||
     (pending.jobId && job.id !== pending.jobId)
   )
-    throw Error("Job не соответствует выбранной операции/проекту");
+    throw Error("Задание не соответствует выбранной операции или проекту");
   if (["failed", "dead", "revoked", "cancelled"].includes(job.status)) {
     return {
       phase: "failed",
@@ -179,7 +179,7 @@ export async function observeOwnerOperation(
     return {
       phase: "staged",
       job,
-      message: `Откат подготовлен как новый пакет ${String(job.result.packageId || "")}, но канал НЕ переключён. Выполните требуемую runtime-сертификацию этого пакета и опубликуйте его штатным workflow.`,
+      message: `Откат подготовлен как новый пакет ${String(job.result.packageId || "")}, но канал НЕ переключён. Выполните необходимую сертификацию среды выполнения этого пакета и опубликуйте его стандартным процессом.`,
     };
   }
   const head = await api.channelHead(
@@ -214,7 +214,7 @@ export async function observeOwnerOperation(
     head,
     message: matches
       ? `Канал ${head.channel} подтверждён: ревизия ${head.revision}, релиз ${head.version || head.releaseId}.`
-      : "Job завершился, но текущий channel head не подтверждает ожидаемый результат. Проверьте аудит и параллельные операции.",
+      : "Задание завершилось, но текущее состояние канала не подтверждает ожидаемый результат. Проверьте журнал аудита и параллельные операции.",
   };
 }
 
@@ -230,7 +230,7 @@ export async function openStagedRollback(
     check.phase !== "staged" ||
     check.job.id !== pending.jobId
   )
-    throw Error("Нет подтверждённого подготовленного rollback");
+    throw Error("Нет подтверждённого подготовленного отката");
   const packageId = check.job.result?.packageId;
   if (typeof packageId !== "string" || !packageId)
     throw Error("Сервер не вернул ID подготовленного пакета");

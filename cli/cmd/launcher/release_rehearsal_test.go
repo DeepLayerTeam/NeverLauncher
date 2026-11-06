@@ -89,7 +89,7 @@ func TestRehearsal0365RequiredAndSignedReceipt(t *testing.T) {
 			os.WriteFile(filepath.Join(dir, "SHA256SUMS"), []byte(""), 0600)
 		}
 		if err := verifyRehearsal0365(dir, version, commit); err == nil {
-			t.Fatalf("%s accepted", change)
+			t.Fatalf("Недопустимое значение %s было принято", change)
 		}
 	}
 }

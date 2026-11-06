@@ -47,7 +47,7 @@ func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 		t.Fatalf("v2 heartbeat contract decode failed: req=%+v err=%v", v2, err)
 	}
 	if ok, reason := validateBridgeProtocolFeatures0191(v2.ProtocolVersion, v2.Features); !ok {
-		t.Fatalf("v2 rolling-upgrade contract rejected: %s", reason)
+		t.Fatalf("Контракт поэтапного обновления v2 ошибочно отклонён: %s", reason)
 	}
 
 	if _, err := decodeBridgeHeartbeat0191(strings.NewReader(`{"protocolVersion":2,"features":["protocol.feature-flags"],"serverId":"node","serverType":"paper","pluginVersion":"0.19.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`)); err == nil {
@@ -59,7 +59,7 @@ func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 		t.Fatalf("v3 heartbeat contract decode failed: req=%+v err=%v", v3, err)
 	}
 	if ok, reason := validateBridgeProtocolFeatures0191(v3.ProtocolVersion, v3.Features); !ok {
-		t.Fatalf("v3 heartbeat contract rejected: %s", reason)
+		t.Fatalf("Контракт сигналов активности v3 ошибочно отклонён: %s", reason)
 	}
 
 	missingFlags, err := decodeBridgeValidateJoin0191(strings.NewReader(`{"protocolVersion":3,"features":["protocol.capability-negotiation"],"serverId":"node","username":"Player","pluginVersion":"0.19.1","pluginSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}`))

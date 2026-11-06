@@ -16,6 +16,6 @@ func TestAuthIdentityConflict0293(t *testing.T) {
 	}
 	original := fakeSQLState0293("57014")
 	if converted := authIdentityConflict0293(original); converted != original {
-		t.Fatalf("non-uniqueness database error changed: %v", converted)
+		t.Fatalf("Изменился тип ошибки нарушения уникальности базы данных: %v", converted)
 	}
 }

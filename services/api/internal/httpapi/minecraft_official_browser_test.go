@@ -60,7 +60,7 @@ func TestBrowserPKCEExchangeRealChainMock0263(t *testing.T) {
 	for _, stage := range []string{"microsoft", "xbox-minecraft", "java-profile"} {
 		bad := &browserMockProvider0263{failAt: stage}
 		if _, _, _, err := exchangeOfficialBrowser0263(context.Background(), bad, ownMicrosoftClient0263, browserRequest0263); err == nil {
-			t.Fatalf("%s unexpectedly accepted", stage)
+			t.Fatalf("Значение %s неожиданно принято", stage)
 		}
 	}
 }

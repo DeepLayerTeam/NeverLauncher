@@ -41,10 +41,10 @@ func TestS3SaveStreamsAndSignsPayload(t *testing.T) {
 		gotBody = string(body)
 		sum := sha256.Sum256([]byte(payload))
 		if r.Header.Get("X-Amz-Content-Sha256") != hex.EncodeToString(sum[:]) {
-			t.Error("payload hash header mismatch")
+			t.Error("Несовпадение хеша полезной нагрузки в заголовке")
 		}
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 ") {
-			t.Error("missing SigV4 authorization")
+			t.Error("Отсутствует авторизация SigV4")
 		}
 		w.WriteHeader(http.StatusOK)
 	}))

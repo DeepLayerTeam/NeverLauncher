@@ -173,6 +173,6 @@ func TestGoSignedDependencyFixture0243(t *testing.T) {
 		t.Fatal("signed v3 catalog fixture signature invalid")
 	}
 	if m.ComponentCatalog.Digest != "53fe27537e66b25479003cdca208f3272091ef78b9278e16009e5097d4281988" {
-		t.Fatal("catalog digest changed")
+		t.Fatal("Хеш каталога неожиданно изменился")
 	}
 }

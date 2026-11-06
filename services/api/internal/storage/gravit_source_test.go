@@ -30,7 +30,7 @@ func TestGravitS3Source02510(t *testing.T) {
 	body, err := io.ReadAll(f)
 	_ = f.Close()
 	if err != nil || string(body) != "source-image" {
-		t.Fatalf("read failed: %s %v", body, err)
+		t.Fatalf("Ошибка чтения %s: %v", body, err)
 	}
 	for _, key := range []string{"../secret", "/secret", "skin\\secret", "a//b", "a/../b"} {
 		if f, err := src.OpenGravitSourceObject02510(context.Background(), key); err == nil {

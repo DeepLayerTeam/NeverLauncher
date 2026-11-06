@@ -116,7 +116,7 @@ func TestServerBridgeNodeIdentity0142RejectsSignatureReplayAndStaleTimestamp(t *
 	replayOut := httptest.NewRecorder()
 	h.ServeHTTP(replayOut, replay)
 	if replayOut.Code != http.StatusConflict || !strings.Contains(replayOut.Body.String(), "serverbridge_node_nonce_replayed") {
-		t.Fatalf("signed request replay accepted: %d %s", replayOut.Code, replayOut.Body.String())
+		t.Fatalf("Повторное воспроизведение подписанного запроса ошибочно разрешено: %d %s", replayOut.Code, replayOut.Body.String())
 	}
 
 	staleNonce := make([]byte, 24)
@@ -152,7 +152,7 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	tamperedOut := httptest.NewRecorder()
 	h.ServeHTTP(tamperedOut, tampered)
 	if tamperedOut.Code != http.StatusUnauthorized || !strings.Contains(tamperedOut.Body.String(), "serverbridge_node_signature_invalid") {
-		t.Fatalf("tampered signed body accepted: %d %s", tamperedOut.Code, tamperedOut.Body.String())
+		t.Fatalf("Подменённое тело подписанного запроса ошибочно принято: %d %s", tamperedOut.Code, tamperedOut.Body.String())
 	}
 
 	wrongFingerprint := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/crypto-rotate-0142/heartbeat", strings.NewReader(originalBody))
@@ -204,6 +204,6 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 
 	duplicate := registerTestBridgeNode0142(t, h, admin, "crypto-duplicate-0142", "Crypto Duplicate 0142", "velocity", "demo-project", "vanilla", secondIdentity)
 	if duplicate.Code != http.StatusBadRequest || !strings.Contains(duplicate.Body.String(), "public key") {
-		t.Fatalf("duplicate node public key accepted: %d %s", duplicate.Code, duplicate.Body.String())
+		t.Fatalf("Повторяющийся публичный ключ узла ошибочно принят: %d %s", duplicate.Code, duplicate.Body.String())
 	}
 }

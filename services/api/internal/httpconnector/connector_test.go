@@ -63,13 +63,13 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 			writeFixtureSigned(w, r, http.StatusOK, identityResponse{ProtocolVersion: protocolVersion, Issuer: "fixture-issuer", Subject: req.Subject, Email: "player@example.test"})
 		case "/refresh":
 			if req.ProviderToken != "provider-refresh-secret" {
-				t.Errorf("provider token lost: %q", req.ProviderToken)
+				t.Errorf("Токен провайдера потерян: %q", req.ProviderToken)
 			}
 			writeFixtureSigned(w, r, http.StatusOK, identityResponse{ProtocolVersion: protocolVersion, Issuer: "fixture-issuer", Subject: "user-42", Email: "player@example.test", ProviderToken: "provider-refresh-rotated"})
 		case "/logout":
 			writeFixtureSigned(w, r, http.StatusOK, actionResponse{ProtocolVersion: protocolVersion, Issuer: "fixture-issuer", Status: "revoked"})
 		default:
-			t.Errorf("unexpected path: %s", r.URL.Path)
+			t.Errorf("Неожиданный путь: %s", r.URL.Path)
 			writeFixtureSigned(w, r, http.StatusNotFound, remoteErrorResponse{ProtocolVersion: protocolVersion, Issuer: "fixture-issuer", Error: remoteError{Code: "identity_not_found"}})
 		}
 	}
@@ -96,7 +96,7 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	if auth.Identity.Subject != "user-42" || auth.Identity.Email != "player@example.test" || auth.ProviderToken != "provider-refresh-secret" {
-		t.Fatalf("unexpected auth result: %+v", auth)
+		t.Fatalf("Неожиданный результат аутентификации: %+v", auth)
 	}
 	if len(auth.Identity.Groups) != 1 || len(auth.Identity.Roles) != 1 {
 		t.Fatalf("Сопоставление потеряно: %+v", auth.Identity)
@@ -124,7 +124,7 @@ func TestHTTPConfigMigrationActivatesTheSameProvider(t *testing.T) {
 	old := `[ {"id":"http-test","baseUrl":"https://auth.example","issuer":"issuer-prod","hmac":{"secretEnv":"NL_SECRET"}} ]`
 	configs, err := LoadConfigs(old, "")
 	if err != nil || len(configs) != 1 || configs[0].Issuer != "issuer-prod" {
-		t.Fatalf("legacy config failed: %v", err)
+		t.Fatalf("Ошибка обработки устаревшей конфигурации: %v", err)
 	}
 	modern := `{"schemaVersion":2,"providers":` + old + `}`
 	migrated, err := LoadConfigs(modern, "")
@@ -187,7 +187,7 @@ func TestNormalizeRequiresHTTPSHMACAndSafeEndpoints(t *testing.T) {
 	t.Setenv("NL_HTTP_TEST_SECRET", fixtureSecret)
 	base := Config{ID: "cms", BaseURL: "https://auth.example.com", Issuer: "cms", HMAC: HMACConfig{SecretEnv: "NL_HTTP_TEST_SECRET"}}
 	if _, err := Normalize(base); err != nil {
-		t.Fatalf("valid config rejected: %v", err)
+		t.Fatalf("Корректная конфигурация ошибочно отклонена: %v", err)
 	}
 	bad := base
 	bad.BaseURL = "http://auth.example.com"
@@ -197,7 +197,7 @@ func TestNormalizeRequiresHTTPSHMACAndSafeEndpoints(t *testing.T) {
 	bad = base
 	bad.HMAC = HMACConfig{}
 	if _, err := Normalize(bad); err == nil {
-		t.Fatal("unsigned provider accepted")
+		t.Fatal("Провайдер без подписи ошибочно принят")
 	}
 	bad = base
 	bad.Endpoints.Authenticate = "https://evil.example/authenticate"
@@ -283,7 +283,7 @@ func TestResponseReplayAndTimestampWindowAreRejected(t *testing.T) {
 	response.Header.Set(headerNonce, nonce)
 	response.Header.Set(headerSignature, "v1="+hex.EncodeToString(sign([]byte(fixtureSecret), responseCanonical(http.StatusOK, stamp, nonce, body))))
 	if err := client.verifyResponse(response, nonce, body); err != nil {
-		t.Fatalf("first signed response rejected: %v", err)
+		t.Fatalf("Первый подписанный ответ ошибочно отклонён: %v", err)
 	}
 	if err := client.verifyResponse(response, nonce, body); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
 		t.Fatalf("replayed response accepted: %v", err)

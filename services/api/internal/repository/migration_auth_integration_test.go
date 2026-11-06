@@ -181,7 +181,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	}
 	var otherUUID string
 	if e = repo.db.QueryRowContext(ctx, `SELECT uuid FROM minecraft_profiles WHERE user_id=$1`, secondUserID).Scan(&otherUUID); e != nil || otherUUID != other.UUID {
-		t.Fatalf("second UUID lost: %s %v", otherUUID, e)
+		t.Fatalf("Второй UUID потерян: %s %v", otherUUID, e)
 	}
 
 }

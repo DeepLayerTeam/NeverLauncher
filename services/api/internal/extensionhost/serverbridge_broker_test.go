@@ -119,7 +119,7 @@ func TestJavaBridgeAuthenticatedBroker0488(t *testing.T) {
 		var response map[string]any
 		if res.StatusCode == 200 {
 			if e = json.Unmarshal(raw, &response); e != nil {
-				t.Fatalf("invalid JSON: %s", raw)
+				t.Fatalf("Некорректный JSON: %s", raw)
 			}
 		}
 		return res.StatusCode, response

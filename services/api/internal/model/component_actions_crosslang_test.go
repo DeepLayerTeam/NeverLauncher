@@ -21,7 +21,7 @@ func TestGoSignedOptionalActionFixture0245(t *testing.T) {
 		t.Fatal(e)
 	}
 	if m.ComponentCatalog.Digest != ComponentCatalogDigest0245(*m.ComponentCatalog) {
-		t.Fatal("invalid action digest")
+		t.Fatal("Недопустимый хеш действия")
 	}
 	signed := m.Signature
 	if signed == nil {

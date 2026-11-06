@@ -59,7 +59,7 @@ func TestConcurrentRevokedRecoveryOnlyOneKeyWins0435(t *testing.T) {
 			continue
 		}
 		if !errors.Is(err, ErrConflict) {
-			t.Fatalf("unexpected recovery error: %v", err)
+			t.Fatalf("Неожиданная ошибка восстановления: %v", err)
 		}
 	}
 	if won != 1 {

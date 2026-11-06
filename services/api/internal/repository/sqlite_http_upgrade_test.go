@@ -68,10 +68,10 @@ func TestHTTPUpgrade0472PreservesProjectAndPrivateAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(r.ListProjects()) != 1 || r.ListProjects()[0].ID != "preserved" {
-		t.Fatal("project lost")
+		t.Fatal("Проект потерян")
 	}
 	if len(r.mem.users) != 1 || r.mem.users[0].PasswordHash != "verifier-secret" {
-		t.Fatal("private auth lost")
+		t.Fatal("Данные приватной аутентификации потеряны")
 	}
 	if err = r.Health(ctx); err != nil {
 		t.Fatal(err)
@@ -146,6 +146,6 @@ func TestHTTPUpgrade0472RejectsMissingAuthSecretsWithoutMutation(t *testing.T) {
 		t.Fatal("missing secrets accepted")
 	}
 	if _, err = os.Stat(filepath.Join(filepath.Dir(path), "pre-upgrade-backups")); !os.IsNotExist(err) {
-		t.Fatalf("unexpected backup or file: %v", err)
+		t.Fatalf("Неожиданная резервная копия или файл: %v", err)
 	}
 }

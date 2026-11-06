@@ -28,10 +28,10 @@ func TestProfileV2DeterministicSnapshots(t *testing.T) {
 	}
 	two.Spec.Loader = "fabric"
 	if err := ValidateProfileSnapshot(two, "demo", "forge"); err == nil {
-		t.Fatal("tampered snapshot accepted")
+		t.Fatal("Подменённый снимок ошибочно принят")
 	}
 	if _, err := NormalizeProfileV2(Profile{ID: "evil\x00id", ProjectID: "p", Name: "n"}); err == nil {
-		t.Fatal("NUL accepted")
+		t.Fatal("Нулевой байт NUL ошибочно принят")
 	}
 	if _, err := NormalizeProfileV2(Profile{ID: "p", ProjectID: "p", Name: "n", SchemaVersion: "3.0"}); err == nil {
 		t.Fatal("future schema accepted")
@@ -60,7 +60,7 @@ func TestManifestV1UnchangedAndV2Payload(t *testing.T) {
 	}
 	v1.ProfileSnapshot = &ProfileSnapshot{}
 	if err := ValidateManifestSchema(v1); err == nil {
-		t.Fatal("v1 snapshot accepted")
+		t.Fatal("Снимок устаревшего формата v1 ошибочно принят")
 	}
 	v1.SchemaVersion = "2.0"
 	if err := ValidateManifestSchema(v1); err == nil {

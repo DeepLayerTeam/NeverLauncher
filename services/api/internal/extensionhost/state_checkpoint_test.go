@@ -64,7 +64,7 @@ func TestCheckpointTamperRefusesOverwrite04810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := restoreRuntime04810(ctx, root, key, tx); err == nil {
-		t.Fatal("tampered backup accepted")
+		t.Fatal("Подменённая резервная копия ошибочно принята")
 	}
 	value, _, _ := runtimeRead0303(dir, file)
 	if string(value) != `"dark"` {
@@ -116,6 +116,6 @@ func TestCheckpointRejectsSymlinkAndInvalidID04810(t *testing.T) {
 		t.Skipf("символические ссылки не поддерживаются: %v", err)
 	}
 	if err := snapshotRuntime04810(ctx, root, key, "extupd-012301230123012301230123"); err == nil {
-		t.Fatal("symlink state accepted")
+		t.Fatal("Состояние через символьную ссылку ошибочно принято")
 	}
 }

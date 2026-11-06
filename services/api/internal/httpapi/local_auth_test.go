@@ -52,7 +52,7 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.User.ID != id || result.Identity.Issuer != "launcher" {
-		t.Fatalf("wrong canonical identity %+v", result.Identity)
+		t.Fatalf("Неверная каноническая идентичность: %+v", result.Identity)
 	}
 	after, err := r.GetUser(id)
 	if err != nil || !strings.HasPrefix(after.PasswordHash, "$argon2id$") || after.PasswordHash == legacy || !localpassword.Verify("imported password", after.PasswordHash) {
@@ -71,7 +71,7 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 	}
 	disabled, err := r.SetUserDisabled(user.ID, true)
 	if err != nil || disabled.Status != "disabled" {
-		t.Fatal("disable failed", err)
+		t.Fatal("Не удалось отключить", err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "Migrated_01", Secret: "imported password"}); err == nil {
 		t.Fatal("disabled imported account logged in")
@@ -113,7 +113,7 @@ func TestImportedFileAuthYggdrasilLoginPreservesUUID0295(t *testing.T) {
 		return result
 	}
 	if result := makeRequest("wrong-password"); result.Code != http.StatusForbidden {
-		t.Fatalf("wrong password status: %d", result.Code)
+		t.Fatalf("Неверный статус при ошибочном пароле: %d", result.Code)
 	}
 	result := makeRequest("Known-gravit-password")
 	if result.Code != http.StatusOK {

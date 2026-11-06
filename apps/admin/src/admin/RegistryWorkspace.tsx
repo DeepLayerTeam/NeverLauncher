@@ -421,7 +421,7 @@ export function RegistryWorkspace({
       version === null ||
       !confirmAction(
         `Обновить ${item.extensionId}`,
-        `Target: ${version.trim() || "stable"}; scope: ${item.scope}:${item.scopeId || "global"}`,
+        `Целевая версия: ${version.trim() || "stable"}; область действия: ${item.scope}:${item.scopeId || "global"}`,
       )
     )
       return cancelledOperation;

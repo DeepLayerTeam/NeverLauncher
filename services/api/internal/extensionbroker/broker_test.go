@@ -68,10 +68,10 @@ func TestScopedFilesystemBrokers03110(t *testing.T) {
 	}
 	for _, rel := range []string{"../outside", "nested/../outside", "/etc/passwd", "nested//file", "nested/./file", "nested\\evil", "", "nested/"} {
 		if _, err := Read(root, rel); err == nil {
-			t.Fatalf("unsafe read %q", rel)
+			t.Fatalf("Небезопасное чтение %q", rel)
 		}
 		if err := Write(root, rel, base64.StdEncoding.EncodeToString([]byte("bad"))); err == nil {
-			t.Fatalf("unsafe write %q", rel)
+			t.Fatalf("Небезопасная запись %q", rel)
 		}
 	}
 	if err := Write(root, "oversized", base64.StdEncoding.EncodeToString(make([]byte, MaxFileBytes+1))); err == nil {
@@ -111,7 +111,7 @@ func TestScopedRootPolicy03110(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := ParseRoots("{\"r\":\"" + link + "\"}"); e == nil {
-		t.Fatal("symlink root accepted")
+		t.Fatal("Корневой каталог через символьную ссылку ошибочно принят")
 	}
 }
 func TestSignedOutboundOrigin03110(t *testing.T) {

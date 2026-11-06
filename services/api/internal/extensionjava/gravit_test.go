@@ -52,7 +52,7 @@ func TestGravitOptInValidation0307(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.GravitModuleClass != "example.Ported" {
-		t.Fatalf("wrong module: %+v", result)
+		t.Fatalf("Неверный модуль: %+v", result)
 	}
 	for _, f := range []string{
 		gravitJar0307(t, entry, "example.NotFound", false),
@@ -74,6 +74,6 @@ func TestRealGravitPortJar0307(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.GravitModuleClass != "ru.example.gravit.PortedModule" || info.ClassFiles < 20 {
-		t.Fatalf("invalid JAR: %+v", info)
+		t.Fatalf("Некорректный JAR-файл: %+v", info)
 	}
 }

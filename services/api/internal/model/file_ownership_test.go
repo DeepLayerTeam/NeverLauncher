@@ -18,10 +18,10 @@ func TestFileOwnershipRules0224(t *testing.T) {
 		{Pattern: "config/**", Action: "exclude", Ownership: "user-owned"},
 	}}
 	if err := ValidateFileOwnership0224(m); err != nil {
-		t.Fatalf("valid policy rejected: %v", err)
+		t.Fatalf("Корректная политика ошибочно отклонена: %v", err)
 	}
 	if err := ValidatePublishFileOwnership0224(m); err != nil {
-		t.Fatalf("valid publish rejected: %v", err)
+		t.Fatalf("Корректная публикация ошибочно отклонена: %v", err)
 	}
 	cases := map[string]func(*Manifest){
 		"saves overwritten":         func(m *Manifest) { m.Files[0].Path = "saves/world/level.dat" },

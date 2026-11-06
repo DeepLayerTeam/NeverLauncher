@@ -50,7 +50,7 @@ func TestJavaResourceLimits04811(t *testing.T) {
 	args := strings.Join(cmd.Args, " ")
 	for _, flag := range []string{"-Xmx204m", "-XX:MaxMetaspaceSize=102m", "-XX:MaxDirectMemorySize=51m", "-XX:ReservedCodeCacheSize=51m", "-XX:+DisableAttachMechanism", "-XX:-CreateCoredumpOnCrash"} {
 		if !strings.Contains(args, flag) {
-			t.Errorf("missing JVM limit %s: %s", flag, args)
+			t.Errorf("Отсутствует ограничение JVM %s: %s", flag, args)
 		}
 	}
 	s.cfg.MaxMemoryBytes = 64 << 20
@@ -102,7 +102,7 @@ func TestJavaHostIPCQuota04811(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 		if i == defaultRequestsPerSecond03113 && w.Code != http.StatusTooManyRequests {
-			t.Fatalf("Java host quota not enforced: %d", w.Code)
+			t.Fatalf("Не применяется квота хоста Java: %d", w.Code)
 		}
 	}
 	if calls != defaultRequestsPerSecond03113 {

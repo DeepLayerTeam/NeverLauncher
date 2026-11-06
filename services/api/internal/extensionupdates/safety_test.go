@@ -176,7 +176,7 @@ func TestApplyRejectsDuplicateModuleID0499(t *testing.T) {
 	item := model.ExtensionUpdatePlanItem{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}
 	tx, err := m.Apply(ctx, model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{item, item}})
 	if err == nil || !errors.Is(err, repository.ErrConflict) || tx.Status != "failed" {
-		t.Fatalf("duplicate module accepted: %+v %v", tx, err)
+		t.Fatalf("Повторяющийся модуль ошибочно принят: %+v %v", tx, err)
 	}
 	if h.stopCount != 0 {
 		t.Fatal("stopped JVM before checking duplicate module")

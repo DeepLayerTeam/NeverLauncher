@@ -70,7 +70,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	}
 	verify, _ = verifyClientInstallation(pkg1Path, client)
 	if !verify.Valid {
-		t.Fatalf("repair failed: %+v", verify)
+		t.Fatalf("Восстановление завершилось ошибкой: %+v", verify)
 	}
 
 	mustWrite(filepath.Join(client, "mods", "orphan.jar"), "orphan")

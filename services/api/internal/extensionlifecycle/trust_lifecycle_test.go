@@ -80,7 +80,7 @@ func TestEnableRechecksRevokedPublisherKey0424(t *testing.T) {
 	item := model.ExtensionRegistryVersion{ExtensionID: before.ExtensionID, Version: before.CurrentVersion, PublisherID: publisher, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: identity, SignatureKeyFingerprint: fp}}
 	manager := New(t.TempDir(), 2, lifecycleTrustPublication0424{Repository: repo, item: item}, nil)
 	if err := manager.requireActiveTrust0424(ctx, before); err != nil {
-		t.Fatalf("active key rejected: %v", err)
+		t.Fatalf("Активный ключ ошибочно отклонён: %v", err)
 	}
 	if _, err := repo.RevokeExtensionRegistryPublisherKey(ctx, publisher, fp); err != nil {
 		t.Fatal(err)

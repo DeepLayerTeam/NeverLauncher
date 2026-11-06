@@ -78,7 +78,7 @@ func TestEvaluateRequiresNativeLiveSession0447(t *testing.T) {
 	report.LiveSession = &LiveSession{ClientSHA256: h, PlayerName: "Steve", PlayerUUID: p.UUID, BeforeSHA256: h, JoinedSHA256: h, StartedAt: start.Format(time.RFC3339Nano), JoinedAt: start.Add(3 * time.Second).Format(time.RFC3339Nano)}
 	ready, e := Evaluate(report)
 	if e != nil || !ready.Ready {
-		t.Fatalf("real-format report rejected: %+v %v", ready, e)
+		t.Fatalf("Отчёт в корректном формате ошибочно отклонён: %+v %v", ready, e)
 	}
 	report.LiveSession.PlayerUUID = "76543210-1234-1234-1234-123456789abc"
 	blocked, e := Evaluate(report)

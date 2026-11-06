@@ -30,7 +30,7 @@ func TestDecodeRejectsAmbiguousOrUnboundedAuthRequests02912(t *testing.T) {
 	}
 	var req login
 	if err := Decode(strings.NewReader(`{"providerId":"strict","password":"correct"}`), &req); err != nil || req.ProviderID != "strict" || req.Password != "correct" {
-		t.Fatalf("valid request failed: %+v %v", req, err)
+		t.Fatalf("Корректный запрос завершился ошибкой: %+v %v", req, err)
 	}
 	if err := Decode(strings.NewReader(strings.Repeat(" ", MaxBytes+1)), &req); !errors.Is(err, ErrTooLarge) {
 		t.Fatalf("large input not rejected specifically: %v", err)

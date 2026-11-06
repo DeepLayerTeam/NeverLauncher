@@ -124,7 +124,7 @@ func TestMigrationRehearsal03310(t *testing.T) {
 	}
 	report.Probes[0].Passed = false
 	if _, e = r.SaveMigrationRehearsal03310(ctx, runID, report); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed stage accepted: %v", e)
+		t.Fatalf("Изменённый этап ошибочно принят: %v", e)
 	}
 	report.StageID = "stage_different12345678"
 	for i := range report.Probes {

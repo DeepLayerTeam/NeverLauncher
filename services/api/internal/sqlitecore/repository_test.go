@@ -90,7 +90,7 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 		t.Fatalf("history %d %v", len(history), e)
 	}
 	if history[0].Spec.Name != "Vanilla" || history[1].Spec.Name != "Vanilla next" {
-		t.Fatal("history changed")
+		t.Fatal("История неожиданно изменилась")
 	}
 	if _, e = r.SaveUser(ctx, model.User{ID: "owner", Email: "owner@example.test", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"project": "owner"}}, "bootstrap"); e != nil {
 		t.Fatal(e)
@@ -129,7 +129,7 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 	}
 	n, e := r.Count(ctx)
 	if e != nil || n["audit_events"] < 4 {
-		t.Fatalf("audit lost: %v %v", n, e)
+		t.Fatalf("Данные аудита потеряны: %v %v", n, e)
 	}
 	if e = r.Close(); e != nil {
 		t.Fatal(e)

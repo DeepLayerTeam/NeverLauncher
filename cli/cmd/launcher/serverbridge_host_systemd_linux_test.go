@@ -172,7 +172,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 		t.Fatal("enabled after failure")
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		t.Fatal("install failure did not rollback")
+		t.Fatal("После ошибки установки не выполнен откат")
 	}
 }
 

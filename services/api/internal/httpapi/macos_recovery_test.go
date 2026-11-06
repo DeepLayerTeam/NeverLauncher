@@ -46,7 +46,7 @@ func TestMacOSRecoveryRejectsReuseAndRequiresFreshPasskey0316(t *testing.T) {
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/key-recovery/begin", access, payload)
 	if code != http.StatusConflict {
-		t.Fatalf("re-enrolling same fingerprint accepted: %d", code)
+		t.Fatalf("Повторная регистрация того же отпечатка ошибочно разрешена: %d", code)
 	}
 
 	newPublic, newPrivate := newReplacementKey0128(t)
@@ -76,6 +76,6 @@ func TestMacOSRecoveryRejectsReuseAndRequiresFreshPasskey0316(t *testing.T) {
 	// источник.
 	replay, _ := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+old.ID+"/key-recovery/complete", access, complete)
 	if replay == http.StatusOK {
-		t.Fatal("recovery replay accepted")
+		t.Fatal("Повторное использование данных восстановления ошибочно разрешено")
 	}
 }

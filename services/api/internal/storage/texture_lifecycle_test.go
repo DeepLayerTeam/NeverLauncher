@@ -63,7 +63,7 @@ func TestTextureS3GCConditionalDelete02511(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		if !strings.Contains(r.URL.Path, "/texture-blobs/sha256/") {
-			t.Errorf("invalid URL: %s", r.URL.Path)
+			t.Errorf("Недопустимый URL: %s", r.URL.Path)
 		}
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 ") {
 			t.Error("unsigned S3 request")

@@ -30,10 +30,10 @@ func TestGravitAtomicImportMemory02210(t *testing.T) {
 	}
 	snap, e := ReadProfileSnapshot(r, project, saved.ID)
 	if e != nil || snap.Digest != saved.Digest {
-		t.Fatalf("missing immutable snapshot: %v %+v", e, snap)
+		t.Fatalf("Отсутствует неизменяемый снимок: %v %+v", e, snap)
 	}
 	if _, _, e = r.CreateGravitProfileWorkspace02210(context.Background(), parsed.Profile, BuildWorkspace{ID: "ws-another", ProjectID: project, OwnerID: "operator", ProfileID: parsed.Profile.ID, Channel: "stable", Version: "1.0.1", Settings: settings}); !errors.Is(e, ErrConflict) {
-		t.Fatalf("duplicate profile accepted: %v", e)
+		t.Fatalf("Повторяющийся профиль ошибочно принят: %v", e)
 	}
 	if _, e = r.GetBuildWorkspace(context.Background(), "ws-another"); !errors.Is(e, ErrNotFound) {
 		t.Fatalf("partial workspace after conflict: %v", e)

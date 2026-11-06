@@ -20,7 +20,7 @@ func TestReleaseManifestTransition0222(t *testing.T) {
 	newRevision.Revision++ // корректный дайджест, но НЕ версия, закреплённая за этим черновиком
 	mutated.ProfileSnapshot = &newRevision
 	if err := ValidateReleaseManifestTransition(original, mutated); err == nil {
-		t.Fatal("different valid revision accepted")
+		t.Fatal("Корректная, но чужая ревизия ошибочно принята")
 	}
 	newSpec := snapshot
 	newSpec.Spec.Name = "Edited"

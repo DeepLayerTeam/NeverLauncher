@@ -79,7 +79,7 @@ func TestCLIComponentsValidSignedManifestAndDeterminism0249(t *testing.T) {
 		t.Fatalf("bad resolved plan %+v", plan)
 	}
 	if plan.Reasons[1].Reason != "dependency" || plan.Reasons[1].Via != "shaders" || len(plan.Actions) != 4 {
-		t.Fatalf("missing explanations/actions: %+v", plan)
+		t.Fatalf("Отсутствуют пояснения или рекомендуемые действия: %+v", plan)
 	}
 	other, e := resolveComponents0249(entry, "quality", env)
 	if e != nil || plan.PlanSHA256 != other.PlanSHA256 {
@@ -182,7 +182,7 @@ func TestCLIComponentsRejectTamperingAndDiff0249(t *testing.T) {
 	other, _, _ := ed25519.GenerateKey(rand.Reader)
 	os.WriteFile(randomKey, []byte(hex.EncodeToString(other)), 0600)
 	if _, e = loadComponents0249(before, randomKey, false); e == nil {
-		t.Fatal("self-signed untrusted manifest accepted")
+		t.Fatal("Недоверенный манифест с самоподписью ошибочно принят")
 	}
 }
 

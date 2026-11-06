@@ -120,7 +120,7 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.LoginLocal(ctx, "owner@test", pw, codes[0], "device"); !errors.Is(e, ErrMFARequired) {
-		t.Fatalf("reused recovery accepted: %v", e)
+		t.Fatalf("Повторное использование данных восстановления ошибочно разрешено: %v", e)
 	}
 	n, e := a.RecoveryRemaining(ctx, "owner")
 	if e != nil || n != 7 {
@@ -145,7 +145,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 		t.Fatal(e)
 	}
 	if out.UUID != p.UUID {
-		t.Fatal("uuid changed")
+		t.Fatal("UUID неожиданно изменился")
 	}
 	login, e := a.LoginLocal(ctx, "owner@test", pw, "", "launcher")
 	if e != nil {
@@ -160,7 +160,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 	}
 	p.UUID = "123e4567-e89b-42d3-a456-426614174001"
 	if _, e = a.SaveMinecraftIdentity(ctx, p, "owner"); !errors.Is(e, ErrImmutable) {
-		t.Fatalf("uuid changed: %v", e)
+		t.Fatalf("UUID неожиданно изменился: %v", e)
 	}
 	// Имитируйте смену пароля или роли в существующем репозитории 0.32.2.
 	if e = r.UpdatePassword(ctx, "owner", "new-password-hash", "owner"); e != nil {

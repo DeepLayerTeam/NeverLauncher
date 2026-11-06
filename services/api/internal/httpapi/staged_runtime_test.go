@@ -90,11 +90,11 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 		t.Fatalf("report: %d %s", rr.Code, rr.Body.String())
 	}
 	if rr := call("POST", "/api/v1/staged-runs/"+id+"/results", issued.Data.Token, body); rr.Code != 409 {
-		t.Fatalf("report replay accepted: %d", rr.Code)
+		t.Fatalf("Повторное воспроизведение отчёта ошибочно принято: %d", rr.Code)
 	}
 	list := call("GET", "/api/v1/packages/"+id+"/staged-runs", admin, nil)
 	if list.Code != 200 || !strings.Contains(list.Body.String(), issued.Data.RunID) || !strings.Contains(list.Body.String(), `"trustedCertification":false`) {
-		t.Fatalf("report not persisted: %d %s", list.Code, list.Body.String())
+		t.Fatalf("Отчёт не сохранён: %d %s", list.Code, list.Body.String())
 	}
 	// Изменение объекта после выдачи токена ДОЛЖНО обнаруживаться до отправки HTTP 200.
 	_, _, e := store.Save("demo-project", id, "mods/honest-validation.jar", strings.NewReader("poison bytes with owner-recomputed hashes not in snapshot"))
@@ -114,7 +114,7 @@ func TestStagedGrantRejectsStaleAndCrossSnapshot0342(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = s.parseGrant0342(token); err == nil {
-		t.Fatal("expired grant accepted")
+		t.Fatal("Просроченное разрешение ошибочно принято")
 	}
 	g.ExpiresAt = time.Now().Add(20 * time.Minute).Unix()
 	token, _ = s.issueGrant0342(g)

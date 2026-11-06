@@ -92,6 +92,6 @@ func TestHardening02112TwoTabConfigCAS(t *testing.T) {
 	}
 	current := request0211(t, h, "GET", "/api/v1/admin/config", token, "")
 	if current.Code != http.StatusOK || !strings.Contains(current.Body.String(), `"revision":2`) {
-		t.Fatalf("unexpected config after conflict: %d %s", current.Code, current.Body.String())
+		t.Fatalf("Неожиданная конфигурация после конфликта: %d %s", current.Code, current.Body.String())
 	}
 }

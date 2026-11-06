@@ -231,7 +231,7 @@ export function ProfileManagementWorkspace({
         </button>
       </div>
       <label className="field">
-        <span>Импорт Never Profile JSON</span>
+        <span>Импорт профиля Never из JSON</span>
         <input
           type="file"
           accept=".json,application/json"

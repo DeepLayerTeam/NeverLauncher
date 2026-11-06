@@ -170,7 +170,7 @@ func TestPCRPolicy0315FailClosed(t *testing.T) {
 	write()
 	policy, hash, err := LoadPCRPolicy0315(path, now)
 	if err != nil || len(hash) != 64 {
-		t.Fatalf("policy failed: %v", err)
+		t.Fatalf("Ошибка применения политики: %v", err)
 	}
 	selected, err := policy.Find("approved", "linux", now)
 	if err != nil || PCRPolicySelection0315(selected) != "sha256:0,2" {
@@ -179,7 +179,7 @@ func TestPCRPolicy0315FailClosed(t *testing.T) {
 	file.Policies[0].PCRs = map[string]string{"24": strings.Repeat("11", 32)}
 	write()
 	if _, _, err := LoadPCRPolicy0315(path, now); err == nil {
-		t.Fatal("out-of-range PCR accepted")
+		t.Fatal("Значение PCR за пределами диапазона ошибочно принято")
 	}
 	file.Policies[0].PCRs = map[string]string{"0": strings.Repeat("11", 32)}
 	write()

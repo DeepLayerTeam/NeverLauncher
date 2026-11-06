@@ -47,7 +47,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 				requests++
 				if r.URL.Path == "/session/minecraft/join" {
 					if r.Method != http.MethodPost || r.Header.Get("Content-Type") != "application/json" {
-						t.Error("bad join headers")
+						t.Error("Некорректные заголовки подключения")
 					}
 					var data map[string]string
 					if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -57,7 +57,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 						t.Error("wrong bearer or profile")
 					}
 					if len(data["serverId"]) < 30 || strings.ContainsAny(data["serverId"], " \r\n") {
-						t.Error("invalid challenge")
+						t.Error("Недопустимый запрос подтверждения")
 					}
 					challenge = data["serverId"]
 					w.WriteHeader(tc.joinStatus)
@@ -77,7 +77,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 					}
 					return
 				}
-				t.Errorf("unexpected %s", r.URL.Path)
+				t.Errorf("Неожиданное значение: %s", r.URL.Path)
 				http.NotFound(w, r)
 			}))
 			defer srv.Close()
@@ -91,7 +91,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 				t.Fatalf("hasJoined called after join was rejected: %d", requests)
 			}
 			if tc.joinStatus == 204 && requests != 2 {
-				t.Fatalf("join/hasJoined missing: %d", requests)
+				t.Fatalf("Отсутствует обработка join/hasJoined: %d", requests)
 			}
 		})
 	}

@@ -19,7 +19,7 @@ func TestValidateGrants(t *testing.T) {
 func TestPathContainment(t *testing.T) {
 	for _, p := range []string{"/tmp/extension/../secrets", "/tmp/other", "/tmp/extension"} {
 		if IsInside("/tmp/extension", p) {
-			t.Fatalf("path accepted: %s", p)
+			t.Fatalf("Недопустимый путь ошибочно принят: %s", p)
 		}
 	}
 	if !IsInside("/tmp/extension", "/tmp/extension/runner") {

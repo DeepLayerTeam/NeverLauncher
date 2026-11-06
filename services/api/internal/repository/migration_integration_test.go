@@ -134,7 +134,7 @@ func TestMigrationFailureResume0331(t *testing.T) {
 	}
 	failed, err := db.FailMigration0331(ctx, lease, "transient metadata error")
 	if err != nil || failed.Status != "failed" {
-		t.Fatalf("failure not persisted: %+v %v", failed, err)
+		t.Fatalf("Сведения о сбое не сохранены: %+v %v", failed, err)
 	}
 	resumed, err := db.ResumeMigration0331(ctx, run.ID)
 	if err != nil || resumed.Step != "target_check" {

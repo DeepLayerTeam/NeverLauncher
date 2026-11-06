@@ -20,7 +20,7 @@ func TestManagedConnectorSwapAndRollback02910(t *testing.T) {
 		t.Fatal("bootstrap provider replaced")
 	}
 	if err := core.SwapManaged(jitFixtureConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "nonexistent"}, 1); err == nil {
-		t.Fatal("unknown role accepted")
+		t.Fatal("Неизвестная роль ошибочно принята")
 	}
 	if err := core.SwapManaged(jitFixtureConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player"}, 1); err != nil {
 		t.Fatal(err)

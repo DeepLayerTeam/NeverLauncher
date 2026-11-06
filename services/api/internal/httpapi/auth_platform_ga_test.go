@@ -40,7 +40,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	}
 	current := request0211(t, api, http.MethodGet, "/api/v1/auth/sessions", admin, "")
 	if current.Code != http.StatusOK {
-		t.Fatalf("unexpected current session: %d %s", current.Code, current.Body)
+		t.Fatalf("Неожиданный ответ о текущей сессии: %d %s", current.Code, current.Body)
 	}
 	for _, body := range []string{
 		`{"allExceptCurrent":true,"AllExceptCurrent":false}`,
@@ -55,7 +55,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 		}
 		still := request0211(t, api, http.MethodGet, "/api/v1/auth/sessions", admin, "")
 		if still.Code != http.StatusOK {
-			t.Fatalf("invalid request revoked session: %d", still.Code)
+			t.Fatalf("Недопустимый запрос привёл к отзыву сессии: %d", still.Code)
 		}
 	}
 	oversized := request0211(t, api, http.MethodPost, "/api/v1/auth/sessions/revoke", admin, `{"allExceptCurrent":false,"pad":"`+strings.Repeat("x", 16*1024)+`"}`)

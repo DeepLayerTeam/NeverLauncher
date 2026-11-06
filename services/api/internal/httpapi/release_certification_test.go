@@ -55,7 +55,7 @@ func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 	}
 	blocked := json.RawMessage(`{"title":"Blocked","version":"1.20.4","mainClass":"net.minecraft.client.main.Main","recommendJavaVersion":17,"classLoaderConfig":"BRIDGE"}`)
 	if result := call("import-gravit", request(report.Data.SHA, blocked)); result.Code != 422 {
-		t.Fatalf("blocked action accepted: %d %s", result.Code, result.Body.String())
+		t.Fatalf("Заблокированное действие ошибочно разрешено: %d %s", result.Code, result.Body.String())
 	}
 	imported := call("import-gravit", request(report.Data.SHA, source))
 	if imported.Code != 201 {
@@ -81,6 +81,6 @@ func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 		t.Fatalf("workspace not pinned: %s", imported.Body.String())
 	}
 	if result := call("import-gravit", request(report.Data.SHA, source)); result.Code != 409 {
-		t.Fatalf("duplicate import accepted: %d %s", result.Code, result.Body.String())
+		t.Fatalf("Повторный импорт ошибочно принят: %d %s", result.Code, result.Body.String())
 	}
 }

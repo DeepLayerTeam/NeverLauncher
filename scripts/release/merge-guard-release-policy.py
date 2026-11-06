@@ -43,7 +43,7 @@ def load_fragment(path: Path, expected_platform: str) -> dict:
         die(f"{path}: фрагмент может содержать только platform {expected_platform}")
     policy = platforms[expected_platform]
     if not isinstance(policy, dict):
-        die(f"{path}: malformed {expected_platform} policy")
+        die(f"{path}: некорректная политика платформы {expected_platform}")
     expected_signing, auth_required = PLATFORMS[expected_platform]
     if policy.get("signingMode") != expected_signing:
         die(

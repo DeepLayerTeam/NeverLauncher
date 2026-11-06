@@ -38,7 +38,7 @@ func TestGuardBoundSession0507VerifiedIssuance(t *testing.T) {
 	join, plan, ticket := fixtureGuardBoundSession0507(t)
 	got, err := createGuardBoundSession0507(join, plan, ticket)
 	if err != nil {
-		t.Fatalf("valid Guard binding rejected: %v", err)
+		t.Fatalf("Корректная привязка Guard ошибочно отклонена: %v", err)
 	}
 	if got.CorrelationID != join.SessionCorrelationID || got.PlanSHA256 != plan.PlanSHA256 || got.GuardAttestationSHA256 != plan.GuardAttestationSHA256 || got.ServerID != join.ServerID || got.SessionID != join.SessionID || got.GuardPID != 5027 {
 		t.Fatalf("Guard binding lost verified identity/build/evidence fields: %+v", got)
@@ -88,7 +88,7 @@ func TestGuardBoundSession0507RejectsCrossSessionAndTamper(t *testing.T) {
 			j, p, ticket := fixtureGuardBoundSession0507(t)
 			tc.alter(&j, p, &ticket)
 			if _, err := createGuardBoundSession0507(j, p, ticket); err == nil {
-				t.Fatal("untrusted Guard binding accepted")
+				t.Fatal("Недоверенная привязка Guard ошибочно принята")
 			}
 		})
 	}

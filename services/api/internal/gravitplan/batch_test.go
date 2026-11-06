@@ -98,7 +98,7 @@ func TestMultiProfilePreviewAndDeterminism0492(t *testing.T) {
 	tampered := one
 	tampered.TargetSHA256 = strings.Repeat("b", 64)
 	if VerifyBatch0492(tampered) == nil {
-		t.Fatal("tampered report accepted")
+		t.Fatal("Подменённый отчёт ошибочно принят")
 	}
 	encoded, err := json.Marshal(one)
 	if err != nil {
@@ -119,12 +119,12 @@ func TestMultiProfileFailClosed0492(t *testing.T) {
 	duplicate := destinationsBatch0492()
 	duplicate[1].ProfileID = "ALPHA"
 	if _, e := makeBatch0492(t, src, v, c, m, duplicate, nil); e == nil {
-		t.Fatal("duplicate target ID accepted")
+		t.Fatal("Повторяющийся идентификатор цели ошибочно принят")
 	}
 	invalid := destinationsBatch0492()
 	invalid[1].ProfilePath = "profiles/not-here.json"
 	if _, e := makeBatch0492(t, src, v, c, m, invalid, nil); e == nil {
-		t.Fatal("unknown source path accepted")
+		t.Fatal("Неизвестный путь к источнику ошибочно принят")
 	}
 	collision, e := makeBatch0492(t, src, v, c, m, destinationsBatch0492(), map[string]bool{"beta": true})
 	if e != nil || collision.Status != "blocked" || collision.Profiles[1].Status != "blocked" {

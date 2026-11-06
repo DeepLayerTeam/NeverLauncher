@@ -88,7 +88,7 @@ export function BuildsWorkspace0353({
         <div>
           <h4>Проекты</h4>
           {!projects.length && (
-            <p>Нет доступных проектов. Проверьте аккаунт и Backend.</p>
+            <p>Нет доступных проектов. Проверьте учётную запись и подключение к серверу.</p>
           )}
           <div className="workspaceList0353">
             {projects.map((project) => (
@@ -312,7 +312,7 @@ export function ServersWorkspace0353({
         </p>
       )}
       {saved && (
-        <p role="status">Выбранный сервер сохранён в Desktop-конфигурации.</p>
+        <p role="status">Выбранный сервер сохранён в настройках настольного приложения.</p>
       )}
       <div className="toolbar inline">
         <button

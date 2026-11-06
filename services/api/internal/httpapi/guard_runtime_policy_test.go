@@ -16,7 +16,7 @@ func TestRuntimePolicy0317NormalizationAndValidation(t *testing.T) {
 		t.Fatalf("normalization: %#v %v", profiles, err)
 	}
 	if got := guardRuntimePolicyDigest0317(profiles); !isSHA256Hex0134(got) {
-		t.Fatalf("invalid runtime policy digest %q", got)
+		t.Fatalf("Недопустимый хеш политики Runtime %q", got)
 	}
 	policy := guardReleasePolicy0134{RuntimeProfiles: map[string][]guardRuntimeProfile0317{"windows": profiles}}
 	valid := guardContinuousEvidence01810{JavaMajor: 21, ModuleSetSHA256: hash}
@@ -68,7 +68,7 @@ func TestRuntimePolicy0317RejectsMissingOrMalformedAllowlist(t *testing.T) {
 	server.Config = cfg
 	policies, err := server.guardReleasePolicies0134()
 	if err != nil {
-		t.Fatalf("valid runtime profile rejected: %v", err)
+		t.Fatalf("Корректный профиль Runtime ошибочно отклонён: %v", err)
 	}
 	if len(policies["0.31.7"].RuntimeProfiles["windows"]) != 1 {
 		t.Fatal("runtime profile did not survive release normalization")
@@ -78,7 +78,7 @@ func TestRuntimePolicy0317RejectsMissingOrMalformedAllowlist(t *testing.T) {
 func TestGuardProcessID0317RejectsControlCharacters(t *testing.T) {
 	for _, good := range []string{"runtime-1700000000-1234", "abc:123", "A_B.c"} {
 		if !validGuardProcessID0317(good) {
-			t.Fatalf("valid process ID rejected: %q", good)
+			t.Fatalf("Корректный идентификатор процесса ошибочно отклонён: %q", good)
 		}
 	}
 	for _, bad := range []string{"", " with-space", "one\\ntwo", "foo/bar", strings.Repeat("a", 129)} {

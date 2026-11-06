@@ -209,7 +209,7 @@ func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 	}
 	library := filepath.Join(folder, "workspace-library.jar")
 	if output, err := exec.Command("jar", "cf", library, "-C", classes, ".").CombinedOutput(); err != nil {
-		t.Fatalf("jar failed: %s: %v", output, err)
+		t.Fatalf("Ошибка обработки JAR %s: %v", output, err)
 	}
 	sha, _, err := hashFile(library)
 	if err != nil {

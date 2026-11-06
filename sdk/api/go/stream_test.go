@@ -72,7 +72,7 @@ func TestStreamRejectsRedirectAndInvalidOptions0463(t *testing.T) {
 		t.Fatal("nil writer accepted")
 	}
 	if _, err = c.RequestStream(context.Background(), "GET", "/api/v1/a", nil, nil, "", &out, -1, ""); err == nil {
-		t.Fatal("negative limit accepted")
+		t.Fatal("Отрицательное ограничение ошибочно принято")
 	}
 	if _, err = c.RequestStream(context.Background(), "GET", "//evil", nil, nil, "", &out, 1024, ""); err == nil {
 		t.Fatal("Небезопасный путь ошибочно принят")

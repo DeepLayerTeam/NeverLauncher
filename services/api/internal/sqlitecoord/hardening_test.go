@@ -31,7 +31,7 @@ func TestCoordinator0471SchemaDriftFailClosed(t *testing.T) {
 		_ = next.Close()
 		t.Fatal("partial coordinator schema silently rebuilt")
 	} else if !strings.Contains(err.Error(), "partial schema") {
-		t.Fatalf("unexpected schema error: %v", err)
+		t.Fatalf("Неожиданная ошибка схемы: %v", err)
 	}
 }
 

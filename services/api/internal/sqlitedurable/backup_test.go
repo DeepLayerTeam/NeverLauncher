@@ -60,7 +60,7 @@ func TestOnlineBackupWALAndVerifiedRestore(t *testing.T) {
 		t.Fatal(e)
 	}
 	if manifest.SchemaVersion != 0 || manifest.Bytes <= 0 {
-		t.Fatalf("unexpected snapshot metadata: %+v", manifest)
+		t.Fatalf("Неожиданные метаданные снимка: %+v", manifest)
 	}
 	if _, err = VerifyBackup(ctx, backup); err != nil {
 		t.Fatal(err)

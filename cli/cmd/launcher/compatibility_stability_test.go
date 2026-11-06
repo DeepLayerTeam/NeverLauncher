@@ -33,7 +33,7 @@ func TestCompatibilityGETRetriesTransientStatus(t *testing.T) {
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
 	if string(data) != "ok" || calls.Load() != 3 {
-		t.Fatalf("unexpected response/calls: %q / %d", data, calls.Load())
+		t.Fatalf("Неожиданные ответ или число вызовов: %q / %d", data, calls.Load())
 	}
 }
 
@@ -100,14 +100,14 @@ func TestSecureClientDestinationRejectsSymlinkComponent(t *testing.T) {
 		t.Fatalf("symlink: %v", err)
 	}
 	if _, err := secureClientDestination(root, "libraries/example.jar"); err == nil {
-		t.Fatal("symlink component was accepted")
+		t.Fatal("Компонент через символьную ссылку ошибочно принят")
 	}
 }
 
 func TestValidateAssetLogicalPath(t *testing.T) {
 	for _, good := range []string{"minecraft/sounds/test.ogg", "icons/icon_16x16.png", "a"} {
 		if err := validateAssetLogicalPath(good); err != nil {
-			t.Fatalf("valid path %q rejected: %v", good, err)
+			t.Fatalf("Допустимый путь %q ошибочно отклонён: %v", good, err)
 		}
 	}
 	for _, bad := range []string{"../escape", "a/../escape", "/absolute", "a//b", "a\\..\\b", ""} {
@@ -178,7 +178,7 @@ func TestValidateRemoteURLRejectsCredentialsAndPrivateLiteral(t *testing.T) {
 		}
 	}
 	if err := validateRemoteURL("https://example.com/file.jar"); err != nil {
-		t.Fatalf("public HTTPS URL rejected: %v", err)
+		t.Fatalf("Публичный HTTPS-адрес ошибочно отклонён: %v", err)
 	}
 	if err := validateRemoteURL("http://127.0.0.1:8080/file.jar"); err != nil {
 		t.Fatalf("loopback HTTP test upstream rejected: %v", err)

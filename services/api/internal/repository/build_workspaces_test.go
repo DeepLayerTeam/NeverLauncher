@@ -36,7 +36,7 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 	hijack := stored
 	hijack.OwnerID = "someone-else"
 	if _, err = repo.SaveBuildWorkspace(ctx, hijack); !errors.Is(err, ErrConflict) {
-		t.Fatalf("owner changed: %v", err)
+		t.Fatalf("Владелец неожиданно изменился: %v", err)
 	}
 	stored.State = "built"
 	stored.PackageID = "demo-project-vanilla-0.22.6"

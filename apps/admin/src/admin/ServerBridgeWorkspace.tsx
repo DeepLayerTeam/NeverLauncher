@@ -798,7 +798,7 @@ export function ServerBridgeWorkspace({
       {node && (
         <div className="bridgeColumns">
           <article className="bridgeSection">
-            <h3>{node.name || node.id} · Runtime</h3>
+            <h3>{node.name || node.id} · Среда выполнения</h3>
             <dl className="bridgeFacts">
               <dt>Пульс (heartbeat)</dt>
               <dd>
@@ -822,11 +822,11 @@ export function ServerBridgeWorkspace({
                 {node.integrityStatus || "неизвестна"}{" "}
                 {node.upgradeRecommended ? " · рекомендуется обновление" : ""}
               </dd>
-              <dt>Идентификатор Runtime</dt>
+              <dt>Идентификатор среды выполнения</dt>
               <dd>
                 <code>{node.runtimeId || "неизвестен"}</code>
               </dd>
-              <dt>Эпоха Runtime</dt>
+              <dt>Эпоха среды выполнения</dt>
               <dd>{node.runtimeEpoch || "неизвестно"}</dd>
               <dt>Хост / Java</dt>
               <dd>
@@ -992,7 +992,7 @@ export function ServerBridgeWorkspace({
                       : "stale/не подтверждено"}{" "}
                     · наблюдение {timeLabel(network.observedAt ?? undefined)}
                   </dd>
-                  <dt>Runtime</dt>
+                  <dt>Среда выполнения</dt>
                   <dd>
                     <code>{network.runtimeId}</code> · эпоха{" "}
                     {network.runtimeEpoch} · ревизия маршрутизации{" "}
@@ -1512,14 +1512,15 @@ export function ServerBridgeWorkspace({
           ]}
         />
         <p className="muted">
-          Journal: последние 100 команд Backend. pending = queued; leased =
-          dispatch без ACK; accepted = принято/запланировано; executed = вызов
-          выполнен без проверки эффекта; succeeded = результат сверён с
-          состоянием платформы; failed и indeterminate различаются.
+          Журнал: последние 100 серверных команд. pending и queued означают ожидание;
+          leased — передача исполнителю без подтверждения ACK; accepted — команда
+          принята или запланирована; executed — вызов выполнен без проверки
+          результата; succeeded — результат подтверждён состоянием платформы;
+          failed — ошибка, indeterminate — результат не определён.
         </p>
       </section>
       <details className="advanced">
-        <summary>Диагностика Protocol v3, topology и audit</summary>
+        <summary>Диагностика протокола v3, топологии и аудита</summary>
         <p className="muted">
           {overview?.protocol?.status || "unknown"} · хеш{" "}
           <code>{overview?.protocol?.featureDigest || "unknown"}</code> ·

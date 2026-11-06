@@ -66,7 +66,7 @@ func TestTrustSweepQuarantinesActiveLocalPackage0424(t *testing.T) {
 		t.Fatalf("sweep failed to disable active quarantined package: blocked=%d err=%v", blocked, err)
 	}
 	if _, err := repo.GetExtensionEmergencyDisable(ctx, id, "global", ""); err != nil {
-		t.Fatalf("kill-switch not persisted: %v", err)
+		t.Fatalf("Состояние аварийного отключения не сохранено: %v", err)
 	}
 	after, err := repo.GetExtensionInstallState(ctx, id, "global", "")
 	if err != nil || after.CurrentState != model.ExtensionInstallStateDisabled {

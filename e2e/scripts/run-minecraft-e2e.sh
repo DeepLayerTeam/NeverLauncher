@@ -888,7 +888,7 @@ player_negative_0398() {
   http="$(serverbridge_node_signed_request "$PAPER_NODE_KEY" paper-e2e-p3 POST \
     "$API/api/v1/server-bridge/validate-join" "$(cat "$request")" "$response")"
   printf '%s\n' "$http" > "$RUNTIME_DIR/player-0398-http-${case_id}.txt"
-  [[ "$http" == 403 ]] || { echo "[player-0398] $case_id expected 403, got $http" >&2; return 1; }
+  [[ "$http" == 403 ]] || { echo "[player-0398] $case_id: ожидался HTTP 403, получен $http" >&2; return 1; }
   jq -e --arg reason "$expected_reason" \
     '.data.allowed == false and .data.reason == $reason and (.data.player == null)' \
     "$response" >/dev/null || { echo "[player-0398] $case_id: неверная причина отказа" >&2; return 1; }

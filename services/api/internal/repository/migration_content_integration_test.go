@@ -101,7 +101,7 @@ func TestMigrationContentAtomicReplay0337(t *testing.T) {
 	changed := plan
 	changed.FilesSHA256 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 	if _, e = repo.EnsureMigrationContent0337(ctx, run.ID, "migration-owner", "stable", "migrated-1", changed); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed source replay accepted: %v", e)
+		t.Fatalf("Повторное воспроизведение с изменённым источником ошибочно разрешено: %v", e)
 	}
 	if _, e = repo.EnsureMigrationContent0337(ctx, run.ID, "other-owner", "stable", "migrated-1", plan); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("owner hijack accepted: %v", e)

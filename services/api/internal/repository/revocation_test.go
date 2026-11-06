@@ -41,7 +41,7 @@ func TestRevokedDeviceKeyCannotBeResurrected0434(t *testing.T) {
 	}
 	after, err := repo.GetTrustedDevice(enrolled.UserID, enrolled.ID)
 	if err != nil || after.Status != "revoked" || after.KeyFingerprint != enrolled.KeyFingerprint {
-		t.Fatalf("revocation changed: %+v %v", after, err)
+		t.Fatalf("Данные об отзыве неожиданно изменились: %+v %v", after, err)
 	}
 	if second, err := repo.RevokeTrustedDevice(ctx, enrolled.UserID, enrolled.ID, "retry"); err != nil || !second.AlreadyRevoked {
 		t.Fatalf("not idempotent: %+v %v", second, err)

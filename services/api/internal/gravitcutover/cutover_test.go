@@ -57,7 +57,7 @@ func TestSignedReleaseMustMatchCurrentNeverKey03311(t *testing.T) {
 	m.Signature = &model.SignatureInfo{Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Signature: hex.EncodeToString(ed25519.Sign(priv, raw))}
 	digest, e := VerifyRelease(m, pub)
 	if e != nil || len(digest) != 64 {
-		t.Fatalf("signature rejected: %s %v", digest, e)
+		t.Fatalf("Подпись ошибочно отклонена: %s %v", digest, e)
 	}
 	if _, e = VerifyRelease(m, other); e == nil {
 		t.Fatal("foreign signer allowed")

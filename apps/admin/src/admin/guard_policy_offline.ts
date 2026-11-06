@@ -13,30 +13,30 @@ export type GuardContent05011 = {
 export type SignedGuard05011 = {schemaVersion: string; payload: string; signature: string};
 const DOMAIN = new TextEncoder().encode('NeverLauncher-Guard-Compatibility-v1\n');
 function hexBytes(value: string): Uint8Array {
-  if (!/^(?:[a-f0-9]{2})+$/.test(value)) throw Error('Неверный hex');
+  if (!/^(?:[a-f0-9]{2})+$/.test(value)) throw Error('Неверное шестнадцатеричное значение');
   return Uint8Array.from(value.match(/../g)!, s => parseInt(s, 16));
 }
 function decodeBase64(value: string): Uint8Array {
-  if (value.length > 256 * 1024 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw Error('Некорректный payload Base64');
+  if (value.length > 256 * 1024 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw Error('Некорректная полезная нагрузка Base64');
   return Uint8Array.from(atob(value), s => s.charCodeAt(0));
 }
 function parsePolicy(raw: Uint8Array): GuardContent05011 {
-  if (!raw.length || raw.length > 192*1024) throw Error('Слишком большой payload');
+  if (!raw.length || raw.length > 192*1024) throw Error('Слишком большая полезная нагрузка');
   const decoded = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)) as GuardContent05011;
   if (decoded.schemaVersion !== 'launcher.guard-compatibility.v1' || !Number.isSafeInteger(decoded.epoch) || decoded.epoch < 1 ||
       !decoded.projectId || !decoded.minecraft || !decoded.loader || !Array.isArray(decoded.artifacts) ||
       !Array.isArray(decoded.transformations) || !Array.isArray(decoded.revokedDigests) || !Array.isArray(decoded.revokedTransformations) ||
       !Number.isSafeInteger(decoded.issuedAt) || !Number.isSafeInteger(decoded.expiresAt) || decoded.expiresAt <= decoded.issuedAt) {
-    throw Error('Неподдерживаемая или повреждённая Guard policy');
+    throw Error('Неподдерживаемая или повреждённая политика Guard');
   }
   return decoded;
 }
 export async function verifyGuardEnvelope05011(envelopeJSON: string, pinnedPublicKey: string, at: number = Math.floor(Date.now()/1000), allowExpired = false) {
   const publicBytes = hexBytes(pinnedPublicKey.trim());
-  if (publicBytes.length !== 32) throw Error('Требуется внешний Ed25519 public key, 64 hex');
-  if (envelopeJSON.length > 256*1024) throw Error('Guard envelope слишком большой');
+  if (publicBytes.length !== 32) throw Error('Требуется внешний публичный ключ Ed25519 из 64 шестнадцатеричных символов');
+  if (envelopeJSON.length > 256*1024) throw Error('Конверт политики Guard слишком большой');
   const env = JSON.parse(envelopeJSON) as SignedGuard05011;
-  if (env.schemaVersion !== 'launcher.guard-compatibility.v1' || typeof env.payload !== 'string' || typeof env.signature !== 'string') throw Error('Неизвестный Guard envelope');
+  if (env.schemaVersion !== 'launcher.guard-compatibility.v1' || typeof env.payload !== 'string' || typeof env.signature !== 'string') throw Error('Неизвестный формат конверта политики Guard');
   const payloadBytes = decodeBase64(env.payload);
   const signature = hexBytes(env.signature);
   if (signature.length !== 64) throw Error('Некорректная подпись Ed25519');
@@ -50,7 +50,7 @@ export async function verifyGuardEnvelope05011(envelopeJSON: string, pinnedPubli
   return policy;
 }
 export function guardCandidate05011(current: GuardContent05011, previous: GuardContent05011|null, digestList: string, transformList: string, now = Math.floor(Date.now()/1000)): GuardContent05011 {
-  if (!Number.isSafeInteger(current.epoch+1)) throw Error('Исчерпана точность epoch');
+  if (!Number.isSafeInteger(current.epoch+1)) throw Error('Исчерпана точность представления эпохи');
   if (previous && (previous.epoch >= current.epoch || previous.projectId !== current.projectId || previous.minecraft !== current.minecraft || previous.loader.toLowerCase() !== current.loader.toLowerCase())) throw Error('Историческая политика не относится к данной сборке или не старше текущей');
   const digest = digestList.split(/[\s,]+/).filter(Boolean);
   if (digest.some(x => !/^[a-f0-9]{64}$/.test(x))) throw Error('Отзыв JAR/native требует SHA-256 lowercase hex');

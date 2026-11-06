@@ -57,7 +57,7 @@ func TestTextureLocalBackupRestoreGC0253(t *testing.T) {
 	recovered, err := io.ReadAll(r)
 	r.Close()
 	if err != nil || !bytes.Equal(recovered, payload) {
-		t.Fatal("restore mismatch", err)
+		t.Fatal("Несоответствие данных после восстановления", err)
 	}
 	// Подменённые снимки должны отклоняться до изменения хранилища.
 	if err := os.WriteFile(filepath.Join(dest, "blobs", obj.Digest+".png"), []byte(strings.Repeat("x", len(payload))), 0600); err != nil {
@@ -84,10 +84,10 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		if !strings.Contains(r.URL.Path, "/bucket/texture-blobs/sha256/") {
-			t.Errorf("unexpected key: %s", r.URL.Path)
+			t.Errorf("Неожиданный ключ: %s", r.URL.Path)
 		}
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 ") {
-			t.Error("missing SigV4")
+			t.Error("Отсутствует подпись SigV4")
 		}
 		switch r.Method {
 		case http.MethodPut:
@@ -273,6 +273,6 @@ func TestTextureS3BackupRestoreAndConditionalRepair0253(t *testing.T) {
 	recovered, err := io.ReadAll(f)
 	f.Close()
 	if err != nil || !bytes.Equal(recovered, png) {
-		t.Fatalf("S3 restore mismatch: %v", err)
+		t.Fatalf("Несовпадение данных после восстановления из S3: %v", err)
 	}
 }

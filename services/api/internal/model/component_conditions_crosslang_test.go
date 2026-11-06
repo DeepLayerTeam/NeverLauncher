@@ -38,6 +38,6 @@ func TestGoSignedConditionalCatalogFixture0244(t *testing.T) {
 		t.Fatal("invalid cross-language signed fixture")
 	}
 	if m.ComponentCatalog.Digest != ComponentCatalogDigest0244(*m.ComponentCatalog) {
-		t.Fatal("wrong catalog digest")
+		t.Fatal("Неверный хеш каталога")
 	}
 }

@@ -39,7 +39,7 @@ func TestCore0472MigratesVersion326AndDoesNotRepeatBackup(t *testing.T) {
 	}
 	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(path), "pre-upgrade-backups", "*.sqlite"))
 	if len(backups) != 1 {
-		t.Fatalf("missing backup %v", backups)
+		t.Fatalf("Отсутствует резервная копия: %v", backups)
 	}
 	if _, err = sqlitedurable.VerifyBackup(ctx, backups[0]); err != nil {
 		t.Fatal(err)

@@ -26,11 +26,11 @@ func TestJavaJarRejectsUnsignedExecutableSubstitution0304(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := safeEntrypoint(root, "backend.jar"); err == nil {
-		t.Fatal("non-JAR accepted")
+		t.Fatal("Файл, не являющийся JAR, ошибочно принят")
 	}
 	if err := os.Symlink(path, filepath.Join(root, "link.jar")); err == nil {
 		if _, err := safeEntrypoint(root, "link.jar"); err == nil {
-			t.Fatal("symlink JAR accepted")
+			t.Fatal("JAR через символьную ссылку ошибочно принят")
 		}
 	}
 	if _, err := safeEntrypoint(root, "../backend.jar"); err == nil {
@@ -51,7 +51,7 @@ func TestJavaEntrypointParentSymlinkRejected0304(t *testing.T) {
 		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	if _, err := safeEntrypoint(root, "alias/extension"); err == nil {
-		t.Fatal("symlink parent accepted")
+		t.Fatal("Родительский каталог через символьную ссылку ошибочно принят")
 	}
 }
 

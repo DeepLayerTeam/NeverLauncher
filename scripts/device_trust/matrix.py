@@ -96,16 +96,16 @@ def load_targets(path: Path) -> dict[str, Any]:
         required = raw.get("required")
         checks = raw.get("requiredChecks")
         if not ID_RE.fullmatch(target_id) or target_id in seen:
-            die(f"target #{index + 1}: invalid or duplicate id {target_id!r}")
+            die(f"цель №{index + 1}: некорректный или повторяющийся идентификатор {target_id!r}")
         seen.add(target_id)
         if kind not in ALLOWED_KINDS:
-            die(f"{target_id}: unsupported kind {kind!r}")
+            die(f"{target_id}: неподдерживаемый тип {kind!r}")
         if not RUNNER_RE.fullmatch(runner):
-            die(f"{target_id}: invalid runner {runner!r}")
+            die(f"{target_id}: недопустимый исполнитель {runner!r}")
         if os_name not in ALLOWED_OS:
-            die(f"{target_id}: unsupported os {os_name!r}")
+            die(f"{target_id}: неподдерживаемая ОС {os_name!r}")
         if arch not in ALLOWED_ARCH:
-            die(f"{target_id}: unsupported arch {arch!r}")
+            die(f"{target_id}: неподдерживаемая архитектура {arch!r}")
         if not isinstance(required, bool):
             die(f"{target_id}: поле required должно иметь логический тип")
         if (
@@ -115,7 +115,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         ):
             die(f"{target_id}: requiredChecks должен быть непустым массивом уникальных строк")
         if len(checks) != len(set(checks)):
-            die(f"{target_id}: duplicate requiredChecks")
+            die(f"{target_id}: повторяющиеся обязательные проверки requiredChecks")
         missing = sorted(KIND_MANDATORY_CHECKS[kind] - set(checks))
         if missing:
             die(

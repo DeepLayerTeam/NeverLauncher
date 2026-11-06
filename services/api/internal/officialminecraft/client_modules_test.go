@@ -14,7 +14,7 @@ func TestMojangProfileTransientRetry0427(t *testing.T) {
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/minecraft/profile" {
-			t.Errorf("unexpected path %q", r.URL.Path)
+			t.Errorf("Неожиданный путь %q", r.URL.Path)
 		}
 		n := calls.Add(1)
 		if n <= 2 {

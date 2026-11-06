@@ -65,6 +65,6 @@ func TestLocalAuthCLI0295SecurityRefusals(t *testing.T) {
 		t.Fatal("reserved FileAuth domain accepted")
 	}
 	if err := run([]string{"import", "--file", "/tmp/Sessions.json", "--format", "sha256-hex"}, &output, strings.NewReader("")); err == nil {
-		t.Fatal("Sessions.json import accepted")
+		t.Fatal("Импорт Sessions.json ошибочно разрешён")
 	}
 }

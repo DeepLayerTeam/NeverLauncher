@@ -231,12 +231,12 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 		t.Fatal(e)
 	}
 	if verifyEvidence(b, evidenceDir) == nil {
-		t.Fatal("tampered evidence accepted")
+		t.Fatal("Подменённое доказательство ошибочно принято")
 	}
 
 	b.SourceSHA256 = testHash
 	if verifyBundle(b, priv.Public().(ed25519.PublicKey)) == nil {
-		t.Fatal("tampered certificate accepted")
+		t.Fatal("Подменённый сертификат ошибочно принят")
 	}
 	if _, e = os.Stat(output); e != nil {
 		t.Fatal(e)
@@ -322,6 +322,6 @@ func TestRejectInsecureKey0340(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := signingKey(path); e == nil {
-		t.Fatal("world-readable key accepted")
+		t.Fatal("Ключ с доступом на чтение для всех ошибочно принят")
 	}
 }

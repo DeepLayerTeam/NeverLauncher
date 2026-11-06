@@ -114,7 +114,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				"libraries/" + mavenPath,
 			} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-					t.Fatalf("missing %s: %v", rel, err)
+					t.Fatalf("Не найден файл или компонент %s: %v", rel, err)
 				}
 			}
 			profileDisk, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(result.ProfilePath)))

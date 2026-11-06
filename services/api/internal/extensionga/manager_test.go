@@ -17,7 +17,7 @@ func TestValidateEmptyRepository0210(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.Checked != 0 || report.Healthy != 0 || len(report.Issues) != 0 {
-		t.Fatalf("unexpected empty report: %+v", report)
+		t.Fatalf("Неожиданно получен пустой отчёт: %+v", report)
 	}
 	if report.Contract.ExtensionAPIVersion != extensioncontract.ExtensionAPIVersion {
 		t.Fatalf("contract API=%q", report.Contract.ExtensionAPIVersion)

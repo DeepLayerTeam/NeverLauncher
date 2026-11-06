@@ -18,7 +18,7 @@ func TestProfileVersionAndReleaseSnapshot0221(t *testing.T) {
 		}
 	}
 	if p.Revision != 1 {
-		t.Fatalf("unexpected legacy revision: %+v", p)
+		t.Fatalf("Неожиданная устаревшая ревизия: %+v", p)
 	}
 	release, err := r.CreateVersion("demo-project", "vanilla", "beta", "profile-0221")
 	if err != nil {
@@ -46,7 +46,7 @@ func TestProfileVersionAndReleaseSnapshot0221(t *testing.T) {
 	versions, _ := r.ListVersions("demo-project")
 	for _, v := range versions {
 		if v.ID == release.ID && v.Manifest.ProfileSnapshot.Digest != old.Digest {
-			t.Fatal("release snapshot changed")
+			t.Fatal("Снимок релиза неожиданно изменился")
 		}
 	}
 	p.Revision = 1

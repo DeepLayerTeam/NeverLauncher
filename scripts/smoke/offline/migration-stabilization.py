@@ -128,4 +128,4 @@ subprocess.run(
     stdout=subprocess.DEVNULL,
 )
 
-print(f"[Launcher] Migration + stabilization 0.15.10 gate: OK ({VERSION})")
+print(f"[Launcher] Проверка миграции и стабилизации 0.15.10: успешно ({VERSION})")

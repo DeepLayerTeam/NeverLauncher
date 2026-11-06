@@ -79,10 +79,10 @@ func TestHostBudget03113ConcurrentAndReset(t *testing.T) {
 		t.Fatal("per-second limit bypassed")
 	}
 	if !budget.admitLocked03113(now.Add(time.Second), p) {
-		t.Fatal("new window not accepted")
+		t.Fatal("Новое окно ошибочно не принято")
 	}
 	if budget.chargeLocked03113(-1, p) {
-		t.Fatal("negative output accepted")
+		t.Fatal("Отрицательное выходное значение ошибочно принято")
 	}
 }
 func TestHostBudget03113Race(t *testing.T) {

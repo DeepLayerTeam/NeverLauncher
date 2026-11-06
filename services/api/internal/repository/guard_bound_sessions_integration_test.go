@@ -151,7 +151,7 @@ func TestServerBoundGuardPostgres0507(t *testing.T) {
 		t.Fatal(err)
 	}
 	if status != "invalidated" || !strings.Contains(reason, "guard_build_revoked") {
-		t.Fatalf("unexpected player session state: %s %s", status, reason)
+		t.Fatalf("Неожиданное состояние игровой сессии: %s %s", status, reason)
 	}
 	var kicked int
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_control_commands_v3 WHERE payload->>'sessionCorrelationId'=$1 AND command_type='player.kick'`, correlation).Scan(&kicked); err != nil {

@@ -121,7 +121,7 @@ func TestVerifyRegistryPackageAcceptsOlderCLISBOM0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if verified.PackageIdentity != inspected.PackageIdentity || verified.SHA256 != inspected.SHA256 || verified.Size != inspected.Size {
-		t.Fatalf("verify/inspect mismatch")
+		t.Fatalf("Результаты проверки и просмотра не совпадают")
 	}
 	otherPublic, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -151,7 +151,7 @@ func TestExtractPayloadFile0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(data) != "#!/bin/sh\necho registry\n" {
-		t.Fatalf("unexpected payload %q", data)
+		t.Fatalf("Неожиданная полезная нагрузка %q", data)
 	}
 	if _, err := ExtractPayloadFile(packagePath, filepath.Join(t.TempDir(), "other"), "sha256:"+strings.Repeat("0", 64)); err == nil {
 		t.Fatal("ExtractPayloadFile accepted wrong immutable package identity")

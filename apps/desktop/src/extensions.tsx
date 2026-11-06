@@ -434,7 +434,7 @@ export function DesktopExtensions0209({
     <section className="desktopExtensions0209">
       <div className="desktopExtensionsHeader">
         <div>
-          <h3>Расширения Desktop</h3>
+          <h3>Расширения настольного приложения</h3>
           <p>
             Автономный интерфейс расширения работает в изолированной среде с непрозрачным источником.
             Доступ к Tauri возможен только через родительский мост с проверкой разрешений.
@@ -444,7 +444,7 @@ export function DesktopExtensions0209({
       </div>
       {error && <div role="alert"><pre>{error}</pre><button onClick={() => void refresh()}>Повторить загрузку</button></div>}
       {!items.length ? (
-        <p>Нет доступных enabled Desktop extensions.</p>
+        <p>Нет доступных включённых расширений настольного приложения.</p>
       ) : (
         <div className="desktopExtensionsLayout">
           <aside className="desktopExtensionNav">

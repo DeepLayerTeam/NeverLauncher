@@ -40,6 +40,6 @@ func TestTrustProfileQueryRequiresBoundDevice0311(t *testing.T) {
 	}
 	code, _ = deviceTrustRequest0121(t, srv, http.MethodGet, "/api/v1/auth/device-trust", access, nil)
 	if code != http.StatusOK {
-		t.Fatalf("legacy status unexpectedly rejected: %d", code)
+		t.Fatalf("Устаревший допустимый статус неожиданно отклонён: %d", code)
 	}
 }

@@ -109,7 +109,7 @@ func TestNormalizeGravitStrictConfiguration(t *testing.T) {
 	good.Password = PasswordConfig{Algorithm: "doubleDigest", AllowLegacyHashes: true, DigestAlgorithm: "SHA-256", DoubleDigestHex: true}
 	runtime, err := Normalize(good)
 	if err != nil || runtime.Password.Algorithm != "double-digest" || runtime.Password.DigestAlgorithm != "sha256" {
-		t.Fatalf("valid Gravit config rejected: %+v, %v", runtime.Password, err)
+		t.Fatalf("Корректная конфигурация Gravit ошибочно отклонена: %+v, %v", runtime.Password, err)
 	}
 }
 
@@ -124,7 +124,7 @@ func TestAuthenticateGravitPHPassFromActualSQLRow(t *testing.T) {
 	defer conn.Close()
 	got, err := conn.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
 	if err != nil || got.Identity.Subject != "777" {
-		t.Fatalf("PHPass database login failed: %+v %v", got, err)
+		t.Fatalf("Ошибка входа через базу данных PHPass: %+v %v", got, err)
 	}
 	_, err = conn.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player", Secret: "wrong"})
 	if authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {

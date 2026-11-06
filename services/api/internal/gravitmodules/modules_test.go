@@ -76,7 +76,7 @@ func TestGravitModulesUnknownCriticalBlocking0338(t *testing.T) {
 	}
 	for _, secret := range []string{"SENSITIVE_MANIFEST_VALUE", "SENSITIVE_TOKEN", "SENSITIVE_ADDRESS"} {
 		if bytes.Contains(raw, []byte(secret)) {
-			t.Fatalf("secret leaked: %s", secret)
+			t.Fatalf("Произошла утечка секрета: %s", secret)
 		}
 	}
 	second, e := Analyze(context.Background(), f, int64(len(source)), snapshot)
@@ -186,6 +186,6 @@ func TestModuleConfigAmbiguity0446(t *testing.T) {
 		}
 	}
 	if !validModuleConfig0446([]byte(`{"a":{"x":1},"b":true}`)) {
-		t.Fatal("valid config rejected")
+		t.Fatal("Корректная конфигурация ошибочно отклонена")
 	}
 }

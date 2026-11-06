@@ -72,7 +72,7 @@ func TestAuditStateReadsRealFiles0450(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := auditState(source, target); err == nil {
-		t.Fatal("different identity accepted")
+		t.Fatal("Другая идентичность ошибочно принята")
 	}
 }
 func TestAuditStateRejectsSymlinkAndEmpty0450(t *testing.T) {
@@ -94,7 +94,7 @@ func TestAuditStateRejectsSymlinkAndEmpty0450(t *testing.T) {
 		t.Fatal("symlink member accepted")
 	}
 	if _, err := auditState(source, source); err == nil {
-		t.Fatal("same snapshot accepted")
+		t.Fatal("Один и тот же снимок ошибочно принят")
 	}
 }
 

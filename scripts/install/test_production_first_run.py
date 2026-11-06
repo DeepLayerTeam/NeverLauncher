@@ -75,7 +75,7 @@ class ProductionFirstRunTests(unittest.TestCase):
                 if url.endswith("/api/v1/admin/login"):
                     self.assertEqual(kwargs["expected_status"], 200)
                     return {"token":"live-jwt", "user":{"email":args.email}}
-                self.fail(f"unexpected endpoint: {url}")
+                self.fail(f"Неожиданная конечная точка API: {url}")
             with patch.object(deploy, "tls_paths"), patch.object(deploy, "public_json", side_effect=fake_api):
                 deploy.bootstrap_first_admin(args)
             self.assertEqual(len(calls), 5)

@@ -27,6 +27,6 @@ func TestProfileBeforeSaveVeto0495(t *testing.T) {
 	}
 	bus.SetDispatcher(&testDispatcher0206{})
 	if err := bus.BeforeProfileSave(ctx, "owner", "update", profile); err != nil {
-		t.Fatalf("valid profile rejected: %v", err)
+		t.Fatalf("Корректный профиль ошибочно отклонён: %v", err)
 	}
 }

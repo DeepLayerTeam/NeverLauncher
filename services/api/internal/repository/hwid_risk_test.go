@@ -35,7 +35,7 @@ func TestHWIDMemoryObservationAppealAndRecovery0299(t *testing.T) {
 	}
 	p := PublicHWIDState0299(changed)
 	if strings.Contains(strings.Join([]string{p["state"].(string), p["deviceId"].(string)}, ":"), a) {
-		t.Fatal("digest leaked")
+		t.Fatal("Произошла утечка хеша")
 	}
 	appeal := HWIDAppeal0299{ID: "appeal-1", UserID: "u1", DeviceID: "d1", Reason: "Replaced motherboard", CreatedAt: now.Add(3 * time.Second)}
 	if err := r.SubmitHWIDAppeal0299(ctx, appeal); err != nil {

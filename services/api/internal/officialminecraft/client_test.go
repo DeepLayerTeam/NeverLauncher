@@ -28,7 +28,7 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 		switch r.URL.Path {
 		case "/devicecode":
 			if r.FormValue("scope") != "XboxLive.signin offline_access" {
-				t.Errorf("scope mismatch")
+				t.Errorf("Несовпадение области действия")
 			}
 			io.WriteString(w, `{"device_code":"dsecret","user_code":"ABCD","verification_uri":"https://microsoft.com/link","expires_in":900,"interval":5}`)
 		case "/token":
@@ -42,7 +42,7 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 			var p struct{ Properties struct{ RpsTicket string } }
 			_ = json.NewDecoder(r.Body).Decode(&p)
 			if p.Properties.RpsTicket != "d=ms-secret" {
-				t.Errorf("unexpected Xbox RPS ticket")
+				t.Errorf("Неожиданный тикет Xbox RPS")
 			}
 			io.WriteString(w, `{"Token":"xbl","DisplayClaims":{"xui":[{"uhs":"user-hash"}]}}`)
 		case "/xsts/authorize":
@@ -51,7 +51,7 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 			var p struct{ IdentityToken string }
 			_ = json.NewDecoder(r.Body).Decode(&p)
 			if p.IdentityToken != "XBL3.0 x=user-hash;xsts" {
-				t.Errorf("unexpected Minecraft identity token")
+				t.Errorf("Неожиданный токен идентичности Minecraft")
 			}
 			io.WriteString(w, `{"access_token":"minecraft-secret","token_type":"Bearer","expires_in":7200}`)
 		case "/entitlements/mcstore":
@@ -218,7 +218,7 @@ func TestPKCEAuthorizationCodeExchangeAndEntitlements(t *testing.T) {
 	}
 	q := u.Query()
 	if q.Get("code_challenge") != challenge || q.Get("code_challenge_method") != "S256" || q.Get("scope") != "XboxLive.signin offline_access" || q.Get("redirect_uri") != redirect || q.Get("response_type") != "code" {
-		t.Fatalf("unexpected authorization request: %s", authURL)
+		t.Fatalf("Неожиданный запрос авторизации: %s", authURL)
 	}
 	tokens, err := c.ExchangeAuthorizationCode(context.Background(), clientID, redirect, "valid-code", verifier)
 	if err != nil || tokens.AccessToken != "ms-secret" {

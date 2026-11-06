@@ -46,7 +46,7 @@ func TestValidateProductionAcceptsSeparatedRootsAndExplicitOrigins(t *testing.T)
 		BridgeReleaseAllowlistJSON: testBridgeAllowlist0135,
 	}
 	if err := ValidateProduction(cfg); err != nil {
-		t.Fatalf("valid production configuration rejected: %v", err)
+		t.Fatalf("Корректная промышленная конфигурация ошибочно отклонена: %v", err)
 	}
 }
 
@@ -199,7 +199,7 @@ func TestValidateProductionServerBridgeHA01911RequiresRedisAndFailClosedPolicy(t
 		RateLimitEnabled: true, RateLimitFailClosed: true, RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
 	}
 	if err := ValidateProduction(cfg); err != nil {
-		t.Fatalf("valid HA production policy rejected: %v", err)
+		t.Fatalf("Корректная промышленная политика HA ошибочно отклонена: %v", err)
 	}
 	cfg.RedisURL = ""
 	if err := ValidateProduction(cfg); err == nil {

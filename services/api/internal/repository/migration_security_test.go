@@ -18,7 +18,7 @@ func TestMigrationSecurityTargetDerivation0336(t *testing.T) {
 		t.Fatalf("bad targets: %#v %v", targets, err)
 	}
 	if targets[1].UserID != "gravit-sql-22222222222243338444555555555555" {
-		t.Fatal("SQL user ID mismatch")
+		t.Fatal("Несовпадение идентификатора пользователя SQL")
 	}
 	differentSourceID := rows[1]
 	differentSourceID.SourceID = "database-other-row-id"
@@ -27,7 +27,7 @@ func TestMigrationSecurityTargetDerivation0336(t *testing.T) {
 	}
 	rows = append(rows, rows[0])
 	if _, err = migrationSecurityTargets0336(rows); !errors.Is(err, migrationworkflow.ErrConflict) {
-		t.Fatalf("duplicate source identity accepted: %v", err)
+		t.Fatalf("Повторная идентичность источника ошибочно принята: %v", err)
 	}
 	rows = []gravitcredentials.Row{{Provider: "fileauth", SourceID: "wrong", Username: "Foo", UUID: "11111111-2222-4333-8444-555555555555", State: "imported"}}
 	if _, err = migrationSecurityTargets0336(rows); !errors.Is(err, migrationworkflow.ErrConflict) {
@@ -35,6 +35,6 @@ func TestMigrationSecurityTargetDerivation0336(t *testing.T) {
 	}
 	rows = []gravitcredentials.Row{{Provider: "unknown", SourceID: "x", Username: "Foo", UUID: "one", State: "imported"}}
 	if _, err = migrationSecurityTargets0336(rows); !errors.Is(err, migrationworkflow.ErrConflict) {
-		t.Fatal("unknown provider accepted")
+		t.Fatal("Неизвестный провайдер ошибочно принят")
 	}
 }

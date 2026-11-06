@@ -30,7 +30,7 @@ export function checkScope0425(scope: ExtensionScope0425): ExtensionScope0425 {
 }
 export function checkExtensionID0425(id: string): string {
   const cleaned = id.trim().toLowerCase();
-  if (!extensionID0425.test(cleaned)) throw new Error("Некорректный extension ID");
+  if (!extensionID0425.test(cleaned)) throw new Error("Некорректный идентификатор расширения");
   return cleaned;
 }
 export function lifecyclePayload0425(
@@ -73,7 +73,7 @@ export class ExtensionManagement0425 {
   }
   async installs(): Promise<ExtensionInstall0425[]> {
     const data = await this.request<{ items: ExtensionInstall0425[] }>("/api/v1/admin/extension-installs");
-    if (!Array.isArray(data.items)) throw new Error("Неверный ответ inventory расширений");
+    if (!Array.isArray(data.items)) throw new Error("Неверный ответ списка установленных расширений");
     return data.items;
   }
   async registry(query: string): Promise<ExtensionRegistryVersion0425[]> {
@@ -113,7 +113,7 @@ export class ExtensionManagement0425 {
       { method: "DELETE" });
   }
   async releaseQuarantine(id: string) {
-    if (!id || id.length > 256) throw new Error("Некорректный quarantine ID");
+    if (!id || id.length > 256) throw new Error("Некорректный идентификатор карантина");
     return this.request(`/api/v1/admin/extension-quarantine/${encodeURIComponent(id)}/release`,
       { method: "POST", body: "{}" });
   }

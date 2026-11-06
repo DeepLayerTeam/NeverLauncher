@@ -188,7 +188,7 @@ func TestRemoteTokenSecurity0284(t *testing.T) {
 	}
 	resp := remoteRequest0284(t, a, token, "GET", "/v1/host/status", "", "", "127.0.0.1:4000")
 	if resp.Code != 401 {
-		t.Fatalf("revoked accepted: %d", resp.Code)
+		t.Fatalf("Отозванные полномочия ошибочно приняты: %d", resp.Code)
 	}
 }
 func TestRemoteControlConcurrentDelivery0284(t *testing.T) {
@@ -335,7 +335,7 @@ func TestRemoteControlRealSupervisorStop0284(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.Status != "stopped" || state.ProcessPID != 0 {
-		t.Fatalf("unexpected runtime state: %+v", state)
+		t.Fatalf("Неожиданное состояние среды выполнения: %+v", state)
 	}
 }
 

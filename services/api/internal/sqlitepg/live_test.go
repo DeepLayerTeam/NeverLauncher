@@ -244,7 +244,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	var importedRecovery string
 	er = pg2.QueryRow(ctx, `SELECT code_hash FROM recovery_codes WHERE user_id='u1' AND method_id='mfa-totp-u1'`).Scan(&importedRecovery)
 	if er != nil || importedRecovery != hex.EncodeToString(recoveryHash[:]) {
-		t.Fatalf("recovery code mismatch: %s %v", importedRecovery, er)
+		t.Fatalf("Код восстановления не совпадает: %s %v", importedRecovery, er)
 	}
 	er = pg2.QueryRow(ctx, `SELECT fencing_token,lease_token FROM durable_scope_leases WHERE scope_key='scope-47'`).Scan(&scopeFence, &scopeToken)
 	if er != nil || scopeFence != 18 || scopeToken != "" {

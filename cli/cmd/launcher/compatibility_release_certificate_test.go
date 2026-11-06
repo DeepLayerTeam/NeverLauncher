@@ -44,7 +44,7 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cert.Status != "certified" || cert.Kind != loaderCompatibilityReleaseCertificateKind01711 {
-		t.Fatalf("unexpected certificate status/kind: %s %s", cert.Status, cert.Kind)
+		t.Fatalf("Неожиданные статус или тип сертификата: %s %s", cert.Status, cert.Kind)
 	}
 	if cert.RequiredTargetCount != 292 || cert.PassedTargetCount != 292 {
 		t.Fatalf("full RC target coverage=%d/%d, want 292/292", cert.PassedTargetCount, cert.RequiredTargetCount)
@@ -74,10 +74,10 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 		}
 	}
 	if !strings.HasPrefix(cert.CertificateID, "sha256:") || len(cert.CertificateID) != len("sha256:")+64 {
-		t.Fatalf("invalid certificateId %q", cert.CertificateID)
+		t.Fatalf("Недопустимый идентификатор сертификата %q", cert.CertificateID)
 	}
 	if cert.Policy != "loader-compatibility-rc-0.17.11-full-release-certificate-all-292-targets-evidence-root-signed-bundle" {
-		t.Fatalf("unexpected RC policy %s", cert.Policy)
+		t.Fatalf("Неожиданная политика RC: %s", cert.Policy)
 	}
 }
 
@@ -213,19 +213,19 @@ func TestLoaderCompatibilityGA0180CertificateBindsRuntimeSupport(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cert.Status != "ga-certified" || cert.ReleaseStage != "ga" {
-		t.Fatalf("unexpected GA status/stage: %s/%s", cert.Status, cert.ReleaseStage)
+		t.Fatalf("Неожиданные статус или этап GA: %s/%s", cert.Status, cert.ReleaseStage)
 	}
 	if cert.RuntimeSupportEntries != 163 || cert.RuntimeSupportSHA256 != loaderGASupportSHA2560180() {
 		t.Fatalf("GA runtime support binding mismatch: entries=%d sha=%s", cert.RuntimeSupportEntries, cert.RuntimeSupportSHA256)
 	}
 	if strings.Join(cert.LegacyForgeVersions, ",") != "1.7.10,1.12.2" {
-		t.Fatalf("legacy Forge GA mismatch: %v", cert.LegacyForgeVersions)
+		t.Fatalf("Несовпадение данных GA для старой версии Forge: %v", cert.LegacyForgeVersions)
 	}
 	if !cert.Invariants["gaRuntimeSupportEnforced"] || !cert.Invariants["legacyForgeGA"] {
 		t.Fatalf("GA invariants missing: %+v", cert.Invariants)
 	}
 	if cert.Policy != "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle" {
-		t.Fatalf("unexpected GA policy %s", cert.Policy)
+		t.Fatalf("Неожиданная политика GA: %s", cert.Policy)
 	}
 }
 

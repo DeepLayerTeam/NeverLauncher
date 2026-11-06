@@ -65,10 +65,10 @@ func TestServerBridgeControlSignature0195(t *testing.T) {
 	canonical := serverBridgeControlCanonical0195("paper-main", "ctl_test", "abc123", "message.broadcast", hex.EncodeToString(sum[:]), "0123456789abcdef0123456789abcdef", "lease_token_0123456789abcdef", 7, 11, 2, 1000, 2000)
 	signature := ed25519.Sign(priv, []byte(canonical))
 	if !ed25519.Verify(pub, []byte(canonical), signature) {
-		t.Fatal("valid control signature rejected")
+		t.Fatal("Корректная подпись управляющей команды ошибочно отклонена")
 	}
 	if ed25519.Verify(pub, []byte(canonical+"tampered"), signature) {
-		t.Fatal("tampered control signature accepted")
+		t.Fatal("Подменённая подпись управляющей команды ошибочно принята")
 	}
 	if len(base64.RawURLEncoding.EncodeToString(signature)) != 86 {
 		t.Fatal("unexpected Ed25519 encoding")

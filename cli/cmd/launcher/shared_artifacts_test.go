@@ -107,7 +107,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 				t.Fatal(err)
 			}
 			if string(content) != "native binary" {
-				t.Fatalf("wrong native for %s", arch)
+				t.Fatalf("Для %s выбрана неверная нативная библиотека", arch)
 			}
 		}
 		return result

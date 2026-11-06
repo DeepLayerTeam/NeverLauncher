@@ -34,10 +34,10 @@ func TestAdditionalHashAllSupportedDoubleDigest0426(t *testing.T) {
 				format = "double-" + test.name + "-binary-hex"
 			}
 			if !VerifyDigest("Gravit-Password-426", format, expected) {
-				t.Fatalf("%s rejected", format)
+				t.Fatalf("Значение %s ошибочно отклонено", format)
 			}
 			if VerifyDigest("wrong", format, expected) {
-				t.Fatalf("%s wrong password accepted", format)
+				t.Fatalf("Неверный пароль для %s ошибочно принят", format)
 			}
 			stored, err := EncodeCredential(format, expected)
 			if err != nil {

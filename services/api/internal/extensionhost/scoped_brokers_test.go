@@ -43,7 +43,7 @@ func TestScopedBrokerCapabilities03110(t *testing.T) {
 	} else {
 		obj, ok := r.value.(map[string]any)
 		if !ok || obj["contentBase64"] != data {
-			t.Fatalf("unexpected read result %+v", r.value)
+			t.Fatalf("Неожиданный результат чтения: %+v", r.value)
 		}
 	}
 	if r := s.executeCapability(ctx, st, "fs.read", capabilityRequest{Name: "private", Path: "secret"}); r.status != 403 {

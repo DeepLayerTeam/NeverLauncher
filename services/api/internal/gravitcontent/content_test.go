@@ -54,7 +54,7 @@ func TestContentRealFileSelection0337(t *testing.T) {
 		t.Fatalf("unexpected staged files: %+v", p.Files)
 	}
 	if p.FilesSHA256 == "" || len(p.FilesSHA256) != 64 {
-		t.Fatal("missing file plan digest")
+		t.Fatal("Отсутствует хеш плана файлов")
 	}
 	for _, f := range p.Files {
 		if strings.Contains(f.SourcePath, "unsafe") || strings.Contains(f.SourcePath, "other") || strings.Contains(f.SourcePath, "skins") || strings.HasSuffix(f.SourcePath, "LaunchServer.json") {
@@ -104,7 +104,7 @@ func TestContentOptionalUnknownAction0337(t *testing.T) {
 		t.Fatal(e)
 	}
 	if p.Ready || p.Optional == nil || p.Optional.Ready {
-		t.Fatalf("unsupported optional action accepted: %+v", p.Optional)
+		t.Fatalf("Неподдерживаемое необязательное действие ошибочно принято: %+v", p.Optional)
 	}
 }
 func TestContentSafeTargets0337(t *testing.T) {

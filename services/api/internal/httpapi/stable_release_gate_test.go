@@ -85,7 +85,7 @@ func TestGASourceConsistency0350(t *testing.T) {
 		t.Fatal("different source commits accepted")
 	}
 	if got, ok := stableSourceConsistency0350(targets[:1]); !ok || got != targets[0].SourceSHA {
-		t.Fatal("same source target rejected")
+		t.Fatal("Совпадающие источник и цель ошибочно отклонены")
 	}
 	if _, ok := stableSourceConsistency0350(nil); ok {
 		t.Fatal("empty source matrix allowed")

@@ -46,7 +46,7 @@ func TestExtractFileAuth334(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(result) != 1 || result[0].Username != "Alice_01" || result[0].Provider != "fileauth" {
-		t.Fatalf("unexpected accounts %+v", result)
+		t.Fatalf("Неожиданный список учётных записей: %+v", result)
 	}
 	for _, a := range result {
 		if strings.Contains(a.Username, "SECRET") || strings.Contains(a.SourceID, "password") {
@@ -56,7 +56,7 @@ func TestExtractFileAuth334(t *testing.T) {
 	stale := snapshot
 	stale.ManifestSHA256 = strings.Repeat("f", 64)
 	if _, e = Extract(context.Background(), bytes.NewReader(src), int64(len(src)), stale); e == nil {
-		t.Fatal("changed manifest accepted")
+		t.Fatal("Изменённый манифест ошибочно принят")
 	}
 }
 func TestFileAuthRefusesKeyDisagreement334(t *testing.T) {
@@ -96,7 +96,7 @@ func TestReconcileUUIDCollisionAndCaseFolding334(t *testing.T) {
 	}
 	rows, sum = Reconcile([]Account{alice}, []Target{{UserID: "target-x", Username: "Alice", UUID: "99999999-2222-4333-8444-555555555555"}})
 	if sum["blocked"] != 1 {
-		t.Fatal("same-name different UUID accepted")
+		t.Fatal("Одинаковое имя с другим UUID ошибочно принято")
 	}
 	rows, sum = Reconcile([]Account{alice, {Provider: "sql", SourceID: "10", Username: "alice", UUID: "12345678-2222-4333-8444-555555555555"}}, nil)
 	if sum["blocked"] != 2 {

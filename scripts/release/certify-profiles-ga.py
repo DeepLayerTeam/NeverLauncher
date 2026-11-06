@@ -128,7 +128,7 @@ def run_suite(name: str, directory: str, package: str, tests: tuple[str, ...]) -
     )
     combined = result.stdout + "\n" + result.stderr
     if result.returncode:
-        raise RuntimeError(f"{name}: exit {result.returncode}\n{combined[-6000:]}")
+        raise RuntimeError(f"{name}: код завершения {result.returncode}\n{combined[-6000:]}")
     validate_test_events(result.stdout, tests)
     return {"id": name, "status": "passed", "tests": list(tests), "command": cmd}
 

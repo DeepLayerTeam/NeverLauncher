@@ -44,7 +44,7 @@ func TestSQLiteHTTP0471StrictSnapshot(t *testing.T) {
 		"truncated":           raw[:len(raw)-1],
 	} {
 		if _, err := decodeSQLiteHTTPDocument0471(document); err == nil {
-			t.Errorf("%s accepted", name)
+			t.Errorf("Недопустимое значение %s было принято", name)
 		}
 	}
 }

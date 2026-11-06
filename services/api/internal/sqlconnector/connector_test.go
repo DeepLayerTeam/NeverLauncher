@@ -149,7 +149,7 @@ func TestAuthenticatePasswordQueriesReadOnlyAndMapsIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if auth.Identity.Subject != "42" || auth.Identity.Email != "player@example.test" || auth.Identity.DisplayName != "Player 42" {
-		t.Fatalf("unexpected identity: %+v", auth.Identity)
+		t.Fatalf("Неожиданная идентичность: %+v", auth.Identity)
 	}
 	if len(auth.Identity.Groups) != 2 || len(auth.Identity.Roles) != 2 {
 		t.Fatalf("Сопоставление потеряно: %+v", auth.Identity)
@@ -276,7 +276,7 @@ func TestTLSPolicyRejectsPlaintextFallback(t *testing.T) {
 	}
 	cfg.DSN = "postgres://db.example/test?sslmode=verify-full"
 	if err := validatePostgresTLS(cfg); err != nil {
-		t.Fatalf("PostgreSQL verify-full rejected: %v", err)
+		t.Fatalf("Режим PostgreSQL verify-full ошибочно отклонён: %v", err)
 	}
 
 	mysqlCfg := cfg
@@ -293,7 +293,7 @@ func TestTLSPolicyRejectsPlaintextFallback(t *testing.T) {
 		t.Fatal("MySQL tls=skip-verify accepted without insecure TLS opt-in")
 	}
 	if err := validateMySQLTLSMode(mysqlCfg, "true"); err != nil {
-		t.Fatalf("MySQL tls=true rejected: %v", err)
+		t.Fatalf("Режим MySQL tls=true ошибочно отклонён: %v", err)
 	}
 }
 

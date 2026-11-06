@@ -109,11 +109,11 @@ func TestNodeNonceReplaySignatureAndTamper(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := r.ConsumeSignedNonce(ctx, p, []byte("request")); !errors.Is(e, ErrReplay) {
-		t.Fatalf("duplicate nonce accepted: %v", e)
+		t.Fatalf("Повторно использованный одноразовый код ошибочно принят: %v", e)
 	}
 	p = signJoinProof(t, priv, "ping", 1, []byte("request"))
 	if e := r.ConsumeSignedNonce(ctx, p, []byte("tampered")); !errors.Is(e, ErrNodeProof) {
-		t.Fatalf("modified body accepted: %v", e)
+		t.Fatalf("Изменённое тело запроса ошибочно принято: %v", e)
 	}
 	p = signJoinProof(t, priv, "ping", 1, []byte("request"))
 	p.Timestamp -= 600
@@ -148,7 +148,7 @@ func TestJoinReplacementRotationRevocation(t *testing.T) {
 	}
 	p := signJoinProof(t, priv, "redeem", 1, []byte(first.Ticket))
 	if _, e = r.RedeemJoinTicket(ctx, first.Ticket, p, ""); !errors.Is(e, ErrNodeProof) {
-		t.Fatalf("old key accepted: %v", e)
+		t.Fatalf("Устаревший ключ ошибочно принят: %v", e)
 	}
 	p = signJoinProof(t, priv2, "redeem", 2, []byte(second.Ticket))
 	if _, e = r.RedeemJoinTicket(ctx, second.Ticket, p, ""); !errors.Is(e, ErrJoinRejected) {
@@ -199,7 +199,7 @@ func TestJoinUpgrade323PreservesUsers(t *testing.T) {
 	}
 	counts, e := r.Count(ctx)
 	if e != nil || counts["bridge_nodes"] != 0 {
-		t.Fatalf("wrong migration: %v %v", counts, e)
+		t.Fatalf("Неверная миграция: %v %v", counts, e)
 	}
 }
 
@@ -231,7 +231,7 @@ func TestRevokedAuthenticationRejectsPendingTicket(t *testing.T) {
 	}
 	proof := signJoinProof(t, priv, "redeem", 1, []byte(grant.Ticket))
 	if _, err := r.RedeemJoinTicket(ctx, grant.Ticket, proof, "127.0.0.1"); !errors.Is(err, ErrJoinRejected) {
-		t.Fatalf("revoked session was accepted: %v", err)
+		t.Fatalf("Отозванная сессия ошибочно принята: %v", err)
 	}
 	if _, err := r.RedeemJoinTicket(ctx, grant.Ticket, proof, "127.0.0.1"); !errors.Is(err, ErrReplay) {
 		t.Fatalf("failed redemption did not persist consumed nonce: %v", err)

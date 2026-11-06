@@ -25,7 +25,7 @@ func TestOperationalConfigAdminRoutes02111(t *testing.T) {
 	}
 	bad := send("POST", "/api/v1/admin/config/validate", `{"expectedRevision":1,"reason":"check settings","settings":{"auditDefaultPageSize":500}}`)
 	if bad.Code != 400 || !strings.Contains(bad.Body.String(), "invalid_field") {
-		t.Fatalf("invalid config: %d %s", bad.Code, bad.Body.String())
+		t.Fatalf("Некорректная конфигурация: %d %s", bad.Code, bad.Body.String())
 	}
 	ok := send("POST", "/api/v1/admin/config/validate", `{"expectedRevision":1,"reason":"check settings","settings":{"auditDefaultPageSize":30,"auditMaxPageSize":100,"auditLookbackDays":30,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}}`)
 	if ok.Code != 200 || !strings.Contains(ok.Body.String(), `"restartRequired":false`) {

@@ -130,7 +130,7 @@ func TestTrustedAttestationMatchesPersistedRun0345(t *testing.T) {
 	// политики матрицей целей.
 	signed.Evidence.RunID = "other-run"
 	if e := matchObservation0345(signed.Evidence, run); e == nil {
-		t.Fatal("cross-run attestation accepted")
+		t.Fatal("Аттестация из другого запуска ошибочно принята")
 	}
 	signed.Evidence.RunID = run.RunID
 	stageRecord["gameplay-smoke"] = stagedStep0342{Status: "passed", EvidenceSHA256: strings.Repeat("9", 64)}
@@ -166,11 +166,11 @@ func TestV14SignedAttestationRejectsMissingAdversarialGame03414(t *testing.T) {
 	signed.Evidence.ArtifactHashes["adversarial-gameplay-04314.json"] = strings.Repeat("a", 64)
 	signFixture0345(t, &signed, private)
 	if err := verifyValidation0345(signed, pub); err != nil {
-		t.Fatalf("signed, digest-bound negative game evidence rejected: %v", err)
+		t.Fatalf("Подписанное отрицательное игровое доказательство, привязанное к хешу, ошибочно отклонено: %v", err)
 	}
 	delete(signed.Evidence.ArtifactHashes, "adversarial-gameplay-04314.json")
 	if err := verifyValidation0345(signed, pub); err == nil {
-		t.Fatal("tampered signed evidence accepted")
+		t.Fatal("Подменённое подписанное доказательство ошибочно принято")
 	}
 	signed.Evidence.PackageVersion = "0.44.0"
 	signFixture0345(t, &signed, private)

@@ -52,7 +52,7 @@ func TestAdminProjectScope0208DoesNotEscapeInstallProject(t *testing.T) {
 		t.Fatal("project-scoped extension escaped into another project")
 	}
 	if adminExtensionProjectAllowed0208(projectInstall, "") {
-		t.Fatal("empty project accepted")
+		t.Fatal("Пустой проект ошибочно принят")
 	}
 	globalInstall := model.ExtensionInstall{Scope: "global"}
 	if !adminExtensionProjectAllowed0208(globalInstall, "project-b") {

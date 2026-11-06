@@ -42,7 +42,7 @@ func TestSHA1WithRSASignatureAndPEM0256(t *testing.T) {
 	}
 	block, _ := pem.Decode([]byte(signer.PublicPEM))
 	if block == nil || block.Type != "PUBLIC KEY" {
-		t.Fatal("invalid public PEM")
+		t.Fatal("Некорректный публичный ключ PEM")
 	}
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
@@ -70,7 +70,7 @@ func mustPKCS80256(t *testing.T, k *rsa.PrivateKey) []byte {
 }
 func TestBadKey0256(t *testing.T) {
 	if _, err := ParsePrivateKey([]byte("broken")); err == nil {
-		t.Fatal("invalid key")
+		t.Fatal("Недопустимый ключ")
 	}
 	k, _ := rsa.GenerateKey(rand.Reader, 1024)
 	if _, err := ParsePrivateKey(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)})); err == nil {

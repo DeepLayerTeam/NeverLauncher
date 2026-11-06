@@ -63,7 +63,7 @@ func TestServerProbeRealPacketHandling(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := probeOnlineMode(context.Background(), runProbeFixture(t, false), 767); err == nil {
-		t.Fatal("offline server accepted")
+		t.Fatal("Недоступный сервер ошибочно принят")
 	}
 	if err := probeOnlineMode(context.Background(), "example.com:bad", 767); err == nil {
 		t.Fatal("invalid address accepted")
@@ -75,10 +75,10 @@ func TestServerProbeRealPacketHandling(t *testing.T) {
 func TestPOCRequiresRealSessionserverWhenEnabled(t *testing.T) {
 	r := verify(context.Background(), &simulatedProvider{}, options{ClientID: ownClientID, Flow: "browser", RequireOnlineSession: true}, newDiscardWriter())
 	if r.Result != "online_session_verified" || r.OnlineModeSession != "verified_live_join_has_joined" {
-		t.Fatalf("unexpected report %+v", r)
+		t.Fatalf("Неожиданный отчёт: %+v", r)
 	}
 	if r.Stages[len(r.Stages)-1].Name != "sessionserver_join_has_joined" {
-		t.Fatal("missing session proof stage")
+		t.Fatal("Отсутствует этап подтверждения сессии")
 	}
 }
 

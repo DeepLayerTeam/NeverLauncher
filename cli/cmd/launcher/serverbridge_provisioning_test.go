@@ -258,7 +258,7 @@ func TestServerBridgeUpgradeRollbackPreservesIdentity0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if restored.Version != "0.19.8" || restored.ArtifactPath != oldArtifact || !fileExists0199(oldArtifact) {
-		t.Fatalf("rollback did not restore 0.19.8 state/artifact: %+v", restored)
+		t.Fatalf("Откат не восстановил состояние и артефакт версии 0.19.8: %+v", restored)
 	}
 	if fileExists0199(after.ArtifactPath) {
 		t.Fatalf("После отката остался артефакт обновлённой версии: %s", after.ArtifactPath)

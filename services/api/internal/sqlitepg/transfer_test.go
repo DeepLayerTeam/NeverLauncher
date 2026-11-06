@@ -30,7 +30,7 @@ func TestTypesAndDigest(t *testing.T) {
 		t.Fatal("NUMERIC affinity must not be silently rounded")
 	}
 	if _, err := identifier(""); err == nil {
-		t.Fatal("empty identifier accepted")
+		t.Fatal("Пустой идентификатор ошибочно принят")
 	}
 	if v, _ := identifier(`a"b`); v != `"a""b"` {
 		t.Fatalf("incorrect identifier escaping: %s", v)
@@ -40,7 +40,7 @@ func TestTypesAndDigest(t *testing.T) {
 		t.Fatal(s, err)
 	}
 	if _, _, err = rowDigest([]any{make(chan int)}); err == nil {
-		t.Fatal("unsupported values accepted")
+		t.Fatal("Неподдерживаемые значения ошибочно приняты")
 	}
 	pk := tableInfo{Name: "test", Columns: []column{{Name: "id", Type: "TEXT", PK: 1}, {Name: "value", Type: "BLOB"}}}
 	ddl, err := sqlCreate(pk)
@@ -87,7 +87,7 @@ func TestPGStagingMigration(t *testing.T) {
 	backup := filepath.Join(dir, "backup.db")
 	repo, err := sqlitecore.Open(ctx, sqlitedurable.Options{Path: dbPath})
 	if err != nil {
-		t.Fatalf("SQLite host must support WAL: %v", err)
+		t.Fatalf("Хост SQLite должен поддерживать WAL: %v", err)
 	}
 	project, err := repo.SaveProject(ctx, model.Project{ID: "sample", Name: "Sample"}, "bootstrap")
 	if err != nil {
@@ -144,7 +144,7 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatalf("Неожиданный отчёт: %+v", result)
 	}
 	if result.PostgreSQLSchema != Schema {
-		t.Fatal("wrong target schema")
+		t.Fatal("Неверная целевая схема")
 	}
 	p, err := pgx.Connect(ctx, dsn)
 	if err != nil {
@@ -153,11 +153,11 @@ func TestPGStagingMigration(t *testing.T) {
 	defer p.Close(ctx)
 	var gotUUID string
 	if err = p.QueryRow(ctx, "SELECT uuid FROM "+qualified("minecraft_profiles")+" WHERE user_id=$1", user.ID).Scan(&gotUUID); err != nil || gotUUID != uuid {
-		t.Fatalf("Minecraft UUID changed: %s %v", gotUUID, err)
+		t.Fatalf("UUID Minecraft неожиданно изменился: %s %v", gotUUID, err)
 	}
 	var tokenStatus string
 	if err = p.QueryRow(ctx, "SELECT status FROM "+qualified("refresh_tokens")+" WHERE token_hash=$1", hash).Scan(&tokenStatus); err != nil || tokenStatus != "revoked" {
-		t.Fatalf("revocation lost: %s %v", tokenStatus, err)
+		t.Fatalf("Данные об отзыве потеряны: %s %v", tokenStatus, err)
 	}
 	var fence int64
 	if err = p.QueryRow(ctx, "SELECT fencing_token FROM "+qualified("durable_scope_leases")+" WHERE scope_key='scope-1'").Scan(&fence); err != nil || fence != 42 {
@@ -165,7 +165,7 @@ func TestPGStagingMigration(t *testing.T) {
 	}
 	var packageRead []byte
 	if err = p.QueryRow(ctx, "SELECT data FROM "+qualified("package_blobs")+" WHERE digest=$1", hex.EncodeToString(packageHash[:])).Scan(&packageRead); err != nil || !bytes.Equal(packageRead, packageBytes) {
-		t.Fatalf("package blob changed: %x %v", packageRead, err)
+		t.Fatalf("Содержимое пакета неожиданно изменилось: %x %v", packageRead, err)
 	}
 	var mfaCipher []byte
 	if err = p.QueryRow(ctx, "SELECT secret_ciphertext FROM "+qualified("mfa_totp")+" WHERE user_id=$1", user.ID).Scan(&mfaCipher); err != nil || !bytes.Equal(mfaCipher, []byte{0, 0, 254, 12, 7}) {
@@ -173,11 +173,11 @@ func TestPGStagingMigration(t *testing.T) {
 	}
 	var epoch int64
 	if err = p.QueryRow(ctx, "SELECT auth_epoch FROM "+qualified("users")+" WHERE id=$1", user.ID).Scan(&epoch); err != nil || epoch != 1 {
-		t.Fatalf("auth epoch changed: %d %v", epoch, err)
+		t.Fatalf("Эпоха аутентификации неожиданно изменилась: %d %v", epoch, err)
 	}
 	var receipt string
 	if err = p.QueryRow(ctx, "SELECT id FROM "+qualified("migration_receipt")).Scan(&receipt); err != nil || receipt != result.SnapshotSHA256 {
-		t.Fatalf("receipt mismatch: %v", err)
+		t.Fatalf("Несовпадение квитанции: %v", err)
 	}
 	if _, err = p.Exec(ctx, "DELETE FROM "+qualified("refresh_tokens")+" WHERE token_hash=$1", hash); err == nil {
 		t.Fatal("immutable PG import allowed revocation deletion")
@@ -238,14 +238,14 @@ func TestPGStagingMigration(t *testing.T) {
 	}
 	_ = f.Close()
 	if _, err = sqlitedurable.VerifyBackup(ctx, backup); err == nil {
-		t.Fatal("modified backup accepted")
+		t.Fatal("Изменённая резервная копия ошибочно принята")
 	}
 }
 
 func TestReverseTransferMissingReceiptFailsClosed(t *testing.T) {
 	ctx := context.Background()
 	if _, err := Export(ctx, "", filepath.Join(t.TempDir(), "db.sqlite")); err == nil {
-		t.Fatal("empty PostgreSQL DSN accepted")
+		t.Fatal("Пустая строка подключения PostgreSQL ошибочно принята")
 	}
 	if _, err := Export(ctx, "nonempty", ""); err == nil {
 		t.Fatal("empty destination accepted")

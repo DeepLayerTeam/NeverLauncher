@@ -61,13 +61,13 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 	}
 	profile, err := r.GetMinecraftProfileByUser(key)
 	if err != nil || profile.UUID != uuid || profile.Name != name {
-		t.Fatalf("Minecraft UUID lost: %+v %v", profile, err)
+		t.Fatalf("UUID Minecraft потерян: %+v %v", profile, err)
 	}
 	// Вторая коллизия отменяет всю партию. Ранее созданный аккаунт остаётся
 	// неизменным.
 	other := fileauth.Account{UUID: "8af62031-2333-4333-8333-000000000099", Username: "Unused0099", Email: "unused0099@fileauth.invalid", PasswordHash: hash}
 	if _, err := r.ImportFileAuth0295(ctx, []fileauth.Account{other, account}, false); err == nil {
-		t.Fatal("duplicate import unexpectedly accepted")
+		t.Fatal("Повторный импорт неожиданно принят")
 	}
 	if _, err := r.GetUser("gravit-fileauth-8af62031233343338333000000000099"); err == nil {
 		t.Fatal("partial commit after collision")

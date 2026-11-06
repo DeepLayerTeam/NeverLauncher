@@ -111,7 +111,7 @@ func TestConditionalVersionRanges0244(t *testing.T) {
 	}
 	env.MinecraftVersion = "1.19.4"
 	if why := unavailable0244(v, env); why == "" {
-		t.Fatal("unsupported game version accepted")
+		t.Fatal("Неподдерживаемая версия игры ошибочно принята")
 	}
 	env.MinecraftVersion = "24w12a"
 	if why := unavailable0244(v, env); why == "" {

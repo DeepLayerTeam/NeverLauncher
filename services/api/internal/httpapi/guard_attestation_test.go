@@ -265,12 +265,12 @@ func TestLinuxGuardAttestationValidation0137(t *testing.T) {
 	policy := guardReleasePolicy0134{GuardSHA256: []string{testGuardHash0134}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: true}
 	a := makeLinuxGuardAttestation0137(t, "linux-challenge", "linux-secret")
 	if err := validateGuardAttestation0134(a, "linux-challenge", "linux-secret", policy, "Linux x86_64", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err != nil {
-		t.Fatalf("valid Linux Guard Attestation rejected: %v", err)
+		t.Fatalf("Корректная аттестация Linux Guard ошибочно отклонена: %v", err)
 	}
 	a.ProcessPolicy.Linux.NoNewPrivs = false
 	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
 	if err := validateGuardAttestation0134(a, "linux-challenge", "linux-secret", policy, "linux", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
-		t.Fatal("Linux Guard Attestation without no_new_privs was accepted")
+		t.Fatal("Аттестация Linux Guard без no_new_privs ошибочно принята")
 	}
 }
 
@@ -321,12 +321,12 @@ func TestMacOSGuardAttestationValidation0138(t *testing.T) {
 	policy := guardReleasePolicy0134{GuardSHA256: []string{testGuardHash0134}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: false}
 	a := makeMacOSGuardAttestation0138(t, "macos-challenge", "macos-secret")
 	if err := validateGuardAttestation0134(a, "macos-challenge", "macos-secret", policy, "macOS-arm64", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err != nil {
-		t.Fatalf("valid macOS Guard Attestation rejected: %v", err)
+		t.Fatalf("Корректная аттестация macOS Guard ошибочно отклонена: %v", err)
 	}
 	a.ProcessPolicy.MacOS.LibraryValidation = false
 	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
 	if err := validateGuardAttestation0134(a, "macos-challenge", "macos-secret", policy, "darwin", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
-		t.Fatal("macOS Guard Attestation without library validation was accepted")
+		t.Fatal("Аттестация macOS Guard без проверки библиотек ошибочно принята")
 	}
 }
 

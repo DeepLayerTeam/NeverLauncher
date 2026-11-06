@@ -119,7 +119,7 @@ func TestGAWorkspaceParallelRevisionCAS0230(t *testing.T) {
 			} else if errors.Is(e, ErrConflict) {
 				conflict.Add(1)
 			} else {
-				t.Errorf("unexpected write failure: %v", e)
+				t.Errorf("Неожиданный сбой записи: %v", e)
 			}
 		}()
 	}

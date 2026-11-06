@@ -168,7 +168,7 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	}
 	job, err := reopened.GetDurableJob(ctx, f.commit.JobID)
 	if err != nil || job.Status != model.DurableJobStatusSucceeded {
-		t.Fatalf("job lost: %+v %v", job, err)
+		t.Fatalf("Задание потеряно: %+v %v", job, err)
 	}
 	outbox, err := reopened.ClaimOutboxEvents(ctx, "worker", 10, time.Minute)
 	if err != nil || len(outbox) != 2 {
@@ -209,7 +209,7 @@ func TestSQLiteStablePublishRevocationForgeryAndExpiration0374(t *testing.T) {
 				}
 			}
 			if _, err := f.repo.CommitDurablePublish(ctx, f.commit); !errors.Is(err, ErrStableRuntimeGate0341) {
-				t.Fatalf("%s accepted: %v", scenario, err)
+				t.Fatalf("Значение %s ошибочно принято: %v", scenario, err)
 			}
 			head, err := f.repo.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 			if err != nil || head.Revision != 0 {

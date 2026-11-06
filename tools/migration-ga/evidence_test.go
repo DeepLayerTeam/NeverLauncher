@@ -131,7 +131,7 @@ func TestEvidenceNoSymlink0449(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := preserveEvidence(dest, "fileauth-login", link, hash([]byte("real-log")), []byte("{}")); err == nil {
-		t.Fatal("symlink evidence accepted")
+		t.Fatal("Доказательство через символьную ссылку ошибочно принято")
 	}
 	if err := preserveEvidence(dest, "fileauth-login", source, hash([]byte("other")), []byte("{}")); err == nil {
 		t.Fatal("wrong SHA accepted")

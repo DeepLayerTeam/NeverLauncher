@@ -28,7 +28,7 @@ func TestRoles0455(t *testing.T) {
 			continue
 		}
 		if c.valid && (role.api != c.api || role.workers != c.workers) {
-			t.Errorf("bad role %+v", role)
+			t.Errorf("Некорректная роль: %+v", role)
 		}
 	}
 }

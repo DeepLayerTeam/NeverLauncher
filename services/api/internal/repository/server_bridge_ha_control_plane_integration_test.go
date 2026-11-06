@@ -91,7 +91,7 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		} else if errors.Is(r.err, ErrNotFound) {
 			misses++
 		} else {
-			t.Fatalf("unexpected lease error: %v", r.err)
+			t.Fatalf("Неожиданная ошибка аренды: %v", r.err)
 		}
 	}
 	if wins != 1 || misses != 1 {
@@ -179,7 +179,7 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		}
 	}
 	if _, err = b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, "dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef", first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second)); !errors.Is(err, ErrConflict) {
-		t.Fatalf("new owner must not claim expired delivery: %v", err)
+		t.Fatalf("Новый владелец не должен захватывать просроченную доставку: %v", err)
 	}
 	// Исходный аутентифицированный устойчивый ACK может согласовать потерянный
 	// HTTP-ответ без повторной отправки побочного эффекта.

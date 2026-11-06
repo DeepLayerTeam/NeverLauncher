@@ -21,6 +21,6 @@ func TestMigrationCutover03311RejectsUnsafeTransportAndMissingConfirmation(t *te
 func TestMigrationCutover03311RequiresBackend(t *testing.T) {
 	e := handleMigrationCutover03311([]string{"cutover-list", "--run", "abc"})
 	if e == nil || !strings.Contains(e.Error(), "--backend") {
-		t.Fatalf("bad validation: %v", e)
+		t.Fatalf("Ошибка проверки: %v", e)
 	}
 }
