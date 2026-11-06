@@ -337,7 +337,7 @@ export function DesktopExtensions0209({
               message.method,
             )
           )
-            throw new Error("Доступ к Desktop Bridge отклонён или устарел");
+            throw new Error("Доступ к мосту настольного приложения отклонён или устарел");
           if (loadedIdentity.current !== identity)
             throw new Error("Представление расширения изменилось");
           if (message.method === "tauri.platform")
@@ -372,7 +372,7 @@ export function DesktopExtensions0209({
             rpc?.protocol !== DESKTOP_EXTENSION_PROTOCOL ||
             rpc?.id !== message.id
           )
-            throw new Error("Ответ Desktop RPC не соответствует запросу");
+            throw new Error("Ответ удалённого вызова настольного приложения не соответствует запросу");
           if (rpc.error) throw new Error(String(rpc.error));
           result = rpc.result;
         }

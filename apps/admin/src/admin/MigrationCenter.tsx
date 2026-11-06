@@ -752,7 +752,7 @@ export function MigrationCenter0331({
       current = JSON.parse(rollbackSnapshot03312);
     } catch {
       setError(
-        "Введите JSON актуального snapshot с отдельно остановленного Never/игрового сервера",
+        "Введите JSON актуального снимка состояния отдельно остановленного Never или игрового сервера",
       );
       return;
     }
@@ -770,7 +770,7 @@ export function MigrationCenter0331({
           reconciliationEvidenceSha256: rollbackReconcileHash03312,
         };
       } catch {
-        setError("Неверный JSON snapshot согласованного Gravit");
+        setError("Некорректный JSON согласованного снимка Gravit");
         return;
       }
     }
@@ -1008,7 +1008,7 @@ export function MigrationCenter0331({
       (!securityPreview || securityRunConfirm !== runId || !freshKeysConfirmed)
     ) {
       setError(
-        "Для смены доверия сначала выполните preview, проверьте ключи и введите точный run ID",
+        "Для смены доверия сначала выполните предварительный просмотр, проверьте ключи и введите точный идентификатор запуска",
       );
       return;
     }
@@ -2262,7 +2262,7 @@ export function MigrationCenter0331({
                     disabled={busy || cutoverConfirm03311 !== runId}
                     onClick={() => void cutoverAction03311("cancel", route)}
                   >
-                    Отменить staging без изменения релиза
+                    Отменить подготовку без изменения релиза
                   </button>
                 </>
               )}

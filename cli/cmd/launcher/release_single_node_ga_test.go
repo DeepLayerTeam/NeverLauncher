@@ -105,7 +105,7 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifySingleNodeGATestedArtifacts0330(dir); err == nil {
-		t.Fatal("untested binary substitution accepted")
+		t.Fatal("Непроверенная подмена бинарного файла ошибочно принята")
 	}
 	if err := os.WriteFile(filepath.Join(dir, "launcher-api-linux-x64"), []byte("tested release bytes:launcher-api-linux-x64"), 0o600); err != nil {
 		t.Fatal(err)
@@ -115,12 +115,12 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifySingleNodeGA0330(dir, "0.33.0", "different-commit", pubFile); err == nil {
-		t.Fatal("cross-commit certificate accepted")
+		t.Fatal("Сертификат другого коммита ошибочно принят")
 	}
 	report["environment"].(map[string]any)["backend_repository"] = "postgres"
 	writeSigned()
 	if err := verifySingleNodeGA0330(dir, "0.33.0", commit, pubFile); err == nil {
-		t.Fatal("PostgreSQL fallback accepted as SQLite-only GA")
+		t.Fatal("Резервный PostgreSQL ошибочно принят как готовность только SQLite")
 	}
 	report["environment"].(map[string]any)["backend_repository"] = "sqlite"
 	writeSigned()
@@ -129,6 +129,6 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifySingleNodeGA0330(dir, "0.33.0", commit, pubFile); err == nil {
-		t.Fatal("RC tampering was accepted")
+		t.Fatal("Подмена кандидата в релиз ошибочно принята")
 	}
 }

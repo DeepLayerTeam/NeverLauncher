@@ -12,7 +12,7 @@ import java.util.Map;
  * отказом при неоднозначности. Подстрока вроде
  * {"error":{"allowed":true}} никогда не разрешает вход в
  * Minecraft. Нейтральному к платформе Bridge не нужны сторонние
- */зависимости JSON. */
+ * зависимости JSON. */
 public final class BridgeAuthResponse0287 {
     private BridgeAuthResponse0287() {}
 
@@ -72,7 +72,7 @@ public final class BridgeAuthResponse0287 {
     /** Проверяйте аутентифицированный ответ Backend со списком маршрутов, а
      * не подстроки JSON. Маршрут должен подходить текущим источнику, цели и
      * живому Runtime. При создании одноразовой передачи решение принимает
-     */только Backend. */
+     * только сервер. */
     public static Decision route(int httpStatus, String body, String sourceNodeId, String requestedTarget,
                                  Instant now) {
         if (httpStatus < 200 || httpStatus >= 300) return Decision.deny("routing_table_unavailable");

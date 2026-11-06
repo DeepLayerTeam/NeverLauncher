@@ -127,7 +127,7 @@ func hostWaitRealJava0414(t *testing.T, root string, supervisorPID int, minimumR
 		if err == nil && (supervisorPID == 0 || state.SupervisorPID == supervisorPID) && state.Status == "running" && state.RestartCount >= minimumRestarts && hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
 			exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", state.ProcessPID))
 			if err != nil || !strings.Contains(exe, "java") {
-				t.Fatalf("expected actual JVM, got executable %q: %v", exe, err)
+				t.Fatalf("Ожидалась реальная JVM, получен исполняемый файл %q: %v", exe, err)
 			}
 			if data, _ := os.ReadFile(filepath.Join(root, "jvm-events.txt")); strings.Contains(string(data), fmt.Sprintf("BOOT:%d", state.ProcessPID)) {
 				return state
@@ -137,7 +137,7 @@ func hostWaitRealJava0414(t *testing.T, root string, supervisorPID int, minimumR
 	}
 	state, _ := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 	log, _ := os.ReadFile(hostPaths01910(root)["supervisor"])
-	t.Fatalf("real JVM never became verified: state=%+v log=%s", state, log)
+	t.Fatalf("Реальная JVM не прошла проверку: состояние=%+v, журнал=%s", state, log)
 	return serverBridgeHostRuntime01910{}
 }
 
@@ -146,10 +146,10 @@ func hostCheckFinished0414(t *testing.T, done <-chan error) {
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Fatalf("supervisor exit: %v", err)
+			t.Fatalf("Ошибка завершения диспетчера: %v", err)
 		}
 	case <-time.After(7 * time.Second):
-		t.Fatal("supervisor did not exit")
+		t.Fatal("Диспетчер не завершился")
 	}
 }
 
@@ -163,12 +163,12 @@ func TestHostLifecycle0414RealJVMStartStopRestartAndSIGTERM(t *testing.T) {
 	hostCheckFinished0414(t, done)
 	state, _ := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 	if state.Status != "stopped" || state.StopMethod != "console-stop" || hostIdentityMatches0282(old.ProcessPID, old.ProcessIdentity) {
-		t.Fatalf("unverified stop: %+v", state)
+		t.Fatalf("Остановка не подтверждена: %+v", state)
 	}
 	second, done2 := hostLaunchSupervisor0414(t, root)
 	newState := hostWaitRealJava0414(t, root, second.Process.Pid, 0)
 	if newState.SessionID == old.SessionID || newState.ProcessIdentity == old.ProcessIdentity {
-		t.Fatalf("restart did not change process and supervisor session: old=%+v new=%+v", old, newState)
+		t.Fatalf("Перезапуск не заменил процесс и сеанс диспетчера: прежний=%+v, новый=%+v", old, newState)
 	}
 	if err := syscall.Kill(second.Process.Pid, syscall.SIGTERM); err != nil {
 		t.Fatal(err)
@@ -176,11 +176,11 @@ func TestHostLifecycle0414RealJVMStartStopRestartAndSIGTERM(t *testing.T) {
 	hostCheckFinished0414(t, done2)
 	stopped, _ := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 	if stopped.Status != "stopped" || stopped.StopMethod != "signal-console-stop" || stopped.ProcessPID != 0 {
-		t.Fatalf("SIGTERM orphaned JVM: %+v", stopped)
+		t.Fatalf("Сигнал SIGTERM оставил JVM без управления: %+v", stopped)
 	}
 	data, err := os.ReadFile(filepath.Join(root, "jvm-events.txt"))
 	if err != nil || strings.Count(string(data), "WORLD-SAVED") != 2 || strings.Count(string(data), "BOOT:") != 2 {
-		t.Fatalf("Java process lifecycle markers missing: %s (%v)", data, err)
+		t.Fatalf("Отсутствуют маркеры жизненного цикла процесса Java: %s (%v)", data, err)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestHostLifecycle0414RealJVMAutoRecoveryAfterCrash(t *testing.T) {
 	cmd, done := hostLaunchSupervisor0414(t, root)
 	running := hostWaitRealJava0414(t, root, cmd.Process.Pid, 1)
 	if running.CrashCount != 1 || running.RestartCount != 1 || running.Crashed {
-		t.Fatalf("crash recovery incorrect: %+v", running)
+		t.Fatalf("Неверное восстановление после сбоя: %+v", running)
 	}
 	if err := stopServerBridgeHost01910([]string{"--server-root", root}); err != nil {
 		t.Fatal(err)
@@ -197,7 +197,7 @@ func TestHostLifecycle0414RealJVMAutoRecoveryAfterCrash(t *testing.T) {
 	hostCheckFinished0414(t, done)
 	data, _ := os.ReadFile(filepath.Join(root, "jvm-events.txt"))
 	if strings.Count(string(data), "CRASH") != 1 || strings.Count(string(data), "BOOT:") != 2 || strings.Count(string(data), "WORLD-SAVED") != 1 {
-		t.Fatalf("actual Java failure not recovered: %s", data)
+		t.Fatalf("Реальный сбой Java не устранён: %s", data)
 	}
 }
 
@@ -205,18 +205,18 @@ func TestHostLifecycle0414RealJVMCrashLoopIsBounded(t *testing.T) {
 	root := hostRealJavaFixture0414(t, "crash-always", 2)
 	err := runServerBridgeHost01910(root, false)
 	if err == nil {
-		t.Fatal("real JVM crash-loop was accepted")
+		t.Fatal("Ошибочно разрешён циклический сбой реальной JVM")
 	}
 	state, readErr := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
 	if state.Status != "crashed" || state.ProcessPID != 0 || state.CrashCount != 3 || state.RestartCount != 2 || !strings.Contains(state.LastError, "crash-loop restart limit") {
-		t.Fatalf("unexpected Java crash budget: %+v (%v)", state, err)
+		t.Fatalf("Неожиданный предел аварий Java: %+v (%v)", state, err)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, "jvm-events.txt"))
 	if strings.Count(string(data), "BOOT:") != 3 || strings.Count(string(data), "CRASH") != 3 {
-		t.Fatalf("unexpected actual Java executions: %s", data)
+		t.Fatalf("Неожиданные реальные запуски Java: %s", data)
 	}
 }
 
@@ -230,7 +230,7 @@ func TestHostLifecycle0414ActualCLIAndRemoteEffects(t *testing.T) {
 	cli := filepath.Join(t.TempDir(), "nl")
 	build := exec.Command("go", "build", "-o", cli, ".")
 	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build production CLI: %v: %s", err, output)
+		t.Fatalf("Ошибка сборки промышленного CLI: %v: %s", err, output)
 	}
 	run := func(action string) error {
 		command := exec.Command(cli, "server-bridge", "host", action, "--server-root", root)
@@ -245,25 +245,25 @@ func TestHostLifecycle0414ActualCLIAndRemoteEffects(t *testing.T) {
 	first := hostWaitRealJava0414(t, root, 0, 0)
 	// CLI не является супервизором: отсоединённая фоновая JVM всё ещё работает.
 	if !hostIdentityMatches0282(first.ProcessPID, first.ProcessIdentity) {
-		t.Fatal("CLI start returned without a live JVM")
+		t.Fatal("Команда запуска CLI завершилась без работающей JVM")
 	}
 	if err := run("restart"); err != nil {
 		t.Fatal(err)
 	}
 	second := hostWaitRealJava0414(t, root, 0, 0)
 	if first.SessionID == second.SessionID || first.ProcessIdentity == second.ProcessIdentity {
-		t.Fatalf("CLI restart did not launch new JVM: old=%+v new=%+v", first, second)
+		t.Fatalf("Перезапуск через CLI не запустил новую JVM: прежняя=%+v, новая=%+v", first, second)
 	}
 	if err := run("stop"); err != nil {
 		t.Fatal(err)
 	}
 	final, err := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 	if err != nil || final.Status != "stopped" || hostIdentityMatches0282(second.ProcessPID, second.ProcessIdentity) {
-		t.Fatalf("CLI stop did not verify process exit: %+v %v", final, err)
+		t.Fatalf("Остановка через CLI не подтвердила завершение процесса: %+v %v", final, err)
 	}
 	events, _ := os.ReadFile(filepath.Join(root, "jvm-events.txt"))
 	if strings.Count(string(events), "BOOT:") != 2 || strings.Count(string(events), "WORLD-SAVED") != 2 {
-		t.Fatalf("actual CLI lifecycle mismatch: %s", events)
+		t.Fatalf("Несоответствие реального жизненного цикла CLI: %s", events)
 	}
 }
 
@@ -289,7 +289,7 @@ func TestHostLifecycle0414StopWhileJavaCrashIsInBackoff(t *testing.T) {
 	}
 	state, _ := readServerBridgeHostRuntime01910(paths["runtime"])
 	if state.Status != "restarting" {
-		t.Fatalf("real Java crash never reached backoff: %+v", state)
+		t.Fatalf("После реального сбоя Java не наступила задержка повторного запуска: %+v", state)
 	}
 	if err := stopServerBridgeHost01910([]string{"--server-root", root}); err != nil {
 		t.Fatal(err)
@@ -297,11 +297,11 @@ func TestHostLifecycle0414StopWhileJavaCrashIsInBackoff(t *testing.T) {
 	hostCheckFinished0414(t, done)
 	state, _ = readServerBridgeHostRuntime01910(paths["runtime"])
 	if state.Status != "stopped" || state.RestartCount != 1 || state.ProcessPID != 0 {
-		t.Fatalf("stop during restart backoff spawned another JVM: %+v", state)
+		t.Fatalf("Остановка во время задержки перезапуска запустила другую JVM: %+v", state)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, "jvm-events.txt"))
 	if strings.Count(string(data), "BOOT:") != 1 {
-		t.Fatalf("JVM relaunched after stop during backoff: %s", data)
+		t.Fatalf("JVM перезапустилась после остановки во время задержки: %s", data)
 	}
 }
 
@@ -313,12 +313,12 @@ func TestHostLifecycle0414StopSessionBoundAcrossProcessStartup(t *testing.T) {
 		t.Fatal(err)
 	}
 	if hostTakeStopRequest0282(path, "old-session", 1234) {
-		t.Fatal("obsolete session consumed process-free stop")
+		t.Fatal("Устаревший сеанс обработал остановку без процесса")
 	}
 	if !hostTakeStopRequest0282(path, "fresh-session", 1234) {
-		t.Fatal("process-free stop did not reach JVM spawned concurrently")
+		t.Fatal("Остановка без процесса не затронула параллельно запущенную JVM")
 	}
 	if hostTakeStopRequest0282(path, "fresh-session", 1234) {
-		t.Fatal("stop request was executed twice")
+		t.Fatal("Запрос остановки выполнен дважды")
 	}
 }

@@ -320,7 +320,7 @@ export function ComponentChooser0247({
         >
           <h4>Предварительная проверка изменений</h4>
           {working && (
-            <p role="status">Runtime проверяет зависимости, условия и файлы…</p>
+            <p role="status">Среда выполнения проверяет зависимости, условия и файлы…</p>
           )}
           {error && (
             <p role="alert" className="error">
@@ -343,7 +343,7 @@ export function ComponentChooser0247({
                 {formatBytes(diff.totalSelectedBytes)}.
               </p>
               <details>
-                <summary>Подробности diff и зависимости</summary>
+                <summary>Подробности изменений и зависимости</summary>
                 <p>
                   Добавляемые компоненты:{" "}
                   {[...selectedNext]
@@ -358,7 +358,7 @@ export function ComponentChooser0247({
                 </p>
                 <p>Добавляемые файлы: {diff.addedFiles.join(", ") || "нет"}</p>
                 <p>
-                  Удаляемые managed-файлы:{" "}
+                  Удаляемые управляемые файлы:{" "}
                   {diff.removedFiles.join(", ") || "нет"}
                 </p>
                 <ul>

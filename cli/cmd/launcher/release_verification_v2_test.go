@@ -82,7 +82,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if ctx.Envelope.KeyID != key.ID || ctx.Policy.Epoch != 1 {
-		t.Fatalf("unexpected envelope/policy: %#v %#v", ctx.Envelope, ctx.Policy)
+		t.Fatalf("Неожиданный подписанный пакет или политика: %#v %#v", ctx.Envelope, ctx.Policy)
 	}
 	if err := commitTrustState0158(ctx); err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.HighestTrustEpoch != 1 || s.HighestRelease != "0.15.8" {
-		t.Fatalf("unexpected trust state: %#v", s)
+		t.Fatalf("Неожиданное состояние доверия: %#v", s)
 	}
 
 	// Подписанный старый релиз отклоняется после принятия версии 0.15.8.
@@ -103,7 +103,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyReleaseSignatureV20158(bundle, rootPub, state, policyPath); err == nil {
-		t.Fatal("expected anti-rollback rejection")
+		t.Fatal("Ожидался отказ защиты от отката")
 	}
 
 	// Ротация повышает эпоху доверия и переводит старый ключ выпуска в режим verify-only.
@@ -126,19 +126,19 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		if k.ID == key.ID {
 			foundOld = true
 			if k.Status != "verify-only" {
-				t.Fatalf("old key status=%s", k.Status)
+				t.Fatalf("Состояние старого ключа: %s", k.Status)
 			}
 		}
 	}
 	if !foundOld {
-		t.Fatal("old key missing after rotation")
+		t.Fatal("Старый ключ отсутствует после ротации")
 	}
 
 	// Новый проверяющий компонент с текущей политикой может проверить исторический
 	// выпуск ключом verify-only, но последующий отзыв блокирует его.
 	freshState := filepath.Join(tmp, "fresh-trust-state.json")
 	if _, err := verifyReleaseSignatureV20158(bundle, rootPub, freshState, policy2); err != nil {
-		t.Fatalf("verify-only historical key should verify before revocation: %v", err)
+		t.Fatalf("Исторический ключ только для проверки должен действовать до отзыва: %v", err)
 	}
 	if _, err := securityRevocations([]string{"revocation-list", "--registry-dir", registry, "--revoke", key.ID}); err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyReleaseSignatureV20158(bundle, rootPub, filepath.Join(tmp, "revoked-state.json"), policy3); err == nil {
-		t.Fatal("revoked historical release key must be rejected by current trust policy")
+		t.Fatal("Текущая политика доверия должна отклонять отозванный исторический ключ релиза")
 	}
 }
 
@@ -172,7 +172,7 @@ func TestReleaseTrustPolicyRejectsTampering(t *testing.T) {
 	}
 	p.Epoch++
 	if _, err := verifyReleaseTrustPolicy0158(p, rootPub, parseTestTime0158(t, p.IssuedAt), true); err == nil {
-		t.Fatal("tampered policy must fail root signature")
+		t.Fatal("Подменённая политика должна не пройти проверку корневой подписи")
 	}
 }
 

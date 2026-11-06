@@ -1592,7 +1592,7 @@ func TestCompatibilityCertificationGA0170RejectsMissingJREAttestation(t *testing
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170"); err == nil {
-		t.Fatal("0.17.0 GA must reject missing JRE attestation")
+		t.Fatal("Версия 0.17.0 GA должна отклонять отсутствие аттестации JRE")
 	}
 }
 
@@ -1600,17 +1600,17 @@ func TestCompatibilityCertificationNeoForgeII0176(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.6", "commit-176")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176")
 	if err != nil {
-		t.Fatalf("0.17.6 NeoForge Compatibility II evidence must pass: %v", err)
+		t.Fatalf("Свидетельства совместимости NeoForge II в версии 0.17.6 должны пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client") {
-		t.Fatalf("0.17.6 policy does not bind NeoForge Compatibility II: %s", certification.Policy)
+		t.Fatalf("Политика версии 0.17.6 не закрепляет совместимость NeoForge II: %s", certification.Policy)
 	}
 	if len(certification.NeoForgeVersions) != len(neoForgeCompatibilityII0176) {
-		t.Fatalf("0.17.6 NeoForge coverage=%d, want %d", len(certification.NeoForgeVersions), len(neoForgeCompatibilityII0176))
+		t.Fatalf("Охват NeoForge в версии 0.17.6: %d вместо %d", len(certification.NeoForgeVersions), len(neoForgeCompatibilityII0176))
 	}
 	for _, minecraft := range []string{"1.20.1", "1.20.6", "1.21.1", "1.21.11", "26.2"} {
 		if !slices.Contains(certification.NeoForgeVersions, minecraft) {
-			t.Fatalf("0.17.6 NeoForge coverage missing %s", minecraft)
+			t.Fatalf("В охвате NeoForge версии 0.17.6 отсутствует %s", minecraft)
 		}
 	}
 }
@@ -1631,7 +1631,7 @@ func TestCompatibilityCertificationNeoForgeII0176RejectsMissingRelease(t *testin
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "NeoForge Compatibility II 0.17.6") {
-		t.Fatalf("0.17.6 must reject missing NeoForge 1.20.1 target, got %v", err)
+		t.Fatalf("Версия 0.17.6 должна отклонять отсутствие цели NeoForge 1.20.1, получено %v", err)
 	}
 }
 
@@ -1648,7 +1648,7 @@ func TestCompatibilityCertificationNeoForgeII0176RejectsWrongJavaMajor(t *testin
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "NeoForge 26.2") {
-		t.Fatalf("0.17.6 must reject NeoForge 26.2 Java mismatch, got %v", err)
+		t.Fatalf("Версия 0.17.6 должна отклонять несовместимость Java для NeoForge 26.2, получено %v", err)
 	}
 }
 
@@ -1665,7 +1665,7 @@ func TestCompatibilityCertificationNeoForgeII0176RejectsMutableResolvedLoader(t 
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "immutable version") {
-		t.Fatalf("0.17.6 must reject mutable NeoForge loader evidence, got %v", err)
+		t.Fatalf("Версия 0.17.6 должна отклонять изменяемые свидетельства загрузчика NeoForge, получено %v", err)
 	}
 }
 
@@ -1702,7 +1702,7 @@ func TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage(t
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.6"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
-		t.Fatalf("bundle verifier must reject tampered NeoForge coverage, got %v", err)
+		t.Fatalf("Проверка пакета должна отклонять подменённый охват NeoForge, получено %v", err)
 	}
 }
 
@@ -1710,10 +1710,10 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.7", "commit-177")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.7", "commit-177")
 	if err != nil {
-		t.Fatalf("0.17.7 loader resolution pinning evidence must pass: %v", err)
+		t.Fatalf("Свидетельства закрепления разрешения загрузчика версии 0.17.7 должны пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "loader-resolution-pinning-0.17.7-immutable-lock-upstream-sha256-profile-sha256-replay") {
-		t.Fatalf("0.17.7 policy does not bind loader resolution pinning: %s", certification.Policy)
+		t.Fatalf("Политика версии 0.17.7 не закрепляет разрешение загрузчика: %s", certification.Policy)
 	}
 	want := 0
 	var targets releaseCompatibilityTargets
@@ -1726,7 +1726,7 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177(t *testing.T) {
 		}
 	}
 	if len(certification.LoaderPins) != want {
-		t.Fatalf("0.17.7 loader pin coverage=%d, want %d", len(certification.LoaderPins), want)
+		t.Fatalf("Охват закреплённых загрузчиков версии 0.17.7: %d вместо %d", len(certification.LoaderPins), want)
 	}
 }
 
@@ -1745,7 +1745,7 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177RejectsMissingPin(
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.7", "commit-177"); err == nil {
-		t.Fatal("0.17.7 must reject missing loader resolution pin")
+		t.Fatal("Версия 0.17.7 должна отклонять отсутствие закрепления загрузчика")
 	}
 }
 
@@ -1777,7 +1777,7 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177BundleRejectsTampe
 		t.Fatal(err)
 	}
 	if len(cert.LoaderPins) == 0 {
-		t.Fatal("fixture produced no loader pins")
+		t.Fatal("Тестовые данные не содержат закреплённых загрузчиков")
 	}
 	cert.LoaderPins[0].ReproducibilitySHA256 = strings.Repeat("e", 64)
 	raw, _ = json.MarshalIndent(cert, "", "  ")
@@ -1785,7 +1785,7 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177BundleRejectsTampe
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.7"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
-		t.Fatalf("bundle verifier must reject tampered loader pin coverage, got %v", err)
+		t.Fatalf("Проверка пакета должна отклонять подменённый охват закреплённых загрузчиков, получено %v", err)
 	}
 }
 
@@ -1797,10 +1797,10 @@ func TestCompatibilityCertificationLoaderNativeE2E0178(t *testing.T) {
 	}
 	expected := []string{"fabric-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64", "quilt-1.21.1-linux-x64"}
 	if !slices.Equal(certification.LoaderNativeTargets, expected) {
-		t.Fatalf("loader-native coverage=%v, want %v", certification.LoaderNativeTargets, expected)
+		t.Fatalf("Охват нативного загрузчика: %v вместо %v", certification.LoaderNativeTargets, expected)
 	}
 	if !strings.Contains(certification.Policy, "loader-native-e2e-0.17.8-fabric-quilt-forge-neoforge-client-server-exact-loader-join") {
-		t.Fatalf("0.17.8 policy does not bind loader-native E2E: %s", certification.Policy)
+		t.Fatalf("Политика версии 0.17.8 не закрепляет сквозные проверки нативного загрузчика: %s", certification.Policy)
 	}
 }
 
@@ -1818,7 +1818,7 @@ func TestCompatibilityCertificationLoaderNativeE2E0178RejectsMissingJoin(t *test
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.8", "commit-178"); err == nil || !strings.Contains(err.Error(), "loaderNativeClientJoin") {
-		t.Fatalf("0.17.8 must reject missing native loader join, got %v", err)
+		t.Fatalf("Версия 0.17.8 должна отклонять отсутствие подключения нативного загрузчика, получено %v", err)
 	}
 }
 
@@ -1855,7 +1855,7 @@ func TestCompatibilityCertificationLoaderNativeE2E0178BundleRejectsTamperedCover
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.8"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
-		t.Fatalf("bundle verifier must reject tampered loader-native coverage, got %v", err)
+		t.Fatalf("Проверка пакета должна отклонять подменённый охват нативного загрузчика, получено %v", err)
 	}
 }
 
@@ -1863,13 +1863,13 @@ func TestCompatibilityCertificationCrossPlatformLoaders0179(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.9", "commit-179")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.9", "commit-179")
 	if err != nil {
-		t.Fatalf("0.17.9 cross-platform loader evidence must pass: %v", err)
+		t.Fatalf("Свидетельства кроссплатформенного загрузчика версии 0.17.9 должны пройти проверку: %v", err)
 	}
 	if len(certification.CrossPlatformLoaderTargets) != 24 {
-		t.Fatalf("cross-platform loader coverage=%d, want 24: %v", len(certification.CrossPlatformLoaderTargets), certification.CrossPlatformLoaderTargets)
+		t.Fatalf("Охват кроссплатформенного загрузчика: %d вместо 24: %v", len(certification.CrossPlatformLoaderTargets), certification.CrossPlatformLoaderTargets)
 	}
 	if !strings.Contains(certification.Policy, "cross-platform-loaders-0.17.9-windows-linux-macos-x64-arm64-native-client") {
-		t.Fatalf("0.17.9 policy does not bind cross-platform loaders: %s", certification.Policy)
+		t.Fatalf("Политика версии 0.17.9 не закрепляет кроссплатформенные загрузчики: %s", certification.Policy)
 	}
 }
 
@@ -1886,7 +1886,7 @@ func TestCompatibilityCertificationCrossPlatformLoaders0179RejectsMissingNativeC
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.9", "commit-179"); err == nil || !strings.Contains(err.Error(), "loaderNativesResolved") {
-		t.Fatalf("0.17.9 must reject missing native resolution check, got %v", err)
+		t.Fatalf("Версия 0.17.9 должна отклонять отсутствие нативной проверки разрешения: %v", err)
 	}
 }
 
@@ -1923,7 +1923,7 @@ func TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCovera
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.9"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
-		t.Fatalf("tampered 0.17.9 cross-platform coverage must fail closed, got %v", err)
+		t.Fatalf("Подменённый кроссплатформенный охват версии 0.17.9 должен вызывать безопасный отказ: %v", err)
 	}
 }
 
@@ -1931,14 +1931,14 @@ func TestCompatibilityCertificationLoaderHardening01710(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.10", "commit-1710")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.10", "commit-1710")
 	if err != nil {
-		t.Fatalf("0.17.10 Loader Hardening evidence must pass: %v", err)
+		t.Fatalf("Свидетельства усиления защиты загрузчика версии 0.17.10 должны пройти проверку: %v", err)
 	}
 	want := []string{"fabric-26.3-linux-x64", "forge-26.3-linux-x64", "neoforge-26.2-linux-x64", "quilt-26.3-linux-x64"}
 	if strings.Join(certification.LoaderHardeningTargets, "\x00") != strings.Join(want, "\x00") {
-		t.Fatalf("hardening coverage=%v want=%v", certification.LoaderHardeningTargets, want)
+		t.Fatalf("Охват усиления защиты: %v вместо %v", certification.LoaderHardeningTargets, want)
 	}
 	if !strings.Contains(certification.Policy, "loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery") {
-		t.Fatalf("0.17.10 policy does not bind hardening: %s", certification.Policy)
+		t.Fatalf("Политика версии 0.17.10 не закрепляет усиление защиты: %s", certification.Policy)
 	}
 }
 
@@ -1955,7 +1955,7 @@ func TestCompatibilityCertificationLoaderHardening01710RejectsMissingProcessorRe
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.10", "commit-1710"); err == nil || !strings.Contains(err.Error(), "loaderProcessorRecovery") {
-		t.Fatalf("0.17.10 must reject missing processor recovery, got %v", err)
+		t.Fatalf("Версия 0.17.10 должна отклонять отсутствие восстановления обработчика, получено %v", err)
 	}
 }
 
@@ -1992,6 +1992,6 @@ func TestCompatibilityCertificationLoaderHardening01710RejectsTamperedCoverage(t
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.10"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
-		t.Fatalf("tampered 0.17.10 hardening coverage must fail closed, got %v", err)
+		t.Fatalf("Подменённый охват усиления защиты версии 0.17.10 должен вызывать безопасный отказ: %v", err)
 	}
 }

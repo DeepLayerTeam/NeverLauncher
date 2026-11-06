@@ -44,7 +44,7 @@ export async function findOriginalOwnerJob(
     job.kind !== pending.intent.kind ||
     job.resourceId !== resource
   )
-    throw Error("Журнал Backend не соответствует сохранённой операции");
+    throw Error("Серверный журнал не соответствует сохранённой операции");
   if (pending.jobId && pending.jobId !== job.id)
     throw Error("Журнал операций вернул другую задачу");
   return job;

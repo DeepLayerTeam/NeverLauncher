@@ -58,12 +58,12 @@ export function GuardPolicyOperations05011({canOperate}:{canOperate:boolean}){
   </div>
   {candidate&&<p>Кандидат epoch {candidate.epoch} требует новой внешней подписи Ed25519. После подписания загрузите готовый envelope для проверки:</p>}
   <label className="field">Новый подписанный envelope<input type="file" accept=".json,application/json" disabled={!current} onChange={e=>chooseEnvelope(e.target.files?.[0],'candidate').catch(err=>setError(String(err)))}/></label>
-  {verifiedSigned&&<div className="buttonRow"><button onClick={()=>download05011('guard-policy-verified.signed.json',verifiedSigned)}>Сохранить проверенный envelope для CLI</button></div>}
-  <h4>Диагностика установленной Guard policy</h4>
+  {verifiedSigned&&<div className="buttonRow"><button onClick={()=>download05011('guard-policy-verified.signed.json',verifiedSigned)}>Сохранить проверенный подписанный пакет для командной строки</button></div>}
+  <h4>Диагностика установленной политики защиты</h4>
   <p>Загрузите отчёт команды <code>launcher runtime client-factory guard-policy-diagnose</code>; он не отправляется на сервер.</p>
-  <input type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>64*1024){setError('Диагностика слишком велика');return}void file.text().then(t=>{const d=JSON.parse(t) as Record<string,unknown>;if(d.operation!=='guard-policy-diagnose')throw Error('Это не отчёт Guard');setDiagnostic(d);setError('')}).catch(err=>setError(String(err)))}}/>
+  <input type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>64*1024){setError('Диагностика слишком велика');return}void file.text().then(t=>{const d=JSON.parse(t) as Record<string,unknown>;if(d.operation!=='guard-policy-diagnose')throw Error('Это не отчёт защиты');setDiagnostic(d);setError('')}).catch(err=>setError(String(err)))}}/>
   {diagnostic&&<pre>{JSON.stringify({status:diagnostic.status,reason:diagnostic.reason,detail:diagnostic.detail,epoch:diagnostic.epoch,verifiedArtifacts:diagnostic.verifiedArtifacts,verifiedExternalNative:diagnostic.verifiedExternalNative},null,2)}</pre>}
   {status&&<p role="status">{status}</p>}{error&&<p role="alert" className="error">{error}</p>}
-  <p><strong>Установка:</strong> <code>launcher runtime client-factory guard-policy-install --client-dir CLIENT --public-key PUBLIC --policy SIGNED</code>. Для отката используйте <code>guard-policy-rollback</code> с вновь подписанной более высокой эпохой. Установка не обходит anti-rollback.</p>
+  <p><strong>Установка:</strong> <code>launcher runtime client-factory guard-policy-install --client-dir CLIENT --public-key PUBLIC --policy SIGNED</code>. Для отката используйте <code>guard-policy-rollback</code> с вновь подписанной более высокой эпохой. Установка не обходит защиту от отката.</p>
  </section>
 }

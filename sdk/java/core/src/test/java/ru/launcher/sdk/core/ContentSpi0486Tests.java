@@ -16,7 +16,7 @@ public final class ContentSpi0486Tests {
     private static void reject(Class<? extends Throwable> expected,Op op)throws Exception{
         checks++;
         try{op.run();throw new AssertionError("expected "+expected.getSimpleName());}
-        catch(Throwable e){if(!expected.isInstance(e))throw new AssertionError("wrong failure",e);}
+        catch(Throwable e){if(!expected.isInstance(e))throw new AssertionError("неверная ошибка",e);}
     }
     private static final byte[] DATA="verified-content-from-storage".getBytes(StandardCharsets.UTF_8);
     private static final String HASH=ContentServices.sha(DATA);

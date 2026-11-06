@@ -18,7 +18,7 @@ func TestMigrationWorkflowCLI0331(t *testing.T) {
 		if r.Method == http.MethodPost {
 			var payload map[string]any
 			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-				t.Errorf("invalid body: %v", err)
+				t.Errorf("Некорректное тело запроса: %v", err)
 			}
 			key, _ = payload["idempotencyKey"].(string)
 		}
@@ -31,15 +31,15 @@ func TestMigrationWorkflowCLI0331(t *testing.T) {
 		t.Fatal(err)
 	}
 	if endpoint != "POST /api/v1/admin/migration-runs" || auth != "Bearer test-token" || key != "stable-request-key" {
-		t.Fatalf("request mismatch: %s %s %s", endpoint, auth, key)
+		t.Fatalf("Несоответствие запроса: %s %s %s", endpoint, auth, key)
 	}
 	if contents, err := os.ReadFile(out); err != nil || !strings.Contains(string(contents), "run-123") {
-		t.Fatalf("invalid JSON output: %s %v", contents, err)
+		t.Fatalf("Некорректный вывод JSON: %s %v", contents, err)
 	}
 	if err := handleMigrationWorkflow0331([]string{"execute", "--backend", srv.URL, "--token", "test-token"}); err == nil {
-		t.Fatal("execution without run ID accepted")
+		t.Fatal("Запуск без идентификатора ошибочно принят")
 	}
 	if err := handleMigrationWorkflow0331([]string{"create", "--backend", srv.URL, "--token", "test-token", "--project", "p1"}); err == nil {
-		t.Fatal("missing idempotency key accepted")
+		t.Fatal("Отсутствие ключа идемпотентности ошибочно принято")
 	}
 }

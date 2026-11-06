@@ -57,10 +57,10 @@ public final class AdvancedEvents0487Tests {
                 host.connect(callback.url());
                 AtomicInteger executions=new AtomicInteger();
                 services.events().subscribeJob("project.saved",null,Json::object,event->{
-                    check(event.metadata().sequence()==12L,"sequence metadata propagated");
-                    check(event.metadata().schemaVersion()==1,"schema version propagated");
-                    check(event.metadata().aggregateId().equals("rel-1"),"aggregate metadata propagated");
-                    check(event.event().idempotencyKey().equals("unique-1"),"durable idempotency key propagated");
+                    check(event.metadata().sequence()==12L,"метаданные последовательности переданы");
+                    check(event.metadata().schemaVersion()==1,"версия схемы передана");
+                    check(event.metadata().aggregateId().equals("rel-1"),"метаданные агрегата переданы");
+                    check(event.event().idempotencyKey().equals("unique-1"),"устойчивый ключ идемпотентности передан");
                     int n=executions.incrementAndGet();
                     if(n==1)throw new java.io.IOException("temporary backend unavailable");
                     if(n==2)throw new RuntimeEvents.PermanentFailure("invalid task");
@@ -76,23 +76,23 @@ public final class AdvancedEvents0487Tests {
                 String base=callback.url();
                 var task=envelope("project.saved","async","evt-1",Map.of("change",1));
                 HttpResponse<String> retry=call(http,base+"/v1/events",task,"callback-secret");
-                check(retry.statusCode()==503,"temporary failure must retry");
-                check(retry.body().contains("EVENT_RETRY"),"temporary retry is explicit");
+                check(retry.statusCode()==503,"временная ошибка должна вызывать повтор");
+                check(retry.body().contains("EVENT_RETRY"),"повтор временной ошибки указан явно");
                 HttpResponse<String> dead=call(http,base+"/v1/events",task,"callback-secret");
-                check(dead.statusCode()==422,"permanent task failure is nonretryable");
-                check(dead.body().contains("EVENT_REJECTED"),"permanent failure has stable code");
+                check(dead.statusCode()==422,"постоянная ошибка задания не допускает повтора");
+                check(dead.body().contains("EVENT_REJECTED"),"постоянная ошибка имеет стабильный код");
                 HttpResponse<String> ack=call(http,base+"/v1/events",task,"callback-secret");
-                check(ack.statusCode()==200 && Json.object(Json.parse(ack.body())).get("accepted").equals(Boolean.TRUE),"successful task has explicit ACK");
+                check(ack.statusCode()==200 && Json.object(Json.parse(ack.body())).get("accepted").equals(Boolean.TRUE),"успешное задание имеет явное подтверждение");
                 check(executions.get()==3,"three actual task attempts");
                 var hook=envelope("release.before-publish","sync","evt-hook",Map.of("signed",false));
-                check(call(http,base+"/v1/hooks",hook,"callback-secret").statusCode()==422,"hook veto denies publish");
-                check(call(http,base+"/v1/hooks",hook,"callback-secret").statusCode()==422,"null policy denies publish");
+                check(call(http,base+"/v1/hooks",hook,"callback-secret").statusCode()==422,"запрет обработчика блокирует публикацию");
+                check(call(http,base+"/v1/hooks",hook,"callback-secret").statusCode()==422,"отсутствие политики блокирует публикацию");
                 HttpResponse<String> ok=call(http,base+"/v1/hooks",hook,"callback-secret");
-                check(ok.statusCode()==200 && Json.object(Json.parse(ok.body())).get("ok").equals(Boolean.TRUE),"explicit policy allow works");
-                check(call(http,base+"/v1/hooks",hook,"wrong-key").statusCode()==401,"unauthorized policy callback denied");
+                check(ok.statusCode()==200 && Json.object(Json.parse(ok.body())).get("ok").equals(Boolean.TRUE),"явное разрешение политики действует");
+                check(call(http,base+"/v1/hooks",hook,"wrong-key").statusCode()==401,"неавторизованный вызов политики отклонён");
                 check(subscribed.get()==2,"two durable backend subscriptions made");
                 services.events().close();
-                check(call(http,base+"/v1/events",task,"callback-secret").statusCode()==422,"shutdown unregisters local handlers");
+                check(call(http,base+"/v1/events",task,"callback-secret").statusCode()==422,"завершение работы отменяет регистрацию локальных обработчиков");
             }
         }finally{broker.stop(0);}
         System.out.println("PASS: "+checks+" Java advanced typed jobs, permanent/retry and sync policy checks");

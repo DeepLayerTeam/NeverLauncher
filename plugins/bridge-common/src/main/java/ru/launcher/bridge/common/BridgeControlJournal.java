@@ -23,7 +23,7 @@ import java.util.TreeSet;
  * неопределённости для команд ServerBridge с побочными
  * эффектами. Записи никогда не удаляются: ранее выполненная
  * команда остаётся надгробной записью даже после ACK Backend и
- */ротации канала. */
+ * ротации канала. */
 final class BridgeControlJournal implements AutoCloseable {
     record State(String digest, String phase, BridgeControlResult result) {}
     record Receipt(String commandId, String runtimeId, long sequence, String channelId,

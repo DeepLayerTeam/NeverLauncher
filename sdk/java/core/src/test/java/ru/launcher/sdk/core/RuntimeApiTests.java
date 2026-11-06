@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class RuntimeApiTests {
     private static int checks;
     static void check(boolean condition,String what){checks++;if(!condition)throw new AssertionError(what);}
-    static void fails(Runnable op){checks++;try{op.run();throw new AssertionError("expected rejection");}catch(IllegalArgumentException|SecurityException expected){}}
+    static void fails(Runnable op){checks++;try{op.run();throw new AssertionError("ожидался отказ");}catch(IllegalArgumentException|SecurityException expected){}}
     static String manifest="{\"schemaVersion\":\"2.0\",\"id\":\"test.runtime\",\"name\":\"Runtime\",\"version\":\"1.0.0\",\"publisher\":\"test\",\"api\":\"1.0\",\"targets\":[{\"kind\":\"backend\",\"entrypoint\":\"backend/run\"}],\"permissions\":[\"storage:read\",\"storage:write\",\"events:subscribe\",\"secrets:read\"]}";
     static void respond(com.sun.net.httpserver.HttpExchange x,int code,Object value)throws IOException {
         byte[] body=Json.encode(value).getBytes(StandardCharsets.UTF_8);x.getResponseHeaders().set("Content-Type","application/json");x.sendResponseHeaders(code,body.length);try(var out=x.getResponseBody()){out.write(body);}
@@ -64,34 +64,34 @@ public final class RuntimeApiTests {
                 var services=new RuntimeServices(host,Set.of("status","empty"));
                 var callbacks=new RuntimeCallbackServer("callback-token",services)) {
                 host.connect(callbacks.url());
-                check(host.capabilities().contains("secret.get"),"host capabilities negotiated");
-                check(services.config().get("settings",configSchema).isEmpty(),"missing config");
+                check(host.capabilities().contains("secret.get"),"разрешения хоста согласованы");
+                check(services.config().get("settings",configSchema).isEmpty(),"отсутствует конфигурация");
                 services.config().put("settings",Map.of("enabled",true,"rate",2),configSchema);
-                check(services.config().get("settings",configSchema).isPresent(),"config stored");
+                check(services.config().get("settings",configSchema).isPresent(),"конфигурация сохранена");
                 services.storage().put("counter",Map.of("count",1),null);
-                check(services.storage().get("counter",null).isPresent(),"storage stored");
+                check(services.storage().get("counter",null).isPresent(),"данные хранилища сохранены");
                 services.storage().delete("counter");
-                check(services.storage().get("counter",null).isEmpty(),"storage deleted");
+                check(services.storage().get("counter",null).isEmpty(),"данные хранилища удалены");
                 byte[][] view=new byte[1][];
                 String secret=services.secrets().withSecret("key","",bytes->{view[0]=bytes;return new String(bytes,StandardCharsets.UTF_8);});
                 check(secret.equals("s3cret")&&Arrays.equals(view[0],new byte[6]),"secret delivered, buffer zeroed");
-                try{services.secrets().withSecret("blocked","",bytes->null);throw new AssertionError("policy bypass");}catch(HostSession.HostError e){check(e.status()==403,"secret broker denied access");}
+                try{services.secrets().withSecret("blocked","",bytes->null);throw new AssertionError("обход политики");}catch(HostSession.HostError e){check(e.status()==403,"посредник секретов запретил доступ");}
                 var payloadSchema=JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"version\":{\"type\":\"string\",\"minLength\":1}},\"required\":[\"version\"],\"additionalProperties\":false}");
                 record Release(String version){}
                 AtomicInteger delivered=new AtomicInteger();
-                services.events().subscribe("release.published","async",payloadSchema,raw->new Release(Json.string(Json.object(raw),"version",true)),event->{check(event.payload().version().equals("1.0.0"),"typed payload");delivered.incrementAndGet();});
-                check(subscribed.get()==1,"server subscription");
+                services.events().subscribe("release.published","async",payloadSchema,raw->new Release(Json.string(Json.object(raw),"version",true)),event->{check(event.payload().version().equals("1.0.0"),"типизированные данные");delivered.incrementAndGet();});
+                check(subscribed.get()==1,"подписка сервера");
                 services.commands().register("status",JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"verbose\":{\"type\":\"boolean\"},\"args\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}"),raw->Json.object(raw),args->Map.of("ok",true));
                 services.commands().register("empty",null,x->x,args->null);
                 fails(()->services.commands().register("danger",null,x->x,x->Map.of()));
-                check(services.commands().invoke("status",Map.of("verbose",true)).equals(Map.of("ok",true)),"typed local command");
+                check(services.commands().invoke("status",Map.of("verbose",true)).equals(Map.of("ok",true)),"типизированная локальная команда");
                 HttpClient client=HttpClient.newHttpClient();
                 String event=Json.encode(Map.of("protocolVersion","1.0","subscription",Map.of("eventType","release.published","mode","async"),"event",Map.of("type","release.published","id","ev-1","idempotencyKey","once","payload",Map.of("version","1.0.0"))));
-                int denied=callback(client,callbacks.url()+"/v1/events",event,"wrong");check(denied==401,"unauthenticated event rejected");
-                check(callback(client,callbacks.url()+"/v1/events",event,"callback-token")==200&&delivered.get()==1,"authenticated typed event handled");
+                int denied=callback(client,callbacks.url()+"/v1/events",event,"wrong");check(denied==401,"неподтверждённое событие отклонено");
+                check(callback(client,callbacks.url()+"/v1/events",event,"callback-token")==200&&delivered.get()==1,"подтверждённое типизированное событие обработано");
                 String malformed=event.replace("\"1.0.0\"","18");
-                check(callback(client,callbacks.url()+"/v1/events",malformed,"callback-token")==422,"schema mismatch rejected");
-                check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"callback-token")==200,"command callback dispatched");
+                check(callback(client,callbacks.url()+"/v1/events",malformed,"callback-token")==422,"несоответствие схемы отклонено");
+                check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"callback-token")==200,"обработчик команды вызван");
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","empty","payload",Map.of())),"callback-token")==200,
                     "JSON null command results succeed");
                 check(callback(client,callbacks.url()+"/v1/rpc",Json.encode(Map.of("protocolVersion","1.0","requestId","abc-123","method","command.invoke","deadlineMs",1500L,
@@ -101,14 +101,14 @@ public final class RuntimeApiTests {
                 // нагрузка намного меньше разрешённых сервером 1 МиБ устойчивого события.
                 AtomicInteger largeDelivered=new AtomicInteger();
                 services.events().subscribe("project.saved","async",null,Json::object,incoming->{
-                    check(((String)incoming.payload().get("data")).length()==150000,"large event payload intact");
+                    check(((String)incoming.payload().get("data")).length()==150000,"крупные данные события сохранены без изменений");
                     largeDelivered.incrementAndGet();
                 });
                 String largeEvent=Json.encode(Map.of("protocolVersion","1.0",
                     "subscription",Map.of("eventType","project.saved","mode","async"),
                     "event",Map.of("type","project.saved","id","ev-large","idempotencyKey","large-1",
                         "payload",Map.of("data","x".repeat(150000)))));
-                check(largeEvent.length()>65536,"large event exceeds RPC limit");
+                check(largeEvent.length()>65536,"крупное событие превышает лимит удалённого вызова");
                 check(callback(client,callbacks.url()+"/v1/events",largeEvent,"callback-token")==200 && largeDelivered.get()==1,
                     "durable-size event delivered through real HTTP callback");
                 // Обратный вызов, не взаимодействующий с системой, не должен обходить
@@ -118,7 +118,7 @@ public final class RuntimeApiTests {
                 check(callback(client,callbacks.url()+"/v1/rpc"," ".repeat(65537),"callback-token")==413,
                     "RPC keeps original independent 64 KiB limit");
                 services.events().subscribe("release.before-publish","sync",null,Json::object,incoming->{
-                    throw new IllegalArgumentException("operator rejected publish");
+                    throw new IllegalArgumentException("оператор запретил публикацию");
                 });
                 String hook=Json.encode(Map.of("protocolVersion","1.0",
                     "subscription",Map.of("eventType","release.before-publish","mode","sync"),
@@ -128,9 +128,9 @@ public final class RuntimeApiTests {
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"wrong")==401,
                     "commands cannot be invoked without authenticated callback token");
                 services.events().unsubscribe("project.saved","async");
-                check(unsubscribed.get()==1,"explicit unsubscription removes backend durable subscription");
+                check(unsubscribed.get()==1,"явная отписка удаляет устойчивую подписку на сервере");
                 services.close();
-                check(unsubscribed.get()==1,"closing extension does not delete pending durable subscriptions");
+                check(unsubscribed.get()==1,"закрытие расширения не удаляет ожидающие устойчивые подписки");
                 try(var restored=new RuntimeServices(host,Set.of("status","empty"));
                     var restoredCallback=new RuntimeCallbackServer("callback-token",restored)){
                     AtomicInteger recovered=new AtomicInteger();
@@ -138,7 +138,7 @@ public final class RuntimeApiTests {
                     check(callback(client,restoredCallback.url()+"/v1/events",event,"callback-token")==200&&recovered.get()==1,
                         "new JVM runtime can resume durable subscription after handler shutdown");
                 }
-                check(unsubscribed.get()==1,"recovered runtime shutdown preserves durable subscription");
+                check(unsubscribed.get()==1,"остановка восстановленной среды выполнения сохраняет устойчивую подписку");
             }
         }finally{fake.stop(0);}
     }

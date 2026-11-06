@@ -45,22 +45,22 @@ public final class RuntimeCallbacks0490Tests {
                 try{release.await();}catch(InterruptedException e){interrupted.set(true);throw e;}
                 calls.incrementAndGet();return Map.of("ok",true);
             });
-            require(status(http,callback.url(),"ga-token","ui.action.invoke")==503,"STARTING cannot execute actions");
-            require(calls.get()==0,"no action executed before ready");
-            require(status(http,callback.url(),"ga-token","health")==200,"supervisor health available during startup");
+            require(status(http,callback.url(),"ga-token","ui.action.invoke")==503,"состояние STARTING не позволяет выполнять действия");
+            require(calls.get()==0,"до готовности не выполнялось никаких действий");
+            require(status(http,callback.url(),"ga-token","health")==200,"состояние диспетчера доступно во время запуска");
             state.set("RUNNING");
-            require(status(http,callback.url(),"bad-token","ui.action.invoke")==401,"bad token rejected");
+            require(status(http,callback.url(),"bad-token","ui.action.invoke")==401,"некорректный токен отклонён");
             var pool=Executors.newSingleThreadExecutor();
             try{
                 var pending=pool.submit(()->{try{return status(http,callback.url(),"ga-token","ui.action.invoke");}catch(Exception e){return -1;}});
-                require(entered.await(3,TimeUnit.SECONDS),"actual handler started");
+                require(entered.await(3,TimeUnit.SECONDS),"реальный обработчик запущен");
                 state.set("STOPPING");
-                require(status(http,callback.url(),"ga-token","ui.action.invoke")==503,"STOPPING rejects new work");
+                require(status(http,callback.url(),"ga-token","ui.action.invoke")==503,"состояние STOPPING отклоняет новые задания");
                 callback.close();
                 release.countDown();
                 pending.get(4,TimeUnit.SECONDS);
                 require(interrupted.get(),"close interrupted in-flight callback");
-                require(calls.get()==0,"cancelled work did not mutate extension state");
+                require(calls.get()==0,"отменённое задание не изменило состояние расширения");
             }finally{release.countDown();pool.shutdownNow();}
         }
         state.set("RUNNING");
@@ -70,8 +70,8 @@ public final class RuntimeCallbacks0490Tests {
             var runtime=new RuntimeServices(host,Set.of(),Map.of("admin",Set.of("refresh")));
             var restarted=new RuntimeCallbackServer("fresh-token",runtime,state::get)){
             runtime.ui().registerAction("admin","refresh",null,(actor,payload)->Map.of("ok",true));
-            require(status(http,restarted.url(),"ga-token","ui.action.invoke")==401,"stale token rejected after restart");
-            require(status(http,restarted.url(),"fresh-token","ui.action.invoke")==200,"fresh instance accepts authorized action");
+            require(status(http,restarted.url(),"ga-token","ui.action.invoke")==401,"устаревший токен отклонён после перезапуска");
+            require(status(http,restarted.url(),"fresh-token","ui.action.invoke")==200,"новый экземпляр принимает разрешённое действие");
         }
         System.out.println("PASS: "+checks+" Java 0.49.0 callback drain, stale lifecycle, token rotation and restart assertions");
     }

@@ -17,7 +17,7 @@ public final class HostStability0481Tests {
     private static void expect(Class<? extends Throwable> type,Throwing action)throws Exception {
         checks++;
         try{action.run();throw new AssertionError("expected "+type.getSimpleName());}
-        catch(Throwable failure){if(!type.isInstance(failure))throw new AssertionError("unexpected exception",failure);}
+        catch(Throwable failure){if(!type.isInstance(failure))throw new AssertionError("неожиданное исключение",failure);}
     }
     private interface Throwing{void run()throws Exception;}
 
@@ -35,18 +35,18 @@ public final class HostStability0481Tests {
             Thread worker=new Thread(()->{try{lifecycle.start(Duration.ofSeconds(10));}catch(Throwable ex){failure.set(ex);}},"test-start-thread");
             worker.start();
             try {
-                check(entered.await(2,TimeUnit.SECONDS),"start callback entered");
+                check(entered.await(2,TimeUnit.SECONDS),"начался вызов обработчика запуска");
                 long beginning=System.nanoTime();
-                check(lifecycle.state()==ExtensionLifecycle.State.STARTING,"state readable while user code executes");
+                check(lifecycle.state()==ExtensionLifecycle.State.STARTING,"состояние доступно при выполнении пользовательского кода");
                 lifecycle.stop(Duration.ofMillis(250));
                 long milliseconds=TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-beginning);
                 check(milliseconds<500,"stop must not wait for blocked startup callback: "+milliseconds+"ms");
-                check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"stop wins startup race");
-                check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"state stays stable after cancellation");
+                check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"остановка опережает запуск при конкурентном выполнении");
+                check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"состояние остаётся стабильным после отмены");
             }finally{released.countDown();worker.join(1500);}
-            check(!worker.isAlive(),"cancelled start thread exited");
-            check(failure.get() instanceof CancellationException,"cancelled start reports cancellation");
-            check(stops.get()==0,"stop callback never called for unstarted extension");
+            check(!worker.isAlive(),"поток отменённого запуска завершился");
+            check(failure.get() instanceof CancellationException,"отменённый запуск сообщает об отмене");
+            check(stops.get()==0,"обработчик остановки не вызывается у незапущенного расширения");
         }
     }
     private static void concurrentStopWaitsForCleanup()throws Exception {
@@ -63,16 +63,16 @@ public final class HostStability0481Tests {
             lifecycle.start(Duration.ofSeconds(1));
             Thread first=new Thread(()->{try{lifecycle.stop(Duration.ofSeconds(3));}catch(Throwable e){error.set(e);}});
             first.start();
-            check(entered.await(1,TimeUnit.SECONDS),"stop callback entered");
+            check(entered.await(1,TimeUnit.SECONDS),"вызван обработчик остановки");
             Thread second=new Thread(()->{try{lifecycle.stop(Duration.ofSeconds(3));}catch(Throwable e){error.set(e);}});
             second.start();
             try{
                 Thread.sleep(90);
-                check(second.isAlive(),"concurrent stop waits for actual cleanup");
-                check(count.get()==1,"stop runs once under concurrency");
+                check(second.isAlive(),"конкурентная остановка ожидает фактическую очистку");
+                check(count.get()==1,"при конкурентном выполнении остановка вызывается один раз");
             }finally{allowStop.countDown();first.join(1000);second.join(1000);}
-            check(!first.isAlive()&&!second.isAlive()&&error.get()==null,"both concurrent stop callers complete");
-            check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"concurrent stop reaches STOPPED");
+            check(!first.isAlive()&&!second.isAlive()&&error.get()==null,"оба конкурентных запроса остановки завершились");
+            check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"конкурентная остановка достигает состояния STOPPED");
         }
     }
     private static void timeoutOfHungStop()throws Exception {
@@ -84,9 +84,9 @@ public final class HostStability0481Tests {
         try(var lifecycle=new ExtensionLifecycle(extension,MANIFEST)){
             lifecycle.start(Duration.ofSeconds(1));
             lifecycle.stop(Duration.ofSeconds(1));
-            check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"graceful stop completes");
+            check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"корректная остановка завершается");
         }
-        check(!interrupted.get(),"graceful stop does not interrupt callback");
+        check(!interrupted.get(),"корректная остановка не прерывает обработчик");
         Extension stuck=new Extension(){
             public void start(ExtensionContext ctx){}
             public void stop(ExtensionContext ctx){while(true){try{Thread.sleep(1000);}catch(InterruptedException ignored){}}}
@@ -95,8 +95,8 @@ public final class HostStability0481Tests {
             lifecycle.start(Duration.ofSeconds(1));
             long started=System.nanoTime();
             expect(TimeoutException.class,()->lifecycle.stop(Duration.ofMillis(90)));
-            check(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started)<700,"uncooperative stop is bounded");
-            check(lifecycle.state()==ExtensionLifecycle.State.FAILED,"timed out stop marked FAILED");
+            check(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started)<700,"время принудительной остановки ограничено");
+            check(lifecycle.state()==ExtensionLifecycle.State.FAILED,"остановка по истечении времени помечена FAILED");
         }
     }
     private static void send(com.sun.net.httpserver.HttpExchange exchange,int status,String body)throws java.io.IOException {
@@ -132,10 +132,10 @@ public final class HostStability0481Tests {
         try(var session=HostSession.fromEnvironment(env(fake.getAddress().getPort()),MANIFEST)){
             session.connect();
             expect(java.io.IOException.class,()->session.capability("runtime.config.get",Map.of()));
-            check(session.healthy(),"oversized response rejects RPC without killing heartbeat");
+            check(session.healthy(),"слишком большой ответ отклоняется без остановки сигналов активности");
             long start=System.nanoTime();
             while(beats.get()==0&&TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start)<3500)Thread.sleep(20);
-            check(beats.get()>0&&session.healthy(),"acknowledged heartbeat keeps host healthy");
+            check(beats.get()>0&&session.healthy(),"подтверждённый сигнал активности сохраняет работоспособность хоста");
             acknowledge.set(false);
             long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(4);
             while(session.healthy()&&System.nanoTime()<deadline)Thread.sleep(20);
@@ -156,18 +156,18 @@ public final class HostStability0481Tests {
                 .POST(HttpRequest.BodyPublishers.ofString(request)).build();
             long before=System.nanoTime();
             var timeout=client.send(rpc,HttpResponse.BodyHandlers.ofString());
-            check(timeout.statusCode()==504,"JVM RPC returns gateway timeout for blocked handler");
-            check(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-before)<1000,"RPC timeout observed on wire");
+            check(timeout.statusCode()==504,"удалённый вызов JVM сообщает о превышении времени ожидания заблокированного обработчика");
+            check(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-before)<1000,"превышение времени ожидания удалённого вызова обнаружено в сети");
             var unauthorized=client.send(HttpRequest.newBuilder(URI.create(callbacks.url()+"/v1/rpc"))
                 .timeout(Duration.ofSeconds(3)).header("Authorization","Bearer invalid")
                 .POST(HttpRequest.BodyPublishers.ofString(request)).build(),HttpResponse.BodyHandlers.ofString());
-            check(unauthorized.statusCode()==401,"RPC refuses incorrect callback secret");
+            check(unauthorized.statusCode()==401,"удалённый вызов отклоняет неверный секрет обработчика");
             String health=Json.encode(Map.of("protocolVersion","1.0","requestId","health-481","method","health","deadlineMs",300L,"params",Map.of()));
             var response=client.send(HttpRequest.newBuilder(URI.create(callbacks.url()+"/v1/rpc"))
                 .timeout(Duration.ofSeconds(3)).header("Authorization","Bearer local-callback-token")
                 .POST(HttpRequest.BodyPublishers.ofString(health)).build(),HttpResponse.BodyHandlers.ofString());
-            check(response.statusCode()==200,"health continues after timed out command callback");
-            check(Boolean.TRUE.equals(Json.object(Json.parse(response.body())).get("ok")),"RPC response protocol intact");
+            check(response.statusCode()==200,"работоспособность сохраняется после превышения времени ожидания команды");
+            check(Boolean.TRUE.equals(Json.object(Json.parse(response.body())).get("ok")),"протокол ответа удалённого вызова не повреждён");
         }
     }
     public static void main(String[] args)throws Exception{

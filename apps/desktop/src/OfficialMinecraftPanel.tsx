@@ -129,7 +129,7 @@ export function OfficialMinecraftPanel0257({
         {!loading && state.accounts.length === 0 && (
           <p>
             Аккаунтов пока нет. Войдите через системный браузер Microsoft или
-            используйте резервный Device Code.
+            используйте резервный код устройства.
           </p>
         )}
         <div
@@ -150,7 +150,7 @@ export function OfficialMinecraftPanel0257({
                     ? ready
                       ? "Выбран · готов к запуску"
                       : "Выбран · нужна проверка"
-                    : "Сохранён в OS vault"}
+                    : "Сохранён в защищённом хранилище ОС"}
                 </small>
               </div>
               <div className="officialAuthAccountActions02610">
@@ -335,7 +335,7 @@ export function OfficialMinecraftPanel0257({
           <>
             <p>
               {reauthRequired
-                ? "Проверка сохранённой сессии не завершилась успешно. Официальный запуск недоступен до нового подтверждения Minecraft profile."
+                ? "Не удалось проверить сохранённый сеанс. Официальный запуск недоступен до повторного подтверждения профиля Minecraft."
                 : "Выберите или добавьте аккаунт, чтобы запустить официальный Minecraft."}
             </p>
             {reauthRequired && (
@@ -372,12 +372,12 @@ export function OfficialMinecraftPanel0257({
               </span>
             </div>
             {state.links === null ? (
-              <p>{state.linksIssue || "Проверяем связь с Never identity."}</p>
+              <p>{state.linksIssue || "Проверяем связь с учётной записью Never."}</p>
             ) : (
               <p>
                 {linked
                   ? "Minecraft UUID подтверждён сервером Never."
-                  : "Локальный игровой аккаунт не привязан к Never identity."}
+                  : "Локальная игровая учётная запись не привязана к учётной записи Never."}
               </p>
             )}
             <div className="toolbar inline">
@@ -402,7 +402,7 @@ export function OfficialMinecraftPanel0257({
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Привязать Never identity к ${profile.name} (${profile.id})? Backend проверит владение Minecraft.`,
+                          `Привязать учётную запись Never к ${profile.name} (${profile.id})? Сервер проверит владение Minecraft.`,
                         )
                       )
                         call((m) => m.link(profile.id));

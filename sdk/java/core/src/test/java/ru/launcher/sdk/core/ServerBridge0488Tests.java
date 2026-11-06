@@ -15,7 +15,7 @@ public final class ServerBridge0488Tests {
     private interface Action { void run() throws Exception; }
     private static void fails(Class<? extends Throwable> type,Action action) throws Exception {
         checks++;try { action.run();throw new AssertionError("expected "+type); }
-        catch(Exception ex){if(!type.isInstance(ex))throw new AssertionError("wrong failure",ex);}
+        catch(Exception ex){if(!type.isInstance(ex))throw new AssertionError("неверная ошибка",ex);}
     }
     private static void reply(HttpExchange x,int code,Object value)throws IOException {
         byte[] body=Json.encode(value).getBytes(StandardCharsets.UTF_8);

@@ -13,7 +13,7 @@ public final class StateMigrations04810Tests {
     private static void check(boolean b,String message){checks++;if(!b)throw new AssertionError(message);}
     @FunctionalInterface interface Op{void run()throws Exception;}
     private static void fails(Op op)throws Exception{
-        checks++;try{op.run();throw new AssertionError("operation unexpectedly succeeded");}
+        checks++;try{op.run();throw new AssertionError("операция неожиданно завершилась успешно");}
         catch(IllegalStateException|IllegalArgumentException expected){}
     }
     private static Map<String,Object> rpc(RuntimeCallbackServer server,String secret,String from,String to,int code)throws Exception{
@@ -31,12 +31,12 @@ public final class StateMigrations04810Tests {
         bare.register("1.1.0","2.0.0",(c,s)->n.incrementAndGet());
         fails(()->bare.register("2.0.0","1.0.0",(c,s)->{}));
         fails(()->bare.register("1.0.0","1.2.0",(c,s)->{}));
-        check(Boolean.TRUE.equals(bare.apply("1.0.0","2.0.0").get("applied")),"chain executed");
-        check(n.get()==2,"both migrations executed");
+        check(Boolean.TRUE.equals(bare.apply("1.0.0","2.0.0").get("applied")),"цепочка выполнена");
+        check(n.get()==2,"обе миграции выполнены");
         fails(()->bare.apply("1.0.0","3.0.0"));
         fails(()->bare.apply("2.0.0","1.0.0"));
         var none=new RuntimeStateMigrations(null,null);
-        check(Boolean.FALSE.equals(none.apply("1.0.0","2.0.0").get("applied")),"schema compatible upgrade requires no migrations");
+        check(Boolean.FALSE.equals(none.apply("1.0.0","2.0.0").get("applied")),"совместимое обновление схемы не требует миграций");
         String source="{\"schemaVersion\":\"2.0\",\"id\":\"example.state\",\"name\":\"State\",\"version\":\"2.0.0\",\"api\":\"1.0\",\"publisher\":\"test\",\"targets\":[{\"kind\":\"backend\",\"entrypoint\":\"backend/extension\"}]}";
         var manifest=ExtensionManifest.parse(source);
         var docs=new ConcurrentHashMap<String,Object>();
@@ -65,11 +65,11 @@ public final class StateMigrations04810Tests {
                     storage.put("counter",Map.of("value",((Number)value.get("value")).intValue()+1),null);
                 });
                 var success=rpc(callback,"callback-secret","1.0.0","2.0.0",200);
-                check(Boolean.TRUE.equals(success.get("ok")),"authenticated migration RPC");
-                check(((Number)Json.object(docs.get("storage:counter")).get("value")).intValue()==8,"migration persisted through real Host broker");
+                check(Boolean.TRUE.equals(success.get("ok")),"подтверждённый удалённый вызов миграции");
+                check(((Number)Json.object(docs.get("storage:counter")).get("value")).intValue()==8,"миграция сохранена через настоящий посредник хоста");
                 rpc(callback,"bad-secret","1.0.0","2.0.0",401);
                 rpc(callback,"callback-secret","0.9.0","2.0.0",422);
-                check(((Number)Json.object(docs.get("storage:counter")).get("value")).intValue()==8,"failed migration did not corrupt document");
+                check(((Number)Json.object(docs.get("storage:counter")).get("value")).intValue()==8,"неуспешная миграция не повредила документ");
             }
         } finally{broker.stop(0);}
         System.out.println("PASS: "+checks+" state migration chain and authenticated runtime persistence assertions");

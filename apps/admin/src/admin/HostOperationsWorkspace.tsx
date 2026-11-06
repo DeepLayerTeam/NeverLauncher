@@ -40,7 +40,7 @@ const formatBytes = (bytes?: number) =>
     : "неизвестно";
 const describeError = (e: unknown) =>
   e instanceof ApiError && e.status === 403
-    ? "Действие запрещено Backend: проверьте глобальное host:process и свежую MFA."
+    ? "Сервер запретил действие: проверьте глобальное право host:process и актуальное подтверждение MFA."
     : e instanceof Error
       ? e.message
       : "Операция недоступна";
@@ -238,7 +238,7 @@ export function HostOperationsWorkspace04111({
       setNotice(
         response.idempotentReplay
           ? "Сервер вернул ранее сохранённую операцию, без нового исполнения."
-          : "Backend сохранил операцию и вернул результат Host Supervisor.",
+          : "Сервер сохранил операцию и вернул результат диспетчера хоста.",
       );
       const refreshed = await api.list(serverId).catch(() => null);
       if (refreshed) {
@@ -270,7 +270,7 @@ export function HostOperationsWorkspace04111({
       setError("Нет свежего подтверждения состояния Host Supervisor.");
       return;
     }
-    const prompt = `${action.toUpperCase()} JVM для ${serverName} (${serverId})?\nHost session: ${host.sessionId || "отсутствует"}\nPID: ${host.telemetry?.processId || "неизвестно"}\n\nОперация сохраняется в PostgreSQL до вызова хоста. Результат может остаться неопределённым.`;
+    const prompt = `${action.toUpperCase()} JVM для ${serverName} (${serverId})?\nСеанс хоста: ${host.sessionId || "отсутствует"}\nPID: ${host.telemetry?.processId || "неизвестно"}\n\nОперация сохраняется в PostgreSQL до вызова хоста. Результат может остаться неопределённым.`;
     if (!window.confirm(prompt)) return;
     const next = { serverId, action, idempotencyKey: crypto.randomUUID() };
     persist(next); // Устойчивое намерение браузера фиксируется ДО POST; при сбое передачи создаётся заново.

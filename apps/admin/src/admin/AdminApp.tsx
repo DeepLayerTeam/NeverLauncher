@@ -1214,7 +1214,7 @@ export function AdminApp() {
               <button
                 disabled={!canPrepare || !packageForm.packageId}
                 onClick={() =>
-                  runAction("Integrity check пакета", () =>
+                  runAction("Проверка целостности пакета", () =>
                     requestJSON(
                       backendUrl,
                       `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`,
@@ -1677,7 +1677,7 @@ export function AdminApp() {
             <p>{`Рабочая панель Launcher ${TOOL_VERSION}: проекты, профили, каналы, пользователи, подписанный релизный поток, multipart-загрузка, ServerBridge, диагностика и резервное копирование через единый /api/v1.`}</p>
           </div>
           <span className={`badge ${status === "online" ? "ok" : "warn"}`}>
-            Backend: {status === "online" ? "доступен" : "недоступен"}
+            Сервер: {status === "online" ? "доступен" : "недоступен"}
           </span>
         </header>
         <section className="card wide">

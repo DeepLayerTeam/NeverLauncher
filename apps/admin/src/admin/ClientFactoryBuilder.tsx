@@ -525,7 +525,7 @@ export function ClientFactoryBuilder02710({
           {!ended(detail.job.state) && (
             <div className="buttonRow">
               <span role="status">
-                Worker выполняет build или verify; журнал обновляется
+                Рабочий процесс выполняет сборку или проверку; журнал обновляется
                 автоматически.
               </span>
               <button disabled={busy} onClick={() => void cancel()}>
@@ -604,8 +604,8 @@ export function ClientFactoryBuilder02710({
               </div>
               {!workspaceEmpty && (
                 <p className="muted">
-                  Прямой перенос доступен только для пустого workspace до stage.
-                  Для нового запуска создайте пустой workspace с необходимой
+                  Прямой перенос доступен только в пустую рабочую область до подготовки.
+                  Для нового запуска создайте пустую рабочую область с необходимой
                   Java.
                 </p>
               )}

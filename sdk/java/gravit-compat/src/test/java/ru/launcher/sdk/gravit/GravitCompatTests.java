@@ -6,8 +6,8 @@ import pro.gravit.utils.command.Command;
 
 public final class GravitCompatTests {
     static int passed;
-    static void verify(boolean value){if(!value)throw new AssertionError("assertion failed");passed++;}
-    static void rejected(Runnable callback){try{callback.run();throw new AssertionError("should reject");}catch(IllegalArgumentException|IllegalStateException|UnsupportedOperationException|NullPointerException expected){passed++;}}
+    static void verify(boolean value){if(!value)throw new AssertionError("проверка не пройдена");passed++;}
+    static void rejected(Runnable callback){try{callback.run();throw new AssertionError("должен быть отказ");}catch(IllegalArgumentException|IllegalStateException|UnsupportedOperationException|NullPointerException expected){passed++;}}
     static class Mod extends LauncherModule {
         boolean pre,init;
         Mod(){super(new LauncherModuleInfoBuilder().setName("ValidModule").setVersion(new Version(1,2,3,4,Version.Type.LTS)).createLauncherModuleInfo());}

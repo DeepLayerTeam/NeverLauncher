@@ -480,7 +480,7 @@ export function BuildWorkspacePanel({
                 .then((updated) => {
                   load(updated);
                   setProgress(
-                    `Client Factory: ${updated.files.length} проверенных файлов перенесено в рабочую область сборки; выполните подготовку, проверку, сборку и игровую приёмку.`,
+                    `Конструктор клиента: ${updated.files.length} проверенных файлов перенесено в рабочую область сборки; выполните подготовку, проверку, сборку и игровую приёмку.`,
                   );
                   return refresh();
                 })

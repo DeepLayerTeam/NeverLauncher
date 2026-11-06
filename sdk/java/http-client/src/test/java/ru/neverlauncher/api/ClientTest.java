@@ -29,7 +29,7 @@ public final class ClientTest {
     e.sendResponseHeaders(403,b.length);try(var out=e.getResponseBody()){out.write(b);}return;
    } else if(e.getRequestURI().getRawPath().equals("/ready")){text="{\"version\":\"0.45.11\"}";}
    else if(e.getRequestURI().getRawPath().equals("/api/v1/projects/a%20b")){
-    if(!"Bearer token".equals(e.getRequestHeaders().getFirst("Authorization")))throw new AssertionError("missing bearer");
+    if(!"Bearer token".equals(e.getRequestHeaders().getFirst("Authorization")))throw new AssertionError("отсутствует токен предъявителя");
     text="{\"id\":\"a b\"}";
    } else {status=403;text="{\"code\":\"denied\",\"message\":\"forbidden\"}";e.getResponseHeaders().set("X-Correlation-ID","id-1");}
    byte[] b=text.getBytes(StandardCharsets.UTF_8);e.sendResponseHeaders(status,b.length);try(var out=e.getResponseBody()){out.write(b);}
@@ -39,23 +39,23 @@ public final class ClientTest {
    var c=new NeverLauncherAPI("http://127.0.0.1:"+server.getAddress().getPort(),"token");c.checkCompatibility();
    var obj=(Map<?,?>)c.call("get_projects_by_projectId",Map.of("projectId","a b"),Map.of(),null,"");
    if(!"a b".equals(obj.get("id")))throw new AssertionError(obj);
-   try {c.call("get_projects",Map.of(),Map.of(),null,"");throw new AssertionError("missing error");}
+   try {c.call("get_projects",Map.of(),Map.of(),null,"");throw new AssertionError("отсутствует ошибка");}
    catch(NeverLauncherAPI.ApiException e){if(e.status!=403||!e.code.equals("denied")||!e.requestId.equals("id-1"))throw e;}
-   try {new NeverLauncherAPI("http://example.com","");throw new AssertionError("insecure URL allowed");}
+   try {new NeverLauncherAPI("http://example.com","");throw new AssertionError("небезопасный адрес ошибочно разрешён");}
    catch(IllegalArgumentException expected){}
    var streamed=new ByteArrayOutputStream();
    long n=c.requestStream("GET","/api/v1/stream",Map.of(),null,null,streamed,20L<<20,"");
-   if(n != 12L<<20 || streamed.size()!=n || streamed.toByteArray()[0]!=(byte)0xAC)throw new AssertionError("12 MiB streamed bytes mismatch");
+   if(n != 12L<<20 || streamed.size()!=n || streamed.toByteArray()[0]!=(byte)0xAC)throw new AssertionError("несоответствие размера потоковых данных (12 МиБ)");
    try {c.requestStream("GET","/api/v1/stream",Map.of(),null,null,new ByteArrayOutputStream(),1<<20,"");
-    throw new AssertionError("stream limit bypass");} catch(IOException expected) {if(!expected.getMessage().contains("лимит размера"))throw expected;}
+    throw new AssertionError("обход ограничения потока");} catch(IOException expected) {if(!expected.getMessage().contains("лимит размера"))throw expected;}
    try {c.requestStream("GET","/api/v1/redirect",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");
-    throw new AssertionError("redirect followed");}catch(NeverLauncherAPI.ApiException expected){if(expected.status!=307)throw expected;}
+    throw new AssertionError("выполнен запрещённый переход");}catch(NeverLauncherAPI.ApiException expected){if(expected.status!=307)throw expected;}
    try {c.requestStream("GET","/api/v1/stream-error",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");
-    throw new AssertionError("error ignored");}catch(NeverLauncherAPI.ApiException expected){
+    throw new AssertionError("ошибка проигнорирована");}catch(NeverLauncherAPI.ApiException expected){
      if(expected.status!=403 || !expected.code.equals("denied") || !expected.requestId.equals("stream-req-1"))throw expected;}
    try {c.requestStream("GET","/api/v1/stream",Map.of(),null,null,new ByteArrayOutputStream(),-1,"");
-    throw new AssertionError("negative limit accepted");}catch(IllegalArgumentException expected){}
-   if(Operations.ALL.size()<450)throw new AssertionError("operation registry incomplete");
+    throw new AssertionError("отрицательный предел ошибочно принят");}catch(IllegalArgumentException expected){}
+   if(Operations.ALL.size()<450)throw new AssertionError("реестр операций неполон");
    System.out.println("Java REST SDK HTTP tests PASS: "+Operations.ALL.size()+" operations");
   } finally {server.stop(0);}
   System.exit(0);

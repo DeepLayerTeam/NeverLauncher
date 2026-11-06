@@ -55,7 +55,7 @@ public final class AdminDesktop0489Tests {
                 services.ui().registerAction("desktop","refresh",null,(actor,payload)->Map.of("from",actor.get("id"),"count",count.incrementAndGet()));
                 services.ui().registerSetting("admin","appearance",schema,Map.of("theme","dark"));
                 services.ui().registerSetting("desktop","appearance",schema,Map.of("theme","light"));
-                try{services.ui().registerAction("admin","root",null,(a,p)->null);throw new AssertionError("unsigned action accepted");}
+                try{services.ui().registerAction("admin","root",null,(a,p)->null);throw new AssertionError("неподписанное действие ошибочно принято");}
                 catch(SecurityException expected){checks++;}
                 var http=HttpClient.newHttpClient();
                 var input=Map.<String,Object>of("surface","admin","actionId","refresh","payload",Map.of(),"actor",Map.of("id","operator"));

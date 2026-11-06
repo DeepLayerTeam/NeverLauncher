@@ -150,7 +150,7 @@ func TestRemoteControlIdempotencyAndUnknown0284(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Contains(audit, []byte("accepted")) || strings.Contains(string(audit), token) {
-		t.Fatalf("audit missing/credential leak: %s", audit)
+		t.Fatalf("Отсутствует аудит или раскрыты учётные данные: %s", audit)
 	}
 }
 func remoteDigestFixture0284(action, subject, node string) string {
@@ -162,10 +162,10 @@ func TestRemoteTokenSecurity0284(t *testing.T) {
 	token := remoteTokenFixture0284(t, id, "host.status")
 	wrong, _ := remoteInit0284(t.TempDir())
 	if _, err := remoteTokenDecode0284(wrong, token, time.Now()); err == nil {
-		t.Fatal("cross-node token accepted")
+		t.Fatal("Токен другого узла ошибочно принят")
 	}
 	if _, err := remoteTokenDecode0284(id, token+"x", time.Now()); err == nil {
-		t.Fatal("modified signature accepted")
+		t.Fatal("Изменённая подпись ошибочно принята")
 	}
 	if _, err := remoteIssue0284(id, "service", []string{"host.exec"}, []string{"127.0.0.1/32"}, time.Minute, time.Now()); err == nil {
 		t.Fatal("host exec scope should not exist")

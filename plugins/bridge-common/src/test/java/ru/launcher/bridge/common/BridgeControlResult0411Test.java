@@ -13,7 +13,7 @@ public final class BridgeControlResult0411Test {
         status("executed", BridgeControlResult.ok(Map.of("accepted", "true")));
         BridgeControlResult observed = BridgeControlResult.verified(Map.of("mode", "maintenance", "enabled", "true"));
         status("succeeded", observed);
-        if (!"platform-state-read".equals(observed.result().get("verification"))) throw new AssertionError("missing verification evidence");
+        if (!"platform-state-read".equals(observed.result().get("verification"))) throw new AssertionError("отсутствуют доказательства проверки");
         status("failed", BridgeControlResult.failed("dispatcher rejected command"));
         status("indeterminate", BridgeControlResult.indeterminate("agent crashed"));
         status("unsupported", BridgeControlResult.unsupported("capability unavailable"));

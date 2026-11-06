@@ -34,7 +34,7 @@ export function OfficialProviderWorkspace02611({ backendUrl, token }: { backendU
     {draft && current ? <>
       <p>Ревизия #{current.revision || 0} · {current.revision === 0 ? 'Используются начальные настройки окружения' : `Изменено: ${current.createdAt || '—'}`}</p>
       <div className="configFields">
-        <label className="field">ID приложения (клиента) Microsoft<input autoComplete="off" spellCheck={false} maxLength={36} value={draft.clientId} onChange={e => update({ clientId: e.target.value.trim() })} /><small className="muted">Собственный зарегистрированный public Client ID в формате UUID.</small></label>
+        <label className="field">ID приложения (клиента) Microsoft<input autoComplete="off" spellCheck={false} maxLength={36} value={draft.clientId} onChange={e => update({ clientId: e.target.value.trim() })} /><small className="muted">Собственный зарегистрированный публичный идентификатор клиента в формате UUID.</small></label>
         <label className="field">Издатель <input value="consumers (личные учётные записи Microsoft)" readOnly /><small className="muted">Другие issuer и произвольные OAuth endpoints запрещены.</small></label>
         <label className="field"><span><input type="checkbox" checked={draft.enabled} onChange={e => update({ enabled:e.target.checked })} /> Разрешить официальную игровую авторизацию</span></label>
         <label className="field"><span><input type="checkbox" checked={draft.browserEnabled} onChange={e => update({ browserEnabled:e.target.checked })} /> Системный браузер + PKCE</span></label>
@@ -48,7 +48,7 @@ export function OfficialProviderWorkspace02611({ backendUrl, token }: { backendU
         const report = await requestJSON<Diagnostics>(backendUrl,'/api/v1/admin/official-provider/diagnostics',token,{method:'POST'});
         setDiagnostics(report);
       })}>Проверить доступность сервисов</button></div>
-      {!validProviderPolicy02611(draft) && <p className="error">Неверный Client ID или недопустимое сочетание политик.</p>}
+      {!validProviderPolicy02611(draft) && <p className="error">Неверный идентификатор клиента или недопустимое сочетание политик.</p>}
     </> : <p className="muted">Загрузка конфигурации…</p>}
     {notice && <p className="success" role="status">{notice}</p>}{error && <p className="error" role="alert">{error}</p>}
     {diagnostics && <><h3>Диагностика · {new Date(diagnostics.checkedAt).toLocaleString()}</h3><p>Доступность API не подтверждает одобрение приложения Minecraft Services или владение Java Edition. Внешнее разрешение: <strong>{diagnostics.appApprovalStatus}</strong>.</p>

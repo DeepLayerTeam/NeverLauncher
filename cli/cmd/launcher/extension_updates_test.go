@@ -16,7 +16,7 @@ func TestExtensionUpdatesCLI02011PlanPayload(t *testing.T) {
 			t.Fatalf("Неожиданный запрос %s %s", r.Method, r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "Bearer test-token" {
-			t.Fatalf("missing bearer token: %q", r.Header.Get("Authorization"))
+			t.Fatalf("Отсутствует токен предъявителя: %q", r.Header.Get("Authorization"))
 		}
 		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 			t.Fatal(err)
@@ -30,23 +30,23 @@ func TestExtensionUpdatesCLI02011PlanPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got["scope"] != "project" || got["scopeId"] != "project-1" || got["channel"] != "beta" {
-		t.Fatalf("unexpected update request: %#v", got)
+		t.Fatalf("Неожиданный запрос обновления: %#v", got)
 	}
 	roots, ok := got["roots"].([]any)
 	if !ok || len(roots) != 1 {
-		t.Fatalf("unexpected roots: %#v", got["roots"])
+		t.Fatalf("Неожиданные корневые каталоги: %#v", got["roots"])
 	}
 	root := roots[0].(map[string]any)
 	if root["extensionId"] != "example.ext" || root["version"] != "1.2.3" || root["channel"] != "beta" {
-		t.Fatalf("unexpected root: %#v", root)
+		t.Fatalf("Неожиданный корневой каталог: %#v", root)
 	}
 }
 
 func TestExtensionUpdatesCLI02011RoutesAndRejectsUnknownChannel(t *testing.T) {
 	if err := handleExtension0201([]string{"updates"}); err == nil || !strings.Contains(err.Error(), "extension updates") {
-		t.Fatalf("updates command not routed: %v", err)
+		t.Fatalf("Команда обновлений не направлена обработчику: %v", err)
 	}
 	if err := handleExtensionUpdates02011([]string{"plan", "example.ext", "--backend", "http://127.0.0.1:1", "--token", "x", "--channel", "nightly"}); err == nil {
-		t.Fatal("unsupported update channel accepted")
+		t.Fatal("Неподдерживаемый канал обновления ошибочно принят")
 	}
 }

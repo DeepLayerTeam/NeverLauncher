@@ -416,7 +416,7 @@ export function ReleaseWorkspace({
           uploadPath || uploadFile.name,
           uploadOwnership,
         ),
-      "Файл загружен и SHA-256 проверен Backend.",
+      "Файл загружен; сервер проверил его SHA-256.",
     );
     if (result) {
       setUploadFile(null);
@@ -431,7 +431,7 @@ export function ReleaseWorkspace({
     if (!form.packageId) return;
     if (action === "sign" && catalogBlocking) {
       setError(
-        "Необходимо сохранить изменения каталога и пройти проверку Backend до подписи.",
+        "Перед подписанием сохраните изменения каталога и пройдите серверную проверку.",
       );
       return;
     }
@@ -481,7 +481,7 @@ export function ReleaseWorkspace({
       const result = await api.evidence(form.packageId, data);
       await loadChecks(form.packageId);
       return result;
-    }, "Подписанное runtime evidence проверено Backend.");
+    }, "Сервер проверил подписанное свидетельство среды выполнения.");
   }
   function newIntent(
     kind: "package-publish" | "channel-rollback",
@@ -548,7 +548,7 @@ export function ReleaseWorkspace({
         latest.releaseId !== exact.before.releaseId
       )
         throw Error(
-          "Канал изменился после preview. Обновите и повторите проверку.",
+          "Канал изменился после предварительного просмотра. Обновите данные и повторите проверку.",
         );
       // Другая вкладка могла отправить изменение, пока открыт предварительный
       // просмотр. Не перезаписывайте ключ восстановления второй операцией.
@@ -694,7 +694,7 @@ export function ReleaseWorkspace({
     if (
       dirty &&
       !window.confirm(
-        "Текущие несохранённые изменения будут потеряны. Открыть подготовленный rollback?",
+        "Текущие несохранённые изменения будут потеряны. Открыть подготовленный откат?",
       )
     )
       return;
@@ -712,7 +712,7 @@ export function ReleaseWorkspace({
       await refreshDrafts();
       await loadChecks(fields.packageId);
       return newDraft;
-    }, "Черновик подготовленного rollback открыт. Для stable нужна новая полная runtime-сертификация до публикации.");
+    }, "Черновик подготовленного отката открыт. Перед стабильной публикацией нужна новая полная сертификация среды выполнения.");
     return created;
   }
   function acknowledgeOperation() {
@@ -1222,7 +1222,7 @@ export function ReleaseWorkspace({
               "не загружена"}{" "}
             {report?.effectivePolicy?.source ===
             "production-runtime-gate-0.34.11"
-              ? "· обязательная доверенная runtime-сертификация"
+              ? "· обязательная доверенная сертификация среды выполнения"
               : policy?.requireServerJoin
                 ? "· требуется Server Join"
                 : ""}

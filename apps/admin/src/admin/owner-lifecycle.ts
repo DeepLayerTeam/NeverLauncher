@@ -170,7 +170,7 @@ export async function observeOwnerOperation(
     return {
       phase: "waiting",
       job,
-      message: `Задание ${job.id}: ${statusRu(job.status)}. Ожидается подтверждение Backend.`,
+      message: `Задание ${job.id}: ${statusRu(job.status)}. Ожидается подтверждение сервера.`,
     };
   if (
     pending.intent.kind === "channel-rollback" &&

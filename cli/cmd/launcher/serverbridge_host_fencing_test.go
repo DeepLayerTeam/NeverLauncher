@@ -42,19 +42,19 @@ func TestRemoteLocalInspectionPreservesUnknownOutcome0285(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Receipt.State != "indeterminate" || result.VerifiedExternalEffect {
-		t.Fatalf("unsafe proof or hidden uncertainty: %s", data)
+		t.Fatalf("Небезопасное доказательство или скрытая неопределённость: %s", data)
 	}
 	original, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Contains(original, []byte(`"indeterminate"`)) {
-		t.Fatal("inspection mutated receipt")
+		t.Fatal("Просмотр изменил квитанцию")
 	}
 	if err := remoteHandle0284([]string{"inspect", "--server-root", root, "--idempotency-key", "other-key-000000001"}); err == nil {
-		t.Fatal("missing journal accepted")
+		t.Fatal("Отсутствие журнала ошибочно принято")
 	}
 	if err := remoteHandle0284([]string{"inspect", "--server-root", root, "--idempotency-key", "bad"}); err == nil {
-		t.Fatal("invalid key accepted")
+		t.Fatal("Недействительный ключ ошибочно принят")
 	}
 }

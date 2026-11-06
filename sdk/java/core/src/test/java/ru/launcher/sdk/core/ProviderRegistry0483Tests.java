@@ -12,7 +12,7 @@ public final class ProviderRegistry0483Tests {
     private static void fails(Class<? extends Throwable> kind, Checked action) throws Exception {
         assertions++;
         try { action.run(); throw new AssertionError("expected " + kind.getName()); }
-        catch (Throwable failure) { if(!kind.isInstance(failure)) throw new AssertionError("unexpected SPI exception", failure); }
+        catch (Throwable failure) { if(!kind.isInstance(failure)) throw new AssertionError("неожиданное исключение SPI", failure); }
     }
     @FunctionalInterface interface Checked { void run() throws Exception; }
     interface Greeting extends JavaProvider { String greet(String name); }
@@ -129,7 +129,7 @@ public final class ProviderRegistry0483Tests {
             registry.select(GREETING.id(),"one",Duration.ofSeconds(1));
             fails(IllegalStateException.class,()->registry.call(GREETING,p->{
                 try {registry.select(GREETING.id(),"other",Duration.ofSeconds(1));}
-                catch(Exception e){throw new IllegalStateException("reentrant selection refused",e);}
+                catch(Exception e){throw new IllegalStateException("повторный вход в выбор отклонён",e);}
                 return p.greet("x");
             }));
             ok(registry.selected(GREETING.id()).isPresent(),"recursive switch does not disrupt active provider");
@@ -163,9 +163,9 @@ public final class ProviderRegistry0483Tests {
             public void start(ExtensionContext ctx) throws Exception {
                 ctx.providers().register(desc("error","*","*",()->new TestProvider("hello",new AtomicInteger(),stopped)));
                 ctx.providers().select(GREETING.id(),"error",Duration.ofSeconds(1));
-                throw new IllegalArgumentException("extension start rejected");
+                throw new IllegalArgumentException("запуск расширения отклонён");
             }
-            public void stop(ExtensionContext ctx) { throw new AssertionError("unstarted extension must not be stopped"); }
+            public void stop(ExtensionContext ctx) { throw new AssertionError("нельзя останавливать незапущенное расширение"); }
         };
         try(var lifecycle=new ExtensionLifecycle(failing,MANIFEST)) {
             fails(IllegalArgumentException.class,()->lifecycle.start(Duration.ofSeconds(2)));

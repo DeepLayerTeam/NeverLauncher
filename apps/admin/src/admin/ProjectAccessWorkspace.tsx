@@ -72,7 +72,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
 
   return <article className="subcard" aria-label="Доступ операторов к проекту">
     <h3>Доступ операторов к проекту</h3>
-    <p className="muted">Назначения действуют только для проекта <strong>{projectId || 'не выбран'}</strong>. Права экземпляра, хоста и Backend не выдаются через projectRoles. Изменение требует свежую phishing-resistant MFA и записывается в аудит.</p>
+    <p className="muted">Назначения действуют только для проекта <strong>{projectId || 'не выбран'}</strong>. Права экземпляра, хоста и Backend не выдаются через projectRoles. Для изменения требуется актуальное многофакторное подтверждение, защищённое от фишинга и записывается в аудит.</p>
     <div className="buttonRow"><button disabled={busy} onClick={() => void refresh().catch(e => setError(String(e)))}>Обновить пользователей и роли</button><button disabled={busy} onClick={() => void onStepUp().catch(e => setError(String(e)))}>Подтвердить многофакторную проверку ключом доступа</button></div>
     <label className="field">Пользователь
       <select value={selectedUserId} onChange={event => setSelectedUserId(event.target.value)} disabled={busy || !projectId}>

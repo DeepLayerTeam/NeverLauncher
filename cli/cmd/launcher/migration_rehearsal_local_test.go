@@ -55,24 +55,24 @@ func TestRehearseLocal04910LiveJoinAndFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.Ready || report.CutoverAllowed || report.LiveSession == nil || len(report.Probes) != 7 {
-		t.Fatal("local-only witness must not certify GA or cutover")
+		t.Fatal("Только локальное свидетельство не должно подтверждать общую готовность или переключение")
 	}
 	if st, err := os.Stat(out); err != nil || st.Mode().Perm() != 0600 {
-		t.Fatalf("private evidence: %v %v", st, err)
+		t.Fatalf("Закрытые свидетельства: %v %v", st, err)
 	}
 	if err := handleMigrationRehearsalLocal04910(args); err == nil {
-		t.Fatal("overwriting a previously completed live witness must fail")
+		t.Fatal("Перезапись ранее завершённого реального свидетельства должна быть отклонена")
 	}
 	if err := handleMigrationRehearsalLocal04910([]string{"--run", run, "--stage", root, "--inventory-sha256", inventory}); err == nil {
-		t.Fatal("report cannot go to stdout")
+		t.Fatal("Отчёт нельзя выводить в стандартный поток вывода")
 	}
 	// Успешная нативная сессия не должна отменять отрицательные результаты независимых проверок.
 	put("probes/join", []byte("#!/bin/sh\nexit 1\n"), 0700)
 	args[len(args)-1] = filepath.Join(root, "failed.json")
 	if err := handleMigrationRehearsalLocal04910(args); err == nil {
-		t.Fatal("failed probe accepted")
+		t.Fatal("Неуспешная проверка ошибочно принята")
 	}
 	if _, err := os.Stat(args[len(args)-1]); !os.IsNotExist(err) {
-		t.Fatal("a failed run wrote success evidence")
+		t.Fatal("Неуспешный запуск записал свидетельство об успехе")
 	}
 }

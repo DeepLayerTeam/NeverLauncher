@@ -35,7 +35,7 @@ export function validHostPending04111(value: unknown): value is HostPending04111
     /^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$/.test(obj.idempotencyKey);
 }
 export function hostOperationOutcome04111(op: HostOperation04111): { label: string; verified: boolean; unresolved: boolean } {
-  if (op.status === 'succeeded') return { label: 'Подтверждено Backend по состоянию хоста и ServerBridge', verified: true, unresolved: false };
+  if (op.status === 'succeeded') return { label: 'Подтверждено сервером по состоянию хоста и ServerBridge', verified: true, unresolved: false };
   if (op.status === 'accepted') return { label: 'Хост принял операцию, конечное состояние игры ещё не проверено', verified: false, unresolved: true };
   return { label: 'Исход неизвестен. Никаких новых действий до сверки', verified: false, unresolved: true };
 }

@@ -41,14 +41,14 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
   const previewValid=(()=>{try{validateBrand0355(brand);return true}catch{return false}})();
   return <section className="card wide brandingStudio0355">
     <h2>Студия оформления · 0.35.5</h2>
-    <p className="muted">Предпросмотр меняется сразу. Исходный bootstrap проверяется Ed25519, новый подписывается в браузере. Ключ не передаётся на сервер и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый installer bundle.</p>
+    <p className="muted">Предпросмотр меняется сразу. Исходный bootstrap проверяется Ed25519, новый подписывается в браузере. Ключ не передаётся на сервер и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый установочный пакет.</p>
     <div className="formGrid">
       <article className="subcard">
-        <h3>1. Подписанный bundle владельца</h3>
+        <h3>1. Подписанный пакет владельца</h3>
         <label className="field">Исходный bootstrap.signed.json<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'source').catch(e=>setError(String(e)))} /></label>
         <label className="field">Закреплённый root Ed25519 public key (64 hex)<input value={root} spellCheck={false} onChange={e=>{setRoot(e.target.value);setLoaded(null)}} /></label>
-        <label className="field">Trust policy для delegated v2 (для v1 не выбирайте)<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'policy').catch(e=>setError(String(e)))} /></label>
-        {policy&&<button onClick={()=>{setPolicy('');setLoaded(null)}}>Убрать trust policy</button>}
+        <label className="field">Политика доверия для делегированного режима v2 (для v1 не выбирайте)<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'policy').catch(e=>setError(String(e)))} /></label>
+        {policy&&<button onClick={()=>{setPolicy('');setLoaded(null)}}>Убрать политику доверия</button>}
         <div className="buttonRow"><button disabled={!source||!root||!projectId} onClick={()=>inspect().catch(e=>{setLoaded(null);setError(String(e))})}>Проверить исходную подпись</button></div>
         {loaded&&<p className="success">Подпись проверена · проект {loaded.projectId} · профиль {loaded.profileId} · envelope {loaded.schema}</p>}
       </article>

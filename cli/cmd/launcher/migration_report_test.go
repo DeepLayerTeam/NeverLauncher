@@ -15,7 +15,7 @@ func TestMigrationReportCLI03313(t *testing.T) {
 		}
 		if strings.HasSuffix(r.URL.Path, "/review") && r.Method == "POST" {
 			if r.Header.Get("X-Migration-RC-Confirm") != "example-run-123" {
-				t.Error("missing review confirmation")
+				t.Error("Отсутствует подтверждение проверки")
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -28,9 +28,9 @@ func TestMigrationReportCLI03313(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := handleMigrationReport03313([]string{"report-review", "--backend", server.URL, "--token", "test-token", "--run", "example-run-123", "--report-sha256", strings.Repeat("a", 64), "--evidence-sha256", strings.Repeat("b", 64), "--evidence-reference", "ci/probe/123"}); e == nil {
-		t.Fatal("review without confirmation accepted")
+		t.Fatal("Проверка без подтверждения ошибочно принята")
 	}
 	if e := handleMigrationReport03313([]string{"report", "--backend", "http://8.8.8.8", "--token", "t", "--run", "r"}); e == nil {
-		t.Fatal("insecure remote backend accepted")
+		t.Fatal("Небезопасный удалённый сервер ошибочно принят")
 	}
 }

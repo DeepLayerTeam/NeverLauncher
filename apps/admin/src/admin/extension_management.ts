@@ -56,7 +56,7 @@ export class ExtensionManagement0425 {
   private readonly token: string;
   constructor(backend: string, token: string) { this.backend = backend; this.token = token; }
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    if (!/^https?:\/\//.test(this.backend) || !this.token) throw new Error("Нет Backend URL или административной сессии");
+    if (!/^https?:\/\//.test(this.backend) || !this.token) throw new Error("Не задан адрес серверного API или отсутствует сеанс администратора");
     const response = await fetch(`${this.backend.replace(/\/$/, "")}${path}`, {
       ...init, cache: "no-store", credentials: "omit",
       headers: { Authorization: `Bearer ${this.token}`, ...(init.body ? { "Content-Type": "application/json" } : {}), ...init.headers },
@@ -136,5 +136,5 @@ export function verifyLifecycle0425(
     if ((action === "install" || action === "update" || action === "rollback") && current.currentState !== "absent" &&
       (!previous || current.generation > previous.generation)) return current.currentState;
   }
-  throw new Error("Backend ответил на операцию, но состояние в inventory ещё не подтверждено. Проверьте аудит перед повтором.");
+  throw new Error("Сервер ответил на операцию, но состояние в реестре ещё не подтверждено. Перед повтором проверьте аудит.");
 }

@@ -8,7 +8,7 @@ public final class ServerBridgeAdapterCapability0286Harness {
     public static void main(String[] args) {
         Set<String> expected = Set.of("velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper",
             "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla");
-        require(BridgeAdapterProfiles.supportedPlatforms().equals(expected), "missing or unexpected adapter");
+        require(BridgeAdapterProfiles.supportedPlatforms().equals(expected), "отсутствующий или неожиданный адаптер");
         for (String id : expected) {
             BridgeAdapterProfile profile = BridgeAdapterProfiles.require(id);
             BridgeRuntimeDescriptor descriptor = BridgeRuntimeDescriptor.of("1.21.1", id, id, "1", id, List.of("runtime.discovery"));
@@ -23,16 +23,16 @@ public final class ServerBridgeAdapterCapability0286Harness {
                 "server.drain", "server.shutdown", "server.console")) {
                 require(BridgeAdapterCapability.forControl(kind) != null, "unmapped operation " + kind);
             }
-            require(BridgeAdapterCapability.forControl("server.shell") == null, "host shell became a game capability");
+            require(BridgeAdapterCapability.forControl("server.shell") == null, "командная оболочка хоста стала игровой возможностью");
             try {
                 BridgeRuntimeDescriptor.of("1.21.1", id, id, "1", id, List.of("adapter.control.root"));
-                throw new AssertionError("accepted forged adapter capability for " + id);
+                throw new AssertionError("ошибочно приняты поддельные разрешения адаптера для " + id);
             } catch (IllegalArgumentException expectedError) { /* fail closed */ }
             System.out.println("CAPABILITY_POLICY_OK platform=" + id + " caps=" + profile.capabilities().size());
         }
         BridgeAdapterProfile vanilla = BridgeAdapterProfiles.require("vanilla");
         require(!vanilla.supports(BridgeAdapterCapability.LOGIN_GATE), "Vanilla RCON не проверяет доступ до входа");
-        require(vanilla.supports(BridgeAdapterCapability.SIDECAR_RCON), "Vanilla sidecar needs RCON");
+        require(vanilla.supports(BridgeAdapterCapability.SIDECAR_RCON), "вспомогательному модулю Vanilla необходим RCON");
         BridgeAdapterProfile sponge = BridgeAdapterProfiles.require("sponge");
         for (BridgeAdapterCapability cap : List.of(BridgeAdapterCapability.CONTROL_WHITELIST,
                 BridgeAdapterCapability.CONTROL_BAN, BridgeAdapterCapability.CONTROL_SAVE, BridgeAdapterCapability.CONTROL_CONSOLE)) {
@@ -45,7 +45,7 @@ public final class ServerBridgeAdapterCapability0286Harness {
         }
         try {
             BridgeAdapterProfiles.rejectUncertifiedHybrid("paper", "Mohist build");
-            throw new AssertionError("accepted uncertified hybrid");
+            throw new AssertionError("несертифицированный гибрид ошибочно принят");
         } catch (IllegalStateException expectedError) { /* blocked */ }
         System.out.println("CAPABILITY_POLICY_OK total=" + expected.size() + " runtime_certified=false");
     }

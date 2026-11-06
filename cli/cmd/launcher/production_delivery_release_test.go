@@ -58,7 +58,7 @@ func TestProductionDeliveryRelease0160BindsCandidateAndAnchors(t *testing.T) {
 	if _, err := verifyProductionDeliveryReleaseDocument0160(dir, ver); err == nil || !strings.Contains(err.Error(), "candidate") {
 		// Набор артефактов кандидата обнаруживает изменённый контрольный объект раньше сравнения с контрольным объектом GA.
 		if err == nil {
-			t.Fatal("expected tamper rejection")
+			t.Fatal("Ожидался отказ при подмене данных")
 		}
 	}
 }
@@ -68,13 +68,13 @@ func TestProductionDeliveryRelease0160RejectsUnversionedPublicOrigin(t *testing.
 	ver := "0.16.0"
 	writeProductionReleaseFixture0160(t, dir, ver, "https://downloads.example.invalid/launcher/stable")
 	if err := writeProductionDeliveryRelease0160(dir, ver); err == nil || !strings.Contains(err.Error(), "immutable version segment") {
-		t.Fatalf("expected immutable URL rejection, got %v", err)
+		t.Fatalf("Ожидался отказ для неизменяемого URL, получено %v", err)
 	}
 }
 
 func TestProductionDeliveryRelease0160RejectsPrereleaseSemver(t *testing.T) {
 	if err := stableProductionVersion0160("0.16.0-rc.1"); err == nil {
-		t.Fatal("prerelease must not be accepted as Production Delivery Release")
+		t.Fatal("Предварительный выпуск нельзя принимать как промышленный релиз доставки")
 	}
 	if err := stableProductionVersion0160("0.16.0"); err != nil {
 		t.Fatal(err)
@@ -99,6 +99,6 @@ func TestProductionDeliveryRelease0160PublicMatrixPublishesGACertificateControl(
 		}
 	}
 	if !foundGA || !foundRC {
-		t.Fatalf("0.16.0 public matrix must publish both RC and GA controls: rc=%v ga=%v", foundRC, foundGA)
+		t.Fatalf("Публичная матрица 0.16.0 должна публиковать проверки кандидата и готового выпуска: rc=%v ga=%v", foundRC, foundGA)
 	}
 }

@@ -50,7 +50,7 @@ public final class ProxyRoutes0417Test {
         assertRoute(false, "route_runtime_invalid", response(normal).replace("\"runtimeEpoch\":4", "\"runtimeEpoch\":0"), "survival");
         assertRoute(false, "routing_table_invalid", response(normal).replace("\"items\":[", "\"items\":{\"ignored\":"), "survival");
         if (BridgeAuthResponse0287.route(503, response(normal), "proxy-1", "survival", NOW).allowed())
-            throw new AssertionError("503 must fail closed");
+            throw new AssertionError("ошибка 503 должна приводить к безопасному отказу");
         checks++;
         System.out.println("ProxyRoutes0417Test OK " + checks + " checks");
     }

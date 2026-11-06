@@ -27,19 +27,19 @@ public final class PlatformControlReadback0416Test {
     }
     public static void main(String[] args) throws Exception {
         var server = new Server();
-        check(PlatformControlReadback.whitelistEntry(server,"Steve",true).status().equals("succeeded"), "whitelist positive readback");
-        check(PlatformControlReadback.whitelistEntry(server,"Steve",false).status().equals("failed"), "whitelist mismatch");
-        check(PlatformControlReadback.whitelistEntry(server,"Other",false).status().equals("succeeded"), "whitelist negative readback");
-        check(PlatformControlReadback.banEntry(server,"Griefer",true).status().equals("succeeded"), "ban positive");
-        check(PlatformControlReadback.banEntry(server,"Alex",false).status().equals("succeeded"), "ban negative");
-        check(PlatformControlReadback.whitelistMode(server,true).status().equals("succeeded"), "whitelist mode true");
-        check(PlatformControlReadback.whitelistMode(server,false).status().equals("failed"), "whitelist mode mismatch");
-        check(PlatformControlReadback.whitelistEntry(new UnknownServer(),"Steve",true).status().equals("executed"), "unknown API must not verify");
-        check(PlatformControlReadback.banEntry(null,"Steve",true).status().equals("executed"), "null server must not verify");
+        check(PlatformControlReadback.whitelistEntry(server,"Steve",true).status().equals("succeeded"), "положительное чтение списка разрешённых игроков");
+        check(PlatformControlReadback.whitelistEntry(server,"Steve",false).status().equals("failed"), "несоответствие списка разрешённых игроков");
+        check(PlatformControlReadback.whitelistEntry(server,"Other",false).status().equals("succeeded"), "отрицательное чтение списка разрешённых игроков");
+        check(PlatformControlReadback.banEntry(server,"Griefer",true).status().equals("succeeded"), "запрет подтверждён");
+        check(PlatformControlReadback.banEntry(server,"Alex",false).status().equals("succeeded"), "запрет не подтверждён");
+        check(PlatformControlReadback.whitelistMode(server,true).status().equals("succeeded"), "режим списка разрешённых игроков включён");
+        check(PlatformControlReadback.whitelistMode(server,false).status().equals("failed"), "несоответствие режима списка разрешённых игроков");
+        check(PlatformControlReadback.whitelistEntry(new UnknownServer(),"Steve",true).status().equals("executed"), "неизвестный API не должен проходить проверку");
+        check(PlatformControlReadback.banEntry(null,"Steve",true).status().equals("executed"), "отсутствующий сервер не должен проходить проверку");
         var tracker = new KickConfirmations();
         UUID session = UUID.randomUUID();
-        check(tracker.begin("Steve",session), "begin tracking");
-        check(!tracker.begin("steve",session), "duplicate begin denied");
+        check(tracker.begin("Steve",session), "начало отслеживания");
+        check(!tracker.begin("steve",session), "повторное начало отклонено");
         tracker.observedQuit("Steve",UUID.randomUUID().toString());
         var pool = Executors.newSingleThreadExecutor();
         try {
@@ -48,12 +48,12 @@ public final class PlatformControlReadback0416Test {
             tracker.observedQuit("STEVE",session.toString());
             var result=proof.get(2,TimeUnit.SECONDS);
             check(result.status().equals("succeeded") && result.result().get("uuid").equals(session.toString()) && result.result().get("verification").equals("player-quit-event"),"session-bound quit evidence");
-            check(tracker.begin("Steve",session),"track after completion");
-            check(tracker.await("Steve",session.toString(),25).status().equals("executed"),"no quit not verified");
-            check(tracker.begin("Steve",session),"track before shutdown");
+            check(tracker.begin("Steve",session),"отслеживание после завершения");
+            check(tracker.await("Steve",session.toString(),25).status().equals("executed"),"отсутствие выхода не подтверждено");
+            check(tracker.begin("Steve",session),"отслеживание перед завершением работы");
             tracker.close();
-            check(tracker.await("Steve",session.toString(),25).status().equals("executed"),"close not verified");
-            check(!tracker.begin("Steve",session),"closed tracker rejects");
+            check(tracker.await("Steve",session.toString(),25).status().equals("executed"),"завершение работы не подтверждено");
+            check(!tracker.begin("Steve",session),"закрытый модуль отслеживания отклоняет запрос");
         } finally { pool.shutdownNow(); }
         System.out.println("PlatformControlReadback0416Test: 19 assertions passed");
     }

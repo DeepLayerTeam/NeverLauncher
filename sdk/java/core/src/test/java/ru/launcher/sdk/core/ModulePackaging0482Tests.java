@@ -9,24 +9,24 @@ import java.util.zip.*;
 public final class ModulePackaging0482Tests {
     private static int checks;
     private static void check(boolean condition,String label){checks++;if(!condition)throw new AssertionError(label);}
-    private static void reject(Checked action){checks++;try{action.run();throw new AssertionError("accepted unsafe JAR");}catch(SecurityException expected){/* fail closed */}catch(Exception unexpected){throw new AssertionError("unexpected exception",unexpected);}}
+    private static void reject(Checked action){checks++;try{action.run();throw new AssertionError("небезопасный JAR ошибочно принят");}catch(SecurityException expected){/* fail closed */}catch(Exception unexpected){throw new AssertionError("неожиданное исключение",unexpected);}}
     private interface Checked{void run()throws Exception;}
     public static void main(String[] args)throws Exception {
-        if(args.length!=1)throw new IllegalArgumentException("pass the real built dependency host jar");
+        if(args.length!=1)throw new IllegalArgumentException("укажите настоящий собранный JAR хоста зависимостей");
         Path packageJar=Path.of(args[0]).toRealPath();
-        try{Class.forName("example.deps.Greeter",false,ModulePackaging0482Tests.class.getClassLoader());throw new AssertionError("test dependency leaked into SDK classpath");}
+        try{Class.forName("example.deps.Greeter",false,ModulePackaging0482Tests.class.getClassLoader());throw new AssertionError("тестовая зависимость попала в путь классов SDK");}
         catch(ClassNotFoundException expected){checks++;}
         try(BundledLibraries loaded=BundledLibraries.open(packageJar,"1.0",ModulePackaging0482Tests.class.getClassLoader())){
             Class<?> greeter=Class.forName("example.deps.Greeter",true,loaded.classLoader());
-            check("dependency-loaded-0482".equals(greeter.getMethod("greeting").invoke(null)),"external library loaded actual bytecode");
-            check(greeter.getClassLoader()==loaded.classLoader(),"isolated URLClassLoader used");
-            check(loaded.classLoader()!=ModulePackaging0482Tests.class.getClassLoader(),"not the SDK classloader");
+            check("dependency-loaded-0482".equals(greeter.getMethod("greeting").invoke(null)),"внешняя библиотека загрузила настоящий байткод");
+            check(greeter.getClassLoader()==loaded.classLoader(),"использован изолированный URLClassLoader");
+            check(loaded.classLoader()!=ModulePackaging0482Tests.class.getClassLoader(),"использован не загрузчик классов SDK");
             Class<?> extensionType=Class.forName("example.extension.DependencyExtension",false,loaded.classLoader());
-            check(extensionType.getClassLoader()==loaded.classLoader(),"extension and library share isolated classloader");
+            check(extensionType.getClassLoader()==loaded.classLoader(),"расширение и библиотека используют общий изолированный загрузчик классов");
             Extension extension=(Extension)extensionType.getDeclaredConstructor().newInstance();
             extension.start(null);
             extension.stop(null);
-            check(extensionType.getClassLoader().loadClass("ru.launcher.sdk.core.Extension")==Extension.class,"SDK API identity shared with parent");
+            check(extensionType.getClassLoader().loadClass("ru.launcher.sdk.core.Extension")==Extension.class,"идентичность API SDK общая с родительским загрузчиком");
         }
         reject(()->BundledLibraries.open(packageJar,"3.7",ModulePackaging0482Tests.class.getClassLoader()));
         Path modified=Files.createTempFile("neverlauncher-0482-bad-hash", ".jar");

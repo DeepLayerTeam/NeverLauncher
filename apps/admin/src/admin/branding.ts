@@ -198,7 +198,7 @@ async function policy0355(
   policyText: string,
   root: string,
 ): Promise<Policy0355> {
-  assert(bytes(policyText).length <= 128 * 1024, "Trust policy слишком велика");
+  assert(bytes(policyText).length <= 128 * 1024, "Политика доверия слишком велика");
   const env = parse<{
     schemaVersion: string;
     payload: string;
@@ -206,7 +206,7 @@ async function policy0355(
   }>(policyText);
   assert(env.schemaVersion === "1.0", "Неподдерживаемая версия policy");
   const raw = base64Decode(env.payload);
-  assert(raw.length <= 96 * 1024, "Payload trust policy слишком велик");
+  assert(raw.length <= 96 * 1024, "Данные политики доверия слишком велики");
   await verify(
     root,
     Uint8Array.from([...bytes("Launcher-Trust-Policy-v1\n"), ...raw]),
@@ -236,7 +236,7 @@ async function policy0355(
       expiry > now &&
       expiry > issue &&
       expiry - issue <= 90 * 86400000,
-    "Trust policy неактуальна",
+    "Политика доверия устарела",
   );
   return p;
 }
@@ -251,7 +251,7 @@ export async function verifyBootstrap0355(
 }> {
   assert(
     bytes(signed).length <= 1024 * 1024,
-    "Bootstrap превышает лимит 1 MiB",
+    "Пакет первичной настройки превышает лимит 1 МиБ",
   );
   hex(root, 32);
   const env = parse<Envelope0355>(signed);
@@ -267,7 +267,7 @@ export async function verifyBootstrap0355(
   if (env.schemaVersion === "2.0") {
     assert(
       !!policyText,
-      "Для delegated bootstrap нужна подписанная trust-policy.signed.json",
+      "Для делегированной первичной настройки нужен подписанный файл trust-policy.signed.json",
     );
     policy = await policy0355(policyText, root);
     assert(
@@ -300,7 +300,7 @@ export async function verifyBootstrap0355(
   } else
     assert(
       !policyText,
-      "Нельзя выпустить legacy bootstrap при включённой delegated policy",
+      "Нельзя выпустить устаревший пакет первичной настройки при включённой делегированной политике",
     );
   await verify(key, message, env.signature);
   const payload = parse<Bootstrap0355>(dec.decode(raw));

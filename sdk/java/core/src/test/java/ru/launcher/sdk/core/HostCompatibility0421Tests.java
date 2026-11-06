@@ -62,52 +62,52 @@ public final class HostCompatibility0421Tests {
         try(var server=new FakeHost();var client=server.session()){
             client.connect("",Set.of("runtime.config.get"));
             check(client.capabilities().contains("runtime.config.get"),"0.42.0 host capabilities accepted");
-            check(client.capability("runtime.config.get",Map.of("key","a")).get("value").equals(3L),"real capability RPC delivered");
-            client.ready();check(server.ready.get()==1,"ready acknowledgement delivered");
-            check(server.hellos.get()==1,"hello once");
-            try{client.connect();throw new AssertionError("repeated hello accepted");}catch(IllegalStateException ok){assertions++;}
-            check(server.hellos.get()==1,"duplicate hello not sent");
-            try{client.capability("secret.get",Map.of());throw new AssertionError("missing capability accepted");}catch(SecurityException ok){assertions++;}
-            check(server.capabilities.get()==1,"missing capability did not reach host");
-            try{client.subscribe("release.future","async");throw new AssertionError("unknown event accepted");}catch(SecurityException ok){assertions++;}
-            check(server.subscriptions.get()==0,"unknown event did not hit subscribe endpoint");
+            check(client.capability("runtime.config.get",Map.of("key","a")).get("value").equals(3L),"реальный удалённый вызов разрешения доставлен");
+            client.ready();check(server.ready.get()==1,"подтверждение готовности доставлено");
+            check(server.hellos.get()==1,"приветствие отправлено один раз");
+            try{client.connect();throw new AssertionError("повторное приветствие ошибочно принято");}catch(IllegalStateException ok){assertions++;}
+            check(server.hellos.get()==1,"повторное приветствие не отправлено");
+            try{client.capability("secret.get",Map.of());throw new AssertionError("принят запрос без требуемого разрешения");}catch(SecurityException ok){assertions++;}
+            check(server.capabilities.get()==1,"запрос без разрешения не достиг хоста");
+            try{client.subscribe("release.future","async");throw new AssertionError("неизвестное событие ошибочно принято");}catch(SecurityException ok){assertions++;}
+            check(server.subscriptions.get()==0,"неизвестное событие не достигло обработчика подписки");
         }
     }
     private static void requiredCapabilityMissing()throws Exception {
         try(var server=new FakeHost();var client=server.session()){
-            try{client.connect("",Set.of("runtime.storage.delete"));throw new AssertionError("missing feature accepted");}
-            catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_CAPABILITY_UNAVAILABLE"),"machine code for unavailable feature");}
+            try{client.connect("",Set.of("runtime.storage.delete"));throw new AssertionError("принят запрос без требуемой возможности");}
+            catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_CAPABILITY_UNAVAILABLE"),"машинный код недоступной возможности");}
             check(server.capabilities.get()==0&&server.ready.get()==0,"required-feature mismatch before host side effects");
         }
     }
     private static void rejectionAndMalformedHello()throws Exception {
         try(var server=new FakeHost();var client=server.session()){
             server.helloStatus=409;server.hello=Map.of("error","host hello rejected","code","HOST_EXTENSION_API_MISMATCH");
-            try{client.connect();throw new AssertionError("API mismatch accepted");}
-            catch(HostSession.HostError ex){check(ex.status()==409 && ex.code().equals("HOST_EXTENSION_API_MISMATCH"),"structured Go host reason retained");}
+            try{client.connect();throw new AssertionError("несовместимая версия API ошибочно принята");}
+            catch(HostSession.HostError ex){check(ex.status()==409 && ex.code().equals("HOST_EXTENSION_API_MISMATCH"),"структурированная причина от хоста Go сохранена");}
         }
         try(var server=new FakeHost();var client=server.session()){
             server.hello=Map.of("protocolVersion","2.0","extensionApiVersion","1.0","instanceId","i-42","heartbeatTimeoutSeconds",60);
-            try{client.connect();throw new AssertionError("protocol mismatch accepted");}
-            catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_PROTOCOL_MISMATCH"),"protocol version reason");}
+            try{client.connect();throw new AssertionError("несовместимая версия протокола ошибочно принята");}
+            catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_PROTOCOL_MISMATCH"),"причина несовместимости версии протокола");}
         }
         try(var server=new FakeHost();var client=server.session()){
             server.hello=Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","i-42","heartbeatTimeoutSeconds",60,"capabilities",List.of("secret.get","secret.get"));
-            try{client.connect();throw new AssertionError("duplicate caps accepted");}catch(IOException ex){check(ex.getMessage().contains("capabilities"),"malformed negotiation fails");}
+            try{client.connect();throw new AssertionError("дублирующие разрешения ошибочно приняты");}catch(IOException ex){check(ex.getMessage().contains("capabilities"),"malformed negotiation fails");}
         }
         try(var server=new FakeHost();var client=server.session()){
             server.hello=Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","i-42","heartbeatTimeoutSeconds",60,"capabilities",List.of("secret.get"),"eventProtocolVersion","2.0");
-            try{client.connect();throw new AssertionError("new event protocol accepted");}
-            catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_EVENT_PROTOCOL_MISMATCH"),"event protocol independent from Host Protocol");}
+            try{client.connect();throw new AssertionError("неподдерживаемый протокол событий ошибочно принят");}
+            catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_EVENT_PROTOCOL_MISMATCH"),"протокол событий не зависит от протокола хоста");}
         }
     }
     private static void readyAcknowledgementAndPreconnectGuard()throws Exception {
         try(var server=new FakeHost();var client=server.session()){
-            try{client.capability("runtime.config.get",Map.of());throw new AssertionError("pre-hello capability accepted");}catch(IllegalStateException ok){assertions++;}
+            try{client.capability("runtime.config.get",Map.of());throw new AssertionError("разрешение до приветствия ошибочно принято");}catch(IllegalStateException ok){assertions++;}
             server.emptyReady=true;client.connect();
-            try{client.ready();throw new AssertionError("missing ready acknowledgement accepted");}
-            catch(IOException ex){check(ex.getMessage().contains("готовность"),"missing readiness payload rejected");}
-            check(server.ready.get()==1,"ready was transmitted");
+            try{client.ready();throw new AssertionError("отсутствие подтверждения готовности ошибочно принято");}
+            catch(IOException ex){check(ex.getMessage().contains("готовность"),"отсутствие данных готовности отклонено");}
+            check(server.ready.get()==1,"сообщение о готовности передано");
         }
     }
     public static void main(String[] args)throws Exception {

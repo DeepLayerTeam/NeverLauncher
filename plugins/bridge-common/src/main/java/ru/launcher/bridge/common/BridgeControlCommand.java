@@ -56,7 +56,7 @@ public record BridgeControlCommand(
      * идентичности сервера и команды, эпохи Runtime/идентичности, тип
      * команды и хеш данных. Изменившуюся устойчивую идентичность нельзя
      * считать той же выполненной командой.
-     */ */
+     */
     public String executionDigest() {
         String stable = String.join("\n",
             "Launcher-ServerBridge-Control-Execution-v2",

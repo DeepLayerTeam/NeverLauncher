@@ -44,29 +44,29 @@ public final class ServerBridgeSecurityCertification01912Harness {
             unpinned.leaseToken(), unpinned.attempt(), unpinned.issuedAtUnixMillis(), unpinned.expiresAtUnixMillis(),
             unpinned.securityProfile(), unpinned.capabilityDigest(), keyA.publicKey, keyA.fingerprint,
             unpinnedSignature, "", "", "");
-        require(!trust.verify(signedUnpinned), "command endpoint can never bootstrap trust");
+        require(!trust.verify(signedUnpinned), "обработчик команд не может устанавливать доверие");
         String firstCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, keyA.fingerprint, "");
-        require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyA.publicKey, keyA.fingerprint, "", "", sign(keyA, firstCanonical), ""), "initial capability trust");
+        require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyA.publicKey, keyA.fingerprint, "", "", sign(keyA, firstCanonical), ""), "исходное доверие разрешений");
 
         String rotateCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, keyB.fingerprint, keyA.fingerprint);
         require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyB.publicKey, keyB.fingerprint, keyA.publicKey, keyA.fingerprint,
             sign(keyB, rotateCanonical), sign(keyA, rotateCanonical)), "overlap key rotation");
 
         String finalizedCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, keyB.fingerprint, "");
-        require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "rotation finalize");
+        require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "завершение ротации");
 
         String attackerCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, attacker.fingerprint, "");
-        require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, attacker.publicKey, attacker.fingerprint, "", "", sign(attacker, attackerCanonical), ""), "untrusted capability key rejected");
+        require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, attacker.publicKey, attacker.fingerprint, "", "", sign(attacker, attackerCanonical), ""), "недоверенный ключ разрешений отклонён");
         String revokedRotationCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, attacker.fingerprint, keyA.fingerprint);
         require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, attacker.publicKey, attacker.fingerprint, keyA.publicKey, keyA.fingerprint,
             sign(attacker, revokedRotationCanonical), sign(keyA, revokedRotationCanonical)), "retired previous key cannot authorize rotation after finalize");
-        require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, "0".repeat(64), keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "capability downgrade rejected");
+        require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, "0".repeat(64), keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "понижение разрешений отклонено");
 
         Path bridgeArtifact = root.resolve("launcher-" + target + "-bridge-0.19.12.jar");
         Files.writeString(bridgeArtifact, "certified-" + target, StandardCharsets.UTF_8);
         String certifiedArtifactHash = BridgeIntegrity.sha256(bridgeArtifact);
         Files.writeString(bridgeArtifact, "tamper", StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.APPEND);
-        require(!certifiedArtifactHash.equals(BridgeIntegrity.sha256(bridgeArtifact)), "tampered bridge artifact rejected by certified hash");
+        require(!certifiedArtifactHash.equals(BridgeIntegrity.sha256(bridgeArtifact)), "подменённый артефакт моста отклонён по сертифицированному хешу");
 
         String runtime = "a".repeat(64);
         String payloadHash = "1".repeat(64);
@@ -121,10 +121,10 @@ public final class ServerBridgeSecurityCertification01912Harness {
         BridgeControlJournal journal = new BridgeControlJournal(root.resolve("control.journal"));
         journal.begin(command);
         journal.complete(command, BridgeControlResult.ok(Map.of("saved", "true")));
-        require(journal.state(command) != null && "done".equals(journal.state(command).phase()), "command replay returns durable result");
+        require(journal.state(command) != null && "done".equals(journal.state(command).phase()), "повтор команды возвращает устойчивый результат");
         boolean digestConflict = false;
         try { journal.state(tamperedCommand); } catch (IllegalStateException expected) { digestConflict = true; }
-        require(digestConflict, "command id replay with changed runtime rejected");
+        require(digestConflict, "повтор идентификатора команды с изменённой средой выполнения отклонён");
 
         NodeIdentity node = NodeIdentity.loadOrCreate(root.resolve("node-v3.properties"));
         BridgeEventJournal eventJournal = new BridgeEventJournal(root.resolve("events.journal"), serverId, runtime, node);
@@ -137,16 +137,16 @@ public final class ServerBridgeSecurityCertification01912Harness {
 
         BridgeEventRecord event = BridgeEventRecord.signed(1, serverId, runtime, "server.ready", System.currentTimeMillis(), Map.of("platform", target), node);
         String eventCanonical = BridgeProtocolSecurity.eventCanonical(serverId, event.eventId(), event.runtimeId(), event.nodeKeyFingerprint(), event.capabilityDigest(), event.sequence(), event.type(), event.occurredAtUnixMillis(), event.payloadSha256());
-        require(BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), eventCanonical, event.signature()), "valid event signature");
+        require(BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), eventCanonical, event.signature()), "действительная подпись события");
         String tamperedEvent = BridgeProtocolSecurity.eventCanonical(serverId, event.eventId(), "c".repeat(64), event.nodeKeyFingerprint(), event.capabilityDigest(), event.sequence(), event.type(), event.occurredAtUnixMillis(), event.payloadSha256());
         require(!BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), tamperedEvent, event.signature()), "tampered/runtime-replayed event rejected");
 
         String bodyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest("{}".getBytes(StandardCharsets.UTF_8)));
         String nodeCanonical = BridgeProtocolSecurity.nodeRequestCanonical(serverId, node.fingerprint(), "POST", "/api/v1/server-bridge/servers/" + serverId + "/heartbeat", "1770000000", "nonce-01912", runtime, digest, bodyHash);
         String nodeSignature = Base64.getUrlEncoder().withoutPadding().encodeToString(node.sign(nodeCanonical));
-        require(BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), nodeCanonical, nodeSignature), "valid node request signature");
+        require(BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), nodeCanonical, nodeSignature), "действительная подпись запроса узла");
         String tamperedNode = BridgeProtocolSecurity.nodeRequestCanonical(serverId, node.fingerprint(), "POST", "/api/v1/server-bridge/servers/" + serverId + "/heartbeat", "1770000000", "nonce-01912", "d".repeat(64), digest, bodyHash);
-        require(!BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), tamperedNode, nodeSignature), "tampered node runtime rejected");
+        require(!BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), tamperedNode, nodeSignature), "подменённая среда выполнения узла отклонена");
 
         System.out.println("ServerBridge Security & Certification 0.19.12 adversarial harness [" + target + "]: OK");
     }

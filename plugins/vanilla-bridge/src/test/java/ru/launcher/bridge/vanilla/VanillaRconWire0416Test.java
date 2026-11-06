@@ -18,7 +18,7 @@ public final class VanillaRconWire0416Test {
     }
     private static Packet read(InputStream stream)throws IOException{
         int size=readInt(stream);
-        if(size<10||size>65536)throw new IOException("bad request packet");
+        if(size<10||size>65536)throw new IOException("некорректный пакет запроса");
         byte[] b=stream.readNBytes(size);
         if(b.length!=size)throw new EOFException();
         int id=(b[0]&255)|((b[1]&255)<<8)|((b[2]&255)<<16)|((b[3]&255)<<24);
@@ -40,16 +40,16 @@ public final class VanillaRconWire0416Test {
                 try(Socket client=listener.accept()){
                     client.setSoTimeout(3000);
                     Packet auth=read(client.getInputStream());
-                    if(auth.type()!=3||!auth.body().equals("secret"))throw new AssertionError("RCON auth");
+                    if(auth.type()!=3||!auth.body().equals("secret"))throw new AssertionError("авторизация RCON");
                     reply(client.getOutputStream(),auth.id(),2,"");
                     Packet command=read(client.getInputStream());
-                    if(command.type()!=2||!command.body().equals("whitelist list"))throw new AssertionError("RCON command");
+                    if(command.type()!=2||!command.body().equals("whitelist list"))throw new AssertionError("команда RCON");
                     reply(client.getOutputStream(),command.id(),0,"There are 2 whitelisted player(s): Steve, Alex");
                 }catch(Exception e){throw new RuntimeException(e);}
             });
             try(VanillaRconClient client=new VanillaRconClient("127.0.0.1",listener.getLocalPort(),"secret",1000)){
                 String reply=client.command("whitelist list");
-                if(!Boolean.TRUE.equals(VanillaRconReadback.membership("whitelist.add","Steve",reply)))throw new AssertionError("RCON readback");
+                if(!Boolean.TRUE.equals(VanillaRconReadback.membership("whitelist.add","Steve",reply)))throw new AssertionError("чтение результата RCON");
             }
             server.get(3,TimeUnit.SECONDS);
             exec.shutdownNow();

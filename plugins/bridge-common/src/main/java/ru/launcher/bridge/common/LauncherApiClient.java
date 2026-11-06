@@ -655,7 +655,7 @@ public final class LauncherApiClient {
      * повторять на другой реплике после неопределённого сбоя
      * сети или HTTP 502/503/504. PostgreSQL мог уже
      * зафиксировать внешний эффект даже при потере первого
-     */HTTP-ответа. */
+     * HTTP-ответа. */
     private HttpResponse<String> sendSignedWithoutReplay0287(String method, String relative, String body)
         throws IOException, InterruptedException, GeneralSecurityException {
         BridgeBackendPool.Endpoint endpoint = backendPool.candidates(relative).get(0);

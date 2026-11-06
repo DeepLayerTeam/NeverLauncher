@@ -2,7 +2,7 @@
  * совместимостью Java 8. Воспроизводимая компиляция:
  * javac --release 8 LauncherJvmProbe.java. Выполняется
  * на устанавливаемом Runtime без javac и системного JDK.
- */ */
+ */
 public final class LauncherJvmProbe {
     private LauncherJvmProbe() { }
 

@@ -322,11 +322,11 @@ export function RegistryWorkspace({
 
   async function publishRegistryArtifact() {
     if (!registryPackageFile)
-      throw new Error("Выберите подписанный .nlext artifact.");
+      throw new Error("Выберите подписанный артефакт .nlext.");
     if (
       !confirmAction(
         `Опубликовать ${registryPackageFile.name}`,
-        "Изменится приватный Registry; подпись проверит Backend",
+        "Изменится закрытый реестр; подпись проверит сервер",
       )
     )
       return cancelledOperation;

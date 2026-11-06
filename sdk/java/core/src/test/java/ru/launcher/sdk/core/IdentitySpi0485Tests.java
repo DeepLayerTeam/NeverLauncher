@@ -13,7 +13,7 @@ public final class IdentitySpi0485Tests {
     private static void fail(Class<? extends Throwable> kind,Throwing call) throws Exception {
         checks++;
         try{call.run();throw new AssertionError("expected "+kind.getSimpleName());}
-        catch(Throwable e){if(!kind.isInstance(e))throw new AssertionError("wrong error",e);}
+        catch(Throwable e){if(!kind.isInstance(e))throw new AssertionError("неверная ошибка",e);}
     }
     @FunctionalInterface interface Throwing{void run()throws Exception;}
     private static final ExtensionManifest M=ExtensionManifest.parse("{\"schemaVersion\":\"2.0\",\"id\":\"example.identity\",\"name\":\"Identity SPI\",\"publisher\":\"test\",\"version\":\"0.48.5\",\"api\":\"1.0\",\"permissions\":[\"auth:provider\"],\"targets\":[{\"kind\":\"backend\",\"entrypoint\":\"backend/main.jar\"}]}");

@@ -1151,7 +1151,7 @@ function App() {
   const [diagnosticStatus03510, setDiagnosticStatus03510] = useState("");
   const [diagnosticBusy03510, setDiagnosticBusy03510] = useState(false);
   const [logs, setLogs] = useState<string[]>([
-    `Launcher Desktop ${DESKTOP_VERSION}: настольное приложение ожидает первичное подключение к серверному API.`,
+    `Настольный Launcher ${DESKTOP_VERSION}: приложение ожидает первичного подключения к серверному API.`,
   ]);
   const [backendStatus, setBackendStatus] = useState<string>("не проверен");
   const [projects, setProjects] = useState<BackendProject[]>([]);
@@ -1348,7 +1348,7 @@ function App() {
         );
         log(
           provisioning
-            ? `Подписанный bootstrap ${provisioning.digest.slice(0, 16)}… проверен native Ed25519.`
+            ? `Подписанный пакет первичной настройки ${provisioning.digest.slice(0, 16)}… проверен нативным модулем Ed25519.`
             : "Конфигурация настольного приложения загружена без подписанного пакета.",
         );
       } catch (error) {
@@ -1369,7 +1369,7 @@ function App() {
         setSelectedProfile(fallback.profileId || "");
         setNativeConfigLoaded0357(true);
         log(
-          "Только web preview: параметры восстановлены из localStorage без native trust.",
+          "Только предварительный просмотр в браузере: параметры восстановлены из localStorage без нативной проверки доверия.",
         );
       }
     })();
@@ -1601,7 +1601,7 @@ function App() {
       log(result.message + ` (${result.configPath})`);
     } catch (error) {
       if ((window as any).__TAURI_INTERNALS__) {
-        log(`Desktop config не сохранён: ${String(error)}`);
+        log(`Конфигурация настольного приложения не сохранена: ${String(error)}`);
         return;
       }
       localStorage.setItem("launcher.desktop.settings", JSON.stringify(next));
@@ -1640,7 +1640,7 @@ function App() {
       setSelectedProject("");
       setSelectedProfile("");
       setScreen("firstRun");
-      log("Привязка Desktop сброшена во временном localStorage fallback.");
+      log("Привязка настольного приложения сброшена во временное резервное хранилище localStorage.");
     }
   }
 
@@ -1657,7 +1657,7 @@ function App() {
     const base = settings.backendUrl.trim();
     if (!base)
       throw new Error(
-        "URL Backend не задан: выполните привязку при первом запуске.",
+        "Адрес серверного API не задан: выполните привязку при первом запуске.",
       );
     return `${base.replace(/\/$/, "")}${path}`;
   }
@@ -1936,7 +1936,7 @@ function App() {
           : "обновлён · проверен",
       );
       log(
-        `Device key ${mode === "rotate" ? "rotated" : "recovered"}: ${oldDeviceId} → ${data.device.id}; старый fingerprint оставлен постоянная запись об отзыве.`,
+        `Ключ устройства ${mode === "rotate" ? "заменён" : "восстановлен"}: ${oldDeviceId} → ${data.device.id}; для прежнего отпечатка сохранена постоянная запись об отзыве.`,
       );
       if (committed.keyBinding === "hardware")
         session = await attestDesktopDeviceKey(session, committed);
@@ -1981,7 +1981,7 @@ function App() {
     );
     setDeviceKey(committed);
     log(
-      `Завершён interrupted staged-key commit для device ${match.id}; текущая session повторно подтвердит possession и binding.`,
+      `Завершена прерванная фиксация подготовленного ключа устройства ${match.id}; текущий сеанс повторно подтвердит владение ключом и привязку.`,
     );
     return committed;
   }
@@ -1996,7 +1996,7 @@ function App() {
     }
     if (!key.deviceId)
       throw new Error(
-        "Hardware attestation требует зарегистрированный deviceId.",
+        "Для аппаратной аттестации требуется зарегистрированный идентификатор устройства (deviceId).",
       );
     setDeviceTrustStatus("Аппаратная аттестация");
     const beginResponse = await postDeviceJson(
@@ -2288,10 +2288,10 @@ function App() {
       )
         throw new Error("Неожиданный результат проверки измеряемой загрузки");
       setMeasuredBootStatus0315(
-        `Политика PCR подтверждена: ${result.policyId}; срок действия до ${result.expiresAt}; Runtime Guard не проверен`,
+        `Политика PCR подтверждена: ${result.policyId}; срок действия до ${result.expiresAt}; защита среды выполнения не проверена`,
       );
       log(
-        `Сервер подтвердил PCR Quote измеряемой загрузки: устройство=${deviceKey.deviceId}, политика=${result.policyId}, хеш=${result.pcrDigest}. Guard/Runtime не проверены.`,
+        `Сервер подтвердил аппаратную цитату PCR измеряемой загрузки: устройство=${deviceKey.deviceId}, политика=${result.policyId}, хеш=${result.pcrDigest}. Защита и среда выполнения не проверены.`,
       );
     } catch (error) {
       setMeasuredBootStatus0315(`Проверка не пройдена: ${String(error)}`);
@@ -2348,7 +2348,7 @@ function App() {
       signature.keyAlgorithm !== key.keyAlgorithm ||
       signature.keyBinding !== key.keyBinding
     )
-      throw new Error("Native device key backend вернул другую identity.");
+      throw new Error("Нативный модуль ключа устройства вернул другую учётную запись.");
     const completeResponse = await postDeviceJson(
       "/api/v1/auth/devices/register/complete",
       session.accessToken,
@@ -2362,7 +2362,7 @@ function App() {
     );
     if (completeResponse.status === 409 && retryOnConflict) {
       throw new Error(
-        "Ключ уже привязан к другому server record. Автоматическое удаление запрещено: выполните восстановление с passkey и новой device identity.",
+        "Ключ уже привязан к другой серверной записи. Автоматическое удаление запрещено: выполните восстановление с ключом доступа и новой учётной записью устройства.",
       );
     }
     if (!completeResponse.ok)
@@ -2383,7 +2383,7 @@ function App() {
     setDeviceKey(bound);
     setDeviceTrustStatus("verified");
     log(
-      `Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; binding=${bound.keyBinding}; provider=${bound.hardwareProvider || bound.storageBackend}; private key не покидает native boundary.`,
+      `Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; привязка=${bound.keyBinding}; поставщик=${bound.hardwareProvider || bound.storageBackend}; закрытый ключ не покидает защищённый нативный модуль.`,
     );
     const trusted = await persistTrustedAccess(session, data.accessToken);
     return attestDesktopDeviceKey(trusted, bound);
@@ -2401,7 +2401,7 @@ function App() {
     if (beginResponse.status === 404) {
       setDeviceTrustStatus("требуется recovery");
       throw new Error(
-        "Запись устройства на сервере отсутствует или отозвана. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить identity через phishing-resistant recovery без потери rollback-возможности.",
+        "Запись устройства на сервере отсутствует или отозвана. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить учётную запись устройства через защищённое от фишинга восстановление с сохранением возможности отката.",
       );
     }
     if (!beginResponse.ok)
@@ -2531,7 +2531,7 @@ function App() {
         `Ошибка переименования устройства: ${response.status} ${response.statusText}`,
       );
     await loadManagedDevices(authSession);
-    log(`Trusted device ${device.id} переименован.`);
+    log(`Доверенное устройство ${device.id} переименовано.`);
   }
 
   async function revokeManagedDevice(device: ManagedDevice) {
@@ -2650,7 +2650,7 @@ function App() {
       }
     } catch (error) {
       setDeviceTrustStatus("ошибка");
-      log(`Device Trust не активирован: ${String(error)}`);
+      log(`Доверие к устройству не активировано: ${String(error)}`);
     }
   }
 
@@ -2681,7 +2681,7 @@ function App() {
       },
     );
     if (!response.ok)
-      throw new Error(`Внешняя identity не привязана: HTTP ${response.status}`);
+      throw new Error(`Внешняя учётная запись не привязана: HTTP ${response.status}`);
     const payload = await response.json();
     const linked = payload?.data?.identity;
     if (
@@ -2692,7 +2692,7 @@ function App() {
       throw new Error("Сервер не подтвердил привязку идентификатора.");
     setLinkedPassword0293("");
     setLinkFeedback0293(
-      `Привязана identity ${linked.provider} / ${linked.issuer} / ${linked.subject}.`,
+      `Привязана учётная запись ${linked.provider} / ${linked.issuer} / ${linked.subject}.`,
     );
     log(
       `Провайдер ${linked.provider} привязан с подтверждением внешних credentials.`,
@@ -2716,7 +2716,7 @@ function App() {
       });
       if (!key?.deviceId || key.deviceId !== tokenDeviceId) {
         throw new Error(
-          "сессия привязана к trusted device, но соответствующий device key отсутствует в защищённом хранилище ОС",
+          "сеанс привязан к доверенному устройству, но соответствующий ключ устройства отсутствует в защищённом хранилище ОС",
         );
       }
       const proof = await callTauri<DeviceSignatureResult>(
@@ -2800,7 +2800,7 @@ function App() {
   async function checkBackend() {
     setStage("connecting");
     try {
-      if (!settings.backendUrl.trim()) throw new Error("Backend URL не задан");
+      if (!settings.backendUrl.trim()) throw new Error("Адрес серверного API не задан");
       await fetchBackendJson("/health");
       const readiness = await fetchBackendJson("/ready");
       const status = await fetchBackendJson("/api/v1/status");
@@ -2875,7 +2875,7 @@ function App() {
           } catch (error) {
             setDeviceTrustStatus("ошибка");
             log(
-              `Device Trust при восстановлении не подтверждён: ${String(error)}`,
+              `Доверие к устройству не подтверждено при восстановлении: ${String(error)}`,
             );
           }
         }
@@ -2893,7 +2893,7 @@ function App() {
             await loadManagedDevices(trusted);
           } catch (error) {
             setDeviceTrustStatus("ошибка");
-            log(`Device Trust после refresh не подтверждён: ${String(error)}`);
+            log(`Доверие к устройству не подтверждено после обновления: ${String(error)}`);
           }
         }
       }
@@ -3773,13 +3773,13 @@ function App() {
 
   async function createGuardLaunchTicket(): Promise<string> {
     if (!authSession?.accessToken)
-      throw new Error("Guard Attestation требует активную Never session.");
+      throw new Error("Для аттестации защиты требуется активный сеанс Never.");
     const userId =
       authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
     if (!userId || !deviceId)
       throw new Error(
-        "Guard Attestation требует session, привязанную к trusted device.",
+        "Для аттестации защиты требуется сеанс, привязанный к доверенному устройству.",
       );
     const key =
       deviceKey ??
@@ -3884,12 +3884,12 @@ function App() {
     minecraftAccessToken?: string,
   ): Promise<{ ticket: string; attestationSha256: string }> {
     if (!authSession?.accessToken)
-      throw new Error("Guard Attestation v2 требует активную Never session.");
+      throw new Error("Для аттестации защиты версии 2 требуется активный сеанс Never.");
     const userId =
       authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
     if (!userId || !deviceId)
-      throw new Error("Guard Attestation v2 требует trusted-device binding.");
+      throw new Error("Для аттестации защиты версии 2 требуется привязка к доверенному устройству.");
     const key =
       deviceKey ??
       (await callTauri<DeviceKeyInfo | null>("device_key_status", {
@@ -4022,7 +4022,7 @@ function App() {
     if (!response.ok)
       throw new Error(
         payload?.error?.message ||
-          `Не удалось получить Minecraft session: ${response.status} ${response.statusText}`,
+          `Не удалось получить сеанс Minecraft: ${response.status} ${response.statusText}`,
       );
     const data = payload?.data ?? payload;
     if (!data.accessToken || !data.profile?.id || !data.profile?.name)
@@ -4075,7 +4075,7 @@ function App() {
       !guardAttestationSha256
     ) {
       throw new Error(
-        "Guard v2 и одноразовый challenge обязательны для verified plan.",
+        "Для проверенного плана необходимы защита версии 2 и одноразовый проверочный запрос.",
       );
     }
     const userId =
@@ -4083,7 +4083,7 @@ function App() {
     const deviceId = accessTokenDeviceId(authSession.accessToken);
     if (!userId || !deviceId)
       throw new Error(
-        "Для доказательств плана требуется привязка сеанса Device Trust",
+        "Для подтверждения плана необходима привязка сеанса к доверенному устройству",
       );
     return callTauri("attest_verified_component_plan_02412", {
       request: {
@@ -4308,7 +4308,7 @@ function App() {
             processId: result.id,
           }).catch(() => undefined);
           throw new Error(
-            `Windows runtime остановлен: Непрерывная аттестация Guard v2 не подтверждена: ${String(attestationError)}`,
+            `Среда выполнения Windows остановлена: непрерывная аттестация защиты версии 2 не подтверждена: ${String(attestationError)}`,
           );
         }
       }
@@ -4347,7 +4347,7 @@ function App() {
           processId: result.id,
         }).catch(() => undefined);
         throw new Error(
-          `Runtime остановлен: ServerBridge join после Attestation v2 не подтверждён: ${String(joinError)}`,
+          `Среда выполнения остановлена: подключение ServerBridge после аттестации версии 2 не подтверждено: ${String(joinError)}`,
         );
       }
       setLaunchResult(result);
@@ -4382,7 +4382,7 @@ function App() {
       setLaunchResult(result);
       log(result.message);
     } catch (error) {
-      log(`Runtime process не остановлен: ${String(error)}`);
+      log(`Не удалось остановить процесс среды выполнения: ${String(error)}`);
     }
   }
 
@@ -4440,7 +4440,7 @@ function App() {
         )
       ) {
         throw new Error(
-          "Для отправки отчёта требуется HTTPS Backend (HTTP допустим только для localhost).",
+          "Для отправки отчёта требуется HTTPS-соединение с сервером (HTTP допустим только для localhost).",
         );
       }
       const response = await fetch(destination.toString(), {
@@ -4452,7 +4452,7 @@ function App() {
         body: JSON.stringify({ consent: true, report }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(`Ошибка HTTP Backend: ${response.status}`);
+      if (!response.ok) throw new Error(`Ошибка HTTP серверного API: ${response.status}`);
       if (!/^[a-f0-9]{32}$/.test(String(payload.id || "")))
         throw new Error(
           "Сервер не подтвердил идентификатор отчёта. Проверьте поддержку перед повтором.",
@@ -4669,7 +4669,7 @@ function App() {
       );
       const saved = await callTauri<DesktopSettings>("load_desktop_config");
       if (!saved.onboardingCompleted)
-        throw new Error("Native verification не сохранила завершение");
+        throw new Error("Нативная проверка не зафиксировала завершение");
       setSettings(normalizedSettings(saved));
       setFirstRunStep0352("complete");
       setStage("ready");
@@ -4683,7 +4683,7 @@ function App() {
         }
       }
       log(
-        `Установка завершена и подтверждена Native (${checked.length} файлов): ${native.message}`,
+        `Установка завершена и подтверждена нативным модулем (${checked.length} файлов): ${native.message}`,
       );
     } catch (error) {
       setStage("failed");

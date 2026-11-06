@@ -45,9 +45,9 @@ public final class BridgeAuthResponse0287Test {
         assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replace("ho_" + "b".repeat(32), "ho_weak")), "proxy-1", "Player", "paper-2", CORRELATION), "invalid handoff ID");
         assertAllowed(false, BridgeAuthResponse0287.handoff(201, join(validHandoff().replaceAll("(?<=expiresAt\\\":\\\")[^\\\"]+", Instant.now().minusSeconds(1).toString())), "proxy-1", "Player", "paper-2", CORRELATION), "expired handoff");
         checks++;
-        if (!BridgeAuthResponse0287.matchesAuthenticatedUUID(UUID, UUID.replace("-", ""))) throw new AssertionError("valid authenticated UUID rejected");
+        if (!BridgeAuthResponse0287.matchesAuthenticatedUUID(UUID, UUID.replace("-", ""))) throw new AssertionError("действительный подтверждённый UUID отклонён");
         checks++;
-        if (BridgeAuthResponse0287.matchesAuthenticatedUUID("", UUID)) throw new AssertionError("unknown authenticated UUID accepted");
+        if (BridgeAuthResponse0287.matchesAuthenticatedUUID("", UUID)) throw new AssertionError("неизвестный подтверждённый UUID ошибочно принят");
         System.out.println("BridgeAuthResponse0287: " + checks + " passed");
     }
 }

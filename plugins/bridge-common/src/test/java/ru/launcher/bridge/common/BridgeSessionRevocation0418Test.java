@@ -13,19 +13,19 @@ public final class BridgeSessionRevocation0418Test {
 
     public static void main(String[] args) {
         BridgePlayerSessionRegistry sessions = new BridgePlayerSessionRegistry();
-        check(!sessions.matches("Player", OLD), "unknown player cannot match a session");
-        check(!sessions.bind("Player", "weak"), "weak session identifiers must be rejected");
-        check(sessions.bind("Player", OLD), "valid ticket is bound");
+        check(!sessions.matches("Player", OLD), "неизвестный игрок не должен соответствовать сеансу");
+        check(!sessions.bind("Player", "weak"), "слабые идентификаторы сеанса должны отклоняться");
+        check(sessions.bind("Player", OLD), "действительный билет привязан");
         check(sessions.matches("player", OLD), "username lookup is case-insensitive");
-        check(!sessions.matches("Player", NEW), "old login cannot authorize unrelated kick");
-        check(!sessions.matches("Player", ""), "empty session correlation cannot bypass fencing");
-        check(!sessions.matches("Player", "not-a-token"), "malformed correlation cannot bypass fencing");
-        check(!sessions.matches("Other", OLD), "different username cannot reuse same ticket");
-        check(sessions.bind("PLAYER", NEW), "relogin replaces the bound session");
-        check(!sessions.matches("Player", OLD), "delayed revocation must not kick new login");
-        check(sessions.matches("player", NEW), "current connection can still be targeted");
+        check(!sessions.matches("Player", NEW), "старый вход не может разрешить удаление другого игрока");
+        check(!sessions.matches("Player", ""), "пустая привязка сеанса не должна обходить ограничение доступа");
+        check(!sessions.matches("Player", "not-a-token"), "некорректная привязка не должна обходить ограничение доступа");
+        check(!sessions.matches("Other", OLD), "другой пользователь не может повторно использовать тот же билет");
+        check(sessions.bind("PLAYER", NEW), "повторный вход заменяет привязанный сеанс");
+        check(!sessions.matches("Player", OLD), "задержанный отзыв не должен отключать новый сеанс");
+        check(sessions.matches("player", NEW), "текущее соединение остаётся доступным для действия");
         sessions.clear("Player");
-        check(!sessions.matches("player", NEW), "disconnect removes the active session");
+        check(!sessions.matches("player", NEW), "отключение удаляет активный сеанс");
         System.out.println("BridgeSessionRevocation0418: " + checks + " passed");
     }
 }

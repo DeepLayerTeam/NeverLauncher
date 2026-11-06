@@ -26,22 +26,22 @@ public final class BridgeFailoverRecovery0515Test {
         String runtime = "a".repeat(64);
         BridgeEventJournal events = new BridgeEventJournal(journal, "server", runtime, node);
         events.append("server.recovered", Map.of("source", "failover"));
-        check(events.nextBatch(64).size() == 1, "event must be queued to disk");
+        check(events.nextBatch(64).size() == 1, "событие должно быть сохранено в очереди на диске");
         boolean blocked = false;
         try { LauncherApiClient.requireEventStream0515(protocol(false)); }
         catch (IOException expected) { blocked = true; }
-        check(blocked, "backend without event stream must not authorize ACK");
+        check(blocked, "сервер без потока событий не должен разрешать подтверждение");
         check(events.ackSequence() == 0 && events.nextBatch(64).size() == 1,
             "a reduced-capability endpoint must leave the signed event on disk");
         // Имитируйте перезагрузку JVM/плагина и повторное подключение Backend без серверного ACK.
         BridgeEventJournal recovered = new BridgeEventJournal(journal, "server", runtime, node);
-        check(recovered.nextBatch(64).size() == 1, "lost HTTP reply must preserve event after restart");
+        check(recovered.nextBatch(64).size() == 1, "потеря HTTP-ответа не должна удалять событие после перезапуска");
         LauncherApiClient.requireEventStream0515(protocol(true));
-        check(recovered.ackSequence() == 0, "negotiation alone is never an ACK");
+        check(recovered.ackSequence() == 0, "одно лишь согласование не считается подтверждением");
         recovered.acknowledge(1); // только после проверки фактического подтверждения ACK от Backend
-        check(recovered.ackSequence() == 1 && recovered.nextBatch(64).isEmpty(), "real ACK advances checkpoint");
+        check(recovered.ackSequence() == 1 && recovered.nextBatch(64).isEmpty(), "настоящее подтверждение сдвигает контрольную точку");
         BridgeEventJournal reloaded = new BridgeEventJournal(journal, "server", runtime, node);
-        check(reloaded.ackSequence() == 1 && reloaded.nextBatch(64).isEmpty(), "ACK survives restart");
+        check(reloaded.ackSequence() == 1 && reloaded.nextBatch(64).isEmpty(), "подтверждение сохраняется после перезапуска");
         System.out.println("BridgeFailoverRecovery0515: " + assertions + " assertions passed");
     }
 }

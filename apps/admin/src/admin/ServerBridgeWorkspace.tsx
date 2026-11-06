@@ -540,7 +540,7 @@ export function ServerBridgeWorkspace({
         );
       }
       setMessage(
-        "Лимит подтверждён ответом Backend и независимым чтением PostgreSQL routing revision #" +
+        "Лимит подтверждён сервером и независимым чтением ревизии маршрутизации PostgreSQL №" +
           observed.operatorCapacityRevision +
           ".",
       );

@@ -136,7 +136,7 @@ export function BackendOperations0289({
       return;
     if (
       !window.confirm(
-        `Выдать команду завершения именно Backend ${status.instanceId}? Внешний supervisor должен перезапустить процесс.`,
+        `Завершить именно серверный процесс ${status.instanceId}? Внешний диспетчер должен перезапустить процесс.`,
       )
     )
       return;
@@ -195,7 +195,7 @@ export function BackendOperations0289({
             <code>{status.commit}</code> · время работы: {status.uptimeSeconds} с
           </p>
           <p>
-            Идентификатор Runtime: <code>{status.instanceId}</code> · ревизия
+            Идентификатор среды выполнения: <code>{status.instanceId}</code> · ревизия
             конфигурации: #{status.operationalConfigRevision}
           </p>
           <p>
@@ -223,7 +223,7 @@ export function BackendOperations0289({
           </table>
           <h3>Контролируемый перезапуск</h3>
           <p className="muted">
-            Только при наличии внешнего service manager и PostgreSQL-журнала.
+            Только при наличии внешнего диспетчера служб и PostgreSQL-журнала.
             Требуется свежая phishing-resistant MFA. Повтор не должен создавать
             новую команду.
           </p>

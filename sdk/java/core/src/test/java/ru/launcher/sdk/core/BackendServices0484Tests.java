@@ -15,7 +15,7 @@ public final class BackendServices0484Tests {
     private static void expect(Class<? extends Throwable> type,Action action)throws Exception {
         checks++;
         try {action.call();throw new AssertionError("expected " + type.getSimpleName());}
-        catch(Throwable ex){if(!type.isInstance(ex))throw new AssertionError("unexpected exception",ex);}
+        catch(Throwable ex){if(!type.isInstance(ex))throw new AssertionError("неожиданное исключение",ex);}
     }
     private interface Action {void call()throws Exception;}
     private static void respond(HttpExchange x,int status,Object obj)throws IOException {
@@ -73,15 +73,15 @@ public final class BackendServices0484Tests {
                 host.connect();
                 try(var runtime=new RuntimeServices(host,Set.of())){
                     BackendServices api=runtime.backend();
-                    check(api.project("p1").id().equals("p1"),"project get via HTTP");
-                    check(api.projects(0,1).nextOffset()==1,"pagination cursor preserved");
-                    check(api.profiles("p1",0,10).items().get(0).javaMajor()==21,"profile typed Java release");
-                    check(api.profile("p1","profile-a").revision()==2,"profile lookup");
-                    check(api.channels("p1",0,10).items().get(0).protectedChannel(),"channel typed read");
-                    check(api.channel("p1","stable").name().equals("stable"),"channel lookup");
-                    check(api.releases("p1",0,10).items().get(0).version().equals("1.0.0"),"release page");
+                    check(api.project("p1").id().equals("p1"),"чтение проекта через HTTP");
+                    check(api.projects(0,1).nextOffset()==1,"курсор постраничной выдачи сохранён");
+                    check(api.profiles("p1",0,10).items().get(0).javaMajor()==21,"типизированный профиль релиза Java");
+                    check(api.profile("p1","profile-a").revision()==2,"поиск профиля");
+                    check(api.channels("p1",0,10).items().get(0).protectedChannel(),"типизированное чтение канала");
+                    check(api.channel("p1","stable").name().equals("stable"),"поиск канала");
+                    check(api.releases("p1",0,10).items().get(0).version().equals("1.0.0"),"страница релизов");
                     check(api.release("p1","rel1").manifest().containsKey("schemaVersion"),"release manifest");
-                    check(api.job("p1","job1").status().equals("succeeded"),"durable job status");
+                    check(api.job("p1","job1").status().equals("succeeded"),"устойчивое состояние задания");
                     expect(IllegalArgumentException.class,()->api.projects(-1,10));
                     expect(IllegalArgumentException.class,()->api.releases("p1",0,100));
                     expect(HostSession.HostError.class,()->api.project("p2"));
