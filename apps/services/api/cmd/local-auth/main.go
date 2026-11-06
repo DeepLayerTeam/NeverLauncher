@@ -98,7 +98,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 	case "list", "export", "create", "password", "disable", "enable":
 		return runOnline(args, output, input)
 	default:
-		return fmt.Errorf("Неизвестное значение: «local-auth command» %q", args[0])
+		return fmt.Errorf("Неизвестное значение: «команда локальной авторизации» %q", args[0])
 	}
 }
 
@@ -129,7 +129,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 	}
 	token := strings.TrimSpace(os.Getenv(*tokenEnv))
 	if token == "" {
-		return fmt.Errorf("Отсутствует: «token environment variable» %s", *tokenEnv)
+		return fmt.Errorf("Отсутствует: «переменная окружения с токеном» %s", *tokenEnv)
 	}
 	var method, path string
 	var payload any

@@ -397,7 +397,7 @@ def package_linux(args, stage, key, out, version):
         ctrl.mkdir()
         debarch = "amd64" if args.arch == "amd64" else "arm64"
         ctrl.joinpath("control").write_text(
-            f"Package: launcher-{args.project}\nVersion: {version}\nArchitecture: {debarch}\nMaintainer: Launcher Release Engineering\nSection: games\nPriority: optional\nDescription: Native signed-config Minecraft launcher installer\n"
+            f"Package: launcher-{args.project}\nVersion: {version}\nArchitecture: {debarch}\nMaintainer: Launcher Release Engineering\nSection: games\nPriority: optional\nDescription: Установщик лаунчера Minecraft с подписанной конфигурацией\n"
         )
         result = out / f"launcher-{version}-{args.project}-linux-{ARCH[args.arch]}.deb"
         checked("dpkg-deb", "--build", "--root-owner-group", pkg, result)

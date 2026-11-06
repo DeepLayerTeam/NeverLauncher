@@ -302,7 +302,7 @@ func (m *Manager) GetSecret(ctx context.Context, extensionID, scope, scopeID, na
 		return nil, err
 	}
 	if s.KeyVersion != KeyVersion {
-		return nil, fmt.Errorf("Не поддерживается: «extension secret key version» %q", s.KeyVersion)
+		return nil, fmt.Errorf("Не поддерживается: «версия секретного ключа расширения» %q", s.KeyVersion)
 	}
 	block, err := aes.NewCipher(m.key)
 	if err != nil {

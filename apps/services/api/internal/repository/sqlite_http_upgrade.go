@@ -96,7 +96,7 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 	fields := fieldMap0472(reflect.TypeOf(sqliteHTTPState0372{}))
 	for key := range root {
 		if _, ok := fields[key]; !ok {
-			return nil, fmt.Errorf("Неизвестное значение: «HTTP legacy field» %q", key)
+			return nil, fmt.Errorf("Неизвестное значение: «поле устаревшего HTTP-формата» %q", key)
 		}
 	}
 	// Отсутствующий верхний счётчик можно синтезировать лишь при пустой старой
@@ -278,7 +278,7 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 		}
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
-			return errors.New("Несовпадение: «HTTP legacy state digest»")
+			return errors.New("Несовпадение: «хеш состояния устаревшего HTTP-формата»")
 		}
 		if !legacy {
 			_, err = decodeSQLiteHTTPDocument0471(raw)

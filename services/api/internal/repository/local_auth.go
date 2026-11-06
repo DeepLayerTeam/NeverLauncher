@@ -40,7 +40,7 @@ func (r *SQLRepository) ReplacePasswordIfMatch0295(ctx context.Context, userID, 
 		return false, err
 	}
 	if priorHash == "" || !strings.HasPrefix(newHash, "$argon2id$") {
-		return false, errors.New("Некорректное значение: «CAS password upgrade»")
+		return false, errors.New("Некорректное значение: «обновление хеша пароля с условной записью»")
 	}
 	result, err := r.db.ExecContext(ctx, `UPDATE users SET password_hash=$3,password_updated_at=now(),updated_at=now()
        WHERE id=$1 AND password_hash=$2 AND status='active'`, userID, priorHash, newHash)
@@ -62,7 +62,7 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 		return 0, err
 	}
 	if len(accounts) == 0 || len(accounts) > fileauth.MaxAccounts {
-		return 0, errors.New("Некорректное значение: «FileAuth account count»")
+		return 0, errors.New("Некорректное значение: «количество учётных записей FileAuth»")
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {

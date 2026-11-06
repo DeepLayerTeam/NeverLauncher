@@ -150,7 +150,7 @@ func decodeStoredEvidence03411(raw []byte, p *validationPayload0345) error {
 	}
 	var extra any
 	if err := decoder.Decode(&extra); err != io.EOF {
-		return errors.New("Некорректное значение: «attestation trailing data»")
+		return errors.New("Некорректное значение: «лишние данные в конце аттестации»")
 	}
 	return nil
 }
@@ -165,13 +165,13 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 			"required-targets-incomplete", safeValidationDecisionDigest03412(coverage.TargetBlockers)); e != nil {
 			return "", coverage, errors.New("Недоступно: аудит допуска стабильной среды выполнения")
 		}
-		return "", coverage, fmt.Errorf("Доступ запрещён: «stable runtime gate»: %v", coverage.TargetBlockers)
+		return "", coverage, fmt.Errorf("Доступ запрещён: «проверка допуска стабильной среды Runtime»: %v", coverage.TargetBlockers)
 	}
 	issuer, ok := s.Repo.(interface {
 		IssueStableRuntimePermit03411(context.Context, repository.StableRuntimePermit03411) (string, error)
 	})
 	if !ok {
-		return "", coverage, errors.New("Недоступно: «stable durable permit issuer»")
+		return "", coverage, errors.New("Недоступно: «сервис выдачи устойчивых разрешений для стабильной среды»")
 	}
 	md, _ := manifestDigest0212(lookup.Release.Manifest)
 	fd, _ := artifactDigest0212(lookup.Files)

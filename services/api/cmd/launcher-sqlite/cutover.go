@@ -26,7 +26,7 @@ func runPGCutoverCheck0475(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 0 || *timeout <= 0 || *sha == "" || *project == "" || *email == "" || *dsnEnv == "" || strings.ContainsAny(*dsnEnv, "= \t\n\r\x00") {
-		fmt.Fprintln(os.Stderr, "Некорректное значение: «cutover check flags»")
+		fmt.Fprintln(os.Stderr, "Некорректное значение: «параметры проверки переключения»")
 		return 2
 	}
 	dsn := os.Getenv(*dsnEnv)

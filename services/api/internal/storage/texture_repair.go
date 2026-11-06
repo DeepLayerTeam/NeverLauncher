@@ -31,7 +31,7 @@ func RestoreTextureObject0253(ctx context.Context, store Storage, digest string,
 	}
 	local, ok := store.(*LocalStorage)
 	if !ok {
-		return "", 0, errors.New("Не поддерживается: «repair storage»")
+		return "", 0, errors.New("Не поддерживается: «хранилище для восстановления»")
 	}
 	filePath, key, err := local.objectPath(textureProject0252, textureVersion0252, rel)
 	if err != nil {

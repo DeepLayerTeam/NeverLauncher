@@ -20,7 +20,7 @@ const (
 
 func verifyLocalPath(path string) error {
 	if path == "/" {
-		return errors.New("«sqlite database path»: запрещено «be root»")
+		return errors.New("«путь к базе данных SQLite»: запрещено «be root»")
 	}
 	dir := filepath.Dir(path)
 	if err := rejectSymlinkSegments(dir); err != nil {
@@ -67,7 +67,7 @@ func verifyLocalPath(path string) error {
 			return fmt.Errorf("Небезопасные права %04o файла SQLite", f.Mode().Perm())
 		}
 		if st, ok := f.Sys().(*syscall.Stat_t); !ok || st.Uid != uint32(os.Geteuid()) {
-			return errors.New("Несовпадение: «sqlite database ownership»")
+			return errors.New("Несовпадение: «владелец базы данных SQLite»")
 		}
 	} else if !os.IsNotExist(e) {
 		return e

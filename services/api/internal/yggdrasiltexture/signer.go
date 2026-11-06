@@ -77,7 +77,7 @@ func LoadFile(path string) (*Signer, error) {
 		return nil, errors.New("Превышен допустимый размер: RSA ключ подписи файл")
 	}
 	if info.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("«RSA signing key file»: запрещено «be group/world accessible (chmod 600)»")
+		return nil, errors.New("«файл ключа подписи RSA»: запрещено «be group/world accessible (chmod 600)»")
 	}
 	content, err := os.ReadFile(path)
 	if err != nil {

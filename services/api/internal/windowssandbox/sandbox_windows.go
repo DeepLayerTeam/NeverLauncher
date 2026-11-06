@@ -354,7 +354,7 @@ func (h *Handle) Started() error {
 				return
 			}
 		}
-		ch <- fmt.Errorf("Ошибка: «sandbox launch»: %s", v)
+		ch <- fmt.Errorf("Ошибка: «запуск песочницы»: %s", v)
 	}()
 	select {
 	case e := <-ch:
@@ -376,7 +376,7 @@ func Prepare(o Options) (*Handle, error) {
 	}
 	id := randomName()
 	if id == "" {
-		return nil, errors.New("Недоступно: «secure random»")
+		return nil, errors.New("Недоступно: «криптографически стойкий генератор случайных чисел»")
 	}
 	profile := "LauncherExt" + id
 	sidPtr, sid, e := newProfile(profile)

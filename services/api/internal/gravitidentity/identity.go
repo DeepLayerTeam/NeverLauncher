@@ -90,7 +90,7 @@ func strictRootMap(b []byte) (map[string]json.RawMessage, error) {
 			return nil, errors.New("Некорректное значение: ключ")
 		}
 		if _, exists := out[strings.ToLower(key)]; exists {
-			return nil, fmt.Errorf("Обнаружен дубликат: «source identity key» %q", key)
+			return nil, fmt.Errorf("Обнаружен дубликат: «ключ идентичности источника» %q", key)
 		}
 		var raw json.RawMessage
 		if e = d.Decode(&raw); e != nil {
@@ -261,7 +261,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		}
 		selected++
 		if f.UncompressedSize64 > MaxIdentityFile {
-			return nil, fmt.Errorf("Превышен допустимый размер: «identity source» %q", f.Name)
+			return nil, fmt.Errorf("Превышен допустимый размер: «источник идентичности» %q", f.Name)
 		}
 		r, e := f.Open()
 		if e != nil {

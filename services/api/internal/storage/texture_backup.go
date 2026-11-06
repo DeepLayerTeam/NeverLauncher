@@ -272,7 +272,7 @@ func checkRestoreFile0253(snapshot string, obj TextureBackupObject0253) error {
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Size() != obj.ByteSize {
-		return errors.New("Несовпадение: «backup object not regular or size»")
+		return errors.New("Несовпадение: «тип или размер объекта резервной копии»")
 	}
 	file, err := os.Open(path)
 	if err != nil {

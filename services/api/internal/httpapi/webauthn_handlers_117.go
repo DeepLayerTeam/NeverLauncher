@@ -492,7 +492,7 @@ func (s Server) verifyPasskeyAssertion117(input webauthnAssertionJSON117, challe
 		return passkeyCredential117{}, wa.AssertionResult{}, err
 	}
 	if expectedUser != "" && credential.UserID != expectedUser {
-		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("Несовпадение: «passkey user»")
+		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("Несовпадение: «пользователь ключа доступа»")
 	}
 	if len(userHandle) > 0 && !hmac.Equal(userHandle, s.webauthnUserHandle117(credential.UserID)) {
 		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("Несоответствие: userHandle")
@@ -589,7 +589,7 @@ func decodeWebAuthnB64117(v string, max int) ([]byte, error) {
 		return nil, err
 	}
 	if len(b) == 0 || len(b) > max {
-		return nil, errors.New("Некорректное значение: «decoded value size»")
+		return nil, errors.New("Некорректное значение: «размер декодированных данных»")
 	}
 	return b, nil
 }

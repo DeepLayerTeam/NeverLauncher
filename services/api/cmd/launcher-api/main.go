@@ -206,13 +206,13 @@ func main() {
 		if cfg.DatabaseAutoMigrate {
 			status, err := migrator.ApplyMigrations(ctx)
 			if err != nil {
-				log.Fatalf("Ошибка: «database migration»: %v", err)
+				log.Fatalf("Ошибка: «миграция базы данных»: %v", err)
 			}
 			log.Printf("Схема базы данных готова: migration=%s, применено=%d/%d", status.Current, status.Applied, status.Total)
 		} else {
 			status, err := migrator.MigrationStatus(ctx)
 			if err != nil {
-				log.Fatalf("Ошибка: «database migration status»: %v", err)
+				log.Fatalf("Ошибка: «состояние миграции базы данных»: %v", err)
 			}
 			if !status.Compatible || len(status.Pending) > 0 {
 				log.Fatalf("Схема базы данных несовместима или ожидает миграции: current=%s, pending=%v", status.Current, status.Pending)
@@ -281,7 +281,7 @@ func main() {
 	federationCore, err := httpapi.NewFederationCore(federationCtx, repo, cfg)
 	federationCancel()
 	if err != nil {
-		log.Fatalf("Ошибка: «federation core initialization»: %v", err)
+		log.Fatalf("Ошибка: «инициализация ядра федеративной авторизации»: %v", err)
 	}
 	defer federationCore.Close()
 	if err := httpapi.ConfigureAuthCore111(cfg, state); err != nil {
@@ -354,7 +354,7 @@ func main() {
 	var host *extensionhost.Supervisor
 	if cfg.ExtensionHostEnabled && !noExtensions {
 		if err := extensionhost.HardenBackendProcess(); err != nil {
-			log.Fatalf("Ошибка: «extension host backend memory hardening»: %v", err)
+			log.Fatalf("Ошибка: «защита памяти Backend для хоста расширений»: %v", err)
 		}
 		host = extensionhost.New(extensionhost.Config{
 			ExtensionRoot:        cfg.ExtensionRoot,
@@ -392,7 +392,7 @@ func main() {
 			events.SetDispatcher(host)
 		}
 		if err := host.Start(context.Background()); err != nil {
-			log.Fatalf("Ошибка: «extension host initialization»: %v", err)
+			log.Fatalf("Ошибка: «инициализация хоста расширений»: %v", err)
 		}
 		defer func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -434,7 +434,7 @@ func main() {
 		// очереди заданий в памяти нет.
 		durableCancel, durableErr := server.StartDurableControlPlaneWithReadiness0455(context.Background(), &workerLastSuccess)
 		if durableErr != nil {
-			log.Fatalf("Ошибка: «durable control-plane initialization»: %v", durableErr)
+			log.Fatalf("Ошибка: «инициализация устойчивого контура управления»: %v", durableErr)
 		}
 		defer durableCancel()
 		log.Printf("Обработчик длительных операций активен: публикация, откат и исходящие сообщения (role=%s)", role.name)
@@ -444,7 +444,7 @@ func main() {
 		// маршрутов Admin/Auth. Для готовности обязателен успешный шаг обращения к
 		// БД.
 		if err := runWorkerProbe0455(cfg.HTTPAddr, &workerLastSuccess, server.Handler()); err != nil {
-			log.Fatalf("Ошибка: «worker probe»: %v", err)
+			log.Fatalf("Ошибка: «проверка рабочего процесса»: %v", err)
 		}
 		return
 	}
@@ -487,7 +487,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("Ошибка: «graceful shutdown»: %v; closing open connections", err)
+		log.Printf("Ошибка: «корректное завершение работы»: %v; closing open connections", err)
 		_ = httpServer.Close()
 	}
 	// Успешное завершение здесь намеренно. Только внешний настроенный менеджер служб

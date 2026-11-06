@@ -337,7 +337,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 		return m, err
 	}
 	if n != m.Bytes || digest != m.SHA256 {
-		return m, errors.New("Несовпадение: «SQLite backup SHA-256 or length»")
+		return m, errors.New("Несовпадение: «SHA-256 или размер резервной копии SQLite»")
 	}
 	v, err := snapshotCheck(ctx, abs)
 	if err != nil {
@@ -355,7 +355,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 // долговременную жёсткую ссылку в той же файловой системе для отката оператором.
 func RestoreBackup(ctx context.Context, backup, target string, replace bool) (rollback string, err error) {
 	if backup == "" || target == "" {
-		return "", errors.New("Требуется: «backup and target»")
+		return "", errors.New("Требуется: «резервная копия и целевой путь»")
 	}
 	src, e := filepath.Abs(backup)
 	if e != nil {
@@ -396,7 +396,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 			return "", errors.New("Целевой объект уже существует; необходимо явно указать --replace")
 		}
 		if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Mode()&os.ModeSymlink != 0 {
-			return "", errors.New("Небезопасное значение: «restore target»")
+			return "", errors.New("Небезопасное значение: «путь восстановления»")
 		}
 		old = true
 	} else if !os.IsNotExist(e) {

@@ -74,7 +74,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
                 h.update(block)
         require(
             h.hexdigest() == digest,
-            f"{target}: shipping package differs from independently certified executable",
+            f"{target}: поставляемый пакет отличается от независимо сертифицированного исполняемого файла",
         )
         checked.add(target)
         digests[target] = digest

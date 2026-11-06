@@ -358,7 +358,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		}
 		respond(items, e)
 	default:
-		respond(nil, errors.New("Не поддерживается: «Desktop RPC method»"))
+		respond(nil, errors.New("Не поддерживается: «метод RPC Desktop»"))
 	}
 }
 

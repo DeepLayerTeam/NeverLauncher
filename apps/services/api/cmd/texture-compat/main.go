@@ -170,10 +170,10 @@ func checkTexture02512(ctx context.Context, c *http.Client, raw string, kind, mo
 	}
 	digest := strings.TrimPrefix(u.Path, prefix)
 	if len(digest) != 64 {
-		return errors.New("Некорректное значение: «content-addressed digest»")
+		return errors.New("Некорректное значение: «хеш содержимого»")
 	}
 	if _, err := hex.DecodeString(digest); err != nil || strings.ToLower(digest) != digest {
-		return errors.New("Некорректное значение: «lowercase digest»")
+		return errors.New("Некорректное значение: «хеш в нижнем регистре»")
 	}
 	content, err := fetch02512(ctx, c, u.String())
 	if err != nil {
@@ -233,7 +233,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if profile.ID != uid || profile.Name == "" {
-		return report, errors.New("Несовпадение: «profile identity»")
+		return report, errors.New("Несовпадение: «идентичность профиля»")
 	}
 	if len(profile.Properties) != 1 || profile.Properties[0].Name != "textures" || profile.Properties[0].Signature == "" {
 		return report, errors.New("Профиль должен содержать ровно одно подписанное свойство textures")
@@ -245,7 +245,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if err := rsa.VerifyPKCS1v15(key, crypto.SHA1, digest[:], sig); err != nil {
-		return report, fmt.Errorf("Некорректное значение: «RSA texture signature»: %w", err)
+		return report, fmt.Errorf("Некорректное значение: «подпись текстуры RSA»: %w", err)
 	}
 	report.SignatureValid = true
 	report.ProfileID = uid
@@ -258,7 +258,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if payload.ProfileID != uid || payload.ProfileName != profile.Name {
-		return report, errors.New("Несовпадение: «signed texture property identity»")
+		return report, errors.New("Несовпадение: «идентичность подписанного свойства текстуры»")
 	}
 	for _, kind := range []string{"SKIN", "CAPE"} {
 		entry, found := payload.Textures[kind]
@@ -270,7 +270,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 			continue
 		}
 		if kind == "SKIN" && entry.Metadata.Model != "" && entry.Metadata.Model != "slim" {
-			return report, errors.New("Minecraft skin model: требуется «default or slim»")
+			return report, errors.New("Minecraft skin model: требуется «default или slim»")
 		}
 		model := "classic"
 		if entry.Metadata.Model == "slim" {

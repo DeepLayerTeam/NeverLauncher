@@ -69,7 +69,7 @@ func normalizeGuardRuntimeProfiles0317(input []guardRuntimeProfile0317) ([]guard
 		}
 		key := fmt.Sprintf("%d:%s:%s:%s", profile.JavaMajor, profile.ModuleSetSHA256, profile.CodeSetSHA256, profile.HookSetSHA256)
 		if seen[key] {
-			return nil, errors.New("Обнаружен дубликат: «runtime profile»")
+			return nil, errors.New("Обнаружен дубликат: «профиль Runtime»")
 		}
 		seen[key] = true
 		out = append(out, profile)
@@ -118,7 +118,7 @@ func verifyGuardRuntimePolicy0317(policy guardReleasePolicy0134, platform string
 	}
 	profiles := policy.RuntimeProfiles[kind]
 	if len(profiles) == 0 {
-		return "", errors.New("«Windows Guard runtime allowlist»: не настроено")
+		return "", errors.New("«список разрешений Windows Guard Runtime»: не настроено")
 	}
 	if !guardRuntimeMatches0317(profiles, evidence.JavaMajor, evidence.ModuleSetSHA256, evidence.CodeSetSHA256, evidence.HookSetSHA256) {
 		return "", errors.New("Версия Java или набор модулей, кода и перехватчиков среды выполнения не разрешены")

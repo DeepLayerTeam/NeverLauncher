@@ -1,7 +1,7 @@
-"""Trusted-host-only diagnostic retention. Export raw runner stdout.
+"""Хранение диагностики только на доверенном хосте. Выводит исходный stdout исполнителя.
 
-Diagnostics are not certification: the attestor signs separately verified
-runtime artifacts; this spool only retains redacted operational logs.
+Диагностика не является сертификацией: аттестатор отдельно подписывает
+проверенные артефакты Runtime; очередь хранит только очищенные рабочие журналы.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -47,7 +47,7 @@ def redact(text: str) -> str:
 
 
 def prune(folder: Path, now: datetime):
-    """Expire only files created by this service, follow symlinks."""
+    """Удаляйте по истечении срока только файлы, созданные этим сервисом; переходите по символьным ссылкам."""
     for path in folder.iterdir():
         if path.is_symlink() or not re.fullmatch(
             r"[a-f0-9]{48}\.(?:log|json)", path.name
@@ -84,11 +84,11 @@ def retain(
         raise ValueError("Каталог диагностики: требуется доступ только владельцу хоста")
     now = datetime.now(timezone.utc)
     prune(directory, now)
-    # Bound total retained log size to 2 MiB. Read past this limit.
+    # Ограничьте общий объём сохраняемых журналов двумя МиБ. Читайте за пределами этого лимита.
     with worker_log.open("rb") as raw:
         content = raw.read(2 * 1024 * 1024)
     sanitized = redact(content.decode("utf-8", "replace")).encode("utf-8")
-    # Write with O_EXCL+O_NOFOLLOW to avoid replacing existing evidence/logs.
+    # Используйте O_EXCL+O_NOFOLLOW, чтобы не заменить существующие свидетельства и журналы.
     destination = directory / (run_id + ".log")
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(destination, flags, 0o600)

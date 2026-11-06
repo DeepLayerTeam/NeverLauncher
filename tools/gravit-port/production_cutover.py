@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Two-phase, fail-closed Gravit production ingress cutover on local HAProxy.
+"""Двухфазное безопасное переключение производственного входящего трафика Gravit
+через локальный HAProxy с отказом при неоднозначности.
 
-The API (PostgreSQL) remains authoritative for release routing and identity.
-HAProxy's admin socket is authoritative for the configured ingress backends.
-These two systems do not share a transaction: any ambiguity leaves ingress in
-MAINT and requires operator reconciliation, not automatic old-world replay.
+API (PostgreSQL) остаётся источником истины для маршрутизации релизов и
+идентичности. Административный сокет HAProxy определяет состояние настроенных
+принимающих Backend. Общей транзакции у двух систем нет: при неоднозначности
+вход остаётся в режиме MAINT до согласования оператором, без автоматического
+повторного применения состояния старого мира.
 """
 from __future__ import annotations
 
@@ -233,7 +235,7 @@ def journal_write(directory: Path, payload: dict, *, new: bool = False):
             f.flush()
             os.fsync(f.fileno())
     else:
-        # Atomic replacement on same filesystem. All journals remain private.
+        # Атомарная замена в той же файловой системе. Все журналы остаются закрытыми.
         temp = directory / "cutover-state.json.next"
         fd = os.open(temp, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "wb") as f:
@@ -274,7 +276,7 @@ def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
         require(digest(f.read()) == cfg["launcherSha256"], "CLI изменился во время переключения")
     with open(os.devnull, "wb") as sink:
         env = dict(os.environ)
-        # The bearer token is environment-only, never stored or placed in argv.
+        # Bearer-токен передаётся только через окружение, не хранится и не попадает в аргументы.
         env.pop("LAUNCHER_PASSWORD", None)
         try:
             subprocess.run([str(launcher), "migrate", "gravit", *args, "--output", str(output)],
@@ -314,7 +316,7 @@ def receipt_check(cfg: dict) -> None:
                 (("runId", "runId"), ("profileId", "profileId"), ("channel", "channel"), ("stageId", "stageId"))) and
             receipt.get("unitState") == "inactive" and receipt.get("unitFileState") in ("masked", "masked-runtime") and
             receipt.get("snapshotSha256") == cfg.get("sourceSnapshotSha256"), "Квитанция блокировки источника не привязана к одобренному источнику")
-    # Backend/CLI independently checks the receipt hash and its freshness.
+    # Backend/CLI независимо проверяют хеш квитанции и её актуальность.
     from datetime import datetime, timezone
     checked = datetime.fromisoformat(receipt["checkedAt"].replace("Z", "+00:00"))
     stopped = datetime.fromisoformat(receipt["stoppedAt"].replace("Z", "+00:00"))
@@ -334,7 +336,7 @@ def auth_canary(cfg: dict, *, public: bool = False):
     require(digest(body) == canary["requestSha256"], "Данные проверочного запроса авторизации изменились после предварительной проверки")
     req = Request(canary["frontendUrl"] if public else canary["url"], body, method="POST",
                   headers={"Content-Type": "application/json", "Cache-Control": "no-store"})
-    # TLS validation uses OS trust; no insecure override and no cross-host redirects.
+    # Проверка TLS использует доверенные корни ОС; небезопасный обход и перенаправления на другие хосты запрещены.
     try:
         with build_opener(HTTPSHandler(), NoRedirect()).open(req, timeout=8) as response:
             require(response.status == 200, "Контрольный запрос авторизации отклонён")
@@ -345,7 +347,7 @@ def auth_canary(cfg: dict, *, public: bool = False):
     result = json.loads(data)
     require(isinstance(result, dict) and result.get(canary["uuidJSONField"]) == canary["expectedPlayerUuid"],
             "Контрольная проверка авторизации подтвердила неверный UUID Minecraft")
-    # Intentionally do not persist session cookies, token, password or body.
+    # Намеренно не сохраняйте cookie сеанса, токен, пароль или тело запроса.
 
 
 def live_canary(cfg: dict, directory: Path) -> dict:
@@ -410,7 +412,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
     route = route_list(cfg, directory, "route-pre-activate.json")
     assert_route(route, cfg, False)
     receipt_check(cfg)
-    # Verify real target auth before changing the PostgreSQL delivery pointer.
+    # Проверьте реальную авторизацию целевого сервиса перед сменой указателя поставки PostgreSQL.
     auth_canary(cfg)
     update_phase(directory, state, "activating")
     try:
@@ -427,7 +429,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
         inspect_proxy(proxy, cfg, "open")
         update_phase(directory, state, "target_open", trafficOpen=True)
         auth_canary(cfg, public=True)  # Real public HTTPS ingress, not just direct upstream.
-        # The same UUID must actually join the Minecraft server after switching.
+        # После переключения тот же UUID должен действительно подключиться к серверу Minecraft.
         live_canary(cfg, directory)
         route = route_list(cfg, directory, "route-final.json")
         assert_route(route, cfg, True)
@@ -446,7 +448,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
 
 
 def main(argv=None) -> int:
-    # Do not allow migration CLI output files to be created world-readable.
+    # Не разрешайте создавать общедоступные выходные файлы CLI миграции.
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("prepare", "activate", "status"))

@@ -14,7 +14,7 @@ import (
 
 func PreUpgradeBackup0472(ctx context.Context, source, label string) (string, error) {
 	if label == "" || strings.ContainsAny(label, `/\\.\x00\r\n`) {
-		return "", errors.New("Некорректное значение: «SQLite backup label»")
+		return "", errors.New("Некорректное значение: «метка резервной копии SQLite»")
 	}
 	abs, err := filepath.Abs(source)
 	if err != nil {
@@ -29,7 +29,7 @@ func PreUpgradeBackup0472(ctx context.Context, source, label string) (string, er
 		return "", err
 	}
 	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm() != 0700 {
-		return "", fmt.Errorf("Небезопасное значение: «SQLite pre-upgrade directory» %s", dir)
+		return "", fmt.Errorf("Небезопасное значение: «каталог перед обновлением SQLite» %s", dir)
 	}
 	token, err := newToken()
 	if err != nil {

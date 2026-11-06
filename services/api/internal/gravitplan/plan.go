@@ -83,7 +83,7 @@ func Digest(p Plan) (string, error) {
 }
 func Verify(p Plan) error {
 	if p.Format != Format || len(p.PlanSHA256) != 64 {
-		return errors.New("Некорректное значение: «migration plan format or digest»")
+		return errors.New("Некорректное значение: «формат или хеш плана миграции»")
 	}
 	d, e := Digest(p)
 	if e != nil {

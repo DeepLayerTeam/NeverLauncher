@@ -181,7 +181,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		for k, v := range security.Resets {
 			v.Record.TokenHash = v.Hash
 			if k != v.Hash {
-				return fmt.Errorf("Несовпадение: «SQLite reset token hash»")
+				return fmt.Errorf("Несовпадение: «хеш токена сброса SQLite»")
 			}
 			state.Security.passwordResets[k] = v.Record
 		}
@@ -189,7 +189,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		for k, v := range security.EmailTokens {
 			v.Record.TokenHash = v.Hash
 			if k != v.Hash {
-				return fmt.Errorf("Несовпадение: «SQLite email token hash»")
+				return fmt.Errorf("Несовпадение: «хеш токена электронной почты SQLite»")
 			}
 			state.Security.emailTokens[k] = v.Record
 		}
@@ -201,7 +201,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		return err
 	}
 	if passkeys.Version != 0 && passkeys.Version != 1 {
-		return fmt.Errorf("Не поддерживается: «SQLite passkeys format» %d", passkeys.Version)
+		return fmt.Errorf("Не поддерживается: «формат ключей доступа SQLite» %d", passkeys.Version)
 	}
 	if passkeys.Version != 0 {
 		state.Passkeys.credentials = make(map[string]passkeyCredential117, len(passkeys.Credentials))
@@ -214,10 +214,10 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 			rec.AAGUID = v.AAGUID
 			index := base64.RawURLEncoding.EncodeToString(v.CredentialID)
 			if len(v.CredentialID) == 0 || rec.ID != id {
-				return fmt.Errorf("Некорректное значение: «SQLite passkey credential» %q", id)
+				return fmt.Errorf("Некорректное значение: «учётные данные ключа доступа SQLite» %q", id)
 			}
 			if _, duplicate := state.Passkeys.credentialIndex[index]; duplicate {
-				return errors.New("Обнаружен дубликат: «SQLite credential identifier»")
+				return errors.New("Обнаружен дубликат: «идентификатор учётных данных SQLite»")
 			}
 			state.Passkeys.credentials[id] = rec
 			state.Passkeys.credentialIndex[index] = id
@@ -230,7 +230,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		return err
 	}
 	if bridge.Version != 0 && bridge.Version != 1 {
-		return fmt.Errorf("Не поддерживается: «SQLite bridge format» %d", bridge.Version)
+		return fmt.Errorf("Не поддерживается: «формат моста SQLite» %d", bridge.Version)
 	}
 	if bridge.Version != 0 {
 		state.ServerBridge.servers = make(map[string]bridgeServerRecord, len(bridge.Servers))

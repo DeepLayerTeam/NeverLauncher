@@ -98,7 +98,7 @@ func Verify(v Report) error {
 // подтверждение — доказательством.
 func Finalize(v Report) (Report, error) {
 	if v.RunID == "" || v.ProjectID == "" {
-		return Report{}, errors.New("Отсутствует: «migration scope»")
+		return Report{}, errors.New("Отсутствует: «область миграции»")
 	}
 	v.Format = Format
 	v.ReportSHA256 = ""
@@ -122,17 +122,17 @@ func Finalize(v Report) (Report, error) {
 	seenItem := map[string]bool{}
 	for _, item := range v.Items {
 		if item.Kind == "" || item.Source == "" {
-			return Report{}, errors.New("Некорректное значение: «inventory item»")
+			return Report{}, errors.New("Некорректное значение: «элемент инвентаризации»")
 		}
 		if item.SHA256 != "" && !validDigest(item.SHA256) {
-			return Report{}, errors.New("Некорректное значение: «inventory checksum»")
+			return Report{}, errors.New("Некорректное значение: «контрольная сумма инвентаризации»")
 		}
 		if item.Status != "transferred" && item.Status != "transformed" && item.Status != "manual" && item.Status != "blocked" {
-			return Report{}, fmt.Errorf("Некорректное значение: «item status» %q", item.Status)
+			return Report{}, fmt.Errorf("Некорректное значение: «состояние элемента» %q", item.Status)
 		}
 		k := item.Kind + "\x00" + item.Source + "\x00" + item.Target
 		if seenItem[k] {
-			return Report{}, errors.New("Обнаружен дубликат: «report item»")
+			return Report{}, errors.New("Обнаружен дубликат: «элемент отчёта»")
 		}
 		seenItem[k] = true
 		v.Counts[item.Status]++
@@ -177,11 +177,11 @@ func Finalize(v Report) (Report, error) {
 		switch ev.State {
 		case "verified", "missing", "blocked", "manual":
 		default:
-			return Report{}, fmt.Errorf("Неизвестное значение: «evidence state» %q", ev.State)
+			return Report{}, fmt.Errorf("Неизвестное значение: «состояние свидетельства» %q", ev.State)
 		}
 		stages[ev.Stage] = ev.State
 		if ev.SHA256 != "" && !validDigest(ev.SHA256) {
-			return Report{}, errors.New("Некорректное значение: «evidence checksum»")
+			return Report{}, errors.New("Некорректное значение: «контрольная сумма свидетельства»")
 		}
 		if ev.State == "missing" || ev.State == "blocked" ||
 			(ev.State == "manual" && (ev.Stage == "cutover" || ev.Stage == "rollback" ||

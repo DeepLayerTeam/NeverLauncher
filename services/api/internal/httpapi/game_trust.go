@@ -66,7 +66,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 		return p, e
 	}
 	if env.SchemaVersion != "1.0" {
-		return p, errors.New("Не поддерживается: «game policy envelope»")
+		return p, errors.New("Не поддерживается: «оболочка игровой политики»")
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) > 96*1024 {
@@ -74,7 +74,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 	}
 	sig, e := hex.DecodeString(env.RootSignature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte("Launcher-Trust-Policy-v1\n"), payload...), sig) {
-		return p, errors.New("Некорректное значение: «game trust root signature»")
+		return p, errors.New("Некорректное значение: «подпись корневого ключа доверия игры»")
 	}
 	if e = json.Unmarshal(payload, &p); e != nil {
 		return p, e
@@ -105,7 +105,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 			return errors.New("Ключ подписи игры отозван")
 		}
 		if k.Status != "active" && k.Status != "verify-only" {
-			return errors.New("Неизвестное значение: «game signing key status»")
+			return errors.New("Неизвестное значение: «состояние ключа подписи игры»")
 		}
 		if issuance && k.Status != "active" {
 			return errors.New("«retired game signing key»: запрещено «publish»")
@@ -123,7 +123,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 				return e
 			}
 			if !time.Now().UTC().Before(limit) || !signedAt.Before(limit) {
-				return errors.New("Истёк срок действия: «game verify-only overlap»")
+				return errors.New("Истёк срок действия: «период проверки старого игрового ключа»")
 			}
 		}
 		return nil

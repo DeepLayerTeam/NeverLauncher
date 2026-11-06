@@ -213,7 +213,7 @@ def verify_ga(
         and rehearsal.get("commit") == commit
         and rehearsal.get("runId") == str(run_id)
         and rehearsal.get("runAttempt") == str(attempt),
-        "rehearsal from another CI run/attempt",
+        "Репетиция получена из другого запуска или попытки CI",
     )
     with tempfile.TemporaryDirectory(prefix="nl-ga-publish-") as folder:
         evidence = Path(folder)

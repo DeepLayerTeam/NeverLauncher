@@ -184,7 +184,7 @@ func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
 func decodeRuntimeValidationKey0212(value string) (ed25519.PublicKey, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return nil, errors.New("Пустое значение: «runtime validation key»")
+		return nil, errors.New("Пустое значение: «ключ проверки Runtime»")
 	}
 	if raw, err := hex.DecodeString(value); err == nil && len(raw) == ed25519.PublicKeySize {
 		return ed25519.PublicKey(raw), nil
@@ -210,7 +210,7 @@ func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error
 	for id, val := range cfg {
 		id = strings.TrimSpace(id)
 		if id == "" {
-			return nil, errors.New("Пустое значение: «runtime validation key id»")
+			return nil, errors.New("Пустое значение: «идентификатор ключа проверки Runtime»")
 		}
 		key, err := decodeRuntimeValidationKey0212(val)
 		if err != nil {
@@ -428,7 +428,7 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 	}
 	keys, err := s.runtimeValidationKeys0212()
 	if err != nil {
-		return fmt.Errorf("Недоступно: «publish runtime trust set»: %w", err)
+		return fmt.Errorf("Недоступно: «публикация набора доверенных ключей Runtime»: %w", err)
 	}
 	items, err := s.Repo.ListRuntimeValidations(ctx, lookup.Release.ID)
 	if err != nil {

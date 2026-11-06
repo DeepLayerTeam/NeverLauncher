@@ -154,7 +154,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 			return e
 		}
 		if v != schemaVersion {
-			return fmt.Errorf("Не поддерживается: «coordinator schema version» %d", v)
+			return fmt.Errorf("Не поддерживается: «версия схемы координатора» %d", v)
 		}
 		return nil
 	})

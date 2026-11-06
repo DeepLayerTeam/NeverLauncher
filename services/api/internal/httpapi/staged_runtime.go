@@ -129,7 +129,7 @@ func (s Server) stagedSnapshot0342(ctx context.Context, g stagedGrant0342) (pack
 		return lookup, err
 	}
 	if !manifestFilesMatch0212(lookup.Release.Manifest, lookup.Files) {
-		return lookup, errors.New("«staged manifest» не совпадает с файлы")
+		return lookup, errors.New("«подготовленный манифест» не совпадает с файлы")
 	}
 	check, err := s.Repo.LatestIntegrityCheck(ctx, g.PackageID)
 	if err != nil || check.Result != "passed" || check.ManifestDigest != md || check.ArtifactDigest != fd {
@@ -325,23 +325,23 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 }
 func validateStagedRunReport0342(g stagedGrant0342, p stagedRunReport0342) error {
 	if p.Schema != stagedRunSchema0342 || p.PackageID != g.PackageID || p.RunID != g.RunID || p.ManifestSHA256 != g.ManifestSHA256 || p.ArtifactSHA256 != g.ArtifactSHA256 {
-		return errors.New("Несовпадение: «run identity or snapshot»")
+		return errors.New("Несовпадение: «идентичность запуска или снимок»")
 	}
 	if p.StartedAt.IsZero() || p.FinishedAt.Before(p.StartedAt) || p.FinishedAt.After(time.Now().Add(5*time.Minute)) || p.StartedAt.Before(time.Unix(g.ExpiresAt, 0).Add(-95*time.Minute)) {
-		return errors.New("Некорректное значение: «execution times»")
+		return errors.New("Некорректное значение: «время выполнения»")
 	}
 	if len(p.Stages) == 0 || len(p.Stages) > 10 {
 		return errors.New("Отсутствует: «or excessive stages»")
 	}
 	for k, v := range p.Stages {
 		if k != "manifest-files" && k != "materialization" && k != "startup" && k != "loader-readiness" && k != "authentication" && k != "server-readiness" && k != "matching-server" && k != "gameplay-smoke" && k != "update-recovery" {
-			return errors.New("Некорректное значение: «execution stage»")
+			return errors.New("Некорректное значение: «этап выполнения»")
 		}
 		if v.Status != "passed" && v.Status != "failed" && v.Status != "blocked" && v.Status != "inconclusive" {
-			return errors.New("Некорректное значение: «execution status»")
+			return errors.New("Некорректное значение: «статус выполнения»")
 		}
 		if len(v.Detail) > 2048 || (v.EvidenceSHA256 != "" && (len(v.EvidenceSHA256) != 64 || !hexSHA0342(v.EvidenceSHA256))) {
-			return errors.New("Некорректное значение: «stage detail or digest»")
+			return errors.New("Некорректное значение: «подробности или хеш этапа»")
 		}
 	}
 	return nil

@@ -21,22 +21,22 @@ def combine(paths: list[Path]) -> dict:
         evidence = json.loads(raw)
         os_name = evidence.get("platform", {}).get("system")
         if os_name not in REQUIRED_PLATFORMS or os_name in report["platforms"]:
-            raise ValueError(f"Неизвестное значение: «or duplicate platform in» {path}: {os_name}")
+            raise ValueError(f"Неизвестная или повторная платформа в файле {path}: {os_name}")
         commit = evidence.get("commit")
         if not re.fullmatch(r"[a-f0-9]{40}", commit or "") or not evidence.get("gitTreeClean"):
-            report["unmetGates"].append(f"{os_name}: missing exact clean commit")
+            report["unmetGates"].append(f"{os_name}: отсутствует точный коммит с чистым рабочим деревом")
         if report["commit"] is None: report["commit"] = commit
         elif commit != report["commit"]:
-            report["unmetGates"].append(f"{os_name}: commit mismatch")
+            report["unmetGates"].append(f"{os_name}: коммиты не совпадают")
         result = {v.get("id"):v.get("status") for v in evidence.get("suites", [])}
         report["platforms"][os_name] = {"artifactSha256":hashlib.sha256(raw).hexdigest(),
                                         "status":evidence.get("status"), "suites":result}
         for case in REQUIRED_SUITES:
-            if result.get(case) != "passed": report["unmetGates"].append(f"{os_name}: {case} not passed")
+            if result.get(case) != "passed": report["unmetGates"].append(f"{os_name}: {case} не пройдена")
         if evidence.get("status") != "passed":
-            report["unmetGates"].append(f"{os_name}: platform status {evidence.get('status')}")
+            report["unmetGates"].append(f"{os_name}: статус платформы {evidence.get('status')}")
     for name in sorted(REQUIRED_PLATFORMS - set(report["platforms"])):
-        report["unmetGates"].append(f"{name}: missing platform report")
+        report["unmetGates"].append(f"{name}: отсутствует отчёт платформы")
     if report["platforms"].get("Windows", {}).get("suites", {}).get("windows-locked-executable-test") != "passed":
         report["unmetGates"].append("Windows: тест эксклюзивной блокировки исполняемого файла не пройден")
     if not report["unmetGates"]: report["status"] = "passed"

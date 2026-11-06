@@ -221,7 +221,7 @@ func readChunks(ctx context.Context, tx pgx.Tx, dest io.Writer, expectedSize int
 		return err
 	}
 	if count == 0 || size != expectedSize || hex.EncodeToString(digest.Sum(nil)) != expectedHash {
-		return errors.New("Несовпадение: «PostgreSQL snapshot length or SHA»")
+		return errors.New("Несовпадение: «длина или SHA-сумма снимка PostgreSQL»")
 	}
 	return nil
 }

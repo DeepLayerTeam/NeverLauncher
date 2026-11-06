@@ -201,7 +201,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
             return Err("Журнал релиза содержит неподписанные пути".into());
         }
         if let Some(ref digest) = entry.old_sha256 {
-            if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("Некорректное значение: «backup digest»".into()); }
+            if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("Некорректное значение: «хеш резервной копии»".into()); }
         }
         if let Some(ref digest) = entry.new_sha256 {
             if expected(&j.next, &entry.path).is_none_or(|(sha, _)| !sha.eq_ignore_ascii_case(digest)) { return Err("Несовпадение: «journal target digest»".into()); }
@@ -600,7 +600,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 file_ownership::ensure_no_symlinks(root, &destination)?;
                 copy_durable(&live, &destination)?;
                 let old_hash = hash(&live)?;
-                if hash(&destination)? != old_hash { return Err(format!("Ошибка: «backup verification»: {p}")); }
+                if hash(&destination)? != old_hash { return Err(format!("Ошибка: «проверка резервной копии»: {p}")); }
                 Some(old_hash)
             },
             Ok(_) => return Err(format!("Управляемый целевой объект не является обычным файлом: {p}")),

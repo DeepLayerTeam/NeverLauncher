@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Host-only Microsoft -> XBL -> XSTS -> Minecraft Java token exchange.
+"""Обмен токенов Microsoft -> XBL -> XSTS -> Minecraft Java только на хосте.
 
-Operator must authorize a dedicated test Minecraft Java account once via
-public-client PKCE/device flow. The refresh token remains on the host and
-is mounted into the untrusted runtime container. Only a short-lived
-Minecraft access token is passed to the isolated worker.
+Оператор должен один раз авторизовать отдельную тестовую учётную запись Minecraft
+Java через PKCE или поток устройства публичного клиента. Токен обновления хранится
+на хосте и подключается к недоверенному контейнеру Runtime. Изолированному
+исполнителю передаётся только краткосрочный токен доступа Minecraft.
 """
 
 from __future__ import annotations

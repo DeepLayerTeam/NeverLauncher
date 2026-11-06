@@ -36,7 +36,7 @@ func parseDSN(raw string) (destination, error) {
 		return destination{}, errors.New("В DSN Sentry отсутствует публичный ключ или хост")
 	}
 	if _, hasPassword := u.User.Password(); hasPassword {
-		return destination{}, errors.New("Не поддерживается: «Sentry DSN secret key»")
+		return destination{}, errors.New("Не поддерживается: «секретный ключ DSN Sentry»")
 	}
 	if u.Scheme != "https" { // HTTP допускается только через loopback, что удобно для локальных развёртываний.
 		if u.Scheme != "http" || (u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil || (net.ParseIP(u.Hostname()) != nil && !net.ParseIP(u.Hostname()).IsLoopback())) {

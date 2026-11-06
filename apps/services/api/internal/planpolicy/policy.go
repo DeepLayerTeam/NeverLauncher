@@ -95,7 +95,7 @@ func Load(now time.Time) (Policy, error) {
 	}
 	sig, e := hex.DecodeString(env.Signature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(key, append([]byte(Domain), payload...), sig) {
-		return out, errors.New("Некорректное значение: «ServerBridge policy signature»")
+		return out, errors.New("Некорректное значение: «подпись политики ServerBridge»")
 	}
 	if e = json.Unmarshal(payload, &out); e != nil {
 		return out, e

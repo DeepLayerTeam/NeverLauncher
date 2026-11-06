@@ -91,7 +91,7 @@ func (r *SQLRepository) EndTextureSnapshot02511(ctx context.Context, token strin
 		return err
 	}
 	if len(token) != 64 {
-		return errors.New("Некорректное значение: «backup lease token»")
+		return errors.New("Некорректное значение: «токен аренды резервной копии»")
 	}
 	_, err := r.db.ExecContext(ctx, `DELETE FROM texture_backup_pins WHERE lease_token=$1`, token)
 	return err

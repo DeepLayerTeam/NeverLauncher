@@ -266,7 +266,7 @@ def verify_update_payload_0410(
                 and len(members[actual_member]) == entry["size"]
                 and hashlib.sha256(members[actual_member]).hexdigest()
                 == entry["sha256"],
-                "installed update component bytes differ: " + role,
+                "байты установленного компонента после обновления отличаются: " + role,
             )
             if role == "package-manifest":
                 expected_path = ("launcher/" if system == "linux" else "") + (

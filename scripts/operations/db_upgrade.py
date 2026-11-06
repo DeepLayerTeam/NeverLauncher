@@ -45,7 +45,7 @@ def exec_checked(command: list[str], *, timeout=1800):
     if result.returncode:
         # Вывод инструментов может содержать учётные данные; никогда не печатайте
         # необработанные stdout/stderr.
-        raise UpgradeError(f'{command[0]} exited {result.returncode}')
+        raise UpgradeError(f'{command[0]} завершилась с кодом {result.returncode}')
     return result.stdout
 
 

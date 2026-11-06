@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Execute the final Gravit migration acceptance against *live* external systems.
+"""Выполняет окончательную приёмку миграции Gravit с *реальными* внешними системами.
 
-Never executes Gravit JARs. The existing Go Migration GA verifier must validate
-signed 36-check evidence and re-query PostgreSQL-backed Backend; then all 19
-approved module behavior probes run as real, hash-pinned executables. This tool
-cannot manufacture Minecraft sessions, signed installers or reviewer approval.
+JAR Gravit не запускаются. Существующая Go-проверка Migration GA обязана проверить
+подписанные свидетельства 36 проверок и повторно запросить Backend с PostgreSQL;
+затем все 19 утверждённых проверок поведения модулей запускаются как реальные
+исполняемые файлы с закреплёнными хешами. Утилита не может подделать сеансы
+Minecraft, подписанные установщики или утверждение проверяющего.
 """
 from __future__ import annotations
 
@@ -110,7 +111,7 @@ def execute(argv: list[str], *, timeout: int, env: dict[str, str], max_out: int 
 
 
 def clean_env() -> dict[str, str]:
-    # Module probes must receive no Backend bearer, signing key or database DSN.
+    # Проверки модулей не должны получать bearer-токен Backend, ключ подписи или DSN базы данных.
     forbidden = ("TOKEN", "SECRET", "PASSWORD", "PRIVATE", "SIGNING", "DSN", "KEY", "CREDENTIAL", "AUTH")
     return {k: v for k, v in os.environ.items()
             if not any(x in k.upper() for x in forbidden) and k not in ("PYTHONPATH", "PYTHONHOME")}
@@ -255,7 +256,7 @@ def check_modules(cfg: dict, refs: dict, output: Path) -> list[dict]:
                 "Доказательства модуля не были созданы текущим запуском: " + module)
         result.append({"moduleId": module, "referenceClass": cls, "executableSha256": probe["executableSha256"],
                        "evidenceSha256": eh, "observationSha256": digest(stdout), "observations": events})
-        # Preserve raw evidence privately, not only its checksum. No overwrite.
+        # Сохраняйте исходные свидетельства конфиденциально, а не только их хеш. Перезапись запрещена.
         dest = output / (module + ".evidence")
         with evidence.open("rb") as source, dest.open("xb") as target:
             os.chmod(dest, 0o600)
@@ -291,12 +292,12 @@ def run(cfg: dict, output: Path) -> dict:
             "Выходной каталог доказательств должен быть новым, пустым и иметь права 0700")
     cohort = doc(Path(cfg["rehearsalReport"]), private=True)
     refs, commit, release = check_migration(cfg, cohort)
-    # Go checker uses the real TLS Backend and verifies ALL 36 signed E2E probes,
-    # their preserved raw evidence, active PostgreSQL route and distinct projects.
+    # Go-проверка подключается к реальному TLS Backend и проверяет ВСЕ 36 подписанных E2E-тестов,
+    # их исходные свидетельства, действующий маршрут PostgreSQL и разные проекты.
     live_certificate_verification(cfg, refs)
     tests = check_modules(cfg, refs, output)
-    # After untrusted module probes, re-query the Backend again: a revoked or
-    # rolled-back release cannot be approved based on the earlier live read.
+    # После недоверенных проверок модулей повторно запросите Backend: отозванный
+    # или откатанный релиз нельзя утвердить по прежним данным.
     live_certificate_verification(cfg, refs)
     report = {"format": FORMAT, "commitSha": commit, "targetReleaseSha256": release,
               "references": [{"referenceClass": item["referenceClass"],

@@ -251,11 +251,11 @@ def local_compat_observe_0516(directory, project):
         raw = inventory.execute(["docker", "exec", container, "wget", "-qO-", "-T", "5",
                                  "http://127.0.0.1:8080" + path], timeout=9)
         if len(raw) > 512_000:
-            raise DeploymentError("Превышен допустимый размер: «HTTP API compatibility response»")
+            raise DeploymentError("Превышен допустимый размер: «ответ совместимости HTTP API»")
         try:
             data = json.loads(raw)
         except ValueError as exc:
-            raise DeploymentError("Некорректное значение: «HTTP API compatibility response»") from exc
+            raise DeploymentError("Некорректное значение: «ответ совместимости HTTP API»") from exc
         if not isinstance(data, dict):
             raise DeploymentError("HTTP API compatibility response: требуется объект JSON")
         return data

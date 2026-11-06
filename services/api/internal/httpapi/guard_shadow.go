@@ -88,7 +88,7 @@ func guardShadowMAC05012(key []byte, message string) string {
 
 func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason string, elapsed time.Duration) error {
 	if correlation == "" || nodeID == "" || (outcome != "allowed" && outcome != "revoked") {
-		return errors.New("Некорректное значение: «Guard shadow observation»")
+		return errors.New("Некорректное значение: «теневое наблюдение Guard»")
 	}
 	if !guardShadowReason05012.MatchString(reason) {
 		reason = "unspecified"
@@ -168,7 +168,7 @@ func recordGuardShadow05012(version, nodeID, correlation, outcome, reason string
 		return guardShadowGlobal05012.err
 	}
 	if guardShadowGlobal05012.journal.version != version {
-		return errors.New("Несовпадение: «Guard shadow active journal version»")
+		return errors.New("Несовпадение: «версия активного журнала теневой проверки Guard»")
 	}
 	return guardShadowGlobal05012.journal.observe(nodeID, correlation, outcome, reason, elapsed)
 }

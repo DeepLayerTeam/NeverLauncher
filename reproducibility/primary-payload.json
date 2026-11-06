@@ -1,7 +1,7 @@
 {
   "schema": "neverlauncher.primary-payload.v1",
   "version": "0.53.0",
-  "scope": "six real OS/CPU unsigned artifacts; native independent comparison and separately signed final-byte acceptance required",
+  "scope": "шесть реальных неподписанных артефактов для сочетаний ОС/ЦП; требуются независимое нативное сравнение и отдельная приёмка подписанного окончательного содержимого",
   "targets": {
     "windows-x64": "launcher-desktop-0.53.0-windows-x64.zip",
     "windows-arm64": "launcher-desktop-0.53.0-windows-arm64.zip",

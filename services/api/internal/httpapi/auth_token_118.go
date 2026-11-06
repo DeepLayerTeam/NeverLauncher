@@ -43,7 +43,7 @@ func (s Server) authTokenKeys118() (string, map[string]string, error) {
 	keys := map[string]string{}
 	if raw := strings.TrimSpace(s.Config.AuthTokenKeysJSON); raw != "" {
 		if err := json.Unmarshal([]byte(raw), &keys); err != nil {
-			return "", nil, fmt.Errorf("Некорректное значение: «auth token keyring»: %w", err)
+			return "", nil, fmt.Errorf("Некорректное значение: «хранилище ключей токенов авторизации»: %w", err)
 		}
 	}
 	if len(keys) == 0 {

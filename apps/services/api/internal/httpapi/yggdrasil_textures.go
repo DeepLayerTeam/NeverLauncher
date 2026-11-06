@@ -73,7 +73,7 @@ func (s Server) textureDomains0256() ([]string, error) {
 	}
 	host := strings.ToLower(u.Hostname())
 	if u.Path != "" && u.Path != "/" {
-		return nil, errors.New("Публичный URL: требуется «API origin without path»")
+		return nil, errors.New("Публичный URL: требуется «адрес начала API без пути»")
 	}
 	if u.Scheme != "https" && (config.IsProductionEnvironment(s.Config.Environment) || u.Scheme != "http") {
 		return nil, errors.New("Источник текстуры должен использовать HTTPS")
@@ -203,7 +203,7 @@ func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (
 		return record, nil
 	}
 	if s.State == nil || s.State.ServerBridge == nil {
-		return bridgeTextureRecord{}, errors.New("Недоступно: «Yggdrasil texture state»")
+		return bridgeTextureRecord{}, errors.New("Недоступно: «состояние текстуры Yggdrasil»")
 	}
 	record := s.State.ServerBridge.textureFor(uuid, name)
 	record.UUID, record.Username = uuid, name

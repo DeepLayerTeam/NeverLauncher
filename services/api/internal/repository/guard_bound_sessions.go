@@ -109,7 +109,7 @@ func (r *SQLRepository) ListDueGuardBoundSessions0507(ctx context.Context, node 
 		return nil, err
 	}
 	if max < 1 || max > 128 {
-		return nil, fmt.Errorf("Некорректное значение: «Guard recheck batch size»")
+		return nil, fmt.Errorf("Некорректное значение: «размер пакета повторной проверки Guard»")
 	}
 	qualifiedColumns := "g." + strings.ReplaceAll(guardBoundColumns0507, ",", ",g.")
 	rows, err := r.db.QueryContext(ctx, `SELECT `+qualifiedColumns+`,p.user_id,p.session_id,p.minecraft_session_id,p.trusted_device_id,p.binding_epoch,p.project_id,p.profile_id,p.channel,p.username,p.player_uuid FROM server_bridge_guard_sessions_0507 g JOIN server_bridge_player_sessions_v3 p USING(correlation_id)
@@ -182,7 +182,7 @@ func (r *SQLRepository) InvalidateGuardBoundSession0507(ctx context.Context, cor
 		return false, err
 	}
 	if !validPlayerCorrelation0197(correlation) || strings.TrimSpace(reason) == "" {
-		return false, errors.New("Некорректное значение: «Guard revocation input»")
+		return false, errors.New("Некорректное значение: «данные отзыва Guard»")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Run a three-project Gravit import, *real* Minecraft rehearsal and signed client update.
+"""Выполняет импорт трёх проектов Gravit, *реальную* репетицию Minecraft и
+обновление подписанного клиента.
 
-Only existing NeverLauncher CLI runtime paths are used. Rehearsal after update
-is an intentionally LOCAL witness: the MIG10 Backend receipt is immutable.
-This tool cannot sign GA, forge receipts, or perform production cutover.
+Используются только существующие пути выполнения NeverLauncher CLI.
+Репетиция после обновления намеренно является ЛОКАЛЬНЫМ свидетельством:
+квитанция MIG10 Backend неизменяема. Утилита не может подписать результат GA,
+подделать квитанции или переключить рабочую среду.
 """
 from __future__ import annotations
 
@@ -100,7 +102,7 @@ def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) 
     require(isinstance(name, str) and name.startswith("/") and isinstance(digest, str)
             and bool(HEX.fullmatch(digest)), "Требуются абсолютный путь к файлу и ожидаемый SHA-256")
     path = Path(name)
-    # Hash an inode-pinned stream; fail if input changed or is linked.
+    # Хешируйте поток с закреплённым inode; завершайте с ошибкой при изменении файла или ссылке.
     stream, st = _checked_open(path, limit)
     with stream:
         h = hashlib.sha256()
@@ -185,9 +187,9 @@ def preflight(config: dict, output: Path) -> list[dict]:
         require(pkg != source and delivery != source, "Исходный пакет и пакет обновления должны различаться")
         component = within(root, p.get("installedComponent"))
         regular_bytes(component, 256 << 20)
-        # Tie both Minecraft launch witnesses to the *actual updated executable*.
-        # A stable wrapper could otherwise launch an old client while a different
-        # runtime file was successfully updated, creating false upgrade evidence.
+        # Привязывайте оба свидетельства запуска Minecraft к *реально обновлённому исполняемому файлу*.
+        # Иначе неизменённая оболочка могла бы запустить старый клиент, пока другой
+        # файл Runtime обновился, создав ложное свидетельство успешного обновления.
         require(root.is_relative_to(stage) and isinstance(live.get("clientPath"), str),
                 "Реальная установка клиента должна находиться внутри изолированного стенда")
         require(within(stage, live["clientPath"]) == component,
@@ -209,7 +211,7 @@ def preflight(config: dict, output: Path) -> list[dict]:
 
 
 def cli(launcher: str, args: list[str], timeout: int = 1800) -> None:
-    # Never put the operator bearer token into process arguments or the report.
+    # Никогда не помещайте bearer-токен оператора в аргументы процесса или отчёт.
     env = dict(os.environ)
     with open(os.devnull, "wb") as sink:
         try:

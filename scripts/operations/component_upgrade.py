@@ -47,7 +47,7 @@ def run(args, *, timeout=600, env=None):
     result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             check=False, timeout=timeout, env=env)
     if result.returncode:
-        raise ComponentError(f'{args[0]} failed (exit={result.returncode})')
+        raise ComponentError(f'{args[0]} завершилась с ошибкой (код выхода={result.returncode})')
     return result.stdout
 
 

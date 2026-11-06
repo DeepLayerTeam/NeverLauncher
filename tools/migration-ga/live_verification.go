@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// A sealed certificate is historical evidence. This check queries the live
-// backend again before final Migration GA promotion, so a rollback, revocation
-// or revised inventory cannot be hidden by a valid historical signature.
+// Запечатанный сертификат — историческое свидетельство. Перед окончательной
+// приёмкой Migration GA повторно опрашивается действующий Backend, чтобы откат,
+// отзыв или изменение инвентаризации не скрывались старой действительной подписью.
 func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) error {
 	if strings.TrimSpace(token) == "" {
 		return errors.New("Проверка GA на действующей системе: требуется токен серверной части")
@@ -66,8 +66,8 @@ func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) er
 	return nil
 }
 
-// Called only after verifying the signatures and all retained evidence. Every
-// reference has a separate trusted plan and is rechecked at promotion time.
+// Вызывается только после проверки подписей и всех сохранённых свидетельств.
+// Каждый эталон имеет собственный доверенный план и повторно проверяется при приёмке.
 func verifyCohortLive(ctx context.Context, inputs map[string]CohortInput, plans map[string]string, token string) error {
 	for _, class := range referenceClasses {
 		file := plans[class]
@@ -106,8 +106,8 @@ func loadCohortPlanPaths(single, modded, network string) map[string]string {
 	return map[string]string{"fileauth-single": single, "sql-modded": modded, "proxy-network": network}
 }
 
-// Guard accidental execution of an offline verify as a GA promotion. Operator
-// automation uses this distinct command and must provide three live plans.
+// Исключите случайный запуск офлайн-проверки как приёмки GA. Автоматизация
+// оператора использует отдельную команду и должна передать три действующих плана.
 func verifyCohortLiveCommand(ctx context.Context, key string, cohort map[string]CohortInput, planFiles map[string]string) error {
 	if err := verifyCohort(key, cohort); err != nil {
 		return err

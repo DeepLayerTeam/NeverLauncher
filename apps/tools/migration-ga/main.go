@@ -1,6 +1,6 @@
-// Migration Center GA evidence runner. This binary does not declare a deployment
-// production-ready merely because an administrator reviewed a migration report:
-// it executes the configured independent checks and seals their actual output.
+// Средство сбора свидетельств для Migration Center GA. Эта программа не считает
+// развёртывание готовым к эксплуатации лишь после изучения отчёта администратором:
+// она выполняет независимые проверки и подписывает их фактические результаты.
 package main
 
 import (
@@ -49,10 +49,10 @@ func referenceClassValid(s string) bool {
 
 var gravit57 = regexp.MustCompile(`^5\.7\.[0-9]+$`)
 
-// These checks are executable operator probes, not claims of universal loader
-// support. A reference project only exercises the features it actually uses;
-// combined coverage includes FileAuth, SQL, official auth, two loaders,
-// optional files, textures, source-port modules and safe cutover/return.
+// Эти исполняемые проверки оператора не гарантируют поддержку всех загрузчиков.
+// Эталонный проект проверяет только используемые им возможности; суммарный охват
+// включает FileAuth, SQL, официальную авторизацию, два загрузчика, необязательные
+// файлы, текстуры, перенос модулей и безопасное переключение с возвратом.
 var commonChecks = []string{
 	"uuid-world-plugin-data", "admin-permissions", "desktop-cache-install",
 	"staged-cutover-canary", "operational-rollback-drill",
@@ -114,8 +114,8 @@ type Decision struct {
 	Revision int64  `json:"revision"`
 }
 
-// This mirrors the backend's v1 report wire schema, including Go's canonical
-// struct field order, so a receipt cannot be rebound to an altered report.
+// Повторяется сетевой формат отчёта Backend v1, включая канонический порядок
+// полей структуры Go: свидетельство нельзя перепривязать к изменённому отчёту.
 type Report struct {
 	Format          string         `json:"format"`
 	RunID           string         `json:"runId"`
@@ -358,9 +358,9 @@ func checkBackendURL(raw string) error {
 	return nil
 }
 
-// sourceJarVersion verifies the actual LaunchServer binary contained in MIG03,
-// not the operator's version claim. This intentionally accepts only manifests
-// carrying an explicit Gravit/LaunchServer product identity.
+// sourceJarVersion проверяет реальный бинарный файл LaunchServer из MIG03,
+// а не заявленную оператором версию. Принимаются только манифесты с явно
+// указанной идентичностью продукта Gravit/LaunchServer.
 func sourceJarEvidence(archivePath string) (string, string, error) {
 	outer, err := zip.OpenReader(archivePath)
 	if err != nil {
@@ -495,8 +495,8 @@ func validatePlan(p Plan) error {
 	return nil
 }
 
-// boundedOutput aborts checks that try to emit unbounded JSON on stdout.
-// Stderr is intentionally not collected (it can contain access tokens).
+// boundedOutput прерывает проверки с неограниченным выводом JSON в stdout.
+// Stderr намеренно не собирается: он может содержать токены доступа.
 type boundedOutput struct {
 	data  bytes.Buffer
 	limit int
@@ -518,7 +518,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	defer cancel()
 	exe := exec.CommandContext(cctx, c.Command[0], c.Command[1:]...)
 	exe.Dir = filepath.Dir(p.SourceArchive)
-	// No backend credentials or signing keys are exposed to test subprocesses.
+	// Учётные данные Backend и ключи подписи не передаются тестовым подпроцессам.
 	env := []string{}
 	for _, s := range os.Environ() {
 		if strings.HasPrefix(s, "LAUNCHER_MIGRATION_GA_") || strings.HasPrefix(s, "LAUNCHER_ADMIN_TOKEN=") || strings.HasPrefix(s, "MIGRATION_GA_") {
@@ -529,12 +529,12 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	exe.Env = env
 	stdout := &boundedOutput{limit: 4 << 20}
 	exe.Stdout = stdout
-	// Check stderr can contain credentials; never allow it into CI logs.
+	// Stderr проверки может содержать учётные данные: не записывайте его в журналы CI.
 	exe.Stderr = io.Discard
 	started := time.Now()
 	e := exe.Run()
 	out := stdout.data.Bytes()
-	// A replaced test executable cannot contribute to a signed GA result.
+	// Подменённая тестовая программа не может участвовать в подписанном результате GA.
 	if err := verifyExecutable(c); err != nil {
 		return result, fmt.Errorf("Исполняемый файл проверки %s был изменён: %w", c.Name, err)
 	}
@@ -676,9 +676,9 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	return nil
 }
 
-// writePrivate publishes a fully fsynced file without ever replacing an
-// existing GA result. Linking the temp file provides an atomic no-overwrite
-// publish operation on the destination filesystem.
+// writePrivate публикует полностью синхронизированный файл, не заменяя
+// существующий результат GA. Жёсткая ссылка на временный файл обеспечивает
+// атомарную публикацию без перезаписи в целевой файловой системе.
 func writePrivate(path string, data []byte) error {
 	if path == "" {
 		return errors.New("Требуется: путь вывода")

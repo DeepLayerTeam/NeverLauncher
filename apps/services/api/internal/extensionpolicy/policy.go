@@ -28,7 +28,7 @@ var hostname = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$`)
 
 func normalizedSet(values []string, check func(string) bool) ([]string, error) {
 	if len(values) > 128 {
-		return nil, errors.New("Превышен допустимый размер: «sandbox grant list»")
+		return nil, errors.New("Превышен допустимый размер: «список разрешений песочницы»")
 	}
 	m := make(map[string]bool, len(values))
 	for _, v := range values {
@@ -92,7 +92,7 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, err
 	}
 	if p.MaxProcesses < 0 || p.MaxProcesses > 128 || p.MaxMemoryBytes < 0 || p.MaxMemoryBytes > 64<<30 || p.MaxCPUPercent < 0 || p.MaxCPUPercent > 100 || p.TimeoutSeconds < 0 || p.TimeoutSeconds > 86400 {
-		return nil, errors.New("Некорректное значение: «sandbox resource limit»")
+		return nil, errors.New("Некорректное значение: «лимит ресурсов песочницы»")
 	}
 	if p.MaxRequestsPerSecond < 0 || p.MaxRequestsPerSecond > 64 || p.MaxOutputBytes < 0 || p.MaxOutputBytes > 8<<20 {
 		return nil, errors.New("Ограничение частоты IPC или объёма вывода изолированной среды превышает максимальное значение хоста")

@@ -81,14 +81,14 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 	decoder.DisallowUnknownFields()
 	var all []validationTarget0346
 	if err := decoder.Decode(&all); err != nil {
-		return nil, "", fmt.Errorf("Некорректное значение: «target policy»: %w", err)
+		return nil, "", fmt.Errorf("Некорректное значение: «целевая политика»: %w", err)
 	}
 	var trailing any
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		return nil, "", errors.New("JSON политики целей некорректен или содержит лишние данные")
 	}
 	if len(all) == 0 || len(all) > 128 {
-		return nil, "", errors.New("Некорректное значение: «target policy size»")
+		return nil, "", errors.New("Некорректное значение: «размер целевой политики»")
 	}
 	relevant := make([]validationTarget0346, 0)
 	ids := map[string]bool{}
@@ -128,7 +128,7 @@ func matchingTarget0346(p validationPayload0345, t validationTarget0346) bool {
 func validationKeyFingerprint0346(key string) (string, error) {
 	decoded, err := base64.RawURLEncoding.DecodeString(key)
 	if err != nil || len(decoded) != ed25519.PublicKeySize {
-		return "", errors.New("Недоступно: «validation trust key»")
+		return "", errors.New("Недоступно: «ключ доверия проверки»")
 	}
 	h := sha256.Sum256(decoded)
 	return hex.EncodeToString(h[:]), nil
@@ -173,7 +173,7 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 	}
 	revoked, err := store.IsValidationKeyRevoked0346(ctx, p.SignerKeyID)
 	if err != nil {
-		return fmt.Errorf("Недоступно: «key revocation store»: %w", err)
+		return fmt.Errorf("Недоступно: «хранилище отозванных ключей»: %w", err)
 	}
 	if revoked {
 		return errors.New("Ключ подписанта подтверждения проверки отозван")

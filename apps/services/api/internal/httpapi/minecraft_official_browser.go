@@ -30,7 +30,7 @@ func validateOfficialBrowserRequest0263(v officialBrowserRequest0263) error {
 		return err
 	}
 	if len(v.Code) < 8 || len(v.Code) > 4096 || strings.ContainsAny(v.Code, "\r\n\x00") {
-		return errors.New("Некорректное значение: «authorization code»")
+		return errors.New("Некорректное значение: «код авторизации»")
 	}
 	return nil
 }

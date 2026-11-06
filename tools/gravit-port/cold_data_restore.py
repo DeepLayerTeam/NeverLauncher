@@ -216,7 +216,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
         co.require(entries(target) == files, "После восстановления контрольная сумма данных не совпадает: оставьте входящий трафик закрытым")
         record("verified_installed")
     except BaseException:
-        # A crash in the rename window is recoverable using the retained old folder.
+        # После сбоя во время переименования можно восстановиться из сохранённой старой папки.
         if not target.exists() and old.is_dir() and not old.is_symlink():
             os.replace(old, target)
             record("restored_previous_after_failure")
@@ -224,7 +224,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
 
 
 def recover(target: Path, manifest: dict, directory: Path, run_id: str):
-    """Reconcile durable rename journal after kill/power loss; never overwrite data."""
+    """Восстанавливайте устойчивый журнал переименования после завершения процесса или сбоя питания; не перезаписывайте данные."""
     files = validate_manifest(manifest, run_id)
     journal = directory / "file-restore-state.json"
     state = co.document(journal, 16384)
@@ -239,8 +239,8 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
     co.require(stage.is_absolute() and stage.parent == target.parent and
                stage.name.startswith(".never-restoring-"), "Небезопасный путь к подготовленным файлам восстановления")
     phase = state.get("phase")
-    # A .next file left by a killed process is not authoritative; the old
-    # atomically replaced journal is the last durable state. Reject links.
+    # Оставшийся после завершения процесса файл .next не является достоверным; старый
+    # атомарно заменённый журнал отражает последнее устойчивое состояние. Ссылки запрещены.
     nextfile = journal.with_name(journal.name + ".next")
     if nextfile.exists() or nextfile.is_symlink():
         st = nextfile.lstat()

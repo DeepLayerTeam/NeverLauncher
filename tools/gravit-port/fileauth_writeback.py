@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Explicit OFFLINE FileAuthSystem Database.json maintenance.
+"""Явное ОФЛАЙН-обслуживание FileAuthSystem Database.json.
 
-Requires Gravit/other writers STOPPED. NeverLauncher live federation remains
-read-only; this utility edits the authoritative file with an operator-pinned
-SHA256, an exclusive local lock and a durable preimage backup. Sessions.json,
-roles, keys and imported session credentials are never touched. Linux/POSIX.
+Требуется ОСТАНОВКА Gravit и всех остальных процессов записи. Действующая
+федерация NeverLauncher остаётся доступной только для чтения. Утилита изменяет
+основной файл с закреплённым оператором SHA256, исключительной локальной
+блокировкой и устойчивой резервной копией исходного состояния. Файлы Sessions.json,
+роли, ключи и импортированные данные сеансов не затрагиваются. Linux/POSIX.
 """
 
 import argparse
@@ -94,8 +95,8 @@ def change(data, *, operation, user_uuid, username="", secret=b"", allow_legacy=
         if not accounts:
             raise WritebackError("Удаление последней учётной записи запрещено")
     elif operation == "set-password":
-        # Strict, explicit compat-only legacy hash to avoid any silent format
-        # change which might lock all users out of the upstream Gravit server.
+        # Строгая явная поддержка устаревшего хеша только для совместимости, чтобы избежать
+        # незаметного изменения формата и потери доступа всех пользователей к серверу Gravit.
         if not allow_legacy or password_format != "sha256-hex":
             raise WritebackError("Для записи SHA-256 в устаревшем формате нужны --password-format sha256-hex и --allow-weak-legacy-hash")
         if not 1 <= len(secret) <= 4096 or not DIGEST.fullmatch(account["password"].lower()):
@@ -139,8 +140,8 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
         secret = read_regular(Path(password_file), max_bytes=4096)
     elif password_file is not None:
         raise WritebackError("Файл паролей не поддерживается для этой операции")
-    # flock serializes cooperating maintenance invocations. External Gravit
-    # processes don't obey this lock, hence the enforced operator precondition.
+    # flock упорядочивает согласованные вызовы обслуживания. Внешние процессы Gravit
+    # не соблюдают эту блокировку, поэтому обязательна предварительная проверка оператора.
     lock_path = source.with_name(".FileAuthSystem.writeback.lock")
     lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(lock_fd, "a+b") as lock:
@@ -166,8 +167,8 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
                 os.fsync(dest.fileno())
             if hashlib.sha256(read_regular(source)).hexdigest() != digest:
                 raise WritebackError("Источник изменился до фиксации")
-            # A preimage hardlink remains intact after atomic replace and is
-            # created without clobbering another operator's existing backup.
+            # Жёсткая ссылка на исходный снимок сохраняется после атомарной замены и
+            # создаётся без перезаписи уже существующей копии другого оператора.
             os.link(source, backup, follow_symlinks=False)
             fsync_directory(source.parent)
             os.replace(name, source)

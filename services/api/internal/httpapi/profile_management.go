@@ -57,7 +57,7 @@ func (s Server) profileSnapshotAt0225(project, id string, revision int64) (model
 	}
 	reader, ok := s.Repo.(profileRevisionReader0221)
 	if !ok {
-		return model.ProfileSnapshot{}, errors.New("Недоступно: «profile revision history»")
+		return model.ProfileSnapshot{}, errors.New("Недоступно: «история версий профиля»")
 	}
 	history, err := reader.ListProfileRevisions(project, id)
 	if err != nil {

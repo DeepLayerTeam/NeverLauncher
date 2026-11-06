@@ -8,32 +8,32 @@
   },
   "policy": {
     "statuses": {
-      "partial": "Sources exist but literal/full functional parity is not certified",
-      "planned": "Outcome not yet implemented/tested",
-      "blocked": "Intentionally unsupported unsafe behavior",
-      "verified": "Only valid with signed cross-platform attestation; none claimed in 0.30.1"
+      "partial": "Исходный код существует, но точное и полное функциональное соответствие не подтверждено",
+      "planned": "Функциональность пока не реализована или не проверена",
+      "blocked": "Небезопасное поведение намеренно не поддерживается",
+      "verified": "Действительно только при подписанной межплатформенной аттестации; для версии 0.30.1 она не заявлена"
     },
-    "verification": "0.30.12 certifies executable integration checks separately; existing partial M01-M19 entries are not upgraded to full upstream module parity merely because a test passed. 0.30.11 and 0.30.1 historical records remain unchanged."
+    "verification": "Версия 0.30.12 отдельно подтверждает исполняемые интеграционные проверки; ранее частичные записи M01–M19 не становятся полным соответствием модулю исходного проекта лишь из-за успешного теста. Исторические записи 0.30.11 и 0.30.1 остаются без изменений."
   },
   "modules": [
     {
       "id": "M01",
       "upstreamModule": "AdditionalHash",
       "status": "partial",
-      "equivalent": "Legacy digest, double-digest, PHPass verification and rehash policy in SQL connector; module options not 1:1.",
+      "equivalent": "Проверка устаревших хешей, двойных хешей и PHPass, а также политика повторного хеширования в SQL-коннекторе; параметры модуля не соответствуют один к одному.",
       "sourceRefs": [
         "services/api/internal/sqlconnector/password_gravit_0294.go"
       ],
       "testRefs": [
         "services/api/internal/sqlconnector/legacy_gravit_0294_test.go"
       ],
-      "limitations": "No proof for every upstream AdditionalHash algorithm or stored credential format."
+      "limitations": "Соответствие всем алгоритмам AdditionalHash и форматам хранимых учётных данных исходного проекта не подтверждено."
     },
     {
       "id": "M02",
       "upstreamModule": "DiscordGame",
       "status": "partial",
-      "equivalent": "Discord IPC SET_ACTIVITY (login/profile/play) and optional HTTPS activity button; no client dependency on Discord",
+      "equivalent": "Discord IPC SET_ACTIVITY (вход/профиль/игра) и необязательная кнопка активности HTTPS; клиент не зависит от Discord",
       "sourceRefs": [
         "cli/internal/discordrpc/client.go",
         "cli/cmd/launcher/lan_discord_0308.go"
@@ -41,13 +41,13 @@
       "testRefs": [
         "cli/internal/discordrpc/client_test.go"
       ],
-      "limitations": "Live Discord client acceptance, Social SDK lobby/peer features and cross-platform IPC are not certified."
+      "limitations": "Работа с реальным клиентом Discord, лобби/подключениями Social SDK и межплатформенным IPC не сертифицирована."
     },
     {
       "id": "M03",
       "upstreamModule": "FileAuthSystem",
       "status": "partial",
-      "equivalent": "FileAuth JSON migration and Argon2id-enabled local authentication.",
+      "equivalent": "Миграция FileAuth JSON и локальная авторизация с поддержкой Argon2id.",
       "sourceRefs": [
         "services/api/internal/fileauth/database_0295.go",
         "services/api/internal/repository/local_auth_0295.go"
@@ -55,13 +55,13 @@
       "testRefs": [
         "services/api/internal/fileauth/database_0295_test.go"
       ],
-      "limitations": "One-time import, not a live file-based authentication provider."
+      "limitations": "Однократный импорт, а не действующий файловый провайдер авторизации."
     },
     {
       "id": "M04",
       "upstreamModule": "FxRuntimeOptimizer",
       "status": "partial",
-      "equivalent": "Desktop Vite code-split lazy modules, idle prewarming, deterministic SHA-256 prebuilt asset index verified before packaging",
+      "equivalent": "Ленивая загрузка модулей Desktop Vite с разделением кода, предварительный прогрев при простое и детерминированный индекс SHA-256 ресурсов, проверяемый перед упаковкой",
       "sourceRefs": [
         "apps/desktop/src/startup_optimizer_03011.ts",
         "scripts/desktop/prebuild_assets_03011.mjs"
@@ -70,39 +70,39 @@
         "scripts/desktop/prebuild_assets_03011.test.mjs",
         "scripts/desktop/startup_prewarmer_03011.test.mjs"
       ],
-      "limitations": "No JavaFX CSS to BSS conversion. Real cold-start benchmark and native platform E2E are not attested."
+      "limitations": "Преобразование JavaFX CSS в BSS отсутствует. Замеры холодного старта и нативные сквозные проверки платформ не аттестованы."
     },
     {
       "id": "M05",
       "upstreamModule": "GenerateCertificate",
       "status": "partial",
-      "equivalent": "Certificate verification and signed release workflows.",
+      "equivalent": "Проверка сертификатов и процессы выпуска подписанных релизов.",
       "sourceRefs": [
         "cli/cmd/launcher/compatibility_release_certificate.go"
       ],
       "testRefs": [
         "cli/cmd/launcher/compatibility_release_certificate_test.go"
       ],
-      "limitations": "No full Gravit certificate generation workflow equivalence test."
+      "limitations": "Полная эквивалентность процесса выпуска сертификатов Gravit не проверена."
     },
     {
       "id": "M06",
       "upstreamModule": "LauncherGuard",
       "status": "partial",
-      "equivalent": "Attestation and Guard integration for launcher protection.",
+      "equivalent": "Аттестация и интеграция Guard для защиты лаунчера.",
       "sourceRefs": [
         "services/api/internal/httpapi/guard_attestation_v2_01810.go"
       ],
       "testRefs": [
         "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
       ],
-      "limitations": "Does not certify every LauncherGuard platform and bypass-resistance scenario."
+      "limitations": "Не подтверждены все платформы LauncherGuard и сценарии устойчивости к обходу защиты."
     },
     {
       "id": "M07",
       "upstreamModule": "LauncherStartScreen",
       "status": "partial",
-      "equivalent": "Native desktop startup, authentication and profile UI.",
+      "equivalent": "Нативный запуск Desktop, авторизация и интерфейс профилей.",
       "sourceRefs": [
         "apps/desktop/src/main.tsx",
         "apps/desktop/src/desktop_experience_0229.ts"
@@ -110,26 +110,26 @@
       "testRefs": [
         "apps/desktop/tests/desktop_experience_0229.test.mjs"
       ],
-      "limitations": "JavaFX API hooks are not supported; visual startup/login/launch E2E needs verification."
+      "limitations": "Хуки JavaFX API не поддерживаются; сквозные проверки интерфейса запуска, входа и старта игры ещё необходимы."
     },
     {
       "id": "M08",
       "upstreamModule": "MirrorHelper",
       "status": "partial",
-      "equivalent": "MirrorHelper equivalents for verified asset operations, mod merges and authlib patching.",
+      "equivalent": "Аналоги MirrorHelper для проверенных операций с ресурсами, объединения модов и изменения authlib.",
       "sourceRefs": [
         "cli/cmd/launcher/mirror_helper_parity_0274.go"
       ],
       "testRefs": [
         "cli/cmd/launcher/mirror_helper_parity_0274_test.go"
       ],
-      "limitations": "No exhaustive command-by-command upstream verification across all loader versions."
+      "limitations": "Полная проверка каждой команды исходного проекта для всех версий загрузчиков отсутствует."
     },
     {
       "id": "M09",
       "upstreamModule": "MojangSupport",
       "status": "partial",
-      "equivalent": "Official Minecraft sign-in and Mojang-profile integration.",
+      "equivalent": "Официальный вход Minecraft и интеграция профилей Mojang.",
       "sourceRefs": [
         "apps/desktop/src/official_minecraft_0257.ts",
         "cli/cmd/launcher/official_ga_release_0270.go"
@@ -137,65 +137,65 @@
       "testRefs": [
         "cli/cmd/launcher/official_ga_release_0270_test.go"
       ],
-      "limitations": "Real account live-service and JVM launch are not attested by the local test alone."
+      "limitations": "Локальный тест сам по себе не подтверждает работу реальной учётной записи с онлайн-сервисом и запуск JVM."
     },
     {
       "id": "M10",
       "upstreamModule": "OpenSSLSignCode",
       "status": "partial",
-      "equivalent": "Windows PE/code-signing verification and publication gates.",
+      "equivalent": "Проверка PE-файлов Windows, подписей кода и условий публикации.",
       "sourceRefs": [
         "cli/cmd/launcher/windows_signing.go"
       ],
       "testRefs": [
         "cli/cmd/launcher/windows_signing_test.go"
       ],
-      "limitations": "No OpenSSLSignCode-specific command/format parity."
+      "limitations": "Соответствие командам и форматам OpenSSLSignCode не подтверждено."
     },
     {
       "id": "M11",
       "upstreamModule": "Prestarter",
       "status": "partial",
-      "equivalent": "Signed native prestarter bootstrap and verified rollback.",
+      "equivalent": "Подписанный нативный предварительный загрузчик и проверенный откат.",
       "sourceRefs": [
         "prestarter/prestarter.go"
       ],
       "testRefs": [
         "prestarter/prestarter_test.go"
       ],
-      "limitations": "Native bootstrap not Java Prestarter module; platform coverage requires independent execution."
+      "limitations": "Нативная начальная загрузка не является Java-модулем Prestarter; поддержка платформ требует независимых запусков."
     },
     {
       "id": "M12",
       "upstreamModule": "RemoteControl",
       "status": "partial",
-      "equivalent": "Scoped HTTPS RemoteControl for server host via ServerBridge.",
+      "equivalent": "HTTPS RemoteControl с ограниченными полномочиями для хоста сервера через ServerBridge.",
       "sourceRefs": [
         "cli/cmd/launcher/serverbridge_host_remote_0284.go"
       ],
       "testRefs": [
         "cli/cmd/launcher/serverbridge_host_remote_0284_test.go"
       ],
-      "limitations": "No generic reflection into Java LaunchServer internals."
+      "limitations": "Произвольный доступ через рефлексию к внутренним компонентам Java LaunchServer не предусмотрен."
     },
     {
       "id": "M13",
       "upstreamModule": "SentryProGuardUpload",
       "status": "partial",
-      "equivalent": "Release-bound upload of obfuscation mappings with UUID check and protected source maps",
+      "equivalent": "Загрузка карт обфускации с привязкой к релизу, проверкой UUID и защитой карт исходного кода",
       "sourceRefs": [
         "scripts/diagnostics/upload_release_0309.py"
       ],
       "testRefs": [
         "scripts/diagnostics/uploader_03011.test.mjs"
       ],
-      "limitations": "Production Sentry Cloud credentials and successful real mapping upload are not tested."
+      "limitations": "Производственные учётные данные Sentry Cloud и успешная фактическая загрузка карт не проверены."
     },
     {
       "id": "M14",
       "upstreamModule": "Sentry launcher module",
       "status": "partial",
-      "equivalent": "Optional redacted Desktop JS/JVM Sentry diagnostics",
+      "equivalent": "Необязательная диагностика Desktop JS/JVM через Sentry с удалением чувствительных данных",
       "sourceRefs": [
         "apps/desktop/src/sentry_diagnostics_0309.ts",
         "sdk/java/core/src/main/java/ru/launcher/sdk/core/SentryDiagnostics.java"
@@ -203,39 +203,39 @@
       "testRefs": [
         "scripts/desktop/desktop_diagnostics_03011.test.mjs"
       ],
-      "limitations": "Production Rust desktop E2E, consent persistence and cloud receipt require verification."
+      "limitations": "Необходимо проверить сквозные тесты производственного Rust Desktop, сохранение согласия и получение подтверждения от облака."
     },
     {
       "id": "M15",
       "upstreamModule": "Sentry server module",
       "status": "partial",
-      "equivalent": "Backend HTTP Sentry reporting and redaction",
+      "equivalent": "Передача диагностических HTTP-отчётов Backend в Sentry с удалением чувствительных данных",
       "sourceRefs": [
         "services/api/internal/sentrydiag/sentry.go"
       ],
       "testRefs": [
         "services/api/internal/sentrydiag/sentry_test.go"
       ],
-      "limitations": "Production Go backend full integration and live Sentry receipt are not attested."
+      "limitations": "Полная интеграция производственного Go Backend и получение отчётов реальным Sentry не аттестованы."
     },
     {
       "id": "M16",
       "upstreamModule": "SystemdNotifier",
       "status": "partial",
-      "equivalent": "Linux host systemd notify/watchdog and service lifecycle.",
+      "equivalent": "Уведомления systemd, контроль работоспособности и жизненный цикл служб хоста Linux.",
       "sourceRefs": [
         "cli/cmd/launcher/serverbridge_host_systemd_linux_02811.go"
       ],
       "testRefs": [
         "cli/cmd/launcher/serverbridge_host_systemd_linux_02811_test.go"
       ],
-      "limitations": "Systemd service support is host-scoped; no generic LaunchServer Java module."
+      "limitations": "Поддержка systemd ограничена хостом; универсального Java-модуля LaunchServer нет."
     },
     {
       "id": "M17",
       "upstreamModule": "UnsafeCommandPack",
       "status": "blocked",
-      "equivalent": "DevTools process/JAR inspection and debug identity are test-only, production unsafe commands intentionally forbidden.",
+      "equivalent": "Проверка процессов/JAR через DevTools и отладочная идентификация разрешены только для тестов; небезопасные команды в рабочей среде намеренно запрещены.",
       "sourceRefs": [
         "cli/internal/devtools/jar.go",
         "cli/internal/devtools/auth.go"
@@ -243,26 +243,26 @@
       "testRefs": [
         "cli/internal/devtools/devtools_test.go"
       ],
-      "limitations": "Intentional policy exception: unsafe classloader access to production LaunchServer or auth credentials is not implemented; full equivalence intentionally impossible."
+      "limitations": "Намеренное исключение из политики: небезопасный доступ к загрузчику классов рабочего LaunchServer или учётным данным не реализован; полное соответствие намеренно невозможно."
     },
     {
       "id": "M18",
       "upstreamModule": "mDNSClientside",
       "status": "partial",
-      "equivalent": "Explicit IPv4 multicast LAN discovery with separately pinned TLS certificate verification",
+      "equivalent": "Явное обнаружение LAN через IPv4 multicast с отдельной проверкой закреплённого TLS-сертификата",
       "sourceRefs": [
         "cli/internal/lanmdns/discovery.go"
       ],
       "testRefs": [
         "cli/internal/lanmdns/discovery_test.go"
       ],
-      "limitations": "IPv6, conflict handling and native desktop LAN UI are not certified."
+      "limitations": "IPv6, обработка конфликтов и нативный интерфейс LAN в Desktop не сертифицированы."
     },
     {
       "id": "M19",
       "upstreamModule": "mDNSServerside",
       "status": "partial",
-      "equivalent": "Constrained LAN mDNS publish with local interface TLS preflight and untrusted TXT fingerprint",
+      "equivalent": "Ограниченная публикация LAN через mDNS с предварительной TLS-проверкой локального интерфейса и недоверенным TXT-отпечатком",
       "sourceRefs": [
         "cli/internal/lanmdns/dns.go",
         "cli/internal/lanmdns/discovery.go"
@@ -270,7 +270,7 @@
       "testRefs": [
         "cli/internal/lanmdns/discovery_test.go"
       ],
-      "limitations": "Remote DNS-SD environments and multicast network segmentation are not certified."
+      "limitations": "Удалённые среды DNS-SD и сегментированные сети multicast не сертифицированы."
     }
   ]
 }

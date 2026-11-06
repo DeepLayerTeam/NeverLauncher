@@ -83,7 +83,7 @@ func VerifyBatch0492(b Batch0492) error {
 func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, project, target string, existing map[string]bool, inventory inv.Inventory, compatibility gd.Report, modules gm.Report, identities IdentityPreview, destinations []Destination) (Batch0492, error) {
 	out := Batch0492{Format: BatchFormat0492, RunID: run, ProjectID: project, SourceSHA256: inventory.SourceSHA256, InventorySHA256: inventory.ManifestSHA256, TargetSHA256: target, Profiles: []ProfileResult0492{}, Blockers: []string{}, Status: "manual"}
 	if len(destinations) == 0 || len(destinations) > MaxProfiles0492 || run == "" || project == "" || len(target) != 64 || size != inventory.SourceBytes || compatibility.SourceSHA256 != inventory.SourceSHA256 || modules.SourceSHA256 != inventory.SourceSHA256 || modules.InventorySHA256 != inventory.ManifestSHA256 {
-		return out, errors.New("Некорректное значение: «batch source, destination count or target snapshot»")
+		return out, errors.New("Некорректное значение: «источник пакета, число целей или целевой снимок»")
 	}
 	if _, err := inventory.Manifest(); err != nil {
 		return out, err

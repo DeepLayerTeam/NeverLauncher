@@ -44,7 +44,7 @@ func ValidateLoopbackRedirect(redirect string) error {
 
 func PKCEChallenge(verifier string) (string, error) {
 	if len(verifier) < 43 || len(verifier) > 128 || !regexp.MustCompile(`^[A-Za-z0-9._~-]+$`).MatchString(verifier) {
-		return "", errors.New("Некорректное значение: «PKCE verifier»")
+		return "", errors.New("Некорректное значение: «проверочный секрет PKCE»")
 	}
 	hash := sha256.Sum256([]byte(verifier))
 	return base64.RawURLEncoding.EncodeToString(hash[:]), nil

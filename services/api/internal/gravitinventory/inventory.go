@@ -60,7 +60,7 @@ func (v Inventory) canonical() ([]byte, error) {
 }
 func (v Inventory) Manifest() ([]byte, error) {
 	if v.Format != Format {
-		return nil, errors.New("Не поддерживается: «source inventory format»")
+		return nil, errors.New("Не поддерживается: «формат инвентаризации источника»")
 	}
 	b, e := v.canonical()
 	if e != nil {
@@ -68,7 +68,7 @@ func (v Inventory) Manifest() ([]byte, error) {
 	}
 	d := sha256.Sum256(b)
 	if hex.EncodeToString(d[:]) != v.ManifestSHA256 {
-		return nil, errors.New("Несовпадение: «inventory manifest checksum»")
+		return nil, errors.New("Несовпадение: «контрольная сумма манифеста инвентаризации»")
 	}
 	return append(b, '\n'), nil
 }
@@ -147,7 +147,7 @@ func safeFiles(z *zip.Reader) ([]*zip.File, error) {
 			return nil, e
 		}
 		if f.Mode().Type() != 0 && !isDir {
-			return nil, fmt.Errorf("Не поддерживается: «special file» %q", f.Name)
+			return nil, fmt.Errorf("Не поддерживается: «специальный файл» %q", f.Name)
 		}
 		n := strings.ToLower(strings.TrimSuffix(f.Name, "/"))
 		if _, ok := seen[n]; ok {

@@ -91,7 +91,7 @@ class Gate02413Tests(unittest.TestCase):
             wrong = sample(target)
             wrong["commit"] = "b" * 40
             self.assertIn(
-                "clean source",
+                "исходники не соответствуют ожидаемому коммиту",
                 " ".join(
                     aggregate(self.files(tmp, [wrong]), expected_commit=SHA)[
                         "unmetGates"

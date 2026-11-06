@@ -84,7 +84,7 @@ func (e *Engine) Register(priority int, mandatory bool, stages []Stage, h Handle
 	match := make(map[Stage]bool, len(stages))
 	for _, s := range stages {
 		if !supported(s) {
-			return fmt.Errorf("Неизвестное значение: «protection stage» %q", s)
+			return fmt.Errorf("Неизвестное значение: «этап защиты» %q", s)
 		}
 		match[s] = true
 	}

@@ -18,7 +18,7 @@ const serverBridgeHandoffTTL0148 = 30 * time.Second
 func newServerBridgeHandoffID0148() (string, error) {
 	buf := make([]byte, 24)
 	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("Недоступно: «secure handoff entropy»: %w", err)
+		return "", fmt.Errorf("Недоступно: «криптографическая случайность безопасной передачи»: %w", err)
 	}
 	return "ho_" + base64.RawURLEncoding.EncodeToString(buf), nil
 }

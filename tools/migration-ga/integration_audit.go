@@ -17,11 +17,11 @@ import (
 	"time"
 )
 
-// LiveIntegrationAudit0491 intentionally does NOT take a project's migration
-// state forward. It verifies that the live PostgreSQL row, authenticated Go
-// API and a *real RPC response* from an installed Java Host agree. A successful
-// API /ready or cached supervisor heartbeat alone cannot satisfy this check.
-// The SQL transaction is read-only, including on production installations.
+// LiveIntegrationAudit0491 намеренно НЕ продвигает состояние миграции проекта.
+// Он сверяет запись действующей PostgreSQL, авторизованный Go API и *реальный
+// RPC-ответ* установленного Java Host. Одного успешного API /ready или
+// кешированного сигнала диспетчера недостаточно. SQL-транзакция доступна
+// только для чтения, в том числе в производственной среде.
 type LiveIntegrationAudit0491 struct {
 	Format                 string    `json:"format"`
 	CheckedAt              time.Time `json:"checkedAt"`
@@ -81,9 +81,9 @@ func validAuditScope0491(s, scopeID, project string) bool {
 	return s == "project" && scopeID == project
 }
 
-// psql is invoked without a shell or DSN in argv. libpq receives the DSN via
-// PGDATABASE. The submitted SQL has only read-only statements and safely quoted
-// identifiers, with no schema changes, temporary tables or write privileges.
+// psql запускается без оболочки и DSN в аргументах. libpq получает DSN через
+// PGDATABASE. SQL содержит только запросы чтения и безопасно экранированные
+// идентификаторы, без изменений схемы, временных таблиц и прав записи.
 func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) (pgAudit0491, string, error) {
 	var record pgAudit0491
 	exe, err := exec.LookPath(opts.PSQL)
@@ -101,7 +101,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 		`'migration',(SELECT row_to_json(m) FROM (SELECT id,project_id,source_kind,status,step,revision FROM migration_runs_0331 WHERE id=` + quote(opts.Run) + `) m),` +
 		`'extension',(SELECT row_to_json(e) FROM (SELECT extension_id,scope,scope_id,current_version,current_state,generation,enabled FROM extension_installs WHERE extension_id=` + quote(opts.Extension) + ` AND scope=` + quote(opts.Scope) + ` AND scope_id=` + quote(opts.ScopeID) + `) e)` +
 		`)::text;\nCOMMIT;\n`
-	// Real newlines, not escaped SQL string literals.
+	// Настоящие переводы строк, а не экранированные строковые литералы SQL.
 	sql = strings.ReplaceAll(sql, `\n`, "\n")
 	cmd := exec.CommandContext(ctx, exe, "--no-psqlrc", "--quiet", "--tuples-only", "--no-align", "--set=ON_ERROR_STOP=1")
 	cmd.Stdin = strings.NewReader(sql)
@@ -248,7 +248,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return errors.New("Некорректная область действия, DSN PostgreSQL или токен администратора")
 	}
 	client := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	// Backend readiness must include a live PostgreSQL ping and schema status.
+	// Готовность Backend должна учитывать реальный отклик PostgreSQL и состояние схемы.
 	var ready struct {
 		Status     string            `json:"status"`
 		Version    string            `json:"version"`
@@ -328,7 +328,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	if err != nil {
 		return err
 	}
-	// A failed audit never emits an attestation or a partial PASS file.
+	// Неуспешный аудит никогда не создаёт аттестацию или частичный файл PASS.
 	if err = writePrivate(opts.Output, append(data, '\n')); err != nil {
 		return err
 	}

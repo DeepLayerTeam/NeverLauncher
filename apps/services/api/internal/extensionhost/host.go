@@ -353,7 +353,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	go func() {
 		defer s.wg.Done()
 		if err := s.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("Ошибка: «extension host protocol server»: %v", err)
+			log.Printf("Ошибка: «сервер протокола хоста расширений»: %v", err)
 		}
 	}()
 	go s.monitorLoop()
@@ -1934,7 +1934,7 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 			}
 			security := s.securityValue0207()
 			if security == nil {
-				return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Недоступно: «secret broker»")}
+				return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("Недоступно: «посредник доступа к секретам»")}
 			}
 			plain, secretErr := security.GetSecret(ctx, st.key.ExtensionID, st.key.Scope, st.key.ScopeID, req.SecretName)
 			if secretErr != nil {

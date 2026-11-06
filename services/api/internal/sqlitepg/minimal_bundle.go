@@ -425,7 +425,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		return report, err
 	}
 	if m.Format != minimalBundleFormat0377 {
-		return report, errors.New("Не поддерживается: «backup format»")
+		return report, errors.New("Не поддерживается: «формат резервной копии»")
 	}
 	report = MinimalBundleReport0377{Format: m.Format, ManifestSHA256: receipt, Files: len(m.Files)}
 	stage, e := os.MkdirTemp(parent, ".launcher-minimal-pg-*")
@@ -510,7 +510,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		err = errors.Join(err, rows.Err())
 		rows.Close()
 		if err == nil && (n != f.Bytes || hex.EncodeToString(h.Sum(nil)) != f.SHA256) {
-			err = errors.New("Несовпадение: «PostgreSQL bundle file hash or size»")
+			err = errors.New("Несовпадение: «хеш или размер файла комплекта PostgreSQL»")
 		}
 		if err == nil {
 			err = out.Sync()

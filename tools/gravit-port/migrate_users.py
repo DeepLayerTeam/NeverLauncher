@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Run the real Gravit identity/credential/trust migration against a live API.
+"""Выполняет реальную миграцию идентичности, учётных данных и доверия Gravit через работающий API.
 
-Preconditions: an existing prepared migration run with persisted Gravit ZIP
-inventory (and PostgreSQL). This tool never deserializes password verifiers,
-accepts Gravit sessions, or imports a Gravit administrator role. Roles require
-an individually approved mapping and a current passkey-authenticated admin token.
+Условия: подготовленная миграция с сохранённой инвентаризацией ZIP Gravit
+и состоянием PostgreSQL. Утилита никогда не десериализует проверочные значения
+паролей, не принимает сеансы Gravit и не импортирует роль администратора Gravit.
+Для переноса ролей нужны индивидуально утверждённое сопоставление и действующий
+токен администратора, подтверждённый ключом доступа.
 """
 import argparse
 import hashlib
@@ -52,7 +53,7 @@ def canonical_uuid(value):
 
 
 def role_plan(path, imported, users):
-    """Require explicit per-UUID approval; never elevate matched Never users."""
+    """Требуйте явного утверждения для каждого UUID; никогда не повышайте права сопоставленных пользователей Never."""
     if not path:
         return []
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -117,7 +118,7 @@ class Backend:
                         raise MigrationError("Неожиданное значение: статус ответа серверной части")
                     raw = resp.read(MAX_RESPONSE + 1)
             except HTTPError as exc:
-                # Do NOT echo a server error body (may contain secrets).
+                # НЕ выводите тело ошибки сервера: оно может содержать секреты.
                 raise MigrationError("Backend отклонил запрос %s %s (HTTP %d)" % (method, path, exc.code)) from None
             except (OSError, URLError) as exc:
                 raise MigrationError("Ошибка передачи данных Backend: %s" % type(exc).__name__) from None
@@ -276,7 +277,7 @@ def main(argv=None):
         result = migrate(Backend(args.backend, token), args.run_id, args.source_zip, args.mode, args.password_format, args.allow_manual_resets, args.roles_file, args.texture_mapping_output)
         atomic_receipt(args.receipt, result)
     except (MigrationError, OSError, ValueError, KeyError) as exc:
-        # Never print password hashes, tokens, response bodies or source paths.
+        # Никогда не выводите хеши паролей, токены, тела ответов и пути к исходникам.
         print("Миграция завершилась ошибкой (%s)" % type(exc).__name__, file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))

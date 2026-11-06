@@ -139,7 +139,7 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 // действительными для входа.
 func parseFileAuthCredentials(data []byte, path, format string, expected map[string]gi.Account) ([]Credential, error) {
 	if format != "" && !fileauth.SupportedFormat(format) {
-		return nil, errors.New("Не поддерживается: «FileAuth password format»")
+		return nil, errors.New("Не поддерживается: «формат пароля FileAuth»")
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	start, err := dec.Token()
@@ -194,7 +194,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		}
 	}
 	if end, err := dec.Token(); err != nil || end != json.Delim('}') {
-		return nil, errors.New("Некорректное значение: «FileAuth JSON terminator»")
+		return nil, errors.New("Некорректное значение: «завершающий маркер JSON FileAuth»")
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
@@ -214,7 +214,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 	for i, s := range header {
 		s = strings.ToLower(strings.TrimSpace(strings.TrimPrefix(s, "\ufeff")))
 		if _, ok := cols[s]; ok {
-			return nil, errors.New("Обнаружен дубликат: «SQL credential column»")
+			return nil, errors.New("Обнаружен дубликат: «столбец учётных данных SQL»")
 		}
 		cols[s] = i
 	}

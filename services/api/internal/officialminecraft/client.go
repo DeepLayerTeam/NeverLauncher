@@ -272,7 +272,7 @@ func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, 
 		return MinecraftToken{}, err
 	}
 	if xbl.Token == "" || len(xbl.DisplayClaims.XUI) != 1 || xbl.DisplayClaims.XUI[0].UHS == "" {
-		return MinecraftToken{}, errors.New("Некорректное значение: «Xbox Live response»")
+		return MinecraftToken{}, errors.New("Некорректное значение: «ответ Xbox Live»")
 	}
 	if stagePassed != nil {
 		stagePassed("xbox_live")
@@ -293,7 +293,7 @@ func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, 
 		return MinecraftToken{}, err
 	}
 	if xsts.Token == "" || len(xsts.DisplayClaims.XUI) != 1 || xsts.DisplayClaims.XUI[0].UHS != xbl.DisplayClaims.XUI[0].UHS {
-		return MinecraftToken{}, errors.New("Несовпадение: «Xbox identity»")
+		return MinecraftToken{}, errors.New("Несовпадение: «идентичность Xbox»")
 	}
 	if stagePassed != nil {
 		stagePassed("xsts")

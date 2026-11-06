@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed Gravit/ Never operational rollback across PostgreSQL and HAProxy.
+"""Безопасный отказ при эксплуатационном откате Gravit/Never через PostgreSQL и HAProxy.
 
-This does NOT roll back live world files or start old Gravit writers: an operator
-must reconcile worlds/players/plugin DBs and prove both independent writers
-are stopped before running plan/commit. Runtime proxy state is not durable.
+Это НЕ откатывает файлы действующих миров и НЕ запускает старые процессы записи
+Gravit. Перед планированием и подтверждением оператор должен согласовать
+данные миров, игроков и БД плагинов, а также доказать остановку обоих независимых
+процессов записи. Состояние прокси Runtime не является долговременным.
 """
 from __future__ import annotations
 
@@ -50,7 +51,7 @@ def validate(cfg: dict, cutover: dict):
     require(not set(units["source"]).intersection(units["target"]), "Одна служба не может одновременно быть источником и целью")
     for name in ("currentSnapshot", "sourceSnapshot"):
         require(isinstance(cfg.get(name), str) and Path(cfg[name]).is_absolute(), "absolute " + name + " required")
-    # No arbitrary shell/script runner, insecure HTTP or secrets accepted in recovery config.
+    # Конфигурация восстановления запрещает произвольный запуск команд, небезопасный HTTP и секреты.
     permitted = {"format", "runId", "profileId", "channel", "cutoverConfigSha256", "units",
                  "currentSnapshot", "sourceSnapshot", "reconciliationEvidenceSha256"}
     require(set(cfg) <= permitted, "Неизвестные или небезопасные поля конфигурации отката")
@@ -169,8 +170,8 @@ def fence(cfg, cut, directory, cfg_hash, proxy):
     route = get_route(cut, directory, "rollback-before.json")
     verify_active(cut, route)
     pid = proxy.instance()
-    # First cut public ingress, then stop/mask ALL known independent writers externally.
-    # If close fails no false readiness journal is created.
+    # Сначала закройте внешний входящий трафик, затем извне остановите/заблокируйте ВСЕ известные независимые процессы записи.
+    # При неуспешном закрытии нельзя создавать ложный журнал готовности.
     co.close_ingress(proxy, cut)
     require(proxy.instance() == pid, "HAProxy перезапущен во время закрытия входящего трафика")
     state = {"format": FORMAT, "configSha256": cfg_hash, "cutoverConfigSha256": cut["_hash"],
@@ -181,7 +182,7 @@ def fence(cfg, cut, directory, cfg_hash, proxy):
 
 
 def typed_digest(snapshot: dict) -> str:
-    """Match Go gravitrehearsal.SnapshotDigest's field order and JSON encoding."""
+    """Соблюдайте порядок полей Go gravitrehearsal.SnapshotDigest и кодирование JSON."""
     required = ("worldSha256", "loader", "optionalPresetSha256", "players")
     pfields = ("sourceId", "uuid", "inventorySha256", "permissionsSha256", "economy", "skinSha256", "admin")
     require(set(snapshot) == set(required) and isinstance(snapshot["players"], list), "Неожиданные поля снимка")
@@ -196,9 +197,9 @@ def typed_digest(snapshot: dict) -> str:
 
 
 def validate_source_against_target(current: dict, source: dict, has_reconciliation: bool, baseline: str):
-    # When Never has produced new game data, require the operator to reconcile it
-    # into the QUARANTINED source FIRST, then independently re-export BOTH. The
-    # Backend performs further domain-specific semantic verification.
+    # Если Never создал новые игровые данные, потребуйте от оператора сначала согласовать их
+    # с ИЗОЛИРОВАННЫМ источником, затем независимо повторно выгрузить ОБА набора.
+    # Backend выполняет дополнительные предметные проверки содержимого.
     if has_reconciliation:
         require(current == source, "Исходная система не приведена в точное соответствие с текущим состоянием миров и игроков Never")
     else:
@@ -295,7 +296,7 @@ def reconcile(cut, directory, state, proxy):
     require(state["phase"] in ("committing", "uncertain", "committed_fenced"),
             "Сверять можно только фактически предпринятую попытку применения")
     assert_proxy(proxy, cut, state)
-    # Do NOT retry COMMIT after a timeout. Read authoritative PostgreSQL state.
+    # НЕ повторяйте COMMIT после тайм-аута. Сначала считайте достоверное состояние PostgreSQL.
     verify_completed(cut, directory, state)
     change(directory, state, "committed_fenced", trafficOpen=False)
 

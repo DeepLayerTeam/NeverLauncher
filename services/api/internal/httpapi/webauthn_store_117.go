@@ -351,7 +351,7 @@ func (p *passkeyPostgres117) scanCredential(row interface{ Scan(...any) error })
 		return c, err
 	}
 	if count < 0 || count > int64(^uint32(0)) {
-		return c, errors.New("Некорректное значение: «WebAuthn sign counter»")
+		return c, errors.New("Некорректное значение: «счётчик подписей WebAuthn»")
 	}
 	c.SignCount = uint32(count)
 	if lastUsed.Valid {

@@ -423,7 +423,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		audit()
 		respond(map[string]any{"accepted": true}, nil)
 	default:
-		respond(nil, fmt.Errorf("Не поддерживается: «Admin RPC method» %q", method))
+		respond(nil, fmt.Errorf("Не поддерживается: «метод RPC администратора» %q", method))
 	}
 }
 

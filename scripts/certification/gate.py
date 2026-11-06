@@ -66,7 +66,7 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
             report.get("commit") != expected_commit
             or report.get("gitTreeClean") is not True
         ):
-            unmet.append(f"{target}: not clean source for expected commit")
+            unmet.append(f"{target}: исходники не соответствуют ожидаемому коммиту или рабочее дерево изменено")
         native = report.get("nativeComponents") or {}
         tests = native.get("tests") or []
         if (
@@ -79,7 +79,7 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
             or native["httpRequests"] < 1
         ):
             unmet.append(
-                f"{target}: native signed components certification missing/failed"
+                f"{target}: сертификация подписанных нативных компонентов отсутствует или не пройдена"
             )
         # Режимы Guard для Linux/macOS и Windows невзаимозаменяемы.
         required = (
@@ -91,7 +91,7 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
         )
         for check in required:
             if (report.get("checks") or {}).get(check) != "passed":
-                unmet.append(f"{target}: {check} missing/failed")
+                unmet.append(f"{target}: {check}: отсутствует результат или проверка не пройдена")
         minecraft = report.get("minecraft") or {}
         if (
             minecraft.get("status") != "passed"
@@ -103,7 +103,7 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
             or not re.fullmatch(r"[a-f0-9]{64}", minecraft["evidenceSha256"])
         ):
             unmet.append(
-                f"{target}: actual Minecraft client launch evidence missing/failed"
+                f"{target}: свидетельства фактического запуска клиента Minecraft отсутствуют или проверка не пройдена"
             )
         result["platforms"][target] = {
             "sourceArtifactSha256": digest,
@@ -111,7 +111,7 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
             "minecraftStatus": minecraft.get("status"),
         }
     for target in sorted(REQUIRED_TARGETS - result["platforms"].keys()):
-        unmet.append(f"{target}: platform evidence not supplied")
+        unmet.append(f"{target}: свидетельства проверки платформы не предоставлены")
     result["status"] = "passed" if not unmet else "incomplete"
     return result
 

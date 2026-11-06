@@ -70,7 +70,7 @@ func coordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor) (bool,
 		}
 	}
 	if version != 0 && version != schemaVersion {
-		return false, fmt.Errorf("Не поддерживается: «coordinator legacy schema» %d", version)
+		return false, fmt.Errorf("Не поддерживается: «устаревшая схема координатора» %d", version)
 	}
 	if version == schemaVersion {
 		// Частично созданная современная схема является повреждением, а не старым
@@ -87,7 +87,7 @@ func migrateCoordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor)
 		return err
 	}
 	if !legacy {
-		return errors.New("Обнаружено изменение: «coordinator legacy upgrade state»")
+		return errors.New("Обнаружено изменение: «состояние обновления устаревшей схемы координатора»")
 	}
 	for _, raw := range strings.Split(schema, ";\n") {
 		stmt := strings.TrimSpace(raw)

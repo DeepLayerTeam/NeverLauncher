@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "productVersion": "0.21.1",
-  "feature": "Authorization Foundation & Frozen Coverage",
+  "feature": "Основа авторизации и зафиксированный охват проверок",
   "upstream": {
     "gravitLauncher": {
       "repository": "GravitLauncher/Launcher",
@@ -93,7 +93,7 @@
     {
       "id": "G01",
       "family": "gravit-core",
-      "name": "Authentication and current-user permissions",
+      "name": "Аутентификация и права текущего пользователя",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -113,7 +113,7 @@
     {
       "id": "G02",
       "family": "gravit-core",
-      "name": "Extensible authentication providers",
+      "name": "Расширяемые провайдеры авторизации",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -131,7 +131,7 @@
     {
       "id": "G03",
       "family": "gravit-core",
-      "name": "SQL-backed authentication identity",
+      "name": "Идентификация пользователей через SQL",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -150,7 +150,7 @@
     {
       "id": "G04",
       "family": "gravit-core",
-      "name": "Federated/OpenID identity resolution",
+      "name": "Федеративная идентификация и OpenID",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -170,7 +170,7 @@
     {
       "id": "G05",
       "family": "gravit-core",
-      "name": "Microsoft authentication compatibility",
+      "name": "Совместимость авторизации Microsoft",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -186,12 +186,12 @@
         "services/api/internal/httpapi/microsoft_flow_116_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Never 0.21.1 has production Microsoft/OIDC identity federation, but does not claim Gravit 5.7.13 Xbox/XSTS/Minecraft Services token-chain parity."
+      "gapReason": "В Never 0.21.1 реализована производственная федеративная идентификация Microsoft/OIDC, но соответствие цепочке токенов Xbox/XSTS/Minecraft Services в Gravit 5.7.13 не заявлено."
     },
     {
       "id": "G06",
       "family": "gravit-core",
-      "name": "GameProfile UUID identity",
+      "name": "Идентификация GameProfile по UUID",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -210,7 +210,7 @@
     {
       "id": "G07",
       "family": "gravit-core",
-      "name": "Client profile lifecycle",
+      "name": "Жизненный цикл профиля клиента",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -229,7 +229,7 @@
     {
       "id": "G08",
       "family": "gravit-core",
-      "name": "Optional file/view semantics",
+      "name": "Семантика необязательных файлов и представлений",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -240,12 +240,12 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Game-profile OptionalFile/OptionalView parity is not implemented in 0.21.1; extension dependency semantics are a separate subsystem and are not counted as parity."
+      "gapReason": "Соответствие OptionalFile/OptionalView игрового профиля в версии 0.21.1 не реализовано; зависимости расширений являются отдельной подсистемой и не считаются эквивалентом."
     },
     {
       "id": "G09",
       "family": "gravit-core",
-      "name": "Optional dependency/conflict semantics",
+      "name": "Необязательные зависимости и конфликты",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -255,12 +255,12 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Gravit game-profile optional dependency/conflict rules are not implemented in the 0.21.1 game profile model."
+      "gapReason": "В модели игровых профилей 0.21.1 не реализованы правила необязательных зависимостей и конфликтов Gravit."
     },
     {
       "id": "G10",
       "family": "gravit-core",
-      "name": "Client package synchronization",
+      "name": "Синхронизация пакета клиента",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -279,7 +279,7 @@
     {
       "id": "G11",
       "family": "gravit-core",
-      "name": "Hashed file/directory integrity",
+      "name": "Проверка целостности файлов и каталогов по хешам",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -299,7 +299,7 @@
     {
       "id": "G12",
       "family": "gravit-core",
-      "name": "Manifest and artifact signing",
+      "name": "Подписание манифестов и артефактов",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -319,7 +319,7 @@
     {
       "id": "G13",
       "family": "gravit-core",
-      "name": "Launch arguments and Java selection",
+      "name": "Аргументы запуска и выбор Java",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -339,7 +339,7 @@
     {
       "id": "G14",
       "family": "gravit-core",
-      "name": "Managed JRE delivery",
+      "name": "Поставка управляемой JRE",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -358,7 +358,7 @@
     {
       "id": "G15",
       "family": "gravit-core",
-      "name": "Loader compatibility",
+      "name": "Совместимость загрузчиков",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -378,7 +378,7 @@
     {
       "id": "G16",
       "family": "gravit-core",
-      "name": "Vanilla compatibility",
+      "name": "Совместимость с Vanilla",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -398,7 +398,7 @@
     {
       "id": "G17",
       "family": "gravit-core",
-      "name": "ServerWrapper integration",
+      "name": "Интеграция ServerWrapper",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -418,7 +418,7 @@
     {
       "id": "G18",
       "family": "gravit-core",
-      "name": "Server authentication bridge",
+      "name": "Мост серверной авторизации",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -438,7 +438,7 @@
     {
       "id": "G19",
       "family": "gravit-core",
-      "name": "Remote server control",
+      "name": "Удалённое управление сервером",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher-modules",
       "upstreamRefs": [
@@ -457,7 +457,7 @@
     {
       "id": "G20",
       "family": "gravit-core",
-      "name": "WebSocket/event control plane",
+      "name": "Управление событиями через WebSocket",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -476,7 +476,7 @@
     {
       "id": "G21",
       "family": "gravit-core",
-      "name": "Skin/cape texture delivery",
+      "name": "Доставка текстур скинов и плащей",
       "owner": "launcher-compatibility",
       "upstreamComponent": "texture-provider",
       "upstreamRefs": [
@@ -491,12 +491,12 @@
         "services/api/internal/httpapi/server_bridge_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Never serves/persists ServerBridge texture profiles, but 0.21.1 does not claim the standalone Gravit TextureProvider upload/retrieval service feature set."
+      "gapReason": "Never выдаёт и сохраняет профили текстур ServerBridge, но в версии 0.21.1 не заявляет полный набор функций отдельного сервиса загрузки и получения текстур Gravit TextureProvider."
     },
     {
       "id": "G22",
       "family": "gravit-core",
-      "name": "Storage/download delivery",
+      "name": "Доставка файлов из хранилища и загрузки",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -517,7 +517,7 @@
     {
       "id": "G23",
       "family": "gravit-core",
-      "name": "Mirror/download helper behavior",
+      "name": "Работа зеркал и вспомогательных загрузчиков",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher-modules",
       "upstreamRefs": [
@@ -527,12 +527,12 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No Gravit MirrorHelper-equivalent authlib patch/install pipeline is claimed by Launcher 0.21.1."
+      "gapReason": "В версии Launcher 0.21.1 не заявлено наличие эквивалента MirrorHelper для изменения и установки authlib."
     },
     {
       "id": "G24",
       "family": "gravit-core",
-      "name": "Installer/profile conversion",
+      "name": "Преобразование установщика и профилей",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -547,12 +547,12 @@
         "services/api/internal/httpapi/server_integration_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Never has production install/project import flows, but does not claim byte-for-byte Gravit profile conversion semantics."
+      "gapReason": "В Never реализованы производственные сценарии установки и импорта проектов, но побайтовое соответствие преобразования профилей Gravit не заявлено."
     },
     {
       "id": "G25",
       "family": "gravit-core",
-      "name": "Launcher self-update",
+      "name": "Самообновление лаунчера",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -570,7 +570,7 @@
     {
       "id": "G26",
       "family": "gravit-core",
-      "name": "Module/extension lifecycle",
+      "name": "Жизненный цикл модулей и расширений",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -591,7 +591,7 @@
     {
       "id": "G27",
       "family": "gravit-core",
-      "name": "Backend extension execution",
+      "name": "Выполнение расширений Backend",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -609,7 +609,7 @@
     {
       "id": "G28",
       "family": "gravit-core",
-      "name": "HWID/device binding",
+      "name": "Привязка устройств и HWID",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -629,7 +629,7 @@
     {
       "id": "G29",
       "family": "gravit-core",
-      "name": "Guard attestation",
+      "name": "Аттестация Guard",
       "owner": "launcher-compatibility",
       "upstreamComponent": "gravit-guard",
       "upstreamRefs": [
@@ -648,7 +648,7 @@
     {
       "id": "G30",
       "family": "gravit-core",
-      "name": "Prestarter boundary",
+      "name": "Граница предварительного загрузчика Prestarter",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher-prestarter",
       "upstreamRefs": [
@@ -659,12 +659,12 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Launcher 0.21.1 does not ship a separate LauncherPrestarter-compatible bootstrap component."
+      "gapReason": "В Launcher 0.21.1 отсутствует отдельный компонент начальной загрузки, совместимый с LauncherPrestarter."
     },
     {
       "id": "G31",
       "family": "gravit-core",
-      "name": "Desktop/runtime integration",
+      "name": "Интеграция Desktop и Runtime",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher-runtime",
       "upstreamRefs": [
@@ -683,7 +683,7 @@
     {
       "id": "G32",
       "family": "gravit-core",
-      "name": "Admin control surface",
+      "name": "Интерфейс администрирования",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -702,7 +702,7 @@
     {
       "id": "G33",
       "family": "gravit-core",
-      "name": "CLI control surface",
+      "name": "Интерфейс командной строки",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -721,7 +721,7 @@
     {
       "id": "G34",
       "family": "gravit-core",
-      "name": "Audit/observability",
+      "name": "Аудит и наблюдаемость",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher-modules",
       "upstreamRefs": [
@@ -740,7 +740,7 @@
     {
       "id": "G35",
       "family": "gravit-core",
-      "name": "Release certification",
+      "name": "Сертификация релизов",
       "owner": "launcher-compatibility",
       "upstreamComponent": "launcher",
       "upstreamRefs": [
@@ -770,7 +770,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "PHPASS AdditionalHash compatibility is not claimed; Never SQL auth supports its own configured password verifier set."
+      "gapReason": "Совместимость с PHPASS AdditionalHash не заявлена; SQL-авторизация Never поддерживает собственный настроенный набор проверок паролей."
     },
     {
       "id": "M02",
@@ -785,7 +785,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No DiscordGame launcher module equivalent is shipped."
+      "gapReason": "Эквивалент модуля DiscordGame для лаунчера не поставляется."
     },
     {
       "id": "M03",
@@ -800,7 +800,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Production auth is database/federation backed; Gravit JSON file-auth parity is intentionally not claimed."
+      "gapReason": "Производственная авторизация использует БД и федерацию; эквивалентность файловой JSON-авторизации Gravit намеренно не заявлена."
     },
     {
       "id": "M04",
@@ -815,7 +815,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Never desktop uses Tauri rather than JavaFX, so JavaFX runtime optimization is not applicable."
+      "gapReason": "В Desktop Never используется Tauri, а не JavaFX, поэтому оптимизация среды JavaFX неприменима."
     },
     {
       "id": "M05",
@@ -834,7 +834,7 @@
         "cli/cmd/launcher/release_verification_v2_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Never has production artifact signing/certification but not the same LaunchServer certificate-generation module API."
+      "gapReason": "Never поддерживает производственное подписание и сертификацию артефактов, но API генерации сертификатов отличается от модуля LaunchServer."
     },
     {
       "id": "M06",
@@ -867,7 +867,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Never desktop owns its Tauri startup UX; JavaFX launcher start-screen module parity is not applicable."
+      "gapReason": "Интерфейс запуска Never Desktop реализован на Tauri; эквивалентность JavaFX-модулю стартового экрана неприменима."
     },
     {
       "id": "M08",
@@ -882,7 +882,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "MirrorHelper authlib patch pipeline is not implemented."
+      "gapReason": "Механизм изменения authlib из MirrorHelper не реализован."
     },
     {
       "id": "M09",
@@ -903,7 +903,7 @@
         "cli/cmd/launcher/compatibility_release_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Local/Yggdrasil-compatible game auth exists; official Microsoft/Xbox/XSTS Minecraft token-chain parity remains explicitly unclaimed."
+      "gapReason": "Есть локальная авторизация, совместимая с Yggdrasil; соответствие официальной цепочке токенов Microsoft/Xbox/XSTS/Minecraft не заявлено."
     },
     {
       "id": "M10",
@@ -922,7 +922,7 @@
         "cli/cmd/launcher/windows_protection_release_01812_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Windows production signing exists but is not exposed as the Gravit module contract."
+      "gapReason": "Подписание Windows для рабочей среды существует, но не предоставляется в виде контракта модуля Gravit."
     },
     {
       "id": "M11",
@@ -937,7 +937,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No Gravit Prestarter module equivalent is shipped."
+      "gapReason": "Эквивалент модуля Gravit Prestarter не поставляется."
     },
     {
       "id": "M12",
@@ -970,7 +970,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No Sentry ProGuard upload module equivalent is shipped."
+      "gapReason": "Эквивалент модуля загрузки карт ProGuard в Sentry не поставляется."
     },
     {
       "id": "M14",
@@ -985,7 +985,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No Sentry launcher-side module equivalent is shipped."
+      "gapReason": "Эквивалент клиентского модуля Sentry не поставляется."
     },
     {
       "id": "M15",
@@ -1000,7 +1000,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No Sentry LaunchServer module equivalent is shipped."
+      "gapReason": "Эквивалент серверного модуля Sentry для LaunchServer не поставляется."
     },
     {
       "id": "M16",
@@ -1015,7 +1015,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No systemd notifier module equivalent is shipped."
+      "gapReason": "Эквивалент модуля уведомления systemd не поставляется."
     },
     {
       "id": "M17",
@@ -1030,7 +1030,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Unsafe command pack behavior is intentionally not part of Launcher production security surface."
+      "gapReason": "Небезопасный набор команд намеренно исключён из производственной поверхности безопасности Launcher."
     },
     {
       "id": "M18",
@@ -1045,7 +1045,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No mDNS client discovery module equivalent is shipped."
+      "gapReason": "Эквивалент клиентского обнаружения через mDNS не поставляется."
     },
     {
       "id": "M19",
@@ -1060,7 +1060,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No mDNS server discovery module equivalent is shipped."
+      "gapReason": "Эквивалент серверного обнаружения через mDNS не поставляется."
     }
   ],
   "sealPaths": [

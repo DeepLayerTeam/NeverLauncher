@@ -10,7 +10,7 @@ import (
 
 var (
 	errSessionNotFound118 = errors.New("Сеанс не найден")
-	errSessionName118     = errors.New("Некорректное значение: «session device name»")
+	errSessionName118     = errors.New("Некорректное значение: «название устройства сеанса»")
 )
 
 func normalizeRiskState118(v string) string {

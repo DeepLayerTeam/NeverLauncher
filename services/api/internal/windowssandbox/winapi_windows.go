@@ -315,7 +315,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	var size uintptr
 	initAttrs.Call(0, 2, 0, uintptr(unsafe.Pointer(&size)))
 	if size == 0 {
-		return 0, 0, 0, 0, errors.New("Недоступно: «AppContainer attribute list»")
+		return 0, 0, 0, 0, errors.New("Недоступно: «список атрибутов AppContainer»")
 	}
 	backing := make([]byte, size)
 	attrs := uintptr(unsafe.Pointer(&backing[0]))

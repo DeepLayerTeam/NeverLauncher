@@ -66,7 +66,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 			case "recovery-ok":
 				methods = mergeAuthMethods117(methods, "recovery-code")
 			default:
-				return loginMFAResult117{}, errors.New("Некорректное значение: «local second factor state»")
+				return loginMFAResult117{}, errors.New("Некорректное значение: «состояние второго фактора локальной авторизации»")
 			}
 			strength = "mfa"
 		} else if passkeys > 0 {

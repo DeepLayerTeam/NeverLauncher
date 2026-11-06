@@ -6,32 +6,32 @@
     {
       "id": "mohist",
       "status": "not-certified",
-      "reason": "hybrid Bukkit+Forge/NeoForge core requires dedicated runtime evidence"
+      "reason": "Для гибридного ядра Bukkit+Forge/NeoForge требуются отдельные свидетельства проверки работающей среды"
     },
     {
       "id": "arclight",
       "status": "not-certified",
-      "reason": "hybrid Bukkit+Forge/NeoForge core requires dedicated runtime evidence"
+      "reason": "Для гибридного ядра Bukkit+Forge/NeoForge требуются отдельные свидетельства проверки работающей среды"
     },
     {
       "id": "magma",
       "status": "not-certified",
-      "reason": "hybrid Bukkit+Forge core requires dedicated runtime evidence"
+      "reason": "Для гибридного ядра Bukkit+Forge требуются отдельные свидетельства проверки работающей среды"
     },
     {
       "id": "catserver",
       "status": "not-certified",
-      "reason": "hybrid Bukkit+Forge core requires dedicated runtime evidence"
+      "reason": "Для гибридного ядра Bukkit+Forge требуются отдельные свидетельства проверки работающей среды"
     },
     {
       "id": "banner",
       "status": "not-certified",
-      "reason": "hybrid Bukkit+Fabric core requires dedicated runtime evidence"
+      "reason": "Для гибридного ядра Bukkit+Fabric требуются отдельные свидетельства проверки работающей среды"
     },
     {
       "id": "cardboard",
       "status": "not-certified",
-      "reason": "hybrid Bukkit+Fabric core requires dedicated runtime evidence"
+      "reason": "Для гибридного ядра Bukkit+Fabric требуются отдельные свидетельства проверки работающей среды"
     }
   ]
 }

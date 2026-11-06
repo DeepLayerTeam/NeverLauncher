@@ -66,7 +66,7 @@ func logRequests0459(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := newCorrelation02111()
 		if id == "" {
-			http.Error(w, "Недоступно: «correlation entropy»", http.StatusServiceUnavailable)
+			http.Error(w, "Недоступно: «криптографическая случайность идентификатора корреляции»", http.StatusServiceUnavailable)
 			return
 		}
 		w.Header().Set("X-Correlation-ID", id)

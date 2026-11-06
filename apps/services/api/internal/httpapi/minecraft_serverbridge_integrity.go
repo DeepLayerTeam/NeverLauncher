@@ -73,7 +73,7 @@ func minecraftIntegrityAllow0135(required bool, reason string, session model.Min
 
 func snapshotFromGuardLaunchTicket0135(ticket model.DeviceChallenge) (minecraftIntegritySnapshot0135, error) {
 	if strings.TrimSpace(ticket.ID) == "" {
-		return minecraftIntegritySnapshot0135{}, errors.New("Отсутствует: «Guard launch ticket»")
+		return minecraftIntegritySnapshot0135{}, errors.New("Отсутствует: «пропуск запуска Guard»")
 	}
 	snapshot := minecraftIntegritySnapshot0135{
 		GuardAttestationSHA256: strings.ToLower(strings.TrimSpace(metadataString0121(ticket.Metadata, "attestationSha256"))),

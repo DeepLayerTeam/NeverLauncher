@@ -97,7 +97,7 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 		}
 	}()
 	if err = durableFileSystemProbe(filepath.Dir(path)); err != nil {
-		return nil, fmt.Errorf("Ошибка: «sqlite durable filesystem probe»: %w", err)
+		return nil, fmt.Errorf("Ошибка: «проверка файловой системы устойчивого хранилища SQLite»: %w", err)
 	}
 	if err = checkSQLiteSidecars(path); err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ func checkEngine(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 	if !strings.Contains(sourceID, "555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76") {
-		return fmt.Errorf("Не поддерживается: «SQLite source revision»: %s", sourceID)
+		return fmt.Errorf("Не поддерживается: «версия исходной базы SQLite»: %s", sourceID)
 	}
 	opts, err := conn.QueryContext(ctx, "PRAGMA compile_options")
 	if err != nil {
@@ -530,7 +530,7 @@ func ProbeDurability(ctx context.Context, opt Options) (WALStatus, error) {
 			return e
 		}
 		if id != token {
-			return fmt.Errorf("Несовпадение: «SQLite durability challenge»")
+			return fmt.Errorf("Несовпадение: «проверка устойчивости SQLite»")
 		}
 		return nil
 	})
