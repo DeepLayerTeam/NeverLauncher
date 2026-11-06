@@ -18,11 +18,11 @@ import (
 func TestServerBridgeSecurityCapabilityDigest01912(t *testing.T) {
 	const expected = "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4"
 	if got := serverBridgeExpectedSecurityCapabilityDigest01912(); got != expected {
-		t.Fatalf("capability digest drift: got %s want %s", got, expected)
+		t.Fatalf("Контрольная сумма возможностей изменилась: получено %s, ожидалось %s", got, expected)
 	}
 	downgraded := append([]string(nil), serverBridgeSecurityRequiredFeatures01912[:len(serverBridgeSecurityRequiredFeatures01912)-1]...)
 	if serverBridgeSecurityCapabilityDigest01912(downgraded) == expected {
-		t.Fatal("capability downgrade preserved certified digest")
+		t.Fatal("После понижения возможностей сохранилась сертифицированная контрольная сумма")
 	}
 }
 
@@ -48,7 +48,7 @@ func TestServerBridgeProtocolV3NodeCanonicalRejectsTamper01912(t *testing.T) {
 		"body":        serverBridgeNodeRequestCanonical01912(req, append(body, ' '), "node-01912", fp, "1770000000", "nonce-01912", strings.Repeat("a", 64), serverBridgeExpectedSecurityCapabilityDigest01912()),
 	} {
 		if ed25519.Verify(pub, []byte(mutated), sig) {
-			t.Fatalf("tampered node %s retained valid signature", name)
+			t.Fatalf("Подменённый узел %s сохранил действительную подпись", name)
 		}
 	}
 }
@@ -95,11 +95,11 @@ func TestServerBridgeProtocolV3CommandCanonicalRejectsReplayAcrossRuntime01912(t
 	canonical := serverBridgeControlCanonical01912("paper-01912", "cmd-1", strings.Repeat("e", 64), "server.save", strings.Repeat("1", 64), "channel", "lease", serverBridgeExpectedSecurityCapabilityDigest01912(), fp, 4, 8, 10, 1, 1000, 2000)
 	sig := ed25519.Sign(priv, []byte(canonical))
 	if !ed25519.Verify(pub, []byte(canonical), sig) {
-		t.Fatal("valid command signature rejected")
+		t.Fatal("Отклонена корректная подпись команды")
 	}
 	replayed := serverBridgeControlCanonical01912("paper-01912", "cmd-1", strings.Repeat("f", 64), "server.save", strings.Repeat("1", 64), "channel", "lease", serverBridgeExpectedSecurityCapabilityDigest01912(), fp, 4, 9, 10, 1, 1000, 2000)
 	if ed25519.Verify(pub, []byte(replayed), sig) {
-		t.Fatal("command replay across runtime remained valid")
+		t.Fatal("Повтор команды между Runtime остался допустимым")
 	}
 }
 
@@ -110,7 +110,7 @@ func TestServerBridge3AllowlistRejectsTamperedBridge01912(t *testing.T) {
 	srv := Server{Version: "0.19.12", Config: config.Config{Environment: "test", BridgeReleaseAllowlistJSON: allowlist}}
 	server := bridgeServerRecord{ID: "paper-security-01912", Kind: "paper"}
 	if decision := srv.validateBridgePluginMeasurement0135(server, "paper", "0.19.12", paperHash); !decision.Allowed || decision.Reason != "bridge_integrity_verified" {
-		t.Fatalf("certified bridge rejected: %+v", decision)
+		t.Fatalf("Отклонён сертифицированный мост: %+v", decision)
 	}
 	if decision := srv.validateBridgePluginMeasurement0135(server, "paper", "0.19.12", strings.Repeat("f", 64)); decision.Allowed || decision.Reason != "bridge_integrity_hash_rejected" {
 		t.Fatalf("Подменённая конфигурация моста ошибочно принята: %+v", decision)
@@ -119,15 +119,15 @@ func TestServerBridge3AllowlistRejectsTamperedBridge01912(t *testing.T) {
 
 func TestServerBridgeSecurityFeatureSetIsExact01912(t *testing.T) {
 	if !serverBridgeSecurityFeaturesExact01912(serverBridgeSecurityRequiredFeatures01912) {
-		t.Fatal("certified security feature set rejected")
+		t.Fatal("Отклонён сертифицированный набор функций безопасности")
 	}
 	extra := append(append([]string(nil), serverBridgeSecurityRequiredFeatures01912...), "security.unapproved")
 	if serverBridgeSecurityFeaturesExact01912(extra) {
-		t.Fatal("security allowlist accepted uncertified extra feature")
+		t.Fatal("Список разрешённых функций безопасности принял лишнюю несертифицированную функцию")
 	}
 	duplicate := append([]string(nil), serverBridgeSecurityRequiredFeatures01912...)
 	duplicate[len(duplicate)-1] = duplicate[0]
 	if serverBridgeSecurityFeaturesExact01912(duplicate) {
-		t.Fatal("security allowlist accepted duplicate/missing feature set")
+		t.Fatal("Список разрешённых функций безопасности принял набор с повторами или пропусками")
 	}
 }

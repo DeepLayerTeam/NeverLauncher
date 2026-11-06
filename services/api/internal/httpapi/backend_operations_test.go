@@ -24,10 +24,10 @@ func TestBackendLifecycle0289(t *testing.T) {
 		t.Fatal(err)
 	}
 	if lc.ScheduleRestart() {
-		t.Fatal("unsupervised restart was scheduled")
+		t.Fatal("Запланирован перезапуск без контроля")
 	}
 	if lc.IsDraining() {
-		t.Fatal("unsupervised instance started draining")
+		t.Fatal("Экземпляр без контроля начал завершать соединения")
 	}
 	a, err := NewBackendLifecycle0289(true)
 	if err != nil {
@@ -35,14 +35,14 @@ func TestBackendLifecycle0289(t *testing.T) {
 	}
 	b, err := NewBackendLifecycle0289(true)
 	if err != nil || a.InstanceID == b.InstanceID {
-		t.Fatal("runtime identity reused")
+		t.Fatal("Повторно использован идентификатор Runtime")
 	}
 	if !a.ScheduleRestart() || a.ScheduleRestart() == true {
-		t.Fatal("duplicate restart scheduled")
+		t.Fatal("Запланирован повторный перезапуск")
 	}
 	select {
 	case <-a.RestartRequested():
 	case <-time.After(time.Second):
-		t.Fatal("restart not dispatched")
+		t.Fatal("Перезапуск не отправлен на выполнение")
 	}
 }

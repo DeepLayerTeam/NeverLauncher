@@ -32,7 +32,7 @@ fn sensor_path() -> PathBuf {
         std::env::var("GUARD_SENSOR_TEST_DLL")
             .expect("GUARD_SENSOR_TEST_DLL должен указывать на собранный guard_sensor.dll"),
     );
-    assert!(sensor.is_file(), "sensor DLL missing: {}", sensor.display());
+    assert!(sensor.is_file(), "Отсутствует DLL сенсора: {}", sensor.display());
     sensor
 }
 
@@ -409,7 +409,7 @@ async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert!(report.hook_engine.hooked_module_count > 0);
     assert!(report.hook_engine.hooked_slot_count > 0);
     assert!(report.hook_engine.integrity_check_count >= 2);
-    assert!(report.hook_engine.intercepted_call_count >= 1, "expected real intercepted JVM/native API call: {report:?}");
+    assert!(report.hook_engine.intercepted_call_count >= 1, "Ожидался реальный перехваченный вызов JVM или нативного API: {report:?}");
     assert_eq!(report.hook_engine.hook_set_sha256.len(), 64);
     assert!(report.memory_integrity.healthy, "нарушение целостности памяти: {}", report.memory_integrity.last_violation);
     assert!(report.memory_integrity.integrity_check_count >= 2);

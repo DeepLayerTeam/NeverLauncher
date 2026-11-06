@@ -17,7 +17,7 @@ func TestAccessLog0459PreservesCorrelationAndStatus(t *testing.T) {
 	defer func() { accessLogger0459 = previous }()
 	handler := logRequests0459(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if correlationID02111(r) == "" {
-			t.Error("missing correlation context")
+			t.Error("Отсутствует контекст сопоставления")
 		}
 		w.WriteHeader(http.StatusConflict)
 	}))
@@ -37,7 +37,7 @@ func TestAccessLog0459PreservesCorrelationAndStatus(t *testing.T) {
 		t.Fatalf("Неожиданное содержимое журнала: %v", record)
 	}
 	if strings.Contains(stream.String(), "abc123") || strings.Contains(stream.String(), "should-not-log") || strings.Contains(stream.String(), "spoofed") {
-		t.Fatal("log leaked untrusted data")
+		t.Fatal("В журнал попали недоверенные данные")
 	}
 }
 func TestAccessLog0459NoMetricsNoise(t *testing.T) {
@@ -49,6 +49,6 @@ func TestAccessLog0459NoMetricsNoise(t *testing.T) {
 	r := httptest.NewRecorder()
 	h.ServeHTTP(r, httptest.NewRequest("GET", "/metrics", nil))
 	if stream.Len() != 0 {
-		t.Fatal("metrics generated log entry")
+		t.Fatal("Метрики вызвали появление записи в журнале")
 	}
 }

@@ -33,7 +33,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 		t.Helper()
 		rr := send(http.MethodPost, "/api/v1/packages/"+packageID+"/publish", "")
 		if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "stable runtime gate") {
-			t.Fatalf("stable must be blocked, got %d %s", rr.Code, rr.Body.String())
+			t.Fatalf("Стабильный канал должен быть заблокирован, получено %d %s", rr.Code, rr.Body.String())
 		}
 	}
 	// Явная политика целостности проекта намеренно не действует для stable.
@@ -65,7 +65,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, request)
 	if rr.Code != http.StatusCreated {
-		t.Fatalf("legacy evidence fixture: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Устаревшие тестовые подтверждения: %d %s", rr.Code, rr.Body.String())
 	}
 	publish()
 
@@ -77,7 +77,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	publish()
 	rr = send(http.MethodGet, "/api/v1/packages/"+packageID+"/validations", "")
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"publishEligible":false`) || !strings.Contains(rr.Body.String(), "production-runtime-gate-0.34.11") {
-		t.Fatalf("effective stable policy must be visible: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Действующая политика стабильного канала должна быть видна: %d %s", rr.Code, rr.Body.String())
 	}
 }
 
@@ -96,7 +96,7 @@ func TestStableMissingPolicyStillBlocksAndPersistsReason0341(t *testing.T) {
 	}
 	err = srv.validatePublishEvidenceContext0213(context.Background(), packageLookup{Release: release})
 	if err == nil || !strings.Contains(err.Error(), "stable runtime gate") {
-		t.Fatalf("missing policy bypassed stable: %v", err)
+		t.Fatalf("Отсутствие политики позволило обойти ограничения стабильного канала: %v", err)
 	}
 	events := repo.ListAuditEvents()
 	found := false
@@ -106,6 +106,6 @@ func TestStableMissingPolicyStillBlocksAndPersistsReason0341(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("stable denied without durable audit reason: %#v", events)
+		t.Fatalf("Стабильный канал заблокирован без сохранённой причины аудита: %#v", events)
 	}
 }

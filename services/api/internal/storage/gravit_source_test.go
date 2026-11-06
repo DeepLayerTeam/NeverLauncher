@@ -12,7 +12,7 @@ import (
 func TestGravitS3Source02510(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" || r.URL.Path != "/bucket/skins/hash.png" || r.Header.Get("Authorization") == "" {
-			t.Errorf("unsigned/misrouted request: %s %s", r.Method, r.URL.Path)
+			t.Errorf("Неподписанный либо неверно маршрутизированный запрос: %s %s", r.Method, r.URL.Path)
 			http.Error(w, "invalid", 401)
 			return
 		}
@@ -40,7 +40,7 @@ func TestGravitS3Source02510(t *testing.T) {
 	}
 }
 func TestGravitS3RedirectRejected02510(t *testing.T) {
-	dst := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Error("SSRF: redirected to arbitrary HTTP server") }))
+	dst := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Error("SSRF: перенаправление на произвольный HTTP-сервер") }))
 	defer dst.Close()
 	srcServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, dst.URL+"/private", http.StatusFound)
@@ -56,6 +56,6 @@ func TestGravitS3RedirectRejected02510(t *testing.T) {
 		t.Fatal("Небезопасное перенаправление принято")
 	}
 	if !strings.Contains(err.Error(), "302") {
-		t.Fatalf("unexpected redirect failure: %v", err)
+		t.Fatalf("Неожиданная ошибка перенаправления: %v", err)
 	}
 }

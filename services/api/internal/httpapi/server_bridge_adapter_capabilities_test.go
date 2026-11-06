@@ -38,25 +38,25 @@ func TestAdapterCommandGate0286FailsClosed(t *testing.T) {
 	node := bridgeServerRecord{Kind: "sponge", ServerBrand: "Sponge", RuntimeID: strings.Repeat("a", 64), RuntimeEpoch: 2,
 		RuntimeLastSeenAt: time.Now(), RuntimeCapabilities: []string{"adapter.control.broadcast", "adapter.control.kick"}}
 	if !serverBridgeNodeAllowsControl0286(node, "message.broadcast") {
-		t.Fatal("advertised broadcast rejected")
+		t.Fatal("Отклонена объявленная широковещательная отправка")
 	}
 	for _, cmd := range []string{"server.save", "server.shell", "server.console", "whitelist.add"} {
 		if serverBridgeNodeAllowsControl0286(node, cmd) {
-			t.Errorf("unsupported operation permitted: %s", cmd)
+			t.Errorf("Разрешена неподдерживаемая операция: %s", cmd)
 		}
 	}
 	node.RuntimeLastSeenAt = time.Now().Add(-3 * time.Minute)
 	if serverBridgeNodeAllowsControl0286(node, "message.broadcast") {
-		t.Fatal("stale runtime allowed")
+		t.Fatal("Разрешён устаревший Runtime")
 	}
 	node.RuntimeLastSeenAt = time.Now()
 	node.RuntimeCapabilities = nil
 	if serverBridgeNodeAllowsControl0286(node, "message.broadcast") {
-		t.Fatal("missing capability allowed")
+		t.Fatal("Разрешена операция без необходимой возможности")
 	}
 	node.Kind = "vanilla"
 	node.RuntimeCapabilities = []string{"adapter.auth.login-gate", "adapter.control.broadcast"}
 	if serverBridgeNodeAllowsControl0286(node, "message.broadcast") {
-		t.Fatal("invalid signed capability set allowed")
+		t.Fatal("Разрешён некорректный подписанный набор возможностей")
 	}
 }

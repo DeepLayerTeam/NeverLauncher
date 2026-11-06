@@ -43,7 +43,7 @@ func TestAdversarialHostReconnectAndBurst03114(t *testing.T) {
 		}
 	}
 	if accepted != 8 || rejected != 24 {
-		t.Fatalf("instance limiter bypass: accepted=%d denied=%d", accepted, rejected)
+		t.Fatalf("Обход ограничения экземпляров: принято=%d, отклонено=%d", accepted, rejected)
 	}
 	state.mu.Lock()
 	if state.budget.output != 16 || state.budget.active != 0 || state.budget.rejected != 24 {
@@ -56,7 +56,7 @@ func TestAdversarialHostReconnectAndBurst03114(t *testing.T) {
 	r.Header.Set("Authorization", "Bearer valid-token")
 	handler.ServeHTTP(w, r)
 	if w.Code != 200 {
-		t.Fatalf("new window refused %d", w.Code)
+		t.Fatalf("Отклонено новое окно: %d", w.Code)
 	}
 }
 func TestAdversarialHostQuotaFailsClosed03114(t *testing.T) {
@@ -75,14 +75,14 @@ func TestAdversarialHostQuotaFailsClosed03114(t *testing.T) {
 	}
 	st.mu.Lock()
 	if st.budget.output != 4 {
-		t.Fatalf("expected 4 billed bytes; got %d", st.budget.output)
+		t.Fatalf("Ожидалось четыре учтённых байта; получено %d", st.budget.output)
 	}
 	st.mu.Unlock()
 	// Не запрашивайте шестой байт через супервизор: истечение квоты намеренно
 	// асинхронно запускает настоящее завершение процесса.
 	st.mu.Lock()
 	if st.budget.chargeLocked03113(2, policy) {
-		t.Fatal("output over quota admitted")
+		t.Fatal("Разрешён вывод сверх квоты")
 	}
 	st.mu.Unlock()
 }

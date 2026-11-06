@@ -284,7 +284,7 @@ if __name__ == "__main__":
             "normal lifecycle removed a persistent subscription"
         )
         print(
-            "PASS: real Java event callback, durable broker documents, CLI RPC, backend restart and re-subscribe"
+            "PASS: реальный обработчик событий Java, постоянные документы брокера, RPC через CLI, перезапуск Backend и повторная подписка"
         )
     finally:
         if restored is not None:

@@ -31,6 +31,6 @@ func TestSignedJavaUI0489(t *testing.T) {
 	}
 	signed.Targets = signed.Targets[1:]
 	if javaUIContribution0489(signed, "admin", "ui.action.invoke", "refresh", "") {
-		t.Fatal("UI callback without a running backend target accepted")
+		t.Fatal("Принят обратный вызов интерфейса без работающего серверного получателя")
 	}
 }

@@ -104,7 +104,7 @@ func TestExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T) {
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "artifact verification failed") {
-		t.Fatalf("install must fail closed: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Установка должна завершиться отказом по умолчанию: %d %s", res.Code, res.Body.String())
 	}
 	installs, err := repo.ListExtensionInstalls(ctx, "", "")
 	if err != nil {
@@ -112,7 +112,7 @@ func TestExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T) {
 	}
 	for _, install := range installs {
 		if install.ExtensionID == "example.registry-extension" {
-			t.Fatalf("unverified artifact created install: %+v", install)
+			t.Fatalf("Непроверенный артефакт создал установку: %+v", install)
 		}
 	}
 }

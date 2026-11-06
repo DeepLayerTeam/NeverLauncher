@@ -45,7 +45,7 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects/demo-project/versions/"+release.ID+"/publish", nil)
 	if _, err := srv.prepareAdminPublish0212(req, current); err == nil {
-		t.Fatal("publish must reject a release before explicit signing and integrity validation")
+		t.Fatal("Публикация должна отклонять релиз до явного подписания и проверки целостности")
 	}
 	// Повторите канонический конвейер sign -> stage -> integrity-check
 	// до начала административной транзакции публикации.
@@ -69,7 +69,7 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 	}
 	result, err := srv.runPackageIntegrityCheck0212(req, packageLookup{Release: current, Files: files})
 	if err != nil || result.Result != "passed" {
-		t.Fatalf("explicit integrity validation must pass: result=%+v err=%v", result, err)
+		t.Fatalf("Явная проверка целостности должна пройти: результат=%+v, ошибка=%v", result, err)
 	}
 	versionsAfter, err := repo.ListVersions(release.ProjectID)
 	if err != nil {
@@ -86,7 +86,7 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 		t.Fatal(err)
 	}
 	if lookup.Release.Status != "integrity-passed" {
-		t.Fatalf("publish CAS received stale status %q; want integrity-passed", lookup.Release.Status)
+		t.Fatalf("CAS публикации получил устаревший статус %q; ожидался integrity-passed", lookup.Release.Status)
 	}
 	versions, err := repo.ListVersions(release.ProjectID)
 	if err != nil {
@@ -97,11 +97,11 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 		if updated.ID == release.ID {
 			found = true
 			if updated.Status != lookup.Release.Status {
-				t.Fatalf("persisted status %q disagrees with publish CAS %q", updated.Status, lookup.Release.Status)
+				t.Fatalf("Сохранённый статус %q не совпадает со статусом CAS публикации %q", updated.Status, lookup.Release.Status)
 			}
 		}
 	}
 	if !found {
-		t.Fatal("release missing after prepare")
+		t.Fatal("После подготовки релиз отсутствует")
 	}
 }

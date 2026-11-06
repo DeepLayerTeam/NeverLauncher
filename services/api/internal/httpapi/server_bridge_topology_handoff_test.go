@@ -33,12 +33,12 @@ func TestServerBridgeHandoffID0148Uses192BitsOfCSPRNGMaterial(t *testing.T) {
 func TestBridgeProxyKind0148IsStrict(t *testing.T) {
 	for _, kind := range []string{"velocity", "BungeeCord", " waterfall "} {
 		if !bridgeProxyKind0148(kind) {
-			t.Fatalf("expected proxy kind %q", kind)
+			t.Fatalf("Ожидался тип прокси %q", kind)
 		}
 	}
 	for _, kind := range []string{"paper", "fabric", "forge", "proxy", ""} {
 		if bridgeProxyKind0148(kind) {
-			t.Fatalf("unexpected proxy kind %q", kind)
+			t.Fatalf("Неожиданный тип прокси %q", kind)
 		}
 	}
 }

@@ -46,18 +46,18 @@ func TestServerBridgeOperations0219ProjectIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(snapshot.Data.Nodes) != 1 || snapshot.Data.Nodes[0].ID != "bridge-home-0219" || snapshot.Data.Metrics.NodesTotal != 1 {
-		t.Fatalf("cross-project node disclosed: %s", own.Body.String())
+		t.Fatalf("Раскрыт узел другого проекта: %s", own.Body.String())
 	}
 	other := request0211(t, h, http.MethodGet, "/api/v1/server-bridge/projects/bridge-other-0219/overview", operator, "")
 	if other.Code != http.StatusForbidden {
-		t.Fatalf("other project overview returned %d: %s", other.Code, other.Body.String())
+		t.Fatalf("Обзор другого проекта вернул %d: %s", other.Code, other.Body.String())
 	}
 	global := request0211(t, h, http.MethodGet, "/api/v1/server-bridge/overview", operator, "")
 	if global.Code != http.StatusForbidden {
-		t.Fatalf("operator reached global overview: %d: %s", global.Code, global.Body.String())
+		t.Fatalf("Оператор получил доступ к глобальному обзору: %d: %s", global.Code, global.Body.String())
 	}
 	readOtherCommand := request0211(t, h, http.MethodGet, "/api/v1/server-bridge/servers/bridge-away-0219/control/hidden", operator, "")
 	if readOtherCommand.Code != http.StatusNotFound {
-		t.Fatalf("operator disclosed other server existence: %d %s", readOtherCommand.Code, readOtherCommand.Body.String())
+		t.Fatalf("Оператор раскрыл существование другого сервера: %d %s", readOtherCommand.Code, readOtherCommand.Body.String())
 	}
 }

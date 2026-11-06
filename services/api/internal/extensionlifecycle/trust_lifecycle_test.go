@@ -51,11 +51,11 @@ func TestEnableDeniesQuarantinedPackage0424(t *testing.T) {
 	}
 	manager := New(t.TempDir(), 2, repo, nil)
 	if _, err := manager.Enable(ctx, id, Scope{Scope: "global"}); err == nil || !strings.Contains(err.Error(), "quarantined") {
-		t.Fatalf("quarantined package enabled: %v", err)
+		t.Fatalf("Включён пакет в карантине: %v", err)
 	}
 	after, err := repo.GetExtensionInstallState(ctx, id, "global", "")
 	if err != nil || after.Generation != before.Generation || after.CurrentState != model.ExtensionInstallStateDisabled {
-		t.Fatalf("rejected enable mutated state: %+v %v", after, err)
+		t.Fatalf("Отклонённая попытка включения изменила состояние: %+v %v", after, err)
 	}
 }
 
@@ -86,10 +86,10 @@ func TestEnableRechecksRevokedPublisherKey0424(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := manager.Enable(ctx, before.ExtensionID, Scope{Scope: "global"}); err == nil || !strings.Contains(err.Error(), "revoked") {
-		t.Fatalf("revoked signing key allowed enable: %v", err)
+		t.Fatalf("Отозванный ключ подписи позволил включить расширение: %v", err)
 	}
 	after, err := repo.GetExtensionInstallState(ctx, before.ExtensionID, "global", "")
 	if err != nil || after.Generation != before.Generation || after.CurrentState != model.ExtensionInstallStateDisabled {
-		t.Fatalf("key revocation changed install incorrectly: %+v %v", after, err)
+		t.Fatalf("Отзыв ключа некорректно изменил установку: %+v %v", after, err)
 	}
 }

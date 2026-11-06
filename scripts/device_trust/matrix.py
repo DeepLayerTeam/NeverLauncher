@@ -119,7 +119,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         missing = sorted(KIND_MANDATORY_CHECKS[kind] - set(checks))
         if missing:
             die(
-                f"{target_id}: requiredChecks weaken {kind} baseline: missing {', '.join(missing)}"
+                f"{target_id}: requiredChecks ослабляют {kind} базовую защиту: отсутствует {', '.join(missing)}"
             )
         normalized.append(
             {
@@ -340,7 +340,7 @@ def render_markdown(
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
     print(
-        f"Device Trust targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}"
+        f"Цели доверия к устройству проверены: {len(payload['targets'])} целевых платформ для {PRODUCT_VERSION}"
     )
     return 0
 
@@ -418,7 +418,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
             print(f"Матрица доверия устройств: {item}", flush=True)
         return 1
     print(
-        f"Device Trust matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}"
+        f"Матрица доверия к устройству — проверка пройдена: {len(targets)} целей, коммит={args.commit}, запуск={args.run_id}"
     )
     return 0
 

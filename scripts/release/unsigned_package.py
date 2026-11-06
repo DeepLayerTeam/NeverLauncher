@@ -110,7 +110,7 @@ def main():
                 raise ValueError('Повторяющееся сопоставление --file')
             mapping[member]=Path(source)
         out=make_package(args.platform,args.arch,args.out_dir,mapping)
-        print(f'UNSIGNED PAYLOAD {out} sha256={hashlib.sha256(out.read_bytes()).hexdigest()}')
+        print(f'НЕПОДПИСАННЫЙ ПАКЕТ {out} sha256={hashlib.sha256(out.read_bytes()).hexdigest()}')
     except (OSError,ValueError,tarfile.TarError) as exc:
         print('Создание неподписанного пакета заблокировано: '+str(exc),file=sys.stderr)
         return 2

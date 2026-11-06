@@ -199,7 +199,7 @@ def validate_authorization_invariants() -> None:
     ]:
         if needle not in repo:
             fail(
-                f"repository no longer uses authoritative project_user_roles: {needle}"
+                f"репозиторий больше не использует авторитетную таблицу project_user_roles: {needle}"
             )
 
     for needle in [

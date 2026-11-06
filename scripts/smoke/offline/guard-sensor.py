@@ -22,7 +22,7 @@ def main() -> int:
     if tuple(
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 2):
-        raise SystemExit(f"[Launcher] Guard Sensor 0.18.2: VERSION={version}")
+        raise SystemExit(f"[Launcher] Сенсор Guard 0.18.2: версия={version}")
 
     sensor = read("runtime/guard-sensor/src/lib.rs")
     sensor_manifest = read("runtime/guard-sensor/Cargo.toml")

@@ -20,7 +20,7 @@ func TestValidateMinecraftUUID(t *testing.T) {
 		{"123e4567e89b42d3a456426614174000extra", ErrInvalidObservedUUID},
 	} {
 		if got := Validate(test.reported, authorized); !errors.Is(got, test.want) || (test.want == nil && got != nil) {
-			t.Errorf("observed %q: got %v want %v", test.reported, got, test.want)
+			t.Errorf("При наблюдении %q получено %v, ожидалось %v", test.reported, got, test.want)
 		}
 	}
 }
@@ -47,7 +47,7 @@ func TestVerifiedOnlineModeRequiresActualUUID0398(t *testing.T) {
 	} {
 		got := ValidateVerified(row.observed, uuid)
 		if !errors.Is(got, row.expected) || (row.expected == nil && got != nil) {
-			t.Errorf("observed=%q returned %v, expected %v", row.observed, got, row.expected)
+			t.Errorf("Наблюдение=%q вернуло %v, ожидалось %v", row.observed, got, row.expected)
 		}
 	}
 }

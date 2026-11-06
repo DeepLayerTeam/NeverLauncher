@@ -58,7 +58,7 @@ func TestOfficialBridgeProfileRequiresLinkedProviderIdentity0397(t *testing.T) {
 			verifier := &minecraftVerifierFixture0268{token: bearer, profile: account}
 			got, err := verifiedOfficialBridgeProfile0397(context.Background(), verifier, tc.store, tc.owner, tc.username, tc.token)
 			if (err == nil) != tc.success {
-				t.Fatalf("verified %v expected success=%t", err, tc.success)
+				t.Fatalf("Проверка %v: ожидался успех=%t", err, tc.success)
 			}
 			if tc.success && (got.ID != uuid || got.Name != account.Name) {
 				t.Fatalf("Неверный профиль: %+v", got)
@@ -76,7 +76,7 @@ func TestOfficialBridgeProofIsNonSecretAndBound0397(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(payload, bearer) || strings.Contains(payload, "refreshToken") || strings.Contains(payload, "accessToken") {
-		t.Fatal("official bearer leaked into join proof")
+		t.Fatal("Официальный токен Bearer попал в подтверждение присоединения")
 	}
 	var proof model.MinecraftSession
 	if err = json.Unmarshal([]byte(payload), &proof); err != nil {
@@ -86,9 +86,9 @@ func TestOfficialBridgeProofIsNonSecretAndBound0397(t *testing.T) {
 		t.Fatal("Неверная привязка доказательства")
 	}
 	if proof.ExpiresAt.Before(now.Add(11*time.Hour)) || proof.ExpiresAt.After(now.Add(13*time.Hour)) {
-		t.Fatal("proxy handoff verification window incorrect")
+		t.Fatal("Некорректное временное окно проверки передачи прокси")
 	}
 	if _, err = officialJoinProof0397("user", "auth-session", "trusted-device", 7, officialminecraft.Profile{ID: "wrong", Name: "OfficialUser"}, nil, now); err == nil {
-		t.Fatal("invalid official UUID accepted")
+		t.Fatal("Принят некорректный официальный UUID")
 	}
 }

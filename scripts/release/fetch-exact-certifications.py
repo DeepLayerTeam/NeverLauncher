@@ -101,7 +101,7 @@ class GitHubAPI:
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(
-                f"GitHub API HTTP {exc.code} for {url}: {body[:500]}"
+                f"GitHub API HTTP {exc.code} для {url}: {body[:500]}"
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(f"Запрос API GitHub для {url} завершился ошибкой: {exc}") from exc
@@ -143,7 +143,7 @@ class GitHubAPI:
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(
-                f"GitHub artifact HTTP {exc.code} for {url}: {body[:500]}"
+                f"HTTP-ошибка артефакта GitHub {exc.code} для {url}: {body[:500]}"
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(

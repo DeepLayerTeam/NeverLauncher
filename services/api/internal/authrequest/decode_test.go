@@ -24,7 +24,7 @@ func TestDecodeRejectsAmbiguousOrUnboundedAuthRequests02912(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var req login
 			if err := Decode(strings.NewReader(input), &req); err == nil {
-				t.Fatalf("ambiguous input accepted: %s", name)
+				t.Fatalf("Приняты неоднозначные входные данные: %s", name)
 			}
 		})
 	}
@@ -33,7 +33,7 @@ func TestDecodeRejectsAmbiguousOrUnboundedAuthRequests02912(t *testing.T) {
 		t.Fatalf("Корректный запрос завершился ошибкой: %+v %v", req, err)
 	}
 	if err := Decode(strings.NewReader(strings.Repeat(" ", MaxBytes+1)), &req); !errors.Is(err, ErrTooLarge) {
-		t.Fatalf("large input not rejected specifically: %v", err)
+		t.Fatalf("Слишком большие входные данные не были явно отклонены: %v", err)
 	}
 }
 
@@ -42,6 +42,6 @@ func TestDecodeRejectsNestedDuplicates02912(t *testing.T) {
 		Settings map[string]any `json:"settings"`
 	}
 	if err := Decode(strings.NewReader(`{"settings":{"role":"admin","role":"player"}}`), &dst); err == nil {
-		t.Fatal("nested duplicate accepted")
+		t.Fatal("Принят вложенный дубликат")
 	}
 }

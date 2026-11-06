@@ -52,7 +52,7 @@ def inspect_elf(path: Path, expected_arch: str) -> str:
     expected_machine, machine_name = MACHINES[expected_arch]
     if machine != expected_machine:
         raise SystemExit(
-            f"{path}: ELF machine={machine}, expected {expected_machine} ({machine_name})"
+            f"{path}: ELF machine={machine}, ожидалось {expected_machine} ({machine_name})"
         )
     return machine_name
 

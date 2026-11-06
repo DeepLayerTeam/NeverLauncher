@@ -37,10 +37,10 @@ func TestEmergencyDisablePersistsDenyEvenWhenStateTransitionFails0424(t *testing
 	rec := httptest.NewRecorder()
 	srv.extensionEmergencyDisable02012(rec, req)
 	if rec.Code != http.StatusInternalServerError || !strings.Contains(rec.Body.String(), "kill-switch active") {
-		t.Fatalf("failure not disclosed as persisted deny: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("Отказ не отражён как сохранённое запрещение: %d %s", rec.Code, rec.Body.String())
 	}
 	if _, err := base.GetExtensionEmergencyDisable(ctx, id, "global", ""); err != nil {
-		t.Fatalf("kill-switch missing on failed disable: %v", err)
+		t.Fatalf("При неудачном отключении отсутствует аварийный выключатель: %v", err)
 	}
 }
 

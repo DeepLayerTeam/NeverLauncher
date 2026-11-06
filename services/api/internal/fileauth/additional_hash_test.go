@@ -44,11 +44,11 @@ func TestAdditionalHashAllSupportedDoubleDigest0426(t *testing.T) {
 				t.Fatalf("%s cannot import: %v", format, err)
 			}
 			if alg, hash, ok := DecodeCredential(stored); !ok || alg != format || hash != expected {
-				t.Fatalf("%s lost during storage", format)
+				t.Fatalf("При сохранении потерян %s", format)
 			}
 		}
 		if _, err := EncodeCredential("double-"+test.name+"-hex", strings.Repeat("f", h.Size()*2-2)); err == nil {
-			t.Fatal("invalid digest length accepted")
+			t.Fatal("Принята некорректная длина контрольной суммы")
 		}
 	}
 }

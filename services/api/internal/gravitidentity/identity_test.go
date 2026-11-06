@@ -110,7 +110,7 @@ func TestReconcileUUIDCollisionAndCaseFolding334(t *testing.T) {
 func TestExtractRejectsUnrecognizedAndInvalid334(t *testing.T) {
 	src, report := archive334(t, map[string]string{"Sessions.json": `{"accessToken":"secret"}`})
 	if _, e := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), report); e == nil {
-		t.Fatal("sessions accepted as users")
+		t.Fatal("Сессии ошибочно приняты как пользователи")
 	}
 	src, report = archive334(t, map[string]string{"sql-export/users.csv": "username,uuid\nAlice,11111111-2222-4333-8444-555555555555\n"})
 	if _, e := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), report); e == nil {

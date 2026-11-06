@@ -11,6 +11,6 @@ func TestAPIContractOnErrors04512(t *testing.T) {
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/projects", nil))
 	if w.Code != 403 || w.Header().Get("X-Launcher-API-Contract") != "1.0.0" {
-		t.Fatalf("contract header missing on errors: %v", w.Result().Header)
+		t.Fatalf("В ответе с ошибкой отсутствует заголовок контракта: %v", w.Result().Header)
 	}
 }

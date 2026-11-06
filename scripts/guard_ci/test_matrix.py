@@ -237,7 +237,7 @@ def main() -> int:
         staged_files = [path for path in staged.iterdir() if path.is_file()]
         if len(staged_files) != 15:
             raise SystemExit(
-                f"expected 15 staged Guard artifacts, got {len(staged_files)}"
+                f"ожидалось 15 подготовленных артефактов Guard, получено {len(staged_files)}"
             )
 
         linux_package = (

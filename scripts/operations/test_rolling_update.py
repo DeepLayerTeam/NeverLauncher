@@ -135,7 +135,7 @@ class RollingTest(unittest.TestCase):
         def compose(directory, project, *args, **kwargs):
             steps.append(args)
             if "up" in args and self.current.read_bytes() == self.target.read_bytes():
-                raise ru.RollingError("simulated image fails readiness")
+                raise ru.RollingError("тестовый образ не прошёл проверку готовности")
             return ""
         original = self.current.read_bytes()
         with patch.object(ru, "validate_stage", return_value={
@@ -347,7 +347,7 @@ class ClusterControllerTest(unittest.TestCase):
     def test_post_cutover_failure_rolls_back_only_affected_node(self):
         class FailureMonitor(self.Monitor):
             def assert_continuity(self):
-                raise ru.RollingError("edge down")
+                raise ru.RollingError("пограничный узел недоступен")
         with self.mocks(), patch.object(ru, "EdgeMonitor", FailureMonitor):
             with self.assertRaisesRegex(ru.RollingError, "затронутый узел восстановлен"):
                 ru.rollout(self.args)

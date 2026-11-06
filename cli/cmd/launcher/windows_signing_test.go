@@ -190,11 +190,11 @@ func TestWindowsPEArchitectureAndCertificateTable0152(t *testing.T) {
 	for _, arch := range []string{"x64", "arm64"} {
 		unsigned, err := inspectWindowsPEBytes0152(syntheticPE0152(t, arch, false))
 		if err != nil || unsigned.Architecture != arch || unsigned.HasSignature {
-			t.Fatalf("unsigned %s PE inspection failed: %+v err=%v", arch, unsigned, err)
+			t.Fatalf("Не удалось проверить PE без подписи %s: %+v, ошибка=%v", arch, unsigned, err)
 		}
 		signed, err := inspectWindowsPEBytes0152(syntheticPE0152(t, arch, true))
 		if err != nil || signed.Architecture != arch || !signed.HasSignature {
-			t.Fatalf("signed %s PE inspection failed: %+v err=%v", arch, signed, err)
+			t.Fatalf("Не удалось проверить подписанный PE %s: %+v, ошибка=%v", arch, signed, err)
 		}
 	}
 }
@@ -253,16 +253,16 @@ func TestWindowsSigningRequiredFrom0152(t *testing.T) {
 func TestGuardSensorRequiredFrom0182(t *testing.T) {
 	for _, ver := range []string{"0.18.0", "0.18.1"} {
 		if guardSensorRequired0182(ver) {
-			t.Fatalf("%s must not require Guard Sensor delivery", ver)
+			t.Fatalf("Для %s не должна требоваться доставка Guard Sensor", ver)
 		}
 	}
 	for _, ver := range []string{"0.18.2", "0.18.3", "0.19.0", "1.0.0"} {
 		if !guardSensorRequired0182(ver) {
-			t.Fatalf("%s must require Guard Sensor delivery", ver)
+			t.Fatalf("Для %s должна требоваться доставка Guard Sensor", ver)
 		}
 		artifacts := expectedWindowsSignedArtifactsForVersion0157(ver, "x64")
 		if artifacts["sensor"] != "guard-sensor-windows-x64.dll" {
-			t.Fatalf("%s sensor artifact mismatch: %#v", ver, artifacts)
+			t.Fatalf("Несоответствие артефакта сенсора %s: %#v", ver, artifacts)
 		}
 	}
 }

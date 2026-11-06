@@ -30,7 +30,7 @@ func TestSQLiteCore0471RejectsUnversionedForeignDatabase(t *testing.T) {
 	}
 	if repo, e := Open(ctx, sqlitedurable.Options{Path: path}); e == nil {
 		_ = repo.Close()
-		t.Fatal("foreign schema silently changed")
+		t.Fatal("Чужая схема изменена без уведомления")
 	}
 }
 
@@ -38,9 +38,9 @@ func TestSQLiteCore0471ExistingMustNotCreateFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "no-such-db.sqlite")
 	if repo, err := OpenExisting(context.Background(), sqlitedurable.Options{Path: path}); err == nil {
 		_ = repo.Close()
-		t.Fatal("created absent database")
+		t.Fatal("Создана ранее отсутствовавшая база данных")
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("OpenExisting created a database or unexpected error: %v", err)
+		t.Fatalf("OpenExisting создал базу данных либо вернул непредвиденную ошибку: %v", err)
 	}
 }

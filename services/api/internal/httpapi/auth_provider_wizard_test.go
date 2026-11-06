@@ -30,7 +30,7 @@ func TestProviderWizardStrictSecrets02910(t *testing.T) {
 		v := repository.ManagedProviderRevision02910{ID: "company", Kind: c.kind, Config: json.RawMessage(c.config), Reason: "test connection"}
 		err := validateManagedSecrets02910(v)
 		if (err == nil) != c.valid {
-			t.Errorf("case %d: expected valid=%v got err=%v", i, c.valid, err)
+			t.Errorf("Сценарий %d: ожидаемая корректность=%v, получена ошибка=%v", i, c.valid, err)
 		}
 	}
 }

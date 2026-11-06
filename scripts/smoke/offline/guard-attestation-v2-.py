@@ -14,7 +14,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] Attestation v2 0.18.10 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Проверка аттестации v2 0.18.10: {path} отсутствует: {', '.join(missing)}"
         )
 
 
@@ -146,7 +146,7 @@ migration_api = read(
 migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 if migration_api != migration_cli:
     raise SystemExit(
-        "[Launcher] Attestation v2 0.18.10 gate: API/CLI migration 0032 differs"
+        "[Launcher] Проверка аттестации v2 0.18.10: миграция API/CLI 0032 отличается"
     )
 require(
     migration_api,
@@ -196,7 +196,7 @@ require(
 )
 if "guard-attestation-v2-01810.py" not in preflight:
     raise SystemExit(
-        "[Launcher] Attestation v2 0.18.10 gate: release preflight wiring missing"
+        "[Launcher] Проверка аттестации v2 0.18.10: отсутствует подключение предварительных проверок релиза"
     )
 
 for rel, text in [
@@ -207,9 +207,9 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[Launcher] Attestation v2 0.18.10 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Проверка аттестации v2 0.18.10: заглушка {placeholder!r} в {rel}"
             )
 
 print(
-    f"[Launcher] Guard Attestation v2 + continuous Windows evidence 0.18.10 gate: OK ({version})"
+    f"[Launcher] Аттестация Guard v2 и непрерывные подтверждения Windows 0.18.10: ПРОЙДЕНО ({version})"
 )

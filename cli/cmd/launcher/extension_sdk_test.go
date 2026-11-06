@@ -28,7 +28,7 @@ func TestExtensionInit02010CreatesRunnableBackendLayout(t *testing.T) {
 	want := map[string]string{"backend": "backend/bin/extension-backend", "cli": "cli/bin/extension-cli", "admin": "admin/index.html", "desktop": "desktop/index.html"}
 	for k, v := range want {
 		if got[k] != v {
-			t.Fatalf("target %s entrypoint=%q want %q", k, got[k], v)
+			t.Fatalf("Цель %s: точка входа=%q, ожидалось %q", k, got[k], v)
 		}
 	}
 	for _, rel := range []string{"backend/go.mod", "backend/main.go", "cli/go.mod", "cli/main.go", "admin/index.html", "desktop/index.html"} {
@@ -69,7 +69,7 @@ func TestLocalDevHost02010DenyByDefaultAndHandshake(t *testing.T) {
 	_ = resp.Body.Close()
 	resp = do("/v1/capabilities/project.get", `{"projectId":"dev-project"}`)
 	if resp.StatusCode != 403 {
-		t.Fatalf("project.get without explicit grant=%d", resp.StatusCode)
+		t.Fatalf("project.get без явно выданного разрешения=%d", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 }

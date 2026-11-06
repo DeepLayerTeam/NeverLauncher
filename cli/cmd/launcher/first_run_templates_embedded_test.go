@@ -20,13 +20,13 @@ func TestEmbeddedProductionTemplatesFromCanonicalSource(t *testing.T) {
 			t.Fatalf("canonical %s: %v", name, err)
 		}
 		if !bytes.Equal(got, want) {
-			t.Errorf("embedded %s differs from canonical", name)
+			t.Errorf("Встроенный %s отличается от эталона", name)
 		}
 		if !strings.HasPrefix(source, "embedded:") {
 			t.Errorf("Неожиданный источник: %s", source)
 		}
 	}
 	if _, _, err := readCanonicalProductionTemplate("../VERSION"); err == nil {
-		t.Fatal("arbitrary relative path accepted as production template")
+		t.Fatal("Произвольный относительный путь принят как производственный шаблон")
 	}
 }

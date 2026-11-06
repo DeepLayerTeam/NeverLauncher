@@ -247,5 +247,5 @@ require(
 )
 
 print(
-    f"Minecraft Compatibility II GA 0.17.0 gate: OK / 0.17.0v3 Java 21/25 grid ({len(vanilla)} Vanilla targets, {len({row['minecraft'] for row in vanilla})} releases, Java 8/16/17/21/25)"
+    f"Проверка совместимости Minecraft II GA 0.17.0: ПРОЙДЕНА / 0.17.0v3 матрица Java 21/25 ({len(vanilla)} целевых платформ Vanilla, {len({row['minecraft'] for row in vanilla})} релизов, Java 8/16/17/21/25)"
 )

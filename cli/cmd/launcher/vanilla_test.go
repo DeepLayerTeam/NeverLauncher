@@ -32,11 +32,11 @@ func TestVanilla0402NativeDuplicateIsPublishedOnce(t *testing.T) {
 		}
 	}
 	if count != 1 {
-		t.Fatalf("same native path reported %d times; want exactly once", count)
+		t.Fatalf("Один и тот же путь нативной библиотеки указан %d раз; должен быть ровно один", count)
 	}
 	b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(nativePath)))
 	if err != nil || string(b) != "same-bytes" {
-		t.Fatalf("native not installed: %q, %v", b, err)
+		t.Fatalf("Нативная библиотека не установлена: %q, %v", b, err)
 	}
 }
 
@@ -50,7 +50,7 @@ func TestVanilla0402MacOSArm64NativesAreLoadableFromRoot(t *testing.T) {
 	alias := "natives/osx/aarch64/libglfw.dylib"
 	b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(alias)))
 	if err != nil || string(b) != "real-dylib-bytes" {
-		t.Fatalf("macOS java.library.path alias missing: %q %v", b, err)
+		t.Fatalf("Отсутствует псевдоним java.library.path для macOS: %q %v", b, err)
 	}
 	found := false
 	for _, file := range install.Files {
@@ -59,7 +59,7 @@ func TestVanilla0402MacOSArm64NativesAreLoadableFromRoot(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("native alias missing from verified file list: %s", alias)
+		t.Fatalf("Псевдоним нативной библиотеки отсутствует в списке проверенных файлов: %s", alias)
 	}
 	// Повторите извлечение из ранее проверенных файлов: второй идентичный подписанный
 	// архив должен использовать тот же алиас, не перезаписывая его.
@@ -67,7 +67,7 @@ func TestVanilla0402MacOSArm64NativesAreLoadableFromRoot(t *testing.T) {
 	aliasPaths, err := flattenLWJGLMacOSNatives(nativeRoot,
 		[]string{"macos/arm64/org/lwjgl/libglfw.dylib"}, "aarch64")
 	if err != nil || len(aliasPaths) != 1 || aliasPaths[0] != "libglfw.dylib" {
-		t.Fatalf("identical LWJGL native alias rejected: %v %v", aliasPaths, err)
+		t.Fatalf("Отклонён идентичный псевдоним нативной библиотеки LWJGL: %v %v", aliasPaths, err)
 	}
 }
 
@@ -82,10 +82,10 @@ func TestVanilla0402MacOSRejectsCrossArchitectureAndCollisions(t *testing.T) {
 	}
 	aliases, err := flattenLWJGLMacOSNatives(root, []string{"macos/x64/org/lwjgl/libtest.dylib"}, "aarch64")
 	if err != nil || len(aliases) != 0 {
-		t.Fatalf("Apple Silicon inherited x64 native: %v %v", aliases, err)
+		t.Fatalf("Apple Silicon унаследовал нативную библиотеку x64: %v %v", aliases, err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "libtest.dylib")); !os.IsNotExist(err) {
-		t.Fatalf("cross-architecture alias created: %v", err)
+		t.Fatalf("Создан псевдоним для другой архитектуры: %v", err)
 	}
 	if _, err := flattenLWJGLMacOSNatives(root, nil, "arm"); err == nil {
 		t.Fatal("Принята неподдерживаемая архитектура")
@@ -105,7 +105,7 @@ func TestVanilla0402MacOSRejectsCrossArchitectureAndCollisions(t *testing.T) {
 	}
 	actual, err := os.ReadFile(filepath.Join(root, "libtest.dylib"))
 	if err != nil || string(actual) != "old" {
-		t.Fatalf("collision overwrote existing library: %q %v", actual, err)
+		t.Fatalf("Конфликт перезаписал существующую библиотеку: %q %v", actual, err)
 	}
 }
 
@@ -123,11 +123,11 @@ func TestVanilla0402VerifiedResourceCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := copyFileVerified(src, dst, int64(len("untampered")), sha); err == nil {
-		t.Fatal("changed asset accepted")
+		t.Fatal("Изменённый ресурс ошибочно принят")
 	}
 	b, err := os.ReadFile(dst)
 	if err != nil || string(b) != "untampered" {
-		t.Fatalf("previous verified asset replaced on failure: %q %v", b, err)
+		t.Fatalf("Ранее проверенный ресурс заменён после ошибки: %q %v", b, err)
 	}
 }
 

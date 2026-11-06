@@ -142,7 +142,7 @@ def main(argv=None) -> int:
         print(json.dumps(result, sort_keys=True))
         return 0
     except (ga.Blocked, Blocked, OSError, KeyError, TypeError, RuntimeError, ValueError) as exc:
-        print('GRAVIT 0.50.0 PRODUCTION GA BLOCKED: ' + str(exc), file=sys.stderr)
+        print('Выпуск GRAVIT 0.50.0 для производства ЗАБЛОКИРОВАН: ' + str(exc), file=sys.stderr)
         return 2
 
 

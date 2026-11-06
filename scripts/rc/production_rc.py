@@ -194,7 +194,7 @@ def validate_events(lines: str, suite: Suite, returncode: int) -> dict:
     wrong = sorted(k for k, v in finished.items() if v != "pass")
     if returncode != 0 or missing or wrong or violations:
         raise GateError(
-            f"{suite.name}: exit={returncode}, missing={missing}, not_passed={wrong}, problems={violations[:16]}"
+            f"{suite.name}: exit={returncode}, отсутствует={missing}, не пройдено={wrong}, проблемы={violations[:16]}"
         )
     return {
         "suite": suite.name,

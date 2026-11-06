@@ -38,7 +38,7 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusUpgradeRequired || !strings.Contains(res.Body.String(), "serverbridge_protocol_unsupported") {
-		t.Fatalf("legacy bridge protocol accepted => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Принят устаревший протокол моста => %d %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"protocolVersion":2,"serverType":"velocity","pluginVersion":"0.11.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))

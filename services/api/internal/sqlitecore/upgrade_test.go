@@ -32,7 +32,7 @@ func TestCore0472MigratesVersion326AndDoesNotRepeatBackup(t *testing.T) {
 	}
 	counts, err := r.Count(ctx)
 	if err != nil || counts["projects"] != 1 || counts["profiles"] != 1 {
-		t.Fatalf("core rows lost: %v %v", counts, err)
+		t.Fatalf("Потеряны основные записи: %v %v", counts, err)
 	}
 	if err = r.Close(); err != nil {
 		t.Fatal(err)
@@ -51,6 +51,6 @@ func TestCore0472MigratesVersion326AndDoesNotRepeatBackup(t *testing.T) {
 	defer r.Close()
 	backups, _ = filepath.Glob(filepath.Join(filepath.Dir(path), "pre-upgrade-backups", "*.sqlite"))
 	if len(backups) != 1 {
-		t.Fatal("repeat migration produced backup")
+		t.Fatal("Повторная миграция создала резервную копию")
 	}
 }

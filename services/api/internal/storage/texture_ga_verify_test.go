@@ -31,7 +31,7 @@ func TestTextureGA0260VerificationRequiresCanonicalPNG(t *testing.T) {
 		t.Fatal(err)
 	}
 	if checked := VerifyTextureGA0260(ctx, store, obj); checked.Result != "ok" {
-		t.Fatalf("valid normalized PNG rejected: %+v", checked)
+		t.Fatalf("Отклонён корректный нормализованный PNG: %+v", checked)
 	}
 	// Имя объекта и совпадение SHA-256 сами по себе недостаточны как доказательство.
 	plain := []byte("not an image, though stored under its correct SHA256")
@@ -40,10 +40,10 @@ func TestTextureGA0260VerificationRequiresCanonicalPNG(t *testing.T) {
 		t.Fatal(err)
 	}
 	if checked := VerifyTexture02511(ctx, store, fake); checked.Result != "ok" {
-		t.Fatalf("unexpected legacy byte-verification behavior: %+v", checked)
+		t.Fatalf("Неожиданное поведение устаревшей побайтовой проверки: %+v", checked)
 	}
 	if checked := VerifyTextureGA0260(ctx, store, fake); checked.Result != "corrupt" {
-		t.Fatalf("non-PNG bytes accepted as release-quality texture: %+v", checked)
+		t.Fatalf("Данные не в формате PNG приняты как текстура релизного качества: %+v", checked)
 	}
 	// Пиксели с корректным хешем, но неканоническим кодированием должны отклоняться:
 	// сервис гарантирует нормализованные блобы и стабильный кэш с адресацией по содержимому.
@@ -56,7 +56,7 @@ func TestTextureGA0260VerificationRequiresCanonicalPNG(t *testing.T) {
 			t.Fatal(err)
 		}
 		if checked := VerifyTextureGA0260(ctx, store, other); checked.Result != "corrupt" {
-			t.Fatalf("noncanonical PNG passed release check: %+v", checked)
+			t.Fatalf("Неканонический PNG прошёл проверку релиза: %+v", checked)
 		}
 	}
 }

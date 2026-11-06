@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] Windows Protection RC 0.18.12 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Проверка RC защиты Windows 0.18.12: {path} отсутствует: {', '.join(missing)}"
         )
 
 
@@ -139,16 +139,16 @@ for text, path in [
         )
 if "TestWindowsProtection" not in ci:
     raise SystemExit(
-        "[Launcher] Windows Protection RC 0.18.12 gate: Go certificate tests: не подключены к CI"
+        "[Launcher] Проверка RC защиты Windows 0.18.12: Go-тесты сертификации не подключены к CI"
     )
 
 lowered = impl.lower()
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in lowered:
         raise SystemExit(
-            f"[Launcher] Windows Protection RC 0.18.12 gate: placeholder {marker!r} in cli/cmd/launcher/windows_protection_release_01812.go"
+            f"[Launcher] Проверка RC защиты Windows 0.18.12: заглушка {marker!r} в cli/cmd/launcher/windows_protection_release_01812.go"
         )
 
 print(
-    f"[Launcher] Windows Protection RC release certificate + production gates 0.18.12 gate: OK ({version})"
+    f"[Launcher] Сертификат RC защиты Windows и производственные проверки 0.18.12: ПРОЙДЕНО ({version})"
 )

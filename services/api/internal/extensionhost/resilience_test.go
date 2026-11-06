@@ -26,7 +26,7 @@ func TestSupervisorConcurrentTerminalFailure03012(t *testing.T) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	if st.state != "failing" || !st.terminationInitiated || st.expectedStop || st.lastError != "Java RPC unresponsive after 3 probes" {
-		t.Fatalf("terminal transition was not idempotent: state=%s cause=%q", st.state, st.lastError)
+		t.Fatalf("Завершающий переход не идемпотентен: состояние=%s, причина=%q", st.state, st.lastError)
 	}
 }
 
@@ -37,7 +37,7 @@ func TestSupervisorStopCannotBeOverriddenByLateProbe03012(t *testing.T) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	if st.state != "stopping" || !st.expectedStop || st.lastError != "" {
-		t.Fatal("late health probe overrode an intentional stop")
+		t.Fatal("Поздняя проверка состояния отменила намеренную остановку")
 	}
 }
 
@@ -67,14 +67,14 @@ func TestSupervisorPreservesJvmHangCause03012(t *testing.T) {
 		}
 		if status.State == "crashed" || status.State == "crashloop" {
 			if !strings.Contains(status.LastError, "Java RPC unresponsive") {
-				t.Fatalf("missing original failure reason: state=%s err=%q", status.State, status.LastError)
+				t.Fatalf("Отсутствует исходная причина отказа: состояние=%s, ошибка=%q", status.State, status.LastError)
 			}
 			return
 		}
 		select {
 		case <-tick.C:
 		case <-deadline.C:
-			t.Fatalf("hung Java process never terminated: %+v", status)
+			t.Fatalf("Зависший процесс Java не завершился: %+v", status)
 		}
 	}
 }

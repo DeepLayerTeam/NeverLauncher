@@ -17,7 +17,7 @@ func TestCompromisedRiskRevokesSessionAndRefreshMemory0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok := store.get(session.ID, user.ID); !ok {
-		t.Fatal("session never active")
+		t.Fatal("Сессия ни разу не была активной")
 	}
 	now := time.Now().UTC()
 	rec, err := store.applyRisk0126(session.ID, user.ID, "compromised", 100, "revoke", []string{"device-revoked"}, now, now)
@@ -25,12 +25,12 @@ func TestCompromisedRiskRevokesSessionAndRefreshMemory0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	if rec.Status != "revoked" || rec.RevokedReason != "risk-compromised" {
-		t.Fatalf("risk decision left session active: %+v", rec)
+		t.Fatalf("После решения о риске сессия осталась активной: %+v", rec)
 	}
 	if _, ok := store.get(session.ID, user.ID); ok {
-		t.Fatal("revoked session remained valid")
+		t.Fatal("Отозванная сессия осталась действительной")
 	}
 	if _, err := store.previewRefresh0126(refresh); err == nil {
-		t.Fatal("risk-revoked refresh token remained valid")
+		t.Fatal("Отозванный по риску токен обновления остался действительным")
 	}
 }

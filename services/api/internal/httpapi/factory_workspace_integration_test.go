@@ -39,10 +39,10 @@ func TestFactoryPrepareWorkspace0401(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Settings.Runtime.Launch.ClasspathStrategy != "mojang" || got.Settings.Runtime.Launch.VersionMetadataPath != p.Launch.ProfilePath || len(got.Files) != 1 || got.Files[0].TargetOS[0] != "linux" || !got.Files[0].Selected {
-		t.Fatalf("unexpected imported workspace: %+v", got)
+		t.Fatalf("Неожиданное импортированное рабочее пространство: %+v", got)
 	}
 	if len(ws.Files) != 0 || ws.Settings.Runtime.Launch.ClasspathStrategy != "" {
-		t.Fatal("mutated caller workspace")
+		t.Fatal("Изменено рабочее пространство вызывающего кода")
 	}
 	cases := []struct {
 		name   string
@@ -81,7 +81,7 @@ func TestFactoryPrepareWorkspace0401(t *testing.T) {
 			w, pl, j := sampleFactory0401()
 			c.change(&w, &pl, &j)
 			if _, err := factoryPrepareWorkspace0401(w, pl, j, 1024); err == nil {
-				t.Fatal("accepted invalid factory delivery")
+				t.Fatal("Принята некорректная доставка сборки")
 			}
 		})
 	}
@@ -105,11 +105,11 @@ func TestFactoryReadSource0401(t *testing.T) {
 	}{path, hex.EncodeToString(sum[:]), int64(len(data))}
 	b, err := factoryReadSource0401(root, f, 1024)
 	if err != nil || string(b) != string(data) {
-		t.Fatalf("read verified output: %v", err)
+		t.Fatalf("Чтение проверенного результата: %v", err)
 	}
 	f.SHA256 = strings.Repeat("0", 64)
 	if _, err = factoryReadSource0401(root, f, 1024); err == nil {
-		t.Fatal("accepted corrupted factory file")
+		t.Fatal("Принят повреждённый файл сборки")
 	}
 	f.SHA256 = hex.EncodeToString(sum[:])
 	f.Path = "../demo.json"
@@ -119,7 +119,7 @@ func TestFactoryReadSource0401(t *testing.T) {
 	f.Path = "versions/demo/demo.json"
 	f.Size = 1025
 	if _, err = factoryReadSource0401(root, f, 1024); err == nil {
-		t.Fatal("accepted oversized file")
+		t.Fatal("Принят файл сверх допустимого размера")
 	}
 	f.Size = int64(len(data))
 	if err = os.Remove(filepath.Join(root, filepath.FromSlash(path))); err != nil {

@@ -255,7 +255,7 @@ def main(argv=None):
         else:
             require(a.baseline and a.operator_work and a.backend_env, 'Отсутствуют независимо собранные свидетельства источника, оператора или Runtime')
             verify(a)
-        print(f'0.48.0 live {a.action} completed')
+        print(f'0.48.0: реальное обновление {a.action} завершено')
         return 0
     except (OSError, ValueError, CutoverError, sqlite3.DatabaseError, KeyError, TypeError, json.JSONDecodeError) as exc:
         print(f'Приёмка реальной среды 0.48.0 отклонена: {type(exc).__name__}: {exc}', file=sys.stderr)

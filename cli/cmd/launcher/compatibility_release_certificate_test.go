@@ -66,7 +66,7 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 		}
 	}
 	if len(cert.Platforms) != 6 {
-		t.Fatalf("platform coverage=%d want=6", len(cert.Platforms))
+		t.Fatalf("Охват платформ=%d, ожидалось 6", len(cert.Platforms))
 	}
 	for name, passed := range cert.Invariants {
 		if !passed {

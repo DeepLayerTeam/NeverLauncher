@@ -106,7 +106,7 @@ func TestRedisCoordinatorFencesCommandOwnership01911(t *testing.T) {
 	ownerB, tokenB := "fedcba9876543210fedcba9876543210", "lease_B_0123456789abcdef"
 	ok, err := coordinator.AcquireCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA, 30*time.Second)
 	if err != nil || !ok {
-		t.Fatalf("first acquire: ok=%v err=%v", ok, err)
+		t.Fatalf("Первый захват: успех=%v, ошибка=%v", ok, err)
 	}
 	ok, err = coordinator.AcquireCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA, 30*time.Second)
 	if err != nil || !ok {

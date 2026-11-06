@@ -46,13 +46,13 @@ func TestDurablePublishRechecksAuthorizationBeforeCommit0213(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := srv.executeDurablePublishJob0213(context.Background(), repo, leased, "worker-a"); !errors.Is(err, errDurableAuthorizationRevoked0213) {
-		t.Fatalf("expected live authorization revocation, got %v", err)
+		t.Fatalf("Ожидался отзыв действующей авторизации, получено %v", err)
 	}
 	stored, err := repo.GetDurableJob(context.Background(), job.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if stored.Status != model.DurableJobStatusRevoked {
-		t.Fatalf("expected revoked job, got %q", stored.Status)
+		t.Fatalf("Ожидалось отозванное задание, получено %q", stored.Status)
 	}
 }

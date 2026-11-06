@@ -141,11 +141,11 @@ func TestLegacySmokeIsIntegrityOnly0212(t *testing.T) {
 	body := res.Body.String()
 	for _, required := range []string{`"validationKind":"integrity"`, `"runtimeExecuted":false`, `"runtimeStatus":"not-checked"`} {
 		if !strings.Contains(body, required) {
-			t.Fatalf("legacy smoke is not honest: missing %s in %s", required, body)
+			t.Fatalf("Устаревшая быстрая проверка даёт недостоверный результат: отсутствует %s в %s", required, body)
 		}
 	}
 	if strings.Contains(body, `"runtimeStatus":"passed"`) || strings.Contains(body, `"validationKind":"runtime"`) {
-		t.Fatalf("integrity-only smoke must never claim runtime pass: %s", body)
+		t.Fatalf("Проверка только целостности не должна подтверждать успешность Runtime: %s", body)
 	}
 }
 
@@ -161,7 +161,7 @@ func TestRuntimePolicyRequiresSignedExactManifestEvidence0212(t *testing.T) {
 	policyRes := httptest.NewRecorder()
 	handler.ServeHTTP(policyRes, policyReq)
 	if policyRes.Code != http.StatusOK {
-		t.Fatalf("set runtime policy => %d %s", policyRes.Code, policyRes.Body.String())
+		t.Fatalf("Установка политики Runtime => %d %s", policyRes.Code, policyRes.Body.String())
 	}
 
 	publish := func() *httptest.ResponseRecorder {
@@ -172,7 +172,7 @@ func TestRuntimePolicyRequiresSignedExactManifestEvidence0212(t *testing.T) {
 		return res
 	}
 	if res := publish(); res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "runtime PASS") {
-		t.Fatalf("publish without runtime evidence must fail => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Публикация без подтверждения Runtime должна завершиться ошибкой => %d %s", res.Code, res.Body.String())
 	}
 
 	now := time.Now().UTC().Add(-time.Minute).Truncate(time.Second)
@@ -207,11 +207,11 @@ func TestRuntimePolicyRequiresSignedExactManifestEvidence0212(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), `"result":"passed"`) {
-		t.Fatalf("signed runtime evidence => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Подписанное подтверждение Runtime => %d %s", res.Code, res.Body.String())
 	}
 
 	if res := publish(); res.Code != http.StatusOK {
-		t.Fatalf("publish with signed exact runtime evidence => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Публикация с подписанным точным подтверждением Runtime => %d %s", res.Code, res.Body.String())
 	}
 }
 
@@ -230,6 +230,6 @@ func TestRuntimeEvidenceWithWrongSignatureIsRejected0212(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusUnauthorized {
-		t.Fatalf("invalid runtime signer must be rejected => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Некорректный подписант Runtime должен быть отклонён => %d %s", res.Code, res.Body.String())
 	}
 }

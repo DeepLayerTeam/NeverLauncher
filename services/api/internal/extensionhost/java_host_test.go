@@ -58,13 +58,13 @@ func TestJavaEntrypointParentSymlinkRejected0304(t *testing.T) {
 func TestJavaRPCLimitAndMethodWhitelist0304(t *testing.T) {
 	s := New(Config{}, repository.NewMemoryRepository("http://localhost"), storage.NewLocalStorage(t.TempDir()))
 	if _, err := s.CallJavaRPC0304(context.Background(), Key{}, "unsafe.eval", nil); err == nil {
-		t.Fatal("unexpected method accepted")
+		t.Fatal("Принят неожиданный метод")
 	}
 	if _, err := s.CallJavaRPC0304(context.Background(), Key{}, "health", json.RawMessage(`{"x":`)); err == nil {
 		t.Fatal("Принят недопустимый JSON")
 	}
 	if _, err := s.CallJavaRPC0304(context.Background(), Key{ExtensionID: "absent"}, "health", nil); !errors.Is(err, ErrHostNotRunning) {
-		t.Fatalf("expected not running, got %v", err)
+		t.Fatalf("Ожидалось состояние «не запущено», получено %v", err)
 	}
 }
 
@@ -136,7 +136,7 @@ func TestJavaHostSubprocessRPCAndCLI0304(t *testing.T) {
 	}
 	status, err := host.Get(key)
 	if err != nil || !status.Healthy || status.State != "running" || status.PID <= 0 {
-		t.Fatalf("unexpected Go JVM status: %#v: %v", status, err)
+		t.Fatalf("Неожиданный статус Go JVM: %#v: %v", status, err)
 	}
 	payload, err := host.CallJavaRPC0304(ctx, key, "health", nil)
 	if err != nil {
@@ -147,14 +147,14 @@ func TestJavaHostSubprocessRPCAndCLI0304(t *testing.T) {
 		Responsive bool   `json:"responsive"`
 	}
 	if err := json.Unmarshal(payload, &health); err != nil || health.State != "RUNNING" || !health.Responsive {
-		t.Fatalf("invalid Java health: %s %v", payload, err)
+		t.Fatalf("Некорректное состояние Java: %s %v", payload, err)
 	}
 	payload, err = host.CallJavaRPC0304(ctx, key, "command.invoke", json.RawMessage(`{"command":"echo","payload":{"ping":17}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(payload), `"ping":17`) {
-		t.Fatalf("unexpected typed Java RPC result: %s", payload)
+		t.Fatalf("Неожиданный типизированный результат Java RPC: %s", payload)
 	}
 	res, err := host.RunCLI0209(ctx, install, []string{"status"})
 	if err != nil {

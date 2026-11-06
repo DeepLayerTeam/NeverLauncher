@@ -48,7 +48,7 @@ func TestNativeCLIHelper04312(t *testing.T) {
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		t.Fatalf("native CLI hello denied: %d", response.StatusCode)
+		t.Fatalf("Приветствие нативного CLI отклонено: %d", response.StatusCode)
 	}
 	time.Sleep(30 * time.Second)
 }
@@ -152,13 +152,13 @@ func TestNativeCLIRevocationStopsRunningProcess04312(t *testing.T) {
 				time.Sleep(20 * time.Millisecond)
 			}
 			if state == nil {
-				t.Fatal("native CLI never registered")
+				t.Fatal("Нативный CLI не зарегистрировался")
 			}
 			state.mu.Lock()
 			ready := !state.helloAt.IsZero()
 			state.mu.Unlock()
 			if !ready {
-				t.Fatal("native CLI did not complete authenticated hello")
+				t.Fatal("Нативный CLI не завершил аутентифицированное приветствие")
 			}
 			switch revocation {
 			case "grant":
@@ -181,10 +181,10 @@ func TestNativeCLIRevocationStopsRunningProcess04312(t *testing.T) {
 			select {
 			case err := <-finished:
 				if err == nil {
-					t.Fatal("CLI reported success despite revoked authority")
+					t.Fatal("CLI сообщил об успехе несмотря на отозванные полномочия")
 				}
 			case <-time.After(8 * time.Second):
-				t.Fatal("running native CLI survived trust revocation")
+				t.Fatal("Работающий нативный CLI остался активен после отзыва доверия")
 			}
 		})
 	}
@@ -202,12 +202,12 @@ func TestCLIAuthorityPreflightRejectsRevocation04312(t *testing.T) {
 	// В неизменяемом манифесте репозитория всё ещё нет разрешения CLI: одни
 	// дополнительные гранты никогда не разрешают исполнение кода.
 	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "revoked") {
-		t.Fatalf("unrequested CLI privilege was granted: %v", err)
+		t.Fatalf("Предоставлено не запрошенное право CLI: %v", err)
 	}
 	if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: st.key.ExtensionID, Scope: "global", Reason: "incident", Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
-		t.Fatalf("emergency-disabled install passed CLI preflight: %v", err)
+		t.Fatalf("Аварийно отключённая установка прошла предварительную проверку CLI: %v", err)
 	}
 }

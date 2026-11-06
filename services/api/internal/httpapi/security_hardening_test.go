@@ -72,7 +72,7 @@ func postJSON902(t *testing.T, h http.Handler, path, body, token string) map[str
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
-		t.Fatalf("invalid json from %s: %v", path, err)
+		t.Fatalf("Некорректный JSON из %s: %v", path, err)
 	}
 	return payload
 }

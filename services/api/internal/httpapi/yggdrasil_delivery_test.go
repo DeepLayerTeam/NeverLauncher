@@ -67,11 +67,11 @@ func decodeTexture0394(t *testing.T, body map[string]any) map[string]any {
 	t.Helper()
 	properties := body["properties"].([]any)
 	if len(properties) != 1 {
-		t.Fatalf("missing Yggdrasil property: %#v", body)
+		t.Fatalf("Отсутствует свойство Yggdrasil: %#v", body)
 	}
 	property := properties[0].(map[string]any)
 	if property["signature"] == nil {
-		t.Fatal("signed profile missing RSA signature")
+		t.Fatal("В подписанном профиле отсутствует подпись RSA")
 	}
 	data, err := base64.StdEncoding.DecodeString(property["value"].(string))
 	if err != nil {
@@ -91,7 +91,7 @@ func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
 	s := Server{Repo: r, State: NewRuntimeState(), Config: config.Config{Environment: "dev", PublicURL: "https://api.example.test"}}
 	code, headers, body := requestLiveTexture0394(t, s, profile.UUID)
 	if code != 200 || !strings.Contains(headers.Get("Cache-Control"), "no-store") {
-		t.Fatalf("Yggdrasil response=%d, cache=%q", code, headers.Get("Cache-Control"))
+		t.Fatalf("Ответ Yggdrasil=%d, кеш=%q", code, headers.Get("Cache-Control"))
 	}
 	v := decodeTexture0394(t, body)
 	if v["profileId"] != minecraftID119(profile.UUID) {
@@ -99,7 +99,7 @@ func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
 	}
 	textures := v["textures"].(map[string]any)
 	if textures["SKIN"].(map[string]any)["metadata"].(map[string]any)["model"] != "slim" || textures["CAPE"].(map[string]any)["url"] != r.texture.CapeURL {
-		t.Fatalf("first skin/cape mismatch: %#v", textures)
+		t.Fatalf("Несоответствие первого скина или плаща: %#v", textures)
 	}
 	// Изменяйте выбранные skin/cape при работающем том же экземпляре Server.
 	// Следующий запрос должен читать актуальные значения БД, а не устаревший кэш
@@ -109,21 +109,21 @@ func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
 	r.texture.Model = "classic"
 	code, _, body = requestLiveTexture0394(t, s, profile.UUID)
 	if code != 200 {
-		t.Fatalf("updated profile status=%d", code)
+		t.Fatalf("Статус обновлённого профиля=%d", code)
 	}
 	next := decodeTexture0394(t, body)["textures"].(map[string]any)
 	if next["SKIN"].(map[string]any)["url"] != r.texture.SkinURL {
-		t.Fatalf("stale skin served: %#v", next)
+		t.Fatalf("Выдан устаревший скин: %#v", next)
 	}
 	if _, ok := next["CAPE"]; ok {
-		t.Fatalf("removed cape still published: %#v", next)
+		t.Fatalf("Удалённый плащ по-прежнему опубликован: %#v", next)
 	}
 	if _, ok := next["SKIN"].(map[string]any)["metadata"]; ok {
-		t.Fatalf("classic model must omit metadata: %#v", next)
+		t.Fatalf("Классическая модель не должна содержать метаданные: %#v", next)
 	}
 	r.fail = errors.New("database unavailable")
 	code, _, _ = requestLiveTexture0394(t, s, profile.UUID)
 	if code != http.StatusServiceUnavailable {
-		t.Fatalf("failed DB masked by empty skin: %d", code)
+		t.Fatalf("Ошибка БД замаскирована пустым скином: %d", code)
 	}
 }

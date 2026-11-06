@@ -63,7 +63,7 @@ def inspect_macho(
     meta = ARCHES[expected_arch]
     if cpu != meta["cpu"]:
         raise RuntimeError(
-            f"{path}: Mach-O cputype=0x{cpu:08x}, expected {meta['cpuText']}"
+            f"{path}: Mach-O cputype=0x{cpu:08x}, ожидалось {meta['cpuText']}"
         )
     ncmds = struct.unpack_from("<I", data, 16)[0]
     sizeofcmds = struct.unpack_from("<I", data, 20)[0]

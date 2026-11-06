@@ -258,7 +258,7 @@ def main():
         print("Изолированные операции 0.35.14 ЗАБЛОКИРОВАНЫ: " + str(exc), file=sys.stderr)
         return 3
     print(
-        "Real fresh-site restore and isolated failure injection completed; HA/production RPO NOT certified."
+        "Реальное восстановление чистой установки и изолированное моделирование сбоя завершены; RPO для отказоустойчивой/производственной среды НЕ сертифицировано."
     )
     return 0
 

@@ -95,7 +95,7 @@ func TestJoinAtomicRaceCrashRestartAndReplay(t *testing.T) {
 	}
 	p := signJoinProof(t, priv, "redeem", 1, []byte(grant.Ticket))
 	if _, e = r.RedeemJoinTicket(ctx, grant.Ticket, p, ""); !errors.Is(e, ErrJoinRejected) {
-		t.Fatalf("reused after restart: %v", e)
+		t.Fatalf("Повторное использование после перезапуска: %v", e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -118,7 +118,7 @@ func TestNodeNonceReplaySignatureAndTamper(t *testing.T) {
 	p = signJoinProof(t, priv, "ping", 1, []byte("request"))
 	p.Timestamp -= 600
 	if e := r.ConsumeSignedNonce(ctx, p, []byte("request")); !errors.Is(e, ErrNodeProof) {
-		t.Fatalf("stale timestamp accepted: %v", e)
+		t.Fatalf("Принята устаревшая отметка времени: %v", e)
 	}
 }
 func TestJoinReplacementRotationRevocation(t *testing.T) {
@@ -135,7 +135,7 @@ func TestJoinReplacementRotationRevocation(t *testing.T) {
 	}
 	status, e := r.TicketStatus(ctx, first.Ticket)
 	if e != nil || status != "replaced" {
-		t.Fatalf("first ticket not replaced: %q %v", status, e)
+		t.Fatalf("Первый билет не был заменён: %q %v", status, e)
 	}
 	// Ротация ключа аннулирует ожидающие билеты и меняет эпоху подписи.
 	pub2, priv2, e := ed25519.GenerateKey(rand.Reader)
@@ -152,7 +152,7 @@ func TestJoinReplacementRotationRevocation(t *testing.T) {
 	}
 	p = signJoinProof(t, priv2, "redeem", 2, []byte(second.Ticket))
 	if _, e = r.RedeemJoinTicket(ctx, second.Ticket, p, ""); !errors.Is(e, ErrJoinRejected) {
-		t.Fatalf("invalidated ticket accepted: %v", e)
+		t.Fatalf("Принят аннулированный билет: %v", e)
 	}
 	if e = a.RevokeSession(ctx, "owner", tokens.SessionID, "security"); e != nil {
 		t.Fatal(e)
@@ -195,7 +195,7 @@ func TestJoinUpgrade323PreservesUsers(t *testing.T) {
 	}
 	u, e := r.GetUser(ctx, "owner")
 	if e != nil || u.ID != "owner" {
-		t.Fatalf("migration dropped user: %+v %v", u, e)
+		t.Fatalf("При миграции потерян пользователь: %+v %v", u, e)
 	}
 	counts, e := r.Count(ctx)
 	if e != nil || counts["bridge_nodes"] != 0 {
@@ -219,7 +219,7 @@ func TestReplayNonceRemainsSpentAfterReopen(t *testing.T) {
 	}
 	defer reopened.Close()
 	if err := reopened.ConsumeSignedNonce(ctx, proof, []byte("persisted-request")); !errors.Is(err, ErrReplay) {
-		t.Fatalf("nonce replay after SQLite restart: %v", err)
+		t.Fatalf("Повтор одноразового значения после перезапуска SQLite: %v", err)
 	}
 }
 
@@ -234,6 +234,6 @@ func TestRevokedAuthenticationRejectsPendingTicket(t *testing.T) {
 		t.Fatalf("Отозванная сессия ошибочно принята: %v", err)
 	}
 	if _, err := r.RedeemJoinTicket(ctx, grant.Ticket, proof, "127.0.0.1"); !errors.Is(err, ErrReplay) {
-		t.Fatalf("failed redemption did not persist consumed nonce: %v", err)
+		t.Fatalf("При неудачном погашении не сохранено использованное одноразовое значение: %v", err)
 	}
 }

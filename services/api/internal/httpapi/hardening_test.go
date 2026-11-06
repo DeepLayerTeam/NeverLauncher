@@ -67,11 +67,11 @@ func TestHardening02112AttemptJournalOmitsInternalLeaseData(t *testing.T) {
 	}
 	for _, internal := range []string{"secret-worker", "workerId", "leaseFence", "internal-job", "777"} {
 		if strings.Contains(string(b), internal) {
-			t.Fatalf("internal durable metadata disclosed: %s", b)
+			t.Fatalf("Раскрыты внутренние постоянные метаданные: %s", b)
 		}
 	}
 	if !strings.Contains(string(b), `"attempt":1`) || !strings.Contains(string(b), `"status":"failed"`) {
-		t.Fatalf("missing public attempt details: %s", b)
+		t.Fatalf("Отсутствуют общедоступные подробности попытки: %s", b)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestHardening02112TwoTabConfigCAS(t *testing.T) {
 	}
 	second := request0211(t, h, "PUT", "/api/v1/admin/config", token, body)
 	if second.Code != http.StatusConflict || !strings.Contains(second.Body.String(), "revision_conflict") {
-		t.Fatalf("tab two accepted stale revision: %d %s", second.Code, second.Body.String())
+		t.Fatalf("Вторая вкладка приняла устаревшую ревизию: %d %s", second.Code, second.Body.String())
 	}
 	current := request0211(t, h, "GET", "/api/v1/admin/config", token, "")
 	if current.Code != http.StatusOK || !strings.Contains(current.Body.String(), `"revision":2`) {

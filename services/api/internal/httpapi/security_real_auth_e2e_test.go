@@ -125,7 +125,7 @@ func TestSecurityRealAuthHTTP02912(t *testing.T) {
 		securityHTTP02912(t, client, base+"/api/v1/auth/login", http.MethodPost, body, "", http.StatusBadRequest)
 	}
 	if calls.Load() != before {
-		t.Fatal("ambiguous credentials reached upstream auth provider")
+		t.Fatal("Неоднозначные учётные данные переданы внешнему провайдеру авторизации")
 	}
 	securityHTTP02912(t, client, base+"/api/v1/admin/login", http.MethodPost, `{"providerId":"issuer-e2e","providerId":"local"}`, "", http.StatusBadRequest)
 	securityHTTP02912(t, client, base+"/api/v1/auth/refresh", http.MethodPost, `{"refreshToken":"a","refreshToken":"b"}`, "", http.StatusBadRequest)
@@ -137,7 +137,7 @@ func TestSecurityRealAuthHTTP02912(t *testing.T) {
 		body := fmt.Sprintf(`{"identifier":"shared@example.test","password":%q}`, password)
 		data := securityHTTP02912(t, client, base+"/api/v1/auth/login", http.MethodPost, body, "", http.StatusOK)
 		if bytes.Contains(data, []byte("upstream-secret")) {
-			t.Fatal("upstream credential leaked through Never login")
+			t.Fatal("Через вход Never произошла утечка учётных данных внешнего провайдера")
 		}
 		var response authHTTPResult02912
 		if err := json.Unmarshal(data, &response); err != nil {
@@ -151,7 +151,7 @@ func TestSecurityRealAuthHTTP02912(t *testing.T) {
 	a := login("valid-password-issuer-a")
 	b := login("valid-password-issuer-b")
 	if a.Data.User.ID != "issuer-user-a" || b.Data.User.ID != "issuer-user-b" || a.Data.Identity.Issuer == b.Data.Identity.Issuer {
-		t.Fatalf("issuer isolation failed: %+v %+v", a.Data, b.Data)
+		t.Fatalf("Нарушена изоляция издателей: %+v %+v", a.Data, b.Data)
 	}
 	refresh := func(token string, expected int) []byte {
 		return securityHTTP02912(t, client, base+"/api/v1/auth/refresh", http.MethodPost, fmt.Sprintf(`{"refreshToken":%q}`, token), "", expected)
@@ -161,7 +161,7 @@ func TestSecurityRealAuthHTTP02912(t *testing.T) {
 		t.Fatal(err)
 	}
 	if rotated.Data.Tokens.RefreshToken == "" || rotated.Data.Tokens.RefreshToken == a.Data.Tokens.RefreshToken {
-		t.Fatal("refresh token was not rotated")
+		t.Fatal("Токен обновления не был сменён")
 	}
 	refresh(a.Data.Tokens.RefreshToken, http.StatusUnauthorized)
 	securityHTTP02912(t, client, base+"/api/v1/auth/sessions", http.MethodGet, "", rotated.Data.Tokens.AccessToken, http.StatusUnauthorized)

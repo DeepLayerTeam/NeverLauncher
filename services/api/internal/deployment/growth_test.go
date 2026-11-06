@@ -91,22 +91,22 @@ func TestS3CrossClientProbeAndCleanup03212(t *testing.T) {
 	}
 	fake.mu.Lock()
 	if len(fake.data) != 0 {
-		t.Fatal("S3 temporary probe was not removed")
+		t.Fatal("Временный тестовый объект S3 не удалён")
 	}
 	fake.corrupt = true
 	fake.mu.Unlock()
 	if err := verifyS3Growth(ctx, cfg); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
-		t.Fatalf("corrupt S3 read incorrectly accepted: %v", err)
+		t.Fatalf("Некорректное чтение повреждённых данных S3 принято: %v", err)
 	}
 	fake.mu.Lock()
 	if len(fake.data) != 0 {
-		t.Fatal("corrupted probe was not removed")
+		t.Fatal("Повреждённый тестовый объект не удалён")
 	}
 	fake.corrupt = false
 	fake.denyDelete = true
 	fake.mu.Unlock()
 	if err := verifyS3Growth(ctx, cfg); err == nil || !strings.Contains(err.Error(), "remove S3 probe object") {
-		t.Fatalf("failed cleanup accepted: %v", err)
+		t.Fatalf("Неудачная очистка ошибочно принята: %v", err)
 	}
 }
 func TestGrowthFailsClosedOnMissingPostgres03212(t *testing.T) {
@@ -115,7 +115,7 @@ func TestGrowthFailsClosedOnMissingPostgres03212(t *testing.T) {
 	plan := Plan{Mode: Standard, Storage: "local"}
 	result, err := VerifyGrowth(ctx, config.Config{DatabaseDSN: "postgres://127.0.0.1:1/not-running?sslmode=disable"}, plan)
 	if err == nil || result.PostgreSQL {
-		t.Fatalf("missing PostgreSQL incorrectly accepted: %+v %v", result, err)
+		t.Fatalf("Отсутствие PostgreSQL ошибочно принято: %+v %v", result, err)
 	}
 }
 func TestGrowthLivePostgresRedis03212(t *testing.T) {
@@ -156,6 +156,6 @@ func TestProductionRCLiveS3Growth(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	if err := verifyS3Growth(ctx, cfg); err != nil {
-		t.Fatalf("live S3 cross-client write/read/hash/cleanup: %v", err)
+		t.Fatalf("Реальная межклиентская проверка S3: запись, чтение, хеширование, очистка: %v", err)
 	}
 }

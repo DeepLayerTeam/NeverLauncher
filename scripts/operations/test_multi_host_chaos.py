@@ -93,7 +93,7 @@ class ChaosTests(unittest.TestCase):
         entries = {'api': ('a'*64, 'launcher_launcher'), 'worker': ('b'*64, 'launcher_launcher')}
         def fail_second(args, timeout=40):
             if args[-1] == 'b'*64:
-                raise chaos.ChaosError('docker command failed')
+                raise chaos.ChaosError('ошибка выполнения команды Docker')
             return ''
         with patch.object(chaos.multi, 'resolved_compose', return_value={'nodeId':'node-a'}), \
              patch.object(chaos, 'local_compose_id', side_effect=lambda d,p,r,**kwargs: entries[r]), \

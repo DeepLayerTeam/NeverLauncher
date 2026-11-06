@@ -62,13 +62,13 @@ func TestCLIComponentsValidSignedManifestAndDeterminism0249(t *testing.T) {
 	src, key := fixtureComponents0249(t), trustedFixtureKey0249(t)
 	entry, e := loadComponents0249(src, key, false)
 	if e != nil || !entry.SignatureVerified {
-		t.Fatalf("real Go-signed fixture: %v", e)
+		t.Fatalf("Фактический тестовый образец с подписью Go: %v", e)
 	}
 	if _, e = loadComponents0249(src, "", false); e == nil {
 		t.Fatal("допущено отсутствие корня доверия")
 	}
 	if _, e = loadComponents0249(src, key, true); e != nil {
-		t.Fatalf("explicit local override: %v", e)
+		t.Fatalf("Явное локальное переопределение: %v", e)
 	}
 	env := cm.ComponentEnvironment0244{OS: "linux", Arch: "x86_64", JavaMajor: 21, MinecraftVersion: "1.21.1", Loader: "fabric", LoaderVersion: "0.16.1"}
 	plan, e := resolveComponents0249(entry, "quality", env)

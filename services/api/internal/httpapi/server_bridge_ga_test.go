@@ -9,7 +9,7 @@ import (
 
 func TestServerBridgeGA0200ProtocolV3IsFrozen(t *testing.T) {
 	if !serverBridgeV3Frozen0200() {
-		t.Fatalf("Protocol v3 feature set drifted: got %s want %s", serverBridgeV3FeatureDigest0200(serverBridgeV3Features0191), serverBridgeV3FrozenFeatureDigest0200)
+		t.Fatalf("Набор возможностей протокола v3 изменился: получено %s, ожидалось %s", serverBridgeV3FeatureDigest0200(serverBridgeV3Features0191), serverBridgeV3FrozenFeatureDigest0200)
 	}
 	if got := serverBridgeProtocolMode0200(3); got != "ga-frozen" {
 		t.Fatalf("Protocol v3 mode = %q", got)
@@ -23,10 +23,10 @@ func TestServerBridgeGA0200ProtocolV2DeprecationHeaders(t *testing.T) {
 	res := httptest.NewRecorder()
 	markServerBridgeProtocolResponse0200(res, 2)
 	if res.Header().Get("Deprecation") != "true" || res.Header().Get("X-Launcher-ServerBridge-Migrate-To") != "3" {
-		t.Fatalf("Protocol v2 response is missing deprecation/migration headers: %#v", res.Header())
+		t.Fatalf("В ответе протокола v2 отсутствуют заголовки устаревания и миграции: %#v", res.Header())
 	}
 	if res.Header().Get("X-Launcher-ServerBridge-Protocol") != "compatibility-deprecated" {
-		t.Fatalf("unexpected protocol mode header: %q", res.Header().Get("X-Launcher-ServerBridge-Protocol"))
+		t.Fatalf("Неожиданный заголовок режима протокола: %q", res.Header().Get("X-Launcher-ServerBridge-Protocol"))
 	}
 }
 

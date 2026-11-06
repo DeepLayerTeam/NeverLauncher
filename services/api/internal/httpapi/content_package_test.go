@@ -22,7 +22,7 @@ func TestJavaContentTransformVerification0486(t *testing.T) {
 	}
 	got, err := decodeJavaPreparedContent0486(toJSON(base))
 	if err != nil || string(got) != string(payload) {
-		t.Fatalf("valid prepared content rejected: %v", err)
+		t.Fatalf("Отклонено корректное подготовленное содержимое: %v", err)
 	}
 	for _, bad := range []preparedJavaContent0486{
 		{DataBase64: base.DataBase64, SHA256: base.SHA256, Size: base.Size, RequiresSigning: false},
@@ -33,7 +33,7 @@ func TestJavaContentTransformVerification0486(t *testing.T) {
 		{DataBase64: base.DataBase64, SHA256: base.SHA256, Size: 100000, RequiresSigning: true},
 	} {
 		if _, e := decodeJavaPreparedContent0486(toJSON(bad)); e == nil {
-			t.Fatalf("invalid Java transform accepted: %+v", bad)
+			t.Fatalf("Принято некорректное преобразование Java: %+v", bad)
 		}
 	}
 }

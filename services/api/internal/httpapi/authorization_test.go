@@ -48,7 +48,7 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 	res := request0211(t, handler, http.MethodPost, "/api/v1/admin/projects", admin,
 		`{"id":"project-b","name":"Project B","defaultChannel":"stable"}`)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create project-b returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Создание project-b вернуло %d: %s", res.Code, res.Body.String())
 	}
 
 	admin, _ = registerTestPasskey117(t, handler, admin)
@@ -101,7 +101,7 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/users/"+created.ID, admin,
 		`{"projectRoles":{}}`)
 	if res.Code != http.StatusOK {
-		t.Fatalf("revoke membership returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Отзыв членства вернул %d: %s", res.Code, res.Body.String())
 	}
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/demo-project", operator, `{"description":"revoked"}`)
 	if res.Code != http.StatusForbidden {

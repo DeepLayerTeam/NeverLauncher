@@ -40,7 +40,7 @@ func TestTextureImmutableConcurrent0252(t *testing.T) {
 		t.Fatal("object corrupted")
 	}
 	if _, _, err := SaveTexture0252(s, digest, []byte("different")); err == nil {
-		t.Fatal("accepted wrong digest")
+		t.Fatal("Принята неправильная контрольная сумма")
 	}
 	if _, _, err := OpenTexture0252(s, "../../etc/passwd"); err == nil {
 		t.Fatal("Выход за пределы допустимого пути")

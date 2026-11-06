@@ -23,7 +23,7 @@ func TestAutoDetectStandardAndNetworkHA(t *testing.T) {
 	cfg := standardConfig(t)
 	p, err := Detect(cfg)
 	if err != nil || p.Mode != Standard || p.Coordinator != "sqlite" || !p.SingleInstance || !strings.HasSuffix(p.LockPath, ".launcher-api.owner.lock") {
-		t.Fatalf("standard plan=%+v error=%v", p, err)
+		t.Fatalf("Стандартный план=%+v, ошибка=%v", p, err)
 	}
 	cfg.SQLiteCoordinatorPath = ""
 	cfg.StorageDriver = "s3"
@@ -94,7 +94,7 @@ func TestStandardS3RequiresSharedExplicitLock(t *testing.T) {
 	cfg.RedisURL = "redis://redis:6379"
 	_, err := Detect(cfg)
 	if err == nil || !strings.Contains(err.Error(), "LOCK_PATH") {
-		t.Fatalf("must fail without lock: %v", err)
+		t.Fatalf("Без блокировки операция должна завершиться ошибкой: %v", err)
 	}
 	cfg.DeploymentLockPath = "/var/lib/launcher/instance.lock"
 	p, err := Detect(cfg)
@@ -106,11 +106,11 @@ func TestStandardS3RequiresSharedExplicitLock(t *testing.T) {
 func TestDevelopmentMemoryHasNoProductionEscape(t *testing.T) {
 	p, err := Detect(config.Config{Environment: "dev", RepositoryDriver: "memory"})
 	if err != nil || p.Mode != Development {
-		t.Fatalf("dev result=%+v err=%v", p, err)
+		t.Fatalf("Результат разработки=%+v, ошибка=%v", p, err)
 	}
 	_, err = Detect(config.Config{Environment: "production", RepositoryDriver: "memory"})
 	if err == nil {
-		t.Fatal("memory must fail in production")
+		t.Fatal("Режим в памяти должен быть запрещён в производственной среде")
 	}
 }
 

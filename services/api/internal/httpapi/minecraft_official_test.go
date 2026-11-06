@@ -19,10 +19,10 @@ func TestOfficialTicketsBoundAndTamperProof0257(t *testing.T) {
 	}
 	decrypted, err := officialOpen0257(secret, ticket)
 	if err != nil || decrypted.MinecraftToken != st.MinecraftToken || decrypted.User != "user-A" {
-		t.Fatal("ticket round trip", err)
+		t.Fatal("Проверка полного цикла билета", err)
 	}
 	if strings.Contains(ticket, "official-secret") || strings.Contains(ticket, st.UUID) {
-		t.Fatal("official secret leaked")
+		t.Fatal("Произошла утечка секрета официального провайдера")
 	}
 	raw, _ := base64.RawURLEncoding.DecodeString(ticket)
 	raw[len(raw)-1] ^= 0x80
@@ -38,15 +38,15 @@ func TestOfficialTicketsBoundAndTamperProof0257(t *testing.T) {
 		t.Fatal("Просроченный тикет ошибочно принят")
 	}
 	if _, err = officialSeal0257("short", st); err == nil {
-		t.Fatal("weak secret accepted")
+		t.Fatal("Принят ненадёжный секрет")
 	}
 }
 func TestOfficialPollRate0257(t *testing.T) {
 	if !officialPollingAllowed0257("fixture-independent-secret", time.Minute) {
-		t.Fatal("first poll rejected")
+		t.Fatal("Отклонён первый запрос состояния")
 	}
 	if officialPollingAllowed0257("fixture-independent-secret", time.Minute) {
-		t.Fatal("poll replay accepted")
+		t.Fatal("Принят повторный запрос состояния")
 	}
 }
 
@@ -65,25 +65,25 @@ func TestRedeemedDeviceFlowPreservesMicrosoftGrant0264(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(ticket, state.MicrosoftAccess) || strings.Contains(ticket, state.MicrosoftRefresh) || strings.Contains(ticket, state.DeviceCode) {
-		t.Fatal("redeemed device flow contains plaintext provider secret")
+		t.Fatal("Завершённый сценарий устройства содержит секрет провайдера открытым текстом")
 	}
 	restored, err := officialOpen0257(secret, ticket)
 	if err != nil || restored.Kind != "redeemed" || restored.MicrosoftAccess != state.MicrosoftAccess || restored.MicrosoftRefresh != state.MicrosoftRefresh {
-		t.Fatalf("redeemed device flow was not recoverable: %v", err)
+		t.Fatalf("Не удалось восстановить завершённый сценарий устройства: %v", err)
 	}
 	if _, err := officialOpen0257("wrong-independent-secret-that-is-long-enough", ticket); err == nil {
-		t.Fatal("device flow decrypted with another backend secret")
+		t.Fatal("Сценарий устройства расшифрован другим серверным секретом")
 	}
 }
 func TestDeviceTransientClassifications0264(t *testing.T) {
 	if !officialTransient0257(context.DeadlineExceeded) || !officialTransient0257(&officialminecraft.ServiceError{Status: 429, Code: "upstream_error"}) ||
 		!officialTransient0257(&officialminecraft.ServiceError{Status: 503, Code: "upstream_error"}) {
-		t.Fatal("temporary provider failures were marked permanent")
+		t.Fatal("Временные ошибки провайдера помечены как постоянные")
 	}
 	if officialTransient0257(officialminecraft.ErrExpired) || officialTransient0257(officialminecraft.ErrDenied) ||
 		officialTransient0257(&officialminecraft.ServiceError{Status: 403, Code: "invalid_app_registration"}) ||
 		officialTransient0257(&officialminecraft.ServiceError{Status: 400, Code: "invalid_grant"}) ||
 		officialTransient0257(context.Canceled) || officialTransient0257(nil) {
-		t.Fatal("permanent or canceled provider failure was marked retryable")
+		t.Fatal("Постоянная либо отменённая ошибка провайдера ошибочно помечена для повторной попытки")
 	}
 }

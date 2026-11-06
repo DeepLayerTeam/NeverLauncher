@@ -36,13 +36,13 @@ func TestJavaLateHelloCannotUndoOperatorStop0422(t *testing.T) {
 	w := httptest.NewRecorder()
 	host.handleHello(w, r)
 	if w.Code != http.StatusConflict {
-		t.Fatalf("late hello accepted: HTTP %d: %s", w.Code, w.Body.String())
+		t.Fatalf("Принято запоздалое приветствие: HTTP %d: %s", w.Code, w.Body.String())
 	}
 	var answer map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &answer); err != nil {
 		t.Fatal(err)
 	}
 	if answer["code"] != "HOST_INSTANCE_NOT_STARTING" || st.state != "stopping" || !st.helloAt.IsZero() || st.callbackURL != "" {
-		t.Fatalf("stopped instance activated or negotiated callback: %+v %+v", answer, st)
+		t.Fatalf("Остановленный экземпляр активирован либо согласовал обратный вызов: %+v %+v", answer, st)
 	}
 }

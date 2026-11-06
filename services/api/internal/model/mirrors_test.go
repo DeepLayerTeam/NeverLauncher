@@ -15,7 +15,7 @@ func TestManifestMirrorsRoundTrip0234(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(b), `"mirrors":[`) {
-		t.Fatalf("fallback sources missing: %s", b)
+		t.Fatalf("Отсутствуют резервные источники: %s", b)
 	}
 	var decoded ManifestFile
 	if err := json.Unmarshal(b, &decoded); err != nil {

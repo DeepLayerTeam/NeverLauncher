@@ -28,7 +28,7 @@ func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
 		}
 		b, err := io.ReadAll(r.Body)
 		if err != nil || !bytes.Equal(b, payload) {
-			t.Error("streaming body mismatch", err)
+			t.Error("Содержимое потокового ответа не совпадает", err)
 		}
 		w.Header().Set("Content-Type", "application/octet-stream")
 		_, _ = w.Write(payload)
@@ -41,7 +41,7 @@ func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
 	var out bytes.Buffer
 	n, err := c.CallStream(context.Background(), "post_admin_projects_by_projectId_versions_by_versionId_files", map[string]string{"projectId": "one", "versionId": "two"}, url.Values{"source": {"integration"}}, bytes.NewReader(payload), "multipart/form-data; boundary=fixed", &out, 20<<20, "upload-1")
 	if err != nil || n != int64(len(payload)) || !bytes.Equal(out.Bytes(), payload) {
-		t.Fatalf("transfer failed n=%d err=%v", n, err)
+		t.Fatalf("Передача завершилась ошибкой: байт=%d, ошибка=%v", n, err)
 	}
 	var limited bytes.Buffer
 	_, err = c.RequestStream(context.Background(), "POST", "/api/v1/admin/projects/one/versions/two/files", url.Values{"source": {"integration"}}, bytes.NewReader(payload), "multipart/form-data; boundary=fixed", &limited, 100, "upload-1")
@@ -69,7 +69,7 @@ func TestStreamRejectsRedirectAndInvalidOptions0463(t *testing.T) {
 		t.Fatalf("redirect accepted: %v", err)
 	}
 	if _, err = c.RequestStream(context.Background(), "GET", "/api/v1/a", nil, nil, "", nil, 1024, ""); err == nil {
-		t.Fatal("nil writer accepted")
+		t.Fatal("Принят отсутствующий объект записи")
 	}
 	if _, err = c.RequestStream(context.Background(), "GET", "/api/v1/a", nil, nil, "", &out, -1, ""); err == nil {
 		t.Fatal("Отрицательное ограничение ошибочно принято")
@@ -93,11 +93,11 @@ func TestExistingJSONAndRawSDKDoNotFollowRedirects0463(t *testing.T) {
 	err := c.Request(context.Background(), "GET", "/api/v1/projects", nil, nil, nil, "")
 	var apiError *APIError
 	if !errors.As(err, &apiError) || apiError.Status != 307 {
-		t.Fatalf("JSON followed redirect: %v", err)
+		t.Fatalf("JSON-запрос последовал за перенаправлением: %v", err)
 	}
 	_, err = c.CallRaw(context.Background(), "get_projects", nil, nil, nil, "", "")
 	if !errors.As(err, &apiError) || apiError.Status != 307 {
-		t.Fatalf("binary followed redirect: %v", err)
+		t.Fatalf("Запрос двоичных данных последовал за перенаправлением: %v", err)
 	}
 	if redirected {
 		t.Fatal("Токен Bearer отправлен по адресу переадресации")

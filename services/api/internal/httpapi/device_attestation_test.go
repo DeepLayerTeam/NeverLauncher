@@ -28,7 +28,7 @@ func registerHardwareDevice0124(t *testing.T, h http.Handler, access string, pri
 		"hardwareProvider": "test-tpm-2.0",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("register begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало регистрации: статус=%d, тело=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
@@ -40,7 +40,7 @@ func registerHardwareDevice0124(t *testing.T, h http.Handler, access string, pri
 		"signature":   signP256P1363Test0123(t, priv, payload),
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("register complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение регистрации: статус=%d, тело=%#v", code, completeOut)
 	}
 	data := deviceTrustData0121(t, completeOut)
 	device, _ := data["device"].(map[string]any)
@@ -77,7 +77,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", trustedAccess, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("attest begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало аттестации: статус=%d, тело=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
@@ -92,7 +92,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", trustedAccess, completeBody)
 	if code != http.StatusOK {
-		t.Fatalf("attest complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение аттестации: статус=%d, тело=%#v", code, completeOut)
 	}
 	complete := deviceTrustData0121(t, completeOut)
 	attestedAccess, _ := complete["accessToken"].(string)
@@ -116,7 +116,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 
 	code, trustOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", attestedAccess, nil)
 	if code != http.StatusOK {
-		t.Fatalf("device trust after attestation status=%d body=%#v", code, trustOut)
+		t.Fatalf("Доверие к устройству после аттестации: статус=%d, тело=%#v", code, trustOut)
 	}
 	trust := deviceTrustData0121(t, trustOut)
 	if trust["deviceAttestationState"] != "verified" || trust["deviceAttestationMethod"] != deviceAttestationMethod0124 {
@@ -125,7 +125,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 
 	code, badBeginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", attestedAccess, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("second attest begin status=%d body=%#v", code, badBeginOut)
+		t.Fatalf("Начало повторной аттестации: статус=%d, тело=%#v", code, badBeginOut)
 	}
 	badBegin := deviceTrustData0121(t, badBeginOut)
 	otherPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -169,7 +169,7 @@ func TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124(t *t
 	fromPostgres.ExpiresAt = challenge.ExpiresAt.Truncate(time.Microsecond)
 	completePayload := deviceAttestationPayload0124("challenge", fromPostgres, device, "session-test", validUntil)
 	if beginPayload != completePayload {
-		t.Fatalf("attestation payload changed after PostgreSQL timestamp round-trip:\nbegin=%q\ncomplete=%q", beginPayload, completePayload)
+		t.Fatalf("Данные аттестации изменились после записи и чтения времени в PostgreSQL:\nначало=%q\nзавершение=%q", beginPayload, completePayload)
 	}
 }
 
@@ -196,7 +196,7 @@ func TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124(t *testing.T) 
 	access, _ := deviceTrustLogin0121(t, h, "software-attestation")
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access, map[string]any{"name": "Software device"})
 	if code != http.StatusOK {
-		t.Fatalf("software register begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало программной регистрации: статус=%d, тело=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -211,7 +211,7 @@ func TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124(t *testing.T) 
 		"signature":   base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, []byte(begin["signingPayload"].(string)))),
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("software register complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение программной регистрации: статус=%d, тело=%#v", code, completeOut)
 	}
 	data := deviceTrustData0121(t, completeOut)
 	trustedAccess, _ := data["accessToken"].(string)

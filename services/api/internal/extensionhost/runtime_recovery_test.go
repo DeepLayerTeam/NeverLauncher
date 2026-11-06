@@ -74,21 +74,21 @@ func TestRuntimeBrokerDocumentsSurviveSupervisorRestart0423(t *testing.T) {
 		case 0:
 			status, body := request("runtime.storage.put", `{"key":"counter","value":{"count":42}}`)
 			if status != 200 {
-				t.Fatalf("initial write status=%d %s", status, body)
+				t.Fatalf("Статус первоначальной записи=%d %s", status, body)
 			}
 		case 1:
 			status, body := request("runtime.storage.get", `{"key":"counter"}`)
 			if status != 200 || !strings.Contains(body, `"count":42`) {
-				t.Fatalf("state missing after restart: %d %s", status, body)
+				t.Fatalf("Состояние отсутствует после перезапуска: %d %s", status, body)
 			}
 			status, body = request("runtime.storage.delete", `{"key":"counter"}`)
 			if status != 200 {
-				t.Fatalf("delete after restart: %d %s", status, body)
+				t.Fatalf("Удаление после перезапуска: %d %s", status, body)
 			}
 		case 2:
 			status, body := request("runtime.storage.get", `{"key":"counter"}`)
 			if status != 404 {
-				t.Fatalf("deleted key resurrected after restart: %d %s", status, body)
+				t.Fatalf("Удалённый ключ восстановился после перезапуска: %d %s", status, body)
 			}
 		}
 		stop, cancel := context.WithTimeout(ctx, 5*time.Second)

@@ -40,7 +40,7 @@ func TestCanonicalRouterDisablesHistoricalAPIByDefault(t *testing.T) {
 		res := httptest.NewRecorder()
 		h.ServeHTTP(res, req)
 		if res.Code != http.StatusNotFound {
-			t.Fatalf("historical route %s must be disabled, got %d: %s", path, res.Code, res.Body.String())
+			t.Fatalf("Устаревший маршрут %s должен быть отключён, получено %d: %s", path, res.Code, res.Body.String())
 		}
 	}
 }
@@ -52,7 +52,7 @@ func TestHistoricalRoutesRemainRemoved(t *testing.T) {
 		res := httptest.NewRecorder()
 		h.ServeHTTP(res, req)
 		if res.Code != http.StatusNotFound {
-			t.Fatalf("historical route %s must remain removed, got %d: %s", path, res.Code, res.Body.String())
+			t.Fatalf("Устаревший маршрут %s должен оставаться удалённым, получено %d: %s", path, res.Code, res.Body.String())
 		}
 	}
 }
@@ -82,6 +82,6 @@ func TestCanonicalCRUDUsesSingleContractVersion(t *testing.T) {
 		t.Fatalf("Создание проекта: %d %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), `"apiVersion":"1.0.0"`) || strings.Contains(res.Body.String(), "8.2.0") {
-		t.Fatalf("canonical CRUD leaked historical contract metadata: %s", res.Body.String())
+		t.Fatalf("Через канонический CRUD раскрыты метаданные устаревшего контракта: %s", res.Body.String())
 	}
 }

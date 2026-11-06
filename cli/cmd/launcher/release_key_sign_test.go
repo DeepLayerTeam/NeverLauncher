@@ -22,7 +22,7 @@ func TestReleaseSigningRejectsInconsistentEd25519Key0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = loadEd25519PrivateKey(path); err == nil {
-		t.Fatal("accepted tampered private/public key pair")
+		t.Fatal("Принята подменённая пара закрытого и открытого ключей")
 	}
 	if err = os.WriteFile(path, []byte(base64.StdEncoding.EncodeToString(private)), 0600); err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestReleaseSigningRejectsInconsistentEd25519Key0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(loaded, private) {
-		t.Fatal("normal private key changed")
+		t.Fatal("Обычный закрытый ключ изменился")
 	}
 }
 func TestReleaseDetachedSignatureRemainsVerified0428(t *testing.T) {
@@ -56,6 +56,6 @@ func TestReleaseDetachedSignatureRemainsVerified0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = verifyDetachedFileWithKey(file, sig, pub); err == nil {
-		t.Fatal("accepted modified provenance")
+		t.Fatal("Приняты изменённые сведения о происхождении")
 	}
 }

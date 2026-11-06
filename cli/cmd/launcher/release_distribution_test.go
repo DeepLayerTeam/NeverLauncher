@@ -84,7 +84,7 @@ func TestReleaseDistribution04511ExactSixPackages(t *testing.T) {
 				t.Fatal(e)
 			}
 			if e = verifyDistributionSupplyChain04511(dir, ver); e == nil {
-				t.Fatal("changed final file passed")
+				t.Fatal("Изменённый итоговый файл ошибочно прошёл проверку")
 			}
 			if e = os.WriteFile(p, raw, 0600); e != nil {
 				t.Fatal(e)

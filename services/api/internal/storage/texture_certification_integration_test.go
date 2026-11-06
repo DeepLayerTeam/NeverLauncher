@@ -57,7 +57,7 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	}
 	count, err := RestoreTextures0253(ctx, store, backup, []TextureBackupObject0253{obj})
 	if err != nil || count != 1 {
-		t.Fatalf("real S3 restore: count=%d err=%v", count, err)
+		t.Fatalf("Реальное восстановление S3: количество=%d, ошибка=%v", count, err)
 	}
 	r, _, err := OpenTexture0252(store, digest)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	actual, readErr := io.ReadAll(r)
 	closeErr := r.Close()
 	if readErr != nil || closeErr != nil || !bytes.Equal(actual, content) {
-		t.Fatalf("restored content mismatch %v %v", readErr, closeErr)
+		t.Fatalf("Несоответствие восстановленного содержимого: %v %v", readErr, closeErr)
 	}
 	if err := DeleteTextureSafely02511(ctx, store, digest); err != nil {
 		t.Fatal(err)

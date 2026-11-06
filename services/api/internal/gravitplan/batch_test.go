@@ -114,7 +114,7 @@ func TestMultiProfileFailClosed0492(t *testing.T) {
 	src, v, c, m := fixturesBatch0492(t, false)
 	missing := destinationsBatch0492()[:1]
 	if _, e := makeBatch0492(t, src, v, c, m, missing, nil); e == nil {
-		t.Fatal("unmapped profile accepted")
+		t.Fatal("Принят профиль без сопоставления")
 	}
 	duplicate := destinationsBatch0492()
 	duplicate[1].ProfileID = "ALPHA"
@@ -128,11 +128,11 @@ func TestMultiProfileFailClosed0492(t *testing.T) {
 	}
 	collision, e := makeBatch0492(t, src, v, c, m, destinationsBatch0492(), map[string]bool{"beta": true})
 	if e != nil || collision.Status != "blocked" || collision.Profiles[1].Status != "blocked" {
-		t.Fatalf("target conflict missed: %+v %v", collision, e)
+		t.Fatalf("Не обнаружен конфликт цели: %+v %v", collision, e)
 	}
 	v.SourceSHA256 = strings.Repeat("f", 64)
 	if _, e = makeBatch0492(t, src, v, c, m, destinationsBatch0492(), nil); e == nil {
-		t.Fatal("invented SHA accepted")
+		t.Fatal("Принят вымышленный хеш SHA")
 	}
 }
 func TestMultiProfileOverlappingClientDirectories0492(t *testing.T) {

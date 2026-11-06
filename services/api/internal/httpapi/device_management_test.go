@@ -31,7 +31,7 @@ func registerSoftwareDevice0125(t *testing.T, h http.Handler, loginLabel, name s
 		"name": name, "platform": "linux", "clientVersion": "0.12.5",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("register begin status=%d body=%#v", code, out)
+		t.Fatalf("Начало регистрации: статус=%d, тело=%#v", code, out)
 	}
 	begin := deviceTrustData0121(t, out)
 	payload, _ := begin["signingPayload"].(string)
@@ -40,7 +40,7 @@ func registerSoftwareDevice0125(t *testing.T, h http.Handler, loginLabel, name s
 		"publicKey": base64.RawURLEncoding.EncodeToString(pub), "signature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, []byte(payload))),
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("register complete status=%d body=%#v", code, out)
+		t.Fatalf("Завершение регистрации: статус=%d, тело=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	trusted, _ := data["accessToken"].(string)
@@ -62,7 +62,7 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 
 	code, listOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=active", primary.Access, nil)
 	if code != http.StatusOK {
-		t.Fatalf("list active status=%d body=%#v", code, listOut)
+		t.Fatalf("Список активных: статус=%d, тело=%#v", code, listOut)
 	}
 	list := deviceTrustData0121(t, listOut)
 	if list["currentDeviceId"] != primary.ID || int(list["count"].(float64)) != 2 {
@@ -93,7 +93,7 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 	// Отзыв должен погасить его до завершения процедуры старым ключом.
 	code, challengeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+secondary.ID+"/verify/begin", unboundAccess, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("verify begin status=%d body=%#v", code, challengeOut)
+		t.Fatalf("Начало проверки: статус=%d, тело=%#v", code, challengeOut)
 	}
 	challenge := deviceTrustData0121(t, challengeOut)
 	payload, _ := challenge["signingPayload"].(string)
@@ -101,7 +101,7 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 
 	code, revokeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/revoke-others", primary.Access, map[string]any{"reason": "user-replaced-device"})
 	if code != http.StatusOK {
-		t.Fatalf("revoke others status=%d body=%#v", code, revokeOut)
+		t.Fatalf("Отзыв других: статус=%d, тело=%#v", code, revokeOut)
 	}
 	revoked := deviceTrustData0121(t, revokeOut)
 	if revoked["preservedDeviceId"] != primary.ID || int(revoked["revokedDevices"].(float64)) != 1 || int(revoked["revokedSessions"].(float64)) < 1 || int(revoked["invalidatedChallenges"].(float64)) < 1 {
@@ -159,7 +159,7 @@ func TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125(t *testing.T) {
 
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+device.ID+"/revoke", device.Access, map[string]any{"reason": "lost-device"})
 	if code != http.StatusOK {
-		t.Fatalf("self revoke status=%d body=%#v", code, out)
+		t.Fatalf("Самостоятельный отзыв: статус=%d, тело=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	if data["alreadyRevoked"] != false || data["reEnrollmentRequiresNewKey"] != true || int(data["revokedSessions"].(float64)) < 1 {

@@ -63,7 +63,7 @@ func TestOfficialLinkProviderProof0268(t *testing.T) {
 				t.Fatalf("provider validation: %v", err)
 			}
 			if fixture.calls != tc.calls {
-				t.Fatalf("provider called %d times", fixture.calls)
+				t.Fatalf("Провайдер вызван %d раз", fixture.calls)
 			}
 		})
 	}
@@ -71,7 +71,7 @@ func TestOfficialLinkProviderProof0268(t *testing.T) {
 func TestOfficialLinkUUIDValidation0268(t *testing.T) {
 	uuid, ok := canonicalMinecraftUUID0268("ABCDEF0123456789ABCDEF0123456789")
 	if !ok || uuid != "abcdef0123456789abcdef0123456789" {
-		t.Fatalf("wrong normalized uuid: %s", uuid)
+		t.Fatalf("Неверный нормализованный UUID: %s", uuid)
 	}
 	for _, bad := range []string{"", "1234", "12345678-1234-1234-1234-123456789012", strings.Repeat("z", 32), strings.Repeat("a", 31) + "/"} {
 		if _, ok := canonicalMinecraftUUID0268(bad); ok {

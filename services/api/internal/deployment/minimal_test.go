@@ -20,7 +20,7 @@ func TestMinimalDeployment0375(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Acquire(plan); err == nil {
-		t.Fatal("two API processes acquired one owner lock")
+		t.Fatal("Два процесса API получили одну блокировку владельца")
 	}
 	if err = owner.Close(); err != nil {
 		t.Fatal(err)
@@ -37,11 +37,11 @@ func TestMinimalDeployment0375(t *testing.T) {
 	cfg.ServerBridgeHARequired = false
 	cfg.RedisURL = "redis://localhost:6379"
 	if _, err = Detect(cfg); err == nil {
-		t.Fatal("Redis accepted in minimal")
+		t.Fatal("Redis принят в минимальном режиме")
 	}
 	cfg.RedisURL = ""
 	cfg.DatabaseDSN = cfg.SQLiteCoordinatorPath
 	if _, err = Detect(cfg); err == nil {
-		t.Fatal("same SQLite DB used for repo and coordinator")
+		t.Fatal("Одна БД SQLite используется для репозитория и координатора")
 	}
 }

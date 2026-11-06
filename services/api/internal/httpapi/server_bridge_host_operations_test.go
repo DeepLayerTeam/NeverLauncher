@@ -15,7 +15,7 @@ func TestHostControlValidation0413(t *testing.T) {
 		r := httptest.NewRequest("POST", "/", bytes.NewBufferString(body))
 		w := httptest.NewRecorder()
 		if _, err := decodeHostAction0413(r, w); err == nil {
-			t.Fatalf("unsafe command accepted: %s", body)
+			t.Fatalf("Принята небезопасная команда: %s", body)
 		}
 	}
 	for _, action := range []string{"start", "stop", "restart"} {
@@ -34,7 +34,7 @@ func TestHostControlBridgeCorrelation0413(t *testing.T) {
 	op := repository.HostOperation0413{CreatedAt: time.Now().Add(-2 * time.Second), BaselineRuntimeID: "old", BaselineRuntimeEpoch: 5}
 	node := bridgeServerRecord{Status: "active", RuntimeID: "new", RuntimeEpoch: 6, LastHeartbeatAt: time.Now()}
 	if !hostReady0413("restart", op, node) {
-		t.Fatal("new bridge runtime not recognized")
+		t.Fatal("Новый Runtime моста не распознан")
 	}
 	node.RuntimeID = "old"
 	if hostReady0413("restart", op, node) {
@@ -43,18 +43,18 @@ func TestHostControlBridgeCorrelation0413(t *testing.T) {
 	node.RuntimeID = "new"
 	node.LastHeartbeatAt = op.CreatedAt.Add(-time.Second)
 	if hostReady0413("start", op, node) {
-		t.Fatal("stale bridge heartbeat accepted")
+		t.Fatal("Принят устаревший сигнал активности моста")
 	}
 	node.LastHeartbeatAt = time.Now().Add(-3 * time.Minute)
 	if hostReady0413("start", op, node) {
-		t.Fatal("stale yet once-fresh heartbeat accepted")
+		t.Fatal("Принят сигнал активности, который ранее был актуальным, но устарел")
 	}
 	node.LastHeartbeatAt = time.Now().Add(45 * time.Second)
 	if hostReady0413("restart", op, node) {
-		t.Fatal("future heartbeat accepted")
+		t.Fatal("Принят сигнал активности с отметкой времени из будущего")
 	}
 	if !hostReady0413("stop", op, node) {
-		t.Fatal("a stopped host does not require its JVM plugin to remain online")
+		t.Fatal("Для остановленного хоста не требуется постоянная работа его плагина JVM")
 	}
 	b, _ := json.Marshal(hostOperationOutput0413(op, node, false))
 	if !bytes.Contains(b, []byte("hostState")) || !bytes.Contains(b, []byte("bridge")) {

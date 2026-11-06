@@ -9,11 +9,11 @@ import (
 
 func TestServerBridgeFabricKind0146(t *testing.T) {
 	if !validBridgeServerKindV2("fabric") {
-		t.Fatal("fabric ServerBridge kind rejected")
+		t.Fatal("Отклонён тип ServerBridge Fabric")
 	}
 	for _, kind := range []string{"fabric-server", "fabricmc", "fabric_loader"} {
 		if validBridgeServerKindV2(kind) {
-			t.Fatalf("ambiguous Fabric kind %q accepted", kind)
+			t.Fatalf("Принят неоднозначный тип Fabric %q", kind)
 		}
 	}
 }
@@ -25,11 +25,11 @@ func TestServerBridgeFabricIntegrityAllowlist0146(t *testing.T) {
 	server := bridgeServerRecord{ID: "fabric-0146", Kind: "fabric"}
 	decision := s.validateBridgePluginMeasurement0135(server, "fabric", "0.14.6", fabricHash)
 	if !decision.Allowed || !decision.Required || decision.Reason != "bridge_integrity_verified" {
-		t.Fatalf("Fabric matching release hash rejected: %+v", decision)
+		t.Fatalf("Отклонён совпадающий хеш релиза Fabric: %+v", decision)
 	}
 	decision = s.validateBridgePluginMeasurement0135(server, "fabric", "0.14.6", strings.Repeat("4", 64))
 	if decision.Allowed || decision.Reason != "bridge_integrity_hash_rejected" {
-		t.Fatalf("Fabric accepted non-Fabric release hash: %+v", decision)
+		t.Fatalf("Fabric принял хеш релиза другого загрузчика: %+v", decision)
 	}
 }
 
@@ -47,12 +47,12 @@ func TestBridgePluginsManifestIncludesFabric0146(t *testing.T) {
 		}
 	}
 	if fabric == nil {
-		t.Fatal("bridge manifest missing Fabric artifact")
+		t.Fatal("В манифесте моста отсутствует артефакт Fabric")
 	}
 	if fabric["descriptor"] != "fabric.mod.json" || fabric["serverType"] != "fabric" || fabric["mainClass"] != "ru.launcher.bridge.fabric.LauncherFabricBridge" {
-		t.Fatalf("invalid Fabric manifest descriptor: %#v", fabric)
+		t.Fatalf("Некорректное описание манифеста Fabric: %#v", fabric)
 	}
 	if required, ok := fabric["clientModRequired"].(bool); !ok || required {
-		t.Fatalf("Fabric Server Bridge must be server-only without client mod requirement: %#v", fabric)
+		t.Fatalf("Мост Fabric должен работать только на сервере и не требовать клиентского мода: %#v", fabric)
 	}
 }

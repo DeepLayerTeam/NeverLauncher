@@ -76,13 +76,13 @@ func TestBrowserPKCERejectsMalformedGrants0263(t *testing.T) {
 		change(&v)
 		mock := &browserMockProvider0263{}
 		if _, _, _, err := exchangeOfficialBrowser0263(context.Background(), mock, ownMicrosoftClient0263, v); err == nil || len(mock.calls) != 0 {
-			t.Fatalf("invalid grant reached Microsoft API: %+v", v)
+			t.Fatalf("Некорректное разрешение дошло до Microsoft API: %+v", v)
 		}
 	}
 	if _, _, _, err := exchangeOfficialBrowser0263(context.Background(), &browserMockProvider0263{}, "00000000-0000-0000-0000-000000000000", browserRequest0263); err == nil {
-		t.Fatal("client ID placeholder accepted")
+		t.Fatal("Принята заглушка идентификатора клиента")
 	}
 	if validOfficialProfile0263(officialminecraft.Profile{ID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Name: "Some-Invalid"}) {
-		t.Fatal("invalid Minecraft name accepted")
+		t.Fatal("Принято некорректное имя Minecraft")
 	}
 }

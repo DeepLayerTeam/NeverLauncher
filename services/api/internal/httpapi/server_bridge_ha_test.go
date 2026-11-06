@@ -54,10 +54,10 @@ func TestServerBridgeRateLimitUsesDedicatedDistributedBudget0149(t *testing.T) {
 			t.Fatalf("scope=%q", got)
 		}
 		if i == 0 && res.Code != http.StatusNoContent {
-			t.Fatalf("first request code=%d", res.Code)
+			t.Fatalf("Код первого запроса=%d", res.Code)
 		}
 		if i == 1 && res.Code != http.StatusTooManyRequests {
-			t.Fatalf("second request code=%d", res.Code)
+			t.Fatalf("Код второго запроса=%d", res.Code)
 		}
 	}
 }

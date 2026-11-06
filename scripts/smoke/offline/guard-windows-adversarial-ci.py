@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] Windows Adversarial CI 0.18.11 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Проверка противодействия атакам Windows в CI 0.18.11: {path} отсутствует: {', '.join(missing)}"
         )
 
 
@@ -87,7 +87,7 @@ for test_name in [
 ]:
     if test_name not in windows_tests:
         raise SystemExit(
-            f"[Launcher] Windows Adversarial CI 0.18.11 gate: отсутствует live test — {test_name}"
+            f"[Launcher] Проверка противодействия атакам Windows в CI 0.18.11: отсутствует реальный тест — {test_name}"
         )
 
 ci = read(".github/workflows/ci.yml")

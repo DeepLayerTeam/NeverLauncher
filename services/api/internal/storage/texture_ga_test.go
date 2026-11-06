@@ -34,13 +34,13 @@ func TestTextureGA0260RejectsIncompleteSnapshotBeforeMutation(t *testing.T) {
 	}
 	if f, _, err := OpenTexture0252(store, first.Digest); err == nil {
 		f.Close()
-		t.Fatal("partial restore made storage changes before manifest authorization")
+		t.Fatal("Частичное восстановление изменило хранилище до авторизации манифеста")
 	}
 	if _, err := RestoreTextures0253(ctx, store, backup, []TextureBackupObject0253{first, first}); err == nil {
-		t.Fatal("duplicate inventory accepted")
+		t.Fatal("Принят повторяющийся перечень объектов")
 	}
 	if restored, err := RestoreTextures0253(ctx, store, backup, []TextureBackupObject0253{first}); err != nil || restored != 1 {
-		t.Fatalf("matching full restore failed: %d %v", restored, err)
+		t.Fatalf("Ошибка полного восстановления совпадающих данных: %d %v", restored, err)
 	}
 }
 
@@ -71,7 +71,7 @@ func TestTextureGA0260RejectsUnsafeManifest(t *testing.T) {
 		t.Skipf("символические ссылки недоступны: %v", err)
 	}
 	if _, err := RestoreTextures0253(ctx, store, snapshot, []TextureBackupObject0253{obj}); err == nil {
-		t.Fatal("symlinked manifest accepted")
+		t.Fatal("Принят манифест через символьную ссылку")
 	}
 	if err := os.Remove(manifest); err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestTextureGA0260RejectsUnsafeManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := RestoreTextures0253(ctx, store, snapshot, []TextureBackupObject0253{obj}); err == nil {
-		t.Fatal("oversized manifest accepted")
+		t.Fatal("Принят манифест сверх допустимого размера")
 	}
 	if err := os.WriteFile(manifest, backup, 0600); err != nil {
 		t.Fatal(err)
@@ -95,6 +95,6 @@ func TestTextureGA0260RejectsUnsafeManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := RestoreTextures0253(ctx, store, snapshot, []TextureBackupObject0253{obj}); err == nil {
-		t.Fatal("empty manifest accepted for live inventory")
+		t.Fatal("Принят пустой манифест для непустого учёта объектов")
 	}
 }

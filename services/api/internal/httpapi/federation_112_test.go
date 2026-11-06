@@ -18,7 +18,7 @@ func TestLocalConnector112Conformance(t *testing.T) {
 	connector := localAuthConnector112{repo: repository.NewMemoryRepository("http://example.test")}
 	report := conformance.Run(context.Background(), connector)
 	if !report.Passed {
-		t.Fatalf("local connector failed conformance: %+v", report)
+		t.Fatalf("Локальный коннектор не прошёл проверку соответствия: %+v", report)
 	}
 }
 
@@ -58,9 +58,9 @@ func TestHTTPLoginUsesRegisteredExternalConnector112(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"provider":"fixture"`) || !strings.Contains(res.Body.String(), `"id":"admin"`) {
-		t.Fatalf("external connector login returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Вход через внешний коннектор вернул %d: %s", res.Code, res.Body.String())
 	}
 	if strings.Contains(res.Body.String(), "provider-secret-must-not-leak") {
-		t.Fatalf("provider token leaked into Never auth response: %s", res.Body.String())
+		t.Fatalf("Токен провайдера попал в ответ авторизации Never: %s", res.Body.String())
 	}
 }

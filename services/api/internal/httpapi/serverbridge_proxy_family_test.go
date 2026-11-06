@@ -10,12 +10,12 @@ import (
 func TestServerBridgeProxyFamilyKinds0145(t *testing.T) {
 	for _, kind := range []string{"velocity", "bungeecord", "waterfall"} {
 		if !validBridgeServerKindV2(kind) {
-			t.Fatalf("proxy-family kind %q rejected", kind)
+			t.Fatalf("Отклонён тип семейства прокси %q", kind)
 		}
 	}
 	for _, kind := range []string{"bungee", "waterfallmc", "velocity-proxy"} {
 		if validBridgeServerKindV2(kind) {
-			t.Fatalf("ambiguous proxy kind %q accepted", kind)
+			t.Fatalf("Принят неоднозначный тип прокси %q", kind)
 		}
 	}
 }
@@ -66,6 +66,6 @@ func TestBridgePluginsManifestIncludesProxyFamily0145(t *testing.T) {
 		}
 	}
 	if got["bungeecord"]["descriptor"] != "bungee.yml" || got["waterfall"]["descriptor"] != "bungee.yml" {
-		t.Fatalf("Bungee-compatible artifacts must publish bungee.yml descriptors: %#v %#v", got["bungeecord"], got["waterfall"])
+		t.Fatalf("Совместимые с Bungee артефакты должны публиковать описания bungee.yml: %#v %#v", got["bungeecord"], got["waterfall"])
 	}
 }

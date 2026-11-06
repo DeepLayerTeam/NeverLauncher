@@ -16,7 +16,7 @@ func TestDesktopProfileServers0229ScopeAndPublicResponse(t *testing.T) {
 		t.Fatalf("catalog HTTP %d: %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), `"items":`) {
-		t.Fatalf("catalog empty format: %s", res.Body.String())
+		t.Fatalf("Некорректный формат пустого каталога: %s", res.Body.String())
 	}
 	if res.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("Каталог серверов не должен кешироваться")

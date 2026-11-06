@@ -181,7 +181,7 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	rotateOut := httptest.NewRecorder()
 	h.ServeHTTP(rotateOut, rotate)
 	if rotateOut.Code != http.StatusOK || !strings.Contains(rotateOut.Body.String(), `"identityEpoch":2`) {
-		t.Fatalf("identity rotation failed: %d %s", rotateOut.Code, rotateOut.Body.String())
+		t.Fatalf("Ошибка ротации идентификатора: %d %s", rotateOut.Code, rotateOut.Body.String())
 	}
 
 	retired := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/crypto-rotate-0142/heartbeat", strings.NewReader(originalBody))

@@ -139,7 +139,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 		}
 	}
 	if rr := upload("after-publish"); rr.Code != http.StatusConflict {
-		t.Fatalf("published upload must be 409 => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Загрузка опубликованного объекта должна вернуть 409 => %d %s", rr.Code, rr.Body.String())
 	}
 	for _, suffix := range []string{"sign", "stage", "smoke-test", "publish"} {
 		req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+id+"/"+suffix, nil)

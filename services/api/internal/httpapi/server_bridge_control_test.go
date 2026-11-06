@@ -23,11 +23,11 @@ func TestServerBridgeControlValidation0195(t *testing.T) {
 	}
 	for _, bad := range []string{"/", "stop", "op Steve", "say ok\nstop"} {
 		if _, err := validateServerBridgeControlRequest0195("server.console", map[string]string{"command": bad}); err == nil {
-			t.Fatalf("unsafe/non-allowlisted console command accepted: %q", bad)
+			t.Fatalf("Принята небезопасная команда консоли, отсутствующая в списке разрешённых: %q", bad)
 		}
 	}
 	if _, err := validateServerBridgeControlRequest0195("server.shell", map[string]string{"command": "id"}); err == nil {
-		t.Fatal("shell control type must not exist")
+		t.Fatal("Тип управления shell не должен существовать")
 	}
 }
 
@@ -40,18 +40,18 @@ func TestSessionBoundKickPayload0418(t *testing.T) {
 		"username": "Steve", "reason": "Launcher session invalidated", "sessionCorrelationId": correlation,
 	})
 	if err != nil || payload["sessionCorrelationId"] != correlation {
-		t.Fatalf("valid session-specific kick was rejected: %v", err)
+		t.Fatalf("Отклонено допустимое отключение конкретной сессии: %v", err)
 	}
 	for _, bad := range []string{"short", "", "A" + correlation[1:], "g" + correlation[1:], correlation + "0"} {
 		if bad == "" {
 			continue
 		} // пустое значение обозначает уже существующее явное действие модератора
 		if _, err := validateServerBridgeControlRequest0195("player.kick", map[string]string{"username": "Steve", "sessionCorrelationId": bad}); err == nil {
-			t.Fatalf("invalid session correlation accepted: %q", bad)
+			t.Fatalf("Принято некорректное сопоставление сессий: %q", bad)
 		}
 	}
 	if _, err := validateServerBridgeControlRequest0195("ban.add", map[string]string{"username": "Steve", "sessionCorrelationId": correlation}); err == nil {
-		t.Fatal("session correlation must not enlarge ban payload privileges")
+		t.Fatal("Сопоставление сессий не должно расширять права данных блокировки")
 	}
 }
 
@@ -86,7 +86,7 @@ func TestServerBridgeControlMemoryIdempotencyLeaseAndAck0195(t *testing.T) {
 	}
 	replay, reused, err := store.createControl0195(cmd, now)
 	if err != nil || !reused || replay.ID != cmd.ID {
-		t.Fatalf("idempotent replay: %+v reused=%v err=%v", replay, reused, err)
+		t.Fatalf("Идемпотентный повтор: %+v, повторно использовано=%v, ошибка=%v", replay, reused, err)
 	}
 	conflict := cmd
 	conflict.ID = "ctl_two"

@@ -74,7 +74,7 @@ func TestExtensionLifecycleEnableDisableUninstallRollback0204(t *testing.T) {
 		t.Fatalf("uninstalled=%+v", uninstalled)
 	}
 	if _, err := os.Stat(currentDir0204(root, Scope{Scope: "global"}, id)); !os.IsNotExist(err) {
-		t.Fatalf("current still exists after uninstall: %v", err)
+		t.Fatalf("Текущая версия осталась после удаления: %v", err)
 	}
 	rolled, err := manager.Rollback(ctx, id, Scope{Scope: "global"})
 	if err != nil {
@@ -111,13 +111,13 @@ func TestExtensionLifecycleFilesystemRollbackOnRepositoryFailure0204(t *testing.
 		t.Fatal(err)
 	}
 	if string(data) != "keep-me" {
-		t.Fatalf("payload changed after failed transaction: %q", data)
+		t.Fatalf("Данные изменились после неудачной транзакции: %q", data)
 	}
 	after, err := baseRepo.GetExtensionInstallState(ctx, id, "global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if after.Generation != before.Generation || after.CurrentState != before.CurrentState || after.CurrentVersion != before.CurrentVersion {
-		t.Fatalf("repository mutated on failed transaction: before=%+v after=%+v", before, after)
+		t.Fatalf("Репозиторий изменился после неудачной транзакции: до=%+v, после=%+v", before, after)
 	}
 }

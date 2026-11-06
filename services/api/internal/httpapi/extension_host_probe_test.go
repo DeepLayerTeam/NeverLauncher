@@ -22,7 +22,7 @@ func TestJavaIntegrationProbe0491RejectsAbsentHost(t *testing.T) {
 	rec := httptest.NewRecorder()
 	(Server{}).extensionHostProbe0491(rec, req)
 	if rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("disabled probe status=%d", rec.Code)
+		t.Fatalf("Статус отключённого зонда=%d", rec.Code)
 	}
 
 	repo := repository.NewMemoryRepository("http://example.test")
@@ -38,6 +38,6 @@ func TestJavaIntegrationProbe0491RejectsAbsentHost(t *testing.T) {
 	rec = httptest.NewRecorder()
 	(Server{Repo: repo, ExtensionHost: host}).extensionHostProbe0491(rec, req)
 	if rec.Code != http.StatusConflict {
-		t.Fatalf("missing running JVM accepted; status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("Принято отсутствие работающей JVM: статус=%d, тело=%s", rec.Code, rec.Body.String())
 	}
 }

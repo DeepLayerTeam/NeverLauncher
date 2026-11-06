@@ -1990,9 +1990,9 @@ mod tests {
                 "downloads": {"artifact": {"path": "wrong.jar", "sha1":"dead"}}
             })).unwrap();
             let (libraries, natives, classpath) = resolve_libraries(&[native, foreign], &env).unwrap();
-            assert!(libraries.is_empty(), "{os}: native JAR added to libraries");
-            assert!(classpath.is_empty(), "{os}: native JAR added to classpath");
-            assert_eq!(natives.len(), 1, "{os}: cross-architecture native leaked");
+            assert!(libraries.is_empty(), "{os}: нативный JAR добавлен в список библиотек");
+            assert!(classpath.is_empty(), "{os}: нативный JAR добавлен в путь классов");
+            assert_eq!(natives.len(), 1, "{os}: нативная библиотека другой архитектуры попала в результат");
             assert_eq!(natives[0].classifier, native_class);
             assert_eq!(natives[0].sha1, "cafe");
         }

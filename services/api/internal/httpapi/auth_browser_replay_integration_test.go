@@ -24,7 +24,7 @@ func TestBrowserNonceAcrossPostgresReplicas0525(t *testing.T) {
 	second := repository.NewSQLRepository("pgx", dsn, "https://launcher.example.test")
 	installer, ok := first.(*repository.SQLRepository)
 	if !ok {
-		t.Fatal("SQL repository unavailable")
+		t.Fatal("Репозиторий SQL недоступен")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()

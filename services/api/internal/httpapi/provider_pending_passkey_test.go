@@ -30,7 +30,7 @@ func TestPendingProviderCredential0296SealedUntilPasskeyProof(t *testing.T) {
 	}
 	token, ok := continuation["transactionToken"].(string)
 	if !ok || token == "" {
-		t.Fatal("missing passkey continuation")
+		t.Fatal("Отсутствует продолжение входа с ключом доступа")
 	}
 	challenge, err := api.State.Passkeys.consumeChallenge(token, "passkey-mfa-login")
 	if err != nil {
@@ -38,16 +38,16 @@ func TestPendingProviderCredential0296SealedUntilPasskeyProof(t *testing.T) {
 	}
 	sealed := metadataString117(challenge.Metadata, "sealedProviderCredential")
 	if sealed == "" || strings.Contains(sealed, "secret-browser-refresh") {
-		t.Fatal("provider credential was not sealed in short-lived challenge")
+		t.Fatal("Учётные данные провайдера не были защищены в краткосрочном запросе")
 	}
 	if _, err := repo.GetProviderCredentialByIdentity(user.ID, identity.ID); err == nil {
-		t.Fatal("provider credential stored before Never WebAuthn proof")
+		t.Fatal("Учётные данные провайдера сохранены до подтверждения Never WebAuthn")
 	}
 	if err := api.commitPendingProviderCredential0296(user, identity.Provider, identity.ID, sealed+"tampered"); err == nil {
 		t.Fatal("Подменённый AEAD-токен ошибочно принят")
 	}
 	if err := api.commitPendingProviderCredential0296(user, identity.Provider, "different-identity", sealed); err == nil {
-		t.Fatal("wrong identity accepted")
+		t.Fatal("Принят неверный идентификатор")
 	}
 	if err := api.commitPendingProviderCredential0296(user, identity.Provider, identity.ID, sealed); err != nil {
 		t.Fatal(err)
@@ -58,6 +58,6 @@ func TestPendingProviderCredential0296SealedUntilPasskeyProof(t *testing.T) {
 	}
 	decrypted, err := api.decryptProviderCredential116(stored)
 	if err != nil || decrypted != "secret-browser-refresh" {
-		t.Fatalf("credential not safely persisted after verification: %v", err)
+		t.Fatalf("Учётные данные не сохранены безопасно после проверки: %v", err)
 	}
 }

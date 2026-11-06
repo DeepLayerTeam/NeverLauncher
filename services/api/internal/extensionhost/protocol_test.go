@@ -59,7 +59,7 @@ func TestHostHelloSDKCompatibility0421(t *testing.T) {
 			}
 			w := send()
 			if w.Code != tc.wantStatus {
-				t.Fatalf("hello HTTP %d, expected %d: %s", w.Code, tc.wantStatus, w.Body.String())
+				t.Fatalf("Приветствие: HTTP %d, ожидалось %d: %s", w.Code, tc.wantStatus, w.Body.String())
 			}
 			var reply map[string]any
 			if err := json.Unmarshal(w.Body.Bytes(), &reply); err != nil {
@@ -70,26 +70,26 @@ func TestHostHelloSDKCompatibility0421(t *testing.T) {
 					t.Fatalf("reason %v, expected %s", reply["code"], tc.code)
 				}
 				if !st.helloAt.IsZero() {
-					t.Fatal("incompatible host activated the extension")
+					t.Fatal("Несовместимый хост активировал расширение")
 				}
 				return
 			}
 			if reply["protocolVersion"] != "1.0" || reply["extensionApiVersion"] != "1.0" || reply["instanceId"] != st.instanceID {
-				t.Fatalf("incompatible hello response: %#v", reply)
+				t.Fatalf("Несовместимый ответ приветствия: %#v", reply)
 			}
 			if st.helloAt.IsZero() || st.state != "running" {
-				t.Fatal("valid legacy/current hello was not activated")
+				t.Fatal("Не активировано корректное приветствие старого либо текущего формата")
 			}
 			again := send()
 			if again.Code != http.StatusConflict {
-				t.Fatalf("replayed hello HTTP %d", again.Code)
+				t.Fatalf("Повторное приветствие: HTTP %d", again.Code)
 			}
 			var rejected map[string]any
 			if err := json.Unmarshal(again.Body.Bytes(), &rejected); err != nil {
 				t.Fatal(err)
 			}
 			if rejected["code"] != "HOST_HELLO_ALREADY_COMPLETED" {
-				t.Fatalf("hello replay accepted: %#v", rejected)
+				t.Fatalf("Принят повтор приветствия: %#v", rejected)
 			}
 		})
 	}

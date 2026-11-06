@@ -27,7 +27,7 @@ func TestOperationList02110RejectsUnscopedAndInvalidRequests(t *testing.T) {
 			t.Errorf("%s => %d, wanted %d: %s", tc.path, recorder.Code, tc.status, recorder.Body.String())
 		}
 		if tc.status == http.StatusOK && (!strings.Contains(recorder.Body.String(), `"items"`) || strings.Contains(recorder.Body.String(), `"leaseToken"`)) {
-			t.Errorf("unsafe list response: %s", recorder.Body.String())
+			t.Errorf("Небезопасный ответ списка: %s", recorder.Body.String())
 		}
 	}
 }

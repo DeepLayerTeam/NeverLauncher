@@ -48,10 +48,10 @@ func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !report.Data.Ready || len(report.Data.SHA) != 64 {
-		t.Fatalf("preview isn't ready: %s", preview.Body.String())
+		t.Fatalf("Предварительный просмотр не готов: %s", preview.Body.String())
 	}
 	if result := call("import-gravit", request("stale", source)); result.Code != 409 {
-		t.Fatalf("stale source accepted: %d %s", result.Code, result.Body.String())
+		t.Fatalf("Принят устаревший источник: %d %s", result.Code, result.Body.String())
 	}
 	blocked := json.RawMessage(`{"title":"Blocked","version":"1.20.4","mainClass":"net.minecraft.client.main.Main","recommendJavaVersion":17,"classLoaderConfig":"BRIDGE"}`)
 	if result := call("import-gravit", request(report.Data.SHA, blocked)); result.Code != 422 {
@@ -78,7 +78,7 @@ func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 		t.Fatal(err)
 	}
 	if saved.Data.Profile.Revision != 1 || saved.Data.Workspace.Revision != 1 || saved.Data.Workspace.ProfileDigest != saved.Data.Profile.Digest || saved.Data.Workspace.State != "importing" {
-		t.Fatalf("workspace not pinned: %s", imported.Body.String())
+		t.Fatalf("Рабочее пространство не закреплено: %s", imported.Body.String())
 	}
 	if result := call("import-gravit", request(report.Data.SHA, source)); result.Code != 409 {
 		t.Fatalf("Повторный импорт ошибочно принят: %d %s", result.Code, result.Body.String())

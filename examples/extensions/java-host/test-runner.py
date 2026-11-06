@@ -230,7 +230,7 @@ if __name__ == "__main__":
                 Handler.readies,
             )
         print(
-            "PASS: executable JVM-host JAR -> authenticated hello -> ready after start -> RPC health/command -> authorization/version/deadline -> CLI"
+            "PASS: исполняемый JAR хоста JVM -> аутентифицированное приветствие -> готовность после запуска -> состояние/команда RPC -> авторизация/версия/срок -> CLI"
         )
     finally:
         if backend.poll() is None:

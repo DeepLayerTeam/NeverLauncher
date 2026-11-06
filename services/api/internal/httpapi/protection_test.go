@@ -23,7 +23,7 @@ func TestProtectionBlocksAuthLaunchJoinAndRestoresAfterUnban0298(t *testing.T) {
 	userID := "user-0298"
 	for _, stage := range []protection.Stage{protection.BeforeAuth, protection.AfterAuth, protection.BeforeLaunch, protection.BeforeJoin} {
 		if decision := server.evaluateProtection0298(ctx, protection.Request{Stage: stage, UserID: userID}); !decision.Allowed() {
-			t.Fatalf("unexpected policy denial %+v", decision)
+			t.Fatalf("Неожиданный отказ по политике: %+v", decision)
 		}
 	}
 	if err := repo.SetProtectionBan(ctx, repository.ProtectionBan{UserID: userID, Reason: "security ban", Actor: "admin"}); err != nil {
@@ -38,7 +38,7 @@ func TestProtectionBlocksAuthLaunchJoinAndRestoresAfterUnban0298(t *testing.T) {
 		t.Fatal(err)
 	}
 	if decision := server.evaluateProtection0298(ctx, protection.Request{Stage: protection.BeforeAuth, UserID: userID}); !decision.Allowed() {
-		t.Fatalf("unban did not restore eligibility %+v", decision)
+		t.Fatalf("Снятие блокировки не восстановило право доступа: %+v", decision)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestBannedUserCannotReceiveNeverSession0298(t *testing.T) {
 	request := httptest.NewRequest("POST", "/api/v1/auth/login", nil)
 	_, _, _, err := server.issueLoginSessionWithAuth(model.User{ID: "banned-user", Email: "banned@example.test", RoleID: "player", Status: "active"}, request, "desktop", []string{"password"}, "single-factor", time.Now().UTC(), "", "local")
 	if !errors.Is(err, errAuthRequired) {
-		t.Fatalf("banned user received new session: %v", err)
+		t.Fatalf("Заблокированный пользователь получил новую сессию: %v", err)
 	}
 }
 
@@ -78,7 +78,7 @@ func TestProtectionBanUnbanLiveHTTP0298(t *testing.T) {
 		t.Fatalf("ban: %d %s", banned.Code, banned.Body.String())
 	}
 	if res := request0211(t, handler, http.MethodGet, "/api/v1/auth/sessions", player, ""); res.Code != http.StatusUnauthorized {
-		t.Fatalf("ban did not revoke live token: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Блокировка не отозвала действующий токен: %d %s", res.Code, res.Body.String())
 	}
 	refused := request0211(t, handler, http.MethodPost, "/api/v1/admin/login", "", `{"email":"ban0298@example.test","password":"safe-password-0298"}`)
 	if refused.Code != http.StatusForbidden {
@@ -90,9 +90,9 @@ func TestProtectionBanUnbanLiveHTTP0298(t *testing.T) {
 	}
 	recovered := request0211(t, handler, http.MethodPost, "/api/v1/admin/login", "", `{"email":"ban0298@example.test","password":"safe-password-0298"}`)
 	if recovered.Code != http.StatusOK {
-		t.Fatalf("unbanned user still denied: %d %s", recovered.Code, recovered.Body.String())
+		t.Fatalf("Доступ после снятия блокировки по-прежнему запрещён: %d %s", recovered.Code, recovered.Body.String())
 	}
 	if res := request0211(t, handler, http.MethodGet, "/api/v1/auth/sessions", player, ""); res.Code != http.StatusUnauthorized {
-		t.Fatalf("unban resurrected revoked token: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Снятие блокировки восстановило отозванный токен: %d %s", res.Code, res.Body.String())
 	}
 }

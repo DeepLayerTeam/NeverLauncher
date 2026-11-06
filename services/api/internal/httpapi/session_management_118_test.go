@@ -43,7 +43,7 @@ func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	}
 	claims, err := s.verifyAdminToken(token)
 	if err != nil || claims.Iss != "https://issuer.example.test" || claims.Aud != "launcher-api" || claims.JTI == "" {
-		t.Fatalf("bad claims: %#v err=%v", claims, err)
+		t.Fatalf("Некорректные утверждения: %#v, ошибка=%v", claims, err)
 	}
 	s.Config.AuthTokenActiveKID = "new"
 	if _, err := s.verifyAdminToken(token); err != nil {

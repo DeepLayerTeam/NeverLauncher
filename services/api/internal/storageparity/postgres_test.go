@@ -51,7 +51,7 @@ func TestPostgresRealStorageParity0371(t *testing.T) {
 	makeRepo := func() *repository.SQLRepository {
 		r, ok := repository.NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*repository.SQLRepository)
 		if !ok {
-			t.Fatal("Postgres factory returned wrong type")
+			t.Fatal("Фабрика PostgreSQL вернула неверный тип")
 		}
 		return r
 	}

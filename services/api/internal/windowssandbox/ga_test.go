@@ -22,7 +22,7 @@ func TestGAInheritedHandlesWhitelisted0320(t *testing.T) {
 	seen := make(map[uintptr]bool)
 	for _, h := range streams {
 		if h == 0 || seen[h] {
-			t.Fatalf("invalid/duplicate duplicated handle: %#x", h)
+			t.Fatalf("Недопустимый или повторный дескриптор скопирован: %#x", h)
 		}
 		seen[h] = true
 		var flags uint32
@@ -32,7 +32,7 @@ func TestGAInheritedHandlesWhitelisted0320(t *testing.T) {
 			t.Fatal(err)
 		}
 		if flags&1 == 0 {
-			t.Fatal("standard stream duplicate is not inheritable")
+			t.Fatal("Копия стандартного потока не наследуется")
 		}
 	}
 }

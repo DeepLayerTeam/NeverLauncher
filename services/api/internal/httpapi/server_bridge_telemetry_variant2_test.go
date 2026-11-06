@@ -66,22 +66,22 @@ func TestTelemetryProcessHostFields0419(t *testing.T) {
 	wrong := pid + 1
 	raw.ProcessID = &wrong
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 3, now); err == nil {
-		t.Fatal("accepted different physical JVM")
+		t.Fatal("Принята другая физическая JVM")
 	}
 	raw.ProcessID = &pid
 	free = total + 1
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 3, now); err == nil {
-		t.Fatal("accepted impossible host memory")
+		t.Fatal("Принято невозможное значение памяти хоста")
 	}
 	free = 6 << 30
 	raw.ProcessID = nil
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 3, now); err == nil {
-		t.Fatal("accepted CPU counters without process identity")
+		t.Fatal("Приняты счётчики ЦП без идентификатора процесса")
 	}
 	raw.ProcessID = &pid
 	load = 1.5
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 3, now); err == nil {
-		t.Fatal("accepted invalid cpu load")
+		t.Fatal("Принято некорректное значение загрузки ЦП")
 	}
 }
 
@@ -97,16 +97,16 @@ func TestTelemetryMissingPlatformSample0419(t *testing.T) {
 	raw.TickHealth = "unavailable"
 	value, err := validateBridgeTelemetry0193(raw, runtime, 2, now)
 	if err != nil || value.PlayersOnline != nil || value.PlayersMax != nil {
-		t.Fatalf("missing platform values must remain unknown, got %+v err %v", value, err)
+		t.Fatalf("Отсутствующие параметры платформы должны оставаться неизвестными, получено %+v, ошибка %v", value, err)
 	}
 	raw.TickHealth = "healthy"
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 2, now); err == nil {
-		t.Fatal("missing ticks claimed healthy")
+		t.Fatal("При отсутствии счётчиков тактов система сообщила об исправности")
 	}
 	raw.TickHealth = "unavailable"
 	online := 4
 	raw.PlayersOnline = &online
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 2, now); err == nil {
-		t.Fatal("partial player metric pair accepted")
+		t.Fatal("Принята неполная пара метрик игроков")
 	}
 }

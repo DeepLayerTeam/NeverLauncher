@@ -25,7 +25,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (
     18,
     9,
 ):
-    raise SystemExit(f"[Launcher] Continuous Guard 0.18.9: VERSION={VERSION}")
+    raise SystemExit(f"[Launcher] Непрерывная защита Guard 0.18.9: версия={VERSION}")
 
 sensor = read("runtime/guard-sensor/src/continuous_guard.rs")
 stream = read("runtime/guard-sensor/src/lib.rs")

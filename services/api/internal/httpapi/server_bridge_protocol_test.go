@@ -44,7 +44,7 @@ func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 	v2, err := decodeBridgeHeartbeat0191(strings.NewReader(`{"protocolVersion":2,"serverId":"node","serverType":"paper","pluginVersion":"0.19.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))
 	if err != nil || v2.ProtocolVersion != 2 || len(v2.Features) != 0 {
-		t.Fatalf("v2 heartbeat contract decode failed: req=%+v err=%v", v2, err)
+		t.Fatalf("Ошибка разбора контракта heartbeat v2: запрос=%+v, ошибка=%v", v2, err)
 	}
 	if ok, reason := validateBridgeProtocolFeatures0191(v2.ProtocolVersion, v2.Features); !ok {
 		t.Fatalf("Контракт поэтапного обновления v2 ошибочно отклонён: %s", reason)
@@ -56,7 +56,7 @@ func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 
 	v3, err := decodeBridgeHeartbeat0191(strings.NewReader(`{"protocolVersion":3,"features":["protocol.feature-flags","protocol.capability-negotiation"],"serverId":"node","serverType":"paper","pluginVersion":"0.19.1","pluginSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}`))
 	if err != nil || v3.ProtocolVersion != 3 {
-		t.Fatalf("v3 heartbeat contract decode failed: req=%+v err=%v", v3, err)
+		t.Fatalf("Ошибка разбора контракта heartbeat v3: запрос=%+v, ошибка=%v", v3, err)
 	}
 	if ok, reason := validateBridgeProtocolFeatures0191(v3.ProtocolVersion, v3.Features); !ok {
 		t.Fatalf("Контракт сигналов активности v3 ошибочно отклонён: %s", reason)
@@ -76,7 +76,7 @@ func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 
 	handoff, err := decodeBridgeHandoff0191(strings.NewReader(`{"protocolVersion":3,"features":["protocol.capability-negotiation","protocol.feature-flags"],"username":"Player","targetServer":"paper-main"}`))
 	if err != nil || handoff.ProtocolVersion != 3 || handoff.TargetServer != "paper-main" {
-		t.Fatalf("v3 handoff contract decode failed: req=%+v err=%v", handoff, err)
+		t.Fatalf("Ошибка разбора контракта передачи v3: запрос=%+v, ошибка=%v", handoff, err)
 	}
 }
 

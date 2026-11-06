@@ -47,11 +47,11 @@ func TestGravitLegacyVerifierVectors(t *testing.T) {
 			}
 			ok, err := verifyPassword(password, tc.hash, cfg)
 			if err != nil || !ok {
-				t.Fatalf("expected known hash valid, ok=%v err=%v", ok, err)
+				t.Fatalf("Известный хеш должен быть корректным, успех=%v, ошибка=%v", ok, err)
 			}
 			ok, err = verifyPassword("wrong", tc.hash, cfg)
 			if err != nil || ok {
-				t.Fatalf("wrong secret accepted, ok=%v err=%v", ok, err)
+				t.Fatalf("Принят неверный секрет: успех=%v, ошибка=%v", ok, err)
 			}
 		})
 	}
@@ -73,7 +73,7 @@ func TestGravitLegacyFailClosed(t *testing.T) {
 	}
 	for i, tc := range cases {
 		if ok, err := verifyPassword("secret", tc.hash, tc.cfg); err == nil || ok {
-			t.Errorf("case %d accepted unsupported or malformed verifier: ok=%v err=%v", i, ok, err)
+			t.Errorf("Сценарий %d принял неподдерживаемую либо повреждённую проверку: успех=%v, ошибка=%v", i, ok, err)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func TestNormalizeGravitStrictConfiguration(t *testing.T) {
 		c := makeConfig()
 		c.Password = PasswordConfig{Algorithm: alg}
 		if _, err := Normalize(c); err == nil {
-			t.Errorf("unsafe legacy %s without opt-in accepted", alg)
+			t.Errorf("Принят небезопасный устаревший %s без явного разрешения", alg)
 		}
 	}
 	bad := []PasswordConfig{
@@ -102,7 +102,7 @@ func TestNormalizeGravitStrictConfiguration(t *testing.T) {
 		c := makeConfig()
 		c.Password = p
 		if _, err := Normalize(c); err == nil {
-			t.Errorf("accepted ambiguous verifier %+v", p)
+			t.Errorf("Принята неоднозначная схема проверки %+v", p)
 		}
 	}
 	good := makeConfig()
@@ -128,7 +128,7 @@ func TestAuthenticateGravitPHPassFromActualSQLRow(t *testing.T) {
 	}
 	_, err = conn.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player", Secret: "wrong"})
 	if authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("wrong password accepted: %v", err)
+		t.Fatalf("Принят неверный пароль: %v", err)
 	}
 }
 
@@ -140,14 +140,14 @@ func TestInspectMappingReadOnlyWithoutReadingHashes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(mapping) != 9 || mapping[3].Field != "password" || mapping[3].Column != "password_hash" {
-		t.Fatalf("actual SQL mapping not inspected: %+v", mapping)
+		t.Fatalf("Фактическое сопоставление SQL не проверено: %+v", mapping)
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	if !state.readOnlySeen || !strings.Contains(state.query, "WHERE 1 = 0") || strings.Contains(state.query, "SELECT *") {
-		t.Fatalf("unsafe schema query: %s readOnly=%v", state.query, state.readOnlySeen)
+		t.Fatalf("Небезопасный запрос схемы: %s, только чтение=%v", state.query, state.readOnlySeen)
 	}
 	if len(state.args) != 0 {
-		t.Fatalf("schema inspection included runtime credentials: %+v", state.args)
+		t.Fatalf("Проверка схемы включила учётные данные Runtime: %+v", state.args)
 	}
 }

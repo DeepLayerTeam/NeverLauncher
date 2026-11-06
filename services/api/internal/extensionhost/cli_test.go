@@ -130,7 +130,7 @@ time.sleep(30)
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("transient CLI was not registered")
+			t.Fatal("Временный CLI не зарегистрирован")
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -142,9 +142,9 @@ time.sleep(30)
 	select {
 	case err := <-done:
 		if err == nil {
-			t.Fatal("transient CLI unexpectedly exited successfully")
+			t.Fatal("Временный CLI неожиданно завершился успешно")
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("RunCLI0209 did not return after lifecycle Stop")
+		t.Fatal("RunCLI0209 не завершился после остановки жизненного цикла")
 	}
 }

@@ -225,5 +225,5 @@ require(
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(
-    f"[Launcher] Guard Guard Attestation + Backend verification 0.13.4 gate OK: {version}"
+    f"[Launcher] Проверка аттестации Guard и Backend 0.13.4 пройдена: {version}"
 )

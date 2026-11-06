@@ -24,18 +24,18 @@ func TestExclusiveLockAndRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Acquire(plan); err == nil {
-		t.Fatal("second handle must be rejected")
+		t.Fatal("Второй дескриптор должен быть отклонён")
 	}
 	info, err := os.Stat(plan.LockPath)
 	if err != nil || info.Mode().Perm() != 0600 {
-		t.Fatalf("lock file %v err=%v", info, err)
+		t.Fatalf("Файл блокировки %v, ошибка=%v", info, err)
 	}
 	if err = first.Close(); err != nil {
 		t.Fatal(err)
 	}
 	second, err := Acquire(plan)
 	if err != nil {
-		t.Fatalf("reacquire after clean shutdown: %v", err)
+		t.Fatalf("Повторный захват после корректного завершения: %v", err)
 	}
 	if err := second.Close(); err != nil {
 		t.Fatal(err)
@@ -61,7 +61,7 @@ func TestLockInDifferentProcess(t *testing.T) {
 	cmd.Env = append(os.Environ(), "LAUNCHER_DEPLOYMENT_LOCK_TEST_PATH="+plan.LockPath, "LAUNCHER_DEPLOYMENT_LOCK_TEST_EXPECT_SUCCESS=1")
 	data, childErr = cmd.CombinedOutput()
 	if childErr != nil {
-		t.Fatalf("child reacquisition failed %v: %s", childErr, data)
+		t.Fatalf("Ошибка повторного захвата дочерним процессом %v: %s", childErr, data)
 	}
 }
 func TestLockChildProcess(t *testing.T) {
@@ -72,7 +72,7 @@ func TestLockChildProcess(t *testing.T) {
 	lock, err := Acquire(Plan{SingleInstance: true, LockPath: path})
 	success := os.Getenv("LAUNCHER_DEPLOYMENT_LOCK_TEST_EXPECT_SUCCESS") == "1"
 	if (err == nil) != success {
-		t.Fatalf("got acquire err=%v, expected success=%v", err, success)
+		t.Fatalf("Ошибка захвата=%v, ожидался успех=%v", err, success)
 	}
 	if err == nil {
 		_ = lock.Close()
@@ -91,7 +91,7 @@ func TestSymlinkAndUnsafePermissionsRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Acquire(p); err == nil {
-		t.Fatal("symlink lock accepted")
+		t.Fatal("Принята блокировка через символьную ссылку")
 	}
 	if err := os.Remove(p.LockPath); err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestSymlinkAndUnsafePermissionsRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Acquire(p); err == nil {
-		t.Fatal("weak lock permissions accepted")
+		t.Fatal("Приняты слишком широкие права файла блокировки")
 	}
 	if err := os.Remove(p.LockPath); err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestSymlinkAndUnsafePermissionsRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Acquire(p); err == nil || !strings.Contains(err.Error(), "writable") {
-		t.Fatalf("unsafe parent accepted: %v", err)
+		t.Fatalf("Принят небезопасный родительский каталог: %v", err)
 	}
 }
 func TestLockParentSymlinkRejected(t *testing.T) {
@@ -125,7 +125,7 @@ func TestLockParentSymlinkRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Acquire(Plan{SingleInstance: true, LockPath: filepath.Join(dir, "alias", "api.lock")}); err == nil {
-		t.Fatal("symlinked parent accepted")
+		t.Fatal("Принят родительский каталог через символьную ссылку")
 	}
 }
 
@@ -143,13 +143,13 @@ func TestProductionLockRequiresVerifiedLocalFS(t *testing.T) {
 	switch fs.Type {
 	case 0xef53, 0x58465342, 0x9123683e:
 		if err != nil {
-			t.Fatalf("supported local filesystem rejected: %v", err)
+			t.Fatalf("Отклонена поддерживаемая локальная файловая система: %v", err)
 		}
 		_ = l.Close()
 	default:
 		if err == nil {
 			_ = l.Close()
-			t.Fatalf("unsafe filesystem 0x%x accepted", fs.Type)
+			t.Fatalf("Принята небезопасная файловая система 0x%x", fs.Type)
 		}
 	}
 }

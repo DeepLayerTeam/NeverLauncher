@@ -10,12 +10,12 @@ import (
 func TestServerBridgeBukkitFamilyKinds0144(t *testing.T) {
 	for _, kind := range []string{"bukkit", "spigot", "paper", "purpur", "folia"} {
 		if !validBridgeServerKindV2(kind) {
-			t.Fatalf("Bukkit-family kind %q rejected", kind)
+			t.Fatalf("Отклонён тип семейства Bukkit %q", kind)
 		}
 	}
 	for _, kind := range []string{"", "paper-folia", "unknown"} {
 		if validBridgeServerKindV2(kind) {
-			t.Fatalf("unsupported ServerBridge kind %q accepted", kind)
+			t.Fatalf("Принят неподдерживаемый тип ServerBridge %q", kind)
 		}
 	}
 }

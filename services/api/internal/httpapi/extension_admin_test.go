@@ -20,7 +20,7 @@ func TestAdminHTMLHardening0208(t *testing.T) {
 	html := hardenAdminHTML0208("<!doctype html><html><head><title>x</title></head><body><script>window.ready=true</script></body></html>")
 	for _, token := range []string{"Content-Security-Policy", "connect-src 'none'", "object-src 'none'", "form-action 'none'"} {
 		if !strings.Contains(html, token) {
-			t.Fatalf("hardened HTML missing %q", token)
+			t.Fatalf("В защищённом HTML отсутствует %q", token)
 		}
 	}
 }
@@ -31,14 +31,14 @@ func TestSafeAdminEntrypoint0208RejectsSymlinkAndTraversal(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := safeAdminEntrypoint0208(root, "index.html"); err != nil {
-		t.Fatalf("valid entrypoint rejected: %v", err)
+		t.Fatalf("Отклонена допустимая точка входа: %v", err)
 	}
 	if _, err := safeAdminEntrypoint0208(root, "../outside.html"); err == nil {
 		t.Fatal("допущен выход за пределы разрешённого пути")
 	}
 	if err := os.Symlink(filepath.Join(root, "index.html"), filepath.Join(root, "link.html")); err == nil {
 		if _, err := safeAdminEntrypoint0208(root, "link.html"); err == nil {
-			t.Fatal("symlink entrypoint accepted")
+			t.Fatal("Принята точка входа через символьную ссылку")
 		}
 	}
 }
@@ -46,17 +46,17 @@ func TestSafeAdminEntrypoint0208RejectsSymlinkAndTraversal(t *testing.T) {
 func TestAdminProjectScope0208DoesNotEscapeInstallProject(t *testing.T) {
 	projectInstall := model.ExtensionInstall{Scope: "project", ScopeID: "project-a"}
 	if !adminExtensionProjectAllowed0208(projectInstall, "project-a") {
-		t.Fatal("own project rejected")
+		t.Fatal("Отклонён собственный проект")
 	}
 	if adminExtensionProjectAllowed0208(projectInstall, "project-b") {
-		t.Fatal("project-scoped extension escaped into another project")
+		t.Fatal("Расширение с ограничением по проекту получило доступ к другому проекту")
 	}
 	if adminExtensionProjectAllowed0208(projectInstall, "") {
 		t.Fatal("Пустой проект ошибочно принят")
 	}
 	globalInstall := model.ExtensionInstall{Scope: "global"}
 	if !adminExtensionProjectAllowed0208(globalInstall, "project-b") {
-		t.Fatal("global extension project access helper rejected a concrete project")
+		t.Fatal("Глобальный обработчик доступа расширения отклонил конкретный проект")
 	}
 }
 

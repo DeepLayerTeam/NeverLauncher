@@ -24,7 +24,7 @@ func TestRecoverOriginalOperation0388(t *testing.T) {
 	input := model.DurableJob{Kind: "package-publish", ActorType: "user", ActorID: "admin", Action: "release:publish", ProjectID: "demo-project", ResourceType: "package", ResourceID: "pkg-recover", IdempotencyKey: "recovery-lost-ack-0388", Payload: []byte(`{"packageId":"pkg-recover"}`), MaxAttempts: 8}
 	saved, reused, err := repo.EnqueueDurableJob(context.Background(), input, time.Hour)
 	if err != nil || reused || saved.ID == "" {
-		t.Fatalf("enqueue: %+v reused=%v err=%v", saved, reused, err)
+		t.Fatalf("Постановка в очередь: %+v, повторно использовано=%v, ошибка=%v", saved, reused, err)
 	}
 	lookup := func(path, bearer string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -45,7 +45,7 @@ func TestRecoverOriginalOperation0388(t *testing.T) {
 		"/api/v1/operations/recover?projectId=demo-project&kind=package-publish&idempotencyKey=missing-record-0388",
 	} {
 		if r := lookup(bad, token); r.Code != 404 {
-			t.Fatalf("cross-scope read: %d %s", r.Code, r.Body.String())
+			t.Fatalf("Чтение за пределами области доступа: %d %s", r.Code, r.Body.String())
 		}
 	}
 	for i := 0; i < 2; i++ {

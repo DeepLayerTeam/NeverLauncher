@@ -21,5 +21,5 @@ async fn missing_selected_legacy_optional_is_not_ready() {
     let files = result.expect("проверить отсутствие выбранных файлов");
     assert!(!files.is_empty(), "Необходимо фактически проверить файлы");
     assert!(files.iter().all(|file| file.status == "missing"),
-        "missing selected optional files must never be accepted as ready: {files:?}");
+        "Нельзя считать систему готовой при отсутствии выбранных необязательных файлов: {files:?}");
 }

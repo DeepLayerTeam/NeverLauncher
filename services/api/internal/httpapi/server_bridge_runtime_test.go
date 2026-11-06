@@ -55,10 +55,10 @@ func TestServerBridgeRuntimeIdentity0192VerifiesNodeBoundProcessIdentity(t *test
 		t.Fatalf("Корректная идентичность Runtime ошибочно отклонена: %v", err)
 	}
 	if verified.RuntimeID != runtimeContract.RuntimeID || verified.NodeKeyFingerprint != identity.Fingerprint || verified.ProcessID != 48120 {
-		t.Fatalf("verified runtime mismatch: %+v", verified)
+		t.Fatalf("Несоответствие проверенного Runtime: %+v", verified)
 	}
 	if got := strings.Join(verified.Capabilities, ","); got != "plugin.bukkit-api,runtime.discovery,runtime.ed25519-attestation" {
-		t.Fatalf("capabilities were not canonicalized: %s", got)
+		t.Fatalf("Возможности не приведены к каноническому виду: %s", got)
 	}
 
 	// Сведения о процессе входят в детерминированный runtime ID и аттестацию Ed25519.
@@ -75,7 +75,7 @@ func TestServerBridgeRuntimeIdentity0192VerifiesNodeBoundProcessIdentity(t *test
 	tampered.MinecraftVersion = "1.21.2"
 	req.Runtime = &tampered
 	if _, err := validateAndVerifyBridgeRuntime0192(server, req, time.Now().UTC()); err == nil || !strings.Contains(err.Error(), "runtime_signature_invalid") {
-		t.Fatalf("tampered discovery metadata accepted: %v", err)
+		t.Fatalf("Приняты подменённые метаданные обнаружения: %v", err)
 	}
 }
 
@@ -95,11 +95,11 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 
 	first, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, base)
 	if err != nil || first.Transition != "started" || first.RuntimeEpoch != 1 || first.ReplacementDetected {
-		t.Fatalf("first runtime transition invalid: %+v err=%v", first, err)
+		t.Fatalf("Некорректный первый переход Runtime: %+v, ошибка=%v", first, err)
 	}
 	same, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, base)
 	if err != nil || same.Transition != "unchanged" || same.RuntimeEpoch != 1 {
-		t.Fatalf("same runtime was not kept stable: %+v err=%v", same, err)
+		t.Fatalf("Не сохранена стабильность того же Runtime: %+v, ошибка=%v", same, err)
 	}
 
 	replacement := base
@@ -109,13 +109,13 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 	replacement.ProcessID = 1002
 	repl, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, replacement)
 	if err != nil || repl.Transition != "replacement" || !repl.ReplacementDetected || repl.PreviousRuntimeID != base.RuntimeID || repl.RuntimeEpoch != 2 {
-		t.Fatalf("overlapping replacement was not detected: %+v err=%v", repl, err)
+		t.Fatalf("Не обнаружена одновременная замена: %+v, ошибка=%v", repl, err)
 	}
 
 	// Поздний heartbeat заменённой JVM не должен возвращать
 	// активную среду к прежнему поколению процесса.
 	if _, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, base); err == nil || !strings.Contains(err.Error(), "older than active runtime") {
-		t.Fatalf("superseded runtime reclaimed active state: %v", err)
+		t.Fatalf("Заменённый Runtime вновь получил активное состояние: %v", err)
 	}
 
 	store.mu.Lock()
@@ -131,15 +131,15 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 	restart.ProcessID = 1003
 	next, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, restart)
 	if err != nil || next.Transition != "restart" || next.ReplacementDetected || next.PreviousRuntimeID != replacement.RuntimeID || next.RuntimeEpoch != 3 {
-		t.Fatalf("restart transition invalid: %+v err=%v", next, err)
+		t.Fatalf("Некорректный переход после перезапуска: %+v, ошибка=%v", next, err)
 	}
 }
 
 func TestServerBridgeRuntimeIdentity0192FeaturePairIsAtomic(t *testing.T) {
 	if enabled, reason := bridgeRuntimeFeatureMode0192([]string{serverBridgeFeatureRuntimeDiscovery}); enabled || reason != "serverbridge_runtime_feature_pair_incomplete" {
-		t.Fatalf("partial runtime feature pair accepted: enabled=%v reason=%s", enabled, reason)
+		t.Fatalf("Принята неполная пара возможностей Runtime: включено=%v, причина=%s", enabled, reason)
 	}
 	if enabled, reason := bridgeRuntimeFeatureMode0192([]string{serverBridgeFeatureRuntimeDiscovery, serverBridgeFeatureRuntimeIdentity}); !enabled || reason != "" {
-		t.Fatalf("complete runtime feature pair rejected: enabled=%v reason=%s", enabled, reason)
+		t.Fatalf("Отклонена полная пара возможностей Runtime: включено=%v, причина=%s", enabled, reason)
 	}
 }

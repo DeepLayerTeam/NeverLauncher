@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] Windows Protection GA 0.19.0 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Проверка GA защиты Windows 0.19.0: {path} отсутствует: {', '.join(missing)}"
         )
 
 
@@ -165,7 +165,7 @@ for text, path in [
         )
 if "TestWindowsProtectionGA" not in ci:
     raise SystemExit(
-        "[Launcher] Windows Protection GA 0.19.0 gate: Go GA tests: не подключены к CI"
+        "[Launcher] Проверка GA защиты Windows 0.19.0: Go-тесты GA не подключены к CI"
     )
 
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:

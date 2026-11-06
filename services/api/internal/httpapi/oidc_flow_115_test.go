@@ -70,7 +70,7 @@ func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	if begin.Data.Transaction == "" || begin.Data.State == "" {
-		t.Fatalf("incomplete begin response: %s", beginRes.Body.String())
+		t.Fatalf("Неполный ответ начала операции: %s", beginRes.Body.String())
 	}
 	authURL, _ := url.Parse(begin.Data.AuthorizationURL)
 	if authURL.Query().Get("code_challenge_method") != "S256" {
@@ -85,11 +85,11 @@ func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
 		t.Fatalf("Завершение: состояние=%d, тело ответа=%s", completeRes.Code, completeRes.Body.String())
 	}
 	if !strings.Contains(completeRes.Body.String(), "accessToken") || !strings.Contains(completeRes.Body.String(), "refreshToken") {
-		t.Fatalf("Never session tokens missing: %s", completeRes.Body.String())
+		t.Fatalf("Отсутствуют токены сессии Never: %s", completeRes.Body.String())
 	}
 	identity, err := repo.GetAuthIdentity("oidc-fixture", "oidc-user-42")
 	if err != nil || identity.UserID == "" {
-		t.Fatalf("OIDC identity not persisted: %+v err=%v", identity, err)
+		t.Fatalf("Идентификатор OIDC не сохранён: %+v, ошибка=%v", identity, err)
 	}
 }
 

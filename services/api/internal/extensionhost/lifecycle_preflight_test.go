@@ -27,6 +27,6 @@ func TestHostCannotStartStaleInstallationAfterDisable0424(t *testing.T) {
 	}
 	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
 	if err := host.StartInstallation(ctx, initial); err == nil || !strings.Contains(err.Error(), "state has changed") {
-		t.Fatalf("stale enabled snapshot restarted: %v", err)
+		t.Fatalf("Перезапущен устаревший активированный снимок: %v", err)
 	}
 }

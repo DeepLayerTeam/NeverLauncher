@@ -58,6 +58,6 @@ func TestS3SaveStreamsAndSignsPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	if key != "project/version/libraries/test.jar" || size != int64(len(payload)) || gotBody != payload {
-		t.Fatalf("unexpected upload result key=%s size=%d body=%d", key, size, len(gotBody))
+		t.Fatalf("Неожиданный результат загрузки: ключ=%s, размер=%d, тело=%d", key, size, len(gotBody))
 	}
 }

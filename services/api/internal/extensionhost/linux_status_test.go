@@ -13,12 +13,12 @@ func TestLinuxStatusIsolatedOnlyAfterVerifiedSetup0319(t *testing.T) {
 	st := &processState{state: "running", sandbox: &extensionSandbox03111{}}
 	before := s.statusOf(st)
 	if before.IsolationStatus == "isolated" || before.OSSandbox != "none" {
-		t.Fatalf("claimed isolation without READY: %+v", before)
+		t.Fatalf("Заявлена изоляция без состояния READY: %+v", before)
 	}
 	st.sandboxReady = true
 	st.sandbox.linux = &linuxsandbox.Handle{}
 	after := s.statusOf(st)
 	if after.IsolationStatus != "isolated" || after.OSSandbox == "none" || after.ExecutionTrust != "os-isolated" {
-		t.Fatalf("failed to surface applied isolation: %+v", after)
+		t.Fatalf("Не удалось отобразить применённую изоляцию: %+v", after)
 	}
 }

@@ -166,7 +166,7 @@ def validate_trust_boundaries() -> None:
         for needle in ["trusted-process", "none"]:
             if needle not in source:
                 fail(
-                    f"{name} does not state explicit trusted-process/no-sandbox boundary"
+                    f"{name} не указывает явно границу доверенного процесса без песочницы"
                 )
     if "OS sandbox" not in admin or "trusted-process" not in admin:
         fail("Интерфейс Admin скрывает границу доверия при выполнении расширений")

@@ -37,7 +37,7 @@ func TestJavaDirectRPCRejectsRevokedExtension04212(t *testing.T) {
 	// ошибку RPC после доставки.
 	_, _ = host.CallJavaRPC0304(ctx, st.key, "health", nil)
 	if attempts != 1 {
-		t.Fatalf("active host callback not reached: %d", attempts)
+		t.Fatalf("Обратный вызов активного хоста не выполнен: %d", attempts)
 	}
 	if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{
 		ExtensionID: st.key.ExtensionID, Scope: "global", Reason: "incident", Source: "test",
@@ -46,15 +46,15 @@ func TestJavaDirectRPCRejectsRevokedExtension04212(t *testing.T) {
 	}
 	_, err := host.CallJavaRPC0304(ctx, st.key, "command.invoke", json.RawMessage(`{"command":"dangerous"}`))
 	if err == nil || !strings.Contains(err.Error(), "trust") {
-		t.Fatalf("revoked direct RPC not rejected: %v", err)
+		t.Fatalf("Не отклонён прямой RPC с отозванными правами: %v", err)
 	}
 	if attempts != 1 {
-		t.Fatalf("revoked callback delivered to JVM: %d", attempts)
+		t.Fatalf("Обратный вызов с отозванными правами доставлен в JVM: %d", attempts)
 	}
 	st.mu.Lock()
 	stopped := st.expectedStop
 	st.mu.Unlock()
 	if !stopped {
-		t.Fatal("supervisor did not initiate revocation stop")
+		t.Fatal("Контроллер не инициировал остановку после отзыва прав")
 	}
 }

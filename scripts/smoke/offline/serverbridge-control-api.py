@@ -161,7 +161,7 @@ for path in control_sources:
     ):
         if forbidden in text:
             raise SystemExit(
-                f"{path.relative_to(ROOT)}: forbidden arbitrary process execution marker {forbidden!r}"
+                f"{path.relative_to(ROOT)}: запрещённый маркер произвольного запуска процессов {forbidden!r}"
             )
 
 migration = (

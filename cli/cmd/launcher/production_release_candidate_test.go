@@ -92,7 +92,7 @@ func TestSLSAProvenance01511CarriesExactSourceCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 	if commit != testSourceCommit01511 {
-		t.Fatalf("provenance source commit=%s", commit)
+		t.Fatalf("Исходный коммит происхождения=%s", commit)
 	}
 }
 

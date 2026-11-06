@@ -32,7 +32,7 @@ func TestJavaManagerDependencyAndReverseProtection0305(t *testing.T) {
 	a := manifest0305("example.a", "1.0.0")
 	a.Dependencies = []model.ExtensionDependency{{ID: "example.b", Version: "^1.0.0"}}
 	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, false); err == nil {
-		t.Fatal("missing dependency accepted")
+		t.Fatal("Принято отсутствие зависимости")
 	}
 	b := manifest0305("example.b", "1.0.0")
 	addDependencyInstall0305(t, repo, b, model.ExtensionInstallStateDisabled)
@@ -41,7 +41,7 @@ func TestJavaManagerDependencyAndReverseProtection0305(t *testing.T) {
 	}
 	addDependencyInstall0305(t, repo, a, model.ExtensionInstallStateDisabled)
 	if err := manager.checkGraph0305(ctx, manifest0305("example.b", "2.0.0"), Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "would break") {
-		t.Fatalf("breaking update accepted: %v", err)
+		t.Fatalf("Принято обновление с несовместимыми изменениями: %v", err)
 	}
 }
 func TestJavaManagerCycleAndConflicts0305(t *testing.T) {
@@ -76,13 +76,13 @@ func TestJavaManagerEnableRejectsMissingDependency0305(t *testing.T) {
 	}
 	_, err := manager.Enable(ctx, manifest.ID, Scope{Scope: "global"})
 	if err == nil {
-		t.Fatal("enabled extension with missing dependency")
+		t.Fatal("Включено расширение с отсутствующей зависимостью")
 	}
 	state, e := repo.GetExtensionInstallState(ctx, manifest.ID, "global", "")
 	if e != nil {
 		t.Fatal(e)
 	}
 	if state.CurrentState != model.ExtensionInstallStateDisabled {
-		t.Fatal("failed enable changed persistent state")
+		t.Fatal("Ошибка включения изменила сохранённое состояние")
 	}
 }

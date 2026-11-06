@@ -260,7 +260,7 @@ if __name__ == "__main__":
                     failed.stderr,
                 )
         print(
-            "PASS: signed-package-compatible Gravit port JAR; backend hello/ready, real event subscription, state write, RPC/CLI command, authenticated callbacks"
+            "PASS: JAR порта Gravit с поддержкой подписанных пакетов; приветствие и готовность Backend, реальная подписка на события, сохранение состояния, команда RPC/CLI и аутентифицированные обратные вызовы"
         )
     finally:
         if backend.poll() is None:

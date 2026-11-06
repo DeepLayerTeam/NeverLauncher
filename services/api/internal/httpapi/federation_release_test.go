@@ -62,7 +62,7 @@ func TestGenericBrowserProviderExplicitLink0120(t *testing.T) {
 	}
 	identity, err := repo.GetAuthIdentity("oidc-fixture", "oidc-user-42")
 	if err != nil || identity.UserID != "admin" {
-		t.Fatalf("generic OIDC identity not linked to current user: %+v err=%v", identity, err)
+		t.Fatalf("Общий идентификатор OIDC не связан с текущим пользователем: %+v, ошибка=%v", identity, err)
 	}
 }
 
@@ -84,6 +84,6 @@ func TestFederationStatus0120ReportsProviderHealth(t *testing.T) {
 	res := httptest.NewRecorder()
 	api.Handler().ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"ready":true`) || !strings.Contains(res.Body.String(), `"id":"local"`) {
-		t.Fatalf("federation status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Федерация: статус=%d, тело=%s", res.Code, res.Body.String())
 	}
 }

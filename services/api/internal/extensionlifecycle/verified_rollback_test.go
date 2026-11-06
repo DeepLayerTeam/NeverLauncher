@@ -26,7 +26,7 @@ func TestJavaRollbackPayloadDigest0305(t *testing.T) {
 		t.Fatal(e)
 	}
 	if expected != actual {
-		t.Fatal("equal payloads have different digests")
+		t.Fatal("Одинаковые данные имеют разные контрольные суммы")
 	}
 	if e := os.WriteFile(filepath.Join(b, "backend", "extension.jar"), []byte("untrusted host"), 0600); e != nil {
 		t.Fatal(e)
@@ -36,11 +36,11 @@ func TestJavaRollbackPayloadDigest0305(t *testing.T) {
 		t.Fatal(e)
 	}
 	if changed == expected {
-		t.Fatal("changed backup passed digest verification")
+		t.Fatal("Изменённая резервная копия прошла проверку контрольной суммы")
 	}
 	if e := os.Symlink(filepath.Join(a, "backend", "extension.jar"), filepath.Join(b, "link")); e == nil {
 		if _, e := digestPayload0305(b); e == nil {
-			t.Fatal("symlink was allowed in backup")
+			t.Fatal("В резервной копии разрешена символьная ссылка")
 		}
 	}
 }

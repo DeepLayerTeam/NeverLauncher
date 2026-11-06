@@ -54,7 +54,7 @@ func TestGuardAttestationV2ValidatesFreshContinuousEvidence01810(t *testing.T) {
 	a := makeGuardAttestationV201810(t, "v2-challenge", "v2-secret")
 	now := time.Now().UTC()
 	if err := validateGuardAttestationV201810(a, "v2-challenge", "v2-secret", policy, "windows", now, now.Add(-time.Second)); err != nil {
-		t.Fatalf("fresh Attestation v2 rejected: %v", err)
+		t.Fatalf("Отклонена актуальная аттестация v2: %v", err)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810(t *testing
 
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/guard-attest-v2/begin", attestedAccess, map[string]any{"launcherVersion": "0.18.10"})
 	if code != http.StatusOK {
-		t.Fatalf("v2 begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало v2: статус=%d, тело=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	challengeID := begin["challengeId"].(string)
@@ -123,7 +123,7 @@ func TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810(t *testing
 	}
 	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/guard-attest-v2/complete", attestedAccess, body)
 	if code != http.StatusOK {
-		t.Fatalf("v2 complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение v2: статус=%d, тело=%#v", code, completeOut)
 	}
 	complete := deviceTrustData0121(t, completeOut)
 	ticket, _ := complete["continuousGuardTicket"].(string)

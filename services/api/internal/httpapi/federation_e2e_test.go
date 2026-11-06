@@ -108,7 +108,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 				t.Fatal(err)
 			}
 			if result.ProviderToken != "" && result.ProviderToken == server.Config.AuthTokenSecret {
-				t.Fatal("provider token crossed Never token boundary")
+				t.Fatal("Токен провайдера пересёк границу токенов Never")
 			}
 			req := httptest.NewRequest("POST", "/api/v1/auth/login", nil)
 			session, refresh, err := state.AuthSessions.createWithAuth(result.User, req, "matrix-"+tc.id, tc.methods, tc.strength, time.Now().UTC(), result.Identity.ID, tc.id)
@@ -117,24 +117,24 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			}
 			access, err := server.issueAccessTokenForSession(result.User, session)
 			if err != nil || access == "" || access == result.ProviderToken {
-				t.Fatalf("Never access token boundary failed access=%q provider=%q err=%v", access, result.ProviderToken, err)
+				t.Fatalf("Нарушена изоляция токенов доступа Never: доступ=%q, провайдер=%q, ошибка=%v", access, result.ProviderToken, err)
 			}
 			rotated, nextRefresh, err := state.AuthSessions.rotate(refresh)
 			if err != nil || nextRefresh == "" || nextRefresh == refresh || rotated.ID != session.ID {
-				t.Fatalf("refresh rotation failed rotated=%+v err=%v", rotated, err)
+				t.Fatalf("Ошибка смены токена обновления: сменён=%+v, ошибка=%v", rotated, err)
 			}
 			mc, mcToken, _, err := server.issueMinecraftSession119(result.User, session.ID, "matrix-client")
 			if err != nil {
 				t.Fatal(err)
 			}
 			if _, _, gotUser, err := server.validateMinecraftToken119(mcToken); err != nil || gotUser.ID != result.User.ID {
-				t.Fatalf("Minecraft session validation failed: user=%+v err=%v", gotUser, err)
+				t.Fatalf("Ошибка проверки сессии Minecraft: пользователь=%+v, ошибка=%v", gotUser, err)
 			}
 			if ok := state.AuthSessions.revoke(session.ID, "matrix-revoke"); !ok {
 				t.Fatal("Родительская сессия Never не была отозвана")
 			}
 			if _, _, _, err := server.validateMinecraftToken119(mcToken); err == nil {
-				t.Fatalf("Minecraft token %s survived parent Never revoke", mc.ID)
+				t.Fatalf("Токен Minecraft %s остался действительным после отзыва родительской сессии Never", mc.ID)
 			}
 		})
 	}
@@ -155,7 +155,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, next, err := state.AuthSessions.rotate(refresh); err != nil || next == refresh {
-			t.Fatalf("passkey session refresh failed next=%q err=%v", next, err)
+			t.Fatalf("Ошибка обновления сессии с ключом доступа: следующая=%q, ошибка=%v", next, err)
 		}
 		_, token, _, err := server.issueMinecraftSession119(user, session.ID, "matrix-passkey")
 		if err != nil {
@@ -165,12 +165,12 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			t.Fatal("Родительская сессия Never не была отозвана")
 		}
 		if _, _, _, err := server.validateMinecraftToken119(token); err == nil {
-			t.Fatal("passkey-derived Minecraft token survived parent revoke")
+			t.Fatal("Токен Minecraft, полученный через ключ доступа, пережил отзыв родительской сессии")
 		}
 	})
 
 	if got := len(core.Providers()); got != 4 {
-		t.Fatalf("expected four external matrix providers, got %d", got)
+		t.Fatalf("Ожидалось четыре внешних провайдера матрицы, получено %d", got)
 	}
 	_ = fmt.Sprintf("%v", core.Health(context.Background()))
 }

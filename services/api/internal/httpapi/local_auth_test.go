@@ -63,18 +63,18 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 		t.Fatalf("UUID изменился после пересчёта хеша: %+v %v", profile, err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "Migrated_01", Secret: "imported password"}); err != nil {
-		t.Fatal("post-rehash login", err)
+		t.Fatal("Вход после повторного хеширования", err)
 	}
 	again, err := r.GetUser(id)
 	if err != nil || again.PasswordHash != after.PasswordHash {
-		t.Fatal("hash must not change again without password rotation")
+		t.Fatal("Хеш не должен меняться без смены пароля")
 	}
 	disabled, err := r.SetUserDisabled(user.ID, true)
 	if err != nil || disabled.Status != "disabled" {
 		t.Fatal("Не удалось отключить", err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "Migrated_01", Secret: "imported password"}); err == nil {
-		t.Fatal("disabled imported account logged in")
+		t.Fatal("Отключённая импортированная учётная запись смогла войти")
 	}
 }
 
@@ -117,7 +117,7 @@ func TestImportedFileAuthYggdrasilLoginPreservesUUID0295(t *testing.T) {
 	}
 	result := makeRequest("Known-gravit-password")
 	if result.Code != http.StatusOK {
-		t.Fatalf("real Yggdrasil login failed %d: %s", result.Code, result.Body.String())
+		t.Fatalf("Ошибка реального входа через Yggdrasil %d: %s", result.Code, result.Body.String())
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(result.Body.Bytes(), &payload); err != nil {
@@ -125,10 +125,10 @@ func TestImportedFileAuthYggdrasilLoginPreservesUUID0295(t *testing.T) {
 	}
 	selected, ok := payload["selectedProfile"].(map[string]any)
 	if !ok || selected["id"] != strings.ReplaceAll(uuid, "-", "") || selected["name"] != "Legacy_41" {
-		t.Fatalf("migrated Minecraft UUID/name mismatch: %#v", payload)
+		t.Fatalf("Несоответствие UUID и имени Minecraft после миграции: %#v", payload)
 	}
 	after, err := r.GetUser(id)
 	if err != nil || !strings.HasPrefix(after.PasswordHash, "$argon2id$") {
-		t.Fatalf("Yggdrasil login failed to upgrade known legacy password: %v", err)
+		t.Fatalf("Вход через Yggdrasil не смог обновить известный устаревший пароль: %v", err)
 	}
 }

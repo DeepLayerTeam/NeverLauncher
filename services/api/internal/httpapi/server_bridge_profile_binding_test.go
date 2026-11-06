@@ -17,7 +17,7 @@ func TestServerBridgeRegistration0383RejectsForeignOrUnknownProfile(t *testing.T
 		key := newTestBridgeNodeIdentity0142(t)
 		res := registerTestBridgeNode0142(t, h, token, "binding-0383-"+tc.project, "Wrong binding", "paper", tc.project, tc.profile, key)
 		if res.Code != http.StatusBadRequest || !strings.Contains(res.Body.String(), "профил") && !strings.Contains(res.Body.String(), "проект") {
-			t.Fatalf("unexpected registration acceptance for %s/%s: %d %s", tc.project, tc.profile, res.Code, res.Body.String())
+			t.Fatalf("Неожиданно принята регистрация %s/%s: %d %s", tc.project, tc.profile, res.Code, res.Body.String())
 		}
 	}
 	// Отклонение не должно приводить к регистрации сервера как побочному эффекту.
@@ -26,6 +26,6 @@ func TestServerBridgeRegistration0383RejectsForeignOrUnknownProfile(t *testing.T
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || strings.Contains(res.Body.String(), `"id":"binding-0383-demo-project"`) {
-		t.Fatalf("failed registration persisted unexpectedly: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Неудачная регистрация неожиданно сохранена: %d %s", res.Code, res.Body.String())
 	}
 }

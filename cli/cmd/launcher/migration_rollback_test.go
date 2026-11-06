@@ -10,7 +10,7 @@ func TestRollbackCLIRequiresWriterFences03312(t *testing.T) {
 	}
 	for _, args := range cases {
 		if e := handleMigrationRollback03312(args); e == nil {
-			t.Fatalf("unsafe command accepted: %v", args)
+			t.Fatalf("Принята небезопасная команда: %v", args)
 		}
 	}
 }

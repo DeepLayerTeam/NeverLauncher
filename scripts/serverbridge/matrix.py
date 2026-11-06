@@ -75,7 +75,7 @@ def load(path: Path) -> dict[str, Any]:
             raise SystemExit(f"{tid}: некорректное покрытие")
         if str(row.get("minecraft", "")) != "1.21.1":
             raise SystemExit(
-                f"{tid}: this release matrix is pinned to Minecraft 1.21.1"
+                f"{tid}: матрица этого релиза привязана к Minecraft 1.21.1"
             )
         if row.get("required") is not True:
             raise SystemExit(f"{tid}: параметр required должен быть true")
@@ -89,7 +89,7 @@ def load(path: Path) -> dict[str, Any]:
         }.get(tid, "runtime-e2e")
         if row.get("coverage") != expected_coverage:
             raise SystemExit(
-                f"{tid}: expected coverage {expected_coverage}, got {row.get('coverage')}"
+                f"{tid}: ожидался охват {expected_coverage}, получено {row.get('coverage')}"
             )
     if ids != EXPECTED:
         raise SystemExit(f"Несовпадение: «ServerBridge target ordering/set»: {ids!r}")
@@ -133,7 +133,7 @@ def main() -> int:
         print(args.out)
     else:
         print(
-            f"ServerBridge public matrix OK: {len(data['targets'])} targets for {VERSION}"
+            f"Публичная матрица ServerBridge проверена: {len(data['targets'])} целевых платформ для {VERSION}"
         )
     return 0
 

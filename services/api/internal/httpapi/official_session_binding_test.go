@@ -28,12 +28,12 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 		Storage: storage.NewLocalStorage(cfg.StorageLocalPath)}.Handler()
 	unauth := request0211(t, api, http.MethodGet, "/api/v1/minecraft/official/browser/config", "", "")
 	if unauth.Code != http.StatusUnauthorized {
-		t.Fatalf("anonymous config returned %d", unauth.Code)
+		t.Fatalf("Конфигурация анонимного доступа вернула %d", unauth.Code)
 	}
 	token := loginAdmin(t, api)
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		t.Fatalf("access bearer is not a JWT")
+		t.Fatalf("Токен доступа Bearer не является JWT")
 	}
 	claimsRaw, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -51,7 +51,7 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 		t.Fatalf("verified config: %d %s", response.Code, response.Body.String())
 	}
 	if response.Header().Get("Cache-Control") != "no-store" {
-		t.Fatalf("identity proof must not be cached")
+		t.Fatalf("Подтверждение личности нельзя кешировать")
 	}
 	var result struct {
 		Data struct {
@@ -63,6 +63,6 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Data.NeverSessionID != claims.SID || result.Data.NeverUserID != claims.Sub {
-		t.Fatalf("backend identity proof differs from the authenticated claims")
+		t.Fatalf("Подтверждение личности сервером отличается от подтверждённых утверждений")
 	}
 }

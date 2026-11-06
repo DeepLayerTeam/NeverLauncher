@@ -94,7 +94,7 @@ func TestPlanDeterminismAndNoSecret0442(t *testing.T) {
 	}
 	// План не должен раскрывать содержимое файлов или старые секреты.
 	if strings.Contains(strings.Join(p.Blockers, "|"), "SECRET_KEY_NOT_TO_TRANSFER") {
-		t.Fatal("source contents leaked")
+		t.Fatal("Произошла утечка содержимого источника")
 	}
 	tampered := p
 	tampered.TargetSHA256 = strings.Repeat("b", 64)
@@ -110,7 +110,7 @@ func TestPlanBlocksDestinationAndSourceChanges0442(t *testing.T) {
 	}
 	vi.SourceSHA256 = strings.Repeat("f", 64)
 	if _, e = Build("run", "project", p.TargetSHA256, d, vi, compat, mods, cp, false, IdentityPreview{SourceAccounts: 1, State: "review_required"}); e == nil {
-		t.Fatal("mismatched source accepted")
+		t.Fatal("Принят источник с несоответствующими данными")
 	}
 }
 
@@ -134,7 +134,7 @@ func TestMissingIdentityAndChangedDestination0442(t *testing.T) {
 func TestPlanExcludesPlayerFiles0443(t *testing.T) {
 	p, _, _, _, content, _ := preview0442(t)
 	if len(content.SkippedFiles) != 1 {
-		t.Fatalf("missing source exclusion: %+v", content.SkippedFiles)
+		t.Fatalf("Отсутствует исключение источника: %+v", content.SkippedFiles)
 	}
 	seen := false
 	for _, item := range p.Items {

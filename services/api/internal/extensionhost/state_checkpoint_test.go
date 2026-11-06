@@ -37,13 +37,13 @@ func TestCheckpointRestoresRealState04810(t *testing.T) {
 	}
 	value, found, err := runtimeRead0303(dir, file)
 	if err != nil || !found || string(value) != `{"counter":3}` {
-		t.Fatalf("restore=%s found=%v err=%v", value, found, err)
+		t.Fatalf("Восстановление=%s, найдено=%v, ошибка=%v", value, found, err)
 	}
 	if _, err = os.Stat(additional); !os.IsNotExist(err) {
-		t.Fatalf("new document survived rollback: %v", err)
+		t.Fatalf("Новый документ сохранился после отката: %v", err)
 	}
 	if err = restoreRuntime04810(ctx, root, key, tx); err != nil {
-		t.Fatalf("restore must be repeatable: %v", err)
+		t.Fatalf("Восстановление должно допускать повторение: %v", err)
 	}
 }
 func TestCheckpointTamperRefusesOverwrite04810(t *testing.T) {
@@ -68,7 +68,7 @@ func TestCheckpointTamperRefusesOverwrite04810(t *testing.T) {
 	}
 	value, _, _ := runtimeRead0303(dir, file)
 	if string(value) != `"dark"` {
-		t.Fatal("restore damaged active data after checksum failure")
+		t.Fatal("Восстановление повредило активные данные после ошибки контрольной суммы")
 	}
 }
 func TestAbsentCheckpointIsolation04810(t *testing.T) {
@@ -94,11 +94,11 @@ func TestAbsentCheckpointIsolation04810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
-		t.Fatalf("previously absent state directory exists: %v", err)
+		t.Fatalf("Появился ранее отсутствовавший каталог состояния: %v", err)
 	}
 	value, found, err := runtimeRead0303(another, outside)
 	if err != nil || !found || string(value) != "3" {
-		t.Fatal("other project changed")
+		t.Fatal("Изменён другой проект")
 	}
 }
 func TestCheckpointRejectsSymlinkAndInvalidID04810(t *testing.T) {
@@ -106,7 +106,7 @@ func TestCheckpointRejectsSymlinkAndInvalidID04810(t *testing.T) {
 	ctx := context.Background()
 	key := Key{ExtensionID: "example.state", Scope: "global"}
 	if err := snapshotRuntime04810(ctx, root, key, "../unsafe"); err == nil {
-		t.Fatal("unsafe transaction ID accepted")
+		t.Fatal("Принят небезопасный идентификатор транзакции")
 	}
 	dir := runtimeDir0303(root, key)
 	if err := secureDirectory0303(dir); err != nil {

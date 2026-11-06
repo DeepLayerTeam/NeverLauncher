@@ -17,7 +17,7 @@ func TestReleaseFileMetadataNormalizesTargetOS(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !executable {
-		t.Fatal("executable=true must be persisted")
+		t.Fatal("Значение executable=true должно сохраняться")
 	}
 	want := []string{"linux", "osx", "windows"}
 	if len(targets) != len(want) {
@@ -34,6 +34,6 @@ func TestReleaseFileMetadataRejectsUnknownTargetOS(t *testing.T) {
 	req := httptest.NewRequest("POST", "/upload", nil)
 	req.MultipartForm = &multipart.Form{Value: map[string][]string{"targetOs": {"plan9"}}}
 	if _, _, err := releaseFileMetadata(req); err == nil {
-		t.Fatal("unknown targetOs must be rejected")
+		t.Fatal("Неизвестная целевая ОС должна быть отклонена")
 	}
 }

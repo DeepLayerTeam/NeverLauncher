@@ -28,10 +28,10 @@ func TestV08PublishedPresetsAndCompatiblePairs0348(t *testing.T) {
 		t.Fatalf("wrong cases: %v / %d / %v", selections, unchecked, err)
 	}
 	if !contains0348(selections, "minimal") || !contains0348(selections, "alpha-only") || !contains0348(selections, "beta-only") {
-		t.Fatalf("published preset missing from runtime matrix: %v", selections)
+		t.Fatalf("Опубликованный пресет отсутствует в матрице Runtime: %v", selections)
 	}
 	if !contains0348(selections, "@custom:v1:minimal:+alpha,+beta") {
-		t.Fatalf("compatible alpha+beta runtime case absent: %v", selections)
+		t.Fatalf("В матрице отсутствует совместимый сценарий alpha+beta Runtime: %v", selections)
 	}
 	signed, _, _ := validValidationFixture0345(t)
 	p := signed.Evidence
@@ -42,7 +42,7 @@ func TestV08PublishedPresetsAndCompatiblePairs0348(t *testing.T) {
 	target.Preset = "minimal"
 	raw, _ := json.Marshal([]validationTarget0346{target})
 	if _, _, err = configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256); err == nil {
-		t.Fatal("one default selection certified all published presets")
+		t.Fatal("Один вариант по умолчанию сертифицировал все опубликованные пресеты")
 	}
 	all := make([]validationTarget0346, 0, len(selections))
 	for i, selection := range selections {
@@ -53,12 +53,12 @@ func TestV08PublishedPresetsAndCompatiblePairs0348(t *testing.T) {
 	}
 	raw, _ = json.Marshal(all)
 	if _, _, err = configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256); err != nil {
-		t.Fatalf("all exact preset and pair targets rejected: %v", err)
+		t.Fatalf("Отклонены все точные цели пресетов и их пар: %v", err)
 	}
 	all[1].Preset = "minimal"
 	raw, _ = json.Marshal(all)
 	if _, _, err = configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256); err == nil {
-		t.Fatal("missing second published preset was silently accepted")
+		t.Fatal("Отсутствие второго опубликованного пресета принято без предупреждения")
 	}
 }
 
@@ -74,7 +74,7 @@ func TestV08ConflictDoesNotGenerateFalseValidTarget0348(t *testing.T) {
 	}, 1)
 	selections, _, err := RequiredMatrixSelections0348(&c)
 	if err != nil || len(selections) != 2 {
-		t.Fatalf("conflict accepted as runnable: %v %v", selections, err)
+		t.Fatalf("Конфликт принят как пригодный к запуску: %v %v", selections, err)
 	}
 }
 
@@ -94,6 +94,6 @@ func TestV08ConditionRequiresOSBranches0348(t *testing.T) {
 	target := testTarget0346(p)
 	target.Preset = "minimal"
 	if err := validateComponentMatrix0348(release.Manifest, []validationTarget0346{target}); err == nil || !strings.Contains(err.Error(), "required component runtime selection") {
-		t.Fatalf("missing conditional target accepted: %v", err)
+		t.Fatalf("Принято отсутствие условной цели: %v", err)
 	}
 }

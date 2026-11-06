@@ -16,17 +16,17 @@ func TestRedisLeaseCannotAliasAnotherKey0514(t *testing.T) {
 	owner, token := "valid-channel-aaaaaaaaaaaaaaaa", "valid-token-aaaaaaaaaaaaaaaa"
 	acquired, err := coord.AcquireCommandLease(ctx, "server-a", "command-one", owner, token, time.Minute)
 	if err != nil || !acquired {
-		t.Fatalf("valid acquire failed: %t, %v", acquired, err)
+		t.Fatalf("Не удалось выполнить допустимый захват: %t, %v", acquired, err)
 	}
 	for _, invalid := range []string{"server/a", "server:a", "server a", "", "server|a", "сервер"} {
 		if _, err := coord.AcquireCommandLease(ctx, invalid, "command-one", owner, token, time.Minute); err == nil {
-			t.Errorf("accepted lossy server id %q", invalid)
+			t.Errorf("Принят идентификатор сервера с потерей данных %q", invalid)
 		}
 		if _, err := coord.VerifyCommandLease(ctx, invalid, "command-one", owner, token); err == nil {
-			t.Errorf("verified lossy server id %q", invalid)
+			t.Errorf("Проверен идентификатор сервера с потерей данных %q", invalid)
 		}
 		if err := coord.ReleaseCommandLease(ctx, invalid, "command-one", owner, token); err == nil {
-			t.Errorf("released lossy server id %q", invalid)
+			t.Errorf("Освобождён идентификатор сервера с потерей данных %q", invalid)
 		}
 	}
 	ok, err := coord.VerifyCommandLease(ctx, "server-a", "command-one", owner, token)

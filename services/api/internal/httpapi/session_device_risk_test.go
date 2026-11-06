@@ -38,7 +38,7 @@ func registerBoundSession0126(t *testing.T, h http.Handler) boundSession0126 {
 		"name": "Risk-bound workstation", "platform": "linux", "clientVersion": "0.12.6",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("register begin status=%d body=%#v", code, out)
+		t.Fatalf("Начало регистрации: статус=%d, тело=%#v", code, out)
 	}
 	begin := deviceTrustData0121(t, out)
 	payload, _ := begin["signingPayload"].(string)
@@ -48,7 +48,7 @@ func registerBoundSession0126(t *testing.T, h http.Handler) boundSession0126 {
 		"signature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, []byte(payload))),
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("register complete status=%d body=%#v", code, out)
+		t.Fatalf("Завершение регистрации: статус=%d, тело=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	session, _ := data["session"].(map[string]any)
@@ -152,7 +152,7 @@ func TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126(t *testing.T)
 	data := deviceTrustData0121(t, out)
 	items, _ := data["items"].([]any)
 	if len(items) != 1 {
-		t.Fatalf("unexpected session list: %#v", data)
+		t.Fatalf("Неожиданный список сессий: %#v", data)
 	}
 	session, _ := items[0].(map[string]any)
 	if session["riskAction"] != "step-up" || session["riskState"] != "elevated" || session["riskScore"].(float64) < 35 {

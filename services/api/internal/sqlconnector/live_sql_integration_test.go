@@ -69,22 +69,22 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 			}
 			conn, err := New(ctx, cfg)
 			if err != nil {
-				t.Fatalf("real SQL activation failed: %v", err)
+				t.Fatalf("Ошибка активации реального SQL: %v", err)
 			}
 			defer conn.Close()
 			auth, err := conn.AuthenticatePassword(ctx, authconnector.PasswordRequest{Identifier: "LEGACY@EXAMPLE.TEST", Secret: "secret"})
 			if err != nil || auth.Identity.Subject != "42" || auth.Identity.Claims["minecraftUuid"] != "550e8400-e29b-41d4-a716-446655440000" {
-				t.Fatalf("real SQL authentication failed: %+v %v", auth, err)
+				t.Fatalf("Ошибка авторизации в реальном SQL: %+v %v", auth, err)
 			}
 			if _, err := conn.AuthenticatePassword(ctx, authconnector.PasswordRequest{Identifier: "legacy", Secret: "wrong"}); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-				t.Fatalf("wrong password must fail, got %v", err)
+				t.Fatalf("Неверный пароль должен вызывать отказ, получено %v", err)
 			}
 			cfg.Columns.Password = "missing_password_column"
 			if rejected, e := New(ctx, cfg); e == nil {
 				if rejected != nil {
 					rejected.Close()
 				}
-				t.Fatal("connector activated with nonexistent mapped password column")
+				t.Fatal("Коннектор активирован с несуществующим сопоставленным столбцом пароля")
 			}
 			// Неизвестный сохранённый проверяющий формат не должен вызывать резервный
 			// переход на локальную аутентификацию.
@@ -93,7 +93,7 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 				t.Fatal(err)
 			}
 			if _, err = conn.AuthenticatePassword(ctx, authconnector.PasswordRequest{Identifier: "legacy", Secret: "secret"}); authconnector.CodeOf(err) != authconnector.ErrMisconfigured {
-				t.Fatalf("unknown hash must fail closed, got %v", err)
+				t.Fatalf("Неизвестный хеш должен вызывать отказ, получено %v", err)
 			}
 
 			// Переключитесь на настроенный источник Gravit doubleDigest: он использует
@@ -113,7 +113,7 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 			defer digestConn.Close()
 			got, err := digestConn.AuthenticatePassword(ctx, authconnector.PasswordRequest{Identifier: "legacy", Secret: "secret"})
 			if err != nil || got.Identity.Subject != "42" {
-				t.Fatalf("real Gravit doubleDigest login failed: %+v %v", got, err)
+				t.Fatalf("Ошибка реального входа Gravit с двойным хешем: %+v %v", got, err)
 			}
 		})
 	}
@@ -121,6 +121,6 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 		t.Skip("no live PostgreSQL/MySQL/MariaDB DSNs configured; CI runs all three")
 	}
 	if os.Getenv("LAUNCHER_SQL_REQUIRE_ALL") == "1" && ran != 3 {
-		t.Fatalf("required 3 live DB engines, got %d", ran)
+		t.Fatalf("Необходимы три доступных движка БД, получено %d", ran)
 	}
 }

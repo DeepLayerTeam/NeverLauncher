@@ -42,13 +42,13 @@ func TestLivePermissionRevocationIsImmediate04210(t *testing.T) {
 	ctx := context.Background()
 	host, repo, st := liveTrustFixture04210(t)
 	if ok, err := host.permissionAllowed0207(ctx, st, "storage:read", ""); !ok || err != nil {
-		t.Fatalf("initial grant rejected: %v", err)
+		t.Fatalf("Отклонено первоначальное разрешение: %v", err)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, st.key.ExtensionID, "global", "", "storage:read"); err != nil {
 		t.Fatal(err)
 	}
 	if ok, err := host.permissionAllowed0207(ctx, st, "storage:read", ""); ok || err != nil {
-		t.Fatalf("revoked grant still effective: %v", err)
+		t.Fatalf("Отозванное разрешение продолжает действовать: %v", err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestLiveEmergencyDisableAndQuarantine04210(t *testing.T) {
 				// карантина должно быть достаточно для отзыва живого токена.
 			}
 			if ok, err := host.permissionAllowed0207(ctx, st, "storage:read", ""); ok || err == nil {
-				t.Fatalf("revoked live authority accepted: ok=%v err=%v", ok, err)
+				t.Fatalf("Приняты отозванные действующие полномочия: успех=%v, ошибка=%v", ok, err)
 			}
 		})
 	}
@@ -87,7 +87,7 @@ func TestLiveUpdateRejectsOldProcess04210(t *testing.T) {
 		t.Fatal(err)
 	}
 	if ok, err := host.permissionAllowed0207(ctx, st, "storage:read", ""); ok || err == nil {
-		t.Fatalf("disabled installation accepted: ok=%v err=%v", ok, err)
+		t.Fatalf("Принята отключённая установка: успех=%v, ошибка=%v", ok, err)
 	}
 }
 
@@ -103,7 +103,7 @@ func TestMonitorTerminatesRevokedProcess04210(t *testing.T) {
 	state, stopped := st.state, st.expectedStop
 	st.mu.Unlock()
 	if !stopped || state != "failing" {
-		t.Fatalf("idle revoked host not terminated: %s expectedStop=%t", state, stopped)
+		t.Fatalf("Не завершён простаивающий хост с отозванными правами: %s, ожидалась остановка=%t", state, stopped)
 	}
 }
 
@@ -128,18 +128,18 @@ func TestRevokedHostTokenCannotUseBroker04210(t *testing.T) {
 	// До отзыва брокер достигает хранилища документов. Отсутствующее состояние
 	// НЕЛЬЗЯ классифицировать как отзыв или недоступность.
 	if code := invoke(); code != http.StatusNotFound {
-		t.Fatalf("initial capability failed: %d", code)
+		t.Fatalf("Ошибка первоначальной возможности: %d", code)
 	}
 	if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: st.key.ExtensionID, Scope: "global", Reason: "security incident", Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
 	if code := invoke(); code != http.StatusServiceUnavailable {
-		t.Fatalf("revoked host token still reaches storage: %d", code)
+		t.Fatalf("Отозванный токен хоста по-прежнему предоставляет доступ к хранилищу: %d", code)
 	}
 	st.mu.Lock()
 	stopped := st.expectedStop
 	st.mu.Unlock()
 	if !stopped {
-		t.Fatal("host was not terminated on broker revocation")
+		t.Fatal("Хост не завершён при отзыве прав брокером")
 	}
 }

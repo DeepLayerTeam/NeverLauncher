@@ -117,14 +117,14 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if afterRollback != v1 {
-		t.Fatalf("rollback checksum=%s want=%s", afterRollback, v1)
+		t.Fatalf("Контрольная сумма отката=%s, ожидалось=%s", afterRollback, v1)
 	}
 	if bytes, err := os.ReadFile(filepath.Join(client, "mods", "orphan.jar")); err != nil || string(bytes) != "orphan" {
 		t.Fatalf("откат удалил пользовательский мод: %v %q", err, bytes)
 	}
 	verify, err = verifyClientInstallation(pkg1Path, client)
 	if err != nil || !verify.Valid {
-		t.Fatalf("rollback verify=%+v err=%v", verify, err)
+		t.Fatalf("Проверка отката=%+v, ошибка=%v", verify, err)
 	}
 }
 
