@@ -1387,7 +1387,7 @@ func fetchBytesVerified(ctx context.Context, client *http.Client, source, expect
 		return nil, err
 	}
 	if int64(len(data)) > max {
-		return nil, fmt.Errorf("response превышает лимит %d bytes", max)
+		return nil, fmt.Errorf("Размер ответа превышает лимит %d байт", max)
 	}
 	if expectedSize > 0 && int64(len(data)) != expectedSize {
 		return nil, fmt.Errorf("размер %d, ожидался %d", len(data), expectedSize)

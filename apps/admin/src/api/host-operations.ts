@@ -78,7 +78,7 @@ export class HostOperationsClient04111 {
     });
   }
   get(serverId: string, operationId: string, reconcile = false): Promise<HostResult04111> {
-    if (!operationId) throw Error('Не выбран operation ID');
+    if (!operationId) throw Error('Не выбран идентификатор операции');
     return requestJSON(this.backendUrl, `${this.path(serverId)}/operations/${encodeURIComponent(operationId)}${reconcile ? '?refresh=1' : ''}`, this.token);
   }
 }

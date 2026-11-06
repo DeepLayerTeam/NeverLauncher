@@ -83,7 +83,7 @@ jobs:
       - name: сборка реальные Desktop frontend
         working-directory: apps/desktop
         run: npm ci && npm run build
-      - name: сборка реальные Desktop нативные исполняемый файл
+      - name: Собрать реальные нативные исполняемые файлы Desktop
         run: cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Измерить первый и последующие запуски процесса в Xvfb
         run: dbus-run-session -- xvfb-run -a python scripts/performance/benchmark_03511.py --desktop apps/desktop/src-tauri/target/release/launcher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json

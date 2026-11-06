@@ -296,7 +296,7 @@ func main() {
 		if strings.EqualFold(cfg.Environment, "production") || strings.EqualFold(cfg.Environment, "prod") {
 			log.Fatal(err)
 		}
-		log.Printf("persistence bootstrap 0.10.0 пропущен: %v", err)
+		log.Printf("Первичная настройка постоянного хранилища 0.10.0 пропущена: %v", err)
 	}
 
 	store, err := newStorage(cfg)
@@ -487,7 +487,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("Ошибка: «корректное завершение работы»: %v; closing open connections", err)
+		log.Printf("Ошибка корректного завершения работы: %v; выполняется закрытие открытых соединений", err)
 		_ = httpServer.Close()
 	}
 	// Успешное завершение здесь намеренно. Только внешний настроенный менеджер служб
@@ -532,7 +532,7 @@ func newStorage(cfg config.Config) (storage.Storage, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := store.Health(ctx); err != nil {
-			return nil, fmt.Errorf("S3 health check не пройден: %w", err)
+			return nil, fmt.Errorf("Проверка работоспособности S3 не пройдена: %w", err)
 		}
 		return store, nil
 	default:

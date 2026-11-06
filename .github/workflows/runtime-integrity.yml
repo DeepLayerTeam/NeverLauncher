@@ -46,12 +46,12 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: реальные JVM classpath/JAR/нативные целостность положительные и отрицательные регрессионные проверки
+      - name: Проверить целостность путей классов JVM, JAR и нативных файлов в позитивных и негативных сценариях
         run: python scripts/tests/guard_runtime_integrity_0505.py
       - name: "Проверить подписанные политики Guard на Go и интеграцию со старым лаунчером"
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestGuardRuntimeInventory0505|TestGuardLoader0504|TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1 -timeout 12m
-      - name: нативные Rust Запустить & inventory модульные тесты
+      - name: Запустить нативные модульные тесты Rust и проверку инвентаризации
         run: |
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib runtime_integrity_0505
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guarded_trusted_launch_0503

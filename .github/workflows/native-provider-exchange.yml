@@ -40,7 +40,7 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Rust тесты (провайдер тестовая фикстура и нативные идентичность)
+      - name: Проверить провайдера на тестовых данных и нативную идентичность в Rust
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests -- --nocapture
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests

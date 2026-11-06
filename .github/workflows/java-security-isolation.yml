@@ -26,7 +26,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Java SDK 17/21 Runtime регрессионная проверка
+      - name: Проверить регрессии Java SDK и Runtime для Java 17/21
         shell: bash
         run: sh sdk/java/core/build.sh test
       - uses: actions/setup-go@v5

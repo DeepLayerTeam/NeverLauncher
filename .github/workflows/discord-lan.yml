@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Проверить Discord IPC и DNS-SD/TLS закрепление
+      - name: Проверить Discord IPC и закрепление доверия DNS-SD/TLS
         working-directory: cli
         run: go test -race -count=1 -timeout 3m ./internal/discordrpc ./internal/lanmdns
       - name: "Проверить и собрать CLI"
@@ -56,12 +56,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Скомпилировать TypeScript application
+      - name: Собрать приложение TypeScript
         working-directory: apps/desktop
         run: |
           npm ci
           npm run build
-      - name: нативные Tauri зависимости
+      - name: Установить нативные зависимости Tauri
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf

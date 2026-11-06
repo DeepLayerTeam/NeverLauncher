@@ -249,7 +249,7 @@ jobs:
       - run: |
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
-      - name: Login в качестве существующие владелец, operate Admin интерфейс, Опубликовать реальные подписанный пакет и Проверить откат
+      - name: Войти как существующий владелец, управлять Admin, опубликовать подписанный пакет и проверить откат
         run: |
           set -euo pipefail
           python3 e2e/scripts/owner-cycle-0390-browser.py

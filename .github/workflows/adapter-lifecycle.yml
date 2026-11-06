@@ -41,7 +41,7 @@ jobs:
           go test ./cmd/launcher -run
           'TestAdapterLifecycle02711|TestClientFactory0271|TestModernLoader0272|TestMirrorHelper0274|TestAuthlibClassloader0279|TestLegacyClientAdapters0278'
           -count=1 -timeout=5m
-      - name: CLI Скомпилировать
+      - name: Собрать CLI
         working-directory: cli
         run: go build ./cmd/launcher
       - name: Статический анализ

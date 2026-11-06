@@ -41,7 +41,7 @@ jobs:
         run: |
           go vet ./internal/attestverify ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker ./internal/linuxsandbox
           go build ./...
-      - name: Загрузить свидетельства regardless outcome
+      - name: Загрузить результаты независимо от исхода проверки
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Windows песочница и хост протокол компиляция
+      - name: Собрать песочницу Windows и протокол взаимодействия с хостом
         working-directory: services/api
         run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
       - name: промышленный API сборка
@@ -70,7 +70,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: macOS Скомпилировать is не OS confinement сертификация
+      - name: Собрать для macOS (без подтверждения изоляции средствами ОС)
         working-directory: services/api
         run: |
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
@@ -86,7 +86,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: Проверить реальные пространства имён, cgroup и изоляцию дочерних процессов; SKIP считается сбоем
         run: python3 scripts/security/certify_03114.py --tier linux-live --output "$RUNNER_TEMP/03114-linux-live.json"
-      - name: Опубликовать kernel свидетельства
+      - name: Опубликовать результаты проверок ядра
         if: always()
         uses: actions/upload-artifact@v4
         with:

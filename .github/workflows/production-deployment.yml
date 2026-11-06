@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Python deployment тесты
+      - name: Проверить развёртывание с помощью Python
         run: |
           python3 -m py_compile scripts/install/production-deploy.py
           python3 -m unittest discover -s scripts/install -p "test_production*py" -v

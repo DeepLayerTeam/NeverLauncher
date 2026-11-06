@@ -49,7 +49,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Скомпилировать промышленный API и Запустить vet
+      - name: Собрать промышленный API и запустить статический анализ go vet
         working-directory: services/api
         run: |
           go build ./cmd/...

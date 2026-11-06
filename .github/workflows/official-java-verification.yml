@@ -36,7 +36,7 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: нативные учётная запись проверка модульные тесты
+      - name: Выполнить модульные тесты проверки нативной учётной записи
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_verification_0266::tests
       - name: нативные провайдер HTTP тестовая фикстура тесты
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests

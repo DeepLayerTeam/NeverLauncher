@@ -52,7 +52,7 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: реальные JVM classloader origins / негативные сценарии (не Minecraft E2E)
+      - name: Проверить источники загрузчиков классов JVM и негативные сценарии (без сквозного теста Minecraft)
         run: python scripts/tests/guard_loader_0504.py
       - name: подписанную политику и доверенные JVM Go интеграция
         working-directory: cli

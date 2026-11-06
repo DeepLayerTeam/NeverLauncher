@@ -324,7 +324,7 @@ function AdminExtensionFrame({
   if (!html)
     return (
       <div className="extensionFrameLoading">
-        Загрузка sandboxed extension UI…
+        Загрузка интерфейса расширения в изолированной среде…
       </div>
     );
   return (
@@ -497,7 +497,7 @@ export function AdminExtensions({
     };
     if (
       !window.confirm(
-        `Подтвердить ${action}: ${id}\nScope: ${scope.scope}/${scope.scopeId || "global"}`,
+        `Подтвердить ${action}: ${id}\nОбласть действия: ${scope.scope}/${scope.scopeId || "global"}`,
       )
     )
       return;
@@ -608,7 +608,7 @@ export function AdminExtensions({
     }
     if (
       !window.confirm(
-        `Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nScope: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через сервер."}`,
+        `Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nОбласть действия: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через сервер."}`,
       )
     )
       return;
@@ -719,8 +719,8 @@ export function AdminExtensions({
         <div>
           <h2>Расширения панели управления</h2>
           <p className="muted">
-            UI extensions работают только в sandboxed iframe. Скрипт extension
-            не загружается в основной React bundle; данные доступны только через
+            Интерфейсы расширений работают только в изолированном iframe. Скрипт extension
+            не включается в основной пакет React; данные доступны только через
             typed permission-aware RPC.
           </p>
         </div>
@@ -791,7 +791,7 @@ export function AdminExtensions({
             <div className="extensionEmpty">
               <strong>Страницы расширений</strong>
               <p className="muted">
-                Выберите вкладку из extension navigation или action.
+                Выберите вкладку в навигации расширения или его действие.
               </p>
             </div>
           )}
@@ -1159,7 +1159,7 @@ export function AdminExtensions({
                 </label>
               </div>
               <details>
-                <summary>Последние логи ({logs.length})</summary>
+                <summary>Последние записи журнала ({logs.length})</summary>
                 <pre className="extensionLogs">
                   {logs
                     .map(

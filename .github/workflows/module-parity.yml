@@ -50,7 +50,7 @@ jobs:
       - name: Выполнить Desktop запуск регрессионная проверка тесты
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M07 --timeout 90s --report audit-evidence/desktop-linux.json
-      - name: Выполнить нативные prestarter регрессионная проверка тесты
+      - name: Выполнить нативные регрессионные тесты Prestarter
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M11 --timeout 240s --report audit-evidence/prestarter-linux.json
       - name: Доказать, что отсутствие модулей нельзя объявить полной функциональной эквивалентностью

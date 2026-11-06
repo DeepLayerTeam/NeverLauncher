@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Выполнить отрицательные безопасности и archive-integrity тесты
+      - name: Выполнить негативные проверки безопасности и целостности архивов
         run: |
           python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
           python -m unittest discover -s scripts/operations -p 'test_standard_backup_0453.py' -v

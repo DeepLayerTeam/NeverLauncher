@@ -42,7 +42,7 @@ jobs:
       - name: ServerBridge хост / разрешение / отзыв / проверки гонок
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity -run 'TestJavaBridge|TestJavaBridgeControlValidation0488|TestJavaBridgeRuntimeFencing0488'
-      - name: существующие ServerBridge PostgreSQL управление и fencing интеграция
+      - name: Проверить интеграцию управления ServerBridge с PostgreSQL и защитой от конфликтов
         if: ${{ env.LAUNCHER_SERVERBRIDGE_HA_DSN != '' }}
         working-directory: services/api
         run: go test -count=1 ./internal/repository -run 'TestServerBridgeControl0195Postgres'

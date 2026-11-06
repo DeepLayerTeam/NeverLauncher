@@ -87,9 +87,9 @@ export function networkStateFresh(state: BridgeNetworkState, now = Date.now()): 
 /** Пустое значение снимает переопределение оператора; ноль явно закрывает приём подключений. */
 export function parseCapacityDraft(input: string): number | null {
   if (!input.trim()) return null;
-  if (!/^(0|[1-9][0-9]*)$/.test(input.trim())) throw new Error('Capacity: целое число 0–1000000 или пустое поле');
+  if (!/^(0|[1-9][0-9]*)$/.test(input.trim())) throw new Error('Вместимость: целое число от 0 до 1000000 или пустое поле');
   const number = Number(input.trim());
-  if (!Number.isSafeInteger(number) || number > 1_000_000) throw new Error('Capacity: диапазон 0–1000000');
+  if (!Number.isSafeInteger(number) || number > 1_000_000) throw new Error('Вместимость: значение от 0 до 1000000');
   return number;
 }
 export type BridgeOverview = {
@@ -118,14 +118,14 @@ export type BridgeEnrollmentRequest = {
 };
 /** Проверяйте экспортированный открытый запрос, а не файл закрытого ключа. Backend повторно проверяет всё. */
 export function parseBridgeEnrollment(input: string, projectId: string): BridgeEnrollmentRequest {
-  if (input.length > 16_384) throw new Error('Слишком большой enrollment request');
+  if (input.length > 16_384) throw new Error('Слишком большой запрос на регистрацию устройства');
   const raw: unknown = JSON.parse(input);
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Неверный enrollment JSON');
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Некорректный JSON запроса регистрации устройства');
   const request = raw as Record<string, unknown>;
   const fields = ['id','name','kind','projectId','profileId','keyAlgorithm','publicKey','keyFingerprint','backendUrl','artifactFile','artifactSha256'];
-  if (fields.some(field => typeof request[field] !== 'string')) throw new Error('Enrollment request не содержит обязательные поля');
+  if (fields.some(field => typeof request[field] !== 'string')) throw new Error('В запросе регистрации устройства отсутствуют обязательные поля');
   if (Object.keys(request).some(field => /private|secret|token|password/i.test(field))) throw new Error('Не загружайте приватные ключи или токены');
-  if (request.projectId !== projectId) throw new Error('Проект в enrollment request не соответствует выбранному проекту');
+  if (request.projectId !== projectId) throw new Error('Проект в запросе регистрации устройства не соответствует выбранному');
   if (request.keyAlgorithm !== 'ed25519' || !/^[0-9a-f]{64}$/i.test(String(request.keyFingerprint)) || !/^[0-9a-f]{64}$/i.test(String(request.artifactSha256))) throw new Error('Неверная криптографическая идентичность или SHA-256');
   if (!/^[A-Za-z0-9_-]{43}$/.test(String(request.publicKey))) throw new Error('Неверный формат публичного ключа Ed25519');
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$/.test(String(request.id)) || !String(request.kind).trim()) throw new Error('Неверный сервер или тип адаптера');
@@ -195,7 +195,7 @@ export function telemetryState(node: ServerBridgeNode, now = Date.now()): { stat
       !Number.isFinite(heartbeat) || heartbeat > now + 30_000 || now - heartbeat >= 90_000 ||
       age >= 90_000 || !node.fresh || t.runtimeId !== node.runtimeId || t.runtimeEpoch !== node.runtimeEpoch ||
       (t.processId !== undefined && t.processId !== node.runtimeProcessId)) {
-    return { state: 'stale', reason: 'Снимок устарел или относится к другому runtime', ageSeconds: seconds };
+    return { state: 'stale', reason: 'Снимок устарел или относится к другому процессу выполнения', ageSeconds: seconds };
   }
   return { state: 'fresh', reason: 'Показатели актуальны', ageSeconds: seconds };
 }

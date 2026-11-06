@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Запустить с отказом по умолчанию GA, релиз и подпись регрессионные проверки
+      - name: Проверить допуск GA, выпуск и подписи с отказом по умолчанию
         shell: bash
         run: |
           set -euo pipefail

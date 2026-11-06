@@ -479,7 +479,7 @@ jobs:
         with:
           pattern: compatibility-*
           path: compatibility-results
-      - name: объединить и Проверить матрица
+      - name: Объединить и проверить матрицу
         shell: bash
         run: |
           set +e
@@ -501,7 +501,7 @@ jobs:
           fi
           cat compatibility-public/aggregate.log
           exit "$rc"
-      - name: Загрузить публичные матрица JSON и Markdown
+      - name: Опубликовать матрицу совместимости в JSON и Markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -539,7 +539,7 @@ jobs:
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --gate minecraft \
             --output "$PWD/acceptance-0521/inventory.json"
-      - name: 0.52.11 полные required-target независимые журнал Повторить
+      - name: Повторить полную независимую проверку обязательных платформ для 0.52.11
         shell: bash
         run: |
           set -euo pipefail
@@ -548,7 +548,7 @@ jobs:
             --commit "$GITHUB_SHA" --compat-run-id "$GITHUB_RUN_ID" \
             --compat-attempt "$GITHUB_RUN_ATTEMPT" \
             --output "$PWD/acceptance-0521/sweep-05211.json"
-      - name: Загрузить observed inventory (не независимые GA)
+      - name: Загрузить перечень наблюдаемых результатов (не независимая приёмка GA)
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -95,7 +95,7 @@ jobs:
             "$RUNNER_TEMP/nl" release production-verify "$RUNNER_TEMP/public-release"
           fi
 
-      - name: Загрузить публичной доставки E2E свидетельства
+      - name: Загрузить результаты сквозных проверок публичной доставки
         uses: actions/upload-artifact@v4
         with:
           name: launcher-public-delivery-e2e-${{ github.sha }}

@@ -697,9 +697,9 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
-      - name: Сборка Runtime для управляемая Java II
+      - name: Собрать Runtime для управляемой Java II
         run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
-      - name: Сквозные производственные тесты управляемая Java II для Java 8/16/17/21/25
+      - name: Провести промышленные сквозные тесты управляемой Java II для Java 8/16/17/21/25
         shell: bash
         run: |
           set -euo pipefail
@@ -853,7 +853,7 @@ jobs:
           (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
           (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/launcher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/launcher)
-      - name: Проверить Extension хост (0.20.5)
+      - name: Проверить хост расширений (0.20.5)
         run: |
           python3 scripts/smoke/offline/extensions-host-0205.py
           (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)

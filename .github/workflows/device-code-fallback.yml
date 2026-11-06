@@ -47,7 +47,7 @@ jobs:
           npm ci
           npm run test:official
           npm run build
-      - name: нативные устройство код тесты и Rust Скомпилировать
+      - name: Проверить нативный вход по коду устройства и собрать Rust
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

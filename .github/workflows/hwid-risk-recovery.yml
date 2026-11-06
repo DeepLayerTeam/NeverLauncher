@@ -67,10 +67,10 @@ jobs:
       - run: npm run build
         working-directory: apps/desktop
       - uses: dtolnay/rust-toolchain@stable
-      - name: Установить Tauri/Linux сборка зависимости
+      - name: Установить зависимости для сборки Tauri в Linux
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev pkg-config
-      - name: нативные оборудование continuity hint модульный Проверить
+      - name: Проверить нативные подсказки о непрерывности аппаратной идентичности
         working-directory: apps/desktop/src-tauri
         run: cargo test hwid_risk_0299 -- --nocapture

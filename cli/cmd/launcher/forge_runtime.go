@@ -468,7 +468,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		installerSHA1 = installerFile.SHA1
 	} else {
 		if opts.LoaderCacheOnly {
-			return forgeMaterializeResult{}, errors.New("loader cache-only mode требует существующий immutable resolution lock")
+			return forgeMaterializeResult{}, errors.New("Режим загрузчика только из кеша требует уже существующий неизменяемый файл закрепления зависимостей")
 		}
 		if installerSHA1 == "" {
 			shaBytes, shaErr := fetchLimitedBytes(ctx, opts.HTTPClient, installerURL+".sha1", 64<<10)
@@ -1339,7 +1339,7 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 	// из универсального JAR к унаследованному клиенту Vanilla во время запуска.
 	var shape map[string]json.RawMessage
 	if err := json.Unmarshal(profileBytes, &shape); err != nil {
-		return installerBundle{}, fmt.Errorf("install_profile.json повреждён: %w", err)
+		return installerBundle{}, fmt.Errorf("Файл install_profile.json повреждён: %w", err)
 	}
 	if _, ok := shape["versionInfo"]; ok {
 		var legacy forgeLegacyInstallerProfile
@@ -1364,7 +1364,7 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 
 	var profile forgeInstallerProfile
 	if err := json.Unmarshal(profileBytes, &profile); err != nil {
-		return installerBundle{}, fmt.Errorf("install_profile.json повреждён: %w", err)
+		return installerBundle{}, fmt.Errorf("Файл install_profile.json повреждён: %w", err)
 	}
 	versionPath := strings.TrimPrefix(strings.TrimSpace(profile.JSON), "/")
 	if versionPath == "" {
@@ -1408,7 +1408,7 @@ func readZipFileLimited(zr *zip.Reader, wanted string, limit int64) ([]byte, err
 			continue
 		}
 		if entry.UncompressedSize64 > uint64(limit) {
-			return nil, fmt.Errorf("entry %s превышает лимит", wanted)
+			return nil, fmt.Errorf("Запись %s превышает допустимый размер", wanted)
 		}
 		r, err := entry.Open()
 		if err != nil {
@@ -1420,7 +1420,7 @@ func readZipFileLimited(zr *zip.Reader, wanted string, limit int64) ([]byte, err
 			return nil, err
 		}
 		if int64(len(data)) > limit {
-			return nil, fmt.Errorf("entry %s превышает лимит", wanted)
+			return nil, fmt.Errorf("Запись %s превышает допустимый размер", wanted)
 		}
 		return data, nil
 	}
@@ -1821,7 +1821,7 @@ func mavenCoordinatePath(coordinate string) (string, error) {
 	}
 	for _, part := range parts {
 		if strings.TrimSpace(part) == "" || strings.ContainsAny(part, `/\\`) {
-			return "", fmt.Errorf("Maven coordinate %q содержит недопустимую часть", coordinate)
+			return "", fmt.Errorf("Координата Maven %q содержит недопустимую часть", coordinate)
 		}
 	}
 	group := strings.ReplaceAll(parts[0], ".", "/")

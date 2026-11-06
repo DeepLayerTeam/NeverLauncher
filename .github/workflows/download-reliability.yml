@@ -34,7 +34,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Установить и Скомпилировать Desktop
+      - name: Установить зависимости и собрать Desktop
         working-directory: apps/desktop
         run: npm ci --ignore-scripts && npm run build
       - name: Проверить удобство загрузок и рекомендации по безопасности

@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: детерминированные отчёт модульный/гонки тесты и PostgreSQL интеграция
+      - name: Проверить воспроизводимость отчётов, модульные тесты, гонки и PostgreSQL
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitreport

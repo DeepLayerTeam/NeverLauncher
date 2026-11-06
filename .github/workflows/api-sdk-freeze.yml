@@ -43,10 +43,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Установить закреплённый компилятор из lockfile Desktop
+      - name: Установить закреплённую в файле блокировки версию компилятора Desktop
         working-directory: apps/desktop
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Скомпилировать и Проверить фактические HTTP JSON/исполняемый файл/stream клиент
+      - name: "Собрать и проверить HTTP-клиент: JSON, двоичные данные и потоковые ответы"
         run: |
           ./apps/desktop/node_modules/.bin/tsc -p sdk/api/typescript/tsconfig.json
           node --test sdk/api/typescript/test/*.test.mjs

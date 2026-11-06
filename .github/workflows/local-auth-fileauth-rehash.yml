@@ -62,5 +62,5 @@ jobs:
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
       - name: Скомпилировать CLI и Backend
         run: go build ./cmd/local-auth-0295 ./cmd/launcher-api
-      - name: Core регрессионная проверка тесты
+      - name: Проверить регрессии ядра
         run: go test -count=1 -timeout=8m ./internal/federation ./internal/repository ./internal/httpapi

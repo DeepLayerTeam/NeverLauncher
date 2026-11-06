@@ -32,7 +32,7 @@ jobs:
       - name: Проверить подписи, анализ владельца и запреты запуска
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
-      - name: Vet modified пакеты
+      - name: Провести статическую проверку изменённых пакетов
         working-directory: services/api
         run: go vet ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
       - name: Полная сборка серверной части

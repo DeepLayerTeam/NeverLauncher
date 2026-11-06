@@ -33,10 +33,10 @@ jobs:
       - name: Проверить браузерный компонент подписи, v1/v2 и межъязыковую проверку Go
         run: npm test
         working-directory: apps/admin
-      - name: Admin промышленные пакет
+      - name: Собрать промышленный пакет Admin
         run: npm run build
         working-directory: apps/admin
-      - name: Prestarter полные промышленные регрессионная проверка
+      - name: Провести полные промышленные регрессионные проверки Prestarter
         run: go test ./... -count=1
         working-directory: prestarter
   desktop-branding-native:
@@ -49,12 +49,12 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-      - name: нативные Linux предпосылки для Tauri 2
+      - name: Установить нативные зависимости Tauri 2 для Linux
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: npm ci
         working-directory: apps/desktop
-      - name: Desktop промышленные ресурсы и React компиляция
+      - name: Собрать промышленные ресурсы Desktop и приложение React
         run: npm run build
         working-directory: apps/desktop
-      - name: нативные Ed25519 первый запуск и branding validator модульные тесты
+      - name: Проверить нативный первый запуск, подписи Ed25519 и валидатор оформления
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml signed_first_run_0352 -- --nocapture

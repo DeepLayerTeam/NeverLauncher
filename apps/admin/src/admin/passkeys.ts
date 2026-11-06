@@ -36,7 +36,7 @@ function requestOptionsFromJSON(input: PublicKeyCredentialRequestOptionsJSON): P
 }
 
 export async function createPasskeyCredential(input: PublicKeyCredentialCreationOptionsJSON) {
-  if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Этот браузер не поддерживает WebAuthn/passkeys.');
+  if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Этот браузер не поддерживает ключи доступа WebAuthn.');
   const credential = await navigator.credentials.create({ publicKey: creationOptionsFromJSON(input) });
   if (!(credential instanceof PublicKeyCredential) || !(credential.response instanceof AuthenticatorAttestationResponse)) throw new Error('Устройство аутентификации не вернуло регистрационные данные WebAuthn.');
   return {
@@ -52,7 +52,7 @@ export async function createPasskeyCredential(input: PublicKeyCredentialCreation
 }
 
 export async function getPasskeyAssertion(input: PublicKeyCredentialRequestOptionsJSON) {
-  if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Этот браузер не поддерживает WebAuthn/passkeys.');
+  if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Этот браузер не поддерживает ключи доступа WebAuthn.');
   const credential = await navigator.credentials.get({ publicKey: requestOptionsFromJSON(input) });
   if (!(credential instanceof PublicKeyCredential) || !(credential.response instanceof AuthenticatorAssertionResponse)) throw new Error('Устройство аутентификации не вернуло подтверждение WebAuthn.');
   return {

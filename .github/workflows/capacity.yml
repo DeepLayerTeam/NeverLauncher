@@ -36,7 +36,7 @@ jobs:
         run: |
           go test -race -count=1 ./internal/capacity ./cmd/launcher-capacity-bench
           go vet ./internal/capacity ./cmd/launcher-capacity-bench
-      - name: полный API Скомпилировать и HTTP интеграция (реальные закреплённые зависимости)
+      - name: Собрать полный API и проверить HTTP-интеграцию с закреплёнными зависимостями
         working-directory: services/api
         run: |
           go test -run '^TestCanonicalStatusReadyAndMetrics$' -count=1 ./internal/httpapi

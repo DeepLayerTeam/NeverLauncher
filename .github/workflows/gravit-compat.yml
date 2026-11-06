@@ -37,12 +37,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Java Core регрессионная проверка и Gravit совместимость тесты
+      - name: Проверить регрессии ядра Java и совместимость с Gravit
         shell: bash
         run: |
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
-      - name: сборка ported модуль fat JAR
+      - name: Собрать перенесённый модуль в единый JAR
         shell: bash
         run: sh examples/extensions/gravit-compat/build.sh
       - name: "Проверить реальную интеграцию JVM: RPC, события и CLI"

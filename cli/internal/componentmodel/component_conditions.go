@@ -191,7 +191,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	if v.MinecraftVersionRange != "" {
 		ok, e := matchRange0243(env.MinecraftVersion, v.MinecraftVersionRange)
 		if e != nil {
-			return "Версия Minecraft не совместима по SemVer: " + e.Error()
+			return "Версия Minecraft не соответствует семантическому версионированию: " + e.Error()
 		}
 		if !ok {
 			return fmt.Sprintf("версия Minecraft %q не входит в диапазон %q", env.MinecraftVersion, v.MinecraftVersionRange)
@@ -203,7 +203,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	if v.LoaderVersionRange != "" {
 		ok, e := matchRange0243(env.LoaderVersion, v.LoaderVersionRange)
 		if e != nil {
-			return "Версия загрузчика не совместима по SemVer: " + e.Error()
+			return "Версия загрузчика не соответствует семантическому версионированию: " + e.Error()
 		}
 		if !ok {
 			return fmt.Sprintf("загрузчик %q не входит в диапазон %q", env.LoaderVersion, v.LoaderVersionRange)

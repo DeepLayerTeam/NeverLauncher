@@ -223,7 +223,7 @@ func fetchLoaderProfileWithCache(ctx context.Context, client *http.Client, root,
 		}
 	}
 	if cacheOnly {
-		return nil, false, false, errors.New("loader cache-only mode требует существующий immutable resolution lock")
+		return nil, false, false, errors.New("Режим загрузчика только из кеша требует уже существующий неизменяемый файл закрепления зависимостей")
 	}
 	data, err := fetchJSONBytes(ctx, client, source, max)
 	if err != nil {

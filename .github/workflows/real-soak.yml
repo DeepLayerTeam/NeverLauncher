@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=42,<47'
-      - name: Запустить 8+ реального Minecraft клиент/сервер сеансы на протяжении не менее одного часа
+      - name: Проверить не менее восьми реальных сеансов Minecraft клиент–сервер продолжительностью от часа
         env:
           TARGET_ID: ${{ matrix.target }}
         shell: bash
@@ -124,7 +124,7 @@ jobs:
         with:
           name: https-soak-05212-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/raw-https-soak
-      - name: независимо Повторить и Подписать каждый исходные Запустить
+      - name: Независимо повторить каждый запуск и подписать его исходные результаты
         env:
           REVIEW_PRIVATE_PEM: ${{ secrets.LAUNCHER_SOAK_REVIEW_PRIVATE_PEM }}
           REVIEW_PUBLIC_PEM: ${{ vars.LAUNCHER_SOAK_REVIEW_PUBLIC_PEM }}

@@ -172,7 +172,7 @@ pub async fn ensure_managed_java(
         ));
     }
     if !matches!(asset.binary.image_type.as_str(), "jre" | "jdk") || asset.binary.jvm_impl != "hotspot" {
-        return Err("Adoptium metadata не соответствует JRE/JDK HotSpot policy".to_string());
+        return Err("Метаданные Adoptium не соответствуют политике JRE/JDK HotSpot".to_string());
     }
     if normalize_adoptium_os(&asset.binary.os) != platform.0 || normalize_adoptium_arch(&asset.binary.architecture) != platform.1 {
         return Err("Метаданные платформы Adoptium не совпадают".to_string());
@@ -230,7 +230,7 @@ pub async fn ensure_managed_java_from_distribution(
             return Err(format!("Несовпадение SHA-256 манифеста Managed JRE: получено {actual}, ожидалось {expected}"));
         }
     } else if archive_base.is_remote() {
-        return Err("remote Managed JRE manifest требует LAUNCHER_MANAGED_JRE_MANIFEST_SHA256/--manifest-sha256".to_string());
+        return Err("Для удалённого манифеста управляемой JRE требуется LAUNCHER_MANAGED_JRE_MANIFEST_SHA256/--manifest-sha256".to_string());
     }
 
     let manifest: ManagedJREDistributionManifest = serde_json::from_slice(&manifest_bytes)
@@ -254,7 +254,7 @@ pub async fn ensure_managed_java_from_distribution(
         .next()
         .ok_or_else(|| format!("В манифесте Managed JRE отсутствует целевая платформа {platform}/{arch}"))?;
     if matching_targets.next().is_some() {
-        return Err(format!("Managed JRE manifest содержит duplicate target {platform}/{arch}"));
+        return Err(format!("Манифест управляемой JRE содержит повторяющуюся платформу {platform}/{arch}"));
     }
     if target.distribution != distribution || target.major_version != required_major {
         return Err("Несовпадение дистрибутива или основной версии целевой Managed JRE".to_string());
@@ -354,7 +354,7 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         return Ok((bytes.to_vec(), DistributionArchiveBase::Remote(base)));
     }
     if location.contains("://") {
-        return Err("Managed JRE manifest поддерживает только HTTPS URL или локальный path".to_string());
+        return Err("Манифест управляемой JRE поддерживает только адрес HTTPS или локальный путь".to_string());
     }
     let path = PathBuf::from(location);
     let original_metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("Ошибка метаданных манифеста Managed JRE {}: {err}", path.display()))?;

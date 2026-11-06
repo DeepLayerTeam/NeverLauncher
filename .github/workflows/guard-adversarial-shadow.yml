@@ -31,7 +31,7 @@ jobs:
       - name: "Сборка и проверка теневого журнала сервера"
         working-directory: services/api/internal/httpapi
         run: go test guard_shadow_05012.go guard_shadow_05012_test.go -count=1 -v
-      - name: Скомпилировать сервер heartbeat интеграция используя полный API пакет
+      - name: Собрать сервер и проверить сигналы активности через полный пакет API
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestGuardShadow05012|TestServerBoundGuard0507' -count=1 -timeout=15m
   actual-jvm-adversarial:

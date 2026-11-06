@@ -81,7 +81,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     environment: production-release
     steps:
-      - name: Потребовать явные утверждённые signed-bootstrap Запустить
+      - name: Потребовать явный подтверждённый запуск подписанного загрузчика
         shell: bash
         env:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
@@ -96,7 +96,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=43,<47'
-      - name: Проверить нативные релиз агент и Выполнить prestarter тесты
+      - name: Проверить нативный агент выпуска и тесты Prestarter
         shell: bash
         run: |
           set -euo pipefail

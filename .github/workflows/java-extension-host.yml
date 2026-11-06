@@ -40,7 +40,7 @@ jobs:
       - name: Скомпилировать SDK с --release 17 и Запустить фактические API тесты
         shell: bash
         run: sh sdk/java/core/build.sh test
-      - name: сборка standalone исполняемый Java хост JAR
+      - name: Собрать автономный исполняемый JAR хоста Java
         shell: bash
         run: sh examples/extensions/java-host/build.sh
       - name: "Проверить JVM-хост и CLI, аутентифицированные RPC и тайм-ауты"
@@ -63,14 +63,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: сборка Java исполняемый Проверить пакет
+      - name: Собрать и проверить исполняемый пакет Java
         run: sh examples/extensions/java-host/build.sh
       - name: Проверить запуск Java супервизором Go, состояние готовности, RPC, CLI и остановку зависших обратных вызовов
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 -timeout 3m -run 'TestJava.*(0304|0422)'  ./internal/extensionhost
-      - name: Java восстановление допуск и отменённые late hello регрессионная проверка
+      - name: Проверить восстановление Java и отклонение запоздалого приветствия
         working-directory: services/api
         run: go test -race -count=1 -run '^TestJavaLateHelloCannotUndoOperatorStop0422$' ./internal/extensionhost
       - name: регрессионная проверка существующие Go расширение хост
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: сборка launchable подписанные .nlext и Проверить Ed25519
+      - name: Собрать запускаемые подписанные пакеты .nlext и проверить Ed25519
         run: |
           set -eu
           sh examples/extensions/java-host/build.sh
@@ -100,7 +100,7 @@ jobs:
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/java-host.nlext" --private-key "$RUNNER_TEMP/private.pem"
           "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/java-host.nlext" --public-key "$RUNNER_TEMP/public.pem"
           test -s "$RUNNER_TEMP/java-host.nlext"
-      - name: устаревшие дочерний процесс examples регрессионная проверка
+      - name: Проверить регрессии примеров с устаревшими дочерними процессами
         run: |
           sh examples/extensions/java-runtime/build.sh
           python3 examples/extensions/java-runtime/test-runner.py

@@ -35,7 +35,7 @@ jobs:
           python-version: '3.12'
       - name: Скомпилировать SDK и Проверить на практике жизненный цикл, совместимость и races
         run: sh sdk/java/core/build.sh test
-      - name: сборка исполняемый Java расширение и закреплённые dependent JAR
+      - name: Собрать исполняемое Java-расширение с закреплёнными зависимостями JAR
         run: sh examples/extensions/java-spi/build.sh
       - name: Проверить аутентифицированный JVM хост, переключение RPC-провайдера, CLI и отказ до готовности
         run: python3 examples/extensions/java-spi/test-runner.py
@@ -56,7 +56,7 @@ jobs:
           python-version: '3.12'
       - name: сборка реальные SPI расширение архив
         run: sh examples/extensions/java-spi/build.sh
-      - name: Запустить существующие locked-JAR preflight и conflict тесты
+      - name: Проверить предварительные условия и конфликты закреплённых JAR
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-spi/build/package/backend/java-spi.jar

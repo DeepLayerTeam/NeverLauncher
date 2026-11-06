@@ -38,7 +38,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Core + реальные локальные HTTP Runtime тесты
+      - name: Проверить ядро и реальные локальные HTTP-сценарии Runtime
         shell: bash
         run: sh sdk/java/core/build.sh test
       - name: Скомпилировать исполняемый Backend/CLI пример

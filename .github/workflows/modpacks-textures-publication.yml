@@ -42,7 +42,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Go промышленные пакет проверка и регрессионные проверки
+      - name: Проверить промышленный пакет Go и регрессионные сценарии
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -51,7 +51,7 @@ jobs:
           go test -count=1 -timeout=15m ./internal/httpapi \
             -run 'TestPublicationCandidate0526UsesActualUploadedBytesAndGraph|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable'
       - uses: dtolnay/rust-toolchain@stable
-      - name: нативные Runtime selected необязательные файл регрессионная проверка
+      - name: Проверить выбор необязательных файлов в нативном Runtime
         working-directory: runtime/runtime
         run: |
           set -euo pipefail

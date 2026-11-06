@@ -26,7 +26,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: сервер доверие и восстановление (includes отрицательные HTTP интеграция сценарии)
+      - name: Проверить доверие и восстановление сервера, включая негативные HTTP-сценарии
         working-directory: services/api
         run: go test -race -count=1 ./internal/trustbaseline ./internal/httpapi ./internal/repository
   native-macos:

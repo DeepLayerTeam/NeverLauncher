@@ -33,7 +33,7 @@ jobs:
         run: go test -race ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
       - name: Статический анализ
         run: go vet ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
-      - name: API интеграция Скомпилировать
+      - name: Собрать API и проверить интеграцию
         run: go build ./...
       - name: Выполнить кросс-сборку Windows
         run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/windowssandbox

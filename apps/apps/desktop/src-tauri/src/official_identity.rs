@@ -140,9 +140,9 @@ fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
         Some(host) => host.parse::<IpAddr>().map(|ip| ip.is_loopback()).unwrap_or(false),
         None => false,
     };
-    if url.scheme() != "https" && !(url.scheme() == "http" && is_loopback) { return Err("Для official identity требуется HTTPS Backend (HTTP только localhost)".into()); }
+    if url.scheme() != "https" && !(url.scheme() == "http" && is_loopback) { return Err("Для официальной идентификации требуется сервер по HTTPS (HTTP разрешён только для localhost)".into()); }
     if url.username() != "" || url.password().is_some() || url.fragment().is_some() || url.query().is_some() || url.path() != "/" {
-        return Err("Backend URL должен содержать только origin".into());
+        return Err("URL серверной части должен содержать только источник без пути и параметров".into());
     }
     let origin = url.origin().ascii_serialization();
     let mut digest = Sha256::new();
@@ -159,7 +159,7 @@ fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result
     let actual = config.get("SessionId").and_then(Value::as_str).unwrap_or("");
     let user = config.get("UserId").and_then(Value::as_str).unwrap_or("");
     if actual.is_empty() || actual != expected_session || user.is_empty() || user.len() > 256 {
-        return Err("Never session identity mismatch: доступ к защищённому хранилищу ОС запрещён".into());
+        return Err("Идентификатор сеанса Never не совпадает: доступ к защищённому хранилищу ОС запрещён".into());
     }
     Ok(())
 }
@@ -252,7 +252,7 @@ fn save(id: &str, record: &StoredAccount) -> Result<(), String> {
     let prior = read_pointer(id)?;
     let mut bytes = serde_json::to_vec(record).map_err(|_| "Не удалось сериализовать vault".to_string())?;
     let count = bytes.len().div_ceil(CHUNK_BYTES);
-    if count == 0 || count > MAX_CHUNKS { bytes.zeroize(); return Err("Игровой аккаунт превышает допустимый размер OS vault".into()); }
+    if count == 0 || count > MAX_CHUNKS { bytes.zeroize(); return Err("Размер игрового аккаунта превышает лимит защищённого хранилища ОС".into()); }
     let mut nonce = [0u8; 12];
     rand::thread_rng().fill_bytes(&mut nonce);
     let generation = hex::encode(nonce);
@@ -262,7 +262,7 @@ fn save(id: &str, record: &StoredAccount) -> Result<(), String> {
     for (index, part) in bytes.chunks(CHUNK_BYTES).enumerate() {
         let mut encoded = base64::engine::general_purpose::STANDARD.encode(part);
         let result = entry(&fragment_id(id, &pointer.generation, index))
-            .and_then(|slot| slot.set_password(&encoded).map_err(|_| "Не удалось записать сегмент OS vault".to_string()));
+            .and_then(|slot| slot.set_password(&encoded).map_err(|_| "Не удалось записать сегмент защищённого хранилища ОС".to_string()));
         encoded.zeroize();
         if let Err(err) = result { write_error = Some(err); break; }
         written += 1;
@@ -272,8 +272,8 @@ fn save(id: &str, record: &StoredAccount) -> Result<(), String> {
         for index in 0..written { let _ = remove_fragment(id, &pointer.generation, index); }
         return Err(err);
     }
-    let mut header = serde_json::to_string(&pointer).map_err(|_| "Невозможно создать указатель OS vault".to_string())?;
-    let result = entry(id).and_then(|slot| slot.set_password(&header).map_err(|_| "Не удалось зафиксировать OS vault".to_string()));
+    let mut header = serde_json::to_string(&pointer).map_err(|_| "Не удалось создать указатель защищённого хранилища ОС".to_string())?;
+    let result = entry(id).and_then(|slot| slot.set_password(&header).map_err(|_| "Не удалось завершить запись в защищённое хранилище ОС".to_string()));
     header.zeroize();
     if let Err(err) = result {
         let _ = remove_fragments(id, &pointer);
@@ -289,7 +289,7 @@ fn delete(id: &str) -> Result<(), String> {
     // Сначала сделайте указатель аккаунта недействительным, в том числе при частичной очистке.
     match entry(id)?.delete_credential() {
         Ok(()) | Err(keyring::v1::Error::NoEntry) => {},
-        Err(_) => return Err("Не удалось отвязать игровой аккаунт в OS vault".into()),
+        Err(_) => return Err("Не удалось отвязать игровой аккаунт в защищённом хранилище ОС".into()),
     }
     if let Some(pointer) = prior { remove_fragments(id, &pointer) } else { Ok(()) }
 }
@@ -349,7 +349,7 @@ fn save_directory(id: &str, dir: &AccountDirectory0267) -> Result<(), String> {
     // Менеджер учётных данных Windows хранит небольшой каталог (менее 2560 байт).
     if raw.len() > 2000 {raw.zeroize();return Err("Превышен размер реестра аккаунтов".into());}
     let result = entry(&directory_slot(id))?.set_password(&raw)
-        .map_err(|_| "Не удалось сохранить реестр аккаунтов в OS vault".to_string());
+        .map_err(|_| "Не удалось сохранить список аккаунтов в защищённом хранилище ОС".to_string());
     raw.zeroize();
     result
 }
@@ -365,7 +365,7 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
     let existing = read(&slot)?;
     if let Some(ref current) = existing {
         if normalized_uuid(&current.profile.id)? != uuid {
-            return Err("Minecraft UUID mismatch при миграции OS vault".into());
+            return Err("UUID Minecraft не совпадает при миграции защищённого хранилища ОС".into());
         }
     }
     if !dir.ids.contains(&uuid) {
@@ -390,8 +390,8 @@ fn selected_record(id: &str) -> Result<Option<(String, StoredAccount)>, String> 
     let dir = load_directory(id)?;
     let Some(uuid) = dir.active else { return Ok(None) };
     let slot = account_slot(id, &uuid)?;
-    let record = read(&slot)?.ok_or("Выбранный Minecraft-аккаунт отсутствует в OS vault")?;
-    if normalized_uuid(&record.profile.id)? != uuid {return Err("Minecraft identity mismatch в OS vault".into());}
+    let record = read(&slot)?.ok_or("Выбранный аккаунт Minecraft отсутствует в защищённом хранилище ОС")?;
+    if normalized_uuid(&record.profile.id)? != uuid {return Err("Идентификатор Minecraft не совпадает с записью в защищённом хранилище ОС".into());}
     Ok(Some((slot, record)))
 }
 fn add_account(id: &str, record: &StoredAccount) -> Result<(), String> {
@@ -918,7 +918,7 @@ impl IdentityManager {
             let mut flows = self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
             let flow = flows.get_mut(&id).ok_or("Нет Device Code авторизации")?;
             if Instant::now() >= flow.expires { flows.remove(&id);return Err("Microsoft Device Code истёк".into()); }
-            if flow.in_flight {return Err("Microsoft polling или Device Code initialization уже выполняется".into());}
+            if flow.in_flight {return Err("Ожидание ответа Microsoft или инициализация входа по коду устройства уже выполняется".into());}
             if Instant::now()<flow.next { return Ok(PollResult{pending:true,profile:None,interval_seconds:Some(flow.next.saturating_duration_since(Instant::now()).as_secs().max(1))}); }
             flow.in_flight=true;
             // После использования не повторяйте одноразовый Device Code при отказе Xbox.
@@ -1110,8 +1110,8 @@ impl IdentityManager {
         migrate_legacy(&id)?;
         let dir = load_directory(&id)?;
         dir.ids.iter().map(|uuid| {
-            let record = read(&account_slot(&id, uuid)?)?.ok_or("Minecraft-аккаунт отсутствует в OS vault")?;
-            if normalized_uuid(&record.profile.id)? != *uuid {return Err("Minecraft identity mismatch в OS vault".into());}
+            let record = read(&account_slot(&id, uuid)?)?.ok_or("Аккаунт Minecraft отсутствует в защищённом хранилище ОС")?;
+            if normalized_uuid(&record.profile.id)? != *uuid {return Err("Идентификатор Minecraft не совпадает с записью в защищённом хранилище ОС".into());}
             Ok(OfficialAccount0267 {id: uuid.clone(), name:record.profile.name.clone(), active:dir.active.as_deref()==Some(uuid)})
         }).collect()
     }
@@ -1123,7 +1123,7 @@ impl IdentityManager {
         let mut dir = load_directory(&id)?;
         if !dir.ids.contains(&uuid) {return Err("Minecraft-аккаунт не найден".into());}
         let slot = account_slot(&id, &uuid)?;
-        let mut record=read(&slot)?.ok_or("Minecraft-аккаунт отсутствует в OS vault")?;
+        let mut record=read(&slot)?.ok_or("Аккаунт Minecraft отсутствует в защищённом хранилище ОС")?;
         if normalized_uuid(&record.profile.id)? != uuid {return Err("Несовпадение идентификаторов Minecraft".into());}
         if record.native.is_some() {
             self.native_validate(&base, &slot, access, &mut record, false).await?;
@@ -1429,7 +1429,7 @@ mod tests {
         let manager=IdentityManager::new().unwrap();
         assert!(manager.verified_scope(&backend,"access-token-0396","sid-real").await.is_ok());
         assert!(manager.verified_scope(&backend,"access-token-0396","sid-forged").await
-            .unwrap_err().contains("identity mismatch"));
+            .unwrap_err().contains("Идентификатор сеанса Never не совпадает"));
         server.await.unwrap();
     }
     #[test]

@@ -55,17 +55,17 @@ jobs:
           python3 scripts/version/manage.py check
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain --untracked-files=normal)"
-      - name: тестовая фикстура и release-gate модульные тесты
+      - name: Проверить тестовые данные и модульные тесты допуска к выпуску
         shell: bash
         run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
-      - name: реальные Go resolver и подписанные план политика тесты
+      - name: Проверить реальный разрешитель Go и политику подписанных планов
         shell: bash
         run: |
           set -euo pipefail
           (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy02412)
           (cd services/api && go test -count=1 ./internal/httpapi -run '^TestVerifiedPlanHardwareDeviceSignatureAndBinding02412$')
           (cd cli && go test -count=1 ./cmd/launcher -run 'Test.*Components.*0249|TestComponent.*02310')
-      - name: реальные Rust Runtime и транзакционное/проверки на обход тесты
+      - name: Проверить Runtime на Rust, транзакции и защиту от обходов
         shell: bash
         run: |
           set -euo pipefail
@@ -80,18 +80,18 @@ jobs:
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --signer "runtime/runtime/target/debug/examples/cert_sign_fixture${suffix}" \
             --output "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json"
-      - name: Установить graphical зависимости для реальные Linux Minecraft
+      - name: Установить графические зависимости для реального Minecraft в Linux
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'linux'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 mesa-vulkan-drivers libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Установить software GL для Windows реальный клиент Запустить
+      - name: Установить программный OpenGL для запуска реального клиента в Windows
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'windows'
         shell: pwsh
         run: |
           ./scripts/compatibility/install-windows-mesa.ps1 -Architecture '${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}' -JavaExecutable "$env:JAVA_HOME/bin/java.exe"
-      - name: реальные Mojang Minecraft клиент Запустить ( mock успех)
+      - name: Запустить настоящий клиент Minecraft от Mojang (без имитации успеха)
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
         shell: bash
         env:
@@ -125,7 +125,7 @@ jobs:
             --bridge "dist/02413/bridge-${{ matrix.os }}-${{ matrix.arch }}.json" \
             --commit "$GITHUB_SHA" --target '${{ matrix.os }}-${{ matrix.arch }}' \
             --output "dist/02413/report-${{ matrix.os }}-${{ matrix.arch }}.json"
-      - name: Загрузить реальное выполнение свидетельства (включая partial сбои)
+      - name: Загрузить результаты реальных запусков, включая частичные отказы
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -156,13 +156,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Скачать все submitted платформа свидетельства (без синтетические отсутствующие результаты)
+      - name: Скачать результаты, предоставленные всеми платформами, без подмены отсутствующих
         uses: actions/download-artifact@v4
         with:
           pattern: components-02413-*
           path: dist/platform-evidence-02413
           merge-multiple: false
-      - name: Обеспечить все шесть целевых платформ, реальные Minecraft и Guard/Bridge свидетельства
+      - name: Потребовать результаты реальных проверок Minecraft и Guard/Bridge для всех шести платформ
         shell: bash
         run: |
           set -euo pipefail

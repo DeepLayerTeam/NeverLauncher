@@ -122,7 +122,7 @@ func handleLoader(args []string) error {
 		}
 	case "resolve", "install-plan":
 		if !isSupportedLoader(loader) {
-			return fmt.Errorf("неподдерживаемый loader: %s", loader)
+			return fmt.Errorf("Неподдерживаемый загрузчик: %s", loader)
 		}
 		payload, err = realLoaderInstallPlan(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON, assetIndexPath)
 		if err != nil {
@@ -130,7 +130,7 @@ func handleLoader(args []string) error {
 		}
 	case "merge":
 		if !isSupportedLoader(loader) {
-			return fmt.Errorf("неподдерживаемый loader: %s", loader)
+			return fmt.Errorf("Неподдерживаемый загрузчик: %s", loader)
 		}
 		payload, err = realLoaderInstallPlan(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON, assetIndexPath)
 		if err != nil {
@@ -141,7 +141,7 @@ func handleLoader(args []string) error {
 		payload = validateLoaderProfile(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON)
 	case "compatibility":
 		if !isSupportedLoader(loader) {
-			return fmt.Errorf("неподдерживаемый loader: %s", loader)
+			return fmt.Errorf("Неподдерживаемый загрузчик: %s", loader)
 		}
 		payload = map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "loader": loader, "minecraftVersion": minecraftVersion, "status": "compatible", "constraints": loaderCompatibility(loader), "runtime": []string{"version-json", "loader-metadata", "installer-profile", "libraries", "natives", "launch-plan", "delivery"}}
 	default:

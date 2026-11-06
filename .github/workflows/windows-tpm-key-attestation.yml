@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Проверить нативные Windows сборка и TPM wire негативные тесты
+      - name: Проверить нативную сборку Windows и негативные сценарии протокола TPM
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
           cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml

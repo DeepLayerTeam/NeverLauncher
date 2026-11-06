@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Cutover проверка и PostgreSQL маршрутизация/fence Проверить
+      - name: Проверить переключение, маршрутизацию PostgreSQL и защиту от конфликтов
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitcutover

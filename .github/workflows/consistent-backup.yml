@@ -34,11 +34,11 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: хост Supervisor атомарные мир проверка и резервная копия/релиз, с детектор гонок
+      - name: Проверить атомарные операции Supervisor с миром, резервными копиями и выпусками с детектором гонок
         working-directory: cli
         run: |
           go test -race -count=1 ./cmd/launcher -run 'Test(WorldBackupCommandRetainsCohortGate0518|WorldCohortGate0518HeldAcrossWorldBackupProcess|WorldBackupGateBlocksStartAndSecondBackup04110|WorldBackupGateFailsClosedAndRecoversOffline04110)$'
-      - name: Проверить схема/каталог и synchronized релиз
+      - name: Проверить схему, каталог и согласованность выпуска
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -c 'import nn1_compat_0516 as n; c,h=n.migration_catalog(); assert len(c)>=100; print(h)'

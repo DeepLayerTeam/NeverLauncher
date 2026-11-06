@@ -48,7 +48,7 @@ jobs:
           cd cli && go build -o "$RUNNER_TEMP/launcher" ./cmd/launcher
           cd ..
           NL349_CLI="$RUNNER_TEMP/launcher" python3 e2e/scripts/test_staged_lifecycle_0349.py
-      - name: Проверить реальный Runtime автономные Импортировать, хеш-сумма enforcement, и откат пути
+      - name: Проверить автономный импорт Runtime, контроль хеш-сумм и откат файлов
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib offline_staged_adoption
       - uses: actions/setup-go@v5
         with:

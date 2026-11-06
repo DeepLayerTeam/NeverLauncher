@@ -55,7 +55,7 @@ jobs:
         with: {go-version-file: cli/go.mod}
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21'}
-      - name: Установить Linux OS песочница и Проверить пользователь namespaces
+      - name: Настроить песочницу Linux и проверить пространства имён пользователей
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
       - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli

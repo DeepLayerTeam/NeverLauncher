@@ -27,7 +27,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Скомпилировать SDK и Запустить Java HTTP-host интеграция тесты
+      - name: Собрать SDK и запустить интеграционные тесты HTTP-хоста Java
         shell: bash
         run: bash sdk/java/core/build.sh test
       - name: Скомпилировать реальные пример
@@ -53,11 +53,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: сборка signable содержимое и Проверить на практике running Java расширение процесс
+      - name: Собрать содержимое для подписи и проверить работающий процесс Java-расширения
         run: |
           sh examples/extensions/java-lifecycle/build.sh
           python3 examples/extensions/java-lifecycle/test-runner.py
-      - name: реальные CLI pack, Ed25519 подпись и проверка
+      - name: Проверить реальную упаковку CLI, подписи Ed25519 и их верификацию
         run: |
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/extension-key.pem"

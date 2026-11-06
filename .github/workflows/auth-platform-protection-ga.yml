@@ -74,18 +74,18 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Проверить точные исходный версия, Go форматирование, и GA утверждение код
+      - name: Проверить версию исходников, форматирование Go и утверждённый код GA
         run: |
           test "$(cat VERSION)" = 0.30.0
           python3 scripts/version/manage.py check
           test -z "$(gofmt -l services/api/internal/httpapi/*0300*.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection_0298.go services/api/internal/httpapi/auth_link_password_0291.go services/api/internal/httpapi/auth_provider_runtime_02910.go)"
           python3 -m unittest discover -s scripts/ga -p 'test_assert_go_test_0300.py' -v
-      - name: Скомпилировать и vet промышленные Go Backend
+      - name: Собрать промышленный Backend на Go и выполнить go vet
         working-directory: services/api
         run: |
           go build ./cmd/...
           go vet ./internal/authrequest ./pkg/protection ./internal/httpapi ./internal/federation ./internal/repository ./internal/sqlconnector
-      - name: реальные HTTP, WebAuthn, защита, Повторить и parser регрессионные проверки
+      - name: Проверить реальные HTTP- и WebAuthn-сценарии, защиту от повтора и разбор входных данных
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -113,10 +113,10 @@ jobs:
             --require TestLiveSQLLegacyAuthentication0294/postgresql \
             --require TestLiveSQLLegacyAuthentication0294/mysql \
             --require TestLiveSQLLegacyAuthentication0294/mariadb
-      - name: реальные подписанные HTTP OIDC Microsoft и федерация SDK тесты
+      - name: Проверить подписанные HTTP-запросы OIDC Microsoft и интеграцию федерации с SDK
         working-directory: services/api
         run: go test -race -count=1 -timeout=10m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation
-      - name: база данных миграции и настоящие Admin промышленные компиляция
+      - name: Проверить миграции БД и промышленную сборку Admin
         run: |
           (cd services/api && go test -count=1 ./internal/dbmigrate)
           python3 scripts/build/embedded_cli_assets.py --check

@@ -51,7 +51,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Установить нативные GUI проверка зависимости
+      - name: Установить нативные зависимости для проверки графического интерфейса
         shell: bash
         run: |
           set -euo pipefail

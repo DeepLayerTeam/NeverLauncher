@@ -39,7 +39,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: миграция доверие reset и реальный PostgreSQL интеграция
+      - name: Проверить сброс доверия при миграции и реальную интеграцию PostgreSQL
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationSecurityTargetDerivation0336|TestMigrationSecurityTrustResetPostgres0336'

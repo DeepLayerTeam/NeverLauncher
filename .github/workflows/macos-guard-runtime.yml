@@ -44,7 +44,7 @@ jobs:
         run: |
           cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
-      - name: macOS libproc процесс и signed-JVM интеграция тесты
+      - name: Проверить процессы macOS через libproc и интеграцию подписанной JVM
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib macos_runtime_guard_0509 -- --nocapture
       - name: Проверить запрет незаметного перезапуска Guard heartbeat без полномочий
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --test macos_guard_runtime_0509 -- --nocapture
@@ -52,7 +52,7 @@ jobs:
         run: |
           python3 scripts/tests/guard_runtime_integrity_0505.py
           python3 scripts/tests/continuous_game_protection_0506.py
-      - name: SIP диагностический (не treated в качестве successful Runtime Проверить)
+      - name: Проверить состояние SIP (диагностика не подтверждает успешную проверку Runtime)
         if: always()
         run: |
           /usr/bin/csrutil status || true

@@ -35,13 +35,13 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Desktop компиляция и интерфейс privacy тесты
+      - name: Собрать Desktop и проверить конфиденциальность интерфейса
         working-directory: apps/desktop
         run: |
           npm ci
           npm run test:textures
           npm run build
-      - name: Скомпилировать нативные идентичность и Выполнить Rust тесты
+      - name: Собрать модуль нативной идентичности и запустить тесты Rust
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests -- --nocapture
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

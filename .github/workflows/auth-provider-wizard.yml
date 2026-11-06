@@ -47,7 +47,7 @@ jobs:
           # Использовать каталог миграций с той же реализацией репозитория, что и в промышленной системе.
           go test ./internal/dbmigrate -count=1
           psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
-      - name: Проверить модульные тесты Auth провайдер Wizard, гонки и интеграцию с PostgreSQL
+      - name: Проверить мастер настройки провайдера авторизации, гонки и интеграцию с PostgreSQL
         working-directory: services/api
         env:
           LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
@@ -59,7 +59,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Admin интерфейс промышленную сборку и тесты
+      - name: Выполнить промышленную сборку и тесты интерфейса Admin
         working-directory: apps/admin
         run: |
           npm ci

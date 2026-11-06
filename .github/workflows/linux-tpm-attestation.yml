@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
-      - name: Linux TPM негативные тесты и промышленные Desktop компиляция
+      - name: Выполнить негативные проверки TPM Linux и промышленную сборку Desktop
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313

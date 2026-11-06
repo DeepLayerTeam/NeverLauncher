@@ -43,7 +43,7 @@ jobs:
       - name: "Установка зафиксированной версии компилятора TypeScript"
         working-directory: sdk/api/typescript
         run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund --save-dev-exact typescript@5.8.3
-      - name: Запустить промышленные SDK и пять реальные Java-subprocess регрессионные проверки
+      - name: Проверить промышленный SDK и пять реальных сценариев с дочерними процессами Java
         shell: bash
         run: |
           set -euo pipefail

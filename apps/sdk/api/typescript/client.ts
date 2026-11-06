@@ -128,10 +128,10 @@ export class NeverLauncherAPI {
     // Версия 0.45.11 не отправляла заголовок контракта; запасной источник — версия продукта в
     // /ready.
     const response = await this.transport(new URL('/ready', this.baseURL), { redirect: 'manual' });
-    if (!response.ok) throw new Error(`Backend не готов: ${response.status}`);
+    if (!response.ok) throw new Error(`Серверная часть не готова: ${response.status}`);
     const version = response.headers.get('X-Launcher-API-Contract');
     if (version) { if (version !== CONTRACT_VERSION) throw new Error(`Несовместимый контракт API: ${version}`); return; }
     const info = await response.json() as { version?: string };
-    if (!['0.45.11', '0.45.12'].includes(info.version ?? '')) throw new Error(`Неподдерживаемая устаревшая версия Backend: ${info.version}`);
+    if (!['0.45.11', '0.45.12'].includes(info.version ?? '')) throw new Error(`Неподдерживаемая устаревшая версия серверной части: ${info.version}`);
   }
 }

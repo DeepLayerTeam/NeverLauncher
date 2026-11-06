@@ -179,7 +179,7 @@ func handleRuntimeLoaderPackage(loader string, args []string) error {
 func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterializeOptions, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMaterializeOptions{}, fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMaterializeOptions{}, fmt.Errorf("Загрузчик метаданных %s не поддерживается", loader)
 	}
 	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
 	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
@@ -462,7 +462,7 @@ func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, 
 func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, string, string, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Загрузчик метаданных %s не поддерживается", loader)
 	}
 	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), url.PathEscape(minecraftVersion))
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
@@ -689,7 +689,7 @@ func strictMavenPath(name string) (string, error) {
 	}
 	for _, part := range parts {
 		if strings.TrimSpace(part) != part || part == "" || part == "." || part == ".." || strings.ContainsAny(part, `/\:@`) {
-			return "", fmt.Errorf("Maven coordinate %q содержит недопустимую часть", name)
+			return "", fmt.Errorf("Координата Maven %q содержит недопустимую часть", name)
 		}
 	}
 	for _, group := range strings.Split(parts[0], ".") {
@@ -724,7 +724,7 @@ func fetchLimitedBytes(ctx context.Context, client *http.Client, rawURL string, 
 		return nil, err
 	}
 	if int64(len(data)) > max {
-		return nil, fmt.Errorf("response превышает лимит %d bytes", max)
+		return nil, fmt.Errorf("Размер ответа превышает лимит %d байт", max)
 	}
 	return data, nil
 }

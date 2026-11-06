@@ -22,7 +22,7 @@ jobs:
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity_0437_tests
       - name: "Собрать механизм изоляции процессов Guard"
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --bin guard
-      - name: Установить signing-test зависимость
+      - name: Установить зависимость для тестирования подписей
         if: runner.os == 'Linux'
         run: python3 -m pip install 'cryptography>=42,<47'
       - name: "Проверить реальную подпись пакетов Linux и доставку архивов tar"

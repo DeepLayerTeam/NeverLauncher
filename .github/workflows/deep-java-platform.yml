@@ -53,13 +53,13 @@ jobs:
       - name: Проверить опубликованные артефакты на возможные обходы
         shell: bash
         run: python3 scripts/java/test_developer_e2e_04812.py
-      - name: три независимые published-SDK Java расширения и реальные JVM дочерние процессы
+      - name: Проверить три независимых Java-расширения на опубликованном SDK и реальные дочерние процессы JVM
         shell: bash
         run: |
           python3 scripts/java/deep_java_e2e_0490.py \
             --sdk-repo dist/java-sdk/maven --report deep-java-0490-report.json
           python3 scripts/version/manage.py check
-      - name: Опубликовать свидетельства явно labeled simulated-Host
+      - name: Опубликовать результаты с явной отметкой об имитации хоста
         uses: actions/upload-artifact@v4
         if: always()
         with:

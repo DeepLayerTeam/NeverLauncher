@@ -28,7 +28,7 @@ jobs:
       - name: TPM quote cryptography и негативные тесты с детектор гонок
         working-directory: services/api
         run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline
-      - name: API и база данных пакеты Скомпилировать
+      - name: Собрать API и пакеты базы данных
         working-directory: services/api
         run: go test ./internal/httpapi ./internal/repository ./internal/dbmigrate -run '^$'
   windows-tpm-quote:
@@ -37,9 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: TPM Quote frame тесты
+      - name: Проверить структуру данных аттестации TPM Quote
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml measured_boot_0315_tests
-      - name: полные Windows нативные Скомпилировать
+      - name: Выполнить полную нативную сборку для Windows
         run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
   linux-tpm-quote:
     runs-on: ubuntu-24.04

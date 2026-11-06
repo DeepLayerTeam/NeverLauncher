@@ -36,7 +36,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     if (!window.confirm('Создать резервную копию PostgreSQL и файлового хранилища? Операция может временно блокировать изменения.')) return;
     const result = await api<{ backupId: string }>('/api/v1/operations/backups', { method: 'POST' });
     choose(result.backupId); setNotice(`Backup ${result.backupId} создан и сохранён на сервере.`);
-    try { await load(); } catch { setNotice(`Backup ${result.backupId} создан. Не удалось обновить список: проверьте его на сервере перед следующим действием.`); }
+    try { await load(); } catch { setNotice(`Резервная копия ${result.backupId} создана. Не удалось обновить список: проверьте его на сервере перед следующим действием.`); }
   }); }
   function inspect(id: string) { void run('inspect', async () => {
     const result = await api<Inspection>(`/api/v1/operations/backups/${encodeURIComponent(id)}`);

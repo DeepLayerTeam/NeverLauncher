@@ -44,7 +44,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: модульный и PostgreSQL интеграция
+      - name: Выполнить модульные и интеграционные тесты PostgreSQL
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitrehearsal
@@ -53,7 +53,7 @@ jobs:
       - name: "Проверить исполнение CLI и безопасность реального процесса"
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestRehearsal|TestRehearseLocal04910'
-      - name: Three-project группа регрессионная проверка (синтетические входные данные; не GA)
+      - name: Проверить группу из трёх проектов на синтетических данных (без сертификации GA)
         run: python3 -m unittest discover -s tools/gravit-port -p 'test_rehearse_cohort_04910.py' -v
       - name: контракт и версия
         run: |

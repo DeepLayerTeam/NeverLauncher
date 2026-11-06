@@ -26,7 +26,7 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Форматировать Проверить
+      - name: Проверить форматирование
         if: runner.os == 'Linux'
         shell: bash
         run: |

@@ -88,7 +88,7 @@ fn normalize_backend_url(value: &str) -> Result<String, String> {
         matches!(host.as_str(), "localhost" | "127.0.0.1" | "[::1]")
     }).unwrap_or(false);
     if !secure && !loopback_http {
-        return Err("Device key разрешён только для HTTPS Backend; HTTP допустим только для localhost development".into());
+        return Err("Ключ устройства разрешён только для серверной части по HTTPS; HTTP допустим лишь при локальной разработке".into());
     }
     Ok(value)
 }

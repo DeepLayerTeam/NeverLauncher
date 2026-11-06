@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Установить Ed25519 проверка проверка library
+      - name: Установить библиотеку проверки подписей Ed25519
         run: python -m pip install 'cryptography>=43,<47'
       - name: Проверить цепочки провайдеров и sessionserver только с внедрением ошибок
         run: go test -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
@@ -73,7 +73,7 @@ jobs:
         shell: bash
       - name: Проверить парсер свидетельств журналов оператора без подмены реальными свидетельствами
         run: python ../../scripts/certification/test_official_game_join_02612.py
-      - name: официальные 0.27.0 подписанные GA проверка негативные тесты (тестовая фикстура data только)
+      - name: Выполнить негативные тесты подписанной проверки GA 0.27.0 на тестовых данных
         run: python ../../scripts/ga/test_official_minecraft_0270.py
       - name: точные нативные установщик привязка негативные тесты (тестовая фикстура data только)
         run: python ../../scripts/ga/test_official_artifacts_0270.py
@@ -99,11 +99,11 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Проверить реальные нативные официальные идентичность пути
+      - name: Проверить реальные нативные пути официальной идентификации
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_
       - name: Проверить Запустить mode изоляция и Runtime
         run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269
-      - name: Rust компиляция (нативные платформа)
+      - name: Собрать Rust для целевой платформы
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Установить закреплённые Desktop зависимости
         working-directory: apps/desktop
@@ -128,7 +128,7 @@ jobs:
     needs: [provider-chain-and-sessionserver, native-runtime-and-desktop]
     runs-on: ubuntu-24.04
     steps:
-      - name: ошибка если любые реальные компиляция или Проверить ОШИБКА
+      - name: Завершить проверку с ошибкой при любом сбое реальной сборки или тестов
         env:
           GO_RESULT: ${{ needs.provider-chain-and-sessionserver.result }}
           NATIVE_RESULT: ${{ needs.native-runtime-and-desktop.result }}

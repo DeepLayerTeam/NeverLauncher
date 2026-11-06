@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: фактические materializers, подписанные свидетельства и негативные сценарии (тестовая фикстура Runtime для модульные тесты)
+      - name: Проверить реальные средства подготовки файлов, подписанные результаты и негативные сценарии Runtime
         working-directory: cli
         run: go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711' -count=1 -timeout=7m
       - name: Детектор гонок данных
@@ -61,13 +61,13 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Установить реальные graphics зависимости
+      - name: Установить реальные графические зависимости
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: сборка реальный Runtime
+      - name: Собрать реальный Runtime
         run: cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime
-      - name: реальные upstream materialization и JVM Запустить
+      - name: Проверить загрузку из первоисточников и запуск JVM
         env:
           LAUNCHER_CERT_LOADER: ${{ matrix.loader }}
           LAUNCHER_CERT_MINECRAFT: ${{ matrix.minecraft }}
@@ -105,11 +105,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Установить graphical зависимости
+      - name: Установить графические зависимости
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: фактические совпадающие Mojang сервер Запустить и клиент join (существующие проверенные нативные E2E)
+      - name: Проверить запуск клиента и подключение к серверу Mojang в реальных нативных сквозных сценариях
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
           LAUNCHER_E2E_JAVA_MAJOR: '17'
