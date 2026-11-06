@@ -288,7 +288,7 @@ func buildTarget02010(root string, target CanonicalExtensionTarget0201, sdkRoot 
 		}
 		entry := filepath.Join(root, filepath.FromSlash(target.Entrypoint))
 		if st, err := os.Stat(entry); err != nil || !st.Mode().IsRegular() {
-			return fmt.Errorf("Отсутствует: «built entrypoint» %s", target.Entrypoint)
+			return fmt.Errorf("Отсутствует собранная точка входа: %s", target.Entrypoint)
 		}
 		return nil
 	default:
@@ -500,7 +500,7 @@ func (h *localDevHost02010) helloHandler(w http.ResponseWriter, r *http.Request)
 	}
 	helloAPI, _ := req["extensionApiVersion"].(string)
 	if fmt.Sprint(req["protocolVersion"]) != ExtensionsHostVersion0210 || !supportsHostHello0210(h.manifest.API, helloAPI) || strings.ToLower(fmt.Sprint(req["extensionId"])) != h.manifest.ID || fmt.Sprint(req["instanceId"]) != h.instance {
-		http.Error(w, "Несовпадение: «host identity/protocol»", 409)
+		http.Error(w, "Не совпадают идентификатор Host и протокол", 409)
 		return
 	}
 	h.once.Do(func() { close(h.hello) })

@@ -272,9 +272,9 @@ def owner_admin_crud_0523(port, email, password):
     require(unauth_status in (401, 403), 'Изменение данных администратора без аутентификации не было запрещено')
     header = {'Authorization': 'Bearer ' + token}
     project = 'owner0523-' + secrets.token_hex(8)
-    description = 'Minimal SQLite retained owner project ' + secrets.token_hex(8)
+    description = 'Минимальный режим SQLite сохранил проект владельца ' + secrets.token_hex(8)
     created = expect(port, 'POST', '/api/v1/admin/projects', 201,
-                     {'id': project, 'name': 'Owner acceptance project', 'defaultChannel': 'stable'}, header)
+                     {'id': project, 'name': 'Проект приёмки владельца', 'defaultChannel': 'stable'}, header)
     require(created.get('data', {}).get('project', {}).get('id') == project,
             'Проект владельца не был создан')
     expect(port, 'PATCH', '/api/v1/admin/projects/' + project, 200,
@@ -301,7 +301,7 @@ def verify_admin_0523(port, email, password, project, description, profile, chan
     require(isinstance(token, str) and len(token) >= 20, 'Состояние входа администратора потеряно')
     doc = expect(port, 'GET', '/api/v1/projects/' + project, 200)
     require(doc.get('id') == project and doc.get('description') == description,
-            'persisted admin project data differs')
+            'Сохранённые данные проекта администратора не совпадают')
     profiles = expect(port, 'GET', '/api/v1/projects/' + project + '/profiles', 200)
     channels = expect(port, 'GET', '/api/v1/projects/' + project + '/channels', 200)
     require(any(p.get('id') == profile for p in profiles.get('items', [])),
@@ -604,7 +604,7 @@ def run_acceptance(
             readiness = expect(port, "GET", "/api/v1/install/readiness", 200)
             require(
                 readiness.get("data", {}).get("installationCompleted"),
-                "completion status lost during restore",
+                "При восстановлении потерян статус завершения",
             )
             expect(
                 port,
@@ -623,7 +623,7 @@ def run_acceptance(
             )
             require(
                 login.get("data", {}).get("tokens", {}).get("accessToken"),
-                "password verifier lost on restore",
+                "При восстановлении потеряно средство проверки пароля",
             )
 
         step(report, "restored_auth_project_and_one_time_token", verify_restored)
@@ -654,7 +654,7 @@ def run_acceptance(
                 require((alternate / "storage/e2e/blobs/survives.dat").is_file(),
                         "Объект из внешнего хранилища не восстановлен")
                 require(hashlib.sha256((alternate / "storage/e2e/blobs/survives.dat").read_bytes()).hexdigest()
-                        == expected_blob_hash, "off-host blob digest differs")
+                        == expected_blob_hash, "Хеш объекта во внешнем хранилище не совпадает")
                 require(str(alternate / "db/http.sqlite") in (alternate / "config/backend.env").read_text(),
                         "Пути внешнего хранилища не перенесены")
                 command(sys.executable, INSTALLER, "check", "--env-file", alternate / "config/backend.env",

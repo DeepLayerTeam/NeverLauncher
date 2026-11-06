@@ -157,10 +157,10 @@ func handleLoader(args []string) error {
 func loaderCatalog() []map[string]any {
 	return []map[string]any{
 		{"id": "vanilla", "title": "Vanilla", "status": "stable", "installer": "mojang-version-manifest", "runtime": "builtin", "metadata": "version.json"},
-		{"id": "fabric", "title": "Fabric", "status": "ga-certified", "installer": "fabric-meta", "runtime": "compatibility-engine", "metadata": "официальный Fabric Meta profile"},
+		{"id": "fabric", "title": "Fabric", "status": "ga-certified", "installer": "fabric-meta", "runtime": "compatibility-engine", "metadata": "Официальный профиль Fabric Meta"},
 		{"id": "forge", "title": "Forge", "status": "ga-certified", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
 		{"id": "neoforge", "title": "NeoForge", "status": "ga-certified", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
-		{"id": "quilt", "title": "Quilt", "status": "ga-certified", "installer": "quilt-meta", "runtime": "compatibility-engine", "metadata": "официальный Quilt Meta profile"},
+		{"id": "quilt", "title": "Quilt", "status": "ga-certified", "installer": "quilt-meta", "runtime": "compatibility-engine", "metadata": "Официальный профиль Quilt Meta"},
 	}
 }
 
@@ -376,10 +376,10 @@ func validateLoaderProfile(loader, minecraftVersion, loaderVersion, metadataPath
 		warnings = append(warnings, "loaderVersion не указан; будет использован дефолтный канал/метаданные")
 	}
 	if versionJSON == "" {
-		warnings = append(warnings, "version.json не указан; runtime launch plan не может считаться проверенным")
+		warnings = append(warnings, "Файл version.json не указан; план запуска Runtime не может считаться проверенным")
 	}
 	if loader == "forge" || loader == "neoforge" {
-		warnings = append(warnings, "loader validate проверяет только legacy inspection input; production materialization выполняется через nl runtime "+loader+"-install/-package")
+		warnings = append(warnings, "Команда loader validate проверяет только входные данные старого формата; создание файлов для эксплуатации выполняется через nl runtime "+loader+"-install/-package")
 	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "valid": len(errs) == 0, "loader": loader, "minecraftVersion": minecraftVersion, "loaderVersion": loaderVersion, "metadata": metadataPath, "installerProfile": installerProfile, "errors": errs, "warnings": warnings, "checks": loaderChecks(loader)}
 }
@@ -532,12 +532,12 @@ func migrationDoctorReport(items []string) map[string]any {
 	if len(duplicates) > 0 {
 		status = "requires-cleanup"
 	}
-	return map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "status": status, "count": len(migrations), "duplicates": duplicates, "migrations": migrations, "policy": []string{"новые миграции получают уникальный монотонный номер", "superseded tombstone migrations игнорируются migration-doctor и остаются no-op для overlay archives", "checksum фиксируется в release bundle и audit log"}}
+	return map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "status": status, "count": len(migrations), "duplicates": duplicates, "migrations": migrations, "policy": []string{"новые миграции получают уникальный монотонный номер", "Замещённые миграции с отметкой удаления игнорируются migration-doctor и ничего не меняют в архивах наложения", "Контрольная сумма фиксируется в пакете релиза и журнале аудита"}}
 }
 
 func handleInstall(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные install-подкоманды: profile list, wizard, env, storage-check, bootstrap-admin, first-project, first-run, readiness, verify")
+		return errors.New("Доступные подкоманды install: profile list, wizard, env, storage-check, bootstrap-admin, first-project, first-run, readiness, verify")
 	}
 	out := flagValue(args, "--output", "")
 	if args[0] == "profile" && len(args) > 1 && args[1] == "list" {
@@ -637,11 +637,11 @@ func installStorageCheck(args []string) error {
 	}
 	storage := strings.ToLower(strings.TrimSpace(flagValue(args, "--storage", "local")))
 	if storage != "local" {
-		return errors.New("S3 storage-check выполняется только через --backend, чтобы проверять реальные production credentials/bucket")
+		return errors.New("Проверка S3 storage-check выполняется только через --backend, чтобы проверить реальные учётные данные и бакет рабочей среды")
 	}
 	rootDir := filepath.Clean(flagValue(args, "--storage-root", "./storage"))
 	if info, err := os.Lstat(rootDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("storage root не может быть symlink")
+		return errors.New("Корневой каталог хранилища не может быть символической ссылкой")
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -718,16 +718,16 @@ func installFirstRun(args []string) error {
 	profile := flagValue(args, "--profile", "vanilla")
 	outputDir := strings.TrimSpace(flagValue(args, "--output-dir", ""))
 	if outputDir == "" {
-		return errors.New("install first-run требует --output-dir; небезопасный встроенный generator удалён")
+		return errors.New("Для install first-run требуется --output-dir; небезопасный встроенный генератор удалён")
 	}
 	apiImage := strings.TrimSpace(flagValue(args, "--api-image", os.Getenv("LAUNCHER_API_IMAGE")))
 	adminImage := strings.TrimSpace(flagValue(args, "--admin-image", os.Getenv("LAUNCHER_ADMIN_IMAGE")))
 	allowUnpinned := flagValue(args, "--allow-unpinned-images", "false") == "true"
 	if apiImage == "" || adminImage == "" {
-		return errors.New("install first-run требует --api-image <registry/image@sha256:...> и --admin-image <registry/image@sha256:...>; standalone bundle не собирает исходники")
+		return errors.New("Для install first-run требуются --api-image <registry/image@sha256:...> и --admin-image <registry/image@sha256:...>; автономный пакет не компилирует исходники")
 	}
 	if !allowUnpinned && (!strings.Contains(apiImage, "@sha256:") || !strings.Contains(adminImage, "@sha256:")) {
-		return errors.New("standalone first-run требует digest-pinned images (@sha256:...); для dev-only допускается --allow-unpinned-images true")
+		return errors.New("Для автономного первого запуска нужны образы с закреплёнными хешами (@sha256:...); только для разработки допускается --allow-unpinned-images true")
 	}
 	files, err := writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminImage)
 	if err != nil {
@@ -747,7 +747,7 @@ func installReadiness(args []string) error {
 	out := flagValue(args, "--output", "")
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	if backend == "" {
-		return errors.New("install readiness требует --backend; локальная декларативная readiness удалена")
+		return errors.New("Для install readiness требуется --backend; локальная декларативная проверка готовности удалена")
 	}
 	payload, err := httpJSON("GET", backend+"/api/v1/install/readiness", nil)
 	if err != nil {
@@ -808,7 +808,7 @@ func writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminIm
 		"status":          "canonical-production-bundle-copied",
 		"source":          "embedded canonical deploy/production templates",
 		"templateSources": templateSources,
-		"security":        "секреты не генерируются и .env не создаётся; API/Admin images закреплены внешними registry refs",
+		"security":        "Секреты не генерируются и .env не создаётся; образы API/Admin закреплены ссылками на внешний реестр",
 		"images":          map[string]string{"api": apiImage, "admin": adminImage},
 		"standalone":      true,
 		"next":            []string{"cp env.production.example .env", "задать реальные secrets/TLS paths", "docker compose config", "docker compose up -d", "nl install verify --backend " + backend},
@@ -859,7 +859,7 @@ func standaloneProductionCompose(template []byte, apiImage, adminImage string) (
 	}
 	result := strings.Join(out, "\n")
 	if strings.Contains(result, "context: ../..") || strings.Contains(result, "dockerfile: services/api") || strings.Contains(result, "dockerfile: apps/admin") {
-		return nil, errors.New("standalone compose всё ещё содержит build.context; отказ")
+		return nil, errors.New("Автономная конфигурация Compose всё ещё содержит build.context; операция отклонена")
 	}
 	return []byte(result), nil
 }
@@ -880,10 +880,10 @@ func projectTemplates() []ProjectTemplate {
 
 func installProfiles() []InstallProfile {
 	return []InstallProfile{
-		{ID: "single-server-local", Title: "Один сервер с локальным хранилищем", Description: "Один backend/admin на одном сервере с local storage", Components: []string{"api", "admin", "cli", "local-storage"}, Storage: "local"},
+		{ID: "single-server-local", Title: "Один сервер с локальным хранилищем", Description: "Один экземпляр Backend/Admin на одном сервере с локальным хранилищем", Components: []string{"api", "admin", "cli", "local-storage"}, Storage: "local"},
 		{ID: "single-server-s3", Title: "Один сервер с S3", Description: "Один backend/admin с S3-compatible storage", Components: []string{"api", "admin", "cli", "s3-storage"}, Storage: "s3"},
 		{ID: "multi-project", Title: "Backend для нескольких проектов", Description: "Один backend для нескольких проектов", Components: []string{"api", "admin", "rbac", "audit"}, Storage: "local-or-s3"},
-		{ID: "multi-tenant", Title: "Многопользовательский Backend", Description: "Tenant isolation для нескольких проектов и команд", Components: []string{"api", "admin", "tenants", "rbac", "audit", "s3-storage"}, Storage: "s3"},
+		{ID: "multi-tenant", Title: "Многопользовательский Backend", Description: "Изоляция арендаторов для нескольких проектов и команд", Components: []string{"api", "admin", "tenants", "rbac", "audit", "s3-storage"}, Storage: "s3"},
 		{ID: "development", Title: "Режим разработки", Description: "Локальная разработка без production-хранилища", Components: []string{"api", "admin", "desktop", "cli"}, Storage: "local"},
 		{ID: "offline", Title: "Автономный режим", Description: "Ограниченный режим без внешних registry sync", Components: []string{"desktop", "local-manifest", "diagnostics"}, Storage: "local"},
 	}

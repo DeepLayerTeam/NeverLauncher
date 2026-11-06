@@ -384,7 +384,7 @@ def accept_verify(args):
     return {'stages': {key: sha(path) for key, path in (
         ('install-standard', args.install_receipt), ('upgrade-standard', args.upgrade_receipt),
         ('restore-standard', args.restore_receipt), ('failover-network-ha', args.failover_receipt))},
-        'result': 'four operational stage receipts internally consistent',
+        'result': 'Квитанции четырёх эксплуатационных этапов внутренне согласованы',
         'limits': ['Квитанции не являются криптографическими подписями; данные оператора и узла требуют внешней аттестации',
                    'Отдельно необходимо подтвердить MFA, подключение к Minecraft, отказоустойчивость нескольких узлов и RPO в реальных условиях']}
 

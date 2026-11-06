@@ -958,8 +958,8 @@ pub async fn certify_vanilla_compatibility(
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
         .map_err(|err| format!("не удалось открыть certification log {}: {err}", log_path.display()))?;
     use std::io::Write as _;
-    writeln!(log_file, "Runtime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
-    writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
+    writeln!(log_file, "Сертификация Runtime {} для Vanilla", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
+    writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; главный класс: {}", plan.main_class).map_err(|e| e.to_string())?;
     // Записываются только уже разрешённые относительные JAR-пути, без учётных данных или
     // токенов аргументов. Так можно диагностировать отсутствие библиотек в старых версиях.
     writeln!(log_file, "--- проверенные элементы пути классов ---").map_err(|e| e.to_string())?;
@@ -979,7 +979,7 @@ pub async fn certify_vanilla_compatibility(
     apply_launch_command_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
-        .map_err(|err| format!("Vanilla certification заблокирован Guard Sensor: {err}"))?;
+        .map_err(|err| format!("Сертификация Vanilla заблокирована Guard Sensor: {err}"))?;
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
@@ -1002,7 +1002,7 @@ pub async fn certify_vanilla_compatibility(
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
-        .map_err(|err| format!("Vanilla certification заблокирован Guard Sensor: {err}"))?;
+        .map_err(|err| format!("Сертификация Vanilla заблокирована Guard Sensor: {err}"))?;
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
         Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться Vanilla runtime: {err}"))?), false),
         Err(_) => {

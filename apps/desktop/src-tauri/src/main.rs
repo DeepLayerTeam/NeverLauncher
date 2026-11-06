@@ -227,7 +227,7 @@ async fn store_auth_session(backend_url: String, session: SecureAuthSession) -> 
         let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить auth session в OS credential store: {e}"));
         secret.zeroize();
         result
-    }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+    }).await.map_err(|e| format!("Задача безопасного хранения учётных данных завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
@@ -244,7 +244,7 @@ async fn load_auth_session(backend_url: String) -> Result<Option<SecureAuthSessi
             Err(keyring::v1::Error::NoEntry) => Ok(None),
             Err(e) => Err(format!("не удалось прочитать auth session из OS credential store: {e}")),
         }
-    }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+    }).await.map_err(|e| format!("Задача безопасного хранения учётных данных завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
@@ -256,7 +256,7 @@ async fn delete_auth_session(backend_url: String) -> Result<(), String> {
             Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()),
             Err(e) => Err(format!("не удалось удалить auth session из OS credential store: {e}")),
         }
-    }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+    }).await.map_err(|e| format!("Задача безопасного хранения учётных данных завершилась ошибкой: {e}"))?
 }
 
 
@@ -301,13 +301,13 @@ async fn measured_boot_quote_0315(
 #[tauri::command]
 async fn ensure_device_key(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::ensure_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Задача обработки ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn device_key_status(backend_url: String, user_id: String) -> Result<Option<DeviceKeyInfo>, String> {
     tokio::task::spawn_blocking(move || device_keys::device_key_status(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Задача обработки ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]

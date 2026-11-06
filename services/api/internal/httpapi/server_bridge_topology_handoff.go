@@ -68,7 +68,7 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 	}
 	req, err := decodeBridgeHandoff0191(r.Body)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
+		writeError(w, http.StatusBadRequest, "Некорректные данные протокола ServerBridge")
 		return
 	}
 	markServerBridgeProtocolResponse0200(w, req.ProtocolVersion)

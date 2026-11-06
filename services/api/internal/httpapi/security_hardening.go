@@ -206,7 +206,7 @@ func (s Server) authTOTPVerify(w http.ResponseWriter, r *http.Request) {
 	_ = s.flushPersistenceState950("totp-verify")
 	recovery, err := s.State.Security.generateRecoveryCodes(claims.Sub, 10)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать recovery codes")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать коды восстановления")
 		return
 	}
 	_ = s.flushPersistenceState950("recovery-codes-generated")
@@ -251,7 +251,7 @@ func (s Server) authRecoveryCodesRegenerate(w http.ResponseWriter, r *http.Reque
 	}
 	codes, err := s.State.Security.generateRecoveryCodesForMethod117(claims.Sub, 10, methodID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать recovery codes")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать коды восстановления")
 		return
 	}
 	_ = s.flushPersistenceState950("recovery-regenerated")

@@ -140,7 +140,7 @@ pub async fn ensure_managed_java(
     };
     fs::create_dir_all(&runtime_root)
         .await
-        .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
+        .map_err(|err| format!("Не удалось создать корневой каталог Runtime {}: {err}", runtime_root.display()))?;
 
     // Если настроен доверенный пакет распространения, сначала проверьте его закреплённый SHA-256. Ранее закэшированный выпуск без закрепления не эквивалентен ему. Встроенный архив поставки сейчас содержит Java 21. Явно заданный манифест поставки профиля может содержать любую поддерживаемую основную версию; не навязывайте Java 21 подписанным профилям Java 8/16/17/25.
     let explicit_manifest = std::env::var("LAUNCHER_MANAGED_JRE_MANIFEST")
@@ -220,7 +220,7 @@ pub async fn ensure_managed_java_from_distribution(
     };
     fs::create_dir_all(&runtime_root)
         .await
-        .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
+        .map_err(|err| format!("Не удалось создать корневой каталог Runtime {}: {err}", runtime_root.display()))?;
     // Никакой общий кэшированный кандидат не должен обходить закреплённую цель релиза.
     let (manifest_bytes, archive_base) = load_distribution_manifest(manifest_location).await?;
     if let Some(expected) = manifest_sha256.filter(|value| !value.trim().is_empty()) {

@@ -91,7 +91,7 @@ def inputs() -> list[str]:
                 raise ValueError('Символическая ссылка в исходниках выпуска: '+str(path))
             result.add(path.relative_to(ROOT).as_posix())
     for path in (ROOT/'.github/workflows').glob('*.yml'):
-        if path.is_symlink(): raise ValueError('symlink in workflow: '+str(path))
+        if path.is_symlink(): raise ValueError('Символическая ссылка в рабочем процессе: '+str(path))
         result.add(path.relative_to(ROOT).as_posix())
     for path in (ROOT/'plugins').rglob('*.gradle.kts'):
         if path.is_symlink(): raise ValueError('Символическая ссылка в сборке Gradle: '+str(path))

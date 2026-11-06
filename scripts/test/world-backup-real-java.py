@@ -91,9 +91,9 @@ public class WorldLifecycle {
         ok=False,
         timeout=10,
     )
-    assert denied.returncode != 0, "JVM launched through maintenance gate"
+    assert denied.returncode != 0, "JVM запущена во время обслуживания"
     assert not (root / "jvm-launch-count.txt").exists(), (
-        "JVM launched while gate was occupied"
+        "JVM запущена, пока блокировка обслуживания была занята"
     )
     gate.rmdir()
     host = subprocess.Popen(
@@ -129,9 +129,9 @@ public class WorldLifecycle {
         )
         m = json.loads(result.stdout)["manifest"]
         assert m["consistency"] == "confirmed-stopped"
-        assert host.wait(timeout=12) == 0, "Supervisor did not exit gracefully"
+        assert host.wait(timeout=12) == 0, "Процесс Supervisor не завершил работу корректно"
         assert (root / "jvm-launch-count.txt").read_text() == "JVM_STARTED\n", (
-            "unexpected JVM restart"
+            "Непредвиденный перезапуск JVM"
         )
         bid = m["id"]
         run(
@@ -198,9 +198,9 @@ public class WorldLifecycle {
             != 0
         )
         assert (root / "jvm-launch-count.txt").read_text() == "JVM_STARTED\n", (
-            "restore restarted JVM"
+            "Восстановление перезапустило JVM"
         )
-        assert not gate.exists(), "backup gate not released"
+        assert not gate.exists(), "Блокировка резервного копирования не освобождена"
         print(
             "PASS OpenJDK 21 process supervised stop, binary world/player/plugin data, SHA-256 verify and isolated restore; no JVM relaunch"
         )

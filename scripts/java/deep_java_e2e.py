@@ -53,7 +53,7 @@ def verify_one(case: str, jar: Path, evidence: dict) -> None:
         assert 'ru/launcher/sdk/host/JavaExtensionHost.class' in data.namelist()
     run(sys.executable, str(FIXTURES / case / 'test-runner.py'), cwd=ROOT, timeout=70)
     evidence[case] = {'jarSha256': hashlib.sha256(jar.read_bytes()).hexdigest(),
-                      'status': 'passed', 'runtime': 'real Java subprocess, simulated Host'}
+                      'status': 'passed', 'runtime': 'Реальный дочерний процесс Java, имитация Host'}
 
 
 def main() -> None:
@@ -112,8 +112,8 @@ def main() -> None:
         'status': 'local-subprocess-pass',
         'sdk': {name: hashlib.sha256(path.read_bytes()).hexdigest() for name,path in sdk.items()},
         'extensions': evidence,
-        'notCertified': ['signed .nlext production installation', 'real Go broker authorization and revocation',
-                         'PostgreSQL upgrade and rollback', 'OS sandbox', 'Minecraft E2E',
+        'notCertified': ['Установка подписанного пакета .nlext в производственной конфигурации', 'Реальная авторизация и отзыв разрешений через брокер Go',
+                         'Обновление и откат PostgreSQL', 'OS sandbox', 'Minecraft E2E',
                          'cross-platform Java 17/21 and independent CI'],
     }
     if args.report:

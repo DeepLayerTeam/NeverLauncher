@@ -556,7 +556,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 					}
 					t := target
 					if err := addTask(vanillaDownloadTask{Path: "libraries/" + nativeRel, URL: upstream, SHA1: sha, Kind: "native-archive", TargetOS: []string{target.OS}, NativeTargets: []vanillaTarget{t}}); err != nil {
-						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 %s: %w", lib.Name, err)
+						return vanillaInstallResult{}, fmt.Errorf("LWJGL для Linux ARM64 (%s): %w", lib.Name, err)
 					}
 				}
 			}

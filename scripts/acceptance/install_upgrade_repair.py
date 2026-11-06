@@ -50,7 +50,7 @@ def run(argv: list[str], *, expect_ok: bool, timeout: int = 900) -> dict:
     completed = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                timeout=timeout, check=False)
     require(len(completed.stdout) < 128 * 1024 and len(completed.stderr) < 128 * 1024,
-            'native process produced oversized logs')
+            'Нативный процесс создал слишком большой журнал')
     if expect_ok:
         require(completed.returncode == 0, f'{Path(argv[0]).name} failed (exit={completed.returncode})')
     else:

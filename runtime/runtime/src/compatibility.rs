@@ -1202,13 +1202,13 @@ pub fn normalize_relative_path(path: &str) -> Result<String, String> {
     let path = path.replace('\\', "/");
     let candidate = Path::new(&path);
     if candidate.is_absolute() || path.is_empty() {
-        return Err(format!("небезопасный compatibility path: {path}"));
+        return Err(format!("Небезопасный путь данных совместимости: {path}"));
     }
     let mut normalized = Vec::new();
     for component in candidate.components() {
         match component {
             Component::Normal(value) => normalized.push(value.to_string_lossy().to_string()),
-            _ => return Err(format!("небезопасный compatibility path: {path}")),
+            _ => return Err(format!("Небезопасный путь данных совместимости: {path}")),
         }
     }
     Ok(normalized.join("/"))

@@ -24,7 +24,7 @@ func writePrivateIdentityReport0334(path string, data any) error {
 	if info, e := os.Stat(filepath.Dir(path)); e != nil {
 		return e
 	} else if !info.IsDir() {
-		return fmt.Errorf("«identity report parent»: требуется каталог")
+		return fmt.Errorf("Для родительского пути отчёта идентификации требуется каталог")
 	}
 	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if e != nil {

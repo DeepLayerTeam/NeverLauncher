@@ -46,7 +46,7 @@ def checksum(path: Path, expected: str) -> None:
     if not isinstance(expected, str) or not HEX64.fullmatch(expected):
         raise ValueError(f"{path.name}:: некорректное ожидаемое значение SHA-256")
     if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-        raise ValueError(f"{path.name}:: отсутствует or altered evidence")
+        raise ValueError(f"{path.name}:: свидетельство отсутствует или изменено")
 
 
 def verify_runtime(

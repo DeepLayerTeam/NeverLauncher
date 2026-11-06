@@ -196,7 +196,7 @@ def main() -> int:
         not isinstance(target_rows, list)
         or [r.get("id") for r in target_rows] != EXPECTED
     ):
-        die("serverbridge target set/order: обнаружено несоответствие")
+        die("Набор или порядок целевых платформ ServerBridge не совпадает")
     hybrid = load_json(ROOT / "serverbridge/hybrid-targets.json")
     hybrid_rows = hybrid.get("targets")
     if (
@@ -214,10 +214,10 @@ def main() -> int:
 
     manifest = load_json(manifest_path)
     if manifest.get("toolVersion") != VERSION or manifest.get("schemaVersion") != "1.2":
-        die("plugin manifest version/schema: обнаружено несоответствие")
+        die("Версия или схема манифеста плагина не совпадает")
     rows = manifest.get("artifacts")
     if not isinstance(rows, list) or [r.get("id") for r in rows] != EXPECTED:
-        die("plugin manifest artifact set/order: обнаружено несоответствие")
+        die("Набор или порядок артефактов манифеста плагина не совпадает")
 
     allow = load_json(allowlist_path)
     if (
@@ -235,7 +235,7 @@ def main() -> int:
         != SECURITY_CAPABILITY_DIGEST
         or sorted(allow.get("requiredFeatures") or []) != sorted(SECURITY_FEATURES)
     ):
-        die("ServerBridge 3 release allowlist security metadata: обнаружено несоответствие")
+        die("Метаданные безопасности списка разрешённых релизов ServerBridge 3 не совпадают")
     releases = allow.get("releases")
     if (
         not isinstance(releases, dict)
@@ -293,7 +293,7 @@ def main() -> int:
                         common_names = set(common.namelist())
                         for entry in COMMON_PROTOCOL_ENTRIES:
                             if entry not in common_names:
-                                die(f"{target}: embedded bridge-common: отсутствует {entry}")
+                                die(f"{target}: во встроенном bridge-common отсутствует {entry}")
                 else:
                     for entry in COMMON_PROTOCOL_ENTRIES:
                         if entry not in names:

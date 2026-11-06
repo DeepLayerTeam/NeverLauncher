@@ -85,7 +85,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
     )
     require(
         policy.get("publishEligible") is True,
-        "Backend stable policy denies publication",
+        "Политика стабильного выпуска Backend запрещает публикацию",
     )
     require(
         isinstance(report, dict)
@@ -96,7 +96,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
     coverage = report.get("coverage")
     require(
         isinstance(coverage, dict) and coverage.get("stablePublishEligible") is True,
-        "live audit gate ineligible",
+        "Текущая проверка аудита не соответствует условиям допуска",
     )
     require(coverage.get("sourceSha") == source_sha, "Коммит источника аудита не совпадает")
     matrix = policy.get("matrixSha256")

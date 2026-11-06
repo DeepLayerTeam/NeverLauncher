@@ -198,7 +198,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 		}
 		actualHash, actualSize, err := hashFile(path)
 		if err != nil {
-			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s artifact %s: %w", arch, artifact.Name, err)
+			return LinuxPackageManifest0153{}, "", fmt.Errorf("Артефакт Linux %s (%s): %w", arch, artifact.Name, err)
 		}
 		if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
 			return LinuxPackageManifest0153{}, "", fmt.Errorf("Несоответствие: Linux %s артефакт %s checksum/size", arch, artifact.Name)

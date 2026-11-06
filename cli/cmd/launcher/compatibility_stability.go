@@ -134,11 +134,11 @@ func secureClientDestination(root, relative string) (string, error) {
 func validateAssetLogicalPath(name string) error {
 	normalized := strings.ReplaceAll(strings.TrimSpace(name), "\\", "/")
 	if normalized == "" || strings.HasPrefix(normalized, "/") || strings.ContainsRune(normalized, '\x00') {
-		return fmt.Errorf("небезопасный asset logical path: %q", name)
+		return fmt.Errorf("Небезопасный логический путь ресурса: %q", name)
 	}
 	for _, component := range strings.Split(normalized, "/") {
 		if component == "" || component == "." || component == ".." {
-			return fmt.Errorf("небезопасный asset logical path: %q", name)
+			return fmt.Errorf("Небезопасный логический путь ресурса: %q", name)
 		}
 	}
 	return nil

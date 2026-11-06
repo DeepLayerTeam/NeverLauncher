@@ -44,7 +44,7 @@ func buildDesktopPackage(ver, artifactDir, out, platform string) error {
 		checksums = append(checksums, sum+"  "+item.Artifact)
 	}
 	if len(selected) == 0 {
-		return errors.New("desktop package не содержит ни одного реально собранного native artifact")
+		return errors.New("Пакет Desktop не содержит ни одного реально собранного нативного артефакта")
 	}
 	sort.Strings(checksums)
 	manifest := DesktopPackageManifest{SchemaVersion: cliSchemaVersion, GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano), ToolVersion: version, Version: ver, Platforms: selected, ChecksumsFile: "SHA256SUMS.desktop"}

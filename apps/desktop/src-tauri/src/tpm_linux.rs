@@ -46,7 +46,7 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
     if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b=='-') {
         return Err("Некорректное значение: метка аппаратного хранилища TPM".into());
     }
-    let home=std::env::var_os("HOME").ok_or("HOME is unavailable")?;
+    let home=std::env::var_os("HOME").ok_or("Переменная HOME недоступна")?;
     let config=std::env::var_os("XDG_CONFIG_HOME").filter(|v| Path::new(v).is_absolute())
         .map(PathBuf::from).unwrap_or_else(|| PathBuf::from(home).join(".config"));
     let mut found=None;

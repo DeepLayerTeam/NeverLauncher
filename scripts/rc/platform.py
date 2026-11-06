@@ -71,7 +71,7 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
                 for path in files
             ).encode()
         ).hexdigest(),
-        "scope": "actual native and production renderer build; does not attest GUI gameplay",
+        "scope": "Реальная сборка нативного компонента и производственного интерфейса; не подтверждает игровой процесс через GUI",
         "timestampUtc": datetime.now(timezone.utc).isoformat(),
         "certificationRun": identity(version, commit, root=ROOT),
     }
@@ -95,7 +95,7 @@ def main():
         print("Рабочая сборка Desktop ЗАБЛОКИРОВАНА: " + str(e), file=sys.stderr)
         return 3
     print(
-        "Desktop native and production renderer bytes verified on " + result["platform"]
+        "Нативный Desktop и производственный интерфейс проверены на " + result["platform"]
     )
     return 0
 

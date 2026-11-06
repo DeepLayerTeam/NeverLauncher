@@ -94,7 +94,7 @@ mod imp {
             format!("Guard Sensor отсутствует рядом с launcher/runtime {}: {err}", path.display())
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
-            return Err("Guard Sensor должен быть непустым regular non-symlink DLL".to_string());
+            return Err("Guard Sensor должен быть непустой обычной DLL, а не символической ссылкой".to_string());
         }
         Ok(path)
     }
@@ -200,7 +200,7 @@ mod imp {
             format!("DLL датчика Guard недоступна {}: {err}", sensor_path.display())
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
-            return Err("Guard Sensor должен быть непустым regular non-symlink DLL".to_string());
+            return Err("Guard Sensor должен быть непустой обычной DLL, а не символической ссылкой".to_string());
         }
         #[cfg(not(debug_assertions))]
         verify_windows_authenticode_trust(&sensor_path)

@@ -100,7 +100,7 @@ func rejectDuplicateJSON0249(data []byte) error {
 				}
 			}
 		default:
-			return errors.New("Неожиданное значение: «JSON closing delimiter»")
+			return errors.New("Неожиданный закрывающий разделитель JSON")
 		}
 		_, e = d.Token()
 		return e
@@ -172,7 +172,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		}
 		sig, e := hex.DecodeString(out.Wire.Signature.Signature)
 		if e != nil || len(sig) != ed25519.SignatureSize {
-			return out, errors.New("Некорректное значение: «Ed25519 manifest signature encoding»")
+			return out, errors.New("Некорректное кодирование подписи манифеста Ed25519")
 		}
 		unsigned := out.Wire
 		unsigned.Signature = nil

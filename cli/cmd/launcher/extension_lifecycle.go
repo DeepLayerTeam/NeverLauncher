@@ -63,7 +63,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		}
 		id, versionValue, ok := parseRegistryCoordinate0203(args[0])
 		if !ok {
-			return errors.New("extension install требует координату id@version")
+			return errors.New("Для установки расширения требуется идентификатор id@version")
 		}
 		scopePayload["version"] = versionValue
 		payload, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extension-installs/"+url.PathEscape(id)+"/install", scopePayload, token)
@@ -109,6 +109,6 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		}
 		return writeOrPrintJSON(out, payload)
 	default:
-		return fmt.Errorf("неизвестная extension lifecycle-подкоманда: %s", command)
+		return fmt.Errorf("Неизвестная подкоманда жизненного цикла расширений: %s", command)
 	}
 }

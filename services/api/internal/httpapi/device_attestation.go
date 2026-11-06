@@ -90,7 +90,7 @@ func (s Server) authDeviceAttestationBegin0124(w http.ResponseWriter, r *http.Re
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
 	if _, err := sessionBoundToDevice0124(s, claims, deviceID); err != nil {
-		writeError(w, http.StatusConflict, "текущая сессия не привязана к этому trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия не привязана к этому доверенному устройству")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, deviceID)
@@ -105,12 +105,12 @@ func (s Server) authDeviceAttestationBegin0124(w http.ResponseWriter, r *http.Re
 
 	challengeID, err := randomToken("dta")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать attestation challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос аттестации")
 		return
 	}
 	challenge, err := randomToken("dac")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать attestation challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос аттестации")
 		return
 	}
 	now := canonicalDeviceAttestationTime0124(time.Now())
@@ -166,7 +166,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
 	if _, err := sessionBoundToDevice0124(s, claims, deviceID); err != nil {
-		writeError(w, http.StatusConflict, "текущая сессия не привязана к этому trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия не привязана к этому доверенному устройству")
 		return
 	}
 	var req deviceProofCompleteRequest0121

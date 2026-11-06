@@ -66,7 +66,7 @@ def process(
         ) from exc
     require(
         len(cmd.stdout) <= 2**20 and len(cmd.stderr) <= 2**20,
-        "oversized native response",
+        "Ответ нативного компонента превышает допустимый размер",
     )
     try:
         obj = json.loads(cmd.stdout) if cmd.stdout else None
@@ -102,11 +102,11 @@ def reject_native(result: tuple[int, dict | None], message: str):
 def check_binary(path: Path) -> Path:
     require(
         path.is_file() and not path.is_symlink(),
-        "native executable is absent or symlinked",
+        "Нативный исполняемый файл отсутствует или является символической ссылкой",
     )
     require(
         os.name == "nt" or os.access(path, os.X_OK),
-        "native executable is not executable",
+        "Нативный файл не имеет права на выполнение",
     )
     return path.resolve()
 
@@ -178,7 +178,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                 file.is_file()
                 and file.stat().st_size == size
                 and hash_file(file) == digest,
-                "native sync did not publish authenticated fixture bytes",
+                "Нативная синхронизация не опубликовала проверенные тестовые данные",
             )
             require(
                 network.transferred - before >= size,
@@ -254,7 +254,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                 )
             )
             require(
-                hash_file(file) == digest, "native repair did not restore correct bytes"
+                hash_file(file) == digest, "Нативное восстановление не вернуло корректные данные"
             )
             checks.append("real-transactional-repair-and-independent-sha256")
             reject_native(
@@ -269,7 +269,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                     "00" * 32,
                     env=env,
                 ),
-                "wrong pinned Ed25519 key accepted",
+                "Принят неверный закреплённый ключ Ed25519",
             )
             checks.append("wrong-trust-root-denied")
             altered = work / "altered-manifest.json"
@@ -288,7 +288,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                     pubkey,
                     env=env,
                 ),
-                "modified signed payload accepted",
+                "Приняты изменённые подписанные данные",
             )
             checks.append("modified-signed-manifest-denied")
             return {

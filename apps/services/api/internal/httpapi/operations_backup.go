@@ -834,7 +834,7 @@ func inspectOperationsBackup880(path string) (operationsBackupManifest880, error
 		}
 		return manifest, nil
 	}
-	return operationsBackupManifest880{}, errors.New("manifest.json отсутствует в backup archive")
+	return operationsBackupManifest880{}, errors.New("В архиве резервной копии отсутствует manifest.json")
 }
 
 func (s Server) verifyOperationsBackup880(ctx context.Context, path, backupID string) (map[string]any, error) {
@@ -940,7 +940,7 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 	}
 	manifestData, err := os.ReadFile(filepath.Join(stage, "manifest.json"))
 	if err != nil {
-		return fail(errors.New("manifest.json отсутствует в backup archive"))
+		return fail(errors.New("В архиве резервной копии отсутствует manifest.json"))
 	}
 	var manifest operationsBackupManifest880
 	if err := json.Unmarshal(manifestData, &manifest); err != nil {

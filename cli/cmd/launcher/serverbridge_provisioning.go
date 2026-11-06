@@ -182,17 +182,17 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 	explicit = strings.ToLower(strings.TrimSpace(explicit))
 	if explicit != "" {
 		if !bridgeSupportedPlatform0199(explicit) {
-			return bridgeDetection0199{}, fmt.Errorf("неподдерживаемая ServerBridge platform: %s", explicit)
+			return bridgeDetection0199{}, fmt.Errorf("Неподдерживаемая платформа ServerBridge: %s", explicit)
 		}
 		hybrid, evidence := detectHybridCore0199(root)
 		if hybrid != "" {
-			return bridgeDetection0199{}, fmt.Errorf("обнаружен hybrid core %s (%s): universal adapter %s нельзя устанавливать без отдельной certification matrix", hybrid, strings.Join(evidence, ", "), explicit)
+			return bridgeDetection0199{}, fmt.Errorf("Обнаружено гибридное ядро %s (%s): универсальный адаптер %s нельзя устанавливать без отдельной матрицы сертификации", hybrid, strings.Join(evidence, ", "), explicit)
 		}
 		return bridgeDetectionForPlatform0199(root, explicit, "explicit", []string{"--platform=" + explicit}), nil
 	}
 
 	if hybrid, evidence := detectHybridCore0199(root); hybrid != "" {
-		return bridgeDetection0199{}, fmt.Errorf("обнаружен несертифицированный hybrid core %s (%s); automatic universal provisioning fail-closed", hybrid, strings.Join(evidence, ", "))
+		return bridgeDetection0199{}, fmt.Errorf("Обнаружено несертифицированное гибридное ядро %s (%s); автоматическая установка универсального адаптера заблокирована", hybrid, strings.Join(evidence, ", "))
 	}
 
 	scores := map[string]int{}
@@ -299,7 +299,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 		}
 	}
 	if len(scores) == 0 {
-		return bridgeDetection0199{}, errors.New("не удалось автоматически определить поддерживаемое Minecraft/proxy ядро; укажите --platform только если платформа действительно входит в certified ServerBridge cohort")
+		return bridgeDetection0199{}, errors.New("Не удалось автоматически определить поддерживаемое ядро Minecraft/прокси; указывайте --platform только для сертифицированной платформы ServerBridge")
 	}
 
 	type ranked struct {
@@ -317,7 +317,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 		return ranks[i].score > ranks[j].score
 	})
 	if len(ranks) > 1 && ranks[0].score == ranks[1].score && ranks[0].platform != ranks[1].platform {
-		return bridgeDetection0199{}, fmt.Errorf("ядро определяется неоднозначно: %s и %s имеют одинаковую достоверность; automatic provisioning остановлен", ranks[0].platform, ranks[1].platform)
+		return bridgeDetection0199{}, fmt.Errorf("Ядро определяется неоднозначно: %s и %s имеют одинаковую достоверность; автоматическая настройка остановлена", ranks[0].platform, ranks[1].platform)
 	}
 	confidence := "medium"
 	if ranks[0].score >= 95 {
@@ -520,10 +520,10 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	current, currentErr := readBridgeProvisionState0199(statePath)
 	if requireExisting && currentErr != nil {
-		return errors.New("server-bridge upgrade требует ранее установленный managed bridge; сначала выполните nl server-bridge install")
+		return errors.New("Для server-bridge upgrade требуется ранее установленный управляемый мост; сначала выполните nl server-bridge install")
 	}
 	if currentErr == nil && current.Platform != "" && current.Platform != detection.Platform {
-		return fmt.Errorf("managed bridge platform=%s, detected platform=%s; автоматический cross-platform upgrade запрещён", current.Platform, detection.Platform)
+		return fmt.Errorf("Платформа управляемого моста=%s, обнаруженная платформа=%s; автоматическое межплатформенное обновление запрещено", current.Platform, detection.Platform)
 	}
 
 	bridgeVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
@@ -760,7 +760,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		return bridgeArtifact0199{}, err
 	}
 	if !info.Mode().IsRegular() || info.Size() == 0 {
-		return bridgeArtifact0199{}, fmt.Errorf("Некорректное значение: «bridge artifact»: %s", abs)
+		return bridgeArtifact0199{}, fmt.Errorf("Некорректный артефакт моста: %s", abs)
 	}
 	file := filepath.Base(abs)
 	expectedPrefix := "launcher-" + platform + "-bridge-"
@@ -951,7 +951,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 			return err
 		}
 		if !strings.Contains(text, "Main-Class: ru.launcher.bridge.vanilla.LauncherVanillaBridge") {
-			return errors.New("Отсутствует: «Vanilla ServerBridge sidecar Main-Class»")
+			return errors.New("Отсутствует главный класс (Main-Class) бокового процесса Vanilla ServerBridge")
 		}
 	}
 	return nil
@@ -1064,29 +1064,29 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		}
 	}
 	if values["formatVersion"] != "1" || strings.ToLower(values["keyAlgorithm"]) != "ed25519" {
-		return bridgeIdentityMaterial0199{}, errors.New("Не поддерживается: «node identity format»")
+		return bridgeIdentityMaterial0199{}, errors.New("Неподдерживаемый формат идентификатора узла")
 	}
 	pub, err := base64.RawURLEncoding.DecodeString(values["publicKey"])
 	if err != nil || len(pub) != ed25519.PublicKeySize {
-		return bridgeIdentityMaterial0199{}, errors.New("Некорректное значение: «node identity publicKey»")
+		return bridgeIdentityMaterial0199{}, errors.New("Некорректный открытый ключ идентификатора узла (publicKey)")
 	}
 	sum := sha256.Sum256(pub)
 	fp := hex.EncodeToString(sum[:])
 	if !strings.EqualFold(fp, values["keyFingerprint"]) {
-		return bridgeIdentityMaterial0199{}, errors.New("Несовпадение: «node identity fingerprint»")
+		return bridgeIdentityMaterial0199{}, errors.New("Отпечаток идентификатора узла не совпадает")
 	}
 	// До успешного завершения подготовки проверьте, что среда Java сможет разобрать материал закрытого ключа.
 	privDER, err := base64.RawURLEncoding.DecodeString(values["privateKeyPkcs8"])
 	if err != nil {
-		return bridgeIdentityMaterial0199{}, errors.New("Некорректное значение: «node identity privateKeyPkcs8»")
+		return bridgeIdentityMaterial0199{}, errors.New("Некорректный закрытый ключ идентификатора узла (privateKeyPkcs8)")
 	}
 	parsed, err := x509.ParsePKCS8PrivateKey(privDER)
 	if err != nil {
-		return bridgeIdentityMaterial0199{}, errors.New("Некорректное значение: «node identity PKCS#8 private key»")
+		return bridgeIdentityMaterial0199{}, errors.New("Некорректный закрытый ключ идентификатора узла в формате PKCS#8")
 	}
 	privateKey, ok := parsed.(ed25519.PrivateKey)
 	if !ok || !privateKey.Public().(ed25519.PublicKey).Equal(ed25519.PublicKey(pub)) {
-		return bridgeIdentityMaterial0199{}, errors.New("Несовпадение: «node identity keypair»")
+		return bridgeIdentityMaterial0199{}, errors.New("Пара ключей идентификатора узла не совпадает")
 	}
 	return bridgeIdentityMaterial0199{PublicKey: values["publicKey"], Fingerprint: fp}, nil
 }
@@ -1103,7 +1103,7 @@ func enrollServerBridge0199(args []string) error {
 	}
 	var req bridgeEnrollmentRequest0199
 	if err := json.Unmarshal(raw, &req); err != nil {
-		return fmt.Errorf("Некорректное значение: «enrollment request»: %w", err)
+		return fmt.Errorf("Некорректный запрос регистрации: %w", err)
 	}
 	if req.ID == "" || req.Kind == "" || req.PublicKey == "" || req.KeyFingerprint == "" {
 		return errors.New("Запрос регистрации заполнен не полностью")
@@ -1323,16 +1323,16 @@ func rollbackServerBridge0199(args []string) error {
 	if txID == "" {
 		state, err := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 		if err != nil {
-			return errors.New("Откат: требуется «--transaction or an active managed ServerBridge state»")
+			return errors.New("Для отката требуется --transaction или активное состояние управляемого ServerBridge")
 		}
 		txID = state.TransactionID
 	}
 	if !bridgeTxID02812.MatchString(txID) {
-		return errors.New("Некорректное значение: «transaction identifier»")
+		return errors.New("Некорректный идентификатор транзакции")
 	}
 	current, currentErr := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 	if currentErr != nil || current.TransactionID != txID {
-		return errors.New("Откат: требуется «the currently active transaction (reconcile changes before rollback)»")
+		return errors.New("Для отката требуется текущая активная транзакция (согласуйте изменения перед откатом)")
 	}
 	txPath := bridgeTransactionPath0199(root, txID)
 	raw, err := os.ReadFile(txPath)
@@ -1557,10 +1557,10 @@ func replaceFile0199(tempName, dst string) error {
 		return err
 	}
 	if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-		return fmt.Errorf("Ошибка: замена %s: переименование: %v; remove destination failed: %w", dst, err, removeErr)
+		return fmt.Errorf("Ошибка замены %s: переименование: %v; не удалось удалить целевой файл: %w", dst, err, removeErr)
 	}
 	if retryErr := os.Rename(tempName, dst); retryErr != nil {
-		return fmt.Errorf("Ошибка: замена %s: переименование: %v; retry failed: %w", dst, err, retryErr)
+		return fmt.Errorf("Ошибка замены %s: переименование: %v; повторная попытка завершилась ошибкой: %w", dst, err, retryErr)
 	}
 	return nil
 }
@@ -1584,7 +1584,7 @@ func readBridgeProvisionState0199(path string) (bridgeProvisionState0199, error)
 		return state, err
 	}
 	if state.SchemaVersion != "1.0" || state.Platform == "" || state.ArtifactPath == "" {
-		return state, errors.New("Некорректное значение: «managed ServerBridge state»")
+		return state, errors.New("Некорректное состояние управляемого ServerBridge")
 	}
 	return state, nil
 }

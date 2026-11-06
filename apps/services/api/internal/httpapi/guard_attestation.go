@@ -756,7 +756,7 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
 	if _, err := sessionBoundToDevice0124(s, claims, deviceID); err != nil {
-		writeError(w, http.StatusConflict, "текущая сессия не привязана к trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия не привязана к доверенному устройству")
 		return
 	}
 	var req guardAttestationBeginRequest0134
@@ -767,12 +767,12 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 	req.LauncherVersion = strings.TrimSpace(req.LauncherVersion)
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "Guard Attestation release policy не настроена")
+		writeError(w, http.StatusServiceUnavailable, "Политика релизов для аттестации Guard не настроена")
 		return
 	}
 	policy, ok := policies[req.LauncherVersion]
 	if !ok {
-		writeError(w, http.StatusPreconditionFailed, "эта версия Desktop отсутствует в Guard release allowlist")
+		writeError(w, http.StatusPreconditionFailed, "Эта версия Desktop отсутствует в списке разрешённых релизов Guard")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, deviceID)
@@ -781,7 +781,7 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) && !isMacOSDevicePlatform0138(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux/macOS trusted device")
+		writeError(w, http.StatusPreconditionFailed, "Производственная реализация аттестации Guard поддерживает доверенные устройства только на Windows, Linux и macOS")
 		return
 	}
 	policySchema, protocolVersion, requireAuthenticode, err := policy.metadataForPlatform0140(device.Platform)
@@ -806,12 +806,12 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 
 	challengeID, err := randomToken("nga")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать Guard Attestation challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос аттестации Guard")
 		return
 	}
 	challenge, err := randomToken("ngc")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать Guard Attestation challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос аттестации Guard")
 		return
 	}
 	now := canonicalGuardAttestationTime0134(time.Now())
@@ -859,7 +859,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
 	if _, err := sessionBoundToDevice0124(s, claims, deviceID); err != nil {
-		writeError(w, http.StatusConflict, "текущая сессия не привязана к trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия не привязана к доверенному устройству")
 		return
 	}
 	var req guardAttestationCompleteRequest0134
@@ -871,12 +871,12 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 	req.ChallengeExpiresAt = strings.TrimSpace(req.ChallengeExpiresAt)
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "Guard Attestation release policy не настроена")
+		writeError(w, http.StatusServiceUnavailable, "Политика релизов для аттестации Guard не настроена")
 		return
 	}
 	policy, ok := policies[req.LauncherVersion]
 	if !ok {
-		writeError(w, http.StatusPreconditionFailed, "эта версия Desktop отсутствует в Guard release allowlist")
+		writeError(w, http.StatusPreconditionFailed, "Эта версия Desktop отсутствует в списке разрешённых релизов Guard")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, deviceID)
@@ -885,7 +885,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		return
 	}
 	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) && !isMacOSDevicePlatform0138(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux/macOS trusted device")
+		writeError(w, http.StatusPreconditionFailed, "Производственная реализация аттестации Guard поддерживает доверенные устройства только на Windows, Linux и macOS")
 		return
 	}
 	policySchema, protocolVersion, _, err := policy.metadataForPlatform0140(device.Platform)
@@ -953,12 +953,12 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 
 	ticketID, err := randomToken("gatid")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить Guard launch ticket")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить билет запуска Guard")
 		return
 	}
 	ticketSecret, err := randomToken("gat")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить Guard launch ticket")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить билет запуска Guard")
 		return
 	}
 	ticketExpires := canonicalGuardAttestationTime0134(now.Add(guardLaunchTicketTTL0134))

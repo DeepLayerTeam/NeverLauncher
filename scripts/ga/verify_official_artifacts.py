@@ -38,7 +38,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
         receipt.get("schemaVersion") == "launcher.official-minecraft.ga-receipt.v1"
         and receipt.get("productVersion") == "0.27.0"
         and receipt.get("status") == "passed",
-        "incomplete GA receipt",
+        "Квитанция общего выпуска заполнена не полностью",
     )
     refs = receipt.get("targets")
     require(

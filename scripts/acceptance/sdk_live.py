@@ -38,7 +38,7 @@ def probe(args):
     need(url.scheme=='https' and url.hostname and not (url.username or url.password or url.path not in ('','/') or
          url.query or url.fragment), 'Для промышленного SDK требуется реальный HTTPS-адрес источника')
     for path in (args.json_path,args.text_path,args.binary_path):
-        need(path in ('/metrics',) or path.startswith('/api/v1/'), 'only actual application API routes are accepted')
+        need(path in ('/metrics',) or path.startswith('/api/v1/'), 'Допускаются только реальные маршруты API приложения')
         need(not any(x in path for x in ('..','?','#','//','\\')),'Небезопасный путь API')
     need(re.fullmatch('[a-f0-9]{64}',args.binary_sha256 or ''),'Требуется заранее независимо закреплённая контрольная сумма исполняемого файла')
     token_path=args.bearer_file

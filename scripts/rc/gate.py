@@ -46,11 +46,11 @@ def digest_ok(value):
 def load_exact(path: Path):
     need(
         path.is_file() and not path.is_symlink() and path.stat().st_size <= 512 * 1024,
-        "missing, symlinked or oversized evidence",
+        "Свидетельство отсутствует, является символической ссылкой или превышает допустимый размер",
     )
     with path.open(encoding="utf-8") as stream:
         data = json.load(stream)
-    need(isinstance(data, dict), "evidence must be an object")
+    need(isinstance(data, dict), "Свидетельство проверки должно быть объектом")
     return data
 
 
@@ -59,7 +59,7 @@ def verify(
 ):
     need(
         rc_extended(version) and re.fullmatch("[a-f0-9]{40}", commit) is not None,
-        "RC expects exact version and complete commit SHA",
+        "Для RC требуется точная версия и полный SHA коммита",
     )
     native = []
     desktop = []
@@ -72,7 +72,7 @@ def verify(
             and nr.get("simulated") is False
             and nr.get("platform") == system
             and nr.get("commit") == commit,
-            "native evidence mismatch for " + system,
+            "Несовпадение свидетельства нативного компонента для " + system,
         )
         need(
             set(nr.get("checks", [])) >= REQUIRED_NATIVE
@@ -108,7 +108,7 @@ def verify(
             and dr.get("simulated") is False
             and dr.get("commit") == commit
             and dr.get("platform") == system,
-            "Desktop compiled artifact mismatch for " + system,
+            "Несовпадение скомпилированного артефакта Desktop для " + system,
         )
         need(
             digest_ok(dr.get("binarySha256"))
@@ -145,7 +145,7 @@ def verify(
         and "refresh-rotation-and-logout-revocation" in checks
         and "unpublished-or-workspace-content-not-served" in checks
         and "unauthenticated-admin-mutation-denied" in checks,
-        "Backend acceptance lacked security negative checks",
+        "Приёмка Backend не содержит негативных проверок безопасности",
     )
     verify_run(backend, version, commit)
     return {

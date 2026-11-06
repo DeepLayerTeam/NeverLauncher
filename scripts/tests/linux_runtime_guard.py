@@ -44,7 +44,7 @@ def linux_harden():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 
 
-@unittest.skipUnless(sys.platform.startswith('linux'), 'Linux-only process protection')
+@unittest.skipUnless(sys.platform.startswith('linux'), 'Защита процесса только для Linux')
 class RealLinuxJVM0508(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -107,7 +107,7 @@ public class Game {
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate()
-            self.fail('protected Java process did not terminate')
+            self.fail('Защищённый процесс Java не завершил работу')
 
     def test_hardened_real_jvm_passes(self):
         process = self.start()
@@ -119,7 +119,7 @@ public class Game {
         process = self.start(harden=False)
         out, err = process.communicate(timeout=15)
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn('Guard Linux JVM', err)
+        self.assertIn('Guard для JVM на Linux', err)
         self.assertNotIn('GAME_STARTED', out)
 
     def test_hardened_game_detects_unauthorized_live_mod(self):
@@ -130,7 +130,7 @@ public class Game {
         (moddir / 'untrusted.jar').write_bytes(b'unapproved module')
         out, err = process.communicate(timeout=15)
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn('unapproved runtime file', err)
+        self.assertIn('Неутверждённый файл Runtime', err)
 
     def test_hardened_game_detects_signed_jar_mutation(self):
         process = self.start(extra=('hold',))

@@ -49,7 +49,7 @@ def architecture(content: bytes, target: str) -> None:
         )
         actual = struct.unpack_from("<H", content, offset + 4)[0]
         require(
-            actual == {"x64": 0x8664, "arm64": 0xAA64}[arch], "wrong PE architecture"
+            actual == {"x64": 0x8664, "arm64": 0xAA64}[arch], "Неверная архитектура PE-файла"
         )
         # IMAGE_DIRECTORY_ENTRY_SECURITY содержит таблицу сертификатов Authenticode. Само
         # её наличие НЕ подтверждает цепочку доверия: нативная проверка подписи Windows/ОС
@@ -486,7 +486,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
     else:
         require(
             sha(bundle / manifest_name) == hashlib.sha256(members[inner]).hexdigest(),
-            target + ": embedded package manifest differs from signed source",
+            target + ": встроенный манифест пакета отличается от подписанного источника",
         )
         manifest = json.loads(members[inner], object_pairs_hook=_no_dupes)
     require(
@@ -497,7 +497,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
     )
     require(
         hashlib.sha256(members[member]).hexdigest() == sha(binary),
-        target + ": packaged executable differs from approved binary",
+        target + ": исполняемый файл в пакете отличается от утверждённого бинарного файла",
     )
     seen = set()
     for row in manifest["artifacts"]:

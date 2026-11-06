@@ -500,7 +500,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 		}
 		rel = filepath.ToSlash(rel)
 		if strings.HasPrefix(rel, "../") || strings.HasPrefix(rel, "/") || rel == "." {
-			return fmt.Errorf("небезопасный путь client package: %s", rel)
+			return fmt.Errorf("Небезопасный путь клиентского пакета: %s", rel)
 		}
 		sum, size, err := hashFile(path)
 		if err != nil {
@@ -1006,7 +1006,7 @@ func clientLocalState(clientDir, profile, channel string) (map[string]any, error
 
 func validateClientPackagePath(path string) error {
 	if path == "" || strings.HasPrefix(path, "/") || strings.Contains(path, "..") || strings.Contains(path, "\\") {
-		return fmt.Errorf("небезопасный путь client package: %s", path)
+		return fmt.Errorf("Небезопасный путь клиентского пакета: %s", path)
 	}
 	lower := strings.ToLower(path)
 	for _, forbidden := range []string{".env", "id_rsa", "id_ed25519", ".pem", ".key"} {

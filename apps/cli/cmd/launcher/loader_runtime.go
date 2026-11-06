@@ -327,7 +327,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит libraries", loader)
 	}
 	if selectedEntry.Loader.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Loader.Maven) {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит выбранный loader artifact %s", loader, selectedEntry.Loader.Maven)
+		return loaderMaterializeResult{}, fmt.Errorf("Профиль %s не содержит выбранный артефакт загрузчика %s", loader, selectedEntry.Loader.Maven)
 	}
 	// Minecraft 26.1+ распространяется без обфускации. Fabric Meta может указывать
 	// маркер intermediary:0.0.0 вместо JAR с маппингами в профиле запуска. Не
@@ -545,7 +545,7 @@ func profileHasLibrary(libraries []MojangLibrary, coordinate string) bool {
 func validateLoaderProfileID(id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" || id == "." || id == ".." || strings.ContainsAny(id, `/\\`) {
-		return fmt.Errorf("loader profile id некорректен: %q", id)
+		return fmt.Errorf("Некорректный идентификатор профиля загрузчика: %q", id)
 	}
 	return nil
 }
@@ -622,22 +622,22 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 			shaBytes, err := fetchLimitedBytes(ctx, client, shaURL, 64<<10)
 			if err != nil {
 				if strict {
-					return nil, fmt.Errorf("loader library %s: не удалось получить SHA-1: %w", lib.Name, err)
+					return nil, fmt.Errorf("Библиотека загрузчика %s: не удалось получить SHA-1: %w", lib.Name, err)
 				}
 			} else {
 				expectedSHA1 = parseSHA1Sidecar(string(shaBytes))
 			}
 		}
 		if strict && !validSHA1Hex(expectedSHA1) {
-			return nil, fmt.Errorf("loader library %s: Maven repository не предоставил корректный SHA-1", lib.Name)
+			return nil, fmt.Errorf("Библиотека загрузчика %s: репозиторий Maven не предоставил корректный SHA-1", lib.Name)
 		}
 		if expectedSHA1 != "" && !validSHA1Hex(expectedSHA1) {
-			return nil, fmt.Errorf("loader library %s: некорректный SHA-1", lib.Name)
+			return nil, fmt.Errorf("Библиотека загрузчика %s: некорректный SHA-1", lib.Name)
 		}
 		path := "libraries/" + rel
 		if previous, ok := seen[path]; ok {
 			if previous != expectedSHA1 || seenURLs[path] != artifactURL {
-				return nil, fmt.Errorf("loader profile содержит конфликтующие artifacts/sources для %s", path)
+				return nil, fmt.Errorf("Профиль загрузчика содержит конфликтующие артефакты или источники для %s", path)
 			}
 		} else {
 			seen[path] = expectedSHA1
@@ -664,7 +664,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		path := "libraries/" + rel
 		file, ok := byPath[path]
 		if !ok {
-			return nil, fmt.Errorf("loader library %s не материализована", lib.Name)
+			return nil, fmt.Errorf("Библиотека загрузчика %s не подготовлена на диске", lib.Name)
 		}
 		artifact := lib.Downloads.Artifact
 		artifact.Size = file.Size

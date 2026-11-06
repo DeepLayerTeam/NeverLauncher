@@ -279,7 +279,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
         raise dr.DrillError("Родительский каталог отчёта должен существовать и не быть символической ссылкой")
     check_services(project, env_file)
     check_lab_endpoint(project, env_file, s3_url)
-    poll(lambda: public_ready(ready_url), True, limit, "initial HA readiness")
+    poll(lambda: public_ready(ready_url), True, limit, "Первоначальная готовность высокой доступности")
     token = secrets.token_hex(16)
     payload = secrets.token_bytes(64)
     digest = hashlib.sha256(payload).hexdigest()

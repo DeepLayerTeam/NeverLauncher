@@ -591,7 +591,7 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 	for _, version := range versions {
 		if version.ID == versionID {
 			if version.Status == "published" {
-				writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
+				writeError(w, http.StatusConflict, "Опубликованный релиз неизменяем; создайте новую версию")
 				return
 			}
 			foundMutable = true

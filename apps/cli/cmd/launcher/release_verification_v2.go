@@ -326,7 +326,7 @@ func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVers
 		return err
 	}
 	if s.RootFingerprint != "" && !strings.EqualFold(s.RootFingerprint, rootFP) {
-		return errors.New("release trust state привязан к другому root key")
+		return errors.New("Состояние доверия к релизу привязано к другому корневому ключу")
 	}
 	if policyEpoch < s.HighestTrustEpoch {
 		return fmt.Errorf("Откат эпохи доверия: политика=%d, принятая эпоха=%d", policyEpoch, s.HighestTrustEpoch)
@@ -354,7 +354,7 @@ func commitTrustState0158(ctx releaseVerificationV2Context) error {
 		return err
 	}
 	if s.RootFingerprint != "" && !strings.EqualFold(s.RootFingerprint, ctx.RootFingerprint) {
-		return errors.New("release trust state привязан к другому root key")
+		return errors.New("Состояние доверия к релизу привязано к другому корневому ключу")
 	}
 	if ctx.Policy.Epoch < s.HighestTrustEpoch {
 		return fmt.Errorf("Откат эпохи доверия при фиксации состояния: политика=%d, принятая эпоха=%d", ctx.Policy.Epoch, s.HighestTrustEpoch)

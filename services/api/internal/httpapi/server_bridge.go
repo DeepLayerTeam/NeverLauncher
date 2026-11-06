@@ -662,7 +662,7 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
 		if _, err := backend.GetServerBridgeNode(ctx, server.ID); err == nil {
-			return bridgeServerRecord{}, fmt.Errorf("ServerBridge node уже зарегистрирован; используйте rotate-identity")
+			return bridgeServerRecord{}, fmt.Errorf("Узел ServerBridge уже зарегистрирован; используйте команду rotate-identity")
 		} else if !isBridgeNotFoundV2(err) {
 			return bridgeServerRecord{}, err
 		}
@@ -675,11 +675,11 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if _, ok := b.servers[server.ID]; ok {
-		return bridgeServerRecord{}, fmt.Errorf("ServerBridge node уже зарегистрирован; используйте rotate-identity")
+		return bridgeServerRecord{}, fmt.Errorf("Узел ServerBridge уже зарегистрирован; используйте команду rotate-identity")
 	}
 	for _, existing := range b.servers {
 		if existing.KeyFingerprint == server.KeyFingerprint {
-			return bridgeServerRecord{}, fmt.Errorf("этот node public key уже зарегистрирован")
+			return bridgeServerRecord{}, fmt.Errorf("Этот открытый ключ узла уже зарегистрирован")
 		}
 	}
 	b.servers[server.ID] = server
@@ -700,7 +700,7 @@ func (b *serverBridgeStore) rotateIdentity(serverID string, req rotateBridgeIden
 			return bridgeServerRecord{}, err
 		}
 		if current.KeyFingerprint != "" && current.KeyFingerprint == fingerprint {
-			return bridgeServerRecord{}, fmt.Errorf("новый public key должен отличаться от текущей node identity")
+			return bridgeServerRecord{}, fmt.Errorf("Новый открытый ключ должен отличаться от ключа текущего узла")
 		}
 		server, err := backend.RotateServerBridgeNodeIdentity(ctx, strings.TrimSpace(serverID), algorithm, publicKey, fingerprint, now)
 		if err != nil {
@@ -715,11 +715,11 @@ func (b *serverBridgeStore) rotateIdentity(serverID string, req rotateBridgeIden
 		return bridgeServerRecord{}, repository.ErrNotFound
 	}
 	if server.KeyFingerprint != "" && server.KeyFingerprint == fingerprint {
-		return bridgeServerRecord{}, fmt.Errorf("новый public key должен отличаться от текущей node identity")
+		return bridgeServerRecord{}, fmt.Errorf("Новый открытый ключ должен отличаться от ключа текущего узла")
 	}
 	for id, existing := range b.servers {
 		if id != serverID && existing.KeyFingerprint == fingerprint {
-			return bridgeServerRecord{}, fmt.Errorf("этот node public key уже зарегистрирован")
+			return bridgeServerRecord{}, fmt.Errorf("Этот открытый ключ узла уже зарегистрирован")
 		}
 	}
 	server.TokenHash = ""
@@ -830,7 +830,7 @@ func (b *serverBridgeStore) createJoin(user model.User, canonical model.Minecraf
 		defer cancel()
 		node, err := backend.GetServerBridgeNode(ctx, req.ServerID)
 		if err != nil {
-			return bridgeJoinRecord{}, fmt.Errorf("server bridge record не найден или не активен")
+			return bridgeJoinRecord{}, fmt.Errorf("Запись ServerBridge не найдена или неактивна")
 		}
 		server = bridgeServerFromModelV2(node)
 	} else {
@@ -839,7 +839,7 @@ func (b *serverBridgeStore) createJoin(user model.User, canonical model.Minecraf
 		b.mu.Unlock()
 	}
 	if server.ID == "" || server.Status != "active" {
-		return bridgeJoinRecord{}, fmt.Errorf("server bridge record не найден или не активен")
+		return bridgeJoinRecord{}, fmt.Errorf("Запись ServerBridge не найдена или неактивна")
 	}
 	if server.ProjectID != "" && server.ProjectID != req.ProjectID {
 		return bridgeJoinRecord{}, fmt.Errorf("server не привязан к projectId %s", req.ProjectID)

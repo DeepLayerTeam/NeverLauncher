@@ -159,7 +159,7 @@ func handleExtension0201(args []string) error {
 		}
 		if target == "desktop" {
 			manifest.Permissions = []string{"desktop:contribute", "project:read"}
-			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: "Example Desktop extension"}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: "Пример расширения", PageID: "main"}}}
+			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: "Пример расширения Desktop"}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: "Пример расширения", PageID: "main"}}}
 		}
 		if target == "cli" {
 			manifest.Permissions = []string{"cli:contribute"}

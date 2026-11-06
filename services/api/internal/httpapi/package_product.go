@@ -271,7 +271,7 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if lookup.Release.Status == "published" {
-		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
+		writeError(w, http.StatusConflict, "Опубликованный релиз неизменяем; создайте новую версию")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadBytes())
@@ -462,7 +462,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	}
 	defer generationUnlock()
 	if lookup.Release.Status == "published" {
-		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
+		writeError(w, http.StatusConflict, "Опубликованный релиз неизменяем; создайте новую версию")
 		return
 	}
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
@@ -528,7 +528,7 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlock()
 	if lookup.Release.Status == "published" {
-		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
+		writeError(w, http.StatusConflict, "Опубликованный релиз неизменяем; создайте новую версию")
 		return
 	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
@@ -559,7 +559,7 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if lookup.Release.Status == "published" {
-		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
+		writeError(w, http.StatusConflict, "Опубликованный релиз неизменяем; создайте новую версию")
 		return
 	}
 	if err := s.validatePublishEvidence0212(r, lookup); err != nil {

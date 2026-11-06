@@ -59,7 +59,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 	req, err := decodeBridgeHeartbeat0191(r.Body)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
+		writeError(w, http.StatusBadRequest, "Некорректные данные протокола ServerBridge")
 		return
 	}
 	markServerBridgeProtocolResponse0200(w, req.ProtocolVersion)
@@ -261,7 +261,7 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	}
 	req, err := decodeBridgeValidateJoin0191(r.Body)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
+		writeError(w, http.StatusBadRequest, "Некорректные данные протокола ServerBridge")
 		return
 	}
 	markServerBridgeProtocolResponse0200(w, req.ProtocolVersion)

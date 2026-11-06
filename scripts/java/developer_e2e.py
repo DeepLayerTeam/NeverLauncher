@@ -118,10 +118,10 @@ def main() -> None:
     report = {
         'version': VERSION, 'os': platform.system(), 'jdk': subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT, text=True).splitlines()[0],
         'modules': {module: hashlib.sha256(path.read_bytes()).hexdigest() for module, path in jars.items()},
-        'checks': ['published jar/pom/sources/javadoc digests', 'Java 17 classfile compatibility',
-                   'public Maven dependency graph', 'external javac consumer', 'real JVM Host subprocess',
+        'checks': ['published jar/pom/sources/javadoc digests', 'Совместимость байткода классов с Java 17',
+                   'Публичный граф зависимостей Maven', 'Внешний потребитель компилятора javac', 'Реальный дочерний процесс JVM Host',
                    'authenticated Admin/Desktop RPC', 'settings storage/validation',
-                   'denied unsigned action and bad token', 'CLI command', 'graceful shutdown'],
+                   'Отклонены неподписанное действие и недействительный токен', 'CLI command', 'graceful shutdown'],
         'passed': True,
         'note': 'Локальный аутентифицированный симулятор JVM; не подтверждает подписанную рабочую установку или нативную песочницу ОС',
     }

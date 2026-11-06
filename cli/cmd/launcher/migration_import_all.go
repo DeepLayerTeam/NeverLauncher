@@ -132,7 +132,7 @@ func migrationJSON0493(client *http.Client, method, endpoint, token, source stri
 		return false, nil
 	}
 	if status != 200 {
-		return false, fmt.Errorf("migration %s HTTP %d: %s", method, status, string(body))
+		return false, fmt.Errorf("Миграция %s: HTTP %d: %s", method, status, string(body))
 	}
 	wrapper := struct {
 		Data json.RawMessage `json:"data"`

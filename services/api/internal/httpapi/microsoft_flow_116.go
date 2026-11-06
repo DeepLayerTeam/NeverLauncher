@@ -39,7 +39,7 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
-		writeError(w, http.StatusForbidden, "связывание с данным Microsoft provider запрещено")
+		writeError(w, http.StatusForbidden, "Привязка к указанному провайдеру Microsoft запрещена")
 		return
 	}
 	if _, ok := s.microsoftConnector116(providerID); !ok {
@@ -88,7 +88,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
-		writeError(w, http.StatusForbidden, "связывание с данным Microsoft provider запрещено")
+		writeError(w, http.StatusForbidden, "Привязка к указанному провайдеру Microsoft запрещена")
 		return
 	}
 	if _, ok := s.microsoftConnector116(providerID); !ok {
@@ -149,7 +149,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	store, err := s.providerCredentialRepository116()
 	if err != nil {
-		writeError(w, http.StatusNotImplemented, "repository не поддерживает provider credentials")
+		writeError(w, http.StatusNotImplemented, "Репозиторий не поддерживает учётные данные провайдера")
 		return
 	}
 	selected, selectErr := selectedAuthIdentity0291(s.Repo, claims.Sub, providerID, r.URL.Query().Get("issuer"))
@@ -158,7 +158,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 		return
 	}
 	if selectErr != nil {
-		writeError(w, http.StatusNotFound, "provider identity отсутствует")
+		writeError(w, http.StatusNotFound, "Идентификатор провайдера отсутствует")
 		return
 	}
 	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, selected.ID)
@@ -217,7 +217,7 @@ func (s Server) authProviderCredentialDelete116(w http.ResponseWriter, r *http.R
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	store, err := s.providerCredentialRepository116()
 	if err != nil {
-		writeError(w, http.StatusNotImplemented, "repository не поддерживает provider credentials")
+		writeError(w, http.StatusNotImplemented, "Репозиторий не поддерживает учётные данные провайдера")
 		return
 	}
 	selected, selectErr := selectedAuthIdentity0291(s.Repo, claims.Sub, providerID, r.URL.Query().Get("issuer"))
@@ -226,7 +226,7 @@ func (s Server) authProviderCredentialDelete116(w http.ResponseWriter, r *http.R
 		return
 	}
 	if selectErr != nil {
-		writeError(w, http.StatusNotFound, "provider identity отсутствует")
+		writeError(w, http.StatusNotFound, "Идентификатор провайдера отсутствует")
 		return
 	}
 	if err := store.DeleteProviderCredentialByIdentity(claims.Sub, selected.ID); err != nil && !errors.Is(err, repository.ErrNotFound) {

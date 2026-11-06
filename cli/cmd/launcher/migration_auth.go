@@ -26,7 +26,7 @@ func postMigrationAuth0335(endpoint, token, sourcePath, algorithm, runID, out st
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("credential import: требуется HTTPS (IP-адрес обратной связи допускается для локальных проверок)")
+			return errors.New("Для импорта учётных данных требуется HTTPS (локальный IP-адрес допускается при проверках)")
 		}
 	}
 	f, e := os.Open(sourcePath)

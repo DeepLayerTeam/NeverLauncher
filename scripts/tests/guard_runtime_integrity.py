@@ -92,7 +92,7 @@ public class Game {
     def finish(self, proc, timeout=20):
         try: out,err=proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
-            proc.kill();proc.communicate();self.fail('Guard JVM did not terminate')
+            proc.kill();proc.communicate();self.fail('Защищённая JVM не завершила работу')
         return proc.returncode,out,err
 
     def test_valid_signed_game(self):
@@ -102,7 +102,7 @@ public class Game {
     def test_unlisted_runtime_classpath(self):
         unknown=self.root/'unexpected.jar';shutil.copy2(self.jar,unknown)
         rc,out,err=self.finish(self.invoke(extra=[unknown]))
-        self.assertNotEqual(rc,0);self.assertIn('classpath is not signed',err)
+        self.assertNotEqual(rc,0);self.assertIn('Путь классов не подписан',err)
 
     def test_wrong_initial_hash(self):
         proc=self.invoke(args=['wait'])
@@ -131,7 +131,7 @@ public class Game {
         self.assertEqual(proc.stdout.readline().strip(),'GAME_STARTED')
         (self.root/'mods/injected.jar').write_bytes(b'unsigned')
         rc,_,err=self.finish(proc,timeout=16)
-        self.assertNotEqual(rc,0);self.assertIn('unapproved runtime file',err)
+        self.assertNotEqual(rc,0);self.assertIn('Неутверждённый файл Runtime',err)
 
     @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'),'Linux /proc/maps+gcc required')
     def test_live_unapproved_mapped_native(self):
@@ -141,7 +141,7 @@ public class Game {
         # обнаружить.
         proc=self.invoke(args=[lib])
         rc,out,err=self.finish(proc,timeout=16)
-        self.assertNotEqual(rc,0);self.assertIn('unapproved mapped native module',err)
+        self.assertNotEqual(rc,0);self.assertIn('Неутверждённый загруженный нативный модуль',err)
 
     @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'),'Linux /proc/maps+gcc required')
     def test_live_authorized_native(self):
@@ -150,15 +150,15 @@ public class Game {
         rc,out,err=self.finish(proc,timeout=18)
         self.assertEqual(rc,0,err);self.assertIn('GAME_STARTED',out)
 
-    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Linux native overlay required')
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Требуется нативный слой защиты Linux')
     def test_external_native_unapproved_during_live_game(self):
         path=self.base/'unapproved-external-overlay.so'
         shutil.copy2(self.native,path)
         proc=self.invoke(args=[path]);rc,_,err=self.finish(proc,timeout=17)
         self.assertNotEqual(rc,0)
-        self.assertIn('unapproved external native module',err)
+        self.assertIn('Неутверждённый внешний нативный модуль',err)
 
-    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Linux native overlay required')
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Требуется нативный слой защиты Linux')
     def test_external_native_signed_and_pinned_allowed(self):
         path=self.base/'approved-external-overlay.so'
         shutil.copy2(self.native,path)
@@ -167,7 +167,7 @@ public class Game {
         self.assertEqual(rc,0,err)
         self.assertIn('GAME_STARTED',out)
 
-    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Linux native overlay required')
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Требуется нативный слой защиты Linux')
     def test_external_native_replaced_during_game(self):
         path=self.base/'replace-external-overlay.so'
         shutil.copy2(self.native,path)
@@ -178,6 +178,6 @@ public class Game {
         os.replace(alternate,path)
         rc,_,err=self.finish(proc,timeout=16)
         self.assertNotEqual(rc,0)
-        self.assertIn('external native modified',err)
+        self.assertIn('Внешний нативный модуль изменён',err)
 
 if __name__=='__main__': unittest.main(verbosity=2)

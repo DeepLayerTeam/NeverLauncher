@@ -217,7 +217,7 @@ func packExtensionPackage0202(sourceDir, outputPath string) (map[string]any, err
 		return nil, errors.New("extension source должен быть обычным каталогом, не symlink")
 	}
 	if strings.ToLower(filepath.Ext(outputPath)) != ".nlext" {
-		return nil, errors.New("extension package output должен иметь расширение .nlext")
+		return nil, errors.New("Выходной файл пакета расширения должен иметь расширение .nlext")
 	}
 	outputAbs, err := filepath.Abs(filepath.Clean(outputPath))
 	if err != nil {
@@ -280,7 +280,7 @@ func packExtensionPackage0202(sourceDir, outputPath string) (map[string]any, err
 		payload.TotalBytes += entry.Size
 		if payload.TotalBytes > extensionPackageMaxTotalBytes0202 {
 			_ = zw.Close()
-			return nil, fmt.Errorf("extension payload превышает лимит %d bytes", extensionPackageMaxTotalBytes0202)
+			return nil, fmt.Errorf("Данные расширения превышают ограничение в %d байт", extensionPackageMaxTotalBytes0202)
 		}
 	}
 
@@ -402,11 +402,11 @@ func collectExtensionPayload0202(root, outputAbs string) ([]extensionPackageSour
 		}
 		seen[fold] = packagePath
 		if info.Size() > extensionPackageMaxSingleFile0202 {
-			return fmt.Errorf("payload file %s превышает лимит %d bytes", rel, extensionPackageMaxSingleFile0202)
+			return fmt.Errorf("Файл данных %s превышает ограничение в %d байт", rel, extensionPackageMaxSingleFile0202)
 		}
 		total += info.Size()
 		if total > extensionPackageMaxTotalBytes0202 {
-			return fmt.Errorf("extension payload превышает лимит %d bytes", extensionPackageMaxTotalBytes0202)
+			return fmt.Errorf("Данные расширения превышают ограничение в %d байт", extensionPackageMaxTotalBytes0202)
 		}
 		files = append(files, extensionPackageSourceFile0202{Rel: rel, Abs: currentAbs, Mode: normalizedExtensionMode0202(info.Mode()), Size: info.Size()})
 		if len(files) > extensionPackageMaxFiles0202 {
@@ -507,7 +507,7 @@ func writeDeterministicZipSource0202(zw *zip.Writer, src extensionPackageSourceF
 		return ExtensionPackageFile0202{}, fmt.Errorf("Файл пакета изменился во время упаковки: %s", src.Rel)
 	}
 	if opened.Size() > extensionPackageMaxSingleFile0202 {
-		return ExtensionPackageFile0202{}, fmt.Errorf("payload file %s превышает лимит %d bytes", src.Rel, extensionPackageMaxSingleFile0202)
+		return ExtensionPackageFile0202{}, fmt.Errorf("Файл данных %s превышает ограничение в %d байт", src.Rel, extensionPackageMaxSingleFile0202)
 	}
 	archiveName := extensionPackagePayloadPrefix0202 + src.Rel
 	header := &zip.FileHeader{Name: archiveName, Method: zip.Deflate}
@@ -1038,7 +1038,7 @@ func signExtensionPackage0202(packagePath, outputPath, privateKeyPath string, fo
 		return nil, err
 	}
 	if strings.ToLower(filepath.Ext(outputPath)) != ".nlext" {
-		return nil, errors.New("extension package output должен иметь расширение .nlext")
+		return nil, errors.New("Выходной файл пакета расширения должен иметь расширение .nlext")
 	}
 	outputAbs, err := filepath.Abs(filepath.Clean(outputPath))
 	if err != nil {

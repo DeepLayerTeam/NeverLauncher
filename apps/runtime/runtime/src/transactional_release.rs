@@ -951,11 +951,11 @@ mod tests {
         commit(&root,next,&key,&staged(&root,&new,&[("mods/new.jar",b"SIGNED_NEW"),("libraries/base.jar",b"BASE")])).unwrap();
         assert!(!root.join("mods/old.jar").exists());
         assert_eq!(fs::read(root.join("mods/new.jar")).unwrap(),b"SIGNED_NEW");
-        for (path,bytes) in player {assert_eq!(fs::read(root.join(path)).unwrap(),bytes,"changed user file: {path}");}
+        for (path,bytes) in player {assert_eq!(fs::read(root.join(path)).unwrap(),bytes,"Пользовательский файл изменён: {path}");}
         rollback(&root,&key).await.unwrap();
         assert_eq!(fs::read(root.join("mods/old.jar")).unwrap(),b"SIGNED_OLD");
         assert!(!root.join("mods/new.jar").exists());
-        for (path,bytes) in player {assert_eq!(fs::read(root.join(path)).unwrap(),bytes,"rollback changed user file: {path}");}
+        for (path,bytes) in player {assert_eq!(fs::read(root.join(path)).unwrap(),bytes,"Откат изменил пользовательский файл: {path}");}
         let _=fs::remove_dir_all(&root);
     }
     #[test]

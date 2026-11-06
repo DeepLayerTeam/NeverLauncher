@@ -49,7 +49,7 @@ def private_json(path):
         first = os.fstat(f.fileno())
         require((first.st_dev, first.st_ino, first.st_size, first.st_mtime_ns, first.st_nlink)
                 == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_nlink),
-                'private input replaced before reading')
+                'Закрытые входные данные подменены до чтения')
         data = f.read(131073)
         last = os.fstat(f.fileno())
         require(len(data) == st.st_size and
@@ -70,7 +70,7 @@ def private_json(path):
 def sha_file(name, *, max_size=8 << 30):
     require(type(name) is str and name.startswith('/'), 'Требуется абсолютный путь к файлу')
     path = Path(name)
-    require(not any(p.is_symlink() for p in (path, *path.parents)), 'linked file path')
+    require(not any(p.is_symlink() for p in (path, *path.parents)), 'Путь к файлу является символической ссылкой')
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= max_size,
             'Недопустимый исходный файл или ссылка вместо файла')

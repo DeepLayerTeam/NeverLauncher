@@ -89,12 +89,12 @@ func (s Server) authPasskeyRegisterBegin117(w http.ResponseWriter, r *http.Reque
 	}
 	challenge, err := newChallengeBytes117()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать WebAuthn challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос проверки WebAuthn")
 		return
 	}
 	token, err := s.State.Passkeys.createChallenge(user.ID, "passkey-register", challenge, map[string]any{"sessionId": claims.SessionID})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить WebAuthn challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос проверки WebAuthn")
 		return
 	}
 	exclude := make([]map[string]any, 0)
@@ -118,7 +118,7 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 	}
 	tx, err := s.State.Passkeys.consumeChallenge(req.TransactionToken, "passkey-register")
 	if err != nil || tx.UserID != claims.Sub || metadataString117(tx.Metadata, "sessionId") != claims.SessionID {
-		writeError(w, http.StatusUnauthorized, "WebAuthn transaction недействительна или истекла")
+		writeError(w, http.StatusUnauthorized, "Транзакция WebAuthn недействительна или срок её действия истёк")
 		return
 	}
 	rawID, clientData, attObj, err := decodeRegistrationCredential117(req.Credential)
@@ -162,12 +162,12 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 func (s Server) authPasskeyLoginBegin117(w http.ResponseWriter, r *http.Request) {
 	challenge, err := newChallengeBytes117()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать WebAuthn challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос проверки WebAuthn")
 		return
 	}
 	token, err := s.State.Passkeys.createChallenge("", "passkey-login", challenge, nil)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить WebAuthn challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос проверки WebAuthn")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"transactionToken": token, "expiresInSeconds": int(webauthnChallengeTTL117.Seconds()), "publicKey": s.passkeyAssertionOptions117(challenge, "")}})
@@ -181,7 +181,7 @@ func (s Server) authPasskeyLoginComplete117(w http.ResponseWriter, r *http.Reque
 	}
 	tx, err := s.State.Passkeys.consumeChallenge(req.TransactionToken, "passkey-login")
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "WebAuthn transaction недействительна или истекла")
+		writeError(w, http.StatusUnauthorized, "Транзакция WebAuthn недействительна или срок её действия истёк")
 		return
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, "")

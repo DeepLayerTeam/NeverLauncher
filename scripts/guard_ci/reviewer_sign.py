@@ -38,7 +38,7 @@ def sign(root: Path, key_path: Path, reviewer: str, publisher: str, commit: str,
            'files': evidence_inventory(root)}
     raw = json.dumps(doc, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
     sig = private.sign(DOMAIN + raw)
-    require(not output.exists() and not signature.exists(), 'never overwrite prior independent review')
+    require(not output.exists() and not signature.exists(), 'Нельзя перезаписывать предыдущий результат независимой проверки')
     output.parent.mkdir(parents=True, exist_ok=True)
     signature.parent.mkdir(parents=True, exist_ok=True)
     for path, content in ((output, raw), (signature, sig)):

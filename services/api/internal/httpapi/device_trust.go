@@ -276,7 +276,7 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 	expires := now.Add(deviceChallengeTTL0121)
 	entry := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: deviceID, Purpose: "register", ChallengeHash: deviceChallengeHash0121(challenge), Metadata: map[string]any{"sessionId": claims.SessionID, "name": name, "platform": platform, "clientVersion": clientVersion, "keyAlgorithm": keyAlgorithm, "keyBinding": keyBinding, "hardwareProvider": hardwareProvider}, CreatedAt: now, ExpiresAt: expires}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить device challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос проверки устройства")
 		return
 	}
 	payload := deviceProofPayload0121("register", challenge, claims.Sub, deviceID, claims.SessionID)
@@ -298,12 +298,12 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, req.DeviceID, "register", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "device challenge недействителен, истёк или уже использован")
+		writeError(w, http.StatusUnauthorized, "Запрос проверки устройства недействителен, просрочен или уже использован")
 		return
 	}
 	sessionID := metadataString0121(ch.Metadata, "sessionId")
 	if sessionID == "" || sessionID != claims.SessionID {
-		writeError(w, http.StatusUnauthorized, "device challenge создан для другой сессии")
+		writeError(w, http.StatusUnauthorized, "Запрос проверки устройства создан для другой сессии")
 		return
 	}
 	keyAlgorithm, keyBinding, hardwareProvider, err := normalizeDeviceKeyProperties0123(metadataString0121(ch.Metadata, "keyAlgorithm"), metadataString0121(ch.Metadata, "keyBinding"), metadataString0121(ch.Metadata, "hardwareProvider"))
@@ -342,7 +342,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 		// Параллельная привязка не должна оставлять вторую активную идентичность
 		// устройства.
 		_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, device.ID, "registration-binding-conflict")
-		writeError(w, http.StatusConflict, "сессия уже привязана; используйте key rotation или recovery")
+		writeError(w, http.StatusConflict, "Сессия уже привязана; используйте смену ключа или восстановление")
 		return
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
@@ -371,7 +371,7 @@ func (s Server) authDeviceVerifyBegin0121(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); !ok || session.TrustedDeviceID != "" || session.DeviceTrustState != "unverified" {
-		writeError(w, http.StatusConflict, "сессия уже привязана; используйте key rotation или recovery")
+		writeError(w, http.StatusConflict, "Сессия уже привязана; используйте смену ключа или восстановление")
 		return
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
@@ -394,7 +394,7 @@ func (s Server) authDeviceVerifyBegin0121(w http.ResponseWriter, r *http.Request
 	expires := now.Add(deviceChallengeTTL0121)
 	entry := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: device.ID, Purpose: "session-bind", ChallengeHash: deviceChallengeHash0121(challenge), Metadata: map[string]any{"sessionId": claims.SessionID}, CreatedAt: now, ExpiresAt: expires}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить device challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос проверки устройства")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"challengeId": challengeID, "deviceId": device.ID, "challenge": challenge, "expiresAt": expires, "keyAlgorithm": device.KeyAlgorithm, "keyBinding": device.KeyBinding, "hardwareProvider": device.HardwareProvider, "signingPayload": deviceProofPayload0121("session-bind", challenge, claims.Sub, device.ID, claims.SessionID)}})
@@ -429,12 +429,12 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, deviceID, "session-bind", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "device challenge недействителен, истёк или уже использован")
+		writeError(w, http.StatusUnauthorized, "Запрос проверки устройства недействителен, просрочен или уже использован")
 		return
 	}
 	sessionID := metadataString0121(ch.Metadata, "sessionId")
 	if sessionID != claims.SessionID {
-		writeError(w, http.StatusUnauthorized, "device challenge создан для другой сессии")
+		writeError(w, http.StatusUnauthorized, "Запрос проверки устройства создан для другой сессии")
 		return
 	}
 	payload := deviceProofPayload0121("session-bind", req.Challenge, claims.Sub, deviceID, sessionID)

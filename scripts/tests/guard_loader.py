@@ -99,7 +99,7 @@ class GuardLoaderLiveJVM0504(unittest.TestCase):
         self.assertEqual(good.returncode,0,good.stderr)
         wrong=self.invoke('fabric','fabric',['fabric'],class_sha='0'*64)
         self.assertNotEqual(wrong.returncode,0)
-        self.assertIn('loader class-byte mismatch',wrong.stderr)
+        self.assertIn('Байткод классов загрузчика не совпадает',wrong.stderr)
 
     def test_reject_wrong_loader(self):
         result=self.invoke('fabric','quilt',['quilt'])
@@ -114,7 +114,7 @@ class GuardLoaderLiveJVM0504(unittest.TestCase):
     def test_reject_missing_loader_binding(self):
         result=self.invoke('fabric','fabric',[],available=['fabric'])
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('loader sources missing',result.stderr)
+        self.assertIn('Исходники загрузчика отсутствуют',result.stderr)
 
     def test_reject_vanilla_mixin(self):
         result=self.invoke('vanilla','mixin',[],available=['mixin'])
@@ -124,7 +124,7 @@ class GuardLoaderLiveJVM0504(unittest.TestCase):
     def test_reject_tampered_loader_before_main(self):
         result=self.invoke('fabric','fabric',['fabric'],corrupt=True)
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('loader JAR digest changed',result.stderr)
+        self.assertIn('Хеш JAR-файла загрузчика изменился',result.stderr)
 
 
 if __name__ == '__main__':

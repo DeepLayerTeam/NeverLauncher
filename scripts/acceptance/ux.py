@@ -122,7 +122,7 @@ def load_inventory():
         require(
             j.get("operatorStep") == "none"
             or j.get("operatorStep", "").startswith(("advanced:", "prohibited:")),
-            "bad operator work classification: " + ident,
+            "Некорректная классификация работы оператора: " + ident,
         )
         require(
             j.get("verification") == "not-run",
@@ -141,7 +141,7 @@ def load_inventory():
             referenced_file(f)
         require(
             all(str(f).endswith((".go", ".py", ".mjs", ".sh")) for f in j["testRefs"]),
-            "non-executable test ref: " + ident,
+            "Ссылка на невыполняемый тест: " + ident,
         )
         if ident == "M17":
             require(
@@ -151,7 +151,7 @@ def load_inventory():
             )
     require(set(UX) == {f"UX{i:02}" for i in range(1, 13)}, "Сопоставление элементов UX неполное")
     require(
-        all(set(ids) <= set(IDS) and ids for ids in UX.values()), "UX orphan references"
+        all(set(ids) <= set(IDS) and ids for ids in UX.values()), "Неиспользуемые ссылки пользовательского интерфейса"
     )
     return journeys
 

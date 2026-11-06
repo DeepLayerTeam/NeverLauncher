@@ -104,7 +104,7 @@ def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str
     require(a.get('targets') == scan(dir_a) and b.get('targets') == scan(dir_b),
             'подписанные отчёты не соответствуют фактическому содержимому архива')
     require(a['targets'] == b['targets'] and set(a['targets']) == TARGETS,
-            'two independent builds differ in unsigned byte payloads')
+            'Две независимые сборки различаются неподписанными байтовыми данными')
     return {'schema': 'neverlauncher.reproducibility-current-comparison/' + VERSION,
             'version': VERSION, 'commit': commit, 'runId': run_id, 'attempt': attempt,
             'status': 'SIX_UNSIGNED_TARGETS_BYTE_IDENTICAL_NOT_GA',

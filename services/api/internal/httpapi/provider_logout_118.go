@@ -33,7 +33,7 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 	}
 	store, err := s.providerCredentialRepository116()
 	if err != nil {
-		writeError(w, http.StatusNotImplemented, "repository не поддерживает provider credentials")
+		writeError(w, http.StatusNotImplemented, "Репозиторий не поддерживает учётные данные провайдера")
 		return
 	}
 	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, identity.ID)

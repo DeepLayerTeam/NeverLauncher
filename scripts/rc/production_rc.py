@@ -271,7 +271,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
         "sqlite_root": root,
         "toolchain": version.stdout.strip(),
         "suites": receipts,
-        "disclaimer": "Tests are required but not proof of multi-host HA or complete product GA certification.",
+        "disclaimer": "Тесты обязательны, но не подтверждают высокую доступность на нескольких узлах или полную сертификацию продукта для общего выпуска.",
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(

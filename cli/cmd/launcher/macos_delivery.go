@@ -247,7 +247,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 		}
 		actualHash, actualSize, err := hashFile(path)
 		if err != nil {
-			return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s artifact %s: %w", arch, artifact.Name, err)
+			return MacOSPackageManifest0154{}, "", fmt.Errorf("Артефакт macOS %s (%s): %w", arch, artifact.Name, err)
 		}
 		if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
 			return MacOSPackageManifest0154{}, "", fmt.Errorf("Несоответствие: macOS %s артефакт %s checksum/size", arch, artifact.Name)

@@ -279,7 +279,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
 	if _, err := sessionBoundToDevice0124(s, claims, deviceID); err != nil {
-		writeError(w, http.StatusConflict, "текущая сессия не привязана к trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия не привязана к доверенному устройству")
 		return
 	}
 	var req guardAttestationV2BeginRequest0317
@@ -290,12 +290,12 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	req.LauncherVersion = strings.TrimSpace(req.LauncherVersion)
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "Guard Attestation release policy не настроена")
+		writeError(w, http.StatusServiceUnavailable, "Политика релизов для аттестации Guard не настроена")
 		return
 	}
 	policy, ok := policies[req.LauncherVersion]
 	if !ok {
-		writeError(w, http.StatusPreconditionFailed, "эта версия Desktop отсутствует в Guard release allowlist")
+		writeError(w, http.StatusPreconditionFailed, "Эта версия Desktop отсутствует в списке разрешённых релизов Guard")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, deviceID)
@@ -366,7 +366,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
 	if _, err := sessionBoundToDevice0124(s, claims, deviceID); err != nil {
-		writeError(w, http.StatusConflict, "текущая сессия не привязана к trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия не привязана к доверенному устройству")
 		return
 	}
 	var req guardAttestationV2CompleteRequest01810
@@ -378,12 +378,12 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	req.ChallengeExpiresAt = strings.TrimSpace(req.ChallengeExpiresAt)
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "Guard Attestation release policy не настроена")
+		writeError(w, http.StatusServiceUnavailable, "Политика релизов для аттестации Guard не настроена")
 		return
 	}
 	policy, ok := policies[req.LauncherVersion]
 	if !ok {
-		writeError(w, http.StatusPreconditionFailed, "эта версия Desktop отсутствует в Guard release allowlist")
+		writeError(w, http.StatusPreconditionFailed, "Эта версия Desktop отсутствует в списке разрешённых релизов Guard")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, deviceID)
@@ -448,12 +448,12 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	}
 	ticketID, err := randomToken("ngctid")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить Continuous Guard ticket")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить билет непрерывной проверки Guard")
 		return
 	}
 	ticketSecret, err := randomToken("ngct")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить Continuous Guard ticket")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить билет непрерывной проверки Guard")
 		return
 	}
 	ticketExpires := canonicalGuardAttestationTime0134(now.Add(guardContinuousJoinTTL01810))

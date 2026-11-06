@@ -41,7 +41,7 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 	}
 	meta := authconnector.NormalizedMetadata(connector.Metadata())
 	if !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
-		writeError(w, http.StatusBadRequest, "auth provider не поддерживает browser linking")
+		writeError(w, http.StatusBadRequest, "Провайдер аутентификации не поддерживает привязку через браузер")
 		return
 	}
 	var req oidcBeginRequest115
@@ -93,7 +93,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	}
 	meta := authconnector.NormalizedMetadata(connector.Metadata())
 	if !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
-		writeError(w, http.StatusBadRequest, "auth provider не поддерживает browser linking")
+		writeError(w, http.StatusBadRequest, "Провайдер аутентификации не поддерживает привязку через браузер")
 		return
 	}
 	var req oidcCompleteRequest115

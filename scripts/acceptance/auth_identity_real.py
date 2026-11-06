@@ -310,7 +310,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     list_a = api.request('GET','/api/v1/minecraft/official/link',token=local_tokens['accessToken'])
     require(game_uuid in json.dumps(list_a).lower(), 'Связь с официальной учётной записью не сохранена надёжно')
     list_b = api.request('GET','/api/v1/minecraft/official/link',token=secondary_tokens['accessToken'])
-    require(game_uuid not in json.dumps(list_b).lower(), 'official UUID leaked into a different owner listing')
+    require(game_uuid not in json.dumps(list_b).lower(), 'Официальный UUID появился в списке другого владельца')
     record(report,'AUTH-OFFICIAL-UUID-OWNERSHIP')
     expect_denied(api,'POST','/api/v1/minecraft/official/link', token=secondary_tokens['accessToken'],
                   data={'minecraftAccessToken':official['accessToken'],'expectedUuid':game_uuid,'confirm':True},codes=(409,))
@@ -330,7 +330,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     # Очистка — настоящая привилегированная операция, а не сброс состояния тестовым кодом.
     api.request('DELETE','/api/v1/minecraft/official/link/'+game_uuid,token=local_tokens['accessToken'])
     removed = api.request('GET','/api/v1/minecraft/official/link',token=local_tokens['accessToken'])
-    require(game_uuid not in json.dumps(removed).lower(), 'official link persisted after owner unlink')
+    require(game_uuid not in json.dumps(removed).lower(), 'Официальная привязка сохранилась после отвязки владельцем')
     record(report,'AUTH-OFFICIAL-UNLINK-PERSISTENCE')
     refresh = api.request('POST','/api/v1/auth/refresh',data={'refreshToken':local_tokens['refreshToken']})['data']['tokens']
     require(isinstance(refresh.get('refreshToken'),str) and refresh['refreshToken'] != local_tokens['refreshToken'],

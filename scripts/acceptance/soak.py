@@ -75,7 +75,7 @@ def copy_selected(raw: Path, destination: Path, names):
     require(len(names) == len(set(names)) and len(names) <= 100, 'Небезопасный список файлов подтверждения')
     for name in names:
         require(isinstance(name, str) and re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}',name),
-                'untrusted evidence basename')
+                'Недоверенное имя файла свидетельства проверки')
         source = raw / name
         inventory.safe_file(source, MAX_LOG)
         shutil.copyfile(source, destination / name)
@@ -172,7 +172,7 @@ def game(args):
             rc = run_game_subprocess(log, env, args.session_timeout)
             require(log.stat().st_size <= MAX_LOG, 'Размер игрового журнала превышает лимит')
             require(not re.search(rb'(?i)(authorization:\s*bearer\s+\S+|refresh[_ -]?token\s*[=:]\s*\S+)',
-                                  log.read_bytes()), 'unredacted secrets in game runner output')
+                                  log.read_bytes()), 'В выводе запуска игры обнаружены нескрытые секреты')
             require(rc == 0, f'Реальные клиент/сервер завершились ошибкой (сеанс {i+1}): {rc}')
             verified = session_archive(target, sample, args)
             receipt['sessions'].append({'session': i+1, 'seconds': round(time.monotonic()-start,3),

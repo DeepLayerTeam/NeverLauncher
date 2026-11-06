@@ -865,7 +865,7 @@ impl IdentityManager {
         Ok(())
     }
     fn native_pending_remove(&self, id: &str) -> Result<(),String> {
-        let previous = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.remove(id);
+        let previous = self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.remove(id);
         if let Some(flow) = previous { let _ = flow.cancel.send(true); }
         Ok(())
     }
@@ -878,7 +878,7 @@ impl IdentityManager {
         // должны действовать даже во время первых сетевых обращений.
         let nonce=rand::random::<u64>();
         let (cancel,_) = watch::channel(false);
-        self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.insert(id.clone(),NativePending0265 {
+        self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.insert(id.clone(),NativePending0265 {
             client_id:String::new(),device:Zeroizing::new(String::new()),grant:None,
             next:Instant::now(),expires:Instant::now()+Duration::from_secs(1800),
             nonce,in_flight:true,failures:0,interval:5,cancel,
@@ -889,11 +889,11 @@ impl IdentityManager {
             if config.data.get("enabled").and_then(Value::as_bool) == Some(false) || config.data.get("deviceEnabled").and_then(Value::as_bool) == Some(false) { return Err("Device Code запрещён политикой игрового провайдера".into()); }
             let client_id = config.data.get("clientId").and_then(Value::as_str)
                 .filter(|s|official_browser_0263::valid_client_id(s)).ok_or("Microsoft Client ID не настроен")?.to_owned();
-            if !self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.get(&id).is_some_and(|f|f.nonce==nonce) {
+            if !self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.get(&id).is_some_and(|f|f.nonce==nonce) {
                 return Err("Microsoft-авторизация отменена".into());
             }
             let challenge = self.provider.device_begin(&client_id).await.map_err(|e|e.message().to_string())?;
-            let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
             let flow=flows.get_mut(&id).filter(|v|v.nonce==nonce).ok_or("Microsoft-авторизация отменена")?;
             let interval=challenge.interval;
             let expires_in=challenge.expires_in;
@@ -907,7 +907,7 @@ impl IdentityManager {
                 interval_seconds:interval,expires_in})
         }.await;
         if result.is_err() {
-            let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
             if flows.get(&id).is_some_and(|v|v.nonce==nonce) {flows.remove(&id);}
         }
         result
@@ -915,7 +915,7 @@ impl IdentityManager {
     pub async fn native_poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult,String> {
         let (base,id) = self.verified_scope(backend,access,session).await?;
         let (client_id,device,nonce,prior_grant) = {
-            let mut flows = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            let mut flows = self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
             let flow = flows.get_mut(&id).ok_or("Нет Device Code авторизации")?;
             if Instant::now() >= flow.expires { flows.remove(&id);return Err("Microsoft Device Code истёк".into()); }
             if flow.in_flight {return Err("Microsoft polling или Device Code initialization уже выполняется".into());}
@@ -945,7 +945,7 @@ impl IdentityManager {
             Some(self.verified_native_grant(&client_id,microsoft.as_ref().unwrap()).await)
         } else {None};
         let _vault=self.vault_lock.lock().await;
-        let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+        let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
         if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
         {
             let flow=flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
@@ -959,7 +959,7 @@ impl IdentityManager {
             let current = match self.request(&base,access,"/browser/config",Method::GET,None,None,None).await {
                 Ok(response) => response,
                 Err(error) if retryable_backend_0396(&error) => {
-                    let mut flows = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+                    let mut flows = self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
                     let flow = flows.get_mut(&id).filter(|f| f.nonce == nonce)
                         .ok_or("Microsoft-авторизация отменена")?;
                     flow.grant = microsoft; // НЕ использовать Microsoft Device Code для повторного обмена на токен
@@ -969,19 +969,19 @@ impl IdentityManager {
                     return Ok(PollResult {pending:true,profile:None,interval_seconds:Some(delay)});
                 },
                 Err(error) => {
-                    self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.remove(&id);
+                    self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.remove(&id);
                     return Err(error);
                 },
             };
             if let Err(error) = verify_session_binding_0396(&current.data, session) {
-                self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.remove(&id);
+                self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.remove(&id);
                 return Err(error);
             }
             if current.data.get("enabled").and_then(Value::as_bool) == Some(false) || current.data.get("deviceEnabled").and_then(Value::as_bool) == Some(false) || current.data.get("clientId").and_then(Value::as_str) != Some(client_id.as_str()) {
-                self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.remove(&id);
+                self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.remove(&id);
                 return Err("Device Code запрещён или Client ID изменился".into());
             }
-            let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
             if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
             let (profile,account)=completed.unwrap().unwrap();
             // Ошибка записи учётных данных в ОС не должна требовать повторного использования
@@ -1024,11 +1024,11 @@ impl IdentityManager {
     }
     pub async fn native_wait_device(&self, backend:&str,access:&str,session:&str) -> Result<OfficialProfile,String> {
         let (_,id)=self.verified_scope(backend,access,session).await?;
-        let mut cancel=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?
+        let mut cancel=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?
             .get(&id).ok_or("Нет Device Code авторизации")?.cancel.subscribe();
         loop {
             let sleep_for={
-                let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+                let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
                 let flow=flows.get(&id).ok_or("Microsoft-авторизация отменена")?;
                 if Instant::now()>=flow.expires {flows.remove(&id);return Err("Microsoft Device Code истёк".into());}
                 flow.next.saturating_duration_since(Instant::now()).min(flow.expires.saturating_duration_since(Instant::now()))

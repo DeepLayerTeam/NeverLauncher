@@ -237,7 +237,7 @@ fn validate_hardware_record(record: &SecureDeviceKeyRecord) -> Result<(SignerHan
     let public = signer.public_key(&record.hardware_label)
         .map_err(|e| format!("не удалось получить hardware public key: {e}"))?;
     if public.len() != 65 || public[0] != 0x04 {
-        return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
+        return Err("Аппаратный модуль подписи вернул некорректный открытый ключ SEC1 P-256".into());
     }
     let public_b64 = URL_SAFE_NO_PAD.encode(&public);
     let fingerprint = hex::encode(Sha256::digest(&public));
@@ -353,7 +353,7 @@ fn try_new_hardware_record_with_generation(backend_url: &str, user_id: &str, gen
     let public = signer.public_key(&label).map_err(|e| format!("Ошибка: чтение аппаратного публичного ключа: {e}"))?;
     if public.len() != 65 || public[0] != 0x04 {
         let _ = signer.delete_key(&label);
-        return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
+        return Err("Аппаратный модуль подписи вернул некорректный открытый ключ SEC1 P-256".into());
     }
     Ok(SecureDeviceKeyRecord {
         schema_version: DEVICE_KEY_SCHEMA_VERSION.into(), user_id: user_id.to_string(), public_key: URL_SAFE_NO_PAD.encode(&public),
@@ -833,7 +833,7 @@ pub fn staged_device_key_status(backend_url: &str, user_id: &str) -> Result<Opti
 pub fn sign_staged_device_replacement(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(user_id)?;
     let lines = validate_device_replacement_payload(payload, &user)?;
-    let mut record = load_staged_record(backend_url, &user)?.ok_or_else(|| "staged device key отсутствует".to_string())?;
+    let mut record = load_staged_record(backend_url, &user)?.ok_or_else(|| "Подготовленный ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     if lines[8] != format!("new-fingerprint={}", record.fingerprint)
         || lines[9] != format!("new-algorithm={}", record.key_algorithm)
@@ -863,7 +863,7 @@ pub fn commit_staged_device_key(backend_url: &str, user_id: &str, device_id: &st
     let user = normalize_user_id(user_id)?;
     let device_id = device_id.trim();
     if device_id.is_empty() || device_id.len() > 160 { return Err("replacement deviceId обязателен".into()); }
-    let mut staged = load_staged_record(backend_url, &user)?.ok_or_else(|| "staged device key отсутствует".to_string())?;
+    let mut staged = load_staged_record(backend_url, &user)?.ok_or_else(|| "Подготовленный ключ устройства отсутствует".to_string())?;
     validate_record(&mut staged)?;
     let old = load_record(backend_url, &user)?;
     staged.device_id = Some(device_id.to_string());

@@ -448,7 +448,7 @@ impl GuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ensure_started(&self) -> Result<GuardStatus, String> {
-        Err("Guard 0.13.4 Windows policy boundary реализован только для Windows".to_string())
+        Err("Граница политики Windows для Guard 0.13.4 реализована только в Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -467,7 +467,7 @@ impl GuardSupervisor {
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
-            .ok_or_else(|| "Guard process boundary не инициализирован".to_string())?;
+            .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         let payload = send_command(handle, "ping").await?;
         if payload.get("pong").and_then(Value::as_bool) == Some(true) {
             Ok(())
@@ -478,7 +478,7 @@ impl GuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ping(&self) -> Result<(), String> {
-        Err("Guard 0.13.4 Windows policy boundary реализован только для Windows".to_string())
+        Err("Граница политики Windows для Guard 0.13.4 реализована только в Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -487,7 +487,7 @@ impl GuardSupervisor {
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
-            .ok_or_else(|| "Guard process boundary не инициализирован".to_string())?;
+            .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         let payload = send_command(handle, "integrity-evidence").await?;
         let evidence: GuardIntegrityEvidence = serde_json::from_value(payload)
             .map_err(|err| format!("Guard integrity evidence payload повреждён: {err}"))?;
@@ -506,7 +506,7 @@ impl GuardSupervisor {
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
-            .ok_or_else(|| "Guard process boundary не инициализирован".to_string())?;
+            .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         let payload = send_command(handle, "process-policy").await?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(payload)
             .map_err(|err| format!("Guard process policy payload повреждён: {err}"))?;
@@ -541,7 +541,7 @@ impl GuardSupervisor {
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
-            .ok_or_else(|| "Guard process boundary не инициализирован".to_string())?;
+            .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         if !handle.protection_profile.is_remote_attestation_eligible() {
             return Err(format!(
                 "Guard: для удалённой аттестации требуется усиленный профиль защиты Windows; текущий профиль: {}",
@@ -623,7 +623,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     let manifest_path = current_dir.join(WINDOWS_PACKAGE_MANIFEST);
     let manifest_link_metadata = std::fs::symlink_metadata(&manifest_path).map_err(|err| {
         format!(
-            "production Windows package manifest отсутствует {}: {err}",
+            "Отсутствует манифест производственного пакета Windows {}: {err}",
             manifest_path.display()
         )
     })?;
@@ -632,7 +632,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     }
     let metadata = std::fs::metadata(&manifest_path).map_err(|err| {
         format!(
-            "production Windows package manifest отсутствует {}: {err}",
+            "Отсутствует манифест производственного пакета Windows {}: {err}",
             manifest_path.display()
         )
     })?;
@@ -1326,7 +1326,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
 
 #[cfg(not(windows))]
 pub async fn run_windows_guard_server(_endpoint: String, _parent_pid: u32) -> Result<(), String> {
-    Err("Guard 0.13.4 Windows policy boundary реализован только для Windows".to_string())
+    Err("Граница политики Windows для Guard 0.13.4 реализована только в Windows".to_string())
 }
 
 #[cfg(windows)]

@@ -24,7 +24,7 @@ from guard_ga_0510 import Blocked, VERSION, TARGETS, LOADERS, COMMIT, require
 def capture(work: Path, paper: Path, username: str, target: str, loader: str, commit: str,
             package: Path, release_bundle: Path) -> dict:
     require(target in TARGETS and loader in LOADERS and bool(COMMIT.fullmatch(commit)),
-            'exact native target, loader and source commit required')
+            'Требуются точная целевая нативная платформа, загрузчик и коммит исходников')
     host_os = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}.get(platform.system())
     host_arch = {'x86_64': 'x64', 'AMD64': 'x64', 'aarch64': 'arm64', 'arm64': 'arm64'}.get(platform.machine())
     require(f'{host_os}-{host_arch}' == target, 'Запись E2E Minecraft необходимо выполнять на целевой платформе')
@@ -34,7 +34,7 @@ def capture(work: Path, paper: Path, username: str, target: str, loader: str, co
     require(package.resolve() == (release_bundle / row['file']).resolve() and package.is_file()
             and not package.is_symlink(), 'Это не точный финальный подписанный установщик')
     from adversarial_pilot_05012 import file_hash
-    require(file_hash(package) == row['sha256'], 'final installer modified after validation')
+    require(file_hash(package) == row['sha256'], 'Готовый установщик изменён после проверки')
     game = verify_game(work, paper, username)
     require(game['loader'] == loader, 'Фактический загрузчик Minecraft отличается от запрошенного')
     require(paper.resolve() == (work / 'paper.log').resolve(),

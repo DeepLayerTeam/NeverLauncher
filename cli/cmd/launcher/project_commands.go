@@ -35,12 +35,12 @@ func handleProject(args []string) error {
 		return errors.New("использование: launcher project validate --target 1.0 project.json | launcher project publish --project demo --channel stable")
 	}
 	if len(args) < 2 {
-		return errors.New("project validate требует путь к project.json")
+		return errors.New("Для проверки проекта требуется путь к project.json")
 	}
 	target := flagValue(args, "--target", "1.0")
 	path := args[len(args)-1]
 	if strings.HasPrefix(path, "--") {
-		return errors.New("project validate требует путь к project.json")
+		return errors.New("Для проверки проекта требуется путь к project.json")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

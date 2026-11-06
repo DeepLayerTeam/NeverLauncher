@@ -75,7 +75,7 @@ class LiveHTTP:
             status, raw = exc.code, exc.read((4 << 20) + 1)
         except (URLError, TimeoutError) as exc:
             raise Blocked('HTTP-подключение к работающей JVM/Backend недоступно: ' + type(exc).__name__) from exc
-        require(len(raw) <= (4 << 20), 'unbounded live HTTP response')
+        require(len(raw) <= (4 << 20), 'Размер ответа действующего HTTP-сервиса не ограничен')
         if isinstance(expected, int):
             expected = (expected,)
         require(status in expected, 'Неожиданный статус реального HTTP-запроса ' + str(status) + ' ' + path)
@@ -149,7 +149,7 @@ def run(cfg, output):
     uuid = good['result'].get('authentication', {}).get('identity', {}).get('subject')
     require(uuid == cfg['testUuid'], 'Реальный Java-провайдер учётных записей изменил UUID')
     wrong = callback(host, token, 'auth.password', {'identifier':cfg['testIdentifier'], 'secret':password+'-wrong'})
-    require(wrong['result'].get('errorCode') == 'invalid_credentials', 'bad password accepted')
+    require(wrong['result'].get('errorCode') == 'invalid_credentials', 'Принят неверный пароль')
     resolved = callback(host, token, 'auth.resolve', {'subject':uuid})
     require(resolved['result'].get('identity', {}).get('subject') == uuid, 'Разрешение учётной записи изменило UUID')
     checks.append('java-auth-identity-live')
@@ -160,7 +160,7 @@ def run(cfg, output):
             'Исходная библиотека Java изменилась или превышает ограничение посредника Java Host в 512 КиБ')
     require(type(cfg.get('libraryPath')) is str and cfg['libraryPath'].startswith(('libraries/','mods/','optional/'))
             and '..' not in cfg['libraryPath'] and '\\' not in cfg['libraryPath'],
-            'library path outside controlled bundle')
+            'Путь к библиотеке выходит за пределы контролируемого пакета')
     asset = callback(host, token, 'content.source.resolve', {'projectId':project, 'path':cfg['libraryPath']})
     require(asset['result'].get('asset', {}).get('sha256') == library_hash,
             'Реальный провайдер не разрешил подтверждённую библиотеку')
@@ -171,12 +171,12 @@ def run(cfg, output):
                     'dataBase64':base64.b64encode(raw.getvalue()).decode()})
     require(pkg['result'].get('requiresSigning') is True, 'Пакет до подписания был ошибочно признан доверенным')
     zipped = base64.b64decode(pkg['result']['dataBase64'], validate=True)
-    require(len(zipped) <= 100 << 20, 'package exceeds acceptance size')
+    require(len(zipped) <= 100 << 20, 'Размер пакета превышает допустимый для приёмки')
     with zipfile.ZipFile(io.BytesIO(zipped)) as z:
-        require(z.read(cfg['libraryPath']) == library.read_bytes(), 'pre-sign package lost authenticated library')
+        require(z.read(cfg['libraryPath']) == library.read_bytes(), 'До подписания пакета потеряна библиотека с проверенной подлинностью')
     denied = callback(host, token, 'content.source.resolve', {'projectId':'different-0528-project',
                      'path':cfg['libraryPath']})
-    require(denied['result'].get('errorCode') == 'content_denied', 'cross-project read accepted')
+    require(denied['result'].get('errorCode') == 'content_denied', 'Разрешено чтение данных другого проекта')
     checks.append('java-content-and-library-live')
     # 3) Настоящий синхронный перехват JVM: успех и отрицательный запрет только при подготовке.
     event_base = {'protocolVersion':'1.0',
@@ -237,7 +237,7 @@ def run(cfg, output):
               'status':'LIVE_CHECKS_PASSED_REVIEW_REQUIRED', 'gaCertified':False,
               'at':datetime.now(timezone.utc).isoformat()}
     require(report['extensionJarSha256'] == cfg.get('extensionJarSha256'), 'JAR установленного расширения изменился')
-    require(not output.exists(), 'refuse overwrite of external acceptance output')
+    require(not output.exists(), 'Запрещена перезапись внешнего результата приёмки')
     fd = os.open(output, os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,'O_NOFOLLOW',0), 0o600)
     with os.fdopen(fd, 'w') as f:
         json.dump(report, f, sort_keys=True, indent=2)
