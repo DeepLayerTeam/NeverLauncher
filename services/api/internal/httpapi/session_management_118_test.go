@@ -34,7 +34,7 @@ func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		t.Fatalf("expected compact JWT, got %q", token)
+		t.Fatalf("Ожидался компактный JWT, получено %q", token)
 	}
 	raw, _ := base64.RawURLEncoding.DecodeString(parts[0])
 	var header authTokenHeader118
@@ -47,7 +47,7 @@ func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	}
 	s.Config.AuthTokenActiveKID = "new"
 	if _, err := s.verifyAdminToken(token); err != nil {
-		t.Fatalf("old token must verify while old key remains in keyring: %v", err)
+		t.Fatalf("Старый токен должен проходить проверку, пока прежний ключ есть в хранилище: %v", err)
 	}
 	newToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	raw, _ = base64.RawURLEncoding.DecodeString(strings.Split(newToken, ".")[0])
 	_ = json.Unmarshal(raw, &header)
 	if header.Kid != "new" {
-		t.Fatalf("new active kid not used: %#v", header)
+		t.Fatalf("Не используется новый активный идентификатор ключа kid: %#v", header)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestSessionManagement118RiskRenameAndProviderRevoke(t *testing.T) {
 	changed.Header.Set("User-Agent", "UA/2")
 	observed, ok := store.observe(first.ID, user.ID, changed)
 	if !ok || observed.RiskState != "elevated" || len(observed.RiskReasons) != 2 {
-		t.Fatalf("risk not elevated: %#v", observed)
+		t.Fatalf("Уровень риска не повышен: %#v", observed)
 	}
 	if got := store.revokeFiltered118("", "oidc-main", "", "compromised-provider:oidc-main"); got != 1 {
 		t.Fatalf("provider revoke=%d", got)
@@ -96,9 +96,9 @@ func TestSessionManagement118RiskRenameAndProviderRevoke(t *testing.T) {
 		}
 	}
 	if !compromised {
-		t.Fatalf("provider session not marked compromised: %#v", items)
+		t.Fatalf("Сессия поставщика не помечена как скомпрометированная: %#v", items)
 	}
 	if _, ok := store.get(second.ID, user.ID); !ok {
-		t.Fatal("unrelated local session must stay active")
+		t.Fatal("Посторонняя локальная сессия должна оставаться активной")
 	}
 }

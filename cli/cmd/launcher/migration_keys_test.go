@@ -37,7 +37,7 @@ func TestGenerateNeverMigrationKeys0336(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(keys.JWTKeys[keys.JWTKeyID]) != 64 || len(keys.ManifestEd25519Seed) != 64 || len(keys.ManifestPublicSHA256) != 64 || keys.JWTKeys[keys.JWTKeyID] == keys.ManifestEd25519Seed {
-		t.Fatal("invalid/identical secret output")
+		t.Fatal("Секретный материал недопустим или совпадает с исходным")
 	}
 	if err = generateNeverMigrationKeys0336(path); err == nil {
 		t.Fatal("secret file overwritten")

@@ -141,7 +141,7 @@ require(
 for forbidden in ["ProcessBuilder", "Runtime.getRuntime().exec", "/bin/sh", "cmd.exe"]:
     if forbidden in vanilla or forbidden in rcon:
         raise SystemExit(
-            f"Vanilla sidecar contains forbidden shell execution: {forbidden}"
+            f"Вспомогательный процесс Vanilla содержит запрещённый запуск командной оболочки: {forbidden}"
         )
 migration = read(
     "services/api/internal/dbmigrate/sql/0039_universal_server_adapters_0198.sql"
@@ -196,5 +196,5 @@ require(
     "OpenAPI platform enum",
 )
 print(
-    "ServerBridge Universal Server Adapters 0.19.8+ production gate: OK (14 adapters; hybrid cohort fail-closed)"
+    "Проверка производственного релиза универсальных серверных адаптеров ServerBridge 0.19.8+: OK (14 адаптеров, гибридные конфигурации отклоняются)"
 )

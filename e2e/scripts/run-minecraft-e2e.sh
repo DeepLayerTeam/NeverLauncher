@@ -274,7 +274,7 @@ materialize_pinned_bytesocks_dependency() {
   local source_dir="$RUNTIME_DIR/bytesocks-source" maven_repo="$RUNTIME_DIR/spark-build-maven"
   local resolved_commit build_jar installed_jar artifact_sha maven_dir
 
-  printf '[e2e] подготовка закреплённой совместимой версии bytesocks %s from %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
+  printf '[e2e] Подготовка закреплённой совместимой версии bytesocks %s из %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$BYTESOCKS_SOURCE_REPOSITORY"
@@ -290,7 +290,7 @@ materialize_pinned_bytesocks_dependency() {
     echo "[e2e] в закреплённом источнике bytesocks отсутствует channelId API" >&2; return 1;
   }
   grep -Fq '<artifactId>Java-WebSocket</artifactId>' "$source_dir/pom.xml" || {
-    echo "[e2e] в закреплённом источнике bytesocks отсутствует Java-WebSocket dependency" >&2; return 1;
+    echo "[e2e] В закреплённом источнике bytesocks отсутствует зависимость Java-WebSocket" >&2; return 1;
   }
   grep -Fq '<version>1.5.4</version>' "$source_dir/pom.xml" || {
     echo "[e2e] в закреплённом источнике bytesocks неожиданная версия Java-WebSocket" >&2; return 1;
@@ -380,7 +380,7 @@ gradle.beforeProject { project ->
 }
 GRADLE
 
-  printf '[e2e] подготовка закреплённого spark-paper %s from %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
+  printf '[e2e] Подготовка закреплённой версии spark-paper %s из %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$SPARK_SOURCE_REPOSITORY"
@@ -466,7 +466,7 @@ gradle.beforeProject { project ->
 }
 GRADLE
 
-  printf '[e2e] подготовка закреплённой Folia %s runtime from %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
+  printf '[e2e] Подготовка закреплённого Runtime Folia %s из %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
   rm -rf "$source_dir"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$FOLIA_SOURCE_REPOSITORY"
@@ -556,7 +556,7 @@ curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -
 LOGIN="$(curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
 ACCESS_TOKEN="$(jq -er '.token' <<<"$LOGIN")"
 
-printf '[e2e] привязка канонического сеанса Launcher к реальному доверенному ключу устройства Ed25519 for 0.12.7 gameplay trust\n'
+printf '[e2e] Привязка канонической сессии Launcher к реальному доверенному ключу устройства Ed25519 для игрового доверия версии 0.12.7\n'
 DEVICE_KEY="$RUNTIME_DIR/device-trust-ed25519.pem"
 DEVICE_MESSAGE="$RUNTIME_DIR/device-trust-message.bin"
 DEVICE_SIGNATURE="$RUNTIME_DIR/device-trust-signature.bin"
@@ -575,7 +575,7 @@ DEVICE_COMPLETE="$(jq -cn \
   '{challengeId:$challengeId,deviceId:$deviceId,challenge:$challenge,publicKey:$publicKey,signature:$signature}')"
 ACCESS_TOKEN="$(json_post "$API/api/v1/auth/devices/register/complete" "$ACCESS_TOKEN" "$DEVICE_COMPLETE" | jq -er '.data.accessToken')"
 
-printf '[e2e] регистрация реального ключа доступа WebAuthn P-256 for fresh release-publish step-up\n'
+printf '[e2e] Регистрация реального ключа доступа WebAuthn P-256 для дополнительной проверки перед публикацией релиза\n'
 PASSKEY_STATE="$RUNTIME_DIR/publish-passkey-state.json"
 PASSKEY_KEY="$RUNTIME_DIR/publish-passkey-p256.pem"
 PASSKEY_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$ACCESS_TOKEN" '{}')"
@@ -656,7 +656,7 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] запуск основных сред Paper и Velocity; auxiliary bridge runtimes are certified sequentially to keep CI memory bounded\n'
+  printf '[e2e] Запуск основных сред Paper и Velocity; вспомогательные Runtime мостов проверяются последовательно во избежание превышения памяти CI\n'
   compose up -d velocity paper
   SERVICES=(velocity paper)
 else
@@ -1231,7 +1231,7 @@ if [[ "$MODE" == "full" ]]; then
   jq -c '.checks.liveServerBridgeCore = true | .evidence += ["live-matrix-core-04113.json"]' \
     "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-04113-tmp.json"
   mv "$RUNTIME_DIR/result-04113-tmp.json" "$RUNTIME_DIR/result.json"
-  echo '[e2e] проверки реальной JVM и сети пройдены for 10 core targets; bukkit/quilt/sponge/vanilla are NOT certified by this suite' >&2
+  echo '[e2e] Проверки реальной JVM и сети пройдены для 10 основных целей; Bukkit/Quilt/Sponge/Vanilla не сертифицируются этим набором' >&2
 fi
 # 0.50.12: сохраните реальный журнал Paper, пока Docker ещё работает. Должны
 # присутствовать и разрешение ServerBridge на вход, и настоящее соединение

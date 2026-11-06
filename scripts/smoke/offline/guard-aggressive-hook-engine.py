@@ -23,7 +23,7 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 4):
         raise SystemExit(
-            f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: VERSION is {version}"
+            f"[Launcher] Проверка агрессивного движка перехватов I 0.18.4: версия {version}"
         )
 
     engine = read("runtime/guard-sensor/src/hook_engine.rs")
@@ -86,7 +86,7 @@ def main() -> int:
     ):
         if forbidden in engine:
             raise SystemExit(
-                f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: cross/global-process primitive forbidden: {forbidden}"
+                f"[Launcher] Проверка агрессивного движка перехватов I 0.18.4: запрещена межпроцессная или общепроцессная операция {forbidden}"
             )
 
     require(
@@ -187,7 +187,7 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Проверка агрессивного движка перехватов I 0.18.4: заглушка {forbidden!r} в {path}"
                 )
 
     print("[Launcher] Aggressive Hook Engine I 0.18.4: проверка: OK")

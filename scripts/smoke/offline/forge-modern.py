@@ -64,13 +64,13 @@ for minecraft, java_major in expected.items():
     expected_scope = "integration" if minecraft == "1.21.1" else "client"
     if row.get("javaMajor") != java_major or row.get("scope") != expected_scope:
         raise SystemExit(
-            f"Forge {minecraft} must be Java {java_major} scope={expected_scope}"
+            f"Forge {minecraft} должен использовать Java {java_major}, область={expected_scope}"
         )
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
         raise SystemExit(f"Для Forge {minecraft} требуется сертификация на linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
         raise SystemExit(
-            f"Forge {minecraft} must resolve latest-stable at execution time"
+            f"Для Forge {minecraft} последняя стабильная версия должна определяться во время выполнения"
         )
 
 runtime = read("cli/cmd/launcher/forge_runtime.go")
@@ -200,5 +200,5 @@ require(
 )
 
 print(
-    f"Forge Modern 0.17.3 gate: OK ({len(forge_rows)} processor-based Forge releases, 1.13.2..26.3, Java 8/16/17/21/25)"
+    f"Проверка современного Forge 0.17.3: OK ({len(forge_rows)} релизов Forge с обработчиками, 1.13.2..26.3, Java 8/16/17/21/25)"
 )

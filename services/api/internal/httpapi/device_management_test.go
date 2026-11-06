@@ -47,7 +47,7 @@ func registerSoftwareDevice0125(t *testing.T, h http.Handler, loginLabel, name s
 	device, _ := data["device"].(map[string]any)
 	id, _ := device["id"].(string)
 	if trusted == "" || id == "" {
-		t.Fatalf("incomplete registration result: %#v", data)
+		t.Fatalf("Неполный результат регистрации: %#v", data)
 	}
 	return registeredDevice0125{ID: id, Access: trusted, Refresh: refresh, Public: pub, Private: priv}
 }
@@ -66,7 +66,7 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 	}
 	list := deviceTrustData0121(t, listOut)
 	if list["currentDeviceId"] != primary.ID || int(list["count"].(float64)) != 2 {
-		t.Fatalf("unexpected device management list: %#v", list)
+		t.Fatalf("Неожиданный список управления устройствами: %#v", list)
 	}
 	items, _ := list["items"].([]any)
 	current := 0
@@ -76,17 +76,17 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 			current++
 		}
 		if item["revocationPermanent"] != true {
-			t.Fatalf("device does not expose permanent revocation semantics: %#v", item)
+			t.Fatalf("Устройство не предоставляет семантику постоянного отзыва: %#v", item)
 		}
 	}
 	if current != 1 {
-		t.Fatalf("expected one current device, got %d: %#v", current, items)
+		t.Fatalf("Ожидалось одно текущее устройство, получено %d: %#v", current, items)
 	}
 
 	unboundAccess, _ := deviceTrustLogin0121(t, h, "management-unbound")
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/revoke-others", unboundAccess, map[string]any{})
 	if code != http.StatusConflict {
-		t.Fatalf("unbound session revoked devices: status=%d body=%#v", code, out)
+		t.Fatalf("Непривязанная сессия отозвала устройства: статус=%d ответ=%#v", code, out)
 	}
 
 	// Оставьте ожидающий запрос подтверждения для второго устройства.
@@ -105,40 +105,40 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 	}
 	revoked := deviceTrustData0121(t, revokeOut)
 	if revoked["preservedDeviceId"] != primary.ID || int(revoked["revokedDevices"].(float64)) != 1 || int(revoked["revokedSessions"].(float64)) < 1 || int(revoked["invalidatedChallenges"].(float64)) < 1 {
-		t.Fatalf("incomplete revoke cascade: %#v", revoked)
+		t.Fatalf("Неполная цепочка отзыва: %#v", revoked)
 	}
 	if revoked["reEnrollmentRequiresNewKey"] != true {
-		t.Fatalf("re-enrollment semantics missing: %#v", revoked)
+		t.Fatalf("Отсутствует предусмотренное поведение повторной регистрации: %#v", revoked)
 	}
 
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", secondary.Access, nil)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("secondary access token survived device revoke: %d", code)
+		t.Fatalf("Вторичный токен доступа остался действителен после отзыва устройства: %d", code)
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": secondary.Refresh})
 	if code != http.StatusUnauthorized {
-		t.Fatalf("secondary refresh family survived device revoke: %d", code)
+		t.Fatalf("Вторичное семейство токенов обновления сохранилось после отзыва устройства: %d", code)
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+secondary.ID+"/verify/complete", unboundAccess, map[string]any{
 		"challengeId": challenge["challengeId"], "challenge": challenge["challenge"], "signature": proof,
 	})
 	if code == http.StatusOK {
-		t.Fatalf("pre-revocation challenge completed after revoke: %d", code)
+		t.Fatalf("Запрос подтверждения, созданный до отзыва, успешно завершился после отзыва: %d", code)
 	}
 
 	code, activeOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=active", primary.Access, nil)
 	if code != http.StatusOK || int(deviceTrustData0121(t, activeOut)["count"].(float64)) != 1 {
-		t.Fatalf("active filter incorrect: status=%d body=%#v", code, activeOut)
+		t.Fatalf("Неверная фильтрация активных устройств: статус=%d ответ=%#v", code, activeOut)
 	}
 	code, revokedOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=revoked", primary.Access, nil)
 	if code != http.StatusOK || int(deviceTrustData0121(t, revokedOut)["count"].(float64)) != 1 {
-		t.Fatalf("revoked filter incorrect: status=%d body=%#v", code, revokedOut)
+		t.Fatalf("Неверная фильтрация отозванных устройств: статус=%d ответ=%#v", code, revokedOut)
 	}
 
 	// Отозванный отпечаток — постоянная отметка: тот же ключ больше нельзя зарегистрировать.
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", unboundAccess, map[string]any{"name": "Reuse revoked key"})
 	if code != http.StatusOK {
-		t.Fatalf("reuse begin failed unexpectedly: %d %#v", code, beginOut)
+		t.Fatalf("Неожиданный сбой при начале повторного использования: %d %#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	reusePayload, _ := begin["signingPayload"].(string)
@@ -147,7 +147,7 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 		"publicKey": base64.RawURLEncoding.EncodeToString(secondary.Public), "signature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(secondary.Private, []byte(reusePayload))),
 	})
 	if code != http.StatusConflict {
-		t.Fatalf("revoked device key was re-enrolled: %d", code)
+		t.Fatalf("Отозванный ключ устройства зарегистрирован повторно: %d", code)
 	}
 }
 
@@ -163,21 +163,21 @@ func TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125(t *testing.T) {
 	}
 	data := deviceTrustData0121(t, out)
 	if data["alreadyRevoked"] != false || data["reEnrollmentRequiresNewKey"] != true || int(data["revokedSessions"].(float64)) < 1 {
-		t.Fatalf("bad self revoke result: %#v", data)
+		t.Fatalf("Некорректный результат самостоятельного отзыва: %#v", data)
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices", device.Access, nil)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("self-revoked session remained active: %d", code)
+		t.Fatalf("Сессия осталась активной после самостоятельного отзыва: %d", code)
 	}
 
 	fresh, _ := deviceTrustLogin0121(t, h, "post-revoke-unbound")
 	code, out = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+device.ID+"/revoke", fresh, map[string]any{})
 	if code != http.StatusOK || deviceTrustData0121(t, out)["alreadyRevoked"] != true {
-		t.Fatalf("repeat revoke is not idempotent: status=%d body=%#v", code, out)
+		t.Fatalf("Повторный отзыв не является идемпотентным: статус=%d ответ=%#v", code, out)
 	}
 
 	code, out = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=unknown", fresh, nil)
 	if code != http.StatusBadRequest {
-		t.Fatalf("invalid status filter accepted: status=%d body=%#v", code, out)
+		t.Fatalf("Принят недопустимый фильтр состояния: статус=%d ответ=%#v", code, out)
 	}
 }

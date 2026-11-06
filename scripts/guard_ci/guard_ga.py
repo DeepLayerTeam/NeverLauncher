@@ -312,7 +312,7 @@ def main(argv=None) -> int:
         print(json.dumps({'status': result['status'], 'output': str(args.output)}))
         return 0
     except (Blocked, ValueError, KeyError, OSError, TypeError, RuntimeError, json.JSONDecodeError) as exc:
-        print('GUARD 0.51.0 PRODUCTION GA BLOCKED: ' + str(exc), file=sys.stderr)
+        print('GUARD 0.51.0: производственный выпуск ЗАБЛОКИРОВАН: ' + str(exc), file=sys.stderr)
         return 2
 
 

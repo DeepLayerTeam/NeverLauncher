@@ -1764,7 +1764,7 @@ function App() {
     const credential = (await navigator.credentials.get({
       publicKey: decodeWebAuthnRequestOptions(begin.publicKey),
     })) as PublicKeyCredential | null;
-    if (!credential) throw new Error("Passkey step-up отменён.");
+    if (!credential) throw new Error("Дополнительная проверка с ключом доступа отменена.");
     const assertion = credential.response as AuthenticatorAssertionResponse;
     const completeResponse = await postDeviceJson(
       "/api/v1/auth/passkeys/step-up/complete",
@@ -1795,7 +1795,7 @@ function App() {
     if (!data.accessToken)
       throw new Error("Сервер не вернул токен доступа после дополнительной проверки ключом доступа.");
     log(
-      "Выполнена свежая phishing-resistant step-up authentication для восстановления device key.",
+      "Выполнена дополнительная аутентификация с защитой от фишинга для восстановления ключа устройства.",
     );
     return persistTrustedAccess(session, data.accessToken);
   }
@@ -2207,7 +2207,7 @@ function App() {
       measuredBootPolicyId0315.length > 96 ||
       !/^[a-zA-Z0-9_.-]+$/.test(measuredBootPolicyId0315.trim())
     ) {
-      throw new Error("Введите идентификатор операторской PCR policy");
+      throw new Error("Введите идентификатор операторской политики PCR");
     }
     if (
       !windowsAkName0313.trim() ||
@@ -2399,7 +2399,7 @@ function App() {
       session.accessToken,
     );
     if (beginResponse.status === 404) {
-      setDeviceTrustStatus("требуется recovery");
+      setDeviceTrustStatus("требуется восстановление");
       throw new Error(
         "Запись устройства на сервере отсутствует или отозвана. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить учётную запись устройства через защищённое от фишинга восстановление с сохранением возможности отката.",
       );
@@ -2828,7 +2828,7 @@ function App() {
       });
       setBackendStatus("ready");
       log(
-        "Серверный API v1 готов: health, readiness, status, требования runtime и политика диагностики отвечают.",
+        "Серверный API v1 готов: проверки работоспособности, готовности и состояния, требования среды выполнения и политика диагностики доступны.",
       );
     } catch (error) {
       setBackendStatus("failed");
@@ -2975,7 +2975,7 @@ function App() {
       pinnedPublicKey: settings.pinnedPublicKey,
     });
     log(
-      "Подписанный Manifest сохранён в локальный offline cache (повторная проверка подписи обязательна).",
+      "Подписанный манифест сохранён в локальном автономном кеше (повторная проверка подписи обязательна).",
     );
   }
 
@@ -4198,7 +4198,7 @@ function App() {
 
   async function launch() {
     if (!manifest) {
-      log("Запуск невозможен без manifest профиля.");
+      log("Запуск невозможен без манифеста профиля.");
       return;
     }
     setStage("launching");
@@ -4231,7 +4231,7 @@ function App() {
       let officialGuardTicket0397: string | undefined;
       if (launchMode === "official" && preferences.offline) {
         throw new Error(
-          "Официальный Minecraft несовместим с offline-запуском.",
+          "Официальный Minecraft не поддерживает автономный запуск.",
         );
       }
       if (!preferences.offline) {
@@ -4527,14 +4527,14 @@ function App() {
         loaded.channel !== p.channel
       )
         throw new Error(
-          "Проверенный Manifest не соответствует подписанному профилю/каналу владельца",
+          "Проверенный манифест не соответствует подписанному профилю или каналу владельца",
         );
       const signature = await callTauri<{ valid: boolean }>(
         "verify_manifest_signature",
         { manifest: loaded, pinnedPublicKey: p.pinnedPublicKey },
       );
       if (!signature.valid)
-        throw new Error("Ed25519-подпись Manifest недействительна");
+        throw new Error("Подпись Ed25519 манифеста недействительна");
       setManifest(loaded);
       setLaunchPlan(null);
       setLaunchResult(null);
@@ -5942,7 +5942,7 @@ function Overview({
         <article className="card">
           <h3>Серверная часть</h3>
           <strong>{backendStatus}</strong>
-          <p>Проверки health/readiness и готовность Desktop.</p>
+          <p>Проверка работоспособности и готовности настольного приложения.</p>
         </article>
         <article className="card">
           <h3>Манифест</h3>
@@ -6197,7 +6197,7 @@ function AuthPanel({
       </div>
       {session && (
         <div className="settings">
-          <h4>Привязать внешний password provider</h4>
+          <h4>Подключить внешнего поставщика парольной аутентификации</h4>
           <p>
             Необходима активная сессия и свежая проверка внешнего пароля; email
             сам по себе не подтверждает владение identity.

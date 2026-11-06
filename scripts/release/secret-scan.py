@@ -121,7 +121,7 @@ def main() -> int:
         for issue in issues:
             print(" -", issue)
         return 1
-    print(f"secret-scan: OK ({path})")
+    print(f"Проверка секретов: OK ({path})")
     return 0
 
 

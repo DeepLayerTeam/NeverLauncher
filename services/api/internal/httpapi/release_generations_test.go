@@ -45,21 +45,21 @@ func TestServerGenerationsAndAuthorizedGameRollback02311(t *testing.T) {
 	}
 	candidate.Manifest.GameReleaseGeneration = 5
 	if err := srv.checkGameReleasePublishGeneration02311(candidate); err == nil {
-		t.Fatal("stale generation accepted")
+		t.Fatal("Принято устаревшее поколение релиза")
 	}
 	candidate.Manifest.GameReleaseGeneration = next
 	candidate.Manifest.Files[0].SHA256 = strings.Repeat("b", 64)
 	if err := srv.checkGameReleasePublishGeneration02311(candidate); err == nil {
-		t.Fatal("fake rollback content accepted")
+		t.Fatal("Приняты поддельные данные отката")
 	}
 	candidate.Manifest.Files[0].SHA256 = strings.Repeat("a", 64)
 	candidate.Manifest.RollbackSource.ManifestSHA256 = strings.Repeat("c", 64)
 	if err := srv.checkGameReleasePublishGeneration02311(candidate); err == nil {
-		t.Fatal("wrong rollback source digest accepted")
+		t.Fatal("Принят неправильный дайджест исходного релиза при откате")
 	}
 	candidate.Manifest.RollbackSource = nil
 	candidate.Manifest.GameReleaseGeneration = 0
 	if err := srv.checkGameReleasePublishGeneration02311(candidate); err == nil {
-		t.Fatal("legacy downgrade after protected generation accepted")
+		t.Fatal("Разрешён откат на устаревшую версию после защищённого поколения")
 	}
 }

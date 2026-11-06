@@ -107,7 +107,7 @@ func TestServerBridgeNodeIdentity0142RejectsSignatureReplayAndStaleTimestamp(t *
 	// У testServer нет allowlist моста, поэтому правильный криптографический запрос
 	// доходит до обычной политики heartbeat независимо от окончательного статуса.
 	if firstOut.Code == http.StatusUnauthorized || firstOut.Code == http.StatusConflict {
-		t.Fatalf("valid signed heartbeat rejected at identity boundary: %d %s", firstOut.Code, firstOut.Body.String())
+		t.Fatalf("Корректное подписанное сообщение активности отклонено при проверке идентичности: %d %s", firstOut.Code, firstOut.Body.String())
 	}
 
 	replay := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/crypto-0142/heartbeat", strings.NewReader(body))
@@ -129,7 +129,7 @@ func TestServerBridgeNodeIdentity0142RejectsSignatureReplayAndStaleTimestamp(t *
 	staleOut := httptest.NewRecorder()
 	h.ServeHTTP(staleOut, stale)
 	if staleOut.Code != http.StatusUnauthorized || !strings.Contains(staleOut.Body.String(), "serverbridge_node_timestamp_out_of_window") {
-		t.Fatalf("stale signed request accepted: %d %s", staleOut.Code, staleOut.Body.String())
+		t.Fatalf("Принят устаревший подписанный запрос: %d %s", staleOut.Code, staleOut.Body.String())
 	}
 }
 
@@ -162,13 +162,13 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	wrongFingerprintOut := httptest.NewRecorder()
 	h.ServeHTTP(wrongFingerprintOut, wrongFingerprint)
 	if wrongFingerprintOut.Code != http.StatusUnauthorized || !strings.Contains(wrongFingerprintOut.Body.String(), "serverbridge_node_fingerprint_mismatch") {
-		t.Fatalf("wrong node fingerprint accepted: %d %s", wrongFingerprintOut.Code, wrongFingerprintOut.Body.String())
+		t.Fatalf("Принят неверный отпечаток узла: %d %s", wrongFingerprintOut.Code, wrongFingerprintOut.Body.String())
 	}
 
 	secondIdentity := newTestBridgeNodeIdentity0142(t)
 	duplicateID := registerTestBridgeNode0142(t, h, admin, "crypto-rotate-0142", "Duplicate Crypto Rotate 0142", "paper", "demo-project", "vanilla", secondIdentity)
 	if duplicateID.Code != http.StatusBadRequest || !strings.Contains(duplicateID.Body.String(), "rotate-identity") {
-		t.Fatalf("existing node identity was replaceable through registration: %d %s", duplicateID.Code, duplicateID.Body.String())
+		t.Fatalf("Регистрация позволила заменить существующую идентичность узла: %d %s", duplicateID.Code, duplicateID.Body.String())
 	}
 
 	rotateBody, err := json.Marshal(map[string]any{"keyAlgorithm": "ed25519", "publicKey": secondIdentity.Encoded})
@@ -190,7 +190,7 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	retiredOut := httptest.NewRecorder()
 	h.ServeHTTP(retiredOut, retired)
 	if retiredOut.Code != http.StatusUnauthorized || !strings.Contains(retiredOut.Body.String(), "serverbridge_node_fingerprint_mismatch") {
-		t.Fatalf("retired node key remained usable: %d %s", retiredOut.Code, retiredOut.Body.String())
+		t.Fatalf("Выведенный из обращения ключ узла остался действующим: %d %s", retiredOut.Code, retiredOut.Body.String())
 	}
 
 	current := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/crypto-rotate-0142/heartbeat", strings.NewReader(originalBody))
@@ -199,7 +199,7 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	currentOut := httptest.NewRecorder()
 	h.ServeHTTP(currentOut, current)
 	if currentOut.Code == http.StatusUnauthorized || currentOut.Code == http.StatusConflict {
-		t.Fatalf("rotated node identity rejected at auth boundary: %d %s", currentOut.Code, currentOut.Body.String())
+		t.Fatalf("Обновлённая идентичность узла отклонена при авторизации: %d %s", currentOut.Code, currentOut.Body.String())
 	}
 
 	duplicate := registerTestBridgeNode0142(t, h, admin, "crypto-duplicate-0142", "Crypto Duplicate 0142", "velocity", "demo-project", "vanilla", secondIdentity)

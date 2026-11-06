@@ -220,7 +220,7 @@ if (
     != 10
 ):
     raise SystemExit(
-        "Every Docker ServerBridge adapter must pin the API control signing key"
+        "Каждый Docker-адаптер ServerBridge должен закреплять ключ подписи управляющего API"
     )
 
 require(

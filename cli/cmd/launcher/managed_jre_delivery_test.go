@@ -134,7 +134,7 @@ func writeManagedJREFixture0155(t *testing.T, dir, ver string) {
 
 func TestManagedJREDistributionRequired0155(t *testing.T) {
 	if managedJREDistributionRequired0155("0.15.4") {
-		t.Fatal("0.15.4 must not require Managed JRE Distribution")
+		t.Fatal("Версия 0.15.4 не должна требовать распространения управляемой JRE")
 	}
 	for _, ver := range []string{"0.15.5", "0.16.0", "1.0.0"} {
 		if !managedJREDistributionRequired0155(ver) {
@@ -169,6 +169,6 @@ func TestManagedJREDistributionRejectsTamper0155(t *testing.T) {
 	}
 	file.Close()
 	if err := verifyManagedJREDistribution0155(dir, ver, true); err == nil {
-		t.Fatal("tampered Managed JRE archive must fail closed")
+		t.Fatal("Изменённый архив управляемой JRE должен приводить к отказу")
 	}
 }

@@ -82,14 +82,14 @@ func TestPlanDeterminismAndNoSecret0442(t *testing.T) {
 		t.Fatalf("nondeterministic plan: %s != %s", p.PlanSHA256, again.PlanSHA256)
 	}
 	if p.TransferBytes == 0 || p.Counts["manual"] == 0 || p.Counts["excluded"] != 2 {
-		t.Fatalf("missing real transfer/manual/key exclusion: %+v", p.Counts)
+		t.Fatalf("В плане отсутствует реальный перенос, ручной этап или исключение ключей: %+v", p.Counts)
 	}
 	if p.Status == "blocked" && len(p.Blockers) == 0 {
-		t.Fatal("blocked plan lacks reason")
+		t.Fatal("У заблокированного плана нет указания причины")
 	}
 	for _, item := range p.Items {
 		if item.Kind == "key" && (item.Status != "excluded" || item.Target != "") {
-			t.Fatal("legacy key scheduled for transfer")
+			t.Fatal("Устаревший ключ включён в план переноса")
 		}
 	}
 	// План не должен раскрывать содержимое файлов или старые секреты.
@@ -106,7 +106,7 @@ func TestPlanBlocksDestinationAndSourceChanges0442(t *testing.T) {
 	p, vi, compat, mods, cp, d := preview0442(t)
 	changed, e := Build("run", "project", p.TargetSHA256, d, vi, compat, mods, cp, true, IdentityPreview{SourceAccounts: 1, State: "review_required"})
 	if e != nil || changed.Status != "blocked" || len(changed.Blockers) == 0 {
-		t.Fatalf("destination collision not blocked: %+v, %v", changed, e)
+		t.Fatalf("Конфликт целевых путей не заблокирован: %+v, %v", changed, e)
 	}
 	vi.SourceSHA256 = strings.Repeat("f", 64)
 	if _, e = Build("run", "project", p.TargetSHA256, d, vi, compat, mods, cp, false, IdentityPreview{SourceAccounts: 1, State: "review_required"}); e == nil {
@@ -118,13 +118,13 @@ func TestMissingIdentityAndChangedDestination0442(t *testing.T) {
 	p, vi, compat, mods, cp, d := preview0442(t)
 	missing, e := Build("run", "project", p.TargetSHA256, d, vi, compat, mods, cp, false, IdentityPreview{State: "blocked", Reason: "missing source identity export"})
 	if e != nil || missing.Status != "blocked" || len(missing.Blockers) == 0 {
-		t.Fatalf("missing identities not blocked %+v %v", missing, e)
+		t.Fatalf("Отсутствующие идентичности не заблокированы: %+v %v", missing, e)
 	}
 	modified := d
 	modified.Channel = "beta"
 	other, e := Build("run", "project", p.TargetSHA256, modified, vi, compat, mods, cp, false, IdentityPreview{SourceAccounts: 1, State: "review_required"})
 	if e != nil || other.PlanSHA256 == p.PlanSHA256 {
-		t.Fatalf("changed destination accepted old digest: %v", e)
+		t.Fatalf("Изменённый целевой файл принят со старым дайджестом: %v", e)
 	}
 }
 
@@ -147,7 +147,7 @@ func TestPlanExcludesPlayerFiles0443(t *testing.T) {
 		}
 	}
 	if !seen {
-		t.Fatal("player file absent from operator plan")
+		t.Fatal("Файл игрока отсутствует в плане оператора")
 	}
 	if err := Verify(p); err != nil {
 		t.Fatal(err)

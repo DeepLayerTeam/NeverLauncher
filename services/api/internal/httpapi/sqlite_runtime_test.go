@@ -59,7 +59,7 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 	state.ServerBridge.mu.Unlock()
 	cipher, found, err := repo.ReadRuntimeComponent0373(context.Background(), "security")
 	if err != nil || !found || bytes.Contains(cipher, []byte("DO-NOT-PERSIST-PLAINTEXT")) {
-		t.Fatalf("security ciphertext missing or leaked secret: %v", err)
+		t.Fatalf("Отсутствует шифротекст безопасности или раскрыт секрет: %v", err)
 	}
 	if err := repo.Close(); err != nil {
 		t.Fatal(err)
@@ -70,16 +70,16 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 		t.Fatal("lost session")
 	}
 	if !state.Security.totpEnabled(user.ID) {
-		t.Fatal("MFA not restored")
+		t.Fatal("Многофакторная аутентификация не восстановлена")
 	}
 	if !state.Security.consumeRecoveryCode(user.ID, code) {
-		t.Fatal("lost recovery code")
+		t.Fatal("Потерян код восстановления")
 	}
 	if state.Security.consumeRecoveryCode(user.ID, code) {
-		t.Fatal("reused recovery code")
+		t.Fatal("Повторно использован код восстановления")
 	}
 	if _, ok := state.Security.consumeOneTimeToken(token, "password-reset"); !ok {
-		t.Fatal("lost password reset token")
+		t.Fatal("Потерян токен сброса пароля")
 	}
 	if _, err := state.Passkeys.consumeChallenge(challengeToken, "register"); err != nil {
 		t.Fatalf("lost challenge: %v", err)
@@ -88,10 +88,10 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.ServerBridge.servers["node-1"].TokenHash != "bridge-token-hash" {
-		t.Fatal("lost bridge identity hash")
+		t.Fatal("Потерян хеш идентичности моста")
 	}
 	if _, ok := state.ServerBridge.nodeNonces["nonce-hash"]; !ok {
-		t.Fatal("lost bridge replay nonce")
+		t.Fatal("Потеряно одноразовое значение защиты моста от повторного воспроизведения")
 	}
 	if err := repo.Close(); err != nil {
 		t.Fatal(err)
@@ -99,19 +99,19 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 	repo, state = openSQLiteRuntimeTest0373(t, path, sqliteTestSecret0373)
 	defer repo.Close()
 	if state.Security.consumeRecoveryCode(user.ID, code) {
-		t.Fatal("recovery code replay after restart")
+		t.Fatal("Код восстановления повторно использован после перезапуска")
 	}
 	if _, ok := state.Security.consumeOneTimeToken(token, "password-reset"); ok {
-		t.Fatal("password reset replay after restart")
+		t.Fatal("Повторно использован токен сброса пароля после перезапуска")
 	}
 	if _, err := state.Passkeys.consumeChallenge(challengeToken, "register"); err == nil {
-		t.Fatal("WebAuthn challenge replay after restart")
+		t.Fatal("Повторно использован запрос WebAuthn после перезапуска")
 	}
 	if _, next, err := state.AuthSessions.rotate(refresh); err != nil || next == "" {
-		t.Fatalf("refresh lost after restart: %v", err)
+		t.Fatalf("Токен обновления потерян после перезапуска: %v", err)
 	}
 	if _, _, err := state.AuthSessions.rotate(refresh); !errors.Is(err, errRefreshTokenReuseDetected) {
-		t.Fatalf("refresh reuse not detected: %v", err)
+		t.Fatalf("Повторное использование токена обновления не обнаружено: %v", err)
 	}
 }
 func TestSQLiteRuntimeRejectsWrongKey0373(t *testing.T) {
@@ -127,7 +127,7 @@ func TestSQLiteRuntimeRejectsWrongKey0373(t *testing.T) {
 	}
 	defer repo.Close()
 	if err := ConfigureSQLiteRuntime0373(context.Background(), NewRuntimeState(), repo, "another-secret-with-more-than-32-characters"); err == nil {
-		t.Fatal("wrong decryption key must fail closed")
+		t.Fatal("Неверный ключ расшифрования должен приводить к отказу")
 	}
 }
 func TestSQLiteRuntimeCommitFailurePoison0373(t *testing.T) {
@@ -138,7 +138,7 @@ func TestSQLiteRuntimeCommitFailurePoison0373(t *testing.T) {
 	func() {
 		defer func() {
 			if recover() == nil {
-				t.Error("failed commit reported success")
+				t.Error("Неудачная фиксация изменений объявлена успешной")
 			}
 		}()
 		state.Security.setEmailVerified("u", true)
@@ -146,7 +146,7 @@ func TestSQLiteRuntimeCommitFailurePoison0373(t *testing.T) {
 	func() {
 		defer func() {
 			if recover() == nil {
-				t.Error("poisoned store became available")
+				t.Error("Повреждённое хранилище стало доступно")
 			}
 		}()
 		_ = state.Security.totpEnabled("u")

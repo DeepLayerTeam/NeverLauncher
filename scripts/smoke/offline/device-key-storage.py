@@ -78,5 +78,5 @@ if errors:
     raise SystemExit(1)
 
 print(
-    "Device key / OS secure storage gate OK: private key stays in Tauri native keyring and proof flow is wired"
+    "Проверка безопасного хранилища ключа устройства ОС — OK: закрытый ключ остаётся в нативном хранилище Tauri, подтверждение ключа подключено"
 )

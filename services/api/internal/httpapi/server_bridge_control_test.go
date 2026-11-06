@@ -101,14 +101,14 @@ func TestServerBridgeControlMemoryIdempotencyLeaseAndAck0195(t *testing.T) {
 		t.Fatalf("Аренда: %+v, ошибка=%v", leased, err)
 	}
 	if _, err := store.leaseControl0195(cmd.ServerID, cmd.RuntimeEpoch, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", channelID, "lease_token_other_0123456789", 0, now, 30*time.Second); !errors.Is(err, repository.ErrNotFound) {
-		t.Fatalf("wrong runtime must not receive command: %v", err)
+		t.Fatalf("Команда не должна поступать в несоответствующий Runtime: %v", err)
 	}
 	resumed, err := store.leaseControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, channelID, "ignored_new_token_0123456789", 0, now.Add(time.Second), 30*time.Second)
 	if err != nil || resumed.ID != leased.ID || resumed.Attempt != leased.Attempt || resumed.LeaseToken != leased.LeaseToken {
-		t.Fatalf("channel resumption did not return same lease: %+v err=%v", resumed, err)
+		t.Fatalf("Восстановление канала не вернуло прежнюю аренду: %+v ошибка=%v", resumed, err)
 	}
 	if _, err := store.leaseControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, "fedcba9876543210fedcba9876543210", "lease_token_other_0123456789", 0, now.Add(time.Second), 30*time.Second); !errors.Is(err, repository.ErrNotFound) {
-		t.Fatalf("competing live channel received leased command: %v", err)
+		t.Fatalf("Конкурирующий активный канал получил арендованную команду: %v", err)
 	}
 	done, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
 	if err != nil || done.Status != "succeeded" {
@@ -116,7 +116,7 @@ func TestServerBridgeControlMemoryIdempotencyLeaseAndAck0195(t *testing.T) {
 	}
 	again, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || again.Status != "succeeded" {
-		t.Fatalf("idempotent ACK failed: %+v err=%v", again, err)
+		t.Fatalf("Идемпотентное подтверждение завершилось ошибкой: %+v ошибка=%v", again, err)
 	}
 	if _, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "false"}, "", now.Add(3*time.Second)); !errors.Is(err, repository.ErrConflict) {
 		t.Fatalf("Принято подтверждение с тем же статусом, но противоречащим результатом: %v", err)

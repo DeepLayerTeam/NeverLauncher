@@ -45,7 +45,7 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 	}
 	before, err := r.GetUser(id)
 	if err != nil || before.PasswordHash != legacy {
-		t.Fatal("failed login mutated password")
+		t.Fatal("Неудачный вход изменил пароль")
 	}
 	result, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "Migrated_01", Secret: "imported password"})
 	if err != nil {
@@ -56,11 +56,11 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 	}
 	after, err := r.GetUser(id)
 	if err != nil || !strings.HasPrefix(after.PasswordHash, "$argon2id$") || after.PasswordHash == legacy || !localpassword.Verify("imported password", after.PasswordHash) {
-		t.Fatal("Argon2id upgrade missing or invalid")
+		t.Fatal("Обновление Argon2id отсутствует или некорректно")
 	}
 	profile, err := r.GetMinecraftProfileByUser(id)
 	if err != nil || profile.UUID != uuid {
-		t.Fatalf("UUID changed after rehash %+v %v", profile, err)
+		t.Fatalf("UUID изменился после пересчёта хеша: %+v %v", profile, err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "Migrated_01", Secret: "imported password"}); err != nil {
 		t.Fatal("post-rehash login", err)

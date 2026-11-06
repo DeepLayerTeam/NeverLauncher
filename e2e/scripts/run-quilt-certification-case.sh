@@ -121,7 +121,7 @@ case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[quilt
 
 certification_live_start quilt "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 
-printf '[quilt-cert] запуск реального профиля клиента Quilt %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
+printf '[quilt-cert] Запуск реального профиля клиента Quilt %s на Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/quilt-certification.json" \

@@ -47,7 +47,7 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 		t.Fatalf("Неожиданные статус или тип сертификата: %s %s", cert.Status, cert.Kind)
 	}
 	if cert.RequiredTargetCount != 292 || cert.PassedTargetCount != 292 {
-		t.Fatalf("full RC target coverage=%d/%d, want 292/292", cert.PassedTargetCount, cert.RequiredTargetCount)
+		t.Fatalf("Покрытие целей релиз-кандидата=%d/%d, ожидается 292/292", cert.PassedTargetCount, cert.RequiredTargetCount)
 	}
 	wantFamilies := map[string]int{"vanilla": 109, "fabric": 53, "quilt": 53, "forge": 50, "neoforge": 27}
 	if len(cert.LoaderFamilies) != len(wantFamilies) {
@@ -101,7 +101,7 @@ func TestLoaderCompatibilityReleaseCertificate01711RejectsTamperedRoot(t *testin
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.11"); err == nil || !strings.Contains(err.Error(), "LOADER_COMPATIBILITY_RELEASE_CERTIFICATE") {
-		t.Fatalf("tampered RC root must fail closed, got %v", err)
+		t.Fatalf("Изменённый корень релиз-кандидата должен приводить к отказу: %v", err)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestLoaderCompatibilityReleaseCertificate01711RejectsMissingCertificate(t *
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.11"); err == nil || !strings.Contains(err.Error(), "missing") {
-		t.Fatalf("missing full RC must fail closed, got %v", err)
+		t.Fatalf("Отсутствие полного релиз-кандидата должно приводить к отказу: %v", err)
 	}
 }
 
@@ -148,7 +148,7 @@ func TestLoaderCompatibilityReleaseCertificate01711EvidenceRootChanges(t *testin
 		t.Fatal(err)
 	}
 	if rc1.EvidenceRootSHA256 == rc2.EvidenceRootSHA256 || rc1.CertificateID == rc2.CertificateID {
-		t.Fatal("target evidence mutation must change full evidence root and certificate ID")
+		t.Fatal("Изменение подтверждений цели должно менять общий корень доказательств и идентификатор сертификата")
 	}
 }
 
@@ -160,7 +160,7 @@ func TestLoaderCompatibilityReleaseCertificate01711IsRequiredReleaseEntryAndChec
 		if entry["name"] == loaderCompatibilityReleaseCertificateFile01711 {
 			found = true
 			if entry["required"] != true || entry["status"] != "present" {
-				t.Fatalf("RC release entry must be required/present: %#v", entry)
+				t.Fatalf("Запись релиза RC должна быть обязательной и присутствовать: %#v", entry)
 			}
 		}
 	}
@@ -179,7 +179,7 @@ func TestLoaderCompatibilityReleaseCertificate01711IsRequiredReleaseEntryAndChec
 		}
 	}
 	if !checksumFound {
-		t.Fatal("full RC is missing from SHA256SUMS inputs")
+		t.Fatal("Полный релиз-кандидат отсутствует среди входных данных SHA256SUMS")
 	}
 }
 
@@ -216,7 +216,7 @@ func TestLoaderCompatibilityGA0180CertificateBindsRuntimeSupport(t *testing.T) {
 		t.Fatalf("Неожиданные статус или этап GA: %s/%s", cert.Status, cert.ReleaseStage)
 	}
 	if cert.RuntimeSupportEntries != 163 || cert.RuntimeSupportSHA256 != loaderGASupportSHA2560180() {
-		t.Fatalf("GA runtime support binding mismatch: entries=%d sha=%s", cert.RuntimeSupportEntries, cert.RuntimeSupportSHA256)
+		t.Fatalf("Несоответствие привязки поддержки Runtime к GA: записей=%d sha=%s", cert.RuntimeSupportEntries, cert.RuntimeSupportSHA256)
 	}
 	if strings.Join(cert.LegacyForgeVersions, ",") != "1.7.10,1.12.2" {
 		t.Fatalf("Несовпадение данных GA для старой версии Forge: %v", cert.LegacyForgeVersions)
@@ -243,7 +243,7 @@ func TestLoaderCompatibilityGA0180RejectsCertifiedRuntimeSurfaceDrift(t *testing
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.18.0", "commit-180"); err == nil {
-		t.Fatal("GA compatibility evidence must reject legacy Forge support drift")
+		t.Fatal("Подтверждения совместимости GA должны отклонять отклонения поддержки устаревшего Forge")
 	}
 }
 
@@ -280,6 +280,6 @@ func TestLoaderCompatibilityGA0180RejectsTamperedRuntimeSupportHash(t *testing.T
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.18.0"); err == nil {
-		t.Fatal("tampered GA runtime support hash must fail closed")
+		t.Fatal("Изменённый хеш поддержки Runtime GA должен приводить к отказу")
 	}
 }

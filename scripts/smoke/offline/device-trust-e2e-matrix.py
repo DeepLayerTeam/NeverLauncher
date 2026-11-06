@@ -218,7 +218,7 @@ if (
     raise SystemExit("Проверка релиза 0.12.9 не подключена к CI или предварительным проверкам")
 if "run-device-trust-e2e.sh" not in ci:
     raise SystemExit(
-        "main CI production E2E does not execute Device Trust PostgreSQL lifecycle"
+        "Основная производственная E2E-проверка CI не запускает жизненный цикл Device Trust для PostgreSQL"
     )
 if "RUN_DEVICE_TRUST_E2E" not in preflight:
     raise SystemExit("Строгая предварительная проверка не запускает сквозные тесты доверия устройств")

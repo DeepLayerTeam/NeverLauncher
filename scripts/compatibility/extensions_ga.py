@@ -59,7 +59,7 @@ def validate_targets(path: Path):
         raise SystemExit("Несовпадение: «Extensions GA frozen contract»")
     if semver(current_version()) < semver(BASELINE_VERSION):
         raise SystemExit(
-            f"Extensions GA certification requires VERSION >= {BASELINE_VERSION}"
+            f"Для сертификации расширений GA требуется VERSION >= {BASELINE_VERSION}"
         )
     print(
         f"Целевые среды расширений GA проверены: {len(rows)} обязательных платформ, {len(checks)} проверок"

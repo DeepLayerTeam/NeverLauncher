@@ -1166,7 +1166,7 @@ export function AdminExtensions({
                       (l: any) =>
                         `${l.timestamp ?? ""} ${l.stream ?? ""} ${l.level ?? ""} ${l.message ?? ""}`,
                     )
-                    .join("\n") || "Нет runtime logs"}
+                    .join("\n") || "Журналы среды выполнения отсутствуют"}
                 </pre>
               </details>
             </article>

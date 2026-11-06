@@ -143,17 +143,17 @@ elif [[ "${RUN_FRONTEND}" == "auto" ]]; then
     run_step admin-build bash "${ROOT_DIR}/scripts/smoke/frontend/admin-build.sh"
     run_step desktop-web-build bash "${ROOT_DIR}/scripts/smoke/frontend/desktop-web-build.sh"
   else
-    echo "[Launcher] frontend build пропущен в auto-режиме; такой прогон не является production-ready"
+    echo "[Launcher] Сборка интерфейса пропущена в автоматическом режиме; такой запуск не подтверждает готовность к эксплуатации"
   fi
 fi
 
 if is_true "${RUN_TAURI}"; then
   if ! command -v cargo >/dev/null 2>&1; then
     if is_true "${STRICT}"; then
-      echo "[Launcher] strict preflight: cargo обязателен" >&2
+      echo "[Launcher] Строгая предварительная проверка: необходим cargo" >&2
       exit 1
     fi
-    echo "[Launcher] Tauri check пропущен: cargo отсутствует"
+    echo "[Launcher] Проверка Tauri пропущена: отсутствует cargo"
   else
     run_step tauri-check bash "${ROOT_DIR}/scripts/smoke/frontend/tauri-check.sh"
   fi

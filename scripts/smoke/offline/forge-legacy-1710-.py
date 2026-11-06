@@ -46,7 +46,7 @@ if (
     or row.get("loaderVersion") != "latest-stable"
 ):
     raise SystemExit(
-        "Forge Legacy 1.7.10 must be latest-stable Java 8 client linux/x86_64"
+        "Устаревшая версия Forge 1.7.10 должна использовать последний стабильный клиент Java 8 для Linux/x86_64"
     )
 
 runtime = read("cli/cmd/launcher/forge_runtime.go")
@@ -151,5 +151,5 @@ require(
 )
 
 print(
-    "Forge Legacy 1.7.10 0.17.5 gate: OK (real V1 universal + LaunchWrapper/cpw FML + Java 8 actual-client certification)"
+    "Проверка устаревшего Forge 1.7.10 версии 0.17.5: OK (настоящий универсальный пакет V1, LaunchWrapper/cpw FML и сертификация реального клиента Java 8)"
 )

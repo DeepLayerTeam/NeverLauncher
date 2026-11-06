@@ -34,15 +34,15 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	weak := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"demo-project":"operator"},"expectedProjectRoles":{}}`)
 	if weak.Code == http.StatusOK {
-		t.Fatalf("role changed without recent passkey MFA: %s", weak.Body.String())
+		t.Fatalf("Роль изменена без недавней MFA с ключом доступа: %s", weak.Body.String())
 	}
 	privilegedCreate := request0211(t, h, http.MethodPost, "/api/v1/admin/users", owner, `{"email":"unverified-0387@example.test","roleId":"player","password":"a-strong-password-0387","projectRoles":{"demo-project":"operator"}}`)
 	if privilegedCreate.Code == http.StatusCreated {
-		t.Fatal("privileged creation bypassed passkey MFA")
+		t.Fatal("Создание привилегированного объекта обошло MFA с ключом доступа")
 	}
 	globalAdminCreate := request0211(t, h, http.MethodPost, "/api/v1/admin/users", owner, `{"email":"unverified-admin-0387@example.test","roleId":"admin","password":"a-strong-password-0387"}`)
 	if globalAdminCreate.Code == http.StatusCreated {
-		t.Fatal("global admin creation bypassed passkey MFA")
+		t.Fatal("Создание глобального администратора обошло MFA с ключом доступа")
 	}
 	owner, _ = registerTestPasskey117(t, h, owner)
 	grant := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"demo-project":"operator"},"expectedProjectRoles":{}}`)
@@ -51,7 +51,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	stale := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"demo-project":"viewer"},"expectedProjectRoles":{}}`)
 	if stale.Code != http.StatusConflict {
-		t.Fatalf("stale membership should conflict: %d %s", stale.Code, stale.Body.String())
+		t.Fatalf("Устаревшая запись о членстве должна вызывать конфликт: %d %s", stale.Code, stale.Body.String())
 	}
 	unknown := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"does-not-exist":"operator"}}`)
 	if unknown.Code != http.StatusBadRequest {
@@ -64,7 +64,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	// Исходный токен отзывается при изменении членства, что требует нового входа.
 	blocked := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"should-not-change"}`)
 	if blocked.Code == http.StatusOK {
-		t.Fatal("old token unexpectedly changed project")
+		t.Fatal("Старый токен неожиданно изменил проект")
 	}
 	actor = loginUser0211(t, h, "operator-0387@example.test", "operator-pass-0387")
 	allowed := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"operator-updated-0387"}`)
@@ -74,7 +74,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	for _, endpoint := range []string{"/api/v1/admin/users", "/api/v1/operations/backend/status", "/api/v1/admin/config"} {
 		forbiddenGlobal := request0211(t, h, http.MethodGet, endpoint, actor, "")
 		if forbiddenGlobal.Code != http.StatusForbidden {
-			t.Fatalf("project operator reached global endpoint %s: %d %s", endpoint, forbiddenGlobal.Code, forbiddenGlobal.Body.String())
+			t.Fatalf("Оператор проекта получил доступ к глобальному маршруту %s: %d %s", endpoint, forbiddenGlobal.Code, forbiddenGlobal.Body.String())
 		}
 	}
 	forbidden := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/other-0387", actor, `{"description":"forbidden"}`)
@@ -87,10 +87,10 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	blocked = request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"after-revoke"}`)
 	if blocked.Code == http.StatusOK {
-		t.Fatal("revoked operator could still mutate")
+		t.Fatal("Оператор с отозванными правами продолжил изменять данные")
 	}
 	audit := request0211(t, h, http.MethodGet, "/api/v1/admin/audit", owner, "")
 	if audit.Code != http.StatusOK || !strings.Contains(audit.Body.String(), "user:project-role:granted") || !strings.Contains(audit.Body.String(), "user:project-role:revoked") {
-		t.Fatalf("missing membership audit: %d %s", audit.Code, audit.Body.String())
+		t.Fatalf("Отсутствует аудит членства: %d %s", audit.Code, audit.Body.String())
 	}
 }

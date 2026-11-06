@@ -71,7 +71,7 @@ require(
 guard = read("runtime/runtime/src/bin/guard.rs")
 if guard.find("ensure_guard_process_policy()") > guard.find("tokio::runtime::Builder"):
     raise SystemExit(
-        "Guard self policy must be enforced before Tokio runtime initialization"
+        "Собственная политика Guard должна применяться до инициализации Runtime Tokio"
     )
 
 guard = read("runtime/runtime/src/guard_ipc.rs")

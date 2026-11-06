@@ -317,7 +317,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
     targets = []
     for platform, arch, vendor_os, vendor_arch, fmt in TARGETS:
         print(
-            f"[ManagedJRE] resolving Temurin {major} {platform}/{arch}", file=sys.stderr
+            f"[ManagedJRE] определение Temurin {major} для {platform}/{arch}", file=sys.stderr
         )
         asset = resolve_asset(major, vendor_os, vendor_arch)
         name = archive_name(version, major, platform, arch, fmt)

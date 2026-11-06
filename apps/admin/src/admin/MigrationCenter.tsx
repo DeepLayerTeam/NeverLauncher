@@ -2116,7 +2116,7 @@ export function MigrationCenter0331({
               {rehearsal03310.liveSession ? (
                 <p>Игровой сеанс: {rehearsal03310.liveSession.playerName} / <code>{rehearsal03310.liveSession.playerUuid}</code> · вход: {rehearsal03310.liveSession.joinedAt} · клиент SHA-256: <code>{rehearsal03310.liveSession.clientSha256}</code></p>
               ) : (
-                <p className="error">Нет нативного подтверждения живого игрового сеанса. Старые probe-only отчёты не считаются готовыми.</p>
+                <p className="error">Нет нативного подтверждения живого игрового сеанса. Старые отчёты, основанные только на пробных проверках, не считаются подтверждением готовности.</p>
               )}
               {rehearsal03310.blockers.map((x, i) => (
                 <p key={i} className="error">

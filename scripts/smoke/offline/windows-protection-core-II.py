@@ -23,7 +23,7 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 1):
         raise SystemExit(
-            f"[Launcher] Windows Protection Core II 0.18.1 gate: VERSION is {version}"
+            f"[Launcher] Проверка ядра защиты Windows II 0.18.1: версия {version}"
         )
 
     protection = read("runtime/runtime/src/windows_protection.rs")
@@ -142,7 +142,7 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[Launcher] Windows Protection Core II 0.18.1 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Проверка ядра защиты Windows II 0.18.1: заглушка {forbidden!r} в {path}"
                 )
 
     print("[Launcher] Windows Protection Core II 0.18.1: проверка: OK")

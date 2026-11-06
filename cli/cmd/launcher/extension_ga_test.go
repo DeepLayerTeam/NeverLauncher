@@ -43,7 +43,7 @@ func TestExtensionUpgradeSource0210(t *testing.T) {
 }
 func TestExtensionUpgradeSourceRejectsSignedPackage0210(t *testing.T) {
 	if err := extensionUpgradeSource0210([]string{"example.nlext"}); err == nil {
-		t.Fatal("expected immutable package error")
+		t.Fatal("Ожидалась ошибка неизменяемого пакета")
 	}
 }
 

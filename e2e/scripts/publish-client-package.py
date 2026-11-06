@@ -138,7 +138,7 @@ class APIClient:
                     delay = self._retry_after_seconds(response)
                     rate_limit_retries += 1
                     print(
-                        f"[e2e-upload] rate limited on {method} {path}; retry {rate_limit_retries}/8 after {delay}s",
+                        f"[e2e-upload] ограничение частоты запросов {method} {path}; повтор {rate_limit_retries}/8 через {delay} с",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -154,7 +154,7 @@ class APIClient:
                     transport_retries += 1
                     delay = min(10, 2 ** (transport_retries - 1))
                     print(
-                        f"[e2e-upload] transient HTTP {response.status}; retry {transport_retries}/{max_transport_retries} after {delay}s",
+                        f"[e2e-upload] временная ошибка HTTP {response.status}; повтор {transport_retries}/{max_transport_retries} через {delay} с",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -175,7 +175,7 @@ class APIClient:
                 transport_retries += 1
                 delay = min(10, 2 ** (transport_retries - 1))
                 print(
-                    f"[e2e-upload] transport {type(exc).__name__}; retry {transport_retries}/{max_transport_retries} after {delay}s",
+                    f"[e2e-upload] ошибка транспорта {type(exc).__name__}; повтор {transport_retries}/{max_transport_retries} через {delay} с",
                     file=sys.stderr,
                     flush=True,
                 )
@@ -468,7 +468,7 @@ def main() -> int:
         total_bytes += expected_size
         if index == 1 or index % 250 == 0 or index == total:
             print(
-                f"[e2e-upload] {index}/{total} files, {total_bytes} bytes",
+                f"[e2e-upload] {index}/{total} файлов, {total_bytes} байт",
                 file=sys.stderr,
                 flush=True,
             )

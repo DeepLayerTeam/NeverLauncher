@@ -22,7 +22,7 @@ func TestV05ExactSignedTargetApplicability0346(t *testing.T) {
 	raw, _ := json.Marshal([]validationTarget0346{target})
 	got, matrix, err := configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256)
 	if err != nil || len(got) != 1 || !matchingTarget0346(p, got[0]) || matrix == "" {
-		t.Fatalf("valid pinned target rejected: %v", err)
+		t.Fatalf("Отклонена корректная закреплённая цель: %v", err)
 	}
 	p.TargetMatrixSHA256 = matrix
 	for name, mutate := range map[string]func(*validationPayload0345){
@@ -44,7 +44,7 @@ func TestV05ExactSignedTargetApplicability0346(t *testing.T) {
 			if !matchingTarget0346(changed, target) && verifyValidation0345(signed, pub) == nil {
 				return
 			}
-			t.Fatalf("wrong target accepted or signature failed unexpectedly")
+			t.Fatalf("Принята неверная цель либо неожиданно не прошла проверка подписи")
 		})
 	}
 	other := target
@@ -53,12 +53,12 @@ func TestV05ExactSignedTargetApplicability0346(t *testing.T) {
 	raw, _ = json.Marshal([]validationTarget0346{target, other})
 	targets, matrix2, err := configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256)
 	if err != nil || len(targets) != 2 || matrix2 == matrix {
-		t.Fatalf("target matrix did not invalidate after adding required target: %v", err)
+		t.Fatalf("Матрица целей не стала недействительной после добавления обязательной цели: %v", err)
 	}
 	other.ManifestSHA256 = strings.Repeat("0", 64)
 	raw, _ = json.Marshal([]validationTarget0346{target, other})
 	if _, _, err = configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256); err == nil {
-		t.Fatal("inconsistent snapshots accepted")
+		t.Fatal("Приняты несогласованные снимки состояния")
 	}
 }
 func TestV05RunNonceExpiryReplayAndRevocation0346(t *testing.T) {
@@ -79,27 +79,27 @@ func TestV05RunNonceExpiryReplayAndRevocation0346(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := r.SaveValidationChallenge0346(ctx, challenge); err == nil {
-		t.Fatal("run nonce replay accepted")
+		t.Fatal("Принято повторное использование одноразового значения запуска")
 	}
 	changed := p
 	changed.RunNonce = strings.Repeat("0", 64)
 	if validateFreshness0346(ctx, r, changed, now, true) == nil {
-		t.Fatal("different run nonce accepted")
+		t.Fatal("Принято другое одноразовое значение запуска")
 	}
 	changed = p
 	changed.PackageID = "another"
 	if validateFreshness0346(ctx, r, changed, now, true) == nil {
-		t.Fatal("wrong package accepted")
+		t.Fatal("Принят неправильный пакет")
 	}
 	changed = p
 	changed.TargetMatrixSHA256 = strings.Repeat("e", 64)
 	if validateFreshness0346(ctx, r, changed, now, true) == nil {
-		t.Fatal("wrong target policy accepted")
+		t.Fatal("Принята неправильная политика целевой платформы")
 	}
 	changed = p
 	changed.Audience = "another"
 	if validateFreshness0346(ctx, r, changed, now, true) == nil {
-		t.Fatal("wrong purpose/audience accepted")
+		t.Fatal("Принято неправильное назначение или аудитория")
 	}
 	changed = p
 	changed.ExpiresAt = now.Add(-time.Second).Format(time.RFC3339Nano)
@@ -107,10 +107,10 @@ func TestV05RunNonceExpiryReplayAndRevocation0346(t *testing.T) {
 		t.Fatal("Приняты подтверждающие данные с истекшим сроком действия")
 	}
 	if validateFreshness0346(ctx, r, p, now.Add(31*time.Minute), true) == nil {
-		t.Fatal("expired challenge accepted for new attestation")
+		t.Fatal("Принят просроченный запрос для новой аттестации")
 	}
 	if err := validateFreshness0346(ctx, r, p, now.Add(31*time.Minute), false); err != nil {
-		t.Fatalf("previously accepted evidence cannot survive grant expiration: %v", err)
+		t.Fatalf("Ранее принятое подтверждение не должно оставаться действительным после истечения разрешения: %v", err)
 	}
 	if err := r.RevokeValidationKey0346(ctx, p.SignerKeyID, "operator", "suspected compromise"); err != nil {
 		t.Fatal(err)

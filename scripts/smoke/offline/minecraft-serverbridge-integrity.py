@@ -269,5 +269,5 @@ if "minecraft-serverbridge-integrity-0135.py" not in preflight:
     raise SystemExit("0.13.5: проверка целостности не подключена к предварительной проверке")
 
 print(
-    f"[Launcher] Minecraft/ServerBridge integrity enforcement 0.13.5 gate OK: {version}"
+    f"[Launcher] Проверка целостности Minecraft/ServerBridge 0.13.5 — OK: {version}"
 )

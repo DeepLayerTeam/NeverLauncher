@@ -104,7 +104,7 @@ class VoidWorldTests(unittest.TestCase):
                         script.index('generator-settings='))
         self.assertIn('cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"', script)
         self.assertIn('1.17.1 nonfatal world codec warning; verifying by real client join', script)
-        self.assertNotIn("raise SystemExit('1.17.1 world codec rejected generated settings')", script)
+        self.assertNotIn("raise SystemExit('Кодек мира версии 1.17.1 отклонил созданные настройки')", script)
         self.assertIn('clientJoinedServer', script)
         self.assertIn(') < "$SERVER_STDIN" > "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)
         self.assertNotIn(') < "$SERVER_STDIN" >> "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)

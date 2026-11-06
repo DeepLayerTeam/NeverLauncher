@@ -58,7 +58,7 @@ def command(argv, timeout=7):
     )
     if cp.returncode:
         raise RuntimeError(
-            f"{argv[0]} returned {cp.returncode}: {cp.stderr[:160].decode(errors='replace')}"
+            f"{argv[0]} вернула код {cp.returncode}: {cp.stderr[:160].decode(errors='replace')}"
         )
     return cp.stdout.decode(errors="replace")
 

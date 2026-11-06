@@ -23,7 +23,7 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 5):
         raise SystemExit(
-            f"[Launcher] Memory Integrity 0.18.5 gate: VERSION is {version}"
+            f"[Launcher] Проверка целостности памяти 0.18.5: версия {version}"
         )
 
     memory = read("runtime/guard-sensor/src/memory_integrity.rs")
@@ -66,7 +66,7 @@ def main() -> int:
     ):
         if forbidden in memory:
             raise SystemExit(
-                f"[Launcher] Memory Integrity 0.18.5 gate: cross-process primitive forbidden: {forbidden}"
+                f"[Launcher] Проверка целостности памяти 0.18.5: запрещённая межпроцессная операция: {forbidden}"
             )
 
     require(
@@ -169,7 +169,7 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[Launcher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Проверка целостности памяти 0.18.5: заглушка {forbidden!r} в {path}"
                 )
 
     print("[Launcher] Memory Integrity 0.18.5: проверка: OK")

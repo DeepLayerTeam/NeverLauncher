@@ -27,13 +27,13 @@ func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
 	lookup := packageLookup{Release: model.ReleaseVersion{Manifest: manifest}, Files: uploaded}
 	candidate := storageBackedCandidate0526(lookup)
 	if len(candidate.Files) != len(uploaded) {
-		t.Fatal("candidate ignored uploaded files")
+		t.Fatal("Кандидат проигнорировал загруженные файлы")
 	}
 	if candidate.Files[0].SHA256 != uploaded[0].SHA256 {
-		t.Fatal("wrong uploaded file digest")
+		t.Fatal("Неверный дайджест загруженного файла")
 	}
 	if len(manifest.Files) != len(uploaded) {
-		t.Fatal("original signed manifest mutated")
+		t.Fatal("Исходный подписанный манифест изменён")
 	}
 	if err := validatePackageCandidate0526(lookup); err != nil {
 		t.Fatalf("valid fixture: %v", err)
@@ -45,7 +45,7 @@ func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
 	without := lookup
 	without.Files = uploaded[1:]
 	if err := validatePackageCandidate0526(without); err == nil {
-		t.Fatal("missing signed mod accepted by publication preflight")
+		t.Fatal("Предпубликационная проверка приняла отсутствие подписанного мода")
 	}
 
 	// Неверное владение также должно отклоняться до подписи манифеста.
@@ -54,6 +54,6 @@ func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
 	tampered.Files[0].Ownership = "required"
 	tampered.Files[0].Required = true
 	if err := validatePackageCandidate0526(tampered); err == nil {
-		t.Fatal("required ownership smuggled into optional-component graph")
+		t.Fatal("Обязательная принадлежность скрытно добавлена в граф необязательных компонентов")
 	}
 }

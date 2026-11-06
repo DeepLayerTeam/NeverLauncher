@@ -254,7 +254,7 @@ require(
 )
 if '- "25570:25565"' in compose_e2e:
     raise SystemExit(
-        "Velocity E2E host port 25570 is mapped to 25565, but Velocity 3.4 runtime binds 25577"
+        "Порт E2E-узла Velocity 25570 перенаправлен на 25565, но Runtime Velocity 3.4 использует порт 25577"
     )
 
 

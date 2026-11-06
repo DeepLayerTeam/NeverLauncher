@@ -75,7 +75,7 @@ func TestWorldBackupCreateVerifyRestore02810(t *testing.T) {
 		}
 	}
 	if err := worldBackupRestore02810(root, store, m, source, dest); err == nil {
-		t.Fatal("existing restore destination overwritten")
+		t.Fatal("Перезаписан существующий каталог назначения восстановления")
 	}
 	if err := os.WriteFile(filepath.Join(source, "payload", "survival", "level.dat"), []byte("CORRUPT"), 0600); err != nil {
 		t.Fatal(err)
@@ -93,10 +93,10 @@ func TestWorldBackupSymlinksAndTraversal02810(t *testing.T) {
 		t.Fatal("path traversal permitted")
 	}
 	if _, err := worldBackupLocation02810(root, filepath.Join(root, "nested")); err == nil {
-		t.Fatal("nested backup store allowed")
+		t.Fatal("Разрешено вложенное хранилище резервных копий")
 	}
 	if _, err := worldBackupLocation02810(root, filepath.Dir(root)); err == nil {
-		t.Fatal("backup store ancestor of root allowed")
+		t.Fatal("Разрешено хранилище резервных копий выше корневого каталога")
 	}
 	if runtime.GOOS != "windows" {
 		if err := os.Symlink(filepath.Join(root, "survival"), filepath.Join(root, "plugins", "wrong-link")); err != nil {
@@ -107,7 +107,7 @@ func TestWorldBackupSymlinksAndTraversal02810(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err := worldBackupCollect02810(root, src); err == nil {
-			t.Fatal("symlink in plugin data accepted")
+			t.Fatal("В данных плагина принята символическая ссылка")
 		}
 	}
 }

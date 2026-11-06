@@ -190,7 +190,7 @@ async def main():
                 ).wait_for()
                 await login_ctx.close()
                 print(
-                    "[admin-hardening-02112] browser PASS: live Backend, two tabs CAS, offline/recovery, RBAC, labels"
+                    "[admin-hardening-02112] браузер PASS: действующий Backend, два окна CAS, автономный режим и восстановление, RBAC, подписи"
                 )
             finally:
                 await ctx.set_offline(False)

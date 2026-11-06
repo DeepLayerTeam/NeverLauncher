@@ -161,5 +161,5 @@ require(
 )
 
 print(
-    "Loader Hardening 0.17.10 gate: OK (content-addressed loader cache, pinned upstream independence, installer restore, durable processor crash recovery)"
+    "Проверка усиления защиты загрузчика 0.17.10: OK (адресуемый по содержимому кеш, независимость от изменяемого источника, восстановление установщика, устойчивость к сбою обработчика)"
 )

@@ -22,7 +22,7 @@ else
   if ( cd "${ROOT_DIR}/services/api" && go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${API_BIN}" ./cmd/launcher-api ); then
     :
   else
-    echo "[Launcher] pgx/full backend build недоступен; собираю launcher_nopgx fallback" >&2
+    echo "[Launcher] Полная сборка Backend с pgx недоступна; используется резервный режим launcher_nopgx" >&2
     ( cd "${ROOT_DIR}/services/api" && go build -tags launcher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${API_BIN}" ./cmd/launcher-api )
   fi
 fi

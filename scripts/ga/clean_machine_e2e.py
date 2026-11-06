@@ -33,7 +33,7 @@ def checked(command, timeout=900, env=None):
     )
     if result.returncode:
         raise RuntimeError(
-            f"{command[0]} exited {result.returncode}: {result.stderr[-1000:]}"
+            f"{command[0]} завершилась с кодом {result.returncode}: {result.stderr[-1000:]}"
         )
     return result.stdout
 

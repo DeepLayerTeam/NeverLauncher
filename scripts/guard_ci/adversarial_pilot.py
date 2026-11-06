@@ -372,7 +372,7 @@ def main() -> int:
         print(json.dumps({'status': report['status'], 'report': str(args.output)}, ensure_ascii=False))
         return 0 if report['status'].startswith('PASS') or report['status'] in ('EVIDENCE_VERIFIED_NOT_INDEPENDENT', 'EVIDENCE_REVIEW_REQUIRED') else 2
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f'Guard 0.50.12 BLOCKED: {exc}', file=sys.stderr)
+        print(f'Guard 0.50.12 ЗАБЛОКИРОВАН: {exc}', file=sys.stderr)
         return 2
 
 

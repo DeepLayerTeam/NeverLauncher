@@ -51,7 +51,7 @@ func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
 }
 
 func TestStreamRejectsRedirectAndInvalidOptions0463(t *testing.T) {
-	destination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Fatal("redirect followed with token") }))
+	destination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Fatal("Переадресация выполнена с токеном") }))
 	defer destination.Close()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Location", destination.URL)
@@ -100,6 +100,6 @@ func TestExistingJSONAndRawSDKDoNotFollowRedirects0463(t *testing.T) {
 		t.Fatalf("binary followed redirect: %v", err)
 	}
 	if redirected {
-		t.Fatal("bearer token was sent to redirect target")
+		t.Fatal("Токен Bearer отправлен по адресу переадресации")
 	}
 }

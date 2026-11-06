@@ -52,15 +52,15 @@ for required in \
   fi
 done
 if [[ -z "${PUBLIC_KEY}" || ! -f "${PUBLIC_KEY}" ]]; then
-  echo "[Launcher] release-bundle gate требует внешний root Ed25519 public key" >&2
+  echo "[Launcher] Для проверки релизного пакета необходим внешний открытый корневой ключ Ed25519" >&2
   exit 1
 fi
 if [[ -z "${TRUST_STATE}" ]]; then
-  echo "[Launcher] release-bundle gate требует persistent trust state через LAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
+  echo "[Launcher] Для проверки релизного пакета требуется сохранённое состояние доверия через LAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
   exit 1
 fi
 if [[ -z "${TRUST_POLICY}" || ! -f "${TRUST_POLICY}" ]]; then
-  echo "[Launcher] release-bundle gate требует внешний current trust policy через LAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
+  echo "[Launcher] Для проверки релизного пакета требуется внешняя текущая политика доверия через LAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
   exit 1
 fi
 if [ -x "${ROOT_DIR}/dist/preflight/nl" ]; then

@@ -47,10 +47,10 @@ func registerHardwareDevice0124(t *testing.T, h http.Handler, access string, pri
 	deviceID, _ := device["id"].(string)
 	trustedAccess, _ := data["accessToken"].(string)
 	if deviceID == "" || trustedAccess == "" {
-		t.Fatalf("incomplete registered device: %#v", data)
+		t.Fatalf("Неполные данные зарегистрированного устройства: %#v", data)
 	}
 	if device["attestationState"] != "unattested" || device["assurance"] != "proof-of-possession" {
-		t.Fatalf("registration must not pre-attest hardware identity: %#v", device)
+		t.Fatalf("Регистрация не должна преждевременно подтверждать аппаратную идентичность: %#v", device)
 	}
 	return deviceID, trustedAccess
 }
@@ -72,7 +72,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	unboundAccess, _ := deviceTrustLogin0121(t, h, "attestation-unbound")
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", unboundAccess, map[string]any{})
 	if code != http.StatusConflict {
-		t.Fatalf("unbound session obtained attestation challenge: status=%d body=%#v", code, out)
+		t.Fatalf("Непривязанная сессия получила запрос аттестации: статус=%d ответ=%#v", code, out)
 	}
 
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", trustedAccess, map[string]any{})
@@ -82,7 +82,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
 	if payload == "" || begin["attestationMethod"] != deviceAttestationMethod0124 || begin["hardwareProvenance"] != "not-verified" {
-		t.Fatalf("bad attestation begin contract: %#v", begin)
+		t.Fatalf("Некорректный контракт начала аттестации: %#v", begin)
 	}
 	completeBody := map[string]any{
 		"challengeId": begin["challengeId"],
@@ -98,20 +98,20 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	attestedAccess, _ := complete["accessToken"].(string)
 	device, _ := complete["device"].(map[string]any)
 	if attestedAccess == "" || complete["attestationState"] != "verified" || complete["attestationMethod"] != deviceAttestationMethod0124 {
-		t.Fatalf("attestation result incomplete: %#v", complete)
+		t.Fatalf("Неполный результат аттестации: %#v", complete)
 	}
 	if device["attestationState"] != "verified" || device["attestationMethod"] != deviceAttestationMethod0124 || device["assurance"] != "challenge-response-attested" {
-		t.Fatalf("attestation was not persisted into trusted device: %#v", device)
+		t.Fatalf("Аттестация не сохранена в записи доверенного устройства: %#v", device)
 	}
 	if complete["hardwareProvenance"] != "not-verified" || complete["authorizationElevation"] != false || complete["phishingResistantElevation"] != false {
-		t.Fatalf("attestation overstated authorization/vendor semantics: %#v", complete)
+		t.Fatalf("Аттестация необоснованно расширила полномочия или сведения о производителе: %#v", complete)
 	}
 
 	// Запрос challenge расходуется до проверки подписи; поэтому повтор корректного
 	// запроса и попытка злоумышленника после неверного доказательства всегда отклоняются.
 	code, replayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", attestedAccess, completeBody)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("attestation replay accepted: status=%d body=%#v", code, replayOut)
+		t.Fatalf("Принято повторное использование аттестации: статус=%d ответ=%#v", code, replayOut)
 	}
 
 	code, trustOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", attestedAccess, nil)
@@ -120,7 +120,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	trust := deviceTrustData0121(t, trustOut)
 	if trust["deviceAttestationState"] != "verified" || trust["deviceAttestationMethod"] != deviceAttestationMethod0124 {
-		t.Fatalf("session status does not expose fresh attestation: %#v", trust)
+		t.Fatalf("Состояние сессии не отражает новую аттестацию: %#v", trust)
 	}
 
 	code, badBeginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", attestedAccess, map[string]any{})
@@ -137,12 +137,12 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	code, badOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", attestedAccess, badBody)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("wrong attestation signature accepted: status=%d body=%#v", code, badOut)
+		t.Fatalf("Принята неверная подпись аттестации: статус=%d ответ=%#v", code, badOut)
 	}
 	badBody["signature"] = signP256P1363Test0123(t, priv, badBegin["signingPayload"].(string))
 	code, badReplayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", attestedAccess, badBody)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("consumed bad-proof challenge reused: status=%d body=%#v", code, badReplayOut)
+		t.Fatalf("Повторно использован запрос с уже отклонённым подтверждением: статус=%d ответ=%#v", code, badReplayOut)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124(t *t
 	raw := time.Date(2026, time.September, 27, 11, 29, 48, 822071312, time.UTC)
 	now := canonicalDeviceAttestationTime0124(raw)
 	if now.Nanosecond()%1000 != 0 {
-		t.Fatalf("attestation timestamp was not canonicalized to PostgreSQL microseconds: %s", now.Format(time.RFC3339Nano))
+		t.Fatalf("Метка времени аттестации не нормализована до микросекунд PostgreSQL: %s", now.Format(time.RFC3339Nano))
 	}
 	challenge := model.DeviceChallenge{
 		CreatedAt: now,
@@ -184,7 +184,7 @@ func TestDeviceAttestationFreshnessDowngradesExpired0124(t *testing.T) {
 	}
 	state, assurance := effectiveDeviceAttestation0124(device, now)
 	if state != "expired" || assurance != "proof-of-possession" {
-		t.Fatalf("expired attestation did not downgrade: state=%s assurance=%s", state, assurance)
+		t.Fatalf("Истёкшая аттестация не снизила уровень доверия: состояние=%s доверие=%s", state, assurance)
 	}
 }
 
@@ -219,6 +219,6 @@ func TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124(t *testing.T) 
 	deviceID, _ := device["id"].(string)
 	code, attestOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", trustedAccess, map[string]any{})
 	if code != http.StatusConflict {
-		t.Fatalf("software key was allowed into attestation: status=%d body=%#v", code, attestOut)
+		t.Fatalf("Программный ключ допущен к аппаратной аттестации: статус=%d ответ=%#v", code, attestOut)
 	}
 }

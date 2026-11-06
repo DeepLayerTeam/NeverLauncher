@@ -64,13 +64,13 @@ func TestDeviceTrustExistingBindingCannotBeReplacedWithoutRecovery0432(t *testin
 		t.Run(tc.name, func(t *testing.T) {
 			code, body := deviceTrustRequest0121(t, h, http.MethodPost, tc.path, boundAccess, map[string]any{"name": "Attempted silent replacement"})
 			if code != http.StatusConflict {
-				t.Fatalf("bound session allowed silent rebind: %d %#v", code, body)
+				t.Fatalf("Привязанная сессия допустила незаметную повторную привязку: %d %#v", code, body)
 			}
 		})
 	}
 	code, body := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", boundAccess, nil)
 	if code != http.StatusOK || deviceTrustData0121(t, body)["trustedDeviceId"] != deviceA {
-		t.Fatalf("denied rebind changed existing binding: %d %#v", code, body)
+		t.Fatalf("Отклонённая повторная привязка изменила действующую связь: %d %#v", code, body)
 	}
 }
 
@@ -94,11 +94,11 @@ func TestDeviceTrustInflightProofCannotSwapAlreadyBoundSession0432(t *testing.T)
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "signature": proof,
 	})
 	if code != http.StatusConflict {
-		t.Fatalf("valid stale proof unexpectedly replaced B: %d %#v", code, rejected)
+		t.Fatalf("Действительное, но устаревшее подтверждение неожиданно заменило B: %d %#v", code, rejected)
 	}
 	code, status := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", bound, nil)
 	if code != http.StatusOK || deviceTrustData0121(t, status)["trustedDeviceId"] != deviceB {
-		t.Fatalf("pending proof altered current binding: %d %#v", code, status)
+		t.Fatalf("Ожидающее подтверждение изменило текущую привязку: %d %#v", code, status)
 	}
 }
 
@@ -138,27 +138,27 @@ func TestDeviceTrustBindingCASAndRefreshEpoch0432(t *testing.T) {
 		}
 	}
 	if successes != 1 {
-		t.Fatalf("concurrent binding succeeded %d times, want exactly one", successes)
+		t.Fatalf("Параллельная привязка успешно выполнена %d раз, ожидается ровно один", successes)
 	}
 	current, ok := sessions.get(session.ID, session.UserID)
 	if !ok || current.BindingEpoch != preview.BindingEpoch+1 || current.TrustedDeviceID == "" {
-		t.Fatalf("invalid binding epoch: %#v", current)
+		t.Fatalf("Некорректная эпоха привязки: %#v", current)
 	}
 	if _, _, err := sessions.rotateExpected0432(refresh, &preview, req); !errors.Is(err, errSessionBindingChanged0432) {
-		t.Fatalf("stale preview rotated bound refresh token: %v", err)
+		t.Fatalf("Устаревший предпросмотр сменил привязанный токен обновления: %v", err)
 	}
 	// Отказ из-за эпохи не должен погашать refresh-токен. Законный клиент может
 	// повторить запрос с обновлённым снимком привязанного устройства и настоящим
 	// доказательством владения ключом.
 	if refreshed, err := sessions.previewRefresh0126(refresh); err != nil || !sameDeviceBinding0432(current, refreshed) {
-		t.Fatalf("CAS failure consumed refresh token: %v %#v", err, refreshed)
+		t.Fatalf("Сбой CAS израсходовал токен обновления: %v %#v", err, refreshed)
 	}
 	_, nextRefresh, err := sessions.rotateExpected0432(refresh, &current, req)
 	if err != nil || nextRefresh == "" || nextRefresh == refresh {
-		t.Fatalf("valid snapshot could not rotate: %v", err)
+		t.Fatalf("Не удалось обновить действующий снимок: %v", err)
 	}
 	if _, err := sessions.bindTrustedDevice121(session.ID, session.UserID, "other", time.Now()); !errors.Is(err, errSessionBindingChanged0432) {
-		t.Fatalf("second binding should require explicit replacement: %v", err)
+		t.Fatalf("Повторная привязка должна требовать явной замены: %v", err)
 	}
 }
 
@@ -194,11 +194,11 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	bound := deviceTrustData0121(t, body)["accessToken"].(string)
 	code, body = complete(bound, second, secondPublic, secondPrivate)
 	if code != http.StatusConflict {
-		t.Fatalf("competing valid challenge bound second device: %d %#v", code, body)
+		t.Fatalf("Конкурирующий действующий запрос привязал второе устройство: %d %#v", code, body)
 	}
 	code, status := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", bound, nil)
 	if code != http.StatusOK || deviceTrustData0121(t, status)["trustedDeviceId"] != first["deviceId"] {
-		t.Fatalf("first binding no longer authoritative: %d %#v", code, status)
+		t.Fatalf("Первая привязка утратила приоритет: %d %#v", code, status)
 	}
 	// Проигравшая регистрация может сохранить кандидата до CAS, но API обязан
 	// навсегда оставить его отозванным, а не ещё одним активным ключом.
@@ -210,7 +210,7 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	}
 	active := deviceTrustData0121(t, listed)["items"].([]any)
 	if len(active) != 1 || active[0].(map[string]any)["id"] != firstDevice {
-		t.Fatalf("losing registered key remained active: %#v", active)
+		t.Fatalf("Ключ, проигравший конкурентную регистрацию, остался активным: %#v", active)
 	}
 	code, listed = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=revoked", bound, nil)
 	if code != http.StatusOK {
@@ -218,6 +218,6 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	}
 	revoked := deviceTrustData0121(t, listed)["items"].([]any)
 	if len(revoked) != 1 || revoked[0].(map[string]any)["id"] != secondDevice {
-		t.Fatalf("losing registered key not revoked: %#v", revoked)
+		t.Fatalf("Ключ, проигравший конкурентную регистрацию, не отозван: %#v", revoked)
 	}
 }

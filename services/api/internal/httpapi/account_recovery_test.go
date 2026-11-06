@@ -25,7 +25,7 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 	}
 	oldAccess, _ := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", lost.Access, nil)
 	if oldAccess != http.StatusUnauthorized {
-		t.Fatalf("old bearer token survived revocation: %d", oldAccess)
+		t.Fatalf("Старый токен Bearer остался действителен после отзыва: %d", oldAccess)
 	}
 
 	independent, _ := deviceTrustLogin0121(t, h, "safe-new-browser")
@@ -34,7 +34,7 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 	beginRequest := map[string]any{"oldDeviceId": lost.ID, "name": "Fresh device", "platform": "linux", "clientVersion": "0.43.5", "publicKey": base64.RawURLEncoding.EncodeToString(public), "keyAlgorithm": "ed25519", "keyBinding": "software"}
 	code, _ := deviceTrustRequest0121(t, h, http.MethodPost, beginPath, independent, beginRequest)
 	if code != http.StatusPreconditionRequired {
-		t.Fatalf("missing fresh phishing-resistant proof permitted: %d", code)
+		t.Fatalf("Допущено отсутствие нового подтверждения, устойчивого к фишингу: %d", code)
 	}
 	claims, err := srv.verifyAdminToken(independent)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 	}
 	code, body := deviceTrustRequest0121(t, h, http.MethodPost, beginPath, freshAccess, beginRequest)
 	if code != http.StatusOK {
-		t.Fatalf("revoked tombstone cannot be recovered: %d %#v", code, body)
+		t.Fatalf("Запись об отзыве не должна подлежать восстановлению: %d %#v", code, body)
 	}
 	begin := deviceTrustData0121(t, body)
 	completePath := "/api/v1/auth/devices/" + lost.ID + "/key-recovery/complete"
@@ -64,11 +64,11 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(lost.Private, []byte(begin["signingPayload"].(string)))),
 	})
 	if code != http.StatusUnauthorized {
-		t.Fatalf("old compromised key signed recovery: %d", code)
+		t.Fatalf("Восстановление подписано старым скомпрометированным ключом: %d", code)
 	}
 	code, body = deviceTrustRequest0121(t, h, http.MethodPost, beginPath, freshAccess, beginRequest)
 	if code != http.StatusOK {
-		t.Fatalf("new recovery challenge: %d %#v", code, body)
+		t.Fatalf("Новый запрос подтверждения восстановления: %d %#v", code, body)
 	}
 	begin = deviceTrustData0121(t, body)
 	signature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(private, []byte(begin["signingPayload"].(string))))
@@ -76,26 +76,26 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": signature,
 	})
 	if code != http.StatusOK {
-		t.Fatalf("verified recovery did not complete: %d %#v", code, body)
+		t.Fatalf("Проверенное восстановление не завершилось: %d %#v", code, body)
 	}
 	data := deviceTrustData0121(t, body)
 	next := data["device"].(map[string]any)
 	nextID := next["id"].(string)
 	if nextID == lost.ID || next["assurance"] != "proof-of-possession" || next["attestationState"] != "unattested" {
-		t.Fatalf("recovered key inherited old identity/assurance: %#v", next)
+		t.Fatalf("Восстановленный ключ унаследовал старую идентичность или уровень доверия: %#v", next)
 	}
 	old, err := repo.GetTrustedDevice("admin", lost.ID)
 	if err != nil || old.Status != "revoked" || old.ReplacedByDeviceID != nextID || old.ReplacementReason != "recover" {
-		t.Fatalf("old key tombstone not permanent: %+v %v", old, err)
+		t.Fatalf("Запись об отзыве старого ключа оказалась не постоянной: %+v %v", old, err)
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", freshAccess, nil)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("pre-recovery bearer survived binding epoch: %d", code)
+		t.Fatalf("Токен Bearer, выданный до восстановления, сохранился после смены эпохи привязки: %d", code)
 	}
 	newAccess := data["accessToken"].(string)
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", newAccess, nil)
 	if code != http.StatusOK {
-		t.Fatalf("new key not usable: %d", code)
+		t.Fatalf("Новый ключ не работает: %d", code)
 	}
 	independent2, _ := deviceTrustLogin0121(t, h, "second-safe-browser")
 	claims2, err := srv.verifyAdminToken(independent2)
@@ -112,7 +112,7 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, beginPath, retry, beginRequest)
 	if code != http.StatusNotFound {
-		t.Fatalf("already claimed tombstone reused: %d", code)
+		t.Fatalf("Повторно использована уже закреплённая запись об отзыве: %d", code)
 	}
 }
 
@@ -145,10 +145,10 @@ func TestRecoveryCannotRebindUnrelatedTrustedDevice0435(t *testing.T) {
 		"oldDeviceId": lost.ID, "publicKey": base64.RawURLEncoding.EncodeToString(public), "keyAlgorithm": "ed25519", "keyBinding": "software",
 	})
 	if code != http.StatusConflict {
-		t.Fatalf("recovery replaced a different active bound device: %d", code)
+		t.Fatalf("Восстановление заменило другое активное привязанное устройство: %d", code)
 	}
 	current, err := repo.GetTrustedDevice("admin", safe.ID)
 	if err != nil || current.Status != "active" {
-		t.Fatalf("unrelated device was changed: %+v %v", current, err)
+		t.Fatalf("Изменено постороннее устройство: %+v %v", current, err)
 	}
 }

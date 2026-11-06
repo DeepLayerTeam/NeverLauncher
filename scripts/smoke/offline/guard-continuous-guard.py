@@ -128,7 +128,7 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[Launcher] Continuous Guard 0.18.9 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Проверка Continuous Guard 0.18.9: заглушка {placeholder!r} в {rel}"
             )
 
 print("[Launcher] Continuous Guard 0.18.9: проверка: OK")

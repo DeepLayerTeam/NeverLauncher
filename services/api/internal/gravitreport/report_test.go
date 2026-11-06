@@ -97,7 +97,7 @@ func TestManualCutoverCannotBeReviewed0340(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.Status != "blocked" {
-		t.Fatal("staged channel passed review")
+		t.Fatal("Промежуточный канал прошёл проверку")
 	}
 }
 func TestUnknownEvidenceStateBlocks0340(t *testing.T) {

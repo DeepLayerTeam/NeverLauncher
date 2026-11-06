@@ -141,7 +141,7 @@ def main() -> int:
         return 0
     except (OSError, TimeoutError, ValueError) as exc:
         # Никаких сырых данных клиента, токенов, стеков исключений или путей.
-        print(f"[1.17.1 resource-ready proxy] {type(exc).__name__}", file=sys.stderr)
+        print(f"[Прокси проверки готовности ресурсов 1.17.1] {type(exc).__name__}", file=sys.stderr)
         return 1
 
 

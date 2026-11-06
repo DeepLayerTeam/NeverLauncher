@@ -5,10 +5,10 @@ VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 
 if ! command -v gradle >/dev/null 2>&1 || ! command -v jar >/dev/null 2>&1; then
   if [[ "${LAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "1" || "${LAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "true" ]]; then
-    echo "[Launcher] strict preflight: Gradle/JDK обязательны для ServerBridge" >&2
+    echo "[Launcher] Строгая предварительная проверка: для ServerBridge необходимы Gradle и JDK" >&2
     exit 1
   fi
-  echo "[Launcher] Gradle/JDK не найдены: production bridge build пропущен локально; такой прогон не является production-ready" >&2
+  echo "[Launcher] Gradle/JDK не найдены: Производственная сборка моста пропущена локально; такой запуск не подтверждает готовность к эксплуатации" >&2
   exit 0
 fi
 

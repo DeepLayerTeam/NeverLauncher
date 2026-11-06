@@ -57,7 +57,7 @@ require(
 )
 if "UnixNano" in helper or "time.Now" in helper:
     raise SystemExit(
-        "0.14.3 ticket identifier helper contains predictable entropy fallback"
+        "Средство генерации идентификатора билета 0.14.3 содержит предсказуемый резервный источник энтропии"
     )
 
 repo = read("services/api/internal/repository/server_bridge_v2.go")

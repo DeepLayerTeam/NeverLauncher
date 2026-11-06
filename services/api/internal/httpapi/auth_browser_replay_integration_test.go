@@ -46,7 +46,7 @@ func TestBrowserNonceAcrossPostgresReplicas0525(t *testing.T) {
 			rec := httptest.NewRecorder()
 			allowed := s.claimBrowserTransaction0525(rec, httptest.NewRequest("POST", "/", nil), tx)
 			if !allowed && rec.Code != 401 {
-				t.Errorf("rejected with HTTP %d, want 401", rec.Code)
+				t.Errorf("Отклонено с HTTP %d, ожидался 401", rec.Code)
 			}
 			accepted <- allowed
 		}(srv)
@@ -60,6 +60,6 @@ func TestBrowserNonceAcrossPostgresReplicas0525(t *testing.T) {
 		}
 	}
 	if count != 1 {
-		t.Fatalf("PostgreSQL accepted %d simultaneous browser completions", count)
+		t.Fatalf("PostgreSQL принял %d одновременных завершений браузерной авторизации", count)
 	}
 }

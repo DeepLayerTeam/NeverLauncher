@@ -133,7 +133,7 @@ case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[neofo
 
 certification_live_start neoforge "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 
-printf '[neoforge-cert] запуск реального NeoForge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
+printf '[neoforge-cert] Запуск реального профиля клиента NeoForge %s на Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/neoforge-certification.json" \

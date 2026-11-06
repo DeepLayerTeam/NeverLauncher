@@ -42,7 +42,7 @@ cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin run
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
 [[ -f "$RUNTIME_BIN" ]] || { echo "[vanilla-cert] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
-printf '[vanilla-cert] подготовка Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
+printf '[vanilla-cert] Подготовка Mojang Vanilla %s для %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
 "$NL_BIN" runtime vanilla-package \
   --minecraft "$MINECRAFT_VERSION" \
   --client-dir "$RUNTIME_DIR/materialized-client" \
@@ -111,7 +111,7 @@ fi
 source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
 certification_live_start vanilla "" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 
-printf '[vanilla-cert] запуск реального клиента Mojang with Java %s on %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
+printf '[vanilla-cert] Запуск реального клиента Mojang на Java %s для %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json" \

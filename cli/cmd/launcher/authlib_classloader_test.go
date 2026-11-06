@@ -90,7 +90,7 @@ func TestAuthlibClassloader0279ApplyLegacyRuntimeAndTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if p.Compatibility == nil || p.Compatibility.JavaMajor != 8 || p.Compatibility.ParentInstallPlanSHA256 == p.ReproducibilitySHA256 {
-		t.Fatalf("compatibility not bound to new digest: %+v", p.Compatibility)
+		t.Fatalf("Совместимость не привязана к новому дайджесту: %+v", p.Compatibility)
 	}
 	if err = verifyFactoryPlan0271(root, p); err != nil {
 		t.Fatal(err)
@@ -128,17 +128,17 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 		}
 		t.Setenv("LAUNCHER_MINECRAFT_ACCESS_TOKEN", "")
 		if err = runLegacyClient0278(context.Background(), root, java, "Agent User", "fixture-uuid"); err == nil {
-			t.Fatal("official mode accepted missing token")
+			t.Fatal("Официальный режим принял запрос без токена")
 		}
 	}
 	if err = handleRuntimeCompat0279([]string{"compat-apply", "--client-dir", root, "--file", filepath.Join(sourceDir, "compat.json")}); err == nil {
-		t.Fatal("mutated compatible build without new project")
+		t.Fatal("Совместимая сборка изменена без создания нового проекта")
 	}
 	if err = os.WriteFile(filepath.Join(root, ".launcher/compat/agents/agent.jar"), []byte("tamper"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err = verifyFactoryPlan0271(root, p); err == nil {
-		t.Fatal("tampered agent passed install plan")
+		t.Fatal("Изменённый агент прошёл проверку плана установки")
 	}
 }
 func TestAuthlibClassloader0279ModulepathAndUnsupportedRules(t *testing.T) {
@@ -158,13 +158,13 @@ func TestAuthlibClassloader0279ModulepathAndUnsupportedRules(t *testing.T) {
 	}
 	base.AddOpens = []string{"java.base/java.lang=ALL-UNNAMED", "-Xmx8G=ALL-UNNAMED"}
 	if err := compatValidateLock0279(&base); err == nil {
-		t.Fatal("untrusted JVM option accepted")
+		t.Fatal("Принят недоверенный параметр JVM")
 	}
 	base.AddOpens = nil
 	base.Modulepath = nil
 	base.AuthMode = "yggdrasil"
 	if err := compatValidateLock0279(&base); err == nil {
-		t.Fatal("unpinned auth agent accepted")
+		t.Fatal("Принят незакреплённый агент авторизации")
 	}
 	base.JavaAgents = []compatAgent0279{{Path: ".launcher/compat/agents/ygg.jar", SHA256: sha, Options: "${TOKEN}"}}
 	if err := compatValidateLock0279(&base); err == nil {
@@ -202,11 +202,11 @@ func TestAuthlibClassloader0279AuthlibProvenanceAndRollback(t *testing.T) {
 		return mirrorPatchAuthlib0274(stage, dest, patch, sha256HexBytes(base), sha256HexBytes(overlay), strings.Repeat("f", 64))
 	})
 	if err == nil {
-		t.Fatal("wrong expected archive accepted")
+		t.Fatal("Принят архив, не соответствующий ожидаемому")
 	}
 	afterBad, err := readFactoryPlan0271(root)
 	if err != nil || pre.ReproducibilitySHA256 != afterBad.ReproducibilitySHA256 {
-		t.Fatal("failed transformation changed live client")
+		t.Fatal("Неудачное преобразование изменило действующий клиент")
 	}
 	updated, err := mirrorTransactional0274(context.Background(), root, func(stage string) ([]mirrorAction0274, error) {
 		return mirrorPatchAuthlib0274(stage, dest, patch, sha256HexBytes(base), sha256HexBytes(overlay), sha256HexBytes(expected))

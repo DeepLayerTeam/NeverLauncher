@@ -110,11 +110,11 @@ func TestRedisCoordinatorFencesCommandOwnership01911(t *testing.T) {
 	}
 	ok, err = coordinator.AcquireCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA, 30*time.Second)
 	if err != nil || !ok {
-		t.Fatalf("same owner renewal: ok=%v err=%v", ok, err)
+		t.Fatalf("Продление аренды тем же владельцем: успешно=%v ошибка=%v", ok, err)
 	}
 	ok, err = coordinator.AcquireCommandLease(context.Background(), "paper-main", "ctl-1", ownerB, tokenB, 30*time.Second)
 	if err != nil || ok {
-		t.Fatalf("competing acquire must be fenced: ok=%v err=%v", ok, err)
+		t.Fatalf("Конкурирующий захват должен блокироваться: успешно=%v ошибка=%v", ok, err)
 	}
 	verified, err := coordinator.VerifyCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA)
 	if err != nil || !verified {
@@ -125,14 +125,14 @@ func TestRedisCoordinatorFencesCommandOwnership01911(t *testing.T) {
 	}
 	verified, _ = coordinator.VerifyCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA)
 	if !verified {
-		t.Fatal("non-owner release removed lease")
+		t.Fatal("Освобождение аренды сторонним участником удалило аренду")
 	}
 	if err := coordinator.ReleaseCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA); err != nil {
 		t.Fatal(err)
 	}
 	verified, _ = coordinator.VerifyCommandLease(context.Background(), "paper-main", "ctl-1", ownerA, tokenA)
 	if verified {
-		t.Fatal("owner release did not remove lease")
+		t.Fatal("Освобождение аренды владельцем не удалило аренду")
 	}
 	if err := coordinator.TouchChannel(context.Background(), ChannelPresence{ReplicaID: "api-1", ServerID: "paper-main", RuntimeID: strings.Repeat("a", 64), ChannelID: ownerA, ResumeAfter: 42, BackendAddress: "api-a:8080"}, 15*time.Second); err != nil {
 		t.Fatal(err)
@@ -146,6 +146,6 @@ func TestRedisCoordinatorFencesCommandOwnership01911(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("channel presence was not persisted to Redis")
+		t.Fatal("Наличие канала не было сохранено в Redis")
 	}
 }

@@ -117,7 +117,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatal(err)
 			}
 			if second.ProcessorSkipped != 1 || second.ProcessorRan != 0 || !compatibilitySHA256RE.MatchString(second.ProcessorJournalSHA256) {
-				t.Fatalf("expected processor journal cache hit: %+v", second)
+				t.Fatalf("Ожидалось попадание в кеш журнала обработчика: %+v", second)
 			}
 
 			// Имитируйте сбой после создания проверенного результата процессора, но до
@@ -137,7 +137,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			journal.Entries["0"] = entry
 			journalRaw, _ = json.MarshalIndent(journal, "", "  ")
 			if err := writeAtomicBytes(filepath.FromSlash(second.ProcessorJournalPath), append(journalRaw, '\n'), 0o600); err != nil {
-				t.Fatalf("write simulated crash journal: %v", err)
+				t.Fatalf("Ошибка записи журнала имитации аварийного завершения: %v", err)
 			}
 			installerPath := filepath.Join(dir, ".launcher", "installers", loader, sanitizeVersionToken(second.ArtifactVersion), "installer.jar")
 			if err := os.Remove(installerPath); err != nil {
@@ -185,10 +185,10 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				LoaderCacheOnly: true, HTTPClient: server.Client(),
 			})
 			if err != nil {
-				t.Fatalf("interrupted processor rerun failed: %v", err)
+				t.Fatalf("Повторный запуск прерванного обработчика завершился ошибкой: %v", err)
 			}
 			if fourth.ProcessorRecovered != 1 || fourth.ProcessorRan != 1 || fourth.ProcessorSkipped != 0 {
-				t.Fatalf("rerun of interrupted processor must be genuine recovery: %+v", fourth)
+				t.Fatalf("Повторный запуск прерванного обработчика должен выполнять настоящее восстановление: %+v", fourth)
 			}
 
 			packagePath := filepath.Join(t.TempDir(), "package.json")
@@ -323,10 +323,10 @@ func TestNeoForgeMavenMetadataPersistentSemanticMismatchFailsClosed(t *testing.T
 
 	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/maven-metadata.xml")
 	if err == nil || !strings.Contains(err.Error(), "не имеет latest-stable версии") {
-		t.Fatalf("persistent incompatible metadata must fail closed, got %v", err)
+		t.Fatalf("Несовместимые сохранённые метаданные должны приводить к отказу: %v", err)
 	}
 	if got := requests.Load(); got != compatibilityHTTPAttempts {
-		t.Fatalf("semantic metadata request count=%d, want %d", got, compatibilityHTTPAttempts)
+		t.Fatalf("Число запросов семантических метаданных=%d, ожидается %d", got, compatibilityHTTPAttempts)
 	}
 }
 
@@ -340,10 +340,10 @@ func TestNeoForgeMavenMetadataPersistentNotFoundFailsClosed(t *testing.T) {
 
 	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL)
 	if err == nil || !strings.Contains(err.Error(), "HTTP 404") {
-		t.Fatalf("persistent metadata 404 must fail closed, got %v", err)
+		t.Fatalf("Ошибка 404 при запросе сохранённых метаданных должна приводить к отказу: %v", err)
 	}
 	if got := requests.Load(); got != compatibilityHTTPAttempts {
-		t.Fatalf("metadata request count=%d, want %d", got, compatibilityHTTPAttempts)
+		t.Fatalf("Число запросов метаданных=%d, ожидается %d", got, compatibilityHTTPAttempts)
 	}
 }
 
@@ -367,7 +367,7 @@ func TestForgeLibraryMaterializationDeduplicatesSameDestinationBeforeWorkers(t *
 		t.Fatal(err)
 	}
 	if got := requests.Load(); got != 1 {
-		t.Fatalf("duplicate destination downloaded %d times, want 1", got)
+		t.Fatalf("Повторяющийся целевой файл загружен %d раз, ожидается 1", got)
 	}
 	if len(downloaded) != 1 || downloaded[0].Path != "libraries/net/minecraftforge/unsafe/0.9.2/unsafe-0.9.2.jar" {
 		t.Fatalf("unexpected deduplicated result: %+v", downloaded)
@@ -407,7 +407,7 @@ func TestForgeInstallV1ProcessorTokens(t *testing.T) {
 		t.Fatalf("Несовпадение токена артефакта InstallV1: %q", artifact)
 	}
 	if _, err := resolveProcessorToken(pc, "{UNKNOWN}"); err == nil {
-		t.Fatal("unknown processor token accepted")
+		t.Fatal("Принят неизвестный токен обработчика")
 	}
 }
 
@@ -471,7 +471,7 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bundle.Legacy || bundle.LegacyMode != "legacy-v1-universal" || bundle.Version.ID != profileID {
-		t.Fatalf("legacy V1 installer detection mismatch: %+v", bundle)
+		t.Fatalf("Несоответствие при определении устаревшего установщика V1: %+v", bundle)
 	}
 
 	clientDir := t.TempDir()
@@ -490,10 +490,10 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		t.Fatalf("Неожиданный результат установки устаревшей версии: %+v", result)
 	}
 	if result.LegacyUniversalSHA1 != universalSHA1 || result.LegacyUniversalSHA256 == "" {
-		t.Fatalf("legacy universal evidence mismatch: %+v", result)
+		t.Fatalf("Несоответствие подтверждений универсального пакета устаревшей версии: %+v", result)
 	}
 	if serverOnlyRequested.Load() {
-		t.Fatal("clientreq=false legacy library was requested")
+		t.Fatal("Запрошена устаревшая библиотека с clientreq=false")
 	}
 	for _, rel := range []string{
 		result.LegacyUniversalPath,
@@ -506,14 +506,14 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		}
 	}
 	if _, err := os.Stat(filepath.Join(clientDir, "libraries/com/example/serverlib/1.0/serverlib-1.0.jar")); !os.IsNotExist(err) {
-		t.Fatalf("server-only legacy library materialized: %v", err)
+		t.Fatalf("Материализована устаревшая библиотека только для сервера: %v", err)
 	}
 	profileOnDisk, err := os.ReadFile(filepath.Join(clientDir, filepath.FromSlash(result.ProfilePath)))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Contains(profileOnDisk, []byte(`"clientreq":false`)) || !bytes.Contains(profileOnDisk, []byte("FMLTweaker")) {
-		t.Fatalf("original legacy versionInfo was not preserved: %s", profileOnDisk)
+		t.Fatalf("Исходное поле versionInfo устаревшей версии не сохранено: %s", profileOnDisk)
 	}
 }
 
@@ -590,7 +590,7 @@ func TestForgeLegacy1710V1LaunchWrapperInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if normalized["inheritsFrom"] != "1.7.10" || !strings.Contains(string(profileOnDisk), "cpw.mods.fml.common.launcher.FMLTweaker") {
-		t.Fatalf("Forge 1.7.10 profile was not normalized correctly: %s", profileOnDisk)
+		t.Fatalf("Профиль Forge 1.7.10 нормализован неправильно: %s", profileOnDisk)
 	}
 }
 
@@ -651,7 +651,7 @@ func TestForgeLegacy1122RepackedEmptyProcessorInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bundle.Legacy || bundle.LegacyMode != "legacy-v2-empty-processors" || bundle.Profile.Path != coord {
-		t.Fatalf("repacked 1.12.2 legacy installer detection mismatch: %+v", bundle)
+		t.Fatalf("Несоответствие при определении переупакованного устаревшего установщика 1.12.2: %+v", bundle)
 	}
 }
 
@@ -660,10 +660,10 @@ func TestInstallerArchiveSecurityAndCoordinateParsing(t *testing.T) {
 		t.Fatalf("unexpected Maven path: %q %v", got, err)
 	}
 	if got, err := mavenCoordinatePath("de.oceanlabs.mcp:mcp_config:1.20.1:mappings@txt"); err != nil || !strings.HasSuffix(got, "mcp_config-1.20.1-mappings.txt") {
-		t.Fatalf("unexpected extended Maven path: %q %v", got, err)
+		t.Fatalf("Неожиданный расширенный путь Maven: %q %v", got, err)
 	}
 	if _, err := safeArchiveRelative("../escape"); err == nil {
-		t.Fatal("installer archive traversal accepted")
+		t.Fatal("Допущен выход за пределы каталога при обработке архива установщика")
 	}
 	if !neoForgeVersionMatchesMinecraft("21.1.105", "1.21.1") ||
 		!neoForgeVersionMatchesMinecraft("26.2.0.75", "26.2") ||
@@ -768,15 +768,15 @@ func TestLegacyNativeClassifierContainerHasNoInventedBaseJar(t *testing.T) {
 	for _, coordinate := range []string{"org.lwjgl.lwjgl:lwjgl-platform:2.9.1", "net.java.jinput:jinput-platform:2.0.5", "tv.twitch:twitch-platform:5.16", "tv.twitch:twitch-external-platform:4.5"} {
 		lib := MojangLibrary{Name: coordinate, Natives: map[string]string{"windows": "natives-windows", "linux": "natives-linux"}}
 		if !isLegacyNativeClassifierContainer(lib) {
-			t.Fatalf("must not download missing classifier-only base JAR: %s", coordinate)
+			t.Fatalf("Нельзя загружать отсутствующий базовый JAR, используемый только классификатором: %s", coordinate)
 		}
 		lib.Downloads.Artifact = MojangDownload{URL: "https://example.com/lib.jar", SHA1: "0123456789abcdef0123456789abcdef01234567"}
 		if isLegacyNativeClassifierContainer(lib) {
-			t.Fatalf("must not skip verified base JAR: %s", coordinate)
+			t.Fatalf("Нельзя пропускать проверенный базовый JAR: %s", coordinate)
 		}
 	}
 	if isLegacyNativeClassifierContainer(MojangLibrary{Name: "org.lwjgl.lwjgl:lwjgl:2.9.1", Natives: map[string]string{"windows": "natives-windows"}}) {
-		t.Fatal("main LWJGL classpath library must not be skipped")
+		t.Fatal("Основная библиотека LWJGL в пути классов не должна пропускаться")
 	}
 }
 
@@ -792,7 +792,7 @@ func TestForgeLatestStableChoosesNumericMaximumIndependentOfMetadataOrder(t *tes
 	for _, tc := range []struct{ minecraft, want string }{{"1.18", "38.0.17"}, {"1.16.5", "36.2.42"}} {
 		got, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "forge", tc.minecraft, "latest-stable", server.URL)
 		if err != nil || got != tc.want {
-			t.Fatalf("forge %s: got %s want %s, err=%v", tc.minecraft, got, tc.want, err)
+			t.Fatalf("Forge %s: получено %s, ожидалось %s, ошибка=%v", tc.minecraft, got, tc.want, err)
 		}
 	}
 }
@@ -807,7 +807,7 @@ func TestForgeLegacyProfileAlreadyInheritedReportsNormalized(t *testing.T) {
 		t.Fatal("profile already inheriting Vanilla must still satisfy legacyProfileNormalized certification")
 	}
 	if string(profile) != string(raw) {
-		t.Fatalf("already normalized profile was unnecessarily rewritten: %s", profile)
+		t.Fatalf("Уже нормализованный профиль был без необходимости перезаписан: %s", profile)
 	}
 }
 
@@ -818,11 +818,11 @@ func TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable(t *testing.T) {
 	defer server.Close()
 	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.5", "latest-stable", server.URL)
 	if err == nil || !strings.Contains(err.Error(), "latest-stable") || !strings.Contains(err.Error(), "20.5.17-beta") || !strings.Contains(err.Error(), "prerelease") {
-		t.Fatalf("prerelease-only upstream must remain failed and explain why: %v", err)
+		t.Fatalf("Источник только с предварительными версиями должен оставаться недоступным с объяснением причины: %v", err)
 	}
 	got, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.5", "latest", server.URL)
 	if err != nil || got != "20.5.17-beta" {
-		t.Fatalf("explicit latest must still allow prerelease: %q %v", got, err)
+		t.Fatalf("Явно указанный latest должен допускать предварительные версии: %q %v", got, err)
 	}
 }
 
@@ -850,11 +850,11 @@ func TestForgeInstallerTransportRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	if requests.Load() != 2 || result.SHA1 != digest || result.Size != int64(len(payload)) {
-		t.Fatalf("recovery must fetch exactly two complete verified attempts: requests=%d result=%+v", requests.Load(), result)
+		t.Fatalf("Восстановление должно выполнить ровно две полные проверенные попытки: запросов=%d результат=%+v", requests.Load(), result)
 	}
 	final, err := os.ReadFile(filepath.Join(root, "installers", "forge.jar"))
 	if err != nil || !bytes.Equal(final, payload) {
-		t.Fatalf("recovered file was not committed atomically: %v", err)
+		t.Fatalf("Восстановленный файл не был записан атомарно: %v", err)
 	}
 }
 
@@ -881,7 +881,7 @@ func TestForgeInstallerTransportRecoveryDoesNotRetryIntegrityOrHTTPFailures(t *t
 			}
 			_, err := downloadForgeInstallerRecoveringTransport(context.Background(), server.Client(), vanillaDownloadTask{Path: "forge.jar", URL: server.URL + "/installer.jar", SHA1: digest}, t.TempDir())
 			if err == nil || requests.Load() != 1 {
-				t.Fatalf("must fail once without retry for %s: requests=%d err=%v", scenario, requests.Load(), err)
+				t.Fatalf("Для %s должен происходить один отказ без повтора: запросов=%d ошибка=%v", scenario, requests.Load(), err)
 			}
 		})
 	}

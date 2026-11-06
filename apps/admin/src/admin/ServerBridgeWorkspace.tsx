@@ -110,9 +110,9 @@ const showProblem = (error: unknown) => {
   if (error instanceof ApiError) {
     if (error.status === 401) return "Сессия истекла. Войдите заново.";
     if (error.status === 403)
-      return `Недостаточно полномочий или требуется новый MFA step-up: ${error.message}`;
+      return `Недостаточно полномочий или требуется повторная дополнительная MFA-проверка: ${error.message}`;
     if (error.status === 409)
-      return `Конфликт состояния сервера или idempotency key: ${error.message}`;
+      return `Конфликт состояния сервера или ключа идемпотентности: ${error.message}`;
   }
   return error instanceof Error ? error.message : "Неизвестная ошибка";
 };
@@ -424,7 +424,7 @@ export function ServerBridgeWorkspace({
       setMessage(
         response.idempotentReplay
           ? "Повтор запроса: возвращена ранее сохранённая команда."
-          : "Команда поставлена в очередь. Ожидаем подтверждение от Bridge.",
+          : "Команда поставлена в очередь. Ожидается подтверждение от серверного моста.",
       );
       persistPending(null);
       const latest = await api.overview(projectId).catch(() => null);
@@ -852,14 +852,14 @@ export function ServerBridgeWorkspace({
                   : node.runtimeCapabilities?.includes(
                         "adapter.auth.login-gate",
                       )
-                    ? "Заявлен адаптером (runtime E2E отдельно)"
+                    ? "Заявлен адаптером (сквозная проверка среды выполнения проводится отдельно)"
                     : "Не подтверждён"}
               </dd>
               <dt>Обслуживание / вывод из нагрузки</dt>
               <dd>
                 {networkFresh
                   ? `Подписанный routing: ${network?.state}; admission: ${network?.reason}`
-                  : "Не подтверждено актуальным routing snapshot"}
+                  : "Не подтверждено актуальным снимком маршрутизации"}
                 . ACK команд проверяйте отдельно.
               </dd>
             </dl>
@@ -1414,7 +1414,7 @@ export function ServerBridgeWorkspace({
           <dl className="bridgeFacts">
             <dt>Команда</dt>
             <dd>{selectedCommand.type}</dd>
-            <dt>Сервер / runtime</dt>
+            <dt>Сервер / среда выполнения</dt>
             <dd>
               {selectedCommand.serverId} / эпоха {selectedCommand.runtimeEpoch}
             </dd>
@@ -1425,7 +1425,7 @@ export function ServerBridgeWorkspace({
             <dt>Доставка</dt>
             <dd>
               {monitorFresh && monitor?.deliveryConfirmed
-                ? "подтверждена ответом Bridge"
+                ? "подтверждена ответом серверного моста"
                 : "не подтверждена; dispatch не равен delivery"}
             </dd>
             <dt>Результат</dt>

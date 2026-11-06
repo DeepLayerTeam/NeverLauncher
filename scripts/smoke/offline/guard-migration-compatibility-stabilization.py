@@ -175,5 +175,5 @@ if targets.get("productVersion") != version:
     raise SystemExit("Цели Guard CI не соответствуют VERSION")
 
 print(
-    f"Launcher 0.13.10 Guard migration + compatibility + stabilization gate: OK ({version})"
+    f"Launcher 0.13.10: проверка миграции Guard, совместимости и стабилизации — OK ({version})"
 )

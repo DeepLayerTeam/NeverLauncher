@@ -170,13 +170,13 @@ expected_unique = {"fabric": 48, "quilt": 48, "forge": 45, "neoforge": 22}
 for loader, want in expected_unique.items():
     if len(unique_versions[loader]) != want:
         raise SystemExit(
-            f"Loader Compatibility GA {loader} unique versions={len(unique_versions[loader])}, want={want}"
+            f"Проверка совместимости загрузчиков GA {loader}: уникальных версий={len(unique_versions[loader])}, ожидается={want}"
         )
 if "1.7.10" not in unique_versions["forge"] or "1.12.2" not in unique_versions["forge"]:
     raise SystemExit(
-        "Loader Compatibility GA must include Forge legacy 1.7.10 and 1.12.2"
+        "Проверка совместимости загрузчиков GA должна включать устаревший Forge 1.7.10 и 1.12.2"
     )
 
 print(
-    "Loader Compatibility GA 0.18.0 gate: OK (runtime-enforced 163 loader/version lines, 292 catalogue targets / 280 required / 12 NOT CERTIFIED, Fabric/Quilt/Forge/NeoForge + legacy)"
+    "Проверка совместимости загрузчиков GA 0.18.0: OK (163 сочетания загрузчика и версии, контролируемых Runtime; 292 цели каталога, 280 обязательных, 12 NOT CERTIFIED, Fabric/Quilt/Forge/NeoForge и устаревшие версии)"
 )

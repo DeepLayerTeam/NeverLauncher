@@ -72,7 +72,7 @@ export function JobMonitor({ backendUrl, token, projectId, initialId = '', canPu
   }
   async function modify(action: 'cancel'|'retry') {
     if (!job || !canPublish) return;
-    if (!window.confirm(`${action === 'cancel' ? 'Отменить ожидающее задание' : 'Повторить завершившееся с ошибкой задание'} ${job.id}?\nРезультат будет сохранён Backend.`)) return;
+    if (!window.confirm(`${action === 'cancel' ? 'Отменить ожидающее задание' : 'Повторить завершившееся с ошибкой задание'} ${job.id}?\nРезультат будет сохранён на сервере.`)) return;
     setBusy(true); setNotice(''); setError('');
     try {
       const updated = await api<Job>(`/api/v1/operations/${encodeURIComponent(job.id)}/${action}`, { method: 'POST' });
@@ -93,7 +93,7 @@ export function JobMonitor({ backendUrl, token, projectId, initialId = '', canPu
       {job.status === 'running' && <p>Исполнитель выполняет операцию. Не отправляйте повторный запрос.</p>}
       {job.status === 'pending' && <p>Ожидает исполнения. Можно отменить до начала работы.</p>}
       <div className="buttonRow"><button disabled={busy || !canPublish || job.status !== 'pending'} onClick={() => void modify('cancel')}>Отменить ожидающее</button><button disabled={busy || !canPublish || !['failed','dead','revoked'].includes(job.status)} onClick={() => void modify('retry')}>Повторить</button><a href={auditHref(job.id)}>Аудит по correlation ID</a></div>
-      {job.result && <details><summary>Ответ Backend</summary><pre>{JSON.stringify(job.result, null, 2)}</pre></details>}
+      {job.result && <details><summary>Ответ сервера</summary><pre>{JSON.stringify(job.result, null, 2)}</pre></details>}
       <h4>История попыток</h4><div className="tableScroll"><table className="table resourceTable"><thead><tr><th>№</th><th>Состояние</th><th>Начало</th><th>Завершение</th><th>Ошибка</th></tr></thead><tbody>{attempts.map(a => <tr key={a.id || a.attempt}><td>{a.attempt}</td><td>{statusRu(a.status)}</td><td>{a.startedAt ? new Date(a.startedAt).toLocaleString() : '—'}</td><td>{a.finishedAt ? new Date(a.finishedAt).toLocaleString() : '—'}</td><td>{a.error || '—'}</td></tr>)}{attempts.length===0 && <tr><td colSpan={5}>Попыток пока нет.</td></tr>}</tbody></table></div>
     </article>}
   </section>;

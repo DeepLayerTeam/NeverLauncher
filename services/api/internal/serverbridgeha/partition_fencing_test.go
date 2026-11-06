@@ -31,6 +31,6 @@ func TestRedisLeaseCannotAliasAnotherKey0514(t *testing.T) {
 	}
 	ok, err := coord.VerifyCommandLease(ctx, "server-a", "command-one", owner, token)
 	if err != nil || !ok {
-		t.Fatalf("invalid release touched valid lease: %t, %v", ok, err)
+		t.Fatalf("Некорректное освобождение затронуло действующую аренду: %t, %v", ok, err)
 	}
 }

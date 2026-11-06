@@ -22,7 +22,7 @@ def main() -> int:
     if tuple(
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 3):
-        raise SystemExit(f"[Launcher] Module Guard 0.18.3: VERSION={version}")
+        raise SystemExit(f"[Launcher] Защита модулей 0.18.3: версия={version}")
 
     sensor = read("runtime/guard-sensor/src/lib.rs")
     parent = read("runtime/runtime/src/windows_module_guard.rs")
@@ -140,7 +140,7 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[Launcher] Module Guard 0.18.3 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Проверка защиты модулей 0.18.3: заглушка {forbidden!r} в {path}"
                 )
 
     print("[Launcher] Module Guard 0.18.3: проверка: OK")

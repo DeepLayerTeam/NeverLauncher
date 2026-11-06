@@ -23,7 +23,7 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 6):
         raise SystemExit(
-            f"[Launcher] Thread & Process Integrity 0.18.6 gate: VERSION is {version}"
+            f"[Launcher] Проверка целостности потоков и процессов 0.18.6: версия {version}"
         )
 
     thread_sensor = read("runtime/guard-sensor/src/thread_integrity.rs")
@@ -63,7 +63,7 @@ def main() -> int:
     ):
         if forbidden in thread_sensor:
             raise SystemExit(
-                f"[Launcher] Thread & Process Integrity 0.18.6 gate: forbidden cross-process primitive {forbidden}"
+                f"[Launcher] Проверка целостности потоков и процессов 0.18.6: запрещённая межпроцессная операция {forbidden}"
             )
 
     require(
@@ -197,7 +197,7 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[Launcher] Thread & Process Integrity 0.18.6 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Проверка целостности потоков и процессов 0.18.6: заглушка {forbidden!r} в {path}"
                 )
 
     print("[Launcher] Thread & Process Integrity 0.18.6: проверка: OK")

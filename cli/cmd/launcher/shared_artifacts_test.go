@@ -117,12 +117,12 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 		t.Fatalf("missing installed files: %+v", first.Files)
 	}
 	if libraryRequests.Load() != 1 || nativeRequests.Load() != 1 || assetRequests.Load() != 1 {
-		t.Fatalf("first install requests unexpected: lib=%d native=%d assets=%d", libraryRequests.Load(), nativeRequests.Load(), assetRequests.Load())
+		t.Fatalf("Неожиданное число запросов при первой установке: библиотеки=%d нативные файлы=%d ресурсы=%d", libraryRequests.Load(), nativeRequests.Load(), assetRequests.Load())
 	}
 	blockArtifacts.Store(true)
 	second := install("two")
 	if second.SharedCacheHits < 3 {
-		t.Fatalf("expected shared cache hits, got %d", second.SharedCacheHits)
+		t.Fatalf("Ожидались попадания в общий кеш, получено: %d", second.SharedCacheHits)
 	}
 	if libraryRequests.Load() != 1 || nativeRequests.Load() != 1 || assetRequests.Load() != 1 {
 		t.Fatal("Общий кеш не сработал: выполнен запрос к автономному источнику артефактов")
@@ -142,7 +142,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 		return sum, size, err
 	}()
 	if err != nil || sumSize != int64(len(lib)) {
-		t.Fatal("client files share mutable inode")
+		t.Fatal("Файлы клиента используют общий изменяемый inode")
 	}
 	_ = install("three")
 	// Поддельную запись кэша нельзя незаметно обойти повторной загрузкой или принять.
@@ -181,10 +181,10 @@ func TestSharedArtifacts0277ConcurrentAndUnsafeRoots(t *testing.T) {
 		}
 	}
 	if _, err := sharedArtifactsContext0277(ctx, filepath.Join(root, "client", "nested"), filepath.Join(root, "client")); err == nil {
-		t.Fatal("shared cache in client directory accepted")
+		t.Fatal("Допущено размещение общего кеша в каталоге клиента")
 	}
 	if _, err := sharedArtifactsContext0277(ctx, filepath.Join(root, "nested"), root); err == nil {
-		t.Fatal("client in shared cache directory accepted")
+		t.Fatal("Допущено размещение клиента в каталоге общего кеша")
 	}
 }
 

@@ -109,7 +109,7 @@ try:
     ).read_text() == "balance: 42\n"
     assert (dest / "world/level.dat").read_text() == "saved from Minecraft stop\n"
     print(
-        "PASS actual CLI + POSIX child process graceful stop -> backup SHA-256 -> verify -> isolated restore; backup ID",
+        "PASS: реальный CLI, корректная остановка дочернего процесса POSIX, резервная копия с SHA-256, проверка и изолированное восстановление; идентификатор копии",
         bid,
     )
 finally:

@@ -255,7 +255,7 @@ def fetch_matrix(
         raise RuntimeError(f"У запуска рабочего процесса {label} для точного коммита некорректный ID")
     if status != "completed":
         print(
-            f"[release-certification] {label}: run {run_id} status={status}; waiting",
+            f"[Сертификация релиза] {label}: запуск {run_id}, состояние={status}; ожидание",
             flush=True,
         )
         return False

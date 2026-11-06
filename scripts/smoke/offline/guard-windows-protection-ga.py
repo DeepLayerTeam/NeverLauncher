@@ -161,7 +161,7 @@ for text, path in [
 ]:
     if "guard-windows-protection-ga-0190.py" not in text:
         raise SystemExit(
-            f"[Launcher] Windows Protection GA 0.19.0 gate: mandatory gate not wired into {path}"
+            f"[Launcher] Проверка защиты Windows GA 0.19.0: обязательная проверка не подключена в {path}"
         )
 if "TestWindowsProtectionGA" not in ci:
     raise SystemExit(
@@ -171,7 +171,7 @@ if "TestWindowsProtectionGA" not in ci:
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in impl.lower():
         raise SystemExit(
-            f"[Launcher] Windows Protection GA 0.19.0 gate: placeholder {marker!r} in implementation"
+            f"[Launcher] Проверка защиты Windows GA 0.19.0: заглушка {marker!r} в реализации"
         )
 
 print(f"[Launcher] Guard Windows Protection GA 0.19.0: проверка готовности к эксплуатации: OK ({version})")

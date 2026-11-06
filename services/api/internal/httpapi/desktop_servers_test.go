@@ -19,7 +19,7 @@ func TestDesktopProfileServers0229ScopeAndPublicResponse(t *testing.T) {
 		t.Fatalf("catalog empty format: %s", res.Body.String())
 	}
 	if res.Header().Get("Cache-Control") != "no-store" {
-		t.Fatal("server catalog must not be cached")
+		t.Fatal("Каталог серверов не должен кешироваться")
 	}
 	for _, path := range []string{"/api/v1/projects/no-such-project/profiles/vanilla/servers", "/api/v1/projects/demo-project/profiles/no-such-profile/servers"} {
 		req = httptest.NewRequest(http.MethodGet, path, nil)

@@ -139,5 +139,5 @@ require(
 )
 
 print(
-    "Minecraft/ServerBridge trust enforcement gate OK: live parent session/device/risk checks, binding-epoch snapshots, channel pinning and plugin deny reasons are enforced"
+    "Проверка доверия Minecraft/ServerBridge — OK: действуют проверки сессии, устройства и рисков, снимки эпох привязки, закрепление каналов и причины отказов плагинов"
 )

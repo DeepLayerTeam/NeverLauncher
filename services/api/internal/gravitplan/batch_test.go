@@ -93,7 +93,7 @@ func TestMultiProfilePreviewAndDeterminism0492(t *testing.T) {
 		t.Fatal(err)
 	}
 	if two.BatchSHA256 != one.BatchSHA256 {
-		t.Fatal("nondeterministic result for reversed profile order")
+		t.Fatal("Изменение порядка профилей привело к недетерминированному результату")
 	}
 	tampered := one
 	tampered.TargetSHA256 = strings.Repeat("b", 64)
@@ -105,7 +105,7 @@ func TestMultiProfilePreviewAndDeterminism0492(t *testing.T) {
 		t.Fatal(err)
 	}
 	if bytes.Contains(encoded, []byte("11111111-2222-4333-8444-555555555555")) {
-		t.Fatal("identity leaked to batch report")
+		t.Fatal("Идентификационные данные попали в групповой отчёт")
 	}
 	// Формирование отчёта никогда не записывает новые целевые данные или выпуск.
 	_ = gc.WorkspaceID("run", "profiles/alpha.json")
@@ -142,9 +142,9 @@ func TestMultiProfileOverlappingClientDirectories0492(t *testing.T) {
 		t.Fatal(e)
 	}
 	if report.Status != "blocked" || report.Profiles[0].Status != "blocked" || report.Profiles[1].Status != "blocked" {
-		t.Fatalf("source ownership overlap missed: %+v", report)
+		t.Fatalf("Не обнаружено пересечение владения источником: %+v", report)
 	}
 	if VerifyBatch0492(report) != nil {
-		t.Fatal("blocked but valid report checksum failed")
+		t.Fatal("Проверка контрольной суммы заблокированного, но корректного отчёта завершилась ошибкой")
 	}
 }

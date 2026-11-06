@@ -32,14 +32,14 @@ func TestRuntimePolicy0317NormalizationAndValidation(t *testing.T) {
 			e := valid
 			mutate(&e)
 			if _, err := verifyGuardRuntimePolicy0317(policy, "windows", e); err == nil {
-				t.Fatal("unapproved runtime accepted")
+				t.Fatal("Принят неодобренный Runtime")
 			}
 		})
 	}
 	policy.RuntimeProfiles["windows"] = []guardRuntimeProfile0317{{JavaMajor: 21, ModuleSetSHA256: strings.Repeat("b", 64)}}
 	after := guardRuntimePolicyDigest0317(policy.RuntimeProfiles["windows"])
 	if before == after {
-		t.Fatal("policy replacement retained digest")
+		t.Fatal("Замена политики сохранила прежний дайджест")
 	}
 	malformed := [][]guardRuntimeProfile0317{
 		{{JavaMajor: 22, ModuleSetSHA256: hash}},
@@ -50,11 +50,11 @@ func TestRuntimePolicy0317NormalizationAndValidation(t *testing.T) {
 	}
 	for n, bad := range malformed {
 		if _, err := normalizeGuardRuntimeProfiles0317(bad); err == nil {
-			t.Fatalf("invalid runtime profile %d accepted", n)
+			t.Fatalf("Принят недопустимый профиль Runtime %d", n)
 		}
 	}
 	if !guardRuntimePolicyRequired0317("0.31.7") || !guardRuntimePolicyRequired0317("0.32.0") || guardRuntimePolicyRequired0317("0.31.6") {
-		t.Fatal("incorrect policy version gate")
+		t.Fatal("Некорректная проверка версии политики")
 	}
 }
 
@@ -62,7 +62,7 @@ func TestRuntimePolicy0317RejectsMissingOrMalformedAllowlist(t *testing.T) {
 	cfg := config.Config{Environment: "test", GuardReleaseAllowlistJSON: `{"schemaVersion":"2.0","releases":{"0.31.7":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"` + strings.Repeat("a", 64) + `","launcherSha256":"` + strings.Repeat("b", 64) + `","requireAuthenticode":true}]}}}}}`}
 	server := Server{Version: "0.31.7", Config: cfg}
 	if _, err := server.guardReleasePolicies0134(); err == nil {
-		t.Fatal("missing runtimeProfiles silently accepted in release 0.31.7")
+		t.Fatal("В релизе 0.31.7 незаметно допущено отсутствие runtimeProfiles")
 	}
 	cfg.GuardReleaseAllowlistJSON = strings.Replace(cfg.GuardReleaseAllowlistJSON, `}]}}}}}`, `}],"runtimeProfiles":[{"javaMajor":21,"moduleSetSha256":"`+strings.Repeat("c", 64)+`"}]}}}}}`, 1)
 	server.Config = cfg
@@ -71,7 +71,7 @@ func TestRuntimePolicy0317RejectsMissingOrMalformedAllowlist(t *testing.T) {
 		t.Fatalf("Корректный профиль Runtime ошибочно отклонён: %v", err)
 	}
 	if len(policies["0.31.7"].RuntimeProfiles["windows"]) != 1 {
-		t.Fatal("runtime profile did not survive release normalization")
+		t.Fatal("Профиль Runtime не сохранился после нормализации релиза")
 	}
 }
 
@@ -83,7 +83,7 @@ func TestGuardProcessID0317RejectsControlCharacters(t *testing.T) {
 	}
 	for _, bad := range []string{"", " with-space", "one\\ntwo", "foo/bar", strings.Repeat("a", 129)} {
 		if validGuardProcessID0317(bad) {
-			t.Fatalf("invalid process ID accepted: %q", bad)
+			t.Fatalf("Принят некорректный идентификатор процесса: %q", bad)
 		}
 	}
 	e := guardContinuousEvidence01810{Schema: guardContinuousEvidenceSchema01810, EvidenceVersion: 2, ProcessID: "runtime:123", RuntimePID: 10}
@@ -91,7 +91,7 @@ func TestGuardProcessID0317RejectsControlCharacters(t *testing.T) {
 	// состояния Runtime.
 	e.ProcessID = "one\ntwo"
 	if err := validateGuardContinuousEvidence01810(e, time.Now()); err == nil {
-		t.Fatal("malformed process ID accepted")
+		t.Fatal("Принят неверно сформированный идентификатор процесса")
 	}
 }
 
@@ -103,22 +103,22 @@ func TestGuardRuntime0317MinecraftSessionBinding(t *testing.T) {
 	}}
 	session := model.MinecraftSession{ID: "minecraft-A", IntegrityVerified: true, LauncherVersion: "0.31.7", GuardSHA256: h("a"), LauncherSHA256: h("b")}
 	if err := validateContinuousGuardTicketForMinecraftSession01810(ticket, session); err != nil {
-		t.Fatalf("bound release denied: %v", err)
+		t.Fatalf("Отклонён привязанный релиз: %v", err)
 	}
 	session.ID = "minecraft-B"
 	if err := validateContinuousGuardTicketForMinecraftSession01810(ticket, session); err == nil {
-		t.Fatal("runtime evidence authorized an unrelated Minecraft session")
+		t.Fatal("Подтверждение Runtime разрешило постороннюю сессию Minecraft")
 	}
 	session.ID = "minecraft-A"
 	delete(ticket.Metadata, "minecraftSessionId")
 	if err := validateContinuousGuardTicketForMinecraftSession01810(ticket, session); err == nil {
-		t.Fatal("unbound 0.31.7 runtime ticket accepted")
+		t.Fatal("Принят непривязанный билет Runtime версии 0.31.7")
 	}
 	ticket.Metadata["minecraftSessionId"] = "minecraft-A"
 	session.CreatedAt = time.Now().UTC()
 	ticket.CreatedAt = session.CreatedAt.Add(-time.Minute)
 	if err := validateContinuousGuardTicketForMinecraftSession01810(ticket, session); err == nil {
-		t.Fatal("runtime ticket predates launch session")
+		t.Fatal("Билет Runtime создан до запуска сессии")
 	}
 }
 
@@ -129,25 +129,25 @@ func TestRuntimePolicy0317AdditionalHashPinning(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !guardRuntimeMatches0317(profiles, 21, h("a"), h("b"), h("c")) {
-		t.Fatal("exact pinned code and hooks rejected")
+		t.Fatal("Отклонены точно закреплённые код и перехватчики")
 	}
 	if guardRuntimeMatches0317(profiles, 21, h("a"), h("d"), h("c")) {
-		t.Fatal("code substitution accepted")
+		t.Fatal("Принята подмена кода")
 	}
 	if guardRuntimeMatches0317(profiles, 21, h("a"), h("b"), h("d")) {
-		t.Fatal("hook substitution accepted")
+		t.Fatal("Принята подмена перехватчика")
 	}
 }
 
 func TestGuardVersionGateFailsClosedOnNonCanonicalVersion0496(t *testing.T) {
 	for _, invalid := range []string{"0.31.7evil", "0.31.7/other", " 0.31.7", "00.31.7", "0.31.07", "0.31.7\n0.30.0", "999999999999.31.7"} {
 		if !guardRuntimePolicyRequired0317(invalid) {
-			t.Fatalf("malformed release bypassed Guard: %q", invalid)
+			t.Fatalf("Неверно сформированный релиз обошёл Guard: %q", invalid)
 		}
 	}
 	for _, valid := range []string{"0.31.7", "0.49.6", "0.49.6-rc.1", "0.49.6+build.1"} {
 		if !guardRuntimePolicyRequired0317(valid) {
-			t.Fatalf("valid release missed gate: %q", valid)
+			t.Fatalf("Корректный релиз не прошёл проверку: %q", valid)
 		}
 	}
 }

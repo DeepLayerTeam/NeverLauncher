@@ -17,11 +17,11 @@ func TestServerBridgeHandoffID0148Uses192BitsOfCSPRNGMaterial(t *testing.T) {
 			t.Fatalf("new handoff id: %v", err)
 		}
 		if !strings.HasPrefix(id, "ho_") {
-			t.Fatalf("unexpected handoff prefix: %q", id)
+			t.Fatalf("Неожиданный префикс передачи соединения: %q", id)
 		}
 		raw, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(id, "ho_"))
 		if err != nil || len(raw) != 24 {
-			t.Fatalf("handoff id must encode 24 random bytes, len=%d err=%v", len(raw), err)
+			t.Fatalf("Идентификатор передачи соединения должен содержать 24 случайных байта: длина=%d ошибка=%v", len(raw), err)
 		}
 		if _, ok := seen[id]; ok {
 			t.Fatalf("duplicate handoff id: %s", id)
@@ -48,6 +48,6 @@ func TestBridgeJoinFromHandoff0148PreservesTargetSecurityBinding(t *testing.T) {
 	h := model.ServerBridgeHandoff{ID: "ho_test", Username: "Player", UUID: "uuid", UserID: "user", SessionID: "session", TargetNodeID: "paper-1", ProjectID: "project", ProfileID: "profile", Channel: "stable", TrustedDeviceID: "device", BindingEpoch: 7, MinecraftSessionID: "mc", TargetIdentityEpoch: 4, TargetKeyFingerprint: strings.Repeat("a", 64), ProtocolVersion: 3, Status: "active", CreatedAt: now, ExpiresAt: now.Add(30 * time.Second)}
 	j := bridgeJoinFromHandoff0148(h)
 	if j.ID != h.ID || j.ServerID != h.TargetNodeID || j.IssuedIdentityEpoch != h.TargetIdentityEpoch || j.IssuedKeyFingerprint != h.TargetKeyFingerprint || j.BindingEpoch != h.BindingEpoch || j.SessionID != h.SessionID || j.ProtocolVersion != h.ProtocolVersion {
-		t.Fatalf("handoff mapping lost security binding: %#v", j)
+		t.Fatalf("Сопоставление передачи соединения потеряло привязку безопасности: %#v", j)
 	}
 }

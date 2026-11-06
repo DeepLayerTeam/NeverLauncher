@@ -62,11 +62,11 @@ func TestExtractFileAuth334(t *testing.T) {
 func TestFileAuthRefusesKeyDisagreement334(t *testing.T) {
 	_, e := parseFileAuth([]byte(`{"11111111-2222-4333-8444-555555555555":{"username":"Alice","uuid":"99999999-2222-4333-8444-555555555555"}}`), "/FileAuthSystem/Database.json")
 	if e == nil {
-		t.Fatal("embedded UUID mismatch accepted")
+		t.Fatal("Принято несоответствие встроенного UUID")
 	}
 	_, e = parseFileAuth([]byte(`{"11111111-2222-4333-8444-555555555555":{"username":"Alice"},"11111111-2222-4333-8444-555555555555":{"username":"Bob"}}`), "FileAuthSystem/Database.json")
 	if e == nil {
-		t.Fatal("duplicate JSON map key accepted")
+		t.Fatal("Принят повторяющийся ключ JSON-объекта")
 	}
 }
 func TestSQLCSVAndCrossSourceCollision334(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSQLCSVAndCrossSourceCollision334(t *testing.T) {
 	}
 	mapped, summary := Reconcile(accounts, nil)
 	if summary["blocked"] != 2 {
-		t.Fatalf("duplicate UUID not blocked: %+v %+v", summary, mapped)
+		t.Fatalf("Повторяющийся UUID не заблокирован: %+v %+v", summary, mapped)
 	}
 }
 func TestReconcileUUIDCollisionAndCaseFolding334(t *testing.T) {
@@ -100,11 +100,11 @@ func TestReconcileUUIDCollisionAndCaseFolding334(t *testing.T) {
 	}
 	rows, sum = Reconcile([]Account{alice, {Provider: "sql", SourceID: "10", Username: "alice", UUID: "12345678-2222-4333-8444-555555555555"}}, nil)
 	if sum["blocked"] != 2 {
-		t.Fatalf("case-insensitive collision accepted: %+v", rows)
+		t.Fatalf("Принят конфликт имён без учёта регистра: %+v", rows)
 	}
 	_, sum = Reconcile([]Account{alice}, nil)
 	if sum["pending_import"] != 1 {
-		t.Fatal("unknown UUID was auto-linked")
+		t.Fatal("Неизвестный UUID был автоматически привязан")
 	}
 }
 func TestExtractRejectsUnrecognizedAndInvalid334(t *testing.T) {
@@ -114,13 +114,13 @@ func TestExtractRejectsUnrecognizedAndInvalid334(t *testing.T) {
 	}
 	src, report = archive334(t, map[string]string{"sql-export/users.csv": "username,uuid\nAlice,11111111-2222-4333-8444-555555555555\n"})
 	if _, e := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), report); e == nil {
-		t.Fatal("SQL CSV without stable id accepted")
+		t.Fatal("Принят SQL CSV без стабильного идентификатора")
 	}
 }
 
 func TestFileAuthCaseFoldedIdentityFieldCollision0444(t *testing.T) {
 	_, err := parseFileAuth([]byte(`{"11111111-2222-4333-8444-555555555555":{"username":"Alice","USERNAME":"Attacker"}}`), "modules-config/FileAuthSystem/Database.json")
 	if err == nil {
-		t.Fatal("ambiguous username case aliases accepted")
+		t.Fatal("Приняты неоднозначные варианты имени пользователя, отличающиеся регистром")
 	}
 }

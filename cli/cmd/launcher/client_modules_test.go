@@ -40,11 +40,11 @@ func TestMirrorInstallerCacheRepair0427(t *testing.T) {
 	bad := art
 	bad.SHA256 = strings.Repeat("0", 64)
 	if err := mirrorEnsureInstaller0427(context.Background(), dest, bad); err == nil {
-		t.Fatal("accepted bad replacement hash")
+		t.Fatal("Принят неверный хеш заменяемого файла")
 	}
 	bytes, err := os.ReadFile(dest)
 	if err != nil || string(bytes) != "original corrupted cache" {
-		t.Fatalf("failed repair changed destination: %v", err)
+		t.Fatalf("Неудачное восстановление изменило целевой файл: %v", err)
 	}
 	// Проверяйте реальный диспетчер CLI и закреплённый офлайн-путь восстановления.
 	if err := handleRuntimeMirror0274([]string{

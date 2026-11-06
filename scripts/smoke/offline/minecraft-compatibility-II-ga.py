@@ -31,7 +31,7 @@ vanilla = [
 ]
 if len(vanilla) < 109 or len({row["minecraft"] for row in vanilla}) < 104:
     raise SystemExit(
-        "GA 0.17.0v3 Vanilla base is narrower than 109 targets / 104 unique releases"
+        "Базовое покрытие Vanilla для GA 0.17.0v3 меньше 109 целей и 104 уникальных релизов"
     )
 if {8, 16, 17, 21, 25} - {row["javaMajor"] for row in vanilla}:
     raise SystemExit("Базовый набор JRE для GA не покрывает Java 8/16/17/21/25")
@@ -106,7 +106,7 @@ if missing_legacy:
 for minecraft, row in legacy_rows.items():
     if row["javaMajor"] != 8 or row["scope"] != "client":
         raise SystemExit(
-            f"GA 0.17.0v1 Legacy Vanilla {minecraft} must be Java 8 scope=client"
+            f"Устаревший Vanilla {minecraft} для GA 0.17.0v1 должен использовать Java 8, область=клиент"
         )
 
 java16_17_0170v2 = {
@@ -136,7 +136,7 @@ for minecraft, major in java16_17_0170v2.items():
     row = modern_rows[minecraft]
     if row["javaMajor"] != major or row["scope"] != "client":
         raise SystemExit(
-            f"GA 0.17.0v2 Vanilla {minecraft} must be Java {major} scope=client"
+            f"Vanilla {minecraft} для GA 0.17.0v2 должен использовать Java {major}, область=клиент"
         )
 
 java21_25_0170v3 = {"1.21.11": 21, "26.2": 25}
@@ -154,7 +154,7 @@ for minecraft, major in java21_25_0170v3.items():
     row = v3_rows[minecraft]
     if row["javaMajor"] != major or row["scope"] != "client":
         raise SystemExit(
-            f"GA 0.17.0v3 Vanilla {minecraft} must be Java {major} scope=client"
+            f"Vanilla {minecraft} для GA 0.17.0v3 должен использовать Java {major}, область=клиент"
         )
 
 require(

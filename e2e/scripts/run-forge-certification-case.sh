@@ -163,7 +163,7 @@ python3 "$ROOT/e2e/scripts/prepare-legacy-forge-config.py" \
 
 certification_live_start forge "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 
-printf '[forge-cert] запуск реального профиля клиента Forge %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
+printf '[forge-cert] Запуск реального профиля клиента Forge %s на Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/forge-certification.json" \

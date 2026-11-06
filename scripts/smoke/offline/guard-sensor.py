@@ -79,14 +79,14 @@ def main() -> int:
     ]:
         if body.count("prepare_sensor_command(&mut command)") < count:
             raise SystemExit(
-                f"[Launcher] Guard Sensor 0.18.2 gate: {label} does not prepare sensor"
+                f"[Launcher] Проверка сенсора Guard 0.18.2: {label} не подготавливает сенсор"
             )
         if (
             body.count("authenticate_sensor_or_kill(sensor_bootstrap, &mut child)")
             < count
         ):
             raise SystemExit(
-                f"[Launcher] Guard Sensor 0.18.2 gate: {label} does not authenticate sensor fail-closed"
+                f"[Launcher] Проверка сенсора Guard 0.18.2: {label} не обеспечивает отказ при неуспешной аутентификации сенсора"
             )
     require(
         supervisor,
@@ -173,7 +173,7 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[Launcher] Guard Sensor 0.18.2 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Проверка сенсора Guard 0.18.2: заглушка {forbidden!r} в {path}"
                 )
 
     print("[Launcher] Guard Sensor 0.18.2: проверка: OK")

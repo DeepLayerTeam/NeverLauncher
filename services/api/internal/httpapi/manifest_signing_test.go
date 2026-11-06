@@ -21,7 +21,7 @@ func TestSignManifestProducesVerifiedEd25519Signature(t *testing.T) {
 		t.Fatal(err)
 	}
 	if signed.Signature == nil {
-		t.Fatal("signed manifest must contain signature")
+		t.Fatal("Подписанный манифест должен содержать подпись")
 	}
 	publicKey, err := hex.DecodeString(signed.Signature.PublicKey)
 	if err != nil {
@@ -38,13 +38,13 @@ func TestSignManifestProducesVerifiedEd25519Signature(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ed25519.Verify(ed25519.PublicKey(publicKey), payload, sig) {
-		t.Fatal("manifest signature is invalid")
+		t.Fatal("Подпись манифеста недействительна")
 	}
 }
 
 func TestSignManifestFailsClosedWithInvalidProductionKey(t *testing.T) {
 	s := Server{Config: config.Config{Environment: "production", ManifestSigningPrivateKey: "not-a-key"}, State: NewRuntimeState()}
 	if _, err := s.signManifest(model.Manifest{SchemaVersion: "1.0", ProjectID: "demo-project", ProfileID: "vanilla", Channel: "stable", Version: "0.21.2-test"}); err == nil {
-		t.Fatal("signing must fail when production key is invalid")
+		t.Fatal("Подписание должно завершаться ошибкой при недействительном производственном ключе")
 	}
 }

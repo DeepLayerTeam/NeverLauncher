@@ -250,7 +250,7 @@ def main():
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(
-        f"[0290] real Paper backup -> verify -> isolated restore verified {len(source)} files"
+        f"[0290] Проверена реальная резервная копия Paper, её целостность и изолированное восстановление {len(source)} файлов"
     )
 
 

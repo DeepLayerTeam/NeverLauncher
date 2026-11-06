@@ -144,5 +144,5 @@ require(
 )
 
 print(
-    f"Launcher ServerBridge Protocol v2 rolling-compatibility + PostgreSQL source-of-truth gate: OK ({version})"
+    f"Launcher ServerBridge Protocol v2: проверка совместимости при постепенном обновлении и основного хранилища PostgreSQL — OK ({version})"
 )

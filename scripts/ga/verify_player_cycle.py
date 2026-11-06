@@ -151,7 +151,7 @@ def main() -> int:
                                 args.run_id, args.run_attempt), sort_keys=True))
         return 0
     except (ValueError, KeyError, TypeError, OSError, json.JSONDecodeError) as err:
-        print(f'[player-0398] BLOCKED: {err}', file=sys.stderr)
+        print(f'[player-0398] ЗАБЛОКИРОВАНО: {err}', file=sys.stderr)
         return 2
 
 

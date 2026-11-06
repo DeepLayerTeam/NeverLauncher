@@ -8,6 +8,6 @@ cd "${ROOT_DIR}/services/api"
 if [[ "${LAUNCHER_PREFLIGHT_PGX:-0}" == "1" || "${LAUNCHER_PREFLIGHT_PGX:-0}" == "true" ]]; then
   go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT}" ./cmd/launcher-api
 else
-  echo "[Launcher] backend build: offline launcher_nopgx mode. Для pgx/full: LAUNCHER_PREFLIGHT_PGX=1" >&2
+  echo "[Launcher] Сборка Backend: автономный режим launcher_nopgx. Для полной сборки с pgx: LAUNCHER_PREFLIGHT_PGX=1" >&2
   go build -tags launcher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT}" ./cmd/launcher-api
 fi

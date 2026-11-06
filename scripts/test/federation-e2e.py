@@ -187,7 +187,7 @@ def main() -> int:
     OUT.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    print(f"[federation-e2e] report: {OUT}")
+    print(f"[federation-e2e] отчёт: {OUT}")
     return 1 if failed else 0
 
 

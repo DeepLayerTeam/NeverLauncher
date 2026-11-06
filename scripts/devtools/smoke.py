@@ -162,7 +162,7 @@ def main(cli):
             p.terminate()
             p.wait(timeout=5)
     print(
-        "PASS: CLI jar analyze/strip-debug, actual JVM, process env, test auth, login, revoke and events"
+        "PASS: анализ и удаление отладочных данных JAR через CLI, реальная JVM, окружение процесса, тестовая авторизация, вход, отзыв и события"
     )
 
 

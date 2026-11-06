@@ -19,10 +19,10 @@ func TestProductionGateFailClosedWithoutTargets03411(t *testing.T) {
 	s := Server{Repo: repo}
 	result := s.evaluateStableRelease03411(context.Background(), packageLookup{Release: release})
 	if result.Eligible || result.Required != 0 || result.TargetBlockers["release"] == "" {
-		t.Fatalf("missing target policy permitted stable: %+v", result)
+		t.Fatalf("Отсутствие политики цели не помешало стабильному релизу: %+v", result)
 	}
 	if _, _, err := s.issueStablePermit03411(context.Background(), packageLookup{Release: release}); err == nil {
-		t.Fatal("missing evidence issued a stable permit")
+		t.Fatal("При отсутствии подтверждений выдано разрешение на стабильный релиз")
 	}
 }
 func TestProductionGateRequiresCompleteMatrix03411(t *testing.T) {
@@ -39,14 +39,14 @@ func TestProductionGateRequiresCompleteMatrix03411(t *testing.T) {
 	}
 	targets, matrix, e := configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256)
 	if e != nil || len(targets) != 2 || matrix == "" {
-		t.Fatalf("matrix missing target: %v", e)
+		t.Fatalf("В матрице отсутствует цель: %v", e)
 	}
 	p.TargetMatrixSHA256 = matrix
 	if matchingTarget0346(p, targets[0]) == matchingTarget0346(p, targets[1]) {
-		t.Fatal("one attestation must match exactly one distinct Java target")
+		t.Fatal("Одна аттестация должна соответствовать ровно одной отдельной цели Java")
 	}
 	if p.TargetID == b.ID && p.JavaSHA256 == b.JavaSHA256 {
-		t.Fatal("other Java target unexpectedly identical")
+		t.Fatal("Другая цель Java неожиданно оказалась идентичной")
 	}
 }
 func TestProductionGateUnknownEvidenceFieldsRejected03411(t *testing.T) {
@@ -58,7 +58,7 @@ func TestProductionGateUnknownEvidenceFieldsRejected03411(t *testing.T) {
 	raw = append(raw[:len(raw)-1], []byte(`,"manualCertified":true}`)...)
 	var decoded validationPayload0345
 	if err := decodeStoredEvidence03411(raw, &decoded); err == nil {
-		t.Fatal("manual certified flag must not be admitted to signed evidence")
+		t.Fatal("Признак ручной сертификации не должен включаться в подписанные подтверждения")
 	}
 }
 
@@ -79,15 +79,15 @@ func TestGASourceConsistency0350(t *testing.T) {
 		t.Fatal(err)
 	}
 	if targets[0].SourceSHA == targets[1].SourceSHA {
-		t.Fatal("fixture source revisions identical")
+		t.Fatal("Ревизии тестовых исходников совпадают")
 	}
 	if _, ok := stableSourceConsistency0350(targets); ok {
-		t.Fatal("different source commits accepted")
+		t.Fatal("Приняты разные коммиты исходников")
 	}
 	if got, ok := stableSourceConsistency0350(targets[:1]); !ok || got != targets[0].SourceSHA {
 		t.Fatal("Совпадающие источник и цель ошибочно отклонены")
 	}
 	if _, ok := stableSourceConsistency0350(nil); ok {
-		t.Fatal("empty source matrix allowed")
+		t.Fatal("Допущена пустая матрица источников")
 	}
 }

@@ -68,7 +68,7 @@ require(
 for forbidden in ("Bukkit.getScheduler()", "runTask(", "runTaskAsynchronously("):
     if forbidden in runtime:
         raise SystemExit(
-            f"Folia-safe runtime must not use legacy Bukkit scheduler: {forbidden}"
+            f"Совместимый с Folia Runtime не должен использовать устаревший планировщик Bukkit: {forbidden}"
         )
 
 platform = read(
@@ -298,7 +298,7 @@ for marker in (
     position = runtime_e2e.index(marker, folia_materialize_start)
     if position >= folia_apply:
         raise SystemExit(
-            "Pinned Folia Git identity is not inherited by paperweight patch subprocesses"
+            "Закреплённая Git-идентичность Folia не передаётся дочерним процессам применения патчей paperweight"
         )
 
 bytesocks_helper = runtime_e2e.index("materialize_pinned_bytesocks_dependency() {")
@@ -317,7 +317,7 @@ if not (
     bytesocks_commit_check < bytesocks_api_check < bytesocks_build < bytesocks_evidence
 ):
     raise SystemExit(
-        "Pinned bytesocks source/API verification must precede Maven build and evidence"
+        "Проверка закреплённых исходников и API bytesocks должна предшествовать сборке Maven и формированию подтверждений"
     )
 
 spark_helper = runtime_e2e.index("materialize_pinned_spark_paper_dependency() {")
@@ -344,22 +344,22 @@ if (
     in runtime_e2e[folia_materialize_start:]
 ):
     raise SystemExit(
-        "Pinned Folia runtime still searches the obsolete Folia-Server/build/libs paperclip path"
+        "Закреплённый Runtime Folia всё ещё ищет устаревший путь paperclip Folia-Server/build/libs"
     )
 if folia_paperclip_lookup <= folia_paperclip:
     raise SystemExit(
-        "Pinned Folia paperclip artifact discovery must run after createMojmapPaperclipJar"
+        "Поиск артефакта paperclip Folia должен выполняться после createMojmapPaperclipJar"
     )
 spark_bytesocks_call = runtime_e2e.index(
     "materialize_pinned_bytesocks_dependency", spark_helper
 )
 if not (spark_bytesocks_call < spark_commit_check < spark_patch_check < spark_build):
     raise SystemExit(
-        "Pinned spark-paper source/version verification must precede its build"
+        "Проверка закреплённого исходника и версии spark-paper должна выполняться перед сборкой"
     )
 if folia_spark_call >= folia_paperclip:
     raise SystemExit(
-        "Pinned spark-paper dependency must be materialized before Folia paperclip build"
+        "Зависимость spark-paper должна быть подготовлена до сборки paperclip Folia"
     )
 
 require(
@@ -385,7 +385,7 @@ if not (
     < runtime_e2e.index(deny_marker)
 ):
     raise SystemExit(
-        "Bukkit-family E2E reconnect cooldown is not between allow and deny network assertions"
+        "Пауза перед повторным подключением в E2E семейства Bukkit не расположена между проверками разрешённого и запрещённого сетевого доступа"
     )
 
 migration_e2e = read("e2e/scripts/run-bukkit-family-migration-e2e.sh")

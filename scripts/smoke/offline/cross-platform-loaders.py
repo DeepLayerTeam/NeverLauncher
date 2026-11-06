@@ -51,7 +51,7 @@ for loader, (minecraft, java) in anchors.items():
     actual = {(row.get("os"), row.get("arch")) for row in rows}
     if len(rows) != 6 or actual != platforms:
         raise SystemExit(
-            f"{loader} {minecraft}: expected six cross-platform targets, got {len(rows)} {sorted(actual)}"
+            f"{loader} {minecraft}: ожидалось шесть кроссплатформенных целей, получено {len(rows)} {sorted(actual)}"
         )
     for row in rows:
         if (
@@ -92,7 +92,7 @@ for loader in anchors:
     )
     if 'TARGET_OS" != "linux"' in script or 'TARGET_ARCH" != "x86_64"' in script:
         raise SystemExit(
-            f"{loader}: obsolete Linux/x86_64-only certification guard remains"
+            f"{loader}: сохранилась устаревшая проверка сертификации только для Linux/x86_64"
         )
 
 verifier = read("scripts/compatibility/verify-loader-platform.py")
@@ -190,5 +190,5 @@ require(
 )
 
 print(
-    "Cross-platform Loaders 0.17.9 gate: OK (Fabric/Quilt/Forge/NeoForge on Windows/Linux/macOS x64/ARM64 with exact native-tree runtime evidence)"
+    "Проверка кроссплатформенных загрузчиков 0.17.9: OK (Fabric/Quilt/Forge/NeoForge для Windows/Linux/macOS x64/ARM64, с подтверждениями нативного Runtime)"
 )

@@ -48,7 +48,7 @@ refresh_json=$(curl -fsS -X POST "${API_URL}/api/v1/auth/refresh" \
 new_access=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["accessToken"])' <<<"${refresh_json}")
 new_refresh=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["refreshToken"])' <<<"${refresh_json}")
 if [[ "${new_refresh}" == "${refresh}" ]]; then
-  echo "Refresh token не был ротирован" >&2
+  echo "Токен обновления не был заменён" >&2
   exit 1
 fi
 

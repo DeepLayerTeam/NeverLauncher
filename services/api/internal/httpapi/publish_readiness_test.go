@@ -47,7 +47,7 @@ func TestPublishReadiness0385ExplainsBrokenPackageAndBlocksPreview(t *testing.T)
 	}
 	r := response.Data.PublishReadiness
 	if r.Eligible || !r.FinalRecheckRequired {
-		t.Fatalf("empty package wrongly eligible: %+v", r)
+		t.Fatalf("Пустой пакет ошибочно признан пригодным: %+v", r)
 	}
 	foundFiles, foundSignature := false, false
 	for _, b := range r.Blockers {
@@ -62,13 +62,13 @@ func TestPublishReadiness0385ExplainsBrokenPackageAndBlocksPreview(t *testing.T)
 		}
 	}
 	if !foundFiles || !foundSignature {
-		t.Fatalf("missing useful blockers: %+v", r.Blockers)
+		t.Fatalf("Отсутствуют значимые причины блокировки: %+v", r.Blockers)
 	}
 	body := `{"kind":"package-publish","projectId":"demo-project","profileId":"vanilla","resourceId":"` + id + `","channel":"dev","idempotencyKey":"0385-refusal"}`
 	for _, path := range []string{"/api/v1/operations/validate", "/api/v1/operations/execute"} {
 		rec := send("POST", path, body)
 		if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"reasonCode":"publish-blocked"`) || !strings.Contains(rec.Body.String(), `"package-files-empty"`) {
-			t.Fatalf("broken package allowed %s: %d %s", path, rec.Code, rec.Body.String())
+			t.Fatalf("Повреждённому пакету разрешено действие %s: %d %s", path, rec.Code, rec.Body.String())
 		}
 	}
 }
@@ -114,7 +114,7 @@ func TestStableReadiness0385RequiresIndependentRuntimeEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	if payload.Data.PublishReadiness.Eligible {
-		t.Fatal("missing v4 evidence must not be accepted")
+		t.Fatal("Отсутствие подтверждений v4 не должно приниматься")
 	}
 	found := false
 	for _, b := range payload.Data.PublishReadiness.Blockers {
@@ -124,6 +124,6 @@ func TestStableReadiness0385RequiresIndependentRuntimeEvidence(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected concrete runtime target blocker: %+v", payload.Data.PublishReadiness.Blockers)
+		t.Fatalf("Ожидалась конкретная причина блокировки целевой платформы Runtime: %+v", payload.Data.PublishReadiness.Blockers)
 	}
 }

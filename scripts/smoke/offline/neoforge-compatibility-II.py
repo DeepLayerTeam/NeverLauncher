@@ -47,7 +47,7 @@ if (
     or "26.3" in expected
 ):
     raise SystemExit(
-        "NeoForge Compatibility II 0.17.6 canonical stable release grid is incomplete or includes unsupported 26.3"
+        "Матрица стабильных релизов NeoForge Compatibility II 0.17.6 неполна или содержит неподдерживаемую версию 26.3"
     )
 
 target_doc = json.loads(read("compatibility/targets.json"))
@@ -67,7 +67,7 @@ for row in rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
         raise SystemExit(
-            f"NeoForge Compatibility II 0.17.6 duplicate Minecraft target: {minecraft}"
+            f"В матрице NeoForge Compatibility II 0.17.6 повторяется цель Minecraft: {minecraft}"
         )
     by_version[minecraft] = row
 if set(by_version) != set(expected):
@@ -79,7 +79,7 @@ for minecraft, java_major in expected.items():
     expected_scope = "integration" if minecraft == "1.21.1" else "client"
     if row.get("javaMajor") != java_major or row.get("scope") != expected_scope:
         raise SystemExit(
-            f"NeoForge {minecraft} must be Java {java_major} scope={expected_scope}"
+            f"NeoForge {minecraft} должен использовать Java {java_major}, область={expected_scope}"
         )
     if (
         row.get("os") != "linux"
@@ -87,7 +87,7 @@ for minecraft, java_major in expected.items():
         or row.get("loaderVersion") != "latest-stable"
     ):
         raise SystemExit(
-            f"NeoForge {minecraft} must be linux/x86_64 with runtime latest-stable resolution"
+            f"NeoForge {minecraft} должен использовать Linux/x86_64 с определением последней стабильной версии во время запуска"
         )
     if minecraft in blocked:
         if (
@@ -95,7 +95,7 @@ for minecraft, java_major in expected.items():
             or row.get("unavailableReason") != "upstream-prerelease-only"
         ):
             raise SystemExit(
-                f"NeoForge {minecraft} must be NOT CERTIFIED: upstream-prerelease-only"
+                f"NeoForge {minecraft} должен иметь статус NOT CERTIFIED: поставщик предлагает только предварительные версии"
             )
     elif row.get("required") is not True or row.get("unavailableReason") is not None:
         raise SystemExit(f"NeoForge {minecraft}: требуется реальная сертификация клиента")

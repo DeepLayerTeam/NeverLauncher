@@ -71,7 +71,7 @@ for forbidden in [
 ]:
     if forbidden in prov:
         raise SystemExit(
-            f"provisioner contains forbidden core/authlib patch path: {forbidden}"
+            f"Средство развёртывания содержит запрещённый путь изменения ядра или authlib: {forbidden}"
         )
 require(
     tests,

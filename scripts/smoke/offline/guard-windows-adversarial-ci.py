@@ -113,7 +113,7 @@ for manifest in [
 ]:
     if manifest not in ci:
         raise SystemExit(
-            f"[Launcher] Windows Adversarial CI 0.18.11 gate: CI does not build {manifest}"
+            f"[Launcher] Проверка атакующих сценариев Windows CI 0.18.11: CI не собирает {manifest}"
         )
 
 preflight = read("scripts/release/preflight.sh")
@@ -133,9 +133,9 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[Launcher] Windows Adversarial CI 0.18.11 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Проверка атакующих сценариев Windows CI 0.18.11: заглушка {placeholder!r} в {rel}"
             )
 
 print(
-    f"[Launcher] Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK ({version})"
+    f"[Launcher] Проверка имитации атак Windows и сертификации совместимости 0.18.11 — OK ({version})"
 )

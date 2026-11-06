@@ -134,7 +134,7 @@ def prepare(data: bytes) -> bytes:
 
 def main() -> int:
     if len(sys.argv) != 2:
-        raise SystemExit('usage: prepare-vanilla-1171-void-world.py path/to/world/level.dat')
+        raise SystemExit('Использование: prepare-vanilla-1171-void-world.py path/to/world/level.dat')
     path = Path(sys.argv[1])
     if path.is_symlink() or not path.is_file():
         raise SystemExit('level.dat должен быть обычным файлом, а не символической ссылкой')

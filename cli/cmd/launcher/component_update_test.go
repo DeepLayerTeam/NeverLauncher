@@ -106,6 +106,6 @@ func TestComponentUpdateRequiresPinnedProductionArchive0157(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := hashPackagePin0157(path, "", false); err == nil {
-		t.Fatal("production component update accepted an unpinned package")
+		t.Fatal("При обновлении производственного компонента принят незакреплённый пакет")
 	}
 }

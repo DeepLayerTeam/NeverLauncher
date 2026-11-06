@@ -280,7 +280,7 @@ with tempfile.TemporaryDirectory(prefix="launcher-ed25519-") as td:
         )
         if signed_process.returncode != 0:
             raise SystemExit(
-                "ServerBridge Ed25519 signing failed: "
+                "Ошибка подписи ServerBridge через Ed25519: "
                 + (signed_process.stderr or signed_process.stdout)[-1200:]
             )
         raw_signature = signature_file.read_bytes()
@@ -301,7 +301,7 @@ with tempfile.TemporaryDirectory(prefix="launcher-ed25519-") as td:
         )
         if signed_process.returncode != 0:
             raise SystemExit(
-                "ServerBridge Ed25519 signing failed: " + signed_process.stderr[-1200:]
+                "Ошибка подписи ServerBridge через Ed25519: " + signed_process.stderr[-1200:]
             )
         signed = signed_process.stdout.strip()
         raw_signature = base64.urlsafe_b64decode(
@@ -309,7 +309,7 @@ with tempfile.TemporaryDirectory(prefix="launcher-ed25519-") as td:
         )
     if len(raw_signature) != 64:
         raise SystemExit(
-            f"ServerBridge helper returned {len(raw_signature)}-byte Ed25519 signature"
+            f"Вспомогательная программа ServerBridge вернула подпись Ed25519 длиной {len(raw_signature)} байт"
         )
     payload.write_text(canonical, encoding="utf-8")
     signature_file.write_bytes(raw_signature)

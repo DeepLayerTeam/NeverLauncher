@@ -22,7 +22,7 @@ func loginUser0211(t *testing.T, handler http.Handler, email, password string) s
 		Token string `json:"token"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil || payload.Token == "" {
-		t.Fatalf("login %s did not return token: err=%v body=%s", email, err, res.Body.String())
+		t.Fatalf("Вход %s не вернул токен: ошибка=%v ответ=%s", email, err, res.Body.String())
 	}
 	return payload.Token
 }
@@ -55,13 +55,13 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 	res = request0211(t, handler, http.MethodPost, "/api/v1/admin/users", admin,
 		`{"email":"operator0211@example.test","displayName":"Scoped Operator","roleId":"player","password":"operator-password-0211","projectRoles":{"demo-project":"operator"}}`)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create scoped operator returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Создание оператора с ограниченными правами вернуло %d: %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &created); err != nil || created.ID == "" {
-		t.Fatalf("cannot decode scoped operator: err=%v body=%s", err, res.Body.String())
+		t.Fatalf("Не удалось декодировать оператора с ограниченными правами: ошибка=%v ответ=%s", err, res.Body.String())
 	}
 
 	operator := loginUser0211(t, handler, "operator0211@example.test", "operator-password-0211")
@@ -69,31 +69,31 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 	// Конкретное членство в проекте разрешает доступ к этому проекту.
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/demo-project", operator, `{"description":"authorized-0211"}`)
 	if res.Code != http.StatusOK {
-		t.Fatalf("own project patch returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Изменение собственного проекта вернуло %d: %s", res.Code, res.Body.String())
 	}
 
 	// Та же роль не распространяется на другие проекты.
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/project-b", operator, `{"description":"must-not-change"}`)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("cross-project patch returned %d, want 403: %s", res.Code, res.Body.String())
+		t.Fatalf("Изменение чужого проекта вернуло %d, ожидается 403: %s", res.Code, res.Body.String())
 	}
 
 	// Конечные точки, область которых задаёт тело запроса, проверяются после извлечения projectId.
 	res = request0211(t, handler, http.MethodPost, "/api/v1/packages", operator,
 		`{"projectId":"project-b","profileId":"vanilla","channel":"stable","version":"0.21.1-cross-project"}`)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("cross-project package create returned %d, want 403: %s", res.Code, res.Body.String())
+		t.Fatalf("Создание пакета чужого проекта вернуло %d, ожидается 403: %s", res.Code, res.Body.String())
 	}
 	res = request0211(t, handler, http.MethodPost, "/api/v1/telemetry/events", operator,
 		`{"projectId":"project-b","event":"forbidden"}`)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("cross-project telemetry returned %d, want 403: %s", res.Code, res.Body.String())
+		t.Fatalf("Телеметрия чужого проекта вернула %d, ожидается 403: %s", res.Code, res.Body.String())
 	}
 
 	// Резервные копии экземпляра не являются правом отдельного проекта.
 	res = request0211(t, handler, http.MethodPost, "/api/v1/operations/backups", operator, `{}`)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("project operator reached instance backup: status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Оператор проекта получил доступ к резервной копии экземпляра: статус=%d ответ=%s", res.Code, res.Body.String())
 	}
 
 	// Отзыв членства действует и на ранее выданный токен. Управление
@@ -105,7 +105,7 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 	}
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/demo-project", operator, `{"description":"revoked"}`)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("revoked token still changed project: status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Отозванный токен продолжил изменять проект: статус=%d ответ=%s", res.Code, res.Body.String())
 	}
 }
 
@@ -117,27 +117,27 @@ func TestGlobalRoleRevocation0211AppliesToExistingToken(t *testing.T) {
 	res := request0211(t, handler, http.MethodPost, "/api/v1/admin/users", admin,
 		`{"email":"global0211@example.test","displayName":"Temporary Admin","roleId":"admin","password":"temporary-admin-0211","projectRoles":{}}`)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create temporary admin returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Создание временного администратора вернуло %d: %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &created); err != nil || created.ID == "" {
-		t.Fatalf("cannot decode temporary admin: err=%v body=%s", err, res.Body.String())
+		t.Fatalf("Не удалось декодировать временного администратора: ошибка=%v ответ=%s", err, res.Body.String())
 	}
 	token := loginUser0211(t, handler, "global0211@example.test", "temporary-admin-0211")
 
 	res = request0211(t, handler, http.MethodPost, "/api/v1/admin/projects", token, `{"id":"global-before-revoke","name":"Before"}`)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("global admin permission before revoke returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Проверка глобальных прав администратора до отзыва вернула %d: %s", res.Code, res.Body.String())
 	}
 
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/users/"+created.ID, admin, `{"roleId":"player"}`)
 	if res.Code != http.StatusOK {
-		t.Fatalf("global role revoke returned %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Отзыв глобальной роли вернул %d: %s", res.Code, res.Body.String())
 	}
 	res = request0211(t, handler, http.MethodPost, "/api/v1/admin/projects", token, `{"id":"global-after-revoke","name":"After"}`)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("stale admin token kept global project:write: status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Устаревший токен администратора сохранил глобальное право project:write: статус=%d ответ=%s", res.Code, res.Body.String())
 	}
 }

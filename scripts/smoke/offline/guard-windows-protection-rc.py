@@ -135,7 +135,7 @@ for text, path in [
 ]:
     if "guard-windows-protection-rc-01812.py" not in text:
         raise SystemExit(
-            f"[Launcher] Windows Protection RC 0.18.12 gate: mandatory gate not wired into {path}"
+            f"[Launcher] Проверка защиты Windows RC 0.18.12: обязательная проверка не подключена в {path}"
         )
 if "TestWindowsProtection" not in ci:
     raise SystemExit(

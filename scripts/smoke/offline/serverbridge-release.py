@@ -95,5 +95,5 @@ if ids != [
 ]:
     raise SystemExit(f"Несовпадение: «ServerBridge 3 target cohort»: {ids}")
 print(
-    f"Launcher {version} ServerBridge 3 release gate: OK (14-platform certified cohort)"
+    f"Launcher {version}: проверка релиза ServerBridge 3 — OK (сертифицированы 14 платформ)"
 )

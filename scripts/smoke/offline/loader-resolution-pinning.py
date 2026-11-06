@@ -160,9 +160,9 @@ workflow = read(".github/workflows/compatibility.yml")
 for loader in ("fabric", "quilt", "forge", "neoforge"):
     if f"e2e/runtime/{loader}-resolution-lock.json" not in workflow:
         raise SystemExit(
-            f"compatibility workflow does not archive {loader} resolution lock"
+            f"Сценарий проверки совместимости не архивирует блокировку разрешения версии {loader}"
         )
 
 print(
-    "Loader Resolution & Pinning 0.17.7 gate: OK (immutable concrete loader + upstream/payload/profile SHA-256 + lock replay reproducibility)"
+    "Проверка разрешения и закрепления загрузчика 0.17.7: OK (неизменяемый загрузчик, SHA-256 источника, данных и профиля, воспроизводимость по файлу блокировки)"
 )

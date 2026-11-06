@@ -254,13 +254,13 @@ fi
 log() { printf '[Launcher %s] %s\n' "${VERSION}" "$*"; }
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Ошибка: production release требует команду '$1'" >&2
+    echo "Ошибка: Для производственного релиза необходима команда '$1'" >&2
     exit 1
   fi
 }
 require_file() {
   if [[ ! -f "$1" ]]; then
-    echo "Ошибка: обязательный release artifact отсутствует: $1" >&2
+    echo "Ошибка: Отсутствует обязательный артефакт релиза: $1" >&2
     exit 1
   fi
 }
@@ -482,7 +482,7 @@ if [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD
     SOURCE_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
   fi
   if [[ -z "${SOURCE_COMMIT}" ]]; then
-    echo "Ошибка: certified release требует LAUNCHER_SOURCE_COMMIT или git HEAD" >&2
+    echo "Ошибка: Для сертифицированного релиза необходимо LAUNCHER_SOURCE_COMMIT или git HEAD" >&2
     exit 1
   fi
 fi

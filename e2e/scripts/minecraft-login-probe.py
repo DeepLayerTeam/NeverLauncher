@@ -457,7 +457,7 @@ def main() -> int:
             ) as exc:
                 raise SystemExit(f"Проверка входа с конфигурацией завершилась ошибкой: {exc}") from exc
             print(
-                f"probe host={args.host} port={args.port} username={args.username} "
+                f"Проверка: узел={args.host} порт={args.port} пользователь={args.username} "
                 f"mode=configuration loginAcknowledged={str(login_acknowledged).lower()} packetsSeen={packets_seen} "
                 f"compressionThreshold={compression_threshold if compression_threshold is not None else 'disabled'} "
                 f"loginWireBytes={login_wire_bytes} configurationBytes={configuration_bytes} "
@@ -483,7 +483,7 @@ def main() -> int:
             response = b""
             terminal = "reset"
     print(
-        f"probe host={args.host} port={args.port} username={args.username} "
+        f"Проверка: узел={args.host} порт={args.port} пользователь={args.username} "
         f"responseBytes={len(response)} terminal={terminal}"
     )
     return 0

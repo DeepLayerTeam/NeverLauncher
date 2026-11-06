@@ -26,7 +26,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (
     8,
 ):
     raise SystemExit(
-        f"[Launcher] JVM-Aware Protection 0.18.8 gate: VERSION is {VERSION}"
+        f"[Launcher] Проверка защиты с учётом JVM 0.18.8: версия {VERSION}"
     )
 
 sensor = read("runtime/guard-sensor/src/jvm_awareness.rs")
@@ -167,7 +167,7 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[Launcher] JVM-Aware Protection 0.18.8 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Проверка защиты с учётом JVM 0.18.8: заглушка {placeholder!r} в {rel}"
             )
 
 print("[Launcher] JVM-Aware Protection 0.18.8: проверка: OK")

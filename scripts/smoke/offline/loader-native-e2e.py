@@ -154,9 +154,9 @@ for required in [
 ]:
     if f"e2e/runtime/{required}" not in workflow:
         raise SystemExit(
-            f"compatibility workflow does not retain loader-native evidence: {required}"
+            f"Сценарий проверки совместимости не сохраняет нативные подтверждения загрузчика: {required}"
         )
 
 print(
-    "Loader-native E2E 0.17.8 gate: OK (Fabric/Quilt/Forge/NeoForge actual client ↔ exact-version dedicated loader server + real join evidence)"
+    "Проверка нативного E2E загрузчиков 0.17.8: OK (реальный клиент Fabric/Quilt/Forge/NeoForge, сервер точной версии и подтверждение подключения)"
 )

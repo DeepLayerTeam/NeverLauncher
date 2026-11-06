@@ -100,7 +100,7 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 		}
 		b, err := os.ReadFile(base[0])
 		if err != nil || !bytes.Equal(b, iconBuf.Bytes()) {
-			t.Fatal("installed icon not signed PNG bytes")
+			t.Fatal("Установленная иконка не соответствует подписанным данным PNG")
 		}
 	}
 	i, err := newInstall(opts)

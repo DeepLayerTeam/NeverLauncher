@@ -100,13 +100,13 @@ for minecraft, java_major in expected.items():
     expected_scope = "integration" if minecraft == "1.21.1" else "client"
     if row.get("javaMajor") != java_major or row.get("scope") != expected_scope:
         raise SystemExit(
-            f"Fabric {minecraft} must be Java {java_major} scope={expected_scope}"
+            f"Fabric {minecraft} должен использовать Java {java_major}, область={expected_scope}"
         )
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
         raise SystemExit(f"Для Fabric {minecraft} требуется сертификация на linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
         raise SystemExit(
-            f"Fabric {minecraft} must resolve latest-stable at execution time"
+            f"Для Fabric {minecraft} последняя стабильная версия должна определяться во время выполнения"
         )
 
 fabric_case = read("e2e/scripts/run-fabric-certification-case.sh")
@@ -201,5 +201,5 @@ require(
 )
 
 print(
-    f"Fabric Compatibility II 0.17.1 gate: OK ({len(fabric_rows)} stable Fabric releases, 1.14..26.3, Java 8/16/17/21/25)"
+    f"Проверка совместимости Fabric II 0.17.1: OK ({len(fabric_rows)} стабильных релизов Fabric, 1.14..26.3, Java 8/16/17/21/25)"
 )

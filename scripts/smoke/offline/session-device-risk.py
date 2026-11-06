@@ -152,5 +152,5 @@ if errors:
     raise SystemExit(1)
 
 print(
-    "Session <-> Device binding + risk integration gate OK: binding epochs invalidate stale access tokens, bound refresh requires current device-key proof, and risk actions enforce step-up/reattest/revoke"
+    "Проверка связи сессии с устройством и учёта рисков — OK: смена эпохи привязки отменяет старые токены, обновление требует актуального подтверждения ключа устройства, решения по рискам требуют дополнительной проверки, аттестации или отзыва"
 )

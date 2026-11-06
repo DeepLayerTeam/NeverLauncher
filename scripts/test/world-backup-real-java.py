@@ -202,7 +202,7 @@ public class WorldLifecycle {
         )
         assert not gate.exists(), "Блокировка резервного копирования не освобождена"
         print(
-            "PASS OpenJDK 21 process supervised stop, binary world/player/plugin data, SHA-256 verify and isolated restore; no JVM relaunch"
+            "PASS: контролируемая остановка процесса OpenJDK 21, двоичные данные мира, игроков и плагинов, проверка SHA-256 и изолированное восстановление; без перезапуска JVM"
         )
     finally:
         if host.poll() is None:

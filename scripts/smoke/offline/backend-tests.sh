@@ -5,6 +5,6 @@ cd "${ROOT_DIR}/services/api"
 if [[ "${LAUNCHER_PREFLIGHT_PGX:-0}" == "1" || "${LAUNCHER_PREFLIGHT_PGX:-0}" == "true" ]]; then
   go test ./...
 else
-  echo "[Launcher] backend tests: offline launcher_nopgx mode. Для pgx/full: LAUNCHER_PREFLIGHT_PGX=1" >&2
+  echo "[Launcher] Тесты Backend: автономный режим launcher_nopgx. Для полной проверки с pgx: LAUNCHER_PREFLIGHT_PGX=1" >&2
   go test -tags launcher_nopgx ./...
 fi

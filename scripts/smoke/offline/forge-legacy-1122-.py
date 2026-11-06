@@ -49,7 +49,7 @@ if (
     raise SystemExit("Forge Legacy 1.12.2: требуется «Java 8 client linux/x86_64»")
 if row.get("loaderVersion") != "latest-stable":
     raise SystemExit(
-        "Forge Legacy 1.12.2 must use latest-stable selector with immutable resolved evidence"
+        "Устаревший Forge 1.12.2 должен выбирать последнюю стабильную версию с неизменяемым подтверждением разрешения"
     )
 
 runtime = read("cli/cmd/launcher/forge_runtime.go")
@@ -156,5 +156,5 @@ require(
 )
 
 print(
-    "Forge Legacy 1.12.2 0.17.4 gate: OK (real V1 universal installer + repacked empty-processor fallback + Java 8 actual-client certification)"
+    "Проверка устаревшего Forge 1.12.2 версии 0.17.4: OK (универсальный установщик V1, резервная обработка переупакованного архива без обработчиков, сертификация реального клиента Java 8)"
 )

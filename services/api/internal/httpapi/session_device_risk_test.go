@@ -66,7 +66,7 @@ func registerBoundSession0126(t *testing.T, h http.Handler) boundSession0126 {
 		Private:       priv,
 	}
 	if result.Access == "" || result.BindingEpoch < 2 {
-		t.Fatalf("binding epoch/access token not rotated after bind: %#v", data)
+		t.Fatalf("Эпоха привязки и токен доступа не обновлены после привязки: %#v", data)
 	}
 	return result
 }
@@ -89,12 +89,12 @@ func TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126(
 
 	code, _ := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", bound.PreBindAccess, nil)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("access token minted before device binding survived binding_epoch change: %d", code)
+		t.Fatalf("Токен доступа, выданный до привязки устройства, остался действителен после изменения binding_epoch: %d", code)
 	}
 
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": bound.Refresh})
 	if code != http.StatusPreconditionRequired {
-		t.Fatalf("bound refresh succeeded without device proof: status=%d body=%#v", code, out)
+		t.Fatalf("Обновление привязанного токена прошло без подтверждения устройства: статус=%d ответ=%#v", code, out)
 	}
 
 	_, wrongPrivate, _ := ed25519.GenerateKey(rand.Reader)
@@ -102,31 +102,31 @@ func TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126(
 	wrongSig := base64.RawURLEncoding.EncodeToString(ed25519.Sign(wrongPrivate, []byte(wrongPayload)))
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": bound.Refresh, "deviceId": bound.DeviceID, "deviceSignature": wrongSig})
 	if code != http.StatusPreconditionRequired {
-		t.Fatalf("wrong refresh device proof was accepted or consumed token: %d", code)
+		t.Fatalf("Принято неправильное подтверждение устройства или израсходован токен обновления: %d", code)
 	}
 
 	proof := refreshProof0126(bound, bound.Refresh)
 	code, out = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": bound.Refresh, "deviceId": bound.DeviceID, "deviceSignature": proof})
 	if code != http.StatusOK {
-		t.Fatalf("valid bound refresh failed: status=%d body=%#v", code, out)
+		t.Fatalf("Корректное обновление привязанного токена завершилось ошибкой: статус=%d ответ=%#v", code, out)
 	}
 	rotated := deviceTrustData0121(t, out)
 	tokens, _ := rotated["tokens"].(map[string]any)
 	newRefresh, _ := tokens["refreshToken"].(string)
 	if newRefresh == "" || newRefresh == bound.Refresh {
-		t.Fatalf("refresh token was not rotated: %#v", tokens)
+		t.Fatalf("Токен обновления не был ротирован: %#v", tokens)
 	}
 
 	// Повтор использованного токена по-прежнему вызывает отзыв всего
 	// семейства. Только что выданная замена также должна стать непригодной.
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": bound.Refresh, "deviceId": bound.DeviceID, "deviceSignature": proof})
 	if code != http.StatusUnauthorized {
-		t.Fatalf("consumed refresh replay was not rejected: %d", code)
+		t.Fatalf("Повтор использованного токена обновления не был отклонён: %d", code)
 	}
 	newProof := refreshProof0126(bound, newRefresh)
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": newRefresh, "deviceId": bound.DeviceID, "deviceSignature": newProof})
 	if code != http.StatusUnauthorized {
-		t.Fatalf("refresh family survived replay compromise: %d", code)
+		t.Fatalf("Семейство токенов обновления пережило компрометацию повторным использованием: %d", code)
 	}
 }
 
@@ -143,7 +143,7 @@ func TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126(t *testing.T)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("ordinary request should remain available for step-up recovery: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Обычный запрос должен оставаться доступным для восстановления с дополнительной аутентификацией: %d %s", rr.Code, rr.Body.String())
 	}
 	var out map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
@@ -156,7 +156,7 @@ func TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126(t *testing.T)
 	}
 	session, _ := items[0].(map[string]any)
 	if session["riskAction"] != "step-up" || session["riskState"] != "elevated" || session["riskScore"].(float64) < 35 {
-		t.Fatalf("user-agent drift did not become an enforceable risk decision: %#v", session)
+		t.Fatalf("Изменение User-Agent не привело к применяемому решению по риску: %#v", session)
 	}
 
 	// Токен может содержать свежее подтверждение устойчивой к фишингу аутентификации, но
@@ -165,7 +165,7 @@ func TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126(t *testing.T)
 	claims := authClaims{AuthStrength: "phishing-resistant", AuthTime: now.Add(-time.Minute).Unix(), RiskState: "elevated", RiskScore: 35, RiskAction: "step-up", RiskUpdatedAt: now.Unix()}
 	riskRR := httptest.NewRecorder()
 	if !(Server{}).writeRiskRequirement0126(riskRR, claims) || riskRR.Code != http.StatusPreconditionRequired {
-		t.Fatalf("risk decision did not enforce step-up: status=%d body=%s", riskRR.Code, riskRR.Body.String())
+		t.Fatalf("Решение по риску не потребовало дополнительной аутентификации: статус=%d ответ=%s", riskRR.Code, riskRR.Body.String())
 	}
 }
 
@@ -174,20 +174,20 @@ func TestRefreshProofCanonicalPayloadDoesNotContainRefreshSecret0126(t *testing.
 	secret := "nlr_super-secret-refresh-token"
 	payload := sessionRefreshProofPayload0126(secret, rec)
 	if bytes.Contains([]byte(payload), []byte(secret)) {
-		t.Fatal("refresh secret leaked into signed canonical payload")
+		t.Fatal("Секрет обновления попал в подписанную каноническую нагрузку")
 	}
 	if !bytes.Contains([]byte(payload), []byte("binding-epoch=7\n")) || !bytes.Contains([]byte(payload), []byte("refresh-token-sha256=")) {
-		t.Fatalf("canonical payload is missing binding material: %q", payload)
+		t.Fatalf("В канонических данных отсутствует материал привязки: %q", payload)
 	}
 }
 
 func TestSessionRiskActionPrecedence0126(t *testing.T) {
 	state, score, action := evaluateRiskReasons0126([]string{"user-agent-changed", "device-attestation-stale"})
 	if state != "elevated" || score != 75 || action != "reattest" {
-		t.Fatalf("stale device attestation must outrank account step-up: state=%s score=%d action=%s", state, score, action)
+		t.Fatalf("Устаревшая аттестация устройства должна иметь приоритет над дополнительной аутентификацией аккаунта: состояние=%s оценка=%d действие=%s", state, score, action)
 	}
 	state, score, action = evaluateRiskReasons0126([]string{"device-attestation-stale", "trusted-device-revoked"})
 	if state != "compromised" || score != 100 || action != "revoke" {
-		t.Fatalf("revocation must outrank re-attestation: state=%s score=%d action=%s", state, score, action)
+		t.Fatalf("Отзыв должен иметь приоритет над повторной аттестацией: состояние=%s оценка=%d действие=%s", state, score, action)
 	}
 }

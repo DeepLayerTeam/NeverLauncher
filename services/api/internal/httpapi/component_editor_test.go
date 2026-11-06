@@ -70,11 +70,11 @@ func TestComponentCatalogEditorLifecycle0248(t *testing.T) {
 	}
 	stale := invoke("PUT", path, body, "application/json")
 	if stale.Code != 409 {
-		t.Fatalf("stale catalog accepted: %d %s", stale.Code, stale.Body.String())
+		t.Fatalf("Принят устаревший каталог: %d %s", stale.Code, stale.Body.String())
 	}
 	invalid := []byte(`{"expectedRevision":2,"catalog":{"schemaVersion":"5.0","components":[{"id":"sodium","name":"Sodium","files":["mods/sodium.jar"],"version":"1.0.0","visible":true,"actions":[{"type":"JvmArgs","args":["-javaagent:evil.jar"]}]}]}}`)
 	bad := invoke("POST", path+"/preview", invalid, "application/json")
 	if bad.Code != 200 || !strings.Contains(bad.Body.String(), `"valid":false`) {
-		t.Fatalf("dangerous action accepted: %d %s", bad.Code, bad.Body.String())
+		t.Fatalf("Разрешено опасное действие: %d %s", bad.Code, bad.Body.String())
 	}
 }

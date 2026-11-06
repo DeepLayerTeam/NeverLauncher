@@ -12,25 +12,25 @@ import (
 func TestServerBridgePublicMatrix0149IsCompleteAndHonestAboutCoverage(t *testing.T) {
 	rows := serverBridgeMatrixPlatforms0149("0.19.2")
 	if len(rows) != 14 {
-		t.Fatalf("expected 14 ServerBridge matrix rows, got %d", len(rows))
+		t.Fatalf("Ожидалось 14 строк матрицы ServerBridge, получено %d", len(rows))
 	}
 	seen := map[string]bool{}
 	for _, row := range rows {
 		if seen[row.ID] {
-			t.Fatalf("duplicate matrix target %q", row.ID)
+			t.Fatalf("Повторяющаяся цель матрицы %q", row.ID)
 		}
 		seen[row.ID] = true
 		if row.ProtocolVersion != serverBridgeProtocolV3 || len(row.SupportedProtocolVersions) != 2 || row.SupportedProtocolVersions[0] != serverBridgeProtocolV3 || row.SupportedProtocolVersions[1] != serverBridgeProtocolV2 || row.Installation != "drop-in-zero-patch" || !row.CryptographicIdentity || !row.ArtifactIntegrity || !row.OneTimeJoin {
-			t.Fatalf("incomplete security capability row: %+v", row)
+			t.Fatalf("Неполная строка возможностей безопасности: %+v", row)
 		}
 		if row.Role == "proxy" && !row.HandoffSource {
-			t.Fatalf("proxy %s is not handoff source", row.ID)
+			t.Fatalf("Прокси %s не является источником передачи соединения", row.ID)
 		}
 		if row.Role == "backend" && !row.HandoffTarget {
-			t.Fatalf("backend %s is not handoff target", row.ID)
+			t.Fatalf("Backend %s не является целью передачи соединения", row.ID)
 		}
 		if row.ID == "bukkit" && row.Coverage != "build-compatibility" {
-			t.Fatalf("Bukkit coverage must be transparent: %+v", row)
+			t.Fatalf("Покрытие Bukkit должно быть отображено явно: %+v", row)
 		}
 	}
 }
@@ -67,6 +67,6 @@ func TestSignedServerBridgeBodyCeiling0149(t *testing.T) {
 	_, err := readAndRestoreNodeRequestBody0142(req)
 	authErr, ok := err.(*bridgeNodeAuthError0142)
 	if !ok || authErr.Status != http.StatusRequestEntityTooLarge {
-		t.Fatalf("expected 413 bridge auth error, got %#v", err)
+		t.Fatalf("Ожидалась ошибка авторизации моста 413, получено %#v", err)
 	}
 }

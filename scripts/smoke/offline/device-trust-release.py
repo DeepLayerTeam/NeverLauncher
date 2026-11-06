@@ -30,7 +30,7 @@ if [p.name for p in api_migs] != sorted(cli_migs):
     raise SystemExit("Каталоги миграций API/CLI отличаются")
 if not any(p.name == "0018_device_trust_stabilization_01210.sql" for p in api_migs):
     raise SystemExit(
-        "0.13+ must retain sealed 0018 Device Trust stabilization migration"
+        "Версия 0.13+ должна сохранять запечатанную стабилизационную миграцию Device Trust 0018"
     )
 for a in api_migs:
     if a.read_bytes() != cli_migs[a.name]:

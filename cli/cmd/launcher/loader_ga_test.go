@@ -29,7 +29,7 @@ func TestLoaderGASupport0180ExactCertifiedSurface(t *testing.T) {
 	}
 	for _, tc := range [][2]string{{"fabric", "1.13.2"}, {"quilt", "1.13.2"}, {"forge", "1.12.1"}, {"forge", "1.20.5"}, {"neoforge", "1.20"}, {"neoforge", "26.3"}} {
 		if _, ok := loaderGASupport0180(tc[0], tc[1]); ok {
-			t.Fatalf("uncertified combination must be rejected by GA support surface: %s/%s", tc[0], tc[1])
+			t.Fatalf("Несертифицированная комбинация должна отклоняться проверкой поддержки GA: %s/%s", tc[0], tc[1])
 		}
 	}
 	if err := validateLoaderGASupportPolicy0180(); err != nil {

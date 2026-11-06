@@ -186,7 +186,7 @@ def main() -> int:
         print(f"Производственная сертификация расширения заблокирована: {err}", file=sys.stderr)
         return 2
     print(
-        "PASS: six real-target extension E2E results AND exact signed extension packages"
+        "PASS: шесть результатов E2E для реальных целей И точно соответствующие подписанные пакеты расширений"
     )
     return 0
 

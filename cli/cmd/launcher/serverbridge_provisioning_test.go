@@ -134,7 +134,7 @@ func TestServerBridgeDetectHybridFailsClosed0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := detectServerBridgePlatform0199(root, ""); err == nil || !strings.Contains(strings.ToLower(err.Error()), "hybrid") {
-		t.Fatalf("hybrid core was not rejected: %v", err)
+		t.Fatalf("Гибридное ядро не было отклонено: %v", err)
 	}
 }
 
@@ -221,7 +221,7 @@ func TestServerBridgeUpgradeRollbackPreservesIdentity0199(t *testing.T) {
 	}
 	oldArtifact := before.ArtifactPath
 	if !fileExists0199(oldArtifact) {
-		t.Fatalf("0.19.8 artifact missing before upgrade: %s", oldArtifact)
+		t.Fatalf("Перед обновлением отсутствует артефакт версии 0.19.8: %s", oldArtifact)
 	}
 
 	artifacts019 := t.TempDir()
@@ -240,14 +240,14 @@ func TestServerBridgeUpgradeRollbackPreservesIdentity0199(t *testing.T) {
 		t.Fatalf("upgrade state=%+v", after)
 	}
 	if fileExists0199(oldArtifact) {
-		t.Fatalf("old bridge artifact was not transactionally replaced: %s", oldArtifact)
+		t.Fatalf("Старый артефакт моста не был заменён транзакционно: %s", oldArtifact)
 	}
 	identityAfter, err := loadNodeIdentityPublic0199(after.IdentityPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if identityAfter.Fingerprint != identityBefore.Fingerprint || identityAfter.PublicKey != identityBefore.PublicKey {
-		t.Fatal("upgrade rotated node identity unexpectedly")
+		t.Fatal("Обновление неожиданно сменило идентичность узла")
 	}
 
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", after.TransactionID}); err != nil {
@@ -298,7 +298,7 @@ func TestServerBridgeReleaseTargetCohortIncludesUniversalAdapters0199(t *testing
 			t.Fatalf("В средстве проверки релиза отсутствует %s", id)
 		}
 		if serverBridge2AllowlistFields0150[id] == "" {
-			t.Fatalf("release verifier missing allowlist field for %s", id)
+			t.Fatalf("В проверке релиза отсутствует поле списка разрешений для %s", id)
 		}
 	}
 }
@@ -364,7 +364,7 @@ func TestServerBridgeMigrateV3GA0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if identityAfter.Fingerprint != identityBefore.Fingerprint || identityAfter.PublicKey != identityBefore.PublicKey {
-		t.Fatal("v2->v3 migration rotated node identity")
+		t.Fatal("Миграция с v2 на v3 изменила идентичность узла")
 	}
 	receiptPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "protocol-v3-ga-migration.json")
 	receiptRaw, err := os.ReadFile(receiptPath)

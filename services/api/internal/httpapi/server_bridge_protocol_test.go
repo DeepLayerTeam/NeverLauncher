@@ -37,7 +37,7 @@ func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusUpgradeRequired || !strings.Contains(res.Body.String(), "serverbridge_no_compatible_protocol") {
-		t.Fatalf("incompatible capabilities offer => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Предложены несовместимые возможности => %d %s", res.Code, res.Body.String())
 	}
 }
 
@@ -51,7 +51,7 @@ func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 	}
 
 	if _, err := decodeBridgeHeartbeat0191(strings.NewReader(`{"protocolVersion":2,"features":["protocol.feature-flags"],"serverId":"node","serverType":"paper","pluginVersion":"0.19.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`)); err == nil {
-		t.Fatal("Protocol v2 contract must reject Protocol v3 feature field")
+		t.Fatal("Контракт протокола v2 должен отклонять поле возможностей протокола v3")
 	}
 
 	v3, err := decodeBridgeHeartbeat0191(strings.NewReader(`{"protocolVersion":3,"features":["protocol.feature-flags","protocol.capability-negotiation"],"serverId":"node","serverType":"paper","pluginVersion":"0.19.1","pluginSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}`))
@@ -67,11 +67,11 @@ func TestServerBridgeProtocol0191SeparateV2V3Contracts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if ok, reason := validateBridgeProtocolFeatures0191(missingFlags.ProtocolVersion, missingFlags.Features); ok || reason != "serverbridge_v3_required_features_missing" {
-		t.Fatalf("incomplete v3 contract must fail closed: ok=%v reason=%s", ok, reason)
+		t.Fatalf("Неполный контракт v3 должен приводить к отказу: успешно=%v причина=%s", ok, reason)
 	}
 
 	if ok, reason := validateBridgeProtocolFeatures0191(serverBridgeProtocolV3, []string{serverBridgeFeatureCapabilityNegotiation, serverBridgeFeatureFlags, "future.unknown-feature"}); ok || reason != "serverbridge_v3_feature_unsupported" {
-		t.Fatalf("unknown v3 feature must fail closed: ok=%v reason=%s", ok, reason)
+		t.Fatalf("Неизвестная возможность v3 должна приводить к отказу: успешно=%v причина=%s", ok, reason)
 	}
 
 	handoff, err := decodeBridgeHandoff0191(strings.NewReader(`{"protocolVersion":3,"features":["protocol.capability-negotiation","protocol.feature-flags"],"username":"Player","targetServer":"paper-main"}`))

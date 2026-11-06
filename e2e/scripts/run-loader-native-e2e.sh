@@ -100,7 +100,7 @@ pauseOnLostFocus:false
 OPTIONS
 fi
 
-printf '[loader-native] запуск реального %s client profile %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
+printf '[loader-native] Запуск реального клиента %s с профилем %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
 export LIBGL_ALWAYS_SOFTWARE=1
@@ -169,4 +169,4 @@ payload={
 open(out_p,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY
 
-printf '[loader-native] PASS %s client ↔ %s server / Minecraft %s / loader %s\n' "$LOADER" "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
+printf '[loader-native] PASS: клиент %s ↔ сервер %s / Minecraft %s / загрузчик %s\n' "$LOADER" "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
