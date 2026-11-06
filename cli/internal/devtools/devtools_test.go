@@ -19,7 +19,7 @@ import (
 func makeTestJar(t *testing.T, signed bool, source string) string {
 	t.Helper()
 	if _, e := exec.LookPath("javac"); e != nil {
-		t.Skip("javac unavailable")
+		t.Skip("Компилятор javac недоступен")
 	}
 	d := t.TempDir()
 	src := filepath.Join(d, "Fixture.java")
@@ -78,7 +78,7 @@ func TestAnalyzeAndTransformJava(t *testing.T) {
 		t.Fatal(e)
 	}
 	if a.Classes != 1 || a.BytecodeMax < 61 || a.Signed {
-		t.Fatalf("unexpected jar analysis: %+v", a)
+		t.Fatalf("Неожиданный результат анализа JAR: %+v", a)
 	}
 	out := filepath.Join(t.TempDir(), "stripped.jar")
 	r, e := StripDebugJar(jar, out)
@@ -86,17 +86,17 @@ func TestAnalyzeAndTransformJava(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.ModifiedClasses != 1 || r.RemovedAttributes < 2 {
-		t.Fatalf("debug attributes not stripped: %+v", r)
+		t.Fatalf("Отладочные атрибуты не удалены: %+v", r)
 	}
 	for _, p := range []string{jar, out} {
 		cmd := exec.Command("java", "-jar", p, "-ok")
 		b, e := cmd.CombinedOutput()
 		if e != nil || strings.TrimSpace(string(b)) != "hello-ok" {
-			t.Fatalf("Java cannot run %s: %s %v", p, b, e)
+			t.Fatalf("Java не может выполнить %s: %s %v", p, b, e)
 		}
 	}
 	if _, e := StripDebugJar(jar, out); e == nil {
-		t.Fatal("clobbered existing output")
+		t.Fatal("Существующий результат был перезаписан")
 	}
 }
 func TestSuspiciousReferenceAndSignatures(t *testing.T) {
@@ -112,15 +112,15 @@ func TestSuspiciousReferenceAndSignatures(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("missing process execution indicator: %+v", r)
+		t.Fatalf("Отсутствует признак реального выполнения процесса: %+v", r)
 	}
 	signed := makeTestJar(t, true, helloSource)
 	r, e = AnalyzeJar(signed)
 	if e != nil || !r.Signed {
-		t.Fatalf("signature not detected: %+v %v", r, e)
+		t.Fatalf("Подпись не обнаружена: %+v %v", r, e)
 	}
 	if _, e := StripDebugJar(signed, filepath.Join(t.TempDir(), "out.jar")); e == nil {
-		t.Fatal("transformed signed JAR")
+		t.Fatal("Изменён подписанный JAR")
 	}
 }
 func TestJarZipTraversalRejected(t *testing.T) {
@@ -140,7 +140,7 @@ func TestJarZipTraversalRejected(t *testing.T) {
 			z.Close()
 			f.Close()
 			if _, e := AnalyzeJar(p); e == nil {
-				t.Fatal("unsafe filename accepted")
+				t.Fatal("Принято небезопасное имя файла")
 			}
 		})
 	}
@@ -153,14 +153,14 @@ func TestRunProcessSanitized(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.ExitCode != 0 || strings.Contains(r.Stdout, "production-secret") || !strings.Contains(r.Stdout, "null\n1\nargument") {
-		t.Fatalf("test process leaked data or args missing: %+v", r)
+		t.Fatalf("Тестовый процесс раскрыл данные либо не получил аргументы: %+v", r)
 	}
 }
 func TestRunTimeout(t *testing.T) {
 	jar := makeTestJar(t, false, `public class Fixture { public static void main(String[] a) throws Exception { Thread.sleep(10000); } }`)
 	r, e := RunComponent(context.Background(), ComponentOptions{Jar: jar, Java: "java", Isolation: "process", Timeout: 150 * time.Millisecond, HeapMB: 64})
 	if e == nil || !r.TimedOut {
-		t.Fatalf("test JVM did not time out: %+v %v", r, e)
+		t.Fatalf("Тестовая JVM не завершилась по тайм-ауту: %+v %v", r, e)
 	}
 }
 func sendJSON(t *testing.T, client *http.Client, url string, body string, control string) (int, map[string]any) {
@@ -195,36 +195,36 @@ func TestAuthFixtureIntegration(t *testing.T) {
 	base := server.URL
 	status, _ := sendJSON(t, client, base+"/fixture/v1/login", `{"username":"debug-user","password":"wrong"}`, "")
 	if status != 401 {
-		t.Fatalf("wrong password: %d", status)
+		t.Fatalf("Неверный пароль: %d", status)
 	}
 	body, _ := json.Marshal(map[string]string{"username": "debug-user", "password": f.Password()})
 	status, logged := sendJSON(t, client, base+"/fixture/v1/login", string(body), "")
 	if status != 200 {
-		t.Fatalf("login failed: %+v", logged)
+		t.Fatalf("Ошибка входа: %+v", logged)
 	}
 	token := logged["accessToken"].(string)
 	if !strings.HasPrefix(token, TestTokenPrefix) {
-		t.Fatal("wrong identity format")
+		t.Fatal("Неверный формат идентичности")
 	}
 	claims, e := f.Verify(token)
 	if e != nil || claims.Subject != "debug-user" {
-		t.Fatalf("unexpected claims %+v %v", claims, e)
+		t.Fatalf("Неожиданные утверждения токена %+v %v", claims, e)
 	}
 	body, _ = json.Marshal(map[string]string{"token": token})
 	status, active := sendJSON(t, client, base+"/fixture/v1/introspect", string(body), "")
 	if status != 200 || active["active"] != true {
-		t.Fatalf("introspection failed %+v", active)
+		t.Fatalf("Ошибка интроспекции %+v", active)
 	}
 	status, _ = sendJSON(t, client, base+"/fixture/v1/revoke", string(body), "")
 	if status != 403 {
-		t.Fatal("revocation without policy token was allowed")
+		t.Fatal("Разрешён отзыв без токена политики")
 	}
 	status, _ = sendJSON(t, client, base+"/fixture/v1/revoke", string(body), f.ControlToken())
 	if status != 200 {
-		t.Fatal("authorized revocation failed")
+		t.Fatal("Ошибка разрешённого отзыва")
 	}
 	if _, e := f.Verify(token); e == nil {
-		t.Fatal("revoked identity accepted")
+		t.Fatal("Принята отозванная идентичность")
 	}
 	request, _ := http.NewRequest("GET", base+"/fixture/v1/events", nil)
 	request.Header.Set("Authorization", "Bearer "+f.ControlToken())
@@ -238,15 +238,15 @@ func TestAuthFixtureIntegration(t *testing.T) {
 	e = json.NewDecoder(resp.Body).Decode(&events)
 	resp.Body.Close()
 	if e != nil || len(events.Events) < 4 {
-		t.Fatalf("missing auth events: %+v %v", events, e)
+		t.Fatalf("Отсутствуют события авторизации: %+v %v", events, e)
 	}
 	status, _ = sendJSON(t, client, base+"/fixture/v1/issue", `{"subject":"another","scopes":["test:read"],"ttlSeconds":60}`, "")
 	if status != 403 {
-		t.Fatal("issue without control token allowed")
+		t.Fatal("Разрешена выдача без управляющего токена")
 	}
 	status, issued := sendJSON(t, client, base+"/fixture/v1/issue", `{"subject":"another","scopes":["test:read"],"ttlSeconds":60}`, f.ControlToken())
 	if status != 200 {
-		t.Fatalf("issue failed: %+v", issued)
+		t.Fatalf("Ошибка выдачи: %+v", issued)
 	}
 }
 func TestAuthExpiryAndListener(t *testing.T) {
@@ -261,12 +261,12 @@ func TestAuthExpiryAndListener(t *testing.T) {
 	}
 	f.now = func() time.Time { return time.Unix(10061, 0) }
 	if _, e := f.Verify(token); e == nil {
-		t.Fatal("expired token accepted")
+		t.Fatal("Принят токен с истёкшим сроком")
 	}
 	for _, addr := range []string{"0.0.0.0:0", "127.0.0.2.local:0", "[::]:0"} {
 		if l, e := ListenFixture(addr, f); e == nil {
 			l.Close()
-			t.Fatalf("unsafe bind %q", addr)
+			t.Fatalf("Небезопасная привязка %q", addr)
 		}
 	}
 	l, e := ListenFixture("127.0.0.1:0", f)
@@ -279,15 +279,15 @@ func TestAuthTokenNotProductionJWT(t *testing.T) {
 	f, _ := NewFixtureServer("tester")
 	token, _ := f.Issue("a", nil, 30*time.Second)
 	if strings.Count(token, ".") != 3 {
-		t.Fatalf("unexpected debug token shape: %s", token[:20])
+		t.Fatalf("Неожиданный формат отладочного токена: %s", token[:20])
 	}
 	parts := strings.Split(token, ".")
 	if parts[0] != "nltest" || parts[1] != "v1" {
-		t.Fatal("not a test namespace")
+		t.Fatal("Указанное пространство имён не предназначено для тестов")
 	}
 	_, err := f.Verify(token + "x")
 	if err == nil {
-		t.Fatal("tampered test token accepted")
+		t.Fatal("Принят изменённый тестовый токен")
 	}
 }
 

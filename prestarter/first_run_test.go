@@ -30,14 +30,14 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(original) != string(signed) {
-		t.Fatal("signed bootstrap changed in handoff")
+		t.Fatal("Подписанные данные первоначальной загрузки изменились при передаче")
 	}
 	verified, _, err := VerifyEnvelope(original, root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if verified.BackendURL != cfg.BackendURL || verified.ServerHost != cfg.ServerHost || !verified.AutoEnter {
-		t.Fatal("signed player route lost")
+		t.Fatal("Потерян подписанный маршрут игрока")
 	}
 	configRaw, err := os.ReadFile(filepath.Join(dir, "config.json"))
 	if err != nil {
@@ -49,7 +49,7 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 	}
 	for key, want := range map[string]string{"backendUrl": cfg.BackendURL, "projectId": cfg.ProjectID, "profileId": cfg.ProfileID, "pinnedPublicKey": cfg.ProfilePublicKey, "serverId": cfg.ServerID, "serverHost": cfg.ServerHost} {
 		if settings[key] != want {
-			t.Fatalf("%s was not provisioned: got %v", key, settings[key])
+			t.Fatalf("Компонент %s не подготовлен: получено %v", key, settings[key])
 		}
 	}
 	if settings["serverPort"] != float64(25566) || settings["autoEnter"] != true {
@@ -69,14 +69,14 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 	var restored map[string]any
 	_ = json.Unmarshal(read, &restored)
 	if restored["memoryMb"] != float64(6144) {
-		t.Fatal("user preference overwritten")
+		t.Fatal("Пользовательские настройки были перезаписаны")
 	}
 	if _, _, err = VerifyEnvelope(original, strings.Repeat("00", 32)); err == nil {
-		t.Fatal("wrong trust root accepted")
+		t.Fatal("Принят неверный корневой ключ доверия")
 	}
 	original[len(original)-2] ^= 1
 	if _, _, err = VerifyEnvelope(original, root); err == nil {
-		t.Fatal("tampered handoff accepted")
+		t.Fatal("Приняты изменённые данные передачи")
 	}
 }
 
@@ -86,7 +86,7 @@ func TestBootstrapServerPolicy0352(t *testing.T) {
 	cfg.AutoEnter = true
 	cfg.ServerID = "velocity-main"
 	if err := cfg.Validate(); err == nil {
-		t.Fatal("auto-enter without public host/port accepted")
+		t.Fatal("Разрешено автоматическое подключение без публичного адреса и порта")
 	}
 	cfg.ServerHost = "mc.example.org"
 	cfg.ServerPort = 25565
@@ -95,7 +95,7 @@ func TestBootstrapServerPolicy0352(t *testing.T) {
 	}
 	cfg.ServerHost = "bad/host"
 	if err := cfg.Validate(); err == nil {
-		t.Fatal("unsafe server host accepted")
+		t.Fatal("Принят небезопасный адрес сервера")
 	}
 	cfg.ServerHost = "mc.example.org"
 	_, private, _ := ed25519.GenerateKey(nil)

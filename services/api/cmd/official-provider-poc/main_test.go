@@ -108,7 +108,7 @@ func TestBrowserPKCEPOCRedactsAllTokensAndNeverClaimsFormalApproval(t *testing.T
 	var instructions bytes.Buffer
 	r := verify(ctx, &simulatedProvider{badState: true}, options{ClientID: ownClientID, Flow: "browser", OpenBrowser: false}, &instructions)
 	if r.Result != "provider_access_verified" {
-		t.Fatalf("unexpected result %+v", r)
+		t.Fatalf("Неожиданный результат %+v", r)
 	}
 	if r.ExternalAppApproval != "requires_independent_provider_confirmation" {
 		t.Fatal("simulated access was treated as approval")

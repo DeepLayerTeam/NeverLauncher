@@ -23,7 +23,7 @@
 ```java
 try (HostSession session = HostSession.fromEnvironment(System.getenv(), manifest)) {
     session.connect(callbackUrl, Set.of("runtime.config.get", "runtime.storage.put"));
-    // Only a host that advertised these effective capabilities can reach here.
+    // Сюда можно попасть только при наличии заявленных хостом действующих возможностей.
 }
 ```
 
@@ -46,7 +46,7 @@ python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.
 (cd services/api && go test ./internal/extensionhost ./internal/extensioncontract ./internal/extensionjava)
 ```
 
-Команда Go требует объявленных в репозитории инструментов Go `1.27.3`. Workflow Java SDK в CI проверяет JDK 17/21 на Linux, macOS и Windows; одних локальных тестов Linux недостаточно для сертификации этих целей.
+Команда Go требует объявленных в репозитории инструментов Go `1.27.3`. Процесс Java SDK в CI проверяет JDK 17/21 на Linux, macOS и Windows; одних локальных тестов Linux недостаточно для сертификации этих целей.
 
 ## Ограничение выпуска
 

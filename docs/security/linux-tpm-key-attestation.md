@@ -6,7 +6,7 @@
 
 В Linux helper используется `tpm2-tools` 5.x, установленный из доверенных пакетов дистрибутива в `/usr/bin`. Запуски — отдельными argv без shell; код ограничивает время и размер файлов, проверяет UID, запрещает symlinks и удаляет приватную временную директорию. **`.tpm_priv` — зашифрованный TPM blob, а не экспортируемый приватный ключ.** Для загрузки используется точно заданный ECC P-256 parent в Owner hierarchy из `hardware-enclave` 0.2.10 (`SHA256`, `AES-128-CFB`, `restricted decrypt`, `fixedTPM/fixedParent/sensitiveDataOrigin/userWithAuth`). С `TPM2_Load` получается прежний подписывающий key, а не новый.
 
-После `TPM2_ReadPublic` полная TPM2B_PUBLIC побайтово сверяется с сохранённой, а P-256 SEC1 — с серверной device identity. `TPM2_Certify` вызывается с отдельным TPM AK по persistent handle `0x81xxxxxx`, с `qualifyingData` — ровно 32-байтовым серверным nonce-derived SHA256. Клиент отправляет binary TPM2B_PUBLIC, TPM2B_ATTEST, TPMT_SIGNATURE и issuer-certified AK X.509 material в существующий `POST /api/v1/auth/devices/{id}/tpm-certify/complete` (после `begin`). Никакая локальная опция не выставляет `verified`: его присваивает только сервер.
+После `TPM2_ReadPublic` полная TPM2B_PUBLIC побайтово сверяется с сохранённой, а P-256 SEC1 — с серверной идентификатору устройства. `TPM2_Certify` вызывается с отдельным TPM AK по persistent handle `0x81xxxxxx`, с `qualifyingData` — ровно 32-байтовым серверным nonce-derived SHA256. Клиент отправляет binary TPM2B_PUBLIC, TPM2B_ATTEST, TPMT_SIGNATURE и issuer-certified AK X.509 material в существующий `POST /api/v1/auth/devices/{id}/tpm-certify/complete` (после `begin`). Никакая локальная опция не выставляет `verified`: его присваивает только сервер.
 
 0.31.4 исправляет реальную несовместимость с 0.31.2: `hardware-enclave` Linux создаёт signing key `TPMT_ECC_SCHEME=ECDSA(SHA256)`, тогда как Windows ранее проверял `NULL`. Общий бинарный парсер и Go verifier теперь принимают **только** `NULL` или `ECDSA(SHA256)`; SHA-1, остальные схемы и кривые остаются запрещёнными. TPM Name пересчитывается из полной фактической public area, включая scheme/hash, поэтому чужой объект не может пройти проверку по голому public key.
 
@@ -21,7 +21,7 @@
 ## Гарантии и ограничения
 
 - Отдельно проверяются native public area, `TPM2_Certify` подпись AK, привязка к server nonce/device/user/session/binding epoch, срок действия, одноразовость, CA root, revocation. Ответ сервера — единственный источник аппаратного assurance.
-- Проверки **не** означают measured boot/PCR/Guard runtime integrity и не заменяют античит. `strict` по-прежнему требует независимых проверок Guard и отвергается без них.
+- Проверки **не** означают измеряемая загрузка/PCR/Guard runtime integrity и не заменяют античит. `strict` по-прежнему требует независимых проверок Guard и отвергается без них.
 - Смена подписи программного пакета или имени key directory не повышает доверие. Неподдерживаемые kernel/TPM credentials возвращают actionable refusal.
 - Текущий Linux producer требует пустую TPM password authorization для user key и AK и AK с persistent handle. Варианты с password/PolicyAuthorize или AK в непостоянном контексте не поддерживаются. Отказ не является общим сбоем лаунчера.
 - Код защищает от случайного доступа к wrapped blob и недоверенных CLI параметров, но **не обеспечивает изоляцию от root или malware с правами того же пользователя**.

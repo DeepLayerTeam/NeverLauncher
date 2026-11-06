@@ -177,7 +177,7 @@ func TestRemoteTokenSecurity0284(t *testing.T) {
 		t.Fatal("bad CIDR accepted")
 	}
 	if _, err := remoteTokenDecode0284(id, token, time.Now().Add(16*time.Minute)); err == nil {
-		t.Fatal("expired token accepted")
+		t.Fatal("Принят токен с истёкшим сроком")
 	}
 	c, err := remoteTokenDecode0284(id, token, time.Now())
 	if err != nil {

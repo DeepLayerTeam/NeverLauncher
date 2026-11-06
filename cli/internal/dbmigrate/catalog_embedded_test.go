@@ -30,17 +30,17 @@ func TestEmbeddedMigrationCatalogMatchesBackendBytes(t *testing.T) {
 		expected[entry.Name()] = b
 	}
 	if len(migrations) != len(expected) || len(migrations) < 100 {
-		t.Fatalf("CLI migration count %d != backend %d", len(migrations), len(expected))
+		t.Fatalf("Количество миграций CLI %d не совпадает с Backend %d", len(migrations), len(expected))
 	}
 	for _, migration := range migrations {
 		b, ok := expected[migration.Version+".sql"]
 		if !ok {
-			t.Errorf("CLI-only migration: %s", migration.Version)
+			t.Errorf("Миграция присутствует только в CLI: %s", migration.Version)
 			continue
 		}
 		sum := sha256.Sum256(b)
 		if migration.Checksum != hex.EncodeToString(sum[:]) || migration.SQL != string(b) {
-			t.Errorf("checksum/bytes mismatch: %s", migration.Version)
+			t.Errorf("Несоответствие контрольной суммы или байтов: %s", migration.Version)
 		}
 	}
 }

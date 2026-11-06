@@ -79,7 +79,7 @@ func TestRuntimeCertification02712SignedEndToEndMaterializerAndTamper(t *testing
 		t.Fatal(err)
 	}
 	if err := factoryCertKeygen02712(key, pub); err == nil {
-		t.Fatal("key overwrite accepted")
+		t.Fatal("Разрешена перезапись ключа")
 	}
 	runtimePath := filepath.Join(tmp, "fake-runtime")
 	runtimeScript := `#!/bin/sh

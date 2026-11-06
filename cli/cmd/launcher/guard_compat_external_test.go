@@ -44,7 +44,7 @@ func TestExternalNativeCompatibility05010(t *testing.T) {
 	link := filepath.Join(filepath.Dir(path), "link.so")
 	if err = os.Symlink(path, link); err == nil {
 		if _, e := guardCompatExternalNativeHash05010(link); e == nil {
-			t.Fatal("symlink accepted")
+			t.Fatal("Принята символьная ссылка")
 		}
 	}
 	if !strings.HasPrefix(hash, "0") && hash == changed {

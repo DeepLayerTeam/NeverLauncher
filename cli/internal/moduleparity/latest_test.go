@@ -55,17 +55,17 @@ func TestLatest04211EvidenceAndStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.FullyCertified || got.ProductVersion != "0.43.0" || len(got.Results) != 19 {
-		t.Fatalf("wrong results: %+v", got)
+		t.Fatalf("Неверные результаты: %+v", got)
 	}
 	for i, r := range got.Results {
 		if r.Test.Status != "not-run" || !r.SourceValidated || len(r.SourceDigests) == 0 {
-			t.Fatalf("fake runtime evidence M%02d: %+v", i+1, r)
+			t.Fatalf("Ложные свидетельства работы Runtime M%02d: %+v", i+1, r)
 		}
 		if i == 16 && r.Status != "blocked" {
-			t.Fatal("unsafe command pack must remain blocked")
+			t.Fatal("Небезопасный пакет команд должен оставаться заблокированным")
 		}
 		if i != 16 && r.Status != "partial" {
-			t.Fatalf("M%02d status was promoted without execution", i+1)
+			t.Fatalf("Статус M%02d повышен без выполнения", i+1)
 		}
 	}
 }
@@ -81,7 +81,7 @@ func TestLatest04211CarriesForwardWithoutClaimingVerified(t *testing.T) {
 			t.Fatal(err)
 		}
 		if report.ProductVersion != version || report.FullyCertified || len(report.Results) != 19 {
-			t.Fatalf("invalid current audit %s: %+v", version, report)
+			t.Fatalf("Недействительный текущий аудит %s: %+v", version, report)
 		}
 	}
 	for _, version := range []string{"0.42.10", "0.42.9", "foo", "0.43.0-rc"} {
@@ -90,7 +90,7 @@ func TestLatest04211CarriesForwardWithoutClaimingVerified(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err := InspectLatest04211(root); err == nil {
-			t.Fatalf("unsupported version %s passed", version)
+			t.Fatalf("Неподдерживаемая версия %s прошла проверку", version)
 		}
 	}
 }
@@ -124,7 +124,7 @@ func TestLatest04211FailsClosed(t *testing.T) {
 				t.Fatal(err)
 			}
 			if _, err := InspectLatest04211(root); err == nil {
-				t.Fatal("forged evidence was accepted")
+				t.Fatal("Приняты поддельные свидетельства проверки")
 			}
 		})
 	}

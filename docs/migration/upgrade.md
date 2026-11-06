@@ -9,7 +9,7 @@
 
 ## Данные Backend
 
-Миграции находятся в `services/api/internal/repository/postgres/` и связанных модулях. CLI имеет команды `nl db migrations|migration-doctor|migrate|status|validate`. **Не применяйте миграции на production до резервного копирования.** Не изменяйте ранее применённые SQL-файлы: создавайте новую миграцию.
+Миграции находятся в `services/api/internal/repository/postgres/` и связанных модулях. CLI имеет команды `nl db migrations|migration-doctor|migrate|status|validate`. **Не применяйте миграции в промышленную среду до резервного копирования.** Не изменяйте ранее применённые SQL-файлы: создавайте новую миграцию.
 
 ## Desktop (настольное приложение) / Runtime (среда выполнения) / Extensions (расширения)
 

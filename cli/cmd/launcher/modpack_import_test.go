@@ -141,7 +141,7 @@ func TestModpack0275CurseForgeResolvedDownloadURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.Status != "complete" || len(report.Imported) != 2 {
-		t.Fatalf("bad report: %+v", report)
+		t.Fatalf("Недействительный отчёт: %+v", report)
 	}
 	b, err := os.ReadFile(filepath.Join(dest, "mods/cfmod.jar"))
 	if err != nil {

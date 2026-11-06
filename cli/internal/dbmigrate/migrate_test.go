@@ -68,7 +68,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"pg_advisory_lock(718033100100)",
 	} {
 		if !strings.Contains(apply, required) {
-			t.Fatalf("apply script missing %q", required)
+			t.Fatalf("Отсутствует скрипт применения %q", required)
 		}
 	}
 
@@ -84,7 +84,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"nl_expected_migrations",
 	} {
 		if !strings.Contains(verify, required) {
-			t.Fatalf("verify script missing %q", required)
+			t.Fatalf("Отсутствует скрипт проверки %q", required)
 		}
 	}
 }

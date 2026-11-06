@@ -27,7 +27,7 @@ func TestTLSDownloadInterruptedResumeExactSHA0527(t *testing.T) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		if seq == 1 {
 			if r.Header.Get("Range") != "" {
-				t.Errorf("first request used Range")
+				t.Errorf("В первом запросе ошибочно использован заголовок Range")
 			}
 			w.Header().Set("Content-Length", strconv.Itoa(len(content)))
 			w.WriteHeader(http.StatusOK)
@@ -40,7 +40,7 @@ func TestTLSDownloadInterruptedResumeExactSHA0527(t *testing.T) {
 			return
 		}
 		if r.Header.Get("Range") != "bytes=12-" || r.Header.Get("If-Range") != "\"release-etag-0527\"" {
-			t.Errorf("unexpected resume headers: %+v", r.Header)
+			t.Errorf("Неожиданные заголовки возобновления загрузки: %+v", r.Header)
 		}
 		resumed.Store(true)
 		w.Header().Set("Content-Range", fmt.Sprintf("bytes 12-%d/%d", len(content)-1, len(content)))
@@ -55,11 +55,11 @@ func TestTLSDownloadInterruptedResumeExactSHA0527(t *testing.T) {
 	meta := filepath.Join(root, "object.etag")
 	storage := &storage{root: root, http: server.Client()}
 	if err := storage.fetch(context.Background(), art, part, meta); err == nil {
-		t.Fatal("broken TCP delivery returned success")
+		t.Fatal("Ошибочная доставка по TCP признана успешной")
 	}
 	received, err := os.ReadFile(part)
 	if err != nil || string(received) != string(content[:12]) {
-		t.Fatalf("partial data not persisted for resume: %q %v", received, err)
+		t.Fatalf("Частичные данные не сохранены для возобновления: %q %v", received, err)
 	}
 	if err := storage.fetch(context.Background(), art, part, meta); err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ func TestTLSResumeRejectsWrongServerValidator0527(t *testing.T) {
 	}
 	s := &storage{root: root, http: server.Client()}
 	if err := s.fetch(context.Background(), art, part, meta); err == nil {
-		t.Fatal("mismatching ETag accepted")
+		t.Fatal("Принят несовпадающий ETag")
 	}
 	if _, err := os.Stat(part); !os.IsNotExist(err) {
 		t.Fatalf("После несовпадения валидатора остался небезопасный частичный файл: %v", err)

@@ -18,7 +18,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		t.Skip("JDK unavailable")
 	}
 	if _, err := exec.LookPath("javac"); err != nil {
-		t.Skip("javac unavailable")
+		t.Skip("Компилятор javac недоступен")
 	}
 	repo := filepath.Join("..", "..", "..")
 	example := filepath.Join(repo, "examples", "extensions", "trusted-jvm")

@@ -7,10 +7,10 @@
 ```java
 services.events().subscribeJob("project.saved", projectSchema,
     payload -> Json.object(payload), event -> {
-        // Optional immutable metadata: event.metadata().sequence(),
+        // Необязательные неизменяемые метаданные: event.metadata().sequence(),
         // event.metadata().schemaVersion(), event.metadata().orderingKey().
-        // Persist an idempotency record together with your external side effect.
-        // Throw IOException for retryable failures.
+        // Сохраняйте запись идемпотентности вместе с внешним результатом операции.
+        // Для ошибок, допускающих повтор, выбрасывайте IOException.
         if (temporarilyUnavailable()) throw new IOException("retry later");
         if (permanentlyInvalid(event.event().payload()))
             throw new RuntimeEvents.PermanentFailure("invalid work item");

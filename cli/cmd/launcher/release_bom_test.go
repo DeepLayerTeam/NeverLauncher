@@ -198,7 +198,7 @@ func TestReleaseBOM03214VersionAndSymlinkSafety(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := writeReleaseBOM03214(dir, source, "0.32.14"); err == nil {
-		t.Fatal("version drift accepted")
+		t.Fatal("Принято расхождение версий")
 	}
 	if err := os.WriteFile(filepath.Join(source, "VERSION"), []byte("0.32.14\n"), 0600); err != nil {
 		t.Fatal(err)

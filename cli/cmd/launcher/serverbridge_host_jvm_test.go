@@ -195,7 +195,7 @@ func TestJVM0283RealJavaClasspathAndModule(t *testing.T) {
 	}
 	javac, err := exec.LookPath("javac")
 	if err != nil {
-		t.Skip("javac unavailable")
+		t.Skip("Компилятор javac недоступен")
 	}
 	version, err := javaMajorVersion(java)
 	if err != nil || version < 9 {

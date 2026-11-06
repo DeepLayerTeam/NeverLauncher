@@ -16,15 +16,15 @@ func TestMigrationAuthCLITransport0335(t *testing.T){
  called:=0
  srv:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
   called++
-  if r.Method!="POST"||r.Header.Get("Authorization")!="Bearer test-token"||r.Header.Get("X-Gravit-Password-Format")!="sha256-hex"||r.Header.Get("X-Migration-Import-Confirm")!="run-xyz" {t.Errorf("incorrect auth import headers: %+v",r.Header)}
-  if r.ContentLength!=10 {t.Errorf("source upload not streaming with known length: %d",r.ContentLength)}
+  if r.Method!="POST"||r.Header.Get("Authorization")!="Bearer test-token"||r.Header.Get("X-Gravit-Password-Format")!="sha256-hex"||r.Header.Get("X-Migration-Import-Confirm")!="run-xyz" {t.Errorf("Неверные заголовки импорта аутентификации: %+v",r.Header)}
+  if r.ContentLength!=10 {t.Errorf("Исходные данные загружены не потоком с известной длиной: %d",r.ContentLength)}
   w.Header().Set("Content-Type","application/json")
   _=json.NewEncoder(w).Encode(map[string]any{"data":map[string]any{"runId":"run-xyz","imported":1}})
  }))
  defer srv.Close()
  out:=filepath.Join(t.TempDir(),"private-report.json")
  if e:=postMigrationAuth0335(srv.URL+"/import","test-token",source,"sha256-hex","run-xyz",out,true);e!=nil{t.Fatal(e)}
- if called!=1{t.Fatalf("expected one request, got %d",called)}
+ if called!=1{t.Fatalf("Ожидался один запрос, получено %d",called)}
  stat,e:=os.Stat(out);if e!=nil{t.Fatal(e)}
  if stat.Mode().Perm()!=0600{t.Fatalf("report exposed: %v",stat.Mode())}
  data,e:=os.ReadFile(out);if e!=nil||!strings.Contains(string(data),`"imported": 1`){t.Fatalf("missing result: %s %v",data,e)}

@@ -15,7 +15,7 @@ import (
 // после принятия SET_ACTIVITY, но до подтверждения.
 func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("Unix socket test; Windows uses named pipes")
+		t.Skip("Тест Unix-сокета; Windows использует именованные каналы")
 	}
 	dir := t.TempDir()
 	t.Setenv("XDG_RUNTIME_DIR", dir)
@@ -79,6 +79,6 @@ func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := session.SetActivity(ctx, nil); !errors.Is(err, net.ErrClosed) {
-		t.Fatalf("closed session reused: %v", err)
+		t.Fatalf("Повторно использована закрытая сессия: %v", err)
 	}
 }

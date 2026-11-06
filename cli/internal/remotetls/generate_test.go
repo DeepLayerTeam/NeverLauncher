@@ -21,7 +21,7 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Directory != dir || !strings.HasPrefix(result.CAFingerprint, "sha256:") {
-		t.Fatalf("unexpected result %+v", result)
+		t.Fatalf("Неожиданный результат %+v", result)
 	}
 	for _, f := range []string{"server.key", "client.key", "ca.key"} {
 		st, err := os.Lstat(filepath.Join(dir, f))
@@ -29,12 +29,12 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 			t.Fatal(err)
 		}
 		if st.Mode().Perm() != 0600 || !st.Mode().IsRegular() {
-			t.Fatalf("unsafe private key %s: %v", f, st.Mode())
+			t.Fatalf("Небезопасное хранение закрытого ключа %s: %v", f, st.Mode())
 		}
 	}
 	st, _ := os.Lstat(dir)
 	if st.Mode().Perm() != 0700 {
-		t.Fatalf("unsafe credential directory: %v", st.Mode())
+		t.Fatalf("Небезопасный каталог учётных данных: %v", st.Mode())
 	}
 	rootData, err := os.ReadFile(result.CAFile)
 	if err != nil {
@@ -42,7 +42,7 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 	}
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM(rootData) {
-		t.Fatal("no trust root")
+		t.Fatal("Отсутствует корневой ключ доверия")
 	}
 	serverPair, err := tls.LoadX509KeyPair(result.ServerCertificate, result.ServerKey)
 	if err != nil {
@@ -71,12 +71,12 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 	unauthenticated := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots}}, Timeout: 3 * time.Second}
 	if resp, err := unauthenticated.Get(server.URL); err == nil {
 		resp.Body.Close()
-		t.Fatal("accepted missing client certificate")
+		t.Fatal("Принят запрос без клиентского сертификата")
 	}
 	wrongName := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots, ServerName: "unrelated.example", Certificates: []tls.Certificate{clientPair}}}, Timeout: 3 * time.Second}
 	if resp, err := wrongName.Get(server.URL); err == nil {
 		resp.Body.Close()
-		t.Fatal("accepted unlisted SAN")
+		t.Fatal("Принято имя SAN вне разрешённого списка")
 	}
 	// Повторный вызов для того же каталога не должен незаметно менять действующие учётные данные.
 	before, err := os.ReadFile(result.ServerKey)
@@ -84,11 +84,11 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Generate(dir, []string{"127.0.0.1"}, 30); err == nil {
-		t.Fatal("overwrote existing credentials")
+		t.Fatal("Существующие учётные данные перезаписаны")
 	}
 	after, err := os.ReadFile(result.ServerKey)
 	if err != nil || string(before) != string(after) {
-		t.Fatal("existing key changed")
+		t.Fatal("Существующий ключ изменился")
 	}
 }
 func TestGenerateInvalidInputsLeaveNoCredentials0428(t *testing.T) {
@@ -103,14 +103,14 @@ func TestGenerateInvalidInputsLeaveNoCredentials0428(t *testing.T) {
 	for i, c := range cases {
 		dir := filepath.Join(t.TempDir(), "secret")
 		if _, err := Generate(dir, c.hosts, c.days); err == nil {
-			t.Fatalf("case %d accepted", i)
+			t.Fatalf("Принят тестовый случай %d", i)
 		}
 		if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
-			t.Fatalf("case %d left credentials", i)
+			t.Fatalf("После тестового случая %d остались учётные данные", i)
 		}
 	}
 	if _, err := Generate("relative", []string{"127.0.0.1"}, 30); err == nil {
-		t.Fatal("accepted relative output path")
+		t.Fatal("Принят относительный путь для результата")
 	}
 }
 func TestGenerateServerCertificateCannotImpersonateClient0428(t *testing.T) {
@@ -130,7 +130,7 @@ func TestGenerateServerCertificateCannotImpersonateClient0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = cert.Verify(x509.VerifyOptions{Roots: roots, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}}); err == nil {
-		t.Fatal("server certificate accepted for client auth")
+		t.Fatal("Серверный сертификат принят для клиентской аутентификации")
 	}
 	// Открытый серверный конечный сертификат должен быть действителен для указанного в документации IP-адреса.
 	if _, err = cert.Verify(x509.VerifyOptions{Roots: roots, DNSName: net.ParseIP("127.0.0.1").String(), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}); err != nil {

@@ -142,7 +142,7 @@ func TestDryRunAndFailureIsolation02510(t *testing.T) {
 		t.Fatal(e)
 	}
 	if report.Counts["validated-dry-run"] != 1 || report.Counts["quarantined"] != 1 || report.Counts["unmatched"] != 1 || db.stage != 0 || db.upload != 0 {
-		t.Fatalf("unexpected report: %+v", report)
+		t.Fatalf("Неожиданный отчёт: %+v", report)
 	}
 }
 func TestLocalSourceRejectsSymlinkEscape02510(t *testing.T) {

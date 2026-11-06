@@ -52,15 +52,15 @@ func TestModuleParity03011CurrentEvidence(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.ProductVersion != "0.31.0" || len(r.Results) != 19 || r.FullyCertified {
-		t.Fatalf("invalid current report: %+v", r)
+		t.Fatalf("Недействительный текущий отчёт: %+v", r)
 	}
 	for _, mod := range r.Results {
 		if !mod.SourceValidated || mod.Test.Status != "not-run" {
-			t.Fatalf("falsely certified: %+v", mod)
+			t.Fatalf("Ошибочно сертифицировано: %+v", mod)
 		}
 	}
 	if r.Results[1].Status != "partial" || r.Results[16].Status != "blocked" {
-		t.Fatal("current implementation status drift")
+		t.Fatal("Состояние текущей реализации не совпадает с ожидаемым")
 	}
 }
 func TestModuleParity03011RejectForgedParity(t *testing.T) {
@@ -87,7 +87,7 @@ func TestModuleParity03011RejectForgedParity(t *testing.T) {
 				t.Fatal(e)
 			}
 			if _, e = InspectCurrent(root); e == nil {
-				t.Fatal("tampered implementation status accepted")
+				t.Fatal("Принято подменённое состояние реализации")
 			}
 		})
 	}
@@ -107,6 +107,6 @@ func TestModuleParity03012PreviousEvidenceStillAuditable(t *testing.T) {
 	}
 	if previous.ProductVersion != "0.30.11" || current.ProductVersion != "0.31.0" ||
 		len(previous.Results) != 19 || len(current.Results) != 19 || previous.FullyCertified || current.FullyCertified {
-		t.Fatalf("historical inventory lost or falsely certified: old=%+v new=%+v", previous, current)
+		t.Fatalf("Историческая инвентаризация потеряна либо ошибочно сертифицирована: раньше=%+v, теперь=%+v", previous, current)
 	}
 }

@@ -56,7 +56,7 @@ func TestLegacy0406ExecutableForgeLaunchAndClasspathPrecedence(t *testing.T) {
 	}
 	javac, err := exec.LookPath("javac")
 	if err != nil {
-		t.Skip("javac unavailable")
+		t.Skip("Компилятор javac недоступен")
 	}
 	jar, err := exec.LookPath("jar")
 	if err != nil {

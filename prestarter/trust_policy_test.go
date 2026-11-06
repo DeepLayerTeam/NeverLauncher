@@ -48,7 +48,7 @@ func TestRootSignedTrustRotationAndRevocation02312(t *testing.T) {
 	envelope.RootSignature = strings.Repeat("a", 128)
 	altered, _ := json.Marshal(envelope)
 	if _, _, e = VerifyTrustPolicy(altered, key, time.Now().UTC()); e == nil {
-		t.Fatal("bad root signature accepted")
+		t.Fatal("Принята неверная подпись корневого ключа")
 	}
 	// Следующая эпоха с подписью корня отзывает ранее активного подписанта.
 	p.Epoch++
@@ -68,10 +68,10 @@ func TestRootSignedTrustRotationAndRevocation02312(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = next.Authorize("bootstrap", "bootstrap-v2", p.Keys[0].PublicKey, time.Now(), time.Now(), true); e == nil {
-		t.Fatal("revoked key authorized")
+		t.Fatal("Отозванный ключ получил разрешение")
 	}
 	if _, e = AcceptTrustPolicy(dir, key, raw, time.Now().UTC()); e == nil {
-		t.Fatal("old trust epoch replay accepted")
+		t.Fatal("Принято повторное воспроизведение старой эпохи доверия")
 	}
 	if _, e = os.Stat(filepath.Join(dir, "active-policy.json")); e != nil {
 		t.Fatal(e)
@@ -102,10 +102,10 @@ func TestVerifyOnlyWindowAndFreeze02312(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = v.Authorize("bootstrap", p.Keys[0].ID, p.Keys[0].PublicKey, time.Now().Add(-time.Minute), time.Now().Add(2*time.Hour), false); e == nil {
-		t.Fatal("retired signing key accepted past overlap")
+		t.Fatal("После переходного периода принят выведенный из обращения ключ подписи")
 	}
 	if _, _, e = VerifyTrustPolicy(raw, key, time.Now().Add(25*time.Hour)); e == nil {
-		t.Fatal("expired trust policy accepted")
+		t.Fatal("Принята политика доверия с истёкшим сроком")
 	}
 }
 
@@ -132,10 +132,10 @@ func TestDelegatedBootstrapCannotUseRevokedSigner02312(t *testing.T) {
 	forged.SignedAt = time.Now().Add(2 * time.Minute).UTC().Format(time.RFC3339)
 	modified, _ := json.Marshal(forged)
 	if _, _, err = VerifyEnvelopeWithPolicy(modified, rootHex, &policy); err == nil {
-		t.Fatal("unsigned bootstrap metadata accepted")
+		t.Fatal("Приняты неподписанные метаданные начальной загрузки")
 	}
 	if _, _, err = VerifyEnvelope(signed, rootHex); err == nil {
-		t.Fatal("v2 config accepted without policy")
+		t.Fatal("Конфигурация v2 принята без политики доверия")
 	}
 	policy.Epoch++
 	policy.Keys[0].Status = "revoked"
@@ -154,6 +154,6 @@ func TestDelegatedBootstrapCannotUseRevokedSigner02312(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, err = VerifyEnvelopeWithPolicy(signed, rootHex, &next); err == nil {
-		t.Fatal("revoked old bootstrap accepted")
+		t.Fatal("Принята отозванная конфигурация первоначальной загрузки")
 	}
 }

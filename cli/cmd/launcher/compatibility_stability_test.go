@@ -112,7 +112,7 @@ func TestValidateAssetLogicalPath(t *testing.T) {
 	}
 	for _, bad := range []string{"../escape", "a/../escape", "/absolute", "a//b", "a\\..\\b", ""} {
 		if err := validateAssetLogicalPath(bad); err == nil {
-			t.Fatalf("unsafe path %q accepted", bad)
+			t.Fatalf("Принят небезопасный путь %q", bad)
 		}
 	}
 }

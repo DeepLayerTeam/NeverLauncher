@@ -53,4 +53,4 @@ python3 scripts/contracts/validate-openapi.py
 
 ## Участие
 
-Перед изменением кода прочитайте [CONTRIBUTING.md](CONTRIBUTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Не помещайте секреты, персональные данные или неподписанные артефакты релиза в pull request.
+Перед изменением кода прочитайте [CONTRIBUTING.md](CONTRIBUTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Не помещайте секреты, персональные данные или неподписанные артефакты релиза в запрос на включение изменений.

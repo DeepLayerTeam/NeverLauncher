@@ -80,7 +80,7 @@ func TestJavaJarSymlinkRejected0305(t *testing.T) {
 		t.Skip(err)
 	}
 	if _, err := Inspect(symlink); err == nil {
-		t.Fatal("symlink accepted")
+		t.Fatal("Принята символьная ссылка")
 	}
 }
 func TestJavaRuntimeProbe0305(t *testing.T) {

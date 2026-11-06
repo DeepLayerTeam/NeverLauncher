@@ -103,17 +103,17 @@ func TestSignedConfigCannotBeTamperedWith(t *testing.T) {
 		t.Fatal("Тест пропустил недействительную подпись")
 	}
 	if _, _, e := VerifyEnvelope(env, strings.Repeat("0", 64)); e == nil {
-		t.Fatal("foreign root accepted")
+		t.Fatal("Принят посторонний корневой ключ")
 	}
 	cfg.Targets[0].Components[0].URL = "http://localhost/binary"
 	unsigned, _ := json.Marshal(cfg)
 	if _, e := SignedEnvelope(unsigned, ed25519.NewKeyFromSeed(make([]byte, 32))); e == nil {
-		t.Fatal("HTTP downgrade accepted")
+		t.Fatal("Разрешён переход на небезопасный HTTP")
 	}
 }
 func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fake POSIX runtime helper requires sh; Windows coverage needs native binaries")
+		t.Skip("Имитация Runtime на POSIX требует sh; на Windows необходимы нативные бинарные файлы")
 	}
 	temp := t.TempDir()
 	parts := baseParts()
@@ -121,7 +121,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 	opts.LaunchProfile = true
 	opts.Username = "TestPlayer"
 	if e := Run(context.Background(), opts); e != nil {
-		t.Fatal("clean bootstrap:", e)
+		t.Fatal("Чистая первоначальная загрузка:", e)
 	}
 	recordDir := filepath.Join(opts.Root, "launcher")
 	var state activeRecord
@@ -137,7 +137,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 		t.Fatal("Неверный указатель первоначально зафиксированной версии", state)
 	}
 	if e := Run(context.Background(), opts); e != nil {
-		t.Fatal("repeated offline install:", e)
+		t.Fatal("Повторная автономная установка:", e)
 	}
 	raw, e = os.ReadFile(slot)
 	if e != nil {
@@ -146,7 +146,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 	var again activeRecord
 	json.Unmarshal(raw, &again)
 	if again.Generation != 1 {
-		t.Fatal("same release unexpectedly updated pointer")
+		t.Fatal("Повторная установка той же версии неожиданно изменила указатель")
 	}
 	// Повредите подписанный компонент. Восстановление обязано вернуть его из проверенного
 	// кэша, не удаляя посторонние игровые и пользовательские данные.
@@ -160,14 +160,14 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = Run(context.Background(), opts); e != nil {
-		t.Fatal("recovery from corrupted binary:", e)
+		t.Fatal("Восстановление из повреждённого бинарного файла:", e)
 	}
 	if !hashFile(component, cfg.Targets[0].Components[2].Artifact) {
-		t.Fatal("component not restored")
+		t.Fatal("Компонент не восстановлен")
 	}
 	save, e := os.ReadFile(userFile)
 	if e != nil || string(save) != "player save" {
-		t.Fatal("user file lost")
+		t.Fatal("Пользовательский файл потерян")
 	}
 }
 func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T) {
@@ -200,13 +200,13 @@ func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T)
 		t.Fatal(err)
 	}
 	if err := Run(context.Background(), opts); err != nil {
-		t.Fatal("recovered first bootstrap:", err)
+		t.Fatal("Восстановленная первоначальная загрузка:", err)
 	}
 }
 
 func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("symlink permissions differ on Windows")
+		t.Skip("В Windows права доступа к символьным ссылкам отличаются")
 	}
 	s, err := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
 	if err != nil {
@@ -225,11 +225,11 @@ func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = s.fetch(context.Background(), a, path+".part", path+".etag"); err == nil || !strings.Contains(err.Error(), "unsafe partial") {
-		t.Fatalf("cache symlink accepted: %v", err)
+		t.Fatalf("Принята символьная ссылка в кеше: %v", err)
 	}
 	data, err := os.ReadFile(sentinel)
 	if err != nil || string(data) != "unchanged" {
-		t.Fatalf("sentinel modified: %q %v", data, err)
+		t.Fatalf("Контрольный файл изменён: %q %v", data, err)
 	}
 }
 
@@ -260,7 +260,7 @@ func TestFailedNewReleaseKeepsOldActive(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(check) != string(old) {
-		t.Fatal("old committed pointer changed despite install failure")
+		t.Fatal("Несмотря на ошибку установки изменён прежний зафиксированный указатель")
 	}
 }
 func TestDownloadRangeResumeAndBadRangeInvalidates(t *testing.T) {
@@ -275,7 +275,7 @@ func TestDownloadRangeResumeAndBadRangeInvalidates(t *testing.T) {
 		if rng := r.Header.Get("Range"); rng != "" {
 			sawRange.Store(true)
 			if r.Header.Get("If-Range") != "\"v1\"" {
-				t.Errorf("wrong If-Range: %q", r.Header.Get("If-Range"))
+				t.Errorf("Неверный заголовок If-Range: %q", r.Header.Get("If-Range"))
 			}
 			var start int64
 			fmt.Sscanf(rng, "bytes=%d-", &start)
@@ -307,7 +307,7 @@ func TestDownloadRangeResumeAndBadRangeInvalidates(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !hashFile(got, checksum) || !sawRange.Load() || count.Load() != 2 {
-		t.Fatalf("resume not used: requests=%d range=%v", count.Load(), sawRange.Load())
+		t.Fatalf("Возобновление загрузки не использовано: запросов=%d, диапазон=%v", count.Load(), sawRange.Load())
 	}
 }
 func TestMalformed206NeverJoinsOldBytes(t *testing.T) {
@@ -355,7 +355,7 @@ func TestManifestIntegrityRejectsWrongBytes(t *testing.T) {
 	}
 	os.WriteFile(s.objectPath(a), []byte(strings.Repeat("x", len(data))), 0600)
 	if _, e := s.artifact(context.Background(), a, ""); e == nil {
-		t.Fatal("corrupted object accepted offline")
+		t.Fatal("В автономном режиме принят повреждённый объект")
 	}
 }
 func TestProcessLockSerializesSameRoot(t *testing.T) {
@@ -374,7 +374,7 @@ func TestProcessLockSerializesSameRoot(t *testing.T) {
 	}()
 	select {
 	case <-done:
-		t.Fatal("acquired locked file twice")
+		t.Fatal("Один и тот же заблокированный файл захвачен дважды")
 	default:
 	}
 	first.Close()
@@ -389,7 +389,7 @@ func TestNoUnboundedTransferAccepted(t *testing.T) {
 	s, _ := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
 	s.http = srv.Client()
 	if _, e := s.artifact(context.Background(), a, ""); e == nil {
-		t.Fatal("oversize streamed body accepted")
+		t.Fatal("Принято потоковое тело сверх допустимого размера")
 	}
 }
 
@@ -423,7 +423,7 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 	if binding["projectId"] != "hello" || binding["profileId"] != "vanilla" || binding["pinnedPublicKey"] != strings.Repeat("a", 64) {
-		t.Fatalf("invalid Desktop configuration: %v", binding)
+		t.Fatalf("Некорректная конфигурация Desktop: %v", binding)
 	}
 	var marker []byte
 	for i := 0; i < 30; i++ {
@@ -434,7 +434,7 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 		time.Sleep(40 * time.Millisecond)
 	}
 	if err != nil || string(marker) != configDir {
-		t.Fatalf("Desktop did not launch with verified first-run configuration: %v", err)
+		t.Fatalf("Desktop не запущен с проверенной конфигурацией первого запуска: %v", err)
 	}
 }
 func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
@@ -464,7 +464,7 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 	os.WriteFile(opts.ConfigPath, signed, 0600)
 	os.WriteFile(filepath.Join(opts.OfflineDir, "profile-manifest.json"), parts["profile-manifest.json"], 0600)
 	if err := Run(context.Background(), opts); err == nil {
-		t.Fatal("invalid Java policy accepted")
+		t.Fatal("Принята недействительная политика Java")
 	}
 	// Предыдущие подписанный Runtime и указатель должны восстановиться с монотонным увеличением
 	// поколения фиксации; неудачное поколение остаётся доступным для диагностики.
@@ -485,7 +485,7 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 		}
 	}
 	if latest.Digest != first.Digest || latest.Generation < 3 {
-		t.Fatalf("rollback failed, records=%+v", records)
+		t.Fatalf("Ошибка отката, записи=%+v", records)
 	}
 }
 func TestRecoveryRemovesUncommittedStaging(t *testing.T) {
@@ -503,6 +503,6 @@ func TestRecoveryRemovesUncommittedStaging(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(releaseRoot); !errors.Is(err, os.ErrNotExist) {
-		t.Fatal("orphaned staging directory not recovered", err)
+		t.Fatal("Не восстановлен оставшийся без владельца каталог подготовки", err)
 	}
 }

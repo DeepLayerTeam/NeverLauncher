@@ -860,7 +860,7 @@ func runMain(args []string) error {
 	case "integration-audit":
 		return integrationAuditCommand0491(args[1:])
 	case "manual-actions":
-		planFile := fs.String("plan", "", "migration operator plan")
+		planFile := fs.String("plan", "", "План действий оператора миграции")
 		out := fs.String("output", "", "Новый файл Markdown со списком ручных действий оператора")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
@@ -875,16 +875,16 @@ func runMain(args []string) error {
 		}
 		return exportManualWorklist(context.Background(), p, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out)
 	case "audit-state":
-		source := fs.String("source", "", "absolute source snapshot directory")
-		target := fs.String("target", "", "absolute target snapshot directory")
-		out := fs.String("output", "", "new private JSON audit evidence file")
+		source := fs.String("source", "", "Абсолютный путь к каталогу снимка исходной системы")
+		target := fs.String("target", "", "Абсолютный путь к каталогу снимка целевой системы")
+		out := fs.String("output", "", "Новый закрытый JSON-файл свидетельств аудита")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
 		return executeStateAudit(*source, *target, *out)
 	case "certify":
 		evidenceDir := fs.String("evidence-dir", "", "Новый закрытый каталог для всех свидетельств проверки")
-		p := fs.String("plan", "", "operator check plan JSON")
+		p := fs.String("plan", "", "JSON-файл плана проверок оператора")
 		out := fs.String("output", "", "Подписанный сертификат (создаётся с правами 0600)")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
@@ -900,8 +900,8 @@ func runMain(args []string) error {
 		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out, *evidenceDir)
 	case "verify":
 		evidenceDir := fs.String("evidence-dir", "", "Сохранённый каталог доказательств (обязательно)")
-		file := fs.String("certificate", "", "signed evidence bundle")
-		pub := fs.String("public-key", "", "trusted Ed25519 PUBLIC KEY PEM")
+		file := fs.String("certificate", "", "Подписанный комплект свидетельств")
+		pub := fs.String("public-key", "", "Доверенный открытый ключ Ed25519 в формате PEM")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -939,15 +939,15 @@ func runMain(args []string) error {
 		return nil
 	case "verify-cohort", "verify-cohort-live":
 		key := fs.String("public-key", "", "Доверенный открытый ключ Ed25519")
-		single := fs.String("fileauth-single", "", "fileauth certificate")
-		singleDir := fs.String("fileauth-single-evidence", "", "fileauth evidence directory")
+		single := fs.String("fileauth-single", "", "Сертификат FileAuth")
+		singleDir := fs.String("fileauth-single-evidence", "", "Каталог свидетельств FileAuth")
 		modded := fs.String("sql-modded", "", "Сертификат SQL/модифицированного клиента")
 		moddedDir := fs.String("sql-modded-evidence", "", "Каталог доказательств SQL/модифицированного клиента")
-		network := fs.String("proxy-network", "", "network certificate")
-		networkDir := fs.String("proxy-network-evidence", "", "network evidence directory")
-		singlePlan := fs.String("fileauth-single-plan", "", "fileauth live source plan")
+		network := fs.String("proxy-network", "", "Сертификат сетевой проверки")
+		networkDir := fs.String("proxy-network-evidence", "", "Каталог свидетельств сетевой проверки")
+		singlePlan := fs.String("fileauth-single-plan", "", "План проверки действующего источника FileAuth")
 		moddedPlan := fs.String("sql-modded-plan", "", "План действующего источника SQL/модифицированного клиента")
-		networkPlan := fs.String("proxy-network-plan", "", "network live source plan")
+		networkPlan := fs.String("proxy-network-plan", "", "План проверки действующего сетевого источника")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}

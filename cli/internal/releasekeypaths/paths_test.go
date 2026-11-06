@@ -24,7 +24,7 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := OutsideBundle(bundle, inside); err == nil {
-		t.Fatal("accepted bundled key")
+		t.Fatal("Принят ключ, встроенный в пакет")
 	}
 	// Лексически вне пакета, но разрешается в ключ внутри пакета.
 	outsideAlias := filepath.Join(root, "malicious-link.key")
@@ -32,7 +32,7 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := OutsideBundle(bundle, outsideAlias); err == nil {
-		t.Fatal("accepted symlink to bundled key")
+		t.Fatal("Принята символьная ссылка на ключ внутри пакета")
 	}
 	// Лексически внутри пакета и указывает наружу — также запрещено.
 	insideAlias := filepath.Join(bundle, "external.key")
@@ -40,7 +40,7 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := OutsideBundle(bundle, insideAlias); err == nil {
-		t.Fatal("accepted key path inside bundle")
+		t.Fatal("Принят путь к ключу внутри пакета")
 	}
 	// Псевдоним каталога набора вне его расположения.
 	bundleAlias := filepath.Join(root, "release-alias")
@@ -48,6 +48,6 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := OutsideBundle(bundleAlias, inside); err == nil {
-		t.Fatal("accepted key in aliased release bundle")
+		t.Fatal("Принят ключ внутри пакета выпуска с альтернативным путём")
 	}
 }

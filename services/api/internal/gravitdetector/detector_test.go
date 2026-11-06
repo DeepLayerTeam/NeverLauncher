@@ -122,7 +122,7 @@ func TestInvalidConfigAndZip0332(t *testing.T) {
 	for _, n := range []string{"../LaunchServer.json", "/etc/passwd", "C:/secret"} {
 		_, e := Assess(archive(t, map[string][]byte{n: []byte("x")}), "")
 		if e == nil {
-			t.Errorf("unsafe path %q accepted", n)
+			t.Errorf("Принят небезопасный путь %q", n)
 		}
 	}
 	if _, e = Assess([]byte("not a zip"), ""); e == nil {

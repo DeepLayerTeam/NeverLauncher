@@ -19,7 +19,7 @@ import (
 // проверяется НЕЗАВИСИМО полученный конечный сертификат.
 func TestLiveLANPublishDiscoverAndPinnedTLS0429(t *testing.T) {
 	if os.Getenv("LAUNCHER_LAN_E2E") != "1" {
-		t.Skip("requires actual LAN multicast: LAUNCHER_LAN_E2E=1")
+		t.Skip("Требуется реальная многоадресная рассылка в локальной сети: LAUNCHER_LAN_E2E=1")
 	}
 	interfaces, err := ipForInterface()
 	if err != nil {
@@ -38,7 +38,7 @@ func TestLiveLANPublishDiscoverAndPinnedTLS0429(t *testing.T) {
 	hash := sha256.Sum256(server.TLS.Certificates[0].Certificate[0])
 	pin := hex.EncodeToString(hash[:])
 	if err := VerifyTLS(context.Background(), server.URL, pin); err != nil {
-		t.Fatalf("TLS leaf pin verification failed: %v", err)
+		t.Fatalf("Ошибка проверки закреплённого конечного TLS-сертификата: %v", err)
 	}
 	url, err := ValidatePublishAddress(server.URL)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestLiveLANPublishDiscoverAndPinnedTLS0429(t *testing.T) {
 	for _, e := range entries {
 		if strings.EqualFold(e.Instance, "NL429_Integration") && e.Address == host && e.Port == port && e.Fingerprint == pin {
 			if e.Verified {
-				t.Fatal("mDNS alone must not mark discovery verified")
+				t.Fatal("Одного mDNS недостаточно для подтверждения обнаружения узла")
 			}
 			found = true
 		}
@@ -71,6 +71,6 @@ func TestLiveLANPublishDiscoverAndPinnedTLS0429(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !found {
-		t.Fatalf("real multicast DNS-SD response not found among %v", entries)
+		t.Fatalf("Среди ответов %v не найден действительный многоадресный ответ DNS-SD", entries)
 	}
 }

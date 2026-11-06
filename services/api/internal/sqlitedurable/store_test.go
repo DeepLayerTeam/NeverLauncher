@@ -331,7 +331,7 @@ func TestRejectMemoryURIsAndBadPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 	if e := verifyLocalPath(filepath.Join(root, "link", "data.db")); e == nil {
-		t.Fatal("symlink accepted")
+		t.Fatal("Принята символьная ссылка")
 	}
 }
 

@@ -141,7 +141,7 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.ReadyForBackendCutover || result.TotalRows < 5 || len(result.Tables) < 25 {
-		t.Fatalf("unexpected report: %+v", result)
+		t.Fatalf("Неожиданный отчёт: %+v", result)
 	}
 	if result.PostgreSQLSchema != Schema {
 		t.Fatal("wrong target schema")

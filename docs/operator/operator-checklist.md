@@ -5,7 +5,7 @@
 | № | Операция | Требуемое свидетельство |
 | --- | --- | --- |
 | 1 | Чистая установка Minimal/Standard/Network-HA в заявленной топологии | source commit, image digest/binary hash, hostname, журналы и точная версия |
-| 2 | TLS/HTTPS preflight | действительный hostname/CA, отсутствие обхода сертификата, действующий `/ready` |
+| 2 | Предварительная проверка TLS/HTTPS | действительный hostname/CA, отсутствие обхода сертификата, действующий `/ready` |
 | 3 | Первый владелец и сохранность данных | проверенная аутентификация и MFA, созданный проект, отказ повторного bootstrap |
 | 4 | Backup off-host | согласованный снимок PostgreSQL/SQLite, blobs и секретов по границам топологии; SHA-256 |
 | 5 | Restore на пустом независимом хосте | действительный вход старого владельца, проект, blob hash, сохранённый world, API `/ready` |
@@ -13,7 +13,7 @@
 | 7 | Component Upgrade | переключение backend/CLI/Bridge и проверка прежней версии при ошибке |
 | 8 | HA/fencing | два API, два workers, failover на выполненной durable job, отказ устаревшего token |
 | 9 | Network-HA Recovery | очищенные Redis leases, новые ServerBridge enrollment и контроль world restore |
-| 10 | Observability | метрики, JSON logs, correlation ID и **доставленный** alert |
+| 10 | Observability | метрики, JSON logs, идентификатор корреляции и **доставленный** alert |
 | 11 | Брендирование/поставка | шесть реальных конечных установщиков, подписи, BOM/SBOM/provenance и независимая аттестация |
 | 12 | API/SDK и Minecraft | две версии backend, Go/TS/Java SDK, реальная авторизация и игровой join |
 

@@ -45,6 +45,6 @@ jobs:
       - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
-      - name: Vet CLI
+      - name: Проверить CLI с помощью go vet
         working-directory: cli
         run: go vet ./cmd/launcher

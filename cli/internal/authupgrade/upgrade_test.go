@@ -34,20 +34,20 @@ func fixture02911(t *testing.T, provider, password string) string {
 func TestPreflightPreventsImplicitCustomProvider02911(t *testing.T) {
 	raw := fixture02911(t, "custom-provider", "argon2id")
 	if _, err := ScanRows(strings.NewReader(raw), nil); err == nil || !strings.Contains(err.Error(), "not verified") {
-		t.Fatalf("custom provider unexpectedly accepted: %v", err)
+		t.Fatalf("Неожиданно принят пользовательский провайдер: %v", err)
 	}
 	cp, err := ScanRows(strings.NewReader(raw), []string{"custom-provider"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cp.Identity["profile"].Count != 1 || cp.Providers["custom-provider"] != 1 {
-		t.Fatalf("unexpected report: %+v", cp)
+		t.Fatalf("Неожиданный отчёт: %+v", cp)
 	}
 }
 
 func TestUnknownHashAlwaysBlocks02911(t *testing.T) {
 	if _, err := ScanRows(strings.NewReader(fixture02911(t, "local", "unsupported")), nil); err == nil || !strings.Contains(err.Error(), "unknown password hashes") {
-		t.Fatalf("unsafe password migration: %v", err)
+		t.Fatalf("Небезопасная миграция паролей: %v", err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestIdentityAndUUIDPreservation02911(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Compare(before, drift); err == nil || !strings.Contains(err.Error(), "profile") {
-		t.Fatalf("UUID was silently replaced: %v", err)
+		t.Fatalf("UUID заменён без предупреждения: %v", err)
 	}
 	changed = strings.Replace(original, "subject-1", "subject-2", 1)
 	drift, err = ScanRows(strings.NewReader(changed), nil)
@@ -78,7 +78,7 @@ func TestIdentityAndUUIDPreservation02911(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Compare(before, drift); err == nil || !strings.Contains(err.Error(), "identity") {
-		t.Fatalf("subject was silently replaced: %v", err)
+		t.Fatalf("Субъект заменён без предупреждения: %v", err)
 	}
 }
 
@@ -92,21 +92,21 @@ func TestCheckpointPersistsNoCredentialsAndCannotOverwrite02911(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Save(path, cp); err == nil {
-		t.Fatal("overwrote safety checkpoint")
+		t.Fatal("Перезаписана контрольная точка безопасности")
 	}
 	onDisk, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bytes.Contains(onDisk, []byte("subject-1")) || bytes.Contains(onDisk, []byte("x@example.invalid")) {
-		t.Fatal("raw identifying data leaked into checkpoint")
+		t.Fatal("Необработанные идентифицирующие данные попали в контрольную точку")
 	}
 	st, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if st.Mode().Perm() != 0600 {
-		t.Fatalf("checkpoint permissions %v", st.Mode().Perm())
+		t.Fatalf("Права доступа к контрольной точке %v", st.Mode().Perm())
 	}
 	loaded, err := Load(path)
 	if err != nil {
@@ -120,22 +120,22 @@ func TestCheckpointPersistsNoCredentialsAndCannotOverwrite02911(t *testing.T) {
 func TestRejectMissingMarkerAndIncompleteCounts02911(t *testing.T) {
 	raw := fixture02911(t, "local", "argon2id")
 	if _, err := ScanRows(strings.NewReader(strings.Replace(raw, `"kind":"meta"`, `"kind":"unexpected"`, 1)), nil); err == nil {
-		t.Fatal("missing scan marker accepted")
+		t.Fatal("Принят результат без маркера сканирования")
 	}
 	if _, err := ScanRows(strings.NewReader(strings.Replace(raw, `"b":"1"`, `"b":"2"`, 1)), nil); err == nil {
-		t.Fatal("partial scan accepted")
+		t.Fatal("Принят неполный результат сканирования")
 	}
 }
 
 func TestSQLReadOnlyAndIssuerGuard02911(t *testing.T) {
 	for _, needle := range []string{"REPEATABLE READ READ ONLY", "orphaned auth identities", "orphaned Minecraft profiles", "duplicate Minecraft UUID", "issuer-scoped subject collision", "row_to_json(v)", "password_hash ~"} {
 		if !strings.Contains(ReadOnlyScanSQL, needle) {
-			t.Errorf("SQL missing %q", needle)
+			t.Errorf("В SQL отсутствует %q", needle)
 		}
 	}
 	for _, forbidden := range []string{"DELETE FROM", "UPDATE users", "INSERT INTO"} {
 		if strings.Contains(ReadOnlyScanSQL, forbidden) {
-			t.Errorf("unsafe mutation %q", forbidden)
+			t.Errorf("Небезопасное изменение %q", forbidden)
 		}
 	}
 }

@@ -24,12 +24,12 @@ func TestAdvertisementRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(got) != 1 || got[0].Instance != "example_backend" || got[0].Address != "192.168.1.10" || got[0].Port != 19443 || got[0].Fingerprint != fp || got[0].Verified {
-		t.Fatalf("invalid parsed advertisement: %#v", got)
+		t.Fatalf("Объявление разобрано некорректно: %#v", got)
 	}
 	bye, _ := announceMessage("Example_Backend", 19443, fp, []net.IP{net.ParseIP("192.168.1.10")}, 0)
 	found, _ := ParseAdvertisement(bye)
 	if len(found) != 0 {
-		t.Fatal("goodbye must not create discoveries")
+		t.Fatal("Сообщение goodbye не должно создавать новые найденные узлы")
 	}
 }
 func TestMalformedMessagesNeverPanic(t *testing.T) {
@@ -47,26 +47,26 @@ func TestMalformedMessagesNeverPanic(t *testing.T) {
 	p[12] = 0xc0
 	p[13] = 12
 	if _, _, err := parsePacket(p); err == nil {
-		t.Fatal("compression cycle accepted")
+		t.Fatal("Принят циклический указатель сжатия")
 	}
 }
 func TestRejectInvalidPublication(t *testing.T) {
 	if _, err := announceMessage("Bad.Name", 443, strings.Repeat("a", 64), []net.IP{net.IPv4(192, 168, 1, 3)}, 120); err == nil {
-		t.Fatal("invalid instance")
+		t.Fatal("Некорректный экземпляр")
 	}
 	if _, err := announceMessage("Good", 443, "not-a-hash", []net.IP{net.IPv4(192, 168, 1, 3)}, 120); err == nil {
-		t.Fatal("invalid fingerprint")
+		t.Fatal("Недействительный отпечаток сертификата")
 	}
 	for _, raw := range []string{"http://10.0.0.1:443", "https://10.0.0.1", "https://user:pwd@10.0.0.1:443", "https://10.0.0.1:443/path"} {
 		if _, err := ValidateURL(raw); err == nil {
-			t.Fatalf("accepted bad URL: %s", raw)
+			t.Fatalf("Принят недопустимый URL: %s", raw)
 		}
 	}
 }
 func TestPublishMustBeLocalLANAddress(t *testing.T) {
 	for _, raw := range []string{"https://127.0.0.1:443", "https://192.0.2.10:443", "https://example.org:443"} {
 		if _, err := ValidatePublishAddress(raw); err == nil {
-			t.Fatalf("accepted remote or loopback publisher %s", raw)
+			t.Fatalf("Принят удалённый или локальный издатель %s", raw)
 		}
 	}
 }
@@ -79,16 +79,16 @@ func TestTLSCertificatePin(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	if err := VerifyTLS(ctx, server.URL, pin); err != nil {
-		t.Fatalf("correct pinned cert rejected: %v", err)
+		t.Fatalf("Отклонён корректный закреплённый сертификат: %v", err)
 	}
 	if err := VerifyTLS(ctx, server.URL, strings.Repeat("0", 64)); err == nil {
-		t.Fatal("incorrect pin accepted")
+		t.Fatal("Принят неверный закреплённый отпечаток")
 	}
 	if err := VerifyTLS(ctx, server.URL, ""); err == nil {
-		t.Fatal("unpinned TLS accepted")
+		t.Fatal("Принято TLS-соединение без закреплённого сертификата")
 	}
 	if err := VerifyTLS(ctx, "http://127.0.0.1:1234", pin); err == nil {
-		t.Fatal("plaintext accepted")
+		t.Fatal("Принята передача без шифрования")
 	}
 }
 func TestDiscoveryCancellation(t *testing.T) {
@@ -98,10 +98,10 @@ func TestDiscoveryCancellation(t *testing.T) {
 	// Некоторые сети CI полностью запрещают multicast; отмену и отказ multicast со
 	// стороны ОС следует возвращать, а не ошибочно сообщать об успехе.
 	if err == nil {
-		t.Fatal("cancelled discovery returned success")
+		t.Fatal("Отменённый поиск ошибочно признан успешным")
 	}
 	if errors.Is(err, context.Canceled) {
 		return
 	}
-	t.Logf("multicast unavailable on CI host: %v", err)
+	t.Logf("Многоадресная рассылка недоступна на агенте CI: %v", err)
 }

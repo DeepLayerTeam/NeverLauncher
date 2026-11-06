@@ -68,7 +68,7 @@ func TestRuntimeStorageSymlinksRejected0303(t *testing.T) {
 	dir := runtimeDir0303(root, Key{ExtensionID: "test.example", Scope: "global"})
 	path, _ := runtimeFile0303(dir, "storage", "state")
 	if err := runtimeWrite0303(context.Background(), dir, path, json.RawMessage(`{"x":1}`)); err == nil {
-		t.Fatal("symlink accepted")
+		t.Fatal("Принята символьная ссылка")
 	}
 	if _, err := os.Stat(filepath.Join(outside, filepath.Base(dir))); !os.IsNotExist(err) {
 		t.Fatal("storage escaped root")

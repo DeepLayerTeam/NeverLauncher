@@ -36,7 +36,7 @@ func TestOfflineGuardRevokeAndRollback05011(t *testing.T) {
 		t.Fatal(err)
 	}
 	if newP.Epoch != 2 || len(newP.RevokedDigests) != 1 || len(newP.RevokedTransformations) != 1 {
-		t.Fatalf("revoke lost fields: %+v", newP)
+		t.Fatalf("При отзыве потеряны поля: %+v", newP)
 	}
 	restored := filepath.Join(dir, "restored.json")
 	if err := operatorRevise05011("rollback", revoked, first, priv, restored, "", "", time.Now()); err != nil {
@@ -47,18 +47,18 @@ func TestOfflineGuardRevokeAndRollback05011(t *testing.T) {
 		t.Fatal(err)
 	}
 	if restoredP.Epoch != 3 || len(restoredP.RevokedDigests) != 1 || len(restoredP.RevokedTransformations) != 1 {
-		t.Fatalf("rollback erased revocations %+v", restoredP)
+		t.Fatalf("Откат удалил записи об отзывах %+v", restoredP)
 	}
 	if err := operatorRevise05011("rollback", revoked, revoked, priv, filepath.Join(dir, "invalid.json"), "", "", time.Now()); err == nil {
-		t.Fatal("same-epoch rollback allowed")
+		t.Fatal("Разрешён откат в пределах той же эпохи")
 	}
 	if err := operatorRevise05011("revoke", revoked, "", priv, filepath.Join(dir, "invalid2.json"), "bad", "", time.Now()); err == nil {
-		t.Fatal("bad hash revoked")
+		t.Fatal("Отозван неверный хеш")
 	}
 	// Формируется допустимый подписанный конверт, который разбирается как подписанный объект JSON.
 	var env signedPolicy05011
 	data, _ := os.ReadFile(restored)
 	if err := json.Unmarshal(data, &env); err != nil || env.Signature == "" {
-		t.Fatal("bad signed output")
+		t.Fatal("Неверный подписанный результат")
 	}
 }

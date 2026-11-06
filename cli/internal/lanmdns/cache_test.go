@@ -43,18 +43,18 @@ func TestMDNSSplitRepliesAndTTL0498(t *testing.T) {
 		c.observe(part, now)
 	}
 	if got := c.endpoints(now); len(got) != 0 {
-		t.Fatalf("partial DNS response advertised %#v", got)
+		t.Fatalf("Опубликован неполный ответ DNS %#v", got)
 	}
 	c.observe(address, now)
 	if got := c.endpoints(now); len(got) != 1 || got[0].Address != "192.168.4.6" || got[0].Port != 9443 || got[0].Verified {
-		t.Fatalf("split DNS joining failed %#v", got)
+		t.Fatalf("Не удалось объединить разделённые ответы DNS %#v", got)
 	}
 	c.observe(build(Service, 12, 0, payloadName(inst)), now.Add(time.Second))
 	if got := c.endpoints(now.Add(time.Second)); len(got) != 0 {
-		t.Fatalf("withdrawn entry retained: %#v", got)
+		t.Fatalf("Отозванная запись не удалена: %#v", got)
 	}
 	c.observe(ptr, now.Add(2*time.Second))
 	if got := c.endpoints(now.Add(121 * time.Second)); len(got) != 0 {
-		t.Fatalf("expired entry retained: %#v", got)
+		t.Fatalf("Запись с истёкшим сроком не удалена: %#v", got)
 	}
 }

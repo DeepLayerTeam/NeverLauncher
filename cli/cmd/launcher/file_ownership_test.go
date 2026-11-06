@@ -76,7 +76,7 @@ func TestFilePolicyRejectsOverwriteAndConflict0224(t *testing.T) {
 	}
 	for i, m := range fixtures {
 		if err := validateManifestFilePolicy0224(m); err == nil {
-			t.Errorf("case %d accepted", i)
+			t.Errorf("Принят тестовый случай %d", i)
 		}
 	}
 }

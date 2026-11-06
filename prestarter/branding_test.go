@@ -27,7 +27,7 @@ func TestSignedBranding0355RejectsActiveContent(t *testing.T) {
 	cases[4].WebsiteURL = "https://evil.test/#fragment"
 	for i, b := range cases {
 		if b.Validate0355() == nil {
-			t.Fatalf("case %d accepted", i)
+			t.Fatalf("Принят тестовый случай %d", i)
 		}
 	}
 }

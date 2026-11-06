@@ -20,19 +20,19 @@ func TestActivityValidation(t *testing.T) {
 	}
 	a.Buttons[0].URL = "javascript:alert(1)"
 	if a.Validate() == nil {
-		t.Fatal("unsafe button link")
+		t.Fatal("Небезопасная ссылка кнопки")
 	}
 	a.Buttons = nil
 	a.State = strings.Repeat("S", 129)
 	if a.Validate() == nil {
-		t.Fatal("overlong state")
+		t.Fatal("Слишком длинное значение состояния")
 	}
 }
 func TestDiscordActivityRejectsCredentialedAndMalformedLinks(t *testing.T) {
 	for _, uri := range []string{"https://user:secret@example.org/", "https://", "https://example.org\nX: 1", "http://example.org", "javascript:alert(1)", "https://example.org/#fragment"} {
 		activity := Activity{Buttons: []Button{{Label: "Join", URL: uri}}}
 		if err := activity.Validate(); err == nil {
-			t.Errorf("accepted unsafe Discord button %q", uri)
+			t.Errorf("Принята небезопасная кнопка Discord %q", uri)
 		}
 	}
 	ok := Activity{Buttons: []Button{{Label: "Join", URL: "https://play.example.org/connect?id=42"}}}
@@ -47,7 +47,7 @@ func TestDiscordActivityRejectsCredentialedAndMalformedLinks(t *testing.T) {
 
 func TestLocalDiscordSession(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("Windows named-pipe mock requires Windows IPC harness")
+		t.Skip("Имитации именованных каналов Windows требуется среда тестирования Windows IPC")
 	}
 	dir := t.TempDir()
 	t.Setenv("XDG_RUNTIME_DIR", dir)
@@ -108,7 +108,7 @@ func TestLocalDiscordSession(t *testing.T) {
 }
 func TestBadApplicationID(t *testing.T) {
 	if _, err := Connect(context.Background(), "no"); err == nil {
-		t.Fatal("invalid app ID accepted")
+		t.Fatal("Принят недействительный ID приложения")
 	}
 }
 func TestRejectOversizedFrame(t *testing.T) {
@@ -118,6 +118,6 @@ func TestRejectOversizedFrame(t *testing.T) {
 	}
 	defer f.Close()
 	if err := writeFrame(f, 1, map[string]any{"text": strings.Repeat("a", maxFrame)}); err == nil {
-		t.Fatal("oversized frame accepted")
+		t.Fatal("Принят кадр сверх допустимого размера")
 	}
 }

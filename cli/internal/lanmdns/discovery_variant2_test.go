@@ -14,17 +14,17 @@ func TestDiscoveryRejectsPacketsThatAreNotSuccessfulAnswers(t *testing.T) {
 	}
 	items, err := ParseAdvertisement(b)
 	if err != nil || len(items) != 1 {
-		t.Fatalf("valid DNS-SD response rejected: %v %v", items, err)
+		t.Fatalf("Отклонён корректный ответ DNS-SD: %v %v", items, err)
 	}
 	badQR := append([]byte(nil), b...)
 	binary.BigEndian.PutUint16(badQR[2:4], 0)
 	if _, err := ParseAdvertisement(badQR); err == nil {
-		t.Fatal("DNS question carrying spoofed answers accepted")
+		t.Fatal("Принят DNS-запрос с поддельными ответами")
 	}
 	badRCODE := append([]byte(nil), b...)
 	binary.BigEndian.PutUint16(badRCODE[2:4], 0x8403)
 	if _, err := ParseAdvertisement(badRCODE); err == nil {
-		t.Fatal("DNS error response accepted")
+		t.Fatal("Принят ошибочный ответ DNS")
 	}
 	// Некорректный класс записи не должен давать проверенный endpoint.
 	badClass := append([]byte(nil), b...)
@@ -42,6 +42,6 @@ func TestDiscoveryRejectsPacketsThatAreNotSuccessfulAnswers(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(items) != 0 {
-		t.Fatal("unsupported DNS record class accepted")
+		t.Fatal("Принят неподдерживаемый класс записи DNS")
 	}
 }

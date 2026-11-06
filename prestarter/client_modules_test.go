@@ -21,6 +21,6 @@ func TestHeadlessPrestarterDoesNotProvisionDesktop0427(t *testing.T) {
 	}
 	dir := filepath.Join(opts.Root, ".launcher-prestarter", "desktop-config")
 	if _, err := os.Lstat(dir); !os.IsNotExist(err) {
-		t.Fatalf("headless wrote desktop provisioning: %v", err)
+		t.Fatalf("Безголовый режим записал конфигурацию Desktop: %v", err)
 	}
 }

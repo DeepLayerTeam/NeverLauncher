@@ -66,11 +66,11 @@ func TestAudit0301ValidSourceInventoryDoesNotClaimParity(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(r.Results) != 19 || r.FullyCertified {
-		t.Fatalf("invalid audit report %#v", r)
+		t.Fatalf("Недействительный отчёт аудита %#v", r)
 	}
 	for _, v := range r.Results {
 		if !v.SourceValidated || v.Test.Status != "not-run" {
-			t.Fatalf("static scan pretends tests ran: %#v", v)
+			t.Fatalf("Статическая проверка ошибочно выдаётся за запуск тестов: %#v", v)
 		}
 	}
 }
@@ -89,7 +89,7 @@ func TestAudit0301RejectsDuplicateAndOverclaim(t *testing.T) {
 			root := fixture(t)
 			editMatrix(t, root, tc.edit)
 			if _, e := Inspect(root); e == nil {
-				t.Fatal("tamper was accepted")
+				t.Fatal("Приняты изменённые посторонним образом данные")
 			}
 		})
 	}
@@ -106,7 +106,7 @@ func TestAudit0301RejectsJavaHostVersionDrift(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := Inspect(root); e == nil {
-		t.Fatal("invalid Java ABI was accepted")
+		t.Fatal("Принят несовместимый Java ABI")
 	}
 }
 func TestAudit0301RefusesSymlinks(t *testing.T) {
@@ -117,11 +117,11 @@ func TestAudit0301RefusesSymlinks(t *testing.T) {
 		t.Skip(e)
 	}
 	if _, e := SafeRepoFile(root, "unsafe-link"); e == nil {
-		t.Fatal("symlink accepted")
+		t.Fatal("Принята символьная ссылка")
 	}
 	for _, p := range []string{"../VERSION", "/etc/passwd", "services//VERSION", "."} {
 		if _, e := SafeRepoFile(root, p); e == nil {
-			t.Errorf("unsafe path %q accepted", p)
+			t.Errorf("Принят небезопасный путь %q", p)
 		}
 	}
 }
@@ -131,7 +131,7 @@ func TestAudit0301VersionDrift(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := Inspect(root); e == nil {
-		t.Fatal("version drift accepted")
+		t.Fatal("Принято расхождение версий")
 	}
 }
 
@@ -145,11 +145,11 @@ func TestAudit0302PinnedBaselineSupportsLaterRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.ProductVersion != "0.30.2" || report.FullyCertified || len(report.Results) != 19 {
-		t.Fatalf("bad report: %+v", report)
+		t.Fatalf("Недействительный отчёт: %+v", report)
 	}
 	for _, version := range []string{"0.30.0", "0.29.99", "0.30.01", "2.bad.0"} {
 		if notBeforeModuleAudit0302(version) {
-			t.Fatalf("accepted incompatible release %s", version)
+			t.Fatalf("Принят несовместимый выпуск %s", version)
 		}
 	}
 }

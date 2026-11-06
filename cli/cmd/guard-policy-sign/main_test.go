@@ -18,7 +18,7 @@ func TestKeygenAndOfflineSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := keygen(private, public); err == nil {
-		t.Fatal("key overwrite accepted")
+		t.Fatal("Разрешена перезапись ключа")
 	}
 	input := filepath.Join(dir, "policy.json")
 	content := []byte(`{"schemaVersion":"launcher.guard-compatibility.v1","epoch":1}`)
@@ -39,9 +39,9 @@ func TestKeygenAndOfflineSignature(t *testing.T) {
 	rawPub, _ := os.ReadFile(public)
 	pub, _ := hex.DecodeString(string(rawPub[:len(rawPub)-1]))
 	if !ed25519.Verify(pub, append([]byte(domain), payload...), signature) {
-		t.Fatal("signed payload does not verify")
+		t.Fatal("Не удалось проверить подпись данных")
 	}
 	if err := sign(input, private, out); err == nil {
-		t.Fatal("signature overwrote existing output")
+		t.Fatal("Подпись перезаписала существующий результат")
 	}
 }
