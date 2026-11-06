@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Проверить целостность путей классов JVM, JAR и нативных файлов в позитивных и негативных сценариях
+      - name: "Проверить целостность путей классов JVM, JAR и нативных файлов в положительных и отрицательных сценариях"
         run: python scripts/tests/guard_runtime_integrity_0505.py
       - name: "Проверить подписанные политики Guard на Go и интеграцию со старым лаунчером"
         working-directory: cli

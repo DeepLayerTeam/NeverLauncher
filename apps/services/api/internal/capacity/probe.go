@@ -115,7 +115,7 @@ func Probe(ctx context.Context, opt Options) Report {
 		} else {
 			db, err := sql.Open("pgx", opt.DatabaseDSN)
 			if err != nil {
-				r.Errors = append(r.Errors, "PostgreSQL open: "+err.Error())
+				r.Errors = append(r.Errors, "Ошибка подключения к PostgreSQL: "+err.Error())
 				r.Verified = false
 			} else {
 				// Ограниченная по времени проба не должна истощать обычный пул соединений
@@ -125,7 +125,7 @@ func Probe(ctx context.Context, opt Options) Report {
 				pg, probeErr := probePostgres(ctx, db)
 				_ = db.Close()
 				if probeErr != nil {
-					r.Errors = append(r.Errors, "PostgreSQL probe: "+probeErr.Error())
+					r.Errors = append(r.Errors, "Ошибка проверки PostgreSQL: "+probeErr.Error())
 					r.Verified = false
 				} else {
 					r.PostgreSQL = &pg

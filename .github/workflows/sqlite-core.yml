@@ -35,7 +35,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sqlite-core"
           chmod 0700 "$RUNNER_TEMP/sqlite-core"
           stat -f -c '%T' "$RUNNER_TEMP/sqlite-core"
-      - name: реальный SQLite WAL интеграция, CAS, доверенные манифест и перезапуск тесты
+      - name: "Проверить реальную интеграцию SQLite WAL, CAS, доверенные манифесты и перезапуск"
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-core
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'

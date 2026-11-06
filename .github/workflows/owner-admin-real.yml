@@ -66,7 +66,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Запустить установленные Standard API, PostgreSQL и реальные Minecraft хост приёмка
+      - name: "Проверить установленный стандартный API, PostgreSQL и приёмку настоящего Minecraft-хоста"
         env:
           NL_0523_ENV: ${{ vars.NL_0523_ENV }}
           NL_0523_PASSWORD_FILE: ${{ vars.NL_0523_PASSWORD_FILE }}

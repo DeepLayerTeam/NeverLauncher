@@ -56,9 +56,9 @@ jobs:
         run: test -z "$(gofmt -l internal/fileauth internal/fileauthlive internal/localpassword internal/repository/local_auth_0295* internal/httpapi/local_auth_0295_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth-0295)"
       - name: Проверить реальный парсер FileAuth, векторы хеширования и вход со старым паролем
         run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/localpassword ./internal/httpapi -run '(0295|0426)$'
-      - name: реальные FileAuth провайдер и HTTP федерация интеграция
+      - name: "Проверить реальную интеграцию провайдера FileAuth и HTTP-федерации"
         run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/fileauthlive ./internal/httpapi -run '0426$'
-      - name: PostgreSQL атомарные Импортировать, UUID, конфликт и CAS интеграция
+      - name: "Проверить атомарный импорт PostgreSQL, UUID, конфликты и интеграцию CAS"
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
       - name: Скомпилировать CLI и Backend
         run: go build ./cmd/local-auth-0295 ./cmd/launcher-api

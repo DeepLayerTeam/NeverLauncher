@@ -85,7 +85,7 @@ jobs:
         run: |
           go build ./cmd/...
           go vet ./internal/authrequest ./pkg/protection ./internal/httpapi ./internal/federation ./internal/repository ./internal/sqlconnector
-      - name: Проверить реальные HTTP- и WebAuthn-сценарии, защиту от повтора и разбор входных данных
+      - name: "Проверить настоящие HTTP- и WebAuthn-сценарии, защиту от повторов и разбор входных данных"
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -98,7 +98,7 @@ jobs:
             --require TestMandatoryPanicAndTimeoutCannotGrantAccess0300 \
             --require TestSecurityRealAuthHTTP02912 \
             --require TestProtectionBanUnbanLiveHTTP0298
-      - name: Проверить настоящие реплики PostgreSQL, каскадный отзыв, блокировки и SQL-аутентификацию провайдеров
+      - name: "Проверить настоящие реплики PostgreSQL, каскадный отзыв доступа, блокировки и SQL-аутентификацию провайдеров"
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -113,7 +113,7 @@ jobs:
             --require TestLiveSQLLegacyAuthentication0294/postgresql \
             --require TestLiveSQLLegacyAuthentication0294/mysql \
             --require TestLiveSQLLegacyAuthentication0294/mariadb
-      - name: Проверить подписанные HTTP-запросы OIDC Microsoft и интеграцию федерации с SDK
+      - name: "Проверить подписи HTTP-запросов Microsoft OIDC и интеграцию федерации с SDK"
         working-directory: services/api
         run: go test -race -count=1 -timeout=10m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation
       - name: Проверить миграции БД и промышленную сборку Admin

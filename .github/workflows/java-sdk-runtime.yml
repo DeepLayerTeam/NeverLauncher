@@ -82,7 +82,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: реальные Go хост HTTP broker, постоянное хранение, разрешение отзыв и безопасности тесты
+      - name: "Проверить реальный HTTP-брокер Go, постоянное хранение, разрешения, отзыв и безопасность"
         working-directory: services/api
         run: go test -race -count=1 -run 'TestRuntime.*0303' ./internal/extensionhost
       - name: Go хост регрессионная проверка тесты

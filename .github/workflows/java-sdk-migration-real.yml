@@ -92,7 +92,7 @@ jobs:
           doc=json.load(open(sys.argv[1]))
           assert doc.get('sourceCommit') == sys.argv[2]
           PY
-      - name: Выполнить установленные JVM хост, 3 реальные Gravit проекты и два исторические upgrades
+      - name: "Проверить установленный JVM-хост, три настоящих проекта Gravit и два обновления с прежних версий"
         shell: bash
         run: |
           set -euo pipefail

@@ -48,7 +48,7 @@ jobs:
           node-version: '22'
       - name: фактические Java промышленные источники / 14 адаптер политики
         run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
-      - name: Java v3 безопасности регрессионные проверки (не реальные Minecraft)
+      - name: "Регрессионные проверки безопасности протокола Java v3 (без запуска Minecraft)"
         run: bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
       - name: Проверить возможности и Runtime на Go
         working-directory: services/api

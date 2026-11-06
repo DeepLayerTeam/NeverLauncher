@@ -41,7 +41,7 @@ jobs:
       - name: "Собрать промышленный Backend"
         working-directory: services/api
         run: go build ./cmd/...
-      - name: Проверить настоящий TPM сертифицировать / Quote и негативные тесты счётчика времени
+      - name: "Проверить подлинную аттестацию TPM Certify/Quote и негативные сценарии со счётчиком времени"
         working-directory: services/api
         shell: bash
         run: |
@@ -50,7 +50,7 @@ jobs:
           grep -q -- '--- PASS: TestCertifyUnsafeTPMClock0436' "$RUNNER_TEMP/tpm-verifier.log"
           grep -q -- '--- PASS: TestQuoteUnsafeTPMClock0436' "$RUNNER_TEMP/tpm-verifier.log"
           if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/tpm-verifier.log"; then exit 1; fi
-      - name: TPM оборудование свидетельства против отозванные/changed реальный PostgreSQL сеансы
+      - name: "Проверить аппаратные свидетельства TPM для отозванных и изменённых сеансов PostgreSQL"
         working-directory: services/api
         shell: bash
         run: |
@@ -78,7 +78,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-      - name: TPM исполняемый файл parsing и Windows нативные код
+      - name: "Проверить разбор TPM в исполняемом файле и нативный код Windows"
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
           cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
@@ -94,7 +94,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
-      - name: TPM исполняемый файл parsing и Linux нативные код
+      - name: "Проверить разбор TPM в исполняемом файле и нативный код Linux"
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314

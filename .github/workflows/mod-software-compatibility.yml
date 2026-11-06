@@ -52,7 +52,7 @@ jobs:
       - name: "Собрать и протестировать датчик Guard и механизм перехвата для Windows"
         if: runner.os == 'Windows'
         run: cargo test --manifest-path runtime/guard-sensor/Cargo.toml --lib external_overlay_scope_05010_tests
-      - name: фактические Java процесс/JNI/модуль/JAR положительные и отрицательные тесты
+      - name: "Проверить реальные процессы Java, JNI, модули и JAR в положительных и отрицательных сценариях"
         run: python scripts/tests/guard_runtime_integrity_0505.py
       - name: подписанную политику, отзыв и Linux наложение тесты
         working-directory: cli

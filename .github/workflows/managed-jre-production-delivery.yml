@@ -22,10 +22,10 @@ jobs:
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Собрать Runtime для управляемой Java II
+      - name: "Собрать Runtime для управляемой Java II"
         run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
 
-      - name: Провести промышленные сквозные тесты управляемой Java II для Java 8/16/17/21/25
+      - name: "Провести промышленные сквозные тесты управляемой Java II на Java 8, 16, 17, 21 и 25"
         shell: bash
         run: |
           set -euo pipefail

@@ -39,7 +39,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
-      - name: "Сборка и тестирование нативной интеграции Keychain/DeviceCheck"
+      - name: "Собрать и проверить нативную интеграцию Keychain и DeviceCheck"
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
       - uses: actions/setup-node@v4
         with:

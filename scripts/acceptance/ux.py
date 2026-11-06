@@ -309,7 +309,7 @@ def main(argv=None):
         if args.command == "audit":
             counts = Counter(x["acceptanceScope"] for x in journeys)
             print(
-                f"{(ROOT / 'VERSION').read_text().strip()} AUDIT PASS: {len(journeys)} G/M journeys, UX01-UX12 mapped, all probe files exist"
+                f"{(ROOT / 'VERSION').read_text().strip()} — АУДИТ ПРОЙДЕН: {len(journeys)} сценариев G/M, проверки UX01–UX12 сопоставлены, все файлы проверок существуют"
             )
             print(
                 "Scopes:",

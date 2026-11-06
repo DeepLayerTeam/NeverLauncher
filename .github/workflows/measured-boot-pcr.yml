@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: TPM quote cryptography и негативные тесты с детектор гонок
+      - name: "Проверить криптографию TPM Quote и отрицательные сценарии с детектором гонок"
         working-directory: services/api
         run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline
       - name: Собрать API и пакеты базы данных

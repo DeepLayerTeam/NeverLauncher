@@ -1914,10 +1914,10 @@ fn now_unix() -> Result<u64, String> { SystemTime::now().duration_since(UNIX_EPO
 async fn set_executable_if_needed(path: &Path, executable: bool) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     if !executable { return Ok(()); }
-    let meta = fs::metadata(path).await.map_err(|err| format!("permissions {}: {err}", path.display()))?;
+    let meta = fs::metadata(path).await.map_err(|err| format!("Ошибка прав доступа к {}: {err}", path.display()))?;
     let mut permissions = meta.permissions();
     permissions.set_mode(permissions.mode() | 0o111);
-    fs::set_permissions(path, permissions).await.map_err(|err| format!("chmod {}: {err}", path.display()))
+    fs::set_permissions(path, permissions).await.map_err(|err| format!("Не удалось изменить права доступа к {}: {err}", path.display()))
 }
 
 #[cfg(not(unix))]

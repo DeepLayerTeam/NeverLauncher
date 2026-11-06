@@ -49,7 +49,7 @@ jobs:
       - name: "Полная сборка серверной части"
         working-directory: services/api
         run: go build ./...
-      - name: MIG01–MIG13 Go тесты, включая PostgreSQL
+      - name: "Запустить Go-тесты MIG01–MIG13, включая PostgreSQL"
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitplan ./internal/gravitidentity ./internal/dbmigrate ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
@@ -105,7 +105,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-      - name: "Зависимости Tauri для Linux"
+      - name: "Установить зависимости Tauri для Linux"
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -115,7 +115,7 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: "Тесты Rust и сборка Desktop"
+      - name: "Запустить тесты Rust и собрать Desktop"
         working-directory: apps/desktop/src-tauri
         run: |
           cargo test --locked
@@ -197,7 +197,7 @@ jobs:
             --proxy-network "$base/proxy-network-certificate.json" \
             --proxy-network-evidence "$base/proxy-network-evidence"
           cp "$base"/*-certificate.json "$RUNNER_TEMP/migration-ga/"
-      - name: Опубликовать только подписанные сертификат summaries (исходные свидетельства remains закрытые)
+      - name: "Опубликовать только подписанные сводки сертификации (исходные свидетельства остаются закрытыми)"
         uses: actions/upload-artifact@v4
         with:
           name: migration-ga-0450-three-references

@@ -42,7 +42,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить миграция, транзакция и проверки на обход guards в PostgreSQL
+      - name: "Проверить миграции, транзакции и попытки обхода защиты в PostgreSQL"
         working-directory: services/api
         run: |
           set -euo pipefail

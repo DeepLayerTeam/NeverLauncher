@@ -45,7 +45,7 @@ jobs:
           go-version-file: prestarter/go.mod
           cache-dependency-path: prestarter/go.sum
           cache: false
-      - name: Запустить настоящие TLS сеть cut/возобновление и подписанные установщик generation откат
+      - name: "Проверить реальные обрывы и возобновление TLS-соединений, создание подписанного установщика и откат"
         working-directory: prestarter
         shell: bash
         run: |

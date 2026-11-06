@@ -33,7 +33,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Скомпилировать фактические песочница и хост на Linux ARM64
+      - name: "Скомпилировать настоящие средства изоляции и хост для Linux ARM64"
         working-directory: services/api
         env:
           GOOS: linux
@@ -43,7 +43,7 @@ jobs:
           go test -c -o "$RUNNER_TEMP/linuxsandbox-arm64.test" ./internal/linuxsandbox
           go build ./internal/extensionhost ./internal/extensionpolicy
           test -s "$RUNNER_TEMP/linuxsandbox-arm64.test"
-      - name: Выполнить Linux AMD64 non-hardware песочница регрессионные проверки
+      - name: "Проверить регрессии программной изоляции в Linux AMD64 без аппаратных средств"
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/linuxsandbox ./internal/extensionhost ./internal/extensionpolicy
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Потребовать настоящие непривилегированные пространства имён, seccomp, делегированную cgroup v2 и cgroup.kill
+      - name: "Потребовать реальные непривилегированные пространства имён, seccomp, делегированную cgroup v2 и cgroup.kill"
         working-directory: services/api
         env:
           NL_RUN_LIVE_LINUX_SANDBOX: '1'

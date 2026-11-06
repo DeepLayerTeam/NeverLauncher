@@ -27,7 +27,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Проверить реальные аутентифицированные Java SDK
+      - name: "Проверить настоящие процессы Java SDK с аутентификацией"
         run: sh sdk/java/core/build.sh test
   go-broker:
     runs-on: ubuntu-24.04
@@ -42,7 +42,7 @@ jobs:
       - name: ServerBridge хост / разрешение / отзыв / проверки гонок
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity -run 'TestJavaBridge|TestJavaBridgeControlValidation0488|TestJavaBridgeRuntimeFencing0488'
-      - name: Проверить интеграцию управления ServerBridge с PostgreSQL и защитой от конфликтов
+      - name: "Проверить взаимодействие ServerBridge с PostgreSQL и защитой от конфликтов"
         if: ${{ env.LAUNCHER_SERVERBRIDGE_HA_DSN != '' }}
         working-directory: services/api
         run: go test -count=1 ./internal/repository -run 'TestServerBridgeControl0195Postgres'

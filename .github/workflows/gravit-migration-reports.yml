@@ -49,7 +49,7 @@ jobs:
       - name: Полная сборка серверной части
         working-directory: services/api
         run: go build ./...
-      - name: "Собрать CLI и выполнить HTTP-тесты"
+      - name: "Собрать CLI и запустить HTTP-тесты"
         working-directory: cli
         run: |
           go test -count=1 ./cmd/launcher -run '^TestMigrationReportCLI03313$'

@@ -358,7 +358,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
     records: dict[str, dict[str, Any]] = {}
     expected_ids = {t["id"] for t in targets}
     for extra in sorted(set(results) - expected_ids):
-        errors.append(f"unexpected device trust result: {extra}")
+        errors.append(f"Неожиданный результат проверки доверия к устройству: {extra}")
     for target in targets:
         found = results.get(target["id"])
         if found is None:

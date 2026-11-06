@@ -62,7 +62,7 @@ jobs:
           python e2e/scripts/test_runtime_capabilities_03410.py
           python e2e/scripts/test_staged_readiness_0343.py
           python e2e/scripts/test_staged_matching_0344.py
-      - name: сборка промышленные CLI и Runtime (не игра)
+      - name: "Собрать промышленные CLI и Runtime (без сборки игры)"
         shell: bash
         run: |
           set -euo pipefail

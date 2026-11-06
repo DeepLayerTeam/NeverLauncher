@@ -31,7 +31,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - run: sh sdk/java/core/build.sh test
       - run: sh examples/extensions/java-content-spi/build.sh
-      - name: реальные Java дочерний процесс и callback базовая проверка
+      - name: "Базовая проверка настоящего дочернего процесса Java и обратных вызовов"
         run: python3 examples/extensions/java-content-spi/test-runner.py
   go-content:
     runs-on: ubuntu-24.04

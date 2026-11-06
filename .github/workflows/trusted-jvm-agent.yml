@@ -37,10 +37,10 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Скомпилировать premain для Java 8 и настоящий плагин перехвата
+      - name: "Скомпилировать агент premain для Java 8 и настоящий подключаемый модуль перехвата"
         shell: bash
         run: sh examples/extensions/trusted-jvm/build.sh
-      - name: Проверить цикл подписанный пакет → установка → запуск JVM → преобразование → выполнение main → обнаружение подмены
+      - name: "Проверить цикл: подпись пакета, установка, запуск JVM, преобразование, выполнение main и обнаружение подмены"
         working-directory: cli
         shell: bash
         run: go test -count=1 -timeout 4m -run '^TestTrustedJVM0306' ./cmd/launcher

@@ -30,12 +30,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Проверить product версия и публичные Java совместимость
+      - name: "Проверить версию продукта и совместимость публичного Java API"
         run: |
           python3 scripts/version/manage.py check
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
-      - name: Скомпилировать реальные исходный ports и Отклонить неподдерживаемые calls
+      - name: "Скомпилировать перенесённые исходники и отклонить неподдерживаемые вызовы"
         run: python3 -m unittest discover -s tools/gravit-port -p 'test_port.py' -v
       - name: "Проверить реальную JVM: хост, события, устойчивое хранилище, RPC и CLI"
         run: |
@@ -47,7 +47,7 @@ jobs:
           (cd cli && go test -count=1 -run '^TestLatest04211' ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --report "$RUNNER_TEMP/gravit-matrix.json"
           "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --module M02 --run-tests --require-tests --report "$RUNNER_TEMP/gravit-discord.json"
-      - name: Подписать реальные source-ported .nlext и Отклонить tampering
+      - name: "Подписать реальные расширения .nlext, перенесённые из исходников, и отклонить подмену"
         run: |
           set -eu
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/author.pem"

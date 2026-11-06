@@ -339,7 +339,7 @@ def main() -> int:
     finally:
         tmp.unlink(missing_ok=True)
     print(
-        f"Native 0.35.14 RC: {len(result['checks'])} real checks passed ({result['platform']})"
+        f"Нативный кандидат 0.35.14: пройдено {len(result['checks'])} реальных проверок ({result['platform']})"
     )
     return 0
 

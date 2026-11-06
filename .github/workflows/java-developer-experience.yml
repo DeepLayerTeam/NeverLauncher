@@ -43,24 +43,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.3'
-      - name: сборка и Проверить Java SDK directly из источники
+      - name: "Собрать и проверить Java SDK непосредственно из исходного кода"
         shell: bash
         run: |
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
           sh sdk/java/http-client/build.sh test
-      - name: пересобрать Maven артефакты из compiled SDK и Проверить на практике публичные ABI
+      - name: "Пересобрать Maven-артефакты из SDK и проверить совместимость публичного ABI"
         shell: bash
         run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
-      - name: Проверить внешние потребитель и реальные JVM хост callbacks
+      - name: "Проверить внешний клиент SDK и обратные вызовы настоящего JVM-хоста"
         shell: bash
         run: |
           python3 scripts/java/test_developer_e2e_04812.py
           python3 scripts/java/developer_e2e_04812.py --sdk-repo dist/java-sdk/maven --report java-developer-evidence.json
-      - name: Скомпилировать тот же публичные SDK потребитель используя Maven
+      - name: "Скомпилировать тот же клиент публичного SDK с помощью Maven"
         shell: bash
         run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml -Dneverlauncher.sdk.version="$(cat VERSION)" package
-      - name: Скомпилировать тот же публичные SDK потребитель используя Gradle
+      - name: "Скомпилировать тот же клиент публичного SDK с помощью Gradle"
         shell: bash
         run: gradle --no-daemon -p examples/extensions/java-developer-04812 -PneverLauncherSdkVersion="$(cat VERSION)" classes
       - name: кроссплатформенный SDK версия проверка
@@ -82,7 +82,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: sh sdk/java/core/build.sh && sh sdk/java/gravit-compat/build.sh && sh sdk/java/http-client/build.sh
-      - name: Проверить одинаковые опубликованные байты SDK из двух независимых каталогов staging
+      - name: "Проверить совпадение байтов опубликованного SDK из двух независимых промежуточных каталогов"
         shell: bash
         run: |
           python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output sdk-staging-a

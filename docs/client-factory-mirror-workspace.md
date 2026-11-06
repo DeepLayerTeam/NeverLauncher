@@ -12,10 +12,10 @@
   "loaderVersion": "0.16.9",
   "modpack": "pack.mrpack",
   "mods": [
-    {"path": "mods/local-addition.jar", "file": "files/local-addition.jar", "sha256": "<actual SHA-256 of the JAR>"}
+    {"path": "mods/local-addition.jar", "file": "files/local-addition.jar", "sha256": "<фактический SHA-256 файла JAR>"}
   ],
   "libraries": [
-    {"coordinate": "example:compatibility-library:1.0", "file": "files/compatibility-library.jar", "sha256": "<actual SHA-256 of the JAR>"}
+    {"coordinate": "example:compatibility-library:1.0", "file": "files/compatibility-library.jar", "sha256": "<фактический SHA-256 файла JAR>"}
   ],
   "compatibility": "compatibility.json"
 }

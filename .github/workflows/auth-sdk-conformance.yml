@@ -43,5 +43,5 @@ jobs:
         run: go test -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/repository ./internal/model ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/sqlconnector
       - name: проверки гонок для соответствие и эмитент связь
         run: go test -race -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector
-      - name: Скомпилировать Backend API с SDK v2
+      - name: "Скомпилировать Backend API с SDK v2"
         run: go build ./cmd/...

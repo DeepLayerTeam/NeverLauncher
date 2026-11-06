@@ -47,7 +47,7 @@ jobs:
       - name: существующие клиент фабрика и адаптеры регрессионная проверка
         working-directory: cli
         run: go test ./cmd/launcher -run 'TestClientFactory0271|TestModernLoaderAdapters0272|TestForge.*|TestModpack.*' -count=1 -timeout=8m
-      - name: сборка исполняемый used API
+      - name: "Собрать работающий API для использования клиентом"
         working-directory: cli
         run: go build ./cmd/launcher
   admin:

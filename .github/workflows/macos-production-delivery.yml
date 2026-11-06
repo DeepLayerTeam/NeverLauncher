@@ -96,7 +96,7 @@ jobs:
 
       - name: Установка зависимости для подписи набора компонентов
         run: python3 -m pip install 'cryptography>=43,<47'
-      - name: сборка, Подписать, notarize и staple x64 + ARM64 пакеты
+      - name: "Собрать и подписать пакеты x64 и ARM64, выполнить нотариальное удостоверение и закрепление подписи"
         shell: bash
         env:
           LAUNCHER_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}

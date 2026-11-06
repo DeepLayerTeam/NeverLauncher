@@ -21,7 +21,7 @@ jobs:
       - name: "Тесты Go с детектором гонок и регрессионные проверки"
         working-directory: services/api
         run: go test -race -count=1 ./internal/httpapi ./internal/repository
-      - name: "Реальная надёжная интеграция PostgreSQL и ServerBridge"
+      - name: "Проверить надёжность настоящей интеграции PostgreSQL и ServerBridge"
         run: bash e2e/scripts/run-admin-hardening-02112-e2e.sh
   admin-build-tests:
     runs-on: ubuntu-24.04

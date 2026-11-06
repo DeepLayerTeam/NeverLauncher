@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Выполнить параллельные фактические HTTPS Backend запросы для не менее одного часа
+      - name: "Выполнять реальные параллельные HTTPS-запросы к Backend не менее одного часа"
         run: |
           set -euo pipefail
           test -n "$LAB_HTTPS_URL"

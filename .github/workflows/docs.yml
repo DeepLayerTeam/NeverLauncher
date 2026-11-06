@@ -51,7 +51,7 @@ jobs:
         run: python3 scripts/operations/operator_accept_04513.py docs-check
       - name: Проверить приёмку и сценарии отказов для оператора в режиме только чтения
         run: python3 -m unittest scripts/operations/test_operator_accept_04513.py -v
-      - name: Проверить фактические эксплуатационный точки входа are callable
+      - name: "Проверить возможность вызова настоящих эксплуатационных точек входа"
         run: |
           python3 scripts/install/production-deploy.py compose --help
           python3 scripts/install/minimal-install.py --help

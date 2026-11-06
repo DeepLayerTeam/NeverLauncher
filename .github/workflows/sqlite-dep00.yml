@@ -31,7 +31,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sqlite-dep00"
           chmod 0700 "$RUNNER_TEMP/sqlite-dep00"
           stat -f -c '%T' "$RUNNER_TEMP/sqlite-dep00"
-      - name: реальные WAL авария, процесс fencing и транзакция тесты
+      - name: "Проверить реальные сбои WAL, изоляцию процессов и транзакции"
         env:
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-dep00

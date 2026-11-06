@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Скомпилировать и Проверить SDK на реальные JVM
+      - name: "Скомпилировать SDK и проверить его в настоящей JVM"
         run: sh sdk/java/core/build.sh test
       - name: Скомпилировать отдельный зависимый JAR и создать встроенный заблокированный хост
         run: sh examples/extensions/java-dependencies/build.sh
@@ -64,7 +64,7 @@ jobs:
           python-version: '3.12'
       - name: сборка фактические встроенные зависимость пакет
         run: sh examples/extensions/java-dependencies/build.sh
-      - name: Проверить фактические JAR и проверки на обход library тестовые фикстуры до activation
+      - name: "Проверить настоящие JAR и сценарии обхода библиотек до активации"
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar

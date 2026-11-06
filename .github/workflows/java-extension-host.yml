@@ -37,13 +37,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Скомпилировать SDK с --release 17 и Запустить фактические API тесты
+      - name: "Скомпилировать SDK с --release 17 и выполнить настоящие тесты API"
         shell: bash
         run: sh sdk/java/core/build.sh test
-      - name: Собрать автономный исполняемый JAR хоста Java
+      - name: "Собрать автономный исполняемый JAR Java-хоста"
         shell: bash
         run: sh examples/extensions/java-host/build.sh
-      - name: "Проверить JVM-хост и CLI, аутентифицированные RPC и тайм-ауты"
+      - name: "Проверить JVM-хост, CLI, аутентифицированные RPC и тайм-ауты"
         shell: bash
         run: python3 examples/extensions/java-host/test-runner.py
       - name: Проверить packed хост классы
@@ -65,7 +65,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: Собрать и проверить исполняемый пакет Java
         run: sh examples/extensions/java-host/build.sh
-      - name: Проверить запуск Java супервизором Go, состояние готовности, RPC, CLI и остановку зависших обратных вызовов
+      - name: "Проверить запуск Java супервизором Go, готовность, RPC, CLI и остановку зависших обратных вызовов"
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar

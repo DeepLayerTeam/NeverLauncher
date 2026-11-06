@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
-      - name: Проверить нативный SQLite WAL, аварийное восстановление и регрессии совместимости со старыми версиями
+      - name: "Проверить нативный SQLite WAL, восстановление после сбоя и совместимость с прежними версиями"
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/nl0478"; chmod 700 "$RUNNER_TEMP/nl0478"
@@ -75,7 +75,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Запустить реальный PostgreSQL миграция SQLRepository и read-back
+      - name: "Проверить реальные миграции SQLRepository в PostgreSQL и чтение записанных данных"
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -94,17 +94,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: реальные Backend HTTP API авторизация, публикация и Admin маршрутизация тесты
+      - name: "Проверить настоящую HTTP-авторизацию Backend, публикацию и маршрутизацию Admin"
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout=15m -run 'TestCanonicalAdminCRUDProductFlow|TestSecurityRealAuthHTTP02912|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable|TestImportedFileAuthLocalLoginAndAtomicRehash0295' -v ./internal/httpapi
-      - name: Admin интерфейс фактические промышленную сборку и interactive компонент тесты
+      - name: "Собрать промышленную версию интерфейса Admin и проверить интерактивные компоненты"
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm test
           npm run build
-      - name: Desktop компонент и клиент обновление тесты против фактические implementation
+      - name: "Проверить компоненты Desktop и обновление клиента на реальной реализации"
         working-directory: apps/desktop
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: cli/go.mod
-      - name: Проверить HTTPS базовый уровень манифест Закрепить и сборка фактические текущие CLI
+      - name: "Проверить HTTPS, закрепление доверенного манифеста и сборку актуального CLI"
         env:
           URL: ${{ inputs.baselines_url }}
           SHA: ${{ inputs.baselines_sha256 }}
@@ -165,7 +165,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libasound2t64 jq postgresql-client maven
-      - name: Проверить реальную публикацию подписанного релиза, авторизацию, транзакционное обновление Desktop, подключения JVM через Bridge и клиент Minecraft
+      - name: "Проверить подписанную публикацию, авторизацию, транзакционное обновление Desktop, JVM через Bridge и клиент Minecraft"
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
           LAUNCHER_E2E_LOADER: vanilla
@@ -202,7 +202,7 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
       - run: sudo apt-get update && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libasound2t64
-      - name: Подготовить фактические совпадающие Mojang сервер и клиент, Запустить и Подтвердить join
+      - name: "Подготовить совместимые сервер и клиент Mojang, запустить их и подтвердить подключение"
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.mc }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.java }}

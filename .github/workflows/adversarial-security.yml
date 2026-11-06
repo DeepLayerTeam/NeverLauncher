@@ -84,7 +84,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Проверить реальные пространства имён, cgroup и изоляцию дочерних процессов; SKIP считается сбоем
+      - name: "Проверить пространства имён, cgroup и изоляцию дочерних процессов; пропуск считается сбоем"
         run: python3 scripts/security/certify_03114.py --tier linux-live --output "$RUNNER_TEMP/03114-linux-live.json"
       - name: Опубликовать результаты проверок ядра
         if: always()
@@ -102,7 +102,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Проверить реальные AppContainer, ACL, Job и дочерние процессы; SKIP считается сбоем
+      - name: "Проверить настоящие AppContainer, ACL, задания и дочерние процессы; пропуск проверки считается сбоем"
         shell: pwsh
         run: python scripts/security/certify_03114.py --tier windows-live --output "$env:RUNNER_TEMP/03114-windows-live.json"
       - name: Опубликовать Windows свидетельства

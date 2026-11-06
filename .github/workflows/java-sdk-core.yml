@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/java-example"
           javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/java-example" examples/extensions/java-lifecycle/src/ru/example/launcher/LifecycleExample.java
-      - name: Проверить манифест matches shipping расширения схема
+      - name: "Проверить соответствие манифеста схеме поставляемого расширения"
         shell: bash
         run: python3 -m json.tool examples/extensions/java-lifecycle/launcher-extension.json >/dev/null
       - name: Проверить создан SDK артефакт

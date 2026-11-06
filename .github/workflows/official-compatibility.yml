@@ -101,7 +101,7 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
       - name: Проверить реальные нативные пути официальной идентификации
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_
-      - name: Проверить Запустить mode изоляция и Runtime
+      - name: "Проверить изоляцию режима запуска и Runtime"
         run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269
       - name: Собрать Rust для целевой платформы
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

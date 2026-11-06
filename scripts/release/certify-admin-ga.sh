@@ -11,7 +11,7 @@ rm -f dist/ga-certification/admin-0220.json dist/ga-certification/owner-cycle-03
 RELEASE_VERSION="$(< VERSION)"
 python3 scripts/release/release_policy.py ga-mode --version "$RELEASE_VERSION" >/dev/null || exit 2
 
-: "${LAUNCHER_GA_SOURCE_SHA:?set the exact candidate commit SHA}"
+: "${LAUNCHER_GA_SOURCE_SHA:?укажите точный SHA коммита кандидата}"
 [[ "$LAUNCHER_GA_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo 'Некорректный SHA коммита релиза' >&2; exit 2; }
 command -v git >/dev/null || { echo 'Для подтверждения происхождения исходников требуется git' >&2; exit 2; }
 COMMIT="$(git rev-parse --verify HEAD)"

@@ -48,7 +48,7 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: реальные TLS и dropped-ACK CLI регрессионные проверки с детектор гонок
+      - name: "Проверить реальные TLS-сценарии и потерянные подтверждения CLI с детектором гонок"
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'Test(RemoteReceiptRecovery0515|RemoteControlScopesAndSources0284|RemoteControlIdempotencyAndUnknown0284|RemoteControlConcurrentDelivery0284|RemoteControlRealHTTPSAndCLI0284)'
   postgres-control:

@@ -39,13 +39,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: реальные Go journal interoperability и hostile свидетельства тесты
+      - name: "Проверить реальную совместимость журналов Go и свидетельства враждебных воздействий"
         run: |
           set -euo pipefail
           python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang_0529.py' -v
           python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real_0529.py' -v
           python3 scripts/guard_ci/test_adversarial_pilot_05012.py
-      - name: промышленные ServerBridge Java adapter-policy JVM тесты
+      - name: "Выполнить промышленные JVM-тесты политик Java-адаптеров ServerBridge"
         run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
       - name: Проверить разрешённые преобразования загрузчика и враждебные изменения JVM в реальных дочерних JVM
         run: |
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Потребовать защищённые закрытые конфигурация и изолированные Minecraft staging
+      - name: "Потребовать закрытые защищённые конфигурации и изолированный стенд Minecraft"
         shell: bash
         run: |
           set -euo pipefail

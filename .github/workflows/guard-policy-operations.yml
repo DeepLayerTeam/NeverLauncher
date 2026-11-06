@@ -43,7 +43,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Проверить WebCrypto Runtime политика операции
+      - name: "Проверить политику операций Runtime с использованием WebCrypto"
         working-directory: apps/admin
         run: node --experimental-strip-types --test tests/guard_policy_05011.test.mjs
       - name: сборка промышленные Admin

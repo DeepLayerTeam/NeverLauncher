@@ -143,7 +143,7 @@ with zipfile.ZipFile(sys.argv[1]) as zf:
     depends=data.get('depends') or {}
     custom=(data.get('custom') or {}).get('launcher') or {}
     if data.get('environment')!='server' or 'quilt_loader' not in depends or custom.get('clientModRequired') is not False:
-        raise SystemExit('[Launcher] Quilt artifact must be Quilt-only, server-only and clientModRequired=false')
+        raise SystemExit('[Launcher] Артефакт Quilt должен предназначаться только для Quilt и сервера, а clientModRequired должен быть false')
 PY_QUILT_META
 
 for platform in forge neoforge; do

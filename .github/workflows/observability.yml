@@ -35,7 +35,7 @@ jobs:
           docker run --rm -v "$PWD/deploy/production/monitoring:/etc/prometheus:ro" --entrypoint /bin/promtool prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus-standard.yml
           docker run --rm -v "$PWD/deploy/production/monitoring:/etc/prometheus:ro" --entrypoint /bin/promtool prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus-network-ha.yml
           docker run --rm -v "$PWD/deploy/production/monitoring:/etc/prometheus:ro" --entrypoint /bin/promtool prom/prometheus:v2.55.1 check rules /etc/prometheus/alerts.yml
-      - name: Проверить реальную конфигурацию Alertmanager и наложение Compose
+      - name: "Проверить реальную конфигурацию Alertmanager и конфигурацию Compose"
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/monitor"
@@ -50,7 +50,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить фактические HTTP состояние/correlation и агент готовность
+      - name: "Проверить состояние HTTP, корреляцию запросов и готовность агента"
         working-directory: services/api
         run: |
           set -euo pipefail

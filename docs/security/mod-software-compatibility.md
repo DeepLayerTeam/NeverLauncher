@@ -16,7 +16,7 @@
 
 ```json
 "externalNativeModules": [
-  {"path":"/home/example/.local/share/example/libcapture.so", "sha256":"<exact lower-case 64-digit SHA-256>"}
+  {"path":"/home/example/.local/share/example/libcapture.so", "sha256":"<точный SHA-256 из 64 шестнадцатеричных символов нижнего регистра>"}
 ]
 ```
 

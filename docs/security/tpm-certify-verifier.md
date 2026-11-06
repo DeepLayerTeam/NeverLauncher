@@ -40,7 +40,7 @@ API принимает **настоящие подтверждения TPM2 `Cer
   "evidence": {
     "tpm2bPublic": "<байты в base64url без заполнения, включая внешний размер>",
     "tpm2bAttest": "<байты в base64url без заполнения, включая внешний размер>",
-    "tpmtSignature": "<base64url unpadded TPMT_SIGNATURE bytes>",
+    "tpmtSignature": "<байты TPMT_SIGNATURE в формате base64url без заполнения>",
     "akCertificatePem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
     "intermediatesPem": []
   }

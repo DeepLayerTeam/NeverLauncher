@@ -38,7 +38,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить реальные HTTP-сценарии авторизации, отзыва доступа и CSP
+      - name: "Проверить реальные HTTP-сценарии авторизации, отзыва доступа и политики CSP"
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestDesktopBridgeRevocationAndGeneration0356|TestExtensionHTMLCSPPrecedesUntrustedMarkup0356|TestDesktopEntrypointServedFromEnabledGrantedInstall0209' -count=1
   native-validation:

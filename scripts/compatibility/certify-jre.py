@@ -172,7 +172,7 @@ def main() -> int:
     try:
         payload = certify(args.java, args.major, args.expected_os, args.expected_arch)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
-        print(f"jre-certification: {exc}", file=sys.stderr)
+        print(f"Ошибка сертификации JRE: {exc}", file=sys.stderr)
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
@@ -180,7 +180,7 @@ def main() -> int:
     )
     if not payload["certified"]:
         print(
-            "jre-certification: mismatch "
+            "Сертификация JRE: обнаружено несовпадение "
             f"major={payload['detectedMajor']}/{payload['expectedMajor']} "
             f"os={payload['detectedOS']}/{payload['expectedOS']} "
             f"arch={payload['detectedArch']}/{payload['expectedArch']}",

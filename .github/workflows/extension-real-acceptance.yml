@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: сборка запускаемый Java расширения и source-port модуль
+      - name: "Собрать запускаемые Java-расширения и перенесённый исходный модуль"
         shell: bash
         run: |
           set -euo pipefail
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: сборка реальные Java расширение хост JAR
+      - name: "Собрать настоящий JAR хоста Java-расширений"
         run: sh examples/extensions/java-host/build.sh
       - name: Запустить супервизор Go и проверить реальный отзыв разрешений и жизненный цикл JVM
         working-directory: services/api
@@ -99,7 +99,7 @@ jobs:
           merge-multiple: true
       - name: с отказом по умолчанию свидетельства тесты
         run: python3 -m unittest discover -s e2e/extensions -p 'test_*.py' -v
-      - name: все шесть целевых платформ и Go supervisor must успех
+      - name: "Потребовать успешной проверки всех шести платформ и супервизора Go"
         env:
           GO_SUPERVISOR_RESULT: ${{ needs.go-supervisor.result }}
           PLATFORM_RESULT: ${{ needs.real-platform.result }}

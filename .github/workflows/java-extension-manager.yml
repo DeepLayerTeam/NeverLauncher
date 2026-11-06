@@ -49,7 +49,7 @@ jobs:
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 -timeout 4m ./internal/extensionhost
-      - name: Проверка компиляции HTTP API с новой интеграцией диагностики
+      - name: "Проверить компиляцию HTTP API с новой диагностикой"
         working-directory: services/api
         run: go test -run '^TestDoesNotExist$' ./internal/httpapi
       - name: Тестирование диагностики CLI и проверки подписей

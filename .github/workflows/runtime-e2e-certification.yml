@@ -141,7 +141,7 @@ jobs:
     needs: [offline-unit-and-adversarial, actual-gui-client, actual-matching-server]
     runs-on: ubuntu-24.04
     steps:
-      - name: Refuse неполные Runtime сертификация
+      - name: "Отклонить неполную сертификацию Runtime"
         env:
           OFFLINE: ${{ needs.offline-unit-and-adversarial.result }}
           REAL: ${{ needs.actual-gui-client.result }}

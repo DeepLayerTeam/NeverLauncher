@@ -58,7 +58,7 @@ jobs:
           try { go test -count=1 ./...; if ($LASTEXITCODE -ne 0) { throw 'Тесты Backend SDK завершились ошибкой' } } finally { Pop-Location }
           Push-Location sdk/cli/go
           try { go test -count=1 ./...; if ($LASTEXITCODE -ne 0) { throw 'Тесты CLI SDK завершились ошибкой' } } finally { Pop-Location }
-      - name: Проверить реальные границы AppContainer, заданий и файловой системы Windows
+      - name: "Проверить настоящую изоляцию AppContainer, заданий и файловой системы Windows"
         working-directory: services/api
         env:
           NL_RUN_LIVE_WIN_SANDBOX: '1'

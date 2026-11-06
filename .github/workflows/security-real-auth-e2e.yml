@@ -70,11 +70,11 @@ jobs:
       - name: Проверить изоляцию источника HTTP, вредоносный JSON, MFA и повтор запросов обновления
         run: |
           go test -race -count=1 -timeout=8m ./internal/authrequest ./internal/httpapi -run '02912|0296|TestProtectionBanUnbanLiveHTTP0298|TestRoleUpdateRevokesLiveNeverToken0297' -v
-      - name: Проверить две отдельные реплики API, настоящие транзакции PostgreSQL и отзыв прав между репликами
+      - name: "Проверить две независимые реплики API, реальные транзакции PostgreSQL и отзыв прав между репликами"
         run: |
           go test -count=1 -timeout=10m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' -v
           go test -count=1 -timeout=10m ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestProtectionPostgres0298' -v
-      - name: Проверить реальную аутентификацию PostgreSQL/MySQL/MariaDB и отказ для неизвестного пароля
+      - name: "Проверить настоящую аутентификацию PostgreSQL, MySQL и MariaDB и отказ при неверном пароле"
         run: go test -count=1 -timeout=8m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' -v
       - name: Проверить OIDC, HTTP, Microsoft и соответствие SDK подписанному поведению провайдеров
         run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation

@@ -2,11 +2,11 @@
 # Требуется настоящая доверенная идентичность Apple Developer ID Application.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-: "${LAUNCHER_MACOS_SANDBOX_TEAM_ID:?required: ten-character Apple team ID}"
-: "${LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY:?required: Developer ID Application certificate identity}"
+: "${LAUNCHER_MACOS_SANDBOX_TEAM_ID:?укажите десятисимвольный идентификатор команды Apple}"
+: "${LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY:?укажите идентификатор сертификата Developer ID Application}"
 [[ "$LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY" == Developer\ ID\ Application:* ]] || { echo "Необходим сертификат Developer ID Application" >&2; exit 1; }
 [[ "$LAUNCHER_MACOS_SANDBOX_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "Некорректный Team ID" >&2; exit 1; }
-DEST="${1:?output path for signed helper required}"
+DEST="${1:?укажите выходной путь для подписанного вспомогательного приложения}"
 [[ "$DEST" = /* ]] || { echo "Выходной путь должен быть абсолютным" >&2; exit 1; }
 mkdir -p "$(dirname "$DEST")"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT

@@ -45,7 +45,7 @@ jobs:
         run: |
           cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
-      - name: реальные Linux /proc и внедрённые ELF регрессионные проверки
+      - name: "Регрессионные проверки реальных процессов Linux через /proc и внедрённых ELF"
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
       - name: Проверить аутентифицированный IPC Guard Linux и heartbeat без перезапуска
         env:
@@ -54,9 +54,9 @@ jobs:
           mkdir -p "$XDG_RUNTIME_DIR"
           chmod 700 "$XDG_RUNTIME_DIR"
           cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
-      - name: реальные защищённые и unhardened JVM сценарии
+      - name: "Проверить сценарии для защищённой и незащищённой JVM"
         run: python3 scripts/tests/linux_runtime_guard_0508.py
-      - name: существующие подписанного JAR/нативные и continuous JVM регрессионные проверки
+      - name: "Проверить существующие регрессии подписанных JAR, нативных файлов и непрерывной защиты JVM"
         run: |
           python3 scripts/tests/guard_runtime_integrity_0505.py
           python3 scripts/tests/continuous_game_protection_0506.py

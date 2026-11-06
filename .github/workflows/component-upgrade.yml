@@ -26,7 +26,7 @@ jobs:
           PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade_0457.py -v
           python3 -m py_compile scripts/operations/component_upgrade_0458.py scripts/operations/dr_03512.py
           python3 scripts/version/manage.py check
-      - name: Проверить полные графы Compose для Standard и Network-HA
+      - name: "Проверить полные конфигурации Compose для стандартного и сетевого отказоустойчивого режимов"
         run: |
           set -euo pipefail
           docker compose -f deploy/production/docker-compose.yml --env-file deploy/production/env.production.example config --quiet

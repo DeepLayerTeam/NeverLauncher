@@ -30,7 +30,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Скомпилировать и Проверить на практике аутентифицированные Java Backend службы
+      - name: "Скомпилировать и проверить настоящие службы Java Backend с аутентификацией"
         run: sh sdk/java/core/build.sh test
   host-broker:
     runs-on: ubuntu-24.04

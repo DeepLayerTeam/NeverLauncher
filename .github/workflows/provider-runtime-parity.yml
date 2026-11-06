@@ -77,7 +77,7 @@ jobs:
         run: go test -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation ./internal/httpapi ./internal/repository
       - name: Проверить гарантии провайдеров и жизненный цикл учётных данных с детектором гонок
         run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpapi ./internal/federation -run '0296|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestHTTPLoginUsesRegisteredExternalConnector112|TestFederationE2E01110CanonicalSessionMatrix'
-      - name: Проверить реальное сопоставление устаревших хешей при входе в PostgreSQL, MySQL и MariaDB
+      - name: "Проверить сопоставление устаревших хешей при входе в PostgreSQL, MySQL и MariaDB"
         env:
           LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
           LAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false

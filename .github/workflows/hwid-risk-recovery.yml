@@ -43,7 +43,7 @@ jobs:
       - name: сборка промышленный API
         working-directory: services/api
         run: go build ./cmd/...
-      - name: Проверить HWID risk и фактические Postgres между репликами восстановление
+      - name: "Проверить оценку риска HWID и реальное восстановление PostgreSQL между репликами"
         working-directory: services/api
         run: go test -race -count=1 -timeout=12m ./internal/repository ./internal/httpapi ./internal/dbmigrate -run 'TestHWID|TestEvaluateAppliedSealedCatalog'
       - name: "Проверить миграции и сборку CLI"

@@ -78,7 +78,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=42,<47'
-      - name: Freeze шесть фактические окончательный пакет байты, подписанные релиз authority
+      - name: "Зафиксировать точные байты шести итоговых пакетов, подписанных уполномоченным издателем"
         shell: bash
         run: |
           set -euo pipefail

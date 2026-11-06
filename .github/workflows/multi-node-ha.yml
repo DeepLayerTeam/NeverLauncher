@@ -30,7 +30,7 @@ jobs:
           go mod download
           go test -race -count=1 ./cmd/launcher-api ./internal/deployment ./internal/repository ./internal/httpapi
           go build -trimpath -o "$RUNNER_TEMP/launcher-api" ./cmd/launcher-api
-      - name: "Проверка конфигурации Docker Compose для сетевой HA и изоляции"
+      - name: "Проверить конфигурацию Docker Compose для сетевой отказоустойчивости и изоляции"
         run: |
           set -euo pipefail
           cp deploy/production/env.production.example "$RUNNER_TEMP/ha.env"
