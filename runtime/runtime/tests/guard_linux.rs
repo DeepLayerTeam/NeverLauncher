@@ -18,10 +18,10 @@ async fn linux_guard_authenticated_boundary_and_attestation() {
     let guard = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
     let supervisor = GuardSupervisor::with_executable(guard);
 
-    let status = supervisor.ensure_started().await.expect("start Guard");
+    let status = supervisor.ensure_started().await.expect("запуск Guard");
     assert!(status.authenticated && status.process_policy_enforced && status.hardening_enforced);
     assert!(status.secure_pipe_acl && status.lifetime_job_enforced);
-    supervisor.ping().await.expect("authenticated ping");
+    supervisor.ping().await.expect("проверочный запрос с аутентификацией");
     supervisor.ping_running().await.expect("выполнить проверку активности без автоматического перезапуска");
 
     let policy = supervisor.process_policy().await.expect("получить политику процессов Linux");
@@ -40,7 +40,7 @@ async fn linux_guard_authenticated_boundary_and_attestation() {
     assert_eq!(attestation.evidence.evidence_sha256.len(), 64);
     assert_eq!(attestation.attestation_sha256.len(), 64);
 
-    supervisor.shutdown().await.expect("shutdown Guard");
+    supervisor.shutdown().await.expect("завершение работы Guard");
     assert!(supervisor.ping_running().await.is_err(), "закрытый Guard не должен незаметно перезапускаться");
     let _ = std::fs::remove_dir_all(runtime_dir);
 }

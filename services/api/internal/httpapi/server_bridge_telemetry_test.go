@@ -38,10 +38,10 @@ func TestValidateBridgeTelemetry0193BindsRuntimeAndNormalizesMetrics(t *testing.
 		t.Fatal(err)
 	}
 	if got.RuntimeEpoch != 9 || got.RuntimeID != runtimeID || got.Sequence != 7 {
-		t.Fatalf("unexpected runtime binding: %+v", got)
+		t.Fatalf("Неожиданная привязка Runtime: %+v", got)
 	}
 	if len(got.Metrics) != 2 || got.Metrics[0] != "jvm.heap" || got.Metrics[1] != "server.tick" {
-		t.Fatalf("metrics were not normalized: %#v", got.Metrics)
+		t.Fatalf("Метрики не нормализованы: %#v", got.Metrics)
 	}
 }
 
@@ -51,11 +51,11 @@ func TestValidateBridgeTelemetry0193RejectsRuntimeMismatchAndStaleClock(t *testi
 	runtime := model.ServerBridgeRuntimeIdentity{RuntimeID: runtimeID}
 	raw := testTelemetry0193(now, strings.Repeat("c", 64))
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 2, now); err == nil || !strings.Contains(err.Error(), "runtime_mismatch") {
-		t.Fatalf("expected runtime mismatch, got %v", err)
+		t.Fatalf("Ожидалось несоответствие Runtime, получено: %v", err)
 	}
 	raw = testTelemetry0193(now.Add(-10*time.Minute), runtimeID)
 	if _, err := validateBridgeTelemetry0193(raw, runtime, 2, now); err == nil || !strings.Contains(err.Error(), "clock_invalid") {
-		t.Fatalf("expected stale sample rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение устаревшего образца, получено: %v", err)
 	}
 }
 
@@ -78,13 +78,13 @@ func TestValidateBridgeTelemetry0193AllowsUnsupportedPlatformCounters(t *testing
 		t.Fatal(err)
 	}
 	if got.LoadedChunks != nil || got.EntityCount != nil || !got.SamplingBudgetExceeded {
-		t.Fatalf("unsupported/budgeted metrics were altered: %+v", got)
+		t.Fatalf("Изменены неподдерживаемые метрики или метрики с ограничением: %+v", got)
 	}
 }
 
 func TestBridgeTelemetryFeatureRequiresRuntimeIdentity(t *testing.T) {
 	if enabled, reason := bridgeTelemetryFeatureMode0193([]string{serverBridgeFeatureServerTelemetry}); enabled || reason == "" {
-		t.Fatalf("telemetry without runtime pair must be rejected: enabled=%v reason=%q", enabled, reason)
+		t.Fatalf("Телеметрия без пары Runtime должна отклоняться: включено=%v причина=%q", enabled, reason)
 	}
 	enabled, reason := bridgeTelemetryFeatureMode0193([]string{
 		serverBridgeFeatureRuntimeDiscovery,
@@ -92,6 +92,6 @@ func TestBridgeTelemetryFeatureRequiresRuntimeIdentity(t *testing.T) {
 		serverBridgeFeatureServerTelemetry,
 	})
 	if !enabled || reason != "" {
-		t.Fatalf("expected telemetry to be enabled: enabled=%v reason=%q", enabled, reason)
+		t.Fatalf("Ожидалась включённая телеметрия: включено=%v причина=%q", enabled, reason)
 	}
 }

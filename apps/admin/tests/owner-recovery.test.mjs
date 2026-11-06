@@ -8,7 +8,7 @@ const intent={kind:'package-publish',projectId:'p1',profileId:'fabric',channel:'
 const record={intent,before:{projectId:'p1',profileId:'fabric',channel:'stable',revision:4,releaseId:'old'}};
 function storage(){const map=new Map();return {getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};}
 const key=()=>durableOwnerKey('https://api.example/','actor-1','p1');
-test('rotation of session does not orphan pending owner intent, but actor and backend remain isolated',()=>{
+test('Ротация сеанса сохраняет незавершённое действие владельца, не смешивая исполнителя и Backend',()=>{
  const s=storage();saveOwnerPending(s,key(),record);
  assert.deepEqual(readOwnerPending(s,durableOwnerKey('https://api.example','actor-1','p1'),'p1'),record);
  assert.equal(readOwnerPending(s,durableOwnerKey('https://api.example','actor-2','p1'),'p1'),null);
@@ -16,7 +16,7 @@ test('rotation of session does not orphan pending owner intent, but actor and ba
  assert.notEqual(key(),durableOwnerKey('https://api.example','actor-1','p1','operations'));
  assert.throws(()=>durableOwnerKey('https://api.example','','p1'));
 });
-test('lost ACK is resolved with GET and exact stored key, without replaying a POST',async()=>{
+test('Потерянный ACK обрабатывается GET с точным сохранённым ключом без повторного POST',async()=>{
  const old=globalThis.fetch;
  const calls=[];
  try{
@@ -26,7 +26,7 @@ test('lost ACK is resolved with GET and exact stored key, without replaying a PO
   assert.match(calls[0][0],/operations\/recover\?projectId=p1&kind=package-publish&idempotencyKey=lost-response-0388/);
  }finally{globalThis.fetch=old}
 });
-test('missing journal entry is not permission to create another job; mismatch fails closed',async()=>{
+test('Отсутствие записи журнала не разрешает создавать новое задание; несоответствие ведёт к безопасному отказу',async()=>{
  const old=globalThis.fetch;
  try{
   globalThis.fetch=async()=>({ok:false,status:404,statusText:'Not Found',json:async()=>({error:{message:'not found'}})});

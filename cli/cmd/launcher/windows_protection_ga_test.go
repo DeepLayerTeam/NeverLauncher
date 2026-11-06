@@ -11,13 +11,13 @@ import (
 
 func TestWindowsProtectionGARequired0190(t *testing.T) {
 	if windowsProtectionGARequired0190("0.18.12") || !windowsProtectionGARequired0190("0.19.0") || !windowsProtectionGARequired0190("1.0.0") {
-		t.Fatal("Windows Protection GA version gate mismatch")
+		t.Fatal("Несоответствие проверки версии Windows Protection GA")
 	}
 	if windowsProtectionGAStableVersion0190("0.19.0") != nil {
-		t.Fatal("stable 0.19.0 rejected")
+		t.Fatal("Отклонена стабильная версия 0.19.0")
 	}
 	if windowsProtectionGAStableVersion0190("0.19.0-rc.1") == nil {
-		t.Fatal("prerelease accepted as Windows Protection GA")
+		t.Fatal("Предрелиз принят за Windows Protection GA")
 	}
 }
 
@@ -27,7 +27,7 @@ func TestWindowsProtectionGABoundaryBindsRCAndArtifacts0190(t *testing.T) {
 	first := windowsProtectionGABoundaryDigest0190("0.19.0", testSourceCommit01511, windowsProtectionRepository01812, strings.Repeat("b", 64), strings.Repeat("c", 64), strings.Repeat("d", 64), strings.Repeat("e", 64), artifacts, caps)
 	second := windowsProtectionGABoundaryDigest0190("0.19.0", testSourceCommit01511, windowsProtectionRepository01812, strings.Repeat("f", 64), strings.Repeat("c", 64), strings.Repeat("d", 64), strings.Repeat("e", 64), artifacts, caps)
 	if first == second || len(first) != 64 {
-		t.Fatal("Windows Protection GA boundary does not bind RC certificate")
+		t.Fatal("Граница доверия Windows Protection GA не связана с сертификатом RC")
 	}
 }
 
@@ -47,7 +47,7 @@ func TestWindowsProtectionGACapabilities0190(t *testing.T) {
 	}
 	for cap, seen := range required {
 		if !seen {
-			t.Fatalf("missing Windows Protection GA capability %s", cap)
+			t.Fatalf("Отсутствует возможность Windows Protection GA: %s", cap)
 		}
 	}
 }
@@ -93,11 +93,11 @@ func TestWindowsProtectionGARejectsKernelDriverPayload0190(t *testing.T) {
 		writeGAPackage0190(t, dir, "0.19.0", arch, false)
 	}
 	if err := verifyWindowsUserModeOnlyPackages0190(dir, "0.19.0"); err != nil {
-		t.Fatalf("driver-free packages rejected: %v", err)
+		t.Fatalf("Отклонены пакеты без драйвера: %v", err)
 	}
 	writeGAPackage0190(t, dir, "0.19.0", "x64", true)
 	if err := verifyWindowsUserModeOnlyPackages0190(dir, "0.19.0"); err == nil {
-		t.Fatal("kernel driver payload accepted by Windows Protection GA")
+		t.Fatal("Windows Protection GA принял содержимое с драйвером ядра")
 	}
 }
 
@@ -111,7 +111,7 @@ func TestWindowsProtectionGAWiredIntoProductionGates0190(t *testing.T) {
 			}
 		}
 		if !seen {
-			t.Fatal("Windows Protection GA missing from production gate set")
+			t.Fatal("Windows Protection GA отсутствует среди обязательных производственных проверок")
 		}
 	}
 }

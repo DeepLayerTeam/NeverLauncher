@@ -10,12 +10,12 @@ import (
 func TestUniversalServerAdapterKinds0198(t *testing.T) {
 	for _, kind := range []string{"velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla"} {
 		if !validBridgeServerKindV2(kind) {
-			t.Fatalf("0.19.8 canonical adapter kind rejected: %s", kind)
+			t.Fatalf("Отклонён канонический тип адаптера 0.19.8: %s", kind)
 		}
 	}
 	for _, kind := range []string{"mohist", "arclight", "magma", "catserver", "banner", "cardboard", "hybrid"} {
 		if validBridgeServerKindV2(kind) {
-			t.Fatalf("hybrid core leaked into universal cohort: %s", kind)
+			t.Fatalf("Гибридное ядро попало в универсальную группу: %s", kind)
 		}
 	}
 }
@@ -32,12 +32,12 @@ func TestUniversalAdapterIntegrityNamespaces0198(t *testing.T) {
 	}
 	p := policies["0.19.8"]
 	if got := bridgeHashesForKind0135(p, "quilt"); len(got) != 1 || got[0] != q {
-		t.Fatalf("quilt integrity namespace mismatch: %v", got)
+		t.Fatalf("Несоответствие пространства имён целостности Quilt: %v", got)
 	}
 	if got := bridgeHashesForKind0135(p, "sponge"); len(got) != 1 || got[0] != s {
-		t.Fatalf("sponge integrity namespace mismatch: %v", got)
+		t.Fatalf("Несоответствие пространства имён целостности Sponge: %v", got)
 	}
 	if got := bridgeHashesForKind0135(p, "vanilla"); len(got) != 1 || got[0] != v {
-		t.Fatalf("vanilla integrity namespace mismatch: %v", got)
+		t.Fatalf("Несоответствие пространства имён целостности Vanilla: %v", got)
 	}
 }

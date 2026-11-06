@@ -12,7 +12,7 @@ import (
 
 func TestMigrationModules0338(t *testing.T) {
 	if err := migrationModuleEndpoint0338("http://example.org/api"); err == nil {
-		t.Fatal("insecure remote transport allowed")
+		t.Fatal("Разрешён небезопасный удалённый транспорт")
 	}
 	zipPath := filepath.Join(t.TempDir(), "source.zip")
 	if err := os.WriteFile(zipPath, []byte("ZIPDATA"), 0600); err != nil {
@@ -25,25 +25,25 @@ func TestMigrationModules0338(t *testing.T) {
 		switch r.URL.Path {
 		case "/analyze":
 			if r.Method != "POST" || r.Header.Get("Content-Type") != "application/zip" {
-				t.Error("wrong upload")
+				t.Error("Загружены неверные данные")
 			}
 			b, _ := io.ReadAll(r.Body)
 			if string(b) != "ZIPDATA" {
-				t.Error("source not streamed")
+				t.Error("Источник не передавался потоково")
 			}
 		case "/status":
 			if r.Method != "GET" || r.URL.Query().Get("wrapperPath") != "server/.env" {
-				t.Error("bad status request")
+				t.Error("Неверный запрос состояния")
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"data":{"state":"online","serverId":"node1","reason":"signed_runtime_heartbeat_fresh"}}`))
 			return
 		case "/enroll":
 			if r.Header.Get("X-Migration-Modules-Confirm") != "run1" || r.Header.Get("X-Migration-Fresh-Keys-Confirmed") != "true" {
-				t.Error("missing confirmation")
+				t.Error("Отсутствует подтверждение")
 			}
 		default:
-			t.Error("unknown request")
+			t.Error("Неизвестный запрос")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"data":{"ok":true}}`))
@@ -53,7 +53,7 @@ func TestMigrationModules0338(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := migrationModuleEnroll0338(srv.URL+"/enroll", "secret", "run1", "", "modules/wrapper.json", "node1", "Name", "paper", "profile1", "publickey", false); err == nil || !strings.Contains(err.Error(), "fresh") {
-		t.Fatalf("enrollment confirmation bypass: %v", err)
+		t.Fatalf("Обход подтверждения регистрации: %v", err)
 	}
 	if err := migrationModuleEnroll0338(srv.URL+"/enroll", "secret", "run1", filepath.Join(t.TempDir(), "enroll.json"), "modules/wrapper.json", "node1", "Name", "paper", "profile1", "publickey", true); err != nil {
 		t.Fatal(err)
@@ -62,6 +62,6 @@ func TestMigrationModules0338(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := migrationBridgeStatus0446(srv.URL+"/status", "secret", "", ""); err == nil {
-		t.Fatal("empty wrapper accepted")
+		t.Fatal("Принята пустая обёртка")
 	}
 }

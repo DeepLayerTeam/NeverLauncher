@@ -25,7 +25,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	build := exec.Command("sh", "build.sh")
 	build.Dir = example
 	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build trusted JVM agent: %v\n%s", err, out)
+		t.Fatalf("Ошибка сборки доверенного JVM-агента: %v\n%s", err, out)
 	}
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -146,7 +146,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, _, err = trustedPrepare0306(root, "example.FixtureGame"); err == nil {
-		t.Fatal("tampered plugin accepted")
+		t.Fatal("Изменённый плагин был принят")
 	}
 	if _, err = trustedInstall0306(root, packagePath, publicKey); err != nil {
 		t.Fatal(err)
@@ -163,7 +163,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	}
 	t.Setenv(trustedPublicKeyEnv0306, "")
 	if _, _, _, err = trustedPrepare0306(root, "example.FixtureGame"); err == nil {
-		t.Fatal("no external trust anchor accepted")
+		t.Fatal("Допущено отсутствие внешнего корня доверия")
 	}
 }
 
@@ -175,6 +175,6 @@ func TestTrustedJVM0306AbsentIsNonIntrusive(t *testing.T) {
 	}
 	done()
 	if len(args) > 0 || main != "example.Game" {
-		t.Fatalf("unexpected activation: %v %s", args, main)
+		t.Fatalf("Неожиданная активация: %v %s", args, main)
 	}
 }

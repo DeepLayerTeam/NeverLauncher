@@ -62,7 +62,7 @@ func TestBridgeVerifyLocalAndRuntime02812(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, _, err := verifyBridgeLocal02812(root); err == nil {
-		t.Fatal("tampered installation accepted")
+		t.Fatal("Принята изменённая установка")
 	}
 }
 
@@ -102,10 +102,10 @@ func TestBridgeRollBackRejectsForgedTransactions02812(t *testing.T) {
 	tx.Changes = append(tx.Changes, bridgeProvisionChange0199{Path: sentinel})
 	writeJSONSecure0199(txPath, tx, 0o600)
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", state.TransactionID}); err == nil {
-		t.Fatal("forged rollback accepted")
+		t.Fatal("Принят поддельный откат")
 	}
 	if text, _ := os.ReadFile(sentinel); string(text) != "do not touch" {
-		t.Fatal("external file modified")
+		t.Fatal("Изменён внешний файл")
 	}
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", "../../evil"}); err == nil {
 		t.Fatal("Разрешён выход за пределы каталога через путь")
@@ -119,7 +119,7 @@ func TestBridgeOperatorMutualExclusion02812(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := bridgeOperatorLock02812(root); err == nil {
-		t.Fatal("concurrent operator accepted")
+		t.Fatal("Разрешён одновременный запуск оператора")
 	}
 	unlock()
 	done, err := bridgeOperatorLock02812(root)
@@ -142,7 +142,7 @@ func TestBridgeRejectsPlainHTTPAndOutsidePaths02812(t *testing.T) {
 	}
 	root := t.TempDir()
 	if err := bridgeInsideRoot02812(root, filepath.Join(t.TempDir(), "outside")); err == nil {
-		t.Fatal("outside root accepted")
+		t.Fatal("Принят путь вне корневого каталога")
 	}
 	if err := os.Symlink(t.TempDir(), filepath.Join(root, "escape")); err == nil {
 		if err := bridgeInsideRoot02812(root, filepath.Join(root, "escape", "cfg.yml")); err == nil {

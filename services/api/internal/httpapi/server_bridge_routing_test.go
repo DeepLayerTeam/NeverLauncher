@@ -29,32 +29,32 @@ func TestServerBridgeRouting0196NodeAttestationAndAdmission(t *testing.T) {
 	raw := signedRouting0196(t, server.ID, runtimeID, identity, "ready", "healthy", true, 12, 100)
 	verified, err := validateAndVerifyBridgeRouting0196(server, &raw, runtime, time.Now().UTC())
 	if err != nil {
-		t.Fatalf("valid routing proof rejected: %v", err)
+		t.Fatalf("Отклонено действительное доказательство маршрутизации: %v", err)
 	}
 	if verified.State != "ready" || verified.Health != "healthy" || !verified.AcceptingConnections || verified.Digest == "" {
-		t.Fatalf("verified routing mismatch: %+v", verified)
+		t.Fatalf("Несоответствие проверенной маршрутизации: %+v", verified)
 	}
 
 	tampered := raw
 	tampered.Health = "unhealthy"
 	if _, err := validateAndVerifyBridgeRouting0196(server, &tampered, runtime, time.Now().UTC()); err == nil || !strings.Contains(err.Error(), "accepting_inconsistent") {
-		t.Fatalf("tampered/inconsistent routing accepted: %v", err)
+		t.Fatalf("Принята изменённая или противоречивая маршрутизация: %v", err)
 	}
 
 	full := signedRouting0196(t, server.ID, runtimeID, identity, "ready", "healthy", true, 100, 100)
 	if _, err := validateAndVerifyBridgeRouting0196(server, &full, runtime, time.Now().UTC()); err == nil || !strings.Contains(err.Error(), "accepting_inconsistent") {
-		t.Fatalf("full backend advertised as accepting: %v", err)
+		t.Fatalf("Переполненный Backend объявлен принимающим запросы: %v", err)
 	}
 
 	draining := signedRouting0196(t, server.ID, runtimeID, identity, "draining", "healthy", false, 12, 100)
 	if _, err := validateAndVerifyBridgeRouting0196(server, &draining, runtime, time.Now().UTC()); err != nil {
-		t.Fatalf("valid draining snapshot rejected: %v", err)
+		t.Fatalf("Отклонён действительный снимок состояния вывода из обслуживания: %v", err)
 	}
 }
 
 func TestServerBridgeRouting0196FeatureAdvertised(t *testing.T) {
 	features := bridgeFeatureFlags0191(serverBridgeV3Features0191)
 	if !features[serverBridgeFeatureRoutingV2] {
-		t.Fatalf("%s is not advertised by Protocol v3", serverBridgeFeatureRoutingV2)
+		t.Fatalf("%s не объявлен протоколом v3", serverBridgeFeatureRoutingV2)
 	}
 }

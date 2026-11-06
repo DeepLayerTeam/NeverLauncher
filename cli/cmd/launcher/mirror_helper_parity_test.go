@@ -164,7 +164,7 @@ func TestMirrorHelper0274DedupeWithoutClasspathModification(t *testing.T) {
 		t.Fatal("Повторяющиеся JAR-библиотеки не были объединены")
 	}
 	if before.Outputs[0] != p.Outputs[0] {
-		t.Fatal("content unexpectedly changed")
+		t.Fatal("Содержимое неожиданно изменилось")
 	}
 	previous := p.ReproducibilitySHA256
 	p, err = mirrorTransactional0274(context.Background(), root, mirrorDedupeLibraries0274)
@@ -196,11 +196,11 @@ func TestMirrorHelper0274PatchAuthlibVerifiedBytes(t *testing.T) {
 		return mirrorPatchAuthlib0274(stage, target, patchFile, mirrorSHA0274(base), mirrorSHA0274(patch), strings.Repeat("0", 64))
 	})
 	if err == nil {
-		t.Fatal("incorrect expected output accepted")
+		t.Fatal("Принят неверный ожидаемый вывод")
 	}
 	still, _ := readFactoryPlan0271(root)
 	if still.ReproducibilitySHA256 != old.ReproducibilitySHA256 {
-		t.Fatal("failed patch mutated live plan")
+		t.Fatal("Неудачное исправление изменило действующий план")
 	}
 	p, err := mirrorTransactional0274(context.Background(), root, func(stage string) ([]mirrorAction0274, error) {
 		return mirrorPatchAuthlib0274(stage, target, patchFile, mirrorSHA0274(base), mirrorSHA0274(patch), mirrorSHA0274(expected))
@@ -240,7 +240,7 @@ func TestMirrorHelper0274InstallerDownloadPinning(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := handleRuntimeMirror0274(args); err == nil {
-		t.Fatal("tampered installer reused")
+		t.Fatal("Повторно использован изменённый установщик")
 	}
 }
 func TestMirrorHelper0274WorkspaceAppliesActualVanillaWithMods(t *testing.T) {
@@ -325,7 +325,7 @@ func TestMirrorHelper0274LaunchVerifiedLocalForgeInstaller(t *testing.T) {
 	mux.HandleFunc("/asset-index.json", func(w http.ResponseWriter, r *http.Request) { w.Write(fixtureFactoryAssets0271(asset)) })
 	mux.HandleFunc("/assets/"+assetHash[:2]+"/"+assetHash, func(w http.ResponseWriter, r *http.Request) { w.Write(asset) })
 	mux.HandleFunc("/installer.jar", func(w http.ResponseWriter, r *http.Request) {
-		t.Error("tried to download verified local installer")
+		t.Error("Предпринята загрузка уже проверенного локального установщика")
 		w.WriteHeader(http.StatusForbidden)
 	})
 	root := filepath.Join(t.TempDir(), "client")

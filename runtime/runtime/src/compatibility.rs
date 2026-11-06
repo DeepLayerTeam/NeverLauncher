@@ -1519,7 +1519,7 @@ mod tests {
             launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/neoforge").to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("resolve NeoForge");
+        let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("разрешение версии NeoForge");
         assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("получить список исключений NeoForge");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "Базовый клиент должен оставаться в исходном списке классов, а не становиться модулем BootstrapLauncher: {ignore}");
@@ -1552,7 +1552,7 @@ mod tests {
             launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("resolve Forge");
+        let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("разрешение версии Forge");
         assert!(result.classpath.iter().any(|value| value == "versions/1.19.4/1.19.4.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("получить список исключений Forge");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "Базовый клиент Vanilla не должен становиться дополнительным модулем Forge: {ignore}");
@@ -1585,9 +1585,9 @@ mod tests {
             launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "1.20.2-forge-48.1.0", None, &ctx).await.expect("resolve Forge 1.20.2");
+        let result = resolve_compatibility(&root, "1.20.2-forge-48.1.0", None, &ctx).await.expect("разрешение версии Forge 1.20.2");
         assert_eq!(result.main_class, "net.minecraftforge.bootstrap.BootstrapLauncher");
-        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge 1.20.2 ignoreList");
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("параметр ignoreList для Forge 1.20.2");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|prefix| "1.20.2.jar".starts_with(prefix.trim()) && !prefix.trim().is_empty()), "Базовый JAR Minecraft нельзя добавлять как дублирующий модуль: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }

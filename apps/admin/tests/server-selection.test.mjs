@@ -8,7 +8,7 @@ const identity={runtimeId:'b'.repeat(64),runtimeEpoch:3,protocolVersion:3,status
 const nodes=[{...identity,id:'a-server',projectId:'alpha',profileId:'a-profile',telemetry:{sampledAtUnixMillis:now-1500,runtimeId:'b'.repeat(64),runtimeEpoch:3}},
   {...identity,id:'b-server',projectId:'beta',profileId:'b-profile',lastHeartbeatAt:new Date(now-200_000).toISOString()}];
 const catalog={projects:[{id:'alpha'},{id:'beta'}],profiles:[{id:'a-profile',projectId:'alpha'},{id:'b-profile',projectId:'beta'}],channels:[{id:'stable',projectId:'alpha'},{id:'beta',projectId:'beta'}],servers:nodes};
-test('server deep links round-trip with owner context and cannot cross projects',()=>{
+test('Глубокие ссылки серверов сохраняют контекст владельца и не пересекают границы проектов',()=>{
   const ctx={projectId:'alpha',profileId:'a-profile',channelId:'stable',serverId:'a-server'};
   for(const section of ['server-bridge','profiles','release-workspace'])assert.deepEqual(parseAdminRoute(adminHref(section,ctx)),{section,...ctx});
   assert.deepEqual(resolveProjectContext(ctx,ctx,catalog),ctx);
@@ -17,7 +17,7 @@ test('server deep links round-trip with owner context and cannot cross projects'
   assert.equal(resolveProjectContext({...ctx,profileId:'b-profile'},ctx,catalog).profileId,'');
   assert.equal(resolveProjectContext({...ctx,serverId:'\u0000hijack'},ctx,catalog).serverId,undefined);
 });
-test('server hint persists only as a preference and is always revalidated against live inventory',()=>{
+test('Подсказка сервера сохраняется только как предпочтение и проверяется по актуальному перечню',()=>{
   const store=new Map();const storage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)};
   saveContext(storage,'x',{projectId:'alpha',profileId:'a-profile',channelId:'stable',serverId:'a-server'});
   const cached=readSavedContext(storage,'x');assert.equal(cached.serverId,'a-server');
@@ -26,7 +26,7 @@ test('server hint persists only as a preference and is always revalidated agains
   assert.equal(nodeForContext0383(nodes,'alpha','a-server').profileId,'a-profile');
   assert.deepEqual(profileNodes0383(nodes,'alpha','a-profile').map(n=>n.id),['a-server']);
 });
-test('node status distinguishes backend outage, signed heartbeat, control readiness and telemetry',()=>{
+test('Состояние узла различает сбой Backend, подписанный сигнал жизни, готовность управления и телеметрию',()=>{
   assert.equal(nodeState0383(nodes[0],true,now).status,'available');
   assert.equal(nodeState0383(nodes[0],false,now).status,'unknown');
   assert.equal(nodeState0383(nodes[1],true,now).status,'unavailable');

@@ -13,7 +13,7 @@ func TestClientIPDoesNotTrustForwardedHeadersByDefault(t *testing.T) {
 	req.RemoteAddr = "203.0.113.9:4567"
 	req.Header.Set("X-Forwarded-For", "198.51.100.77")
 	if got := resolveClientIP(req, &trustedProxySet{}); got != "203.0.113.9" {
-		t.Fatalf("client IP spoofed through untrusted XFF: %q", got)
+		t.Fatalf("Подмена IP клиента через недоверенный XFF: %q", got)
 	}
 }
 
@@ -26,14 +26,14 @@ func TestClientIPWalksTrustedProxyChainFromRight(t *testing.T) {
 	req.RemoteAddr = "10.0.0.20:4567"
 	req.Header.Set("X-Forwarded-For", "198.51.100.77, 10.0.0.10")
 	if got := resolveClientIP(req, trusted); got != "198.51.100.77" {
-		t.Fatalf("unexpected client IP: %q", got)
+		t.Fatalf("Неожиданный IP клиента: %q", got)
 	}
 
 	// Если недоверенный промежуточный узел подставляет более ранний адрес,
 	// побеждает ближайший недоверенный узел; подделанный адрес слева игнорируется.
 	req.Header.Set("X-Forwarded-For", "192.0.2.44, 198.51.100.88")
 	if got := resolveClientIP(req, trusted); got != "198.51.100.88" {
-		t.Fatalf("trusted chain accepted spoofed left-most IP: %q", got)
+		t.Fatalf("Доверенная цепочка приняла подменённый крайний левый IP: %q", got)
 	}
 }
 
@@ -59,10 +59,10 @@ func TestRateLimiterUsesResolvedClientIPAndAuthBudget(t *testing.T) {
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
 		if i < 2 && res.Code != http.StatusNoContent {
-			t.Fatalf("request %d unexpectedly limited: %d %s", i+1, res.Code, res.Body.String())
+			t.Fatalf("Для запроса %d неожиданно применено ограничение: %d %s", i+1, res.Code, res.Body.String())
 		}
 		if i == 2 && res.Code != http.StatusTooManyRequests {
-			t.Fatalf("third auth request not limited: %d %s", res.Code, res.Body.String())
+			t.Fatalf("К третьему запросу авторизации не применено ограничение: %d %s", res.Code, res.Body.String())
 		}
 	}
 }

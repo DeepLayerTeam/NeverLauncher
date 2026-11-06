@@ -89,10 +89,10 @@ func TestInstallerRollbackPreviousSignedRelease0527(t *testing.T) {
 		t.Fatal(err)
 	}
 	if active.Release != first.Release || active.Generation != second.Generation+1 {
-		t.Fatalf("wrong rollback active: %+v", active)
+		t.Fatalf("Активно неверное состояние после отката: %+v", active)
 	}
 	if bytes, err := os.ReadFile(save); err != nil || string(bytes) != "persist across generations" {
-		t.Fatalf("game save changed: %s %v", bytes, err)
+		t.Fatalf("Изменено игровое сохранение: %s %v", bytes, err)
 	}
 	if err := VerifyInstalled(opts); err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestInstallerRollbackPreviousSignedRelease0527(t *testing.T) {
 	}
 	active, err = i.current()
 	if err != nil || active.Release != second.Release || active.Generation != 4 {
-		t.Fatalf("roll-forward mismatch: %+v %v", active, err)
+		t.Fatalf("Несоответствие после повторного применения обновления: %+v %v", active, err)
 	}
 }
 
@@ -134,11 +134,11 @@ func TestInstallerRollbackCancellationNeverActivates0527(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := Rollback(ctx, opts); err == nil {
-		t.Fatal("canceled provisioning succeeded")
+		t.Fatal("Отменённая подготовка неожиданно завершилась успешно")
 	}
 	active, err := i.current()
 	if err != nil || active.Release != second.Release || active.Generation != second.Generation {
-		t.Fatalf("rollback advanced on cancellation: %+v %v", active, err)
+		t.Fatalf("Откат продолжился после отмены: %+v %v", active, err)
 	}
 }
 
@@ -151,6 +151,6 @@ func TestInstallerRollbackRejectsAbsentPreviousGeneration0527(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Rollback(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "previous") {
-		t.Fatalf("unexpected absent prior: %v", err)
+		t.Fatalf("Неожиданно отсутствует предыдущее состояние: %v", err)
 	}
 }

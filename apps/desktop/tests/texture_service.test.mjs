@@ -20,7 +20,7 @@ function response(data, status = 200, headers = {}) {
 function mockResponse(data, status = 200) {
   return response({ apiVersion: "0.25.8", data }, status);
 }
-test("safe Mojang textures only, upgrades legacy CDN http", () => {
+test("Допускаются только безопасные текстуры Mojang; устаревший CDN HTTP обновляется", () => {
   assert.equal(
     safeOfficialTextureURL0258(
       "http://textures.minecraft.net/texture/" + digest,
@@ -46,7 +46,7 @@ test("safe Mojang textures only, upgrades legacy CDN http", () => {
     assert.equal(safeOfficialTextureURL0258(value), undefined, value);
   }
 });
-test("revision selects local account scoped current state, not launcher profile", () => {
+test("Ревизия выбирает текущее состояние локальной учётной записи, а не профиль лаунчера", () => {
   const entries = [
     { kind: "skin", revision: 4, projectId: "project", blobDigest: "wrong" },
     { kind: "skin", revision: 7, projectId: "", blobDigest: digest },
@@ -57,7 +57,7 @@ test("revision selects local account scoped current state, not launcher profile"
   assert.equal(textureAssignment0258(entries, "skin").blobDigest, digest);
   assert.equal(textureRevision0258([], "skin"), 0);
 });
-test("upload validates PNG size/type/name before network request", () => {
+test("До сетевого запроса проверяются размер, тип и имя PNG", () => {
   assert.throws(() =>
     validateTextureFile0258({ name: "foo.txt", size: 4, type: "image/png" }),
   );
@@ -75,7 +75,7 @@ test("upload validates PNG size/type/name before network request", () => {
     validateTextureFile0258({ name: "valid.PNG", size: 11, type: "image/png" }),
   );
 });
-test("API request endpoints, CAS, and never forwards official session / foreign UUID", async (t) => {
+test("Адреса запросов API и CAS не передают официальный сеанс или чужой UUID", async (t) => {
   const recorded = [];
   globalThis.fetch = async (url, opts = {}) => {
     recorded.push({ url, opts });
@@ -217,7 +217,7 @@ test("Загрузка multipart отслеживает прогресс XHR и 
     delete globalThis.XMLHttpRequest;
   });
 });
-test("official skin upload crosses only native IPC; no browser bearer or game token", async () => {
+test("Загрузка официального скина идёт только через нативный IPC, без Bearer-токена браузера или игрового токена", async () => {
   const { OfficialMinecraftClient0257 } =
     await import("../build-tests/official_minecraft_0257.js");
   const previousFetch = globalThis.fetch,

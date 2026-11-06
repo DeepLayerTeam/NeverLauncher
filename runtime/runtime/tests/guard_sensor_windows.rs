@@ -220,7 +220,7 @@ fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write JVM-Aware JIT probe");
+    .expect("запись проверки JIT с учётом JVM");
     let status = std::process::Command::new(javac)
         .arg("JvmAwareJitProbe.java")
         .current_dir(directory)
@@ -287,7 +287,7 @@ async fn guard_sensor_agentpath_loads_before_jvm_startup() {
     let mut child = command.spawn().expect("запустить Java в приостановленном состоянии");
     let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
-    let pid = child.id().expect("Java PID");
+    let pid = child.id().expect("идентификатор процесса Java");
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
         .expect("выполнить согласование Agent_OnLoad датчика с активацией защиты модулей");
@@ -363,7 +363,7 @@ async fn guard_sensor_agentpath_loads_before_jvm_startup() {
     assert_eq!(report.module_guard.continuous_guard.sensor_event_chain_sha256.len(), 64);
     assert!(runtime_policy.report().enforced);
 
-    let status = child.wait().await.expect("wait Java");
+    let status = child.wait().await.expect("ожидание процесса Java");
     assert!(status.success(), "команда java -version завершилась ошибкой после загрузки датчика: {status}");
 }
 
@@ -459,7 +459,7 @@ async fn guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Continuous Guard Sensor");
+        .expect("подготовка непрерывного датчика защиты Guard");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -749,7 +749,7 @@ async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach()
     let mut child = command.spawn().expect("запустить Java-проверку защиты отладки в приостановленном состоянии");
     let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
-    let pid = child.id().expect("Debug Guard Java PID");
+    let pid = child.id().expect("идентификатор отладочного процесса Guard Java");
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
         .expect("активировать защиту отладки и инструментирования до запуска основного метода Java");
@@ -808,13 +808,13 @@ async fn guard_jvm_aware_protection_accepts_certified_hotspot_jit() {
         .arg("JvmAwareJitProbe");
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn JVM-aware JIT Java");
+    let mut child = command.spawn().expect("запуск Java с JIT и учётом JVM");
     let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("authenticate JVM-aware Sensor");
-    let status = child.wait().await.expect("wait JVM-aware JIT Java");
+        .expect("аутентификация датчика с учётом JVM");
+    let status = child.wait().await.expect("ожидание Java с JIT и учётом JVM");
     assert!(status.success(), "сертифицированная JIT-нагрузка HotSpot должна оставаться разрешённой: {status}");
 
     let report = session.report().module_guard.jvm_aware;

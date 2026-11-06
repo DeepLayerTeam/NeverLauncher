@@ -24,7 +24,7 @@ func TestProviderRuntimeParity0296UpstreamCannotSatisfyNeverMFA(t *testing.T) {
 	} {
 		t.Run(tc.provider, func(t *testing.T) {
 			if result, err := server.evaluateLoginMFA117(user, tc.methods, "", ""); err == nil || result.Strength == "mfa" || result.Strength == "phishing-resistant" {
-				t.Fatalf("upstream MFA claim bypassed Never MFA policy: result=%+v err=%v", result, err)
+				t.Fatalf("Признак MFA внешнего провайдера обошёл политику MFA Never: результат=%+v ошибка=%v", result, err)
 			}
 		})
 	}
@@ -35,14 +35,14 @@ func TestProviderRuntimeParity0296UpstreamCannotSatisfyNeverMFA(t *testing.T) {
 	}
 	login, err := server.evaluateLoginMFA117(user, []string{"mfa", "passkey", "totp", "oidc"}, "", "")
 	if err != nil || login.Strength != "single-factor" || login.NeedPasskey {
-		t.Fatalf("unexpected Never auth strength: %+v err=%v", login, err)
+		t.Fatalf("Неожиданный уровень авторизации Never: %+v ошибка=%v", login, err)
 	}
 	for _, method := range login.Methods {
 		if method == "mfa" || method == "passkey" || method == "totp" {
-			t.Fatalf("upstream factor appeared as local factor: %+v", login.Methods)
+			t.Fatalf("Внешний фактор ошибочно учтён как локальный: %+v", login.Methods)
 		}
 	}
 	if !strings.Contains(strings.Join(login.Methods, ","), "upstream:passkey") {
-		t.Fatalf("missing external assurance provenance: %+v", login.Methods)
+		t.Fatalf("Отсутствуют сведения о происхождении внешнего подтверждения: %+v", login.Methods)
 	}
 }

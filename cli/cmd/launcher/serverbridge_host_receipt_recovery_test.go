@@ -25,7 +25,7 @@ func TestRemoteReceiptRecovery0515(t *testing.T) {
 			// бы исполнить потенциально опасное действие ещё раз.
 			h, ok := w.(http.Hijacker)
 			if !ok {
-				t.Error("server must allow connection drop")
+				t.Error("Сервер должен допускать обрыв соединения")
 				return
 			}
 			conn, _, err := h.Hijack()
@@ -39,7 +39,7 @@ func TestRemoteReceiptRecovery0515(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"schemaVersion":"1.0","state":"succeeded","action":"restart"}`))
 		default:
-			t.Errorf("unexpected remote request %s %s", r.Method, r.URL.Path)
+			t.Errorf("Неожиданный удалённый запрос %s %s", r.Method, r.URL.Path)
 			http.Error(w, "unexpected", 400)
 		}
 	}))
@@ -57,24 +57,24 @@ func TestRemoteReceiptRecovery0515(t *testing.T) {
 	}
 	args := []string{"call", "--url", server.URL, "--ca-file", ca, "--token-file", token, "--idempotency-key", key, "--output", output}
 	if err := remoteCall0284(append(append([]string{}, args...), "--action", "restart")); err == nil {
-		t.Fatal("lost response must be reported as uncertain")
+		t.Fatal("Потерянный ответ должен приводить к неопределённому результату")
 	}
 	if err := remoteCall0284(append(append([]string{}, args...), "--action", "receipt")); err != nil {
-		t.Fatalf("read-only original receipt recovery: %v", err)
+		t.Fatalf("Восстановление исходной квитанции в режиме только чтения: %v", err)
 	}
 	content, err := os.ReadFile(output)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(content), `"state": "succeeded"`) && !strings.Contains(string(content), `"state":"succeeded"`) {
-		t.Fatalf("unexpected recovered receipt %s", content)
+		t.Fatalf("Неожиданная восстановленная квитанция %s", content)
 	}
 	if mutations.Load() != 1 || receiptReads.Load() != 1 {
-		t.Fatalf("recovery must not invoke command again: mutations=%d receipts=%d", mutations.Load(), receiptReads.Load())
+		t.Fatalf("Восстановление не должно повторно запускать команду: изменений=%d квитанций=%d", mutations.Load(), receiptReads.Load())
 	}
 	// Проверка TLS использует реальный доверенный сертификат сервера. При
 	// отсутствии CA нужно отказать без сетевого запроса.
 	if err := remoteCall0284([]string{"call", "--url", server.URL, "--token-file", token, "--action", "receipt", "--idempotency-key", key}); err == nil {
-		t.Fatal("receipt recovery must not disable CA verification")
+		t.Fatal("Восстановление квитанции не должно отключать проверку центра сертификации")
 	}
 }

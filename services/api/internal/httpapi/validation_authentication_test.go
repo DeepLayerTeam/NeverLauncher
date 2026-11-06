@@ -12,7 +12,7 @@ import (
 func TestV07FailClosedRealProviderAttestation(t *testing.T) {
 	signed, private, public := validValidationFixture0345(t)
 	if signed.Evidence.AuthenticationMode != "official" {
-		t.Fatal("fixture requires real official authentication mode")
+		t.Fatal("Тестовый сценарий требует настоящего официального режима авторизации")
 	}
 	if err := verifyValidation0345(signed, public); err != nil {
 		t.Fatal(err)
@@ -29,7 +29,7 @@ func TestV07FailClosedRealProviderAttestation(t *testing.T) {
 			changed.Evidence.Stages["authentication"] = status
 			signFixture0345(t, &changed, private)
 			if err := verifyValidation0345(changed, public); err == nil {
-				t.Fatal("synthetic or inconclusive authentication certified")
+				t.Fatal("Сертифицирована синтетическая или неподтверждённая авторизация")
 			}
 		})
 	}
@@ -38,7 +38,7 @@ func TestV07FailClosedRealProviderAttestation(t *testing.T) {
 		changed.Evidence.AuthenticationMode = mode
 		signFixture0345(t, &changed, private)
 		if err := verifyValidation0345(changed, public); err == nil {
-			t.Fatalf("forbidden authentication mode %q accepted", mode)
+			t.Fatalf("Принят запрещённый режим авторизации %q", mode)
 		}
 	}
 	other := signed
@@ -48,7 +48,7 @@ func TestV07FailClosedRealProviderAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if matchingTarget0346(other.Evidence, testTarget0346(signed.Evidence)) {
-		t.Fatal("valid signature for different provider inherited official target")
+		t.Fatal("Действительная подпись другого провайдера ошибочно получила статус официального провайдера")
 	}
 }
 
@@ -59,7 +59,7 @@ func TestV07MissingAuthTargetAndAuthStageRejected(t *testing.T) {
 	target.AuthenticationMode = ""
 	blob, _ := json.Marshal([]validationTarget0346{target})
 	if _, _, err := configuredTargets0346(string(blob), release, signed.Evidence.ManifestSHA256, signed.Evidence.ArtifactSHA256); err == nil {
-		t.Fatal("target missing provider mode accepted")
+		t.Fatal("Принята цель без режима провайдера")
 	}
 	now := time.Now().UTC()
 	grant := stagedGrant0342{Schema: stagedGrantSchema0342, PackageID: signed.Evidence.PackageID,
@@ -70,11 +70,11 @@ func TestV07MissingAuthTargetAndAuthStageRejected(t *testing.T) {
 		StartedAt: now.Add(-time.Minute), FinishedAt: now,
 		Stages: map[string]stagedStep0342{"authentication": {Status: "inconclusive", Detail: "provider outage"}}}
 	if err := validateStagedRunReport0342(grant, report); err != nil {
-		t.Fatalf("provider outage diagnostic rejected: %v", err)
+		t.Fatalf("Отклонена диагностика недоступности провайдера: %v", err)
 	}
 	report.Stages["authentication"] = stagedStep0342{Status: "passed", EvidenceSHA256: strings.Repeat("a", 64)}
 	if err := validateStagedRunReport0342(grant, report); err != nil {
-		t.Fatalf("auth stage digest diagnostic rejected: %v", err)
+		t.Fatalf("Отклонена диагностика дайджеста этапа авторизации: %v", err)
 	}
 	// Недоверенный staging-отчёт никогда непосредственно не сертифицирует релиз;
 	// в доверенное хранилище могут попадать только свидетельства v4 отдельно

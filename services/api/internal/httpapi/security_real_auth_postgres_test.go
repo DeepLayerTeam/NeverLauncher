@@ -37,7 +37,7 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 			t.Fatal(err)
 		}
 	} else {
-		t.Fatal("SQL repository initialization failed")
+		t.Fatal("Не удалось инициализировать SQL-репозиторий")
 	}
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	ids := [2]string{"auth-e2e-a-" + suffix, "auth-e2e-b-" + suffix}
@@ -90,7 +90,7 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 	first := login(a.server.URL, "valid-password-issuer-a", http.StatusOK)
 	second := login(b.server.URL, "valid-password-issuer-b", http.StatusOK)
 	if first.Data.User.ID != ids[0] || second.Data.User.ID != ids[1] {
-		t.Fatalf("issuer crossed accounts: %s %s", first.Data.User.ID, second.Data.User.ID)
+		t.Fatalf("Издатель связал разные учётные записи: %s %s", first.Data.User.ID, second.Data.User.ID)
 	}
 	securityHTTP02912(t, client, b.server.URL+"/api/v1/auth/sessions", http.MethodGet, "", first.Data.Tokens.AccessToken, http.StatusOK)
 	rotatedBody := securityHTTP02912(t, client, b.server.URL+"/api/v1/auth/refresh", http.MethodPost, fmt.Sprintf(`{"refreshToken":%q}`, first.Data.Tokens.RefreshToken), "", http.StatusOK)
@@ -99,14 +99,14 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 		t.Fatal(err)
 	}
 	if rotated.Data.Tokens.RefreshToken == first.Data.Tokens.RefreshToken || rotated.Data.Tokens.RefreshToken == "" {
-		t.Fatal("cross-replica refresh did not rotate")
+		t.Fatal("Обновление между репликами не вызвало ротацию")
 	}
 	securityHTTP02912(t, client, a.server.URL+"/api/v1/auth/refresh", http.MethodPost, fmt.Sprintf(`{"refreshToken":%q}`, first.Data.Tokens.RefreshToken), "", http.StatusUnauthorized)
 	securityHTTP02912(t, client, b.server.URL+"/api/v1/auth/sessions", http.MethodGet, "", rotated.Data.Tokens.AccessToken, http.StatusUnauthorized)
 	securityHTTP02912(t, client, a.server.URL+"/api/v1/auth/sessions", http.MethodGet, "", second.Data.Tokens.AccessToken, http.StatusOK)
 	banStore, ok := firstRepo.(repository.ProtectionBanStore)
 	if !ok {
-		t.Fatal("production ban repository required")
+		t.Fatal("Требуется рабочий репозиторий блокировок")
 	}
 	if err := banStore.SetProtectionBan(ctx, repository.ProtectionBan{UserID: ids[1], Actor: ids[0], Reason: "cross-replica security e2e"}); err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 	}
 	third := login(b.server.URL, "valid-password-issuer-b", http.StatusOK)
 	if third.Data.Tokens.RefreshToken == second.Data.Tokens.RefreshToken {
-		t.Fatal("unban resurrected old token")
+		t.Fatal("Снятие блокировки восстановило старый токен")
 	}
 	securityHTTP02912(t, client, a.server.URL+"/api/v1/auth/sessions", http.MethodGet, "", second.Data.Tokens.AccessToken, http.StatusUnauthorized)
 }

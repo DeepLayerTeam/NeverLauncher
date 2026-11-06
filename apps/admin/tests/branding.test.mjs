@@ -78,7 +78,7 @@ const brand = {
   textColor: "#ffffff",
   news: [{ title: "Обновление", url: "https://example.com/news" }],
 };
-test("root signed v1 -> branding edit -> new signed payload verifies; tampering rejected", async () => {
+test("Подпись корня v1, изменение оформления, проверка нового подписанного содержимого; подмена отклоняется", async () => {
   const root = await keypair();
   const raw = enc.encode(JSON.stringify(bootstrap(root.public)));
   const original = JSON.stringify({
@@ -133,7 +133,7 @@ test("root signed v1 -> branding edit -> new signed payload verifies; tampering 
     /подпись/,
   );
 });
-test("delegated signed v2 -> root policy -> modified signed bootstrap remains v2", async () => {
+test("Делегированная подпись v2, политика корня, изменённый подписанный Bootstrap остаётся версией v2", async () => {
   const root = await keypair(),
     delegate = await keypair();
   const now = new Date();

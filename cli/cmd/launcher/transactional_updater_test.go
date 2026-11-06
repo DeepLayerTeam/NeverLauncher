@@ -149,7 +149,7 @@ func TestTransactionalUpdaterCrashRecovery0156(t *testing.T) {
 	}
 	recovered, _ := report["recovered"].([]string)
 	if len(recovered) != 1 || recovered[0] != journal.ID {
-		t.Fatalf("recovery report=%v", report)
+		t.Fatalf("Отчёт о восстановлении=%v", report)
 	}
 	if raw, _ := os.ReadFile(dst); string(raw) != "old" {
 		t.Fatalf("Восстановление после сбоя не вернуло исходный файл: %q", raw)

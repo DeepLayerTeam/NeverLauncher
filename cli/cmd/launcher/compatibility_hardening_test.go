@@ -52,7 +52,7 @@ func TestDownloadVanillaArtifactResumesVerifiedPartial(t *testing.T) {
 	}
 	got, err := os.ReadFile(dest)
 	if err != nil || string(got) != string(payload) {
-		t.Fatalf("final payload mismatch: %q / %v", got, err)
+		t.Fatalf("Несоответствие итогового содержимого: %q / %v", got, err)
 	}
 	if _, err := os.Stat(dest + ".nlpart"); !os.IsNotExist(err) {
 		t.Fatalf("После публикации остался частично загруженный файл: %v", err)
@@ -140,12 +140,12 @@ func TestVanillaMetadataRecoveryExactVersionOnly(t *testing.T) {
 	root := t.TempDir()
 	first, err := resolveVanillaMetadataWithRecovery(context.Background(), server.Client(), root, server.URL+"/manifest.json", "1.20.4")
 	if err != nil || first.Recovered {
-		t.Fatalf("initial upstream fetch failed/recovered unexpectedly: %+v / %v", first, err)
+		t.Fatalf("Первоначальная загрузка из источника неожиданно завершилась сбоем или восстановлением: %+v / %v", first, err)
 	}
 	manifestUp.Store(false)
 	second, err := resolveVanillaMetadataWithRecovery(context.Background(), server.Client(), root, server.URL+"/manifest.json", "1.20.4")
 	if err != nil || !second.Recovered || string(second.Bytes) != string(versionBytes) {
-		t.Fatalf("exact-version recovery failed: %+v / %v", second, err)
+		t.Fatalf("Не удалось восстановить точную версию: %+v / %v", second, err)
 	}
 	if _, err := resolveVanillaMetadataWithRecovery(context.Background(), server.Client(), root, server.URL+"/manifest.json", "latest-release"); err == nil {
 		t.Fatal("Последний релиз неожиданно получен из устаревшего кеша метаданных")
@@ -185,7 +185,7 @@ func TestDownloadVanillaArtifactRepairsCorruptCompletedPartialInSameRun(t *testi
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests.Add(1)
 		if got := r.Header.Get("Range"); got != "" {
-			t.Fatalf("corrupt completed partial must restart from zero, got Range=%q", got)
+			t.Fatalf("Повреждённая завершённая частичная загрузка должна начинаться заново, получен Range=%q", got)
 		}
 		w.Header().Set("Content-Length", fmt.Sprint(len(payload)))
 		_, _ = w.Write(payload)
@@ -199,11 +199,11 @@ func TestDownloadVanillaArtifactRepairsCorruptCompletedPartialInSameRun(t *testi
 		t.Fatal(err)
 	}
 	if result.Resumed || requests.Load() != 1 {
-		t.Fatalf("expected one clean restart, got result=%+v requests=%d", result, requests.Load())
+		t.Fatalf("Ожидался один запуск с чистого состояния, получено: результат=%+v запросов=%d", result, requests.Load())
 	}
 	got, err := os.ReadFile(dest)
 	if err != nil || string(got) != string(payload) {
-		t.Fatalf("repaired payload mismatch: %q / %v", got, err)
+		t.Fatalf("Несоответствие восстановленного содержимого: %q / %v", got, err)
 	}
 }
 

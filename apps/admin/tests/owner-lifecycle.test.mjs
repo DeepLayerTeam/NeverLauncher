@@ -59,7 +59,7 @@ async function scripted(handlers, fn) {
   }
 }
 
-test("recovery uses project, backend and session boundary; tokens stored", () => {
+test("Восстановление учитывает границы проекта, Backend и сеанса; токены сохранены", () => {
   const store = fakeStore();
   const a = recoveryStorageKey("https://api.example/", "owner", "s1");
   assert.notEqual(a, recoveryStorageKey("https://api.example", "owner", "s2"));
@@ -74,7 +74,7 @@ test("recovery uses project, backend and session boundary; tokens stored", () =>
   clearOwnerPending(store, a);
   assert.equal(readOwnerPending(store, a, "owner"), null);
 });
-test("corrupt and foreign persistent intents fail closed", () => {
+test("Повреждённые и чужие сохранённые намерения безопасно отклоняются", () => {
   const store = fakeStore();
   const key = "intent";
   for (const value of [
@@ -97,7 +97,7 @@ test("corrupt and foreign persistent intents fail closed", () => {
     /Недопустимый/,
   );
 });
-test("owner validates a real channel head and Backend preview before allowing execution", async () => {
+test("Владелец проверяет реальную текущую версию канала и предпросмотр Backend до выполнения", async () => {
   await scripted(
     {
       "/api/v1/projects/owner/profiles/fabric/channels/stable/head": before,
@@ -170,7 +170,7 @@ test("Отклоняет несовпадение версии канала, н�
     /Некорректная/,
   );
 });
-test("pending/failed jobs cannot be presented as published", async () => {
+test("Ожидающие или неудачные задания не отображаются как опубликованные", async () => {
   for (const [status, phase] of [
     ["pending", "waiting"],
     ["running", "waiting"],
@@ -199,7 +199,7 @@ test("pending/failed jobs cannot be presented as published", async () => {
     );
   }
 });
-test("successful publish requires the ACTUAL channel head at expected package", async () => {
+test("Успешная публикация требует фактической текущей версии канала с ожидаемым пакетом", async () => {
   for (const [head, phase] of [
     [before, "unconfirmed"],
     [{ ...after, releaseId: "other-pkg" }, "unconfirmed"],
@@ -231,7 +231,7 @@ test("successful publish requires the ACTUAL channel head at expected package", 
     );
   }
 });
-test("project or resource mismatch in durable job fails closed", async () => {
+test("Несоответствие проекта или ресурса в устойчивом задании приводит к безопасному отказу", async () => {
   for (const job of [
     {
       id: "job-1",
@@ -259,7 +259,7 @@ test("project or resource mismatch in durable job fails closed", async () => {
     );
   }
 });
-test("rollback to stable is STAGED when real Backend requires trusted runtime evidence", async () => {
+test("Откат на стабильную версию остаётся подготовленным, пока Backend требует доверенные свидетельства Runtime", async () => {
   const rollback = {
     intent: {
       ...intent,
@@ -294,7 +294,7 @@ test("rollback to stable is STAGED when real Backend requires trusted runtime ev
     },
   );
 });
-test("successful rollback requires exact newly published package from job result", async () => {
+test("Успешный откат требует точного нового опубликованного пакета из результата задания", async () => {
   const rollback = {
     intent: {
       ...intent,
@@ -341,7 +341,7 @@ test("successful rollback requires exact newly published package from job result
     );
   }
 });
-test("API retry reuses exact intent and authenticated endpoint", async () => {
+test("Повтор запроса API использует то же намерение и авторизованный маршрут", async () => {
   await scripted(
     {
       "/api/v1/operations/execute": {

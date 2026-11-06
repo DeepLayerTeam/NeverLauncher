@@ -16,16 +16,16 @@ func TestProviderCredentialEncryptionRoundTripAndAADBinding116(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(ciphertext, "microsoft-refresh-secret") || !strings.HasPrefix(ciphertext, "v1.") {
-		t.Fatalf("provider credential is not safely enveloped: %q", ciphertext)
+		t.Fatalf("Учётные данные провайдера не защищены надлежащим образом: %q", ciphertext)
 	}
 	item.EncryptedRefreshToken = ciphertext
 	plain, err := s.decryptProviderCredential116(item)
 	if err != nil || plain != "microsoft-refresh-secret" {
-		t.Fatalf("round trip failed plain=%q err=%v", plain, err)
+		t.Fatalf("Ошибка сохранения и чтения: исходное=%q ошибка=%v", plain, err)
 	}
 	item.Subject = "tenant:other-object"
 	if _, err := s.decryptProviderCredential116(item); err == nil {
-		t.Fatal("expected AAD-bound credential to reject subject substitution")
+		t.Fatal("Ожидалось, что учётные данные с привязкой к AAD отклонят подмену субъекта")
 	}
 }
 
@@ -37,6 +37,6 @@ func TestProviderCredentialEncryptionRejectsWrongServerSecret116(t *testing.T) {
 	}
 	other := Server{Config: config.Config{AuthTokenSecret: "server-secret-two-012345678901234567890"}}
 	if _, err := other.decryptProviderCredential116(model.ProviderCredential{UserID: "user", IdentityID: "identity", Provider: "microsoft", Subject: "tenant:object", EncryptedRefreshToken: ciphertext}); err == nil {
-		t.Fatal("expected credential encrypted by another deployment secret to fail")
+		t.Fatal("Учётные данные, зашифрованные другим секретом установки, должны отклоняться")
 	}
 }

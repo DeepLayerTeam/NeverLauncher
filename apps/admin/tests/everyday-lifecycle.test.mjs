@@ -5,22 +5,22 @@ import { canSeeSection, can } from '../src/admin/permissions.ts';
 import { requestJSON } from '../src/api/client.ts';
 
 const viewer = {user:{id:'alice',email:'a@example.test',roleId:'viewer'},permissions:[],projectPermissions:{alpha:['project:read']}};
-test('personal sessions remain visible without global users:manage, admin controls do not', () => {
+test('Личные сеансы доступны без глобального users:manage, в отличие от средств администрирования', () => {
  assert.equal(canSeeSection(viewer,'devices','alpha'),true);
  assert.equal(can(viewer,'users:manage'),false);
  assert.equal(canSeeSection(viewer,'backup-restore','alpha'),false);
 });
-test('audit deep links encode correlation and extension identifiers', () => {
+test('Глубокие ссылки аудита кодируют идентификаторы корреляции и расширений', () => {
  assert.equal(auditHref('job_a/b ?'), '#/audit?query=job_a%2Fb%20%3F');
  assert.equal(auditHref('extension.demo'), '#/audit?query=extension.demo');
 });
-test('recovery advice differentiates auth, conflict and indeterminate transport', () => {
+test('Рекомендации по восстановлению различают авторизацию, конфликт и неопределённый транспорт', () => {
  assert.match(recoveryAdvice('403 forbidden'),/полномочия/i);
  assert.match(recoveryAdvice('step-up required'),/вход|step-up/i);
  assert.match(recoveryAdvice('409 conflict'),/обновите/i);
  assert.match(recoveryAdvice('network timeout'),/аудит/i);
 });
-test('job browsing uses the authenticated, project-scoped API response envelope', async () => {
+test('Список заданий использует авторизованный ответ API, ограниченный текущим проектом', async () => {
  const old = globalThis.fetch;
  try {
   globalThis.fetch = async (url, init) => {
@@ -32,7 +32,7 @@ test('job browsing uses the authenticated, project-scoped API response envelope'
   assert.deepEqual(result.items.map(j=>j.id),['job1']);
  } finally {globalThis.fetch=old;}
 });
-test('backup restore payload requires an explicit selected archive and components', () => {
+test('Восстановление из резервной копии требует явно выбранного архива и компонентов', () => {
  const body = JSON.stringify({confirm:'backup-id',database:true,storage:false});
  assert.deepEqual(JSON.parse(body),{confirm:'backup-id',database:true,storage:false});
 });

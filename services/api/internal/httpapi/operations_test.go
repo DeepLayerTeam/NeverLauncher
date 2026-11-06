@@ -101,11 +101,11 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 			jobID = rr.Header().Get("X-Correlation-ID")
 		}
 		if received.Data.RollbackVersion != first.Data.RollbackVersion || received.Data.PackageID != first.Data.PackageID || rr.Header().Get("X-Correlation-ID") != jobID {
-			t.Fatalf("duplicate rollback created different release/job: first=%+v next=%+v", first, received)
+			t.Fatalf("Повторный откат создал другой релиз или задание: первый=%+v следующий=%+v", first, received)
 		}
 	}
 	if first.Data.Status != "rolled-back-as-new-validated-immutable-release" || jobID == "" {
-		t.Fatalf("rollback not published: %+v correlation=%s", first, jobID)
+		t.Fatalf("Откат не опубликован: %+v корреляция=%s", first, jobID)
 	}
 	// Успешный устойчивый откат ОБЯЗАН действительно продвинуть head канала;
 	// повтор той же задачи не должен продвигать его снова.
@@ -114,7 +114,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("read head: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Чтение текущей версии: %d %s", rr.Code, rr.Body.String())
 	}
 	var observed struct {
 		Data struct {
@@ -126,7 +126,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 		t.Fatal(err)
 	}
 	if observed.Data.ReleaseID != first.Data.PackageID || observed.Data.Revision != 2 {
-		t.Fatalf("rollback job did not atomically advance channel to its own package: %+v", observed)
+		t.Fatalf("Задание отката не перевело канал атомарно на собственный пакет: %+v", observed)
 	}
 	req = httptest.NewRequest("POST", "/api/v1/channels/dev/rollback", strings.NewReader(`{"projectId":"demo-project","profileId":"fabric","toVersion":"0.21.7-idem"}`))
 	auth(req)
@@ -134,7 +134,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != 409 {
-		t.Fatalf("same key with changed intent should conflict: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Одинаковый ключ с изменённым назначением должен вызывать конфликт: %d %s", rr.Code, rr.Body.String())
 	}
 
 }
@@ -150,7 +150,7 @@ func TestOperationRoutesRequireAuthentication0217(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, httptest.NewRequest(tc.method, tc.path, nil))
 		if rr.Code != http.StatusUnauthorized {
-			t.Errorf("%s %s: expected 401 got %d %s", tc.method, tc.path, rr.Code, rr.Body.String())
+			t.Errorf("%s %s: ожидался 401, получен %d %s", tc.method, tc.path, rr.Code, rr.Body.String())
 		}
 	}
 }
@@ -185,7 +185,7 @@ func TestPublishPreviewRejectsWrongChannel0386(t *testing.T) {
 		body, _ := json.Marshal(map[string]string{"kind": "package-publish", "projectId": "demo-project", "resourceId": pkg.Data.PackageID, "profileId": tc.profile, "channel": tc.channel})
 		res := request("/api/v1/operations/validate", string(body))
 		if res.Code != http.StatusConflict {
-			t.Errorf("wrong %s/%s should conflict, got %d %s", tc.profile, tc.channel, res.Code, res.Body.String())
+			t.Errorf("Неверное сочетание %s/%s должно вызывать конфликт, получено %d %s", tc.profile, tc.channel, res.Code, res.Body.String())
 		}
 	}
 }

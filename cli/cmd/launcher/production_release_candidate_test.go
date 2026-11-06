@@ -48,13 +48,13 @@ func TestProductionReleaseCandidate01511BindsExactCohort(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err != nil {
-		t.Fatalf("post-certification signature file must not change cohort: %v", err)
+		t.Fatalf("Файл подписи после сертификации не должен изменять состав группы: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "artifact-a.bin"), []byte("tampered"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err == nil || !strings.Contains(err.Error(), "cohort mismatch") {
-		t.Fatalf("tampered cohort accepted: %v", err)
+		t.Fatalf("Принята изменённая группа: %v", err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestProductionReleaseCandidate01511RejectsInjectedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err == nil || !strings.Contains(err.Error(), "cohort size mismatch") {
-		t.Fatalf("injected post-certification file accepted: %v", err)
+		t.Fatalf("Принят файл, добавленный после сертификации: %v", err)
 	}
 }
 
@@ -99,7 +99,7 @@ func TestSLSAProvenance01511CarriesExactSourceCommit(t *testing.T) {
 func TestNormalizeSourceCommit01511RejectsPlaceholders(t *testing.T) {
 	for _, value := range []string{"", "HEAD", "deadbeef", strings.Repeat("g", 40)} {
 		if _, err := normalizeSourceCommit01511(value); err == nil {
-			t.Fatalf("invalid source commit accepted: %q", value)
+			t.Fatalf("Принят недопустимый исходный коммит: %q", value)
 		}
 	}
 }

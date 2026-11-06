@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { NeverLauncherAPI, ApiError, resolvePath, OPERATIONS } from '../dist/client.js';
 
-test('real HTTP, auth, status/error, legacy compatibility and path escaping', async () => {
+test('Настоящий HTTP, авторизация, статусы и ошибки, совместимость со старой версией и экранирование путей', async () => {
  const server = createServer((req,res) => {
   if (req.url === '/ready') { res.end('{"version":"0.45.11"}'); return; }
   assert.equal(req.headers.authorization, 'Bearer token');

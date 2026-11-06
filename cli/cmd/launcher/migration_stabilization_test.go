@@ -33,15 +33,15 @@ func TestMigrationStabilization01510MigratesLegacyComponentState(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !report.Migrated || report.Version != "0.15.9" {
-		t.Fatalf("unexpected migration report: %+v", report)
+		t.Fatalf("Неожиданный отчёт о миграции: %+v", report)
 	}
 	if _, err := os.Stat(legacyPath); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("legacy state still exists: %v", err)
+		t.Fatalf("Устаревшее состояние по-прежнему существует: %v", err)
 	}
 	canonical := filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))
 	state, ok, err := readComponentUpdateStateOptional01510(canonical)
 	if err != nil || !ok || state.Version != "0.15.9" {
-		t.Fatalf("canonical state invalid: ok=%v state=%+v err=%v", ok, state, err)
+		t.Fatalf("Каноническое состояние некорректно: ok=%v состояние=%+v ошибка=%v", ok, state, err)
 	}
 }
 
@@ -71,10 +71,10 @@ func TestReleaseTrustState01510MigratesAndBindsSameVersionManifest(t *testing.T)
 		t.Fatal(err)
 	}
 	if state.SchemaVersion != releaseTrustStateSchema01510 || state.HighestReleaseManifestSHA256 != digest || state.StateRevision != 1 {
-		t.Fatalf("unexpected migrated trust state: %+v", state)
+		t.Fatalf("Неожиданное перенесённое состояние доверия: %+v", state)
 	}
 	if err := precheckTrustState0158(statePath, rootFP, 10, "0.15.10", strings.Repeat("d", 64)); err == nil {
-		t.Fatal("same-version manifest replacement must be rejected")
+		t.Fatal("Замена манифеста без изменения версии должна отклоняться")
 	}
 }
 
@@ -94,7 +94,7 @@ func TestReleaseTrustStateLock01510RejectsConcurrentVerifier(t *testing.T) {
 	if err := withReleaseTrustStateLock01510(state, func() error { return nil }); err == nil {
 		close(release)
 		<-done
-		t.Fatal("concurrent verifier unexpectedly acquired trust-state lock")
+		t.Fatal("Параллельная проверка неожиданно захватила блокировку состояния доверия")
 	}
 	close(release)
 	if err := <-done; err != nil {
@@ -117,12 +117,12 @@ func TestTransactionalUpdater01510CleansRollbackPayload(t *testing.T) {
 	}
 	spec := updaterTestSpec0156(t, "app.bin", filepath.Join(source, "app.bin"), false)
 	if _, err := updater.apply(updaterRequest0156{Root: root, Files: []updaterFileSpec0156{spec}, Verify: func() error { return errors.New("rollback") }}); err == nil {
-		t.Fatal("expected rollback")
+		t.Fatal("Ожидался откат")
 	}
 	txRoot := filepath.Join(updater.controlDir, "transactions")
 	entries, err := os.ReadDir(txRoot)
 	if err != nil || len(entries) == 0 {
-		t.Fatalf("missing transaction journal: %v", err)
+		t.Fatalf("Отсутствует журнал транзакции: %v", err)
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -130,7 +130,7 @@ func TestTransactionalUpdater01510CleansRollbackPayload(t *testing.T) {
 		}
 		for _, payload := range []string{"stage", "backup"} {
 			if _, err := os.Stat(filepath.Join(txRoot, entry.Name(), payload)); !errors.Is(err, os.ErrNotExist) {
-				t.Fatalf("terminal payload %s still exists: %v", payload, err)
+				t.Fatalf("Конечный файл %s по-прежнему существует: %v", payload, err)
 			}
 		}
 	}

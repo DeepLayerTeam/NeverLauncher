@@ -43,7 +43,7 @@ func TestGuardPolicyOperations05011HistoryDiagnoseAndRollback(t *testing.T) {
 	}
 	items := report["items"].([]guardHistoryItem05011)
 	if len(items) != 2 || items[0].Epoch != 2 || items[1].Epoch != 1 || !items[0].Current {
-		t.Fatalf("wrong history: %+v", items)
+		t.Fatalf("Неверная история: %+v", items)
 	}
 	// Без новой подписи в более высокой эпохе нельзя восстановить предыдущую политику.
 	if err := guardCompatAuthorizeRollback05011(root, key, first); err == nil {
@@ -53,7 +53,7 @@ func TestGuardPolicyOperations05011HistoryDiagnoseAndRollback(t *testing.T) {
 	p.RevokedDigests = nil
 	bad := signCompat0502(t, p, priv)
 	if err := guardCompatAuthorizeRollback05011(root, key, bad); err == nil {
-		t.Fatal("rollback cleared revocation")
+		t.Fatal("Откат отменил отзыв доверия")
 	}
 	p.RevokedDigests = []string{a.SHA256}
 	good := signCompat0502(t, p, priv)
@@ -100,7 +100,7 @@ func TestGuardPolicyOperations05011CrashAndHistoryTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := guardCompatInstall0502(root, signCompat0502(t, policyFixture0502(), priv), key); err == nil {
-		t.Fatal("downgrade succeeded")
+		t.Fatal("Понижение версии завершилось успешно")
 	}
 	archived, _ := guardCompatPath0502(root, guardHistoryDir05011+"/"+guardHistoryName05011(v))
 	if err := os.WriteFile(archived, []byte("corrupted"), 0600); err != nil {
@@ -108,7 +108,7 @@ func TestGuardPolicyOperations05011CrashAndHistoryTampering(t *testing.T) {
 	}
 	report, err := guardCompatOperation05011(root, key, []string{"guard-policy-history"})
 	if err == nil || report["status"] != "blocked" {
-		t.Fatal("corrupt history was accepted")
+		t.Fatal("Принята повреждённая история")
 	}
 }
 
@@ -124,7 +124,7 @@ func TestGuardPolicyOperations05011ExpiredPolicyCanRotate(t *testing.T) {
 	raw, _ := os.ReadFile(first)
 	v, err := guardCompatHistoricalVerify05011(root, key, raw)
 	if err != nil || v.Policy.Epoch != 1 {
-		t.Fatalf("historical verifier: %v", err)
+		t.Fatalf("Проверка исторических данных: %v", err)
 	}
 	report, err := guardCompatOperation05011(root, key, []string{"guard-policy-diagnose", "--project", "another"})
 	if err == nil || !strings.Contains(report["detail"].(string), "scope") {

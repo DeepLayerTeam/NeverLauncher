@@ -15,7 +15,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	identity := newTestBridgeNodeIdentity0142(t)
 	res := registerTestBridgeNode0142(t, handler, adminToken, "velocity-main", "Velocity Main", "velocity", "demo-project", "vanilla", identity)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("register server => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Регистрация сервера => %d %s", res.Code, res.Body.String())
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin","deviceId":"desktop-smoke"}`))
@@ -24,7 +24,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("player login => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Вход игрока => %d %s", res.Code, res.Body.String())
 	}
 	var loginPayload struct {
 		Data struct {
@@ -45,7 +45,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "joined") {
-		t.Fatalf("session join => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Подключение сеанса => %d %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/session/has-joined?username=AdminPlayer&serverId=velocity-main", nil)
@@ -53,7 +53,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "launcher") {
-		t.Fatalf("has-joined => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Проверка has-joined => %d %s", res.Code, res.Body.String())
 	}
 	var joined struct {
 		ID string `json:"id"`
@@ -69,7 +69,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusNotFound {
-		t.Fatalf("replayed has-joined must be denied => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Повторная проверка has-joined должна отклоняться => %d %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/textures/"+joined.ID, nil)

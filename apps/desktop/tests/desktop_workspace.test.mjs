@@ -25,26 +25,26 @@ function flatten(element){if(element==null||typeof element!=='object')return [];
 function buttons(tree){return flatten(tree).filter(node=>node.type==='button');}
 function label(node){return JSON.stringify(node.children.map(x=>typeof x==='string'?x:x?.children||[]));}
 function buttonWith(tree,s){const match=buttons(tree).find(b=>label(b).includes(s));assert.ok(match,`No button for ${s}`);return match;}
-test('build catalog buttons execute selected project/profile operations and navigation',()=>{
+test('Кнопки каталога сборок выполняют операции выбранного проекта и профиля, а также навигацию',()=>{
  const events=[];
  const tree=BuildsWorkspace0353({projects:[{id:'p',title:'Example'}],profiles:[{id:'client',name:'Client'}],selectedProject:'p',selectedProfile:'client',manifest:{projectId:'p',profileId:'client',version:'v1',channel:'stable',minecraft:{version:'1.20',loader:'Fabric'},files:[{path:'a'}]},signedProject:'',signedProfile:'',loading:false,error:'',refresh:()=>events.push('reload'),chooseProject:id=>events.push(`project:${id}`),chooseProfile:id=>events.push(`profile:${id}`),showMods:()=>events.push('mods'),showDownloads:()=>events.push('downloads')});
  buttonWith(tree,'Example').props.onClick();buttonWith(tree,'Client').props.onClick();
  buttonWith(tree,'Выбрать моды').props.onClick();buttonWith(tree,'Установка / проверка').props.onClick();
  assert.deepEqual(events,['project:p','profile:client','mods','downloads']);
 });
-test('signed workspace cannot choose another project/profile',()=>{
+test('Подписанная рабочая область не позволяет выбрать другой проект или профиль',()=>{
  const tree=BuildsWorkspace0353({projects:[{id:'owner'},{id:'other'}],profiles:[{id:'fixed'},{id:'other-profile'}],selectedProject:'owner',selectedProfile:'fixed',manifest:null,signedProject:'owner',signedProfile:'fixed',loading:false,error:'',refresh:()=>{},chooseProject:()=>{},chooseProfile:()=>{},showMods:()=>{},showDownloads:()=>{}});
  assert.equal(buttonWith(tree,'other').props.disabled,true);
  assert.equal(buttonWith(tree,'other-profile').props.disabled,true);
 });
-test('server browser dispatches only active server, uses native-persist callback',async()=>{
+test('Список серверов выбирает только активный сервер и вызывает нативное сохранение',async()=>{
  const events=[];
  const tree=ServersWorkspace0353({servers:[{id:'a',name:'Alpha',kind:'Paper',health:'healthy',status:'active'}, {id:'b',name:'Beta',kind:'Paper',health:'down',status:'revoked'}],selectedId:'a',signedId:'',autoEnter:false,serverHost:'',serverPort:25565,offline:false,projectId:'p',profileId:'x',error:'',loading:false,reload:()=>events.push('reload'),select:id=>events.push(`select:${id}`),save:async()=>{events.push('save')},onOpenSettings:()=>events.push('settings')});
  assert.equal(buttonWith(tree,'Beta').props.disabled,true);
  buttonWith(tree,'Alpha').props.onClick();await buttonWith(tree,'Сохранить выбор').props.onClick();
  assert.deepEqual(events,['select:a','save']);
 });
-test('history exposes native entries, filters and invokes actual refresh/stop callbacks',()=>{
+test('История показывает нативные записи, фильтры и действительно вызывает обновление или остановку',()=>{
  const events=[];
  const tree=HistoryWorkspace0353({entries:[{startedAt:'2026-10-28T01:00:00Z',success:false,projectId:'p',profileId:'main',version:'1',message:'crashed',logPath:'/logs/mc.log'}],loading:false,error:'',reload:()=>events.push('reload'),activeProcess:{id:'pid',state:'running',message:'running'},onStop:()=>events.push('stop')});
  buttonWith(tree,'Обновить историю').props.onClick();buttonWith(tree,'Остановить Minecraft').props.onClick();

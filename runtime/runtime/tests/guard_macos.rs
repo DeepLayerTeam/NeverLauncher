@@ -11,10 +11,10 @@ async fn macos_guard_authenticated_boundary_and_attestation() {
     let guard = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
     let supervisor = GuardSupervisor::with_executable(guard);
 
-    let status = supervisor.ensure_started().await.expect("start Guard");
+    let status = supervisor.ensure_started().await.expect("запуск Guard");
     assert!(status.authenticated && status.process_policy_enforced && status.hardening_enforced);
     assert!(status.secure_pipe_acl && status.lifetime_job_enforced);
-    supervisor.ping().await.expect("authenticated ping");
+    supervisor.ping().await.expect("проверочный запрос с аутентификацией");
 
     let policy = supervisor.process_policy().await.expect("получить политику процессов macOS");
     assert_eq!(policy.schema, GUARD_MACOS_PROCESS_POLICY_SCHEMA);
@@ -29,10 +29,10 @@ async fn macos_guard_authenticated_boundary_and_attestation() {
     let guard_state = evidence.guard.macos.as_ref().expect("получить данные Guard для macOS");
     assert!(guard_state.code_signature_valid && guard_state.hardened_runtime && guard_state.library_validation);
 
-    let attestation = supervisor.remote_attestation("challenge-macos-1", "server-random-challenge").await.expect("macOS attestation");
+    let attestation = supervisor.remote_attestation("challenge-macos-1", "server-random-challenge").await.expect("аттестация macOS");
     assert_eq!(attestation.challenge_id, "challenge-macos-1");
     assert_eq!(attestation.evidence.evidence_sha256.len(), 64);
     assert_eq!(attestation.attestation_sha256.len(), 64);
 
-    supervisor.shutdown().await.expect("shutdown Guard");
+    supervisor.shutdown().await.expect("завершение работы Guard");
 }

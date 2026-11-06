@@ -5,7 +5,7 @@ import { endpointForSection } from '../src/admin/sections.ts';
 import { requestJSON, ApiError, collection } from '../src/api/client.ts';
 
 const scoped = { user: { id: 'u', email: 'u@example.test', roleId: 'viewer' }, permissions: [], projectPermissions: { alpha: ['project:read', 'project:write', 'release:prepare'], beta: ['project:read'] } };
-test('project actions are not silently granted outside project scope', () => {
+test('Действия проекта не разрешаются неявно за пределами проекта', () => {
   assert.equal(can(scoped, 'project:write', 'alpha'), true);
   assert.equal(can(scoped, 'project:write', 'beta'), false);
   assert.equal(can(scoped, 'project:write'), false);
@@ -16,16 +16,16 @@ test('project actions are not silently granted outside project scope', () => {
   assert.equal(canSeeSection(scoped, 'server-bridge', 'unknown'), false);
   assert.equal(canSeeSection(null, 'dashboard', 'alpha'), false);
 });
-test('global wildcard remains an owner-only permission projection', () => {
+test('Глобальная маска разрешений доступна только владельцу', () => {
   const owner = { ...scoped, permissions: ['*'] };
   assert.equal(can(owner, 'users:manage'), true);
   assert.equal(canSeeSection(owner, 'backup-restore', ''), true);
 });
-test('project URL parameters are encoded and unrelated pages use global routes', () => {
+test('Параметры URL проекта кодируются; прочие страницы используют глобальные маршруты', () => {
   assert.equal(endpointForSection('profiles', 'a/b c'), '/api/v1/projects/a%2Fb%20c/profiles');
   assert.equal(endpointForSection('users', 'a/b'), '/api/v1/admin/users');
 });
-test('API unwraps real backend shapes and sets authorization without cache', async () => {
+test('API разбирает реальные ответы Backend и задаёт авторизацию без кеширования', async () => {
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async (url, init) => {
@@ -38,18 +38,18 @@ test('API unwraps real backend shapes and sets authorization without cache', asy
     assert.deepEqual(data.permissions, ['project:read']);
   } finally { globalThis.fetch = original; }
 });
-test('HTTP errors preserve actual status and reason', async () => {
+test('Ошибки HTTP сохраняют реальный статус и причину', async () => {
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async () => ({ ok: false, status: 403, statusText: 'Forbidden', json: async () => ({ error: { message: 'project denied', reasonCode: 'project-membership-required' } }) });
     await assert.rejects(requestJSON('https://example.test', '/api/v1/admin/users', 'token'), err => err instanceof ApiError && err.status === 403 && err.reasonCode === 'project-membership-required');
   } finally { globalThis.fetch = original; }
 });
-test('item extraction rejects nested payloads that are not collection rows', () => {
+test('Извлечение элементов отклоняет вложенные данные, не являющиеся строками коллекции', () => {
   assert.deepEqual(collection({ items: [{ id: 'a' }, null, 'bad'] }), [{ id: 'a' }]);
 });
 
-test('typed Admin API uses access-filtered overview instead of public projects endpoint', async () => {
+test('Типизированный API Admin использует обзор с фильтрацией доступа вместо публичного маршрута проектов', async () => {
   const { AdminApi } = await import('../src/api/admin.ts');
   const original = globalThis.fetch;
   const visited = [];
@@ -66,7 +66,7 @@ test('typed Admin API uses access-filtered overview instead of public projects e
   } finally { globalThis.fetch = original; }
 });
 
-test('collection tables search, facet, numeric sort, pagination and empty pages', async () => {
+test('Таблицы коллекций поддерживают поиск, фильтры, числовую сортировку, страницы и пустые результаты', async () => {
   const { filterSortRows, paginateRows } = await import('../src/components/resource-model.ts');
   const columns = [{ field: 'name', title: 'Name' }, { field: 'status', title: 'Status', facet: true }, { field: 'size', title: 'Size' }];
   const rows = [{ name: 'Beta', status: 'draft', size: 20 }, { name: 'Alpha', status: 'live', size: 5 }, { name: 'Gamma', status: 'live', size: 30 }];
@@ -79,7 +79,7 @@ test('collection tables search, facet, numeric sort, pagination and empty pages'
 });
 
 
-test('Unified Operations is a project-scoped functional Admin route', () => {
+test('Единые операции работают в маршруте Admin с ограничением по проекту', () => {
   assert.equal(endpointForSection('operations', 'demo-project'), '/api/v1/operations');
   assert.equal(canSeeSection(scoped, 'operations', 'alpha'), true);
   assert.equal(canSeeSection(scoped, 'operations', 'unknown'), false);

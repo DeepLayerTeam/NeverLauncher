@@ -90,16 +90,16 @@ func TestInstallRepairUninstallKeepsGameData(t *testing.T) {
 		t.Fatal(e)
 	}
 	if strings.Count(string(raw), "--no-desktop") != 2 || !strings.Contains(string(raw), "--offline") {
-		t.Fatalf("incorrect launch args: %s", raw)
+		t.Fatalf("Неверные аргументы запуска: %s", raw)
 	}
 	if e = Uninstall(opts); e != nil {
 		t.Fatal(e)
 	}
 	if data, e := os.ReadFile(game); e != nil || string(data) != "save data" {
-		t.Fatal("uninstall deleted user save")
+		t.Fatal("Удаление программы затронуло пользовательское сохранение")
 	}
 	if _, e = os.Stat(filepath.Join(opts.Root, ".launcher-installer")); !os.IsNotExist(e) {
-		t.Fatal("installer-owned files remain")
+		t.Fatal("Остались файлы, созданные установщиком")
 	}
 }
 func TestTamperedSignedBundleRejected(t *testing.T) {
@@ -116,7 +116,7 @@ func TestTamperedSignedBundleRejected(t *testing.T) {
 		t.Fatal("Принят повреждённый исполняемый файл")
 	}
 	if e := Install(context.Background(), opts); e == nil {
-		t.Fatal("installer accepted tampered binary")
+		t.Fatal("Установщик принял изменённый исполняемый файл")
 	}
 }
 func TestOfflineMissingObjectRejected(t *testing.T) {
@@ -133,7 +133,7 @@ func TestCannotReplaceRootTrust(t *testing.T) {
 	opts := signedBundle(t, root, false)
 	opts.TrustedKey = strings.Repeat("0", 64)
 	if _, _, e := VerifyBundle(opts.Bundle, opts.TrustedKey, false); e == nil {
-		t.Fatal("untrusted signing root accepted")
+		t.Fatal("Принят недоверенный корень подписи")
 	}
 }
 

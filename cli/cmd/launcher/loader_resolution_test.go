@@ -24,17 +24,17 @@ func TestLoaderResolutionLockRoundTripAndTamperDetection(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !compatibilitySHA256RE.MatchString(lockSHA) || !compatibilitySHA256RE.MatchString(persisted.ReproducibilitySHA256) {
-		t.Fatalf("invalid lock hashes: lock=%s reproducibility=%s", lockSHA, persisted.ReproducibilitySHA256)
+		t.Fatalf("Недопустимые хеши блокировки: lock=%s воспроизводимость=%s", lockSHA, persisted.ReproducibilitySHA256)
 	}
 	loaded, err := readLoaderResolutionLock(path, "fabric", "1.21.1", "latest-stable")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if loaded.ResolvedVersion != "0.16.10" || loaded.ReproducibilitySHA256 != persisted.ReproducibilitySHA256 {
-		t.Fatalf("round trip mismatch: %+v", loaded)
+		t.Fatalf("Несоответствие после сохранения и чтения: %+v", loaded)
 	}
 	if _, err := readLoaderResolutionLock(path, "fabric", "1.21.1", "0.16.10"); err != nil {
-		t.Fatalf("explicit replay of the exact pinned version must be accepted: %v", err)
+		t.Fatalf("Повтор точной закреплённой версии должен приниматься: %v", err)
 	}
 
 	raw, err := os.ReadFile(path)
@@ -51,7 +51,7 @@ func TestLoaderResolutionLockRoundTripAndTamperDetection(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := readLoaderResolutionLock(path, "fabric", "1.21.1", "latest-stable"); err == nil || !strings.Contains(err.Error(), "reproducibility SHA-256 mismatch") {
-		t.Fatalf("tampered lock must fail reproducibility validation, got %v", err)
+		t.Fatalf("Изменённая блокировка должна отклоняться проверкой воспроизводимости, получено: %v", err)
 	}
 }
 
@@ -63,6 +63,6 @@ func TestLoaderResolutionLockRejectsMutableResolvedVersion(t *testing.T) {
 		RuntimeProfileSHA256: strings.Repeat("3", 64), MaterializationSHA256: strings.Repeat("4", 64), ReproducibilitySHA256: strings.Repeat("5", 64),
 	}
 	if err := validateLoaderResolutionLock(&lock, "quilt", "1.21.1", "latest-stable", true); err == nil || !strings.Contains(err.Error(), "immutable resolvedVersion") {
-		t.Fatalf("mutable resolved version accepted: %v", err)
+		t.Fatalf("Принята изменяемая разрешённая версия: %v", err)
 	}
 }

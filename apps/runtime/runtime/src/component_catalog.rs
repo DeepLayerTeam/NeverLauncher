@@ -273,11 +273,11 @@ fn condition_unavailable_0244(c:&CatalogComponent,env:&ComponentEnvironment0244)
     let Some(v)=&c.conditions else{return Ok(None)};
     if !v.os.is_empty()&&!v.os.contains(&env.os){return Ok(Some(format!("ОС {} отсутствует в списке {:?}",env.os,v.os)))}
     if !v.arch.is_empty()&&!v.arch.contains(&env.arch){return Ok(Some(format!("Архитектура {} отсутствует в списке {:?}",env.arch,v.arch)))}
-    if v.java_major_min!=0&&(env.java_major==0||env.java_major<v.java_major_min){return Ok(Some(format!("Java {} below {}",env.java_major,v.java_major_min)))}
-    if v.java_major_max!=0&&(env.java_major==0||env.java_major>v.java_major_max){return Ok(Some(format!("Java {} above {}",env.java_major,v.java_major_max)))}
+    if v.java_major_min!=0&&(env.java_major==0||env.java_major<v.java_major_min){return Ok(Some(format!("Версия Java {} ниже минимальной {}",env.java_major,v.java_major_min)))}
+    if v.java_major_max!=0&&(env.java_major==0||env.java_major>v.java_major_max){return Ok(Some(format!("Версия Java {} выше максимальной {}",env.java_major,v.java_major_max)))}
     if !v.minecraft_versions.is_empty()&&!v.minecraft_versions.contains(&env.minecraft_version){return Ok(Some(format!("Minecraft {} не разрешён",env.minecraft_version)))}
     if !v.minecraft_version_range.is_empty() {
-        if !matches_range_0243(&env.minecraft_version,&v.minecraft_version_range).unwrap_or(false){return Ok(Some(format!("Minecraft {} outside {}",env.minecraft_version,v.minecraft_version_range)))}
+        if !matches_range_0243(&env.minecraft_version,&v.minecraft_version_range).unwrap_or(false){return Ok(Some(format!("Версия Minecraft {} не входит в диапазон {}",env.minecraft_version,v.minecraft_version_range)))}
     }
     if !v.loaders.is_empty()&&!v.loaders.contains(&env.loader){return Ok(Some(format!("Загрузчик {} не разрешён",env.loader)))}
     if !v.loader_version_range.is_empty(){if !matches_range_0243(&env.loader_version,&v.loader_version_range).unwrap_or(false){return Ok(Some(format!("Версия загрузчика {} выходит за диапазон {}",env.loader_version,v.loader_version_range)))}}

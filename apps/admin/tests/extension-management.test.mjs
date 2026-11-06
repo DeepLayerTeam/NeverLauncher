@@ -2,14 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ExtensionManagement0425, lifecyclePayload0425, verifyLifecycle0425 } from '../src/admin/extension_management_0425.ts';
 const globalScope = {scope: 'global', scopeId: ''};
-test('scope, version and channel are validated before a privileged request', () => {
+test('Перед привилегированным запросом проверяются область действия, версия и канал', () => {
   assert.deepEqual(lifecyclePayload0425('install', globalScope, '1.2.3'), {scope:'global', scopeId:'', version:'1.2.3'});
   assert.throws(() => lifecyclePayload0425('install', globalScope), /верси/);
   assert.throws(() => lifecyclePayload0425('update', globalScope, '1.2.3','stable'), /версию или канал/);
   assert.throws(() => lifecyclePayload0425('enable', {scope:'project',scopeId:''}), /область/);
   assert.throws(() => lifecyclePayload0425('update', globalScope, '', 'bad/channel'), /канал/);
 });
-test('lifecycle posts exact server action and checks response envelope', async () => {
+test('Управление жизненным циклом отправляет точное серверное действие и проверяет структуру ответа', async () => {
   const old = globalThis.fetch;
   try {
     globalThis.fetch = async (url, options) => {
@@ -24,7 +24,7 @@ test('lifecycle posts exact server action and checks response envelope', async (
     assert.equal((await manager.lifecycle('update', 'org.example.ext', globalScope,'','stable')).status,'updated');
   } finally { globalThis.fetch = old; }
 });
-test('backend errors, missing data and stale inventory fail closed', async () => {
+test('Ошибки Backend, отсутствующие данные и устаревший перечень приводят к безопасному отказу', async () => {
   const old = globalThis.fetch;
   const mgr = new ExtensionManagement0425('https://backend.test', 'token');
   try {
@@ -38,7 +38,7 @@ test('backend errors, missing data and stale inventory fail closed', async () =>
   assert.equal(verifyLifecycle0425('enable','org.example.ext',globalScope,before,after,{install:after[0]}),'enabled');
   assert.throws(()=>verifyLifecycle0425('enable','org.example.ext',globalScope,before,before,{install:after[0]}), /не подтверждено/);
 });
-test('quarantine release and emergency clear go to protected real endpoints',async()=>{
+test('Снятие карантина и аварийная очистка вызывают реальные защищённые маршруты',async()=>{
   const old=globalThis.fetch; const calls=[];
   try {
     globalThis.fetch = async (url, opts)=>{calls.push([url,opts.method,opts.body]);return {ok:true,json:async()=>({data:{status:'ok'}})};};
@@ -51,7 +51,7 @@ test('quarantine release and emergency clear go to protected real endpoints',asy
     assert.equal(calls[1][1], 'DELETE');
   } finally {globalThis.fetch=old;}
 });
-test('installation, updates, rollback, removal require observed inventory transitions', () => {
+test('Установка, обновление, откат и удаление требуют подтверждённых изменений перечня', () => {
   const before=[{extensionId:'org.example.ext',scope:'global',scopeId:'',currentState:'disabled',currentVersion:'1.0.0',generation:8}];
   const updated=[{...before[0],currentVersion:'1.1.0',generation:9}];
   assert.equal(verifyLifecycle0425('update','org.example.ext',globalScope,before,updated,{install:updated[0]}),'disabled');

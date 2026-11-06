@@ -18,14 +18,14 @@ func TestGuardLoader0504SignedSourceAndRevocation(t *testing.T) {
 	}
 	p.RevokedDigests = []string{library.SHA256}
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("revoked loader accepted")
+		t.Fatal("Отозванный загрузчик был принят")
 	}
 	p.RevokedDigests = nil
 	if err := os.WriteFile(filepath.Join(root, "libraries", "fabric-loader.jar"), []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("tampered loader accepted")
+		t.Fatal("Изменённый загрузчик был принят")
 	}
 }
 func TestGuardLoader0504RejectUnboundOrUnsupportedLoaders(t *testing.T) {
@@ -60,7 +60,7 @@ func TestGuardLoader0504RejectSymlinkAndNonJAR(t *testing.T) {
 		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
-		t.Fatal("symlinked loader accepted")
+		t.Fatal("Загрузчик по символической ссылке был принят")
 	}
 }
 
@@ -75,24 +75,24 @@ func TestGuardLoader0504SignedClassHashBindings(t *testing.T) {
 	}
 	v, err := guardCompatLoad0502(root, key)
 	if err != nil || v == nil {
-		t.Fatalf("signed class hashes not loaded: %v", err)
+		t.Fatalf("Хеши подписанных классов не загружены: %v", err)
 	}
 	props, err := guardLoaderConfig0504(root, v.Policy)
 	if err != nil || !strings.Contains(props, "loader.class.count=1") || !strings.Contains(props, "loader.class.0.sha256="+strings.Repeat("a", 64)) {
-		t.Fatalf("signed class digest not forwarded: %v %s", err, props)
+		t.Fatalf("Дайджест подписанных классов не передан: %v %s", err, props)
 	}
 	p.Epoch++
 	p.LoaderClassBytes = append(p.LoaderClassBytes, p.LoaderClassBytes[0])
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, private), key); err == nil {
-		t.Fatal("duplicate signed class mapping accepted")
+		t.Fatal("Принято повторное сопоставление подписанного класса")
 	}
 	p.LoaderClassBytes[1].Class = "invalid class name"
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, private), key); err == nil {
-		t.Fatal("invalid signed class name accepted")
+		t.Fatal("Принято недопустимое имя подписанного класса")
 	}
 	p.LoaderClassBytes = p.LoaderClassBytes[:1]
 	p.LoaderClassBytes[0].SHA256 = "not-sha256"
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, private), key); err == nil {
-		t.Fatal("invalid class hash accepted")
+		t.Fatal("Принят недопустимый хеш класса")
 	}
 }

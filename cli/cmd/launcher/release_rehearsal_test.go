@@ -18,7 +18,7 @@ func TestRehearsal0365RequiredAndSignedReceipt(t *testing.T) {
 	version := "0.36.5"
 	commit := strings.Repeat("a", 40)
 	if err := verifyRehearsal0365(dir, version, commit); err == nil {
-		t.Fatal("missing receipt accepted")
+		t.Fatal("Принята отсутствующая квитанция")
 	}
 	approval := strings.Repeat("b", 64)
 	receipt := map[string]any{"schemaVersion": "launcher.release.rehearsal.v1",
@@ -61,16 +61,16 @@ func TestRehearsal0365RequiredAndSignedReceipt(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyRehearsal0365(dir, version, commit); err != nil {
-		t.Fatalf("valid signed checksum receipt rejected: %v", err)
+		t.Fatalf("Отклонена действительная подписанная квитанция контрольной суммы: %v", err)
 	}
 	if err := verifyRehearsal0365(dir, version, strings.Repeat("c", 40)); err == nil {
-		t.Fatal("old commit accepted")
+		t.Fatal("Принят устаревший коммит")
 	}
 	original := receipt["version"]
 	receipt["version"] = "0.36.4"
 	write(rehearsalReceipt0365, receipt)
 	if err := verifyRehearsal0365(dir, version, commit); err == nil {
-		t.Fatal("old version accepted")
+		t.Fatal("Принята устаревшая версия")
 	}
 	receipt["version"] = original
 	write(rehearsalReceipt0365, receipt)

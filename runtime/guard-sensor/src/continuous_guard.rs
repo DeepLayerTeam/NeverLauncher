@@ -169,10 +169,10 @@ fn verify_guard_ack_packet(
     if &packet[..8] != CONTINUOUS_GUARD_ACK_MAGIC {
         return Err("Несовпадение: «Continuous Guard Guard-ACK magic»".to_string());
     }
-    let version = u32::from_le_bytes(packet[8..12].try_into().expect("fixed ACK packet"));
-    let packet_pid = u32::from_le_bytes(packet[12..16].try_into().expect("fixed ACK packet"));
-    let guard_sequence = u64::from_le_bytes(packet[16..24].try_into().expect("fixed ACK packet"));
-    let sensor_sequence = u64::from_le_bytes(packet[24..32].try_into().expect("fixed ACK packet"));
+    let version = u32::from_le_bytes(packet[8..12].try_into().expect("ACK-пакет фиксированного размера"));
+    let packet_pid = u32::from_le_bytes(packet[12..16].try_into().expect("ACK-пакет фиксированного размера"));
+    let guard_sequence = u64::from_le_bytes(packet[16..24].try_into().expect("ACK-пакет фиксированного размера"));
+    let sensor_sequence = u64::from_le_bytes(packet[24..32].try_into().expect("ACK-пакет фиксированного размера"));
     if version != CONTINUOUS_GUARD_VERSION || packet_pid != pid {
         return Err("Несовпадение: «Continuous Guard Guard-ACK version/PID»".to_string());
     }

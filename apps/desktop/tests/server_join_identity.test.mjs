@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {assertOfficialJoin0397} from '../build-tests/server_join_identity_0397.js';
 const expected = {uuid:'123E4567-E89B-42D3-A456-426614174000',name:'OfficialPlayer',serverId:'velocity-main'};
 const correct = {uuid:'123e4567e89b42d3a456426614174000',username:'OfficialPlayer',serverId:'velocity-main'};
-test('accepts the authorized Mojang profile, with UUID normalization',()=>{
+test('Принимается авторизованный профиль Mojang с нормализацией UUID',()=>{
   assert.deepEqual(assertOfficialJoin0397(correct,expected),correct);
 });
 for (const [label, change] of [

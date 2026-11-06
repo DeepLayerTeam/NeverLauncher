@@ -2,22 +2,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseChoice0247,encodeChoice0247,proposeChoice0247} from '../build-tests/component_selection_0247.js';
-test('stable canonical choices and duplicate rejection',()=>{
+test('Канонические варианты остаются стабильными, дубликаты отклоняются',()=>{
   assert.equal(encodeChoice0247(parseChoice0247('@custom:v1:quality:+iris,-optifine')),'@custom:v1:quality:+iris,-optifine');
   assert.throws(()=>parseChoice0247('@custom:v1::+a,+a'),/повторная/);
   assert.throws(()=>parseChoice0247('@custom:v1::+unknown/evil'),/Некорректная/);
 });
-test('selecting incompatible mod cascades out dependents',()=>{
+test('Выбор несовместимого мода последовательно исключает зависимые моды',()=>{
   const cat=[{id:'iris',name:'Iris',dependencies:[{id:'sodium'}]},{id:'sodium',name:'Sodium',conflicts:[{id:'optifine'}]},{id:'optifine',name:'OptiFine'}];
   const choice=proposeChoice0247('',cat,['iris','sodium'],'optifine',true);
   assert.deepEqual(choice.removed,['iris','sodium']);
   assert.deepEqual(choice.added,['optifine']);
 });
-test('required removal refused',()=>{
+test('Удаление обязательного компонента запрещено',()=>{
   assert.throws(()=>proposeChoice0247('',[{id:'core',name:'core',required:true}],['core'],'core',false),/нельзя/);
 });
 
-test('SemVer constraints match the native resolver, including ranges and prereleases',async()=>{
+test('Ограничения SemVer соответствуют нативному разрешению версий, включая диапазоны и предрелизы',async()=>{
   const {matchesVersion0247} = await import('../build-tests/component_selection_0247.js');
   for(const [version,range,expected] of [
     ['1.2.3','>=1.0.0 <2.0.0',true], ['2.0.0','>=1.0.0 <2.0.0',false],
@@ -31,7 +31,7 @@ test('SemVer constraints match the native resolver, including ranges and prerele
     assert.throws(()=>matchesVersion0247('1.2.3',range));
 });
 
-test('versioned directional conflict removes incompatible existing mod',()=>{
+test('Направленный конфликт версий удаляет уже установленный несовместимый мод',()=>{
   const cat=[
     {id:'newrenderer',name:'New',version:'2.1.0',conflicts:[{id:'oldrenderer',versionRange:'>=1.5.0 <2.0.0'}]},
     {id:'oldrenderer',name:'Old',version:'1.8.0'},
@@ -43,7 +43,7 @@ test('versioned directional conflict removes incompatible existing mod',()=>{
   assert.equal(candidate.choice,'@custom:v1:quality:-addon,+newrenderer,-oldrenderer');
 });
 
-test('nonmatching directional versioned conflict preserves both mods',()=>{
+test('Если направленный конфликт версий не совпадает, оба мода сохраняются',()=>{
   const cat=[
     {id:'updated',name:'Updated',version:'2.1.0',conflicts:[{id:'legacy',versionRange:'<2.0.0'}]},
     {id:'legacy',name:'Legacy',version:'2.0.0'},
@@ -53,7 +53,7 @@ test('nonmatching directional versioned conflict preserves both mods',()=>{
   assert.deepEqual(candidate.added,['updated']);
 });
 
-test('dependency of new mod conflicts with installed mod and removes dependents',()=>{
+test('Зависимость нового мода конфликтует с установленным модом и удаляет зависимые компоненты',()=>{
   const cat=[
     {id:'newaddon',name:'New',version:'1.0.0',dependencies:[{id:'engine'}]},
     {id:'engine',name:'Engine',version:'2.0.0',conflicts:[{id:'legacy',versionRange:'^1.0.0'}]},
@@ -66,7 +66,7 @@ test('dependency of new mod conflicts with installed mod and removes dependents'
   assert.doesNotMatch(candidate.choice,/\+engine/); // нативный компонент раскрывает подписанные зависимости
 });
 
-test('switching exclusive engines removes the old engine and its dependent mods',()=>{
+test('Переключение взаимоисключающих движков удаляет старый движок и зависимые моды',()=>{
   const cat=[
     {id:'renderer-a',name:'A',exclusiveGroup:'renderer'},
     {id:'renderer-b',name:'B',exclusiveGroup:'renderer'},
@@ -76,7 +76,7 @@ test('switching exclusive engines removes the old engine and its dependent mods'
   assert.deepEqual(result.removed,['renderer-a','addon']);
 });
 
-test('a conflict with a required component fails without a candidate',()=>{
+test('Конфликт с обязательным компонентом отклоняется без альтернативного варианта',()=>{
   const cat=[
     {id:'newmod',name:'New',conflicts:[{id:'core'}]},
     {id:'core',name:'Core',required:true},
@@ -84,7 +84,7 @@ test('a conflict with a required component fails without a candidate',()=>{
   assert.throws(()=>proposeChoice0247('',cat,['core'],'newmod',true),/обязательным/);
 });
 
-test('impossible dependencies are rejected before install',()=>{
+test('Невыполнимые зависимости отклоняются до установки',()=>{
   const cat=[
     {id:'newmod',name:'New',dependencies:[{id:'engine',versionRange:'^2.0.0'}]},
     {id:'engine',name:'Engine',version:'1.9.0'},
@@ -94,7 +94,7 @@ test('impossible dependencies are rejected before install',()=>{
   assert.throws(()=>proposeChoice0247('',missing,[],'newmod',true),/отсутствует/);
 });
 
-test('two dependencies of a requested mod cannot conflict with one another',()=>{
+test('Две зависимости запрошенного мода не должны конфликтовать друг с другом',()=>{
   const cat=[
     {id:'newmod',name:'New',dependencies:[{id:'a'},{id:'b'}]},
     {id:'a',name:'A',exclusiveGroup:'engine'},
@@ -103,7 +103,7 @@ test('two dependencies of a requested mod cannot conflict with one another',()=>
   assert.throws(()=>proposeChoice0247('',cat,[],'newmod',true),/Несовместимые зависимости/);
 });
 
-test('disabling a dependency removes all of its currently enabled dependents',()=>{
+test('Отключение зависимости удаляет все активные зависящие от неё компоненты',()=>{
   const cat=[
     {id:'base',name:'Base'},
     {id:'mid',name:'Mid',dependencies:[{id:'base'}]},
@@ -113,7 +113,7 @@ test('disabling a dependency removes all of its currently enabled dependents',()
   assert.deepEqual(result.removed,['base','mid','top']);
 });
 
-test('a previous explicit exclusion is released for a new signed dependency',()=>{
+test('Ранее заданное исключение отменяется ради новой подписанной зависимости',()=>{
   const cat=[
     {id:'mod',name:'Mod',dependencies:[{id:'helper'}]},
     {id:'helper',name:'Helper',visible:false},

@@ -14,7 +14,7 @@ const fakeStorage = () => {
   return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
 };
 
-test('real Admin resource routes are addressable and survive hash-based reload/back/forward', () => {
+test('Реальные маршруты ресурсов Admin доступны по адресу и работают после перезагрузки, назад и вперёд', () => {
   const state={projectId:'alpha',profileId:'a-main',channelId:'stable'};
   for(const section of ['projects','profiles','channels','packages','release-workspace','server-bridge']) {
     const href=adminHref(section,state);
@@ -27,7 +27,7 @@ test('real Admin resource routes are addressable and survive hash-based reload/b
   assert.equal(parseAdminRoute('#/%E0%A4%A').section,'dashboard');
 });
 
-test('only an authenticated owner and backend share their own persisted context', () => {
+test('Только авторизованный владелец и Backend используют свой сохранённый контекст', () => {
   const storage=fakeStorage();
   const alice=contextStorageKey('https://api.test:443/','alice');
   const other=contextStorageKey('https://api.test/','bob');
@@ -39,7 +39,7 @@ test('only an authenticated owner and backend share their own persisted context'
   assert.deepEqual(readSavedContext(storage,other),empty);
 });
 
-test('changing projects discards stale profile/channel IDs and forbids cross-project selection', () => {
+test('Переключение проекта сбрасывает устаревшие ID профиля и канала и запрещает межпроектный выбор', () => {
   const saved={projectId:'alpha',profileId:'a-main',channelId:'stable'};
   assert.deepEqual(resolveProjectContext({projectId:'beta'},saved,catalog),{projectId:'beta',profileId:'',channelId:''});
   assert.deepEqual(resolveProjectContext({projectId:'alpha'},saved,catalog),{projectId:'alpha',profileId:'',channelId:''}); // явная очистка работает
@@ -47,7 +47,7 @@ test('changing projects discards stale profile/channel IDs and forbids cross-pro
   assert.deepEqual(resolveProjectContext({projectId:'beta',profileId:'b-main',channelId:'test'},saved,catalog),{projectId:'beta',profileId:'b-main',channelId:'test'});
 });
 
-test('unknown/inaccessible project and deleted resources are removed by the live catalog', () => {
+test('Актуальный каталог исключает неизвестные и недоступные проекты, а также удалённые ресурсы', () => {
   const saved={projectId:'alpha',profileId:'a-main',channelId:'stable'};
   assert.deepEqual(resolveProjectContext({projectId:'forbidden',profileId:'invisible'},saved,catalog),saved);
   assert.deepEqual(resolveProjectContext(saved,saved,{...catalog,profiles:[],channels:[]}),{projectId:'alpha',profileId:'',channelId:''});
@@ -55,7 +55,7 @@ test('unknown/inaccessible project and deleted resources are removed by the live
   assert.deepEqual(resolveProjectContext({},empty,catalog),{projectId:'alpha',profileId:'',channelId:''});
 });
 
-test('malformed, oversized and control-character context does not become trusted navigation', () => {
+test('Повреждённый, слишком большой контекст или управляющие символы не становятся доверенной навигацией', () => {
   const storage=fakeStorage();
   storage.setItem('bad','{unclosed');
   assert.deepEqual(readSavedContext(storage,'bad'),empty);

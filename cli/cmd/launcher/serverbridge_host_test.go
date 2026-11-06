@@ -35,7 +35,7 @@ exit 0`)
 		t.Fatalf("Неожиданная конфигурация: %+v", config)
 	}
 	if got := strings.Join(config.JVMArgs, " "); got != "-Xms128M -Xmx256M" {
-		t.Fatalf("JVM args=%q", got)
+		t.Fatalf("Аргументы JVM=%q", got)
 	}
 	command, err := serverBridgeHostCommand01910(config)
 	if err != nil {
@@ -86,13 +86,13 @@ exit 0`)
 	stderr, _ := os.ReadFile(paths["stderr"])
 	combined, _ := os.ReadFile(paths["combined"])
 	if !strings.Contains(string(stdout), "stdout-run-1") || !strings.Contains(string(stdout), "stdout-run-2") {
-		t.Fatalf("stdout log=%q", stdout)
+		t.Fatalf("Журнал stdout=%q", stdout)
 	}
 	if !strings.Contains(string(stderr), "stderr-run-1") || !strings.Contains(string(stderr), "stderr-run-2") {
-		t.Fatalf("stderr log=%q", stderr)
+		t.Fatalf("Журнал stderr=%q", stderr)
 	}
 	if !strings.Contains(string(combined), "[STDOUT]") || !strings.Contains(string(combined), "[STDERR]") {
-		t.Fatalf("combined log=%q", combined)
+		t.Fatalf("Объединённый журнал=%q", combined)
 	}
 }
 

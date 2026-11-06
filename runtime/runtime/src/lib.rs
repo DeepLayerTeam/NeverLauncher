@@ -2163,8 +2163,8 @@ mod tests {
             digest: hex::encode(Sha256::digest(bytes.as_bytes())), spec,
         });
         let seed = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
-        let key = sign_manifest(&mut manifest, seed, "2026-10-18T00:00:00Z").expect("v2 sign");
-        verify_manifest_signature(&manifest, &key).expect("v2 verify");
+        let key = sign_manifest(&mut manifest, seed, "2026-10-18T00:00:00Z").expect("подпись версии v2");
+        verify_manifest_signature(&manifest, &key).expect("проверка версии v2");
         let mut altered_runtime = manifest.clone();
         altered_runtime.runtime.java.minimum_major_version = 16;
         assert!(verify_manifest_signature(&altered_runtime, &key).is_err(), "Java policy is covered by the Ed25519 signature");
@@ -2265,8 +2265,8 @@ mod tests {
         assert_eq!(digest(&components),"85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119");
         m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components,categories:vec![],groups:vec![],presets:vec![],default_preset:String::new()});
         let seed="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
-        let key=sign_manifest(&mut m,seed,"2026-10-20T00:00:00Z").expect("v3 sign");
-        verify_manifest_signature(&m,&key).expect("signed v3 catalog");
+        let key=sign_manifest(&mut m,seed,"2026-10-20T00:00:00Z").expect("подпись версии v3");
+        verify_manifest_signature(&m,&key).expect("подписанный каталог v3");
         assert!(String::from_utf8(manifest_signing_payload(&m).unwrap()).unwrap().contains("Sodium \\u0026 friends"));
         let mut tampered=m.clone();
         tampered.component_catalog.as_mut().unwrap().components[0].name="forged".into();

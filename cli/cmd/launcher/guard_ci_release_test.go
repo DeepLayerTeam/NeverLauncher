@@ -107,7 +107,7 @@ func TestGuardCICertificationRoundTrip0139(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyGuardCICertificationInBundle(out, "0.13.9"); err == nil {
-		t.Fatal("Guard CI certification must reject a post-CI artifact replacement")
+		t.Fatal("Сертификация Guard в CI должна отклонять замену артефакта после проверки")
 	}
 }
 
@@ -127,16 +127,16 @@ func TestGuardCICertificationRejectsWeakenedMatrix0139(t *testing.T) {
 	matrixRaw, _ = json.Marshal(matrix)
 	targetsRaw, _ := os.ReadFile(targetsPath)
 	if _, err := validateGuardCIEvidence(matrixRaw, targetsRaw, "0.13.9", "abc139"); err == nil {
-		t.Fatal("Guard certification must reject a target without required integration test")
+		t.Fatal("Сертификация Guard должна отклонять платформу без обязательного интеграционного теста")
 	}
 }
 
 func TestGuardCICertificationRequiredFrom0139(t *testing.T) {
 	if !guardCICertificationRequired("0.13.9") || !guardCICertificationRequired("0.14.0") {
-		t.Fatal("0.13.9+ must require Guard CI certification")
+		t.Fatal("Версия 0.13.9 и новее должна требовать сертификацию Guard в CI")
 	}
 	if guardCICertificationRequired("0.13.8") {
-		t.Fatal("0.13.8 must not retroactively require Guard CI certification")
+		t.Fatal("Для версии 0.13.8 нельзя задним числом требовать сертификацию Guard в CI")
 	}
 }
 
@@ -183,7 +183,7 @@ func TestReleasePublishCheckRequiresGuardCertification0139(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := run([]string{"release", "publish-check", out, "--public-key", publicPath}); err == nil {
-		t.Fatal("0.13.9 publish-check must require Guard CI certification")
+		t.Fatal("Проверка публикации версии 0.13.9 должна требовать сертификацию Guard в CI")
 	}
 }
 
@@ -206,7 +206,7 @@ func TestGuardCICertificationRejectsRepositoryMismatch01310(t *testing.T) {
 	matrixRaw, _ = json.Marshal(matrix)
 	targetsRaw, _ := os.ReadFile(targetsPath)
 	if _, err := validateGuardCIEvidence(matrixRaw, targetsRaw, "0.13.10", "abc1310"); err == nil {
-		t.Fatal("Guard certification must reject a per-target repository mismatch")
+		t.Fatal("Сертификация Guard должна отклонять несоответствие репозитория конкретной платформы")
 	}
 }
 
@@ -226,7 +226,7 @@ func TestGuardCICertificationLegacy01310StillValid(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := validateGuardCIEvidence(matrixRaw, targetsRaw, "0.13.10", "abc1310"); err != nil {
-		t.Fatalf("0.14 CLI broke verification compatibility with 0.13.10 Guard evidence: %v", err)
+		t.Fatalf("CLI версии 0.14 нарушил совместимость с проверкой свидетельств Guard 0.13.10: %v", err)
 	}
 }
 
@@ -252,6 +252,6 @@ func TestGuardCICertification0140RequiresReleaseIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := validateGuardCIEvidence(matrixRaw, targetsRaw, "0.14.0", "abc140"); err == nil {
-		t.Fatal("0.14.0 Guard certification accepted evidence without authenticated release identity")
+		t.Fatal("Сертификация Guard 0.14.0 приняла свидетельства без подтверждённого идентификатора релиза")
 	}
 }

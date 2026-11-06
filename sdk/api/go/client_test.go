@@ -19,11 +19,11 @@ func TestHTTPClientRealRequests(t *testing.T) {
 			return
 		}
 		if r.Header.Get("Authorization") != "Bearer test" {
-			t.Error("missing token")
+			t.Error("Отсутствует токен")
 		}
 		if r.URL.Path == "/api/v1/admin/projects/one/versions/two/files" {
 			if r.Header.Get("Content-Type") != "application/octet-stream" {
-				t.Errorf("wrong content type")
+				t.Errorf("Неверный тип содержимого")
 			}
 			var b [3]byte
 			_, _ = r.Body.Read(b[:])
@@ -52,7 +52,7 @@ func TestHTTPClientRealRequests(t *testing.T) {
 	}
 	raw, err := c.CallRaw(context.Background(), "post_admin_projects_by_projectId_versions_by_versionId_files", map[string]string{"projectId": "one", "versionId": "two"}, nil, []byte("xyz"), "application/octet-stream", "safe-key")
 	if err != nil || string(raw) != "xyz" {
-		t.Fatalf("raw err %v bytes %q", err, raw)
+		t.Fatalf("Необработанная ошибка %v, данные %q", err, raw)
 	}
 	if got["id"] != "a b" {
 		t.Fatal(got)
@@ -66,13 +66,13 @@ func TestHTTPClientRealRequests(t *testing.T) {
 		t.Fatal("Разрешён выход за пределы каталога через путь")
 	}
 	if _, err = New("http://example.org", "secret"); err == nil {
-		t.Fatal("remote cleartext accepted")
+		t.Fatal("Разрешена передача открытых данных на удалённый узел")
 	}
 	if err = c.Request(context.Background(), "GET", "//evil", nil, nil, nil, ""); err == nil {
-		t.Fatal("unsafe route")
+		t.Fatal("Небезопасный маршрут")
 	}
 	if len(Operations) < 450 {
-		t.Fatalf("missing operations %d", len(Operations))
+		t.Fatalf("Отсутствуют операции: %d", len(Operations))
 	}
 }
 func TestLegacyAndIncompatible(t *testing.T) {
@@ -82,7 +82,7 @@ func TestLegacyAndIncompatible(t *testing.T) {
 		err := c.CheckCompatibility(context.Background())
 		server.Close()
 		if (err == nil) != (v == "0.45.11") {
-			t.Fatalf("version %s err %v", v, err)
+			t.Fatalf("Версия %s, ошибка %v", v, err)
 		}
 	}
 	if !strings.Contains(ContractVersion, "1.") {

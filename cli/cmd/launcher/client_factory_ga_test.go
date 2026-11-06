@@ -27,23 +27,23 @@ func TestClientFactoryGA0280SignedJoinTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, err := factoryVerifyJoin0280(evidence, signed, pub, "0.28.0", strings.Repeat("b", 40)); err == nil {
-		t.Fatal("accepted different release commit")
+		t.Fatal("Принят другой коммит релиза")
 	}
 	if _, _, err := factoryVerifyJoin0280(evidence, signed, pub, "0.27.12", commit); err == nil {
-		t.Fatal("accepted different product version")
+		t.Fatal("Принята другая версия продукта")
 	}
 	newPrivate, newPub := filepath.Join(root, "other.key"), filepath.Join(root, "other.pub")
 	if err := factoryCertKeygen02712(newPrivate, newPub); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := factoryVerifyJoin0280(evidence, signed, newPub, "0.28.0", commit); err == nil {
-		t.Fatal("accepted different trust root")
+		t.Fatal("Принят другой корень доверия")
 	}
 	if err := os.WriteFile(evidence, []byte(content+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := factoryVerifyJoin0280(evidence, signed, pub, "0.28.0", commit); err == nil {
-		t.Fatal("accepted modified evidence")
+		t.Fatal("Приняты изменённые свидетельства")
 	}
 }
 func TestClientFactoryGA0280IncompleteEvidenceFailsClosed(t *testing.T) {
@@ -58,10 +58,10 @@ func TestClientFactoryGA0280IncompleteEvidenceFailsClosed(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, _, err := factoryReadJoinEvidence0280(evidence); err == nil {
-			t.Fatalf("accepted incomplete server join: %s", bad)
+			t.Fatalf("Принято неполное подключение к серверу: %s", bad)
 		}
 	}
 	if _, err := factoryVerifyGA0280("", "", "", "", "", "0.28.0", strings.Repeat("a", 40)); err == nil {
-		t.Fatal("certified GA without runtime matrix and trusted join proof")
+		t.Fatal("Подтверждена готовность GA без матрицы Runtime и доказательства доверенного подключения")
 	}
 }

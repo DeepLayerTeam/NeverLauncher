@@ -33,7 +33,7 @@ const live = {
   },
 };
 
-test("host permissions cannot be inherited from project game-scopes", () => {
+test("Права хоста не наследуются от игровых прав проекта", () => {
   const scoped = {
     user: { id: "operator", roleId: "user" },
     permissions: [],
@@ -114,7 +114,7 @@ test("Восстановление принимает только полную 
   assert.equal(validHostPending04111({ ...valid, serverId: "../api" }), false);
   assert.equal(validHostPending04111({}), false);
 });
-test("real HTTP calls list PostgreSQL journal, check RemoteControl and reissue action on GET", async () => {
+test("Реальные HTTP-запросы показывают журнал PostgreSQL, проверяют RemoteControl и повторяют действие при GET", async () => {
   const old = globalThis.fetch;
   const requests = [];
   try {

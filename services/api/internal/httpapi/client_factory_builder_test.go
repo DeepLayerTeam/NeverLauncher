@@ -12,10 +12,10 @@ import (
 func TestFactoryBuilderValidation02710(t *testing.T) {
 	valid := factoryBuilderRequest02710{Minecraft: "1.21.1", Loader: "fabric", LoaderVersion: "0.16.13", Target: "linux/x86_64"}
 	if err := factoryValidateRequest02710(factoryBuilderRequest02710{Minecraft: "1.14.2 Pre-Release 3", Loader: "vanilla", Target: "windows/x86_64"}); err != nil {
-		t.Fatalf("valid historic Minecraft version ID rejected: %v", err)
+		t.Fatalf("Отклонён действительный исторический идентификатор версии Minecraft: %v", err)
 	}
 	if err := factoryValidateRequest02710(valid); err != nil {
-		t.Fatalf("exact selector: %v", err)
+		t.Fatalf("Точный селектор: %v", err)
 	}
 	for _, input := range []factoryBuilderRequest02710{
 		{Minecraft: "latest-release", Loader: "vanilla", Target: "linux/x86_64"},
@@ -45,7 +45,7 @@ func TestFactoryBuilderPersistenceAndTamper02710(t *testing.T) {
 	}
 	loaded, _, err := factoryRead02710(root, id)
 	if err != nil || loaded.State != "completed" {
-		t.Fatalf("read job: %+v %v", loaded, err)
+		t.Fatalf("Чтение задания: %+v %v", loaded, err)
 	}
 	if _, err = factoryJobPath02710(root, "../escape"); err == nil {
 		t.Fatal("Разрешён выход за пределы каталога")
@@ -57,7 +57,7 @@ func TestFactoryBuilderPersistenceAndTamper02710(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = factoryVerifyArtifact02710(root, "artifact.bin", strings.Repeat("0", 64)); err == nil {
-		t.Fatal("accepted modified artifact")
+		t.Fatal("Принят изменённый артефакт")
 	}
 	if _, err = factoryVerifyArtifact02710(root, "../artifact.bin", ""); err == nil {
 		t.Fatal("Разрешён выход за пределы каталога")
@@ -122,6 +122,6 @@ esac
 		t.Fatal(err)
 	}
 	if got.State != "completed" || got.Files != 1 || got.PlanDigest != strings.Repeat("a", 64) {
-		t.Fatalf("worker did not execute build and verify: %+v", got)
+		t.Fatalf("Рабочий процесс не выполнил сборку и проверку: %+v", got)
 	}
 }

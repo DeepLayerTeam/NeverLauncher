@@ -34,7 +34,7 @@ const node = {
   },
 };
 
-test("project-scoped overview path and rights do not grant global access", () => {
+test("Обзорный маршрут и права проекта не дают глобальный доступ", () => {
   assert.equal(
     endpointForSection("server-bridge", "a/b"),
     "/api/v1/server-bridge/projects/a%2Fb/overview",
@@ -112,7 +112,7 @@ test("Телеметрия скрывается для неизвестных, �
   );
 });
 
-test("0.41.9 displays a missing physical process or stale host/players as healthy", () => {
+test("Версия 0.41.9 ошибочно показывает отсутствующий процесс или устаревший хост и игроков как исправных", () => {
   const process = 4711;
   const good = {
     ...node,
@@ -299,7 +299,7 @@ test("Групповое разрешение роли проекта не от�
   assert.equal(can(role, "host:exec", "p"), false);
 });
 
-test("0.28.6 capability filtering is signed-runtime-fresh and fail closed", () => {
+test("Версия 0.28.6 проверяет актуальность подписанного Runtime при фильтрации возможностей и безопасно отклоняет нарушения", () => {
   const reported = {
     ...node,
     kind: "sponge",
@@ -362,7 +362,7 @@ test("0.28.8: актуальность подписанной маршрутиз
   assert.equal(networkStateFresh({ ...state, runtimeId: "b" }, now), false);
   assert.equal(networkStateFresh({ ...state, runtimeEpoch: 0 }, now), false);
 });
-test("0.28.8 capacity policy differentiates clear, deny and bounded values", () => {
+test("Версия 0.28.8 различает снятие ограничения, запрет и значения лимита в политике вместимости", () => {
   assert.equal(parseCapacityDraft(""), null);
   assert.equal(parseCapacityDraft("0"), 0);
   assert.equal(parseCapacityDraft("1000000"), 1000000);
@@ -411,7 +411,7 @@ test("0.28.8: обновление ёмкости требует точный Ru
   }
 });
 
-test("0.41.11 admission requires Backend response AND independent PostgreSQL readback", () => {
+test("Версия 0.41.11 требует ответа Backend И независимого чтения PostgreSQL при допуске", () => {
   const receipt = {
     nodeId: "paper",
     operatorCapacityMax: 0,

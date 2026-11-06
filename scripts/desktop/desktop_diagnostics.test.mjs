@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-test('desktop Sentry error redaction and opted-in report tests execute',()=>{
+test('Проверки очистки ошибок и отправки отчётов в Sentry по согласию пользователя выполняются',()=>{
  const args=['src/sentry_diagnostics_0309.ts','--module','es2020','--target','es2020','--strict','--skipLibCheck','--lib','es2020,dom','--outDir','build-tests'];
  const compile=spawnSync('tsc',args,{cwd:'apps/desktop',encoding:'utf8',timeout:30000});
  assert.equal(compile.status,0,compile.stderr+compile.stdout);

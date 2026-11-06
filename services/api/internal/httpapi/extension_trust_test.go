@@ -56,7 +56,7 @@ func TestExtensionRecoveryExportImportPreservesFailClosedTrust02012(t *testing.T
 		t.Fatal(err)
 	}
 	if len(state.Quarantine) != 1 || len(state.EmergencyDisables) != 1 || len(state.PublisherKeys) != 1 {
-		t.Fatalf("incomplete recovery export: %+v", state)
+		t.Fatalf("Неполный экспорт восстановления: %+v", state)
 	}
 
 	target := repository.NewMemoryRepository("http://target.test")
@@ -66,24 +66,24 @@ func TestExtensionRecoveryExportImportPreservesFailClosedTrust02012(t *testing.T
 		t.Fatal(err)
 	}
 	if counts["quarantine"] != 1 || counts["emergencyDisables"] != 1 || counts["keys"] != 1 {
-		t.Fatalf("unexpected import counts: %+v", counts)
+		t.Fatalf("Неожиданные количества импортированных объектов: %+v", counts)
 	}
 	restoredKey, err := target.GetExtensionRegistryPublisherKey(ctx, key.PublisherID, key.Fingerprint)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if restoredKey.Active || restoredKey.RevokedAt == nil {
-		t.Fatalf("revoked key was not restored fail-closed: %+v", restoredKey)
+		t.Fatalf("Отозванный ключ не восстановлен с безопасным отказом: %+v", restoredKey)
 	}
 	if quarantined, err := target.IsExtensionPackageQuarantined(ctx, identity); err != nil || !quarantined {
-		t.Fatalf("quarantine not restored: quarantined=%v err=%v", quarantined, err)
+		t.Fatalf("Карантин не восстановлен: карантин=%v ошибка=%v", quarantined, err)
 	}
 	if _, err := target.GetExtensionEmergencyDisable(ctx, "example.recovery", "global", ""); err != nil {
-		t.Fatalf("kill-switch not restored: %v", err)
+		t.Fatalf("Аварийное отключение не восстановлено: %v", err)
 	}
 	policy, err := target.GetExtensionTrustPolicy(ctx)
 	if err != nil || policy.Mode != model.ExtensionTrustModeStrict || len(policy.AllowedPublishers) != 1 {
-		t.Fatalf("trust policy not restored: %+v err=%v", policy, err)
+		t.Fatalf("Политика доверия не восстановлена: %+v ошибка=%v", policy, err)
 	}
 }
 
@@ -97,10 +97,10 @@ func TestRecoveryImportIsIdempotentForActiveQuarantine02012(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := s.importExtensionRecoveryState02012(ctx, state, false); err != nil {
-		t.Fatalf("second recovery import must be idempotent: %v", err)
+		t.Fatalf("Повторный импорт восстановления должен быть идемпотентным: %v", err)
 	}
 	items, err := repo.ListExtensionQuarantine(ctx, true)
 	if err != nil || len(items) != 1 {
-		t.Fatalf("idempotent quarantine restore produced duplicates: len=%d err=%v", len(items), err)
+		t.Fatalf("Идемпотентное восстановление карантина создало дубликаты: количество=%d ошибка=%v", len(items), err)
 	}
 }

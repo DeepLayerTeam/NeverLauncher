@@ -5,13 +5,13 @@ import {canSeeSection} from '../src/admin/permissions.ts';
 import {endpointForSection} from '../src/admin/sections.ts';
 
 const subject={user:{id:'id1',email:'test@example.test',roleId:'release-manager'}, permissions:[],projectPermissions:{alpha:['project:read','release:prepare','release:publish'],beta:['project:read']}};
-test('Release Workspace UI navigation depends on actual scoped permission',()=>{
+test('Навигация рабочей области релизов зависит от реальных ограниченных прав',()=>{
  assert.equal(canSeeSection(subject,'release-workspace','alpha'),true);
  assert.equal(canSeeSection(subject,'release-workspace','beta'),false);
  assert.equal(canSeeSection(subject,'job-monitor','beta'),true);
  assert.equal(endpointForSection('release-workspace','alpha'),'/api/v1/release-drafts');
 });
-test('Release API sends typed draft updates, user-authenticated validation and durable operations',async()=>{
+test('API релизов отправляет типизированные изменения черновика, проверку с авторизацией пользователя и устойчивые операции',async()=>{
  const visited=[];const original=globalThis.fetch;
  try {
   globalThis.fetch=async (url,init)=>{visited.push([url,init]);return {ok:true,json:async()=>({data:{id:'draft-1',projectId:'alpha',revision:2,items:[]}})};};

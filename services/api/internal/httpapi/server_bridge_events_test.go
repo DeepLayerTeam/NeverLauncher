@@ -58,12 +58,12 @@ func TestServerBridgeEventSignature0194(t *testing.T) {
 		t.Fatal(err)
 	}
 	if event.Sequence != 1 || event.Type != "server.ready" {
-		t.Fatalf("unexpected event: %+v", event)
+		t.Fatalf("Неожиданное событие: %+v", event)
 	}
 
 	raw.Payload["platform"] = "tampered"
 	if _, err := validateBridgeEvent0194("paper-0194", runtime, "", raw, public, time.Now().UTC(), false); err == nil {
-		t.Fatal("tampered event payload must fail digest/signature validation")
+		t.Fatal("Изменённое содержимое события должно отклоняться проверкой дайджеста и подписи")
 	}
 }
 
@@ -82,7 +82,7 @@ func TestServerBridgeEventMemoryAckReplay0194(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.AckSequence != 2 || result.Inserted != 2 {
-		t.Fatalf("unexpected first ACK: %+v", result)
+		t.Fatalf("Неожиданное первое подтверждение ACK: %+v", result)
 	}
 
 	result, err = store.appendEvents0194(server, events, time.Now().UTC())
@@ -90,24 +90,24 @@ func TestServerBridgeEventMemoryAckReplay0194(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.AckSequence != 2 || result.Inserted != 0 {
-		t.Fatalf("resend must be idempotent: %+v", result)
+		t.Fatalf("Повторная отправка должна быть идемпотентной: %+v", result)
 	}
 
 	conflict := events[1]
 	conflict.PayloadSHA256 = "3333333333333333333333333333333333333333333333333333333333333333"
 	if _, err := store.appendEvents0194(server, []model.ServerBridgeEvent{conflict}, time.Now().UTC()); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("conflicting replay must fail with ErrConflict: %v", err)
+		t.Fatalf("Конфликтующий повтор должен завершаться ErrConflict: %v", err)
 	}
 	gap := model.ServerBridgeEvent{Sequence: 4, EventID: runtime + "-4", RuntimeID: runtime, Type: "server.ready", OccurredAtUnixMillis: time.Now().UnixMilli(), Payload: map[string]string{}, PayloadSHA256: "4444444444444444444444444444444444444444444444444444444444444444", Signature: "x"}
 	if _, err := store.appendEvents0194(server, []model.ServerBridgeEvent{gap}, time.Now().UTC()); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("sequence gap must fail with ErrConflict: %v", err)
+		t.Fatalf("Пропуск в последовательности должен приводить к ErrConflict: %v", err)
 	}
 }
 
 func TestServerBridgeEventTypes0194(t *testing.T) {
 	for _, required := range []string{"server.startup", "server.ready", "server.shutdown", "player.login", "player.join", "player.quit", "player.kick", "world.load", "world.unload", "proxy.connect", "proxy.switch", "server.crash", "server.error"} {
 		if _, ok := serverBridgeEventTypes0194[required]; !ok {
-			t.Fatalf("missing event type %s", required)
+			t.Fatalf("Отсутствует тип события %s", required)
 		}
 	}
 }

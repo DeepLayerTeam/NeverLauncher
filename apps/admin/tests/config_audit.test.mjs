@@ -6,14 +6,14 @@ import { requestJSON, ApiError } from '../src/api/client.ts';
 
 const admin = {user:{id:'u1',email:'owner@example.test',roleId:'admin'}, permissions:['settings:manage','audit:read'], projectPermissions:{}};
 const viewer = {user:{id:'u2',email:'viewer@example.test',roleId:'viewer'}, permissions:[], projectPermissions:{a:['project:read']}};
-test('configuration workspace is global settings:manage only; audit read is separate',()=>{
+test('Рабочая область конфигурации требует глобального settings:manage; чтение аудита регулируется отдельно',()=>{
  assert.equal(canSeeSection(admin,'config',''),true);
  assert.equal(canSeeSection(viewer,'config','a'),false);
  assert.equal(canSeeSection(admin,'audit',''),true);
  assert.equal(canSeeSection(viewer,'audit','a'),false);
  assert.equal(endpointForSection('config','a'),'/api/v1/admin/config');
 });
-test('config CAS request and audit query use authorized Backend and preserve reasonCode', async()=>{
+test('CAS-запрос конфигурации и запрос аудита обращаются к авторизованному Backend и сохраняют reasonCode', async()=>{
  const old = globalThis.fetch;
  try {
    globalThis.fetch = async (url, init) => {

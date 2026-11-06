@@ -14,23 +14,23 @@ func TestMigrationIndependentNeverSigners0336(t *testing.T) {
 	cfg := config.Config{AuthTokenActiveKID: "2026-10", AuthTokenKeysJSON: `{"2026-10":"auth-secret-independently-provisioned-123456789"}`, ManifestSigningPrivateKey: hex.EncodeToString(seed[:])}
 	kid, pub, err := migrationSigner0336(cfg)
 	if err != nil || kid != "2026-10" || len(pub) != 64 {
-		t.Fatalf("valid signers %s %s %v", kid, pub, err)
+		t.Fatalf("Проверка действительных подписантов: %s %s %v", kid, pub, err)
 	}
 	cfg.ManifestSigningPrivateKey = ""
 	if _, _, err = migrationSigner0336(cfg); err == nil {
-		t.Fatal("developer manifest key accepted")
+		t.Fatal("Принят ключ манифеста разработчика")
 	}
 	cfg.ManifestSigningPrivateKey = hex.EncodeToString(seed[:])
 	cfg.AuthTokenKeysJSON = ""
 	if _, _, err = migrationSigner0336(cfg); err == nil {
-		t.Fatal("JWT default fallback accepted")
+		t.Fatal("Принято резервное значение JWT по умолчанию")
 	}
 	cfg.AuthTokenKeysJSON = `{"2026-10":"weak"}`
 	if _, _, err = migrationSigner0336(cfg); err == nil {
-		t.Fatal("short secret accepted")
+		t.Fatal("Принят слишком короткий секрет")
 	}
 	cfg.AuthTokenKeysJSON = `{"2026-10":"` + strings.Repeat("x", 32) + `","old-kid":"` + strings.Repeat("x", 32) + `"}`
 	if _, _, err = migrationSigner0336(cfg); err == nil {
-		t.Fatal("duplicate JWT keys accepted")
+		t.Fatal("Приняты повторяющиеся ключи JWT")
 	}
 }

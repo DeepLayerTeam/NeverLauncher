@@ -32,7 +32,7 @@ async function withServer(callback) {
  finally { server.closeAllConnections();await new Promise(resolve => server.close(resolve)); }
 }
 
-test('production HTTP client preserves binary responses and text without JSON decoding', async () => {
+test('Рабочий HTTP-клиент сохраняет двоичные ответы и текст без декодирования как JSON', async () => {
  await withServer(async client => {
   const result=await client.request('GET','/api/v1/bytes',{responseType:'bytes'});
   assert.deepEqual(Array.from(result),[137,80,78,71,0,255,254]);
@@ -42,7 +42,7 @@ test('production HTTP client preserves binary responses and text without JSON de
  });
 });
 
-test('streaming download is consumable incrementally and bounded', async () => {
+test('Потоковую загрузку можно читать постепенно с соблюдением ограничений', async () => {
  await withServer(async client => {
   const s=await client.request('GET','/api/v1/stream',{responseType:'stream'});
   const reader=s.getReader();let total=0;
@@ -54,7 +54,7 @@ test('streaming download is consumable incrementally and bounded', async () => {
  });
 });
 
-test('HTTP errors, unauthorized redirects, invalid limits and cancellation retain protection', async () => {
+test('Защита сохраняется при ошибках HTTP, недопустимых перенаправлениях, лимитах и отмене', async () => {
  await withServer(async client => {
   await assert.rejects(client.request('GET','/api/v1/error',{responseType:'bytes'}),
     e=>e instanceof ApiError && e.status===403 && e.code==='denied' && e.requestId==='forbidden-1');

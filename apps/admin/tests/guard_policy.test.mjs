@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {generateKeyPairSync, sign, webcrypto} from 'node:crypto';
 import { verifyGuardEnvelope05011, guardCandidate05011, guardCandidateAllowed05011 } from '../src/admin/guard_policy_offline_05011.ts';
 
-test('Guard Ed25519 browser verifier, tamper detection and safe rollback', async () => {
+test('Проверка Ed25519 в браузере для Guard выявляет изменения и обеспечивает безопасный откат', async () => {
  const {publicKey,privateKey}=generateKeyPairSync('ed25519');
  const keyHex=publicKey.export({type:'spki',format:'der'}).subarray(-32).toString('hex');
  const now=Math.floor(Date.now()/1000);

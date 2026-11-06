@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ApiError } from '../src/api/client.ts';
 import { ReleaseApi } from '../src/api/release.ts';
 
-test('Admin preserves exact backend publish refusal with per-file repair actions',async()=>{
+test('Admin сохраняет точную причину отказа Backend в публикации и предлагает исправления по файлам',async()=>{
  const original=globalThis.fetch;
  const blockers=[{reasonCode:'file-integrity-mismatch',resource:'mods/broken.jar',message:'SHA-256 differs',action:'Replace this file and revalidate'},
  {reasonCode:'stable-runtime-target-blocked',resource:'linux-amd64',message:'missing attestation',action:'Run real target'}];
@@ -16,7 +16,7 @@ test('Admin preserves exact backend publish refusal with per-file repair actions
  } finally{globalThis.fetch=original}
 });
 
-test('Admin obtains live readiness from existing validations endpoint',async()=>{
+test('Admin получает актуальную готовность через существующий маршрут проверок',async()=>{
  const original=globalThis.fetch;const calls=[];
  try {
   globalThis.fetch=async(url,init)=>{calls.push([url,init]);return {ok:true,status:200,json:async()=>({data:{integrity:null,runtime:[],policy:{requiredLevel:'integrity',requireServerJoin:false},publishReadiness:{packageId:'pkg-385',eligible:false,finalRecheckRequired:true,blockers:[{reasonCode:'package-files-empty',resource:'files.present',message:'empty',action:'upload'}]}}})}};

@@ -29,7 +29,7 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		if !verifyHTTP114Request(r, body) {
-			t.Errorf("invalid HTTP connector request signature")
+			t.Errorf("Неверная подпись запроса HTTP-коннектора")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -89,14 +89,14 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Provider.ID != "cms" || result.Identity.Subject != "cms-user-42" || result.User.Email != "player@example.test" {
-		t.Fatalf("unexpected federation result: %+v", result)
+		t.Fatalf("Неожиданный результат федерации: %+v", result)
 	}
 	if result.User.PasswordHash != "" {
-		t.Fatal("HTTP JIT user unexpectedly received a local password hash")
+		t.Fatal("Пользователь HTTP JIT неожиданно получил локальный хеш пароля")
 	}
 	linked, err := repo.GetAuthIdentity("cms", "cms-user-42")
 	if err != nil || linked.UserID != result.User.ID {
-		t.Fatalf("HTTP identity was not persisted: %+v err=%v", linked, err)
+		t.Fatalf("Идентификатор HTTP не был сохранён: %+v ошибка=%v", linked, err)
 	}
 }
 

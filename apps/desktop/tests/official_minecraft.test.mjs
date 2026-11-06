@@ -8,7 +8,7 @@ const profile = {
   capes: [],
 };
 
-test("official flow uses ONLY the native boundary; no tickets or game credentials in IPC results", async () => {
+test("Официальный сценарий использует только нативную границу; IPC-ответы не содержат билеты и игровые учётные данные", async () => {
   const requests = [];
   const invoke = async (command, args) => {
     requests.push({ command, args });
@@ -116,7 +116,7 @@ test("Отклоняет преждевременный опрос до нати
   assert.equal(commands.includes("official_identity_poll_0262"), false);
 });
 
-test("never forwards native account tickets or token fields to preview", async () => {
+test("Билеты нативной учётной записи и поля токенов не передаются в предпросмотр", async () => {
   const calls = [];
   const owned = {
     ...profile,
@@ -154,7 +154,7 @@ test("never forwards native account tickets or token fields to preview", async (
   );
 });
 
-test("browser PKCE is a native-only command and returns profile metadata", async () => {
+test("PKCE браузера вызывается только нативной командой и возвращает метаданные профиля", async () => {
   const calls = [];
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -543,7 +543,7 @@ test("0.39.5: нативная запись разрешена только дл
   await assert.rejects(client.selectCape("owned"), /не подтвердил/);
 });
 
-test("0.39.5 native write response must retain the authenticated Minecraft UUID", async () => {
+test("В версии 0.39.5 ответ нативной записи должен сохранять проверенный UUID Minecraft", async () => {
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
     "access",
@@ -556,7 +556,7 @@ test("0.39.5 native write response must retain the authenticated Minecraft UUID"
   await assert.rejects(client.resetSkin(), /другой UUID/);
 });
 
-test("0.39.5 does not claim a cape was removed when Minecraft still reports it active", async () => {
+test("Версия 0.39.5 не сообщает об удалении плаща, пока Minecraft считает его активным", async () => {
   const p = { ...profile, capes: [{ id: "cape", state: "ACTIVE", url: "" }] };
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -567,7 +567,7 @@ test("0.39.5 does not claim a cape was removed when Minecraft still reports it a
   await assert.rejects(client.resetCape(), /не подтвердил/);
 });
 
-test("0.39.5 changing accounts during a pending texture operation never adopts old account result", async () => {
+test("Версия 0.39.5 не применяет результат старой учётной записи при переключении аккаунта во время операции с текстурой", async () => {
   let release;
   const pending = new Promise((resolve) => (release = resolve));
   const client = new OfficialMinecraftClient0257(
@@ -589,7 +589,7 @@ test("0.39.5 changing accounts during a pending texture operation never adopts o
   await assert.rejects(attempt, /аккаунт изменился/);
 });
 
-test("0.39.5 checks PNG dimensions and model before exposing bytes via native IPC", async () => {
+test("Версия 0.39.5 проверяет размеры и модель PNG до передачи байтов через нативный IPC", async () => {
   const png = (w, h) => {
     const bytes = Buffer.alloc(33);
     Buffer.from("89504e470d0a1a0a", "hex").copy(bytes, 0);
@@ -629,7 +629,7 @@ test("0.39.5 checks PNG dimensions and model before exposing bytes via native IP
   );
 });
 
-test("0.39.5 abort after server write cannot falsely report that change was undone", async () => {
+test("Версия 0.39.5 после отмены серверной записи не должна ошибочно сообщать, что изменение откачено", async () => {
   const ctrl = new AbortController();
   const bytes = Buffer.alloc(33);
   Buffer.from("89504e470d0a1a0a", "hex").copy(bytes, 0);
@@ -660,7 +660,7 @@ test("0.39.5 abort after server write cannot falsely report that change was undo
   assert.equal(actual.skins[0].id, "new");
 });
 
-test("0.39.6 vault account operations carry verified Never context instead of an unbound SID", async () => {
+test("Версия 0.39.6 передаёт операциям хранилища проверенный контекст Never вместо непривязанного SID", async () => {
   const received = [];
   const neverToken = "bearer-live-0396";
   const client = new OfficialMinecraftClient0257(

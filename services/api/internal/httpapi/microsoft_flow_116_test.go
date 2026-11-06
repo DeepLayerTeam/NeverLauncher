@@ -81,7 +81,7 @@ func TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116(t *testing.
 	beginRes := httptest.NewRecorder()
 	handler.ServeHTTP(beginRes, beginReq)
 	if beginRes.Code != http.StatusOK {
-		t.Fatalf("link begin status=%d body=%s", beginRes.Code, beginRes.Body.String())
+		t.Fatalf("Начало связывания: статус=%d тело=%s", beginRes.Code, beginRes.Body.String())
 	}
 	var begin struct {
 		Data struct{ State, Transaction string } `json:"data"`
@@ -96,25 +96,25 @@ func TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116(t *testing.
 	completeRes := httptest.NewRecorder()
 	handler.ServeHTTP(completeRes, completeReq)
 	if completeRes.Code != http.StatusOK {
-		t.Fatalf("link complete status=%d body=%s", completeRes.Code, completeRes.Body.String())
+		t.Fatalf("Завершение связывания: статус=%d тело=%s", completeRes.Code, completeRes.Body.String())
 	}
 	if strings.Contains(completeRes.Body.String(), "microsoft-refresh-secret") {
-		t.Fatalf("provider credential leaked into link response: %s", completeRes.Body.String())
+		t.Fatalf("Учётные данные провайдера попали в ответ связывания: %s", completeRes.Body.String())
 	}
 	identity, err := repo.GetAuthIdentity("ms-fixture", microsoftFixtureAuth116("").Identity.Subject)
 	if err != nil || identity.UserID != "admin" {
-		t.Fatalf("Microsoft identity not linked to current user: %+v err=%v", identity, err)
+		t.Fatalf("Учётная запись Microsoft не связана с текущим пользователем: %+v ошибка=%v", identity, err)
 	}
 	credential, err := repo.GetProviderCredential("admin", "ms-fixture")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(credential.EncryptedRefreshToken, "microsoft-refresh-secret") {
-		t.Fatal("provider credential stored in plaintext")
+		t.Fatal("Учётные данные провайдера сохранены в открытом виде")
 	}
 	plain, err := api.decryptProviderCredential116(credential)
 	if err != nil || plain != "microsoft-refresh-secret" {
-		t.Fatalf("saved credential cannot be decrypted: %q err=%v", plain, err)
+		t.Fatalf("Сохранённые учётные данные не удалось расшифровать: %q ошибка=%v", plain, err)
 	}
 
 	refreshReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/providers/ms-fixture/credential/refresh", nil)
@@ -122,7 +122,7 @@ func TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116(t *testing.
 	refreshRes := httptest.NewRecorder()
 	handler.ServeHTTP(refreshRes, refreshReq)
 	if refreshRes.Code != http.StatusOK || strings.Contains(refreshRes.Body.String(), "microsoft-refresh-rotated") {
-		t.Fatalf("credential refresh status=%d body=%s", refreshRes.Code, refreshRes.Body.String())
+		t.Fatalf("Обновление учётных данных: статус=%d тело=%s", refreshRes.Code, refreshRes.Body.String())
 	}
 	credential, err = repo.GetProviderCredential("admin", "ms-fixture")
 	if err != nil {
@@ -130,6 +130,6 @@ func TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116(t *testing.
 	}
 	plain, err = api.decryptProviderCredential116(credential)
 	if err != nil || plain != "microsoft-refresh-rotated" || credential.LastRefreshedAt.IsZero() {
-		t.Fatalf("rotated credential mismatch plain=%q refreshedAt=%v err=%v", plain, credential.LastRefreshedAt, err)
+		t.Fatalf("Несоответствие учётных данных после ротации: исходное=%q времяОбновления=%v ошибка=%v", plain, credential.LastRefreshedAt, err)
 	}
 }

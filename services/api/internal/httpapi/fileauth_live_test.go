@@ -44,10 +44,10 @@ func TestLiveFileAuthFederatedLogin0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first.Identity.Subject != uuid || first.User.RoleID != "player" || first.Identity.Claims["minecraftUuid"] != uuid {
-		t.Fatalf("identity/role/UUID mismatch %+v", first)
+		t.Fatalf("Несоответствие идентификатора, роли или UUID: %+v", first)
 	}
 	if second, err := core.AuthenticatePassword(context.Background(), "gravit-live", authconnector.PasswordRequest{Identifier: "Player_426", Secret: secret}); err != nil || second.User.ID != first.User.ID {
-		t.Fatalf("unstable identity %v %v", second, err)
+		t.Fatalf("Нестабильный идентификатор %v %v", second, err)
 	}
 	api := Server{Version: "0.42.6", Config: cfg, Repo: repo, State: NewRuntimeState(), Federation: core}
 	login := func(password string) *httptest.ResponseRecorder {
@@ -59,12 +59,12 @@ func TestLiveFileAuthFederatedLogin0426(t *testing.T) {
 		return res
 	}
 	if res := login(secret); res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"provider":"gravit-live"`) || strings.Contains(res.Body.String(), secret) {
-		t.Fatalf("live login: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Вход в реальном окружении: %d %s", res.Code, res.Body.String())
 	}
 	if err := os.Remove(db); err != nil {
 		t.Fatal(err)
 	}
 	if res := login(secret); res.Code != http.StatusServiceUnavailable {
-		t.Fatalf("missing file permitted cached login: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Отсутствующий файл позволил войти из кеша: %d %s", res.Code, res.Body.String())
 	}
 }

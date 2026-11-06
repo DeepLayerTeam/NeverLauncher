@@ -35,7 +35,7 @@ func TestGravitSourceExportCLI0333(t *testing.T) {
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/export" || r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("Content-Type") != "application/zip" {
-			t.Errorf("bad upload headers: %+v", r.Header)
+			t.Errorf("Неверные заголовки загрузки: %+v", r.Header)
 		}
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("X-Migration-Manifest-SHA256", expected)
@@ -53,13 +53,13 @@ func TestGravitSourceExportCLI0333(t *testing.T) {
 	}
 	info, e := os.Stat(destination)
 	if e != nil || info.Mode().Perm() != 0600 {
-		t.Fatalf("export permissions %v %v", info, e)
+		t.Fatalf("Права доступа к экспорту: %v %v", info, e)
 	}
 	if e = postGravitInventory0333(server.URL+"/export", "test-token", sourceFile, destination, true); e == nil {
-		t.Fatal("clobbered an existing export")
+		t.Fatal("Перезаписан существующий экспорт")
 	}
 	if _, e = os.Stat(destination); e != nil {
-		t.Fatal("old export lost")
+		t.Fatal("Предыдущий экспорт утрачен")
 	}
 }
 func TestGravitSourceCLIRejectsUnsafeTransport0333(t *testing.T) {
@@ -68,7 +68,7 @@ func TestGravitSourceCLIRejectsUnsafeTransport0333(t *testing.T) {
 	_ = os.WriteFile(p, []byte("zip"), 0600)
 	e := postGravitInventory0333("http://example.org/export", "test-token", p, filepath.Join(dir, "out"), true)
 	if e == nil || !strings.Contains(e.Error(), "HTTPS") {
-		t.Fatalf("unsafe transport allowed: %v", e)
+		t.Fatalf("Разрешён небезопасный транспорт: %v", e)
 	}
 }
 func sha0333(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }

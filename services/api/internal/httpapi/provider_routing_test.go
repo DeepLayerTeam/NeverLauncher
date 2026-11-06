@@ -64,21 +64,21 @@ func TestHTTPLoginRouting0293NoFallbackAndStrictDomain(t *testing.T) {
 	}
 	res := request(`{"identifier":"alice@company.test","password":"verified"}`)
 	if res.Code != http.StatusUnauthorized {
-		t.Fatalf("primary auth failure status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Ошибка основной авторизации: статус=%d тело=%s", res.Code, res.Body.String())
 	}
 	if first != 1 || second != 0 {
-		t.Fatalf("unexpected fallback: primary=%d secondary=%d", first, second)
+		t.Fatalf("Неожиданный переход на резервный провайдер: основной=%d резервный=%d", first, second)
 	}
 	res = request(`{"identifier":"alice@company.test","password":"verified","providerId":"secondary"}`)
 	if res.Code != http.StatusForbidden || second != 0 {
-		t.Fatalf("strict domain bypass status=%d calls=%d", res.Code, second)
+		t.Fatalf("Обход строгого ограничения домена: статус=%d вызовов=%d", res.Code, second)
 	}
 	res = request(`{"identifier":"alice@other.test","password":"verified","providerId":"secondary"}`)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"issuer":"https://external.test"`) {
-		t.Fatalf("explicit issuer-scoped login status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Вход с явным ограничением по издателю: статус=%d тело=%s", res.Code, res.Body.String())
 	}
 	if second != 1 {
-		t.Fatalf("explicit provider not called: %d", second)
+		t.Fatalf("Явно заданный провайдер не был вызван: %d", second)
 	}
 }
 
@@ -109,12 +109,12 @@ func TestHTTPLinkBlockedBeforeCredentialProof0293(t *testing.T) {
 	res := httptest.NewRecorder()
 	api.Handler().ServeHTTP(res, req)
 	if res.Code != http.StatusForbidden {
-		t.Fatalf("link policy status=%d body=%s", res.Code, res.Body.String())
+		t.Fatalf("Политика связывания учётных записей: статус=%d тело=%s", res.Code, res.Body.String())
 	}
 	if calls != 0 {
-		t.Fatal("disabled linking sent credentials to external provider")
+		t.Fatal("При отключённом связывании данные отправлены внешнему провайдеру")
 	}
 	if !errors.Is(core.EnsureLinkAllowed("blocked"), federation.ErrLinkingDisabled) {
-		t.Fatal("link protection absent")
+		t.Fatal("Отсутствует защита связывания учётных записей")
 	}
 }

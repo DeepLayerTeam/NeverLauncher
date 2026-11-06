@@ -21,7 +21,7 @@ const sample = {
   artifactSha256: "b".repeat(64),
 };
 
-test("0.28.12 accepts public enrollment for exact project only", () => {
+test("Версия 0.28.12 разрешает публичную регистрацию только для указанного проекта", () => {
   assert.equal(
     parseBridgeEnrollment(JSON.stringify(sample), "project-a").id,
     "paper-prod",
@@ -48,7 +48,7 @@ test("0.28.12 accepts public enrollment for exact project only", () => {
   );
 });
 
-test("0.28.12 project wildcard does not authorize settings:manage on the Backend", () => {
+test("Версия 0.28.12 не предоставляет settings:manage в Backend по маске проекта", () => {
   const projectOnly = {
     permissions: [],
     projectPermissions: { "project-a": ["*"] },

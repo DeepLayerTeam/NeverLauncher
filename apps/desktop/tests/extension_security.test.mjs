@@ -55,7 +55,7 @@ test("HTML привязан к точной версии, поколению и 
   }
   assert.notEqual(identity0356(item), identity0356({ ...item, generation: 3 }));
 });
-test("RPC fails closed for malformed method, envelope, size and identifiers", () => {
+test("RPC безопасно отклоняет неверный метод, конверт, размер и идентификаторы", () => {
   const base = {
     protocol: "extensions.desktop-rpc.v1",
     type: "rpc.request",
@@ -75,7 +75,7 @@ test("RPC fails closed for malformed method, envelope, size and identifiers", ()
     assert.equal(validRPC0356({ ...base, ...change }), false);
   }
 });
-test("bridge requires fresh affirmative Backend attestation for exact action and install", () => {
+test("Мост требует свежего подтверждения Backend для точного действия и установки", () => {
   const grant = {
     authorized: true,
     extensionId: item.extensionId,

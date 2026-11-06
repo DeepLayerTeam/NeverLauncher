@@ -46,12 +46,12 @@ func TestRemoteGracefulStopWaitsForJournaledRequest0428(t *testing.T) {
 	select {
 	case <-entered:
 	case <-time.After(3 * time.Second):
-		t.Fatal("request did not reach server")
+		t.Fatal("Запрос не дошёл до сервера")
 	}
 	cancel()
 	select {
 	case err := <-result:
-		t.Fatalf("server exited before request completion: %v", err)
+		t.Fatalf("Сервер завершил работу до выполнения запроса: %v", err)
 	case <-time.After(60 * time.Millisecond):
 	}
 	close(finish)
@@ -61,7 +61,7 @@ func TestRemoteGracefulStopWaitsForJournaledRequest0428(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("request response missing")
+		t.Fatal("Отсутствует ответ на запрос")
 	}
 	select {
 	case err := <-result:
@@ -69,6 +69,6 @@ func TestRemoteGracefulStopWaitsForJournaledRequest0428(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("shutdown did not complete")
+		t.Fatal("Завершение работы не выполнено")
 	}
 }

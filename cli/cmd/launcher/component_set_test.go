@@ -98,14 +98,14 @@ func TestSignedComponentSet02310(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifySignedComponentSet02310(path, manifest, false); err == nil {
-		t.Fatal("modified manifest accepted")
+		t.Fatal("Принят изменённый манифест")
 	}
 	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	componentSetTrustedKey02310 = strings.Repeat("0", 64)
 	if err := verifySignedComponentSet02310(path, manifest, false); err == nil {
-		t.Fatal("wrong trusted key accepted")
+		t.Fatal("Принят неверный доверенный ключ")
 	}
 	componentSetTrustedKey02310 = trust
 	broken := manifest
@@ -114,7 +114,7 @@ func TestSignedComponentSet02310(t *testing.T) {
 	copySet.Protocols[1].Provides = map[string]uint32{"guard-ipc": 3}
 	broken.ComponentSet = &copySet
 	if err := validateComponentProtocols02310(broken); err == nil {
-		t.Fatal("mismatched guard protocol accepted")
+		t.Fatal("Принят несовместимый протокол Guard")
 	}
 	broken = manifest
 	copySet = *manifest.ComponentSet
@@ -122,12 +122,12 @@ func TestSignedComponentSet02310(t *testing.T) {
 	copySet.Protocols[0].Requires = nil
 	broken.ComponentSet = &copySet
 	if err := validateComponentProtocols02310(broken); err == nil {
-		t.Fatal("missing required dependency accepted")
+		t.Fatal("Принято отсутствие обязательной зависимости")
 	}
 	broken = manifest
 	broken.SupportFiles = nil
 	if err := validateComponentProtocols02310(broken); err == nil {
-		t.Fatal("missing updater accepted")
+		t.Fatal("Принято отсутствие модуля обновления")
 	}
 }
 
@@ -152,11 +152,11 @@ func TestCoordinatedPackageCommitAndFailure02310(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := applyComponentPackage0157(bundle, "", "", installRoot, "", 0, false, true); err == nil {
-		t.Fatal("tampered component accepted")
+		t.Fatal("Принят изменённый компонент")
 	}
 	body, err := os.ReadFile(filepath.Join(installRoot, "launcher-desktop"))
 	if err != nil || string(body) != "old desktop" {
-		t.Fatal("failed package changed live Desktop")
+		t.Fatal("Неудачная установка пакета изменила работающий Desktop")
 	}
 	if err := os.WriteFile(payload, raw, 0o755); err != nil {
 		t.Fatal(err)
@@ -252,10 +252,10 @@ func TestComponentSetInterruptedSwitchRecovery02310(t *testing.T) {
 			t.Fatal(err)
 		}
 		if string(body) != old {
-			t.Fatalf("mixed active set %s = %q", name, body)
+			t.Fatalf("Смешанный активный набор %s = %q", name, body)
 		}
 	}
 	if _, err := updater.recover(false); err != nil {
-		t.Fatalf("recovery must be idempotent: %v", err)
+		t.Fatalf("Восстановление должно быть идемпотентным: %v", err)
 	}
 }
