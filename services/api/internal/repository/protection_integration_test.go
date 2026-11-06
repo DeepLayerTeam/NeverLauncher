@@ -54,23 +54,23 @@ func TestProtectionBanPostgres0298(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok, err := a.ActiveProtectionBan(ctx, uid, time.Now().UTC()); err != nil || !ok {
-		t.Fatalf("replica did not see ban: %v %v", ok, err)
+		t.Fatalf("Реплика не обнаружила блокировку: %v %v", ok, err)
 	}
 	var state string
 	if err := a.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, session).Scan(&state); err != nil || state != "revoked" {
-		t.Fatalf("ban did not revoke active session: %v %v", state, err)
+		t.Fatalf("Блокировка не отозвала активную сессию: %v %v", state, err)
 	}
 	if _, err := a.db.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,'player',$4,'active',now()+interval '1 hour')`, "post-ban-"+suffix, uid, uid+"@example.test", "post-family-"+suffix); err == nil || !strings.Contains(err.Error(), "protection policy denied") {
-		t.Fatalf("new session admitted under ban: %v", err)
+		t.Fatalf("При действующей блокировке разрешена новая сессия: %v", err)
 	}
 	changed, err := b.RevokeProtectionBan(ctx, uid, "admin")
 	if err != nil || !changed {
-		t.Fatalf("unban failed %v %v", changed, err)
+		t.Fatalf("Не удалось снять блокировку: %v %v", changed, err)
 	}
 	if _, ok, err := a.ActiveProtectionBan(ctx, uid, time.Now().UTC()); err != nil || ok {
-		t.Fatalf("ban still active: %v %v", ok, err)
+		t.Fatalf("Блокировка всё ещё действует: %v %v", ok, err)
 	}
 	if err := a.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, session).Scan(&state); err != nil || state != "revoked" {
-		t.Fatal("unban resurrected credentials")
+		t.Fatal("Снятие блокировки восстановило отозванные учётные данные")
 	}
 }

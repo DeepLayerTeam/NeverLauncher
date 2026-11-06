@@ -19,7 +19,7 @@ func TestSignedManifestSandboxPolicy0318(t *testing.T) {
 		t.Fatal(err)
 	}
 	if verified.Manifest.Sandbox == nil || verified.Manifest.Sandbox.Mode != "trusted" {
-		t.Fatalf("signed sandbox policy not preserved: %+v", verified.Manifest.Sandbox)
+		t.Fatalf("Подписанная политика изоляции не сохранилась: %+v", verified.Manifest.Sandbox)
 	}
 	original, err := zip.OpenReader(filename)
 	if err != nil {
@@ -46,7 +46,7 @@ func TestSignedManifestSandboxPolicy0318(t *testing.T) {
 		if entry.Name == manifestName0203 {
 			altered := bytes.Replace(contents, []byte(`"mode": "trusted"`), []byte(`"mode": "isolated"`), 1)
 			if bytes.Equal(altered, contents) {
-				t.Fatal("sandbox policy not serialized into signed manifest")
+				t.Fatal("Политика изоляции не записана в подписанный манифест")
 			}
 			contents = altered
 			changed = true
@@ -70,6 +70,6 @@ func TestSignedManifestSandboxPolicy0318(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = VerifyFile(corrupt, key); err == nil {
-		t.Fatal("tampered sandbox policy accepted despite package signature")
+		t.Fatal("Ошибочно принята изменённая политика изоляции несмотря на подпись пакета")
 	}
 }

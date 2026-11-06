@@ -51,7 +51,7 @@ func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 			candidate := cloneWorkspace0226(original)
 			mutate(&candidate)
 			if _, err := r.SaveBuildWorkspace(ctx, candidate); !errors.Is(err, ErrConflict) {
-				t.Fatalf("mutating pinned input was accepted: %v", err)
+				t.Fatalf("Ошибочно принято изменение закреплённых входных данных: %v", err)
 			}
 		})
 	}
@@ -59,7 +59,7 @@ func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 	w.PackageID = "unsafe"
 	w.BuildDigest = strings.Repeat("c", 64)
 	if _, err := r.SaveBuildWorkspace(ctx, w); err == nil {
-		t.Fatal("build without staging accepted")
+		t.Fatal("Ошибочно принята сборка без предварительного размещения")
 	}
 	w.State = "staged"
 	w.BuildDigest = ""
@@ -81,7 +81,7 @@ func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 			bad.BuildDigest = "junk"
 		}
 		if _, err = r.SaveBuildWorkspace(ctx, bad); err == nil {
-			t.Fatalf("invalid reserved transition %s accepted", change)
+			t.Fatalf("Ошибочно принят недопустимый зарезервированный переход %s", change)
 		}
 	}
 	w.State = "built"
@@ -126,6 +126,6 @@ func TestGAWorkspaceParallelRevisionCAS0230(t *testing.T) {
 	close(start)
 	wg.Wait()
 	if success.Load() != 1 || conflict.Load() != 15 {
-		t.Fatalf("CAS failed success=%d conflicts=%d", success.Load(), conflict.Load())
+		t.Fatalf("Ошибка CAS: успех=%d, конфликты=%d", success.Load(), conflict.Load())
 	}
 }

@@ -120,7 +120,7 @@ func TestBrowserPKCEPOCRedactsAllTokensAndNeverClaimsFormalApproval(t *testing.T
 		t.Fatal("Отсутствие игровых прав может сочетаться с активным профилем Java")
 	}
 	if r.MinecraftProfileSHA256 == "" {
-		t.Fatal("missing hashed subject")
+		t.Fatal("Отсутствует хешированный идентификатор субъекта")
 	}
 	payload, err := json.Marshal(r)
 	if err != nil {
@@ -128,11 +128,11 @@ func TestBrowserPKCEPOCRedactsAllTokensAndNeverClaimsFormalApproval(t *testing.T
 	}
 	for _, secret := range []string{"PRIVATE-MS", "PRIVATE-REFRESH", "PRIVATE-MC", "PrivatePerson", "123456781234123412341234567890ab", "authorized"} {
 		if bytes.Contains(payload, []byte(secret)) {
-			t.Fatalf("report leaked %q", secret)
+			t.Fatalf("Утечка в отчёте: %q", secret)
 		}
 	}
 	if !strings.Contains(instructions.String(), "Microsoft personal-account") {
-		t.Fatal("missing browser instructions")
+		t.Fatal("Отсутствуют инструкции для браузера")
 	}
 }
 
@@ -141,11 +141,11 @@ func TestExplicitAppApprovalRejectionReportsBlockingStage(t *testing.T) {
 	defer cancel()
 	r := verify(ctx, &simulatedProvider{reject: &officialminecraft.ServiceError{Status: 403, Code: "invalid_app_registration"}}, options{ClientID: ownClientID, Flow: "browser"}, new(bytes.Buffer))
 	if r.Result != "blocked" || r.MinecraftServicesAccess != "not_verified" {
-		t.Fatalf("incorrect access assertion: %+v", r)
+		t.Fatalf("Некорректное подтверждение доступа: %+v", r)
 	}
 	last := r.Stages[len(r.Stages)-1]
 	if last.Name != "minecraft_token" || last.Status != "blocked" || last.ErrorCode != "minecraft_app_not_authorized" || last.HTTPStatus != 403 {
-		t.Fatalf("unexpected rejection: %+v", last)
+		t.Fatalf("Неожиданный отказ: %+v", last)
 	}
 }
 
@@ -160,10 +160,10 @@ func TestReportExclusivePrivateAndAtomicEnoughForProof(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm() != 0600 {
-		t.Fatalf("report permissions: %o", info.Mode().Perm())
+		t.Fatalf("Права доступа к отчёту: %o", info.Mode().Perm())
 	}
 	if err := writeReport(path, r); err == nil {
-		t.Fatal("existing report overwritten")
+		t.Fatal("Существующий отчёт перезаписан")
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -184,7 +184,7 @@ func TestSessionserviceFailureAlwaysBlocksPOC(t *testing.T) {
 	provider := &simulatedProvider{onlineReject: officialminecraft.ErrOnlineIdentityMismatch}
 	r := verify(ctx, provider, options{ClientID: ownClientID, Flow: "browser", RequireOnlineSession: true}, io.Discard)
 	if r.Result != "blocked" || r.OnlineModeSession != "not_verified" || r.MinecraftServicesAccess != "verified_live_profile" {
-		t.Fatalf("incorrect release gate %+v", r)
+		t.Fatalf("Некорректная проверка допуска к выпуску: %+v", r)
 	}
 	last := r.Stages[len(r.Stages)-1]
 	if last.Name != "sessionserver_join_has_joined" || last.ErrorCode != "online_mode_identity_mismatch" {
@@ -198,7 +198,7 @@ func TestOAuthCallbackRejectsDuplicateStateWithoutConsumingGrant(t *testing.T) {
 	p := &simulatedProvider{duplicateCallback: make(chan int, 1)}
 	r := verify(ctx, p, options{ClientID: ownClientID, Flow: "browser"}, io.Discard)
 	if r.Result != "provider_access_verified" {
-		t.Fatalf("later legitimate callback rejected: %+v", r)
+		t.Fatalf("Позднее корректное обратное обращение отклонено: %+v", r)
 	}
 	if status := <-p.duplicateCallback; status != http.StatusBadRequest {
 		t.Fatalf("Повторяющееся состояние ошибочно принято: %d", status)

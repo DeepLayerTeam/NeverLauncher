@@ -32,7 +32,7 @@ func TestTextureConfirmation0395ReadsFreshOfficialProfile(t *testing.T) {
 	c.minecraft = srv.URL
 	profile, err := c.ConfirmTexture0395(context.Background(), "owner-token", textureUUID0395, "cape-select", "owned")
 	if err != nil || len(profile.Capes) != 1 || profile.Capes[0].State != "ACTIVE" || reads.Load() != 2 {
-		t.Fatalf("failed to confirm delayed activation: %+v err=%v reads=%d", profile, err, reads.Load())
+		t.Fatalf("Не удалось подтвердить отложенную активацию: %+v ошибка=%v чтений=%d", profile, err, reads.Load())
 	}
 }
 
@@ -47,7 +47,7 @@ func TestTextureConfirmation0395RejectsWrongIdentityWithoutRetry(t *testing.T) {
 	c.minecraft = srv.URL
 	_, err := c.ConfirmTexture0395(context.Background(), "owner-token", textureUUID0395, "cape-reset", "")
 	if err == nil || reads.Load() != 1 {
-		t.Fatalf("accepted wrong Minecraft identity: %v reads=%d", err, reads.Load())
+		t.Fatalf("Ошибочно принят чужой идентификатор Minecraft: %v чтений=%d", err, reads.Load())
 	}
 }
 
@@ -56,14 +56,14 @@ func TestTextureConfirmation0395RequiresActiveSelectionAndModel(t *testing.T) {
 		Capes: []Cape{{ID: "a", State: "INACTIVE"}, {ID: "b", State: "ACTIVE"}}}
 	if confirmedTexture0395(p, "cape-select", "a") || confirmedTexture0395(p, "cape-reset", "") ||
 		confirmedTexture0395(p, "skin-upload", "slim") || confirmedTexture0395(p, "invalid", "") {
-		t.Fatal("accepted unconfirmed official texture operation")
+		t.Fatal("Ошибочно принята неподтверждённая операция с официальной текстурой")
 	}
 	if !confirmedTexture0395(p, "cape-select", "b") || !confirmedTexture0395(p, "skin-upload", "classic") {
-		t.Fatal("rejected observed official texture operation")
+		t.Fatal("Отклонена подтверждённая операция с официальной текстурой")
 	}
 	p.Capes[1].State = "INACTIVE"
 	if !confirmedTexture0395(p, "cape-reset", "") {
-		t.Fatal("reset cape not confirmed")
+		t.Fatal("Сброс плаща не подтверждён")
 	}
 }
 
@@ -80,6 +80,6 @@ func TestTextureConfirmation0395CancelsWithoutFurtherProviderRequests(t *testing
 	c.minecraft = srv.URL
 	_, err := c.ConfirmTexture0395(ctx, "owner-token", strings.ToUpper(textureUUID0395), "cape-select", "a")
 	if err == nil || reads.Load() != 1 {
-		t.Fatalf("cancel not enforced err=%v reads=%d", err, reads.Load())
+		t.Fatalf("Отмена не была применена: ошибка=%v чтений=%d", err, reads.Load())
 	}
 }

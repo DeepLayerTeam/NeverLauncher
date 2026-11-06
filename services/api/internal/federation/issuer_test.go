@@ -35,17 +35,17 @@ func TestFederationCannotMergeIssuerBySubjectOrEmail0291(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first.User.ID == second.User.ID || first.User.Email == second.User.Email || first.Identity.ID == second.Identity.ID {
-		t.Fatal("same email/subject merged across issuers")
+		t.Fatal("Адрес электронной почты и субъект объединены между разными издателями токенов")
 	}
 	if first.Identity.Email != "shared@example.test" || second.Identity.Email != "shared@example.test" {
-		t.Fatal("original email claim lost")
+		t.Fatal("Потеряно исходное утверждение об адресе электронной почты")
 	}
 	again, err := core.AuthenticatePassword(context.Background(), "multi", authconnector.PasswordRequest{Identifier: "https://issuer-one.test"})
 	if err != nil || again.User.ID != first.User.ID {
-		t.Fatal("issuer identity is not stable", err)
+		t.Fatal("Идентификатор издателя токена нестабилен", err)
 	}
 	if _, err := repo.GetAuthIdentity("multi", "same"); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("ambiguous unscoped lookup accepted: %v", err)
+		t.Fatalf("Ошибочно принят неоднозначный поиск без указания области: %v", err)
 	}
 }
 
@@ -61,14 +61,14 @@ func TestLegacyIssuerRequiresExplicitLink0291(t *testing.T) {
 	}
 	proof := authconnector.Authentication{Identity: authconnector.Identity{Issuer: "https://issuer-one.test", Subject: "same"}}
 	if _, err := core.AuthenticatePassword(context.Background(), "multi", authconnector.PasswordRequest{Identifier: proof.Identity.Issuer}); !errors.Is(err, ErrIdentityNotLinked) {
-		t.Fatalf("legacy account stolen or shadowed: %v", err)
+		t.Fatalf("Старая учётная запись перехвачена или затенена: %v", err)
 	}
 	if _, err := core.LinkAuthenticatedIdentity("admin", "multi", proof); err != nil {
 		t.Fatal("explicit migration link", err)
 	}
 	result, err := core.AuthenticatePassword(context.Background(), "multi", authconnector.PasswordRequest{Identifier: proof.Identity.Issuer})
 	if err != nil || result.User.ID != "admin" {
-		t.Fatalf("linked identity failed %+v / %v", result, err)
+		t.Fatalf("Ошибка привязанной идентичности: %+v / %v", result, err)
 	}
 }
 
@@ -84,9 +84,9 @@ func TestPasswordProofLinksExistingNeverIdentity0291(t *testing.T) {
 	}
 	result, err := core.AuthenticatePassword(context.Background(), "multi", req)
 	if err != nil || result.User.ID != "admin" {
-		t.Fatalf("password proof did not activate issuer flow: %+v / %v", result, err)
+		t.Fatalf("Подтверждение пароля не активировало процесс издателя токена: %+v / %v", result, err)
 	}
 	if _, _, err := core.LinkPasswordIdentity(context.Background(), "admin", "multi", authconnector.PasswordRequest{Identifier: "https://issuer.test"}); err == nil {
-		t.Fatal("missing external password accepted")
+		t.Fatal("Ошибочно принято отсутствие внешнего пароля")
 	}
 }

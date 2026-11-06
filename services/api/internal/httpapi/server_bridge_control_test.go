@@ -71,7 +71,7 @@ func TestServerBridgeControlSignature0195(t *testing.T) {
 		t.Fatal("Подменённая подпись управляющей команды ошибочно принята")
 	}
 	if len(base64.RawURLEncoding.EncodeToString(signature)) != 86 {
-		t.Fatal("unexpected Ed25519 encoding")
+		t.Fatal("Неожиданное представление Ed25519")
 	}
 }
 

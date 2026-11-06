@@ -46,7 +46,7 @@ func TestExtensionLifecycleMemoryStateMachine0204(t *testing.T) {
 		PackageIdentity: identity, CurrentPackageIdentity: identity, Operation: "disable", Source: "stale", ExpectedGeneration: 1,
 	})
 	if !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale generation must conflict, got %v", err)
+		t.Fatalf("Устаревшее поколение должно вызывать конфликт, получено %v", err)
 	}
 
 	revisions, err := repo.ListExtensionInstallRevisions(ctx, manifest.ID, "global", "", 10)
@@ -80,6 +80,6 @@ func TestExtensionLifecycleProjectScopeIsolation0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if a.ScopeID == b.ScopeID || a.Generation != 1 || b.Generation != 1 {
-		t.Fatalf("scope isolation failed: a=%+v b=%+v", a, b)
+		t.Fatalf("Нарушена изоляция областей: a=%+v b=%+v", a, b)
 	}
 }

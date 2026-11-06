@@ -138,7 +138,7 @@ class PhysicalTests(unittest.TestCase):
                 '--redfish-url',self.args.redfish_url,'--bmc-token-file',self.args.bmc_token_file,
                 '--bmc-ca',self.args.bmc_ca,'--expected-serial',self.args.expected_serial,
                 '--allow-disruption',self.args.allow_disruption]), 3)
-            self.assertTrue(Path(self.args.state).exists(), 'unverified disruption journal must persist')
+            self.assertTrue(Path(self.args.state).exists(), 'Журнал неподтверждённого сбоя должен сохраняться')
 
     def test_successful_power_drill_closes_journal_only_after_live_recovery(self):
         statuses = [{'PowerState':'On'}, {'PowerState':'On'}, {'PowerState':'On'}]

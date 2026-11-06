@@ -70,7 +70,7 @@ func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 			}
 			_, e := tx.ExecContext(ctx, query, args...)
 			if e == nil || !strings.Contains(e.Error(), "stable_runtime_gate_") {
-				t.Errorf("bypass should fail with gate diagnostic: %v", e)
+				t.Errorf("Обход должен завершаться отказом с диагностикой проверки: %v", e)
 			}
 			if _, rollback := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT ga_negative"); rollback != nil {
 				t.Fatal(rollback)
@@ -83,6 +83,6 @@ func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 	// Менее строгая политика dev остаётся доступной; заморозка stable не должна
 	// глобально делать обычные файлы разработки только для чтения.
 	if _, err = tx.ExecContext(ctx, `UPDATE release_versions SET manifest='{"test":true}'::jsonb WHERE id=$1`, dev); err != nil {
-		t.Fatalf("dev unexpectedly frozen: %v", err)
+		t.Fatalf("Версия разработки неожиданно заблокирована: %v", err)
 	}
 }

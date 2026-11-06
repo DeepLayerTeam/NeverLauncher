@@ -66,23 +66,23 @@ func TestTextureURLImportProvenance0254(t *testing.T) {
 		t.Fatal(err)
 	}
 	if selected.Source != "managed-url-import" || selected.ExternalURL != "" || selected.BlobDigest != digest {
-		t.Fatalf("unexpected import selection: %+v", selected)
+		t.Fatalf("Неожиданный выбор при импорте: %+v", selected)
 	}
 	var event, source, external string
 	if err = db.QueryRowContext(ctx, `SELECT r.event,a.source,a.external_url FROM texture_assignment_revisions r JOIN texture_assignments a ON r.assignment_id=a.id WHERE a.id=$1`, selected.ID).Scan(&event, &source, &external); err != nil {
 		t.Fatal(err)
 	}
 	if event != "import" || source != "managed-url-import" || external != "" {
-		t.Fatalf("incorrect imported revision %s %s %s", event, source, external)
+		t.Fatalf("Некорректная импортированная ревизия %s %s %s", event, source, external)
 	}
 	// Тот же хеш остаётся неизменяемым; второму запросу требуется новая CAS-ревизия.
 	if _, err = repo.UploadTexture0252(ctx, owner, input); !errors.Is(err, ErrTextureRevisionConflict0251) {
-		t.Fatalf("expected stale revision conflict: %v", err)
+		t.Fatalf("Ожидался конфликт устаревшей ревизии: %v", err)
 	}
 	alien := owner
 	alien.UserID = "other"
 	if _, err = repo.UploadTexture0252(ctx, alien, input); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("foreign profile was writable: %v", err)
+		t.Fatalf("Чужой профиль оказался доступен для записи: %v", err)
 	}
 	input.Source = "url-direct"
 	input.ExpectedRevision = 1

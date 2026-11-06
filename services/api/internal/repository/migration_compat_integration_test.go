@@ -42,7 +42,7 @@ func TestGravitAssessmentTransactional0332(t *testing.T) {
 	}
 	report := gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: fmt.Sprintf("%064x", 77), ClaimedVersion: "5.7.12", Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}
 	if _, err = repo.SaveMigrationCompatibility0332(ctx, run.ID, report); !errors.Is(err, mw.ErrBusy) {
-		t.Fatalf("assessment before baseline accepted: %v", err)
+		t.Fatalf("Ошибочно принята оценка до фиксации базового состояния: %v", err)
 	}
 	for _, step := range []string{"target_check", "target_inventory"} {
 		lease, e := repo.ClaimMigration0331(ctx, run.ID, "worker", 10*time.Second)
@@ -54,7 +54,7 @@ func TestGravitAssessmentTransactional0332(t *testing.T) {
 		}
 	}
 	if saved, err := repo.SaveMigrationCompatibility0332(ctx, run.ID, report); err != nil || saved.SourceSHA256 != report.SourceSHA256 {
-		t.Fatalf("persist assessment %+v %v", saved, err)
+		t.Fatalf("Сохранение оценки: %+v %v", saved, err)
 	}
 	one, err := repo.GetMigration0331(ctx, run.ID)
 	if err != nil {
@@ -65,12 +65,12 @@ func TestGravitAssessmentTransactional0332(t *testing.T) {
 	}
 	two, err := repo.GetMigration0331(ctx, run.ID)
 	if err != nil || one.Revision != two.Revision {
-		t.Fatalf("idempotency failed %+v %+v %v", one, two, err)
+		t.Fatalf("Нарушена идемпотентность: %+v %+v %v", one, two, err)
 	}
 	differentClaim := report
 	differentClaim.ClaimedVersion = "5.7.11"
 	if _, err = repo.SaveMigrationCompatibility0332(ctx, run.ID, differentClaim); !errors.Is(err, mw.ErrConflict) {
-		t.Fatalf("version claim changed silently: %v", err)
+		t.Fatalf("Заявленная версия изменилась незаметно: %v", err)
 	}
 	other := report
 	other.SourceSHA256 = fmt.Sprintf("%064x", 88)
@@ -79,11 +79,11 @@ func TestGravitAssessmentTransactional0332(t *testing.T) {
 	}
 	three, err := repo.GetMigration0331(ctx, run.ID)
 	if err != nil || three.Revision != two.Revision+1 {
-		t.Fatalf("revision not incremented %+v %v", three, err)
+		t.Fatalf("Ревизия не увеличена: %+v %v", three, err)
 	}
 	got, err := repo.GetMigrationCompatibility0332(ctx, run.ID)
 	if err != nil || got.SourceSHA256 != other.SourceSHA256 {
-		t.Fatalf("stored report incorrect %+v %v", got, err)
+		t.Fatalf("Сохранённый отчёт некорректен: %+v %v", got, err)
 	}
 	events, err := repo.MigrationEvents0331(ctx, run.ID, 0, 50)
 	if err != nil {
@@ -96,6 +96,6 @@ func TestGravitAssessmentTransactional0332(t *testing.T) {
 		}
 	}
 	if count != 2 {
-		t.Fatalf("expected 2 events for 3 attempts, got %d", count)
+		t.Fatalf("Ожидалось два события на три попытки, получено %d", count)
 	}
 }

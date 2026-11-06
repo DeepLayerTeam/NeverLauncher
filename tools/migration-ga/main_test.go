@@ -69,7 +69,7 @@ func TestCheckPlanRequiresFullMatrix(t *testing.T) {
 	}
 	p.Checks[0].Command = nil
 	if validatePlan(p) == nil {
-		t.Fatal("accepted no execution")
+		t.Fatal("Ошибочно принято отсутствие выполнения")
 	}
 }
 func TestGAProbeHelper(t *testing.T) {

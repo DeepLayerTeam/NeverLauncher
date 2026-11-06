@@ -30,7 +30,7 @@ func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	defer first.db.Close()
 	second, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("second PostgreSQL connection required")
+		t.Fatal("Требуется второе соединение PostgreSQL")
 	}
 	defer second.db.Close()
 	if _, err := first.ApplyMigrations(ctx); err != nil {
@@ -69,10 +69,10 @@ func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	hw := model.DeviceHardwareEvidence{UserID: user, DeviceID: device, SessionID: session, BindingEpoch: 7, KeyFingerprint: fp, RootID: "operator", RootFingerprint: rootFP, AKFingerprint: akFP, ChallengeID: "htc-" + suffix, VerifiedAt: now, ExpiresAt: now.Add(time.Hour)}
 	quote := model.MeasuredBootEvidence0315{UserID: user, DeviceID: device, SessionID: session, BindingEpoch: 7, KeyFingerprint: fp, RootID: "operator", RootFingerprint: rootFP, AKFingerprint: akFP, PolicyID: "prod", PolicyHash: strings.Repeat("d", 64), PCRDigest: strings.Repeat("e", 64), ChallengeID: "mpc-" + suffix, VerifiedAt: now, ExpiresAt: now.Add(5 * time.Minute)}
 	if err = second.SaveHardwareEvidence(ctx, hw); err != nil {
-		t.Fatalf("active hardware proof rejected: %v", err)
+		t.Fatalf("Действующее аппаратное подтверждение отклонено: %v", err)
 	}
 	if err = second.SaveMeasuredBoot0315(ctx, quote); err != nil {
-		t.Fatalf("active Quote rejected: %v", err)
+		t.Fatalf("Действующий Quote отклонён: %v", err)
 	}
 	if _, err = first.db.ExecContext(ctx, `UPDATE auth_sessions SET binding_epoch=8 WHERE id=$1`, session); err != nil {
 		t.Fatal(err)
@@ -80,10 +80,10 @@ func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	hw.ChallengeID += "-epoch"
 	quote.ChallengeID += "-epoch"
 	if err = second.SaveHardwareEvidence(ctx, hw); err == nil {
-		t.Fatal("stale epoch stored hardware proof")
+		t.Fatal("Аппаратное подтверждение сохранено для устаревшей эпохи")
 	}
 	if err = second.SaveMeasuredBoot0315(ctx, quote); err == nil {
-		t.Fatal("stale epoch stored measured boot proof")
+		t.Fatal("Подтверждение измеренной загрузки сохранено для устаревшей эпохи")
 	}
 	if _, err = first.db.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=now(),revoked_reason='proof-test' WHERE id=$1`, session); err != nil {
 		t.Fatal(err)
@@ -93,9 +93,9 @@ func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	hw.ChallengeID += "-revoked"
 	quote.ChallengeID += "-revoked"
 	if err = second.SaveHardwareEvidence(ctx, hw); err == nil {
-		t.Fatal("revoked session stored hardware proof")
+		t.Fatal("Отозванная сессия сохранила аппаратное подтверждение")
 	}
 	if err = second.SaveMeasuredBoot0315(ctx, quote); err == nil {
-		t.Fatal("revoked session stored measured boot proof")
+		t.Fatal("Отозванная сессия сохранила подтверждение измеренной загрузки")
 	}
 }

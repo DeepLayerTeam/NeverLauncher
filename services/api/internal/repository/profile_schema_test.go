@@ -25,7 +25,7 @@ func TestProfileVersionAndReleaseSnapshot0221(t *testing.T) {
 		t.Fatal(err)
 	}
 	if release.Manifest.SchemaVersion != "2.0" || release.Manifest.ProfileSnapshot == nil {
-		t.Fatal("draft has no immutable v2 snapshot")
+		t.Fatal("В черновике отсутствует неизменяемый снимок v2")
 	}
 	old := *release.Manifest.ProfileSnapshot
 	p.Name = "Renamed"
@@ -34,14 +34,14 @@ func TestProfileVersionAndReleaseSnapshot0221(t *testing.T) {
 		t.Fatal(err)
 	}
 	if saved.Revision != 2 || saved.Digest == old.Digest {
-		t.Fatal("profile edit did not create revision")
+		t.Fatal("Изменение профиля не создало ревизию")
 	}
 	history, err := r.ListProfileRevisions("demo-project", "vanilla")
 	if err != nil || len(history) != 2 {
 		t.Fatalf("history %v: %v", history, err)
 	}
 	if history[0].Digest != old.Digest {
-		t.Fatal("old history rewritten")
+		t.Fatal("Старая история переписана")
 	}
 	versions, _ := r.ListVersions("demo-project")
 	for _, v := range versions {
@@ -52,14 +52,14 @@ func TestProfileVersionAndReleaseSnapshot0221(t *testing.T) {
 	p.Revision = 1
 	p.Name = "stale update"
 	if _, err := r.SaveProfile(p); err != ErrConflict {
-		t.Fatalf("expected CAS conflict got %v", err)
+		t.Fatalf("Ожидался конфликт CAS, получено %v", err)
 	}
 	saved.Name = "Renamed"
 	same, err := r.SaveProfile(saved)
 	if err != nil || same.Revision != 2 {
-		t.Fatal("no-op edited revision")
+		t.Fatal("Пустая операция изменила ревизию")
 	}
 	if _, err := r.GetManifest("demo-project", "vanilla", "beta"); err != ErrNotFound {
-		t.Fatalf("draft leaked in public manifest: %v", err)
+		t.Fatalf("Черновик попал в публичный манифест: %v", err)
 	}
 }

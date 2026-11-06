@@ -66,10 +66,10 @@ func TestServerProbeRealPacketHandling(t *testing.T) {
 		t.Fatal("Недоступный сервер ошибочно принят")
 	}
 	if err := probeOnlineMode(context.Background(), "example.com:bad", 767); err == nil {
-		t.Fatal("invalid address accepted")
+		t.Fatal("Ошибочно принят некорректный адрес")
 	}
 	if err := probeOnlineMode(context.Background(), "127.0.0.1:25565", 0); err == nil {
-		t.Fatal("invalid protocol accepted")
+		t.Fatal("Ошибочно принят некорректный протокол")
 	}
 }
 func TestPOCRequiresRealSessionserverWhenEnabled(t *testing.T) {

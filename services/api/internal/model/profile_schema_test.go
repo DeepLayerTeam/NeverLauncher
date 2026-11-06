@@ -34,7 +34,7 @@ func TestProfileV2DeterministicSnapshots(t *testing.T) {
 		t.Fatal("Нулевой байт NUL ошибочно принят")
 	}
 	if _, err := NormalizeProfileV2(Profile{ID: "p", ProjectID: "p", Name: "n", SchemaVersion: "3.0"}); err == nil {
-		t.Fatal("future schema accepted")
+		t.Fatal("Ошибочно принята схема будущей версии")
 	}
 }
 
@@ -56,7 +56,7 @@ func TestManifestV1UnchangedAndV2Payload(t *testing.T) {
 	}
 	sig := ed25519.Sign(priv, old)
 	if !ed25519.Verify(priv.Public().(ed25519.PublicKey), old, sig) {
-		t.Fatal("v1 signature invalid")
+		t.Fatal("Некорректная подпись v1")
 	}
 	v1.ProfileSnapshot = &ProfileSnapshot{}
 	if err := ValidateManifestSchema(v1); err == nil {
@@ -64,7 +64,7 @@ func TestManifestV1UnchangedAndV2Payload(t *testing.T) {
 	}
 	v1.SchemaVersion = "2.0"
 	if err := ValidateManifestSchema(v1); err == nil {
-		t.Fatal("bad v2 snapshot accepted")
+		t.Fatal("Ошибочно принят некорректный снимок v2")
 	}
 	p, _ := NormalizeProfileV2(Profile{ID: "forge", ProjectID: "demo", Name: "Forge", Loader: "forge", Revision: 3})
 	shot := SnapshotProfile(p)
@@ -78,6 +78,6 @@ func TestManifestV1UnchangedAndV2Payload(t *testing.T) {
 	}
 	digest := sha256.Sum256(payload)
 	if len(hex.EncodeToString(digest[:])) != 64 || !strings.Contains(string(payload), `"profileSnapshot"`) {
-		t.Fatal("v2 snapshot not signed")
+		t.Fatal("Снимок v2 не подписан")
 	}
 }

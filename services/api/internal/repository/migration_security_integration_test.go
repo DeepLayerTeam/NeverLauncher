@@ -108,7 +108,7 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	}
 	var state string
 	if err = repo.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, sid).Scan(&state); err != nil || state != "active" {
-		t.Fatalf("preview changed session %s %v", state, err)
+		t.Fatalf("Предпросмотр изменил сессию %s: %v", state, err)
 	}
 	report, err := repo.ResetMigrationTrust0336(ctx, run.ID, kid, manifestHash, false)
 	if err != nil || report.AppliedAt == nil || report.SessionsRevoked != 1 || report.DevicesRevoked != 1 {
@@ -116,14 +116,14 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	}
 	for _, q := range []string{`SELECT status FROM auth_sessions WHERE id=$1`, `SELECT status FROM refresh_token_families WHERE session_id=$1`} {
 		if err = repo.db.QueryRowContext(ctx, q, sid).Scan(&state); err != nil || state != "revoked" {
-			t.Fatalf("dependent not revoked %s %v", state, err)
+			t.Fatalf("Связанный объект не отозван %s: %v", state, err)
 		}
 	}
 	if err = repo.db.QueryRowContext(ctx, `SELECT status FROM trusted_devices WHERE id=$1`, did).Scan(&state); err != nil || state != "revoked" {
-		t.Fatalf("device not revoked: %s %v", state, err)
+		t.Fatalf("Устройство не отозвано: %s %v", state, err)
 	}
 	if _, err = repo.ResetMigrationTrust0336(ctx, run.ID, "different-kid", manifestHash, false); !errors.Is(err, mw.ErrConflict) {
-		t.Fatalf("changed signer accepted %v", err)
+		t.Fatalf("Ошибочно принят изменённый подписант: %v", err)
 	}
 	// Новый независимый ключ, зарегистрированный после сброса, принадлежит
 	// владельцу и не должен отзываться повторным запросом после неопределённого
@@ -135,10 +135,10 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	}
 	replay, err := repo.ResetMigrationTrust0336(ctx, run.ID, kid, manifestHash, false)
 	if err != nil || !replay.Verified || replay.DevicesRevoked != 1 {
-		t.Fatalf("not idempotent %#v %v", replay, err)
+		t.Fatalf("Операция не идемпотентна: %#v %v", replay, err)
 	}
 	if err = repo.db.QueryRowContext(ctx, `SELECT status FROM trusted_devices WHERE id=$1`, newDevice).Scan(&state); err != nil || state != "active" {
-		t.Fatalf("replay revoked fresh device %s %v", state, err)
+		t.Fatalf("Повторное выполнение отозвало новое устройство %s: %v", state, err)
 	}
 	if _, err = repo.GetMigrationSecurity0336(ctx, run.ID); err != nil {
 		t.Fatal(err)

@@ -16,13 +16,13 @@ import (
 func TestGACgroupKillMandatory0320(t *testing.T) {
 	dir := t.TempDir()
 	if err := requireCgroupKill03120(dir); err == nil || !strings.Contains(err.Error(), "cgroup-kill-required") {
-		t.Fatalf("missing cgroup.kill accepted: %v", err)
+		t.Fatalf("Ошибочно принято отсутствие cgroup.kill: %v", err)
 	}
 	if err := os.Mkdir(filepath.Join(dir, "cgroup.kill"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	if err := requireCgroupKill03120(dir); err == nil {
-		t.Fatal("directory disguised as cgroup.kill accepted")
+		t.Fatal("Ошибочно принят каталог, выдающий себя за cgroup.kill")
 	}
 	if err := os.Remove(filepath.Join(dir, "cgroup.kill")); err != nil {
 		t.Fatal(err)
@@ -50,6 +50,6 @@ func TestGAConcurrentIPCListenerShutdown0320(t *testing.T) {
 	select {
 	case <-listener.done:
 	default:
-		t.Fatal("listener not closed")
+		t.Fatal("Слушающий сокет не закрыт")
 	}
 }

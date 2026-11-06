@@ -12,21 +12,21 @@ func TestDesktopAndCLIContributions0209AreCanonicalAndPermissionBound(t *testing
 		t.Fatalf("Корректный манифест для нескольких целей ошибочно отклонён: %v", err)
 	}
 	if len(got.Targets) != 4 || got.Targets[0].Kind != "admin" || got.Targets[3].Kind != "desktop" {
-		t.Fatalf("targets not canonical: %#v", got.Targets)
+		t.Fatalf("Целевые объекты не приведены к каноническому виду: %#v", got.Targets)
 	}
 	if got.Desktop == nil || got.CLI == nil || got.CLI.Namespace != "ops" {
-		t.Fatalf("contributions lost: %#v %#v", got.Desktop, got.CLI)
+		t.Fatalf("Вклады расширения потеряны: %#v %#v", got.Desktop, got.CLI)
 	}
 	bad := manifest
 	bad.Permissions = []string{"desktop:contribute"}
 	if _, _, err := NormalizeExtensionManifest(bad); err == nil {
-		t.Fatal("CLI contributions accepted without cli:contribute")
+		t.Fatal("Ошибочно приняты расширения CLI без разрешения cli:contribute")
 	}
 	bad = manifest
 	bad.Targets = []model.ExtensionTarget{{Kind: "desktop", Entrypoint: "desktop/index.js"}}
 	bad.CLI = nil
 	bad.Permissions = []string{"desktop:contribute"}
 	if _, _, err := NormalizeExtensionManifest(bad); err == nil {
-		t.Fatal("Desktop contributions accepted without standalone HTML")
+		t.Fatal("Ошибочно приняты расширения Desktop без самостоятельного HTML")
 	}
 }

@@ -22,13 +22,13 @@ func TestPrivateJSONRejectsUnsafeFiles(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := readPrivateJSON(p, &v); e != nil || v.ID != "p" {
-		t.Fatalf("private JSON should be accepted: %v %+v", e, v)
+		t.Fatalf("Частный JSON должен приниматься: %v %+v", e, v)
 	}
 	if e := os.WriteFile(p, []byte(`{"id":"p","privileged":true}`), 0600); e != nil {
 		t.Fatal(e)
 	}
 	if e := readPrivateJSON(p, &v); e == nil {
-		t.Fatal("unknown JSON fields accepted")
+		t.Fatal("Ошибочно приняты неизвестные поля JSON")
 	}
 	link := filepath.Join(dir, "link.json")
 	if e := os.Symlink(p, link); e != nil {

@@ -11,13 +11,13 @@ func TestManagedConnectorSwapAndRollback02910(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := core.SwapManaged(fixtureConnector{}, ProviderPolicy{}, 1); err == nil {
-		t.Fatal("local provider replaced")
+		t.Fatal("Локальный провайдер заменён")
 	}
 	if err := core.Register(unlinkedConnector{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := core.SwapManaged(unlinkedConnector{}, ProviderPolicy{}, 2); err == nil {
-		t.Fatal("bootstrap provider replaced")
+		t.Fatal("Провайдер начальной настройки заменён")
 	}
 	if err := core.SwapManaged(jitFixtureConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "nonexistent"}, 1); err == nil {
 		t.Fatal("Неизвестная роль ошибочно принята")
@@ -38,9 +38,9 @@ func TestManagedConnectorSwapAndRollback02910(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok := core.Connector("website"); ok {
-		t.Fatal("disabled provider still registered")
+		t.Fatal("Отключённый провайдер всё ещё зарегистрирован")
 	}
 	if err := core.DisableManaged("external"); err == nil {
-		t.Fatal("static provider disabled")
+		t.Fatal("Статический провайдер отключён")
 	}
 }

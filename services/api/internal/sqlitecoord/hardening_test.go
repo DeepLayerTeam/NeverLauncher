@@ -29,7 +29,7 @@ func TestCoordinator0471SchemaDriftFailClosed(t *testing.T) {
 	}
 	if next, err := Open(ctx, path); err == nil {
 		_ = next.Close()
-		t.Fatal("partial coordinator schema silently rebuilt")
+		t.Fatal("Неполная схема координатора незаметно пересоздана")
 	} else if !strings.Contains(err.Error(), "partial schema") {
 		t.Fatalf("Неожиданная ошибка схемы: %v", err)
 	}
@@ -56,6 +56,6 @@ func TestCoordinator0471RejectsForeignSchema(t *testing.T) {
 	}
 	if c, err := Open(ctx, path); err == nil {
 		_ = c.Close()
-		t.Fatal("incompatible schema accepted")
+		t.Fatal("Ошибочно принята несовместимая схема")
 	}
 }

@@ -79,7 +79,7 @@ func TestJoinAtomicRaceCrashRestartAndReplay(t *testing.T) {
 	}
 	wg.Wait()
 	if winners.Load() != 1 {
-		t.Fatalf("one-time redemption winners=%d", winners.Load())
+		t.Fatalf("Число успешных одноразовых погашений: %d", winners.Load())
 	}
 	if e := r.Close(); e != nil {
 		t.Fatal(e)
@@ -91,7 +91,7 @@ func TestJoinAtomicRaceCrashRestartAndReplay(t *testing.T) {
 	defer r.Close()
 	state, e := r.TicketStatus(ctx, grant.Ticket)
 	if e != nil || state != "consumed" {
-		t.Fatalf("after restart state=%q error=%v", state, e)
+		t.Fatalf("После перезапуска: состояние=%q, ошибка=%v", state, e)
 	}
 	p := signJoinProof(t, priv, "redeem", 1, []byte(grant.Ticket))
 	if _, e = r.RedeemJoinTicket(ctx, grant.Ticket, p, ""); !errors.Is(e, ErrJoinRejected) {

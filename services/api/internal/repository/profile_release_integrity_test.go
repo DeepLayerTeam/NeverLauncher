@@ -23,7 +23,7 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 		}
 	}
 	if draft.Manifest.ProfileSnapshot == nil || *draft.Manifest.ProfileSnapshot != frozen {
-		t.Fatal("CreateVersion leaked mutable snapshot pointer")
+		t.Fatal("CreateVersion раскрыл ссылку на изменяемый снимок")
 	}
 	// Законное изменение метаданных черновика сохраняет закреплённую ревизию.
 	draft.Manifest.Minecraft.Version = "1.21.1"
@@ -32,17 +32,17 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 		t.Fatal(err)
 	}
 	if *saved.Manifest.ProfileSnapshot != frozen {
-		t.Fatal("valid metadata update unpinned the snapshot")
+		t.Fatal("При корректном обновлении метаданных снимок потерял фиксацию")
 	}
 	newer := frozen
 	newer.Revision++
 	changed := saved.Manifest
 	changed.ProfileSnapshot = &newer
 	if _, err := r.UpdateVersionManifest(draft.ProjectID, draft.ID, changed); err == nil {
-		t.Fatal("snapshot revision injection accepted")
+		t.Fatal("Ошибочно принято внедрение ревизии снимка")
 	}
 	if _, err := r.PublishVersionWithManifest(draft.ProjectID, draft.ProfileID, draft.Channel, draft.Version, changed); err == nil {
-		t.Fatal("publish substituted a different snapshot")
+		t.Fatal("При публикации подставлен другой снимок")
 	}
 	// Постороннее изменение профиля не влияет на зафиксированный черновик.
 	profiles, _ := r.ListProfiles("demo-project")
@@ -60,7 +60,7 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 		t.Fatal(err)
 	}
 	if *saved.Manifest.ProfileSnapshot != frozen {
-		t.Fatal("published snapshot changed")
+		t.Fatal("Опубликованный снимок изменился")
 	}
 	published, err := r.GetManifest("demo-project", "vanilla", "beta")
 	if err != nil {
@@ -71,13 +71,13 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 	for _, v := range current {
 		if v.ID == release.ID {
 			if *v.Manifest.ProfileSnapshot != frozen {
-				t.Fatal("public read mutated stored manifest")
+				t.Fatal("Публичное чтение изменило сохранённый манифест")
 			}
 			v.Manifest.ProfileSnapshot.Revision = 10
 		}
 	}
 	again, err := r.GetManifest("demo-project", "vanilla", "beta")
 	if err != nil || *again.ProfileSnapshot != frozen {
-		t.Fatal("ListVersions leaked mutable snapshot pointer")
+		t.Fatal("ListVersions раскрыл ссылку на изменяемый снимок")
 	}
 }

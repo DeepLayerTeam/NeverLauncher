@@ -13,7 +13,7 @@ func TestReleaseManifestTransition0222(t *testing.T) {
 	candidate.CreatedAt = "2026-10-18T10:00:00Z"
 	candidate.Files = []ManifestFile{{Path: "mods/example.jar", SHA256: "00", Size: 2}}
 	if err := ValidateReleaseManifestTransition(original, candidate); err != nil {
-		t.Fatalf("safe draft update rejected: %v", err)
+		t.Fatalf("Безопасное обновление черновика отклонено: %v", err)
 	}
 	mutated := candidate
 	newRevision := snapshot
@@ -27,28 +27,28 @@ func TestReleaseManifestTransition0222(t *testing.T) {
 	newSpec.Digest = ProfileDigest(newSpec.Spec)
 	mutated.ProfileSnapshot = &newSpec
 	if err := ValidateReleaseManifestTransition(original, mutated); err == nil {
-		t.Fatal("different valid spec accepted")
+		t.Fatal("Ошибочно принята отличающаяся корректная спецификация")
 	}
 	mutated = candidate
 	mutated.SchemaVersion = "1.0"
 	mutated.ProfileSnapshot = nil
 	if err := ValidateReleaseManifestTransition(original, mutated); err == nil {
-		t.Fatal("v2 downgrade accepted")
+		t.Fatal("Ошибочно разрешён откат схемы v2")
 	}
 	mutated = candidate
 	mutated.Version = "2"
 	if err := ValidateReleaseManifestTransition(original, mutated); err == nil {
-		t.Fatal("release identity change accepted")
+		t.Fatal("Ошибочно принято изменение идентификатора выпуска")
 	}
 	legacy := Manifest{SchemaVersion: "1.0", ProjectID: "project", ProfileID: "main", Channel: "stable", Version: "legacy", Files: []ManifestFile{}}
 	updated := legacy
 	updated.Files = []ManifestFile{{Path: "test"}}
 	if err := ValidateReleaseManifestTransition(legacy, updated); err != nil {
-		t.Fatalf("legacy draft update rejected: %v", err)
+		t.Fatalf("Обновление старого черновика отклонено: %v", err)
 	}
 	updated.SchemaVersion = "2.0"
 	updated.ProfileSnapshot = &snapshot
 	if err := ValidateReleaseManifestTransition(legacy, updated); err == nil {
-		t.Fatal("silent v1 upgrade accepted")
+		t.Fatal("Ошибочно принято скрытое обновление v1")
 	}
 }

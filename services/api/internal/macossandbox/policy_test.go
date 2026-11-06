@@ -12,7 +12,7 @@ func TestValidateGrants(t *testing.T) {
 	bad := []struct{ r, w, n, s []string }{{[]string{"/etc"}, nil, nil, nil}, {nil, []string{"../secret"}, nil, nil}, {nil, nil, []string{"https://example.com"}, nil}, {nil, nil, nil, []string{"../../secret"}}}
 	for _, tc := range bad {
 		if ValidateGrants(tc.r, tc.w, tc.n, tc.s) == nil {
-			t.Fatal("dangerous grant accepted", tc)
+			t.Fatal("Ошибочно принято опасное разрешение", tc)
 		}
 	}
 }
@@ -23,6 +23,6 @@ func TestPathContainment(t *testing.T) {
 		}
 	}
 	if !IsInside("/tmp/extension", "/tmp/extension/runner") {
-		t.Fatal("valid path refused")
+		t.Fatal("Корректный путь отклонён")
 	}
 }

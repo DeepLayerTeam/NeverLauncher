@@ -55,10 +55,10 @@ func TestMigrationReportPostgres03313(t *testing.T) {
 		t.Fatalf("Отсутствие доказательств не привело к блокировке: %+v", first)
 	}
 	if strings.Contains(string(first.ReportSHA256), "password") {
-		t.Fatal("secret in hash")
+		t.Fatal("Секрет обнаружен в хеше")
 	}
 	if _, e = r.ReviewMigrationReport03313(ctx, run.ID, first.ReportSHA256, "tester", "test://proof", strings.Repeat("a", 64)); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("premature review accepted: %v", e)
+		t.Fatalf("Ошибочно принята преждевременная проверка: %v", e)
 	}
 	if _, e = r.GetReviewedMigrationReport03313(ctx, run.ID); !errors.Is(e, mw.ErrNotFound) {
 		t.Fatalf("Отсутствующая квитанция ошибочно помечена как присутствующая: %v", e)
@@ -75,6 +75,6 @@ func TestMigrationReportPostgres03313(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = tx.ExecContext(ctx, `UPDATE migration_reports_03313 SET reviewed_by='forged' WHERE run_id=$1`, run.ID); e == nil {
-		t.Fatal("immutable report could be edited")
+		t.Fatal("Неизменяемый отчёт удалось отредактировать")
 	}
 }

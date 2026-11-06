@@ -8,7 +8,7 @@ func TestBackupCLIRequiresInputsAndExplicitReplace(t *testing.T) {
 		{"restore", "--backup", "/b"}, {"backup-verify", "--replace", "--backup", "/x"},
 	} {
 		if code := runBackupAction(tc); code != 2 {
-			t.Fatalf("%v returned %d; wanted invalid-usage 2", tc, code)
+			t.Fatalf("%v вернул код %d; ожидался код неверного использования 2", tc, code)
 		}
 	}
 }

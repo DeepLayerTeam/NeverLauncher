@@ -27,11 +27,11 @@ func TestListProjectOperations02110IsolationPaginationAndStatus(t *testing.T) {
 	}
 	one, err := repo.ListProjectOperations(ctx, "alpha", "", 2, 0)
 	if err != nil || len(one) != 2 {
-		t.Fatalf("first page %#v: %v", one, err)
+		t.Fatalf("Первая страница %#v: %v", one, err)
 	}
 	two, err := repo.ListProjectOperations(ctx, "alpha", "", 2, 2)
 	if err != nil || len(two) != 2 {
-		t.Fatalf("second page %#v: %v", two, err)
+		t.Fatalf("Вторая страница %#v: %v", two, err)
 	}
 	if one[0].ID == two[0].ID {
 		t.Fatal("Постраничная выдача дублирует записи")

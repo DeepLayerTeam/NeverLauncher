@@ -81,7 +81,7 @@ func TestHTTPUpgrade0472PreservesProjectAndPrivateAuth(t *testing.T) {
 	}
 	backup, _ := filepath.Glob(filepath.Join(filepath.Dir(path), "pre-upgrade-backups", "*.sqlite"))
 	if len(backup) != 1 {
-		t.Fatalf("missing verified backup %v", backup)
+		t.Fatalf("Отсутствует проверенная резервная копия: %v", backup)
 	}
 	if _, err = sqlitedurable.VerifyBackup(ctx, backup[0]); err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestHTTPUpgrade0472PreservesProjectAndPrivateAuth(t *testing.T) {
 	defer r.Close()
 	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(path), "pre-upgrade-backups", "*.sqlite"))
 	if len(backups) != 1 {
-		t.Fatal("non-idempotent upgrade")
+		t.Fatal("Обновление не идемпотентно")
 	}
 }
 
@@ -143,7 +143,7 @@ func TestHTTPUpgrade0472RejectsMissingAuthSecretsWithoutMutation(t *testing.T) {
 	}
 	if r, err = OpenSQLiteHTTPRepository0372(ctx, path, ""); err == nil {
 		_ = r.Close()
-		t.Fatal("missing secrets accepted")
+		t.Fatal("Ошибочно принято отсутствие секретов")
 	}
 	if _, err = os.Stat(filepath.Join(filepath.Dir(path), "pre-upgrade-backups")); !os.IsNotExist(err) {
 		t.Fatalf("Неожиданная резервная копия или файл: %v", err)

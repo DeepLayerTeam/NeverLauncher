@@ -22,7 +22,7 @@ func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 		t.Helper()
 		r, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 		if !ok {
-			t.Fatal("expected SQLRepository")
+			t.Fatal("Ожидалось SQLRepository")
 		}
 		return r
 	}
@@ -72,18 +72,18 @@ func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 		case errors.Is(item.err, ErrConflict):
 			conflict++
 		default:
-			t.Errorf("unexpected postgres save error: %v", item.err)
+			t.Errorf("Неожиданная ошибка сохранения PostgreSQL: %v", item.err)
 		}
 	}
 	if success != 1 || conflict != 1 {
-		t.Fatalf("two replicas must yield one successful CAS: success=%d conflict=%d", success, conflict)
+		t.Fatalf("Две реплики должны дать одну успешную операцию CAS: успех=%d, конфликт=%d", success, conflict)
 	}
 	after, err := b.GetOperationalConfig(ctx)
 	if err != nil || after.Revision != initial.Revision+1 {
-		t.Fatalf("lost committed config revision: %+v %v", after, err)
+		t.Fatalf("Потеряна подтверждённая ревизия конфигурации: %+v %v", after, err)
 	}
 	if after.Settings.AuditLookbackDays != 40 && after.Settings.AuditLookbackDays != 41 {
-		t.Fatalf("unexpected persisted settings: %+v", after.Settings)
+		t.Fatalf("Неожиданные сохранённые настройки: %+v", after.Settings)
 	}
 	// Восстановление использует НОВУЮ ревизию и не уничтожает прежнюю историю.
 	restored, err := a.SaveOperationalConfig(ctx, after.Revision, OperationalConfig{}, "e2e-admin", "restore after CAS", &initial.Revision)

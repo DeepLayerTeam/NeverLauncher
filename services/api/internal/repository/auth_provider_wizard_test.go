@@ -27,7 +27,7 @@ func TestManagedProviderRevisionsAndRollbacks02910(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = r.ActivateManagedProvider02910(ctx, "company", 2, 0, "admin", "Stale writer"); !errors.Is(err, ErrManagedProviderConflict02910) {
-		t.Fatalf("expected CAS conflict: %v", err)
+		t.Fatalf("Ожидался конфликт CAS: %v", err)
 	}
 	if _, err = r.ActivateManagedProvider02910(ctx, "company", 2, 1, "admin", "Move to second"); err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func TestManagedProviderRevisionsAndRollbacks02910(t *testing.T) {
 	}
 	active, err = r.ListActiveManagedProviders02910(ctx)
 	if err != nil || len(active) != 0 {
-		t.Fatalf("provider remains active: %+v %v", active, err)
+		t.Fatalf("Провайдер остался активным: %+v %v", active, err)
 	}
 }
 func TestManagedProviderConcurrentCAS02910(t *testing.T) {
@@ -91,7 +91,7 @@ func TestManagedProviderRejectsUnsafeMetadata02910(t *testing.T) {
 		{ID: strings.Repeat("a", 65), Kind: "sql", Config: []byte(`{}`), Reason: "valid reason"},
 	} {
 		if err := ValidateManagedProviderDraft02910(v); err == nil {
-			t.Fatalf("unsafe draft accepted: %+v", v)
+			t.Fatalf("Ошибочно принят небезопасный черновик: %+v", v)
 		}
 	}
 }

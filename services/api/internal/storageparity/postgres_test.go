@@ -44,7 +44,7 @@ func TestPostgresRealStorageParity0371(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PARITY_POSTGRES_DSN")
 	if dsn == "" {
 		if os.Getenv("LAUNCHER_STORAGE_PARITY_REQUIRED") == "1" {
-			t.Fatal("LAUNCHER_PARITY_POSTGRES_DSN required for production parity gate")
+			t.Fatal("Для производственной проверки соответствия требуется LAUNCHER_PARITY_POSTGRES_DSN")
 		}
 		t.Skip("requires disposable LAUNCHER_PARITY_POSTGRES_DSN")
 	}
@@ -59,7 +59,7 @@ func TestPostgresRealStorageParity0371(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	if _, err := migrate.ApplyMigrations(ctx); err != nil {
-		t.Fatalf("Postgres migration: %v", err)
+		t.Fatalf("Миграция PostgreSQL: %v", err)
 	}
 	if err := migrate.Close(); err != nil {
 		t.Fatal(err)

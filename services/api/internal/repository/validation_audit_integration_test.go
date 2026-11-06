@@ -31,14 +31,14 @@ func TestV12SQLAuditImmutableAndNoManualCertification03412(t *testing.T) {
 	}
 	rows, err := r.ListValidationAttempts03412(ctx, pkg, 0, 100)
 	if err != nil || len(rows) != 1 || rows[0].Outcome != "rejected" || rows[0].ReasonCode != "untrusted-signature" {
-		t.Fatalf("missing persisted rejection: %+v %v", rows, err)
+		t.Fatalf("Не сохранён отказ: %+v %v", rows, err)
 	}
 	for _, q := range []string{
 		`UPDATE validation_attempt_events_03412 SET outcome='eligible' WHERE package_id=$1`,
 		`DELETE FROM validation_attempt_events_03412 WHERE package_id=$1`,
 	} {
 		if _, err := r.db.ExecContext(ctx, q, pkg); err == nil || !strings.Contains(err.Error(), "append-only") {
-			t.Fatalf("SQL audit mutation succeeded: %s: %v", q, err)
+			t.Fatalf("Удалось изменить SQL-аудит: %s: %v", q, err)
 		}
 	}
 	// Миграция V12 не создаёт столбец ручной сертификации или орган выдачи
@@ -46,7 +46,7 @@ func TestV12SQLAuditImmutableAndNoManualCertification03412(t *testing.T) {
 	var manual bool
 	err = r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='validation_attempt_events_03412' AND column_name='certified')`).Scan(&manual)
 	if err != nil || manual {
-		t.Fatalf("manual certification column exists: %v", err)
+		t.Fatalf("Обнаружено поле ручной сертификации: %v", err)
 	}
 }
 

@@ -79,20 +79,20 @@ func TestRemoteLifecycle0413(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !Verified("restart", before, after, receipt) || count.Load() != 1 {
-		t.Fatalf("not verified: %+v %+v", receipt, after)
+		t.Fatalf("Не проверено: %+v %+v", receipt, after)
 	}
 	recovered, err := client.ReadReceipt04112(context.Background(), "restart", "operation-12345678901")
 	if err != nil || recovered.State != "succeeded" || count.Load() != 1 {
-		t.Fatalf("read-only lost ACK recovery failed: %+v %v count=%d", recovered, err, count.Load())
+		t.Fatalf("Не удалось восстановить подтверждение в режиме только чтения: %+v %v, количество=%d", recovered, err, count.Load())
 	}
 	if _, err = client.ReadReceipt04112(context.Background(), "stop", "operation-12345678901"); err == nil {
-		t.Fatal("accepted receipt for wrong action")
+		t.Fatal("Ошибочно принята квитанция для другого действия")
 	}
 	if _, err = client.ReadReceipt04112(context.Background(), "restart", "unknown-receipt-04112"); !errors.Is(err, ErrReceiptNotFound04112) {
-		t.Fatalf("unknown receipt returned %v", err)
+		t.Fatalf("Возвращена неизвестная квитанция: %v", err)
 	}
 	if Verified("restart", after, after, receipt) {
-		t.Fatal("same-session restart accepted")
+		t.Fatal("Ошибочно принят перезапуск той же сессии")
 	}
 	if _, err := NewClient(Target{CAFile: ca, TokenFile: "missing"}); err == nil {
 		t.Fatal("Принят запрос без токена")
@@ -100,6 +100,6 @@ func TestRemoteLifecycle0413(t *testing.T) {
 	wrong := *client
 	wrong.nodeID = "another-node"
 	if _, err := wrong.Status(context.Background()); err == nil {
-		t.Fatal("node ID mismatch accepted")
+		t.Fatal("Ошибочно принято несовпадение идентификатора узла")
 	}
 }

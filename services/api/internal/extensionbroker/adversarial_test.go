@@ -43,7 +43,7 @@ func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Write(root, "escape/backend-secret", payload); err == nil {
-		t.Fatal("symlink parent escaped")
+		t.Fatal("Обход через символическую ссылку родительского каталога")
 	}
 	if _, err := Read(root, "escape/backend-secret"); err == nil {
 		t.Fatal("Родительская символическая ссылка позволила прочитать закрытый inode")
@@ -52,7 +52,7 @@ func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Read(root, "hardlink"); err == nil {
-		t.Fatal("private hardlink disclosed")
+		t.Fatal("Раскрыта частная жёсткая ссылка")
 	}
 	if err := Write(root, "hardlink", payload); err != nil {
 		t.Fatal(err)

@@ -24,12 +24,12 @@ func TestProtectionBanLifecycle0298(t *testing.T) {
 		t.Fatalf("unban %v %v", changed, err)
 	}
 	if _, ok, _ := r.ActiveProtectionBan(ctx, "user", now); ok {
-		t.Fatal("unban ignored")
+		t.Fatal("Снятие блокировки проигнорировано")
 	}
 	if err := r.SetProtectionBan(ctx, ProtectionBan{UserID: "user", Reason: "expired ban", Actor: "admin", ExpiresAt: func() *time.Time { x := now.Add(-time.Second); return &x }()}); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok, _ := r.ActiveProtectionBan(ctx, "user", now); ok {
-		t.Fatal("expired ban enforced")
+		t.Fatal("Применена истёкшая блокировка")
 	}
 }

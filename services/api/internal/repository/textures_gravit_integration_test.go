@@ -82,16 +82,16 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 		t.Fatalf("Отсутствует квитанция: %v", e)
 	}
 	if _, e = r.UploadTexture0252(ctx, p, input); !errors.Is(e, ErrGravitAlreadyImported02510) {
-		t.Fatalf("reimport mutation allowed: %v", e)
+		t.Fatalf("Ошибочно разрешено изменение при повторном импорте: %v", e)
 	}
 	var count int
 	e = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_assignment_revisions WHERE event='gravit-import' AND actor_user_id LIKE 'system:%'`).Scan(&count)
 	if e != nil || count != 1 {
-		t.Fatalf("audit actor not system, count=%d err=%v", count, e)
+		t.Fatalf("Субъект аудита не является системой: записей=%d, ошибка=%v", count, e)
 	}
 	foreign := p
 	foreign.UserID = "bob"
 	if _, e = r.UploadTexture0252(ctx, foreign, input); !errors.Is(e, ErrNotFound) {
-		t.Fatalf("foreign UUID accepted: %v", e)
+		t.Fatalf("Ошибочно принят чужой UUID: %v", e)
 	}
 }

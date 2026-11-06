@@ -42,7 +42,7 @@ func TestSupportReportSubmitRequiresLoginAndConsent03510(t *testing.T) {
 	resp := httptest.NewRecorder()
 	handler.ServeHTTP(resp, req)
 	if resp.Code == http.StatusOK || resp.Code == http.StatusCreated {
-		t.Fatal("anonymous report accepted")
+		t.Fatal("Ошибочно принят анонимный отчёт")
 	}
 	token := loginAdmin(t, handler)
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/diagnostics/reports", strings.NewReader(body))

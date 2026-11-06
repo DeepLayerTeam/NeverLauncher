@@ -35,7 +35,7 @@ func TestComponentCatalogEditorLifecycle0248(t *testing.T) {
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created.Body.Bytes(), &response); err != nil || response.Data.ManifestSchemaVersion != "3.0" {
-		t.Fatalf("package not v3: %v %s", err, created.Body.String())
+		t.Fatalf("Пакет не соответствует v3: %v %s", err, created.Body.String())
 	}
 	id := response.Data.PackageID
 	var content bytes.Buffer

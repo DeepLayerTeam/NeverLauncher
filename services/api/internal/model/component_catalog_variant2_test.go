@@ -57,7 +57,7 @@ func TestComponentCatalogTopologyOperational0242(t *testing.T) {
 		t.Fatal(err)
 	}
 	if parsed.ComponentCatalog.Digest != m.ComponentCatalog.Digest {
-		t.Fatal("json roundtrip digest changed")
+		t.Fatal("После сериализации и десериализации JSON изменился хеш")
 	}
 	t.Logf("v2 Go digest fixture: %s", m.ComponentCatalog.Digest)
 }
@@ -85,18 +85,18 @@ func TestComponentTopologyTamperAndCycles0242(t *testing.T) {
 			tc.mutate(m.ComponentCatalog)
 			m.ComponentCatalog.Digest = ComponentCatalogDigest0242(*m.ComponentCatalog)
 			if err := ValidateManifestSchema(m); err == nil {
-				t.Fatal("invalid topology accepted with refreshed digest")
+				t.Fatal("Ошибочно принята некорректная топология с обновлённым хешем")
 			}
 		})
 	}
 	m := topologyFixture0242()
 	m.ComponentCatalog.Components[1].Name = "Modified"
 	if err := ValidateManifestSchema(m); err == nil {
-		t.Fatal("metadata mutation accepted with stale signed digest")
+		t.Fatal("Ошибочно принято изменение метаданных при устаревшем подписанном хеше")
 	}
 	m = topologyFixture0242()
 	m.ComponentCatalog.Presets[2].Components = []string{"core"}
 	if err := ValidateManifestSchema(m); err == nil {
-		t.Fatal("preset mutation accepted with stale digest")
+		t.Fatal("Ошибочно принято изменение набора при устаревшем хеше")
 	}
 }

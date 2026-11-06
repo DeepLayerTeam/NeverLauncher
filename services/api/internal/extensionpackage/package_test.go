@@ -128,7 +128,7 @@ func TestVerifyRegistryPackageAcceptsOlderCLISBOM0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := VerifyFile(packagePath, otherPublic); err == nil {
-		t.Fatal("VerifyFile accepted an untrusted Ed25519 key")
+		t.Fatal("VerifyFile ошибочно принял недоверенный ключ Ed25519")
 	}
 }
 
@@ -154,6 +154,6 @@ func TestExtractPayloadFile0204(t *testing.T) {
 		t.Fatalf("Неожиданная полезная нагрузка %q", data)
 	}
 	if _, err := ExtractPayloadFile(packagePath, filepath.Join(t.TempDir(), "other"), "sha256:"+strings.Repeat("0", 64)); err == nil {
-		t.Fatal("ExtractPayloadFile accepted wrong immutable package identity")
+		t.Fatal("ExtractPayloadFile ошибочно принял чужой идентификатор неизменяемого пакета")
 	}
 }

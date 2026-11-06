@@ -78,6 +78,6 @@ func TestJavaBridgeResponseRedaction0488(t *testing.T) {
 		}
 	}
 	if len(out) == 0 || len(view) == 0 {
-		t.Fatal("status view empty")
+		t.Fatal("Представление состояния пустое")
 	}
 }

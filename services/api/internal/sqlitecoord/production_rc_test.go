@@ -28,7 +28,7 @@ func TestProductionRCConcurrentRateLimitStress(t *testing.T) {
 			for j := 0; j < attempts; j++ {
 				result, err := coordinator.Allow(ctx, "rc-load-client", budget, time.Minute)
 				if err != nil {
-					t.Errorf("SQLite under concurrent load: %v", err)
+					t.Errorf("SQLite при одновременной нагрузке: %v", err)
 					return
 				}
 				if result.Allowed {
@@ -41,7 +41,7 @@ func TestProductionRCConcurrentRateLimitStress(t *testing.T) {
 	}
 	wg.Wait()
 	if allowed.Load() != budget || denied.Load() != workers*attempts-budget {
-		t.Fatalf("concurrency bypassed persisted rate limit: allowed=%d denied=%d",
+		t.Fatalf("Параллельные запросы обошли сохраняемый лимит частоты: разрешено=%d, отклонено=%d",
 			allowed.Load(), denied.Load())
 	}
 	if err := coordinator.Close(); err != nil {
@@ -50,8 +50,8 @@ func TestProductionRCConcurrentRateLimitStress(t *testing.T) {
 	reopened := openTestCoordinator(t, path)
 	result, err := reopened.Allow(ctx, "rc-load-client", budget, time.Minute)
 	if err != nil || result.Allowed {
-		t.Fatalf("restart bypassed exhausted budget: %+v %v", result, err)
+		t.Fatalf("Перезапуск позволил обойти исчерпанный лимит: %+v %v", result, err)
 	}
-	t.Logf("observed sqlite-limiter test throughput=%.2f ops/s, measured on this runner only",
+	t.Logf("Измеренная пропускная способность ограничителя SQLite=%.2f оп./с; измерение относится только к этому исполнителю",
 		float64(workers*attempts)/time.Since(start).Seconds())
 }

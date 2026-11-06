@@ -21,14 +21,14 @@ func TestStableRepositoryGuardsAndDevContinueWorking0341(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := repo.PublishVersionWithManifestCAS(stable.ProjectID, stable.ProfileID, stable.Channel, stable.Version, stable.Manifest, before.Revision); !errors.Is(err, ErrStableRuntimeGate0341) {
-		t.Fatalf("direct stable CAS bypass: %v", err)
+		t.Fatalf("Обход CAS стабильного выпуска: %v", err)
 	}
 	if _, err := repo.UpdateVersionStatus(stable.ProjectID, stable.ID, "published"); !errors.Is(err, ErrStableRuntimeGate0341) {
-		t.Fatalf("manual stable status bypass: %v", err)
+		t.Fatalf("Обход проверки статуса стабильного выпуска вручную: %v", err)
 	}
 	after, err := repo.GetChannelHead(context.Background(), "demo-project", "vanilla", "stable")
 	if err != nil || after.Revision != before.Revision || after.ReleaseID != before.ReleaseID {
-		t.Fatalf("stable head modified: %+v -> %+v, %v", before, after, err)
+		t.Fatalf("Указатель стабильного выпуска изменён: %+v -> %+v, %v", before, after, err)
 	}
 	for _, channel := range []string{"dev", "test"} {
 		release, err := repo.CreateVersion("demo-project", "vanilla", channel, "0.34.1-allowed")
@@ -37,7 +37,7 @@ func TestStableRepositoryGuardsAndDevContinueWorking0341(t *testing.T) {
 		}
 		published, err := repo.PublishVersionWithManifestCAS(release.ProjectID, release.ProfileID, release.Channel, release.Version, release.Manifest, 0)
 		if err != nil || published.Status != "published" {
-			t.Fatalf("%s should remain publishable: %+v %v", channel, published, err)
+			t.Fatalf("%s должен оставаться доступным для публикации: %+v %v", channel, published, err)
 		}
 	}
 }
@@ -64,10 +64,10 @@ func TestStableDurableCommitIsBlockedInRepository0341(t *testing.T) {
 	}
 	_, err = repo.CommitDurablePublish(ctx, model.DurablePublishCommit{JobID: job.ID, JobLeaseToken: job.LeaseToken, ScopeKey: lease.ScopeKey, ScopeLeaseToken: lease.LeaseToken, ScopeFencingToken: lease.FencingToken, ExpectedStatus: release.Status})
 	if !errors.Is(err, ErrStableRuntimeGate0341) {
-		t.Fatalf("durable bypass: %v", err)
+		t.Fatalf("Обход постоянного хранилища: %v", err)
 	}
 	stored, err := repo.GetChannelHead(ctx, "demo-project", "vanilla", "stable")
 	if err != nil || stored.Revision != 1 {
-		t.Fatalf("stable head moved: %+v %v", stored, err)
+		t.Fatalf("Указатель стабильного выпуска сместился: %+v %v", stored, err)
 	}
 }

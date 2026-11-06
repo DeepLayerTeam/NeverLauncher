@@ -23,7 +23,7 @@ func TestSignedGameReleaseGeneration02311(t *testing.T) {
 	old := base
 	old.GameReleaseGeneration = 8
 	if err := ValidateManifestSchema(old); err == nil {
-		t.Fatal("rollback to same generation must fail")
+		t.Fatal("Откат к тому же поколению должен завершаться ошибкой")
 	}
 	old = base
 	old.RollbackSource = &GameRollbackSource02311{Version: "v1", GameReleaseGeneration: 7, ManifestSHA256: "invalid"}
@@ -35,6 +35,6 @@ func TestSignedGameReleaseGeneration02311(t *testing.T) {
 	legacy.RollbackSource = nil
 	bytes, _ := json.Marshal(legacy)
 	if strings.Contains(string(bytes), "gameReleaseGeneration") || strings.Contains(string(bytes), "rollbackSource") {
-		t.Fatal("legacy signed payload compatibility lost")
+		t.Fatal("Утрачена совместимость со старыми подписанными данными")
 	}
 }

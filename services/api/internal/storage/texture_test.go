@@ -37,7 +37,7 @@ func TestTextureImmutableConcurrent0252(t *testing.T) {
 		t.Fatal(err)
 	}
 	if size != int64(len(data)) || !bytes.Equal(got, data) {
-		t.Fatal("object corrupted")
+		t.Fatal("Объект повреждён")
 	}
 	if _, _, err := SaveTexture0252(s, digest, []byte("different")); err == nil {
 		t.Fatal("Принята неправильная контрольная сумма")

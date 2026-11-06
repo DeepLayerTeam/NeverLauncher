@@ -10,21 +10,21 @@ func TestCanonicalAPIVersion(t *testing.T) {
 		}
 	}
 	if _, err := CanonicalAPIVersion("2.0"); err == nil {
-		t.Fatal("unsupported API must fail")
+		t.Fatal("Неподдерживаемая версия API должна приводить к ошибке")
 	}
 }
 func TestHostHelloCompatibility(t *testing.T) {
 	if !SupportsHostHello("3.7", "") {
-		t.Fatal("legacy 0.20 hello must remain compatible")
+		t.Fatal("Приветственное сообщение версии 0.20 должно сохранять совместимость")
 	}
 	if !SupportsHostHello("3.7", "1.0") {
-		t.Fatal("legacy manifest with GA SDK must work")
+		t.Fatal("Старый манифест должен работать с GA SDK")
 	}
 	if !SupportsHostHello("1.0", "1.0") {
-		t.Fatal("GA hello must work")
+		t.Fatal("Приветственное сообщение GA должно работать")
 	}
 	if SupportsHostHello("1.0", "") {
-		t.Fatal("GA manifest must require API version in hello")
+		t.Fatal("Манифест GA должен требовать версию API в приветственном сообщении")
 	}
 }
 func TestRequireGA(t *testing.T) {
@@ -33,7 +33,7 @@ func TestRequireGA(t *testing.T) {
 	}
 	for _, value := range []string{"3.7", "1.0.0", "v1", "v1.0"} {
 		if err := RequireGAAPIVersion(value); err == nil {
-			t.Fatalf("non-canonical API %q must not be accepted for new GA publication", value)
+			t.Fatalf("Неканоническая версия API %q не должна приниматься при новой публикации GA", value)
 		}
 	}
 }

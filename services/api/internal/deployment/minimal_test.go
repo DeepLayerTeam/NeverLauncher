@@ -32,7 +32,7 @@ func TestMinimalDeployment0375(t *testing.T) {
 	other.Close()
 	cfg.ServerBridgeHARequired = true
 	if _, err = Detect(cfg); err == nil {
-		t.Fatal("distributed HA accepted")
+		t.Fatal("Ошибочно принята распределённая высокая доступность")
 	}
 	cfg.ServerBridgeHARequired = false
 	cfg.RedisURL = "redis://localhost:6379"

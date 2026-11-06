@@ -84,7 +84,7 @@ func TestAcceptanceCohort0449(t *testing.T) {
 	replaced := cohort["sql-modded"]
 	cohort["sql-modded"] = cohort["fileauth-single"]
 	if verifyCohort(trusted, cohort) == nil {
-		t.Fatal("accepted duplicate project/incorrect cohort class")
+		t.Fatal("Ошибочно принят дублирующийся проект или неверный класс группы")
 	}
 	cohort["sql-modded"] = replaced
 	if err := os.Remove(filepath.Join(cohort["proxy-network"].EvidenceDir, "negative-rollback.evidence")); err != nil {

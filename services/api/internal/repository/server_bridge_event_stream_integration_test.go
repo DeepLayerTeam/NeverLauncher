@@ -51,30 +51,30 @@ func TestServerBridgeEventStream0194Postgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.AckSequence != 2 || result.Inserted != 2 {
-		t.Fatalf("unexpected append: %+v", result)
+		t.Fatalf("Неожиданное добавление: %+v", result)
 	}
 	result, err = repo.AppendServerBridgeEvents(ctx, node.ID, 9, runtimeID, events, now.Add(time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if result.AckSequence != 2 || result.Inserted != 0 {
-		t.Fatalf("resend is not idempotent: %+v", result)
+		t.Fatalf("Повторная отправка не идемпотентна: %+v", result)
 	}
 	var auditCount int
 	if err := repo.db.QueryRowContext(ctx, `SELECT count(*) FROM audit_events WHERE id IN ('serverbridge-event-events0194-node-9-1','serverbridge-event-events0194-node-9-2')`).Scan(&auditCount); err != nil {
 		t.Fatal(err)
 	}
 	if auditCount != 2 {
-		t.Fatalf("expected 2 transactional audit rows, got %d", auditCount)
+		t.Fatalf("Ожидалось две записи транзакционного аудита, получено %d", auditCount)
 	}
 
 	conflict := events[1]
 	conflict.PayloadSHA256 = "3333333333333333333333333333333333333333333333333333333333333333"
 	if _, err := repo.AppendServerBridgeEvents(ctx, node.ID, 9, runtimeID, []model.ServerBridgeEvent{conflict}, now); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected replay conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт повторного воспроизведения, получено %v", err)
 	}
 	gap := model.ServerBridgeEvent{Sequence: 4, EventID: runtimeID + "-4", RuntimeID: runtimeID, Type: "server.error", OccurredAtUnixMillis: now.UnixMilli(), Payload: map[string]string{}, PayloadSHA256: "4444444444444444444444444444444444444444444444444444444444444444", Signature: "sig4"}
 	if _, err := repo.AppendServerBridgeEvents(ctx, node.ID, 9, runtimeID, []model.ServerBridgeEvent{gap}, now); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected gap conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт из-за пропуска, получено %v", err)
 	}
 }

@@ -18,7 +18,7 @@ func TestLiveManagedProviderCAS02910(t *testing.T) {
 	r := NewPostgresRepository(dsn, "https://launcher.example.test")
 	store, ok := r.(ManagedProviderStore02910)
 	if !ok {
-		t.Fatal("repository has no managed provider store")
+		t.Fatal("Хранилище не содержит управляемого хранилища провайдеров")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -52,7 +52,7 @@ func TestLiveManagedProviderCAS02910(t *testing.T) {
 	}
 	for _, entry := range active {
 		if entry.ID == id {
-			t.Fatal("test provider remains active")
+			t.Fatal("Тестовый провайдер остался активным")
 		}
 	}
 }

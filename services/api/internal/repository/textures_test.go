@@ -12,7 +12,7 @@ func TestCanonicalTextureUUID0251(t *testing.T) {
 	}
 	for _, in := range []string{"", "../skin.png", "acbd123456784bceae0011223344556z", "00000000-0000-0000-0000-00000000000", "https://example.org/x"} {
 		if _, err := canonicalUUID0251(in); err == nil {
-			t.Fatalf("accepted UUID %q", in)
+			t.Fatalf("Ошибочно принят UUID %q", in)
 		}
 	}
 }
@@ -27,7 +27,7 @@ func TestValidateTextureSelection0251(t *testing.T) {
 	}
 	for _, v := range invalid {
 		if err := validateTextureSelection0251(v[0], v[1], v[2]); err == nil {
-			t.Fatal("accepted invalid", v)
+			t.Fatal("Ошибочно принято некорректное значение", v)
 		}
 	}
 }

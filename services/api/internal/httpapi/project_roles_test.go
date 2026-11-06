@@ -55,7 +55,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	unknown := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"does-not-exist":"operator"}}`)
 	if unknown.Code != http.StatusBadRequest {
-		t.Fatalf("unknown project: %d %s", unknown.Code, unknown.Body.String())
+		t.Fatalf("Неизвестный проект: %d %s", unknown.Code, unknown.Body.String())
 	}
 	wildcard := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"*":"owner"}}`)
 	if wildcard.Code != http.StatusBadRequest {
@@ -69,7 +69,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	actor = loginUser0211(t, h, "operator-0387@example.test", "operator-pass-0387")
 	allowed := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"operator-updated-0387"}`)
 	if allowed.Code != http.StatusOK {
-		t.Fatalf("own project: %d %s", allowed.Code, allowed.Body.String())
+		t.Fatalf("Собственный проект: %d %s", allowed.Code, allowed.Body.String())
 	}
 	for _, endpoint := range []string{"/api/v1/admin/users", "/api/v1/operations/backend/status", "/api/v1/admin/config"} {
 		forbiddenGlobal := request0211(t, h, http.MethodGet, endpoint, actor, "")
@@ -79,7 +79,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	forbidden := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/other-0387", actor, `{"description":"forbidden"}`)
 	if forbidden.Code != http.StatusForbidden {
-		t.Fatalf("other project: %d %s", forbidden.Code, forbidden.Body.String())
+		t.Fatalf("Чужой проект: %d %s", forbidden.Code, forbidden.Body.String())
 	}
 	revoke := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{},"expectedProjectRoles":{"demo-project":"operator"}}`)
 	if revoke.Code != http.StatusOK {

@@ -17,12 +17,12 @@ func runtimeFixture0223() Manifest {
 func TestRuntimeConstraints0223AcceptsRunnableAndModule(t *testing.T) {
 	m := runtimeFixture0223()
 	if err := ValidateRuntimeConstraints0223(m); err != nil {
-		t.Fatalf("valid runtime refused: %v", err)
+		t.Fatalf("Корректная среда выполнения отклонена: %v", err)
 	}
 	m.Runtime.Launch.ModulepathEntries = []string{"libraries/other.jar"}
 	m.Runtime.Launch.MainModule = "net.example.client/net.example.Main"
 	if err := ValidateRuntimeConstraints0223(m); err != nil {
-		t.Fatalf("valid module runtime refused: %v", err)
+		t.Fatalf("Корректная среда выполнения модуля отклонена: %v", err)
 	}
 }
 
@@ -71,6 +71,6 @@ func TestRuntimeConstraints0223PreservesUnconfiguredV2Draft(t *testing.T) {
 	m.Runtime.Java.MajorVersion = 21
 	m.Runtime.Launch.ClasspathEntries = []string{"bad.jar"}
 	if err := ValidateRuntimeConstraints0223(m); err == nil || !strings.Contains(err.Error(), "not a required") {
-		t.Fatalf("must reject undeclared classpath: %v", err)
+		t.Fatalf("Необъявленный путь классов должен отклоняться: %v", err)
 	}
 }

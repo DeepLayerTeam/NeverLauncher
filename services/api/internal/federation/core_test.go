@@ -33,7 +33,7 @@ func TestAuthenticatePasswordResolvesCanonicalUser(t *testing.T) {
 		t.Fatalf("Неожиданный результат: %+v", result)
 	}
 	if len(result.AuthMethods) != 1 || result.AuthMethods[0] != "password" {
-		t.Fatalf("auth methods lost: %+v", result.AuthMethods)
+		t.Fatalf("Потеряны способы аутентификации: %+v", result.AuthMethods)
 	}
 }
 
@@ -96,17 +96,17 @@ func TestAuthenticatePasswordJITProvisionsCanonicalUser(t *testing.T) {
 		t.Fatalf("Неожиданный результат JIT: %+v", result)
 	}
 	if result.User.PasswordHash != "" {
-		t.Fatal("JIT federated user unexpectedly has a local password")
+		t.Fatal("У федеративного JIT-пользователя неожиданно обнаружен локальный пароль")
 	}
 	if _, err := repo.GetAuthIdentity("local", result.User.ID); err == nil {
-		t.Fatal("JIT federated user unexpectedly received local identity")
+		t.Fatal("Федеративный JIT-пользователь неожиданно получил локальный идентификатор")
 	}
 	again, err := core.AuthenticatePassword(context.Background(), "website", authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if again.User.ID != result.User.ID {
-		t.Fatalf("JIT user id is not stable: %s != %s", again.User.ID, result.User.ID)
+		t.Fatalf("Идентификатор JIT-пользователя нестабилен: %s != %s", again.User.ID, result.User.ID)
 	}
 }
 
@@ -124,10 +124,10 @@ func TestJITProvisioningDoesNotAutoLinkMatchingEmail(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.User.ID == "existing" || result.User.Email == "player@example.test" {
-		t.Fatalf("external email was used as canonical account link: %+v", result.User)
+		t.Fatalf("Внешний адрес электронной почты использован как каноническая связь с учётной записью: %+v", result.User)
 	}
 	if result.Identity.Email != "player@example.test" {
-		t.Fatalf("external issuer claim was lost: %+v", result.Identity)
+		t.Fatalf("Потеряно утверждение внешнего издателя токена: %+v", result.Identity)
 	}
 }
 
@@ -151,12 +151,12 @@ func TestJITRoleMappingRequiresExplicitLocalPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.User.RoleID != "admin" {
-		t.Fatalf("expected explicit mapping to admin, got %q", result.User.RoleID)
+		t.Fatalf("Ожидалось явное сопоставление с администратором, получено %q", result.User.RoleID)
 	}
 }
 func TestJITRoleMappingRejectsUnknownNeverRole(t *testing.T) {
 	core := New(repository.NewMemoryRepository("http://example.test"))
 	if err := core.RegisterWithPolicy(roleMappedConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player", RoleMappings: map[string]string{"external": "does-not-exist"}}); err == nil {
-		t.Fatal("unknown role mapping target was accepted")
+		t.Fatal("Ошибочно принята неизвестная целевая роль сопоставления")
 	}
 }

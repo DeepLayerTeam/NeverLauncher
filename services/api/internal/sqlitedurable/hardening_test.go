@@ -20,7 +20,7 @@ func TestSQLite0471RejectsSymlinkedWAL(t *testing.T) {
 	}
 	if store, err := Open(context.Background(), opt); err == nil {
 		_ = store.Close()
-		t.Fatal("accepted a symlinked SQLite WAL file")
+		t.Fatal("Ошибочно принят файл WAL SQLite через символическую ссылку")
 	} else if !strings.Contains(err.Error(), "sidecar") {
 		t.Fatal(err)
 	}
@@ -48,10 +48,10 @@ func TestSQLite0471TruncatingCheckpoint(t *testing.T) {
 	}
 	status, err := s.Checkpoint(ctx)
 	if err != nil {
-		t.Fatalf("checkpoint failed %+v: %v", status, err)
+		t.Fatalf("Сбой контрольной точки %+v: %v", status, err)
 	}
 	if status.Busy != 0 {
-		t.Fatalf("not complete: %+v", status)
+		t.Fatalf("Операция не завершена: %+v", status)
 	}
 	if err := s.Read(ctx, func(q Executor) error {
 		var n int

@@ -182,7 +182,7 @@ class CohortTests(unittest.TestCase):
         self.assertEqual(calls[3][:2], ["update", "components"])
         self.assertEqual(result["installedAfterSha256"], new_sha)
         self.assertTrue((case_root / "post-update-live.json").exists())
-        self.assertFalse((self.out / "cohort-04910.json").exists(), "operator has not certified cohort")
+        self.assertFalse((self.out / "cohort-04910.json").exists(), "Оператор не сертифицировал группу")
 
     def test_post_update_witness_must_bind_to_updated_binary(self):
         p = self.config["projects"][0]

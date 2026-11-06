@@ -18,9 +18,9 @@ func TestAdminComponentGraphPreview0248(t *testing.T) {
 	// Статический предпросмотр должен отклонять конфликтующий пресет, даже если
 	// условные каталоги откладывают выбор под конкретную среду до нативного Runtime.
 	if _, err = PreviewCatalogGraph0248(invalid, "quality"); err == nil || !strings.Contains(err.Error(), "conflict") {
-		t.Fatalf("conflict was not explained: %v", err)
+		t.Fatalf("Причина конфликта не объяснена: %v", err)
 	}
 	if _, err = PreviewCatalogGraph0248(invalid, "unknown"); err == nil {
-		t.Fatal("missing preset accepted")
+		t.Fatal("Ошибочно принято отсутствие набора")
 	}
 }

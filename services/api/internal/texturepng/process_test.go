@@ -43,7 +43,7 @@ func TestRejectsCorruptionAndTrailingData(t *testing.T) {
 	candidates = append(candidates, corrupt)
 	for i, data := range candidates {
 		if _, err := Process(bytes.NewReader(data), "skin", "classic"); err == nil {
-			t.Errorf("invalid case %d accepted", i)
+			t.Errorf("Ошибочно принят некорректный вариант %d", i)
 		}
 	}
 	_, err := Process(bytes.NewReader(candidates[4]), "skin", "classic")
@@ -65,13 +65,13 @@ func TestDeterministicNormalization(t *testing.T) {
 		t.Fatal("Результат недетерминирован")
 	}
 	if a.Width != 64 || a.Height != 64 {
-		t.Fatalf("bad dimensions %+v", a)
+		t.Fatalf("Некорректные размеры: %+v", a)
 	}
 }
 func TestBoundedReader(t *testing.T) {
 	r := io.LimitReader(bytes.NewReader(bytes.Repeat([]byte("x"), MaxEncodedBytes+100)), MaxEncodedBytes+100)
 	_, err := Process(r, "skin", "classic")
 	if !errors.Is(err, ErrTooLarge) {
-		t.Fatalf("expected too large: %v", err)
+		t.Fatalf("Ожидалось превышение допустимого размера: %v", err)
 	}
 }

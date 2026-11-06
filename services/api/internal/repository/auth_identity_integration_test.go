@@ -54,14 +54,14 @@ func TestCanonicalIssuerPostgres0291(t *testing.T) {
 		t.Fatal(err)
 	}
 	if one.ID == two.ID || one.UserID == two.UserID {
-		t.Fatal("cross-issuer account merge")
+		t.Fatal("Объединены учётные записи разных издателей токенов")
 	}
 	if _, err := b.GetAuthIdentity("oidc-0291", "same"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("unqualified lookup: %v", err)
+		t.Fatalf("Поиск без уточнения: %v", err)
 	}
 	got, err := b.GetAuthIdentityByIssuer("oidc-0291", one.Issuer, "same")
 	if err != nil || got.UserID != one.UserID {
-		t.Fatalf("cross-replica issuer lookup: %+v / %v", got, err)
+		t.Fatalf("Поиск издателя токена между репликами: %+v / %v", got, err)
 	}
 	for _, identity := range []model.AuthIdentity{one, two} {
 		_, err = a.SaveProviderCredential(model.ProviderCredential{UserID: identity.UserID, IdentityID: identity.ID, Provider: identity.Provider, Subject: identity.Subject, EncryptedRefreshToken: "encrypted-fixture"})
@@ -73,7 +73,7 @@ func TestCanonicalIssuerPostgres0291(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := b.SaveAuthIdentity(model.AuthIdentity{UserID: users[1], Provider: "oidc-0291", Issuer: one.Issuer, Subject: "same"}); err == nil {
-		t.Fatal("subject reassignment accepted")
+		t.Fatal("Ошибочно принято переназначение субъекта")
 	}
 	profile, err := a.SaveMinecraftProfile(model.MinecraftProfile{UserID: users[0], UUID: "0d011234-aaaa-4bbb-8ccc-123400002911", Name: "IssuerTest0291", Issuer: "launcher", Realm: "local", Subject: "0d011234-aaaa-4bbb-8ccc-123400002911"})
 	if err != nil {
@@ -84,6 +84,6 @@ func TestCanonicalIssuerPostgres0291(t *testing.T) {
 		t.Fatalf("Неожиданное изменение UUID: %v", err)
 	}
 	if _, err := b.db.ExecContext(ctx, `UPDATE minecraft_profiles SET uuid=$1 WHERE user_id=$2`, profile.UUID, users[0]); err == nil {
-		t.Fatal("direct SQL UUID mutation bypassed trigger")
+		t.Fatal("Прямое изменение UUID через SQL обошло триггер")
 	}
 }

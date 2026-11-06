@@ -6,9 +6,9 @@ import "testing"
 
 func TestAMD64SeccompArchitecture0439(t *testing.T) {
 	if sandboxAuditArch != 0xc000003e || sandboxMemfdCreateSyscall != 319 || !sandboxRejectX32 {
-		t.Fatal("unexpected x86-64 Linux kernel ABI")
+		t.Fatal("Неожиданный ABI ядра Linux для x86-64")
 	}
 	if !containsDeniedSyscall0439(sandboxClone3Syscall) {
-		t.Fatal("clone3 must be denied")
+		t.Fatal("Системный вызов clone3 должен быть запрещён")
 	}
 }

@@ -62,6 +62,6 @@ func TestWorkerProbe0455(t *testing.T) {
 	rr := httptest.NewRecorder()
 	unhealthy.ServeHTTP(rr, httptest.NewRequest("GET", "/ready", nil))
 	if rr.Code != http.StatusServiceUnavailable {
-		t.Fatalf("worker hid dependency failure: %d", rr.Code)
+		t.Fatalf("Рабочий процесс скрыл ошибку зависимости: %d", rr.Code)
 	}
 }

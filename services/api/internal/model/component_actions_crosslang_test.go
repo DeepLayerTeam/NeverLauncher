@@ -41,6 +41,6 @@ func TestGoSignedOptionalActionFixture0245(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !ed25519.Verify(pk, payload, sig) {
-		t.Fatal("signed optional actions fixture invalid")
+		t.Fatal("Некорректны тестовые данные подписанных дополнительных действий")
 	}
 }

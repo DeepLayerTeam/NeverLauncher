@@ -48,22 +48,22 @@ func TestFileAuthCredentialExtraction335(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(entries) != 1 || entries[0].PasswordHash == "" || entries[0].Algorithm != "sha256-hex" {
-		t.Fatalf("unexpected entries: %+v", entries)
+		t.Fatalf("Неожиданные записи: %+v", entries)
 	}
 	raw, e := json.Marshal(entries)
 	if e != nil {
 		t.Fatal(e)
 	}
 	if bytes.Contains(raw, []byte(original)) || bytes.Contains(raw, []byte("$gravit")) || bytes.Contains(raw, []byte("DO_NOT_COPY")) {
-		t.Fatal("hash leaked in report")
+		t.Fatal("Хеш попал в отчёт")
 	}
 	if manual, e := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, ""); e != nil || len(manual) != 1 || manual[0].State != "manual_reset" || manual[0].PasswordHash != "" {
-		t.Fatal("unknown FileAuth format must require manual reset without credential import", e)
+		t.Fatal("Неизвестный формат FileAuth должен требовать ручного сброса без импорта учётных данных", e)
 	}
 	changed := snapshot
 	changed.SourceSHA256 = strings.Repeat("0", 64)
 	if _, e = Extract(context.Background(), bytes.NewReader(src), int64(len(src)), changed, "sha256-hex"); e == nil {
-		t.Fatal("accepted changed source")
+		t.Fatal("Ошибочно принят изменённый источник")
 	}
 }
 func TestSQLCredentialsSelectiveManual335(t *testing.T) {
@@ -74,17 +74,17 @@ func TestSQLCredentialsSelectiveManual335(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(entries) != 2 || entries[0].State != "importable" || entries[1].State != "manual_reset" || entries[1].PasswordHash != "" {
-		t.Fatalf("unexpected SQL selection %+v", entries)
+		t.Fatalf("Неожиданная SQL-выборка: %+v", entries)
 	}
 	invalid := strings.ReplaceAll(string(src), "password_hash", "invalid")
 	_ = invalid // Изменённый ZIP не пройдёт проверку состава до начала разбора.
 	_, e = parseSQL([]byte("id,username,uuid,password_hash,password_format\n7,Bob,11111111-2222-4333-8444-555555555555,nothex,sha256-hex\n"), "sql-export/users.csv")
 	if e == nil {
-		t.Fatal("accepted invalid claimed password hash")
+		t.Fatal("Ошибочно принят неверный заявленный хеш пароля")
 	}
 }
 func TestDecisionFingerprint335(t *testing.T) {
 	if SourceFingerprint("a", "b", "sha256-hex") == SourceFingerprint("a", "b", "md5-hex") {
-		t.Fatal("algorithm not bound")
+		t.Fatal("Алгоритм не привязан")
 	}
 }

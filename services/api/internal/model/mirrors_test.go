@@ -22,13 +22,13 @@ func TestManifestMirrorsRoundTrip0234(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(decoded.Mirrors) != 2 || decoded.Mirrors[0] != in.Mirrors[0] || decoded.Mirrors[1] != in.Mirrors[1] {
-		t.Fatalf("mirror order changed: %+v", decoded.Mirrors)
+		t.Fatalf("Порядок зеркал изменился: %+v", decoded.Mirrors)
 	}
 	b, err = json.Marshal(ManifestFile{Path: "a.jar"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(b), "mirrors") {
-		t.Fatalf("legacy manifests must omit absent mirrors: %s", b)
+		t.Fatalf("В старых манифестах нельзя указывать отсутствующие зеркала: %s", b)
 	}
 }

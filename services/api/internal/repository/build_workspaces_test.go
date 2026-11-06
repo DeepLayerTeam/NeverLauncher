@@ -16,13 +16,13 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 		t.Fatal(err)
 	}
 	if saved.Revision != 1 || saved.State != "importing" {
-		t.Fatalf("initial revision: %#v", saved)
+		t.Fatalf("Начальная ревизия: %#v", saved)
 	}
 	saved.Files[0].Path = "tampered.jar"
 	saved.Settings.ToolVersions["api"] = "other"
 	untouched, err := repo.GetBuildWorkspace(ctx, saved.ID)
 	if err != nil || untouched.Files[0].Path != "mods/first.jar" || untouched.Settings.ToolVersions["api"] != "0.22.6" {
-		t.Fatalf("external mutation affected repository: %#v %v", untouched, err)
+		t.Fatalf("Внешнее изменение повлияло на хранилище: %#v %v", untouched, err)
 	}
 	updated := untouched
 	updated.State = "staged"
@@ -31,7 +31,7 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 		t.Fatalf("save: %#v %v", stored, err)
 	}
 	if _, err = repo.SaveBuildWorkspace(ctx, updated); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale update allowed: %v", err)
+		t.Fatalf("Ошибочно разрешено устаревшее обновление: %v", err)
 	}
 	hijack := stored
 	hijack.OwnerID = "someone-else"
@@ -54,6 +54,6 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 	}
 	foreign, err := repo.ListBuildWorkspaces(ctx, "demo-project", "not-admin")
 	if err != nil || len(foreign) != 0 {
-		t.Fatalf("owner leak: %#v %v", foreign, err)
+		t.Fatalf("Утечка данных владельца: %#v %v", foreign, err)
 	}
 }

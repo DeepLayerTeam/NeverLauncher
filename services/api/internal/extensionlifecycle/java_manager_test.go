@@ -55,7 +55,7 @@ func TestJavaManagerCycleAndConflicts0305(t *testing.T) {
 	addDependencyInstall0305(t, repo, b, model.ExtensionInstallStateDisabled)
 	addDependencyInstall0305(t, repo, a, model.ExtensionInstallStateDisabled)
 	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "cycle") {
-		t.Fatalf("cycle accepted: %v", err)
+		t.Fatalf("Ошибочно принята циклическая зависимость: %v", err)
 	}
 	a.Dependencies = nil
 	a.Conflicts = []model.ExtensionConflict{{ID: "example.b", Version: "*"}}

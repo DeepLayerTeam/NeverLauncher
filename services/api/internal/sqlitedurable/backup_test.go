@@ -66,7 +66,7 @@ func TestOnlineBackupWALAndVerifiedRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = OnlineBackup(ctx, opt.Path, backup); err == nil {
-		t.Fatal("overwrote existing immutable backup")
+		t.Fatal("Перезаписана существующая неизменяемая резервная копия")
 	}
 	restoreDir := filepath.Join(filepath.Dir(opt.Path), "restore")
 	if err = os.Mkdir(restoreDir, 0700); err != nil {
@@ -114,7 +114,7 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = RestoreBackup(ctx, backup, opt.Path, true); err == nil {
-		t.Fatal("restore bypassed active owner lock")
+		t.Fatal("Восстановление обошло активную блокировку владельца")
 	}
 	if err = s.Close(); err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = RestoreBackup(ctx, backup, opt.Path, true); err == nil || !strings.Contains(err.Error(), "checkpoint") {
-		t.Fatalf("unsafe sidecar accepted: %v", err)
+		t.Fatalf("Ошибочно принят небезопасный сопутствующий файл: %v", err)
 	}
 	if err = os.Remove(sidecar); err != nil {
 		t.Fatal(err)
@@ -135,7 +135,7 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	if rollback == "" {
-		t.Fatal("restore did not preserve previous DB")
+		t.Fatal("Восстановление не сохранило предыдущую базу данных")
 	}
 	if _, err = os.Stat(rollback); err != nil {
 		t.Fatal(err)
@@ -154,9 +154,9 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = VerifyBackup(ctx, backup); err == nil {
-		t.Fatal("tampered snapshot verified")
+		t.Fatal("Изменённый снимок ошибочно прошёл проверку")
 	}
 	if _, err = RestoreBackup(ctx, backup, opt.Path, true); err == nil {
-		t.Fatal("tampered snapshot restored")
+		t.Fatal("Изменённый снимок ошибочно восстановлен")
 	}
 }

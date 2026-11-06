@@ -82,7 +82,7 @@ func TestRevocationTerminalPostgres0434(t *testing.T) {
 	}
 	if revoked.RevokedSessions != 1 || revoked.RevokedMinecraftSessions != 1 ||
 		len(revoked.RevokedSessionIDs) != 1 || revoked.RevokedSessionIDs[0] != sid {
-		t.Fatalf("trigger cascade not reflected in API result: %+v", revoked)
+		t.Fatalf("Каскадное действие триггера не отражено в результате API: %+v", revoked)
 	}
 	var sessionState, minecraftState string
 	if err := a.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, sid).Scan(&sessionState); err != nil {
@@ -95,22 +95,22 @@ func TestRevocationTerminalPostgres0434(t *testing.T) {
 		t.Fatalf("cascade session=%s Minecraft=%s", sessionState, minecraftState)
 	}
 	if _, err := a.SaveTrustedDevice(ctx, device); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale device writer succeeded: %v", err)
+		t.Fatalf("Устаревшая запись устройства прошла успешно: %v", err)
 	}
 	if _, err := a.SaveMinecraftSession(credential); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale Minecraft writer succeeded: %v", err)
+		t.Fatalf("Устаревшая запись Minecraft прошла успешно: %v", err)
 	}
 	if _, err := a.db.ExecContext(ctx, `UPDATE trusted_devices SET status='active',trust_state='verified',revoked_at=NULL,revoked_reason='' WHERE id=$1`, did); err == nil {
-		t.Fatal("SQL resurrected revoked device")
+		t.Fatal("SQL восстановил отозванное устройство")
 	}
 	if _, err := a.db.ExecContext(ctx, `UPDATE minecraft_sessions SET status='active',revoked_at=NULL,revoked_reason='' WHERE id=$1`, mid); err == nil {
-		t.Fatal("SQL resurrected revoked game credential")
+		t.Fatal("SQL восстановил отозванные игровые учётные данные")
 	}
 	if _, err := a.db.ExecContext(ctx, `UPDATE trusted_devices SET public_key=$2 WHERE id=$1`, did, base64.RawURLEncoding.EncodeToString(make([]byte, 32))); err == nil {
-		t.Fatal("SQL replaced key in revoked row")
+		t.Fatal("SQL заменил ключ в отозванной записи")
 	}
 	again, err := a.GetTrustedDevice(uid, did)
 	if err != nil || again.Status != "revoked" {
-		t.Fatalf("device tombstone altered %+v %v", again, err)
+		t.Fatalf("Изменена запись об удалённом устройстве: %+v %v", again, err)
 	}
 }

@@ -15,7 +15,7 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 		t.Fatal(err)
 	}
 	if created.Revision != 1 || created.CreatedAt.IsZero() {
-		t.Fatalf("not initialized: %+v", created)
+		t.Fatalf("Не инициализировано: %+v", created)
 	}
 	if _, err = r.CreateReleaseDraft(ctx, original); !errors.Is(err, ErrConflict) {
 		t.Fatalf("duplicate: %v", err)

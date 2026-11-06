@@ -11,13 +11,13 @@ import (
 
 func TestAllowlistAndRemoteProtection(t *testing.T) {
 	if _, e := safeURL("http://example.org/api/v1/status", false); e == nil {
-		t.Fatal("remote without approval")
+		t.Fatal("Удалённый доступ без подтверждения")
 	}
 	if _, e := safeURL("http://127.0.0.1:8080/api/v1/auth/login", false); e == nil {
-		t.Fatal("write endpoint allowed")
+		t.Fatal("Разрешён адрес API с операцией записи")
 	}
 	if _, e := safeURL("http://127.0.0.1:8080/api/v1/status?token=private", false); e == nil {
-		t.Fatal("token query allowed")
+		t.Fatal("Разрешена передача токена в параметрах запроса")
 	}
 	if _, e := safeURL("https://example.org/api/v1/status", true); e != nil {
 		t.Fatal(e)
@@ -28,13 +28,13 @@ func TestMeasuredSuccessAndFailures(t *testing.T) {
 	defer ts.Close()
 	r := run(context.Background(), ts.Client(), ts.URL, 2, 120*time.Millisecond)
 	if r.Requests < 10 || r.Successful != r.Requests || !r.Passed || r.RPS <= 0 {
-		t.Fatalf("unmeasured success %+v", r)
+		t.Fatalf("Успех зафиксирован без измерений: %+v", r)
 	}
 	bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(503) }))
 	defer bad.Close()
 	r = run(context.Background(), bad.Client(), bad.URL, 2, 120*time.Millisecond)
 	if r.Status5xx == 0 || r.Passed {
-		t.Fatalf("bad backend claimed capacity %+v", r)
+		t.Fatalf("Неисправный Backend сообщил о доступной ёмкости: %+v", r)
 	}
 }
 
@@ -49,10 +49,10 @@ func TestProductionRCRejectsEveryUnexpectedResponse(t *testing.T) {
 			client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 			result := run(context.Background(), client, srv.URL, 2, 150*time.Millisecond)
 			if result.Requests < 10 || result.Passed || result.Successful != 0 {
-				t.Fatalf("unhealthy endpoint accepted: %+v", result)
+				t.Fatalf("Ошибочно принят неисправный адрес API: %+v", result)
 			}
 			if status != http.StatusTooManyRequests && status != http.StatusServiceUnavailable && result.UnexpectedHTTP != result.Requests {
-				t.Fatalf("unexpected HTTP status not accounted for: %+v", result)
+				t.Fatalf("Не учтён неожиданный статус HTTP: %+v", result)
 			}
 		})
 	}
@@ -70,6 +70,6 @@ func TestProductionRCMixedSuccessAndErrorsFails(t *testing.T) {
 	defer srv.Close()
 	result := run(context.Background(), srv.Client(), srv.URL, 4, 150*time.Millisecond)
 	if result.Requests < 10 || result.UnexpectedHTTP == 0 || result.Successful == 0 || result.Passed {
-		t.Fatalf("partial capacity accepted: %+v", result)
+		t.Fatalf("Ошибочно принята неполная ёмкость: %+v", result)
 	}
 }

@@ -29,7 +29,7 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	if err := store.Health(ctx); err != nil {
-		t.Fatalf("real S3 health: %v", err)
+		t.Fatalf("Проверка работоспособности настоящего S3: %v", err)
 	}
 	content := []byte("real S3 texture compatibility 0.25.12 " + time.Now().UTC().Format(time.RFC3339Nano))
 	sum := sha256.Sum256(content)
@@ -43,17 +43,17 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	}
 	obj := textureFixture0253(content)
 	if got := VerifyTexture02511(ctx, store, obj); got.Result != "ok" {
-		t.Fatalf("real S3 verification: %+v", got)
+		t.Fatalf("Проверка настоящего S3: %+v", got)
 	}
 	backup := filepath.Join(t.TempDir(), "snapshot")
 	if err := BackupTextures0253(ctx, store, []TextureBackupObject0253{obj}, backup); err != nil {
 		t.Fatal(err)
 	}
 	if err := DeleteTextureSafely02511(ctx, store, digest); err != nil {
-		t.Fatalf("S3 safe delete: %v", err)
+		t.Fatalf("Безопасное удаление из S3: %v", err)
 	}
 	if got := VerifyTexture02511(ctx, store, obj); got.Result != "unavailable" {
-		t.Fatalf("deleted blob still present: %+v", got)
+		t.Fatalf("Удалённые данные всё ещё присутствуют: %+v", got)
 	}
 	count, err := RestoreTextures0253(ctx, store, backup, []TextureBackupObject0253{obj})
 	if err != nil || count != 1 {

@@ -22,7 +22,7 @@ func TestLinuxAdversarialDescendants03114(t *testing.T) {
 		t.Skip("live kernel host explicitly required")
 	}
 	if err := Available(); err != nil {
-		t.Fatalf("required live sandbox unavailable: %v", err)
+		t.Fatalf("Недоступна обязательная рабочая изолированная среда: %v", err)
 	}
 	opt := validOptions0319(t)
 	opt.Policy.MaxProcesses = 8
@@ -49,7 +49,7 @@ sleep 15
 		t.Fatal(err)
 	}
 	if err := h.Started(); err != nil {
-		t.Fatalf("OS sandbox init: %v / %s", err, stderr.String())
+		t.Fatalf("Инициализация системной изоляции: %v / %s", err, stderr.String())
 	}
 	var descendants []int
 	until := time.Now().Add(4 * time.Second)
@@ -70,7 +70,7 @@ sleep 15
 		time.Sleep(50 * time.Millisecond)
 	}
 	if len(descendants) < 3 {
-		t.Fatalf("expected sandbox leader, proxy and descendant in one cgroup; got %v; %s", descendants, stderr.String())
+		t.Fatalf("Ожидалась общая cgroup для основного процесса изоляции, прокси и потомка; получено %v; %s", descendants, stderr.String())
 	}
 	h.Close()
 	deadline := time.Now().Add(3 * time.Second)
@@ -86,7 +86,7 @@ sleep 15
 				break
 			}
 			if time.Now().After(deadline) {
-				t.Fatalf("descendant process %d survived sandbox close", pid)
+				t.Fatalf("Дочерний процесс %d продолжил работу после закрытия изоляции", pid)
 			}
 			time.Sleep(20 * time.Millisecond)
 		}

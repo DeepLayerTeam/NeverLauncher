@@ -99,7 +99,7 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 		t.Fatalf("Утверждения userinfo не объединены: %+v", auth.Identity)
 	}
 	if strings.Join(auth.AuthMethods, ",") != "pwd,mfa" {
-		t.Fatalf("unexpected amr: %v", auth.AuthMethods)
+		t.Fatalf("Неожиданное значение amr: %v", auth.AuthMethods)
 	}
 	if _, err := c.CompleteBrowserAuth(context.Background(), authconnector.BrowserAuthCallback{RedirectURI: "https://launcher.example.test/callback", Code: "code-2", State: strings.Repeat("s", 43), Nonce: "wrong-" + expectedNonce, PKCEVerifier: verifier}); err == nil {
 		t.Fatal("Ожидалась ошибка проверки одноразового значения nonce")

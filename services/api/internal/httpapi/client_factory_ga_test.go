@@ -73,6 +73,6 @@ func TestFactoryPackageVerified0280RejectsTraversal(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := factoryPackageVerified0280(root, client, plan); err == nil {
-		t.Fatal("accepted traversing path")
+		t.Fatal("Ошибочно принят путь с выходом за пределы каталога")
 	}
 }

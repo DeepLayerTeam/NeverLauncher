@@ -20,7 +20,7 @@ func TestV12ForgedExpiredUnsignedManualCertification03412(t *testing.T) {
 	// старого запуска.
 	signed.Signature = ""
 	if verifyValidation0345(signed, trusted) == nil {
-		t.Fatal("unsigned runner accepted")
+		t.Fatal("Ошибочно принят неподписанный исполняемый модуль")
 	}
 	signed, _, trusted = validValidationFixture0345(t)
 	raw, _ := json.Marshal(signed.Evidence)

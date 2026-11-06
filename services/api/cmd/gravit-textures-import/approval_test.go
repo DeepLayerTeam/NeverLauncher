@@ -11,11 +11,11 @@ func TestTextureApprovalGate0445(t *testing.T) {
 	approved := strings.Repeat("a", 64)
 	for _, invalid := range []string{"", "not-a-sha", strings.Repeat("A", 64), strings.Repeat("g", 64)} {
 		if isApprovedTexturePlan0445(invalid) {
-			t.Fatalf("accepted invalid approved plan hash %q", invalid)
+			t.Fatalf("Ошибочно принят некорректный хеш утверждённого плана %q", invalid)
 		}
 	}
 	if !isApprovedTexturePlan0445(approved) {
-		t.Fatal("valid sha256 refused")
+		t.Fatal("Корректный SHA-256 отклонён")
 	}
 	for _, tc := range []struct {
 		status string
@@ -30,10 +30,10 @@ func TestTextureApprovalGate0445(t *testing.T) {
 	} {
 		r := texturegravit.Report{Rows: []texturegravit.Record{{Status: tc.status}}, Counts: map[string]int{tc.status: 1}}
 		if got := texturePreviewClean0445(r); got != tc.ok {
-			t.Errorf("status %s: expected %v, got %v", tc.status, tc.ok, got)
+			t.Errorf("Статус %s: ожидалось %v, получено %v", tc.status, tc.ok, got)
 		}
 	}
 	if texturePreviewClean0445(texturegravit.Report{Counts: map[string]int{}}) {
-		t.Fatal("empty dry-run was approved")
+		t.Fatal("Ошибочно утверждена пустая пробная операция")
 	}
 }

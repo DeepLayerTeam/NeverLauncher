@@ -47,7 +47,7 @@ func TestAdversarialHostReconnectAndBurst03114(t *testing.T) {
 	}
 	state.mu.Lock()
 	if state.budget.output != 16 || state.budget.active != 0 || state.budget.rejected != 24 {
-		t.Fatalf("counters invalid: %+v", state.budget)
+		t.Fatalf("Некорректные счётчики: %+v", state.budget)
 	}
 	state.budget.window = time.Now().Add(-2 * time.Second)
 	state.mu.Unlock()

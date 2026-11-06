@@ -67,7 +67,7 @@ func TestSignedTextureProtocol0256(t *testing.T) {
 	}
 	block, _ := pem.Decode([]byte(meta.SignaturePublickey))
 	if block == nil {
-		t.Fatal("bad PEM")
+		t.Fatal("Некорректный PEM")
 	}
 	pk, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {

@@ -67,7 +67,7 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 	repo, state = openSQLiteRuntimeTest0373(t, path, sqliteTestSecret0373)
 	defer repo.Close()
 	if _, ok := state.AuthSessions.get(session.ID, user.ID); !ok {
-		t.Fatal("lost session")
+		t.Fatal("Сессия потеряна")
 	}
 	if !state.Security.totpEnabled(user.ID) {
 		t.Fatal("Многофакторная аутентификация не восстановлена")
@@ -82,7 +82,7 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 		t.Fatal("Потерян токен сброса пароля")
 	}
 	if _, err := state.Passkeys.consumeChallenge(challengeToken, "register"); err != nil {
-		t.Fatalf("lost challenge: %v", err)
+		t.Fatalf("Запрос подтверждения потерян: %v", err)
 	}
 	if _, err := state.Passkeys.credentialByRawID(cred.CredentialID); err != nil {
 		t.Fatal(err)

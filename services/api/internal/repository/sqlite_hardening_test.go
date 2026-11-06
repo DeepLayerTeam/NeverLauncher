@@ -19,7 +19,7 @@ func TestSQLiteHTTP0471StrictSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = decodeSQLiteHTTPDocument0471(raw); err != nil {
-		t.Fatalf("generated snapshot rejected: %v", err)
+		t.Fatalf("Созданный снимок отклонён: %v", err)
 	}
 	var fields map[string]json.RawMessage
 	if err = json.Unmarshal(raw, &fields); err != nil {
@@ -78,7 +78,7 @@ func TestSQLiteHTTP0471RejectsUnrelatedDatabaseAndMissingSnapshot(t *testing.T) 
 	}
 	if r, e := OpenSQLiteHTTPRepository0372(ctx, path, ""); e == nil {
 		_ = r.Close()
-		t.Fatal("unrelated database initialized as empty launcher")
+		t.Fatal("Посторонняя база данных инициализирована как пустой Launcher")
 	}
 }
 
@@ -105,9 +105,9 @@ func TestSQLiteHTTP0471HealthVerifiesDocumentAndCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := repo.Health(ctx); err == nil {
-		t.Fatal("invalid document passed readiness")
+		t.Fatal("Некорректный документ прошёл проверку готовности")
 	}
 	if err := repo.Health(ctx); err == nil {
-		t.Fatal("repository recovered without a verified reopen")
+		t.Fatal("Хранилище восстановилось без проверенного повторного открытия")
 	}
 }

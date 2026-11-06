@@ -24,7 +24,7 @@ func TestNormalizeServerBridgeControlFailure(t *testing.T) {
 				t.Fatalf("normalized bytes=%d valid=%v; want %d", len(normalized), utf8.ValidString(normalized), tc.length)
 			}
 			if normalized != normalizeServerBridgeControlFailure(normalized) {
-				t.Fatal("idempotent normalization violated")
+				t.Fatal("Нарушена идемпотентность нормализации")
 			}
 		})
 	}

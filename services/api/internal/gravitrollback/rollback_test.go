@@ -34,13 +34,13 @@ func TestCompareRefusesPostSwitchWrites(t *testing.T) {
 	p.Current.Players[0].Economy = "101"
 	diff, e := Compare(p, r, r.RunID)
 	if e != nil || diff.Ready || len(diff.Blockers) == 0 {
-		t.Fatalf("changed economy accepted: %+v %v", diff, e)
+		t.Fatalf("Ошибочно принято изменение экономики: %+v %v", diff, e)
 	}
 	p, r = fixture()
 	p.Current.WorldSHA256 = strings.Repeat("b", 64)
 	diff, e = Compare(p, r, r.RunID)
 	if e != nil || diff.Ready {
-		t.Fatalf("changed world accepted: %+v %v", diff, e)
+		t.Fatalf("Ошибочно принято изменение мира: %+v %v", diff, e)
 	}
 	p, r = fixture()
 	p.Current.Players = append(p.Current.Players, p.Current.Players[0])
@@ -51,7 +51,7 @@ func TestCompareRefusesPostSwitchWrites(t *testing.T) {
 	p.EvidenceReference = "different/evidence"
 	different, e := Compare(p, r, r.RunID)
 	if e != nil || different.PlanSHA256 == ok.PlanSHA256 {
-		t.Fatal("evidence must change plan hash")
+		t.Fatal("Подтверждения должны изменять хеш плана")
 	}
 }
 func TestCommitRequiresBothFences(t *testing.T) {
@@ -72,7 +72,7 @@ func TestReconciledPostSwitchWrites03312(t *testing.T) {
 	p.Current.Players[0].Economy = "300"
 	blocked, e := Compare(p, r, r.RunID)
 	if e != nil || blocked.Ready {
-		t.Fatalf("should require reconciliation: %+v %v", blocked, e)
+		t.Fatalf("Должно требоваться согласование: %+v %v", blocked, e)
 	}
 	source := p.Current
 	source.Players = append([]gr.Player(nil), p.Current.Players...)
@@ -80,11 +80,11 @@ func TestReconciledPostSwitchWrites03312(t *testing.T) {
 	p.ReconciliationEvidenceSHA256 = strings.Repeat("b", 64)
 	result, e := Compare(p, r, r.RunID)
 	if e != nil || !result.Ready || result.Mode != "reconciled" || result.ReconciledSourceSHA256 == "" {
-		t.Fatalf("reconciled state rejected: %+v %v", result, e)
+		t.Fatalf("Согласованное состояние отклонено: %+v %v", result, e)
 	}
 	source.Players[0].InventorySHA256 = strings.Repeat("c", 64)
 	result, e = Compare(p, r, r.RunID)
 	if e != nil || result.Ready {
-		t.Fatalf("differing source accepted: %+v %v", result, e)
+		t.Fatalf("Ошибочно принят отличающийся источник: %+v %v", result, e)
 	}
 }

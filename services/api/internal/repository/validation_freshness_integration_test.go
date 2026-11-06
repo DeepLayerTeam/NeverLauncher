@@ -44,15 +44,15 @@ func TestV05PostgresDurableChallengeAndKeyRevocation0346(t *testing.T) {
 	}
 	restored, err := r.GetValidationChallenge0346(ctx, c.RunID)
 	if err != nil || restored.Nonce != c.Nonce || !restored.IssuedAt.Equal(c.IssuedAt) || restored.TargetMatrixSHA256 != c.TargetMatrixSHA256 {
-		t.Fatalf("challenge not durably bound: %+v %v", restored, err)
+		t.Fatalf("Запрос подтверждения не закреплён в постоянном хранилище: %+v %v", restored, err)
 	}
 	if err := r.SaveValidationChallenge0346(ctx, c); err == nil {
-		t.Fatal("replayed run accepted")
+		t.Fatal("Ошибочно принят повторно воспроизведённый запуск")
 	}
 	sameNonce := c
 	sameNonce.RunID += "-another"
 	if err := r.SaveValidationChallenge0346(ctx, sameNonce); err == nil {
-		t.Fatal("reused nonce accepted for different run")
+		t.Fatal("Ошибочно принят повторно использованный nonce для другого запуска")
 	}
 	fp := strings.Repeat("e", 64)
 	if err := r.RevokeValidationKey0346(ctx, fp, "operator", "confirmed key compromise"); err != nil {
@@ -60,7 +60,7 @@ func TestV05PostgresDurableChallengeAndKeyRevocation0346(t *testing.T) {
 	}
 	revoked, err := r.IsValidationKeyRevoked0346(ctx, fp)
 	if err != nil || !revoked {
-		t.Fatal("revocation not visible to SQL reader", err)
+		t.Fatal("Отзыв не виден читающему SQL-компоненту", err)
 	}
 	// Отзывы ключей глобальны и постоянны; точек DELETE или восстановления нет.
 }

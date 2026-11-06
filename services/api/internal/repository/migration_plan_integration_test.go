@@ -51,7 +51,7 @@ func TestMigrationPlanDurableIdempotentAndSourcePinned0442(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = repo.SaveMigrationPlan0442(ctx, p); !errors.Is(e, mw.ErrBusy) {
-		t.Fatalf("early plan saved: %v", e)
+		t.Fatalf("План сохранён преждевременно: %v", e)
 	}
 	for _, step := range []string{"target_check", "target_inventory"} {
 		lease, err := repo.ClaimMigration0331(ctx, run.ID, "plan-worker", 10*time.Second)
@@ -66,7 +66,7 @@ func TestMigrationPlanDurableIdempotentAndSourcePinned0442(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = repo.SaveMigrationPlan0442(ctx, p); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("plan without compatibility accepted: %v", e)
+		t.Fatalf("Ошибочно принят план без проверки совместимости: %v", e)
 	}
 	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: source.SourceSHA256, Status: "manual", VersionStatus: "unverified"}); e != nil {
 		t.Fatal(e)
@@ -83,7 +83,7 @@ func TestMigrationPlanDurableIdempotentAndSourcePinned0442(t *testing.T) {
 	}
 	after, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || after.Revision != before.Revision {
-		t.Fatalf("idempotent replay changed revision: %v %+v %+v", e, before, after)
+		t.Fatalf("Идемпотентное повторение изменило ревизию: %v %+v %+v", e, before, after)
 	}
 	changed := p
 	changed.TargetSHA256 = strings.Repeat("b", 64)
@@ -96,7 +96,7 @@ func TestMigrationPlanDurableIdempotentAndSourcePinned0442(t *testing.T) {
 	}
 	saved, e := repo.GetMigrationPlan0442(ctx, run.ID)
 	if e != nil || saved.PlanSHA256 != changed.PlanSHA256 {
-		t.Fatalf("updated plan unavailable: %v", e)
+		t.Fatalf("Обновлённый план недоступен: %v", e)
 	}
 	forged := changed
 	forged.SourceSHA256 = strings.Repeat("c", 64)
@@ -105,6 +105,6 @@ func TestMigrationPlanDurableIdempotentAndSourcePinned0442(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = repo.SaveMigrationPlan0442(ctx, forged); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("source repin accepted: %v", e)
+		t.Fatalf("Ошибочно принята повторная фиксация источника: %v", e)
 	}
 }

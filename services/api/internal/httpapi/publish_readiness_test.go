@@ -58,7 +58,7 @@ func TestPublishReadiness0385ExplainsBrokenPackageAndBlocksPreview(t *testing.T)
 			foundSignature = true
 		}
 		if b.Resource == "" || b.Message == "" || b.Action == "" {
-			t.Fatalf("incomplete blocker: %+v", b)
+			t.Fatalf("Неполное описание блокирующей причины: %+v", b)
 		}
 	}
 	if !foundFiles || !foundSignature {
@@ -89,7 +89,7 @@ func TestPublishRefusal0385KeepsIndividualTargetReasons(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Error.ReasonCode != "publish-blocked" || len(result.Error.Blockers) != 1 || result.Error.Blockers[0].Resource != "linux-amd64" {
-		t.Fatalf("lost targets: %+v", result)
+		t.Fatalf("Потеряны целевые объекты: %+v", result)
 	}
 }
 

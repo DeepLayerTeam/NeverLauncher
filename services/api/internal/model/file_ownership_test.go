@@ -49,16 +49,16 @@ func TestFileOwnershipRules0224(t *testing.T) {
 			c.FileRules = append([]FileRule(nil), m.FileRules...)
 			mutate(&c)
 			if err := ValidateFileOwnership0224(c); err == nil {
-				t.Fatalf("unsafe rule accepted: %+v", c)
+				t.Fatalf("Ошибочно принято небезопасное правило: %+v", c)
 			}
 		})
 	}
 	m.Files[0].SHA256 = ""
 	if err := ValidateFileOwnership0224(m); err != nil {
-		t.Fatal("draft must be editable", err)
+		t.Fatal("Черновик должен допускать редактирование", err)
 	}
 	if err := ValidatePublishFileOwnership0224(m); err == nil {
-		t.Fatal("incomplete content published")
+		t.Fatal("Опубликовано неполное содержимое")
 	}
 }
 
@@ -73,7 +73,7 @@ func TestFileOwnershipSigningCompatibility0224(t *testing.T) {
 		t.Fatal("Содержимое v1 изменилось")
 	}
 	if !ed25519.Verify(private.Public().(ed25519.PublicKey), v1Raw, ed25519.Sign(private, v1Raw)) {
-		t.Fatal("v1 broke")
+		t.Fatal("Нарушена совместимость с v1")
 	}
 	v2 := Manifest{SchemaVersion: "2.0", Files: []ManifestFile{{Path: "mods/a.jar", Required: true, Ownership: "required"}}, FileRules: []FileRule{{Pattern: "mods/**", Action: "include", Ownership: "managed"}}}
 	b, _ := json.Marshal(v2)
@@ -81,6 +81,6 @@ func TestFileOwnershipSigningCompatibility0224(t *testing.T) {
 	v2.FileRules[0].Action = "exclude"
 	tampered, _ := json.Marshal(v2)
 	if ed25519.Verify(private.Public().(ed25519.PublicKey), tampered, sig) {
-		t.Fatal("signed policy tampering accepted")
+		t.Fatal("Ошибочно принято изменение подписанной политики")
 	}
 }

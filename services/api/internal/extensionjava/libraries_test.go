@@ -75,7 +75,7 @@ func TestPinnedLibraryJarInspect0482(t *testing.T) {
 		t.Fatal(err)
 	}
 	if jar.MinimumJava != 21 || jar.ClassFiles != 3 || len(jar.Libraries) != 1 || jar.Libraries[0].Coordinate != "test:dep" {
-		t.Fatalf("incorrect libraries: %+v", jar)
+		t.Fatalf("Некорректный набор библиотек: %+v", jar)
 	}
 }
 
@@ -124,7 +124,7 @@ func TestDuplicateJarClassesRejected0482(t *testing.T) {
 	for _, bad := range []string{"example/Plugin.class", "ru/launcher/sdk/core/HostSession.class", "java/lang/String.class"} {
 		lib := zip0482(t, map[string][]byte{bad: class0482(61)})
 		if _, err := Inspect(makeFixture0482(t, lib, ">=1.0 <2.0")); err == nil {
-			t.Fatalf("accepted conflict %s", bad)
+			t.Fatalf("Ошибочно принят конфликт %s", bad)
 		}
 	}
 }
@@ -175,6 +175,6 @@ func TestUnsafeAndLockedDependencyRejected0482(t *testing.T) {
 	// Некорректные контрольные суммы и неожиданное содержимое индекса всегда
 	// вызывают отказ.
 	if _, err := Inspect(badHash); err == nil {
-		t.Fatal("accepted altered lock")
+		t.Fatal("Ошибочно принят изменённый файл блокировки")
 	}
 }

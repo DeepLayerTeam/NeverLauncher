@@ -22,13 +22,13 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = r.InitializeMinimalInstallation0375(ctx, "wrong-token-"+strings.Repeat("b", 40), true); err == nil {
-		t.Fatal("cannot replace bootstrap verifier")
+		t.Fatal("Нельзя заменять проверяющий компонент начальной настройки")
 	}
 	now := time.Now().UTC()
 	user := model.User{ID: "admin", Email: "admin@example.test", DisplayName: "Owner", Status: "active", RoleID: "owner", PasswordHash: "hash-not-a-real-secret", CreatedAt: now, UpdatedAt: now}
 	identity := model.AuthIdentity{ID: "identity-local-admin", UserID: "admin", Issuer: "launcher", Provider: "local", Subject: "admin", Email: user.Email}
 	if _, err = r.BootstrapMinimalAdmin0375(ctx, user, identity, "wrong", "installer"); err == nil {
-		t.Fatal("invalid token accepted")
+		t.Fatal("Ошибочно принят некорректный токен")
 	}
 	created, err := r.BootstrapMinimalAdmin0375(ctx, user, identity, token, "installer")
 	if err != nil {
@@ -38,10 +38,10 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 		t.Fatal("Неверный владелец")
 	}
 	if _, err = r.BootstrapMinimalAdmin0375(ctx, user, identity, token, "installer"); err == nil {
-		t.Fatal("token reused")
+		t.Fatal("Токен использован повторно")
 	}
 	if err = r.CompleteMinimalInstallation0375(ctx); err == nil {
-		t.Fatal("completed without a project")
+		t.Fatal("Завершено без проекта")
 	}
 	if _, err = r.SaveProject(model.Project{ID: "first", Name: "First", CreatedAt: now, UpdatedAt: now}); err != nil {
 		t.Fatal(err)
@@ -66,12 +66,12 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 	}
 	actual, err := r.GetUser("admin")
 	if err != nil || actual.PasswordHash != user.PasswordHash {
-		t.Fatalf("owner password hash lost on restart: %v", err)
+		t.Fatalf("При перезапуске потерян хеш пароля владельца: %v", err)
 	}
 	if _, err = r.GetAuthIdentity("local", "admin"); err != nil {
 		t.Fatalf("Идентичность не сохранена: %v", err)
 	}
 	if _, err = r.BootstrapMinimalAdmin0375(ctx, user, identity, token, "installer"); err == nil {
-		t.Fatal("bootstrap reopened after restart")
+		t.Fatal("После перезапуска повторно открыта начальная настройка")
 	}
 }

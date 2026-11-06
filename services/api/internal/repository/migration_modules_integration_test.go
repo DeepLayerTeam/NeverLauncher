@@ -44,7 +44,7 @@ func TestMigrationModuleReportImmutable0338(t *testing.T) {
 	}
 	report := gm.Report{Format: gm.Format, SourceSHA256: "", InventorySHA256: "", Modules: []gm.Module{}, Wrappers: []gm.Wrapper{}, Blockers: []string{}, Ready: true}
 	if _, e := r.SaveMigrationModules0338(ctx, run.ID, report); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("unbound report accepted: %v", e)
+		t.Fatalf("Ошибочно принят непривязанный отчёт: %v", e)
 	}
 	for _, step := range []string{"target_check", "target_inventory"} {
 		lease, e := r.ClaimMigration0331(ctx, run.ID, "module-test", 10*time.Second)
@@ -73,12 +73,12 @@ func TestMigrationModuleReportImmutable0338(t *testing.T) {
 	}
 	after, e := r.GetMigration0331(ctx, run.ID)
 	if e != nil || before.Revision != after.Revision {
-		t.Fatalf("replay changed revision: %v", e)
+		t.Fatalf("Повторное выполнение изменило ревизию: %v", e)
 	}
 	report.Blockers = []string{"unknown auth module"}
 	report.Ready = false
 	if _, e = r.SaveMigrationModules0338(ctx, run.ID, report); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed assessment accepted: %v", e)
+		t.Fatalf("Ошибочно принята изменённая оценка: %v", e)
 	}
 	if e = r.RecordMigrationWrapperEnrollment0338(ctx, run.ID, "wrapper.json", "new-node", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"); e != nil {
 		t.Fatal(e)

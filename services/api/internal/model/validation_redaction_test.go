@@ -18,12 +18,12 @@ func TestValidationDetailsRedactSecretsAndIdentifiers03412(t *testing.T) {
 		redacted := RedactValidationDetail03412(raw)
 		for _, secret := range []string{"ghp_secrettoken123", "secret-abc", "important-person", "verysecret", "ABC", "ZXCV", "secret-json", "s3cret", "123e4567-e89b-12d3-a456-426614174000", "user@example.com"} {
 			if strings.Contains(redacted, secret) {
-				t.Errorf("secret leaked in %q: %q", raw, redacted)
+				t.Errorf("Секрет попал в %q: %q", raw, redacted)
 			}
 		}
 	}
 	digest := strings.Repeat("a", 64)
 	if got := RedactValidationDetail03412("sha256=" + digest); got != "sha256="+digest {
-		t.Fatalf("digest redacted: %s", got)
+		t.Fatalf("Хеш скрыт: %s", got)
 	}
 }

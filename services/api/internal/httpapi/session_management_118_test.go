@@ -76,7 +76,7 @@ func TestSessionManagement118RiskRenameAndProviderRevoke(t *testing.T) {
 	}
 	renamed, err := store.renameDevice118(first.ID, user.ID, "Work Laptop")
 	if err != nil || renamed.Device != "Work Laptop" || renamed.DeviceID != "device-a" {
-		t.Fatalf("rename failed: %#v %v", renamed, err)
+		t.Fatalf("Переименование не удалось: %#v %v", renamed, err)
 	}
 	changed := httptest.NewRequest("GET", "http://example.test", nil)
 	changed.RemoteAddr = "203.0.113.44:5555"

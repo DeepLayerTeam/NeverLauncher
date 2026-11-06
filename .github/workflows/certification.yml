@@ -111,7 +111,7 @@ jobs:
           from pathlib import Path
           p=Path('e2e/runtime/result.json')
           report=json.loads(p.read_text())
-          assert report['status']=='passed' and report['checks']['actualClient'] is True, 'Minecraft did not actually launch'
+          assert report['status']=='passed' and report['checks']['actualClient'] is True, 'Minecraft фактически не запустился'
           PY
       - name: Собрать отчёт, привязанный к происхождению сборки (отмечает отсутствующие Guard/Bridge как пройденные)
         if: success()

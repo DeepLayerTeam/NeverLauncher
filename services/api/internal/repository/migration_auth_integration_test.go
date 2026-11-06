@@ -87,7 +87,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	userID = migratedUserID0335(account)
 	var count int
 	if e = repo.db.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE id=$1`, userID).Scan(&count); e != nil || count != 0 {
-		t.Fatal("dry-run created users", e)
+		t.Fatal("Пробная операция создала пользователей", e)
 	}
 	// Неверный выбор формата хеша отклоняется серверным парсером источника; после
 	// импорта решения квитанцию нельзя повторить с другим форматом.
@@ -98,7 +98,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	var hash, uuid, role string
 	e = repo.db.QueryRowContext(ctx, `SELECT u.password_hash,m.uuid,u.role_id FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, userID).Scan(&hash, &uuid, &role)
 	if e != nil || hash != encoded || uuid != account.UUID || role != "player" {
-		t.Fatalf("incorrect account/UUID: %q %q %q %v", hash, uuid, role, e)
+		t.Fatalf("Некорректные учётная запись или UUID: %q %q %q %v", hash, uuid, role, e)
 	}
 	if _, e = repo.db.ExecContext(ctx, `UPDATE users SET password_hash=$2 WHERE id=$1`, userID, "$argon2id$verified-upgrade"); e != nil {
 		t.Fatal(e)
@@ -108,10 +108,10 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 		t.Fatalf("повторное выполнение: %+v %v", replay, e)
 	}
 	if _, e = repo.ImportMigrationCredentials0335(ctx, run.ID, source.SourceSHA256, "bcrypt", input, false); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed decision replayed: %v", e)
+		t.Fatalf("Повторно применено изменённое решение: %v", e)
 	}
 	if e = repo.db.QueryRowContext(ctx, `SELECT count(*) FROM migration_events_0331 WHERE run_id=$1 AND kind='gravit_auth_imported'`, run.ID).Scan(&count); e != nil || count != 1 {
-		t.Fatalf("expected exactly one event %d %v", count, e)
+		t.Fatalf("Ожидалось ровно одно событие: %d %v", count, e)
 	}
 
 	// Отдельная миграция может сопоставить аккаунт по точному UUID, но не менять
@@ -135,16 +135,16 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	}
 	matched, e := repo.SaveMigrationIdentities0334(ctx, run2.ID, source.SourceSHA256, source.ManifestSHA256, []gi.Account{account})
 	if e != nil || matched.Summary["matched"] != 1 {
-		t.Fatalf("expected UUID match: %+v %v", matched, e)
+		t.Fatalf("Ожидалось совпадение UUID: %+v %v", matched, e)
 	}
 	replacement := c
 	replacement.PasswordHash = strings.Repeat("c", 64)
 	preserved, e := repo.ImportMigrationCredentials0335(ctx, run2.ID, source.SourceSHA256, "", []gc.Credential{replacement}, false)
 	if e != nil || preserved.ExistingUnchanged != 1 || preserved.Imported != 0 || preserved.Complete {
-		t.Fatalf("matched account overwritten: %+v %v", preserved, e)
+		t.Fatalf("Сопоставленная учётная запись перезаписана: %+v %v", preserved, e)
 	}
 	if e = repo.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id=$1`, userID).Scan(&hash); e != nil || hash != "$argon2id$verified-upgrade" {
-		t.Fatalf("source password overwrote Never: %v %q", e, hash)
+		t.Fatalf("Пароль источника перезаписал пароль Never: %v %q", e, hash)
 	}
 	// В версии 0.44.4 два независимых SQL-источника Gravit могут использовать
 	// id=1. Импорт второго UUID должен создавать отдельную учётную запись Never,
@@ -168,16 +168,16 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	other := gi.Account{Provider: "sql", SourceID: account.SourceID, Username: "Auth336", UUID: "22222222-2222-4333-8444-555555555555", SourcePath: "sql-export/users.csv"}
 	otherMapping, e := repo.SaveMigrationIdentities0334(ctx, run3.ID, source.SourceSHA256, source.ManifestSHA256, []gi.Account{other})
 	if e != nil || otherMapping.Summary["pending_import"] != 1 {
-		t.Fatalf("second SQL identity: %+v %v", otherMapping, e)
+		t.Fatalf("Вторая идентичность SQL: %+v %v", otherMapping, e)
 	}
 	otherCredential := gc.Credential{Account: other, PasswordHash: encoded, Algorithm: "sha256-hex", State: "importable"}
 	otherResult, e := repo.ImportMigrationCredentials0335(ctx, run3.ID, source.SourceSHA256, "", []gc.Credential{otherCredential}, false)
 	if e != nil || otherResult.Imported != 1 {
-		t.Fatalf("second SQL import: %+v %v", otherResult, e)
+		t.Fatalf("Второй импорт SQL: %+v %v", otherResult, e)
 	}
 	secondUserID = migratedUserID0335(other)
 	if secondUserID == userID {
-		t.Fatal("different UUID imported into first SQL user")
+		t.Fatal("Другой UUID импортирован первому пользователю SQL")
 	}
 	var otherUUID string
 	if e = repo.db.QueryRowContext(ctx, `SELECT uuid FROM minecraft_profiles WHERE user_id=$1`, secondUserID).Scan(&otherUUID); e != nil || otherUUID != other.UUID {

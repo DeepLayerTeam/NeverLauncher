@@ -54,7 +54,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 						t.Error(err)
 					}
 					if data["accessToken"] != "SECRET_MC_TOKEN" || data["selectedProfile"] != sessionProfileID {
-						t.Error("wrong bearer or profile")
+						t.Error("Неверный токен Bearer или профиль")
 					}
 					if len(data["serverId"]) < 30 || strings.ContainsAny(data["serverId"], " \r\n") {
 						t.Error("Недопустимый запрос подтверждения")
@@ -65,10 +65,10 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 				}
 				if r.URL.Path == "/session/minecraft/hasJoined" {
 					if r.Method != http.MethodGet || r.URL.Query().Get("serverId") != challenge || r.URL.Query().Get("username") != username {
-						t.Error("wrong hasJoined query")
+						t.Error("Некорректный запрос hasJoined")
 					}
 					if r.Header.Get("Authorization") != "" {
-						t.Error("bearer leaked to hasJoined")
+						t.Error("Токен Bearer передан в hasJoined")
 					}
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(tc.checkStatus)
@@ -88,7 +88,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 				t.Fatalf("error=%v", err)
 			}
 			if tc.joinStatus != 204 && requests != 1 {
-				t.Fatalf("hasJoined called after join was rejected: %d", requests)
+				t.Fatalf("Вызван hasJoined после отклонённого подключения: %d", requests)
 			}
 			if tc.joinStatus == 204 && requests != 2 {
 				t.Fatalf("Отсутствует обработка join/hasJoined: %d", requests)
@@ -100,7 +100,7 @@ func TestSessionserverNoTokenLeakOnErrorAndBadInput(t *testing.T) {
 	c := New()
 	for _, p := range []Profile{{ID: "bad", Name: "Player"}, {ID: sessionProfileID, Name: "with spaces"}} {
 		if err := c.VerifyOnlineSession(context.Background(), "secret", p); err == nil {
-			t.Fatal("bad identity accepted")
+			t.Fatal("Ошибочно принят некорректный идентификатор")
 		}
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +113,6 @@ func TestSessionserverNoTokenLeakOnErrorAndBadInput(t *testing.T) {
 	c.sessionserver = srv.URL
 	err := c.VerifyOnlineSession(context.Background(), "SECRET_DO_NOT_ECHO", Profile{ID: sessionProfileID, Name: "Player"})
 	if err == nil || strings.Contains(err.Error(), "SECRET_DO_NOT_ECHO") {
-		t.Fatalf("secret in error: %v", err)
+		t.Fatalf("Секрет обнаружен в сообщении об ошибке: %v", err)
 	}
 }

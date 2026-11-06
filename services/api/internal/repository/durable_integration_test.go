@@ -59,7 +59,7 @@ func TestDurableJobLeaseRecoversAcrossReplicaRestart0213(t *testing.T) {
 	}
 	first, err := a.LeaseDurableJob(ctx, job.ID, "api-a", 120*time.Millisecond)
 	if err != nil {
-		t.Fatalf("first lease: %v", err)
+		t.Fatalf("Первая аренда: %v", err)
 	}
 	if first.LeaseFence < 1 || first.LeaseToken == "" {
 		t.Fatalf("Первая аренда ресурса не защищена ограничителем поколений: %+v", first)

@@ -49,10 +49,10 @@ func TestAuthIdentityCollisionPostgres0293(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := b.SaveAuthIdentity(model.AuthIdentity{UserID: second, Provider: linked.Provider, Issuer: linked.Issuer, Subject: linked.Subject, Email: linked.Email}); !errors.Is(err, ErrConflict) {
-		t.Fatalf("cross-user identity reassignment: %v", err)
+		t.Fatalf("Переназначение идентификатора между пользователями: %v", err)
 	}
 	if _, err := b.SaveAuthIdentity(model.AuthIdentity{UserID: first, Provider: linked.Provider, Issuer: linked.Issuer, Subject: "another", Email: linked.Email}); !errors.Is(err, ErrConflict) {
-		t.Fatalf("same-user subject replacement: %v", err)
+		t.Fatalf("Замена субъекта того же пользователя: %v", err)
 	}
 	stable, err := b.GetAuthIdentityByIssuer(linked.Provider, linked.Issuer, linked.Subject)
 	if err != nil || stable.UserID != first || stable.ID != linked.ID {

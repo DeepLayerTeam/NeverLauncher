@@ -20,7 +20,7 @@ func TestSQLiteHTTPRepositoryBootstrap0372(t *testing.T) {
 	}
 	closer, ok := first.(interface{ Close() error })
 	if !ok {
-		t.Fatal("SQLite backend did not expose the durable store closer")
+		t.Fatal("Backend SQLite не предоставил функцию закрытия постоянного хранилища")
 	}
 	if err := closer.Close(); err != nil {
 		t.Fatal(err)
@@ -29,6 +29,6 @@ func TestSQLiteHTTPRepositoryBootstrap0372(t *testing.T) {
 	defer second.(interface{ Close() error }).Close()
 	project, err := second.GetProject("installed")
 	if err != nil || project.Name != "Installed" {
-		t.Fatalf("backend repository lost data: %+v / %v", project, err)
+		t.Fatalf("Хранилище Backend потеряло данные: %+v / %v", project, err)
 	}
 }

@@ -52,7 +52,7 @@ func fixture02512(t *testing.T) (*httptest.Server, string, func()) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"skinDomains": []string{"127.0.0.1"}, "signaturePublickey": pemKey})
 		case "/sessionserver/session/minecraft/profile/" + uuid:
 			if r.URL.Query().Get("unsigned") != "false" {
-				t.Errorf("requested unsigned payload")
+				t.Errorf("Запрошены неподписанные данные")
 			}
 			signed := map[string]any{"profileId": uuid, "profileName": "Tester", "textures": map[string]any{"SKIN": map[string]string{"url": server.URL + "/api/v1/textures/blob/" + hash}}}
 			payload, _ := json.Marshal(signed)
@@ -81,30 +81,30 @@ func TestLiveYggdrasilProfileAndActualTexture02512(t *testing.T) {
 	cfg := options02512{Origin: server.URL, UUID: id, ExpectSkin: true, AllowLoopbackHTTP: true}
 	result, err := certify02512(ctx, server.Client(), cfg)
 	if err != nil || result.Status != "passed" || !result.SignatureValid || !result.SkinChecked {
-		t.Fatalf("signed profile and actual PNG: %+v %v", result, err)
+		t.Fatalf("Подписанный профиль и фактический PNG: %+v %v", result, err)
 	}
 	cfg.ExpectCape = true
 	if _, err := certify02512(ctx, server.Client(), cfg); err == nil {
-		t.Fatal("absent required cape accepted")
+		t.Fatal("Ошибочно принято отсутствие обязательного плаща")
 	}
 	cfg.ExpectCape = false
 	cfg.AllowLoopbackHTTP = false
 	if _, err := certify02512(ctx, server.Client(), cfg); err == nil {
-		t.Fatal("non-TLS origin accepted")
+		t.Fatal("Ошибочно принят источник без TLS")
 	}
 }
 func TestCertProbeRejectsUnsafeURLs02512(t *testing.T) {
 	for _, raw := range []string{"http://169.254.169.254/", "http://127.0.0.1.evil.test", "http://user:secret@127.0.0.1/", "file:///tmp/test", "https://example.com/api/path", "https://example.com/?x=1"} {
 		if _, err := origin02512(raw, true); err == nil && strings.HasPrefix(raw, "http:") {
-			t.Errorf("unsafe HTTP origin: %s", raw)
+			t.Errorf("Небезопасный источник HTTP: %s", raw)
 		}
 	}
 	for _, id := range []string{"evil", "../../../../../../../", strings.Repeat("a", 33)} {
 		if _, err := cleanUUID02512(id); err == nil {
-			t.Errorf("accepted bad UUID %q", id)
+			t.Errorf("Ошибочно принят неверный UUID %q", id)
 		}
 	}
 	if !domainAllowed02512("assets.example.test", []string{".example.test"}) || domainAllowed02512("example.test.evil.test", []string{"example.test"}) {
-		t.Fatal("domain allowlist bypass")
+		t.Fatal("Обход списка разрешённых доменов")
 	}
 }

@@ -14,7 +14,7 @@ func TestBackendRestartKey0289(t *testing.T) {
 	}
 	b, _ := BackendRestartKey0289("operator-2", "0123456789abcdef")
 	if a == b {
-		t.Fatal("separate actors share idempotency identity")
+		t.Fatal("Разные участники используют общий идентификатор идемпотентности")
 	}
 	for _, key := range []string{"", "short", "0123456789abcd/xx", "0123456789abcdef?access_token=secret"} {
 		if _, err := BackendRestartKey0289("operator", key); err == nil {
@@ -31,7 +31,7 @@ func TestBackendNoticeValidation0289(t *testing.T) {
 		{"", "Message", false}, {"u", "test", true},
 	} {
 		if err := ValidateBackendNotice0289(tc.user, tc.body); (err == nil) != tc.ok {
-			t.Fatalf("notice validation user=%q body=%q err=%v", tc.user, tc.body, err)
+			t.Fatalf("Проверка уведомления: пользователь=%q, текст=%q, ошибка=%v", tc.user, tc.body, err)
 		}
 	}
 }

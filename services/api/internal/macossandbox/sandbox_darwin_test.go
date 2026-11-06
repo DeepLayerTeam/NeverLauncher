@@ -45,7 +45,7 @@ func TestUntrustedHelperFileRejectedBeforeCodesign(t *testing.T) {
 	}
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_TEAM_ID", "ABCDEFG123")
 	if Available() == nil {
-		t.Fatal("unsigned executable accepted")
+		t.Fatal("Ошибочно принят неподписанный исполняемый файл")
 	}
 }
 
@@ -74,6 +74,6 @@ func TestWritableDirectoryCannotHostTrustedHelper04311(t *testing.T) {
 	}
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_HELPER", file)
 	if _, err := helperPath(); err == nil {
-		t.Fatal("writable ancestor accepted")
+		t.Fatal("Ошибочно принят родительский каталог с правом записи")
 	}
 }

@@ -166,7 +166,7 @@ func TestRealTPMCertifyChainAndExactDevice0312(t *testing.T) {
 			x, y := ev, b
 			tc.change(&x, &y)
 			if _, err := Verify(x, y, store, time.Now()); err == nil {
-				t.Fatal("forged evidence accepted")
+				t.Fatal("Ошибочно приняты поддельные доказательства")
 			}
 		})
 	}
@@ -201,7 +201,7 @@ func TestRootRevocationAndPlatform0312(t *testing.T) {
 	config.Roots[0].Platforms = []string{"linux"}
 	reload(config)
 	if _, err := Verify(ev, b, store, time.Now()); err != nil {
-		t.Fatalf("recovered trust: %v", err)
+		t.Fatalf("Восстановленное доверие: %v", err)
 	}
 }
 func TestMalformedTPMRejectsTrailingBytes0312(t *testing.T) {
@@ -221,7 +221,7 @@ func TestMalformedTPMRejectsTrailingBytes0312(t *testing.T) {
 				x.TPMTSignature = b64(append(v, 0))
 			}
 			if _, err := Verify(x, b, store, time.Now()); err == nil {
-				t.Fatal("trailing bytes accepted")
+				t.Fatal("Ошибочно приняты лишние байты в конце")
 			}
 		})
 	}

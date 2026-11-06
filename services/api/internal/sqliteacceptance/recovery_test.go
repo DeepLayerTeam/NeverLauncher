@@ -49,9 +49,9 @@ func TestThreeDatabasesRecoverCommittedStateAfterAbruptExit0471(t *testing.T) {
 	child := exec.Command(os.Args[0], "-test.run=^TestThreeDatabaseChild0471$")
 	child.Env = append(os.Environ(), "LAUNCHER_0471_CRASH_ROOT="+root)
 	if output, err := child.CombinedOutput(); err == nil {
-		t.Fatalf("child did not crash: %s", output)
+		t.Fatalf("Дочерний процесс не завершился аварийно: %s", output)
 	} else if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 71 {
-		t.Fatalf("child crash unexpected: %v: %s", err, output)
+		t.Fatalf("Неожиданное аварийное завершение дочернего процесса: %v: %s", err, output)
 	}
 	ctx := context.Background()
 	httpRepo, err := repository.OpenSQLiteHTTPRepository0372(ctx, filepath.Join(root, "http.sqlite"), "")
@@ -60,7 +60,7 @@ func TestThreeDatabasesRecoverCommittedStateAfterAbruptExit0471(t *testing.T) {
 	}
 	defer httpRepo.Close()
 	if _, err = httpRepo.GetProject("project-before-crash"); err != nil {
-		t.Fatalf("HTTP lost WAL commit: %v", err)
+		t.Fatalf("HTTP потерял подтверждённую запись WAL: %v", err)
 	}
 	if err = httpRepo.Health(ctx); err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestThreeDatabasesRecoverCommittedStateAfterAbruptExit0471(t *testing.T) {
 	}
 	defer core.Close()
 	if _, err = core.GetProject(ctx, "core-project"); err != nil {
-		t.Fatalf("Core lost WAL commit: %v", err)
+		t.Fatalf("Ядро потеряло подтверждённую запись WAL: %v", err)
 	}
 	coord, err := sqlitecoord.Open(ctx, filepath.Join(root, "coordinator.sqlite"))
 	if err != nil {
@@ -80,7 +80,7 @@ func TestThreeDatabasesRecoverCommittedStateAfterAbruptExit0471(t *testing.T) {
 	defer coord.Close()
 	r, err := coord.Allow(ctx, "crash-client", 1, time.Hour)
 	if err != nil || r.Allowed {
-		t.Fatalf("rate limiter lost acknowledged event: %+v %v", r, err)
+		t.Fatalf("Ограничитель частоты потерял подтверждённое событие: %+v %v", r, err)
 	}
 }
 

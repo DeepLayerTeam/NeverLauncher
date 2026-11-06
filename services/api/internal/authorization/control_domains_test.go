@@ -64,7 +64,7 @@ func TestControlDomains0281BroadcastOnlyNeverEscalates(t *testing.T) {
 		}
 	}
 	if got := authorize(GameBroadcast, "beta"); got.Allowed {
-		t.Fatalf("cross-project authority: %+v", got)
+		t.Fatalf("Полномочия между проектами: %+v", got)
 	}
 	if got := svc.Authorize(ctx, actor, HostExec, Scope{Kind: ScopeGlobal}, Resource{Kind: "host"}); got.Allowed {
 		t.Fatalf("Отправитель рассылки проекта получил глобальный доступ к оболочке: %+v", got)

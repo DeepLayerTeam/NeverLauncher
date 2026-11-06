@@ -62,12 +62,12 @@ func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
 			continue
 		}
 		if edge.Status != "source-stale" {
-			t.Fatalf("legacy routing must fail closed, got %q", edge.Status)
+			t.Fatalf("Старый механизм маршрутизации должен безопасно отказывать, получено %q", edge.Status)
 		}
 		if edge.LastSeenAt.IsZero() || edge.CreatedAt.IsZero() {
-			t.Fatalf("topology timestamps must be non-NULL: %+v", edge)
+			t.Fatalf("Временные метки топологии не должны быть NULL: %+v", edge)
 		}
 		return
 	}
-	t.Fatalf("expected legacy topology edge for %s -> %s", ids[0], ids[1])
+	t.Fatalf("Ожидалось ребро старой топологии %s -> %s", ids[0], ids[1])
 }

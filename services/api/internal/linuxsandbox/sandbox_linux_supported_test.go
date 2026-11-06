@@ -72,7 +72,7 @@ func TestConfigFDIsSealedAndNotOnFilesystem0319(t *testing.T) {
 		t.Fatal(errno)
 	}
 	if _, e := f.WriteString("tamper"); !errors.Is(e, syscall.EPERM) {
-		t.Fatalf("sealed FD mutable: %v", e)
+		t.Fatalf("Защищённый файловый дескриптор допускает изменение: %v", e)
 	}
 }
 func TestLinuxIsolationLive0319(t *testing.T) {
@@ -149,7 +149,7 @@ func TestBrokerGrantsAcceptedInPrivateNamespace03110(t *testing.T) {
 	o.Policy.NetworkOutbound = []string{"api.example.com:443"}
 	o.Policy.Secrets = []string{"api_token"}
 	if err := validate(o); err != nil {
-		t.Fatalf("valid broker-only grants rejected: %v", err)
+		t.Fatalf("Корректные разрешения только для брокера отклонены: %v", err)
 	}
 }
 

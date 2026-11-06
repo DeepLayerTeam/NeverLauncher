@@ -18,7 +18,7 @@ func TestJavaConfig0485(t *testing.T) {
 		{ID: "company", ExtensionID: "company.identity", DisplayName: ""},
 	} {
 		if cfg.Validate() == nil {
-			t.Errorf("accepted unsafe config %+v", cfg)
+			t.Errorf("Ошибочно принята небезопасная конфигурация: %+v", cfg)
 		}
 	}
 }
@@ -32,18 +32,18 @@ func TestJavaIdentityProof0485(t *testing.T) {
 	}
 	proof, err := decodeProof(makeJSON("stable-identity", time.Now().Add(time.Hour).Unix()))
 	if err != nil || proof.Identity.Subject != "stable-identity" || proof.ProviderToken != "provider-session" {
-		t.Fatalf("valid live proof rejected %+v %v", proof, err)
+		t.Fatalf("Корректное реальное подтверждение отклонено: %+v %v", proof, err)
 	}
 	if _, err = decodeProof(makeJSON("", time.Now().Add(time.Hour).Unix())); authconnector.CodeOf(err) != authconnector.ErrMisconfigured {
-		t.Fatalf("empty subject accepted %v", err)
+		t.Fatalf("Ошибочно принят пустой субъект: %v", err)
 	}
 	if _, err = decodeProof(makeJSON("stable-identity", time.Now().Add(-time.Hour).Unix())); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("expired token accepted %v", err)
+		t.Fatalf("Ошибочно принят просроченный токен: %v", err)
 	}
 	if _, err = decodeProof(json.RawMessage(`{"identity":{"issuer":"issuer","subject":"x"},"authMethods":[]}`)); authconnector.CodeOf(err) != authconnector.ErrMisconfigured {
-		t.Fatalf("no authentication method accepted %v", err)
+		t.Fatalf("Ошибочно принято отсутствие способа аутентификации: %v", err)
 	}
 	if _, err = decodeProof(json.RawMessage(`null`)); authconnector.CodeOf(err) != authconnector.ErrMisconfigured {
-		t.Fatalf("missing proof accepted %v", err)
+		t.Fatalf("Ошибочно принято отсутствие подтверждения: %v", err)
 	}
 }

@@ -56,12 +56,12 @@ func TestComponentResolverOperational0243(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), `"versionRange":`) {
-		t.Fatal("constraints are absent from signed JSON")
+		t.Fatal("Ограничения отсутствуют в подписанном JSON")
 	}
 	mutated := dependencyFixture0243()
 	mutated.ComponentCatalog.Components[2].Dependencies[0].VersionRange = "^0.6.0"
 	if err := ValidateManifestSchema(mutated); err == nil {
-		t.Fatal("tampering with constraints did not invalidate digest")
+		t.Fatal("Изменение ограничений не привело к недействительности хеша")
 	}
 }
 func TestDependencyResolverRejectsImpossible0243(t *testing.T) {
@@ -91,7 +91,7 @@ func TestDependencyResolverRejectsImpossible0243(t *testing.T) {
 			m.ComponentCatalog.Digest = ComponentCatalogDigest0243(*m.ComponentCatalog)
 			err := ValidateManifestSchema(m)
 			if err == nil || !strings.Contains(err.Error(), tc.code) {
-				t.Fatalf("want explanatory %s, got %v", tc.code, err)
+				t.Fatalf("Ожидалось пояснение %s, получено %v", tc.code, err)
 			}
 		})
 	}
@@ -123,7 +123,7 @@ func TestVersionRanges0243(t *testing.T) {
 			continue
 		}
 		if _, err := matchRange0243("1.2.3", expr); err == nil {
-			t.Errorf("invalid range accepted: %q", expr)
+			t.Errorf("Ошибочно принят некорректный диапазон: %q", expr)
 		}
 	}
 }
@@ -132,13 +132,13 @@ func TestResolutionErrorTyped0243(t *testing.T) {
 	_, err := ResolveCatalogPreset0242(*m.ComponentCatalog, "does-not-exist")
 	var explanation *ResolutionError0243
 	if !errors.As(err, &explanation) || explanation.Code != "unknown_preset" {
-		t.Fatalf("expected typed error; got %v", err)
+		t.Fatalf("Ожидалась типизированная ошибка, получено %v", err)
 	}
 	m = topologyFixture0242()
 	m.ComponentCatalog.Components[0].Version = "1.0.0"
 	m.ComponentCatalog.Digest = ComponentCatalogDigest0242(*m.ComponentCatalog)
 	if err = ValidateManifestSchema(m); err == nil || !strings.Contains(err.Error(), "unsigned v3 constraints") {
-		t.Fatalf("unsigned rules accepted by legacy schema: %v", err)
+		t.Fatalf("Старая схема ошибочно приняла неподписанные правила: %v", err)
 	}
 }
 
@@ -170,7 +170,7 @@ func TestGoSignedDependencyFixture0243(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), payload, sig) {
-		t.Fatal("signed v3 catalog fixture signature invalid")
+		t.Fatal("Некорректна подпись тестового каталога v3")
 	}
 	if m.ComponentCatalog.Digest != "53fe27537e66b25479003cdca208f3272091ef78b9278e16009e5097d4281988" {
 		t.Fatal("Хеш каталога неожиданно изменился")

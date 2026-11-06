@@ -174,7 +174,7 @@ func TestPCRPolicy0315FailClosed(t *testing.T) {
 	}
 	selected, err := policy.Find("approved", "linux", now)
 	if err != nil || PCRPolicySelection0315(selected) != "sha256:0,2" {
-		t.Fatal("wrong PCR selection")
+		t.Fatal("Неверный выбор регистров PCR")
 	}
 	file.Policies[0].PCRs = map[string]string{"24": strings.Repeat("11", 32)}
 	write()

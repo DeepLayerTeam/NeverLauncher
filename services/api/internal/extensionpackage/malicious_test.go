@@ -83,7 +83,7 @@ func TestMaliciousPackagesRejectedBeforeMetadataParsing02012(t *testing.T) {
 				_ = analysis.close()
 			}
 			if err == nil {
-				t.Fatalf("malicious archive %s was accepted", tc.name)
+				t.Fatalf("Ошибочно принят вредоносный архив %s", tc.name)
 			}
 		})
 	}
@@ -92,7 +92,7 @@ func TestMaliciousPackagesRejectedBeforeMetadataParsing02012(t *testing.T) {
 func TestArchivePathControlAndCrossPlatformAliasesRejected02012(t *testing.T) {
 	for _, name := range []string{"payload/a\\b", "payload/a\x01b", "payload/trailing. ", "payload/LPT1.txt", "../payload/x", "payload/a/../x", strings.Repeat("a", 256)} {
 		if err := validateArchivePath0203(name); err == nil {
-			t.Fatalf("unsafe archive path accepted: %q", name)
+			t.Fatalf("Ошибочно принят небезопасный путь архива: %q", name)
 		}
 	}
 }
