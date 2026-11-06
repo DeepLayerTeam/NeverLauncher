@@ -19,11 +19,11 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Python and real audit functions without Docker fixtures
+      - name: Проверить Python и реальные Проверить functions без Docker тестовые фикстуры
         run: |
           python3 -m py_compile scripts/operations/ha_inventory_0511.py
           python3 -m unittest discover -s scripts/operations -p 'test_ha_inventory_0511.py' -v
-      - name: Missing live Docker project must never report PASS
+      - name: отсутствующие реальные Docker проект must никогда отчёт успех
         run: |
           set +e
           python3 scripts/operations/ha_inventory_0511.py node --project definitely-not-running-0511 --output /tmp/ha-0511-absent.json

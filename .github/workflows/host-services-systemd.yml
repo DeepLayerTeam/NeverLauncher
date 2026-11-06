@@ -19,13 +19,13 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Race and regression tests
+      - name: гонки и регрессионная проверка тесты
         working-directory: cli
         run: go test -race ./cmd/launcher -run 'TestHostSystemd|TestHostService|TestServerBridgeHost|TestWorldBackup|TestRemoteGracefulStop|TestRemoteSystemdGivesDrain|TestReleaseSigningRejects|TestReleaseDetached' -count=1
-      - name: Native TLS certificates and release key boundaries
+      - name: нативные TLS сертификаты и релиз ключ границы
         working-directory: cli
         run: go test -race ./internal/remotetls ./internal/releasekeypaths -count=1
-      - name: CLI binary, sd_notify and graceful SIGTERM E2E
+      - name: "Проверить CLI, sd_notify и корректное завершение по SIGTERM (E2E)"
         run: |
           cd cli
           go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
@@ -42,6 +42,6 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Windows host CLI regression compile
+      - name: "Собрать CLI для Windows и выполнить регрессионные проверки хоста"
         working-directory: cli
         run: go test ./cmd/launcher -run 'TestWorldBackup|TestServerBridgeHost' -count=1

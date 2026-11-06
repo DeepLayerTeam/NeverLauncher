@@ -33,21 +33,21 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Verify embedded catalogue and upgrade tests
+      - name: "Проверить встроенный каталог и тесты обновления"
         working-directory: cli
         run: |
           go test -race ./internal/authupgrade ./internal/dbmigrate
           go vet ./internal/authupgrade ./internal/dbmigrate
           go build -o /tmp/nl-upgrade ./cmd/launcher
-      - name: Reproduce upgrade from the exact 0.29.10 migration catalogue
+      - name: "Воспроизвести обновление из точного каталога миграций 0.29.10"
         run: |
-          # Copy the CLI migration catalogue, excluding ONLY 0086. This creates
-          # a database with every immutable migration through 0.29.10.
+          # Скопировать каталог миграций CLI, исключив ТОЛЬКО 0086. Так создаётся
+          # база данных со всеми неизменяемыми миграциями вплоть до 0.29.10.
           cp -a cli /tmp/nl-cli-prior
           rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
           (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/launcher)
           /tmp/nl-prior db migrate apply
-      - name: Seed two isolated issuers before upgrade
+      - name: "Создать данные двух изолированных издателей до обновления"
         run: |
           psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 <<'SQL'
           BEGIN;
@@ -62,17 +62,17 @@ jobs:
                  ('migration-b','7e58de9e-6dde-40ea-bfe6-16c85ae32972','Migration_B','launcher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32972','legacy-migration');
           COMMIT;
           SQL
-      - name: Actual PostgreSQL checkpoint, apply and verify
+      - name: "Проверить контрольную точку, применение и верификацию PostgreSQL"
         run: |
           /tmp/nl-upgrade db auth-upgrade preflight --snapshot /tmp/nl-identity.json --allow-provider oidc-smoke
           /tmp/nl-upgrade db auth-upgrade apply --snapshot /tmp/nl-identity.json --backup-confirmed --maintenance-confirmed
           /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json
-          # Even a privileged UPDATE must not remap an existing subject or GameProfile UUID.
+          # Даже привилегированный UPDATE не должен переназначать существующий субъект или UUID GameProfile.
           if psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'"; then exit 1; fi
           if psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'"; then exit 1; fi
-          # Local data drift must be detected by the offline checkpoint.
+          # Локальный дрейф данных должен выявляться автономной контрольной точкой.
           psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE users SET display_name='Changed' WHERE id='migration-a'"
           if /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json; then exit 1; fi
-      - name: Backend catalogue matches CLI byte-for-byte
+      - name: "Проверить побайтовое соответствие каталогов Backend и CLI"
         run: |
           python3 scripts/build/embedded_cli_assets.py --check

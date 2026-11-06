@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: Exact immutable, signed, integrity-passed stable staged package
+        description: Точный неизменяемый подписанный подготовленный стабильный пакет с пройденной проверкой целостности
         required: true
         type: string
 permissions:
@@ -42,18 +42,18 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Verify migration, transaction and adversarial guards in PostgreSQL
+      - name: Проверить миграция, транзакция и проверки на обход guards в PostgreSQL
         working-directory: services/api
         run: |
           set -euo pipefail
           go test -count=1 -timeout 30m ./internal/dbmigrate ./internal/repository ./internal/httpapi \
             -run 'TestV11|TestV12|TestGA|TestGASource|TestStableSQL|TestStableRuntime|TestProductionGate|TestTrustedAttestation|TestV05|TestV08'
-      - name: Reject incomplete, stale, forged or mocked GA coverage
+      - name: Отклонять неполные, устаревшие, поддельные или имитированные GA-свидетельства
         run: python3 scripts/ga/test_runtime_acceptance_0350.py
   live-backend-acceptance:
-    # The protected environment authorizes only a read-only Backend API token.
-    # Neither the attestation signing key nor production release key is present.
-    # The actual stable commit still re-evaluates evidence in PostgreSQL.
+    # Защищённое окружение разрешает только токен Backend API для чтения.
+    # В нём нет ни ключа подписи аттестации, ни ключа промышленного релиза.
+    # Фактический стабильный коммит повторно оценивает свидетельства в PostgreSQL.
     name: Require actual independently signed all-target live evidence
     needs: [security-regression]
     runs-on: ubuntu-24.04
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Check protected Backend evaluator and exact source revision
+      - name: "Проверить защищённый вычислитель Backend и точную ревизию исходников"
         env:
           NL_GA_OPERATOR_TOKEN: ${{ secrets.NL_GA_OPERATOR_TOKEN }}
           NL_GA_BACKEND_URL: ${{ vars.NL_GA_BACKEND_URL }}

@@ -32,17 +32,17 @@ jobs:
         with:
           go-version-file: prestarter/go.mod
           cache-dependency-path: prestarter/go.sum
-      - name: Install review signature dependency
+      - name: Установить проверка подпись зависимость
         run: python3 -m pip install 'cryptography>=42,<47'
-      - name: Verify real source version and syntax
+      - name: Проверить реальные исходный версия и синтаксис
         run: |
           python3 scripts/version/manage.py check
           python3 -m py_compile scripts/acceptance/native_packages_0522.py scripts/release/build-branded-installers.py
-      - name: Run checksum, replay, false PASS, platform and redaction regressions
+      - name: Проверить контрольные суммы, повторное воспроизведение, ложный успех, платформы и сокрытие секретов
         run: python3 -m unittest scripts/acceptance/test_native_packages_0522.py -v
-      - name: Exercise actual .deb builder with signed source fixture (unsigned TEST output only)
+      - name: Проверить настоящий сборщик .deb с подписанными тестовыми исходниками (только неподписанный результат)
         run: python3 scripts/release/test_build_branded_installers.py -v
-      - name: Refuse a fake native six-platform invocation on this Ubuntu runner
+      - name: Отклонить поддельный запуск для шести нативных платформ на агенте Ubuntu
         env:
           GITHUB_ACTIONS: 'false'
         run: |

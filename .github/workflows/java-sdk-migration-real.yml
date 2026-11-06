@@ -43,7 +43,7 @@ jobs:
       - name: "Установка зафиксированной версии компилятора TypeScript"
         working-directory: sdk/api/typescript
         run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund --save-dev-exact typescript@5.8.3
-      - name: Run production SDK and five real Java-subprocess regressions
+      - name: Запустить промышленные SDK и пять реальные Java-subprocess регрессионные проверки
         shell: bash
         run: |
           set -euo pipefail
@@ -57,7 +57,7 @@ jobs:
           assert result['status']=='LOCAL_REGRESSIONS_NOT_GA'
           assert result['gaCertified'] is False and len(result['checks']) == 8
           PY
-      # The local report has hashes only; it is NOT published as a GA pass.
+      # Локальный отчёт содержит только хеши; он НЕ публикуется как пройденная GA.
   independent-live:
     needs: production-regression
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Require real external host and exact pinned source
+      - name: Потребовать реальные внешние хост и точные закреплённые исходный
         shell: bash
         run: |
           set -euo pipefail
@@ -92,7 +92,7 @@ jobs:
           doc=json.load(open(sys.argv[1]))
           assert doc.get('sourceCommit') == sys.argv[2]
           PY
-      - name: Execute installed JVM Host, 3 live Gravit projects and two historical upgrades
+      - name: Выполнить установленные JVM хост, 3 реальные Gravit проекты и два исторические upgrades
         shell: bash
         run: |
           set -euo pipefail
@@ -101,5 +101,5 @@ jobs:
           python3 scripts/acceptance/java_sdk_migration_0528.py live \
             --config "$NL0528_CONFIG" \
             --report "$RUNNER_TEMP/nl0528-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-0528.json"
-      # Private migration reports, player UUIDs, source archives and Host tokens
-      # remain on the controlled runner. Independent review/signature is separate.
+      # Закрытые отчёты о миграциях, UUID игроков, исходные архивы и токены Host
+      # остаются на контролируемом агенте; независимая проверка и подпись выполняются отдельно.

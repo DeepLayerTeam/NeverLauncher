@@ -62,23 +62,23 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Parse formatting and compile production Backend
+      - name: "Проверить форматирование и собрать промышленный Backend"
         run: |
           test -z "$(gofmt -l internal/authrequest internal/httpapi/auth_accounts.go internal/httpapi/admin_handlers.go internal/httpapi/auth.go internal/httpapi/*02912*.go)"
           go build ./cmd/...
           go vet ./internal/authrequest ./internal/httpapi ./internal/federation ./internal/repository
-      - name: Live HTTP issuer isolation, malicious JSON, MFA and refresh replay
+      - name: реальные HTTP эмитент изоляция, malicious JSON, MFA и обновление Повторить
         run: |
           go test -race -count=1 -timeout=8m ./internal/authrequest ./internal/httpapi -run '02912|0296|TestProtectionBanUnbanLiveHTTP0298|TestRoleUpdateRevokesLiveNeverToken0297' -v
-      - name: Two separate API replicas, genuine PostgreSQL transactions and cross-replica revocation
+      - name: Проверить две отдельные реплики API, настоящие транзакции PostgreSQL и отзыв прав между репликами
         run: |
           go test -count=1 -timeout=10m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' -v
           go test -count=1 -timeout=10m ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestProtectionPostgres0298' -v
-      - name: Genuine PostgreSQL MySQL MariaDB password mapping and unknown verifier denial
+      - name: Проверить реальную аутентификацию PostgreSQL/MySQL/MariaDB и отказ для неизвестного пароля
         run: go test -count=1 -timeout=8m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' -v
-      - name: OIDC HTTP Microsoft signed provider behavior and SDK conformance
+      - name: Проверить OIDC, HTTP, Microsoft и соответствие SDK подписанному поведению провайдеров
         run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation
-      - name: Backend/CLI migration catalogues and real upgrade prerequisites
+      - name: "Проверить каталоги миграций Backend/CLI и реальные предпосылки обновления"
         run: |
           go test -count=1 ./internal/dbmigrate
           python3 ../../scripts/build/embedded_cli_assets.py --check

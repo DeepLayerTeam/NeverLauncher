@@ -86,7 +86,7 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0025_proxy_family_0145'")"
-[[ "$target_sealed" == "true" ]] || { echo "proxy family migration is not sealed: 0025_proxy_family_0145" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Миграция семейства прокси не опечатана: 0025_proxy_family_0145" >&2; exit 1; }
 
 printf '[proxy-family-migration] проверка существующего узла Velocity и всех типов семейства прокси\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='velocity-before-0145'")" == "velocity" ]]
@@ -118,7 +118,7 @@ then
 fi
 
 proxy_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2 WHERE kind IN ('velocity','bungeecord','waterfall')")"
-(( proxy_count >= 4 )) || { echo "[proxy-family-migration] expected proxy nodes, got $proxy_count" >&2; exit 1; }
+(( proxy_count >= 4 )) || { echo "[proxy-family-migration] ожидались узлы прокси, получено: $proxy_count" >&2; exit 1; }
 
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$proxy_count" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingVelocityPreserved:true,proxyFamilyKindsAccepted:true,invalidKindRejected:true,proxyNodeCount:$count}' \

@@ -30,10 +30,10 @@ jobs:
         with:
           go-version: '1.23'
           cache-dependency-path: prestarter/go.mod
-      - name: Native tests
+      - name: нативные тесты
         working-directory: prestarter
         run: go test -count=1 ./...
-      - name: Native bootstrap binary
+      - name: нативные первый запуск исполняемый файл
         working-directory: prestarter
         run: go build -o prestarter-test${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/prestarter
   cross-compile:
@@ -44,8 +44,8 @@ jobs:
         with:
           go-version: '1.23'
           cache-dependency-path: prestarter/go.mod
-      - name: Verify all six OS and architecture builds
+      - name: Проверить все шесть OS и архитектура сборки
         env:
-          # Test-only public key. Never publish these as trusted production release binaries.
+          # Открытый ключ предназначен только для тестов. Не публикуйте такие бинарные файлы как доверенные промышленные релизы.
           LAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         run: bash scripts/release/build-prestarter.sh

@@ -15,8 +15,8 @@ source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[vanilla-cert] неверная версия Minecraft" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[vanilla-cert] неверный основной номер версии Java" >&2; exit 2; }
-case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[vanilla-cert] invalid target OS: $TARGET_OS" >&2; exit 2 ;; esac
-case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[vanilla-cert] invalid target arch: $TARGET_ARCH" >&2; exit 2 ;; esac
+case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[vanilla-cert] недопустимая целевая ОС: $TARGET_OS" >&2; exit 2 ;; esac
+case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[vanilla-cert] недопустимая целевая архитектура: $TARGET_ARCH" >&2; exit 2 ;; esac
 [[ -n "$JAVA_BIN" && -f "$JAVA_BIN" ]] || { echo "[vanilla-cert] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
 for cmd in go cargo python3; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "[vanilla-cert] отсутствует необходимая команда: $cmd" >&2; exit 1; }

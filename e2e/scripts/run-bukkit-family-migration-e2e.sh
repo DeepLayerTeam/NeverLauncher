@@ -86,7 +86,7 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0024_bukkit_family_0144'")"
-[[ "$target_sealed" == "true" ]] || { echo "Bukkit family migration is not sealed: 0024_bukkit_family_0144" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Миграция семейства Bukkit не опечатана: 0024_bukkit_family_0144" >&2; exit 1; }
 
 printf '[bukkit-family-migration] verify existing node and every new Bukkit-family kind\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='paper-before-0144'")" == "paper" ]]
@@ -118,7 +118,7 @@ then
 fi
 
 family_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2 WHERE kind IN ('bukkit','spigot','paper','purpur','folia')")"
-(( family_count >= 6 )) || { echo "[bukkit-family-migration] expected family nodes, got $family_count" >&2; exit 1; }
+(( family_count >= 6 )) || { echo "[bukkit-family-migration] ожидались узлы семейства, получено: $family_count" >&2; exit 1; }
 
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$family_count" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingPaperPreserved:true,bukkitFamilyKindsAccepted:true,invalidKindRejected:true,familyNodeCount:$count}' \

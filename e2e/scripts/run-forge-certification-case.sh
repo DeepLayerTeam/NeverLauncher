@@ -16,7 +16,7 @@ source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] неверная версия Minecraft" >&2; exit 2; }
-[[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] invalid Forge loader selector" >&2; exit 2; }
+[[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] неверно выбран загрузчик Forge" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[forge-cert] неверный основной номер версии Java" >&2; exit 2; }
 certification_platform_validate "forge-cert" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_BIN"
 
@@ -150,8 +150,8 @@ PROFILE_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],enco
 RESOLVED_LOADER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["loaderVersion"])' "$RUNTIME_DIR/forge-install.json")"
 MAIN_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["mainClass"])' "$RUNTIME_DIR/forge-install.json")"
 
-[[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[forge-cert] incomplete Forge profile evidence" >&2; exit 1; }
-case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[forge-cert] mutable loader selector leaked into resolved version" >&2; exit 1 ;; esac
+[[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[forge-cert] неполные свидетельства профиля Forge" >&2; exit 1; }
+case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[forge-cert] изменяемое значение выбора загрузчика попало в определённую версию" >&2; exit 1 ;; esac
 
 # Forge 1.14.4 включает NightConfig 3.6.0. Исправление отсутствующего fml.toml
 # при первом запуске может вызвать ConcurrentModificationException в ConfigSpec.

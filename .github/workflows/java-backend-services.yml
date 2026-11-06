@@ -30,7 +30,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Compile and exercise authenticated Java backend services
+      - name: Скомпилировать и Проверить на практике аутентифицированные Java Backend службы
         run: sh sdk/java/core/build.sh test
   host-broker:
     runs-on: ubuntu-24.04
@@ -40,11 +40,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Real host broker, repository scope, revocation and job redaction
+      - name: Проверить брокер настоящего хоста, границы репозитория, отзыв прав и скрытие данных в заданиях
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost -run 'TestJavaBackendServicesBroker0484'
-      - name: Existing broker and security regressions
+      - name: существующие broker и безопасности регрессионные проверки
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity
-      - name: Canonical product version
+      - name: канонические product версия
         run: python3 scripts/version/manage.py check

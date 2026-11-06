@@ -20,11 +20,11 @@ case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-native] не�
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[loader-native] неверная версия Minecraft" >&2; exit 2; }
 [[ "$LOADER_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,95}$ ]] || { echo "[loader-native] Необходимо указать фиксированную версию загрузчика" >&2; exit 2; }
 case "$(printf '%s' "$LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[loader-native] изменяемый селектор загрузчика запрещён" >&2; exit 2 ;; esac
-[[ "$CLIENT_PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$ ]] || { echo "[loader-native] invalid client profile id" >&2; exit 2; }
-[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[loader-native] Java major is required" >&2; exit 2; }
+[[ "$CLIENT_PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$ ]] || { echo "[loader-native] недопустимый ID профиля клиента" >&2; exit 2; }
+[[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[loader-native] необходимо указать основную версию Java" >&2; exit 2; }
 [[ -x "$JAVA_BIN" ]] || { echo "[loader-native] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
-[[ "$SERVER_PORT" =~ ^[0-9]+$ ]] && (( SERVER_PORT > 0 && SERVER_PORT < 65536 )) || { echo "[loader-native] invalid server port" >&2; exit 2; }
-[[ "$MAX_RUNTIME_SECONDS" =~ ^[0-9]+$ ]] && (( MAX_RUNTIME_SECONDS >= 15 )) || { echo "[loader-native] invalid client runtime" >&2; exit 2; }
+[[ "$SERVER_PORT" =~ ^[0-9]+$ ]] && (( SERVER_PORT > 0 && SERVER_PORT < 65536 )) || { echo "[loader-native] недопустимый порт сервера" >&2; exit 2; }
+[[ "$MAX_RUNTIME_SECONDS" =~ ^[0-9]+$ ]] && (( MAX_RUNTIME_SECONDS >= 15 )) || { echo "[loader-native] недопустимое время работы клиента" >&2; exit 2; }
 for cmd in docker python3 cargo xvfb-run sha256sum jq; do command -v "$cmd" >/dev/null 2>&1 || { echo "[loader-native] отсутствует необходимая команда: $cmd" >&2; exit 1; }; done
 docker compose version >/dev/null
 
@@ -52,7 +52,7 @@ compose rm -sf loader-native >/dev/null 2>&1 || true
 printf '[loader-native] start %s %s / loader %s dedicated server\n' "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
 compose up -d loader-native >/dev/null
 CONTAINER_ID="$(compose ps -q loader-native)"
-[[ -n "$CONTAINER_ID" ]] || { echo "[loader-native] container was not created" >&2; exit 1; }
+[[ -n "$CONTAINER_ID" ]] || { echo "[loader-native] контейнер не был создан" >&2; exit 1; }
 
 HEALTH=""
 for _ in $(seq 1 120); do
@@ -73,7 +73,7 @@ docker inspect --format '{{json .State.Health}}' "$CONTAINER_ID" > "$RUNTIME_DIR
 jq -e '.Status == "healthy" and .FailingStreak == 0' "$RUNTIME_DIR/health-loader-native.json" >/dev/null
 
 ARTIFACT_ROOT="$SERVER_DIR/$ARTIFACT_REL"
-[[ -d "$ARTIFACT_ROOT" ]] || { echo "[loader-native] loader runtime artifacts missing: $ARTIFACT_ROOT" >&2; find "$SERVER_DIR" -maxdepth 5 -type f | head -200 >&2 || true; exit 1; }
+[[ -d "$ARTIFACT_ROOT" ]] || { echo "[loader-native] отсутствуют артефакты Runtime загрузчика: $ARTIFACT_ROOT" >&2; find "$SERVER_DIR" -maxdepth 5 -type f | head -200 >&2 || true; exit 1; }
 find "$ARTIFACT_ROOT" -type f -print | sort > "$RUNTIME_DIR/loader-native-server-artifacts.txt"
 python3 - "$RUNTIME_DIR/loader-native-server-artifacts.txt" "$LOADER_VERSION" <<'PY'
 import sys
@@ -121,7 +121,7 @@ for _ in $(seq 1 30); do
   if grep -Fq "$PLAYER_USERNAME joined the game" "$RUNTIME_DIR/loader-native-server.log"; then JOINED=true; break; fi
   sleep 1
 done
-[[ "$JOINED" == true ]] || { echo "[loader-native] actual client did not join loader server" >&2; tail -200 "$RUNTIME_DIR/loader-native-server.log" >&2; exit 1; }
+[[ "$JOINED" == true ]] || { echo "[loader-native] настоящий клиент не подключился к серверу загрузчика" >&2; tail -200 "$RUNTIME_DIR/loader-native-server.log" >&2; exit 1; }
 
 IMAGE_REF="$(docker inspect --format '{{.Config.Image}}' "$CONTAINER_ID")"
 IMAGE_ID="$(docker inspect --format '{{.Image}}' "$CONTAINER_ID")"

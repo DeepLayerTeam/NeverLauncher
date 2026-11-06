@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Build runnable Java extensions and source-port module
+      - name: сборка запускаемый Java расширения и source-port модуль
         shell: bash
         run: |
           set -euo pipefail
@@ -42,13 +42,13 @@ jobs:
           sh examples/extensions/java-runtime/build.sh
           sh examples/extensions/java-lifecycle/build.sh
           sh examples/extensions/gravit-compat/build.sh
-      - name: Compile real native CLI for this target
+      - name: "Собрать реальный нативный CLI для выбранной платформы"
         shell: bash
         run: |
           set -euo pipefail
           cd cli
           go build -o "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/launcher
-      - name: Execute JVM E2E and negative signature tests
+      - name: Выполнить JVM E2E и отрицательные подпись тесты
         shell: bash
         run: |
           set -euo pipefail
@@ -74,9 +74,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Build real Java extension host JAR
+      - name: сборка реальные Java расширение хост JAR
         run: sh examples/extensions/java-host/build.sh
-      - name: Run Go supervisor, live permission revocation and real-JVM lifecycle
+      - name: Запустить супервизор Go и проверить реальный отзыв разрешений и жизненный цикл JVM
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
@@ -97,9 +97,9 @@ jobs:
           pattern: extensions-04212-*
           path: evidence
           merge-multiple: true
-      - name: Fail-closed evidence tests
+      - name: с отказом по умолчанию свидетельства тесты
         run: python3 -m unittest discover -s e2e/extensions -p 'test_*.py' -v
-      - name: All six targets AND Go supervisor must pass
+      - name: все шесть целевых платформ и Go supervisor must успех
         env:
           GO_SUPERVISOR_RESULT: ${{ needs.go-supervisor.result }}
           PLATFORM_RESULT: ${{ needs.real-platform.result }}

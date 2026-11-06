@@ -64,7 +64,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Build production Backend and run browser replay + existing auth regressions
+      - name: "Собрать промышленный Backend, повторить браузерные сценарии и регрессионные проверки авторизации"
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -73,9 +73,9 @@ jobs:
           go test -race -count=1 -timeout=12m ./internal/httpapi \
             -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
   live-external-providers:
-    # External Microsoft identity and SQL/OIDC secrets must be provisioned by
-    # an independent operator, never stored in Actions logs or unit fixtures.
-    # A missing proof remains BLOCKED; this is not an automatic GA approval.
+    # Внешние учётные данные Microsoft и секреты SQL/OIDC должны предоставляться
+    # независимым оператором и никогда не храниться в журналах Actions или фикстурах.
+    # При отсутствии подтверждения результат — BLOCKED, а не автоматическое утверждение GA.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, auth-identity-live]
     environment: auth-identity-physical-acceptance

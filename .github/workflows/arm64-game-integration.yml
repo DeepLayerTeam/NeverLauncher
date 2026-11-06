@@ -69,7 +69,7 @@ jobs:
           mkdir -p ../dist/arm64-native-check
           SUFFIX=''; test '${{ matrix.os }}' != windows || SUFFIX='.exe'
           go build -trimpath -o "../dist/arm64-native-check/launcher${SUFFIX}" ./cmd/launcher
-      - name: "Проверка архитектуры Managed Java и разрешения метаданных"
+      - name: "Проверка архитектуры управляемая Java и разрешения метаданных"
         shell: bash
         run: |
           set -euo pipefail

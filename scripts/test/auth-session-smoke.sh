@@ -84,4 +84,4 @@ if [[ "${status}" != "401" ]]; then
   exit 1
 fi
 
-echo "[Launcher] Auth session smoke OK for ${VERSION}"
+echo "[Launcher] базовая проверка сеанса авторизации пройдена для ${VERSION}"

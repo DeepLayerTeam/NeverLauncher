@@ -1,9 +1,9 @@
 name: Интеграция и совместимость с официальным Minecraft 0.26.12
 
-# This workflow runs actual native builds and offline fault-injection tests on
-# all target operating systems. LIVE provider sign-in and real game-join checks
-# require an operator-owned account and servers; the workflow MUST NOT label
-# those external gates successful simply because these jobs pass.
+# Этот процесс выполняет настоящие нативные сборки и автономные тесты внедрения
+# ошибок на всех целевых ОС. Для РЕАЛЬНОГО входа через провайдеров и подключения к игре
+# нужны принадлежащие оператору учётная запись и серверы; процесс НЕ ДОЛЖЕН помечать
+# внешние проверки успешными только на основании прохождения этих заданий.
 on:
   pull_request:
     paths:
@@ -59,23 +59,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install Ed25519 gate verification library
+      - name: Установить Ed25519 проверка проверка library
         run: python -m pip install 'cryptography>=43,<47'
-      - name: Provider chain / sessionserver tests (fault-injection only)
+      - name: Проверить цепочки провайдеров и sessionserver только с внедрением ошибок
         run: go test -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Go race detector (supported runner)
+      - name: Go детектор гонок (поддерживаемые агент)
         if: runner.os == 'Linux'
         run: go test -race -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Vet actual POC implementation
+      - name: Vet фактические POC implementation
         run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Compile interactive live provider E2E binary
+      - name: Скомпилировать interactive реальные провайдер E2E исполняемый файл
         run: go build -o "$RUNNER_TEMP/official-provider-poc${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/official-provider-poc
         shell: bash
-      - name: Operator-log evidence parser tests (not live evidence)
+      - name: Проверить парсер свидетельств журналов оператора без подмены реальными свидетельствами
         run: python ../../scripts/certification/test_official_game_join_02612.py
-      - name: Official 0.27.0 signed GA gate negative tests (fixture data only)
+      - name: официальные 0.27.0 подписанные GA проверка негативные тесты (тестовая фикстура data только)
         run: python ../../scripts/ga/test_official_minecraft_0270.py
-      - name: Exact native installer binding negative tests (fixture data only)
+      - name: точные нативные установщик привязка негативные тесты (тестовая фикстура data только)
         run: python ../../scripts/ga/test_official_artifacts_0270.py
 
   native-runtime-and-desktop:
@@ -99,16 +99,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Test real native official identity paths
+      - name: Проверить реальные нативные официальные идентичность пути
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_
-      - name: Test launch mode isolation and runtime
+      - name: Проверить Запустить mode изоляция и Runtime
         run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269
-      - name: Rust compilation (native platform)
+      - name: Rust компиляция (нативные платформа)
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: Install pinned Desktop dependencies
+      - name: Установить закреплённые Desktop зависимости
         working-directory: apps/desktop
         run: npm ci
-      - name: Official / textures / launch / session lifecycle regressions
+      - name: официальные / текстуры / Запустить / сеанс жизненный цикл регрессионные проверки
         working-directory: apps/desktop
         shell: bash
         run: |
@@ -118,7 +118,7 @@ jobs:
           npm run test:launch-modes
           npm run test:components
           node --experimental-strip-types --test tests/startup_screen_0427.test.mjs
-      - name: Production renderer build
+      - name: промышленные интерфейс сборка
         working-directory: apps/desktop
         run: npm run build
 
@@ -128,14 +128,14 @@ jobs:
     needs: [provider-chain-and-sessionserver, native-runtime-and-desktop]
     runs-on: ubuntu-24.04
     steps:
-      - name: Fail if any real compilation or test failed
+      - name: ошибка если любые реальные компиляция или Проверить ОШИБКА
         env:
           GO_RESULT: ${{ needs.provider-chain-and-sessionserver.result }}
           NATIVE_RESULT: ${{ needs.native-runtime-and-desktop.result }}
         run: |
           test "$GO_RESULT" = success
           test "$NATIVE_RESULT" = success
-      - name: Explicitly preserve live release blocker
+      - name: явно сохранить реальные релиз blocker
         run: |
           echo 'Automated preflight only: live own-app Microsoft/Xbox/Minecraft proof,'
           echo 'real vanilla and modded game joins, OS vault behavior and provider'

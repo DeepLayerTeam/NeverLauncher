@@ -27,7 +27,7 @@ jobs:
           # репозитории два модуля, и ни один не находится в корне.
           build-mode: manual
           queries: security-and-quality
-      - name: Build both Go modules for CodeQL extraction
+      - name: сборка оба Go модули для CodeQL extraction
         shell: bash
         run: |
           set -euo pipefail

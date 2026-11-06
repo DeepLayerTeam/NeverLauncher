@@ -55,7 +55,7 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0028_zero_patch_topology_handoff_0148'")"
-[[ "$target_sealed" == "true" ]] || { echo "topology/handoff migration is not sealed: 0028_zero_patch_topology_handoff_0148" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Миграция топологии и передачи управления не опечатана: 0028_zero_patch_topology_handoff_0148" >&2; exit 1; }
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2 WHERE id IN ('proxy-main','survival')")" == 2 ]]
 for table in server_bridge_topology_edges_v2 server_bridge_handoffs_v2; do
   [[ "$(psql "$DB_DSN" -Atqc "SELECT to_regclass('public.$table') IS NOT NULL")" == t ]]

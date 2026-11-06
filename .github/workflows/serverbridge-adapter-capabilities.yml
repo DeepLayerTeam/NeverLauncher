@@ -46,13 +46,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Actual Java production sources / 14 adapter policies
+      - name: фактические Java промышленные источники / 14 адаптер политики
         run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
-      - name: Java v3 security regressions (not live Minecraft)
+      - name: Java v3 безопасности регрессионные проверки (не реальные Minecraft)
         run: bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
-      - name: Go runtime verification / capability gates
+      - name: Go Runtime проверка / возможность проверки
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestAdapter|TestServerBridgeRuntimeIdentity0192|TestServerBridgeControl' -count=1 -timeout=5m
-      - name: JavaScript operator restrictions
+      - name: Проверить ограничения оператора JavaScript
         working-directory: apps/admin
         run: npm test

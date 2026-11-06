@@ -74,18 +74,18 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Verify exact source version, Go formatting, and GA assertion code
+      - name: Проверить точные исходный версия, Go форматирование, и GA утверждение код
         run: |
           test "$(cat VERSION)" = 0.30.0
           python3 scripts/version/manage.py check
           test -z "$(gofmt -l services/api/internal/httpapi/*0300*.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection_0298.go services/api/internal/httpapi/auth_link_password_0291.go services/api/internal/httpapi/auth_provider_runtime_02910.go)"
           python3 -m unittest discover -s scripts/ga -p 'test_assert_go_test_0300.py' -v
-      - name: Compile and vet production Go Backend
+      - name: Скомпилировать и vet промышленные Go Backend
         working-directory: services/api
         run: |
           go build ./cmd/...
           go vet ./internal/authrequest ./pkg/protection ./internal/httpapi ./internal/federation ./internal/repository ./internal/sqlconnector
-      - name: Live HTTP, WebAuthn, protection, replay and parser regressions
+      - name: реальные HTTP, WebAuthn, защита, Повторить и parser регрессионные проверки
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -98,7 +98,7 @@ jobs:
             --require TestMandatoryPanicAndTimeoutCannotGrantAccess0300 \
             --require TestSecurityRealAuthHTTP02912 \
             --require TestProtectionBanUnbanLiveHTTP0298
-      - name: Real PostgreSQL replicas, revocation cascade, protection ban and SQL provider authentication
+      - name: Проверить настоящие реплики PostgreSQL, каскадный отзыв, блокировки и SQL-аутентификацию провайдеров
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -113,10 +113,10 @@ jobs:
             --require TestLiveSQLLegacyAuthentication0294/postgresql \
             --require TestLiveSQLLegacyAuthentication0294/mysql \
             --require TestLiveSQLLegacyAuthentication0294/mariadb
-      - name: Real signed HTTP OIDC Microsoft and federation SDK tests
+      - name: реальные подписанные HTTP OIDC Microsoft и федерация SDK тесты
         working-directory: services/api
         run: go test -race -count=1 -timeout=10m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation
-      - name: Database migrations and genuine Admin production compilation
+      - name: база данных миграции и настоящие Admin промышленные компиляция
         run: |
           (cd services/api && go test -count=1 ./internal/dbmigrate)
           python3 scripts/build/embedded_cli_assets.py --check

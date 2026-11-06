@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Build and test actual CLI and signer
+      - name: "Собрать и проверить реальный CLI и механизм подписи"
         working-directory: cli
         run: |
           go test ./cmd/guard-policy-sign -count=1
@@ -43,10 +43,10 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Verify WebCrypto runtime policy operations
+      - name: Проверить WebCrypto Runtime политика операции
         working-directory: apps/admin
         run: node --experimental-strip-types --test tests/guard_policy_05011.test.mjs
-      - name: Build production Admin
+      - name: сборка промышленные Admin
         working-directory: apps/admin
         run: |
           npm ci

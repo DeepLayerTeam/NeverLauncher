@@ -30,12 +30,12 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Check modified Go source formatting
+      - name: Проверить modified Go исходный форматирование
         if: runner.os == 'Linux'
         shell: bash
         run: |
           test -z "$(gofmt -l cli/cmd/launcher/modern_loader_adapters_0272*.go cli/cmd/launcher/{client_factory_0271,loader_runtime,forge_runtime,vanilla_runtime,compatibility_hardening}.go)"
-      - name: Client Factory and modern adapter integration fixtures
+      - name: клиент фабрика и современные адаптер интеграция тестовые фикстуры
         working-directory: cli
         shell: bash
         run: >-

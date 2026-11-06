@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Deterministic report unit/race tests and PostgreSQL integration
+      - name: детерминированные отчёт модульный/гонки тесты и PostgreSQL интеграция
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitreport
@@ -49,7 +49,7 @@ jobs:
       - name: Полная сборка серверной части
         working-directory: services/api
         run: go build ./...
-      - name: CLI build and HTTP tests
+      - name: "Собрать CLI и выполнить HTTP-тесты"
         working-directory: cli
         run: |
           go test -count=1 ./cmd/launcher -run '^TestMigrationReportCLI03313$'
@@ -64,9 +64,9 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Contract and canonical version
+      - name: контракт и канонические версия
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
-      - name: Explicit RC limitation
+      - name: явные RC limitation
         run: echo 'CI unit/integration success is not evidence of a real isolated Gravit/Minecraft E2E or production certification.'

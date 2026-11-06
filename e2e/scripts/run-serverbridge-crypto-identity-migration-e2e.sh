@@ -108,19 +108,19 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0022_serverbridge_crypto_node_identities_0142'")"
-[[ "$identity_sealed" == "true" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
+[[ "$identity_sealed" == "true" ]] || { echo "Миграция идентичности 0.14.2 не опечатана" >&2; exit 1; }
 
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,plugin_version,plugin_sha256,integrity_status,(integrity_verified_at IS NULL)::text,(last_heartbeat_at IS NULL)::text FROM server_bridge_nodes_v2 WHERE id='paper-0141'")"
 # psql отображает пустые текстовые столбцы соседними разделителями.
-[[ "$node_state" == "identity-enrollment-required||||||0||||true|true" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
+[[ "$node_state" == "identity-enrollment-required||||||0||||true|true" ]] || { echo "Неожиданное состояние узла после миграции: $node_state" >&2; exit 1; }
 disabled_legacy_secret="$(psql "$DB_DSN" -AtF '|' -qc "SELECT token_hash,token_prefix,status FROM server_bridge_nodes_v2 WHERE id='paper-disabled-0141'")"
-[[ "$disabled_legacy_secret" == "||disabled" ]] || { echo "disabled node retained legacy bearer material: $disabled_legacy_secret" >&2; exit 1; }
+[[ "$disabled_legacy_secret" == "||disabled" ]] || { echo "Отключённый узел сохранил устаревшие данные Bearer: $disabled_legacy_secret" >&2; exit 1; }
 join_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,(invalidated_at IS NOT NULL)::text FROM server_bridge_join_tickets_v2 WHERE id='join-0141'")"
-[[ "$join_state" == "invalidated|true" ]] || { echo "0.14.1 active join survived identity boundary: $join_state" >&2; exit 1; }
+[[ "$join_state" == "invalidated|true" ]] || { echo "Активное подключение 0.14.1 сохранилось после смены границы идентичности: $join_state" >&2; exit 1; }
 nonce_table="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('server_bridge_node_nonces_v2') IS NOT NULL")"
-[[ "$nonce_table" == "t" ]] || { echo "node nonce table missing" >&2; exit 1; }
+[[ "$nonce_table" == "t" ]] || { echo "Отсутствует таблица одноразовых значений узла" >&2; exit 1; }
 identity_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge_nodes_v2_key_fingerprint') IS NOT NULL")"
-[[ "$identity_index" == "t" ]] || { echo "node fingerprint uniqueness index missing" >&2; exit 1; }
+[[ "$identity_index" == "t" ]] || { echo "Отсутствует уникальный индекс отпечатков узлов" >&2; exit 1; }
 
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyBearerRetired:true,nodeStatus:"identity-enrollment-required",activeJoinInvalidated:true,nonceReplayStoreCreated:true}' \

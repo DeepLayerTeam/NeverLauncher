@@ -21,11 +21,11 @@ on:
   workflow_dispatch:
     inputs:
       texture_origin:
-        description: 'Optional running Yggdrasil HTTPS origin for a live protocol probe'
+        description: 'Необязательный действующий HTTPS-сервер Yggdrasil для проверки реального протокола'
         required: false
         type: string
       local_minecraft_uuid:
-        description: 'Local account with a published managed skin, only for live probe'
+        description: 'Локальная учётная запись с опубликованным управляемым скином только для реальной проверки'
         required: false
         type: string
 permissions:
@@ -65,7 +65,7 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Compile real API and maintenance tools (not mock drivers)
+      - name: Скомпилировать настоящий API и инструменты обслуживания (без подставных драйверов)
         working-directory: services/api
         run: |
           go build -trimpath -o /tmp/launcher-api ./cmd/launcher-api
@@ -104,7 +104,7 @@ jobs:
           docker run --rm --network host \
             -e MC_HOST_texture=http://minioadmin:texture_password_cert_only@127.0.0.1:9000 \
             minio/mc:RELEASE.2024-10-08T09-37-26Z mb --ignore-existing texture/texture-cert-02512
-      - name: Execute live S3 compatibility and local recovery
+      - name: Выполнить реальные S3 совместимость и локальные восстановление
         working-directory: services/api
         env:
           TEST_TEXTURE_S3_ENDPOINT_02512: http://127.0.0.1:9000

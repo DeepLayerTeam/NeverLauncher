@@ -10,10 +10,10 @@ TARGET="${LAUNCHER_CERT_TARGET:-linux/x86_64}"
 LOADER_VERSION="${LAUNCHER_CERT_LOADER_VERSION:-latest-stable}"
 DEST="${LAUNCHER_CERT_OUTPUT:-$ROOT/e2e/client-factory-02712-result}"
 DURATION="${LAUNCHER_CERT_RUNTIME_SECONDS:-45}"
-case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "Unsupported loader" >&2; exit 2;; esac
-[[ "$MC" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,95}$ ]] || { echo "Invalid version" >&2; exit 2; }
-[[ "$DURATION" =~ ^[0-9]+$ ]] || { echo "Invalid duration" >&2; exit 2; }
-[[ "$TARGET" =~ ^(linux|windows|osx|macos)/(x86|x86_64|aarch64)$ ]] || { echo "Invalid target" >&2; exit 2; }
+case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "Неподдерживаемый загрузчик" >&2; exit 2;; esac
+[[ "$MC" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,95}$ ]] || { echo "Некорректная версия" >&2; exit 2; }
+[[ "$DURATION" =~ ^[0-9]+$ ]] || { echo "Недопустимая длительность" >&2; exit 2; }
+[[ "$TARGET" =~ ^(linux|windows|osx|macos)/(x86|x86_64|aarch64)$ ]] || { echo "Недопустимая целевая платформа" >&2; exit 2; }
 [[ -f "$JAVA" ]] || { echo "Исполняемый файл Java не найден: $JAVA" >&2; exit 2; }
 mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd -P)"
@@ -26,7 +26,7 @@ RT="${LAUNCHER_CERT_RUNTIME_BIN:-$ROOT/runtime/runtime/target/debug/runtime}"
 if [[ ! -f "$RT" ]]; then
  cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 fi
-[[ -f "$RT" ]] || { echo "Runtime binary missing" >&2; exit 2; }
+[[ -f "$RT" ]] || { echo "Отсутствует исполняемый файл Runtime" >&2; exit 2; }
 # Сам Runtime закрепляется до теста; Go проверяет его хеш до исполнения и после него.
 RT_SHA="$(python3 - "$RT" <<'PY'
 from pathlib import Path
@@ -55,7 +55,7 @@ CMD=("$BIN" runtime client-factory certify-run --client-dir "$CLIENT" --runtime 
  --runtime-sha256 "$RT_SHA" --java "$JAVA" --private-key "$KEY" \
  --max-runtime-seconds "$DURATION" --output "$CERT")
 if [[ "$(uname -s)" == Linux ]]; then
- command -v xvfb-run >/dev/null || { echo "xvfb-run unavailable" >&2; exit 2; }
+ command -v xvfb-run >/dev/null || { echo "Команда xvfb-run недоступна" >&2; exit 2; }
  export LIBGL_ALWAYS_SOFTWARE=1
  xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' "${CMD[@]}" > "$DEST/run-result.json"
 else

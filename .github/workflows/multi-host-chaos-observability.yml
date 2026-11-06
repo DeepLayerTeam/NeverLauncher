@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Test actual fault orchestration, recovery safety and prior HA code
+      - name: Проверить фактические сбой оркестрация, восстановление безопасность и prior HA код
         run: |
           set -euo pipefail
           python3 -m pip install 'PyYAML==6.0.3'
@@ -31,7 +31,7 @@ jobs:
             scripts/operations/test_multi_host_0512.py \
             scripts/operations/test_dependency_ha_0513.py \
             scripts/operations/test_cross_host_recovery_0519.py
-      - name: Check Python, version metadata, Prometheus and blackbox configuration
+      - name: Проверить Python, метаданные версий, Prometheus и конфигурацию blackbox
         shell: bash
         run: |
           set -euo pipefail

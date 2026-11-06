@@ -24,7 +24,7 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci --ignore-scripts
         working-directory: apps/desktop
-      - name: "Сборка интерфейса React и проверка типов во всех файлах TSX"
+      - name: Собрать интерфейс React и проверить типы всех TSX-файлов
         working-directory: apps/desktop
         run: npm run build
       - name: "Проверка рабочего пространства игрока и навигации"

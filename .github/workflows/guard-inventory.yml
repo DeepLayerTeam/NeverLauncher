@@ -62,7 +62,7 @@ jobs:
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --guard "runtime/runtime/target/debug/guard${suffix}" \
             --output "guard-inventory-${{ matrix.target }}.json"
-      - name: Загрузка фактической локальной диагностики (BLOCKED не означает успешную проверку)
+      - name: Загрузка фактической локальной диагностики (заблокировано не означает успешную проверку)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -84,7 +84,7 @@ jobs:
           path: guard-inventory-native
           merge-multiple: true
         continue-on-error: true
-      - name: Объединение реальных отчётов ОС и ЦП (отсутствующие помечаются BLOCKED)
+      - name: Объединение реальных отчётов ОС и ЦП (отсутствующие помечаются заблокировано)
         run: |
           python - <<'PY'
           from pathlib import Path

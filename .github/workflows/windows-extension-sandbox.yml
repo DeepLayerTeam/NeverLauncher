@@ -22,8 +22,8 @@ permissions:
 
 jobs:
   windows-native-isolation:
-    # ARM64 is intentionally a real native host, never an x64 cross-build or
-    # emulator. An unavailable runner blocks this job; there is no fallback.
+    # ARM64 намеренно использует настоящий нативный хост, а не кросс-сборку x64
+    # или эмулятор. Недоступность агента блокирует задание без запасного пути.
     strategy:
       fail-fast: false
       matrix:
@@ -45,20 +45,20 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Require native Windows architecture (no emulation)
+      - name: Потребовать нативные Windows архитектура (без emulation)
         run: |
           $goArch = (go env GOARCH).Trim()
           if ($goArch -ne '${{ matrix.arch }}') { throw "Expected native ${{ matrix.arch }} Go, got $goArch" }
           $osArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
           $expected = if ('${{ matrix.arch }}' -eq 'arm64') { 'Arm64' } else { 'X64' }
           if ($osArchitecture -ne $expected) { throw "Expected $expected host, got $osArchitecture" }
-      - name: Build Windows extension SDKs
+      - name: сборка Windows расширение SDKs
         run: |
           Push-Location sdk/backend/go
           try { go test -count=1 ./...; if ($LASTEXITCODE -ne 0) { throw 'Backend SDK tests failed' } } finally { Pop-Location }
           Push-Location sdk/cli/go
           try { go test -count=1 ./...; if ($LASTEXITCODE -ne 0) { throw 'CLI SDK tests failed' } } finally { Pop-Location }
-      - name: Run real Windows AppContainer, Job and filesystem boundary tests
+      - name: Запустить реальные Windows AppContainer, задание и файловая система граница тесты
         working-directory: services/api
         env:
           NL_RUN_LIVE_WIN_SANDBOX: '1'
@@ -67,11 +67,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Native Windows sandbox boundary tests failed' }
           go test -tags launcher_nopgx -count=1 ./internal/extensionpolicy ./internal/extensionhost
           if ($LASTEXITCODE -ne 0) { throw 'Windows extension policy/host tests failed' }
-      - name: Build real Windows Backend
+      - name: сборка реальные Windows Backend
         working-directory: services/api
         run: |
           go build -o "$env:RUNNER_TEMP/launcher-api-${{ matrix.arch }}.exe" ./cmd/launcher-api
           if ($LASTEXITCODE -ne 0) { throw 'Windows Backend build failed' }
-      - name: Native tests are not release certification
+      - name: нативные тесты are не релиз сертификация
         run: |
           Write-Output 'This job verifies Windows sandbox enforcement, not final signed installers or the six-platform release gate.'

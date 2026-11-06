@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=42,<47'
-      - name: Run 8+ actual Minecraft client/server sessions over at least one hour
+      - name: Запустить 8+ реального Minecraft клиент/сервер сеансы на протяжении не менее одного часа
         env:
           TARGET_ID: ${{ matrix.target }}
         shell: bash
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Execute concurrent actual HTTPS backend requests for at least one hour
+      - name: Выполнить параллельные фактические HTTPS Backend запросы для не менее одного часа
         run: |
           set -euo pipefail
           test -n "$LAB_HTTPS_URL"
@@ -124,7 +124,7 @@ jobs:
         with:
           name: https-soak-05212-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/raw-https-soak
-      - name: Independently replay and sign every raw run
+      - name: независимо Повторить и Подписать каждый исходные Запустить
         env:
           REVIEW_PRIVATE_PEM: ${{ secrets.LAUNCHER_SOAK_REVIEW_PRIVATE_PEM }}
           REVIEW_PUBLIC_PEM: ${{ vars.LAUNCHER_SOAK_REVIEW_PUBLIC_PEM }}

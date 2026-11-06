@@ -53,7 +53,7 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0027_forge_neoforge_server_bridge_0147'")"
-[[ "$target_sealed" == "true" ]] || { echo "Forge/NeoForge ServerBridge migration is not sealed: 0027_forge_neoforge_server_bridge_0147" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Миграция ServerBridge для Forge/NeoForge не опечатана: 0027_forge_neoforge_server_bridge_0147" >&2; exit 1; }
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='fabric-before-0147'")" == fabric ]]
 for kind in forge neoforge; do
   fp="$(printf '%s-0147' "$kind" | sha256sum | awk '{print $1}')"

@@ -44,18 +44,18 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Unit and PostgreSQL integration
+      - name: модульный и PostgreSQL интеграция
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitrehearsal
           go test -race -count=1 ./internal/repository -run 'TestMigrationRehearsal03310'
           go test -count=1 ./internal/httpapi -run '^$'
-      - name: CLI real-process probes and security checks
+      - name: "Проверить исполнение CLI и безопасность реального процесса"
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestRehearsal|TestRehearseLocal04910'
-      - name: Three-project cohort regression (synthetic inputs; not GA)
+      - name: Three-project группа регрессионная проверка (синтетические входные данные; не GA)
         run: python3 -m unittest discover -s tools/gravit-port -p 'test_rehearse_cohort_04910.py' -v
-      - name: Contract and version
+      - name: контракт и версия
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py

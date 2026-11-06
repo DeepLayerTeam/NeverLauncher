@@ -20,13 +20,13 @@ OUT_PACKAGE="$RUNTIME_DIR/loader-hardening-package.json"
 OUT_EVIDENCE="$RUNTIME_DIR/loader-hardening.json"
 
 case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
-[[ -x "$NL_BIN" ]] || { echo "[loader-hardening] CLI binary unavailable: $NL_BIN" >&2; exit 2; }
+[[ -x "$NL_BIN" ]] || { echo "[loader-hardening] недоступен исполняемый файл CLI: $NL_BIN" >&2; exit 2; }
 [[ -f "$SOURCE_CLIENT_DIR/.launcher/${LOADER}-resolution-lock.json" ]] || {
   echo "[loader-hardening] исходная блокировка разрешения зависимостей недоступна" >&2; exit 1;
 }
 rm -rf "$CLIENT_DIR"
 cp -R "$SOURCE_CLIENT_DIR" "$CLIENT_DIR"
-[[ -f "$LOCK" ]] || { echo "[loader-hardening] isolated resolution lock unavailable: $LOCK" >&2; exit 1; }
+[[ -f "$LOCK" ]] || { echo "[loader-hardening] недоступна блокировка изолированного разрешения: $LOCK" >&2; exit 1; }
 
 # Forge/NeoForge должен доказать два пути восстановления, а не просто наличие
 # прогретого установщика: удалите установщик и отметьте завершённый процессор как
@@ -167,4 +167,4 @@ Path(out_p).write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + '\n'
 print(json.dumps(evidence, ensure_ascii=False))
 PY
 
-echo "[loader-hardening] PASS $LOADER $MINECRAFT_VERSION content-addressed cache/upstream/installers/processors recovery"
+echo "[loader-hardening] PASS $LOADER $MINECRAFT_VERSION восстановление кеша, источников, установщиков и обработчиков с адресацией по содержимому"

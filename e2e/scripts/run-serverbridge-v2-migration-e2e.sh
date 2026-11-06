@@ -101,13 +101,13 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"
-[[ "$target_sealed" == "true" ]] || { echo "ServerBridge Protocol v2 migration is not sealed: 0021_serverbridge_protocol_v2_0141" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Миграция протокола ServerBridge v2 не опечатана: 0021_serverbridge_protocol_v2_0141" >&2; exit 1; }
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT protocol_version,status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,project_id,profile_id FROM server_bridge_nodes_v2 WHERE id='legacy-paper'")"
-[[ "$node_state" == "2|identity-enrollment-required||||||0|legacy-project|vanilla" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
+[[ "$node_state" == "2|identity-enrollment-required||||||0|legacy-project|vanilla" ]] || { echo "Неожиданное состояние узла после миграции: $node_state" >&2; exit 1; }
 texture_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT username,model,skin_url FROM server_bridge_textures_v2 WHERE player_uuid='00000000-0000-0000-0000-000000000141'")"
-[[ "$texture_state" == "LegacyPlayer|slim|https://assets.invalid/skin.png" ]] || { echo "unexpected migrated texture: $texture_state" >&2; exit 1; }
+[[ "$texture_state" == "LegacyPlayer|slim|https://assets.invalid/skin.png" ]] || { echo "Неожиданная текстура после миграции: $texture_state" >&2; exit 1; }
 join_count="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_join_tickets_v2')"
-[[ "$join_count" == "0" ]] || { echo "legacy active join was migrated unsafely" >&2; exit 1; }
+[[ "$join_count" == "0" ]] || { echo "Устаревшее активное подключение перенесено небезопасным способом" >&2; exit 1; }
 
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyNode:{status:"identity-enrollment-required",protocolVersion:2,bearerCredentialRetired:true,identityEnrollmentRequired:true},legacyTexturesImported:true,legacyActiveJoinsImported:false}' \

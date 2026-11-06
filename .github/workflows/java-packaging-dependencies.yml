@@ -37,15 +37,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile and test SDK on real JVM
+      - name: Скомпилировать и Проверить SDK на реальные JVM
         run: sh sdk/java/core/build.sh test
-      - name: Compile separate dependent JAR and create embedded locked host
+      - name: Скомпилировать отдельный зависимый JAR и создать встроенный заблокированный хост
         run: sh examples/extensions/java-dependencies/build.sh
-      - name: Actual child-first extension class resolution and rejection cases
+      - name: Проверить реальное разрешение классов расширения с приоритетом дочернего загрузчика и сценарии отказа
         run: |
           javac --release 17 -cp sdk/java/core/build/classes -d sdk/java/core/build/test-classes sdk/java/core/src/test/java/ru/launcher/sdk/core/ModulePackaging0482Tests.java
           java -cp sdk/java/core/build/classes:sdk/java/core/build/test-classes ru.launcher.sdk.core.ModulePackaging0482Tests examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
-      - name: Real executable Host/HTTP handshake, start, callback, heartbeat, shutdown
+      - name: Проверить настоящий исполняемый хост, HTTP-рукопожатие, запуск, callback, heartbeat и завершение
         run: python3 examples/extensions/java-dependencies/test-runner.py
   java-signed-package-inspection:
     runs-on: ubuntu-24.04
@@ -62,12 +62,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Build actual embedded dependency package
+      - name: сборка фактические встроенные зависимость пакет
         run: sh examples/extensions/java-dependencies/build.sh
-      - name: Inspect actual JAR and adversarial library fixtures before activation
+      - name: Проверить фактические JAR и проверки на обход library тестовые фикстуры до activation
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
         run: go test -race -count=1 ./internal/extensionjava
-      - name: Validate canonical product version metadata
+      - name: Проверить канонические product версия метаданные
         run: python3 scripts/version/manage.py check

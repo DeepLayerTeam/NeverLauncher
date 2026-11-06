@@ -46,6 +46,6 @@ jobs:
       - run: python3 scripts/sdk/generate-http-operations.py --check
       - run: python3 scripts/version/manage.py check
       - run: bash -n scripts/release/build-release.sh
-      # No fake signing key or canned "PASS" receipts are used in CI.
-      # A *real* release remains blocked until an external independent
-      # operator signs actual production evidence and six OS-native jobs pass.
+      # В CI не используются поддельные ключи подписи или заранее подготовленные квитанции «PASS».
+      # Реальный релиз остаётся заблокированным, пока независимый внешний
+      # оператор не подпишет промышленные свидетельства и не пройдут шесть нативных заданий ОС.

@@ -19,14 +19,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Real host byte-swap and production orchestration negative tests
+      - name: Проверить настоящую замену байтов на хосте и негативные промышленные сценарии оркестрации
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_component_upgrade_0458.py -v
           PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade_0457.py -v
           python3 -m py_compile scripts/operations/component_upgrade_0458.py scripts/operations/dr_03512.py
           python3 scripts/version/manage.py check
-      - name: Validate full Standard and Network-HA Compose graphs
+      - name: Проверить полные графы Compose для Standard и Network-HA
         run: |
           set -euo pipefail
           docker compose -f deploy/production/docker-compose.yml --env-file deploy/production/env.production.example config --quiet
@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Build actual NeverLauncher CLI and exercise native transactional updater
+      - name: "Собрать CLI NeverLauncher и испытать нативный транзакционный механизм обновления"
         working-directory: cli
         run: |
           set -euo pipefail

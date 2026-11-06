@@ -11,7 +11,7 @@ while [[ $# -gt 0 ]]; do
     --allow-ad-hoc) MODE="adhoc"; shift ;;
     --out-dir) OUT_DIR="$2"; shift 2 ;;
     *)
-      if [[ "$1" == --* ]]; then echo "unknown option: $1" >&2; exit 2; fi
+      if [[ "$1" == --* ]]; then echo "Неизвестный параметр: $1" >&2; exit 2; fi
       OUT_DIR="$1"; shift ;;
   esac
 done
@@ -139,7 +139,7 @@ EOF_PLIST
     codesign --verify --strict --verbose=2 "${file}"
     if [[ "${MODE}" == "production" ]]; then
       details="$(codesign -dv --verbose=4 "${file}" 2>&1)"
-      grep -F "TeamIdentifier=${TEAM_ID}" <<<"${details}" >/dev/null || { echo "TeamIdentifier mismatch for ${file}" >&2; exit 1; }
+      grep -F "TeamIdentifier=${TEAM_ID}" <<<"${details}" >/dev/null || { echo "Не совпадает TeamIdentifier файла ${file}" >&2; exit 1; }
       grep -E 'flags=.*runtime' <<<"${details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${file}" >&2; exit 1; }
     fi
   done
@@ -162,10 +162,10 @@ EOF_PLIST
   codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"
   if [[ "${MODE}" == "production" ]]; then
     app_details="$(codesign -dv --verbose=4 "${APP_ROOT}" 2>&1)"
-    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${app_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${APP_ROOT}" >&2; exit 1; }
+    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${app_details}" >/dev/null || { echo "Не совпадает TeamIdentifier приложения ${APP_ROOT}" >&2; exit 1; }
     grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${APP_ROOT}" >&2; exit 1; }
     desktop_details="$(codesign -dv --verbose=4 "${MACOS_DIR}/launcher-desktop" 2>&1)"
-    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
+    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "Не совпадает TeamIdentifier файла ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
     grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
   fi
 
@@ -200,7 +200,7 @@ PY
 done
 
 if [[ "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
-  echo "Launcher ${VERSION} macOS unsigned x64+ARM64 binaries captured before codesign"
+  echo "Launcher ${VERSION}: неподписанные файлы macOS x64 и ARM64 сохранены до codesign"
   exit 0
 fi
 
@@ -246,4 +246,4 @@ done
 printf 'Итоговая опись поставки macOS (%s):\n' "${OUT_DIR}"
 find "${OUT_DIR}" -maxdepth 1 -type f -print | sort
 
-echo "Launcher ${VERSION} macOS x64+ARM64 packages prepared (signingMode=${SIGNING_MODE})"
+echo "Launcher ${VERSION}: пакеты macOS x64 и ARM64 подготовлены (режим подписи=${SIGNING_MODE})"

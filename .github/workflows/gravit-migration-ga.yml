@@ -49,7 +49,7 @@ jobs:
       - name: "Полная сборка серверной части"
         working-directory: services/api
         run: go build ./...
-      - name: MIG01–MIG13 Go tests, including PostgreSQL
+      - name: MIG01–MIG13 Go тесты, включая PostgreSQL
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitplan ./internal/gravitidentity ./internal/dbmigrate ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
@@ -64,7 +64,7 @@ jobs:
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
-      - name: Executable GA checker and signature/tamper tests
+      - name: исполняемый GA checker и подпись/подмена тесты
         working-directory: tools/migration-ga
         run: |
           go test -race -count=1 ./...
@@ -89,8 +89,8 @@ jobs:
           npm run build
 
   desktop:
-    # Package/install testing across all supported OS is distinct from the
-    # signed *real user transition* checks required below.
+    # Тестирование пакета и установки на всех поддерживаемых ОС отдельно от
+    # подписанных проверок реального переноса пользователей, обязательных ниже.
     strategy:
       fail-fast: false
       matrix:
@@ -122,9 +122,9 @@ jobs:
           cargo check --locked
 
   isolated-gravit-e2e:
-    # This job MUST NOT be replaced with fixtures that simply return passed.
-    # Real Gravit 5.7.x projects, Minecraft worlds/servers and all three
-    # Desktop platforms are provided by a segregated operator-owned runner.
+    # Это задание НЕЛЬЗЯ заменять фикстурами, которые просто возвращают passed.
+    # Реальные проекты Gravit 5.7.x, миры и серверы Minecraft, а также все три
+    # платформы Desktop предоставляются изолированным агентом оператора.
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     needs: [migrate-api, admin, desktop]
     runs-on: [self-hosted, linux, x64, migration-ga-isolated]
@@ -143,7 +143,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Require three isolated reference projects and private evidence storage
+      - name: Потребовать три изолированные reference проекты и закрытые свидетельства хранилище
         shell: bash
         run: |
           set -euo pipefail
@@ -163,11 +163,11 @@ jobs:
           printf '%s' "$MIGRATION_GA_NETWORK_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/proxy-network.plan.json"
           printf '%s' "$MIGRATION_GA_SIGNING_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/signer.pem"
           printf '%s' "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/trusted.pem"
-          # Evidence is retained on the protected self-hosted runner, not
-          # published with a potentially public CI artifact.
+          # Свидетельства хранятся на защищённом собственном агенте и не
+          # публикуются как потенциально открытый артефакт CI.
           base="$(mktemp -d "$MIGRATION_GA_EVIDENCE_ROOT/run-XXXXXXXX")"
           printf '%s\n' "$base" > "$RUNNER_TEMP/migration-ga/evidence-location"
-      - name: Execute mandatory positive and negative E2E checks for all three classes
+      - name: Выполнить обязательные положительные и отрицательные E2E проверки для все три классы
         shell: bash
         run: |
           set -euo pipefail
@@ -197,7 +197,7 @@ jobs:
             --proxy-network "$base/proxy-network-certificate.json" \
             --proxy-network-evidence "$base/proxy-network-evidence"
           cp "$base"/*-certificate.json "$RUNNER_TEMP/migration-ga/"
-      - name: Publish only signed certificate summaries (raw evidence remains private)
+      - name: Опубликовать только подписанные сертификат summaries (исходные свидетельства remains закрытые)
         uses: actions/upload-artifact@v4
         with:
           name: migration-ga-0450-three-references
@@ -210,5 +210,5 @@ jobs:
         run: |
           rm -f "$RUNNER_TEMP/migration-ga/signer.pem" "$RUNNER_TEMP/migration-ga/"*.plan.json
           rm -f "$RUNNER_TEMP/migration-ga/evidence-location"
-          # The private evidence archive is not deleted automatically: independent
-          # reviewers need its complete receipts and raw check outputs.
+          # Закрытый архив свидетельств не удаляется автоматически — независимым
+          # проверяющим нужны все квитанции и исходные результаты проверок.

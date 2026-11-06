@@ -63,5 +63,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Existing security gates and new 0.43.8 denial scenarios
+      - name: существующие проверки безопасности и новые 0.43.8 отказ сценарии
         run: python3 -m unittest discover -s scripts/ga -p 'test_security_capabilities_0431.py' -v

@@ -382,7 +382,7 @@ func (s Server) rollbackExecute0217(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if job.Status == model.DurableJobStatusFailed || job.Status == model.DurableJobStatusDead || job.Status == model.DurableJobStatusRevoked {
-		writeError(w, 409, "rollback job is "+job.Status+": "+job.LastError)
+		writeError(w, 409, "Задание отката находится в состоянии "+job.Status+": "+job.LastError)
 		return
 	}
 	worker := randomWorkerID0213("rollback-request")
@@ -410,7 +410,7 @@ func (s Server) rollbackExecute0217(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if latest.Status == model.DurableJobStatusFailed || latest.Status == model.DurableJobStatusDead || latest.Status == model.DurableJobStatusRevoked {
-		writeError(w, 409, "rollback job is "+latest.Status+": "+latest.LastError)
+		writeError(w, 409, "Задание отката находится в состоянии "+latest.Status+": "+latest.LastError)
 		return
 	}
 	writeJSON(w, 202, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "rollback-queued", "job": publicOperation0217(latest), "correlationId": latest.ID}})

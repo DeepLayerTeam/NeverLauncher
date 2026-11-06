@@ -406,8 +406,8 @@ export function AuthProviderWizard02910({
                         }
                       >
                         {rev.revision < h.activeRevision
-                          ? "Rollback"
-                          : "Activate"}
+                          ? "Откатить"
+                          : "Активировать"}
                       </button>
                     </td>
                   </tr>

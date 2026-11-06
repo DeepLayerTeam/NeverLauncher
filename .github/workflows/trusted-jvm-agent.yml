@@ -37,14 +37,14 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Compile Java 8-compatible premain and real hook plugin
+      - name: Скомпилировать premain для Java 8 и настоящий плагин перехвата
         shell: bash
         run: sh examples/extensions/trusted-jvm/build.sh
-      - name: Signed bundle -> install -> JVM launch -> transform -> post-main -> tamper tests
+      - name: Проверить цикл подписанный пакет → установка → запуск JVM → преобразование → выполнение main → обнаружение подмены
         working-directory: cli
         shell: bash
         run: go test -count=1 -timeout 4m -run '^TestTrustedJVM0306' ./cmd/launcher
-      - name: Existing authlib/classloader legacy regression
+      - name: существующие authlib/classloader устаревшие регрессионная проверка
         working-directory: cli
         shell: bash
         run: go test -count=1 -timeout 4m -run '^TestAuthlibClassloader0279' ./cmd/launcher

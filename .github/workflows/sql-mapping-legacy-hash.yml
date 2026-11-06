@@ -60,9 +60,9 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Проверка форматирования
         run: test -z "$(gofmt -l internal/sqlconnector)"
-      - name: Legacy verifier unit tests including race detector
+      - name: устаревшие верификатор модульные тесты включая детектор гонок
         run: go test -race -count=1 -timeout=4m ./internal/sqlconnector -run 'TestGravit|TestNormalizeGravit|TestAuthenticateGravit|TestInspectMapping'
-      - name: PostgreSQL, MySQL and MariaDB real login, schema validation and fail-closed verification
+      - name: PostgreSQL, MySQL и MariaDB реальные login, схема проверка и с отказом по умолчанию проверка
         env:
           LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
           LAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false

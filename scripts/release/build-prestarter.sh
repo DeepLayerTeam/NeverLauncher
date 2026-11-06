@@ -21,10 +21,10 @@ mkdir -p "$OUT"
     IFS=: read -r os arch label <<<"$target"
     case "$os" in windows) suffix=".exe";platform="windows";;darwin) suffix="";platform="macos";;*)suffix="";platform="linux";;esac
     name="neverprestarter-${VERSION}-${platform}-${label}${suffix}"
-    echo "Building $name with embedded pinned trust root"
+    echo "Сборка $name со встроенным закреплённым корнем доверия"
     GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 GOPROXY=off \
       go build -trimpath -ldflags="-s -w -X main.embeddedRootPublicKey=${ROOT_KEY} -X main.version=${VERSION}" \
       -o "$OUT/$name" ./cmd/prestarter
   done
 )
-echo "Native Prestarter binaries: $OUT"
+echo "Нативные исполняемые файлы Prestarter: $OUT"

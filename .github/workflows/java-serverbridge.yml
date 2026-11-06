@@ -27,7 +27,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Test real authenticated Java SDK
+      - name: Проверить реальные аутентифицированные Java SDK
         run: sh sdk/java/core/build.sh test
   go-broker:
     runs-on: ubuntu-24.04
@@ -39,10 +39,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: ServerBridge host / permission / revocation / race checks
+      - name: ServerBridge хост / разрешение / отзыв / проверки гонок
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity -run 'TestJavaBridge|TestJavaBridgeControlValidation0488|TestJavaBridgeRuntimeFencing0488'
-      - name: Existing ServerBridge PostgreSQL control and fencing integration
+      - name: существующие ServerBridge PostgreSQL управление и fencing интеграция
         if: ${{ env.LAUNCHER_SERVERBRIDGE_HA_DSN != '' }}
         working-directory: services/api
         run: go test -count=1 ./internal/repository -run 'TestServerBridgeControl0195Postgres'

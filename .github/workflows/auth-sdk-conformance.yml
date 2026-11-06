@@ -39,9 +39,9 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Проверка форматирования
         run: test -z "$(gofmt -l pkg/authconnector internal/federation/core.go internal/httpconnector/config.go internal/httpconnector/connector_test.go internal/oidcconnector/config.go internal/oidcconnector/connector_test.go internal/microsoftconnector/config.go internal/microsoftconnector/connector_test.go internal/sqlconnector/config.go)"
-      - name: SDK, federation and real signed protocol conformance
+      - name: Проверить SDK, федерацию и соответствие реальному подписанному протоколу
         run: go test -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/repository ./internal/model ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/sqlconnector
-      - name: Race checks for conformance and issuer linkage
+      - name: проверки гонок для соответствие и эмитент связь
         run: go test -race -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector
-      - name: Compile Backend API with SDK v2
+      - name: Скомпилировать Backend API с SDK v2
         run: go build ./cmd/...

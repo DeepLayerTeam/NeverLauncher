@@ -29,7 +29,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: TPM Certify negative fixtures and repository/session policy
+      - name: TPM сертифицировать отрицательные тестовые фикстуры и репозиторий/сеанс политика
         run: go test -race -count=1 ./internal/attestverify ./internal/model ./internal/trustbaseline ./internal/repository ./internal/httpapi
       - name: "Сборка серверной части"
         run: go build ./cmd/launcher-api

@@ -22,4 +22,4 @@ curl -fsS -X POST "$BASE_URL/api/v1/packages/$PACKAGE_ID/files" -H "Authorizatio
 curl -fsS -X POST "$BASE_URL/api/v1/packages/$PACKAGE_ID/validate" -H "Authorization: Bearer $TOKEN" | grep -q '"status":"valid"'
 curl -fsS -X POST "$BASE_URL/api/v1/packages/$PACKAGE_ID/publish" -H "Authorization: Bearer $TOKEN" | grep -q '"status":"published"'
 curl -fsS "$BASE_URL/api/v1/projects/demo-project/profiles/vanilla/manifest?channel=stable" | grep -q 'mods/example.jar'
-echo "package product smoke OK: $PACKAGE_ID"
+echo "Базовая проверка пакета продукта пройдена: $PACKAGE_ID"

@@ -45,16 +45,16 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Compile actual Runtime and Guard
+      - name: Скомпилировать реальный Runtime и Guard
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
-      - name: Native game process, policy, and external overlay regression
+      - name: нативные игра процесс, политика, и внешние наложение регрессионная проверка
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib
-      - name: Compile actual Windows Guard Sensor and hook engine tests
+      - name: "Собрать и протестировать датчик Guard и механизм перехвата для Windows"
         if: runner.os == 'Windows'
         run: cargo test --manifest-path runtime/guard-sensor/Cargo.toml --lib external_overlay_scope_05010_tests
-      - name: Actual Java process/JNI/module/JAR positive and negative tests
+      - name: фактические Java процесс/JNI/модуль/JAR положительные и отрицательные тесты
         run: python scripts/tests/guard_runtime_integrity_0505.py
-      - name: Signed policy, revocation and Linux overlay tests
+      - name: подписанную политику, отзыв и Linux наложение тесты
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestExternalNativeCompatibility05010|TestSignedExternalModulePolicy05010|TestGuardCompatibility0502)' -count=1 -timeout 12m
       - name: Согласованность версий

@@ -109,17 +109,17 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0023_one_time_join_tickets_0143'")"
-[[ "$target_sealed" == "true" ]] || { echo "one-time join ticket migration is not sealed: 0023_one_time_join_tickets_0143" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Миграция одноразовых билетов подключения не опечатана: 0023_one_time_join_tickets_0143" >&2; exit 1; }
 
 legacy_bridge_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,status,(invalidated_at IS NOT NULL)::text,issued_identity_epoch,issued_key_fingerprint FROM server_bridge_join_tickets_v2 WHERE id='legacy-ticket-0142'")"
-[[ "$legacy_bridge_state" == "1|invalidated|true|0|" ]] || { echo "0.14.2 ServerBridge ticket survived one-time boundary: $legacy_bridge_state" >&2; exit 1; }
+[[ "$legacy_bridge_state" == "1|invalidated|true|0|" ]] || { echo "Билет ServerBridge 0.14.2 сохранился после одноразового ограничения: $legacy_bridge_state" >&2; exit 1; }
 legacy_yggdrasil_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM minecraft_joins")"
-[[ "$legacy_yggdrasil_count" == "0" ]] || { echo "replayable 0.14.2 Yggdrasil joins survived migration" >&2; exit 1; }
+[[ "$legacy_yggdrasil_count" == "0" ]] || { echo "Повторно используемые подключения Yggdrasil 0.14.2 сохранились после миграции" >&2; exit 1; }
 
 bridge_nonce_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge_join_v2_redemption_nonce_0143') IS NOT NULL")"
-[[ "$bridge_nonce_index" == "t" ]] || { echo "ServerBridge redemption nonce index missing" >&2; exit 1; }
+[[ "$bridge_nonce_index" == "t" ]] || { echo "Отсутствует индекс одноразовых значений погашения ServerBridge" >&2; exit 1; }
 yggdrasil_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('idx_minecraft_joins_active_expires_0143') IS NOT NULL")"
-[[ "$yggdrasil_index" == "t" ]] || { echo "Yggdrasil active expiry index missing" >&2; exit 1; }
+[[ "$yggdrasil_index" == "t" ]] || { echo "Отсутствует индекс срока действия Yggdrasil" >&2; exit 1; }
 
 printf '[one-time-join-migration] prove new v2 ticket identity binding and redemption constraints\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
@@ -138,7 +138,7 @@ SET status='consumed', consumed_at=now(), redeemed_identity_epoch=1,
 WHERE id='ticket-v2-0143';
 SQL
 v2_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,status,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,length(redeemed_nonce_hash) FROM server_bridge_join_tickets_v2 WHERE id='ticket-v2-0143'")"
-[[ "$v2_state" == "2|consumed|1|true|64" ]] || { echo "unexpected v2 one-time ticket state: $v2_state" >&2; exit 1; }
+[[ "$v2_state" == "2|consumed|1|true|64" ]] || { echo "Неожиданное состояние одноразового билета v2: $v2_state" >&2; exit 1; }
 
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyServerBridgeTicketInvalidated:true,legacyYggdrasilJoinsDiscarded:true,identityBoundTicketVersion:2,redemptionProofPersisted:true}' \

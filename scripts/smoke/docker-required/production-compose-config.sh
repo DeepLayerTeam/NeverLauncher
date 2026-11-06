@@ -20,4 +20,4 @@ else
   echo "[Launcher] docker не найден: выполнена статическая проверка production compose"
 fi
 
-echo "[Launcher] production compose config smoke OK"
+echo "[Launcher] базовая проверка промышленной конфигурации Compose пройдена"

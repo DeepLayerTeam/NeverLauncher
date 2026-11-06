@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       actual_minecraft:
-        description: 'Perform actual upstream downloads and GUI JVM launches for every listed family'
+        description: 'Выполнять реальные загрузки из исходных источников и запускать JVM с GUI для каждого указанного семейства'
         type: boolean
         required: true
         default: true
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
-      - name: Actual materializers, signed evidence and negative cases (fixture runtime for unit tests)
+      - name: фактические materializers, подписанные свидетельства и негативные сценарии (тестовая фикстура Runtime для модульные тесты)
         working-directory: cli
         run: go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711' -count=1 -timeout=7m
       - name: Детектор гонок данных
@@ -61,13 +61,13 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-      - name: Install real graphics dependencies
+      - name: Установить реальные graphics зависимости
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Build real Runtime
+      - name: сборка реальный Runtime
         run: cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime
-      - name: Real upstream materialization and JVM launch
+      - name: реальные upstream materialization и JVM Запустить
         env:
           LAUNCHER_CERT_LOADER: ${{ matrix.loader }}
           LAUNCHER_CERT_MINECRAFT: ${{ matrix.minecraft }}
@@ -77,7 +77,7 @@ jobs:
         run: |
           export LAUNCHER_CERT_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-client-factory-certification-02712.sh
-      - name: Upload evidence (upload private signing key)
+      - name: Загрузить свидетельства (Загрузить закрытые подписание ключ)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -105,11 +105,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install graphical dependencies
+      - name: Установить graphical зависимости
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Actual matching Mojang server start and client join (existing verified native E2E)
+      - name: фактические совпадающие Mojang сервер Запустить и клиент join (существующие проверенные нативные E2E)
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
           LAUNCHER_E2E_JAVA_MAJOR: '17'
@@ -125,7 +125,7 @@ jobs:
           proof=json.loads(Path('e2e/runtime/matching-server.json').read_text())
           assert proof['status']=='passed' and proof['clientJoinedServer'] is True, 'no real client/server join'
           PYJOIN
-      - name: Preserve real matching-server diagnostics
+      - name: Сохранить диагностику реального подходящего сервера
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -141,7 +141,7 @@ jobs:
     needs: [offline-unit-and-adversarial, actual-gui-client, actual-matching-server]
     runs-on: ubuntu-24.04
     steps:
-      - name: Refuse incomplete runtime certification
+      - name: Refuse неполные Runtime сертификация
         env:
           OFFLINE: ${{ needs.offline-unit-and-adversarial.result }}
           REAL: ${{ needs.actual-gui-client.result }}

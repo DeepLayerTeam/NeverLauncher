@@ -46,7 +46,7 @@ func (c *Core) RefreshLinkedIdentity(userID, providerID, expectedID string, auth
 		return model.AuthIdentity{}, err
 	}
 	if linked.UserID != userID || linked.ID != expectedID {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "provider refresh changed identity owner")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "При обновлении провайдера изменился владелец идентичности")
 	}
 	linked.Email = identity.Email
 	linked.Username = identity.Username

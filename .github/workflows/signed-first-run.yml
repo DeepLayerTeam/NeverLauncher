@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: prestarter/go.mod
-      - name: Prestarter acceptance and regressions
+      - name: Prestarter приёмка и регрессионные проверки
         working-directory: prestarter
         run: go test -run 'TestOwnerSignedFirstRun0352|TestBootstrapServerPolicy0352|TestSignedConfigCannotBeTamperedWith|TestOfflineFreshInstallAndVerifiedRecovery' -count=1 .
   desktop-native-verification:
@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Native Tauri system dependencies
+      - name: нативные Tauri системные зависимости
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-node@v4
@@ -40,8 +40,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Desktop compile
+      - name: Desktop Скомпилировать
         working-directory: apps/desktop
         run: npm ci --ignore-scripts && npm run build
-      - name: Native signed-envelope verification tests
+      - name: нативные signed-envelope проверка тесты
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml signed_first_run_0352 -- --nocapture

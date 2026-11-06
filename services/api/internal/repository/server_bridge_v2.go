@@ -1239,8 +1239,8 @@ CASE
  ELSE 'active' END AS effective_status,
 s.routing_health,t.routing_health,t.routing_state,t.routing_players_online,CASE WHEN t.operator_capacity_max IS NULL THEN t.routing_capacity_max WHEN t.routing_capacity_max=0 THEN t.operator_capacity_max ELSE LEAST(t.routing_capacity_max,t.operator_capacity_max) END,(t.routing_accepting AND (t.operator_capacity_max IS NULL OR (t.operator_capacity_max>0 AND t.routing_players_online<t.operator_capacity_max))),
 t.runtime_id,t.runtime_epoch,t.routing_revision,
--- Legacy nodes have no signed routing snapshot yet; preserve a non-NULL
--- observation timestamp for the API model without treating them as routable.
+-- Устаревшие узлы пока не имеют подписанного снимка маршрутизации; сохраняем
+-- ненулевую метку времени наблюдения для модели API, не считая их маршрутизируемыми.
 COALESCE(e.last_seen_at,LEAST(s.routing_observed_at,t.routing_observed_at),
          LEAST(s.last_heartbeat_at,t.last_heartbeat_at),GREATEST(s.created_at,t.created_at)),
 COALESCE(e.created_at,GREATEST(s.created_at,t.created_at))

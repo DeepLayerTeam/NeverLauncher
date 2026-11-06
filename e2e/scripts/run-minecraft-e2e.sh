@@ -916,7 +916,7 @@ consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_
 (( consumed_count >= 1 )) || { echo "[e2e] билет ServerBridge Protocol v2 не сохранён как использованный" >&2; exit 1; }
 redemption_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,redeemed_identity_epoch,length(redeemed_nonce_hash),(redeemed_by_ip<>'')::text FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed' ORDER BY consumed_at DESC LIMIT 1")"
 IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch nonce_hash_len redeemed_ip_present <<< "$redemption_state"
-[[ "$redemption_version" == "2" && "$fingerprint_match" == "true" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "true" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
+[[ "$redemption_version" == "2" && "$fingerprint_match" == "true" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "true" ]] || { echo "[e2e] недействительное подтверждение использования одноразового билета: $redemption_state" >&2; exit 1; }
 # Проба протокола выше уже израсходовала одноразовый билет. Выдайте новый для настоящего
 # соединения Minecraft; единственным получателем должен быть серверный плагин.
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"

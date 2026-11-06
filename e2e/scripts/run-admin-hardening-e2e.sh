@@ -9,7 +9,7 @@ CONTAINER="launcher-admin-hardening-02112-${GITHUB_RUN_ID:-local}-$$"
 PORT="${LAUNCHER_ADMIN_HARDENING_PG_PORT:-}"
 PUBLISH_PORT="127.0.0.1::5432"
 if [[ -n "$PORT" ]]; then
-  [[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || { echo "[admin-hardening-02112] invalid port" >&2; exit 2; }
+  [[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || { echo "[admin-hardening-02112] недопустимый порт" >&2; exit 2; }
   PUBLISH_PORT="127.0.0.1:${PORT}:5432"
 fi
 
@@ -99,7 +99,7 @@ if [[ "$READY" != true ]]; then
   exit 1
 fi
 
-echo "[admin-hardening-02112] running real PostgreSQL + ServerBridge v3 + CAS integration tests"
+echo "[admin-hardening-02112] выполняются реальные интеграционные тесты PostgreSQL, ServerBridge v3 и CAS"
 (
   cd "$ROOT/services/api"
   LAUNCHER_DURABLE_DSN="$DSN" LAUNCHER_SERVERBRIDGE_HA_DSN="$DSN" \

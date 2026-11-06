@@ -448,7 +448,7 @@ func (m *Manager) abortBeforeMutation0499(tx model.ExtensionUpdateTransaction, s
 	failures := m.restartSnapshots02011(snapshots, tx.Plan.Items)
 	if len(failures) > 0 {
 		tx.Status = "rollback_failed"
-		tx.Failure = cause.Error() + "; restart failed: " + strings.Join(failures, "; ")
+		tx.Failure = cause.Error() + "; не удалось перезапустить: " + strings.Join(failures, "; ")
 		tx.FinishedAt = nil
 		if _, err := m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); err != nil {
 			return tx, errors.Join(cause, fmt.Errorf("Ошибка журнала восстановления: %w", err))
@@ -609,7 +609,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		tx.RolledBack = append(tx.RolledBack, id)
 		rolled[id] = struct{}{}
 		if _, err := m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); err != nil {
-			rbErrs = append(rbErrs, id+": journal rollback: "+err.Error())
+			rbErrs = append(rbErrs, id+": откат журнала: "+err.Error())
 		}
 	}
 
@@ -685,7 +685,7 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 		if len(stopFailures) > 0 {
 			// Сохраняйте журнал пригодным для восстановления при следующем получении аренды.
 			tx.Status = "running"
-			tx.Failure = cause.Error() + "; unable to stop JVM before state restore: " + strings.Join(stopFailures, "; ")
+			tx.Failure = cause.Error() + "; не удалось остановить JVM перед восстановлением состояния: " + strings.Join(stopFailures, "; ")
 			tx.FinishedAt = nil
 			_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
 			return tx, fmt.Errorf("Откат обновления заблокирован активным расширением: %w", errors.New(tx.Failure))

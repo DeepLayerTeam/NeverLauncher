@@ -19,12 +19,12 @@ on:
   workflow_dispatch:
     inputs:
       production_release:
-        description: 'Build and sign release artifacts from approved signed bootstrap run'
+        description: 'Собрать и подписать артефакты релиза из утверждённого подписанного запуска начальной загрузки'
         type: boolean
         required: true
         default: false
       source_run_id:
-        description: 'Run with signed launcher-bootstrap-{platform}-{arch} artifacts'
+        description: 'Запускать с подписанными артефактами launcher-bootstrap-{platform}-{arch}'
         required: false
         type: string
 permissions:
@@ -47,10 +47,10 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=43,<47'
-      - name: Test native lifecycle and signature checks
+      - name: Проверить нативные жизненный цикл и проверки подписей
         working-directory: prestarter
         run: go test -count=1 ./...
-      - name: Cross-compile native installer and Prestarter for six delivery targets
+      - name: Выполнить кросс-компиляцию нативного установщика и Prestarter для шести платформ
         if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -62,7 +62,7 @@ jobs:
               (cd prestarter && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/nl-branding-cross/${app}-${os}-${arch}" "./cmd/${app}")
             done
           done
-      - name: Smoke-test signed .deb packaging
+      - name: Провести базовую проверку подписанного пакета .deb
         if: runner.os == 'Linux'
         run: python scripts/release/test_build_branded_installers.py
   release:
@@ -81,7 +81,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     environment: production-release
     steps:
-      - name: Require explicit approved signed-bootstrap run
+      - name: Потребовать явные утверждённые signed-bootstrap Запустить
         shell: bash
         env:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
@@ -96,28 +96,28 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=43,<47'
-      - name: Ensure native release runner and execute prestarter tests
+      - name: Проверить нативные релиз агент и Выполнить prestarter тесты
         shell: bash
         run: |
           set -euo pipefail
           test "$(go env GOOS)" = '${{ matrix.platform }}' || { echo 'wrong production OS'; exit 1; }
           test "$(go env GOARCH)" = '${{ matrix.arch }}' || { echo 'wrong production architecture'; exit 1; }
           (cd prestarter && go test -count=1 ./...)
-      - name: Fetch approved signed bootstrap inputs
+      - name: Получить утверждённые подписанные первый запуск входные данные
         uses: actions/download-artifact@v4
         with:
           name: launcher-bootstrap-${{ matrix.platform }}-${{ matrix.arch }}
           run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: branded-input
-      - name: Pin root key from protected release environment
+      - name: Закрепить root ключ из защищённые релиз окружение
         shell: bash
         env:
           PINNED_ROOT_KEY: ${{ vars.LAUNCHER_RELEASE_ROOT_PUBLIC_KEY }}
         run: |
           test "${#PINNED_ROOT_KEY}" -eq 64
           printf '%s' "$PINNED_ROOT_KEY" > root-public-key.hex
-      - name: Prepare Windows code-signing certificate
+      - name: Подготовить Windows code-signing сертификат
         if: runner.os == 'Windows'
         shell: pwsh
         env:
@@ -131,13 +131,13 @@ jobs:
           if (!$cert.Thumbprint) { throw 'No signing certificate imported' }
           Add-Content $env:GITHUB_ENV "LAUNCHER_WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)"
           Remove-Item signing.pfx
-      - name: Import macOS Apple certificates
+      - name: Импортировать macOS Apple сертификаты
         if: runner.os == 'macOS'
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.APPLE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_P12_PASSWORD }}
-      - name: Configure protected Apple notarization profile
+      - name: настроить защищённые Apple нотариальное заверение профиль
         if: runner.os == 'macOS'
         shell: bash
         env:
@@ -153,7 +153,7 @@ jobs:
             --key "$RUNNER_TEMP/native-notary-0522.p8" \
             --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER"
           printf 'LAUNCHER_MACOS_NOTARY_PROFILE=native-package-0522\n' >> "$GITHUB_ENV"
-      - name: Import Linux signing key
+      - name: Импортировать Linux подписание ключ
         if: runner.os == 'Linux'
         shell: bash
         env:
@@ -179,7 +179,7 @@ jobs:
             --project '${{ vars.LAUNCHER_BRANDED_PROJECT_ID }}' --version "$VERSION" \
             --config branded-input/bootstrap.signed.json --prestarter "$PRESTARTER" \
             --root-key-file root-public-key.hex --output dist/native "${EXTRA[@]}"
-      - name: Destroy temporary Apple notary key file
+      - name: Удалить temporary Apple notary ключ файл
         if: always() && runner.os == 'macOS'
         shell: bash
         run: rm -f "$RUNNER_TEMP/native-notary-0522.p8"

@@ -31,7 +31,7 @@ jobs:
       - name: "Сборка и проверка теневого журнала сервера"
         working-directory: services/api/internal/httpapi
         run: go test guard_shadow_05012.go guard_shadow_05012_test.go -count=1 -v
-      - name: Compile server heartbeat integration using full API package
+      - name: Скомпилировать сервер heartbeat интеграция используя полный API пакет
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestGuardShadow05012|TestServerBoundGuard0507' -count=1 -timeout=15m
   actual-jvm-adversarial:
@@ -62,7 +62,7 @@ jobs:
       - name: "Установка нативных библиотек для тестов Linux"
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential
-      - name: Run supported JVM adversarial suites with captured evidence
+      - name: Запустить поддерживаемые JVM проверки на обход наборы тестов с собранные свидетельства
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then

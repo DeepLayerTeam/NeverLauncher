@@ -22,16 +22,16 @@ jobs:
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Сборка Runtime для Managed Java II
+      - name: Сборка Runtime для управляемая Java II
         run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
 
-      - name: Сквозные производственные тесты Managed Java II для Java 8/16/17/21/25
+      - name: Сквозные производственные тесты управляемая Java II для Java 8/16/17/21/25
         shell: bash
         run: |
           set -euo pipefail
           bash e2e/scripts/run-managed-java-II-e2e.sh
 
-      - name: Сборка дистрибутива Managed JRE с закреплённым поставщиком
+      - name: Сборка дистрибутива управляемая JRE с закреплённым поставщиком
         shell: bash
         run: |
           set -euo pipefail
@@ -43,7 +43,7 @@ jobs:
             --major 21
           cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json "${OUT}/MANAGED_JAVA_II_EVIDENCE.json"
 
-      - name: Verify six targets and delivery binding
+      - name: Проверить шесть цели и доставка привязка
         shell: bash
         run: |
           set -euo pipefail
@@ -54,7 +54,7 @@ jobs:
           /tmp/nl delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
 
-      - name: Upload Managed JRE production assets
+      - name: Загрузить управляемая JRE промышленные ресурсы
         uses: actions/upload-artifact@v4
         with:
           name: launcher-managed-jre-${{ github.sha }}

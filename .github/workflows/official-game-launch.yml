@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Linux Tauri native prerequisites
+      - name: Linux Tauri нативные предпосылки
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -35,13 +35,13 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Runtime realm tests
+      - name: Runtime realm тесты
         run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269::tests
-      - name: Tauri realm command tests
+      - name: Tauri realm команда тесты
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml launch_realm_0269_tests
       - name: Компиляция Rust
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: Renderer and full desktop verification
+      - name: интерфейс и полные Desktop проверка
         working-directory: apps/desktop
         run: |
           npm ci

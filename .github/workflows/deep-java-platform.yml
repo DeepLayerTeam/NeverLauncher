@@ -50,22 +50,22 @@ jobs:
       - name: "Публикация двоичных артефактов SDK"
         shell: bash
         run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
-      - name: Adversarial published-artifact checks
+      - name: Проверить опубликованные артефакты на возможные обходы
         shell: bash
         run: python3 scripts/java/test_developer_e2e_04812.py
-      - name: Three independent published-SDK Java extensions and real JVM subprocesses
+      - name: три независимые published-SDK Java расширения и реальные JVM дочерние процессы
         shell: bash
         run: |
           python3 scripts/java/deep_java_e2e_0490.py \
             --sdk-repo dist/java-sdk/maven --report deep-java-0490-report.json
           python3 scripts/version/manage.py check
-      - name: Publish evidence explicitly labeled simulated-Host
+      - name: Опубликовать свидетельства явно labeled simulated-Host
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: deep-java-${{ matrix.java }}-local-runtime
           path: deep-java-0490-report.json
           if-no-files-found: warn
-  # Production GA is NOT inferred from this workflow. A real signed deployment,
-  # update/rollback, Go Broker/PG storage, native sandbox and six-platform
-  # release attestation are mandatory independent requirements.
+  # Этот процесс не означает готовности к промышленной GA. Отдельно обязательны
+  # реальное подписанное развёртывание, обновление и откат, Go Broker/PG, нативная
+  # песочница и аттестация релиза на шести платформах.

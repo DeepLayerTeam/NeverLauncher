@@ -26,4 +26,4 @@ curl -fsS -X POST "$BACKEND/api/v1/admin/users/$USER_ID/disable" "${AUTH[@]}" >/
 curl -fsS -X POST "$BACKEND/api/v1/admin/users/$USER_ID/enable" "${AUTH[@]}" >/dev/null
 curl -fsS "$BACKEND/api/v1/admin/audit" "${AUTH[@]}" >/dev/null
 
-echo "Launcher ${VERSION:-0.10.0} admin CRUD smoke: OK"
+echo "Launcher ${VERSION:-0.10.0}: базовая проверка CRUD Admin успешна"

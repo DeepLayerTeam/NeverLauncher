@@ -4,7 +4,7 @@
 # доступного через PATH исполняемого java, затем восстанавливается офлайн.
 set -euo pipefail
 if (( $# != 4 )); then
-  echo "Usage: $0 /absolute/path/runtime /path/MANAGED_JRE_MANIFEST.json SHA256 MAJOR" >&2
+  echo "Использование: $0 /absolute/path/runtime /path/MANAGED_JRE_MANIFEST.json SHA256 MAJOR" >&2
   exit 64
 fi
 runtime="$(realpath "$1")"

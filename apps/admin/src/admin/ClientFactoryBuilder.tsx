@@ -657,10 +657,10 @@ export function ClientFactoryBuilder02710({
                       {
                         (
                           {
-                            files: "Outputs",
-                            sources: "Sources",
-                            processors: "Processors",
-                            log: "Logs",
+                            files: "Результаты",
+                            sources: "Источники",
+                            processors: "Обработчики",
+                            log: "Журналы",
                           } as const
                         )[name]
                       }

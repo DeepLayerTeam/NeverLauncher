@@ -30,7 +30,7 @@ jobs:
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitecore cmd/launcher-sqlite)"
-      - name: Certify native local filesystem
+      - name: сертифицировать нативные локальные файловая система
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/sqlite-auth"

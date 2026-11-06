@@ -35,7 +35,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
-      - name: Materialize code-signing certificate
+      - name: Подготовить code-signing сертификат
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
@@ -46,7 +46,7 @@ jobs:
       - name: Установка зависимости для подписи набора компонентов
         shell: pwsh
         run: python -m pip install 'cryptography>=43,<47'
-      - name: Build and Authenticode-sign both architectures
+      - name: Собрать пакет и подписать обе архитектуры через Authenticode
         shell: pwsh
         env:
           LAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
@@ -57,7 +57,7 @@ jobs:
           ./scripts/release/build-windows-desktop.ps1 `
             -RequireCodeSigning `
             -CodeSigningCertificatePath "$env:RUNNER_TEMP\launcher-codesign.pfx"
-      - name: Generate delivery manifest and verify production signing evidence
+      - name: Сгенерировать доставка манифест и Проверить промышленные подписание свидетельства
         shell: pwsh
         run: |
           $Version = (Get-Content VERSION -Raw).Trim()
@@ -70,7 +70,7 @@ jobs:
           }
           & "$env:RUNNER_TEMP\nl.exe" delivery manifest --bundle $Dir --version $Version
           & "$env:RUNNER_TEMP\nl.exe" delivery verify-windows --bundle $Dir --version $Version --production
-      - name: Verify actual OS Authenticode signatures on packaged Windows executables
+      - name: Проверить настоящую системную подпись Authenticode для упакованных файлов Windows
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -93,11 +93,11 @@ jobs:
               Write-Host "Verified final signed package executable: $($Exe.Name) $Arch"
             }
           }
-      - name: Remove signing credential file
+      - name: Удалить подписание учётные данные файл
         if: always()
         shell: pwsh
         run: Remove-Item "$env:RUNNER_TEMP\launcher-codesign.pfx" -Force -ErrorAction SilentlyContinue
-      - name: Upload signed Windows delivery artifacts
+      - name: Загрузить подписанные Windows доставка артефакты
         uses: actions/upload-artifact@v4
         with:
           name: launcher-windows-production-${{ github.sha }}

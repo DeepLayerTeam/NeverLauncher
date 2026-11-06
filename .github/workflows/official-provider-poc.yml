@@ -34,5 +34,5 @@ jobs:
         run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
       - name: "Сборка пробного исполняемого файла для живой среды (без учётных данных в CI)"
         run: go build -o "$RUNNER_TEMP/official-provider-poc" ./cmd/official-provider-poc
-      # No provider secrets/client accounts in CI; live verification and
-      # independent external approval remain explicit mandatory release gates.
+      # В CI нет секретов провайдеров и учётных записей клиентов; реальная проверка
+      # и независимое внешнее утверждение остаются обязательными проверками релиза.

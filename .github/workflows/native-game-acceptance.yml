@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: Immutable staged and signed package to execute on all six GUI hosts
+        description: Неизменяемый подготовленный и подписанный пакет для выполнения на всех шести хостах с GUI
         required: true
         type: string
   workflow_call:
@@ -17,9 +17,9 @@ concurrency:
   group: native-game-04314-${{ inputs.package_id }}
   cancel-in-progress: false
 jobs:
-  # Missing native GUI hardware is a BLOCKER, not a substituted x64 VM or
-  # silent exclusion from the matrix. Reusable worker already checks actual
-  # host OS/architecture and requires matching Minecraft server & live auth.
+  # Отсутствие нативного оборудования с GUI — БЛОКИРУЮЩАЯ ОШИБКА, а не подмена x64 VM
+  # или незаметное исключение из матрицы. Повторно используемый агент уже проверяет
+  # ОС и архитектуру хоста, а также требует соответствующий сервер Minecraft и реальную авторизацию.
   live-native-game:
     strategy:
       fail-fast: false

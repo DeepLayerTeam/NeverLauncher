@@ -9,7 +9,7 @@ CONTAINER="launcher-durable-0213-${GITHUB_RUN_ID:-local}-$$"
 PORT="${LAUNCHER_DURABLE_POSTGRES_PORT:-}"
 PUBLISH_PORT="127.0.0.1::5432"
 if [[ -n "$PORT" ]]; then
-  [[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || { echo "[durable-0213] invalid port" >&2; exit 2; }
+  [[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || { echo "[durable-0213] недопустимый порт" >&2; exit 2; }
   PUBLISH_PORT="127.0.0.1:${PORT}:5432"
 fi
 

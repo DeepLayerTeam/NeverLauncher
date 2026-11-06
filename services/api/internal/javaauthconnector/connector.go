@@ -123,7 +123,7 @@ type javaProof struct {
 func decodeProof(raw json.RawMessage) (authconnector.Authentication, error) {
 	var p javaProof
 	if len(raw) == 0 || json.Unmarshal(raw, &p) != nil {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "malformed Java identity proof")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Некорректное подтверждение идентичности Java")
 	}
 	identity, err := p.Identity.validated()
 	if err != nil {
@@ -164,7 +164,7 @@ func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.Resol
 	}
 	var identity javaIdentity
 	if len(response["identity"]) == 0 || json.Unmarshal(response["identity"], &identity) != nil {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "malformed Java identity")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrMisconfigured, "Некорректная идентичность Java")
 	}
 	parsed, err := identity.validated()
 	if err != nil {

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Exact approved 40-character commit (protected environment)
+        description: Точно утверждённый 40-символьный коммит (защищённое окружение)
         type: string
         required: true
 
@@ -37,8 +37,8 @@ jobs:
           python scripts/version/manage.py check
 
   build:
-    # Real independent native compiler/toolchain executions, not two checksum
-    # reports manufactured from a single build directory.
+    # Реальные независимые запуски нативных компиляторов и инструментов сборки, а не два отчёта
+    # с контрольными суммами, созданные из одного каталога сборки.
     if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [regression]
     environment: production-acceptance

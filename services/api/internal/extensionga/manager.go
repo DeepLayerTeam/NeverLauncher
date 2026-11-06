@@ -173,9 +173,9 @@ func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 		if mutate && (install.CurrentState == model.ExtensionInstallStateEnabled || install.Enabled) {
 			reason := fmt.Sprintf("Не удалось согласовать расширения GA [%s]: %s", code, msg)
 			if _, e := m.Repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Reason: reason, Source: "ga-reconcile"}); e != nil {
-				issue.Message += "; emergency-disable persistence failed: " + e.Error()
+				issue.Message += "; не удалось сохранить состояние экстренного отключения: " + e.Error()
 			} else if _, e := m.Lifecycle.Disable(ctx, install.ExtensionID, extensionlifecycle.Scope{Scope: install.Scope, ScopeID: install.ScopeID}); e != nil {
-				issue.Message += "; lifecycle disable failed: " + e.Error()
+				issue.Message += "; не удалось отключить жизненный цикл: " + e.Error()
 			} else {
 				issue.Disabled = true
 				report.Disabled++

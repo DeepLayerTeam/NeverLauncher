@@ -29,10 +29,10 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Signature / owner review / launch-denial tests
+      - name: Проверить подписи, анализ владельца и запреты запуска
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
-      - name: Vet modified packages
+      - name: Vet modified пакеты
         working-directory: services/api
         run: go vet ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
       - name: Полная сборка серверной части

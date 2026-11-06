@@ -59,7 +59,7 @@ latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0030_serverbridge_migration_stabilization_01410'")"
-[[ "$target_sealed" == "true" ]] || { echo "ServerBridge stabilization migration is not sealed: 0030_serverbridge_migration_stabilization_01410" >&2; exit 1; }
+[[ "$target_sealed" == "true" ]] || { echo "Стабилизирующая миграция ServerBridge не опечатана: 0030_serverbridge_migration_stabilization_01410" >&2; exit 1; }
 [[ "$(psql "$DB_DSN" -Atqc "SELECT identity_epoch FROM server_bridge_nodes_v2 WHERE id='stabilization-proxy'")" == 7 ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT status FROM server_bridge_nodes_v2 WHERE id='stabilization-backend'")" == active ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT status FROM server_bridge_topology_edges_v2 WHERE source_node_id='stabilization-proxy' AND target_node_id='stabilization-backend'")" == disabled ]]

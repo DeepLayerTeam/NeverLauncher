@@ -31,15 +31,15 @@ if ! valid_id "$TARGET_ID" || ! valid_version "$MINECRAFT"; then
   echo "[compat] Некорректные метаданные целевой конфигурации" >&2
   exit 2
 fi
-case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[compat] invalid loader" >&2; exit 2 ;; esac
+case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[compat] недопустимый загрузчик" >&2; exit 2 ;; esac
 case "$SCOPE" in client|integration) ;; *) echo "[compat] Недопустимая область сертификации" >&2; exit 2 ;; esac
 case "$MATCHING_SERVER" in true|false) ;; *) echo "[compat] matchingServer должен иметь значение true или false" >&2; exit 2 ;; esac
 if [[ "$MATCHING_SERVER" == "true" && ! ( "$SCOPE" == "client" && "$LOADER" == "vanilla" && "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
   echo "[compat] Для matchingServer требуется область клиента Vanilla в linux/x86_64" >&2
   exit 2
 fi
-case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[compat] unsupported target OS" >&2; exit 2 ;; esac
-case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[compat] unsupported target architecture" >&2; exit 2 ;; esac
+case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[compat] неподдерживаемая целевая ОС" >&2; exit 2 ;; esac
+case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[compat] неподдерживаемая целевая архитектура" >&2; exit 2 ;; esac
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[compat] Необходимо указать основную версию Java" >&2; exit 2; }
 [[ -n "$JAVA_BIN" ]] || { echo "[compat] Целевой исполняемый файл Java недоступен" >&2; exit 2; }
 if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
@@ -85,7 +85,7 @@ set +e
 # Сохраняйте реальный вывод дочернего процесса вне e2e/runtime, который
 # очищает каждый сценарий сертификации. Сырой журнал хешируется в результате
 # и независимо воспроизводится до подписи проверенной приёмки.
-printf "[compat] actual client execution target=%s version=%s\n" "$TARGET_ID" "$PRODUCT_VERSION" > "$EXECUTION_LOG"
+printf "[compat] реальный запуск клиента: платформа=%s версия=%s\n" "$TARGET_ID" "$PRODUCT_VERSION" > "$EXECUTION_LOG"
 if [[ "$SCOPE" == "client" && "$MATCHING_SERVER" == "true" ]]; then
   bash "$ROOT/e2e/scripts/run-vanilla-matching-e2e.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "vanilla" ]]; then
@@ -103,7 +103,7 @@ else
 fi
 rc=${PIPESTATUS[0]}
 set -e
-[[ -f "$EXECUTION_LOG" && $(wc -c < "$EXECUTION_LOG") -le 33554432 ]] || { echo "[compat] execution log exceeded bound" >&2; exit 2; }
+[[ -f "$EXECUTION_LOG" && $(wc -c < "$EXECUTION_LOG") -le 33554432 ]] || { echo "[compat] журнал выполнения превысил допустимый размер" >&2; exit 2; }
 
 python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$MATCHING_SERVER" "$COMMIT" "$RUN_ID" "$RUN_ATTEMPT" "$rc" <<'PY'
 from __future__ import annotations

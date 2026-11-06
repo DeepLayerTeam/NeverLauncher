@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       manifest_url:
-        description: 'HTTPS source index of the exact six publicly downloadable signed final installers'
+        description: 'HTTPS-индекс источников шести окончательных подписанных установщиков для публичной загрузки'
         type: string
         required: true
       manifest_sha256:
-        description: 'Independently approved SHA-256 of source index (NOT copied from the index)'
+        description: 'Независимо утверждённый SHA-256 исходного индекса (НЕ копировать из самого индекса)'
         type: string
         required: true
       manifest_size:
-        description: 'Exact source index byte size from protected release approval'
+        description: 'Точный размер исходного индекса в байтах из защищённого утверждения релиза'
         type: string
         required: true
       project:
-        description: 'Project ID pinned by signed bootstrap configuration'
+        description: 'ID проекта, закреплённый подписанной конфигурацией начальной загрузки'
         type: string
         required: true
 
@@ -31,8 +31,8 @@ concurrency:
 jobs:
   native-package:
     name: "Настоящий подписанный установщик для ${{ matrix.platform }}-${{ matrix.arch }}"
-    # These hosted runners are disposable. This test runs real system installers,
-    # including sudo dpkg and Apple Installer, and MUST NOT run on user machines.
+    # Эти агенты одноразовые. Тест запускает настоящие системные установщики,
+    # включая sudo dpkg и Apple Installer, и НЕ ДОЛЖЕН запускаться на пользовательских машинах.
     strategy:
       fail-fast: false
       matrix:
@@ -88,7 +88,7 @@ jobs:
           path.chmod(0o600)
           PY
           fi
-      - name: Download, authenticate, system-install, provision and verify the final package
+      - name: Скачать, аутентифицировать, системно установить, настроить и проверить окончательный пакет
         shell: bash
         env:
           NATIVE_MANIFEST_URL: ${{ inputs.manifest_url }}
@@ -118,7 +118,7 @@ jobs:
             --windows-thumbprint "$PINNED_WINDOWS_SHA1" \
             --apple-team-id "$PINNED_APPLE_TEAM_ID" \
             --disposable-runner --output "$RUNNER_TEMP/native-package-0522"
-      - name: Upload redacted diagnostic logs and verified receipt or BLOCKED marker
+      - name: Загрузить обезличенные диагностические журналы и проверенную квитанцию либо маркер BLOCKED
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -172,7 +172,7 @@ jobs:
           m.fetch(os.environ['INDEX_URL'],pathlib.Path(os.environ['RUNNER_TEMP'])/'native-final-sources-0522.json',
                   os.environ['INDEX_SHA256'],int(os.environ['INDEX_SIZE']))
           PY
-      - name: Independently replay reports/log hashes, block any omission or substitution
+      - name: Независимо повторить отчёты и хеши журналов; блокировать пропуски и подмены
         shell: bash
         env:
           INDEX_SHA256: ${{ inputs.manifest_sha256 }}

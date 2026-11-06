@@ -85,16 +85,16 @@ jobs:
         continue-on-error: true
         uses: actions/setup-java@v5
         with:
-          # Only for Gradle/tooling; actual-client Java remains the pinned JDK.
-          # Hosted runners primarily pre-cache Temurin, avoiding the ARM64
-          # Microsoft ZIP / PowerShell CLR extraction crash when possible.
+          # Только для Gradle и инструментов; реальный клиент использует закреплённую JDK.
+          # На публичных агентах Temurin обычно кэширован заранее, что по возможности избегает
+          # сбоя извлечения ZIP Microsoft ARM64 внутри PowerShell CLR.
           distribution: temurin
           java-version: '21'
           check-latest: false
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
-      # Hosted Windows ARM64 occasionally crashes inside PowerShell's CLR
-      # while extracting a valid JDK 21 ZIP. Retry the actual setup action;
-      # continue the client certification without a working JDK.
+      # Публичный агент Windows ARM64 иногда завершается аварийно внутри PowerShell CLR
+      # при извлечении корректного ZIP JDK 21. Повторить реальное действие настройки;
+      # продолжить сертификацию клиента даже без работоспособной JDK.
       - name: Повторная установка инструментов Java 21 после временного сбоя распаковки
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
         uses: actions/setup-java@v5
@@ -155,15 +155,15 @@ jobs:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
-          # Operator-provisioned independently SHA-256 pinned matching server ZIPs.
-          # Missing distributions intentionally BLOCK required multiplayer targets.
+          # Подготовленные оператором ZIP соответствующего сервера с независимым закреплённым SHA-256.
+          # Отсутствие дистрибутивов намеренно БЛОКИРУЕТ обязательные цели многопользовательской игры.
           LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
           LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
-          # CI runners have no physical audio device; force OpenAL Soft's
-          # genuine null backend rather than failing to open the default one.
-          # This only affects certification runners, not launcher releases.
+          # У агентов CI нет физического аудиоустройства — принудительно включается настоящий
+          # нулевой Backend OpenAL Soft, а не ошибка открытия устройства по умолчанию.
+          # Это влияет только на агентов сертификации, а не на релизы Launcher.
           ALSOFT_DRIVERS: "null"
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
@@ -298,16 +298,16 @@ jobs:
         continue-on-error: true
         uses: actions/setup-java@v5
         with:
-          # Only for Gradle/tooling; actual-client Java remains the pinned JDK.
-          # Hosted runners primarily pre-cache Temurin, avoiding the ARM64
-          # Microsoft ZIP / PowerShell CLR extraction crash when possible.
+          # Только для Gradle и инструментов; реальный клиент использует закреплённую JDK.
+          # На публичных агентах Temurin обычно кэширован заранее, что по возможности избегает
+          # сбоя извлечения ZIP Microsoft ARM64 внутри PowerShell CLR.
           distribution: temurin
           java-version: '21'
           check-latest: false
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
-      # Hosted Windows ARM64 occasionally crashes inside PowerShell's CLR
-      # while extracting a valid JDK 21 ZIP. Retry the actual setup action;
-      # continue the client certification without a working JDK.
+      # Публичный агент Windows ARM64 иногда завершается аварийно внутри PowerShell CLR
+      # при извлечении корректного ZIP JDK 21. Повторить реальное действие настройки;
+      # продолжить сертификацию клиента даже без работоспособной JDK.
       - name: Повторная установка инструментов Java 21 после временного сбоя распаковки
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
         uses: actions/setup-java@v5
@@ -368,15 +368,15 @@ jobs:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
-          # Operator-provisioned independently SHA-256 pinned matching server ZIPs.
-          # Missing distributions intentionally BLOCK required multiplayer targets.
+          # Подготовленные оператором ZIP соответствующего сервера с независимым закреплённым SHA-256.
+          # Отсутствие дистрибутивов намеренно БЛОКИРУЕТ обязательные цели многопользовательской игры.
           LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
           LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
-          # CI runners have no physical audio device; force OpenAL Soft's
-          # genuine null backend rather than failing to open the default one.
-          # This only affects certification runners, not launcher releases.
+          # У агентов CI нет физического аудиоустройства — принудительно включается настоящий
+          # нулевой Backend OpenAL Soft, а не ошибка открытия устройства по умолчанию.
+          # Это влияет только на агентов сертификации, а не на релизы Launcher.
           ALSOFT_DRIVERS: "null"
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
@@ -473,13 +473,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Download compatibility evidence
+      - name: Скачать совместимость свидетельства
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: compatibility-*
           path: compatibility-results
-      - name: Aggregate and validate matrix
+      - name: объединить и Проверить матрица
         shell: bash
         run: |
           set +e
@@ -501,7 +501,7 @@ jobs:
           fi
           cat compatibility-public/aggregate.log
           exit "$rc"
-      - name: Upload public matrix JSON and Markdown
+      - name: Загрузить публичные матрица JSON и Markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -522,14 +522,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install evidence signature verifier
+      - name: Установить свидетельства подпись верификатор
         run: python3 -m pip install 'cryptography>=42,<47'
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           pattern: compatibility-*
           path: compatibility-results
-      - name: Replay original hashed logs and reject missing required executions
+      - name: Повторно воспроизвести исходные захешированные журналы
         shell: bash
         run: |
           set -uo pipefail
@@ -539,7 +539,7 @@ jobs:
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --gate minecraft \
             --output "$PWD/acceptance-0521/inventory.json"
-      - name: 0.52.11 full required-target independent log replay
+      - name: 0.52.11 полные required-target независимые журнал Повторить
         shell: bash
         run: |
           set -euo pipefail
@@ -548,7 +548,7 @@ jobs:
             --commit "$GITHUB_SHA" --compat-run-id "$GITHUB_RUN_ID" \
             --compat-attempt "$GITHUB_RUN_ATTEMPT" \
             --output "$PWD/acceptance-0521/sweep-05211.json"
-      - name: Upload observed inventory (not independent GA)
+      - name: Загрузить observed inventory (не независимые GA)
         if: always()
         uses: actions/upload-artifact@v4
         with:

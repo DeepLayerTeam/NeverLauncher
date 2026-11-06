@@ -16,7 +16,7 @@ source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[quilt-cert] неверная версия Minecraft" >&2; exit 2; }
-[[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[quilt-cert] invalid Quilt loader selector" >&2; exit 2; }
+[[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[quilt-cert] неверно выбран загрузчик Quilt" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[quilt-cert] неверный основной номер версии Java" >&2; exit 2; }
 certification_platform_validate "quilt-cert" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_BIN"
 
@@ -116,8 +116,8 @@ PROFILE_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],enco
 RESOLVED_LOADER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["loaderVersion"])' "$RUNTIME_DIR/quilt-install.json")"
 MAIN_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8"))["mainClass"])' "$RUNTIME_DIR/quilt-install.json")"
 
-[[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[quilt-cert] incomplete Quilt profile evidence" >&2; exit 1; }
-case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[quilt-cert] mutable loader selector leaked into resolved version" >&2; exit 1 ;; esac
+[[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[quilt-cert] неполные свидетельства профиля Quilt" >&2; exit 1; }
+case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[quilt-cert] изменяемое значение выбора загрузчика попало в определённую версию" >&2; exit 1 ;; esac
 
 certification_live_start quilt "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 

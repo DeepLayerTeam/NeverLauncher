@@ -29,7 +29,7 @@ jobs:
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/launcher-sqlite)"
-      - name: Require supported native filesystem; race + restart tests
+      - name: Потребовать поддерживаемые нативные файловая система; гонки + перезапуск тесты
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
@@ -40,7 +40,7 @@ jobs:
           stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
-      - name: Build production CLI and exercise real durable queue & outbox
+      - name: "Собрать промышленный CLI и испытать устойчивую очередь и outbox"
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
         run: |

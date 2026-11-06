@@ -56,7 +56,7 @@ jobs:
           set -euo pipefail
           test "$(go env GOOS)" = '${{ matrix.os }}'
           test "$(go env GOARCH)" = '${{ matrix.arch }}'
-      - name: Revoke actual running native CLI process and broker access
+      - name: Отозвать доступ действующего нативного процесса CLI и брокера
         shell: bash
         working-directory: services/api
         run: |
@@ -69,7 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           go test -count=1 -timeout 8m ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionsecurity
-  # Kernel isolation with native unprivileged user namespaces/cgroup, signed
-  # macOS helper and Windows AppContainer/Job is separately required by the
-  # existing platform-specific live workflows and release evidence gate.
-  # A test of the revocation *supervisor* is not itself sandbox certification.
+  # Изоляция ядра с нативными непривилегированными пространствами имён пользователей и cgroup,
+  # подписанным помощником macOS и Windows AppContainer/Job отдельно требуется
+  # реальными платформенными процессами и проверкой свидетельств релиза.
+  # Проверка супервизора отзыва сама по себе не является сертификацией песочницы.

@@ -23,13 +23,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Validate scoped brokers, sandbox integration and trust policy
+      - name: Проверить scoped brokers, песочница интеграция и доверие политика
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
       - name: Static analyzer
         working-directory: services/api
         run: go vet ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
-      - name: Build API with production PostgreSQL driver
+      - name: сборка API с промышленные PostgreSQL драйвер
         working-directory: services/api
         run: go build ./cmd/launcher-api
-# Live namespace/cgroup test requires a dedicated preconfigured non-root host.
+# Реальные тесты пространства имён и cgroup требуют выделенного настроенного хоста без прав root.

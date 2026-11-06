@@ -17,7 +17,7 @@ PLAYER_USERNAME="NL_Cert_Client"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[matching-e2e] неверная версия Minecraft" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[matching-e2e] неверный основной номер версии Java" >&2; exit 2; }
-[[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[matching-e2e] matching-server E2E is certified on linux/x86_64" >&2; exit 2; }
+[[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[matching-e2e] сквозные тесты соответствующего сервера сертифицированы на linux/x86_64" >&2; exit 2; }
 [[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[matching-e2e] исполняемый файл целевой Java недоступен: $JAVA_BIN" >&2; exit 2; }
 for cmd in go cargo python3 xvfb-run; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "[matching-e2e] отсутствует необходимая команда: $cmd" >&2; exit 1; }

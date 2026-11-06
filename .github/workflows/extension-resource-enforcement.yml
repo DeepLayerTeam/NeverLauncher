@@ -33,11 +33,11 @@ jobs:
         run: go test -race ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
       - name: Статический анализ
         run: go vet ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
-      - name: API integration compile
+      - name: API интеграция Скомпилировать
         run: go build ./...
-      - name: Windows cross-build
+      - name: Выполнить кросс-сборку Windows
         run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/windowssandbox
-      - name: macOS cross-build arm64 and amd64
+      - name: Выполнить кросс-сборку macOS для ARM64 и AMD64
         run: |
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
@@ -67,5 +67,5 @@ jobs:
           go-version-file: services/api/go.mod
       - run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
       - run: go build ./...
-    # Actual AppContainer child/ACL/Job bypass checks require separately
-    # provisioned E2E runners; compilation is not proof of OS confinement.
+    # Реальные проверки обходов AppContainer, дочерних процессов, ACL и Job требуют
+    # отдельных подготовленных E2E-агентов; компиляция не доказывает изоляцию ОС.

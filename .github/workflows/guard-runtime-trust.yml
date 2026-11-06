@@ -30,16 +30,16 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Guard Runtime Trust policy and HTTP security tests
+      - name: "Проверить политику доверия Guard Runtime и безопасность HTTP"
         working-directory: services/api
         run: go test -count=1 ./internal/httpapi ./internal/trustbaseline ./internal/attestverify
-      - name: Backend full build
+      - name: "Полная сборка Backend"
         working-directory: services/api
         run: go build ./cmd/launcher-api
       - name: Статический анализ Go (vet)
         working-directory: services/api
         run: go vet ./internal/httpapi
-      - name: Race detector and replay/policy revocation tests
+      - name: детектор гонок и Повторить/политика отзыв тесты
         if: matrix.os == 'ubuntu-24.04'
         working-directory: services/api
         run: go test -race -count=1 -run 'TestRuntimePolicy0317|TestGuardProcessID0317|TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810' ./internal/httpapi

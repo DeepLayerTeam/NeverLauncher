@@ -3,8 +3,8 @@ set -euo pipefail
 
 certification_platform_validate() {
   local label="$1" os_name="$2" arch="$3" java_bin="$4"
-  case "$os_name" in linux|windows|macos) ;; *) echo "[$label] unsupported target OS: $os_name" >&2; return 2 ;; esac
-  case "$arch" in x86_64|aarch64) ;; *) echo "[$label] unsupported target architecture: $arch" >&2; return 2 ;; esac
+  case "$os_name" in linux|windows|macos) ;; *) echo "[$label] неподдерживаемая целевая ОС: $os_name" >&2; return 2 ;; esac
+  case "$arch" in x86_64|aarch64) ;; *) echo "[$label] неподдерживаемая целевая архитектура: $arch" >&2; return 2 ;; esac
   [[ -n "$java_bin" && -f "$java_bin" ]] || { echo "[$label] исполняемый файл целевой Java недоступен: $java_bin" >&2; return 2; }
   for cmd in go cargo python3; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "[$label] отсутствует необходимая команда: $cmd" >&2; return 1; }
@@ -25,7 +25,7 @@ certification_prepare_windows_sensor() {
   local sensor_dll="$root/runtime/guard-sensor/target/debug/guard_sensor.dll"
   local destination="$(dirname "$runtime_bin")/guard-sensor.dll"
   cargo build --quiet --manifest-path "$sensor_manifest" --lib
-  [[ -s "$sensor_dll" ]] || { echo "[certification] built Guard Sensor DLL missing: $sensor_dll" >&2; return 1; }
+  [[ -s "$sensor_dll" ]] || { echo "[certification] отсутствует собранная библиотека Guard Sensor DLL: $sensor_dll" >&2; return 1; }
   cp "$sensor_dll" "$destination"
   [[ -s "$destination" ]] || { echo "[certification] не удалось скопировать DLL Guard Sensor" >&2; return 1; }
 }

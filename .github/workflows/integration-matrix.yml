@@ -14,11 +14,11 @@ on:
   workflow_dispatch:
     inputs:
       baselines_url:
-        description: 'HTTPS URL of independently SHA-256-pinned manifest covering all supported prior real installed release archives'
+        description: 'HTTPS-URL манифеста с независимо закреплённым SHA-256 для всех поддерживаемых архивов ранее установленных реальных релизов'
         type: string
         required: true
       baselines_sha256:
-        description: 'Pinned SHA-256 digest of the exact manifest bytes'
+        description: 'Закреплённый SHA-256 точных байтов манифеста'
         type: string
         required: true
 permissions:
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
-      - name: Native SQLite WAL crash, compatibility, recovery and legacy regressions
+      - name: Проверить нативный SQLite WAL, аварийное восстановление и регрессии совместимости со старыми версиями
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/nl0478"; chmod 700 "$RUNNER_TEMP/nl0478"
@@ -75,7 +75,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Run real PostgreSQL migration to SQLRepository and read-back
+      - name: Запустить реальный PostgreSQL миграция SQLRepository и read-back
         working-directory: services/api
         run: |
           set -euo pipefail
@@ -94,17 +94,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Real Backend HTTP API authorization, publication and Admin routing tests
+      - name: реальные Backend HTTP API авторизация, публикация и Admin маршрутизация тесты
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout=15m -run 'TestCanonicalAdminCRUDProductFlow|TestSecurityRealAuthHTTP02912|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable|TestImportedFileAuthLocalLoginAndAtomicRehash0295' -v ./internal/httpapi
-      - name: Admin UI actual production build and interactive component tests
+      - name: Admin интерфейс фактические промышленную сборку и interactive компонент тесты
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm test
           npm run build
-      - name: Desktop component and client update tests against actual implementation
+      - name: Desktop компонент и клиент обновление тесты против фактические implementation
         working-directory: apps/desktop
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: cli/go.mod
-      - name: Verify HTTPS baseline manifest pin and build actual current CLI
+      - name: Проверить HTTPS базовый уровень манифест Закрепить и сборка фактические текущие CLI
         env:
           URL: ${{ inputs.baselines_url }}
           SHA: ${{ inputs.baselines_sha256 }}
@@ -133,7 +133,7 @@ jobs:
           (cd cli && go build -trimpath -ldflags "-X main.version=0.48.0" -o "$RUNNER_TEMP/launcher-0478" ./cmd/launcher)
           sudo chown root:root "$RUNNER_TEMP/launcher-0478"
           sudo chmod 0755 "$RUNNER_TEMP/launcher-0478"
-      - name: Execute installed native CLI upgrade for every old version, with exact-byte user-data verification
+      - name: Выполнить нативное обновление CLI из каждой установленной старой версии с побайтовой проверкой пользовательских данных
         run: |
           set -euo pipefail
           sudo python3 scripts/integration/legacy_matrix_0478.py --manifest "$RUNNER_TEMP/baselines.json" --candidate-cli "$RUNNER_TEMP/launcher-0478" --out "$RUNNER_TEMP/legacy-0478.json"
@@ -161,11 +161,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14'
-      - name: Install live Minecraft / PostgreSQL / GUI prerequisites
+      - name: Установить реальные Minecraft / PostgreSQL / GUI предпосылки
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libasound2t64 jq postgresql-client maven
-      - name: Real signed-release publication, auth, Desktop transactional update, Bridge JVM joins and Minecraft client
+      - name: Проверить реальную публикацию подписанного релиза, авторизацию, транзакционное обновление Desktop, подключения JVM через Bridge и клиент Minecraft
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
           LAUNCHER_E2E_LOADER: vanilla
@@ -202,7 +202,7 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
       - run: sudo apt-get update && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libasound2t64
-      - name: Materialize actual matching Mojang server and client, launch and confirm join
+      - name: Подготовить фактические совпадающие Mojang сервер и клиент, Запустить и Подтвердить join
         env:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.mc }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.java }}
@@ -249,7 +249,7 @@ jobs:
       - run: |
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
-      - name: Login as existing owner, operate Admin UI, publish real signed package and verify rollback
+      - name: Login в качестве существующие владелец, operate Admin интерфейс, Опубликовать реальные подписанный пакет и Проверить откат
         run: |
           set -euo pipefail
           python3 e2e/scripts/owner-cycle-0390-browser.py
@@ -265,7 +265,7 @@ jobs:
     needs: [sqlite-and-faults, postgres-real, backend-admin-desktop, legacy-native-installed, real-full-minecraft, real-matching-minecraft, real-owner-browser]
     runs-on: ubuntu-24.04
     steps:
-      - name: Accept only when every real integration suite succeeded (never accept skipped suites)
+      - name: Принимать результат только при прохождении каждого реального набора тестов; пропуски не считаются успехом
         env:
           SQLITE: ${{ needs.sqlite-and-faults.result }}
           POSTGRES: ${{ needs.postgres-real.result }}

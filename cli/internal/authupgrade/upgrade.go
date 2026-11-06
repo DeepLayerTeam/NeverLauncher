@@ -80,9 +80,9 @@ BEGIN
  END IF;
 END
 $nl$;
--- Stable canonical fields only. A one-way digest of each stored password
--- hash detects accidental resets without exporting the hash. External claims,
--- sessions and access/refresh tokens are never SELECTed by this scan.
+-- Только стабильные канонические поля. Односторонний хеш каждого сохранённого
+-- хеша пароля выявляет случайный сброс без выдачи самого хеша. Внешние claims,
+-- сеансы и токены доступа/обновления никогда не выбираются этим запросом SELECT.
 SELECT row_to_json(v)::text FROM (
  SELECT 'meta'::text kind, 'scan-v1'::text a, ''::text b, ''::text c, ''::text d
  UNION ALL SELECT 'user'::text kind, id::text a, email::text b, coalesce(display_name,'')::text c, jsonb_build_array(role_id, md5(coalesce(password_hash,'')))::text d FROM users

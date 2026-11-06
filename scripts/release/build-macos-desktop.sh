@@ -99,7 +99,7 @@ codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" 
 codesign --verify --deep --strict --verbose=2 "${APP}"
 if [[ "${MODE}" == "production" ]]; then
   for signed in "${MACOS_DIR}/guard" "${MACOS_DIR}/launcher-desktop"; do
-    codesign -dv --verbose=4 "${signed}" 2>&1 | grep -F "TeamIdentifier=${TEAM_ID}" >/dev/null || { echo "signing team mismatch for ${signed}" >&2; exit 1; }
+    codesign -dv --verbose=4 "${signed}" 2>&1 | grep -F "TeamIdentifier=${TEAM_ID}" >/dev/null || { echo "Не совпадает команда подписи для ${signed}" >&2; exit 1; }
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${signed}" >&2; exit 1; }
   done
 fi
@@ -157,4 +157,4 @@ rm -f "${FINAL_ZIP}"
 cp "${TMP_ZIP}" "${FINAL_ZIP}"
 [[ "${MODE}" == production ]] && rm -f "${TMP_ZIP}"
 shasum -a 256 "${FINAL_ZIP}" "${OUT_DIR}/launcher-desktop-macos-universal" "${OUT_DIR}/guard-macos-universal"
-echo "macOS ${MODE} package created: ${FINAL_ZIP}"
+echo "Создан пакет macOS ${MODE}: ${FINAL_ZIP}"

@@ -43,27 +43,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.3'
-      - name: Build and test Java SDK directly from sources
+      - name: сборка и Проверить Java SDK directly из источники
         shell: bash
         run: |
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
           sh sdk/java/http-client/build.sh test
-      - name: Rebuild Maven artifacts from compiled SDK and exercise public ABI
+      - name: пересобрать Maven артефакты из compiled SDK и Проверить на практике публичные ABI
         shell: bash
         run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
-      - name: Verify external consumer and live JVM Host callbacks
+      - name: Проверить внешние потребитель и реальные JVM хост callbacks
         shell: bash
         run: |
           python3 scripts/java/test_developer_e2e_04812.py
           python3 scripts/java/developer_e2e_04812.py --sdk-repo dist/java-sdk/maven --report java-developer-evidence.json
-      - name: Compile same public SDK consumer using Maven
+      - name: Скомпилировать тот же публичные SDK потребитель используя Maven
         shell: bash
         run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml -Dneverlauncher.sdk.version="$(cat VERSION)" package
-      - name: Compile same public SDK consumer using Gradle
+      - name: Скомпилировать тот же публичные SDK потребитель используя Gradle
         shell: bash
         run: gradle --no-daemon -p examples/extensions/java-developer-04812 -PneverLauncherSdkVersion="$(cat VERSION)" classes
-      - name: Cross-platform SDK version validation
+      - name: кроссплатформенный SDK версия проверка
         shell: bash
         run: python3 scripts/version/manage.py check
       - uses: actions/upload-artifact@v4
@@ -82,7 +82,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: sh sdk/java/core/build.sh && sh sdk/java/gravit-compat/build.sh && sh sdk/java/http-client/build.sh
-      - name: Two independent staging directories produce identical published SDK bytes
+      - name: Проверить одинаковые опубликованные байты SDK из двух независимых каталогов staging
         shell: bash
         run: |
           python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output sdk-staging-a

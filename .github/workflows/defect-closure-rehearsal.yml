@@ -12,15 +12,15 @@ on:
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Immutable exact 40-digit candidate commit
+        description: Неизменяемый точный 40-символьный коммит кандидата
         required: true
         type: string
       project:
-        description: Pinned release distribution project slug
+        description: Закреплённый идентификатор проекта распространения релиза
         required: true
         type: string
       source_index_sha256:
-        description: SHA-256 of independently approved six-platform distribution index
+        description: SHA-256 независимо утверждённого индекса дистрибутивов для шести платформ
         required: true
         type: string
 
@@ -71,7 +71,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=42,<47'
-      - name: Seal exact original source and six final installed-package assets
+      - name: Опечатать точные оригинальные исходники и артефакты шести окончательных установленных пакетов
         env:
           APPROVED_COMMIT: ${{ inputs.source_commit }}
           APPROVED_PROJECT: ${{ inputs.project }}
@@ -125,7 +125,7 @@ jobs:
         with:
           name: frozen-candidate-05212-${{ inputs.source_commit }}
           path: ${{ runner.temp }}/freeze-05212
-      - name: Run real regressions and replay originals from all final-byte E2E sources
+      - name: Запустить реальные регрессионные проверки и Повторить originals из все final-byte E2E источники
         env:
           APPROVED_COMMIT: ${{ inputs.source_commit }}
           APPROVED_PROJECT: ${{ inputs.project }}
@@ -189,7 +189,7 @@ jobs:
         with:
           name: signed-rehearsal-05212-${{ inputs.source_commit }}
           path: ${{ runner.temp }}/rehearsal-05212
-      - name: Re-execute regressions and revalidate signed observations against original files
+      - name: Повторить регрессии и проверить подписанные наблюдения по исходным файлам
         env:
           APPROVED_COMMIT: ${{ inputs.source_commit }}
           APPROVED_PROJECT: ${{ inputs.project }}
