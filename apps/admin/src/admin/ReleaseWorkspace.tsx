@@ -577,7 +577,7 @@ export function ReleaseWorkspace({
       setPending(recorded);
       setMonitorId(accepted.id);
       return accepted;
-    }, "Операция поставлена в очередь. Ожидайте исполнения и проверки channel head.");
+    }, "Операция поставлена в очередь. Ожидайте исполнения и проверки текущей версии канала.");
     setPlanned(null);
     setPreview(null);
     setRollbackPreview(null);
@@ -638,7 +638,7 @@ export function ReleaseWorkspace({
       setPending(next);
       setMonitorId(accepted.id);
       return accepted;
-    }, "Исходный durable job найден или принят. Выполнение ещё не подтверждено.");
+    }, "Исходное фоновое задание найдено или принято. Выполнение ещё не подтверждено.");
   }
   useEffect(() => {
     if (!pending || pending.jobId) return;
@@ -677,7 +677,7 @@ export function ReleaseWorkspace({
             .catch(() => undefined);
         }
       } catch (e) {
-        if (live) setError(printable(e) + " · Проверьте durable job и аудит.");
+        if (live) setError(printable(e) + " · Проверьте фоновое задание и журнал аудита.");
       }
     }
     void inspect();
@@ -1539,7 +1539,7 @@ export function ReleaseWorkspace({
           </p>
           <p>
             {check?.message ||
-              "Проверка durable job и channel head ещё не завершена. Не создавайте повторную операцию."}
+              "Проверка фонового задания и текущей версии канала ещё не завершена. Не создавайте повторную операцию."}
           </p>
           {check?.phase === "confirmed" && (
             <p className="success" role="status">

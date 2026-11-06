@@ -203,7 +203,7 @@ class OptionalComponentsGATests(unittest.TestCase):
             path = root / "darwin-arm64" / "components.bin"
             raw = path.read_bytes().replace(b'"passed"', b'"skipped"', 1)
             path.write_bytes(raw)
-            with self.assertRaisesRegex(ValueError, "Несовпадение: «content digest»"):
+            with self.assertRaisesRegex(ValueError, "Контрольная сумма содержимого не совпадает"):
                 verify_all(root, key, COMMIT, version=VERSION)
 
     def test_cross_commit_is_rejected(self):
@@ -220,7 +220,7 @@ class OptionalComponentsGATests(unittest.TestCase):
             original = root / "windows-amd64"
             original.rename(root / "safe-directory")
             original.symlink_to(root / "safe-directory", target_is_directory=True)
-            with self.assertRaisesRegex(ValueError, "symlinked"):
+            with self.assertRaisesRegex(ValueError, "символической ссылкой"):
                 verify_all(root, key, COMMIT, version=VERSION)
 
     def test_duplicate_json_object_fields_rejected(self):

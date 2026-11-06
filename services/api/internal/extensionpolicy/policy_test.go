@@ -36,7 +36,7 @@ func TestSignedPolicy0318NormalizeAndReject(t *testing.T) {
 			p := *base.Sandbox
 			modify(&p)
 			if _, err := Validate(&p); err == nil {
-				t.Fatalf("invalid policy accepted: %+v", p)
+				t.Fatalf("Принята некорректная политика: %+v", p)
 			}
 		})
 	}
@@ -44,10 +44,10 @@ func TestSignedPolicy0318NormalizeAndReject(t *testing.T) {
 func TestSignedPolicy0318FailClosedRuntime(t *testing.T) {
 	if err := LaunchAllowed(signedPolicy0318()); runtime.GOOS == "windows" && windowssandbox.Available() == nil {
 		if err != nil {
-			t.Fatalf("Windows AppContainer preflight refused: %v", err)
+			t.Fatalf("Предварительная проверка Windows AppContainer отклонена: %v", err)
 		}
 	} else if err == nil || !strings.Contains(err.Error(), "sandbox-unavailable") {
-		t.Fatalf("isolated policy accepted without sandbox capability: %v", err)
+		t.Fatalf("Политика изоляции принята без возможности запуска изолированной среды: %v", err)
 	}
 	legacy := signedPolicy0318()
 	legacy.Sandbox = nil
@@ -70,7 +70,7 @@ func TestSignedPolicy0318OwnerReview(t *testing.T) {
 		t.Fatalf("changed=%v err=%v", changed, err)
 	}
 	if err := RequireReview(old, updated, ""); err == nil {
-		t.Fatal("unattended update accepted")
+		t.Fatal("Принято необслуживаемое обновление")
 	}
 	digest, err := ApprovalDigest(updated)
 	if err != nil {
@@ -82,11 +82,11 @@ func TestSignedPolicy0318OwnerReview(t *testing.T) {
 	tampered := updated
 	tampered.Permissions = []string{"project:read", "secrets:read"}
 	if err := RequireReview(old, tampered, digest); err == nil {
-		t.Fatal("digest reused after privilege escalation")
+		t.Fatal("Контрольная сумма повторно использована после повышения привилегий")
 	}
 	changed, err = ChangesRequireApproval(updated, updated)
 	if err != nil || changed {
-		t.Fatal("unchanged policy incorrectly needs review")
+		t.Fatal("Неизменённая политика ошибочно требует проверки")
 	}
 	if err := RequireReview(updated, updated, ""); err != nil {
 		t.Fatal(err)
@@ -96,7 +96,7 @@ func TestSignedPolicy0318OwnerReview(t *testing.T) {
 	narrower.Sandbox = &copyPolicy
 	narrower.Sandbox.FilesystemWrite = nil
 	if err := RequireReview(updated, narrower, ""); err == nil {
-		t.Fatal("silent mode narrowing accepted")
+		t.Fatal("Принято незаметное сужение режима")
 	}
 }
 func TestSignedPolicy0318DigestBoundToExtensionAndVersion(t *testing.T) {
@@ -105,12 +105,12 @@ func TestSignedPolicy0318DigestBoundToExtensionAndVersion(t *testing.T) {
 	a.ID = "other.extension"
 	different, _ := ApprovalDigest(a)
 	if digest == different {
-		t.Fatal("unbound to ID")
+		t.Fatal("Не привязано к идентификатору")
 	}
 	a = signedPolicy0318()
 	a.Version = "1.1.1"
 	different, _ = ApprovalDigest(a)
 	if digest == different {
-		t.Fatal("unbound to version")
+		t.Fatal("Не привязано к версии")
 	}
 }

@@ -61,7 +61,7 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 		return model.ExtensionEvent{}, errors.New("Метаданные события расширения превышают допустимые ограничения")
 	}
 	if in.SchemaVersion < 1 {
-		return model.ExtensionEvent{}, errors.New("extension event schemaVersion: требуется «positive»")
+		return model.ExtensionEvent{}, errors.New("extension event schemaVersion: требуется «положительное значение»")
 	}
 	var payload any
 	if len(in.Payload) == 0 {

@@ -204,7 +204,7 @@ mod imp {
         }
         #[cfg(not(debug_assertions))]
         verify_windows_authenticode_trust(&sensor_path)
-            .map_err(|err| format!("Ошибка: «Guard Sensor Authenticode verification»: {err}"))?;
+            .map_err(|err| format!("Ошибка: «проверка подписи Authenticode датчика Guard»: {err}"))?;
 
         let mut module_guard_policy = policy_for_command(command, &sensor_path)?;
         if let (Some(root),Some(manifest))=(verified_root,signed_manifest) {
@@ -214,7 +214,7 @@ mod imp {
         }
         let endpoint = sensor_endpoint();
         let server = create_secure_pipe_server(&endpoint)
-            .map_err(|err| format!("Ошибка: «Guard Sensor startup pipe creation»: {err}"))?;
+            .map_err(|err| format!("Ошибка: «создание канала запуска датчика Guard»: {err}"))?;
         let mut secret = [0u8; 32];
         OsRng.fill_bytes(&mut secret);
 
@@ -263,27 +263,27 @@ mod imp {
             timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), server.connect())
                 .await
                 .map_err(|_| "Датчик Guard не загрузился до истечения времени запуска JVM".to_string())?
-                .map_err(|err| format!("Ошибка: «Guard Sensor startup pipe connect»: {err}"))?;
+                .map_err(|err| format!("Ошибка: «подключение канала запуска датчика Guard»: {err}"))?;
 
             let mut packet = [0u8; 48];
             timeout(Duration::from_secs(3), server.read_exact(&mut packet))
                 .await
                 .map_err(|_| "Превышено время аутентификации датчика Guard при запуске".to_string())?
-                .map_err(|err| format!("Ошибка: «Guard Sensor startup packet read»: {err}"))?;
+                .map_err(|err| format!("Ошибка: «чтение пакета запуска датчика Guard»: {err}"))?;
 
             if &packet[..8] != SENSOR_MAGIC {
                 packet.zeroize();
-                return Err("Несовпадение: «Guard Sensor startup packet magic»".to_string());
+                return Err("Несовпадение: «сигнатура пакета запуска датчика Guard»".to_string());
             }
             let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("получить длину среза"));
             let pid = u32::from_le_bytes(packet[12..16].try_into().expect("получить длину среза"));
             if protocol != GUARD_SENSOR_PROTOCOL_VERSION || pid != expected_pid {
                 packet.zeroize();
-                return Err("Несовпадение: «Guard Sensor startup packet protocol/PID»".to_string());
+                return Err("Несовпадение: «протокол или PID пакета запуска датчика Guard»".to_string());
             }
 
             let mut mac = HmacSha256::new_from_slice(&self.secret)
-                .map_err(|_| "Ошибка: «Guard Sensor HMAC initialization»".to_string())?;
+                .map_err(|_| "Ошибка: «инициализация HMAC датчика Guard»".to_string())?;
             mac.update(SENSOR_DOMAIN);
             mac.update(&protocol.to_le_bytes());
             mac.update(&pid.to_le_bytes());
@@ -291,7 +291,7 @@ mod imp {
             let authenticated: bool = expected[..].ct_eq(&packet[16..]).into();
             packet.zeroize();
             if !authenticated {
-                return Err("Ошибка: «Guard Sensor startup authentication»".to_string());
+                return Err("Ошибка: «аутентификация запуска датчика Guard»".to_string());
             }
 
             let runtime_policy = self
@@ -308,7 +308,7 @@ mod imp {
                 runtime_policy,
             )
             .await
-            .map_err(|err| format!("Ошибка: «Guard Module Guard arm»: {err}"))?;
+            .map_err(|err| format!("Ошибка: «активация Module Guard»: {err}"))?;
 
             Ok(WindowsSensorSession {
                 protocol_version: protocol,

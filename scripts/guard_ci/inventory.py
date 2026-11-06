@@ -52,7 +52,7 @@ def validate_report(raw: object) -> dict:
         if item["id"] in by_id:
             raise ValueError(f"Обнаружен дубликат: проверка Guard: {item['id']}")
         if item.get("status") not in STATUSES or not isinstance(item.get("detail"), str):
-            raise ValueError(f"Некорректный формат: «Guard check status»: {item['id']}")
+            raise ValueError(f"Некорректный формат: «статус проверки Guard»: {item['id']}")
         by_id[item["id"]] = item
     if missing := REQUIRED - by_id.keys():
         raise ValueError(f"Отсутствуют проверки Guard: {sorted(missing)}")
@@ -60,16 +60,16 @@ def validate_report(raw: object) -> dict:
     for sensor in ("sensor.windows.in-process", "sensor.jvm-awareness", "sensor.continuous"):
         required_status = "BLOCKED" if raw["os"] == "windows" else "UNSUPPORTED"
         if by_id[sensor]["status"] != required_status:
-            raise ValueError(f"«in-process sensor»: запрещено «claim {by_id[sensor]['status']}:» {sensor}")
+            raise ValueError(f"«датчик внутри процесса»: запрещено «заявлять статус {by_id[sensor]['status']} для» {sensor}")
     for loader in ("vanilla", "fabric", "quilt", "forge", "neoforge"):
         key = f"loader.runtime.{loader}"
         if key not in by_id or by_id[key]["status"] != "BLOCKED":
-            raise ValueError(f"«local inventory»: запрещено «certify» {key}")
+            raise ValueError(f"«локальная инвентаризация»: запрещено «подтверждать сертификацию» {key}")
     # Опись никогда не запускает игру. Этот инструмент не может сертифицировать
     # настоящий вход, работу загрузчика или разрешённого Java-агента.
     for item_id in ("minecraft.real-join", "minecraft.authorized-javaagent"):
         if by_id[item_id]["status"] != "BLOCKED":
-            raise ValueError(f"«local inventory»: запрещено «certify» {item_id}")
+            raise ValueError(f"«локальная инвентаризация»: запрещено «подтверждать сертификацию» {item_id}")
     is_blocked = any(c["status"] == "BLOCKED" for c in checks)
     if raw.get("status") != ("BLOCKED" if is_blocked else "PASS"):
         raise ValueError("Итоги инвентаризации не соответствуют фактическим проверкам")
@@ -127,7 +127,7 @@ def merge(args: argparse.Namespace) -> int:
         doc = validate_report(json.loads(Path(filename).read_text(encoding="utf-8")))
         key = (doc["os"], doc["architecture"])
         if key in reports:
-            raise ValueError(f"Обнаружен дубликат: «native target report» {key}")
+            raise ValueError(f"Обнаружен дубликат: «отчёт нативной целевой платформы» {key}")
         reports[key] = doc
     if len({doc["productVersion"] for doc in reports.values()}) > 1:
         raise ValueError("В одной матрице инвентаризации Guard указаны разные версии продукта")

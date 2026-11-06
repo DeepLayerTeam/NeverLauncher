@@ -40,7 +40,7 @@ def current_target() -> tuple[str, str]:
         "aarch64": "aarch64",
     }.get(platform.machine().lower())
     if system is None or arch is None:
-        raise RuntimeError(f"Не поддерживается: «certification target»: {platform.platform()}")
+        raise RuntimeError(f"Не поддерживается: «целевая платформа сертификации»: {platform.platform()}")
     return system, arch
 
 

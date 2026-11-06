@@ -92,7 +92,7 @@ func TestServerBoundGuardPostgres0507(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(before) != 1 || before[0] != correlation {
-		t.Fatalf("missing pre-policy active session must be identified: %v", before)
+		t.Fatalf("Не выявлен активный сеанс, созданный до применения политики: %v", before)
 	}
 	hash := func(x string) string { return strings.Repeat(x, 64) }
 	now := time.Now().UTC()
@@ -109,42 +109,42 @@ func TestServerBoundGuardPostgres0507(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := r.SaveGuardBoundSession0507(ctx, bound); err == nil {
-		t.Fatal("replay may not replace immutable Guard binding")
+		t.Fatal("Повторный запрос не должен заменять неизменяемую привязку Guard")
 	}
 	stored, err := r.GetGuardBoundSession0507(ctx, correlation)
 	if err != nil || stored.PlanSHA256 != bound.PlanSHA256 || stored.DeviceKeyFingerprint != bound.DeviceKeyFingerprint {
-		t.Fatalf("stored binding mismatch: %+v, %v", stored, err)
+		t.Fatalf("Несоответствие сохранённой привязки: %+v, %v", stored, err)
 	}
 	after, err := r.ListUnboundGuardPlayerSessions0507(ctx, node, 32)
 	if err != nil || len(after) != 0 {
-		t.Fatalf("signed binding did not bind active player: %v / %v", after, err)
+		t.Fatalf("Подписанная привязка не связала активного игрока: %v / %v", after, err)
 	}
 	due, err := r.ListDueGuardBoundSessions0507(ctx, node, now, 32)
 	if err != nil || len(due) != 1 {
-		t.Fatalf("active player must be due: %+v / %v", due, err)
+		t.Fatalf("Активный игрок должен подлежать проверке: %+v / %v", due, err)
 	}
 	if due[0].LiveUserID != bound.UserID || due[0].LiveMinecraftSessionID != bound.MinecraftSessionID ||
 		due[0].LiveTrustedDeviceID != bound.TrustedDeviceID || due[0].LiveBindingEpoch != 3 {
-		t.Fatalf("live player authority mismatch: %+v", due[0])
+		t.Fatalf("Несоответствие прав активного игрока: %+v", due[0])
 	}
 	if err := r.MarkGuardBoundSessionChecked0507(ctx, correlation, now); err != nil {
 		t.Fatal(err)
 	}
 	due, err = r.ListDueGuardBoundSessions0507(ctx, node, now.Add(2*time.Second), 32)
 	if err != nil || len(due) != 0 {
-		t.Fatalf("recheck pacing failed: %v / %v", due, err)
+		t.Fatalf("Нарушен интервал повторной проверки: %v / %v", due, err)
 	}
 	due, err = r.ListDueGuardBoundSessions0507(ctx, node, now.Add(11*time.Second), 32)
 	if err != nil || len(due) != 1 {
-		t.Fatalf("overdue session must be rechecked: %v / %v", due, err)
+		t.Fatalf("Просроченный сеанс должен быть перепроверен: %v / %v", due, err)
 	}
 	revoked, err := r.InvalidateGuardBoundSession0507(ctx, correlation, "guard_build_revoked", now)
 	if err != nil || !revoked {
-		t.Fatalf("Guard revocation must invalidate player: %v / %v", revoked, err)
+		t.Fatalf("Отзыв Guard должен аннулировать доступ игрока: %v / %v", revoked, err)
 	}
 	revoked, err = r.InvalidateGuardBoundSession0507(ctx, correlation, "repeat", now)
 	if err != nil || revoked {
-		t.Fatalf("Guard revocation must be idempotent: %v / %v", revoked, err)
+		t.Fatalf("Отзыв Guard должен быть идемпотентным: %v / %v", revoked, err)
 	}
 	var status, reason string
 	if err := r.db.QueryRowContext(ctx, `SELECT status,invalidated_reason FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1`, correlation).Scan(&status, &reason); err != nil {
@@ -158,6 +158,6 @@ func TestServerBoundGuardPostgres0507(t *testing.T) {
 		t.Fatal(err)
 	}
 	if kicked != 1 {
-		t.Fatalf("expected exactly one correlation-bound kick command, got %d", kicked)
+		t.Fatalf("Ожидалась ровно одна команда отключения с привязкой к корреляции, получено %d", kicked)
 	}
 }

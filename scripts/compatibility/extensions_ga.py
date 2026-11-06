@@ -40,7 +40,7 @@ def validate_targets(path: Path):
         or len(ids) != len(set(ids))
         or not checks
     ):
-        raise SystemExit("Некорректное значение: «Extensions GA target definition»")
+        raise SystemExit("Некорректное значение: «описание целевых платформ GA расширений»")
     if {r.get("os") for r in rows if r.get("required")} != {
         "linux",
         "windows",
@@ -56,7 +56,7 @@ def validate_targets(path: Path):
     if any(contract.get(k) != v for k, v in expected.items()) or contract.get(
         "legacyApiAliases"
     ) != ["3.7"]:
-        raise SystemExit("Несовпадение: «Extensions GA frozen contract»")
+        raise SystemExit("Несовпадение: «зафиксированный контракт GA расширений»")
     if semver(current_version()) < semver(BASELINE_VERSION):
         raise SystemExit(
             f"Для сертификации расширений GA требуется VERSION >= {BASELINE_VERSION}"

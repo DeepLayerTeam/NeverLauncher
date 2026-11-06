@@ -15,17 +15,17 @@ func TestFileAuthUnsupportedVerifierNeedsManualReset0444(t *testing.T) {
 	})
 	got, err := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, "")
 	if err != nil || len(got) != 1 || got[0].State != "manual_reset" || got[0].PasswordHash != "" {
-		t.Fatalf("manual-reset extraction: %+v %v", got, err)
+		t.Fatalf("Извлечение с ручным сбросом: %+v %v", got, err)
 	}
 	if got[0].UUID != "11111111-2222-4333-8444-555555555555" {
-		t.Fatal("identity was not preserved")
+		t.Fatal("Идентификатор не сохранился")
 	}
 	b, err := json.Marshal(got)
 	if err != nil || bytes.Contains(b, []byte(strings.Repeat("a", 64))) {
-		t.Fatal("verifier leaked into preview")
+		t.Fatal("Проверочный секрет раскрыт в предварительном просмотре")
 	}
 	if _, err = Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, "unsafe-hash"); err == nil {
-		t.Fatal("unsupported explicitly requested format accepted")
+		t.Fatal("Принят явно указанный неподдерживаемый формат")
 	}
 }
 
@@ -35,7 +35,7 @@ func TestFileAuthMissingVerifierRequiresReset0444(t *testing.T) {
 	})
 	got, err := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, "sha256-hex")
 	if err != nil || len(got) != 1 || got[0].State != "manual_reset" || got[0].PasswordHash != "" || !strings.Contains(got[0].Reason, "missing") {
-		t.Fatalf("missing verifier: %+v %v", got, err)
+		t.Fatalf("Отсутствует проверочный секрет: %+v %v", got, err)
 	}
 }
 
@@ -44,14 +44,14 @@ func TestFileAuthMalformedVerifierRefused0444(t *testing.T) {
 		"modules-config/FileAuthSystem/Database.json": `{"11111111-2222-4333-8444-555555555555":{"username":"Player335","password":"not-a-sha256"}}`,
 	})
 	if _, err := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, "sha256-hex"); err == nil {
-		t.Fatal("claimed SHA256 verifier is malformed")
+		t.Fatal("Заявленный проверочный SHA-256 имеет неверный формат")
 	}
 }
 
 func TestFileAuthCanonicalUUIDDuplicateRefused0444(t *testing.T) {
 	_, err := parseFileAuthCredentials([]byte(`{"11111111-2222-4333-8444-555555555555":{"password":"a"},"11111111222243338444555555555555":{"password":"b"}}`), "p", "", nil)
 	if err == nil {
-		t.Fatal("duplicate UUID representations accepted")
+		t.Fatal("Приняты повторяющиеся представления UUID")
 	}
 }
 
@@ -60,7 +60,7 @@ func TestFileAuthCanonicalUUIDDuplicateRefused0444(t *testing.T) {
 // путь ZIP → независимо хешированные идентичности MIG04 → проверка учётных данных.
 func TestLargeFileAuthBeyondLegacyImporterLimit0444(t *testing.T) {
 	if testing.Short() {
-		t.Skip("large real-source extraction")
+		t.Skip("Извлечение большого реального источника")
 	}
 	var data strings.Builder
 	data.Grow(19 << 20)
@@ -73,18 +73,18 @@ func TestLargeFileAuthBeyondLegacyImporterLimit0444(t *testing.T) {
 	}
 	data.WriteByte('}')
 	if data.Len() <= 16<<20 || data.Len() > 64<<20 {
-		t.Fatalf("incorrect file size for regression test: %d", data.Len())
+		t.Fatalf("Неверный размер файла для регрессионного теста: %d", data.Len())
 	}
 	src, snapshot := sourceFixture335(t, map[string]string{
 		"modules-config/FileAuthSystem/Database.json": data.String(),
 	})
 	got, err := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, "sha256-hex")
 	if err != nil || len(got) != 125000 {
-		t.Fatalf("large FileAuth source: %d accounts, error %v", len(got), err)
+		t.Fatalf("Большой источник FileAuth: %d учётных записей, ошибка %v", len(got), err)
 	}
 	for _, row := range []Credential{got[0], got[len(got)-1]} {
 		if row.State != "importable" || row.PasswordHash == "" {
-			t.Fatal("large fileauth dropped a valid verifier")
+			t.Fatal("Большой источник FileAuth потерял корректный проверочный секрет")
 		}
 	}
 }

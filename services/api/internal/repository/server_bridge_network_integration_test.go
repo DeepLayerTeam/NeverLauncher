@@ -22,7 +22,7 @@ func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 	defer cancel()
 	r, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("expected PostgreSQL")
+		t.Fatal("Ожидался PostgreSQL")
 	}
 	defer r.db.Close()
 	if _, err := r.ApplyMigrations(ctx); err != nil {
@@ -54,22 +54,22 @@ func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 	}
 	routes, err := r.ListServerBridgeAllowedBackends(ctx, source, now)
 	if err != nil || len(routes) != 1 || routes[0].NodeID != target {
-		t.Fatalf("initial route: %+v %v", routes, err)
+		t.Fatalf("Начальный маршрут: %+v %v", routes, err)
 	}
 	zero := 0
 	rev, err := r.SetServerBridgeNetworkCapacity(ctx, target, project, runtime, 1, 0, &zero, "integration-test", now)
 	if err != nil || rev != 1 {
-		t.Fatalf("deny policy: rev=%d err=%v", rev, err)
+		t.Fatalf("Политика запрета: rev=%d err=%v", rev, err)
 	}
 	if _, err := r.SetServerBridgeNetworkCapacity(ctx, target, project, runtime, 1, 0, &zero, "stale", now); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale optimistic policy accepted: %v", err)
+		t.Fatalf("Принята устаревшая оптимистическая политика: %v", err)
 	}
 	if err := r.EnsureServerBridgeNodeRoutable(ctx, target, 1, runtime, now); !errors.Is(err, ErrConflict) {
-		t.Fatalf("closed target routable: %v", err)
+		t.Fatalf("Закрытый целевой узел доступен для маршрутизации: %v", err)
 	}
 	routes, err = r.ListServerBridgeAllowedBackends(ctx, source, now)
 	if err != nil || len(routes) != 0 {
-		t.Fatalf("closed target selected: %+v %v", routes, err)
+		t.Fatalf("Выбран закрытый целевой узел: %+v %v", routes, err)
 	}
 	states, err := r.ListServerBridgeNetworkStates(ctx, project, now)
 	if err != nil {
@@ -106,13 +106,13 @@ func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 	five := 5
 	rev, err = r.SetServerBridgeNetworkCapacity(ctx, target, project, runtime, 1, 1, &five, "integration-test", now)
 	if err != nil || rev != 2 {
-		t.Fatalf("restore policy: rev=%d err=%v", rev, err)
+		t.Fatalf("Восстановление политики: rev=%d err=%v", rev, err)
 	}
 	if err := r.EnsureServerBridgeNodeRoutable(ctx, target, 1, runtime, now); err != nil {
-		t.Fatalf("restored target not routable: %v", err)
+		t.Fatalf("Восстановленный целевой узел недоступен для маршрутизации: %v", err)
 	}
 	routes, err = r.ListServerBridgeAllowedBackends(ctx, source, now)
 	if err != nil || len(routes) != 1 || routes[0].CapacityMax != 5 {
-		t.Fatalf("wrong effective cap: %+v %v", routes, err)
+		t.Fatalf("Неверный действующий лимит: %+v %v", routes, err)
 	}
 }

@@ -41,7 +41,7 @@ func (r *SQLRepository) CreateMigration0331(ctx context.Context, projectID, sour
 		return mw.Run{}, err
 	}
 	if sourceKind != "gravit" || len(key) < 8 || len(key) > 128 {
-		return mw.Run{}, errors.New("Некорректное значение: «migration source or idempotency key»")
+		return mw.Run{}, errors.New("Некорректное значение: «источник миграции или ключ идемпотентности»")
 	}
 	id, err := migrationID0331()
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *SQLRepository) ClaimMigration0331(ctx context.Context, id, owner string
 		return mw.Lease{}, err
 	}
 	if owner == "" || ttl < time.Second || ttl > 2*time.Minute {
-		return mw.Lease{}, errors.New("Некорректное значение: «lease parameters»")
+		return mw.Lease{}, errors.New("Некорректное значение: «параметры аренды»")
 	}
 	v, err := scanMigration0331(r.db.QueryRowContext(ctx, `
  UPDATE migration_runs_0331 SET lease_owner=$2,lease_until=now()+($3::bigint * interval '1 millisecond'),
@@ -130,7 +130,7 @@ func nextStep0331(step string) (string, string, error) {
 	case "target_inventory":
 		return "source_assessment", "prepared", nil
 	}
-	return "", "", errors.New("Не поддерживается: «migration step»")
+	return "", "", errors.New("Не поддерживается: «шаг миграции»")
 }
 func (r *SQLRepository) CheckpointMigration0331(ctx context.Context, lease mw.Lease, step string, payload json.RawMessage) (mw.Run, error) {
 	if err := r.check(); err != nil {
@@ -258,7 +258,7 @@ func (r *SQLRepository) MigrationEvents0331(ctx context.Context, id string, afte
 		return nil, err
 	}
 	if limit < 1 || limit > 200 {
-		return nil, errors.New("Некорректное значение: «event limit»")
+		return nil, errors.New("Некорректное значение: «лимит событий»")
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT seq,kind,step,revision,detail,created_at FROM migration_events_0331 WHERE run_id=$1 AND seq>$2 ORDER BY seq LIMIT $3`, id, after, limit)
 	if err != nil {

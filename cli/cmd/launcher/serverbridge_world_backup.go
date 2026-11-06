@@ -82,7 +82,7 @@ func worldBackupHandle02810(args []string) error {
 		return worldBackupReleaseCohortHold0518(root, holdID)
 	}
 	if action != "create" && action != "verify" && action != "restore" {
-		return fmt.Errorf("Неизвестное значение: «world-backup operation» %q", action)
+		return fmt.Errorf("Неизвестное значение: «операция резервного копирования мира» %q", action)
 	}
 	if err = worldBackupPrivateDir02810(dir); err != nil {
 		return err
@@ -339,7 +339,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 				return errors.New("Блокировка супервизора Host существует без Runtime: резервное копирование небезопасно")
 			}
 		} else if !errors.Is(lockErr, os.ErrNotExist) {
-			return fmt.Errorf("Не удалось проверить «Host supervisor lock:» %w", lockErr)
+			return fmt.Errorf("Не удалось проверить «блокировка Host Supervisor:» %w", lockErr)
 		}
 		return nil
 	}

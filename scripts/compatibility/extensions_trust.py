@@ -25,7 +25,7 @@ def validate_targets(path: Path):
         or len(ids) != len(set(ids))
         or not checks
     ):
-        raise SystemExit("Некорректное значение: «Extensions trust/recovery target definition»")
+        raise SystemExit("Некорректное значение: «описание целевых платформ доверия и восстановления расширений»")
     required = {r.get("os") for r in rows if r.get("required")}
     if required != {"linux", "windows", "macos"}:
         raise SystemExit(

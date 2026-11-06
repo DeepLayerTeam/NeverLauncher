@@ -17,7 +17,7 @@ import (
 func TestStoragePathsAndDigest0474(t *testing.T) {
 	for _, path := range []string{"../escape", "/absolute", "x/../escape", "x\\windows", ".", "x//y"} {
 		if _, err := filePath0474("p", "v", path); err == nil {
-			t.Fatalf("accepted unsafe %q", path)
+			t.Fatalf("Принято небезопасное значение %q", path)
 		}
 	}
 	if _, err := filePath0474("p", "v", "mods/a.jar"); err != nil {
@@ -55,12 +55,12 @@ func TestAtomicVerifiedLocalFile0474(t *testing.T) {
 		t.Fatalf("readback: %v %v", exists, err)
 	}
 	if err := atomicLocalSave0474(ctx, dest, obj, bytes.NewReader(raw)); err == nil {
-		t.Fatal("overwrote existing object")
+		t.Fatal("Перезаписан существующий объект")
 	}
 	corrupted := obj
 	corrupted.hash = strings.Repeat("0", 64)
 	if exists, err = verifyObject0474(ctx, dest, corrupted); !exists || err == nil {
-		t.Fatal("corrupt hash accepted")
+		t.Fatal("Принята повреждённая контрольная сумма")
 	}
 	outside := filepath.Join(dir, "external.bin")
 	if err = os.WriteFile(outside, raw, 0600); err != nil {
@@ -70,7 +70,7 @@ func TestAtomicVerifiedLocalFile0474(t *testing.T) {
 		symlink := obj
 		symlink.path = "a/linked.jar"
 		if e := safeLocalObject0474(source, symlink); e == nil {
-			t.Fatal("followed source symlink")
+			t.Fatal("Выполнен переход по символической ссылке источника")
 		}
 	} else if !errors.Is(err, os.ErrPermission) {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestStateConversionValidation0474(t *testing.T) {
 	}
 	row["payload"] = `{"a":2}`
 	if _, err := digestJSON0474(row, "payload", "payload_digest"); err == nil {
-		t.Fatal("digest corruption accepted")
+		t.Fatal("Принято повреждение контрольной суммы")
 	}
 	names := map[string]bool{}
 	for _, r := range stateRules0474() {
@@ -95,7 +95,7 @@ func TestStateConversionValidation0474(t *testing.T) {
 	}
 	for _, name := range []string{"auth_sessions", "mfa_totp", "durable_jobs", "durable_outbox", "bridge_nonces"} {
 		if !names[name] {
-			t.Fatal("missing state importer", name)
+			t.Fatal("Отсутствует средство импорта состояния", name)
 		}
 	}
 }

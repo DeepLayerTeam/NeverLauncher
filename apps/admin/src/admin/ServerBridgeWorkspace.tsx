@@ -449,7 +449,7 @@ export function ServerBridgeWorkspace({
       const request = parseBridgeEnrollment(enrollmentJSON, projectId);
       if (nodes.some((item) => item.id === request.id))
         throw new Error(
-          "Узел уже зарегистрирован. Ротация идентичности выполняется отдельно с phishing-resistant MFA.",
+          "Узел уже зарегистрирован. Ротация идентичности выполняется отдельно с многофакторной аутентификацией, устойчивой к фишингу.",
         );
       if (
         !window.confirm(
@@ -744,7 +744,7 @@ export function ServerBridgeWorkspace({
                 n.telemetry?.playersOnline != null &&
                 n.telemetry?.playersMax != null
                   ? `${formatMetric(n.telemetry.playersOnline)} / ${formatMetric(n.telemetry.playersMax)}`
-                  : "неизвестно (telemetry stale)"}
+                  : "неизвестно (устаревшая телеметрия)"}
               </span>
               <small>
                 Protocol {n.protocolVersion || "unknown"} ·{" "}

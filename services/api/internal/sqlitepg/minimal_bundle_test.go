@@ -121,7 +121,7 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 		t.Fatalf("Небезопасный результат переноса: %+v", importResult)
 	}
 	if _, err = ImportMinimalBundle0377(ctx, input, dsn); err == nil {
-		t.Fatal("import overwrote immutable transfer")
+		t.Fatal("Импорт перезаписал неизменяемую передачу")
 	}
 	restored := filepath.Join(base, "restored-bundle")
 	exportResult, err := ExportMinimalBundle0377(ctx, dsn, restored)
@@ -129,10 +129,10 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 		t.Fatal(err)
 	}
 	if exportResult != importResult {
-		t.Fatalf("manifest/bytes changed between imports: %+v %+v", importResult, exportResult)
+		t.Fatalf("Манифест или содержимое изменились между импортами: %+v %+v", importResult, exportResult)
 	}
 	if _, _, err = verifyMinimalBundle0377(ctx, restored); err != nil {
-		t.Fatalf("reverse transfer corrupt: %v", err)
+		t.Fatalf("Обратная передача повреждена: %v", err)
 	}
 	for _, name := range []string{"manifest.json", "payload/config/backend.env", "payload/db/http.sqlite", "payload/db/coordinator.sqlite", "payload/storage/client.bin"} {
 		a, err := os.ReadFile(filepath.Join(input, name))
@@ -144,11 +144,11 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(a, b) {
-			t.Fatalf("roundtrip changed %s", name)
+			t.Fatalf("Данные изменились после обратимого преобразования: %s", name)
 		}
 	}
 	if _, err = ExportMinimalBundle0377(ctx, dsn, restored); err == nil {
-		t.Fatal("existing destination overwritten")
+		t.Fatal("Существующий целевой объект перезаписан")
 	}
 	pg, err = pgx.Connect(ctx, dsn)
 	if err != nil {
@@ -156,10 +156,10 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 	}
 	defer pg.Close(ctx)
 	if _, err = pg.Exec(ctx, "TRUNCATE "+minimalRef0377("chunks")); err == nil {
-		t.Fatal("immutable project files could be truncated")
+		t.Fatal("Неизменяемые файлы проекта допускают усечение")
 	}
 	if _, err = pg.Exec(ctx, "UPDATE "+minimalRef0377("files")+" SET bytes=0"); err == nil {
-		t.Fatal("immutable project manifest could be changed")
+		t.Fatal("Неизменяемый манифест проекта допускает изменение")
 	}
 	// Подмена источника должна отклоняться без изменения зафиксированной копии.
 	f := filepath.Join(input, "payload/storage/client.bin")
@@ -174,11 +174,11 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 func TestMinimalDigests0377(t *testing.T) {
 	h := sha256.Sum256([]byte("abc"))
 	if len(hex.EncodeToString(h[:])) != 64 {
-		t.Fatal("invalid SHA-256 length")
+		t.Fatal("Неверная длина SHA-256")
 	}
 	for _, s := range []string{"../escape", "/absolute", "a//b", ".", "a/./b", "a/../b", "a\\b", ""} {
 		if legalPath0377(s) {
-			t.Fatalf("accepted traversal %q", s)
+			t.Fatalf("Допущен выход за пределы каталога: %q", s)
 		}
 	}
 }

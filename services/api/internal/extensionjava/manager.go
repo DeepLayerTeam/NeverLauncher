@@ -223,7 +223,7 @@ func ProbeRuntime(ctx context.Context, javaBinary string, requiredFeature int) (
 		}
 	} else {
 		if !filepath.IsAbs(javaBinary) {
-			return RuntimeInfo{}, errors.New("Для настроенный исполняемый файл Java требуется: «absolute»")
+			return RuntimeInfo{}, errors.New("Для настроенный исполняемый файл Java требуется: «абсолютный путь»")
 		}
 		st, err := os.Lstat(javaBinary)
 		if err != nil {

@@ -358,7 +358,7 @@ export function RegistryWorkspace({
 
   function lifecycleScopePayload() {
     if (extensionScope === "project" && !extensionScopeId.trim())
-      throw new Error("Для project scope укажите Project ID.");
+      throw new Error("Для области действия проекта укажите идентификатор проекта.");
     return {
       scope: extensionScope,
       scopeId: extensionScope === "project" ? extensionScopeId.trim() : "",

@@ -42,10 +42,10 @@ export function GuardPolicyOperations05011({canOperate}:{canOperate:boolean}){
  return <section className="subcard" aria-label="Операции с политиками Guard 0.50.11">
   <h3>Guard · подписанные политики и восстановление</h3>
   <p>Проверка подписи выполняется в браузере по внешнему закреплённому публичному ключу. Приватный ключ не загружается. Admin готовит изменения и проверяет результат; применение на защищённом клиенте выполняет CLI.</p>
-  <label className="field">Ed25519 public key (64 hex из внешнего доверенного источника)<input spellCheck={false} autoComplete="off" value={publicKey} onChange={e=>changeKey(e.target.value.trim())}/></label>
+  <label className="field">Публичный ключ Ed25519 (64 шестнадцатеричных символа из внешнего доверенного источника)<input spellCheck={false} autoComplete="off" value={publicKey} onChange={e=>changeKey(e.target.value.trim())}/></label>
   <div className="formGrid">
    <label className="field">Текущая подписанная политика<input type="file" accept=".json,application/json" onChange={e=>chooseEnvelope(e.target.files?.[0],'current').catch(err=>setError(String(err)))}/></label>
-   <label className="field">Историческая подписанная политика для rollback<input type="file" accept=".json,application/json" disabled={!current} onChange={e=>chooseEnvelope(e.target.files?.[0],'history').catch(err=>setError(String(err)))}/></label>
+   <label className="field">Предыдущая подписанная политика для отката<input type="file" accept=".json,application/json" disabled={!current} onChange={e=>chooseEnvelope(e.target.files?.[0],'history').catch(err=>setError(String(err)))}/></label>
   </div>
   {current&&current.expiresAt<=Math.floor(Date.now()/1000)&&<p role="alert">Срок политики истёк: её нельзя использовать для запуска, но допустимо подписать новую более высокую эпоху.</p>}
   {current&&<p>Проверена подпись эпохи <strong>{current.epoch}</strong>; проект {current.projectId}; Minecraft {current.minecraft}; loader {current.loader}; до {new Date(current.expiresAt*1000).toLocaleString()}; модулей {current.artifacts.length}; отозванных хешей {current.revokedDigests.length}.</p>}
@@ -57,7 +57,7 @@ export function GuardPolicyOperations05011({canOperate}:{canOperate:boolean}){
    <button disabled={!old||!current||!canOperate} onClick={()=>{try{draft(true)}catch(e){setError(String(e))}}}>Подготовить безопасный rollback</button>
   </div>
   {candidate&&<p>Кандидат epoch {candidate.epoch} требует новой внешней подписи Ed25519. После подписания загрузите готовый envelope для проверки:</p>}
-  <label className="field">Новый подписанный envelope<input type="file" accept=".json,application/json" disabled={!current} onChange={e=>chooseEnvelope(e.target.files?.[0],'candidate').catch(err=>setError(String(err)))}/></label>
+  <label className="field">Новый подписанный конверт<input type="file" accept=".json,application/json" disabled={!current} onChange={e=>chooseEnvelope(e.target.files?.[0],'candidate').catch(err=>setError(String(err)))}/></label>
   {verifiedSigned&&<div className="buttonRow"><button onClick={()=>download05011('guard-policy-verified.signed.json',verifiedSigned)}>Сохранить проверенный подписанный пакет для командной строки</button></div>}
   <h4>Диагностика установленной политики защиты</h4>
   <p>Загрузите отчёт команды <code>launcher runtime client-factory guard-policy-diagnose</code>; он не отправляется на сервер.</p>

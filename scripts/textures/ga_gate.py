@@ -106,7 +106,7 @@ def read_file(
         or "\\" in name
         or Path(name).name != name
     ):
-        raise GateError("Небезопасное значение: «evidence filename»")
+        raise GateError("Небезопасное значение: «имя файла свидетельства»")
     if base.is_symlink():
         raise GateError("Каталог подтверждений является символической ссылкой")
     path = base / name
@@ -128,7 +128,7 @@ def read_file(
     if expected is not None and (
         not SHA.fullmatch(expected) or hasher.hexdigest() != expected
     ):
-        raise GateError(f"Несовпадение: «evidence SHA-256»: {path}")
+        raise GateError(f"Несовпадение: «контрольная сумма SHA-256 свидетельства»: {path}")
     return bytes(output)
 
 

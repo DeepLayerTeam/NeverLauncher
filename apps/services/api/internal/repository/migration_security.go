@@ -89,7 +89,7 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 		return report, err
 	}
 	if runID == "" || len(kid) > 96 || len(kid) < 1 || len(manifestPublicSHA) != 64 {
-		return report, errors.New("Некорректное значение: «signer identification»")
+		return report, errors.New("Некорректное значение: «идентификатор подписанта»")
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {

@@ -65,10 +65,10 @@ func TestGravitModulesUnknownCriticalBlocking0338(t *testing.T) {
 		t.Fatal(e)
 	}
 	if report.Ready || report.CutoverAllowed || len(report.Modules) != 1 || !report.Modules[0].AuthHook || len(report.Blockers) != 1 {
-		t.Fatalf("unsafe source accepted: %+v", report)
+		t.Fatalf("Принят небезопасный исходный материал: %+v", report)
 	}
 	if len(report.Wrappers) != 1 || report.Wrappers[0].ServerName != "lobby" || !report.Wrappers[0].LegacyTokenPresent {
-		t.Fatalf("wrong wrapper migration %+v", report.Wrappers)
+		t.Fatalf("Некорректная миграция обёртки: %+v", report.Wrappers)
 	}
 	raw, e := json.Marshal(report)
 	if e != nil {
@@ -85,7 +85,7 @@ func TestGravitModulesUnknownCriticalBlocking0338(t *testing.T) {
 	}
 	other, _ := json.Marshal(second)
 	if !bytes.Equal(raw, other) {
-		t.Fatal("non deterministic report")
+		t.Fatal("Недетерминированный отчёт")
 	}
 }
 func TestGravitModulesWrapperInline0338(t *testing.T) {
@@ -99,7 +99,7 @@ func TestGravitModulesWrapperInline0338(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(report.Wrappers) != 1 || report.Wrappers[0].Mode != "inline" || !report.Ready || report.CutoverAllowed {
-		t.Fatalf("bad inline wrapper result %+v", report)
+		t.Fatalf("Некорректный результат встроенной обёртки: %+v", report)
 	}
 }
 func TestGravitModulesTamperRejected0338(t *testing.T) {
@@ -107,7 +107,7 @@ func TestGravitModulesTamperRejected0338(t *testing.T) {
 	f, snapshot := inspectFixture0338(t, src)
 	snapshot.Files[0].SHA256 = strings.Repeat("0", 64)
 	if _, e := Analyze(context.Background(), f, int64(len(src)), snapshot); e == nil {
-		t.Fatal("altered inventory digest accepted")
+		t.Fatal("Принята изменённая контрольная сумма инвентаризации")
 	}
 	f, snapshot = inspectFixture0338(t, src)
 	result, e := Analyze(context.Background(), f, int64(len(src)), snapshot)
@@ -115,7 +115,7 @@ func TestGravitModulesTamperRejected0338(t *testing.T) {
 		t.Fatal(e)
 	}
 	if result.Ready || len(result.Blockers) != 1 {
-		t.Fatalf("invalid jar passed: %+v", result)
+		t.Fatalf("Принят некорректный JAR: %+v", result)
 	}
 }
 func TestGravitModulesUnsafeNestedJar0338(t *testing.T) {
@@ -127,7 +127,7 @@ func TestGravitModulesUnsafeNestedJar0338(t *testing.T) {
 		t.Fatal(e)
 	}
 	if result.Ready || len(result.Blockers) != 1 {
-		t.Fatalf("malicious jar not blocked %+v", result)
+		t.Fatalf("Вредоносный JAR не заблокирован: %+v", result)
 	}
 }
 
@@ -140,7 +140,7 @@ func TestLegacyServerWrapperJAR0338(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(result.Modules) != 1 || result.Modules[0].Implementation != "built_in_equivalent" || result.Modules[0].Status != "manual" || !result.Ready || result.CutoverAllowed {
-		t.Fatalf("legacy wrapper misclassified %+v", result)
+		t.Fatalf("Неверно классифицирована устаревшая обёртка: %+v", result)
 	}
 }
 
@@ -158,7 +158,7 @@ func TestModuleConfigsRequireArtifactAndDoNotLeak0446(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.Ready || len(report.Blockers) != 3 || len(report.Modules) != 4 {
-		t.Fatalf("orphan config not blocked: %+v", report)
+		t.Fatalf("Конфигурация без владельца не заблокирована: %+v", report)
 	}
 	var readyConfig bool
 	for _, m := range report.Modules {
@@ -167,7 +167,7 @@ func TestModuleConfigsRequireArtifactAndDoNotLeak0446(t *testing.T) {
 		}
 	}
 	if !readyConfig {
-		t.Fatalf("matching config not classified for manual port: %+v", report.Modules)
+		t.Fatalf("Подходящая конфигурация не помечена для ручного переноса: %+v", report.Modules)
 	}
 	encoded, err := json.Marshal(report)
 	if err != nil {
@@ -175,14 +175,14 @@ func TestModuleConfigsRequireArtifactAndDoNotLeak0446(t *testing.T) {
 	}
 	for _, secret := range []string{"HIDDEN_BRIDGE_SECRET", "HIDDEN_ORPHAN_SECRET"} {
 		if bytes.Contains(encoded, []byte(secret)) {
-			t.Fatalf("module secret leaked in report")
+			t.Fatalf("Секрет модуля раскрыт в отчёте")
 		}
 	}
 }
 func TestModuleConfigAmbiguity0446(t *testing.T) {
 	for _, raw := range []string{`{"a":1,"a":2}`, `{"a":1,"A":2}`, `{"a":1} {"b":2}`, `[]`, `{`} {
 		if validModuleConfig0446([]byte(raw)) {
-			t.Fatalf("accepted ambiguous module JSON: %q", raw)
+			t.Fatalf("Принят неоднозначный JSON модуля: %q", raw)
 		}
 	}
 	if !validModuleConfig0446([]byte(`{"a":{"x":1},"b":true}`)) {

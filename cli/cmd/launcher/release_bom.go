@@ -130,7 +130,7 @@ func bomCheckSourceVersion03214(name, rel, ver string, raw []byte) error {
 		}
 	case rel == "schemas/openapi.yaml":
 		if !strings.Contains(s, "Launcher "+ver+".") {
-			return errors.New("Несовпадение: «OpenAPI version»")
+			return errors.New("Несовпадение: «версия OpenAPI»")
 		}
 	}
 	return nil
@@ -142,7 +142,7 @@ func bomSourceComponents03214(root, ver string) ([]bomComponent03214, error) {
 		return nil, err
 	}
 	if strings.TrimSpace(string(rootVersion)) != ver {
-		return nil, fmt.Errorf("Несовпадение: «source VERSION»: %q != %q", strings.TrimSpace(string(rootVersion)), ver)
+		return nil, fmt.Errorf("Несовпадение: «исходная версия в VERSION»: %q != %q", strings.TrimSpace(string(rootVersion)), ver)
 	}
 	sources := bomSources03214()
 	keys := make([]string, 0, len(sources))
@@ -211,7 +211,7 @@ func bomCheckRequiredArtifacts03214(dir, ver string, items []bomArtifact03214) e
 			continue
 		}
 		if !have[name] {
-			return fmt.Errorf("Отсутствует: «BOM: required shipping artifact»: %s", name)
+			return fmt.Errorf("Отсутствует: «обязательный артефакт поставки в спецификации состава»: %s", name)
 		}
 	}
 	return nil
@@ -249,7 +249,7 @@ func verifyReleaseBOM03214(dir, ver string) error {
 		return fmt.Errorf("BOM содержит некорректный JSON: %w", err)
 	}
 	if bom.Schema != 1 || bom.ProductVersion != ver {
-		return fmt.Errorf("Несовпадение: «BOM schema/version»: %d %q expected %q", bom.Schema, bom.ProductVersion, ver)
+		return fmt.Errorf("Несовпадение: «схема или версия спецификации состава»: %d %q expected %q", bom.Schema, bom.ProductVersion, ver)
 	}
 	expectedSources := bomSources03214()
 	if len(bom.Components) != len(expectedSources) {
@@ -259,7 +259,7 @@ func verifyReleaseBOM03214(dir, ver string) error {
 	for _, c := range bom.Components {
 		rel, ok := expectedSources[c.Name]
 		if !ok || seen[c.Name] || c.Version != bomComponentVersion03214(c.Name, ver) || c.SourceFile != rel || !bomSHA03214(c.SourceSHA256) {
-			return fmt.Errorf("Несовпадение: «BOM source component»: %s", c.Name)
+			return fmt.Errorf("Несовпадение: «исходный компонент спецификации состава»: %s", c.Name)
 		}
 		seen[c.Name] = true
 	}
@@ -325,7 +325,7 @@ func verifyReleaseBOMBinding03214(dir, ver string) error {
 		}
 	}
 	if !requiredFile || !requiredArtifact {
-		return errors.New("Для BOM требуется: «a required release-manifest artifact with exact digest»")
+		return errors.New("Для BOM требуется: «обязательный артефакт манифеста выпуска с точной контрольной суммой»")
 	}
 	sums, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {

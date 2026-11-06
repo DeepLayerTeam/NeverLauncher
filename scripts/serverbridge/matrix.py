@@ -92,7 +92,7 @@ def load(path: Path) -> dict[str, Any]:
                 f"{tid}: ожидался охват {expected_coverage}, получено {row.get('coverage')}"
             )
     if ids != EXPECTED:
-        raise SystemExit(f"Несовпадение: «ServerBridge target ordering/set»: {ids!r}")
+        raise SystemExit(f"Несовпадение: «порядок или набор целевых платформ ServerBridge»: {ids!r}")
     return data
 
 

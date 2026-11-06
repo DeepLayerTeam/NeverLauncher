@@ -220,7 +220,7 @@ def object_pairs(pairs):
     result = {}
     for key, value in pairs:
         if key in result:
-            raise Blocked("Обнаружен дубликат: «JSON field:»" + key)
+            raise Blocked("Обнаружен дубликат: «поле JSON:»" + key)
         result[key] = value
     return result
 
@@ -290,7 +290,7 @@ def approval_data(
             bytes.fromhex(signature_hex.decode()), cfg.signing_domain + raw
         )
     except InvalidSignature as exc:
-        raise Blocked("Некорректное значение: «operator signature»") from exc
+        raise Blocked("Некорректное значение: «подпись оператора»") from exc
     data = json.loads(raw, object_pairs_hook=object_pairs)
     require(
         isinstance(data, dict)

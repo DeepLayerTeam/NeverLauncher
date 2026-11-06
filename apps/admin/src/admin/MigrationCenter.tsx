@@ -689,7 +689,7 @@ export function MigrationCenter0331({
         try {
           receipt = JSON.parse(cutoverReceipt0448);
         } catch {
-          setError("Нужен JSON оригинальной source fence receipt, полученной после остановки службы");
+          setError("Нужен JSON оригинального подтверждения блокировки записи в источнике, полученной после остановки службы");
           return;
         }
         body = {

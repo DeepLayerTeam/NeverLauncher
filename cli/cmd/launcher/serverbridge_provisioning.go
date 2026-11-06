@@ -845,7 +845,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	field := bridgeAllowlistField0199(platform)
 	values := policy[field]
 	if len(values) != 1 || !strings.EqualFold(strings.TrimSpace(values[0]), digest) {
-		return "", fmt.Errorf("«release allowlist field» %s не совпадает с «artifact SHA-256»", field)
+		return "", fmt.Errorf("«поле списка разрешённых выпусков» %s не совпадает с «SHA-256 артефакта»", field)
 	}
 	return "BRIDGE_RELEASE_ALLOWLIST.json", nil
 }
@@ -1044,7 +1044,7 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		return bridgeIdentityMaterial0199{}, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity: требуется «a regular non-symlink file:» %s", path)
+		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity: требуется «обычный файл, не являющийся символической ссылкой:» %s", path)
 	}
 	if err := verifyNodeIdentityPermissions0199(path, info); err != nil {
 		return bridgeIdentityMaterial0199{}, err
@@ -1162,10 +1162,10 @@ func serverBridgeMigrateV30200(args []string) error {
 	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	current, err := readBridgeProvisionState0199(statePath)
 	if err != nil {
-		return errors.New("server-bridge migrate-v3: требуется «an existing managed ServerBridge installation; run `nl server-bridge install` first»")
+		return errors.New("server-bridge migrate-v3: требуется «существующая управляемая установка ServerBridge; сначала выполните `nl server-bridge install`»")
 	}
 	if compareSemver0199(version, "0.20.0") < 0 {
-		return fmt.Errorf("server-bridge migrate-v3: требуется «nl >= 0.20.0; current CLI is» %s", version)
+		return fmt.Errorf("server-bridge migrate-v3: требуется «nl версии не ниже 0.20.0; текущая версия CLI:» %s", version)
 	}
 	targetVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
 	if compareSemver0199(targetVersion, "0.20.0") < 0 {
@@ -1179,7 +1179,7 @@ func serverBridgeMigrateV30200(args []string) error {
 		}
 	}
 	if backend == "" {
-		return errors.New("server-bridge migrate-v3: требуется «a Backend URL to verify Protocol v3 GA capability before replacing the artifact»")
+		return errors.New("server-bridge migrate-v3: требуется «URL Backend для проверки поддержки Protocol v3 GA перед заменой артефакта»")
 	}
 	capURL := backend + "/api/v1/server-bridge/capabilities?protocols=3&features=" + strings.Join([]string{
 		"protocol.capability-negotiation", "protocol.feature-flags", "protocol.rolling-upgrade-v2",
@@ -1190,7 +1190,7 @@ func serverBridgeMigrateV30200(args []string) error {
 	}, ",")
 	capabilities, err := httpJSONWithAuth("GET", capURL, nil, "")
 	if err != nil {
-		return fmt.Errorf("Ошибка: «Protocol v3 GA Backend preflight»: %w", err)
+		return fmt.Errorf("Ошибка: «предварительная проверка Backend на поддержку Protocol v3 GA»: %w", err)
 	}
 	data, _ := capabilities["data"].(map[string]any)
 	if intFromJSON0200(data["negotiatedProtocolVersion"]) != 3 || data["protocolV3Frozen"] != true || fmt.Sprint(data["protocolV3Status"]) != "ga-frozen" || fmt.Sprint(data["protocolV3FeatureDigest"]) != "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc" {
@@ -1350,7 +1350,7 @@ func rollbackServerBridge0199(args []string) error {
 		return err
 	}
 	if tx.CompletedAt == "" {
-		return errors.New("incomplete transaction: требуется «manual reconciliation»")
+		return errors.New("Незавершённая транзакция: требуется ручное согласование состояния")
 	}
 	if tx.RolledBackAt != "" {
 		return fmt.Errorf("Транзакция %s уже отменена", tx.ID)

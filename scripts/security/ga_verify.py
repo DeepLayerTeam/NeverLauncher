@@ -225,7 +225,7 @@ def verify_all(
             "Необходимы доверенный 32-байтный ключ Ed25519, точный 40-символьный SHA Git и отпечаток исходников"
         )
     if len(paths) != len(TIERS):
-        raise ValueError("Требуется: «seven independent signed tiers»")
+        raise ValueError("Требуется: «семь независимо подписанных уровней подтверждений»")
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(key_hex))
     now = now or dt.datetime.now(dt.timezone.utc)
     results = [

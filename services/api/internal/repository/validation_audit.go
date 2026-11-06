@@ -83,7 +83,7 @@ func (r *SQLRepository) ListValidationAttempts03412(ctx context.Context, pkg str
 		ctx = context.Background()
 	}
 	if limit < 1 || limit > 100 {
-		return nil, errors.New("Некорректное значение: «audit page size»")
+		return nil, errors.New("Некорректное значение: «размер страницы аудита»")
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT id,package_id,run_id,kind,outcome,reason_code,payload_sha256,created_at FROM validation_attempt_events_03412 WHERE package_id=$1 AND ($2::bigint=0 OR id<$2) ORDER BY id DESC LIMIT $3`, pkg, before, limit)
 	if err != nil {

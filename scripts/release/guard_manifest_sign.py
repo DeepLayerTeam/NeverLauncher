@@ -20,15 +20,15 @@ def sign_manifest(raw: bytes) -> bytes:
     seed = os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_SEED", "").strip()
     public = os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "").strip()
     if len(seed) != 64 or len(public) != 64:
-        raise ValueError("production Linux Guard manifest: требуется «a pinned Ed25519 signing seed and public key»")
+        raise ValueError("production Linux Guard manifest: требуется «закреплённый закрытый ключ подписи Ed25519 и публичный ключ»")
     try:
         key = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(seed))
         expected = bytes.fromhex(public)
     except (ValueError, TypeError) as exc:
-        raise ValueError("Некорректное значение: «Linux Guard manifest signing key encoding»") from exc
+        raise ValueError("Некорректное значение: «кодировка ключа подписи манифеста Linux Guard»") from exc
     actual = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
     if actual != expected:
-        raise ValueError("«Linux Guard public key» не совпадает с «the signing seed»")
+        raise ValueError("Публичный ключ Linux Guard не соответствует закрытому ключу подписи")
     return (key.sign(DOMAIN + raw).hex() + "\n").encode("ascii")
 
 

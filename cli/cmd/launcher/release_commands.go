@@ -251,7 +251,7 @@ func handleRelease(args []string) error {
 		return nil
 	case "distribution-verify":
 		if len(args) < 2 {
-			return errors.New("release distribution-verify: требуется «release bundle directory»")
+			return errors.New("release distribution-verify: требуется «каталог пакета выпуска»")
 		}
 		ver, err := releaseBundleVersion(args[1])
 		if err != nil {
@@ -577,7 +577,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			missing = append(missing, "guard CI matrix")
 		}
 		if len(missing) > 0 {
-			return fmt.Errorf("0.15.11+ production release candidate: требуется «complete certification cohort:» %s", strings.Join(missing, ", "))
+			return fmt.Errorf("0.15.11+ production release candidate: требуется «полный набор результатов сертификации:» %s", strings.Join(missing, ", "))
 		}
 	}
 	if strings.TrimSpace(compatibilityMatrixPath) != "" {
@@ -803,7 +803,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		if compatibilityReleaseCertificate01711Required(ver) {
 			certificatePath := filepath.Join(out, loaderCompatibilityReleaseCertificateFile01711)
 			if _, err := os.Stat(certificatePath); err != nil {
-				return fmt.Errorf("Отсутствует: «Loader Compatibility RC 0.17.11 certificate»: %w", err)
+				return fmt.Errorf("Отсутствует: «сертификат совместимости загрузчиков RC 0.17.11»: %w", err)
 			}
 			if err := verifyLoaderCompatibilityReleaseCertificate01711(out, ver); err != nil {
 				return fmt.Errorf("Ошибка самопроверки совместимости загрузчиков RC 0.17.11: %w", err)
@@ -823,10 +823,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 				}
 				var ga loaderCompatibilityReleaseCertificate01711
 				if err := json.Unmarshal(raw, &ga); err != nil {
-					return fmt.Errorf("Некорректное значение: «Loader Compatibility GA certificate»: %w", err)
+					return fmt.Errorf("Некорректное значение: «сертификат совместимости загрузчиков GA»: %w", err)
 				}
 				if ga.Status != "ga-certified" || ga.ReleaseStage != "ga" || ga.RuntimeSupportEntries != len(loaderGASupportEntries0180()) || !compatibilitySHA256RE.MatchString(ga.RuntimeSupportSHA256) || !strings.EqualFold(ga.RuntimeSupportSHA256, loaderGASupportSHA2560180()) || !ga.Invariants["gaRuntimeSupportEnforced"] || !ga.Invariants["legacyForgeGA"] {
-					return errors.New("Некорректное значение: «Loader Compatibility GA 0.18.0 certificate/runtime support binding»")
+					return errors.New("Некорректное значение: «привязка сертификата совместимости загрузчиков GA 0.18.0 к поддержке Runtime»")
 				}
 				loaderCompatibilityGA = true
 				loaderCompatibilityGASupportSHA256 = ga.RuntimeSupportSHA256
@@ -1081,10 +1081,10 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return err
 		}
 		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsProtectionReleaseCertificateSHA256)) || !strings.EqualFold(certHash, manifest.WindowsProtectionReleaseCertificateSHA256) {
-			return errors.New("Несовпадение: «RELEASE_MANIFEST Windows Protection RC certificate hash»")
+			return errors.New("Несовпадение: «контрольная сумма сертификата Windows Protection RC в RELEASE_MANIFEST»")
 		}
 		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsAdversarialCertificateSHA256)) || !strings.EqualFold(adversarialHash, manifest.WindowsAdversarialCertificateSHA256) {
-			return errors.New("Несовпадение: «RELEASE_MANIFEST Windows adversarial certificate hash»")
+			return errors.New("Несовпадение: «контрольная сумма сертификата adversarial-проверок Windows в RELEASE_MANIFEST»")
 		}
 		if err := verifyWindowsProtectionRelease01812(dir, manifest.Version); err != nil {
 			return fmt.Errorf("Сертификация RC защиты Windows: %w", err)
@@ -1099,7 +1099,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return err
 		}
 		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsProtectionGACertificateSHA256)) || !strings.EqualFold(gaHash, manifest.WindowsProtectionGACertificateSHA256) {
-			return errors.New("Несовпадение: «RELEASE_MANIFEST Windows Protection GA certificate hash»")
+			return errors.New("Несовпадение: «контрольная сумма сертификата Windows Protection GA в RELEASE_MANIFEST»")
 		}
 		if err := verifyWindowsProtectionGA0190(dir, manifest.Version); err != nil {
 			return fmt.Errorf("Сертификация GA защиты Windows: %w", err)
@@ -1150,14 +1150,14 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return err
 		}
 		if !validDeliverySHA256(manifest.ProductionDeliveryReleaseSHA256) || !strings.EqualFold(actualCertHash, manifest.ProductionDeliveryReleaseSHA256) {
-			return errors.New("Несовпадение: «RELEASE_MANIFEST Production Delivery Release certificate hash»")
+			return errors.New("Несовпадение: «контрольная сумма сертификата промышленной поставки в RELEASE_MANIFEST»")
 		}
 		productionCommit, err := verifyProductionDeliveryReleaseDocument0160(dir, manifest.Version)
 		if err != nil {
 			return fmt.Errorf("Ошибка документа промышленной поставки релиза: %w", err)
 		}
 		if !strings.EqualFold(manifest.SourceCommit, productionCommit) {
-			return errors.New("«RELEASE_MANIFEST sourceCommit» не совпадает с «Production Delivery Release certificate»")
+			return errors.New("«поле sourceCommit в RELEASE_MANIFEST» не совпадает с «сертификатом промышленной поставки»")
 		}
 		if err := verifyProductionDeliveryRelease0160(dir, manifest.Version, true); err != nil {
 			return fmt.Errorf("Сертификация релиза промышленной доставки: %w", err)
@@ -1173,10 +1173,10 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return err
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(manifest.LoaderCompatibilityReleaseCertificateSHA256)) || !strings.EqualFold(actualCertHash, manifest.LoaderCompatibilityReleaseCertificateSHA256) {
-			return errors.New("Несовпадение: «RELEASE_MANIFEST Loader Compatibility GA certificate hash»")
+			return errors.New("Несовпадение: «контрольная сумма сертификата совместимости загрузчиков GA в RELEASE_MANIFEST»")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(manifest.LoaderCompatibilityGASupportSHA256)) || !strings.EqualFold(manifest.LoaderCompatibilityGASupportSHA256, loaderGASupportSHA2560180()) {
-			return errors.New("Несовпадение: «RELEASE_MANIFEST Loader Compatibility GA runtime support hash»")
+			return errors.New("Несовпадение: «контрольная сумма поддержки Runtime для совместимости загрузчиков GA в RELEASE_MANIFEST»")
 		}
 		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, manifest.Version); err != nil {
 			return fmt.Errorf("Ошибка совместимости загрузчиков GA 0.18.0: %w", err)
@@ -1185,7 +1185,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	for _, name := range manifest.RequiredFiles {
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil {
-			return fmt.Errorf("Некорректное значение: «requiredFiles path» %q: %w", name, err)
+			return fmt.Errorf("Некорректное значение: «путь элемента requiredFiles» %q: %w", name, err)
 		}
 		if st, err := os.Stat(filepath.Join(dir, clean)); err != nil || st.IsDir() {
 			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
@@ -1202,7 +1202,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		}
 		cleanArtifact, err := safeReleaseRelativePath0158(artifact.Name)
 		if err != nil {
-			return fmt.Errorf("Некорректное значение: «required artifact path» %q: %w", artifact.Name, err)
+			return fmt.Errorf("Некорректное значение: «путь к обязательному артефакту» %q: %w", artifact.Name, err)
 		}
 		path := filepath.Join(dir, cleanArtifact)
 		actual, size, err := hashFile(path)

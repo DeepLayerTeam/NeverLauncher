@@ -445,7 +445,7 @@ export function TexturesPanel0258({
       if (!client || !identity) throw new Error("Профиль не загружен.");
       const u = new URL(importUrl);
       if (u.protocol !== "https:")
-        throw new Error("Импорт допускает только HTTPS URL.");
+        throw new Error("Для импорта разрешены только адреса HTTPS.");
       await client.importURL(kind, importUrl, revision, model, visibility);
       setImportUrl("");
       setSelected(null);

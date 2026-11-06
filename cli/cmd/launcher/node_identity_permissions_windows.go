@@ -16,7 +16,7 @@ func windowsIdentityACL0199(path, script string) error {
 	cmd.Env = append(os.Environ(), "LAUNCHER_IDENTITY_ACL_PATH="+path)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("Ошибка: «node identity Windows ACL operation»: %w: %s", err, strings.TrimSpace(string(out)))
+		return fmt.Errorf("Ошибка: «операция с разрешениями ACL идентификатора узла Windows»: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }

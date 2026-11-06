@@ -106,7 +106,7 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     for component, (bundle_path, canonical_pattern) in COMPONENTS.items():
         source = app / bundle_path
         if not source.is_file():
-            raise RuntimeError(f"Отсутствует: «signed macOS bundle executable»: {source}")
+            raise RuntimeError(f"Отсутствует: «исполняемый файл подписанного пакета macOS»: {source}")
         # Основной исполняемый файл приложения подписывается финальным шагом APP_ROOT
         # codesign после создания Resources. Помощники должны быть подписаны раньше.
         inspect_macho(source, arch, require_signature=(component != "desktop-launcher"))
@@ -229,7 +229,7 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         bundle_path, canonical_pattern = COMPONENTS[component]
         source = app / bundle_path
         if not source.is_file():
-            raise RuntimeError(f"Отсутствует: «final signed macOS executable»: {source}")
+            raise RuntimeError(f"Отсутствует: «окончательный подписанный исполняемый файл macOS»: {source}")
         inspect_macho(source, arch)
         canonical_name = canonical_pattern.format(arch=arch)
         canonical = out / canonical_name
@@ -289,7 +289,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
         package_name = f"launcher-desktop-{args.version}-macos-{arch}.zip"
         package = out / package_name
         if not package.is_file() or package.stat().st_size <= 0:
-            raise RuntimeError(f"Отсутствует: «final macOS package»: {package}")
+            raise RuntimeError(f"Отсутствует: «окончательный пакет macOS»: {package}")
         submission_id, status, stapled, stapler_validated, gatekeeper = load_notary(
             notary_paths[arch], production
         )

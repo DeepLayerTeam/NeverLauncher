@@ -80,7 +80,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return err
 		}
 		if string(gaKey) == string(privateKey.Public().(ed25519.PublicKey)) {
-			return errors.New("release and independent GA keys: требуется «different»")
+			return errors.New("release and independent GA keys: требуется «различаться»")
 		}
 	}
 	// Обязательная независимая проверка GA точных байтов должна выполняться внутри `launcher release sign`, а

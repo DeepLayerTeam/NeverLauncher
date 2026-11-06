@@ -154,7 +154,7 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def die(msg: str) -> None:
-    raise SystemExit(f"Ошибка: «ServerBridge 3 release certification»: {msg}")
+    raise SystemExit(f"Ошибка: «сертификация выпуска ServerBridge 3»: {msg}")
 
 
 def sha256(path: Path) -> str:

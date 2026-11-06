@@ -1922,7 +1922,7 @@ function App() {
         );
       const data = completePayload.data ?? completePayload;
       if (!data.accessToken || !data.device?.id)
-        throw new Error("Сервер не вернул replacement device/access token.");
+        throw new Error("Сервер не вернул новый токен устройства или доступа.");
       serverCommitted = true;
       session = await persistTrustedAccess(session, data.accessToken);
       const committed = await callTauri<DeviceKeyInfo>(
@@ -2373,7 +2373,7 @@ function App() {
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken)
       throw new Error(
-        "Сервер не вернул токен доступа после device registration.",
+        "Сервер не вернул токен доступа после регистрации устройства.",
       );
     const bound = await callTauri<DeviceKeyInfo>("bind_device_key", {
       backendUrl: settings.backendUrl,
@@ -2442,7 +2442,7 @@ function App() {
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken)
       throw new Error(
-        "Сервер не вернул токен доступа после device verification.",
+        "Сервер не вернул токен доступа после проверки устройства.",
       );
     setDeviceTrustStatus("verified");
     log(
@@ -2458,7 +2458,7 @@ function App() {
     const userId = session.userId || accessTokenSubject(session.accessToken);
     if (!userId)
       throw new Error(
-        "Не удалось определить canonical user id для device key.",
+        "Не удалось определить канонический идентификатор пользователя для device key.",
       );
     const normalized = session.userId ? session : { ...session, userId };
     if (!session.userId)

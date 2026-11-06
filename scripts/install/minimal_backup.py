@@ -116,7 +116,7 @@ def read_install(root):
         key, value = line.split("=", 1)
         require(
             key.startswith("LAUNCHER_") and key not in values,
-            "bad/duplicate backend.env key",
+            "некорректный или повторяющийся ключ backend.env",
         )
         values[key] = value
     require(
@@ -306,7 +306,7 @@ def verify(bundle):
     private_directory(payload)
     st = check_path(bundle / "manifest.json")
     require(
-        st.st_size <= MAX_MANIFEST_BYTES and st.st_mode & 0o077 == 0, "unsafe manifest"
+        st.st_size <= MAX_MANIFEST_BYTES and st.st_mode & 0o077 == 0, "небезопасный манифест"
     )
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
     require(
@@ -331,7 +331,7 @@ def verify(bundle):
         require(
             isinstance(record, dict)
             and set(record) == {"path", "kind", "bytes", "sha256", "mode"},
-            "invalid record",
+            "некорректная запись",
         )
         rel = record["path"]
         validate_relative(rel)

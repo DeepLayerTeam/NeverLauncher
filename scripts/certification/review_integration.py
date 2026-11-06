@@ -45,7 +45,7 @@ def review(paths: list[Path], revision: str) -> dict:
         raw = json.loads(path.read_text(encoding="utf-8"))
         platform = raw.get("platform")
         if platform not in REQUIRED or platform in found:
-            raise ValueError(f"Неизвестное значение: «or duplicate platform»: {platform}")
+            raise ValueError(f"Неизвестная или повторяющаяся платформа: {platform}")
         if (
             raw.get("schemaVersion") != "1.0"
             or raw.get("release") != "0.30.12"

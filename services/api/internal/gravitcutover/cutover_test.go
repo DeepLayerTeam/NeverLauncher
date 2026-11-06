@@ -21,12 +21,12 @@ func TestCutoverInputs03311(t *testing.T) {
 	bad := valid
 	bad.ProfileID = "../etc"
 	if ValidateStage(bad) == nil {
-		t.Fatal("unsafe profile allowed")
+		t.Fatal("Разрешён небезопасный профиль")
 	}
 	bad = valid
 	bad.ExpectedHeadRevision = -1
 	if ValidateStage(bad) == nil {
-		t.Fatal("negative revision allowed")
+		t.Fatal("Разрешена отрицательная ревизия")
 	}
 	act := Activate{ProfileID: "forge-1", Channel: "stable", ExpectedRevision: 1, SourceFenceReference: "ops/ticket-92342", SourceFenceEvidenceSHA256: strings.Repeat("a", 64), CurrentSourceSnapshotSHA256: strings.Repeat("b", 64), SourceFenceReceipt: &SourceFenceReceipt0448{}}
 	if e := ValidateActivation(act); e != nil {
@@ -34,7 +34,7 @@ func TestCutoverInputs03311(t *testing.T) {
 	}
 	act.SourceFenceEvidenceSHA256 = "invalid"
 	if ValidateActivation(act) == nil {
-		t.Fatal("unbound evidence allowed")
+		t.Fatal("Разрешено неподвязанное свидетельство")
 	}
 }
 func TestSignedReleaseMustMatchCurrentNeverKey03311(t *testing.T) {
@@ -48,7 +48,7 @@ func TestSignedReleaseMustMatchCurrentNeverKey03311(t *testing.T) {
 	}
 	m := model.Manifest{SchemaVersion: "1.0", ProjectID: "project", ProfileID: "profile", Channel: "stable", Version: "v3", Files: []model.ManifestFile{}}
 	if _, e = VerifyRelease(m, pub); e == nil {
-		t.Fatal("unsigned release allowed")
+		t.Fatal("Разрешён неподписанный выпуск")
 	}
 	raw, e := json.Marshal(m)
 	if e != nil {
@@ -60,11 +60,11 @@ func TestSignedReleaseMustMatchCurrentNeverKey03311(t *testing.T) {
 		t.Fatalf("Подпись ошибочно отклонена: %s %v", digest, e)
 	}
 	if _, e = VerifyRelease(m, other); e == nil {
-		t.Fatal("foreign signer allowed")
+		t.Fatal("Разрешён посторонний подписант")
 	}
 	m.Version = "v4"
 	if _, e = VerifyRelease(m, pub); e == nil {
-		t.Fatal("tampered manifest allowed")
+		t.Fatal("Разрешён изменённый манифест")
 	}
 }
 
@@ -88,20 +88,20 @@ func TestVerifySourceFence0448(t *testing.T) {
 	bad := a
 	bad.SourceFenceEvidenceSHA256 = strings.Repeat("a", 64)
 	if VerifySourceFence0448(bad, route, now) == nil {
-		t.Fatal("forged digest accepted")
+		t.Fatal("Принята поддельная контрольная сумма")
 	}
 	route.StageID = "different-stage-12345"
 	if VerifySourceFence0448(a, route, now) == nil {
-		t.Fatal("different rehearsal accepted")
+		t.Fatal("Принята другая репетиция")
 	}
 	route.StageID = receipt.StageID
 	if VerifySourceFence0448(a, route, now.Add(11*time.Minute)) == nil {
-		t.Fatal("stale evidence accepted")
+		t.Fatal("Принято устаревшее свидетельство")
 	}
 	proof := *receipt
 	proof.UnitState = "active"
 	a.SourceFenceReceipt = &proof
 	if VerifySourceFence0448(a, route, now) == nil {
-		t.Fatal("active writer accepted")
+		t.Fatal("Разрешена активная служба записи")
 	}
 }

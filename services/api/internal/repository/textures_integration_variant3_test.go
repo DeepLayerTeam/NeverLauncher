@@ -17,7 +17,7 @@ import (
 func TestTextureStorageQuota0253(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0253")
 	if dsn == "" {
-		t.Skip("set TEST_PG_DSN_0253 to a disposable PostgreSQL database")
+		t.Skip("Укажите в TEST_PG_DSN_0253 временную базу PostgreSQL")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -65,43 +65,43 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	}
 	a := makeUpload("first verified normalized png", 0)
 	if err = repo.StageTextureUpload0253(ctx, owner, a); err != nil {
-		t.Fatalf("staging: %v", err)
+		t.Fatalf("Промежуточное размещение: %v", err)
 	}
 	var stagedStatus string
 	if err = db.QueryRowContext(ctx, `SELECT status FROM texture_blobs WHERE digest=$1`, a.Digest).Scan(&stagedStatus); err != nil || stagedStatus != "staging" {
-		t.Fatalf("expected staged object: %s %v", stagedStatus, err)
+		t.Fatalf("Ожидался объект промежуточного размещения: %s %v", stagedStatus, err)
 	}
 	if _, err = repo.UploadTexture0252(ctx, owner, a); err != nil {
 		t.Fatal(err)
 	}
 	if err = repo.StageTextureUpload0253(ctx, owner, makeUpload("second verified normalized png", 1)); !errors.Is(err, ErrTextureUploadLimit0252) {
-		t.Fatalf("staging must enforce quota: %v", err)
+		t.Fatalf("При промежуточном размещении должен соблюдаться лимит: %v", err)
 	}
 	if _, err = repo.UploadTexture0252(ctx, owner, makeUpload("second verified normalized png", 1)); !errors.Is(err, ErrTextureUploadLimit0252) {
-		t.Fatalf("expected count quota rejection, got %v", err)
+		t.Fatalf("Ожидался отказ из-за лимита количества, получено: %v", err)
 	}
 	// Одинаковый хеш дедуплицируется, двойного списания квоты нет даже при замене.
 	a.ExpectedRevision = 1
 	if _, err = repo.UploadTexture0252(ctx, owner, a); err != nil {
-		t.Fatalf("deduped upload: %v", err)
+		t.Fatalf("Загрузка с устранением дубликатов: %v", err)
 	}
 	var ownerCount int
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blob_owners WHERE user_id='owner'`).Scan(&ownerCount); err != nil || ownerCount != 1 {
-		t.Fatalf("quota owner rows %d %v", ownerCount, err)
+		t.Fatalf("Строки лимита владельца: %d %v", ownerCount, err)
 	}
 	// Второй владелец получает независимую запись владения и квоты для того же
 	// содержимого.
 	other := model.MinecraftProfile{UUID: "99999999-2222-4333-8444-555555555555", UserID: "other", Name: "Alex", Realm: "local", Issuer: "launcher"}
 	a.ExpectedRevision = 0
 	if err = repo.StageTextureUpload0253(ctx, other, a); err != nil {
-		t.Fatalf("second owner staging dedup: %v", err)
+		t.Fatalf("Устранение дубликатов при размещении вторым владельцем: %v", err)
 	}
 	if _, err = repo.UploadTexture0252(ctx, other, a); err != nil {
 		t.Fatal(err)
 	}
 	var blobCount int
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blobs`).Scan(&blobCount); err != nil || blobCount != 1 {
-		t.Fatalf("expected physical dedup %d %v", blobCount, err)
+		t.Fatalf("Ожидалось физическое устранение дубликатов: %d %v", blobCount, err)
 	}
 	// Объекты со ссылками не могут становиться кандидатами на очистку независимо
 	// от возраста.
@@ -110,7 +110,7 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	}
 	candidates, err := repo.ClaimTextureGarbage0253(ctx, "local", 50)
 	if err != nil || len(candidates) != 0 {
-		t.Fatalf("GC must preserve assigned blob: %+v %v", candidates, err)
+		t.Fatalf("Сборщик мусора должен сохранять назначенный объект: %+v %v", candidates, err)
 	}
 	if _, err = db.ExecContext(ctx, `DELETE FROM texture_assignments`); err != nil {
 		t.Fatal(err)
@@ -120,12 +120,12 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	}
 	candidates, err = repo.ClaimTextureGarbage0253(ctx, "local", 50)
 	if err != nil || len(candidates) != 1 {
-		t.Fatalf("expected orphan GC candidate: %+v %v", candidates, err)
+		t.Fatalf("Ожидался объект без владельца для сборки мусора: %+v %v", candidates, err)
 	}
 	if err = repo.FinishTextureGarbage0253(ctx, candidates[0].Digest); err != nil {
 		t.Fatal(err)
 	}
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blob_owners`).Scan(&ownerCount); err != nil || ownerCount != 0 {
-		t.Fatalf("GC did not release quotas: %d %v", ownerCount, err)
+		t.Fatalf("Сборщик мусора не освободил лимиты: %d %v", ownerCount, err)
 	}
 }

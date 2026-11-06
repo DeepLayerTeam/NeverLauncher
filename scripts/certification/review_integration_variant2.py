@@ -50,7 +50,7 @@ def review(paths: list[Path], revision: str) -> dict:
         raw = json.loads(path.read_text(encoding="utf-8"))
         platform = raw.get("platform")
         if platform not in REQUIRED or platform in found:
-            raise ValueError(f"Неизвестное значение: «or duplicate platform»: {platform}")
+            raise ValueError(f"Неизвестная или повторяющаяся платформа: {platform}")
         if (
             raw.get("schemaVersion") != "1.0"
             or raw.get("release") != "0.31.0"
@@ -80,7 +80,7 @@ def review(paths: list[Path], revision: str) -> dict:
             for step, expected in zip(case["steps"], expected_commands):
                 command = step.get("command")
                 if not isinstance(command, list) or len(command) != len(expected):
-                    raise ValueError(f"Неожиданное значение: «E2E command shape for» {case['case']}")
+                    raise ValueError(f"Неожиданное значение: «формат команды E2E для» {case['case']}")
                 for actual, required in zip(command, expected):
                     if required in ("{cli}", "{root}", "{parity}", "{maven}"):
                         if (
@@ -98,9 +98,9 @@ def review(paths: list[Path], revision: str) -> dict:
                             .name.lower()
                             .startswith("python")
                         ):
-                            raise ValueError("Несовпадение: «E2E Python interpreter»")
+                            raise ValueError("Несовпадение: «интерпретатор Python для E2E»")
                     elif actual != required:
-                        raise ValueError(f"Неожиданное значение: «E2E command for» {case['case']}")
+                        raise ValueError(f"Неожиданное значение: «команда E2E для» {case['case']}")
                 if (
                     step.get("status") != "passed"
                     or step.get("exitCode") != 0

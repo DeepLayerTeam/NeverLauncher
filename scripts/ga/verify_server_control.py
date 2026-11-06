@@ -24,7 +24,7 @@ def strict_json(path: Path):
         value = {}
         for k, v in pairs:
             if k in value:
-                raise ValueError(f"Обнаружен дубликат: «evidence key» {k}")
+                raise ValueError(f"Обнаружен дубликат: «ключ свидетельства» {k}")
             value[k] = v
         return value
 
@@ -42,7 +42,7 @@ def verify(root: Path, version: str, commit: str):
         or result.get("status") != "passed"
         or result.get("mode") != "full"
     ):
-        raise ValueError("Отсутствует: «full actual-client Minecraft E2E result»")
+        raise ValueError("Отсутствует: «полный результат E2E-проверки с настоящим клиентом Minecraft»")
     mc = result.get("minecraft", {})
     if (
         not isinstance(mc, dict)
@@ -61,7 +61,7 @@ def verify(root: Path, version: str, commit: str):
         "proxyFamilyRuntime",
     )
     if not isinstance(checks, dict) or any(checks.get(k) is not True for k in required):
-        raise ValueError("Отсутствует: «real login, replay or routing checks»")
+        raise ValueError("Отсутствует: «проверки настоящего входа, повторного запроса или маршрутизации»")
     if (
         proof.get("schemaVersion") != "launcher.server-control.real-world-restore.v1"
         or proof.get("version") != version
@@ -80,12 +80,12 @@ def verify(root: Path, version: str, commit: str):
         "returnedToHealthyService",
     ):
         if proof.get(name) is not True:
-            raise ValueError(f"Ошибка: «world backup runtime check»: {name}")
+            raise ValueError(f"Ошибка: «проверка выполнения резервного копирования мира»: {name}")
     for name in ("playerDataFiles", "pluginDataFiles", "filesVerified"):
         if type(proof.get(name)) is not int or proof[name] <= 0:
             raise ValueError(f"Резервная копия мира не содержит фактический файл {name}")
     if not DIGEST.fullmatch(str(proof.get("worldFileSha256", ""))):
-        raise ValueError("Отсутствует: «preserved real world digest»")
+        raise ValueError("Отсутствует: «сохранённая контрольная сумма настоящего игрового мира»")
     if commit:
         if not COMMIT.fullmatch(commit) or proof.get("sourceCommit") != commit:
             raise ValueError("Доказательство восстановления мира Paper относится к другому коммиту")

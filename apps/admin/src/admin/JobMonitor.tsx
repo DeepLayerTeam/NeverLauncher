@@ -80,7 +80,7 @@ export function JobMonitor({ backendUrl, token, projectId, initialId = '', canPu
       await Promise.all([load(job.id), reloadPage()]);
     } catch (e) { setError(explain(e)); } finally { setBusy(false); }
   }
-  return <section className="card wide" aria-label="Монитор durable jobs">
+  return <section className="card wide" aria-label="Монитор фоновых заданий">
     <div className="registryHeading"><div><h2>Jobs — жизненный цикл операций</h2><p className="muted">Задания выполняются на сервере независимо от браузера. Отмена возможна только до начала исполнения; ошибка не означает безопасного автоматического повтора.</p></div><button disabled={busy} onClick={() => { void reloadPage().catch(e => setError(explain(e))); void load().catch(e => setError(explain(e))); }}>Обновить</button></div>
     {error && <p className="error" role="alert">{error}</p>}{notice && <p className="success" role="status">{notice}</p>}
     <div className="dataToolbar"><label>Статус<select value={filter} onChange={e => { setFilter(e.target.value); setOffset(0); }}>{states.map(s => <option key={s} value={s}>{s ? statusRu(s) : 'Все'}</option>)}</select></label><label>ID задания<input value={jobId} onChange={e => setJobId(e.target.value)} placeholder="job_..." /></label><button disabled={!jobId.trim()} onClick={() => void load().catch(e => setError(explain(e)))}>Открыть по ID</button></div>

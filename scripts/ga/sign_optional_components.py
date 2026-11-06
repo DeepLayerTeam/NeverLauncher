@@ -32,7 +32,7 @@ def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: 
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("Требуется полный точный идентификатор коммита Git исходников")
     if os.name != 'nt' and key_path.stat().st_mode & 0o077:
-        raise ValueError("«signing private key»: запрещено «be readable by group/others»")
+        raise ValueError("Закрытый ключ подписи не должен быть доступен для чтения группе или другим пользователям")
     private = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
     if not isinstance(private, Ed25519PrivateKey):
         raise ValueError("Ожидается приватный ключ Ed25519 в кодировке PEM")
@@ -41,13 +41,13 @@ def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: 
         raise ValueError("Ключ подписи отличается от утверждённого независимого корня доверия GA")
     attestation_file = folder / 'attestation.json'
     if attestation_file.is_symlink() or not attestation_file.is_file():
-        raise ValueError("Требуется: «ordinary attestation.json»")
+        raise ValueError("Требуется: «обычный файл attestation.json»")
     raw = attestation_file.read_bytes()
     if len(raw) > 1024*1024:
         raise ValueError("Превышен допустимый размер: аттестация")
     doc = strict_json(raw)
     if doc.get('schemaVersion') != COMPONENT_GA_SCHEMA or doc.get('productVersion') != '0.25.0' or doc.get('commit') != commit:
-        raise ValueError("Не поддерживается: «GA attestation or source mismatch»")
+        raise ValueError("Не поддерживается: «несоответствие аттестации GA или исходного кода»")
     if doc.get('status') != 'passed' or doc.get('gitTreeClean') is not True:
         raise ValueError("Неполные исходные данные GA")
     platform, arch = doc.get('platform'), doc.get('architecture')
@@ -55,10 +55,10 @@ def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: 
         raise ValueError("Платформа или архитектура не привязана к каталогу")
     objects = doc.get('objects')
     if not isinstance(objects, dict) or set(objects) != REQUIRED_OBJECTS:
-        raise ValueError("Отсутствует: «or extra evidence objects»")
+        raise ValueError("Отсутствует: «или лишние объекты свидетельств»")
     for name, value in objects.items():
         if not isinstance(value, dict):
-            raise ValueError("Некорректное значение: «evidence object»")
+            raise ValueError("Некорректное значение: «объект свидетельства»")
         content = load_attested_file(folder, value.get('file'), value.get('sha256'), binary=name=='installer')
         if name != 'installer':
             check_report(content, commit=commit, version='0.25.0', subject=name, target=folder.name)

@@ -32,21 +32,21 @@ type preparedJavaContent0486 struct {
 func decodeJavaPreparedContent0486(raw json.RawMessage) ([]byte, error) {
 	var answer preparedJavaContent0486
 	if len(raw) == 0 || len(raw) > 64<<10 || json.Unmarshal(raw, &answer) != nil {
-		return nil, errors.New("Некорректное значение: «content provider response»")
+		return nil, errors.New("Некорректное значение: «ответ поставщика содержимого»")
 	}
 	if answer.ErrorCode != "" {
 		return nil, fmt.Errorf("Java-провайдер отклонил пакет: %s", answer.ErrorCode)
 	}
 	if !answer.RequiresSigning || answer.Size < 0 || answer.Size > maxJavaContentTransform0486 || len(answer.DataBase64) > (maxJavaContentTransform0486+2)/3*4+8 {
-		return nil, errors.New("Превышен допустимый размер: «unsigned content preparation response invalid or»")
+		return nil, errors.New("Ответ подготовки неподписанного содержимого некорректен или превышает допустимый размер")
 	}
 	bytes, err := base64.StdEncoding.DecodeString(answer.DataBase64)
 	if err != nil || len(bytes) != answer.Size {
-		return nil, errors.New("Несовпадение: «content provider size/base64»")
+		return nil, errors.New("Несовпадение: «размер или кодировка Base64 содержимого поставщика»")
 	}
 	digest := sha256.Sum256(bytes)
 	if !strings.EqualFold(answer.SHA256, hex.EncodeToString(digest[:])) {
-		return nil, errors.New("Несовпадение: «content provider digest»")
+		return nil, errors.New("Несовпадение: «контрольная сумма содержимого поставщика»")
 	}
 	return bytes, nil
 }
@@ -63,7 +63,7 @@ func (s Server) prepareJavaPackageFile0486(ctx context.Context, extensionID, pro
 		return nil, errors.New("Некорректное значение: содержимое ID расширения")
 	}
 	if projectID == "" || filename == "" {
-		return nil, errors.New("Требуется: «package project and path»")
+		return nil, errors.New("Требуется: «проект и путь пакета»")
 	}
 	if len(raw) > maxJavaContentTransform0486 {
 		return nil, errors.New("Преобразование содержимого Java поддерживает файлы до 24 КиБ; файлы большего размера нужно загружать через основной конвейер пакетов")

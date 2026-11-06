@@ -375,7 +375,7 @@ func verifyLegacyLaunch0278(root string, p factoryPlan0271) error {
 	}
 	disk, _ := json.Marshal(fromDisk)
 	if string(expected) != string(disk) {
-		return errors.New("файл запуска прежней версии не совпадает с «install-plan»")
+		return errors.New("файл запуска прежней версии не совпадает с «планом установки»")
 	}
 	return nil
 }

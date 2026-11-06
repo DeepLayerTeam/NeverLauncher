@@ -63,7 +63,7 @@ def main() -> int:
     try:
         verify(args.report, args.require)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"Доступ запрещён: «GA gate»: {exc}", file=sys.stderr)
+        print(f"Доступ запрещён: «контроль допуска GA»: {exc}", file=sys.stderr)
         return 1
     return 0
 

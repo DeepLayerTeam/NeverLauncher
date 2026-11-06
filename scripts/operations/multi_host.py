@@ -68,7 +68,7 @@ def url_host(value, scheme):
     if parsed.scheme not in scheme or not parsed.hostname or parsed.fragment:
         raise DeploymentError("Внешняя зависимость должна использовать требуемую схему URL с TLS")
     if parsed.hostname.lower() in ("localhost", "127.0.0.1", "::1", "postgres", "redis", "minio", "s3"):
-        raise DeploymentError("«external dependency»: запрещено «resolve to a localhost or embedded Compose service»")
+        raise DeploymentError("Внешняя зависимость не должна указывать на localhost или встроенную службу Compose")
     return parsed.hostname.lower()
 
 
@@ -113,22 +113,22 @@ def resolved_compose(directory, project, *, env_file=None):
             if str(env.get(key, "")).lower() != expected:
                 raise DeploymentError(name + " содержит небезопасное значение " + key)
         if env.get("LAUNCHER_STORAGE_S3_BUCKET", "") == "":
-            raise DeploymentError("Отсутствует: «S3 bucket»")
+            raise DeploymentError("Отсутствует: «корзина S3»")
     ids = (api.get("LAUNCHER_REPLICA_ID"), worker.get("LAUNCHER_REPLICA_ID"))
     if not isinstance(ids[0], str) or not ids[0].endswith("-api") or not LABEL_REGEX.fullmatch(ids[0][:-4]):
-        raise DeploymentError("Для LAUNCHER_NODE_ID требуется: «a stable lowercase hostname-compatible identifier»")
+        raise DeploymentError("Для LAUNCHER_NODE_ID требуется: «стабильный идентификатор в нижнем регистре, совместимый с именем узла»")
     node_id = ids[0][:-4]
     if ids[1] != node_id + "-worker":
         raise DeploymentError("API и рабочий процесс должны иметь общий префикс узла, но разные идентификаторы реплик")
     pg = url_host(api.get("LAUNCHER_DATABASE_DSN", ""), ("postgres", "postgresql"))
     if parse_qs(urlsplit(api["LAUNCHER_DATABASE_DSN"]).query).get("sslmode") != ["verify-full"]:
-        raise DeploymentError("Для PostgreSQL требуется «TLS sslmode=verify-full on multi-host network»")
+        raise DeploymentError("Для PostgreSQL требуется «TLS с sslmode=verify-full в сети из нескольких узлов»")
     redis = url_host(api.get("LAUNCHER_REDIS_URL", ""), ("rediss",))
     s3 = url_host(api.get("LAUNCHER_STORAGE_S3_ENDPOINT", ""), ("https",))
     public = api.get("LAUNCHER_PUBLIC_URL", "")
     public_host = url_host(public, ("https",))
     if urlsplit(public).username or urlsplit(public).password:
-        raise DeploymentError("публичный URL: запрещено «contain credentials»")
+        raise DeploymentError("публичный URL: запрещено «содержать учётные данные»")
     for key in ("LAUNCHER_DATABASE_DSN", "LAUNCHER_REDIS_URL", "LAUNCHER_STORAGE_S3_ENDPOINT",
                 "LAUNCHER_STORAGE_S3_BUCKET", "LAUNCHER_STORAGE_S3_REGION", "LAUNCHER_PUBLIC_URL"):
         if api.get(key) != worker.get(key):
@@ -142,7 +142,7 @@ def resolved_compose(directory, project, *, env_file=None):
     if refs["api"] != refs["worker"]:
         raise DeploymentError("API и рабочий процесс должны использовать точно один и тот же исполняемый файл или образ")
     if "ports" in services["api"] or "ports" in services["worker"]:
-        raise DeploymentError("«API/worker»: запрещено «publish host ports»")
+        raise DeploymentError("«службы API и обработчика заданий»: запрещено «публиковать порты узла»")
     ingress_ports = services["ingress"].get("ports", [])
     if len(ingress_ports) != 1:
         raise DeploymentError("Входящий прокси должен публиковать ровно один ограниченный HTTPS-порт")
@@ -151,17 +151,17 @@ def resolved_compose(directory, project, *, env_file=None):
             raise DeploymentError("У локального входящего прокси можно публиковать только порт 443")
         host_ip = str(bind.get("host_ip", ""))
         if not host_ip or host_ip in ("0.0.0.0", "::", "127.0.0.1"):
-            raise DeploymentError("ingress: требуется «an explicit reachable, restricted interface IP»")
+            raise DeploymentError("ingress: требуется «явный доступный IP-адрес ограниченного сетевого интерфейса»")
     for name in ("api", "worker"):
         if not services[name].get("healthcheck"):
-            raise DeploymentError("Отсутствует: «readiness healthcheck for»" + name)
+            raise DeploymentError("Отсутствует: «проверка готовности для»" + name)
     # Проверяйте ключ и сертификат TLS на хосте по разобранным томам Docker, а не
     # через недоверенную подстановку содержимого env-файла или журналирование
     # конфигурации Docker.
     tls_targets = ("/etc/launcher/tls/fullchain.pem", "/etc/launcher/tls/privkey.pem")
     tls_volumes = [v for v in services["ingress"].get("volumes", []) if v.get("target") in tls_targets]
     if sorted(v["target"] for v in tls_volumes) != sorted(tls_targets):
-        raise DeploymentError("both host TLS certificate and key: требуется «bind-mounted»")
+        raise DeploymentError("Сертификат TLS и закрытый ключ узла должны быть подключены как тома")
     for volume in tls_volumes:
         if volume.get("type") != "bind" or volume.get("read_only") is not True:
             raise DeploymentError("Учётные данные TLS узла должны подключаться как файлы только для чтения")
@@ -304,17 +304,17 @@ def local_up(directory, project):
         cwd=directory, timeout=230)
     report = live_observe(directory, project)
     if not report["ready"]:
-        raise DeploymentError("Ошибка: «containers started but live readiness or dependency round trips»")
+        raise DeploymentError("Ошибка: «контейнеры запущены, но проверка готовности или взаимодействие с зависимостями не прошли»")
     return report
 
 
 def remote_call(target, installed_script, directory, project, mode, *, growth=True, timeout=150):
     if not HOST_REGEX.fullmatch(target) or target.startswith("-"):
-        raise DeploymentError("Некорректное значение: «SSH target»")
+        raise DeploymentError("Некорректное значение: «целевой узел SSH»")
     if not installed_script.startswith("/") or not directory.startswith("/"):
         raise DeploymentError("Для установленного скрипта и каталога развёртывания требуются абсолютные пути")
     if any("\n" in s or "\r" in s for s in (installed_script, directory)):
-        raise DeploymentError("Некорректное значение: «remote path»")
+        raise DeploymentError("Некорректное значение: «удалённый путь»")
     args = ["python3", installed_script, mode, "--directory", directory, "--project", project,
             "--output", "-"]
     if not growth:
@@ -334,7 +334,7 @@ def remote_call(target, installed_script, directory, project, mode, *, growth=Tr
 
 def remote_stop_start(target, installed_script, directory, project, action):
     if action not in ("stop", "start"):
-        raise DeploymentError("Не поддерживается: «disruption action»")
+        raise DeploymentError("Не поддерживается: «действие по имитации отказа»")
     return remote_call(target, installed_script, directory, project, "local-" + action,
                        growth=False, timeout=(260 if action == "start" else 120))
 
@@ -344,7 +344,7 @@ def parse_nodes(specs):
     for spec in specs:
         name, sep, host = spec.partition("=")
         if not sep or not LABEL_REGEX.fullmatch(name) or not HOST_REGEX.fullmatch(host) or host.startswith("-") or name in nodes:
-            raise DeploymentError("each --node: требуется «a unique label=trusted-ssh-host»")
+            raise DeploymentError("Для каждого --node требуется уникальная запись вида label=trusted-ssh-host")
         if host in nodes.values():
             raise DeploymentError("Одна цель SSH указана несколько раз")
         nodes[name] = host
@@ -383,7 +383,7 @@ def validate_edge_url(url):
     try:
         parsed = urlsplit(url)
     except ValueError as exc:
-        raise DeploymentError("Некорректное значение: «external load balancer URL»") from exc
+        raise DeploymentError("Некорректное значение: «URL внешнего балансировщика нагрузки»") from exc
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment or parsed.query or parsed.path not in ("", "/", "/ready"):
         raise DeploymentError("Внешнему балансировщику требуется HTTPS-адрес или /ready без учётных данных")
     return url

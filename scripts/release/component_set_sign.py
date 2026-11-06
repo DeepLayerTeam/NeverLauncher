@@ -35,7 +35,7 @@ def signed_set(
         ):
             value = os.environ["LAUNCHER_COMPONENT_SECURITY_GENERATION"].strip()
             if not value.isascii() or not value.isdigit():
-                raise ValueError("component security generation: требуется «decimal»")
+                raise ValueError("поколение безопасности компонента должно быть десятичным числом")
             generation = int(value)
             manifest["securityGeneration"] = generation
         if type(generation) is not int or generation <= 0 or generation > 2**64 - 1:
@@ -49,12 +49,12 @@ def signed_set(
         if platform == "windows"
         else {"desktop", "guard", "runtime"}
     ):
-        raise ValueError("Неожиданное значение: «component role set»")
+        raise ValueError("Неожиданное значение: «набор ролей компонентов»")
     helpers = [
         x for x in manifest.get("supportFiles", []) if x["component"] == "updater"
     ]
     if len(helpers) != 1 or not helpers[0]["executable"]:
-        raise ValueError("Отсутствует: «component update helper»")
+        raise ValueError("Отсутствует: «вспомогательная программа обновления компонентов»")
     rows = [
         {
             "component": "desktop",
@@ -112,7 +112,7 @@ def signed_set(
 
     seed_bytes = bytes.fromhex(seed)
     if len(seed_bytes) != 32:
-        raise ValueError("Ed25519 seed: требуется «exactly 32 bytes in hexadecimal»")
+        raise ValueError("закрытый ключ Ed25519 должен содержать ровно 32 байта в шестнадцатеричном представлении")
     key = Ed25519PrivateKey.from_private_bytes(seed_bytes)
     expected_pub = (
         os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "").strip().lower()
@@ -177,7 +177,7 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
         or policy.get("domain") != "launcher.trust.v1"
         or policy.get("epoch", 0) < 1
     ):
-        raise ValueError("Некорректное значение: «delegated policy»")
+        raise ValueError("Некорректное значение: «делегированная политика»")
 
     def timestamp(s):
         return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(

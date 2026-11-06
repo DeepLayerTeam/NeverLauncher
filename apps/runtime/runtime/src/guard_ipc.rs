@@ -432,13 +432,13 @@ impl GuardSupervisor {
         validate_status_profile(&status, protection_profile)?;
         if status.pid != guard_pid || status.parent_pid != parent_pid
             || status.started_at_unix != _handshake_status.started_at_unix {
-            return Err("Несовпадение: «Guard Windows status process identity»".into());
+            return Err("Несовпадение: «идентификатор процесса состояния Windows Guard»".into());
         }
         status.lifetime_job_enforced = true;
         status.package_manifest_verified = package_manifest_verified;
         let policy_value = send_command(&mut handle, "process-policy")
             .await
-            .map_err(|err| format!("Ошибка: «Guard Windows Protection Core query»: {err}"))?;
+            .map_err(|err| format!("Ошибка: «запрос к Windows Protection Core»: {err}"))?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(policy_value)
             .map_err(|err| format!("Guard Windows Protection Core payload повреждён: {err}"))?;
         validate_guard_process_policy(&handle, &policy)?;
@@ -537,7 +537,7 @@ impl GuardSupervisor {
             challenge: challenge.to_string(),
         };
         let request_payload = serde_json::to_string(&request)
-            .map_err(|err| format!("Ошибка: «Guard attestation request serialization»: {err}"))?;
+            .map_err(|err| format!("Ошибка: «сериализация запроса аттестации Guard»: {err}"))?;
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
@@ -637,7 +637,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         )
     })?;
     if metadata.len() == 0 || metadata.len() > 256 * 1024 {
-        return Err("Некорректное значение: «Windows package manifest size»".to_string());
+        return Err("Некорректное значение: «размер манифеста пакета Windows»".to_string());
     }
     let raw = std::fs::read(&manifest_path)
         .map_err(|err| format!("не удалось прочитать Windows package manifest: {err}"))?;
@@ -684,14 +684,14 @@ fn verify_package_artifact(manifest: &WindowsPackageManifest, path: &Path) -> Re
     let metadata = std::fs::metadata(path)
         .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
     if metadata.len() != artifact.size {
-        return Err(format!("Несовпадение: «Windows package artifact size»: {name}"));
+        return Err(format!("Несовпадение: «размер артефакта пакета Windows»: {name}"));
     }
     let actual = sha256_file(path)?;
     if artifact.sha256.len() != 64
         || !artifact.sha256.bytes().all(|b| b.is_ascii_hexdigit())
         || !actual.eq_ignore_ascii_case(&artifact.sha256)
     {
-        return Err(format!("Несовпадение: «Windows package artifact SHA-256»: {name}"));
+        return Err(format!("Несовпадение: «SHA-256 артефакта пакета Windows»: {name}"));
     }
     Ok(())
 }
@@ -977,7 +977,7 @@ fn validate_release_identity(status: &GuardStatus, expected_platform: &str) -> R
     }
     if status.state != "ready" || !status.authenticated || !status.process_policy_enforced
         || !status.hardening_enforced || !status.secure_pipe_acl {
-        return Err("Ошибка: «Guard Windows mandatory runtime trust state»".to_string());
+        return Err("Ошибка: «обязательное состояние доверия Runtime в Windows Guard»".to_string());
     }
     if status.windows_protection_core_version != GUARD_WINDOWS_PROTECTION_CORE_VERSION
         || status.windows_capability_model_version != GUARD_WINDOWS_CAPABILITY_MODEL_VERSION
@@ -1018,7 +1018,7 @@ fn validate_integrity_evidence(
         || evidence.boundary.expected_parent_pid != launcher_pid
         || evidence.boundary.observed_parent_pid != launcher_pid
     {
-        return Err("Несовпадение: «Guard integrity evidence PID binding»".to_string());
+        return Err("Несовпадение: «привязка свидетельства целостности Guard к PID»".to_string());
     }
 
     let expected_digest = recompute_evidence_sha256(evidence)?;

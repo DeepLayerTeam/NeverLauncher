@@ -123,8 +123,8 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
       <h5>Подписанные файлы</h5>
       {availableFiles.map(f=><label key={f.path} className="componentEditorFile0248"><input type="checkbox" checked={component.files.includes(f.path)} onChange={e=>changeComponent({files:e.target.checked?[...component.files,f.path]:component.files.filter(p=>p!==f.path),actions:!e.target.checked?component.actions?.filter(a=>a.path!==f.path):component.actions})}/><code>{f.path}</code> ({f.size} B)</label>)}
       {!availableFiles.length&&<p className="muted">Свободных optional-файлов нет. Загрузите их в пакет перед назначением.</p>}
-      <MultiField label="Зависимости (ID [SemVer range], по одной на строке)" value={formatRelations0248(component.dependencies)} onChange={t=>changeComponent({dependencies:parseRelations0248(t)})}/>
-      <MultiField label="Конфликты (ID [SemVer range])" value={formatRelations0248(component.conflicts)} onChange={t=>changeComponent({conflicts:parseRelations0248(t)})}/>
+      <MultiField label="Зависимости (ID [диапазон версий SemVer], по одной на строке)" value={formatRelations0248(component.dependencies)} onChange={t=>changeComponent({dependencies:parseRelations0248(t)})}/>
+      <MultiField label="Конфликты (ID [диапазон версий SemVer])" value={formatRelations0248(component.conflicts)} onChange={t=>changeComponent({conflicts:parseRelations0248(t)})}/>
       <h5>Условия (schema 1.0)</h5>
       <label><input type="checkbox" checked={!!component.conditions} onChange={e=>changeComponent({conditions:e.target.checked?{schemaVersion:'1.0'}:undefined})}/> Ограничить доступность</label>
       {component.conditions&&<>

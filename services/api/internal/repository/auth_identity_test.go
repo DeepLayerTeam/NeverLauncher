@@ -27,25 +27,25 @@ func TestIssuerScopedIdentityMemory0291(t *testing.T) {
 		t.Fatal(err)
 	}
 	if one.ID == two.ID || one.UserID == two.UserID {
-		t.Fatal("issuer identities collapsed")
+		t.Fatal("Идентификаторы разных поставщиков слились")
 	}
 	if _, err := r.GetAuthIdentity("oidc", "same"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("unscoped lookup must fail closed: %v", err)
+		t.Fatalf("Поиск без области действия должен завершаться отказом: %v", err)
 	}
 	scoped, err := r.GetAuthIdentityByIssuer("oidc", "https://two.example", "same")
 	if err != nil || scoped.UserID != bob.ID {
-		t.Fatalf("issuer lookup failed: %+v / %v", scoped, err)
+		t.Fatalf("Поиск у поставщика не выполнен: %+v / %v", scoped, err)
 	}
 	if _, err := r.SaveAuthIdentity(model.AuthIdentity{UserID: bob.ID, Provider: "oidc", Issuer: "https://one.example", Subject: "same"}); err == nil {
-		t.Fatal("reassignment accepted")
+		t.Fatal("Переназначение ошибочно принято")
 	}
 	if _, err := r.SaveAuthIdentity(model.AuthIdentity{UserID: bob.ID, Provider: "oidc", Issuer: "https://two.example", Subject: "another"}); err == nil {
-		t.Fatal("issuer subject rewrite accepted")
+		t.Fatal("Принято изменение субъекта поставщика")
 	}
 	// JIT тоже идемпотентен и ограничен областью доступа.
 	u, identity, err := r.SaveFederatedUser(context.Background(), model.User{ID: "other", Email: "other@identity.invalid", RoleID: "player"}, model.AuthIdentity{Provider: "oidc", Issuer: "https://third.example", Subject: "same"})
 	if err != nil || identity.UserID != u.ID {
-		t.Fatalf("JIT failed %+v / %v", identity, err)
+		t.Fatalf("Создание учётной записи при первом входе не выполнено: %+v / %v", identity, err)
 	}
 }
 
@@ -66,19 +66,19 @@ func TestCredentialCannotCrossIssuerMemory0291(t *testing.T) {
 		}
 	}
 	if _, err := r.GetProviderCredential("admin", "oidc"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("ambiguous token lookup: %v", err)
+		t.Fatalf("Неоднозначный поиск токена: %v", err)
 	}
 	if _, err := r.GetProviderCredentialByIdentity("admin", second.ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.DeleteProviderCredential("admin", "oidc"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("ambiguous revoke accepted: %v", err)
+		t.Fatalf("Принят неоднозначный запрос на отзыв: %v", err)
 	}
 	if err := r.DeleteProviderCredentialByIdentity("admin", first.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := r.GetProviderCredentialByIdentity("admin", second.ID); err != nil {
-		t.Fatal("other issuer token lost", err)
+		t.Fatal("Потерян токен другого поставщика", err)
 	}
 }
 
@@ -92,12 +92,12 @@ func TestMinecraftUUIDImmutableMemory0291(t *testing.T) {
 	changed := profile
 	changed.UUID = "99999999-2222-4333-8444-555555555555"
 	if _, err := r.SaveMinecraftProfile(changed); !errors.Is(err, ErrConflict) {
-		t.Fatalf("UUID replacement accepted: %v", err)
+		t.Fatalf("Принята замена UUID: %v", err)
 	}
 	changed = profile
 	changed.Issuer = "external"
 	if _, err := r.SaveMinecraftProfile(changed); !errors.Is(err, ErrConflict) {
-		t.Fatalf("unverified issuer rewrite accepted: %v", err)
+		t.Fatalf("Принята неподтверждённая замена поставщика: %v", err)
 	}
 	saved, err := r.GetMinecraftProfileByUser("admin")
 	if err != nil || saved.UUID != uuid {

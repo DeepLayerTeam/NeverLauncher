@@ -34,7 +34,7 @@ func testOptions(t *testing.T) Options {
 		if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") == "1" {
 			t.Fatalf("проверка файловой системы для SQLite не пройдена: %v", err)
 		}
-		t.Skipf("SQLite integration requires verified ext4/xfs/btrfs mount: %v", err)
+		t.Skipf("Для интеграции SQLite требуется подтверждённое подключение ext4/xfs/btrfs: %v", err)
 	}
 	return opt
 }
@@ -370,11 +370,11 @@ func TestLockPrimitive(t *testing.T) {
 
 func TestRejectTmpfs(t *testing.T) {
 	if _, err := os.Stat("/dev/shm"); err != nil {
-		t.Skip("no tmpfs mount")
+		t.Skip("Отсутствует подключение tmpfs")
 	}
 	root, err := os.MkdirTemp("/dev/shm", "sqlite-negative-*")
 	if err != nil {
-		t.Skipf("cannot create tmpfs test directory: %v", err)
+		t.Skipf("Не удалось создать тестовый каталог tmpfs: %v", err)
 	}
 	defer os.RemoveAll(root)
 	if err = os.Chmod(root, 0700); err != nil {

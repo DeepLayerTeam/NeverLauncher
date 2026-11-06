@@ -42,7 +42,7 @@ def package(evidence: Path, approval: dict, destination: Path, *, now=None) -> N
             for relative in evidence_files(approval["version"]):
                 path = evidence / relative
                 if path.is_symlink() or not path.is_file():
-                    raise ValueError("Отсутствует: «security evidence for archive:»" + relative)
+                    raise ValueError("Отсутствует: «свидетельство безопасности для архива:»" + relative)
                 info = ZipInfo(relative, (1980, 1, 1, 0, 0, 0))
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o100600 << 16

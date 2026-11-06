@@ -110,7 +110,7 @@ def sync(
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=140)
     elapsed = time.perf_counter_ns() - t0
     if expect_success and result.returncode:
-        raise AssertionError(f"Ошибка: «real runtime sync-local»: {result.stderr[-2500:]}")
+        raise AssertionError(f"Ошибка: «реальная локальная синхронизация Runtime»: {result.stderr[-2500:]}")
     if not expect_success and not result.returncode:
         raise AssertionError("Изменённый манифест ошибочно принят")
     if not expect_success:
@@ -159,7 +159,7 @@ def integration(runtime: Path, signer: Path, out: Path) -> dict:
             if (root / "rejected" / "libraries").exists():
                 raise AssertionError("Установлен неподписанный файл")
             if len(server.metrics()["requests"]) != original_requests:
-                raise AssertionError("Недоверенное значение: «manifest caused HTTP requests»")
+                raise AssertionError("Недоверенное значение: «манифест привёл к HTTP-запросам»")
         # Сокет сервера уже закрыт. Второй профиль не может получить удалённый файл.
         sign(signer, unsigned, signed, manifest(server.url, files, profile="second"))
         second = sync(runtime, signed, root / "second", key, cache)

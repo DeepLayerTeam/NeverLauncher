@@ -77,13 +77,13 @@ def certify(
     java: str, expected_major: int, expected_os: str, expected_arch: str
 ) -> dict[str, Any]:
     if expected_major <= 0:
-        raise ValueError("expected Java major: требуется «positive»")
+        raise ValueError("expected Java major: требуется «положительное значение»")
     expected_os = normalize_os(expected_os)
     expected_arch = normalize_arch(expected_arch)
     if expected_os not in {"linux", "windows", "macos"}:
-        raise ValueError(f"Не поддерживается: «expected OS»: {expected_os}")
+        raise ValueError(f"Не поддерживается: «ожидаемая ОС»: {expected_os}")
     if expected_arch not in {"x86_64", "aarch64"}:
-        raise ValueError(f"Не поддерживается: «expected architecture»: {expected_arch}")
+        raise ValueError(f"Не поддерживается: «ожидаемая архитектура»: {expected_arch}")
 
     resolved = executable_path(java)
     if not resolved.is_file():

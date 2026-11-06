@@ -50,7 +50,7 @@ def timestamp(value):
             timezone.utc
         )
     except (TypeError, ValueError, AttributeError):
-        raise Blocked("Некорректное значение: «expiry time»") from None
+        raise Blocked("Некорректное значение: «время истечения срока»") from None
 
 
 def assess(package, validations, report, package_id, version, source_sha, now=None):

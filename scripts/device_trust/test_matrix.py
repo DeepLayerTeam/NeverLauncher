@@ -104,7 +104,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("unknown fields", proc.stderr + proc.stdout)
+            self.assertIn("неизвестные поля", proc.stderr + proc.stdout)
 
     def test_validate_rejects_weakened_required_checks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -114,7 +114,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("weaken", proc.stderr + proc.stdout)
+            self.assertIn("ослабляют", proc.stderr + proc.stdout)
 
     def test_aggregate_accepts_exact_commit_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -249,7 +249,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "DeepLayerTeam/Launcher",
             )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Контрольная сумма SHA-256 не совпадает", proc.stderr + proc.stdout)
+            self.assertIn("контрольная сумма SHA-256 свидетельства", proc.stderr + proc.stdout)
 
     def test_aggregate_rejects_path_traversal_evidence_name(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -282,7 +282,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "DeepLayerTeam/Launcher",
             )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("safe-basename", proc.stderr + proc.stdout)
+            self.assertIn("безопасными именами файлов", proc.stderr + proc.stdout)
 
     def test_protocol_result_cannot_claim_vendor_hardware_provenance(self) -> None:
         doc = {
@@ -369,7 +369,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn(
-                "vendor hardware provenance", (proc.stderr + proc.stdout).lower()
+                "производителе оборудования", (proc.stderr + proc.stdout).lower()
             )
 
 

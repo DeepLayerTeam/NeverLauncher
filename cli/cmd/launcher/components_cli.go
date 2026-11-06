@@ -149,7 +149,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		return out, fmt.Errorf("Для компонентов необходим Manifest v3, получено %q", out.Wire.SchemaVersion)
 	}
 	if len(out.Wire.ComponentCatalog) == 0 || len(out.Wire.Files) == 0 || len(out.Wire.ProfileSnapshot) == 0 {
-		return out, errors.New("v3 manifest: требуется «catalog, files and profile snapshot»")
+		return out, errors.New("Манифест v3 должен содержать каталог, файлы и снимок профиля")
 	}
 	if e = json.Unmarshal(data, &out.Manifest); e != nil {
 		return out, e
@@ -609,7 +609,7 @@ func handleComponents0249(args []string) error {
 		Message       string `json:"message"`
 	}{"1.0", "error", code, component, related, err.Error()}
 	if e := writeComponentsJSON0249(output, report); e != nil {
-		return fmt.Errorf("«%w;»: запрещено «write error JSON:» %v", err, e)
+		return fmt.Errorf("%w; не удалось записать ошибку в JSON: %v", err, e)
 	}
 	return err
 }

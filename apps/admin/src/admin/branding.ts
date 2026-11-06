@@ -222,7 +222,7 @@ async function policy0355(
       Array.isArray(p.keys) &&
       p.keys.length > 0 &&
       p.keys.length <= 128,
-    "Неверная root-signed policy",
+    "Некорректная политика, подписанная корневым ключом",
   );
   const issue = Date.parse(p.issuedAt),
     expiry = Date.parse(p.expiresAt);
@@ -257,10 +257,10 @@ export async function verifyBootstrap0355(
   const env = parse<Envelope0355>(signed);
   assert(
     env && ["1.0", "2.0"].includes(env.schemaVersion),
-    "Неподдерживаемый signed bootstrap",
+    "Неподдерживаемый подписанный пакет первоначальной настройки",
   );
   const raw = base64Decode(env.payload);
-  assert(raw.length <= 1024 * 1024, "Payload bootstrap слишком велик");
+  assert(raw.length <= 1024 * 1024, "Содержимое пакета первоначальной настройки слишком велико");
   let key = root,
     message = raw,
     policy: Policy0355 | undefined;
@@ -314,7 +314,7 @@ export async function verifyBootstrap0355(
   if (env.schemaVersion === "2.0")
     assert(
       payload.profilePublicKey.toLowerCase() === root.toLowerCase(),
-      "Delegated bootstrap должен закреплять root profilePublicKey",
+      "Делегированный пакет первоначальной настройки должен закреплять корневой profilePublicKey",
     );
   if (payload.branding) validateBrand0355(payload.branding);
   return { envelope: env, payload, policy };
@@ -355,7 +355,7 @@ export async function signBranding0355(
         k.role === "bootstrap" &&
         k.status === "active",
     );
-    assert(key, "Активный delegated signer отсутствует");
+    assert(key, "Активный делегированный подписант отсутствует");
     expected = key.publicKey;
     output.keyId = key.id;
     output.trustEpoch = input.policy!.epoch;

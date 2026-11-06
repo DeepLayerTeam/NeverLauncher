@@ -140,15 +140,15 @@ func handlePipeline(args []string) error {
 		}
 		validate, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/validate", map[string]any{}, token)
 		if err != nil {
-			return fmt.Errorf("Ошибка: «package validation»: %w", err)
+			return fmt.Errorf("Ошибка: «проверка пакета»: %w", err)
 		}
 		sign, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/sign", map[string]any{}, token)
 		if err != nil {
-			return fmt.Errorf("Ошибка: «package signing»: %w", err)
+			return fmt.Errorf("Ошибка: «подписание пакета»: %w", err)
 		}
 		staged, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/stage", map[string]any{}, token)
 		if err != nil {
-			return fmt.Errorf("Ошибка: «package stage»: %w", err)
+			return fmt.Errorf("Ошибка: «подготовка пакета»: %w", err)
 		}
 		return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "validate": validate, "sign": sign, "stage": staged})
 	case "integrity-check":

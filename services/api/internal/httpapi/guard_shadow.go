@@ -39,7 +39,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 		return nil, errors.New("Для теневой режим Guard требуется «a valid running product version»")
 	}
 	if !filepath.IsAbs(directory) || !filepath.IsAbs(keyFile) {
-		return nil, errors.New("Guard shadow directory/key: требуется «absolute»")
+		return nil, errors.New("Guard shadow directory/key: требуется «абсолютный путь»")
 	}
 	di, err := os.Lstat(directory)
 	if err != nil || !di.IsDir() || di.Mode()&os.ModeSymlink != 0 || di.Mode().Perm()&0077 != 0 {

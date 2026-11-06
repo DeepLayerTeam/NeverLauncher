@@ -27,10 +27,10 @@ func TestEvaluate03310(t *testing.T) {
 	v.Probes[0].Passed = false
 	failed, e := Evaluate(v)
 	if e != nil || failed.Ready {
-		t.Fatal("failed test passed")
+		t.Fatal("Провален тест, который должен был завершиться отказом")
 	}
 	if e = CompareReady(v); e == nil {
-		t.Fatal("forged readiness accepted")
+		t.Fatal("Принята поддельная готовность")
 	}
 	v = r
 	v.Target.Players = append([]Player(nil), v.Target.Players...)
@@ -39,25 +39,25 @@ func TestEvaluate03310(t *testing.T) {
 	v.TargetSnapshotSHA256 = d
 	failed, e = Evaluate(v)
 	if e != nil || failed.Ready {
-		t.Fatal("economy regression passed")
+		t.Fatal("Не обнаружена регрессия экономики")
 	}
 	v = r
 	v.Probes = v.Probes[:len(v.Probes)-1]
 	failed, e = Evaluate(v)
 	if e != nil || failed.Ready {
-		t.Fatal("missing admin probe passed")
+		t.Fatal("Пройдена проверка без административного запроса")
 	}
 	v = r
 	v.Probes = append([]Probe(nil), v.Probes...)
 	v.Probes[2].UUID = "not-existing"
 	failed, e = Evaluate(v)
 	if e != nil || failed.Ready {
-		t.Fatal("wrong join UUID passed")
+		t.Fatal("Принят неверный UUID подключения")
 	}
 	v = r
 	v.TargetSnapshotSHA256 = h
 	if _, e = Evaluate(v); e == nil {
-		t.Fatal("forged snapshot digest accepted")
+		t.Fatal("Принята поддельная контрольная сумма снимка")
 	}
 }
 
@@ -72,7 +72,7 @@ func TestEvaluateRequiresNativeLiveSession0447(t *testing.T) {
 	}
 	older, e := Evaluate(report)
 	if e != nil || older.Ready || len(older.Blockers) == 0 {
-		t.Fatalf("legacy synthetic report passed: %+v %v", older, e)
+		t.Fatalf("Принят устаревший синтетический отчёт: %+v %v", older, e)
 	}
 	start := time.Now().UTC().Add(-10 * time.Second)
 	report.LiveSession = &LiveSession{ClientSHA256: h, PlayerName: "Steve", PlayerUUID: p.UUID, BeforeSHA256: h, JoinedSHA256: h, StartedAt: start.Format(time.RFC3339Nano), JoinedAt: start.Add(3 * time.Second).Format(time.RFC3339Nano)}
@@ -83,11 +83,11 @@ func TestEvaluateRequiresNativeLiveSession0447(t *testing.T) {
 	report.LiveSession.PlayerUUID = "76543210-1234-1234-1234-123456789abc"
 	blocked, e := Evaluate(report)
 	if e != nil || blocked.Ready {
-		t.Fatalf("mismatched live UUID passed: %+v %v", blocked, e)
+		t.Fatalf("Принят неверный UUID реального сеанса: %+v %v", blocked, e)
 	}
 	report.LiveSession.PlayerUUID = p.UUID
 	report.LiveSession.JoinedAt = report.LiveSession.StartedAt
 	if _, e = Evaluate(report); e == nil {
-		t.Fatal("impossible live timeline accepted")
+		t.Fatal("Принята невозможная хронология реального сеанса")
 	}
 }

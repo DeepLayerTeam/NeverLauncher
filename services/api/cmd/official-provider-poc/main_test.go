@@ -111,13 +111,13 @@ func TestBrowserPKCEPOCRedactsAllTokensAndNeverClaimsFormalApproval(t *testing.T
 		t.Fatalf("Неожиданный результат %+v", r)
 	}
 	if r.ExternalAppApproval != "requires_independent_provider_confirmation" {
-		t.Fatal("simulated access was treated as approval")
+		t.Fatal("Имитация доступа ошибочно принята за подтверждение")
 	}
 	if r.MinecraftServicesAccess != "verified_live_profile" || len(r.Stages) != 8 {
-		t.Fatalf("unexpected stage sequence %+v", r)
+		t.Fatalf("Неожиданная последовательность этапов: %+v", r)
 	}
 	if r.EntitlementItems == nil || *r.EntitlementItems != 0 {
-		t.Fatal("zero entitlements may coexist with active Java profile")
+		t.Fatal("Отсутствие игровых прав может сочетаться с активным профилем Java")
 	}
 	if r.MinecraftProfileSHA256 == "" {
 		t.Fatal("missing hashed subject")

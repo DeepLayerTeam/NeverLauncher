@@ -26,14 +26,14 @@ func TestExpiredMutationAndJobFences0514(t *testing.T) {
 	r.durableScopeLeases[lease.ScopeKey] = old
 	r.durableMu.Unlock()
 	if err := r.ReleaseDurableScopeLease(ctx, lease.ScopeKey, lease.LeaseToken); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired scope token released lease: %v", err)
+		t.Fatalf("Просроченный токен области действия освободил аренду: %v", err)
 	}
 	newLease, err := r.AcquireDurableScopeLease(ctx, lease.ScopeKey, "worker-b", time.Minute)
 	if err != nil || newLease.FencingToken <= lease.FencingToken {
-		t.Fatalf("new fence not monotonic: %#v %v", newLease, err)
+		t.Fatalf("Новый барьер не монотонен: %#v %v", newLease, err)
 	}
 	if _, err := r.RenewDurableScopeLease(ctx, lease.ScopeKey, lease.LeaseToken, time.Minute); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("stale owner renewed newer fence: %v", err)
+		t.Fatalf("Устаревший владелец продлил более новый барьер: %v", err)
 	}
 	job, _, err := r.EnqueueDurableJob(ctx, model.DurableJob{
 		Kind: "package-publish", ActorType: "user", ActorID: "operator",
@@ -53,14 +53,14 @@ func TestExpiredMutationAndJobFences0514(t *testing.T) {
 	r.durableJobs[job.ID] = expiredJob
 	r.durableMu.Unlock()
 	if _, err := r.FailDurableJob(ctx, job.ID, oldJob.LeaseToken, "late", time.Second); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired owner failed job: %v", err)
+		t.Fatalf("Владелец с истёкшими полномочиями изменил статус задания на ошибку: %v", err)
 	}
 	if _, err := r.TerminateDurableJob(ctx, job.ID, oldJob.LeaseToken, model.DurableJobStatusFailed, "late"); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired owner terminated job: %v", err)
+		t.Fatalf("Владелец с истёкшими полномочиями завершил задание: %v", err)
 	}
 	claimed, err := r.LeaseDurableJob(ctx, job.ID, "worker-b", time.Minute)
 	if err != nil || claimed.LeaseFence <= oldJob.LeaseFence {
-		t.Fatalf("worker-b must take over with higher fence: %+v %v", claimed, err)
+		t.Fatalf("Обработчик B должен принять управление с более высоким барьером: %+v %v", claimed, err)
 	}
 }
 
@@ -95,10 +95,10 @@ func TestExpiredExhaustedWorkBecomesTerminal0514(t *testing.T) {
 	}
 	current, err := r.GetDurableJob(ctx, job.ID)
 	if err != nil || current.Status != model.DurableJobStatusDead || current.LeaseToken != "" {
-		t.Fatalf("exhausted job remains runnable: %+v %v", current, err)
+		t.Fatalf("Задание с исчерпанными попытками осталось доступным для запуска: %+v %v", current, err)
 	}
 	if _, err := r.FailDurableJob(ctx, job.ID, leased.LeaseToken, "late", 0); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("exhausted worker changed terminal job: %v", err)
+		t.Fatalf("Обработчик с исчерпанными попытками изменил завершённое задание: %v", err)
 	}
 	if _, err := r.ClaimOutboxEvents(ctx, "worker-b", 8, time.Minute); err != nil {
 		t.Fatal(err)
@@ -107,6 +107,6 @@ func TestExpiredExhaustedWorkBecomesTerminal0514(t *testing.T) {
 	currentEvent := r.durableOutbox[id]
 	r.durableMu.Unlock()
 	if currentEvent.Status != model.OutboxStatusDead || currentEvent.LeaseToken != "" {
-		t.Fatalf("exhausted outbox event remains runnable: %+v", currentEvent)
+		t.Fatalf("Событие исходящей очереди с исчерпанными попытками осталось доступным для обработки: %+v", currentEvent)
 	}
 }

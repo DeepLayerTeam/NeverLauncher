@@ -88,6 +88,6 @@ func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 	// Восстановление использует НОВУЮ ревизию и не уничтожает прежнюю историю.
 	restored, err := a.SaveOperationalConfig(ctx, after.Revision, OperationalConfig{}, "e2e-admin", "restore after CAS", &initial.Revision)
 	if err != nil || restored.Revision != after.Revision+1 || restored.Settings != initial.Settings {
-		t.Fatalf("restore: %+v %v", restored, err)
+		t.Fatalf("Восстановление: %+v %v", restored, err)
 	}
 }

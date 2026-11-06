@@ -45,10 +45,10 @@ def _timestamp(value: str) -> datetime:
             raise ValueError("Отметка времени указана не в UTC")
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
-            raise ValueError("Отсутствует: «timezone»")
+            raise ValueError("Отсутствует: «часовой пояс»")
         return parsed.astimezone(timezone.utc)
     except ValueError as exc:
-        raise CertificationBlocked("Некорректное значение: «certification execution timestamp»") from exc
+        raise CertificationBlocked("Некорректное значение: «время запуска сертификации»") from exc
 
 
 def identity(
@@ -82,7 +82,7 @@ def identity(
             raise CertificationBlocked("VERSION рабочей копии отличается от сертифицируемой версии")
     repository = env.get("GITHUB_REPOSITORY", "")
     if not REPO.fullmatch(repository):
-        raise CertificationBlocked("Требуется: «current GitHub repository identity»")
+        raise CertificationBlocked("Требуется: «идентификатор текущего репозитория GitHub»")
     run_id = _positive(env.get("GITHUB_RUN_ID", ""), "GITHUB_RUN_ID")
     attempt = _positive(env.get("GITHUB_RUN_ATTEMPT", ""), "GITHUB_RUN_ATTEMPT")
     moment = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)

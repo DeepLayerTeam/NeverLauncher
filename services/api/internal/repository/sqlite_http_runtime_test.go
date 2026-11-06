@@ -49,27 +49,27 @@ func TestSQLiteHTTPDevicesJobsExtensionsRestart0373(t *testing.T) {
 	defer db.Close()
 	accountRestored, err := db.GetUser("owner-1")
 	if err != nil || accountRestored.PasswordHash != account.PasswordHash {
-		t.Fatalf("lost password verifier: %v", err)
+		t.Fatalf("Потерян проверочный секрет пароля: %v", err)
 	}
 	secretRestored, err := db.GetExtensionSecret(ctx, "example.extension", "global", "", "token")
 	if err != nil || !bytes.Equal(secret.Ciphertext, secretRestored.Ciphertext) || !bytes.Equal(secret.Nonce, secretRestored.Nonce) {
-		t.Fatalf("lost extension ciphertext: %v", err)
+		t.Fatalf("Потерян шифротекст расширения: %v", err)
 	}
 	deviceRestored, err := db.GetTrustedDevice("user-1", "device-1")
 	if err != nil || deviceRestored.PublicKey != "public-1" {
-		t.Fatalf("lost device public key: %v", err)
+		t.Fatalf("Потерян публичный ключ устройства: %v", err)
 	}
 	found, err := db.GetDurableJob(ctx, stored.ID)
 	if err != nil || found.IdempotencyKey != "retry-key" {
-		t.Fatalf("lost job: %+v %v", found, err)
+		t.Fatalf("Потеряно задание: %+v %v", found, err)
 	}
 	_, created, err = db.EnqueueDurableJob(ctx, job, time.Hour)
 	if err != nil || created {
-		t.Fatalf("job replay: created=%v err=%v", created, err)
+		t.Fatalf("Повторная обработка задания: created=%v err=%v", created, err)
 	}
 	policy, err := db.GetExtensionTrustPolicy(ctx)
 	if err != nil || policy.Mode != model.ExtensionTrustModeAudit {
-		t.Fatalf("lost extension policy: %+v %v", policy, err)
+		t.Fatalf("Потеряна политика расширения: %+v %v", policy, err)
 	}
 	if _, err := db.RevokeTrustedDevice(ctx, "user-1", "device-1", "security-incident"); err != nil {
 		t.Fatal(err)
@@ -89,9 +89,9 @@ func TestSQLiteHTTPDevicesJobsExtensionsRestart0373(t *testing.T) {
 	// Некорректные имена компонентов не должны читать или изменять произвольные
 	// таблицы SQLite.
 	if err := db.WriteRuntimeComponent0373(ctx, "../sessions", []byte("x")); err == nil {
-		t.Fatal("unrestricted runtime component")
+		t.Fatal("Компонент Runtime получил неограниченный доступ")
 	}
 	if _, _, err := db.ReadRuntimeComponent0373(ctx, "../sessions"); err == nil {
-		t.Fatal("unrestricted component read")
+		t.Fatal("Разрешено неограниченное чтение компонента")
 	}
 }

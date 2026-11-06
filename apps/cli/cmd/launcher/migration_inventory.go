@@ -213,7 +213,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	// Создание ссылки атомарно в пределах файловой системы и завершается ошибкой при существующей цели. Не
 	// затирайте предыдущие снимки восстановления и не переходите по символьным ссылкам назначения.
 	if e = os.Link(tmp.Name(), out); e != nil {
-		return fmt.Errorf("«cannot safely publish export to %q (destination»: запрещено «exist):» %w", out, e)
+		return fmt.Errorf("«невозможно безопасно опубликовать экспорт в %q (целевой файл»: запрещено «существует):» %w", out, e)
 	}
 	fmt.Printf("Экспортирован проверенный источник Gravit: %s (SHA-256 манифеста %s)\n", out, expected)
 	return nil

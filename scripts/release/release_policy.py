@@ -35,7 +35,7 @@ def parsed(version: str):
     if not match or any(
         part.startswith("0") and len(part) > 1 for part in match.groups()[:3]
     ):
-        raise ValueError("Некорректное значение: «canonical release version:»" + version)
+        raise ValueError("Некорректное значение: «каноническая версия выпуска:»" + version)
     return tuple(int(p) for p in match.groups()[:3]), match.group(4)
 
 

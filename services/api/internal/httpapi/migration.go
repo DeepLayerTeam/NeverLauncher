@@ -184,7 +184,7 @@ func (s Server) migrationBaseline0331(ctx context.Context, run mw.Run) (json.Raw
 		digest := sha256.Sum256(raw)
 		return json.Marshal(map[string]any{"inventory": inventory, "sha256": hex.EncodeToString(digest[:])})
 	default:
-		return nil, errors.New("Отсутствует: «executable source step registered; run is not migration-complete»")
+		return nil, errors.New("Отсутствует: «зарегистрированный исполняемый шаг источника; миграция ещё не завершена»")
 	}
 }
 func (s Server) migrationExecute0331(w http.ResponseWriter, r *http.Request) {

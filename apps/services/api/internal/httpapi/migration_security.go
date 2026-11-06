@@ -25,15 +25,15 @@ type migrationSecurityStore0336 interface {
 func migrationSigner0336(cfg config.Config) (string, string, error) {
 	kid := strings.TrimSpace(cfg.AuthTokenActiveKID)
 	if kid == "" || len(kid) > 96 {
-		return "", "", errors.New("Требуется: «explicit Never JWT active KID»")
+		return "", "", errors.New("Требуется: «явно указанный активный KID JWT Never»")
 	}
 	keys := map[string]string{}
 	if err := json.Unmarshal([]byte(cfg.AuthTokenKeysJSON), &keys); err != nil {
-		return "", "", errors.New("Требуется: «explicit Never JWT key set»")
+		return "", "", errors.New("Требуется: «явно указанный набор ключей JWT Never»")
 	}
 	active := strings.TrimSpace(keys[kid])
 	if len(active) < 32 {
-		return "", "", errors.New("active Never JWT secret: требуется «independently provisioned (min 32 bytes)»")
+		return "", "", errors.New("active Never JWT secret: требуется «создан независимо (не менее 32 байт)»")
 	}
 	for other, name := range keys {
 		if other != kid && name == active {
@@ -41,11 +41,11 @@ func migrationSigner0336(cfg config.Config) (string, string, error) {
 		}
 	}
 	if strings.EqualFold(active, strings.TrimSpace(cfg.ManifestSigningPrivateKey)) {
-		return "", "", errors.New("JWT and Ed25519 signing secrets: требуется «independent»")
+		return "", "", errors.New("JWT and Ed25519 signing secrets: требуется «быть независимыми»")
 	}
 	seed, err := hex.DecodeString(strings.TrimSpace(cfg.ManifestSigningPrivateKey))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return "", "", errors.New("new Never Ed25519 manifest signing seed: требуется «configured»")
+		return "", "", errors.New("new Never Ed25519 manifest signing seed: требуется «настроенный»")
 	}
 	public := ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey)
 	digest := sha256.Sum256(public)

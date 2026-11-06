@@ -99,7 +99,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 
 func compatValidateJar0279(path, digest, prefix string) error {
 	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(strings.ToLower(path), ".jar") {
-		return fmt.Errorf("compatibility JAR: требуется «under %s:» %q", prefix, path)
+		return fmt.Errorf("compatibility JAR: требуется «в каталоге %s:» %q", prefix, path)
 	}
 	if err := validateVanillaRelativePath(path); err != nil {
 		return err

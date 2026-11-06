@@ -126,20 +126,20 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	}
 	var joins int
 	if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM minecraft_joins WHERE minecraft_session_id=$1`, mc).Scan(&joins); err != nil || joins != 0 {
-		t.Fatalf("join not invalidated: %d %v", joins, err)
+		t.Fatalf("Подключение не аннулировано: %d %v", joins, err)
 	}
 	var kicks int
 	if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND command_type='player.kick' AND status='pending' AND requested_by='serverbridge-player-session'`, node).Scan(&kicks); err != nil || kicks != 1 {
-		t.Fatalf("online player was not scheduled for disconnection: %d %v", kicks, err)
+		t.Fatalf("Активный игрок не поставлен в очередь на отключение: %d %v", kicks, err)
 	}
 	// Даже второе соединение API не должно выдавать Minecraft-токен для отозванного
 	// родителя независимо от локальных кэшей реплик.
 	if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`, "late-"+suffix, user, first, uuid, strings.Repeat("d", 64)); err == nil {
-		t.Fatal("concurrent-revocation gate allowed new Minecraft authorization")
+		t.Fatal("При параллельном отзыве разрешена новая авторизация Minecraft")
 	}
 	var status string
 	if err := b.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(&status); err != nil || status != "running" {
-		t.Fatalf("other active session should preserve job: %q %v", status, err)
+		t.Fatalf("Другой активный сеанс должен сохранять задание: %q %v", status, err)
 	}
 	// Изменение чувствительных данных пользователя отзывает все оставшиеся сеансы
 	// триггером БД.
@@ -148,15 +148,15 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	}
 	for _, q := range []string{`SELECT status FROM auth_sessions WHERE id=$1`, `SELECT status FROM refresh_token_families WHERE session_id=$1`} {
 		if err := a.db.QueryRowContext(ctx, q, second).Scan(&status); err != nil || status != "revoked" {
-			t.Fatalf("role revocation: %s: %q %v", q, status, err)
+			t.Fatalf("Отзыв роли: %s: %q %v", q, status, err)
 		}
 	}
 	if err := a.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(&status); err != nil || status != "revoked" {
-		t.Fatalf("job not fenced: %q %v", status, err)
+		t.Fatalf("Задание не защищено от устаревших операций: %q %v", status, err)
 	}
 	// ID отозванных сеансов окончательно недействительны.
 	if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='active',revoked_at=NULL,revoked_reason='' WHERE id=$1`, second); err == nil {
-		t.Fatal("a revoked session was resurrected")
+		t.Fatal("Отозванный сеанс был восстановлен")
 	}
 	// Изменение несвязанного поля пользователя не должно выводить новый сеанс из
 	// системы.
@@ -180,7 +180,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := b.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, fresh).Scan(&status); err != nil || status != "active" {
-		t.Fatalf("profile update incorrectly revoked session: %q %v", status, err)
+		t.Fatalf("Обновление профиля ошибочно отозвало сеанс: %q %v", status, err)
 	}
 	// Редактирование прав роли — действующее изменение безопасности, даже если
 	// users.role_id и users.project_roles совпадают. Кэшированные токены должны
@@ -214,6 +214,6 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := a.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, roleSession).Scan(&status); err != nil || status != "revoked" {
-		t.Fatalf("role permission edit retained access: %q %v", status, err)
+		t.Fatalf("Изменение разрешений роли сохранило доступ: %q %v", status, err)
 	}
 }

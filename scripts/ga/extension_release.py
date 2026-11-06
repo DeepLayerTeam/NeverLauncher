@@ -96,7 +96,7 @@ def certify(
             "Сертификат расширения не соответствует шести исходным результатам запуска JVM"
         )
     if cert.get("schemaVersion") != "launcher.extensions.acceptance.v1":
-        raise ValueError("Не поддерживается: «extension acceptance certificate»")
+        raise ValueError("Не поддерживается: «сертификат приёмки расширения»")
     matrix_hash = verify_matrix(matrix)
     checked_file(cli)
     checked_file(publisher_key)

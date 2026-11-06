@@ -92,11 +92,11 @@ func (r *SQLRepository) MaterializedBuildForPackage0384(ctx context.Context, pac
 func validWorkspace0226(w BuildWorkspace) error {
 	for _, id := range []string{w.ID, w.ProjectID, w.OwnerID, w.ProfileID, w.Channel, w.Version} {
 		if id == "" || len(id) > 128 || strings.ContainsAny(id, "\x00\r\n") {
-			return errors.New("Некорректное значение: «workspace identity»")
+			return errors.New("Некорректное значение: «идентификатор рабочей области»")
 		}
 	}
 	if w.ProfileRevision < 1 || len(w.ProfileDigest) != 64 || len(w.Files) > 25000 {
-		return errors.New("Некорректное значение: «pinned profile or file count»")
+		return errors.New("Некорректное значение: «закреплённый профиль или количество файлов»")
 	}
 	return nil
 }
@@ -120,21 +120,21 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 	switch next.State {
 	case "importing":
 		if next.BuildDigest != "" {
-			return errors.New("«importing workspace»: запрещено сохранять контрольную сумму сборки")
+			return errors.New("«импортируемая рабочая область»: запрещено сохранять контрольную сумму сборки")
 		}
 	case "staged":
 		if next.BuildDigest != "" {
-			return errors.New("«staged workspace»: запрещено сохранять контрольную сумму сборки")
+			return errors.New("«подготовленная рабочая область»: запрещено сохранять контрольную сумму сборки")
 		}
 	case "built":
 		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {
-			return errors.New("built workspace: требуется «staged inputs, package and SHA-256 build digest»")
+			return errors.New("built workspace: требуется «подготовленные входные данные, пакет и контрольная сумма сборки SHA-256»")
 		}
 		if _, err := hex.DecodeString(next.BuildDigest); err != nil {
-			return errors.New("Некорректное значение: «build digest»")
+			return errors.New("Некорректное значение: «контрольная сумма сборки»")
 		}
 	default:
-		return errors.New("Некорректное значение: «workspace state transition»")
+		return errors.New("Некорректное значение: «переход состояния рабочей области»")
 	}
 	if old.PackageID != "" && old.PackageID != next.PackageID {
 		return fmt.Errorf("%w: резервирование пакета рабочей области неизменяемо", ErrConflict)

@@ -73,19 +73,19 @@ func normalizeSecret0207(in model.ExtensionSecret) (model.ExtensionSecret, error
 		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: ID расширения %q", s.ExtensionID)
 	}
 	if !extensionSecretName0207.MatchString(s.Name) {
-		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: «extension secret name» %q", s.Name)
+		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: «имя секрета расширения» %q", s.Name)
 	}
 	if len(s.Nonce) != 12 {
 		return model.ExtensionSecret{}, errors.New("extension secret nonce: требуется «12 bytes»")
 	}
 	if len(s.Ciphertext) < 16 || len(s.Ciphertext) > (1<<20)+16 {
-		return model.ExtensionSecret{}, errors.New("Некорректное значение: «extension secret ciphertext size»")
+		return model.ExtensionSecret{}, errors.New("Некорректное значение: «размер зашифрованного секрета расширения»")
 	}
 	if s.KeyVersion == "" || len(s.KeyVersion) > 64 {
-		return model.ExtensionSecret{}, errors.New("Требуется: «extension secret keyVersion»")
+		return model.ExtensionSecret{}, errors.New("Требуется: «поле keyVersion секрета расширения»")
 	}
 	if s.UpdatedBy == "" || len(s.UpdatedBy) > 255 {
-		return model.ExtensionSecret{}, errors.New("Требуется: «extension secret updatedBy»")
+		return model.ExtensionSecret{}, errors.New("Требуется: «поле updatedBy секрета расширения»")
 	}
 	return s, nil
 }

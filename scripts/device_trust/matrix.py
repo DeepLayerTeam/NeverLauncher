@@ -165,10 +165,10 @@ def discover_results(
             continue
         target_id = str(payload.get("targetId", "")).strip()
         if not ID_RE.fullmatch(target_id):
-            errors.append(f"{path}: invalid targetId")
+            errors.append(f"{path}: некорректный targetId")
             continue
         if target_id in found:
-            errors.append(f"duplicate device trust result for {target_id}")
+            errors.append(f"повторяющийся результат проверки доверия устройства для {target_id}")
             continue
         found[target_id] = (path, payload)
     return found, errors
@@ -195,11 +195,11 @@ def verify_result(
     }
     for key, value in expected.items():
         if str(result.get(key, "")) != str(value):
-            errors.append(f"{key}: expected {value!r}, got {result.get(key)!r}")
+            errors.append(f"{key}: ожидалось {value!r}, получено {result.get(key)!r}")
     if result.get("status") != "passed":
-        errors.append(f"status is {result.get('status')!r}")
+        errors.append(f"получен статус {result.get('status')!r}")
     if result.get("exitCode") != 0:
-        errors.append(f"exitCode is {result.get('exitCode')!r}")
+        errors.append(f"получен код завершения {result.get('exitCode')!r}")
     runtime_arch = str(result.get("runtimeArch", "")).strip()
     if not runtime_arch:
         errors.append("Отсутствует runtimeArch")
@@ -209,14 +209,14 @@ def verify_result(
             errors.append(f"runtimeArch {runtime_arch!r} не соответствует целевой архитектуре {target['arch']!r}")
     checks = result.get("checks")
     if not isinstance(checks, dict):
-        errors.append("checks is missing")
+        errors.append("отсутствует объект checks")
     else:
         for check in target["requiredChecks"]:
             if checks.get(check) is not True:
-                errors.append(f"required check {check} is not true")
+                errors.append(f"обязательная проверка {check} не пройдена")
     evidence = result.get("evidence")
     if not isinstance(evidence, dict):
-        errors.append("evidence is missing")
+        errors.append("отсутствует объект evidence")
     else:
         files = evidence.get("files")
         digests = evidence.get("sha256")
@@ -231,7 +231,7 @@ def verify_result(
                 "evidence.files должен быть непустым массивом строк с безопасными именами файлов"
             )
         elif len(files) != len(set(files)):
-            errors.append("evidence.files contains duplicates")
+            errors.append("evidence.files содержит повторяющиеся значения")
         elif "device-trust-result.json" in files:
             errors.append("evidence.files не может включать device-trust-result.json")
         elif not isinstance(digests, dict) or set(digests) != set(files):
@@ -254,7 +254,7 @@ def verify_result(
                     continue
                 actual_digest = sha256_file(evidence_path)
                 if actual_digest != expected_digest:
-                    errors.append(f"evidence SHA-256 mismatch for {name}")
+                    errors.append(f"контрольная сумма SHA-256 свидетельства {name} не совпадает")
     claims = result.get("claims")
     if target["kind"] == "protocol-e2e":
         if not isinstance(claims, dict):

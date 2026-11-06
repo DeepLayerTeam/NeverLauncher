@@ -236,7 +236,7 @@ func (s *passkeyStore117) policy(userID string) string {
 func (s *passkeyStore117) setPolicy(userID, req string) error {
 	req = normalizeMFARequirement117(req)
 	if req == "" {
-		return errors.New("Некорректное значение: «MFA requirement»")
+		return errors.New("Некорректное значение: «требование MFA»")
 	}
 	if s.persistent != nil {
 		return s.persistent.setPolicy(userID, req)

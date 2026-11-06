@@ -80,7 +80,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
         name = pattern.format(arch=arch)
         path = out / name
         if not path.is_file():
-            raise SystemExit(f"Отсутствует: «Linux production artifact»: {path}")
+            raise SystemExit(f"Отсутствует: «рабочий артефакт Linux»: {path}")
         machine = inspect_elf(path, arch)
         digest, size = sha256_file(path)
         artifacts.append(

@@ -186,7 +186,7 @@ var hostBaseEnvAllowlist0282 = []string{"PATH", "HOME", "USER", "LANG", "LC_ALL"
 
 func validateHostEnvKey0282(key string) error {
 	if !hostEnvKeyPattern0282.MatchString(key) {
-		return fmt.Errorf("Некорректное значение: «environment variable name» %q", key)
+		return fmt.Errorf("Некорректное значение: «имя переменной окружения» %q", key)
 	}
 	return nil
 }

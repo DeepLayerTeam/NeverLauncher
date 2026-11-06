@@ -83,7 +83,7 @@ def enough_space(path: Path, required_bytes: int, reason: str):
     Проверять файловую систему целевого пути.
     """
     if required_bytes < 0:
-        raise CutoverError("Некорректное значение: «storage size estimate»")
+        raise CutoverError("Некорректное значение: «оценка размера хранилища»")
     where = path
     while not where.exists():
         where = where.parent
@@ -103,7 +103,7 @@ def sqlite_size_on_disk(path: Path) -> int:
             refuse_symlink(sibling)
             st = sibling.stat()
             if not stat.S_ISREG(st.st_mode):
-                raise CutoverError("Небезопасное значение: «SQLite sidecar»")
+                raise CutoverError("Небезопасное значение: «вспомогательный файл SQLite»")
             total += st.st_size
     return total
 
@@ -166,9 +166,9 @@ def check_stage_chain(state: dict):
     if state.get("importOutcomeUnknown") and "import" in completed:
         raise CutoverError("Обнаружено противоречивое подтверждение завершения импорта")
     if state.get("writeBoundaryCrossed") and "verify" not in completed:
-        raise CutoverError("Небезопасное значение: «write-boundary journal without verification; automatic rollback forbidden»")
+        raise CutoverError("Небезопасное значение: «непроверенный журнал границы записи; автоматический откат запрещён»")
     if "cutover" in completed and not state.get("writeBoundaryCrossed"):
-        raise CutoverError("Запрещено: «cutover recorded without write boundary; automatic rollback»")
+        raise CutoverError("Запрещено: «переключение зафиксировано без границы записи; автоматический откат»")
 
 
 def sha256_file(path: Path):
@@ -183,7 +183,7 @@ def run_cmd(args, *, env=None):
     try:
         p = subprocess.run(args, env=env, capture_output=True, timeout=3600, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise CutoverError(f"Ошибка: «subprocess»: {args[0]}: {type(exc).__name__}") from exc
+        raise CutoverError(f"Ошибка: «дочерний процесс»: {args[0]}: {type(exc).__name__}") from exc
     if p.returncode:
         # stderr может содержать аргументы команд, пути и секреты. Нельзя выводить его без фильтрации.
         raise CutoverError(f"Команда {Path(args[0]).name} {args[1] if len(args)>1 else ''} завершилась с ошибкой (код {p.returncode}); подробности в закрытых журналах службы оператора")
@@ -204,14 +204,14 @@ def parse_env(path: Path):
         if not line or line.startswith("#"):
             continue
         if not re.fullmatch(r"(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=.*", line):
-            raise CutoverError("Не поддерживается: «env syntax; refusing to rewrite service configuration»")
+            raise CutoverError("Не поддерживается: «синтаксис файла переменных окружения; изменение конфигурации службы отклонено»")
         if line.startswith("export "):
-            raise CutoverError("«systemd EnvironmentFile»: запрещено «contain export»")
+            raise CutoverError("Файл переменных окружения systemd не должен содержать команду export")
         key, value = line.split("=", 1)
         if key in items:
-            raise CutoverError(f"Обнаружен дубликат: «environment key» {key}")
+            raise CutoverError(f"Обнаружен дубликат: «ключ переменной окружения» {key}")
         if "\x00" in value or "\r" in value:
-            raise CutoverError("Небезопасное значение: «environment value»")
+            raise CutoverError("Небезопасное значение: «значение переменной окружения»")
         items[key] = value
     return items
 
@@ -229,7 +229,7 @@ def change_env(path: Path, target_dsn: str, driver: str, storage_path: str):
         "LAUNCHER_STORAGE_LOCAL_PATH": storage_path,
     }
     if any(c in target_dsn + storage_path for c in ("\n", "\r", "\x00", "\"")):
-        raise CutoverError("Небезопасное значение: «configuration characters»")
+        raise CutoverError("Небезопасное значение: «символы конфигурации»")
     seen = set()
     new = []
     for line in lines:
@@ -239,7 +239,7 @@ def change_env(path: Path, target_dsn: str, driver: str, storage_path: str):
         name, _ = line.split("=", 1)
         if name in changes:
             if name in seen:
-                raise CutoverError("Обнаружен дубликат: «environment key»")
+                raise CutoverError("Обнаружен дубликат: «ключ переменной окружения»")
             new.append(f"{name}={changes[name]}\n")
             seen.add(name)
         else:
@@ -270,20 +270,20 @@ def verify_http_snapshot(path: Path):
     with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         exists = db.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='http_repository_state_0372'").fetchone()[0]
         if exists != 1:
-            raise CutoverError("Отсутствует: «HTTP Repository snapshot table»")
+            raise CutoverError("Отсутствует: «таблица снимка HTTP Repository»")
         rows = db.execute("SELECT singleton,state_version,sequence,sha256,document FROM http_repository_state_0372").fetchall()
         if len(rows) != 1:
-            raise CutoverError("Некорректное значение: «HTTP Repository snapshot singleton»")
+            raise CutoverError("Некорректное значение: «единственная запись снимка HTTP Repository»")
         singleton, version, sequence, digest, document = rows[0]
         if singleton != 1 or version != 1 or sequence < 1 or not isinstance(document, bytes):
-            raise CutoverError("Некорректное значение: «HTTP Repository snapshot metadata»")
+            raise CutoverError("Некорректное значение: «метаданные снимка HTTP Repository»")
         if hashlib.sha256(document).hexdigest() != digest:
-            raise CutoverError("Несовпадение: «HTTP Repository snapshot SHA-256»")
+            raise CutoverError("Несовпадение: «SHA-256 снимка HTTP Repository»")
         def reject_duplicate(pairs):
             out = {}
             for key, value in pairs:
                 if key in out:
-                    raise CutoverError("Обнаружен дубликат: «HTTP snapshot JSON key»")
+                    raise CutoverError("Обнаружен дубликат: «ключ JSON снимка HTTP»")
                 out[key] = value
             return out
         try:
@@ -291,7 +291,7 @@ def verify_http_snapshot(path: Path):
         except (UnicodeError, ValueError) as exc:
             raise CutoverError("Некорректный JSON HTTP-репозитория") from exc
         if not isinstance(data, dict) or not data:
-            raise CutoverError("Некорректное значение: «HTTP Repository JSON state»")
+            raise CutoverError("Некорректное значение: «состояние JSON HTTP Repository»")
 
 
 def sqlite_backup(source_name: str, dest: Path):
@@ -345,7 +345,7 @@ class Operator:
             private_file(self.state_path)
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
-                raise CutoverError("Некорректное значение: «persisted cutover journal»")
+                raise CutoverError("Некорректное значение: «сохранённый журнал переключения»")
             if data.get("format") != self.state["format"]:
                 raise CutoverError("Неизвестный формат журнала")
             check_stage_chain(data)
@@ -408,9 +408,9 @@ class Operator:
 
     def preflight(self):
         if not self.a.units or len(set(self.a.units)) != len(self.a.units):
-            raise CutoverError("Требуется: «at least one explicit systemd service and no duplicate units»")
+            raise CutoverError("Требуется: «хотя бы одна явно заданная служба systemd без повторяющихся модулей»")
         if not self.env[self.a.dsn_env]:
-            raise CutoverError("target PostgreSQL DSN: требуется «supplied via an environment variable»")
+            raise CutoverError("target PostgreSQL DSN: требуется «передаваться через переменную окружения»")
         private_file(Path(self.a.source_env))
         cfg = parse_env(Path(self.a.source_env))
         if cfg.get("LAUNCHER_REPOSITORY_DRIVER", "").lower() != "sqlite":
@@ -433,7 +433,7 @@ class Operator:
         if self.a.coordinator_db:
             sources.append(self.a.coordinator_db)
         if len({Path(v).resolve() for v in sources}) != len(sources):
-            raise CutoverError("SQLite Core, HTTP and Coordinator: требуется «separate databases»")
+            raise CutoverError("SQLite Core, HTTP and Coordinator: требуется «использовать отдельные базы данных»")
         # ЭТО НЕПРЕОДОЛИМАЯ НЕСОВМЕСТИМОСТЬ в 0.47.4. Обход запрещён даже при пустом HTTP-снимке: закрытые данные
         # авторизации, координатора, подписи, установки и Runtime не имеют канонического сопоставления в
         # PostgreSQL.
@@ -460,7 +460,7 @@ class Operator:
         for unit in self.a.units:
             code, _ = self.service("stop", unit)
             if code:
-                raise CutoverError(f"Не удалось остановить «writer service» {unit}")
+                raise CutoverError(f"Не удалось остановить «служба записи» {unit}")
         self.inactive()
         return {"stoppedServices": len(self.a.units)}
 
@@ -495,7 +495,7 @@ class Operator:
         self.save()
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-live", "--backup", str(self.backup), "--ack-live-import", "--timeout", "45m", *self.mfa_args()], env=self.env)
         if not report.get("verified") or report.get("sourceSha256") != self.state["sourceSHA256"]:
-            raise CutoverError("Некорректное значение: «live import receipt»")
+            raise CutoverError("Некорректное значение: «подтверждение выполненного импорта»")
         return {"sourceSHA256": self.state["sourceSHA256"], "verified": True}
 
     def mfa_args(self):
@@ -508,17 +508,17 @@ class Operator:
     def files(self):
         self.inactive()
         if not self.a.storage_source or not self.a.storage_target:
-            raise CutoverError("Требуется: «distinct local source/target storage roots»")
+            raise CutoverError("Требуется: «разные корневые каталоги исходного и целевого локальных хранилищ»")
         src = Path(self.a.storage_source)
         dst = Path(self.a.storage_target)
         if not src.is_absolute() or not dst.is_absolute():
-            raise CutoverError("source and target storage roots: требуется «absolute»")
+            raise CutoverError("source and target storage roots: требуется «абсолютный путь»")
         src_path, dst_path = src.resolve(), dst.resolve()
         if (src_path == dst_path or src_path.is_relative_to(dst_path)
                 or dst_path.is_relative_to(src_path)):
-            raise CutoverError("source and PostgreSQL storage: требуется «disjoint trees»")
+            raise CutoverError("source and PostgreSQL storage: требуется «непересекающиеся деревья каталогов»")
         if self.work.is_relative_to(src_path) or self.work.is_relative_to(dst_path):
-            raise CutoverError("«private migration journal»: запрещено «be inside storage»")
+            raise CutoverError("Закрытый журнал миграции не должен находиться внутри хранилища")
         refuse_symlink(dst)
         before, count, size = storage_fingerprint(src)
         enough_space(dst, size, "Проверенная локальная копия двоичных данных")
@@ -581,10 +581,10 @@ Backend до объявления завершения миграции опер
         try:
             auth = json.loads(secret_file.read_text(encoding="utf-8"))
         except (ValueError, UnicodeError) as exc:
-            raise CutoverError("Некорректное значение: «old owner credential JSON»") from exc
+            raise CutoverError("Некорректное значение: «JSON учётных данных прежнего владельца»") from exc
         if (not isinstance(auth, dict) or auth.get("email", "").casefold() != self.a.owner_email.casefold()
                 or not isinstance(auth.get("password"), str) or not auth["password"]):
-            raise CutoverError("«old owner credential» не совпадает с «migration owner»")
+            raise CutoverError("Учётные данные прежнего владельца не соответствуют владельцу миграции")
         values = {"email": auth["email"], "password": auth["password"]}
         for optional in ("totp", "recoveryCode", "providerId"):
             if optional in auth:
@@ -621,7 +621,7 @@ Backend до объявления завершения миграции опер
                         raise CutoverError("Объём данных API после переключения превысил лимит проверки")
                     return json.loads(data)
             except (OSError, ValueError) as exc:
-                raise CutoverError("Ошибка: «live PostgreSQL Backend login or project operation»") from exc
+                raise CutoverError("Ошибка: «вход в действующий Backend на PostgreSQL или операция с проектом»") from exc
         health = request("/ready")
         if not isinstance(health, dict) or health.get("status") != "ok":
             raise CutoverError("JSON проверки состояния Backend сообщает о неготовности")
@@ -637,7 +637,7 @@ Backend до объявления завершения миграции опер
         project_path = "/api/v1/projects/" + quote(self.a.project, safe="")
         project = request(project_path, token=login["token"])
         if not isinstance(project, dict) or project.get("id") != self.a.project:
-            raise CutoverError("«imported project»: запрещено «be read through Backend API»")
+            raise CutoverError("Импортированный проект не должен быть доступен для чтения через API Backend")
         # Защищённый экспорт Admin требует реального разрешения проекта и подтверждает сопоставление сеанса и
         # роли, а не только доступность общедоступного GET.
         request("/api/v1/admin/projects/" + quote(self.a.project, safe="") + "/export", token=login["token"])
@@ -689,7 +689,7 @@ Backend до объявления завершения миграции опер
         with (self.work / "operator.lock").open("a+b") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             if self.state.get("writeBoundaryCrossed"):
-                raise CutoverError("Запрещено: «writes may have reached PostgreSQL; automatic rollback»")
+                raise CutoverError("Запрещено: «записи могли попасть в PostgreSQL; автоматический откат»")
             if self.state.get("importOutcomeUnknown"):
                 # Импорт SQLRepository мог быть зафиксирован, но до переключения источником истины остаётся старая БД. При
                 # восстановлении SQLite не удаляйте данные PostgreSQL и не повторяйте импорт.

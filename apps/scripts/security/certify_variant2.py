@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     if not __import__("re").fullmatch("[0-9a-f]{40}", args.commit):
-        parser.error("Требуется: «exact Git commit SHA»")
+        parser.error("Требуется: «точный SHA коммита Git»")
     if (ROOT / "VERSION").read_text().strip() != "0.32.0":
         parser.error("Значение VERSION исходников должно быть равно 0.32.0")
     if (ROOT / ".git").exists():

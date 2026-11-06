@@ -18,10 +18,10 @@ import (
 // одной успешной кросс-компиляции.
 func TestARM64NativeKernelBoundary0439(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_LINUX_SANDBOX") != "1" {
-		t.Skip("native AArch64 cgroup-delegated sandbox host required")
+		t.Skip("Требуется реальный узел AArch64 с делегированием cgroup для изоляции")
 	}
 	if err := Available(); err != nil {
-		t.Fatalf("AArch64 isolation unavailable: %v", err)
+		t.Fatalf("Изоляция AArch64 недоступна: %v", err)
 	}
 	opt := validOptions0319(t)
 	opt.Policy.TimeoutSeconds = 20
@@ -52,7 +52,7 @@ func main() {
 	}
 	build := exec.Command("go", "build", "-trimpath", "-o", probe, src)
 	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("compile native arm64 probe: %v: %s", err, output)
+		t.Fatalf("Компиляция нативной проверки arm64: %v: %s", err, output)
 	}
 	opt.Entrypoint = probe
 	h, err := Prepare(opt)
@@ -67,20 +67,20 @@ func main() {
 		t.Fatal(err)
 	}
 	if err := h.Started(); err != nil {
-		t.Fatalf("sandbox bootstrap: %v: %s", err, stderr.String())
+		t.Fatalf("Запуск изолированной среды: %v: %s", err, stderr.String())
 	}
 	result := make(chan error, 1)
 	go func() { result <- h.Cmd.Wait() }()
 	select {
 	case err := <-result:
 		if err != nil {
-			t.Fatalf("isolated guest failed: %v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+			t.Fatalf("Сбой изолированного процесса: %v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
 		}
 	case <-time.After(15 * time.Second):
 		h.Close()
-		t.Fatal("isolated guest exceeded deadline")
+		t.Fatal("Изолированный процесс превысил лимит времени")
 	}
 	if !strings.Contains(stdout.String(), "arm64-seccomp-namespaces-ok") {
-		t.Fatalf("guest did not demonstrate policy: stdout=%q stderr=%q", stdout.String(), stderr.String())
+		t.Fatalf("Изолированный процесс не подтвердил применение политики: stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
 }

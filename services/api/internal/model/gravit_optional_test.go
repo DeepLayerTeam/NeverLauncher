@@ -21,35 +21,35 @@ func TestGravitOptionalMigrationRealCatalog02411(t *testing.T) {
 	base := NewComponentCatalog0245(ComponentCatalog0241{}, 1)
 	result, err := ConvertGravitOptionalView02411(gravitOptionalSource02411(), base, gravitOptionalFiles02411())
 	if err != nil || !result.Ready {
-		t.Fatalf("migration: %v %+v", err, result.Fields)
+		t.Fatalf("Миграция: %v %+v", err, result.Fields)
 	}
 	if len(result.Catalog.Components) != 2 || len(result.Catalog.Categories) != 1 {
 		t.Fatalf("Некорректная топология: %+v", result.Catalog)
 	}
 	a, b := result.Catalog.Components[0], result.Catalog.Components[1]
 	if !a.Default || len(a.Actions) != 1 || a.Actions[0].Type != "File" || a.Conditions == nil || a.Conditions.OS[0] != "windows" {
-		t.Fatalf("mapped optional invalid %+v", a)
+		t.Fatalf("Некорректное сопоставление необязательного компонента: %+v", a)
 	}
 	if len(b.Dependencies) != 1 || b.Dependencies[0].ID != a.ID || len(b.Actions) != 2 {
-		t.Fatalf("relation/actions invalid %+v", b)
+		t.Fatalf("Некорректные связи или действия: %+v", b)
 	}
 	m := validSignedV3Catalog0241()
 	m.Files = gravitOptionalFiles02411()
 	m.ComponentCatalog = &result.Catalog
 	if err := ValidateManifestSchema(m); err != nil {
-		t.Fatalf("not a publishable catalog: %v", err)
+		t.Fatalf("Каталог нельзя опубликовать: %v", err)
 	}
 	ids, err := ResolveCatalogConditional0244(result.Catalog, "", ComponentEnvironment0244{OS: "windows", JavaMajor: 17})
 	if err != nil || len(ids) != 1 || ids[0] != a.ID {
-		t.Fatalf("resolution %+v %v", ids, err)
+		t.Fatalf("Разрешение зависимостей: %+v %v", ids, err)
 	}
 	again, _ := ConvertGravitOptionalView02411(gravitOptionalSource02411(), base, gravitOptionalFiles02411())
 	if result.Catalog.Digest != again.Catalog.Digest || a.ID != again.Catalog.Components[0].ID {
-		t.Fatal("nondeterministic import")
+		t.Fatal("Недетерминированный импорт")
 	}
 	encoded, _ := json.Marshal(result.Catalog)
 	if !strings.Contains(string(encoded), `"schemaVersion":"5.0"`) {
-		t.Fatal("not real v5 catalog")
+		t.Fatal("Это не настоящий каталог v5")
 	}
 }
 func TestGravitOptionalMigrationRejectUnsupported02411(t *testing.T) {
@@ -76,7 +76,7 @@ func TestGravitOptionalMigrationRejectUnsupported02411(t *testing.T) {
 				t.Fatal(err)
 			}
 			if r.Ready || r.Summary["blocked"]+r.Summary["manual"] == 0 {
-				t.Fatalf("silently accepted %+v", r)
+				t.Fatalf("Без предупреждения принято: %+v", r)
 			}
 		})
 	}
@@ -91,7 +91,7 @@ func TestGravitOptionalRejectDuplicatesAndTamper02411(t *testing.T) {
 	}
 	r, e := ConvertGravitOptionalView02411([]byte(`[{"name":"A","actions":[{"type":"file","files":{"mods/nei.jar":""}}]}]`), base, gravitOptionalFiles02411()[:1])
 	if e != nil || !r.Ready {
-		t.Fatalf("import %+v %v", r.Fields, e)
+		t.Fatalf("Импорт: %+v %v", r.Fields, e)
 	}
 	m := validSignedV3Catalog0241()
 	m.Files = gravitOptionalFiles02411()[:1]
@@ -110,7 +110,7 @@ func TestGravitOptionalClassPathAndBoundedJava02411(t *testing.T) {
 	base := NewComponentCatalog0245(ComponentCatalog0241{}, 1)
 	r, e := ConvertGravitOptionalView02411([]byte(source), base, gravitOptionalFiles02411()[:1])
 	if e != nil || !r.Ready {
-		t.Fatalf("classpath migration: %v %+v", e, r.Fields)
+		t.Fatalf("Миграция classpath: %v %+v", e, r.Fields)
 	}
 	c := r.Catalog.Components[0]
 	if len(c.Actions) != 2 || c.Actions[1].Type != "ClassPath" || c.Conditions.JavaMajorMax != 21 || c.Conditions.Arch[0] != "x86_64" {
@@ -129,7 +129,7 @@ func TestGravitOptionalClassPathAndBoundedJava02411(t *testing.T) {
 	} {
 		r, e := ConvertGravitOptionalView02411([]byte(src), base, gravitOptionalFiles02411()[:1])
 		if e == nil && r.Ready {
-			t.Fatalf("unsafe structure accepted: %s", src)
+			t.Fatalf("Принята небезопасная структура: %s", src)
 		}
 	}
 }
@@ -139,6 +139,6 @@ func TestGravitOptionalNullableCollections02411(t *testing.T) {
 	source := `{"updateOptional":[{"name":"Sample","info":null,"category":null,"dependenciesFile":null,"conflictFile":null,"groupFile":null,"triggersList":null,"triggers":null,"actions":[{"type":"file","files":{"mods/nei.jar":""}}]}]}`
 	r, e := ConvertGravitOptionalView02411([]byte(source), base, gravitOptionalFiles02411()[:1])
 	if e != nil || !r.Ready {
-		t.Fatalf("nullable collections %+v %v", r.Fields, e)
+		t.Fatalf("Коллекции с допустимыми null: %+v %v", r.Fields, e)
 	}
 }

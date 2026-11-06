@@ -65,7 +65,7 @@ def validate(log: Path, commit: str, version: str) -> dict:
             raise ValueError(f"Тест Go завершился ошибкой или пропущен: {test or 'package'}")
         if test in REQUIRED and action in ("pass", "run"):
             if action == "pass" and seen.get(test) == "passed":
-                raise ValueError(f"Обнаружен дубликат: «completed Go test»: {test}")
+                raise ValueError(f"Обнаружен дубликат: «завершённый тест Go»: {test}")
             seen[test] = "passed" if action == "pass" else seen.get(test, "running")
         if not test and action == "pass":
             package_pass = True

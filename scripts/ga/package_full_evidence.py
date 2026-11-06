@@ -40,7 +40,7 @@ def evidence_files(version: str) -> tuple[str, ...]:
 def safe_member(path: Path) -> bytes:
     # Отклоняйте символьные ссылки в любых родительских каталогах доказательств, а не только конечную ссылку.
     if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
-        raise ValueError("Небезопасное значение: «symlink in GA evidence:»" + str(path))
+        raise ValueError("Небезопасное значение: «символическая ссылка в свидетельстве GA:»" + str(path))
     if not path.is_file() or not 0 < path.stat().st_size <= MAX_MEMBER:
         raise ValueError("Подтверждение выполнения GA отсутствует, пустое или слишком большое: " + str(path))
     data = path.read_bytes()
@@ -95,7 +95,7 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
             mode = (entry.external_attr >> 16) & 0o170000
             if (entry.is_dir() or mode not in (0, 0o100000)
                     or not 0 < entry.file_size <= MAX_MEMBER):
-                raise ValueError("Небезопасное значение: «GA execution archive entry:»" + entry.filename)
+                raise ValueError("Небезопасное значение: «запись архива выполнения GA:»" + entry.filename)
             total += entry.file_size
             if total > MAX_TOTAL:
                 raise ValueError("Размер распакованных подтверждений выполнения GA превышает лимит")

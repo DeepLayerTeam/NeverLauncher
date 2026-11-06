@@ -251,7 +251,7 @@ export function OperationsWorkspace({
     if (!recoverable || recoverable.jobId || !canPublish || busy) return;
     if (
       !window.confirm(
-        "Серверный журнал пока не содержит этот job. Повторить строго сохранённый запрос с исходным idempotency key? Потребуется действующая MFA.",
+        "Серверный журнал пока не содержит это задание. Повторить сохранённый запрос с исходным ключом идемпотентности? Потребуется действующая MFA.",
       )
     )
       return;

@@ -75,7 +75,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 	}
 	assignment, e := r.UploadTexture0252(ctx, p, input)
 	if e != nil || assignment.Revision != 1 || assignment.Source != "imported" {
-		t.Fatalf("import %+v %v", assignment, e)
+		t.Fatalf("Импорт: %+v %v", assignment, e)
 	}
 	already, _, _, e = r.GravitImportState02510(ctx, input.GravitSourceID, input.GravitRowID, p, "skin")
 	if e != nil || !already {

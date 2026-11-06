@@ -51,14 +51,14 @@ func TestConditionalResolverEndToEnd0244(t *testing.T) {
 			modify.change(&e)
 			_, err := ResolveCatalogConditional0244(updated, "quality", e)
 			if err == nil || !strings.Contains(err.Error(), "condition_unsatisfied") {
-				t.Fatalf("must block with explanation: %v", err)
+				t.Fatalf("Должен блокировать с объяснением: %v", err)
 			}
 		})
 	}
 	before := updated.Digest
 	updated.Components[1].Conditions.Permissions = []string{"admin"}
 	if ComponentCatalogDigest0244(updated) == before {
-		t.Fatal("permission mutation did not alter signed digest")
+		t.Fatal("Изменение разрешений не изменило подписанную контрольную сумму")
 	}
 	if ValidateManifestSchema(func() Manifest { m.ComponentCatalog = &updated; return m }()) == nil {
 		t.Fatal("Изменённый каталог ошибочно принят")
@@ -72,12 +72,12 @@ func TestImplicitDefaultsAreFilteredBeforeDownload0244(t *testing.T) {
 	env := ComponentEnvironment0244{OS: "windows"}
 	ids, err := ResolveCatalogConditional0244(v4, "", env)
 	if err != nil || !reflect.DeepEqual(ids, []string{"core"}) {
-		t.Fatalf("unavailable implicit default must be skipped: %v %v", ids, err)
+		t.Fatalf("Недоступное значение по умолчанию должно пропускаться: %v %v", ids, err)
 	}
 	v4.Components[1].Required = true
 	_, err = ResolveCatalogConditional0244(v4, "", env)
 	if err == nil || !strings.Contains(err.Error(), "required component") {
-		t.Fatalf("required bypass: %v", err)
+		t.Fatalf("Обойдена обязательная проверка: %v", err)
 	}
 }
 
@@ -85,7 +85,7 @@ func TestConditionalSchemaFailClosed0244(t *testing.T) {
 	m := dependencyFixture0243()
 	m.ComponentCatalog.Components[1].Conditions = &ComponentConditions0244{SchemaVersion: "1.0", OS: []string{"linux"}}
 	if err := ValidateManifestSchema(m); err == nil {
-		t.Fatal("v3 must reject unsigned v4 fields")
+		t.Fatal("Версия v3 должна отклонять неподписанные поля v4")
 	}
 	for _, condition := range []ComponentConditions0244{
 		{SchemaVersion: "2.0"}, {SchemaVersion: "1.0", OS: []string{"unsupported"}},
@@ -99,7 +99,7 @@ func TestConditionalSchemaFailClosed0244(t *testing.T) {
 		c.Components[1].Conditions = &cc
 		c = NewComponentCatalog0244(c, 5)
 		if err := ValidateCatalogConditions0244(c); err == nil {
-			t.Fatalf("invalid conditions accepted %+v", condition)
+			t.Fatalf("Приняты некорректные условия: %+v", condition)
 		}
 	}
 }
@@ -115,7 +115,7 @@ func TestConditionalVersionRanges0244(t *testing.T) {
 	}
 	env.MinecraftVersion = "24w12a"
 	if why := unavailable0244(v, env); why == "" {
-		t.Fatal("snapshot incorrectly matched semver condition")
+		t.Fatal("Снимок ошибочно соответствует условию SemVer")
 	}
 }
 
@@ -136,7 +136,7 @@ func TestConditionalCatalogRejectsConflictingNamedPreset0391(t *testing.T) {
 			m.ComponentCatalog = &cat
 			err := ValidateManifestSchema(m)
 			if err == nil || !strings.Contains(err.Error(), "exclusive_group") {
-				t.Fatalf("invalid signed preset published: %v", err)
+				t.Fatalf("Опубликован некорректный подписанный набор настроек: %v", err)
 			}
 		})
 	}

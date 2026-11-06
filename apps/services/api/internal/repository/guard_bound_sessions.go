@@ -138,7 +138,7 @@ func (r *SQLRepository) ListUnboundGuardPlayerSessions0507(ctx context.Context, 
 		return nil, err
 	}
 	if max < 1 || max > 128 {
-		return nil, fmt.Errorf("Некорректное значение: «unbound player batch size»")
+		return nil, fmt.Errorf("Некорректное значение: «размер пакета игроков без привязки»")
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT p.correlation_id FROM server_bridge_player_sessions_v3 p
         LEFT JOIN server_bridge_guard_sessions_0507 g ON g.correlation_id=p.correlation_id

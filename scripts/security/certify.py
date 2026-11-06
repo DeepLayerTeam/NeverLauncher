@@ -199,7 +199,7 @@ def assemble_release(paths):
         obj = json.loads(pathlib.Path(path).read_text())
         tier = obj.get("tier")
         if tier not in tiers or tier in reports:
-            raise ValueError(f"Неожиданное значение: «or duplicated evidence tier»: {tier}")
+            raise ValueError(f"Неизвестный или повторяющийся уровень подтверждений: {tier}")
         reports[tier] = obj
     if reports.keys() != tiers:
         return {
@@ -212,19 +212,19 @@ def assemble_release(paths):
     now = dt.datetime.now(dt.timezone.utc)
     for tier, report in reports.items():
         if report.get("sourceSha256") != reference:
-            problems.append(f"{tier}: source fingerprint mismatch")
+            problems.append(f"{tier}: отпечаток исходного кода не совпадает")
         if report.get("status") != "PASS":
-            problems.append(f"{tier}: not PASS")
+            problems.append(f"{tier}: проверка не пройдена (статус не PASS)")
         try:
             generated = dt.datetime.fromisoformat(
                 report["generatedAt"].replace("Z", "+00:00")
             )
             if abs((now - generated).total_seconds()) > 7 * 86400:
-                problems.append(f"{tier}: evidence older than seven days")
+                problems.append(f"{tier}: свидетельство старше семи дней")
         except (KeyError, ValueError):
-            problems.append(f"{tier}: missing timestamp")
+            problems.append(f"{tier}: отсутствует отметка времени")
         if not report.get("results"):
-            problems.append(f"{tier}: no executable test results")
+            problems.append(f"{tier}: нет результатов выполненных тестов")
     return {
         "status": "PASS" if not problems else "BLOCKED",
         "problems": problems,

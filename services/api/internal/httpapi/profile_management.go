@@ -50,7 +50,7 @@ func decodeProfileWrite0225(r *http.Request, out any) error {
 
 func (s Server) profileSnapshotAt0225(project, id string, revision int64) (model.ProfileSnapshot, error) {
 	if revision < 0 {
-		return model.ProfileSnapshot{}, errors.New("revision: требуется «positive»")
+		return model.ProfileSnapshot{}, errors.New("revision: требуется «положительное значение»")
 	}
 	if revision == 0 {
 		return repository.ReadProfileSnapshot(s.Repo, project, id)

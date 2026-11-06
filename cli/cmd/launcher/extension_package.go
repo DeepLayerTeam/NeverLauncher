@@ -1075,7 +1075,7 @@ func signExtensionPackage0202(packagePath, outputPath, privateKeyPath string, fo
 		entry := analysis.Entries[name]
 		if entry == nil {
 			_ = zw.Close()
-			return nil, fmt.Errorf("Отсутствует: «package entry during signing»: %s", name)
+			return nil, fmt.Errorf("Отсутствует: «запись пакета во время подписания»: %s", name)
 		}
 		if err := copyCanonicalZipEntry0202(zw, entry, buildTime); err != nil {
 			_ = zw.Close()
