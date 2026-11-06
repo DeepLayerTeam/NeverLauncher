@@ -26,7 +26,7 @@ jobs:
       - name: Проверить scoped brokers, песочница интеграция и доверие политика
         working-directory: services/api
         run: go test -race -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
-      - name: Static analyzer
+      - name: Статический анализатор
         working-directory: services/api
         run: go vet ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
       - name: сборка API с промышленные PostgreSQL драйвер

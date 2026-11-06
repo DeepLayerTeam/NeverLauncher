@@ -166,7 +166,7 @@ class CutoverTests(unittest.TestCase):
         write_private(path, receipt)
         self.config["fenceReceipt"] = str(path)
         self.save_config()
-        # Pre-flight config is immutable across phases. Configure the receipt path in advance.
+        # Предварительная конфигурация неизменна между фазами. Задайте путь к квитанции заранее.
         return path
 
     def test_real_socket_drains_auth_and_game_before_closing(self):
@@ -179,7 +179,7 @@ class CutoverTests(unittest.TestCase):
         self.assertFalse(state["trafficOpen"])
 
     def test_two_phase_real_cli_subprocess_and_postjoin_success(self):
-        # Receipt path must be included BEFORE prepare; the bytes cannot be changed later.
+        # Путь к квитанции нужно указать ДО подготовки: впоследствии байты изменять нельзя.
         self.proof()
         self.prepare()
         with patch.object(mod, "auth_canary") as auth_check:

@@ -82,9 +82,8 @@ func verifyCohortLive(ctx context.Context, inputs map[string]CohortInput, plans 
 		if err := decodeStrict(raw, &p); err != nil {
 			return err
 		}
-		// The private signing key is not needed to verify a reference; it may
-		// have been rotated/removed since certification. Validate the fields
-		// that bind the source, commit and backend instead.
+		// Закрытый ключ подписи не нужен для проверки ссылки: после сертификации его могли
+		// заменить или удалить. Вместо него проверяйте поля привязки источника, коммита и Backend.
 		if p.ReferenceClass != class || !commitHash(p.CommitSHA) || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) {
 			return errors.New("Некорректное значение: действующий эталонный план")
 		}

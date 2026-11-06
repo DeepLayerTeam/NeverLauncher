@@ -214,5 +214,5 @@ private func run() throws {
 }
 do { try run() } catch let e as SandboxError { fail(e.message) } catch { fail("sandbox-initialization-failed") }
 #else
-fatalError("Launcher macOS Sandbox Helper can run only on macOS")
+fatalError("Вспомогательная утилита изоляции Launcher может запускаться только на macOS")
 #endif

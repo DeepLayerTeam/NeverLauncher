@@ -47,7 +47,7 @@ func paritySwitch0301(args []string, name string) bool {
 
 func handleModuleParity0301(args []string) error {
 	if len(args) == 0 || args[0] != "audit" {
-		return errors.New("usage: nl module-parity audit [--root PATH] [--baseline 0.30.1|0.30.11|0.30.12|0.31.0|0.42.11] [--run-tests] [--module M01,M03] [--timeout 180s] [--report PATH|-] [--require-tests] [--require-full-parity]")
+		return errors.New("Использование: nl module-parity audit [--root PATH] [--baseline 0.30.1|0.30.11|0.30.12|0.31.0|0.42.11] [--run-tests] [--module M01,M03] [--timeout 180s] [--report PATH|-] [--require-tests] [--require-full-parity]")
 	}
 	args = args[1:]
 	root := flagValue(args, "--root", "")

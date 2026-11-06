@@ -152,8 +152,8 @@ func verifyEvidence(b Bundle, dir string) error {
 		if err = decodeStrict(raw, &probe); err != nil {
 			return err
 		}
-		// The certificate signs the canonical normalized receipt, not trailing
-		// whitespace or operator-controlled formatting.
+		// Сертификат подписывает каноническую нормализованную квитанцию, а не завершающие
+		// пробелы или форматирование, управляемое оператором.
 		canonical, err := json.Marshal(probe)
 		if err != nil {
 			return err

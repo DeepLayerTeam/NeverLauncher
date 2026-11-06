@@ -37,7 +37,7 @@ func TestAuditStateReadsRealFiles0450(t *testing.T) {
 	}
 	a, err := auditState(source, target)
 	if err != nil || !a.Matched || a.WorldFiles != 1 || a.PluginFiles != 1 {
-		t.Fatalf("expected actual matching data: %+v %v", a, err)
+		t.Fatalf("Ожидалось совпадение реальных данных: %+v %v", a, err)
 	}
 	evidence := filepath.Join(root, "audit.json")
 	if err := executeStateAudit(source, target, evidence); err != nil {
@@ -145,6 +145,6 @@ func TestEmptyPluginTreesCanBeAudited0450(t *testing.T) {
 	}
 	a, err := auditState(src, tgt)
 	if err != nil || !a.Matched || a.PluginFiles != 0 {
-		t.Fatalf("no-plugin Vanilla project rejected: %+v, %v", a, err)
+		t.Fatalf("Проект Vanilla без плагина был отклонён: %+v, %v", a, err)
 	}
 }

@@ -21,7 +21,7 @@ func TestManualWorklistDerivedFromReport0450(t *testing.T) {
 	content := string(work)
 	for _, need := range []string{"old-module.jar", "requires source port", r.ReportSHA256, "[ ]", "Ограничения отката"} {
 		if !strings.Contains(content, need) {
-			t.Fatalf("missing %s", need)
+			t.Fatalf("Отсутствует %s", need)
 		}
 	}
 	p.ProjectID = "other"

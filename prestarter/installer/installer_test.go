@@ -83,7 +83,7 @@ func TestInstallRepairUninstallKeepsGameData(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := Repair(context.Background(), opts); e != nil {
-		t.Fatal("repair must work without removable media:", e)
+		t.Fatal("Восстановление должно работать без съёмного носителя:", e)
 	}
 	raw, e := os.ReadFile(filepath.Join(root, "invocations"))
 	if e != nil {
@@ -113,7 +113,7 @@ func TestTamperedSignedBundleRejected(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, _, e := VerifyBundle(opts.Bundle, opts.TrustedKey, false); e == nil {
-		t.Fatal("tampered executable was accepted")
+		t.Fatal("Принят повреждённый исполняемый файл")
 	}
 	if e := Install(context.Background(), opts); e == nil {
 		t.Fatal("installer accepted tampered binary")
@@ -125,7 +125,7 @@ func TestOfflineMissingObjectRejected(t *testing.T) {
 	entries, _ := os.ReadDir(filepath.Join(opts.Bundle, "objects"))
 	os.Remove(filepath.Join(opts.Bundle, "objects", entries[0].Name()))
 	if _, _, e := VerifyBundle(opts.Bundle, opts.TrustedKey, true); e == nil {
-		t.Fatal("offline bundle missing signed object")
+		t.Fatal("В автономном пакете отсутствует подписанный объект")
 	}
 }
 func TestCannotReplaceRootTrust(t *testing.T) {
@@ -156,7 +156,7 @@ func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = Repair(context.Background(), opts); err != nil {
-		t.Fatal("offline repair failed: ", err)
+		t.Fatal("Ошибка автономного восстановления: ", err)
 	}
 	if _, err = os.Stat(filepath.Join(root, "invocations")); err != nil {
 		t.Fatal(err)
@@ -178,10 +178,10 @@ func TestCanceledBootstrapNeverAdvancesActiveRelease0240(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := Install(ctx, opts); err == nil {
-		t.Fatal("canceled Prestarter was reported successful")
+		t.Fatal("Отменённый Prestarter ошибочно признан успешным")
 	}
 	if _, err := i.current(); err == nil {
-		t.Fatal("incomplete first installation was marked active")
+		t.Fatal("Незавершённая первая установка помечена активной")
 	}
 	if err := Install(context.Background(), opts); err != nil {
 		t.Fatal(err)
@@ -191,13 +191,13 @@ func TestCanceledBootstrapNeverAdvancesActiveRelease0240(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Install(ctx, opts); err == nil {
-		t.Fatal("canceled update was reported successful")
+		t.Fatal("Отменённое обновление ошибочно признано успешным")
 	}
 	active, err := i.current()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if active.Generation != original.Generation || active.Release != original.Release {
-		t.Fatalf("active release advanced on failed bootstrap: before=%+v after=%+v", original, active)
+		t.Fatalf("При ошибке начальной загрузки изменился активный релиз: до=%+v, после=%+v", original, active)
 	}
 }

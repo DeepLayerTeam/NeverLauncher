@@ -80,7 +80,7 @@ func TestGAProbeHelper(t *testing.T) {
 		os.Exit(9)
 	}
 	epath := os.Getenv("GA_PROBE_EVIDENCE")
-	// The helper updates the receipt during this process invocation.
+	// Вспомогательный процесс обновляет квитанцию во время текущего запуска.
 	_ = os.Chtimes(epath, time.Now(), time.Now())
 	name := ""
 	if len(os.Args) >= 2 {
@@ -198,8 +198,8 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 		kv := strings.SplitN(env, "=", 2)
 		t.Setenv(kv[0], kv[1])
 	}
-	// Commands are static per check, so use a wrapper that identifies the check
-	// via a positional environment variable passed to the helper executable.
+	// Команды для каждой проверки неизменны, поэтому используйте оболочку,
+	// определяющую проверку по позиционной переменной окружения, переданной исполняемому помощнику.
 	for i := range p.Checks {
 		p.Checks[i].Command = append(p.Checks[i].Command, "--", p.Checks[i].Name)
 	}
@@ -217,7 +217,7 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(b.Checks) != len(requiredForClass(p.ReferenceClass)) {
-		t.Fatal("missing GA checks")
+		t.Fatal("Отсутствуют проверки GA")
 	}
 	if e = verifyBundle(b, priv.Public().(ed25519.PublicKey)); e != nil {
 		t.Fatal(e)
@@ -225,7 +225,7 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	if e = verifyEvidence(b, evidenceDir); e != nil {
 		t.Fatal(e)
 	}
-	// Signature alone is insufficient: the evidence is required for GA sign-off.
+	// Одной подписи недостаточно: для утверждения GA обязательно наличие свидетельств.
 	evidencePath := filepath.Join(evidenceDir, requiredForClass(p.ReferenceClass)[0]+".evidence")
 	if e = os.WriteFile(evidencePath, []byte("tampered"), 0600); e != nil {
 		t.Fatal(e)
@@ -309,11 +309,11 @@ func TestAtomicPrivateCertificateNoOverwrite0340(t *testing.T) {
 	}
 	b, e := os.ReadFile(path)
 	if e != nil || string(b) != "proof-one" {
-		t.Fatal("overwritten or missing certificate", e)
+		t.Fatal("Сертификат перезаписан или отсутствует", e)
 	}
 	info, e := os.Stat(path)
 	if e != nil || info.Mode().Perm()&0077 != 0 {
-		t.Fatal("not owner-only", e)
+		t.Fatal("Права доступа не ограничены владельцем", e)
 	}
 }
 func TestRejectInsecureKey0340(t *testing.T) {

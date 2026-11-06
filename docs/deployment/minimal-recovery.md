@@ -1,6 +1,6 @@
 # NeverLauncher 0.45.2: Minimal — зашифрованная резервная копия и восстановление на другом Linux-хосте
 
-Это инструкция для **single-node SQLite + локальные файлы**, созданной через `scripts/install/minimal-install.py init`. Это не PostgreSQL/Redis/S3 backup, не online backup и не HA. Используйте один экземпляр API, локальную файловую систему (ext4/xfs/btrfs), приватную учётную запись службы и **тот же проверенный выпуск Backend API** на восстанавливаемом хосте.
+Это инструкция для **single-node SQLite + локальные файлы**, созданной через `scripts/install/minimal-install.py init`. Это не PostgreSQL/Redis/S3 backup, не резервная копия без остановки и не HA. Используйте один экземпляр API, локальную файловую систему (ext4/xfs/btrfs), приватную учётную запись службы и **тот же проверенный выпуск Backend API** на восстанавливаемом хосте.
 
 ## Что переносится
 

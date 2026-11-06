@@ -65,7 +65,7 @@ func TestTLSDownloadInterruptedResumeExactSHA0527(t *testing.T) {
 		t.Fatal(err)
 	}
 	if attempts.Load() != 2 || !resumed.Load() || !hashFile(part, art) {
-		t.Fatalf("failed signed range resume: attempts=%d resumed=%v", attempts.Load(), resumed.Load())
+		t.Fatalf("Не удалось возобновить подписанную загрузку по диапазону: попыток=%d, возобновлено=%v", attempts.Load(), resumed.Load())
 	}
 }
 
@@ -97,9 +97,9 @@ func TestTLSResumeRejectsWrongServerValidator0527(t *testing.T) {
 		t.Fatal("mismatching ETag accepted")
 	}
 	if _, err := os.Stat(part); !os.IsNotExist(err) {
-		t.Fatalf("unsafe partial retained after validator mismatch: %v", err)
+		t.Fatalf("После несовпадения валидатора остался небезопасный частичный файл: %v", err)
 	}
 	if calls.Load() != 1 {
-		t.Fatalf("expected one network attempt, got %d", calls.Load())
+		t.Fatalf("Ожидалась одна сетевая попытка, получено %d", calls.Load())
 	}
 }

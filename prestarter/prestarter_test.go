@@ -100,7 +100,7 @@ func TestSignedConfigCannotBeTamperedWith(t *testing.T) {
 	s.Signature = strings.Repeat("0", 128)
 	bad, _ = json.Marshal(s)
 	if _, _, e := VerifyEnvelope(bad, key); e == nil {
-		t.Fatal("invalid signature accepted")
+		t.Fatal("Тест пропустил недействительную подпись")
 	}
 	if _, _, e := VerifyEnvelope(env, strings.Repeat("0", 64)); e == nil {
 		t.Fatal("foreign root accepted")
@@ -134,7 +134,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 		t.Fatal(e)
 	}
 	if state.Digest == "" || state.Generation != 1 {
-		t.Fatal("invalid initial committed pointer", state)
+		t.Fatal("Неверный указатель первоначально зафиксированной версии", state)
 	}
 	if e := Run(context.Background(), opts); e != nil {
 		t.Fatal("repeated offline install:", e)
@@ -180,11 +180,11 @@ func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T)
 	parts["runtime"] = []byte("#!/bin/sh\ncase \"$1\" in verify) echo '{}';; java) exit 17;; *) exit 19;; esac\n")
 	opts, _ := makeOfflineFixture(t, root, parts)
 	if err := Run(context.Background(), opts); err == nil {
-		t.Fatal("failed bootstrap returned success")
+		t.Fatal("Ошибка начальной загрузки ошибочно признана успехом")
 	}
 	for _, name := range []string{"active-0.json", "active-1.json"} {
 		if _, err := os.Stat(filepath.Join(opts.Root, "launcher", name)); !errors.Is(err, os.ErrNotExist) {
-			t.Fatalf("failed initial release left active slot %s: %v", name, err)
+			t.Fatalf("После ошибки первоначального релиза остался активный слот %s: %v", name, err)
 		}
 	}
 	// Восстановите подписанный источник и запустите повторно. Кэш и манифест можно использовать ещё раз.
@@ -253,7 +253,7 @@ func TestFailedNewReleaseKeepsOldActive(t *testing.T) {
 	opts.TrustedKey = key
 	// Нет нового подписанного совпадающего бинарного файла Desktop — переключение запрещено.
 	if e := Run(context.Background(), opts); e == nil {
-		t.Fatal("missing component accepted")
+		t.Fatal("Принят пакет без обязательного компонента")
 	}
 	check, err := os.ReadFile(filepath.Join(opts.Root, "launcher", "active-1.json"))
 	if err != nil {
@@ -342,7 +342,7 @@ func TestMalformed206NeverJoinsOldBytes(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !hashFile(got, a) || num.Load() != 3 {
-		t.Fatal("invalid range not discarded", num.Load())
+		t.Fatal("Недопустимый диапазон не отброшен", num.Load())
 	}
 }
 func TestManifestIntegrityRejectsWrongBytes(t *testing.T) {

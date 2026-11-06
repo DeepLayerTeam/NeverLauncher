@@ -97,7 +97,7 @@ func Init(dest, publicURL, dsn, storageDir string) error {
 		{"LAUNCHER_EXTENSION_ROOT", filepath.Join(filepath.Dir(storageDir), "extensions")}, {"LAUNCHER_REPOSITORY_DRIVER", "postgres"}, {"LAUNCHER_SQL_DRIVER", "pgx"}, {"LAUNCHER_DATABASE_DSN", dsn}, {"LAUNCHER_DATABASE_AUTO_MIGRATE", "true"}, {"LAUNCHER_STORAGE_DRIVER", "local"}, {"LAUNCHER_STORAGE_LOCAL_PATH", storageDir}, {"LAUNCHER_AUTH_TOKEN_SECRET", secret}, {"LAUNCHER_BOOTSTRAP_TOKEN", token}, {"LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", signing}, {"LAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY", bridge}, {"LAUNCHER_EXTENSION_SECRETS_KEY", extensions},
 	}
 	var b bytes.Buffer
-	b.WriteString("# Launcher: GENERATED SECRETS. Permissions 0600. Keep in safe backup.\n# Supply verified LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON and LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON before production startup.\n")
+	b.WriteString("# Launcher: СЕКРЕТЫ СОЗДАНЫ АВТОМАТИЧЕСКИ. Права 0600. Сохраните в защищённой резервной копии.\n# До промышленного запуска задайте проверенные LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON и LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON.\n")
 	for _, f := range fields {
 		if !validEnvField(f[1]) {
 			return fmt.Errorf("Небезопасное значение переменной окружения %s", f[0])

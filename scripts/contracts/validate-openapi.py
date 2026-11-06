@@ -9,7 +9,7 @@ HTTP=ROOT/'services/api/internal/httpapi'
 try: spec=json.loads(SPEC.read_text(encoding="utf-8"))
 except Exception as exc: raise SystemExit(f"Ошибка: «OpenAPI parse»: {exc}")
 errors=[]
-if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
+if spec.get('openapi')!='3.1.1': errors.append('Версия OpenAPI должна быть 3.1.1')
 if spec.get('info',{}).get('version')!='1.0.0': errors.append('Поле info.version должно быть равно 1.0.0')
 route_re=re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
 files=[HTTP/'handler.go']+sorted(p for p in HTTP.glob('routes_*.go') if 'legacy' not in p.name)+sorted(p for p in HTTP.glob('migration_*.go') if not p.name.endswith('_test.go'))
@@ -19,14 +19,14 @@ for f in files:
 doc=set()
 ids=[]
 for path,item in spec.get('paths',{}).items():
-    if re.search(r'/api/v[2-9](?:/|$)',path): errors.append(f'historical route in canonical OpenAPI: {path}')
+    if re.search(r'/api/v[2-9](?:/|$)',path): errors.append(f'Устаревший маршрут в каноническом OpenAPI: {path}')
     for method,op in item.items():
         if method.lower() not in {'get','post','put','patch','delete'}: continue
         key=(method.lower(),path); doc.add(key)
         oid=op.get('operationId')
-        if not oid: errors.append(f'{method.upper()} {path} missing operationId')
+        if not oid: errors.append(f'{method.upper()} {path}: отсутствует operationId')
         else: ids.append(oid)
-        if not op.get('responses'): errors.append(f'{method.upper()} {path} missing responses')
+        if not op.get('responses'): errors.append(f'{method.upper()} {path}: отсутствуют ответы responses')
         for name in re.findall(r'{([^}]+)}',path):
             params=op.get('parameters',[])
             if not any(p.get('in')=='path' and p.get('name')==name and p.get('required') is True for p in params):

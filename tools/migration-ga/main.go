@@ -329,9 +329,9 @@ func getJSON(ctx context.Context, client *http.Client, endpoint, token string, o
 	if e != nil {
 		return e
 	}
-	// All Launcher Admin responses are enveloped as {"data": ...}.
-	// Do not accept a bare or unknown response that only happens to match a
-	// subset of the expected report fields.
+	// Все ответы Launcher Admin имеют оболочку {"data": ...}.
+	// Не принимайте ответ без оболочки или неизвестного формата, даже если
+	// часть полей совпадает с ожидаемым отчётом.
 	var envelope struct {
 		Data json.RawMessage `json:"data"`
 	}
@@ -748,8 +748,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if r.RunID != p.RunID || r.ProjectID != p.ProjectID || r.SourceSHA256 != source {
 		return errors.New("ZIP источника, проект или запуск не совпадает с отчёт базы данных")
 	}
-	// Bind the tested release to an actually active cutover, not merely
-	// a release ID or digest invented by the operator's test scripts.
+	// Привязывайте проверяемый релиз к действительно активному переключению,
+	// а не только к ID релиза или хешу, придуманному тестовыми скриптами оператора.
 	foundTarget := false
 	for _, ev := range r.Evidence {
 		if strings.HasPrefix(ev.Stage, "cutover_scope:") && ev.State == "verified" && ev.Details == "active" && ev.SHA256 == p.TargetReleaseSHA256 {
@@ -781,8 +781,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	}
 	sort.Strings(uuids)
 	b := Bundle{Format: format, Version: version, ReferenceClass: p.ReferenceClass, RunID: p.RunID, ProjectID: p.ProjectID, CommitSHA: p.CommitSHA, SourceVersion: p.SourceVersion, TrustedGravitJarSHA256: p.TrustedGravitJarSHA256, TargetReleaseSHA256: p.TargetReleaseSHA256, ReportSHA256: r.ReportSHA256, SourceSHA256: source, ReviewedBy: review.ReviewedBy, ReviewEvidenceSHA256: review.EvidenceSHA256, Checks: []SealedProbe{}}
-	// Create the evidence directory only after the authoritative report and
-	// immutable operator review have been checked. No prior directory is reused.
+	// Создавайте каталог свидетельств только после проверки достоверного отчёта и
+	// неизменяемого заключения оператора. Ранее созданные каталоги не используйте повторно.
 	if e = os.Mkdir(evidenceDir, 0700); e != nil {
 		return fmt.Errorf("Создание каталога доказательств: %w", e)
 	}
@@ -796,8 +796,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if err := ensureSnapshotStillMatches(p, evidenceDir); err != nil {
 		return fmt.Errorf("Снимки изменились во время проверки GA: %w", err)
 	}
-	// A check must not change its own Gravit source bytes after the initial
-	// source verification while still receiving a signed certificate.
+	// Проверка не должна изменять исходные байты Gravit после первоначальной
+	// проверки источника и при этом получать подписанный сертификат.
 	again, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
 		return e
@@ -805,8 +805,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if again != source {
 		return errors.New("Исходный архив изменился во время проверок GA")
 	}
-	// Re-read the backend: a new source receipt, route or identity invalidates
-	// a previously successful check before its certificate can be written.
+	// Повторно прочитайте состояние Backend: новая квитанция источника, маршрут или
+	// идентичность аннулируют ранее успешную проверку до записи её сертификата.
 	var after Report
 	if e = getJSON(ctx, client, endpoint, token, &after); e != nil {
 		return e
@@ -824,8 +824,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if afterReview.Status != review.Status || afterReview.ReviewedBy != review.ReviewedBy || afterReview.ReviewedAt != review.ReviewedAt || afterReview.EvidenceReference != review.EvidenceReference || afterReview.EvidenceSHA256 != review.EvidenceSHA256 || afterReview.Report.ReportSHA256 != r.ReportSHA256 {
 		return errors.New("Заключение оператора изменилось во время сквозной проверки GA; повторите проверку")
 	}
-	// Access independent audit signing material only after all untrusted
-	// probe commands have exited and the authoritative state was reread.
+	// Обращайтесь к независимому ключевому материалу подписи аудита лишь после
+	// завершения всех недоверенных команд проверки и повторного чтения достоверного состояния.
 	key, e := signingKey(p.SigningKey)
 	if e != nil {
 		return e

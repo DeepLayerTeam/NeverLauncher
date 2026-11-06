@@ -43,7 +43,7 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	opts.TrustedKey = hex.EncodeToString(pub)
 	cfg, _, err := prestarter.VerifyEnvelope(raw, opts.TrustedKey)
 	if err == nil {
-		t.Fatal("must not accept old fixture trust root")
+		t.Fatal("Нельзя принимать устаревший тестовый корневой ключ доверия")
 	}
 	// Получите конфигурацию фикстуры, не доверяя исходному подписанту; изменения
 	// теста подписываются новым закреплённым тестовым ключом.
@@ -91,12 +91,12 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		desktop, err := os.ReadFile(filepath.Join(root, "xdg", "applications", "launcher.desktop"))
 		if err != nil || !bytes.Contains(desktop, []byte("Icon=")) {
-			t.Fatal("branded desktop shortcut missing signed icon")
+			t.Fatal("В ярлыке Desktop отсутствует подписанная фирменная иконка")
 		}
 		// Подписанный образ находится рядом с проверенным установленным пакетом.
 		base, err := filepath.Glob(filepath.Join(opts.Root, ".launcher-installer", "releases", "*", "brand-icon.png"))
 		if err != nil || len(base) != 1 {
-			t.Fatalf("missing branded installed icon: %v %v", base, err)
+			t.Fatalf("Отсутствует фирменная иконка установленного приложения: %v %v", base, err)
 		}
 		b, err := os.ReadFile(base[0])
 		if err != nil || !bytes.Equal(b, iconBuf.Bytes()) {
@@ -123,21 +123,21 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 		t.Fatal(err)
 	}
 	if updated.Generation != before.Generation+1 || updated.Release == before.Release {
-		t.Fatalf("signed update not committed: before=%+v after=%+v", before, updated)
+		t.Fatalf("Подписанное обновление не зафиксировано: до=%+v, после=%+v", before, updated)
 	}
 	bad := filepath.Join(root, "bad")
 	opts.Bundle = bad
 	cfg.Branding.DisplayName = "Broken Brand"
 	sign(bad, cfg, "#!/bin/sh\nexit 32\n")
 	if err := Update(context.Background(), opts); err == nil {
-		t.Fatal("failed Prestarter update accepted")
+		t.Fatal("Принято ошибочное обновление Prestarter")
 	}
 	afterFail, err := i.current()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if afterFail.Generation != updated.Generation || afterFail.Release != updated.Release {
-		t.Fatal("failed update moved trusted active slot")
+		t.Fatal("Ошибочное обновление изменило доверенный активный слот")
 	}
 	hijack := filepath.Join(root, "other-project")
 	opts.Bundle = hijack

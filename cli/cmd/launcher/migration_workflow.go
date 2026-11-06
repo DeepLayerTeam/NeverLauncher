@@ -17,7 +17,7 @@ import (
 // управляют контрольная точка и аренда в БД, а не процесс CLI.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|dry-run-all|verify-dry-run-all|import-content-all|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|rollback-plan|rollback-commit|rollback-status|report|report-review|report-review-status|generate-keys")
+		return errors.New("Для migrate gravit укажите команду create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|dry-run-all|verify-dry-run-all|import-content-all|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|rollback-plan|rollback-commit|rollback-status|report|report-review|report-review-status|generate-keys")
 	}
 	command := args[0]
 	if command == "report" || command == "report-review" || command == "report-review-status" {

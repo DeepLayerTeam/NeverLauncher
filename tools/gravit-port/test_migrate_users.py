@@ -1,4 +1,4 @@
-"""Stateful, failure-oriented tests of the executable user migration operator."""
+"""Тесты рабочего оператора миграции пользователей с сохранением состояния и моделированием отказов."""
 import importlib.util
 import json
 import hashlib
@@ -49,7 +49,7 @@ class Stub:
         if path.endswith("/security/preview"):
             return {"importedAccounts": 1, "appliedAt": None}
         if path.endswith("/security/activate"):
-            # First actual commit is not marked verified until a later GET.
+            # Первый реальный коммит не считается проверенным до последующего запроса GET.
             return {"importedAccounts": 1, "appliedAt": "2026-11-02T16:00:00Z", "verified": False}
         if path.endswith("/security"):
             return {"importedAccounts": 1, "verified": True}

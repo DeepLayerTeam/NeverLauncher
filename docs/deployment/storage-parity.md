@@ -33,7 +33,7 @@
 | `services/api/internal/httpapi/operations_backup.go` | Обслуживание и backup используют зависимости текущей топологии |
 | `services/api/internal/repository/*.go` | SQLRepository и дополнительные store интерфейсы, включая устройства, публикацию, Bridge, расширения, миграции |
 | `services/api/internal/dbmigrate/sql/*.sql` | PostgreSQL SQL миграции; нельзя исполнять их как SQLite |
-| `services/api/internal/sqlitepg/transfer.go` | Перенос между движками не эквивалентен готовому cutover backend |
+| `services/api/internal/sqlitepg/transfer.go` | Перенос между движками не равнозначен готовому переключению Backend |
 | `services/api/internal/sqlitedurable/*` | Гарантии WAL/FS; самостоятельное хранилище не означает HTTP parity |
 
 ## Реальные общие поведенческие тесты

@@ -128,8 +128,8 @@ func withoutPostgresEnvironment0491(env []string, opts liveIntegrationOptions049
 	out := make([]string, 0, len(env))
 	for _, v := range env {
 		key, value, _ := strings.Cut(v, "=")
-		// Do not forward the API authorization bearer or a second copy of
-		// PostgreSQL credentials to the external client process.
+		// Не передавайте токен авторизации API или дополнительную копию учётных данных
+		// PostgreSQL внешнему клиентскому процессу.
 		if strings.HasPrefix(key, "PG") || strings.HasPrefix(key, "LAUNCHER_MIGRATION_GA_") || key == "LAUNCHER_POSTGRES_DSN" || value == opts.Token || value == opts.DSN {
 			continue
 		}
@@ -187,8 +187,8 @@ type hostProbe0491 struct {
 }
 
 func auditGet0491(ctx context.Context, client *http.Client, endpoint, token string, out any) error {
-	// Existing Backend responses carry additional versioned fields. Preserve
-	// envelope verification, then decode the known audit projection only.
+	// Текущие ответы Backend содержат дополнительные версионированные поля.
+	// Сохраните проверку оболочки ответа и декодируйте только известные поля аудита.
 	var raw json.RawMessage
 	if err := getJSON(ctx, client, endpoint, token, &raw); err != nil {
 		return err
@@ -305,8 +305,8 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	if !probe.Java.Responsive || probe.Java.State != "RUNNING" {
 		return errors.New("JVM Java не подтвердила работающий RPC в состоянии RUNNING")
 	}
-	// Re-read both independent stores after JVM execution. A concurrent
-	// migration or extension update must not seal a stale cross-system result.
+	// После выполнения JVM повторно прочитайте оба независимых хранилища.
+	// Параллельная миграция или обновление расширения не должны заверять устаревший результат сверки систем.
 	pgAfter, _, err := postgresSnapshot0491(ctx, opts)
 	if err != nil {
 		return err

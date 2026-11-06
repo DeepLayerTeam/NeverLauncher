@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real Java source-port compiler/package tests; no mocked javac or signing."""
+"""Реальные тесты компиляции и упаковки перенесённых исходников Java без имитации javac и подписи."""
 from __future__ import annotations
 
 import importlib.util

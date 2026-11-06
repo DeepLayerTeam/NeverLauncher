@@ -157,7 +157,7 @@ func TestInitSecretsAndNoOverwrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Contains(b, []byte("LAUNCHER_BOOTSTRAP_TOKEN=")) || !bytes.Contains(b, []byte("LAUNCHER_ENV=production")) {
-		t.Fatal("configuration fields missing")
+		t.Fatal("Отсутствуют поля конфигурации")
 	}
 	if err := Init(dest, "https://launcher.example", "postgres://localhost/db", filepath.Join(dir, "storage")); err == nil {
 		t.Fatal("init overwrote existing credentials")
@@ -179,7 +179,7 @@ func TestOwnerBootstrapUsesFilesAndSingleRequest(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		if r.Method != "POST" || r.URL.Path != "/api/v1/install/bootstrap-admin" || r.Header.Get("X-Launcher-Bootstrap-Token") != strings.Repeat("a", 64) {
-			t.Error("wrong bootstrap request")
+			t.Error("Неверный запрос начальной загрузки")
 		}
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(`{"data":{"status":"admin-created"}}`))
@@ -189,7 +189,7 @@ func TestOwnerBootstrapUsesFilesAndSingleRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if calls != 1 {
-		t.Fatalf("expected one atomic bootstrap call, got %d", calls)
+		t.Fatalf("Ожидался один атомарный вызов начальной загрузки, получено %d", calls)
 	}
 	os.Chmod(pass, 0644)
 	if err := BootstrapOwner(srv.URL, "owner@example.com", "Owner", pass, token); err == nil {
@@ -215,7 +215,7 @@ func TestConcurrentAtomicInstall(t *testing.T) {
 		}
 	}
 	if successes != 1 {
-		t.Fatalf("expected exactly one installer to win, got %d", successes)
+		t.Fatalf("Ожидался один успешно завершившийся установщик, получено %d", successes)
 	}
 	b, err := os.ReadFile(filepath.Join(target, "app"))
 	if err != nil || string(b) != "executable" {
@@ -239,7 +239,7 @@ func TestBootstrapFromGeneratedEnv(t *testing.T) {
 		}
 	}
 	if len(token) != 64 {
-		t.Fatalf("invalid bootstrap token length: %d", len(token))
+		t.Fatalf("Недопустимая длина токена начальной загрузки: %d", len(token))
 	}
 	pass := filepath.Join(dir, "password")
 	put(t, pass, "correct horse battery staple", 0600)
@@ -247,7 +247,7 @@ func TestBootstrapFromGeneratedEnv(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count++
 		if r.Header.Get("X-Launcher-Bootstrap-Token") != token {
-			t.Error("wrong token")
+			t.Error("Неверный токен")
 		}
 		w.WriteHeader(201)
 	}))
@@ -280,7 +280,7 @@ func TestSystemdUnitHardening(t *testing.T) {
 	}
 	for _, needle := range []string{"User=launcher", "ProtectSystem=strict", "NoNewPrivileges=true", "StateDirectoryMode=0700"} {
 		if !bytes.Contains(data, []byte(needle)) {
-			t.Fatalf("missing %s", needle)
+			t.Fatalf("Отсутствует %s", needle)
 		}
 	}
 	if err := WriteSystemdUnit(unit, app, secret); err == nil {

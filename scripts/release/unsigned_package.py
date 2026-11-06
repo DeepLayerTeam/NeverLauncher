@@ -98,7 +98,7 @@ def main():
     p.add_argument('--platform',choices=('windows','linux','macos'),required=True)
     p.add_argument('--arch',choices=('x64','arm64'),required=True)
     p.add_argument('--out-dir',type=Path,required=True)
-    p.add_argument('--file',action='append',required=True,help="archive/member/path=/absolute/compiled/file")
+    p.add_argument('--file',action='append',required=True,help="путь/в/архиве=/абсолютный/путь/к/собранному/файлу")
     args=p.parse_args()
     try:
         mapping={}

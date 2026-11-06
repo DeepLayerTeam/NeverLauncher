@@ -159,7 +159,7 @@ func TestMandatoryNegativeChecks0449(t *testing.T) {
 		}
 	}
 	if validatePlan(p) == nil {
-		t.Fatal("missing required negative optional check")
+		t.Fatal("Отсутствует обязательная негативная проверка необязательного компонента")
 	}
 	p.ReferenceClass = "unknown"
 	if validatePlan(p) == nil {

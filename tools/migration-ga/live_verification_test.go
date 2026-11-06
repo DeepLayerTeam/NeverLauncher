@@ -41,7 +41,7 @@ func TestLiveVerificationRejectsRevokedCutoverAndChangedReview0450(t *testing.T)
 		t.Fatal(err)
 	}
 	if err := verifyLiveReference(context.Background(), b, p, ""); err == nil {
-		t.Fatal("missing token accepted")
+		t.Fatal("Запрос без токена был принят")
 	}
 	report.Evidence[len(report.Evidence)-1].Details = "cancelled"
 	report.ReportSHA256 = ""

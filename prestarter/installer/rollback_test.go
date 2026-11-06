@@ -118,11 +118,11 @@ func TestInstallerRollbackRejectsCorruptPriorPackage0527(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := Rollback(context.Background(), opts); err == nil {
-		t.Fatal("tampered previous signed payload was accepted")
+		t.Fatal("Приняты повреждённые данные предыдущего подписанного релиза")
 	}
 	active, err := i.current()
 	if err != nil || active.Release != second.Release || active.Generation != second.Generation {
-		t.Fatalf("altered active on rejected rollback: %+v %v", active, err)
+		t.Fatalf("При отклонённом откате изменился активный релиз: %+v %v", active, err)
 	}
 }
 

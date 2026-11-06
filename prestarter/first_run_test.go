@@ -53,7 +53,7 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 		}
 	}
 	if settings["serverPort"] != float64(25566) || settings["autoEnter"] != true {
-		t.Fatal("signed auto-enter was not provisioned")
+		t.Fatal("Автоматическое подключение из подписанной конфигурации не настроено")
 	}
 	// Пользовательские настройки переживают корректный перезапуск Prestarter, а проверенный
 	// конверт повторно публикуется из подписанной конфигурации владельца.
