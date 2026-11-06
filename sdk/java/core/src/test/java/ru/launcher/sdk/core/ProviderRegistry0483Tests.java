@@ -49,7 +49,7 @@ public final class ProviderRegistry0483Tests {
             registry.select(GREETING.id(),"second",Duration.ofSeconds(2));
             ok(registry.call(GREETING,p->p.greet("Ada")).equals("two-Ada"),"После выбора используется новый провайдер");
             ok(starts.get()==2&&stops.get()==1,"Старый провайдер корректно остановлен ровно один раз");
-            ok(registry.selected(GREETING.id()).orElseThrow().providerId().equals("second"),"active provider visible");
+            ok(registry.selected(GREETING.id()).orElseThrow().providerId().equals("second"),"Активный провайдер доступен");
             registry.shutdown(Duration.ofSeconds(2));
             ok(stops.get()==2,"Активный провайдер остановлен при закрытии реестра");
             fails(IllegalStateException.class,()->registry.call(GREETING,p->p.greet("Ada")));
@@ -66,8 +66,8 @@ public final class ProviderRegistry0483Tests {
             }));
             registry.select(GREETING.id(),"good",Duration.ofSeconds(2));
             fails(IllegalStateException.class,()->registry.select(GREETING.id(),"broken",Duration.ofSeconds(2)));
-            ok(registry.selected(GREETING.id()).isEmpty(),"failed switch leaves no active provider");
-            ok(cleaned.get()==1,"broken provider cleaned up after failed start");
+            ok(registry.selected(GREETING.id()).isEmpty(),"После неудачного переключения активный провайдер отсутствует");
+            ok(cleaned.get()==1,"Провайдер с ошибкой корректно освобождает ресурсы после неудачного запуска");
             fails(IllegalStateException.class,()->registry.call(GREETING,p->p.greet("x")));
         }
     }
@@ -80,14 +80,14 @@ public final class ProviderRegistry0483Tests {
             registry.select(GREETING.id(),"slow",Duration.ofSeconds(1));
             Thread reader=new Thread(()->{try{registry.call(GREETING,p->{entered.countDown();try{release.await();}catch(InterruptedException e){Thread.currentThread().interrupt();}return p.greet("Z");});}catch(Throwable t){failure.set(t);}});
             reader.start();
-            ok(entered.await(1,TimeUnit.SECONDS),"provider call entered");
+            ok(entered.await(1,TimeUnit.SECONDS),"Вызов провайдера начат");
             Thread switching=new Thread(()->{try{registry.select(GREETING.id(),"fast",Duration.ofSeconds(2));}catch(Throwable t){failure.set(t);}});
             switching.start();
             Thread.sleep(80);
-            ok(stopped.get()==0&&switching.isAlive(),"provider not stopped while call is active");
+            ok(stopped.get()==0&&switching.isAlive(),"Провайдер не останавливается во время активного вызова");
             release.countDown();reader.join(1200);switching.join(1200);
-            ok(!reader.isAlive()&&!switching.isAlive()&&failure.get()==null,"switch drains in-flight calls");
-            ok(stopped.get()==1,"old provider stopped after drain");
+            ok(!reader.isAlive()&&!switching.isAlive()&&failure.get()==null,"Переключение дожидается завершения текущих вызовов");
+            ok(stopped.get()==1,"Предыдущий провайдер остановлен после завершения вызовов");
         } finally {release.countDown();}
     }
     static void deadlineAndFailure() throws Exception {
@@ -132,7 +132,7 @@ public final class ProviderRegistry0483Tests {
                 catch(Exception e){throw new IllegalStateException("повторный вход в выбор отклонён",e);}
                 return p.greet("x");
             }));
-            ok(registry.selected(GREETING.id()).isPresent(),"recursive switch does not disrupt active provider");
+            ok(registry.selected(GREETING.id()).isPresent(),"Рекурсивное переключение не нарушает работу активного провайдера");
         }
     }
     static void concurrentShutdown() throws Exception {
@@ -149,12 +149,12 @@ public final class ProviderRegistry0483Tests {
             Thread two=new Thread(()->{try{registry.shutdown(Duration.ofSeconds(3));}catch(Throwable e){failure.set(e);}});
             one.start();
             try {
-                ok(stopping.await(1,TimeUnit.SECONDS),"first shutdown entered provider stop");
+                ok(stopping.await(1,TimeUnit.SECONDS),"Первое завершение работы приступило к остановке провайдера");
                 two.start();Thread.sleep(70);
-                ok(two.isAlive(),"concurrent shutdown waits for actual provider stop");
+                ok(two.isAlive(),"Параллельное завершение ожидает фактической остановки провайдера");
             } finally {finish.countDown();one.join(1100);two.join(1100);}
-            ok(!one.isAlive()&&!two.isAlive()&&failure.get()==null,"two shutdown callers finished");
-            ok(stops.get()==1,"provider stop runs once");
+            ok(!one.isAlive()&&!two.isAlive()&&failure.get()==null,"Оба параллельных завершения выполнены");
+            ok(stops.get()==1,"Остановка провайдера выполняется один раз");
         }
     }
     static void failedExtensionStartCleansProvider() throws Exception {
@@ -169,8 +169,8 @@ public final class ProviderRegistry0483Tests {
         };
         try(var lifecycle=new ExtensionLifecycle(failing,MANIFEST)) {
             fails(IllegalArgumentException.class,()->lifecycle.start(Duration.ofSeconds(2)));
-            ok(lifecycle.state()==ExtensionLifecycle.State.FAILED,"failed startup is not marked running");
-            ok(stopped.get()==1,"failed startup closes already activated provider");
+            ok(lifecycle.state()==ExtensionLifecycle.State.FAILED,"Неудачный запуск не отмечается как работающий");
+            ok(stopped.get()==1,"Неудачный запуск закрывает ранее активированный провайдер");
         }
     }
     public static void main(String[] args) throws Exception {

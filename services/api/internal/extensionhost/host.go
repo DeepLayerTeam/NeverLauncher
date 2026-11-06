@@ -1015,7 +1015,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		}
 		failed.mu.Lock()
 		startupFailure := failed.state == "failed" ||
-			(failed.state == "stopped" && (strings.HasPrefix(failed.lastError, "Превышено время ожидания приветствия при запуске") || strings.HasPrefix(failed.lastError, "event subscription reconcile failed")))
+			(failed.state == "stopped" && (strings.HasPrefix(failed.lastError, "Превышено время ожидания приветствия при запуске") || strings.HasPrefix(failed.lastError, "Не удалось согласовать подписку на события")))
 		failed.mu.Unlock()
 		s.mu.RLock()
 		permitted := s.processes[k] == failed && s.recoveryEpoch[k] == epoch

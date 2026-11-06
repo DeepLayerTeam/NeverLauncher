@@ -4690,7 +4690,7 @@ function App() {
       setFirstRunError0352(
         `Установка не завершена: ${String(error)}. Используйте повторную попытку.`,
       );
-      log(`Installer: ${String(error)}`);
+      log(`Установщик: ${String(error)}`);
     } finally {
       setFirstRunBusy0352(false);
       setTransferBusy(false);
@@ -4863,7 +4863,7 @@ function App() {
               className="startupStatus0427"
               aria-live="polite"
               aria-label={
-                ui0357.locale === "ru" ? "Запуск клиента" : "Client launch"
+                ui0357.locale === "ru" ? "Запуск клиента" : "Запуск клиента"
               }
             >
               <span role={stage === "failed" ? "alert" : "status"}>

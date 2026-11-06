@@ -18,7 +18,7 @@ class JavaArtifactHardeningTest(unittest.TestCase):
     def setUpClass(cls):
         cls.repo = Path(os.environ.get('LAUNCHER_JAVA_SDK_REPO', mod.ROOT / 'dist/java-sdk/maven'))
         if not cls.repo.is_dir():
-            raise RuntimeError('publish SDK artifacts before running this suite')
+            raise RuntimeError('Опубликуйте артефакты SDK перед запуском этого набора тестов')
 
     def isolated(self):
         temp = tempfile.TemporaryDirectory()

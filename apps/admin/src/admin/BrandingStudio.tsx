@@ -84,7 +84,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
         </aside>
         <div className="brandPreviewMain0355" style={brand.splashPng?{backgroundImage:`linear-gradient(0deg,rgba(0,0,0,.6),rgba(0,0,0,.6)),url(${brandImage(brand.splashPng)})`}:{}}>
           {brand.logoPng&&<img className="brandPreviewLogo0355" alt="Логотип" src={brandImage(brand.logoPng)} />}
-          <h2>{brand.displayName}</h2><p>{brand.locale==='en'?'Ready to play':'Готово к игре'}</p>
+          <h2>{brand.displayName}</h2><p>{brand.locale==='en'?'Готов к игре':'Готово к игре'}</p>
           <button style={{background:brand.accentColor||'#22c55e',color:brand.backgroundColor||'#0f172a'}}>{brand.locale==='en'?'Play':'Играть'}</button>
           <div>{(brand.news||[]).map((n,i)=><p key={i}>{n.title} · {n.url}</p>)}</div>
         </div>

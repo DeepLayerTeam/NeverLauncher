@@ -42,7 +42,7 @@ class GameAdversarialRegression(unittest.TestCase):
                     path.write_text('{"status":"valid"}')
                     return (0, b'')
                 return (1, b'rejected-corrupted-file')
-            raise AssertionError('unexpected command')
+            raise AssertionError('Неожиданная команда')
         with patch.object(negative, '_run', side_effect=execution):
             result = negative.execute('runtime', 'cli', self.manifest, 'pub', self.package,
                                       self.client, self.files, self.work, {})
@@ -52,26 +52,26 @@ class GameAdversarialRegression(unittest.TestCase):
 
     def test_corruption_accepted_blocks_and_restores(self):
         with patch.object(negative, '_run', return_value=(0, b'{}')):
-            with self.assertRaisesRegex(RuntimeError, 'corrupted installed file accepted'):
+            with self.assertRaisesRegex(RuntimeError, 'ошибочно приняла повреждённый установленный файл'):
                 negative.reject_corrupted_client('cli', self.package, self.client,
                                                 self.files, self.work, {})
         self.assertEqual(hashlib.sha256(self.target.read_bytes()).hexdigest(), self.digest)
 
     def test_invalid_baseline_blocks_not_a_false_positive(self):
         with patch.object(negative, '_run', return_value=(1, b'failed')):
-            with self.assertRaisesRegex(RuntimeError, 'unmodified signed manifest'):
+            with self.assertRaisesRegex(RuntimeError, 'Реальный Runtime не принял исходную подпись'):
                 negative.reject_tampered_manifest('runtime', self.manifest, 'pub', self.work, {})
 
     def test_version_mismatch_and_symlink_rejected(self):
         self.files[0]['sha256'] = '0' * 64
-        with self.assertRaisesRegex(RuntimeError, 'not initially byte verified'):
+        with self.assertRaisesRegex(RuntimeError, 'отсутствует первоначальная побайтовая проверка'):
             negative.reject_corrupted_client('cli', self.package, self.client,
                                             self.files, self.work, {})
         self.target.unlink()
         another = self.root / 'elsewhere'
         another.write_bytes(b'junk')
         self.target.symlink_to(another)
-        with self.assertRaisesRegex(RuntimeError, 'no installed required regular'):
+        with self.assertRaisesRegex(RuntimeError, 'Не найден обязательный установленный обычный файл'):
             negative.reject_corrupted_client('cli', self.package, self.client,
                                             self.files, self.work, {})
         self.assertEqual(another.read_bytes(), b'junk')

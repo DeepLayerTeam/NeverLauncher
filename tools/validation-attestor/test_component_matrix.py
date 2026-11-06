@@ -224,7 +224,7 @@ class ComponentMatrixTests(unittest.TestCase):
 
         def execute(_cfg, _pkg, target, grant):
             if target["id"] == "two":
-                raise ValueError("actual Minecraft crashed")
+                raise ValueError("Настоящий клиент Minecraft аварийно завершился")
             return {"runId": grant["runId"]}
 
         with (

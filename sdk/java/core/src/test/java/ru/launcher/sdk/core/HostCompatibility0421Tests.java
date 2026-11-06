@@ -82,7 +82,7 @@ public final class HostCompatibility0421Tests {
     }
     private static void rejectionAndMalformedHello()throws Exception {
         try(var server=new FakeHost();var client=server.session()){
-            server.helloStatus=409;server.hello=Map.of("error","host hello rejected","code","HOST_EXTENSION_API_MISMATCH");
+            server.helloStatus=409;server.hello=Map.of("error","Приветствие хоста отклонено","code","HOST_EXTENSION_API_MISMATCH");
             try{client.connect();throw new AssertionError("несовместимая версия API ошибочно принята");}
             catch(HostSession.HostError ex){check(ex.status()==409 && ex.code().equals("HOST_EXTENSION_API_MISMATCH"),"структурированная причина от хоста Go сохранена");}
         }

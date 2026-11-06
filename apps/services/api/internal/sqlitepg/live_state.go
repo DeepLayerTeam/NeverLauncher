@@ -156,7 +156,7 @@ func session0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		revoked = time.Now().UTC()
 	}
 	_, e = tx.Exec(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,status,refresh_family_id,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,auth_methods,core_auth_epoch_0474,core_original_status_0474,core_original_reason_0474)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16)`, s["id"], uid, email, role, s["device_id"], status, family, created, seen, expires, revoked, "SQLite to PostgreSQL trust-boundary rotation", methods, epoch, s["status"], s["revoked_reason"])
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16)`, s["id"], uid, email, role, s["device_id"], status, family, created, seen, expires, revoked, "Обновление границы доверия при переходе с SQLite на PostgreSQL", methods, epoch, s["status"], s["revoked_reason"])
 	return e
 }
 func family0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {

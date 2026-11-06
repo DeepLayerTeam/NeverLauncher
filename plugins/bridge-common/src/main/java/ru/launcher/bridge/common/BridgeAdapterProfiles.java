@@ -114,7 +114,7 @@ public final class BridgeAdapterProfiles {
         for (String marker : new String[]{"mohist", "arclight", "magma", "catserver", "banner", "cardboard"}) {
             if (brand.contains(marker)) {
                 throw new IllegalStateException(
-                    "hybrid core '" + marker + "' is outside the Universal Server Adapter cohort; " +
+                    "Гибридное ядро '" + marker + "' не входит в группу универсального серверного адаптера; " +
                     "Используйте отдельно сертифицированный гибридный адаптер или матрицу вместо " + normalize(platformId)
                 );
             }

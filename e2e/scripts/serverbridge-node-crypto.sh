@@ -56,7 +56,7 @@ serverbridge_node_sign() {
   fi
   # В OpenSSL Ed25519 — однопроходный алгоритм. pkeyutl нужен входной файл с
   # позиционированием; передача канонических данных через stdin может дать ошибку
-  # "unable to determine file size for oneshot operation" и нулевой результат.
+  # "Не удалось определить размер файла для однократной операции" и нулевой результат.
   if ! openssl pkeyutl -sign -rawin -inkey "$key" -in "$canonical_file" -out "$signature_file" >/dev/null 2>&1; then
     rm -f "$canonical_file" "$signature_file"
     return 1

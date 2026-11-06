@@ -105,7 +105,7 @@ class StandardBackupTests(unittest.TestCase):
                     return None
                 if cmds[0] == 'exec':
                     return type('result', (), {'stdout': b'0|0/ABC123\n'})()
-                raise AssertionError('unexpected compose invocation: ' + str(cmds))
+                raise AssertionError('Неожиданный вызов compose: ' + str(cmds))
 
             def tar_backup(volume, output):
                 if volume.endswith('coordinator'):

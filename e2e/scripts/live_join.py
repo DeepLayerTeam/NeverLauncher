@@ -294,7 +294,7 @@ def main():
     try:
         return serve(args) if args.command == 'serve' else verify(args)
     except (RuntimeError, OSError, ValueError, KeyError) as err:
-        print('[live-join-0524] BLOCKED: ' + str(err), file=sys.stderr)
+        print('[live-join-0524] ЗАБЛОКИРОВАНО: ' + str(err), file=sys.stderr)
         return 3
 
 

@@ -229,9 +229,9 @@ class FailureRecovery0477(unittest.TestCase):
             # Представляет прерывание процесса во время атомарной записи env.
             state = json.loads(self.op.state_path.read_text())
             self.assertTrue(state['writeBoundaryCrossed'])
-            raise OSError('injected cutover crash')
+            raise OSError('Искусственно вызванный сбой при переключении')
         with mock.patch.object(self.op, 'inactive'), mock.patch.object(opmod, 'change_env', side_effect=killed):
-            with self.assertRaisesRegex(OSError, 'injected cutover crash'):
+            with self.assertRaisesRegex(OSError, 'Искусственно вызванный сбой при переключении'):
                 self.op.cutover()
         with self.assertRaisesRegex(opmod.CutoverError, 'automatic rollback forbidden'):
             opmod.Operator(self.op.a).rollback()

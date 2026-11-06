@@ -174,7 +174,7 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 	return name, auth, launch, nil
 }
 func parseWrapper(raw []byte, p, sha string) Wrapper {
-	w := Wrapper{Path: p, SHA256: sha, Replacement: "Never ServerBridge (new Ed25519 enrollment)", Status: "manual"}
+	w := Wrapper{Path: p, SHA256: sha, Replacement: "Never ServerBridge (новая регистрация с ключом Ed25519)", Status: "manual"}
 	if strings.HasSuffix(strings.ToLower(p), ".env") || strings.EqualFold(path.Base(p), ".env") {
 		w.Mode = "environment"
 		for _, line := range strings.Split(string(raw), "\n") {

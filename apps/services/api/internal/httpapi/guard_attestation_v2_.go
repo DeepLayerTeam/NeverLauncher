@@ -195,7 +195,7 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 		"process tree":        e.ProcessTreeSHA256,
 		"debug state":         e.DebugStateSHA256,
 		"JVM state":           e.JVMStateSHA256,
-		"Sensor event chain":  e.SensorEventChainSHA256,
+		"Цепочка событий датчика":  e.SensorEventChainSHA256,
 		"last cross-check":    e.LastCrossCheckSHA256,
 		"continuous evidence": e.EvidenceSHA256,
 	} {

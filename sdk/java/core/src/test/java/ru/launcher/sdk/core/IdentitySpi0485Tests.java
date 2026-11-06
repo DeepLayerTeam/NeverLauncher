@@ -46,7 +46,7 @@ public final class IdentitySpi0485Tests {
             .header("Authorization","Bearer "+token).header("Content-Type","application/json")
             .POST(HttpRequest.BodyPublishers.ofString(Json.encode(msg))).timeout(Duration.ofSeconds(2)).build();
         HttpResponse<String> response=http.send(request,HttpResponse.BodyHandlers.ofString());
-        ok(response.statusCode()==(token.equals("callback-secret")?200:401),"authenticated callback status");
+        ok(response.statusCode()==(token.equals("callback-secret")?200:401),"Статус авторизованного обратного вызова");
         return Json.object(Json.parse(response.body()));
     }
     public static void main(String[] args)throws Exception {
@@ -75,13 +75,13 @@ public final class IdentitySpi0485Tests {
                 var bad=rpc(http,callback,"callback-secret","auth.password",Map.of("identifier","member","secret","bad"));
                 ok(Json.object(bad.get("result")).get("errorCode").equals("invalid_credentials"),"При неверном пароле возвращается стабильная ошибка");
                 var lookup=rpc(http,callback,"callback-secret","auth.resolve",Map.of("subject",ID.subject()));
-                ok(Json.object(Json.object(lookup.get("result")).get("identity")).get("subject").equals(ID.subject()),"resolve linked subject");
+                ok(Json.object(Json.object(lookup.get("result")).get("identity")).get("subject").equals(ID.subject()),"Поиск связанного субъекта");
                 var invalid=rpc(http,callback,"callback-secret","auth.resolve",Map.of("subject","different"));
                 ok(Json.object(invalid.get("result")).get("errorCode").equals("identity_not_found"),"Доступ неизвестному субъекту запрещён");
                 var session=rpc(http,callback,"callback-secret","auth.session.verify",Map.of("providerToken","session-1"));
                 ok(Json.object(session.get("result")).containsKey("authentication"),"Реальная проверка сеанса провайдера");
                 var revoked=rpc(http,callback,"callback-secret","auth.session.revoke",Map.of("providerToken","session-1","subject",ID.subject()));
-                ok(Boolean.TRUE.equals(Json.object(revoked.get("result")).get("revoked")),"provider revocation confirmed");
+                ok(Boolean.TRUE.equals(Json.object(revoked.get("result")).get("revoked")),"Отзыв провайдера подтверждён");
                 var after=rpc(http,callback,"callback-secret","auth.session.verify",Map.of("providerToken","session-1"));
                 ok(Json.object(after.get("result")).get("errorCode").equals("invalid_credentials"),"Отозванный токен провайдера отклоняется");
                 rpc(http,callback,"bad-token","auth.password",Map.of("identifier","member","secret","correct"));

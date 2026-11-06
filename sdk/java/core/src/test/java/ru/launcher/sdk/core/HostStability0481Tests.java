@@ -139,7 +139,7 @@ public final class HostStability0481Tests {
             acknowledge.set(false);
             long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(4);
             while(session.healthy()&&System.nanoTime()<deadline)Thread.sleep(20);
-            check(!session.healthy(),"200 response without ok=true revokes health");
+            check(!session.healthy(),"Ответ 200 без ok=true помечает службу как неисправную");
             expect(IllegalStateException.class,()->session.capability("runtime.config.get",Map.of()));
         }finally{fake.stop(0);}
     }

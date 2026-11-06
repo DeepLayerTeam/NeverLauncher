@@ -77,7 +77,7 @@ def validate(folder, source_commit, version, run_id, run_attempt):
                     or signature.get("tamperDenied") is not True
                 ):
                     raise ValueError(
-                        f"{name}/{case}: signed package negative tests absent"
+                        f"{name}/{case}: отсутствуют негативные тесты подписанного пакета"
                     )
         result[name] = {
             "status": "pass",

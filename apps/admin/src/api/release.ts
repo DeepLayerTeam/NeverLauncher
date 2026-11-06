@@ -57,7 +57,7 @@ export class ReleaseApi {
   private async sendForm(path: string,body: FormData) {
     const res = await fetch(`${this.base.replace(/\/$/,'')}${path}`,{method:'POST',headers:{Authorization:`Bearer ${this.token}`},body,cache:'no-store'});
     const payload: unknown = await res.json().catch(()=>null);
-    if (!res.ok) { const error = payload && typeof payload==='object' && 'error' in payload ? (payload as {error?:{message?:string}}).error?.message : undefined; throw new Error(error || `Upload: HTTP ${res.status}`); }
+    if (!res.ok) { const error = payload && typeof payload==='object' && 'error' in payload ? (payload as {error?:{message?:string}}).error?.message : undefined; throw new Error(error || `Загрузка: HTTP ${res.status}`); }
     return payload;
   }
 }

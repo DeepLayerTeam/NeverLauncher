@@ -85,7 +85,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.Reasons = append(p.Reasons, "Настроены PostgreSQL, политика высокой доступности Redis и хранилище S3")
 	case postgres:
 		p.Mode = Standard
-		p.Reasons = append(p.Reasons, "PostgreSQL repository; HA topology is incomplete or disabled")
+		p.Reasons = append(p.Reasons, "Репозиторий PostgreSQL; конфигурация высокой доступности не завершена или отключена")
 	default:
 		return p, fmt.Errorf("Не поддерживается: «repository driver %q: no fallback to memory»", p.Repository)
 	}
@@ -113,7 +113,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		}
 		for label, path := range map[string]string{"repository": cfg.DatabaseDSN, "coordinator": cfg.SQLiteCoordinatorPath, "storage": cfg.StorageLocalPath} {
 			if strings.TrimSpace(path) == "" || (config.IsProductionEnvironment(cfg.Environment) && (!filepath.IsAbs(path) || filepath.Clean(path) != path)) {
-				problems = append(problems, "single-node "+label+" requires an absolute clean persistent path")
+				problems = append(problems, "single-node "+label+" требуется абсолютный путь к чистому каталогу постоянного хранения")
 			}
 		}
 		if filepath.Clean(cfg.DatabaseDSN) == filepath.Clean(cfg.SQLiteCoordinatorPath) {
@@ -132,7 +132,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		if lock := strings.TrimSpace(cfg.DeploymentLockPath); lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
 			problems = append(problems, "Нельзя переопределить блокировку владельца одиночного узла")
 		}
-		p.Reasons = append(p.Reasons, "exclusive local process owner; durable SQLite HTTP repository and coordinator")
+		p.Reasons = append(p.Reasons, "Единственный локальный процесс-владелец; сохраняемый HTTP-репозиторий SQLite и координатор")
 	case Standard, NetworkHA:
 		if !postgres {
 			problems = append(problems, "Для standard/network-ha требуется HTTP-хранилище PostgreSQL")

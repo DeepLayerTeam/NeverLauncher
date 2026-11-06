@@ -439,7 +439,7 @@ def main() -> int:
     if args.webauthn_helper and args.webauthn_state:
         client.set_upload_passkey(args.webauthn_helper, args.webauthn_state)
         print(
-            "[e2e-upload] renew access before long file transfer",
+            "[e2e-upload] обновите доступ перед длительной передачей файла",
             file=sys.stderr,
             flush=True,
         )
@@ -475,7 +475,7 @@ def main() -> int:
 
     if args.webauthn_helper and args.webauthn_state:
         print(
-            "[e2e-upload] refresh phishing-resistant step-up before package signing",
+            "[e2e-upload] обновите дополнительную защиту от фишинга перед подписанием пакета",
             file=sys.stderr,
             flush=True,
         )
@@ -502,7 +502,7 @@ def main() -> int:
 
     if args.webauthn_helper and args.webauthn_state:
         print(
-            "[e2e-upload] refresh phishing-resistant step-up immediately before publish",
+            "[e2e-upload] обновите дополнительную защиту от фишинга непосредственно перед публикацией",
             file=sys.stderr,
             flush=True,
         )

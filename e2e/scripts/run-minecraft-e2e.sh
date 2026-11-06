@@ -723,14 +723,14 @@ raw = open(path, 'rb').read()
 lock = json.loads(raw.decode('utf-8'))
 actual = hashlib.sha256(raw).hexdigest()
 if actual != expected_lock:
-    raise SystemExit(f'loader lock SHA-256 mismatch: expected {expected_lock} got {actual}')
+    raise SystemExit(f'SHA-256 файла блокировки загрузчика не совпадает: ожидалось {expected_lock}, получено {actual}')
 if lock.get('reproducibilitySha256') != expected_repro:
     raise SystemExit('Идентификатор воспроизводимости закреплённого загрузчика не совпадает')
 if lock.get('resolvedVersion') in ('', None, 'latest', 'latest-stable', 'stable', 'recommended'):
     raise SystemExit('В блокировке загрузчика отсутствует неизменяемый resolvedVersion')
 for key in ('resolutionSourceSha256', 'payloadSha256', 'runtimeProfileSha256', 'materializationSha256', 'reproducibilitySha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(lock.get(key) or '')):
-        raise SystemExit(f'loader lock {key} is invalid')
+        raise SystemExit(f'Некорректное поле файла блокировки загрузчика: {key}')
 PYLOCK
 fi
 
@@ -897,7 +897,7 @@ PLAYER_AUTHORIZED_UUID="$(jq -er '.data.join.uuid' "$RUNTIME_DIR/join-paper-real
 PLAYER_WRONG_UUID="$(python3 - "$PLAYER_AUTHORIZED_UUID" <<'PYUUID'
 import re,sys
 value=sys.argv[1].replace('-','').lower()
-if not re.fullmatch(r'[0-9a-f]{32}',value): raise SystemExit('invalid real Minecraft ticket UUID')
+if not re.fullmatch(r'[0-9a-f]{32}',value): raise SystemExit('Некорректный UUID настоящего билета Minecraft')
 print(('0' if value[0]!='0' else '1')+value[1:])
 PYUUID
 )"

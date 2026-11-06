@@ -169,7 +169,7 @@ class DependencyHATests(unittest.TestCase):
             if method == 'DELETE':
                 data.pop(key, None)
                 return 204, b''
-            raise AssertionError('unexpected method')
+            raise AssertionError('Неожиданный метод')
         with patch.object(ha, 's3_request', side_effect=request):
             report = ha.s3_object_probe(self.config(), {}, gateways)
             self.assertTrue(report['crossGatewayReadBack'])

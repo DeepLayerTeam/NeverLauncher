@@ -87,7 +87,7 @@ INSERT INTO trusted_devices(
 ) VALUES
  ('dtmig-new','dtmig-user','Current device','active','verified','proof-of-possession','ed25519','software','',
   'unattested','','legacy-public-key-new',repeat('1',64),'linux','0.12.9',now(),now(),'127.0.0.1','migration-e2e','',NULL,'',''),
- ('dtmig-old','dtmig-user','Legacy rotated device','revoked','revoked','proof-of-possession','ed25519','software','',
+ ('dtmig-old','dtmig-user','Устройство с ранее заменённым ключом','revoked','revoked','proof-of-possession','ed25519','software','',
   'unattested','','legacy-public-key-old',repeat('2',64),'linux','0.12.8',now()-interval '1 day',now()-interval '1 hour','','','',now()-interval '1 hour','dtmig-new','rotate'),
  ('dtmig-other-device','dtmig-other','Other device','active','verified','proof-of-possession','ed25519','software','',
   'unattested','','legacy-public-key-other',repeat('3',64),'linux','0.12.9',now(),now(),'','','',NULL,'','');

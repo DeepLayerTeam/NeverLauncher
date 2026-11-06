@@ -50,7 +50,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
 
         String rotateCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, keyB.fingerprint, keyA.fingerprint);
         require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyB.publicKey, keyB.fingerprint, keyA.publicKey, keyA.fingerprint,
-            sign(keyB, rotateCanonical), sign(keyA, rotateCanonical)), "overlap key rotation");
+            sign(keyB, rotateCanonical), sign(keyA, rotateCanonical)), "Перекрывающая ротация ключей");
 
         String finalizedCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, keyB.fingerprint, "");
         require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "завершение ротации");
@@ -59,7 +59,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
         require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, attacker.publicKey, attacker.fingerprint, "", "", sign(attacker, attackerCanonical), ""), "недоверенный ключ разрешений отклонён");
         String revokedRotationCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, attacker.fingerprint, keyA.fingerprint);
         require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, attacker.publicKey, attacker.fingerprint, keyA.publicKey, keyA.fingerprint,
-            sign(attacker, revokedRotationCanonical), sign(keyA, revokedRotationCanonical)), "retired previous key cannot authorize rotation after finalize");
+            sign(attacker, revokedRotationCanonical), sign(keyA, revokedRotationCanonical)), "Выведенный из обращения прежний ключ не может разрешать ротацию после завершения");
         require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, "0".repeat(64), keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "понижение разрешений отклонено");
 
         Path bridgeArtifact = root.resolve("launcher-" + target + "-bridge-0.19.12.jar");
@@ -81,42 +81,42 @@ public final class ServerBridgeSecurityCertification01912Harness {
             5000, 9000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
         require(unsigned.executionDigest().equals(retry.executionDigest()),
-            "exactly-once digest stable across retry and lease metadata");
+            "Дайджест однократного выполнения стабилен при повторе и изменении данных аренды");
         require(!unsigned.canonical().equals(retry.canonical()),
-            "v3 signed canonical binds retry and lease metadata");
+            "Подписанное каноническое представление v3 включает метаданные повтора и аренды");
         BridgeControlCommand alteredPayload = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 3,
             "server.save", Map.of(), "2".repeat(64), 11, unsigned.channelId(),
             unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
         require(!unsigned.executionDigest().equals(alteredPayload.executionDigest()),
-            "exactly-once digest rejects same commandId with changed payload hash");
+            "Дайджест однократного выполнения отклоняет тот же commandId при изменении хеша содержимого");
         BridgeControlCommand alteredRuntime = new BridgeControlCommand(serverId, "cmd-01912", runtime, 8, 3,
             "server.save", Map.of(), payloadHash, 11, unsigned.channelId(),
             unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
         require(!unsigned.executionDigest().equals(alteredRuntime.executionDigest()),
-            "exactly-once digest binds runtime epoch against cross-runtime replay");
+            "Дайджест однократного выполнения привязывает эпоху среды и предотвращает повтор в другой среде");
         BridgeControlCommand alteredIdentity = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 4,
             "server.save", Map.of(), payloadHash, 11, unsigned.channelId(),
             unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
         require(!unsigned.executionDigest().equals(alteredIdentity.executionDigest()),
-            "exactly-once digest binds node identity epoch");
+            "Дайджест однократного выполнения учитывает эпоху идентификатора узла");
         BridgeControlCommand alteredCommand = new BridgeControlCommand(serverId, "other-command", runtime, 7, 3,
             "server.save", Map.of(), payloadHash, 11, unsigned.channelId(),
             unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
         require(!unsigned.executionDigest().equals(alteredCommand.executionDigest()),
-            "exactly-once digest binds command identity");
+            "Дайджест однократного выполнения учитывает идентификатор команды");
         String commandSignature = sign(keyB, unsigned.canonicalForSigner(keyB.fingerprint));
         BridgeControlCommand command = new BridgeControlCommand(unsigned.serverId(), unsigned.commandId(), unsigned.runtimeId(), unsigned.runtimeEpoch(), unsigned.identityEpoch(), unsigned.type(), unsigned.payload(), unsigned.payloadSha256(),
             unsigned.deliverySequence(), unsigned.channelId(), unsigned.leaseToken(), unsigned.attempt(), unsigned.issuedAtUnixMillis(), unsigned.expiresAtUnixMillis(), unsigned.securityProfile(), unsigned.capabilityDigest(),
             keyB.publicKey, keyB.fingerprint, commandSignature, "", "", "");
-        require(trust.verify(command), "valid v3 command signature");
+        require(trust.verify(command), "Действительная подпись команды v3");
         BridgeControlCommand tamperedCommand = new BridgeControlCommand(command.serverId(), command.commandId(), "b".repeat(64), 8, command.identityEpoch(), command.type(), command.payload(), command.payloadSha256(),
             command.deliverySequence(), command.channelId(), command.leaseToken(), command.attempt(), command.issuedAtUnixMillis(), command.expiresAtUnixMillis(), command.securityProfile(), command.capabilityDigest(),
             command.v3SigningPublicKey(), command.v3SigningKeyFingerprint(), command.v3Signature(), "", "", "");
-        require(!trust.verify(tamperedCommand), "tampered/runtime-replayed command rejected");
+        require(!trust.verify(tamperedCommand), "Изменённая или повторно воспроизведённая в другой среде команда отклонена");
 
         BridgeControlJournal journal = new BridgeControlJournal(root.resolve("control.journal"));
         journal.begin(command);
@@ -139,7 +139,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
         String eventCanonical = BridgeProtocolSecurity.eventCanonical(serverId, event.eventId(), event.runtimeId(), event.nodeKeyFingerprint(), event.capabilityDigest(), event.sequence(), event.type(), event.occurredAtUnixMillis(), event.payloadSha256());
         require(BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), eventCanonical, event.signature()), "действительная подпись события");
         String tamperedEvent = BridgeProtocolSecurity.eventCanonical(serverId, event.eventId(), "c".repeat(64), event.nodeKeyFingerprint(), event.capabilityDigest(), event.sequence(), event.type(), event.occurredAtUnixMillis(), event.payloadSha256());
-        require(!BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), tamperedEvent, event.signature()), "tampered/runtime-replayed event rejected");
+        require(!BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), tamperedEvent, event.signature()), "Изменённое или повторно воспроизведённое в другой среде событие отклонено");
 
         String bodyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest("{}".getBytes(StandardCharsets.UTF_8)));
         String nodeCanonical = BridgeProtocolSecurity.nodeRequestCanonical(serverId, node.fingerprint(), "POST", "/api/v1/server-bridge/servers/" + serverId + "/heartbeat", "1770000000", "nonce-01912", runtime, digest, bodyHash);
@@ -148,7 +148,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
         String tamperedNode = BridgeProtocolSecurity.nodeRequestCanonical(serverId, node.fingerprint(), "POST", "/api/v1/server-bridge/servers/" + serverId + "/heartbeat", "1770000000", "nonce-01912", "d".repeat(64), digest, bodyHash);
         require(!BridgeProtocolSecurity.verify(node.publicKeyBase64Url(), tamperedNode, nodeSignature), "подменённая среда выполнения узла отклонена");
 
-        System.out.println("ServerBridge Security & Certification 0.19.12 adversarial harness [" + target + "]: OK");
+        System.out.println("Сценарии атак для сертификации безопасности ServerBridge 0.19.12 [" + target + "]: OK");
     }
 
     private static SigningKey signingKey() throws Exception {

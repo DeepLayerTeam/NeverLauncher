@@ -90,7 +90,7 @@ public final class AdvancedEvents0487Tests {
                 HttpResponse<String> ok=call(http,base+"/v1/hooks",hook,"callback-secret");
                 check(ok.statusCode()==200 && Json.object(Json.parse(ok.body())).get("ok").equals(Boolean.TRUE),"явное разрешение политики действует");
                 check(call(http,base+"/v1/hooks",hook,"wrong-key").statusCode()==401,"неавторизованный вызов политики отклонён");
-                check(subscribed.get()==2,"two durable backend subscriptions made");
+                check(subscribed.get()==2,"Созданы две сохраняемые подписки на события Backend");
                 services.events().close();
                 check(call(http,base+"/v1/events",task,"callback-secret").statusCode()==422,"завершение работы отменяет регистрацию локальных обработчиков");
             }

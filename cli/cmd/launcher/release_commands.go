@@ -1453,7 +1453,7 @@ func releaseBundleVersion(dir string) (string, error) {
 func releaseDescription(ver string) string {
 	extra := ""
 	if compatibilityVersionAtLeast(ver, 0, 43, 0) {
-		extra += "\n- 0.43.0+: release includes two signed executable Java extension example packages and a six-target JVM/Gravit source-port acceptance ZIP; source-port is not arbitrary Gravit JAR binary compatibility."
+		extra += "\n- 0.43.0+: выпуск включает два подписанных исполняемых пакета примеров расширений Java и ZIP с приёмочными испытаниями переноса исходников JVM/Gravit для шести целевых платформ; перенос исходников не означает двоичную совместимость с произвольными JAR Gravit."
 	}
 	if compatibilityCertificationRequired(ver) {
 		extra = "\n- официальный publish-check требует COMPATIBILITY_TARGETS/MATRIX/CERTIFICATION, привязанные к той же версии и source commit;"
@@ -1499,7 +1499,7 @@ func releaseDescription(ver string) string {
 	if productionDeliveryReleaseRequired0160(ver) {
 		extra += "\n- начиная с 0.16.0 Production Delivery Release промотит прошедший exact-commit RC в stable GA boundary: PRODUCTION_DELIVERY_RELEASE.json связывает six-target delivery, vendor signing/notarization, Managed JRE, trust policy и immutable versioned public origin; документ сам входит в Release Verification v2 signature boundary;"
 	}
-	return fmt.Sprintf("# Launcher %s — Release Pipeline\n\n"+
+	return fmt.Sprintf("# Launcher %s — Конвейер выпуска\n\n"+
 		"Launcher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
 		"Основное:\n"+
 		"- единый build-release сценарий для CLI, Backend API, Admin Web, Desktop Web/native, Runtime и ServerBridge;\n"+

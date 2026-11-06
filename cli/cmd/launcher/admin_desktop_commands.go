@@ -453,11 +453,11 @@ func packaging940SBOM(entries []map[string]any) map[string]any {
 	for _, e := range entries {
 		pkgs = append(pkgs, map[string]any{"SPDXID": "SPDXRef-" + strings.NewReplacer("/", "-", ".", "-").Replace(fmt.Sprint(e["source"])), "name": fmt.Sprint(e["source"]), "versionInfo": version, "filesAnalyzed": true, "checksums": []map[string]string{{"algorithm": "SHA256", "checksumValue": fmt.Sprint(e["sha256"])}}})
 	}
-	return map[string]any{"spdxVersion": "SPDX-2.3", "SPDXID": "SPDXRef-DOCUMENT", "name": "Launcher " + version, "documentName": "Launcher-" + version, "dataLicense": "CC0-1.0", "creationInfo": map[string]any{"created": time.Now().UTC().Format(time.RFC3339), "creators": []string{"Tool: Launcher CLI " + version}}, "packages": pkgs}
+	return map[string]any{"spdxVersion": "SPDX-2.3", "SPDXID": "SPDXRef-DOCUMENT", "name": "Launcher " + version, "documentName": "Launcher-" + version, "dataLicense": "CC0-1.0", "creationInfo": map[string]any{"created": time.Now().UTC().Format(time.RFC3339), "creators": []string{"Инструмент: Launcher CLI " + version}}, "packages": pkgs}
 }
 
 func packaging940Provenance(srcRoot string) map[string]any {
-	return map[string]any{"schemaVersion": "0.10.0", "subject": "Launcher", "version": version, "builder": "Launcher CLI production packaging 0.10.0", "sourceRoot": srcRoot, "generatedAt": time.Now().UTC().Format(time.RFC3339), "commands": []string{"nl release doctor", "nl db migration-doctor", "nl packaging prepare", "nl packaging verify", "экспресс-проверка упаковки: nl packaging smoke"}, "materials": []string{"VERSION", "CLI binary", "Backend API binary", "метаданные пакета Admin", "метаданные пакета Desktop", "OpenAPI", "README", "CHANGELOG", "SECURITY"}}
+	return map[string]any{"schemaVersion": "0.10.0", "subject": "Launcher", "version": version, "builder": "Launcher CLI — сборка промышленного пакета 0.10.0", "sourceRoot": srcRoot, "generatedAt": time.Now().UTC().Format(time.RFC3339), "commands": []string{"nl release doctor", "nl db migration-doctor", "nl packaging prepare", "nl packaging verify", "экспресс-проверка упаковки: nl packaging smoke"}, "materials": []string{"VERSION", "CLI binary", "Исполняемый файл Backend API", "метаданные пакета Admin", "метаданные пакета Desktop", "OpenAPI", "README", "CHANGELOG", "SECURITY"}}
 }
 
 func packaging940BuildMatrix() map[string]any {

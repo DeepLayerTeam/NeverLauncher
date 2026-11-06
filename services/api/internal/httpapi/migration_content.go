@@ -195,7 +195,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 			writeError(w, 409, "Не удалось проверить собранную рабочую область: "+err.Error())
 			return
 		}
-		writeJSON(w, 200, map[string]any{"data": migrationContentResponse0337(plan, ws, "verified built workspace: "+digest, true)})
+		writeJSON(w, 200, map[string]any{"data": migrationContentResponse0337(plan, ws, "Проверенное собранное рабочее пространство: "+digest, true)})
 		return
 	}
 	if ws.PackageID != "" {
@@ -271,7 +271,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		return
 	}
 	digest, validationErr := s.workspaceValidate0226(ws)
-	validation := "valid build inputs: " + digest
+	validation := "Допустимые входные данные сборки: " + digest
 	valid := validationErr == nil
 	if validationErr != nil {
 		validation = "Проверка сборки заблокирована: " + validationErr.Error()

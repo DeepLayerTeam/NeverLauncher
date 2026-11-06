@@ -82,7 +82,7 @@ def serve(args: argparse.Namespace) -> None:
         try:
             client, _ = listener.accept()
         except socket.timeout:
-            evidence["reason"] = "no real Minecraft client connected"
+            evidence["reason"] = "Ни один настоящий клиент Minecraft не подключился"
             report()
             raise TimeoutError(evidence["reason"])
         with client:
@@ -94,7 +94,7 @@ def serve(args: argparse.Namespace) -> None:
                 time.sleep(0.15)
             if not evidence["atlasReady"]:
                 evidence["reason"] = (
-                    "Minecraft blocks texture atlas not ready before deadline"
+                    "Атлас текстур блоков Minecraft не был подготовлен к установленному сроку"
                 )
                 report()
                 raise TimeoutError(evidence["reason"])
@@ -105,7 +105,7 @@ def serve(args: argparse.Namespace) -> None:
                     ("127.0.0.1", args.backend_port), timeout=5
                 )
             except OSError:
-                evidence["reason"] = "real matching server connection failed"
+                evidence["reason"] = "Не удалось установить соединение с настоящим сервером для проверки совместимости"
                 report()
                 raise
             with upstream:

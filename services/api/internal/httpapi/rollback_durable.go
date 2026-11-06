@@ -226,7 +226,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableControlPlane, job model.DurableJob, worker string) (map[string]any, error) {
 	var p rollbackPayload0217
 	if err := json.Unmarshal(job.Payload, &p); err != nil {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "malformed rollback payload")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Некорректные данные для отката")
 		return nil, err
 	}
 	release, check, err := s.stageRollback0217(ctx, job, p)

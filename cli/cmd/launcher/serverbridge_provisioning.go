@@ -997,7 +997,7 @@ func writeBridgeConfig0199(path, backend, serverID, projectID, profileID, channe
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	body := fmt.Sprintf("# Managed by `nl server-bridge install` (Launcher %s).\n# Only ServerBridge-owned files are changed; Minecraft/proxy core/authlib files are untouched.\nbackend:\n  url: %q\n  timeoutMs: 5000\n  retries: 2\n  heartbeatIntervalSeconds: 30\nserver:\n  id: %q\nidentity:\n  file: %q\nprofile:\n  projectId: %q\n  profileId: %q\n  channel: %q\nsecurity:\n  failMode: closed\n  requireLauncherSession: true\n  requireIntegrity: true\ntelemetry:\n  sampleIntervalSeconds: 10\n  samplingBudgetMs: 20\n", version, backend, serverID, "node-identity.properties", projectID, profileID, channel)
+	body := fmt.Sprintf("# Управляется командой `nl server-bridge install` (Launcher %s).\n# Изменяются только файлы ServerBridge; ядро Minecraft/прокси и файлы authlib не затрагиваются.\nbackend:\n  url: %q\n  timeoutMs: 5000\n  retries: 2\n  heartbeatIntervalSeconds: 30\nserver:\n  id: %q\nidentity:\n  file: %q\nprofile:\n  projectId: %q\n  profileId: %q\n  channel: %q\nsecurity:\n  failMode: closed\n  requireLauncherSession: true\n  requireIntegrity: true\ntelemetry:\n  sampleIntervalSeconds: 10\n  samplingBudgetMs: 20\n", version, backend, serverID, "node-identity.properties", projectID, profileID, channel)
 	return atomicWrite0199(path, []byte(body), 0o644)
 }
 
@@ -1023,7 +1023,7 @@ func loadOrCreateNodeIdentity0199(path string) (bridgeIdentityMaterial0199, erro
 	fingerprintBytes := sha256.Sum256(pub)
 	fingerprint := hex.EncodeToString(fingerprintBytes[:])
 	enc := base64.RawURLEncoding
-	text := "# Launcher ServerBridge node identity - PRIVATE KEY, do not share\n" +
+	text := "# Идентификатор узла Launcher ServerBridge — ЗАКРЫТЫЙ КЛЮЧ, не передавайте другим лицам\n" +
 		"formatVersion=1\nkeyAlgorithm=ed25519\n" +
 		"publicKey=" + enc.EncodeToString(pub) + "\n" +
 		"keyFingerprint=" + fingerprint + "\n" +

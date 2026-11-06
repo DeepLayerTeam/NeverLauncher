@@ -47,7 +47,7 @@ public final class PlatformControlReadback0416Test {
             Thread.sleep(40);
             tracker.observedQuit("STEVE",session.toString());
             var result=proof.get(2,TimeUnit.SECONDS);
-            check(result.status().equals("succeeded") && result.result().get("uuid").equals(session.toString()) && result.result().get("verification").equals("player-quit-event"),"session-bound quit evidence");
+            check(result.status().equals("succeeded") && result.result().get("uuid").equals(session.toString()) && result.result().get("verification").equals("player-quit-event"),"Подтверждение выхода связано с сеансом");
             check(tracker.begin("Steve",session),"отслеживание после завершения");
             check(tracker.await("Steve",session.toString(),25).status().equals("executed"),"отсутствие выхода не подтверждено");
             check(tracker.begin("Steve",session),"отслеживание перед завершением работы");

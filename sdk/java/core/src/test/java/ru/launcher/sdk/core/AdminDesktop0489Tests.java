@@ -59,14 +59,14 @@ public final class AdminDesktop0489Tests {
                 catch(SecurityException expected){checks++;}
                 var http=HttpClient.newHttpClient();
                 var input=Map.<String,Object>of("surface","admin","actionId","refresh","payload",Map.of(),"actor",Map.of("id","operator"));
-                ok(Boolean.TRUE.equals(rpc(http,server,"secret","ui.action.invoke",input,200).get("ok")),"signed admin action");
-                ok(count.get()==1,"Java handler executed");
-                ok(Boolean.TRUE.equals(rpc(http,server,"secret","ui.action.invoke",Map.of("surface","desktop","actionId","refresh","payload",Map.of(),"actor",Map.of("id","operator")),200).get("ok")),"desktop Java action");
-                ok(count.get()==2,"desktop handler executed");
+                ok(Boolean.TRUE.equals(rpc(http,server,"secret","ui.action.invoke",input,200).get("ok")),"Подписанное действие администратора");
+                ok(count.get()==1,"Обработчик Java выполнен");
+                ok(Boolean.TRUE.equals(rpc(http,server,"secret","ui.action.invoke",Map.of("surface","desktop","actionId","refresh","payload",Map.of(),"actor",Map.of("id","operator")),200).get("ok")),"Действие Java в Desktop");
+                ok(count.get()==2,"Обработчик Desktop выполнен");
                 rpc(http,server,"secret","ui.action.invoke",Map.of("surface","admin","actionId","other","payload",Map.of(),"actor",Map.of("id","operator")),422);
                 rpc(http,server,"bad","ui.action.invoke",input,401);
                 var result=rpc(http,server,"secret","ui.settings.get",Map.of("surface","admin","key","appearance"),200);
-                ok("dark".equals(Json.object(Json.object(result.get("result")).get("value")).get("theme")),"default settings loaded");
+                ok("dark".equals(Json.object(Json.object(result.get("result")).get("value")).get("theme")),"Настройки по умолчанию загружены");
                 var saved=rpc(http,server,"secret","ui.settings.put",Map.of("surface","admin","key","appearance","value",Map.of("theme","light")),200);
                 ok(Boolean.TRUE.equals(Json.object(saved.get("result")).get("saved")),"Данные сохранены через возможность Host");
                 ok("light".equals(Json.object(stored.get("ui.admin.appearance")).get("theme")),"Фактическая запись через брокер хранилища");

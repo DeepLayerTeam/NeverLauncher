@@ -35,4 +35,4 @@ for bad in (event('TestA', 'fail')+'\n'+event('TestA','pass'),
     except ValueError:
         pass
     else:
-        raise AssertionError('GA accepted a skipped/failed preceding test')
+        raise AssertionError('GA принял пропущенную или проваленную предшествующую проверку')

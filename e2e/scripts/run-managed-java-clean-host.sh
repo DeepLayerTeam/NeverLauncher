@@ -57,7 +57,7 @@ env -u JAVA_HOME -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS \
 import json,sys
 result=json.load(open(sys.argv[1]))
 assert result['status']=='ready', result
-assert not result['cached'], 'damaged Java must be reinstalled, not accepted as cache hit'
+assert not result['cached'], 'Повреждённую Java необходимо переустановить, а не считать корректной записью кеша'
 PY
 [[ ! -e "$install_dir/UNEXPECTED_FILE" ]] || { echo 'Повреждённая среда выполнения не восстановлена' >&2; exit 1; }
 [[ ! -e "$(dirname "$install_dir")/.staging-dead-worker" ]] || { echo 'Устаревшие подготовленные файлы не удалены' >&2; exit 1; }

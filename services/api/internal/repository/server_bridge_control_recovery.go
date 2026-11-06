@@ -10,10 +10,10 @@ func recoverableServerBridgeLease0412(c model.ServerBridgeControlCommand) bool {
 		return false
 	}
 	switch c.Error {
-	case "delivered command expired without proof of completion",
-		"delivery lease expired without proof of completion",
+	case "Срок действия доставленной команды истёк без подтверждения завершения",
+		"Срок аренды доставки истёк без подтверждения завершения",
 		"Доставка привязана к устаревшему идентификатору Runtime",
-		"delivered command lost lease/runtime before ACK",
+		"Доставленная команда утратила аренду или среду выполнения до подтверждения ACK",
 		"Выданная команда потеряла аренду без подтверждения завершения":
 		return true
 	}

@@ -592,7 +592,7 @@ func extensionSBOMBytes0202(manifest CanonicalExtensionManifest0201, canonicalDi
 		SPDXID:            "SPDXRef-DOCUMENT",
 		Name:              manifest.ID + " " + manifest.Version,
 		DocumentNamespace: "https://launcher.local/spdx/extension/" + manifest.ID + "/" + manifest.Version + "/" + canonicalDigest,
-		CreationInfo:      extensionSPDXCreationInfo0202{Created: buildTime.Format(time.RFC3339), Creators: []string{"Tool: Launcher CLI " + version}},
+		CreationInfo:      extensionSPDXCreationInfo0202{Created: buildTime.Format(time.RFC3339), Creators: []string{"Инструмент: Launcher CLI " + version}},
 		Packages: []extensionSPDXPackage0202{{
 			SPDXID: pkgID, Name: manifest.Name, VersionInfo: manifest.Version, DownloadLocation: "NOASSERTION", FilesAnalyzed: true, LicenseConcluded: "NOASSERTION", LicenseDeclared: "NOASSERTION",
 		}},
@@ -617,7 +617,7 @@ func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0
 	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://launcher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
 		return errors.New("SBOM.spdx.json metadata не соответствует manifest")
 	}
-	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: Launcher CLI ") {
+	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Инструмент: Launcher CLI ") {
 		return errors.New("SBOM.spdx.json creationInfo некорректен")
 	}
 	if len(doc.Packages) != 1 {

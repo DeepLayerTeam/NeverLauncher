@@ -70,7 +70,7 @@ if not (install.get('minecraftVersion') == mc and install.get('javaMajorVersion'
     raise SystemExit('Недопустимое подтверждение установки Vanilla')
 internal_os = 'osx' if os_name == 'macos' else os_name
 if {'os': internal_os, 'arch': arch} not in (install.get('targets') or []):
-    raise SystemExit(f'vanilla install target mismatch: expected {internal_os}/{arch}')
+    raise SystemExit(f'Целевая платформа установки Vanilla не совпадает: ожидалось {internal_os}/{arch}')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):
     raise SystemExit('Ошибка проверки подготовленного пакета')
 settings = package.get('manifestSettings') or {}

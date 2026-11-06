@@ -224,7 +224,7 @@ func (s Server) serverBridgeRegister(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{
 		"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "registered", "server": server,
 		"nodeIdentity": map[string]any{"keyAlgorithm": server.KeyAlgorithm, "keyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch},
-		"usage":        map[string]any{"authentication": "Ed25519 signed request headers", "privateKey": "remains on the ServerBridge node and is never sent to Backend"},
+		"usage":        map[string]any{"authentication": "Заголовки запросов, подписанные Ed25519", "privateKey": "остаётся на узле ServerBridge и никогда не передаётся в Backend"},
 	}})
 }
 

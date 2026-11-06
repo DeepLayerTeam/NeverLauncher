@@ -253,7 +253,7 @@ func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql
 		return err
 	}
 	if oldBackend != "" && oldBackend != h.TargetNodeID {
-		if err = r.queuePlayerKickTx0197(ctx, tx, correlationID, username, oldBackend, oldBackendRuntime, oldBackendEpoch, "Launcher backend transfer completed", now); err != nil {
+		if err = r.queuePlayerKickTx0197(ctx, tx, correlationID, username, oldBackend, oldBackendRuntime, oldBackendEpoch, "Передача данных Backend Launcher завершена", now); err != nil {
 			return err
 		}
 	}

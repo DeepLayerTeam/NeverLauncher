@@ -195,12 +195,12 @@ public final class Control0415Harness {
    BridgeControlResult kicked=call(plugin,"player.kick",Map.of("username","Steve"));
    status(kicked,"succeeded");
    check(kicked.result().get("verification").equals("player-quit-event"),"Отсутствует подтверждение выхода");
-   check(steve.kicks==1,"kick invoked twice");
+   check(steve.kicks==1,"Отключение игрока выполнено дважды");
    if (brand.equals("Folia")) {
     Player alex=new Player("Alex"); Player bob=new Player("Bob");
     Bukkit.players.add(alex); Bukkit.players.add(bob);
     status(call(plugin,"message.broadcast",Map.of("message","hi")),"executed");
-    check(alex.messages==1 && bob.messages==1,"Folia per-entity delivery failed");
+    check(alex.messages==1 && bob.messages==1,"Сбой доставки на уровне сущности Folia");
     bob.failSend=true;
     status(call(plugin,"message.broadcast",Map.of("message","hi")),"indeterminate");
     org.bukkit.scheduler.EntityScheduler.retire=true;

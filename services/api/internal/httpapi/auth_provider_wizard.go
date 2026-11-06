@@ -85,7 +85,7 @@ func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer closeManaged02910(probe.Connector)
-	writeJSON(w, 200, map[string]any{"healthy": true, "metadata": probe.Metadata, "mapping": probe.Mapping, "credentialReferencesVerified": true, "note": "Connectivity proves neither account ownership nor Microsoft Minecraft entitlement"})
+	writeJSON(w, 200, map[string]any{"healthy": true, "metadata": probe.Metadata, "mapping": probe.Mapping, "credentialReferencesVerified": true, "note": "Доступность сервиса не подтверждает владение учётной записью или право доступа к Minecraft от Microsoft"})
 }
 func (s Server) wizardDraft02910(w http.ResponseWriter, r *http.Request) {
 	var req managedWizardRequest02910

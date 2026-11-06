@@ -109,7 +109,7 @@ class V09Tests(unittest.TestCase):
     def test_actual_sigkill_at_staging_and_committing_then_production_recover(self):
         cli = os.environ.get("NL349_CLI")
         if not cli or not Path(cli).is_file():
-            self.skipTest("build real CLI and set NL349_CLI")
+            self.skipTest("Соберите настоящий CLI и задайте NL349_CLI")
         # Большие реальные массивы байтов позволяют наблюдать фазы журнала prepared/committing, не
         # добавляя НИКАКИХ тестовых задержек или перехватов сбоя в обновлятор.
         for folder, tag in ((self.old, b"A"), (self.new, b"B")):

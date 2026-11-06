@@ -93,7 +93,7 @@ func (s Server) securityHardeningStatus(w http.ResponseWriter, r *http.Request) 
 func (s Server) ecosystemSecurityHardening(w http.ResponseWriter, r *http.Request) {
 	payload := s.securityHardeningPayload902("ecosystem-security-hardening")
 	payload["ecosystemGate"] = "required-after-9.0.1-stabilization"
-	payload["release"] = "Launcher 0.10.0 Security Hardening"
+	payload["release"] = "Launcher 0.10.0 — усиление безопасности"
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": securityHardeningSchema902, "data": payload})
 }
 
@@ -107,14 +107,14 @@ func (s Server) securityHardeningPayload902(kind string) map[string]any {
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
 		"implemented": []string{
 			"подключение TOTP с проверкой по RFC 6238",
-			"TOTP enforcement during admin/player login when enabled",
+			"Обязательная проверка TOTP при входе администратора или игрока, если она включена",
 			"регистрация ключей доступа WebAuthn Level 3 и вход без пароля с проверкой пользователя",
-			"MFA 2.0 policies: optional, required, phishing-resistant",
+			"Политики MFA 2.0: необязательная, обязательная и устойчивая к фишингу",
 			"Для критических операций необходимо повторное подтверждение личности",
 			"одноразовые коды восстановления с хешированием SHA-256",
 			"одноразовые токены сброса пароля с отзывом сеансов",
 			"одноразовые токены подтверждения электронной почты",
-			"IP/email login failure lockout",
+			"Блокировка входа после неудачных попыток по IP-адресу или электронной почте",
 			"события аудита безопасности для MFA, сброса пароля, подтверждения и блокировки",
 		},
 		"endpoints": []string{
@@ -164,11 +164,11 @@ func (s Server) authTOTPEnroll(w http.ResponseWriter, r *http.Request) {
 	}
 	secret, err := generateTOTPSecret902()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать TOTP secret")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать секрет TOTP")
 		return
 	}
 	if err := s.State.Security.startTOTPEnrollment(claims.Sub, secret); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить TOTP enrollment")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить регистрацию TOTP")
 		return
 	}
 	_ = s.flushPersistenceState950("totp-enroll")
@@ -183,7 +183,7 @@ func (s Server) authTOTPEnroll(w http.ResponseWriter, r *http.Request) {
 		"secret":          secret,
 		"provisioningUri": provisioning,
 		"algorithm":       "TOTP/HMAC-SHA1/30s/6digits",
-		"next":            []string{"add secret to authenticator", "POST /api/v1/auth/totp/verify with current code", "regenerate recovery codes"},
+		"next":            []string{"Добавьте секрет в приложение-аутентификатор", "Отправьте текущий код в POST /api/v1/auth/totp/verify", "Создайте новые коды восстановления"},
 	}})
 }
 
@@ -200,7 +200,7 @@ func (s Server) authTOTPVerify(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.State.Security.finishTOTPEnrollment(claims.Sub, req.Code) {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: securityAuditID902("totp-verify-failed"), Actor: claims.Email, Action: "auth:totp:verify:failed", Target: claims.Sub, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusUnauthorized, "неверный TOTP код")
+		writeError(w, http.StatusUnauthorized, "Неверный код TOTP")
 		return
 	}
 	_ = s.flushPersistenceState950("totp-verify")
@@ -227,7 +227,7 @@ func (s Server) authTOTPDisable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.State.Security.disableTOTP(claims.Sub, req.Code) {
-		writeError(w, http.StatusUnauthorized, "неверный TOTP код или TOTP не включён")
+		writeError(w, http.StatusUnauthorized, "Неверный код TOTP или TOTP не включён")
 		return
 	}
 	_ = s.flushPersistenceState950("totp-disabled")

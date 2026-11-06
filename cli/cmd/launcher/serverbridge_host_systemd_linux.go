@@ -55,10 +55,10 @@ func hostWatchdogInterval02811() time.Duration {
 }
 
 func hostServiceReady02811(state serverBridgeHostRuntime01910) {
-	_ = hostNotify02811(fmt.Sprintf("READY=1\nSTATUS=running Minecraft pid=%d", state.ProcessPID))
+	_ = hostNotify02811(fmt.Sprintf("READY=1\nSTATUS=Minecraft запущен, PID=%d", state.ProcessPID))
 }
 func hostServiceStopping02811() {
-	_ = hostNotify02811("STOPPING=1\nSTATUS=gracefully stopping Minecraft")
+	_ = hostNotify02811("STOPPING=1\nSTATUS=Выполняется штатная остановка Minecraft")
 }
 func hostServiceStatus02811(status string) { _ = hostNotify02811("STATUS=" + status) }
 

@@ -74,7 +74,7 @@ public final class RuntimeApiTests {
                 check(services.storage().get("counter",null).isEmpty(),"данные хранилища удалены");
                 byte[][] view=new byte[1][];
                 String secret=services.secrets().withSecret("key","",bytes->{view[0]=bytes;return new String(bytes,StandardCharsets.UTF_8);});
-                check(secret.equals("s3cret")&&Arrays.equals(view[0],new byte[6]),"secret delivered, buffer zeroed");
+                check(secret.equals("s3cret")&&Arrays.equals(view[0],new byte[6]),"Секрет доставлен, буфер очищен");
                 try{services.secrets().withSecret("blocked","",bytes->null);throw new AssertionError("обход политики");}catch(HostSession.HostError e){check(e.status()==403,"посредник секретов запретил доступ");}
                 var payloadSchema=JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"version\":{\"type\":\"string\",\"minLength\":1}},\"required\":[\"version\"],\"additionalProperties\":false}");
                 record Release(String version){}
@@ -110,13 +110,13 @@ public final class RuntimeApiTests {
                         "payload",Map.of("data","x".repeat(150000)))));
                 check(largeEvent.length()>65536,"крупное событие превышает лимит удалённого вызова");
                 check(callback(client,callbacks.url()+"/v1/events",largeEvent,"callback-token")==200 && largeDelivered.get()==1,
-                    "durable-size event delivered through real HTTP callback");
+                    "Событие большого объёма доставлено через настоящий обратный вызов HTTP");
                 // Обратный вызов, не взаимодействующий с системой, не должен обходить
                 // ограничения запроса.
                 check(callback(client,callbacks.url()+"/v1/events"," ".repeat(2*1024*1024+1),"callback-token")==413,
-                    "oversized event rejected");
+                    "Событие превышенного размера отклонено");
                 check(callback(client,callbacks.url()+"/v1/rpc"," ".repeat(65537),"callback-token")==413,
-                    "RPC keeps original independent 64 KiB limit");
+                    "RPC сохраняет исходный независимый предел 64 КиБ");
                 services.events().subscribe("release.before-publish","sync",null,Json::object,incoming->{
                     throw new IllegalArgumentException("оператор запретил публикацию");
                 });
@@ -124,7 +124,7 @@ public final class RuntimeApiTests {
                     "subscription",Map.of("eventType","release.before-publish","mode","sync"),
                     "event",Map.of("type","release.before-publish","id","ev-hook","payload",Map.of("version","2"))));
                 check(callback(client,callbacks.url()+"/v1/hooks",hook,"callback-token")==422,
-                    "rejected synchronous hook fails closed");
+                    "Отклонённый синхронный обработчик безопасно блокирует выполнение");
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"wrong")==401,
                     "Команды недоступны без подтверждённого токена обратного вызова");
                 services.events().unsubscribe("project.saved","async");

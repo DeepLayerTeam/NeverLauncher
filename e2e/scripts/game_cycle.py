@@ -529,5 +529,5 @@ if __name__ == "__main__":
     try:
         main()
     except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as exc:
-        print("[game-cycle-0364] BLOCKED:", exc, file=sys.stderr)
+        print("[game-cycle-0364] ЗАБЛОКИРОВАНО:", exc, file=sys.stderr)
         sys.exit(2)

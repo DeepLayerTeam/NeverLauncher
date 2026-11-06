@@ -124,7 +124,7 @@ func (s Server) backendInstanceStatus0289(w http.ResponseWriter, r *http.Request
 		"supervisedRestartEnabled": l.Enabled, "draining": l.IsDraining(),
 		"environment": s.Config.Environment, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver,
 		"checks": checks, "operationalConfigRevision": revision, "recentAdminSessions": len(recent), "recentLauncherSessions": launcherCount,
-		"sessionMetric": "active auth / launcher sessions observed within 5 minutes (not open sockets)"})
+		"sessionMetric": "Сеансы авторизации и лаунчера, наблюдавшиеся за последние 5 минут (не активные сетевые соединения)"})
 }
 
 type backendClient0289 struct {
@@ -228,7 +228,7 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !claimed {
-		writeJSON(w, 200, map[string]any{"operation": rec, "rescheduled": false, "note": "duplicate key never repeats the external effect"})
+		writeJSON(w, 200, map[string]any{"operation": rec, "rescheduled": false, "note": "Повторное использование ключа не приводит к повторному выполнению внешнего действия"})
 		return
 	}
 	s.audit(r, claims.Email, "backend:restart:accepted", rec.ID)

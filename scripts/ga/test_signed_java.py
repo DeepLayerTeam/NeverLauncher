@@ -27,12 +27,12 @@ def smoke(cli: Path):
             file=scratch/'packages'/row['filename']
             bad=subprocess.run([str(cli),'extension','verify',str(file),'--public-key',str(badpub)],capture_output=True)
             if bad.returncode == 0:
-                raise RuntimeError('wrong publisher key accepted')
+                raise RuntimeError('Принят неверный ключ издателя')
             altered=scratch/'modified.nlext'
             raw=bytearray(file.read_bytes());raw[len(raw)//2]^=1;altered.write_bytes(raw)
             bad=subprocess.run([str(cli),'extension','verify',str(altered),'--public-key',str(pub)],capture_output=True)
             if bad.returncode==0:
-                raise RuntimeError('modified signed archive accepted')
+                raise RuntimeError('Принят изменённый подписанный архив')
         print('Проверены два подписанных исполняемых примера пакетов; неверный ключ и подмена отклонены')
 
 if __name__=='__main__':

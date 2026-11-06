@@ -68,7 +68,7 @@ latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migration
 [[ "$latest_before" == "0024_bukkit_family_0144" ]]
 
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
-INSERT INTO projects(id,name,default_channel) VALUES ('proxy-family-project','Proxy Family Project','stable');
+INSERT INTO projects(id,name,default_channel) VALUES ('proxy-family-project','Проект семейства прокси','stable');
 INSERT INTO server_bridge_nodes_v2(
   id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,
   key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,created_at

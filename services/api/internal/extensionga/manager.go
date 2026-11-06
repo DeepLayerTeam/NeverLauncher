@@ -56,7 +56,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 	}
 	version, err := m.Repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
-		return "manifest.missing", "persisted manifest unavailable: " + err.Error()
+		return "manifest.missing", "Сохранённый манифест недоступен: " + err.Error()
 	}
 	if version.Manifest.ID != install.ExtensionID || version.Manifest.Version != install.CurrentVersion {
 		return "manifest.identity", "Сохранённый идентификатор манифеста не совпадает с установленной версией"
@@ -94,7 +94,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 	if strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") {
 		publication, err := m.Repo.GetExtensionRegistryVersion(ctx, install.ExtensionID, install.CurrentVersion)
 		if err != nil {
-			return "registry.missing", "registry publication unavailable: " + err.Error()
+			return "registry.missing", "Публикация в реестре недоступна: " + err.Error()
 		}
 		if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
 			return "registry.identity", "Идентификатор пакета в реестре не совпадает с активной установкой"

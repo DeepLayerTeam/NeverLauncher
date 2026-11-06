@@ -82,7 +82,7 @@ INSERT INTO trusted_devices(
  attestation_state,attestation_method,public_key,key_fingerprint,platform,client_version,
  created_at,updated_at,last_ip,last_user_agent,revoked_reason,replaced_at,replaced_by_device_id,replacement_reason
 ) VALUES
- ('gmig-device','gmig-user','Guard migration device','active','verified','proof-of-possession','ed25519','software','',
+ ('gmig-device','gmig-user','Устройство для миграции Guard','active','verified','proof-of-possession','ed25519','software','',
   'unattested','','legacy-public-key',repeat('1',64),'linux','0.13.9',now(),now(),'127.0.0.1','guard-migration-e2e','',NULL,NULL,'');
 INSERT INTO auth_sessions(
  id,user_id,email,role_id,device_id,device,status,refresh_family_id,created_at,last_seen_at,expires_at,

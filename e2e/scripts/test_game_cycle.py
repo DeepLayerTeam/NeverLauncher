@@ -73,9 +73,9 @@ class PackageInputs(unittest.TestCase):
 
 class RealProductionUpdater(unittest.TestCase):
     def test_real_cli_install_update_rollback_exact_bytes(self):
-        self.assertIsNotNone(shutil.which("go"), "Go required, cannot skip lifecycle")
+        self.assertIsNotNone(shutil.which("go"), "Требуется Go: проверку жизненного цикла пропускать нельзя")
         self.assertIsNotNone(
-            shutil.which("git"), "Git required, cannot skip commit identity"
+            shutil.which("git"), "Требуется Git: проверку идентификатора коммита пропускать нельзя"
         )
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

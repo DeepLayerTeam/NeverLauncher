@@ -159,7 +159,7 @@ while time.time()<deadline:
     s=socket.socket(); s.settimeout(.5)
     try:
         if s.connect_ex(('127.0.0.1',port)) == 0:
-            print('matching server TCP ready')
+            print('TCP-сервер для проверки совместимости готов')
             raise SystemExit(0)
     finally:
         s.close()
@@ -206,7 +206,7 @@ while time.monotonic() < deadline:
     with socket.socket() as sock:
         sock.settimeout(1)
         if sock.connect_ex(('127.0.0.1', port)) == 0:
-            print('[matching-e2e] 1.17.1 void-world TCP ready')
+            print('[matching-e2e] 1.17.1: TCP-сервер пустого мира готов')
             break
     time.sleep(1)
 else: raise SystemExit('Сервер 1.17.1 с пустым миром не достиг готовности')
@@ -217,7 +217,7 @@ with open(log, encoding='utf-8', errors='replace') as inp:
 # первом этапе. Сохраните диагностику, затем докажите реальное подключение к точной
 # версии сервера Mojang и работу Runtime клиента в обязательном E2E ниже.
 if 'Not a registry ops' in body or 'No key structures in MapLike' in body:
-    print('[matching-e2e] 1.17.1 nonfatal world codec warning; verifying by real client join')
+    print('[matching-e2e] 1.17.1: некритичное предупреждение кодека мира; проверяем реальным подключением клиента')
 PYREADY
 fi
 

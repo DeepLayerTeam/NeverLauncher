@@ -806,7 +806,7 @@ func writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminIm
 		"profileId":       profile,
 		"generatedAt":     time.Now().UTC().Format(time.RFC3339),
 		"status":          "canonical-production-bundle-copied",
-		"source":          "embedded canonical deploy/production templates",
+		"source":          "встроенные канонические шаблоны развёртывания и промышленной эксплуатации",
 		"templateSources": templateSources,
 		"security":        "Секреты не генерируются и .env не создаётся; образы API/Admin закреплены ссылками на внешний реестр",
 		"images":          map[string]string{"api": apiImage, "admin": adminImage},

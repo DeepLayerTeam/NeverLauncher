@@ -3,7 +3,7 @@ main: ru.launcher.bridge.folia.LauncherFoliaBridge
 version: ${version}
 api-version: '1.21'
 author: SkiF4er
-description: Launcher ServerBridge/AuthBridge integration for Folia servers.
+description: Интеграция Launcher ServerBridge/AuthBridge для серверов Folia.
 folia-supported: true
 commands:
   nlbridge:

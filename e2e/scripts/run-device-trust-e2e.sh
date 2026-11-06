@@ -195,14 +195,14 @@ DEVICE1="$(jq -er '.data.device.id' <<<"$COMPLETE1")"
 EPOCH1="$(jq -er '.data.session.bindingEpoch' <<<"$COMPLETE1")"
 [[ "$EPOCH1" -ge 2 ]]
 printf '%s' "$COMPLETE1" | sanitize_registration > "$RESULT_DIR/registration.json"
-code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS_PRE" '' "$RUNTIME_DIR/prebind-access.json")"; expect_code 401 "$code" 'pre-bind access survived binding epoch change'
-code="$(request_code POST "$API/api/v1/auth/devices/register/complete" "$ACCESS1" "$COMPLETE_BODY1" "$RUNTIME_DIR/registration-replay.json")"; expect_code 401 "$code" 'registration challenge replay'
+code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS_PRE" '' "$RUNTIME_DIR/prebind-access.json")"; expect_code 401 "$code" 'Доступ до привязки остался действительным после изменения эпохи привязки'
+code="$(request_code POST "$API/api/v1/auth/devices/register/complete" "$ACCESS1" "$COMPLETE_BODY1" "$RUNTIME_DIR/registration-replay.json")"; expect_code 401 "$code" 'Повторное использование запроса регистрации'
 TRUST1="$(curl -fsS -H "Authorization: Bearer $ACCESS1" "$API/api/v1/auth/device-trust")"
 jq -e --arg dev "$DEVICE1" '.data.deviceTrustState=="verified" and .data.trustedDeviceId==$dev' <<<"$TRUST1" >/dev/null
 jq '{data:{deviceTrustState:.data.deviceTrustState,trustedDeviceId:.data.trustedDeviceId,deviceAttestationState:.data.deviceAttestationState}}' <<<"$TRUST1" > "$RESULT_DIR/trust-after-registration.json"
 
 printf '[device-trust-e2e] для обновления привязанной сессии требуется владение текущим ключом\n'
-code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH1" '{refreshToken:$refresh}')" "$RUNTIME_DIR/refresh-without-proof.json")"; expect_code 428 "$code" 'bound refresh without device proof'
+code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH1" '{refreshToken:$refresh}')" "$RUNTIME_DIR/refresh-without-proof.json")"; expect_code 428 "$code" 'Обновление привязанного сеанса без доказательства владения устройством'
 REFRESH_PAYLOAD1="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE1" "$EPOCH1" "$REFRESH1")"
 REFRESH_SIG1="$(sign_payload ed25519 "$KEY1" "$REFRESH_PAYLOAD1")"
 REFRESH_OK1="$(json_post "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH1" --arg device "$DEVICE1" --arg sig "$REFRESH_SIG1" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')")"
@@ -217,10 +217,10 @@ SERVER_REG="$(json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS1R"
 jq -e '.data.status=="registered" and .data.nodeIdentity.keyAlgorithm=="ed25519" and .data.nodeIdentity.identityEpoch==1' <<<"$SERVER_REG" >/dev/null
 BRIDGE_HEARTBEAT_BODY="$(jq -cn --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{protocolVersion:2,serverId:"dt-e2e-paper",serverType:"paper",pluginVersion:$version,pluginSha256:$sha,hostname:"device-trust-e2e"}')"
 code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/servers/dt-e2e-paper/heartbeat" "$BRIDGE_HEARTBEAT_BODY" "$RESULT_DIR/bridge-heartbeat.json")"
-expect_code 200 "$code" 'ServerBridge integrity heartbeat was rejected'
+expect_code 200 "$code" 'Сервер отклонил подтверждение целостности ServerBridge'
 jq -e --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '.data.status=="heartbeat-accepted" and .data.integrity.allowed==true and .data.integrity.required==true and .data.integrity.reason=="bridge_integrity_verified" and .data.pluginVersion==$version and .data.pluginSha256==$sha' "$RESULT_DIR/bridge-heartbeat.json" >/dev/null
 code="$(request_code POST "$API/api/v1/session/join" "$ACCESS1R" '{"username":"DeviceTrustE2E","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$RESULT_DIR/software-device-guard-required.json")"
-expect_code 412 "$code" 'software Linux device bypassed Guard-bound Minecraft integrity'
+expect_code 412 "$code" 'Программное устройство Linux обошло проверку целостности Minecraft, связанную с Guard'
 jq -e '.error.code==412 and (.error.message|contains("minecraftAccessToken"))' "$RESULT_DIR/software-device-guard-required.json" >/dev/null
 
 printf '[device-trust-e2e] для смены ключа необходимы доказательства владения старым и новым ключами; неудачный запрос одноразовый\n'
@@ -231,10 +231,10 @@ ROT1="$(rotation_begin)"
 ROT_PAYLOAD1="$(jq -er '.data.signingPayload' <<<"$ROT1")"
 NEW_SIG_ONLY="$(sign_payload ed25519 "$KEY2" "$ROT_PAYLOAD1")"
 ROT_FAIL_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$ROT1")" --arg ch "$(jq -er '.data.challenge' <<<"$ROT1")" --arg ns "$NEW_SIG_ONLY" '{challengeId:$id,challenge:$ch,newSignature:$ns}')"
-code="$(request_code POST "$API/api/v1/auth/devices/$DEVICE1/key-rotation/complete" "$ACCESS1R" "$ROT_FAIL_BODY" "$RUNTIME_DIR/rotation-missing-old-proof.json")"; expect_code 401 "$code" 'rotation without old key proof'
+code="$(request_code POST "$API/api/v1/auth/devices/$DEVICE1/key-rotation/complete" "$ACCESS1R" "$ROT_FAIL_BODY" "$RUNTIME_DIR/rotation-missing-old-proof.json")"; expect_code 401 "$code" 'Ротация без доказательства владения прежним ключом'
 OLD_SIG_BURNED="$(sign_payload ed25519 "$KEY1" "$ROT_PAYLOAD1")"
 ROT_REPLAY_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$ROT1")" --arg ch "$(jq -er '.data.challenge' <<<"$ROT1")" --arg os "$OLD_SIG_BURNED" --arg ns "$NEW_SIG_ONLY" '{challengeId:$id,challenge:$ch,oldSignature:$os,newSignature:$ns}')"
-code="$(request_code POST "$API/api/v1/auth/devices/$DEVICE1/key-rotation/complete" "$ACCESS1R" "$ROT_REPLAY_BODY" "$RUNTIME_DIR/rotation-burned-replay.json")"; expect_code 401 "$code" 'failed rotation challenge replay'
+code="$(request_code POST "$API/api/v1/auth/devices/$DEVICE1/key-rotation/complete" "$ACCESS1R" "$ROT_REPLAY_BODY" "$RUNTIME_DIR/rotation-burned-replay.json")"; expect_code 401 "$code" 'Повторное использование запроса после неудачной ротации'
 ROT2="$(rotation_begin)"
 ROT_PAYLOAD2="$(jq -er '.data.signingPayload' <<<"$ROT2")"
 OLD_SIG2="$(sign_payload ed25519 "$KEY1" "$ROT_PAYLOAD2")"
@@ -247,12 +247,12 @@ EPOCH2="$(jq -er '.data.session.bindingEpoch' <<<"$ROT_OK")"
 [[ "$DEVICE2" != "$DEVICE1" && "$EPOCH2" -gt "$EPOCH1" ]]
 jq -e '.data.oldFingerprintPermanentTombstone==true and .data.mode=="rotate"' <<<"$ROT_OK" >/dev/null
 printf '%s' "$ROT_OK" | sanitize_rotation > "$RESULT_DIR/rotation.json"
-code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS1R" '' "$RUNTIME_DIR/pre-rotation-access.json")"; expect_code 401 "$code" 'pre-rotation access survived binding epoch change'
+code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS1R" '' "$RUNTIME_DIR/pre-rotation-access.json")"; expect_code 401 "$code" 'Доступ до ротации остался действительным после изменения эпохи привязки'
 
 printf '[device-trust-e2e] для той же группы обновления теперь требуются новый ключ и новый идентификатор устройства\n'
 OLD_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE1" "$EPOCH1" "$REFRESH2")"
 OLD_REFRESH_SIG="$(sign_payload ed25519 "$KEY1" "$OLD_REFRESH_PAYLOAD")"
-code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH2" --arg device "$DEVICE1" --arg sig "$OLD_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/refresh-old-key-after-rotation.json")"; expect_code 428 "$code" 'old key refreshed rebound session'
+code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH2" --arg device "$DEVICE1" --arg sig "$OLD_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/refresh-old-key-after-rotation.json")"; expect_code 428 "$code" 'Старый ключ обновил сеанс после повторной привязки'
 REFRESH_PAYLOAD2="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE2" "$EPOCH2" "$REFRESH2")"
 REFRESH_SIG2="$(sign_payload ed25519 "$KEY2" "$REFRESH_PAYLOAD2")"
 REFRESH_OK2="$(json_post "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH2" --arg device "$DEVICE2" --arg sig "$REFRESH_SIG2" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')")"
@@ -264,7 +264,7 @@ TOMB_LOGIN="$(login dt-tombstone)"; TOMB_ACCESS="$(jq -er '.data.tokens.accessTo
 TOMB_BEGIN="$(json_post "$API/api/v1/auth/devices/register/begin" "$TOMB_ACCESS" "$(jq -cn --arg v "$VERSION" '{name:"Old key reuse attempt",platform:"linux",clientVersion:$v,keyAlgorithm:"ed25519",keyBinding:"software"}')")"
 TOMB_SIG="$(sign_payload ed25519 "$KEY1" "$(jq -er '.data.signingPayload' <<<"$TOMB_BEGIN")")"
 TOMB_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$TOMB_BEGIN")" --arg dev "$(jq -er '.data.deviceId' <<<"$TOMB_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$TOMB_BEGIN")" --arg pub "$PUB1" --arg sig "$TOMB_SIG" '{challengeId:$id,deviceId:$dev,challenge:$ch,publicKey:$pub,signature:$sig}')"
-code="$(request_code POST "$API/api/v1/auth/devices/register/complete" "$TOMB_ACCESS" "$TOMB_BODY" "$RESULT_DIR/old-key-tombstone.json")"; expect_code 409 "$code" 'revoked fingerprint was re-enrolled'
+code="$(request_code POST "$API/api/v1/auth/devices/register/complete" "$TOMB_ACCESS" "$TOMB_BODY" "$RESULT_DIR/old-key-tombstone.json")"; expect_code 409 "$code" 'Отозванный отпечаток устройства был зарегистрирован повторно'
 
 printf '[device-trust-e2e] модуль риска сохраняет отклонения и блокирует чувствительные игровые действия до дополнительной проверки\n'
 RISK_LOGIN="$(login dt-risk)"; RISK_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$RISK_LOGIN")"; RISK_SESSION="$(jq -er '.data.session.id' <<<"$RISK_LOGIN")"
@@ -273,10 +273,10 @@ RISK_SIG="$(sign_payload ed25519 "$KEY2" "$(jq -er '.data.signingPayload' <<<"$R
 RISK_COMPLETE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/verify/complete" "$RISK_ACCESS_PRE" "$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$RISK_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$RISK_BEGIN")" --arg sig "$RISK_SIG" '{challengeId:$id,challenge:$ch,signature:$sig}')")"
 RISK_ACCESS="$(jq -er '.data.accessToken' <<<"$RISK_COMPLETE")"
 RISK_UA="Launcher-DeviceTrust-E2E/${VERSION}-risk"
-code="$(request_code GET "$API/api/v1/auth/sessions" "$RISK_ACCESS" '' "$RUNTIME_DIR/risk-sessions.json" "$RISK_UA")"; expect_code 200 "$code" 'risk observation request'
+code="$(request_code GET "$API/api/v1/auth/sessions" "$RISK_ACCESS" '' "$RUNTIME_DIR/risk-sessions.json" "$RISK_UA")"; expect_code 200 "$code" 'Запрос оценки риска'
 jq -e --arg sid "$RISK_SESSION" '.data.items[] | select(.id==$sid) | .riskAction=="step-up" and .riskState=="elevated" and .riskScore>=35' "$RUNTIME_DIR/risk-sessions.json" >/dev/null
 jq --arg sid "$RISK_SESSION" '{data:{session:(.data.items[]|select(.id==$sid)|{id,riskState,riskScore,riskAction,riskReasons})}}' "$RUNTIME_DIR/risk-sessions.json" > "$RESULT_DIR/risk-step-up.json"
-code="$(request_code POST "$API/api/v1/session/join" "$RISK_ACCESS" '{"username":"RiskPlayer","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$RUNTIME_DIR/risk-join-denied.json" "$RISK_UA")"; expect_code 428 "$code" 'elevated-risk gameplay join'
+code="$(request_code POST "$API/api/v1/session/join" "$RISK_ACCESS" '{"username":"RiskPlayer","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$RUNTIME_DIR/risk-join-denied.json" "$RISK_UA")"; expect_code 428 "$code" 'Вход в игру с повышенным риском'
 
 printf '[device-trust-e2e] аттестация аппаратно привязанного протокола P-256 без утверждений о происхождении производителя\n'
 HW_LOGIN="$(login dt-hardware)"; HW_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$HW_LOGIN")"
@@ -336,7 +336,7 @@ jq -e '.data.allowed==true' "$RESULT_DIR/bridge-guard-bound-allowed.json" >/dev/
 jq '{data:{verified:.data.verified,platform:.data.platform,guardProtocolVersion:.data.guardProtocolVersion,oneTime:.data.oneTime}}' <<<"$GUARD_OK" > "$RESULT_DIR/guard-attestation.json"
 jq '{data:{profile:.data.profile,integrity:.data.integrity}}' <<<"$MC_SESSION" > "$RESULT_DIR/minecraft-integrity-session.json"
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/attest/complete" "$HW_ACCESS_ATTESTED" "$ATT_BODY" "$RUNTIME_DIR/attestation-replay.json")"; expect_code 401 "$code" 'attestation replay'
-code="$(request_code POST "$API/api/v1/auth/devices/key-recovery/begin" "$HW_ACCESS_ATTESTED" '{}' "$RESULT_DIR/recovery-step-up-required.json")"; expect_code 428 "$code" 'recovery without phishing-resistant step-up'
+code="$(request_code POST "$API/api/v1/auth/devices/key-recovery/begin" "$HW_ACCESS_ATTESTED" '{}' "$RESULT_DIR/recovery-step-up-required.json")"; expect_code 428 "$code" 'Восстановление без дополнительной проверки, устойчивой к фишингу'
 
 printf '[device-trust-e2e] реальное подтверждение WebAuthn разрешает восстановление ключа; старая аппаратная идентичность отзывается\n'
 PASS_LOGIN="$(login dt-passkey-bootstrap)"; PASS_ACCESS="$(jq -er '.data.tokens.accessToken' <<<"$PASS_LOGIN")"
@@ -374,21 +374,21 @@ REC_DEVICE="$(jq -er '.data.device.id' <<<"$REC_OK")"
 jq -e '.data.mode=="recover" and .data.oldFingerprintPermanentTombstone==true and .data.session.authStrength=="phishing-resistant"' <<<"$REC_OK" >/dev/null
 printf '%s' "$REC_OK" | sanitize_rotation > "$RESULT_DIR/recovery.json"
 code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-after-recovery.json")"
-expect_code 403 "$code" 'Guard-bound ServerBridge join survived device recovery'
+expect_code 403 "$code" 'Доступ ServerBridge, привязанный к Guard, сохранился после восстановления устройства'
 jq -e '.data.allowed==false and (.data.reason=="launcher_session_or_handoff_missing_or_expired" or .data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed" or .data.reason=="minecraft_session_missing_or_expired" or .data.reason=="minecraft_integrity_invalid")' "$RESULT_DIR/bridge-after-recovery.json" >/dev/null
-code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" '' "$RUNTIME_DIR/pre-recovery-access.json")"; expect_code 401 "$code" 'pre-recovery access survived binding epoch change'
+code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" '' "$RUNTIME_DIR/pre-recovery-access.json")"; expect_code 401 "$code" 'Доступ до восстановления остался действительным после изменения эпохи привязки'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM device_challenges WHERE id='$REC_CHALLENGE_ID' AND user_id='$USER_ID' AND device_id='$HW_DEVICE' AND purpose='key-recover' AND consumed_at IS NOT NULL")" == "1" ]]
-code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RESULT_DIR/recovery-replay.json")"; expect_code 404 "$code" 'recovery challenge replay after source-device tombstone'
+code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RESULT_DIR/recovery-replay.json")"; expect_code 404 "$code" 'Повторное использование запроса восстановления после блокировки исходного устройства'
 jq -e '.error.code==404 and .error.message=="активное исходное устройство не найдено"' "$RESULT_DIR/recovery-replay.json" >/dev/null
 
 printf '[device-trust-e2e] постоянный отзыв устройства распространяется на токены доступа и обновления\n'
 REVOKE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/revoke" "$ACCESS2R" '{"reason":"device-trust-e2e-revoke"}')"
 jq -e '.data.device.status=="revoked" and .data.reEnrollmentRequiresNewKey==true and .data.revokedRefreshFamilies>=1' <<<"$REVOKE" >/dev/null
 jq '{data:{device:.data.device,alreadyRevoked:.data.alreadyRevoked,revokedSessions:.data.revokedSessions,revokedRefreshFamilies:.data.revokedRefreshFamilies,revokedMinecraftSessions:.data.revokedMinecraftSessions,invalidatedChallenges:.data.invalidatedChallenges,invalidatedBridgeJoins:.data.invalidatedBridgeJoins,reEnrollmentRequiresNewKey:.data.reEnrollmentRequiresNewKey}}' <<<"$REVOKE" > "$RESULT_DIR/revocation.json"
-code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS2R" '' "$RUNTIME_DIR/revoked-access.json")"; expect_code 401 "$code" 'revoked device access survived'
+code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS2R" '' "$RUNTIME_DIR/revoked-access.json")"; expect_code 401 "$code" 'Доступ отозванного устройства остался действительным'
 REVOKED_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE2" "$EPOCH2" "$REFRESH3")"
 REVOKED_REFRESH_SIG="$(sign_payload ed25519 "$KEY2" "$REVOKED_REFRESH_PAYLOAD")"
-code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH3" --arg device "$DEVICE2" --arg sig "$REVOKED_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/revoked-refresh.json")"; expect_code 401 "$code" 'revoked device refresh survived'
+code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH3" --arg device "$DEVICE2" --arg sig "$REVOKED_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/revoked-refresh.json")"; expect_code 401 "$code" 'Обновление сеанса отозванного устройства осталось действительным'
 
 printf '[device-trust-e2e] требуются свидетельства обновления с миграции 0.12.9 до текущей поставляемой\n'
 MIGRATION_UPGRADE_EVIDENCE="$ROOT/e2e/device-trust-migration-result/migration-stabilization.json"

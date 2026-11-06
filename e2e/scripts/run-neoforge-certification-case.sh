@@ -111,7 +111,7 @@ if mode != 'processors' or client_processors <= 0 or ran + skipped != client_pro
     raise SystemExit(f'NeoForge processor execution evidence is incomplete: mode={mode!r} client={client_processors} ran={ran} skipped={skipped}')
 for key in ('installerSha256', 'profileSha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(install.get(key) or '')):
-        raise SystemExit(f'invalid NeoForge {key}')
+        raise SystemExit(f'Некорректное поле NeoForge {key}')
 if int(install.get('libraryCount') or 0) <= 0:
     raise SystemExit('Библиотеки среды NeoForge не установлены')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):

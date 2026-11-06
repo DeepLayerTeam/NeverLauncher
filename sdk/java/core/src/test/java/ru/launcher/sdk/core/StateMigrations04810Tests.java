@@ -21,7 +21,7 @@ public final class StateMigrations04810Tests {
             .timeout(Duration.ofSeconds(4)).header("Authorization","Bearer "+secret)
             .POST(HttpRequest.BodyPublishers.ofString(Json.encode(Map.of("protocolVersion","1.0","requestId","migration1","method","state.migrate","deadlineMs",1600L,"params",Map.of("fromVersion",from,"toVersion",to))))).build();
         var response=HttpClient.newHttpClient().send(request,HttpResponse.BodyHandlers.ofString());
-        check(response.statusCode()==code,"migration HTTP status "+response.statusCode()+" expected "+code);
+        check(response.statusCode()==code,"HTTP-статус миграции "+response.statusCode()+" expected "+code);
         return Json.object(Json.parse(response.body()));
     }
     public static void main(String[] ignored)throws Exception {

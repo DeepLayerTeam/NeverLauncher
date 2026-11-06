@@ -32,16 +32,16 @@ public final class BridgeControlJournal0412Test {
             check(concurrentDenied, "второй исполнитель не должен получать журнал");
             boolean duplicateDenied = false;
             try { j.begin(action); } catch (java.io.IOException expected) { duplicateDenied = true; }
-            check(duplicateDenied, "re-entry must not repeat the action");
+            check(duplicateDenied, "Повторный вход не должен запускать действие снова");
         }
         try (BridgeControlJournal j = new BridgeControlJournal(journalFile)) {
             check("executing".equals(j.state(action).phase()), "сбой до фиксации должен давать неопределённый результат");
-            BridgeControlResult unknown = BridgeControlResult.indeterminate("agent died after admission");
+            BridgeControlResult unknown = BridgeControlResult.indeterminate("Агент завершился после допуска команды");
             j.complete(action, unknown);
             check(j.unacknowledged("runtime", channel).size() == 1, "восстановление после сбоя должно поставить подтверждение в очередь");
         }
         try (BridgeControlJournal j = new BridgeControlJournal(journalFile)) {
-            check(channel.equals(j.channelId("runtime")), "same JVM/runtime must resume its channel");
+            check(channel.equals(j.channelId("runtime")), "Тот же JVM-процесс и среда выполнения должны восстановить свой канал");
             var pending = j.unacknowledged("runtime", channel);
             check(pending.size() == 1 && "indeterminate".equals(pending.get(0).result().status()), "потерянное подтверждение должно сохраняться после перезапуска");
             j.acknowledge(pending.get(0));
@@ -55,7 +55,7 @@ public final class BridgeControlJournal0412Test {
             check(j.unacknowledged("runtime", channel).size() == 1, "неподтверждённый результат должен сохраняться в устойчивой очереди");
             boolean replayDenied = false;
             try { j.begin(b); } catch (java.io.IOException expected) { replayDenied = true; }
-            check(replayDenied, "even ACK-loss replay cannot execute again");
+            check(replayDenied, "Даже повтор после потери ACK не должен приводить к повторному выполнению");
             boolean digestDenied = false;
             try { j.state(command("second", "f".repeat(64), 2, channel, "lease-token-123456780")); }
             catch (IllegalStateException expected) { digestDenied = true; }
@@ -68,7 +68,7 @@ public final class BridgeControlJournal0412Test {
             check(j.state(action) != null, "большой журнал должен сохранять старейшую запись о запрете повтора команды");
             String newChannel = j.channelId("another-runtime");
             check(!newChannel.equals(channel) && j.unacknowledged("another-runtime", newChannel).isEmpty(),
-                "new JVM runtime must never replay old runtime commands");
+                "Новая среда JVM не должна повторно выполнять команды старой среды");
         }
         // Обновите реальную дисковую схему 0.41.1 без полей квитанции, не стирая
         // уже выполненную команду и не запуская её снова.
@@ -84,7 +84,7 @@ public final class BridgeControlJournal0412Test {
         try (BridgeControlJournal migrated = new BridgeControlJournal(legacy)) {
             check("done".equals(migrated.state(oldCommand).phase()), "устаревшая запись о запрете повтора должна читаться без повторного выполнения");
             migrated.bindLegacyReceipt(oldCommand);
-            check(migrated.unacknowledged("runtime", channel).size() == 1, "legacy result must be safely ACK-recoverable");
+            check(migrated.unacknowledged("runtime", channel).size() == 1, "Подтверждение ACK устаревшего результата должно безопасно восстанавливаться");
             boolean wrongLeaseDenied = false;
             try { migrated.bindLegacyReceipt(command("legacy", "b".repeat(64), 50, channel, "malicious-new-lease000")); }
             catch (java.io.IOException expected) { wrongLeaseDenied = true; }

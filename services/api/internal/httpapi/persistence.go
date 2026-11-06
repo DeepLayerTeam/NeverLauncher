@@ -133,7 +133,7 @@ func (s Server) persistenceSmoke(w http.ResponseWriter, r *http.Request) {
 		if err := s.Repo.Health(ctx); err != nil {
 			add("sqlite-integrity", "failed", err.Error())
 		} else {
-			add("sqlite-integrity", "ok", "SQLite WAL store and repository state verified")
+			add("sqlite-integrity", "ok", "Состояние хранилища SQLite WAL и репозитория проверено")
 		}
 	} else {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -146,7 +146,7 @@ func (s Server) persistenceSmoke(w http.ResponseWriter, r *http.Request) {
 		} else if _, ok, err := store.loadLatest(ctx, "all"); err != nil || !ok {
 			add("postgres-read", "failed", fmt.Sprintf("ok=%v err=%v", ok, err))
 		} else {
-			add("postgres-ddl-write-read", "ok", "snapshot persisted and loaded")
+			add("postgres-ddl-write-read", "ok", "Снимок состояния сохранён и загружен")
 		}
 	}
 	payload["status"] = status
@@ -164,10 +164,10 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 		}
 	}
 	persistenceMode := "postgres-backed-security-serverbridge-state"
-	persistenceRelease := "Launcher 0.10.0 Persisted PostgreSQL State"
+	persistenceRelease := "Launcher 0.10.0 — сохраняемое состояние PostgreSQL"
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		persistenceMode = "sqlite-wal-security-serverbridge-state"
-		persistenceRelease = "Launcher 0.37.3 SQLite Runtime State"
+		persistenceRelease = "Launcher 0.37.3 — состояние среды выполнения SQLite"
 	}
 	payload := map[string]any{
 		"schemaVersion": persistenceSchema950,
@@ -185,12 +185,12 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			"productionGate": s.Config.RequirePersistentStoreInProduction,
 		},
 		"implemented": []string{
-			"PostgreSQL DDL for security users, normalized auth sessions/token families/MFA, bridge servers, join sessions, textures and audit",
-			"normalized PostgreSQL auth core is source of truth for sessions and MFA in 0.11.1",
-			"JSON persistence snapshots remain for non-auth legacy state and 0.10.x migration bootstrap",
-			"startup migration from latest PostgreSQL persistence snapshot into normalized auth tables",
+			"DDL PostgreSQL для пользователей безопасности, нормализованных сеансов авторизации, семейств токенов, MFA, серверов моста, игровых сеансов, текстур и аудита",
+			"Нормализованный модуль авторизации PostgreSQL является основным источником данных о сеансах и MFA начиная с 0.11.1",
+			"Снимки состояния JSON сохраняются для устаревших данных вне авторизации и начального этапа миграции версий 0.10.x",
+			"При запуске данные из последнего снимка PostgreSQL переносятся в нормализованные таблицы авторизации",
 			"Защита промышленного режима: хранилище в памяти запрещено при LAUNCHER_ENV=production",
-			"persistence status/readiness/security/server-bridge/smoke endpoints",
+			"Конечные точки состояния хранения, готовности, безопасности, ServerBridge и базовых проверок",
 			"Манифесты резервного копирования и восстановления включают таблицы сохраняемого состояния 0.10.0",
 		},
 		"endpoints": []string{
@@ -205,9 +205,9 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 	}
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		payload["implemented"] = []string{
-			"SQLite HTTP Repository 0.37.2 WAL state with private authentication and extension fields",
-			"SQLite Runtime 0.37.3 encrypted durable auth sessions, MFA, passkeys, and ServerBridge state",
-			"Persisted devices, durable jobs, extensions and trust policy in the SQLite HTTP Repository",
+			"SQLite HTTP Repository 0.37.2: состояние WAL с защищённой авторизацией и полями расширений",
+			"SQLite Runtime 0.37.3: зашифрованные сохраняемые сеансы авторизации, MFA, ключи доступа и состояние ServerBridge",
+			"Устройства, сохраняемые задания, расширения и политика доверия хранятся в SQLite HTTP Repository",
 			"Промышленное развёртывание только на SQLite заблокировано до подтверждения соответствия критериям выпуска",
 		}
 	}

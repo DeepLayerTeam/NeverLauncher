@@ -27,7 +27,7 @@ public final class CoreTests {
         ok(Json.object(Json.parse(Json.encode(Map.of("x",List.of("hello\\world",true,13))))).containsKey("x"),"JSON roundtrip");
     }
     static void semver(){
-        ok(SemVer.parse("2.0.0-beta.2").compareTo(SemVer.parse("2.0.0-beta.11"))<0,"numeric prerelease order");
+        ok(SemVer.parse("2.0.0-beta.2").compareTo(SemVer.parse("2.0.0-beta.11"))<0,"Числовой порядок предварительных выпусков");
         ok(SemVer.parse("1.5.0").matches(">=1.2.0 <2.0.0"),"compound range");
         ok(!SemVer.parse("2.0.0").matches("^1.2.0"),"caret bound");
         ok(SemVer.parse("0.2.7").matches("^0.2.0"),"zero major caret");
@@ -70,7 +70,7 @@ public final class CoreTests {
         }ok(start.get()==1&&stop.get()==1,"callbacks once");
         Extension hangs=new Extension(){public void start(ExtensionContext c)throws Exception{Thread.sleep(60_000);}public void stop(ExtensionContext c){}};
         try(var managed=new ExtensionLifecycle(hangs,m)){
-            throwsType(TimeoutException.class,()->managed.start(Duration.ofMillis(50)));ok(managed.state()==ExtensionLifecycle.State.FAILED,"deadline fails closed");
+            throwsType(TimeoutException.class,()->managed.start(Duration.ofMillis(50)));ok(managed.state()==ExtensionLifecycle.State.FAILED,"По истечении срока операция безопасно блокируется");
         }
     }
     static void host() throws Exception {
@@ -89,7 +89,7 @@ public final class CoreTests {
         try{
             Map<String,String> env=new HashMap<>();env.put("LAUNCHER_EXTENSION_HOST_URL","http://127.0.0.1:"+server.getAddress().getPort());env.put("LAUNCHER_EXTENSION_HOST_TOKEN",token);env.put("LAUNCHER_EXTENSION_ID","org.test");env.put("LAUNCHER_EXTENSION_VERSION","1.0.0");env.put("LAUNCHER_EXTENSION_HOST_PROTOCOL","1.0");env.put("LAUNCHER_EXTENSION_API_VERSION","1.0");env.put("LAUNCHER_EXTENSION_INSTANCE_ID","instance-42");
             try(HostSession session=HostSession.fromEnvironment(env,dep("org.test","1.0.0","[]"))){session.connect();Thread.sleep(1300);ok(session.healthy(),"heartbeat healthy");}
-            ok(hello.get()==1&&heartbeats.get()>=1,"real HTTP exchange");
+            ok(hello.get()==1&&heartbeats.get()>=1,"Настоящий обмен HTTP");
             env.put("LAUNCHER_EXTENSION_ID","wrong");throwsType(IllegalArgumentException.class,()->HostSession.fromEnvironment(env,dep("org.test","1.0.0","[]")));
         }finally{server.stop(0);}
     }

@@ -16,7 +16,7 @@ public final class BridgeSessionRevocation0418Test {
         check(!sessions.matches("Player", OLD), "неизвестный игрок не должен соответствовать сеансу");
         check(!sessions.bind("Player", "weak"), "слабые идентификаторы сеанса должны отклоняться");
         check(sessions.bind("Player", OLD), "действительный билет привязан");
-        check(sessions.matches("player", OLD), "username lookup is case-insensitive");
+        check(sessions.matches("player", OLD), "Поиск имени пользователя не зависит от регистра");
         check(!sessions.matches("Player", NEW), "старый вход не может разрешить удаление другого игрока");
         check(!sessions.matches("Player", ""), "пустая привязка сеанса не должна обходить ограничение доступа");
         check(!sessions.matches("Player", "not-a-token"), "некорректная привязка не должна обходить ограничение доступа");

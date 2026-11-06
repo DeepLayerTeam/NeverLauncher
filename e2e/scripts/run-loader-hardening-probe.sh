@@ -99,7 +99,7 @@ if not sha_re.fullmatch(payload_sha):
     raise SystemExit('В блокировке разрешения отсутствует допустимый закреплённый SHA-256 содержимого')
 cache_path = Path(client_dir) / '.launcher' / 'loader-cache' / 'sha256' / payload_sha[:2] / (payload_sha + '.payload')
 if not cache_path.is_file():
-    raise SystemExit(f'content-addressed loader cache payload is missing: {cache_path}')
+    raise SystemExit(f'Отсутствуют данные кеша загрузчика с адресацией по содержимому: {cache_path}')
 h = hashlib.sha256(cache_path.read_bytes()).hexdigest()
 if h != payload_sha:
     raise SystemExit('SHA-256 адресуемого по содержимому кеша загрузчика не совпадает')
@@ -138,7 +138,7 @@ if loader in ('forge','neoforge'):
         )
     if not processor_verified:
         raise SystemExit(
-            f'processor crash recovery evidence is incomplete: mode={mode!r}, '
+            f'Подтверждения восстановления после сбоя обработчика неполные: режим={mode!r}, '
             f'client={client_count}, ran={ran}, skipped={skipped}, '
             f'recovered={processor_recovered}, journalSha={journal_sha!r}'
         )

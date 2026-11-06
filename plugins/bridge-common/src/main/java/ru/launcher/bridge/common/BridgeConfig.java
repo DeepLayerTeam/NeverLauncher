@@ -127,11 +127,11 @@ public final class BridgeConfig {
             // Специально записывайте только комментарии. Рабочие значения берутся из переменных
             // окружения или стандартных настроек, поэтому установка JAR или мода не патчит
             // конфигурацию Paper/Velocity/Bungee/Fabric/Forge и не фиксирует окружение.
-            String template = "# Launcher ServerBridge " + BridgeDefaults.VERSION + " zero-patch bootstrap\n" +
-                "# No Minecraft/proxy configuration is modified by this plugin.\n" +
-                "# Defaults: backend=http://127.0.0.1:8080 server.id=" + defaultServerId + "\n" +
-                "# Override with LAUNCHER_BACKEND_URLS (HA) or LAUNCHER_BACKEND_URL / LAUNCHER_SERVER_ID,\n" +
-                "# or add explicit keys here when file-based configuration is preferred.\n";
+            String template = "# Launcher ServerBridge " + BridgeDefaults.VERSION + " — начальная настройка без правки конфигурации\n" +
+                "# Плагин не изменяет конфигурацию Minecraft или прокси.\n" +
+                "# Значения по умолчанию: backend=http://127.0.0.1:8080 server.id=" + defaultServerId + "\n" +
+                "# Для изменения используйте LAUNCHER_BACKEND_URLS (HA) или LAUNCHER_BACKEND_URL / LAUNCHER_SERVER_ID,\n" +
+                "# либо задайте значения здесь, если предпочтительна настройка через файл.\n";
             Files.writeString(absolute, template, java.nio.charset.StandardCharsets.UTF_8,
                 java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
         } catch (IOException | SecurityException ignored) {

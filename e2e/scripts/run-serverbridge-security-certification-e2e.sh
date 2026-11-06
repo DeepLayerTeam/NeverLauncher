@@ -7,10 +7,10 @@ import json,sys
 p=sys.argv[1]; d=json.load(open(p,encoding='utf-8'))
 expected=['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']
 scenarios={'canonical-v3-domain','capability-downgrade','tampered-bridge-artifact','tampered-node-request','tampered-event','replayed-event','tampered-command','replayed-command','runtime-instance-rebind','online-key-rotation'}
-if d.get('release')!='ServerBridge 3' or d.get('protocolVersion')!=3 or d.get('securityProfile')!='serverbridge3-security-01912': raise SystemExit('security matrix metadata mismatch')
-if d.get('targets')!=expected: raise SystemExit('security matrix must cover all 14 ServerBridge 3 targets in release order')
-if set(d.get('requiredScenarios') or [])!=scenarios or d.get('coverage')!='all-required-scenarios-on-every-target': raise SystemExit('security adversarial scenario matrix incomplete')
-print(f'ServerBridge security E2E matrix: {len(expected)} targets x {len(scenarios)} scenarios')
+if d.get('release')!='ServerBridge 3' or d.get('protocolVersion')!=3 or d.get('securityProfile')!='serverbridge3-security-01912': raise SystemExit('Метаданные матрицы безопасности не совпадают')
+if d.get('targets')!=expected: raise SystemExit('Матрица безопасности должна охватывать все 14 целей ServerBridge 3 в порядке выпуска')
+if set(d.get('requiredScenarios') or [])!=scenarios or d.get('coverage')!='all-required-scenarios-on-every-target': raise SystemExit('Матрица сценариев противодействия атакам заполнена не полностью')
+print(f'Матрица E2E-безопасности ServerBridge: {len(expected)} целей × {len(scenarios)} сценариев')
 PY
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/gen/ru/launcher/bridge/common" "$TMP/classes"

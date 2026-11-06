@@ -42,7 +42,7 @@ SQL
 done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"; [[ "$latest_before" == "0026_fabric_server_bridge_0146" ]]
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
-INSERT INTO projects(id,name,default_channel) VALUES ('forge-family-project','Forge Family Project','stable');
+INSERT INTO projects(id,name,default_channel) VALUES ('forge-family-project','Проект семейства Forge','stable');
 INSERT INTO server_bridge_nodes_v2(id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,created_at)
 VALUES ('fabric-before-0147','Fabric Before 0147','fabric','forge-family-project','vanilla','','','','active',2,'ed25519',repeat('A',43),repeat('a',64),1,now(),now());
 SQL

@@ -177,7 +177,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		"user":          sanitizeUserAccount(user),
 		"session":       sanitizeSessionRecord(session),
 		"tokens":        map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true},
-		"next":          []string{"store refresh token in secure storage", "Используйте токен доступа для защищённых адресов API", "refresh before expiry", "Повторный вход после отзыва"},
+		"next":          []string{"store refresh token in secure storage", "Используйте токен доступа для защищённых адресов API", "обновите до истечения срока действия", "Повторный вход после отзыва"},
 	}})
 }
 

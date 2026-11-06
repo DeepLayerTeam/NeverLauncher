@@ -1540,9 +1540,9 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 func (r *SQLRepository) reconcileControlLeases0285(ctx context.Context, tx *sql.Tx, serverID string, now time.Time) error {
 	_, err := tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
 SET status='indeterminate', updated_at=$2, completed_at=$2,
-    error=CASE WHEN expires_at<=$2 THEN 'delivered command expired without proof of completion'
+    error=CASE WHEN expires_at<=$2 THEN 'Срок действия доставленной команды истёк без подтверждения завершения'
                WHEN lease_until IS NOT NULL AND lease_until>$2 THEN 'Доставка привязана к устаревшему идентификатору Runtime'
-               ELSE 'delivery lease expired without proof of completion' END,
+               ELSE 'Срок аренды доставки истёк без подтверждения завершения' END,
     lease_until=NULL
 WHERE server_id=$1 AND status='leased' AND ((lease_until IS NULL OR lease_until<=$2) OR expires_at<=$2
  OR NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=server_id

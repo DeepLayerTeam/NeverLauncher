@@ -98,7 +98,7 @@ public final class ContentSpi0486Tests {
                     ok(STARTED.get()==1,"Провайдер запускается в реальном жизненном цикле JVM");
                     var content=services.content();
                     var source=content.source("p1","file.bin");
-                    ok(source.sha256().equals(HASH),"source pins digest");
+                    ok(source.sha256().equals(HASH),"Источник закрепляет дайджест");
                     ok(Arrays.equals(content.readChecked(source),DATA),"Проверено чтение из хранилища Host с аутентификацией");
                     ok(Arrays.equals(content.readChecked(content.delivery("p1","file.bin")),DATA),"Загрузка по HTTPS использует Host и проверяет контрольную сумму");
                     ok(Arrays.equals(content.readChecked(content.texture("p1","profile-a","skin")),DATA),"Источник текстуры получен из проверенного хранилища Host");

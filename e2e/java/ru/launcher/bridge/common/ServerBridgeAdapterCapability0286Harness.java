@@ -36,7 +36,7 @@ public final class ServerBridgeAdapterCapability0286Harness {
         BridgeAdapterProfile sponge = BridgeAdapterProfiles.require("sponge");
         for (BridgeAdapterCapability cap : List.of(BridgeAdapterCapability.CONTROL_WHITELIST,
                 BridgeAdapterCapability.CONTROL_BAN, BridgeAdapterCapability.CONTROL_SAVE, BridgeAdapterCapability.CONTROL_CONSOLE)) {
-            require(!sponge.supports(cap), "Sponge reflection-only/unsupported control advertised: " + cap);
+            require(!sponge.supports(cap), "Sponge объявляет управление, доступное только через рефлексию или не поддерживаемое: " + cap);
         }
         for (String id : List.of("velocity", "bungeecord", "waterfall")) {
             BridgeAdapterProfile profile = BridgeAdapterProfiles.require(id);

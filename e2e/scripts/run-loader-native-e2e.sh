@@ -83,7 +83,7 @@ if not paths:
     raise SystemExit('Список артефактов сервера загрузчика пуст')
 needle='/' + version + '/'
 if not any(needle in p.replace('\\','/') or version in p.rsplit('/',1)[-1] for p in paths):
-    raise SystemExit(f'exact loader version {version!r} is not present in server runtime artifact paths')
+    raise SystemExit(f'Точная версия загрузчика {version!r} отсутствует в путях к артефактам серверной среды выполнения')
 PY
 
 # Каждое задание матрицы создаёт чистый каталог игры. Minecraft 1.20+
@@ -157,7 +157,7 @@ if not any(needle in p.replace('\\','/') or loader_ver in p.rsplit('/',1)[-1] fo
 family_markers={'fabric':['fabric'],'quilt':['quilt'],'forge':['forge'],'neoforge':['neoforge','neo forge']}
 low=log.lower()
 if not any(marker in low for marker in family_markers[loader]):
-    raise SystemExit(f'loader-native server log has no {loader} runtime marker')
+    raise SystemExit(f'Журнал сервера не содержит маркера среды выполнения загрузчика {loader}')
 payload={
  'schemaVersion':'1.0','status':'passed','loader':loader,'minecraftVersion':mc,'resolvedLoaderVersion':loader_ver,
  'clientProfileId':profile,'clientMainClass':client.get('mainClass'),'clientJoined':True,'serverHealthy':True,

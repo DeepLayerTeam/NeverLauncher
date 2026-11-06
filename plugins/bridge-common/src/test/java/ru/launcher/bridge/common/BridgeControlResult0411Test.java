@@ -14,7 +14,7 @@ public final class BridgeControlResult0411Test {
         BridgeControlResult observed = BridgeControlResult.verified(Map.of("mode", "maintenance", "enabled", "true"));
         status("succeeded", observed);
         if (!"platform-state-read".equals(observed.result().get("verification"))) throw new AssertionError("отсутствуют доказательства проверки");
-        status("failed", BridgeControlResult.failed("dispatcher rejected command"));
+        status("failed", BridgeControlResult.failed("Диспетчер отклонил команду"));
         status("indeterminate", BridgeControlResult.indeterminate("agent crashed"));
         status("unsupported", BridgeControlResult.unsupported("capability unavailable"));
         System.out.println("BridgeControlResult0411: 6 проверок пройдено");

@@ -127,7 +127,7 @@ func (s Server) contracts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) compatibility(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "status": "canonical-v1", "contracts": []string{"schemas/openapi.yaml"}, "policy": []string{"historical /api/v2-/api/v5 routes are removed", "database migrations are checksum-enforced", "Требуются подписанные манифесты"}})
+	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "status": "canonical-v1", "contracts": []string{"schemas/openapi.yaml"}, "policy": []string{"Исторические маршруты /api/v2–/api/v5 удалены", "Целостность миграций базы данных контролируется по контрольным суммам", "Требуются подписанные манифесты"}})
 }
 
 func (s Server) adminCompatibility(w http.ResponseWriter, r *http.Request) {

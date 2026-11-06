@@ -28,7 +28,7 @@ func (s Server) adminOpsDiagnostics(w http.ResponseWriter, r *http.Request) {
 	payload["center"] = map[string]any{
 		"cards":     []string{"API", "PostgreSQL", "Storage", "Redis optional", "Admin build", "Desktop build", "ServerBridge", "Runtime Resolver", "Package Integrity", "Production E2E"},
 		"redaction": "privacy-by-default",
-		"export":    "redacted diagnostics bundle",
+		"export":    "Диагностический пакет с удалёнными конфиденциальными данными",
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": adminOpsSchema9100, "data": payload})
 }

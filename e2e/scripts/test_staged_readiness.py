@@ -60,7 +60,7 @@ class ReadinessTests(unittest.TestCase):
                     if other != loader:
                         self.assertFalse(
                             log_health(self.root, None, other)[0],
-                            f"{loader} log incorrectly accepted as {other}",
+                            f"Журнал загрузчика {loader} ошибочно распознан как {other}",
                         )
 
     def test_guard_violation_and_jvm_crash(self):
