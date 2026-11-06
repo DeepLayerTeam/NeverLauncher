@@ -31,15 +31,15 @@ func hostRealJavaFixture0414(t *testing.T, mode string, restarts int) string {
 	t.Helper()
 	java, err := exec.LookPath("java")
 	if err != nil {
-		t.Skip("real Java executable unavailable")
+		t.Skip("исполняемый файл Java недоступен")
 	}
 	javac, err := exec.LookPath("javac")
 	if err != nil {
-		t.Skip("Java compiler unavailable")
+		t.Skip("компилятор Java недоступен")
 	}
 	jar, err := exec.LookPath("jar")
 	if err != nil {
-		t.Skip("jar tool unavailable")
+		t.Skip("инструмент jar недоступен")
 	}
 	root := t.TempDir()
 	source := filepath.Join(root, "JvmLifecycleFixture.java")
@@ -224,7 +224,7 @@ func TestHostLifecycle0414RealJVMCrashLoopIsBounded(t *testing.T) {
 // процесс, stop ждёт завершения JVM, а restart подтверждает другой процесс ОС.
 func TestHostLifecycle0414ActualCLIAndRemoteEffects(t *testing.T) {
 	if testing.Short() {
-		t.Skip("builds real CLI")
+		t.Skip("собирается настоящий CLI")
 	}
 	root := hostRealJavaFixture0414(t, "run", 0)
 	cli := filepath.Join(t.TempDir(), "nl")

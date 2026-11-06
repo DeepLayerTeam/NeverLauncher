@@ -14,7 +14,7 @@ public final class ServerBridge0488Tests {
     private static void ok(boolean value,String why){checks++;if(!value)throw new AssertionError(why);}
     private interface Action { void run() throws Exception; }
     private static void fails(Class<? extends Throwable> type,Action action) throws Exception {
-        checks++;try { action.run();throw new AssertionError("expected "+type); }
+        checks++;try { action.run();throw new AssertionError("ожидалось исключение "+type); }
         catch(Exception ex){if(!type.isInstance(ex))throw new AssertionError("неверная ошибка",ex);}
     }
     private static void reply(HttpExchange x,int code,Object value)throws IOException {

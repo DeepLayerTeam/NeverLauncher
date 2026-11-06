@@ -48,7 +48,7 @@ func TestJavaEntrypointParentSymlinkRejected0304(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(dir, filepath.Join(root, "alias")); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
+		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	if _, err := safeEntrypoint(root, "alias/extension"); err == nil {
 		t.Fatal("symlink parent accepted")
@@ -190,7 +190,7 @@ func TestJavaHostHungCallbacksDoNotBlockGoSupervisor0304(t *testing.T) {
 		state, _ := host.Get(key)
 		if state.State == "crashed" || state.State == "crashloop" {
 			if !strings.Contains(state.LastError, "Java RPC unresponsive") {
-				t.Fatalf("unexpected failure: %v", state.LastError)
+				t.Fatalf("неожиданная ошибка: %v", state.LastError)
 			}
 			return
 		}

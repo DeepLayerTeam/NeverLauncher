@@ -10,11 +10,11 @@ import (
 
 func TestExternalNativeCompatibility05010(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Linux-only external native policy")
+		t.Skip("политика внешних нативных компонентов доступна только в Linux")
 	}
 	for _, bad := range []string{"relative.so", "/tmp/../x.so", "/proc/self/maps.so", "/tmp/a\\b.so", "/tmp/a.jar", "/tmp//foo.so", "/tmp/foo.so/"} {
 		if guardCompatExternalNativePath05010(bad) {
-			t.Errorf("accepted unsafe path: %s", bad)
+			t.Errorf("принят небезопасный путь: %s", bad)
 		}
 	}
 	path := filepath.Join(t.TempDir(), "approved.so")
@@ -22,14 +22,14 @@ func TestExternalNativeCompatibility05010(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !guardCompatExternalNativePath05010(path) {
-		t.Fatal("real external path rejected")
+		t.Fatal("отклонён допустимый внешний путь")
 	}
 	hash, err := guardCompatExternalNativeHash05010(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(hash) != 64 {
-		t.Fatalf("bad digest %s", hash)
+		t.Fatalf("некорректный хеш %s", hash)
 	}
 	if err = os.WriteFile(path, []byte("modified overlay image"), 0600); err != nil {
 		t.Fatal(err)
@@ -39,7 +39,7 @@ func TestExternalNativeCompatibility05010(t *testing.T) {
 		t.Fatal(err)
 	}
 	if changed == hash {
-		t.Fatal("tampering went unnoticed")
+		t.Fatal("подмена осталась незамеченной")
 	}
 	link := filepath.Join(filepath.Dir(path), "link.so")
 	if err = os.Symlink(path, link); err == nil {
@@ -48,13 +48,13 @@ func TestExternalNativeCompatibility05010(t *testing.T) {
 		}
 	}
 	if !strings.HasPrefix(hash, "0") && hash == changed {
-		t.Fatal("hash collision")
+		t.Fatal("коллизия хешей")
 	}
 }
 
 func TestSignedExternalModulePolicy05010(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Linux-only external native policy")
+		t.Skip("политика внешних нативных компонентов доступна только в Linux")
 	}
 	root, key, private := compatFixture0502(t)
 	path := filepath.Join(t.TempDir(), "recording-overlay.so")
@@ -74,13 +74,13 @@ func TestSignedExternalModulePolicy05010(t *testing.T) {
 		return guardCompatValidateLaunch0502(root, policy.ProjectID, policy.Minecraft, policy.Loader, nil, nil)
 	}
 	if err := launch(); err != nil {
-		t.Fatalf("signed overlay refused: %v", err)
+		t.Fatalf("подписанное наложение отклонено: %v", err)
 	}
 	if err := os.WriteFile(path, []byte("changed"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := launch(); err == nil || !strings.Contains(err.Error(), "changed") {
-		t.Fatalf("modified overlay allowed: %v", err)
+		t.Fatalf("разрешено изменённое наложение: %v", err)
 	}
 	if err := os.WriteFile(path, []byte("an exact external module"), 0600); err != nil {
 		t.Fatal(err)
@@ -91,6 +91,6 @@ func TestSignedExternalModulePolicy05010(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := launch(); err == nil || !strings.Contains(err.Error(), "revoked") {
-		t.Fatalf("revoked overlay allowed: %v", err)
+		t.Fatalf("разрешено отозванное наложение: %v", err)
 	}
 }

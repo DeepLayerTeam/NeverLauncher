@@ -39,16 +39,16 @@ func TestLoaderGASupport0180ExactCertifiedSurface(t *testing.T) {
 		t.Fatalf("GA support entries=%d want=163", len(loaderGASupportEntries0180()))
 	}
 	if len(loaderGASupportSHA2560180()) != 64 {
-		t.Fatalf("invalid GA support digest %q", loaderGASupportSHA2560180())
+		t.Fatalf("недопустимый хеш поддержки GA %q", loaderGASupportSHA2560180())
 	}
 }
 
 func TestLoaderGASupport0180RejectsJavaDrift(t *testing.T) {
 	if _, err := enforceLoaderGASupport0180("forge", "1.7.10", 17); err == nil || !strings.Contains(err.Error(), "requires Java 8") {
-		t.Fatalf("wrong Java must fail closed, got %v", err)
+		t.Fatalf("неподходящая Java должна блокироваться, получено: %v", err)
 	}
 	if _, err := enforceLoaderGASupport0180("neoforge", "26.3", 25); err == nil || !strings.Contains(err.Error(), "outside the certified GA support surface") {
-		t.Fatalf("uncertified Minecraft line must fail closed, got %v", err)
+		t.Fatalf("несертифицированная версия Minecraft должна блокироваться, получено: %v", err)
 	}
 }
 
@@ -58,14 +58,14 @@ func TestLoaderGA0180ProductionParsersEnableRuntimeGuard(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !meta.EnforceGASupport {
-		t.Fatal("Fabric production parser must enable GA support guard")
+		t.Fatal("рабочий парсер Fabric должен включать проверку поддержки GA")
 	}
 	forge, err := parseForgeMaterializeOptions("forge", []string{"--minecraft", "1.12.2"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !forge.EnforceGASupport {
-		t.Fatal("Forge production parser must enable GA support guard")
+		t.Fatal("рабочий парсер Forge должен включать проверку поддержки GA")
 	}
 }
 
@@ -74,12 +74,12 @@ func TestLoaderGA0180ProductionParsersRejectUnsupportedConcreteVersionBeforeInst
 	version = "0.18.0"
 	defer func() { version = old }()
 	if _, err := parseLoaderMaterializeOptions("fabric", []string{"--minecraft", "1.13.2"}); err == nil {
-		t.Fatal("Fabric GA parser must reject unsupported concrete version before upstream access")
+		t.Fatal("парсер Fabric GA должен отклонять неподдерживаемую версию до обращения к внешнему источнику")
 	}
 	if _, err := parseForgeMaterializeOptions("forge", []string{"--minecraft", "1.20.5"}); err == nil {
-		t.Fatal("Forge GA parser must reject uncertified gap before installer access")
+		t.Fatal("парсер Forge GA должен отклонять несертифицированный диапазон до запуска установщика")
 	}
 	if _, err := parseForgeMaterializeOptions("neoforge", []string{"--minecraft", "26.3"}); err == nil {
-		t.Fatal("NeoForge GA parser must reject uncertified future line before installer access")
+		t.Fatal("парсер NeoForge GA должен отклонять несертифицированную будущую ветку до запуска установщика")
 	}
 }

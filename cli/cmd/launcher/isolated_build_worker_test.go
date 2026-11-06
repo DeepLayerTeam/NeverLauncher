@@ -15,7 +15,7 @@ import (
 
 func TestProcessorWorker0273ExecutesOutsideCLIWithSanitizedEnvAndLog(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX fake-Java fixture")
+		t.Skip("тестовая имитация Java для POSIX")
 	}
 	dir := t.TempDir()
 	java := filepath.Join(dir, "java")
@@ -97,7 +97,7 @@ func TestProcessorWorker0273RefusesOversizedOrUntrustedRequest(t *testing.T) {
 		t.Log("Слишком большой запрос отклоняется на уровне транспорта")
 	}
 	if len(tooBig.Args) <= 4096 {
-		t.Fatal("invalid fixture")
+		t.Fatal("некорректный тестовый стенд")
 	}
 }
 
@@ -214,7 +214,7 @@ func TestForgeProcessorRecovery0273QuarantinesCorruptOutputAndChangedInputs(t *t
 
 func TestForgeProcessorRecovery0273RejectsSymlinkOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("requires symlinks")
+		t.Skip("требуются символические ссылки")
 	}
 	root := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "external.jar")
@@ -234,10 +234,10 @@ func TestForgeProcessorRecovery0273RejectsSymlinkOutput(t *testing.T) {
 
 func TestProcessorWorker0273StrictSandboxFailsClosedWhenUnsupported(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Linux bubblewrap availability contract")
+		t.Skip("проверка доступности bubblewrap в Linux")
 	}
 	if _, err := exec.LookPath("bwrap"); err == nil {
-		t.Skip("bubblewrap present: needs system-supported namespace integration to certify")
+		t.Skip("bubblewrap установлен; для сертификации требуется системная поддержка пространств имён")
 	}
 	root := t.TempDir()
 	java := filepath.Join(root, "java")

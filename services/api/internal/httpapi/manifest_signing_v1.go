@@ -20,7 +20,7 @@ func (s Server) manifestSigningPrivateKey() (ed25519.PrivateKey, error) {
 		if strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod") {
 			return nil, errors.New("LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY обязателен для production publish")
 		}
-		dev := sha256.Sum256([]byte("Launcher development signing key - never use in production"))
+		dev := sha256.Sum256([]byte("Ключ подписи Launcher для разработки — запрещено использовать в рабочей среде"))
 		seedHex = hex.EncodeToString(dev[:])
 	}
 	seed, err := hex.DecodeString(seedHex)

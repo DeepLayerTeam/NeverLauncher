@@ -59,29 +59,29 @@ func TestManualGates0276LocalInstallAndExportRequiresExactGrants(t *testing.T) {
 		t.Fatal(err)
 	}
 	if receipt.Status != "complete" || len(receipt.Imported) != 2 {
-		t.Fatalf("invalid receipt %+v", receipt)
+		t.Fatalf("недопустимая квитанция %+v", receipt)
 	}
 	if receipt.Imported[0].SHA256 == "" {
-		t.Fatal("hash absent")
+		t.Fatal("хеш отсутствует")
 	}
 	report, _, err := evaluatePublishedArtifacts0276(dir, "")
 	if err != nil || report.Status != "blocked" || len(report.Missing) != 1 || report.Missing[0].Code != "permissions_unavailable" {
-		t.Fatalf("default must block release: %+v %v", report, err)
+		t.Fatalf("режим по умолчанию должен блокировать выпуск: %+v %v", report, err)
 	}
 	policy := permissionsFor0276(t, pack, receipt.Imported[:1])
 	report, _, err = evaluatePublishedArtifacts0276(dir, policy)
 	if err != nil || report.Status != "blocked" || len(report.Missing) != 1 || report.Missing[0].Code != "redistribution_not_authorized" {
-		t.Fatalf("missing file permission must block: %+v %v", report, err)
+		t.Fatalf("отсутствие разрешения на файл должно блокировать операцию: %+v %v", report, err)
 	}
 	policy = permissionsFor0276(t, pack, receipt.Imported)
 	report, _, err = evaluatePublishedArtifacts0276(dir, policy)
 	if err != nil || report.Status != "ready" || report.Checked != 2 || report.Authorized != 2 {
-		t.Fatalf("unexpected pass %+v %v", report, err)
+		t.Fatalf("неожиданное успешное прохождение: %+v %v", report, err)
 	}
 	export := filepath.Join(t.TempDir(), "artifacts.zip")
 	report, err = exportModpackArtifacts0276(dir, policy, export)
 	if err != nil || report.Status != "ready" {
-		t.Fatalf("export failed: %+v %v", report, err)
+		t.Fatalf("сбой экспорта: %+v %v", report, err)
 	}
 	zr, e := zip.OpenReader(export)
 	if e != nil {
@@ -93,19 +93,19 @@ func TestManualGates0276LocalInstallAndExportRequiresExactGrants(t *testing.T) {
 		entries[f.Name] = true
 	}
 	if !entries["files/mods/test.jar"] || !entries["files/config/settings.txt"] || !entries["artifact-bundle.json"] || len(entries) != 3 {
-		t.Fatalf("not an artifact-only export: %+v", entries)
+		t.Fatalf("экспорт содержит не только артефакты: %+v", entries)
 	}
 	if _, e = os.Stat(filepath.Join(dir, "versions")); e != nil {
-		t.Fatal("should not modify installed client", e)
+		t.Fatal("установленный клиент не должен изменяться", e)
 	}
 	if _, e = exportModpackArtifacts0276(dir, policy, export); e == nil {
-		t.Fatal("must not overwrite existing export")
+		t.Fatal("существующий экспорт нельзя перезаписывать")
 	}
 	if e = os.WriteFile(filepath.Join(dir, "mods/test.jar"), []byte("tampered"), 0600); e != nil {
 		t.Fatal(e)
 	}
 	if _, _, e = evaluatePublishedArtifacts0276(dir, policy); e == nil {
-		t.Fatal("tampered lock must prevent export")
+		t.Fatal("изменённая блокировка должна препятствовать экспорту")
 	}
 }
 func TestManualGates0276FailClosedDuringImportAndVerifiedManual(t *testing.T) {
@@ -124,20 +124,20 @@ func TestManualGates0276FailClosedDuringImportAndVerifiedManual(t *testing.T) {
 	target := filepath.Join(root, "client")
 	report, err := importModpackWithGates0276(context.Background(), pack, target, manual, "", "", false, fixtureModpackOptions0275(srv), "", "redistributable")
 	if err == nil || report.Status != "blocked" || len(report.Missing) != 1 || report.Missing[0].Code != "permissions_unavailable" {
-		t.Fatalf("redistributable import must block: %+v %v", report, err)
+		t.Fatalf("импорт предназначенного для распространения пакета должен блокироваться: %+v %v", report, err)
 	}
 	if _, e := os.Stat(target); !os.IsNotExist(e) {
-		t.Fatal("partial output published")
+		t.Fatal("опубликован неполный результат")
 	}
 	bytesHash := sha256.Sum256(mod)
 	config := sha256.Sum256([]byte("local config"))
 	policy := permissionsFor0276(t, pack, []modpackFile0275{{Path: "mods/test.jar", SHA256: hex.EncodeToString(bytesHash[:])}, {Path: "config/settings.txt", SHA256: hex.EncodeToString(config[:])}})
 	report, err = importModpackWithGates0276(context.Background(), pack, target, manual, "", "", false, fixtureModpackOptions0275(srv), policy, "redistributable")
 	if err != nil || report.Status != "complete" {
-		t.Fatalf("verified manual import failed: %+v %v", report, err)
+		t.Fatalf("сбой проверенного ручного импорта: %+v %v", report, err)
 	}
 	if len(report.Imported) != 2 {
-		t.Fatal("missing outputs")
+		t.Fatal("отсутствуют выходные файлы")
 	}
 	var found bool
 	for _, f := range report.Imported {
@@ -146,11 +146,11 @@ func TestManualGates0276FailClosedDuringImportAndVerifiedManual(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("missing manual provenance: %+v", report.Imported)
+		t.Fatalf("отсутствует подтверждение происхождения ручного импорта: %+v", report.Imported)
 	}
 	gate, _, err := evaluatePublishedArtifacts0276(target, policy)
 	if err != nil || gate.Status != "ready" {
-		t.Fatalf("gate failed: %+v %v", gate, err)
+		t.Fatalf("проверка допуска завершилась ошибкой: %+v %v", gate, err)
 	}
 }
 func TestManualGates0276StructuredMissingAndSymlink(t *testing.T) {
@@ -162,11 +162,11 @@ func TestManualGates0276StructuredMissingAndSymlink(t *testing.T) {
 	target := filepath.Join(dir, "client")
 	report, err := importModpack0275(context.Background(), pack, target, "", "", "", false, fixtureModpackOptions0275(srv))
 	if err == nil || report.Status != "blocked" || len(report.Missing) != 1 {
-		t.Fatalf("missing file must block: %+v %v", report, err)
+		t.Fatalf("отсутствующий файл должен блокировать операцию: %+v %v", report, err)
 	}
 	missing := report.Missing[0]
 	if missing.Code != "manual_required" || !missing.CanManual || missing.ExpectedSHA1 == "" || missing.ExpectedSHA512 == "" || missing.ExpectedSize != int64(len(mod)) {
-		t.Fatalf("missing action not actionable: %+v", missing)
+		t.Fatalf("для отсутствующего действия нельзя выполнить операцию: %+v", missing)
 	}
 	root := filepath.Join(dir, "manual")
 	if e := os.MkdirAll(root, 0700); e != nil {
@@ -178,10 +178,10 @@ func TestManualGates0276StructuredMissingAndSymlink(t *testing.T) {
 	}
 	link := filepath.Join(root, "test.jar")
 	if e := os.Symlink(outside, link); e != nil {
-		t.Skipf("symlink unavailable: %v", e)
+		t.Skipf("символическая ссылка недоступна: %v", e)
 	}
 	if _, e := secureManualSource0276(root, "test.jar"); e == nil {
-		t.Fatal("symlink was followed")
+		t.Fatal("выполнен переход по символической ссылке")
 	}
 }
 func TestManualGates0276RejectPolicyMutationAndInvalidInput(t *testing.T) {
@@ -204,7 +204,7 @@ func TestManualGates0276RejectPolicyMutationAndInvalidInput(t *testing.T) {
 				t.Fatal(e)
 			}
 			if _, e := readArtifactPermissions0276(file); e == nil {
-				t.Fatal("accepted unsafe grant")
+				t.Fatal("принято небезопасное разрешение")
 			}
 		})
 	}
@@ -213,11 +213,11 @@ func TestManualGates0276RejectPolicyMutationAndInvalidInput(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := readArtifactPermissions0276(file); e == nil {
-		t.Fatal("accepted trailing JSON")
+		t.Fatal("приняты дополнительные данные после JSON")
 	}
 	r := verifyPermissionGrants0276(strings.Repeat("c", 64), "", nil, p)
 	if r.Status != "blocked" || len(r.Missing) != 1 || r.Missing[0].Code != "pack_identity_mismatch" {
-		t.Fatalf("accepted wrong pack: %+v", r)
+		t.Fatalf("принят неверный пакет: %+v", r)
 	}
 }
 
@@ -236,7 +236,7 @@ func TestManualGates0276RealCLICommands(t *testing.T) {
 	// При отсутствии прав завершайте процесс с ненулевым кодом, но сохраняйте машиночитаемый отчёт.
 	e = handleRuntimeFactory0271([]string{"verify-publication", "--client-dir", clientDir, "--output", rightsReport})
 	if e == nil {
-		t.Fatal("CLI gate returned success without rights")
+		t.Fatal("CLI сообщил об успешной проверке при отсутствии прав")
 	}
 	b, e := os.ReadFile(rightsReport)
 	if e != nil {
@@ -244,7 +244,7 @@ func TestManualGates0276RealCLICommands(t *testing.T) {
 	}
 	var denied permissionGateReport0276
 	if e = json.Unmarshal(b, &denied); e != nil || denied.Status != "blocked" {
-		t.Fatalf("missing blocked CLI report: %+v %v", denied, e)
+		t.Fatalf("отсутствует отчёт CLI о блокировке: %+v %v", denied, e)
 	}
 	policy := permissionsFor0276(t, pack, receipt.Imported)
 	if e = handleRuntimeFactory0271([]string{"verify-publication", "--client-dir", clientDir, "--permissions-file", policy, "--output", rightsReport}); e != nil {
@@ -256,13 +256,13 @@ func TestManualGates0276RealCLICommands(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = json.Unmarshal(b, &ready); e != nil || ready.Status != "ready" {
-		t.Fatalf("gate not ready: %+v %v", ready, e)
+		t.Fatalf("проверка допуска ещё не готова: %+v %v", ready, e)
 	}
 	export := filepath.Join(root, "export.zip")
 	if e = handleRuntimeFactory0271([]string{"export-modpack-artifacts", "--client-dir", clientDir, "--permissions-file", policy, "--file", export, "--output", rightsReport}); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = os.Stat(export); e != nil {
-		t.Fatal("CLI did not export artifact ZIP", e)
+		t.Fatal("CLI не экспортировал ZIP с артефактами", e)
 	}
 }

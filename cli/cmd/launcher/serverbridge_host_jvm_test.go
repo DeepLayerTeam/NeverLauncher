@@ -13,7 +13,7 @@ import (
 func hostJavaFixture0283(t *testing.T) (string, string) {
 	t.Helper()
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX Java fixture")
+		t.Skip("тестовая Java для POSIX")
 	}
 	root := t.TempDir()
 	java := writeFakeJava01910(t, root, `printf '%s\n' "$@" > "${PWD}/actual-launch-argv.txt"
@@ -44,7 +44,7 @@ func TestJVM0283MainClassRunsApprovedLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(config.Classpath, []string{jar, filepath.Join(root, "libs")}) {
-		t.Fatalf("canonical classpath: %v", config.Classpath)
+		t.Fatalf("канонический classpath: %v", config.Classpath)
 	}
 	expected := []string{"-Xmx512M", "-cp", strings.Join(config.Classpath, string(os.PathListSeparator)), "org.example.Server", "nogui"}
 	cmd, err := serverBridgeHostCommand01910(config)
@@ -62,7 +62,7 @@ func TestJVM0283MainClassRunsApprovedLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.TrimSpace(string(actual)) != strings.Join(expected, "\n") {
-		t.Fatalf("actual argv: %s", actual)
+		t.Fatalf("фактические аргументы запуска: %s", actual)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestJVM0283ModuleLaunchAndValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if config.LaunchMode != "java-module" {
-		t.Fatalf("unexpected mode: %s", config.LaunchMode)
+		t.Fatalf("неожиданный режим: %s", config.LaunchMode)
 	}
 	command, err := serverBridgeHostCommand01910(config)
 	if err != nil {
@@ -112,7 +112,7 @@ func TestJVM0283HostRejectsExecutionAndInjection(t *testing.T) {
 		})
 	}
 	if err := configureServerBridgeHost01910(append(append([]string{}, base...), "--server-arg", "@untrusted.txt")); err == nil {
-		t.Fatal("accepted game argfile")
+		t.Fatal("принят файл аргументов игры, который должен был быть отклонён")
 	}
 	custom := filepath.Join(root, "arbitrary-executable")
 	if err := os.WriteFile(custom, []byte("#!/bin/sh\necho 'openjdk version \"21\"' >&2\n"), 0755); err != nil {
@@ -120,10 +120,10 @@ func TestJVM0283HostRejectsExecutionAndInjection(t *testing.T) {
 	}
 	other := []string{"--server-root", root, "--platform", "paper", "--server-jar", "paper.jar", "--java", custom}
 	if err := configureServerBridgeHost01910(other); err == nil {
-		t.Fatal("unapproved executable accepted")
+		t.Fatal("принят неразрешённый исполняемый файл")
 	}
 	if err := configureServerBridgeHost01910(append(other, "--allow-custom-java-executable")); err != nil {
-		t.Fatalf("explicit host opt-in: %v", err)
+		t.Fatalf("явное согласие узла: %v", err)
 	}
 }
 
@@ -134,11 +134,11 @@ func TestJVM0283RejectsEscapingAndChangedArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(filepath.Join(outside, "escape.jar"), filepath.Join(root, "escape.jar")); err != nil {
-		t.Skipf("symlink unsupported: %v", err)
+		t.Skipf("символические ссылки не поддерживаются: %v", err)
 	}
 	base := append(hostTestArgs0283(root, java), "--launch-mode", "java-main-class", "--main-class", "org.example.Main")
 	if err := configureServerBridgeHost01910(append(append([]string{}, base...), "--classpath-entry", "escape.jar")); err == nil {
-		t.Fatal("outside symlink accepted")
+		t.Fatal("принята символическая ссылка за пределы разрешённого каталога")
 	}
 	if err := os.WriteFile(filepath.Join(root, "good.jar"), []byte("inside"), 0600); err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func TestJVM0283RejectsEscapingAndChangedArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := serverBridgeHostCommand01910(config); err == nil {
-		t.Fatal("artifact changed after configure but launch accepted")
+		t.Fatal("артефакт изменился после настройки, но запуск был разрешён")
 	}
 }
 
@@ -179,7 +179,7 @@ func TestJVM0283ClasspathWildcardAndPathRejections(t *testing.T) {
 	}
 	for _, bad := range []string{"libs/*.jar", "../libs/*", "libs/*/nested", ""} {
 		if err := configureServerBridgeHost01910(append(append([]string{}, base...), "--classpath-entry", bad)); err == nil {
-			t.Errorf("accepted invalid classpath %q", bad)
+			t.Errorf("принят некорректный classpath %q", bad)
 		}
 	}
 }
@@ -187,11 +187,11 @@ func TestJVM0283ClasspathWildcardAndPathRejections(t *testing.T) {
 // Проверяет настоящую JVM, а не только фикстуру аргументов exec.
 func TestJVM0283RealJavaClasspathAndModule(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fixture uses Unix filesystem layout")
+		t.Skip("тестовый стенд использует структуру файловой системы Unix")
 	}
 	java, err := exec.LookPath("java")
 	if err != nil {
-		t.Skip("Java runtime unavailable")
+		t.Skip("среда выполнения Java недоступна")
 	}
 	javac, err := exec.LookPath("javac")
 	if err != nil {
@@ -199,7 +199,7 @@ func TestJVM0283RealJavaClasspathAndModule(t *testing.T) {
 	}
 	version, err := javaMajorVersion(java)
 	if err != nil || version < 9 {
-		t.Skip("Java 9+ required for module test")
+		t.Skip("для проверки модулей требуется Java 9 или новее")
 	}
 	for _, module := range []bool{false, true} {
 		name := "classpath"
@@ -229,7 +229,7 @@ func TestJVM0283RealJavaClasspathAndModule(t *testing.T) {
 				argv = append(argv, descriptor)
 			}
 			if out, err := exec.Command(javac, argv...).CombinedOutput(); err != nil {
-				t.Fatalf("compile Java fixture: %v: %s", err, out)
+				t.Fatalf("сбой компиляции тестового Java-кода: %v: %s", err, out)
 			}
 			args := []string{"--server-root", root, "--platform", "paper", "--java", java, "--restart-policy", "never", "--server-arg", "E2E"}
 			if module {
@@ -278,13 +278,13 @@ func TestJVM0283UserJVMArgfileCannotInjectAgent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := serverBridgeHostCommand01910(config); err == nil {
-		t.Fatal("malicious user_jvm_args.txt accepted")
+		t.Fatal("принят вредоносный файл user_jvm_args.txt")
 	}
 }
 
 func TestJVM0283RestartRechecksArtifacts(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("fixture replaces symlink from POSIX shell")
+		t.Skip("тестовый стенд заменяет символическую ссылку через оболочку POSIX")
 	}
 	root := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "malicious.jar")
@@ -302,13 +302,13 @@ func TestJVM0283RestartRechecksArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runServerBridgeHost01910(root, false); err == nil {
-		t.Fatal("restarted after unsafe artifact swap")
+		t.Fatal("выполнен перезапуск после небезопасной подмены артефакта")
 	}
 	state, err := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 	if err != nil {
 		t.Fatal(err)
 	}
 	if state.Status != "failed" || !strings.Contains(state.LastError, "JAR") {
-		t.Fatalf("expected preflight failure before relaunch: %+v", state)
+		t.Fatalf("ожидалась ошибка предварительной проверки перед перезапуском: %+v", state)
 	}
 }

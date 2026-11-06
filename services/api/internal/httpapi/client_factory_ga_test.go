@@ -58,7 +58,7 @@ func TestFactoryPackageVerified0280(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(filepath.Join(client, ".launcher", "install-plan.json"), filepath.Join(client, "mod.jar")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
+		t.Skipf("символические ссылки недоступны: %v", err)
 	}
 	if _, err := factoryPackageVerified0280(root, client, plan); err == nil {
 		t.Fatal("export accepted a symlink")

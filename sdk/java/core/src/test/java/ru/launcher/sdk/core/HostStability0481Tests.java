@@ -16,7 +16,7 @@ public final class HostStability0481Tests {
     private static final ExtensionManifest MANIFEST=ExtensionManifest.parse("{\"schemaVersion\":\"2.0\",\"id\":\"org.stability\",\"name\":\"Stability\",\"version\":\"1.0.0\",\"publisher\":\"test\",\"api\":\"1.0\",\"targets\":[{\"kind\":\"backend\",\"entrypoint\":\"backend/app.jar\"}]}");
     private static void expect(Class<? extends Throwable> type,Throwing action)throws Exception {
         checks++;
-        try{action.run();throw new AssertionError("expected "+type.getSimpleName());}
+        try{action.run();throw new AssertionError("ожидалось исключение "+type.getSimpleName());}
         catch(Throwable failure){if(!type.isInstance(failure))throw new AssertionError("неожиданное исключение",failure);}
     }
     private interface Throwing{void run()throws Exception;}
@@ -172,6 +172,6 @@ public final class HostStability0481Tests {
     }
     public static void main(String[] args)throws Exception{
         concurrentStopOfHungStart();concurrentStopWaitsForCleanup();timeoutOfHungStop();heartbeatAndBoundedRPC();realRpcDeadline();
-        System.out.println("PASS: "+checks+" Java SDK/host 0.48.1 concurrency, heartbeat, RPC regression checks");
+        System.out.println("PASS: "+checks+" регрессионных проверок параллелизма, сигналов работоспособности и RPC Java SDK/host 0.48.1");
     }
 }

@@ -38,9 +38,9 @@ public final class LiveAcceptance {
                                   OutputStream.nullOutputStream(),1024,"");
                 throw new IOException("небезопасный внешний источник ошибочно принят");
             } catch(IllegalArgumentException expected) { }
-            System.out.println("PASS sdk=java checks=3 binaryBytes="+size+" binarySha256="+hash);
+            System.out.println("PASS sdk=java проверок=3 binaryBytes="+size+" binarySha256="+hash);
         } catch(Exception ex) {
-            System.err.println("BLOCKED SDK Java: "+ex.getClass().getSimpleName());
+            System.err.println("Проверка Java SDK заблокирована: "+ex.getClass().getSimpleName());
             System.exit(2);
         }
     }

@@ -57,7 +57,7 @@ func TestGuardLoader0504RejectSymlinkAndNonJAR(t *testing.T) {
 	a := artifact0502(t, root, "loader-library", "libraries/real.jar", "real")
 	p.Artifacts = []guardCompatArtifact0502{{Kind: "loader-library", Path: "libraries/link.jar", SHA256: a.SHA256}}
 	if err := os.Symlink("real.jar", filepath.Join(root, "libraries", "link.jar")); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
+		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	if _, err := guardLoaderConfig0504(root, p); err == nil {
 		t.Fatal("symlinked loader accepted")

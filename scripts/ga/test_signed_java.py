@@ -33,7 +33,7 @@ def smoke(cli: Path):
             bad=subprocess.run([str(cli),'extension','verify',str(altered),'--public-key',str(pub)],capture_output=True)
             if bad.returncode==0:
                 raise RuntimeError('modified signed archive accepted')
-        print('2 signed runnable example packages verified; wrong-key and tampering rejected')
+        print('Проверены два подписанных исполняемых примера пакетов; неверный ключ и подмена отклонены')
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

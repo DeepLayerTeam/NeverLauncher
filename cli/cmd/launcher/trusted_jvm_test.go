@@ -15,7 +15,7 @@ import (
 
 func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	if _, err := exec.LookPath("java"); err != nil {
-		t.Skip("JDK unavailable")
+		t.Skip("JDK недоступен")
 	}
 	if _, err := exec.LookPath("javac"); err != nil {
 		t.Skip("Компилятор javac недоступен")

@@ -29,7 +29,7 @@ public final class BridgeLiveTelemetry0419Test {
         require("healthy".equals(fresh.tickHealth()) && fresh.playersOnline() == 8, "актуальные наблюдаемые такты");
         require(fresh.processId().equals(initial.processId()), "тот же наблюдаемый процесс ОС");
         require(fresh.toJson().contains("\"processId\":" + ProcessHandle.current().pid()), "подписанный JSON содержит идентификатор процесса");
-        System.out.println("PASS 0419 Java process telemetry / stale / future / JSON");
+        System.out.println("УСПЕШНО 0419: телеметрия процесса Java, устаревшие и будущие события, JSON");
     }
     private static void require(boolean value, String assertion) {
         if (!value) throw new AssertionError(assertion);

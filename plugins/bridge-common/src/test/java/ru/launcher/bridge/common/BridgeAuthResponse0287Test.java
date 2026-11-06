@@ -48,6 +48,6 @@ public final class BridgeAuthResponse0287Test {
         if (!BridgeAuthResponse0287.matchesAuthenticatedUUID(UUID, UUID.replace("-", ""))) throw new AssertionError("действительный подтверждённый UUID отклонён");
         checks++;
         if (BridgeAuthResponse0287.matchesAuthenticatedUUID("", UUID)) throw new AssertionError("неизвестный подтверждённый UUID ошибочно принят");
-        System.out.println("BridgeAuthResponse0287: " + checks + " passed");
+        System.out.println("BridgeAuthResponse0287: " + checks + " проверок пройдено");
     }
 }

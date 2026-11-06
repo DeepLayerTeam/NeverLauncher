@@ -42,6 +42,6 @@ public final class BridgeFailoverRecovery0515Test {
         check(recovered.ackSequence() == 1 && recovered.nextBatch(64).isEmpty(), "настоящее подтверждение сдвигает контрольную точку");
         BridgeEventJournal reloaded = new BridgeEventJournal(journal, "server", runtime, node);
         check(reloaded.ackSequence() == 1 && reloaded.nextBatch(64).isEmpty(), "подтверждение сохраняется после перезапуска");
-        System.out.println("BridgeFailoverRecovery0515: " + assertions + " assertions passed");
+        System.out.println("BridgeFailoverRecovery0515: " + assertions + " проверок пройдено");
     }
 }

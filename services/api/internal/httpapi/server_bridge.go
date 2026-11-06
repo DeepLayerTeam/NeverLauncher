@@ -340,7 +340,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	continuousRequired, err := s.continuousGuardRequiredForJoin01810(claims.Sub, trust.TrustedDeviceID)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "Continuous Guard Attestation v2 policy unavailable: "+err.Error())
+		writeError(w, http.StatusPreconditionFailed, "Политика непрерывной аттестации Guard v2 недоступна: "+err.Error())
 		return
 	}
 	var verifiedGuardTicket model.DeviceChallenge
@@ -351,7 +351,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	if continuousRequired {
 		continuousTicket, err := s.consumeGuardContinuousJoinTicket01810(r, claims, req.ContinuousGuardTicket)
 		if err != nil {
-			writeError(w, http.StatusPreconditionFailed, "Continuous Guard Attestation v2 required: "+err.Error())
+			writeError(w, http.StatusPreconditionFailed, "Требуется непрерывная аттестация Guard v2: "+err.Error())
 			return
 		}
 		var bindErr error
@@ -369,7 +369,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	if planPolicyRequired02412() {
 		if err := s.verifyPlanForJoin02412(r, claims, req, verifiedGuardTicket); err != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("verified-plan-denied"), Actor: claims.Sub, Action: "serverbridge:plan:denied", Target: req.ServerID + ":" + err.Error(), CreatedAt: time.Now().UTC()})
-			writeError(w, http.StatusPreconditionFailed, "verified component plan denied: "+err.Error())
+			writeError(w, http.StatusPreconditionFailed, "Проверенный план компонентов отклонён: "+err.Error())
 			return
 		}
 	}
@@ -392,12 +392,12 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		var profileErr error
 		canonical, profileErr = s.ensureMinecraftProfile119(user)
 		if profileErr != nil {
-			writeError(w, http.StatusServiceUnavailable, "Minecraft profile unavailable")
+			writeError(w, http.StatusServiceUnavailable, "Профиль Minecraft недоступен")
 			return
 		}
 	}
 	if minecraftSession.ProfileUUID != "" && !strings.EqualFold(minecraftSession.ProfileUUID, canonical.UUID) {
-		writeError(w, http.StatusPreconditionFailed, "Minecraft session profile mismatch")
+		writeError(w, http.StatusPreconditionFailed, "Профиль сеанса Minecraft не совпадает с выбранным")
 		return
 	}
 	join, err := s.State.ServerBridge.createJoin(user, canonical, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, minecraftSession.ID, req)
@@ -422,7 +422,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.flushPersistenceState950("server-bridge-join-created")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("join-created"), Actor: user.Email, Action: "serverbridge:session:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed negotiated ServerBridge request", "Повтор запроса, просроченный билет или сменившаяся учётная запись узла приводят к отказу"}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"Сервер использует разрешение ровно один раз в подписанном запросе ServerBridge с согласованными возможностями", "Повтор запроса, просроченный билет или сменившаяся учётная запись узла приводят к отказу"}}})
 }
 
 func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
@@ -453,7 +453,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	bridgeIntegrity := s.evaluateRegisteredBridgeIntegrity0135(server)
 	if !bridgeIntegrity.Allowed {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-bridge-integrity-denied"), Actor: server.ID, Action: "serverbridge:has-joined:bridge-integrity-denied", Target: username + ":" + bridgeIntegrity.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusPreconditionFailed, "server bridge integrity denied join: "+bridgeIntegrity.Reason)
+		writeError(w, http.StatusPreconditionFailed, "Проверка целостности ServerBridge отклонила подключение: "+bridgeIntegrity.Reason)
 		return
 	}
 	join, ok := s.State.ServerBridge.hasJoined(username, serverID)
@@ -477,7 +477,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 			_ = s.flushPersistenceState950("server-bridge-trust-invalidate")
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-trust-denied"), Actor: server.ID, Action: "serverbridge:has-joined:trust-denied", Target: join.UUID + ":" + trust.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusForbidden, "trust policy denied join: "+trust.Reason)
+		writeError(w, http.StatusForbidden, "Политика доверия отклонила подключение: "+trust.Reason)
 		return
 	}
 	_, integrity := s.evaluateServerBridgeJoinIntegrity0135(join)
@@ -487,7 +487,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 			_ = s.flushPersistenceState950("server-bridge-integrity-invalidate")
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-integrity-denied"), Actor: server.ID, Action: "serverbridge:has-joined:integrity-denied", Target: join.UUID + ":" + integrity.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusForbidden, "integrity policy denied join: "+integrity.Reason)
+		writeError(w, http.StatusForbidden, "Политика целостности отклонила подключение: "+integrity.Reason)
 		return
 	}
 	redemption, redemptionErr := bridgeJoinRedemption0143(r, server)
@@ -616,10 +616,10 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "Автоматическое обнаружение узлов и сред выполнения", "Идентификатор JVM, подтверждённый подписью Ed25519", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "revisioned local texture identity and URL assignments (PNG service pending)", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "Подтверждения передачи между источником и целью с привязкой к Runtime", "maintenance/drain/stale admission blocking"}
+		base["implemented"] = []string{"PostgreSQL — основной источник данных", "Протокол ServerBridge 3 GA v3 зафиксирован; совместимость с v2 сохраняется на период вывода из эксплуатации", "согласование возможностей", "флаги возможностей протокола", "Автоматическое обнаружение узлов и сред выполнения", "Идентификатор JVM, подтверждённый подписью Ed25519", "обнаружение перезапуска или замены экземпляра Runtime", "запросы узлов с подписью Ed25519", "защита от повторов одноразовых значений в PostgreSQL", "атомарные одноразовые билеты подключения", "одноразовые билеты подключения с привязкой к личности", "атомарное сохранение подтверждений погашения билетов", "однократное погашение подключений Yggdrasil", "регистрация и ротация криптографической идентичности", "подключение сеанса игрока", "серверная проверка has-joined", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "проверка доверия к сеансу, устройству и рискам в реальном времени", "отзыв учётных данных при изменении эпохи привязки", "версионирование локальных текстур и назначений URL (сервис PNG ещё не готов)", "события аудита подключений", "упорядоченный поток подписанных серверных событий", "надёжный канал управления от Backend к ServerBridge", "RBAC/idempotent control commands", "управление консолью платформы по списку разрешённых команд", "транзакционный аудит команд управления", "состояние маршрутизации в реальном времени, подтверждённое Ed25519", "прокси-маршрутизация с учётом работоспособности и ёмкости", "Подтверждения передачи между источником и целью с привязкой к Runtime", "блокировка подключений при обслуживании, выводе из эксплуатации или устаревании данных"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
-		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop или игрок входит в систему и привязывает подтверждённое доверенное устройство", "Desktop отправляет запрос входа в сессию с проектом, профилем и каналом; Backend фиксирует привязку устройства", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend повторно проверяет родительский сеанс, устройство, эпоху привязки и политику рисков", "Backend возвращает метаданные профиля и текстур либо конкретную причину отказа в доверии", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
+		base["productFlow"] = []string{"узел создаёт локальный ключ Ed25519, а администратор регистрирует открытый ключ в PostgreSQL", "Desktop или игрок входит в систему и привязывает подтверждённое доверенное устройство", "Desktop отправляет запрос входа в сессию с проектом, профилем и каналом; Backend фиксирует привязку устройства", "серверный плагин подписывает запросы validate-join/has-joined локальным закрытым ключом Ed25519", "Backend повторно проверяет родительский сеанс, устройство, эпоху привязки и политику рисков", "Backend возвращает метаданные профиля и текстур либо конкретную причину отказа в доверии", "повторная привязка, отзыв и постоянный риск делают прежние игровые учётные данные недействительными"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags launcher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}

@@ -55,6 +55,6 @@ public final class PlatformControlReadback0416Test {
             check(tracker.await("Steve",session.toString(),25).status().equals("executed"),"завершение работы не подтверждено");
             check(!tracker.begin("Steve",session),"закрытый модуль отслеживания отклоняет запрос");
         } finally { pool.shutdownNow(); }
-        System.out.println("PlatformControlReadback0416Test: 19 assertions passed");
+        System.out.println("PlatformControlReadback0416Test: 19 проверок пройдено");
     }
 }

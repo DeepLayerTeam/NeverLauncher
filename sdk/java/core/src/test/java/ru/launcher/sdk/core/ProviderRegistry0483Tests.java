@@ -11,7 +11,7 @@ public final class ProviderRegistry0483Tests {
     private static void ok(boolean yes, String label) { assertions++; if(!yes) throw new AssertionError(label); }
     private static void fails(Class<? extends Throwable> kind, Checked action) throws Exception {
         assertions++;
-        try { action.run(); throw new AssertionError("expected " + kind.getName()); }
+        try { action.run(); throw new AssertionError("ожидалось исключение " + kind.getName()); }
         catch (Throwable failure) { if(!kind.isInstance(failure)) throw new AssertionError("неожиданное исключение SPI", failure); }
     }
     @FunctionalInterface interface Checked { void run() throws Exception; }
@@ -176,6 +176,6 @@ public final class ProviderRegistry0483Tests {
     public static void main(String[] args) throws Exception {
         switchingAndCompatibility(); failedActivationFailsClosed(); callDrainAndSwitch(); deadlineAndFailure(); lifecycleIntegration();
         concurrentShutdown(); failedExtensionStartCleansProvider(); recursiveSwitchRejected();
-        System.out.println("PASS: "+assertions+" real Java SPI registry, compatibility, lifecycle and concurrent shutdown checks");
+        System.out.println("PASS: "+assertions+" проверок реестра Java SPI, совместимости, жизненного цикла и параллельного завершения");
     }
 }

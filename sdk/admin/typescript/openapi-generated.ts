@@ -75,6 +75,6 @@ export const EXTENSIONS_API_OPERATIONS: Record<ExtensionsAPIOperationId, Extensi
   "put_admin_extensions_by_extensionId_secrets_by_secretName": { method: "PUT" as ExtensionsAPIOperation['method'], path: "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}" },
 };
 
-// Canonical API payloads use envelope/object schemas; these aliases remain generated and intentionally transport-only.
+// Канонические данные API используют схемы с оболочкой или объектом; эти псевдонимы остаются автоматически генерируемыми и предназначены только для передачи данных.
 export type ExtensionsAPIObject = Record<string, unknown>;
 export type ExtensionsAPIResponse<T = ExtensionsAPIObject> = { data?: T; error?: unknown } & ExtensionsAPIObject;

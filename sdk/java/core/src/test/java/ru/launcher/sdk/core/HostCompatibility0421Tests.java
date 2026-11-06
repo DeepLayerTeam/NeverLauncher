@@ -93,7 +93,7 @@ public final class HostCompatibility0421Tests {
         }
         try(var server=new FakeHost();var client=server.session()){
             server.hello=Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","i-42","heartbeatTimeoutSeconds",60,"capabilities",List.of("secret.get","secret.get"));
-            try{client.connect();throw new AssertionError("дублирующие разрешения ошибочно приняты");}catch(IOException ex){check(ex.getMessage().contains("capabilities"),"malformed negotiation fails");}
+            try{client.connect();throw new AssertionError("дублирующие разрешения ошибочно приняты");}catch(IOException ex){check(ex.getMessage().contains("capabilities"),"некорректное согласование должно завершаться отказом");}
         }
         try(var server=new FakeHost();var client=server.session()){
             server.hello=Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","i-42","heartbeatTimeoutSeconds",60,"capabilities",List.of("secret.get"),"eventProtocolVersion","2.0");
@@ -112,6 +112,6 @@ public final class HostCompatibility0421Tests {
     }
     public static void main(String[] args)throws Exception {
         successOldHost();requiredCapabilityMissing();rejectionAndMalformedHello();readyAcknowledgementAndPreconnectGuard();
-        System.out.println("PASS: "+assertions+" Java SDK/Host Protocol 0.42.0 <-> 0.42.1 compatibility checks");
+        System.out.println("PASS: "+assertions+" проверок совместимости протоколов Java SDK/Host 0.42.0 и 0.42.1");
     }
 }

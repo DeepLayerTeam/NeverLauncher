@@ -17,6 +17,6 @@ public final class BridgeControlResult0411Test {
         status("failed", BridgeControlResult.failed("dispatcher rejected command"));
         status("indeterminate", BridgeControlResult.indeterminate("agent crashed"));
         status("unsupported", BridgeControlResult.unsupported("capability unavailable"));
-        System.out.println("BridgeControlResult0411: 6 passed");
+        System.out.println("BridgeControlResult0411: 6 проверок пройдено");
     }
 }

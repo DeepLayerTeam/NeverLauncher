@@ -73,7 +73,7 @@ func extensionInit02010(args []string) error {
 	}
 	out := filepath.Clean(flagValue(args, "--out", "launcher-extension"))
 	id := strings.ToLower(strings.TrimSpace(flagValue(args, "--id", "ru.example.launcher.extension")))
-	name := strings.TrimSpace(flagValue(args, "--name", "Launcher extension"))
+	name := strings.TrimSpace(flagValue(args, "--name", "расширение Launcher"))
 	publisher := strings.TrimSpace(flagValue(args, "--publisher", "Example Publisher"))
 	if st, err := os.Stat(out); err == nil && st.IsDir() {
 		entries, _ := os.ReadDir(out)
@@ -192,7 +192,7 @@ func main() {
   if err != nil { panic(err) }
   defer callback.Close(context.Background())
   if _, err = client.Hello(ctx, callback.URL); err != nil { panic(err) }
-  _ = client.Log(ctx, "info", "extension started", map[string]any{"sdk":"0.21.0"})
+  _ = client.Log(ctx, "info", "расширение запущено", map[string]any{"sdk":"0.21.0"})
   go func(){ _ = client.HeartbeatLoop(ctx) }()
   ticker := time.NewTicker(30*time.Second); defer ticker.Stop()
   for { select { case <-ctx.Done(): return; case <-ticker.C: _, _ = client.Health(ctx) } }

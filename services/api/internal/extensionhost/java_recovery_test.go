@@ -181,7 +181,7 @@ func TestJavaAutoRecoveryAfterRuntimeRestored0422(t *testing.T) {
 	install = persistJavaInstall0422(t, host, install)
 	java, err := exec.LookPath("java")
 	if err != nil {
-		t.Skip("Java runtime unavailable")
+		t.Skip("среда выполнения Java недоступна")
 	}
 	wrapper := filepath.Join(t.TempDir(), "java-runtime")
 	writeWrapper := func() error { return os.WriteFile(wrapper, []byte("#!/bin/sh\nexec "+java+" \"$@\"\n"), 0700) }

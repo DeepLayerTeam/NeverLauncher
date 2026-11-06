@@ -504,7 +504,7 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 	install, err := s.lifecycleManager0204().Install(r.Context(), item, lifecycleScopeFromRequest0204(request.Scope, request.ScopeID))
 	if err != nil {
 		lower := strings.ToLower(err.Error())
-		if strings.Contains(lower, ".nlext") || strings.Contains(lower, "signature") || strings.Contains(lower, "package identity") || strings.Contains(lower, "artifact sha") || strings.Contains(lower, "publisher key") {
+		if strings.Contains(lower, ".nlext") || strings.Contains(lower, "signature") || strings.Contains(lower, "идентичность пакета") || strings.Contains(lower, "SHA артефакта") || strings.Contains(lower, "ключ издателя") {
 			writeError(w, http.StatusConflict, "Проверка артефакта реестра завершилась ошибкой: "+err.Error())
 			return
 		}

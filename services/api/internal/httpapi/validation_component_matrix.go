@@ -139,7 +139,7 @@ func compatiblePair0348(cat *model.ComponentCatalog0241, base string, ids []stri
 	// Используйте промышленный резолвер зависимостей и конфликтов для временного выбора в памяти; сам каталог
 	// и подписанный дайджест не изменяются.
 	copyCat := *cat
-	copyCat.Presets = append(append([]model.CatalogPreset0242(nil), cat.Presets...), model.CatalogPreset0242{ID: "matrix_case_0348", Name: "matrix case", Components: append([]string(nil), ids...)})
+	copyCat.Presets = append(append([]model.CatalogPreset0242(nil), cat.Presets...), model.CatalogPreset0242{ID: "matrix_case_0348", Name: "проверка матрицы", Components: append([]string(nil), ids...)})
 	if base != "" {
 		for _, p := range cat.Presets {
 			if p.ID == base {

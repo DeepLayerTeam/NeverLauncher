@@ -331,7 +331,7 @@ func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
 		"supportedLoaders": []string{"vanilla", "fabric", "quilt", "forge", "neoforge"},
 		"metadataSources": []map[string]any{
 			{"id": "mojang-version-manifest", "requiredFor": []string{"vanilla", "fabric", "quilt", "forge", "neoforge"}, "input": "--version-json", "resolves": []string{"client.jar", "mainClass", "libraries", "natives", "arguments", "javaVersion"}},
-			{"id": "mojang-asset-index", "requiredFor": []string{"all"}, "input": "--asset-index", "resolves": []string{"assets/objects", "asset total size", "asset object paths"}},
+			{"id": "mojang-asset-index", "requiredFor": []string{"all"}, "input": "--asset-index", "resolves": []string{"assets/objects", "общий размер ресурсов", "пути к объектам ресурсов"}},
 			{"id": "fabric-meta-profile", "requiredFor": []string{"fabric"}, "input": "Fabric Meta v2", "resolves": []string{"Зафиксированная версия загрузчика", "KnotClient", "fabric-loader", "intermediary", "Параметры загрузчика", "Проверенные библиотеки Maven"}},
 			{"id": "quilt-meta-profile", "requiredFor": []string{"quilt"}, "input": "Quilt Meta v3", "resolves": []string{"Зафиксированная версия загрузчика", "Quilt KnotClient", "quilt-loader", "intermediary", "Параметры загрузчика", "Проверенные библиотеки Maven"}},
 			{"id": "forge-installer", "requiredFor": []string{"forge"}, "input": "Forge Maven installer.jar", "resolves": []string{"legacy V1 universal installer", "install_profile.json", "version.json", "embedded Maven", "Обработчики клиента", "Проверенные выходные файлы"}},
@@ -463,9 +463,9 @@ func runtimeMetadataPolicy740() map[string]any {
 		"status":        "ready",
 		"policy": []map[string]any{
 			{"source": "version.json", "trust": "required", "validation": []string{"id", "mainClass", "downloads.client", "libraries", "arguments or minecraftArguments"}},
-			{"source": "asset index", "trust": "required-for-full-assets", "validation": []string{"objects hash", "objects size", "object path prefix"}},
-			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
-			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-pinned", "validation": []string{"installer SHA-1", "Устаревший универсальный установщик V1 для Forge 1.7.10/1.12.2", "processor-based install_profile (Forge 1.13.2+ / NeoForge)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
+			{"source": "индекс ресурсов", "trust": "required-for-full-assets", "validation": []string{"хеши объектов", "размеры объектов", "префикс пути объекта"}},
+			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-pinned", "validation": []string{"совместимость с Minecraft", "точная версия загрузчика loaderVersion", "inheritsFrom", "mainClass", "выбранный артефакт загрузчика", "Maven SHA-1", "SHA-256 нормализованного профиля"}},
+			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-pinned", "validation": []string{"installer SHA-1", "Устаревший универсальный установщик V1 для Forge 1.7.10/1.12.2", "processor-based install_profile (Forge 1.13.2+ / NeoForge)", "соответствие версии Minecraft", "встроенные пути Maven", "processor Main-Class", "результаты обработчиков", "нормализованные библиотеки Runtime"}},
 		},
 		"security": []string{"Выход за пределы каталога запрещён", "Символические ссылки в компонентах запрещены", "Параллельная установка файлов заблокирована", "Количество повторных обращений к поставщику ограничено", "Для продолжения загрузки по Range требуется закреплённая итоговая контрольная сумма", "Повреждённый кеш помещён в карантин", "Возврат к устаревшим метаданным latest/snapshot запрещён", "Распаковка нативных ZIP ограничена", "Созданные нативные файлы опубликованы транзакционно", "Учётные данные и фрагменты в удалённом URL запрещены", "Поля контрольных сумм сохранены", "Слой подписанного манифеста остаётся вне обработчика зависимостей", "Точная матрица поддержки Loader Compatibility GA проверена перед установкой загрузчика"},
 	}

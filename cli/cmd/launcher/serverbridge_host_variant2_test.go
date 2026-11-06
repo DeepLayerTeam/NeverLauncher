@@ -13,7 +13,7 @@ import (
 func hostFixture0282(t *testing.T, body string) (string, string) {
 	t.Helper()
 	if runtime.GOOS != "linux" {
-		t.Skip("host runtime identity integration fixtures currently require Linux")
+		t.Skip("интеграционные тесты идентичности Runtime узла сейчас требуют Linux")
 	}
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "paper.jar"), []byte("fixture"), 0600); err != nil {

@@ -63,20 +63,20 @@ BEGIN
   RAISE EXCEPTION 'Обновление аутентификации: отсутствуют обязательные таблицы учётных записей';
  END IF;
  SELECT count(*) INTO bad FROM auth_identities i LEFT JOIN users u ON i.user_id=u.id WHERE u.id IS NULL;
- IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: orphaned auth identities: %',bad; END IF;
+ IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: осиротевшие записи идентификации: %',bad; END IF;
  SELECT count(*) INTO bad FROM minecraft_profiles p LEFT JOIN users u ON p.user_id=u.id WHERE u.id IS NULL;
- IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: orphaned Minecraft profiles: %',bad; END IF;
+ IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: профили Minecraft без пользователей: %',bad; END IF;
  SELECT count(*) INTO bad FROM (SELECT lower(uuid) FROM minecraft_profiles GROUP BY lower(uuid) HAVING count(*)>1) t;
- IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: duplicate Minecraft UUID: %',bad; END IF;
+ IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: повторяющиеся UUID Minecraft: %',bad; END IF;
  SELECT count(*) INTO bad FROM (SELECT lower(name) FROM minecraft_profiles GROUP BY lower(name) HAVING count(*)>1) t;
- IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: duplicate Minecraft profile name: %',bad; END IF;
+ IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: повторяющиеся имена профилей Minecraft: %',bad; END IF;
  SELECT count(*) INTO bad FROM (SELECT lower(email) FROM users GROUP BY lower(email) HAVING count(*)>1) t;
- IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: duplicate account email: %',bad; END IF;
+ IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: повторяющиеся адреса электронной почты: %',bad; END IF;
  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_identities' AND column_name='issuer') THEN
   EXECUTE 'SELECT count(*) FROM auth_identities WHERE issuer IS NULL OR issuer='''' OR issuer<>btrim(issuer) OR length(issuer)>2048 OR issuer ~ ''[[:space:][:cntrl:]]'' OR (provider=''local'' AND issuer<>''launcher'')' INTO bad;
-  IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: invalid issuer: %',bad; END IF;
+  IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: недопустимый издатель идентичности: %',bad; END IF;
   EXECUTE 'SELECT count(*) FROM (SELECT provider,issuer,subject FROM auth_identities GROUP BY provider,issuer,subject HAVING count(*)>1) t' INTO bad;
-  IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: issuer-scoped subject collision: %',bad; END IF;
+  IF bad<>0 THEN RAISE EXCEPTION 'Обновление аутентификации: конфликт субъектов одного издателя: %',bad; END IF;
  END IF;
 END
 $nl$;

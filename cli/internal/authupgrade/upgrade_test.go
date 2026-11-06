@@ -33,7 +33,7 @@ func fixture02911(t *testing.T, provider, password string) string {
 
 func TestPreflightPreventsImplicitCustomProvider02911(t *testing.T) {
 	raw := fixture02911(t, "custom-provider", "argon2id")
-	if _, err := ScanRows(strings.NewReader(raw), nil); err == nil || !strings.Contains(err.Error(), "not verified") {
+	if _, err := ScanRows(strings.NewReader(raw), nil); err == nil || !strings.Contains(err.Error(), "не проверен") {
 		t.Fatalf("Неожиданно принят пользовательский провайдер: %v", err)
 	}
 	cp, err := ScanRows(strings.NewReader(raw), []string{"custom-provider"})
@@ -46,7 +46,7 @@ func TestPreflightPreventsImplicitCustomProvider02911(t *testing.T) {
 }
 
 func TestUnknownHashAlwaysBlocks02911(t *testing.T) {
-	if _, err := ScanRows(strings.NewReader(fixture02911(t, "local", "unsupported")), nil); err == nil || !strings.Contains(err.Error(), "unknown password hashes") {
+	if _, err := ScanRows(strings.NewReader(fixture02911(t, "local", "unsupported")), nil); err == nil || !strings.Contains(err.Error(), "неизвестных хешей паролей") {
 		t.Fatalf("Небезопасная миграция паролей: %v", err)
 	}
 }
@@ -128,7 +128,7 @@ func TestRejectMissingMarkerAndIncompleteCounts02911(t *testing.T) {
 }
 
 func TestSQLReadOnlyAndIssuerGuard02911(t *testing.T) {
-	for _, needle := range []string{"REPEATABLE READ READ ONLY", "orphaned auth identities", "orphaned Minecraft profiles", "duplicate Minecraft UUID", "issuer-scoped subject collision", "row_to_json(v)", "password_hash ~"} {
+	for _, needle := range []string{"REPEATABLE READ READ ONLY", "осиротевшие записи идентификации", "профили Minecraft без пользователей", "повторяющиеся UUID Minecraft", "конфликт субъектов одного издателя", "row_to_json(v)", "password_hash ~"} {
 		if !strings.Contains(ReadOnlyScanSQL, needle) {
 			t.Errorf("В SQL отсутствует %q", needle)
 		}

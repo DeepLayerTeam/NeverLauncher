@@ -91,10 +91,10 @@ func TestExtensionPackageDeterministicPack0202(t *testing.T) {
 		t.Fatalf("Неожиданный анализ пакета: %#v", analysis.Descriptor)
 	}
 	if _, ok := analysis.Entries[extensionPackageSBOMName0202]; !ok {
-		t.Fatal("SBOM missing")
+		t.Fatal("отсутствует SBOM")
 	}
 	if _, ok := analysis.Entries[extensionPackageChecksumsName0202]; !ok {
-		t.Fatal("checksums missing")
+		t.Fatal("отсутствуют контрольные суммы")
 	}
 }
 
@@ -204,7 +204,7 @@ func TestExtensionPackageRejectsMissingEntrypoint0202(t *testing.T) {
 
 func TestExtensionPackageRejectsSourceSymlink0202(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("symlink privileges are environment-specific on Windows")
+		t.Skip("права на символические ссылки в Windows зависят от среды")
 	}
 	base := t.TempDir()
 	source := filepath.Join(base, "source")
@@ -226,7 +226,7 @@ func TestExtensionPackageRejectsSourceSymlink0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(target, filepath.Join(source, "bin", "backend")); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
+		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	_, err := packExtensionPackage0202(source, filepath.Join(base, "symlink.nlext"))
 	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "symlink") {

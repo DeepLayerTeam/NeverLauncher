@@ -232,7 +232,7 @@ func supplyChainSecurityModel() map[string]any {
 		"toolVersion":      version,
 		"generatedAt":      time.Now().UTC().Format(time.RFC3339),
 		"status":           "security-supply-chain-ready",
-		"release":          "Launcher " + version + " security model",
+		"release":          "Launcher " + version + " модель безопасности",
 		"signedArtifacts":  []string{"manifest", "release-bundle", "desktop-package", "extension-package", "client-package"},
 		"requiredControls": []string{"ed25519-signatures", "sha256-every-file", "root-signed-trust-policy", "trusted-keys-registry", "key-rotation", "revocation-list", "trust-epoch-anti-rollback", "release-version-anti-rollback", "sbom", "provenance", "audit-log", "safe-extraction", "download-allowlist"},
 		"checks": []map[string]string{
@@ -279,7 +279,7 @@ func securityReleasePolicyModel() map[string]any {
 }
 
 func securityDesktopPolicyModel() map[string]any {
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "enforced", "rules": []string{"Обязательная подпись манифеста", "Обязательный доверенный ключ Ed25519", "Контрольная сумма SHA-256 каждого файла", "safe path join", "Безопасная распаковка архива", "Список разрешённых источников загрузки", "Снимок для отката до применения изменений", "Экспорт диагностики при ошибке проверки"}}
+	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "enforced", "rules": []string{"Обязательная подпись манифеста", "Обязательный доверенный ключ Ed25519", "Контрольная сумма SHA-256 каждого файла", "безопасное объединение путей", "Безопасная распаковка архива", "Список разрешённых источников загрузки", "Снимок для отката до применения изменений", "Экспорт диагностики при ошибке проверки"}}
 }
 
 func writeOrPrintJSON(out string, payload any) error {
@@ -497,7 +497,7 @@ func handleDB(args []string) error {
 		printJSON(status)
 		return nil
 	case "validate":
-		report := map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "valid": true, "checks": []string{"projects table", "profiles table", "release_channels table", "release_versions table", "files table", "storage_objects table", "users table", "roles table", "audit_events table", "telemetry_events table", "crash_reports table", "foreign keys", "Ограничения уникальности", "Транзакционная публикация", "manifest jsonb", "Индекс lower(email)"}}
+		report := map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "valid": true, "checks": []string{"projects table", "таблица профилей", "release_channels table", "release_versions table", "таблица файлов", "storage_objects table", "таблица пользователей", "таблица ролей", "audit_events table", "telemetry_events table", "crash_reports table", "внешние ключи", "Ограничения уникальности", "Транзакционная публикация", "манифест в формате jsonb", "Индекс lower(email)"}}
 		if out != "" {
 			return writeJSONFile(out, report)
 		}
@@ -547,7 +547,7 @@ func handleStorage(args []string) error {
 func handleTenantAudit(args []string) error {
 	out := flagValue(args, "--output", "")
 	tenantID := flagValue(args, "--tenant", "demo-tenant")
-	report := map[string]any{"schemaVersion": "1.0", "toolVersion": version, "generatedAt": time.Now().UTC().Format(time.RFC3339), "tenantId": tenantID, "status": "review_required", "checks": []string{"projectRoles scoped", "Изолированный префикс хранилища", "Изолированная область аудита", "Отдельный профиль оформления", "Ограниченные разрешения расширений"}}
+	report := map[string]any{"schemaVersion": "1.0", "toolVersion": version, "generatedAt": time.Now().UTC().Format(time.RFC3339), "tenantId": tenantID, "status": "review_required", "checks": []string{"роли ограничены проектом", "Изолированный префикс хранилища", "Изолированная область аудита", "Отдельный профиль оформления", "Ограниченные разрешения расширений"}}
 	if out != "" {
 		return writeJSONFile(out, report)
 	}

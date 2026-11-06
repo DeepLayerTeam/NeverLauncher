@@ -121,5 +121,5 @@ func TestPublicProductionDeliveryMatrix01511PublishesCandidateControl(t *testing
 			return
 		}
 	}
-	t.Fatal("0.15.11+ public matrix must publish PRODUCTION_RELEASE_CANDIDATE.json as a control")
+	t.Fatal("публичная матрица версии 0.15.11+ должна публиковать PRODUCTION_RELEASE_CANDIDATE.json для контроля")
 }

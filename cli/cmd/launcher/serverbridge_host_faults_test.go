@@ -99,7 +99,7 @@ func TestRemoteFaultCorruptJournalFailClosed04112(t *testing.T) {
 
 func TestRemoteFaultKernelSplitBrain04112(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("unsupported kernel singleton platform")
+		t.Skip("платформа не поддерживает единственный экземпляр на уровне ядра")
 	}
 	_, id, root := remoteFixture0284(t)
 	dir := remoteDir0284(root)

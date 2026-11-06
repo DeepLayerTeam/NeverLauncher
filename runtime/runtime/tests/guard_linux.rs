@@ -41,6 +41,6 @@ async fn linux_guard_authenticated_boundary_and_attestation() {
     assert_eq!(attestation.attestation_sha256.len(), 64);
 
     supervisor.shutdown().await.expect("shutdown Guard");
-    assert!(supervisor.ping_running().await.is_err(), "closed Guard must not silently restart");
+    assert!(supervisor.ping_running().await.is_err(), "закрытый Guard не должен незаметно перезапускаться");
     let _ = std::fs::remove_dir_all(runtime_dir);
 }

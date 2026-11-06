@@ -63,7 +63,7 @@ func TestRuntimeStorageSymlinksRejected0303(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(root, "runtime-data")); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
+		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	dir := runtimeDir0303(root, Key{ExtensionID: "test.example", Scope: "global"})
 	path, _ := runtimeFile0303(dir, "storage", "state")

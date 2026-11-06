@@ -52,7 +52,7 @@ func TestLegacy0406ChildOptionsOverrideWithoutDroppingParent(t *testing.T) {
 // Mojang/Forge и не реальную установленную Java 8.
 func TestLegacy0406ExecutableForgeLaunchAndClasspathPrecedence(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX Java selector fixture")
+		t.Skip("тестовый выбор Java для POSIX")
 	}
 	javac, err := exec.LookPath("javac")
 	if err != nil {
@@ -60,11 +60,11 @@ func TestLegacy0406ExecutableForgeLaunchAndClasspathPrecedence(t *testing.T) {
 	}
 	jar, err := exec.LookPath("jar")
 	if err != nil {
-		t.Skip("jar unavailable")
+		t.Skip("инструмент jar недоступен")
 	}
 	java, err := exec.LookPath("java")
 	if err != nil {
-		t.Skip("java unavailable")
+		t.Skip("Java недоступна")
 	}
 	root := filepath.Join(t.TempDir(), "legacy client with spaces")
 	compile := func(classes, name, code string, cp string) {

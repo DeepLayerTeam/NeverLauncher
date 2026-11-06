@@ -52,6 +52,6 @@ public final class ProxyRoutes0417Test {
         if (BridgeAuthResponse0287.route(503, response(normal), "proxy-1", "survival", NOW).allowed())
             throw new AssertionError("ошибка 503 должна приводить к безопасному отказу");
         checks++;
-        System.out.println("ProxyRoutes0417Test OK " + checks + " checks");
+        System.out.println("ProxyRoutes0417Test OK " + checks + " проверок");
     }
 }

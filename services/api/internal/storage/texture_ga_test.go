@@ -68,7 +68,7 @@ func TestTextureGA0260RejectsUnsafeManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(outside, manifest); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
+		t.Skipf("символические ссылки недоступны: %v", err)
 	}
 	if _, err := RestoreTextures0253(ctx, store, snapshot, []TextureBackupObject0253{obj}); err == nil {
 		t.Fatal("symlinked manifest accepted")

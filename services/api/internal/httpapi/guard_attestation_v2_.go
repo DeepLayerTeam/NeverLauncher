@@ -185,7 +185,7 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 		return errors.New("Основная версия Java не сертифицирована для Guard Attestation v2")
 	}
 	for label, value := range map[string]string{
-		"module event chain":  e.ModuleEventChainSHA256,
+		"цепочка событий модулей":  e.ModuleEventChainSHA256,
 		"module set":          e.ModuleSetSHA256,
 		"hook set":            e.HookSetSHA256,
 		"code set":            e.CodeSetSHA256,

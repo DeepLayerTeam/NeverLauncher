@@ -62,12 +62,12 @@ func TestRemoteControlSystemdReadyAndDrain0498(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("remote did not drain")
+		t.Fatal("удалённый узел не завершил обработку запросов")
 	}
 	// Отправка готовности должна завершаться ошибкой при неисправном настроенном сокете systemd.
 	t.Setenv("NOTIFY_SOCKET", filepath.Join(t.TempDir(), "unavailable.sock"))
 	if err := remoteServiceReady0498(); err == nil {
-		t.Fatal("missing notify listener acknowledged")
+		t.Fatal("подтверждено отсутствие обработчика уведомлений")
 	}
 	_ = os.Unsetenv("NOTIFY_SOCKET")
 }

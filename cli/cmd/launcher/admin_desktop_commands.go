@@ -278,11 +278,11 @@ func packaging940ReleaseGates() []map[string]any {
 		{"id": "admin-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/admin"},
 		{"id": "desktop-web-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/desktop"},
 		{"id": "tauri-native-build", "required": true, "status": "external", "check": "cargo/tauri build on Linux/Windows/macOS runner"},
-		{"id": "checksums", "required": true, "status": "implemented", "check": "SHA256SUMS generated and verified"},
-		{"id": "sbom", "required": true, "status": "implemented", "check": "SBOM.spdx.json present"},
-		{"id": "provenance", "required": true, "status": "implemented", "check": "PROVENANCE.json present"},
-		{"id": "artifact-manifest", "required": true, "status": "implemented", "check": "RELEASE_MANIFEST.json and ARTIFACTS.json present"},
-		{"id": "packaging-smoke", "required": true, "status": "implemented", "check": "nl packaging smoke"},
+		{"id": "checksums", "required": true, "status": "implemented", "check": "контрольные суммы SHA256SUMS сформированы и проверены"},
+		{"id": "sbom", "required": true, "status": "implemented", "check": "файл SBOM.spdx.json присутствует"},
+		{"id": "provenance", "required": true, "status": "implemented", "check": "файл PROVENANCE.json присутствует"},
+		{"id": "artifact-manifest", "required": true, "status": "implemented", "check": "файлы RELEASE_MANIFEST.json и ARTIFACTS.json присутствуют"},
+		{"id": "packaging-smoke", "required": true, "status": "implemented", "check": "экспресс-проверка упаковки: nl packaging smoke"},
 	}
 }
 
@@ -457,7 +457,7 @@ func packaging940SBOM(entries []map[string]any) map[string]any {
 }
 
 func packaging940Provenance(srcRoot string) map[string]any {
-	return map[string]any{"schemaVersion": "0.10.0", "subject": "Launcher", "version": version, "builder": "Launcher CLI production packaging 0.10.0", "sourceRoot": srcRoot, "generatedAt": time.Now().UTC().Format(time.RFC3339), "commands": []string{"nl release doctor", "nl db migration-doctor", "nl packaging prepare", "nl packaging verify", "nl packaging smoke"}, "materials": []string{"VERSION", "CLI binary", "Backend API binary", "Admin package metadata", "Desktop package metadata", "OpenAPI", "README", "CHANGELOG", "SECURITY"}}
+	return map[string]any{"schemaVersion": "0.10.0", "subject": "Launcher", "version": version, "builder": "Launcher CLI production packaging 0.10.0", "sourceRoot": srcRoot, "generatedAt": time.Now().UTC().Format(time.RFC3339), "commands": []string{"nl release doctor", "nl db migration-doctor", "nl packaging prepare", "nl packaging verify", "экспресс-проверка упаковки: nl packaging smoke"}, "materials": []string{"VERSION", "CLI binary", "Backend API binary", "метаданные пакета Admin", "метаданные пакета Desktop", "OpenAPI", "README", "CHANGELOG", "SECURITY"}}
 }
 
 func packaging940BuildMatrix() map[string]any {

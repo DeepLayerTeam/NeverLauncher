@@ -118,15 +118,15 @@ func TestDevEnvironment02010DoesNotLeakBackendSecrets(t *testing.T) {
 	env := devEnvironment02010("http://127.0.0.1:1", "token", "callback", "instance", m, "backend")
 	joined := strings.Join(env, "\n")
 	if strings.Contains(joined, "DATABASE_DSN") || strings.Contains(joined, "AUTH_SIGNING_KEY") {
-		t.Fatalf("secret leaked into dev environment: %s", joined)
+		t.Fatalf("секрет попал в окружение разработки: %s", joined)
 	}
 }
 
 func TestSDKEntrypoints02010(t *testing.T) {
 	if sdkEntrypoint("backend") != "backend/bin/extension-backend" || sdkEntrypoint("admin") != "admin/index.html" {
-		t.Fatalf("unexpected 0.20.10 SDK entrypoints")
+		t.Fatalf("неожиданные точки входа SDK версии 0.20.10")
 	}
 	if runtime.GOOS != "windows" && strings.Contains(sdkEntrypoint("backend"), ".go") {
-		t.Fatal("backend manifest entrypoint must be executable payload, not Go source")
+		t.Fatal("точкой входа манифеста Backend должен быть исполняемый файл, а не исходник Go")
 	}
 }

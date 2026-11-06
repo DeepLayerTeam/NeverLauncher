@@ -26,6 +26,6 @@ public final class BridgeSessionRevocation0418Test {
         check(sessions.matches("player", NEW), "текущее соединение остаётся доступным для действия");
         sessions.clear("Player");
         check(!sessions.matches("player", NEW), "отключение удаляет активный сеанс");
-        System.out.println("BridgeSessionRevocation0418: " + checks + " passed");
+        System.out.println("BridgeSessionRevocation0418: " + checks + " проверок пройдено");
     }
 }

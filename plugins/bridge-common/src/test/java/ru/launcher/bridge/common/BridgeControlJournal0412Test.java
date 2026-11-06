@@ -95,6 +95,6 @@ public final class BridgeControlJournal0412Test {
         try (BridgeControlJournal ignored = new BridgeControlJournal(journalFile)) { }
         catch (java.io.IOException expected) { corruptedDenied = true; }
         check(corruptedDenied, "повреждённый журнал должен вызывать безопасный отказ");
-        System.out.println("BridgeControlJournal0412: " + passed + " assertions passed");
+        System.out.println("BridgeControlJournal0412: " + passed + " проверок пройдено");
     }
 }

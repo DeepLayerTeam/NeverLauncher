@@ -1124,7 +1124,7 @@ mod tests {
         }
         assert_eq!(fs::read(root.join("mods/sodium.jar")).unwrap(),b"SODIUM");
         assert_eq!(fs::read(root.join("mods/shader.jar")).unwrap(),b"SHADER");
-        assert!(!root.join("mods/indium.jar").exists(),"File action excluded this signed but unselected file");
+        assert!(!root.join("mods/indium.jar").exists(),"операция с файлами исключила подписанный, но не выбранный файл");
         let active=pointer(&root).unwrap().active.unwrap();
         validate_release(&active,&key).unwrap();
         let mut tampered=active.clone();tampered.plan_sha256=Some("f".repeat(64));
@@ -1156,8 +1156,8 @@ mod tests {
         let (_,running)=watch::channel(Directive::Running);
         let second=install(&m,&root,&key,None,"quality-0246".into(),running,Some("quality".into())).await.unwrap();
         assert_eq!(second.failed,0);
-        assert!(second.skipped>=1,"previously verified core must be reused");
-        assert!(second.bytes_reused>=4,"verified core bytes count toward reuse");
+        assert!(second.skipped>=1,"ранее проверенное ядро должно использоваться повторно");
+        assert!(second.bytes_reused>=4,"байты проверенного ядра должны учитываться как повторно использованные");
         let checks=crate::check_files_with_preset(&m,&root,Some("quality")).await.unwrap();
         assert_eq!(checks.len(),3);
         assert!(checks.iter().all(|x|x.status=="ok"));
@@ -1182,7 +1182,7 @@ mod tests {
         fs::write(root.join("mods/sodium.jar"),b"PLAYER_EDIT").unwrap();
         let minimal=release_from_plan_0246(&m,"minimal",802);
         let err=commit(&root,minimal,&key,&stage).unwrap_err();
-        assert!(err.contains("previous active release changed"),"{err}");
+        assert!(err.contains("предыдущий активный выпуск изменился"),"{err}");
         assert_eq!(fs::read(root.join("mods/sodium.jar")).unwrap(),b"PLAYER_EDIT");
         assert_eq!(pointer(&root).unwrap().active.unwrap().preset.as_deref(),Some("quality"));
         fs::remove_dir_all(root).unwrap();
@@ -1231,7 +1231,7 @@ mod tests {
         commit(&root,repaired,&key,&staged(&root,&b,&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")])).unwrap();
         assert_eq!(fs::read(root.join("mods/core.jar")).unwrap(),b"NEW");
         let checkpoint=last_known_good(&root).unwrap().unwrap();
-        assert_eq!(checkpoint.backup_id,original_backup,"repair must retain the A backup");
+        assert_eq!(checkpoint.backup_id,original_backup,"восстановление должно сохранять резервную копию A");
         assert_eq!(checkpoint.next.id,format!("{:032x}",403));
         // Повторное восстановление тоже не должно терять исходную контрольную точку A.
         fs::write(root.join("mods/core.jar"),b"SECOND_BAD").unwrap();

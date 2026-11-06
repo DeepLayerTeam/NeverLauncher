@@ -431,7 +431,7 @@ func (s Server) validatePackageFiles(release model.ReleaseVersion, files []model
 		_ = reader.Close()
 		actual := hex.EncodeToString(h.Sum(nil))
 		status := "ok"
-		message := "storage object matches manifest metadata"
+		message := "объект хранилища соответствует метаданным манифеста"
 		if copyErr != nil || size != file.Size || !strings.EqualFold(actual, file.SHA256) {
 			status = "failed"
 			message = fmt.Sprintf("Несовпадение размера или хеша: размер=%d, ожидаемый размер=%d, SHA=%s, ожидаемый SHA=%s, ошибка копирования=%v", size, file.Size, actual, file.SHA256, copyErr)

@@ -12,7 +12,7 @@ public final class IdentitySpi0485Tests {
     private static void ok(boolean pass,String why){checks++;if(!pass)throw new AssertionError(why);}
     private static void fail(Class<? extends Throwable> kind,Throwing call) throws Exception {
         checks++;
-        try{call.run();throw new AssertionError("expected "+kind.getSimpleName());}
+        try{call.run();throw new AssertionError("ожидалось исключение "+kind.getSimpleName());}
         catch(Throwable e){if(!kind.isInstance(e))throw new AssertionError("неверная ошибка",e);}
     }
     @FunctionalInterface interface Throwing{void run()throws Exception;}

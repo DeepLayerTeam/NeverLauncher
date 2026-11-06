@@ -146,5 +146,5 @@ public final class RuntimeApiTests {
         var req=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(3)).header("Authorization","Bearer "+bearer).POST(HttpRequest.BodyPublishers.ofString(value)).build();
         return client.send(req,HttpResponse.BodyHandlers.discarding()).statusCode();
     }
-    public static void main(String[]args)throws Exception{test();System.out.println("PASS: "+checks+" Java runtime broker/event/command/schema tests");}
+    public static void main(String[]args)throws Exception{test();System.out.println("PASS: "+checks+" проверок брокера Runtime, событий, команд и схем Java");}
 }

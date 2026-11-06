@@ -17,7 +17,7 @@ func TestRuntimeCertification02712RejectsFalseProbe(t *testing.T) {
 	good := factoryProbe02712{Status: "passed", MinecraftVersion: "1.21.1", MainClass: plan.Launch.MainClass, RequiredJavaMajor: 21, DetectedJavaMajor: 21, ClasspathEntries: 3, TimedOut: true, RuntimeSeconds: 20}
 	goodLog := []byte("Runtime ...\n--- process output ---\n[main/INFO] LWJGL version 3.3\n")
 	if err := certValidateProbe02712(plan, "1.21.1", good, goodLog, 30); err == nil {
-		t.Fatal("legacy timeout/marker accepted as runtime readiness")
+		t.Fatal("устаревший тайм-аут или маркер ошибочно принят как готовность Runtime")
 	}
 	for _, tc := range []struct {
 		name   string
@@ -37,14 +37,14 @@ func TestRuntimeCertification02712RejectsFalseProbe(t *testing.T) {
 			p := good
 			tc.mutate(&p)
 			if err := certValidateProbe02712(plan, "1.21.1", p, tc.log, 30); err == nil {
-				t.Fatal("false success accepted")
+				t.Fatal("принят ложный успешный результат")
 			}
 		})
 	}
 }
 func TestRuntimeCertification02712SignedEndToEndMaterializerAndTamper(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX fixture runtime; Windows verified by native CI")
+		t.Skip("тестовый Runtime для POSIX; Windows проверяется нативным CI")
 	}
 	clientJar := []byte("fixture-client")
 	asset := []byte("fixture-asset")
@@ -107,15 +107,15 @@ printf '{"status":"passed","minecraftVersion":"%s","mainClass":"net.minecraft.cl
 	}
 	file := filepath.Join(tmp, "actual-cert.json")
 	if _, err = certRun02712(context.Background(), client, runtimePath, javaPath, strings.Repeat("0", 64), key, file, 20); err == nil {
-		t.Fatal("unapproved runtime executable accepted")
+		t.Fatal("принят неразрешённый исполняемый файл Runtime")
 	}
 	// Даже действительный ключ подписи владельца не превращает синтетический маркер LWJGL и тайм-аут в
 	// доказательство готовности меню или визуализатора. Сертификат не создаётся.
 	if _, err := certRun02712(context.Background(), client, runtimePath, javaPath, runtimeSHA, key, file, 20); err == nil {
-		t.Fatal("synthetic startup probe was certified")
+		t.Fatal("искусственная проверка запуска прошла сертификацию")
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		t.Fatalf("legacy certification left a supposedly valid artifact: %v", err)
+		t.Fatalf("устаревшая сертификация оставила якобы действительный артефакт: %v", err)
 	}
 }
 func TestRuntimeCertification02712HostAndPaths(t *testing.T) {
@@ -125,13 +125,13 @@ func TestRuntimeCertification02712HostAndPaths(t *testing.T) {
 	wrong := currentVanillaTarget()
 	wrong.OS = "os"
 	if err := certHostTarget02712(wrong); err == nil {
-		t.Fatal("cross-target runtime certification accepted")
+		t.Fatal("принята сертификация Runtime для другой платформы")
 	}
 	if _, err := certResolveExecutable02712(""); err == nil {
-		t.Fatal("empty executable accepted")
+		t.Fatal("принят пустой исполняемый файл")
 	}
 	if err := factoryCertKeygen02712("", ""); err == nil {
-		t.Fatal("empty key paths accepted")
+		t.Fatal("приняты пустые пути ключей")
 	}
 }
 
@@ -144,7 +144,7 @@ func TestRuntimeCertification02712MatrixRejectsMissingOrUnsigned(t *testing.T) {
 	}
 	report, err := certifyMatrix02712(matrix, "missing.pub", filepath.Join(root, "report.json"), false)
 	if err == nil || report.Status != "failed" || report.Failed != 1 {
-		t.Fatalf("matrix accepted missing runtime proof: %+v %v", report, err)
+		t.Fatalf("матрица приняла отсутствие подтверждения Runtime: %+v %v", report, err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "report.json")); err != nil {
 		t.Fatalf("missing failure report: %v", err)

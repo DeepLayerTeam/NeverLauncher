@@ -79,7 +79,7 @@ func productionFirstRun990() map[string]any {
 		"toolVersion":   version,
 		"status":        "first-run-prepared",
 		"script":        "scripts/install/production-setup.sh",
-		"bootstrap":     []string{"validate env", "apply migrations", "create first admin", "create demo project", "create vanilla profile", "create stable channel", "issue bridge token", "write bootstrap report"},
+		"bootstrap":     []string{"проверка переменных окружения", "применение миграций", "создание первого администратора", "создание демонстрационного проекта", "создание профиля Vanilla", "создание стабильного канала", "выдача токена ServerBridge", "формирование отчёта о первоначальной настройке"},
 		"outputs":       []string{".launcher/production-first-run/first-run-report-0.10.0.json"},
 	}
 }
@@ -90,8 +90,8 @@ func productionE2E990() map[string]any {
 		"toolVersion":   version,
 		"status":        "production-e2e-ready",
 		"script":        "e2e/scripts/run-minecraft-e2e.sh",
-		"scenario":      "Desktop → package download → launch → server join → session revoke → deny next join",
-		"checks":        []string{"compose present", "first-run bootstrap present", "desktop package gate", "launch plan gate", "server bridge allow/revoke/deny", "audit diagnostics"},
+		"scenario":      "Desktop → загрузка пакета → запуск → подключение к серверу → отзыв сеанса → запрет следующего подключения",
+		"checks":        []string{"конфигурация Docker Compose присутствует", "первоначальная настройка выполнена", "проверка пакета Desktop", "проверка плана запуска", "server bridge allow/revoke/deny", "диагностика журнала аудита"},
 		"commands":      []string{"bash e2e/scripts/run-minecraft-e2e.sh"},
 	}
 }
@@ -446,7 +446,7 @@ func loaderCompatibility(loader string) map[string]any {
 		return map[string]any{
 			"status":                 "stable",
 			"java":                   []int{8, 16, 17, 21, 25},
-			"minecraftRange":         "Mojang release metadata validated by the Vanilla compatibility engine",
+			"minecraftRange":         "Метаданные выпусков Mojang проверены механизмом совместимости Vanilla",
 			"requiresInstallerMerge": false,
 			"supportsOptionalMods":   false,
 			"profileFields":          []string{"minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
@@ -609,9 +609,9 @@ func installWizardPayload(args []string) map[string]any {
 			{"id": "environment", "title": "Environment", "command": "nl install env --profile " + profile},
 			{"id": "database", "title": "PostgreSQL", "checks": []string{"LAUNCHER_DATABASE_DSN", "LAUNCHER_SQL_DRIVER=pgx", "migrations"}},
 			{"id": "storage", "title": "Storage", "command": "nl install storage-check --storage local"},
-			{"id": "admin", "title": "Bootstrap admin", "command": "nl install bootstrap-admin --email admin@example.test"},
-			{"id": "project", "title": "First project", "command": "nl install first-project --project demo-project --profile vanilla"},
-			{"id": "verify", "title": "Installation verification", "command": "nl install verify --backend " + backend + " --profile " + profile},
+			{"id": "admin", "title": "Первый администратор", "command": "nl install bootstrap-admin --email admin@example.test"},
+			{"id": "project", "title": "Первый проект", "command": "nl install first-project --project demo-project --profile vanilla"},
+			{"id": "verify", "title": "Проверка установки", "command": "nl install verify --backend " + backend + " --profile " + profile},
 		},
 	}
 }

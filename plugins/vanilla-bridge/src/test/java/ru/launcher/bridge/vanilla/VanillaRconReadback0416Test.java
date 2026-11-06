@@ -12,6 +12,6 @@ public final class VanillaRconReadback0416Test {
         check(VanillaRconReadback.membership("ban.add","Steve","There are 2 bans: Alex, Steve, Another") == null,"ambiguous count");
         check(VanillaRconReadback.rejected("Unknown or incomplete command, see below for error"),"reject unknown");
         check(!VanillaRconReadback.rejected("Added Steve to the whitelist"),"normal response");
-        System.out.println("VanillaRconReadback0416Test: 9 assertions passed");
+        System.out.println("VanillaRconReadback0416Test: 9 проверок пройдено");
     }
 }

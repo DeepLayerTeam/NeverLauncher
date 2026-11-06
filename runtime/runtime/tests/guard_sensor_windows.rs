@@ -22,8 +22,8 @@ fn java_tools() -> (PathBuf, PathBuf) {
     let java_home = PathBuf::from(java_home);
     let java = java_home.join("bin").join("java.exe");
     let javac = java_home.join("bin").join("javac.exe");
-    assert!(java.is_file(), "java.exe missing: {}", java.display());
-    assert!(javac.is_file(), "javac.exe missing: {}", javac.display());
+    assert!(java.is_file(), "файл java.exe отсутствует: {}", java.display());
+    assert!(javac.is_file(), "файл javac.exe отсутствует: {}", javac.display());
     (java, javac)
 }
 
@@ -41,7 +41,7 @@ fn memory_probe_path() -> PathBuf {
         std::env::var("GUARD_MEMORY_PROBE_DLL")
             .expect("GUARD_MEMORY_PROBE_DLL должен указывать на собранный guard_memory_probe.dll"),
     );
-    assert!(probe.is_file(), "memory probe DLL missing: {}", probe.display());
+    assert!(probe.is_file(), "отсутствует DLL проверки памяти: {}", probe.display());
     probe
 }
 
@@ -50,7 +50,7 @@ fn thread_probe_path() -> PathBuf {
         std::env::var("GUARD_THREAD_PROBE_DLL")
             .expect("GUARD_THREAD_PROBE_DLL должен указывать на собранный guard_thread_probe.dll"),
     );
-    assert!(probe.is_file(), "thread probe DLL missing: {}", probe.display());
+    assert!(probe.is_file(), "отсутствует DLL проверки потоков: {}", probe.display());
     probe
 }
 
@@ -59,7 +59,7 @@ fn debug_probe_path() -> PathBuf {
         std::env::var("GUARD_DEBUG_PROBE_EXE")
             .expect("GUARD_DEBUG_PROBE_EXE должен указывать на собранный guard-debug-probe.exe"),
     );
-    assert!(probe.is_file(), "debug probe EXE missing: {}", probe.display());
+    assert!(probe.is_file(), "отсутствует EXE проверки отладки: {}", probe.display());
     probe
 }
 
@@ -69,7 +69,7 @@ fn jvm_probe_path() -> PathBuf {
         std::env::var("GUARD_JVM_PROBE_DLL")
             .expect("GUARD_JVM_PROBE_DLL должен указывать на собранный guard_jvm_probe.dll"),
     );
-    assert!(probe.is_file(), "JVM-aware probe DLL missing: {}", probe.display());
+    assert!(probe.is_file(), "отсутствует DLL проверки JVM: {}", probe.display());
     probe
 }
 
@@ -106,7 +106,7 @@ fn compile_module_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("запустить компилятор javac");
-    assert!(status.success(), "javac failed: {status}");
+    assert!(status.success(), "ошибка javac: {status}");
 }
 
 fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
@@ -128,7 +128,7 @@ fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("скомпилировать Java-проверку целостности памяти");
-    assert!(status.success(), "Memory Integrity javac failed: {status}");
+    assert!(status.success(), "ошибка javac при проверке целостности памяти: {status}");
 }
 
 fn compile_process_tree_probe(javac: &Path, directory: &Path) {
@@ -152,7 +152,7 @@ fn compile_process_tree_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("скомпилировать Java-проверку дерева процессов");
-    assert!(status.success(), "Process Tree javac failed: {status}");
+    assert!(status.success(), "ошибка javac при проверке дерева процессов: {status}");
 }
 
 fn compile_debug_boundary_probe(javac: &Path, directory: &Path) {
@@ -172,7 +172,7 @@ fn compile_debug_boundary_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("скомпилировать Java-проверку защиты отладки");
-    assert!(status.success(), "Debug Guard javac failed: {status}");
+    assert!(status.success(), "ошибка javac при проверке защиты от отладки: {status}");
 }
 
 fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
@@ -194,7 +194,7 @@ fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("скомпилировать Java-проверку целостности потоков");
-    assert!(status.success(), "Thread Integrity javac failed: {status}");
+    assert!(status.success(), "ошибка javac при проверке целостности потоков: {status}");
 }
 
 fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
@@ -226,7 +226,7 @@ fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("скомпилировать Java-проверку JIT с учётом JVM");
-    assert!(status.success(), "JVM-Aware JIT javac failed: {status}");
+    assert!(status.success(), "ошибка javac в проверке JIT для JVM: {status}");
 }
 
 fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
@@ -248,7 +248,7 @@ fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
         .current_dir(directory)
         .status()
         .expect("скомпилировать проверку внешнего исполнения в JVM");
-    assert!(status.success(), "JVM-Aware foreign exec javac failed: {status}");
+    assert!(status.success(), "ошибка javac в проверке стороннего исполняемого кода JVM: {status}");
 }
 
 // Java 8/16/17 System.load() не принимает дословные Win32 namespace-пути вида (\\?\C:\...).
@@ -364,7 +364,7 @@ async fn guard_sensor_agentpath_loads_before_jvm_startup() {
     assert!(runtime_policy.report().enforced);
 
     let status = child.wait().await.expect("wait Java");
-    assert!(status.success(), "java -version failed after sensor load: {status}");
+    assert!(status.success(), "команда java -version завершилась ошибкой после загрузки датчика: {status}");
 }
 
 #[tokio::test]
@@ -396,22 +396,22 @@ async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
         .await
         .expect("активировать защиту модулей до запуска основного метода Java");
     let status = child.wait().await.expect("дождаться завершения проверочной Java-программы");
-    assert!(status.success(), "trusted native probe failed: {status}");
+    assert!(status.success(), "сбой доверенной нативной проверки: {status}");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard;
-    assert!(report.healthy, "Module Guard violation: {}", report.last_violation);
+    assert!(report.healthy, "нарушение защиты модулей: {}", report.last_violation);
     assert_eq!(report.violation_count, 0);
-    assert!(report.load_events >= 1, "expected at least one DLL load event: {report:?}");
-    assert!(report.heartbeat_count >= 1, "expected continuous heartbeat: {report:?}");
+    assert!(report.load_events >= 1, "ожидалось хотя бы одно событие загрузки DLL: {report:?}");
+    assert!(report.heartbeat_count >= 1, "ожидались непрерывные сигналы работоспособности: {report:?}");
     assert!(report.event_count >= report.load_events + report.heartbeat_count);
-    assert!(report.hook_engine.healthy, "Hook Engine violation: {}", report.hook_engine.last_violation);
+    assert!(report.hook_engine.healthy, "нарушение механизма перехватов: {}", report.hook_engine.last_violation);
     assert!(report.hook_engine.hooked_module_count > 0);
     assert!(report.hook_engine.hooked_slot_count > 0);
     assert!(report.hook_engine.integrity_check_count >= 2);
     assert!(report.hook_engine.intercepted_call_count >= 1, "expected real intercepted JVM/native API call: {report:?}");
     assert_eq!(report.hook_engine.hook_set_sha256.len(), 64);
-    assert!(report.memory_integrity.healthy, "Memory Integrity violation: {}", report.memory_integrity.last_violation);
+    assert!(report.memory_integrity.healthy, "нарушение целостности памяти: {}", report.memory_integrity.last_violation);
     assert!(report.memory_integrity.integrity_check_count >= 2);
     assert!(report.memory_integrity.executable_region_count > 0);
     assert!(report.memory_integrity.image_code_region_count > 0);
@@ -429,10 +429,10 @@ async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert_eq!(report.debug_instrumentation.state_sha256.len(), 64);
     assert_eq!(report.event_chain_sha256.len(), 64);
     assert_eq!(report.module_set_sha256.len(), 64);
-    assert!(report.continuous_guard.healthy, "Continuous Guard violation: {}", report.continuous_guard.last_violation);
-    assert!(report.continuous_guard.sensor_heartbeat_count >= 2, "expected Sensor heartbeats: {report:?}");
-    assert!(report.continuous_guard.guard_heartbeat_count >= 2, "expected Guard heartbeats: {report:?}");
-    assert!(report.continuous_guard.cross_check_count >= 2, "expected bidirectional cross-checks: {report:?}");
+    assert!(report.continuous_guard.healthy, "нарушение непрерывной защиты Guard: {}", report.continuous_guard.last_violation);
+    assert!(report.continuous_guard.sensor_heartbeat_count >= 2, "ожидались сигналы работоспособности датчика: {report:?}");
+    assert!(report.continuous_guard.guard_heartbeat_count >= 2, "ожидались сигналы работоспособности Guard: {report:?}");
+    assert!(report.continuous_guard.cross_check_count >= 2, "ожидались двусторонние взаимные проверки: {report:?}");
     assert_eq!(
         report.continuous_guard.sensor_heartbeat_count,
         report.continuous_guard.guard_heartbeat_count,
@@ -474,13 +474,13 @@ async fn guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
         .await
         .expect("выполнить перекрёстную проверку при запуске непрерывной защиты Guard");
     let status = child.wait().await.expect("дождаться завершения Java-проверки непрерывной защиты Guard");
-    assert!(status.success(), "Continuous Guard healthy workload failed: {status}");
+    assert!(status.success(), "ошибка нормальной нагрузки непрерывной защиты Guard: {status}");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard.continuous_guard;
     assert_eq!(report.version, GUARD_CONTINUOUS_GUARD_VERSION);
-    assert!(report.healthy, "Continuous Guard violation: {}", report.last_violation);
-    assert!(report.sensor_heartbeat_count >= 3, "expected startup + runtime Sensor heartbeats: {report:?}");
+    assert!(report.healthy, "нарушение непрерывной защиты Guard: {}", report.last_violation);
+    assert!(report.sensor_heartbeat_count >= 3, "ожидались сигналы датчика при запуске и во время работы: {report:?}");
     assert_eq!(report.sensor_heartbeat_count, report.guard_heartbeat_count);
     assert_eq!(report.sensor_heartbeat_count, report.cross_check_count);
     assert_eq!(report.last_guard_sequence, report.guard_heartbeat_count);
@@ -523,12 +523,12 @@ async fn guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots() 
         .await
         .expect("активировать защиту модулей до запуска основного метода Java");
     let status = child.wait().await.expect("дождаться завершения заблокированной Java-проверки");
-    assert!(!status.success(), "unsigned module outside trusted roots must be fail-closed");
+    assert!(!status.success(), "неподписанный модуль вне доверенных каталогов должен блокироваться");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard;
     assert!(!report.healthy);
-    assert!(report.violation_count >= 1, "expected Module Guard violation: {report:?}");
+    assert!(report.violation_count >= 1, "ожидалось нарушение защиты модулей: {report:?}");
     assert!(
         report.last_violation.contains("outside trusted roots")
             || report.last_violation.contains("Authenticode"),
@@ -570,13 +570,13 @@ async fn guard_memory_integrity_fail_closed_on_executable_image_code_page_drift(
         .await
         .expect("активировать контроль целостности памяти до запуска основного метода Java");
     let status = child.wait().await.expect("дождаться завершения проверки вмешательства в память");
-    assert!(!status.success(), "executable image code-page drift must be fail-closed");
+    assert!(!status.success(), "изменение страниц кода исполняемого образа должно блокироваться");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard;
-    assert!(!report.healthy, "Module Guard must reflect Memory Integrity failure");
+    assert!(!report.healthy, "защита модулей должна отражать нарушение целостности памяти");
     assert!(!report.memory_integrity.healthy);
-    assert!(report.memory_integrity.violation_count >= 1, "expected Memory Integrity violation: {report:?}");
+    assert!(report.memory_integrity.violation_count >= 1, "ожидалось нарушение целостности памяти: {report:?}");
     assert!(
         report.memory_integrity.last_violation.contains("code-page drift")
             || report.last_violation.contains("code-page drift"),
@@ -619,11 +619,11 @@ async fn guard_thread_process_integrity_tracks_job_bound_descendant_processes() 
     );
 
     let report = module_report.thread_process_integrity;
-    assert!(report.healthy, "Thread & Process Integrity violation: {}", report.last_violation);
+    assert!(report.healthy, "нарушение целостности потоков и процессов: {}", report.last_violation);
     assert!(report.job_bound);
     assert!(!report.breakaway_allowed);
-    assert!(report.descendant_process_peak >= 1, "expected observed job-bound descendant: {report:?}");
-    assert!(report.process_transition_count >= 1, "expected process-tree transition: {report:?}");
+    assert!(report.descendant_process_peak >= 1, "ожидалось обнаружение дочернего процесса, привязанного к заданию: {report:?}");
+    assert!(report.process_transition_count >= 1, "ожидалось изменение дерева процессов: {report:?}");
     assert!(report.integrity_check_count >= 2);
     assert_eq!(report.process_tree_sha256.len(), 64);
 
@@ -660,11 +660,11 @@ async fn guard_thread_integrity_fail_closed_on_private_executable_thread_start()
         .await
         .expect("активировать контроль целостности потоков и процессов до запуска основного метода Java");
     let status = child.wait().await.expect("дождаться завершения проверки вмешательства в потоки");
-    assert!(!status.success(), "private executable thread start must be fail-closed");
+    assert!(!status.success(), "запуск потока из приватной исполняемой памяти должен блокироваться");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard;
-    assert!(!report.healthy, "Module Guard must reflect Thread Integrity failure");
+    assert!(!report.healthy, "защита модулей должна отражать нарушение целостности потоков");
     assert!(!report.thread_process_integrity.healthy);
     assert!(
         report.thread_process_integrity.violation_count >= 1,
@@ -699,7 +699,7 @@ async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_a
         let mut command = Command::new(&java);
         command.arg(forbidden);
         let err = match prepare_sensor_command_with_path(&mut command, sensor.clone()) {
-            Ok(_) => panic!("startup instrumentation must be rejected before JVM spawn: {forbidden}"),
+            Ok(_) => panic!("инструментирование при запуске должно блокироваться до создания процесса JVM: {forbidden}"),
             Err(err) => err,
         };
         assert!(
@@ -714,7 +714,7 @@ async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_a
         Ok(_) => panic!("инструментирование через JAVA_TOOL_OPTIONS должно отклоняться"),
         Err(err) => err,
     };
-    assert!(err.contains("JAVA_TOOL_OPTIONS"), "unexpected env rejection: {err}");
+    assert!(err.contains("JAVA_TOOL_OPTIONS"), "неожиданный отказ по переменным окружения: {err}");
 
     let mut clean = Command::new(java);
     let _bootstrap = prepare_sensor_command_with_path(&mut clean, sensor)
@@ -759,7 +759,7 @@ async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach()
         .spawn()
         .expect("подключить тестовый отладчик для проверки обхода защиты");
     let status = child.wait().await.expect("дождаться завершения JVM с подключённым отладчиком");
-    assert!(!status.success(), "live debugger attach must be fail-closed");
+    assert!(!status.success(), "подключение отладчика к работающему процессу должно блокироваться");
     let debugger_status = debugger_child.wait().await.expect("дождаться завершения проверки обхода защиты отладчиком");
     sleep(Duration::from_millis(250)).await;
 
@@ -768,7 +768,7 @@ async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach()
         debugger_status.success(),
         "adversarial debugger did not attach/complete (status={debugger_status}); guard report={report:?}"
     );
-    assert!(!report.healthy, "Module Guard must reflect debugger boundary failure: {report:?}");
+    assert!(!report.healthy, "защита модулей должна отражать нарушение границ отладки: {report:?}");
     assert!(
         !report.debug_instrumentation.healthy,
         "live debugger must be detected specifically by Debug & Instrumentation Guard: {report:?}"
@@ -815,10 +815,10 @@ async fn guard_jvm_aware_protection_accepts_certified_hotspot_jit() {
         .await
         .expect("authenticate JVM-aware Sensor");
     let status = child.wait().await.expect("wait JVM-aware JIT Java");
-    assert!(status.success(), "certified HotSpot JIT workload must remain allowed: {status}");
+    assert!(status.success(), "сертифицированная JIT-нагрузка HotSpot должна оставаться разрешённой: {status}");
 
     let report = session.report().module_guard.jvm_aware;
-    assert!(report.healthy, "JVM-Aware Protection must remain healthy: {report:?}");
+    assert!(report.healthy, "защита с учётом JVM должна оставаться работоспособной: {report:?}");
     assert_eq!(report.java_major, expected_java_major());
     assert!(report.certified_major);
     assert!(report.integrity_check_count >= 2);
@@ -864,12 +864,12 @@ async fn guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_al
         .await
         .expect("аутентифицировать датчик проверки обхода защиты с учётом JVM");
     let status = child.wait().await.expect("дождаться завершения Java-проверки обхода защиты с учётом JVM");
-    assert!(!status.success(), "foreign executable MEM_PRIVATE allocation must be fail-closed");
+    assert!(!status.success(), "стороннее выделение исполняемой памяти MEM_PRIVATE должно блокироваться");
 
     let report = session.report().module_guard;
-    assert!(!report.healthy, "Module Guard must reflect JVM-aware violation");
+    assert!(!report.healthy, "защита модулей должна отражать нарушение защиты JVM");
     assert!(!report.jvm_aware.healthy);
-    assert!(report.jvm_aware.violation_count >= 1, "expected JVM-aware violation: {report:?}");
+    assert!(report.jvm_aware.violation_count >= 1, "ожидалось нарушение защиты JVM: {report:?}");
     assert!(
         report.jvm_aware.last_violation.contains("outside jvm.dll provenance")
             || report.last_violation.contains("outside jvm.dll provenance"),

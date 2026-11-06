@@ -20,20 +20,20 @@ func TestWorldCohortGate0518HeldAcrossWorldBackupProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := worldBackupHostGateAcquire04110(root, "start"); err == nil {
-		t.Fatal("world JVM was allowed to start while checkpoint gate is held")
+		t.Fatal("JVM мира запустилась во время блокировки контрольной точки")
 	}
 	if err := worldBackupReleaseCohortHold0518(root, strings.Repeat("c", 32)); err == nil {
-		t.Fatal("a different backup cohort released world gate")
+		t.Fatal("другая группа резервных копий сняла блокировку мира")
 	}
 	if _, err := os.Stat(filepath.Join(worldBackupHostGatePath04110(root), worldCohortHoldFile0518)); err != nil {
-		t.Fatalf("gate disappeared after invalid release: %v", err)
+		t.Fatalf("блокировка исчезла после ошибочного освобождения: %v", err)
 	}
 	if err := worldBackupReleaseCohortHold0518(root, runID); err != nil {
 		t.Fatal(err)
 	}
 	next, err := worldBackupHostGateAcquire04110(root, "start")
 	if err != nil {
-		t.Fatalf("JVM launch gate not released: %v", err)
+		t.Fatalf("блокировка запуска JVM не снята: %v", err)
 	}
 	next()
 }
@@ -50,7 +50,7 @@ func TestWorldBackupCommandRetainsCohortGate0518(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := worldBackupHostGateAcquire04110(root, "start"); err == nil {
-		t.Fatal("world could restart between world copy and DB checkpoint")
+		t.Fatal("мир смог перезапуститься между копированием мира и контрольной точкой БД")
 	}
 	if err := worldBackupHandle02810([]string{"release", "--server-root", root,
 		"--backup-root", store, "--hold-id", runID}); err != nil {

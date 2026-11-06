@@ -299,7 +299,7 @@ func handleRelease(args []string) error {
 		plan := map[string]any{
 			"schemaVersion": "1.0",
 			"version":       ver,
-			"platform":      "release artifacts",
+			"platform":      "артефакты выпуска",
 			"steps": []string{
 				"проверить VERSION, исходники и release artifacts (Markdown документация необязательна)",
 				"запустить release doctor",
@@ -546,8 +546,8 @@ func publishTransactionPlan(kind, subject, channel, releaseVersion string) map[s
 		"channel":       channel,
 		"version":       releaseVersion,
 		"status":        "transaction-plan",
-		"transaction":   []string{"BEGIN", "lock project/channel", "Проверьте профиль и манифест", "insert version draft", "attach storage objects", "write audit event", "promote channel pointer", "COMMIT"},
-		"rollback":      []string{"ROLLBACK on validation error", "do not move channel pointer", "keep previous published version immutable"},
+		"transaction":   []string{"BEGIN", "lock project/channel", "Проверьте профиль и манифест", "insert version draft", "привязать объекты хранилища", "записать событие аудита", "перевести указатель канала на новую версию", "COMMIT"},
+		"rollback":      []string{"ОТКАТ при ошибке проверки", "не изменять указатель канала", "оставить предыдущую опубликованную версию неизменной"},
 	}
 }
 
@@ -568,10 +568,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 		missing := []string{}
 		if strings.TrimSpace(compatibilityMatrixPath) == "" {
-			missing = append(missing, "compatibility matrix")
+			missing = append(missing, "матрица совместимости")
 		}
 		if strings.TrimSpace(deviceTrustMatrixPath) == "" {
-			missing = append(missing, "device trust matrix")
+			missing = append(missing, "матрица доверия к устройствам")
 		}
 		if strings.TrimSpace(guardCIMatrixPath) == "" {
 			missing = append(missing, "guard CI matrix")

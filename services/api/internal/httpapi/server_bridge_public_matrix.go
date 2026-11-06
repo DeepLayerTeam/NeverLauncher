@@ -35,20 +35,20 @@ func serverBridgeMatrixPlatforms0149(version string) []serverBridgeMatrixPlatfor
 		}
 	}
 	return []serverBridgeMatrixPlatform0149{
-		common("velocity", "proxy", "proxy", "3.3.0", "", "launcher-velocity-bridge-"+version+".jar", "async EventTask + dedicated network executor", "runtime-e2e"),
-		common("bungeecord", "proxy", "proxy", "1.21-R0.1", "", "launcher-bungeecord-bridge-"+version+".jar", "PreLogin intent + dedicated network executor", "runtime-e2e"),
-		common("waterfall", "proxy", "proxy", "1.21", "", "launcher-waterfall-bridge-"+version+".jar", "PreLogin intent + dedicated network executor", "runtime-e2e"),
-		common("bukkit", "bukkit", "backend", "", "1.21.1", "launcher-bukkit-bridge-"+version+".jar", "Bukkit-compatible listener + dedicated network executor", "build-compatibility"),
-		common("spigot", "bukkit", "backend", "", "1.21.1", "launcher-spigot-bridge-"+version+".jar", "Bukkit-family listener + dedicated network executor", "runtime-e2e"),
-		common("paper", "bukkit", "backend", "", "1.21.1", "launcher-paper-bridge-"+version+".jar", "Bukkit-family listener + dedicated network executor", "runtime-e2e"),
-		common("purpur", "bukkit", "backend", "", "1.21.1", "launcher-purpur-bridge-"+version+".jar", "Bukkit-family listener + dedicated network executor", "runtime-e2e"),
-		common("folia", "bukkit", "backend", "", "1.21.1", "launcher-folia-bridge-"+version+".jar", "Folia-safe dedicated network executor", "runtime-e2e"),
-		common("fabric", "fabric", "backend", "", "1.21.1", "launcher-fabric-bridge-"+version+".jar", "Fabric login synchronizer + bounded validation executor", "runtime-e2e"),
-		common("quilt", "quilt", "backend", "", "1.21.1", "launcher-quilt-bridge-"+version+".jar", "Quilt server lifecycle + bounded validation executor", "build-compatibility"),
-		common("forge", "modloader", "backend", "", "1.21.1", "launcher-forge-bridge-"+version+".jar", "PlayerNegotiationEvent future + bounded validation executor", "runtime-e2e"),
-		common("neoforge", "modloader", "backend", "", "1.21.1", "launcher-neoforge-bridge-"+version+".jar", "PlayerNegotiationEvent future + bounded validation executor", "runtime-e2e"),
-		common("sponge", "sponge", "backend", "", "1.21.1", "launcher-sponge-bridge-"+version+".jar", "Sponge event lifecycle + bounded validation executor", "build-compatibility"),
-		common("vanilla", "vanilla-sidecar", "backend", "", "1.21.1", "launcher-vanilla-bridge-"+version+".jar", "RCON sidecar + bounded polling executor", "sidecar-rcon-e2e"),
+		common("velocity", "proxy", "proxy", "3.3.0", "", "launcher-velocity-bridge-"+version+".jar", "асинхронный EventTask и отдельный сетевой исполнитель", "runtime-e2e"),
+		common("bungeecord", "proxy", "proxy", "1.21-R0.1", "", "launcher-bungeecord-bridge-"+version+".jar", "обработка PreLogin и отдельный сетевой исполнитель", "runtime-e2e"),
+		common("waterfall", "proxy", "proxy", "1.21", "", "launcher-waterfall-bridge-"+version+".jar", "обработка PreLogin и отдельный сетевой исполнитель", "runtime-e2e"),
+		common("bukkit", "bukkit", "backend", "", "1.21.1", "launcher-bukkit-bridge-"+version+".jar", "слушатель Bukkit и отдельный сетевой исполнитель", "build-compatibility"),
+		common("spigot", "bukkit", "backend", "", "1.21.1", "launcher-spigot-bridge-"+version+".jar", "слушатель семейства Bukkit и отдельный сетевой исполнитель", "runtime-e2e"),
+		common("paper", "bukkit", "backend", "", "1.21.1", "launcher-paper-bridge-"+version+".jar", "слушатель семейства Bukkit и отдельный сетевой исполнитель", "runtime-e2e"),
+		common("purpur", "bukkit", "backend", "", "1.21.1", "launcher-purpur-bridge-"+version+".jar", "слушатель семейства Bukkit и отдельный сетевой исполнитель", "runtime-e2e"),
+		common("folia", "bukkit", "backend", "", "1.21.1", "launcher-folia-bridge-"+version+".jar", "отдельный сетевой исполнитель, совместимый с Folia", "runtime-e2e"),
+		common("fabric", "fabric", "backend", "", "1.21.1", "launcher-fabric-bridge-"+version+".jar", "синхронизация входа Fabric и исполнитель проверки с ограниченной нагрузкой", "runtime-e2e"),
+		common("quilt", "quilt", "backend", "", "1.21.1", "launcher-quilt-bridge-"+version+".jar", "жизненный цикл сервера Quilt и исполнитель проверки с ограниченной нагрузкой", "build-compatibility"),
+		common("forge", "modloader", "backend", "", "1.21.1", "launcher-forge-bridge-"+version+".jar", "асинхронный PlayerNegotiationEvent и исполнитель проверки с ограниченной нагрузкой", "runtime-e2e"),
+		common("neoforge", "modloader", "backend", "", "1.21.1", "launcher-neoforge-bridge-"+version+".jar", "асинхронный PlayerNegotiationEvent и исполнитель проверки с ограниченной нагрузкой", "runtime-e2e"),
+		common("sponge", "sponge", "backend", "", "1.21.1", "launcher-sponge-bridge-"+version+".jar", "жизненный цикл событий Sponge и исполнитель проверки с ограниченной нагрузкой", "build-compatibility"),
+		common("vanilla", "vanilla-sidecar", "backend", "", "1.21.1", "launcher-vanilla-bridge-"+version+".jar", "дополнительный сервис RCON и исполнитель опроса с ограниченной нагрузкой", "sidecar-rcon-e2e"),
 	}
 }
 
@@ -79,7 +79,7 @@ func (s Server) serverBridgePublicMatrix0149(w http.ResponseWriter, r *http.Requ
 				"topologyFreshnessSeconds": 120,
 			},
 			"evidence": map[string]any{
-				"policy":                  "exact-commit CI evidence; coverage field distinguishes runtime-e2e from build-compatibility",
+				"policy":                  "Результаты CI привязаны к точному коммиту; поле coverage различает runtime-e2e и build-compatibility",
 				"runtimeEvidenceArtifact": "launcher-minecraft-client-e2e-evidence",
 				"matrixSource":            "serverbridge/targets.json",
 			},

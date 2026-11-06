@@ -638,10 +638,10 @@ mod tests {
         assert_eq!(result.downloaded, 7, "{:?}", result.messages);
         assert_eq!(result.failed, 1, "{:?}", result.messages);
         assert_eq!(result.failed_files, vec!["libraries/7.jar"]);
-        assert!(a.max_active.load(Ordering::SeqCst) >= 2, "no parallel downloads on first host");
-        assert!(a.max_active.load(Ordering::SeqCst) <= 2, "exceeded per-host limit");
-        assert!(global_max.load(Ordering::SeqCst) >= 2, "downloads were sequential");
-        assert!(global_max.load(Ordering::SeqCst) <= 3, "exceeded global limit");
+        assert!(a.max_active.load(Ordering::SeqCst) >= 2, "на первом узле не было параллельных загрузок");
+        assert!(a.max_active.load(Ordering::SeqCst) <= 2, "превышено ограничение загрузок на один узел");
+        assert!(global_max.load(Ordering::SeqCst) >= 2, "загрузки выполнялись последовательно");
+        assert!(global_max.load(Ordering::SeqCst) <= 3, "превышено общее ограничение загрузок");
         assert!(b.max_active.load(Ordering::SeqCst) <= 2);
         for i in 0..7 {
             assert_eq!(fs::read_to_string(root.join(format!("libraries/{i}.jar"))).await.unwrap(),
@@ -775,7 +775,7 @@ mod concurrent_operations_tests {
             .await.unwrap().unwrap();
         assert_eq!(result.downloaded, 1, "{:?}", result.messages);
         assert_eq!(result.failed, 0);
-        assert_eq!(result.bytes_downloaded, 20, "only the missing suffix crossed the wire after failure");
+        assert_eq!(result.bytes_downloaded, 20, "после сбоя должны были передаваться только недостающие данные");
         assert_eq!(fs::read(root.join("libraries/retry.jar")).await.unwrap(), bytes);
         server.await.unwrap();
         let requests = requests.lock().unwrap();
@@ -859,7 +859,7 @@ mod content_cache_mirror_integration_tests {
         assert_eq!(offline.failed, 0);
         assert_eq!(offline.cache_hits, 1);
         assert_eq!(offline.bytes_reused, trusted.len() as u64);
-        assert_eq!(offline.bytes_downloaded, 0, "cache hit must transfer zero wire bytes");
+        assert_eq!(offline.bytes_downloaded, 0, "при попадании в кеш передача по сети должна отсутствовать");
         assert_eq!(fs::read(second.join("libraries/common.jar")).await.unwrap(), trusted);
         fs::remove_dir_all(sandbox).await.unwrap();
     }

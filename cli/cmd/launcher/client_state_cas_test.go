@@ -31,7 +31,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 	}
 	_, err = u.apply(updaterRequest0156{Root: root, Namespace: "client-package", FromVersion: "", ToVersion: "2", ExpectedStateSHA256: before})
 	if err == nil || !strings.Contains(err.Error(), "conflict") {
-		t.Fatalf("expected stale-state conflict: %v", err)
+		t.Fatalf("ожидался конфликт устаревшего состояния: %v", err)
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, "client-state.json"))
 	if err != nil || string(raw) != `{"version":"1"}` {
@@ -39,7 +39,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 	}
 	_, err = u.apply(updaterRequest0156{Root: root, Namespace: "client-package", FromVersion: "1", ToVersion: "2", ExpectedStateSHA256: after})
 	if err != nil {
-		t.Fatalf("matching state should commit: %v", err)
+		t.Fatalf("совпадающее состояние должно сохраняться: %v", err)
 	}
 }
 
@@ -87,10 +87,10 @@ func TestClientStateActivationHappensAfterVerifiedFiles0228(t *testing.T) {
 	}
 	raw, err := os.ReadFile(pointer)
 	if err != nil || string(raw) != string(newPointer) {
-		t.Fatalf("activation failed: %s %v", raw, err)
+		t.Fatalf("сбой активации: %s %v", raw, err)
 	}
 	raw, err = os.ReadFile(filepath.Join(root, "managed", "data.bin"))
 	if err != nil || string(raw) != string(payload) {
-		t.Fatalf("managed file absent: %s %v", raw, err)
+		t.Fatalf("отсутствует управляемый файл: %s %v", raw, err)
 	}
 }

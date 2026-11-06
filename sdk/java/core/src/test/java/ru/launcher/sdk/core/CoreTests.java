@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.*;
 public final class CoreTests {
     private static int assertions;
     private static void ok(boolean b,String message){assertions++;if(!b)throw new AssertionError(message);}
-    private static void throwsType(Class<? extends Throwable> type,Checked action){assertions++;try{action.run();throw new AssertionError("expected "+type.getSimpleName());}catch(Throwable e){if(!type.isInstance(e))throw new AssertionError("expected "+type.getSimpleName()+", got "+e,e);}}
+    private static void throwsType(Class<? extends Throwable> type,Checked action){assertions++;try{action.run();throw new AssertionError("ожидалось исключение "+type.getSimpleName());}catch(Throwable e){if(!type.isInstance(e))throw new AssertionError("ожидалось исключение "+type.getSimpleName()+", got "+e,e);}}
     @FunctionalInterface interface Checked{void run() throws Exception;}
     private static String sample(String id,String version,String deps,String conflicts){return "{\"schemaVersion\":\"2.0\",\"id\":\""+id+"\",\"name\":\"Test\",\"version\":\""+version+"\",\"publisher\":\"team\",\"api\":\"1.0\",\"targets\":[{\"kind\":\"backend\",\"entrypoint\":\"backend/bin/app\"}],\"dependencies\":"+deps+",\"conflicts\":"+conflicts+"}";}
     static ExtensionManifest dep(String id,String version,String deps){return ExtensionManifest.parse(sample(id,version,deps,"[]"));}
@@ -93,5 +93,5 @@ public final class CoreTests {
             env.put("LAUNCHER_EXTENSION_ID","wrong");throwsType(IllegalArgumentException.class,()->HostSession.fromEnvironment(env,dep("org.test","1.0.0","[]")));
         }finally{server.stop(0);}
     }
-    public static void main(String[] args)throws Exception{jsonAndManifest();semver();graph();cancellationAndDeadline();lifecycle();host();System.out.println("PASS: "+assertions+" Java SDK Core checks");}
+    public static void main(String[] args)throws Exception{jsonAndManifest();semver();graph();cancellationAndDeadline();lifecycle();host();System.out.println("PASS: "+assertions+" проверок ядра Java SDK");}
 }

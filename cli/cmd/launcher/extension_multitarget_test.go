@@ -10,7 +10,7 @@ import (
 
 func TestExtensionPackageFourTargets0209(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fixture uses POSIX executable bits")
+		t.Skip("тестовому стенду требуются биты исполнения POSIX")
 	}
 	t.Setenv("SOURCE_DATE_EPOCH", "1700000000")
 	root := t.TempDir()

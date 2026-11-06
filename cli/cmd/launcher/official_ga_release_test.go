@@ -27,37 +27,37 @@ func TestOfficialMinecraftGAReceipt0270(t *testing.T) {
 		}
 	}
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err == nil {
-		t.Fatal("missing official GA proof was accepted")
+		t.Fatal("принято отсутствие официального подтверждения GA")
 	}
 	makeReceipt("passed", signed)
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", strings.Repeat("d", 40)); err == nil {
-		t.Fatal("wrong release source accepted")
+		t.Fatal("принят неверный источник выпуска")
 	}
 	makeReceipt("blocked", signed)
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err == nil {
-		t.Fatal("blocked receipt accepted")
+		t.Fatal("принята заблокированная квитанция")
 	}
 	makeReceipt("passed", signed[:5])
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err == nil {
-		t.Fatal("missing platform accepted")
+		t.Fatal("принято отсутствие платформы")
 	}
 	duplicate := append(append([]map[string]string{}, signed[:5]...), signed[0])
 	makeReceipt("passed", duplicate)
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err == nil {
-		t.Fatal("duplicate platform accepted")
+		t.Fatal("принято повторение платформы")
 	}
 	makeReceipt("passed", signed)
 	if err := os.Remove(filepath.Join(root, officialGACertification0270)); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink("/etc/passwd", filepath.Join(root, officialGACertification0270)); err != nil {
-		t.Skip("symlinks unavailable")
+		t.Skip("символические ссылки недоступны")
 	}
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err == nil {
-		t.Fatal("symlinked GA receipt accepted")
+		t.Fatal("принята квитанция GA через символическую ссылку")
 	}
 	// Совместимость обновлений существующих версий должна сохраняться: их правила выпуска не меняются.
 	if err := verifyOfficialGAReceipt0270(root, "0.26.12", commit); err != nil {

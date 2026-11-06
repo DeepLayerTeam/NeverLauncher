@@ -175,7 +175,7 @@ func TestLegacyAdapters0278VanillaFactoryEndToEnd(t *testing.T) {
 
 func TestLegacyAdapters0278RealJavaArgvExecutionAndGates(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX Java shim fixture")
+		t.Skip("тестовая оболочка Java для POSIX")
 	}
 	root := filepath.Join(t.TempDir(), "legacy directory with spaces")
 	target := currentVanillaTarget()
@@ -311,7 +311,7 @@ func TestLegacyAdapters0278ForgeFactoryRealMaterializer(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				t.Skip("fixture Java launcher is POSIX")
+				t.Skip("тестовая программа запуска Java предназначена для POSIX")
 			}
 			o := factoryBuildOptions0271{Loader: "forge", Minecraft: tc.mc, LoaderVersion: tc.loaderVersion, ClientDir: installDir,
 				VersionManifest: server.URL + "/manifest", AssetBaseURL: server.URL + "/assets", InstallerURL: server.URL + "/installer.jar", InstallerSHA1: sha1hex(installer.Bytes()), JavaExecutable: java,

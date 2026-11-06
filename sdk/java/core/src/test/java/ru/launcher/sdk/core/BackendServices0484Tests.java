@@ -14,7 +14,7 @@ public final class BackendServices0484Tests {
     private static void check(boolean value,String message){checks++;if(!value)throw new AssertionError(message);}
     private static void expect(Class<? extends Throwable> type,Action action)throws Exception {
         checks++;
-        try {action.call();throw new AssertionError("expected " + type.getSimpleName());}
+        try {action.call();throw new AssertionError("ожидалось исключение " + type.getSimpleName());}
         catch(Throwable ex){if(!type.isInstance(ex))throw new AssertionError("неожиданное исключение",ex);}
     }
     private interface Action {void call()throws Exception;}
@@ -95,5 +95,5 @@ public final class BackendServices0484Tests {
             }
         } finally {broker.stop(0);}
     }
-    public static void main(String[] argv)throws Exception {run();System.out.println("PASS: "+checks+" Java Backend Services typed HTTP, pagination and revocation checks");}
+    public static void main(String[] argv)throws Exception {run();System.out.println("PASS: "+checks+" проверок типизированного HTTP, пагинации и отзыва доступа для сервисов Java Backend");}
 }

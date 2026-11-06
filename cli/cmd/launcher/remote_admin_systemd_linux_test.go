@@ -13,6 +13,6 @@ func TestRemoteSystemdGivesDrainWindow0428(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(unit, "TimeoutStopSec=105s") || !strings.Contains(unit, "KillMode=process") {
-		t.Fatalf("remote shutdown not safe: %s", unit)
+		t.Fatalf("удалённая остановка небезопасна: %s", unit)
 	}
 }

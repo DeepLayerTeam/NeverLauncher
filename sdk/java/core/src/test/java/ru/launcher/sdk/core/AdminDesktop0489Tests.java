@@ -76,6 +76,6 @@ public final class AdminDesktop0489Tests {
                 rpc(http,server,"secret","ui.action.invoke",input,422);
             }
         }finally{broker.stop(0);}
-        System.out.println("PASS: "+checks+" Admin/Desktop Java UI actions and settings HTTP integration checks");
+        System.out.println("PASS: "+checks+" проверок HTTP-интеграции действий интерфейса и настроек Java Admin/Desktop");
     }
 }

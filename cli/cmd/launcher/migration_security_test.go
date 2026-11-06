@@ -25,7 +25,7 @@ func TestMigrationSecurityCLI0336(t *testing.T) {
 		t.Fatal("Отправлен небезопасный запрос")
 	}
 	if err := postMigrationSecurity0336("http://example.com/api", "t", "run-1", "", true, "run-1"); err == nil {
-		t.Fatal("insecure remote HTTP accepted")
+		t.Fatal("небезопасное удалённое соединение HTTP было принято")
 	}
 	if err := postMigrationSecurity0336(srv.URL, "t", "run-1", "", true, "run-1"); err != nil {
 		t.Fatal(err)
@@ -34,6 +34,6 @@ func TestMigrationSecurityCLI0336(t *testing.T) {
 		t.Fatal("Команда активации не выполнена")
 	}
 	if !strings.HasPrefix(srv.URL, "http://127.0.0.1:") {
-		t.Skip("system selected IPv6 loopback")
+		t.Skip("система выбрала обратный адрес IPv6")
 	}
 }

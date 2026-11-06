@@ -45,6 +45,6 @@ public final class ModulePackaging0482Tests {
             }
             reject(()->BundledLibraries.open(modified,"1.0",ModulePackaging0482Tests.class.getClassLoader()));
         }finally{Files.deleteIfExists(modified);}
-        System.out.println("PASS: "+checks+" real nested JAR classloading, API, and integrity checks");
+        System.out.println("PASS: "+checks+" проверок реальной загрузки вложенных JAR, API и целостности");
     }
 }

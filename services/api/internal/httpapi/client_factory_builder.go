@@ -730,7 +730,7 @@ func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=launcher-client-%s.zip", job.ID))
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Launcher-Distribution", "local-only; publication requires permission gates and signed runtime certification")
+	w.Header().Set("X-Launcher-Distribution", "только локально; публикация требует проверки прав и подписанной сертификации Runtime")
 	http.ServeContent(w, r, "client.zip", stat.ModTime(), file)
 	s.audit(r, job.OwnerID, "client-factory:export", job.ID)
 }

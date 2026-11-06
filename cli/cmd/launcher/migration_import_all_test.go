@@ -59,7 +59,7 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 	imports := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer token" {
-			t.Error("missing bearer")
+			t.Error("отсутствует Bearer-токен")
 			w.WriteHeader(401)
 			return
 		}
@@ -74,18 +74,18 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/dry-run"):
 			n := strings.TrimSuffix(strings.TrimPrefix(r.Header.Get("X-Gravit-Profile-Path"), "profiles/"), ".json")
 			if n != "one" && n != "two" {
-				t.Errorf("bad profile %s", n)
+				t.Errorf("некорректный профиль %s", n)
 			}
 			if r.Header.Get("X-Loader-Version") != "49.0.38" {
-				t.Error("exact Forge loader version was not transferred")
+				t.Error("точная версия загрузчика Forge не была перенесена")
 			}
 			if r.Header.Get("Content-Type") != "application/zip" {
-				t.Error("no ZIP upload")
+				t.Error("ZIP-файл не был загружен")
 			}
 			data, _ := io.ReadAll(r.Body)
 			sourceBytes, _ := os.ReadFile(source)
 			if string(data) != string(sourceBytes) {
-				t.Error("different source bytes")
+				t.Error("байты исходного файла не совпадают")
 			}
 			plan := livePlanFixture0493(batch, n)
 			if n == "two" {
@@ -96,20 +96,20 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/content/import"):
 			n := strings.TrimSuffix(strings.TrimPrefix(r.Header.Get("X-Gravit-Profile-Path"), "profiles/"), ".json")
 			if r.Header.Get("X-Migration-Content-Confirm") != "run" {
-				t.Error("run confirmation missing")
+				t.Error("отсутствует подтверждение запуска")
 			}
 			wanted := strings.Repeat("d", 64)
 			if n == "two" {
 				wanted = strings.Repeat("e", 64)
 			}
 			if r.Header.Get("X-Migration-Plan-SHA256") != wanted {
-				t.Error("pinned plan digest not sent")
+				t.Error("не передан закреплённый хеш плана")
 			}
 			if r.Header.Get("X-Loader-Version") != "49.0.38" {
-				t.Error("loader version missing from commit")
+				t.Error("в коммите отсутствует версия загрузчика")
 			}
 			if n == "two" && !staged["one"] {
-				t.Error("second profile imported first")
+				t.Error("второй профиль импортирован раньше первого")
 			}
 			imports++
 			staged[n] = true
@@ -126,18 +126,18 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 		t.Fatal(err)
 	}
 	if imports != 2 {
-		t.Fatalf("only %d profiles imported", imports)
+		t.Fatalf("импортировано только %d профилей", imports)
 	}
 	resumed := append(append([]string(nil), args[:len(args)-1]...), filepath.Join(t.TempDir(), "resume.json"), "--resume", "true")
 	if err := handleMigrationWorkflow0331(resumed); err != nil {
-		t.Fatalf("idempotent resume rejected: %v", err)
+		t.Fatalf("повторяемое возобновление отклонено: %v", err)
 	}
 	if imports != 2 {
-		t.Fatalf("resume reapplied already-staged bytes: %d", imports)
+		t.Fatalf("при возобновлении повторно применены ранее подготовленные байты: %d", imports)
 	}
 	st, err := os.Stat(output)
 	if err != nil || st.Mode().Perm() != 0600 {
-		t.Fatalf("missing private result: %v %v", st, err)
+		t.Fatalf("отсутствует закрытый результат: %v %v", st, err)
 	}
 	var result struct {
 		Status   string                  `json:"status"`
@@ -145,10 +145,10 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 	}
 	payload, _ := os.ReadFile(output)
 	if json.Unmarshal(payload, &result) != nil || result.Status != "staged" || len(result.Profiles) != 2 {
-		t.Fatalf("invalid success receipt %s", payload)
+		t.Fatalf("некорректная квитанция об успехе %s", payload)
 	}
 	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "--resume") {
-		t.Fatalf("duplicate import did not fail closed: %v", err)
+		t.Fatalf("повторный импорт не был заблокирован: %v", err)
 	}
 }
 func livePlanFixture0493(batch gravBatch0492, n string) migrationLivePlan0493 {
@@ -202,20 +202,20 @@ func TestImportAllRejectsStaleTargetAndTamperedInputs0493(t *testing.T) {
 	defer server.Close()
 	args := []string{"import-content-all", "--backend", server.URL, "--token", "token", "--run", "run", "--confirm", "run", "--source", source, "--mapping", mapping, "--report", report}
 	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "target changed") {
-		t.Fatalf("stale target not rejected: %v", err)
+		t.Fatalf("устаревшая цель не была отклонена: %v", err)
 	}
 	if imports != 0 {
-		t.Fatal("mutation occurred after stale target")
+		t.Fatal("данные изменены после выявления устаревшей цели")
 	}
 	if err := os.WriteFile(source, []byte("altered"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "source changed") {
-		t.Fatalf("tampered ZIP was accepted: %v", err)
+		t.Fatalf("принят изменённый ZIP-файл: %v", err)
 	}
 	args[7] = "wrong" // wrong confirmation
 	if err := handleMigrationWorkflow0331(args); err == nil {
-		t.Fatal("wrong explicit confirmation accepted")
+		t.Fatal("принято неверное явное подтверждение")
 	}
 }
 func TestImportAllURL0493(t *testing.T) {
@@ -226,7 +226,7 @@ func TestImportAllURL0493(t *testing.T) {
 	}
 	for _, raw := range []string{"http://127.0.0.1:8080", "https://example.com"} {
 		if _, err := migrationURL0493(raw); err != nil {
-			t.Fatalf("valid URL rejected: %v", err)
+			t.Fatalf("допустимый URL отклонён: %v", err)
 		}
 	}
 }

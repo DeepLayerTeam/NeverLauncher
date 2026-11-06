@@ -56,7 +56,7 @@ public final class ClientTest {
    try {c.requestStream("GET","/api/v1/stream",Map.of(),null,null,new ByteArrayOutputStream(),-1,"");
     throw new AssertionError("отрицательный предел ошибочно принят");}catch(IllegalArgumentException expected){}
    if(Operations.ALL.size()<450)throw new AssertionError("реестр операций неполон");
-   System.out.println("Java REST SDK HTTP tests PASS: "+Operations.ALL.size()+" operations");
+   System.out.println("Тесты HTTP для Java REST SDK пройдены: "+Operations.ALL.size()+" операций");
   } finally {server.stop(0);}
   System.exit(0);
  }

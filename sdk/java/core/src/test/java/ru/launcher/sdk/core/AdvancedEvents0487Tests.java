@@ -95,6 +95,6 @@ public final class AdvancedEvents0487Tests {
                 check(call(http,base+"/v1/events",task,"callback-secret").statusCode()==422,"завершение работы отменяет регистрацию локальных обработчиков");
             }
         }finally{broker.stop(0);}
-        System.out.println("PASS: "+checks+" Java advanced typed jobs, permanent/retry and sync policy checks");
+        System.out.println("PASS: "+checks+" проверок типизированных заданий Java, постоянных и повторных операций и политики синхронизации");
     }
 }

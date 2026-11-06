@@ -54,6 +54,6 @@ public final class VanillaRconWire0416Test {
             server.get(3,TimeUnit.SECONDS);
             exec.shutdownNow();
         }
-        System.out.println("VanillaRconWire0416Test: TCP auth, command, split-packet readback PASS");
+        System.out.println("VanillaRconWire0416Test: проверка TCP-аутентификации, команд и ответов из нескольких пакетов пройдена");
     }
 }

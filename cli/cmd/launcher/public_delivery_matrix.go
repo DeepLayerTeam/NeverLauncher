@@ -566,7 +566,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	if err != nil {
 		return report, err
 	}
-	for label, candidate := range map[string]string{"root public key": rootPublicKey, "current trust policy": currentTrustPolicy, "trust state": trustState} {
+	for label, candidate := range map[string]string{"корневой открытый ключ": rootPublicKey, "текущая политика доверия": currentTrustPolicy, "состояние доверия": trustState} {
 		if strings.TrimSpace(candidate) == "" {
 			return report, fmt.Errorf("Для открытый E2E требуется: внешний %s", label)
 		}

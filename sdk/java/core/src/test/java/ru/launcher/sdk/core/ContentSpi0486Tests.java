@@ -15,7 +15,7 @@ public final class ContentSpi0486Tests {
     private interface Op{void run()throws Exception;}
     private static void reject(Class<? extends Throwable> expected,Op op)throws Exception{
         checks++;
-        try{op.run();throw new AssertionError("expected "+expected.getSimpleName());}
+        try{op.run();throw new AssertionError("ожидалось исключение "+expected.getSimpleName());}
         catch(Throwable e){if(!expected.isInstance(e))throw new AssertionError("неверная ошибка",e);}
     }
     private static final byte[] DATA="verified-content-from-storage".getBytes(StandardCharsets.UTF_8);

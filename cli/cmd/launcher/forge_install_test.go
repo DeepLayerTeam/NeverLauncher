@@ -45,14 +45,14 @@ func TestForgeNeoForgeLibrariesOnlyForSelectedTargets0404(t *testing.T) {
 				t.Fatal(err)
 			}
 			if requests.Load() != 1 || len(files) != 1 || !strings.Contains(files[0].Path, "linux-specific") {
-				t.Fatalf("wrong target downloads: requests=%d files=%+v", requests.Load(), files)
+				t.Fatalf("загружены файлы не для той платформы: запросы=%d, файлы=%+v", requests.Load(), files)
 			}
 			if libs[0].Name != "example:os-specific:1.0" || libs[2].Name != "example:classifier:1.0:natives-windows" {
-				t.Fatal("must preserve non-applicable metadata")
+				t.Fatal("необходимо сохранять неприменимые метаданные")
 			}
 			for _, rel := range []string{"libraries/example/os-specific/1.0/os-specific-1.0.jar", "libraries/example/classifier/1.0/classifier-1.0-natives-windows.jar"} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); !os.IsNotExist(err) {
-					t.Fatalf("unselected library downloaded: %s (%v)", rel, err)
+					t.Fatalf("загружена невыбранная библиотека: %s (%v)", rel, err)
 				}
 			}
 		})
@@ -62,12 +62,12 @@ func TestForgeNeoForgeLibrariesOnlyForSelectedTargets0404(t *testing.T) {
 func TestForgeLibraryRejectsMavenArtifactSubstitution0404(t *testing.T) {
 	libraries := []MojangLibrary{{Name: "example:real:1.0", Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "example/other/1.0/other-1.0.jar", URL: "https://example.org/other.jar", SHA1: strings.Repeat("a", 40)}}}}
 	if _, err := materializeForgeLibraries(context.Background(), nil, t.TempDir(), &libraries, "forge", 2, true); err == nil || !strings.Contains(err.Error(), "Maven identity") {
-		t.Fatalf("incorrect artifact path accepted: %v", err)
+		t.Fatalf("принят неверный путь артефакта: %v", err)
 	}
 	// Неподходящая несовместимая запись не должна ломать установку только для Linux.
 	libraries[0].Rules = []map[string]any{{"action": "allow", "os": map[string]any{"name": "windows"}}}
 	if files, err := materializeForgeLibraries(context.Background(), nil, t.TempDir(), &libraries, "forge", 2, true, vanillaTarget{OS: "linux", Arch: "x86_64"}); err != nil || len(files) != 0 {
-		t.Fatalf("irrelevant Windows artifact should be skipped: %v %+v", err, files)
+		t.Fatalf("ненужный артефакт Windows должен пропускаться: %v %+v", err, files)
 	}
 }
 
@@ -76,7 +76,7 @@ func javaBase64Encode0404(data []byte) string { return base64.StdEncoding.Encode
 func makeForgeTestJar0404(t *testing.T, className, source string, withMainManifest bool) []byte {
 	t.Helper()
 	if _, err := exec.LookPath("javac"); err != nil {
-		t.Skip("JDK javac unavailable")
+		t.Skip("компилятор javac из JDK недоступен")
 	}
 	work := t.TempDir()
 	name := filepath.Join(work, filepath.FromSlash(strings.ReplaceAll(className, ".", "/"))+".java")
@@ -122,11 +122,11 @@ func makeForgeTestJar0404(t *testing.T, className, source string, withMainManife
 // входа загрузчика здесь — детерминированные тестовые данные, не бинарники Mojang.
 func TestForgeNeoForgeInstallerRunsRealJVMProcessorAndPatchedClasspath0404(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("test fixture uses the OS java executable; CI JVM target varies")
+		t.Skip("тестовый стенд использует системный исполняемый файл Java; версия JVM в CI может различаться")
 	}
 	java, err := exec.LookPath("java")
 	if err != nil {
-		t.Skip("java unavailable")
+		t.Skip("Java недоступна")
 	}
 	generated := makeForgeTestJar0404(t, "cpw.mods.bootstraplauncher.BootstrapLauncher", `package cpw.mods.bootstraplauncher; public class BootstrapLauncher { public static void main(String[] args) { System.out.println("LOADER_STARTED " + String.join(" ", args)); } }`, false)
 	// Процессор преобразует входной патч установщика в проверенный JAR Runtime.
@@ -163,13 +163,13 @@ func TestForgeNeoForgeInstallerRunsRealJVMProcessorAndPatchedClasspath0404(t *te
 				t.Fatal(err)
 			}
 			if res.ProcessorRan != 1 || res.ProfilePath == "" {
-				t.Fatalf("processor did not execute: %+v", res)
+				t.Fatalf("обработчик не был запущен: %+v", res)
 			}
 			generatedPath := filepath.Join(clientDir, "libraries", "com", "example", "generated", "1.0", "generated-1.0.jar")
 			run := exec.Command(java, "-cp", generatedPath, "cpw.mods.bootstraplauncher.BootstrapLauncher", "--launchTarget", loader+"client")
 			output, err := run.CombinedOutput()
 			if err != nil || !strings.Contains(string(output), "LOADER_STARTED --launchTarget "+loader+"client") {
-				t.Fatalf("generated classpath cannot execute: %v %s", err, output)
+				t.Fatalf("не удалось выполнить код с созданным classpath: %v %s", err, output)
 			}
 		})
 	}

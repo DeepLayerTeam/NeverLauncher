@@ -11,7 +11,7 @@ import (
 
 func TestServerBridgeHostConfigureJavaJar01910(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("test fixture uses a POSIX fake java executable")
+		t.Skip("тестовый стенд использует имитацию исполняемого файла Java для POSIX")
 	}
 	root := t.TempDir()
 	jar := filepath.Join(root, "paper-1.21.1.jar")
@@ -49,7 +49,7 @@ exit 0`)
 
 func TestServerBridgeHostCrashRestartAndLogs01910(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("test fixture uses a POSIX fake java executable")
+		t.Skip("тестовый стенд использует имитацию исполняемого файла Java для POSIX")
 	}
 	root := t.TempDir()
 	jar := filepath.Join(root, "paper.jar")
@@ -178,7 +178,7 @@ while :; do sleep 1; done`)
 
 func TestServerBridgeHostForgeArgsMode01910(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("test fixture uses a POSIX fake java executable")
+		t.Skip("тестовый стенд использует имитацию исполняемого файла Java для POSIX")
 	}
 	root := t.TempDir()
 	argsFile := filepath.Join(root, "libraries", "net", "minecraftforge", "forge", "1.20.1-47.3.0", "unix_args.txt")

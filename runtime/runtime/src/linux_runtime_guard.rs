@@ -365,7 +365,7 @@ mod tests {
             signed:BTreeMap::new(), external:BTreeMap::new(), java_native_baseline:BTreeMap::new(),
             expected_jvm_args:vec!["8".into()],
         };
-        assert!(guard.verify().is_ok(), "actual hardened child should pass");
+        assert!(guard.verify().is_ok(), "защищённый дочерний процесс должен пройти проверку");
         guard.expected_jvm_args = vec!["-javaagent:/injected.jar".into()];
         assert!(guard.verify().unwrap_err().contains("Обнаружено изменение: параметры запуска"));
         guard.expected_jvm_args = vec!["8".into()];

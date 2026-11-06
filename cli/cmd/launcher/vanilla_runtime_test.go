@@ -357,7 +357,7 @@ func TestExtractNativeJarRejectsTraversal(t *testing.T) {
 
 func TestValidateRemoteURLRejectsPlainHTTPExceptLoopback(t *testing.T) {
 	if err := validateRemoteURL("http://example.com/file.jar"); err == nil {
-		t.Fatal("plain HTTP accepted")
+		t.Fatal("небезопасное соединение HTTP было принято")
 	}
 	if err := validateRemoteURL("http://127.0.0.1:8080/file.jar"); err != nil {
 		t.Fatalf("Локальный HTTP ошибочно отклонён: %v", err)
@@ -1129,7 +1129,7 @@ func TestFlattenLWJGLWindowsNativesRejectsSymlinkSource(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(filepath.Join(root, "outside.dll"), file); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
+		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil {
 		t.Fatal("Принят нативный исходный файл через символическую ссылку")
