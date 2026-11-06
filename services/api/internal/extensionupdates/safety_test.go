@@ -17,7 +17,7 @@ func TestUpdateHealthRequiresExactRunningGeneration0499(t *testing.T) {
 	install := model.ExtensionInstall{ExtensionID: "example.plugin", Scope: "project", ScopeID: "p1", CurrentVersion: "2.0.0", Generation: 3}
 	valid := extensionhost.Status{ExtensionID: "example.plugin", Scope: "project", ScopeID: "p1", Version: "2.0.0", Generation: 3, State: "running", Healthy: true}
 	if !healthyInstallation0499(valid, install) {
-		t.Fatal("correct live generation rejected")
+		t.Fatal("Отклонена корректная активная версия")
 	}
 	invalid := []struct {
 		name   string
@@ -35,7 +35,7 @@ func TestUpdateHealthRequiresExactRunningGeneration0499(t *testing.T) {
 			got := valid
 			tc.change(&got)
 			if healthyInstallation0499(got, install) {
-				t.Fatal("unrelated or stale JVM accepted")
+				t.Fatal("Принята посторонняя или устаревшая JVM")
 			}
 		})
 	}
@@ -80,18 +80,18 @@ func TestRecoveryRefusesRestoreWhenJVMCannotStop0499(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := m.recoverTransaction02011(ctx, tx, 30*time.Millisecond); err == nil || !strings.Contains(err.Error(), "cannot stop") {
-		t.Fatalf("recovery must refuse active host: %v", err)
+		t.Fatalf("Восстановление должно отклонять работающий хост: %v", err)
 	}
 	if h.restores != 0 || h.content != `{"schema":2}` {
-		t.Fatalf("new JVM state overwritten: restores=%d content=%s", h.restores, h.content)
+		t.Fatalf("Перезаписано новое состояние JVM: восстановлений=%d содержимое=%s", h.restores, h.content)
 	}
 	current, _ := r.GetExtensionInstallState(ctx, "update.test", "global", "")
 	if current.CurrentVersion != "2.0.0" {
-		t.Fatal("rolled package while JVM potentially active")
+		t.Fatal("Пакет откатан при потенциально работающей JVM")
 	}
 	stored, _ := r.GetExtensionUpdateTransaction(ctx, tx.ID)
 	if stored.Status != "running" {
-		t.Fatalf("journal must remain recoverable: %s", stored.Status)
+		t.Fatalf("Журнал должен оставаться пригодным для восстановления: %s", stored.Status)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestRecoveryDoesNotSilentlySkipDatabaseError0499(t *testing.T) {
 		Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", Operation: "unchanged", FromVersion: "1.0.0", ToVersion: "1.0.0"}}}}
 	err := m.recoverTransaction02011(ctx, tx, 30*time.Millisecond)
 	if err == nil || !strings.Contains(err.Error(), "database connection lost") {
-		t.Fatalf("database failure treated as successful rollback: %v", err)
+		t.Fatalf("Ошибка базы данных ошибочно признана успешным откатом: %v", err)
 	}
 }
 
@@ -124,7 +124,7 @@ func TestRecoveryStopsDependentsBeforeDependencies0499(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(h.order) != 2 || h.order[0] != "dependent" || h.order[1] != "base" {
-		t.Fatalf("wrong stop order: %v", h.order)
+		t.Fatalf("Неправильный порядок остановки: %v", h.order)
 	}
 }
 
@@ -136,20 +136,20 @@ func TestFailedOldJVMRestartRemainsRecoverable0499(t *testing.T) {
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}}}
 	tx, err := m.Apply(ctx, plan)
 	if err == nil || tx.Status != "rollback_failed" {
-		t.Fatalf("unsafe successful abort: status=%s err=%v", tx.Status, err)
+		t.Fatalf("Небезопасное успешное прерывание: статус=%s ошибка=%v", tx.Status, err)
 	}
 	state, _ := r.GetExtensionInstallState(ctx, "update.test", "global", "")
 	if state.CurrentVersion != "1.0.0" {
-		t.Fatal("package changed before checkpoint")
+		t.Fatal("Пакет изменён до контрольной точки")
 	}
 	h.failAt = 0
 	h.startFailAt = 0
 	if err := m.recoverInterrupted02011(ctx, "global", "", time.Second); err != nil {
-		t.Fatalf("failed pre-mutation transaction not recoverable: %v", err)
+		t.Fatalf("Неудачная транзакция до изменения данных не поддаётся восстановлению: %v", err)
 	}
 	stored, err := r.GetExtensionUpdateTransaction(ctx, tx.ID)
 	if err != nil || stored.Status != "rolled_back" {
-		t.Fatalf("incorrect recovered journal: %+v %v", stored, err)
+		t.Fatalf("Неверно восстановленный журнал: %+v %v", stored, err)
 	}
 }
 
@@ -161,10 +161,10 @@ func TestApplyRejectsStaleUnchangedDependency0499(t *testing.T) {
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "2.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "unchanged"}}}
 	tx, err := m.Apply(ctx, plan)
 	if err == nil || !errors.Is(err, repository.ErrConflict) || tx.Status != "failed" {
-		t.Fatalf("stale dependency incorrectly accepted: %+v %v", tx, err)
+		t.Fatalf("Ошибочно принята устаревшая зависимость: %+v %v", tx, err)
 	}
 	if h.stopCount != 0 {
-		t.Fatal("stopped JVM before checking stale dependency")
+		t.Fatal("JVM остановлена до проверки устаревшей зависимости")
 	}
 }
 
@@ -179,7 +179,7 @@ func TestApplyRejectsDuplicateModuleID0499(t *testing.T) {
 		t.Fatalf("Повторяющийся модуль ошибочно принят: %+v %v", tx, err)
 	}
 	if h.stopCount != 0 {
-		t.Fatal("stopped JVM before checking duplicate module")
+		t.Fatal("JVM остановлена до проверки дубликата модуля")
 	}
 }
 
@@ -191,14 +191,14 @@ func TestRollbackCannotClaimSuccessWithUnhealthyOldJVM0499(t *testing.T) {
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}}}
 	tx, err := m.Apply(ctx, plan)
 	if err == nil || tx.Status != "rollback_failed" || !strings.Contains(tx.Failure, "restored JVM unhealthy") {
-		t.Fatalf("unsafe rollback completion: status=%s failure=%s err=%v", tx.Status, tx.Failure, err)
+		t.Fatalf("Небезопасное завершение отката: статус=%s сбой=%s ошибка=%v", tx.Status, tx.Failure, err)
 	}
 	h.healthy = true
 	if err := m.recoverInterrupted02011(ctx, "global", "", time.Second); err != nil {
-		t.Fatalf("retry after recovery: %v", err)
+		t.Fatalf("Повторная попытка после восстановления: %v", err)
 	}
 	stored, err := r.GetExtensionUpdateTransaction(ctx, tx.ID)
 	if err != nil || stored.Status != "rolled_back" {
-		t.Fatalf("rollback was not recovered: %+v %v", stored, err)
+		t.Fatalf("Откат не был восстановлен: %+v %v", stored, err)
 	}
 }

@@ -126,23 +126,23 @@ func TestAutomaticRollbackOnHealthFailure02011(t *testing.T) {
 	plan := model.ExtensionUpdatePlan{Scope: "global", LauncherVersion: "0.20.11", APIVersion: "3.7", OS: "linux", Architecture: "amd64", DefaultChannel: "stable", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update", Channel: "stable"}}}
 	tx, err := m.Apply(context.Background(), plan)
 	if err == nil {
-		t.Fatal("health failure did not fail transaction")
+		t.Fatal("Сбой проверки состояния не привёл к ошибке транзакции")
 	}
 	if tx.Status != "rolled_back" {
-		t.Fatalf("status=%s failure=%s", tx.Status, tx.Failure)
+		t.Fatalf("Статус=%s сбой=%s", tx.Status, tx.Failure)
 	}
 	cur, err := r.GetExtensionInstallState(context.Background(), "update.test", "global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cur.CurrentVersion != installed.CurrentVersion {
-		t.Fatalf("rollback version=%s want=%s", cur.CurrentVersion, installed.CurrentVersion)
+		t.Fatalf("Версия после отката=%s, ожидалось=%s", cur.CurrentVersion, installed.CurrentVersion)
 	}
 	if len(tx.Applied) != 1 || len(tx.RolledBack) != 1 {
-		t.Fatalf("transaction journal=%+v", tx)
+		t.Fatalf("Журнал транзакции=%+v", tx)
 	}
 	if host.stops < 2 || host.starts < 2 {
-		t.Fatalf("host compensation not exercised: starts=%d stops=%d", host.starts, host.stops)
+		t.Fatalf("Компенсация действий хоста не выполнена: запусков=%d остановок=%d", host.starts, host.stops)
 	}
 }
 
@@ -151,13 +151,13 @@ func TestUpdateLeasePreventsConcurrentTransaction02011(t *testing.T) {
 	owner := "0123456789abcdef0123456789abcdef"
 	ok, err := r.AcquireExtensionUpdateLease(context.Background(), "global", "", owner, time.Minute)
 	if err != nil || !ok {
-		t.Fatalf("lease setup ok=%v err=%v", ok, err)
+		t.Fatalf("Настройка захвата: успешно=%v ошибка=%v", ok, err)
 	}
 	m := &Manager{Repo: r, Lifecycle: &fakeLifecycle02011{repo: r}, Host: &fakeHost02011{healthy: true}, Config: Config{LeaseTTL: time.Minute}}
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update", Channel: "stable"}}}
 	_, err = m.Apply(context.Background(), plan)
 	if err == nil || !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("expected lease conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт захвата, получено: %v", err)
 	}
 }
 
@@ -178,24 +178,24 @@ func TestInterruptedInFlightTransactionRecoveredBeforeNewApply02011(t *testing.T
 	m := &Manager{Repo: r, Lifecycle: life, Host: host, Config: Config{HealthTimeout: 50 * time.Millisecond, LeaseTTL: time.Minute}}
 	newTx, err := m.Apply(ctx, oldPlan)
 	if err != nil {
-		t.Fatalf("apply after recovery: %v", err)
+		t.Fatalf("Применение после восстановления: %v", err)
 	}
 	if newTx.Status != "succeeded" {
-		t.Fatalf("new transaction status=%s", newTx.Status)
+		t.Fatalf("Статус новой транзакции=%s", newTx.Status)
 	}
 	recovered, err := r.GetExtensionUpdateTransaction(ctx, oldTx.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if recovered.Status != "rolled_back" || recovered.InFlight != "" || len(recovered.RolledBack) != 1 || recovered.RolledBack[0] != "update.test" {
-		t.Fatalf("interrupted transaction not recovered: %+v", recovered)
+		t.Fatalf("Прерванная транзакция не восстановлена: %+v", recovered)
 	}
 	cur, err := r.GetExtensionInstallState(ctx, "update.test", "global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cur.CurrentVersion != "2.0.0" {
-		t.Fatalf("new transaction did not apply after recovery: current=%s", cur.CurrentVersion)
+		t.Fatalf("Новая транзакция не применена после восстановления: текущая=%s", cur.CurrentVersion)
 	}
 }
 
@@ -207,14 +207,14 @@ func TestFailedJavaMigrationRestoresCheckpoint04810(t *testing.T) {
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}}}
 	tx, err := manager.Apply(context.Background(), plan)
 	if err == nil || tx.Status != "rolled_back" {
-		t.Fatalf("failed migration must rollback: tx=%+v err=%v", tx, err)
+		t.Fatalf("Неудачная миграция должна откатываться: транзакция=%+v ошибка=%v", tx, err)
 	}
 	if host.migrations != 1 || host.restores != 1 || host.content != `{"schema":1}` {
-		t.Fatalf("state not compensated: %+v", host)
+		t.Fatalf("Состояние не компенсировано: %+v", host)
 	}
 	restored, err := r.GetExtensionInstallState(context.Background(), "update.test", "global", "")
 	if err != nil || restored.CurrentVersion != original.CurrentVersion {
-		t.Fatalf("package rollback failed: %+v err=%v", restored, err)
+		t.Fatalf("Ошибка отката пакета: %+v ошибка=%v", restored, err)
 	}
 }
 func TestRecoveredInterruptedTransactionRestoresState04810(t *testing.T) {
@@ -233,10 +233,10 @@ func TestRecoveredInterruptedTransactionRestoresState04810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if host.restores != 1 || host.content != "old-value" {
-		t.Fatalf("state not restored after interruption: %+v", host)
+		t.Fatalf("Состояние не восстановлено после прерывания: %+v", host)
 	}
 	install, err := r.GetExtensionInstallState(ctx, "update.test", "global", "")
 	if err != nil || install.CurrentVersion != "1.0.0" {
-		t.Fatalf("incorrect recovered version: %+v %v", install, err)
+		t.Fatalf("Неправильная восстановленная версия: %+v %v", install, err)
 	}
 }

@@ -19,7 +19,7 @@ func decodeMap119(t *testing.T, body *bytes.Buffer) map[string]any {
 	t.Helper()
 	var v map[string]any
 	if err := json.Unmarshal(body.Bytes(), &v); err != nil {
-		t.Fatalf("decode: %v body=%s", err, body.String())
+		t.Fatalf("Ошибка разбора: %v тело ответа=%s", err, body.String())
 	}
 	return v
 }
@@ -36,7 +36,7 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	er := httptest.NewRecorder()
 	handler.ServeHTTP(er, ex)
 	if er.Code != http.StatusCreated {
-		t.Fatalf("exchange=%d %s", er.Code, er.Body.String())
+		t.Fatalf("Обмен=%d %s", er.Code, er.Body.String())
 	}
 	ep := decodeMap119(t, er.Body)
 	ed := ep["data"].(map[string]any)
@@ -49,7 +49,7 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	vv := httptest.NewRecorder()
 	handler.ServeHTTP(vv, vr)
 	if vv.Code != http.StatusNoContent {
-		t.Fatalf("validate=%d %s", vv.Code, vv.Body.String())
+		t.Fatalf("Проверка=%d %s", vv.Code, vv.Body.String())
 	}
 
 	joinBody, _ := json.Marshal(map[string]string{"accessToken": mcToken, "selectedProfile": uuid, "serverId": "server-hash-119"})
@@ -57,13 +57,13 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	jv := httptest.NewRecorder()
 	handler.ServeHTTP(jv, jr)
 	if jv.Code != http.StatusNoContent {
-		t.Fatalf("join=%d %s", jv.Code, jv.Body.String())
+		t.Fatalf("Присоединение=%d %s", jv.Code, jv.Body.String())
 	}
 	wrongIP := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119&ip=203.0.113.250", nil)
 	wrongIPV := httptest.NewRecorder()
 	handler.ServeHTTP(wrongIPV, wrongIP)
 	if wrongIPV.Code != http.StatusNoContent {
-		t.Fatalf("hasJoined must reject mismatched optional ip: %d %s", wrongIPV.Code, wrongIPV.Body.String())
+		t.Fatalf("hasJoined должен отклонять несовпадающий необязательный IP: %d %s", wrongIPV.Code, wrongIPV.Body.String())
 	}
 	// Репозиторий PostgreSQL погашает билет одним условным UPDATE; репозиторий в памяти
 	// выполняет тот же атомарный контракт однократного использования под блокировкой.
@@ -99,17 +99,17 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 		case http.StatusNoContent:
 			denied++
 		default:
-			t.Fatalf("concurrent /hasJoined unexpected status %d", code)
+			t.Fatalf("Неожиданный статус параллельного /hasJoined: %d", code)
 		}
 	}
 	if allowed != 1 || denied != concurrentJoins-1 {
-		t.Fatalf("only the first concurrent /hasJoined may succeed: allowed=%d denied=%d", allowed, denied)
+		t.Fatalf("Только первый параллельный запрос /hasJoined может завершиться успешно: разрешено=%d отказано=%d", allowed, denied)
 	}
 	replay := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
 	replayV := httptest.NewRecorder()
 	handler.ServeHTTP(replayV, replay)
 	if replayV.Code != http.StatusNoContent {
-		t.Fatalf("one-time Yggdrasil join replay must be denied: %d %s", replayV.Code, replayV.Body.String())
+		t.Fatalf("Повтор одноразового присоединения Yggdrasil должен отклоняться: %d %s", replayV.Code, replayV.Body.String())
 	}
 
 	logout := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
@@ -117,13 +117,13 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	lo := httptest.NewRecorder()
 	handler.ServeHTTP(lo, logout)
 	if lo.Code != http.StatusOK {
-		t.Fatalf("logout=%d %s", lo.Code, lo.Body.String())
+		t.Fatalf("Выход=%d %s", lo.Code, lo.Body.String())
 	}
 	vr = httptest.NewRequest(http.MethodPost, "/authserver/validate", strings.NewReader(`{"accessToken":"`+mcToken+`"}`))
 	vv = httptest.NewRecorder()
 	handler.ServeHTTP(vv, vr)
 	if vv.Code != http.StatusForbidden {
-		t.Fatalf("minecraft token must die with parent Never session: %d %s", vv.Code, vv.Body.String())
+		t.Fatalf("Токен Minecraft должен прекращать действие вместе с основной сессией Never: %d %s", vv.Code, vv.Body.String())
 	}
 }
 
@@ -134,18 +134,18 @@ func TestMinecraftAuth119YggdrasilPasswordUsesFederationCore(t *testing.T) {
 	v := httptest.NewRecorder()
 	handler.ServeHTTP(v, r)
 	if v.Code != http.StatusOK {
-		t.Fatalf("authenticate=%d %s", v.Code, v.Body.String())
+		t.Fatalf("Аутентификация=%d %s", v.Code, v.Body.String())
 	}
 	p := decodeMap119(t, v.Body)
 	token, ok := p["accessToken"].(string)
 	if !ok || !strings.HasPrefix(token, "nlmc_") {
-		t.Fatalf("expected opaque minecraft token: %#v", p["accessToken"])
+		t.Fatalf("Ожидался непрозрачный токен Minecraft: %#v", p["accessToken"])
 	}
 	vr := httptest.NewRequest(http.MethodPost, "/authserver/validate", strings.NewReader(`{"accessToken":"`+token+`","clientToken":"legacy-client"}`))
 	vv := httptest.NewRecorder()
 	handler.ServeHTTP(vv, vr)
 	if vv.Code != http.StatusNoContent {
-		t.Fatalf("validate=%d %s", vv.Code, vv.Body.String())
+		t.Fatalf("Проверка=%d %s", vv.Code, vv.Body.String())
 	}
 }
 
@@ -155,7 +155,7 @@ func TestMinecraftAuth119RefreshConsumesOldToken(t *testing.T) {
 	av := httptest.NewRecorder()
 	handler.ServeHTTP(av, auth)
 	if av.Code != http.StatusOK {
-		t.Fatalf("authenticate=%d %s", av.Code, av.Body.String())
+		t.Fatalf("Аутентификация=%d %s", av.Code, av.Body.String())
 	}
 	p := decodeMap119(t, av.Body)
 	oldToken := p["accessToken"].(string)
@@ -164,13 +164,13 @@ func TestMinecraftAuth119RefreshConsumesOldToken(t *testing.T) {
 	fv := httptest.NewRecorder()
 	handler.ServeHTTP(fv, first)
 	if fv.Code != http.StatusOK {
-		t.Fatalf("first refresh=%d %s", fv.Code, fv.Body.String())
+		t.Fatalf("Первое обновление=%d %s", fv.Code, fv.Body.String())
 	}
 	second := httptest.NewRequest(http.MethodPost, "/authserver/refresh", strings.NewReader(body))
 	sv := httptest.NewRecorder()
 	handler.ServeHTTP(sv, second)
 	if sv.Code != http.StatusForbidden {
-		t.Fatalf("replayed refresh token must be rejected: %d %s", sv.Code, sv.Body.String())
+		t.Fatalf("Повторно использованный токен обновления должен отклоняться: %d %s", sv.Code, sv.Body.String())
 	}
 }
 
@@ -188,7 +188,7 @@ func TestMinecraftAuth119PlayerRoleCanExchangeSession(t *testing.T) {
 	lr := httptest.NewRecorder()
 	h.ServeHTTP(lr, login)
 	if lr.Code != http.StatusOK {
-		t.Fatalf("player login=%d %s user=%s", lr.Code, lr.Body.String(), user.ID)
+		t.Fatalf("Вход игрока=%d %s пользователь=%s", lr.Code, lr.Body.String(), user.ID)
 	}
 	p := decodeMap119(t, lr.Body)
 	token := p["data"].(map[string]any)["tokens"].(map[string]any)["accessToken"].(string)
@@ -199,7 +199,7 @@ func TestMinecraftAuth119PlayerRoleCanExchangeSession(t *testing.T) {
 	er := httptest.NewRecorder()
 	h.ServeHTTP(er, ex)
 	if er.Code != http.StatusCreated {
-		t.Fatalf("player exchange=%d %s", er.Code, er.Body.String())
+		t.Fatalf("Обмен токена игрока=%d %s", er.Code, er.Body.String())
 	}
 }
 
@@ -210,7 +210,7 @@ func TestMinecraftAuth119ExchangeRejectsMalformedJSON(t *testing.T) {
 	lr := httptest.NewRecorder()
 	handler.ServeHTTP(lr, login)
 	if lr.Code != http.StatusOK {
-		t.Fatalf("login=%d %s", lr.Code, lr.Body.String())
+		t.Fatalf("Вход=%d %s", lr.Code, lr.Body.String())
 	}
 	p := decodeMap119(t, lr.Body)
 	token := p["data"].(map[string]any)["tokens"].(map[string]any)["accessToken"].(string)
@@ -221,7 +221,7 @@ func TestMinecraftAuth119ExchangeRejectsMalformedJSON(t *testing.T) {
 	v := httptest.NewRecorder()
 	handler.ServeHTTP(v, r)
 	if v.Code != http.StatusBadRequest {
-		t.Fatalf("malformed exchange body=%d %s", v.Code, v.Body.String())
+		t.Fatalf("Некорректные данные обмена=%d %s", v.Code, v.Body.String())
 	}
 }
 
@@ -248,7 +248,7 @@ func TestMinecraftProfile119StableAcrossEmailChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first.UUID != second.UUID || first.Name != second.Name {
-		t.Fatalf("profile must stay stable: before=%+v after=%+v", first, second)
+		t.Fatalf("Профиль должен оставаться неизменным: до=%+v после=%+v", first, second)
 	}
 }
 
@@ -258,20 +258,20 @@ func TestYggdrasilMetadata119RootIsExact(t *testing.T) {
 	v := httptest.NewRecorder()
 	h.ServeHTTP(v, r)
 	if v.Code != http.StatusOK || !strings.Contains(v.Body.String(), "Launcher") {
-		t.Fatalf("root metadata=%d %s", v.Code, v.Body.String())
+		t.Fatalf("Корневые метаданные=%d %s", v.Code, v.Body.String())
 	}
 	metadata := decodeMap119(t, v.Body)
 	meta, ok := metadata["meta"].(map[string]any)
 	if !ok || meta["feature.non_email_login"] != true || meta["links"] == nil {
-		t.Fatalf("invalid authlib-injector metadata: %#v", metadata)
+		t.Fatalf("Некорректные метаданные authlib-injector: %#v", metadata)
 	}
 	if _, legacyTopLevel := metadata["feature"]; legacyTopLevel {
-		t.Fatalf("feature flags must be inside meta: %#v", metadata)
+		t.Fatalf("Флаги возможностей должны находиться внутри meta: %#v", metadata)
 	}
 	r = httptest.NewRequest(http.MethodGet, "/removed-legacy-path", nil)
 	v = httptest.NewRecorder()
 	h.ServeHTTP(v, r)
 	if v.Code != http.StatusNotFound {
-		t.Fatalf("root handler must not swallow unknown paths: %d", v.Code)
+		t.Fatalf("Корневой обработчик не должен скрывать неизвестные пути: %d", v.Code)
 	}
 }

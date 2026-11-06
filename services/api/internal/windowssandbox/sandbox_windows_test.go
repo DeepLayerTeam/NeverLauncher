@@ -37,7 +37,7 @@ func TestFailClosedWindowsSandboxPolicy03111(t *testing.T) {
 			o := testOptions03111(root, entry)
 			edit(&o)
 			if e := validate(o); e == nil {
-				t.Fatal("unsafe configuration accepted")
+				t.Fatal("Принята небезопасная конфигурация")
 			}
 		})
 	}
@@ -48,11 +48,11 @@ func TestChildIsolation03111(t *testing.T) {
 	}
 	pipe := os.Getenv("LAUNCHER_EXTENSION_HOST_PIPE")
 	if !strings.HasPrefix(pipe, `\\.\pipe\LOCAL\Launcher-Extension-`) {
-		t.Fatal("missing named broker pipe")
+		t.Fatal("Отсутствует именованный канал брокера")
 	}
 	handle, err := syscall.CreateFile(syscall.StringToUTF16Ptr(pipe), syscall.GENERIC_READ|syscall.GENERIC_WRITE, 0, nil, syscall.OPEN_EXISTING, 0, 0)
 	if err != nil {
-		t.Fatalf("broker pipe inaccessible: %v", err)
+		t.Fatalf("Именованный канал брокера недоступен: %v", err)
 	}
 	f := os.NewFile(uintptr(handle), "host-pipe")
 	defer f.Close()
@@ -62,29 +62,29 @@ func TestChildIsolation03111(t *testing.T) {
 	}
 	b, err := io.ReadAll(io.LimitReader(f, 8192))
 	if err != nil || !strings.Contains(string(b), "broker-ok") {
-		t.Fatalf("broker response %v %q", err, string(b))
+		t.Fatalf("Ответ брокера %v %q", err, string(b))
 	}
 	if _, err = os.ReadFile(os.Getenv("NL_WIN_PRIVATE_FILE")); err == nil {
-		t.Fatal("private backend file readable")
+		t.Fatal("Закрытый файл сервера доступен для чтения")
 	}
 	if err = os.WriteFile(os.Getenv("NL_WIN_PACKAGE_EXECUTABLE"), []byte("tampered"), 0600); err == nil {
-		t.Fatal("immutable package writable")
+		t.Fatal("Неизменяемый пакет доступен для записи")
 	}
 	c, done := context.WithTimeout(context.Background(), 1500*time.Millisecond)
 	defer done()
 	conn, err := (&net.Dialer{}).DialContext(c, "tcp", "1.1.1.1:443")
 	if err == nil {
 		conn.Close()
-		t.Fatal("direct outbound connection possible")
+		t.Fatal("Возможно прямое исходящее соединение")
 	}
 	cmd := exec.Command(os.Getenv("NL_WIN_PACKAGE_EXECUTABLE"), "-test.run=NoSuchTest")
 	if err = cmd.Run(); err == nil {
-		t.Fatal("process tree escaped active-process job limit")
+		t.Fatal("Дерево процессов обошло ограничение количества активных процессов задания")
 	}
 }
 func TestRealWindowsAppContainerAndJob03111(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_WIN_SANDBOX") != "1" {
-		t.Skip("requires actual Windows AppContainer + Job Object; enable in Windows acceptance CI")
+		t.Skip("Требуются реальные Windows AppContainer и Job Object; включите их в приёмочные проверки Windows")
 	}
 	binary, err := os.Executable()
 	if err != nil {
@@ -118,16 +118,16 @@ func TestRealWindowsAppContainerAndJob03111(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = h.Started(); err != nil {
-		t.Fatalf("token+job+pipe not enforced: %v; %s", err, output.String())
+		t.Fatalf("Не обеспечена проверка токена, задания и канала: %v; %s", err, output.String())
 	}
 	if h.PID() <= 0 {
-		t.Fatal("missing true isolated process PID")
+		t.Fatal("Отсутствует PID действительно изолированного процесса")
 	}
 	if err = h.Cmd.Wait(); err != nil {
-		t.Fatalf("child test failed: %v\n%s", err, output.String())
+		t.Fatalf("Дочерний тест завершился ошибкой: %v\n%s", err, output.String())
 	}
 	if !strings.Contains(output.String(), "PASS") {
-		t.Fatalf("child did not complete: %s", output.String())
+		t.Fatalf("Дочерний процесс не завершился: %s", output.String())
 	}
 }
 
@@ -152,7 +152,7 @@ func TestWindowsSandboxRefusesUnimplementedFilesystemGrants04310(t *testing.T) {
 			o := testOptions03111(root, entry)
 			grant.modify(&o)
 			if err := validate(o); err == nil {
-				t.Fatal("unimplemented shared grant was accepted")
+				t.Fatal("Принято неподдерживаемое общее разрешение")
 			}
 		})
 	}
@@ -174,11 +174,11 @@ func TestWindowsSandboxRejectsReparsePackage04310(t *testing.T) {
 		// обычных поддерживаемых хостах Windows; этот тест нельзя молча ПРОПУСКАТЬ.
 		output, junctionErr := exec.Command("cmd.exe", "/c", "mklink", "/J", link, outside).CombinedOutput()
 		if junctionErr != nil {
-			t.Fatalf("cannot exercise reparse-point rejection (symlink: %v, junction: %v): %s", err, junctionErr, output)
+			t.Fatalf("Невозможно проверить отклонение точки повторного разбора (символьная ссылка: %v, соединение: %v): %s", err, junctionErr, output)
 		}
 	}
 	if err := validate(testOptions03111(root, entry)); err == nil {
-		t.Fatal("recursive ACL grant would traverse a reparse point")
+		t.Fatal("Рекурсивное разрешение ACL пересекло бы точку повторного разбора")
 	}
 }
 
@@ -193,7 +193,7 @@ func TestChildKeepRunningForJobTermination04310(t *testing.T) {
 // уже возобновлённый изолированный дочерний процесс (а не только помощника).
 func TestLiveWindowsJobKillOnClose04310(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_WIN_SANDBOX") != "1" {
-		t.Skip("requires a native Windows AppContainer runner")
+		t.Skip("Требуется нативная среда запуска Windows AppContainer")
 	}
 	binary, err := os.Executable()
 	if err != nil {
@@ -224,18 +224,18 @@ func TestLiveWindowsJobKillOnClose04310(t *testing.T) {
 	}
 	childPID := h.PID()
 	if childPID <= 0 {
-		t.Fatal("isolated child PID is missing")
+		t.Fatal("Отсутствует PID изолированного дочернего процесса")
 	}
 	const synchronize = 0x00100000
 	child, _, callErr := kernel32.NewProc("OpenProcess").Call(synchronize, 0, uintptr(childPID))
 	if child == 0 {
-		t.Fatalf("OpenProcess(%d): %v", childPID, callErr)
+		t.Fatalf("Ошибка OpenProcess(%d): %v", childPID, callErr)
 	}
 	defer closeHandle(child)
 	h.Close() // завершить вспомогательный процесс; закрытие последнего дескриптора Job должно завершить всех потомков
 	_ = h.Cmd.Wait()
 	status, _, callErr := waitObject.Call(child, 5000)
 	if status != 0 {
-		t.Fatalf("sandbox child survived Job handle closure: status=%d error=%v", status, callErr)
+		t.Fatalf("Дочерний процесс песочницы продолжил работать после закрытия дескриптора Job: статус=%d ошибка=%v", status, callErr)
 	}
 }

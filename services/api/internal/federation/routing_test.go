@@ -47,25 +47,25 @@ func TestRouting0293ExactDomainSelectionAndNoFallback(t *testing.T) {
 	}
 	selected, err := core.RoutePasswordProvider("", "  user@ENTERPRISE.TEST  ")
 	if err != nil || selected != "primary" {
-		t.Fatalf("domain routing: %q %v", selected, err)
+		t.Fatalf("Маршрутизация по домену: %q %v", selected, err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "", authconnector.PasswordRequest{Identifier: "user@enterprise.test", Secret: "verified"}); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("unexpected primary error: %v", err)
+		t.Fatalf("Неожиданная ошибка основного провайдера: %v", err)
 	}
 	if primaryCalls != 1 || fallbackCalls != 0 {
-		t.Fatalf("provider fallback occurred: primary=%d fallback=%d", primaryCalls, fallbackCalls)
+		t.Fatalf("Произошёл переход на резервного провайдера: основной=%d резервный=%d", primaryCalls, fallbackCalls)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "fallback", authconnector.PasswordRequest{Identifier: "user@enterprise.test", Secret: "verified"}); !errors.Is(err, ErrRoutingDenied) {
-		t.Fatalf("strict route bypass: %v", err)
+		t.Fatalf("Обход строгой маршрутизации: %v", err)
 	}
 	if fallbackCalls != 0 {
-		t.Fatal("denied provider received credentials")
+		t.Fatal("Отклонённый провайдер получил учётные данные")
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "fallback", authconnector.PasswordRequest{Identifier: "different@other.test", Secret: "verified"}); err != nil {
 		t.Fatal(err)
 	}
 	if fallbackCalls != 1 {
-		t.Fatalf("explicit fallback not honored for other domain: %d", fallbackCalls)
+		t.Fatalf("Явно заданный резервный маршрут для другого домена проигнорирован: %d", fallbackCalls)
 	}
 }
 
@@ -79,10 +79,10 @@ func TestRouting0293RequiresExplicitAndRejectsBadConfigurations(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := core.RoutePasswordProvider("", "username"); !errors.Is(err, ErrRoutingRequired) {
-		t.Fatalf("unrouted username: %v", err)
+		t.Fatalf("Имя пользователя не сопоставлено с маршрутом: %v", err)
 	}
 	if selected, err := core.RoutePasswordProvider("company", "username"); err != nil || selected != "company" {
-		t.Fatalf("explicit provider: %q %v", selected, err)
+		t.Fatalf("Явно указанный провайдер: %q %v", selected, err)
 	}
 	for _, bad := range []RoutingConfig{
 		{Version: 2}, {Version: 1, DefaultProvider: "missing"}, {Version: 1, Rules: []RoutingRule{{EmailDomain: "*.example.test", ProviderID: "company"}}},
@@ -92,16 +92,16 @@ func TestRouting0293RequiresExplicitAndRejectsBadConfigurations(t *testing.T) {
 		{Version: 1, DisableLinking: true, LinkingAllowProviders: []string{"company"}},
 	} {
 		if err := core.ConfigureRouting(bad); err == nil {
-			t.Fatalf("accepted invalid policy: %+v", bad)
+			t.Fatalf("Принята некорректная политика: %+v", bad)
 		}
 	}
 	if _, err := core.RoutePasswordProvider("", "username"); !errors.Is(err, ErrRoutingRequired) {
-		t.Fatalf("invalid policy partially applied: %v", err)
+		t.Fatalf("Некорректная политика частично применена: %v", err)
 	}
 	copy := core.Routing()
 	copy.DefaultProvider = "attacker"
 	if got := core.Routing().DefaultProvider; got != "" {
-		t.Fatalf("routing exposed mutable state: %q", got)
+		t.Fatalf("Маршрутизация раскрыла изменяемое состояние: %q", got)
 	}
 }
 
@@ -123,27 +123,27 @@ func TestRouting0293ValidatedLinkingAndIssuerCollision(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, err := core.LinkPasswordIdentity(context.Background(), "admin", "forbidden", authconnector.PasswordRequest{Identifier: "who", Secret: "verified"}); !errors.Is(err, ErrLinkingDisabled) {
-		t.Fatalf("forbidden provider link: %v", err)
+		t.Fatalf("Запрещённая привязка провайдера: %v", err)
 	}
 	if calls != 0 {
-		t.Fatal("forbidden provider received password")
+		t.Fatal("Запрещённый провайдер получил пароль")
 	}
 	if _, _, err := core.LinkPasswordIdentity(context.Background(), "admin", "company", authconnector.PasswordRequest{Identifier: "who", Secret: "wrong"}); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("link accepted invalid password: %v", err)
+		t.Fatalf("При привязке принят неверный пароль: %v", err)
 	}
 	if identities := repo.ListAuthIdentities("admin"); len(identities) != 1 {
-		t.Fatalf("invalid proof modified identities: %+v", identities)
+		t.Fatalf("Некорректное доказательство изменило идентичности: %+v", identities)
 	}
 	linked, _, err := core.LinkPasswordIdentity(context.Background(), "admin", "company", authconnector.PasswordRequest{Identifier: "who", Secret: "verified"})
 	if err != nil || linked.UserID != "admin" || linked.Issuer != "https://one.test" {
-		t.Fatalf("link: %+v %v", linked, err)
+		t.Fatalf("Привязка: %+v %v", linked, err)
 	}
 	if _, _, err := core.LinkPasswordIdentity(context.Background(), second.ID, "company", authconnector.PasswordRequest{Identifier: "who", Secret: "verified"}); authconnector.CodeOf(err) != authconnector.ErrConflict {
-		t.Fatalf("identity reassigned to second canonical user: %v", err)
+		t.Fatalf("Идентичность переназначена второму каноническому пользователю: %v", err)
 	}
 	found, err := repo.GetAuthIdentityByIssuer("company", "https://one.test", "42")
 	if err != nil || found.UserID != "admin" {
-		t.Fatalf("identity changed on failed link: %+v %v", found, err)
+		t.Fatalf("Идентичность изменилась после неудачной привязки: %+v %v", found, err)
 	}
 }
 
@@ -154,19 +154,19 @@ func TestRouting0293ConfigFileNoUnrecognizedFields(t *testing.T) {
 	}
 	cfg, err := LoadRoutingConfig("", file)
 	if err != nil || !cfg.RequireExplicitProvider {
-		t.Fatalf("loaded config: %+v %v", cfg, err)
+		t.Fatalf("Загруженная конфигурация: %+v %v", cfg, err)
 	}
 	if _, err := LoadRoutingConfig(`{"version":1}`, file); err == nil {
-		t.Fatal("accepted ambiguous env/file")
+		t.Fatal("Принята неоднозначная конфигурация окружения или файла")
 	}
 	for _, raw := range []string{`{"version":1,"unk":true}`, `{"version":1} {"version":1}`, `{"version":1,"version":2}`, `{"version":1,"rules":[{"emailDomain":"corp.test","emailDomain":"other.test","providerId":"company"}]}`, strings.Repeat("x", 65537)} {
 		if _, err := LoadRoutingConfig(raw, ""); err == nil {
-			t.Fatalf("accepted invalid file size or JSON")
+			t.Fatalf("Принят некорректный размер файла или JSON")
 		}
 	}
 	defaults, err := LoadRoutingConfig("", "")
 	if err != nil || defaults.Version != 1 || defaults.DefaultProvider != "local" {
-		t.Fatalf("legacy defaults changed: %+v %v", defaults, err)
+		t.Fatalf("Изменились исходные настройки совместимости: %+v %v", defaults, err)
 	}
 }
 
@@ -181,13 +181,13 @@ func TestRouting0293DisableLinkingDoesNotDisableAuthentication(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, err := core.LinkPasswordIdentity(context.Background(), "admin", "company", authconnector.PasswordRequest{Identifier: "alice", Secret: "verified"}); !errors.Is(err, ErrLinkingDisabled) {
-		t.Fatalf("disabled linking accepted: %v", err)
+		t.Fatalf("Разрешена отключённая привязка: %v", err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "", authconnector.PasswordRequest{Identifier: "alice", Secret: "verified"}); err != nil {
-		t.Fatalf("normal login blocked by link policy: %v", err)
+		t.Fatalf("Политика привязки заблокировала обычный вход: %v", err)
 	}
 	if count != 1 {
-		t.Fatalf("linking accidentally contacted provider: calls=%d", count)
+		t.Fatalf("При привязке ошибочно выполнено обращение к провайдеру: вызовов=%d", count)
 	}
 }
 
@@ -209,24 +209,24 @@ func TestRouting0293DisableNewLinksPreservesExistingCredentialRefresh(t *testing
 	fresh := authconnector.Authentication{Identity: authconnector.Identity{Issuer: "https://one.test", Subject: "subject-one", Email: "new@company.test"}, AuthMethods: []string{"refresh"}}
 	updated, err := core.RefreshLinkedIdentity("admin", "company", linked.ID, fresh)
 	if err != nil || updated.ID != linked.ID || updated.Email != "new@company.test" {
-		t.Fatalf("refresh of existing link blocked: %+v %v", updated, err)
+		t.Fatalf("Заблокировано обновление существующей привязки: %+v %v", updated, err)
 	}
 	if _, err := core.LinkAuthenticatedIdentity("admin", "company", fresh); !errors.Is(err, ErrLinkingDisabled) {
-		t.Fatalf("link policy bypass: %v", err)
+		t.Fatalf("Обход политики привязки: %v", err)
 	}
 	for _, bad := range []authconnector.Authentication{
 		{Identity: authconnector.Identity{Issuer: "https://two.test", Subject: "subject-one"}, AuthMethods: []string{"refresh"}},
 		{Identity: authconnector.Identity{Issuer: "https://one.test", Subject: "different"}, AuthMethods: []string{"refresh"}},
 	} {
 		if _, err := core.RefreshLinkedIdentity("admin", "company", linked.ID, bad); authconnector.CodeOf(err) != authconnector.ErrConflict {
-			t.Fatalf("repointed refresh accepted: %v", err)
+			t.Fatalf("Принято обновление с переназначением привязки: %v", err)
 		}
 	}
 	if _, err := core.RefreshLinkedIdentity("admin", "company", "wrong-id", fresh); authconnector.CodeOf(err) != authconnector.ErrConflict {
-		t.Fatalf("wrong linked credential accepted: %v", err)
+		t.Fatalf("Приняты неправильные учётные данные привязки: %v", err)
 	}
 	saved, err := repo.GetAuthIdentityByIssuer("company", "https://one.test", "subject-one")
 	if err != nil || saved.ID != linked.ID || saved.Email != "new@company.test" {
-		t.Fatalf("linked identity compromised: %+v %v", saved, err)
+		t.Fatalf("Скомпрометирована привязанная идентичность: %+v %v", saved, err)
 	}
 }

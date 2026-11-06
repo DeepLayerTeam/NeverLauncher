@@ -35,7 +35,7 @@ func TestDigestStableAndTamper(t *testing.T) {
 	}
 	two, e := Finalize(b)
 	if e != nil || two.ReportSHA256 != one.ReportSHA256 {
-		t.Fatal("nondeterministic sorted evidence", e)
+		t.Fatal("Результаты отсортированы недетерминированно", e)
 	}
 	one.Identities[0].TargetUserID = "tampered"
 	if Verify(one) == nil {
@@ -88,7 +88,7 @@ func TestManualCutoverCannotBeReviewed0340(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.Status != "blocked" || !strings.Contains(strings.Join(r.Blockers, ";"), "cutover: обязательный этап не проверен") {
-		t.Fatalf("unsafe RC review: %+v", r)
+		t.Fatalf("Небезопасная проверка релиз-кандидата: %+v", r)
 	}
 	a.Evidence[len(a.Evidence)-2].State = "verified"
 	a.Evidence = append(a.Evidence, Evidence{Stage: "cutover_scope:default/stable", State: "manual", Details: "staged"})

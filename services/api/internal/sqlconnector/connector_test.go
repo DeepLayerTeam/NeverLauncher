@@ -155,18 +155,18 @@ func TestAuthenticatePasswordQueriesReadOnlyAndMapsIdentity(t *testing.T) {
 		t.Fatalf("Сопоставление потеряно: %+v", auth.Identity)
 	}
 	if auth.Identity.Claims["minecraftUuid"] != "550e8400-e29b-41d4-a716-446655440000" {
-		t.Fatalf("minecraft UUID not mapped: %+v", auth.Identity.Claims)
+		t.Fatalf("UUID Minecraft не сопоставлен: %+v", auth.Identity.Claims)
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	if !state.readOnlySeen {
-		t.Fatal("connector did not request a read-only transaction")
+		t.Fatal("Коннектор не запросил транзакцию только для чтения")
 	}
 	if strings.Contains(state.query, "player@example.test") || strings.Contains(state.query, "secret") {
-		t.Fatalf("credentials interpolated into SQL: %s", state.query)
+		t.Fatalf("Учётные данные подставлены непосредственно в SQL: %s", state.query)
 	}
 	if len(state.args) != 1 || state.args[0].Value != "player@example.test" {
-		t.Fatalf("expected one PostgreSQL bind argument, got %+v", state.args)
+		t.Fatalf("Ожидался один параметр привязки PostgreSQL, получено: %+v", state.args)
 	}
 }
 
@@ -189,17 +189,17 @@ func TestAuthenticatePasswordRejectsDuplicateIdentifier(t *testing.T) {
 
 func TestPasswordAlgorithms(t *testing.T) {
 	if ok, err := verifyPassword("correct horse battery staple", "$2y$10$xskAkxff64efsclNY8HUa.BoeuCiSQFbUuLnwNQc8krReAyjtKS3e", PasswordConfig{Algorithm: "bcrypt"}); err != nil || !ok {
-		t.Fatalf("bcrypt verification failed ok=%v err=%v", ok, err)
+		t.Fatalf("Проверка bcrypt не пройдена: результат=%v ошибка=%v", ok, err)
 	}
 	salt := []byte("launcher-test-salt")
 	derived := pbkdf2SHA256([]byte("secret"), salt, 12000, 32)
 	encoded := "$pbkdf2-sha256$12000$" + rawBase64(salt) + "$" + rawBase64(derived)
 	if ok, err := verifyPassword("secret", encoded, PasswordConfig{Algorithm: "pbkdf2-sha256", PBKDF2MinIterations: 10000}); err != nil || !ok {
-		t.Fatalf("PBKDF2 verification failed ok=%v err=%v", ok, err)
+		t.Fatalf("Проверка PBKDF2 не пройдена: результат=%v ошибка=%v", ok, err)
 	}
 	sum := sha256.Sum256([]byte("legacy"))
 	if ok, err := verifyPassword("legacy", "sha256:"+hex.EncodeToString(sum[:]), PasswordConfig{Algorithm: "legacy-sha256", AllowLegacySHA256: true}); err != nil || !ok {
-		t.Fatalf("legacy SHA-256 verification failed ok=%v err=%v", ok, err)
+		t.Fatalf("Проверка устаревшего SHA-256 не пройдена: результат=%v ошибка=%v", ok, err)
 	}
 }
 
@@ -227,11 +227,11 @@ func TestNormalizeRejectsUnsafeIdentifiersAndLegacySHAByDefault(t *testing.T) {
 	requireTLS := false
 	_, err := Normalize(Config{ID: "sql", Driver: "postgresql", DSN: "x", Table: "users; DROP TABLE users", Columns: Columns{ID: "id", Email: "email", Password: "password"}, Password: PasswordConfig{Algorithm: "bcrypt"}, RequireTLS: &requireTLS})
 	if err == nil {
-		t.Fatal("unsafe table identifier accepted")
+		t.Fatal("Принят небезопасный идентификатор таблицы")
 	}
 	_, err = Normalize(Config{ID: "sql", Driver: "postgresql", DSN: "x", Table: "users", Columns: Columns{ID: "id", Email: "email", Password: "password"}, Password: PasswordConfig{Algorithm: "sha256"}, RequireTLS: &requireTLS})
 	if err == nil {
-		t.Fatal("legacy SHA-256 enabled without explicit opt-in")
+		t.Fatal("Устаревший SHA-256 включён без явного согласия")
 	}
 }
 
@@ -242,18 +242,18 @@ func TestParseStringListSupportsPostgresTextArrays(t *testing.T) {
 	}
 	want := []string{"builders", "ops,team", `quoted"name`, "NULL"}
 	if len(values) != len(want) {
-		t.Fatalf("unexpected values: %#v", values)
+		t.Fatalf("Неожиданные значения: %#v", values)
 	}
 	for i := range want {
 		if values[i] != want[i] {
-			t.Fatalf("value %d: want %q got %q (%#v)", i, want[i], values[i], values)
+			t.Fatalf("Значение %d: ожидалось %q, получено %q (%#v)", i, want[i], values[i], values)
 		}
 	}
 	if _, err := parseStringList(`{"broken}`); err == nil {
-		t.Fatal("malformed PostgreSQL array accepted")
+		t.Fatal("Принят некорректный массив PostgreSQL")
 	}
 	if _, err := parseStringList(`{{"nested"}}`); err == nil {
-		t.Fatal("nested PostgreSQL array accepted")
+		t.Fatal("Принят вложенный массив PostgreSQL")
 	}
 }
 
@@ -264,15 +264,15 @@ func TestTLSPolicyRejectsPlaintextFallback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := validatePostgresTLS(cfg); err == nil {
-		t.Fatal("PostgreSQL sslmode=prefer accepted while TLS is required")
+		t.Fatal("Принят режим PostgreSQL sslmode=prefer при обязательном TLS")
 	}
 	cfg.DSN = "postgres://db.example/test?sslmode=require"
 	if err := validatePostgresTLS(cfg); err != nil {
-		t.Fatalf("PostgreSQL sslmode=require should be accepted only with explicit allowInsecureTls: %v", err)
+		t.Fatalf("Режим PostgreSQL sslmode=require допустим только при явном allowInsecureTls: %v", err)
 	}
 	cfg.AllowInsecureTLS = false
 	if err := validatePostgresTLS(cfg); err == nil {
-		t.Fatal("PostgreSQL sslmode=require accepted without certificate verification opt-in")
+		t.Fatal("Принят PostgreSQL sslmode=require без явного разрешения пропустить проверку сертификата")
 	}
 	cfg.DSN = "postgres://db.example/test?sslmode=verify-full"
 	if err := validatePostgresTLS(cfg); err != nil {
@@ -283,14 +283,14 @@ func TestTLSPolicyRejectsPlaintextFallback(t *testing.T) {
 	mysqlCfg.Driver = "mysql"
 	mysqlCfg.AllowInsecureTLS = true
 	if err := validateMySQLTLSMode(mysqlCfg, "preferred"); err == nil {
-		t.Fatal("MySQL tls=preferred accepted while TLS is required")
+		t.Fatal("Принят MySQL tls=preferred при обязательном TLS")
 	}
 	if err := validateMySQLTLSMode(mysqlCfg, "skip-verify"); err != nil {
-		t.Fatalf("MySQL tls=skip-verify rejected with explicit allowInsecureTls: %v", err)
+		t.Fatalf("Отклонён MySQL tls=skip-verify при явном allowInsecureTls: %v", err)
 	}
 	mysqlCfg.AllowInsecureTLS = false
 	if err := validateMySQLTLSMode(mysqlCfg, "skip-verify"); err == nil {
-		t.Fatal("MySQL tls=skip-verify accepted without insecure TLS opt-in")
+		t.Fatal("Принят MySQL tls=skip-verify без явного разрешения небезопасного TLS")
 	}
 	if err := validateMySQLTLSMode(mysqlCfg, "true"); err != nil {
 		t.Fatalf("Режим MySQL tls=true ошибочно отклонён: %v", err)
@@ -300,17 +300,17 @@ func TestTLSPolicyRejectsPlaintextFallback(t *testing.T) {
 func TestPasswordAlgorithmsArgon2AndDjangoPBKDF2(t *testing.T) {
 	argonHash := `$argon2id$v=19$m=8192,t=2,p=1$4PsCctcmsXex95yvydR9kA$wPiBZmNgGrZqbmIKX2RXNJG99bhcgZ/fXwEzO9MGras`
 	if ok, err := verifyPassword("secret", argonHash, PasswordConfig{Algorithm: "argon2id"}); err != nil || !ok {
-		t.Fatalf("Argon2id verification failed ok=%v err=%v", ok, err)
+		t.Fatalf("Проверка Argon2id не пройдена: результат=%v ошибка=%v", ok, err)
 	}
 	if ok, err := verifyPassword("wrong", argonHash, PasswordConfig{Algorithm: "argon2id"}); err != nil || ok {
-		t.Fatalf("Argon2id wrong password accepted ok=%v err=%v", ok, err)
+		t.Fatalf("Argon2id принял неверный пароль: результат=%v ошибка=%v", ok, err)
 	}
 
 	salt := "django-test-salt"
 	derived := pbkdf2SHA256([]byte("secret"), []byte(salt), 12000, 32)
 	django := "pbkdf2_sha256$12000$" + salt + "$" + rawBase64(derived)
 	if ok, err := verifyPassword("secret", django, PasswordConfig{Algorithm: "pbkdf2-sha256", PBKDF2MinIterations: 10000}); err != nil || !ok {
-		t.Fatalf("Django PBKDF2 verification failed ok=%v err=%v", ok, err)
+		t.Fatalf("Проверка Django PBKDF2 не пройдена: результат=%v ошибка=%v", ok, err)
 	}
 }
 
@@ -321,7 +321,7 @@ func TestBuildQueriesUsesDriverPlaceholders(t *testing.T) {
 		t.Fatal(err)
 	}
 	if args != 1 || strings.Count(query, "$1") != 2 || strings.Contains(query, "?") {
-		t.Fatalf("unexpected PostgreSQL query/args: args=%d query=%s", args, query)
+		t.Fatalf("Неожиданный запрос PostgreSQL или параметры: аргументов=%d запрос=%s", args, query)
 	}
 
 	mysql := pg
@@ -331,7 +331,7 @@ func TestBuildQueriesUsesDriverPlaceholders(t *testing.T) {
 		t.Fatal(err)
 	}
 	if args != 2 || strings.Count(query, "?") != 2 || strings.Contains(query, "$1") {
-		t.Fatalf("unexpected MySQL query/args: args=%d query=%s", args, query)
+		t.Fatalf("Неожиданный запрос MySQL или параметры: аргументов=%d запрос=%s", args, query)
 	}
 }
 
@@ -344,7 +344,7 @@ func TestAuthenticatePasswordRejectsDisabledIdentity(t *testing.T) {
 	}
 	_, err = connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
 	if authconnector.CodeOf(err) != authconnector.ErrIdentityDisabled {
-		t.Fatalf("expected disabled identity error, got %v", err)
+		t.Fatalf("Ожидалась ошибка отключённой идентичности, получено: %v", err)
 	}
 }
 
@@ -352,11 +352,11 @@ func TestNormalizeRejectsAmbiguousDSNAndExcessivePool(t *testing.T) {
 	requireTLS := false
 	base := Config{ID: "sql", Driver: "postgresql", DSN: "postgres://one", DSNEnv: "OTHER_DSN", Table: "users", Columns: Columns{ID: "id", Email: "email", Password: "password"}, Password: PasswordConfig{Algorithm: "bcrypt"}, RequireTLS: &requireTLS}
 	if _, err := Normalize(base); err == nil {
-		t.Fatal("configuration with both dsn and dsnEnv was accepted")
+		t.Fatal("Принята конфигурация с одновременно заданными dsn и dsnEnv")
 	}
 	base.DSNEnv = ""
 	base.MaxOpenConns = 513
 	if _, err := Normalize(base); err == nil {
-		t.Fatal("excessive SQL connection pool was accepted")
+		t.Fatal("Принят недопустимо большой пул SQL-соединений")
 	}
 }

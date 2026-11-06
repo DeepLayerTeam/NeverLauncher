@@ -62,19 +62,19 @@ func TestKnownGravit57Assess0332(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.DetectedVersion != "5.7.12" || r.VersionStatus != "recognized" || r.VersionEvidence != "jar-manifest" {
-		t.Fatalf("version detection: %+v", r)
+		t.Fatalf("Определение версии: %+v", r)
 	}
 	if r.Status != "manual" || r.CutoverAllowed || len(r.Components) != 3 {
-		t.Fatalf("unexpected assessment result: %+v", r)
+		t.Fatalf("Неожиданный результат оценки: %+v", r)
 	}
 	if !finding(r, "AUTH_REQUIRES_MAPPING") || !finding(r, "OPTIONAL_ACTION_REVIEW") {
-		t.Fatalf("missing findings: %+v", r.Findings)
+		t.Fatalf("Отсутствуют результаты проверки: %+v", r.Findings)
 	}
 	if strings.Contains(fmt.Sprintf("%+v", r), "SUPER_SECRET_PASSWORD") {
-		t.Fatal("password leaked in report")
+		t.Fatal("В отчёт попал пароль")
 	}
 	if again, e := Assess(b, "5.7.12"); e != nil || again.SourceSHA256 != r.SourceSHA256 {
-		t.Fatal("nondeterministic source hash")
+		t.Fatal("Недетерминированный хеш исходных данных")
 	}
 }
 func TestUnknownAuthBlocks0332(t *testing.T) {
@@ -82,10 +82,10 @@ func TestUnknownAuthBlocks0332(t *testing.T) {
 	f["installation/LaunchServer.json"] = []byte(`{"auth":{"custom":{"isDefault":true,"core":{"type":"ownplugin","apiKey":"HIDDEN"}}}}`)
 	r, e := Assess(archive(t, f), "5.7.12")
 	if e != nil || r.Status != "blocked" || !finding(r, "UNKNOWN_AUTH_PROVIDER") {
-		t.Fatalf("unknown auth allowed %+v %v", r, e)
+		t.Fatalf("Разрешён неизвестный способ аутентификации: %+v %v", r, e)
 	}
 	if strings.Contains(fmt.Sprintf("%+v", r), "HIDDEN") {
-		t.Fatal("secret exposed")
+		t.Fatal("Раскрыт секрет")
 	}
 }
 func TestUnknownOptionalBlocks0332(t *testing.T) {
@@ -93,23 +93,23 @@ func TestUnknownOptionalBlocks0332(t *testing.T) {
 	f["installation/profiles/fabric.json"] = []byte(`{"title":"X","version":"1.20","mainClass":"a.b.Main","updateOptional":[{"actions":[{"type":"shell","command":"echo secret"}]}]}`)
 	r, e := Assess(archive(t, f), "5.7.12")
 	if e != nil || r.Status != "blocked" || !finding(r, "UNKNOWN_OPTIONAL_ACTION") {
-		t.Fatalf("unknown action not blocked %+v %v", r, e)
+		t.Fatalf("Неизвестное действие не заблокировано: %+v %v", r, e)
 	}
 }
 func TestVersionMismatchAndClaim0332(t *testing.T) {
 	f := base(t)
 	r, e := Assess(archive(t, f), "5.7.11")
 	if e != nil || r.VersionStatus != "conflict" || r.Status != "blocked" {
-		t.Fatalf("version spoof: %+v %v", r, e)
+		t.Fatalf("Подмена версии: %+v %v", r, e)
 	}
 	delete(f, "installation/LaunchServer.jar")
 	r, e = Assess(archive(t, f), "5.7.12")
 	if e != nil || r.VersionStatus != "unverified" || r.VersionEvidence != "operator-claim" || r.CutoverAllowed == true {
-		t.Fatalf("unverified version: %+v %v", r, e)
+		t.Fatalf("Непроверенная версия: %+v %v", r, e)
 	}
 	r, e = Assess(archive(t, f), "5.8.0")
 	if e != nil || r.VersionStatus != "unsupported" || r.Status != "blocked" {
-		t.Fatalf("wrong version supported %+v %v", r, e)
+		t.Fatalf("Ошибочная версия признана поддерживаемой: %+v %v", r, e)
 	}
 }
 func TestInvalidConfigAndZip0332(t *testing.T) {
@@ -117,7 +117,7 @@ func TestInvalidConfigAndZip0332(t *testing.T) {
 	f["installation/LaunchServer.json"] = []byte(`{"auth":{"std":{"core":`) // broken JSON
 	r, e := Assess(archive(t, f), "")
 	if e != nil || !finding(r, "INVALID_JSON") || r.Status != "blocked" {
-		t.Fatalf("bad config accepted %+v %v", r, e)
+		t.Fatalf("Принята некорректная конфигурация: %+v %v", r, e)
 	}
 	for _, n := range []string{"../LaunchServer.json", "/etc/passwd", "C:/secret"} {
 		_, e := Assess(archive(t, map[string][]byte{n: []byte("x")}), "")
@@ -126,7 +126,7 @@ func TestInvalidConfigAndZip0332(t *testing.T) {
 		}
 	}
 	if _, e = Assess([]byte("not a zip"), ""); e == nil {
-		t.Error("nonzip accepted")
+		t.Error("Принят файл, не являющийся ZIP-архивом")
 	}
 }
 func TestSourcePackageIndependentOfModuleExecution0332(t *testing.T) {
@@ -137,7 +137,7 @@ func TestSourcePackageIndependentOfModuleExecution0332(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !finding(r, "MODULE_REVIEW_REQUIRED") {
-		t.Fatalf("custom module not reported %+v", r)
+		t.Fatalf("Пользовательский модуль не отражён в отчёте: %+v", r)
 	}
 }
 
@@ -146,15 +146,15 @@ func TestWrapperEnvSecretsAndDuplicateKeys0332(t *testing.T) {
 	f["installation/.env"] = []byte("SERVERWRAPPER_ADDRESS=ws://127.0.0.1:9274\nSERVERWRAPPER_CHECK_SERVER_TOKEN=PRIVATE_SESSION_TOKEN\n")
 	r, e := Assess(archive(t, f), "5.7.12")
 	if e != nil || !finding(r, "WRAPPER_REENROLL") {
-		t.Fatalf("wrapper env undetected %+v %v", r, e)
+		t.Fatalf("Не обнаружено окружение обёртки: %+v %v", r, e)
 	}
 	if strings.Contains(fmt.Sprintf("%+v", r), "PRIVATE_SESSION_TOKEN") {
-		t.Fatal("wrapper credential leaked")
+		t.Fatal("Раскрыты учётные данные обёртки")
 	}
 	f["installation/LaunchServer.json"] = []byte(`{"auth":{"std":{"isDefault":true,"core":{"type":"sql","type":"unknown"}}}}`)
 	r, e = Assess(archive(t, f), "5.7.12")
 	if e != nil || !finding(r, "INVALID_JSON") || r.Status != "blocked" {
-		t.Fatalf("ambiguous JSON accepted %+v %v", r, e)
+		t.Fatalf("Принят неоднозначный JSON: %+v %v", r, e)
 	}
 }
 func TestAmbiguousLaunchServer0332(t *testing.T) {
@@ -162,7 +162,7 @@ func TestAmbiguousLaunchServer0332(t *testing.T) {
 	f["second/LaunchServer.json"] = launchServer("5.7.12")
 	r, e := Assess(archive(t, f), "5.7.12")
 	if e != nil || !finding(r, "MULTIPLE_LAUNCHSERVERS") || r.Status != "blocked" {
-		t.Fatalf("ambiguous source accepted %+v %v", r, e)
+		t.Fatalf("Принят неоднозначный источник: %+v %v", r, e)
 	}
 }
 
@@ -203,7 +203,7 @@ func TestReaderLargeSource0441(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.Size() <= 64<<20 {
-		t.Fatalf("fixture too small: %d", info.Size())
+		t.Fatalf("Тестовый набор слишком мал: %d", info.Size())
 	}
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		t.Fatal(err)
@@ -218,16 +218,16 @@ func TestReaderLargeSource0441(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r.SourceBytes != info.Size() || r.SourceSHA256 != sha || r.Categories["client"] != 1 || len(r.FilesSHA256) != 64 {
-		t.Fatalf("missing verified large inventory: %+v", r)
+		t.Fatalf("Отсутствует проверенная полная инвентаризация: %+v", r)
 	}
 	if r.ServerJarSHA256 == "" || r.DetectedVersion != "5.7.12" || !finding(r, "BINARY_PROVENANCE_NOT_ATTESTED") || r.CutoverAllowed {
-		t.Fatalf("unverified binary classified as ready: %+v", r)
+		t.Fatalf("Непроверенный исполняемый файл признан готовым: %+v", r)
 	}
 	if _, err := AssessReader(context.Background(), file, info.Size(), strings.Repeat("0", 64), "5.7.12"); err == nil {
-		t.Fatal("accepted incorrect source digest")
+		t.Fatal("Принята неверная контрольная сумма источника")
 	}
 	if again, err := AssessReader(context.Background(), file, info.Size(), sha, "5.7.12"); err != nil || again.FilesSHA256 != r.FilesSHA256 {
-		t.Fatalf("large scan not reproducible: %v", err)
+		t.Fatalf("Результат полной проверки невоспроизводим: %v", err)
 	}
 }
 
@@ -249,16 +249,16 @@ func TestGravit573CandidateAndSourceCategories0441(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.DetectedVersion != "5.7.13" || report.VersionStatus != "recognized" || report.CutoverAllowed || report.Status != "manual" {
-		t.Fatalf("unexpected candidate status: %+v", report)
+		t.Fatalf("Неожиданный статус кандидата: %+v", report)
 	}
 	if report.Categories["authentication"] != 1 || report.Categories["module_config"] != 1 || report.Categories["server_wrapper"] != 1 || report.Categories["asset"] != 1 || report.Categories["library"] != 1 || report.Categories["texture"] != 1 {
-		t.Fatalf("source categories incomplete: %+v", report.Categories)
+		t.Fatalf("Неполные категории исходных файлов: %+v", report.Categories)
 	}
 	if strings.Contains(fmt.Sprintf("%+v", report), "SECRET_NOT_IN_REPORT") {
-		t.Fatal("configuration secret leaked into report")
+		t.Fatal("Секрет конфигурации попал в отчёт")
 	}
 	if !finding(report, "BINARY_PROVENANCE_NOT_ATTESTED") {
-		t.Fatal("provenance claim missing")
+		t.Fatal("Отсутствует утверждение о происхождении")
 	}
 }
 
@@ -267,18 +267,18 @@ func TestReaderCorruptSourceAndCancelled0441(t *testing.T) {
 	corrupted := append([]byte(nil), source...)
 	pos := bytes.Index(corrupted, []byte("EXACT_BYTES_MATCHED"))
 	if pos < 0 {
-		t.Fatal("stored ZIP fixture expected")
+		t.Fatal("Ожидался сохранённый тестовый ZIP-архив")
 	}
 	corrupted[pos] ^= 0x7f
 	sha := sha256.Sum256(corrupted)
 	if _, err := AssessReader(context.Background(), bytes.NewReader(corrupted), int64(len(corrupted)), hex.EncodeToString(sha[:]), ""); err == nil {
-		t.Fatal("CRC mismatch accepted")
+		t.Fatal("Принят файл с несовпадением CRC")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	sha = sha256.Sum256(source)
 	if _, err := AssessReader(ctx, bytes.NewReader(source), int64(len(source)), hex.EncodeToString(sha[:]), ""); err == nil {
-		t.Fatal("cancelled inspection accepted")
+		t.Fatal("Принят результат отменённой проверки")
 	}
 }
 

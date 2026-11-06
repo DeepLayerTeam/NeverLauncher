@@ -20,10 +20,10 @@ import (
 func writePythonFixture0205(t *testing.T, root string, crash bool) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
-		t.Skip("python shebang host fixture is unix-only")
+		t.Skip("Тестовый хост с Python shebang работает только в Unix")
 	}
 	if _, err := exec.LookPath("python3"); err != nil {
-		t.Skip("python3 unavailable")
+		t.Skip("Python 3 недоступен")
 	}
 	path := filepath.Join(root, "backend", "extension")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -89,14 +89,14 @@ func TestExtensionHostRealProcessProtocolAndSanitizedEnvironment0205(t *testing.
 		_ = host.Close(ctx)
 	})
 	if err := host.StartInstallation(context.Background(), install); err != nil {
-		t.Fatalf("StartInstallation: %v", err)
+		t.Fatalf("Ошибка запуска установки: %v", err)
 	}
 	st, err := host.Get(Key{ExtensionID: install.ExtensionID, Scope: "global"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if st.State != "running" || !st.Healthy || st.PID <= 0 {
-		t.Fatalf("unexpected host status: %#v", st)
+		t.Fatalf("Неожиданный статус хоста: %#v", st)
 	}
 	deadline := time.Now().Add(2 * time.Second)
 	foundProtocol, foundStdout := false, false
@@ -116,14 +116,14 @@ func TestExtensionHostRealProcessProtocolAndSanitizedEnvironment0205(t *testing.
 		time.Sleep(30 * time.Millisecond)
 	}
 	if !foundProtocol || !foundStdout {
-		t.Fatalf("expected protocol/stdout logs: protocol=%v stdout=%v", foundProtocol, foundStdout)
+		t.Fatalf("Ожидались журналы протокола и стандартного вывода: протокол=%v stdout=%v", foundProtocol, foundStdout)
 	}
 	if err := host.Stop(context.Background(), Key{ExtensionID: install.ExtensionID, Scope: "global"}); err != nil {
 		t.Fatal(err)
 	}
 	st, _ = host.Get(Key{ExtensionID: install.ExtensionID, Scope: "global"})
 	if st.State != "stopped" {
-		t.Fatalf("expected stopped, got %#v", st)
+		t.Fatalf("Ожидалась остановка, получено: %#v", st)
 	}
 }
 
@@ -156,7 +156,7 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 	})
 	err = host.StartInstallation(context.Background(), install)
 	if err != nil && !strings.Contains(err.Error(), "exited") {
-		t.Fatalf("initial start: %v", err)
+		t.Fatalf("Первоначальный запуск: %v", err)
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
@@ -165,25 +165,25 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 			select {
 			case <-crashLoopPersisted:
 			case <-time.After(2 * time.Second):
-				t.Fatal("crash-loop handler did not persist emergency disable")
+				t.Fatal("Обработчик цикла аварийных завершений не сохранил экстренное отключение")
 			}
 			if _, err := repo.GetExtensionEmergencyDisable(context.Background(), install.ExtensionID, "global", ""); err != nil {
-				t.Fatalf("persistent emergency disable missing: %v", err)
+				t.Fatalf("Отсутствует сохранённое экстренное отключение: %v", err)
 			}
 			if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
-				t.Fatalf("crash-loop extension restarted despite kill-switch: %v", err)
+				t.Fatalf("Расширение перезапущено после повторных сбоев вопреки аварийному выключателю: %v", err)
 			}
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
 	st, _ := host.Get(Key{ExtensionID: install.ExtensionID, Scope: "global"})
-	t.Fatalf("host did not enter crashloop: %#v", st)
+	t.Fatalf("Хост не перешёл в состояние циклического сбоя: %#v", st)
 }
 
 func TestSafeEntrypointRejectsSymlink0205(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("symlink permissions vary on Windows")
+		t.Skip("Разрешения символьных ссылок различаются в Windows")
 	}
 	root := t.TempDir()
 	target := filepath.Join(root, "real")
@@ -194,7 +194,7 @@ func TestSafeEntrypointRejectsSymlink0205(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := safeEntrypoint(root, "extension"); err == nil {
-		t.Fatal("symlink entrypoint must be rejected")
+		t.Fatal("Точка входа через символьную ссылку должна отклоняться")
 	}
 }
 
@@ -204,7 +204,7 @@ func TestSanitizedEnvironmentNeverForwardsSecrets0205(t *testing.T) {
 	env := sanitizedEnvironment(map[string]string{"LAUNCHER_EXTENSION_HOST_TOKEN": "token"})
 	joined := strings.Join(env, "\n")
 	if strings.Contains(joined, "DATABASE_DSN") || strings.Contains(joined, "AUTH_TOKEN_SECRET") {
-		t.Fatal("backend secrets leaked to extension environment")
+		t.Fatal("Секреты сервера раскрыты в окружении расширения")
 	}
 	if !strings.Contains(joined, "LAUNCHER_EXTENSION_HOST_TOKEN=token") {
 		t.Fatal("Отсутствует токен хоста")
@@ -215,7 +215,7 @@ func TestStartRequiresEnabledState0205(t *testing.T) {
 	host := New(Config{}, repository.NewMemoryRepository("http://example.test"), storage.NewLocalStorage(t.TempDir()))
 	err := host.StartInstallation(context.Background(), model.ExtensionInstall{ExtensionID: "example.disabled", CurrentState: model.ExtensionInstallStateDisabled})
 	if err == nil || errors.Is(err, ErrNoBackendTarget) {
-		t.Fatalf("disabled extension start should fail before target resolution: %v", err)
+		t.Fatalf("Запуск отключённого расширения должен блокироваться до разрешения целевой точки: %v", err)
 	}
 }
 
@@ -236,26 +236,26 @@ func TestEventSubscriptionPermissionBoundary0206(t *testing.T) {
 		t.Fatalf("Разрешение на асинхронную операцию ошибочно отклонено: %v", err)
 	}
 	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err == nil {
-		t.Fatal("sync subscription accepted without granted events:sync")
+		t.Fatal("Разрешена синхронная подписка без права events:sync")
 	}
 	if _, err := repo.GrantExtensionPermission(context.Background(), model.ExtensionPermissionGrant{ExtensionID: manifest.ID, Scope: "global", Permission: "events:sync", GrantedBy: "test"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err != nil {
-		t.Fatalf("sync permission rejected: %v", err)
+		t.Fatalf("Отклонено разрешение синхронного доступа: %v", err)
 	}
 	if err := s.validateEventPermission0206(st, "audit.event.created", model.ExtensionEventModeAsync); err == nil {
-		t.Fatal("audit subscription accepted without granted audit:read")
+		t.Fatal("Разрешена подписка на аудит без права audit:read")
 	}
 }
 
 func TestValidateCallbackURLLoopbackOnly0206(t *testing.T) {
 	for _, raw := range []string{"https://127.0.0.1:9000", "http://example.com:9000", "http://localhost:9000", "http://127.0.0.1:9000/path", "http://127.0.0.1"} {
 		if _, err := validateCallbackURL0206(raw); err == nil {
-			t.Fatalf("unsafe callback URL accepted: %s", raw)
+			t.Fatalf("Принят небезопасный URL обратного вызова: %s", raw)
 		}
 	}
 	if got, err := validateCallbackURL0206("http://127.0.0.1:9000"); err != nil || got != "http://127.0.0.1:9000" {
-		t.Fatalf("valid loopback callback rejected: got=%q err=%v", got, err)
+		t.Fatalf("Отклонён допустимый локальный обратный вызов: получено=%q ошибка=%v", got, err)
 	}
 }

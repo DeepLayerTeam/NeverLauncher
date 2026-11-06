@@ -28,33 +28,33 @@ import (
 
 func TestLiveMapping0473(t *testing.T) {
 	if _, err := PopulateLive0473(context.Background(), ""); err == nil {
-		t.Fatal("accepted empty DSN")
+		t.Fatal("Принята пустая строка подключения DSN")
 	}
 	if _, err := bool0473(int64(2)); err == nil {
-		t.Fatal("accepted invalid boolean")
+		t.Fatal("Принято некорректное логическое значение")
 	}
 	if b, err := bool0473(int64(0)); err != nil || b != false {
-		t.Fatalf("bool: %v %v", b, err)
+		t.Fatalf("Логическое значение: %v %v", b, err)
 	}
 	if _, err := json0473(`{broken`); err == nil {
-		t.Fatal("accepted invalid JSON")
+		t.Fatal("Принят некорректный JSON")
 	}
 	if _, err := instant0473(int64(-1), false); err == nil {
-		t.Fatal("accepted negative timestamp")
+		t.Fatal("Принята отрицательная временная метка")
 	}
 	if v, err := instant0473(int64(0), true); err != nil || v != nil {
-		t.Fatalf("optional zero: %v %v", v, err)
+		t.Fatalf("Необязательное нулевое значение: %v %v", v, err)
 	}
 	if v, err := instant0473(int64(1), false); err != nil || !v.(time.Time).Equal(time.Unix(0, 1)) {
-		t.Fatalf("nanoseconds: %v %v", v, err)
+		t.Fatalf("Наносекунды: %v %v", v, err)
 	}
 	for _, r := range rules0473() {
 		if r.source == "" || r.target == "" || len(r.columns) == 0 {
-			t.Fatalf("incomplete live mapping: %+v", r)
+			t.Fatalf("Неполное сопоставление рабочих данных: %+v", r)
 		}
 	}
 	if err := checkManifest0473(map[string]any{"manifest": "{}", "status": "published"}); err == nil {
-		t.Fatal("invalid manifest accepted")
+		t.Fatal("Принят некорректный манифест")
 	}
 }
 
@@ -64,7 +64,7 @@ func TestLiveMapping0473(t *testing.T) {
 func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PG_LIVE_TEST_DSN")
 	if dsn == "" {
-		t.Skip("requires isolated LAUNCHER_PG_LIVE_TEST_DSN")
+		t.Skip("Необходима изолированная LAUNCHER_PG_LIVE_TEST_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
 	defer cancel()
@@ -76,7 +76,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	err = pg.QueryRow(ctx, `SELECT to_regclass('public.schema_migrations') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)`, Schema).Scan(&empty)
 	_ = pg.Close(ctx)
 	if err != nil || !empty {
-		t.Fatalf("must be a dedicated, untouched PostgreSQL test database: %v", err)
+		t.Fatalf("Необходима отдельная неизменённая тестовая база PostgreSQL: %v", err)
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -84,7 +84,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	}
 	defer db.Close()
 	if _, err = dbmigrate.Apply(ctx, db); err != nil {
-		t.Fatalf("apply real PostgreSQL schema: %v", err)
+		t.Fatalf("Применение реальной схемы PostgreSQL: %v", err)
 	}
 	dir := t.TempDir()
 	src := filepath.Join(dir, "core.db")
@@ -125,7 +125,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	execRaw := func(q string, args ...any) {
 		t.Helper()
 		if _, x := rawDB.Exec(q, args...); x != nil {
-			t.Fatalf("SQLite fixture %s: %v", q, x)
+			t.Fatalf("Тестовый набор SQLite %s: %v", q, x)
 		}
 	}
 	execRaw(`UPDATE users SET auth_epoch=2 WHERE id='u1'`)
@@ -181,31 +181,31 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Import(ctx, backup, dsn); err != nil {
-		t.Fatalf("staging: %v", err)
+		t.Fatalf("Подготовка: %v", err)
 	}
 	live, err := PopulateLiveWithMFA0474(ctx, dsn, MFASecrets0474{SQLiteMFAKey: mfaKey, PostgreSQLSecret: "postgres-mfa-integration-key"})
 	if err != nil {
-		t.Fatalf("LIVE conversion: %v", err)
+		t.Fatalf("Преобразование рабочих данных: %v", err)
 	}
 	if !live.Verified || live.ReadyForBackendCutover || live.Files != 1 || live.LocalIdentities != 1 || len(live.LiveTables) != len(rules0473())+len(stateRules0474()) {
-		t.Fatalf("incorrect live receipt: %+v", live)
+		t.Fatalf("Некорректная квитанция преобразования рабочих данных: %+v", live)
 	}
 	api := repository.NewPostgresRepository(dsn, "")
 	project, err := api.GetProject("project-47")
 	if err != nil || project.Name != "Imported Project" {
-		t.Fatalf("SQLRepository project: %+v %v", project, err)
+		t.Fatalf("Проект в SQLRepository: %+v %v", project, err)
 	}
 	profiles, err := api.ListProfiles("project-47")
 	if err != nil || len(profiles) != 1 || profiles[0].MinecraftVersion != "1.21.1" || profiles[0].JavaMajor != 21 {
-		t.Fatalf("SQLRepository profiles: %+v %v", profiles, err)
+		t.Fatalf("Профили в SQLRepository: %+v %v", profiles, err)
 	}
 	versions, err := api.ListVersions("project-47")
 	if err != nil || len(versions) != 1 || versions[0].Manifest.ProfileSnapshot == nil {
-		t.Fatalf("SQLRepository versions: %+v %v", versions, err)
+		t.Fatalf("Версии в SQLRepository: %+v %v", versions, err)
 	}
 	u, err := api.GetUserByEmail("owner@example.test")
 	if err != nil || u.ID != "u1" || u.PasswordHash != "persisted-password-hash" {
-		t.Fatalf("SQLRepository user: %+v %v", u, err)
+		t.Fatalf("Пользователь в SQLRepository: %+v %v", u, err)
 	}
 	pg2, er := pgx.Connect(ctx, dsn)
 	if er != nil {
@@ -217,12 +217,12 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	var sessionStatus, scopeToken string
 	er = pg2.QueryRow(ctx, `SELECT core_auth_epoch_0474,status FROM auth_sessions WHERE id='session-47'`).Scan(&importedEpoch, &sessionStatus)
 	if er != nil || importedEpoch != 2 || sessionStatus != "revoked" {
-		t.Fatalf("session not rotated: %d %s %v", importedEpoch, sessionStatus, er)
+		t.Fatalf("Сессия не обновлена: %d %s %v", importedEpoch, sessionStatus, er)
 	}
 	var methodStatus, pgCipher string
 	er = pg2.QueryRow(ctx, `SELECT status,active_secret_ciphertext FROM mfa_methods WHERE id='mfa-totp-u1'`).Scan(&methodStatus, &pgCipher)
 	if er != nil || methodStatus != "enabled" {
-		t.Fatalf("mfa disabled on import: %s %v", methodStatus, er)
+		t.Fatalf("Многофакторная аутентификация отключена при импорте: %s %v", methodStatus, er)
 	}
 	mfaCipherBytes, er := base64.RawURLEncoding.DecodeString(pgCipher)
 	if er != nil {
@@ -239,7 +239,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	}
 	mfaUnwrapped, er := pgAEAD.Open(nil, mfaCipherBytes[:pgAEAD.NonceSize()], mfaCipherBytes[pgAEAD.NonceSize():], []byte("0.10.0"))
 	if er != nil || string(mfaUnwrapped) != base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(mfaSeed) {
-		t.Fatalf("imported MFA key is not equivalent: %v", er)
+		t.Fatalf("Импортированный ключ MFA не эквивалентен исходному: %v", er)
 	}
 	var importedRecovery string
 	er = pg2.QueryRow(ctx, `SELECT code_hash FROM recovery_codes WHERE user_id='u1' AND method_id='mfa-totp-u1'`).Scan(&importedRecovery)
@@ -248,23 +248,23 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	}
 	er = pg2.QueryRow(ctx, `SELECT fencing_token,lease_token FROM durable_scope_leases WHERE scope_key='scope-47'`).Scan(&scopeFence, &scopeToken)
 	if er != nil || scopeFence != 18 || scopeToken != "" {
-		t.Fatalf("scope not fenced: %d %s %v", scopeFence, scopeToken, er)
+		t.Fatalf("Область доступа не изолирована: %d %s %v", scopeFence, scopeToken, er)
 	}
 	for _, q := range []string{`SELECT id FROM durable_jobs WHERE id='job-47'`, `SELECT id FROM event_outbox WHERE id='event-47'`, `SELECT id FROM server_bridge_nodes_v2 WHERE id='bridge-47'`, `SELECT id FROM refresh_token_families WHERE id='family-47'`} {
 		var id string
 		if er = pg2.QueryRow(ctx, q).Scan(&id); er != nil {
-			t.Fatalf("SQLRepository state not readable: %s %v", q, er)
+			t.Fatalf("Не удаётся прочитать состояние SQLRepository: %s %v", q, er)
 		}
 	}
 	pg2.Close(ctx)
 	if er != nil || identityUser != "u1" {
-		t.Fatalf("SQLRepository local login identity: %s %v", identityUser, er)
+		t.Fatalf("Локальная идентичность входа в SQLRepository: %s %v", identityUser, er)
 	}
 	if _, err = PopulateLive0473(ctx, dsn); err == nil {
-		t.Fatal("reimport over live database accepted")
+		t.Fatal("Разрешён повторный импорт поверх рабочей базы данных")
 	}
 	files, err := api.ListFiles("project-47", versions[0].ID)
 	if err != nil || len(files) != 1 || files[0].Path != "mods/example.jar" || files[0].URL != "https://example.test/files/example.jar" || len(files[0].Mirrors) != 1 || files[0].Mirrors[0] != "https://mirror.example.test/example.jar" {
-		t.Fatalf("SQLRepository file links: %+v %v", files, err)
+		t.Fatalf("Ссылки файлов в SQLRepository: %+v %v", files, err)
 	}
 }

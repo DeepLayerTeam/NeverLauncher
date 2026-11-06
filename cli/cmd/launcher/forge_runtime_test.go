@@ -18,7 +18,7 @@ import (
 
 func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fixture Java executable uses POSIX shell; production implementation is cross-platform")
+		t.Skip("Тестовый исполняемый файл Java использует POSIX shell; рабочая реализация поддерживает разные платформы")
 	}
 	for _, loader := range []string{"forge", "neoforge"} {
 		t.Run(loader, func(t *testing.T) {
@@ -103,7 +103,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			}
 			gotGenerated, err := os.ReadFile(filepath.Join(dir, "libraries", filepath.FromSlash(generatedRel)))
 			if err != nil || !bytes.Equal(gotGenerated, generated) {
-				t.Fatalf("processor output mismatch: %q %v", gotGenerated, err)
+				t.Fatalf("Несовпадение вывода обработчика: %q %v", gotGenerated, err)
 			}
 
 			// Идемпотентность: при проверенном результате процессора следующий запуск должен пропустить дорогостоящую обработку.
@@ -125,11 +125,11 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			// восстановить выполнявшуюся запись без повторного запуска процессора.
 			journalRaw, err := os.ReadFile(filepath.FromSlash(second.ProcessorJournalPath))
 			if err != nil {
-				t.Fatalf("read processor journal: %v", err)
+				t.Fatalf("Чтение журнала обработчика: %v", err)
 			}
 			var journal forgeProcessorJournal
 			if err := json.Unmarshal(journalRaw, &journal); err != nil {
-				t.Fatalf("decode processor journal: %v", err)
+				t.Fatalf("Разбор журнала обработчика: %v", err)
 			}
 			entry := journal.Entries["0"]
 			entry.State = "running"
@@ -215,7 +215,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				seenGenerated = seenGenerated || file.Path == "libraries/"+generatedRel
 			}
 			if !seenProfile || !seenGenerated {
-				t.Fatalf("package missing Forge/NeoForge artifacts: profile=%v generated=%v", seenProfile, seenGenerated)
+				t.Fatalf("В пакете отсутствуют артефакты Forge/NeoForge: профиль=%v сгенерировано=%v", seenProfile, seenGenerated)
 			}
 		})
 	}
@@ -238,7 +238,7 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.1", "latest-stable", server.URL+"/neo-legacy.xml")
 	if err != nil || loaderVersion != "1.20.1-47.1.79" || artifactVersion != "1.20.1-47.1.79" {
-		t.Fatalf("NeoForge 1.20.1 selection: %q %q %v", loaderVersion, artifactVersion, err)
+		t.Fatalf("Выбор NeoForge 1.20.1: %q %q %v", loaderVersion, artifactVersion, err)
 	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/neo.xml")
 	if err != nil || loaderVersion != "21.1.105" || artifactVersion != "21.1.105" {
@@ -246,10 +246,10 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "26.2", "latest-stable", server.URL+"/neo.xml")
 	if err != nil || loaderVersion != "26.2.0.75" || artifactVersion != "26.2.0.75" {
-		t.Fatalf("NeoForge 26.2 selection: %q %q %v", loaderVersion, artifactVersion, err)
+		t.Fatalf("Выбор NeoForge 26.2: %q %q %v", loaderVersion, artifactVersion, err)
 	}
 	if _, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "21.4.20", server.URL+"/neo.xml"); err == nil {
-		t.Fatal("incompatible NeoForge/Minecraft explicit version accepted")
+		t.Fatal("Принята явно указанная несовместимая версия NeoForge/Minecraft")
 	}
 	if got := forgeInstallerURL("neoforge", "1.20.1", "1.20.1-47.1.79"); !strings.Contains(got, "/net/neoforged/forge/1.20.1-47.1.79/forge-1.20.1-47.1.79-installer.jar") {
 		t.Fatalf("Неожиданный URL установщика NeoForge 1.20.1: %s", got)
@@ -370,7 +370,7 @@ func TestForgeLibraryMaterializationDeduplicatesSameDestinationBeforeWorkers(t *
 		t.Fatalf("Повторяющийся целевой файл загружен %d раз, ожидается 1", got)
 	}
 	if len(downloaded) != 1 || downloaded[0].Path != "libraries/net/minecraftforge/unsafe/0.9.2/unsafe-0.9.2.jar" {
-		t.Fatalf("unexpected deduplicated result: %+v", downloaded)
+		t.Fatalf("Неожиданный результат удаления дубликатов: %+v", downloaded)
 	}
 }
 
@@ -397,7 +397,7 @@ func TestForgeInstallV1ProcessorTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(resolved, "--mc=1.20.1;side=client;patch=") || !strings.Contains(resolved, patchPath) || !strings.HasSuffix(resolved, "hash=0123456789abcdef0123456789abcdef01234567") {
-		t.Fatalf("InstallV1 inline token expansion mismatch: %q", resolved)
+		t.Fatalf("Несовпадение подстановки токенов InstallV1: %q", resolved)
 	}
 	artifact, err := resolveProcessorToken(pc, "{PATCHED}")
 	if err != nil {
@@ -561,7 +561,7 @@ func TestForgeLegacy1710V1LaunchWrapperInstaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bundle.Legacy || bundle.LegacyMode != "legacy-v1-universal" || bundle.Version.InheritsFrom != "" {
-		t.Fatalf("1.7.10 V1 installer detection mismatch: %+v", bundle)
+		t.Fatalf("Несовпадение определения установщика V1 для 1.7.10: %+v", bundle)
 	}
 	clientDir := t.TempDir()
 	result, err := installForgeLegacy(context.Background(), forgeMaterializeOptions{
@@ -602,7 +602,7 @@ func TestCanonicalLegacyForgeRepositoryURL(t *testing.T) {
 		"http://127.0.0.1:8080/repo/":            "http://127.0.0.1:8080/repo/",
 	} {
 		if actual := canonicalLegacyForgeURL(input); actual != expected {
-			t.Fatalf("canonicalLegacyForgeURL(%q)=%q want %q", input, actual, expected)
+			t.Fatalf("canonicalLegacyForgeURL(%q)=%q, ожидалось %q", input, actual, expected)
 		}
 	}
 }
@@ -657,7 +657,7 @@ func TestForgeLegacy1122RepackedEmptyProcessorInstaller(t *testing.T) {
 
 func TestInstallerArchiveSecurityAndCoordinateParsing(t *testing.T) {
 	if got, err := mavenCoordinatePath("net.minecraftforge:installertools:1.4.1:fatjar@jar"); err != nil || got != "net/minecraftforge/installertools/1.4.1/installertools-1.4.1-fatjar.jar" {
-		t.Fatalf("unexpected Maven path: %q %v", got, err)
+		t.Fatalf("Неожиданный путь Maven: %q %v", got, err)
 	}
 	if got, err := mavenCoordinatePath("de.oceanlabs.mcp:mcp_config:1.20.1:mappings@txt"); err != nil || !strings.HasSuffix(got, "mcp_config-1.20.1-mappings.txt") {
 		t.Fatalf("Неожиданный расширенный путь Maven: %q %v", got, err)
@@ -670,7 +670,7 @@ func TestInstallerArchiveSecurityAndCoordinateParsing(t *testing.T) {
 		!neoForgeVersionMatchesMinecraft("26.1.1.12", "26.1.1") ||
 		neoForgeVersionMatchesMinecraft("21.4.20", "1.21.1") ||
 		neoForgeVersionMatchesMinecraft("26.2.0.75", "26.1") {
-		t.Fatal("NeoForge Minecraft compatibility mapping incorrect")
+		t.Fatal("Неверное сопоставление совместимости NeoForge и Minecraft")
 	}
 }
 
@@ -804,7 +804,7 @@ func TestForgeLegacyProfileAlreadyInheritedReportsNormalized(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !normalized {
-		t.Fatal("profile already inheriting Vanilla must still satisfy legacyProfileNormalized certification")
+		t.Fatal("Профиль с наследованием Vanilla должен соответствовать проверке legacyProfileNormalized")
 	}
 	if string(profile) != string(raw) {
 		t.Fatalf("Уже нормализованный профиль был без необходимости перезаписан: %s", profile)

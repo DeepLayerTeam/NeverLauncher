@@ -14,7 +14,7 @@ import (
 func TestServerBridgeControl0195Postgres(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN is not set")
+		t.Skip("Переменная LAUNCHER_SERVERBRIDGE_HA_DSN не задана")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -56,7 +56,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	}
 	replayed, reused, err := repo.CreateServerBridgeControlCommand(ctx, cmd, now.Add(time.Millisecond))
 	if err != nil || !reused || replayed.ID != cmd.ID {
-		t.Fatalf("idempotent create: %+v reused=%v err=%v", replayed, reused, err)
+		t.Fatalf("Идемпотентное создание: %+v повторно=%v ошибка=%v", replayed, reused, err)
 	}
 	conflict := cmd
 	conflict.ID = "ctl_control0195_conflict"
@@ -65,7 +65,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 		t.Fatalf("Ожидался конфликт идемпотентности, получено %v", err)
 	}
 	if _, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0123456789abcdef0123456789abcdef", "lease_wrong_0123456789abcdef", 0, now, 30*time.Second); !errors.Is(err, ErrConflict) {
-		t.Fatalf("wrong runtime lease should conflict, got %v", err)
+		t.Fatalf("Неверный захват времени выполнения должен вызывать конфликт, получено: %v", err)
 	}
 	leased, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "0123456789abcdef0123456789abcdef", "lease_token_0123456789abcdef", 0, now, 30*time.Second)
 	if err != nil || leased.Status != "leased" || leased.Attempt != 1 {
@@ -73,10 +73,10 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	}
 	resumed, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "0123456789abcdef0123456789abcdef", "ignored_token_0123456789abcdef", 0, now.Add(time.Second), 30*time.Second)
 	if err != nil || resumed.ID != leased.ID || resumed.Attempt != leased.Attempt || resumed.LeaseToken != leased.LeaseToken {
-		t.Fatalf("resumed lease mismatch: %+v err=%v", resumed, err)
+		t.Fatalf("Несовпадение возобновлённого захвата: %+v ошибка=%v", resumed, err)
 	}
 	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, "wrong_token_0123456789abcdef", leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second)); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale/wrong lease token was not fenced: %v", err)
+		t.Fatalf("Устаревший или неверный токен захвата не отклонён: %v", err)
 	}
 	done, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
 	if err != nil || done.Status != "succeeded" {
@@ -84,7 +84,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	}
 	done2, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || done2.Status != "succeeded" {
-		t.Fatalf("idempotent completion: %+v err=%v", done2, err)
+		t.Fatalf("Идемпотентное завершение: %+v ошибка=%v", done2, err)
 	}
 	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "false"}, "", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Принято подтверждение с тем же статусом, но противоречащим результатом: %v", err)
@@ -97,7 +97,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	if auditCount != 2 {
-		t.Fatalf("expected queued+completed transactional audit rows, got %d", auditCount)
+		t.Fatalf("Ожидались записи аудита поставленной в очередь и завершённой транзакций, получено: %d", auditCount)
 	}
 
 	// В 0.51.5 две независимые реплики API могут обработать одну доставку даже при
@@ -106,7 +106,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	// Истёкшая доставка НИКОГДА не становится вторым выполнением.
 	second, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("second repository is not SQLRepository")
+		t.Fatal("Второе хранилище не является SQLRepository")
 	}
 	defer second.db.Close()
 	cmd2 := cmd
@@ -117,39 +117,39 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	cmd2.UpdatedAt = cmd2.CreatedAt
 	_, _, err = repo.CreateServerBridgeControlCommand(ctx, cmd2, time.Now().UTC().Add(6*time.Hour))
 	if err != nil {
-		t.Fatalf("fast API clock incorrectly rejected pending command: %v", err)
+		t.Fatalf("Ускоренные часы API ошибочно отклонили ожидающую команду: %v", err)
 	}
 	channel := "skew_channel_0123456789abcdef"
 	token := "skew_token_0123456789abcdef"
 	first, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, token, 0, time.Now().UTC().Add(6*time.Hour), 30*time.Second)
 	if err != nil || first.ID != cmd2.ID {
-		t.Fatalf("fast clock expired pending command: %+v, %v", first, err)
+		t.Fatalf("Ускоренные часы пометили ожидающую команду как просроченную: %+v, %v", first, err)
 	}
 	var dbNow time.Time
 	if err := repo.db.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&dbNow); err != nil {
 		t.Fatal(err)
 	}
 	if delta := first.LeaseUntil.Sub(dbNow); delta < 20*time.Second || delta > 35*time.Second {
-		t.Fatalf("lease must use database time, remaining: %v", delta)
+		t.Fatalf("Захват должен использовать время базы данных; осталось: %v", delta)
 	}
 	resumedOtherReplica, err := second.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, "new_token_0123456789abcdef", 0, time.Now().UTC().Add(-6*time.Hour), 30*time.Second)
 	if err != nil || resumedOtherReplica.ID != first.ID || resumedOtherReplica.LeaseToken != token || resumedOtherReplica.Attempt != 1 {
-		t.Fatalf("other API replica must resume original delivery, not reexecute: %+v, %v", resumedOtherReplica, err)
+		t.Fatalf("Другая реплика API должна возобновить исходную доставку, а не выполнять команду повторно: %+v, %v", resumedOtherReplica, err)
 	}
 	_, err = second.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "other_channel_0123456789abcdef", "other_token_0123456789abcdef", 0, time.Now().UTC().Add(-6*time.Hour), 30*time.Second)
 	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("second channel claimed active delivery: %v", err)
+		t.Fatalf("Второй канал захватил активную доставку: %v", err)
 	}
 	doneSkew, err := second.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd2.ID, channel, token, first.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(-6*time.Hour))
 	if err != nil || doneSkew.Status != "succeeded" {
-		t.Fatalf("cross replica ACK failed: %+v, %v", doneSkew, err)
+		t.Fatalf("Сбой подтверждения между репликами: %+v, %v", doneSkew, err)
 	}
 	if delta := doneSkew.CompletedAt.Sub(dbNow); delta < -5*time.Second || delta > 10*time.Second {
-		t.Fatalf("ACK evidence incorrectly uses an API host clock: %v", delta)
+		t.Fatalf("Подтверждение ошибочно использует часы сервера API: %v", delta)
 	}
 	lateACK, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd2.ID, channel, token, first.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(6*time.Hour))
 	if err != nil || lateACK.Status != "succeeded" {
-		t.Fatalf("lost ACK retry across replicas: %+v, %v", lateACK, err)
+		t.Fatalf("Повтор после потери подтверждения между репликами: %+v, %v", lateACK, err)
 	}
 	cmd3 := cmd2
 	cmd3.ID = "ctl_control0195_expiry_0515"
@@ -160,21 +160,21 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	}
 	pending, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, "expired_token_0123456789abcdef", first.DeliverySequence, time.Now().Add(-6*time.Hour), 30*time.Second)
 	if err != nil || pending.ID != cmd3.ID {
-		t.Fatalf("lease command 3: %+v, %v", pending, err)
+		t.Fatalf("Захват команды 3: %+v, %v", pending, err)
 	}
 	if _, err := repo.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1`, cmd3.ID); err != nil {
 		t.Fatal(err)
 	}
 	_, err = second.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "other_channel_0123456789abcdef", "retry_token_0123456789abcdef", first.DeliverySequence, time.Now().Add(-6*time.Hour), 30*time.Second)
 	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expired side effect must never be redelivered: %v", err)
+		t.Fatalf("Побочный эффект команды с истёкшим сроком нельзя доставлять повторно: %v", err)
 	}
 	current, err := second.GetServerBridgeControlCommand(ctx, node.ID, cmd3.ID)
 	if err != nil || current.Status != "indeterminate" {
-		t.Fatalf("expired command not reconciled: %+v, %v", current, err)
+		t.Fatalf("Просроченная команда не согласована: %+v, %v", current, err)
 	}
 	resolved, err := second.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd3.ID, channel, pending.LeaseToken, pending.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(6*time.Hour))
 	if err != nil || resolved.Status != "succeeded" {
-		t.Fatalf("original durable late ACK rejected: %+v, %v", resolved, err)
+		t.Fatalf("Позднее подтверждение исходной надёжной доставки отклонено: %+v, %v", resolved, err)
 	}
 }

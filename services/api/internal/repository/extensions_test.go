@@ -37,43 +37,43 @@ func TestExtensionMemoryRepositoryPersistsImmutableCanonicalVersions0201(t *test
 		t.Fatal(err)
 	}
 	if first.ManifestSHA256 == "" || first.Manifest.Targets[0].Kind != "backend" {
-		t.Fatalf("manifest was not canonicalized: %#v", first)
+		t.Fatalf("Манифест не приведён к каноническому виду: %#v", first)
 	}
 	if len(first.Manifest.Permissions) != 2 {
-		t.Fatalf("permissions were not normalized: %#v", first.Manifest.Permissions)
+		t.Fatalf("Разрешения не нормализованы: %#v", first.Manifest.Permissions)
 	}
 
 	second, err := repo.SaveExtensionVersion(ctx, manifest)
 	if err != nil {
-		t.Fatalf("idempotent save failed: %v", err)
+		t.Fatalf("Ошибка идемпотентного сохранения: %v", err)
 	}
 	if first.ManifestSHA256 != second.ManifestSHA256 || !first.CreatedAt.Equal(second.CreatedAt) {
-		t.Fatalf("idempotent save changed immutable version: %#v %#v", first, second)
+		t.Fatalf("Идемпотентное сохранение изменило неизменяемую версию: %#v %#v", first, second)
 	}
 
 	mutated := manifest
 	mutated.Name = "Changed bytes"
 	if _, err := repo.SaveExtensionVersion(ctx, mutated); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("expected ErrImmutable, got %v", err)
+		t.Fatalf("Ожидалась ошибка ErrImmutable, получено: %v", err)
 	}
 	identity, err := repo.GetExtension(ctx, manifest.ID)
 	if err != nil || identity.Name != manifest.Name {
-		t.Fatalf("failed immutable write changed extension identity: %#v %v", identity, err)
+		t.Fatalf("Неудачная запись неизменяемой версии изменила идентичность расширения: %#v %v", identity, err)
 	}
 	permissions, err := repo.ListExtensionPermissions(ctx, manifest.ID, manifest.Version)
 	if err != nil || len(permissions) != 2 || permissions[0] != "release:read" || permissions[1] != "storage:read" {
-		t.Fatalf("normalized permissions mismatch: %#v %v", permissions, err)
+		t.Fatalf("Несовпадение нормализованных разрешений: %#v %v", permissions, err)
 	}
 	dependencies, err := repo.ListExtensionDependencies(ctx, manifest.ID, manifest.Version)
 	if err != nil || len(dependencies) != 1 || dependencies[0].ID != "ru.example.base" {
-		t.Fatalf("normalized dependencies mismatch: %#v %v", dependencies, err)
+		t.Fatalf("Несовпадение нормализованных зависимостей: %#v %v", dependencies, err)
 	}
 
 	hijack := manifest
 	hijack.Version = "1.2.4"
 	hijack.Publisher = "Other Publisher"
 	if _, err := repo.SaveExtensionVersion(ctx, hijack); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected publisher ErrConflict, got %v", err)
+		t.Fatalf("Ожидалась ошибка издателя ErrConflict, получено: %v", err)
 	}
 }
 
@@ -90,17 +90,17 @@ func TestExtensionMemoryRepositoryInstallStateReferencesExistingVersion0201(t *t
 		t.Fatal(err)
 	}
 	if installed.InstalledAt.IsZero() || installed.UpdatedAt.IsZero() {
-		t.Fatalf("timestamps not assigned: %#v", installed)
+		t.Fatalf("Не назначены временные метки: %#v", installed)
 	}
 	got, err := repo.GetExtensionInstall(ctx, manifest.ID, "project", "demo-project")
 	if err != nil || got.Version != manifest.Version {
-		t.Fatalf("get install: %#v %v", got, err)
+		t.Fatalf("Получение установки: %#v %v", got, err)
 	}
 	if err := repo.DeleteExtensionInstall(ctx, manifest.ID, "project", "demo-project"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := repo.GetExtensionInstall(ctx, manifest.ID, "project", "demo-project"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("deleted install should be missing, got %v", err)
+		t.Fatalf("Удалённая установка должна отсутствовать, получено: %v", err)
 	}
 }
 
@@ -110,7 +110,7 @@ func TestExtensionsCore0201Postgres(t *testing.T) {
 		dsn = os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	if dsn == "" {
-		t.Skip("PostgreSQL test DSN is not set")
+		t.Skip("Строка подключения DSN для тестовой PostgreSQL не задана")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -132,24 +132,24 @@ func TestExtensionsCore0201Postgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	if stored.ManifestSHA256 == "" {
-		t.Fatal("manifest digest is empty")
+		t.Fatal("Контрольная сумма манифеста пуста")
 	}
 	permissions, err := repo.ListExtensionPermissions(ctx, manifest.ID, manifest.Version)
 	if err != nil || len(permissions) != 2 {
-		t.Fatalf("permissions: %#v %v", permissions, err)
+		t.Fatalf("Разрешения: %#v %v", permissions, err)
 	}
 	dependencies, err := repo.ListExtensionDependencies(ctx, manifest.ID, manifest.Version)
 	if err != nil || len(dependencies) != 1 || dependencies[0].ID != "ru.example.base" {
-		t.Fatalf("dependencies: %#v %v", dependencies, err)
+		t.Fatalf("Зависимости: %#v %v", dependencies, err)
 	}
 	if _, err := repo.db.ExecContext(ctx, `UPDATE extension_versions SET api='tampered' WHERE extension_id=$1 AND version=$2`, manifest.ID, manifest.Version); err == nil {
-		t.Fatal("database accepted immutable extension version mutation")
+		t.Fatal("База данных допустила изменение неизменяемой версии расширения")
 	}
 	if _, err := repo.db.ExecContext(ctx, `UPDATE extensions SET publisher='attacker' WHERE id=$1`, manifest.ID); err == nil {
-		t.Fatal("database accepted publisher mutation")
+		t.Fatal("База данных допустила изменение издателя")
 	}
 	install, err := repo.SaveExtensionInstall(ctx, model.ExtensionInstall{ExtensionID: manifest.ID, Version: manifest.Version, Scope: "global", Source: "local"})
 	if err != nil || install.ExtensionID != manifest.ID {
-		t.Fatalf("install: %#v %v", install, err)
+		t.Fatalf("Установка: %#v %v", install, err)
 	}
 }

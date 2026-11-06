@@ -66,7 +66,7 @@ func TestRemoteControlScopesAndSources0284(t *testing.T) {
 	token := remoteTokenFixture0284(t, id, "host.status")
 	status := remoteRequest0284(t, a, token, "GET", "/v1/host/status", "", "", "127.0.0.1:4000")
 	if status.Code != http.StatusOK || !strings.Contains(status.Body.String(), id.NodeID) {
-		t.Fatalf("status=%d %s", status.Code, status.Body.String())
+		t.Fatalf("Статус=%d %s", status.Code, status.Body.String())
 	}
 	for name, request := range map[string]func() *httptest.ResponseRecorder{
 		"cannot start with status": func() *httptest.ResponseRecorder {
@@ -96,7 +96,7 @@ func TestRemoteControlScopesAndSources0284(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			rr := request()
 			if rr.Code < 400 {
-				t.Fatalf("status %d %s", rr.Code, rr.Body.String())
+				t.Fatalf("Статус %d %s", rr.Code, rr.Body.String())
 			}
 		})
 	}
@@ -112,17 +112,17 @@ func TestRemoteControlIdempotencyAndUnknown0284(t *testing.T) {
 	key := "idempotency-id-000000001"
 	first := call("start", key)
 	if first.Code != 200 || !strings.Contains(first.Body.String(), `"succeeded"`) {
-		t.Fatalf("first=%d %s", first.Code, first.Body.String())
+		t.Fatalf("Первый запрос=%d %s", first.Code, first.Body.String())
 	}
 	second := call("start", key)
 	if second.Code != 200 || count.Load() != 1 {
-		t.Fatalf("replayed=%d count=%d", second.Code, count.Load())
+		t.Fatalf("Повторный запрос=%d число=%d", second.Code, count.Load())
 	}
 	if changed := call("stop", key); changed.Code != 409 || count.Load() != 1 {
-		t.Fatalf("changed %d", changed.Code)
+		t.Fatalf("Изменено %d", changed.Code)
 	}
 	if missing := call("start", ""); missing.Code != 400 {
-		t.Fatalf("missing idem %d", missing.Code)
+		t.Fatalf("Отсутствует ключ идемпотентности %d", missing.Code)
 	}
 	// Перезапущенный агент загружает квитанции с диска. Второе исполнение запрещено.
 	b, err := remoteNewAgent0284(root, id, []string{"127.0.0.0/8"})
@@ -132,7 +132,7 @@ func TestRemoteControlIdempotencyAndUnknown0284(t *testing.T) {
 	b.execute = func(string) (json.RawMessage, error) { count.Add(1); return nil, nil }
 	replay := remoteRequest0284(t, b, token, "POST", "/v1/host/commands", "start", key, "127.0.0.1:23000")
 	if replay.Code != 200 || count.Load() != 1 {
-		t.Fatalf("restart replay %d %d", replay.Code, count.Load())
+		t.Fatalf("Повтор запроса после перезапуска %d %d", replay.Code, count.Load())
 	}
 	// Сбой во время внешнего побочного эффекта: результат неопределён, НИКОГДА не повторяйте.
 	uncertainKey := "indeterminate-id-00001"
@@ -143,7 +143,7 @@ func TestRemoteControlIdempotencyAndUnknown0284(t *testing.T) {
 	}
 	replay = remoteRequest0284(t, b, token, "POST", "/v1/host/commands", "start", uncertainKey, "127.0.0.1:23000")
 	if replay.Code != 409 || count.Load() != 1 || !strings.Contains(replay.Body.String(), "indeterminate") {
-		t.Fatalf("unknown %d %s", replay.Code, replay.Body.String())
+		t.Fatalf("Неизвестный запрос %d %s", replay.Code, replay.Body.String())
 	}
 	audit, err := os.ReadFile(filepath.Join(remoteDir0284(root), "audit.jsonl"))
 	if err != nil {
@@ -168,13 +168,13 @@ func TestRemoteTokenSecurity0284(t *testing.T) {
 		t.Fatal("Изменённая подпись ошибочно принята")
 	}
 	if _, err := remoteIssue0284(id, "service", []string{"host.exec"}, []string{"127.0.0.1/32"}, time.Minute, time.Now()); err == nil {
-		t.Fatal("host exec scope should not exist")
+		t.Fatal("Область доступа для выполнения команд хоста не должна существовать")
 	}
 	if _, err := remoteIssue0284(id, "service", []string{"host.status"}, []string{"127.0.0.1/32"}, time.Hour, time.Now()); err == nil {
-		t.Fatal("long-lived token issued")
+		t.Fatal("Выдан токен с чрезмерным сроком действия")
 	}
 	if _, err := remoteIssue0284(id, "service", []string{"host.status"}, []string{"invalid"}, time.Minute, time.Now()); err == nil {
-		t.Fatal("bad CIDR accepted")
+		t.Fatal("Принят некорректный диапазон CIDR")
 	}
 	if _, err := remoteTokenDecode0284(id, token, time.Now().Add(16*time.Minute)); err == nil {
 		t.Fatal("Принят токен с истёкшим сроком")
@@ -213,11 +213,11 @@ func TestRemoteControlConcurrentDelivery0284(t *testing.T) {
 	close(codes)
 	for code := range codes {
 		if code != 200 {
-			t.Fatalf("concurrent request returned %d", code)
+			t.Fatalf("Параллельный запрос вернул %d", code)
 		}
 	}
 	if executed.Load() != 1 {
-		t.Fatalf("executed %d times", executed.Load())
+		t.Fatalf("Выполнено раз: %d", executed.Load())
 	}
 }
 
@@ -244,16 +244,16 @@ func TestRemoteControlRealHTTPSAndCLI0284(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Contains(data, []byte(id.NodeID)) {
-		t.Fatalf("status response=%s", data)
+		t.Fatalf("Ответ о состоянии=%s", data)
 	}
 	if err = remoteCall0284([]string{"--url", server.URL, "--token-file", tokenFile, "--ca-file", ca, "--action", "start"}); err == nil {
-		t.Fatal("mutation missing idempotency key accepted")
+		t.Fatal("Принята мутация без ключа идемпотентности")
 	}
 	if err = remoteCall0284([]string{"--url", server.URL + "?token=secret", "--token-file", tokenFile, "--ca-file", ca}); err == nil {
-		t.Fatal("query secrets must not be allowed")
+		t.Fatal("Секреты в параметрах запроса должны быть запрещены")
 	}
 	if err = remoteCall0284([]string{"--url", server.URL, "--token-file", tokenFile, "--ca-file", tokenFile}); err == nil {
-		t.Fatal("insecure CA was accepted")
+		t.Fatal("Принят небезопасный центр сертификации")
 	}
 }
 
@@ -265,7 +265,7 @@ func TestRemoteKeyRotationLiveAndLease0284(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = remoteAcquireLease0284(remoteDir0284(root), id.NodeID); err == nil {
-		t.Fatal("second agent accepted on same server root")
+		t.Fatal("Второй агент принят для того же корня сервера")
 	}
 	release()
 	release, err = remoteAcquireLease0284(remoteDir0284(root), id.NodeID)
@@ -283,18 +283,18 @@ func TestRemoteKeyRotationLiveAndLease0284(t *testing.T) {
 	}
 	old := remoteRequest0284(t, a, token, "GET", "/v1/host/status", "", "", "127.0.0.1:4000")
 	if old.Code != http.StatusUnauthorized {
-		t.Fatalf("token survived key rotation: %d", old.Code)
+		t.Fatalf("Токен сохранил действительность после ротации ключа: %d", old.Code)
 	}
 	newToken := remoteTokenFixture0284(t, id, "host.status")
 	next := remoteRequest0284(t, a, newToken, "GET", "/v1/host/status", "", "", "127.0.0.1:4000")
 	if next.Code != http.StatusOK {
-		t.Fatalf("new token rejected after rotation: %d", next.Code)
+		t.Fatalf("Новый токен отклонён после ротации ключа: %d", next.Code)
 	}
 }
 
 func TestRemoteControlRealSupervisorStop0284(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX fake JVM fixture")
+		t.Skip("Тестовая имитация JVM для POSIX")
 	}
 	a, id, root := remoteFixture0284(t)
 	jar := filepath.Join(root, "paper.jar")
@@ -320,15 +320,15 @@ func TestRemoteControlRealSupervisorStop0284(t *testing.T) {
 	token := remoteTokenFixture0284(t, id, "host.stop")
 	response := remoteRequest0284(t, a, token, "POST", "/v1/host/commands", "stop", "supervisor-stop-000000001", "127.0.0.1:4444")
 	if response.Code != 200 {
-		t.Fatalf("stop command: %d %s", response.Code, response.Body.String())
+		t.Fatalf("Команда остановки: %d %s", response.Code, response.Body.String())
 	}
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Fatalf("supervisor: %v", err)
+			t.Fatalf("Супервизор: %v", err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("remote stop didn't terminate JVM")
+		t.Fatal("Удалённая остановка не завершила JVM")
 	}
 	state, err := readServerBridgeHostRuntime01910(paths["runtime"])
 	if err != nil {
@@ -343,19 +343,19 @@ func TestHostObservedPostconditions0413(t *testing.T) {
 	before := map[string]any{"sessionId": "session-previous", "processAlive": true, "supervisorAlive": true, "observedStatus": "running"}
 	stopped := map[string]any{"sessionId": "session-previous", "processAlive": false, "supervisorAlive": false, "observedStatus": "stopped"}
 	if !remoteObservedEffect0413("stop", before, stopped) {
-		t.Fatal("verified stop not recognized")
+		t.Fatal("Подтверждённая остановка не распознана")
 	}
 	if remoteObservedEffect0413("restart", before, before) {
-		t.Fatal("unchanged session verified as restart")
+		t.Fatal("Неизменённая сессия ошибочно признана перезапущенной")
 	}
 	if remoteObservedEffect0413("start", stopped, map[string]any{"processAlive": false, "supervisorAlive": true, "observedStatus": "starting"}) {
-		t.Fatal("planned JVM start verified without process")
+		t.Fatal("Запланированный запуск JVM признан подтверждённым без процесса")
 	}
 	running := map[string]any{"sessionId": "session-new", "processAlive": true, "supervisorAlive": true, "observedStatus": "running"}
 	if !remoteObservedEffect0413("restart", before, running) || !remoteObservedEffect0413("start", stopped, running) {
-		t.Fatal("verified JVM execution denied")
+		t.Fatal("Подтверждённое выполнение JVM отклонено")
 	}
 	if remoteObservedEffect0413("stop", before, map[string]any{"sessionId": "session-previous", "processAlive": false, "supervisorAlive": true, "observedStatus": "stopped"}) {
-		t.Fatal("live supervisor ignored during shutdown")
+		t.Fatal("Работающий супервизор проигнорирован при завершении")
 	}
 }

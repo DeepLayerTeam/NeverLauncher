@@ -22,16 +22,16 @@ func TestParseFileAuthRealShapeAndNoPrivilegeImport0295(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(entries) != 1 || entries[0].Email != "alice_001@fileauth.invalid" || entries[0].UUID != aliceUUID {
-		t.Fatalf("incorrect canonical identity: %#v", entries)
+		t.Fatalf("Неверная каноническая идентичность: %#v", entries)
 	}
 	if !VerifyDigest("Truly-Private-Password", "sha256-hex", hex.EncodeToString(sum[:])) {
-		t.Fatal("real old password rejected")
+		t.Fatal("Отклонён действительный старый пароль")
 	}
 	if _, pw, ok := DecodeCredential(entries[0].PasswordHash); !ok || pw != hex.EncodeToString(sum[:]) {
-		t.Fatal("hash format cannot be verified")
+		t.Fatal("Невозможно проверить формат хеша")
 	}
 	if strings.Contains(fmt.Sprintf("%#v", entries), "ADMIN") {
-		t.Fatal("Gravit privileged role must not be imported")
+		t.Fatal("Привилегированная роль Gravit не должна импортироваться")
 	}
 }
 func TestImportLegacyBase64AndBadInputs0295(t *testing.T) {
@@ -43,7 +43,7 @@ func TestImportLegacyBase64AndBadInputs0295(t *testing.T) {
 	}
 	alg, hash, ok := DecodeCredential(entries[0].PasswordHash)
 	if !ok || alg != "sha256-hex" || hash != hex.EncodeToString(digest[:]) {
-		t.Fatalf("bad legacy digest normalization %q %q %v", alg, hash, ok)
+		t.Fatalf("Неверная нормализация старой контрольной суммы %q %q %v", alg, hash, ok)
 	}
 	negative := []struct{ name, data, format string }{
 		{"unknown-hash", file, "auto"},
@@ -57,7 +57,7 @@ func TestImportLegacyBase64AndBadInputs0295(t *testing.T) {
 	for _, tc := range negative {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := Parse(strings.NewReader(tc.data), tc.format); err == nil {
-				t.Fatal("invalid import accepted")
+				t.Fatal("Принят некорректный импорт")
 			}
 		})
 	}
@@ -66,7 +66,7 @@ func TestDuplicateCaseInsensitiveName0295(t *testing.T) {
 	h := strings.Repeat("a", 64)
 	data := fmt.Sprintf(`{"%s":{"username":"Alice","uuid":"%s","password":"%s"},"%s":{"username":"alice","uuid":"%s","password":"%s"}}`, aliceUUID, aliceUUID, h, bobUUID, bobUUID, h)
 	if _, err := Parse(strings.NewReader(data), "sha256-hex"); err == nil {
-		t.Fatal("ambiguous player name imported")
+		t.Fatal("Импортировано неоднозначное имя игрока")
 	}
 }
 func TestPHPassVectorsAndUnknownFormat0295(t *testing.T) {
@@ -74,19 +74,19 @@ func TestPHPassVectorsAndUnknownFormat0295(t *testing.T) {
 	// WordPress/Gravit.
 	hash := "$P$712345678o0hL6WBuvF/R0TpeZunPm0"
 	if !validPHPass(hash) {
-		t.Fatal("vector failed validation")
+		t.Fatal("Тестовый вектор не прошёл проверку")
 	}
 	if !VerifyPHPass("Known-WordPress-Password", hash) {
-		t.Fatal("known PHPass password rejected")
+		t.Fatal("Отклонён известный пароль PHPass")
 	}
 	if VerifyPHPass("wrong", hash) {
 		t.Fatal("Принят неверный пароль")
 	}
 	if _, err := EncodeCredential("phpass", strings.Replace(hash, "$P$7", "$P$Z", 1)); err == nil {
-		t.Fatal("unsafe phpass cost accepted")
+		t.Fatal("Принята небезопасная стоимость вычисления PHPass")
 	}
 	if _, err := EncodeCredential("unknown", hash); err == nil {
-		t.Fatal("unknown custom verifier accepted")
+		t.Fatal("Принят неизвестный пользовательский проверяющий модуль")
 	}
 }
 func TestDigestVectors0295(t *testing.T) {
@@ -95,18 +95,18 @@ func TestDigestVectors0295(t *testing.T) {
 	first := hex.EncodeToString(sum[:])
 	second := sha256.Sum256([]byte(first))
 	if !VerifyDigest(plain, "double-sha256-hex", hex.EncodeToString(second[:])) {
-		t.Fatal("double hex digest failed")
+		t.Fatal("Ошибка двойного хеширования в шестнадцатеричном формате")
 	}
 	binary := sha256.Sum256(sum[:])
 	if !VerifyDigest(plain, "double-sha256-binary-hex", hex.EncodeToString(binary[:])) {
-		t.Fatal("double binary digest failed")
+		t.Fatal("Ошибка двойного хеширования двоичных данных")
 	}
 	if VerifyDigest(plain, "sha256-hex", hex.EncodeToString(second[:])) {
-		t.Fatal("algorithm confusion")
+		t.Fatal("Путаница алгоритмов")
 	}
 }
 func TestFileSizeLimit0295(t *testing.T) {
 	if _, err := Parse(strings.NewReader(strings.Repeat("x", MaxDatabaseBytes+1)), "sha256-hex"); err == nil {
-		t.Fatal("oversized database accepted")
+		t.Fatal("Принята база данных недопустимого размера")
 	}
 }

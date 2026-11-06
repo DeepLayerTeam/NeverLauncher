@@ -24,7 +24,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	} {
 		res := request0211(t, api, http.MethodPost, tt.path, "", tt.body)
 		if res.Code != http.StatusBadRequest {
-			t.Fatalf("ambiguous OIDC request: %s => %d %s", tt.path, res.Code, res.Body)
+			t.Fatalf("Неоднозначный запрос OIDC: %s => %d %s", tt.path, res.Code, res.Body)
 		}
 	}
 	// Для привязки провайдера требуется точное подтверждение паролем даже у
@@ -35,7 +35,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	} {
 		res := request0211(t, api, http.MethodPost, "/api/v1/auth/providers/local/link/password", admin, body)
 		if res.Code != http.StatusBadRequest {
-			t.Fatalf("ambiguous password proof accepted: %d %s", res.Code, res.Body)
+			t.Fatalf("Принято неоднозначное подтверждение пароля: %d %s", res.Code, res.Body)
 		}
 	}
 	current := request0211(t, api, http.MethodGet, "/api/v1/auth/sessions", admin, "")
@@ -51,7 +51,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	} {
 		res := request0211(t, api, http.MethodPost, "/api/v1/auth/sessions/revoke", admin, body)
 		if res.Code != http.StatusBadRequest {
-			t.Fatalf("invalid revocation accepted: %q: %d %s", body, res.Code, res.Body)
+			t.Fatalf("Принят некорректный отзыв: %q: %d %s", body, res.Code, res.Body)
 		}
 		still := request0211(t, api, http.MethodGet, "/api/v1/auth/sessions", admin, "")
 		if still.Code != http.StatusOK {
@@ -60,7 +60,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	}
 	oversized := request0211(t, api, http.MethodPost, "/api/v1/auth/sessions/revoke", admin, `{"allExceptCurrent":false,"pad":"`+strings.Repeat("x", 16*1024)+`"}`)
 	if oversized.Code != http.StatusRequestEntityTooLarge {
-		t.Fatalf("unbounded revocation body: %d", oversized.Code)
+		t.Fatalf("Тело запроса отзыва не ограничено: %d", oversized.Code)
 	}
 	// Обе разрушающие операции Admin должны отвергать дубликаты до изменения данных.
 	for _, body := range []string{
@@ -70,18 +70,18 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	} {
 		res := request0211(t, api, http.MethodPost, "/api/v1/admin/auth/sessions/revoke", admin, body)
 		if res.Code != http.StatusBadRequest {
-			t.Fatalf("invalid admin revoke accepted: %d %s", res.Code, res.Body)
+			t.Fatalf("Принят некорректный отзыв администратором: %d %s", res.Code, res.Body)
 		}
 	}
 	created := request0211(t, api, http.MethodPost, "/api/v1/admin/users", admin, `{"email":"ga0300@example.test","displayName":"GA proof","roleId":"player","password":"strong-password-0300"}`)
 	if created.Code != http.StatusCreated {
-		t.Fatalf("could not create test account: %d %s", created.Code, created.Body)
+		t.Fatalf("Не удалось создать тестовую учётную запись: %d %s", created.Code, created.Body)
 	}
 	// Сервер отвечает ID пользователя; все данные взяты из настоящего создания
 	// пользователя Admin.
 	var user model.User
 	if err := json.Unmarshal(created.Body.Bytes(), &user); err != nil || user.ID == "" {
-		t.Fatalf("created user: %v %s", err, created.Body)
+		t.Fatalf("Создан пользователь: %v %s", err, created.Body)
 	}
 	for _, body := range []string{
 		`{"reason":"valid reason","Reason":"overriding reason"}`,
@@ -90,22 +90,22 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	} {
 		res := request0211(t, api, http.MethodPost, "/api/v1/admin/protection/users/"+user.ID+"/ban", admin, body)
 		if res.Code != http.StatusBadRequest {
-			t.Fatalf("ambiguous ban accepted: %d %s", res.Code, res.Body)
+			t.Fatalf("Принята неоднозначная блокировка: %d %s", res.Code, res.Body)
 		}
 	}
 	fresh := request0211(t, api, http.MethodPost, "/api/v1/admin/login", "", `{"email":"ga0300@example.test","password":"strong-password-0300"}`)
 	if fresh.Code != http.StatusOK {
-		t.Fatalf("ambiguous ban mutated account: %d %s", fresh.Code, fresh.Body)
+		t.Fatalf("Неоднозначная блокировка изменила учётную запись: %d %s", fresh.Code, fresh.Body)
 	}
 	// Корректные блокировка и отзыв продолжают работать после некорректных
 	// запросов.
 	good := request0211(t, api, http.MethodPost, "/api/v1/admin/protection/users/"+user.ID+"/ban", admin, `{"reason":"verified confirmed account compromise"}`)
 	if good.Code != http.StatusOK {
-		t.Fatalf("valid protection ban failed: %d %s", good.Code, good.Body)
+		t.Fatalf("Корректная защитная блокировка не выполнена: %d %s", good.Code, good.Body)
 	}
 	blocked := request0211(t, api, http.MethodPost, "/api/v1/admin/login", "", `{"email":"ga0300@example.test","password":"strong-password-0300"}`)
 	if blocked.Code != http.StatusForbidden {
-		t.Fatalf("ban failed to block login: %d %s", blocked.Code, blocked.Body)
+		t.Fatalf("Блокировка не запретила вход: %d %s", blocked.Code, blocked.Body)
 	}
 }
 
@@ -124,7 +124,7 @@ func TestProviderConfigRejectsDuplicateAndNestedAliases0300(t *testing.T) {
 			} `json:"hmac"`
 		}
 		if err := strictProviderConfig02910([]byte(payload), &target); err == nil {
-			t.Fatalf("ambiguous provider config accepted: %s", payload)
+			t.Fatalf("Принята неоднозначная конфигурация провайдера: %s", payload)
 		}
 	}
 }
@@ -137,6 +137,6 @@ func TestProtectionCannotUseMissingSessionStore0300(t *testing.T) {
 	server := Server{Repo: repo}
 	d := server.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeJoin, UserID: "protection0300", SessionID: "forged-parent-session"})
 	if d.Action != protection.Deny || d.Reason != "session_store_unavailable" {
-		t.Fatalf("session bypass in unconfigured host: %+v", d)
+		t.Fatalf("Обход проверки сессии на ненастроенном хосте: %+v", d)
 	}
 }

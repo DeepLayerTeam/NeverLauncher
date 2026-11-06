@@ -40,7 +40,7 @@ func TestJavaJvmCrashRestartsRealProcess0422(t *testing.T) {
 	}
 	before, err := host.Get(key)
 	if err != nil || !before.Healthy {
-		t.Fatalf("JVM failed to start: %+v %v", before, err)
+		t.Fatalf("Не удалось запустить JVM: %+v %v", before, err)
 	}
 	if err := killProcessTree(host.processes[key.String()].cmd.Process); err != nil {
 		t.Fatal(err)
@@ -54,14 +54,14 @@ func TestJavaJvmCrashRestartsRealProcess0422(t *testing.T) {
 		if err == nil && after.Healthy && after.InstanceID != before.InstanceID && after.PID != before.PID && after.Restarts >= 1 {
 			result, err := host.CallJavaRPC0304(ctx, key, "health", nil)
 			if err != nil || !strings.Contains(string(result), `"responsive":true`) {
-				t.Fatalf("restarted JVM does not accept authenticated RPC: %s: %v", result, err)
+				t.Fatalf("Перезапущенная JVM не принимает аутентифицированные RPC: %s: %v", result, err)
 			}
 			return
 		}
 		select {
 		case <-tick.C:
 		case <-until.C:
-			t.Fatalf("real JVM did not recover: before=%+v after=%+v error=%v", before, after, err)
+			t.Fatalf("Рабочая JVM не восстановилась: до=%+v после=%+v ошибка=%v", before, after, err)
 		case <-ctx.Done():
 			t.Fatal(ctx.Err())
 		}
@@ -75,28 +75,28 @@ func TestJavaMissingRuntimeRetryAfterRepair0422(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "java-repaired")
 	host.cfg.JavaExecutable = missing
 	if err := host.StartInstallation(ctx, install); err == nil {
-		t.Fatal("unavailable JVM unexpectedly launched")
+		t.Fatal("Неожиданно запущена недоступная JVM")
 	}
 	failed, err := host.Get(key)
 	if err != nil || failed.State != "failed" || failed.LastError == "" {
-		t.Fatalf("failed launch left stale starting slot: %+v %v", failed, err)
+		t.Fatalf("После неудачного запуска осталась устаревшая запись о запуске: %+v %v", failed, err)
 	}
 	if len(host.tokens) != 0 {
-		t.Fatal("failed JVM retained an active authentication token")
+		t.Fatal("После сбоя JVM сохранила активный токен аутентификации")
 	}
 	java, err := exec.LookPath("java")
 	if err != nil {
-		t.Skip("Java unavailable")
+		t.Skip("Java недоступна")
 	}
 	if err := os.WriteFile(missing, []byte("#!/bin/sh\nexec "+java+" \"$@\"\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	if err := host.StartInstallation(ctx, install); err != nil {
-		t.Fatalf("repaired JVM could not start: %v", err)
+		t.Fatalf("Восстановленную JVM не удалось запустить: %v", err)
 	}
 	running, err := host.Get(key)
 	if err != nil || !running.Healthy || running.InstanceID == failed.InstanceID {
-		t.Fatalf("retry not running: %+v %v", running, err)
+		t.Fatalf("Повторная попытка не выполняется: %+v %v", running, err)
 	}
 	if err := host.Stop(ctx, key); err != nil {
 		t.Fatal(err)
@@ -117,11 +117,11 @@ func TestJavaReconcileRunningAndDisable0422(t *testing.T) {
 	}
 	for i := 0; i < 2; i++ {
 		if errs := host.Reconcile(ctx); len(errs) != 0 {
-			t.Fatalf("idempotent reconcile %d failed: %v", i, errs)
+			t.Fatalf("Ошибка идемпотентного согласования %d: %v", i, errs)
 		}
 		current, _ := host.Get(key)
 		if current.InstanceID != original.InstanceID || current.PID != original.PID {
-			t.Fatalf("reconcile relaunched healthy JVM: %+v", current)
+			t.Fatalf("Согласование повторно запустило исправную JVM: %+v", current)
 		}
 	}
 	_, err = host.repo.TransitionExtensionInstall(ctx, model.ExtensionLifecycleTransition{
@@ -135,11 +135,11 @@ func TestJavaReconcileRunningAndDisable0422(t *testing.T) {
 		t.Fatal(err)
 	}
 	if errs := host.Reconcile(ctx); len(errs) != 0 {
-		t.Fatalf("disable reconcile failed: %v", errs)
+		t.Fatalf("Ошибка согласования отключения: %v", errs)
 	}
 	stopped, err := host.Get(key)
 	if err != nil || stopped.State != "stopped" {
-		t.Fatalf("disabled extension still running: %+v %v", stopped, err)
+		t.Fatalf("Отключённое расширение продолжает работать: %+v %v", stopped, err)
 	}
 }
 
@@ -169,7 +169,7 @@ func TestJavaStopCancelsScheduledRestart0422(t *testing.T) {
 	time.Sleep(1500 * time.Millisecond) // больше секундной паузы перед повторной попыткой
 	after, _ := host.Get(key)
 	if after.InstanceID != before.InstanceID || after.State == "running" {
-		t.Fatalf("operator Stop did not cancel restart: %+v", after)
+		t.Fatalf("Команда оператора Stop не отменила перезапуск: %+v", after)
 	}
 }
 
@@ -215,7 +215,7 @@ func TestJavaAutoRecoveryAfterRuntimeRestored0422(t *testing.T) {
 		select {
 		case <-ticker.C:
 		case <-failDeadline.C:
-			t.Fatalf("missing Java runtime did not reach failed state: %+v", status)
+			t.Fatalf("При отсутствии Java Runtime состояние ошибки не установлено: %+v", status)
 		case <-ctx.Done():
 			t.Fatal(ctx.Err())
 		}
@@ -227,14 +227,14 @@ func TestJavaAutoRecoveryAfterRuntimeRestored0422(t *testing.T) {
 		status, _ := host.Get(key)
 		if status.Healthy && status.InstanceID != first.InstanceID && status.Restarts >= 2 {
 			if _, err := host.CallJavaRPC0304(ctx, key, "health", nil); err != nil {
-				t.Fatalf("recovered JVM RPC: %v", err)
+				t.Fatalf("RPC восстановленной JVM: %v", err)
 			}
 			return
 		}
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			t.Fatalf("JVM did not recover after Java was restored: %+v: %v", status, ctx.Err())
+			t.Fatalf("JVM не восстановилась после восстановления Java: %+v: %v", status, ctx.Err())
 		}
 	}
 }

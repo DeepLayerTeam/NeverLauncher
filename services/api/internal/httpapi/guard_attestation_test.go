@@ -20,18 +20,18 @@ func authClaimsFromToken0134(t *testing.T, token string) authClaims {
 	t.Helper()
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		t.Fatalf("invalid access token shape")
+		t.Fatalf("Некорректная структура токена доступа")
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		t.Fatalf("decode access token claims: %v", err)
+		t.Fatalf("Ошибка разбора утверждений токена доступа: %v", err)
 	}
 	var claims authClaims
 	if err := json.Unmarshal(raw, &claims); err != nil {
-		t.Fatalf("decode access token claims json: %v", err)
+		t.Fatalf("Ошибка разбора JSON утверждений токена доступа: %v", err)
 	}
 	if claims.Sub == "" || claims.SessionID == "" {
-		t.Fatalf("access token is missing subject/session claims")
+		t.Fatalf("В токене доступа отсутствуют сведения о пользователе или сессии")
 	}
 	return claims
 }
@@ -45,16 +45,16 @@ func TestCanonicalGuardAttestationTime0134MatchesPostgresPrecision(t *testing.T)
 	raw := time.Date(2026, time.September, 27, 15, 41, 15, 123456789, time.UTC)
 	canonical := canonicalGuardAttestationTime0134(raw)
 	if canonical.Nanosecond() != 123456000 {
-		t.Fatalf("canonical nanoseconds=%d want=123456000", canonical.Nanosecond())
+		t.Fatalf("Канонические наносекунды=%d, ожидалось=123456000", canonical.Nanosecond())
 	}
 	if got := canonical.Format(time.RFC3339Nano); got != "2026-09-27T15:41:15.123456Z" {
-		t.Fatalf("canonical RFC3339Nano=%q", got)
+		t.Fatalf("Каноническое значение RFC3339Nano=%q", got)
 	}
 	// pgx/PostgreSQL TIMESTAMPTZ хранит микросекунды, поэтому круговой проход
 	// БД не должен изменять строку привязки challenge, возвращённую begin.
 	postgresRoundTrip := time.Unix(canonical.Unix(), int64(canonical.Nanosecond()/1000)*1000).UTC()
 	if got, want := postgresRoundTrip.Format(time.RFC3339Nano), canonical.Format(time.RFC3339Nano); got != want {
-		t.Fatalf("PostgreSQL round-trip changed Guard timestamp: got=%q want=%q", got, want)
+		t.Fatalf("После сохранения в PostgreSQL изменилась временная метка Guard: получено=%q ожидалось=%q", got, want)
 	}
 }
 
@@ -110,7 +110,7 @@ func registerWindowsHardwareDevice0134(t *testing.T, h http.Handler, access stri
 		"keyAlgorithm": "p256", "keyBinding": "hardware", "hardwareProvider": "test-windows-hardware-p256",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("register begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало регистрации: статус=%d тело ответа=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
@@ -119,14 +119,14 @@ func registerWindowsHardwareDevice0134(t *testing.T, h http.Handler, access stri
 		"publicKey": base64.RawURLEncoding.EncodeToString(publicKey), "signature": signP256P1363Test0123(t, priv, payload),
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("register complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение регистрации: статус=%d тело ответа=%#v", code, completeOut)
 	}
 	data := deviceTrustData0121(t, completeOut)
 	device, _ := data["device"].(map[string]any)
 	deviceID, _ := device["id"].(string)
 	trustedAccess, _ := data["accessToken"].(string)
 	if deviceID == "" || trustedAccess == "" {
-		t.Fatalf("incomplete registered Windows device: %#v", data)
+		t.Fatalf("Неполные данные зарегистрированного устройства Windows: %#v", data)
 	}
 	return deviceID, trustedAccess
 }
@@ -135,7 +135,7 @@ func attestHardwareDeviceForGuard0134(t *testing.T, h http.Handler, trustedAcces
 	t.Helper()
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", trustedAccess, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("device attest begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало аттестации устройства: статус=%d тело ответа=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload := begin["signingPayload"].(string)
@@ -144,7 +144,7 @@ func attestHardwareDeviceForGuard0134(t *testing.T, h http.Handler, trustedAcces
 		"signature": signP256P1363Test0123(t, priv, payload),
 	})
 	if code != http.StatusOK {
-		t.Fatalf("device attest complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение аттестации устройства: статус=%d тело ответа=%#v", code, completeOut)
 	}
 	return deviceTrustData0121(t, completeOut)["accessToken"].(string)
 }
@@ -176,12 +176,12 @@ func TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134(t *testin
 
 	code, missingOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/minecraft/session", attestedAccess, map[string]any{"clientToken": "guard-missing"})
 	if code != http.StatusPreconditionFailed {
-		t.Fatalf("Windows Minecraft session without Guard ticket status=%d body=%#v", code, missingOut)
+		t.Fatalf("Сессия Minecraft Windows без билета Guard: статус=%d тело ответа=%#v", code, missingOut)
 	}
 
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/guard-attest/begin", attestedAccess, map[string]any{"launcherVersion": "0.13.4"})
 	if code != http.StatusOK {
-		t.Fatalf("guard begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало проверки Guard: статус=%d тело ответа=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	challengeID := begin["challengeId"].(string)
@@ -197,21 +197,21 @@ func TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134(t *testin
 	}
 	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/guard-attest/complete", attestedAccess, completeBody)
 	if code != http.StatusOK {
-		t.Fatalf("guard complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение проверки Guard: статус=%d тело ответа=%#v", code, completeOut)
 	}
 	complete := deviceTrustData0121(t, completeOut)
 	ticket, _ := complete["launchTicket"].(string)
 	if ticket == "" || complete["verified"] != true || complete["oneTime"] != true {
-		t.Fatalf("incomplete guard verification result: %#v", complete)
+		t.Fatalf("Неполный результат проверки Guard: %#v", complete)
 	}
 
 	code, mcOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/minecraft/session", attestedAccess, map[string]any{"clientToken": "guard-client", "guardAttestationTicket": ticket})
 	if code != http.StatusCreated {
-		t.Fatalf("minecraft session with guard ticket status=%d body=%#v", code, mcOut)
+		t.Fatalf("Сессия Minecraft с билетом Guard: статус=%d тело ответа=%#v", code, mcOut)
 	}
 	code, replayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/minecraft/session", attestedAccess, map[string]any{"clientToken": "guard-client-2", "guardAttestationTicket": ticket})
 	if code != http.StatusPreconditionFailed {
-		t.Fatalf("replayed Guard ticket accepted status=%d body=%#v", code, replayOut)
+		t.Fatalf("Повторно использованный билет Guard принят: статус=%d тело ответа=%#v", code, replayOut)
 	}
 }
 
@@ -219,7 +219,7 @@ func TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134(t *testing.T) {
 	policy := guardReleasePolicy0134{GuardSHA256: []string{strings.Repeat("1", 64)}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: true}
 	a := makeGuardAttestation0134(t, "challenge-id", "challenge-secret")
 	if err := validateGuardAttestation0134(a, "challenge-id", "challenge-secret", policy, "windows", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
-		t.Fatal("non-allowlisted Guard image hash was accepted")
+		t.Fatal("Принят хеш образа Guard вне списка разрешённых")
 	}
 }
 
@@ -354,28 +354,28 @@ func TestGuardReleasePolicyV2ExactPlatformPair0140(t *testing.T) {
 	policy := policies["0.14.0"]
 	allowed, _, err := policy.allowsArtifactPair0140("windows-amd64", guardA, launcherA)
 	if err != nil || !allowed {
-		t.Fatalf("exact Windows artifact pair was rejected: allowed=%v err=%v", allowed, err)
+		t.Fatalf("Отклонена точная пара артефактов Windows: разрешено=%v ошибка=%v", allowed, err)
 	}
 	allowed, _, err = policy.allowsArtifactPair0140("windows-amd64", guardA, launcherB)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if allowed {
-		t.Fatal("cross-product artifact pair must not be accepted")
+		t.Fatal("Нельзя принимать пару артефактов разных продуктов")
 	}
 	allowed, _, err = policy.allowsArtifactPair0140("macos-arm64", guardA, launcherA)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if allowed {
-		t.Fatal("Windows/Linux artifact pair must not cross the macOS platform namespace")
+		t.Fatal("Пара артефактов Windows/Linux не должна пересекать пространство платформы macOS")
 	}
 }
 
 func TestGuardReleasePolicyLegacyRejectedFrom0140(t *testing.T) {
 	s := Server{Version: "0.14.0", Config: config.Config{Environment: "test", GuardReleaseAllowlistJSON: `{"0.14.0":{"guardSha256":["` + strings.Repeat("a", 64) + `"],"launcherSha256":["` + strings.Repeat("b", 64) + `"]}}`}}
 	if _, err := s.guardReleasePolicies0134(); err == nil {
-		t.Fatal("0.14.0 Backend accepted legacy Guard release policy")
+		t.Fatal("Backend 0.14.0 принял устаревшую политику выпуска Guard")
 	}
 }
 
@@ -385,6 +385,6 @@ func TestGuardReleasePolicyProductionSigningRequirements0140(t *testing.T) {
 	policy := `{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"unsigned-development","artifacts":[{"guardSha256":"` + guardHash + `","launcherSha256":"` + launcherHash + `","requireAuthenticode":false}]}}}}}`
 	s := Server{Version: "0.14.0", Config: config.Config{Environment: "production", GuardReleaseAllowlistJSON: policy}}
 	if _, err := s.guardReleasePolicies0134(); err == nil {
-		t.Fatal("production Backend accepted unsigned Windows Guard policy")
+		t.Fatal("Рабочий Backend принял неподписанную политику Guard для Windows")
 	}
 }

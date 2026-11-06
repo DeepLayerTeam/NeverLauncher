@@ -46,28 +46,28 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 	}
 	st, err := EvaluateApplied(pending)
 	if err != nil || !st.Compatible || len(st.Pending) != 1 {
-		t.Fatalf("pending should be compatible but incomplete: status=%+v err=%v", st, err)
+		t.Fatalf("Ожидающая миграция должна быть совместимой, но незавершённой: статус=%+v ошибка=%v", st, err)
 	}
 
 	unknown := catalogChecksums(t)
 	unknown["9999_future"] = "deadbeef"
 	st, err = EvaluateApplied(unknown)
 	if err == nil || st.Compatible || !strings.Contains(err.Error(), "unknown to this binary") {
-		t.Fatalf("future migration was not rejected: status=%+v err=%v", st, err)
+		t.Fatalf("Миграция из будущей версии не была отклонена: статус=%+v ошибка=%v", st, err)
 	}
 
 	unverified := catalogChecksums(t)
 	unverified["0009_minecraft_auth_compat_2_0119"] = ""
 	st, err = EvaluateApplied(unverified)
 	if err == nil || st.Compatible || !strings.Contains(err.Error(), "without sealed checksum") {
-		t.Fatalf("unsealed checksum was not rejected: status=%+v err=%v", st, err)
+		t.Fatalf("Незафиксированная контрольная сумма не отклонена: статус=%+v ошибка=%v", st, err)
 	}
 
 	drift := catalogChecksums(t)
 	drift["0008_session_management_2_0118"] = strings.Repeat("0", 64)
 	st, err = EvaluateApplied(drift)
 	if err == nil || st.Compatible || !strings.Contains(err.Error(), "checksum migration") {
-		t.Fatalf("checksum drift was not rejected: status=%+v err=%v", st, err)
+		t.Fatalf("Изменение контрольной суммы не отклонено: статус=%+v ошибка=%v", st, err)
 	}
 }
 
@@ -91,7 +91,7 @@ func TestDeviceTrustStabilizationMigration01210(t *testing.T) {
 		"UPDATE minecraft_sessions SET trusted_device_id=NULL",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.12.10 stabilization migration missing %q", required)
+			t.Fatalf("0.12.10 stabilization — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -113,7 +113,7 @@ func TestGuardMigrationCompatibilityStabilization01310(t *testing.T) {
 		"partial Guard snapshot",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.13.10 Guard stabilization migration missing %q", required)
+			t.Fatalf("0.13.10 Guard stabilization — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -135,7 +135,7 @@ func TestServerBridgeProtocolV2Migration0141(t *testing.T) {
 		"launcher_persistence_snapshots_950",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.1 ServerBridge v2 migration missing %q", required)
+			t.Fatalf("0.14.1 ServerBridge v2 — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -159,7 +159,7 @@ func TestServerBridgeCryptoNodeIdentitiesMigration0142(t *testing.T) {
 		"status='invalidated'",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.2 cryptographic node identity migration missing %q", required)
+			t.Fatalf("0.14.2 cryptographic node identity — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -182,7 +182,7 @@ func TestOneTimeJoinTicketsMigration0143(t *testing.T) {
 		"consumed_at",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.3 one-time join ticket migration missing %q", required)
+			t.Fatalf("0.14.3 one-time join ticket — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -202,7 +202,7 @@ func TestBukkitFamilyMigration0144(t *testing.T) {
 		"'folia'",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.4 Bukkit family migration missing %q", required)
+			t.Fatalf("0.14.4 Bukkit family — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -222,7 +222,7 @@ func TestProxyFamilyMigration0145(t *testing.T) {
 		"'folia'",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.5 proxy family migration missing %q", required)
+			t.Fatalf("0.14.5 proxy family — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -240,7 +240,7 @@ func TestFabricServerBridgeMigration0146(t *testing.T) {
 		"'folia'",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.6 Fabric Server Bridge migration missing %q", required)
+			t.Fatalf("0.14.6 Fabric Server Bridge — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -258,7 +258,7 @@ func TestForgeNeoForgeServerBridgeMigration0147(t *testing.T) {
 		"'fabric'",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.7 Forge/NeoForge Server Bridge migration missing %q", required)
+			t.Fatalf("0.14.7 Forge/NeoForge Server Bridge — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -278,7 +278,7 @@ func TestZeroPatchTopologyHandoffMigration0148(t *testing.T) {
 		"runtime-learned ServerBridge topology",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.14.8 zero-patch topology/handoff migration missing %q", required)
+			t.Fatalf("0.14.8 zero-patch topology/handoff — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -291,11 +291,11 @@ func TestApplyUsesSessionAdvisoryLock(t *testing.T) {
 	text := string(src)
 	for _, required := range []string{"pg_advisory_lock(718033100100)", "pg_advisory_unlock(718033100100)", "validateExistingBeforeApply", "lockConn.BeginTx(ctx, nil)"} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("migration apply missing serialized gate %q", required)
+			t.Fatalf("При применении миграций отсутствует последовательный барьер %q", required)
 		}
 	}
 	if strings.Contains(text, "tx, err := db.BeginTx(ctx, nil)") {
-		t.Fatal("migration apply must start transactions on the advisory-lock connection")
+		t.Fatal("Миграция должна начинать транзакции в соединении с рекомендательной блокировкой")
 	}
 }
 
@@ -312,7 +312,7 @@ func TestServerBridgePublicMatrixHAHardeningMigration0149(t *testing.T) {
 		"idx_server_bridge_join_active_expiry_0149",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.14.9 migration missing %q", required)
+			t.Fatalf("0.14.9 — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -331,7 +331,7 @@ func TestGuardAttestationChallengePurposeMigration0161(t *testing.T) {
 		"key-recover",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.16.1 Guard challenge-purpose migration missing %q", required)
+			t.Fatalf("0.16.1 Guard challenge-purpose — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -350,7 +350,7 @@ func TestGuardAttestationV2Migration01810(t *testing.T) {
 		"guard-continuous-join-v2",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.18.10 Guard Attestation v2 migration missing %q", required)
+			t.Fatalf("0.18.10 Guard Attestation v2 — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -371,7 +371,7 @@ func TestServerBridgeMigrationStabilization01410(t *testing.T) {
 		"DELETE FROM server_bridge_node_nonces_v2",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.14.10 migration missing %q", required)
+			t.Fatalf("0.14.10 — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -394,7 +394,7 @@ func TestServerBridgeRuntimeIdentityMigration0192(t *testing.T) {
 		"node_key_fingerprint",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.19.2 ServerBridge runtime identity migration missing %q", required)
+			t.Fatalf("0.19.2 ServerBridge runtime identity — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -416,7 +416,7 @@ func TestServerBridgeTelemetryMigration0193(t *testing.T) {
 		"idx_server_bridge_telemetry_server_sampled",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.19.3 ServerBridge telemetry migration missing %q", required)
+			t.Fatalf("0.19.3 ServerBridge telemetry — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -437,7 +437,7 @@ func TestServerBridgeEventStreamMigration0194(t *testing.T) {
 		"UNIQUE (server_id, runtime_epoch, event_id)",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.19.4 ServerBridge event stream migration missing %q", required)
+			t.Fatalf("0.19.4 ServerBridge event stream — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -458,7 +458,7 @@ func TestServerBridgeControlAPIMigration0195(t *testing.T) {
 		"serverbridge:console",
 	} {
 		if !strings.Contains(s, required) {
-			t.Fatalf("0.19.5 ServerBridge control migration missing %q", required)
+			t.Fatalf("0.19.5 ServerBridge control — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -484,7 +484,7 @@ func TestServerBridgeTopologyRouting2Migration0196(t *testing.T) {
 		"server_bridge_handoff_routing_proofs_check",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.19.6 topology/routing migration missing %q", required)
+			t.Fatalf("0.19.6 topology/routing — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -505,7 +505,7 @@ func TestServerBridgePlayerSessionIntegration3Migration0197(t *testing.T) {
 		"recheck_required",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.19.7 player-session migration missing %q", required)
+			t.Fatalf("0.19.7 player-session — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -518,12 +518,12 @@ func TestUniversalServerAdaptersMigration0198(t *testing.T) {
 	text := string(b)
 	for _, required := range []string{"server_bridge_nodes_v2_kind_check", "'quilt'", "'sponge'", "'vanilla'", "separate certification"} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.19.8 migration missing %q", required)
+			t.Fatalf("0.19.8 — отсутствует миграция %q", required)
 		}
 	}
 	for _, hybrid := range []string{"'mohist'", "'arclight'", "'magma'", "'catserver'", "'banner'", "'cardboard'"} {
 		if strings.Contains(text, hybrid) {
-			t.Fatalf("hybrid core leaked into canonical kind constraint: %s", hybrid)
+			t.Fatalf("Гибридное ядро попало в ограничение допустимых типов: %s", hybrid)
 		}
 	}
 }
@@ -536,7 +536,7 @@ func TestServerBridgeHAControlPlaneMigration01911(t *testing.T) {
 	text := string(b)
 	for _, required := range []string{"delivery_sequence", "lease_owner", "lease_token", "uq_server_bridge_control_delivery_sequence_01911", "idx_server_bridge_control_resume_01911", "idx_server_bridge_control_owner_01911"} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.19.11 HA migration missing %q", required)
+			t.Fatalf("0.19.11 HA — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -549,7 +549,7 @@ func TestServerBridge3GAMigration0200(t *testing.T) {
 	text := string(b)
 	for _, required := range []string{"protocol_version=2", "compatibility/deprecation-only", "nl server-bridge migrate-v3", "idx_server_bridge_nodes_protocol_migration_0200"} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("GA migration missing %q", required)
+			t.Fatalf("GA — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -575,7 +575,7 @@ func TestExtensionsRegistryMigration0203(t *testing.T) {
 		"yank state is irreversible",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.20.3 registry migration missing %q", required)
+			t.Fatalf("0.20.3 registry — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -592,7 +592,7 @@ func TestExtensionsInstallLifecycleMigration0204(t *testing.T) {
 		"launcher_extension_install_state_guard_0204", "activated_at",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.20.4 lifecycle migration missing %q", required)
+			t.Fatalf("0.20.4 lifecycle — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -608,12 +608,12 @@ func TestExtensionsEventsHooksMigration0206(t *testing.T) {
 		"UNIQUE (event_type, idempotency_key)", "ON DELETE CASCADE", "payload_sha256", "next_attempt_at", "lease_until", "lease_token", "extension_event_delivery_lease_state",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.20.6 events migration missing %q", required)
+			t.Fatalf("0.20.6 events — отсутствует миграция %q", required)
 		}
 	}
 	dead := text[strings.Index(text, "CREATE TABLE IF NOT EXISTS extension_event_dead_letters"):]
 	if strings.Contains(dead, "REFERENCES extension_event_subscriptions") || strings.Contains(dead, "REFERENCES extension_event_deliveries") {
-		t.Fatal("DLQ must survive subscription/delivery deletion")
+		t.Fatal("Очередь необработанных сообщений должна сохраняться при удалении подписки или доставки")
 	}
 }
 
@@ -628,7 +628,7 @@ func TestExtensionsCapabilitySecurityMigration0207(t *testing.T) {
 		"PRIMARY KEY", "scope IN ('global','project')", "key_version", "updated_by",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.20.7 capability security migration missing %q", required)
+			t.Fatalf("0.20.7 capability security — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -644,7 +644,7 @@ func TestExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
 		"rolled_back", "rollback_failed", "expires_at",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.20.11 dependency/update migration missing %q", required)
+			t.Fatalf("0.20.11 dependency/update — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -660,7 +660,7 @@ func TestExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
 		"revoked_at", "released_at", "source", "launcher_revoke_extension_key_02012",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.20.12 trust/recovery migration missing %q", required)
+			t.Fatalf("0.20.12 trust/recovery — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -673,7 +673,7 @@ func TestExtensionsGAMigration0210(t *testing.T) {
 	text := string(b)
 	for _, required := range []string{"extension_ga_contract", "package_format_version", "manifest_schema_version", "host_protocol_version", "extension_api_version", "legacy_api_aliases", "3.7"} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.21.0 GA migration missing %q", required)
+			t.Fatalf("0.21.0 GA — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -689,7 +689,7 @@ func TestHonestValidationTrustMigration0212(t *testing.T) {
 		"remote_hardware_provenance", "not-verified", "smoke-passed", "integrity", "runtime",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.21.2 honest validation/trust migration missing %q", required)
+			t.Fatalf("0.21.2 honest validation/trust — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -706,7 +706,7 @@ func TestAuthorizationFoundationMigration0211(t *testing.T) {
 		"identity_version", "issuer", "realm", "subject", "legacy-user-derived-v2",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.21.1 authorization migration missing %q", required)
+			t.Fatalf("0.21.1 authorization — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -727,7 +727,7 @@ func TestDurableBoundariesMigration0213(t *testing.T) {
 		"recovered expired lease",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("0.21.3 durable boundaries migration missing %q", required)
+			t.Fatalf("0.21.3 durable boundaries — отсутствует миграция %q", required)
 		}
 	}
 }
@@ -765,7 +765,7 @@ func TestTextureLifecycleMigration02511(t *testing.T) {
 	}
 	for _, word := range []string{"texture_backup_pins", "gc_lease_token", "expires_at", "ON DELETE CASCADE"} {
 		if !strings.Contains(string(b), word) {
-			t.Errorf("lifecycle migration lacks %q", word)
+			t.Errorf("В миграции жизненного цикла отсутствует %q", word)
 		}
 	}
 }
@@ -783,6 +783,6 @@ func TestNN1MigrationCatalogFrozen0516(t *testing.T) {
 	}
 	const baseline0515 = "12247e5cb196efb8a77d52c64dd55e4b4956703100a928c65d8be0c978c723ce"
 	if got := hex.EncodeToString(h.Sum(nil)); got != baseline0515 {
-		t.Fatalf("N/N-1 cannot run after PostgreSQL catalog change: %s", got)
+		t.Fatalf("Версии N и N-1 не могут работать после изменения каталога PostgreSQL: %s", got)
 	}
 }

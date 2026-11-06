@@ -50,7 +50,7 @@ func TestClientFactory0271VanillaTransactionReplayAndTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first.MinecraftVersion != "fixture-1" || first.Java.Major != 21 || first.Launch.MainClass == "" || len(first.Sources) < 3 || len(first.Outputs) < 3 || first.ReproducibilitySHA256 == "" {
-		t.Fatalf("incomplete materialization: %+v", first)
+		t.Fatalf("Неполная материализация сборки: %+v", first)
 	}
 	if err := verifyFactoryPlan0271(dir, first); err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestClientFactory0271VanillaTransactionReplayAndTampering(t *testing.T) {
 	newest.Store(true)
 	second, err := executeFactoryBuild0271(context.Background(), opts)
 	if err != nil {
-		t.Fatalf("rebuild incorrectly resolved latest or invalidated pinned inputs: %v", err)
+		t.Fatalf("Повторная сборка ошибочно использовала последнюю версию или нарушила фиксацию входных данных: %v", err)
 	}
 	if second.ReproducibilitySHA256 != first.ReproducibilitySHA256 {
 		t.Fatal("Идентичность изменилась при повторном воспроизведении")
@@ -68,14 +68,14 @@ func TestClientFactory0271VanillaTransactionReplayAndTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyFactoryPlan0271(dir, first); err == nil {
-		t.Fatal("tampered output passed verification")
+		t.Fatal("Подменённые выходные данные прошли проверку")
 	}
 	if _, err := executeFactoryBuild0271(context.Background(), opts); err == nil {
-		t.Fatal("corrupt previous build was trusted")
+		t.Fatal("Повреждённая предыдущая сборка признана доверенной")
 	}
 	saved, _ := os.ReadFile(jar)
 	if string(saved) != "tampered" {
-		t.Fatal("failed build modified existing directory")
+		t.Fatal("Неудачная сборка изменила существующий каталог")
 	}
 }
 func fixtureFactoryAssets0271(asset []byte) []byte {
@@ -99,14 +99,14 @@ func TestClientFactory0271RejectsUnpinnedOutputAndSymlink(t *testing.T) {
 	}
 	_, err := executeFactoryBuild0271(context.Background(), factoryBuildOptions0271{Loader: "vanilla", Minecraft: "latest-release", ClientDir: dir, StrictUpstream: true})
 	if err == nil || !strings.Contains(err.Error(), "empty destination") {
-		t.Fatalf("nonempty unmanaged directory accepted: %v", err)
+		t.Fatalf("Принят непустой неуправляемый каталог: %v", err)
 	}
 	if err := os.Remove(filepath.Join(dir, "extra.jar")); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(t.TempDir(), filepath.Join(dir, "libraries")); err == nil {
 		if _, err := scanFactoryOutputs0271(dir); err == nil {
-			t.Fatal("symlink accepted as build output")
+			t.Fatal("Символьная ссылка принята как выход сборки")
 		}
 	}
 }
@@ -122,7 +122,7 @@ func TestClientFactory0271RejectsModifiedLock(t *testing.T) {
 	}
 	p.Outputs[0].Size++
 	if err := validateFactoryPlan0271(p); err == nil {
-		t.Fatal("modified output lock passed")
+		t.Fatal("Изменённый файл блокировки результата прошёл проверку")
 	}
 }
 
@@ -168,20 +168,20 @@ func TestClientFactory0271FabricQuiltPinnedAdapterReplay(t *testing.T) {
 				t.Fatal(err)
 			}
 			if first.LoaderVersion != tc.version || first.Launch.MainClass != tc.main || first.LoaderResolutionSHA256 == "" {
-				t.Fatalf("incomplete %s install: %+v", tc.loader, first)
+				t.Fatalf("Неполная установка %s: %+v", tc.loader, first)
 			}
 			if len(first.Sources) < 4 {
-				t.Fatalf("%s sources not captured: %+v", tc.loader, first.Sources)
+				t.Fatalf("Исходные данные %s не сохранены: %+v", tc.loader, first.Sources)
 			}
 			second, err := executeFactoryBuild0271(context.Background(), opts)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if second.ReproducibilitySHA256 != first.ReproducibilitySHA256 {
-				t.Fatal("loader replay changed digest")
+				t.Fatal("Повторная обработка загрузчика изменила контрольную сумму")
 			}
 			if listed.Load() != 1 {
-				t.Fatalf("loader metadata re-resolved on replay: %d", listed.Load())
+				t.Fatalf("При повторе метаданные загрузчика запрошены заново: %d", listed.Load())
 			}
 			if err := verifyFactoryPlan0271(dir, second); err != nil {
 				t.Fatal(err)
@@ -192,7 +192,7 @@ func TestClientFactory0271FabricQuiltPinnedAdapterReplay(t *testing.T) {
 
 func TestClientFactory0271ForgeNeoForgeProcessorsAreRealAndPinned(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fixture Java executable uses POSIX shell")
+		t.Skip("Тестовый исполняемый файл Java использует POSIX shell")
 	}
 	for _, tc := range []struct{ loader, version string }{{"forge", "52.0.1"}, {"neoforge", "21.1.105"}} {
 		t.Run(tc.loader, func(t *testing.T) {
@@ -222,14 +222,14 @@ func TestClientFactory0271ForgeNeoForgeProcessorsAreRealAndPinned(t *testing.T) 
 				t.Fatal(err)
 			}
 			if first.Loader != tc.loader || first.LoaderVersion != tc.version || len(first.Processors) == 0 || len(first.Processors[0].Outputs) == 0 || len(first.Sources) < 3 {
-				t.Fatalf("incomplete processor evidence: %+v", first)
+				t.Fatalf("Неполные подтверждения работы обработчика: %+v", first)
 			}
 			next, err := executeFactoryBuild0271(context.Background(), opts)
 			if err != nil {
-				t.Fatalf("processor replay: %v", err)
+				t.Fatalf("Повторная обработка: %v", err)
 			}
 			if next.ReproducibilitySHA256 != first.ReproducibilitySHA256 {
-				t.Fatal("processor replay changed identity")
+				t.Fatal("Повторная обработка изменила идентичность")
 			}
 		})
 	}
@@ -239,7 +239,7 @@ func TestClientFactory0271RejectsOutputInsideManagedTree(t *testing.T) {
 	root := t.TempDir()
 	for _, output := range []string{filepath.Join(root, "result.json"), filepath.Join(root, ".launcher", "install-plan.json"), root} {
 		if err := rejectFactoryOutputPath0271(root, output); err == nil {
-			t.Fatalf("unsafe --output allowed: %s", output)
+			t.Fatalf("Разрешён небезопасный параметр --output: %s", output)
 		}
 	}
 	if err := rejectFactoryOutputPath0271(root, filepath.Join(t.TempDir(), "result.json")); err != nil {

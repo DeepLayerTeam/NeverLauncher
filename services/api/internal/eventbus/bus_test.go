@@ -72,15 +72,15 @@ func TestEventBusIdempotencyAndOrdering0206(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sub.ID == 0 {
-		t.Fatal("subscription id not assigned")
+		t.Fatal("Подписке не назначен идентификатор")
 	}
 	first, inserted, err := bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "same", Source: "test", Payload: map[string]any{"v": 1}})
 	if err != nil || !inserted {
-		t.Fatalf("first publish inserted=%v err=%v", inserted, err)
+		t.Fatalf("Первичная публикация: добавлено=%v ошибка=%v", inserted, err)
 	}
 	again, inserted, err := bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "same", Source: "test", Payload: map[string]any{"v": 1}})
 	if err != nil || inserted || again.Sequence != first.Sequence {
-		t.Fatalf("idempotent publish mismatch inserted=%v err=%v", inserted, err)
+		t.Fatalf("Нарушена идемпотентность публикации: добавлено=%v ошибка=%v", inserted, err)
 	}
 	if _, _, err := bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "same", Source: "test", Payload: map[string]any{"v": 2}}); !errors.Is(err, repository.ErrConflict) {
 		t.Fatalf("Ожидался конфликт, получено %v", err)
@@ -98,13 +98,13 @@ func TestEventBusIdempotencyAndOrdering0206(t *testing.T) {
 		d.mu.Unlock()
 		if n == 2 {
 			if seq[0] >= seq[1] {
-				t.Fatalf("delivery order=%v", seq)
+				t.Fatalf("Порядок доставки=%v", seq)
 			}
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("events were not delivered")
+	t.Fatal("События не доставлены")
 }
 
 func TestSyncHookReject0206(t *testing.T) {
@@ -117,7 +117,7 @@ func TestSyncHookReject0206(t *testing.T) {
 	bus.SetDispatcher(&testDispatcher0206{reject: true})
 	err = bus.DispatchSync(ctx, PublishInput{Type: "project.before-save", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "hook-1", Source: "test", Payload: map[string]any{"id": "p1"}})
 	if !errors.Is(err, ErrHookRejected) {
-		t.Fatalf("expected hook rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение хуком, получено: %v", err)
 	}
 }
 
@@ -140,13 +140,13 @@ func TestAsyncDeliveryMovesToDLQ0206(t *testing.T) {
 		items, _ := repo.ListExtensionEventDeadLetters(ctx, "test.events", 10)
 		if len(items) == 1 {
 			if items[0].Attempts != 3 {
-				t.Fatalf("attempts=%d", items[0].Attempts)
+				t.Fatalf("Число попыток=%d", items[0].Attempts)
 			}
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("delivery was not moved to DLQ")
+	t.Fatal("Сообщение не перенесено в очередь необработанных сообщений (DLQ)")
 }
 
 func TestSyncHookTimeout0206(t *testing.T) {
@@ -159,7 +159,7 @@ func TestSyncHookTimeout0206(t *testing.T) {
 	bus.SetDispatcher(&testDispatcher0206{hookDelay: 250 * time.Millisecond})
 	err = bus.DispatchSync(ctx, PublishInput{Type: "project.before-save", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "hook-timeout", Source: "test", Payload: ProjectPayload{Action: "update", Actor: "admin", Project: model.Project{ID: "p1"}}})
 	if !errors.Is(err, ErrHookTimeout) {
-		t.Fatalf("expected hook timeout, got %v", err)
+		t.Fatalf("Ожидалось превышение времени ожидания хука, получено: %v", err)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestSubscriptionUnsubscribeStopsFutureDelivery0206(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(items) != 0 {
-		t.Fatalf("unsubscribed delivery remained leaseable: %d", len(items))
+		t.Fatalf("После отмены подписки доставка осталась доступной для захвата: %d", len(items))
 	}
 }
 
@@ -195,7 +195,7 @@ func TestTypedProjectPayloadKeepsActionAndActor0206(t *testing.T) {
 		t.Fatal(err)
 	}
 	if payload["action"] != "update" || payload["actor"] != "admin" {
-		t.Fatalf("typed payload lost action/actor: %s", e.Payload)
+		t.Fatalf("Типизированные данные потеряли действие или исполнителя: %s", e.Payload)
 	}
 }
 
@@ -217,7 +217,7 @@ func TestSubscriptionPauseResumePreservesDurableDelivery0206(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(items) != 0 {
-		t.Fatalf("paused subscription leased %d deliveries", len(items))
+		t.Fatalf("Приостановленная подписка захватила доставок: %d", len(items))
 	}
 	if err := bus.SetSubscriptionsEnabled(ctx, "test.events", "global", "", true); err != nil {
 		t.Fatal(err)
@@ -227,7 +227,7 @@ func TestSubscriptionPauseResumePreservesDurableDelivery0206(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(items) != 1 || items[0].Event.IdempotencyKey != "paused" {
-		t.Fatalf("durable delivery was not resumed: %#v", items)
+		t.Fatalf("Надёжная доставка не возобновилась: %#v", items)
 	}
 }
 
@@ -243,15 +243,15 @@ func TestDeliveryLeaseFencingRejectsStaleAck0206(t *testing.T) {
 	}
 	first, err := repo.LeaseExtensionEventDeliveries(ctx, 1, time.Now().Add(10*time.Millisecond))
 	if err != nil || len(first) != 1 || first[0].Delivery.LeaseToken == "" {
-		t.Fatalf("first lease: items=%#v err=%v", first, err)
+		t.Fatalf("Первый захват: элементы=%#v ошибка=%v", first, err)
 	}
 	time.Sleep(20 * time.Millisecond)
 	second, err := repo.LeaseExtensionEventDeliveries(ctx, 1, time.Now().Add(time.Second))
 	if err != nil || len(second) != 1 || second[0].Delivery.LeaseToken == "" || second[0].Delivery.LeaseToken == first[0].Delivery.LeaseToken {
-		t.Fatalf("second lease: items=%#v err=%v", second, err)
+		t.Fatalf("Второй захват: элементы=%#v ошибка=%v", second, err)
 	}
 	if err := repo.CompleteExtensionEventDelivery(ctx, first[0].Delivery.ID, first[0].Delivery.LeaseToken, time.Now()); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("stale lease ACK should conflict, got %v", err)
+		t.Fatalf("Подтверждение устаревшего захвата должно вызывать конфликт, получено: %v", err)
 	}
 	if err := repo.CompleteExtensionEventDelivery(ctx, second[0].Delivery.ID, second[0].Delivery.LeaseToken, time.Now()); err != nil {
 		t.Fatalf("Не удалось подтвердить текущую аренду: %v", err)
@@ -284,11 +284,11 @@ func TestDisabledInstallPausesAsyncAndSyncWithoutDroppingBacklog0206(t *testing.
 		t.Fatal(err)
 	}
 	if len(items) != 0 {
-		t.Fatalf("disabled installation leased async events: %d", len(items))
+		t.Fatalf("Отключённая установка захватила асинхронных событий: %d", len(items))
 	}
 	bus.SetDispatcher(&testDispatcher0206{reject: true})
 	if err := bus.DispatchSync(ctx, PublishInput{Type: "project.before-save", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "disabled-hook", Source: "test", Payload: map[string]any{"id": "p1"}}); err != nil {
-		t.Fatalf("disabled installation should not run sync hook: %v", err)
+		t.Fatalf("Отключённая установка не должна запускать синхронный хук: %v", err)
 	}
 	state, err = repo.GetExtensionInstallState(ctx, "test.events", "global", "")
 	if err != nil {
@@ -302,7 +302,7 @@ func TestDisabledInstallPausesAsyncAndSyncWithoutDroppingBacklog0206(t *testing.
 		t.Fatal(err)
 	}
 	if len(items) == 0 || items[0].Event.IdempotencyKey != "while-disabled" {
-		t.Fatalf("durable backlog did not resume after enable: %#v", items)
+		t.Fatalf("После включения не возобновилась обработка накопленных событий: %#v", items)
 	}
 }
 
@@ -334,7 +334,7 @@ func TestLargeReleaseManifestUsesContentAddressedExtensionEvent0206(t *testing.T
 			err = bus.ReleasePublished(ctx, "admin", release)
 		}
 		if err != nil {
-			t.Fatalf("large release %s: %v", action, err)
+			t.Fatalf("Большой выпуск %s: %v", action, err)
 		}
 	}
 	for _, typ := range []string{"release.created", "release.before-publish", "release.published"} {
@@ -344,11 +344,11 @@ func TestLargeReleaseManifestUsesContentAddressedExtensionEvent0206(t *testing.T
 			t.Fatal(err)
 		}
 		if !p.ManifestOmitted || p.ManifestFileCount != len(files) || len(p.ManifestSHA256) != 64 || len(p.Release.Manifest.Files) != 0 {
-			t.Fatalf("missing content-addressed projection: %s %+v", typ, p)
+			t.Fatalf("Отсутствует представление с адресацией по содержимому: %s %+v", typ, p)
 		}
 		_, inserted, err := bus.Publish(ctx, PublishInput{Type: typ, ProjectID: "p1", AggregateType: "release", AggregateID: release.ID, OrderingKey: "release:" + release.ID, IdempotencyKey: key, Source: "httpapi", Payload: p})
 		if err != nil || inserted {
-			t.Fatalf("event idempotency %s inserted=%v err=%v", typ, inserted, err)
+			t.Fatalf("Идемпотентность события %s: добавлено=%v ошибка=%v", typ, inserted, err)
 		}
 	}
 }
@@ -357,6 +357,6 @@ func TestSmallReleaseEventRetainsFullManifest0206(t *testing.T) {
 	release := model.ReleaseVersion{ID: "small", Manifest: model.Manifest{Files: []model.ManifestFile{{Path: "a.jar", Size: 3}}}}
 	payload, err := releaseEventPayload0206("created", "admin", release)
 	if err != nil || payload.ManifestOmitted || len(payload.Release.Manifest.Files) != 1 {
-		t.Fatalf("small release changed: %+v %v", payload, err)
+		t.Fatalf("Изменился небольшой выпуск: %+v %v", payload, err)
 	}
 }

@@ -56,12 +56,12 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 			io.WriteString(w, `{"access_token":"minecraft-secret","token_type":"Bearer","expires_in":7200}`)
 		case "/entitlements/mcstore":
 			if r.Header.Get("Authorization") != "Bearer minecraft-secret" {
-				t.Error("wrong entitlement bearer")
+				t.Error("Неверный токен авторизации прав")
 			}
 			io.WriteString(w, `{"items":[{"name":"product_minecraft"}]}`)
 		case "/minecraft/profile":
 			if r.Header.Get("Authorization") != "Bearer minecraft-secret" {
-				t.Errorf("missing minecraft bearer")
+				t.Errorf("Отсутствует токен авторизации Minecraft")
 			}
 			io.WriteString(w, `{"id":"123456781234123412341234567890ab","name":"RealOwner","skins":[{"id":"skin0","state":"ACTIVE","variant":"CLASSIC"}],"capes":[{"id":"mine","state":"ACTIVE"}]}`)
 		case "/minecraft/profile/capes/active":
@@ -71,7 +71,7 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 				}
 				json.NewDecoder(r.Body).Decode(&p)
 				if p.CapeID != "mine" {
-					t.Errorf("wrong cape ID")
+					t.Errorf("Неверный идентификатор плаща")
 				}
 			}
 			if r.Method == "DELETE" {
@@ -81,13 +81,13 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 			io.WriteString(w, `{"id":"123456781234123412341234567890ab","name":"RealOwner"}`)
 		case "/minecraft/profile/skins":
 			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data;") {
-				t.Errorf("missing multipart")
+				t.Errorf("Отсутствуют части составного запроса")
 			}
 			if err := r.ParseMultipartForm(4 << 20); err != nil {
 				t.Error(err)
 			}
 			if r.FormValue("variant") != "slim" {
-				t.Errorf("wrong skin model")
+				t.Errorf("Неверная модель скина")
 			}
 			f, _, e := r.FormFile("file")
 			if e != nil {
@@ -96,7 +96,7 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 				head := make([]byte, 8)
 				io.ReadFull(f, head)
 				if !bytes.Equal(head, []byte("\x89PNG\r\n\x1a\n")) {
-					t.Error("wrong PNG")
+					t.Error("Некорректный PNG-файл")
 				}
 				f.Close()
 			}
@@ -104,7 +104,7 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 		case "/minecraft/profile/skins/active":
 			w.WriteHeader(204)
 		default:
-			t.Errorf("unexpected endpoint %s", r.URL.Path)
+			t.Errorf("Неожиданная конечная точка %s", r.URL.Path)
 			http.NotFound(w, r)
 		}
 	})
@@ -122,11 +122,11 @@ func TestFullOfficialAuthAndOperations(t *testing.T) {
 	ctx := context.Background()
 	code, err := c.Begin(ctx, "client")
 	if err != nil || code.UserCode != "ABCD" {
-		t.Fatalf("device code: %+v %v", code, err)
+		t.Fatalf("Код устройства: %+v %v", code, err)
 	}
 	_, err = c.Complete(ctx, "client", "pending")
 	if !errors.Is(err, ErrPending) {
-		t.Fatalf("expected pending: %v", err)
+		t.Fatalf("Ожидался статус ожидания: %v", err)
 	}
 	ms, err := c.Complete(ctx, "client", "dsecret")
 	if err != nil {
@@ -138,10 +138,10 @@ func TestFullOfficialAuthAndOperations(t *testing.T) {
 	}
 	p, err := c.Profile(ctx, mc.AccessToken)
 	if err != nil || p.ID != "123456781234123412341234567890ab" {
-		t.Fatalf("profile %+v %v", p, err)
+		t.Fatalf("Профиль %+v %v", p, err)
 	}
 	if _, err = c.SelectCape(ctx, mc.AccessToken, "not-mine"); err == nil {
-		t.Fatal("unowned cape selected")
+		t.Fatal("Выбран плащ без подтверждённого владения")
 	}
 	if _, err = c.SelectCape(ctx, mc.AccessToken, "mine"); err != nil {
 		t.Fatal(err)
@@ -157,15 +157,15 @@ func TestFullOfficialAuthAndOperations(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = c.UploadSkin(ctx, mc.AccessToken, "invalid", png); err == nil {
-		t.Fatal("invalid variant accepted")
+		t.Fatal("Принят некорректный вариант")
 	}
 	refreshed, err := c.Refresh(ctx, "client", ms.RefreshToken)
 	if err != nil || refreshed.RefreshToken == "" {
-		t.Fatalf("refresh: %+v %v", refreshed, err)
+		t.Fatalf("Обновление токена: %+v %v", refreshed, err)
 	}
 }
 func TestRedirectNotFollowedAndSizeBound(t *testing.T) {
-	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Fatal("redirect followed") }))
+	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Fatal("Выполнен переход по перенаправлению") }))
 	defer evil.Close()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, evil.URL, http.StatusFound) }))
 	defer server.Close()
@@ -178,7 +178,7 @@ func TestRedirectNotFollowedAndSizeBound(t *testing.T) {
 	defer huge.Close()
 	c.microsoft = huge.URL
 	if _, err := c.Begin(context.Background(), "client"); err == nil || !strings.Contains(err.Error(), "limit") {
-		t.Fatalf("unbounded response %v", err)
+		t.Fatalf("Ответ не ограничен по размеру: %v", err)
 	}
 }
 func TestMicrosoftVerificationHostRestricted(t *testing.T) {
@@ -189,12 +189,12 @@ func TestMicrosoftVerificationHostRestricted(t *testing.T) {
 	c := New()
 	c.microsoft = s.URL
 	if _, err := c.Begin(context.Background(), "id"); err == nil {
-		t.Fatal("untrusted verification uri")
+		t.Fatal("Недоверенный адрес проверки")
 	}
 }
 func TestHTTPTimeoutConfigured(t *testing.T) {
 	if New().http.Timeout > 20*time.Second {
-		t.Fatal("timeout too long")
+		t.Fatal("Превышено допустимое время ожидания")
 	}
 }
 
@@ -222,10 +222,10 @@ func TestPKCEAuthorizationCodeExchangeAndEntitlements(t *testing.T) {
 	}
 	tokens, err := c.ExchangeAuthorizationCode(context.Background(), clientID, redirect, "valid-code", verifier)
 	if err != nil || tokens.AccessToken != "ms-secret" {
-		t.Fatalf("code exchange: %v", err)
+		t.Fatalf("Обмен кода: %v", err)
 	}
 	if count, err := c.EntitlementCount(context.Background(), "minecraft-secret"); err != nil || count != 1 {
-		t.Fatalf("entitlements: count=%d err=%v", count, err)
+		t.Fatalf("Права: количество=%d ошибка=%v", count, err)
 	}
 }
 
@@ -233,19 +233,19 @@ func TestRejectUntrustedPKCEInputs(t *testing.T) {
 	c := New()
 	for _, bad := range []string{"", "00000000-0000-0000-0000-000000000000", "microsoft-id", "${CLIENT_ID}"} {
 		if err := ValidateClientID(bad); err == nil {
-			t.Errorf("accepted client ID %q", bad)
+			t.Errorf("Принят недопустимый идентификатор клиента %q", bad)
 		}
 	}
 	for _, bad := range []string{"https://localhost:1000/minecraft-poc/callback", "http://example.org:1000/minecraft-poc/callback", "http://127.0.0.1:1000/evil", "http://localhost:1000/minecraft-poc/callback?code=secret", "http://evil@localhost:1000/minecraft-poc/callback", "http://0.0.0.0:1000/minecraft-poc/callback"} {
 		if err := ValidateLoopbackRedirect(bad); err == nil {
-			t.Errorf("accepted redirect %q", bad)
+			t.Errorf("Принято недопустимое перенаправление %q", bad)
 		}
 	}
 	if _, err := PKCEChallenge("too-short"); err == nil {
-		t.Fatal("accepted short verifier")
+		t.Fatal("Принято слишком короткое проверочное значение")
 	}
 	if _, err := c.AuthorizationURL("4b8f7734-4f10-44ca-b870-b4d89d34a319", "http://localhost:1/minecraft-poc/callback", "short", strings.Repeat("a", 43)); err == nil {
-		t.Fatal("accepted short state")
+		t.Fatal("Принято слишком короткое значение состояния")
 	}
 }
 
@@ -260,6 +260,6 @@ func TestMinecraftRegistrationRejectionCodeIsSanitized(t *testing.T) {
 	_, err := c.EntitlementCount(context.Background(), "redacted")
 	var serviceErr *ServiceError
 	if !errors.As(err, &serviceErr) || serviceErr.Code != "invalid_app_registration" {
-		t.Fatalf("want safe classified rejection, got %v", err)
+		t.Fatalf("Ожидалось безопасное классифицированное отклонение, получено: %v", err)
 	}
 }

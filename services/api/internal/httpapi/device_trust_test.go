@@ -48,7 +48,7 @@ func deviceTrustData0121(t *testing.T, out map[string]any) map[string]any {
 	t.Helper()
 	v, ok := out["data"].(map[string]any)
 	if !ok {
-		t.Fatalf("missing data: %#v", out)
+		t.Fatalf("Отсутствуют данные: %#v", out)
 	}
 	return v
 }
@@ -57,17 +57,17 @@ func deviceTrustLogin0121(t *testing.T, h http.Handler, deviceID string) (string
 	t.Helper()
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/login", "", map[string]any{"email": "admin@launcher.local", "password": "admin", "deviceId": deviceID})
 	if code != http.StatusOK {
-		t.Fatalf("login status=%d body=%#v", code, out)
+		t.Fatalf("Статус входа=%d тело ответа=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	tokens, ok := data["tokens"].(map[string]any)
 	if !ok {
-		t.Fatalf("missing tokens: %#v", data)
+		t.Fatalf("Отсутствуют токены: %#v", data)
 	}
 	access, _ := tokens["accessToken"].(string)
 	refresh, _ := tokens["refreshToken"].(string)
 	if access == "" || refresh == "" {
-		t.Fatalf("empty tokens: %#v", tokens)
+		t.Fatalf("Пустые токены: %#v", tokens)
 	}
 	return access, refresh
 }
@@ -80,7 +80,7 @@ func TestDeviceTrustRegistrationBindingReplayAndRevocation0121(t *testing.T) {
 	access1, _ := deviceTrustLogin0121(t, h, "legacy-label-a")
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access1, map[string]any{"name": "Workstation", "platform": "linux", "clientVersion": "0.12.1"})
 	if code != http.StatusOK {
-		t.Fatalf("register begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало регистрации: статус=%d тело ответа=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	challengeID, _ := begin["challengeId"].(string)
@@ -88,7 +88,7 @@ func TestDeviceTrustRegistrationBindingReplayAndRevocation0121(t *testing.T) {
 	challenge, _ := begin["challenge"].(string)
 	payload, _ := begin["signingPayload"].(string)
 	if challengeID == "" || deviceID == "" || challenge == "" || payload == "" {
-		t.Fatalf("incomplete begin payload: %#v", begin)
+		t.Fatalf("Неполные данные начала регистрации: %#v", begin)
 	}
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -98,39 +98,39 @@ func TestDeviceTrustRegistrationBindingReplayAndRevocation0121(t *testing.T) {
 	completeBody := map[string]any{"challengeId": challengeID, "deviceId": deviceID, "challenge": challenge, "publicKey": base64.RawURLEncoding.EncodeToString(pub), "signature": base64.RawURLEncoding.EncodeToString(sig)}
 	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", access1, completeBody)
 	if code != http.StatusCreated {
-		t.Fatalf("register complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение регистрации: статус=%d тело ответа=%#v", code, completeOut)
 	}
 	complete := deviceTrustData0121(t, completeOut)
 	trustedAccess1, _ := complete["accessToken"].(string)
 	if trustedAccess1 == "" {
-		t.Fatalf("missing renewed access token: %#v", complete)
+		t.Fatalf("Отсутствует обновлённый токен доступа: %#v", complete)
 	}
 	device, _ := complete["device"].(map[string]any)
 	if device["trustState"] != "verified" || device["assurance"] != "proof-of-possession" || device["keyFingerprint"] == "" {
-		t.Fatalf("bad device: %#v", device)
+		t.Fatalf("Некорректное устройство: %#v", device)
 	}
 	if _, leaks := device["publicKey"]; leaks {
-		t.Fatalf("public key leaked in API device model: %#v", device)
+		t.Fatalf("Публичный ключ неожиданно раскрыт в модели устройства API: %#v", device)
 	}
 
 	code, replayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", trustedAccess1, completeBody)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("replayed registration challenge status=%d body=%#v", code, replayOut)
+		t.Fatalf("Повторно использован запрос регистрации: статус=%d тело ответа=%#v", code, replayOut)
 	}
 
 	code, trustOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", trustedAccess1, nil)
 	if code != http.StatusOK {
-		t.Fatalf("trust status=%d body=%#v", code, trustOut)
+		t.Fatalf("Статус доверия=%d тело ответа=%#v", code, trustOut)
 	}
 	trust := deviceTrustData0121(t, trustOut)
 	if trust["deviceTrustState"] != "verified" || trust["trustedDeviceId"] != deviceID {
-		t.Fatalf("session not device-bound: %#v", trust)
+		t.Fatalf("Сессия не привязана к устройству: %#v", trust)
 	}
 
 	access2, refresh2 := deviceTrustLogin0121(t, h, "legacy-label-b")
 	code, verifyBeginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/verify/begin", access2, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("verify begin status=%d body=%#v", code, verifyBeginOut)
+		t.Fatalf("Начало проверки: статус=%d тело ответа=%#v", code, verifyBeginOut)
 	}
 	verifyBegin := deviceTrustData0121(t, verifyBeginOut)
 	verifyChallengeID, _ := verifyBegin["challengeId"].(string)
@@ -139,34 +139,34 @@ func TestDeviceTrustRegistrationBindingReplayAndRevocation0121(t *testing.T) {
 	verifySig := ed25519.Sign(priv, []byte(verifyPayload))
 	code, verifyOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/verify/complete", access2, map[string]any{"challengeId": verifyChallengeID, "challenge": verifyChallenge, "signature": base64.RawURLEncoding.EncodeToString(verifySig)})
 	if code != http.StatusOK {
-		t.Fatalf("verify complete status=%d body=%#v", code, verifyOut)
+		t.Fatalf("Завершение проверки: статус=%d тело ответа=%#v", code, verifyOut)
 	}
 	trustedAccess2, _ := deviceTrustData0121(t, verifyOut)["accessToken"].(string)
 	if trustedAccess2 == "" {
-		t.Fatal("second bound access token missing")
+		t.Fatal("Отсутствует второй привязанный токен доступа")
 	}
 
 	code, listOut := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices", trustedAccess2, nil)
 	if code != http.StatusOK {
-		t.Fatalf("list devices status=%d body=%#v", code, listOut)
+		t.Fatalf("Список устройств: статус=%d тело ответа=%#v", code, listOut)
 	}
 	items, _ := deviceTrustData0121(t, listOut)["items"].([]any)
 	if len(items) != 1 {
-		t.Fatalf("expected one device: %#v", listOut)
+		t.Fatalf("Ожидалось одно устройство: %#v", listOut)
 	}
 
 	code, revokeOut := deviceTrustRequest0121(t, h, http.MethodDelete, "/api/v1/auth/devices/"+deviceID, trustedAccess1, nil)
 	if code != http.StatusOK {
-		t.Fatalf("device revoke status=%d body=%#v", code, revokeOut)
+		t.Fatalf("Отзыв устройства: статус=%d тело ответа=%#v", code, revokeOut)
 	}
 
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", trustedAccess2, nil)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("bound session survived device revoke: %d", code)
+		t.Fatalf("Привязанная сессия сохранилась после отзыва устройства: %d", code)
 	}
 	code, refreshOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": refresh2})
 	if code != http.StatusUnauthorized {
-		t.Fatalf("refresh family survived device revoke: status=%d body=%#v", code, refreshOut)
+		t.Fatalf("Семейство токенов обновления сохранилось после отзыва устройства: статус=%d тело ответа=%#v", code, refreshOut)
 	}
 }
 
@@ -180,7 +180,7 @@ func TestDeviceTrustRejectsWrongSignatureAndDuplicateKey0121(t *testing.T) {
 	register := func(name string, wrong bool) (int, map[string]any) {
 		code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access, map[string]any{"name": name})
 		if code != http.StatusOK {
-			t.Fatalf("begin: %d %#v", code, out)
+			t.Fatalf("Начало: %d %#v", code, out)
 		}
 		d := deviceTrustData0121(t, out)
 		payload, _ := d["signingPayload"].(string)
@@ -193,21 +193,21 @@ func TestDeviceTrustRejectsWrongSignatureAndDuplicateKey0121(t *testing.T) {
 	}
 	code, out := register("Bad proof", true)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("wrong signature accepted: %d %#v", code, out)
+		t.Fatalf("Принята неверная подпись: %d %#v", code, out)
 	}
 	code, out = register("First", false)
 	if code != http.StatusCreated {
-		t.Fatalf("first registration failed: %d %#v", code, out)
+		t.Fatalf("Первичная регистрация не удалась: %d %#v", code, out)
 	}
 	if newAccess, _ := deviceTrustData0121(t, out)["accessToken"].(string); newAccess == "" {
-		t.Fatal("first registration did not return access token")
+		t.Fatal("Первичная регистрация не вернула токен доступа")
 	}
 	// Версия 0.12.8 запрещает второй ключ из уже привязанного сеанса. Для проверки постоянного
 	// запрета по отпечатку используйте новый непривязанный сеанс той же учётной записи.
 	access, _ = deviceTrustLogin0121(t, h, "duplicate-key-unbound")
 	code, out = register("Duplicate key", false)
 	if code != http.StatusConflict {
-		t.Fatalf("duplicate key accepted: %d %#v", code, out)
+		t.Fatalf("Принят повторный ключ: %d %#v", code, out)
 	}
 }
 
@@ -245,12 +245,12 @@ func TestDeviceTrustHardwareP256RegistrationAndBinding0123(t *testing.T) {
 		"hardwareProvider": "test-tpm-2.0",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("hardware register begin status=%d body=%#v", code, beginOut)
+		t.Fatalf("Начало регистрации аппаратного ключа: статус=%d тело ответа=%#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
 	if payload == "" || begin["keyAlgorithm"] != "p256" || begin["keyBinding"] != "hardware" || begin["hardwareProvider"] != "test-tpm-2.0" {
-		t.Fatalf("bad hardware begin payload: %#v", begin)
+		t.Fatalf("Некорректные данные начала регистрации аппаратного ключа: %#v", begin)
 	}
 	completeBody := map[string]any{
 		"challengeId": begin["challengeId"],
@@ -261,33 +261,33 @@ func TestDeviceTrustHardwareP256RegistrationAndBinding0123(t *testing.T) {
 	}
 	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", access1, completeBody)
 	if code != http.StatusCreated {
-		t.Fatalf("hardware register complete status=%d body=%#v", code, completeOut)
+		t.Fatalf("Завершение регистрации аппаратного ключа: статус=%d тело ответа=%#v", code, completeOut)
 	}
 	complete := deviceTrustData0121(t, completeOut)
 	device, _ := complete["device"].(map[string]any)
 	if device["keyAlgorithm"] != "p256" || device["keyBinding"] != "hardware" || device["hardwareProvider"] != "test-tpm-2.0" {
-		t.Fatalf("hardware identity metadata lost: %#v", device)
+		t.Fatalf("Потеряны метаданные аппаратной идентификации: %#v", device)
 	}
 	if device["assurance"] != "proof-of-possession" {
-		t.Fatalf("unattested hardware key must not elevate assurance: %#v", device)
+		t.Fatalf("Неподтверждённый аппаратный ключ не должен повышать уровень доверия: %#v", device)
 	}
 	if _, leaks := device["publicKey"]; leaks {
-		t.Fatalf("public key leaked in API device model: %#v", device)
+		t.Fatalf("Публичный ключ неожиданно раскрыт в модели устройства API: %#v", device)
 	}
 	deviceID, _ := device["id"].(string)
 	if deviceID == "" {
-		t.Fatalf("missing hardware device id: %#v", device)
+		t.Fatalf("Отсутствует идентификатор аппаратного устройства: %#v", device)
 	}
 
 	access2, _ := deviceTrustLogin0121(t, h, "hardware-label-b")
 	code, verifyBeginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/verify/begin", access2, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("hardware verify begin status=%d body=%#v", code, verifyBeginOut)
+		t.Fatalf("Начало проверки аппаратного ключа: статус=%d тело ответа=%#v", code, verifyBeginOut)
 	}
 	verifyBegin := deviceTrustData0121(t, verifyBeginOut)
 	verifyPayload, _ := verifyBegin["signingPayload"].(string)
 	if verifyPayload == "" || verifyBegin["keyAlgorithm"] != "p256" || verifyBegin["keyBinding"] != "hardware" {
-		t.Fatalf("bad hardware verify payload: %#v", verifyBegin)
+		t.Fatalf("Некорректные данные проверки аппаратного ключа: %#v", verifyBegin)
 	}
 	code, verifyOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/verify/complete", access2, map[string]any{
 		"challengeId": verifyBegin["challengeId"],
@@ -295,9 +295,9 @@ func TestDeviceTrustHardwareP256RegistrationAndBinding0123(t *testing.T) {
 		"signature":   signP256P1363Test0123(t, priv, verifyPayload),
 	})
 	if code != http.StatusOK {
-		t.Fatalf("hardware verify complete status=%d body=%#v", code, verifyOut)
+		t.Fatalf("Завершение проверки аппаратного ключа: статус=%d тело ответа=%#v", code, verifyOut)
 	}
 	if access, _ := deviceTrustData0121(t, verifyOut)["accessToken"].(string); access == "" {
-		t.Fatalf("hardware-bound session token missing: %#v", verifyOut)
+		t.Fatalf("Отсутствует токен сессии, привязанный к аппаратному устройству: %#v", verifyOut)
 	}
 }

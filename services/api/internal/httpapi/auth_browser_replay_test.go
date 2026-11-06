@@ -41,7 +41,7 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 	}
 	begin := call(a, "/api/v1/auth/oidc/oidc-fixture/begin", map[string]any{"deviceId": "device-a"})
 	if begin.Code != 200 {
-		t.Fatalf("begin HTTP %d: %s", begin.Code, begin.Body.String())
+		t.Fatalf("Начало операции: HTTP %d: %s", begin.Code, begin.Body.String())
 	}
 	var response struct {
 		Data struct {
@@ -55,7 +55,7 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 	tx := response.Data.Transaction
 	state := response.Data.State
 	if tx == "" || state == "" {
-		t.Fatal("missing sealed transaction")
+		t.Fatal("Отсутствует защищённая транзакция")
 	}
 	endpoint := "/api/v1/auth/oidc/oidc-fixture/complete"
 	payload := map[string]any{"code": "fixture-code", "state": state, "transaction": tx}
@@ -63,13 +63,13 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 	// транзакцию.
 	wrongDevice := map[string]any{"code": "fixture-code", "state": state, "transaction": tx, "deviceId": "device-b"}
 	if result := call(a, endpoint, wrongDevice); result.Code != 401 {
-		t.Fatalf("device swap HTTP %d", result.Code)
+		t.Fatalf("Подмена устройства: HTTP %d", result.Code)
 	}
 	if result := call(a, endpoint, payload); result.Code != 200 {
-		t.Fatalf("valid first HTTP %d: %s", result.Code, result.Body.String())
+		t.Fatalf("Корректный первый запрос: HTTP %d: %s", result.Code, result.Body.String())
 	}
 	if result := call(b, endpoint, payload); result.Code != 401 {
-		t.Fatalf("replica replay HTTP %d", result.Code)
+		t.Fatalf("Повтор через другую реплику: HTTP %d", result.Code)
 	}
 	opened, err := srvA.openOIDCTransaction115(tx)
 	if err != nil {
@@ -82,18 +82,18 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result := call(a, endpoint, map[string]any{"code": "fixture-code", "state": state, "transaction": secondSeal}); result.Code != 401 {
-		t.Fatalf("resealed replay HTTP %d", result.Code)
+		t.Fatalf("Повтор с повторно защищёнными данными: HTTP %d", result.Code)
 	}
 	// Свежая браузерная транзакция остаётся пригодной после инцидента повтора.
 	fresh := call(b, "/api/v1/auth/oidc/oidc-fixture/begin", map[string]any{"deviceId": "device-a"})
 	if fresh.Code != 200 {
-		t.Fatal("fresh begin failed")
+		t.Fatal("Не удалось начать новую операцию")
 	}
 	if err := json.Unmarshal(fresh.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
 	if result := call(b, endpoint, map[string]any{"code": "fixture-code", "state": response.Data.State, "transaction": response.Data.Transaction}); result.Code != 200 {
-		t.Fatalf("fresh transaction HTTP %d: %s", result.Code, result.Body.String())
+		t.Fatalf("Новая транзакция: HTTP %d: %s", result.Code, result.Body.String())
 	}
 }
 
@@ -128,7 +128,7 @@ func TestBrowserLinkReplayAndLoginSeparation0525(t *testing.T) {
 	}
 	begin := call(handler, "/api/v1/auth/microsoft/ms-fixture/link/begin", map[string]any{}, access)
 	if begin.Code != 200 {
-		t.Fatalf("begin: %d %s", begin.Code, begin.Body.String())
+		t.Fatalf("Начало: %d %s", begin.Code, begin.Body.String())
 	}
 	var response struct {
 		Data struct{ Transaction, State string } `json:"data"`
@@ -139,32 +139,32 @@ func TestBrowserLinkReplayAndLoginSeparation0525(t *testing.T) {
 	// Транзакцию привязки нельзя использовать для входа без токена владельца Never.
 	login := call(handler, "/api/v1/auth/oidc/ms-fixture/complete", map[string]any{"code": "microsoft-code", "state": response.Data.State, "transaction": response.Data.Transaction}, "")
 	if login.Code != 401 {
-		t.Fatalf("link-to-login substitution HTTP %d", login.Code)
+		t.Fatalf("Подмена привязки входом: HTTP %d", login.Code)
 	}
 	body := map[string]any{"code": "microsoft-code", "state": response.Data.State, "transaction": response.Data.Transaction}
 	first := call(handler, "/api/v1/auth/microsoft/ms-fixture/link/complete", body, access)
 	if first.Code != 200 {
-		t.Fatalf("link HTTP %d: %s", first.Code, first.Body.String())
+		t.Fatalf("Привязка: HTTP %d: %s", first.Code, first.Body.String())
 	}
 	second := call(handler, "/api/v1/auth/microsoft/ms-fixture/link/complete", body, access)
 	if second.Code != 401 {
-		t.Fatalf("link replay HTTP %d", second.Code)
+		t.Fatalf("Повтор привязки: HTTP %d", second.Code)
 	}
 	// Неверный state не должен расходовать новую действительную транзакцию.
 	begin = call(handler, "/api/v1/auth/microsoft/ms-fixture/link/begin", map[string]any{}, access)
 	if begin.Code != 200 {
-		t.Fatal("new Microsoft link transaction failed")
+		t.Fatal("Ошибка новой транзакции привязки Microsoft")
 	}
 	if err := json.Unmarshal(begin.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
 	wrong := call(handler, "/api/v1/auth/microsoft/ms-fixture/link/complete", map[string]any{"code": "microsoft-code", "state": "wrong", "transaction": response.Data.Transaction}, access)
 	if wrong.Code != 401 {
-		t.Fatalf("state mismatch HTTP %d", wrong.Code)
+		t.Fatalf("Несовпадение состояния: HTTP %d", wrong.Code)
 	}
 	legitimate := call(handler, "/api/v1/auth/microsoft/ms-fixture/link/complete", map[string]any{"code": "microsoft-code", "state": response.Data.State, "transaction": response.Data.Transaction}, access)
 	if legitimate.Code != 200 {
-		t.Fatalf("new legitimate link HTTP %d: %s", legitimate.Code, legitimate.Body.String())
+		t.Fatalf("Новая допустимая привязка: HTTP %d: %s", legitimate.Code, legitimate.Body.String())
 	}
 }
 
@@ -187,6 +187,6 @@ func TestBrowserReplayAtomicMemory0525(t *testing.T) {
 		}
 	}
 	if passed != 1 {
-		t.Fatalf("same nonce consumed %d times", passed)
+		t.Fatalf("Один и тот же nonce использован раз: %d", passed)
 	}
 }

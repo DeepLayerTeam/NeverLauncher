@@ -29,7 +29,7 @@ func beginReplacement0128(t *testing.T, h http.Handler, path, access, oldDeviceI
 		"publicKey": base64.RawURLEncoding.EncodeToString(pub), "keyAlgorithm": "ed25519", "keyBinding": "software",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("replacement begin status=%d body=%#v", code, out)
+		t.Fatalf("Начало замены ключа: статус=%d тело ответа=%#v", code, out)
 	}
 	return deviceTrustData0121(t, out)
 }
@@ -46,7 +46,7 @@ func rotateBoundAccess0128(t *testing.T, h http.Handler, current boundAccess0127
 		"newSignature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, []byte(payload))),
 	})
 	if code != http.StatusOK {
-		t.Fatalf("device key rotation complete=%d %#v", code, out)
+		t.Fatalf("Завершение смены ключа устройства=%d %#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	device, _ := data["device"].(map[string]any)
@@ -64,7 +64,7 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 	begin := beginReplacement0128(t, h, "/api/v1/auth/devices/key-rotation/begin", old.Access, old.ID, newPub)
 	payload, _ := begin["signingPayload"].(string)
 	if payload == "" || begin["oldKeyProofRequired"] != true {
-		t.Fatalf("rotation challenge incomplete: %#v", begin)
+		t.Fatalf("Неполный запрос смены ключа: %#v", begin)
 	}
 	oldSig := base64.RawURLEncoding.EncodeToString(ed25519.Sign(old.Private, []byte(payload)))
 	newSig := base64.RawURLEncoding.EncodeToString(ed25519.Sign(newPriv, []byte(payload)))
@@ -74,7 +74,7 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": newSig,
 	})
 	if code != http.StatusUnauthorized {
-		t.Fatalf("rotation without old-key proof accepted: %d", code)
+		t.Fatalf("Принята смена ключа без доказательства владения старым ключом: %d", code)
 	}
 
 	// Запрос challenge намеренно сгорает; начните новую процедуру и завершите оба доказательства.
@@ -86,14 +86,14 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "oldSignature": oldSig, "newSignature": newSig,
 	})
 	if code != http.StatusOK {
-		t.Fatalf("rotation complete status=%d body=%#v", code, out)
+		t.Fatalf("Завершение смены ключа: статус=%d тело ответа=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	newAccess, _ := data["accessToken"].(string)
 	newDevice, _ := data["device"].(map[string]any)
 	newID, _ := newDevice["id"].(string)
 	if newAccess == "" || newID == "" || newID == old.ID || data["oldFingerprintPermanentTombstone"] != true {
-		t.Fatalf("bad rotation result: %#v", data)
+		t.Fatalf("Некорректный результат смены ключа: %#v", data)
 	}
 
 	oldRow, err := repo.GetTrustedDevice("admin", old.ID)
@@ -101,18 +101,18 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 		t.Fatal(err)
 	}
 	if oldRow.Status != "revoked" || oldRow.ReplacedByDeviceID != newID || oldRow.ReplacementReason != "rotate" || oldRow.ReplacedAt.IsZero() {
-		t.Fatalf("old identity not linked as replacement tombstone: %+v", oldRow)
+		t.Fatalf("Старая идентичность не помечена как заменённая: %+v", oldRow)
 	}
 	if _, err := repo.GetTrustedDevice("admin", newID); err != nil {
-		t.Fatalf("replacement device missing: %v", err)
+		t.Fatalf("Отсутствует заменяющее устройство: %v", err)
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", old.Access, nil)
 	if code != http.StatusUnauthorized {
-		t.Fatalf("pre-rotation access token survived binding epoch change: %d", code)
+		t.Fatalf("Токен доступа до смены ключа действителен после изменения эпохи привязки: %d", code)
 	}
 	code, _ = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/device-trust", newAccess, nil)
 	if code != http.StatusOK {
-		t.Fatalf("new access token unusable after rotation: %d", code)
+		t.Fatalf("Новый токен доступа не действует после смены ключа: %d", code)
 	}
 }
 
@@ -130,7 +130,7 @@ func TestDeviceKeyRecoveryRequiresFreshPhishingResistantAuthAndOnlyNewKeyProof01
 		"publicKey": base64.RawURLEncoding.EncodeToString(newPub), "keyAlgorithm": "ed25519", "keyBinding": "software",
 	})
 	if code != http.StatusPreconditionRequired {
-		t.Fatalf("recovery started without phishing-resistant step-up: status=%d body=%#v", code, out)
+		t.Fatalf("Восстановление начато без устойчивого к фишингу дополнительного подтверждения: статус=%d тело ответа=%#v", code, out)
 	}
 
 	claims, err := srv.verifyAdminToken(old.Access)
@@ -153,17 +153,17 @@ func TestDeviceKeyRecoveryRequiresFreshPhishingResistantAuthAndOnlyNewKeyProof01
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": newSig,
 	})
 	if code != http.StatusOK {
-		t.Fatalf("recovery complete status=%d body=%#v", code, out)
+		t.Fatalf("Завершение восстановления: статус=%d тело ответа=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	newDevice, _ := data["device"].(map[string]any)
 	newID, _ := newDevice["id"].(string)
 	if newID == "" || data["mode"] != "recover" {
-		t.Fatalf("bad recovery result: %#v", data)
+		t.Fatalf("Некорректный результат восстановления: %#v", data)
 	}
 	oldRow, _ := repo.GetTrustedDevice("admin", old.ID)
 	if oldRow.Status != "revoked" || oldRow.ReplacedByDeviceID != newID || oldRow.ReplacementReason != "recover" {
-		t.Fatalf("recovery did not tombstone old identity: %+v", oldRow)
+		t.Fatalf("Восстановление не пометило старую идентичность как заменённую: %+v", oldRow)
 	}
 }
 
@@ -174,6 +174,6 @@ func TestBoundSessionCannotBypassReplacementViaOrdinaryRegistration0128(t *testi
 	bound := registerSoftwareDevice0125(t, h, "registration-bypass", "Bound workstation")
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", bound.Access, map[string]any{"name": "Bypass replacement"})
 	if code != http.StatusConflict {
-		t.Fatalf("bound session enrolled second key outside replacement flow: status=%d body=%#v", code, out)
+		t.Fatalf("Привязанная сессия зарегистрировала второй ключ вне процедуры замены: статус=%d тело ответа=%#v", code, out)
 	}
 }
