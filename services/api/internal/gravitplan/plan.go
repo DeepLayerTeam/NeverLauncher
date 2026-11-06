@@ -160,7 +160,7 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 	}
 	for _, f := range c.Findings {
 		if f.Severity == "blocked" {
-			p.Blockers = append(p.Blockers, fmt.Sprintf("compatibility %s (%s): %s", f.Code, f.Path, f.Message))
+			p.Blockers = append(p.Blockers, fmt.Sprintf("совместимость %s (%s): %s", f.Code, f.Path, f.Message))
 		}
 	}
 	for _, f := range m.Modules {

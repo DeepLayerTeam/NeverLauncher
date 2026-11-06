@@ -16,7 +16,7 @@ import (
 type incidentTransitionError0424 struct{ repository.Repository }
 
 func (r incidentTransitionError0424) TransitionExtensionInstall(context.Context, model.ExtensionLifecycleTransition) (model.ExtensionInstall, error) {
-	return model.ExtensionInstall{}, errors.New("durable transition unavailable")
+	return model.ExtensionInstall{}, errors.New("устойчивый переход состояния недоступен")
 }
 
 func TestEmergencyDisablePersistsDenyEvenWhenStateTransitionFails0424(t *testing.T) {

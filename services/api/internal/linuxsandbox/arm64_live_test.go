@@ -37,14 +37,14 @@ import("fmt"; "os"; "strings"; "syscall")
 func main() {
  b,e:=os.ReadFile("/proc/self/status");if e!=nil{panic(e)}
  s:=string(b)
- for _,needle:=range []string{"NoNewPrivs:\t1","Seccomp:\t2","CapEff:\t0000000000000000"}{if !strings.Contains(s,needle){panic("isolation not active: "+needle)}}
+ for _,needle:=range []string{"NoNewPrivs:\t1","Seccomp:\t2","CapEff:\t0000000000000000"}{if !strings.Contains(s,needle){panic("изоляция не активирована: "+needle)}}
  for _,num:=range []uintptr{40,97,268,280,435,442}{
   _,_,errno:=syscall.RawSyscall(num,0,0,0)
   if num==435 {if errno!=syscall.ENOSYS {panic(fmt.Sprintf("clone3: %v",errno))}}
-  else if errno!=syscall.EPERM {panic(fmt.Sprintf("syscall %d not seccomp-denied: %v",num,errno))}
+  else if errno!=syscall.EPERM {panic(fmt.Sprintf("системный вызов %d не заблокирован seccomp: %v",num,errno))}
  }
- if _,e:=os.Stat("/etc/passwd");!os.IsNotExist(e){panic("host filesystem reachable")}
- if _,e:=os.Stat("/package/arm64-probe");e!=nil{panic("readonly package missing")}
+ if _,e:=os.Stat("/etc/passwd");!os.IsNotExist(e){panic("файловая система хоста доступна из изоляции")}
+ if _,e:=os.Stat("/package/arm64-probe");e!=nil{panic("пакет только для чтения не найден")}
  fmt.Println("arm64-seccomp-namespaces-ok")
 }`
 	if err := os.WriteFile(src, []byte(code), 0o600); err != nil {

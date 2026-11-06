@@ -36,7 +36,7 @@ func (*simulatedProvider) Complete(context.Context, string, string) (officialmin
 }
 func (p *simulatedProvider) AuthorizationURL(_ string, redirect, state, challenge string) (string, error) {
 	if challenge == "" {
-		return "", errors.New("missing PKCE challenge")
+		return "", errors.New("отсутствует проверочное значение PKCE")
 	}
 	go func() {
 		if p.badState { // Неверное состояние не должно разрешать вход или завершать локальный прослушиватель.
@@ -58,19 +58,19 @@ func (p *simulatedProvider) AuthorizationURL(_ string, redirect, state, challeng
 }
 func (*simulatedProvider) ExchangeAuthorizationCode(_ context.Context, _, redirect, code, verifier string) (officialminecraft.OAuthTokens, error) {
 	if code != "authorized" || verifier == "" || !strings.HasPrefix(redirect, "http://localhost:") {
-		return officialminecraft.OAuthTokens{}, errors.New("invalid callback or verifier")
+		return officialminecraft.OAuthTokens{}, errors.New("некорректный обратный вызов или проверочный код")
 	}
 	return officialminecraft.OAuthTokens{AccessToken: "PRIVATE-MS", RefreshToken: "PRIVATE-REFRESH", TokenType: "Bearer", ExpiresIn: 3600}, nil
 }
 func (*simulatedProvider) Refresh(_ context.Context, _, refresh string) (officialminecraft.OAuthTokens, error) {
 	if refresh != "PRIVATE-REFRESH" {
-		return officialminecraft.OAuthTokens{}, errors.New("not a refresh token")
+		return officialminecraft.OAuthTokens{}, errors.New("передан не токен обновления")
 	}
 	return officialminecraft.OAuthTokens{AccessToken: "PRIVATE-MS2", RefreshToken: "PRIVATE-REFRESH2", TokenType: "Bearer", ExpiresIn: 3600}, nil
 }
 func (p *simulatedProvider) ExchangeWithStages(_ context.Context, ms string, stagePassed func(string)) (officialminecraft.MinecraftToken, error) {
 	if ms != "PRIVATE-MS2" {
-		return officialminecraft.MinecraftToken{}, errors.New("wrong token type")
+		return officialminecraft.MinecraftToken{}, errors.New("неверный тип токена")
 	}
 	stagePassed("xbox_live")
 	stagePassed("xsts")
@@ -82,7 +82,7 @@ func (p *simulatedProvider) ExchangeWithStages(_ context.Context, ms string, sta
 }
 func (*simulatedProvider) EntitlementCount(_ context.Context, token string) (int, error) {
 	if token != "PRIVATE-MC" {
-		return 0, errors.New("wrong bearer")
+		return 0, errors.New("неверный токен доступа")
 	}
 	return 0, nil
 }
@@ -91,13 +91,13 @@ func (p *simulatedProvider) VerifyOnlineSession(_ context.Context, token string,
 		return p.onlineReject
 	}
 	if token != "PRIVATE-MC" || profile.Name != "PrivatePerson" {
-		return errors.New("wrong online session identity")
+		return errors.New("неверная учётная запись сетевого сеанса")
 	}
 	return nil
 }
 func (*simulatedProvider) Profile(_ context.Context, token string) (officialminecraft.Profile, error) {
 	if token != "PRIVATE-MC" {
-		return officialminecraft.Profile{}, errors.New("wrong bearer")
+		return officialminecraft.Profile{}, errors.New("неверный токен доступа")
 	}
 	return officialminecraft.Profile{ID: "123456781234123412341234567890ab", Name: "PrivatePerson"}, nil
 }

@@ -92,7 +92,7 @@ func verifyCohortLive(ctx context.Context, inputs map[string]CohortInput, plans 
 			return err
 		}
 		if err := ensureSnapshotStillMatches(p, inputs[class].EvidenceDir); err != nil {
-			return fmt.Errorf("%s snapshot: %w", class, err)
+			return fmt.Errorf("снимок состояния %s: %w", class, err)
 		}
 		if err := verifyLiveReference(ctx, b, p, token); err != nil {
 			return fmt.Errorf("%s: %w", class, err)

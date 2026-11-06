@@ -156,7 +156,10 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	}
 	gc := candidateRows[0]
 	called := 0
-	if err := r.DeleteTextureWithLease02512(ctx, gc, func(context.Context, string) error { called++; return fmt.Errorf("storage unavailable") }); err == nil || called != 1 {
+	if err := r.DeleteTextureWithLease02512(ctx, gc, func(context.Context, string) error {
+		called++
+		return fmt.Errorf("хранилище недоступно")
+	}); err == nil || called != 1 {
 		t.Fatalf("ошибка хранилища потеряна: %v, вызовов=%d", err, called)
 	}
 	var status string
@@ -174,7 +177,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	if err := r.DeleteTextureWithLease02512(ctx, gc, func(_ context.Context, digest string) error {
 		called++
 		if digest != third {
-			return fmt.Errorf("wrong digest")
+			return fmt.Errorf("контрольная сумма не совпадает")
 		}
 		// Второй сеанс PostgreSQL не должен вставить FK-ссылку во время физического
 		// удаления. Callback намеренно вызывается при блокировке строки объекта.
@@ -187,7 +190,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		defer stop()
 		_, err = secondDB.ExecContext(lockCtx, `INSERT INTO `+schema+`.texture_backup_pins(digest,lease_token,expires_at) VALUES ($1,$2,now()+interval '5 minutes')`, third, strings.Repeat("c", 64))
 		if !errors.Is(err, context.DeadlineExceeded) {
-			return fmt.Errorf("foreign-key insert bypassed GC row lock: %v", err)
+			return fmt.Errorf("вставка по внешнему ключу обошла блокировку строки при сборке мусора: %v", err)
 		}
 		return nil
 	}); err != nil {

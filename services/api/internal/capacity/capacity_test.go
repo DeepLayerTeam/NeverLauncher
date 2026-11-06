@@ -98,10 +98,10 @@ type fakeRows struct {
 
 func (fakeDriver) Open(string) (driver.Conn, error) { return fakeConn{}, nil }
 func (fakeConn) Prepare(string) (driver.Stmt, error) {
-	return nil, errors.New("prepare not implemented")
+	return nil, errors.New("подготовка запроса не реализована")
 }
 func (fakeConn) Close() error              { return nil }
-func (fakeConn) Begin() (driver.Tx, error) { return nil, errors.New("transactions not implemented") }
+func (fakeConn) Begin() (driver.Tx, error) { return nil, errors.New("нет транзакций") }
 func (fakeConn) QueryContext(_ context.Context, q string, _ []driver.NamedValue) (driver.Rows, error) {
 	var v []driver.Value
 	switch {
@@ -118,7 +118,7 @@ func (fakeConn) QueryContext(_ context.Context, q string, _ []driver.NamedValue)
 	case strings.Contains(q, "FROM event_outbox"):
 		v = []driver.Value{int64(510)}
 	default:
-		return nil, errors.New("unexpected query: " + q)
+		return nil, errors.New("неожиданный запрос: " + q)
 	}
 	cols := make([]string, len(v))
 	for i := range cols {

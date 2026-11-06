@@ -98,7 +98,7 @@ func previewCatalog0248(release model.ReleaseVersion, req componentEditorRequest
 			result, err := model.PreviewCatalogGraph0248(cat, name)
 			if err != nil {
 				entry.Error = err.Error()
-				report.Errors = append(report.Errors, fmt.Sprintf("preset %q: %v", name, err))
+				report.Errors = append(report.Errors, fmt.Sprintf("предустановка %q: %v", name, err))
 			} else {
 				entry.Selected = result
 			}

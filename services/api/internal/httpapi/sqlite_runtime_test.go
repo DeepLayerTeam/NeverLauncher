@@ -159,5 +159,5 @@ func (sqliteFailBackend0373) ReadRuntimeComponent0373(context.Context, string) (
 	return nil, false, nil
 }
 func (sqliteFailBackend0373) WriteRuntimeComponent0373(context.Context, string, []byte) error {
-	return errors.New("disk full")
+	return errors.New("на диске нет свободного места")
 }

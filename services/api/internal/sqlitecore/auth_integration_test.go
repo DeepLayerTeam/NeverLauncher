@@ -304,7 +304,7 @@ func TestSQLiteWrongMFAKeyAndRecoveryPersistence(t *testing.T) {
 			return er
 		}
 		if strings.Contains(string(ciphertext), secret) {
-			return errors.New("TOTP plaintext found in database")
+			return errors.New("в базе данных обнаружен TOTP-секрет в открытом виде")
 		}
 		return nil
 	})

@@ -31,7 +31,7 @@ func TestPolicyRuntime0298(t *testing.T) {
 	if got := e.Evaluate(context.Background(), Request{Stage: BeforeLaunch}); !got.Allowed() {
 		t.Fatalf("Не настроенный этап: %+v", got)
 	}
-	if err := e.Register(2, true, []Stage{BeforeAuth}, testHandler{"broken", Allow, errors.New("database unavailable")}); err != nil {
+	if err := e.Register(2, true, []Stage{BeforeAuth}, testHandler{"broken", Allow, errors.New("база данных недоступна")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.Evaluate(context.Background(), Request{Stage: BeforeAuth}); got.Action != Deny || got.Reason != "policy_handler_unavailable" {

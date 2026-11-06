@@ -524,7 +524,7 @@ func httpJSONWithHeaders(method, url string, body any, headers map[string]string
 		}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return payload, fmt.Errorf("%s returned %s: %s", url, resp.Status, strings.TrimSpace(string(data)))
+		return payload, fmt.Errorf("запрос %s вернул %s: %s", url, resp.Status, strings.TrimSpace(string(data)))
 	}
 	return payload, nil
 }

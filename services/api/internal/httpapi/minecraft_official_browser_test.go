@@ -26,24 +26,24 @@ type browserMockProvider0263 struct {
 func (f *browserMockProvider0263) ExchangeAuthorizationCode(_ context.Context, clientID, redirect, code, verifier string) (officialminecraft.OAuthTokens, error) {
 	f.calls = append(f.calls, "microsoft")
 	if f.failAt == "microsoft" {
-		return officialminecraft.OAuthTokens{}, errors.New("provider rejected code")
+		return officialminecraft.OAuthTokens{}, errors.New("провайдер отклонил код авторизации")
 	}
 	if clientID != ownMicrosoftClient0263 || redirect != browserRequest0263.RedirectURI || code != browserRequest0263.Code || verifier != pkceVerifier0263 {
-		return officialminecraft.OAuthTokens{}, errors.New("unexpected native auth grant")
+		return officialminecraft.OAuthTokens{}, errors.New("получено неожиданное разрешение нативной авторизации")
 	}
 	return officialminecraft.OAuthTokens{AccessToken: "fixture-ms-bearer", RefreshToken: "fixture-refresh", ExpiresIn: 3600, TokenType: "Bearer"}, nil
 }
 func (f *browserMockProvider0263) Exchange(_ context.Context, bearer string) (officialminecraft.MinecraftToken, error) {
 	f.calls = append(f.calls, "xbox-minecraft")
 	if bearer != "fixture-ms-bearer" || f.failAt == "xbox-minecraft" {
-		return officialminecraft.MinecraftToken{}, errors.New("provider rejected Xbox chain")
+		return officialminecraft.MinecraftToken{}, errors.New("провайдер отклонил цепочку авторизации Xbox")
 	}
 	return officialminecraft.MinecraftToken{AccessToken: "fixture-minecraft-bearer", ExpiresIn: 7200, TokenType: "Bearer"}, nil
 }
 func (f *browserMockProvider0263) Profile(_ context.Context, bearer string) (officialminecraft.Profile, error) {
 	f.calls = append(f.calls, "java-profile")
 	if bearer != "fixture-minecraft-bearer" || f.failAt == "java-profile" {
-		return officialminecraft.Profile{}, errors.New("no Minecraft Java access")
+		return officialminecraft.Profile{}, errors.New("отсутствует доступ к Minecraft Java Edition")
 	}
 	return officialminecraft.Profile{ID: "123456781234123412341234567890ab", Name: "ExampleUser"}, nil
 }

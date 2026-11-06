@@ -63,7 +63,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0084_hwid_risk_recovery_0299",
 		"0085_auth_provider_wizard_02910",
 		"0086_auth_upgrade_integrity_02911",
-		"database contains migrations unknown to this binary",
+		"База данных содержит миграции, неизвестные этой версии программы",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",
 	} {
@@ -77,10 +77,10 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, required := range []string{
-		"unknown to this binary",
-		"pending migration",
-		"without sealed checksum",
-		"checksum mismatch",
+		"неизвестных этой версии программы",
+		"ожидают выполнения",
+		"без закреплённой контрольной суммы",
+		"несовпадений контрольных сумм миграций",
 		"nl_expected_migrations",
 	} {
 		if !strings.Contains(verify, required) {

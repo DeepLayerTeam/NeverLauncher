@@ -75,7 +75,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 			cached.Recovered = true
 			return cached, nil
 		}
-		return vanillaResolvedMetadata{}, fmt.Errorf("version.json %s: %w", selectedID, err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("файл version.json %s: %w", selectedID, err)
 	}
 	if err := saveVanillaMetadataCache(root, manifestURL, requestedVersion, manifestBytes, selected, versionBytes); err != nil {
 		return vanillaResolvedMetadata{}, fmt.Errorf("Кеш метаданных Mojang: %w", err)

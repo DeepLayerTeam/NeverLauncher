@@ -87,7 +87,7 @@ func TestOnlineBackupWALAndVerifiedRestore(t *testing.T) {
 			return e
 		}
 		if v != "committed WAL record" {
-			return errors.New("committed WAL record absent from online snapshot")
+			return errors.New("зафиксированная запись WAL отсутствует в снимке работающей базы данных")
 		}
 		return nil
 	}); err != nil {

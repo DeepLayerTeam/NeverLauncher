@@ -146,7 +146,7 @@ func verifyEvidence(b Bundle, dir string) error {
 	for _, check := range b.Checks {
 		raw, err := checkPrivateRegular(filepath.Join(dir, check.Name+".receipt.json"), 4<<20)
 		if err != nil {
-			return fmt.Errorf("%s receipt: %w", check.Name, err)
+			return fmt.Errorf("квитанция проверки %s: %w", check.Name, err)
 		}
 		var probe Probe
 		if err = decodeStrict(raw, &probe); err != nil {

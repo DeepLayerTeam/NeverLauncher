@@ -20,7 +20,7 @@ type minecraftVerifierFixture0268 struct {
 func (f *minecraftVerifierFixture0268) Profile(_ context.Context, token string) (officialminecraft.Profile, error) {
 	f.calls++
 	if token != f.token {
-		return officialminecraft.Profile{}, errors.New("invalid proof")
+		return officialminecraft.Profile{}, errors.New("недействительное подтверждение владения учётной записью")
 	}
 	return f.profile, f.err
 }

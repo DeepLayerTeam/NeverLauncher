@@ -121,7 +121,7 @@ func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
 	if _, ok := next["SKIN"].(map[string]any)["metadata"]; ok {
 		t.Fatalf("Классическая модель не должна содержать метаданные: %#v", next)
 	}
-	r.fail = errors.New("database unavailable")
+	r.fail = errors.New("база данных недоступна")
 	code, _, _ = requestLiveTexture0394(t, s, profile.UUID)
 	if code != http.StatusServiceUnavailable {
 		t.Fatalf("Ошибка БД замаскирована пустым скином: %d", code)

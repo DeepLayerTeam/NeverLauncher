@@ -57,7 +57,7 @@ func TestSQLite0471TruncatingCheckpoint(t *testing.T) {
 		var n int
 		e := q.QueryRowContext(ctx, `SELECT count(*) FROM events WHERE id='acknowledged'`).Scan(&n)
 		if e == nil && n != 1 {
-			return fmt.Errorf("committed WAL event lost: %d", n)
+			return fmt.Errorf("зафиксированное событие WAL потеряно: %d", n)
 		}
 		return e
 	}); err != nil {

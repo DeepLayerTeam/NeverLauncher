@@ -29,10 +29,10 @@ func (s officialJoinLinkStore0397) ListOfficialLinks0268(_ context.Context, owne
 	return s.links, nil
 }
 func (s officialJoinLinkStore0397) UpsertOfficialLink0268(context.Context, string, string, string) (repository.OfficialNeverLink0268, error) {
-	return repository.OfficialNeverLink0268{}, errors.New("unexpected mutation")
+	return repository.OfficialNeverLink0268{}, errors.New("неожиданное изменение связи учётной записи")
 }
 func (s officialJoinLinkStore0397) RemoveOfficialLink0268(context.Context, string, string) error {
-	return errors.New("unexpected mutation")
+	return errors.New("неожиданное изменение связи учётной записи")
 }
 
 func TestOfficialBridgeProfileRequiresLinkedProviderIdentity0397(t *testing.T) {

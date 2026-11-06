@@ -73,13 +73,13 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
       <label className="field">Загрузчик<select disabled={working} value={form.loader} onChange={e=>{edit('loader',e.target.value);if(e.target.value==='vanilla')edit('loaderVersion','')}}>
         {['vanilla','fabric','quilt','forge','neoforge'].map(loader=><option key={loader} value={loader}>{loader}</option>)}
       </select></label>
-      {form.loader!=='vanilla'&&<label className="field">Точная версия загрузчика<input disabled={working} value={form.loaderVersion} onChange={e=>edit('loaderVersion',e.target.value.trim())} placeholder="Без latest" /></label>}
+      {form.loader!=='vanilla'&&<label className="field">Точная версия загрузчика<input disabled={working} value={form.loaderVersion} onChange={e=>edit('loaderVersion',e.target.value.trim())} placeholder="Укажите конкретную версию" /></label>}
       <label className="field">Основная версия Java<input disabled={working} type="number" min="8" max="255" value={form.javaMajor} onChange={e=>edit('javaMajor',Number(e.target.value))} /></label>
       <label className="field">Пресет компонентов<input disabled={working} value={form.preset} onChange={e=>edit('preset',e.target.value)} /></label>
       <label className="field">Описание<textarea disabled={working} rows={3} value={form.description} onChange={e=>edit('description',e.target.value)} /></label>
     </div>
     <label className="check"><input disabled={working} type="checkbox" checked={form.isDefault} onChange={e=>edit('isDefault',e.target.checked)} />Профиль по умолчанию</label>
-    {selectedProfile && <p className="muted">Редактируемая ревизия: <strong>{baseRevision??'—'}</strong> · digest: <code>{selectedProfile.digest||'—'}</code></p>}
+    {selectedProfile && <p className="muted">Редактируемая ревизия: <strong>{baseRevision??'—'}</strong> · контрольная сумма: <code>{selectedProfile.digest||'—'}</code></p>}
     {selectedProfile && baseRevision !== null && selectedProfile.revision!==baseRevision &&
       <p role="alert" className="error">Профиль был изменён другим оператором (текущая ревизия {selectedProfile.revision}). Ваши изменения сохранены в форме, но для записи необходимо обновить профиль и применить изменения поверх новой ревизии.</p>}
     {issue && <p className="muted" role="status">{issue}</p>}

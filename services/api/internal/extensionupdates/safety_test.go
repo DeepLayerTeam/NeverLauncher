@@ -52,14 +52,14 @@ func (h *stoppedHost0499) Stop(_ context.Context, k extensionhost.Key) error {
 	h.stopCount++
 	h.order = append(h.order, k.ExtensionID)
 	if h.stopCount == h.failAt {
-		return errors.New("simulated unkillable JVM")
+		return errors.New("имитация процесса JVM, который невозможно завершить")
 	}
 	return h.fakeHost02011.Stop(context.Background(), k)
 }
 func (h *stoppedHost0499) StartInstallation(ctx context.Context, ins model.ExtensionInstall) error {
 	h.starts++
 	if h.starts == h.startFailAt {
-		return errors.New("simulated old JVM restart failure")
+		return errors.New("имитация ошибки повторного запуска старой JVM")
 	}
 	h.active = ins
 	return nil
@@ -98,7 +98,7 @@ func TestRecoveryRefusesRestoreWhenJVMCannotStop0499(t *testing.T) {
 type failedReadRepository0499 struct{ repository.Repository }
 
 func (r failedReadRepository0499) GetExtensionInstallState(context.Context, string, string, string) (model.ExtensionInstall, error) {
-	return model.ExtensionInstall{}, errors.New("database connection lost")
+	return model.ExtensionInstall{}, errors.New("соединение с базой данных потеряно")
 }
 func TestRecoveryDoesNotSilentlySkipDatabaseError0499(t *testing.T) {
 	ctx := context.Background()

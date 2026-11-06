@@ -105,7 +105,7 @@ func Probe(ctx context.Context, opt Options) Report {
 		}
 		r.Disks = append(r.Disks, d)
 		if d.AvailableBytes < MinDiskFreeBytes || d.AvailableFraction < MinDiskFreeFraction {
-			r.issue("critical", p.name+".free", fmt.Sprintf("%d bytes / %.1f%%", d.AvailableBytes, d.AvailableFraction*100), "Доступно менее 2 ГиБ или 10 % объёма", "Освободите место или перенесите данные и резервные копии на другой том; перед расширением проверьте восстановление")
+			r.issue("critical", p.name+".free", fmt.Sprintf("%d байт / %.1f%%", d.AvailableBytes, d.AvailableFraction*100), "Доступно менее 2 ГиБ или 10 % объёма", "Освободите место или перенесите данные и резервные копии на другой том; перед расширением проверьте восстановление")
 		}
 	}
 	if strings.EqualFold(opt.Driver, "postgres") || strings.EqualFold(opt.Driver, "postgresql") || strings.EqualFold(opt.Driver, "sql") {

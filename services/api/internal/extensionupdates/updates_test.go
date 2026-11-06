@@ -202,7 +202,7 @@ func TestInterruptedInFlightTransactionRecoveredBeforeNewApply02011(t *testing.T
 func TestFailedJavaMigrationRestoresCheckpoint04810(t *testing.T) {
 	r, target, original := updateFixture02011(t)
 	life := &fakeLifecycle02011{repo: r}
-	host := &fakeHost02011{healthy: true, content: `{"schema":1}`, migrationErr: errors.New("migration failed")}
+	host := &fakeHost02011{healthy: true, content: `{"schema":1}`, migrationErr: errors.New("миграция завершилась ошибкой")}
 	manager := &Manager{Repo: r, Lifecycle: life, Host: host, Config: Config{HealthTimeout: time.Second}}
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}}}
 	tx, err := manager.Apply(context.Background(), plan)

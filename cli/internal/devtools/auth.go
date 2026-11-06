@@ -180,7 +180,7 @@ func (f *FixtureServer) Handler() http.Handler {
 		}
 		tok, e := f.Issue(f.user, []string{"test:player"}, 5*time.Minute)
 		if e != nil {
-			writeFixtureJSON(w, 500, map[string]string{"error": "internal error"})
+			writeFixtureJSON(w, 500, map[string]string{"error": "внутренняя ошибка"})
 			return
 		}
 		f.addEvent("auth.login.succeeded", f.user)

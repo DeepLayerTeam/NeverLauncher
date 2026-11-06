@@ -67,7 +67,7 @@ func TestLocalDiscordSession(t *testing.T) {
 		_ = c.SetDeadline(time.Now().Add(4 * time.Second))
 		op, msg, err := readFrame(c)
 		if err != nil || op != 0 || string(msg["client_id"]) != `"123456789012345678"` {
-			errCh <- fmt.Errorf("handshake %d %v %v", op, msg, err)
+			errCh <- fmt.Errorf("ошибка рукопожатия Discord RPC: %d %v %v", op, msg, err)
 			return
 		}
 		if err := writeFrame(c, 1, map[string]any{"cmd": "DISPATCH", "evt": "READY", "data": map[string]any{}}); err != nil {
@@ -76,7 +76,7 @@ func TestLocalDiscordSession(t *testing.T) {
 		}
 		op, msg, err = readFrame(c)
 		if err != nil || op != 1 || string(msg["cmd"]) != `"SET_ACTIVITY"` {
-			errCh <- fmt.Errorf("activity %d %v %v", op, msg, err)
+			errCh <- fmt.Errorf("ошибка передачи активности Discord RPC: %d %v %v", op, msg, err)
 			return
 		}
 		var args struct {

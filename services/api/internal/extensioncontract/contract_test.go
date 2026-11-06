@@ -6,7 +6,7 @@ func TestCanonicalAPIVersion(t *testing.T) {
 	for _, value := range []string{"1.0", "1.0.0", "v1", "3.7", "3.7.0"} {
 		got, err := CanonicalAPIVersion(value)
 		if err != nil || got != ExtensionAPIVersion {
-			t.Fatalf("CanonicalAPIVersion(%q) = %q, %v", value, got, err)
+			t.Fatalf("проверка CanonicalAPIVersion(%q): получено %q, ошибка %v", value, got, err)
 		}
 	}
 	if _, err := CanonicalAPIVersion("2.0"); err == nil {

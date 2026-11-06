@@ -82,17 +82,17 @@ func TestCommittedAndRollback(t *testing.T) {
 			return e
 		}
 		if n != 42 {
-			return fmt.Errorf("committed data lost: %d", n)
+			return fmt.Errorf("зафиксированные данные потеряны: %d", n)
 		}
 		var count int
 		if e := q.QueryRowContext(ctx, "SELECT count(*) FROM t WHERE id='rolled_back'").Scan(&count); e != nil {
 			return e
 		}
 		if count != 0 {
-			return errors.New("rollback data survived")
+			return errors.New("данные отменённой транзакции сохранились")
 		}
 		if _, e := q.ExecContext(ctx, "DELETE FROM t"); e == nil {
-			return errors.New("reader has write access")
+			return errors.New("подключение только для чтения допускает запись")
 		}
 		return nil
 	})
@@ -147,7 +147,7 @@ func TestConcurrentWritersAreSerialized(t *testing.T) {
 			return e
 		}
 		if n != 60 {
-			return fmt.Errorf("lost update, n=%d", n)
+			return fmt.Errorf("потеряно обновление, n=%d", n)
 		}
 		return nil
 	})
@@ -261,13 +261,13 @@ func TestAbruptExitRecovery(t *testing.T) {
 			return e
 		}
 		if n != 1 {
-			return fmt.Errorf("prior committed write lost: %d", n)
+			return fmt.Errorf("предыдущая зафиксированная запись потеряна: %d", n)
 		}
 		if e := q.QueryRowContext(ctx, "SELECT count(*) FROM crash_test WHERE id='during_crash'").Scan(&n); e != nil {
 			return e
 		}
 		if n != 0 {
-			return errors.New("crash-before-commit became durable")
+			return errors.New("незафиксированная транзакция сохранилась после аварийного завершения")
 		}
 		return nil
 	}); err != nil {
@@ -306,7 +306,7 @@ func TestCanceledTxnRollback(t *testing.T) {
 			return e
 		}
 		if n != 0 {
-			return fmt.Errorf("canceled write committed: %d", n)
+			return fmt.Errorf("отменённая операция записи была зафиксирована: %d", n)
 		}
 		return nil
 	}); err != nil {

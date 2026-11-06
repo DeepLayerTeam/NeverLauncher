@@ -76,7 +76,7 @@ func TestAddressBlockAndDNSRebinding(t *testing.T) {
 	}
 	f.dial = func(context.Context, string, string) (net.Conn, error) {
 		called = true
-		return nil, errors.New("should not dial")
+		return nil, errors.New("сетевое подключение не должно выполняться")
 	}
 	if _, err := f.dialValidated(context.Background(), "tcp", "textures.example.org:443"); !errors.Is(err, ErrUnsafe) || called {
 		t.Fatalf("повторная привязка DNS не заблокирована: %v, соединение=%t", err, called)

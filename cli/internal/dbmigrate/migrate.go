@@ -87,10 +87,10 @@ func BuildApplyScript() (string, error) {
 	b.WriteString(`CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, checksum TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '', applied_at TIMESTAMPTZ NOT NULL DEFAULT now());` + "\n")
 	b.WriteString(`ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS version TEXT; ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum TEXT NOT NULL DEFAULT ''; ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''; ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS applied_at TIMESTAMPTZ NOT NULL DEFAULT now();` + "\n")
 	b.WriteString(`DO $$ BEGIN IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='schema_migrations' AND column_name='id') THEN EXECUTE 'UPDATE schema_migrations SET version=id WHERE version IS NULL AND id IS NOT NULL'; END IF; END $$; CREATE UNIQUE INDEX IF NOT EXISTS idx_schema_migrations_version_p0 ON schema_migrations(version);` + "\n")
-	b.WriteString("DO $$ BEGIN IF EXISTS(SELECT 1 FROM schema_migrations WHERE version IS NOT NULL AND version NOT IN (" + knownVersionsSQL(ms) + ")) THEN RAISE EXCEPTION 'database contains migrations unknown to this binary; refusing downgrade/apply'; END IF; END $$;\n")
+	b.WriteString("DO $$ BEGIN IF EXISTS(SELECT 1 FROM schema_migrations WHERE version IS NOT NULL AND version NOT IN (" + knownVersionsSQL(ms) + ")) THEN RAISE EXCEPTION 'База данных содержит миграции, неизвестные этой версии программы; применение и откат запрещены'; END IF; END $$;\n")
 	for i, m := range ms {
 		varName := fmt.Sprintf("applied_%d", i)
-		b.WriteString("DO $$ BEGIN IF EXISTS(SELECT 1 FROM schema_migrations WHERE version=" + sqlLiteral(m.Version) + " AND checksum<>'' AND checksum<>" + sqlLiteral(m.Checksum) + ") THEN RAISE EXCEPTION 'migration checksum mismatch: " + m.Version + "'; END IF; END $$;\n")
+		b.WriteString("DO $$ BEGIN IF EXISTS(SELECT 1 FROM schema_migrations WHERE version=" + sqlLiteral(m.Version) + " AND checksum<>'' AND checksum<>" + sqlLiteral(m.Checksum) + ") THEN RAISE EXCEPTION 'Контрольная сумма миграции не совпадает: " + m.Version + "'; END IF; END $$;\n")
 		b.WriteString("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=" + sqlLiteral(m.Version) + ") AS " + varName + " \\gset\n")
 		b.WriteString("\\if :" + varName + "\n")
 		b.WriteString("UPDATE schema_migrations SET checksum=" + sqlLiteral(m.Checksum) + ", description=CASE WHEN description='' THEN " + sqlLiteral(m.Version) + " ELSE description END WHERE version=" + sqlLiteral(m.Version) + " AND checksum='';\n")
@@ -117,7 +117,7 @@ func BuildVerifyScript() (string, error) {
 	}
 	var b strings.Builder
 	b.WriteString("\\set ON_ERROR_STOP on\n")
-	b.WriteString("DO $$ BEGIN IF to_regclass(current_schema() || '.schema_migrations') IS NULL THEN RAISE EXCEPTION 'schema_migrations table is missing'; END IF; END $$;\n")
+	b.WriteString("DO $$ BEGIN IF to_regclass(current_schema() || '.schema_migrations') IS NULL THEN RAISE EXCEPTION 'Таблица schema_migrations отсутствует'; END IF; END $$;\n")
 	b.WriteString("CREATE TEMP TABLE nl_expected_migrations(version TEXT PRIMARY KEY, checksum TEXT NOT NULL) ON COMMIT PRESERVE ROWS;\n")
 	b.WriteString("INSERT INTO nl_expected_migrations(version,checksum) VALUES " + expectedValuesSQL(ms) + ";\n")
 	b.WriteString(`DO $$ DECLARE broken BIGINT; BEGIN

@@ -45,7 +45,7 @@ func (c *behaviorConnector) Refresh(_ context.Context, token string) (authconnec
 }
 func (c *behaviorConnector) Revoke(_ context.Context, r authconnector.RevokeRequest) error {
 	if r.Subject != c.subject || r.ProviderToken != "token-two" {
-		return errors.New("wrong token")
+		return errors.New("неверный токен")
 	}
 	c.revoked = true
 	return nil

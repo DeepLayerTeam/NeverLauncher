@@ -31,7 +31,7 @@ type databaseFake struct {
 
 func (f *databaseFake) GetMinecraftProfileByUUID(uuid string) (model.MinecraftProfile, error) {
 	if uuid != f.profile.UUID {
-		return model.MinecraftProfile{}, errors.New("not found")
+		return model.MinecraftProfile{}, errors.New("профиль не найден")
 	}
 	return f.profile, nil
 }

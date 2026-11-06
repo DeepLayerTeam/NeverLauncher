@@ -164,7 +164,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 	// Неудачное включение службы не должно оставлять частично установленный сервис.
 	hostSystemctl02811 = func(args ...string) error {
 		if len(args) > 1 && args[1] == "enable" {
-			return fmt.Errorf("simulated failure")
+			return fmt.Errorf("имитация ошибки systemd")
 		}
 		return nil
 	}

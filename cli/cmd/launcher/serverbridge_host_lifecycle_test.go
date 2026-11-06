@@ -235,7 +235,7 @@ func TestHostLifecycle0414ActualCLIAndRemoteEffects(t *testing.T) {
 	run := func(action string) error {
 		command := exec.Command(cli, "server-bridge", "host", action, "--server-root", root)
 		if output, err := command.CombinedOutput(); err != nil {
-			return fmt.Errorf("actual CLI %s: %w: %s", action, err, output)
+			return fmt.Errorf("вызов реального CLI %s: %w: %s", action, err, output)
 		}
 		return nil
 	}
