@@ -17,7 +17,7 @@ import (
 func TestTextureURLImportProvenance0254(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0254")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL and TEST_PG_DSN_0254")
+		t.Skip("Требуется одноразовая база PostgreSQL и переменная TEST_PG_DSN_0254")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

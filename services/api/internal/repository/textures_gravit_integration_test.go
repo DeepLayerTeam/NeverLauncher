@@ -20,7 +20,7 @@ import (
 func TestTextureGravitImportPostgres02510(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_02510")
 	if dsn == "" {
-		t.Skip("TEST_PG_DSN_02510 not provided")
+		t.Skip("Не задана переменная TEST_PG_DSN_02510")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 	input := VerifiedTexture0252{Digest: digest, Size: 512, Width: 64, Height: 64, Driver: "local", ObjectKey: "texture-blobs/sha256/" + digest[:2] + "/" + digest + ".png", Kind: "skin", Model: "slim", Visibility: "public", Source: "managed-gravit-import", ExpectedRevision: 0, GravitSourceID: "gravit-prod", GravitRowID: "upstream-row", GravitExternalUUID: "11111111-2222-4333-8444-555555555555", GravitOriginalHash: digest}
 	already, rev, exists, e := r.GravitImportState02510(ctx, input.GravitSourceID, input.GravitRowID, p, "skin")
 	if e != nil || already || exists || rev != 0 {
-		t.Fatalf("preflight %v %v %v %v", already, rev, exists, e)
+		t.Fatalf("Предварительная проверка: %v %v %v %v", already, rev, exists, e)
 	}
 	if e = r.StageTextureUpload0253(ctx, p, input); e != nil {
 		t.Fatal(e)

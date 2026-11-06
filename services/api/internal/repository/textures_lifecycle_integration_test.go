@@ -20,7 +20,7 @@ import (
 func TestTextureLifecyclePostgres02511(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_02511")
 	if dsn == "" {
-		t.Skip("TEST_PG_DSN_02511 not provided")
+		t.Skip("Не задана переменная TEST_PG_DSN_02511")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -152,7 +152,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	}
 	candidateRows, err := r.ClaimTextureGarbage02511(ctx, "local", 1)
 	if err != nil || len(candidateRows) != 1 {
-		t.Fatalf("0.25.12 GC claim: %+v %v", candidateRows, err)
+		t.Fatalf("Захват сборщика мусора 0.25.12: %+v %v", candidateRows, err)
 	}
 	gc := candidateRows[0]
 	called := 0

@@ -114,7 +114,7 @@ func TestVerifyRegistryPackageAcceptsOlderCLISBOM0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if inspected.Manifest.ID != "example.registry-extension" || inspected.KeyFingerprint == "" {
-		t.Fatalf("inspect=%+v", inspected)
+		t.Fatalf("Проверка содержимого=%+v", inspected)
 	}
 	verified, err := VerifyFile(packagePath, public)
 	if err != nil {
@@ -144,7 +144,7 @@ func TestExtractPayloadFile0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if manifest.ID != "example.registry-extension" || manifest.Version != "1.2.3" {
-		t.Fatalf("manifest=%+v", manifest)
+		t.Fatalf("Манифест=%+v", manifest)
 	}
 	data, err := os.ReadFile(filepath.Join(dst, "backend", "extension"))
 	if err != nil {

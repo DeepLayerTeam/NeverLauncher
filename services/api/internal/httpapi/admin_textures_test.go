@@ -23,11 +23,11 @@ func TestTextureAdminRBAC0259(t *testing.T) {
 	} {
 		anon := request0211(t, h, tc.method, tc.path, "", tc.body)
 		if anon.Code != 401 {
-			t.Errorf("anonymous %s %s: %d", tc.method, tc.path, anon.Code)
+			t.Errorf("Анонимный запрос %s %s: %d", tc.method, tc.path, anon.Code)
 		}
 		denied := request0211(t, h, tc.method, tc.path, viewer, tc.body)
 		if denied.Code != 403 {
-			t.Errorf("viewer %s %s: %d", tc.method, tc.path, denied.Code)
+			t.Errorf("Просмотр %s %s: %d", tc.method, tc.path, denied.Code)
 		}
 	}
 }

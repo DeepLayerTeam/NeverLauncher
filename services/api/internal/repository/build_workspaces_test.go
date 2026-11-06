@@ -28,7 +28,7 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 	updated.State = "staged"
 	stored, err := repo.SaveBuildWorkspace(ctx, updated)
 	if err != nil || stored.Revision != 2 {
-		t.Fatalf("save: %#v %v", stored, err)
+		t.Fatalf("Сохранение: %#v %v", stored, err)
 	}
 	if _, err = repo.SaveBuildWorkspace(ctx, updated); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Ошибочно разрешено устаревшее обновление: %v", err)

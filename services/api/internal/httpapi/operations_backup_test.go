@@ -90,7 +90,7 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Создание: %d %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		BackupID string `json:"backupId"`

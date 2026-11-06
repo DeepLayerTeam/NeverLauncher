@@ -18,4 +18,4 @@ func TestEnvironmentRejectsIncompleteHost(t *testing.T){
   t.Setenv("LAUNCHER_EXTENSION_HOST_URL","");t.Setenv("LAUNCHER_EXTENSION_HOST_TOKEN","");t.Setenv("LAUNCHER_EXTENSION_ID","");t.Setenv("LAUNCHER_EXTENSION_INSTANCE_ID","")
   if _,err:=Environment();err==nil{t.Fatal("Ожидалась ошибка неполного окружения узла")}
 }
-func TestNewUsesBoundedHTTPClient(t *testing.T){c:=New(HostEnvironment{});if c.http.Timeout!=10*time.Second{t.Fatalf("timeout=%s",c.http.Timeout)}}
+func TestNewUsesBoundedHTTPClient(t *testing.T){c:=New(HostEnvironment{});if c.http.Timeout!=10*time.Second{t.Fatalf("тайм-аут=%s",c.http.Timeout)}}

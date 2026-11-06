@@ -32,7 +32,7 @@ func TestEnvelopeAndPrivacy(t *testing.T) {
 	case raw := <-got:
 		for _, s := range []string{"abc123", "alice@example.com", "/home/alice", "/Users/bob"} {
 			if strings.Contains(raw, s) {
-				t.Errorf("leak: %s", s)
+				t.Errorf("Утечка: %s", s)
 			}
 		}
 		lines := strings.Split(strings.TrimSpace(raw), "\n")

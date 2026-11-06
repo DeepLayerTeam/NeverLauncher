@@ -34,7 +34,7 @@ func TestMigrationBridgeLive0446(t *testing.T) {
 			tt.change(&v)
 			state, _ := migrationBridgeLive0446(v, "project1", "profile1", strings.Repeat("a", 64), now)
 			if state != tt.state {
-				t.Fatalf("got %q want %q", state, tt.state)
+				t.Fatalf("Получено %q, ожидалось %q", state, tt.state)
 			}
 		})
 	}

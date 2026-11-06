@@ -25,7 +25,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	data := []byte("signed extension package bytes; no external blob dependency")
 	pkg, created, e := r.PutPackage(ctx, data, "owner")
 	if e != nil || !created {
-		t.Fatalf("put: %v %v", created, e)
+		t.Fatalf("Запись: %v %v", created, e)
 	}
 	p2, created, e := r.PutPackage(ctx, data, "owner")
 	if e != nil || created || pkg.Digest != p2.Digest {
@@ -67,7 +67,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 			if err == nil {
 				success.Add(1)
 			} else if !errors.Is(err, ErrConflict) {
-				t.Errorf("CAS: %v", err)
+				t.Errorf("Операция CAS: %v", err)
 			}
 		}()
 	}

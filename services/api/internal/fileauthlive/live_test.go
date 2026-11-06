@@ -92,7 +92,7 @@ func TestLiveFileAuthSubjectDeletionAndSymlink0426(t *testing.T) {
 	}
 	profile, err := c.ResolveProfile(context.Background(), authconnector.ResolveRequest{Subject: firstUUID0426})
 	if err != nil || profile.MinecraftUUID != firstUUID0426 {
-		t.Fatalf("profile %v %v", profile, err)
+		t.Fatalf("профиль: %v %v", profile, err)
 	}
 	if err := os.WriteFile(path, liveDatabase0426(secondUUID0426, "Bob_426", "another"), 0600); err != nil {
 		t.Fatal(err)

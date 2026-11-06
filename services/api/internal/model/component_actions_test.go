@@ -32,7 +32,7 @@ func TestSignedOptionalActionsEndToEnd0245(t *testing.T) {
 	}
 	for _, preset := range []string{"minimal", "optimized", "quality"} {
 		if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, preset); err != nil {
-			t.Fatalf("preset %s %v", preset, err)
+			t.Fatalf("предустановка %s: %v", preset, err)
 		}
 	}
 	m.ComponentCatalog.Components[1].Actions[2].Args[0] = "-Dfabric.log.level=trace"

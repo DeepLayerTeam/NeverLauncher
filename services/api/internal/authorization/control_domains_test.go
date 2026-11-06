@@ -21,7 +21,7 @@ func TestControlDomains0281ClosedDispatchTable(t *testing.T) {
 	for kind, want := range commands {
 		got, ok := GameCommandPermission(kind)
 		if !ok || got != want || !IsProjectAction(got) {
-			t.Fatalf("%s: permission %q, known %t", kind, got, ok)
+			t.Fatalf("%s: разрешение %q, известно=%t", kind, got, ok)
 		}
 		domain, ok := ControlActionDomain(got)
 		if !ok || domain != DomainGame {

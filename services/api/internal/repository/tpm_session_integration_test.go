@@ -19,7 +19,7 @@ import (
 func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires real disposable PostgreSQL")
+		t.Skip("Требуется настоящая одноразовая база PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

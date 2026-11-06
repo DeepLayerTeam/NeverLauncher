@@ -24,7 +24,7 @@ func TestRoles0455(t *testing.T) {
 	for _, c := range cases {
 		role, err := parseProcessRole0455(c.input, c.mode)
 		if (err == nil) != c.valid {
-			t.Errorf("%q %q: error=%v", c.input, c.mode, err)
+			t.Errorf("%q %q: ошибка=%v", c.input, c.mode, err)
 			continue
 		}
 		if c.valid && (role.api != c.api || role.workers != c.workers) {
@@ -41,7 +41,7 @@ func TestWorkerProbe0455(t *testing.T) {
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
 		if rr.Code != expected {
-			t.Errorf("%s status %d != %d", path, rr.Code, expected)
+			t.Errorf("%s: статус %d != %d", path, rr.Code, expected)
 		}
 	}
 	check("/ready", http.StatusServiceUnavailable)

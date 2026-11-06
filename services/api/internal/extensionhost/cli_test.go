@@ -66,7 +66,7 @@ print(json.dumps({"command":sys.argv[1],"target":os.environ.get("LAUNCHER_EXTENS
 	})
 	result, err := host.RunCLI0209(context.Background(), install, []string{"status"})
 	if err != nil {
-		t.Fatalf("RunCLI0209: %v / %#v", err, result)
+		t.Fatalf("Запуск CLI: %v / %#v", err, result)
 	}
 	if result.ExitCode != 0 || !strings.Contains(result.Stdout, `"target": "cli"`) || !strings.Contains(result.Stdout, `"dbSecretPresent": false`) {
 		t.Fatalf("Неожиданный результат: %#v", result)
@@ -137,7 +137,7 @@ time.sleep(30)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	if err := host.Stop(ctx, key); err != nil {
-		t.Fatalf("Stop: %v", err)
+		t.Fatalf("Остановка: %v", err)
 	}
 	select {
 	case err := <-done:

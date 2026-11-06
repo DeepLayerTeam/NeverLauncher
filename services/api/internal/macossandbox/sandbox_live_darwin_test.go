@@ -39,7 +39,7 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 			}
 			h, err := Prepare(options)
 			if err != nil {
-				t.Fatalf("prepare: %v", err)
+				t.Fatalf("Подготовка: %v", err)
 			}
 			defer h.Close()
 			if err = h.Cmd.Start(); err != nil {
@@ -85,7 +85,7 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 // вспомогательном процессе.
 func TestSignedSandboxLiveShutdown04311(t *testing.T) {
 	if os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE") != "1" {
-		t.Skip("native macOS only")
+		t.Skip("Только для нативной macOS")
 	}
 	h, err := Prepare(Options{PayloadRoot: os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE_ROOT"), Entrypoint: os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE_FIXTURE"), Args: []string{"stay"}, HostURL: "http://127.0.0.1:19090", HostHandler: http.NotFoundHandler(), Policy: Policy{MaxProcesses: 1, MaxMemoryBytes: 512 << 20, MaxCPUPercent: 100, TimeoutSeconds: 20}})
 	if err != nil {

@@ -101,7 +101,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	id := "parity-0371-" + scope + "-" + suffix
 	p, err := s.SaveProject(model.Project{ID: id, Name: "Parity project"})
 	if err != nil {
-		t.Fatalf("SaveProject: %v", err)
+		t.Fatalf("Сохранение проекта: %v", err)
 	}
 	if p.ID != id || p.DefaultChannel != "stable" {
 		t.Fatalf("идентичность проекта или значение по умолчанию: %#v", p)
@@ -173,7 +173,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	// Идентичность пользователя и роли проекта сохраняются после настоящего повторного открытия Backend.
 	u, err := s.SaveUser(model.User{ID: id + "-owner", Email: id + "@example.invalid", DisplayName: "Parity Owner", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{id: "owner"}})
 	if err != nil {
-		t.Fatalf("SaveUser: %v", err)
+		t.Fatalf("Сохранение пользователя: %v", err)
 	}
 	if u.ProjectRoles[id] != "owner" {
 		t.Fatalf("Отсутствует привязка роли: %+v", u.ProjectRoles)
@@ -185,7 +185,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		t.Fatalf("Отключение завершилось ошибкой, роли потеряны: %+v / %v", disabled, err)
 	}
 	if err := s.Close(); err != nil {
-		t.Fatalf("close: %v", err)
+		t.Fatalf("Закрытие: %v", err)
 	}
 	s = open()
 	defer s.Close()

@@ -29,7 +29,7 @@ func TestRevokedDeviceKeyCannotBeResurrected0434(t *testing.T) {
 	}
 	revoked, err := repo.RevokeTrustedDevice(ctx, enrolled.UserID, enrolled.ID, "device-compromised")
 	if err != nil || revoked.Device.Status != "revoked" {
-		t.Fatalf("revoke: %+v %v", revoked, err)
+		t.Fatalf("Отзыв: %+v %v", revoked, err)
 	}
 	if _, err := repo.SaveTrustedDevice(ctx, enrolled); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Устаревший процесс записи устройства восстановил отозванный ключ: %v", err)

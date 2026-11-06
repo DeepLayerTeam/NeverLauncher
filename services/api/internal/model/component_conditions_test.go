@@ -33,7 +33,7 @@ func TestConditionalResolverEndToEnd0244(t *testing.T) {
 	}
 	selected, err = ResolveCatalogConditional0244(updated, "quality", env)
 	if err != nil || !reflect.DeepEqual(selected, []string{"core", "performance.sodium", "shaders"}) {
-		t.Fatalf("quality: %v %v", selected, err)
+		t.Fatalf("качество: %v %v", selected, err)
 	}
 	for _, modify := range []struct {
 		name   string
@@ -107,7 +107,7 @@ func TestConditionalVersionRanges0244(t *testing.T) {
 	v := &ComponentConditions0244{SchemaVersion: "1.0", MinecraftVersionRange: ">=1.20.0 <1.22.0", LoaderVersionRange: "^0.16.0"}
 	env := ComponentEnvironment0244{MinecraftVersion: "1.21.1", LoaderVersion: "0.16.2"}
 	if why := unavailable0244(v, env); why != "" {
-		t.Fatalf("compatible: %s", why)
+		t.Fatalf("совместимо: %s", why)
 	}
 	env.MinecraftVersion = "1.19.4"
 	if why := unavailable0244(v, env); why == "" {

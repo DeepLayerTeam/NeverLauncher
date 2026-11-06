@@ -101,7 +101,7 @@ func TestJavaRuntimeProbe0305(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Feature != 21 {
-		t.Fatalf("version=%d", got.Feature)
+		t.Fatalf("версия=%d", got.Feature)
 	}
 	if _, err := ProbeRuntime(context.Background(), java, 22); err == nil {
 		t.Fatal("ошибочно принята завышенная требуемая версия Runtime")

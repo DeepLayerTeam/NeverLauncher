@@ -18,7 +18,7 @@ func TestNetworkCapacityValidation0288(t *testing.T) {
 	for _, tc := range tests {
 		value, err := parseNetworkCapacity0288([]byte(tc.in))
 		if (err == nil) != tc.ok {
-			t.Errorf("%q: err=%v", tc.in, err)
+			t.Errorf("%q: ошибка=%v", tc.in, err)
 			continue
 		}
 		if !tc.ok {
@@ -29,7 +29,7 @@ func TestNetworkCapacityValidation0288(t *testing.T) {
 			continue
 		}
 		if value != nil && *value != tc.value {
-			t.Errorf("%q: got %d", tc.in, *value)
+			t.Errorf("%q: получено %d", tc.in, *value)
 		}
 	}
 }

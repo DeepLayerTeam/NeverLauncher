@@ -20,7 +20,7 @@ func TestProductionReleaseCandidateRequired01511(t *testing.T) {
 	}
 	for _, tc := range cases {
 		if got := productionReleaseCandidateRequired01511(tc.version); got != tc.want {
-			t.Fatalf("productionReleaseCandidateRequired01511(%q)=%v want=%v", tc.version, got, tc.want)
+			t.Fatalf("productionReleaseCandidateRequired01511(%q)=%v, ожидалось=%v", tc.version, got, tc.want)
 		}
 	}
 }

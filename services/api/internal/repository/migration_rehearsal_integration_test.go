@@ -52,7 +52,7 @@ func TestMigrationRehearsal03310(t *testing.T) {
 				value = project + "-ws"
 			}
 			if _, e := r.db.ExecContext(c, q, value); e != nil {
-				t.Log("cleanup:", e)
+				t.Log("Очистка:", e)
 			}
 		}
 		_, _ = r.db.ExecContext(c, `DELETE FROM projects WHERE id=$1`, project)
@@ -109,14 +109,14 @@ func TestMigrationRehearsal03310(t *testing.T) {
 	}
 	saved, e := r.SaveMigrationRehearsal03310(ctx, runID, report)
 	if e != nil || !saved.Ready || saved.CutoverAllowed {
-		t.Fatalf("good stage: %+v %v", saved, e)
+		t.Fatalf("Корректный этап: %+v %v", saved, e)
 	}
 	before, e := r.GetMigration0331(ctx, runID)
 	if e != nil {
 		t.Fatal(e)
 	}
 	if _, e = r.SaveMigrationRehearsal03310(ctx, runID, report); e != nil {
-		t.Fatal("retry:", e)
+		t.Fatal("Повтор:", e)
 	}
 	after, e := r.GetMigration0331(ctx, runID)
 	if e != nil || before.Revision != after.Revision {

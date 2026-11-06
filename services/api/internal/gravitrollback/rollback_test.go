@@ -28,7 +28,7 @@ func TestCompareRefusesPostSwitchWrites(t *testing.T) {
 	p, r := fixture()
 	ok, e := Compare(p, r, r.RunID)
 	if e != nil || !ok.Ready || len(ok.Blockers) != 0 {
-		t.Fatalf("clean: %+v %v", ok, e)
+		t.Fatalf("Очистка: %+v %v", ok, e)
 	}
 	p.Current.Players = append([]gr.Player(nil), p.Current.Players...)
 	p.Current.Players[0].Economy = "101"

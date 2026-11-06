@@ -50,7 +50,7 @@ func TestPublicProductionDeliveryMatrix0159CoversSixTargets(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(matrix.Targets) != 6 {
-		t.Fatalf("targets=%d", len(matrix.Targets))
+		t.Fatalf("целей=%d", len(matrix.Targets))
 	}
 	if len(matrix.Assets) != len(manifest.Artifacts) {
 		t.Fatalf("ресурсов=%d, доставлено=%d", len(matrix.Assets), len(manifest.Artifacts))

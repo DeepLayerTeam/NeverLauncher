@@ -49,7 +49,7 @@ def binary_jar(core: Path, sources: list[Path], main: str, dest: Path,
 
 def verify_one(case: str, jar: Path, evidence: dict) -> None:
     with zipfile.ZipFile(jar) as data:
-        assert data.testzip() is None, 'corrupt JAR'
+        assert data.testzip() is None, 'Повреждённый JAR-файл'
         assert 'ru/launcher/sdk/host/JavaExtensionHost.class' in data.namelist()
     run(sys.executable, str(FIXTURES / case / 'test-runner.py'), cwd=ROOT, timeout=70)
     evidence[case] = {'jarSha256': hashlib.sha256(jar.read_bytes()).hexdigest(),

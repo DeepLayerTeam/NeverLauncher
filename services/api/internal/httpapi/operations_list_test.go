@@ -24,7 +24,7 @@ func TestOperationList02110RejectsUnscopedAndInvalidRequests(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		h.ServeHTTP(recorder, request)
 		if recorder.Code != tc.status {
-			t.Errorf("%s => %d, wanted %d: %s", tc.path, recorder.Code, tc.status, recorder.Body.String())
+			t.Errorf("%s: получено %d, ожидалось %d: %s", tc.path, recorder.Code, tc.status, recorder.Body.String())
 		}
 		if tc.status == http.StatusOK && (!strings.Contains(recorder.Body.String(), `"items"`) || strings.Contains(recorder.Body.String(), `"leaseToken"`)) {
 			t.Errorf("Небезопасный ответ списка: %s", recorder.Body.String())

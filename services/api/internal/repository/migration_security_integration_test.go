@@ -104,7 +104,7 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	kid, manifestHash := "new-kid-0336", strings.Repeat("b", 64)
 	preview, err := repo.ResetMigrationTrust0336(ctx, run.ID, kid, manifestHash, true)
 	if err != nil || preview.ImportedAccounts != 1 || preview.AppliedAt != nil {
-		t.Fatalf("preview %#v %v", preview, err)
+		t.Fatalf("Предпросмотр: %#v %v", preview, err)
 	}
 	var state string
 	if err = repo.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, sid).Scan(&state); err != nil || state != "active" {
@@ -112,7 +112,7 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	}
 	report, err := repo.ResetMigrationTrust0336(ctx, run.ID, kid, manifestHash, false)
 	if err != nil || report.AppliedAt == nil || report.SessionsRevoked != 1 || report.DevicesRevoked != 1 {
-		t.Fatalf("reset %#v %v", report, err)
+		t.Fatalf("Сброс: %#v %v", report, err)
 	}
 	for _, q := range []string{`SELECT status FROM auth_sessions WHERE id=$1`, `SELECT status FROM refresh_token_families WHERE session_id=$1`} {
 		if err = repo.db.QueryRowContext(ctx, q, sid).Scan(&state); err != nil || state != "revoked" {

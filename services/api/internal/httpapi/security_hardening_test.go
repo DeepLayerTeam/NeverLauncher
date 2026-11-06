@@ -68,7 +68,7 @@ func postJSON902(t *testing.T, h http.Handler, path, body, token string) map[str
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code < 200 || res.Code >= 300 {
-		t.Fatalf("%s returned %d: %s", path, res.Code, res.Body.String())
+		t.Fatalf("%s: возвращён код %d, %s", path, res.Code, res.Body.String())
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {

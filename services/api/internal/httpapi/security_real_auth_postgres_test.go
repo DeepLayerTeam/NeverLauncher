@@ -25,7 +25,7 @@ import (
 func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
+		t.Skip("Требуется одноразовая база данных, заданная через LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()

@@ -62,8 +62,8 @@ public final class AdvancedEvents0487Tests {
                     check(event.metadata().aggregateId().equals("rel-1"),"метаданные агрегата переданы");
                     check(event.event().idempotencyKey().equals("unique-1"),"устойчивый ключ идемпотентности передан");
                     int n=executions.incrementAndGet();
-                    if(n==1)throw new java.io.IOException("temporary backend unavailable");
-                    if(n==2)throw new RuntimeEvents.PermanentFailure("invalid task");
+                    if(n==1)throw new java.io.IOException("Временная недоступность сервера");
+                    if(n==2)throw new RuntimeEvents.PermanentFailure("Недопустимое задание");
                 });
                 AtomicInteger hookRuns=new AtomicInteger();
                 services.events().subscribeHook("release.before-publish",null,Json::object,event->{

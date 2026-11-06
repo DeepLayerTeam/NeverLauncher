@@ -43,7 +43,7 @@ func TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341(t *testing.T) {
 		"direct already-published insert": `INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) SELECT id||'-x',project_id,profile_id,'stable','2','published','{}'::jsonb FROM release_versions WHERE id=$1`,
 	} {
 		if _, e := repo.db.ExecContext(ctx, query, releaseID); e == nil || !strings.Contains(e.Error(), "stable_runtime_gate_0341") {
-			t.Errorf("%s bypass: %v", label, e)
+			t.Errorf("%s: обход проверки: %v", label, e)
 		}
 	}
 	// Защита не затрагивает другой канал.

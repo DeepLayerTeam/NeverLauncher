@@ -49,7 +49,7 @@ func TestAuthenticateRejectsUnlinkedIdentity(t *testing.T) {
 	core := New(repository.NewMemoryRepository("http://example.test"))
 	_ = core.Register(unlinkedConnector{})
 	if _, err := core.AuthenticatePassword(context.Background(), "external", authconnector.PasswordRequest{}); err != ErrIdentityNotLinked {
-		t.Fatalf("got %v", err)
+		t.Fatalf("получено %v", err)
 	}
 }
 

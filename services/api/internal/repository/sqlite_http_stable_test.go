@@ -59,7 +59,7 @@ func stableFixture0374(t *testing.T) stableSQLiteFixture0374 {
 	raw, _ := json.Marshal(map[string]string{"packageId": rel.ID})
 	job, created, err := r.EnqueueDurableJob(ctx, model.DurableJob{Kind: "package-publish", ActorType: "user", ActorID: "owner", Action: "release:publish", ProjectID: rel.ProjectID, ResourceType: "package", ResourceID: rel.ID, IdempotencyKey: "request-1", Payload: raw}, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("job: %v", err)
+		t.Fatalf("Задача: %v", err)
 	}
 	job, err = r.LeaseDurableJob(ctx, job.ID, "worker", time.Minute)
 	if err != nil {
@@ -134,7 +134,7 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	f := stableFixture0374(t)
 	ctx := context.Background()
 	if _, err := f.repo.CommitDurablePublish(ctx, f.commit); !errors.Is(err, ErrStableRuntimeGate0341) {
-		t.Fatalf("no grant: %v", err)
+		t.Fatalf("Нет разрешения: %v", err)
 	}
 	head, err := f.repo.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 	if err != nil || head.Revision != 0 {
@@ -152,7 +152,7 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	}
 	head, err = f.repo.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 	if err != nil || head.Revision != 1 || head.ReleaseID != f.rel.ID {
-		t.Fatalf("head: %+v %v", head, err)
+		t.Fatalf("Заголовок: %+v %v", head, err)
 	}
 	if err = f.repo.Close(); err != nil {
 		t.Fatal(err)

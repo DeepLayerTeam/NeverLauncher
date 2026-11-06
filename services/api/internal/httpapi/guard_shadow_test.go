@@ -42,7 +42,7 @@ func TestGuardShadow05012RealAppendAndIntegrity(t *testing.T) {
 	}
 	matches, err := filepath.Glob(filepath.Join(dir, "guard-shadow-*.jsonl"))
 	if err != nil || len(matches) != 1 {
-		t.Fatalf("journals %v: %v", matches, err)
+		t.Fatalf("Журналы %v: %v", matches, err)
 	}
 	stat, err := os.Stat(matches[0])
 	if err != nil {

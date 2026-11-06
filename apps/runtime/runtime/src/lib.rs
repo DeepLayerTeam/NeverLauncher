@@ -2284,8 +2284,8 @@ mod tests {
     fn sign_and_verify_manifest_with_pinned_key() {
         let mut manifest = sample_manifest();
         let seed = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
-        let public_key = sign_manifest(&mut manifest, seed, "2026-09-13T00:00:00Z").expect("sign");
-        let result = verify_manifest_signature(&manifest, &public_key).expect("verify");
+        let public_key = sign_manifest(&mut manifest, seed, "2026-09-13T00:00:00Z").expect("подпись");
+        let result = verify_manifest_signature(&manifest, &public_key).expect("проверка подписи");
         assert!(result.valid);
         assert_eq!(result.public_key, public_key);
     }
@@ -2293,7 +2293,7 @@ mod tests {
     #[test]
     fn signing_payload_preserves_explicit_false_executable_for_go_contract() {
         let manifest = sample_manifest();
-        let payload = manifest_signing_payload(&manifest).expect("payload");
+        let payload = manifest_signing_payload(&manifest).expect("данные для подписи");
         let json = String::from_utf8(payload).expect("utf8");
         assert!(
             json.contains("\"executable\":false"),
@@ -2313,7 +2313,7 @@ mod tests {
     fn signature_verification_is_fail_closed() {
         let mut manifest = sample_manifest();
         let seed = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
-        let public_key = sign_manifest(&mut manifest, seed, "2026-09-13T00:00:00Z").expect("sign");
+        let public_key = sign_manifest(&mut manifest, seed, "2026-09-13T00:00:00Z").expect("подпись");
         manifest.version = "tampered".to_string();
         assert!(verify_manifest_signature(&manifest, &public_key).is_err());
         assert!(verify_manifest_signature(&manifest, "").is_err());

@@ -170,7 +170,7 @@ func TestMicrosoftConfigUsesKnownCloudAuthoritiesAndStableTenantRules(t *testing
 			t.Fatalf("%s: %v", cloud, err)
 		}
 		if cfg.AuthorityBase != want {
-			t.Fatalf("%s authority=%q want=%q", cloud, cfg.AuthorityBase, want)
+			t.Fatalf("%s: издатель=%q, ожидалось=%q", cloud, cfg.AuthorityBase, want)
 		}
 	}
 	if _, err := Normalize(Config{ID: "bad", Cloud: "global", Tenant: "contoso.onmicrosoft.com", ClientID: testClientID, RedirectURIs: []string{"https://launcher.example/cb"}}); err == nil {

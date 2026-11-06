@@ -90,7 +90,7 @@ def env(port, target="backend"):
 
 
 def main():
-    assert JAR.is_file(), "run build.sh first"
+    assert JAR.is_file(), "Сначала запустите build.sh"
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     instance_env = env(server.server_port)
@@ -112,7 +112,7 @@ def main():
         until = time.monotonic() + 5
         while Handler.beats == 0 and time.monotonic() < until:
             time.sleep(0.04)
-        assert Handler.beats > 0, "host missed heartbeat"
+        assert Handler.beats > 0, "Хост не отправил сигнал активности"
         child.terminate()
         out, err = child.communicate(timeout=8)
         assert child.returncode in (0, 143, -15), (child.returncode, out, err)

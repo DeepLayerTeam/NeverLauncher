@@ -14,7 +14,7 @@ func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("capabilities v3 => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Возможности протокола v3: %d %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
 	for _, want := range []string{`"release":"ServerBridge 3"`, `"negotiatedProtocolVersion":3`, `"legacyProtocolV2Supported":true`, `"protocol.capability-negotiation":true`, `"protocol.feature-flags":true`, `"runtime.node-discovery-v1":true`, `"security.runtime-identity-ed25519":true`, `"control.secure-channel-v1":true`, `"control.ha-channel-v2":true`} {
@@ -30,7 +30,7 @@ func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"negotiatedProtocolVersion":2`) {
-		t.Fatalf("capabilities v2 fallback => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Резервный переход на возможности протокола v2: %d %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/server-bridge/capabilities?protocols=99&features=protocol.capability-negotiation,protocol.feature-flags", nil)
@@ -116,6 +116,6 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"protocolVersion":3`) || !strings.Contains(res.Body.String(), `"protocol.feature-flags"`) {
-		t.Fatalf("v3 heartbeat => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Сигнал активности v3: %d %s", res.Code, res.Body.String())
 	}
 }

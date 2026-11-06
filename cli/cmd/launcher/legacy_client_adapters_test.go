@@ -91,7 +91,7 @@ func TestLegacyAdapters0278RejectUnknownTweakerAndUnpinnedLibrary(t *testing.T) 
 func TestLegacyAdapters0278ArgumentsAndSecrets(t *testing.T) {
 	args, err := splitLegacyArguments0278(`--username "Test Player" --tweakClass test.Main`)
 	if err != nil || len(args) != 4 || args[1] != "Test Player" {
-		t.Fatalf("split %v %v", args, err)
+		t.Fatalf("Разделение: %v %v", args, err)
 	}
 	if _, err = splitLegacyArguments0278(`--username "broken`); err == nil {
 		t.Fatal("Принята незакрытая кавычка")

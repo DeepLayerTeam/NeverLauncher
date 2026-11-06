@@ -19,7 +19,7 @@ import (
 // переживает cgroup.kill.
 func TestLinuxAdversarialDescendants03114(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_LINUX_SANDBOX") != "1" {
-		t.Skip("live kernel host explicitly required")
+		t.Skip("Требуется явно указанный хост с работающим ядром")
 	}
 	if err := Available(); err != nil {
 		t.Fatalf("Недоступна обязательная рабочая изолированная среда: %v", err)

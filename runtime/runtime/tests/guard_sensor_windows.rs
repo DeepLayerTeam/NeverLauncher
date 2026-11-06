@@ -76,7 +76,7 @@ fn jvm_probe_path() -> PathBuf {
 fn unique_test_root(label: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("clock")
+        .expect("системное время")
         .as_nanos();
     std::env::temp_dir().join(format!(
         "guard-module-guard-{label}-{}-{nanos}",

@@ -47,6 +47,6 @@ func TestListProjectOperations02110IsolationPaginationAndStatus(t *testing.T) {
 	}
 	other, err := repo.ListProjectOperations(ctx, "beta", "", 10, 0)
 	if err != nil || len(other) != 1 {
-		t.Fatalf("beta jobs: %+v %v", other, err)
+		t.Fatalf("Задачи бета-версии: %+v %v", other, err)
 	}
 }

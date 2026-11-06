@@ -32,7 +32,7 @@ func TestRegistrationAndAssertionES256(t *testing.T) {
 		t.Fatalf("ошибка регистрации: %v", err)
 	}
 	if registration.Algorithm != -7 {
-		t.Fatalf("algorithm=%d", registration.Algorithm)
+		t.Fatalf("алгоритм=%d", registration.Algorithm)
 	}
 
 	clientGet := testClientData(t, "webauthn.get", challenge, origin)

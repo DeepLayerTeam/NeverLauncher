@@ -73,7 +73,7 @@ func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 		t.Fatalf("ожидался конфликт устаревшей ревизии CAS, получено: %v", err)
 	}
 	if _, err := r.SaveUser(model.User{ID: "owner", Email: "owner@example.test", RoleID: "owner", Status: "active"}); err != nil {
-		t.Fatalf("owner: %v", err)
+		t.Fatalf("Владелец: %v", err)
 	}
 	if _, err := r.SetUserDisabled("owner", true); !errors.Is(err, ErrConflict) {
 		t.Fatalf("последняя учётная запись владельца отключена: %v", err)

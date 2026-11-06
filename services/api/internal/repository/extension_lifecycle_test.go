@@ -25,7 +25,7 @@ func TestExtensionLifecycleMemoryStateMachine0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if installed.Generation != 1 || installed.CurrentState != model.ExtensionInstallStateDisabled || installed.Enabled {
-		t.Fatalf("install=%+v", installed)
+		t.Fatalf("установка=%+v", installed)
 	}
 
 	enabled, err := repo.TransitionExtensionInstall(ctx, model.ExtensionLifecycleTransition{
@@ -37,7 +37,7 @@ func TestExtensionLifecycleMemoryStateMachine0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if enabled.Generation != 2 || !enabled.Enabled {
-		t.Fatalf("enable=%+v", enabled)
+		t.Fatalf("включение=%+v", enabled)
 	}
 
 	_, err = repo.TransitionExtensionInstall(ctx, model.ExtensionLifecycleTransition{
@@ -54,7 +54,7 @@ func TestExtensionLifecycleMemoryStateMachine0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(revisions) != 2 || revisions[0].Operation != "enable" || revisions[1].Operation != "install" {
-		t.Fatalf("revisions=%+v", revisions)
+		t.Fatalf("ревизии=%+v", revisions)
 	}
 }
 

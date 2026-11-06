@@ -56,7 +56,7 @@ func TestPolicyGateAndHostPaths0319(t *testing.T) {
 func TestConfigFDIsSealedAndNotOnFilesystem0319(t *testing.T) {
 	f, e := sealedConfigFD()
 	if e != nil {
-		t.Skipf("memfd disabled: %v", e)
+		t.Skipf("Механизм memfd отключён: %v", e)
 	}
 	defer f.Close()
 	if _, e := f.WriteString("launcher-extension-credential"); e != nil {

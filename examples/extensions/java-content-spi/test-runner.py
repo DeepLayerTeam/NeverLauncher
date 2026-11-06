@@ -77,7 +77,7 @@ def rpc(callback, method, params={},token=CALLBACK):
 
 def main():
     jar=ROOT/'build/package/backend/content-spi.jar'
-    assert jar.exists(),'run build.sh first'
+    assert jar.exists(),'Сначала запустите build.sh'
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     child=subprocess.Popen(['java','-jar',str(jar.resolve())],cwd=ROOT/'build/package',env=env(server.server_port),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)

@@ -122,7 +122,7 @@ func TestGrowthLivePostgresRedis03212(t *testing.T) {
 	pg := os.Getenv("LAUNCHER_GROWTH_TEST_PG_DSN")
 	redis := os.Getenv("LAUNCHER_GROWTH_TEST_REDIS_URL")
 	if pg == "" || redis == "" {
-		t.Skip("live PostgreSQL/Redis URLs required")
+		t.Skip("Требуются адреса работающих PostgreSQL и Redis")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -145,7 +145,7 @@ func TestProductionRCLiveS3Growth(t *testing.T) {
 	}
 	for _, k := range keys {
 		if os.Getenv(k) == "" {
-			t.Skipf("real S3 RC test requires %s", k)
+			t.Skipf("Для проверки реального релиз-кандидата S3 требуется %s", k)
 		}
 	}
 	cfg := storage.S3Config{

@@ -26,7 +26,7 @@ func TestComponentCatalogEditorLifecycle0248(t *testing.T) {
 	}
 	created := invoke("POST", "/api/v1/packages", []byte(`{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"0.24.8-graph-test","manifestSchemaVersion":"3.0"}`), "application/json")
 	if created.Code != 201 {
-		t.Fatalf("v3 create %d: %s", created.Code, created.Body.String())
+		t.Fatalf("Создание v3: %d, %s", created.Code, created.Body.String())
 	}
 	var response struct {
 		Data struct {
@@ -52,7 +52,7 @@ func TestComponentCatalogEditorLifecycle0248(t *testing.T) {
 	}
 	uploaded := invoke("POST", "/api/v1/packages/"+id+"/files", content.Bytes(), writer.FormDataContentType())
 	if uploaded.Code != 201 {
-		t.Fatalf("upload %d: %s", uploaded.Code, uploaded.Body.String())
+		t.Fatalf("Загрузка: %d, %s", uploaded.Code, uploaded.Body.String())
 	}
 	path := "/api/v1/packages/" + id + "/component-catalog"
 	state := invoke("GET", path, nil, "")
@@ -62,11 +62,11 @@ func TestComponentCatalogEditorLifecycle0248(t *testing.T) {
 	body := []byte(`{"expectedRevision":1,"catalog":{"schemaVersion":"5.0","revision":1,"digest":"","components":[{"id":"sodium","name":"Sodium","files":["mods/sodium.jar"],"version":"1.0.0","visible":true}],"presets":[{"id":"optimized","name":"Optimized","components":["sodium"]}],"defaultPreset":"optimized"}}`)
 	preview := invoke("POST", path+"/preview", body, "application/json")
 	if preview.Code != 200 || !strings.Contains(preview.Body.String(), `"valid":true`) {
-		t.Fatalf("preview %d: %s", preview.Code, preview.Body.String())
+		t.Fatalf("Предпросмотр: %d, %s", preview.Code, preview.Body.String())
 	}
 	saved := invoke("PUT", path, body, "application/json")
 	if saved.Code != 200 || !strings.Contains(saved.Body.String(), `"revision":2`) {
-		t.Fatalf("save %d: %s", saved.Code, saved.Body.String())
+		t.Fatalf("Сохранение: %d, %s", saved.Code, saved.Body.String())
 	}
 	stale := invoke("PUT", path, body, "application/json")
 	if stale.Code != 409 {

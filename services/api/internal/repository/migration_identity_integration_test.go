@@ -68,7 +68,7 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	records := []gi.Account{{Provider: "fileauth", SourceID: uuid, Username: "Alice334", UUID: uuid, SourcePath: "modules-config/FileAuthSystem/Database.json"}}
 	first, e := repo.SaveMigrationIdentities0334(ctx, run.ID, source.SourceSHA256, source.ManifestSHA256, records)
 	if e != nil || first.Summary["pending_import"] != 1 || first.Ready {
-		t.Fatalf("first: %+v %v", first, e)
+		t.Fatalf("Первый: %+v %v", first, e)
 	}
 	r1, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil {
@@ -76,7 +76,7 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	}
 	again, e := repo.SaveMigrationIdentities0334(ctx, run.ID, source.SourceSHA256, source.ManifestSHA256, records)
 	if e != nil || again.Summary["pending_import"] != 1 {
-		t.Fatalf("replay %+v %v", again, e)
+		t.Fatalf("Повтор: %+v %v", again, e)
 	}
 	r2, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || r1.Revision != r2.Revision {
@@ -93,11 +93,11 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	}
 	verified, e := repo.VerifyMigrationIdentities0334(ctx, run.ID)
 	if e != nil || verified.Summary["matched"] != 1 || verified.Rows[0].TargetUserID != user || !verified.Ready {
-		t.Fatalf("verify %+v %v", verified, e)
+		t.Fatalf("Проверка: %+v %v", verified, e)
 	}
 	persisted, e := repo.GetMigrationIdentities0334(ctx, run.ID)
 	if e != nil || persisted.Rows[0].UUID != uuid || persisted.Summary["matched"] != 1 {
-		t.Fatalf("persist %+v %v", persisted, e)
+		t.Fatalf("Сохранение: %+v %v", persisted, e)
 	}
 	latest, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || latest.Revision != r2.Revision+1 {

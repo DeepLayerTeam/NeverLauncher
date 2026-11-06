@@ -14,7 +14,7 @@ import (
 func TestHostOperationsPostgres0413(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN not set")
+		t.Skip("Не задана переменная LAUNCHER_SERVERBRIDGE_HA_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -44,16 +44,16 @@ func TestHostOperationsPostgres0413(t *testing.T) {
 	op := HostOperation0413{ID: "host0413-id-1", ServerID: server, Action: "restart", RequestedBy: "operator", IdempotencyKey: "idem-host-0413-0001", RequestDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", RemoteNodeID: "host-node-1", BaselineRuntimeID: "runtime-old", HostBefore: json.RawMessage(`{"nodeId":"host-node-1"}`)}
 	created, replay, err := a.CreateHostOperation0413(ctx, op)
 	if err != nil || replay || created.State != "indeterminate" {
-		t.Fatalf("intent %+v replay=%t err=%v", created, replay, err)
+		t.Fatalf("Намерение %+v, повтор=%t, ошибка=%v", created, replay, err)
 	}
 	byKey, keyErr := b.GetHostOperationByKey0413(ctx, server, op.IdempotencyKey)
 	if keyErr != nil || byKey.ID != created.ID {
-		t.Fatalf("lookup by key %+v %v", byKey, keyErr)
+		t.Fatalf("Поиск по ключу: %+v %v", byKey, keyErr)
 	}
 	op.ID = "another-id"
 	again, replay, err := b.CreateHostOperation0413(ctx, op)
 	if err != nil || !replay || again.ID != created.ID {
-		t.Fatalf("replay %+v replay=%t err=%v", again, replay, err)
+		t.Fatalf("Повтор %+v, повтор=%t, ошибка=%v", again, replay, err)
 	}
 	op.Action = "stop"
 	if _, _, err = b.CreateHostOperation0413(ctx, op); !errors.Is(err, ErrConflict) {
@@ -69,13 +69,13 @@ func TestHostOperationsPostgres0413(t *testing.T) {
 	created.RemoteReceipt = json.RawMessage(`{"action":"restart","state":"succeeded"}`)
 	accepted, err := a.FinishHostOperation0413(ctx, created, "indeterminate")
 	if err != nil || accepted.State != "accepted" {
-		t.Fatalf("accepted %+v %v", accepted, err)
+		t.Fatalf("Принято: %+v %v", accepted, err)
 	}
 	accepted.State = "succeeded"
 	accepted.HostAfter = json.RawMessage(`{"nodeId":"host-node-1","status":{"observedStatus":"running"}}`)
 	succeeded, err := b.FinishHostOperation0413(ctx, accepted, "accepted")
 	if err != nil || succeeded.State != "succeeded" {
-		t.Fatalf("verified %+v %v", succeeded, err)
+		t.Fatalf("Проверено: %+v %v", succeeded, err)
 	}
 	if _, err = a.FinishHostOperation0413(ctx, accepted, "accepted"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Итоговый результат перезаписан: %v", err)

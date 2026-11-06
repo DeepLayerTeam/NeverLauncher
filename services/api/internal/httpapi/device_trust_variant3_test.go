@@ -83,7 +83,7 @@ func TestDeviceTrustInflightProofCannotSwapAlreadyBoundSession0432(t *testing.T)
 	fresh, _ := deviceTrustLogin0121(t, h, "still-unbound")
 	code, beginResponse := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceA+"/verify/begin", fresh, map[string]any{})
 	if code != http.StatusOK {
-		t.Fatalf("verify/begin: %d %#v", code, beginResponse)
+		t.Fatalf("Начало проверки: %d %#v", code, beginResponse)
 	}
 	begin := deviceTrustData0121(t, beginResponse)
 	bound, deviceB, _ := registerDevice0432(t, h, fresh, "Device B")

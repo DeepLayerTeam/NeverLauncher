@@ -52,7 +52,7 @@ func (f registryFixture02011) publish(t *testing.T, id, version string, channels
 		Channels:      channels,
 	})
 	if err != nil {
-		t.Fatalf("publish %s@%s: %v", id, version, err)
+		t.Fatalf("Публикация %s@%s: %v", id, version, err)
 	}
 }
 

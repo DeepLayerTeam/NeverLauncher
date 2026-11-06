@@ -100,7 +100,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Создание: %d %s", res.Code, res.Body.String())
 	}
 	var payload struct {
 		Data struct {

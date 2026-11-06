@@ -52,7 +52,7 @@ func TestJVM0283MainClassRunsApprovedLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(cmd[1:], expected) {
-		t.Fatalf("cmd: %v vs %v", cmd, expected)
+		t.Fatalf("Команда: %v, ожидалось: %v", cmd, expected)
 	}
 	if err := runServerBridgeHost01910(root, false); err != nil {
 		t.Fatal(err)
@@ -175,7 +175,7 @@ func TestJVM0283ClasspathWildcardAndPathRejections(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(config.Classpath) != 1 || config.Classpath[0] != filepath.Join(root, "libs", "*") {
-		t.Fatalf("wildcard: %v", config.Classpath)
+		t.Fatalf("Шаблон подстановки: %v", config.Classpath)
 	}
 	for _, bad := range []string{"libs/*.jar", "../libs/*", "libs/*/nested", ""} {
 		if err := configureServerBridgeHost01910(append(append([]string{}, base...), "--classpath-entry", bad)); err == nil {

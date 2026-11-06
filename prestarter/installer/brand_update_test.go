@@ -23,7 +23,7 @@ import (
 // Prestarter и подписанными данными. Только игровой бинарный файл является фикстурой.
 func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("script-based Prestarter fixture")
+		t.Skip("Тестовые данные Prestarter на основе скрипта")
 	}
 	root := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", filepath.Join(root, "xdg"))

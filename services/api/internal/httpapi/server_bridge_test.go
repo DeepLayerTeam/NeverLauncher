@@ -76,7 +76,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "textures") {
-		t.Fatalf("textures => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Текстуры: %d %s", res.Code, res.Body.String())
 	}
 
 }

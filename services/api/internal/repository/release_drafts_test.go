@@ -18,7 +18,7 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 		t.Fatalf("Не инициализировано: %+v", created)
 	}
 	if _, err = r.CreateReleaseDraft(ctx, original); !errors.Is(err, ErrConflict) {
-		t.Fatalf("duplicate: %v", err)
+		t.Fatalf("Дубликат: %v", err)
 	}
 	rows, err := r.ListReleaseDrafts(ctx, "demo-project", "owner-a")
 	if err != nil || len(rows) != 1 {
@@ -32,7 +32,7 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 	update.PackageID = "demo-project-vanilla-1.0.0"
 	stored, err := r.UpdateReleaseDraft(ctx, update)
 	if err != nil || stored.Revision != 2 || stored.PackageID != update.PackageID {
-		t.Fatalf("update: %+v %v", stored, err)
+		t.Fatalf("Обновление: %+v %v", stored, err)
 	}
 	if _, err = r.UpdateReleaseDraft(ctx, update); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Обнаружена запись устаревших данных: %v", err)

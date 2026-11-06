@@ -67,7 +67,7 @@ func TestSignedPolicy0318OwnerReview(t *testing.T) {
 	updated := signedPolicy0318()
 	changed, err := ChangesRequireApproval(old, updated)
 	if err != nil || !changed {
-		t.Fatalf("changed=%v err=%v", changed, err)
+		t.Fatalf("Изменено=%v, ошибка=%v", changed, err)
 	}
 	if err := RequireReview(old, updated, ""); err == nil {
 		t.Fatal("Принято необслуживаемое обновление")

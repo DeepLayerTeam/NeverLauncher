@@ -24,7 +24,7 @@ func TestStatusAndHealthExposeSourceCommit0220(t *testing.T) {
 		res := httptest.NewRecorder()
 		item.fn.ServeHTTP(res, httptest.NewRequest(http.MethodGet, item.path, nil))
 		if res.Code != http.StatusOK {
-			t.Fatalf("%s status=%d", item.path, res.Code)
+			t.Fatalf("%s: статус=%d", item.path, res.Code)
 		}
 		var status statusResponse
 		if err := json.Unmarshal(res.Body.Bytes(), &status); err != nil {

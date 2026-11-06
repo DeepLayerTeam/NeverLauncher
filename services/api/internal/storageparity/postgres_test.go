@@ -46,7 +46,7 @@ func TestPostgresRealStorageParity0371(t *testing.T) {
 		if os.Getenv("LAUNCHER_STORAGE_PARITY_REQUIRED") == "1" {
 			t.Fatal("Для производственной проверки соответствия требуется LAUNCHER_PARITY_POSTGRES_DSN")
 		}
-		t.Skip("requires disposable LAUNCHER_PARITY_POSTGRES_DSN")
+		t.Skip("Требуется одноразовая база PostgreSQL, заданная через LAUNCHER_PARITY_POSTGRES_DSN")
 	}
 	makeRepo := func() *repository.SQLRepository {
 		r, ok := repository.NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*repository.SQLRepository)

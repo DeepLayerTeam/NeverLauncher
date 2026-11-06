@@ -72,7 +72,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	account := gi.Account{Provider: "sql", SourceID: "db-id-" + suffix, Username: "Auth335", UUID: "11111111-2222-4333-8444-555555555555", SourcePath: "sql-export/users.csv"}
 	mapped, e := repo.SaveMigrationIdentities0334(ctx, run.ID, source.SourceSHA256, source.ManifestSHA256, []gi.Account{account})
 	if e != nil || mapped.Summary["pending_import"] != 1 {
-		t.Fatalf("map: %+v %v", mapped, e)
+		t.Fatalf("Сопоставление: %+v %v", mapped, e)
 	}
 	encoded, e := fileauth.EncodeCredential("sha256-hex", strings.Repeat("b", 64))
 	if e != nil {
@@ -82,7 +82,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	input := []gc.Credential{c}
 	dry, e := repo.ImportMigrationCredentials0335(ctx, run.ID, source.SourceSHA256, "", input, true)
 	if e != nil || !dry.DryRun || dry.Imported != 1 {
-		t.Fatalf("dry-run: %+v %v", dry, e)
+		t.Fatalf("Пробный запуск: %+v %v", dry, e)
 	}
 	userID = migratedUserID0335(account)
 	var count int
@@ -93,7 +93,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	// импорта решения квитанцию нельзя повторить с другим форматом.
 	saved, e := repo.ImportMigrationCredentials0335(ctx, run.ID, source.SourceSHA256, "", input, false)
 	if e != nil || saved.Imported != 1 || saved.DryRun {
-		t.Fatalf("import: %+v %v", saved, e)
+		t.Fatalf("Импорт: %+v %v", saved, e)
 	}
 	var hash, uuid, role string
 	e = repo.db.QueryRowContext(ctx, `SELECT u.password_hash,m.uuid,u.role_id FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, userID).Scan(&hash, &uuid, &role)

@@ -125,7 +125,7 @@ func TestRealTPMCertifyChainAndExactDevice0312(t *testing.T) {
 		t.Fatal(e)
 	}
 	if r.RootID != "operator-ca" || !store.Active(r.RootID, r.AKFingerprint, "linux", time.Now().UTC()) || !r.ExpiresAt.After(time.Now()) {
-		t.Fatalf("result=%+v", r)
+		t.Fatalf("Результат=%+v", r)
 	}
 	cases := []struct {
 		name   string

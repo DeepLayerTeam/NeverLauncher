@@ -13,7 +13,7 @@ import (
 func TestLiveManagedProviderCAS02910(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("configure test PostgreSQL DSN")
+		t.Skip("Настройте строку подключения к тестовой базе PostgreSQL")
 	}
 	r := NewPostgresRepository(dsn, "https://launcher.example.test")
 	store, ok := r.(ManagedProviderStore02910)

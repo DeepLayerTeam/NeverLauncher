@@ -26,7 +26,7 @@ func TestSignedJavaUI0489(t *testing.T) {
 		{"admin", "ui.settings.delete", "", "appearance", false},
 	} {
 		if got := javaUIContribution0489(signed, test.surface, test.method, test.action, test.key); got != test.expected {
-			t.Errorf("%s %s %s %s: got %v", test.surface, test.method, test.action, test.key, got)
+			t.Errorf("%s %s %s %s: получено %v", test.surface, test.method, test.action, test.key, got)
 		}
 	}
 	signed.Targets = signed.Targets[1:]

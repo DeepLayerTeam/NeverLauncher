@@ -9,7 +9,7 @@ public final class BridgeLiveTelemetry0419Test {
         BridgeTelemetrySnapshot initial = sampler.sample("real-runtime");
         require(initial.processId() != null && initial.processId() == ProcessHandle.current().pid(), "настоящий идентификатор процесса JVM");
         require(initial.heapCommittedBytes() >= initial.heapUsedBytes(), "настоящая куча памяти");
-        require(initial.processCpuTimeNanos() == null || initial.processCpuTimeNanos() >= 0, "CPU time");
+        require(initial.processCpuTimeNanos() == null || initial.processCpuTimeNanos() >= 0, "Процессорное время");
         if (initial.hostTotalMemoryBytes() != null) {
             require(initial.hostFreeMemoryBytes() != null && initial.hostTotalMemoryBytes() > 0, "доступная память хоста");
             require(initial.hostFreeMemoryBytes() <= initial.hostTotalMemoryBytes(), "физическая память хоста");

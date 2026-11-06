@@ -40,7 +40,7 @@ func TestComponentResolverOperational0243(t *testing.T) {
 	for _, tc := range cases {
 		ids, err := ResolveCatalogPreset0242(*m.ComponentCatalog, tc.preset)
 		if err != nil || !reflect.DeepEqual(ids, tc.expected) {
-			t.Fatalf("preset %q: %v %v", tc.preset, ids, err)
+			t.Fatalf("предустановка %q: %v %v", tc.preset, ids, err)
 		}
 	}
 	if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, "missing"); err == nil {

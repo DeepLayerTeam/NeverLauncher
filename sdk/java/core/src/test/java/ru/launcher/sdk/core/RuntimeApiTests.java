@@ -38,7 +38,7 @@ public final class RuntimeApiTests {
         // Более конкретные контексты имеют приоритет перед /v1/.
         fake.createContext("/v1/capabilities/",x->{
             try {
-                check("Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization")),"broker authorized");
+                check("Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization")),"Посредник авторизован");
                 String path=x.getRequestURI().getPath();var req=Json.object(Json.parse(new String(x.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)));
                 if(path.endsWith("secret.get")){if("blocked".equals(req.get("name"))){respond(x,403,Map.of("error","forbidden"));return;}respond(x,200,Map.of("valueBase64",Base64.getEncoder().encodeToString("s3cret".getBytes(StandardCharsets.UTF_8))));return;}
                 String key=path+":"+req.get("key");
@@ -49,7 +49,7 @@ public final class RuntimeApiTests {
             }catch(Exception ex){respond(x,500,Map.of("error",ex.toString()));}
         });
         fake.createContext("/v1/events/subscriptions",x->{
-            check("Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization")),"subscribe authorized");
+            check("Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization")),"Подписка разрешена");
             if(x.getRequestMethod().equals("DELETE")){unsubscribed.incrementAndGet();x.sendResponseHeaders(204,-1);x.close();return;}
             subscribed.incrementAndGet();respond(x,201,Map.of("id",4));
         });

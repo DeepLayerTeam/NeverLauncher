@@ -58,7 +58,7 @@ func TestBehavioralConformanceExecutesEveryOperation(t *testing.T) {
 	c := &behaviorConnector{issuer: "issuer-1", subject: "subject-1", password: "only-test-password"}
 	report := conformance.RunBehavioral(context.Background(), c, fixture())
 	if !report.Passed {
-		t.Fatalf("failed: %+v", report)
+		t.Fatalf("Ошибка: %+v", report)
 	}
 	if !c.revoked {
 		t.Fatal("Отзыв был выполнен")

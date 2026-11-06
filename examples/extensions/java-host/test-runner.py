@@ -137,7 +137,7 @@ if __name__ == "__main__":
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     jar = STAGE / "backend" / "java-host.jar"
-    assert jar.is_file(), "run build.sh first"
+    assert jar.is_file(), "Сначала запустите build.sh"
     backend = subprocess.Popen(
         ["java", "-jar", str(jar.resolve())],
         cwd=STAGE,

@@ -107,7 +107,7 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 		t.Fatal(e)
 	}
 	if len(codes) != 8 {
-		t.Fatalf("recovery %d", len(codes))
+		t.Fatalf("восстановление %d", len(codes))
 	}
 	if _, e = a.ValidateAccess(ctx, before.AccessToken); !errors.Is(e, ErrAuthentication) {
 		t.Fatal("сессия до прохождения MFA остаётся действительной")
@@ -124,7 +124,7 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 	}
 	n, e := a.RecoveryRemaining(ctx, "owner")
 	if e != nil || n != 7 {
-		t.Fatalf("remaining=%d %v", n, e)
+		t.Fatalf("Осталось=%d %v", n, e)
 	}
 	if e = a.DisableTOTP(ctx, "owner", pw, codes[1]); e != nil {
 		t.Fatal(e)
@@ -227,7 +227,7 @@ func TestTOTPReplayAndRFC6238(t *testing.T) {
 	// Шестизначная версия берёт последние шесть десятичных цифр.
 	secret := []byte("12345678901234567890")
 	if got := totpCode(secret, 59/30); got != "287082" {
-		t.Fatalf("TOTP vector: %s", got)
+		t.Fatalf("Тестовый вектор TOTP: %s", got)
 	}
 	if step, ok := checkTOTP(secret, "287082", time.Unix(59, 0), -1); !ok || step != 1 {
 		t.Fatal("код TOTP отклонён")
@@ -278,7 +278,7 @@ func TestSQLiteSchemaUpgrade322To323(t *testing.T) {
 }
 func TestNoSQLiteIntegrationOnOverlay(t *testing.T) {
 	if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" {
-		t.Skip("only run strict filesystem certification in native CI")
+		t.Skip("Строгая сертификация файловой системы выполняется только в нативной среде CI")
 	}
 }
 
@@ -368,7 +368,7 @@ func TestMinecraftCascadeRevokeUserAndStaleSession(t *testing.T) {
 	}
 	n, e := a.RevokeUserSessions(ctx, "owner", "account-logout")
 	if e != nil || n != 1 {
-		t.Fatalf("revocations %d: %v", n, e)
+		t.Fatalf("Отзывов: %d; %v", n, e)
 	}
 	if _, e = a.ValidateMinecraftSession(ctx, token); !errors.Is(e, ErrAuthentication) {
 		t.Fatal("токен Minecraft остался действительным после выхода из основной учётной записи")

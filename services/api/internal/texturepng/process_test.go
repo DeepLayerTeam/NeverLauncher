@@ -48,7 +48,7 @@ func TestRejectsCorruptionAndTrailingData(t *testing.T) {
 	}
 	_, err := Process(bytes.NewReader(candidates[4]), "skin", "classic")
 	if !errors.Is(err, ErrTooLarge) {
-		t.Fatalf("size: %v", err)
+		t.Fatalf("Размер: %v", err)
 	}
 }
 func TestDeterministicNormalization(t *testing.T) {

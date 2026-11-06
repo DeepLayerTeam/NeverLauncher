@@ -71,7 +71,7 @@ func TestStandardRequiresVerifiedBinding0311(t *testing.T) {
 			c.mutate(&copy)
 			got := Evaluate(copy, c.bound, now).ProfileDecisions[Standard]
 			if got.Result != Deny || !contains0311(got.ReasonCodes, c.reason) {
-				t.Fatalf("got %+v", got)
+				t.Fatalf("получено %+v", got)
 			}
 		})
 	}

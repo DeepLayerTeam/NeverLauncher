@@ -57,7 +57,7 @@ func TestRuntimeConstraints0223RejectsUnsafeLaunch(t *testing.T) {
 			m := runtimeFixture0223()
 			edit(&m)
 			if err := ValidateRuntimeConstraints0223(m); err == nil {
-				t.Fatalf("accepted %s", name)
+				t.Fatalf("Принято: %s", name)
 			}
 		})
 	}

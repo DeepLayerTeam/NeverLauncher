@@ -151,7 +151,7 @@ def callback(url, method, payload, token=CALLBACK):
 
 if __name__ == "__main__":
     jar = STAGE / "backend" / "gravit-port.jar"
-    assert jar.exists(), "run build.sh first"
+    assert jar.exists(), "Сначала запустите build.sh"
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     backend = subprocess.Popen(

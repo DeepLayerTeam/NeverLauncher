@@ -57,21 +57,21 @@ func TestExtensionLifecycleEnableDisableUninstallRollback0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if enabled.CurrentState != model.ExtensionInstallStateEnabled || enabled.Generation != 2 {
-		t.Fatalf("enabled=%+v", enabled)
+		t.Fatalf("включено=%+v", enabled)
 	}
 	disabled, err := manager.Disable(ctx, id, Scope{Scope: "global"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if disabled.CurrentState != model.ExtensionInstallStateDisabled || disabled.Generation != 3 {
-		t.Fatalf("disabled=%+v", disabled)
+		t.Fatalf("отключено=%+v", disabled)
 	}
 	uninstalled, err := manager.Uninstall(ctx, id, Scope{Scope: "global"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if uninstalled.CurrentState != model.ExtensionInstallStateAbsent || uninstalled.Generation != 4 {
-		t.Fatalf("uninstalled=%+v", uninstalled)
+		t.Fatalf("удалено=%+v", uninstalled)
 	}
 	if _, err := os.Stat(currentDir0204(root, Scope{Scope: "global"}, id)); !os.IsNotExist(err) {
 		t.Fatalf("Текущая версия осталась после удаления: %v", err)
@@ -81,7 +81,7 @@ func TestExtensionLifecycleEnableDisableUninstallRollback0204(t *testing.T) {
 		t.Fatal(err)
 	}
 	if rolled.CurrentVersion != "1.0.0" || rolled.CurrentState != model.ExtensionInstallStateDisabled || rolled.Generation != 5 {
-		t.Fatalf("rolled=%+v", rolled)
+		t.Fatalf("откачено=%+v", rolled)
 	}
 	data, err := os.ReadFile(filepath.Join(currentDir0204(root, Scope{Scope: "global"}, id), "backend", "extension"))
 	if err != nil {

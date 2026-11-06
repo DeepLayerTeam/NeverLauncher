@@ -1371,7 +1371,7 @@ mod tests {
     fn temp_root(name: &str) -> PathBuf {
         let root = std::env::temp_dir().join(format!("runtime-compat-{name}-{}", std::process::id()));
         let _ = stdfs::remove_dir_all(&root);
-        stdfs::create_dir_all(&root).expect("mkdir");
+        stdfs::create_dir_all(&root).expect("создание каталога");
         root
     }
 
@@ -1441,7 +1441,7 @@ mod tests {
             launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/custom").to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("resolve");
+        let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("определение совместимости");
         assert_eq!(result.main_class, "com.example.CustomMain");
         assert_eq!(result.java_major_version, Some(21));
         assert_eq!(result.client_jar, "versions/1.21.1/1.21.1.jar");

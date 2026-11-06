@@ -81,7 +81,7 @@ func TestCoordinatorUpgrade0472PreservesLeasesAndIsIdempotent(t *testing.T) {
 	}
 	backups, err := filepath.Glob(filepath.Join(filepath.Dir(path), "pre-upgrade-backups", "*.sqlite"))
 	if err != nil || len(backups) != 1 {
-		t.Fatalf("backup %v %v", backups, err)
+		t.Fatalf("Резервная копия: %v %v", backups, err)
 	}
 	if _, err = sqlitedurable.VerifyBackup(ctx, backups[0]); err != nil {
 		t.Fatal(err)

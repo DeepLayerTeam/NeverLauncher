@@ -32,7 +32,7 @@ func TestAutoDetectStandardAndNetworkHA(t *testing.T) {
 	cfg.ServerBridgeReplicaID = "api-a"
 	p, err = Detect(cfg)
 	if err != nil || p.Mode != NetworkHA || p.Coordinator != "redis" || p.SingleInstance || p.LockPath != "" {
-		t.Fatalf("HA plan=%+v error=%v", p, err)
+		t.Fatalf("План высокой доступности=%+v, ошибка=%v", p, err)
 	}
 }
 
@@ -81,7 +81,7 @@ func TestExplicitModeRejectsUnsafeCombinations(t *testing.T) {
 			tc.mutate(&c)
 			_, err := Detect(c)
 			if err == nil || !strings.Contains(err.Error(), tc.fragment) {
-				t.Fatalf("got %v, expected %q", err, tc.fragment)
+				t.Fatalf("Получено %v, ожидалось %q", err, tc.fragment)
 			}
 		})
 	}
@@ -99,7 +99,7 @@ func TestStandardS3RequiresSharedExplicitLock(t *testing.T) {
 	cfg.DeploymentLockPath = "/var/lib/launcher/instance.lock"
 	p, err := Detect(cfg)
 	if err != nil || p.Mode != Standard || p.LockPath != cfg.DeploymentLockPath {
-		t.Fatalf("plan=%+v error=%v", p, err)
+		t.Fatalf("План=%+v, ошибка=%v", p, err)
 	}
 }
 

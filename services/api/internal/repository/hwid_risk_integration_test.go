@@ -41,15 +41,15 @@ func TestHWIDRiskPostgresCrossReplica0299(t *testing.T) {
 	hint1, hint2 := strings.Repeat("1", 64), strings.Repeat("2", 64)
 	state, err := a.ObserveHWID0299(ctx, userID, deviceID, hint1, now)
 	if err != nil || state.State != "recognized" {
-		t.Fatalf("first: %#v %v", state, err)
+		t.Fatalf("Первый: %#v %v", state, err)
 	}
 	state, err = b.ObserveHWID0299(ctx, userID, deviceID, hint2, now.Add(time.Second))
 	if err != nil || state.State != "changed" {
-		t.Fatalf("change: %#v %v", state, err)
+		t.Fatalf("Изменение: %#v %v", state, err)
 	}
 	got, err := a.GetHWID0299(ctx, userID, deviceID, now.Add(time.Second))
 	if err != nil || got.State != "changed" {
-		t.Fatalf("cross-replica: %#v %v", got, err)
+		t.Fatalf("Между репликами: %#v %v", got, err)
 	}
 	appeal := HWIDAppeal0299{ID: "hwid-appeal-" + suffix, UserID: userID, DeviceID: deviceID, Reason: "Hardware replacement", CreatedAt: now.Add(2 * time.Second)}
 	if err := a.SubmitHWIDAppeal0299(ctx, appeal); err != nil {

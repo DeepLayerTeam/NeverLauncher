@@ -21,7 +21,7 @@ import (
 func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0251")
 	if dsn == "" {
-		t.Skip("TEST_PG_DSN_0251 not provided")
+		t.Skip("Не задана переменная TEST_PG_DSN_0251")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

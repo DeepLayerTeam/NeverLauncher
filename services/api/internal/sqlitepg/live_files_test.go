@@ -27,10 +27,10 @@ func TestStoragePathsAndDigest0474(t *testing.T) {
 	want := sha256.Sum256(payload)
 	hash, n, err := fileDigest0474(context.Background(), bytes.NewReader(payload))
 	if err != nil || n != int64(len(payload)) || hash != hex.EncodeToString(want[:]) {
-		t.Fatalf("digest=%s size=%d err=%v", hash, n, err)
+		t.Fatalf("контрольная сумма=%s, размер=%d, ошибка=%v", hash, n, err)
 	}
 	if err := context.Canceled; err == nil {
-		t.Fatal("impossible")
+		t.Fatal("Невозможное состояние")
 	}
 }
 func TestAtomicVerifiedLocalFile0474(t *testing.T) {
@@ -52,7 +52,7 @@ func TestAtomicVerifiedLocalFile0474(t *testing.T) {
 	}
 	exists, err := verifyObject0474(ctx, dest, obj)
 	if err != nil || !exists {
-		t.Fatalf("readback: %v %v", exists, err)
+		t.Fatalf("Повторное чтение: %v %v", exists, err)
 	}
 	if err := atomicLocalSave0474(ctx, dest, obj, bytes.NewReader(raw)); err == nil {
 		t.Fatal("Перезаписан существующий объект")
@@ -89,7 +89,7 @@ func TestStateConversionValidation0474(t *testing.T) {
 	names := map[string]bool{}
 	for _, r := range stateRules0474() {
 		if names[r.source] {
-			t.Fatalf("duplicate %s", r.source)
+			t.Fatalf("Дубликат: %s", r.source)
 		}
 		names[r.source] = true
 	}

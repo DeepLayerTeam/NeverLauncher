@@ -43,7 +43,7 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 	key := "gravit-fileauth-" + "8af62031233343338333" + id
 	defer r.db.ExecContext(context.Background(), `DELETE FROM users WHERE id=$1`, key)
 	if count, err := r.ImportFileAuth0295(ctx, []fileauth.Account{account}, true); err != nil || count != 1 {
-		t.Fatalf("dry-run: count=%d err=%v", count, err)
+		t.Fatalf("Пробный запуск: количество=%d, ошибка=%v", count, err)
 	}
 	if _, err := r.GetUser(key); err == nil {
 		t.Fatal("Пробный запуск сохранил учётные записи")

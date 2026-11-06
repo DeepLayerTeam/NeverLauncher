@@ -21,7 +21,7 @@ func TestPublishedReleaseImmutableAtRepositoryLayer(t *testing.T) {
 		t.Fatal(err)
 	}
 	if release.Status != "published" {
-		t.Fatalf("status=%s", release.Status)
+		t.Fatalf("Статус=%s", release.Status)
 	}
 	if _, err = repo.UpdateVersionStatus("demo-project", release.ID, "draft"); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("ошибка изменения состояния=%v", err)

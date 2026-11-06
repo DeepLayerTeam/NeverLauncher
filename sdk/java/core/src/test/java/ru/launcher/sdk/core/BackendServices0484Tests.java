@@ -80,7 +80,7 @@ public final class BackendServices0484Tests {
                     check(api.channels("p1",0,10).items().get(0).protectedChannel(),"типизированное чтение канала");
                     check(api.channel("p1","stable").name().equals("stable"),"поиск канала");
                     check(api.releases("p1",0,10).items().get(0).version().equals("1.0.0"),"страница релизов");
-                    check(api.release("p1","rel1").manifest().containsKey("schemaVersion"),"release manifest");
+                    check(api.release("p1","rel1").manifest().containsKey("schemaVersion"),"Манифест релиза");
                     check(api.job("p1","job1").status().equals("succeeded"),"устойчивое состояние задания");
                     expect(IllegalArgumentException.class,()->api.projects(-1,10));
                     expect(IllegalArgumentException.class,()->api.releases("p1",0,100));

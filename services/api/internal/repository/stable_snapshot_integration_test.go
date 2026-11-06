@@ -46,7 +46,7 @@ func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 			params = params[:len(params)-1]
 		}
 		if _, err = tx.ExecContext(ctx, statement, params...); err != nil {
-			t.Fatalf("fixture: %s: %v", statement, err)
+			t.Fatalf("Тестовые данные: %s: %v", statement, err)
 		}
 	}
 	blocked := map[string]string{

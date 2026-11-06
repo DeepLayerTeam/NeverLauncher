@@ -51,7 +51,7 @@ func TestRecoverOriginalOperation0388(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		r := lookup(path, token)
 		if r.Code != 200 || r.Header().Get("X-Correlation-ID") != saved.ID {
-			t.Fatalf("recovery %d: %d %s", i, r.Code, r.Body.String())
+			t.Fatalf("Восстановление %d: %d %s", i, r.Code, r.Body.String())
 		}
 	}
 	original, err := repo.FindOperationByKey(context.Background(), input.Kind, input.ActorID, input.IdempotencyKey)

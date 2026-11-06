@@ -73,7 +73,7 @@ func TestJoinAtomicRaceCrashRestartAndReplay(t *testing.T) {
 			if _, e := r.RedeemJoinTicket(ctx, grant.Ticket, proof, "127.0.0.1"); e == nil {
 				winners.Add(1)
 			} else if !errors.Is(e, ErrJoinRejected) {
-				t.Errorf("race: %v", e)
+				t.Errorf("Состояние гонки: %v", e)
 			}
 		}()
 	}
@@ -144,7 +144,7 @@ func TestJoinReplacementRotationRevocation(t *testing.T) {
 	}
 	node, e := r.RegisterNode(ctx, NodeRegistration{ID: "node1", ProjectID: "project", ProfileID: "vanilla", Channel: "stable", PublicKeyHex: hex.EncodeToString(pub2), Actor: "owner"})
 	if e != nil || node.IdentityEpoch != 2 {
-		t.Fatalf("rotation %v %+v", e, node)
+		t.Fatalf("Ротация: %v %+v", e, node)
 	}
 	p := signJoinProof(t, priv, "redeem", 1, []byte(first.Ticket))
 	if _, e = r.RedeemJoinTicket(ctx, first.Ticket, p, ""); !errors.Is(e, ErrNodeProof) {

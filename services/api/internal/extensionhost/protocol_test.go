@@ -67,7 +67,7 @@ func TestHostHelloSDKCompatibility0421(t *testing.T) {
 			}
 			if tc.code != "" {
 				if reply["code"] != tc.code {
-					t.Fatalf("reason %v, expected %s", reply["code"], tc.code)
+					t.Fatalf("Причина %v, ожидалось %s", reply["code"], tc.code)
 				}
 				if !st.helloAt.IsZero() {
 					t.Fatal("Несовместимый хост активировал расширение")

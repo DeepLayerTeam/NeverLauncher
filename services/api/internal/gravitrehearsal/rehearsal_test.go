@@ -19,7 +19,7 @@ func TestEvaluate03310(t *testing.T) {
 	}
 	v, e := Evaluate(r)
 	if e != nil || !v.Ready || len(v.Blockers) != 0 || v.CutoverAllowed {
-		t.Fatalf("valid: %+v %v", v, e)
+		t.Fatalf("Корректность: %+v %v", v, e)
 	}
 	if e = CompareReady(v); e != nil {
 		t.Fatal(e)

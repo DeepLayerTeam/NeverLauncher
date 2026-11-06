@@ -39,7 +39,7 @@ func TestComponentCatalogTopologyOperational0242(t *testing.T) {
 	for _, tc := range tests {
 		actual, err := ResolveCatalogPreset0242(*m.ComponentCatalog, tc.preset)
 		if err != nil || !reflect.DeepEqual(actual, tc.ids) {
-			t.Fatalf("preset %q: %v %v", tc.preset, actual, err)
+			t.Fatalf("предустановка %q: %v %v", tc.preset, actual, err)
 		}
 	}
 	if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, "does-not-exist"); err == nil {

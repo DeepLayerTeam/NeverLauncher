@@ -12,11 +12,11 @@ public final class ServerBridgeAdapterCapability0286Harness {
         for (String id : expected) {
             BridgeAdapterProfile profile = BridgeAdapterProfiles.require(id);
             BridgeRuntimeDescriptor descriptor = BridgeRuntimeDescriptor.of("1.21.1", id, id, "1", id, List.of("runtime.discovery"));
-            require(descriptor.capabilities().contains("adapter.universal-v1"), "universal missing: " + id);
-            require(descriptor.capabilities().contains("adapter.role." + profile.role()), "role missing: " + id);
-            require(descriptor.capabilities().contains("adapter.family." + profile.family()), "family missing: " + id);
+            require(descriptor.capabilities().contains("adapter.universal-v1"), "Отсутствует универсальная возможность: " + id);
+            require(descriptor.capabilities().contains("adapter.role." + profile.role()), "Отсутствует роль: " + id);
+            require(descriptor.capabilities().contains("adapter.family." + profile.family()), "Отсутствует семейство: " + id);
             for (BridgeAdapterCapability cap : BridgeAdapterCapability.values()) {
-                require(descriptor.capabilities().contains(cap.runtimeCapability()) == profile.supports(cap), id + " cap mismatch: " + cap);
+                require(descriptor.capabilities().contains(cap.runtimeCapability()) == profile.supports(cap), id + " несоответствие возможностей: " + cap);
             }
             for (String kind : List.of("player.kick", "message.broadcast", "whitelist.add", "whitelist.remove",
                 "whitelist.enable", "whitelist.disable", "ban.add", "ban.remove", "server.save", "server.maintenance",

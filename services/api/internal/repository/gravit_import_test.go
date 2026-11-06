@@ -17,7 +17,7 @@ func TestGravitAtomicImportMemory02210(t *testing.T) {
 	source := []byte(`{"title":"Vanilla","version":"1.20.4","mainClass":"net.minecraft.client.main.Main","recommendJavaVersion":17,"classLoaderConfig":"SYSTEM_ARGS"}`)
 	parsed, e := model.ConvertGravitProfile02210(source, project, "gravit-migration", "", "vanilla")
 	if e != nil || !parsed.Ready {
-		t.Fatalf("conversion: %v %+v", e, parsed.Fields)
+		t.Fatalf("Преобразование: %v %+v", e, parsed.Fields)
 	}
 	settings := BuildSettings{Minecraft: parsed.Settings.Minecraft, Runtime: parsed.Settings.Runtime}
 	ws := BuildWorkspace{ID: "ws-demo-gravit", ProjectID: project, OwnerID: "operator", ProfileID: parsed.Profile.ID, Channel: "stable", Version: "1.0.0", Settings: settings}

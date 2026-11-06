@@ -40,7 +40,7 @@ func TestGuardLoader0504RejectUnboundOrUnsupportedLoaders(t *testing.T) {
 	}
 	p.Loader = "vanilla"
 	if out, err := guardLoaderConfig0504(root, p); err != nil || !strings.Contains(out, "loader.count=0") {
-		t.Fatalf("vanilla: %v %s", err, out)
+		t.Fatalf("Vanilla: %v %s", err, out)
 	}
 	p.Loader = "custom-loader"
 	if _, err := guardLoaderConfig0504(root, p); err == nil {

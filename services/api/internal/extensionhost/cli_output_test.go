@@ -34,6 +34,6 @@ func TestCLIOutput03113SharesBothStreams(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	if called.Load() != 1 || dst.String() != "12345678" {
-		t.Fatalf("abort=%d content=%q", called.Load(), dst.String())
+		t.Fatalf("прерывание=%d, содержимое=%q", called.Load(), dst.String())
 	}
 }

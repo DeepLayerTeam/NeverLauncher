@@ -55,7 +55,7 @@ func TestJavaBridgeRuntimeFencing0488(t *testing.T) {
 		v := n
 		mutate(&v)
 		if bridgeRuntimeControl0488(v, "server.save", now) {
-			t.Errorf("admitted: %s", name)
+			t.Errorf("Разрешён допуск: %s", name)
 		}
 	}
 	if bridgeRuntimeControl0488(n, "server.console", now) {

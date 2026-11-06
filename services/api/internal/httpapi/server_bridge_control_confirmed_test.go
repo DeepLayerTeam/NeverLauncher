@@ -38,7 +38,7 @@ func TestBridgeOutcomeClassification0411(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			cmd := model.ServerBridgeControlCommand{Type: c.kind, Payload: c.request}
 			if got := classifyBridgeControlOutcome0411(cmd, c.ack, c.result); got != c.expected {
-				t.Fatalf("got %s, want %s", got, c.expected)
+				t.Fatalf("Получено %s, ожидалось %s", got, c.expected)
 			}
 		})
 	}

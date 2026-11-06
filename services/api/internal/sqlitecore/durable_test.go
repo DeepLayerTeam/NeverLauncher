@@ -206,11 +206,11 @@ func TestOutboxAtLeastOnceRestartAndIdempotentDelivery(t *testing.T) {
 	}
 	again, created, e := r.EnqueueOutboxEvent(ctx, newDurableEvent("retry-event"))
 	if e != nil || created || again.ID != ev.ID {
-		t.Fatalf("dedup %+v %v", again, e)
+		t.Fatalf("устранение дубликатов: %+v %v", again, e)
 	}
 	batch, e := r.ClaimOutboxEvents(ctx, "sender-1", 1, time.Second)
 	if e != nil || len(batch) != 1 {
-		t.Fatalf("claim %+v %v", batch, e)
+		t.Fatalf("Захват: %+v %v", batch, e)
 	}
 	if e = r.Close(); e != nil {
 		t.Fatal(e)

@@ -121,7 +121,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 		}
 		var got string
 		if err := b.db.QueryRowContext(ctx, check.sql, key).Scan(&got); err != nil || got != check.want {
-			t.Fatalf("%s: got %q, err %v", check.sql, got, err)
+			t.Fatalf("%s: получено %q, ошибка %v", check.sql, got, err)
 		}
 	}
 	var joins int

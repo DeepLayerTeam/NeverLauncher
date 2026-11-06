@@ -37,7 +37,7 @@ func openTest(t *testing.T) (*Repository, string) {
 	defer cancel()
 	r, e := Open(ctx, sqlitedurable.Options{Path: path})
 	if e != nil && strings.Contains(e.Error(), "unsupported SQLite filesystem") && os.Getenv("LAUNCHER_SQLITE_TEST_ROOT") == "" {
-		t.Skipf("requires ext4/xfs/btrfs directory: %v", e)
+		t.Skipf("Требуется каталог на файловой системе ext4/xfs/btrfs: %v", e)
 	}
 	if e != nil {
 		t.Fatal(e)
@@ -80,7 +80,7 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 		t.Fatal(e)
 	}
 	if next.Revision != 2 {
-		t.Fatalf("revision=%d", next.Revision)
+		t.Fatalf("ревизия=%d", next.Revision)
 	}
 	if _, e = r.SaveProfile(ctx, first, "owner"); !errors.Is(e, ErrConflict) {
 		t.Fatalf("Принята устаревшая ревизия: %v", e)

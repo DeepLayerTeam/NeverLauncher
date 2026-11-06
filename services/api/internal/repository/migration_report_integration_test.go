@@ -33,7 +33,7 @@ func TestMigrationReportPostgres03313(t *testing.T) {
 	defer func() {
 		for _, q := range []string{`DELETE FROM migration_events_0331 WHERE run_id=$1`, `DELETE FROM migration_runs_0331 WHERE id=$1`} {
 			if _, e := r.db.ExecContext(context.Background(), q, runID); e != nil {
-				t.Log("cleanup:", e)
+				t.Log("Очистка:", e)
 			}
 		}
 		_, _ = r.db.ExecContext(context.Background(), `DELETE FROM projects WHERE id=$1`, project)

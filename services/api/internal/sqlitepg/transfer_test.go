@@ -45,7 +45,7 @@ func TestTypesAndDigest(t *testing.T) {
 	pk := tableInfo{Name: "test", Columns: []column{{Name: "id", Type: "TEXT", PK: 1}, {Name: "value", Type: "BLOB"}}}
 	ddl, err := sqlCreate(pk)
 	if err != nil || !strings.Contains(ddl, `PRIMARY KEY ("id")`) || !strings.Contains(ddl, `"value" BYTEA`) {
-		t.Fatalf("DDL: %s %v", ddl, err)
+		t.Fatalf("Операция DDL: %s %v", ddl, err)
 	}
 }
 func TestMissingCoreStateFailsClosed(t *testing.T) {

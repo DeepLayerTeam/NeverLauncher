@@ -12,10 +12,10 @@ func TestServerBridgeGA0200ProtocolV3IsFrozen(t *testing.T) {
 		t.Fatalf("Набор возможностей протокола v3 изменился: получено %s, ожидалось %s", serverBridgeV3FeatureDigest0200(serverBridgeV3Features0191), serverBridgeV3FrozenFeatureDigest0200)
 	}
 	if got := serverBridgeProtocolMode0200(3); got != "ga-frozen" {
-		t.Fatalf("Protocol v3 mode = %q", got)
+		t.Fatalf("Режим протокола v3: %q", got)
 	}
 	if got := serverBridgeProtocolMode0200(2); got != "compatibility-deprecated" {
-		t.Fatalf("Protocol v2 mode = %q", got)
+		t.Fatalf("Режим протокола v2: %q", got)
 	}
 }
 

@@ -16,7 +16,7 @@ import (
 func TestV12SQLAuditImmutableAndNoManualCertification03412(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("disposable PostgreSQL required")
+		t.Skip("Требуется одноразовая база PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()

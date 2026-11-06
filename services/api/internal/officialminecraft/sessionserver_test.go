@@ -85,7 +85,7 @@ func TestLiveSessionserverProtocolFixture(t *testing.T) {
 			c.sessionserver = srv.URL
 			err := c.VerifyOnlineSession(context.Background(), "SECRET_MC_TOKEN", Profile{ID: sessionProfileID, Name: username})
 			if (err != nil) != tc.wantError {
-				t.Fatalf("error=%v", err)
+				t.Fatalf("ошибка=%v", err)
 			}
 			if tc.joinStatus != 204 && requests != 1 {
 				t.Fatalf("Вызван hasJoined после отклонённого подключения: %d", requests)

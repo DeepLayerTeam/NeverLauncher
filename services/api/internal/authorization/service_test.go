@@ -81,7 +81,7 @@ func TestProjectComponentRightsNeverEscapeScope0392(t *testing.T) {
 		result := svc.Authorize(context.Background(), actor, action,
 			Scope{Kind: ScopeProject, ProjectID: project}, Resource{Kind: "profile", ID: "profile-1", ProjectID: project})
 		if result.Allowed != want {
-			t.Errorf("action=%q scope=%q granted=%v want=%v (%s)", action, project, result.Allowed, want, result.ReasonCode)
+			t.Errorf("Действие=%q, область=%q, предоставлено=%v, ожидалось=%v (%s)", action, project, result.Allowed, want, result.ReasonCode)
 		}
 	}
 	check("component.perf", "p1", true)

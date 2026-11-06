@@ -48,7 +48,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 		c := context.Background()
 		clean := func(q string, args ...any) {
 			if _, e := r.db.ExecContext(c, q, args...); e != nil {
-				t.Log("cleanup", e)
+				t.Log("очистка", e)
 			}
 		}
 		clean(`DELETE FROM migration_rollbacks_03312 WHERE run_id=$1`, runID)
@@ -106,7 +106,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 		rep.Probes = append(rep.Probes, gr.Probe{Name: name, Passed: true, RunID: runID, StageID: rep.StageID, UUID: player, EvidenceSHA256: hash})
 	}
 	if _, e = r.SaveMigrationRehearsal03310(ctx, runID, rep); e != nil {
-		t.Fatal("rehearsal", e)
+		t.Fatal("Репетиция", e)
 	}
 	pub, priv, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
@@ -219,7 +219,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	result, e := r.CommitMigrationRollback03312(ctx, runID, commit, pub)
 	if e != nil || result.State != "completed" {
-		t.Fatalf("commit: %+v %v", result, e)
+		t.Fatalf("Фиксация: %+v %v", result, e)
 	}
 	replay, e := r.CommitMigrationRollback03312(ctx, runID, commit, pub)
 	if e != nil || replay.PlanSHA256 != result.PlanSHA256 {

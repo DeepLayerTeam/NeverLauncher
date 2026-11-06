@@ -13,7 +13,7 @@ func TestRuntimePolicy0317NormalizationAndValidation(t *testing.T) {
 	hash := strings.Repeat("a", 64)
 	profiles, err := normalizeGuardRuntimeProfiles0317([]guardRuntimeProfile0317{{JavaMajor: 21, ModuleSetSHA256: strings.ToUpper(hash)}})
 	if err != nil || len(profiles) != 1 || profiles[0].ModuleSetSHA256 != hash {
-		t.Fatalf("normalization: %#v %v", profiles, err)
+		t.Fatalf("Нормализация: %#v %v", profiles, err)
 	}
 	if got := guardRuntimePolicyDigest0317(profiles); !isSHA256Hex0134(got) {
 		t.Fatalf("Недопустимый хеш политики Runtime %q", got)

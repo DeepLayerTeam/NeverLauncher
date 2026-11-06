@@ -62,7 +62,7 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 	}
 	_, consumed, completed, err := r.MinimalInstallationStatus0375(ctx)
 	if err != nil || !consumed || !completed {
-		t.Fatalf("status: consumed=%v completed=%v err=%v", consumed, completed, err)
+		t.Fatalf("Статус: обработано=%v, завершено=%v, ошибка=%v", consumed, completed, err)
 	}
 	actual, err := r.GetUser("admin")
 	if err != nil || actual.PasswordHash != user.PasswordHash {

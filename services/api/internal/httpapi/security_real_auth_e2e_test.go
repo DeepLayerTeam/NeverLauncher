@@ -84,7 +84,7 @@ func securityHTTP02912(t *testing.T, client *http.Client, url, method, body, acc
 		t.Fatal(err)
 	}
 	if resp.StatusCode != expected {
-		t.Fatalf("%s %s => %d (want %d): %s", method, url, resp.StatusCode, expected, string(data))
+		t.Fatalf("%s %s: получено %d (ожидалось %d): %s", method, url, resp.StatusCode, expected, string(data))
 	}
 	return data
 }

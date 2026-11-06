@@ -14,7 +14,7 @@ import (
 func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("requires LAUNCHER_SERVERBRIDGE_HA_DSN")
+		t.Skip("Требуется переменная LAUNCHER_SERVERBRIDGE_HA_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()

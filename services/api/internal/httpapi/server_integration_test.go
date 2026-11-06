@@ -144,7 +144,7 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 		res = httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
 		if res.Code != http.StatusOK {
-			t.Fatalf("explicit %s => %d %s", suffix, res.Code, res.Body.String())
+			t.Fatalf("Явный запрос %s: %d %s", suffix, res.Code, res.Body.String())
 		}
 	}
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects/demo-project/versions/"+created.ID+"/publish", nil)

@@ -27,7 +27,7 @@ func signedBundle(t *testing.T, root string, offline bool) Options {
 	}
 	script := []byte("#!/bin/sh\nif [ -f \"$2\" ]; then :; fi\nprintf '%s\\n' \"$*\" >> \"" + filepath.Join(root, "invocations") + "\"\n")
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX script fixture; cross compile checked separately")
+		t.Skip("Тестовый POSIX-скрипт; кросс-компиляция проверяется отдельно")
 	}
 	if e := os.WriteFile(filepath.Join(bundle, binaryName()), script, 0700); e != nil {
 		t.Fatal(e)

@@ -58,7 +58,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    assert (STAGE / "backend/lib/java-lifecycle.jar").is_file(), "run build.sh first"
+    assert (STAGE / "backend/lib/java-lifecycle.jar").is_file(), "Сначала запустите build.sh"
     classpath = os.pathsep.join(
         (
             str((STAGE / "backend/lib/launcher-java-sdk-core.jar").resolve()),

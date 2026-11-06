@@ -19,7 +19,7 @@ import (
 func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	endpoint := os.Getenv("TEST_TEXTURE_S3_ENDPOINT_02512")
 	if endpoint == "" {
-		t.Skip("TEST_TEXTURE_S3_ENDPOINT_02512 not configured")
+		t.Skip("Не настроена переменная TEST_TEXTURE_S3_ENDPOINT_02512")
 	}
 	cfg := S3Config{Endpoint: endpoint, Bucket: os.Getenv("TEST_TEXTURE_S3_BUCKET_02512"), Region: "us-east-1", AccessKey: os.Getenv("TEST_TEXTURE_S3_ACCESS_KEY_02512"), SecretKey: os.Getenv("TEST_TEXTURE_S3_SECRET_KEY_02512"), PathStyle: true}
 	store, err := NewS3Storage(cfg)

@@ -22,7 +22,7 @@ func TestHWIDRiskNeverAutomaticallyRevokes0299(t *testing.T) {
 	} {
 		_, _, action := evaluateRiskReasons0126(tc.reasons)
 		if action != tc.wantAction {
-			t.Errorf("%v: got %s want %s", tc.reasons, action, tc.wantAction)
+			t.Errorf("%v: получено %s, ожидалось %s", tc.reasons, action, tc.wantAction)
 		}
 	}
 }

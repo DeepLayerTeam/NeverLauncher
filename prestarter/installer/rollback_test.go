@@ -64,7 +64,7 @@ func installTwoSignedReleases0527(t *testing.T) (Options, *installation, record,
 		t.Fatal(err)
 	}
 	if first.Release == second.Release || first.Generation != 1 || second.Generation != 2 {
-		t.Fatalf("fixture: first=%+v second=%+v", first, second)
+		t.Fatalf("Тестовые данные: первый=%+v, второй=%+v", first, second)
 	}
 	return opts, i, *first, *second
 }

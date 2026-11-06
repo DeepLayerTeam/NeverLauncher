@@ -18,7 +18,7 @@ func TestScopedFilesystemBrokers03110(t *testing.T) {
 	}
 	got, err := Read(root, "nested/report.txt")
 	if err != nil || string(mustDecode03110(t, got)) != "report" {
-		t.Fatalf("read %q %v", got, err)
+		t.Fatalf("Чтение %q: %v", got, err)
 	}
 	if err := Write(root, "nested/report.txt", base64.StdEncoding.EncodeToString([]byte("updated"))); err != nil {
 		t.Fatal(err)

@@ -74,7 +74,7 @@ func TestModuleParityCLI03011HistoricalSelection(t *testing.T) {
 			t.Fatal(e)
 		}
 		if len(report.Results) != 19 {
-			t.Fatalf("%s: %d records", baseline, len(report.Results))
+			t.Fatalf("%s: записей — %d", baseline, len(report.Results))
 		}
 		if baseline == "0.30.1" && report.Results[1].Status != "planned" {
 			t.Fatal("Перезаписан исторический реестр")

@@ -84,7 +84,7 @@ class CohortTests(unittest.TestCase):
 
     def test_three_unique_projects_are_preflighted_without_running_anything(self):
         self.assertEqual(len(self.validate()), 3)
-        with patch.dict(os.environ, {"LAUNCHER_TOKEN": "test-secret"}), patch.object(mod, "cli", side_effect=AssertionError("should not run")):
+        with patch.dict(os.environ, {"LAUNCHER_TOKEN": "test-secret"}), patch.object(mod, "cli", side_effect=AssertionError("Не должно выполняться")):
             self.assertEqual(mod.main(["--config", str(self.config_file), "--output-dir", str(self.out), "--preflight-only"]), 0)
 
     def test_duplicate_source_is_blocked(self):

@@ -57,7 +57,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	}
 	verify, err := verifyClientInstallation(pkg1Path, client)
 	if err != nil || !verify.Valid {
-		t.Fatalf("verify=%+v err=%v", verify, err)
+		t.Fatalf("Проверка=%+v, ошибка=%v", verify, err)
 	}
 
 	mustWrite(filepath.Join(client, "mods", "core.jar"), "corrupt")

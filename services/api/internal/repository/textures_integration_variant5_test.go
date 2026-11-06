@@ -18,7 +18,7 @@ import (
 func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0255")
 	if dsn == "" {
-		t.Skip("set TEST_PG_DSN_0255 to an isolated PostgreSQL 17+ database")
+		t.Skip("Укажите изолированную базу PostgreSQL 17+ в переменной TEST_PG_DSN_0255")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

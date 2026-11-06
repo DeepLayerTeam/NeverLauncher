@@ -15,7 +15,7 @@ func TestExtensionLifecycleInstallCLI0204(t *testing.T) {
 			t.Fatalf("Запрос=%s %s", r.Method, r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "Bearer lifecycle-token" {
-			t.Fatalf("auth=%q", r.Header.Get("Authorization"))
+			t.Fatalf("авторизация=%q", r.Header.Get("Authorization"))
 		}
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

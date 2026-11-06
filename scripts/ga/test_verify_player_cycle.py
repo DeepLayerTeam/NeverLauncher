@@ -108,7 +108,7 @@ class PlayerCycle0398Test(unittest.TestCase):
         with self.assertRaises(ValueError):verify(self.root,VERSION,'not-a-commit')
 
     def test_no_game_cycle_cannot_be_certified(self):
-        with patch('verify_player_cycle_0398.verify_game_cycle',side_effect=ValueError('missing JVM')):
+        with patch('verify_player_cycle_0398.verify_game_cycle',side_effect=ValueError('Не найдена виртуальная машина Java (JVM)')):
             with self.assertRaisesRegex(ValueError,'missing JVM'):self.pass_test()
 
     def test_wrong_realm_and_client_are_not_accepted(self):

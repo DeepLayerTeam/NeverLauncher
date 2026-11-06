@@ -25,7 +25,7 @@ func TestOperationsCancelBeforeLease0217(t *testing.T) {
 	ctx := context.Background()
 	cancelled, err := r.CancelOperationJob(ctx, j.ID, "alice")
 	if err != nil || cancelled.Status != model.DurableJobStatusFailed {
-		t.Fatalf("cancel: %+v %v", cancelled, err)
+		t.Fatalf("Отмена: %+v %v", cancelled, err)
 	}
 	if _, err = r.LeaseDurableJob(ctx, j.ID, "worker", time.Minute); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("Отменённое задание получило блокировку выполнения: %v", err)
@@ -36,7 +36,7 @@ func TestOperationsCancelBeforeLease0217(t *testing.T) {
 	}
 	retried, err := r.RetryOperationJob(ctx, j.ID)
 	if err != nil || retried.Status != model.DurableJobStatusPending {
-		t.Fatalf("retry: %+v %v", retried, err)
+		t.Fatalf("Повтор: %+v %v", retried, err)
 	}
 	leased, err := r.LeaseDurableJob(ctx, j.ID, "worker", time.Minute)
 	if err != nil {
@@ -67,7 +67,7 @@ func TestOperationsRetryPreservesHistoryAndFencing0217(t *testing.T) {
 	}
 	failed, err := r.TerminateDurableJob(ctx, j.ID, first.LeaseToken, model.DurableJobStatusFailed, "test-network-failure")
 	if err != nil || failed.Status != model.DurableJobStatusFailed {
-		t.Fatalf("terminal: %v %v", failed, err)
+		t.Fatalf("Завершение: %v %v", failed, err)
 	}
 	if _, err = r.RetryOperationJob(ctx, j.ID); err != nil {
 		t.Fatal(err)

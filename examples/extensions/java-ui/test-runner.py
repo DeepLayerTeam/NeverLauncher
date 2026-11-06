@@ -70,7 +70,7 @@ if __name__=="__main__":
     server=http.server.ThreadingHTTPServer(("127.0.0.1",0),Host)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     jar=Path(sys.argv[1]).resolve() if len(sys.argv)>=2 else ROOT/"build/package/backend/workspace.jar"
-    assert jar.is_file(),"run build.sh first"
+    assert jar.is_file(),"Сначала запустите build.sh"
     proc=subprocess.Popen(["java","-jar",str(jar)],env=env(server,"backend"),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
         deadline=time.monotonic()+12

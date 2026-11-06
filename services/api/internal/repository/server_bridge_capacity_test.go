@@ -13,7 +13,7 @@ func TestEffectiveBridgeCapacity0288(t *testing.T) {
 		{40, capOf(0), 0}, {40, capOf(90), 40}, {0, capOf(15), 15},
 	} {
 		if got := effectiveBridgeCapacity0288(tc.signed, tc.limit); got != tc.expected {
-			t.Errorf("signed=%d got=%d want=%d", tc.signed, got, tc.expected)
+			t.Errorf("Подписано=%d, получено=%d, ожидалось=%d", tc.signed, got, tc.expected)
 		}
 	}
 }

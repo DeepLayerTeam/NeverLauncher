@@ -106,7 +106,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("validations => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Проверка данных: %d %s", res.Code, res.Body.String())
 	}
 	var validations struct {
 		Data struct {

@@ -60,7 +60,7 @@ func TestRemoteFaultReadOnlyReceipt04112(t *testing.T) {
 	key := "completed-command-04112-001"
 	first := remoteRequest0284(t, a, token, http.MethodPost, "/v1/host/commands", "start", key, "127.0.0.1:1000")
 	if first.Code != http.StatusOK {
-		t.Fatalf("execute %d %s", first.Code, first.Body.String())
+		t.Fatalf("Выполнение: %d %s", first.Code, first.Body.String())
 	}
 	for i := 0; i < 3; i++ {
 		r := remoteRequest0284(t, a, token, http.MethodGet, "/v1/host/receipts/"+key, "", "", "127.0.0.1:1000")

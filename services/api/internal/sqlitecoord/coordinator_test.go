@@ -39,7 +39,7 @@ func openTestCoordinator(t *testing.T, path string) *Coordinator {
 		// Хранилище SQLite продукта явно запрещает overlayfs и tmpfs. Сертифицированное
 		// задание CI устанавливает следующий флаг и должно пропускать тесты.
 		if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" && (errors.Is(e, os.ErrPermission) || isUnsupportedFS(e)) {
-			t.Skipf("requires supported SQLite local FS: %v", e)
+			t.Skipf("Требуется поддерживаемая локальная файловая система SQLite: %v", e)
 		}
 		t.Fatal(e)
 	}
@@ -64,7 +64,7 @@ func TestRateLimitAtomicAndRestart(t *testing.T) {
 			defer wg.Done()
 			result, e := c.Allow(ctx, "auth|10.0.0.1", 7, time.Minute)
 			if e != nil {
-				t.Errorf("allow: %v", e)
+				t.Errorf("Разрешение: %v", e)
 				return
 			}
 			if result.Allowed {
@@ -219,7 +219,7 @@ func TestLeaseExpiryFencingAndPrune(t *testing.T) {
 	}
 	n, e := c.Prune(ctx)
 	if e != nil || n != 2 {
-		t.Fatalf("prune %d %v", n, e)
+		t.Fatalf("Очистка %d: %v", n, e)
 	}
 	e = c.db.Read(ctx, func(q sqlitedurable.Executor) error {
 		return q.QueryRowContext(ctx, "SELECT fence FROM coord_leases WHERE server_id='srv' AND command_id='cmd'").Scan(&fence)

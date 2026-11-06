@@ -38,7 +38,7 @@ func TestProfileVersionAndReleaseSnapshot0221(t *testing.T) {
 	}
 	history, err := r.ListProfileRevisions("demo-project", "vanilla")
 	if err != nil || len(history) != 2 {
-		t.Fatalf("history %v: %v", history, err)
+		t.Fatalf("История %v: %v", history, err)
 	}
 	if history[0].Digest != old.Digest {
 		t.Fatal("Старая история переписана")

@@ -21,7 +21,7 @@ func TestProtectionBanLifecycle0298(t *testing.T) {
 		t.Fatalf("Блокировка не применяется: %+v %v %v", b, ok, err)
 	}
 	if changed, err := r.RevokeProtectionBan(ctx, "user", "admin"); err != nil || !changed {
-		t.Fatalf("unban %v %v", changed, err)
+		t.Fatalf("Снятие блокировки: %v %v", changed, err)
 	}
 	if _, ok, _ := r.ActiveProtectionBan(ctx, "user", now); ok {
 		t.Fatal("Снятие блокировки проигнорировано")

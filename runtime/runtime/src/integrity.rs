@@ -741,7 +741,7 @@ mod tests {
             evidence_sha256: String::new(),
             session_proof: "44".repeat(32),
         };
-        evidence.evidence_sha256 = hex::encode(recompute_evidence_sha256(&evidence).expect("digest"));
+        evidence.evidence_sha256 = hex::encode(recompute_evidence_sha256(&evidence).expect("контрольная сумма"));
         evidence
     }
 
@@ -751,7 +751,7 @@ mod tests {
         let original = evidence.evidence_sha256.clone();
         let mut changed = evidence.clone();
         changed.guard.image_sha256 = "aa".repeat(32);
-        assert_ne!(hex::encode(recompute_evidence_sha256(&changed).expect("digest")), original);
+        assert_ne!(hex::encode(recompute_evidence_sha256(&changed).expect("контрольная сумма")), original);
     }
 
     #[test]

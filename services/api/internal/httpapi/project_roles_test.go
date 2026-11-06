@@ -24,7 +24,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(made.Body.Bytes(), &user); err != nil || user.ID == "" {
-		t.Fatalf("user: %s %v", made.Body.String(), err)
+		t.Fatalf("Пользователь: %s %v", made.Body.String(), err)
 	}
 	actor := loginUser0211(t, h, "operator-0387@example.test", "operator-pass-0387")
 	path := "/api/v1/admin/users/" + user.ID

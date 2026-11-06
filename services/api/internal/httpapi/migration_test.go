@@ -20,7 +20,7 @@ func TestMigrationTargetSteps0331(t *testing.T) {
 	for _, step := range []string{"target_check", "target_inventory"} {
 		result, err := server.migrationBaseline0331(context.Background(), mw.Run{ProjectID: project.ID, Step: step})
 		if err != nil || !json.Valid(result) {
-			t.Fatalf("step %s: %s %v", step, result, err)
+			t.Fatalf("Шаг %s: %s %v", step, result, err)
 		}
 	}
 	if _, err = server.migrationBaseline0331(context.Background(), mw.Run{ProjectID: project.ID, Step: "cutover"}); err == nil {

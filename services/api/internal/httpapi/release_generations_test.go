@@ -27,7 +27,7 @@ func TestServerGenerationsAndAuthorizedGameRollback02311(t *testing.T) {
 	}
 	next, err := srv.nextGameReleaseGeneration02311(old.ProjectID, old.ProfileID, old.Channel, "")
 	if err != nil || next != 6 {
-		t.Fatalf("next=%d err=%v", next, err)
+		t.Fatalf("Следующий=%d, ошибка=%v", next, err)
 	}
 	candidate, err := repo.CreateVersion(old.ProjectID, old.ProfileID, old.Channel, "v-rollback")
 	if err != nil {

@@ -61,7 +61,7 @@ func TestSupportsHostHello0210(t *testing.T) {
 		{"2.0", "1.0", false},
 	} {
 		if got := supportsHostHello0210(tc.manifest, tc.hello); got != tc.want {
-			t.Fatalf("supportsHostHello0210(%q,%q)=%v want %v", tc.manifest, tc.hello, got, tc.want)
+			t.Fatalf("supportsHostHello0210(%q,%q)=%v, ожидалось %v", tc.manifest, tc.hello, got, tc.want)
 		}
 	}
 }

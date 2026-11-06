@@ -61,7 +61,7 @@ printf 'logged output\n'
 
 func TestProcessorWorker0273TimeoutKillsProcessGroup(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Linux PGID test")
+		t.Skip("Проверка группы процессов (PGID) в Linux")
 	}
 	dir := t.TempDir()
 	java := filepath.Join(dir, "java")

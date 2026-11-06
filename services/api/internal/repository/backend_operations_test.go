@@ -45,6 +45,6 @@ func TestRecentMinecraftClients0289Memory(t *testing.T) {
 	}}
 	got, err := repo.ListRecentMinecraftClients0289(context.Background(), now, 5*time.Minute)
 	if err != nil || len(got) != 1 || got[0].SessionID != "a" {
-		t.Fatalf("observed=%+v err=%v", got, err)
+		t.Fatalf("Наблюдаемое=%+v, ошибка=%v", got, err)
 	}
 }

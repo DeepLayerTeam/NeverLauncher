@@ -37,7 +37,7 @@ func TestJavaPermanentRejectionDeadLettersImmediately0487(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(items) != 1 || items[0].Attempts != 1 || d.calls != 1 {
-		t.Fatalf("deadletters=%+v calls=%d", items, d.calls)
+		t.Fatalf("Необработанные сообщения=%+v, вызовов=%d", items, d.calls)
 	}
 	// Повтор того же ключа идемпотентности не должен снова ставить завершённый
 	// элемент в очередь.
