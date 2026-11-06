@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned TypeScript compiler
+      - name: "Установка зафиксированной версии компилятора TypeScript"
         working-directory: sdk/api/typescript
         run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund --save-dev-exact typescript@5.8.3
       - name: Run production SDK and five real Java-subprocess regressions

@@ -21,4 +21,4 @@ codesign --verify --strict --verbose=2 --test-requirement "$REQ" "$TMP/NeverExte
 plutil -lint "$ROOT/macos/sandbox-helper/ExtensionSandbox.entitlements"
 install -m 0500 "$TMP/NeverExtensionSandbox" "$DEST"
 codesign --verify --strict --test-requirement "$REQ" "$DEST"
-echo "Signed helper installed: $DEST"
+echo "Подписанная вспомогательная программа установлена: $DEST"

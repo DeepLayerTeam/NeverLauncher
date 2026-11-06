@@ -39,13 +39,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
-      - name: Compile and test actual native Keychain/DeviceCheck integration
+      - name: "Сборка и тестирование нативной интеграции Keychain/DeviceCheck"
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Desktop UI compile
+      - name: "Компиляция интерфейса Desktop"
         working-directory: apps/desktop
         run: npm ci && npm run build

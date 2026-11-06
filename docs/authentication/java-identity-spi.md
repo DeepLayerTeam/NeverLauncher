@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.5 — Java IdentityProvider
+# NeverLauncher 0.48.5 — провайдер идентификации Java
 
 Java-расширения с целью `backend` могут зарегистрировать реализацию `IdentityProvider` через `ctx.providers().register(new ProviderDescriptor<>(IdentityServices.CONTRACT, ...))` и выбрать её в `Extension.start()`. Необходимо реализовать `authenticatePassword`, `resolveIdentity`, `verifyProviderSession` и `revokeProviderSession`. Методы возвращают `VerifiedIdentity` с постоянными **issuer и subject** (не адресом электронной почты), а также `IdentityProof`, содержащим учётные данные сессии провайдера и способы аутентификации. Для ожидаемых отказов аутентификации выбрасывайте `IdentityFailure` со стабильными кодами. Никогда не записывайте секреты в журналы.
 

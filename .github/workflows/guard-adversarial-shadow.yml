@@ -23,12 +23,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Real validation logic and hostile evidence regressions
+      - name: "Регрессионные тесты реальной валидации и враждебных свидетельств"
         run: python3 scripts/guard_ci/test_adversarial_pilot_05012.py
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Compile and exercise actual server shadow journal
+      - name: "Сборка и проверка теневого журнала сервера"
         working-directory: services/api/internal/httpapi
         run: go test guard_shadow_05012.go guard_shadow_05012_test.go -count=1 -v
       - name: Compile server heartbeat integration using full API package
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install Linux native library test prerequisites
+      - name: "Установка нативных библиотек для тестов Linux"
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential
       - name: Run supported JVM adversarial suites with captured evidence

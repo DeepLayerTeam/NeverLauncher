@@ -7,7 +7,7 @@
 - [Операторское руководство 0.45.13](operator/README.md) — реальные команды установки, резервирования, восстановления, обновления, инцидентов и контроль второй независимой приёмки.
 
 - [Быстрый старт](getting-started/quickstart.md) — требования, проверка дерева, сборка компонентов.
-- [Production-развертывание](getting-started/production.md) — секреты, PostgreSQL/Redis, reverse proxy, первый запуск.
+- [Промышленное развёртывание](getting-started/production.md) — секреты, PostgreSQL/Redis, reverse proxy, первый запуск.
 - [Локальная разработка](development/local-development.md) — инструменты и тесты.
 
 ## Управление платформой

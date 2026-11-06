@@ -69,5 +69,5 @@ jobs:
           LAUNCHER_SQL_TEST_MARIADB_DSN: auth:integration-only@tcp(localhost:3307)/auth?tls=false
           LAUNCHER_SQL_REQUIRE_ALL: '1'
         run: go test -count=1 -timeout=5m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' -v
-      - name: Build Backend API
+      - name: "Сборка API серверной части"
         run: go build ./cmd/...

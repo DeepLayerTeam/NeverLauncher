@@ -50,7 +50,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Require actual architecture and OS
+      - name: "Проверка реальной архитектуры и ОС"
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +63,7 @@ jobs:
           set -euo pipefail
           go test -count=1 -timeout 5m -v ./internal/extensionhost \
             -run 'TestNativeCLIRevocationStopsRunningProcess04312|TestCLIAuthorityPreflightRejectsRevocation04312|TestBrokerResponseRevocation04312'
-      - name: Existing extension host and authorization regression suite
+      - name: "Регрессионные тесты хоста расширений и авторизации"
         shell: bash
         working-directory: services/api
         run: |

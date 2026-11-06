@@ -30,7 +30,7 @@ jobs:
             scripts/operations/test_dr_03512.py \
             scripts/operations/test_multi_host_0512.py \
             scripts/operations/test_nn1_compat_0516.py
-      - name: Check Python syntax and release metadata
+      - name: "Проверка синтаксиса Python и метаданных релиза"
         run: |
           python3 -m py_compile scripts/operations/cross_host_recovery_0519.py
           python3 scripts/version/manage.py check

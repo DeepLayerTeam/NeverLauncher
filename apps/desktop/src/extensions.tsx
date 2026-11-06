@@ -183,7 +183,7 @@ export function DesktopExtensions0209({
       loadedIdentity.current = "";
       const message = String(e);
       setError(message);
-      log(`Desktop Extensions catalog: ${message}`);
+      log(`Каталог расширений Desktop: ${message}`);
     }
   }
 
@@ -213,7 +213,7 @@ export function DesktopExtensions0209({
       loadedIdentity.current = "";
       const message = String(e);
       setError(message);
-      log(`Desktop extension ${item.extensionId}: ${message}`);
+      log(`Расширение Desktop ${item.extensionId}: ${message}`);
     }
   }
 

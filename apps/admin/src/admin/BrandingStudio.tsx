@@ -61,7 +61,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
           {([['accentColor','Акцент'],['backgroundColor','Фон'],['textColor','Текст']] as const).map(([key,label])=><label key={key}>{label}<input aria-label={label} type="color" value={brand[key]||'#ffffff'} onChange={e=>change(key,e.target.value)}/></label>)}
         </div>
         <label className="field">Язык оформления<select value={brand.locale||'ru'} onChange={e=>change('locale',e.target.value)}><option value="ru">Русский</option><option value="en">Английский</option></select></label>
-        {([['logoPng','Логотип'],['iconPng','Иконка в Desktop'],['splashPng','Фон splash']] as const).map(([field,label])=><label className="field" key={field}>{label} · PNG до 128 KiB
+        {([['logoPng','Логотип'],['iconPng','Иконка приложения'],['splashPng','Заставка запуска']] as const).map(([field,label])=><label className="field" key={field}>{label} · PNG до 128 KiB
           <input type="file" accept="image/png" onChange={e=>{const f=e.target.files?.[0];if(f)readPng0355(f).then(s=>change(field,s)).catch(err=>setError(String(err)))}}/>
           {brand[field]&&<button type="button" onClick={()=>change(field,'')}>Удалить {label.toLowerCase()}</button>}
         </label>)}
@@ -93,10 +93,10 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
     </article>
     <article className="subcard">
       <h3>4. Подписание и экспорт</h3>
-      <label className="field">Локальный файл приватного Ed25519 seed (32 байта hex)
+      <label className="field">Локальный файл закрытого ключевого материала Ed25519 (32 байта, шестнадцатеричный формат)
         <input ref={privateInput} type="file" accept=".key,.txt" onChange={e=>setSeedFile(e.target.files?.[0]??null)}/>
       </label>
-      <p className="muted">Для v1 нужен root seed, для v2 — seed активного делегированного bootstrap-ключа из загруженной trust policy. При несовпадении ключа подписание отклоняется.</p>
+      <p className="muted">Для v1 нужен корневой ключевой материал, для v2 — материал активного делегированного ключа начальной загрузки из загруженной политики доверия. При несовпадении ключа подписание отклоняется.</p>
       <div className="buttonRow"><button disabled={!canSign||!loaded||!previewValid||!seedFile||busy} onClick={()=>signedDownload().catch(err=>setError(String(err)))}>{busy?'Подписание…':'Подписать и скачать bootstrap.signed.json'}</button></div>
       {status&&<p className="success" role="status">{status}</p>}
       {error&&<p className="error" role="alert">{error}</p>}

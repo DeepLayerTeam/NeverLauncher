@@ -126,7 +126,7 @@ function textureError0258(
     );
   return new TextureServiceError0258(
     status,
-    typeof message === "string" ? message : `Texture API: HTTP ${status}`,
+    typeof message === "string" ? message : `API текстур: HTTP ${status}`,
   );
 }
 export class TextureServiceClient0258 {

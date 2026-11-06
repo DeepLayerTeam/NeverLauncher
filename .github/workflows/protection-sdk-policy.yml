@@ -40,13 +40,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Real API build and integration tests
+      - name: "Сборка настоящего API и интеграционные тесты"
         working-directory: services/api
         run: |
           go build ./cmd/...
           go test -count=1 -timeout=10m ./pkg/protection ./internal/dbmigrate ./internal/repository ./internal/httpapi -run 'TestProtection.*0298|TestEvaluateAppliedSealedCatalog|TestRoleUpdateRevokesLiveNeverToken0297'
           go test -race -count=1 -timeout=10m ./pkg/protection ./internal/repository -run 'TestProtection.*0298'
-      - name: CLI migrations
+      - name: "Миграции CLI"
         working-directory: cli
         run: go test ./internal/dbmigrate -count=1
       - name: Статический анализ Go (vet)

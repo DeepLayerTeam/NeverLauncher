@@ -25,13 +25,13 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Verify dependencies and format
+      - name: "Проверка зависимостей и форматирования"
         run: |
           set -euo pipefail
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/sqlitedurable internal/sqlitecore cmd/launcher-sqlite)"
-      - name: Verify local durable filesystem
+      - name: "Проверка надёжной локальной файловой системы"
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-backup-tests
         run: |
@@ -42,12 +42,12 @@ jobs:
           case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem: $fstype"; exit 1 ;; esac
           echo "LAUNCHER_SQLITE_TEST_ROOT=$LAUNCHER_SQLITE_TEST_ROOT" >> "$GITHUB_ENV"
           echo 'LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1' >> "$GITHUB_ENV"
-      - name: Integration, concurrency and source vet
+      - name: "Интеграция, конкурентность и статический анализ исходников"
         run: |
           set -euo pipefail
           go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./cmd/launcher-sqlite
           go vet ./internal/sqlitedurable ./internal/sqlitecore ./cmd/launcher-sqlite
-      - name: End-to-end CLI backup, verify, restore, pre-upgrade
+      - name: "Сквозная проверка CLI: резервирование, проверка, восстановление и подготовка к обновлению"
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite

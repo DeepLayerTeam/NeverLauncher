@@ -1199,7 +1199,7 @@ export function MigrationCenter0331({
       if (!response.ok) {
         const payload = await response.text();
         throw new Error(
-          `Export HTTP ${response.status}: ${payload.slice(0, 250)}`,
+          `Ошибка экспорта, HTTP ${response.status}: ${payload.slice(0, 250)}`,
         );
       }
       if (

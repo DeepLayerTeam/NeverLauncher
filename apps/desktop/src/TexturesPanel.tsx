@@ -538,7 +538,7 @@ export function TexturesPanel0258({
           <p className="textureProfile0258">
             {realm === "local"
               ? `Локальный профиль: ${identity?.profileName} · ${identity?.profileUuid}`
-              : `Microsoft Minecraft: ${officialProfile?.name} · ${officialProfile?.id}`}
+              : `Учётная запись Microsoft Minecraft: ${officialProfile?.name} · ${officialProfile?.id}`}
           </p>
           <div className="textureContent0258">
             <div>

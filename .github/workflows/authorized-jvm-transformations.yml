@@ -61,5 +61,5 @@ jobs:
         run: |
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guarded_trusted_launch_0503
-      - name: Canonical version consistency
+      - name: "Согласованность канонической версии"
         run: python scripts/version/manage.py check

@@ -161,7 +161,7 @@ jobs:
         run: |
           test -n "$GPG_KEY_DATA"
           printf '%s' "$GPG_KEY_DATA" | gpg --batch --import
-      - name: Build production-signed native artifact
+      - name: "Сборка нативного артефакта с промышленной подписью"
         shell: bash
         env:
           LAUNCHER_GPG_SIGNING_KEY: ${{ secrets.LINUX_GPG_KEY_ID }}
@@ -183,7 +183,7 @@ jobs:
         if: always() && runner.os == 'macOS'
         shell: bash
         run: rm -f "$RUNNER_TEMP/native-notary-0522.p8"
-      - name: Upload signed installers and signatures
+      - name: "Загрузка подписанных установщиков и подписей"
         uses: actions/upload-artifact@v4
         with:
           name: launcher-installer-${{ matrix.platform }}-${{ matrix.arch }}

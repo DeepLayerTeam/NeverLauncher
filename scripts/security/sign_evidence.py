@@ -33,7 +33,7 @@ def main():
     password = os.environ.get("LAUNCHER_GA_SIGNING_KEY_PASSPHRASE")
     if password is None:
         password = getpass.getpass(
-            "Private key passphrase (empty for unencrypted PKCS#8): "
+            "Пароль закрытого ключа (оставьте пустым для незашифрованного PKCS#8): "
         )
     private = serialization.load_pem_private_key(
         args.private_key_file.read_bytes(),
@@ -69,7 +69,7 @@ def main():
         sig_path.unlink(missing_ok=True)
         raise
     print(
-        f"Approved signed evidence: {args.evidence.name} (.sig); key fingerprint retained by approver"
+        f"Подписанное подтверждение одобрено: {args.evidence.name} (.sig); отпечаток ключа сохранён у подтверждающего лица"
     )
 
 

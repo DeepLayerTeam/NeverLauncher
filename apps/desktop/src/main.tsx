@@ -3810,7 +3810,7 @@ function App() {
     if (!beginResponse.ok)
       throw new Error(
         beginPayload?.error?.message ||
-          `Guard Attestation begin: ${beginResponse.status} ${beginResponse.statusText}`,
+          `Начало аттестации Guard: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const begin = beginPayload?.data ?? beginPayload;
     if (
@@ -3868,7 +3868,7 @@ function App() {
     if (!completeResponse.ok)
       throw new Error(
         completePayload?.error?.message ||
-          `Guard Attestation complete: ${completeResponse.status} ${completeResponse.statusText}`,
+          `Аттестация Guard завершена: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const data = completePayload?.data ?? completePayload;
     if (!data?.verified || !data?.launchTicket || !data?.oneTime)
@@ -3919,7 +3919,7 @@ function App() {
     if (!beginResponse.ok)
       throw new Error(
         beginPayload?.error?.message ||
-          `Guard Attestation v2 begin: ${beginResponse.status} ${beginResponse.statusText}`,
+          `Начало аттестации Guard v2: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const begin = beginPayload?.data ?? beginPayload;
     if (
@@ -3976,7 +3976,7 @@ function App() {
     if (!completeResponse.ok)
       throw new Error(
         completePayload?.error?.message ||
-          `Guard Attestation v2 complete: ${completeResponse.status} ${completeResponse.statusText}`,
+          `Аттестация Guard v2 завершена: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const data = completePayload?.data ?? completePayload;
     if (
@@ -4594,7 +4594,7 @@ function App() {
     } catch (error) {
       setStage("failed");
       setFirstRunError0352(`Подготовка отклонена: ${String(error)}`);
-      log(`First run: ${String(error)}`);
+      log(`Первый запуск: ${String(error)}`);
     } finally {
       setFirstRunBusy0352(false);
     }
@@ -4914,7 +4914,7 @@ function App() {
                         void callTauri("open_external_https_0356", {
                           url: item.url,
                         }).catch((error) =>
-                          log(`External link: ${String(error)}`),
+                          log(`Внешняя ссылка: ${String(error)}`),
                         );
                       }}
                     >
@@ -4932,7 +4932,7 @@ function App() {
                   e.preventDefault();
                   void callTauri("open_external_https_0356", {
                     url: signedProvisioning0352.branding!.websiteUrl,
-                  }).catch((error) => log(`External link: ${String(error)}`));
+                  }).catch((error) => log(`Внешняя ссылка: ${String(error)}`));
                 }}
               >
                 {translate0357.website}
@@ -5341,7 +5341,7 @@ function App() {
                   }
                   onClick={() =>
                     certifyPlatformTPM0314().catch((e: Error) =>
-                      log(`TPM Certify: ${String(e)}`),
+                      log(`Сертификация TPM: ${String(e)}`),
                     )
                   }
                 >
@@ -5380,7 +5380,7 @@ function App() {
                   }
                   onClick={() =>
                     verifyMeasuredBoot0315().catch((e: Error) =>
-                      log(`TPM Quote: ${String(e)}`),
+                      log(`Цитата TPM: ${String(e)}`),
                     )
                   }
                 >
@@ -6361,7 +6361,7 @@ function AuthPanel({
                       : "—"}{" "}
                     · {device.revokedReason || "причина не указана"}
                     {device.replacedByDeviceId
-                      ? ` · replaced by ${device.replacedByDeviceId}`
+                      ? ` · заменено устройством ${device.replacedByDeviceId}`
                       : ""}
                   </small>
                 )}

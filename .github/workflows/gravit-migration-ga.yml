@@ -46,7 +46,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Full Backend build
+      - name: "Полная сборка серверной части"
         working-directory: services/api
         run: go build ./...
       - name: MIG01–MIG13 Go tests, including PostgreSQL
@@ -55,12 +55,12 @@ jobs:
           go test -race -count=1 ./internal/gravitplan ./internal/gravitidentity ./internal/dbmigrate ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
           go test -race -count=1 ./internal/repository -run '^TestMigration.*(Postgres|033|0442|0448)' 
           go test -run '^$' ./internal/httpapi
-      - name: CLI build and tests
+      - name: "Сборка и тесты CLI"
         working-directory: cli
         run: |
           go build ./cmd/launcher
           go test -race -count=1 ./cmd/launcher -run 'TestMigration.*(033|0447|0448)' 
-      - name: Schema, OpenAPI and version
+      - name: "Схема, OpenAPI и версия"
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
@@ -81,7 +81,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Admin tests and production build
+      - name: "Тесты Admin и промышленная сборка"
         working-directory: apps/admin
         run: |
           npm ci
@@ -105,17 +105,17 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-      - name: Tauri Linux dependencies
+      - name: "Зависимости Tauri для Linux"
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-      - name: Desktop production assets
+      - name: "Промышленные ресурсы Desktop"
         working-directory: apps/desktop
         run: |
           npm ci
           npm run build
-      - name: Desktop Rust tests and compile
+      - name: "Тесты Rust и сборка Desktop"
         working-directory: apps/desktop/src-tauri
         run: |
           cargo test --locked
@@ -204,7 +204,7 @@ jobs:
           path: ${{ runner.temp }}/migration-ga/*-certificate.json
           retention-days: 90
           if-no-files-found: error
-      - name: Remove temporary signing material
+      - name: "Удаление временного ключевого материала"
         if: always()
         shell: bash
         run: |

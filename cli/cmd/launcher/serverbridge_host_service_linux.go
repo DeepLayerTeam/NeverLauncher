@@ -16,7 +16,7 @@ import (
 	"syscall"
 )
 
-const hostServiceMarker02811 = "# Managed by Launcher Host Service Installer 0.28.11"
+const hostServiceMarker02811 = "# Управляется установщиком службы узла Launcher 0.28.11"
 
 var hostServiceName02811 = regexp.MustCompile(`^[a-z][a-z0-9-]{0,47}$`)
 

@@ -41,13 +41,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile SDK and exercise real Java callbacks
+      - name: "Сборка SDK и проверка реальных обратных вызовов Java"
         shell: bash
         run: |
           sh sdk/java/core/build.sh test
           sh sdk/java/gravit-compat/build.sh test
           sh sdk/java/http-client/build.sh test
-      - name: Publish public binary SDK artifacts
+      - name: "Публикация двоичных артефактов SDK"
         shell: bash
         run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
       - name: Adversarial published-artifact checks

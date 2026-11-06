@@ -51,7 +51,7 @@ jobs:
       - name: Live policy/agent integration regressions
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1
-      - name: Offline sign/key generation tests
+      - name: "Автономные тесты подписи и генерации ключей"
         working-directory: cli
         run: go test ./cmd/guard-policy-sign -count=1
       - name: Native Rust Guard policy and real Trusted JVM launch integration

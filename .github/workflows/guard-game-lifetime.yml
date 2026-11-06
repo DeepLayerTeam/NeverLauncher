@@ -41,22 +41,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: Linux Tauri build dependencies
+      - name: "Зависимости сборки Tauri для Linux"
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
-      - name: Check production process termination code
+      - name: "Проверка кода завершения промышленного процесса"
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --lib
-      - name: Run real process kill test (Linux)
+      - name: "Проверка принудительного завершения реального процесса (Linux)"
         if: runner.os == 'Linux'
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib game_guard_lifetime_0438_tests -- --nocapture
-      - name: Build and test native Desktop game watchdog
+      - name: "Сборка и тестирование нативного сторожевого процесса Desktop"
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml game_guard_watchdog_0438 -- --nocapture
-      - name: Compile both Guard and Desktop runtime
+      - name: "Сборка Guard и среды исполнения Desktop"
         run: cargo check --manifest-path runtime/runtime/Cargo.toml --bin guard
   security-release-gate:
-    name: Deny missing live gameplay evidence
+    name: "Отказ при отсутствии доказательств реального игрового процесса"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

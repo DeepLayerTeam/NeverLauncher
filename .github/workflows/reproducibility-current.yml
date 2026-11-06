@@ -79,7 +79,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Verify clean immutable source and pinned dependencies
+      - name: "Проверка неизменности исходников и зафиксированных зависимостей"
         env:
           EXPECTED_SHA: ${{ inputs.source_commit }}
         shell: bash
@@ -90,13 +90,13 @@ jobs:
           test "$(cat VERSION)" = 0.53.0
           git diff --exit-code HEAD --
           git diff --cached --exit-code HEAD --
-      - name: Install Linux native build dependencies
+      - name: "Установка нативных зависимостей сборки для Linux"
         if: startsWith(matrix.target, 'linux')
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
-      - name: Native executable compilation and deterministic unsigned packaging
+      - name: "Сборка нативного исполняемого файла и воспроизводимая упаковка без подписи"
         env:
           TARGET: ${{ matrix.target }}
         shell: bash
@@ -139,7 +139,7 @@ jobs:
           pattern: unsigned-05212-${{ matrix.builder }}-*-${{ inputs.source_commit }}
           path: dist/unsigned-capture
           merge-multiple: true
-      - name: Reopen real archives and sign complete six-target observation
+      - name: "Повторная проверка архивов и подписание результатов для шести платформ"
         env:
           BUILDER: ${{ matrix.builder }}
           SOURCE_SHA: ${{ inputs.source_commit }}
@@ -200,7 +200,7 @@ jobs:
         with:
           name: independent-05212-builder-b-${{ inputs.source_commit }}
           path: dist/b-receipt
-      - name: Independently pin public keys and rehash every archive member
+      - name: "Независимая фиксация открытых ключей и проверка хеша каждого файла архива"
         env:
           A_PUBLIC: ${{ vars.LAUNCHER_REPRO_BUILDER_A_PUBLIC_KEY_PEM }}
           B_PUBLIC: ${{ vars.LAUNCHER_REPRO_BUILDER_B_PUBLIC_KEY_PEM }}

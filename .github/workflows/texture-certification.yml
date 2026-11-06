@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   postgres-api:
-    name: Go API, real PostgreSQL transactions, lifecycle and protocol
+    name: "Go API, реальные транзакции PostgreSQL, жизненный цикл и протокол"
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
@@ -72,12 +72,12 @@ jobs:
           go build -trimpath -o /tmp/texture-maintenance ./cmd/texture-maintenance-0253
           go build -trimpath -o /tmp/gravit-textures-import ./cmd/gravit-textures-import-02510
           go build -trimpath -o /tmp/texture-compat ./cmd/texture-compat-02512
-      - name: Execute real PostgreSQL, HTTP and storage tests
+      - name: "Запуск настоящих тестов PostgreSQL, HTTP и хранилища"
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 12m ./internal/repository ./internal/httpapi ./internal/storage ./internal/dbmigrate ./internal/texturepng ./internal/texturefetch ./internal/yggdrasiltexture ./internal/officialminecraft ./cmd/texture-compat-02512
           go vet ./internal/repository ./internal/httpapi ./internal/storage ./internal/dbmigrate ./cmd/texture-maintenance-0253 ./cmd/texture-compat-02512
-      - name: Validate generated API and version
+      - name: "Проверка сгенерированного API и версии"
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py
@@ -91,7 +91,7 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Start disposable MinIO and initialize bucket
+      - name: "Запуск временного MinIO и создание бакета"
         run: |
           docker run -d --rm --name textures-minio -p 127.0.0.1:9000:9000 \
             -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=texture_password_cert_only \
@@ -113,11 +113,11 @@ jobs:
           TEST_TEXTURE_S3_SECRET_KEY_02512: texture_password_cert_only
         run: |
           go test -race -count=1 -timeout 5m ./internal/storage
-      - name: MinIO diagnostics on failure
+      - name: "Диагностика MinIO при сбое"
         if: failure()
         run: docker logs textures-minio 2>&1 | tail -80 || true
   desktop-admin:
-    name: Desktop and Admin integration/build
+    name: "Интеграция и сборка Desktop и Admin"
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -129,13 +129,13 @@ jobs:
           cache-dependency-path: |
             apps/desktop/package-lock.json
             apps/admin/package-lock.json
-      - name: Desktop install, UI client tests, production frontend build
+      - name: "Установка Desktop, тесты интерфейса клиента и промышленная сборка"
         working-directory: apps/desktop
         run: |
           npm ci
           npm run test:textures
           npm run build
-      - name: Admin install, permissions/UI tests, production frontend build
+      - name: "Установка Admin, тесты прав и интерфейса, промышленная сборка"
         working-directory: apps/admin
         run: |
           npm ci
@@ -152,7 +152,7 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Verify actual running authlib-injector origin
+      - name: "Проверка источника реального запущенного authlib-injector"
         working-directory: services/api
         env:
           TEXTURE_ORIGIN: ${{ inputs.texture_origin }}

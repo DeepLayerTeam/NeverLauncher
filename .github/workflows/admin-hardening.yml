@@ -18,10 +18,10 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Go race tests and regression checks
+      - name: "Тесты Go с детектором гонок и регрессионные проверки"
         working-directory: services/api
         run: go test -race -count=1 ./internal/httpapi ./internal/repository
-      - name: Real PostgreSQL and ServerBridge durable integration
+      - name: "Реальная надёжная интеграция PostgreSQL и ServerBridge"
         run: bash e2e/scripts/run-admin-hardening-02112-e2e.sh
   admin-build-tests:
     runs-on: ubuntu-24.04
@@ -33,13 +33,13 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Install, test and production build
+      - name: "Установка зависимостей, тестирование и промышленная сборка"
         working-directory: apps/admin
         run: |
           npm ci
           npm test
           npm run build
-      - name: OpenAPI and version
+      - name: "Проверка OpenAPI и версии"
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
@@ -60,9 +60,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install browser driver
+      - name: "Установка драйвера браузера"
         run: |
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
-      - name: Browser against real staging Backend (no mocks)
+      - name: "Проверка браузером на настоящем тестовом Backend (без имитаций)"
         run: python3 e2e/scripts/admin-hardening-02112-browser.py

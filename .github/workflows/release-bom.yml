@@ -44,7 +44,7 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache: false
-      - name: Version sync and release source checks
+      - name: "Синхронизация версий и проверка исходников релиза"
         run: python3 scripts/version/manage.py check
       - name: Real Go BOM tests and race checks
         working-directory: cli

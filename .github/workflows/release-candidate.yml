@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   rc-regressions:
-    name: Version, negative evidence and DR source security
+    name: "Версия, отрицательные свидетельства и безопасность исходников DR"
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Fail-closed executable acceptance suite
+      - name: "Приёмочные исполняемые тесты с отказом при ошибке"
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/acceptance/ux_0351.py audit
@@ -46,7 +46,7 @@ jobs:
           python3 -m unittest discover -s scripts/ga -p 'test_runtime_acceptance_0350.py' -v
   runtime-native:
     needs: [rc-regressions]
-    name: Real signed download, repair, tamper rejection (${{ matrix.target }})
+    name: "Подписанная загрузка, восстановление и отказ при подмене (${{ matrix.target }})"
     strategy:
       fail-fast: false
       matrix:
@@ -67,9 +67,9 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Compile real native executable and restricted Ed25519 fixture signer
+      - name: "Сборка нативного исполняемого файла и ограниченного тестового подписанта Ed25519"
         run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
-      - name: Execute signed HTTP install/repair and negative native trust tests
+      - name: "Подписанная HTTP-установка, восстановление и негативные тесты нативного доверия"
         shell: bash
         run: |
           set -euo pipefail
@@ -89,7 +89,7 @@ jobs:
           retention-days: 30
   desktop-native:
     needs: [rc-regressions]
-    name: Built Tauri + actual React assets and tests (${{ matrix.target }})
+    name: "Сборка Tauri, реальных ресурсов React и тестирование (${{ matrix.target }})"
     strategy:
       fail-fast: false
       matrix:
@@ -115,12 +115,12 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install Linux native WebView toolchain
+      - name: "Установка нативных инструментов WebView для Linux"
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libxdo-dev libssl-dev librsvg2-dev libgtk-3-dev build-essential
-      - name: Install and build real Desktop renderer
+      - name: "Установка зависимостей и сборка настоящего интерфейса Desktop"
         working-directory: apps/desktop
         run: |
           npm ci --no-audit --no-fund
@@ -131,11 +131,11 @@ jobs:
           npm run test:update-migration
           npm run test:diagnostics-support
           npm run test:accessibility
-      - name: Compile and unit-test native Tauri with current Runtime
+      - name: "Сборка и модульное тестирование нативного Tauri с текущим Runtime"
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-default-features
           cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: Hash actual executable and production-renderer bytes
+      - name: "Вычисление хешей исполняемого файла и промышленного интерфейса"
         shell: bash
         run: |
           set -euo pipefail
@@ -155,7 +155,7 @@ jobs:
           retention-days: 30
   backend-journey:
     needs: [rc-regressions]
-    name: Real PostgreSQL stable gate + disposable Owner/Player HTTP
+    name: "Контроль стабильности на настоящем PostgreSQL и временном HTTP-окружении владельца/игрока"
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
@@ -182,12 +182,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run Go security, rollback, consent and PostgreSQL immutable stable snapshot
+      - name: "Тесты Go: безопасность, откат, согласие и неизменяемый снимок PostgreSQL"
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 25m ./internal/httpapi ./internal/repository -run 'TestRollbackOperationIdempotency0217|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213|TestCanonicalPackageProductUploadValidatePublish|TestSupportReportSubmitRequiresLoginAndConsent03510|TestSupportReportRejectsUnknownFields03510|TestOperatorDiagnosticsDoesNotLeakInfrastructure03510|TestProductionGateFailClosedWithoutTargets03411|TestProductionGateUnknownEvidenceFieldsRejected03411|TestGAStableSnapshotImmutablePostgres0350|TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341'
           go build ./cmd/launcher-api
-      - name: Real disposable Backend and owner/player authenticated HTTP E2E
+      - name: "Сквозные HTTP-тесты владельца и игрока на временном настоящем Backend"
         run: |
           mkdir -p rc-out/backend
           bash scripts/acceptance/run_owner_player_0351.sh "$PWD/rc-out/backend/owner-player.json"
@@ -199,7 +199,7 @@ jobs:
           retention-days: 30
   rc-verification:
     needs: [runtime-native, desktop-native, backend-journey]
-    name: Require all three real OS outputs and protected Backend E2E
+    name: "Обязательные результаты трёх ОС и защищённые E2E-тесты Backend"
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -223,7 +223,7 @@ jobs:
         with:
           name: rc03514-backend-${{ github.sha }}
           path: rc-out/backend
-      - name: Verify true operations, hashes, scope and exact-commit completeness
+      - name: "Проверка реальных операций, хешей, границ доступа и полноты точного коммита"
         run: |
           python scripts/rc/gate_03514.py \
             --native-dir rc-out/native --desktop-dir rc-out/desktop \
