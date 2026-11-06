@@ -90,7 +90,7 @@ def read_json(path: Path) -> dict:
     except Blocked:
         raise
     except (UnicodeError, ValueError) as exc:
-        raise Blocked('invalid JSON: ' + str(path)) from exc
+        raise Blocked('Некорректный JSON: ' + str(path)) from exc
     require(type(doc) is dict, 'Корневой элемент JSON должен быть объектом: ' + str(path))
     return doc
 

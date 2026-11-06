@@ -106,9 +106,9 @@ if 'validate_software_record' in attest or 'new_software_record' in attest or 't
     errors.append('native attestation signer contains software/create fallback')
 
 if errors:
-    print('Challenge-response attestation gate FAILED:', file=sys.stderr)
+    print('Проверка аттестации запрос–ответ не пройдена:', file=sys.stderr)
     for item in errors:
         print(' - ' + item, file=sys.stderr)
     raise SystemExit(1)
 
-print('Challenge-response attestation gate OK: single-use, session-bound hardware-key freshness proof is persisted without claiming vendor remote provenance')
+print('Проверка аттестации запрос–ответ пройдена: сохранено одноразовое подтверждение актуальности аппаратного ключа, привязанное к сессии, без заявлений о подтверждении происхождения производителем')

@@ -26,21 +26,21 @@ func TestPolicyRuntime0298(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := e.Evaluate(context.Background(), Request{Stage: BeforeAuth}); got.Action != Deny || got.Handler != "block" {
-		t.Fatalf("denial overriden: %+v", got)
+		t.Fatalf("Отказ в доступе был переопределён: %+v", got)
 	}
 	if got := e.Evaluate(context.Background(), Request{Stage: BeforeLaunch}); !got.Allowed() {
-		t.Fatalf("unconfigured stage: %+v", got)
+		t.Fatalf("Не настроенный этап: %+v", got)
 	}
 	if err := e.Register(2, true, []Stage{BeforeAuth}, testHandler{"broken", Allow, errors.New("database unavailable")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.Evaluate(context.Background(), Request{Stage: BeforeAuth}); got.Action != Deny || got.Reason != "policy_handler_unavailable" {
-		t.Fatalf("fail open: %+v", got)
+		t.Fatalf("Сбой привёл к разрешению доступа: %+v", got)
 	}
 	if err := e.Register(2, true, []Stage{BeforeAuth}, testHandler{"broken", Allow, nil}); err == nil {
-		t.Fatal("duplicate handler accepted")
+		t.Fatal("Принят дублирующий обработчик")
 	}
 	if err := e.Register(2, true, []Stage{"bogus"}, testHandler{"bad", Allow, nil}); err == nil {
-		t.Fatal("unknown stage accepted")
+		t.Fatal("Принят неизвестный этап")
 	}
 }

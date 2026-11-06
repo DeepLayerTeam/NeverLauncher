@@ -29,7 +29,7 @@ certification_live_start() {
     --pins "${LAUNCHER_E2E_SERVER_PINS:-}" --bundle-dir "${LAUNCHER_E2E_SERVER_BUNDLE_DIR:-}")
   # Не используйте старую квитанцию и не оставляйте предыдущий сервер в повторно используемом рабочем каталоге.
   [[ ! -e "$root/live-server-ready.json" && ! -e "$root/live-server-witness.json" && ! -e "$root/live-server-stopped.json" && ! -e "$root/live-server-stop.request" && ! -e "$root/live-join.json" ]] || {
-    echo '[live-join] stale matching-server receipt' >&2; return 2;
+    echo '[live-join] устаревшая квитанция подходящего сервера' >&2; return 2;
   }
   python3 "$ROOT/e2e/scripts/live_join_0524.py" "${args[@]}" > "$root/live-server-execution.log" 2>&1 &
   LIVE_JOIN_DAEMON_PID=$!
@@ -38,11 +38,11 @@ certification_live_start() {
   for ((attempt=0;attempt<480;attempt++)); do
     if [[ -s "$root/live-server-ready.json" ]]; then break; fi
     if ! kill -0 "$LIVE_JOIN_DAEMON_PID" 2>/dev/null; then
-      cat "$root/live-server-execution.log" >&2; echo '[live-join] dedicated server startup failed' >&2; return 3;
+      cat "$root/live-server-execution.log" >&2; echo '[live-join] ошибка запуска выделенного сервера' >&2; return 3;
     fi
     sleep 0.5
   done
-  [[ -s "$root/live-server-ready.json" ]] || { echo '[live-join] no dedicated server readiness' >&2; return 3; }
+  [[ -s "$root/live-server-ready.json" ]] || { echo '[live-join] выделенный сервер не подтвердил готовность' >&2; return 3; }
   LIVE_JOIN_SERVER_PORT="$(python3 - "$root/live-server-ready.json" "$TARGET_ID" <<'PY'
 import json,sys
 ready=json.load(open(sys.argv[1],encoding='utf-8'))
@@ -70,12 +70,12 @@ certification_live_finish() {
   # Runtime завершился; запечатывайте журнал сервера только после остановки
   # выделенной JVM, иначе поздние строки завершения нарушат его SHA-256.
   [[ -s "$root/live-server-witness.json" ]] || {
-    echo '[live-join] no contemporaneous client-online RCON witness' >&2
+    echo '[live-join] отсутствует актуальное подтверждение RCON о нахождении клиента в сети' >&2
     return 3
   }
   certification_live_cleanup
   [[ -s "$root/live-server-stopped.json" ]] || {
-    echo '[live-join] dedicated JVM was not alive at orderly shutdown' >&2
+    echo '[live-join] выделенная JVM не работала в момент штатного завершения' >&2
     return 3
   }
   python3 "$ROOT/e2e/scripts/live_join_0524.py" verify \
@@ -83,7 +83,7 @@ certification_live_finish() {
     --loader "$loader" --loader-version "$resolved" \
     --profile "$profile" --java-major "$JAVA_MAJOR" || {
       [[ -e "$root/live-server-execution.log" ]] && tail -c 12000 "$root/live-server-execution.log" >&2
-      echo '[live-join] actual client did not join matching dedicated server' >&2
+      echo '[live-join] реальный клиент не подключился к соответствующему выделенному серверу' >&2
       return 3
     }
 }

@@ -66,7 +66,7 @@ if psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null 2>&1
 INSERT INTO server_bridge_nodes_v2(id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,created_at)
 VALUES('invalid-neoforge','invalid','neo-forge','forge-family-project','vanilla','','','','active',2,'ed25519',repeat('C',43),repeat('c',64),1,now(),now());
 SQL
-then echo '[forge-neoforge-migration] non-canonical kind bypassed constraint' >&2; exit 1; fi
+then echo '[forge-neoforge-migration] неканонический тип обошёл ограничение' >&2; exit 1; fi
 count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2 WHERE kind IN ('forge','neoforge')")"; [[ "$count" == 2 ]]
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$count" '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingNodePreserved:true,forgeNeoForgeKindsAccepted:true,nonCanonicalKindRejected:true,nodeCount:$count}' > "$RESULT_DIR/forge-neoforge-server-bridge-migration.json"
-printf '[forge-neoforge-migration] PASS 0.14.6 -> 0.14.7 Forge + NeoForge schema semantics\n'
+printf '[forge-neoforge-migration] PASS 0.14.6 -> 0.14.7: семантика схемы Forge + NeoForge\n'

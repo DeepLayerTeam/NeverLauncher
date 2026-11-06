@@ -112,4 +112,4 @@ join_count="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_join_tick
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyNode:{status:"identity-enrollment-required",protocolVersion:2,bearerCredentialRetired:true,identityEnrollmentRequired:true},legacyTexturesImported:true,legacyActiveJoinsImported:false}' \
   > "$RESULT_DIR/serverbridge-v2-migration.json"
-printf '[serverbridge-v2-migration] PASS 0.14.0 -> 0.14.3 snapshot + cryptographic identity + one-time ticket migration semantics\n'
+printf '[serverbridge-v2-migration] PASS 0.14.0 -> 0.14.3: миграция снимков, криптографических удостоверений и одноразовых билетов\n'

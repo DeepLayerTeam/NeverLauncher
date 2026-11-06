@@ -182,7 +182,7 @@ mod tests {
             "public final class GuardHold {public static void main(String[] a) throws Exception {Thread.sleep(20000);}}")
             .unwrap();
         let compiled = Command::new(javac).arg(fixture.join("GuardHold.java"))
-            .status().expect("javac spawn");
+            .status().expect("Запуск javac");
         assert!(compiled.success(), "javac fixture failed");
         let mut command = Command::new(&java);
         command.args(["-cp",fixture.to_str().unwrap(),"GuardHold"]);
@@ -192,11 +192,11 @@ mod tests {
             if libc::setpgid(0, 0) < 0 {return Err(std::io::Error::last_os_error())}
             Ok(())
         }); }
-        let mut child = command.spawn().expect("signed game JVM must launch");
+        let mut child = command.spawn().expect("Подписанная игровая JVM должна запускаться");
         std::thread::sleep(Duration::from_millis(700));
         let pid = child.id();
-        let attached = MacOSRuntimeGuard0509::attach(pid,&java).expect("signed JDK process must be verifiable");
-        attached.verify().expect("macOS process signature and identity still valid");
+        let attached = MacOSRuntimeGuard0509::attach(pid,&java).expect("Подписанный процесс JDK должен поддаваться проверке");
+        attached.verify().expect("Подпись и удостоверение процесса macOS остаются действительными");
         assert!(MacOSRuntimeGuard0509::attach(pid,Path::new("/usr/bin/false")).is_err());
         child.kill().unwrap();
         child.wait().unwrap();
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn inspects_current_real_process() {
         let pid = std::process::id();
-        let i = process_identity(pid).expect("macOS libproc must inspect own process");
+        let i = process_identity(pid).expect("macOS libproc должна проверять собственный процесс");
         assert_eq!(i.pid,pid);
         assert_eq!(i.owner, unsafe{libc::geteuid()});
         assert!(actual_executable(pid).unwrap().is_file());

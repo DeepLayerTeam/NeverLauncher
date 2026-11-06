@@ -116,6 +116,6 @@ func TestV05RunNonceExpiryReplayAndRevocation0346(t *testing.T) {
 		t.Fatal(err)
 	}
 	if validateFreshness0346(ctx, r, p, now, false) == nil {
-		t.Fatal("revoked key accepted")
+		t.Fatal("Принят отозванный ключ")
 	}
 }

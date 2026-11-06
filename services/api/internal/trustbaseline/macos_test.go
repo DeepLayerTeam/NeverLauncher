@@ -17,11 +17,11 @@ func TestMacOSSecureEnclaveLabelsGrantRemoteProvenance0316(t *testing.T) {
 		device.RemoteHardwareProvenance = "verified" // forged legacy DB state
 		assessment := Evaluate(device, true, now)
 		if assessment.RemoteHardwareProvenance != "not-verified" || assessment.ProfileDecisions[Standard].Result != Allow || assessment.ProfileDecisions[Strict].Result != Deny {
-			t.Fatalf("local Mac key upgraded remote assurance: %+v", assessment)
+			t.Fatalf("Локальный ключ Mac повысил уровень удалённого подтверждения: %+v", assessment)
 		}
 		strict := assessment.ProfileDecisions[Strict]
 		if !contains0311(strict.ReasonCodes, "macos-app-attest-not-bound-to-device-identity") || !strings.Contains(strict.RecoveryAction, "passkey") {
-			t.Fatalf("unhelpful Mac strict denial: %+v", strict)
+			t.Fatalf("Неинформативный отказ строгого профиля Mac: %+v", strict)
 		}
 	}
 }

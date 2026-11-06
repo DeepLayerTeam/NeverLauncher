@@ -23,20 +23,20 @@ func TestGuardRuntimeInventory0505(t *testing.T) {
 	policy := guardCompatPolicy0502{Artifacts: []guardCompatArtifact0502{{Kind: "mod", Path: "mods/allowed.jar", SHA256: sha}}}
 	config, err := guardRuntimeInventory0505(root, policy)
 	if err != nil || !strings.Contains(config, "integrity.required=true") || !strings.Contains(config, "integrity.count=1") || !strings.Contains(config, sha) {
-		t.Fatalf("signed inventory: %s, %v", config, err)
+		t.Fatalf("Подписанная опись: %s, %v", config, err)
 	}
 	if err = os.WriteFile(file, []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = guardRuntimeInventory0505(root, policy); err == nil {
-		t.Fatal("digest replacement not rejected")
+		t.Fatal("Замена хеша не отклонена")
 	}
 	policy.RevokedDigests = []string{sha}
 	if _, err = guardRuntimeInventory0505(root, policy); err == nil {
-		t.Fatal("revocation not rejected")
+		t.Fatal("Отзыв не отклонён")
 	}
 	policy.Artifacts = nil
 	if _, err = guardRuntimeInventory0505(root, policy); err == nil {
-		t.Fatal("empty inventory accepted")
+		t.Fatal("Принята пустая опись")
 	}
 }

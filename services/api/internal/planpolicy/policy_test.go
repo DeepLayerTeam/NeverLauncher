@@ -45,16 +45,16 @@ func TestSignedPolicyAndAdversarialMutations02412(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !Required() || !Matches(got, "server", "project", "profile", "stable", strings.Repeat("a", 128), strings.Repeat("b", 64), strings.Repeat("c", 64)) {
-		t.Fatal("valid signed plan denied")
+		t.Fatal("Отклонён действительный подписанный план")
 	}
 	if Matches(got, "server", "project", "profile", "stable", strings.Repeat("a", 128), strings.Repeat("b", 64), strings.Repeat("d", 64)) {
-		t.Fatal("tampered plan allowed")
+		t.Fatal("Разрешён изменённый план")
 	}
 	if Matches(got, "other", "project", "profile", "stable", strings.Repeat("a", 128), strings.Repeat("b", 64), strings.Repeat("c", 64)) {
-		t.Fatal("wrong server allowed")
+		t.Fatal("Разрешён неправильный сервер")
 	}
 	if _, err = Load(now.Add(2 * time.Hour)); err == nil {
-		t.Fatal("expired policy accepted")
+		t.Fatal("Принята политика с истёкшим сроком действия")
 	}
 	// Изменение корректной подписанной полезной нагрузки не должно сохранять
 	// действительность подписи.
@@ -64,17 +64,17 @@ func TestSignedPolicyAndAdversarialMutations02412(t *testing.T) {
 	env.Payload = base64.StdEncoding.EncodeToString(v)
 	write(env)
 	if _, err = Load(now); err == nil {
-		t.Fatal("tampered payload accepted")
+		t.Fatal("Приняты изменённые данные")
 	}
 	env.Payload = base64.StdEncoding.EncodeToString(bytes)
 	env.Signature = strings.Repeat("0", 128)
 	write(env)
 	if _, err = Load(now); err == nil {
-		t.Fatal("wrong signature accepted")
+		t.Fatal("Принята неправильная подпись")
 	}
 	write(Envelope{SchemaVersion: "1.0", Payload: base64.StdEncoding.EncodeToString(bytes), Signature: hex.EncodeToString(signature)})
 	t.Setenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY", strings.Repeat("f", 64))
 	if _, err = Load(now); err == nil {
-		t.Fatal("wrong pinned key accepted")
+		t.Fatal("Принят неправильный закреплённый ключ")
 	}
 }

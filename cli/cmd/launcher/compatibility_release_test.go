@@ -70,14 +70,14 @@ func TestCompatibilityCertificationAcceptsVersionlessTargetsFromRepositoryContra
 		t.Fatal(err)
 	}
 	if _, exists := targetDocument["productVersion"]; exists {
-		t.Fatal("repository-style compatibility targets must not duplicate VERSION")
+		t.Fatal("Целевые платформы совместимости в формате репозитория не должны дублировать VERSION")
 	}
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.1", "abc123")
 	if err != nil {
-		t.Fatalf("versionless compatibility targets must derive product version from release VERSION: %v", err)
+		t.Fatalf("Целевые платформы совместимости без версии должны получать версию продукта из VERSION выпуска: %v", err)
 	}
 	if certification.ProductVersion != "0.16.1" {
-		t.Fatalf("certification productVersion=%q, want 0.16.1", certification.ProductVersion)
+		t.Fatalf("Версия продукта в сертификации=%q, ожидалась 0.16.1", certification.ProductVersion)
 	}
 }
 
@@ -102,7 +102,7 @@ func TestCompatibilityCertificationRejectsExplicitTargetsVersionMismatch(t *test
 		t.Fatal(err)
 	}
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.1", "abc123"); err == nil {
-		t.Fatal("explicit compatibility targets productVersion mismatch must fail closed")
+		t.Fatal("Несовпадение productVersion у явно заданных целевых платформ должно приводить к блокировке")
 	}
 }
 
@@ -127,7 +127,7 @@ func TestCompatibilityCertificationRejectsMatrixVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.1", "abc123"); err == nil {
-		t.Fatal("compatibility matrix productVersion mismatch must fail closed")
+		t.Fatal("Несовпадение productVersion в матрице совместимости должно приводить к блокировке")
 	}
 }
 
@@ -667,19 +667,19 @@ func TestCompatibilityCertificationVanillaBaselineII(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.2", "commit-162")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162")
 	if err != nil {
-		t.Fatalf("0.16.2 Baseline II evidence must pass: %v", err)
+		t.Fatalf("Свидетельство базового набора II версии 0.16.2 должно пройти проверку: %v", err)
 	}
 	if certification.Policy != "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact" {
-		t.Fatalf("unexpected policy: %s", certification.Policy)
+		t.Fatalf("Неожиданная политика: %s", certification.Policy)
 	}
 	if len(certification.VanillaVersions) != len(vanillaCompatibilityBaselineII) {
-		t.Fatalf("vanilla coverage=%v", certification.VanillaVersions)
+		t.Fatalf("Охват Vanilla=%v", certification.VanillaVersions)
 	}
 	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21]" {
-		t.Fatalf("java coverage=%s", got)
+		t.Fatalf("Охват Java=%s", got)
 	}
 	if got := strings.Join(certification.Scopes, ","); got != "client,integration" {
-		t.Fatalf("scope coverage=%s", got)
+		t.Fatalf("Охват областей применения=%s", got)
 	}
 }
 
@@ -697,7 +697,7 @@ func TestCompatibilityCertificationVanillaBaselineIIRejectsJavaMismatch(t *testi
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162"); err == nil {
-		t.Fatal("0.16.2 Baseline II must reject Java mismatch")
+		t.Fatal("Базовый набор II версии 0.16.2 должен отклонять несовпадение Java")
 	}
 }
 
@@ -717,7 +717,7 @@ func TestCompatibilityCertificationVanillaBaselineIIRejectsMissingAnchor(t *test
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162"); err == nil {
-		t.Fatal("0.16.2 Baseline II must reject missing anchor")
+		t.Fatal("Базовый набор II версии 0.16.2 должен отклонять отсутствие корня доверия")
 	}
 }
 
@@ -725,15 +725,15 @@ func TestCompatibilityCertificationLegacyVanilla0163(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.3", "commit-163")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.3", "commit-163")
 	if err != nil {
-		t.Fatalf("0.16.3 Legacy Vanilla evidence must pass: %v", err)
+		t.Fatalf("Свидетельство устаревшей Vanilla версии 0.16.3 должно пройти проверку: %v", err)
 	}
 	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8"
 	if certification.Policy != wantPolicy {
-		t.Fatalf("unexpected policy: %s", certification.Policy)
+		t.Fatalf("Неожиданная политика: %s", certification.Policy)
 	}
 	for _, minecraft := range legacyVanillaJava8Compatibility0163 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("legacy Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+			t.Fatalf("Устаревшая версия Vanilla %s отсутствует в сертификации: %v", minecraft, certification.VanillaVersions)
 		}
 	}
 }
@@ -754,22 +754,22 @@ func TestCompatibilityCertificationLegacyVanilla0163RejectsMissingReleaseLine(t 
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.3", "commit-163"); err == nil {
-		t.Fatal("0.16.3 must reject missing legacy Vanilla release line")
+		t.Fatal("Версия 0.16.3 должна отклонять отсутствие выпуска устаревшей Vanilla")
 	}
 }
 func TestCompatibilityCertificationLegacyVanilla0164(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.4", "commit-164")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.4", "commit-164")
 	if err != nil {
-		t.Fatalf("0.16.4 pre-1.7 Legacy Vanilla evidence must pass: %v", err)
+		t.Fatalf("Свидетельство устаревшей Vanilla до 1.7 для версии 0.16.4 должно пройти проверку: %v", err)
 	}
 	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8"
 	if certification.Policy != wantPolicy {
-		t.Fatalf("unexpected policy: %s", certification.Policy)
+		t.Fatalf("Неожиданная политика: %s", certification.Policy)
 	}
 	for _, minecraft := range legacyVanillaPre17Compatibility0164 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("pre-1.7 Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+			t.Fatalf("Версия Vanilla до 1.7 (%s) отсутствует в сертификации: %v", minecraft, certification.VanillaVersions)
 		}
 	}
 }
@@ -790,7 +790,7 @@ func TestCompatibilityCertificationLegacyVanilla0164RejectsMissingReleaseLine(t 
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.4", "commit-164"); err == nil {
-		t.Fatal("0.16.4 must reject missing pre-1.7 Vanilla release line")
+		t.Fatal("Версия 0.16.4 должна отклонять отсутствие выпуска Vanilla до 1.7")
 	}
 }
 
@@ -798,15 +798,15 @@ func TestCompatibilityCertificationJava16_17Vanilla0166(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.6", "commit-166")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.6", "commit-166")
 	if err != nil {
-		t.Fatalf("0.16.6 Java 16/17 Vanilla evidence must pass: %v", err)
+		t.Fatalf("Свидетельство Vanilla с Java 16/17 версии 0.16.6 должно пройти проверку: %v", err)
 	}
 	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8;vanilla-1.17.1-1.20.4-java16-17-exact"
 	if certification.Policy != wantPolicy {
-		t.Fatalf("unexpected policy: %s", certification.Policy)
+		t.Fatalf("Неожиданная политика: %s", certification.Policy)
 	}
 	for minecraft, javaMajor := range java16_17VanillaCompatibility0166 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("Java 16/17 Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+			t.Fatalf("Версия Vanilla с Java 16/17 (%s) отсутствует в сертификации: %v", minecraft, certification.VanillaVersions)
 		}
 		_ = javaMajor
 	}
@@ -828,7 +828,7 @@ func TestCompatibilityCertificationJava16_17Vanilla0166RejectsMissingReleaseLine
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.6", "commit-166"); err == nil {
-		t.Fatal("0.16.6 must reject missing Java 16/17 Vanilla release line")
+		t.Fatal("Версия 0.16.6 должна отклонять отсутствие выпуска Vanilla с Java 16/17")
 	}
 }
 
@@ -845,7 +845,7 @@ func TestCompatibilityCertificationJava16_17Vanilla0166RejectsWrongMajor(t *test
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.6", "commit-166"); err == nil {
-		t.Fatal("0.16.6 must reject wrong Java major for 1.19.4")
+		t.Fatal("Версия 0.16.6 должна отклонять неверную основную версию Java для 1.19.4")
 	}
 }
 
@@ -853,15 +853,15 @@ func TestCompatibilityCertificationJava21Vanilla0167(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.7", "commit-167")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.7", "commit-167")
 	if err != nil {
-		t.Fatalf("0.16.7 Java 21 Vanilla evidence must pass: %v", err)
+		t.Fatalf("Свидетельство Vanilla с Java 21 версии 0.16.7 должно пройти проверку: %v", err)
 	}
 	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8;vanilla-1.17.1-1.20.4-java16-17-exact;vanilla-1.20.5-1.21.10-java21-exact"
 	if certification.Policy != wantPolicy {
-		t.Fatalf("unexpected policy: %s", certification.Policy)
+		t.Fatalf("Неожиданная политика: %s", certification.Policy)
 	}
 	for minecraft := range java21VanillaCompatibility0167 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("Java 21 Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+			t.Fatalf("Версия Vanilla с Java 21 (%s) отсутствует в сертификации: %v", minecraft, certification.VanillaVersions)
 		}
 	}
 }
@@ -882,7 +882,7 @@ func TestCompatibilityCertificationJava21Vanilla0167RejectsMissingReleaseLine(t 
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.7", "commit-167"); err == nil {
-		t.Fatal("0.16.7 must reject missing Java 21 Vanilla release line")
+		t.Fatal("Версия 0.16.7 должна отклонять отсутствие выпуска Vanilla с Java 21")
 	}
 }
 
@@ -899,7 +899,7 @@ func TestCompatibilityCertificationJava21Vanilla0167RejectsWrongMajor(t *testing
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.7", "commit-167"); err == nil {
-		t.Fatal("0.16.7 must reject wrong Java major for 1.21.10")
+		t.Fatal("Версия 0.16.7 должна отклонять неверную основную версию Java для 1.21.10")
 	}
 }
 
@@ -907,19 +907,19 @@ func TestCompatibilityCertificationJava25Vanilla0168(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.8", "commit-168")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.8", "commit-168")
 	if err != nil {
-		t.Fatalf("0.16.8 Java 25 Vanilla evidence must pass: %v", err)
+		t.Fatalf("Свидетельство Vanilla с Java 25 версии 0.16.8 должно пройти проверку: %v", err)
 	}
 	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8;vanilla-1.17.1-1.20.4-java16-17-exact;vanilla-1.20.5-1.21.10-java21-exact;vanilla-26.1.x-26.3-java25-exact"
 	if certification.Policy != wantPolicy {
-		t.Fatalf("unexpected policy: %s", certification.Policy)
+		t.Fatalf("Неожиданная политика: %s", certification.Policy)
 	}
 	for minecraft := range java25VanillaCompatibility0168 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("Java 25 Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+			t.Fatalf("Версия Vanilla с Java 25 (%s) отсутствует в сертификации: %v", minecraft, certification.VanillaVersions)
 		}
 	}
 	if !slices.Contains(certification.JavaMajors, 25) {
-		t.Fatalf("Java 25 missing from certification coverage: %v", certification.JavaMajors)
+		t.Fatalf("Java 25 отсутствует в охвате сертификации: %v", certification.JavaMajors)
 	}
 }
 
@@ -939,7 +939,7 @@ func TestCompatibilityCertificationJava25Vanilla0168RejectsMissingRelease(t *tes
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.8", "commit-168"); err == nil {
-		t.Fatal("0.16.8 must reject missing Java 25 Vanilla release")
+		t.Fatal("Версия 0.16.8 должна отклонять отсутствие выпуска Vanilla с Java 25")
 	}
 }
 
@@ -956,7 +956,7 @@ func TestCompatibilityCertificationJava25Vanilla0168RejectsWrongMajor(t *testing
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.8", "commit-168"); err == nil {
-		t.Fatal("0.16.8 must reject wrong Java major for 26.1.2")
+		t.Fatal("Версия 0.16.8 должна отклонять неверную основную версию Java для 26.1.2")
 	}
 }
 
@@ -964,10 +964,10 @@ func TestCompatibilityCertificationCrossPlatformVanilla0169(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.9", "commit-169")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169")
 	if err != nil {
-		t.Fatalf("0.16.9 cross-platform Vanilla evidence must pass: %v", err)
+		t.Fatalf("Кроссплатформенное свидетельство Vanilla версии 0.16.9 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "cross-platform-vanilla-windows-linux-macos-x64-arm64") {
-		t.Fatalf("cross-platform policy missing: %s", certification.Policy)
+		t.Fatalf("Отсутствует кроссплатформенная политика: %s", certification.Policy)
 	}
 }
 
@@ -987,7 +987,7 @@ func TestCompatibilityCertificationCrossPlatformVanilla0169RejectsMissingPlatfor
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169"); err == nil {
-		t.Fatal("0.16.9 must reject missing Windows ARM64 Vanilla certification target")
+		t.Fatal("Версия 0.16.9 должна отклонять отсутствие целевой сертификации Vanilla для Windows ARM64")
 	}
 }
 
@@ -1004,7 +1004,7 @@ func TestCompatibilityCertificationCrossPlatformVanilla0169RejectsPlatformMismat
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169"); err == nil {
-		t.Fatal("0.16.9 must reject host platform mismatch evidence")
+		t.Fatal("Версия 0.16.9 должна отклонять свидетельство с несовпадением платформы хоста")
 	}
 }
 
@@ -1012,10 +1012,10 @@ func TestCompatibilityCertificationActualClientE2EII01610(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.10", "commit-1610")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.10", "commit-1610")
 	if err != nil {
-		t.Fatalf("0.16.10 Actual Client E2E II evidence must pass: %v", err)
+		t.Fatalf("Свидетельство реального сквозного теста клиента II версии 0.16.10 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "actual-client-e2e-II-real-clients-matching-mojang-servers") {
-		t.Fatalf("0.16.10 policy does not bind matching servers: %s", certification.Policy)
+		t.Fatalf("Политика 0.16.10 не связывает соответствующие серверы: %s", certification.Policy)
 	}
 }
 
@@ -1032,7 +1032,7 @@ func TestCompatibilityCertificationActualClientE2EII01610RejectsMissingJoin(t *t
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.10", "commit-1610"); err == nil {
-		t.Fatal("0.16.10 must reject matching-server target without a real client join")
+		t.Fatal("Версия 0.16.10 должна отклонять цель с подходящим сервером без реального подключения клиента")
 	}
 }
 
@@ -1049,7 +1049,7 @@ func TestCompatibilityCertificationActualClientE2EII01610RejectsMissingMatchingF
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.10", "commit-1610"); err == nil {
-		t.Fatal("0.16.10 must reject missing required matching-server target")
+		t.Fatal("Версия 0.16.10 должна отклонять отсутствие обязательной цели с подходящим сервером")
 	}
 }
 
@@ -1057,10 +1057,10 @@ func TestCompatibilityCertificationHardening01611Policy(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.11", "commit-1611")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.11", "commit-1611")
 	if err != nil {
-		t.Fatalf("0.16.11 compatibility evidence must pass: %v", err)
+		t.Fatalf("Свидетельство совместимости версии 0.16.11 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "compatibility-hardening-cache-recovery-upstream-failure-security") {
-		t.Fatalf("0.16.11 policy does not bind compatibility hardening: %s", certification.Policy)
+		t.Fatalf("Политика 0.16.11 не связывает усиление защиты совместимости: %s", certification.Policy)
 	}
 }
 
@@ -1068,22 +1068,22 @@ func TestCompatibilityCertificationGA0170BindsJREBase(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170")
 	if err != nil {
-		t.Fatalf("0.17.0 GA compatibility evidence must pass: %v", err)
+		t.Fatalf("Свидетельство совместимости GA версии 0.17.0 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base") {
-		t.Fatalf("0.17.0 policy does not bind GA JRE base: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.0 не связывает базовый набор JRE для GA: %s", certification.Policy)
 	}
 	if !strings.Contains(certification.Policy, "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8") {
-		t.Fatalf("0.17.0v1 policy does not bind complete legacy grid: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.0v1 не связывает полную матрицу устаревших версий: %s", certification.Policy)
 	}
 	if len(certification.VanillaVersions) < 104 {
-		t.Fatalf("0.17.0v3 GA Vanilla coverage too small: %d", len(certification.VanillaVersions))
+		t.Fatalf("Охват Vanilla в GA 0.17.0v3 недостаточен: %d", len(certification.VanillaVersions))
 	}
 	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21 25]" {
-		t.Fatalf("0.17.0 GA Java coverage=%s", got)
+		t.Fatalf("Охват Java в GA 0.17.0=%s", got)
 	}
 	if len(certification.JREBuilds) == 0 {
-		t.Fatal("0.17.0 GA certification must contain concrete JRE builds")
+		t.Fatal("Сертификация GA 0.17.0 должна содержать конкретные сборки JRE")
 	}
 }
 
@@ -1103,7 +1103,7 @@ func TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease(t *testin
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170"); err == nil || !strings.Contains(err.Error(), "0.17.0v1") {
-		t.Fatalf("0.17.0v1 must reject missing 1.8.8 target, got %v", err)
+		t.Fatalf("Версия 0.17.0v1 должна отклонять отсутствие цели 1.8.8; получено %v", err)
 	}
 }
 
@@ -1111,14 +1111,14 @@ func TestCompatibilityCertificationGA0170v2RequiresCompleteJava16_17Grid(t *test
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v2")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2")
 	if err != nil {
-		t.Fatalf("0.17.0v2 Java 16/17 evidence must pass: %v", err)
+		t.Fatalf("Свидетельство Java 16/17 версии 0.17.0v2 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "java16-17-vanilla-0.17.0v2-complete-9-release-grid-exact") {
-		t.Fatalf("0.17.0v2 policy missing: %s", certification.Policy)
+		t.Fatalf("Отсутствует политика 0.17.0v2: %s", certification.Policy)
 	}
 	for minecraft := range java16_17VanillaCompatibility0170v2 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("0.17.0v2 version %s missing", minecraft)
+			t.Fatalf("Версия %s отсутствует в 0.17.0v2", minecraft)
 		}
 	}
 }
@@ -1139,7 +1139,7 @@ func TestCompatibilityCertificationGA0170v2RejectsMissingJavaTransitionRelease(t
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2"); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
-		t.Fatalf("0.17.0v2 must reject missing 1.19.2 target, got %v", err)
+		t.Fatalf("Версия 0.17.0v2 должна отклонять отсутствие цели 1.19.2; получено %v", err)
 	}
 }
 
@@ -1156,7 +1156,7 @@ func TestCompatibilityCertificationGA0170v2RejectsWrongJavaMajor(t *testing.T) {
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2"); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
-		t.Fatalf("0.17.0v2 must reject Java mismatch, got %v", err)
+		t.Fatalf("Версия 0.17.0v2 должна отклонять несовпадение Java; получено %v", err)
 	}
 }
 
@@ -1164,14 +1164,14 @@ func TestCompatibilityCertificationGA0170v3RequiresJava21And25Grid(t *testing.T)
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v3")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v3")
 	if err != nil {
-		t.Fatalf("0.17.0v3 Java 21/25 evidence must pass: %v", err)
+		t.Fatalf("Свидетельство Java 21/25 версии 0.17.0v3 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "java21-25-vanilla-0.17.0v3-complete-2-release-grid-exact") {
-		t.Fatalf("0.17.0v3 policy missing: %s", certification.Policy)
+		t.Fatalf("Отсутствует политика 0.17.0v3: %s", certification.Policy)
 	}
 	for minecraft := range java21_25VanillaCompatibility0170v3 {
 		if !slices.Contains(certification.VanillaVersions, minecraft) {
-			t.Fatalf("0.17.0v3 version %s missing", minecraft)
+			t.Fatalf("Версия %s отсутствует в 0.17.0v3", minecraft)
 		}
 	}
 }
@@ -1192,7 +1192,7 @@ func TestCompatibilityCertificationGA0170v3RejectsMissingRelease(t *testing.T) {
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v3"); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
-		t.Fatalf("0.17.0v3 must reject missing 1.21.11 target, got %v", err)
+		t.Fatalf("Версия 0.17.0v3 должна отклонять отсутствие цели 1.21.11; получено %v", err)
 	}
 }
 
@@ -1209,7 +1209,7 @@ func TestCompatibilityCertificationGA0170v3RejectsWrongJavaMajor(t *testing.T) {
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v3"); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
-		t.Fatalf("0.17.0v3 must reject Java mismatch for 26.2, got %v", err)
+		t.Fatalf("Версия 0.17.0v3 должна отклонять несовпадение Java для 26.2; получено %v", err)
 	}
 }
 
@@ -1217,17 +1217,17 @@ func TestCompatibilityCertificationFabricII0171(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.1", "commit-171")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171")
 	if err != nil {
-		t.Fatalf("0.17.1 Fabric Compatibility II evidence must pass: %v", err)
+		t.Fatalf("Свидетельство совместимости Fabric II версии 0.17.1 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client") {
-		t.Fatalf("0.17.1 policy does not bind Fabric Compatibility II: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.1 не связывает совместимость Fabric II: %s", certification.Policy)
 	}
 	if len(certification.FabricVersions) != len(fabricCompatibilityII0171) {
-		t.Fatalf("0.17.1 Fabric coverage=%d, want %d", len(certification.FabricVersions), len(fabricCompatibilityII0171))
+		t.Fatalf("Охват Fabric 0.17.1=%d, ожидалось %d", len(certification.FabricVersions), len(fabricCompatibilityII0171))
 	}
 	for _, minecraft := range []string{"1.14", "1.17", "1.20.5", "1.21.11", "26.3"} {
 		if !slices.Contains(certification.FabricVersions, minecraft) {
-			t.Fatalf("0.17.1 Fabric coverage missing %s", minecraft)
+			t.Fatalf("Отсутствует охват Fabric 0.17.1 для %s", minecraft)
 		}
 	}
 }
@@ -1248,7 +1248,7 @@ func TestCompatibilityCertificationFabricII0171RejectsMissingRelease(t *testing.
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171"); err == nil || !strings.Contains(err.Error(), "Fabric Compatibility II 0.17.1") {
-		t.Fatalf("0.17.1 must reject missing Fabric 1.14 target, got %v", err)
+		t.Fatalf("Версия 0.17.1 должна отклонять отсутствие цели Fabric 1.14; получено %v", err)
 	}
 }
 
@@ -1265,7 +1265,7 @@ func TestCompatibilityCertificationFabricII0171RejectsWrongJavaMajor(t *testing.
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171"); err == nil || !strings.Contains(err.Error(), "Fabric 1.17") {
-		t.Fatalf("0.17.1 must reject Fabric 1.17 Java mismatch, got %v", err)
+		t.Fatalf("Версия 0.17.1 должна отклонять несовпадение Java для Fabric 1.17; получено %v", err)
 	}
 }
 
@@ -1282,7 +1282,7 @@ func TestCompatibilityCertificationFabricII0171RejectsMutableResolvedLoader(t *t
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171"); err == nil || !strings.Contains(err.Error(), "immutable version") {
-		t.Fatalf("0.17.1 must reject mutable Fabric loader evidence, got %v", err)
+		t.Fatalf("Версия 0.17.1 должна отклонять изменяемое свидетельство загрузчика Fabric; получено %v", err)
 	}
 }
 
@@ -1290,17 +1290,17 @@ func TestCompatibilityCertificationQuiltII0172(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.2", "commit-172")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172")
 	if err != nil {
-		t.Fatalf("0.17.2 Quilt Compatibility II evidence must pass: %v", err)
+		t.Fatalf("Свидетельство совместимости Quilt II версии 0.17.2 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client") {
-		t.Fatalf("0.17.2 policy does not bind Quilt Compatibility II: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.2 не связывает совместимость Quilt II: %s", certification.Policy)
 	}
 	if len(certification.QuiltVersions) != len(quiltCompatibilityII0172) {
-		t.Fatalf("0.17.2 Quilt coverage=%d, want %d", len(certification.QuiltVersions), len(quiltCompatibilityII0172))
+		t.Fatalf("Охват Quilt 0.17.2=%d, ожидалось %d", len(certification.QuiltVersions), len(quiltCompatibilityII0172))
 	}
 	for _, minecraft := range []string{"1.14", "1.17", "1.20.5", "1.21.11", "26.3"} {
 		if !slices.Contains(certification.QuiltVersions, minecraft) {
-			t.Fatalf("0.17.2 Quilt coverage missing %s", minecraft)
+			t.Fatalf("Отсутствует охват Quilt 0.17.2 для %s", minecraft)
 		}
 	}
 }
@@ -1321,7 +1321,7 @@ func TestCompatibilityCertificationQuiltII0172RejectsMissingRelease(t *testing.T
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "Quilt Compatibility II 0.17.2") {
-		t.Fatalf("0.17.2 must reject missing Quilt 1.14 target, got %v", err)
+		t.Fatalf("Версия 0.17.2 должна отклонять отсутствие цели Quilt 1.14; получено %v", err)
 	}
 }
 
@@ -1338,7 +1338,7 @@ func TestCompatibilityCertificationQuiltII0172RejectsWrongJavaMajor(t *testing.T
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "Quilt 1.17") {
-		t.Fatalf("0.17.2 must reject Quilt 1.17 Java mismatch, got %v", err)
+		t.Fatalf("Версия 0.17.2 должна отклонять несовпадение Java для Quilt 1.17; получено %v", err)
 	}
 }
 
@@ -1355,7 +1355,7 @@ func TestCompatibilityCertificationQuiltII0172RejectsMutableResolvedLoader(t *te
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "immutable version") {
-		t.Fatalf("0.17.2 must reject mutable Quilt loader evidence, got %v", err)
+		t.Fatalf("Версия 0.17.2 должна отклонять изменяемое свидетельство загрузчика Quilt; получено %v", err)
 	}
 }
 
@@ -1363,17 +1363,17 @@ func TestCompatibilityCertificationForgeModern0173(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.3", "commit-173")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173")
 	if err != nil {
-		t.Fatalf("0.17.3 Forge Modern evidence must pass: %v", err)
+		t.Fatalf("Свидетельство современной Forge версии 0.17.3 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client") {
-		t.Fatalf("0.17.3 policy does not bind Forge Modern: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.3 не связывает современную Forge: %s", certification.Policy)
 	}
 	if len(certification.ForgeVersions) != len(forgeModern0173) {
-		t.Fatalf("0.17.3 Forge coverage=%d, want %d", len(certification.ForgeVersions), len(forgeModern0173))
+		t.Fatalf("Охват Forge 0.17.3=%d, ожидалось %d", len(certification.ForgeVersions), len(forgeModern0173))
 	}
 	for _, minecraft := range []string{"1.13.2", "1.17.1", "1.20.6", "1.21.11", "26.3"} {
 		if !slices.Contains(certification.ForgeVersions, minecraft) {
-			t.Fatalf("0.17.3 Forge coverage missing %s", minecraft)
+			t.Fatalf("Отсутствует охват Forge 0.17.3 для %s", minecraft)
 		}
 	}
 }
@@ -1394,7 +1394,7 @@ func TestCompatibilityCertificationForgeModern0173RejectsMissingRelease(t *testi
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "Forge Modern 0.17.3") {
-		t.Fatalf("0.17.3 must reject missing Forge 1.13.2 target, got %v", err)
+		t.Fatalf("Версия 0.17.3 должна отклонять отсутствие цели Forge 1.13.2; получено %v", err)
 	}
 }
 
@@ -1411,7 +1411,7 @@ func TestCompatibilityCertificationForgeModern0173RejectsWrongJavaMajor(t *testi
 	}
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "Forge 1.17.1") {
-		t.Fatalf("0.17.3 must reject Forge 1.17.1 Java mismatch, got %v", err)
+		t.Fatalf("Версия 0.17.3 должна отклонять несовпадение Java для Forge 1.17.1; получено %v", err)
 	}
 }
 
@@ -1443,7 +1443,7 @@ func TestCompatibilityCertificationForgeModern0173BundleRejectsTamperedForgeCove
 		t.Fatal(err)
 	}
 	if len(cert.ForgeVersions) < 2 {
-		t.Fatalf("expected broad Forge coverage, got %v", cert.ForgeVersions)
+		t.Fatalf("Ожидался широкий охват Forge; получено %v", cert.ForgeVersions)
 	}
 	cert.ForgeVersions = cert.ForgeVersions[:len(cert.ForgeVersions)-1]
 	raw, err = json.MarshalIndent(cert, "", "  ")
@@ -1455,7 +1455,7 @@ func TestCompatibilityCertificationForgeModern0173BundleRejectsTamperedForgeCove
 		t.Fatal(err)
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.3"); err == nil {
-		t.Fatal("bundle verifier must reject tampered Forge coverage")
+		t.Fatal("Верификатор пакета должен отклонять изменённый охват Forge")
 	}
 }
 
@@ -1472,7 +1472,7 @@ func TestCompatibilityCertificationForgeModern0173RejectsMutableResolvedLoader(t
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "immutable version") {
-		t.Fatalf("0.17.3 must reject mutable Forge loader evidence, got %v", err)
+		t.Fatalf("Версия 0.17.3 должна отклонять изменяемое свидетельство загрузчика Forge; получено %v", err)
 	}
 }
 
@@ -1480,13 +1480,13 @@ func TestCompatibilityCertificationForgeLegacy1122_0174(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.4", "commit-174")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174")
 	if err != nil {
-		t.Fatalf("0.17.4 Forge Legacy evidence must pass: %v", err)
+		t.Fatalf("Свидетельство устаревшей Forge версии 0.17.4 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client") {
-		t.Fatalf("0.17.4 policy does not bind Forge Legacy 1.12.2: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.4 не связывает устаревшую Forge 1.12.2: %s", certification.Policy)
 	}
 	if !slices.Contains(certification.ForgeVersions, "1.12.2") {
-		t.Fatalf("0.17.4 Forge coverage missing 1.12.2: %v", certification.ForgeVersions)
+		t.Fatalf("В охвате Forge 0.17.4 отсутствует 1.12.2: %v", certification.ForgeVersions)
 	}
 }
 
@@ -1506,7 +1506,7 @@ func TestCompatibilityCertificationForgeLegacy1122_0174RejectsMissingTarget(t *t
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174"); err == nil || !strings.Contains(err.Error(), "Forge Legacy 1.12.2 0.17.4") {
-		t.Fatalf("0.17.4 must reject missing Forge 1.12.2 target, got %v", err)
+		t.Fatalf("Версия 0.17.4 должна отклонять отсутствие цели Forge 1.12.2; получено %v", err)
 	}
 }
 
@@ -1523,7 +1523,7 @@ func TestCompatibilityCertificationForgeLegacy1122_0174RejectsMutableResolvedLoa
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174"); err == nil || !strings.Contains(err.Error(), "immutable version") {
-		t.Fatalf("0.17.4 must reject mutable Forge legacy loader evidence, got %v", err)
+		t.Fatalf("Версия 0.17.4 должна отклонять изменяемое свидетельство устаревшего загрузчика Forge; получено %v", err)
 	}
 }
 
@@ -1531,13 +1531,13 @@ func TestCompatibilityCertificationForgeLegacy1710_0175(t *testing.T) {
 	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.5", "commit-175")
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.5", "commit-175")
 	if err != nil {
-		t.Fatalf("0.17.5 Forge Legacy 1.7.10 evidence must pass: %v", err)
+		t.Fatalf("Свидетельство Forge 1.7.10 версии 0.17.5 должно пройти проверку: %v", err)
 	}
 	if !strings.Contains(certification.Policy, "forge-legacy-0.17.5-real-1.7.10-launchwrapper-cpw-fml-actual-client") {
-		t.Fatalf("0.17.5 policy does not bind Forge Legacy 1.7.10: %s", certification.Policy)
+		t.Fatalf("Политика 0.17.5 не связывает устаревшую Forge 1.7.10: %s", certification.Policy)
 	}
 	if !slices.Contains(certification.ForgeVersions, "1.7.10") {
-		t.Fatalf("0.17.5 Forge coverage missing 1.7.10: %v", certification.ForgeVersions)
+		t.Fatalf("В охвате Forge 0.17.5 отсутствует 1.7.10: %v", certification.ForgeVersions)
 	}
 }
 
@@ -1557,7 +1557,7 @@ func TestCompatibilityCertificationForgeLegacy1710_0175RejectsMissingTarget(t *t
 	targets.Targets = filtered
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.5", "commit-175"); err == nil || !strings.Contains(err.Error(), "Forge Legacy 1.7.10 0.17.5") {
-		t.Fatalf("0.17.5 must reject missing Forge 1.7.10 target, got %v", err)
+		t.Fatalf("Версия 0.17.5 должна отклонять отсутствие цели Forge 1.7.10; получено %v", err)
 	}
 }
 
@@ -1574,7 +1574,7 @@ func TestCompatibilityCertificationForgeLegacy1710_0175RejectsMutableResolvedLoa
 	}
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.5", "commit-175"); err == nil || !strings.Contains(err.Error(), "immutable version") {
-		t.Fatalf("0.17.5 must reject mutable Forge 1.7.10 loader evidence, got %v", err)
+		t.Fatalf("Версия 0.17.5 должна отклонять изменяемое свидетельство загрузчика Forge 1.7.10; получено %v", err)
 	}
 }
 

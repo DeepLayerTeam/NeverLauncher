@@ -22,13 +22,13 @@ func TestRollbackBoundSnapshot0448(t *testing.T) {
 	}
 	sum := sha256.Sum256(data)
 	if actual != hex.EncodeToString(sum[:]) {
-		t.Fatal("rollback evidence digest must bind exact exported JSON bytes")
+		t.Fatal("Хеш подтверждения отката должен соответствовать точным байтам экспортированного JSON")
 	}
 	if err := os.WriteFile(path, append(data, []byte("\n{}")...), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := rollbackReadSnapshot0448(path); err == nil {
-		t.Fatal("accepted trailing object")
+		t.Fatal("Принят лишний объект в конце данных")
 	}
 	if err := os.WriteFile(path, []byte("null"), 0600); err != nil {
 		t.Fatal(err)

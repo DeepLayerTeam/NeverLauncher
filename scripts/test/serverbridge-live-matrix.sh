@@ -10,7 +10,7 @@ for executable in docker java gradle go cargo jq psql mvn; do
     echo "[0.41.13] отсутствует обязательный исполняемый файл реального Runtime: $executable" >&2; exit 1;
   }
 done
-docker info >/dev/null 2>&1 || { echo '[0.41.13] Docker daemon unavailable: live certification impossible' >&2; exit 1; }
+docker info >/dev/null 2>&1 || { echo '[0.41.13] демон Docker недоступен: реальная сертификация невозможна' >&2; exit 1; }
 # Существующий E2E создаёт настоящие контейнеры из upstream-образов
 # Minecraft/Proxy, собирает промышленные JAR Bridge, отправляет сетевые запросы
 # join/revoke и запускает настоящую клиентскую JVM Mojang для Paper. Расширение

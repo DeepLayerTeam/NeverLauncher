@@ -26,9 +26,9 @@ func (brokenConnector) Metadata() authconnector.Metadata {
 
 func TestConformanceChecksCapabilityInterfaces(t *testing.T) {
 	if report := conformance.Run(context.Background(), goodConnector{}); !report.Passed {
-		t.Fatalf("good connector failed conformance: %+v", report)
+		t.Fatalf("Исправный коннектор не прошёл проверку соответствия: %+v", report)
 	}
 	if report := conformance.Run(context.Background(), brokenConnector{}); report.Passed {
-		t.Fatalf("broken connector unexpectedly passed: %+v", report)
+		t.Fatalf("Неисправный коннектор неожиданно прошёл проверку: %+v", report)
 	}
 }

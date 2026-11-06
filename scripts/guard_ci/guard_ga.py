@@ -65,7 +65,7 @@ def doc(path: Path) -> dict:
     try:
         obj = json.loads(regular(path), object_pairs_hook=json_unique)
     except (UnicodeError, json.JSONDecodeError) as exc:
-        raise Blocked('invalid JSON: ' + str(path)) from exc
+        raise Blocked('Некорректный JSON: ' + str(path)) from exc
     require(type(obj) is dict, 'JSON подтверждения должен содержать объект: ' + str(path))
     return obj
 

@@ -34,7 +34,7 @@ func TestFailClosedOnCancelledPolicyContext0300(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if d := New(time.Second).Evaluate(ctx, Request{Stage: BeforeJoin}); d.Action != Deny || d.Reason != "policy_context_unavailable" {
-		t.Fatalf("canceled policy allowed without handlers: %+v", d)
+		t.Fatalf("Отменённая политика разрешена без обработчиков: %+v", d)
 	}
 	ctx, cancel = context.WithCancel(context.Background())
 	engine := New(time.Second)
@@ -42,7 +42,7 @@ func TestFailClosedOnCancelledPolicyContext0300(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d := engine.Evaluate(ctx, Request{Stage: BeforeJoin}); d.Action != Deny {
-		t.Fatalf("canceled policy allowed after optional handler: %+v", d)
+		t.Fatalf("Отменённая политика разрешена после необязательного обработчика: %+v", d)
 	}
 }
 
@@ -53,17 +53,17 @@ func TestMandatoryPanicAndTimeoutCannotGrantAccess0300(t *testing.T) {
 	}
 	d := engine.Evaluate(context.Background(), Request{Stage: BeforeAuth})
 	if d.Action != Deny || d.Reason != "policy_handler_unavailable" || d.Handler != "untrusted" {
-		t.Fatalf("panicking mandatory handler not denied: %+v", d)
+		t.Fatalf("Обязательный обработчик, вызвавший панику, не заблокирован: %+v", d)
 	}
 	if err := evaluatePanic0300(); err == nil || strings.Contains(err.Error(), "SECRET") {
-		t.Fatalf("handler panic must return a redacted error, got %v", err)
+		t.Fatalf("Паника обработчика должна возвращать ошибку без секретных данных; получено %v", err)
 	}
 	engine = New(time.Millisecond)
 	if err := engine.Register(0, true, []Stage{BeforeAuth}, timeoutHandler0300{}); err != nil {
 		t.Fatal(err)
 	}
 	if d := engine.Evaluate(context.Background(), Request{Stage: BeforeAuth}); d.Action != Deny {
-		t.Fatalf("timeout granted access: %+v", d)
+		t.Fatalf("При превышении времени ожидания доступ был предоставлен: %+v", d)
 	}
 }
 func evaluatePanic0300() error {

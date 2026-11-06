@@ -37,7 +37,7 @@ func signComponentGenerationFixture02311(t *testing.T, dir string, m componentUp
 }
 func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	if !componentSecurityRequired02311("0.23.11") || componentSecurityRequired02311("0.23.10") {
-		t.Fatal("version gate")
+		t.Fatal("Проверка версии")
 	}
 	bundle, m, key, private := signedComponentFixture02310(t)
 	prior := componentSetTrustedKey02310
@@ -61,23 +61,23 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	m.SecurityGeneration = 6
 	signComponentGenerationFixture02311(t, bundle, m, private)
 	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err == nil || !strings.Contains(err.Error(), "anti-rollback") {
-		t.Fatalf("old signed set was accepted: %v", err)
+		t.Fatalf("Принят старый подписанный набор: %v", err)
 	}
 	m.SecurityGeneration = 7
 	m.ProductVersion = "0.23.10" // эталонный набор v1; делегированное доверие v2 проверяется отдельно
 	signComponentGenerationFixture02311(t, bundle, m, private)
 	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err == nil {
-		t.Fatal("same generation/different content accepted")
+		t.Fatal("Принято разное содержимое для одного поколения")
 	}
 	m.SecurityGeneration = 8
 	m.ProductVersion = "0.23.11"
 	signComponentGenerationFixture02311(t, bundle, m, private)
 	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err != nil {
-		t.Fatalf("next generation rejected: %v", err)
+		t.Fatalf("Следующее поколение отклонено: %v", err)
 	}
 	floor, err = loadComponentWatermark02311(root)
 	if err != nil || floor.Generation != 8 {
-		t.Fatalf("floor after update=%+v %v", floor, err)
+		t.Fatalf("Нижняя граница версии после обновления=%+v %v", floor, err)
 	}
 	// Сбой после фиксации состояния, но до записи контрольного значения: восстановление
 	// поднимает границу лишь после хеширования ВСЕХ фактически установленных бинарников.
@@ -96,7 +96,7 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	}
 	floor, err = loadComponentWatermark02311(root)
 	if err != nil || floor.Generation != 9 {
-		t.Fatalf("recovery floor=%+v %v", floor, err)
+		t.Fatalf("Нижняя граница восстановления=%+v %v", floor, err)
 	}
 	// Ни удаление, ни перезапись установленного состояния более старой
 	// версией не должны обходить сохранённую нижнюю границу безопасности.
@@ -104,7 +104,7 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := reconcileInstalledComponentGeneration02311(root); err == nil {
-		t.Fatal("missing installed state accepted")
+		t.Fatal("Принято отсутствие состояния установки")
 	}
 }
 
@@ -117,6 +117,6 @@ func TestCorruptedComponentGenerationFloor02311(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := loadComponentWatermark02311(root); err == nil {
-		t.Fatal("corrupted floor accepted")
+		t.Fatal("Принята повреждённая нижняя граница версии")
 	}
 }

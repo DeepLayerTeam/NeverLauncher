@@ -74,7 +74,7 @@ def ipv4(value, label):
             raise ValueError('Недопустимый для маршрутизации IPv4-адрес')
         return str(address)
     except ValueError as exc:
-        raise HAError('invalid IP: ' + label) from exc
+        raise HAError('Некорректный IP-адрес: ' + label) from exc
 
 
 def port(value, label):

@@ -211,7 +211,7 @@ func TestKeyRotationAttestationAndRevocation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := ensurePublicKeyNotRevoked(dir, pubPath); err == nil {
-		t.Fatal("revoked key accepted")
+		t.Fatal("Принят отозванный ключ")
 	}
 }
 

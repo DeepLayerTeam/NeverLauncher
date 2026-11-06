@@ -18,7 +18,7 @@ func TestUpgradeLegacyAndVersionedProviderConfiguration(t *testing.T) {
 	for _, input := range inputs {
 		got, err := configmigration.Decode[provider]([]byte(input))
 		if err != nil || len(got) != 1 || got[0].ID != "auth" || got[0].Issuer != "https://id.example" || got[0].SecretEnv != "NL_SECRET" {
-			t.Fatalf("configured issuer or secret reference corrupted during migration: %+v %v", got, err)
+			t.Fatalf("При миграции повреждены настроенный издатель или ссылка на секрет: %+v %v", got, err)
 		}
 	}
 }
@@ -35,11 +35,11 @@ func TestRejectUnsafeProviderConfigurationMigration(t *testing.T) {
 	}
 	for _, input := range cases {
 		if _, err := configmigration.Decode[provider]([]byte(input)); err == nil {
-			t.Errorf("invalid configured migration accepted: %s", input)
+			t.Errorf("Принята некорректно настроенная миграция: %s", input)
 		}
 	}
 	if configmigration.CurrentSchemaVersion != 2 {
-		t.Fatal("schema was silently changed")
+		t.Fatal("Схема изменена без уведомления")
 	}
 }
 func TestMigrationErrorsIncludeSecretValues(t *testing.T) {
@@ -47,6 +47,6 @@ func TestMigrationErrorsIncludeSecretValues(t *testing.T) {
 	raw := `{"schemaVersion":99,"providers":[{"id":"a","secretEnv":"` + secret + `"}]}`
 	_, err := configmigration.Decode[provider]([]byte(raw))
 	if err == nil || strings.Contains(err.Error(), secret) {
-		t.Fatalf("config error exposed a secret: %v", err)
+		t.Fatalf("Ошибка конфигурации раскрыла секрет: %v", err)
 	}
 }

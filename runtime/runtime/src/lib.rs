@@ -1941,13 +1941,13 @@ mod tests {
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Обнаружен дубликат: «heap override»");
         m.runtime.jvm_args.clear();
         m.runtime.jvm_args.push("-Xmx1024M".into());
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "heap beyond max");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Размер кучи превышает максимум");
         m.runtime.jvm_args.clear();
         m.runtime.launch.classpath_entries = vec!["libraries/missing.jar".into()];
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "unsigned classpath");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Неподписанный classpath");
         m.runtime.launch.classpath_entries = vec!["libraries/fixture.jar".into()];
         m.runtime.launch.environment_allowlist = vec!["JAVA_TOOL_OPTIONS".into()];
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "Java env injection");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Внедрение через переменные окружения Java");
         m.runtime.launch.environment_allowlist.clear();
         m.runtime.java.maximum_major_version = 16;
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Несовпадение: «Java constraint»");

@@ -15,7 +15,7 @@ func TestEnvelopeAndPrivacy(t *testing.T) {
 	got := make(chan string, 2)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/42/envelope/" || r.Header.Get("Content-Type") != "application/x-sentry-envelope" {
-			t.Errorf("invalid ingestion request %s", r.URL.Path)
+			t.Errorf("Недействительный запрос приёма %s", r.URL.Path)
 		}
 		b, _ := io.ReadAll(r.Body)
 		got <- string(b)
@@ -37,7 +37,7 @@ func TestEnvelopeAndPrivacy(t *testing.T) {
 		}
 		lines := strings.Split(strings.TrimSpace(raw), "\n")
 		if len(lines) != 3 {
-			t.Fatalf("bad envelope %d", len(lines))
+			t.Fatalf("Некорректный конверт %d", len(lines))
 		}
 		var e map[string]any
 		if err := json.Unmarshal([]byte(lines[2]), &e); err != nil {
@@ -47,7 +47,7 @@ func TestEnvelopeAndPrivacy(t *testing.T) {
 			t.Fatal(e)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("missing envelope")
+		t.Fatal("Отсутствует конверт")
 	}
 	reporter.Close()
 }
@@ -80,7 +80,7 @@ func TestSendContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := r.send(ctx, event{"a", "b", "c"}); err == nil {
-		t.Fatal("canceled request succeeded")
+		t.Fatal("Отменённый запрос завершился успешно")
 	}
 	r.Close()
 }

@@ -7,15 +7,15 @@ API_BIN="${TMPDIR:-/tmp}/launcher-api-smoke-${VERSION}"
 API_ADDR="${LAUNCHER_SMOKE_ADDR:-127.0.0.1:18130}"
 API_URL="http://${API_ADDR}"
 
-printf '[Launcher] Release smoke %s: offline release gate\n' "${VERSION}"
+printf '[Launcher] Проверки выпуска %s: автономная проверка допуска\n' "${VERSION}"
 LAUNCHER_PREFLIGHT_FRONTEND="${LAUNCHER_PREFLIGHT_FRONTEND:-auto}" \
 LAUNCHER_PREFLIGHT_MODE=offline \
 bash "${ROOT_DIR}/scripts/release/preflight.sh"
 
-printf '[Launcher] Release smoke %s: production deployment config\n' "${VERSION}"
+printf '[Launcher] Проверки выпуска %s: конфигурация промышленного развертывания\n' "${VERSION}"
 bash "${ROOT_DIR}/scripts/smoke/docker-required/production-compose-config.sh"
 
-printf '[Launcher] Release smoke %s: backend API runtime smoke\n' "${VERSION}"
+printf '[Launcher] Проверки выпуска %s: рабочая проверка Backend API\n' "${VERSION}"
 if [ -x "${ROOT_DIR}/dist/preflight/launcher-api" ]; then
   API_BIN="${ROOT_DIR}/dist/preflight/launcher-api"
 else

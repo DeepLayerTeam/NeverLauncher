@@ -22,7 +22,7 @@ import (
 func TestFabricQuilt0403MaterializedClasspathRunsOnJVM(t *testing.T) {
 	for _, binary := range []string{"java", "javac", "jar"} {
 		if _, err := exec.LookPath(binary); err != nil {
-			t.Skipf("Java integration needs %s: %v", binary, err)
+			t.Skipf("Для интеграции Java требуется %s: %v", binary, err)
 		}
 	}
 	for _, tc := range []struct{ loader, version, entrypoint, coordinate string }{
@@ -111,10 +111,10 @@ func TestFabricQuilt0403MaterializedClasspathRunsOnJVM(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got := unexpectedFetch.Load(); got != 0 {
-				t.Fatalf("fetched %d libraries for unsupported platform", got)
+				t.Fatalf("Для неподдерживаемой платформы загружено %d библиотек", got)
 			}
 			if result.MainClass != tc.entrypoint {
-				t.Fatalf("wrong mainClass: %s", result.MainClass)
+				t.Fatalf("Неверный mainClass: %s", result.MainClass)
 			}
 			profileData := mustRead0403(t, filepath.Join(clientDir, filepath.FromSlash(result.ProfilePath)))
 			var profile loaderVersionProfile
@@ -133,7 +133,7 @@ func TestFabricQuilt0403MaterializedClasspathRunsOnJVM(t *testing.T) {
 			cmd := exec.Command("java", "-cp", strings.Join(classpath, string(os.PathListSeparator)), result.MainClass)
 			output, err := cmd.CombinedOutput()
 			if err != nil || strings.TrimSpace(string(output)) != "LOADER_CLASSPATH_OK" {
-				t.Fatalf("JVM launcher failed: %v: %s", err, output)
+				t.Fatalf("Ошибка запуска JVM: %v: %s", err, output)
 			}
 		})
 	}
@@ -192,14 +192,14 @@ func compileFixtureJar0403(t *testing.T, dir, className, source string, classpat
 func TestLoader0403RejectsMavenArtifactPathDrift(t *testing.T) {
 	name := "org.example:demo:1.0"
 	if _, err := strictMavenPath(name + "@zip"); err == nil {
-		t.Fatal("non-JAR Maven extension allowed")
+		t.Fatal("Разрешено расширение Maven в формате, отличном от JAR")
 	}
 	if rel, err := strictMavenPath(name + "@jar"); err != nil || rel != "org/example/demo/1.0/demo-1.0.jar" {
-		t.Fatalf("jar suffix: %s %v", rel, err)
+		t.Fatalf("Расширение файла JAR: %s %v", rel, err)
 	}
 	for _, name := range []string{"org..example:demo:1.0", "org.example:../demo:1.0", "org.example:demo:..", "org.example:demo:1.0@zip"} {
 		if _, err := strictMavenPath(name); err == nil {
-			t.Errorf("unsafe Maven coordinate accepted %q", name)
+			t.Errorf("Приняты небезопасные координаты Maven %q", name)
 		}
 	}
 	jar := []byte("fixture")
@@ -207,6 +207,6 @@ func TestLoader0403RejectsMavenArtifactPathDrift(t *testing.T) {
 	defer server.Close()
 	profile := loaderVersionProfile{Libraries: []MojangLibrary{{Name: name, URL: server.URL, Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "different/path.jar", URL: server.URL, SHA1: sha10403(jar)}}}}}
 	if _, err := materializeLoaderLibraries(context.Background(), server.Client(), t.TempDir(), &profile, 1, true); err == nil || !strings.Contains(err.Error(), "Maven identity") {
-		t.Fatalf("wrong artifact path must fail, got %v", err)
+		t.Fatalf("Неверный путь к артефакту должен вызывать ошибку; получено %v", err)
 	}
 }

@@ -61,7 +61,7 @@ func TestBehavioralConformanceExecutesEveryOperation(t *testing.T) {
 		t.Fatalf("failed: %+v", report)
 	}
 	if !c.revoked {
-		t.Fatal("revoke executed")
+		t.Fatal("Отзыв был выполнен")
 	}
 	required := map[string]bool{"registration": false, "health": false, "authenticate:password": false, "authenticate:wrong-password": false, "resolve:identity": false, "resolve:profile": false, "refresh": false, "revoke": false, "revoke:invalidation": false}
 	for _, v := range report.Checks {
@@ -71,7 +71,7 @@ func TestBehavioralConformanceExecutesEveryOperation(t *testing.T) {
 	}
 	for name, ok := range required {
 		if !ok {
-			t.Fatalf("required check %s not executed/passed", name)
+			t.Fatalf("Обязательная проверка %s не выполнена или не пройдена", name)
 		}
 	}
 }
@@ -79,25 +79,25 @@ func TestBehavioralConformanceFailsWithoutCredentials(t *testing.T) {
 	c := &behaviorConnector{issuer: "issuer-1", subject: "subject-1", password: "only-test-password"}
 	report := conformance.RunBehavioral(context.Background(), c, conformance.Fixture{})
 	if report.Passed || c.revoked {
-		t.Fatalf("missing fixture passed or revoked: %+v", report)
+		t.Fatalf("Отсутствующий тестовый набор прошёл проверку или был отозван: %+v", report)
 	}
 }
 func TestBehavioralConformanceRejectsIssuerSwapWithoutLoggingSecrets(t *testing.T) {
 	c := &behaviorConnector{issuer: "issuer-1", subject: "subject-1", password: "only-test-password", swapped: true}
 	report := conformance.RunBehavioral(context.Background(), c, fixture())
 	if report.Passed {
-		t.Fatalf("issuer swap passed: %+v", report)
+		t.Fatalf("Подмена издателя прошла проверку: %+v", report)
 	}
 	for _, check := range report.Checks {
 		if strings.Contains(check.Message, "only-test-password") || strings.Contains(check.Message, "token-one") || strings.Contains(check.Message, "token-two") {
-			t.Fatalf("conformance leaked credentials: %+v", check)
+			t.Fatalf("Проверка соответствия раскрыла учётные данные: %+v", check)
 		}
 	}
 }
 func TestSDKRegistrationRejectsUndeclaredCredentialMethods(t *testing.T) {
 	bad := undeclaredBehavior{&behaviorConnector{issuer: "issuer-1", subject: "subject-1"}}
 	if err := authconnector.ValidateConnector(bad); err == nil {
-		t.Fatal("undeclared methods accepted")
+		t.Fatal("Приняты необъявленные методы")
 	}
 }
 
@@ -114,13 +114,13 @@ func TestSDKResponseValidations(t *testing.T) {
 		{Identity: authconnector.Identity{Subject: "u"}, AuthMethods: []string{""}},
 	} {
 		if authconnector.ValidateAuthentication(auth) == nil {
-			t.Fatalf("invalid authentication accepted")
+			t.Fatalf("Принята недействительная аутентификация")
 		}
 	}
 	if authconnector.ValidateAuthentication(authconnector.Authentication{Identity: authconnector.Identity{Subject: "u", Issuer: "issuer"}}) != nil {
-		t.Fatal("valid identity rejected")
+		t.Fatal("Отклонена действительная учётная запись")
 	}
 	if authconnector.ValidateProfile(authconnector.Profile{Subject: "attacker"}, "user") == nil {
-		t.Fatal("profile reassignment accepted")
+		t.Fatal("Разрешено переназначение профиля")
 	}
 }

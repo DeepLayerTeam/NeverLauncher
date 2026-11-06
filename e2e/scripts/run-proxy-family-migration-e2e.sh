@@ -123,4 +123,4 @@ proxy_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$proxy_count" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingVelocityPreserved:true,proxyFamilyKindsAccepted:true,invalidKindRejected:true,proxyNodeCount:$count}' \
   > "$RESULT_DIR/proxy-family-migration.json"
-printf '[proxy-family-migration] PASS 0.14.4 -> 0.14.5 Proxy family schema semantics\n'
+printf '[proxy-family-migration] PASS 0.14.4 -> 0.14.5: семантика схемы прокси-семейства\n'

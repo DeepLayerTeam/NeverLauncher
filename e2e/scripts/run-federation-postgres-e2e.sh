@@ -49,7 +49,7 @@ json_post() {
   curl -fsS -H 'Content-Type: application/json' ${token:+-H "Authorization: Bearer $token"} -d "$body" "$url"
 }
 
-printf '[federation-postgres-e2e] build CLI and start PostgreSQL/Redis\n'
+printf '[federation-postgres-e2e] сборка CLI и запуск PostgreSQL/Redis\n'
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/launcher )
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
@@ -58,13 +58,13 @@ for _ in $(seq 1 60); do
 done
 psql "$DB_DSN" -Atqc 'select 1' >/dev/null
 
-printf '[federation-postgres-e2e] explicit migration apply + sealed verification\n'
+printf '[federation-postgres-e2e] явное применение миграций и проверка их фиксации\n'
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.json"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.json"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
 psql "$DB_DSN" -Atqc "SELECT 1 FROM schema_migrations WHERE version='0011_auth_federation_release_0120' AND checksum<>''" | grep -qx '1'
 
-printf '[federation-postgres-e2e] start three Backend instances sharing PostgreSQL/Redis\n'
+printf '[federation-postgres-e2e] запуск трёх экземпляров Backend с общими PostgreSQL/Redis\n'
 compose up -d --build api-a api-b api-c
 wait_http http://127.0.0.1:18081 api-a
 wait_http http://127.0.0.1:18082 api-b
@@ -81,14 +81,14 @@ login="$(curl -fsS -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_E
 access_a="$(jq -er '.data.tokens.accessToken' <<<"$login")"
 refresh_a="$(jq -er '.data.tokens.refreshToken' <<<"$login")"
 
-printf '[federation-postgres-e2e] promote external-only user to local password auth transactionally\n'
+printf '[federation-postgres-e2e] транзакционный перевод внешнего пользователя на локальную аутентификацию по паролю\n'
 EXTERNAL_USER_ID="user-federation-external-e2e"
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES('$EXTERNAL_USER_ID','external-e2e@launcher.local','External E2E','player','active','{}'::jsonb,'',now(),now()) ON CONFLICT(id) DO NOTHING; INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at) VALUES('identity-http-e2e','$EXTERNAL_USER_ID','http-e2e','subject-e2e','external-e2e@launcher.local','external-e2e','External E2E','{}'::jsonb,now(),now()) ON CONFLICT DO NOTHING;" >/dev/null
 json_post http://127.0.0.1:18081/api/v1/admin/users/$EXTERNAL_USER_ID/password "$access_a" '{"password":"Federation-E2E-Local-Password-0120"}' > "$RUNTIME_DIR/password-promotion.json"
 promoted_local_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM auth_identities WHERE user_id='$EXTERNAL_USER_ID' AND provider='local' AND subject='$EXTERNAL_USER_ID'")"
 [[ "$promoted_local_count" == "1" ]] || { echo "Повышение аутентификации по паролю не создало каноническую локальную идентичность: $promoted_local_count" >&2; exit 1; }
 
-printf '[federation-postgres-e2e] restart login instance and refresh persisted session\n'
+printf '[federation-postgres-e2e] перезапуск экземпляра входа и обновление сохранённой сессии\n'
 compose restart api-a >/dev/null
 wait_http http://127.0.0.1:18081 api-a
 rotated="$(json_post http://127.0.0.1:18081/api/v1/auth/refresh '' "{\"refreshToken\":\"$refresh_a\"}")"
@@ -96,13 +96,13 @@ access_1="$(jq -er '.data.tokens.accessToken' <<<"$rotated")"
 refresh_1="$(jq -er '.data.tokens.refreshToken' <<<"$rotated")"
 [[ "$refresh_1" != "$refresh_a" ]]
 
-printf '[federation-postgres-e2e] refresh on Backend-B and validate access on Backend-C\n'
+printf '[federation-postgres-e2e] обновление сессии на Backend-B и проверка доступа на Backend-C\n'
 rotated_b="$(json_post http://127.0.0.1:18082/api/v1/auth/refresh '' "{\"refreshToken\":\"$refresh_1\"}")"
 access_b="$(jq -er '.data.tokens.accessToken' <<<"$rotated_b")"
 refresh_b="$(jq -er '.data.tokens.refreshToken' <<<"$rotated_b")"
 curl -fsS -H "Authorization: Bearer $access_b" http://127.0.0.1:18083/api/v1/auth/accounts > "$RUNTIME_DIR/accounts-c.json"
 
-printf '[federation-postgres-e2e] replay old refresh on Backend-C must compromise family globally\n'
+printf '[federation-postgres-e2e] повторное использование старого токена обновления на Backend-C должно глобально скомпрометировать семейство\n'
 code="$(curl -sS -o "$RUNTIME_DIR/replay.json" -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"refreshToken\":\"$refresh_1\"}" http://127.0.0.1:18083/api/v1/auth/refresh)"
 [[ "$code" == "401" ]]
 for base in http://127.0.0.1:18081 http://127.0.0.1:18082 http://127.0.0.1:18083; do
@@ -112,7 +112,7 @@ done
 code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"refreshToken\":\"$refresh_b\"}" http://127.0.0.1:18082/api/v1/auth/refresh)"
 [[ "$code" == "401" ]]
 
-printf '[federation-postgres-e2e] verify database remains migration-clean after runtime traffic\n'
+printf '[federation-postgres-e2e] проверка согласованности миграций базы после рабочего трафика\n'
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify-after.json"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify-after.json"
 

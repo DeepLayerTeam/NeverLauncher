@@ -126,4 +126,4 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, AssertionError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-        sys.exit('FAIL: 0.49.0 independent Java subprocess integration: '+str(e))
+        sys.exit('ОШИБКА: 0.49.0 — независимая интеграция с подпроцессом Java: '+str(e))

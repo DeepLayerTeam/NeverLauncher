@@ -187,11 +187,11 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 
 func TestMacOSProductionRequired0154(t *testing.T) {
 	if macOSProductionRequired0154("0.15.3") {
-		t.Fatal("0.15.3 must not require macOS x64+ARM64 notarization")
+		t.Fatal("Версия 0.15.3 не должна требовать нотариального заверения macOS x64+ARM64")
 	}
 	for _, ver := range []string{"0.15.4", "0.16.0", "1.0.0"} {
 		if !macOSProductionRequired0154(ver) {
-			t.Fatalf("%s must require macOS x64+ARM64 notarization", ver)
+			t.Fatalf("Версия %s должна требовать нотариального заверения macOS x64+ARM64", ver)
 		}
 	}
 }
@@ -203,13 +203,13 @@ func TestInspectMacOSMachO0154(t *testing.T) {
 			t.Fatal(err)
 		}
 		if info.Architecture != arch || !info.HasCodeSignature {
-			t.Fatalf("unexpected Mach-O info: %+v", info)
+			t.Fatalf("Неожиданные сведения Mach-O: %+v", info)
 		}
 	}
 	bad := fakeSignedMachO0154(t, "x64")
 	binary.LittleEndian.PutUint32(bad[40:44], 4096)
 	if _, err := inspectMacOSMachOBytes0154(bad); err == nil {
-		t.Fatal("out-of-bounds LC_CODE_SIGNATURE must fail")
+		t.Fatal("Выход LC_CODE_SIGNATURE за границы должен приводить к ошибке")
 	}
 }
 
@@ -243,14 +243,14 @@ func TestMacOSProductionEvidenceAdhocAndNotarized0154(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.production && nativeCalls != 2 {
-				t.Fatalf("production verification must inspect both architectures, got %d", nativeCalls)
+				t.Fatalf("Промышленная проверка должна охватывать обе архитектуры; получено: %d", nativeCalls)
 			}
 			if !tc.production && nativeCalls != 0 {
-				t.Fatalf("development verification unexpectedly invoked production native verifier %d times", nativeCalls)
+				t.Fatalf("Проверка разработки неожиданно вызвала промышленный нативный верификатор %d раз", nativeCalls)
 			}
 			if !tc.production {
 				if err := verifyMacOSNotarizationEvidence0154(dir, ver, true); err == nil {
-					t.Fatal("publish verification must reject ad-hoc macOS evidence")
+					t.Fatal("Проверка публикации должна отклонять неподтверждённые свидетельства macOS")
 				}
 			}
 		})
@@ -283,6 +283,6 @@ func TestMacOSProductionEvidenceRejectsTamper0154(t *testing.T) {
 	}
 	f.Close()
 	if err := verifyMacOSNotarizationEvidence0154(dir, ver, true); err == nil {
-		t.Fatal("tampered macOS artifact must fail verification")
+		t.Fatal("Проверка изменённого артефакта macOS должна завершиться ошибкой")
 	}
 }

@@ -505,8 +505,8 @@ mod game_guard_lifetime_0438_tests {
         let mut command = tokio::process::Command::new("sleep");
         command.arg("30");
         crate::linux_policy::prepare_runtime_command(&mut command);
-        let child = command.spawn().expect("spawn real process with a private group");
-        let pid = child.id().expect("child PID");
+        let child = command.spawn().expect("Запуск настоящего процесса в отдельной группе");
+        let pid = child.id().expect("PID дочернего процесса");
         let id = format!("guard-0438-{pid}");
         let status = ProcessStatus {
             id: id.clone(), pid: Some(pid), state: "running".into(),
@@ -529,7 +529,7 @@ mod game_guard_lifetime_0438_tests {
         assert!(result.message.contains("Связь с аутентифицированным Guard потеряна"));
         let mut locked = child.lock().await;
         let exit = timeout(Duration::from_secs(3), locked.as_mut().unwrap().wait())
-            .await.expect("child exit timeout").expect("Не удалось дождаться завершения дочернего процесса");
+            .await.expect("Превышено время ожидания завершения дочернего процесса").expect("Не удалось дождаться завершения дочернего процесса");
         assert!(!exit.success(), "При потере Guard игра должна принудительно завершаться");
     }
 }

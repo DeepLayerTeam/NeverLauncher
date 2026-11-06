@@ -41,18 +41,18 @@ func syntheticWindowsAdversarialCertificate01812() windowsAdversarialCertificate
 
 func TestWindowsProtectionReleaseRequired01812(t *testing.T) {
 	if windowsProtectionReleaseRequired01812("0.18.11") || !windowsProtectionReleaseRequired01812("0.18.12") || !windowsProtectionReleaseRequired01812("0.19.0") {
-		t.Fatal("Windows Protection RC version gate mismatch")
+		t.Fatal("Несовпадение проверки версии кандидата выпуска Windows Protection")
 	}
 }
 
 func TestValidateWindowsAdversarialCertificate01812(t *testing.T) {
 	cert := syntheticWindowsAdversarialCertificate01812()
 	if err := validateWindowsAdversarialCertificate01812(cert, "0.18.12", testSourceCommit01511); err != nil {
-		t.Fatalf("valid adversarial certificate rejected: %v", err)
+		t.Fatalf("Отклонён действительный сертификат испытаний на обход: %v", err)
 	}
 	cert.ScenarioExecutions = 54
 	if err := validateWindowsAdversarialCertificate01812(cert, "0.18.12", testSourceCommit01511); err == nil {
-		t.Fatal("incomplete adversarial execution cohort accepted")
+		t.Fatal("Принят неполный набор испытаний на обход")
 	}
 }
 
@@ -62,6 +62,6 @@ func TestWindowsProtectionBoundaryDigest01812BindsArtifactsAndCapabilities(t *te
 	first := windowsProtectionBoundaryDigest01812("0.18.12", testSourceCommit01511, windowsProtectionRepository01812, "42", strings.Repeat("2", 64), artifacts, capabilities)
 	second := windowsProtectionBoundaryDigest01812("0.18.12", testSourceCommit01511, windowsProtectionRepository01812, "42", strings.Repeat("2", 64), []windowsProtectionArtifact01812{{Name: "guard.exe", Size: 8, SHA256: strings.Repeat("1", 64)}}, capabilities)
 	if first == second || len(first) != 64 {
-		t.Fatal("Windows Protection RC boundary does not bind artifact size")
+		t.Fatal("Граница кандидата выпуска Windows Protection не учитывает размер артефакта")
 	}
 }

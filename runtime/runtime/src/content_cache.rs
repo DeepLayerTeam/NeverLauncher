@@ -16,7 +16,7 @@ fn valid_digest(value: &str) -> bool {
 
 fn lock_for(digest: &str) -> Arc<AsyncMutex<()>> {
     let mut locks = OBJECT_LOCKS.get_or_init(|| Mutex::new(HashMap::new()))
-        .lock().expect("object cache mutex map poisoned");
+        .lock().expect("Отравлена блокировка карты кеша объектов");
     locks.retain(|_, value| value.strong_count() > 0);
     if let Some(existing) = locks.get(digest).and_then(Weak::upgrade) { return existing; }
     let lock = Arc::new(AsyncMutex::new(()));

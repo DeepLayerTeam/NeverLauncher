@@ -32,11 +32,11 @@ func TestFenceSourceAndFreshSnapshot0448(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := stopSourceWriter0448(context.Background(), state, path, fakeFencer0448); err == nil {
-		t.Fatal("overwrote stop receipt")
+		t.Fatal("Перезаписана квитанция остановки")
 	}
 	st, err := os.Stat(path)
 	if err != nil || st.Mode().Perm() != 0600 {
-		t.Fatalf("stop evidence permissions: %v %v", st, err)
+		t.Fatalf("Разрешения свидетельства остановки: %v %v", st, err)
 	}
 	snapshotPath := filepath.Join(dir, "snapshot.json")
 	// Тот же канонический порядок полей, что и в API SnapshotDigest.
@@ -52,14 +52,14 @@ func TestFenceSourceAndFreshSnapshot0448(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report.SnapshotSHA256 != expected || report.UnitState != "inactive" {
-		t.Fatalf("invalid receipt: %+v", report)
+		t.Fatalf("Недействительная квитанция: %+v", report)
 	}
 	var loaded sourceFenceEvidence0448
 	if err := readFenceFile0448(receipt, 4096, &loaded); err != nil || loaded.Unit != "gravit.service" {
-		t.Fatalf("not round-tripped: %+v %v", loaded, err)
+		t.Fatalf("Данные не прошли обратное преобразование: %+v %v", loaded, err)
 	}
 	if _, err := verifyStoppedSource0448(context.Background(), path, snapshotPath, expected, receipt, fakeFencer0448); err == nil {
-		t.Fatal("overwrote fence evidence")
+		t.Fatal("Перезаписано свидетельство блокировки")
 	}
 }
 func TestFenceRejectsDriftAndWriterRestart0448(t *testing.T) {
@@ -75,7 +75,7 @@ func TestFenceRejectsDriftAndWriterRestart0448(t *testing.T) {
 	}
 	expected := strings.Repeat("a", 64)
 	if _, err := verifyStoppedSource0448(context.Background(), path, snap, expected, filepath.Join(dir, "proof"), fakeFencer0448); err == nil {
-		t.Fatal("accepted changed world")
+		t.Fatal("Принято изменённое состояние игрового мира")
 	}
 	restarted := func(ctx context.Context, args ...string) (string, error) {
 		if len(args) > 1 && strings.Contains(args[1], "ActiveState") {
@@ -84,11 +84,11 @@ func TestFenceRejectsDriftAndWriterRestart0448(t *testing.T) {
 		return "masked-runtime", nil
 	}
 	if _, err := verifyStoppedSource0448(context.Background(), path, snap, expected, filepath.Join(dir, "proof"), restarted); err == nil {
-		t.Fatal("accepted active source writer")
+		t.Fatal("Допущен активный процесс записи в исходное хранилище")
 	}
 	state.Unit = "../bad.service"
 	if err := stopSourceWriter0448(context.Background(), state, filepath.Join(dir, "bad"), fakeFencer0448); err == nil {
-		t.Fatal("allowed unsafe unit")
+		t.Fatal("Разрешена небезопасная служба")
 	}
 	state.Unit = "gravit.service"
 	state.StoppedAt = time.Now().Add(-20 * time.Minute)
@@ -98,6 +98,6 @@ func TestFenceRejectsDriftAndWriterRestart0448(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyStoppedSource0448(context.Background(), old, snap, expected, filepath.Join(dir, "proof"), fakeFencer0448); err == nil {
-		t.Fatal("accepted expired state")
+		t.Fatal("Принято состояние с истёкшим сроком действия")
 	}
 }

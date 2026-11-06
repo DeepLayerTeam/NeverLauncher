@@ -19,7 +19,7 @@ func TestRetryTransientSentryIngestKeepsEventIdentity(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		lines := strings.Split(strings.TrimSpace(string(body)), "\n")
 		if len(lines) != 3 {
-			t.Errorf("bad envelope %q", body)
+			t.Errorf("Некорректный конверт %q", body)
 			w.WriteHeader(400)
 			return
 		}
@@ -54,7 +54,7 @@ func TestRetryTransientSentryIngestKeepsEventIdentity(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	if len(ids) != 2 || ids[0] == "" || ids[0] != ids[1] {
-		t.Fatalf("retry did not preserve event identity: %v", ids)
+		t.Fatalf("Повторная попытка не сохранила идентификатор события: %v", ids)
 	}
 }
 
@@ -65,7 +65,7 @@ func TestCloseFlushesAcceptedEvents(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		lines := strings.Split(strings.TrimSpace(string(body)), "\n")
 		if len(lines) != 3 {
-			t.Errorf("invalid envelope")
+			t.Errorf("Недействительный конверт")
 			return
 		}
 		var e struct {
@@ -92,7 +92,7 @@ func TestCloseFlushesAcceptedEvents(t *testing.T) {
 	defer mu.Unlock()
 	for _, msg := range []string{"alpha", "beta", "gamma", "delta"} {
 		if !got["errors: "+msg] {
-			t.Errorf("lost queued event %s", msg)
+			t.Errorf("Потеряно событие очереди %s", msg)
 		}
 	}
 	// Закрытие идемпотентно, поздние события больше не принимаются.

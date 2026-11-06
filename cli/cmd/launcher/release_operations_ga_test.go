@@ -84,17 +84,17 @@ func TestOperationsGA0460ExactBytesAndIndependentKey(t *testing.T) {
 	}
 	makeEvidence(approval)
 	if e := verifyOperationsGA0460(bundle, ver, releasePub); e != nil {
-		t.Fatalf("signed exact-byte evidence rejected: %v", e)
+		t.Fatalf("Отклонено подписанное свидетельство для точных байтов: %v", e)
 	}
 	if e := verifyOperationsGA0460(bundle, ver, opPub); e == nil {
-		t.Fatal("operator is release signer")
+		t.Fatal("Оператор выступает подписантом выпуска")
 	}
 	t.Run("tampered package", func(t *testing.T) {
 		tar := distributionTargets04511(ver)[0].packageFile
 		p := filepath.Join(bundle, tar)
 		os.WriteFile(p, []byte("replaced"), 0600)
 		if verifyOperationsGA0460(bundle, ver, releasePub) == nil {
-			t.Fatal("unverified package accepted")
+			t.Fatal("Принят непроверенный пакет")
 		}
 	})
 	os.WriteFile(filepath.Join(bundle, distributionTargets04511(ver)[0].packageFile), []byte(distributionTargets04511(ver)[0].target+"-signed-final-bytes"), 0600)
@@ -103,7 +103,7 @@ func TestOperationsGA0460ExactBytesAndIndependentKey(t *testing.T) {
 		old, _ := os.ReadFile(p)
 		os.WriteFile(p, append(old, ' '), 0600)
 		if verifyOperationsGA0460(bundle, ver, releasePub) == nil {
-			t.Fatal("invalid signature accepted")
+			t.Fatal("Принята недействительная подпись")
 		}
 		os.WriteFile(p, old, 0600)
 	})
@@ -112,7 +112,7 @@ func TestOperationsGA0460ExactBytesAndIndependentKey(t *testing.T) {
 		a.SourceCommit = strings.Repeat("d", 40)
 		makeEvidence(a)
 		if verifyOperationsGA0460(bundle, ver, releasePub) == nil {
-			t.Fatal("wrong commit accepted")
+			t.Fatal("Принят неправильный коммит")
 		}
 	})
 	t.Run("expired", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestOperationsGA0460ExactBytesAndIndependentKey(t *testing.T) {
 		a.IssuedAt = time.Now().Add(-15 * 24 * time.Hour).UTC().Format(time.RFC3339Nano)
 		makeEvidence(a)
 		if verifyOperationsGA0460(bundle, ver, releasePub) == nil {
-			t.Fatal("expired signed receipt accepted")
+			t.Fatal("Принята подписанная квитанция с истёкшим сроком действия")
 		}
 	})
 	t.Run("api mismatch", func(t *testing.T) {
@@ -128,13 +128,13 @@ func TestOperationsGA0460ExactBytesAndIndependentKey(t *testing.T) {
 		a.OpenApiV1Sha256 = hash([]byte("changed api"))
 		makeEvidence(a)
 		if verifyOperationsGA0460(bundle, ver, releasePub) == nil {
-			t.Fatal("API mismatch vs actual source BOM accepted")
+			t.Fatal("Допущено несоответствие API фактической спецификации исходных компонентов")
 		}
 	})
 	t.Run("missing key", func(t *testing.T) {
 		t.Setenv("LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE", "")
 		if verifyOperationsGA0460(bundle, ver, releasePub) == nil {
-			t.Fatal("no trust anchor accepted")
+			t.Fatal("Принято отсутствие корня доверия")
 		}
 	})
 }

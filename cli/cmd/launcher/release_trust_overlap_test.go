@@ -21,17 +21,17 @@ func TestFiniteReleaseVerifyOnlyOverlap02312(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = findTrustedReleaseKey0158(policy, signer.ID, fp, now.Add(time.Minute)); e == nil {
-		t.Fatal("retired signer backdating allowed new signature")
+		t.Fatal("Для выведенного из эксплуатации подписанта разрешено датирование новой подписи задним числом")
 	}
 	signer.RetiredAt = now.Add(-72 * time.Hour).Format(time.RFC3339Nano)
 	signer.VerifyUntil = now.Add(-70 * time.Hour).Format(time.RFC3339Nano)
 	policy.Keys = []releaseTrustKey0158{signer}
 	if _, e = findTrustedReleaseKey0158(policy, signer.ID, fp, now.Add(-80*time.Hour)); e == nil {
-		t.Fatal("expired verification overlap still trusted")
+		t.Fatal("Истёкший период пересечения ключей всё ещё считается доверенным")
 	}
 	signer.Status = "revoked"
 	policy.Keys = []releaseTrustKey0158{signer}
 	if _, e = findTrustedReleaseKey0158(policy, signer.ID, fp, now.Add(-80*time.Hour)); e == nil {
-		t.Fatal("revoked key accepted")
+		t.Fatal("Принят отозванный ключ")
 	}
 }

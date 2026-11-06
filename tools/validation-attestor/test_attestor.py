@@ -194,7 +194,7 @@ def fixture(work):
         },
     )
     # Данные теста V09: независимо проверяемый предыдущий пакет и сохранённый CLI
-    # transaction outputs. Real updater coverage is exercised in the CLI tests.
+    # результаты транзакций. Настоящая проверка обновлятора выполняется в тестах CLI.
     prev = {
         "packageId": "prev-package",
         "version": "0.9.0",

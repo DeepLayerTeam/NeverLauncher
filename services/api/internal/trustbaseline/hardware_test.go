@@ -17,7 +17,7 @@ func TestHardwareCertifyAssessmentPreservesGuardGate0312(t *testing.T) {
 	v := model.DeviceHardwareEvidence{UserID: d.UserID, DeviceID: d.ID, SessionID: "session", BindingEpoch: 3, KeyFingerprint: d.KeyFingerprint, AKFingerprint: strings.Repeat("a", 64), RootID: "operator-ca", RootFingerprint: strings.Repeat("b", 64), VerifiedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Hour)}
 	a := EvaluateWithHardwareEvidence(d, true, v, now)
 	if a.RemoteHardwareProvenance != "tpm-ak-certified" || a.ProfileDecisions[Strict].Result != Deny || a.ProfileDecisions[Standard].Result != Allow || contains0311(a.ReasonCodes, "remote-hardware-verifier-unavailable") || !contains0311(a.ReasonCodes, "guard-runtime-evidence-unavailable") {
-		t.Fatalf("incorrect attestation assessment %+v", a)
+		t.Fatalf("Некорректная оценка аттестации %+v", a)
 	}
 	for _, tc := range []struct {
 		name   string
@@ -36,7 +36,7 @@ func TestHardwareCertifyAssessmentPreservesGuardGate0312(t *testing.T) {
 			tc.change(&e)
 			a := EvaluateWithHardwareEvidence(d, tc.bound, e, now)
 			if a.RemoteHardwareProvenance != "not-verified" || a.ProfileDecisions[Strict].Result != Deny {
-				t.Fatalf("forged assurance: %+v", a)
+				t.Fatalf("Подделан уровень подтверждения: %+v", a)
 			}
 		})
 	}

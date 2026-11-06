@@ -49,7 +49,7 @@ trap cleanup EXIT
 rm -rf "$SERVER_DIR"
 mkdir -p "$SERVER_DIR"
 compose rm -sf loader-native >/dev/null 2>&1 || true
-printf '[loader-native] start %s %s / loader %s dedicated server\n' "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
+printf '[loader-native] запуск выделенного сервера %s %s / загрузчик %s\n' "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
 compose up -d loader-native >/dev/null
 CONTAINER_ID="$(compose ps -q loader-native)"
 [[ -n "$CONTAINER_ID" ]] || { echo "[loader-native] контейнер не был создан" >&2; exit 1; }

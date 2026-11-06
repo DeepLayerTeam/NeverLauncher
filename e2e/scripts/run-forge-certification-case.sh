@@ -27,7 +27,7 @@ EXE_SUFFIX="$(certification_exe_suffix "$TARGET_OS")"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
 RUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
-printf '[forge-cert] build CLI and Runtime\n'
+printf '[forge-cert] сборка CLI и Runtime\n'
 (
   cd "$ROOT/cli"
   go build -o "$NL_BIN" ./cmd/launcher
@@ -216,4 +216,4 @@ payload = {
 open(out, 'w', encoding='utf-8').write(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
 PY
 
-printf '[forge-cert] PASS Forge %s / loader %s / Java %s\n' "$MINECRAFT_VERSION" "$RESOLVED_LOADER" "$JAVA_MAJOR"
+printf '[forge-cert] PASS Forge %s / загрузчик %s / Java %s\n' "$MINECRAFT_VERSION" "$RESOLVED_LOADER" "$JAVA_MAJOR"

@@ -465,7 +465,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
                     stats.completed.fetch_add(1, Ordering::Relaxed);
                     stats.emit("verified", Some(&path), true);
                 },
-                Ok((path, _, Err(e))) if e == "download paused" || e == "download cancelled" => {
+                Ok((path, _, Err(e))) if e == "Загрузка приостановлена" || e == "Загрузка отменена" => {
                     stats.metrics.lock().expect("Блокировка метрик загрузки повреждена").in_flight.remove(&path);
                     // Долговременный журнал и все проверенные частичные файлы сохраняются.
                 },

@@ -175,7 +175,7 @@ func TestGuardCompatibility0502ExternalRootAndRequired(t *testing.T) {
 	raw, _ = json.Marshal(env)
 	_ = os.WriteFile(file, raw, 0600)
 	if err := guardCompatInstall0502(root, file, key); err == nil {
-		t.Fatal("invalid signature accepted")
+		t.Fatal("Принята недействительная подпись")
 	}
 	embedded := filepath.Join(root, "root.pub")
 	raw, _ = os.ReadFile(key)

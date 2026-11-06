@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[one-time-join-migration] materialize exact 0.14.2 database through migration 0022\n'
+printf '[one-time-join-migration] создание базы версии 0.14.2 с применением миграций по 0022 включительно\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -67,7 +67,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0022_serverbridge_crypto_node_identities_0142" ]]
 
-printf '[one-time-join-migration] seed replayable 0.14.2 ServerBridge and Yggdrasil joins\n'
+printf '[one-time-join-migration] создание исходных подключений ServerBridge и Yggdrasil версии 0.14.2 с возможностью повтора\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
@@ -121,7 +121,7 @@ bridge_nonce_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge
 yggdrasil_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('idx_minecraft_joins_active_expires_0143') IS NOT NULL")"
 [[ "$yggdrasil_index" == "t" ]] || { echo "Отсутствует индекс срока действия Yggdrasil" >&2; exit 1; }
 
-printf '[one-time-join-migration] prove new v2 ticket identity binding and redemption constraints\n'
+printf '[one-time-join-migration] проверка привязки нового билета v2 к удостоверению и ограничений погашения\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 INSERT INTO server_bridge_join_tickets_v2(
   id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,
@@ -143,4 +143,4 @@ v2_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,status,issued_ide
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyServerBridgeTicketInvalidated:true,legacyYggdrasilJoinsDiscarded:true,identityBoundTicketVersion:2,redemptionProofPersisted:true}' \
   > "$RESULT_DIR/one-time-join-ticket-migration.json"
-printf '[one-time-join-migration] PASS 0.14.2 -> 0.14.3 one-time join ticket migration semantics\n'
+printf '[one-time-join-migration] PASS 0.14.2 -> 0.14.3: семантика миграции одноразовых билетов подключения\n'

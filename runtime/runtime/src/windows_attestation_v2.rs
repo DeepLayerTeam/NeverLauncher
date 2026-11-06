@@ -431,7 +431,7 @@ mod tests {
     fn continuous_evidence_digest_and_freshness_are_enforced() {
         let now = 1_800_000_000_000u64;
         let value = evidence(now);
-        validate_continuous_evidence_v2(&value, now).expect("fresh evidence");
+        validate_continuous_evidence_v2(&value, now).expect("Актуальное свидетельство");
 
         let mut wrong_version = value.clone();
         wrong_version.sensor_protocol_version = wrong_version.sensor_protocol_version.saturating_add(1);

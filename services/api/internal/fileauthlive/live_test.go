@@ -51,13 +51,13 @@ func TestLiveFileAuthReloadAndFailClosed0426(t *testing.T) {
 	path, c := newLiveFixture0426(t)
 	a, err := login0426(c, "OriginalSecret426")
 	if err != nil || a.Identity.Subject != firstUUID0426 || a.Identity.Claims["minecraftUuid"] != firstUUID0426 {
-		t.Fatalf("initial login %v %v", a, err)
+		t.Fatalf("Первоначальный вход %v %v", a, err)
 	}
 	if len(a.Identity.Roles) != 0 || len(a.Identity.Groups) != 0 {
-		t.Fatal("Gravit roles imported")
+		t.Fatal("Роли Gravit импортированы")
 	}
 	if _, err := login0426(c, "wrong"); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("wrong credential: %v", err)
+		t.Fatalf("Неверные учётные данные: %v", err)
 	}
 	if err := os.WriteFile(path+".next", liveDatabase0426(firstUUID0426, "Alice_426", "UpdatedSecret426"), 0600); err != nil {
 		t.Fatal(err)
@@ -66,29 +66,29 @@ func TestLiveFileAuthReloadAndFailClosed0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := login0426(c, "OriginalSecret426"); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("old password worked: %v", err)
+		t.Fatalf("Старый пароль продолжил работать: %v", err)
 	}
 	if _, err := login0426(c, "UpdatedSecret426"); err != nil {
-		t.Fatalf("new password rejected: %v", err)
+		t.Fatalf("Новый пароль отклонён: %v", err)
 	}
 	if err := os.WriteFile(path, []byte(`{"broken":`), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := login0426(c, "UpdatedSecret426"); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("corrupt file used cached accounts: %v", err)
+		t.Fatalf("Повреждённый файл позволил использовать кешированные учётные записи: %v", err)
 	}
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := login0426(c, "UpdatedSecret426"); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("missing file used cached accounts: %v", err)
+		t.Fatalf("Отсутствующий файл позволил использовать кешированные учётные записи: %v", err)
 	}
 }
 func TestLiveFileAuthSubjectDeletionAndSymlink0426(t *testing.T) {
 	path, c := newLiveFixture0426(t)
 	id, err := c.ResolveIdentity(context.Background(), authconnector.ResolveRequest{Subject: firstUUID0426})
 	if err != nil || id.DisplayName != "Alice_426" {
-		t.Fatalf("identity lookup %v %v", id, err)
+		t.Fatalf("Поиск учётной записи %v %v", id, err)
 	}
 	profile, err := c.ResolveProfile(context.Background(), authconnector.ResolveRequest{Subject: firstUUID0426})
 	if err != nil || profile.MinecraftUUID != firstUUID0426 {
@@ -98,7 +98,7 @@ func TestLiveFileAuthSubjectDeletionAndSymlink0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := c.ResolveIdentity(context.Background(), authconnector.ResolveRequest{Subject: firstUUID0426}); authconnector.CodeOf(err) != authconnector.ErrIdentityNotFound {
-		t.Fatalf("removed identity remained: %v", err)
+		t.Fatalf("Удалённая учётная запись сохранилась: %v", err)
 	}
 	if err := os.Rename(path, path+".real"); err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func TestLiveFileAuthSubjectDeletionAndSymlink0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := login0426(c, "OriginalSecret426"); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("symlink source accepted: %v", err)
+		t.Fatalf("Принят источник через символическую ссылку: %v", err)
 	}
 }
 func TestLiveFileAuthConfigValidation0426(t *testing.T) {
@@ -121,15 +121,15 @@ func TestLiveFileAuthConfigValidation0426(t *testing.T) {
 		`[] {}`, strings.Repeat("x", maxLiveConfigBytes+1),
 	} {
 		if _, err := LoadLiveConfigs(bad, ""); err == nil {
-			t.Fatalf("invalid config accepted: %s", bad)
+			t.Fatalf("Принята недействительная конфигурация: %s", bad)
 		}
 	}
 	if _, err := LoadLiveConfigs(`[]`, path); err == nil {
-		t.Fatal("ambiguous source accepted")
+		t.Fatal("Принят неоднозначный источник")
 	}
 	cfgs, err := LoadLiveConfigs(`[ {"id":"gravit-files","databasePath":"`+path+`","passwordFormat":"sha256-hex","provisioning":{"mode":"jit"}} ]`, "")
 	if err != nil || len(cfgs) != 1 || cfgs[0].Provisioning.Mode != "jit" {
-		t.Fatalf("valid config %v %v", cfgs, err)
+		t.Fatalf("Действительная конфигурация %v %v", cfgs, err)
 	}
 }
 func TestLiveFileAuthConcurrentSnapshotReload0426(t *testing.T) {
@@ -164,7 +164,7 @@ func TestLiveFileAuthSameMtimeAndLengthStillReloads0426(t *testing.T) {
 	}
 	data := liveDatabase0426(firstUUID0426, "Alice_426", "ReplacedSecret426")
 	if int64(len(data)) != old.Size() {
-		t.Fatal("fixture should have same size")
+		t.Fatal("Тестовые файлы должны иметь одинаковый размер")
 	}
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
@@ -173,7 +173,7 @@ func TestLiveFileAuthSameMtimeAndLengthStillReloads0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := login0426(c, "OriginalSecret426"); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("content replacement with same size and mtime escaped cache invalidation: %v", err)
+		t.Fatalf("Замена содержимого с тем же размером и временем изменения обошла сброс кеша: %v", err)
 	}
 	if _, err := login0426(c, "ReplacedSecret426"); err != nil {
 		t.Fatal(err)
@@ -191,10 +191,10 @@ func TestLiveFileAuthPHPass0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := c.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "WP_Player", Secret: "Known-WordPress-Password"}); err != nil {
-		t.Fatalf("correct PHPass password rejected: %v", err)
+		t.Fatalf("Правильный пароль PHPass отклонён: %v", err)
 	}
 	if _, err := c.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "WP_Player", Secret: "wrong"}); authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("wrong PHPass password accepted: %v", err)
+		t.Fatalf("Принят неправильный пароль PHPass: %v", err)
 	}
 }
 
@@ -217,6 +217,6 @@ func TestLiveFileAuthChangeDuringPasswordVerification0426(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := login0426(c, "OriginalSecret426"); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("stale hash authenticated during source rotation: %v", err)
+		t.Fatalf("Устаревший хеш позволил пройти аутентификацию при смене источника: %v", err)
 	}
 }

@@ -17,4 +17,4 @@ javac --release 21 -encoding UTF-8 -d "$work/classes" "$work/generated/ru/launch
 java -ea -cp "$work/classes" ru.launcher.bridge.common.PlatformControlReadback0416Test
 java -ea -cp "$work/classes" ru.launcher.bridge.vanilla.VanillaRconReadback0416Test
 java -ea -cp "$work/classes" ru.launcher.bridge.vanilla.VanillaRconWire0416Test
-printf 'ServerBridge 0.41.6 Java/RCON source verification PASS\n'
+printf 'ServerBridge 0.41.6: проверка источника Java/RCON пройдена (PASS)\n'

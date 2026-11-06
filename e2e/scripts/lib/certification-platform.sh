@@ -49,7 +49,7 @@ certification_run_client() {
     local eligibility="$(dirname "$output")/../../scripts/compatibility/retry-macos-sdl3.py"
     if python3 "$eligibility" --report "$output" --client-root "$client_root"; then
       cp "$output" "${output%.json}.first-attempt.json"
-      printf '[certification] macOS SDL 3 SIGABRT: repeat full %s client certification once\n' "${LAUNCHER_E2E_LOADER:-}" >&2
+      printf '[certification] macOS SDL 3 SIGABRT: однократно повторите полную сертификацию клиента %s\n' "${LAUNCHER_E2E_LOADER:-}" >&2
       local second_rc=0
       "$runtime_bin" "$@" > "$output" || second_rc=$?
       # Сохраняйте второй отчёт, даже если нативный процесс снова завершился с ошибкой;

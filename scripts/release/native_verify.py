@@ -71,7 +71,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
     plat,arch=target.split('-',1)
     expected_os={'windows':'Windows','darwin':'Darwin','linux':'Linux'}[plat]
     if platform.system()!=expected_os:
-        raise ValueError(f'{target} requires native {expected_os} verifier')
+        raise ValueError(f'Для платформы {target} требуется нативный верификатор {expected_os}')
     file=contract()['targets'][target]
     unsigned_file=require_path(unsigned,file)
     visit_archive(unsigned_file,plat,arch)

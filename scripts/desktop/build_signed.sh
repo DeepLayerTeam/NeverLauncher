@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Собирайте нативный Desktop с открытым корневым ключом подписи пакета владельца.
 set -euo pipefail
-if [[ $# -ne 1 ]]; then echo "Usage: $0 <32-byte-ed25519-public-root-hex-file>" >&2; exit 2; fi
+if [[ $# -ne 1 ]]; then echo "Использование: $0 <32-byte-ed25519-public-root-hex-file>" >&2; exit 2; fi
 ROOT_FILE="$1"
 [[ -f "$ROOT_FILE" && ! -L "$ROOT_FILE" ]] || { echo "Файл корневого открытого ключа отсутствует или небезопасен" >&2; exit 2; }
 ROOT=$(tr -d '\r\n ' < "$ROOT_FILE")

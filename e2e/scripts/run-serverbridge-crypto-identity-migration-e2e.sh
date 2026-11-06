@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[serverbridge-crypto-migration] materialize exact 0.14.1 database through migration 0021\n'
+printf '[serverbridge-crypto-migration] создание базы версии 0.14.1 с применением миграций по 0021 включительно\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -67,7 +67,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0021_serverbridge_protocol_v2_0141" ]]
 
-printf '[serverbridge-crypto-migration] seed active 0.14.1 bearer node and live join ticket\n'
+printf '[serverbridge-crypto-migration] создание активного узла версии 0.14.1 с Bearer и действующего билета подключения\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
@@ -125,4 +125,4 @@ identity_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge_nod
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyBearerRetired:true,nodeStatus:"identity-enrollment-required",activeJoinInvalidated:true,nonceReplayStoreCreated:true}' \
   > "$RESULT_DIR/serverbridge-crypto-identity-migration.json"
-printf '[serverbridge-crypto-migration] PASS 0.14.1 -> 0.14.3 bearer retirement + identity enrollment + one-time ticket semantics\n'
+printf '[serverbridge-crypto-migration] PASS 0.14.1 -> 0.14.3: вывод Bearer, регистрация удостоверений и одноразовые билеты\n'

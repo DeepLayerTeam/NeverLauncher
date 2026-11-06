@@ -44,7 +44,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[matching-e2e] build CLI and Runtime\n'
+printf '[matching-e2e] сборка CLI и Runtime\n'
 (
   cd "$ROOT/cli"
   go build -trimpath -ldflags "-X main.version=${PRODUCT_VERSION}" -o "$NL_BIN" ./cmd/launcher
@@ -52,7 +52,7 @@ printf '[matching-e2e] build CLI and Runtime\n'
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 [[ -x "$RUNTIME_BIN" ]] || { echo "[matching-e2e] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
-printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSION"
+printf '[matching-e2e] подготовка настоящего клиента Mojang %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-package \
   --minecraft "$MINECRAFT_VERSION" \
   --client-dir "$CLIENT_DIR" \
@@ -68,7 +68,7 @@ printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSIO
   --output "$RUNTIME_DIR/materialized-client-verify.json"
 cp "$CLIENT_DIR/.launcher/vanilla-install.json" "$RUNTIME_DIR/vanilla-install.json"
 
-printf '[matching-e2e] materialize verified Mojang server.jar for the exact same version %s\n' "$MINECRAFT_VERSION"
+printf '[matching-e2e] подготовка проверенного server.jar Mojang точно той же версии %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-server \
   --minecraft "$MINECRAFT_VERSION" \
   --server-dir "$SERVER_DIR" \
@@ -137,7 +137,7 @@ else
   SERVER_STDIN=/dev/null
 fi
 
-printf '[matching-e2e] start Mojang server %s on 127.0.0.1:%s with Java %s\n' "$MINECRAFT_VERSION" "$SERVER_PORT" "$JAVA_MAJOR"
+printf '[matching-e2e] запуск сервера Mojang %s на 127.0.0.1:%s с Java %s\n' "$MINECRAFT_VERSION" "$SERVER_PORT" "$JAVA_MAJOR"
 (
   cd "$SERVER_DIR"
   exec "$JAVA_BIN" -Xms256M -Xmx768M -jar server.jar nogui
@@ -173,24 +173,24 @@ PY
 # level.dat, созданного сервером. Корректно остановите первый сервер, убедитесь
 # в сохранении метаданных мира, удалите старые чанки бедрока и перезапустите.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
-  printf '[matching-e2e] stop initial 1.17.1 server for offline world preparation\n'
+  printf '[matching-e2e] остановка исходного сервера 1.17.1 для автономной подготовки мира\n'
   printf 'stop\n' >&"$SERVER_CONTROL_FD"
   for _ in $(seq 1 120); do
     if ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then break; fi
     sleep 0.25
   done
   if kill -0 "$SERVER_PID" >/dev/null 2>&1; then
-    echo '[matching-e2e] 1.17.1 server failed to stop cleanly' >&2
+    echo '[matching-e2e] сервер 1.17.1 не удалось корректно остановить' >&2
     exit 1
   fi
-  wait "$SERVER_PID" || { echo '[matching-e2e] initial server exited with failure' >&2; exit 1; }
+  wait "$SERVER_PID" || { echo '[matching-e2e] исходный сервер завершился с ошибкой' >&2; exit 1; }
   # Сохраните диагностику первого запуска, но не смешивайте с журналом сертификационного
   # сервера. Второй запуск начинает чистый журнал для фактического доказательства соединения.
   cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"
   python3 "$ROOT/e2e/scripts/prepare-vanilla-1171-void-world.py" "$SERVER_DIR/world/level.dat"
   # Существующие чанки сохраняют бедрок независимо от настроек генератора.
   rm -rf "$SERVER_DIR/world/region" "$SERVER_DIR/world/entities" "$SERVER_DIR/world/poi"
-  printf '[matching-e2e] restart 1.17.1 server with verified void world\n'
+  printf '[matching-e2e] перезапуск сервера 1.17.1 с проверенным пустым миром\n'
   (
     cd "$SERVER_DIR"
     exec "$JAVA_BIN" -Xms256M -Xmx768M -jar server.jar nogui
@@ -259,10 +259,10 @@ if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   PROXY_PID=$!
   for _ in $(seq 1 100); do
     [[ -s "$RUNTIME_DIR/resource-ready-proxy.port" ]] && break
-    kill -0 "$PROXY_PID" >/dev/null 2>&1 || { echo '[matching-e2e] resource gate exited before binding localhost' >&2; exit 1; }
+    kill -0 "$PROXY_PID" >/dev/null 2>&1 || { echo '[matching-e2e] барьер ресурсов завершился до привязки к localhost' >&2; exit 1; }
     sleep 0.1
   done
-  [[ -s "$RUNTIME_DIR/resource-ready-proxy.port" ]] || { echo '[matching-e2e] resource gate did not bind' >&2; exit 1; }
+  [[ -s "$RUNTIME_DIR/resource-ready-proxy.port" ]] || { echo '[matching-e2e] барьер ресурсов не выполнил привязку' >&2; exit 1; }
   CERT_PORT="$(cat "$RUNTIME_DIR/resource-ready-proxy.port")"
   [[ "$CERT_PORT" =~ ^[0-9]{1,5}$ ]] || { echo '[matching-e2e] недопустимый порт клиентского подключения с ограниченным доступом' >&2; exit 1; }
 fi
@@ -342,4 +342,4 @@ payload={
 open(out,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY
 
-printf '[matching-e2e] PASS client=%s server=%s Java=%s\n' "$MINECRAFT_VERSION" "$MINECRAFT_VERSION" "$JAVA_MAJOR"
+printf '[matching-e2e] PASS клиент=%s сервер=%s Java=%s\n' "$MINECRAFT_VERSION" "$MINECRAFT_VERSION" "$JAVA_MAJOR"

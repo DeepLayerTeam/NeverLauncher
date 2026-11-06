@@ -156,4 +156,4 @@ jq -n \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true},failClosedPartialSnapshot:true,guardSnapshotConstraints:$constraints,serverBridgeV2Tables:3}' \
   > "$RESULT_DIR/migration-compatibility-stabilization.json"
 
-printf '[guard-migration-e2e] PASS 0.13.9 -> current Guard migration + ServerBridge v2 schema\n'
+printf '[guard-migration-e2e] PASS 0.13.9 -> текущая миграция Guard и схема ServerBridge v2\n'

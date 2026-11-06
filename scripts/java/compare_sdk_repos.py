@@ -13,7 +13,7 @@ def tree(path):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        sys.exit('usage: compare_sdk_repos_04812.py STAGING_A/maven STAGING_B/maven')
+        sys.exit('Использование: compare_sdk_repos_04812.py STAGING_A/maven STAGING_B/maven')
     try:
         left, right = tree(sys.argv[1]), tree(sys.argv[2])
         if not left or left != right:

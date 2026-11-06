@@ -6,9 +6,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)}"
 [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ || "$SOURCE_COMMIT" =~ ^[a-f0-9]{64}$ ]] || {
-  echo '0.42.0: exact source commit required' >&2; exit 2;
+  echo '0.42.0: требуется точный коммит исходного кода' >&2; exit 2;
 }
-[[ "$(cat "$ROOT/VERSION")" == 0.42.0 ]] || { echo 'wrong source version' >&2; exit 2; }
+[[ "$(cat "$ROOT/VERSION")" == 0.42.0 ]] || { echo 'Неверная версия исходного кода' >&2; exit 2; }
 # Раннер E2E очищает Runtime; запускайте тесты отказов ПОСЛЕ него, а не до.
 GITHUB_SHA="$SOURCE_COMMIT" LAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 mkdir -p "$ROOT/e2e/runtime"
@@ -24,4 +24,4 @@ python3 "$ROOT/scripts/ga/record_network_faults_0420.py" \
 python3 "$ROOT/serverbridge/live_matrix_04113.py" --scope all --root "$ROOT" \
   --runtime "$ROOT/e2e/runtime" \
   --out "$ROOT/e2e/runtime/live-matrix-all-0420.json"
-printf '0.42.0: completed real JVM/host fault run and full Minecraft matrix\n'
+printf '0.42.0: выполнены реальные испытания сбоев JVM/хоста и полная матрица Minecraft\n'

@@ -29,8 +29,8 @@ func TestLinuxAdversarialDescendants03114(t *testing.T) {
 	opt.Policy.TimeoutSeconds = 20
 	script := `#!/bin/sh
 set -eu
-# Both leader and descendant must remain in the same OS cgroup even if a
-# child creates a fresh process group. A process group alone is not security.
+# Как ведущий процесс, так и его потомки должны оставаться в одной cgroup ОС, даже если
+# дочерний процесс создаёт новую группу процессов. Одна группа процессов не обеспечивает безопасность.
 setsid /bin/sh -c 'sleep 15' >/dev/null 2>&1 &
 echo descendant-started
 sleep 15

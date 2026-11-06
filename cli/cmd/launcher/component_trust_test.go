@@ -51,7 +51,7 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 			t.Fatal(e)
 		}
 		if p.Epoch != epoch {
-			t.Fatal("fixture epoch")
+			t.Fatal("Эпоха тестового набора")
 		}
 		h := sha256.Sum256(manifest)
 		env := componentSignature02312{SchemaVersion: "2.0", Algorithm: "ed25519", KeyID: "component-v1", TrustEpoch: epoch, PolicySHA256: digest, ManifestSHA256: hex.EncodeToString(h[:]), SignedAt: now.Format(time.RFC3339), Signature: ""}
@@ -78,7 +78,7 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = verifyComponentTrust02312(manifestPath); e == nil {
-		t.Fatal("mix-and-match manifest accepted")
+		t.Fatal("Принят манифест со смешанными компонентами")
 	}
 	if e = os.WriteFile(manifestPath, manifest, 0600); e != nil {
 		t.Fatal(e)
@@ -86,7 +86,7 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 	revoked := makePolicy(2, "revoked")
 	sign(revoked, 2)
 	if e = verifyComponentTrust02312(manifestPath); e == nil {
-		t.Fatal("revoked component signer accepted")
+		t.Fatal("Принят отозванный подписант компонента")
 	}
 	// Принятие новой эпохи отзывов навсегда запрещает старую подписанную
 	// политику, даже если её собственная подпись остаётся действительной.
@@ -95,6 +95,6 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 	}
 	sign(first, 1)
 	if e = acceptComponentTrust02312(rootInstall, manifestPath); e == nil {
-		t.Fatal("old policy replay accepted")
+		t.Fatal("Принято повторное воспроизведение старой политики")
 	}
 }

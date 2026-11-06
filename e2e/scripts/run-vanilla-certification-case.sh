@@ -33,7 +33,7 @@ EXE_SUFFIX=""
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
 RUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
-printf '[vanilla-cert] build CLI and Runtime for %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
+printf '[vanilla-cert] сборка CLI и Runtime для %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
 (
   cd "$ROOT/cli"
   go build -o "$NL_BIN" ./cmd/launcher

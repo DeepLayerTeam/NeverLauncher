@@ -26,8 +26,8 @@ func TestMigrationAuthCLITransport0335(t *testing.T){
  if e:=postMigrationAuth0335(srv.URL+"/import","test-token",source,"sha256-hex","run-xyz",out,true);e!=nil{t.Fatal(e)}
  if called!=1{t.Fatalf("Ожидался один запрос, получено %d",called)}
  stat,e:=os.Stat(out);if e!=nil{t.Fatal(e)}
- if stat.Mode().Perm()!=0600{t.Fatalf("report exposed: %v",stat.Mode())}
- data,e:=os.ReadFile(out);if e!=nil||!strings.Contains(string(data),`"imported": 1`){t.Fatalf("missing result: %s %v",data,e)}
- if e:=postMigrationAuth0335(srv.URL+"/import","test-token",source,"sha256-hex","run-xyz",out,true);!os.IsExist(e){t.Fatalf("report overwrite allowed: %v",e)}
- if e:=postMigrationAuth0335("http://example.com/credentials/import","test-token",source,"sha256-hex","run-xyz","",true);e==nil{t.Fatal("credential transmission over insecure public HTTP accepted")}
+ if stat.Mode().Perm()!=0600{t.Fatalf("Отчёт раскрыт: %v",stat.Mode())}
+ data,e:=os.ReadFile(out);if e!=nil||!strings.Contains(string(data),`"imported": 1`){t.Fatalf("Отсутствует результат: %s %v",data,e)}
+ if e:=postMigrationAuth0335(srv.URL+"/import","test-token",source,"sha256-hex","run-xyz",out,true);!os.IsExist(e){t.Fatalf("Разрешена перезапись отчёта: %v",e)}
+ if e:=postMigrationAuth0335("http://example.com/credentials/import","test-token",source,"sha256-hex","run-xyz","",true);e==nil{t.Fatal("Разрешена передача учётных данных по незащищённому публичному HTTP")}
 }

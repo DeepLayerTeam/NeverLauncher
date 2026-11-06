@@ -32,6 +32,6 @@ func TestSafeUpstreamAuthMethods0296(t *testing.T) {
 	}
 	long := SafeUpstreamAuthMethods([]string{strings.Repeat("x", 64)})
 	if len(long) != 1 || len(long[0]) > 64 || !strings.HasPrefix(long[0], "upstream:") {
-		t.Fatalf("method bounds not enforced: %q", long)
+		t.Fatalf("Ограничения методов не соблюдены: %q", long)
 	}
 }

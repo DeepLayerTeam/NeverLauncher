@@ -1070,7 +1070,7 @@ mod tests {
             breakaway_allowed: false,
             primary_thread_resumed: true,
         };
-        let json = serde_json::to_value(&report).expect("policy report serializes");
+        let json = serde_json::to_value(&report).expect("Сериализация отчёта о политике");
         assert_eq!(json["pid"], 42);
         assert_eq!(json["assignedToJob"], true);
         assert_eq!(json["breakawayAllowed"], false);
@@ -1085,7 +1085,7 @@ mod tests {
             current_directory_removed_from_dll_search: true,
             restricted_default_dll_directories: true,
         };
-        let json = serde_json::to_value(&report).expect("hardening report serializes");
+        let json = serde_json::to_value(&report).expect("Сериализация отчёта об усилении защиты");
         assert_eq!(json["hardeningVersion"], GUARD_WINDOWS_HARDENING_VERSION);
         assert_eq!(json["enforced"], true);
         assert_eq!(json["restrictedDefaultDllDirectories"], true);
@@ -1147,14 +1147,14 @@ mod tests {
         ] {
             let report = sample_windows_policy(profile);
             validate_windows_guard_policy_report(&report, profile)
-                .expect("valid profile capability report");
+                .expect("Действительный отчёт о возможностях профиля");
         }
     }
 
     #[test]
     fn protection_core_rejects_capability_drift() {
         let mut report = sample_windows_policy(WindowsProtectionProfile::Aggressive);
-        let details = report.windows.as_mut().expect("Windows details");
+        let details = report.windows.as_mut().expect("Сведения Windows");
         details.capabilities.image_load_policy.observed_flags = 0x3;
         details.capabilities.image_load_policy.satisfied = false;
         assert!(validate_windows_guard_policy_report(
@@ -1177,7 +1177,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn process_hardening_is_enforced_for_current_test_process() {
-        let report = ensure_windows_production_hardening().expect("Windows production hardening");
+        let report = ensure_windows_production_hardening().expect("Усиление защиты Windows в промышленной среде");
         assert_eq!(report.pid, std::process::id());
         assert!(report.enforced);
         assert!(report.heap_terminate_on_corruption);
@@ -1197,8 +1197,8 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null());
         prepare_runtime_command(&mut command);
-        let mut child = command.spawn().expect("spawn suspended Windows child");
-        let guard = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+        let mut child = command.spawn().expect("Создание приостановленного дочернего процесса Windows");
+        let guard = enforce_runtime_process(&mut child).expect("Применение политики процессов среды выполнения");
         let report = guard.report();
         assert!(report.enforced);
         assert!(report.created_suspended);
@@ -1207,7 +1207,7 @@ mod tests {
         assert!(report.die_on_unhandled_exception);
         assert!(!report.breakaway_allowed);
         assert!(report.primary_thread_resumed);
-        let status = child.wait().await.expect("wait for policy-bound child");
+        let status = child.wait().await.expect("Ожидание дочернего процесса с применённой политикой");
         assert!(status.success());
     }
 

@@ -171,7 +171,7 @@ def command_sync() -> int:
     )
     if changed:
         print(
-            f"Synced VERSION={version} into {len(changed)} required metadata files (+ generated OpenAPI):"
+            f"Версия VERSION={version} синхронизирована в {len(changed)} обязательных файлах метаданных (и сформированном OpenAPI):"
         )
         for rel in changed:
             print(f" - {rel}")

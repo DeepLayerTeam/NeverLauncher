@@ -64,4 +64,4 @@ fi
 "$BIN" runtime client-factory certify-verify --client-dir "$CLIENT" --certificate "$CERT" --public-key "$PUB" --output "$DEST/certificate-verification.json"
 # Никогда не публикуйте этот временный закрытый ключ CI как артефакт сборки.
 if [[ -z "${LAUNCHER_CERT_SIGNING_KEY:-}" && "${LAUNCHER_CERT_KEEP_TEST_KEY:-0}" != 1 ]]; then rm -f "$KEY"; fi
-printf '[client-factory-certification] certified loader=%s mc=%s target=%s output=%s\n' "$LOADER" "$MC" "$TARGET" "$CERT"
+printf '[client-factory-certification] сертифицирован загрузчик=%s mc=%s платформа=%s результат=%s\n' "$LOADER" "$MC" "$TARGET" "$CERT"

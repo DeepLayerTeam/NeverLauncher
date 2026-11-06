@@ -25,10 +25,10 @@ func TestHTTPWindowRollingAndStatus(t *testing.T) {
 	m.observe(now, 429, 120*time.Millisecond)
 	got := m.Snapshot(now)
 	if got.Requests != 22 || got.Failures != 1 || got.Throttled != 1 || got.P95Seconds != .25 {
-		t.Fatalf("unexpected window: %+v", got)
+		t.Fatalf("Неожиданный интервал: %+v", got)
 	}
 	if m.Snapshot(now.Add(61*time.Second)).Requests != 0 {
-		t.Fatal("expired window included")
+		t.Fatal("Включён интервал с истёкшим сроком действия")
 	}
 }
 func TestHTTPMiddleware(t *testing.T) {
@@ -37,12 +37,12 @@ func TestHTTPMiddleware(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/a", nil))
 	if rec.Code != 503 || m.Snapshot(time.Now()).Failures != 1 {
-		t.Fatalf("status lost: %d", rec.Code)
+		t.Fatalf("Статус потерян: %d", rec.Code)
 	}
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/metrics", nil))
 	if m.Snapshot(time.Now()).Requests != 1 {
-		t.Fatal("metrics scraped itself")
+		t.Fatal("Сбор метрик охватил сам себя")
 	}
 	var out bytes.Buffer
 	m.Prometheus(&out)
@@ -54,37 +54,37 @@ func TestOperationalThresholds(t *testing.T) {
 	r := Report{Issues: []Issue{}}
 	r.evaluatePostgres(PostgreSQL{ActiveConnections: 83, MaxConnections: 100, PendingJobs: 510, ExpiredJobLeases: 1, PendingOutbox: 700, OldestPendingJobSeconds: 120})
 	if len(r.Issues) != 5 {
-		t.Fatalf("expected five measurable warnings: %+v", r.Issues)
+		t.Fatalf("Ожидалось пять измеримых предупреждений: %+v", r.Issues)
 	}
 	for _, i := range r.Issues {
 		if i.Severity != "warning" || i.Recommendation == "" {
-			t.Fatalf("bad recommendation %+v", i)
+			t.Fatalf("Некорректная рекомендация %+v", i)
 		}
 	}
 }
 func TestProbeFailsClosedWhenDatabaseUnavailable(t *testing.T) {
 	r := Probe(context.Background(), Options{Driver: "postgres"})
 	if r.Verified || len(r.Errors) == 0 || r.PostgreSQL != nil {
-		t.Fatalf("false green capacity probe: %+v", r)
+		t.Fatalf("Ложно положительный результат проверки ёмкости: %+v", r)
 	}
 }
 func TestCollectorStaleReport(t *testing.T) {
 	c := NewCollector(Options{Mode: "standard"})
 	if c.Latest().Verified {
-		t.Fatal("uncollected capacity reported verified")
+		t.Fatal("Несобранные данные о ёмкости отмечены как проверенные")
 	}
 	c.mu.Lock()
 	c.last = Report{Verified: true, At: time.Now().Add(-120 * time.Second)}
 	c.sampled = true
 	c.mu.Unlock()
 	if c.Latest().Verified {
-		t.Fatal("stale capacity reported verified")
+		t.Fatal("Устаревшие данные о ёмкости отмечены как проверенные")
 	}
 }
 func TestMeasureDiskFailsForMissingVolume(t *testing.T) {
 	_, err := measureDisk("backup", "/some/missing/unlikely/capacity-check-03215")
 	if err == nil {
-		t.Fatal("missing volume accepted")
+		t.Fatal("Принято отсутствие тома")
 	}
 }
 
@@ -148,6 +148,6 @@ func TestPostgresReadingFromQueries(t *testing.T) {
 		t.Fatal(e)
 	}
 	if p.ActiveConnections != 89 || p.MaxConnections != 100 || p.PendingJobs != 900 || p.ExpiredJobLeases != 3 || p.PendingOutbox != 510 || p.DatabaseBytes != 123456 || p.Users != 2 || p.CrashReports != 6 {
-		t.Fatalf("bad actual query data: %+v", p)
+		t.Fatalf("Некорректные фактические данные запроса: %+v", p)
 	}
 }

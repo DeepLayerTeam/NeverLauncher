@@ -27,7 +27,7 @@ EXE_SUFFIX="$(certification_exe_suffix "$TARGET_OS")"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
 RUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
-printf '[fabric-cert] build CLI and Runtime\n'
+printf '[fabric-cert] сборка CLI и Runtime\n'
 (
   cd "$ROOT/cli"
   go build -o "$NL_BIN" ./cmd/launcher
@@ -36,7 +36,7 @@ cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin run
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
 [[ -f "$RUNTIME_BIN" ]] || { echo "[fabric-cert] исполняемый файл Runtime отсутствует" >&2; exit 1; }
 
-printf '[fabric-cert] materialize Fabric %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
+printf '[fabric-cert] подготовка Fabric %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 materialize_loader_package() {
   "$NL_BIN" runtime fabric-package \
     --minecraft "$MINECRAFT_VERSION" \
@@ -174,4 +174,4 @@ payload = {
 open(out, 'w', encoding='utf-8').write(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
 PY
 
-printf '[fabric-cert] PASS Fabric %s / loader %s / Java %s\n' "$MINECRAFT_VERSION" "$RESOLVED_LOADER" "$JAVA_MAJOR"
+printf '[fabric-cert] PASS Fabric %s / загрузчик %s / Java %s\n' "$MINECRAFT_VERSION" "$RESOLVED_LOADER" "$JAVA_MAJOR"

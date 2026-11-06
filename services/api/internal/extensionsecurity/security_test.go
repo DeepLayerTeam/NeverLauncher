@@ -34,26 +34,26 @@ func TestDenyByDefaultGrantRevokeAndDiff0207(t *testing.T) {
 	m, _ := fixture0207(t)
 	ctx := context.Background()
 	if ok, err := m.Allowed(ctx, "example.security", "1.0.0", "global", "", "project:read", "demo-project"); err != nil || ok {
-		t.Fatalf("deny-by-default failed ok=%v err=%v", ok, err)
+		t.Fatalf("Политика запрета по умолчанию не сработала ok=%v err=%v", ok, err)
 	}
 	if _, err := m.Grant(ctx, "example.security", "1.0.0", "global", "", "project:read", "admin", "test"); err != nil {
 		t.Fatal(err)
 	}
 	if ok, err := m.Allowed(ctx, "example.security", "1.0.0", "global", "", "project:read", "demo-project"); err != nil || !ok {
-		t.Fatalf("grant not effective ok=%v err=%v", ok, err)
+		t.Fatalf("Предоставленное разрешение не действует ok=%v err=%v", ok, err)
 	}
 	d, err := m.PermissionDiff(ctx, "example.security", "1.0.0", "1.1.0", "global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(d.AddedNotGranted) != 2 || d.AddedNotGranted[0] != "http:outbound" || d.AddedNotGranted[1] != "secrets:read" {
-		t.Fatalf("unexpected diff %#v", d)
+		t.Fatalf("Неожиданное различие %#v", d)
 	}
 	if err := m.Revoke(ctx, "example.security", "global", "", "project:read"); err != nil {
 		t.Fatal(err)
 	}
 	if ok, err := m.Allowed(ctx, "example.security", "1.0.0", "global", "", "project:read", "demo-project"); err != nil || ok {
-		t.Fatalf("revoke failed ok=%v err=%v", ok, err)
+		t.Fatalf("Ошибка отзыва разрешения ok=%v err=%v", ok, err)
 	}
 }
 func TestProjectScopedGrant0207(t *testing.T) {
@@ -63,10 +63,10 @@ func TestProjectScopedGrant0207(t *testing.T) {
 		t.Fatal(err)
 	}
 	if ok, _ := m.Allowed(ctx, "example.security", "1.0.0", "global", "", "storage:read", "p1"); !ok {
-		t.Fatal("project grant should authorize matching project for global install")
+		t.Fatal("Разрешение проекта должно предоставлять доступ соответствующему проекту при глобальной установке")
 	}
 	if ok, _ := m.Allowed(ctx, "example.security", "1.0.0", "global", "", "storage:read", "p2"); ok {
-		t.Fatal("project grant leaked to another project")
+		t.Fatal("Разрешение проекта распространилось на другой проект")
 	}
 }
 func TestSecretsEncryptedAuthenticated0207(t *testing.T) {
@@ -84,17 +84,17 @@ func TestSecretsEncryptedAuthenticated0207(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(stored.Ciphertext) == "top-secret" {
-		t.Fatal("plaintext stored")
+		t.Fatal("Сохранён открытый текст")
 	}
 	plain, err := m.GetSecret(ctx, "example.security", "global", "", "API_KEY")
 	if err != nil || string(plain) != "top-secret" {
-		t.Fatalf("secret roundtrip failed %q %v", plain, err)
+		t.Fatalf("Секрет не прошёл цикл записи и чтения %q %v", plain, err)
 	}
 	stored.Ciphertext[0] ^= 0xff
 	if _, err := repo.PutExtensionSecret(ctx, stored); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := m.GetSecret(ctx, "example.security", "global", "", "API_KEY"); err == nil {
-		t.Fatal("tampered ciphertext accepted")
+		t.Fatal("Принят изменённый шифртекст")
 	}
 }
