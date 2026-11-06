@@ -21,7 +21,7 @@ export type ScopedServer = {
 
 export function scopedServers(payload: unknown): ScopedServer[] {
   const rows = (payload as { items?: unknown })?.items;
-  if (!Array.isArray(rows)) throw new Error('Backend вернул некорректный каталог серверов');
+  if (!Array.isArray(rows)) throw new Error('Сервер вернул некорректный каталог серверов');
   const seen = new Set<string>();
   return rows.filter((row): row is ScopedServer => {
     if (!row || typeof row !== 'object') return false;

@@ -41,7 +41,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
   const previewValid=(()=>{try{validateBrand0355(brand);return true}catch{return false}})();
   return <section className="card wide brandingStudio0355">
     <h2>Студия оформления · 0.35.5</h2>
-    <p className="muted">Предпросмотр меняется сразу. Исходный bootstrap проверяется Ed25519, новый подписывается в браузере. Ключ не передаётся в Backend и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый installer bundle.</p>
+    <p className="muted">Предпросмотр меняется сразу. Исходный bootstrap проверяется Ed25519, новый подписывается в браузере. Ключ не передаётся на сервер и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый installer bundle.</p>
     <div className="formGrid">
       <article className="subcard">
         <h3>1. Подписанный bundle владельца</h3>

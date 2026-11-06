@@ -41,7 +41,7 @@ func TestLiveManagedProviderCAS02910(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = store.ActivateManagedProvider02910(ctx, id, 0, current, "test", "Stale revision"); !errors.Is(err, ErrManagedProviderConflict02910) {
-		t.Fatalf("expected CAS conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт ревизии CAS, получено %v", err)
 	}
 	if _, err = store.ActivateManagedProvider02910(ctx, id, 0, v.Revision, "test", "Disable after test"); err != nil {
 		t.Fatal(err)

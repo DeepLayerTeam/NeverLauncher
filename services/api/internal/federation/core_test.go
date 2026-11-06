@@ -30,7 +30,7 @@ func TestAuthenticatePasswordResolvesCanonicalUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.User.ID != "admin" || result.Identity.Provider != "local" {
-		t.Fatalf("unexpected result: %+v", result)
+		t.Fatalf("Неожиданный результат: %+v", result)
 	}
 	if len(result.AuthMethods) != 1 || result.AuthMethods[0] != "password" {
 		t.Fatalf("auth methods lost: %+v", result.AuthMethods)
@@ -68,7 +68,7 @@ func TestLinkAuthenticatedIdentityRejectsReassignment(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := core.LinkAuthenticatedIdentity(second.ID, "external", proof); authconnector.CodeOf(err) != authconnector.ErrConflict {
-		t.Fatalf("expected conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт, получено %v", err)
 	}
 }
 

@@ -21,7 +21,7 @@ func TestOfficialProviderPolicyValidation02611(t *testing.T) {
 		{ClientID: "", Enabled: true, BrowserEnabled: true, Issuer: "consumers"},
 	} {
 		if err := bad.Validate(); err == nil {
-			t.Fatalf("accepted invalid configuration: %+v", bad)
+			t.Fatalf("Принята недопустимая конфигурация: %+v", bad)
 		}
 	}
 }
@@ -39,7 +39,7 @@ func TestOfficialProviderConcurrentCASAndHistory02611(t *testing.T) {
 			if err == nil {
 				successes <- rev
 			} else if !errors.Is(err, ErrOfficialProviderConflict02611) {
-				t.Errorf("unexpected error: %v", err)
+				t.Errorf("Неожиданная ошибка: %v", err)
 			}
 		}()
 	}

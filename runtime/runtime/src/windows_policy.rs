@@ -630,8 +630,8 @@ mod windows_impl {
                 std::io::Error::last_os_error()
             ));
         }
-        let assigned = u32::from_ne_bytes(buffer[0..4].try_into().expect("fixed header")) as usize;
-        let listed = u32::from_ne_bytes(buffer[4..8].try_into().expect("fixed header")) as usize;
+        let assigned = u32::from_ne_bytes(buffer[0..4].try_into().expect("получить заголовок фиксированной длины")) as usize;
+        let listed = u32::from_ne_bytes(buffer[4..8].try_into().expect("получить заголовок фиксированной длины")) as usize;
         if assigned > listed || listed > MAX_JOB_PROCESS_IDS {
             return Err(format!(
                 "Guard: список процессов Job Object неполон: assigned={assigned}, listed={listed}"

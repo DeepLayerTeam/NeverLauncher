@@ -38,12 +38,12 @@ func TestServerBridgeProxyFamilyIntegrityAllowlist0145(t *testing.T) {
 		server := bridgeServerRecord{ID: kind + "-0145", Kind: kind}
 		decision := s.validateBridgePluginMeasurement0135(server, kind, "0.14.5", hashes[kind])
 		if !decision.Allowed || !decision.Required || decision.Reason != "bridge_integrity_verified" {
-			t.Fatalf("%s matching release hash rejected: %+v", kind, decision)
+			t.Fatalf("%s: отклонён совпадающий хеш релиза: %+v", kind, decision)
 		}
 		wrong := hashes["paper"]
 		decision = s.validateBridgePluginMeasurement0135(server, kind, "0.14.5", wrong)
 		if decision.Allowed || decision.Reason != "bridge_integrity_hash_rejected" {
-			t.Fatalf("%s cross-platform artifact hash accepted: %+v", kind, decision)
+			t.Fatalf("%s: принят хеш артефакта для другой платформы: %+v", kind, decision)
 		}
 	}
 }
@@ -52,7 +52,7 @@ func TestBridgePluginsManifestIncludesProxyFamily0145(t *testing.T) {
 	manifest := bridgePluginsManifest940("0.14.5")
 	artifacts, ok := manifest["artifacts"].([]map[string]any)
 	if !ok {
-		t.Fatalf("unexpected artifacts type: %T", manifest["artifacts"])
+		t.Fatalf("Неожиданный тип артефактов: %T", manifest["artifacts"])
 	}
 	got := map[string]map[string]any{}
 	for _, artifact := range artifacts {
@@ -62,7 +62,7 @@ func TestBridgePluginsManifestIncludesProxyFamily0145(t *testing.T) {
 	}
 	for _, id := range []string{"velocity", "bungeecord", "waterfall"} {
 		if got[id] == nil {
-			t.Fatalf("bridge manifest missing %s artifact", id)
+			t.Fatalf("В манифесте моста отсутствует артефакт %s", id)
 		}
 	}
 	if got["bungeecord"]["descriptor"] != "bungee.yml" || got["waterfall"]["descriptor"] != "bungee.yml" {

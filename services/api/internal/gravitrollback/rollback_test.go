@@ -57,7 +57,7 @@ func TestCompareRefusesPostSwitchWrites(t *testing.T) {
 func TestCommitRequiresBothFences(t *testing.T) {
 	c := CommitInput{ProfileID: "client", Channel: "stable", ExpectedRevision: 2, PlanSHA256: strings.Repeat("a", 64), CurrentEvidenceSHA256: strings.Repeat("a", 64)}
 	if ValidateCommit(c) == nil {
-		t.Fatal("unfenced commit accepted")
+		t.Fatal("Принят коммит без проверки блокировки")
 	}
 	c.SourceWriterFenced = true
 	c.NeverWriterFenced = true

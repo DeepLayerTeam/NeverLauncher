@@ -61,7 +61,7 @@ func TestConditionalResolverEndToEnd0244(t *testing.T) {
 		t.Fatal("permission mutation did not alter signed digest")
 	}
 	if ValidateManifestSchema(func() Manifest { m.ComponentCatalog = &updated; return m }()) == nil {
-		t.Fatal("tampered catalog accepted")
+		t.Fatal("Изменённый каталог ошибочно принят")
 	}
 }
 func TestImplicitDefaultsAreFilteredBeforeDownload0244(t *testing.T) {

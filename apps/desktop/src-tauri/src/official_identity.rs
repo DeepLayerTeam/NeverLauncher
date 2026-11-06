@@ -1309,7 +1309,7 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn official_linking_requires_explicit_confirmation() {
-        let manager=IdentityManager::new().expect("http manager");
+        let manager=IdentityManager::new().expect("создать диспетчер HTTP");
         let uuid="123456789abcdef0123456789abcdef0";
         let result=manager.link_0268("https://example.com","access-token","session",uuid,false).await;
         assert!(result.unwrap_err().contains("подтверждение"));

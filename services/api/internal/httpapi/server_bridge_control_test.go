@@ -82,7 +82,7 @@ func TestServerBridgeControlMemoryIdempotencyLeaseAndAck0195(t *testing.T) {
 	cmd := model.ServerBridgeControlCommand{ID: "ctl_one", ServerID: "paper-main", RuntimeEpoch: 9, RuntimeID: runtimeID, Type: "server.save", Payload: map[string]string{}, PayloadSHA256: "abc", RequestDigest: "request-1", RequestedBy: "admin@example.test", IdempotencyKey: "idem-12345678", Status: "pending", CreatedAt: now, UpdatedAt: now, ExpiresAt: now.Add(time.Minute)}
 	first, reused, err := store.createControl0195(cmd, now)
 	if err != nil || reused || first.ID != cmd.ID {
-		t.Fatalf("create: %+v reused=%v err=%v", first, reused, err)
+		t.Fatalf("Создание: %+v, повторно использовано=%v, ошибка=%v", first, reused, err)
 	}
 	replay, reused, err := store.createControl0195(cmd, now)
 	if err != nil || !reused || replay.ID != cmd.ID {
@@ -92,13 +92,13 @@ func TestServerBridgeControlMemoryIdempotencyLeaseAndAck0195(t *testing.T) {
 	conflict.ID = "ctl_two"
 	conflict.RequestDigest = "request-2"
 	if _, _, err := store.createControl0195(conflict, now); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("expected idempotency conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт идемпотентности, получено %v", err)
 	}
 	channelID := "0123456789abcdef0123456789abcdef"
 	leaseToken := "lease_token_0123456789abcdef"
 	leased, err := store.leaseControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, channelID, leaseToken, 0, now, 30*time.Second)
 	if err != nil || leased.Attempt != 1 || leased.Status != "leased" {
-		t.Fatalf("lease: %+v err=%v", leased, err)
+		t.Fatalf("Аренда: %+v, ошибка=%v", leased, err)
 	}
 	if _, err := store.leaseControl0195(cmd.ServerID, cmd.RuntimeEpoch, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", channelID, "lease_token_other_0123456789", 0, now, 30*time.Second); !errors.Is(err, repository.ErrNotFound) {
 		t.Fatalf("wrong runtime must not receive command: %v", err)
@@ -112,16 +112,16 @@ func TestServerBridgeControlMemoryIdempotencyLeaseAndAck0195(t *testing.T) {
 	}
 	done, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
 	if err != nil || done.Status != "succeeded" {
-		t.Fatalf("complete: %+v err=%v", done, err)
+		t.Fatalf("Завершение: %+v, ошибка=%v", done, err)
 	}
 	again, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || again.Status != "succeeded" {
 		t.Fatalf("idempotent ACK failed: %+v err=%v", again, err)
 	}
 	if _, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "false"}, "", now.Add(3*time.Second)); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("same-status ACK with conflicting result accepted: %v", err)
+		t.Fatalf("Принято подтверждение с тем же статусом, но противоречащим результатом: %v", err)
 	}
 	if _, err := store.completeControl0195(cmd.ServerID, cmd.RuntimeEpoch, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "failed", nil, "late conflict", now.Add(3*time.Second)); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("conflicting ACK accepted: %v", err)
+		t.Fatalf("Принято противоречащее подтверждение: %v", err)
 	}
 }

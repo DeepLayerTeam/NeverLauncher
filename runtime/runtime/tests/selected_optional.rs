@@ -6,19 +6,19 @@ use std::time::{SystemTime, UNIX_EPOCH};
 async fn missing_selected_legacy_optional_is_not_ready() {
     let mut source: serde_json::Value = serde_json::from_str(
         include_str!("fixtures/catalog_manifest_v3_go_signed_0242.json")
-    ).expect("known-good manifest fixture");
+    ).expect("создать тестовый заведомо корректный манифест");
     source["schemaVersion"] = serde_json::json!("2.0");
-    source.as_object_mut().expect("manifest object").remove("componentCatalog");
-    let manifest: runtime::Manifest = serde_json::from_value(source).expect("legacy manifest");
+    source.as_object_mut().expect("получить объект манифеста").remove("componentCatalog");
+    let manifest: runtime::Manifest = serde_json::from_value(source).expect("получить устаревший манифест");
     let root: PathBuf = std::env::temp_dir().join(format!(
         "neverlauncher-selected-optional-0526-{}-{}",
         std::process::id(),
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
     ));
-    std::fs::create_dir(&root).expect("isolated test directory");
+    std::fs::create_dir(&root).expect("создать изолированный тестовый каталог");
     let result = runtime::check_files_with_preset(&manifest, &root, None).await;
     std::fs::remove_dir_all(&root).expect("cleanup");
-    let files = result.expect("check missing selected files");
+    let files = result.expect("проверить отсутствие выбранных файлов");
     assert!(!files.is_empty(), "must actually inspect files");
     assert!(files.iter().all(|file| file.status == "missing"),
         "missing selected optional files must never be accepted as ready: {files:?}");

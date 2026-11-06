@@ -35,7 +35,7 @@ func TestV3CatalogReferenceDigestIdentityAndImmutability0241(t *testing.T) {
     *next.ComponentCatalog=*decoded.ComponentCatalog
     next.ComponentCatalog.Components=append([]CatalogComponent0241(nil),decoded.ComponentCatalog.Components...)
     next.ComponentCatalog.Components[0].Name="evil"
-    if err=ValidateManifestSchema(next);err==nil {t.Fatal("tampered catalog accepted")}
+    if err=ValidateManifestSchema(next);err==nil {t.Fatal("Изменённый каталог ошибочно принят")}
     next=decoded;next.ComponentCatalog=&ComponentCatalog0241{};*next.ComponentCatalog=*decoded.ComponentCatalog
     next.ComponentCatalog.Components=append([]CatalogComponent0241(nil),decoded.ComponentCatalog.Components...)
     next.ComponentCatalog.Components[0].Files=[]string{"mods/not-signed.jar"}

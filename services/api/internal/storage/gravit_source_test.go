@@ -35,7 +35,7 @@ func TestGravitS3Source02510(t *testing.T) {
 	for _, key := range []string{"../secret", "/secret", "skin\\secret", "a//b", "a/../b"} {
 		if f, err := src.OpenGravitSourceObject02510(context.Background(), key); err == nil {
 			f.Close()
-			t.Fatalf("unsafe key accepted: %q", key)
+			t.Fatalf("Принят небезопасный ключ: %q", key)
 		}
 	}
 }
@@ -53,7 +53,7 @@ func TestGravitS3RedirectRejected02510(t *testing.T) {
 	f, err := src.OpenGravitSourceObject02510(context.Background(), "skins/abc.png")
 	if err == nil {
 		f.Close()
-		t.Fatal("redirect accepted")
+		t.Fatal("Небезопасное перенаправление принято")
 	}
 	if !strings.Contains(err.Error(), "302") {
 		t.Fatalf("unexpected redirect failure: %v", err)

@@ -189,7 +189,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	commit := rb.CommitInput{ProfileID: profile, Channel: channel, ExpectedRevision: active.Revision, PlanSHA256: plan.PlanSHA256, Current: rep.Target, CurrentEvidenceSHA256: hash}
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, commit, pub); e == nil {
-		t.Fatal("unfenced commit accepted")
+		t.Fatal("Принят коммит без проверки блокировки")
 	}
 	commit.SourceWriterFenced = true
 	commit.NeverWriterFenced = true

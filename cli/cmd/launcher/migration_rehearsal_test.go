@@ -94,7 +94,7 @@ func TestRehearsalPathTraversal03310(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := rehearsalPath03310(dir, "escape"); e == nil {
-		t.Fatal("symlink escape accepted")
+		t.Fatal("Разрешён выход за пределы каталога через символьную ссылку")
 	}
 }
 

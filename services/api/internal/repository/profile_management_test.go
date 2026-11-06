@@ -73,7 +73,7 @@ func TestConcurrentExclusiveProfileCreation0225(t *testing.T) {
 			} else if errors.Is(err, ErrConflict) {
 				conflicts++
 			} else {
-				t.Errorf("unexpected error: %v", err)
+				t.Errorf("Неожиданная ошибка: %v", err)
 			}
 		}()
 	}

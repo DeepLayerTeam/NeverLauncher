@@ -125,7 +125,7 @@ func prepareLinuxBundleFixture0153(t *testing.T, ver string) string {
 		t.Fatalf("write evidence: %v", err)
 	}
 	if err := writeDeliveryManifest0151(dir, ver); err != nil {
-		t.Fatalf("write delivery manifest: %v", err)
+		t.Fatalf("Ошибка записи манифеста поставки: %v", err)
 	}
 	return dir
 }

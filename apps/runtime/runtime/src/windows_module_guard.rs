@@ -1371,9 +1371,9 @@ mod imp {
         if &packet[..8] != MODULE_EVENT_MAGIC {
             return Err("Несовпадение: «Module Guard event magic»".to_string());
         }
-        let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("fixed packet"));
-        let pid = u32::from_le_bytes(packet[12..16].try_into().expect("fixed packet"));
-        let sequence = u64::from_le_bytes(packet[16..24].try_into().expect("fixed packet"));
+        let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("получить пакет фиксированной длины"));
+        let pid = u32::from_le_bytes(packet[12..16].try_into().expect("получить пакет фиксированной длины"));
+        let sequence = u64::from_le_bytes(packet[16..24].try_into().expect("получить пакет фиксированной длины"));
         if protocol != SENSOR_PROTOCOL_VERSION || pid != expected_pid {
             return Err("Несовпадение: «Module Guard event protocol/PID»".to_string());
         }
@@ -1394,11 +1394,11 @@ mod imp {
         if packet[46] != 0 || packet[47] != 0 {
             return Err("Зарезервированные байты события Module Guard должны быть нулевыми".to_string());
         }
-        let reason = u32::from_le_bytes(packet[24..28].try_into().expect("fixed packet"));
-        let flags = u32::from_le_bytes(packet[28..32].try_into().expect("fixed packet"));
-        let base_address = u64::from_le_bytes(packet[32..40].try_into().expect("fixed packet"));
-        let size_of_image = u32::from_le_bytes(packet[40..44].try_into().expect("fixed packet"));
-        let path_len = u16::from_le_bytes(packet[44..46].try_into().expect("fixed packet")) as usize;
+        let reason = u32::from_le_bytes(packet[24..28].try_into().expect("получить пакет фиксированной длины"));
+        let flags = u32::from_le_bytes(packet[28..32].try_into().expect("получить пакет фиксированной длины"));
+        let base_address = u64::from_le_bytes(packet[32..40].try_into().expect("получить пакет фиксированной длины"));
+        let size_of_image = u32::from_le_bytes(packet[40..44].try_into().expect("получить пакет фиксированной длины"));
+        let path_len = u16::from_le_bytes(packet[44..46].try_into().expect("получить пакет фиксированной длины")) as usize;
         if path_len > MODULE_PATH_WCHARS {
             return Err("Длина пути события Module Guard превышает ограничение протокола".to_string());
         }
@@ -1406,7 +1406,7 @@ mod imp {
         for index in 0..path_len {
             let offset = 48 + index * 2;
             wide.push(u16::from_le_bytes(
-                packet[offset..offset + 2].try_into().expect("fixed packet"),
+                packet[offset..offset + 2].try_into().expect("получить пакет фиксированной длины"),
             ));
         }
         let path = if wide.is_empty() {

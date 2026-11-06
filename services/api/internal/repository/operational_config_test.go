@@ -24,7 +24,7 @@ func TestOperationalConfigCompareAndSwapAndRestore02111(t *testing.T) {
 	}
 	_, err = r.SaveOperationalConfig(ctx, 1, edited, "admin", "stale request", nil)
 	if !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected CAS conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт ревизии CAS, получено %v", err)
 	}
 	previous := int64(1)
 	restored, err := r.SaveOperationalConfig(ctx, 2, OperationalConfig{}, "admin", "restore previous", &previous)

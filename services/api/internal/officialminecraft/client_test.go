@@ -172,7 +172,7 @@ func TestRedirectNotFollowedAndSizeBound(t *testing.T) {
 	c := New()
 	c.microsoft = server.URL
 	if _, err := c.Begin(context.Background(), "client"); err == nil {
-		t.Fatal("redirect accepted")
+		t.Fatal("Небезопасное перенаправление принято")
 	}
 	huge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(bytes.Repeat([]byte("x"), maxResponse+1)) }))
 	defer huge.Close()

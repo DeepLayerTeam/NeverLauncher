@@ -25,7 +25,7 @@ func TestFactoryBuilderValidation02710(t *testing.T) {
 		{Minecraft: "1.21.1", Loader: "fabric;bash", LoaderVersion: "1.0", Target: "linux/x86_64"},
 	} {
 		if factoryValidateRequest02710(input) == nil {
-			t.Errorf("accepted invalid configuration: %+v", input)
+			t.Errorf("Принята недопустимая конфигурация: %+v", input)
 		}
 	}
 }
@@ -48,7 +48,7 @@ func TestFactoryBuilderPersistenceAndTamper02710(t *testing.T) {
 		t.Fatalf("read job: %+v %v", loaded, err)
 	}
 	if _, err = factoryJobPath02710(root, "../escape"); err == nil {
-		t.Fatal("accepted traversal")
+		t.Fatal("Разрешён выход за пределы каталога")
 	}
 	if err = os.WriteFile(filepath.Join(root, "artifact.bin"), []byte("hello"), 0600); err != nil {
 		t.Fatal(err)
@@ -60,7 +60,7 @@ func TestFactoryBuilderPersistenceAndTamper02710(t *testing.T) {
 		t.Fatal("accepted modified artifact")
 	}
 	if _, err = factoryVerifyArtifact02710(root, "../artifact.bin", ""); err == nil {
-		t.Fatal("accepted traversal")
+		t.Fatal("Разрешён выход за пределы каталога")
 	}
 }
 func TestFactoryBuilderWorkerExecution02710(t *testing.T) {

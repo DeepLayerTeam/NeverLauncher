@@ -99,7 +99,7 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 		t.Fatalf("unexpected auth result: %+v", auth)
 	}
 	if len(auth.Identity.Groups) != 1 || len(auth.Identity.Roles) != 1 {
-		t.Fatalf("mapping lost: %+v", auth.Identity)
+		t.Fatalf("Сопоставление потеряно: %+v", auth.Identity)
 	}
 
 	resolved, err := connector.ResolveIdentity(context.Background(), authconnector.ResolveRequest{Subject: "user-42"})

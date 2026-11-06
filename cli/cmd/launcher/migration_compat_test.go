@@ -18,14 +18,14 @@ func TestGravitCompatibilityCLI0332(t *testing.T) {
 	var seen bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" || r.URL.Path != "/api/v1/admin/migration-runs/run123/compatibility" {
-			t.Errorf("wrong method/path: %s %s", r.Method, r.URL.Path)
+			t.Errorf("Неверные метод или путь: %s %s", r.Method, r.URL.Path)
 		}
 		if r.Header.Get("X-Gravit-Version") != "5.7.12" || r.Header.Get("Authorization") != "Bearer test-token" || r.Header.Get("Content-Type") != "application/zip" {
-			t.Errorf("missing auth/version/content-type")
+			t.Errorf("Отсутствуют аутентификация, версия или Content-Type")
 		}
 		contents, _ := io.ReadAll(r.Body)
 		if string(contents) != "binary-zip-payload" {
-			t.Error("missing raw ZIP bytes")
+			t.Error("Отсутствуют исходные байты ZIP")
 		}
 		seen = true
 		w.Header().Set("Content-Type", "application/json")
@@ -35,16 +35,16 @@ func TestGravitCompatibilityCLI0332(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "report.json")
 	err := handleMigrationWorkflow0331([]string{"assess", "--backend", srv.URL, "--token", "test-token", "--run", "run123", "--source", source, "--version", "5.7.12", "--output", out})
 	if err != nil || !seen {
-		t.Fatalf("upload failed: %v, seen=%v", err, seen)
+		t.Fatalf("Ошибка загрузки: %v, получено=%v", err, seen)
 	}
 	data, err := os.ReadFile(out)
 	if err != nil || !strings.Contains(string(data), "manual") {
-		t.Fatalf("saved report missing: %v %s", err, data)
+		t.Fatalf("Сохранённый отчёт отсутствует: %v %s", err, data)
 	}
 	if err = handleMigrationWorkflow0331([]string{"assess", "--backend", "http://8.8.8.8", "--token", "t", "--run", "run", "--source", source}); err == nil {
-		t.Fatal("cleartext remote secrets allowed")
+		t.Fatal("Разрешена передача удалённых секретов открытым текстом")
 	}
 	if err = handleMigrationWorkflow0331([]string{"assess", "--backend", srv.URL, "--token", "t", "--run", "run"}); err == nil {
-		t.Fatal("missing source accepted")
+		t.Fatal("Принят запрос без источника")
 	}
 }

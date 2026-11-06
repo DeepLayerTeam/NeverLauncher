@@ -207,7 +207,7 @@ func TestCLIComponentsEngineParity0249(t *testing.T) {
 }
 func TestCLIComponentsRejectDuplicateKeysAndEmitJSONErrors0249(t *testing.T) {
 	if e := rejectDuplicateJSON0249([]byte(`{"x":{"a":1,"a":2}}`)); e == nil {
-		t.Fatal("duplicate JSON key accepted")
+		t.Fatal("Принят повторяющийся ключ JSON")
 	}
 	if e := rejectDuplicateJSON0249([]byte(`{"x":[1,{"b":2}]}`)); e != nil {
 		t.Fatal(e)
@@ -217,7 +217,7 @@ func TestCLIComponentsRejectDuplicateKeysAndEmitJSONErrors0249(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "error.json")
 	err := run([]string{"components", "resolve", "--manifest", src, "--public-key", key, "--preset", "does-not-exist", "--output", out})
 	if err == nil {
-		t.Fatal("unknown preset accepted")
+		t.Fatal("Принят неизвестный пресет")
 	}
 	raw, e := os.ReadFile(out)
 	if e != nil {

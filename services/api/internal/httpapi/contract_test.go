@@ -70,7 +70,7 @@ func TestCanonicalCRUDUsesSingleContractVersion(t *testing.T) {
 		Token string `json:"token"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &session); err != nil || session.Token == "" {
-		t.Fatalf("login token: %v %s", err, res.Body.String())
+		t.Fatalf("Токен входа: %v %s", err, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects", strings.NewReader(`{"id":"p1-project","name":"P1 Project","defaultChannel":"stable"}`))
@@ -79,7 +79,7 @@ func TestCanonicalCRUDUsesSingleContractVersion(t *testing.T) {
 	res = httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create project: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Создание проекта: %d %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), `"apiVersion":"1.0.0"`) || strings.Contains(res.Body.String(), "8.2.0") {
 		t.Fatalf("canonical CRUD leaked historical contract metadata: %s", res.Body.String())

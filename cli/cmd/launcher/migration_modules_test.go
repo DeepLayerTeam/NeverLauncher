@@ -20,7 +20,7 @@ func TestMigrationModules0338(t *testing.T) {
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer secret" {
-			t.Error("missing auth")
+			t.Error("Отсутствует аутентификация")
 		}
 		switch r.URL.Path {
 		case "/analyze":

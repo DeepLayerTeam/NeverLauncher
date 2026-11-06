@@ -64,7 +64,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create package => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Создание пакета: %d %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		Data struct {

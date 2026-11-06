@@ -229,6 +229,6 @@ func TestTransactionalUpdaterRejectsTraversal0156(t *testing.T) {
 	size, sum := updaterBytesMetadata0156(data)
 	_, err := updater.apply(updaterRequest0156{Root: root, Files: []updaterFileSpec0156{{Path: "../escape", Data: data, Size: size, SHA256: sum}}})
 	if err == nil {
-		t.Fatal("path traversal accepted")
+		t.Fatal("Разрешён выход за пределы каталога через путь")
 	}
 }

@@ -13,7 +13,7 @@ func TestExtensionUpdatesCLI02011PlanPayload(t *testing.T) {
 	var got map[string]any
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/extension-updates/plan" || r.Method != http.MethodPost {
-			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+			t.Fatalf("Неожиданный запрос %s %s", r.Method, r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Fatalf("missing bearer token: %q", r.Header.Get("Authorization"))

@@ -76,12 +76,12 @@ export function JobMonitor({ backendUrl, token, projectId, initialId = '', canPu
     setBusy(true); setNotice(''); setError('');
     try {
       const updated = await api<Job>(`/api/v1/operations/${encodeURIComponent(job.id)}/${action}`, { method: 'POST' });
-      setJob(updated); setNotice(`Backend подтвердил ${action}. Статус: ${updated.status}.`);
+      setJob(updated); setNotice(`Сервер подтвердил ${action}. Статус: ${updated.status}.`);
       await Promise.all([load(job.id), reloadPage()]);
     } catch (e) { setError(explain(e)); } finally { setBusy(false); }
   }
   return <section className="card wide" aria-label="Монитор durable jobs">
-    <div className="registryHeading"><div><h2>Jobs — жизненный цикл операций</h2><p className="muted">Задания выполняются на Backend независимо от браузера. Отмена возможна только до начала исполнения; ошибка не означает безопасного автоматического повтора.</p></div><button disabled={busy} onClick={() => { void reloadPage().catch(e => setError(explain(e))); void load().catch(e => setError(explain(e))); }}>Обновить</button></div>
+    <div className="registryHeading"><div><h2>Jobs — жизненный цикл операций</h2><p className="muted">Задания выполняются на сервере независимо от браузера. Отмена возможна только до начала исполнения; ошибка не означает безопасного автоматического повтора.</p></div><button disabled={busy} onClick={() => { void reloadPage().catch(e => setError(explain(e))); void load().catch(e => setError(explain(e))); }}>Обновить</button></div>
     {error && <p className="error" role="alert">{error}</p>}{notice && <p className="success" role="status">{notice}</p>}
     <div className="dataToolbar"><label>Статус<select value={filter} onChange={e => { setFilter(e.target.value); setOffset(0); }}>{states.map(s => <option key={s} value={s}>{s ? statusRu(s) : 'Все'}</option>)}</select></label><label>ID задания<input value={jobId} onChange={e => setJobId(e.target.value)} placeholder="job_..." /></label><button disabled={!jobId.trim()} onClick={() => void load().catch(e => setError(explain(e)))}>Открыть по ID</button></div>
     <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Задание</th><th>Ресурс</th><th>Состояние</th><th>Попытки</th><th>Обновлено</th><th>Просмотр</th></tr></thead><tbody>{(page?.items ?? []).map(j => <tr key={j.id}><td><code>{j.id}</code><br/>{j.kind}</td><td>{j.resourceId}</td><td><span className={`badge ${j.status === 'succeeded' ? 'ok' : ['dead','failed'].includes(j.status) ? 'warn' : ''}`}>{statusRu(j.status)}</span></td><td>{j.attemptCount}/{j.maxAttempts}</td><td>{j.updatedAt ? new Date(j.updatedAt).toLocaleString() : '—'}</td><td><button onClick={() => select(j.id)}>Открыть</button></td></tr>)}{!page?.items?.length && <tr><td colSpan={6}>Для выбранного проекта и фильтра заданий нет.</td></tr>}</tbody></table></div>

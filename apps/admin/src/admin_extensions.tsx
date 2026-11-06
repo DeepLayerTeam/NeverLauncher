@@ -608,7 +608,7 @@ export function AdminExtensions({
     }
     if (
       !window.confirm(
-        `Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nScope: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через Backend."}`,
+        `Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nScope: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через сервер."}`,
       )
     )
       return;
@@ -657,7 +657,7 @@ export function AdminExtensions({
             (x.scopeId ?? "") === scope.scopeId,
         )
       )
-        throw new Error("Аварийная блокировка не подтверждена на Backend");
+        throw new Error("Аварийная блокировка не подтверждена на сервере");
       if (
         action === "emergency-clear" &&
         nextEmergency.some(
@@ -667,7 +667,7 @@ export function AdminExtensions({
             (x.scopeId ?? "") === scope.scopeId,
         )
       )
-        throw new Error("Снятие блокировки не подтверждено на Backend");
+        throw new Error("Снятие блокировки не подтверждено на сервере");
       if (
         action === "quarantine-release" &&
         nextQuarantine.some((x) => x.id === id && x.active)
@@ -735,7 +735,7 @@ export function AdminExtensions({
             {operationResult.action}: {operationResult.target}
           </strong>
           <p>
-            Backend вернул ответ. Актуальное состояние показано в списке
+            Сервер вернул ответ. Актуальное состояние показано в списке
             установок после обновления.
           </p>
           <details>
@@ -799,8 +799,8 @@ export function AdminExtensions({
       </div>
       <h2>Реестр и установка расширений</h2>
       <p className="muted">
-        Устанавливаются только опубликованные подписанные версии из Backend
-        Registry. Для операций обновления, отката и удаления Backend требует
+        Устанавливаются только опубликованные подписанные версии с сервера
+        Registry. Для операций обновления, отката и удаления Сервер требует
         свежую MFA-сессию.
       </p>
       <div className="buttonRow">
@@ -888,7 +888,7 @@ export function AdminExtensions({
                 })
               }
             >
-              Освободить из карантина (MFA)
+              Освободить из карантина (многофакторная проверка)
             </button>
           </article>
         ))}
@@ -1108,7 +1108,7 @@ export function AdminExtensions({
                     )
                   }
                 >
-                  Удалить (MFA)
+                  Удалить (многофакторная проверка)
                 </button>
                 <button
                   disabled={operationBusy}

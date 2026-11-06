@@ -418,7 +418,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
                 }
             }
             let Some((idx, local_permit, host_permit, global_permit)) = chosen else { break };
-            let job = pending.remove(idx).expect("position was present");
+            let job = pending.remove(idx).expect("позиция должна присутствовать");
             let client = client.clone();
             let root = root.clone();
             let stats = Arc::clone(&stats);

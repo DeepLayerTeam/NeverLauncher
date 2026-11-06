@@ -193,7 +193,7 @@ export function OperationsWorkspace({
       if (action === "execute" && !recovery) {
         if (readRecovery(backendUrl, projectId, userId)) {
           setError(
-            "Другая вкладка сохранила незавершённую операцию. Обновите страницу, чтобы восстановить исходный job.",
+            "Другая вкладка сохранила незавершённую операцию. Обновите страницу, чтобы восстановить исходное задание.",
           );
           inFlight.current = false;
           setBusy(false);
@@ -452,7 +452,7 @@ export function OperationsWorkspace({
                   disabled={busy}
                   onClick={() => void perform("execute", true)}
                 >
-                  Найти исходный job (без повторного исполнения)
+                  Найти исходное задание (без повторного исполнения)
                 </button>
                 <button
                   disabled={

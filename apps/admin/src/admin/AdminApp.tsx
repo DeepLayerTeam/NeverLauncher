@@ -557,7 +557,7 @@ export function AdminApp() {
     preserveRefresh = false,
   ) {
     const nextToken = data.tokens?.accessToken ?? data.accessToken;
-    if (!nextToken) throw new Error("Backend не вернул токен доступа Never.");
+    if (!nextToken) throw new Error("Сервер не вернул токен доступа Never.");
     setToken(nextToken);
     setPassword("");
     setTotp("");
@@ -571,7 +571,7 @@ export function AdminApp() {
 
   async function finishPasskeyMFA(data: LoginResponse) {
     if (!data.transactionToken || !data.publicKey)
-      throw new Error("Backend запросил MFA через passkey без транзакции WebAuthn.");
+      throw new Error("Сервер запросил многофакторную проверку с ключом доступа без транзакции WebAuthn.");
     const credential = await getPasskeyAssertion(data.publicKey);
     const completed = await requestJSON<PasskeySessionResponse>(
       backendUrl,
@@ -588,7 +588,7 @@ export function AdminApp() {
     );
     applyPasskeySession(completed);
     setMessage(
-      "Вход завершён passkey MFA. Сессия имеет phishing-resistant authentication strength.",
+      "Вход завершён с многофакторной проверкой ключом доступа. Сессия защищена аутентификацией, устойчивой к фишингу.",
     );
   }
 
@@ -613,7 +613,7 @@ export function AdminApp() {
       await finishPasskeyMFA(data);
       return;
     }
-    if (!data.token) throw new Error("Backend не вернул токен доступа.");
+    if (!data.token) throw new Error("Сервер не вернул токен доступа.");
     setToken(data.token);
     setPassword("");
     setTotp("");
@@ -650,7 +650,7 @@ export function AdminApp() {
       },
     );
     applyPasskeySession(completed);
-    setMessage("Выполнен passwordless вход по passkey.");
+    setMessage("Выполнен вход без пароля с ключом доступа.");
   }
 
   async function registerPasskey() {
@@ -679,7 +679,7 @@ export function AdminApp() {
     );
     applyPasskeySession(completed, true);
     setMessage(
-      "Passkey зарегистрирован и текущая сессия повышена до phishing-resistant.",
+      "Ключ доступа зарегистрирован. Уровень защиты текущей сессии повышен до устойчивого к фишингу.",
     );
   }
 
@@ -709,7 +709,7 @@ export function AdminApp() {
     );
     applyPasskeySession(completed, true);
     setMessage(
-      "Passkey step-up выполнен. Критические операции разблокированы на ограниченное время.",
+      "Дополнительная проверка ключом доступа выполнена. Критические операции разблокированы на ограниченное время.",
     );
   }
 
@@ -722,7 +722,7 @@ export function AdminApp() {
       { method: "PUT", body: JSON.stringify({ requirement: mfaPolicy }) },
     );
     setMfaPolicy((data.requirement as typeof mfaPolicy) ?? mfaPolicy);
-    setMessage(`MFA policy сохранена: ${data.requirement ?? mfaPolicy}.`);
+    setMessage(`Политика многофакторной аутентификации сохранена: ${data.requirement ?? mfaPolicy}.`);
   }
 
   async function refreshSession() {
@@ -737,7 +737,7 @@ export function AdminApp() {
     setToken(data.tokens.accessToken);
     setRefreshToken(data.tokens.refreshToken);
     setSessionId(data.session.id);
-    setMessage("Сессия обновлена, refresh token ротирован сервером.");
+    setMessage("Сессия обновлена, токен обновления заменён сервером.");
   }
 
   async function logout() {
@@ -851,7 +851,7 @@ export function AdminApp() {
     if (reason === null) return;
     if (
       !window.confirm(
-        `Отозвать устройство ${item.name || item.id}? Старый device key больше нельзя будет зарегистрировать повторно.`,
+        `Отозвать устройство ${item.name || item.id}? Старый ключ устройства больше нельзя будет зарегистрировать повторно.`,
       )
     )
       return;
@@ -867,7 +867,7 @@ export function AdminApp() {
     );
     await loadTrustedDevices();
     setMessage(
-      `Устройство отозвано: sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}. Если Backend требует fresh phishing-resistant step-up, сначала нажмите «Подтвердить passkey».`,
+      `Устройство отозвано: sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}. Если сервер требует повторную проверку, устойчивую к фишингу, сначала нажмите «Подтвердить ключ доступа».`,
     );
   }
 
@@ -1138,7 +1138,7 @@ export function AdminApp() {
         <h2>Конвейер пакетов и релизов {TOOL_VERSION}</h2>
         <p className="muted">
           Создание пакета, загрузка и проверка SHA-256. Публикация и откат
-          выполняются через мастер с preview, durable job и подтверждённым
+          выполняются через мастер с предпросмотром, устойчивым к сбоям заданием и подтверждённым
           channel head.
         </p>
         <div className="formGrid">
@@ -1765,7 +1765,7 @@ export function AdminApp() {
                 >
                   <option value="">
                     {bridgeInventory?.error
-                      ? "Недоступно — проверьте Backend"
+                      ? "Недоступно — проверьте сервер"
                       : !bridgeInventoryFresh
                         ? "Ожидание свежих данных"
                         : "Выберите сервер"}
@@ -1899,7 +1899,7 @@ export function AdminApp() {
                   )
                 }
               >
-                Войти по passkey
+                Войти с ключом доступа
               </button>
             </div>
           )}
@@ -1930,24 +1930,24 @@ export function AdminApp() {
                     )
                   }
                 >
-                  Добавить passkey
+                  Добавить ключ доступа
                 </button>
                 <button
                   onClick={() =>
                     stepUpPasskey().catch((err: Error) => setError(err.message))
                   }
                 >
-                  Подтвердить passkey
+                  Подтвердить ключ доступа
                 </button>
                 <select
-                  aria-label="Политика MFA"
+                  aria-label="Политика многофакторной аутентификации"
                   value={mfaPolicy}
                   onChange={(event) =>
                     setMfaPolicy(event.target.value as typeof mfaPolicy)
                   }
                 >
-                  <option value="optional">MFA необязательна</option>
-                  <option value="required">MFA обязательна</option>
+                  <option value="optional">Многофакторная аутентификация необязательна</option>
+                  <option value="required">Многофакторная аутентификация обязательна</option>
                   <option value="phishing-resistant">Защита от фишинга</option>
                 </select>
                 <button
@@ -1955,7 +1955,7 @@ export function AdminApp() {
                     saveMfaPolicy().catch((err: Error) => setError(err.message))
                   }
                 >
-                  Сохранить MFA policy
+                  Сохранить политику многофакторной аутентификации
                 </button>
               </div>
             </details>

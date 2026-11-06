@@ -80,7 +80,7 @@ func TestPHPassVectorsAndUnknownFormat0295(t *testing.T) {
 		t.Fatal("known PHPass password rejected")
 	}
 	if VerifyPHPass("wrong", hash) {
-		t.Fatal("wrong password accepted")
+		t.Fatal("Принят неверный пароль")
 	}
 	if _, err := EncodeCredential("phpass", strings.Replace(hash, "$P$7", "$P$Z", 1)); err == nil {
 		t.Fatal("unsafe phpass cost accepted")

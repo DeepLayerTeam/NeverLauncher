@@ -33,10 +33,10 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     try { await operation(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(''); }
   }
   function create() { void run('create', async () => {
-    if (!window.confirm('Создать backup PostgreSQL и файлового хранилища? Операция может временно блокировать изменения.')) return;
+    if (!window.confirm('Создать резервную копию PostgreSQL и файлового хранилища? Операция может временно блокировать изменения.')) return;
     const result = await api<{ backupId: string }>('/api/v1/operations/backups', { method: 'POST' });
-    choose(result.backupId); setNotice(`Backup ${result.backupId} создан и сохранён на Backend.`);
-    try { await load(); } catch { setNotice(`Backup ${result.backupId} создан. Не удалось обновить список: проверьте его в Backend перед следующим действием.`); }
+    choose(result.backupId); setNotice(`Backup ${result.backupId} создан и сохранён на сервере.`);
+    try { await load(); } catch { setNotice(`Backup ${result.backupId} создан. Не удалось обновить список: проверьте его на сервере перед следующим действием.`); }
   }); }
   function inspect(id: string) { void run('inspect', async () => {
     const result = await api<Inspection>(`/api/v1/operations/backups/${encodeURIComponent(id)}`);
@@ -44,26 +44,26 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
   }); }
   function dryRun() { void run('dry-run', async () => {
     const result = await api<DryRun>(`/api/v1/operations/backups/${encodeURIComponent(selected)}/restore-dry-run`, { method: 'POST' });
-    if (result.backupId !== selected || result.status !== 'valid') throw new Error('Backend не подтвердил корректность выбранного архива.');
+    if (result.backupId !== selected || result.status !== 'valid') throw new Error('Сервер не подтвердил корректность выбранного архива.');
     setVerified(result); setNotice(`Проверка архива завершена. Проверено файлов: ${result.checked}. Восстановление не выполнялось.`);
   }); }
   function executeRestore() { void run('restore', async () => {
     if (!verified || verified.backupId !== selected || !canRestore || (!database && !storage) || confirmId !== selected) return;
     const parts = [database ? 'PostgreSQL' : '', storage ? 'Storage' : ''].filter(Boolean).join(' + ');
-    if (!window.confirm(`НЕОБРАТИМО заменить ${parts} данными из ${selected}? Backend создаст safety backup до изменений. Текущие данные могут быть потеряны.`)) return;
+    if (!window.confirm(`НЕОБРАТИМО заменить ${parts} данными из ${selected}? Сервер создаст страховочную резервную копию до изменений. Текущие данные могут быть потеряны.`)) return;
     const result = await api<Restore>(`/api/v1/operations/backups/${encodeURIComponent(selected)}/restore`, { method: 'POST', body: JSON.stringify({ confirm: confirmId, database, storage }) });
     setRestore(result); setVerified(null); setConfirmId('');
-    setNotice(`Ответ Backend: ${result.status}; восстановлено: ${result.restored?.join(', ') || 'неизвестно'}. Страховочная копия: ${result.safetyBackupId || 'не указан'}.`);
+    setNotice(`Ответ сервера: ${result.status}; восстановлено: ${result.restored?.join(', ') || 'неизвестно'}. Страховочная копия: ${result.safetyBackupId || 'не указан'}.`);
     try { await load(); } catch { setNotice(`Восстановление вернуло ответ ${result.status}; страховочная копия ${result.safetyBackupId || 'не указан'}. Не удалось обновить список — проверьте статус в аудите.`); }
   }); }
   const filtered = (data?.backups ?? []).filter(item => item.backupId.toLowerCase().includes(search.trim().toLowerCase()));
   const current = data?.backups?.find(item => item.backupId === selected);
   return <section className="card wide" aria-label="Резервное копирование и восстановление">
-    <div className="registryHeading"><div><h2>Резервное копирование / восстановление</h2><p className="muted">Настоящие архивы Backend; проверка SHA-256, dry-run и подтверждённое восстановление. Restore требует свежей phishing-resistant аутентификации.</p></div><div className="buttonRow"><button disabled={!!busy} onClick={() => void run('refresh', load)}>Обновить</button><button disabled={!!busy} onClick={create}>Создать backup</button></div></div>
+    <div className="registryHeading"><div><h2>Резервное копирование / восстановление</h2><p className="muted">Настоящие резервные копии сервера; проверка SHA-256, пробная проверка и подтверждённое восстановление. Восстановление требует повторной аутентификации, устойчивой к фишингу.</p></div><div className="buttonRow"><button disabled={!!busy} onClick={() => void run('refresh', load)}>Обновить</button><button disabled={!!busy} onClick={create}>Создать резервную копию</button></div></div>
     <p className="muted">Состояние: {data?.status ?? 'загрузка'} · Режим: {data?.mode ?? '—'} · Архивов: {data?.backups?.length ?? '—'}</p>
     {error && <p className="error" role="alert">{error} <span className="muted">Проверьте полномочия, соединение и повторите чтение статуса. Для восстановления подтвердите вход с помощью ключа доступа.</span></p>}
     {notice && <p className="success" role="status">{notice}</p>}
-    <a href={auditHref(selected || 'backup:')} >Открыть журнал аудита backup</a>
+    <a href={auditHref(selected || 'backup:')} >Открыть журнал резервного копирования</a>
     <div className="dataToolbar"><label>Поиск по ID<input type="search" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
     <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Резервное копирование</th><th>Создан</th><th>Размер</th><th>SHA-256</th><th>Действия</th></tr></thead><tbody>
       {filtered.map(item => <tr key={item.backupId}><td><code>{item.backupId}</code></td><td>{item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</td><td>{(item.size / 1024 / 1024).toFixed(1)} MiB</td><td><code>{item.sha256.slice(0, 18)}…</code></td><td><button disabled={!!busy} onClick={() => { choose(item.backupId); inspect(item.backupId); }}>Открыть</button></td></tr>)}
@@ -72,16 +72,16 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     {selected && current && <article className="subcard">
       <h3>Резервная копия {selected}</h3>
       <p>Серверный SHA-256: <code>{current.sha256}</code></p>
-      <div className="buttonRow"><button disabled={!!busy} onClick={() => inspect(selected)}>Инспектировать</button><button disabled={!!busy} onClick={dryRun}>Проверить восстановимость (dry-run)</button><a href={auditHref(selected)}>Аудит этого архива</a></div>
-      {inspection && <div><p>Файлы: {inspection.manifest.files?.length ?? 0} · PostgreSQL: {inspection.manifest.databaseDump ? 'есть' : 'нет'} · Объекты хранилища: {inspection.manifest.storageObjects}</p><p className="muted">Манифест прочитан. Для восстановления обязательно выполните dry-run.</p></div>}
+      <div className="buttonRow"><button disabled={!!busy} onClick={() => inspect(selected)}>Инспектировать</button><button disabled={!!busy} onClick={dryRun}>Проверить восстановимость (пробная проверка)</button><a href={auditHref(selected)}>Аудит этого архива</a></div>
+      {inspection && <div><p>Файлы: {inspection.manifest.files?.length ?? 0} · PostgreSQL: {inspection.manifest.databaseDump ? 'есть' : 'нет'} · Объекты хранилища: {inspection.manifest.storageObjects}</p><p className="muted">Манифест прочитан. Для восстановления обязательно выполните пробную проверку.</p></div>}
       {verified && <div className="subcard"><h4>Результат пробного восстановления: {verified.status}</h4><p>Проверено файлов: {verified.checked} · Дамп PostgreSQL: {verified.databaseDump} · Хранилище: {verified.storageObjects}</p><p className="muted">Dry-run подтверждает структуру архива, но не гарантирует успешность destructive restore при других внешних условиях.</p></div>}
       <div className="subcard">
         <h4>Восстановить данные</h4>
-        <p className="muted">Доступно только после успешного dry-run. Сервер создаёт защитную резервную копию. Операция синхронная и не является долговременным заданием; при обрыве соединения сначала проверьте состояние и аудит, не повторяйте запрос автоматически.</p>
+        <p className="muted">Доступно только после успешной пробной проверки. Сервер создаёт защитную резервную копию. Операция синхронная и не является долговременным заданием; при обрыве соединения сначала проверьте состояние и аудит, не повторяйте запрос автоматически.</p>
         <label><input type="checkbox" checked={database} onChange={e => setDatabase(e.target.checked)} disabled={!canRestore || verified?.databaseDump !== 'valid' || !inspection?.manifest.databaseDump} /> PostgreSQL</label>
         <label><input type="checkbox" checked={storage} onChange={e => setStorage(e.target.checked)} disabled={!canRestore || !verified} /> Хранилище</label>
         <label className="field">Введите ID архива точно<input value={confirmId} onChange={e => setConfirmId(e.target.value)} autoComplete="off" placeholder={selected}/></label>
-        {!canRestore && <p className="muted">Требуются глобальные права settings:manage и свежий passkey step-up.</p>}
+        {!canRestore && <p className="muted">Требуются глобальные права settings:manage и повторная проверка с ключом доступа.</p>}
         <button className="danger" disabled={!!busy || !canRestore || !verified || !inspection || confirmId !== selected || (!database && !storage)} onClick={executeRestore}>Выполнить подтверждённое восстановление</button>
       </div>
       {restore && <article className="subcard"><h4>Результат восстановления: {restore.status}</h4><p>Затронуто: {restore.restored?.join(', ') || '—'}</p><p>Защитная копия: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}

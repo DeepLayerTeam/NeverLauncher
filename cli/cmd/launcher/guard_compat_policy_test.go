@@ -82,7 +82,7 @@ func TestGuardCompatibility0502RealFileEnforcementAndRevocation(t *testing.T) {
 		t.Fatalf("valid allowed launch denied: %v", err)
 	}
 	if err := guardCompatValidateLaunch0502(root, "other", p.Minecraft, p.Loader, nil, nil); err == nil {
-		t.Fatal("wrong project accepted")
+		t.Fatal("Принят неверный проект")
 	}
 	intruder := artifact0502(t, root, "mod", "mods/injected.jar", "unlisted mod")
 	if err := launch(); err == nil || !strings.Contains(err.Error(), "unauthorized") {
@@ -152,7 +152,7 @@ func TestGuardCompatibility0502SignatureExpiryEquivocationAndSafety(t *testing.T
 	p.ExpiresAt = time.Now().Unix() + 3600
 	p.Artifacts = []guardCompatArtifact0502{{Kind: "mod", Path: "../outside.jar", SHA256: strings.Repeat("0", 64)}}
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err == nil {
-		t.Fatal("unsafe path accepted")
+		t.Fatal("Небезопасный путь ошибочно принят")
 	}
 	if err := os.Remove(filepath.Join(root, ".launcher/guard/compatibility.json")); err != nil {
 		t.Fatal(err)

@@ -35,7 +35,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	}
 	schema := fmt.Sprintf("texture_lifecycle_02511_%d", time.Now().UnixNano())
 	if !regexp.MustCompile(`^texture_lifecycle_02511_[0-9]+$`).MatchString(schema) {
-		t.Fatal("invalid schema")
+		t.Fatal("Недопустимая схема")
 	}
 	if _, err := db.ExecContext(ctx, `CREATE SCHEMA `+schema); err != nil {
 		t.Fatal(err)

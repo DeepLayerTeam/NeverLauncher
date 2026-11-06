@@ -23,12 +23,12 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	defer cancel()
 	a, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("expected postgres")
+		t.Fatal("Ожидался PostgreSQL")
 	}
 	defer a.db.Close()
 	b, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("expected postgres")
+		t.Fatal("Ожидался PostgreSQL")
 	}
 	defer b.db.Close()
 	if _, err := a.ApplyMigrations(ctx); err != nil {

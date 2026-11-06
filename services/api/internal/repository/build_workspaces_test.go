@@ -46,7 +46,7 @@ func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = repo.SaveBuildWorkspace(ctx, finished); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("built workspace mutable: %v", err)
+		t.Fatalf("Собранную рабочую область можно изменить: %v", err)
 	}
 	listed, err := repo.ListBuildWorkspaces(ctx, "demo-project", "admin")
 	if err != nil || len(listed) != 1 || listed[0].State != "built" {

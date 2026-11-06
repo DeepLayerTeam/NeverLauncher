@@ -18,7 +18,7 @@ use std::{
 use tokio::{process::Command, time::{sleep, Duration}};
 
 fn java_tools() -> (PathBuf, PathBuf) {
-    let java_home = std::env::var("JAVA_HOME").expect("JAVA_HOME must be set by Windows CI");
+    let java_home = std::env::var("JAVA_HOME").expect("JAVA_HOME должен быть задан в CI для Windows");
     let java_home = PathBuf::from(java_home);
     let java = java_home.join("bin").join("java.exe");
     let javac = java_home.join("bin").join("javac.exe");
@@ -30,7 +30,7 @@ fn java_tools() -> (PathBuf, PathBuf) {
 fn sensor_path() -> PathBuf {
     let sensor = PathBuf::from(
         std::env::var("GUARD_SENSOR_TEST_DLL")
-            .expect("GUARD_SENSOR_TEST_DLL must point to built guard_sensor.dll"),
+            .expect("GUARD_SENSOR_TEST_DLL должен указывать на собранный guard_sensor.dll"),
     );
     assert!(sensor.is_file(), "sensor DLL missing: {}", sensor.display());
     sensor
@@ -39,7 +39,7 @@ fn sensor_path() -> PathBuf {
 fn memory_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("GUARD_MEMORY_PROBE_DLL")
-            .expect("GUARD_MEMORY_PROBE_DLL must point to built guard_memory_probe.dll"),
+            .expect("GUARD_MEMORY_PROBE_DLL должен указывать на собранный guard_memory_probe.dll"),
     );
     assert!(probe.is_file(), "memory probe DLL missing: {}", probe.display());
     probe
@@ -48,7 +48,7 @@ fn memory_probe_path() -> PathBuf {
 fn thread_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("GUARD_THREAD_PROBE_DLL")
-            .expect("GUARD_THREAD_PROBE_DLL must point to built guard_thread_probe.dll"),
+            .expect("GUARD_THREAD_PROBE_DLL должен указывать на собранный guard_thread_probe.dll"),
     );
     assert!(probe.is_file(), "thread probe DLL missing: {}", probe.display());
     probe
@@ -57,7 +57,7 @@ fn thread_probe_path() -> PathBuf {
 fn debug_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("GUARD_DEBUG_PROBE_EXE")
-            .expect("GUARD_DEBUG_PROBE_EXE must point to built guard-debug-probe.exe"),
+            .expect("GUARD_DEBUG_PROBE_EXE должен указывать на собранный guard-debug-probe.exe"),
     );
     assert!(probe.is_file(), "debug probe EXE missing: {}", probe.display());
     probe
@@ -67,7 +67,7 @@ fn debug_probe_path() -> PathBuf {
 fn jvm_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("GUARD_JVM_PROBE_DLL")
-            .expect("GUARD_JVM_PROBE_DLL must point to built guard_jvm_probe.dll"),
+            .expect("GUARD_JVM_PROBE_DLL должен указывать на собранный guard_jvm_probe.dll"),
     );
     assert!(probe.is_file(), "JVM-aware probe DLL missing: {}", probe.display());
     probe
@@ -85,7 +85,7 @@ fn unique_test_root(label: &str) -> PathBuf {
 }
 
 fn compile_module_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог проверочной Java-программы");
     fs::write(
         directory.join("ModuleGuardProbe.java"),
         r#"public final class ModuleGuardProbe {
@@ -100,17 +100,17 @@ fn compile_module_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write Java probe");
+    .expect("записать проверочную Java-программу");
     let status = std::process::Command::new(javac)
         .arg("ModuleGuardProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac");
+        .expect("запустить компилятор javac");
     assert!(status.success(), "javac failed: {status}");
 }
 
 fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create Memory Integrity Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог Java-проверки целостности памяти");
     fs::write(
         directory.join("MemoryIntegrityProbe.java"),
         r#"public final class MemoryIntegrityProbe {
@@ -122,17 +122,17 @@ fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write Memory Integrity Java probe");
+    .expect("записать Java-проверку целостности памяти");
     let status = std::process::Command::new(javac)
         .arg("MemoryIntegrityProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac for Memory Integrity probe");
+        .expect("скомпилировать Java-проверку целостности памяти");
     assert!(status.success(), "Memory Integrity javac failed: {status}");
 }
 
 fn compile_process_tree_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create Process Tree Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог Java-проверки дерева процессов");
     fs::write(
         directory.join("ProcessTreeProbe.java"),
         r#"public final class ProcessTreeProbe {
@@ -146,17 +146,17 @@ fn compile_process_tree_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write Process Tree Java probe");
+    .expect("записать Java-проверку дерева процессов");
     let status = std::process::Command::new(javac)
         .arg("ProcessTreeProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac for Process Tree probe");
+        .expect("скомпилировать Java-проверку дерева процессов");
     assert!(status.success(), "Process Tree javac failed: {status}");
 }
 
 fn compile_debug_boundary_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create Debug Guard Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог Java-проверки защиты отладки");
     fs::write(
         directory.join("DebugBoundaryProbe.java"),
         r#"public final class DebugBoundaryProbe {
@@ -166,17 +166,17 @@ fn compile_debug_boundary_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write Debug Guard Java probe");
+    .expect("записать Java-проверку защиты отладки");
     let status = std::process::Command::new(javac)
         .arg("DebugBoundaryProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac for Debug Guard probe");
+        .expect("скомпилировать Java-проверку защиты отладки");
     assert!(status.success(), "Debug Guard javac failed: {status}");
 }
 
 fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create Thread Integrity Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог Java-проверки целостности потоков");
     fs::write(
         directory.join("ThreadIntegrityProbe.java"),
         r#"public final class ThreadIntegrityProbe {
@@ -188,17 +188,17 @@ fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write Thread Integrity Java probe");
+    .expect("записать Java-проверку целостности потоков");
     let status = std::process::Command::new(javac)
         .arg("ThreadIntegrityProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac for Thread Integrity probe");
+        .expect("скомпилировать Java-проверку целостности потоков");
     assert!(status.success(), "Thread Integrity javac failed: {status}");
 }
 
 fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create JVM-Aware JIT Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог Java-проверки JIT с учётом JVM");
     fs::write(
         directory.join("JvmAwareJitProbe.java"),
         r#"public final class JvmAwareJitProbe {
@@ -225,12 +225,12 @@ fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
         .arg("JvmAwareJitProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac for JVM-Aware JIT probe");
+        .expect("скомпилировать Java-проверку JIT с учётом JVM");
     assert!(status.success(), "JVM-Aware JIT javac failed: {status}");
 }
 
 fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
-    fs::create_dir_all(directory).expect("create JVM-Aware foreign exec Java probe directory");
+    fs::create_dir_all(directory).expect("создать каталог Java-проверки внешнего исполнения в JVM");
     fs::write(
         directory.join("JvmAwareForeignExecProbe.java"),
         r#"public final class JvmAwareForeignExecProbe {
@@ -242,19 +242,19 @@ fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
 }
 "#,
     )
-    .expect("write JVM-Aware foreign exec probe");
+    .expect("записать проверку внешнего исполнения в JVM");
     let status = std::process::Command::new(javac)
         .arg("JvmAwareForeignExecProbe.java")
         .current_dir(directory)
         .status()
-        .expect("run javac for JVM-Aware foreign exec probe");
+        .expect("скомпилировать проверку внешнего исполнения в JVM");
     assert!(status.success(), "JVM-Aware foreign exec javac failed: {status}");
 }
 
 // Java 8/16/17 System.load() не принимает дословные Win32 namespace-пути вида (\\?\C:\...).
 // Продолжайте каноникализацию, но передавайте обычный абсолютный путь Windows.
 fn java_native_load_path(path: &Path) -> PathBuf {
-    let absolute = fs::canonicalize(path).expect("canonicalize native probe DLL");
+    let absolute = fs::canonicalize(path).expect("получить канонический путь к нативной проверочной DLL");
     let value = absolute.to_string_lossy();
     if let Some(unc) = value.strip_prefix(r"\\?\UNC\") {
         return PathBuf::from(format!(r"\\{}", unc));
@@ -278,19 +278,19 @@ async fn guard_sensor_agentpath_loads_before_jvm_startup() {
     let sensor = sensor_path();
 
     let mut command = Command::new(java);
-    command.current_dir(std::env::current_dir().expect("current dir"));
+    command.current_dir(std::env::current_dir().expect("получить текущий каталог"));
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command.arg("-version");
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Java suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить Java в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let pid = child.id().expect("Java PID");
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("sensor Agent_OnLoad + Module Guard arm handshake");
+        .expect("выполнить согласование Agent_OnLoad датчика с активацией защиты модулей");
     let report = session.report();
 
     assert_eq!(report.protocol_version, GUARD_SENSOR_PROTOCOL_VERSION);
@@ -375,13 +375,13 @@ async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     let trusted = root.join("trusted");
     compile_module_probe(&javac, &trusted);
     let probe_dll = trusted.join("probe-native.dll");
-    fs::copy(&sensor, &probe_dll).expect("copy probe DLL into trusted runtime root");
+    fs::copy(&sensor, &probe_dll).expect("скопировать проверочную DLL в доверенный каталог среды выполнения");
     let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -389,13 +389,13 @@ async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
         .arg(&probe_dll);
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Java probe suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить проверочную Java-программу в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("arm Module Guard before Java main");
-    let status = child.wait().await.expect("wait Java probe");
+        .expect("активировать защиту модулей до запуска основного метода Java");
+    let status = child.wait().await.expect("дождаться завершения проверочной Java-программы");
     assert!(status.success(), "trusted native probe failed: {status}");
     sleep(Duration::from_millis(250)).await;
 
@@ -453,7 +453,7 @@ async fn guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
     let trusted = root.join("trusted");
     compile_module_probe(&javac, &trusted);
     let probe_dll = trusted.join("continuous-probe-native.dll");
-    fs::copy(&sensor, &probe_dll).expect("copy continuous guard probe DLL");
+    fs::copy(&sensor, &probe_dll).expect("скопировать DLL непрерывной проверки Guard");
     let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
@@ -467,13 +467,13 @@ async fn guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
         .arg(&probe_dll);
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Continuous Guard Java probe");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce Continuous Guard runtime policy");
+    let mut child = command.spawn().expect("запустить Java-проверку непрерывной защиты Guard");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику непрерывной защиты Guard");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("Continuous Guard startup cross-check");
-    let status = child.wait().await.expect("wait Continuous Guard Java probe");
+        .expect("выполнить перекрёстную проверку при запуске непрерывной защиты Guard");
+    let status = child.wait().await.expect("дождаться завершения Java-проверки непрерывной защиты Guard");
     assert!(status.success(), "Continuous Guard healthy workload failed: {status}");
     sleep(Duration::from_millis(250)).await;
 
@@ -500,15 +500,15 @@ async fn guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots() 
     let trusted = root.join("trusted");
     let untrusted = root.join("untrusted");
     compile_module_probe(&javac, &trusted);
-    fs::create_dir_all(&untrusted).expect("create untrusted directory");
+    fs::create_dir_all(&untrusted).expect("создать недоверенный каталог");
     let probe_dll = untrusted.join("unsigned-probe-native.dll");
-    fs::copy(&sensor, &probe_dll).expect("copy unsigned probe DLL outside trusted roots");
+    fs::copy(&sensor, &probe_dll).expect("скопировать неподписанную DLL за пределы доверенных каталогов");
     let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -516,13 +516,13 @@ async fn guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots() 
         .arg(&probe_dll);
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Java probe suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить проверочную Java-программу в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("arm Module Guard before Java main");
-    let status = child.wait().await.expect("wait blocked Java probe");
+        .expect("активировать защиту модулей до запуска основного метода Java");
+    let status = child.wait().await.expect("дождаться завершения заблокированной Java-проверки");
     assert!(!status.success(), "unsigned module outside trusted roots must be fail-closed");
     sleep(Duration::from_millis(250)).await;
 
@@ -549,13 +549,13 @@ async fn guard_memory_integrity_fail_closed_on_executable_image_code_page_drift(
     let trusted = root.join("trusted");
     compile_memory_integrity_probe(&javac, &trusted);
     let probe_dll = trusted.join("memory-tamper-probe.dll");
-    fs::copy(&memory_probe, &probe_dll).expect("copy Memory Integrity tamper probe");
+    fs::copy(&memory_probe, &probe_dll).expect("скопировать проверку вмешательства в память");
     let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -563,13 +563,13 @@ async fn guard_memory_integrity_fail_closed_on_executable_image_code_page_drift(
         .arg(&probe_dll);
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Memory Integrity Java probe suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить Java-проверку целостности памяти в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("arm Memory Integrity before Java main");
-    let status = child.wait().await.expect("wait Memory Integrity tamper probe");
+        .expect("активировать контроль целостности памяти до запуска основного метода Java");
+    let status = child.wait().await.expect("дождаться завершения проверки вмешательства в память");
     assert!(!status.success(), "executable image code-page drift must be fail-closed");
     sleep(Duration::from_millis(250)).await;
 
@@ -598,17 +598,17 @@ async fn guard_thread_process_integrity_tracks_job_bound_descendant_processes() 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command.arg("-cp").arg(&trusted).arg("ProcessTreeProbe");
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Process Tree Java probe suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить Java-проверку дерева процессов в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("arm Thread & Process Integrity before Java main");
-    let status = child.wait().await.expect("wait Process Tree Java probe");
+        .expect("активировать контроль целостности потоков и процессов до запуска основного метода Java");
+    let status = child.wait().await.expect("дождаться завершения Java-проверки дерева процессов");
     sleep(Duration::from_millis(250)).await;
     let module_report = session.report().module_guard;
     assert!(
@@ -639,13 +639,13 @@ async fn guard_thread_integrity_fail_closed_on_private_executable_thread_start()
     let trusted = root.join("trusted");
     compile_thread_integrity_probe(&javac, &trusted);
     let probe_dll = trusted.join("thread-tamper-probe.dll");
-    fs::copy(&thread_probe, &probe_dll).expect("copy Thread Integrity tamper probe");
+    fs::copy(&thread_probe, &probe_dll).expect("скопировать проверку вмешательства в потоки");
     let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -653,13 +653,13 @@ async fn guard_thread_integrity_fail_closed_on_private_executable_thread_start()
         .arg(&probe_dll);
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Thread Integrity Java probe suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить Java-проверку целостности потоков в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("arm Thread & Process Integrity before Java main");
-    let status = child.wait().await.expect("wait Thread Integrity tamper probe");
+        .expect("активировать контроль целостности потоков и процессов до запуска основного метода Java");
+    let status = child.wait().await.expect("дождаться завершения проверки вмешательства в потоки");
     assert!(!status.success(), "private executable thread start must be fail-closed");
     sleep(Duration::from_millis(250)).await;
 
@@ -711,14 +711,14 @@ async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_a
     let mut env_command = Command::new(&java);
     env_command.env("JAVA_TOOL_OPTIONS", "-javaagent:C:\\tmp\\env-agent.jar -Xmx512m");
     let err = match prepare_sensor_command_with_path(&mut env_command, sensor.clone()) {
-        Ok(_) => panic!("JAVA_TOOL_OPTIONS instrumentation must be rejected"),
+        Ok(_) => panic!("инструментирование через JAVA_TOOL_OPTIONS должно отклоняться"),
         Err(err) => err,
     };
     assert!(err.contains("JAVA_TOOL_OPTIONS"), "unexpected env rejection: {err}");
 
     let mut clean = Command::new(java);
     let _bootstrap = prepare_sensor_command_with_path(&mut clean, sensor)
-        .expect("clean JVM command must be accepted");
+        .expect("команда запуска JVM без запрещённых аргументов должна приниматься");
     let args = clean
         .as_std()
         .get_args()
@@ -742,25 +742,25 @@ async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach()
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command.arg("-cp").arg(&trusted).arg("DebugBoundaryProbe");
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn Debug Guard Java probe suspended");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить Java-проверку защиты отладки в приостановленном состоянии");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let pid = child.id().expect("Debug Guard Java PID");
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("arm Debug & Instrumentation Guard before Java main");
+        .expect("активировать защиту отладки и инструментирования до запуска основного метода Java");
 
     let mut debugger_child = Command::new(debugger)
         .arg(pid.to_string())
         .spawn()
-        .expect("attach adversarial debugger probe");
-    let status = child.wait().await.expect("wait debugger-attached JVM");
+        .expect("подключить тестовый отладчик для проверки обхода защиты");
+    let status = child.wait().await.expect("дождаться завершения JVM с подключённым отладчиком");
     assert!(!status.success(), "live debugger attach must be fail-closed");
-    let debugger_status = debugger_child.wait().await.expect("wait adversarial debugger probe");
+    let debugger_status = debugger_child.wait().await.expect("дождаться завершения проверки обхода защиты отладчиком");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard;
@@ -799,7 +799,7 @@ async fn guard_jvm_aware_protection_accepts_certified_hotspot_jit() {
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command
         .arg("-Xbatch")
         .arg("-XX:CompileThreshold=100")
@@ -809,7 +809,7 @@ async fn guard_jvm_aware_protection_accepts_certified_hotspot_jit() {
     prepare_runtime_command(&mut command);
 
     let mut child = command.spawn().expect("spawn JVM-aware JIT Java");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
@@ -843,13 +843,13 @@ async fn guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_al
     let trusted = root.join("trusted");
     compile_jvm_foreign_exec_probe(&javac, &trusted);
     let probe_dll = trusted.join("jvm-aware-foreign-probe.dll");
-    fs::copy(&probe, &probe_dll).expect("copy JVM-aware adversarial probe");
+    fs::copy(&probe, &probe_dll).expect("скопировать проверку обхода защиты с учётом JVM");
     let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare Guard Sensor agentpath");
+        .expect("подготовить путь к агенту Guard Sensor");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -857,13 +857,13 @@ async fn guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_al
         .arg(&probe_dll);
     prepare_runtime_command(&mut command);
 
-    let mut child = command.spawn().expect("spawn JVM-aware adversarial Java");
-    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let mut child = command.spawn().expect("запустить Java-проверку обхода защиты с учётом JVM");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("применить политику процессов среды выполнения");
     bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
-        .expect("authenticate JVM-aware adversarial Sensor");
-    let status = child.wait().await.expect("wait JVM-aware adversarial Java");
+        .expect("аутентифицировать датчик проверки обхода защиты с учётом JVM");
+    let status = child.wait().await.expect("дождаться завершения Java-проверки обхода защиты с учётом JVM");
     assert!(!status.success(), "foreign executable MEM_PRIVATE allocation must be fail-closed");
 
     let report = session.report().module_guard;

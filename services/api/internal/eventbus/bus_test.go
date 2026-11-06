@@ -83,7 +83,7 @@ func TestEventBusIdempotencyAndOrdering0206(t *testing.T) {
 		t.Fatalf("idempotent publish mismatch inserted=%v err=%v", inserted, err)
 	}
 	if _, _, err := bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "same", Source: "test", Payload: map[string]any{"v": 2}}); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("expected conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт, получено %v", err)
 	}
 	_, _, _ = bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "second", Source: "test", Payload: map[string]any{"v": 2}})
 	d := &testDispatcher0206{failures: 1}

@@ -275,8 +275,8 @@ mod imp {
                 packet.zeroize();
                 return Err("Несовпадение: «Guard Sensor startup packet magic»".to_string());
             }
-            let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("slice length"));
-            let pid = u32::from_le_bytes(packet[12..16].try_into().expect("slice length"));
+            let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("получить длину среза"));
+            let pid = u32::from_le_bytes(packet[12..16].try_into().expect("получить длину среза"));
             if protocol != GUARD_SENSOR_PROTOCOL_VERSION || pid != expected_pid {
                 packet.zeroize();
                 return Err("Несовпадение: «Guard Sensor startup packet protocol/PID»".to_string());

@@ -34,7 +34,7 @@ func TestJavaJarRejectsUnsignedExecutableSubstitution0304(t *testing.T) {
 		}
 	}
 	if _, err := safeEntrypoint(root, "../backend.jar"); err == nil {
-		t.Fatal("path traversal accepted")
+		t.Fatal("Разрешён выход за пределы каталога через путь")
 	}
 }
 func TestJavaEntrypointParentSymlinkRejected0304(t *testing.T) {
@@ -61,7 +61,7 @@ func TestJavaRPCLimitAndMethodWhitelist0304(t *testing.T) {
 		t.Fatal("unexpected method accepted")
 	}
 	if _, err := s.CallJavaRPC0304(context.Background(), Key{}, "health", json.RawMessage(`{"x":`)); err == nil {
-		t.Fatal("invalid JSON accepted")
+		t.Fatal("Принят недопустимый JSON")
 	}
 	if _, err := s.CallJavaRPC0304(context.Background(), Key{ExtensionID: "absent"}, "health", nil); !errors.Is(err, ErrHostNotRunning) {
 		t.Fatalf("expected not running, got %v", err)

@@ -16,17 +16,17 @@ async fn macos_guard_authenticated_boundary_and_attestation() {
     assert!(status.secure_pipe_acl && status.lifetime_job_enforced);
     supervisor.ping().await.expect("authenticated ping");
 
-    let policy = supervisor.process_policy().await.expect("macOS process policy");
+    let policy = supervisor.process_policy().await.expect("получить политику процессов macOS");
     assert_eq!(policy.schema, GUARD_MACOS_PROCESS_POLICY_SCHEMA);
-    let macos = policy.macos.expect("macOS policy details");
+    let macos = policy.macos.expect("получить сведения о политике macOS");
     assert!(macos.core_dumps_disabled && macos.debugger_attach_denied);
     assert!(macos.code_signature_valid && macos.hardened_runtime && macos.library_validation);
     assert!(macos.dyld_environment_sanitized && macos.parent_exit_watch && macos.private_umask);
 
-    let evidence = supervisor.integrity_evidence().await.expect("macOS integrity evidence");
+    let evidence = supervisor.integrity_evidence().await.expect("получить данные о целостности macOS");
     assert_eq!(evidence.schema, GUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA);
     assert!(evidence.boundary.parent_matches);
-    let guard_state = evidence.guard.macos.as_ref().expect("guard macOS evidence");
+    let guard_state = evidence.guard.macos.as_ref().expect("получить данные Guard для macOS");
     assert!(guard_state.code_signature_valid && guard_state.hardened_runtime && guard_state.library_validation);
 
     let attestation = supervisor.remote_attestation("challenge-macos-1", "server-random-challenge").await.expect("macOS attestation");

@@ -79,7 +79,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
  }
  async function runPreview(){if(!catalog||!snapshot)return;setBusy(true);setError('');setNotice('');
   try{const key=JSON.stringify(catalog);const result=await api.componentEditorPreview(packageId,{expectedRevision:initialRevision,catalog});setPreview(result);setPreviewKey(key);
-   if(result.valid)setNotice('Backend подтвердил корректность каталога и пресетов.');
+   if(result.valid)setNotice('Сервер подтвердил корректность каталога и пресетов.');
   }catch(e){setPreview(null);setPreviewKey('');setError(errText(e))}finally{setBusy(false)}
  }
  async function save(){if(!catalog||!snapshot||!validated||!dirty)return;setSaving(true);setError('');
@@ -88,7 +88,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
    setPreview(null);setPreviewKey('');setNotice(`Каталог r${result.catalog.revision} сохранён. Digest ${result.catalog.digest.slice(0,16)}…`);
   }catch(e){setError(errText(e));setPreview(null);setPreviewKey('')}finally{setSaving(false)}
  }
- if(busy&&!snapshot)return <article className="subcard"><h4>Редактор компонентов</h4><p>Загрузка каталога из Backend…</p></article>;
+ if(busy&&!snapshot)return <article className="subcard"><h4>Редактор компонентов</h4><p>Загрузка каталога с сервера…</p></article>;
  if(!snapshot||!catalog)return <article className="subcard"><h4>Редактор компонентов</h4><p role="alert" className="error">{error||'Каталог не найден'}</p></article>;
  const catEntry=categories.find(c=>c.id===selected);
  const groupEntry=groups.find(c=>c.id===selected);
@@ -98,8 +98,8 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
  return <article className="subcard componentEditor0248">
   <h4>Редактор графа компонентов · 0.24.8</h4>
   <p className="muted">Manifest {snapshot.manifestSchemaVersion} · Каталог {snapshot.catalog?.schemaVersion} r{initialRevision} · SHA-256 {snapshot.catalog?.digest?.slice(0,16)}… · {snapshot.status}</p>
-  {!eligible&&<p role="alert" className="error">Редактирование доступно только в неподписанном Manifest v3. Создайте новый v3-пакет; подписанные и опубликованные релизы неизменяемы.</p>}
-  <div className="buttonRow"><button disabled={busy||saving||dirty} onClick={()=>void load()}>Перечитать с Backend</button><button disabled={!dirty||busy||saving} onClick={()=>{if(window.confirm('Сбросить несохранённые изменения?')){setCatalog(initialCatalog(snapshot.catalog!));setPreview(null);setPreviewKey('')}}}>Сбросить правки</button></div>
+  {!eligible&&<p role="alert" className="error">Редактирование доступно только в неподписанном манифесте v3. Создайте новый v3-пакет; подписанные и опубликованные релизы неизменяемы.</p>}
+  <div className="buttonRow"><button disabled={busy||saving||dirty} onClick={()=>void load()}>Загрузить с сервера заново</button><button disabled={!dirty||busy||saving} onClick={()=>{if(window.confirm('Сбросить несохранённые изменения?')){setCatalog(initialCatalog(snapshot.catalog!));setPreview(null);setPreviewKey('')}}}>Сбросить правки</button></div>
   <fieldset disabled={!usable}>
    <nav className="buttonRow" aria-label="Раздел каталога">{(['components','categories','groups','presets'] as Section[]).map(kind=><button type="button" key={kind} aria-pressed={section===kind} onClick={()=>{setSection(kind);setSelected('')}}>{({components:'Компоненты',categories:'Категории',groups:'Группы',presets:'Пресеты'})[kind]}</button>)}</nav>
    <div className="componentEditorLayout0248">
@@ -164,12 +164,12 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
   {showGraph&&<div className="componentEditorGraph0248"><h5>Граф зависимостей и конфликтов</h5><ul>{components.map(c=><li key={c.id}><strong>{c.id}</strong>{c.dependencies?.length?' → '+c.dependencies.map(r=>r.id+(r.versionRange?' ('+r.versionRange+')':'')).join(', '):''}{c.conflicts?.length?' · конфликтует: '+c.conflicts.map(r=>r.id).join(', '):''}{c.exclusiveGroup?' · exclusive '+c.exclusiveGroup:''}</li>)}</ul></div>}
   <button onClick={()=>setShowGraph(v=>!v)}>{showGraph?'Скрыть граф':'Показать граф'}</button>
   {localErrors.length>0&&<div role="alert" className="error"><strong>Локальные замечания:</strong><ul>{localErrors.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}
-  {preview&&<div className="releaseEffect" role="status"><strong>{preview.valid?'Backend: проверка пройдена':'Backend: каталог недопустим'}</strong><p>Ревизия r{preview.revision} · хеш <code>{preview.digest}</code></p>
+  {preview&&<div className="releaseEffect" role="status"><strong>{preview.valid?'Сервер: проверка пройдена':'Сервер: каталог недопустим'}</strong><p>Ревизия r{preview.revision} · хеш <code>{preview.digest}</code></p>
    {preview.errors.length>0&&<ul>{preview.errors.map((e,i)=><li key={i}>{e}</li>)}</ul>}
    <h5>Проверка всех пресетов</h5><ul>{preview.presets.map((p,i)=><li key={i}>{p.preset||'(по умолчанию)'}: {p.error||p.selected?.join(', ')||'пустой набор'}</li>)}</ul>
-   <p className="muted">Условия OS/Java/loader и permissions повторно проверяются native runtime при установке. Серверный граф-preview не является доказательством полномочий пользователя.</p>
+   <p className="muted">Условия OS/Java/loader и permissions повторно проверяются нативной средой выполнения при установке. Серверный предпросмотр графа не является доказательством полномочий пользователя.</p>
   </div>}
-  <div className="buttonRow"><button disabled={!usable||!!localErrors.length} onClick={()=>void runPreview()}>Проверить на Backend</button>
+  <div className="buttonRow"><button disabled={!usable||!!localErrors.length} onClick={()=>void runPreview()}>Проверить на сервере</button>
    <button disabled={!usable||!dirty||!validated||!!localErrors.length} onClick={()=>void save()}>Сохранить проверенный каталог</button></div>
   {dirty&&<p className="muted">Каталог изменён; для сохранения требуется успешный свежий предпросмотр Backend.</p>}
   {notice&&<p role="status" className="success">{notice}</p>}

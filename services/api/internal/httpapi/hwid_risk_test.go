@@ -34,7 +34,7 @@ func TestHWIDDigestIsAccountScoped0299(t *testing.T) {
 		t.Fatal("HWID digest must be keyed and account-scoped")
 	}
 	if a != hwidAccountDigest0299("secret", "alice", hint) {
-		t.Fatal("not deterministic")
+		t.Fatal("Результат недетерминирован")
 	}
 }
 

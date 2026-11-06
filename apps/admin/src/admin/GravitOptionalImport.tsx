@@ -26,14 +26,14 @@ export function GravitOptionalImport02411({api,packageId,revision,enabled,onCand
  }
  return <section className="subcard" aria-label="Миграция Gravit OptionalView">
   <h5>Импорт Gravit OptionalFile / OptionalView · 0.24.11</h5>
-  <p>Импортируются поддерживаемые действия, зависимости, конфликты и обязательные триггеры из updateOptional. Файлы сначала загружаются как optional в текущий draft. Миграция не исполняет код и не изменяет подписанные релизы.</p>
+  <p>Импортируются поддерживаемые действия, зависимости, конфликты и обязательные триггеры из updateOptional. Файлы сначала загружаются как optional в текущий черновик. Миграция не исполняет код и не изменяет подписанные релизы.</p>
   <label className="field"><span>Gravit ClientProfile или updateOptional JSON</span><input type="file" accept=".json,application/json" disabled={!enabled||busy} onChange={e=>void load(e.target.files?.[0]||null)}/></label>
   <div className="buttonRow"><button disabled={!enabled||busy||!source} onClick={()=>void inspect()}>Проверить перенос Gravit</button>{result&&<button onClick={downloadReport}>Скачать отчёт несовместимостей</button>}</div>
   {result&&<div role="status"><p><strong>{result.canApply?'Конвертация пригодна для предпросмотра':'Обнаружены несовместимости — требуется ручная правка'}</strong> · преобразовано: {result.migration.summary.transformed} · сопоставлено: {result.migration.summary.mapped} · вручную: {result.migration.summary.manual} · заблокировано: {result.migration.summary.blocked}</p>
    <p>SHA-256 Gravit JSON: <code>{result.migration.sourceSha256}</code></p>
    <div style={{maxHeight:260,overflowY:'auto'}}><table><thead><tr><th>Путь</th><th>Статус</th><th>Обоснование</th></tr></thead><tbody>{result.migration.fields.map((f,i)=><tr key={f.field+'-'+i}><td><code>{f.field}</code></td><td>{f.status}</td><td>{f.reason}{f.target&&<> → <code>{f.target}</code></>}</td></tr>)}</tbody></table></div>
    {result.preview.errors.length>0&&<ul>{result.preview.errors.map((e,i)=><li key={i}>{e}</li>)}</ul>}
-   <p>Следующее действие загрузит результат в редактор, но <strong>не сохранит</strong> каталог. Проверка Backend и отдельное сохранение обязательны.</p>
+   <p>Следующее действие загрузит результат в редактор, но <strong>не сохранит</strong> каталог. Проверка сервером и отдельное сохранение обязательны.</p>
    <button disabled={!enabled||busy||!result.canApply} onClick={()=>{onCandidate(result.migration.catalog);setResult(null)}}>Перенести в редактор для проверки</button>
   </div>}
   {error&&<p role="alert" className="error">{error}</p>}

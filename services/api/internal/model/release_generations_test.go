@@ -28,7 +28,7 @@ func TestSignedGameReleaseGeneration02311(t *testing.T) {
 	old = base
 	old.RollbackSource = &GameRollbackSource02311{Version: "v1", GameReleaseGeneration: 7, ManifestSHA256: "invalid"}
 	if err := ValidateManifestSchema(old); err == nil {
-		t.Fatal("invalid hash accepted")
+		t.Fatal("Принят недопустимый хеш")
 	}
 	legacy := base
 	legacy.GameReleaseGeneration = 0

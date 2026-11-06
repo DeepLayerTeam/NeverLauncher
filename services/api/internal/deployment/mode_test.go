@@ -120,6 +120,6 @@ func TestDeveloperRelativeStorageStillHasExclusiveAbsoluteLock(t *testing.T) {
 	cfg.StorageLocalPath = "./data/storage"
 	p, err := Detect(cfg)
 	if err != nil || !filepath.IsAbs(p.LockPath) || !p.SingleInstance {
-		t.Fatalf("plan=%+v err=%v", p, err)
+		t.Fatalf("План=%+v, ошибка=%v", p, err)
 	}
 }

@@ -25,7 +25,7 @@ func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 	if _, err := (&SQLRepository{db: db}).ApplyMigrations(ctx); err != nil {
-		t.Fatalf("apply migrations: %v", err)
+		t.Fatalf("Ошибка применения миграций: %v", err)
 	}
 	stamp := time.Now().UnixNano()
 	a, b := fmt.Sprintf("official-link-a-%d", stamp), fmt.Sprintf("official-link-b-%d", stamp)

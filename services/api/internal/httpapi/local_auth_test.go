@@ -41,7 +41,7 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "Migrated_01", Secret: "wrong"}); err == nil {
-		t.Fatal("wrong password accepted")
+		t.Fatal("Принят неверный пароль")
 	}
 	before, err := r.GetUser(id)
 	if err != nil || before.PasswordHash != legacy {

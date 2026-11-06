@@ -22,7 +22,7 @@ func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
 	defer cancel()
 	r, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("expected PostgreSQL repository")
+		t.Fatal("Ожидался репозиторий PostgreSQL")
 	}
 	defer r.db.Close()
 	if _, err := r.ApplyMigrations(ctx); err != nil {

@@ -21,9 +21,9 @@ func TestLoaderPayloadCacheRejectsAndQuarantinesCorruptPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := loadLoaderPayloadCacheBytes(root, "fabric", "26.3", "https://meta.fabricmc.net/test", sha, maxCompatibilityArtifact); err == nil || !strings.Contains(err.Error(), "SHA-256 mismatch") {
-		t.Fatalf("corrupt loader cache must fail closed, got %v", err)
+		t.Fatalf("Повреждение кеша загрузчика должно блокировать операцию, получено %v", err)
 	}
 	if _, err := os.Stat(payloadPath); !os.IsNotExist(err) {
-		t.Fatalf("corrupt cache payload must be quarantined, stat=%v", err)
+		t.Fatalf("Повреждённые данные кеша должны помещаться в карантин, состояние=%v", err)
 	}
 }

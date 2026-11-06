@@ -37,7 +37,7 @@ func TestBridgePluginsManifestIncludesFabric0146(t *testing.T) {
 	manifest := bridgePluginsManifest940("0.14.6")
 	artifacts, ok := manifest["artifacts"].([]map[string]any)
 	if !ok {
-		t.Fatalf("unexpected artifacts type: %T", manifest["artifacts"])
+		t.Fatalf("Неожиданный тип артефактов: %T", manifest["artifacts"])
 	}
 	var fabric map[string]any
 	for _, artifact := range artifacts {

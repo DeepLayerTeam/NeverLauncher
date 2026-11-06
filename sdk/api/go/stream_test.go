@@ -75,7 +75,7 @@ func TestStreamRejectsRedirectAndInvalidOptions0463(t *testing.T) {
 		t.Fatal("negative limit accepted")
 	}
 	if _, err = c.RequestStream(context.Background(), "GET", "//evil", nil, nil, "", &out, 1024, ""); err == nil {
-		t.Fatal("unsafe path accepted")
+		t.Fatal("Небезопасный путь ошибочно принят")
 	}
 }
 

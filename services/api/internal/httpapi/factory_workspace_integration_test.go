@@ -114,7 +114,7 @@ func TestFactoryReadSource0401(t *testing.T) {
 	f.SHA256 = hex.EncodeToString(sum[:])
 	f.Path = "../demo.json"
 	if _, err = factoryReadSource0401(root, f, 1024); err == nil {
-		t.Fatal("accepted traversal")
+		t.Fatal("Разрешён выход за пределы каталога")
 	}
 	f.Path = "versions/demo/demo.json"
 	f.Size = 1025

@@ -53,7 +53,7 @@ func TestRedisLimiterHealthAndAtomicWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Allowed || result.Remaining != 19 || result.ResetAfter <= 0 {
-		t.Fatalf("unexpected result: %+v", result)
+		t.Fatalf("Неожиданный результат: %+v", result)
 	}
 	<-done
 }

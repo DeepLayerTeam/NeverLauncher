@@ -56,7 +56,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
         method:'PATCH',body:JSON.stringify(next),
       });
       await refresh();
-      setNotice(`Назначение для ${selectedUser.email} сохранено на Backend. Проверьте аудит user:project-role.`);
+      setNotice(`Назначение для ${selectedUser.email} сохранено на сервере. Проверьте аудит user:project-role.`);
       await onChanged();
     } catch (err) {
       if (err instanceof IndeterminateApiError) {
@@ -73,7 +73,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
   return <article className="subcard" aria-label="Доступ операторов к проекту">
     <h3>Доступ операторов к проекту</h3>
     <p className="muted">Назначения действуют только для проекта <strong>{projectId || 'не выбран'}</strong>. Права экземпляра, хоста и Backend не выдаются через projectRoles. Изменение требует свежую phishing-resistant MFA и записывается в аудит.</p>
-    <div className="buttonRow"><button disabled={busy} onClick={() => void refresh().catch(e => setError(String(e)))}>Обновить пользователей и роли</button><button disabled={busy} onClick={() => void onStepUp().catch(e => setError(String(e)))}>Подтвердить passkey MFA</button></div>
+    <div className="buttonRow"><button disabled={busy} onClick={() => void refresh().catch(e => setError(String(e)))}>Обновить пользователей и роли</button><button disabled={busy} onClick={() => void onStepUp().catch(e => setError(String(e)))}>Подтвердить многофакторную проверку ключом доступа</button></div>
     <label className="field">Пользователь
       <select value={selectedUserId} onChange={event => setSelectedUserId(event.target.value)} disabled={busy || !projectId}>
         <option value="">Выберите пользователя</option>
@@ -91,7 +91,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
         </select>
       </label>
       {allowed.find(role => role.id === desiredRole) && <p className="muted">{allowed.find(role => role.id === desiredRole)?.description} · Результирующие права ограничены проектом.</p>}
-      <button disabled={busy || !projectId || desiredRole === currentRole || selectedUser.status !== 'active'} onClick={() => void saveRole()}>{busy ? 'Сохранение…' : 'Сохранить назначение на Backend'}</button>
+      <button disabled={busy || !projectId || desiredRole === currentRole || selectedUser.status !== 'active'} onClick={() => void saveRole()}>{busy ? 'Сохранение…' : 'Сохранить назначение на сервере'}</button>
     </>}
     {error && <p role="alert" className="error">{error}</p>}
     {notice && <p role="status" className="success">{notice}</p>}

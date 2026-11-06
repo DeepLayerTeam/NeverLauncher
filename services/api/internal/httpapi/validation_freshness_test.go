@@ -104,7 +104,7 @@ func TestV05RunNonceExpiryReplayAndRevocation0346(t *testing.T) {
 	changed = p
 	changed.ExpiresAt = now.Add(-time.Second).Format(time.RFC3339Nano)
 	if validateFreshness0346(ctx, r, changed, now, true) == nil {
-		t.Fatal("expired evidence accepted")
+		t.Fatal("Приняты подтверждающие данные с истекшим сроком действия")
 	}
 	if validateFreshness0346(ctx, r, p, now.Add(31*time.Minute), true) == nil {
 		t.Fatal("expired challenge accepted for new attestation")

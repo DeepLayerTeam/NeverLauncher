@@ -68,7 +68,7 @@ export class ExtensionManagement0425 {
       throw new Error(message || `HTTP ${response.status} ${response.statusText}`);
     }
     if (body == null || !Object.prototype.hasOwnProperty.call(body, "data"))
-      throw new Error("Backend вернул ответ без data; состояние не подтверждено");
+      throw new Error("Сервер вернул ответ без data; состояние не подтверждено");
     return body.data as T;
   }
   async installs(): Promise<ExtensionInstall0425[]> {

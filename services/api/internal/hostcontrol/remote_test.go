@@ -95,7 +95,7 @@ func TestRemoteLifecycle0413(t *testing.T) {
 		t.Fatal("same-session restart accepted")
 	}
 	if _, err := NewClient(Target{CAFile: ca, TokenFile: "missing"}); err == nil {
-		t.Fatal("missing token accepted")
+		t.Fatal("Принят запрос без токена")
 	}
 	wrong := *client
 	wrong.nodeID = "another-node"

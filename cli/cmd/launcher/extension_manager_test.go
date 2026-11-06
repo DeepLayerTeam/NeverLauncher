@@ -12,7 +12,7 @@ import (
 func TestExtensionManager0425LiveBackend(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/admin/extensions/manager" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			t.Errorf("Неожиданный запрос: %s %s", r.Method, r.URL.Path)
 			http.NotFound(w, r)
 			return
 		}
@@ -43,6 +43,6 @@ func TestExtensionManager0425LiveBackend(t *testing.T) {
 func TestExtensionManager0425RequiresAuthentication(t *testing.T) {
 	t.Setenv("LAUNCHER_TOKEN", "")
 	if err := handleExtensionManager0425([]string{"--backend", "https://backend.invalid"}); err == nil {
-		t.Fatal("missing token accepted")
+		t.Fatal("Принят запрос без токена")
 	}
 }

@@ -45,7 +45,7 @@ func TestManifestV1UnchangedAndV2Payload(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(old), "profileSnapshot") {
-		t.Fatal("v1 payload changed")
+		t.Fatal("Содержимое v1 изменилось")
 	}
 	if err := ValidateManifestSchema(v1); err != nil {
 		t.Fatal(err)

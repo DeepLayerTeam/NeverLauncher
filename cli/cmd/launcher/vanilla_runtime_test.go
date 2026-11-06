@@ -151,7 +151,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Status != "installed-and-verified" || result.MinecraftVersion != "test-vanilla" || result.JavaMajorVersion != 21 {
-		t.Fatalf("unexpected result: %+v", result)
+		t.Fatalf("Неожиданный результат: %+v", result)
 	}
 	required := []string{
 		"versions/test-vanilla/test-vanilla.json",
@@ -392,7 +392,7 @@ func TestJavaMajorFromVersionEnforcesJava16And17VanillaRange(t *testing.T) {
 				t.Fatalf("Minecraft %s accepted wrong Java major", tc.version)
 			}
 			if _, err := javaMajorFromVersion(tc.version, MojangVersionFile{}); err == nil {
-				t.Fatalf("Minecraft %s accepted missing javaVersion.majorVersion", tc.version)
+				t.Fatalf("Minecraft %s принят без javaVersion.majorVersion", tc.version)
 			}
 		})
 	}
@@ -420,17 +420,17 @@ func TestJavaMajorFromVersionEnforces0170v2Grid(t *testing.T) {
 		}
 		got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(major)}})
 		if err != nil || got != major {
-			t.Fatalf("Minecraft %s Java=%d err=%v, want %d", version, got, err, major)
+			t.Fatalf("Minecraft %s Java=%d, ошибка=%v, ожидалось %d", version, got, err, major)
 		}
 		if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
-			t.Fatalf("Minecraft %s accepted missing Java metadata: %v", version, err)
+			t.Fatalf("Minecraft %s принят без метаданных Java: %v", version, err)
 		}
 		wrong := 17
 		if major == 17 {
 			wrong = 16
 		}
 		if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(wrong)}}); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
-			t.Fatalf("Minecraft %s accepted wrong Java %d: %v", version, wrong, err)
+			t.Fatalf("Minecraft %s принят с неверной Java %d: %v", version, wrong, err)
 		}
 	}
 	for _, outside := range []string{"1.17.1", "1.18.2", "1.19.4", "1.20.1", "1.20.2", "1.20.4", "1.20.5"} {
@@ -452,17 +452,17 @@ func TestJavaMajorFromVersionEnforces0170v3Grid(t *testing.T) {
 		}
 		got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(major)}})
 		if err != nil || got != major {
-			t.Fatalf("Minecraft %s Java=%d err=%v, want %d", version, got, err, major)
+			t.Fatalf("Minecraft %s Java=%d, ошибка=%v, ожидалось %d", version, got, err, major)
 		}
 		if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
-			t.Fatalf("Minecraft %s accepted missing Java metadata: %v", version, err)
+			t.Fatalf("Minecraft %s принят без метаданных Java: %v", version, err)
 		}
 		wrong := 17
 		if major == 25 {
 			wrong = 21
 		}
 		if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(wrong)}}); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
-			t.Fatalf("Minecraft %s accepted wrong Java %d: %v", version, wrong, err)
+			t.Fatalf("Minecraft %s принят с неверной Java %d: %v", version, wrong, err)
 		}
 	}
 	for _, outside := range []string{"1.21.10", "26.1.2", "26.3"} {
@@ -555,7 +555,7 @@ func TestInstallVanilla0170v1MaterializesLegacyReleaseWithoutJavaVersion(t *test
 	}
 	for _, rel := range []string{"versions/1.2.1/1.2.1.json", "versions/1.2.1/1.2.1.jar", "assets/indexes/pre-1.6.json"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-			t.Fatalf("missing materialized %s: %v", rel, err)
+			t.Fatalf("Отсутствует материализованный файл %s: %v", rel, err)
 		}
 	}
 }
@@ -604,7 +604,7 @@ func TestInstallVanilla0170v2MaterializesModernJavaTransition(t *testing.T) {
 			}
 			for _, rel := range []string{"versions/" + tc.version + "/" + tc.version + ".json", "versions/" + tc.version + "/" + tc.version + ".jar", "assets/indexes/" + tc.version + ".json"} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-					t.Fatalf("missing materialized %s: %v", rel, err)
+					t.Fatalf("Отсутствует материализованный файл %s: %v", rel, err)
 				}
 			}
 		})
@@ -655,7 +655,7 @@ func TestInstallVanilla0170v3MaterializesJava21And25Releases(t *testing.T) {
 			}
 			for _, rel := range []string{"versions/" + tc.version + "/" + tc.version + ".json", "versions/" + tc.version + "/" + tc.version + ".jar", "assets/indexes/" + tc.version + ".json"} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
-					t.Fatalf("missing materialized %s: %v", rel, err)
+					t.Fatalf("Отсутствует материализованный файл %s: %v", rel, err)
 				}
 			}
 		})
@@ -723,7 +723,7 @@ func TestJavaMajorFromVersionEnforcesJava21VanillaRange(t *testing.T) {
 				t.Fatalf("Minecraft %s accepted Java 17", version)
 			}
 			if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil {
-				t.Fatalf("Minecraft %s accepted missing javaVersion.majorVersion", version)
+				t.Fatalf("Minecraft %s принят без javaVersion.majorVersion", version)
 			}
 		})
 	}
@@ -746,7 +746,7 @@ func TestJavaMajorFromVersionEnforcesJava25VanillaRange(t *testing.T) {
 				t.Fatalf("Minecraft %s accepted Java 21", version)
 			}
 			if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil {
-				t.Fatalf("Minecraft %s accepted missing javaVersion.majorVersion", version)
+				t.Fatalf("Minecraft %s принят без javaVersion.majorVersion", version)
 			}
 		})
 	}
@@ -1117,7 +1117,7 @@ func TestFlattenLWJGLWindowsNativesRejectsCollisionsAndForeignPaths(t *testing.T
 		t.Fatalf("expected strict native collision failure, got %v", err)
 	}
 	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "unknown"); err == nil {
-		t.Fatal("unsupported architecture accepted")
+		t.Fatal("Принята неподдерживаемая архитектура")
 	}
 }
 

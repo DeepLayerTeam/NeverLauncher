@@ -57,7 +57,7 @@ func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
 	beginRes := httptest.NewRecorder()
 	handler.ServeHTTP(beginRes, beginReq)
 	if beginRes.Code != http.StatusOK {
-		t.Fatalf("begin status=%d body=%s", beginRes.Code, beginRes.Body.String())
+		t.Fatalf("Начало: состояние=%d, тело ответа=%s", beginRes.Code, beginRes.Body.String())
 	}
 	var begin struct {
 		Data struct {
@@ -82,7 +82,7 @@ func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
 	completeRes := httptest.NewRecorder()
 	handler.ServeHTTP(completeRes, completeReq)
 	if completeRes.Code != http.StatusOK {
-		t.Fatalf("complete status=%d body=%s", completeRes.Code, completeRes.Body.String())
+		t.Fatalf("Завершение: состояние=%d, тело ответа=%s", completeRes.Code, completeRes.Body.String())
 	}
 	if !strings.Contains(completeRes.Body.String(), "accessToken") || !strings.Contains(completeRes.Body.String(), "refreshToken") {
 		t.Fatalf("Never session tokens missing: %s", completeRes.Body.String())

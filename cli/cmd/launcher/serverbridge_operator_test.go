@@ -108,7 +108,7 @@ func TestBridgeRollBackRejectsForgedTransactions02812(t *testing.T) {
 		t.Fatal("external file modified")
 	}
 	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", "../../evil"}); err == nil {
-		t.Fatal("path traversal accepted")
+		t.Fatal("Разрешён выход за пределы каталога через путь")
 	}
 }
 
@@ -146,7 +146,7 @@ func TestBridgeRejectsPlainHTTPAndOutsidePaths02812(t *testing.T) {
 	}
 	if err := os.Symlink(t.TempDir(), filepath.Join(root, "escape")); err == nil {
 		if err := bridgeInsideRoot02812(root, filepath.Join(root, "escape", "cfg.yml")); err == nil {
-			t.Fatal("symlink escape accepted")
+			t.Fatal("Разрешён выход за пределы каталога через символьную ссылку")
 		}
 	}
 }

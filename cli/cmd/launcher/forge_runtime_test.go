@@ -85,7 +85,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatal(err)
 			}
 			if result.Status != "installed-and-verified" || result.Loader != loader || result.ProcessorRan != 1 || result.ProcessorSkipped != 0 {
-				t.Fatalf("unexpected result: %+v", result)
+				t.Fatalf("Неожиданный результат: %+v", result)
 			}
 			generatedRel, err := mavenCoordinatePath("com.example:generated:1.0")
 			if err != nil {
@@ -200,7 +200,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				"--project", "test-project", "--profile", loader, "--channel", "stable", "--version", "1.0.0", "--output", packagePath,
 			}
 			if err := handleRuntimeForgeLikePackage(loader, args); err != nil {
-				t.Fatalf("%s-package failed: %v", loader, err)
+				t.Fatalf("Ошибка пакета %s: %v", loader, err)
 			}
 			pkg, err := readClientPackageManifest(packagePath)
 			if err != nil {

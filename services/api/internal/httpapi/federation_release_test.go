@@ -40,7 +40,7 @@ func TestGenericBrowserProviderExplicitLink0120(t *testing.T) {
 	beginRes := httptest.NewRecorder()
 	h.ServeHTTP(beginRes, beginReq)
 	if beginRes.Code != http.StatusOK {
-		t.Fatalf("begin status=%d body=%s", beginRes.Code, beginRes.Body.String())
+		t.Fatalf("Начало: состояние=%d, тело ответа=%s", beginRes.Code, beginRes.Body.String())
 	}
 	var begin struct {
 		Data struct {
@@ -58,7 +58,7 @@ func TestGenericBrowserProviderExplicitLink0120(t *testing.T) {
 	completeRes := httptest.NewRecorder()
 	h.ServeHTTP(completeRes, completeReq)
 	if completeRes.Code != http.StatusOK {
-		t.Fatalf("complete status=%d body=%s", completeRes.Code, completeRes.Body.String())
+		t.Fatalf("Завершение: состояние=%d, тело ответа=%s", completeRes.Code, completeRes.Body.String())
 	}
 	identity, err := repo.GetAuthIdentity("oidc-fixture", "oidc-user-42")
 	if err != nil || identity.UserID != "admin" {

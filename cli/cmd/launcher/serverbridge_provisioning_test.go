@@ -268,7 +268,7 @@ func TestServerBridgeUpgradeRollbackPreservesIdentity0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if identityRestored.Fingerprint != identityBefore.Fingerprint || identityRestored.PublicKey != identityBefore.PublicKey {
-		t.Fatal("rollback changed node identity")
+		t.Fatal("Откат изменил идентификатор узла")
 	}
 }
 
@@ -393,6 +393,6 @@ func TestServerBridgeMigrateV3GA0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if identityRestored.Fingerprint != identityBefore.Fingerprint {
-		t.Fatal("rollback changed node identity")
+		t.Fatal("Откат изменил идентификатор узла")
 	}
 }

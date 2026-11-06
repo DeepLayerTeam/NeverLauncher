@@ -86,7 +86,7 @@ func TestGravitOptionalRejectDuplicatesAndTamper02411(t *testing.T) {
 	for _, source := range []string{`[{"name":"A","name":"B"}]`, `[{"name":"A","actions":[{"type":"file","files":{"mods/nei.jar":"","mods/nei.jar":""}}]}]`} {
 		r, e := ConvertGravitOptionalView02411([]byte(source), base, gravitOptionalFiles02411()[:1])
 		if e == nil && r.Ready {
-			t.Fatal("duplicate JSON key accepted")
+			t.Fatal("Принят повторяющийся ключ JSON")
 		}
 	}
 	r, e := ConvertGravitOptionalView02411([]byte(`[{"name":"A","actions":[{"type":"file","files":{"mods/nei.jar":""}}]}]`), base, gravitOptionalFiles02411()[:1])

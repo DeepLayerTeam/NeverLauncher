@@ -188,7 +188,7 @@ export function telemetryState(node: ServerBridgeNode, now = Date.now()): { stat
   const t = node.telemetry;
   if (!t || !Number.isFinite(t.sampledAtUnixMillis) || !t.sampledAtUnixMillis) return { state: node.telemetryState === 'stale' ? 'stale' : 'unknown', reason: node.telemetryState === 'stale' ? 'Последний снимок устарел (Backend)' : 'Telemetry ещё не получена', ageSeconds: null };
   const age = now - t.sampledAtUnixMillis;
-  if (age < -30_000) return { state: 'unknown', reason: 'Время узла отличается от Backend/браузера', ageSeconds: null };
+  if (age < -30_000) return { state: 'unknown', reason: 'Время узла отличается от сервера/браузера', ageSeconds: null };
   const seconds = Math.max(0, Math.floor(age / 1000));
   const heartbeat = Date.parse(node.lastHeartbeatAt ?? '');
   if (node.telemetryState === 'stale' || node.telemetryState === 'unknown' || node.status !== 'active' ||

@@ -57,7 +57,7 @@ func TestDesktopEntrypointServedFromEnabledGrantedInstall0209(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.desktopExtensionEntrypoint0209(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("Код состояния=%d, тело ответа=%s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
 	for _, token := range []string{desktopBridgeProtocol0209, "connect-src 'none'", "parent.postMessage"} {

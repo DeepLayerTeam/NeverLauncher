@@ -11,7 +11,7 @@ import (
 func TestMigrationReportCLI03313(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-token" {
-			t.Error("missing auth")
+			t.Error("Отсутствует аутентификация")
 		}
 		if strings.HasSuffix(r.URL.Path, "/review") && r.Method == "POST" {
 			if r.Header.Get("X-Migration-RC-Confirm") != "example-run-123" {

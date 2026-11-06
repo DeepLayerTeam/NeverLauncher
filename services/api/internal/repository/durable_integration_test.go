@@ -31,7 +31,7 @@ func openDurablePostgres0213(t *testing.T) (*SQLRepository, *SQLRepository, cont
 	open := func() *SQLRepository {
 		r, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 		if !ok {
-			t.Fatal("repository is not SQLRepository")
+			t.Fatal("Репозиторий не является SQLRepository")
 		}
 		return r
 	}
@@ -39,7 +39,7 @@ func openDurablePostgres0213(t *testing.T) (*SQLRepository, *SQLRepository, cont
 	t.Cleanup(func() { _ = a.db.Close() })
 	t.Cleanup(func() { _ = b.db.Close() })
 	if _, err := a.ApplyMigrations(ctx); err != nil {
-		t.Fatalf("apply migrations: %v", err)
+		t.Fatalf("Ошибка применения миграций: %v", err)
 	}
 	return a, b, ctx
 }
@@ -55,7 +55,7 @@ func TestDurableJobLeaseRecoversAcrossReplicaRestart0213(t *testing.T) {
 		Payload:        []byte(`{"releaseId":"release-restart"}`),
 	}, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("enqueue: created=%v err=%v", created, err)
+		t.Fatalf("Добавление в очередь: создано=%v, ошибка=%v", created, err)
 	}
 	first, err := a.LeaseDurableJob(ctx, job.ID, "api-a", 120*time.Millisecond)
 	if err != nil {

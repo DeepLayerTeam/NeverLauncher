@@ -63,7 +63,7 @@ func TestHTTPClientRealRequests(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Path("/a/{projectId}", map[string]string{"projectId": "../admin"}); err == nil {
-		t.Fatal("path traversal accepted")
+		t.Fatal("Разрешён выход за пределы каталога через путь")
 	}
 	if _, err = New("http://example.org", "secret"); err == nil {
 		t.Fatal("remote cleartext accepted")

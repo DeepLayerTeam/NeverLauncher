@@ -132,7 +132,7 @@ func TestReplaceFileAtomicPortableReplacesExisting(t *testing.T) {
 	}
 	data, err := os.ReadFile(dst)
 	if err != nil || string(data) != "new" {
-		t.Fatalf("replacement mismatch: %q / %v", data, err)
+		t.Fatalf("Несоответствие при замене: %q / %v", data, err)
 	}
 	if _, err := os.Stat(tmp); !os.IsNotExist(err) {
 		t.Fatalf("temporary file still exists: %v", err)

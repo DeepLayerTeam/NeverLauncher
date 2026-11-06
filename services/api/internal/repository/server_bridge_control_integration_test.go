@@ -20,7 +20,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	defer cancel()
 	repo, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("repository is not SQLRepository")
+		t.Fatal("Репозиторий не является SQLRepository")
 	}
 	defer repo.db.Close()
 	if _, err := repo.ApplyMigrations(ctx); err != nil {
@@ -52,7 +52,7 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	}
 	created, reused, err := repo.CreateServerBridgeControlCommand(ctx, cmd, now)
 	if err != nil || reused || created.ID != cmd.ID {
-		t.Fatalf("create: %+v reused=%v err=%v", created, reused, err)
+		t.Fatalf("Создание: %+v, повторно использовано=%v, ошибка=%v", created, reused, err)
 	}
 	replayed, reused, err := repo.CreateServerBridgeControlCommand(ctx, cmd, now.Add(time.Millisecond))
 	if err != nil || !reused || replayed.ID != cmd.ID {
@@ -62,14 +62,14 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	conflict.ID = "ctl_control0195_conflict"
 	conflict.RequestDigest = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 	if _, _, err := repo.CreateServerBridgeControlCommand(ctx, conflict, now); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected idempotency conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт идемпотентности, получено %v", err)
 	}
 	if _, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0123456789abcdef0123456789abcdef", "lease_wrong_0123456789abcdef", 0, now, 30*time.Second); !errors.Is(err, ErrConflict) {
 		t.Fatalf("wrong runtime lease should conflict, got %v", err)
 	}
 	leased, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "0123456789abcdef0123456789abcdef", "lease_token_0123456789abcdef", 0, now, 30*time.Second)
 	if err != nil || leased.Status != "leased" || leased.Attempt != 1 {
-		t.Fatalf("lease: %+v err=%v", leased, err)
+		t.Fatalf("Аренда: %+v, ошибка=%v", leased, err)
 	}
 	resumed, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "0123456789abcdef0123456789abcdef", "ignored_token_0123456789abcdef", 0, now.Add(time.Second), 30*time.Second)
 	if err != nil || resumed.ID != leased.ID || resumed.Attempt != leased.Attempt || resumed.LeaseToken != leased.LeaseToken {
@@ -80,17 +80,17 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	}
 	done, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
 	if err != nil || done.Status != "succeeded" {
-		t.Fatalf("complete: %+v err=%v", done, err)
+		t.Fatalf("Завершение: %+v, ошибка=%v", done, err)
 	}
 	done2, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || done2.Status != "succeeded" {
 		t.Fatalf("idempotent completion: %+v err=%v", done2, err)
 	}
 	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "false"}, "", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
-		t.Fatalf("same-status ACK with conflicting result accepted: %v", err)
+		t.Fatalf("Принято подтверждение с тем же статусом, но противоречащим результатом: %v", err)
 	}
 	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "failed", nil, "late", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
-		t.Fatalf("conflicting ACK accepted: %v", err)
+		t.Fatalf("Принято противоречащее подтверждение: %v", err)
 	}
 	var auditCount int
 	if err := repo.db.QueryRowContext(ctx, `SELECT count(*) FROM audit_events WHERE id IN ($1,$2)`, "serverbridge-control-queued-"+cmd.ID, "serverbridge-control-complete-"+cmd.ID).Scan(&auditCount); err != nil {

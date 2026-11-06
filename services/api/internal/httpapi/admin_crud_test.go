@@ -37,7 +37,7 @@ func TestCanonicalAdminCRUDProductFlow(t *testing.T) {
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
 		if res.Code != step.code || !strings.Contains(res.Body.String(), step.want) {
-			t.Fatalf("%s %s => %d %s; want %d and %q", step.method, step.path, res.Code, res.Body.String(), step.code, step.want)
+			t.Fatalf("%s %s: %d %s; ожидалось %d и %q", step.method, step.path, res.Code, res.Body.String(), step.code, step.want)
 		}
 	}
 

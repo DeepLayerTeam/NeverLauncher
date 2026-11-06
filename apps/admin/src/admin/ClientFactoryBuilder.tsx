@@ -586,7 +586,7 @@ export function ClientFactoryBuilder02710({
                 >
                   {deliveryBusy
                     ? "Верификация и перенос…"
-                    : "Перенести сборку в Build Workspace"}
+                    : "Перенести сборку в рабочую область сборки"}
                 </button>
                 <button disabled={exportBusy} onClick={() => void exportZIP()}>
                   {exportBusy

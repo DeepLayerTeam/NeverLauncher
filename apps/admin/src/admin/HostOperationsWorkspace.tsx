@@ -231,13 +231,13 @@ export function HostOperationsWorkspace04111({
         op.action !== original.action ||
         op.idempotencyKey !== original.idempotencyKey
       )
-        throw Error("Backend вернул несоответствующий operation receipt");
+        throw Error("Сервер вернул несоответствующее подтверждение операции");
       setSelectedId(op.id);
       setSelected(op);
       persist(null);
       setNotice(
         response.idempotentReplay
-          ? "Backend вернул ранее сохранённую операцию, без нового исполнения."
+          ? "Сервер вернул ранее сохранённую операцию, без нового исполнения."
           : "Backend сохранил операцию и вернул результат Host Supervisor.",
       );
       const refreshed = await api.list(serverId).catch(() => null);
@@ -286,7 +286,7 @@ export function HostOperationsWorkspace04111({
         data.operation.id !== op.id ||
         data.operation.serverId !== op.serverId
       )
-        throw Error("Backend вернул другую операцию");
+        throw Error("Сервер вернул другую операцию");
       setSelected(data.operation);
       setSelectedId(data.operation.id);
       const refreshed = await api.list(serverId);
@@ -509,7 +509,7 @@ export function HostOperationsWorkspace04111({
         При <code>принято</code> или <code>неопределённо</code> новые действия
         заблокированы в панели. Только read-only сверка с хостом и журналом;
         принудительное снятие неопределённого состояния требует отдельной
-        процедуры на Backend.
+        процедуры на сервере.
       </p>
     </section>
   );

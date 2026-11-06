@@ -25,7 +25,7 @@ func TestGoSignedOptionalActionFixture0245(t *testing.T) {
 	}
 	signed := m.Signature
 	if signed == nil {
-		t.Fatal("missing signature")
+		t.Fatal("Отсутствует подпись")
 	}
 	pk, e := hex.DecodeString(signed.PublicKey)
 	if e != nil {

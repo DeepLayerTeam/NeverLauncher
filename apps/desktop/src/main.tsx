@@ -1151,7 +1151,7 @@ function App() {
   const [diagnosticStatus03510, setDiagnosticStatus03510] = useState("");
   const [diagnosticBusy03510, setDiagnosticBusy03510] = useState(false);
   const [logs, setLogs] = useState<string[]>([
-    `Launcher Desktop ${DESKTOP_VERSION}: product-клиент ожидает first-run подключение к Backend API.`,
+    `Launcher Desktop ${DESKTOP_VERSION}: настольное приложение ожидает первичное подключение к серверному API.`,
   ]);
   const [backendStatus, setBackendStatus] = useState<string>("не проверен");
   const [projects, setProjects] = useState<BackendProject[]>([]);
@@ -1349,7 +1349,7 @@ function App() {
         log(
           provisioning
             ? `Подписанный bootstrap ${provisioning.digest.slice(0, 16)}… проверен native Ed25519.`
-            : "Desktop config загружен без подписанного bundle.",
+            : "Конфигурация настольного приложения загружена без подписанного пакета.",
         );
       } catch (error) {
         if (disposed) return;
@@ -1760,7 +1760,7 @@ function App() {
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
     if (!begin.transactionToken || !begin.publicKey?.challenge)
-      throw new Error("Backend вернул неполный запрос дополнительной проверки passkey.");
+      throw new Error("Сервер вернул неполный запрос дополнительной проверки ключом доступа.");
     const credential = (await navigator.credentials.get({
       publicKey: decodeWebAuthnRequestOptions(begin.publicKey),
     })) as PublicKeyCredential | null;
@@ -1793,7 +1793,7 @@ function App() {
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken)
-      throw new Error("Backend не вернул токен доступа после дополнительной проверки passkey.");
+      throw new Error("Сервер не вернул токен доступа после дополнительной проверки ключом доступа.");
     log(
       "Выполнена свежая phishing-resistant step-up authentication для восстановления device key.",
     );
@@ -1872,10 +1872,10 @@ function App() {
         !begin.signingPayload ||
         !begin.newDeviceId
       )
-        throw new Error("Backend вернул неполный key replacement challenge.");
+        throw new Error("Сервер вернул неполный запрос на замену ключа.");
       if (begin.newFingerprint !== staged.fingerprint)
         throw new Error(
-          "Backend replacement fingerprint не совпадает со staged key.",
+          "Отпечаток нового ключа, полученный с сервера, не совпадает с подготовленным ключом.",
         );
       const newProof = await callTauri<DeviceSignatureResult>(
         "sign_staged_device_replacement",
@@ -1886,7 +1886,7 @@ function App() {
         },
       );
       if (newProof.fingerprint !== staged.fingerprint)
-        throw new Error("Staged signer вернул другую identity.");
+        throw new Error("Подготовленный модуль подписи вернул другой идентификатор.");
       let oldSignature = "";
       if (mode === "rotate") {
         const oldProof = await callTauri<DeviceSignatureResult>(
@@ -1899,7 +1899,7 @@ function App() {
         );
         if (!deviceKey || oldProof.fingerprint !== deviceKey.fingerprint)
           throw new Error(
-            "Current-key rotation proof подписан неожиданной identity.",
+            "Подтверждение ротации действующего ключа подписано неизвестным ключом.",
           );
         oldSignature = oldProof.signature;
       }
@@ -1922,7 +1922,7 @@ function App() {
         );
       const data = completePayload.data ?? completePayload;
       if (!data.accessToken || !data.device?.id)
-        throw new Error("Backend не вернул replacement device/access token.");
+        throw new Error("Сервер не вернул replacement device/access token.");
       serverCommitted = true;
       session = await persistTrustedAccess(session, data.accessToken);
       const committed = await callTauri<DeviceKeyInfo>(
@@ -1936,7 +1936,7 @@ function App() {
           : "обновлён · проверен",
       );
       log(
-        `Device key ${mode === "rotate" ? "rotated" : "recovered"}: ${oldDeviceId} → ${data.device.id}; старый fingerprint оставлен permanent tombstone.`,
+        `Device key ${mode === "rotate" ? "rotated" : "recovered"}: ${oldDeviceId} → ${data.device.id}; старый fingerprint оставлен постоянная запись об отзыве.`,
       );
       if (committed.keyBinding === "hardware")
         session = await attestDesktopDeviceKey(session, committed);
@@ -1947,7 +1947,7 @@ function App() {
       // Повторите согласование с ТЕМ ЖЕ подготовленным закрытым ключом после восстановления связи.
       if (serverCommitted)
         log(
-          "Backend завершил replacement; staged key сохранён для повторного commit/reconciliation после ошибки native storage.",
+          "Сервер завершил replacement; подготовленный ключ сохранён для повторного commit/reconciliation после ошибки системного хранилища.",
         );
       throw error;
     }
@@ -2015,10 +2015,10 @@ function App() {
       !begin.signingPayload ||
       !begin.attestationValidUntil
     )
-      throw new Error("Backend вернул неполный device attestation challenge.");
+      throw new Error("Сервер вернул неполный запрос аттестации устройства.");
     if (begin.hardwareProvenance !== "not-remotely-verified")
       throw new Error(
-        "Backend вернул неизвестную hardware provenance semantics; fail-closed.",
+        "Сервер вернул неизвестные свойства аппаратной аттестации; доступ заблокирован.",
       );
 
     const signature = await callTauri<DeviceSignatureResult>(
@@ -2037,7 +2037,7 @@ function App() {
       !signature.hardwareBound
     ) {
       throw new Error(
-        "Native attestation signer вернул другую или не-hardware identity.",
+        "Нативный модуль аттестации вернул другой идентификатор или ключ без аппаратной защиты.",
       );
     }
     const completeResponse = await postDeviceJson(
@@ -2061,21 +2061,21 @@ function App() {
       data.attestationState !== "verified" ||
       data.attestationMethod !== "challenge-response-v1"
     )
-      throw new Error("Backend не подтвердил challenge-response attestation.");
+      throw new Error("Сервер не подтвердил аттестацию по схеме «запрос — ответ».");
     if (
       data.hardwareProvenance !== "not-remotely-verified" ||
       data.authorizationElevation !== false ||
       data.phishingResistantElevation !== false
     ) {
       throw new Error(
-        "Backend изменил security semantics device attestation; fail-closed.",
+        "Сервер изменил свойства безопасности аттестации устройства; доступ заблокирован.",
       );
     }
     setDeviceTrustStatus(
       `attested · до ${new Date(data.attestationExpiresAt).toLocaleString()}`,
     );
     log(
-      `Challenge-response attestation подтверждён для ${key.deviceId}; freshness=${data.attestationExpiresAt}. Проверено владение зарегистрированным hardware key; vendor TPM/Secure Enclave provenance не заявляется.`,
+      `Аттестация по схеме «запрос — ответ» подтверждена для ${key.deviceId}; freshness=${data.attestationExpiresAt}. Проверено владение зарегистрированным аппаратным ключом; vendor TPM/Secure Enclave provenance не заявляется.`,
     );
     return persistTrustedAccess(session, data.accessToken);
   }
@@ -2180,7 +2180,7 @@ function App() {
         `Сертификат TPM AK подтверждён · CA=${result.rootId} · срок действия до ${result.expiresAt} · Guard/PCR не проверены`,
       );
       log(
-        `Backend подтвердил TPM Certify: устройство=${deviceKey.deviceId}; CA=${result.rootId}; Guard/PCR не проверены`,
+        `Сервер подтвердил TPM Certify: устройство=${deviceKey.deviceId}; CA=${result.rootId}; Guard/PCR не проверены`,
       );
       await loadManagedDevices();
     } catch (error) {
@@ -2333,7 +2333,7 @@ function App() {
       !begin.challenge ||
       !begin.signingPayload
     )
-      throw new Error("Backend вернул неполный device registration challenge.");
+      throw new Error("Сервер вернул неполный запрос регистрации устройства.");
     const signature = await callTauri<DeviceSignatureResult>(
       "sign_device_payload",
       {
@@ -2373,7 +2373,7 @@ function App() {
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken)
       throw new Error(
-        "Backend не вернул access token после device registration.",
+        "Сервер не вернул токен доступа после device registration.",
       );
     const bound = await callTauri<DeviceKeyInfo>("bind_device_key", {
       backendUrl: settings.backendUrl,
@@ -2401,7 +2401,7 @@ function App() {
     if (beginResponse.status === 404) {
       setDeviceTrustStatus("требуется recovery");
       throw new Error(
-        "Server device record отсутствует или отозван. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить identity через phishing-resistant recovery без потери rollback-возможности.",
+        "Запись устройства на сервере отсутствует или отозвана. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить identity через phishing-resistant recovery без потери rollback-возможности.",
       );
     }
     if (!beginResponse.ok)
@@ -2411,7 +2411,7 @@ function App() {
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
     if (!begin.challengeId || !begin.challenge || !begin.signingPayload)
-      throw new Error("Backend вернул неполный device verification challenge.");
+      throw new Error("Сервер вернул неполный запрос проверки устройства.");
     const signature = await callTauri<DeviceSignatureResult>(
       "sign_device_payload",
       {
@@ -2422,7 +2422,7 @@ function App() {
     );
     if (signature.fingerprint !== key.fingerprint)
       throw new Error(
-        "Device key fingerprint изменился во время proof-of-possession.",
+        "Отпечаток ключа устройства изменился во время подтверждения владения ключом.",
       );
     const completeResponse = await postDeviceJson(
       `/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/verify/complete`,
@@ -2442,11 +2442,11 @@ function App() {
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken)
       throw new Error(
-        "Backend не вернул access token после device verification.",
+        "Сервер не вернул токен доступа после device verification.",
       );
     setDeviceTrustStatus("verified");
     log(
-      `Proof-of-possession подтверждён устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`,
+      `Владение ключом подтверждено устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`,
     );
     const trusted = await persistTrustedAccess(session, data.accessToken);
     return attestDesktopDeviceKey(trusted, key);
@@ -2475,7 +2475,7 @@ function App() {
     });
     if (key.privateKeyExposedToFrontend)
       throw new Error(
-        "Device key backend сообщил private key exposed to frontend; fail-closed.",
+        "Подсистема ключей устройства сообщила об утечке закрытого ключа в интерфейс; доступ заблокирован.",
       );
     setDeviceKey(key);
     return verifyDesktopDeviceKey(normalized, key);
@@ -2628,7 +2628,7 @@ function App() {
         payload.data.session?.userId ||
         accessTokenSubject(payload.data.tokens.accessToken),
     };
-    if (!next.userId) throw new Error("Backend не вернул canonical user id.");
+    if (!next.userId) throw new Error("Сервер не вернул канонический идентификатор пользователя.");
     await callTauri<void>("store_auth_session", {
       backendUrl: settings.backendUrl,
       session: next,
@@ -2689,7 +2689,7 @@ function App() {
       linked?.provider !== linkedProvider0293 ||
       !linked?.id
     )
-      throw new Error("Backend не подтвердил привязку identity.");
+      throw new Error("Сервер не подтвердил привязку идентификатора.");
     setLinkedPassword0293("");
     setLinkFeedback0293(
       `Привязана identity ${linked.provider} / ${linked.issuer} / ${linked.subject}.`,
@@ -2716,7 +2716,7 @@ function App() {
       });
       if (!key?.deviceId || key.deviceId !== tokenDeviceId) {
         throw new Error(
-          "сессия привязана к trusted device, но соответствующий device key отсутствует в OS secure storage",
+          "сессия привязана к trusted device, но соответствующий device key отсутствует в защищённом хранилище ОС",
         );
       }
       const proof = await callTauri<DeviceSignatureResult>(
@@ -2769,7 +2769,7 @@ function App() {
       throw new Error("нет сохранённой сессии: выполните вход заново");
     await rotateDesktopSession(authSession);
     log(
-      "Сессия обновлена: refresh token ротирован сервером и атомарно заменён в системном хранилище учётных данных.",
+      "Сессия обновлена: токен обновления заменён сервером и атомарно заменён в системном хранилище учётных данных.",
     );
   }
 
@@ -2793,7 +2793,7 @@ function App() {
       deviceKey ? "ключ сохранён локально" : "не инициализирован",
     );
     log(
-      "Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Device key сохранён в OS secure storage для следующего входа.",
+      "Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Ключ устройства сохранён в защищённом хранилище ОС для следующего входа.",
     );
   }
 
@@ -2828,12 +2828,12 @@ function App() {
       });
       setBackendStatus("ready");
       log(
-        "Backend API v1 готов: health, readiness, status, требования runtime и политика диагностики отвечают.",
+        "Серверный API v1 готов: health, readiness, status, требования runtime и политика диагностики отвечают.",
       );
     } catch (error) {
       setBackendStatus("failed");
       setStage("failed");
-      log(`Backend API недоступен: ${String(error)}`);
+      log(`Серверный API недоступен: ${String(error)}`);
     }
   }
 
@@ -2885,7 +2885,7 @@ function App() {
           userId: stored.userId || accessTokenSubject(stored.accessToken),
         });
         log(
-          "Access token истёк; сессия восстановлена через ротацию refresh token из системного хранилища учётных данных.",
+          "Срок действия токена доступа истёк; сессия восстановлена через ротацию токена обновления из системного хранилища учётных данных.",
         );
         if (rotated.userId) {
           try {
@@ -3001,10 +3001,10 @@ function App() {
         normalizedSettings({ ...current, offlineEnabled: true }),
       );
       setOfflineStatus0358(
-        `Offline готов: ${result.projectId}/${result.profileId} · ${result.version}. Доступ к защищённому серверу не предоставляется.`,
+        `Автономный режим готов: ${result.projectId}/${result.profileId} · ${result.version}. Доступ к защищённому серверу не предоставляется.`,
       );
       log(
-        `Offline: файлы установленной сборки ${result.version} проверены native SHA-256. Это не Minecraft entitlement.`,
+        `Автономный режим: файлы установленной сборки ${result.version} проверены по локальным хешам SHA-256. Это не подтверждение права доступа к Minecraft.`,
       );
     } catch (error) {
       const action = offlineRecovery0358(error);
@@ -3012,13 +3012,13 @@ function App() {
       setSettings((current) =>
         normalizedSettings({ ...current, offlineEnabled: false }),
       );
-      setOfflineStatus0358(`Offline недоступен: ${String(error)}. ${action}`);
+      setOfflineStatus0358(`Автономный режим недоступен: ${String(error)}. ${action}`);
       log(`Offline отклонён: ${String(error)}. ${action}`);
     }
   }
 
   function currentLaunchPreferences() {
-    if (!manifest) throw new Error("Manifest не загружен");
+    if (!manifest) throw new Error("Манифест не загружен");
     if (!["2.0", "3.0"].includes(manifest.schemaVersion))
       throw new Error("Для настроек запуска Desktop требуется манифест v2/v3");
     const effective = offlineLaunchSettings0358(
@@ -3079,7 +3079,7 @@ function App() {
       setLaunchResult(null);
       if (!settings.offlineEnabled) {
         await loadProfileServers(result.projectId, result.profileId).catch(
-          (error) => log(`Server browser недоступен: ${String(error)}`),
+          (error) => log(`Браузер серверов недоступен: ${String(error)}`),
         );
       }
       const effectiveRoot = settings.gameDirectory.includes(result.projectId)
@@ -3317,7 +3317,7 @@ function App() {
           );
           if (manifest.runtime.launch?.offlineMode) {
             await cacheSignedManifest(manifest).catch((error) =>
-              log(`Offline кеш после resume не обновлён: ${String(error)}`),
+              log(`Автономный кеш после возобновления не обновлён: ${String(error)}`),
             );
           }
         }
@@ -3465,7 +3465,7 @@ function App() {
       });
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch((error) =>
-          log(`Offline кеш после установки не обновлён: ${String(error)}`),
+          log(`Автономный кеш после установки не обновлён: ${String(error)}`),
         );
       }
       log(
@@ -3564,7 +3564,7 @@ function App() {
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch((error) =>
           log(
-            `Offline кеш выбранных компонентов не обновлён: ${String(error)}`,
+            `Автономный кеш выбранных компонентов не обновлён: ${String(error)}`,
           ),
         );
       }
@@ -3630,7 +3630,7 @@ function App() {
       }
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch((error) =>
-          log(`Offline кеш после repair не обновлён: ${String(error)}`),
+          log(`Автономный кеш после восстановления не обновлён: ${String(error)}`),
         );
       }
       log(
@@ -3698,12 +3698,12 @@ function App() {
           }),
         );
         log(
-          `Rollback: восстановлен подписанный релиз ${restored.manifest.version} и его выбор компонентов.`,
+          `Откат: восстановлен подписанный релиз ${restored.manifest.version} и его выбор компонентов.`,
         );
       } else {
         setManifest(null);
         setFiles([]);
-        log("Rollback: активный релиз отсутствует.");
+        log("Откат: активный релиз отсутствует.");
       }
       setDownload(null);
     } catch (error) {
@@ -3795,7 +3795,7 @@ function App() {
       !key.hardwareBound
     ) {
       throw new Error(
-        "Guard Attestation требует локальный hardware-bound P-256 device key текущего trusted device.",
+        "Аттестация Guard требует аппаратно защищённый ключ P-256 текущего доверенного устройства.",
       );
     }
 
@@ -3820,7 +3820,7 @@ function App() {
       begin.launcherVersion !== DESKTOP_VERSION
     ) {
       throw new Error(
-        "Backend вернул неполный или несовместимый Guard Attestation challenge.",
+        "Сервер вернул неполный или несовместимый запрос аттестации Guard.",
       );
     }
 
@@ -3848,7 +3848,7 @@ function App() {
       !submission.hardwareBound
     ) {
       throw new Error(
-        "Native Guard Attestation signer вернул неожиданную release/device identity.",
+        "Модуль подписи аттестации Guard вернул неожиданные идентификаторы релиза или устройства.",
       );
     }
 
@@ -3872,9 +3872,9 @@ function App() {
       );
     const data = completePayload?.data ?? completePayload;
     if (!data?.verified || !data?.launchTicket || !data?.oneTime)
-      throw new Error("Backend не выдал одноразовый Guard launch ticket.");
+      throw new Error("Сервер не выдал одноразовое разрешение на запуск Guard.");
     log(
-      `Guard attestation подтверждена Backend: evidence=${String(data.evidenceSha256 || "").slice(0, 16)}…, ticket до ${data.expiresAt}.`,
+      `Аттестация Guard подтверждена сервером: evidence=${String(data.evidenceSha256 || "").slice(0, 16)}…, ticket до ${data.expiresAt}.`,
     );
     return data.launchTicket;
   }
@@ -3904,7 +3904,7 @@ function App() {
       !key.hardwareBound
     ) {
       throw new Error(
-        "Guard Attestation v2 требует hardware-bound P-256 device key текущего trusted device.",
+        "Аттестация Guard v2 требует аппаратно защищённый ключ P-256 текущего доверенного устройства.",
       );
     }
     const beginResponse = await postDeviceJson(
@@ -3929,7 +3929,7 @@ function App() {
       begin.attestationSchema !== "guard/windows-guard-attestation/v2"
     ) {
       throw new Error(
-        "Backend вернул неполный или несовместимый Guard Attestation v2 challenge.",
+        "Сервер вернул неполный или несовместимый запрос аттестации Guard v2.",
       );
     }
     const submission = await callTauri<GuardAttestationSubmission>(
@@ -3957,7 +3957,7 @@ function App() {
       !submission.hardwareBound
     ) {
       throw new Error(
-        "Native Guard Attestation v2 signer вернул неожиданную release/device identity.",
+        "Модуль подписи аттестации Guard v2 вернул неожиданные идентификаторы релиза или устройства.",
       );
     }
     const completeResponse = await postDeviceJson(
@@ -3988,11 +3988,11 @@ function App() {
       data.runtimeAssurance !== "device-signed-user-mode-observation"
     ) {
       throw new Error(
-        "Backend не подтвердил обязательную Guard Runtime Trust allowlist; запуск заблокирован.",
+        "Сервер не подтвердил обязательный список разрешённых сред выполнения Guard; запуск заблокирован.",
       );
     }
     log(
-      `Continuous Guard Attestation v2: прошла серверная runtime allowlist (user-mode evidence), hash=${String(data.continuousEvidenceSha256 || "").slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`,
+      `Непрерывная аттестация Guard v2: прошла серверная проверка списка разрешённых сред выполнения (user-mode evidence), hash=${String(data.continuousEvidenceSha256 || "").slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`,
     );
     return {
       ticket: String(data.continuousGuardTicket),
@@ -4026,7 +4026,7 @@ function App() {
       );
     const data = payload?.data ?? payload;
     if (!data.accessToken || !data.profile?.id || !data.profile?.name)
-      throw new Error("Backend вернул неполную Minecraft session.");
+      throw new Error("Сервер вернул неполные данные сеанса Minecraft.");
     return {
       username: data.profile.name,
       uuid: data.profile.id,
@@ -4308,7 +4308,7 @@ function App() {
             processId: result.id,
           }).catch(() => undefined);
           throw new Error(
-            `Windows runtime остановлен: Continuous Guard Attestation v2 не подтверждена: ${String(attestationError)}`,
+            `Windows runtime остановлен: Непрерывная аттестация Guard v2 не подтверждена: ${String(attestationError)}`,
           );
         }
       }
@@ -4455,7 +4455,7 @@ function App() {
       if (!response.ok) throw new Error(`Ошибка HTTP Backend: ${response.status}`);
       if (!/^[a-f0-9]{32}$/.test(String(payload.id || "")))
         throw new Error(
-          "Backend не подтвердил идентификатор отчёта. Проверьте поддержку перед повтором.",
+          "Сервер не подтвердил идентификатор отчёта. Проверьте поддержку перед повтором.",
         );
       setDiagnosticStatus03510(`Отчёт принят поддержкой. ID: ${payload.id}`);
       setDiagnosticConsent03510(false);
@@ -5393,7 +5393,7 @@ function App() {
                   Linux: необходимы /dev/tpmrm0, tpm2-tools 5.x и AK на TPM
                   persistent handle. Windows: пустая auth-сессия PCP-ключа.
                   Несовместимые TPM/AK завершаются отказом без аппаратного
-                  assurance. AK root policy задаётся оператором на Backend.
+                  assurance. AK root policy задаётся оператором на сервере.
                 </small>
               </section>
             )}
@@ -5842,7 +5842,7 @@ function FirstRunPanel({
     <section className="panel">
       <h3>Первый запуск</h3>
       <p>
-        Launcher {DESKTOP_VERSION} требует явной привязки Desktop к Backend API
+        Launcher {DESKTOP_VERSION} требует явной привязки Desktop к серверному API
         и реальному проекту; запуск проходит через рабочий движок запуска и
         режим восстановления.
       </p>
@@ -5864,7 +5864,7 @@ function FirstRunPanel({
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
               patchSettings("projectId", event.target.value)
             }
-            placeholder="выберите из Backend API"
+            placeholder="выберите на сервере"
           />
         </label>
         <label>
@@ -5874,7 +5874,7 @@ function FirstRunPanel({
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
               patchSettings("profileId", event.target.value)
             }
-            placeholder="выберите из Backend API"
+            placeholder="выберите на сервере"
           />
         </label>
         <label>
@@ -5973,7 +5973,7 @@ function Overview({
         <article className="card">
           <h3>Контракт</h3>
           <strong>{readinessContract?.status ?? "не загружен"}</strong>
-          <p>Модель готовности Desktop из Backend API.</p>
+          <p>Модель готовности Desktop с серверного API.</p>
         </article>
         <article className="card">
           <h3>Диагностика</h3>
@@ -6264,7 +6264,7 @@ function AuthPanel({
           {macOSTrust0316.appAttest}; происхождение удалённого ключа —{" "}
           {macOSTrust0316.remoteDeviceKeyProvenance}; строгий профиль —{" "}
           {macOSTrust0316.strictProfile}. При утрате ключа используйте
-          восстановление через passkey; оно отзывает прежнюю identity и требует
+          восстановление через ключ доступа; оно отзывает прежнюю identity и требует
           повторной аттестации нового ключа. Локальные сигналы не доказывают
           серверу происхождение ключа.
         </p>
@@ -6444,7 +6444,7 @@ function ProjectPanel({
   return (
     <section className="panel">
       <h3>Проекты</h3>
-      <p>Список проектов загружается из Backend API.</p>
+      <p>Список проектов загружается с серверного API.</p>
       <div className="toolbar inline">
         <button onClick={loadProjects}>Загрузить проекты</button>
         <button onClick={() => loadProfiles(selectedProject)}>

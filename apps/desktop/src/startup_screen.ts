@@ -7,7 +7,7 @@ export type StartupStage0427 =
 
 const descriptions: Record<StartupStage0427, [string, string]> = {
   idle: ["Подготовка не запущена", "Preparation has not started"],
-  connecting: ["Проверка соединения с Backend", "Checking backend connection"],
+  connecting: ["Проверка соединения с сервером", "Checking backend connection"],
   session: ["Проверка сессии Launcher", "Validating Launcher session"],
   project: ["Выбор проекта", "Selecting project"],
   profile: ["Выбор игрового профиля", "Selecting game profile"],

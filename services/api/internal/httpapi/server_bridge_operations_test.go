@@ -13,7 +13,7 @@ func TestServerBridgeOperations0219ProjectIsolation(t *testing.T) {
 
 	created := request0211(t, h, http.MethodPost, "/api/v1/admin/projects", owner, `{"id":"bridge-other-0219","name":"Bridge Other","defaultChannel":"stable"}`)
 	if created.Code != http.StatusCreated {
-		t.Fatalf("create project: %d %s", created.Code, created.Body.String())
+		t.Fatalf("Создание проекта: %d %s", created.Code, created.Body.String())
 	}
 	a := newTestBridgeNodeIdentity0142(t)
 	b := newTestBridgeNodeIdentity0142(t)

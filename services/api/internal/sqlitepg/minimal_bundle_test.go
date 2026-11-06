@@ -22,10 +22,10 @@ func TestMinimalBundle077Validation(t *testing.T) {
 		t.Fatal("empty backup accepted")
 	}
 	if _, err := ImportMinimalBundle0377(ctx, dir, ""); err == nil {
-		t.Fatal("empty DSN accepted")
+		t.Fatal("Принята пустая строка подключения DSN")
 	}
 	if _, err := ExportMinimalBundle0377(ctx, "", filepath.Join(dir, "other")); err == nil {
-		t.Fatal("empty DSN accepted")
+		t.Fatal("Принята пустая строка подключения DSN")
 	}
 }
 

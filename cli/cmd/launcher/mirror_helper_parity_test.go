@@ -131,7 +131,7 @@ func TestMirrorHelper0274ModsTransactionAndRecovery(t *testing.T) {
 	content, _ = json.Marshal(artifact)
 	os.WriteFile(manifest, content, 0600)
 	if err := handleRuntimeMirror0274([]string{"install-mods", "--client-dir", root, "--manifest", manifest}); err == nil {
-		t.Fatal("unsafe path accepted")
+		t.Fatal("Небезопасный путь ошибочно принят")
 	}
 }
 func TestMirrorHelper0274DedupeWithoutClasspathModification(t *testing.T) {

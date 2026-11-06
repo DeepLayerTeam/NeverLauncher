@@ -10,6 +10,6 @@ export function PublishReadiness0385({readiness,refusal=[],refresh,disabled=fals
    <strong>{blocker.reasonCode}</strong> · <code>{blocker.resource}</code>
    <p>{blocker.message}</p><p><strong>Действие:</strong> {blocker.action}</p>
   </li>)}</ol>}
-  <button type="button" disabled={disabled} onClick={refresh}>Повторно проверить на Backend</button>
+  <button type="button" disabled={disabled} onClick={refresh}>Повторно проверить на сервере</button>
  </section>;
 }

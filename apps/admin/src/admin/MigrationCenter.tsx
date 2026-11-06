@@ -1600,7 +1600,7 @@ export function MigrationCenter0331({
               }
               onClick={() => void migrationCredentials(false)}
             >
-              Проверить импорт паролей (dry-run)
+              Проверить импорт паролей (пробная проверка)
             </button>
           </div>
           {credentialPreview && (
@@ -2371,7 +2371,7 @@ export function MigrationCenter0331({
                     }
                     onClick={() => void rollbackAction03312("commit", route)}
                   >
-                    Commit: вернуть прежний Never channel head (MFA)
+                    Commit: вернуть прежний Never channel head (многофакторная проверка)
                   </button>
                   {rollbackPlan03312 &&
                     rollbackPlan03312.profileId === route.profileId &&
@@ -2470,7 +2470,7 @@ export function MigrationCenter0331({
                 />
               </label>
               <label className="field">
-                <span>Подтвердите точный run ID (MFA)</span>
+                <span>Подтвердите точный run ID (многофакторная проверка)</span>
                 <input
                   value={reportConfirm03313}
                   onChange={(e) => setReportConfirm03313(e.target.value)}

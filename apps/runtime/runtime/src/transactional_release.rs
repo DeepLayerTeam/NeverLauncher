@@ -1019,7 +1019,7 @@ mod tests {
                 "mods/sodium.jar"=>b"SODIUM".as_slice(),
                 "mods/indium.jar"=>b"INDIUM".as_slice(),
                 "mods/shader.jar"=>b"SHADER".as_slice(),
-                _=>panic!("unexpected test path"),
+                _=>panic!("неожиданный путь в тесте"),
             };
             f.sha256=hex::encode(Sha256::digest(bytes));
             f.size=bytes.len() as u64;

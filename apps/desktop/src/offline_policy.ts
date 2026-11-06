@@ -17,9 +17,9 @@ export function offlineSelection0358(identity: string, settings: LocalLaunchSett
 export function offlineRecovery0358(error: unknown): string {
   const message = String(error);
   if (/bootstrap|first.run|owner.bundle|owner-signed|подписанн.*bundle/i.test(message))
-    return 'Установите выданный владельцем подписанный bundle и завершите первый запуск онлайн.';
+    return 'Установите выданный владельцем подписанный пакет и завершите первый запуск онлайн.';
   if (/signature|ed25519|trust.policy|invalid.signer|подпись|ключ.*подписи/i.test(message))
-    return 'Получите у владельца актуальный подписанный bundle; не отключайте проверку подписи.';
+    return 'Получите у владельца актуальный подписанный пакет; не отключайте проверку подписи.';
   if (/offline.*(disabled|not.allow|denied.*policy)|offline.cache.disabled/i.test(message))
     return 'Этот профиль запрещает offline. Выберите разрешённый профиль или играйте онлайн.';
   if (/profile|channel|pinned.key|scope|release.differs|preset|подписанн.*профил/i.test(message))

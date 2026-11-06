@@ -202,7 +202,7 @@ export function AuthProviderWizard02910({
       </div>
       <p className="muted">
         Настройка SQL, HTTP, OIDC, Microsoft и утверждённых Java SPI-провайдеров. Секреты и
-        строки подключения задаются переменными окружения Backend; они не
+        строки подключения задаются переменными окружения сервера; они не
         сохраняются в истории и не отображаются в Admin.
       </p>
       <h3>1. Конфигурация</h3>
@@ -232,7 +232,7 @@ export function AuthProviderWizard02910({
       </div>
       <p className="muted">
         Для Java укажите extensionId глобального подписанного расширения с
-        разрешением auth:provider. Для остальных провайдеров задайте allowlist,
+        разрешением auth:provider. Для остальных провайдеров задайте список разрешённых значений,
         issuer, redirect URI и имена переменных с секретами. Нельзя сохранять
         DSN, пароли, токены или приватные ключи в JSON.
       </p>
@@ -278,7 +278,7 @@ export function AuthProviderWizard02910({
             })
           }
         >
-          2. Test connection и mapping preview
+          2. Проверка подключения и предварительный просмотр сопоставления
         </button>
         <button
           disabled={busy || !test?.healthy || testedConfig !== rawConfig}
@@ -288,12 +288,12 @@ export function AuthProviderWizard02910({
               await load();
               setStep("activate");
               setNotice(
-                `Проверенный черновик редакции №${String(result.revision)} сохранён. Теперь его можно активировать после MFA.`,
+                `Проверенный черновик редакции №${String(result.revision)} сохранён. Теперь его можно активировать после многофакторной проверки.`,
               );
             })
           }
         >
-          Сохранить проверенный draft (MFA)
+          Сохранить проверенный черновик (многофакторная проверка)
         </button>
       </div>
       {test && step !== "config" && (
@@ -344,7 +344,7 @@ export function AuthProviderWizard02910({
       )}
       <h3>3. Поэтапное внедрение и история ревизий</h3>
       <p className="muted">
-        Активация и откат требуют свежей phishing-resistant MFA и
+        Активация и откат требуют повторной многофакторной аутентификации, устойчивой к фишингу и
         compare-and-swap версии. Новый коннектор проверяется непосредственно
         перед применением. При ошибке текущая конфигурация не изменяется.
       </p>

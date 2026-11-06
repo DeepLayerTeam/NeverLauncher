@@ -83,7 +83,7 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 		t.Fatalf("revision=%d", next.Revision)
 	}
 	if _, e = r.SaveProfile(ctx, first, "owner"); !errors.Is(e, ErrConflict) {
-		t.Fatalf("stale revision accepted: %v", e)
+		t.Fatalf("Принята устаревшая ревизия: %v", e)
 	}
 	history, e := r.ListProfileRevisions(ctx, "project", "vanilla")
 	if e != nil || len(history) != 2 {

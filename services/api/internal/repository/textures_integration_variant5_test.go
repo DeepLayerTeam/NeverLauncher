@@ -33,7 +33,7 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	}
 	schema := fmt.Sprintf("textures_0255_%d", time.Now().UnixNano())
 	if !regexp.MustCompile(`^textures_0255_[0-9]+$`).MatchString(schema) {
-		t.Fatal("unsafe schema")
+		t.Fatal("Небезопасная схема")
 	}
 	if _, err = db.ExecContext(ctx, `CREATE SCHEMA `+schema); err != nil {
 		t.Fatal(err)

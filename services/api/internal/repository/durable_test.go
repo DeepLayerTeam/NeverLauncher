@@ -54,7 +54,7 @@ func TestDurableJobIdempotencyRejectsDifferentPayload0213(t *testing.T) {
 	}
 	base.Payload = two
 	if _, _, err := r.EnqueueDurableJob(ctx, base, time.Hour); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected idempotency conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт идемпотентности, получено %v", err)
 	}
 }
 

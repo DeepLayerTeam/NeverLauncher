@@ -34,7 +34,7 @@ func TestSQLiteHTTPDevicesJobsExtensionsRestart0373(t *testing.T) {
 	job := model.DurableJob{Kind: "package-publish", ActorType: "user", ActorID: "operator", Action: "release:publish", ProjectID: "project-1", ResourceType: "package", ResourceID: "package-1", IdempotencyKey: "retry-key", Payload: payload}
 	stored, created, err := db.EnqueueDurableJob(ctx, job, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("enqueue: created=%v err=%v", created, err)
+		t.Fatalf("Добавление в очередь: создано=%v, ошибка=%v", created, err)
 	}
 	if _, err := db.SaveExtensionTrustPolicy(ctx, model.ExtensionTrustPolicy{Mode: model.ExtensionTrustModeAudit}); err != nil {
 		t.Fatal(err)

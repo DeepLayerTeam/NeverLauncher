@@ -15,7 +15,7 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     let executable = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
     let supervisor = GuardSupervisor::with_executable(executable);
 
-    let status = supervisor.ensure_started().await.expect("Guard must start");
+    let status = supervisor.ensure_started().await.expect("Guard должен запуститься");
     assert_eq!(status.state, "ready");
     assert!(status.authenticated);
     assert_eq!(status.parent_pid, std::process::id());
@@ -41,8 +41,8 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     assert!(!status.package_manifest_verified); // Интеграционный исполняемый файл намеренно пропускает проверку пакета релиза.
     assert!(status.pid > 0);
 
-    supervisor.ping().await.expect("authenticated ping must pass");
-    let status_again = supervisor.status().await.expect("status must pass");
+    supervisor.ping().await.expect("аутентифицированный запрос доступности должен пройти");
+    let status_again = supervisor.status().await.expect("запрос состояния должен пройти");
     assert_eq!(status_again.pid, status.pid);
     assert!(status_again.hardening_enforced);
     assert!(status_again.secure_pipe_acl);
@@ -51,7 +51,7 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     let process_policy = supervisor
         .process_policy()
         .await
-        .expect("Windows process policy must be enforced and authenticated");
+        .expect("политика процессов Windows должна применяться и подтверждаться");
     assert_eq!(process_policy.schema, GUARD_WINDOWS_PROCESS_POLICY_SCHEMA);
     assert_eq!(
         process_policy.policy_version,
@@ -69,7 +69,7 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     let windows = process_policy
         .windows
         .as_ref()
-        .expect("Windows Protection Core details must be authenticated");
+        .expect("сведения ядра защиты Windows должны быть подтверждены");
     assert_eq!(windows.core_version, GUARD_WINDOWS_PROTECTION_CORE_VERSION);
     assert_eq!(
         windows.capability_model_version,
@@ -85,7 +85,7 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     let evidence = supervisor
         .integrity_evidence()
         .await
-        .expect("Windows integrity evidence must be collected and authenticated");
+        .expect("данные о целостности Windows должны быть собраны и подтверждены");
     assert_eq!(evidence.schema, GUARD_INTEGRITY_EVIDENCE_SCHEMA);
     assert_eq!(
         evidence.evidence_version,
@@ -114,7 +114,7 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     let attestation = supervisor
         .remote_attestation(challenge_id, challenge)
         .await
-        .expect("challenge-bound Guard Attestation must be produced and authenticated");
+        .expect("аттестация Guard, привязанная к запросу, должна создаваться и проверяться");
     assert_eq!(attestation.schema, GUARD_REMOTE_ATTESTATION_SCHEMA);
     assert_eq!(
         attestation.attestation_version,
@@ -128,8 +128,8 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     assert_eq!(attestation.attestation_sha256.len(), 64);
     assert_eq!(attestation.session_proof.len(), 64);
 
-    supervisor.shutdown().await.expect("shutdown must pass");
-    supervisor.shutdown().await.expect("shutdown must be idempotent");
+    supervisor.shutdown().await.expect("завершение работы должно пройти успешно");
+    supervisor.shutdown().await.expect("завершение работы должно быть идемпотентным");
 }
 
 #[tokio::test]
@@ -140,13 +140,13 @@ async fn guard_compat_profile_enforces_its_runtime_capabilities() {
         WindowsProtectionProfile::Compat,
     );
 
-    let status = supervisor.ensure_started().await.expect("compat Guard must start");
+    let status = supervisor.ensure_started().await.expect("Guard в режиме совместимости должен запуститься");
     assert_eq!(status.windows_protection_profile, "compat");
     let policy = supervisor
         .process_policy()
         .await
-        .expect("compat policy must be authenticated");
-    let windows = policy.windows.as_ref().expect("compat Windows details");
+        .expect("политика совместимости должна быть подтверждена");
+    let windows = policy.windows.as_ref().expect("сведения о совместимости с Windows");
     assert_eq!(windows.profile, WindowsProtectionProfile::Compat);
     assert!(!windows.remote_attestation_eligible);
     assert!(windows.requirements_satisfied);
@@ -158,7 +158,7 @@ async fn guard_compat_profile_enforces_its_runtime_capabilities() {
         .remote_attestation("compat-not-eligible", "challenge")
         .await
         .is_err());
-    supervisor.shutdown().await.expect("compat shutdown must pass");
+    supervisor.shutdown().await.expect("завершение режима совместимости должно пройти успешно");
 }
 
 #[tokio::test]
@@ -169,13 +169,13 @@ async fn guard_audit_profile_measures_without_claiming_remote_trust() {
         WindowsProtectionProfile::Audit,
     );
 
-    let status = supervisor.ensure_started().await.expect("audit Guard must start");
+    let status = supervisor.ensure_started().await.expect("Guard в режиме аудита должен запуститься");
     assert_eq!(status.windows_protection_profile, "audit");
     let policy = supervisor
         .process_policy()
         .await
-        .expect("audit capability measurement must be authenticated");
-    let windows = policy.windows.as_ref().expect("audit Windows details");
+        .expect("измерение возможностей в режиме аудита должно быть подтверждено");
+    let windows = policy.windows.as_ref().expect("сведения аудита Windows");
     assert_eq!(windows.profile, WindowsProtectionProfile::Audit);
     assert!(!windows.remote_attestation_eligible);
     assert_eq!(windows.requirements.dynamic_code, 0);
@@ -188,5 +188,5 @@ async fn guard_audit_profile_measures_without_claiming_remote_trust() {
         .remote_attestation("audit-not-eligible", "challenge")
         .await
         .is_err());
-    supervisor.shutdown().await.expect("audit shutdown must pass");
+    supervisor.shutdown().await.expect("завершение режима аудита должно пройти успешно");
 }

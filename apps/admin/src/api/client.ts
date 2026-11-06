@@ -30,14 +30,14 @@ export async function requestJSON<T>(backendUrl: string, path: string, token?: s
     const message = cause instanceof Error ? cause.message : 'Сеть недоступна';
     if (mutation) throw new IndeterminateApiError(method,
       `Нет ответа Backend (${message}). Результат операции неизвестен: проверьте job/аудит или повторите запрос только с исходным idempotency key.`);
-    throw new ApiError(0, `Backend недоступен (${message}). Проверьте соединение и обновите страницу.`, 'backend-unavailable');
+    throw new ApiError(0, `Сервер недоступен (${message}). Проверьте соединение и обновите страницу.`, 'backend-unavailable');
   }
   let payload: unknown;
   try { payload = response.status === 204 ? null : await response.json(); }
   catch {
-    if (response.ok && mutation) throw new IndeterminateApiError(method, 'Backend вернул не-JSON ответ после изменения. Результат неизвестен: проверьте аудит/job перед повтором.');
-    if (response.ok) throw new ApiError(response.status, 'Backend вернул некорректный JSON. Повторите чтение.', 'invalid-backend-response');
-    throw new ApiError(response.status, `HTTP ${response.status}: Backend вернул ответ без структурированной ошибки`, 'invalid-backend-response');
+    if (response.ok && mutation) throw new IndeterminateApiError(method, 'Сервер вернул не-JSON ответ после изменения. Результат неизвестен: проверьте аудит/job перед повтором.');
+    if (response.ok) throw new ApiError(response.status, 'Сервер вернул некорректный JSON. Повторите чтение.', 'invalid-backend-response');
+    throw new ApiError(response.status, `HTTP ${response.status}: Сервер вернул ответ без структурированной ошибки`, 'invalid-backend-response');
   }
   if (!response.ok) {
     const failure = (payload && typeof payload === 'object' && 'error' in payload ? (payload as { error: ApiFailure }).error : undefined);

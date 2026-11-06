@@ -16,7 +16,7 @@ func TestTextureConfirmation0395ReadsFreshOfficialProfile(t *testing.T) {
 	var reads atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/minecraft/profile" || r.Header.Get("Authorization") != "Bearer owner-token" {
-			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+			t.Errorf("Неожиданный запрос %s %s", r.Method, r.URL.Path)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

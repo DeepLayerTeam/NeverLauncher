@@ -70,7 +70,7 @@ func TestFileOwnershipSigningCompatibility0224(t *testing.T) {
 	v1 := Manifest{SchemaVersion: "1.0", Files: []ManifestFile{{Path: "mods/legacy.jar", Required: true}}}
 	v1Raw, _ := json.Marshal(v1)
 	if strings.Contains(string(v1Raw), "fileRules") || strings.Contains(string(v1Raw), "ownership") {
-		t.Fatal("v1 payload changed")
+		t.Fatal("Содержимое v1 изменилось")
 	}
 	if !ed25519.Verify(private.Public().(ed25519.PublicKey), v1Raw, ed25519.Sign(private, v1Raw)) {
 		t.Fatal("v1 broke")

@@ -101,7 +101,7 @@ func TestSignedBundleInstallAndTamper(t *testing.T) {
 	out.Close()
 	z.Close()
 	if _, err := Verify(tampered, pub); err == nil {
-		t.Fatal("tampering accepted")
+		t.Fatal("Изменённые данные ошибочно приняты")
 	}
 }
 func TestManifestUnsignedEntryAndBadTrustRoot(t *testing.T) {

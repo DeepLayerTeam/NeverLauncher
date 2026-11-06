@@ -102,7 +102,7 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 		t.Fatalf("revision update %+v %v", changed, err)
 	}
 	if _, err := r.UpdateTextureSelection0251(ctx, p, "skin", 1, "slim", "public", true); !errors.Is(err, ErrTextureRevisionConflict0251) {
-		t.Fatalf("stale revision accepted: %v", err)
+		t.Fatalf("Принята устаревшая ревизия: %v", err)
 	}
 	// Запрещайте активацию плаща до явного разрешения, затем допускайте её.
 	if _, err := db.ExecContext(ctx, `INSERT INTO texture_assignments(realm,profile_uuid,user_id,kind,external_url,source,model)

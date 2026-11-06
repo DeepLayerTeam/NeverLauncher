@@ -2178,9 +2178,9 @@ mod tests {
     fn v3_go_publisher_fixture_verifies_in_native_runtime_0241() {
         // Тестовые данные подписаны издателем Go через crypto/ed25519 и encoding/json.
         let json = include_str!("../tests/fixtures/component_catalog_v3_go_signed.json");
-        let m: Manifest = serde_json::from_str(json).expect("Go v3 fixture decode");
+        let m: Manifest = serde_json::from_str(json).expect("декодировать тестовые данные Go версии 3");
         let pinned = "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
-        verify_manifest_signature(&m,pinned).expect("Go-signed v3 catalog must verify in Rust");
+        verify_manifest_signature(&m,pinned).expect("каталог v3, подписанный Go, должен успешно проверяться в Rust");
         let mut tampered=m.clone();
         tampered.component_catalog.as_mut().unwrap().components[0].files.pop();
         assert!(verify_manifest_signature(&tampered,pinned).is_err());
@@ -2192,9 +2192,9 @@ mod tests {
     #[test]
     fn go_signed_v3_catalog_v2_interop_0242() {
         let signed = include_str!("../tests/fixtures/catalog_manifest_v3_go_signed_0242.json");
-        let manifest: Manifest = serde_json::from_str(signed).expect("Go signed catalog fixture");
+        let manifest: Manifest = serde_json::from_str(signed).expect("получить тестовый каталог, подписанный Go");
         let key="24a9dcf8fac87bd5cb27d51d09f98188bc1c00b1223f5ccaa26a5736d9a53d78";
-        verify_manifest_signature(&manifest,key).expect("Go Ed25519 v3 / catalog v2 signature must verify in Rust");
+        verify_manifest_signature(&manifest,key).expect("подпись Ed25519 v3 каталога v2 из Go должна проверяться в Rust");
         let cat=manifest.component_catalog.as_ref().unwrap();
         assert_eq!(crate::component_catalog_0241::digest_v2(cat),cat.digest);
         let minimal=crate::component_catalog_0241::active_files(&manifest,Some("minimal")).unwrap();
@@ -2215,9 +2215,9 @@ mod tests {
     fn signed_go_v3_dependencies_and_conflicts_0243() {
         use crate::component_catalog_0241::{active_files,digest_v3,ComponentRequirement};
         let signed=include_str!("../tests/fixtures/catalog_dependency_0243_go_signed.json");
-        let manifest:Manifest=serde_json::from_str(signed).expect("Go-signed v3 resolver fixture must decode");
+        let manifest:Manifest=serde_json::from_str(signed).expect("тестовые данные разрешителя v3 из Go должны декодироваться");
         let key="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
-        verify_manifest_signature(&manifest,key).expect("Go Ed25519 with catalog 3.0 must verify in Rust");
+        verify_manifest_signature(&manifest,key).expect("подпись Go Ed25519 для каталога 3.0 должна проверяться в Rust");
         let cat=manifest.component_catalog.as_ref().unwrap();
         assert_eq!(digest_v3(cat),"53fe27537e66b25479003cdca208f3272091ef78b9278e16009e5097d4281988");
         let minimum=active_files(&manifest,Some("minimal")).unwrap();
@@ -2342,7 +2342,7 @@ mod tests {
         };
         let legacy = root.join(platform);
         let isolated = legacy.join(arch);
-        std::fs::create_dir_all(&isolated).expect("mkdir natives");
+        std::fs::create_dir_all(&isolated).expect("создать каталог нативных библиотек");
         assert_eq!(platform_natives_directory(&root).await, isolated);
         let _ = std::fs::remove_dir_all(&root);
     }

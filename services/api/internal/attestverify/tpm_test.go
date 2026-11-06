@@ -184,7 +184,7 @@ func TestRootRevocationAndPlatform0312(t *testing.T) {
 		t.Fatal("AK revocation not immediate")
 	}
 	if _, err := Verify(ev, b, store, time.Now()); err == nil {
-		t.Fatal("revoked AK accepted")
+		t.Fatal("Принят отозванный ключ аттестации AK")
 	}
 	config.RevokedAKFingerprints = nil
 	config.Roots[0].Status = "revoked"

@@ -22,7 +22,7 @@ func TestGoSignedConditionalCatalogFixture0244(t *testing.T) {
 	}
 	signature := m.Signature
 	if signature == nil {
-		t.Fatal("missing signature")
+		t.Fatal("Отсутствует подпись")
 	}
 	pub, e1 := hex.DecodeString(signature.PublicKey)
 	sig, e2 := hex.DecodeString(signature.Signature)

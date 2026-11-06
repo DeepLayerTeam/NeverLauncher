@@ -105,7 +105,7 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 		} else if errors.Is(e, ErrConflict) {
 			conflicts++
 		} else {
-			t.Fatalf("unexpected CAS error: %v", e)
+			t.Fatalf("Неожиданная ошибка проверки ревизии CAS: %v", e)
 		}
 	}
 	if success != 1 || conflicts != 1 {

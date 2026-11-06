@@ -51,7 +51,7 @@ func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 		}
 	}
 	if err := writeDeliveryManifest0151(dir, "0.15.1"); err != nil {
-		t.Fatalf("write delivery manifest: %v", err)
+		t.Fatalf("Ошибка записи манифеста поставки: %v", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, "0.15.1"); err != nil {
 		t.Fatalf("verify delivery manifest: %v", err)

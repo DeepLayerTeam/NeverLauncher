@@ -88,7 +88,7 @@ func TestVanilla0402MacOSRejectsCrossArchitectureAndCollisions(t *testing.T) {
 		t.Fatalf("cross-architecture alias created: %v", err)
 	}
 	if _, err := flattenLWJGLMacOSNatives(root, nil, "arm"); err == nil {
-		t.Fatal("unsupported architecture accepted")
+		t.Fatal("Принята неподдерживаемая архитектура")
 	}
 	nested := filepath.Join(root, "macos", "arm64", "org", "lwjgl")
 	if err := os.MkdirAll(nested, 0755); err != nil {

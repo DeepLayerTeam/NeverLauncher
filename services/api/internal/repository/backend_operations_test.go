@@ -18,7 +18,7 @@ func TestBackendRestartKey0289(t *testing.T) {
 	}
 	for _, key := range []string{"", "short", "0123456789abcd/xx", "0123456789abcdef?access_token=secret"} {
 		if _, err := BackendRestartKey0289("operator", key); err == nil {
-			t.Fatalf("unsafe key accepted: %q", key)
+			t.Fatalf("Принят небезопасный ключ: %q", key)
 		}
 	}
 }

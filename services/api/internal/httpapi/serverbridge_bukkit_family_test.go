@@ -36,7 +36,7 @@ func TestServerBridgeBukkitFamilyIntegrityAllowlist0144(t *testing.T) {
 		server := bridgeServerRecord{ID: kind + "-0144", Kind: kind}
 		decision := s.validateBridgePluginMeasurement0135(server, kind, "0.14.4", hashes[kind])
 		if !decision.Allowed || !decision.Required || decision.Reason != "bridge_integrity_verified" {
-			t.Fatalf("%s matching release hash rejected: %+v", kind, decision)
+			t.Fatalf("%s: отклонён совпадающий хеш релиза: %+v", kind, decision)
 		}
 		wrong := hashes["velocity"]
 		if kind == "velocity" {
@@ -44,7 +44,7 @@ func TestServerBridgeBukkitFamilyIntegrityAllowlist0144(t *testing.T) {
 		}
 		decision = s.validateBridgePluginMeasurement0135(server, kind, "0.14.4", wrong)
 		if decision.Allowed || decision.Reason != "bridge_integrity_hash_rejected" {
-			t.Fatalf("%s cross-platform artifact hash accepted: %+v", kind, decision)
+			t.Fatalf("%s: принят хеш артефакта для другой платформы: %+v", kind, decision)
 		}
 	}
 }
@@ -53,7 +53,7 @@ func TestBridgePluginsManifestIncludesEntireBukkitFamily0144(t *testing.T) {
 	manifest := bridgePluginsManifest940("0.14.4")
 	artifacts, ok := manifest["artifacts"].([]map[string]any)
 	if !ok {
-		t.Fatalf("unexpected artifacts type: %T", manifest["artifacts"])
+		t.Fatalf("Неожиданный тип артефактов: %T", manifest["artifacts"])
 	}
 	got := map[string]bool{}
 	for _, artifact := range artifacts {
@@ -63,7 +63,7 @@ func TestBridgePluginsManifestIncludesEntireBukkitFamily0144(t *testing.T) {
 	}
 	for _, id := range []string{"velocity", "bukkit", "spigot", "paper", "purpur", "folia"} {
 		if !got[id] {
-			t.Fatalf("bridge manifest missing %s artifact", id)
+			t.Fatalf("В манифесте моста отсутствует артефакт %s", id)
 		}
 	}
 }

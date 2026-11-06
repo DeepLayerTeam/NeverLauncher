@@ -20,13 +20,13 @@ func TestGA0361DirectSignerBlocksWithoutIndependentSignedEvidence(t *testing.T) 
 		t.Fatal(err)
 	}
 	if err := verifyGATargets0361(t.TempDir(), "0.36.1", strings.Repeat("a", 40), pub); err == nil {
-		t.Fatal("direct release signer bypassed mandatory GA")
+		t.Fatal("Прямая подпись релиза обошла обязательную приёмку GA")
 	}
 	if err := verifyGATargets0361(t.TempDir(), "0.37.0", strings.Repeat("a", 40), pub); err == nil {
-		t.Fatal("future version bypassed mandatory GA")
+		t.Fatal("Будущая версия обошла обязательную приёмку GA")
 	}
 	if !gaTargetsRequired0361("1.0.0") || gaTargetsRequired0361("0.36.0") {
-		t.Fatal("GA threshold violates historical compatibility")
+		t.Fatal("Порог общей приёмки нарушает обратную совместимость")
 	}
 }
 
@@ -125,16 +125,16 @@ func TestGA0361AuthenticatesSixRealArtifactBytesAndSignedTraces(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyGATargets0361(bundle, version, commit, releasePub); err != nil {
-		t.Fatalf("valid signed six-target exact-byte verification rejected: %v", err)
+		t.Fatalf("Отклонена корректная проверка подписанных байтов для шести платформ: %v", err)
 	}
 	file := filepath.Join(bundle, "launcher-desktop-windows-x64.exe")
 	if err := os.WriteFile(file, []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifyGATargets0361(bundle, version, commit, releasePub); err == nil {
-		t.Fatal("tampered executable passed GA")
+		t.Fatal("Изменённый исполняемый файл прошёл приёмку GA")
 	}
 	if err := verifyGATargets0361(bundle, "0.36.2", commit, releasePub); err == nil {
-		t.Fatal("wrong version accepted")
+		t.Fatal("Принята неверная версия")
 	}
 }

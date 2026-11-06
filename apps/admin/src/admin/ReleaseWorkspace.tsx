@@ -322,7 +322,7 @@ export function ReleaseWorkspace({
     const updated = await perform(
       async () =>
         draft ? api.save({ ...draft, ...fields }) : api.create(fields),
-      "Черновик сохранён на Backend.",
+      "Черновик сохранён на сервере.",
     );
     if (updated) {
       setDraft(updated);
@@ -464,7 +464,7 @@ export function ReleaseWorkspace({
           [];
         throw new ApiError(
           409,
-          "Validate завершился отказом. Исправьте перечисленные ошибки.",
+          "Проверка завершилась ошибкой. Исправьте перечисленные ошибки.",
           "file-validation-failed",
           blockers,
         );
@@ -476,7 +476,7 @@ export function ReleaseWorkspace({
     if (!form.packageId) return;
     await perform(async () => {
       if (file.size > 1024 * 1024)
-        throw new Error("Evidence file превышает 1 МБ.");
+        throw new Error("Размер файла подтверждающих данных превышает 1 МБ.");
       const data: unknown = JSON.parse(await file.text());
       const result = await api.evidence(form.packageId, data);
       await loadChecks(form.packageId);
@@ -513,7 +513,7 @@ export function ReleaseWorkspace({
         preview: result.preview,
       });
       return result.preview;
-    }, "Backend проверил полномочия и эффект. Публикация ещё не выполнена.");
+    }, "Сервер проверил полномочия и эффект. Публикация ещё не выполнена.");
     if (kind === "package-publish") setPreview(next || null);
     else setRollbackPreview(next || null);
   }
@@ -554,7 +554,7 @@ export function ReleaseWorkspace({
       // просмотр. Не перезаписывайте ключ восстановления второй операцией.
       if (readOwnerPending(localStorage, recoveryKey, projectId))
         throw Error(
-          "В другой вкладке есть незавершённая операция. Обновите страницу и восстановите исходный job.",
+          "В другой вкладке есть незавершённая операция. Обновите страницу и восстановите исходное задание.",
         );
       // До сетевого ввода-вывода. Потеря подтверждения ACK не должна создавать вторую операцию.
       saveOwnerPending(localStorage, recoveryKey, exact);
@@ -570,7 +570,7 @@ export function ReleaseWorkspace({
             : exact.intent.channel)
       )
         throw Error(
-          "Backend вернул несоответствующий job; проверьте журнал по idempotency key.",
+          "Сервер вернул задание с несоответствующими данными; проверьте журнал по ключу идемпотентности.",
         );
       const recorded = { ...exact, jobId: accepted.id };
       saveOwnerPending(localStorage, recoveryKey, recorded);
@@ -601,7 +601,7 @@ export function ReleaseWorkspace({
       const existing = await findOriginalOwnerJob(api, pending);
       if (!existing) {
         throw Error(
-          "Backend не нашёл исходный job. Сохранённый ключ не изменён; повтор отправки требует свежего MFA и отдельного подтверждения.",
+          "Сервер не нашёл исходное задание. Сохранённый ключ не изменён; повтор отправки требует свежего MFA и отдельного подтверждения.",
         );
       }
       const next = { ...pending, jobId: existing.id };
@@ -632,7 +632,7 @@ export function ReleaseWorkspace({
             ? pending.intent.resourceId
             : pending.intent.channel)
       )
-        throw Error("Backend вернул несоответствующий job");
+        throw Error("Сервер вернул задание с несоответствующими данными");
       const next = { ...pending, jobId: accepted.id };
       saveOwnerPending(localStorage, recoveryKey, next);
       setPending(next);
@@ -779,7 +779,7 @@ export function ReleaseWorkspace({
       <h2>Рабочая область выпуска · {__LAUNCHER_VERSION__}</h2>
       <p className="muted">
         Мастер: проект → профиль и загрузчик → сборка → проверка → канал.
-        Черновики хранятся на Backend с проверкой версии при сохранении.
+        Черновики хранятся на сервере с проверкой версии при сохранении.
       </p>
       <div className="formGrid">
         <article className="subcard">
@@ -1061,7 +1061,7 @@ export function ReleaseWorkspace({
             }
             onClick={() => void createPackage()}
           >
-            Создать пакет на Backend
+            Создать пакет на сервере
           </button>
           {form.packageId && (
             <>
@@ -1293,7 +1293,7 @@ export function ReleaseWorkspace({
           <h3>5. Канал / публикация / откат</h3>
           <p>
             Публикация допускается только после проверки подписи, целостности и
-            выполнения validation policy на Backend.
+            выполнения политики проверки на сервере.
           </p>
           <div role="status">
             <strong>Фактический channel head:</strong>{" "}
@@ -1450,7 +1450,7 @@ export function ReleaseWorkspace({
             </table>
           </div>
           <hr />
-          <h3>Rollback опубликованного релиза</h3>
+          <h3>Откат опубликованного релиза</h3>
           <label className="field">
             Целевая опубликованная версия
             <select
@@ -1570,7 +1570,7 @@ export function ReleaseWorkspace({
             )}
             {!pending.jobId && (
               <button disabled={busy} onClick={() => void recoverOperation()}>
-                Найти исходный job (без повтора)
+                Найти исходное задание (без повтора)
               </button>
             )}
             {!pending.jobId && (

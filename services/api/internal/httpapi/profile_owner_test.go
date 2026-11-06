@@ -18,7 +18,7 @@ func TestOwnerProfileConfigurationAndRevision0382(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, req)
 		if recorder.Code != want || !strings.Contains(recorder.Body.String(), fragment) {
-			t.Fatalf("%s %s => %d %s; want %d and %q", method, path, recorder.Code, recorder.Body.String(), want, fragment)
+			t.Fatalf("%s %s: %d %s; ожидалось %d и %q", method, path, recorder.Code, recorder.Body.String(), want, fragment)
 		}
 	}
 	project := "/api/v1/admin/projects/owner-profile-0382"

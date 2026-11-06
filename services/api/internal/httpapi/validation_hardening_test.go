@@ -32,7 +32,7 @@ func TestV12ForgedExpiredUnsignedManualCertification03412(t *testing.T) {
 	signed.Evidence.ExpiresAt = time.Now().UTC().Add(-time.Second).Format(time.RFC3339Nano)
 	repo := repository.NewMemoryRepository("https://example.test")
 	if err := validateFreshness0346(context.Background(), repo, signed.Evidence, time.Now(), false); err == nil {
-		t.Fatal("expired evidence accepted")
+		t.Fatal("Приняты подтверждающие данные с истекшим сроком действия")
 	}
 	if strings.Contains(redactValidationDetail03412("Authorization: Bearer AAAAA access_token=BBBBB"), "BBBBB") {
 		t.Fatal("Обнаружена утечка секрета")

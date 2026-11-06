@@ -247,7 +247,7 @@ export function RegistryWorkspace({
       if (result === cancelledOperation) return; // пользователь отказался; запрос не отправлен
       setLastOperation({ label, output: result, target });
       setMessage(
-        `${label}: Backend вернул результат. Уточните текущее состояние в карточке.`,
+        `${label}: Сервер вернул результат. Уточните текущее состояние в карточке.`,
       );
       await Promise.all([
         loadRegistry(),
@@ -302,7 +302,7 @@ export function RegistryWorkspace({
     if (
       !confirmAction(
         `Добавить доверенный Ed25519 key для ${registryPublisherId}`,
-        "Ключ будет разрешать публикацию подписанных расширений. Проверьте fingerprint до добавления.",
+        "Ключ будет разрешать публикацию подписанных расширений. Проверьте отпечаток ключа до добавления.",
       )
     )
       return cancelledOperation;
@@ -543,7 +543,7 @@ export function RegistryWorkspace({
       )}
       {operationBusy && (
         <p className="muted" role="status">
-          Выполнение операции на Backend…
+          Выполнение операции на сервере…
         </p>
       )}
       <div className="registryToolbar">

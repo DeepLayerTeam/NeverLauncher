@@ -91,7 +91,7 @@ func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := r.SaveBuildWorkspace(ctx, finished); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("built workspace mutable: %v", err)
+		t.Fatalf("Собранную рабочую область можно изменить: %v", err)
 	}
 }
 

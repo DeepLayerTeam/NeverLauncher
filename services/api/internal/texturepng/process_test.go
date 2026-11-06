@@ -62,7 +62,7 @@ func TestDeterministicNormalization(t *testing.T) {
 		t.Fatal(e)
 	}
 	if a.Digest != b.Digest || !bytes.Equal(a.PNG, b.PNG) {
-		t.Fatal("not deterministic")
+		t.Fatal("Результат недетерминирован")
 	}
 	if a.Width != 64 || a.Height != 64 {
 		t.Fatalf("bad dimensions %+v", a)

@@ -83,7 +83,7 @@ func TestQuote0315ValidAndAdversarial(t *testing.T) {
 		return err
 	}
 	if err := verify(ev, b, p, ph, pin, roots); err != nil {
-		t.Fatalf("valid quote rejected: %v", err)
+		t.Fatalf("Отклонена корректная цитата TPM: %v", err)
 	}
 	accepted, err := VerifyQuote0315(ev, b, p, ph, pin, roots, time.Now().UTC())
 	if err != nil || accepted.ExpiresAt.Sub(time.Now().UTC()) > 5*time.Minute || accepted.ExpiresAt.Before(time.Now()) {
@@ -154,7 +154,7 @@ func TestQuote0315ValidAndAdversarial(t *testing.T) {
 	}
 	roots.revokedAK[pin.AKFingerprint] = true
 	if err := verify(ev, b, p, ph, pin, roots); err == nil {
-		t.Fatal("revoked AK accepted")
+		t.Fatal("Принят отозванный ключ аттестации AK")
 	}
 }
 func TestPCRPolicy0315FailClosed(t *testing.T) {

@@ -43,7 +43,7 @@ func TestComponentCatalogTopologyOperational0242(t *testing.T) {
 		}
 	}
 	if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, "does-not-exist"); err == nil {
-		t.Fatal("unknown preset accepted")
+		t.Fatal("Принят неизвестный пресет")
 	}
 	raw, err := json.Marshal(m)
 	if err != nil {

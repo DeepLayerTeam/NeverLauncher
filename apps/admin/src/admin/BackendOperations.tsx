@@ -174,7 +174,7 @@ export function BackendOperations0289({
     <section className="card wide">
       <h2>Управление серверной частью · {__LAUNCHER_VERSION__}</h2>
       <p className="muted">
-        Управление самим Backend, не Minecraft-серверами или процессами
+        Управление самим сервером, не Minecraft-серверами или процессами
         произвольного хоста. Требуется глобальное backend:control.
       </p>
       <div className="buttonRow">
@@ -185,7 +185,7 @@ export function BackendOperations0289({
           Обновить состояние
         </button>
         <button disabled={busy} onClick={() => void reload()}>
-          Reload безопасных настроек (MFA)
+          Перезагрузить безопасные настройки (многофакторная проверка)
         </button>
       </div>
       {status ? (
@@ -252,7 +252,7 @@ export function BackendOperations0289({
       )}
       <h3>Наблюдаемые сессии</h3>
       <p className="muted">
-        Admin и Minecraft launcher sessions с lastSeenAt не старше пяти минут.
+        Сеансы панели администратора и Minecraft-лаунчера с lastSeenAt не старше пяти минут.
         Это не открытые TCP-соединения и не количество игроков на игровых
         серверах.
       </p>
@@ -342,12 +342,12 @@ export function BackendOperations0289({
         disabled={busy || !recipient.trim() || !body.trim()}
         onClick={() => void notify()}
       >
-        Отправить уведомление (MFA)
+        Отправить уведомление (многофакторная проверка)
       </button>
       <h3>Связанные рабочие операции</h3>
       <div className="buttonRow">
         <button onClick={() => navigate("config")}>
-          Validate / apply / rollback конфигурации
+          Проверка / применение / откат конфигурации
         </button>
         <button onClick={() => navigate("job-monitor")}>
           Задания сборки и публикации

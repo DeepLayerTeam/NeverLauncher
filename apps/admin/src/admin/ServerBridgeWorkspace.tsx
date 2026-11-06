@@ -411,7 +411,7 @@ export function ServerBridgeWorkspace({
     try {
       const response = await api.send(request);
       if (!response.command?.id)
-        throw new Error("Backend не вернул ID управляющей команды");
+        throw new Error("Сервер не вернул ID управляющей команды");
       sessionStorage.setItem(
         monitorStorageKey(projectId, backendUrl, userId),
         JSON.stringify({
@@ -464,7 +464,7 @@ export function ServerBridgeWorkspace({
         result.server.keyFingerprint !== request.keyFingerprint
       )
         throw new Error(
-          "Backend вернул не ту идентичность; проверьте запись узла и аудит.",
+          "Сервер вернул не ту идентичность; проверьте запись узла и аудит.",
         );
       setEnrollmentJSON("");
       const fresh = await api.overview(projectId);
@@ -536,7 +536,7 @@ export function ServerBridgeWorkspace({
         )
       ) {
         throw new Error(
-          "Backend не подтвердил новую политику capacity повторным чтением. Не отправляйте её повторно без проверки ревизии.",
+          "Сервер не подтвердил новую политику capacity повторным чтением. Не отправляйте её повторно без проверки ревизии.",
         );
       }
       setMessage(
@@ -1144,7 +1144,7 @@ export function ServerBridgeWorkspace({
                   </div>
                 )}
                 <p className="muted">
-                  Команды drain/maintenance исполняются через форму ниже с MFA,
+                  Команды drain/maintenance исполняются через форму ниже с многофакторной проверкой,
                   idempotency и Bridge ACK. Capacity применяется непосредственно
                   к маршрутам и handoff через PostgreSQL, не меняет max-players
                   в Minecraft и не отключает существующих игроков.

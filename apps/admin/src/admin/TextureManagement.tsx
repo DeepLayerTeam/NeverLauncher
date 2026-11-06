@@ -124,7 +124,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
       <label className="field">Максимум байт на игрока<input type="number" min={1024} max={1073741824} value={policy.maxBytesPerPlayer} onChange={e => change('maxBytesPerPlayer', Number(e.target.value))}/></label>
       <label className="field">Максимум файлов на игрока<input type="number" min={1} max={10000} value={policy.maxBlobsPerPlayer} onChange={e => change('maxBlobsPerPlayer', Number(e.target.value))}/></label>
       <label className="field">Причина изменения<input value={reason} maxLength={500} minLength={3} onChange={e => setReason(e.target.value)}/></label>
-      <button onClick={savePolicy} disabled={busy || reason.trim().length < 3}>Сохранить политику (MFA)</button>
+      <button onClick={savePolicy} disabled={busy || reason.trim().length < 3}>Сохранить политику (многофакторная проверка)</button>
       <button onClick={() => refresh().catch(e => setError(String(e)))} disabled={busy}>Перезагрузить</button>
     </fieldset>
     <fieldset disabled={busy}>
@@ -133,7 +133,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
       <label className="field">Тип<select value={kind} onChange={e => setKind(e.target.value as 'skin'|'cape')}><option value="skin">Скин</option><option value="cape">Плащ</option></select></label>
       <label className="field">Решение<select value={decision} onChange={e => setDecision(e.target.value as typeof decision)}><option value="allow">Разрешить</option><option value="deny">Запретить</option><option value="inherit">Наследовать политику</option></select></label>
       <label className="field">Причина<input value={exceptionReason} maxLength={500} onChange={e => setExceptionReason(e.target.value)}/></label>
-      <button disabled={!userId.trim() || busy || exceptionReason.trim().length < 3} onClick={saveException}>Применить исключение (MFA)</button>
+      <button disabled={!userId.trim() || busy || exceptionReason.trim().length < 3} onClick={saveException}>Применить исключение (многофакторная проверка)</button>
       <button disabled={!userId.trim() || busy} onClick={readPlayerHistory}>История скинов и плащей пользователя</button>
       {playerHistory.length > 0 && <table><thead><tr><th>Профиль</th><th>Тип</th><th>Действие</th><th>Ревизия</th><th>Дата</th></tr></thead><tbody>
         {playerHistory.map((h,i) => <tr key={`${h.profileUuid}:${h.kind}:${h.revision}:${i}`}><td>{h.profileUuid}</td><td>{h.kind}</td><td>{h.event}</td><td>{h.revision}</td><td>{h.createdAt}</td></tr>)}

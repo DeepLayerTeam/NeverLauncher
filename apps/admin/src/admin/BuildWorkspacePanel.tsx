@@ -284,7 +284,7 @@ export function BuildWorkspacePanel({
           /* Сохранить последнюю подтверждённую ревизию. */
         }
         setProgress(
-          `Подтверждено ${uploaded}/${accepted.length}. Состояние перечитано из Backend.`,
+          `Подтверждено ${uploaded}/${accepted.length}. Состояние перечитано с сервера.`,
         );
         throw e;
       } finally {
@@ -354,7 +354,7 @@ export function BuildWorkspacePanel({
   }
   async function verifyPackage(ws: BuildWorkspace) {
     if (!ws.packageId)
-      throw new Error("Backend не вернул неизменяемый идентификатор пакета");
+      throw new Error("Сервер не вернул неизменяемый идентификатор пакета");
     const pkg = await api<{
       packageId: string;
       projectId: string;
@@ -444,11 +444,11 @@ export function BuildWorkspacePanel({
             }
             onClick={() => void create()}
           >
-            Создать workspace
+            Создать рабочую область
           </button>
           {items.length > 0 && (
             <>
-              <h5>Продолжить workspace</h5>
+              <h5>Продолжить работу в рабочей области</h5>
               <ul>
                 {items.map((x) => (
                   <li key={x.id}>
@@ -480,7 +480,7 @@ export function BuildWorkspacePanel({
                 .then((updated) => {
                   load(updated);
                   setProgress(
-                    `Client Factory: ${updated.files.length} проверенных файлов перенесено в Build Workspace; выполните stage, validate, build и игровую приёмку.`,
+                    `Client Factory: ${updated.files.length} проверенных файлов перенесено в рабочую область сборки; выполните подготовку, проверку, сборку и игровую приёмку.`,
                   );
                   return refresh();
                 })
@@ -506,7 +506,7 @@ export function BuildWorkspacePanel({
                 void refresh();
               }}
             >
-              Другой workspace
+              Другая рабочая область
             </button>
             <button disabled={busy} onClick={() => void scanFiles()}>
               Проверка / SHA-256
@@ -761,7 +761,7 @@ export function BuildWorkspacePanel({
                   disabled={busy || !workspace.packageId}
                   onClick={() => void run(() => verifyPackage(workspace))}
                 >
-                  Сверить пакет с Workspace
+                  Сверить пакет с рабочей областью
                 </button>
                 <button
                   disabled={busy || !workspace.packageId}
@@ -778,7 +778,7 @@ export function BuildWorkspacePanel({
               {materialized !== null && (
                 <p role="status">
                   {materialized
-                    ? "Состав и SHA-256 в пакете совпадают с зафиксированным workspace."
+                    ? "Состав и SHA-256 в пакете совпадают с зафиксированной рабочей областью."
                     : "Обнаружено несовпадение пакета"}
                 </p>
               )}

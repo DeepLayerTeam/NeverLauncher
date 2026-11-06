@@ -138,9 +138,9 @@ export async function prepareOwnerOperation(
     before.profileId !== intent.profileId ||
     before.channel !== intent.channel
   )
-    throw Error("Backend вернул некорректную привязку канала");
+    throw Error("Сервер вернул некорректную привязку канала");
   const preview = await api.validateOperation(intent);
-  if (!preview.valid) throw Error("Backend отклонил операцию");
+  if (!preview.valid) throw Error("Сервер отклонил операцию");
   return { before, preview };
 }
 
@@ -233,7 +233,7 @@ export async function openStagedRollback(
     throw Error("Нет подтверждённого подготовленного rollback");
   const packageId = check.job.result?.packageId;
   if (typeof packageId !== "string" || !packageId)
-    throw Error("Backend не вернул ID подготовленного пакета");
+    throw Error("Сервер не вернул ID подготовленного пакета");
   const pkg = await api.package(packageId);
   if (
     pkg.packageId !== packageId ||

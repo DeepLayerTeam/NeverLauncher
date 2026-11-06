@@ -115,7 +115,7 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 			staged[n] = true
 			jsonData0493(w, contentResponseFixture0493(batch, n))
 		default:
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+			t.Errorf("Неожиданный запрос: %s %s", r.Method, r.URL)
 			w.WriteHeader(404)
 		}
 	}))

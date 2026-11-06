@@ -94,9 +94,9 @@ func TestAdminEntrypointServedFromEnabledVerifiedInstall0208(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.adminExtensionEntrypoint0208(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("Код состояния=%d, тело ответа=%s", rec.Code, rec.Body.String())
 	}
 	if !strings.Contains(rec.Body.String(), "connect-src 'none'") || !strings.Contains(rec.Body.String(), "parent.postMessage") {
-		t.Fatalf("unexpected body: %s", rec.Body.String())
+		t.Fatalf("Неожиданное тело ответа: %s", rec.Body.String())
 	}
 }

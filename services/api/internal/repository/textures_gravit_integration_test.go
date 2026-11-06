@@ -35,7 +35,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 	}
 	schema := fmt.Sprintf("gravit_02510_%d", time.Now().UnixNano())
 	if !regexp.MustCompile(`^gravit_02510_[0-9]+$`).MatchString(schema) {
-		t.Fatal("invalid schema")
+		t.Fatal("Недопустимая схема")
 	}
 	if _, err := db.ExecContext(ctx, `CREATE SCHEMA `+schema); err != nil {
 		t.Fatal(err)

@@ -26,6 +26,6 @@ func TestManualWorklistDerivedFromReport0450(t *testing.T) {
 	}
 	p.ProjectID = "other"
 	if _, err := renderManualWorklist(p, r); err == nil {
-		t.Fatal("wrong project accepted")
+		t.Fatal("Принят неверный проект")
 	}
 }

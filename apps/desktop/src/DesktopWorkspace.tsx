@@ -71,7 +71,7 @@ export function BuildsWorkspace0353({
         <div>
           <h3>Сборки и профили</h3>
           <p>
-            Проекты и профили из Backend. Манифест проверяется Native Ed25519
+            Проекты и профили с сервера. Манифест проверяется Native Ed25519
             перед установкой.
           </p>
         </div>
@@ -234,7 +234,7 @@ export function ServersWorkspace0353({
         <div>
           <h3>Серверы</h3>
           <p>
-            Узлы ServerBridge активного профиля. Список загружается из Backend;
+            Узлы ServerBridge активного профиля. Список загружается с сервера;
             не является DNS-каталогом Minecraft.
           </p>
         </div>

@@ -20,7 +20,7 @@ func TestServerBridgeEventStream0194Postgres(t *testing.T) {
 	defer cancel()
 	repo, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("repository is not SQLRepository")
+		t.Fatal("Репозиторий не является SQLRepository")
 	}
 	defer repo.db.Close()
 	if _, err := repo.ApplyMigrations(ctx); err != nil {

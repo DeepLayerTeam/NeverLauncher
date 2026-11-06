@@ -21,7 +21,7 @@ func extensionAdminToken0201(t *testing.T, h http.Handler) string {
 		Token string `json:"token"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &session); err != nil || session.Token == "" {
-		t.Fatalf("login token: %v %s", err, res.Body.String())
+		t.Fatalf("Токен входа: %v %s", err, res.Body.String())
 	}
 	return session.Token
 }

@@ -21,11 +21,11 @@ func TestSafeUpstreamAuthMethods0296(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := SafeUpstreamAuthMethods(tc.in)
 			if len(got) != len(tc.want) {
-				t.Fatalf("methods=%q want=%q", got, tc.want)
+				t.Fatalf("Методы=%q, ожидалось=%q", got, tc.want)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("methods=%q want=%q", got, tc.want)
+					t.Fatalf("Методы=%q, ожидалось=%q", got, tc.want)
 				}
 			}
 		})

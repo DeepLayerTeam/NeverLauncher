@@ -49,7 +49,7 @@ func TestRuntimeStoragePersistenceIsolationAndLimits0303(t *testing.T) {
 		t.Fatal("traversal accepted")
 	}
 	if err := runtimeWrite0303(context.Background(), global, path, json.RawMessage(`{"incomplete":`)); err == nil {
-		t.Fatal("invalid JSON accepted")
+		t.Fatal("Принят недопустимый JSON")
 	}
 	if err := runtimeWrite0303(context.Background(), global, path, json.RawMessage(`"`+strings.Repeat("a", runtimeValueLimit0303)+`"`)); err == nil {
 		t.Fatal("oversized state accepted")

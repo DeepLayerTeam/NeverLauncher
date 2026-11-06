@@ -99,7 +99,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				t.Fatal(err)
 			}
 			if result.Status != "installed-and-verified" || result.LoaderVersion != tc.loaderVersion || result.MainClass != tc.mainClass {
-				t.Fatalf("unexpected result: %+v", result)
+				t.Fatalf("Неожиданный результат: %+v", result)
 			}
 			if result.ResolutionPinned || !compatibilitySHA256RE.MatchString(result.ResolutionLockSHA256) || !compatibilitySHA256RE.MatchString(result.ReproducibilitySHA256) {
 				t.Fatalf("first materialization did not create a valid resolution lock: %+v", result)
@@ -141,7 +141,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				"--project", "test-project", "--profile", tc.loader, "--channel", "stable", "--version", "1.0.0", "--output", packageManifest,
 			}
 			if err := handleRuntimeLoaderPackage(tc.loader, args); err != nil {
-				t.Fatalf("%s-package failed: %v", tc.loader, err)
+				t.Fatalf("Ошибка пакета %s: %v", tc.loader, err)
 			}
 			if got := metadataRequests.Load(); got != 1 {
 				t.Fatalf("pinned replay re-resolved mutable metadata: requests=%d, want 1", got)

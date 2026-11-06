@@ -187,7 +187,7 @@ func TestReleaseBOM03214TamperBlocks(t *testing.T) {
 			}
 			tt.mutate(t, dir)
 			if err := verifyReleaseBOM03214(dir, "0.32.14"); err == nil {
-				t.Fatal("tampering accepted")
+				t.Fatal("Изменённые данные ошибочно приняты")
 			}
 		})
 	}
@@ -208,7 +208,7 @@ func TestReleaseBOM03214VersionAndSymlinkSafety(t *testing.T) {
 		t.Skipf("symlink unsupported: %s", err)
 	}
 	if err := writeReleaseBOM03214(dir, source, "0.32.14"); err == nil {
-		t.Fatal("symlinked artifact accepted")
+		t.Fatal("Принят артефакт по символьной ссылке")
 	}
 }
 func TestReleaseBOM03214SourcePin(t *testing.T) {
@@ -223,7 +223,7 @@ func TestReleaseBOM03214SourcePin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if lock["version"] != "0.32.14" {
-		t.Fatal("unexpected fixture version")
+		t.Fatal("Неожиданная версия тестовых данных")
 	}
 	lock["version"] = "0.32.13"
 	updated, err := json.Marshal(lock)
@@ -234,7 +234,7 @@ func TestReleaseBOM03214SourcePin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := writeReleaseBOM03214(dir, source, "0.32.14"); err == nil {
-		t.Fatal("package lock drift accepted")
+		t.Fatal("Принято расхождение файла блокировки пакетов")
 	}
 }
 
@@ -264,7 +264,7 @@ func TestReleaseBOM03214SignedBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyReleaseBOMBinding03214(dir, "0.32.14"); err != nil {
-		t.Fatalf("valid signed boundary rejected: %v", err)
+		t.Fatalf("Отклонена корректная подписанная граница доверия: %v", err)
 	}
 	for name, changed := range map[string]string{
 		"dropped bom checksum":    strings.Repeat("a", 64) + "  RELEASE_MANIFEST.json\n",
@@ -276,7 +276,7 @@ func TestReleaseBOM03214SignedBoundary(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := verifyReleaseBOMBinding03214(dir, "0.32.14"); err == nil {
-				t.Fatal("unsigned BOM accepted")
+				t.Fatal("Принят неподписанный перечень материалов BOM")
 			}
 		})
 	}
@@ -289,6 +289,6 @@ func TestReleaseBOM03214SignedBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyReleaseBOMBinding03214(dir, "0.32.14"); err == nil {
-		t.Fatal("non-required BOM accepted")
+		t.Fatal("Принят необязательный перечень материалов BOM")
 	}
 }

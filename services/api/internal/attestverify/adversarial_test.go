@@ -45,7 +45,7 @@ func TestAdversarialQuotePCRAndPolicyReplay03114(t *testing.T) {
 	evidence, binding, policy, hash, pinned, roots := makeQuoteFixture0315(t)
 	now := time.Now().UTC()
 	if _, err := VerifyQuote0315(evidence, binding, policy, hash, pinned, roots, now); err != nil {
-		t.Fatalf("valid quote rejected: %v", err)
+		t.Fatalf("Отклонена корректная цитата TPM: %v", err)
 	}
 	for name, mutate := range map[string]func(*QuoteEvidence0315, *Binding, *PCRPolicy0315, *string, *Result){
 		"new-nonce": func(_ *QuoteEvidence0315, b *Binding, _ *PCRPolicy0315, _ *string, _ *Result) {

@@ -44,7 +44,7 @@ func TestComponentResolverOperational0243(t *testing.T) {
 		}
 	}
 	if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, "missing"); err == nil {
-		t.Fatal("unknown preset accepted")
+		t.Fatal("Принят неизвестный пресет")
 	}
 	// Каталог v3 — подписанное надмножество топологии v2, а не изменяемый выбор.
 	raw, _ := json.Marshal(m)

@@ -152,7 +152,7 @@ func TestAuthenticatePasswordQueriesReadOnlyAndMapsIdentity(t *testing.T) {
 		t.Fatalf("unexpected identity: %+v", auth.Identity)
 	}
 	if len(auth.Identity.Groups) != 2 || len(auth.Identity.Roles) != 2 {
-		t.Fatalf("mapping lost: %+v", auth.Identity)
+		t.Fatalf("Сопоставление потеряно: %+v", auth.Identity)
 	}
 	if auth.Identity.Claims["minecraftUuid"] != "550e8400-e29b-41d4-a716-446655440000" {
 		t.Fatalf("minecraft UUID not mapped: %+v", auth.Identity.Claims)
@@ -183,7 +183,7 @@ func TestAuthenticatePasswordRejectsDuplicateIdentifier(t *testing.T) {
 	}
 	_, err = connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "same", Secret: "secret"})
 	if authconnector.CodeOf(err) != authconnector.ErrConflict {
-		t.Fatalf("expected conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт, получено %v", err)
 	}
 }
 

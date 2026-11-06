@@ -1819,7 +1819,7 @@ fn attestation_session_proof(session_key: &[u8; 32], attestation_digest: &[u8; 3
 
 #[cfg(any(windows, test))]
 fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
-    let mut mac = Hmac::<Sha256>::new_from_slice(key).expect("HMAC-SHA-256 accepts arbitrary key length");
+    let mut mac = Hmac::<Sha256>::new_from_slice(key).expect("HMAC-SHA-256 должен принимать ключ произвольной длины");
     mac.update(message);
     let digest = mac.finalize().into_bytes();
     let mut out = [0u8; 32];

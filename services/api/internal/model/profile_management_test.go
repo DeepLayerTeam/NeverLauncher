@@ -91,6 +91,6 @@ func TestPresetProfilesProduceValidIndependentRecords0225(t *testing.T) {
 		}
 	}
 	if _, err := CreateFromPreset0225("alpha", "bad", "", "unsupported"); err == nil {
-		t.Fatal("unknown preset accepted")
+		t.Fatal("Принят неизвестный пресет")
 	}
 }

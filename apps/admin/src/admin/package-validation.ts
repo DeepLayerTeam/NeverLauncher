@@ -10,5 +10,5 @@ export function requireValidatedPackage0390(result:PackageValidation0390): Packa
       result.checks.every(check => check.status === 'ok')) return result;
   const reasons = (result?.blockers?.length ? result.blockers.map(b=>`${b.reasonCode} (${b.resource}): ${b.message}. ${b.action}`) :
     result?.checks?.filter(c=>c.status!=='ok').map(c=>`${c.reasonCode||c.id}: ${c.message||'не пройдено'}`)) || [];
-  throw new Error(`Backend отклонил Validate: ${reasons.join('; ')||'нет подтверждения корректности пакета'}`);
+  throw new Error(`Сервер отклонил Validate: ${reasons.join('; ')||'нет подтверждения корректности пакета'}`);
 }

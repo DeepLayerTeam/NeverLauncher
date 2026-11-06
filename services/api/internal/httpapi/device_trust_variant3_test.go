@@ -134,7 +134,7 @@ func TestDeviceTrustBindingCASAndRefreshEpoch0432(t *testing.T) {
 			continue
 		}
 		if !errors.Is(e, errSessionBindingChanged0432) {
-			t.Fatalf("unexpected CAS error: %v", e)
+			t.Fatalf("Неожиданная ошибка проверки ревизии CAS: %v", e)
 		}
 	}
 	if successes != 1 {

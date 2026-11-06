@@ -40,7 +40,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
     try{
       const result=await requestJSON<{profile:Profile}>(backendUrl,editing?`${root}/${encodeURIComponent(selectedProfile.id)}`:root,token,
         {method:editing?'PATCH':'POST',body:JSON.stringify({...form,loaderVersion:form.loader==='vanilla'?'':form.loaderVersion,...(editing?{expectedRevision:baseRevision}:{})})});
-      if(!result.profile?.id)throw new Error('Backend не вернул сохранённый профиль. Проверьте список перед повтором.');
+      if(!result.profile?.id)throw new Error('Сервер не вернул сохранённый профиль. Проверьте список перед повтором.');
       setDirty(false);setBaseRevision(result.profile.revision);setForm(fromProfile(result.profile));
       if(!editing)onCreated(result.profile.id);
       setNotice(`Профиль ${result.profile.id} сохранён. Ревизия ${result.profile.revision}.`);
@@ -65,7 +65,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
   const issue=validateProfile0382(form);
   return <article className="subcard" aria-label="Редактор профиля Minecraft">
     <h3>{selectedProfile?`Настройка профиля ${selectedProfile.id}`:'Создать профиль Minecraft'}</h3>
-    <p className="muted">Minecraft, загрузчик и Java сохраняются на Backend и входят в неизменяемую ревизию профиля. Уже опубликованные сборки не изменяются.</p>
+    <p className="muted">Minecraft, загрузчик и Java сохраняются на сервере и входят в неизменяемую ревизию профиля. Уже опубликованные сборки не изменяются.</p>
     <div className="formGrid">
       <label className="field">ID профиля<input disabled={working||!!selectedProfile} value={form.id} onChange={e=>edit('id',e.target.value.trim())} placeholder="выживание" /></label>
       <label className="field">Название<input disabled={working} value={form.name} onChange={e=>edit('name',e.target.value)} /></label>

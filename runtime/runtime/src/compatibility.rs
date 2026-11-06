@@ -1479,7 +1479,7 @@ mod tests {
             assets_directory: root.join("assets").to_string_lossy().to_string(),
             natives_directory: native_path.to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "26.3", None, &ctx).await.expect("resolve modern runtime");
+        let result = resolve_compatibility(&root, "26.3", None, &ctx).await.expect("разрешить современную среду выполнения");
         let java_path = format!("-Djava.library.path={}", native_path.display());
         let lwjgl_path = format!("-Dorg.lwjgl.librarypath={}", native_path.display());
         assert_eq!(result.jvm_args.iter().filter(|arg| arg.as_str() == java_path.as_str()).count(), 1);
@@ -1521,7 +1521,7 @@ mod tests {
         };
         let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("resolve NeoForge");
         assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
-        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("получить список исключений NeoForge");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "Базовый клиент должен оставаться в исходном списке классов, а не становиться модулем BootstrapLauncher: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
@@ -1554,7 +1554,7 @@ mod tests {
         };
         let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("resolve Forge");
         assert!(result.classpath.iter().any(|value| value == "versions/1.19.4/1.19.4.jar"));
-        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge ignoreList");
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("получить список исключений Forge");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "Базовый клиент Vanilla не должен становиться дополнительным модулем Forge: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
@@ -1647,7 +1647,7 @@ mod tests {
             launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "1.7.10", None, &ctx).await.expect("resolve legacy");
+        let result = resolve_compatibility(&root, "1.7.10", None, &ctx).await.expect("разрешить устаревший вариант");
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
         assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=Launcher"));
@@ -1681,7 +1681,7 @@ mod tests {
             launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
         };
-        let result = resolve_compatibility(&root, "1.5.2", None, &ctx).await.expect("resolve pre-1.6");
+        let result = resolve_compatibility(&root, "1.5.2", None, &ctx).await.expect("разрешить вариант до версии 1.6");
         assert_eq!(result.java_major_version, Some(8));
         assert_eq!(result.main_class, "net.minecraft.launchwrapper.Launch");
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "LegacyPlayer" && pair[1] == "token:offline-session:00000000-0000-0000-0000-000000000000"));

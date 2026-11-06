@@ -39,7 +39,7 @@ func TestDigestStableAndTamper(t *testing.T) {
 	}
 	one.Identities[0].TargetUserID = "tampered"
 	if Verify(one) == nil {
-		t.Fatal("tampering accepted")
+		t.Fatal("Изменённые данные ошибочно приняты")
 	}
 }
 func TestMissingAndBlockedCannotPass(t *testing.T) {
@@ -70,7 +70,7 @@ func TestDuplicateInvalidEvidence(t *testing.T) {
 	a = baseline()
 	a.Items[0].SHA256 = "spoof"
 	if _, e := Finalize(a); e == nil {
-		t.Fatal("invalid hash accepted")
+		t.Fatal("Принят недопустимый хеш")
 	}
 }
 

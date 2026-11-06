@@ -24,7 +24,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("create package => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Создание пакета: %d %s", res.Code, res.Body.String())
 	}
 	var createPayload struct {
 		Data struct {

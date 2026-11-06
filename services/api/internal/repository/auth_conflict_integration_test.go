@@ -25,12 +25,12 @@ func TestAuthIdentityCollisionPostgres0293(t *testing.T) {
 	defer cancel()
 	a, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("expected PostgreSQL repository")
+		t.Fatal("Ожидался репозиторий PostgreSQL")
 	}
 	defer a.db.Close()
 	b, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("expected PostgreSQL repository")
+		t.Fatal("Ожидался репозиторий PostgreSQL")
 	}
 	defer b.db.Close()
 	if _, err := a.ApplyMigrations(ctx); err != nil {

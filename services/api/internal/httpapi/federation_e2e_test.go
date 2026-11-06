@@ -131,7 +131,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 				t.Fatalf("Minecraft session validation failed: user=%+v err=%v", gotUser, err)
 			}
 			if ok := state.AuthSessions.revoke(session.ID, "matrix-revoke"); !ok {
-				t.Fatal("parent Never session was not revoked")
+				t.Fatal("Родительская сессия Never не была отозвана")
 			}
 			if _, _, _, err := server.validateMinecraftToken119(mcToken); err == nil {
 				t.Fatalf("Minecraft token %s survived parent Never revoke", mc.ID)
@@ -162,7 +162,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			t.Fatal(err)
 		}
 		if ok := state.AuthSessions.revoke(session.ID, "matrix-revoke"); !ok {
-			t.Fatal("parent Never session was not revoked")
+			t.Fatal("Родительская сессия Never не была отозвана")
 		}
 		if _, _, _, err := server.validateMinecraftToken119(token); err == nil {
 			t.Fatal("passkey-derived Minecraft token survived parent revoke")

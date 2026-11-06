@@ -352,9 +352,9 @@ mod tests {
         let mut cmd = tokio::process::Command::new("sleep");
         cmd.arg("8");
         crate::linux_policy::prepare_runtime_command(&mut cmd);
-        let mut child = cmd.spawn().expect("start Linux restricted child");
-        let pid = child.id().expect("child pid");
-        let exe = fs::read_link(format!("/proc/{pid}/exe")).expect("resolve child executable");
+        let mut child = cmd.spawn().expect("запустить дочерний процесс Linux с ограничениями");
+        let pid = child.id().expect("получить идентификатор дочернего процесса");
+        let exe = fs::read_link(format!("/proc/{pid}/exe")).expect("определить исполняемый файл дочернего процесса");
         let meta = fs::metadata(&exe).unwrap();
         let mut guard = LinuxRuntimeGuard0508 {
             pid, start_ticks:start_ticks_from_stat(&read_proc(pid,"stat").unwrap()).unwrap(),
@@ -383,12 +383,12 @@ mod tests {
         fs::write(&source, b"int guard_probe(void) { return 10; }\n").unwrap();
         let native = root.join("unapproved.so");
         let compiler = std::process::Command::new("cc").args(["-shared","-fPIC","-o"])
-            .arg(&native).arg(&source).status().expect("C compiler for real ELF probe");
+            .arg(&native).arg(&source).status().expect("получить компилятор C для реальной проверки ELF");
         assert!(compiler.success());
         let mut cmd = tokio::process::Command::new("sleep");
         cmd.arg("8").env("LD_PRELOAD", &native);
         crate::linux_policy::prepare_runtime_command(&mut cmd);
-        let mut child = cmd.spawn().expect("run game-like process with injected ELF");
+        let mut child = cmd.spawn().expect("запустить игровой процесс с внедрённым ELF");
         let pid = child.id().unwrap();
         let exe = fs::read_link(format!("/proc/{pid}/exe")).unwrap();
         let meta = fs::metadata(&exe).unwrap();
