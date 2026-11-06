@@ -55,7 +55,7 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 		in.SchemaVersion = 1
 	}
 	if in.ID == "" || in.Type == "" || in.AggregateType == "" || in.AggregateID == "" || in.OrderingKey == "" || in.IdempotencyKey == "" || in.Source == "" {
-		return model.ExtensionEvent{}, errors.New("Требуется: «extension event identity/type/aggregate/ordering/idempotency/source are»")
+		return model.ExtensionEvent{}, errors.New("Требуется: «идентичность, тип, агрегат, порядок, идемпотентность или источник события расширения»")
 	}
 	if len(in.ID) > 128 || len(in.Type) > 128 || len(in.OrderingKey) > 256 || len(in.IdempotencyKey) > 256 || len(in.AggregateID) > 256 || len(in.Source) > 128 {
 		return model.ExtensionEvent{}, errors.New("Метаданные события расширения превышают допустимые ограничения")
@@ -70,7 +70,7 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 	dec := json.NewDecoder(strings.NewReader(string(in.Payload)))
 	dec.UseNumber()
 	if err := dec.Decode(&payload); err != nil {
-		return model.ExtensionEvent{}, fmt.Errorf("Некорректное значение: «extension event payload»: %w", err)
+		return model.ExtensionEvent{}, fmt.Errorf("Некорректное значение: «содержимое события расширения»: %w", err)
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
@@ -118,7 +118,7 @@ func normalizeSubscription0206(in model.ExtensionEventSubscription) (model.Exten
 		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: тип события %q", in.EventType)
 	}
 	if in.Mode != model.ExtensionEventModeAsync && in.Mode != model.ExtensionEventModeSync {
-		return model.ExtensionEventSubscription{}, errors.New("subscription mode: требуется «async or sync»")
+		return model.ExtensionEventSubscription{}, errors.New("subscription mode: требуется «асинхронный или синхронный»")
 	}
 	return in, nil
 }

@@ -149,7 +149,7 @@ v3_rows = {
 }
 missing_v3 = sorted(set(java21_25_0170v3) - set(v3_rows))
 if missing_v3:
-    raise SystemExit(f"Отсутствует: «GA 0.17.0v3 Java 21/25 Vanilla grid»: {missing_v3}")
+    raise SystemExit(f"Отсутствует: «матрица Vanilla Java 21/25 для GA 0.17.0v3»: {missing_v3}")
 for minecraft, major in java21_25_0170v3.items():
     row = v3_rows[minecraft]
     if row["javaMajor"] != major or row["scope"] != "client":

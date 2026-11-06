@@ -106,7 +106,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	etag := resp.Header.Get("ETag")
 	if len(etag) < 3 || len(etag) > 256 || !strings.HasPrefix(etag, "\"") || !strings.HasSuffix(etag, "\"") {
 		resp.Body.Close()
-		return errors.New("S3 GC: требуется «a strong object ETag»")
+		return errors.New("S3 GC: требуется «строгий ETag объекта»")
 	}
 	dataHash := sha256.New()
 	n, readErr := io.Copy(dataHash, io.LimitReader(resp.Body, 4<<20+1))
@@ -137,7 +137,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	case http.StatusOK, http.StatusNoContent, http.StatusNotFound:
 		return nil
 	case http.StatusPreconditionFailed, http.StatusConflict:
-		return errors.New("Обнаружено изменение: «S3 GC conditional delete failed: object»")
+		return errors.New("Обнаружено изменение: «условное удаление сборщиком мусора S3 не удалось: объект»")
 	default:
 		return fmt.Errorf("Ошибка удаления S3 при очистке: HTTP %d", response.StatusCode)
 	}

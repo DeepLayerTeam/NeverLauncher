@@ -1606,7 +1606,7 @@ export function MigrationCenter0331({
           {credentialPreview && (
             <>
               <p>
-                Dry-run: импортируемых {credentialPreview.imported},
+                Пробный запуск: будет импортировано {credentialPreview.imported},
                 существующих без изменений {credentialPreview.existingUnchanged}
                 , индивидуальный сброс {credentialPreview.manualReset}.
               </p>
@@ -1733,7 +1733,7 @@ export function MigrationCenter0331({
             assets/ в зашифрованный Never Build Workspace. Импортёр использует
             поле <code>dir</code> Gravit ClientProfile, если оно задано;
             пользовательские файлы не копируются. Каждый запуск миграции
-            закрепляет один профиль и собственный dry-run. Сервер не выполняет
+            закрепляет один профиль и собственный пробный запуск. Сервер не выполняет
             исходные JAR и не копирует авторизацию, ключи или модули. Новый
             релиз подписывается только после отдельной проверки.
           </p>
@@ -1814,7 +1814,7 @@ export function MigrationCenter0331({
               disabled={busy || !source || !inventory || !compatibility || run.status !== "prepared"}
               onClick={() => void migrationDryRun0442()}
             >
-              Выполнить полный dry-run и зафиксировать план
+              Выполнить полную пробную проверку и зафиксировать план
             </button>
             <button
               disabled={
@@ -1834,8 +1834,8 @@ export function MigrationCenter0331({
           {migrationPlan0442 && (
             <div>
               <p>Общий план: <strong>{migrationPlan0442.status}</strong>;
-                совпадение с текущими полями: {planMatches0442 ? "да" : "нет, требуется новый dry-run"}.
-                Исходная цель: {migrationPlan0442.targetUnchanged === false ? "изменилась — повторить dry-run" : "актуальна"}.
+                совпадение с текущими полями: {planMatches0442 ? "да" : "нет, требуется новая пробная проверка"}.
+                Исходная цель: {migrationPlan0442.targetUnchanged === false ? "изменилась — повторить пробную проверку" : "актуальна"}.
                 Учётных записей: {migrationPlan0442.identities.sourceAccounts};
                 проблем сопоставления UUID: {migrationPlan0442.identities.duplicateOrConflicting}.
                 Копирование: {migrationPlan0442.transferBytes} байт;
@@ -2069,7 +2069,7 @@ export function MigrationCenter0331({
                   >
                     Зарегистрировать новый ServerBridge node
                   </button>
-                  <p>После установки ServerBridge на игровой сервер проверьте реальный подписанный heartbeat. Регистрация ключа не означает готовность к переключению.</p>
+                  <p>После установки ServerBridge на игровой сервер проверьте реальный подписанный сигнал состояния. Регистрация ключа не означает готовность к переключению.</p>
                   <button disabled={busy || !wrapperPath0338} onClick={() => void checkBridge0446()}>
                     Проверить подключение ServerBridge
                   </button>

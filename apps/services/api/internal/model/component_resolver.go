@@ -83,7 +83,7 @@ func parseSemver0243(source string) (semver0243, error) {
 	}
 	raw := strings.SplitN(source, "+", 2)
 	if len(raw) == 2 && !semverIdentifiers0243(raw[1], false) {
-		return result, fmt.Errorf("Некорректное значение: «semver build metadata» %q", source)
+		return result, fmt.Errorf("Некорректное значение: «метаданные сборки семантической версии» %q", source)
 	}
 	pre := strings.SplitN(raw[0], "-", 2)
 	if len(pre) == 2 {

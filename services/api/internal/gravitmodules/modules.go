@@ -82,7 +82,7 @@ func readFile(ctx context.Context, f *zip.File, limit int64) ([]byte, error) {
 		n, err := r.Read(p)
 		if n > 0 {
 			if int64(b.Len()+n) > limit {
-				return nil, errors.New("Превышен допустимый размер: «expanded file»")
+				return nil, errors.New("Превышен допустимый размер: «распакованный файл»")
 			}
 			b.Write(p[:n])
 		}
@@ -153,7 +153,7 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 		// модуль безопасным.
 		if strings.HasSuffix(lower, ".class") || strings.HasPrefix(lower, "meta-inf/services/") {
 			if f.UncompressedSize64 > 4<<20 {
-				return "", false, false, errors.New("Превышен допустимый размер: «class/service descriptor»")
+				return "", false, false, errors.New("Превышен допустимый размер: «описатель класса или службы»")
 			}
 			data, er := readFile(ctx, f, 4<<20)
 			if er != nil {

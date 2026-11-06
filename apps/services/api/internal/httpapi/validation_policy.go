@@ -109,7 +109,7 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 		}
 	}
 	if len(relevant) == 0 {
-		return nil, "", errors.New("Отсутствует: «required runtime targets for this package/version»")
+		return nil, "", errors.New("Отсутствует: «обязательные целевые среды выполнения для этого пакета и версии»")
 	}
 	if err := validateComponentMatrix0348(release.Manifest, relevant); err != nil {
 		return nil, "", err
@@ -150,7 +150,7 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 		return errors.New("Backend не выдал проверочный запрос для аттестации")
 	}
 	if p.RunNonce != challenge.Nonce || p.PackageID != challenge.PackageID || p.ManifestSHA256 != challenge.ManifestSHA256 || p.ArtifactSHA256 != challenge.ArtifactSHA256 || p.TargetMatrixSHA256 != challenge.TargetMatrixSHA256 {
-		return errors.New("Несовпадение: «attestation challenge/snapshot/target policy»")
+		return errors.New("Несовпадение: «проверочное значение аттестации, снимок состояния или целевая политика»")
 	}
 	issued, err := time.Parse(time.RFC3339Nano, p.IssuedAt)
 	if err != nil || !issued.Equal(challenge.IssuedAt) {

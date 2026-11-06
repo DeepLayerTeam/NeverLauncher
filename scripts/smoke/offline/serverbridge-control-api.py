@@ -25,7 +25,7 @@ required = [
 ]
 for rel in required:
     if not resource_exists(ROOT, rel):
-        raise SystemExit(f"Отсутствует: «0.19.5 Control API production file»: {rel}")
+        raise SystemExit(f"Отсутствует: «файл промышленного API управления 0.19.5»: {rel}")
 
 checks = {
     "services/api/internal/httpapi/routes_bridge.go": [

@@ -75,7 +75,7 @@ func Process(src io.Reader, kind, model string) (Result, error) {
 	}
 	decoded, err := png.Decode(bytes.NewReader(content))
 	if err != nil {
-		return result, fmt.Errorf("Ошибка: «%w: PNG decoding»: %v", ErrInvalid, err)
+		return result, fmt.Errorf("Ошибка: «%w: декодирование PNG»: %v", ErrInvalid, err)
 	}
 	if decoded.Bounds().Dx() != cfg.Width || decoded.Bounds().Dy() != cfg.Height {
 		return result, ErrInvalid

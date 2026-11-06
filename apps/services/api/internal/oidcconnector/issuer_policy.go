@@ -25,7 +25,7 @@ func (ExactIssuerPolicy) ValidateDiscoveryIssuer(configuredIssuer, discoveredIss
 func (ExactIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, claims map[string]any, _ string) error {
 	issuer, _ := claims["iss"].(string)
 	if strings.TrimSpace(issuer) != strings.TrimSpace(discoveredIssuer) {
-		return fmt.Errorf("Несовпадение: «ID token issuer»")
+		return fmt.Errorf("Несовпадение: «издатель токена идентификации»")
 	}
 	return nil
 }

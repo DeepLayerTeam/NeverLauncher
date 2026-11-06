@@ -239,7 +239,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 	fmt.Fprintln(output, "Redirect registration: http://localhost/minecraft-poc/callback (native/public client; loopback port is dynamic).")
 	if opt.OpenBrowser {
 		if err := openBrowser(authURL); err != nil {
-			fmt.Fprintln(output, "Не удалось открыть «browser automatically; use the URL above.»")
+			fmt.Fprintln(output, "Не удалось открыть «автоматически открыть браузер; воспользуйтесь адресом выше.»")
 		}
 	}
 	select {

@@ -24,7 +24,7 @@ type BackendNoticeStore0289 interface {
 
 func ValidateBackendNotice0289(recipient, body string) error {
 	if strings.TrimSpace(recipient) == "" || len(recipient) > 128 {
-		return errors.New("Некорректное значение: «recipient user ID»")
+		return errors.New("Некорректное значение: «идентификатор пользователя-получателя»")
 	}
 	if len(strings.TrimSpace(body)) < 1 || len([]rune(body)) > 512 {
 		return errors.New("notice: требуется «1-512 characters»")

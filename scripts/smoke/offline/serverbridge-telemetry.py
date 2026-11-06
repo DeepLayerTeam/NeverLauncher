@@ -16,7 +16,7 @@ required_files = [
 ]
 for rel in required_files:
     if not resource_exists(ROOT, rel):
-        raise SystemExit(f"Отсутствует: «telemetry production file»: {rel}")
+        raise SystemExit(f"Отсутствует: «файл промышленной телеметрии»: {rel}")
 
 checks = {
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java": [

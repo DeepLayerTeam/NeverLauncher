@@ -1932,7 +1932,7 @@ function App() {
       setDeviceKey(committed);
       setDeviceTrustStatus(
         committed.keyBinding === "hardware"
-          ? "rotated · требуется attestation"
+          ? "ключ заменён · требуется аттестация"
           : "обновлён · проверен",
       );
       log(
@@ -1947,7 +1947,7 @@ function App() {
       // Повторите согласование с ТЕМ ЖЕ подготовленным закрытым ключом после восстановления связи.
       if (serverCommitted)
         log(
-          "Сервер завершил replacement; подготовленный ключ сохранён для повторного commit/reconciliation после ошибки системного хранилища.",
+          "Сервер завершил замену ключа; подготовленный ключ сохранён для повторного подтверждения и согласования состояния после ошибки системного хранилища.",
         );
       throw error;
     }
@@ -2213,11 +2213,11 @@ function App() {
       !windowsAkName0313.trim() ||
       !windowsAkCert0313.includes("-----BEGIN CERTIFICATE-----")
     ) {
-      throw new Error("Настройте сертифицированный TPM Attestation Key");
+      throw new Error("Настройте сертифицированный ключ аттестации TPM");
     }
     if (measuredBootBusy0315) return;
     setMeasuredBootBusy0315(true);
-    setMeasuredBootStatus0315("TPM Quote: запрашивается одноразовый challenge");
+    setMeasuredBootStatus0315("Аттестация TPM: запрашивается одноразовое проверочное значение");
     try {
       const base = `/api/v1/auth/devices/${encodeURIComponent(deviceKey.deviceId)}/measured-boot`;
       const began = await postDeviceJson(
@@ -2458,7 +2458,7 @@ function App() {
     const userId = session.userId || accessTokenSubject(session.accessToken);
     if (!userId)
       throw new Error(
-        "Не удалось определить канонический идентификатор пользователя для device key.",
+        "Не удалось определить канонический идентификатор пользователя для ключа устройства.",
       );
     const normalized = session.userId ? session : { ...session, userId };
     if (!session.userId)
@@ -2537,7 +2537,7 @@ function App() {
   async function revokeManagedDevice(device: ManagedDevice) {
     if (!authSession?.accessToken || device.status !== "active") return;
     const warning = device.current
-      ? "Отозвать текущее устройство? Текущая Never session, refresh token, Minecraft session и device key станут недействительными. Для повторной регистрации будет создан новый ключ."
+      ? "Отозвать текущее устройство? Сеансы Never и Minecraft, токен обновления и ключ устройства станут недействительными. Для повторной регистрации будет создан новый ключ."
       : `Отозвать устройство «${device.name}»? Все связанные с ним сессии будут немедленно завершены, а старый ключ нельзя будет зарегистрировать повторно.`;
     if (!window.confirm(warning)) return;
     const response = await postDeviceJson(
@@ -2570,7 +2570,7 @@ function App() {
       setAuthSession(null);
       setDeviceKey(null);
       setManagedDevices([]);
-      setDeviceTrustStatus("revoked · требуется новый вход и новый device key");
+      setDeviceTrustStatus("доступ отозван · требуется новый вход и новый ключ устройства");
       return;
     }
     await loadManagedDevices(authSession);
@@ -2731,7 +2731,7 @@ function App() {
         },
       );
       if (proof.fingerprint !== key.fingerprint)
-        throw new Error("refresh proof подписан неожиданным device key");
+        throw new Error("Подтверждение обновления токена подписано другим ключом устройства");
       body.deviceId = tokenDeviceId;
       body.deviceSignature = proof.signature;
       setDeviceKey(key);
@@ -3451,7 +3451,7 @@ function App() {
         )
       ) {
         throw new Error(
-          "SHA-256 mismatch: проверка установленных файлов не пройдена",
+          "Несовпадение SHA-256: проверка установленных файлов не пройдена",
         );
       }
       // Сохраняйте установленную конфигурацию только после проверки подписанного релиза и
@@ -4584,7 +4584,7 @@ function App() {
         p.serverId &&
         !availableServers.some((server) => server.id === p.serverId)
       )
-        throw new Error("Сервер из подписанного bundle недоступен или отозван");
+        throw new Error("Сервер из подписанного пакета недоступен или отозван");
       setProfileServers(availableServers);
       setStage("files");
       setFirstRunStep0352("select");
@@ -5477,7 +5477,7 @@ function App() {
             )}
             {screen === "projects" && signedProvisioning0352 ? (
               <section className="panel">
-                Проект закреплён подписанным bundle:{" "}
+                Проект закреплён подписанным пакетом:{" "}
                 {signedProvisioning0352.projectId}
               </section>
             ) : (
@@ -6052,7 +6052,7 @@ function AuthPanel({
         Guard evidence. В этой версии revoke необратим для старого ключа:
         Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует
         незавершённые device challenges и ServerBridge joins. Повторное
-        подключение отозванной установки требует нового device key.
+        подключение отозванной установки требует нового ключа устройства.
       </p>
       <div className="settings">
         <label>
@@ -6149,7 +6149,7 @@ function AuthPanel({
             )
           }
         >
-          Проверить device key
+          Проверить ключ устройства
         </button>
         {session && (
           <button

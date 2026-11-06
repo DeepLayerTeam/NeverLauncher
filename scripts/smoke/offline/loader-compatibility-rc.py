@@ -128,7 +128,7 @@ if {
 } != blocked:
     raise SystemExit("Набор недоступных вышестоящих целей или причины недоступности изменились")
 if any((row.get("os"), row.get("arch")) != ("linux", "x86_64") for row in unavailable):
-    raise SystemExit("Неожиданное значение: «unavailable platform»")
+    raise SystemExit("Неожиданное значение: «недоступная платформа»")
 family_counts = Counter(row.get("loader") for row in targets)
 expected_families = {
     "vanilla": 109,

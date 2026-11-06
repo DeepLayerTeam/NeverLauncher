@@ -53,7 +53,7 @@ func normalizeGuardRuntimeProfiles0317(input []guardRuntimeProfile0317) ([]guard
 		switch profile.JavaMajor {
 		case 8, 16, 17, 21, 25:
 		default:
-			return nil, errors.New("Не поддерживается: «Java major in Guard runtime policy»")
+			return nil, errors.New("Не поддерживается: «основная версия Java в политике Guard»")
 		}
 		profile.ModuleSetSHA256 = strings.ToLower(strings.TrimSpace(profile.ModuleSetSHA256))
 		profile.CodeSetSHA256 = strings.ToLower(strings.TrimSpace(profile.CodeSetSHA256))
@@ -153,15 +153,15 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	}
 	major, err := strconv.ParseUint(metadataString0121(ticket.Metadata, "javaMajor"), 10, 32)
 	if err != nil || major == 0 {
-		return errors.New("Некорректное значение: «Continuous Guard ticket Java version»")
+		return errors.New("Некорректное значение: «версия Java в разрешении непрерывной защиты Guard»")
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, claims.TrustedDeviceID)
 	if err != nil || device.Status != "active" || device.TrustState != "verified" {
-		return errors.New("Недоступно: «Continuous Guard trusted device revoked or»")
+		return errors.New("Недоступно: «доверенное устройство непрерывной защиты Guard отозвано или»")
 	}
 	state, _ := effectiveDeviceAttestation0124(device, now)
 	if state != "verified" {
-		return errors.New("Истёк срок действия: «Continuous Guard device attestation»")
+		return errors.New("Истёк срок действия: «аттестация устройства непрерывной защиты Guard»")
 	}
 	// Не допускайте, чтобы устаревшие или ранее проверенные ключи устройств
 	// переживали восстановление.
@@ -171,7 +171,7 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	version := metadataString0121(ticket.Metadata, "launcherVersion")
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		return errors.New("Недоступно: «Continuous Guard release policy»")
+		return errors.New("Недоступно: «политика выпуска непрерывной защиты Guard»")
 	}
 	policy, ok := policies[version]
 	if !ok {

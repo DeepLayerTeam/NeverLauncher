@@ -76,7 +76,7 @@ func normalizeSecret0207(in model.ExtensionSecret) (model.ExtensionSecret, error
 		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: «имя секрета расширения» %q", s.Name)
 	}
 	if len(s.Nonce) != 12 {
-		return model.ExtensionSecret{}, errors.New("extension secret nonce: требуется «12 bytes»")
+		return model.ExtensionSecret{}, errors.New("extension secret nonce: требуется «12 байт»")
 	}
 	if len(s.Ciphertext) < 16 || len(s.Ciphertext) > (1<<20)+16 {
 		return model.ExtensionSecret{}, errors.New("Некорректное значение: «размер зашифрованного секрета расширения»")

@@ -23,7 +23,7 @@ func coordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor) (bool,
 		}
 		fields := strings.Fields(stmt)
 		if len(fields) < 6 {
-			return false, fmt.Errorf("Некорректное значение: «coordinator DDL» %q", stmt)
+			return false, fmt.Errorf("Некорректное значение: «DDL координатора» %q", stmt)
 		}
 		expected[fields[5]] = normalizeCoordinatorDDL0471(stmt)
 	}

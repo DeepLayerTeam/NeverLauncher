@@ -271,10 +271,10 @@ export function RegistryWorkspace({
 
   async function createRegistryPublisher() {
     if (!registryPublisherId.trim() || !registryPublisherName.trim())
-      throw new Error("Укажите ID и название publisher.");
+      throw new Error("Укажите идентификатор и название издателя.");
     if (
       !confirmAction(
-        `Сохранить publisher ${registryPublisherId}`,
+        `Сохранить издателя ${registryPublisherId}`,
         `Название: ${registryPublisherName}; изменение доверенного реестра`,
       )
     )
@@ -520,7 +520,7 @@ export function RegistryWorkspace({
           <h2>Реестр расширений {TOOL_VERSION}</h2>
           <p className="muted">
             Private/local registry подписанных immutable .nlext. Publish
-            принимает только artifact с доверенным Ed25519 publisher key;
+            принимает только артефакты с доверенным публичным ключом издателя Ed25519;
             install повторно проверяет bytes и signature из storage.
           </p>
         </div>
@@ -580,7 +580,7 @@ export function RegistryWorkspace({
           aria-label="Поиск по реестру"
           value={registryQuery}
           onChange={(event) => setRegistryQuery(event.target.value)}
-          placeholder="Поиск extension/publisher"
+          placeholder="Поиск расширений и издателей"
         />
         <input
           aria-label="Канал реестра"
@@ -644,7 +644,7 @@ export function RegistryWorkspace({
                 ).catch((err) => setError(err.message))
               }
             >
-              Создать/обновить publisher
+              Создать / обновить издателя
             </button>
             <button
               onClick={() =>

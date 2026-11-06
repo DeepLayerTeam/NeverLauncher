@@ -94,13 +94,13 @@ func factoryConfig02710() (string, string, error) {
 	}
 	stat, err := os.Stat(binary)
 	if err != nil || stat.IsDir() || stat.Mode()&0111 == 0 {
-		return "", "", errors.New("Недоступно: «Client Factory CLI executable»")
+		return "", "", errors.New("Недоступно: «исполняемый файл командной строки фабрики клиента»")
 	}
 	if err = os.MkdirAll(root, 0700); err != nil {
 		return "", "", err
 	}
 	if stat, err = os.Lstat(root); err != nil || !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 || stat.Mode().Perm()&0022 != 0 {
-		return "", "", errors.New("Client Factory root: требуется «a private directory, not a symlink»")
+		return "", "", errors.New("Client Factory root: требуется «закрытый каталог, не символическая ссылка»")
 	}
 	return binary, root, nil
 }
@@ -137,7 +137,7 @@ func factoryRead02710(root, id string) (factoryBuilderJob02710, string, error) {
 		return job, "", err
 	}
 	if job.ID != id {
-		return job, "", errors.New("Несовпадение: «job identity»")
+		return job, "", errors.New("Несовпадение: «идентификатор задания»")
 	}
 	// Сбой процесса не должен навсегда оставлять задачу в состоянии «выполняется»
 	// в интерфейсе.
@@ -299,7 +299,7 @@ func factoryRun02710(binary, root string, job factoryBuilderJob02710) {
 		p, err = factoryLoadPlan02710(dir)
 		if err == nil {
 			if p.MinecraftVersion != job.Request.Minecraft || p.Loader != job.Request.Loader || (job.Request.LoaderVersion != "" && p.LoaderVersion != job.Request.LoaderVersion) {
-				err = errors.New("«imported modpack» не совпадает с «pinned Minecraft/loader workspace identity»")
+				err = errors.New("«импортированный набор модов» не совпадает с «закреплённая идентичность рабочей области Minecraft и загрузчика»")
 			} else {
 				job.PlanDigest = p.ReproducibilitySHA256
 				job.Files = len(p.Outputs)
@@ -536,7 +536,7 @@ func factoryVerifyArtifact02710(root, path, digest string) (string, error) {
 		return "", err
 	}
 	if hex.EncodeToString(hash.Sum(nil)) != digest {
-		return "", fmt.Errorf("Несовпадение: «artifact %s checksum»", path)
+		return "", fmt.Errorf("Несовпадение: «контрольная сумма артефакта %s»", path)
 	}
 	return full, nil
 }
@@ -557,7 +557,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 			return "", errors.New("Экспорт превышает проверенный лимит размера или содержит недопустимый файл")
 		}
 		if _, exists := expected[f.Path]; exists {
-			return "", errors.New("Обнаружен дубликат: «export entry»")
+			return "", errors.New("Обнаружен дубликат: «запись экспорта»")
 		}
 		expected[f.Path] = struct {
 			digest string
@@ -590,7 +590,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 		full := client
 		for _, part := range strings.Split(path, "/") {
 			if part == "" || part == "." || part == ".." {
-				return "", errors.New("Небезопасное значение: «output component»")
+				return "", errors.New("Небезопасное значение: «выходной компонент»")
 			}
 			full = filepath.Join(full, part)
 			st, e := os.Lstat(full)
@@ -612,7 +612,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 		}
 		if exp, ok := expected[path]; ok && stat.Size() != exp.size {
 			file.Close()
-			return "", errors.New("Обнаружено изменение: «export file size»")
+			return "", errors.New("Обнаружено изменение: «размер экспортируемого файла»")
 		}
 		if path == ".launcher/install-plan.json" && (stat.Size() > 8<<20 || total+stat.Size() > maxExportBytes) {
 			file.Close()

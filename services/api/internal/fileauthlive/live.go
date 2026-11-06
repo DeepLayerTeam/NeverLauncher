@@ -102,7 +102,7 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 		return in, fmt.Errorf("Действующий провайдер FileAuth %q: явный формат пароля не поддерживается", in.ID)
 	}
 	if in.DatabasePath == "" || !filepath.IsAbs(in.DatabasePath) || !strings.EqualFold(filepath.Base(in.DatabasePath), "Database.json") {
-		return in, fmt.Errorf("Требуется: «live FileAuth provider %q: absolute Database.json path»", in.ID)
+		return in, fmt.Errorf("Требуется: «провайдер FileAuth %q: абсолютный путь к Database.json»", in.ID)
 	}
 	if in.DisplayName == "" {
 		in.DisplayName = in.ID
@@ -114,7 +114,7 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 		in.Provisioning.Mode = "explicit-only"
 	}
 	if in.Provisioning.Mode != "explicit-only" && in.Provisioning.Mode != "jit" {
-		return in, errors.New("Некорректное значение: «live FileAuth provisioning mode»")
+		return in, errors.New("Некорректное значение: «режим подготовки активного провайдера FileAuth»")
 	}
 	if in.Provisioning.DefaultRole == "" {
 		in.Provisioning.DefaultRole = "player"
@@ -139,7 +139,7 @@ type LiveConnector struct {
 // номинально настроенного, но непригодного провайдера.
 func NewLiveConnector(ctx context.Context, input LiveConfig, verifier func(password, encoded string) bool) (*LiveConnector, error) {
 	if verifier == nil {
-		return nil, errors.New("Требуется: «live FileAuth password verifier»")
+		return nil, errors.New("Требуется: «средство проверки паролей активного провайдера FileAuth»")
 	}
 	cfg, err := normalizeLiveConfig(input)
 	if err != nil {
@@ -181,7 +181,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if !before.Mode().IsRegular() || before.Mode().Perm()&0007 != 0 {
-		return nil, errors.New("Файл Database.json системы FileAuth: требуется «a regular file without world permissions»")
+		return nil, errors.New("Файл Database.json системы FileAuth: требуется «обычный файл без доступа для посторонних пользователей»")
 	}
 	f, err := os.Open(c.cfg.DatabasePath)
 	if err != nil {
@@ -193,7 +193,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if !os.SameFile(before, opened) || opened.Size() > fileauth.MaxDatabaseBytes || !opened.Mode().IsRegular() {
-		return nil, errors.New("Превышен допустимый размер: «FileAuth Database.json changed during open or»")
+		return nil, errors.New("Превышен допустимый размер: «файл FileAuth Database.json изменился во время открытия или»")
 	}
 	data, err := io.ReadAll(io.LimitReader(f, fileauth.MaxDatabaseBytes+1))
 	if err != nil {

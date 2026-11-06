@@ -76,7 +76,7 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, errors.New("sandbox.version: требуется «1»")
 	}
 	if p.Mode != "isolated" && p.Mode != "trusted" {
-		return nil, errors.New("sandbox.mode: требуется «isolated or trusted»")
+		return nil, errors.New("sandbox.mode: требуется «изолированная или доверенная»")
 	}
 	var err error
 	if p.FilesystemRead, err = normalizedSet(p.FilesystemRead, func(v string) bool { return v == "package" || fsGrant(v) && v != "scratch" }); err != nil {
@@ -98,7 +98,7 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, errors.New("Ограничение частоты IPC или объёма вывода изолированной среды превышает максимальное значение хоста")
 	}
 	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
-		return nil, errors.New("isolated sandbox: требуется «finite process, memory, CPU and time limits»")
+		return nil, errors.New("isolated sandbox: требуется «ограничения по числу процессов, памяти, ЦП и времени»")
 	}
 	return &p, nil
 }
@@ -183,7 +183,7 @@ func RequireReview(before, after model.ExtensionManifest, submittedDigest string
 	// расширения. Никогда не считайте смену ID при тех же разрешениях безопасным
 	// обновлением.
 	if before.ID == "" || after.ID == "" || before.ID != after.ID {
-		return errors.New("«sandbox approval»: запрещено «cross extension identities»")
+		return errors.New("«подтверждение изоляции»: запрещено «идентичности разных расширений»")
 	}
 	changed, err := ChangesRequireApproval(before, after)
 	if err != nil {

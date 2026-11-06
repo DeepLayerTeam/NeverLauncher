@@ -226,7 +226,7 @@ type MFASecrets0474 struct {
 
 func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 	if len(keys.SQLiteMFAKey) != 32 || keys.PostgreSQLSecret == "" {
-		return "", errors.New("для миграции MFA необходимы --sqlite-mfa-key-file и --postgres-secret-env; TOTP: запрещено «be disabled or copied as plaintext»")
+		return "", errors.New("для миграции MFA необходимы --sqlite-mfa-key-file и --postgres-secret-env; TOTP: запрещено «быть отключёнными или скопированными открытым текстом»")
 	}
 	block, err := aes.NewCipher(keys.SQLiteMFAKey)
 	if err != nil {

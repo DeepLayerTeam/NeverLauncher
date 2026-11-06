@@ -51,10 +51,10 @@ func normalizeRuntimeValidation0212(in model.RuntimeValidationResult) (model.Run
 		return model.RuntimeValidationResult{}, errors.New("runtime validation result: требуется пройдено или не пройдено")
 	}
 	if in.Result == "passed" && (!in.ActualClient || in.ExitCode != 0) {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation pass: требуется «actual client evidence with exit code 0»")
+		return model.RuntimeValidationResult{}, errors.New("runtime validation pass: требуется «фактические доказательства запуска клиента с кодом выхода 0»")
 	}
 	if in.FinishedAt.IsZero() || in.StartedAt.IsZero() || in.FinishedAt.Before(in.StartedAt) {
-		return model.RuntimeValidationResult{}, errors.New("Некорректное значение: «runtime validation timestamps are»")
+		return model.RuntimeValidationResult{}, errors.New("Некорректное значение: «временные метки проверки среды выполнения»")
 	}
 	if in.CreatedAt.IsZero() {
 		in.CreatedAt = time.Now().UTC()
@@ -256,7 +256,7 @@ func normalizeProjectValidationPolicy0212(in model.ProjectValidationPolicy) (mod
 		in.RequiredLevel = "integrity"
 	}
 	if in.RequiredLevel != "integrity" && in.RequiredLevel != "runtime" {
-		return model.ProjectValidationPolicy{}, errors.New("required validation level: требуется «integrity or runtime»")
+		return model.ProjectValidationPolicy{}, errors.New("required validation level: требуется «целостность или среда выполнения»")
 	}
 	if in.UpdatedAt.IsZero() {
 		in.UpdatedAt = time.Now().UTC()

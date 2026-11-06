@@ -101,7 +101,7 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 		return ws, errors.New("У фабрики клиента отсутствует исполняемый профиль метаданных Minecraft")
 	}
 	if ws.Settings.Runtime.Launch.VersionMetadataPath != "" && ws.Settings.Runtime.Launch.VersionMetadataPath != metadata {
-		return ws, errors.New("«pinned metadata path» не совпадает с «factory launcher»")
+		return ws, errors.New("«путь к закреплённым метаданным» не совпадает с «лаунчер фабрики сборок»")
 	}
 	if len(p.Outputs) == 0 || len(p.Outputs) > maxWorkspaceFiles0226 {
 		return ws, errors.New("Число результатов фабрики клиента превышает ограничения рабочей области")
@@ -137,7 +137,7 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 			hasMetadata = true
 		}
 		if f.Size < 0 || f.Size > maxFileBytes || len(f.SHA256) != 64 {
-			return ws, fmt.Errorf("Некорректное значение: «factory file too large or»: %s", f.Path)
+			return ws, fmt.Errorf("Некорректное значение: «файл фабрики слишком велик или»: %s", f.Path)
 		}
 		file := repository.BuildFile{Path: f.Path, Size: f.Size, SHA256: strings.ToLower(f.SHA256), Ownership: "required", Selected: true, TargetOS: []string{osName}}
 		if err := normalizeBuildFile0226(file); err != nil {

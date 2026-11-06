@@ -460,7 +460,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 			return report, err
 		}
 		if mode < 0 {
-			return report, fmt.Errorf("Некорректное значение: «stored file mode»: %s", f.Path)
+			return report, fmt.Errorf("Некорректное значение: «сохранённый режим доступа к файлу»: %s", f.Path)
 		}
 		saved.Mode = uint32(mode)
 		if saved != f {

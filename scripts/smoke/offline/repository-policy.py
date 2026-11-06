@@ -112,7 +112,7 @@ else:
         if api_digest != cli_digest:
             fail(f"Несовпадение контрольной суммы миграции Backend и CLI: {name}")
 if "0011_auth_federation_release_0120.sql" not in api_files:
-    fail("Отсутствует «0.12.0 Auth Federation release migration»")
+    fail("Отсутствует «миграция выпуска федеративной авторизации 0.12.0»")
 release_migration = api_files["0011_auth_federation_release_0120.sql"].read_text(
     encoding="utf-8"
 )
@@ -122,9 +122,9 @@ for required in [
     "auth_identities_provider_canonical_check",
 ]:
     if required not in release_migration:
-        fail(f"Для «0.12.0 federation release migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «миграция выпуска федерации 0.12.0» отсутствует обязательный инвариант: {required}")
 if "0012_device_trust_core_0121.sql" not in api_files:
-    fail("Отсутствует «0.12.1 Device Trust Core migration»")
+    fail("Отсутствует «миграция ядра доверия к устройствам 0.12.1»")
 device_migration = api_files["0012_device_trust_core_0121.sql"].read_text(
     encoding="utf-8"
 )
@@ -136,9 +136,9 @@ for required in [
     "auth_sessions_trusted_device_fk",
 ]:
     if required not in device_migration:
-        fail(f"Для «0.12.1 device trust migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «миграция доверия к устройствам 0.12.1» отсутствует обязательный инвариант: {required}")
 if "0014_challenge_response_attestation_0124.sql" not in api_files:
-    fail("Отсутствует «0.12.4 Challenge-response attestation migration»")
+    fail("Отсутствует «миграция аттестации с запросом и ответом 0.12.4»")
 attestation_migration = api_files[
     "0014_challenge_response_attestation_0124.sql"
 ].read_text(encoding="utf-8")
@@ -150,7 +150,7 @@ for required in [
     "'attest'",
 ]:
     if required not in attestation_migration:
-        fail(f"Для «0.12.4 attestation migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «миграция аттестации 0.12.4» отсутствует обязательный инвариант: {required}")
 
 # 2. Исторические milestone-версии 4.x-8.x запрещены как schemaVersion в CLI.
 legacy_schema_patterns = [
@@ -286,7 +286,7 @@ for required in [
     "extractAndVerifyOperationsBackup880",
 ]:
     if required not in backup_go:
-        fail(f"Неполная реализация «backup production implementation»: {required}")
+        fail(f"Неполная реализация «промышленная реализация резервного копирования»: {required}")
 for legacy in [
     "release_manager.go",
     "client_package.go",
@@ -313,10 +313,10 @@ for required in [
     "/api/v1/admin/auth/federation/status",
 ]:
     if required not in federation_routes:
-        fail(f"Для «0.12.0 Auth Federation route» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «маршрут федеративной авторизации 0.12.0» отсутствует обязательный компонент: {required}")
 for required in ["func NewFederationCore(", "conformance.Run(ctx, local)"]:
     if required not in federation_registry:
-        fail(f"Для «0.12.0 canonical federation registry» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «канонический реестр федерации 0.12.0» отсутствует обязательный компонент: {required}")
 auth_session_postgres = read("services/api/internal/httpapi/auth_core_postgres_111.go")
 if "INSERT INTO auth_identities" in auth_session_postgres:
     fail(
@@ -339,7 +339,7 @@ for required in [
     "/api/v1/admin/auth/devices",
 ]:
     if required not in device_routes:
-        fail(f"Для «0.12.1 Device Trust route» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «маршрут проверки доверия к устройству 0.12.1» отсутствует обязательный компонент: {required}")
 for required in [
     "ed25519.Verify",
     "ConsumeDeviceChallenge",
@@ -347,7 +347,7 @@ for required in [
     "deviceProofPayload0121",
 ]:
     if required not in device_trust:
-        fail(f"Для «0.12.1 Device Trust proof path» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «обработка подтверждения доверия к устройству 0.12.1» отсутствует обязательный компонент: {required}")
 for required in [
     "key_fingerprint",
     "status='revoked'",
@@ -355,9 +355,9 @@ for required in [
     "trusted_device_id",
 ]:
     if required not in device_repo:
-        fail(f"Неполная реализация «0.12.1 Device Trust persistence/revocation»: {required}")
+        fail(f"Неполная реализация «хранение данных и отзыв доверия к устройству 0.12.1»: {required}")
 if not (ROOT / "services/api/internal/httpapi/device_trust_0121_test.go").is_file():
-    fail("Отсутствует «0.12.1 Device Trust HTTP E2E test»")
+    fail("Отсутствует «сквозной HTTP-тест доверия к устройству 0.12.1»")
 # В 0.12.2 официальный Desktop должен полностью управлять жизненным циклом закрытого
 # ключа устройства. Закрытый seed допустим лишь внутри нативной границы Tauri/keyring;
 # React получает только публичные метаданные и подписи, никогда секретный ключ.
@@ -383,7 +383,7 @@ for required in [
     "reset_device_key",
 ]:
     if required not in desktop_tauri:
-        fail(f"Для «0.12.2 Tauri device-key command» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «команда Tauri для ключа устройства 0.12.2» отсутствует обязательный компонент: {required}")
 for required in [
     "ensureDesktopDeviceTrust",
     "/api/v1/auth/devices/register/begin",
@@ -391,7 +391,7 @@ for required in [
     "privateKeyExposedToFrontend",
 ]:
     if required not in desktop_ui:
-        fail(f"Для «0.12.2 Desktop automatic Device Trust flow» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «автоматическая проверка доверия к устройству в Desktop 0.12.2» отсутствует обязательный компонент: {required}")
 for forbidden in [
     "privateSeed",
     "private_seed",
@@ -423,7 +423,7 @@ for required in [
     '!p.contains("keyring")',
 ]:
     if required not in desktop_device_keys:
-        fail(f"Для «0.12.3 hardware-bound Desktop path» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «аппаратно защищённый процесс Desktop 0.12.3» отсутствует обязательный компонент: {required}")
 for required in [
     "ecdsa.Verify",
     "elliptic.Unmarshal(elliptic.P256()",
@@ -431,27 +431,27 @@ for required in [
     "hardwareProvider",
 ]:
     if required not in device_trust:
-        fail(f"Для «0.12.3 P-256 server proof path» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «обработка серверного подтверждения P-256 0.12.3» отсутствует обязательный компонент: {required}")
 for required in [
     "key_algorithm IN ('ed25519','p256')",
     "key_binding IN ('software','hardware')",
     "key_binding='hardware' AND key_algorithm='p256'",
 ]:
     if required not in hardware_migration:
-        fail(f"Неполная реализация «0.12.3 hardware identity migration»: {required}")
+        fail(f"Неполная реализация «миграция аппаратной идентичности 0.12.3»: {required}")
 if "TestDeviceTrustHardwareP256RegistrationAndBinding0123" not in read(
     "services/api/internal/httpapi/device_trust_0121_test.go"
 ):
-    fail("Отсутствует «0.12.3 P-256 HTTP E2E test»")
+    fail("Отсутствует «сквозной HTTP-тест P-256 0.12.3»")
 if (
     "hardware-bound-identity.py" not in preflight
     or "scripts/smoke/offline/hardware-bound-identity.py" not in ci
 ):
-    fail("Проверка «0.12.3 hardware-bound identity gate» не подключена к preflight/CI")
+    fail("Проверка «аппаратная привязка идентичности 0.12.3» не подключена к preflight/CI")
 if "libtss2-dev" not in ci:
     fail("0.12.3: в CI отсутствует зависимость сборки Linux TPM libtss2-dev")
 if "Hardware-bound identity gate OK" not in hardware_gate:
-    fail("Не завершена реализация «0.12.3 hardware identity gate»")
+    fail("Не завершена реализация «проверка аппаратной идентичности 0.12.3»")
 if (
     'Assurance:         "hardware"' in device_trust
     or 'Assurance:         "attested"' in device_trust
@@ -476,7 +476,7 @@ for required in [
     "not-verified",
 ]:
     if required not in attestation_handler:
-        fail(f"Для «0.12.4 challenge-response attestation path» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «обработка аттестации с запросом и ответом 0.12.4» отсутствует обязательный компонент: {required}")
 for required in [
     "TestDeviceChallengeResponseAttestation0124",
     "TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124",
@@ -484,7 +484,7 @@ for required in [
     "wrong attestation signature accepted",
 ]:
     if required not in attestation_test:
-        fail(f"Для «0.12.4 attestation E2E test» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «сквозной тест аттестации 0.12.4» отсутствует обязательный компонент: {required}")
 if (
     "challenge-response-attestation.py" not in preflight
     or "scripts/smoke/offline/challenge-response-attestation.py" not in ci
@@ -520,7 +520,7 @@ for required in [
     "currentTrustedDeviceID0125",
 ]:
     if required not in device_management:
-        fail(f"Для «0.12.5 device management path» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «обработка управления устройствами 0.12.5» отсутствует обязательный компонент: {required}")
 for required in [
     "UPDATE device_challenges SET consumed_at",
     "UPDATE auth_sessions SET status='revoked'",
@@ -531,7 +531,7 @@ for required in [
     "assurance='proof-of-possession'",
 ]:
     if required not in device_repository:
-        fail(f"Для «0.12.5 transactional device revocation» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «транзакционный отзыв устройств 0.12.5» отсутствует обязательный компонент: {required}")
 for required in [
     "TestDeviceManagementRevokeOthersAndChallengeInvalidation0125",
     "TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125",
@@ -541,7 +541,7 @@ for required in [
     "self-revoked session remained active",
 ]:
     if required not in device_management_test:
-        fail(f"Недостаточное регрессионное покрытие «0.12.5 device management»: {required}")
+        fail(f"Недостаточное регрессионное покрытие «управление устройствами 0.12.5»: {required}")
 if (
     "device-management-revocation.py" not in preflight
     or "scripts/smoke/offline/device-management-revocation.py" not in ci
@@ -567,7 +567,7 @@ for required in [
     "reconcileSessionDeviceRisk0126",
 ]:
     if required not in auth_go:
-        fail(f"Для «0.12.6 authoritative session/device binding» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «авторитетная привязка сеанса и устройства 0.12.6» отсутствует обязательный компонент: {required}")
 for required in [
     "Launcher Session Device Binding v1",
     "refresh-token-sha256=",
@@ -578,7 +578,7 @@ for required in [
     '"revoke"',
 ]:
     if required not in session_risk:
-        fail(f"Для «0.12.6 risk/device proof path» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «обработка оценки риска и подтверждения устройства 0.12.6» отсутствует обязательный компонент: {required}")
 for required in [
     "previewRefresh0126(req.RefreshToken)",
     "verifyRefreshDeviceProof0126",
@@ -586,14 +586,14 @@ for required in [
     "device-bound-refresh",
 ]:
     if required not in auth_accounts:
-        fail(f"Для «0.12.6 bound refresh integration» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «интеграция обновления токенов с привязкой 0.12.6» отсутствует обязательный компонент: {required}")
 for required in [
     "TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126",
     "TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126",
     "refresh family survived replay compromise",
 ]:
     if required not in session_risk_test:
-        fail(f"Недостаточное регрессионное покрытие «0.12.6 session/device risk»: {required}")
+        fail(f"Недостаточное регрессионное покрытие «оценка риска сеанса и устройства 0.12.6»: {required}")
 if (
     "session-device-risk-0126.py" not in preflight
     or "scripts/smoke/offline/session-device-risk-0126.py" not in ci
@@ -625,7 +625,7 @@ for required in [
     "session_step_up_required",
 ]:
     if required not in gameplay_trust:
-        fail(f"Для «0.12.7 gameplay trust evaluator» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «оценка доверия к игровому процессу 0.12.7» отсутствует обязательный компонент: {required}")
 for required in [
     "issueMinecraftSessionWithTrust119",
     "TrustedDeviceID: trustedDeviceID",
@@ -635,7 +635,7 @@ for required in [
     "evaluateGameplayTrust0127",
 ]:
     if required not in minecraft_auth:
-        fail(f"Для «0.12.7 Minecraft credential trust binding» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «привязка доверия к учётным данным Minecraft 0.12.7» отсутствует обязательный компонент: {required}")
 for required in [
     "TrustedDeviceID",
     "BindingEpoch",
@@ -643,24 +643,24 @@ for required in [
     "evaluateGameplayTrust0127",
 ]:
     if required not in server_bridge:
-        fail(f"Для «0.12.7 ServerBridge trust binding» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «привязка доверия к ServerBridge 0.12.7» отсутствует обязательный компонент: {required}")
 for required in ["channel_mismatch", "trustEnforcement", "evaluateGameplayTrust0127"]:
     if required not in bridge_plugins:
-        fail(f"Для «0.12.7 plugin trust enforcement» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «принудительная проверка доверия к плагинам 0.12.7» отсутствует обязательный компонент: {required}")
 for required in [
     "TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind",
     "TestServerBridgeTrust0127LiveBindingAndRiskEnforcement",
     "bridge accepted mismatched channel",
 ]:
     if required not in gameplay_trust_test:
-        fail(f"Недостаточное регрессионное покрытие «0.12.7 gameplay trust»: {required}")
+        fail(f"Недостаточное регрессионное покрытие «доверие к игровому процессу 0.12.7»: {required}")
 if (
     "minecraft-serverbridge-trust-0127.py" not in preflight
     or "scripts/smoke/offline/minecraft-serverbridge-trust-0127.py" not in ci
 ):
-    fail("Проверка «0.12.7 Minecraft/ServerBridge trust gate» не подключена к preflight/CI")
+    fail("Проверка «доверие Minecraft/ServerBridge 0.12.7» не подключена к preflight/CI")
 if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate:
-    fail("Не завершена реализация «0.12.7 Minecraft/ServerBridge trust gate»")
+    fail("Не завершена реализация «проверка доверия Minecraft/ServerBridge 0.12.7»")
 
 for required in ["LAUNCHER_PREFLIGHT_STRICT", "LAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
@@ -688,7 +688,7 @@ for required in [
     'LAUNCHER_DATABASE_AUTO_MIGRATE: "false"',
 ]:
     if required not in federation_e2e_compose:
-        fail(f"Неполная реализация «federation PostgreSQL E2E»: {required}")
+        fail(f"Неполная реализация «сквозная проверка федерации PostgreSQL»: {required}")
 federation_e2e = read("e2e/scripts/run-federation-postgres-e2e.sh")
 for required in [
     "db migrate verify",
@@ -922,7 +922,7 @@ for required in ["ErrImmutable", 'Status == "published"']:
 # места выполнения, а не наличие всех слов в одном устаревшем монолите.
 for required in ["Опубликованный релиз нельзя изменить", "http.StatusConflict"]:
     if required not in package_product:
-        fail(f"Для «HTTP package lifecycle immutable guard» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «защита неизменности жизненного цикла HTTP-пакета» отсутствует обязательный компонент: {required}")
 if "lockPackageMutation" not in read("services/api/internal/httpapi/admin_handlers.go"):
     fail("Обработчики файлов и пакетов Admin обязаны блокировать конкурентное изменение пакетов")
 rollback_worker = read("services/api/internal/httpapi/rollback_durable_0217.go")
@@ -933,7 +933,7 @@ for required in [
     "verifyManifestSignature",
 ]:
     if required not in rollback_worker:
-        fail(f"Для «durable rollback lifecycle invariant» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «инвариант устойчивого жизненного цикла отката» отсутствует обязательный компонент: {required}")
 if "FOR UPDATE" not in postgres_repo or "status <> 'published'" not in postgres_repo:
     fail(
         "PostgreSQL immutable guard должен использовать row locking и conditional mutation"
@@ -998,7 +998,7 @@ for required in [
     "ensurePublicKeyNotRevoked",
 ]:
     if required not in security_keyring:
-        fail(f"Неполная реализация «persistent key rotation/revocation/attestation»: {required}")
+        fail(f"Неполная реализация «постоянная ротация, отзыв и аттестация ключей»: {required}")
 for forbidden in ["rotation-policy", "attestation-plan"]:
     if forbidden in security_commands or forbidden in security_keyring:
         fail(f"security key lifecycle содержит declaration-only status: {forbidden}")
@@ -1015,7 +1015,7 @@ for required in [
     "resolvedDependencies",
 ]:
     if required not in supply_chain:
-        fail(f"Неполная реализация «dependency SBOM/provenance»: {required}")
+        fail(f"Неполная реализация «ведомость компонентов SBOM и происхождение зависимостей»: {required}")
 for required in [
     "PROVENANCE.json.sig",
     "signDetachedFileWithKey",
@@ -1243,7 +1243,7 @@ compat_workflow = read(".github/workflows/compatibility.yml")
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
 for required in ["vanilla", "fabric", "quilt", "forge", "neoforge", '"required": true']:
     if required not in compat_targets:
-        fail(f"Неполная реализация «compatibility targets»: {required}")
+        fail(f"Неполная реализация «целевые платформы совместимости»: {required}")
 for forbidden in [
     '"status": "passed"',
     '"status":"passed"',
@@ -1267,11 +1267,11 @@ for required in [
     "evidenceSha256",
 ]:
     if required not in compat_tool:
-        fail(f"Для «compatibility matrix aggregator» отсутствует механизм защиты: {required}")
+        fail(f"В проверке «сборщик матрицы совместимости» отсутствует механизм защиты: {required}")
 if not (ROOT / "scripts/compatibility/test_matrix.py").is_file():
-    fail("Отсутствуют регрессионные тесты «compatibility matrix»")
+    fail("Отсутствуют регрессионные тесты «матрица совместимости»")
 if not (ROOT / "e2e/scripts/test_publish_client_package.py").is_file():
-    fail("Отсутствуют регрессионные тесты «E2E publisher path-hardening»")
+    fail("Отсутствуют регрессионные тесты «сквозная проверка защиты путей издателя»")
 for required in [
     "run-compatibility-case.sh",
     "strategy:",
@@ -1282,7 +1282,7 @@ for required in [
     "matrix.py aggregate",
 ]:
     if required not in compat_workflow:
-        fail(f"Неполная реализация «public compatibility workflow»: {required}")
+        fail(f"Неполная реализация «публичный процесс проверки совместимости»: {required}")
 for required in [
     "LAUNCHER_E2E_MODE=compatibility",
     "GITHUB_SHA",
@@ -1305,7 +1305,7 @@ for required in [
     "joined the game",
 ]:
     if required not in e2e_script:
-        fail(f"Для «generic real-client E2E hardening» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «усиление сквозных проверок настоящего клиента» отсутствует обязательный компонент: {required}")
 if "LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}" not in e2e_compose:
     fail(
         "Профиль сервера E2E должен соответствовать целевой платформе совместимости, а не быть жёстко привязан к Vanilla"
@@ -1339,7 +1339,7 @@ for required in [
     "retryableCompatibilityStatus",
 ]:
     if required not in stability_go:
-        fail(f"Для «0.10.7 compatibility stabilization» отсутствует необходимый механизм: {required}")
+        fail(f"В проверке «стабилизация совместимости 0.10.7» отсутствует необходимый механизм: {required}")
 for required in [
     "TestCompatibilityGETRetriesTransientStatus",
     "TestMaterializationLockIsExclusive",
@@ -1355,7 +1355,7 @@ for required in [
     "validateAssetLogicalPath",
 ]:
     if required not in vanilla_runtime:
-        fail(f"Для «Vanilla stabilization» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «стабилизация Vanilla» отсутствует обязательный компонент: {required}")
 for required in [
     "fetchForgeLikeMetadata",
     "compatibilityHTTPAttempts",
@@ -1376,7 +1376,7 @@ for required in [
     "TestNeoForgeMavenMetadataPersistentSemanticMismatchFailsClosed",
 ]:
     if required not in forge_runtime_tests:
-        fail(f"Отсутствуют регрессионные тесты «NeoForge Maven metadata retry»: {required}")
+        fail(f"Отсутствуют регрессионные тесты «повторное получение метаданных Maven для NeoForge»: {required}")
 # Запись Java 1.3 проверяет всю файловую инвентаризацию и затем один настоящий
 # самотест JVM -version с проверкой ОС/архитектуры, а не только кэшированные
 # метаданные.
@@ -1412,7 +1412,7 @@ for required in [
     "evidence manifestLoader mismatch",
 ]:
     if required not in compat_tool:
-        fail(f"Для «compatibility evidence stabilization» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «стабилизация доказательств совместимости» отсутствует обязательный компонент: {required}")
 
 # 11b. Усиление совместимости 0.16.11: прерванные загрузки восстанавливаются,
 # повреждённые записи кеша изолируются, метаданные Mojang точной версии
@@ -1449,7 +1449,7 @@ for required in [
     "TestVanillaMetadataRecoveryDoesNotResurrectMissingAuthoritativeVersion",
 ]:
     if required not in read("cli/cmd/launcher/compatibility_hardening_test.go"):
-        fail(f"Отсутствуют регрессионные тесты «0.16.11 compatibility hardening»: {required}")
+        fail(f"Отсутствуют регрессионные тесты «усиление совместимости 0.16.11»: {required}")
 for required in [
     "java_sha256",
     'schema_version: "1.3"',
@@ -1460,7 +1460,7 @@ for required in [
     "metadata.file_type().is_symlink()",
 ]:
     if required not in managed_java:
-        fail(f"Для «0.16.11 Managed Java hardening» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «усиление управляемой Java 0.16.11» отсутствует обязательный компонент: {required}")
 
 
 # 12. Выпуск совместимости Minecraft: публикация в производстве требует
@@ -1479,7 +1479,7 @@ for required in [
     "evidenceSha256",
 ]:
     if required not in compat_release:
-        fail(f"Для «compatibility release certification» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «сертификация выпуска на совместимость» отсутствует обязательный компонент: {required}")
 for required in [
     'ProductVersion string                       `json:"productVersion,omitempty"`',
     "targetsProductVersion := strings.TrimSpace(targets.ProductVersion)",
@@ -1506,10 +1506,10 @@ for required in [
     "Certification evidence не передан",
 ]:
     if required not in build_release:
-        fail(f"Неполная реализация «build-release compatibility certification»: {required}")
+        fail(f"Неполная реализация «сертификация совместимости собранного выпуска»: {required}")
 compat_release_tests_path = ROOT / "cli/cmd/launcher/compatibility_release_test.go"
 if not compat_release_tests_path.is_file():
-    fail("Отсутствуют регрессионные тесты «compatibility release certification»")
+    fail("Отсутствуют регрессионные тесты «сертификация выпуска на совместимость»")
 compat_release_tests = compat_release_tests_path.read_text(encoding="utf-8")
 for required in [
     "TestCompatibilityCertificationAcceptsVersionlessTargetsFromRepositoryContract",
@@ -1517,7 +1517,7 @@ for required in [
     "TestCompatibilityCertificationRejectsMatrixVersionMismatch",
 ]:
     if required not in compat_release_tests:
-        fail(f"Отсутствуют регрессионные тесты «compatibility release VERSION»: {required}")
+        fail(f"Отсутствуют регрессионные тесты «VERSION выпуска совместимости»: {required}")
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (
     0,
     16,
@@ -1531,7 +1531,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             "0.16.11 Сертификация выпуска не привязана к политике усиления совместимости"
         )
     if "TestCompatibilityCertificationHardening01611Policy" not in compat_release_tests:
-        fail("Отсутствует регрессионный тест «0.16.11 compatibility hardening release»")
+        fail("Отсутствует регрессионный тест «выпуск 0.16.11 с усилением совместимости»")
 
 release_cert_fetch = read("scripts/release/fetch-exact-certifications.py")
 for required in [
@@ -1548,7 +1548,7 @@ for required in [
     "Never forward the GitHub bearer token",
 ]:
     if required not in release_cert_fetch:
-        fail(f"Неполная реализация «release exact-commit certification fetcher»: {required}")
+        fail(f"Неполная реализация «загрузка результатов сертификации точного коммита выпуска»: {required}")
 for required in [
     "actions: read",
     "fetch-exact-certifications.py",
@@ -1584,7 +1584,7 @@ for required in [
     "oldFingerprintPermanentTombstone",
 ]:
     if required not in key_recovery_handler:
-        fail(f"Для «0.12.8 key replacement ceremony» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «процедура замены ключа 0.12.8» отсутствует обязательный компонент: {required}")
 for required in [
     "hardware_key_label_generation",
     "stage_device_key_replacement",
@@ -1593,7 +1593,7 @@ for required in [
     "abort_staged_device_key",
 ]:
     if required not in key_recovery_native:
-        fail(f"Для «0.12.8 native staged-key lifecycle» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «жизненный цикл подготовленного ключа в нативном модуле 0.12.8» отсутствует обязательный компонент: {required}")
 for required in [
     "replaceDesktopDeviceKey",
     "passkeyStepUp",
@@ -1601,7 +1601,7 @@ for required in [
     "serverCommitted",
 ]:
     if required not in key_recovery_desktop:
-        fail(f"Для «0.12.8 desktop replacement flow» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «процесс замены ключа Desktop 0.12.8» отсутствует обязательный компонент: {required}")
 if key_recovery_migration_api != key_recovery_migration_cli:
     fail("Обнаружено несовпадение «0.12.8 миграция API/CLI 0017»")
 if (
@@ -1648,7 +1648,7 @@ for required in [
     "exact commit/run ID",
 ]:
     if required not in device_trust_matrix:
-        fail(f"Для «0.12.9 trust matrix aggregator» отсутствует механизм защиты: {required}")
+        fail(f"В проверке «сборщик матрицы доверия 0.12.9» отсутствует механизм защиты: {required}")
 for required in [
     "db migrate apply",
     "/api/v1/auth/devices/register/begin",
@@ -1706,7 +1706,7 @@ for required in [
     '"openssl", "dgst", "-sha256", "-sign"',
 ]:
     if required not in device_trust_webauthn:
-        fail(f"Неполная реализация «0.12.9 WebAuthn Device Trust E2E helper»: {required}")
+        fail(f"Неполная реализация «вспомогательная сквозная проверка WebAuthn для доверия к устройству 0.12.9»: {required}")
 for required in [
     "matrix.py plan",
     "runs-on: ${{ matrix.runner }}",
@@ -1727,16 +1727,16 @@ for required in [
     "attestation_payload_is_hardware_only_and_identity_bound",
 ]:
     if required not in device_trust_native_result:
-        fail(f"Неполная реализация «0.12.9 native Device Trust evidence»: {required}")
+        fail(f"Неполная реализация «доказательства доверия к устройству из нативного модуля 0.12.9»: {required}")
 if (
     "device-trust-e2e-matrix-0129.py" not in preflight
     or "scripts/smoke/offline/device-trust-e2e-matrix-0129.py" not in ci
 ):
-    fail("Проверка «0.12.9 Device Trust matrix gate» не подключена к preflight/CI")
+    fail("Проверка «матрица доверия к устройствам 0.12.9» не подключена к preflight/CI")
 if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
     fail("0.12.9 Связка строгих производственных E2E-проверок настроена не полностью")
 if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_gate:
-    fail("Не завершена реализация «0.12.9+ mandatory Device Trust release gate»")
+    fail("Не завершена реализация «обязательная проверка доверия к устройствам для выпусков 0.12.9+»")
 
 
 # В 0.12.10: миграция и стабилизация. Обновление строго со схемы 0.12.9 —
@@ -1769,7 +1769,7 @@ for required in [
     "legacy-device-revoked",
 ]:
     if required not in stabilization_migration_api:
-        fail(f"Для «0.12.10 stabilization migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «миграция стабилизации 0.12.10» отсутствует обязательный инвариант: {required}")
 for required in [
     "0.12.9 schema (0001..0017)",
     "0017_device_key_recovery_rotation_0128",
@@ -1789,7 +1789,7 @@ for required in [
     "0018_device_trust_stabilization_01210",
 ]:
     if required not in device_trust_e2e:
-        fail(f"Для «0.12.10: публичные свидетельства доверия к устройству» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.12.10: публичные свидетельства доверия к устройству» отсутствует обязательный компонент: {required}")
 if (
     '"productVersion": "' + VERSION + '"' not in device_trust_targets
     or "migrationStabilization01210" not in device_trust_targets
@@ -1806,7 +1806,7 @@ if (
     "device-trust-migration-stabilization-01210.py" not in preflight
     or "scripts/smoke/offline/device-trust-migration-stabilization-01210.py" not in ci
 ):
-    fail("Проверка «0.12.10 stabilization gate» не подключена к preflight/CI")
+    fail("Проверка «стабилизация 0.12.10» не подключена к preflight/CI")
 if (
     "run-device-trust-migration-e2e.sh" not in preflight
     or "run-device-trust-migration-e2e.sh" not in ci
@@ -1823,7 +1823,7 @@ if (
         "0.12.10 Свидетельства миграции не сохраняются процессами CI и публичной политики доверия к устройствам"
     )
 if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization_gate:
-    fail("Не завершена реализация «0.12.10 mandatory migration stabilization release gate»")
+    fail("Не завершена реализация «обязательная проверка стабилизации миграции перед выпуском 0.12.10»")
 
 
 # В 0.16.1: исправление назначений запросов Guard Attestation в PostgreSQL. Без
@@ -1844,7 +1844,7 @@ for required in [
     "key-recover",
 ]:
     if required not in guard_purpose_migration_api:
-        fail(f"Для «0.16.1 Guard challenge-purpose migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «0.16.1 Guard challenge-purpose migration» отсутствует обязательный инвариант: {required}")
 
 guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
 for required in [
@@ -1856,7 +1856,7 @@ for required in [
     "guardPurposeMigrationSealed:true",
 ]:
     if required not in guard_migration_e2e:
-        fail(f"Для «0.16.1 Guard challenge-purpose PostgreSQL E2E» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.16.1 Guard challenge-purpose PostgreSQL E2E» отсутствует обязательный компонент: {required}")
 
 guard_attestation_backend_0161 = read(
     "services/api/internal/httpapi/guard_attestation_0134.go"
@@ -1868,7 +1868,7 @@ for required in [
     "ticketExpires := canonicalGuardAttestationTime0134",
 ]:
     if required not in guard_attestation_backend_0161:
-        fail(f"Для «0.16.1 Guard Attestation timestamp canonicalization» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.16.1 Guard Attestation timestamp canonicalization» отсутствует обязательный компонент: {required}")
 
 
 # В 0.18.10: Guard Attestation v2 требует фиксированных назначений запросов и билетов для
@@ -1888,7 +1888,7 @@ for required in [
     "guard-launch-v1",
 ]:
     if required not in guard_v2_migration_api:
-        fail(f"Для «0.18.10 Guard Attestation v2 migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «0.18.10 Guard Attestation v2 migration» отсутствует обязательный инвариант: {required}")
 for required in [
     "0032_guard_attestation_v2_01810",
     "dtmig-guard-attest-v2",
@@ -1898,7 +1898,7 @@ for required in [
     "guardAttestationV2MigrationSealed:true",
 ]:
     if required not in guard_migration_e2e:
-        fail(f"Для «0.18.10 Guard Attestation v2 PostgreSQL E2E» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 Guard Attestation v2 PostgreSQL E2E» отсутствует обязательный компонент: {required}")
 attestation_v2_backend = read(
     "services/api/internal/httpapi/guard_attestation_v2_01810.go"
 )
@@ -1912,7 +1912,7 @@ for required in [
     '"launcherSha256"',
 ]:
     if required not in attestation_v2_backend:
-        fail(f"Для «0.18.10 Guard Attestation v2 backend invariant» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 Guard Attestation v2 backend invariant» отсутствует обязательный компонент: {required}")
 attestation_v2_bridge = read("services/api/internal/httpapi/server_bridge.go")
 for required in [
     "continuousGuardRequiredForJoin01810",
@@ -1920,7 +1920,7 @@ for required in [
     "Continuous Guard Attestation v2 policy unavailable",
 ]:
     if required not in attestation_v2_bridge:
-        fail(f"Для «0.18.10 ServerBridge continuous evidence binding» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 ServerBridge continuous evidence binding» отсутствует обязательный компонент: {required}")
 attestation_v2_runtime = read("runtime/runtime/src/windows_attestation_v2.rs")
 for required in [
     "collect_windows_continuous_evidence_v2",
@@ -1928,7 +1928,7 @@ for required in [
     "build_windows_attestation_v2",
 ]:
     if required not in attestation_v2_runtime:
-        fail(f"Для «0.18.10 Guard Attestation v2 runtime invariant» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 Guard Attestation v2 runtime invariant» отсутствует обязательный компонент: {required}")
 if (
     "guard-attestation-v2-01810.py" not in preflight
     or "guard-attestation-v2-01810.py" not in ci
@@ -1952,14 +1952,14 @@ for required in [
     "guard/windows-integrity-evidence/v1",
 ]:
     if required not in integrity_0132:
-        fail(f"Для «0.13.2 Windows integrity evidence» отсутствует необходимый механизм: {required}")
+        fail(f"В проверке «0.13.2 Windows integrity evidence» отсутствует необходимый механизм: {required}")
 for required in [
     "integrity-evidence",
     "integrity_session_proof",
     "collect_windows_integrity_evidence",
 ]:
     if required not in guard_0132:
-        fail(f"Для «0.13.2 authenticated integrity IPC» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.13.2 authenticated integrity IPC» отсутствует обязательный компонент: {required}")
 if (
     "launch заблокирован: Guard Windows Integrity Evidence v1 недоступен"
     not in desktop_0132
@@ -1995,21 +1995,21 @@ for required in [
     "ResumeThread",
 ]:
     if required not in policy_0133:
-        fail(f"Для «0.13.3 Windows runtime/process policy» отсутствует необходимый механизм: {required}")
+        fail(f"В проверке «0.13.3 Windows runtime/process policy» отсутствует необходимый механизм: {required}")
 for required in [
     "process-policy",
     "process_policy_enforced",
     "validate_guard_process_policy",
 ]:
     if required not in guard_0133:
-        fail(f"Для «0.13.3 authenticated process-policy IPC» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.13.3 authenticated process-policy IPC» отсутствует обязательный компонент: {required}")
 for required in [
     "prepare_runtime_command",
     "enforce_runtime_process",
     "runtime_policy: Some(runtime_policy)",
 ]:
     if required not in supervisor_0133:
-        fail(f"Для «0.13.3 runtime supervisor policy enforcement» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.13.3 runtime supervisor policy enforcement» отсутствует обязательный компонент: {required}")
 if (
     "launch заблокирован: Guard Windows process policy verification failed"
     not in desktop_0133
@@ -2090,7 +2090,7 @@ for required in [
     "guard-ci-macos-universal",
 ]:
     if required not in ci and required != "Guard CI matrix":
-        fail(f"Для «0.13.9 CI matrix wiring» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.13.9 CI matrix wiring» отсутствует обязательный компонент: {required}")
 if "guard-certification:" not in ci:
     fail("Отсутствует «0.13.9 aggregate Guard certification CI job»")
 if (
@@ -2677,7 +2677,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "vanilla-1.20.4-linux-x64",
     ]:
         if target not in targets_0166:
-            fail(f"Для «0.16.6 Java 16/17 actual-client target» отсутствует обязательный компонент: {target}")
+            fail(f"В проверке «0.16.6 Java 16/17 actual-client target» отсутствует обязательный компонент: {target}")
     for required in [
         "JAVA16_17_VANILLA_0166",
         "Java 16/17 Vanilla 0.16.6",
@@ -2747,7 +2747,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         target = f"vanilla-{version}-linux-x64"
         if target not in targets_0167:
-            fail(f"Для «0.16.7 Java 21 actual-client target» отсутствует обязательный компонент: {target}")
+            fail(f"В проверке «0.16.7 Java 21 actual-client target» отсутствует обязательный компонент: {target}")
     for required in [
         "JAVA21_VANILLA_0167",
         "Java 21 Vanilla 0.16.7",
@@ -2802,7 +2802,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for version in ["26.1", "26.1.1", "26.1.2", "26.3"]:
         target = f"vanilla-{version}-linux-x64"
         if target not in targets_0168:
-            fail(f"Для «0.16.8 Java 25 actual-client target» отсутствует обязательный компонент: {target}")
+            fail(f"В проверке «0.16.8 Java 25 actual-client target» отсутствует обязательный компонент: {target}")
     for required in [
         "JAVA25_VANILLA_0168",
         "Java 25 Vanilla 0.16.8",
@@ -2851,7 +2851,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "vanilla-26.3-macos-arm64",
     ]:
         if target not in targets_0169:
-            fail(f"Для «0.16.9 cross-platform Vanilla target» отсутствует обязательный компонент: {target}")
+            fail(f"В проверке «0.16.9 cross-platform Vanilla target» отсутствует обязательный компонент: {target}")
     for required in [
         "CROSS_PLATFORM_VANILLA_0169",
         "ubuntu-24.04-arm",
@@ -2950,7 +2950,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "vanilla-26.3-linux-x64",
     ]:
         if target not in targets_01610:
-            fail(f"Для «0.16.10 matching-server target» отсутствует обязательный компонент: {target}")
+            fail(f"В проверке «0.16.10 matching-server target» отсутствует обязательный компонент: {target}")
     if targets_01610.count('"matchingServer": true') < 5:
         fail("0.16.10: цели не содержат пять репрезентативных пар соответствующих серверов")
     for required in [
@@ -3224,7 +3224,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LAUNCHER_RELEASE_TRUST_STATE_FILE",
     ]:
         if required not in build_release_0158:
-            fail(f"Для «0.15.8 production release trust input» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.15.8 production release trust input» отсутствует обязательный компонент: {required}")
     for required in [
         "TestReleaseVerificationV2TrustLifecycleAndAntiRollback",
         "TestReleaseTrustPolicyRejectsTampering",
@@ -3783,7 +3783,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Отсутствуют регрессионные тесты «0.17.1 Fabric»: {required}")
     for required in ["fabric-install.json", "fabric-certification.json"]:
         if required not in compat_workflow_0171:
-            fail(f"Для «0.17.1 Fabric raw CI evidence upload» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.1 Fabric raw CI evidence upload» отсутствует обязательный компонент: {required}")
     if "Fabric Compatibility II 0.17.1 gate: OK" not in fabric_gate_0171:
         fail("Не завершена реализация «0.17.1 mandatory Fabric Compatibility II gate»")
     if (
@@ -3879,7 +3879,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Отсутствуют регрессионные тесты «0.17.2 Quilt»: {required}")
     for required in ["quilt-install.json", "quilt-certification.json"]:
         if required not in compat_workflow_0172:
-            fail(f"Для «0.17.2 Quilt raw CI evidence upload» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.2 Quilt raw CI evidence upload» отсутствует обязательный компонент: {required}")
     if "Quilt Compatibility II 0.17.2 gate: OK" not in quilt_gate_0172:
         fail("Не завершена реализация «0.17.2 mandatory Quilt Compatibility II gate»")
     if (
@@ -3996,7 +3996,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Отсутствуют регрессионные тесты «0.17.3 Forge»: {required}")
     for required in ["forge-install.json", "forge-certification.json"]:
         if required not in compat_workflow_0173:
-            fail(f"Для «0.17.3 Forge raw CI evidence upload» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.3 Forge raw CI evidence upload» отсутствует обязательный компонент: {required}")
     if "Forge Modern 0.17.3 gate: OK" not in forge_gate_0173:
         fail("Не завершена реализация «0.17.3 mandatory Forge Modern gate»")
     if "forge-modern-0173.py" not in preflight or "forge-modern-0173.py" not in ci:
@@ -4330,7 +4330,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.6: публичный каталог загрузчиков NeoForge по-прежнему содержит заглушку")
     for required in ["neoforge-install.json", "neoforge-certification.json"]:
         if required not in neo_workflow_0176:
-            fail(f"Для «0.17.6 NeoForge CI raw evidence» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.6 NeoForge CI raw evidence» отсутствует обязательный компонент: {required}")
     for required in [
         "TestCompatibilityCertificationNeoForgeII0176",
         "TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage",
@@ -5090,7 +5090,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "assert!(report.loaded_before_main)",
     ]:
         if required not in sensor_test_0182:
-            fail(f"Для «0.18.2 Guard Sensor Java integration regression» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.2 Guard Sensor Java integration regression» отсутствует обязательный компонент: {required}")
     if "Guard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
         fail("Не завершена реализация «0.18.2 mandatory Guard Sensor gate»")
     if "guard-sensor-0182.py" not in preflight or "guard-sensor-0182.py" not in ci:
@@ -5253,7 +5253,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.18.4 Hook Engine parent enforcement»: {required}")
     for required in ["WindowsHookEngineReport", "GUARD_HOOK_ENGINE_VERSION"]:
         if required not in hook_report_0184:
-            fail(f"Для «0.18.4 Hook Engine report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.4 Hook Engine report» отсутствует обязательный компонент: {required}")
     for required in ["GUARD_SENSOR_PROTOCOL_VERSION: u32 = 3", "NGSENS04"]:
         if required not in hook_bootstrap_0184:
             fail(f"Неполная реализация «0.18.4 protocol-v3 bootstrap»: {required}")
@@ -5264,7 +5264,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "report.hook_engine.intercepted_call_count >= 1",
     ]:
         if required not in hook_test_0184:
-            fail(f"Для «0.18.4 real JVM hook integration regression» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.4 real JVM hook integration regression» отсутствует обязательный компонент: {required}")
     if "Aggressive Hook Engine I 0.18.4 gate: OK" not in hook_gate_0184:
         fail("Не завершена реализация «0.18.4 mandatory Hook Engine gate»")
     if (
@@ -5345,7 +5345,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "GUARD_MEMORY_INTEGRITY_VERSION",
     ]:
         if required not in memory_report_0185:
-            fail(f"Для «0.18.5 Memory Integrity report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.5 Memory Integrity report» отсутствует обязательный компонент: {required}")
     for required in [
         "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
         "executable image code-page drift must be fail-closed",
@@ -5461,7 +5461,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "process_tree_sha256",
     ]:
         if required not in thread_report_0186:
-            fail(f"Для «0.18.6 Thread & Process Integrity report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.6 Thread & Process Integrity report» отсутствует обязательный компонент: {required}")
     for required in [
         "guard_thread_process_integrity_tracks_job_bound_descendant_processes",
         "descendant_process_peak >= 1",
@@ -5574,7 +5574,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "state_sha256",
     ]:
         if required not in debug_report_0187:
-            fail(f"Для «0.18.7 Debug Guard report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.7 Debug Guard report» отсутствует обязательный компонент: {required}")
     for required in [
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
@@ -5682,7 +5682,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "GUARD_JVM_PROBE_DLL",
     ]:
         if required not in jvm_test_0188:
-            fail(f"Для «0.18.8 JVM-Aware Windows integration regression» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.8 JVM-Aware Windows integration regression» отсутствует обязательный компонент: {required}")
     for required in ["VirtualAlloc", "PAGE_EXECUTE_READWRITE", "guard-jvm-aware-probe"]:
         if required not in jvm_probe_0188:
             fail(f"Неполная реализация «0.18.8 JVM-Aware adversarial fixture»: {required}")
@@ -5813,7 +5813,7 @@ for required in (
     '"sensorAndFixtureHashesBound": True',
 ):
     if required not in adversarial_runner_01811:
-        fail(f"Для «0.18.11 Windows Adversarial CI runner» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «0.18.11 Windows Adversarial CI runner» отсутствует обязательный инвариант: {required}")
 if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', adversarial_runner_01811):
     fail("0.18.11: Windows Adversarial CI не запускает реальные тесты Cargo")
 for required in [
@@ -5822,7 +5822,7 @@ for required in [
     "test_aggregate_requires_every_certified_java_major",
 ]:
     if required not in adversarial_tests_01811:
-        fail(f"Для «0.18.11 Windows Adversarial CI self-test» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.11 Windows Adversarial CI self-test» отсутствует обязательный компонент: {required}")
 for required in [
     "guard-windows-adversarial:",
     "java: [8, 16, 17, 21, 25]",
@@ -5832,7 +5832,7 @@ for required in [
     "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
 ]:
     if required not in ci:
-        fail(f"Для «0.18.11 Windows Adversarial CI workflow» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.11 Windows Adversarial CI workflow» отсутствует обязательный компонент: {required}")
 if (
     "guard-windows-adversarial-ci-01811.py" not in preflight
     or "test_windows_adversarial.py" not in preflight
@@ -5889,7 +5889,7 @@ for required in [
     "TestWindowsProtectionBoundaryDigest01812BindsArtifactsAndCapabilities",
 ]:
     if required not in windows_protection_rc_tests_01812:
-        fail(f"Для «0.18.12 Windows Protection RC tests» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.12 Windows Protection RC tests» отсутствует обязательный компонент: {required}")
 for required in [
     'case "windows-protection-verify":',
     "writeWindowsProtectionRelease01812(out, ver, expectedCommit)",
@@ -5899,7 +5899,7 @@ for required in [
     '"windowsAdversarialCertificateSha256"',
 ]:
     if required not in release_commands_01812:
-        fail(f"Для «0.18.12 release CLI Windows Protection RC wiring» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.12 release CLI Windows Protection RC wiring» отсутствует обязательный компонент: {required}")
 for required in [
     "LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
     "WINDOWS_PROTECTION_RC_REQUIRED",
@@ -5907,7 +5907,7 @@ for required in [
     'release windows-protection-verify "${OUT_DIR}"',
 ]:
     if required not in build_release_01812:
-        fail(f"Для «0.18.12 build-release Windows Protection RC wiring» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.12 build-release Windows Protection RC wiring» отсутствует обязательный компонент: {required}")
 if (
     "windows-protection-rc-adversarial-signed-production-boundary"
     not in production_candidate_01812
@@ -5987,7 +5987,7 @@ for required in [
     "TestWindowsProtectionGACapabilities0190",
 ]:
     if required not in windows_protection_ga_tests_0190:
-        fail(f"Для «0.19.0 Windows Protection GA tests» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.19.0 Windows Protection GA tests» отсутствует обязательный компонент: {required}")
 for required in [
     'case "windows-protection-ga-verify":',
     "writeWindowsProtectionGA0190(out, ver)",
@@ -5997,14 +5997,14 @@ for required in [
     '"windows-protection-ga-fail-closed-user-mode-boundary"',
 ]:
     if required not in release_commands_01812:
-        fail(f"Для «0.19.0 release CLI Windows Protection GA wiring» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.19.0 release CLI Windows Protection GA wiring» отсутствует обязательный компонент: {required}")
 for required in [
     "WINDOWS_PROTECTION_GA_REQUIRED",
     "WINDOWS_PROTECTION_GA_CERTIFICATE.json",
     'release windows-protection-ga-verify "${OUT_DIR}"',
 ]:
     if required not in build_release_01812:
-        fail(f"Для «0.19.0 build-release Windows Protection GA wiring» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.19.0 build-release Windows Protection GA wiring» отсутствует обязательный компонент: {required}")
 if (
     "windows-protection-ga-fail-closed-user-mode-boundary"
     not in production_candidate_01812
@@ -6034,14 +6034,14 @@ for required in [
     "consumeGuardContinuousJoinTicket01810",
 ]:
     if required not in attestation_v2_0190:
-        fail(f"Для «0.19.0 server Attestation v2 enforcement» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.19.0 server Attestation v2 enforcement» отсутствует обязательный компонент: {required}")
 for required in [
     "ContinuousGuardTicket",
     "consumeGuardContinuousJoinTicket01810",
     "validateContinuousGuardTicketForMinecraftSession01810",
 ]:
     if required not in server_bridge_0190:
-        fail(f"Для «0.19.0 ServerBridge continuous ticket enforcement» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.19.0 ServerBridge continuous ticket enforcement» отсутствует обязательный компонент: {required}")
 if (
     "guard-windows-protection-ga-0190.py" not in preflight
     or "guard-windows-protection-ga-0190.py" not in ci
@@ -6106,7 +6106,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "returnedToHealthyService",
     ]:
         if required not in certification:
-            fail(f"Для «0.29.0 required E2E attestation validation» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.29.0 required E2E attestation validation» отсутствует обязательный компонент: {required}")
     if (
         "verify_server_control_0290.py" not in pipeline
         or "world-backup-0290.json" not in pipeline

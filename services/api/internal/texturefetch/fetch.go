@@ -21,9 +21,9 @@ import (
 
 var (
 	ErrUnsafe   = errors.New("Небезопасное значение: «texture URL or address»")
-	ErrRemote   = errors.New("Ошибка: «remote texture request»")
-	ErrRedirect = errors.New("Запрещено: «texture redirects are»")
-	ErrTooLarge = errors.New("Превышен допустимый размер: «remote texture»")
+	ErrRemote   = errors.New("Ошибка: «запрос удалённой текстуры»")
+	ErrRedirect = errors.New("Запрещено: «перенаправления при загрузке текстур»")
+	ErrTooLarge = errors.New("Превышен допустимый размер: «удалённая текстура»")
 	ErrBusy     = errors.New("Слишком много одновременных загрузок текстур")
 )
 
@@ -95,7 +95,7 @@ func New(allowlist string) (*Fetcher, error) {
 		for _, raw := range strings.Split(allowlist, ",") {
 			host := strings.ToLower(strings.TrimSpace(raw))
 			if !isDNSName(host) {
-				return nil, fmt.Errorf("Некорректное значение: «texture fetch allowlist entry»: %q", raw)
+				return nil, fmt.Errorf("Некорректное значение: «запись списка разрешённых источников текстур»: %q", raw)
 			}
 			f.hosts[host] = true
 		}

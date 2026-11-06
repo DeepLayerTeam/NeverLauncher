@@ -45,17 +45,17 @@ const actions: Array<{
 }> = [
   { type: "player.kick", label: "Отключить игрока", confirm: true },
   { type: "message.broadcast", label: "Сообщение всем игрокам" },
-  { type: "whitelist.add", label: "Добавить в whitelist" },
-  { type: "whitelist.remove", label: "Убрать из whitelist", confirm: true },
-  { type: "whitelist.enable", label: "Включить whitelist", confirm: true },
-  { type: "whitelist.disable", label: "Отключить whitelist", confirm: true },
+  { type: "whitelist.add", label: "Добавить в список разрешённых игроков" },
+  { type: "whitelist.remove", label: "Удалить из списка разрешённых игроков", confirm: true },
+  { type: "whitelist.enable", label: "Включить список разрешённых игроков", confirm: true },
+  { type: "whitelist.disable", label: "Отключить список разрешённых игроков", confirm: true },
   { type: "ban.add", label: "Заблокировать игрока", confirm: true },
   { type: "ban.remove", label: "Снять блокировку" },
   { type: "server.save", label: "Сохранить мир" },
   { type: "server.maintenance", label: "Режим обслуживания", confirm: true },
   {
     type: "server.drain",
-    label: "Drain / запрет новых подключений",
+    label: "Запретить новые подключения (освобождение сервера)",
     confirm: true,
   },
   { type: "server.shutdown", label: "Остановить сервер", confirm: true },
@@ -402,7 +402,7 @@ export function ServerBridgeWorkspace({
         Object.entries(request.payload)
           .map(([k, v]) => `${k}: ${v}`)
           .join("\n") || "Без аргументов"
-      }\n\nКоманда будет выполнена игровым сервером. Отмена после dispatch не гарантируется.`;
+      }\n\nКоманда будет выполнена игровым сервером. После отправки отмена команды не гарантируется.`;
       if (!window.confirm(effect)) return;
       persistPending(request); // Сохранить ДО сетевого ввода-вывода; при повторной попытке использовать тот же набор данных и ключ.
     }
@@ -473,7 +473,7 @@ export function ServerBridgeWorkspace({
       setSelectedServer(request.id);
       onSelectServer?.(request.id);
       setMessage(
-        `Узел ${request.id} зарегистрирован. Запустите установленный адаптер и дождитесь свежего подписанного heartbeat; регистрация не подтверждает работоспособность.`,
+        `Узел ${request.id} зарегистрирован. Запустите установленный адаптер и дождитесь нового подписанного сигнала состояния; сама регистрация не подтверждает работоспособность.`,
       );
     } catch (e) {
       setError(
@@ -536,7 +536,7 @@ export function ServerBridgeWorkspace({
         )
       ) {
         throw new Error(
-          "Сервер не подтвердил новую политику capacity повторным чтением. Не отправляйте её повторно без проверки ревизии.",
+          "Сервер не подтвердил новую политику ограничения нагрузки при повторном чтении. Не отправляйте её повторно без проверки ревизии.",
         );
       }
       setMessage(
@@ -667,7 +667,7 @@ export function ServerBridgeWorkspace({
             nl server-bridge verify --server-root &lt;path&gt; --backend
             &lt;url&gt;
           </code>{" "}
-          с административным токеном из защищённого окружения. Свежий heartbeat
+          с административным токеном из защищённого окружения. Актуальный подписанный сигнал состояния
           и версия/хеш проверяются отдельно от факта регистрации.
         </p>
       </details>
@@ -675,7 +675,7 @@ export function ServerBridgeWorkspace({
         <div className="bridgeMetricGrid">
           <MetricCard label="Серверы проекта" value={nodes.length} />
           <MetricCard
-            label="Активные heartbeat"
+            label="Узлы с актуальным сигналом состояния"
             value={nodes.filter((n) => n.fresh).length}
           />
           <MetricCard
@@ -800,7 +800,7 @@ export function ServerBridgeWorkspace({
           <article className="bridgeSection">
             <h3>{node.name || node.id} · Среда выполнения</h3>
             <dl className="bridgeFacts">
-              <dt>Пульс (heartbeat)</dt>
+              <dt>Последний сигнал состояния</dt>
               <dd>
                 {timeLabel(node.lastHeartbeatAt)} ·{" "}
                 {usable ? "активен" : "устарел / недоступен"}
@@ -848,7 +848,7 @@ export function ServerBridgeWorkspace({
               <dt>Проверка входа</dt>
               <dd>
                 {node.kind === "vanilla"
-                  ? "Нет: sidecar/RCON не перехватывает вход до логина"
+                  ? "Нет: внешний агент/RCON не перехватывает подключения до авторизации"
                   : node.runtimeCapabilities?.includes(
                         "adapter.auth.login-gate",
                       )
@@ -858,7 +858,7 @@ export function ServerBridgeWorkspace({
               <dt>Обслуживание / вывод из нагрузки</dt>
               <dd>
                 {networkFresh
-                  ? `Подписанный routing: ${network?.state}; admission: ${network?.reason}`
+                  ? `Подписанная маршрутизация: ${network?.state}; решение о допуске: ${network?.reason}`
                   : "Не подтверждено актуальным снимком маршрутизации"}
                 . ACK команд проверяйте отдельно.
               </dd>
@@ -937,7 +937,7 @@ export function ServerBridgeWorkspace({
         <h3>Сеть · Topology & Admission</h3>
         <p className="muted">
           PostgreSQL: подписанное состояние узлов + независимая политика доступа
-          оператора. Routing обновляется узлами, журнал команд отдельно
+          оператора. Маршрутизация обновляется узлами, журнал команд отдельно
           подтверждает их выполнение.
         </p>
         <div className="bridgeMetricGrid">
@@ -956,7 +956,7 @@ export function ServerBridgeWorkspace({
             }
           />
           <MetricCard
-            label="Узлы с актуальным routing"
+            label="Узлы с актуальными маршрутами"
             value={
               (overview?.network ?? []).filter((n) =>
                 networkStateFresh(n, clock),
@@ -974,10 +974,10 @@ export function ServerBridgeWorkspace({
         </div>
         {node && (
           <>
-            <h4>Admission для {node.name || node.id}</h4>
+            <h4>Допуск подключений: {node.name || node.id}</h4>
             {!network && (
               <p className="bridgeAttention">
-                PostgreSQL routing state отсутствует; управление capacity
+                Состояние маршрутизации PostgreSQL отсутствует; управление нагрузкой
                 недоступно.
               </p>
             )}
@@ -989,7 +989,7 @@ export function ServerBridgeWorkspace({
                     {network.source} ·{" "}
                     {networkFresh && snapshotFresh
                       ? "актуально"
-                      : "stale/не подтверждено"}{" "}
+                      : "устарело / не подтверждено"}{" "}
                     · наблюдение {timeLabel(network.observedAt ?? undefined)}
                   </dd>
                   <dt>Среда выполнения</dt>
@@ -1145,7 +1145,7 @@ export function ServerBridgeWorkspace({
                 )}
                 <p className="muted">
                   Команды drain/maintenance исполняются через форму ниже с многофакторной проверкой,
-                  idempotency и Bridge ACK. Capacity применяется непосредственно
+                  повторной отправки и подтверждения моста (ACK). Ограничение нагрузки применяется непосредственно
                   к маршрутам и handoff через PostgreSQL, не меняет max-players
                   в Minecraft и не отключает существующих игроков.
                 </p>
@@ -1221,7 +1221,7 @@ export function ServerBridgeWorkspace({
           )}
           {!usable && (
             <p className="bridgeAttention">
-              Отправка отключена: heartbeat, runtime, Protocol v3 или снимок
+              Отправка отключена: сигнал состояния, среда выполнения, протокол v3 или снимок
               недоступны. Обновите Backend и соединение с сервером.
             </p>
           )}
@@ -1418,7 +1418,7 @@ export function ServerBridgeWorkspace({
             <dd>
               {selectedCommand.serverId} / эпоха {selectedCommand.runtimeEpoch}
             </dd>
-            <dt>Попытка / sequence</dt>
+            <dt>Попытка / порядковый номер</dt>
             <dd>
               {selectedCommand.attempt} / {selectedCommand.deliverySequence}
             </dd>
@@ -1426,7 +1426,7 @@ export function ServerBridgeWorkspace({
             <dd>
               {monitorFresh && monitor?.deliveryConfirmed
                 ? "подтверждена ответом серверного моста"
-                : "не подтверждена; dispatch не равен delivery"}
+                : "не подтверждена; отправка команды ещё не означает её доставку"}
             </dd>
             <dt>Результат</dt>
             <dd>

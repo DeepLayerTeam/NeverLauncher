@@ -22,7 +22,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("schemaVersion") != "1.0" or targets.get("productVersion") != version:
-    raise SystemExit("Несовпадение: «Guard CI targets schema/version»")
+    raise SystemExit("Несовпадение: «схема и версия целевых платформ CI защиты Guard»")
 rows = targets.get("targets")
 if not isinstance(rows, list) or {
     row.get("os") for row in rows if row.get("required")

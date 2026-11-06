@@ -34,14 +34,14 @@ if version_tuple < (0, 12, 9):
 targets_path = ROOT / "device-trust/targets.json"
 targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version or targets.get("schemaVersion") != "1.0":
-    raise SystemExit("Несовпадение: «Device Trust target document version/schema»")
+    raise SystemExit("Несовпадение: «версия и схема документа целевых платформ доверия к устройству»")
 rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) < 4:
     raise SystemExit("В публичной матрице доверия устройств отсутствуют обязательные базовые цели")
 if any(row.get("required") is not True for row in rows):
     raise SystemExit("every Device Trust target: требуется «required»")
 if any("status" in row or "passed" in row for row in rows):
-    raise SystemExit("«Device Trust targets»: запрещено «contain editable pass/fail state»")
+    raise SystemExit("«целевые платформы доверия к устройствам»: запрещено «содержать редактируемый статус прохождения проверки»")
 expected = {
     "postgres-protocol-linux-x64": ("protocol-e2e", "linux"),
     "native-linux-x64": ("native-tests", "linux"),
@@ -53,10 +53,10 @@ expected = {
 }
 actual = {str(row.get("id")): (row.get("kind"), row.get("os")) for row in rows}
 if len(actual) != len(rows):
-    raise SystemExit("Обнаружен дубликат: «Device Trust target ID»")
+    raise SystemExit("Обнаружен дубликат: «идентификатор целевой платформы доверия к устройству»")
 for target_id, identity in expected.items():
     if actual.get(target_id) != identity:
-        raise SystemExit(f"Отсутствует: «or changed mandatory Device Trust baseline target»: {target_id}")
+        raise SystemExit(f"Отсутствует: «или изменена обязательная базовая платформа проверки доверия к устройству»: {target_id}")
 # Новые обязательные платформы также проверяются scripts/device_trust/matrix.py;
 # исторический этап не должен отклонять законно расширенный охват защиты.
 

@@ -147,7 +147,7 @@ func (s Server) serverBridgeTopology0148(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		// Не раскрывайте внутренние сведения SQL в ответе клиенту, но
 		// сохраняйте первопричину в серверных журналах для CI и эксплуатации.
-		log.Printf("Ошибка: «serverbridge topology PostgreSQL read»: %v", err)
+		log.Printf("Ошибка: «чтение топологии ServerBridge из PostgreSQL»: %v", err)
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL topology недоступна")
 		return
 	}

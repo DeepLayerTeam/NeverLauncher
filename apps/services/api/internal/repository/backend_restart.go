@@ -45,7 +45,7 @@ func (r *SQLRepository) ClaimBackendRestart0289(ctx context.Context, actor, key,
 		return BackendRestartRecord0289{}, false, err
 	}
 	if strings.TrimSpace(instance) == "" {
-		return BackendRestartRecord0289{}, false, errors.New("Требуется: «instance identity»")
+		return BackendRestartRecord0289{}, false, errors.New("Требуется: «идентичность экземпляра»")
 	}
 	if err := r.check(); err != nil {
 		return BackendRestartRecord0289{}, false, err

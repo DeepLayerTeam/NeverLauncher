@@ -26,7 +26,7 @@ type Signer struct {
 func ParsePrivateKey(pemBytes []byte) (*Signer, error) {
 	block, remainder := pem.Decode(pemBytes)
 	if block == nil || len(strings.TrimSpace(string(remainder))) != 0 || len(block.Headers) != 0 {
-		return nil, errors.New("Требуется: «exactly one unencrypted PEM private key»")
+		return nil, errors.New("Требуется: «ровно один незашифрованный закрытый ключ PEM»")
 	}
 	var key *rsa.PrivateKey
 	switch block.Type {
@@ -50,7 +50,7 @@ func ParsePrivateKey(pemBytes []byte) (*Signer, error) {
 		return nil, errors.New("Не поддерживается: ключ подписи PEM тип")
 	}
 	if key.N.BitLen() < 2048 {
-		return nil, errors.New("RSA key: требуется «at least 2048 bits»")
+		return nil, errors.New("RSA key: требуется «не менее 2048 бит»")
 	}
 	if err := key.Validate(); err != nil {
 		return nil, fmt.Errorf("Некорректное значение: RSA ключ подписи: %w", err)
@@ -77,7 +77,7 @@ func LoadFile(path string) (*Signer, error) {
 		return nil, errors.New("Превышен допустимый размер: RSA ключ подписи файл")
 	}
 	if info.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("«файл ключа подписи RSA»: запрещено «be group/world accessible (chmod 600)»")
+		return nil, errors.New("«файл ключа подписи RSA»: запрещено «быть доступным группе или посторонним пользователям (chmod 600)»")
 	}
 	content, err := os.ReadFile(path)
 	if err != nil {

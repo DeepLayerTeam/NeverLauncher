@@ -373,7 +373,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !s.authorizeClaims(r, claims, "audit:read", "", "audit", "").Allowed {
-			respond(nil, errors.New("Доступ запрещён: «user audit:read»"))
+			respond(nil, errors.New("Доступ запрещён: «право пользователя audit:read»"))
 			return
 		}
 		if err := allow("audit:read", ""); err != nil {
@@ -388,7 +388,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		respond(items, nil)
 	case "storage.info":
 		if !s.hasAnyProjectPermission(r, claims, "project:read") {
-			respond(nil, errors.New("Доступ запрещён: «user project:read»"))
+			respond(nil, errors.New("Доступ запрещён: «право пользователя project:read»"))
 			return
 		}
 		if err := allow("storage:read", ""); err != nil {
@@ -404,7 +404,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			Status    string `json:"status"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || strings.TrimSpace(p.ProjectID) == "" || strings.TrimSpace(p.Event) == "" {
-			respond(nil, errors.New("Требуется: «projectId and event»"))
+			respond(nil, errors.New("Требуется: «идентификатор проекта projectId и событие»"))
 			return
 		}
 		if !adminExtensionProjectAllowed0208(install, p.ProjectID) {

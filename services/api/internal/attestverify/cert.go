@@ -25,7 +25,7 @@ func parseAKChain(e Evidence) (*x509.Certificate, *x509.CertPool, error) {
 	p := x509.NewCertPool()
 	for _, s := range e.IntermediatesPEM {
 		if len(s) > 12000 {
-			return nil, nil, errors.New("Превышен допустимый размер: «intermediate»")
+			return nil, nil, errors.New("Превышен допустимый размер: «промежуточный сертификат»")
 		}
 		c, err := decodeOne(s)
 		if err != nil {

@@ -123,7 +123,7 @@ func DeleteTexture0253(ctx context.Context, store Storage, digest string) error 
 	}
 	s3, ok := store.(*S3Storage)
 	if !ok {
-		return errors.New("texture GC: требуется «local or S3 storage»")
+		return errors.New("texture GC: требуется «локальное хранилище или S3»")
 	}
 	key, err := objectKey(textureProject0252, textureVersion0252, rel)
 	if err != nil {

@@ -27,7 +27,7 @@ import (
 func Export(ctx context.Context, postgresDSN, target string) (out Report, err error) {
 	out = Report{Format: importVersion, PostgreSQLSchema: Schema, ReadyForBackendCutover: false}
 	if strings.TrimSpace(postgresDSN) == "" || strings.TrimSpace(target) == "" {
-		return out, errors.New("Требуется: «PostgreSQL DSN and target SQLite backup»")
+		return out, errors.New("Требуется: «DSN PostgreSQL и целевая резервная копия SQLite»")
 	}
 	dest, err := filepath.Abs(target)
 	if err != nil {
@@ -38,7 +38,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	}
 	parent := filepath.Dir(dest)
 	if st, e := os.Lstat(parent); e != nil || !st.IsDir() || st.Mode().Perm()&0077 != 0 {
-		return out, errors.New("Для целевая база данных SQLite требуется: «in a private 0700 existing directory»")
+		return out, errors.New("Для целевая база данных SQLite требуется: «в существующем закрытом каталоге с правами 0700»")
 	}
 	for _, suffix := range []string{"", ".json", "-wal", "-shm", "-journal"} {
 		if _, e := os.Lstat(dest + suffix); e == nil {
@@ -108,7 +108,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 		return out, fmt.Errorf("Ошибка проверки целостности восстановленной резервной копии SQLite: %w", err)
 	}
 	if actual.SHA256 != out.SnapshotSHA256 {
-		return out, errors.New("Несовпадение: «reconstructed SQLite SHA»")
+		return out, errors.New("Несовпадение: «SHA-256 восстановленной базы SQLite»")
 	}
 	if err = verifyRestoredCore(ctx, tmp); err != nil {
 		return out, fmt.Errorf("Ошибка проверки инвариантов восстановленного приложения: %w", err)
@@ -190,12 +190,12 @@ func readChunks(ctx context.Context, tx pgx.Tx, dest io.Writer, expectedSize int
 			break
 		}
 		if ordinal != count || len(data) == 0 || len(data) > snapshotChunkSize {
-			err = errors.New("Некорректное значение: «or missing PostgreSQL snapshot chunk»")
+			err = errors.New("Некорректное значение: «или отсутствует фрагмент снимка PostgreSQL»")
 			break
 		}
 		sum := sha256.Sum256(data)
 		if hex.EncodeToString(sum[:]) != savedHash {
-			err = errors.New("Несовпадение: «snapshot chunk SHA-256»")
+			err = errors.New("Несовпадение: «SHA-256 фрагмента снимка»")
 			break
 		}
 		n, writeErr := dest.Write(data)

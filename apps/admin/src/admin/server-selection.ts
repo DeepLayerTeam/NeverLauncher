@@ -15,8 +15,8 @@ export function nodeState0383(n: ServerBridgeNode, snapshotFresh: boolean, now =
   const heartbeat = Date.parse(n.lastHeartbeatAt ?? '');
   const heartbeatFresh = snapshotFresh && n.fresh && Number.isFinite(heartbeat) && heartbeat <= now + 30_000 && now - heartbeat < 120_000;
   const telemetry = snapshotFresh ? telemetryState(n, now).state : 'unknown';
-  if (!snapshotFresh) return { status:'unknown', label:'Нет свежего ответа Backend', heartbeat:'unknown', telemetry };
-  if (!heartbeatFresh) return { status:'unavailable', label:'Heartbeat отсутствует или устарел', heartbeat: Number.isFinite(heartbeat) ? 'stale' : 'unknown', telemetry };
-  if (!canControlNode(n, now)) return { status:'unavailable', label:'Узел не готов к управлению (status/protocol/runtime)', heartbeat:'fresh', telemetry };
+  if (!snapshotFresh) return { status:'unknown', label:'Нет актуального ответа серверной части', heartbeat:'unknown', telemetry };
+  if (!heartbeatFresh) return { status:'unavailable', label:'Сигнал состояния отсутствует или устарел', heartbeat: Number.isFinite(heartbeat) ? 'stale' : 'unknown', telemetry };
+  if (!canControlNode(n, now)) return { status:'unavailable', label:'Узел не готов к управлению (статус, протокол или среда выполнения)', heartbeat:'fresh', telemetry };
   return { status:'available', label:'ServerBridge доступен (не подтверждает запуск Minecraft)', heartbeat:'fresh', telemetry };
 }

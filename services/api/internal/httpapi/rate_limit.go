@@ -28,7 +28,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	// перезапуск.
 	if strings.EqualFold(strings.TrimSpace(cfg.RepositoryDriver), "sqlite") {
 		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" {
-			return fmt.Errorf("SQLite HTTP backend: требуется «durable SQLite coordinator path»")
+			return fmt.Errorf("SQLite HTTP backend: требуется «путь к устойчивому координатору SQLite»")
 		}
 		if filepath.Clean(cfg.SQLiteCoordinatorPath) == filepath.Clean(cfg.DatabaseDSN) {
 			return fmt.Errorf("Хранилищу SQLite и координатору требуются разные файлы с поддержкой блокировок")
@@ -52,7 +52,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	// успеха через память.
 	if path := strings.TrimSpace(cfg.SQLiteCoordinatorPath); path != "" {
 		if cfg.ServerBridgeHARequired {
-			return fmt.Errorf("«SQLite single-node»: запрещено «satisfy distributed ServerBridge HA»")
+			return fmt.Errorf("«одиночный узел SQLite»: запрещено «обеспечивать распределённую отказоустойчивость ServerBridge»")
 		}
 		if cfg.RateLimitEnabled && !cfg.RateLimitFailClosed {
 			return fmt.Errorf("При сбое ограничителя запросов SQLite доступ должен блокироваться")
@@ -61,7 +61,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		coordinator, openErr := sqlitecoord.Open(ctx, path)
 		cancel()
 		if openErr != nil {
-			return fmt.Errorf("Недоступно: «SQLite single-node coordinator»: %w", openErr)
+			return fmt.Errorf("Недоступно: «координатор SQLite для одиночного узла»: %w", openErr)
 		}
 		s.productRuntimeCloser = coordinator
 		s.ServerBridgeCoordinator = coordinator
@@ -86,10 +86,10 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		if coordErr == nil {
 			s.ServerBridgeCoordinator = coordinator
 		} else if cfg.ServerBridgeHARequired {
-			return fmt.Errorf("Недоступно: «Redis ServerBridge HA coordinator is required but»: %w", coordErr)
+			return fmt.Errorf("Недоступно: «координатор Redis для отказоустойчивого ServerBridge обязателен, но»: %w", coordErr)
 		}
 	} else if cfg.ServerBridgeHARequired {
-		return fmt.Errorf("Пустое значение: «Redis ServerBridge HA coordinator is required but LAUNCHER_REDIS_URL»")
+		return fmt.Errorf("Пустое значение: «координатор Redis для отказоустойчивого ServerBridge обязателен, но LAUNCHER_REDIS_URL»")
 	}
 
 	s.RateLimitEnabled = cfg.RateLimitEnabled
@@ -113,7 +113,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		return nil
 	}
 	if cfg.RateLimitFailClosed {
-		return fmt.Errorf("Недоступно: «Redis rate limiter is required but»: %w", err)
+		return fmt.Errorf("Недоступно: «ограничитель частоты запросов Redis обязателен, но»: %w", err)
 	}
 	s.RateLimiter = ratelimit.NewMemory()
 	return nil

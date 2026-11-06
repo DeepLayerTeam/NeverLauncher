@@ -35,7 +35,7 @@ func durableHash(raw []byte) (string, error) {
 		raw = []byte(`{}`)
 	}
 	if len(raw) > 1024*1024 || !json.Valid(raw) {
-		return "", errors.New("durable payload: требуется «valid JSON <=1MiB»")
+		return "", errors.New("durable payload: требуется «корректный JSON размером не более 1 МиБ»")
 	}
 	// Сохраняйте точные байты JSON: повтор обязан передавать идентичную исходную
 	// полезную нагрузку.
@@ -90,7 +90,7 @@ func (r *Repository) GetDurableJob(ctx context.Context, id string) (j model.Dura
 // Ключи идемпотентности не удаляются автоматически; повтор после сбоя требует учёта сохранённого состояния.
 func (r *Repository) EnqueueDurableJob(ctx context.Context, j model.DurableJob, _ time.Duration) (out model.DurableJob, created bool, err error) {
 	if !durableFieldsNonempty(j.Kind, j.ActorType, j.ActorID, j.Action, j.ResourceType, j.ResourceID, j.IdempotencyKey) || (j.ProjectID != "" && !durableFieldsNonempty(j.ProjectID)) {
-		return out, false, errors.New("durable job: требуется «valid identity/action/resource/idempotency»")
+		return out, false, errors.New("durable job: требуется «корректные идентификатор, действие, ресурс и ключ идемпотентности»")
 	}
 	if j.MaxAttempts == 0 {
 		j.MaxAttempts = 8
@@ -187,7 +187,7 @@ func claimJob(ctx context.Context, q sqlitedurable.Executor, id, worker string, 
 }
 func (r *Repository) LeaseDurableJob(ctx context.Context, id, worker string, ttl time.Duration) (out model.DurableJob, err error) {
 	if !durableFieldsNonempty(id, worker) || !validDurableTTL(ttl) {
-		return out, errors.New("Некорректное значение: «job lease identity or duration (1s..1h)»")
+		return out, errors.New("Некорректное значение: «идентичность аренды задания или длительность (от 1 с до 1 ч)»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var claimed bool
@@ -205,7 +205,7 @@ func (r *Repository) LeaseDurableJob(ctx context.Context, id, worker string, ttl
 }
 func (r *Repository) LeaseDurableJobs(ctx context.Context, kind, worker string, limit int, ttl time.Duration) (out []model.DurableJob, err error) {
 	if !durableFieldsNonempty(worker) || (kind != "" && !durableFieldsNonempty(kind)) || limit < 1 || limit > 100 || !validDurableTTL(ttl) {
-		return nil, errors.New("Некорректное значение: «claim arguments»")
+		return nil, errors.New("Некорректное значение: «параметры захвата задания»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()
@@ -257,7 +257,7 @@ func validateJobOwnership(j model.DurableJob, token string, now int64) error {
 }
 func (r *Repository) RenewDurableJob(ctx context.Context, id, token string, ttl time.Duration) (out model.DurableJob, err error) {
 	if !validDurableTTL(ttl) {
-		return out, errors.New("Некорректное значение: «renewal ttl»")
+		return out, errors.New("Некорректное значение: «срок продления аренды»")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		j, e := readJob(ctx, q, id)

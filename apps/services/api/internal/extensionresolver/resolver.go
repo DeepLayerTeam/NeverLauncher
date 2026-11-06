@@ -193,7 +193,7 @@ func cloneState(in state) state {
 
 func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.ExtensionUpdateRoot) (model.ExtensionUpdatePlan, error) {
 	if r == nil || r.Repo == nil {
-		return model.ExtensionUpdatePlan{}, errors.New("Недоступно: «extension resolver repository»")
+		return model.ExtensionUpdatePlan{}, errors.New("Недоступно: «репозиторий разрешения зависимостей расширений»")
 	}
 	var err error
 	scope, err = normalizeScope(scope)
@@ -201,7 +201,7 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 		return model.ExtensionUpdatePlan{}, err
 	}
 	if !allowedChannel(normalizeChannel(r.Env.DefaultChannel)) {
-		return model.ExtensionUpdatePlan{}, errors.New("default channel: требуется «stable, beta or dev»")
+		return model.ExtensionUpdatePlan{}, errors.New("default channel: требуется «stable, beta или dev»")
 	}
 	installs, err := r.Repo.ListExtensionInstallStates(ctx, scope.Scope, scope.ScopeID)
 	if err != nil {
@@ -235,11 +235,11 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 	for _, root := range roots {
 		id := strings.ToLower(strings.TrimSpace(root.ExtensionID))
 		if id == "" {
-			return model.ExtensionUpdatePlan{}, errors.New("Требуется: «update root extensionId»")
+			return model.ExtensionUpdatePlan{}, errors.New("Требуется: «идентификатор корневого расширения extensionId при обновлении»")
 		}
 		ch := normalizeChannel(root.Channel)
 		if !allowedChannel(ch) {
-			return model.ExtensionUpdatePlan{}, fmt.Errorf("Не поддерживается: «update channel» %q", ch)
+			return model.ExtensionUpdatePlan{}, fmt.Errorf("Не поддерживается: «канал обновлений» %q", ch)
 		}
 		c := "*"
 		if strings.TrimSpace(root.Version) != "" {
@@ -362,9 +362,9 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 			return r.solve(rest, st, byID, pins)
 		}
 		if pin := pins[req.id]; pin != "" {
-			return state{}, fmt.Errorf("«pinned extension %s@%s»: запрещено «satisfy %s/channel %s/platform compatibility»", req.id, pin, req.constraint, req.channel)
+			return state{}, fmt.Errorf("«закреплённое расширение %s@%s»: запрещено «соответствовать требованиям совместимости %s, канала %s и платформы»", req.id, pin, req.constraint, req.channel)
 		}
-		return state{}, fmt.Errorf("Отсутствует: «compatible registry version for %s %s in channel» %s", req.id, req.constraint, req.channel)
+		return state{}, fmt.Errorf("Отсутствует: «совместимая версия из реестра для %s %s в канале» %s", req.id, req.constraint, req.channel)
 	}
 	var last error
 	for _, cand := range filtered {

@@ -114,7 +114,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 		return fmt.Errorf("%w: недопустимое сопоставление сессии игрока", ErrConflict)
 	}
 	if redemption.SessionCorrelationID != "" && !strings.EqualFold(redemption.SessionCorrelationID, correlationID) {
-		return fmt.Errorf("Несовпадение: «%w: player session correlation»", ErrConflict)
+		return fmt.Errorf("Несовпадение: «%w: связь с сеансом игрока»", ErrConflict)
 	}
 	var nodeKind, runtimeID string
 	var runtimeEpoch int64
@@ -127,7 +127,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 		if join.ProtocolVersion < 3 {
 			return nil
 		}
-		return fmt.Errorf("Недоступно: «%w: player session runtime»", ErrConflict)
+		return fmt.Errorf("Недоступно: «%w: среда выполнения сеанса игрока»", ErrConflict)
 	}
 	lockKey := join.SessionID + ":" + join.UUID
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1970, hashtext($1))`, lockKey); err != nil {
@@ -223,7 +223,7 @@ func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql
 		return nil
 	}
 	if redemption.SessionCorrelationID != "" && !strings.EqualFold(redemption.SessionCorrelationID, correlationID) {
-		return fmt.Errorf("Несовпадение: «%w: player transfer correlation»", ErrConflict)
+		return fmt.Errorf("Несовпадение: «%w: связь с переносом игрока»", ErrConflict)
 	}
 	var status, username, proxyNode, oldBackend, oldBackendRuntime string
 	var sequence, oldBackendEpoch int64

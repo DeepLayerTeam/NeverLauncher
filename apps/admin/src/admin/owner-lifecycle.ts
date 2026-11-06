@@ -246,7 +246,7 @@ export async function openStagedRollback(
     !pkg.minecraft.loader
   )
     throw Error(
-      "Подготовленный rollback не соответствует доверенному проекту, профилю или каналу",
+      "Подготовленный откат не соответствует доверенному проекту, профилю или каналу",
     );
   const fields: DraftFields = {
     projectId: pkg.projectId,

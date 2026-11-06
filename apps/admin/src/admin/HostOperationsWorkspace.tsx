@@ -319,7 +319,7 @@ export function HostOperationsWorkspace04111({
       <h3>Управление хостом · JVM · {serverName}</h3>
       <p className="muted">
         Backend → PostgreSQL journal → TLS RemoteControl → Host Supervisor → OS
-        JVM. Игровой heartbeat проверяется отдельно. Команды требуют свежей MFA
+        JVM. Сигнал состояния игрового сервера проверяется отдельно. Команды требуют свежей MFA
         и глобального <code>host:process</code>.
       </p>
       {error && (
@@ -370,7 +370,7 @@ export function HostOperationsWorkspace04111({
         <dt>ServerBridge</dt>
         <dd>
           {gameReady
-            ? "Свежий подписанный heartbeat"
+            ? "Актуальный подписанный сигнал состояния"
             : "неизвестно/не готов; живой JVM-процесс не гарантирует готовность Minecraft"}
         </dd>
         <dt>Наблюдение</dt>

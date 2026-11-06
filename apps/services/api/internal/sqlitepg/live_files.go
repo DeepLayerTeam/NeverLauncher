@@ -236,7 +236,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 	}
 	target := filepath.Join(root, rel)
 	if e = os.Link(tempName, target); e != nil {
-		return fmt.Errorf("целевой объект: запрещено «already exist:» %w", e)
+		return fmt.Errorf("целевой объект: запрещено «уже существуют:» %w", e)
 	}
 	dir, e := os.Open(parent)
 	if e != nil {

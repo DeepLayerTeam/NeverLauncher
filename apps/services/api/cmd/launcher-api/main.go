@@ -240,7 +240,7 @@ func main() {
 				ctx, cancel := context.WithTimeout(maintenanceCtx, 20*time.Second)
 				defer cancel()
 				if err := janitor.PruneHWID0299(ctx, time.Now().UTC()); err != nil && ctx.Err() == nil {
-					log.Printf("Ошибка: «HWID data retention cleanup»: %v", err)
+					log.Printf("Ошибка: «очистка данных HWID по истечении срока хранения»: %v", err)
 				}
 			}
 			prune()
@@ -315,13 +315,13 @@ func main() {
 	}
 	extSecurity, err := extensionsecurity.New(repo, secretKey)
 	if err != nil {
-		log.Fatalf("Ошибка: «Extensions capability security initialization»: %v", err)
+		log.Fatalf("Ошибка: «инициализация защиты возможностей расширений»: %v", err)
 	}
 	gaManager := extensionga.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
 	if !noExtensions {
 		report, reconcileErr := gaManager.Reconcile(context.Background())
 		if reconcileErr != nil {
-			log.Fatalf("Ошибка: «Extensions GA reconciliation»: %v", reconcileErr)
+			log.Fatalf("Ошибка: «согласование состояния расширений при выпуске GA»: %v", reconcileErr)
 		}
 		if len(report.Issues) > 0 {
 			log.Printf("Согласование расширений GA: проверено=%d, исправно=%d, отключено=%d, проблем=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
@@ -340,12 +340,12 @@ func main() {
 			BatchSize:      cfg.ExtensionEventsBatchSize,
 		}, repo)
 		if err != nil {
-			log.Fatalf("Ошибка: «Extensions event bus initialization»: %v", err)
+			log.Fatalf("Ошибка: «инициализация шины событий расширений»: %v", err)
 		}
 		if sinkRepo, ok := repo.(interface{ SetAuditEventSink(func(model.AuditEvent)) }); ok {
 			sinkRepo.SetAuditEventSink(func(a model.AuditEvent) {
 				if err := events.AuditCreated(context.Background(), a); err != nil {
-					log.Printf("Ошибка: «Extensions audit event publish»: %v", err)
+					log.Printf("Ошибка: «публикация события аудита расширений»: %v", err)
 				}
 			})
 		}

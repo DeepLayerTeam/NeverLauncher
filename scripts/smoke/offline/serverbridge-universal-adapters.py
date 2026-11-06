@@ -37,7 +37,7 @@ expected = [
     "vanilla",
 ]
 if [x["id"] for x in targets["targets"]] != expected:
-    raise SystemExit("Несовпадение: «universal 14-target cohort»")
+    raise SystemExit("Несовпадение: «универсальная группа из 14 целевых платформ»")
 profiles = read(
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeAdapterProfiles.java"
 )

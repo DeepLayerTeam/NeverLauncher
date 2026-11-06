@@ -89,11 +89,11 @@ func run(args []string, output io.Writer, input io.Reader) error {
 		if err != nil {
 			return err
 		}
-		state := "validated; transaction rolled back"
+		state := "проверено, транзакция отменена"
 		if *apply {
-			state = "committed"
+			state = "изменения сохранены"
 		}
-		_, err = fmt.Fprintf(output, "FileAuthSystem: %d accounts %s; no Sessions.json imported\n", count, state)
+		_, err = fmt.Fprintf(output, "FileAuthSystem: %d учётных записей %s; импорт Sessions.json не выполнялся\n", count, state)
 		return err
 	case "list", "export", "create", "password", "disable", "enable":
 		return runOnline(args, output, input)
@@ -115,7 +115,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return errors.New("Неожиданное значение: «positional arguments (passwords must only arrive over stdin)»")
+		return errors.New("Неожиданное значение: «позиционные аргументы; пароли допускается передавать только через стандартный ввод»")
 	}
 	base, err := url.Parse(strings.TrimRight(strings.TrimSpace(*endpoint), "/"))
 	if err != nil {
@@ -138,7 +138,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 		method, path = "GET", "/api/v1/admin/users"
 	case "create":
 		if *email == "" || strings.Contains(*email, "@"+fileauth.EmailDomain) || (*role != "player" && *role != "viewer") {
-			return errors.New("create: требуется «--email and an unprivileged --role (player|viewer)»")
+			return errors.New("create: требуется «параметр --email и непривилегированная роль --role (player|viewer)»")
 		}
 		password, err := readPassword(input)
 		if err != nil {

@@ -273,7 +273,7 @@ func (r *Repository) SaveChannel(ctx context.Context, c model.ReleaseChannel, ac
 		c.Name = c.ID
 	}
 	if c.ID == "" || c.ProjectID == "" {
-		return c, errors.New("Требуется: «channel id/projectId»")
+		return c, errors.New("Требуется: «идентификатор канала или проекта projectId»")
 	}
 	err := r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		_, e := q.ExecContext(ctx, `INSERT INTO channels(project_id,id,name,description,protected) VALUES(?,?,?,?,?) ON CONFLICT(project_id,id) DO UPDATE SET name=excluded.name,description=excluded.description,protected=excluded.protected`, c.ProjectID, c.ID, c.Name, c.Description, c.Protected)

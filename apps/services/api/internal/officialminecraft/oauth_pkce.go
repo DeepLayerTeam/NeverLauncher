@@ -18,7 +18,7 @@ var publicClientID = regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4
 // регистрацию другого лаунчера. Client ID необходимо указывать явно.
 func ValidateClientID(clientID string) error {
 	if !publicClientID.MatchString(clientID) || strings.EqualFold(clientID, "00000000-0000-0000-0000-000000000000") {
-		return errors.New("Требуется: «a real application (client) ID UUID»")
+		return errors.New("Требуется: «действительный UUID приложения (клиента)»")
 	}
 	return nil
 }
@@ -114,7 +114,7 @@ func (c *Client) EntitlementCount(ctx context.Context, token string) (int, error
 		return 0, err
 	}
 	if reply.Items == nil {
-		return 0, errors.New("Некорректное значение: «entitlements response: missing items array»")
+		return 0, errors.New("Некорректное значение: «ответ о правах доступа: отсутствует массив items»")
 	}
 	return len(reply.Items), nil
 }

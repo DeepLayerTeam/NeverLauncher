@@ -10,7 +10,7 @@ export function parseAdminRoute(hash: string): AdminRoute {
   const question = raw.indexOf('?');
   const path = question < 0 ? raw : raw.slice(0, question);
   let segment = '';
-  try { segment = decodeURIComponent(path.split('/')[0]); } catch { /* invalid link */ }
+  try { segment = decodeURIComponent(path.split('/')[0]); } catch { /* некорректная ссылка */ }
   const route: AdminRoute = { section: ids.has(segment) ? segment as SectionId : 'dashboard' };
   const params = new URLSearchParams(question < 0 ? '' : raw.slice(question + 1));
   for (const field of Object.keys(keyNames) as Array<keyof ProjectContext>) {

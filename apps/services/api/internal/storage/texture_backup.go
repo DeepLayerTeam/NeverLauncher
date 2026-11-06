@@ -178,7 +178,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		return 0, err
 	}
 	if !info.Mode().IsRegular() || info.Size() > 16<<20 {
-		return 0, errors.New("Небезопасное значение: «or oversized backup manifest»")
+		return 0, errors.New("Небезопасное значение: «или манифест резервной копии превышает лимит размера»")
 	}
 	f, err := os.Open(manifestPath)
 	if err != nil {

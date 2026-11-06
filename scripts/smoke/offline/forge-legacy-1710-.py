@@ -24,7 +24,7 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 if dict(matrix_globals["FORGE_LEGACY_1710_0175"]) != {"1.7.10": 8}:
-    raise SystemExit("Несовпадение: «Forge Legacy 1.7.10 canonical grid»")
+    raise SystemExit("Несовпадение: «каноническая матрица Forge Legacy 1.7.10»")
 
 rows = [
     row

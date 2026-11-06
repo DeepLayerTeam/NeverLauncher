@@ -40,7 +40,7 @@ func (v OfficialProviderSettings02611) Validate() error {
 		return errors.New("Поддерживаются только личные учётные записи Microsoft")
 	}
 	if v.ClientID != "" && (!clientIDPattern02611.MatchString(v.ClientID) || strings.EqualFold(v.ClientID, "00000000-0000-0000-0000-000000000000")) {
-		return errors.New("clientId: требуется «a registered public application UUID»")
+		return errors.New("clientId: требуется «зарегистрированный публичный UUID приложения»")
 	}
 	if v.Enabled && v.ClientID == "" {
 		return errors.New("Для включённого провайдера требуется clientId")

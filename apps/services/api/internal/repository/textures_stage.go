@@ -38,7 +38,7 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 		}
 	}
 	if input.ObjectKey != "texture-blobs/sha256/"+input.Digest[:2]+"/"+input.Digest+".png" {
-		return errors.New("Некорректное значение: «staging object key»")
+		return errors.New("Некорректное значение: «ключ объекта промежуточного хранилища»")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

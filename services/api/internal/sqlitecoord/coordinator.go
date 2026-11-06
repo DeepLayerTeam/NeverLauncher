@@ -65,7 +65,7 @@ func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (
 		}
 		fields := strings.Fields(stmt)
 		if len(fields) < 6 {
-			return false, fmt.Errorf("Некорректное значение: «embedded coordinator DDL»: %q", stmt)
+			return false, fmt.Errorf("Некорректное значение: «DDL встроенного координатора»: %q", stmt)
 		}
 		name := fields[5]
 		expected[name] = normalizeCoordinatorDDL0471(stmt)
@@ -83,7 +83,7 @@ func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (
 		}
 		want, ok := expected[name]
 		if !ok || !sqlText.Valid || normalizeCoordinatorDDL0471(sqlText.String) != want {
-			err = fmt.Errorf("Требуется: «coordinator incompatible %s schema %q; manual migration»", kind, name)
+			err = fmt.Errorf("Требуется: «несовместимая схема координатора %s версии %q; требуется ручная миграция»", kind, name)
 			break
 		}
 		seen[name] = struct{}{}

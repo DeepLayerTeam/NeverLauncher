@@ -19,15 +19,15 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
   async function inspect(){
     setError('');setStatus('');
     const result=await verifyBootstrap0355(source,root.trim(),policy);
-    if(result.payload.projectId!==projectId)throw Error(`Bootstrap принадлежит проекту ${result.payload.projectId}, а в панели выбран ${projectId}`);
+    if(result.payload.projectId!==projectId)throw Error(`Файл начальной настройки принадлежит проекту ${result.payload.projectId}, а в панели выбран ${projectId}`);
     setBrand(result.payload.branding??{...starter,publisher:projectId,displayName:projectId});
     setLoaded({projectId:result.payload.projectId,profileId:result.payload.profileId,schema:result.envelope.schemaVersion});
-    setStatus('Подпись исходного bundle проверена локально. Изменения доступны для предпросмотра.');
+    setStatus('Подпись исходного пакета проверена локально. Изменения доступны для предпросмотра.');
   }
   async function signedDownload(){
-    if(!loaded||!canSign)throw Error('Подписывать bundle может только уполномоченный владелец проекта');
-    if(loaded.projectId!==projectId)throw Error('Изменён контекст проекта: повторите проверку bundle');
-    if(!seedFile||seedFile.size>4096)throw Error('Выберите небольшой локальный файл с 32-байтовым Ed25519 seed hex');
+    if(!loaded||!canSign)throw Error('Подписывать пакет может только уполномоченный владелец проекта');
+    if(loaded.projectId!==projectId)throw Error('Изменён контекст проекта: повторите проверку пакета');
+    if(!seedFile||seedFile.size>4096)throw Error('Выберите локальный файл с 32-байтовым исходным ключевым материалом Ed25519 в шестнадцатеричном формате');
     setError('');setBusy(true);
     try{
       const seed=(await seedFile.text()).trim();
@@ -35,22 +35,22 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
       const url=URL.createObjectURL(new Blob([output],{type:'application/json'}));
       try{const a=document.createElement('a');a.href=url;a.download='bootstrap.signed.json';a.click();}
       finally{setTimeout(()=>URL.revokeObjectURL(url),1000)}
-      setSeedFile(null);if(privateInput.current)privateInput.current.value='';setStatus('Новый bootstrap проверен и сохранён. Замените им файл в подписываемом installer bundle; опубликуйте новый установщик.');
+      setSeedFile(null);if(privateInput.current)privateInput.current.value='';setStatus('Новый файл начальной настройки проверен и сохранён. Замените им соответствующий файл в подписываемом установочном пакете, затем опубликуйте новый установщик.');
     }finally{setBusy(false)}
   }
   const previewValid=(()=>{try{validateBrand0355(brand);return true}catch{return false}})();
   return <section className="card wide brandingStudio0355">
     <h2>Студия оформления · 0.35.5</h2>
-    <p className="muted">Предпросмотр меняется сразу. Исходный bootstrap проверяется Ed25519, новый подписывается в браузере. Ключ не передаётся на сервер и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый установочный пакет.</p>
+    <p className="muted">Предпросмотр меняется сразу. Подпись исходного файла начальной настройки проверяется по Ed25519, новый подписывается в браузере. Ключ не передаётся на сервер и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый установочный пакет.</p>
     <div className="formGrid">
       <article className="subcard">
         <h3>1. Подписанный пакет владельца</h3>
         <label className="field">Исходный bootstrap.signed.json<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'source').catch(e=>setError(String(e)))} /></label>
-        <label className="field">Закреплённый root Ed25519 public key (64 hex)<input value={root} spellCheck={false} onChange={e=>{setRoot(e.target.value);setLoaded(null)}} /></label>
+        <label className="field">Закреплённый корневой публичный ключ Ed25519 (64 шестнадцатеричных символа)<input value={root} spellCheck={false} onChange={e=>{setRoot(e.target.value);setLoaded(null)}} /></label>
         <label className="field">Политика доверия для делегированного режима v2 (для v1 не выбирайте)<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'policy').catch(e=>setError(String(e)))} /></label>
         {policy&&<button onClick={()=>{setPolicy('');setLoaded(null)}}>Убрать политику доверия</button>}
         <div className="buttonRow"><button disabled={!source||!root||!projectId} onClick={()=>inspect().catch(e=>{setLoaded(null);setError(String(e))})}>Проверить исходную подпись</button></div>
-        {loaded&&<p className="success">Подпись проверена · проект {loaded.projectId} · профиль {loaded.profileId} · envelope {loaded.schema}</p>}
+        {loaded&&<p className="success">Подпись проверена · проект {loaded.projectId} · профиль {loaded.profileId} · формат подписанного пакета {loaded.schema}</p>}
       </article>
       <article className="subcard">
         <h3>2. Оформление</h3>

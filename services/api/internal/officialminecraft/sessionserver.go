@@ -117,7 +117,7 @@ func (c *Client) VerifyOnlineSession(ctx context.Context, token string, profile 
 	verifyReq.Header.Set("Accept", "application/json")
 	checked, err := c.http.Do(verifyReq)
 	if err != nil {
-		return errors.New("Недоступно: «sessionserver hasJoined»")
+		return errors.New("Недоступно: «запрос hasJoined к серверу сеансов»")
 	}
 	defer checked.Body.Close()
 	if checked.StatusCode != http.StatusOK {

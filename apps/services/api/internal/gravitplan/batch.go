@@ -95,7 +95,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		}
 	}
 	if len(available) == 0 || len(available) != len(destinations) {
-		return out, fmt.Errorf("every Gravit profile: требуется «mapped exactly once: source has %d, request has» %d", len(available), len(destinations))
+		return out, fmt.Errorf("every Gravit profile: требуется «однозначное сопоставление: в источнике %d, в запросе» %d", len(available), len(destinations))
 	}
 	mapped, ids := make(map[string]bool), make(map[string]bool)
 	for _, d := range destinations {
@@ -104,7 +104,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		}
 		id := strings.ToLower(d.ProfileID)
 		if ids[id] {
-			return out, errors.New("Обнаружен дубликат: «target profile ID»")
+			return out, errors.New("Обнаружен дубликат: «идентификатор целевого профиля»")
 		}
 		ids[id], mapped[d.ProfilePath] = true, true
 	}

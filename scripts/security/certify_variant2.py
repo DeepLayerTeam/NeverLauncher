@@ -44,7 +44,7 @@ def source_fingerprint():
         ]
     for p in sorted(paths):
         if not p.is_file():
-            raise ValueError(f"Отсутствует: «tracked source»: {p}")
+            raise ValueError(f"Отсутствует: «отслеживаемые исходные файлы»: {p}")
         rel = p.relative_to(ROOT).as_posix()
         sha.update(rel.encode() + b"\x00")
         sha.update(hashlib.sha256(p.read_bytes()).digest())
@@ -71,7 +71,7 @@ def main():
             ["git", "status", "--porcelain"], cwd=ROOT, text=True
         )
         if dirty.strip():
-            parser.error("«dirty source tree»: запрещено «generate GA evidence»")
+            parser.error("«исходный каталог с незакоммиченными изменениями»: запрещено «формирование доказательств готовности GA»")
     spec = {
         "offline": previous.OFFLINE,
         "backend-security": previous.BACKEND_SECURITY,

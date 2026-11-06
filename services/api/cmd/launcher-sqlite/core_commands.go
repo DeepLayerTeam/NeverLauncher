@@ -69,7 +69,7 @@ func runCoreAction(args []string) int {
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
 	db := flags.String("db", "", "Приватный локальный файл SQLite")
 	input := flags.String("input", "", "Приватный JSON-файл с правами 0600")
-	kind := flags.String("kind", "", "project|profile|channel|user|audit or get resource")
+	kind := flags.String("kind", "", "project|profile|channel|user|audit (тип ресурса для чтения или изменения)")
 	actor := flags.String("actor", "", "Обязательный идентификатор исполнителя для записей аудита изменений")
 	project := flags.String("project", "", "ID проекта")
 	profile := flags.String("profile", "", "ID профиля")
@@ -163,7 +163,7 @@ func runCoreAction(args []string) int {
 				output = map[string]string{"status": "recorded"}
 			}
 		default:
-			err = errors.New("Не поддерживается: «--kind for core-put»")
+			err = errors.New("Не поддерживается: «параметр --kind для команды core-put»")
 		}
 	case "core-draft":
 		output, err = repo.CreateDraft(ctx, *project, *profile, *channel, *version, *actor)
@@ -211,7 +211,7 @@ func runCoreAction(args []string) int {
 		case "counts":
 			output, err = repo.Count(ctx)
 		default:
-			err = errors.New("Не поддерживается: «--kind for core-get»")
+			err = errors.New("Не поддерживается: «параметр --kind для команды core-get»")
 		}
 	}
 	if err != nil {

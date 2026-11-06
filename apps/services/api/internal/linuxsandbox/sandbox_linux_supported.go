@@ -604,7 +604,7 @@ func newIPCProxy(conn net.Conn) http.Handler {
 		clone.Close = false
 		clone.Header.Del("Connection")
 		if err := clone.Write(conn); err != nil {
-			http.Error(w, "Недоступно: «host ipc»", 502)
+			http.Error(w, "Недоступно: «межпроцессное взаимодействие хоста»", 502)
 			return
 		}
 		resp, err := http.ReadResponse(reader, clone)

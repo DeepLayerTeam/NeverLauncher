@@ -212,7 +212,7 @@ func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessi
 	}
 	decision := s.evaluateMinecraftIntegrity0135(session)
 	if !decision.Allowed {
-		return model.MinecraftSession{}, fmt.Errorf("Доступ запрещён: «Minecraft integrity policy»: %s", decision.Reason)
+		return model.MinecraftSession{}, fmt.Errorf("Доступ запрещён: «политика целостности Minecraft»: %s", decision.Reason)
 	}
 	return session, nil
 }

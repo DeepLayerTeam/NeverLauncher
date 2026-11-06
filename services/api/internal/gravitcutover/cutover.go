@@ -76,7 +76,7 @@ func VerifySourceFence0448(a Activate, r Route, now time.Time) error {
 	}
 	sum := sha256.Sum256(payload)
 	if hex.EncodeToString(sum[:]) != a.SourceFenceEvidenceSHA256 {
-		return errors.New("Несовпадение: «source stop receipt SHA-256»")
+		return errors.New("Несовпадение: «SHA-256 подтверждения остановки источника»")
 	}
 	return nil
 }
@@ -103,13 +103,13 @@ type Route struct {
 
 func ValidateStage(s Stage) error {
 	if !scope.MatchString(s.ProfileID) || !scope.MatchString(s.Channel) || len(s.ReleaseID) < 1 || len(s.ReleaseID) > 256 || strings.ContainsAny(s.ReleaseID, "\x00\r\n") || s.ExpectedHeadRevision < 0 || len(s.StageID) < 16 || len(s.StageID) > 128 {
-		return errors.New("Некорректное значение: «cutover stage scope, release, revision or rehearsal»")
+		return errors.New("Некорректное значение: «область действия, выпуск, ревизия или репетиция этапа переключения»")
 	}
 	return nil
 }
 func ValidateActivation(a Activate) error {
 	if !scope.MatchString(a.ProfileID) || !scope.MatchString(a.Channel) || a.ExpectedRevision < 1 || len(a.SourceFenceReference) < 8 || len(a.SourceFenceReference) > 256 || strings.ContainsAny(a.SourceFenceReference, "\r\n\x00") || !digest.MatchString(a.SourceFenceEvidenceSHA256) || !digest.MatchString(a.CurrentSourceSnapshotSHA256) || a.SourceFenceReceipt == nil {
-		return errors.New("Некорректное значение: «cutover activation/fencing evidence»")
+		return errors.New("Некорректное значение: «доказательства активации переключения и блокировки источника»")
 	}
 	return nil
 }
@@ -121,7 +121,7 @@ func VerifyRelease(m model.Manifest, trusted ed25519.PublicKey) (string, error) 
 		return "", err
 	}
 	if m.Signature == nil || !strings.EqualFold(m.Signature.Algorithm, "Ed25519") {
-		return "", errors.New("Требуется: «signed Never release»")
+		return "", errors.New("Требуется: «подписанный выпуск Never»")
 	}
 	pub, err := hex.DecodeString(m.Signature.PublicKey)
 	if err != nil || len(pub) != ed25519.PublicKeySize || !ed25519.PublicKey(pub).Equal(trusted) {
@@ -138,7 +138,7 @@ func VerifyRelease(m model.Manifest, trusted ed25519.PublicKey) (string, error) 
 		return "", err
 	}
 	if !ed25519.Verify(pub, raw, sig) {
-		return "", errors.New("Ошибка: «release signature verification»")
+		return "", errors.New("Ошибка: «проверка подписи выпуска»")
 	}
 	all, err := json.Marshal(m)
 	if err != nil {

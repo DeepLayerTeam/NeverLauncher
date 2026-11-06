@@ -73,14 +73,14 @@ func exchangeOfficialBrowser0263(ctx context.Context, provider officialBrowserPr
 		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, err
 	}
 	if tokens.AccessToken == "" || tokens.RefreshToken == "" {
-		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Отсутствует: «Microsoft bearer/refresh token»")
+		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Отсутствует: «токен доступа или обновления Microsoft»")
 	}
 	mc, err := provider.Exchange(ctx, tokens.AccessToken)
 	if err != nil {
 		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, err
 	}
 	if mc.AccessToken == "" || mc.ExpiresIn <= 0 {
-		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Отсутствует: «Minecraft bearer»")
+		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Отсутствует: «токен доступа Minecraft»")
 	}
 	profile, err := provider.Profile(ctx, mc.AccessToken)
 	if err != nil {

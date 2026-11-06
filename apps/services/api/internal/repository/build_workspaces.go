@@ -380,7 +380,7 @@ func (r *SQLRepository) saveBuildWorkspace0401(ctx context.Context, w BuildWorks
 		return w, e
 	}
 	if n != 1 {
-		return w, fmt.Errorf("Несовпадение: «%w: revision»", ErrConflict)
+		return w, fmt.Errorf("Несовпадение: «%w: ревизия»", ErrConflict)
 	}
 	return w, tx.Commit()
 }

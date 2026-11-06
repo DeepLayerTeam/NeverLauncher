@@ -238,7 +238,7 @@ func (c *Client) Refresh(ctx context.Context, clientID, refresh string) (OAuthTo
 		return tokens, err
 	}
 	if tokens.AccessToken == "" || tokens.TokenType != "Bearer" {
-		return OAuthTokens{}, errors.New("Некорректное значение: «Microsoft refresh response»")
+		return OAuthTokens{}, errors.New("Некорректное значение: «ответ Microsoft на обновление токена»")
 	}
 	if tokens.RefreshToken == "" {
 		tokens.RefreshToken = refresh
@@ -334,10 +334,10 @@ func (c *Client) Entitled(ctx context.Context, token string) error {
 }
 func (c *Client) UploadSkin(ctx context.Context, token, variant string, png []byte) (Profile, error) {
 	if variant != "classic" && variant != "slim" {
-		return Profile{}, errors.New("Некорректное значение: «Minecraft skin variant»")
+		return Profile{}, errors.New("Некорректное значение: «вариант скина Minecraft»")
 	}
 	if len(png) == 0 || len(png) > 4<<20 {
-		return Profile{}, errors.New("Некорректное значение: «Minecraft skin payload»")
+		return Profile{}, errors.New("Некорректное значение: «данные скина Minecraft»")
 	}
 	var b bytes.Buffer
 	mw := multipart.NewWriter(&b)

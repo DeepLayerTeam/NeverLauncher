@@ -149,7 +149,7 @@ func (r *Repository) UpdateDraftManifest(ctx context.Context, projectID, release
 
 func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	if len(roots) == 0 {
-		return errors.New("production release: требуется «configured trusted Ed25519 root»")
+		return errors.New("production release: требуется «настроенный доверенный корневой ключ Ed25519»")
 	}
 	// Подписанный черновик не является запускаемым промышленным релизом. Перед
 	// записью опубликованного head канала требуйте минимальные исполняемые
@@ -188,7 +188,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 		return e
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pub), raw, sig) {
-		return errors.New("Ошибка: «manifest Ed25519 signature verification»")
+		return errors.New("Ошибка: «проверка подписи манифеста Ed25519»")
 	}
 	return model.ValidateManifestSchema(m)
 }
@@ -305,13 +305,13 @@ func (r *Repository) Published(ctx context.Context, projectID, profileID, channe
 		out.PublishedAt = ts(published)
 		sum := sha256.Sum256([]byte(raw))
 		if hex.EncodeToString(sum[:]) != digest {
-			return errors.New("Несовпадение: «published channel manifest digest»")
+			return errors.New("Несовпадение: «хеш опубликованного манифеста канала»")
 		}
 		if e = json.Unmarshal([]byte(raw), &out.Manifest); e != nil {
 			return e
 		}
 		if out.Manifest.ProjectID != projectID || out.Manifest.ProfileID != profileID || out.Manifest.Channel != channel || out.Manifest.Version != out.Version {
-			return errors.New("Несовпадение: «published manifest identity»")
+			return errors.New("Несовпадение: «идентичность опубликованного манифеста»")
 		}
 		return verifyTrustedSignature(out.Manifest, roots)
 	})

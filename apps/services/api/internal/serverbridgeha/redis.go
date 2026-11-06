@@ -124,7 +124,7 @@ func (r *RedisCoordinator) AcquireCommandLease(ctx context.Context, serverID, co
 	}
 	n, ok := v.(int64)
 	if !ok {
-		return false, fmt.Errorf("Неожиданное значение: «Redis lease response»: %v", v)
+		return false, fmt.Errorf("Неожиданное значение: «ответ Redis при получении аренды»: %v", v)
 	}
 	return n == 1, nil
 }
@@ -159,7 +159,7 @@ func (r *RedisCoordinator) ReleaseCommandLease(ctx context.Context, serverID, co
 func validateCommandLeaseIdentity0514(parts ...string) error {
 	for _, part := range parts {
 		if part == "" || len(part) > 256 || safePart(part) != part {
-			return errors.New("Небезопасное значение: «Redis command lease identity»")
+			return errors.New("Небезопасное значение: «идентификатор аренды команды Redis»")
 		}
 	}
 	return nil

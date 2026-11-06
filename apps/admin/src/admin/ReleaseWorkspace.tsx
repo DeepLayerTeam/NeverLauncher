@@ -1565,7 +1565,7 @@ export function ReleaseWorkspace({
                 disabled={busy || !canPrepare}
                 onClick={() => void continueStagedRollback()}
               >
-                Открыть подготовленный rollback для сертификации
+                Открыть подготовленный откат для проверки перед выпуском
               </button>
             )}
             {!pending.jobId && (
@@ -1603,7 +1603,7 @@ export function ReleaseWorkspace({
       <p className="muted">
         Порядок владельца: сборка и компоненты → подпись/validation → просмотр
         эффекта → durable job → проверенный channel head →
-        диагностика/наблюдение → rollback при необходимости. HTTP 202 не
+        диагностика и наблюдение → откат при необходимости. HTTP 202 не
         является публикацией.
       </p>
       <div className="buttonRow">

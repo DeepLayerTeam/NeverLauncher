@@ -218,7 +218,7 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 
 func validateGuardAttestationV201810(a guardRemoteAttestationV201810, challengeID, challenge string, policy guardReleasePolicy0134, platform string, now time.Time, challengeCreatedAt time.Time) error {
 	if a.Schema != guardAttestationV2Schema01810 || a.AttestationVersion != guardAttestationV2Version01810 || a.ChallengeID != strings.TrimSpace(challengeID) {
-		return errors.New("Несовпадение: «Guard Attestation v2 schema/version/challengeId»")
+		return errors.New("Несовпадение: «схема, версия и идентификатор запроса аттестации Guard v2 (challengeId)»")
 	}
 	expectedChallenge := deviceChallengeHash0121(challenge)
 	if !hmac.Equal([]byte(expectedChallenge), []byte(strings.ToLower(strings.TrimSpace(a.ChallengeSHA256)))) {
@@ -231,7 +231,7 @@ func validateGuardAttestationV201810(a guardRemoteAttestationV201810, challengeI
 		return errors.New("Несоответствие привязки базового проверочного запроса Guard Attestation v2")
 	}
 	if err := validateGuardAttestation0134(a.BaseAttestation, challengeID, challenge, policy, platform, now, challengeCreatedAt); err != nil {
-		return fmt.Errorf("Ошибка: «Guard Attestation v2 base verification»: %w", err)
+		return fmt.Errorf("Ошибка: «базовая проверка аттестации Guard v2»: %w", err)
 	}
 	if err := validateGuardContinuousEvidence01810(a.ContinuousEvidence, now); err != nil {
 		return err
@@ -527,7 +527,7 @@ func validateContinuousGuardTicketForMinecraftSession01810(ticket model.DeviceCh
 		return errors.New("Среда выполнения Continuous Guard не привязана к этой сессии Minecraft")
 	}
 	if metadataString0121(ticket.Metadata, "launcherVersion") != strings.TrimSpace(session.LauncherVersion) {
-		return errors.New("«Continuous Guard ticket launcher version» не совпадает с «Minecraft integrity session»")
+		return errors.New("«версия лаунчера в разрешении непрерывной защиты Guard» не совпадает с «сеанс проверки целостности Minecraft»")
 	}
 	for label, pair := range map[string][2]string{
 		"Guard":   {metadataString0121(ticket.Metadata, "guardSha256"), strings.ToLower(strings.TrimSpace(session.GuardSHA256))},
@@ -536,7 +536,7 @@ func validateContinuousGuardTicketForMinecraftSession01810(ticket model.DeviceCh
 		left := strings.ToLower(strings.TrimSpace(pair[0]))
 		right := strings.ToLower(strings.TrimSpace(pair[1]))
 		if !isSHA256Hex0134(left) || !isSHA256Hex0134(right) || !hmac.Equal([]byte(left), []byte(right)) {
-			return fmt.Errorf("Несовпадение: «Continuous Guard ticket %s artifact binding»", label)
+			return fmt.Errorf("Несовпадение: «привязка артефакта %s в разрешении непрерывной защиты Guard»", label)
 		}
 	}
 	return nil

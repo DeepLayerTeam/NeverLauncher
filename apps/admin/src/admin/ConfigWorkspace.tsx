@@ -14,8 +14,8 @@ const fields: Array<{ key: keyof OperationalSettings; title: string; help: strin
   { key: 'auditMaxPageSize', title: 'Аудит: максимальный размер страницы', help: 'Ограничивает количество записей, выдаваемых API', min: 5, max: 200 },
   { key: 'auditLookbackDays', title: 'Аудит: период по умолчанию (дней)', help: 'Поиск без даты начала охватывает заданный период; явный диапазон не ограничен', min: 1, max: 3650 },
   { key: 'auditExposeClientDetails', title: 'Отображать IP и User-Agent в аудите', help: 'При отключении API скрывает IP и User-Agent в результатах поиска' },
-  { key: 'jobsDefaultPageSize', title: 'Jobs: строк на странице', help: 'Размер страницы по умолчанию', min: 5, max: 100 },
-  { key: 'jobsMaxPageSize', title: 'Jobs: максимальный размер страницы', help: 'Серверный предел выдачи jobs', min: 5, max: 200 },
+  { key: 'jobsDefaultPageSize', title: 'Задания: записей на странице', help: 'Размер страницы по умолчанию', min: 5, max: 100 },
+  { key: 'jobsMaxPageSize', title: 'Задания: максимальное число записей', help: 'Серверный предел выдачи заданий', min: 5, max: 200 },
 ];
 export function configDiff(a: OperationalSettings, b: OperationalSettings): Diff[] {
   return fields.filter(f => a[f.key] !== b[f.key]).map(f => ({ field: f.key, before: a[f.key], after: b[f.key], restartRequired: false }));

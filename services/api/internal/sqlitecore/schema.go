@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("Не найдено: «sqlite core: record»")
+	ErrNotFound  = errors.New("Не найдено: «ядро SQLite: запись»")
 	ErrConflict  = errors.New("Ядро SQLite: конфликт ревизии или ограничения уникальности")
 	ErrImmutable = errors.New("Ядро SQLite: опубликованный релиз или история неизменяемы")
 )
@@ -55,7 +55,7 @@ func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Reposito
 	if st, err := os.Lstat(options.Path); err != nil {
 		return nil, fmt.Errorf("Существующая база ядра SQLite: %w", err)
 	} else if !st.Mode().IsRegular() {
-		return nil, errors.New("«sqlite core existing database»: требуется обычный файл")
+		return nil, errors.New("«существующая база данных ядра SQLite»: требуется обычный файл")
 	}
 	store, err := sqlitedurable.Open(ctx, options)
 	if err != nil {
@@ -272,7 +272,7 @@ func (r *Repository) Check(ctx context.Context) error {
 			sum := sha256.Sum256([]byte(raw))
 			if hex.EncodeToString(sum[:]) != digest {
 				_ = heads.Close()
-				return errors.New("Несовпадение: «sqlite core channel manifest digest»")
+				return errors.New("Несовпадение: «хеш манифеста канала ядра SQLite»")
 			}
 		}
 		if e = errors.Join(heads.Err(), heads.Close()); e != nil {
@@ -291,7 +291,7 @@ func (r *Repository) Check(ctx context.Context) error {
 				}
 				actual := sha256.Sum256([]byte(payload))
 				if hex.EncodeToString(actual[:]) != stored {
-					er = fmt.Errorf("Несовпадение: «sqlite durable %s payload digest»", table)
+					er = fmt.Errorf("Несовпадение: «хеш содержимого устойчивого хранилища SQLite %s»", table)
 					break
 				}
 			}

@@ -80,7 +80,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 		return p, e
 	}
 	if p.SchemaVersion != "1.0" || p.Domain != "launcher.trust.v1" || p.Epoch == 0 {
-		return p, errors.New("Некорректное значение: «game trust domain/epoch»")
+		return p, errors.New("Некорректное значение: «домен доверия игры или эпоха»")
 	}
 	start, e := gameTrustUTC02312(p.IssuedAt)
 	if e != nil {
@@ -108,7 +108,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 			return errors.New("Неизвестное значение: «состояние ключа подписи игры»")
 		}
 		if issuance && k.Status != "active" {
-			return errors.New("«retired game signing key»: запрещено «publish»")
+			return errors.New("«выведенный из обращения ключ подписи игры»: запрещено «publish»")
 		}
 		first, e := gameTrustUTC02312(k.NotBefore)
 		if e != nil {

@@ -60,7 +60,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
       minecraftVersion:snapshot.spec.minecraftVersion||'',loaderVersion:snapshot.spec.loaderVersion||'',javaMajor:snapshot.spec.javaMajor||17});
     setDirty(true);setNotice(snapshot.spec.minecraftVersion
       ?'Исторические значения загружены. Нажмите «Сохранить изменения».'
-      :'У старой ревизии не было закреплённых параметров запуска. Укажите Minecraft, loader и Java перед сохранением.');
+      :'У старой ревизии не было закреплённых параметров запуска. Укажите версии Minecraft, загрузчика и Java перед сохранением.');
   }
   const issue=validateProfile0382(form);
   return <article className="subcard" aria-label="Редактор профиля Minecraft">

@@ -46,7 +46,7 @@ func providerCredentialAAD116(userID, identityID, provider, subject string) []by
 func (s Server) encryptProviderCredential116(userID, identityID, provider, subject, token string) (string, error) {
 	token = strings.TrimSpace(token)
 	if token == "" || len(token) > 32768 {
-		return "", errors.New("Превышен допустимый размер: «provider refresh token is empty or»")
+		return "", errors.New("Превышен допустимый размер: «токен обновления провайдера пуст или»")
 	}
 	aead, err := s.providerCredentialAEAD116()
 	if err != nil {
@@ -64,7 +64,7 @@ func (s Server) encryptProviderCredential116(userID, identityID, provider, subje
 func (s Server) decryptProviderCredential116(item model.ProviderCredential) (string, error) {
 	parts := strings.SplitN(strings.TrimSpace(item.EncryptedRefreshToken), ".", 2)
 	if len(parts) != 2 || parts[0] != providerCredentialCipherVersion116 {
-		return "", errors.New("Не поддерживается: «provider credential ciphertext version»")
+		return "", errors.New("Не поддерживается: «версия зашифрованных учётных данных провайдера»")
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -82,7 +82,7 @@ func (s Server) decryptProviderCredential116(item model.ProviderCredential) (str
 		return "", err
 	}
 	if len(plain) == 0 || len(plain) > 32768 {
-		return "", errors.New("Некорректное значение: «provider credential plaintext»")
+		return "", errors.New("Некорректное значение: «открытый текст учётных данных провайдера»")
 	}
 	return string(plain), nil
 }

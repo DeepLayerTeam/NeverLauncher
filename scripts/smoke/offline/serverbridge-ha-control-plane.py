@@ -180,7 +180,7 @@ require(
 )
 for forbidden in ["status == 401 ||", "status == 403 ||"]:
     if forbidden in client:
-        raise SystemExit("«authentication rejection»: запрещено «trigger endpoint failover»")
+        raise SystemExit("«отказ в аутентификации»: запрещено «инициировать переключение резервного адреса»")
 for text, needle, label in [
     (preflight, "serverbridge-ha-control-plane-01911.py", "preflight"),
     (ci, "serverbridge-ha-control-plane-01911.py", "CI"),

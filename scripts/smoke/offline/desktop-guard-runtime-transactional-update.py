@@ -148,7 +148,7 @@ if (
     raise SystemExit("0.15.7: нативное покрытие CI обновления компонентов неполное")
 preflight = read("scripts/release/preflight.sh")
 if "desktop-guard-runtime-transactional-update-0157.py" not in preflight:
-    raise SystemExit("Отсутствует: «0.15.7 component updater preflight gate»")
+    raise SystemExit("Отсутствует: «предварительная проверка обновления компонентов 0.15.7»")
 
 subprocess.run(
     [

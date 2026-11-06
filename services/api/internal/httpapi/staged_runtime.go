@@ -331,7 +331,7 @@ func validateStagedRunReport0342(g stagedGrant0342, p stagedRunReport0342) error
 		return errors.New("Некорректное значение: «время выполнения»")
 	}
 	if len(p.Stages) == 0 || len(p.Stages) > 10 {
-		return errors.New("Отсутствует: «or excessive stages»")
+		return errors.New("Отсутствует: «или превышено количество этапов»")
 	}
 	for k, v := range p.Stages {
 		if k != "manifest-files" && k != "materialization" && k != "startup" && k != "loader-readiness" && k != "authentication" && k != "server-readiness" && k != "matching-server" && k != "gameplay-smoke" && k != "update-recovery" {

@@ -287,7 +287,7 @@ export function ServersWorkspace0353({
         <p role="status">
           Выбран: {current.name} ({current.id}).{" "}
           {signedId
-            ? "Выбор закреплён подписанным bundle."
+            ? "Выбор закреплён подписанным пакетом."
             : "Можно сохранить выбранный сервер для следующих запусков."}
         </p>
       )}

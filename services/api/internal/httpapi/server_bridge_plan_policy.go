@@ -136,16 +136,16 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 	}
 	e := req.PlanEvidence
 	if e == nil {
-		return errors.New("Требуется: «verified component plan evidence»")
+		return errors.New("Требуется: «доказательства проверенного плана компонентов»")
 	}
 	if req.Channel == "" {
 		req.Channel = "stable"
 	}
 	if e.UserID != claims.Sub || e.SessionID != claims.SessionID || e.DeviceID != claims.TrustedDeviceID || e.BindingEpoch != claims.BindingEpoch || e.ServerID != req.ServerID || e.ProjectID != req.ProjectID || e.ProfileID != req.ProfileID || e.Channel != req.Channel {
-		return errors.New("Несовпадение: «verified component plan session, trusted device or target»")
+		return errors.New("Несовпадение: «сеанс, доверенное устройство или цель проверенного плана компонентов»")
 	}
 	if !isHexLength02412(e.ReleaseSignature, 128) || !isHexLength02412(e.CatalogDigest, 64) || !isHexLength02412(e.PlanSHA256, 64) || !isHexLength02412(e.GuardAttestationSHA256, 64) {
-		return errors.New("Некорректный формат: «signed component plan measurements»")
+		return errors.New("Некорректный формат: «измерения подписанного плана компонентов»")
 	}
 	if !planMatches02412(policy, e.ServerID, e.ProjectID, e.ProfileID, e.Channel, e.ReleaseSignature, e.CatalogDigest, e.PlanSHA256) {
 		return errors.New("Подписанная политика запрещает рассчитанный план компонентов")
@@ -156,25 +156,25 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 		return errors.New("Проверенный план не привязан к актуальному подтверждению непрерывной защиты Guard")
 	}
 	if e.ChallengeID == "" || e.Challenge == "" || len(e.Challenge) > 160 || len(e.ChallengeID) > 160 || strings.ContainsAny(planEvidencePayload02412(*e), "\r") {
-		return errors.New("Некорректное значение: «verified plan challenge»")
+		return errors.New("Некорректное значение: «проверочное значение подтверждённого плана»")
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, claims.TrustedDeviceID)
 	if err != nil || device.KeyAlgorithm != "p256" || device.KeyBinding != "hardware" {
-		return errors.New("Недоступно: «hardware device identity»")
+		return errors.New("Недоступно: «аппаратная идентичность устройства»")
 	}
 	key, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || key.fingerprint != device.KeyFingerprint {
-		return errors.New("Некорректное значение: «device proof key binding»")
+		return errors.New("Некорректное значение: «привязка ключа подтверждения устройства»")
 	}
 	if err = verifyDeviceSignature0123(key, planEvidencePayload02412(*e), e.Signature); err != nil {
-		return errors.New("Некорректное значение: «verified plan device proof signature»")
+		return errors.New("Некорректное значение: «подпись подтверждения устройства в проверенном плане»")
 	}
 	consumed, err := s.Repo.ConsumeDeviceChallenge(r.Context(), e.ChallengeID, claims.Sub, claims.TrustedDeviceID, planChallengePurpose02412, deviceChallengeHash0121(e.Challenge), time.Now().UTC())
 	if err != nil {
 		return errors.New("Проверочный запрос плана просрочен или использован повторно")
 	}
 	if metadataString0121(consumed.Metadata, "sessionId") != claims.SessionID || metadataString0121(consumed.Metadata, "bindingEpoch") != strconv.FormatInt(claims.BindingEpoch, 10) || metadataString0121(consumed.Metadata, "serverId") != req.ServerID || metadataString0121(consumed.Metadata, "projectId") != req.ProjectID || metadataString0121(consumed.Metadata, "profileId") != req.ProfileID || metadataString0121(consumed.Metadata, "channel") != req.Channel || metadataString0121(consumed.Metadata, "policyEpoch") != strconv.FormatUint(policy.Epoch, 10) {
-		return errors.New("Обнаружено изменение: «verified plan challenge binding/policy epoch»")
+		return errors.New("Обнаружено изменение: «привязка проверочного значения плана или эпоха политики»")
 	}
 	return nil
 }

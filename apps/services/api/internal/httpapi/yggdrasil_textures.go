@@ -69,7 +69,7 @@ func validDomainRule0256(domain string) bool {
 func (s Server) textureDomains0256() ([]string, error) {
 	u, err := url.Parse(s.Config.PublicURL)
 	if err != nil || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return nil, errors.New("Некорректное значение: «public texture origin»")
+		return nil, errors.New("Некорректное значение: «источник публичной текстуры»")
 	}
 	host := strings.ToLower(u.Hostname())
 	if u.Path != "" && u.Path != "/" {
@@ -83,7 +83,7 @@ func (s Server) textureDomains0256() ([]string, error) {
 	for _, raw := range s.Config.YggdrasilTextureDomains {
 		rule := strings.ToLower(strings.TrimSpace(raw))
 		if !validDomainRule0256(rule) {
-			return nil, fmt.Errorf("Некорректное значение: «texture allowlist rule» %q", raw)
+			return nil, fmt.Errorf("Некорректное значение: «правило списка разрешённых источников текстур» %q", raw)
 		}
 		if !seen[rule] {
 			seen[rule] = true

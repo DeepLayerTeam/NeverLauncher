@@ -36,7 +36,7 @@ type guardShadowJournal05012 struct {
 
 func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShadowJournal05012, error) {
 	if len(version) > 48 || !guardShadowVersion05012.MatchString(version) {
-		return nil, errors.New("Для теневой режим Guard требуется «a valid running product version»")
+		return nil, errors.New("Для теневой режим Guard требуется «корректная версия работающего продукта»")
 	}
 	if !filepath.IsAbs(directory) || !filepath.IsAbs(keyFile) {
 		return nil, errors.New("Guard shadow directory/key: требуется «абсолютный путь»")
@@ -47,7 +47,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	ki, err := os.Lstat(keyFile)
 	if err != nil || !ki.Mode().IsRegular() || ki.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Ключ теневого режима Guard: требуется «a private regular file»")
+		return nil, errors.New("Ключ теневого режима Guard: требуется «закрытый обычный файл»")
 	}
 	raw, err := os.ReadFile(keyFile)
 	if err != nil {
@@ -55,7 +55,7 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 	}
 	key, err := hex.DecodeString(strings.TrimSpace(string(raw)))
 	if err != nil || len(key) != 32 {
-		return nil, errors.New("Ключ теневого режима Guard: требуется «exactly 32 random bytes in hex»")
+		return nil, errors.New("Ключ теневого режима Guard: требуется «ровно 32 случайных байта в шестнадцатеричном формате»")
 	}
 	var boot [16]byte
 	if _, err = rand.Read(boot[:]); err != nil {
@@ -159,7 +159,7 @@ func recordGuardShadow05012(version, nodeID, correlation, outcome, reason string
 		return nil
 	}
 	if directory == "" || keyFile == "" {
-		return errors.New("Для теневой режим Guard требуется «both directory and key file»")
+		return errors.New("Для теневой режим Guard требуется «как каталог, так и файл ключа»")
 	}
 	guardShadowGlobal05012.once.Do(func() {
 		guardShadowGlobal05012.journal, guardShadowGlobal05012.err = newGuardShadowJournal05012(directory, keyFile, version)

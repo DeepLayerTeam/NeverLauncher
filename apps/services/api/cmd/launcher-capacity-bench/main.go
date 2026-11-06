@@ -42,7 +42,7 @@ type Response struct {
 func safeURL(s string, remote bool) (string, error) {
 	u, e := url.Parse(s)
 	if e != nil || u == nil || u.Host == "" || u.Fragment != "" || u.User != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return "", errors.New("Требуется: «absolute http(s) URL without credentials/fragment»")
+		return "", errors.New("Требуется: «абсолютный адрес HTTP(S) без учётных данных и фрагмента»")
 	}
 	if u.RawQuery != "" {
 		return "", errors.New("Параметры запроса запрещены во избежание повторного использования токенов")

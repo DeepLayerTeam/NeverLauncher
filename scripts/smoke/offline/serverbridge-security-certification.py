@@ -117,7 +117,7 @@ if (
     "LEGACY_PROTOCOL_VERSION)"
     in client.split("SUPPORTED_PROTOCOLS", 1)[1].split(";", 1)[0]
 ):
-    raise SystemExit("«0.19.12 bridge»: запрещено «offer Protocol v2»")
+    raise SystemExit("«0.19.12 bridge»: запрещено «предлагать протокол v2»")
 require(
     trust,
     [
@@ -272,7 +272,7 @@ if (
     or set(matrix.get("requiredScenarios", [])) != required
     or matrix.get("coverage") != "all-required-scenarios-on-every-target"
 ):
-    raise SystemExit("Отсутствует: «complete ServerBridge 3 E2E matrix»")
+    raise SystemExit("Отсутствует: «полная сквозная матрица ServerBridge 3»")
 for text, needle, label in [
     (preflight, "serverbridge-security-certification-01912.py", "preflight gate"),
     (

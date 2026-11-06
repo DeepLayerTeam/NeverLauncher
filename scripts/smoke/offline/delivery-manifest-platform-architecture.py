@@ -130,7 +130,7 @@ with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:
     )
     data = json.loads(resolved)
     if data.get("target") != {"platform": "windows", "architecture": "arm64"}:
-        raise SystemExit(f"Несовпадение: «canonical target»: {data.get('target')}")
+        raise SystemExit(f"Несовпадение: «каноническая целевая платформа»: {data.get('target')}")
     artifacts = data.get("artifacts", [])
     if (
         len(artifacts) != 1

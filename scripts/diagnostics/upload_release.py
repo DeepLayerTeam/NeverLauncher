@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     release = release_id(args.version, args.commit)
     if not any((args.js_dist, args.native_symbols, args.jvm_mapping)):
-        parser.error("Требуется: «at least one artifact»")
+        parser.error("Требуется: «хотя бы один артефакт»")
     for env in ("SENTRY_AUTH_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT"):
         if not os.environ.get(env):
             parser.error(f"Для реальной загрузки требуется {env}")
@@ -98,9 +98,9 @@ def main(argv: list[str] | None = None) -> int:
                     fields.get("io.sentry.proguard.uuid", "").lower()
                     != args.mapping_uuid.lower()
                 ):
-                    parser.error("«mapping UUID» не совпадает с «built JAR: refuse upload»")
+                    parser.error("UUID карты сопоставления не совпадает с UUID собранного JAR; загрузка запрещена")
         except (OSError, zipfile.BadZipFile, UnicodeError) as exc:
-            parser.error(f"Не удалось проверить «JVM mapping/build pair:» {exc}")
+            parser.error(f"Не удалось проверить соответствие карты сопоставления и сборки JVM: {exc}")
         sample = args.jvm_mapping.read_text(encoding="utf-8")[:8192]
         if " -> " not in sample:
             parser.error("Файл сопоставления JVM не похож на карту ProGuard")
@@ -133,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 data = json.loads(sm.read_text())
             except (OSError, ValueError) as exc:
-                parser.error(f"Некорректное значение: «source map» {sm}: {exc}")
+                parser.error(f"Некорректное значение: «карта исходников» {sm}: {exc}")
             if (
                 data.get("version") != 3
                 or not data.get("sources")

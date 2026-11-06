@@ -71,7 +71,7 @@ func Available() error {
 		return fmt.Errorf("Недоступно: STARTUPINFOEX: %w", err)
 	}
 	if err := createJob.Find(); err != nil {
-		return fmt.Errorf("Недоступно: «Job Objects»: %w", err)
+		return fmt.Errorf("Недоступно: «объекты заданий»: %w", err)
 	}
 	return nil
 }

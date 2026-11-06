@@ -197,7 +197,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 		return model.TextureAssignment0251{}, ErrTextureRevisionConflict0251
 	}
 	if profile.Realm != "local" || profile.Issuer != "launcher" {
-		return model.TextureAssignment0251{}, fmt.Errorf("«official identity»: запрещено «be changed via local texture service»")
+		return model.TextureAssignment0251{}, fmt.Errorf("«официальная идентичность»: запрещено «изменяться через локальную службу текстур»")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

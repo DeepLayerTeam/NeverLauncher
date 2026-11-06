@@ -58,7 +58,7 @@ require(runner, "scripts/guard_ci/windows_adversarial.py", [
     "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification",
 ])
 if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', runner):
-    raise SystemExit("Отсутствует: «Windows Adversarial CI: live Rust/Cargo test command»")
+    raise SystemExit("Отсутствует: «Windows Adversarial CI: фактическая команда проверки Rust/Cargo»")
 
 unit_tests = read("scripts/guard_ci/test_windows_adversarial.py")
 require(

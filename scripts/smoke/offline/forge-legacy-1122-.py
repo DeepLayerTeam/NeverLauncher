@@ -25,7 +25,7 @@ def require(text: str, tokens: list[str], name: str) -> None:
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected = dict(matrix_globals["FORGE_LEGACY_1122_0174"])
 if expected != {"1.12.2": 8}:
-    raise SystemExit(f"Несовпадение: «Forge Legacy 0.17.4 canonical grid»: {expected}")
+    raise SystemExit(f"Несовпадение: «каноническая матрица Forge Legacy 0.17.4»: {expected}")
 
 target_doc = json.loads(read("compatibility/targets.json"))
 rows = [
@@ -46,7 +46,7 @@ if (
     or row.get("os") != "linux"
     or row.get("arch") != "x86_64"
 ):
-    raise SystemExit("Forge Legacy 1.12.2: требуется «Java 8 client linux/x86_64»")
+    raise SystemExit("Forge Legacy 1.12.2: требуется «клиент Java 8 для Linux/x86_64»")
 if row.get("loaderVersion") != "latest-stable":
     raise SystemExit(
         "Устаревший Forge 1.12.2 должен выбирать последнюю стабильную версию с неизменяемым подтверждением разрешения"

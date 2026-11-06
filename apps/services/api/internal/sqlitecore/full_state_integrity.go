@@ -39,7 +39,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			break
 		}
 		if packageDigest(raw) != digest {
-			e = errors.New("Несовпадение: «package blob checksum»")
+			e = errors.New("Несовпадение: «контрольная сумма содержимого пакета»")
 			break
 		}
 	}
@@ -58,7 +58,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			break
 		}
 		if !ed25519.Verify(ed25519.PublicKey(key), extensionSignatureMessage(id, version, digest), signature) {
-			e = errors.New("Обнаружено изменение: «signed extension package signature»")
+			e = errors.New("Обнаружено изменение: «подпись подписанного пакета расширения»")
 			break
 		}
 	}
@@ -101,7 +101,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			break
 		}
 		if packageDigest([]byte(payload)) != digest {
-			e = errors.New("Несовпадение: «extension state digest»")
+			e = errors.New("Несовпадение: «хеш состояния расширения»")
 			break
 		}
 	}

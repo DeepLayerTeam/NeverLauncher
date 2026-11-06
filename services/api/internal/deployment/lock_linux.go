@@ -23,7 +23,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 	}
 	path := plan.LockPath
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
-		return nil, errors.New("Блокировка экземпляра: требуется «an absolute clean path»")
+		return nil, errors.New("Блокировка экземпляра: требуется «абсолютный нормализованный путь»")
 	}
 	parent := filepath.Dir(path)
 	// Никогда не проходите через сегменты-символьные ссылки: иначе два имени
@@ -43,7 +43,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 				return nil, fmt.Errorf("Ошибка родительского каталога блокировки экземпляра %s: %w", current, e)
 			}
 			if st.Mode()&os.ModeSymlink != 0 || !st.IsDir() {
-				return nil, fmt.Errorf("Для «instance lock parent» %s требуется: настоящий каталог", current)
+				return nil, fmt.Errorf("Для «родительский каталог блокировки экземпляра» %s требуется: настоящий каталог", current)
 			}
 		}
 	}
@@ -57,7 +57,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 	if plan.requireLocalFS {
 		owner, ok := st.Sys().(*syscall.Stat_t)
 		if !ok || owner.Uid != uint32(os.Geteuid()) || st.Mode().Perm()&0077 != 0 {
-			return nil, errors.New("production instance lock parent: требуется «owned by service user and mode 0700»")
+			return nil, errors.New("production instance lock parent: требуется «принадлежит служебному пользователю и имеет права 0700»")
 		}
 		var fs syscall.Statfs_t
 		if err := syscall.Statfs(parent, &fs); err != nil {
@@ -66,7 +66,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 		switch fs.Type {
 		case 0xef53, 0x58465342, 0x9123683e: // ext4, XFS, Btrfs
 		default:
-			return nil, fmt.Errorf("Блокировка экземпляра: требуется «verified local ext4/XFS/Btrfs, got fs type 0x%x»", fs.Type)
+			return nil, fmt.Errorf("Блокировка экземпляра: требуется «проверенная локальная файловая система ext4/XFS/Btrfs, получен тип 0x%x»", fs.Type)
 		}
 		if fs.Flags&1 != 0 {
 			return nil, errors.New("Файловая система блокировки экземпляра доступна только для чтения")
@@ -86,7 +86,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 	}
 	owner, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || owner.Uid != uint32(os.Geteuid()) || owner.Nlink != 1 {
-		return fail(errors.New("Блокировка экземпляра: требуется «owned regular 0600 file with one hard link»"))
+		return fail(errors.New("Блокировка экземпляра: требуется «обычный файл владельца с правами 0600 и одной жёсткой ссылкой»"))
 	}
 	if err := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		return fail(fmt.Errorf("Экземпляр уже запущен, блокировка %s: %w", path, err))
