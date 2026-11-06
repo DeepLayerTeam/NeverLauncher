@@ -17,14 +17,14 @@ func TestExtensionEventRejectsTrailingJSON0423(t *testing.T) {
 		Payload: json.RawMessage(`{"version":1} {"version":2}`),
 	}
 	if _, err := normalizeEvent0206(in); err == nil {
-		t.Fatal("accepted multiple JSON values as one durable event")
+		t.Fatal("Несколько значений JSON ошибочно приняты как одно сохраняемое событие")
 	}
 	in.Payload = json.RawMessage(`{"version":1} \n`)
 	if _, err := normalizeEvent0206(in); err == nil {
-		t.Fatal("accepted malformed event payload")
+		t.Fatal("Ошибочно приняты некорректные данные события")
 	}
 	in.Payload = json.RawMessage(`{"version":1}   `)
 	if _, err := normalizeEvent0206(in); err != nil {
-		t.Fatalf("rejected a valid event with trailing whitespace: %v", err)
+		t.Fatalf("Отклонено корректное событие с пробелами в конце: %v", err)
 	}
 }

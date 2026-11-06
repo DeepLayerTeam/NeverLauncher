@@ -10,7 +10,7 @@ import (
 
 func TestHeadlessPrestarterDoesNotProvisionDesktop0427(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX fake runtime")
+		t.Skip("Имитатор среды выполнения для POSIX")
 	}
 	opts, _ := makeOfflineFixture(t, t.TempDir(), baseParts())
 	opts.NoDesktop = true

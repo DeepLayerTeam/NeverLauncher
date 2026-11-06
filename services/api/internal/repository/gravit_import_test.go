@@ -26,7 +26,7 @@ func TestGravitAtomicImportMemory02210(t *testing.T) {
 		t.Fatal(e)
 	}
 	if saved.Revision != 1 || saved.IsDefault || w.Revision != 1 || w.State != "importing" || w.ProfileDigest != saved.Digest {
-		t.Fatalf("wrong initial state: %+v %+v", saved, w)
+		t.Fatalf("Неверное начальное состояние: %+v %+v", saved, w)
 	}
 	snap, e := ReadProfileSnapshot(r, project, saved.ID)
 	if e != nil || snap.Digest != saved.Digest {
@@ -36,14 +36,14 @@ func TestGravitAtomicImportMemory02210(t *testing.T) {
 		t.Fatalf("Повторяющийся профиль ошибочно принят: %v", e)
 	}
 	if _, e = r.GetBuildWorkspace(context.Background(), "ws-another"); !errors.Is(e, ErrNotFound) {
-		t.Fatalf("partial workspace after conflict: %v", e)
+		t.Fatalf("После конфликта осталась частично созданная рабочая область: %v", e)
 	}
 	other := parsed.Profile
 	other.ID = "another-profile"
 	otherWorkspace := ws
 	otherWorkspace.ProfileID = other.ID
 	if _, _, e = r.CreateGravitProfileWorkspace02210(context.Background(), other, otherWorkspace); !errors.Is(e, ErrConflict) {
-		t.Fatalf("workspace conflict not rejected: %v", e)
+		t.Fatalf("Конфликт рабочей области не отклонён: %v", e)
 	}
 	profiles, e := r.ListProfiles(project)
 	if e != nil {
@@ -51,7 +51,7 @@ func TestGravitAtomicImportMemory02210(t *testing.T) {
 	}
 	for _, p := range profiles {
 		if p.ID == other.ID {
-			t.Fatal("partial profile after workspace conflict")
+			t.Fatal("После конфликта рабочей области остался частично созданный профиль")
 		}
 	}
 }
@@ -72,13 +72,13 @@ func TestGravitAtomicImportConcurrent02210(t *testing.T) {
 			if _, _, err := r.CreateGravitProfileWorkspace02210(context.Background(), profile, w); err == nil {
 				okCount.Add(1)
 			} else if !errors.Is(err, ErrConflict) {
-				t.Errorf("unexpected writer error: %v", err)
+				t.Errorf("Неожиданная ошибка записи: %v", err)
 			}
 		}(i)
 	}
 	wg.Wait()
 	if okCount.Load() != 1 {
-		t.Fatalf("expected one atomic winner, got %d", okCount.Load())
+		t.Fatalf("Ожидался один победитель атомарной операции, получено %d", okCount.Load())
 	}
 	profiles, err := r.ListProfiles("demo-project")
 	if err != nil {
@@ -91,6 +91,6 @@ func TestGravitAtomicImportConcurrent02210(t *testing.T) {
 		}
 	}
 	if found != 1 {
-		t.Fatalf("expected exactly one imported profile, got %d", found)
+		t.Fatalf("Ожидался ровно один импортированный профиль, получено %d", found)
 	}
 }

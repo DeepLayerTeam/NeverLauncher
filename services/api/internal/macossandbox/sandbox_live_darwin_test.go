@@ -17,14 +17,14 @@ import (
 // Кросс-компиляция или локальный mock codesign не подходят.
 func TestSignedSandboxNativeLive04311(t *testing.T) {
 	if os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE") != "1" {
-		t.Skip("live signing and native macOS runner required")
+		t.Skip("Требуются реальная подпись и нативный исполнитель macOS")
 	}
 	image := os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE_FIXTURE")
 	if image == "" {
-		t.Fatal("native Mach-O fixture required")
+		t.Fatal("Требуется нативный тестовый файл Mach-O")
 	}
 	if err := Available(); err != nil {
-		t.Fatalf("signed helper not usable: %v", err)
+		t.Fatalf("Подписанный вспомогательный процесс недоступен: %v", err)
 	}
 	for _, scenario := range []struct {
 		name    string
@@ -61,14 +61,14 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 			select {
 			case err := <-done:
 				if scenario.allowed && err != nil {
-					t.Fatalf("allowed isolated process failed: %v", err)
+					t.Fatalf("Разрешённый изолированный процесс завершился с ошибкой: %v", err)
 				}
 				if !scenario.allowed && err == nil {
-					t.Fatal("extra descendant or detached process was accepted")
+					t.Fatal("Ошибочно принят лишний дочерний или отделённый процесс")
 				}
 			case <-ctx.Done():
 				h.Close()
-				t.Fatal("signed helper or its child hung after deadline")
+				t.Fatal("Подписанный вспомогательный процесс или его потомок завис после истечения срока")
 			}
 		})
 	}
@@ -77,7 +77,7 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 	// наличие контроля.
 	_, err := Prepare(Options{Policy: Policy{MaxProcesses: 2, MaxCPUPercent: 100, MaxMemoryBytes: 512 << 20, TimeoutSeconds: 5}, HostURL: "http://127.0.0.1:19090", HostHandler: http.NotFoundHandler()})
 	if err == nil || !strings.Contains(err.Error(), "resource-policy") {
-		t.Fatalf("multi-process mode must fail closed: %v", err)
+		t.Fatalf("Многопроцессный режим должен блокировать операцию при ошибке: %v", err)
 	}
 }
 
@@ -109,11 +109,11 @@ func TestSignedSandboxLiveShutdown04311(t *testing.T) {
 	select {
 	case err := <-result:
 		if err == nil {
-			t.Fatal("helper exited successfully after supervisor loss")
+			t.Fatal("Вспомогательный процесс успешно завершился после потери супервизора")
 		}
 	case <-time.After(3 * time.Second):
 		h.Close()
-		t.Fatal("child not terminated after supervisor liveness FD closed")
+		t.Fatal("Дочерний процесс не завершён после закрытия дескриптора контроля супервизора")
 	}
 	// Для другого запуска нужен отдельный независимо подписанный вспомогательный
 	// процесс; закрытый нельзя оживить повторным открытием того же IPC.

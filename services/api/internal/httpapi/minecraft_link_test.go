@@ -75,7 +75,7 @@ func TestOfficialLinkUUIDValidation0268(t *testing.T) {
 	}
 	for _, bad := range []string{"", "1234", "12345678-1234-1234-1234-123456789012", strings.Repeat("z", 32), strings.Repeat("a", 31) + "/"} {
 		if _, ok := canonicalMinecraftUUID0268(bad); ok {
-			t.Fatalf("accepted %q", bad)
+			t.Fatalf("Ошибочно принято значение %q", bad)
 		}
 	}
 }

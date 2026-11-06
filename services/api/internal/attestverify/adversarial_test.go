@@ -12,7 +12,7 @@ func TestAdversarialCertifyReplayAndCrossBinding03114(t *testing.T) {
 	now := time.Now().UTC()
 	verified, err := Verify(evidence, binding, roots, now)
 	if err != nil || !roots.ActivePinned(verified.RootID, verified.RootFingerprint, verified.AKFingerprint, binding.Platform, now) {
-		t.Fatalf("positive hardware proof rejected: %+v %v", verified, err)
+		t.Fatalf("Отклонено корректное аппаратное доказательство: %+v %v", verified, err)
 	}
 	for name, modify := range map[string]func(*Evidence, *Binding){
 		"replay-device":       func(_ *Evidence, b *Binding) { b.DeviceID = "other" },
@@ -35,7 +35,7 @@ func TestAdversarialCertifyReplayAndCrossBinding03114(t *testing.T) {
 			candidate, b := evidence, binding
 			modify(&candidate, &b)
 			if _, err := Verify(candidate, b, roots, now); err == nil {
-				t.Fatal("cross-context TPM Certify accepted")
+				t.Fatal("Ошибочно принято подтверждение TPM из другого контекста")
 			}
 		})
 	}
@@ -81,7 +81,7 @@ func TestAdversarialQuotePCRAndPolicyReplay03114(t *testing.T) {
 			e, b, p, h, pin := evidence, binding, policy, hash, pinned
 			mutate(&e, &b, &p, &h, &pin)
 			if _, err := VerifyQuote0315(e, b, p, h, pin, roots, now); err == nil {
-				t.Fatal("replayed or altered quote accepted")
+				t.Fatal("Ошибочно принято повторно воспроизведённое или изменённое свидетельство TPM")
 			}
 		})
 	}

@@ -81,7 +81,7 @@ func TestMultiProfilePreviewAndDeterminism0492(t *testing.T) {
 		t.Fatal(err)
 	}
 	if one.ProfileCount != 2 || one.Format != BatchFormat0492 || one.Profiles[0].FileCount == 0 || one.Profiles[1].FileCount == 0 || one.Profiles[0].SourceDirectory != "alpha" || one.Profiles[1].SourceDirectory != "beta" {
-		t.Fatalf("not converted: %+v", one)
+		t.Fatalf("Не преобразовано: %+v", one)
 	}
 	if err = VerifyBatch0492(one); err != nil {
 		t.Fatal(err)

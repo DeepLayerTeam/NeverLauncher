@@ -57,13 +57,13 @@ func TestAuditStateReadsRealFiles0450(t *testing.T) {
 	}
 	probe.SourceWorldSHA256 = testHash
 	if err := validateStateAuditEvidence(b, probe); err == nil {
-		t.Fatal("unbound state hash accepted")
+		t.Fatal("Ошибочно принят хеш состояния без привязки")
 	}
 	if err := os.WriteFile(filepath.Join(target, "world/region"), []byte("changed-data"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := auditState(source, target); err == nil {
-		t.Fatal("changed player world accepted")
+		t.Fatal("Ошибочно принят изменённый игровой мир")
 	}
 	if err := os.WriteFile(filepath.Join(target, "world/region"), []byte("data-world/region"), 0600); err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestAuditStateRejectsSymlinkAndEmpty0450(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := auditState(source, target); err == nil {
-		t.Fatal("symlink member accepted")
+		t.Fatal("Ошибочно принят элемент-символическая ссылка")
 	}
 	if _, err := auditState(source, source); err == nil {
 		t.Fatal("Один и тот же снимок ошибочно принят")
@@ -127,7 +127,7 @@ func TestSnapshotMustRemainUnchangedAfterAudit0450(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := ensureSnapshotStillMatches(p, evidenceDir); err == nil {
-		t.Fatal("late plugin data mutation accepted")
+		t.Fatal("Ошибочно принято позднее изменение данных плагина")
 	}
 }
 

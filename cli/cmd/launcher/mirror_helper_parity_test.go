@@ -301,7 +301,7 @@ func TestMirrorHelper0274WorkspaceAppliesActualVanillaWithMods(t *testing.T) {
 // настоящим дочерним рабочим процессом вместо вручную составленного плана.
 func TestMirrorHelper0274LaunchVerifiedLocalForgeInstaller(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fixture processor Java executable is a POSIX script")
+		t.Skip("Тестовый исполняемый файл обработчика Java представляет собой сценарий POSIX")
 	}
 	clientJar := []byte("minecraft-client")
 	asset := []byte("minecraft-asset")

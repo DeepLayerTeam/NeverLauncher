@@ -14,13 +14,13 @@ func TestUnsignedHelperAlwaysRejected(t *testing.T) {
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_HELPER", "")
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_TEAM_ID", "")
 	if Available() == nil {
-		t.Fatal("unsigned missing helper accepted")
+		t.Fatal("Ошибочно принят отсутствующий неподписанный вспомогательный процесс")
 	}
 }
 func TestWrongTeamIDRejected(t *testing.T) {
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_TEAM_ID", "NOT-A-TEAM")
 	if _, err := teamID(); err == nil {
-		t.Fatal("invalid team ID accepted")
+		t.Fatal("Ошибочно принят некорректный идентификатор команды")
 	}
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_TEAM_ID", "ABCDEFG123")
 	if _, err := teamID(); err != nil {
@@ -38,7 +38,7 @@ func TestUntrustedHelperFileRejectedBeforeCodesign(t *testing.T) {
 	}
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_HELPER", p)
 	if _, err := helperPath(); err == nil {
-		t.Fatal("group/world writable helper accepted")
+		t.Fatal("Ошибочно принят вспомогательный файл с разрешённой записью для группы и всех пользователей")
 	}
 	if err := os.Chmod(p, 0o500); err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestUnsupportedMacOSResourcePolicyRefusedBeforeExecution04311(t *testing.T)
 		t.Fatal("Неподдерживаемая многопроцессная песочница macOS ошибочно принята")
 	}
 	if !strings.Contains(err.Error(), "helper") { // Отсутствие вспомогательного процесса само по себе приводит к отказу по умолчанию.
-		t.Fatalf("unexpected error for unsigned isolated mode: %v", err)
+		t.Fatalf("Неожиданная ошибка в неподписанном изолированном режиме: %v", err)
 	}
 }
 

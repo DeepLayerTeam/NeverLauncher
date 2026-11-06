@@ -19,7 +19,7 @@ func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 	body := res.Body.String()
 	for _, want := range []string{`"release":"ServerBridge 3"`, `"negotiatedProtocolVersion":3`, `"legacyProtocolV2Supported":true`, `"protocol.capability-negotiation":true`, `"protocol.feature-flags":true`, `"runtime.node-discovery-v1":true`, `"security.runtime-identity-ed25519":true`, `"control.secure-channel-v1":true`, `"control.ha-channel-v2":true`} {
 		if !strings.Contains(body, want) {
-			t.Fatalf("capabilities v3 missing %s: %s", want, body)
+			t.Fatalf("Возможности версии 3 не содержат %s: %s", want, body)
 		}
 	}
 
@@ -106,7 +106,7 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusUpgradeRequired || !strings.Contains(res.Body.String(), "serverbridge_v3_required_features_missing") {
-		t.Fatalf("incomplete v3 heartbeat => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Неполный сигнал активности версии 3 => %d %s", res.Code, res.Body.String())
 	}
 
 	// Полностью согласованный v3 становится активным протоколом узла.

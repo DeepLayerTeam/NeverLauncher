@@ -16,7 +16,7 @@ import (
 func TestMigrationReportPostgres03313(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires isolated PostgreSQL")
+		t.Skip("Требуется изолированный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

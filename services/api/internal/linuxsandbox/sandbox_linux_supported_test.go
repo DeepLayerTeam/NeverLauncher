@@ -48,7 +48,7 @@ func TestPolicyGateAndHostPaths0319(t *testing.T) {
 			c.Policy = opt.Policy
 			mutate(&c)
 			if err := validate(c); err == nil {
-				t.Fatalf("unsafe configuration accepted: %+v", c)
+				t.Fatalf("Ошибочно принята небезопасная конфигурация: %+v", c)
 			}
 		})
 	}
@@ -77,10 +77,10 @@ func TestConfigFDIsSealedAndNotOnFilesystem0319(t *testing.T) {
 }
 func TestLinuxIsolationLive0319(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_LINUX_SANDBOX") != "1" {
-		t.Skip("requires delegated cgroup v2 and userns; run on provisioned Linux host")
+		t.Skip("Требуются делегированные cgroup v2 и пространства имён пользователей; запускайте на подготовленном сервере Linux")
 	}
 	if e := Available(); e != nil {
-		t.Fatalf("live sandbox capability unavailable: %v", e)
+		t.Fatalf("Возможность запуска изолированной среды недоступна: %v", e)
 	}
 	opt := validOptions0319(t)
 	script := `#!/bin/sh
@@ -111,26 +111,26 @@ printf 'sandbox-evidence-ok\n'
 		t.Fatal(e)
 	}
 	if e := h.Started(); e != nil {
-		t.Fatalf("sandbox setup: %v stderr=%s", e, stderr.String())
+		t.Fatalf("Настройка изолированной среды: %v, stderr=%s", e, stderr.String())
 	}
 	done := make(chan error, 1)
 	go func() { done <- h.Cmd.Wait() }()
 	select {
 	case e := <-done:
 		if e != nil {
-			t.Fatalf("sandbox execution: %v stderr=%s", e, stderr.String())
+			t.Fatalf("Выполнение в изолированной среде: %v, stderr=%s", e, stderr.String())
 		}
 	case <-time.After(10 * time.Second):
-		t.Fatal("sandbox failed to terminate")
+		t.Fatal("Изолированная среда не завершилась")
 	}
 	if !strings.Contains(stdout.String(), "sandbox-evidence-ok") {
-		t.Fatalf("sandbox did not enforce claims: %q %s", stdout.String(), stderr.String())
+		t.Fatalf("Изолированная среда не обеспечила заявленные ограничения: %q %s", stdout.String(), stderr.String())
 	}
 }
 
 func TestUnsupportedKernelOrMissingDelegationFailsClosed0319(t *testing.T) {
 	if Available() == nil {
-		t.Skip("kernel preflight available; enforcement is tested by live test")
+		t.Skip("Предварительная проверка ядра доступна; соблюдение ограничений проверяется реальным тестом")
 	}
 	opts := validOptions0319(t)
 	h, err := Prepare(opts)
@@ -138,7 +138,7 @@ func TestUnsupportedKernelOrMissingDelegationFailsClosed0319(t *testing.T) {
 		if h != nil {
 			h.Close()
 		}
-		t.Fatal("non-capable host accepted isolated package")
+		t.Fatal("Сервер без необходимой поддержки ошибочно принял изолированный пакет")
 	}
 }
 

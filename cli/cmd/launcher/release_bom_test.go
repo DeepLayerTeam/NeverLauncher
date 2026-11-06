@@ -205,7 +205,7 @@ func TestReleaseBOM03214VersionAndSymlinkSafety(t *testing.T) {
 	}
 	bad := filepath.Join(dir, "foreign.bin")
 	if err := os.Symlink(filepath.Join(dir, "BUILD_NOTES.txt"), bad); err != nil {
-		t.Skipf("symlink unsupported: %s", err)
+		t.Skipf("Символическая ссылка не поддерживается: %s", err)
 	}
 	if err := writeReleaseBOM03214(dir, source, "0.32.14"); err == nil {
 		t.Fatal("Принят артефакт по символьной ссылке")

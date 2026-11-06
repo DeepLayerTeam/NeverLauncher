@@ -181,7 +181,7 @@ func TestRootRevocationAndPlatform0312(t *testing.T) {
 	config.RevokedAKFingerprints = []string{r.AKFingerprint}
 	reload(config)
 	if store.Active(r.RootID, r.AKFingerprint, b.Platform, time.Now()) {
-		t.Fatal("AK revocation not immediate")
+		t.Fatal("Отзыв ключа аттестации не применён немедленно")
 	}
 	if _, err := Verify(ev, b, store, time.Now()); err == nil {
 		t.Fatal("Принят отозванный ключ аттестации AK")
@@ -230,7 +230,7 @@ func TestMalformedTPMRejectsTrailingBytes0312(t *testing.T) {
 func TestLinuxHardwareEnclaveECDSAKeyScheme0314(t *testing.T) {
 	ev, binding, roots, _ := makeCertifyFixtureWithScheme(t, true)
 	if _, err := Verify(ev, binding, roots, time.Now().UTC()); err != nil {
-		t.Fatalf("real Linux TPM key template rejected: %v", err)
+		t.Fatalf("Отклонён настоящий шаблон ключа Linux TPM: %v", err)
 	}
 	orig, _ := base64.RawURLEncoding.DecodeString(ev.TPM2BPublic)
 	// Смещения TPMT_PUBLIC: type[2], nameAlg[2], attrs[4], authPolicy[2],

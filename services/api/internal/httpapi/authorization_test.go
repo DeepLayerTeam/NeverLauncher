@@ -16,7 +16,7 @@ func loginUser0211(t *testing.T, handler http.Handler, email, password string) s
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("login %s returned %d: %s", email, res.Code, res.Body.String())
+		t.Fatalf("Вход %s вернул код %d: %s", email, res.Code, res.Body.String())
 	}
 	var payload struct {
 		Token string `json:"token"`

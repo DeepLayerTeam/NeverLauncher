@@ -44,14 +44,14 @@ func TestTrustStrictAllowListAndAuditMode02012(t *testing.T) {
 	}
 	decision, err := EvaluatePublication(ctx, repo, item)
 	if err == nil || decision.Allowed {
-		t.Fatalf("strict policy accepted non-allowlisted publisher: decision=%+v err=%v", decision, err)
+		t.Fatalf("Строгая политика ошибочно приняла издателя вне списка разрешённых: решение=%+v, ошибка=%v", decision, err)
 	}
 	if _, err := repo.SaveExtensionTrustPolicy(ctx, model.ExtensionTrustPolicy{Mode: model.ExtensionTrustModeAudit, AllowedPublishers: []string{"other.publisher"}}); err != nil {
 		t.Fatal(err)
 	}
 	decision, err = EvaluatePublication(ctx, repo, item)
 	if err != nil || !decision.Allowed || len(decision.Violations) == 0 {
-		t.Fatalf("audit policy should allow with violation: decision=%+v err=%v", decision, err)
+		t.Fatalf("Политика аудита должна разрешать операцию с фиксацией нарушения: решение=%+v, ошибка=%v", decision, err)
 	}
 }
 
@@ -62,7 +62,7 @@ func TestRevokedKeyAndQuarantineAlwaysFailClosed02012(t *testing.T) {
 		t.Fatal(err)
 	}
 	if decision, err := EvaluatePublication(ctx, repo, item); err == nil || decision.Allowed {
-		t.Fatalf("revoked key accepted: decision=%+v err=%v", decision, err)
+		t.Fatalf("Ошибочно принят отозванный ключ: решение=%+v, ошибка=%v", decision, err)
 	}
 
 	repo, item, _ = trustFixture02012(t)
@@ -70,7 +70,7 @@ func TestRevokedKeyAndQuarantineAlwaysFailClosed02012(t *testing.T) {
 		t.Fatal(err)
 	}
 	if decision, err := EvaluatePublication(ctx, repo, item); err == nil || decision.Allowed {
-		t.Fatalf("quarantined artifact accepted: decision=%+v err=%v", decision, err)
+		t.Fatalf("Ошибочно принят артефакт в карантине: решение=%+v, ошибка=%v", decision, err)
 	}
 }
 
@@ -82,6 +82,6 @@ func TestRevokedPublisherKeyCannotBeReactivated02012(t *testing.T) {
 	}
 	key.Active = true
 	if _, err := repo.SaveExtensionRegistryPublisherKey(ctx, key); err == nil {
-		t.Fatal("revoked publisher key was reactivated")
+		t.Fatal("Отозванный ключ издателя был повторно активирован")
 	}
 }

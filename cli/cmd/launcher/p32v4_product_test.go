@@ -45,7 +45,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if installed["status"] != "applied-and-verified" {
-		t.Fatalf("install=%v", installed)
+		t.Fatalf("Установка=%v", installed)
 	}
 	if info, err := os.Stat(filepath.Join(client, "natives", "launch.sh")); err != nil || (runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0) {
 		t.Fatalf("бит выполнения не сохранён: режим=%v ошибка=%v", func() os.FileMode {
@@ -157,7 +157,7 @@ func TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(files) < 4 {
-		t.Fatalf("files=%v", files)
+		t.Fatalf("Файлы=%v", files)
 	}
 	raw, err := os.ReadFile(filepath.Join(out, "docker-compose.yml"))
 	if err != nil {
@@ -234,6 +234,6 @@ func TestDependencySBOMAndProvenanceUseRealInputs(t *testing.T) {
 	}
 	subjects := prov["subject"].([]map[string]any)
 	if len(subjects) != 1 || subjects[0]["name"] != "artifact.bin" {
-		t.Fatalf("subjects=%v", subjects)
+		t.Fatalf("Объекты=%v", subjects)
 	}
 }

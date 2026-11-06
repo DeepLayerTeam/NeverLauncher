@@ -28,7 +28,7 @@ func TestSignedOptionalActionsEndToEnd0245(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(payload), `"type":"ClassPath"`) {
-		t.Fatal("action missing from signing payload")
+		t.Fatal("Действие отсутствует в подписываемых данных")
 	}
 	for _, preset := range []string{"minimal", "optimized", "quality"} {
 		if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, preset); err != nil {
@@ -37,7 +37,7 @@ func TestSignedOptionalActionsEndToEnd0245(t *testing.T) {
 	}
 	m.ComponentCatalog.Components[1].Actions[2].Args[0] = "-Dfabric.log.level=trace"
 	if ValidateManifestSchema(m) == nil {
-		t.Fatal("tampered optional JVM arguments accepted")
+		t.Fatal("Ошибочно приняты изменённые необязательные аргументы JVM")
 	}
 }
 func TestSignedOptionalActionsRejectUnsignedUnsafe0245(t *testing.T) {
@@ -63,13 +63,13 @@ func TestSignedOptionalActionsRejectUnsignedUnsafe0245(t *testing.T) {
 		v5 := NewComponentCatalog0245(*m.ComponentCatalog, 8)
 		m.ComponentCatalog = &v5
 		if err := ValidateManifestSchema(m); err == nil {
-			t.Fatalf("unsafe action accepted: %+v", action)
+			t.Fatalf("Ошибочно принято небезопасное действие: %+v", action)
 		}
 	}
 	m := signedActionsFixture0245()
 	v4 := NewComponentCatalog0244(*m.ComponentCatalog, 9)
 	m.ComponentCatalog = &v4
 	if err := ValidateManifestSchema(m); err == nil {
-		t.Fatal("actions in schema 4.0 accepted unsigned")
+		t.Fatal("Действия схемы 4.0 ошибочно приняты без подписи")
 	}
 }

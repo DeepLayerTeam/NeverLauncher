@@ -18,7 +18,7 @@ import (
 func TestMigrationRehearsal03310(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires isolated PostgreSQL")
+		t.Skip("Требуется изолированный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
@@ -74,7 +74,7 @@ func TestMigrationRehearsal03310(t *testing.T) {
 		report.Probes = append(report.Probes, gr.Probe{Name: name, Passed: true, RunID: runID, StageID: report.StageID, UUID: p.UUID, EvidenceSHA256: h})
 	}
 	if _, e = r.SaveMigrationRehearsal03310(ctx, runID, report); !errors.Is(e, mw.ErrBusy) {
-		t.Fatalf("premature staging pass: %v", e)
+		t.Fatalf("Преждевременно разрешена подготовка выпуска: %v", e)
 	}
 	for _, step := range []string{"target_check", "target_inventory"} {
 		lease, e := r.ClaimMigration0331(ctx, runID, "rehearsal-worker", 10*time.Second)
@@ -101,7 +101,7 @@ func TestMigrationRehearsal03310(t *testing.T) {
 	q(`INSERT INTO build_workspaces_0226(id,project_id,owner_id,revision,data) VALUES($1,$2,'operator',1,'{"state":"staged","files":[{"path":"assets/snapshot.dat","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":1,"ownership":"required"}]}'::jsonb)`, project+"-ws", project)
 	q(`INSERT INTO migration_content_0337(run_id,profile_path,source_sha256,manifest_sha256,files_sha256,profile_id,workspace_id,owner_id,report) VALUES($1,'profiles/client.json',$2,$2,$2,'client',$3,'operator','{"files":[{"targetPath":"assets/snapshot.dat","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":1,"ownership":"required"}]}'::jsonb)`, runID, h, project+"-ws")
 	if _, e = r.SaveMigrationRehearsal03310(ctx, runID, report); e == nil {
-		t.Fatal("missing MIG08 review passed")
+		t.Fatal("Проверка MIG08 пройдена без обязательного отчёта")
 	}
 	modules := gm.Report{Format: gm.Format, SourceSHA256: h, InventorySHA256: h, Ready: true, Blockers: []string{}, Modules: []gm.Module{}, Wrappers: []gm.Wrapper{}}
 	if _, e = r.SaveMigrationModules0338(ctx, runID, modules); e != nil {
@@ -132,6 +132,6 @@ func TestMigrationRehearsal03310(t *testing.T) {
 	}
 	blocked, e := r.SaveMigrationRehearsal03310(ctx, runID, report)
 	if e != nil || blocked.Ready {
-		t.Fatalf("failed second stage: %+v %v", blocked, e)
+		t.Fatalf("Ошибка второго этапа подготовки: %+v %v", blocked, e)
 	}
 }

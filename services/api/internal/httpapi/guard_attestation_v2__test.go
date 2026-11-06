@@ -128,7 +128,7 @@ func TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810(t *testing
 	complete := deviceTrustData0121(t, completeOut)
 	ticket, _ := complete["continuousGuardTicket"].(string)
 	if ticket == "" || complete["verified"] != true || complete["oneTime"] != true {
-		t.Fatalf("incomplete v2 result: %#v", complete)
+		t.Fatalf("Неполный результат версии 2: %#v", complete)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/session/join", nil)
 	consumed, err := server.consumeGuardContinuousJoinTicket01810(req, claims, ticket)

@@ -50,7 +50,7 @@ func TestExtractFileAuth334(t *testing.T) {
 	}
 	for _, a := range result {
 		if strings.Contains(a.Username, "SECRET") || strings.Contains(a.SourceID, "password") {
-			t.Fatal("secret persisted")
+			t.Fatal("Секрет сохранён в хранилище")
 		}
 	}
 	stale := snapshot
@@ -92,7 +92,7 @@ func TestReconcileUUIDCollisionAndCaseFolding334(t *testing.T) {
 	targets := []Target{{UserID: "target-a", Username: "Alice", UUID: alice.UUID}, {UserID: "target-a", Username: "Alice", UUID: alice.UUID, Source: "official_link"}, {UserID: "target-b", Username: "Bob", UUID: "99999999-bbbb-4ccc-8ddd-eeeeeeeeeeee"}}
 	rows, sum := Reconcile([]Account{alice, bob}, targets)
 	if sum["matched"] != 1 || sum["blocked"] != 1 || rows[0].TargetUserID != "target-a" {
-		t.Fatalf("unexpected mapping %+v %+v", rows, sum)
+		t.Fatalf("Неожиданное сопоставление: %+v %+v", rows, sum)
 	}
 	rows, sum = Reconcile([]Account{alice}, []Target{{UserID: "target-x", Username: "Alice", UUID: "99999999-2222-4333-8444-555555555555"}})
 	if sum["blocked"] != 1 {

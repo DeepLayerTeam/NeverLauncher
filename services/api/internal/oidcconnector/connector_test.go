@@ -96,13 +96,13 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 		t.Fatalf("Неожиданный результат аутентификации: %+v", auth)
 	}
 	if len(auth.Identity.Roles) != 1 || auth.Identity.Roles[0] != "member" {
-		t.Fatalf("userinfo claims not merged: %+v", auth.Identity)
+		t.Fatalf("Утверждения userinfo не объединены: %+v", auth.Identity)
 	}
 	if strings.Join(auth.AuthMethods, ",") != "pwd,mfa" {
 		t.Fatalf("unexpected amr: %v", auth.AuthMethods)
 	}
 	if _, err := c.CompleteBrowserAuth(context.Background(), authconnector.BrowserAuthCallback{RedirectURI: "https://launcher.example.test/callback", Code: "code-2", State: strings.Repeat("s", 43), Nonce: "wrong-" + expectedNonce, PKCEVerifier: verifier}); err == nil {
-		t.Fatal("expected nonce validation failure")
+		t.Fatal("Ожидалась ошибка проверки одноразового значения nonce")
 	}
 	report := conformance.RunBehavioral(context.Background(), c, conformance.Fixture{
 		Subject: "user-42", Issuer: issuer,
@@ -114,22 +114,22 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 		},
 	})
 	if !report.Passed {
-		t.Fatalf("signed OIDC browser+refresh conformance failed: %+v", report)
+		t.Fatalf("Проверка подписанного OIDC-входа через браузер и обновления токена завершилась ошибкой: %+v", report)
 	}
 }
 
 func TestOIDCNormalizeRejectsUnsafeConfiguration(t *testing.T) {
 	_, err := Normalize(Config{ID: "bad", Issuer: "http://idp.example.test", ClientID: "client", RedirectURIs: []string{"https://app.example/cb"}, TokenEndpointAuthMethod: "none"})
 	if err == nil {
-		t.Fatal("expected non-HTTPS issuer rejection")
+		t.Fatal("Ожидался отказ издателю с адресом без HTTPS")
 	}
 	_, err = Normalize(Config{ID: "bad", Issuer: "https://idp.example.test", ClientID: "client", RedirectURIs: []string{"https://app.example/cb"}, TokenEndpointAuthMethod: "none", AllowedIDTokenAlgs: []string{"none"}})
 	if err == nil {
-		t.Fatal("expected alg none rejection")
+		t.Fatal("Ожидался отказ алгоритму alg=none")
 	}
 	_, err = Normalize(Config{ID: "bad", Issuer: "https://idp.example.test", ClientID: "client", RedirectURIs: []string{"https://app.example/cb"}, TokenEndpointAuthMethod: "client_secret_basic"})
 	if err == nil {
-		t.Fatal("expected missing client secret rejection")
+		t.Fatal("Ожидался отказ из-за отсутствующего секрета клиента")
 	}
 }
 
@@ -167,7 +167,7 @@ func TestJWTRejectsAudienceAndIssuerMismatch(t *testing.T) {
 	base["aud"] = "other"
 	raw = signRS256Test(t, key, "k", base)
 	if _, err := verifyIDToken(raw, keys, cfg, "n", true); err == nil {
-		t.Fatal("expected audience mismatch")
+		t.Fatal("Ожидалось несовпадение аудитории токена")
 	}
 	base["aud"] = cfg.ClientID
 	base["iss"] = "https://evil.example"

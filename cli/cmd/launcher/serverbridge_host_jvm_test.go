@@ -90,7 +90,7 @@ func TestJVM0283ModuleLaunchAndValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := strings.Join(command, " "); !strings.Contains(got, "--module-path "+filepath.Join(root, "modules", "server.jar")+" --module org.example.server/org.example.Main") {
-		t.Fatalf("command: %v", command)
+		t.Fatalf("Команда: %v", command)
 	}
 	if err := runServerBridgeHost01910(root, false); err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func TestJVM0283HostRejectsExecutionAndInjection(t *testing.T) {
 		t.Run(injected, func(t *testing.T) {
 			args := append(append([]string{}, base...), "--jvm-arg", injected)
 			if err := configureServerBridgeHost01910(args); err == nil {
-				t.Fatalf("accepted %q", injected)
+				t.Fatalf("Ошибочно принято значение %q", injected)
 			}
 		})
 	}

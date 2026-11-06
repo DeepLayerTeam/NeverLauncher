@@ -62,7 +62,7 @@ func TestDesktopEntrypointServedFromEnabledGrantedInstall0209(t *testing.T) {
 	body := rec.Body.String()
 	for _, token := range []string{desktopBridgeProtocol0209, "connect-src 'none'", "parent.postMessage"} {
 		if !strings.Contains(body, token) {
-			t.Fatalf("response missing %q: %s", token, body)
+			t.Fatalf("В ответе отсутствует %q: %s", token, body)
 		}
 	}
 }

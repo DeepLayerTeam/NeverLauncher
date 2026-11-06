@@ -45,7 +45,7 @@ func TestReportIntegrityAndCutover(t *testing.T) {
 	}
 	r.ReportSHA256 = testHash
 	if reportVerified(r) == nil {
-		t.Fatal("spoofed digest accepted")
+		t.Fatal("Ошибочно принят поддельный хеш")
 	}
 	r = sampleReport(t, testHash)
 	r.Evidence[len(r.Evidence)-1].Details = "cancelled"
@@ -53,13 +53,13 @@ func TestReportIntegrityAndCutover(t *testing.T) {
 	b, _ := json.Marshal(r)
 	r.ReportSHA256 = hash(b)
 	if reportVerified(r) == nil {
-		t.Fatal("cancelled migration accepted")
+		t.Fatal("Ошибочно принята отменённая миграция")
 	}
 }
 func TestCheckPlanRequiresFullMatrix(t *testing.T) {
 	p := Plan{ReferenceClass: "fileauth-single", Backend: "https://trusted.example", RunID: "abcdef0123456789", ProjectID: "p", SourceArchive: "/s.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: "/key", SnapshotSourceDir: "/source", SnapshotTargetDir: "/target"}
 	if validatePlan(p) == nil {
-		t.Fatal("accepted absent E2E checks")
+		t.Fatal("Ошибочно принято отсутствие E2E-проверок")
 	}
 	for _, n := range requiredForClass(p.ReferenceClass) {
 		p.Checks = append(p.Checks, Check{Name: n, ExecutableSHA256: testHash, Command: []string{"/bin/true"}, TimeoutSeconds: 10})
@@ -248,7 +248,7 @@ func TestDigestAndURLValidation(t *testing.T) {
 	}
 	for _, url := range []string{"http://example.com", "https://user:pass@example.com", "https://example.com/a", "https://example.com?secret=1"} {
 		if checkBackendURL(url) == nil {
-			t.Fatalf("unsafe backend %s accepted", url)
+			t.Fatalf("Ошибочно принят небезопасный Backend %s", url)
 		}
 	}
 	for _, url := range []string{"http://127.0.0.1:9080", "https://example.com"} {
@@ -279,7 +279,7 @@ func trustedJarHash(t *testing.T) string {
 		}
 		return hash(b)
 	}
-	t.Fatal("fixture has no LaunchServer.jar")
+	t.Fatal("В тестовом окружении отсутствует LaunchServer.jar")
 	return ""
 }
 func TestSourceVersionPinnedToRealJAR0340(t *testing.T) {
@@ -289,13 +289,13 @@ func TestSourceVersionPinnedToRealJAR0340(t *testing.T) {
 	}
 	v, e := sourceJarVersion(p)
 	if e != nil || v != "5.7.4" {
-		t.Fatalf("actual jar version: %q %v", v, e)
+		t.Fatalf("Фактическая версия JAR: %q %v", v, e)
 	}
 	if e = os.WriteFile(p, []byte("not an archive"), 0600); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = sourceJarVersion(p); e == nil {
-		t.Fatal("accepted malformed source ZIP")
+		t.Fatal("Ошибочно принят некорректный исходный ZIP")
 	}
 }
 
@@ -305,7 +305,7 @@ func TestAtomicPrivateCertificateNoOverwrite0340(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := writePrivate(path, []byte("proof-two")); e == nil {
-		t.Fatal("certificate overwrite succeeded")
+		t.Fatal("Перезапись сертификата ошибочно удалась")
 	}
 	b, e := os.ReadFile(path)
 	if e != nil || string(b) != "proof-one" {

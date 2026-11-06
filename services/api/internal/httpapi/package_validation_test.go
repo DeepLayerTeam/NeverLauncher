@@ -72,7 +72,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &created); err != nil || created.Data.PackageID == "" {
-		t.Fatalf("package id missing: %v %s", err, res.Body.String())
+		t.Fatalf("Отсутствует идентификатор пакета: %v %s", err, res.Body.String())
 	}
 	packageID := created.Data.PackageID
 

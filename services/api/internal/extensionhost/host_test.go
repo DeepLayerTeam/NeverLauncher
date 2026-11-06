@@ -19,7 +19,7 @@ func TestPersistentEmergencyDisableBlocksHostBeforeExecution02012(t *testing.T) 
 	}
 	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
 	if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
-		t.Fatalf("emergency-disabled extension reached execution path: %v", err)
+		t.Fatalf("Аварийно отключённое расширение дошло до выполнения: %v", err)
 	}
 }
 
@@ -32,7 +32,7 @@ func TestQuarantinedPackageBlocksHostBeforeExecution02012(t *testing.T) {
 	}
 	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
 	if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "quarantined") {
-		t.Fatalf("quarantined extension reached execution path: %v", err)
+		t.Fatalf("Расширение в карантине дошло до выполнения: %v", err)
 	}
 }
 
@@ -54,9 +54,9 @@ func TestCrashLoopHandlerPersistsKillSwitch02012(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("crash-loop persistence callback was not invoked")
+		t.Fatal("Обратный вызов сохранения состояния после серии сбоев не вызван")
 	}
 	if _, err := repo.GetExtensionEmergencyDisable(context.Background(), "example.crashloop", "global", ""); err != nil {
-		t.Fatalf("persistent crash-loop kill-switch missing: %v", err)
+		t.Fatalf("Отсутствует постоянный выключатель расширения при повторяющихся сбоях: %v", err)
 	}
 }

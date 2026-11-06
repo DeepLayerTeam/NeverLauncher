@@ -28,11 +28,11 @@ func TestOperationsCancelBeforeLease0217(t *testing.T) {
 		t.Fatalf("cancel: %+v %v", cancelled, err)
 	}
 	if _, err = r.LeaseDurableJob(ctx, j.ID, "worker", time.Minute); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("cancelled job was leased: %v", err)
+		t.Fatalf("Отменённое задание получило блокировку выполнения: %v", err)
 	}
 	repeated, err := r.FindOperationByKey(ctx, j.Kind, j.ActorID, j.IdempotencyKey)
 	if err != nil || repeated.ID != j.ID {
-		t.Fatalf("idempotent result changed after cancel: %+v %v", repeated, err)
+		t.Fatalf("Идемпотентный результат изменился после отмены: %+v %v", repeated, err)
 	}
 	retried, err := r.RetryOperationJob(ctx, j.ID)
 	if err != nil || retried.Status != model.DurableJobStatusPending {
@@ -43,7 +43,7 @@ func TestOperationsCancelBeforeLease0217(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = r.CancelOperationJob(ctx, j.ID, "alice"); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("running operation cancelled: %v", err)
+		t.Fatalf("Выполняемая операция отменена: %v", err)
 	}
 	result, _ := json.Marshal(map[string]string{"status": "succeeded"})
 	completed, err := r.CompleteOperationJob(ctx, j.ID, leased.LeaseToken, result)
@@ -51,11 +51,11 @@ func TestOperationsCancelBeforeLease0217(t *testing.T) {
 		t.Fatalf("завершение: %+v %v", completed, err)
 	}
 	if _, err = r.RetryOperationJob(ctx, j.ID); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("completed job was retried: %v", err)
+		t.Fatalf("Повторно запущено завершённое задание: %v", err)
 	}
 	history, err := r.ListOperationAttempts(ctx, j.ID)
 	if err != nil || len(history) != 1 || history[0].Status != "succeeded" {
-		t.Fatalf("unexpected attempts: %+v %v", history, err)
+		t.Fatalf("Неожиданные попытки: %+v %v", history, err)
 	}
 }
 func TestOperationsRetryPreservesHistoryAndFencing0217(t *testing.T) {
@@ -77,17 +77,17 @@ func TestOperationsRetryPreservesHistoryAndFencing0217(t *testing.T) {
 		t.Fatal(err)
 	}
 	if second.LeaseFence <= first.LeaseFence || second.AttemptCount <= first.AttemptCount {
-		t.Fatal("retry reused old fence/attempt")
+		t.Fatal("Повторный запуск использовал старое ограничение или номер попытки")
 	}
 	result, _ := json.Marshal(map[string]string{"status": "ok"})
 	if _, err = r.CompleteOperationJob(ctx, j.ID, first.LeaseToken, result); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("stale worker could complete: %v", err)
+		t.Fatalf("Устаревший исполнитель смог завершить операцию: %v", err)
 	}
 	if _, err = r.CompleteOperationJob(ctx, j.ID, second.LeaseToken, result); err != nil {
 		t.Fatal(err)
 	}
 	attempts, err := r.ListOperationAttempts(ctx, j.ID)
 	if err != nil || len(attempts) != 2 || attempts[0].Status != "failed" || attempts[1].Status != "succeeded" {
-		t.Fatalf("attempt journal lost: %+v %v", attempts, err)
+		t.Fatalf("Журнал попыток потерян: %+v %v", attempts, err)
 	}
 }

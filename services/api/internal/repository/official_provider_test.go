@@ -50,15 +50,15 @@ func TestOfficialProviderConcurrentCASAndHistory02611(t *testing.T) {
 		count++
 	}
 	if count != 1 {
-		t.Fatalf("expected one winner, got %d", count)
+		t.Fatalf("Ожидался один победитель, получено %d", count)
 	}
 	p.DeviceEnabled = false
 	second, err := r.SaveOfficialProvider02611(context.Background(), 1, p, "admin", "disable device code")
 	if err != nil || second.Revision != 2 {
-		t.Fatalf("expected revision 2: %v %+v", err, second)
+		t.Fatalf("Ожидалась ревизия 2: %v %+v", err, second)
 	}
 	history, err := r.ListOfficialProviderHistory02611(context.Background(), 10)
 	if err != nil || len(history) != 2 || history[0].Revision != 2 || history[1].Revision != 1 {
-		t.Fatalf("broken history: %v %+v", err, history)
+		t.Fatalf("Повреждённая история: %v %+v", err, history)
 	}
 }

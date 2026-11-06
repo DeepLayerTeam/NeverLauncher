@@ -46,7 +46,7 @@ func TestExtensionsCoreHTTP0201(t *testing.T) {
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusCreated || !strings.Contains(res.Body.String(), `"manifestSha256"`) {
-		t.Fatalf("register extension: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Регистрация расширения: %d %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/extensions/ru.example.http-extension/versions/1.0.0", nil)
@@ -54,7 +54,7 @@ func TestExtensionsCoreHTTP0201(t *testing.T) {
 	res = httptest.NewRecorder()
 	h.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"ru.example.http-extension"`) {
-		t.Fatalf("get extension version: %d %s", res.Code, res.Body.String())
+		t.Fatalf("Получение версии расширения: %d %s", res.Code, res.Body.String())
 	}
 
 	mutated := strings.Replace(manifest, "HTTP Extension", "Mutated Extension", 1)

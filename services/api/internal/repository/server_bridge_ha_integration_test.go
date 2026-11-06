@@ -21,11 +21,11 @@ func TestServerBridgeHA0149(t *testing.T) {
 	defer cancel()
 	r1, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("repo1 is not SQLRepository")
+		t.Fatal("Первый репозиторий не является SQLRepository")
 	}
 	r2, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("repo2 is not SQLRepository")
+		t.Fatal("Второй репозиторий не является SQLRepository")
 	}
 	defer r1.db.Close()
 	defer r2.db.Close()
@@ -77,7 +77,7 @@ func TestServerBridgeHA0149(t *testing.T) {
 		}
 	}
 	if accepted != 1 {
-		t.Fatalf("expected exactly one nonce consumer, got %d", accepted)
+		t.Fatalf("Ожидался ровно один потребитель одноразового значения nonce, получено %d", accepted)
 	}
 
 	// Создайте истёкший одноразовый номер; обслуживание HA должно удалить его, не затронув
@@ -94,9 +94,9 @@ func TestServerBridgeHA0149(t *testing.T) {
 		t.Fatal(err)
 	}
 	if status.ExpiredNonceBacklog != 0 {
-		t.Fatalf("expired nonce backlog=%d", status.ExpiredNonceBacklog)
+		t.Fatalf("Очередь просроченных значений nonce=%d", status.ExpiredNonceBacklog)
 	}
 	if status.NodesFresh < 1 {
-		t.Fatalf("expected fresh ServerBridge node: %+v", status)
+		t.Fatalf("Ожидался новый узел ServerBridge: %+v", status)
 	}
 }

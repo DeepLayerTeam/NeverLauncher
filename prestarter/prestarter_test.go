@@ -172,7 +172,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 }
 func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX runtime fixture")
+		t.Skip("Тестовая среда выполнения POSIX")
 	}
 	root := t.TempDir()
 	parts := baseParts()
@@ -235,7 +235,7 @@ func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
 
 func TestFailedNewReleaseKeepsOldActive(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX helper test")
+		t.Skip("Проверка вспомогательного инструмента POSIX")
 	}
 	temp := t.TempDir()
 	parts := baseParts()
@@ -395,7 +395,7 @@ func TestNoUnboundedTransferAccepted(t *testing.T) {
 
 func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX Desktop probe")
+		t.Skip("Проверка Desktop для POSIX")
 	}
 	root := t.TempDir()
 	parts := baseParts()
@@ -439,7 +439,7 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 }
 func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX helper test")
+		t.Skip("Проверка вспомогательного инструмента POSIX")
 	}
 	root := t.TempDir()
 	parts := baseParts()
@@ -450,7 +450,7 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 	os.WriteFile(opts.ConfigPath, signed, 0600)
 	opts.TrustedKey = hex.EncodeToString(private.Public().(ed25519.PublicKey))
 	if err := Run(context.Background(), opts); err != nil {
-		t.Fatal("initial:", err)
+		t.Fatal("Начальное состояние:", err)
 	}
 	var first activeRecord
 	raw, _ := os.ReadFile(filepath.Join(opts.Root, "launcher", "active-1.json"))
@@ -490,7 +490,7 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 }
 func TestRecoveryRemovesUncommittedStaging(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX helper test")
+		t.Skip("Проверка вспомогательного инструмента POSIX")
 	}
 	root := t.TempDir()
 	opts, _ := makeOfflineFixture(t, root, baseParts())

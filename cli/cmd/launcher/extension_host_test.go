@@ -16,12 +16,12 @@ func TestExtensionHostCLI0205(t *testing.T) {
 		}
 		if calls == 1 {
 			if r.Method != http.MethodGet || r.URL.Path != "/api/v1/admin/extension-hosts" {
-				t.Fatalf("unexpected list %s %s", r.Method, r.URL.Path)
+				t.Fatalf("Неожиданный список: %s %s", r.Method, r.URL.Path)
 			}
 		}
 		if calls == 2 {
 			if r.Method != http.MethodPost || r.URL.Path != "/api/v1/admin/extension-hosts/example.host/restart" || r.URL.Query().Get("scope") != "project" || r.URL.Query().Get("scopeId") != "project-a" {
-				t.Fatalf("unexpected restart %s %s %s", r.Method, r.URL.String(), r.URL.RawQuery)
+				t.Fatalf("Неожиданный перезапуск: %s %s %s", r.Method, r.URL.String(), r.URL.RawQuery)
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -35,6 +35,6 @@ func TestExtensionHostCLI0205(t *testing.T) {
 		t.Fatal(err)
 	}
 	if calls != 2 {
-		t.Fatalf("calls=%d", calls)
+		t.Fatalf("Вызовов=%d", calls)
 	}
 }

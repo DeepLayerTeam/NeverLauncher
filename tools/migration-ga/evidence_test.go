@@ -91,7 +91,7 @@ func TestAcceptanceCohort0449(t *testing.T) {
 		t.Fatal(err)
 	}
 	if verifyCohort(trusted, cohort) == nil {
-		t.Fatal("accepted absent negative rollback proof")
+		t.Fatal("Ошибочно принято отсутствие доказательства отказа при откате")
 	}
 }
 func TestAcceptanceReceiptTampering0449(t *testing.T) {
@@ -113,7 +113,7 @@ func TestAcceptanceReceiptTampering0449(t *testing.T) {
 		t.Fatal(err)
 	}
 	if verifyEvidence(bundle, input.EvidenceDir) == nil {
-		t.Fatal("forged negative auth report accepted")
+		t.Fatal("Ошибочно принят поддельный отрицательный отчёт авторизации")
 	}
 }
 func TestEvidenceNoSymlink0449(t *testing.T) {
@@ -134,13 +134,13 @@ func TestEvidenceNoSymlink0449(t *testing.T) {
 		t.Fatal("Доказательство через символьную ссылку ошибочно принято")
 	}
 	if err := preserveEvidence(dest, "fileauth-login", source, hash([]byte("other")), []byte("{}")); err == nil {
-		t.Fatal("wrong SHA accepted")
+		t.Fatal("Ошибочно принят неверный SHA")
 	}
 	if err := preserveEvidence(dest, "fileauth-login", source, hash([]byte("real-log")), []byte("{}")); err != nil {
 		t.Fatal(err)
 	}
 	if err := preserveEvidence(dest, "fileauth-login", source, hash([]byte("real-log")), []byte("{}")); err == nil {
-		t.Fatal("existing evidence overwritten")
+		t.Fatal("Существующие доказательства были перезаписаны")
 	}
 }
 
@@ -163,6 +163,6 @@ func TestMandatoryNegativeChecks0449(t *testing.T) {
 	}
 	p.ReferenceClass = "unknown"
 	if validatePlan(p) == nil {
-		t.Fatal("unknown reference project class accepted")
+		t.Fatal("Ошибочно принят неизвестный класс эталонного проекта")
 	}
 }

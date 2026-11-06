@@ -63,7 +63,7 @@ func TestHostOperationsPostgres0413(t *testing.T) {
 	op.IdempotencyKey = "different-idem-key-0413"
 	op.RequestDigest = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	if _, _, err = b.CreateHostOperation0413(ctx, op); !errors.Is(err, ErrConflict) {
-		t.Fatalf("concurrent unknown host operation should conflict: %v", err)
+		t.Fatalf("Одновременные неизвестные операции на сервере должны конфликтовать: %v", err)
 	}
 	created.State = "accepted"
 	created.RemoteReceipt = json.RawMessage(`{"action":"restart","state":"succeeded"}`)
@@ -78,6 +78,6 @@ func TestHostOperationsPostgres0413(t *testing.T) {
 		t.Fatalf("verified %+v %v", succeeded, err)
 	}
 	if _, err = a.FinishHostOperation0413(ctx, accepted, "accepted"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("terminal result overwritten %v", err)
+		t.Fatalf("Итоговый результат перезаписан: %v", err)
 	}
 }

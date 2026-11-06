@@ -84,7 +84,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "mods/example.jar") {
-		t.Fatalf("published manifest => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Опубликованный манифест => %d %s", res.Code, res.Body.String())
 	}
 }
 
@@ -147,7 +147,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 		res = httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
 		if res.Code != http.StatusConflict {
-			t.Fatalf("published %s must be 409 => %d %s", suffix, res.Code, res.Body.String())
+			t.Fatalf("Для опубликованного %s ожидается код 409 => %d %s", suffix, res.Code, res.Body.String())
 		}
 	}
 
@@ -158,7 +158,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("immutable rollback => %d %s", res.Code, res.Body.String())
+		t.Fatalf("Откат неизменяемого выпуска => %d %s", res.Code, res.Body.String())
 	}
 	var rollback struct {
 		Data struct {

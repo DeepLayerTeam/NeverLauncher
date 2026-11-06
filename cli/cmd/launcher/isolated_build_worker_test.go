@@ -140,7 +140,7 @@ func TestForgeProcessorInputFingerprint0273RejectsModifiedClasspath(t *testing.T
 
 func TestForgeProcessorRecovery0273QuarantinesCorruptOutputAndChangedInputs(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX fixture")
+		t.Skip("Тестовое окружение POSIX")
 	}
 	root := t.TempDir()
 	java := testFakeJava(t, []byte("verified-processor-output"))

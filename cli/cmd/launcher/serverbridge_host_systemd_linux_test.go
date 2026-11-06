@@ -53,12 +53,12 @@ func TestHostSystemdUnitRejectsInjection02811(t *testing.T) {
 	cases := []string{"../bad", "AAA", "x unit", "", "x\\x", "a/b"}
 	for _, s := range cases {
 		if _, err := hostServiceFile02811("user", s); err == nil {
-			t.Errorf("accepted name %q", s)
+			t.Errorf("Ошибочно принято имя %q", s)
 		}
 	}
 	for _, s := range []string{"", "/tmp/a\nExecStart=/bin/sh", "/tmp/x\r", "/tmp/\x00secret"} {
 		if _, err := hostUnitValue02811(s); err == nil {
-			t.Errorf("accepted %q", s)
+			t.Errorf("Ошибочно принято значение %q", s)
 		}
 	}
 	s, err := hostUnitValue02811(`/data/my %world "`)
@@ -89,7 +89,7 @@ func TestHostSystemdNotifySocketAndWatchdog02811(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := string(buf[:n]); !strings.Contains(got, "READY=1") || !strings.Contains(got, "pid=1234") {
-		t.Fatalf("message=%q", got)
+		t.Fatalf("Сообщение=%q", got)
 	}
 	hostServiceStopping02811()
 	n, _, err = listener.ReadFromUnix(buf)

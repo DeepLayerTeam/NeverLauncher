@@ -30,7 +30,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	path := "/api/v1/admin/users/" + user.ID
 	denied := request0211(t, h, http.MethodPatch, path, actor, `{"projectRoles":{"demo-project":"owner"}}`)
 	if denied.Code != http.StatusForbidden {
-		t.Fatalf("operator escalated: %d %s", denied.Code, denied.Body.String())
+		t.Fatalf("Оператор получил повышенные права: %d %s", denied.Code, denied.Body.String())
 	}
 	weak := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"demo-project":"operator"},"expectedProjectRoles":{}}`)
 	if weak.Code == http.StatusOK {
@@ -59,7 +59,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	}
 	wildcard := request0211(t, h, http.MethodPatch, path, owner, `{"projectRoles":{"*":"owner"}}`)
 	if wildcard.Code != http.StatusBadRequest {
-		t.Fatalf("wildcard project: %d %s", wildcard.Code, wildcard.Body.String())
+		t.Fatalf("Подстановочный проект: %d %s", wildcard.Code, wildcard.Body.String())
 	}
 	// Исходный токен отзывается при изменении членства, что требует нового входа.
 	blocked := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"should-not-change"}`)

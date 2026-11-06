@@ -157,7 +157,7 @@ func TestServerBridgeInstallIdentityEnrollmentAndRollback0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.Platform != "paper" || state.Version != "0.19.9" {
-		t.Fatalf("state=%+v", state)
+		t.Fatalf("Состояние=%+v", state)
 	}
 	if !fileExists0199(state.ArtifactPath) || !fileExists0199(state.ConfigPath) || !fileExists0199(state.IdentityPath) {
 		t.Fatalf("Отсутствуют управляемые файлы: %+v", state)

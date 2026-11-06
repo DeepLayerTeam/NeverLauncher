@@ -27,25 +27,25 @@ func TestChannelHeadCASPublishAndRead0228(t *testing.T) {
 	}
 	h, err := r.GetChannelHead(ctx, "demo-project", "vanilla", "dev")
 	if err != nil || h.Revision != 1 || h.ReleaseID != first.ID {
-		t.Fatalf("head not promoted %+v %v", h, err)
+		t.Fatalf("Указатель текущей версии не переведён: %+v %v", h, err)
 	}
 	if _, err := r.PublishVersionWithManifestCAS(second.ProjectID, second.ProfileID, second.Channel, second.Version, second.Manifest, 0); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale publish must fail: %v", err)
+		t.Fatalf("Публикация устаревшей версии должна завершаться отказом: %v", err)
 	}
 	current, err := r.GetManifest("demo-project", "vanilla", "dev")
 	if err != nil || current.Version != first.Version {
-		t.Fatalf("stale publish leaked: %s %v", current.Version, err)
+		t.Fatalf("Устаревшая публикация раскрыла данные: %s %v", current.Version, err)
 	}
 	if _, err := r.PublishVersionWithManifestCAS(second.ProjectID, second.ProfileID, second.Channel, second.Version, second.Manifest, 1); err != nil {
 		t.Fatal(err)
 	}
 	h, err = r.GetChannelHead(ctx, "demo-project", "vanilla", "dev")
 	if err != nil || h.Revision != 2 || h.ReleaseID != second.ID {
-		t.Fatalf("head not advanced %+v %v", h, err)
+		t.Fatalf("Указатель текущей версии не продвинут: %+v %v", h, err)
 	}
 	current, err = r.GetManifest("demo-project", "vanilla", "dev")
 	if err != nil || current.Version != second.Version {
-		t.Fatalf("channel read not pinned: %s %v", current.Version, err)
+		t.Fatalf("Чтение канала не закреплено: %s %v", current.Version, err)
 	}
 }
 
@@ -57,6 +57,6 @@ func TestChannelHeadsProfileIsolated0228(t *testing.T) {
 	}
 	empty, err := r.GetChannelHead(context.Background(), "demo-project", "fabric", "stable")
 	if err != nil || empty.Revision != 0 {
-		t.Fatalf("other profile inherited head: %+v %v", empty, err)
+		t.Fatalf("Другой профиль унаследовал указатель текущей версии: %+v %v", empty, err)
 	}
 }

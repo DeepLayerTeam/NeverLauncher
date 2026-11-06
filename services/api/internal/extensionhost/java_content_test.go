@@ -49,16 +49,16 @@ func TestJavaContentRPC0486(t *testing.T) {
 	// Нет разрешения выпуска: работающая доверенная JVM никогда не должна получать
 	// обратный вызов.
 	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
-		t.Fatalf("ungranted content RPC: %v", e)
+		t.Fatalf("Вызов RPC для содержимого без разрешения: %v", e)
 	}
 	if attempts != 0 {
-		t.Fatalf("ungranted callback reached JVM: %d", attempts)
+		t.Fatalf("Обратный вызов без разрешения достиг JVM: %d", attempts)
 	}
 	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectB); e == nil || !strings.Contains(e.Error(), "scope") {
-		t.Fatalf("cross-project content RPC: %v", e)
+		t.Fatalf("Межпроектный RPC содержимого: %v", e)
 	}
 	if attempts != 0 {
-		t.Fatal("cross-project callback reached JVM")
+		t.Fatal("Межпроектный обратный вызов достиг JVM")
 	}
 	for _, permission := range []string{"release:read", "release:prepare"} {
 		if _, e := repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: id, Scope: "project", ScopeID: "project-a", Permission: permission, GrantedBy: "test"}); e != nil {
@@ -69,35 +69,35 @@ func TestJavaContentRPC0486(t *testing.T) {
 		before := attempts
 		_, _ = host.CallJavaRPC0304(ctx, st.key, method, projectA)
 		if attempts != before+1 {
-			t.Fatalf("granted %s callback not reached: attempts=%d", method, attempts)
+			t.Fatalf("Разрешённый обратный вызов %s не выполнен: попыток=%d", method, attempts)
 		}
 	}
 	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.publish.unsigned", projectA); e == nil || !strings.Contains(e.Error(), "unsupported") {
-		t.Fatalf("unlisted content method accepted: %v", e)
+		t.Fatalf("Ошибочно принят неуказанный метод работы с содержимым: %v", e)
 	}
 	if e := repo.RevokeExtensionPermission(ctx, id, "project", "project-a", "release:prepare"); e != nil {
 		t.Fatal(e)
 	}
 	before := attempts
 	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.package.prepare", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
-		t.Fatalf("revoked prepare still allowed: %v", e)
+		t.Fatalf("Подготовка осталась разрешённой после отзыва права: %v", e)
 	}
 	if attempts != before {
-		t.Fatal("revoked preparation reached JVM")
+		t.Fatal("Вызов подготовки достиг JVM после отзыва права")
 	}
 	// Метаданные только на чтение допускаются независимо от подготовки пакета.
 	_, _ = host.CallJavaRPC0304(ctx, st.key, "content.metadata.enrich", projectA)
 	if attempts != before+1 {
-		t.Fatal("release:read unexpectedly revoked with prepare")
+		t.Fatal("Право release:read неожиданно отозвано вместе с prepare")
 	}
 	if e := repo.RevokeExtensionPermission(ctx, id, "project", "project-a", "release:read"); e != nil {
 		t.Fatal(e)
 	}
 	before = attempts
 	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.delivery.resolve", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
-		t.Fatalf("revoked content read: %v", e)
+		t.Fatalf("Чтение содержимого после отзыва права: %v", e)
 	}
 	if attempts != before {
-		t.Fatal("revoked delivery reached JVM")
+		t.Fatal("Доставка достигла JVM после отзыва права")
 	}
 }

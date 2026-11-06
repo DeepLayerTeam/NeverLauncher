@@ -52,7 +52,7 @@ func TestBrowserPKCEExchangeRealChainMock0263(t *testing.T) {
 	f := &browserMockProvider0263{}
 	ms, mc, profile, err := exchangeOfficialBrowser0263(context.Background(), f, ownMicrosoftClient0263, browserRequest0263)
 	if err != nil || ms.RefreshToken != "fixture-refresh" || mc.AccessToken != "fixture-minecraft-bearer" || profile.ID == "" {
-		t.Fatalf("unexpected chain: %v", err)
+		t.Fatalf("Неожиданная цепочка: %v", err)
 	}
 	if strings.Join(f.calls, ",") != "microsoft,xbox-minecraft,java-profile" {
 		t.Fatal(f.calls)

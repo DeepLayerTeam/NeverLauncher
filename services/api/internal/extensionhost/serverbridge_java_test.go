@@ -39,7 +39,7 @@ func TestJavaBridgeRuntimeFencing0488(t *testing.T) {
 	n := model.ServerBridgeNode{ID: "node", ProjectID: "p", Status: "active", Kind: "paper", ServerBrand: "Paper", ProtocolVersion: 3,
 		RuntimeEpoch: 2, RuntimeID: runtime, RuntimeLastSeenAt: now.Add(-time.Second), RuntimeCapabilities: []string{"adapter.control.broadcast", "adapter.control.save"}, IntegrityStatus: "verified"}
 	if !bridgeRuntimeControl0488(n, "server.save", now) {
-		t.Fatal("verified current Paper adapter must accept save")
+		t.Fatal("Проверенный актуальный адаптер Paper должен разрешать сохранение")
 	}
 	for name, mutate := range map[string]func(*model.ServerBridgeNode){
 		"unverified":         func(v *model.ServerBridgeNode) { v.IntegrityStatus = "rejected" },
@@ -59,7 +59,7 @@ func TestJavaBridgeRuntimeFencing0488(t *testing.T) {
 		}
 	}
 	if bridgeRuntimeControl0488(n, "server.console", now) {
-		t.Fatal("console is not available to extensions")
+		t.Fatal("Консоль недоступна расширениям")
 	}
 }
 func TestJavaBridgeResponseRedaction0488(t *testing.T) {
@@ -74,7 +74,7 @@ func TestJavaBridgeResponseRedaction0488(t *testing.T) {
 	view := bridgeCommandView0488(cmd)
 	for _, secret := range []string{"payload", "leaseToken", "requestedBy", "runtimeId", "requestDigest"} {
 		if _, ok := view[secret]; ok {
-			t.Fatalf("command credential leaked: %s", secret)
+			t.Fatalf("Учётные данные команды раскрыты: %s", secret)
 		}
 	}
 	if len(out) == 0 || len(view) == 0 {

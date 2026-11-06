@@ -49,7 +49,7 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 	}
 	report, e := migrationRehearsalRun03310(context.Background(), dir, run, h)
 	if e != nil || len(report.Probes) != 7 || report.LiveSession == nil || report.Ready || report.CutoverAllowed || report.Probes[0].EvidenceSHA256 == "" {
-		t.Fatalf("runner: %+v %v", report, e)
+		t.Fatalf("Исполнитель: %+v %v", report, e)
 	}
 	sent := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

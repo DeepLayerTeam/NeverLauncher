@@ -48,7 +48,7 @@ func TestMigrationEnrollmentJSONStrict0446(t *testing.T) {
 	}
 	for _, bad := range []string{good + ` {}`, `{"unknown":"value"}`, `null`, `{"wrapperPath":"x"} {}`} {
 		if err := decodeMigrationEnrollment0446(strings.NewReader(bad), &req); err == nil {
-			t.Fatalf("accepted %q", bad)
+			t.Fatalf("Ошибочно принято значение %q", bad)
 		}
 	}
 }

@@ -80,6 +80,6 @@ func TestGravitOptionalPreviewSaveLifecycle02411(t *testing.T) {
 	}
 	blocked := request("POST", path+"/gravit-preview", makeReq(2, `{"updateOptional":[{"name":"Bad","actions":[{"type":"file","files":{"mods/nei.jar":"mods/evil.jar"}}]}]}`), "application/json")
 	if blocked.Code != 200 || !strings.Contains(blocked.Body.String(), `"canApply":false`) {
-		t.Fatalf("invalid conversion accepted %d %s", blocked.Code, blocked.Body.String())
+		t.Fatalf("Ошибочно принято некорректное преобразование: %d %s", blocked.Code, blocked.Body.String())
 	}
 }

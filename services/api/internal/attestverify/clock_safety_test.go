@@ -13,7 +13,7 @@ func TestCertifyUnsafeTPMClock0436(t *testing.T) {
 	evidence, binding, roots, _ := makeCertifyFixture(t)
 	now := time.Now().UTC()
 	if _, err := Verify(evidence, binding, roots, now); err != nil {
-		t.Fatalf("safe TPM evidence rejected: %v", err)
+		t.Fatalf("Отклонено безопасное доказательство TPM: %v", err)
 	}
 	pub, err := decode(evidence.TPM2BPublic, 4098)
 	if err != nil {
@@ -37,12 +37,12 @@ func TestCertifyUnsafeTPMClock0436(t *testing.T) {
 		mutated := append([]byte(nil), original...)
 		mutated[2+safeOffset] = invalid
 		if err := parseAttest(mutated, ExpectedExtraData(binding), name); err == nil || !strings.Contains(err.Error(), "clock") {
-			t.Fatalf("unsafe TPM clock %d accepted: %v", invalid, err)
+			t.Fatalf("Ошибочно принято небезопасное время TPM %d: %v", invalid, err)
 		}
 		modified := evidence
 		modified.TPM2BAttest = base64.RawURLEncoding.EncodeToString(mutated)
 		if _, err := Verify(modified, binding, roots, now); err == nil {
-			t.Fatalf("unsafe hardware attestation accepted for safe=%d", invalid)
+			t.Fatalf("Ошибочно принята небезопасная аппаратная аттестация при safe=%d", invalid)
 		}
 	}
 }
@@ -51,7 +51,7 @@ func TestQuoteUnsafeTPMClock0436(t *testing.T) {
 	evidence, binding, policy, hash, pinned, roots := makeQuoteFixture0315(t)
 	now := time.Now().UTC()
 	if _, err := VerifyQuote0315(evidence, binding, policy, hash, pinned, roots, now); err != nil {
-		t.Fatalf("safe quote rejected: %v", err)
+		t.Fatalf("Отклонено корректное свидетельство TPM: %v", err)
 	}
 	original, err := decode(evidence.TPM2BAttest, 4098)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestQuoteUnsafeTPMClock0436(t *testing.T) {
 		modified := evidence
 		modified.TPM2BAttest = base64.RawURLEncoding.EncodeToString(mutated)
 		if _, err := VerifyQuote0315(modified, binding, policy, hash, pinned, roots, now); err == nil || !strings.Contains(err.Error(), "clock") {
-			t.Fatalf("unsafe TPM quote clock %d accepted or not checked: %v", invalid, err)
+			t.Fatalf("Небезопасное время свидетельства TPM %d принято либо не проверено: %v", invalid, err)
 		}
 	}
 }

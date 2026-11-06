@@ -13,21 +13,21 @@ func TestBrokerResponseRevocation04312(t *testing.T) {
 	ctx := context.Background()
 	req := capabilityRequest{Key: "sample"}
 	if err := host.revalidateCapability04312(ctx, st, "runtime.storage.get", req); err != nil {
-		t.Fatalf("initial grant denied: %v", err)
+		t.Fatalf("Начальное предоставление права отклонено: %v", err)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, st.key.ExtensionID, "global", "", "storage:read"); err != nil {
 		t.Fatal(err)
 	}
 	if err := host.revalidateCapability04312(ctx, st, "runtime.storage.get", req); err == nil || !strings.Contains(err.Error(), "revoked") {
-		t.Fatalf("result leaked after permission revocation: %v", err)
+		t.Fatalf("Результат раскрыт после отзыва разрешения: %v", err)
 	}
 	if err := host.revalidateCapability04312(ctx, st, "unknown.privilege", req); err == nil {
-		t.Fatal("unknown capability was allowed")
+		t.Fatal("Ошибочно разрешена неизвестная возможность")
 	}
 	if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: st.key.ExtensionID, Scope: "global", Reason: "incident", Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := host.revalidateCapability04312(ctx, st, "extension.self", req); err == nil {
-		t.Fatal("metadata response permitted after emergency disable")
+		t.Fatal("После аварийного отключения ошибочно разрешён ответ с метаданными")
 	}
 }

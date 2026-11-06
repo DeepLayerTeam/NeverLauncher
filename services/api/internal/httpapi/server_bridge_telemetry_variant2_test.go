@@ -61,7 +61,7 @@ func TestTelemetryProcessHostFields0419(t *testing.T) {
 	runtime := model.ServerBridgeRuntimeIdentity{RuntimeID: rid, ProcessID: pid}
 	got, err := validateBridgeTelemetry0193(raw, runtime, 3, now)
 	if err != nil || got.ProcessID == nil || *got.ProcessID != pid || got.HostFreeMemoryBytes == nil {
-		t.Fatalf("unexpected telemetry %v: %+v", err, got)
+		t.Fatalf("Неожиданная телеметрия %v: %+v", err, got)
 	}
 	wrong := pid + 1
 	raw.ProcessID = &wrong

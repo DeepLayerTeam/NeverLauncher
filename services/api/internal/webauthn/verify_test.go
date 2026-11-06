@@ -49,7 +49,7 @@ func TestRegistrationAndAssertionES256(t *testing.T) {
 		t.Fatalf("assertion failed: %v", err)
 	}
 	if assertion.SignCount != 1 || !assertion.UserVerified {
-		t.Fatalf("unexpected assertion: %+v", assertion)
+		t.Fatalf("Неожиданное утверждение: %+v", assertion)
 	}
 }
 

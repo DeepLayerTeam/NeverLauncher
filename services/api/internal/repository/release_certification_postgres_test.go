@@ -19,14 +19,14 @@ import (
 func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires LAUNCHER_TEST_POSTGRES_DSN; release workflow must set it")
+		t.Skip("Требуется LAUNCHER_TEST_POSTGRES_DSN; процесс выпуска должен задать эту переменную")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	open := func() *SQLRepository {
 		repo, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 		if !ok {
-			t.Fatal("expected SQL repository")
+			t.Fatal("Ожидался SQL-репозиторий")
 		}
 		return repo
 	}
@@ -50,13 +50,13 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 		t.Fatal(err)
 	}
 	if saved.Revision != 1 || w.ProfileDigest != saved.Digest || w.Revision != 1 {
-		t.Fatalf("invalid imported record: %+v %+v", saved, w)
+		t.Fatalf("Некорректная импортированная запись: %+v %+v", saved, w)
 	}
 	// Импортированные профиль и рабочее пространство должны быть видны из другого
 	// соединения.
 	got, err := b.GetBuildWorkspace(ctx, w.ID)
 	if err != nil || got.ProfileDigest != saved.Digest {
-		t.Fatalf("not durable: %+v %v", got, err)
+		t.Fatalf("Данные не сохранены надёжно: %+v %v", got, err)
 	}
 	conflict := base
 	conflict.ID = "workspace-conflict-" + project
@@ -64,12 +64,12 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 		t.Fatalf("Повторный импорт ошибочно принят: %v", err)
 	}
 	if _, err := a.GetBuildWorkspace(ctx, conflict.ID); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("partial import: %v", err)
+		t.Fatalf("Частичный импорт: %v", err)
 	}
 	// Существующий ID рабочего пространства нельзя присвоить, даже если время создания или полезная
 	// нагрузка совпадают.
 	if _, err := b.CreateBuildWorkspace(ctx, base); !errors.Is(err, ErrConflict) {
-		t.Fatalf("duplicate workspace accepted: %v", err)
+		t.Fatalf("Ошибочно принята повторяющаяся рабочая область: %v", err)
 	}
 	fromA, err := a.GetBuildWorkspace(ctx, w.ID)
 	if err != nil {
@@ -117,6 +117,6 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 	}
 	pinned.Settings.ToolVersions["api"] = "tampered"
 	if _, err := a.SaveBuildWorkspace(ctx, pinned); !errors.Is(err, ErrConflict) {
-		t.Fatalf("settings mutation accepted in SQL: %v", err)
+		t.Fatalf("SQL ошибочно принял изменение настроек: %v", err)
 	}
 }

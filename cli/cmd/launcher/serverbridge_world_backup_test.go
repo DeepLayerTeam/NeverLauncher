@@ -44,7 +44,7 @@ func TestWorldBackupCreateVerifyRestore02810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Join(worlds, ",") != "survival,survival_nether,survival_the_end" {
-		t.Fatalf("worlds: %v", worlds)
+		t.Fatalf("Игровые миры: %v", worlds)
 	}
 	m, err := worldBackupCreate02810(root, store, nil, "stopped")
 	if err != nil {

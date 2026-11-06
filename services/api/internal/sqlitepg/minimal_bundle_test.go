@@ -88,7 +88,7 @@ func fixtureMinimalBundle0377(t *testing.T, base string) string {
 func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PG_TEST_DSN")
 	if dsn == "" {
-		t.Skip("isolated PostgreSQL service required")
+		t.Skip("Требуется изолированный сервер PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
@@ -102,7 +102,7 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 	}
 	pg.Close(ctx)
 	if exists {
-		t.Fatal("migration test requires empty isolated target schema")
+		t.Fatal("Для проверки миграции требуется пустая изолированная целевая схема")
 	}
 	t.Cleanup(func() {
 		p, e := pgx.Connect(context.Background(), dsn)
@@ -118,7 +118,7 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 		t.Fatal(err)
 	}
 	if importResult.ReadyForBackendCutover || importResult.Files != 4 || importResult.Bytes <= 0 {
-		t.Fatalf("unsafe transfer result %+v", importResult)
+		t.Fatalf("Небезопасный результат переноса: %+v", importResult)
 	}
 	if _, err = ImportMinimalBundle0377(ctx, input, dsn); err == nil {
 		t.Fatal("import overwrote immutable transfer")

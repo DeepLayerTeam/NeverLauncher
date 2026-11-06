@@ -24,7 +24,7 @@ func TestServerBridgeHandoffID0148Uses192BitsOfCSPRNGMaterial(t *testing.T) {
 			t.Fatalf("Идентификатор передачи соединения должен содержать 24 случайных байта: длина=%d ошибка=%v", len(raw), err)
 		}
 		if _, ok := seen[id]; ok {
-			t.Fatalf("duplicate handoff id: %s", id)
+			t.Fatalf("Повторяющийся идентификатор передачи: %s", id)
 		}
 		seen[id] = struct{}{}
 	}

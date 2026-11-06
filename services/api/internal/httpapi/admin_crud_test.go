@@ -52,7 +52,7 @@ func TestCanonicalAdminCRUDProductFlow(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &created); err != nil || created.ID == "" {
-		t.Fatalf("user id not found: %v body=%s", err, res.Body.String())
+		t.Fatalf("Идентификатор пользователя не найден: %v, ответ=%s", err, res.Body.String())
 	}
 
 	for _, path := range []string{"/api/v1/admin/users/" + created.ID + "/disable", "/api/v1/admin/users/" + created.ID + "/enable"} {

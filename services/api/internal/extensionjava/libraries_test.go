@@ -57,7 +57,7 @@ func makeFixture0482(t *testing.T, libraryBytes []byte, api string) string {
 func TestActualCompiledDependencyHost0482(t *testing.T) {
 	file := os.Getenv("LAUNCHER_TEST_JAVA_DEPENDENCY_JAR")
 	if file == "" {
-		t.Skip("built signed-layout Java dependency fixture not provided")
+		t.Skip("Не предоставлено тестовое окружение зависимостей Java с подписанной структурой")
 	}
 	info, err := Inspect(file)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestConflictingDependencyLibrariesRejected0482(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "class conflict") {
-		t.Fatalf("duplicate third-party class accepted: %v", err)
+		t.Fatalf("Ошибочно принят повторяющийся класс сторонней библиотеки: %v", err)
 	}
 	// Разные ID зависимостей могут сосуществовать, но две версии одних и тех же координат —
 	// нет.
@@ -116,7 +116,7 @@ func TestConflictingDependencyLibrariesRejected0482(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "duplicate dependency") {
-		t.Fatalf("duplicate coordinates accepted: %v", err)
+		t.Fatalf("Ошибочно приняты повторяющиеся координаты зависимостей: %v", err)
 	}
 }
 
@@ -136,7 +136,7 @@ func TestUnsafeAndLockedDependencyRejected0482(t *testing.T) {
 		{"lib/Preview.class": []byte{0xca, 0xfe, 0xba, 0xbe, 0xff, 0xff, 0, 61}},
 	} {
 		if _, err := Inspect(makeFixture0482(t, zip0482(t, contents), ">=1.0 <2.0")); err == nil {
-			t.Fatal("accepted malformed bundled JAR")
+			t.Fatal("Ошибочно принят повреждённый встроенный JAR")
 		}
 	}
 	badHash := makeFixture0482(t, zip0482(t, map[string][]byte{"lib/Safe.class": class0482(61)}), ">=1.0 <2.0")

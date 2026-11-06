@@ -14,7 +14,7 @@ import (
 func TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
@@ -48,6 +48,6 @@ func TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341(t *testing.T) {
 	}
 	// Защита не затрагивает другой канал.
 	if _, err := repo.db.ExecContext(ctx, `UPDATE release_versions SET channel='dev' WHERE id=$1`, releaseID); err == nil {
-		t.Fatal("release identity was unexpectedly mutable")
+		t.Fatal("Идентификатор выпуска неожиданно оказался изменяемым")
 	}
 }

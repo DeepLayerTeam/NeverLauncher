@@ -30,7 +30,7 @@ func registerDevice0432(t *testing.T, h http.Handler, access, name string) (stri
 	t.Helper()
 	code, body := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access, map[string]any{"name": name, "platform": "linux", "clientVersion": "0.43.2"})
 	if code != http.StatusOK {
-		t.Fatalf("begin registration: %d %#v", code, body)
+		t.Fatalf("Начало регистрации: %d %#v", code, body)
 	}
 	begin := deviceTrustData0121(t, body)
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -43,7 +43,7 @@ func registerDevice0432(t *testing.T, h http.Handler, access, name string) (stri
 		"publicKey": base64.RawURLEncoding.EncodeToString(pub), "signature": signature,
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("complete registration: %d %#v", code, body)
+		t.Fatalf("Завершение регистрации: %d %#v", code, body)
 	}
 	data := deviceTrustData0121(t, body)
 	return data["accessToken"].(string), begin["deviceId"].(string), priv
@@ -189,7 +189,7 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	}
 	code, body := complete(unbound, first, firstPublic, firstPrivate)
 	if code != http.StatusCreated {
-		t.Fatalf("first completion: %d %#v", code, body)
+		t.Fatalf("Первое завершение: %d %#v", code, body)
 	}
 	bound := deviceTrustData0121(t, body)["accessToken"].(string)
 	code, body = complete(bound, second, secondPublic, secondPrivate)
@@ -206,7 +206,7 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	secondDevice := second["deviceId"].(string)
 	code, listed := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=active", bound, nil)
 	if code != http.StatusOK {
-		t.Fatalf("device inventory: %d %#v", code, listed)
+		t.Fatalf("Перечень устройств: %d %#v", code, listed)
 	}
 	active := deviceTrustData0121(t, listed)["items"].([]any)
 	if len(active) != 1 || active[0].(map[string]any)["id"] != firstDevice {
@@ -214,7 +214,7 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	}
 	code, listed = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=revoked", bound, nil)
 	if code != http.StatusOK {
-		t.Fatalf("revoked inventory: %d %#v", code, listed)
+		t.Fatalf("Перечень отозванных устройств: %d %#v", code, listed)
 	}
 	revoked := deviceTrustData0121(t, listed)["items"].([]any)
 	if len(revoked) != 1 || revoked[0].(map[string]any)["id"] != secondDevice {

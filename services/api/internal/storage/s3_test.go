@@ -28,7 +28,7 @@ func TestS3SaveStreamsAndSignsPayload(t *testing.T) {
 	var gotBody string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
-			t.Errorf("method=%s", r.Method)
+			t.Errorf("Метод=%s", r.Method)
 		}
 		if r.URL.Path != "/bucket/project/version/libraries/test.jar" {
 			t.Errorf("path=%s", r.URL.Path)

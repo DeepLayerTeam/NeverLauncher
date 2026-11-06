@@ -101,7 +101,7 @@ func TestVanilla0402MacOSRejectsCrossArchitectureAndCollisions(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := flattenLWJGLMacOSNatives(root, []string{"macos/arm64/org/lwjgl/libtest.dylib"}, "aarch64"); err == nil {
-		t.Fatal("collision accepted")
+		t.Fatal("Ошибочно допущен конфликт")
 	}
 	actual, err := os.ReadFile(filepath.Join(root, "libtest.dylib"))
 	if err != nil || string(actual) != "old" {

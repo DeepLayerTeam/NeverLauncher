@@ -31,7 +31,7 @@ func TestHWIDDigestIsAccountScoped0299(t *testing.T) {
 	a := hwidAccountDigest0299("secret", "alice", hint)
 	b := hwidAccountDigest0299("secret", "bob", hint)
 	if a == b || a == hint || len(a) != 64 {
-		t.Fatal("HWID digest must be keyed and account-scoped")
+		t.Fatal("Хеш HWID должен формироваться с ключом и быть привязан к учётной записи")
 	}
 	if a != hwidAccountDigest0299("secret", "alice", hint) {
 		t.Fatal("Результат недетерминирован")
@@ -56,32 +56,32 @@ func TestHWIDRiskPersistsAfterPrivacyDeletion0433(t *testing.T) {
 	}
 	code, out := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/sessions", bound.Access, nil)
 	if code != http.StatusOK {
-		t.Fatalf("risk inspection failed: %d %#v", code, out)
+		t.Fatalf("Проверка риска завершилась ошибкой: %d %#v", code, out)
 	}
 	before := deviceTrustData0121(t, out)
 	items, ok := before["items"].([]any)
 	if !ok || len(items) == 0 {
-		t.Fatalf("missing live session: %#v", before)
+		t.Fatalf("Отсутствует активный сеанс: %#v", before)
 	}
 	state, _ := items[0].(map[string]any)
 	if state["riskAction"] != "step-up" {
-		t.Fatalf("changed HWID did not elevate risk: %#v", state)
+		t.Fatalf("Изменение HWID не повысило оценку риска: %#v", state)
 	}
 	code, out = deviceTrustRequest0121(t, h, http.MethodDelete, "/api/v1/auth/hwid", bound.Access, nil)
 	if code != http.StatusOK {
-		t.Fatalf("privacy deletion failed: %d %#v", code, out)
+		t.Fatalf("Удаление персональных данных завершилось ошибкой: %d %#v", code, out)
 	}
 	code, out = deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/sessions", bound.Access, nil)
 	if code != http.StatusOK {
-		t.Fatalf("session inspection failed: %d %#v", code, out)
+		t.Fatalf("Проверка сеанса завершилась ошибкой: %d %#v", code, out)
 	}
 	after := deviceTrustData0121(t, out)
 	items, ok = after["items"].([]any)
 	if !ok || len(items) == 0 {
-		t.Fatalf("missing session after privacy deletion: %#v", after)
+		t.Fatalf("После удаления персональных данных отсутствует сеанс: %#v", after)
 	}
 	state, _ = items[0].(map[string]any)
 	if state["riskAction"] != "step-up" {
-		t.Fatalf("privacy deletion bypassed session policy: %#v", state)
+		t.Fatalf("Удаление персональных данных обошло политику сеансов: %#v", state)
 	}
 }

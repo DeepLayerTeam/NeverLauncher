@@ -18,7 +18,7 @@ func TestRollbackBoundSnapshot0448(t *testing.T) {
 	}
 	obj, actual, err := rollbackReadSnapshot0448(path)
 	if err != nil || obj == nil {
-		t.Fatalf("read: %v", err)
+		t.Fatalf("Чтение: %v", err)
 	}
 	sum := sha256.Sum256(data)
 	if actual != hex.EncodeToString(sum[:]) {

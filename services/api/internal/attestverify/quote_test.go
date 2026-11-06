@@ -87,7 +87,7 @@ func TestQuote0315ValidAndAdversarial(t *testing.T) {
 	}
 	accepted, err := VerifyQuote0315(ev, b, p, ph, pin, roots, time.Now().UTC())
 	if err != nil || accepted.ExpiresAt.Sub(time.Now().UTC()) > 5*time.Minute || accepted.ExpiresAt.Before(time.Now()) {
-		t.Fatalf("invalid quote validity period: %+v %v", accepted, err)
+		t.Fatalf("Некорректный срок действия свидетельства TPM: %+v %v", accepted, err)
 	}
 
 	cases := []struct {
@@ -148,7 +148,7 @@ func TestQuote0315ValidAndAdversarial(t *testing.T) {
 			a, bb, pp, hh, pn, rr := ev, b, p, ph, pin, *roots
 			c.change(&a, &bb, &pp, &hh, &pn, &rr)
 			if err := verify(a, bb, pp, hh, pn, &rr); err == nil {
-				t.Fatal("forged or unapproved quote accepted")
+				t.Fatal("Ошибочно принято поддельное или неодобренное свидетельство TPM")
 			}
 		})
 	}
@@ -187,6 +187,6 @@ func TestPCRPolicy0315FailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, err := LoadPCRPolicy0315(path, now); err == nil {
-		t.Fatal("world writable policy accepted")
+		t.Fatal("Ошибочно принята политика с правом записи для всех пользователей")
 	}
 }

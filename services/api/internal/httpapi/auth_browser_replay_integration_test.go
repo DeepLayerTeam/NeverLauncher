@@ -18,7 +18,7 @@ import (
 func TestBrowserNonceAcrossPostgresReplicas0525(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	first := repository.NewSQLRepository("pgx", dsn, "https://launcher.example.test")
 	second := repository.NewSQLRepository("pgx", dsn, "https://launcher.example.test")

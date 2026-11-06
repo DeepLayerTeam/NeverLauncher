@@ -25,13 +25,13 @@ func TestProjectRoleNeverBecomesGlobal(t *testing.T) {
 	})
 	actor := Actor{Kind: ActorUser, ID: "u1"}
 	if got := svc.Authorize(context.Background(), actor, "project:write", Scope{Kind: ScopeGlobal}, Resource{Kind: "project"}); got.Allowed {
-		t.Fatalf("project role unexpectedly granted global permission: %+v", got)
+		t.Fatalf("Роль проекта неожиданно выдала глобальное разрешение: %+v", got)
 	}
 	if got := svc.Authorize(context.Background(), actor, "project:write", Scope{Kind: ScopeProject, ProjectID: "p1"}, Resource{Kind: "project", ID: "p1", ProjectID: "p1"}); !got.Allowed {
-		t.Fatalf("project role should grant p1 permission: %+v", got)
+		t.Fatalf("Роль проекта должна выдавать разрешение p1: %+v", got)
 	}
 	if got := svc.Authorize(context.Background(), actor, "project:write", Scope{Kind: ScopeProject, ProjectID: "p2"}, Resource{Kind: "project", ID: "p2", ProjectID: "p2"}); got.Allowed {
-		t.Fatalf("project role leaked across projects: %+v", got)
+		t.Fatalf("Права роли проекта распространились на другие проекты: %+v", got)
 	}
 }
 
@@ -42,7 +42,7 @@ func TestWildcardMembershipDoesNotGrantInstanceAccess(t *testing.T) {
 	})
 	got := svc.Authorize(context.Background(), Actor{Kind: ActorUser, ID: "u1"}, "project:write", Scope{Kind: ScopeProject, ProjectID: "p1"}, Resource{Kind: "project", ID: "p1", ProjectID: "p1"})
 	if got.Allowed {
-		t.Fatalf("legacy wildcard membership must not grant project access: %+v", got)
+		t.Fatalf("Устаревшее членство с подстановочным шаблоном не должно предоставлять доступ к проекту: %+v", got)
 	}
 }
 
@@ -53,7 +53,7 @@ func TestResourceCannotEscapeProjectScope(t *testing.T) {
 	})
 	got := svc.Authorize(context.Background(), Actor{Kind: ActorUser, ID: "u1"}, "project:write", Scope{Kind: ScopeProject, ProjectID: "p1"}, Resource{Kind: "profile", ID: "x", ProjectID: "p2"})
 	if got.Allowed || got.ReasonCode != "resource-scope-mismatch" {
-		t.Fatalf("mismatched resource escaped project scope: %+v", got)
+		t.Fatalf("Ресурс с несовпадающими атрибутами вышел за пределы проекта: %+v", got)
 	}
 }
 
@@ -67,7 +67,7 @@ func TestProjectRoleCannotGrantInstanceWideAction(t *testing.T) {
 	})
 	got := svc.Authorize(context.Background(), Actor{Kind: ActorUser, ID: "u1"}, "users:manage", Scope{Kind: ScopeProject, ProjectID: "p1"}, Resource{Kind: "user", ID: "u2", ProjectID: "p1"})
 	if got.Allowed || got.ReasonCode != "global-action-required" {
-		t.Fatalf("project role granted an instance-wide action: %+v", got)
+		t.Fatalf("Роль проекта предоставила действие для всего экземпляра: %+v", got)
 	}
 }
 
@@ -90,7 +90,7 @@ func TestProjectComponentRightsNeverEscapeScope0392(t *testing.T) {
 	check("component.perf", "p2", false)
 	for _, invalid := range []string{"component.", "component...x", "component.A", "component.perf::admin", "users:manage"} {
 		if invalid != "users:manage" && IsProjectAction(invalid) {
-			t.Errorf("invalid component role action accepted: %q", invalid)
+			t.Errorf("Ошибочно принято некорректное действие роли компонента: %q", invalid)
 		}
 		check(invalid, "p1", false)
 	}

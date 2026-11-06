@@ -22,7 +22,7 @@ func TestExtensionCLINamespaceCatalogAndInvoke0209(t *testing.T) {
 			var req map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&req)
 			if req["command"] != "status" {
-				t.Errorf("command=%v", req["command"])
+				t.Errorf("Команда=%v", req["command"])
 			}
 			invoked = true
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"exitCode": 0, "stdout": "ok\n", "protocol": "1.0"}})
@@ -49,6 +49,6 @@ func TestExtensionCLINamespaceCatalogAndInvoke0209(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(script, "ops") || !strings.Contains(script, "status") {
-		t.Fatalf("completion=%s", script)
+		t.Fatalf("Завершение=%s", script)
 	}
 }

@@ -30,12 +30,12 @@ func TestControlDomains0281ClosedDispatchTable(t *testing.T) {
 	}
 	for _, kind := range []string{"", "server.shell", "host.exec", "host.restart", "backend.restart", "server.restart", "MESSAGE.BROADCAST", "message.broadcast;host.exec"} {
 		if permission, ok := GameCommandPermission(kind); ok || permission != "" {
-			t.Fatalf("unsafe command %q accepted as %q", kind, permission)
+			t.Fatalf("Небезопасная команда %q ошибочно принята как %q", kind, permission)
 		}
 	}
 	for _, action := range []string{BackendControl, HostProcess, HostExec} {
 		if !IsControlAction(action) || IsProjectAction(action) {
-			t.Fatalf("host/backend action %q is project scoped", action)
+			t.Fatalf("Действие сервера/backend %q ошибочно ограничено областью проекта", action)
 		}
 	}
 }
@@ -56,18 +56,18 @@ func TestControlDomains0281BroadcastOnlyNeverEscalates(t *testing.T) {
 			Scope{Kind: ScopeProject, ProjectID: project}, Resource{Kind: "server", ID: "game-1", ProjectID: project})
 	}
 	if got := authorize(GameBroadcast, "alpha"); !got.Allowed {
-		t.Fatalf("project broadcaster denied: %+v", got)
+		t.Fatalf("Отклонён отправитель рассылки проекта: %+v", got)
 	}
 	for _, action := range []string{GameModerate, GameSave, GameTraffic, GameShutdown, GameConsole, BackendControl, HostProcess, HostExec, "serverbridge:console", "serverbridge:control"} {
 		if got := authorize(action, "alpha"); got.Allowed {
-			t.Fatalf("broadcast granted %q: %+v", action, got)
+			t.Fatalf("Рассылка предоставила разрешение %q: %+v", action, got)
 		}
 	}
 	if got := authorize(GameBroadcast, "beta"); got.Allowed {
 		t.Fatalf("cross-project authority: %+v", got)
 	}
 	if got := svc.Authorize(ctx, actor, HostExec, Scope{Kind: ScopeGlobal}, Resource{Kind: "host"}); got.Allowed {
-		t.Fatalf("project broadcaster got global shell access: %+v", got)
+		t.Fatalf("Отправитель рассылки проекта получил глобальный доступ к оболочке: %+v", got)
 	}
 }
 
@@ -80,7 +80,7 @@ func TestControlDomains0281LegacyControlIsNotImplicitPrivilege(t *testing.T) {
 	for _, action := range []string{GameBroadcast, GameModerate, GameSave, GameTraffic, GameShutdown, GameConsole, BackendControl, HostProcess, HostExec} {
 		got := svc.Authorize(context.Background(), actor, action, Scope{Kind: ScopeProject, ProjectID: "alpha"}, Resource{Kind: "server", ProjectID: "alpha"})
 		if got.Allowed {
-			t.Fatalf("legacy permission implicitly escalated to %s", action)
+			t.Fatalf("Устаревшее разрешение неявно повышено до %s", action)
 		}
 	}
 }
@@ -98,7 +98,7 @@ func TestControlDomains0281InstanceRightsRequireGlobalScope(t *testing.T) {
 		}
 		allowed := svc.Authorize(context.Background(), actor, action, Scope{Kind: ScopeGlobal}, Resource{Kind: "host"})
 		if !allowed.Allowed {
-			t.Fatalf("owner's global right denied: %+v", allowed)
+			t.Fatalf("Отклонено глобальное право владельца: %+v", allowed)
 		}
 	}
 }

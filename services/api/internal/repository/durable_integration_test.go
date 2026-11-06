@@ -24,7 +24,7 @@ func openDurablePostgres0213(t *testing.T) (*SQLRepository, *SQLRepository, cont
 		dsn = os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	}
 	if dsn == "" {
-		t.Skip("PostgreSQL durable-boundaries test DSN is not set")
+		t.Skip("Адрес подключения PostgreSQL для проверки надёжного сохранения не задан")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	t.Cleanup(cancel)
@@ -62,25 +62,25 @@ func TestDurableJobLeaseRecoversAcrossReplicaRestart0213(t *testing.T) {
 		t.Fatalf("first lease: %v", err)
 	}
 	if first.LeaseFence < 1 || first.LeaseToken == "" {
-		t.Fatalf("first lease not fenced: %+v", first)
+		t.Fatalf("Первая аренда ресурса не защищена ограничителем поколений: %+v", first)
 	}
 	if _, err := b.LeaseDurableJob(ctx, job.ID, "api-b", time.Second); !errors.Is(err, ErrLeaseBusy) {
-		t.Fatalf("second replica acquired live lease, err=%v", err)
+		t.Fatalf("Вторая реплика захватила активную аренду ресурса, ошибка=%v", err)
 	}
 	time.Sleep(180 * time.Millisecond)
 	recovered, err := b.LeaseDurableJob(ctx, job.ID, "api-b", time.Second)
 	if err != nil {
-		t.Fatalf("expired lease was not recoverable on second replica: %v", err)
+		t.Fatalf("Просроченная аренда не восстановилась на второй реплике: %v", err)
 	}
 	if recovered.LeaseOwner != "api-b" || recovered.LeaseFence <= first.LeaseFence || recovered.LeaseToken == first.LeaseToken {
-		t.Fatalf("lease recovery did not advance fencing: first=%+v recovered=%+v", first, recovered)
+		t.Fatalf("При восстановлении аренды не изменился номер поколения: первая=%+v, восстановленная=%+v", first, recovered)
 	}
 	var abandonedStatus, abandonedError string
 	if err := b.db.QueryRowContext(ctx, `SELECT status,error FROM durable_job_attempts WHERE job_id=$1 AND attempt=$2`, job.ID, first.AttemptCount).Scan(&abandonedStatus, &abandonedError); err != nil {
-		t.Fatalf("read abandoned attempt: %v", err)
+		t.Fatalf("Чтение брошенной попытки: %v", err)
 	}
 	if abandonedStatus != "failed" || abandonedError == "" {
-		t.Fatalf("abandoned attempt not closed during restart recovery: status=%q error=%q", abandonedStatus, abandonedError)
+		t.Fatalf("Брошенная попытка не закрыта при восстановлении после перезапуска: статус=%q, ошибка=%q", abandonedStatus, abandonedError)
 	}
 }
 
@@ -123,22 +123,22 @@ func TestDurableScopeLeaseHasSingleDistributedOwner0213(t *testing.T) {
 		case errors.Is(got.err, ErrLeaseBusy):
 			busy++
 		default:
-			t.Fatalf("unexpected distributed lease error: %v", got.err)
+			t.Fatalf("Неожиданная ошибка распределённой аренды: %v", got.err)
 		}
 	}
 	if winners != 1 || busy != 1 {
-		t.Fatalf("expected one distributed lease owner, winners=%d busy=%d", winners, busy)
+		t.Fatalf("Ожидался один владелец распределённой аренды: победителей=%d, занятых=%d", winners, busy)
 	}
 	if err := a.ReleaseDurableScopeLease(ctx, scope, winner.lease.LeaseToken); err != nil {
 		if err := b.ReleaseDurableScopeLease(ctx, scope, winner.lease.LeaseToken); err != nil {
-			t.Fatalf("release winning lease: %v", err)
+			t.Fatalf("Освобождение выигравшей аренды: %v", err)
 		}
 	}
 	next, err := b.AcquireDurableScopeLease(ctx, scope, "api-after-restart", 3*time.Second)
 	if err != nil {
-		t.Fatalf("reacquire after release: %v", err)
+		t.Fatalf("Повторный захват после освобождения: %v", err)
 	}
 	if next.FencingToken <= winner.lease.FencingToken {
-		t.Fatalf("fence did not advance: first=%d next=%d", winner.lease.FencingToken, next.FencingToken)
+		t.Fatalf("Номер поколения не увеличился: первый=%d, следующий=%d", winner.lease.FencingToken, next.FencingToken)
 	}
 }

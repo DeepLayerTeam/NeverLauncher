@@ -25,7 +25,7 @@ func TestManifestCopiesDoNotAlias0222(t *testing.T) {
 		input.Minecraft.GameArgs[0] != "original" || input.Runtime.JVMArgs[0] != "original" ||
 		!input.Runtime.Launch.Features["safe"] || input.Files[0].Path != "original" ||
 		input.Files[0].TargetOS[0] != "linux" {
-		t.Fatal("manifest clone leaked mutable aliases")
+		t.Fatal("Копия манифеста раскрыла изменяемые ссылки")
 	}
 }
 
@@ -34,6 +34,6 @@ func TestCloneManifestMirrors0234(t *testing.T) {
 	clone := cloneManifest0222(in)
 	clone.Files[0].Mirrors[0] = "https://different.test/a.jar"
 	if in.Files[0].Mirrors[0] != "https://one.test/a.jar" {
-		t.Fatal("clone mutates signed source mirror list")
+		t.Fatal("Копирование меняет подписанный список зеркал источника")
 	}
 }

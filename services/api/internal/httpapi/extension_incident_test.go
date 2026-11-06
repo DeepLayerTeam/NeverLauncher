@@ -63,13 +63,13 @@ func TestTrustSweepQuarantinesActiveLocalPackage0424(t *testing.T) {
 	srv := Server{Repo: repo, Config: config.Config{ExtensionRoot: t.TempDir()}}
 	blocked, err := srv.enforceExtensionTrustRuntime02012(ctx, "quarantine-test")
 	if err != nil || blocked != 1 {
-		t.Fatalf("sweep failed to disable active quarantined package: blocked=%d err=%v", blocked, err)
+		t.Fatalf("Проверка не отключила активный пакет в карантине: заблокировано=%d, ошибка=%v", blocked, err)
 	}
 	if _, err := repo.GetExtensionEmergencyDisable(ctx, id, "global", ""); err != nil {
 		t.Fatalf("Состояние аварийного отключения не сохранено: %v", err)
 	}
 	after, err := repo.GetExtensionInstallState(ctx, id, "global", "")
 	if err != nil || after.CurrentState != model.ExtensionInstallStateDisabled {
-		t.Fatalf("quarantined package remained enabled: %+v %v", after, err)
+		t.Fatalf("Пакет в карантине остался включённым: %+v %v", after, err)
 	}
 }

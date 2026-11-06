@@ -17,7 +17,7 @@ func TestDeviceTrustBaselineStrictCannotBeSelfDeclared0311(t *testing.T) {
 	d := model.TrustedDevice{Status: "active", TrustState: "verified", KeyAlgorithm: "p256", KeyBinding: "hardware", HardwareProvider: "TPM", KeyFingerprint: strings.Repeat("f", 64), RemoteHardwareProvenance: "verified", AttestationState: "verified", AttestationMethod: "challenge-response-v1", AttestedAt: now.Add(-time.Minute), AttestationExpiresAt: now.Add(time.Hour)}
 	clean := sanitizeTrustedDevice0121(d)
 	if clean.RemoteHardwareProvenance != "not-verified" || clean.TrustAssessment.ProfileDecisions["strict"].Result != "deny" || clean.TrustAssessment.LocalHardwareBinding != "client-reported" {
-		t.Fatalf("legacy self-declaration elevated: %+v", clean)
+		t.Fatalf("Устаревшее самодекларирование ошибочно повысило уровень доверия: %+v", clean)
 	}
 }
 
@@ -28,15 +28,15 @@ func TestTrustProfileQueryRequiresBoundDevice0311(t *testing.T) {
 	access, _ := deviceTrustLogin0121(t, srv, "nonbound")
 	code, data := deviceTrustRequest0121(t, srv, http.MethodGet, "/api/v1/auth/device-trust?requireProfile=strict", access, nil)
 	if code != http.StatusForbidden {
-		t.Fatalf("strict must deny, status=%d payload=%#v", code, data)
+		t.Fatalf("Строгая политика должна отклонять запрос: статус=%d, данные=%#v", code, data)
 	}
 	policy := deviceTrustData0121(t, data)["trustAssessment"].(map[string]any)["profileDecisions"].(map[string]any)
 	if policy["strict"].(map[string]any)["result"] != "deny" {
-		t.Fatalf("unexpected verdict %#v", policy)
+		t.Fatalf("Неожиданное заключение: %#v", policy)
 	}
 	code, _ = deviceTrustRequest0121(t, srv, http.MethodGet, "/api/v1/auth/device-trust?requireProfile=superuser", access, nil)
 	if code != http.StatusBadRequest {
-		t.Fatalf("invalid profile accepted, got %d", code)
+		t.Fatalf("Ошибочно принят некорректный профиль, получен код %d", code)
 	}
 	code, _ = deviceTrustRequest0121(t, srv, http.MethodGet, "/api/v1/auth/device-trust", access, nil)
 	if code != http.StatusOK {

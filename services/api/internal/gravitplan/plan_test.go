@@ -79,7 +79,7 @@ func TestPlanDeterminismAndNoSecret0442(t *testing.T) {
 		t.Fatal(e)
 	}
 	if p.PlanSHA256 != again.PlanSHA256 {
-		t.Fatalf("nondeterministic plan: %s != %s", p.PlanSHA256, again.PlanSHA256)
+		t.Fatalf("Недетерминированный план: %s != %s", p.PlanSHA256, again.PlanSHA256)
 	}
 	if p.TransferBytes == 0 || p.Counts["manual"] == 0 || p.Counts["excluded"] != 2 {
 		t.Fatalf("В плане отсутствует реальный перенос, ручной этап или исключение ключей: %+v", p.Counts)

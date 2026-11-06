@@ -60,7 +60,7 @@ func TestGravitOptInValidation0307(t *testing.T) {
 		gravitJar0307(t, "example.Other", "example.Ported", true),
 	} {
 		if _, err := Inspect(f); err == nil {
-			t.Fatalf("accepted incompatible module %s", f)
+			t.Fatalf("Ошибочно принят несовместимый модуль %s", f)
 		}
 	}
 }

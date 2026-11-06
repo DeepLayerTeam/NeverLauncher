@@ -138,7 +138,7 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	}
 	head, err := f.repo.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 	if err != nil || head.Revision != 0 {
-		t.Fatalf("uncertified head changed: %+v %v", head, err)
+		t.Fatalf("Изменился несертифицированный указатель выпуска: %+v %v", head, err)
 	}
 	f.installEvidence(t)
 	token := f.issue(t)
@@ -164,7 +164,7 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	f.repo = reopened
 	head, err = reopened.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 	if err != nil || head.Revision != 1 {
-		t.Fatalf("stable lost on restart: %+v %v", head, err)
+		t.Fatalf("Стабильный выпуск потерян после перезапуска: %+v %v", head, err)
 	}
 	job, err := reopened.GetDurableJob(ctx, f.commit.JobID)
 	if err != nil || job.Status != model.DurableJobStatusSucceeded {
@@ -172,10 +172,10 @@ func TestSQLiteStablePublishAtomicReplayAndRestart0374(t *testing.T) {
 	}
 	outbox, err := reopened.ClaimOutboxEvents(ctx, "worker", 10, time.Minute)
 	if err != nil || len(outbox) != 2 {
-		t.Fatalf("outbox not atomically saved: %+v %v", outbox, err)
+		t.Fatalf("Исходящая очередь не сохранена атомарно: %+v %v", outbox, err)
 	}
 	if _, err = reopened.CommitDurablePublish(ctx, f.commit); err == nil {
-		t.Fatal("spent grant reused after process restart")
+		t.Fatal("Использованное разрешение повторно применено после перезапуска")
 	}
 }
 func TestSQLiteStablePublishRevocationForgeryAndExpiration0374(t *testing.T) {
@@ -213,7 +213,7 @@ func TestSQLiteStablePublishRevocationForgeryAndExpiration0374(t *testing.T) {
 			}
 			head, err := f.repo.GetChannelHead(ctx, f.rel.ProjectID, f.rel.ProfileID, "stable")
 			if err != nil || head.Revision != 0 {
-				t.Fatalf("rejected operation moved head: %+v %v", head, err)
+				t.Fatalf("Отклонённая операция изменила указатель выпуска: %+v %v", head, err)
 			}
 		})
 	}
@@ -242,6 +242,6 @@ func TestSQLiteStablePublishConcurrentSingleCommit0374(t *testing.T) {
 		}
 	}
 	if count != 1 {
-		t.Fatalf("concurrent stable publication accepted %d requests", count)
+		t.Fatalf("Одновременная публикация стабильного выпуска приняла %d запросов", count)
 	}
 }

@@ -17,7 +17,7 @@ import (
 func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

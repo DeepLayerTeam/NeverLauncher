@@ -25,26 +25,26 @@ func TestRevokedDeviceKeyCannotBeResurrected0434(t *testing.T) {
 	swapped.PublicKey = "replacement-without-rotation"
 	swapped.KeyFingerprint = "replacement-fingerprint"
 	if _, err := repo.SaveTrustedDevice(ctx, swapped); !errors.Is(err, ErrConflict) {
-		t.Fatalf("silent key swap: %v", err)
+		t.Fatalf("Незаметная замена ключа: %v", err)
 	}
 	revoked, err := repo.RevokeTrustedDevice(ctx, enrolled.UserID, enrolled.ID, "device-compromised")
 	if err != nil || revoked.Device.Status != "revoked" {
 		t.Fatalf("revoke: %+v %v", revoked, err)
 	}
 	if _, err := repo.SaveTrustedDevice(ctx, enrolled); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale device writer resurrected revoked key: %v", err)
+		t.Fatalf("Устаревший процесс записи устройства восстановил отозванный ключ: %v", err)
 	}
 	alias := enrolled
 	alias.ID = "dev-alias-0434"
 	if _, err := repo.SaveTrustedDevice(ctx, alias); !errors.Is(err, ErrConflict) {
-		t.Fatalf("revoked key re-enrolled under different id: %v", err)
+		t.Fatalf("Отозванный ключ повторно зарегистрирован под другим ID: %v", err)
 	}
 	after, err := repo.GetTrustedDevice(enrolled.UserID, enrolled.ID)
 	if err != nil || after.Status != "revoked" || after.KeyFingerprint != enrolled.KeyFingerprint {
 		t.Fatalf("Данные об отзыве неожиданно изменились: %+v %v", after, err)
 	}
 	if second, err := repo.RevokeTrustedDevice(ctx, enrolled.UserID, enrolled.ID, "retry"); err != nil || !second.AlreadyRevoked {
-		t.Fatalf("not idempotent: %+v %v", second, err)
+		t.Fatalf("Нарушена идемпотентность: %+v %v", second, err)
 	}
 }
 
@@ -61,16 +61,16 @@ func TestRevokedMinecraftTokenCannotBeResurrected0434(t *testing.T) {
 	changed := session
 	changed.BindingEpoch = 3
 	if _, err := repo.SaveMinecraftSession(changed); !errors.Is(err, ErrConflict) {
-		t.Fatalf("credential rebound without issuance: %v", err)
+		t.Fatalf("Учётные данные повторно привязаны без выдачи: %v", err)
 	}
 	if err := repo.RevokeMinecraftSession(session.ID, "parent-session-revoked"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := repo.SaveMinecraftSession(session); !errors.Is(err, ErrConflict) {
-		t.Fatalf("revoked game credential revived: %v", err)
+		t.Fatalf("Отозванные игровые учётные данные восстановлены: %v", err)
 	}
 	existing, err := repo.GetMinecraftSessionByTokenHash(session.AccessTokenHash)
 	if err != nil || existing.Status != "revoked" {
-		t.Fatalf("game credential lost tombstone: %+v %v", existing, err)
+		t.Fatalf("Игровые учётные данные потеряли отметку об удалении: %+v %v", existing, err)
 	}
 }

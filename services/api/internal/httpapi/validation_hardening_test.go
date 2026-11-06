@@ -27,7 +27,7 @@ func TestV12ForgedExpiredUnsignedManualCertification03412(t *testing.T) {
 	raw = append(raw[:len(raw)-1], []byte(`,"certified":true}`)...)
 	var out validationPayload0345
 	if decodeStoredEvidence03411(raw, &out) == nil {
-		t.Fatal("manual certified field admitted")
+		t.Fatal("Ошибочно допущено вручную установленное поле сертификации")
 	}
 	signed.Evidence.ExpiresAt = time.Now().UTC().Add(-time.Second).Format(time.RFC3339Nano)
 	repo := repository.NewMemoryRepository("https://example.test")
@@ -46,10 +46,10 @@ func TestV12GateFailedAttemptHasImmutableDigest03412(t *testing.T) {
 	}
 	s := Server{Repo: repo}
 	if _, _, err = s.issueStablePermit03411(context.Background(), packageLookup{Release: release}); err == nil {
-		t.Fatal("missing certified targets allowed stable")
+		t.Fatal("Стабильный выпуск ошибочно разрешён без сертифицированных платформ")
 	}
 	events, err := repo.ListValidationAttempts03412(context.Background(), release.ID, 0, 10)
 	if err != nil || len(events) != 1 || events[0].Kind != "stable-gate" || events[0].Outcome != "blocked" || len(events[0].PayloadSHA256) != 64 {
-		t.Fatalf("denied publish not audited: %+v %v", events, err)
+		t.Fatalf("Отказ в публикации не записан в аудит: %+v %v", events, err)
 	}
 }

@@ -19,7 +19,7 @@ import (
 func TestMigrationPlanDurableIdempotentAndSourcePinned0442(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
 	defer cancel()

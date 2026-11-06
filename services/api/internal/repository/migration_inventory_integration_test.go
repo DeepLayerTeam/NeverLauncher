@@ -41,7 +41,7 @@ func inventoryFixture0333(t *testing.T, content string) inv.Inventory {
 func TestMigrationInventoryTransactional0333(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -67,7 +67,7 @@ func TestMigrationInventoryTransactional0333(t *testing.T) {
 	}
 	first := inventoryFixture0333(t, "first")
 	if _, e = repo.SaveMigrationInventory0333(ctx, run.ID, first); !errors.Is(e, mw.ErrBusy) {
-		t.Fatalf("premature inventory accepted: %v", e)
+		t.Fatalf("Преждевременно принят перечень: %v", e)
 	}
 	for _, step := range []string{"target_check", "target_inventory"} {
 		lease, e := repo.ClaimMigration0331(ctx, run.ID, "test-worker", 10*time.Second)
@@ -90,7 +90,7 @@ func TestMigrationInventoryTransactional0333(t *testing.T) {
 	}
 	replay, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || replay.Revision != original.Revision {
-		t.Fatalf("duplicate event on replay %v %+v %+v", e, replay, original)
+		t.Fatalf("Повторяющееся событие при воспроизведении: %v %+v %+v", e, replay, original)
 	}
 	changed := inventoryFixture0333(t, "second")
 	if _, e = repo.SaveMigrationInventory0333(ctx, run.ID, changed); e != nil {
@@ -98,20 +98,20 @@ func TestMigrationInventoryTransactional0333(t *testing.T) {
 	}
 	current, e := repo.GetMigrationInventory0333(ctx, run.ID)
 	if e != nil || current.ManifestSHA256 != changed.ManifestSHA256 {
-		t.Fatalf("inventory persistence failed %v", e)
+		t.Fatalf("Не удалось сохранить перечень: %v", e)
 	}
 	updated, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || updated.Revision != original.Revision+1 {
-		t.Fatalf("revision not incremented %v", e)
+		t.Fatalf("Ревизия не увеличена: %v", e)
 	}
 	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: first.SourceSHA256, Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("compat source repin accepted: %v", e)
+		t.Fatalf("Ошибочно принято изменение закреплённого источника совместимости: %v", e)
 	}
 	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: changed.SourceSHA256, Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = repo.SaveMigrationInventory0333(ctx, run.ID, first); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("inventory source repin accepted: %v", e)
+		t.Fatalf("Ошибочно принято изменение закреплённого источника перечня: %v", e)
 	}
 	events, e := repo.MigrationEvents0331(ctx, run.ID, 0, 100)
 	if e != nil {
@@ -124,6 +124,6 @@ func TestMigrationInventoryTransactional0333(t *testing.T) {
 		}
 	}
 	if count != 2 {
-		t.Fatalf("expected two inventory commits, got %d", count)
+		t.Fatalf("Ожидалось два сохранения перечня, получено %d", count)
 	}
 }

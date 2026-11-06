@@ -26,7 +26,7 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 	}
 	rows, err = r.ListReleaseDrafts(ctx, "demo-project", "owner-b")
 	if err != nil || len(rows) != 0 {
-		t.Fatalf("owner isolation: %v %#v", err, rows)
+		t.Fatalf("Нарушена изоляция владельцев: %v %#v", err, rows)
 	}
 	update := created
 	update.PackageID = "demo-project-vanilla-1.0.0"
@@ -40,15 +40,15 @@ func TestReleaseDraftPersistenceAndCAS0218(t *testing.T) {
 	hijack := stored
 	hijack.OwnerID = "owner-b"
 	if _, err = r.UpdateReleaseDraft(ctx, hijack); !errors.Is(err, ErrConflict) {
-		t.Fatalf("owner transfer: %v", err)
+		t.Fatalf("Передача владения: %v", err)
 	}
 	if err = r.DeleteReleaseDraft(ctx, stored.ID, "owner-b"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("foreign delete: %v", err)
+		t.Fatalf("Удаление чужой записи: %v", err)
 	}
 	if err = r.DeleteReleaseDraft(ctx, stored.ID, "owner-a"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = r.GetReleaseDraft(ctx, stored.ID); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("deleted draft visible: %v", err)
+		t.Fatalf("Удалённый черновик остаётся видимым: %v", err)
 	}
 }

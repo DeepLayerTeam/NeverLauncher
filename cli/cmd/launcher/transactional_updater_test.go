@@ -51,7 +51,7 @@ func TestTransactionalUpdaterCommitAndDelete0156(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report["status"] != "committed" {
-		t.Fatalf("report=%v", report)
+		t.Fatalf("Отчёт=%v", report)
 	}
 	if raw, _ := os.ReadFile(filepath.Join(root, "app.bin")); string(raw) != "new" {
 		t.Fatalf("app.bin=%q", raw)
@@ -67,7 +67,7 @@ func TestTransactionalUpdaterCommitAndDelete0156(t *testing.T) {
 		t.Fatal(err)
 	}
 	if status["status"] != "idle" {
-		t.Fatalf("status=%v", status)
+		t.Fatalf("Статус=%v", status)
 	}
 }
 
@@ -209,7 +209,7 @@ func TestManifestUpdaterApply0156(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report["status"] != "committed" {
-		t.Fatalf("report=%v", report)
+		t.Fatalf("Отчёт=%v", report)
 	}
 	if raw, _ := os.ReadFile(filepath.Join(live, "replace.txt")); string(raw) != "new" {
 		t.Fatalf("replace.txt=%q", raw)

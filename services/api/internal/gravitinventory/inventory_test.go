@@ -105,7 +105,7 @@ func TestInventoryRejectsHostileZIP0333(t *testing.T) {
 			b := fixture0333(t, map[string]string{name: "payload"})
 			h := sha256.Sum256(b)
 			if _, e := Inspect(context.Background(), bytes.NewReader(b), int64(len(b)), hex.EncodeToString(h[:])); e == nil {
-				t.Fatalf("accepted %q", name)
+				t.Fatalf("Ошибочно принято значение %q", name)
 			}
 		})
 	}

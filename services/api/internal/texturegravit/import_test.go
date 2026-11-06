@@ -56,7 +56,7 @@ func TestIdentityMappingIsStrict02510(t *testing.T) {
 	}
 	for _, s := range []string{"../../x", "notuuid", "", strings.Repeat("a", 31)} {
 		if _, e := CanonicalUUID(s); e == nil {
-			t.Fatalf("accepted %q", s)
+			t.Fatalf("Ошибочно принято значение %q", s)
 		}
 	}
 	if _, e := LoadMappings([]byte(`[{"source_uuid":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","target_uuid":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},{"source_uuid":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","target_uuid":"cccccccc-cccc-cccc-cccc-cccccccccccc"}]`)); e == nil {
@@ -67,7 +67,7 @@ func TestObjectKeyValidation02510(t *testing.T) {
 	for _, key := range []string{"../etc/passwd", "foo/../bar", "/absolute", "a\\b", "a//b", "a/%evil"} {
 		if key != "a/%evil" {
 			if ValidateObjectKey(key) == nil {
-				t.Fatalf("accepted %q", key)
+				t.Fatalf("Ошибочно принято значение %q", key)
 			}
 		}
 	}

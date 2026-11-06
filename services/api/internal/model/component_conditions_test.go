@@ -29,7 +29,7 @@ func TestConditionalResolverEndToEnd0244(t *testing.T) {
 	// Ни пресет, ни значение по умолчанию не выбирают performance; требуется
 	// только Core.
 	if !reflect.DeepEqual(selected, []string{"core", "performance.sodium"}) {
-		t.Fatalf("unexpected selection %v", selected)
+		t.Fatalf("Неожиданный выбор: %v", selected)
 	}
 	selected, err = ResolveCatalogConditional0244(updated, "quality", env)
 	if err != nil || !reflect.DeepEqual(selected, []string{"core", "performance.sodium", "shaders"}) {

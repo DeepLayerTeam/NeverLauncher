@@ -59,7 +59,7 @@ func TestMissingCoreStateFailsClosed(t *testing.T) {
 func TestPGStagingMigration(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PG_TEST_DSN")
 	if dsn == "" {
-		t.Skip("isolated PostgreSQL test DB not configured")
+		t.Skip("Изолированная тестовая база PostgreSQL не настроена")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()

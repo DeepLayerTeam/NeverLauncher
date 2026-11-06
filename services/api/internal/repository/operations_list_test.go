@@ -34,16 +34,16 @@ func TestListProjectOperations02110IsolationPaginationAndStatus(t *testing.T) {
 		t.Fatalf("second page %#v: %v", two, err)
 	}
 	if one[0].ID == two[0].ID {
-		t.Fatal("pagination duplicates entries")
+		t.Fatal("Постраничная выдача дублирует записи")
 	}
 	for _, j := range append(one, two...) {
 		if j.ProjectID != "alpha" {
-			t.Fatal("other project leaked")
+			t.Fatal("Раскрыты данные другого проекта")
 		}
 	}
 	none, err := repo.ListProjectOperations(ctx, "alpha", "succeeded", 10, 0)
 	if err != nil || len(none) != 0 {
-		t.Fatalf("unexpected succeeded jobs: %+v %v", none, err)
+		t.Fatalf("Неожиданные успешно завершённые задания: %+v %v", none, err)
 	}
 	other, err := repo.ListProjectOperations(ctx, "beta", "", 10, 0)
 	if err != nil || len(other) != 1 {

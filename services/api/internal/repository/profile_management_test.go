@@ -26,7 +26,7 @@ func TestExclusiveProfileCreationAndHistory0225(t *testing.T) {
 		t.Fatalf("Недопустимая первая ревизия: %+v", actual)
 	}
 	if _, err := r.CreateProfileExclusive0225(p); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected duplicate conflict: %v", err)
+		t.Fatalf("Ожидался конфликт дублирования: %v", err)
 	}
 	history, err := r.ListProfileRevisions("demo-project", "vanilla-copy")
 	if err != nil || len(history) != 1 || history[0].Digest != actual.Digest {
@@ -50,7 +50,7 @@ func TestExclusiveProfileCreationAndHistory0225(t *testing.T) {
 	}
 	old, err := ReadProfileSnapshot(r, "demo-project", "vanilla-copy")
 	if err != nil || old.Spec.Name != "Copy" {
-		t.Fatalf("clone mutated with source %v %+v", err, old)
+		t.Fatalf("Копия изменилась вместе с источником: %v %+v", err, old)
 	}
 }
 
@@ -84,11 +84,11 @@ func TestConcurrentExclusiveProfileCreation0225(t *testing.T) {
 	found, _ := r.ListProfiles("demo-project")
 	for _, item := range found {
 		if item.ID == "race" && item.IsDefault {
-			t.Fatal("new profile inherited default role")
+			t.Fatal("Новый профиль унаследовал роль по умолчанию")
 		}
 	}
 	history, err := r.ListProfileRevisions("demo-project", "race")
 	if err != nil || len(history) != 1 {
-		t.Fatalf("duplicate revisions %v %+v", err, history)
+		t.Fatalf("Повторяющиеся ревизии: %v %+v", err, history)
 	}
 }

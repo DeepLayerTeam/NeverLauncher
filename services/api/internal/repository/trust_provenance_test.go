@@ -17,10 +17,10 @@ func TestLegacyProvenanceDowngradedOnDeviceWrite0311(t *testing.T) {
 		t.Fatal(err)
 	}
 	if normalized.RemoteHardwareProvenance != "not-verified" {
-		t.Fatalf("legacy self-asserted provenance elevated: %+v", normalized)
+		t.Fatalf("Повышен уровень доверия к устаревшему неподтверждённому происхождению: %+v", normalized)
 	}
 	original.RemoteHardwareProvenance = "unknown-with-malicious-value"
 	if _, err := normalizeTrustedDevice0121(original); err == nil {
-		t.Fatal("malformed provenance should be rejected")
+		t.Fatal("Некорректное происхождение должно отклоняться")
 	}
 }

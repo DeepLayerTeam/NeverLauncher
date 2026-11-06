@@ -56,6 +56,6 @@ func TestRecoverOriginalOperation0388(t *testing.T) {
 	}
 	original, err := repo.FindOperationByKey(context.Background(), input.Kind, input.ActorID, input.IdempotencyKey)
 	if err != nil || original.ID != saved.ID {
-		t.Fatalf("journal mutated: %+v %v", original, err)
+		t.Fatalf("Журнал был изменён: %+v %v", original, err)
 	}
 }

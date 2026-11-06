@@ -46,18 +46,18 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 		t.Fatalf("dry-run: count=%d err=%v", count, err)
 	}
 	if _, err := r.GetUser(key); err == nil {
-		t.Fatal("dry-run committed accounts")
+		t.Fatal("Пробный запуск сохранил учётные записи")
 	}
 	if _, err := r.ImportFileAuth0295(ctx, []fileauth.Account{account}, false); err != nil {
 		t.Fatal(err)
 	}
 	user, err := r.GetUser(key)
 	if err != nil || user.Email != account.Email || user.RoleID != "player" || user.PasswordHash != hash {
-		t.Fatalf("persisted user: %+v %v", user, err)
+		t.Fatalf("Сохранённый пользователь: %+v %v", user, err)
 	}
 	identity, err := r.GetAuthIdentityByIssuer("local", "launcher", key)
 	if err != nil || identity.UserID != key {
-		t.Fatalf("missing real local identity: %+v %v", identity, err)
+		t.Fatalf("Отсутствует настоящая локальная личность: %+v %v", identity, err)
 	}
 	profile, err := r.GetMinecraftProfileByUser(key)
 	if err != nil || profile.UUID != uuid || profile.Name != name {
@@ -70,15 +70,15 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 		t.Fatal("Повторный импорт неожиданно принят")
 	}
 	if _, err := r.GetUser("gravit-fileauth-8af62031233343338333000000000099"); err == nil {
-		t.Fatal("partial commit after collision")
+		t.Fatal("После конфликта частично сохранились изменения")
 	}
 	if ok, err := r.ReplacePasswordIfMatch0295(ctx, key, "wrong", "$argon2id$v=19$dummy"); err != nil || ok {
-		t.Fatalf("CAS ignored expected hash: %v %v", ok, err)
+		t.Fatalf("CAS проигнорировал ожидаемый хеш: %v %v", ok, err)
 	}
 	if ok, err := r.ReplacePasswordIfMatch0295(ctx, key, hash, "$argon2id$v=19$dummy"); err != nil || !ok {
-		t.Fatalf("CAS password upgrade: %v %v", ok, err)
+		t.Fatalf("Обновление пароля с CAS: %v %v", ok, err)
 	}
 	if ok, err := r.ReplacePasswordIfMatch0295(ctx, key, hash, "$argon2id$v=19$dummy2"); err != nil || ok {
-		t.Fatalf("stale credential rewrote upgraded password: %v %v", ok, err)
+		t.Fatalf("Устаревшие учётные данные перезаписали обновлённый пароль: %v %v", ok, err)
 	}
 }

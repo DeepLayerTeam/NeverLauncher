@@ -17,10 +17,10 @@ func TestOneTimeJoinTicket0143CSPRNGIdentifier(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !strings.HasPrefix(id, "jt_") || len(id) < 32 {
-			t.Fatalf("unexpected ticket id shape: %q", id)
+			t.Fatalf("Неожиданный формат идентификатора билета: %q", id)
 		}
 		if _, ok := seen[id]; ok {
-			t.Fatalf("duplicate CSPRNG ticket id: %s", id)
+			t.Fatalf("Повторяющийся идентификатор билета, созданного криптографическим генератором: %s", id)
 		}
 		seen[id] = struct{}{}
 	}
@@ -44,7 +44,7 @@ func TestOneTimeJoinTicket0143BindsIdentityAndConsumesExactlyOnce(t *testing.T) 
 
 	wrong := model.ServerBridgeJoinRedemption{NodeID: "paper-0143", IdentityEpoch: 8, KeyFingerprint: fingerprint, NonceHash: strings.Repeat("1", 64)}
 	if _, ok := store.consumeJoinV2(join, wrong); ok {
-		t.Fatal("ticket accepted a different node identity epoch")
+		t.Fatal("Билет ошибочно принял другую эпоху личности узла")
 	}
 
 	proofs := []model.ServerBridgeJoinRedemption{
@@ -72,10 +72,10 @@ func TestOneTimeJoinTicket0143BindsIdentityAndConsumesExactlyOnce(t *testing.T) 
 		}
 	}
 	if allowed != 1 {
-		t.Fatalf("expected exactly one ticket redemption, got %d", allowed)
+		t.Fatalf("Ожидалось ровно одно погашение билета, получено %d", allowed)
 	}
 	stored := store.joins[store.joinKey(join.Username, join.ServerID)]
 	if stored.Status != "consumed" || stored.ConsumedAt.IsZero() || stored.RedeemedIdentityEpoch != 7 || stored.RedeemedKeyFingerprint != fingerprint || len(stored.RedeemedNonceHash) != 64 {
-		t.Fatalf("redemption audit proof was not persisted: %+v", stored)
+		t.Fatalf("Аудиторское подтверждение погашения билета не сохранено: %+v", stored)
 	}
 }

@@ -15,7 +15,7 @@ func TestExtensionHTMLCSPPrecedesUntrustedMarkup0356(t *testing.T) {
 		pos := strings.Index(got, dangerous)
 		csp := strings.Index(got, `http-equiv="Content-Security-Policy"`)
 		if csp < 0 || pos < 0 || csp > pos || !strings.Contains(got, "connect-src 'none'") || !strings.Contains(got, "form-action 'none'") || !strings.Contains(got, "worker-src 'none'") {
-			t.Fatalf("CSP was not installed before untrusted input: %q", got)
+			t.Fatalf("Политика CSP не была установлена до обработки недоверенного ввода: %q", got)
 		}
 	}
 }

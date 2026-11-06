@@ -17,7 +17,7 @@ import (
 func signedComponentFixture02310(t *testing.T) (string, componentUpdateManifest0157, string, string) {
 	t.Helper()
 	if runtime.GOOS != "linux" {
-		t.Skip("ELF integration fixture runs on Linux")
+		t.Skip("Интеграционное тестовое окружение ELF работает только в Linux")
 	}
 	binary, err := os.Executable()
 	if err != nil {
@@ -166,7 +166,7 @@ func TestCoordinatedPackageCommitAndFailure02310(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report["status"] != "committed" {
-		t.Fatalf("status=%v", report)
+		t.Fatalf("Статус=%v", report)
 	}
 	for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
 		if err := verifyUpdaterFile0156(filepath.Join(installRoot, item.TargetPath), item.Size, item.SHA256); err != nil {

@@ -15,7 +15,7 @@ import (
 func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
 	dsn := os.Getenv("TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("set TEST_POSTGRES_DSN for isolated PostgreSQL integration tests")
+		t.Skip("Для изолированных интеграционных тестов PostgreSQL задайте TEST_POSTGRES_DSN")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -42,10 +42,10 @@ func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first.MinecraftUUID != uuid || first.MinecraftName != "FirstName" {
-		t.Fatalf("unexpected first binding %#v", first)
+		t.Fatalf("Неожиданная первая привязка: %#v", first)
 	}
 	if _, err := repo.UpsertOfficialLink0268(ctx, b, uuid, "Stolen"); !errors.Is(err, ErrOfficialLinkOwned0268) {
-		t.Fatalf("expected ownership conflict, got %v", err)
+		t.Fatalf("Ожидался конфликт владения, получено %v", err)
 	}
 	mine, err := repo.ListOfficialLinks0268(ctx, a)
 	if err != nil || len(mine) != 1 {
@@ -56,11 +56,11 @@ func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
 		t.Fatalf("other owner list: %#v %v", other, err)
 	}
 	if err := repo.RemoveOfficialLink0268(ctx, b, uuid); !errors.Is(err, ErrOfficialLinkAbsent0268) {
-		t.Fatalf("wrong owner deletion: %v", err)
+		t.Fatalf("Удаление записи неверного владельца: %v", err)
 	}
 	renamed, err := repo.UpsertOfficialLink0268(ctx, a, uuid, "NewName")
 	if err != nil || renamed.MinecraftName != "NewName" {
-		t.Fatalf("same owner rename: %#v %v", renamed, err)
+		t.Fatalf("Переименование у того же владельца: %#v %v", renamed, err)
 	}
 	if err := repo.RemoveOfficialLink0268(ctx, a, uuid); err != nil {
 		t.Fatal(err)

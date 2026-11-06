@@ -104,7 +104,7 @@ func registerTestPasskey117(t *testing.T, h http.Handler, token string) (string,
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(rr.Body.Bytes(), &complete); err != nil || complete.Data.AccessToken == "" {
-		t.Fatalf("passkey access token missing: %v %s", err, rr.Body.String())
+		t.Fatalf("Отсутствует токен доступа для ключа входа: %v %s", err, rr.Body.String())
 	}
 	return complete.Data.AccessToken, testPasskey117{key: key, credential: cred, userHandle: userHandle, rpID: rpID, origin: origin}
 }
@@ -171,10 +171,10 @@ func passkeyLogin117(t *testing.T, h http.Handler, fixture testPasskey117) strin
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil || out.Data.Tokens.AccessToken == "" || out.Data.AuthStrength != "phishing-resistant" {
-		t.Fatalf("passkey login payload invalid: %v %s", err, rr.Body.String())
+		t.Fatalf("Некорректные данные входа по ключу доступа: %v %s", err, rr.Body.String())
 	}
 	if out.Data.Session.Provider != "passkey" || out.Data.Session.IdentityID != "" {
-		t.Fatalf("passwordless passkey must not fabricate local identity: provider=%q identity=%q body=%s", out.Data.Session.Provider, out.Data.Session.IdentityID, rr.Body.String())
+		t.Fatalf("Вход по ключу доступа без пароля не должен создавать фиктивную локальную личность: провайдер=%q, личность=%q, ответ=%s", out.Data.Session.Provider, out.Data.Session.IdentityID, rr.Body.String())
 	}
 	return out.Data.Tokens.AccessToken
 }
@@ -184,7 +184,7 @@ func TestPasskeyRegistrationAndPasswordlessLogin117(t *testing.T) {
 	passwordToken := loginAdmin(t, h)
 	stepped, fixture := registerTestPasskey117(t, h, passwordToken)
 	if stepped == passwordToken {
-		t.Fatal("step-up must mint a new access token")
+		t.Fatal("Дополнительная проверка должна выдавать новый токен доступа")
 	}
 	_ = passkeyLogin117(t, h, fixture)
 }
@@ -282,7 +282,7 @@ func TestPhishingResistantPolicyBlocksSessionUntilPasskey117(t *testing.T) {
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusAccepted {
-		t.Fatalf("password login must pause for passkey => %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("Вход по паролю должен приостанавливаться для проверки ключа доступа => %d %s", rr.Code, rr.Body.String())
 	}
 	var pending struct {
 		Data struct {

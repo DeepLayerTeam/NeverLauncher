@@ -18,7 +18,7 @@ func TestOfficialProviderPolicyGate02611(t *testing.T) {
 	w := httptest.NewRecorder()
 	got, ok := server.officialProviderPolicy02611(w, req, "browser")
 	if !ok || got.ClientID == "" {
-		t.Fatalf("env-backed policy not applied: %d", w.Code)
+		t.Fatalf("Политика из переменных окружения не применена: %d", w.Code)
 	}
 	got.BrowserEnabled = false
 	if _, err := repo.SaveOfficialProvider02611(context.Background(), 0, got, "admin", "disable browser login"); err != nil {
@@ -27,12 +27,12 @@ func TestOfficialProviderPolicyGate02611(t *testing.T) {
 	w = httptest.NewRecorder()
 	_, ok = server.officialProviderPolicy02611(w, req, "browser")
 	if ok || w.Code != 403 {
-		t.Fatalf("browser flow should be forbidden: %v %d", ok, w.Code)
+		t.Fatalf("Браузерный сценарий должен быть запрещён: %v %d", ok, w.Code)
 	}
 	w = httptest.NewRecorder()
 	_, ok = server.officialProviderPolicy02611(w, req, "device")
 	if !ok {
-		t.Fatalf("device fallback unexpectedly disabled: %d", w.Code)
+		t.Fatalf("Резервный способ входа через устройство неожиданно отключён: %d", w.Code)
 	}
 }
 func TestOfficialProviderPayloadValidation02611(t *testing.T) {

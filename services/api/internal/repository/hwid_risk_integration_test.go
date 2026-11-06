@@ -60,13 +60,13 @@ func TestHWIDRiskPostgresCrossReplica0299(t *testing.T) {
 	}
 	got, err = a.GetHWID0299(ctx, userID, deviceID, now.Add(4*time.Second))
 	if err != nil || got.State != "recognized" || got.Baseline != hint2 {
-		t.Fatalf("not recovered: %#v %v", got, err)
+		t.Fatalf("Восстановление не выполнено: %#v %v", got, err)
 	}
 	if err := b.ForgetHWID0299(ctx, userID, deviceID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.GetHWID0299(ctx, userID, deviceID, now); err != ErrNotFound {
-		t.Fatalf("not deleted across replicas: %v", err)
+		t.Fatalf("Не удалено во всех репликах: %v", err)
 	}
 }
 
@@ -103,7 +103,7 @@ func TestHWIDPostgresStaleAppealAndHardwareChange0433(t *testing.T) {
 	}
 	old, err := a.ObserveHWID0299(ctx, userID, deviceID, x, now.Add(2*time.Second))
 	if err != nil || old.State != "changed" || old.Pending != y {
-		t.Fatalf("baseline replay succeeded: %#v %v", old, err)
+		t.Fatalf("Повторное воспроизведение исходного состояния ошибочно удалось: %#v %v", old, err)
 	}
 	appeal := HWIDAppeal0299{ID: "hwid-appeal-" + suffix, UserID: userID, DeviceID: deviceID, Reason: "Hardware replaced", CreatedAt: now.Add(3 * time.Second)}
 	if err := a.SubmitHWIDAppeal0299(ctx, appeal); err != nil {
@@ -113,10 +113,10 @@ func TestHWIDPostgresStaleAppealAndHardwareChange0433(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := a.ResolveHWIDAppeal0299(ctx, appeal.ID, "admin", "approved", now.Add(5*time.Second)); err != ErrConflict {
-		t.Fatalf("stale appeal accepted: %v", err)
+		t.Fatalf("Ошибочно принято устаревшее обращение: %v", err)
 	}
 	if _, err := a.ConfirmHWID0299(ctx, userID, deviceID, y, now.Add(5*time.Second)); err != ErrNotFound {
-		t.Fatalf("CAS stale confirmation accepted: %v", err)
+		t.Fatalf("CAS ошибочно принял устаревшее подтверждение: %v", err)
 	}
 	if _, err := b.ConfirmHWID0299(ctx, userID, deviceID, z, now.Add(6*time.Second)); err != nil {
 		t.Fatal(err)

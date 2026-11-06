@@ -27,7 +27,7 @@ func TestAccessLog0459PreservesCorrelationAndStatus(t *testing.T) {
 	handler.ServeHTTP(result, req)
 	id := result.Header().Get("X-Correlation-ID")
 	if len(id) != 32 || id == "spoofed" {
-		t.Fatalf("unexpected id %q", id)
+		t.Fatalf("Неожиданный идентификатор: %q", id)
 	}
 	var record map[string]any
 	if err := json.Unmarshal(stream.Bytes(), &record); err != nil {

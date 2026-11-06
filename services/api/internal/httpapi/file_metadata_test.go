@@ -21,11 +21,11 @@ func TestReleaseFileMetadataNormalizesTargetOS(t *testing.T) {
 	}
 	want := []string{"linux", "osx", "windows"}
 	if len(targets) != len(want) {
-		t.Fatalf("unexpected targets: %#v", targets)
+		t.Fatalf("Неожиданные целевые платформы: %#v", targets)
 	}
 	for i := range want {
 		if targets[i] != want[i] {
-			t.Fatalf("unexpected targets: %#v", targets)
+			t.Fatalf("Неожиданные целевые платформы: %#v", targets)
 		}
 	}
 }

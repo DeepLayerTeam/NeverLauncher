@@ -44,7 +44,7 @@ func TestServerBridgeGA0200OverviewAndPublicMatrix(t *testing.T) {
 	body := res.Body.String()
 	for _, want := range []string{`"release":"ServerBridge 3 GA"`, `"status":"ga-frozen"`, `"v2Mode":"compatibility-deprecated"`, `"featureDigest":"` + serverBridgeV3FrozenFeatureDigest0200 + `"`, `"nodes":`, `"topology":`, `"control":`, `"audit":`} {
 		if !strings.Contains(body, want) {
-			t.Fatalf("overview missing %s: %s", want, body)
+			t.Fatalf("В обзоре отсутствует %s: %s", want, body)
 		}
 	}
 

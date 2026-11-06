@@ -43,7 +43,7 @@ exit 0`)
 	}
 	joined := strings.Join(command, " ")
 	if !strings.Contains(joined, "-Xms128M -Xmx256M -jar "+jar+" nogui") {
-		t.Fatalf("command=%q", joined)
+		t.Fatalf("Команда=%q", joined)
 	}
 }
 
@@ -98,7 +98,7 @@ exit 0`)
 
 func TestServerBridgeHostStopSupervisedProcess01910(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("test fixture uses POSIX signals")
+		t.Skip("Для тестового окружения требуются сигналы POSIX")
 	}
 	root := t.TempDir()
 	jar := filepath.Join(root, "paper.jar")

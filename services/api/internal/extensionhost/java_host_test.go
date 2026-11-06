@@ -74,14 +74,14 @@ func TestJavaRPCLimitAndMethodWhitelist0304(t *testing.T) {
 func javaHostFixture0304(t *testing.T) (*Supervisor, model.ExtensionInstall, Key) {
 	t.Helper()
 	if runtime.GOOS != "linux" {
-		t.Skip("Linux process-group supervisor test")
+		t.Skip("Проверка супервизора групп процессов Linux")
 	}
 	source := os.Getenv("LAUNCHER_TEST_JAVA_HOST_JAR")
 	if source == "" {
-		t.Skip("set LAUNCHER_TEST_JAVA_HOST_JAR to the built Java host example")
+		t.Skip("Укажите собранный пример Java-хоста в LAUNCHER_TEST_JAVA_HOST_JAR")
 	}
 	if _, err := exec.LookPath("java"); err != nil {
-		t.Skip("Java 17+ runtime not installed")
+		t.Skip("Среда выполнения Java 17+ не установлена")
 	}
 	bytes, err := os.ReadFile(source)
 	if err != nil {
@@ -158,10 +158,10 @@ func TestJavaHostSubprocessRPCAndCLI0304(t *testing.T) {
 	}
 	res, err := host.RunCLI0209(ctx, install, []string{"status"})
 	if err != nil {
-		t.Fatalf("Java CLI: %v stdout=%s stderr=%s", err, res.Stdout, res.Stderr)
+		t.Fatalf("Командный интерфейс Java: %v, stdout=%s, stderr=%s", err, res.Stdout, res.Stderr)
 	}
 	if !strings.Contains(res.Stdout, `"running":true`) {
-		t.Fatalf("Java CLI did not execute start(): %s", res.Stdout)
+		t.Fatalf("Java CLI не вызвал start(): %s", res.Stdout)
 	}
 	if err := host.Stop(ctx, key); err != nil {
 		t.Fatal(err)
@@ -197,7 +197,7 @@ func TestJavaHostHungCallbacksDoNotBlockGoSupervisor0304(t *testing.T) {
 		select {
 		case <-ticker.C:
 		case <-deadline:
-			t.Fatalf("hung JVM was not terminated by Go supervisor: %+v", state)
+			t.Fatalf("Зависшая JVM не была завершена супервизором Go: %+v", state)
 		}
 	}
 }

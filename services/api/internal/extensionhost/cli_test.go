@@ -18,10 +18,10 @@ import (
 
 func TestCLIExtensionRunsThroughAuthenticatedHostProtocol0209(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("python shebang fixture is unix-only")
+		t.Skip("Тестовый сценарий Python с shebang предназначен только для Unix")
 	}
 	if _, err := exec.LookPath("python3"); err != nil {
-		t.Skip("python3 unavailable")
+		t.Skip("Python 3 недоступен")
 	}
 	root := t.TempDir()
 	repo := repository.NewMemoryRepository("http://localhost")
@@ -69,16 +69,16 @@ print(json.dumps({"command":sys.argv[1],"target":os.environ.get("LAUNCHER_EXTENS
 		t.Fatalf("RunCLI0209: %v / %#v", err, result)
 	}
 	if result.ExitCode != 0 || !strings.Contains(result.Stdout, `"target": "cli"`) || !strings.Contains(result.Stdout, `"dbSecretPresent": false`) {
-		t.Fatalf("unexpected result: %#v", result)
+		t.Fatalf("Неожиданный результат: %#v", result)
 	}
 }
 
 func TestLifecycleStopTerminatesTransientCLI0209(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("python shebang fixture is unix-only")
+		t.Skip("Тестовый сценарий Python с shebang предназначен только для Unix")
 	}
 	if _, err := exec.LookPath("python3"); err != nil {
-		t.Skip("python3 unavailable")
+		t.Skip("Python 3 недоступен")
 	}
 	root := t.TempDir()
 	repo := repository.NewMemoryRepository("http://localhost")

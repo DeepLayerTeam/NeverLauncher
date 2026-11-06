@@ -48,11 +48,11 @@ func TestLiveVerificationRejectsRevokedCutoverAndChangedReview0450(t *testing.T)
 	raw, _ := json.Marshal(report)
 	report.ReportSHA256 = hash(raw)
 	if err := verifyLiveReference(context.Background(), b, p, "test-token"); err == nil {
-		t.Fatal("revoked cutover accepted")
+		t.Fatal("Ошибочно принято отозванное переключение")
 	}
 	report = sampleReport(t, sourceSHA)
 	review.ReviewedBy = "different"
 	if err := verifyLiveReference(context.Background(), b, p, "test-token"); err == nil {
-		t.Fatal("changed operator review accepted")
+		t.Fatal("Ошибочно принят изменённый отчёт оператора")
 	}
 }

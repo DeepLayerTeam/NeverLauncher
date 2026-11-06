@@ -14,10 +14,10 @@ func TestSQLiteCoordinatorFailClosed0374(t *testing.T) {
 	state := NewRuntimeState()
 	cfg := config.Config{RepositoryDriver: "sqlite", DatabaseDSN: filepath.Join(t.TempDir(), "http.db")}
 	if err := state.ConfigureProductRuntime(cfg); err == nil || !strings.Contains(err.Error(), "coordinator") {
-		t.Fatalf("missing coordinator must fail closed: %v", err)
+		t.Fatalf("При отсутствии координатора операция должна блокироваться: %v", err)
 	}
 	cfg.SQLiteCoordinatorPath = cfg.DatabaseDSN
 	if err := state.ConfigureProductRuntime(cfg); err == nil || !strings.Contains(err.Error(), "distinct") {
-		t.Fatalf("overlapping writer locks must fail: %v", err)
+		t.Fatalf("Пересекающиеся блокировки записи должны приводить к отказу: %v", err)
 	}
 }

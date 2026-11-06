@@ -43,13 +43,13 @@ func TestFactoryPackageVerified0280(t *testing.T) {
 	}
 	defer z.Close()
 	if len(z.File) != 2 {
-		t.Fatalf("expected 2 files, got %d", len(z.File))
+		t.Fatalf("Ожидалось 2 файла, получено %d", len(z.File))
 	}
 	if err := os.WriteFile(filepath.Join(client, "mod.jar"), []byte("corruption"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := factoryPackageVerified0280(root, client, plan); err == nil {
-		t.Fatal("export accepted a modified client")
+		t.Fatal("Экспорт ошибочно принял изменённый клиент")
 	}
 	if err := os.WriteFile(filepath.Join(client, "mod.jar"), payload, 0600); err != nil {
 		t.Fatal(err)
@@ -61,7 +61,7 @@ func TestFactoryPackageVerified0280(t *testing.T) {
 		t.Skipf("символические ссылки недоступны: %v", err)
 	}
 	if _, err := factoryPackageVerified0280(root, client, plan); err == nil {
-		t.Fatal("export accepted a symlink")
+		t.Fatal("Экспорт ошибочно принял символическую ссылку")
 	}
 }
 func TestFactoryPackageVerified0280RejectsTraversal(t *testing.T) {

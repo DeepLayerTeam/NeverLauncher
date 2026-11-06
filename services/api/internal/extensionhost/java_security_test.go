@@ -45,7 +45,7 @@ func TestJavaResourceLimits04811(t *testing.T) {
 	s := &Supervisor{cfg: Config{MaxMemoryBytes: 512 << 20}.normalized()}
 	cmd, err := s.javaCommand0304("module.jar", nil)
 	if err != nil {
-		t.Skipf("no Java runtime available: %v", err)
+		t.Skipf("Среда выполнения Java недоступна: %v", err)
 	}
 	args := strings.Join(cmd.Args, " ")
 	for _, flag := range []string{"-Xmx204m", "-XX:MaxMetaspaceSize=102m", "-XX:MaxDirectMemorySize=51m", "-XX:ReservedCodeCacheSize=51m", "-XX:+DisableAttachMechanism", "-XX:-CreateCoredumpOnCrash"} {

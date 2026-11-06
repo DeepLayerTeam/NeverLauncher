@@ -71,7 +71,7 @@ func installTwoSignedReleases0527(t *testing.T) (Options, *installation, record,
 
 func TestInstallerRollbackPreviousSignedRelease0527(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("shell test fixture is POSIX")
+		t.Skip("Для тестового сценария оболочки требуется POSIX")
 	}
 	opts, i, first, second := installTwoSignedReleases0527(t)
 	save := filepath.Join(opts.Root, "profiles", "project", "saves", "world.dat")
@@ -110,7 +110,7 @@ func TestInstallerRollbackPreviousSignedRelease0527(t *testing.T) {
 
 func TestInstallerRollbackRejectsCorruptPriorPackage0527(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("shell test fixture is POSIX")
+		t.Skip("Для тестового сценария оболочки требуется POSIX")
 	}
 	opts, i, first, second := installTwoSignedReleases0527(t)
 	binary := filepath.Join(i.base, "releases", first.Release, binaryName())
@@ -128,7 +128,7 @@ func TestInstallerRollbackRejectsCorruptPriorPackage0527(t *testing.T) {
 
 func TestInstallerRollbackCancellationNeverActivates0527(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("shell test fixture is POSIX")
+		t.Skip("Для тестового сценария оболочки требуется POSIX")
 	}
 	opts, i, _, second := installTwoSignedReleases0527(t)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -144,7 +144,7 @@ func TestInstallerRollbackCancellationNeverActivates0527(t *testing.T) {
 
 func TestInstallerRollbackRejectsAbsentPreviousGeneration0527(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("shell test fixture is POSIX")
+		t.Skip("Для тестового сценария оболочки требуется POSIX")
 	}
 	opts := signedBundle(t, t.TempDir(), true)
 	if err := Install(context.Background(), opts); err != nil {

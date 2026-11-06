@@ -16,15 +16,15 @@ func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
 	payload := bytes.Repeat([]byte{0x00, 0xff, 0x01, 0x89}, 3<<20) // 12 МиБ — больше прежнего буфера на 8 МиБ
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/projects/one/versions/two/files" {
-			t.Errorf("path %s", r.URL.Path)
+			t.Errorf("Путь %s", r.URL.Path)
 			w.WriteHeader(404)
 			return
 		}
 		if r.Header.Get("Authorization") != "Bearer test" || r.Header.Get("Idempotency-Key") != "upload-1" || r.Header.Get("Content-Type") != "multipart/form-data; boundary=fixed" {
-			t.Error("request headers")
+			t.Error("Заголовки запроса")
 		}
 		if r.URL.Query().Get("source") != "integration" {
-			t.Error("query params")
+			t.Error("Параметры запроса")
 		}
 		b, err := io.ReadAll(r.Body)
 		if err != nil || !bytes.Equal(b, payload) {
@@ -46,7 +46,7 @@ func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
 	var limited bytes.Buffer
 	_, err = c.RequestStream(context.Background(), "POST", "/api/v1/admin/projects/one/versions/two/files", url.Values{"source": {"integration"}}, bytes.NewReader(payload), "multipart/form-data; boundary=fixed", &limited, 100, "upload-1")
 	if err == nil || !strings.Contains(err.Error(), "size limit") {
-		t.Fatalf("limit bypass: %v", err)
+		t.Fatalf("Обход ограничения: %v", err)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestStreamRejectsRedirectAndInvalidOptions0463(t *testing.T) {
 	_, err := c.RequestStream(context.Background(), "GET", "/api/v1/redirect", nil, nil, "", &out, 1024, "")
 	var apiErr *APIError
 	if !errors.As(err, &apiErr) || apiErr.Status != 307 {
-		t.Fatalf("redirect accepted: %v", err)
+		t.Fatalf("Ошибочно принято перенаправление: %v", err)
 	}
 	if _, err = c.RequestStream(context.Background(), "GET", "/api/v1/a", nil, nil, "", nil, 1024, ""); err == nil {
 		t.Fatal("Принят отсутствующий объект записи")

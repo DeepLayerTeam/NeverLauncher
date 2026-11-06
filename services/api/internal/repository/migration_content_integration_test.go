@@ -22,7 +22,7 @@ import (
 func TestMigrationContentAtomicReplay0337(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
@@ -84,7 +84,7 @@ func TestMigrationContentAtomicReplay0337(t *testing.T) {
 	}
 	plan, e := gc.Prepare(ctx, bytes.NewReader(buf.Bytes()), int64(buf.Len()), inventory, "profiles/demo.json", project, "imported-demo", "", "vanilla")
 	if e != nil || !plan.Ready {
-		t.Fatalf("fixture must be supported: %v %+v", e, plan.Blockers)
+		t.Fatalf("Тестовая конфигурация должна поддерживаться: %v %+v", e, plan.Blockers)
 	}
 	first, e := repo.EnsureMigrationContent0337(ctx, run.ID, "migration-owner", "stable", "migrated-1", plan)
 	if e != nil {
@@ -92,11 +92,11 @@ func TestMigrationContentAtomicReplay0337(t *testing.T) {
 	}
 	second, e := repo.EnsureMigrationContent0337(ctx, run.ID, "migration-owner", "stable", "migrated-1", plan)
 	if e != nil || second.ID != first.ID || second.Revision != first.Revision {
-		t.Fatalf("idempotent replay failed: %v", e)
+		t.Fatalf("Повторное идемпотентное выполнение завершилось ошибкой: %v", e)
 	}
 	persisted, workspace, e := repo.GetMigrationContent0337(ctx, run.ID, "profiles/demo.json")
 	if e != nil || workspace.ID != first.ID || persisted.FilesSHA256 != plan.FilesSHA256 {
-		t.Fatalf("receipt not durable: %v", e)
+		t.Fatalf("Квитанция не сохранена надёжно: %v", e)
 	}
 	changed := plan
 	changed.FilesSHA256 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
@@ -104,6 +104,6 @@ func TestMigrationContentAtomicReplay0337(t *testing.T) {
 		t.Fatalf("Повторное воспроизведение с изменённым источником ошибочно разрешено: %v", e)
 	}
 	if _, e = repo.EnsureMigrationContent0337(ctx, run.ID, "other-owner", "stable", "migrated-1", plan); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("owner hijack accepted: %v", e)
+		t.Fatalf("Ошибочно разрешён захват владения: %v", e)
 	}
 }

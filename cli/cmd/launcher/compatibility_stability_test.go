@@ -92,7 +92,7 @@ func TestMaterializationLockIsExclusive(t *testing.T) {
 
 func TestSecureClientDestinationRejectsSymlinkComponent(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("symlink creation requires privileges on some Windows runners")
+		t.Skip("На некоторых Windows-агентах для создания символических ссылок требуются привилегии")
 	}
 	root := t.TempDir()
 	outside := t.TempDir()
@@ -141,7 +141,7 @@ func TestReplaceFileAtomicPortableReplacesExisting(t *testing.T) {
 
 func TestClientPackageRejectsSymlinkArtifact(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("symlink creation requires privileges on some Windows runners")
+		t.Skip("На некоторых Windows-агентах для создания символических ссылок требуются привилегии")
 	}
 	root := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "outside.jar")

@@ -18,7 +18,7 @@ func TestExtensionRegistrySearchCLI0203(t *testing.T) {
 			t.Fatalf("path=%s", r.URL.Path)
 		}
 		if r.Method != http.MethodGet {
-			t.Fatalf("method=%s", r.Method)
+			t.Fatalf("Метод=%s", r.Method)
 		}
 		if r.Header.Get("Authorization") != "Bearer registry-token" {
 			t.Fatalf("authorization=%q", r.Header.Get("Authorization"))
@@ -62,7 +62,7 @@ func TestExtensionRegistryInstallCLI0203(t *testing.T) {
 			t.Fatalf("path=%s", r.URL.Path)
 		}
 		if r.Method != http.MethodPost {
-			t.Fatalf("method=%s", r.Method)
+			t.Fatalf("Метод=%s", r.Method)
 		}
 		var body map[string]string
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

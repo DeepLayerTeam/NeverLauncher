@@ -15,12 +15,12 @@ func TestMigrationModulesSignGate0338(t *testing.T) {
 	report.Blockers = []string{"modules/auth.jar blocked"}
 	report.Ready = false
 	if err := verifyModuleRelease0338(p, report); err == nil {
-		t.Fatal("unsafe module allowed to sign")
+		t.Fatal("Небезопасному модулю ошибочно разрешено подписывание")
 	}
 	report.Blockers = nil
 	report.Ready = true
 	report.InventorySHA256 = "wrong"
 	if err := verifyModuleRelease0338(p, report); err == nil {
-		t.Fatal("source repin allowed to sign")
+		t.Fatal("Ошибочно разрешено подписывание после смены закреплённого источника")
 	}
 }

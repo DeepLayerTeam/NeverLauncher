@@ -63,18 +63,18 @@ func TestConcurrentRevokedRecoveryOnlyOneKeyWins0435(t *testing.T) {
 		}
 	}
 	if won != 1 {
-		t.Fatalf("concurrent recoveries succeeded %d times, want one", won)
+		t.Fatalf("Параллельное восстановление завершилось успешно %d раз; ожидался один", won)
 	}
 	tombstone, err := repo.GetTrustedDevice(old.UserID, old.ID)
 	if err != nil || tombstone.Status != "revoked" || tombstone.ReplacedByDeviceID == "" {
-		t.Fatalf("old device was not kept revoked: %+v %v", tombstone, err)
+		t.Fatalf("Старое устройство не осталось отозванным: %+v %v", tombstone, err)
 	}
 	active := repo.ListTrustedDevices(old.UserID, "active")
 	if len(active) != 1 || active[0].ID != tombstone.ReplacedByDeviceID {
-		t.Fatalf("unexpected active device identities: %+v", active)
+		t.Fatalf("Неожиданные активные личности устройств: %+v", active)
 	}
 	if _, err := repo.SaveTrustedDevice(ctx, old); !errors.Is(err, ErrConflict) {
-		t.Fatalf("revoked key resurrected: %v", err)
+		t.Fatalf("Отозванный ключ восстановился: %v", err)
 	}
 }
 
@@ -100,17 +100,17 @@ func TestFailedSessionBindingCanRetryWithoutResurrectingKey0435(t *testing.T) {
 	}
 	oldRow, err := repo.GetTrustedDevice(old.UserID, old.ID)
 	if err != nil || oldRow.Status != "revoked" || oldRow.ReplacedByDeviceID != "" {
-		t.Fatalf("old trust was restored: %+v %v", oldRow, err)
+		t.Fatalf("Восстановлен прежний уровень доверия: %+v %v", oldRow, err)
 	}
 	failedRow, err := repo.GetTrustedDevice(old.UserID, failed.ID)
 	if err != nil || failedRow.Status != "revoked" {
-		t.Fatalf("failed candidate not revoked: %+v %v", failedRow, err)
+		t.Fatalf("Отклонённый кандидат не отозван: %+v %v", failedRow, err)
 	}
 	if _, err := repo.SaveTrustedDevice(ctx, failed); !errors.Is(err, ErrConflict) {
-		t.Fatalf("failed key resurrected: %v", err)
+		t.Fatalf("Отклонённый ключ снова активен: %v", err)
 	}
 	retry := recoveryKey0435(t, "retry-0435")
 	if _, _, err := repo.RecoverRevokedTrustedDeviceKey0435(ctx, old.UserID, old.ID, retry, time.Now().UTC()); err != nil {
-		t.Fatalf("new recovery after CAS failure denied: %v", err)
+		t.Fatalf("Новое восстановление после сбоя CAS отклонено: %v", err)
 	}
 }

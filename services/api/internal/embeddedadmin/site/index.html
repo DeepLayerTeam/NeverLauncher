@@ -152,7 +152,7 @@
           <label
             >Парольный формат Gravit FileAuth
             <select name="format">
-              <option value="">Без FileAuth (SQL only)</option>
+              <option value="">Без FileAuth (только SQL)</option>
               <option>sha256-hex</option>
               <option>sha256-base64url</option>
               <option>md5-hex</option>
@@ -169,7 +169,7 @@
             >Подтвердить ID запуска для импорта<input
               name="confirmRun"
               autocomplete="off"
-              placeholder="Точный Migration run ID"
+              placeholder="Точный идентификатор задачи миграции"
           /></label>
           <button id="migration-preview-credentials" type="button">
             Проверка авторизации (dry-run)</button
@@ -185,7 +185,7 @@
             Проверить применённый reset
           </button>
           <label
-            >Подтвердить точный ID запуска<input
+            >Подтвердить точный идентификатор задачи<input
               id="migration-security-run"
               autocomplete="off"
               placeholder="Идентификатор задачи миграции"
@@ -241,12 +241,12 @@
               value="migrated-1"
           /></label>
           <button id="migration-content-preview" type="button">
-            Проверить содержимое (dry-run)</button
+            Проверить содержимое (пробный запуск)</button
           ><button id="migration-content-status" type="button">
-            Прочитать сохранённый import
+            Показать сохранённый импорт
           </button>
           <label
-            >Подтвердить точный run ID<input
+            >Подтвердить точный идентификатор задачи<input
               id="migration-content-run"
               autocomplete="off"
           /></label>
@@ -254,7 +254,7 @@
             Перенести проверенные файлы
           </button>
           <button id="migration-content-optionals" type="button">
-            Применить optional catalog после сборки
+            Применить каталог необязательных компонентов после сборки
           </button>
         </fieldset>
         <fieldset id="migration-modules">
@@ -275,7 +275,7 @@
               placeholder="server/ServerWrapperConfig.json"
           /></label>
           <label
-            >Новый ServerBridge Node ID<input
+            >Новый идентификатор узла ServerBridge<input
               id="migration-modules-node"
               placeholder="my-server"
           /></label>
@@ -296,7 +296,7 @@
               placeholder="my-profile"
           /></label>
           <label
-            >НОВЫЙ Ed25519 publicKey (base64url; private key никогда не
+            >НОВЫЙ открытый ключ Ed25519 (base64url; private key никогда не
             отправляется)<input
               id="migration-modules-public-key"
               autocomplete="off"
@@ -307,7 +307,7 @@
             не используются</label
           >
           <label
-            >Подтвердить точный run ID<input
+            >Подтвердить точный идентификатор задачи<input
               id="migration-modules-confirm"
               autocomplete="off"
           /></label>
@@ -347,25 +347,25 @@
               id="migration-cutover-release"
           /></label>
           <label
-            >Текущая ревизия channel head<input
+            >Текущая ревизия указателя канала<input
               id="migration-cutover-head-revision"
               type="number"
               min="0"
               value="0"
           /></label>
           <label
-            >Stage ID успешной репетиции MIG10<input
+            >Идентификатор этапа успешной репетиции MIG10<input
               id="migration-cutover-stage-id"
           /></label>
           <label
-            >Подтверждение — точный migration run ID<input
+            >Подтверждение — точный идентификатор задачи миграции<input
               id="migration-cutover-confirm"
               autocomplete="off"
           /></label>
           <button id="migration-cutover-stage" type="button">
-            Stage (заморозить публикацию)</button
+            Подготовить этап (приостановить публикацию)</button
           ><button id="migration-cutover-list" type="button">
-            Проверить состояния cutover
+            Проверить состояния переключения
           </button>
           <p>
             Для activation введите ожидаемую ревизию cutover receipt (не channel
@@ -416,7 +416,7 @@
             ></textarea>
           </label>
           <label
-            >Опционально JSON сверенного Gravit snapshot после внешнего переноса
+            >Необязательный JSON сверенного снимка Gravit после внешнего переноса
             новых записей<textarea
               id="migration-rollback-source-snapshot"
               rows="5"
@@ -431,7 +431,7 @@
               id="migration-rollback-evidence-ref"
           /></label>
           <label
-            >SHA-256 доказательства актуального snapshot<input
+            >SHA-256 доказательства актуального снимка<input
               id="migration-rollback-evidence-sha"
           /></label>
           <label
@@ -483,7 +483,7 @@
               id="migration-rc-evidence-sha"
           /></label>
           <label
-            >Подтвердить точный run ID (MFA)<input
+            >Подтвердить точный идентификатор задачи (MFA)<input
               id="migration-rc-confirm"
               autocomplete="off"
           /></label>

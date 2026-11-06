@@ -13,7 +13,7 @@ import (
 func TestJavaManagerDiagnoseCLI0305(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/admin/extension-installs/example.java" || r.URL.Query().Get("diagnostics") != "1" || r.URL.Query().Get("scope") != "project" || r.URL.Query().Get("scopeId") != "p1" {
-			t.Errorf("request=%s %s", r.Method, r.URL.String())
+			t.Errorf("Запрос=%s %s", r.Method, r.URL.String())
 			http.Error(w, "bad", 400)
 			return
 		}

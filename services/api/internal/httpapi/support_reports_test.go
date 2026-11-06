@@ -31,7 +31,7 @@ func TestSupportReportValidation03510(t *testing.T) {
 	cases = append(cases, leak)
 	for _, bad := range cases {
 		if err := validateSupport03510(bad); err == nil {
-			t.Errorf("unsafe report accepted: %+v", bad)
+			t.Errorf("Ошибочно принят небезопасный отчёт: %+v", bad)
 		}
 	}
 }
@@ -57,7 +57,7 @@ func TestSupportReportSubmitRequiresLoginAndConsent03510(t *testing.T) {
 	resp = httptest.NewRecorder()
 	handler.ServeHTTP(resp, req)
 	if resp.Code != http.StatusCreated {
-		t.Fatalf("consented submission failed: %d %s", resp.Code, resp.Body.String())
+		t.Fatalf("Отправка с согласия пользователя завершилась ошибкой: %d %s", resp.Code, resp.Body.String())
 	}
 	var returned map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &returned); err != nil {
@@ -73,14 +73,14 @@ func TestSupportReportSubmitRequiresLoginAndConsent03510(t *testing.T) {
 	anonymous := httptest.NewRecorder()
 	handler.ServeHTTP(anonymous, httptest.NewRequest(http.MethodGet, "/api/v1/operations/support-reports", nil))
 	if anonymous.Code == http.StatusOK {
-		t.Fatal("anonymous operator inbox allowed")
+		t.Fatal("Ошибочно разрешён анонимный доступ к входящим сообщениям оператора")
 	}
 	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/operations/support-reports", nil)
 	listReq.Header.Set("Authorization", "Bearer "+token)
 	listResp := httptest.NewRecorder()
 	handler.ServeHTTP(listResp, listReq)
 	if listResp.Code != http.StatusOK || !strings.Contains(listResp.Body.String(), id) {
-		t.Fatalf("report not in operator inbox: %d %s", listResp.Code, listResp.Body.String())
+		t.Fatalf("Отчёт отсутствует во входящих сообщениях оператора: %d %s", listResp.Code, listResp.Body.String())
 	}
 
 }
@@ -94,7 +94,7 @@ func TestSupportReportRejectsUnknownFields03510(t *testing.T) {
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, req)
 	if response.Code != http.StatusBadRequest {
-		t.Fatalf("unknown field accepted: %d", response.Code)
+		t.Fatalf("Ошибочно принято неизвестное поле: %d", response.Code)
 	}
 }
 
@@ -106,11 +106,11 @@ func TestOperatorDiagnosticsDoesNotLeakInfrastructure03510(t *testing.T) {
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, req)
 	if response.Code != http.StatusOK {
-		t.Fatalf("operator export unavailable: %d", response.Code)
+		t.Fatalf("Экспорт для оператора недоступен: %d", response.Code)
 	}
 	for _, s := range []string{"storageLocalPath", "storageS3Endpoint", "backupRoot", "storageS3Bucket", "databaseDsn", "authTokenSecret", "publicUrl", "corsAllowedOrigins"} {
 		if strings.Contains(response.Body.String(), s) {
-			t.Errorf("sensitive configuration key leaked: %s", s)
+			t.Errorf("Произошла утечка конфиденциального ключа настройки: %s", s)
 		}
 	}
 }

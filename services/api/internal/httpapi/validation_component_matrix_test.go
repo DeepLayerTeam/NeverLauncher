@@ -25,7 +25,7 @@ func TestV08PublishedPresetsAndCompatiblePairs0348(t *testing.T) {
 	}, 1)
 	selections, unchecked, err := RequiredMatrixSelections0348(&cat)
 	if err != nil || unchecked != 0 || len(selections) != 6 {
-		t.Fatalf("wrong cases: %v / %d / %v", selections, unchecked, err)
+		t.Fatalf("Некорректные тестовые случаи: %v / %d / %v", selections, unchecked, err)
 	}
 	if !contains0348(selections, "minimal") || !contains0348(selections, "alpha-only") || !contains0348(selections, "beta-only") {
 		t.Fatalf("Опубликованный пресет отсутствует в матрице Runtime: %v", selections)

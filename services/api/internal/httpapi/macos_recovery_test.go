@@ -26,7 +26,7 @@ func TestMacOSRecoveryRejectsReuseAndRequiresFreshPasskey0316(t *testing.T) {
 	}
 	code, _ := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/key-recovery/begin", old.Access, payload)
 	if code != http.StatusPreconditionRequired {
-		t.Fatalf("missing fresh passkey: %d", code)
+		t.Fatalf("Отсутствует новый ключ доступа: %d", code)
 	}
 	claims, err := srv.verifyAdminToken(old.Access)
 	if err != nil {
@@ -53,24 +53,24 @@ func TestMacOSRecoveryRejectsReuseAndRequiresFreshPasskey0316(t *testing.T) {
 	payload["publicKey"] = base64.RawURLEncoding.EncodeToString(newPublic)
 	code, output := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/key-recovery/begin", access, payload)
 	if code != http.StatusOK {
-		t.Fatalf("valid recovery start: %d, %#v", code, output)
+		t.Fatalf("Корректное начало восстановления: %d, %#v", code, output)
 	}
 	begin := deviceTrustData0121(t, output)
 	signed := base64.RawURLEncoding.EncodeToString(ed25519.Sign(newPrivate, []byte(begin["signingPayload"].(string))))
 	complete := map[string]any{"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": signed}
 	code, output = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+old.ID+"/key-recovery/complete", access, complete)
 	if code != http.StatusOK {
-		t.Fatalf("recovery complete: %d, %#v", code, output)
+		t.Fatalf("Завершение восстановления: %d, %#v", code, output)
 	}
 	data := deviceTrustData0121(t, output)
 	recovered := data["device"].(map[string]any)
 	newID := recovered["id"].(string)
 	if newID == old.ID || recovered["assurance"] != "proof-of-possession" || recovered["attestationState"] != "unattested" {
-		t.Fatalf("new identity inherited old assurance or key: %#v", recovered)
+		t.Fatalf("Новая личность унаследовала прежний уровень доверия или ключ: %#v", recovered)
 	}
 	previous, err := repo.GetTrustedDevice(claims.Sub, old.ID)
 	if err != nil || previous.Status != "revoked" || previous.ReplacedByDeviceID != newID {
-		t.Fatalf("old identity not tombstoned: %+v %v", previous, err)
+		t.Fatalf("Старая личность не помечена как удалённая: %+v %v", previous, err)
 	}
 	// Погашенный challenge нельзя использовать дважды, как нельзя повторно заменить отозванный
 	// источник.

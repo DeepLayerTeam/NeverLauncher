@@ -86,10 +86,10 @@ func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 	}
 	result, err := repo.ReplaceTrustedDeviceKey(ctx, userID, oldID, sessionID, "recover", "device-key-recover", next, time.Now().UTC())
 	if err != nil {
-		t.Fatalf("recovery transaction: %v", err)
+		t.Fatalf("Транзакция восстановления: %v", err)
 	}
 	if result.OldDevice.Status != "revoked" || result.OldDevice.ReplacedByDeviceID != next.ID || result.NewDevice.AttestationState != "unattested" {
-		t.Fatalf("recovery incorrectly reused old trust: %+v", result)
+		t.Fatalf("Восстановление ошибочно повторно использовало прежние данные доверия: %+v", result)
 	}
 	var savedID, trust, status string
 	var epoch int64
@@ -97,7 +97,7 @@ func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 		t.Fatal(err)
 	}
 	if savedID != next.ID || trust != "verified" || status != "active" || epoch <= 1 {
-		t.Fatalf("rebound session not committed: %s %s %s %d", savedID, trust, status, epoch)
+		t.Fatalf("Повторно привязанный сеанс не сохранён: %s %s %s %d", savedID, trust, status, epoch)
 	}
 	replayPublic, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -106,9 +106,9 @@ func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 	digest := sha256.Sum256(replayPublic)
 	replay := model.TrustedDevice{ID: "replay-" + suffix, UserID: userID, Name: "Replay", Status: "active", TrustState: "verified", KeyAlgorithm: "ed25519", PublicKey: base64.RawURLEncoding.EncodeToString(replayPublic), KeyFingerprint: hex.EncodeToString(digest[:])}
 	if _, err := repo.ReplaceTrustedDeviceKey(ctx, userID, oldID, sessionID, "recover", "replay", replay, time.Now().UTC()); !errors.Is(err, ErrConflict) {
-		t.Fatalf("already recovered tombstone accepted a second replacement: %v", err)
+		t.Fatalf("Для уже восстановленной удалённой записи ошибочно разрешена повторная замена: %v", err)
 	}
 	if _, err := repo.SaveTrustedDevice(ctx, old); !errors.Is(err, ErrConflict) {
-		t.Fatalf("old key reactivated: %v", err)
+		t.Fatalf("Старый ключ повторно активирован: %v", err)
 	}
 }

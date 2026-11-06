@@ -65,7 +65,7 @@ func TestFactoryBuilderPersistenceAndTamper02710(t *testing.T) {
 }
 func TestFactoryBuilderWorkerExecution02710(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("POSIX fixture")
+		t.Skip("Тестовое окружение POSIX")
 	}
 	root := t.TempDir()
 	id := strings.Repeat("b", 32)

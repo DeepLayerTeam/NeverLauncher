@@ -20,7 +20,7 @@ import (
 func TestMigrationIdentityTransactional0334(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL 17")
+		t.Skip("Требуется временный экземпляр PostgreSQL 17")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
@@ -83,7 +83,7 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 		t.Fatalf("replay revision %d -> %d: %v", r1.Revision, r2.Revision, e)
 	}
 	if _, e = repo.SaveMigrationIdentities0334(ctx, run.ID, source.SourceSHA256, source.ManifestSHA256, []gi.Account{{Provider: "fileauth", SourceID: uuid, Username: "SomeoneElse", UUID: uuid, SourcePath: records[0].SourcePath}}); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed source map accepted: %v", e)
+		t.Fatalf("Ошибочно принято изменённое сопоставление источников: %v", e)
 	}
 	if _, e = repo.db.ExecContext(ctx, `INSERT INTO users(id,email,display_name) VALUES($1,$2,'Alice334')`, user, user+"@example.invalid"); e != nil {
 		t.Fatal(e)
@@ -101,7 +101,7 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	}
 	latest, e := repo.GetMigration0331(ctx, run.ID)
 	if e != nil || latest.Revision != r2.Revision+1 {
-		t.Fatalf("verification event revision: %+v %v", latest, e)
+		t.Fatalf("Ревизия события проверки: %+v %v", latest, e)
 	}
 	// Существующее имя с чужим UUID должно блокироваться, а не объединяться по
 	// нику.
@@ -124,6 +124,6 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	}
 	blocked, e := repo.SaveMigrationIdentities0334(ctx, run2.ID, source.SourceSHA256, source.ManifestSHA256, second)
 	if e != nil || blocked.Summary["blocked"] != 1 || blocked.Ready {
-		t.Fatalf("UUID collision accepted %+v %v", blocked, e)
+		t.Fatalf("Ошибочно допущен конфликт UUID: %+v %v", blocked, e)
 	}
 }

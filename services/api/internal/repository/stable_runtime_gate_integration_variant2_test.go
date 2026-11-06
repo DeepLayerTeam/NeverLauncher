@@ -16,7 +16,7 @@ import (
 func TestV11StableSQLRejectsForgedPermitAndManualWrites03411(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable PostgreSQL")
+		t.Skip("Требуется временный экземпляр PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()
@@ -58,7 +58,7 @@ func TestV11StableSQLRejectsForgedPermitAndManualWrites03411(t *testing.T) {
 				}
 			}
 			if _, e = tx.ExecContext(ctx, `UPDATE release_versions SET status='published' WHERE id=$1`, id); e == nil || !strings.Contains(e.Error(), "stable_runtime_gate_03411") {
-				t.Fatalf("manual published status bypass: %v", e)
+				t.Fatalf("Обход проверки при ручном статусе публикации: %v", e)
 			}
 		})
 	}
@@ -72,6 +72,6 @@ func TestV11StableSQLRejectsForgedPermitAndManualWrites03411(t *testing.T) {
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) VALUES($1,'vanilla','stable',1,$2,'0.34.11',$3)`, project, id, strings.Repeat("a", 64))
 	if err == nil || !strings.Contains(err.Error(), "stable_runtime_gate_03411") {
-		t.Fatalf("forged grant changed stable head: %v", err)
+		t.Fatalf("Поддельное разрешение изменило указатель стабильного выпуска: %v", err)
 	}
 }

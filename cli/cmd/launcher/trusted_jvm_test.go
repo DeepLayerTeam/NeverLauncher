@@ -136,7 +136,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	}
 	rec, release, err := trustedLoad0306(root, publicKey)
 	if err != nil || rec == nil {
-		t.Fatalf("verify: %v", err)
+		t.Fatalf("Проверка: %v", err)
 	}
 	plugin, err := trustedPath0306(root, release+"/plugins/logging-hook.jar")
 	if err != nil {

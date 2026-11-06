@@ -41,7 +41,7 @@ func TestGuardBoundSession0507VerifiedIssuance(t *testing.T) {
 		t.Fatalf("Корректная привязка Guard ошибочно отклонена: %v", err)
 	}
 	if got.CorrelationID != join.SessionCorrelationID || got.PlanSHA256 != plan.PlanSHA256 || got.GuardAttestationSHA256 != plan.GuardAttestationSHA256 || got.ServerID != join.ServerID || got.SessionID != join.SessionID || got.GuardPID != 5027 {
-		t.Fatalf("Guard binding lost verified identity/build/evidence fields: %+v", got)
+		t.Fatalf("Привязка Guard потеряла проверенные поля личности, сборки или доказательств: %+v", got)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestGuardBoundSession0507RuntimeBindingChecks(t *testing.T) {
 	b.LiveUsername = b.Username
 	b.LiveUUID = b.PlayerUUID
 	if !guardBoundLiveMatches0507(b) {
-		t.Fatal("same authoritative player row denied")
+		t.Fatal("Отклонена та же подтверждённая запись игрока")
 	}
 	changes := []struct {
 		name   string
@@ -133,7 +133,7 @@ func TestGuardBoundSession0507RuntimeBindingChecks(t *testing.T) {
 			corrupted := b
 			tc.tamper(&corrupted)
 			if guardBoundLiveMatches0507(corrupted) {
-				t.Fatal("altered active player session accepted")
+				t.Fatal("Ошибочно принят изменённый активный сеанс игрока")
 			}
 		})
 	}

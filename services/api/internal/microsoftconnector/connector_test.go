@@ -132,7 +132,7 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 		t.Fatalf("unexpected logout URL %q err=%v", logout, err)
 	}
 	if _, err := connector.ProviderLogoutURL("https://evil.example/signed-out"); err == nil {
-		t.Fatal("expected unregistered post-logout redirect rejection")
+		t.Fatal("Ожидался отказ незарегистрированному перенаправлению после выхода")
 	}
 	report := conformance.RunBehavioral(context.Background(), connector, conformance.Fixture{
 		Subject: strings.ToLower(testTenantID + ":" + testObjectID),
@@ -156,10 +156,10 @@ func TestMicrosoftIssuerPolicyRejectsTenantAndSigningKeyConfusion(t *testing.T) 
 	}
 	bad := map[string]any{"tid": "22222222-2222-3333-4444-555555555555", "iss": "https://login.microsoftonline.com/22222222-2222-3333-4444-555555555555/v2.0"}
 	if err := p.ValidateTokenIssuer("https://login.microsoftonline.com/{tenantid}/v2.0", bad, "https://login.microsoftonline.com/{tenantid}/v2.0"); err == nil {
-		t.Fatal("expected tenant allowlist rejection")
+		t.Fatal("Ожидался отказ из-за списка разрешённых арендаторов")
 	}
 	if err := p.ValidateTokenIssuer("https://login.microsoftonline.com/{tenantid}/v2.0", claims, "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0"); err == nil {
-		t.Fatal("expected signing-key issuer rejection")
+		t.Fatal("Ожидался отказ из-за издателя ключа подписи")
 	}
 }
 
@@ -174,7 +174,7 @@ func TestMicrosoftConfigUsesKnownCloudAuthoritiesAndStableTenantRules(t *testing
 		}
 	}
 	if _, err := Normalize(Config{ID: "bad", Cloud: "global", Tenant: "contoso.onmicrosoft.com", ClientID: testClientID, RedirectURIs: []string{"https://launcher.example/cb"}}); err == nil {
-		t.Fatal("expected mutable tenant-domain rejection")
+		t.Fatal("Ожидался отказ из-за изменяемого домена арендатора")
 	}
 }
 

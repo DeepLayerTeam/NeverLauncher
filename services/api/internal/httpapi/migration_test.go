@@ -24,6 +24,6 @@ func TestMigrationTargetSteps0331(t *testing.T) {
 		}
 	}
 	if _, err = server.migrationBaseline0331(context.Background(), mw.Run{ProjectID: project.ID, Step: "cutover"}); err == nil {
-		t.Fatal("unsafe cutover treated as executable")
+		t.Fatal("Небезопасный переход ошибочно признан исполняемым")
 	}
 }

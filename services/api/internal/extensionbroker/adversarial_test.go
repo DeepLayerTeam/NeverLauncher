@@ -46,7 +46,7 @@ func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 		t.Fatal("symlink parent escaped")
 	}
 	if _, err := Read(root, "escape/backend-secret"); err == nil {
-		t.Fatal("symlink parent read private inode")
+		t.Fatal("Родительская символическая ссылка позволила прочитать закрытый inode")
 	}
 	if err := os.Link(secret, filepath.Join(root, "hardlink")); err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 	} // Замена файла, а не изменение inode.
 	got, err := os.ReadFile(secret)
 	if err != nil || !bytes.Equal(got, []byte("immutable-secret")) {
-		t.Fatalf("outside inode changed: %q %v", got, err)
+		t.Fatalf("Изменён inode за пределами разрешённой области: %q %v", got, err)
 	}
 }
 
@@ -106,7 +106,7 @@ func TestAdversarialBrokerAtomicConcurrentWriters03114(t *testing.T) {
 	wg.Wait()
 	close(failures)
 	for err := range failures {
-		t.Errorf("atomic broker failure: %v", err)
+		t.Errorf("Ошибка атомарной операции брокера: %v", err)
 	}
 }
 
@@ -147,6 +147,6 @@ func TestAdversarialBrokerSymlinkSwap03114(t *testing.T) {
 	wg.Wait()
 	got, err := os.ReadFile(secret)
 	if err != nil || string(got) != "untouched" {
-		t.Fatalf("root-swapping leaked outside inode: %q %v", got, err)
+		t.Fatalf("Замена корневого каталога раскрыла внешний inode: %q %v", got, err)
 	}
 }

@@ -19,7 +19,7 @@ func TestCanonicalIssuer0291(t *testing.T) {
 		{"oidc", "issuer\x00untrusted"},
 	} {
 		if got, err := CanonicalAuthIssuer(tc.provider, tc.issuer); err == nil {
-			t.Fatalf("invalid issuer %q accepted as %q", tc.issuer, got)
+			t.Fatalf("Некорректный издатель %q ошибочно принят как %q", tc.issuer, got)
 		}
 	}
 }
