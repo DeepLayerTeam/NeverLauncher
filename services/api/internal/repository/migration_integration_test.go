@@ -20,7 +20,7 @@ import (
 func TestMigrationDurability0331(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable LAUNCHER_TEST_POSTGRES_DSN")
+		t.Skip("требуется одноразовая база в LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -47,13 +47,13 @@ func TestMigrationDurability0331(t *testing.T) {
 	}
 	same, err := b.CreateMigration0331(ctx, project, "gravit", "stable-key-for-retry")
 	if err != nil || same.ID != run.ID {
-		t.Fatalf("idempotency broken: %+v %v", same, err)
+		t.Fatalf("нарушена идемпотентность: %+v %v", same, err)
 	}
 	if _, err := a.ClaimMigration0331(ctx, run.ID, "worker-one", 1200*time.Millisecond); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := b.ClaimMigration0331(ctx, run.ID, "worker-two", time.Second); !errors.Is(err, mw.ErrBusy) {
-		t.Fatalf("double claim permitted: %v", err)
+		t.Fatalf("допущен двойной захват: %v", err)
 	}
 	time.Sleep(1400 * time.Millisecond)
 	second, err := b.ClaimMigration0331(ctx, run.ID, "worker-two", 10*time.Second)
@@ -62,21 +62,21 @@ func TestMigrationDurability0331(t *testing.T) {
 	}
 	old := mw.Lease{Run: run, Owner: "worker-one", Fence: 1}
 	if _, err := a.CheckpointMigration0331(ctx, old, "target_check", json.RawMessage(`{"ok":true}`)); !errors.Is(err, mw.ErrConflict) {
-		t.Fatalf("stale fencing accepted: %v", err)
+		t.Fatalf("допущен устаревший токен защиты: %v", err)
 	}
 	step1, err := b.CheckpointMigration0331(ctx, second, "target_check", json.RawMessage(`{"ok":true}`))
 	if err != nil || step1.Step != "target_inventory" || step1.Revision != 1 {
-		t.Fatalf("checkpoint 1: %+v %v", step1, err)
+		t.Fatalf("контрольная точка 1: %+v %v", step1, err)
 	}
 	afterRestart, err := a.GetMigration0331(ctx, run.ID)
 	if err != nil || afterRestart.Step != "target_inventory" {
-		t.Fatalf("restart state: %+v %v", afterRestart, err)
+		t.Fatalf("состояние после перезапуска: %+v %v", afterRestart, err)
 	}
 	if _, err := a.PauseMigration0331(ctx, run.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := b.ClaimMigration0331(ctx, run.ID, "worker-three", time.Second); !errors.Is(err, mw.ErrBusy) {
-		t.Fatalf("paused claimed: %v", err)
+		t.Fatalf("захвачено приостановленное задание: %v", err)
 	}
 	if _, err := b.ResumeMigration0331(ctx, run.ID); err != nil {
 		t.Fatal(err)
@@ -87,18 +87,18 @@ func TestMigrationDurability0331(t *testing.T) {
 	}
 	final, err := a.CheckpointMigration0331(ctx, lease, "target_inventory", json.RawMessage(`{"count":0}`))
 	if err != nil || final.Status != "prepared" || final.Revision != 4 {
-		t.Fatalf("final step: %+v %v", final, err)
+		t.Fatalf("последний шаг: %+v %v", final, err)
 	}
 	if _, err := b.ClaimMigration0331(ctx, run.ID, "worker-five", time.Second); !errors.Is(err, mw.ErrBusy) {
-		t.Fatalf("prepared claimed: %v", err)
+		t.Fatalf("захвачено подготовленное задание: %v", err)
 	}
 	events, err := b.MigrationEvents0331(ctx, run.ID, 0, 100)
 	if err != nil || len(events) != 5 {
-		t.Fatalf("expected 5 journal events (created,checkpoint,pause,resume,checkpoint), got %+v %v", events, err)
+		t.Fatalf("ожидались 5 событий журнала (создание, контрольная точка, пауза, возобновление, контрольная точка), получено: %+v %v", events, err)
 	}
 	for i := 1; i < len(events); i++ {
 		if events[i].Sequence <= events[i-1].Sequence {
-			t.Fatalf("nonmonotonic journal: %+v", events)
+			t.Fatalf("нарушена монотонность журнала: %+v", events)
 		}
 	}
 }
@@ -106,7 +106,7 @@ func TestMigrationDurability0331(t *testing.T) {
 func TestMigrationFailureResume0331(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("PostgreSQL required")
+		t.Skip("требуется PostgreSQL")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
@@ -138,6 +138,6 @@ func TestMigrationFailureResume0331(t *testing.T) {
 	}
 	resumed, err := db.ResumeMigration0331(ctx, run.ID)
 	if err != nil || resumed.Step != "target_check" {
-		t.Fatalf("resume: %+v %v", resumed, err)
+		t.Fatalf("возобновление: %+v %v", resumed, err)
 	}
 }

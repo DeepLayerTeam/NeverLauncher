@@ -12,7 +12,7 @@ func TestRoleUpdateRevokesLiveNeverToken0297(t *testing.T) {
 	created := request0211(t, handler, http.MethodPost, "/api/v1/admin/users", owner,
 		`{"email":"revocation-0297@example.test","displayName":"Revocation","roleId":"player","password":"a-real-password-0297"}`)
 	if created.Code != http.StatusCreated {
-		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+		t.Fatalf("создание: %d %s", created.Code, created.Body.String())
 	}
 	var user struct {
 		ID string `json:"id"`

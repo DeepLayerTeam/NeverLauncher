@@ -29,23 +29,23 @@ func TestHostBudget03113RateAndOutput(t *testing.T) {
 		t.Fatal(code)
 	}
 	if code := do(); code != 429 {
-		t.Fatalf("expected rate limit got %d", code)
+		t.Fatalf("ожидалось ограничение частоты запросов, получено %d", code)
 	}
 	st.mu.Lock()
 	st.budget.window = time.Now().Add(-time.Second)
 	st.mu.Unlock()
 	if code := do(); code != 200 {
-		t.Fatalf("window did not reset: %d", code)
+		t.Fatalf("окно ограничения не сброшено: %d", code)
 	}
 	st.mu.Lock()
 	if st.budget.output != 6 || st.budget.rejected != 1 || st.budget.active != 0 {
-		t.Fatalf("bad resource counters %+v", st.budget)
+		t.Fatalf("неверные счётчики ресурсов: %+v", st.budget)
 	}
 	if st.budget.chargeLocked03113(3, policy) {
-		t.Fatal("output budget bypassed")
+		t.Fatal("обойдён лимит размера вывода")
 	}
 	if st.budget.output != 6 {
-		t.Fatal("overflow changed accounted bytes")
+		t.Fatal("переполнение изменило подсчёт учтённых байтов")
 	}
 	st.mu.Unlock()
 }
@@ -55,28 +55,28 @@ func TestHostBudget03113ConcurrentAndReset(t *testing.T) {
 	now := time.Now()
 	for i := 0; i < maxConcurrentRequests03113; i++ {
 		if !budget.admitLocked03113(now, p) {
-			t.Fatalf("slot %d denied", i)
+			t.Fatalf("слот %d отклонён", i)
 		}
 	}
 	if budget.admitLocked03113(now, p) {
-		t.Fatal("concurrent budget bypassed")
+		t.Fatal("обойдён лимит параллельных операций")
 	}
 	if budget.rejected != 1 {
-		t.Fatal("rejection not counted")
+		t.Fatal("отказ не учтён")
 	}
 	budget.active--
 	if !budget.admitLocked03113(now, p) {
-		t.Fatal("released slot not reusable")
+		t.Fatal("освобождённый слот недоступен для повторного использования")
 	}
 	budget.active = 0
 	for i := 0; i < 64-maxConcurrentRequests03113-1; i++ {
 		if !budget.admitLocked03113(now, p) {
-			t.Fatalf("rate slot %d", i)
+			t.Fatalf("слот ограничения частоты %d", i)
 		}
 		budget.active--
 	}
 	if budget.admitLocked03113(now, p) {
-		t.Fatal("per-second limit bypassed")
+		t.Fatal("обойдён посекундный лимит")
 	}
 	if !budget.admitLocked03113(now.Add(time.Second), p) {
 		t.Fatal("Новое окно ошибочно не принято")
@@ -105,7 +105,7 @@ func TestHostBudget03113Race(t *testing.T) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	if st.budget.output > defaultOutputBytes03113 || st.budget.active != 0 {
-		t.Fatalf("bad budget: %+v", st.budget)
+		t.Fatalf("неверный лимит ресурсов: %+v", st.budget)
 	}
 }
 func TestHostBudget03113UnauthenticatedDoesNotConsume(t *testing.T) {
@@ -120,9 +120,9 @@ func TestHostBudget03113UnauthenticatedDoesNotConsume(t *testing.T) {
 		return w.Code
 	}
 	if request("not-a-token") != 204 {
-		t.Fatal("auth middleware behavior changed")
+		t.Fatal("поведение промежуточного обработчика авторизации изменилось")
 	}
 	if request("real-token") != 204 {
-		t.Fatal("anonymous depleted instance budget")
+		t.Fatal("анонимный запрос исчерпал лимит экземпляра")
 	}
 }

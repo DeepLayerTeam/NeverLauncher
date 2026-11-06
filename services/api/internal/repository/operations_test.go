@@ -16,7 +16,7 @@ func newOperationFixture0217(t *testing.T) (*MemoryRepository, model.DurableJob)
 	raw, _ := json.Marshal(map[string]string{"projectId": "demo-project", "channel": "stable", "toVersion": "1.0"})
 	j, created, err := r.EnqueueDurableJob(ctx, model.DurableJob{Kind: "channel-rollback", ActorType: "user", ActorID: "alice", Action: "release:publish", ProjectID: "demo-project", ResourceType: "channel", ResourceID: "stable", IdempotencyKey: "request-1", Payload: raw}, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("enqueue: %v %v", created, err)
+		t.Fatalf("ошибка постановки в очередь: %v %v", created, err)
 	}
 	return r, j
 }
@@ -48,7 +48,7 @@ func TestOperationsCancelBeforeLease0217(t *testing.T) {
 	result, _ := json.Marshal(map[string]string{"status": "succeeded"})
 	completed, err := r.CompleteOperationJob(ctx, j.ID, leased.LeaseToken, result)
 	if err != nil || completed.Status != model.DurableJobStatusSucceeded {
-		t.Fatalf("complete: %+v %v", completed, err)
+		t.Fatalf("завершение: %+v %v", completed, err)
 	}
 	if _, err = r.RetryOperationJob(ctx, j.ID); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("completed job was retried: %v", err)

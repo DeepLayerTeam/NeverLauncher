@@ -127,49 +127,49 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	q(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) VALUES($1,$2,$3,8,$4,'old',$5)`, project, profile, channel, oldID, oldDigest)
 	stage := co.Stage{ProfileID: profile, Channel: channel, ReleaseID: targetID, StageID: rep.StageID, ExpectedHeadRevision: 8}
 	if _, e = r.StageMigrationCutover03311(ctx, runID, co.Stage{ProfileID: profile, Channel: channel, ReleaseID: targetID, StageID: rep.StageID, ExpectedHeadRevision: 7}, pub); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("stale head accepted: %v", e)
+		t.Fatalf("принята устаревшая головная ревизия: %v", e)
 	}
 	route, e := r.StageMigrationCutover03311(ctx, runID, stage, pub)
 	if e != nil || route.State != "staged" {
-		t.Fatalf("stage: %+v %v", route, e)
+		t.Fatalf("подготовка: %+v %v", route, e)
 	}
 	again, e := r.StageMigrationCutover03311(ctx, runID, stage, pub)
 	if e != nil || again.Revision != route.Revision {
-		t.Fatalf("stage replay %+v %v", again, e)
+		t.Fatalf("повторная подготовка: %+v %v", again, e)
 	}
 	if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET revision=9 WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
-		t.Fatal("concurrent publisher escaped staged DB trigger")
+		t.Fatal("параллельный издатель обошёл триггер базы данных для подготовленного состояния")
 	}
 	proof := &co.SourceFenceReceipt0448{Format: "never/gravit-source-stop/v1", RunID: runID, ProfileID: profile, Channel: channel, StageID: rep.StageID, Unit: "gravit.service", StoppedAt: time.Now().UTC().Add(-time.Minute), CheckedAt: time.Now().UTC(), UnitState: "inactive", UnitFileState: "masked-runtime", SnapshotSHA256: snapHash, SnapshotFileSHA256: hash}
 	proofBytes, _ := json.Marshal(proof)
 	proofHash := sha256.Sum256(proofBytes)
 	activation := co.Activate{ProfileID: profile, Channel: channel, ExpectedRevision: route.Revision, SourceFenceReference: "ops/fence-ticket-42", SourceFenceEvidenceSHA256: hex.EncodeToString(proofHash[:]), CurrentSourceSnapshotSHA256: hash, SourceFenceReceipt: proof}
 	if _, e = r.ActivateMigrationCutover03311(ctx, runID, activation, pub); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("wrong source snapshot accepted: %v", e)
+		t.Fatalf("принят неверный исходный снимок: %v", e)
 	}
 	activation.CurrentSourceSnapshotSHA256 = snapHash
 	active, e := r.ActivateMigrationCutover03311(ctx, runID, activation, pub)
 	if e != nil || active.State != "active" || active.ActivatedRevision == nil || *active.ActivatedRevision != 9 {
-		t.Fatalf("activate: %+v %v", active, e)
+		t.Fatalf("активация: %+v %v", active, e)
 	}
 	again, e = r.ActivateMigrationCutover03311(ctx, runID, activation, pub)
 	if e != nil || again.Revision != active.Revision {
-		t.Fatalf("replay: %+v %v", again, e)
+		t.Fatalf("повторное выполнение: %+v %v", again, e)
 	}
 	var head string
 	var rev int64
 	if e = r.db.QueryRowContext(ctx, `SELECT release_id,revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel).Scan(&head, &rev); e != nil || head != targetID || rev != 9 {
-		t.Fatalf("channel not switched: %s %d %v", head, rev, e)
+		t.Fatalf("канал не переключён: %s %d %v", head, rev, e)
 	}
 	if _, e = r.CancelMigrationCutover03311(ctx, runID, profile, channel, active.Revision); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("post-cutover cancel accepted: %v", e)
+		t.Fatalf("допущена отмена после переключения: %v", e)
 	}
 	// MIG12 должен ограждать также АКТИВНЫЙ маршрут и защищать DELETE.
 	if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET version='unapproved' WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
-		t.Fatal("active head accepted another publisher")
+		t.Fatal("активная головная ревизия приняла другого издателя")
 	}
 	if _, e = r.db.ExecContext(ctx, `DELETE FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
-		t.Fatal("active head delete bypassed guard")
+		t.Fatal("удаление активной головной ревизии обошло защиту")
 	}
 	planInput := rb.PlanInput{ProfileID: profile, Channel: channel, ExpectedRevision: active.Revision, Current: rep.Target, EvidenceReference: "runbooks/frozen-export-0001", EvidenceSHA256: hash}
 	mutated := planInput
@@ -181,11 +181,11 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	plan, e := r.PlanMigrationRollback03312(ctx, runID, planInput)
 	if e != nil || !plan.Ready || plan.State != "planned" {
-		t.Fatalf("plan: %+v %v", plan, e)
+		t.Fatalf("план: %+v %v", plan, e)
 	}
 	againPlan, e := r.PlanMigrationRollback03312(ctx, runID, planInput)
 	if e != nil || againPlan.PlanSHA256 != plan.PlanSHA256 {
-		t.Fatalf("idempotent plan: %+v %v", againPlan, e)
+		t.Fatalf("идемпотентность плана: %+v %v", againPlan, e)
 	}
 	commit := rb.CommitInput{ProfileID: profile, Channel: channel, ExpectedRevision: active.Revision, PlanSHA256: plan.PlanSHA256, Current: rep.Target, CurrentEvidenceSHA256: hash}
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, commit, pub); e == nil {
@@ -196,7 +196,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	wrongEvidence := commit
 	wrongEvidence.CurrentEvidenceSHA256 = strings.Repeat("f", 64)
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, wrongEvidence, pub); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("different export evidence accepted: %v", e)
+		t.Fatalf("допущены другие свидетельства экспорта: %v", e)
 	}
 	// Новый план должен заменять прежнее одобрение и аннулировать его хеш.
 	renewed := planInput
@@ -204,10 +204,10 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	renewed.EvidenceSHA256 = strings.Repeat("d", 64)
 	newPlan, replanErr := r.PlanMigrationRollback03312(ctx, runID, renewed)
 	if replanErr != nil || !newPlan.Ready || newPlan.PlanSHA256 == plan.PlanSHA256 {
-		t.Fatalf("replan failed: %+v %v", newPlan, replanErr)
+		t.Fatalf("повторное планирование не удалось: %+v %v", newPlan, replanErr)
 	}
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, commit, pub); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("stale rollback approval accepted: %v", e)
+		t.Fatalf("принято устаревшее подтверждение отката: %v", e)
 	}
 	commit.PlanSHA256 = newPlan.PlanSHA256
 	commit.CurrentEvidenceSHA256 = renewed.EvidenceSHA256
@@ -215,7 +215,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	changed.Current.Players = append([]gr.Player(nil), commit.Current.Players...)
 	changed.Current.Players[0].Economy = "999"
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, changed, pub); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("changed snapshot allowed: %v", e)
+		t.Fatalf("допущен изменённый снимок: %v", e)
 	}
 	result, e := r.CommitMigrationRollback03312(ctx, runID, commit, pub)
 	if e != nil || result.State != "completed" {
@@ -223,12 +223,12 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	replay, e := r.CommitMigrationRollback03312(ctx, runID, commit, pub)
 	if e != nil || replay.PlanSHA256 != result.PlanSHA256 {
-		t.Fatalf("commit replay: %+v %v", replay, e)
+		t.Fatalf("повторная фиксация: %+v %v", replay, e)
 	}
 	if e = r.db.QueryRowContext(ctx, `SELECT release_id,revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel).Scan(&head, &rev); e != nil || head != oldID || rev != 10 {
-		t.Fatalf("rollback head incorrect: %s %d %v", head, rev, e)
+		t.Fatalf("неверная головная ревизия после отката: %s %d %v", head, rev, e)
 	}
 	if _, e = r.ActivateMigrationCutover03311(ctx, runID, activation, pub); !errors.Is(e, mw.ErrConflict) {
-		t.Fatalf("reactivation after rollback allowed: %v", e)
+		t.Fatalf("допущена повторная активация после отката: %v", e)
 	}
 }

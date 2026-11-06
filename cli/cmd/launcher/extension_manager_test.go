@@ -37,7 +37,7 @@ func TestExtensionManager0425LiveBackend(t *testing.T) {
 		t.Fatal(err)
 	}
 	if data["data"].(map[string]any)["count"] != float64(1) {
-		t.Fatalf("wrong inventory %s", raw)
+		t.Fatalf("неверный список компонентов %s", raw)
 	}
 }
 func TestExtensionManager0425RequiresAuthentication(t *testing.T) {

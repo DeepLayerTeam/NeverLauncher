@@ -67,10 +67,10 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 
 	untrusted := registryTestPublication0203(t, "1.0.0", fingerprint, 1, "stable")
 	if _, err := repo.PublishExtensionRegistryVersion(ctx, untrusted); !errors.Is(err, ErrConflict) {
-		t.Fatalf("untrusted publish error = %v, want ErrConflict", err)
+		t.Fatalf("ошибка недоверенной публикации=%v, ожидалась ErrConflict", err)
 	}
 	if _, err := repo.GetExtensionVersion(ctx, untrusted.Manifest.ID, untrusted.Manifest.Version); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("untrusted publish leaked canonical version: %v", err)
+		t.Fatalf("недоверенная публикация раскрыла каноническую версию: %v", err)
 	}
 
 	if _, err := repo.SaveExtensionRegistryPublisher(ctx, model.ExtensionRegistryPublisher{ID: "deeplayer.team", Name: "DeepLayer Team", Active: true}); err != nil {
@@ -85,7 +85,7 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(v1.Channels) != 1 || v1.Channels[0] != "stable" {
-		t.Fatalf("v1 channels=%v", v1.Channels)
+		t.Fatalf("каналы версии 1=%v", v1.Channels)
 	}
 
 	compatible, err := repo.SearchExtensionRegistry(ctx, model.ExtensionRegistrySearch{Channel: "stable", LauncherVersion: "0.20.3", OS: "linux", Architecture: "amd64"})
@@ -93,14 +93,14 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(compatible) != 1 || compatible[0].Version != "1.0.0" {
-		t.Fatalf("compatible search=%+v", compatible)
+		t.Fatalf("поиск совместимых версий=%+v", compatible)
 	}
 	incompatible, err := repo.SearchExtensionRegistry(ctx, model.ExtensionRegistrySearch{LauncherVersion: "0.21.0", OS: "linux", Architecture: "amd64"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(incompatible) != 0 {
-		t.Fatalf("incompatible search returned %d items", len(incompatible))
+		t.Fatalf("поиск несовместимых версий вернул %d элементов", len(incompatible))
 	}
 
 	v2pub := registryTestPublication0203(t, "1.1.0", fingerprint, 2, "beta")
@@ -112,20 +112,20 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !containsRegistryChannel0203(moved.Channels, "stable") {
-		t.Fatalf("stable was not moved: %v", moved.Channels)
+		t.Fatalf("стабильный канал не был переключён: %v", moved.Channels)
 	}
 	old, err := repo.GetExtensionRegistryVersion(ctx, v2pub.Manifest.ID, "1.0.0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if containsRegistryChannel0203(old.Channels, "stable") {
-		t.Fatalf("stable remained on old version: %v", old.Channels)
+		t.Fatalf("стабильный канал остался на прежней версии: %v", old.Channels)
 	}
 
 	mutated := v2pub
 	mutated.Compatibility.MaxLauncher = "0.20.8"
 	if _, err := repo.PublishExtensionRegistryVersion(ctx, mutated); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("compatibility mutation error=%v, want ErrImmutable", err)
+		t.Fatalf("ошибка изменения совместимости=%v, ожидалась ErrImmutable", err)
 	}
 
 	yanked, err := repo.YankExtensionRegistryVersion(ctx, v2pub.Manifest.ID, "1.1.0", "security regression")
@@ -133,7 +133,7 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if yanked.YankedAt == nil || len(yanked.Channels) != 0 {
-		t.Fatalf("invalid yank state: %+v", yanked)
+		t.Fatalf("недопустимое состояние отзыва версии: %+v", yanked)
 	}
 	visible, err := repo.SearchExtensionRegistry(ctx, model.ExtensionRegistrySearch{Query: "registry-extension"})
 	if err != nil {
@@ -141,7 +141,7 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 	}
 	for _, item := range visible {
 		if item.Version == "1.1.0" {
-			t.Fatalf("yanked version present in default search")
+			t.Fatalf("отозванная версия присутствует в результатах поиска по умолчанию")
 		}
 	}
 	all, err := repo.SearchExtensionRegistry(ctx, model.ExtensionRegistrySearch{Query: "registry-extension", IncludeYanked: true})
@@ -155,12 +155,12 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 		}
 	}
 	if !foundYanked {
-		t.Fatalf("includeYanked did not return yanked version")
+		t.Fatalf("includeYanked не вернул отозванную версию")
 	}
 	if _, err := repo.SetExtensionRegistryChannel(ctx, v2pub.Manifest.ID, "stable", "1.1.0"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("channel to yanked version error=%v, want ErrConflict", err)
+		t.Fatalf("ошибка переключения канала на отозванную версию=%v, ожидалась ErrConflict", err)
 	}
 	if _, err := repo.YankExtensionRegistryVersion(ctx, v2pub.Manifest.ID, "1.1.0", "different reason"); !errors.Is(err, ErrImmutable) {
-		t.Fatalf("yank mutation error=%v, want ErrImmutable", err)
+		t.Fatalf("ошибка изменения отозванной версии=%v, ожидалась ErrImmutable", err)
 	}
 }

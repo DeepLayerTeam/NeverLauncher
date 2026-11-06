@@ -114,7 +114,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 	}
 	first := install("one")
 	if len(first.Files) < 7 {
-		t.Fatalf("missing installed files: %+v", first.Files)
+		t.Fatalf("отсутствуют установленные файлы: %+v", first.Files)
 	}
 	if libraryRequests.Load() != 1 || nativeRequests.Load() != 1 || assetRequests.Load() != 1 {
 		t.Fatalf("Неожиданное число запросов при первой установке: библиотеки=%d нативные файлы=%d ресурсы=%d", libraryRequests.Load(), nativeRequests.Load(), assetRequests.Load())
@@ -129,7 +129,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 	}
 	for _, f := range second.Files {
 		if (f.Kind == "library" || f.Kind == "native-archive" || f.Kind == "asset") && !f.Cached {
-			t.Fatalf("uncached shared artifact %s", f.Path)
+			t.Fatalf("общий артефакт %s отсутствует в кеше", f.Path)
 		}
 	}
 	// Созданные файлы независимы: изменение клиента не должно менять CAS.
@@ -152,7 +152,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 	}
 	_, err = installVanilla(context.Background(), vanillaInstallOptions{MinecraftVersion: "fixture-1", ClientDir: filepath.Join(base, "four"), VersionManifest: server.URL + "/manifest", AssetBaseURL: server.URL + "/assets", Workers: 2, StrictUpstream: true, SharedCacheDir: cache, HTTPClient: server.Client()})
 	if err == nil || !strings.Contains(err.Error(), "cache") {
-		t.Fatalf("corrupt cache accepted: %v", err)
+		t.Fatalf("допущен повреждённый кеш: %v", err)
 	}
 }
 
@@ -202,7 +202,7 @@ func TestNativeExtraction0277RejectsConflictingOutputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := extractNativeJar(filepath.Join(root, "1.jar"), dest, nil); err == nil {
-		t.Fatal("conflicting native overwritten")
+		t.Fatal("конфликтующий нативный компонент был перезаписан")
 	}
 	got, err := os.ReadFile(filepath.Join(dest, "lib.dll"))
 	if err != nil || string(got) != "correct" {

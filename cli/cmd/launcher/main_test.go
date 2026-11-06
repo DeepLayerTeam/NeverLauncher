@@ -40,22 +40,22 @@ func TestManifestBuildValidateHashesDiffAndUpdatePlan(t *testing.T) {
 	planPath := filepath.Join(root, "plan.json")
 
 	if err := run([]string{"manifest", "build", oldDir, "--version", "2.6.0", "--output", oldManifest}); err != nil {
-		t.Fatalf("old manifest build: %v", err)
+		t.Fatalf("сборка старого манифеста: %v", err)
 	}
 	if err := run([]string{"manifest", "build", newDir, "--version", "2.7.0", "--output", newManifest}); err != nil {
-		t.Fatalf("new manifest build: %v", err)
+		t.Fatalf("сборка нового манифеста: %v", err)
 	}
 	if err := run([]string{"manifest", "validate", newManifest}); err != nil {
-		t.Fatalf("manifest validate: %v", err)
+		t.Fatalf("проверка манифеста: %v", err)
 	}
 	if err := run([]string{"hashes", "check", newManifest, "--root", newDir}); err != nil {
-		t.Fatalf("hashes check: %v", err)
+		t.Fatalf("проверка хешей: %v", err)
 	}
 	if err := run([]string{"manifest", "diff", "--old", oldManifest, "--new", newManifest, "--output", diffPath}); err != nil {
-		t.Fatalf("manifest diff: %v", err)
+		t.Fatalf("сравнение манифестов: %v", err)
 	}
 	if err := run([]string{"update", "plan", "--from", oldManifest, "--to", newManifest, "--output", planPath}); err != nil {
-		t.Fatalf("update plan: %v", err)
+		t.Fatalf("план обновления: %v", err)
 	}
 
 	var diff ManifestDiff
@@ -97,7 +97,7 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 		}
 	}
 	if err := run([]string{"release", "package", "--version", "0.10.6", "--out", out}); err != nil {
-		t.Fatalf("release package: %v", err)
+		t.Fatalf("пакет релиза: %v", err)
 	}
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -113,7 +113,7 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := run([]string{"release", "sign", out, "--private-key", privatePath}); err != nil {
-		t.Fatalf("release sign: %v", err)
+		t.Fatalf("подпись релиза: %v", err)
 	}
 	for _, name := range []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "RELEASE_NOTES.txt"} {
 		if _, err := os.Stat(filepath.Join(out, name)); err != nil {
@@ -121,10 +121,10 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 		}
 	}
 	if err := run([]string{"release", "verify", out, "--public-key", publicPath}); err != nil {
-		t.Fatalf("release verify: %v", err)
+		t.Fatalf("проверка релиза: %v", err)
 	}
 	if err := run([]string{"release", "publish-check", out, "--public-key", publicPath}); err != nil {
-		t.Fatalf("release publish-check: %v", err)
+		t.Fatalf("предварительная проверка публикации релиза: %v", err)
 	}
 	if err := os.Remove(filepath.Join(out, "runtime-linux-amd64")); err != nil {
 		t.Fatal(err)
@@ -187,7 +187,7 @@ func TestAdminOpsCanonicalCommands(t *testing.T) {
 	}
 	for _, path := range []string{"/api/v1/status", "/ready", "/api/v1/operations/diagnostics", "/api/v1/operations/backup"} {
 		if !seen[path] {
-			t.Fatalf("canonical endpoint %s was not called", path)
+			t.Fatalf("каноническая конечная точка %s не была вызвана", path)
 		}
 	}
 }
@@ -209,7 +209,7 @@ func TestRemovedLegacyCommandsAreRejected(t *testing.T) {
 		{"deployment", "status"},
 	} {
 		if err := run(args); err == nil {
-			t.Fatalf("legacy command %v must be rejected after cleanup", args)
+			t.Fatalf("устаревшая команда %v должна отклоняться после очистки", args)
 		}
 	}
 }
@@ -239,13 +239,13 @@ func TestReleaseDoctorAcceptsCanonicalOpenAPI(t *testing.T) {
 	}
 	defer func() { _ = os.Chdir(oldWD) }()
 	if err := releaseDoctor(); err != nil {
-		t.Fatalf("release doctor rejected canonical P3.2 tree: %v", err)
+		t.Fatalf("проверка релиза отклонила каноническое дерево P3.2: %v", err)
 	}
 }
 
 func TestCanonicalOpenAPIRejectsHistoricalPaths(t *testing.T) {
 	data := []byte(`{"openapi":"3.1.1","paths":{"/health":{},"/ready":{},"/api/v1/status":{},"/api/v5/status":{}}}`)
 	if errs := canonicalOpenAPIErrors(data); len(errs) == 0 {
-		t.Fatal("historical /api/v5 path must be rejected")
+		t.Fatal("устаревший путь /api/v5 должен отклоняться")
 	}
 }

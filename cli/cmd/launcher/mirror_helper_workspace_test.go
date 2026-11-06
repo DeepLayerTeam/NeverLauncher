@@ -91,7 +91,7 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if plan.Compatibility == nil || plan.Compatibility.AuthMode != "offline" {
-		t.Fatal("authentication compatibility not present in published plan")
+		t.Fatal("совместимость авторизации отсутствует в опубликованном плане")
 	}
 	for rel, expected := range map[string]string{
 		"mods/remote.jar": mirrorSHA0274(modBytes),
@@ -104,14 +104,14 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 	}
 	content, err := os.ReadFile(filepath.Join(target, "config/workspace.properties"))
 	if err != nil || string(content) != "from=modpack" {
-		t.Fatalf("modpack override not delivered: %s (%v)", content, err)
+		t.Fatalf("замещающие файлы модпака не доставлены: %s (%v)", content, err)
 	}
 	profile, err := os.ReadFile(filepath.Join(target, filepath.FromSlash(plan.Launch.ProfilePath)))
 	if err != nil || !strings.Contains(string(profile), `"name": "example:library:1.0"`) {
-		t.Fatalf("Maven library is missing from runtime profile: %v", err)
+		t.Fatalf("библиотека Maven отсутствует в профиле Runtime: %v", err)
 	}
 	if err := handleRuntimeMirror0274(args(target)); err == nil {
-		t.Fatal("existing verified client must not be silently overwritten")
+		t.Fatal("ранее проверенный клиент нельзя перезаписывать без уведомления")
 	}
 
 	// Неверный хеш не должен оставлять частично опубликованную цель.
@@ -119,10 +119,10 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 	writeWS()
 	broken := filepath.Join(folder, "nested", "broken-client")
 	if err := handleRuntimeMirror0274(args(broken)); err == nil {
-		t.Fatal("tampered mod accepted")
+		t.Fatal("принят мод с изменённым содержимым")
 	}
 	if _, err := os.Lstat(broken); !os.IsNotExist(err) {
-		t.Fatalf("failed transaction created target: %v", err)
+		t.Fatalf("неудачная транзакция создала целевой объект: %v", err)
 	}
 	// Закреплённый загрузчик модпака нельзя незаметно заменять метаданными рабочего пространства.
 	ws.Mods[0].SHA256 = mirrorSHA0274(extraBytes)
@@ -130,10 +130,10 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 	writeWS()
 	mismatch := filepath.Join(folder, "nested", "wrong-version")
 	if err := handleRuntimeMirror0274(args(mismatch)); err == nil {
-		t.Fatal("pack/workspace version mismatch accepted")
+		t.Fatal("допущено несовпадение версий пакета и рабочего пространства")
 	}
 	if _, err := os.Lstat(mismatch); !os.IsNotExist(err) {
-		t.Fatalf("mismatched client published: %v", err)
+		t.Fatalf("опубликован клиент с несовпадающей версией: %v", err)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestMirrorWorkspace0405AuthlibPatchDeliveredAndVerified(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyFactoryPlan0271(dst, p); err == nil {
-		t.Fatal("corrupt transformed authlib was not rejected")
+		t.Fatal("повреждённая преобразованная библиотека авторизации не отклонена")
 	}
 }
 
@@ -190,7 +190,7 @@ func TestMirrorWorkspace0405AuthlibPatchDeliveredAndVerified(t *testing.T) {
 func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 	for _, program := range []string{"javac", "jar", "java"} {
 		if _, err := exec.LookPath(program); err != nil {
-			t.Skipf("Java toolchain unavailable: %s", program)
+			t.Skipf("набор инструментов Java недоступен: %s", program)
 		}
 	}
 	s := fixtureModpackServer0275(t, nil)
@@ -205,7 +205,7 @@ func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 		t.Fatal(err)
 	}
 	if output, err := exec.Command("javac", "-d", classes, javaSource).CombinedOutput(); err != nil {
-		t.Fatalf("javac failed: %s: %v", output, err)
+		t.Fatalf("ошибка компилятора javac: %s: %v", output, err)
 	}
 	library := filepath.Join(folder, "workspace-library.jar")
 	if output, err := exec.Command("jar", "cf", library, "-C", classes, ".").CombinedOutput(); err != nil {
@@ -239,7 +239,7 @@ func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 	installed := filepath.Join(target, "libraries/workspace/fixture/1.0/fixture-1.0.jar")
 	output, err := exec.Command("java", "-cp", installed, "workspace.Main").CombinedOutput()
 	if err != nil || string(output) != "workspace-0405-ok" {
-		t.Fatalf("registered Java library does not execute: %s: %v", output, err)
+		t.Fatalf("зарегистрированная библиотека Java не запускается: %s: %v", output, err)
 	}
 }
 
@@ -276,7 +276,7 @@ func TestMirrorWorkspace0405CurseOverridesWithoutAPIKey(t *testing.T) {
 	}
 	bytes, err := os.ReadFile(filepath.Join(dst, "config/installed.toml"))
 	if err != nil || string(bytes) != "enabled=true" {
-		t.Fatalf("CurseForge overrides not installed: %s, %v", bytes, err)
+		t.Fatalf("замещающие файлы CurseForge не установлены: %s, %v", bytes, err)
 	}
 	plan, err := readFactoryPlan0271(dst)
 	if err != nil {

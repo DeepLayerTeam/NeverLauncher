@@ -156,6 +156,6 @@ func TestRuntimeCertification02712MatrixRejectsMissingOrUnsigned(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := certifyMatrix02712(matrix, "missing.pub", "", false); err == nil {
-		t.Fatal("unsafe target ID accepted")
+		t.Fatal("допущен небезопасный идентификатор целевой платформы")
 	}
 }

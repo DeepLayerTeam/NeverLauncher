@@ -16,7 +16,7 @@ import (
 func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN is not set")
+		t.Skip("переменная LAUNCHER_SERVERBRIDGE_HA_DSN не задана")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

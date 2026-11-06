@@ -167,7 +167,7 @@ func TestServerBridgeInstallIdentityEnrollmentAndRollback0199(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyNodeIdentityPermissions0199(state.IdentityPath, info); err != nil {
-		t.Fatalf("identity permissions: %v", err)
+		t.Fatalf("разрешения идентичности: %v", err)
 	}
 	identity, err := loadNodeIdentityPublic0199(state.IdentityPath)
 	if err != nil {

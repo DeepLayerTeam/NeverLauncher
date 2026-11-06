@@ -21,7 +21,7 @@ func TestGenerateNeverMigrationKeys0336(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm() != 0600 {
-		t.Fatalf("secret file not 0600: %v", info.Mode())
+		t.Fatalf("права файла с секретом отличаются от 0600: %v", info.Mode())
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -40,6 +40,6 @@ func TestGenerateNeverMigrationKeys0336(t *testing.T) {
 		t.Fatal("Секретный материал недопустим или совпадает с исходным")
 	}
 	if err = generateNeverMigrationKeys0336(path); err == nil {
-		t.Fatal("secret file overwritten")
+		t.Fatal("файл с секретом был перезаписан")
 	}
 }

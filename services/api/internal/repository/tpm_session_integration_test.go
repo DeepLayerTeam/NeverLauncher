@@ -25,7 +25,7 @@ func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	defer cancel()
 	first, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
-		t.Fatal("PostgreSQL required")
+		t.Fatal("требуется PostgreSQL")
 	}
 	defer first.db.Close()
 	second, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)

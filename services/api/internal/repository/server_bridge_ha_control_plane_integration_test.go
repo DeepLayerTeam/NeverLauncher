@@ -15,7 +15,7 @@ import (
 func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN is not set")
+		t.Skip("переменная LAUNCHER_SERVERBRIDGE_HA_DSN не задана")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -53,7 +53,7 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		t.Fatal(err)
 	}
 	if created.DeliverySequence < 1 {
-		t.Fatal("delivery sequence was not allocated")
+		t.Fatal("номер последовательности доставки не выделен")
 	}
 
 	type outcome struct {
@@ -95,25 +95,25 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		}
 	}
 	if wins != 1 || misses != 1 {
-		t.Fatalf("expected one distributed owner, wins=%d misses=%d", wins, misses)
+		t.Fatalf("ожидался один распределённый владелец: успешных захватов=%d, неудачных=%d", wins, misses)
 	}
 	if winner.cmd.LeaseOwner == "" || winner.cmd.LeaseToken == "" {
-		t.Fatal("winner was not fenced")
+		t.Fatal("победитель не получил защиту от устаревших владельцев")
 	}
 	for name, replica := range map[string]*SQLRepository{"api-a": a, "api-b": b} {
 		resumed, resumeErr := replica.LeaseServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, winner.cmd.LeaseOwner, "ignored_new_token_0123456789", 0, now.Add(500*time.Millisecond), 30*time.Second)
 		if resumeErr != nil || resumed.ID != winner.cmd.ID || resumed.LeaseToken != winner.cmd.LeaseToken || resumed.Attempt != winner.cmd.Attempt {
-			t.Fatalf("%s did not resume the same durable lease: %+v err=%v", name, resumed, resumeErr)
+			t.Fatalf("%s не возобновил ту же долговременную аренду: %+v, ошибка=%v", name, resumed, resumeErr)
 		}
 	}
 
 	done, err := b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, winner.cmd.ID, winner.cmd.LeaseOwner, winner.cmd.LeaseToken, winner.cmd.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
 	if err != nil || done.Status != "succeeded" {
-		t.Fatalf("cross-replica completion: %+v err=%v", done, err)
+		t.Fatalf("завершение через другую реплику: %+v, ошибка=%v", done, err)
 	}
 	replay, err := a.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, winner.cmd.ID, winner.cmd.LeaseOwner, winner.cmd.LeaseToken, winner.cmd.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || replay.Status != "succeeded" {
-		t.Fatalf("cross-replica idempotent ACK: %+v err=%v", replay, err)
+		t.Fatalf("идемпотентное подтверждение через другую реплику: %+v, ошибка=%v", replay, err)
 	}
 	// Повторный FAILED ACK с чрезмерно длинной причиной должен возвращать
 	// одинаковый нормализованный сохранённый ответ на всех репликах Backend.
@@ -122,26 +122,26 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	failedCommand.IdempotencyKey = "ha01911-idem-long-failure"
 	createdFailed, _, createErr := a.CreateServerBridgeControlCommand(ctx, failedCommand, now)
 	if createErr != nil || createdFailed.ID != failedCommand.ID {
-		t.Fatalf("create long-failure command: %+v err=%v", createdFailed, createErr)
+		t.Fatalf("создание команды длительного отказа: %+v, ошибка=%v", createdFailed, createErr)
 	}
 	failedLease, leaseErr := b.LeaseServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "longfailure_0123456789abcdef", created.DeliverySequence,
 		now, 30*time.Second)
 	if leaseErr != nil || failedLease.ID != failedCommand.ID {
-		t.Fatalf("lease long-failure command: %+v err=%v", failedLease, leaseErr)
+		t.Fatalf("аренда команды длительного отказа: %+v, ошибка=%v", failedLease, leaseErr)
 	}
 	longFailure := "reason: " + strings.Repeat("x", 1500)
 	failed, failedErr := a.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
 		failedLease.ID, failedLease.LeaseOwner, failedLease.LeaseToken,
 		failedLease.DeliverySequence, "failed", map[string]string{"reason": "test"}, longFailure, now.Add(time.Second))
 	if failedErr != nil || len(failed.Error) != 1024 || failed.Status != "failed" {
-		t.Fatalf("persist normalized failure: %+v err=%v", failed, failedErr)
+		t.Fatalf("сохранение нормализованного отказа: %+v, ошибка=%v", failed, failedErr)
 	}
 	replayed, replayErr := b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
 		failedLease.ID, failedLease.LeaseOwner, failedLease.LeaseToken,
 		failedLease.DeliverySequence, "failed", map[string]string{"reason": "test"}, longFailure, now.Add(2*time.Second))
 	if replayErr != nil || replayed.Error != failed.Error {
-		t.Fatalf("idempotent failed acknowledgement across replicas: %+v err=%v", replayed, replayErr)
+		t.Fatalf("идемпотентное подтверждение отказа между репликами: %+v, ошибка=%v", replayed, replayErr)
 	}
 
 	// Устойчивый failover: доставленный внешний побочный эффект с потерянным ACK
@@ -159,7 +159,7 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		"cccccccccccccccccccccccccccccccc", "lease_uncertain_0123456789abcdef",
 		failedLease.DeliverySequence, now, 5*time.Second)
 	if err != nil || first.Status != "leased" {
-		t.Fatalf("first uncertain lease: %+v %v", first, err)
+		t.Fatalf("первая аренда с неопределённым результатом: %+v %v", first, err)
 	}
 	// Имитируйте истечение в БД; старый тест сдвигал время API, которое 0.51.5
 	// намеренно игнорирует для защиты от расхождения часов хостов.
@@ -170,12 +170,12 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		"dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef",
 		failedLease.DeliverySequence, now.Add(6*time.Second), 5*time.Second)
 	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("redelivered uncertain command: %v", err)
+		t.Fatalf("повторно доставлена команда с неопределённым исходом: %v", err)
 	}
 	for _, replica := range []*SQLRepository{a, b} {
 		read, readErr := replica.GetServerBridgeControlCommand(ctx, nodeID, first.ID)
 		if readErr != nil || read.Status != "indeterminate" || read.LeaseToken != first.LeaseToken || read.Attempt != 1 {
-			t.Fatalf("cross-replica uncertain state: %+v %v", read, readErr)
+			t.Fatalf("неопределённое состояние между репликами: %+v %v", read, readErr)
 		}
 	}
 	if _, err = b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, "dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef", first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second)); !errors.Is(err, ErrConflict) {
@@ -185,10 +185,10 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	// HTTP-ответ без повторной отправки побочного эффекта.
 	late, err := b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, first.LeaseOwner, first.LeaseToken, first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second))
 	if err != nil || late.Status != "succeeded" {
-		t.Fatalf("original late ACK must reconcile safely: %+v %v", late, err)
+		t.Fatalf("исходное запоздавшее подтверждение должно безопасно согласовываться: %+v %v", late, err)
 	}
 	// Реплика до 0.28.5 должна ограждаться самим PostgreSQL, а не только Go.
 	if _, err = b.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased', lease_token='stale' WHERE id=$1`, first.ID); err == nil {
-		t.Fatal("database trigger permitted old replica redelivery")
+		t.Fatal("триггер базы данных разрешил повторную доставку старой репликой")
 	}
 }

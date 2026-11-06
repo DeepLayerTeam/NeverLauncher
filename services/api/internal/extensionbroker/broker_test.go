@@ -25,7 +25,7 @@ func TestScopedFilesystemBrokers03110(t *testing.T) {
 	}
 	got, err = Read(root, "nested/report.txt")
 	if err != nil || string(mustDecode03110(t, got)) != "updated" {
-		t.Fatalf("atomic replacement %q %v", got, err)
+		t.Fatalf("атомарная замена %q: %v", got, err)
 	}
 	outside := filepath.Join(t.TempDir(), "outside")
 	if err := os.WriteFile(outside, []byte("unchanged"), 0600); err != nil {
@@ -35,36 +35,36 @@ func TestScopedFilesystemBrokers03110(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Read(root, "nested/link"); err == nil {
-		t.Fatal("symlink read bypass")
+		t.Fatal("обход ограничения чтения через символьную ссылку")
 	}
 	if err := Write(root, "nested/link", base64.StdEncoding.EncodeToString([]byte("replacement"))); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(outside)
 	if string(b) != "unchanged" {
-		t.Fatal("symlink changed outside inode")
+		t.Fatal("символьная ссылка изменила данные за пределами разрешённого inode")
 	}
 	if err := os.Symlink(filepath.Dir(outside), filepath.Join(root, "linked-dir")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Read(root, "linked-dir/outside"); err == nil {
-		t.Fatal("symlinked parent bypass")
+		t.Fatal("обход ограничения через родительскую символьную ссылку")
 	}
 	if err := Write(root, "linked-dir/outside", base64.StdEncoding.EncodeToString([]byte("oops"))); err == nil {
-		t.Fatal("symlinked parent write")
+		t.Fatal("запись через родительскую символьную ссылку")
 	}
 	if err := os.Link(outside, filepath.Join(root, "nested", "hardlink")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Read(root, "nested/hardlink"); err == nil {
-		t.Fatal("hardlink read outside grant")
+		t.Fatal("чтение через жёсткую ссылку за пределами выданных прав")
 	}
 	if err := Write(root, "nested/hardlink", base64.StdEncoding.EncodeToString([]byte("safe"))); err != nil {
 		t.Fatal(err)
 	}
 	b, _ = os.ReadFile(outside)
 	if string(b) != "unchanged" {
-		t.Fatal("hardlink alias changed outside inode")
+		t.Fatal("жёсткая ссылка изменила данные за пределами разрешённого inode")
 	}
 	for _, rel := range []string{"../outside", "nested/../outside", "/etc/passwd", "nested//file", "nested/./file", "nested\\evil", "", "nested/"} {
 		if _, err := Read(root, rel); err == nil {
@@ -75,13 +75,13 @@ func TestScopedFilesystemBrokers03110(t *testing.T) {
 		}
 	}
 	if err := Write(root, "oversized", base64.StdEncoding.EncodeToString(make([]byte, MaxFileBytes+1))); err == nil {
-		t.Fatal("oversized payload accepted")
+		t.Fatal("принят запрос с превышением допустимого размера")
 	}
 	if err := os.WriteFile(filepath.Join(root, "nested", "large"), make([]byte, MaxFileBytes+1), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Read(root, "nested/large"); err == nil {
-		t.Fatal("large read accepted")
+		t.Fatal("допущено чтение сверх лимита")
 	}
 }
 func mustDecode03110(t *testing.T, s string) []byte {
@@ -98,12 +98,12 @@ func TestScopedRootPolicy03110(t *testing.T) {
 	good := "{\"reports\":\"" + root + "\"}"
 	roots, e := ParseRoots(good)
 	if e != nil || roots["reports"] != root {
-		t.Fatalf("valid root %v", e)
+		t.Fatalf("корректный корневой каталог: %v", e)
 	}
 	bad := []string{"{bad}", "{\"../bad\":\"" + root + "\"}", "{\"reports\":\"/\"}", "{\"reports\":\"/not-a-real-directory\"}", "{} trailing"}
 	for _, v := range bad {
 		if _, e := ParseRoots(v); e == nil {
-			t.Errorf("invalid root accepted %q", v)
+			t.Errorf("принят недопустимый корневой каталог %q", v)
 		}
 	}
 	link := filepath.Join(t.TempDir(), "link")
@@ -118,18 +118,18 @@ func TestSignedOutboundOrigin03110(t *testing.T) {
 	grants := []string{"api.example.com:443", "service.example.org:8443"}
 	for _, url := range []string{"https://api.example.com/v1", "https://api.example.com:443/v2", "https://service.example.org:8443/api"} {
 		if !AllowedDestination(url, grants) {
-			t.Fatalf("allowed origin denied %q", url)
+			t.Fatalf("разрешённый источник отклонён %q", url)
 		}
 	}
 	for _, url := range []string{"http://api.example.com", "https://other.example.com", "https://sub.api.example.com", "https://api.example.com.evil.net", "https://api.example.com:444", "https://user:pass@api.example.com", "https://127.0.0.1", "https://api.example.com./", "https://API.EXAMPLE.COM", "https://api.example.com:0443", "https://api.example.com/#fragment", "https://api.example.com%2f.evil/"} {
 		if AllowedDestination(url, grants) {
-			t.Fatalf("unapproved origin accepted %q", url)
+			t.Fatalf("принят неутверждённый источник %q", url)
 		}
 	}
 	if HasGrant(grants, "api.example.com:444") {
-		t.Fatal("ungranted endpoint")
+		t.Fatal("запрос к конечной точке без выданного разрешения")
 	}
 	if !strings.Contains(ErrDenied.Error(), "denied") {
-		t.Fatal("unexpected denial")
+		t.Fatal("неожиданный отказ")
 	}
 }

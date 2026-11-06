@@ -95,19 +95,19 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 		}
 		status, out := request(capability, payload)
 		if status != 200 {
-			t.Fatalf("%s expected 200 got %d", capability, status)
+			t.Fatalf("%s: ожидался код 200, получен %d", capability, status)
 		}
 		if len(out) == 0 {
-			t.Fatalf("%s empty response", capability)
+			t.Fatalf("%s: пустой ответ", capability)
 		}
 		if capability == "job.get" {
 			value, ok := out["job"].(map[string]any)
 			if !ok {
-				t.Fatalf("bad job envelope %v", out)
+				t.Fatalf("неверная оболочка задания: %v", out)
 			}
 			for _, sensitive := range []string{"payload", "result", "actorId", "leaseToken", "lastError"} {
 				if _, found := value[sensitive]; found {
-					t.Fatalf("sensitive field leaked: %s", sensitive)
+					t.Fatalf("раскрыто конфиденциальное поле: %s", sensitive)
 				}
 			}
 			if value["projectId"] != "demo-project" {
@@ -118,30 +118,30 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 	for _, capability := range []string{"profile.list", "channel.list", "release.page", "job.get", "project.get"} {
 		payload := map[string]any{"projectId": "other-project", "name": job.ID}
 		if status, _ := request(capability, payload); status != http.StatusForbidden {
-			t.Fatalf("cross-project %s allowed: %d", capability, status)
+			t.Fatalf("разрешена операция %s в чужом проекте: %d", capability, status)
 		}
 	}
 	if status, _ := request("project.list", map[string]any{}); status != http.StatusForbidden {
-		t.Fatalf("project-scoped enumeration allowed: %d", status)
+		t.Fatalf("разрешён перебор объектов за пределами проекта: %d", status)
 	}
 	if status, _ := request("profile.list", map[string]any{"projectId": "demo-project", "offset": -1}); status != 400 {
-		t.Fatalf("invalid pagination allowed: %d", status)
+		t.Fatalf("разрешена недопустимая пагинация: %d", status)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, ext, "project", "demo-project", "project:read"); err != nil {
 		t.Fatal(err)
 	}
 	if status, _ := request("profile.list", map[string]any{"projectId": "demo-project"}); status != http.StatusForbidden {
-		t.Fatalf("revoked project permission ignored: %d", status)
+		t.Fatalf("отзыв прав на проект проигнорирован: %d", status)
 	}
 	// release:read не зависит от project:read.
 	if status, _ := request("channel.list", map[string]any{"projectId": "demo-project"}); status != 200 {
-		t.Fatalf("release grant lost after project revoke: %d", status)
+		t.Fatalf("разрешение на релиз потеряно после отзыва прав на проект: %d", status)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, ext, "project", "demo-project", "release:read"); err != nil {
 		t.Fatal(err)
 	}
 	if status, _ := request("channel.list", map[string]any{"projectId": "demo-project"}); status != 403 {
-		t.Fatalf("revoked release permission ignored: %d", status)
+		t.Fatalf("отзыв разрешения на релиз проигнорирован: %d", status)
 	}
 	// Расширение с явно глобальной областью и явным глобальным разрешением может
 	// перечислять проекты.
@@ -170,7 +170,7 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 		t.Fatal(e)
 	}
 	if resp.StatusCode != 200 || len(values["items"].([]any)) != 1 || values["nextOffset"] == nil {
-		t.Fatalf("global page not returned: status=%d response=%v", resp.StatusCode, values)
+		t.Fatalf("не возвращена общая страница: статус=%d, ответ=%v", resp.StatusCode, values)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, ext, "global", "", "project:read"); err != nil {
 		t.Fatal(err)
@@ -187,6 +187,6 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 	}
 	defer resp2.Body.Close()
 	if resp2.StatusCode != 403 {
-		t.Fatalf("global grant revocation ignored: %d", resp2.StatusCode)
+		t.Fatalf("отзыв глобального разрешения проигнорирован: %d", resp2.StatusCode)
 	}
 }

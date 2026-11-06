@@ -29,7 +29,7 @@ func TestSQLiteHTTPStateCoverage0372(t *testing.T) {
 			continue
 		}
 		if v, ok := got[f.Name]; !ok || v != f.Type {
-			t.Errorf("HTTP state field %s (%s) is not persisted with matching type", f.Name, f.Type)
+			t.Errorf("поле HTTP-состояния %s (%s) не сохраняется с соответствующим типом", f.Name, f.Type)
 		}
 	}
 }
@@ -40,46 +40,46 @@ func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 	open := func() *SQLiteHTTPRepository0372 {
 		r, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://example")
 		if err != nil {
-			t.Fatalf("open real SQLite WAL repository: %v", err)
+			t.Fatalf("не удалось открыть реальный репозиторий SQLite WAL: %v", err)
 		}
 		return r
 	}
 	r := open()
 	if len(r.ListProjects()) != 0 || len(r.ListUsers()) != 0 {
-		t.Fatal("a new SQLite installation must not inherit development projects or admin credentials")
+		t.Fatal("новая установка SQLite не должна наследовать проекты разработки и учётные данные администратора")
 	}
 	if err := r.Health(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := r.SaveUser(model.User{ID: "unapproved", Email: "viewer@example.test", RoleID: "viewer"}); !errors.Is(err, ErrConflict) {
-		t.Fatalf("first account must be active owner: %v", err)
+		t.Fatalf("первая учётная запись должна принадлежать активному владельцу: %v", err)
 	}
 	project, err := r.SaveProject(model.Project{ID: "real-project", Name: "Real project"})
 	if err != nil || project.ID != "real-project" {
-		t.Fatalf("save project: %+v / %v", project, err)
+		t.Fatalf("сохранение проекта: %+v / %v", project, err)
 	}
 	p, err := r.SaveProfile(model.Profile{ProjectID: project.ID, ID: "client", Name: "Vanilla", Loader: "vanilla"})
 	if err != nil || p.Revision != 1 {
-		t.Fatalf("save profile: %+v / %v", p, err)
+		t.Fatalf("сохранение профиля: %+v / %v", p, err)
 	}
 	current := p
 	current.Name = "Updated"
 	updated, err := r.SaveProfile(current)
 	if err != nil || updated.Revision != 2 {
-		t.Fatalf("CAS revision: %+v / %v", updated, err)
+		t.Fatalf("ревизия CAS: %+v / %v", updated, err)
 	}
 	current.Name = "Stale edit"
 	if _, err := r.SaveProfile(current); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected stale CAS conflict, got %v", err)
+		t.Fatalf("ожидался конфликт устаревшей ревизии CAS, получено: %v", err)
 	}
 	if _, err := r.SaveUser(model.User{ID: "owner", Email: "owner@example.test", RoleID: "owner", Status: "active"}); err != nil {
 		t.Fatalf("owner: %v", err)
 	}
 	if _, err := r.SetUserDisabled("owner", true); !errors.Is(err, ErrConflict) {
-		t.Fatalf("last owner was disabled: %v", err)
+		t.Fatalf("последняя учётная запись владельца отключена: %v", err)
 	}
 	if _, err := OpenSQLiteHTTPRepository0372(ctx, path, ""); err == nil {
-		t.Fatal("second writer acquired the same SQLite file")
+		t.Fatal("второй процесс записи захватил тот же файл SQLite")
 	}
 	if err := r.Close(); err != nil {
 		t.Fatal(err)
@@ -87,24 +87,24 @@ func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 	r = open()
 	defer r.Close()
 	if err := r.Health(ctx); err != nil {
-		t.Fatalf("reopen readiness: %v", err)
+		t.Fatalf("готовность после повторного открытия: %v", err)
 	}
 	if got, err := r.GetProject(project.ID); err != nil || got.Name != project.Name {
-		t.Fatalf("project lost on restart: %+v / %v", got, err)
+		t.Fatalf("проект потерян после перезапуска: %+v / %v", got, err)
 	}
 	profiles, err := r.ListProfiles(project.ID)
 	if err != nil || len(profiles) != 1 || profiles[0].Revision != 2 || profiles[0].Name != "Updated" {
-		t.Fatalf("profile revision lost on restart: %+v / %v", profiles, err)
+		t.Fatalf("ревизия профиля потеряна после перезапуска: %+v / %v", profiles, err)
 	}
 	history, err := r.ListProfileRevisions(project.ID, "client")
 	if err != nil || len(history) != 2 {
-		t.Fatalf("history lost on restart: %+v / %v", history, err)
+		t.Fatalf("история потеряна после перезапуска: %+v / %v", history, err)
 	}
 	if _, err := r.GetUserByEmail("owner@example.test"); err != nil {
-		t.Fatalf("owner lost on restart: %v", err)
+		t.Fatalf("владелец потерян после перезапуска: %v", err)
 	}
 	if len(r.ListUsers()) != 1 {
-		t.Fatal("unexpected development user after reopen")
+		t.Fatal("после повторного открытия обнаружен неожиданный пользователь разработки")
 	}
 }
 
@@ -143,11 +143,11 @@ func TestSQLiteHTTPConcurrentWritesAndSafeFailure0372(t *testing.T) {
 	}
 	defer r.Close()
 	if got := len(r.ListProjects()); got != n {
-		t.Fatalf("concurrent writes lost: got %d want %d", got, n)
+		t.Fatalf("параллельные записи потеряны: получено %d, ожидалось %d", got, n)
 	}
 	// Отсутствующий релиз нельзя продвинуть в stable. Обхода Runtime-гейта нет.
 	if _, err := r.PublishVersion("pa", "client", "stable", "1.0"); err == nil {
-		t.Fatal("stable publish unexpectedly succeeded")
+		t.Fatal("публикация стабильного выпуска неожиданно завершилась успешно")
 	}
 }
 
@@ -165,12 +165,12 @@ func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 	}
 	_, err = r.SaveProject(model.Project{ID: "not-committed", Name: "Not committed"})
 	if err == nil {
-		t.Fatal("success returned for a failed SQLite COMMIT")
+		t.Fatal("после неудачной фиксации SQLite COMMIT возвращён успешный результат")
 	}
 	func() {
 		defer func() {
 			if recover() == nil {
-				t.Fatal("stale unsynced cache remained readable")
+				t.Fatal("устаревший несинхронизированный кеш остался доступен для чтения")
 			}
 		}()
 		_, _ = r.GetProject("not-committed")
@@ -181,7 +181,7 @@ func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 	}
 	defer reloaded.Close()
 	if _, err = reloaded.GetProject("not-committed"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("uncommitted project survived restart: %v", err)
+		t.Fatalf("незафиксированный проект сохранился после перезапуска: %v", err)
 	}
 }
 
@@ -199,6 +199,6 @@ func TestSQLiteHTTPFilePermissions0372(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm()&0077 != 0 {
-		t.Fatalf("database readable by group/other: %s", info.Mode().Perm())
+		t.Fatalf("база данных доступна группе или другим пользователям: %s", info.Mode().Perm())
 	}
 }

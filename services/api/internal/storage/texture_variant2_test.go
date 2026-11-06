@@ -35,20 +35,20 @@ func TestTextureLocalBackupRestoreGC0253(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := BackupTextures0253(ctx, s, []TextureBackupObject0253{obj}, dest); err == nil {
-		t.Fatal("overwrote backup")
+		t.Fatal("резервная копия перезаписана")
 	}
 	if err := DeleteTexture0253(ctx, s, obj.Digest); err != nil {
 		t.Fatal(err)
 	}
 	if err := DeleteTexture0253(ctx, s, obj.Digest); err != nil {
-		t.Fatal("delete must be idempotent", err)
+		t.Fatal("удаление должно быть идемпотентным", err)
 	}
 	if _, _, err := OpenTexture0252(s, obj.Digest); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("expected deleted object, %v", err)
+		t.Fatalf("ожидался удалённый объект: %v", err)
 	}
 	n, err := RestoreTextures0253(ctx, s, dest, []TextureBackupObject0253{obj})
 	if err != nil || n != 1 {
-		t.Fatalf("restore %d %v", n, err)
+		t.Fatalf("восстановление %d: %v", n, err)
 	}
 	r, _, err := OpenTexture0252(s, obj.Digest)
 	if err != nil {
@@ -64,13 +64,13 @@ func TestTextureLocalBackupRestoreGC0253(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := RestoreTextures0253(ctx, s, dest, []TextureBackupObject0253{obj}); err == nil {
-		t.Fatal("accepted corrupt backup")
+		t.Fatal("принята повреждённая резервная копия")
 	}
 	if err := DeleteTexture0253(ctx, s, obj.Digest); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := RestoreTextures0253(ctx, s, dest, nil); err == nil {
-		t.Fatal("accepted unauthorized backup digest")
+		t.Fatal("принят неавторизованный хеш резервной копии")
 	}
 }
 func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
@@ -93,13 +93,13 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 		case http.MethodPut:
 			puts++
 			if r.Header.Get("If-None-Match") != "*" {
-				t.Error("S3 conditional PUT missing")
+				t.Error("отсутствует условный PUT-запрос S3")
 			}
 			if r.Header.Get("Content-Type") != "image/png" {
-				t.Error("incorrect PNG content type")
+				t.Error("неверный тип содержимого PNG")
 			}
 			if r.Header.Get("Cache-Control") != "public, max-age=31536000, immutable" {
-				t.Error("incorrect immutable cache header")
+				t.Error("неверный заголовок неизменяемого кеша")
 			}
 			if _, ok := stored[r.URL.Path]; ok {
 				w.WriteHeader(http.StatusPreconditionFailed)
@@ -119,7 +119,7 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 			delete(stored, r.URL.Path)
 			w.WriteHeader(http.StatusNoContent)
 		default:
-			t.Errorf("unexpected method %s", r.Method)
+			t.Errorf("неожиданный метод %s", r.Method)
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}))
@@ -131,11 +131,11 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		key, n, err := PutTextureImmutable0253(ctx, s, obj.Digest, payload)
 		if err != nil || key != obj.ObjectKey || n != obj.ByteSize {
-			t.Fatalf("immutable PUT #%d: key=%s size=%d err=%v", i, key, n, err)
+			t.Fatalf("неизменяемый PUT №%d: ключ=%s, размер=%d, ошибка=%v", i, key, n, err)
 		}
 	}
 	if puts != 2 {
-		t.Fatalf("expected PUT + conditional retry, got %d", puts)
+		t.Fatalf("ожидались PUT и условная повторная попытка, получено %d", puts)
 	}
 	// Объект был подменён между загрузками; нельзя принимать совпадение лишь по ключу.
 	mu.Lock()
@@ -144,13 +144,13 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 	}
 	mu.Unlock()
 	if _, _, err := PutTextureImmutable0253(ctx, s, obj.Digest, payload); err == nil {
-		t.Fatal("deduplicated corrupt S3 bytes")
+		t.Fatal("повреждённые данные S3 устранены при дедупликации")
 	}
 	if err := DeleteTexture0253(ctx, s, obj.Digest); err != nil {
 		t.Fatal(err)
 	}
 	if err := DeleteTexture0253(ctx, s, obj.Digest); err != nil {
-		t.Fatal("S3 idempotent delete", err)
+		t.Fatal("идемпотентное удаление S3", err)
 	}
 }
 func TestTextureGCRefusesModifiedLocal0253(t *testing.T) {
@@ -169,7 +169,7 @@ func TestTextureGCRefusesModifiedLocal0253(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := DeleteTexture0253(context.Background(), s, obj.Digest); err == nil {
-		t.Fatal("deleted modified file")
+		t.Fatal("удалён изменённый файл")
 	}
 }
 
@@ -200,7 +200,7 @@ func TestTextureRestoreRepairsCorruptLocal0253(t *testing.T) {
 	restored, err := io.ReadAll(f)
 	f.Close()
 	if err != nil || !bytes.Equal(restored, png) {
-		t.Fatal("corrupt local file not repaired", err)
+		t.Fatal("повреждённый локальный файл не восстановлен", err)
 	}
 }
 
@@ -264,7 +264,7 @@ func TestTextureS3BackupRestoreAndConditionalRepair0253(t *testing.T) {
 	mu.Unlock()
 	n, err := RestoreTextures0253(ctx, store, snapshot, []TextureBackupObject0253{obj})
 	if err != nil || n != 1 {
-		t.Fatalf("S3 conditional repair %d: %v", n, err)
+		t.Fatalf("условное восстановление S3 %d: %v", n, err)
 	}
 	f, _, err := OpenTexture0252(store, obj.Digest)
 	if err != nil {

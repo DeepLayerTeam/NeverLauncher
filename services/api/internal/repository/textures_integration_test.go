@@ -36,7 +36,7 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	}
 	schema := fmt.Sprintf("test_textures_0251_%d", time.Now().UnixNano())
 	if !regexp.MustCompile(`^test_textures_0251_[0-9]+$`).MatchString(schema) {
-		t.Fatal("unsafe schema name")
+		t.Fatal("небезопасное имя схемы")
 	}
 	if _, err := db.ExecContext(ctx, `CREATE SCHEMA `+schema); err != nil {
 		t.Fatal(err)
@@ -70,36 +70,36 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, string(migration)); err != nil {
-		t.Fatalf("migration: %v", err)
+		t.Fatalf("миграция: %v", err)
 	}
 	r := &SQLRepository{db: db}
 	selected, ok, err := r.ReadTextureProfile0251(ctx, p.UUID)
 	if err != nil || !ok || selected.Model != "slim" || selected.SkinURL != "https://textures.example/skin.png" {
-		t.Fatalf("migration lookup: %+v %v %v", selected, ok, err)
+		t.Fatalf("поиск миграции: %+v %v %v", selected, ok, err)
 	}
 	aliased, ok, err := r.ReadTextureProfile0251(ctx, legacySum)
 	if err != nil || !ok || aliased.UUID != p.UUID {
-		t.Fatalf("legacy alias: %+v %v %v", aliased, ok, err)
+		t.Fatalf("устаревший псевдоним: %+v %v %v", aliased, ok, err)
 	}
 	if _, ok, err := r.ReadTextureProfile0251(ctx, "22222222-2222-4222-8222-222222222222"); err != nil || ok {
-		t.Fatalf("unmatched record unexpectedly resolved: %v %v", ok, err)
+		t.Fatalf("запись без соответствия неожиданно была разрешена: %v %v", ok, err)
 	}
 	var unmatched int
 	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM texture_legacy_unmatched`).Scan(&unmatched); err != nil || unmatched != 1 {
-		t.Fatalf("quarantine count %d %v", unmatched, err)
+		t.Fatalf("количество записей в карантине: %d %v", unmatched, err)
 	}
 	list, err := r.ListTextureAssignments0251(ctx, p)
 	if err != nil || len(list) != 1 || list[0].Revision != 1 {
-		t.Fatalf("initial list %+v %v", list, err)
+		t.Fatalf("исходный список: %+v %v", list, err)
 	}
 	foreign := p
 	foreign.UserID = other.UserID
 	if _, err := r.UpdateTextureSelection0251(ctx, foreign, "skin", 1, "classic", "public", true); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("foreign ownership accepted: %v", err)
+		t.Fatalf("допущено чужое владение: %v", err)
 	}
 	changed, err := r.UpdateTextureSelection0251(ctx, p, "skin", 1, "classic", "private", true)
 	if err != nil || changed.Revision != 2 {
-		t.Fatalf("revision update %+v %v", changed, err)
+		t.Fatalf("обновление ревизии: %+v %v", changed, err)
 	}
 	if _, err := r.UpdateTextureSelection0251(ctx, p, "skin", 1, "slim", "public", true); !errors.Is(err, ErrTextureRevisionConflict0251) {
 		t.Fatalf("Принята устаревшая ревизия: %v", err)
@@ -110,35 +110,35 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := r.UpdateTextureSelection0251(ctx, p, "cape", 1, "classic", "public", true); !errors.Is(err, ErrTextureCapeDenied0251) {
-		t.Fatalf("cape policy bypass %v", err)
+		t.Fatalf("обход политики плащей: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO texture_cape_grants(project_id,user_id,granted,actor_user_id) VALUES ('',$1,true,$2)`, p.UserID, other.UserID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := r.UpdateTextureSelection0251(ctx, p, "cape", 1, "classic", "public", true); err != nil {
-		t.Fatalf("granted cape rejected: %v", err)
+		t.Fatalf("плащ с разрешённым доступом отклонён: %v", err)
 	}
 	nowPrivate, ok, err := r.ReadTextureProfile0251(ctx, p.UUID)
 	if err != nil || !ok || nowPrivate.SkinURL != "" {
-		t.Fatalf("private texture leaked: %+v %v %v", nowPrivate, ok, err)
+		t.Fatalf("раскрыта приватная текстура: %+v %v %v", nowPrivate, ok, err)
 	}
 	history, err := r.ListTextureRevisions0251(ctx, p, "skin")
 	if err != nil || len(history) != 2 || history[0].Revision != 2 || history[1].Revision != 1 {
-		t.Fatalf("history %+v %v", history, err)
+		t.Fatalf("история: %+v %v", history, err)
 	}
 	if err := r.EnsureTextureIdentity0251(ctx, p); err != nil {
 		t.Fatal(err)
 	}
 	history, err = r.ListTextureRevisions0251(ctx, p, "skin")
 	if err != nil || len(history) != 2 {
-		t.Fatalf("lazy backfill reinserted revisions: %v %v", len(history), err)
+		t.Fatalf("отложенное заполнение повторно вставило ревизии: %v %v", len(history), err)
 	}
 	// Убедитесь, что запись с отсутствующим владельцем не проходит проверку
 	// владения.
 	fake := p
 	fake.UserID = "account_b"
 	if err := r.EnsureTextureIdentity0251(ctx, fake); err == nil {
-		t.Fatal("foreign canonical profile accepted")
+		t.Fatal("принят чужой канонический профиль")
 	}
 }
 

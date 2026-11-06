@@ -86,7 +86,7 @@ func sqliteFactory(t *testing.T) func() storage {
 		defer cancel()
 		r, err := sqlitecore.Open(ctx, sqlitedurable.Options{Path: path})
 		if err != nil {
-			t.Fatalf("real SQLite open (cannot substitute in-memory): %v", err)
+			t.Fatalf("открытие реальной SQLite (нельзя заменять базой в памяти): %v", err)
 		}
 		return &sqliteAdapter{repo: r}
 	}
@@ -104,29 +104,29 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		t.Fatalf("SaveProject: %v", err)
 	}
 	if p.ID != id || p.DefaultChannel != "stable" {
-		t.Fatalf("project identity/default: %#v", p)
+		t.Fatalf("идентичность проекта или значение по умолчанию: %#v", p)
 	}
 	before := p.CreatedAt
 	p.Name = "Parity renamed"
 	p, err = s.SaveProject(p)
 	if err != nil || p.CreatedAt.IsZero() || !p.CreatedAt.Equal(before) {
-		t.Fatalf("upsert replaced createdAt: %#v %v", p, err)
+		t.Fatalf("операция upsert изменила createdAt: %#v %v", p, err)
 	}
 
 	// Настоящий CAS ревизии и гарантии неизменяемой истории редакций.
 	original, err := s.SaveProfile(model.Profile{ProjectID: id, ID: "client", Name: "Vanilla", Loader: "vanilla"})
 	if err != nil || original.Revision != 1 {
-		t.Fatalf("initial profile: %+v / %v", original, err)
+		t.Fatalf("исходный профиль: %+v / %v", original, err)
 	}
 	initialSnapshot, err := s.CurrentProfileSnapshot(id, "client")
 	if err != nil || initialSnapshot.Revision != 1 || initialSnapshot.Digest != original.Digest {
-		t.Fatalf("initial snapshot: %+v / %v", initialSnapshot, err)
+		t.Fatalf("исходный снимок: %+v / %v", initialSnapshot, err)
 	}
 	next := original
 	next.Name = "Vanilla changed"
 	updated, err := s.SaveProfile(next)
 	if err != nil || updated.Revision != 2 || updated.Digest == original.Digest {
-		t.Fatalf("CAS update: %+v / %v", updated, err)
+		t.Fatalf("обновление CAS: %+v / %v", updated, err)
 	}
 	stale := original
 	stale.Name = "stale write"
@@ -135,10 +135,10 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	}
 	history, err := s.ListProfileRevisions(id, "client")
 	if err != nil || len(history) != 2 || history[0].Revision != 1 || history[1].Revision != 2 {
-		t.Fatalf("immutable history: %+v / %v", history, err)
+		t.Fatalf("неизменяемая история: %+v / %v", history, err)
 	}
 	if history[0].Spec.Name != "Vanilla" || history[1].Spec.Name != "Vanilla changed" {
-		t.Fatalf("revision content modified: %+v", history)
+		t.Fatalf("содержимое ревизии изменено: %+v", history)
 	}
 
 	// Гонка записи из двух соединений с одной ревизией: победитель ровно один.
@@ -163,11 +163,11 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		} else if s.IsConflict(err) {
 			conflicts++
 		} else {
-			t.Fatalf("unexpected concurrent write error: %v", err)
+			t.Fatalf("неожиданная ошибка параллельной записи: %v", err)
 		}
 	}
 	if wins != 1 || conflicts != 1 {
-		t.Fatalf("CAS concurrency: winner=%d conflicts=%d", wins, conflicts)
+		t.Fatalf("параллельный CAS: победителей=%d, конфликтов=%d", wins, conflicts)
 	}
 
 	// Идентичность пользователя и роли проекта сохраняются после настоящего повторного открытия Backend.
@@ -191,19 +191,19 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	defer s.Close()
 	restored, err := s.GetProject(id)
 	if err != nil || restored.Name != "Parity renamed" || !restored.CreatedAt.Equal(before) {
-		t.Fatalf("project lost after restart: %+v / %v", restored, err)
+		t.Fatalf("проект потерян после перезапуска: %+v / %v", restored, err)
 	}
 	sn, err := s.CurrentProfileSnapshot(id, "client")
 	if err != nil || sn.Revision != 3 {
-		t.Fatalf("profile lost after restart: %+v / %v", sn, err)
+		t.Fatalf("профиль потерян после перезапуска: %+v / %v", sn, err)
 	}
 	h, err := s.ListProfileRevisions(id, "client")
 	if err != nil || len(h) != 3 {
-		t.Fatalf("revisions lost after restart: %d / %v", len(h), err)
+		t.Fatalf("ревизии потеряны после перезапуска: %d / %v", len(h), err)
 	}
 	user, err := s.GetUserByEmail(strings.ToUpper(u.Email))
 	if err != nil || user.ID != u.ID || user.ProjectRoles[id] != "owner" || user.Status != "disabled" {
-		t.Fatalf("user/status/roles lost after restart: %+v / %v", user, err)
+		t.Fatalf("пользователь, статус или роли потеряны после перезапуска: %+v / %v", user, err)
 	}
 }
 

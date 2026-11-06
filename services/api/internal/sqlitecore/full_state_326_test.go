@@ -29,7 +29,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	}
 	p2, created, e := r.PutPackage(ctx, data, "owner")
 	if e != nil || created || pkg.Digest != p2.Digest {
-		t.Fatalf("dedup: %v %v", created, e)
+		t.Fatalf("устранение дубликатов: %v %v", created, e)
 	}
 	pub, priv, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
@@ -53,7 +53,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	inst := SQLiteExtensionInstall{ExtensionID: in.ExtensionID, Scope: "global", Version: in.Version, PackageDigest: pkg.Digest, State: "enabled", Actor: "owner"}
 	installed, e := r.ApplyExtensionInstall326(ctx, inst, 0)
 	if e != nil || installed.Generation != 1 {
-		t.Fatalf("install: %+v %v", installed, e)
+		t.Fatalf("установка: %+v %v", installed, e)
 	}
 	var success atomic.Int64
 	var wg sync.WaitGroup
@@ -73,11 +73,11 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	}
 	wg.Wait()
 	if success.Load() != 1 {
-		t.Fatalf("CAS winners=%d", success.Load())
+		t.Fatalf("победителей CAS=%d", success.Load())
 	}
 	installed, e = r.GetExtensionInstall326(ctx, in.ExtensionID, "global", "")
 	if e != nil || installed.Generation != 2 || installed.State != "disabled" {
-		t.Fatalf("after CAS: %+v %v", installed, e)
+		t.Fatalf("после CAS: %+v %v", installed, e)
 	}
 	inst.State = "enabled"
 	installed, e = r.ApplyExtensionInstall326(ctx, inst, 2)
@@ -87,10 +87,10 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	state := SQLiteExtensionState{ExtensionID: in.ExtensionID, Scope: "global", Key: "settings", Value: `{"level":1}`}
 	v, e := r.PutExtensionState326(ctx, state, 0, "owner")
 	if e != nil || v.Generation != 1 {
-		t.Fatalf("state: %v %+v", e, v)
+		t.Fatalf("состояние: %v %+v", e, v)
 	}
 	if _, e = r.PutExtensionState326(ctx, state, 0, "owner"); !errors.Is(e, ErrConflict) {
-		t.Fatalf("CAS stale state: %v", e)
+		t.Fatalf("устаревшее состояние CAS: %v", e)
 	}
 	if e = r.Close(); e != nil {
 		t.Fatal(e)
@@ -113,7 +113,7 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	}
 	installed, e = r.GetExtensionInstall326(ctx, in.ExtensionID, "global", "")
 	if e != nil || installed.State != "disabled" || installed.Generation != 4 {
-		t.Fatalf("publisher revoke must disable: %v %+v", e, installed)
+		t.Fatalf("отзыв прав издателя должен отключать публикацию: %v %+v", e, installed)
 	}
 	if _, e = r.ApplyExtensionInstall326(ctx, inst, 4); !errors.Is(e, ErrAuthentication) {
 		t.Fatalf("Установка от отозванного издателя ошибочно разрешена: %v", e)
@@ -137,18 +137,18 @@ func TestFullStateBridgeSignedRuntimeNoRedelivery(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := r.HeartbeatBridgeRuntime(ctx, first); !errors.Is(e, ErrReplay) {
-		t.Fatalf("heartbeat nonce replay: %v", e)
+		t.Fatalf("повторное использование одноразового номера проверки активности: %v", e)
 	}
 	c := model.ServerBridgeControlCommand{ServerID: "node1", RuntimeID: runtime, RuntimeEpoch: 1, Type: "broadcast", Payload: map[string]string{"message": "maintenance"}, RequestedBy: "owner", IdempotencyKey: "request-001", ExpiresAt: time.Now().Add(time.Minute)}
 	created, yes, e := r.CreateBridgeCommand(ctx, c)
 	if e != nil || !yes {
-		t.Fatalf("enqueue: %+v %v", created, e)
+		t.Fatalf("добавление в очередь: %+v %v", created, e)
 	}
 	// После потерянного сетевого ответа можно повторить ключ идемпотентности; исходный запрос обязан полностью
 	// совпадать.
 	same, yes, e := r.CreateBridgeCommand(ctx, c)
 	if e != nil || yes || same.ID != created.ID {
-		t.Fatalf("enqueue replay: %+v %v", same, e)
+		t.Fatalf("повторное добавление в очередь: %+v %v", same, e)
 	}
 	c.Payload = map[string]string{"message": "danger"}
 	if _, _, e = r.CreateBridgeCommand(ctx, c); !errors.Is(e, ErrDurableIdempotency) {
@@ -159,28 +159,28 @@ func TestFullStateBridgeSignedRuntimeNoRedelivery(t *testing.T) {
 	}
 	lease, e := r.LeaseBridgeCommand(ctx, signLease("worker-123"), runtime, 1, "worker-123", 0, time.Second)
 	if e != nil || lease.Status != "leased" || len(lease.LeaseToken) != 64 {
-		t.Fatalf("lease: %+v %v", lease, e)
+		t.Fatalf("аренда: %+v %v", lease, e)
 	}
 	resume, e := r.LeaseBridgeCommand(ctx, signLease("worker-123"), runtime, 1, "worker-123", 0, time.Second)
 	if e != nil || resume.LeaseToken != lease.LeaseToken {
-		t.Fatalf("resume changed lease: %+v %v", resume, e)
+		t.Fatalf("возобновление изменило аренду: %+v %v", resume, e)
 	}
 	badToken := fmt.Sprintf("%064x", 1)
 	badProof := signJoinProof(t, priv, "control-ack", 1, bridgeAckPayload(lease.ID, runtime, "worker-123", badToken, 1, lease.DeliverySequence, "succeeded", "{}", ""))
 	if _, e = r.CompleteBridgeCommand(ctx, badProof, lease.ID, runtime, "worker-123", badToken, 1, lease.DeliverySequence, "succeeded", nil, ""); !errors.Is(e, ErrBridgeUncertain) {
-		t.Fatalf("wrong token accepted: %v", e)
+		t.Fatalf("принят неверный токен: %v", e)
 	}
 	time.Sleep(1100 * time.Millisecond)
 	if _, e = r.LeaseBridgeCommand(ctx, signLease("worker-456"), runtime, 1, "worker-456", 0, time.Second); !errors.Is(e, ErrNotFound) {
-		t.Fatalf("ambiguous delivery replayed: %v", e)
+		t.Fatalf("повторена доставка с неоднозначным исходом: %v", e)
 	}
 	indeterminate, e := r.GetBridgeCommand(ctx, lease.ID)
 	if e != nil || indeterminate.Status != "indeterminate" {
-		t.Fatalf("lost ACK: %+v %v", indeterminate, e)
+		t.Fatalf("потеря подтверждения получения: %+v %v", indeterminate, e)
 	}
 	staleProof := signJoinProof(t, priv, "control-ack", 1, bridgeAckPayload(lease.ID, runtime, "worker-123", lease.LeaseToken, 1, lease.DeliverySequence, "succeeded", "{}", ""))
 	if _, e = r.CompleteBridgeCommand(ctx, staleProof, lease.ID, runtime, "worker-123", lease.LeaseToken, 1, lease.DeliverySequence, "succeeded", nil, ""); !errors.Is(e, ErrBridgeUncertain) {
-		t.Fatalf("stale ACK accepted: %v", e)
+		t.Fatalf("принято устаревшее подтверждение получения: %v", e)
 	}
 	second := signHeartbeat(2, 1, priv)
 	if e = r.HeartbeatBridgeRuntime(ctx, second); e != nil {

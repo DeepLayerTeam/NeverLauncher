@@ -24,7 +24,7 @@ import (
 func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable LAUNCHER_TEST_POSTGRES_DSN")
+		t.Skip("требуется одноразовая база в LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

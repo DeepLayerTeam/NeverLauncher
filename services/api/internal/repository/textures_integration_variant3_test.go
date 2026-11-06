@@ -49,7 +49,7 @@ func TestTextureStorageQuota0253(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err = db.ExecContext(ctx, string(bytes)); err != nil {
-			t.Fatalf("migration %s: %v", name, err)
+			t.Fatalf("миграция %s: %v", name, err)
 		}
 	}
 	if _, err = db.ExecContext(ctx, `INSERT INTO texture_project_policies(project_id,max_bytes_per_player,max_blobs_per_player)

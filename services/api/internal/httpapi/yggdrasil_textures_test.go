@@ -24,7 +24,7 @@ func TestSignedTextureProtocol0256(t *testing.T) {
 		t.Fatal(err)
 	}
 	if p["name"] != "textures" || p["signature"] == "" {
-		t.Fatal("missing signed textures")
+		t.Fatal("отсутствуют подписанные текстуры")
 	}
 	raw, err := base64.StdEncoding.DecodeString(p["value"])
 	if err != nil {
@@ -42,18 +42,18 @@ func TestSignedTextureProtocol0256(t *testing.T) {
 		t.Fatal(err)
 	}
 	if payload.ProfileID != "123456781234423492340123456789ab" || payload.ProfileName != "Example" {
-		t.Fatalf("bad minecraft profile %#v", payload)
+		t.Fatalf("некорректный профиль Minecraft: %#v", payload)
 	}
 	if payload.Textures["SKIN"].Metadata["model"] != "slim" {
-		t.Fatal("bad slim model")
+		t.Fatal("неверная модель slim")
 	}
 	if _, ok := payload.Textures["CAPE"]; ok {
-		t.Fatal("untrusted foreign cape URL signed")
+		t.Fatal("подписан недоверенный внешний URL плаща")
 	}
 	rec := httptest.NewRecorder()
 	s.yggdrasilMetadata119(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Code != 200 {
-		t.Fatalf("metadata status=%d, body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("статус метаданных=%d, тело=%s", rec.Code, rec.Body.String())
 	}
 	var meta struct {
 		SkinDomains        []string `json:"skinDomains"`
@@ -87,14 +87,14 @@ func TestSignedTextureProtocol0256(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, has := p["signature"]; has {
-		t.Fatal("unsigned profile must omit signature")
+		t.Fatal("неподписанный профиль не должен содержать подпись")
 	}
 	raw, _ = base64.StdEncoding.DecodeString(p["value"])
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		t.Fatal(err)
 	}
 	if _, has := payload.Textures["SKIN"].Metadata["model"]; has {
-		t.Fatal("classic must use default model not classic")
+		t.Fatal("для classic должна использоваться модель по умолчанию, а не значение classic")
 	}
 }
 func TestYggdrasilPolicyFailsClosed0256(t *testing.T) {
@@ -102,20 +102,20 @@ func TestYggdrasilPolicyFailsClosed0256(t *testing.T) {
 	rec := httptest.NewRecorder()
 	s.yggdrasilMetadata119(rec, httptest.NewRequest("GET", "/", nil))
 	if rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("production without RSA key returned %d", rec.Code)
+		t.Fatalf("промышленная конфигурация без ключа RSA вернула %d", rec.Code)
 	}
 	s.Config.Environment = "dev"
 	s.Config.YggdrasilTextureDomains = []string{"*"}
 	if _, err := s.textureProperty0256(bridgeTextureRecord{UUID: "x", Username: "x"}, true); err == nil {
-		t.Fatal("wildcard allowlist accepted")
+		t.Fatal("принят список разрешённых значений с подстановочными символами")
 	}
 	for _, tc := range []string{"http://127.0.0.1/private", "https://api.example.test@evil.test/x", "https://api.example.test.evil.test/x"} {
 		if textureURLAllowed0256(tc, []string{"api.example.test"}, true) {
-			t.Errorf("unsafe URL allowed: %q", tc)
+			t.Errorf("разрешён небезопасный URL: %q", tc)
 		}
 	}
 	if !domainAllowed0256("cdn.example.test", []string{".example.test"}) || domainAllowed0256("example.test", []string{".example.test"}) {
-		t.Fatal("suffix matching broken")
+		t.Fatal("сопоставление по суффиксу нарушено")
 	}
 }
 
@@ -126,13 +126,13 @@ func TestYggdrasilProtocolWriteRejectsMissingMinecraftBearer0256(t *testing.T) {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, request)
 		if response.Code != http.StatusUnauthorized {
-			t.Fatalf("%s unauthenticated write accepted: %d", method, response.Code)
+			t.Fatalf("%s: разрешена запись без аутентификации: %d", method, response.Code)
 		}
 	}
 	request := httptest.NewRequest(http.MethodPost, "/api/profiles/minecraft", strings.NewReader(`{"name":"not-an-array"}`))
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	if response.Code != http.StatusBadRequest {
-		t.Fatalf("invalid batch accepted: %d", response.Code)
+		t.Fatalf("принят недопустимый пакет: %d", response.Code)
 	}
 }

@@ -33,7 +33,7 @@ func bindAccessToken0127(t *testing.T, h http.Handler, access, name string) boun
 		"name": name, "platform": "linux", "clientVersion": "0.12.7",
 	})
 	if code != http.StatusOK {
-		t.Fatalf("device register begin=%d %#v", code, out)
+		t.Fatalf("начало регистрации устройства: код=%d, ответ=%#v", code, out)
 	}
 	begin := deviceTrustData0121(t, out)
 	payload, _ := begin["signingPayload"].(string)
@@ -45,7 +45,7 @@ func bindAccessToken0127(t *testing.T, h http.Handler, access, name string) boun
 		"signature":   base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, []byte(payload))),
 	})
 	if code != http.StatusCreated {
-		t.Fatalf("device register complete=%d %#v", code, out)
+		t.Fatalf("завершение регистрации устройства: код=%d, ответ=%#v", code, out)
 	}
 	data := deviceTrustData0121(t, out)
 	session, _ := data["session"].(map[string]any)
@@ -58,7 +58,7 @@ func bindAccessToken0127(t *testing.T, h http.Handler, access, name string) boun
 		Private:      priv,
 	}
 	if bound.Access == "" || bound.DeviceID == "" || bound.BindingEpoch < 2 {
-		t.Fatalf("incomplete bound session: %#v", data)
+		t.Fatalf("неполная привязанная сессия: %#v", data)
 	}
 	return bound
 }
@@ -74,7 +74,7 @@ func TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind(t *
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusPreconditionRequired || !strings.Contains(rr.Body.String(), "trusted_device_required") {
-		t.Fatalf("unbound minecraft exchange was not denied: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("обмен Minecraft без привязки не был отклонён: %d %s", rr.Code, rr.Body.String())
 	}
 
 	bound := bindAccessToken0127(t, h, access, "Minecraft trust device A")
@@ -85,7 +85,7 @@ func TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind(t *
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusCreated {
-		t.Fatalf("bound minecraft exchange=%d %s", rr.Code, rr.Body.String())
+		t.Fatalf("обмен Minecraft с привязкой: %d %s", rr.Code, rr.Body.String())
 	}
 	var created map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &created); err != nil {
@@ -97,18 +97,18 @@ func TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind(t *
 	vv := httptest.NewRecorder()
 	h.ServeHTTP(vv, validate)
 	if vv.Code != http.StatusNoContent {
-		t.Fatalf("bound minecraft token did not validate: %d %s", vv.Code, vv.Body.String())
+		t.Fatalf("привязанный токен Minecraft не прошёл проверку: %d %s", vv.Code, vv.Body.String())
 	}
 
 	rebound := rotateBoundAccess0128(t, h, bound, "Minecraft trust device B")
 	if rebound.BindingEpoch <= bound.BindingEpoch {
-		t.Fatalf("re-bind did not advance epoch: before=%d after=%d", bound.BindingEpoch, rebound.BindingEpoch)
+		t.Fatalf("повторная привязка не увеличила эпоху: до=%d, после=%d", bound.BindingEpoch, rebound.BindingEpoch)
 	}
 	validate = httptest.NewRequest(http.MethodPost, "/authserver/validate", strings.NewReader(`{"accessToken":"`+mcToken+`","clientToken":"trust-client"}`))
 	vv = httptest.NewRecorder()
 	h.ServeHTTP(vv, validate)
 	if vv.Code != http.StatusForbidden {
-		t.Fatalf("minecraft token survived parent device re-bind: %d %s", vv.Code, vv.Body.String())
+		t.Fatalf("токен Minecraft сохранился после повторной привязки основного устройства: %d %s", vv.Code, vv.Body.String())
 	}
 }
 
@@ -119,7 +119,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	identity := newTestBridgeNodeIdentity0142(t)
 	rv := registerTestBridgeNode0142(t, h, admin, "trust-0127", "Trust 0127", "paper", "demo-project", "vanilla", identity)
 	if rv.Code != http.StatusCreated {
-		t.Fatalf("register server=%d %s", rv.Code, rv.Body.String())
+		t.Fatalf("регистрация сервера: %d %s", rv.Code, rv.Body.String())
 	}
 
 	access, _ := deviceTrustLogin0121(t, h, "bridge-trust-0127")
@@ -133,7 +133,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 		jv := httptest.NewRecorder()
 		h.ServeHTTP(jv, join)
 		if jv.Code != http.StatusOK {
-			t.Fatalf("trusted bridge join=%d %s", jv.Code, jv.Body.String())
+			t.Fatalf("подключение через доверенный мост: %d %s", jv.Code, jv.Body.String())
 		}
 	}
 	issueJoin()
@@ -148,7 +148,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	}
 	first := validateJoin()
 	if first.Code != http.StatusOK || !strings.Contains(first.Body.String(), `"policy":"session-device-risk-v1"`) {
-		t.Fatalf("trusted validate-join=%d %s", first.Code, first.Body.String())
+		t.Fatalf("проверка подключения через доверенный мост: %d %s", first.Code, first.Body.String())
 	}
 
 	issueJoin()
@@ -158,7 +158,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	cm := httptest.NewRecorder()
 	h.ServeHTTP(cm, channelMismatch)
 	if cm.Code != http.StatusForbidden || !strings.Contains(cm.Body.String(), "channel_mismatch") {
-		t.Fatalf("bridge accepted mismatched channel: %d %s", cm.Code, cm.Body.String())
+		t.Fatalf("мост принял несовпадающий канал: %d %s", cm.Code, cm.Body.String())
 	}
 
 	// Изменение сети или UA на стороне игрока создаёт обязательное решение о риске.
@@ -170,10 +170,10 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	dv := httptest.NewRecorder()
 	h.ServeHTTP(dv, drift)
 	if dv.Code != http.StatusOK {
-		t.Fatalf("risk drift request=%d %s", dv.Code, dv.Body.String())
+		t.Fatalf("запрос с изменившимся уровнем риска: %d %s", dv.Code, dv.Body.String())
 	}
 	denied := validateJoin()
 	if denied.Code != http.StatusForbidden || !strings.Contains(denied.Body.String(), "session_step_up_required") {
-		t.Fatalf("bridge ignored live risk policy: %d %s", denied.Code, denied.Body.String())
+		t.Fatalf("мост проигнорировал действующую политику рисков: %d %s", denied.Code, denied.Body.String())
 	}
 }

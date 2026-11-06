@@ -27,13 +27,13 @@ func TestTypesAndDigest(t *testing.T) {
 		}
 	}
 	if _, err := columnType("NUMERIC"); err == nil {
-		t.Fatal("NUMERIC affinity must not be silently rounded")
+		t.Fatal("значение с типом NUMERIC нельзя округлять без предупреждения")
 	}
 	if _, err := identifier(""); err == nil {
 		t.Fatal("Пустой идентификатор ошибочно принят")
 	}
 	if v, _ := identifier(`a"b`); v != `"a""b"` {
-		t.Fatalf("incorrect identifier escaping: %s", v)
+		t.Fatalf("некорректное экранирование идентификатора: %s", v)
 	}
 	s, b, err := rowDigest([]any{"abc", []byte{0, 1, 2}, int64(12), nil})
 	if err != nil || len(b) != sha256.Size || len(s) != 64 {
@@ -50,7 +50,7 @@ func TestTypesAndDigest(t *testing.T) {
 }
 func TestMissingCoreStateFailsClosed(t *testing.T) {
 	if err := requireCoreTables([]tableInfo{{Name: "projects"}}); err == nil {
-		t.Fatal("accepted missing durable state")
+		t.Fatal("допущено отсутствие долговременного состояния")
 	}
 }
 
@@ -72,7 +72,7 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if preexisting {
-		t.Fatal("test database must not already contain a SQLite transfer schema; refusing destructive reset")
+		t.Fatal("тестовая база уже содержит схему переноса SQLite; разрушительный сброс запрещён")
 	}
 	pg.Close(ctx)
 	t.Cleanup(func() {
@@ -127,7 +127,7 @@ func TestPGStagingMigration(t *testing.T) {
 	for _, u := range updates {
 		if _, err = db.ExecContext(ctx, u.query, u.args...); err != nil {
 			db.Close()
-			t.Fatalf("fixture %s: %v", u.query, err)
+			t.Fatalf("тестовый набор %s: %v", u.query, err)
 		}
 	}
 	if err = db.Close(); err != nil {
@@ -161,7 +161,7 @@ func TestPGStagingMigration(t *testing.T) {
 	}
 	var fence int64
 	if err = p.QueryRow(ctx, "SELECT fencing_token FROM "+qualified("durable_scope_leases")+" WHERE scope_key='scope-1'").Scan(&fence); err != nil || fence != 42 {
-		t.Fatalf("fencing lost: %d %v", fence, err)
+		t.Fatalf("потеряна защита от устаревшего владельца: %d %v", fence, err)
 	}
 	var packageRead []byte
 	if err = p.QueryRow(ctx, "SELECT data FROM "+qualified("package_blobs")+" WHERE digest=$1", hex.EncodeToString(packageHash[:])).Scan(&packageRead); err != nil || !bytes.Equal(packageRead, packageBytes) {
@@ -169,7 +169,7 @@ func TestPGStagingMigration(t *testing.T) {
 	}
 	var mfaCipher []byte
 	if err = p.QueryRow(ctx, "SELECT secret_ciphertext FROM "+qualified("mfa_totp")+" WHERE user_id=$1", user.ID).Scan(&mfaCipher); err != nil || !bytes.Equal(mfaCipher, []byte{0, 0, 254, 12, 7}) {
-		t.Fatalf("MFA ciphertext changed: %x %v", mfaCipher, err)
+		t.Fatalf("шифротекст MFA изменился: %x %v", mfaCipher, err)
 	}
 	var epoch int64
 	if err = p.QueryRow(ctx, "SELECT auth_epoch FROM "+qualified("users")+" WHERE id=$1", user.ID).Scan(&epoch); err != nil || epoch != 1 {
@@ -180,10 +180,10 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatalf("Несовпадение квитанции: %v", err)
 	}
 	if _, err = p.Exec(ctx, "DELETE FROM "+qualified("refresh_tokens")+" WHERE token_hash=$1", hash); err == nil {
-		t.Fatal("immutable PG import allowed revocation deletion")
+		t.Fatal("импорт в неизменяемую PostgreSQL позволил удалить отзыв прав")
 	}
 	if _, err = p.Exec(ctx, "TRUNCATE "+qualified("refresh_tokens")); err == nil {
-		t.Fatal("immutable PG import allowed TRUNCATE, bypassing revocation preservation")
+		t.Fatal("импорт в неизменяемую PostgreSQL допустил TRUNCATE в обход сохранения отзыва прав")
 	}
 	// Полный физический обратный перенос, а не просто копия манифеста, должен
 	// восстановить все байты SQLite, объекты схемы и пользовательские данные.
@@ -193,11 +193,11 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if reverse.ReadyForBackendCutover || reverse.SnapshotSHA256 != result.SnapshotSHA256 || reverse.TotalRows != result.TotalRows {
-		t.Fatalf("reverse transfer receipt differs: %+v", reverse)
+		t.Fatalf("квитанция обратного переноса отличается: %+v", reverse)
 	}
 	exportedManifest, err := sqlitedurable.VerifyBackup(ctx, exported)
 	if err != nil || exportedManifest.SHA256 != result.SnapshotSHA256 {
-		t.Fatalf("exported SQLite invalid: %+v %v", exportedManifest, err)
+		t.Fatalf("экспортированная SQLite некорректна: %+v %v", exportedManifest, err)
 	}
 	originalBytes, err := os.ReadFile(backup)
 	if err != nil {
@@ -208,10 +208,10 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(originalBytes, exportedBytes) {
-		t.Fatal("PostgreSQL -> SQLite backup bytes differ")
+		t.Fatal("байты резервной копии при переносе PostgreSQL -> SQLite не совпадают")
 	}
 	if _, err = Export(ctx, dsn, exported); err == nil {
-		t.Fatal("reverse migration overwrote existing backup")
+		t.Fatal("обратная миграция перезаписала существующую резервную копию")
 	}
 	// Настоящие операции SQLite Core продолжают работать после обратного импорта.
 	restored := filepath.Join(dir, "restored.db")
@@ -226,7 +226,7 @@ func TestPGStagingMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = Import(ctx, backup, dsn); err == nil {
-		t.Fatal("rerun overwrote existing import")
+		t.Fatal("повторный запуск перезаписал существующий импорт")
 	}
 	// Подмена файла нарушает проверяемый по хешу sidecar и блокирует перенос.
 	f, err := os.OpenFile(backup, os.O_WRONLY, 0)
@@ -248,6 +248,6 @@ func TestReverseTransferMissingReceiptFailsClosed(t *testing.T) {
 		t.Fatal("Пустая строка подключения PostgreSQL ошибочно принята")
 	}
 	if _, err := Export(ctx, "nonempty", ""); err == nil {
-		t.Fatal("empty destination accepted")
+		t.Fatal("принято пустое место назначения")
 	}
 }

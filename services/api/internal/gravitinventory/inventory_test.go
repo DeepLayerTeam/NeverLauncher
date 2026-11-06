@@ -53,14 +53,14 @@ func TestInventoryExportRoundtrip0333(t *testing.T) {
 	})
 	inv := analyze0333(t, data)
 	if len(inv.Files) != 7 || inv.SourceEntries != 7 || inv.ServerReferences != 1 || inv.AuthProviders["sql"] != 1 || inv.OptionalActions["file"] != 1 || inv.Categories["asset"] != 1 || inv.Categories["key"] != 1 {
-		t.Fatalf("wrong parsed inventory %+v", inv)
+		t.Fatalf("неверно разобранный инвентарь: %+v", inv)
 	}
 	serialized, e := json.Marshal(inv)
 	if e != nil {
 		t.Fatal(e)
 	}
 	if bytes.Contains(serialized, []byte("DO_NOT_EXPORT_IN_REPORT")) || bytes.Contains(serialized, []byte("MUST_NOT_LEAK")) || bytes.Contains(serialized, []byte("private-host")) {
-		t.Fatal("secret leaked to database report")
+		t.Fatal("секрет раскрыт в отчёте о базе данных")
 	}
 	var first, second bytes.Buffer
 	for _, b := range []*bytes.Buffer{&first, &second} {
@@ -69,7 +69,7 @@ func TestInventoryExportRoundtrip0333(t *testing.T) {
 		}
 	}
 	if !bytes.Equal(first.Bytes(), second.Bytes()) {
-		t.Fatal("export not deterministic")
+		t.Fatal("экспорт недетерминирован")
 	}
 	archive, e := zip.NewReader(bytes.NewReader(first.Bytes()), int64(first.Len()))
 	if e != nil {
@@ -92,11 +92,11 @@ func TestInventoryExportRoundtrip0333(t *testing.T) {
 			continue
 		}
 		if f.Name == "project/private.key" && string(v) != "MUST_NOT_LEAK" {
-			t.Fatal("export altered secret source bytes")
+			t.Fatal("экспорт изменил исходные секретные данные")
 		}
 	}
 	if len(archive.File) != len(inv.Files)+1 {
-		t.Fatal("export not complete")
+		t.Fatal("экспорт не завершён")
 	}
 }
 func TestInventoryRejectsHostileZIP0333(t *testing.T) {
@@ -123,7 +123,7 @@ func TestInventoryRejectsDuplicateEntries0333(t *testing.T) {
 	_ = w.Close()
 	h := sha256.Sum256(b.Bytes())
 	if _, e := Inspect(context.Background(), bytes.NewReader(b.Bytes()), int64(b.Len()), hex.EncodeToString(h[:])); e == nil {
-		t.Fatal("case-insensitive collision accepted")
+		t.Fatal("допущен конфликт имён без учёта регистра")
 	}
 }
 func TestInventoryDetectsCRCAndMalformedConfig0333(t *testing.T) {
@@ -136,12 +136,12 @@ func TestInventoryDetectsCRCAndMalformedConfig0333(t *testing.T) {
 	damaged := append([]byte{}, good...)
 	pos := bytes.Index(damaged, []byte("abcdefg0123456789"))
 	if pos < 0 {
-		t.Fatal("cannot locate fixture")
+		t.Fatal("не удалось найти тестовые данные")
 	}
 	damaged[pos] ^= 0x11
 	h = sha256.Sum256(damaged)
 	if _, e := Inspect(context.Background(), bytes.NewReader(damaged), int64(len(damaged)), hex.EncodeToString(h[:])); e == nil {
-		t.Fatal("corrupted stored ZIP accepted")
+		t.Fatal("принят повреждённый ZIP из хранилища")
 	}
 }
 func TestInventoryChangedSourceRejected0333(t *testing.T) {
@@ -150,10 +150,10 @@ func TestInventoryChangedSourceRejected0333(t *testing.T) {
 	inv := analyze0333(t, one)
 	var out bytes.Buffer
 	if e := Export(context.Background(), &out, bytes.NewReader(two), int64(len(two)), inv); e == nil {
-		t.Fatal("export accepted changed source")
+		t.Fatal("экспорт принял изменённый источник")
 	}
 	if out.Len() != 0 {
-		t.Fatal("wrote bytes despite mismatch")
+		t.Fatal("данные записаны несмотря на несовпадение")
 	}
 }
 func TestInventorySpoolPrivate0333(t *testing.T) {
@@ -165,12 +165,12 @@ func TestInventorySpoolPrivate0333(t *testing.T) {
 	defer f.Close()
 	st, e := f.Stat()
 	if e != nil || st.Mode().Perm() != 0600 || n != 6 || len(h) != 64 {
-		t.Fatalf("unsafe spool n=%d mode=%v err=%v", n, st.Mode(), e)
+		t.Fatalf("небезопасный временный буфер: n=%d, режим=%v, ошибка=%v", n, st.Mode(), e)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if _, _, _, e := Spool(ctx, strings.NewReader("data")); !errors.Is(e, context.Canceled) {
-		t.Fatalf("cancel ignored: %v", e)
+		t.Fatalf("отмена проигнорирована: %v", e)
 	}
 }
 
@@ -190,7 +190,7 @@ func TestSourceDigestAndWrapperBinary0441(t *testing.T) {
 		t.Fatal(err)
 	}
 	if v.Categories["authentication"] != 2 || v.Categories["module_config"] != 1 || v.Categories["server_wrapper"] != 1 || v.Categories["texture"] != 1 {
-		t.Fatalf("categories: %+v", v.Categories)
+		t.Fatalf("категории: %+v", v.Categories)
 	}
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -200,10 +200,10 @@ func TestSourceDigestAndWrapperBinary0441(t *testing.T) {
 		t.Fatal("Произошла утечка секрета модуля")
 	}
 	if _, err := Inspect(context.Background(), bytes.NewReader(source), int64(len(source)), strings.Repeat("a", 64)); err == nil {
-		t.Fatal("inventory accepted caller-forged source SHA")
+		t.Fatal("инвентарь принял поддельный хеш SHA, переданный вызывающей стороной")
 	}
 	inspected, err := ValidateSource(context.Background(), bytes.NewReader(source), int64(len(source)), actual)
 	if err != nil || len(inspected.Files) != len(v.Files) {
-		t.Fatalf("compatibility ZIP validation mismatch: %v", err)
+		t.Fatalf("несовпадение при проверке ZIP на совместимость: %v", err)
 	}
 }

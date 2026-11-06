@@ -105,7 +105,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	}
 	replay, e := repo.ImportMigrationCredentials0335(ctx, run.ID, source.SourceSHA256, "", input, false)
 	if e != nil || replay.Imported != 1 {
-		t.Fatalf("replay: %+v %v", replay, e)
+		t.Fatalf("повторное выполнение: %+v %v", replay, e)
 	}
 	if _, e = repo.ImportMigrationCredentials0335(ctx, run.ID, source.SourceSHA256, "bcrypt", input, false); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("changed decision replayed: %v", e)

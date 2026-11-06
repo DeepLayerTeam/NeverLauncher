@@ -35,7 +35,7 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 			return
 		}
 		if !verifyFixtureRequest(r, body) {
-			t.Errorf("request signature invalid for %s", r.URL.Path)
+			t.Errorf("неверная подпись запроса для %s", r.URL.Path)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -46,7 +46,7 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 				return
 			}
 			if req.ProtocolVersion != protocolVersion || req.RequestID == "" {
-				t.Errorf("invalid request envelope: %+v", req)
+				t.Errorf("неверная оболочка запроса: %+v", req)
 			}
 		}
 		switch r.URL.Path {
@@ -88,7 +88,7 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 		Subject:  "user-42", Issuer: "fixture-issuer", AllowRevoke: true,
 	})
 	if !report.Passed {
-		t.Fatalf("real signed HTTP conformance failed: %+v", report)
+		t.Fatalf("проверка соответствия реального подписанного HTTP-запроса не пройдена: %+v", report)
 	}
 
 	auth, err := connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player@example.test", Secret: "secret"})
@@ -104,11 +104,11 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 
 	resolved, err := connector.ResolveIdentity(context.Background(), authconnector.ResolveRequest{Subject: "user-42"})
 	if err != nil || resolved.Subject != "user-42" {
-		t.Fatalf("resolve failed: %+v err=%v", resolved, err)
+		t.Fatalf("разрешение не удалось: %+v, ошибка=%v", resolved, err)
 	}
 	refreshed, err := connector.Refresh(context.Background(), auth.ProviderToken)
 	if err != nil || refreshed.ProviderToken != "provider-refresh-rotated" {
-		t.Fatalf("refresh failed: %+v err=%v", refreshed, err)
+		t.Fatalf("обновление не удалось: %+v, ошибка=%v", refreshed, err)
 	}
 	if err := connector.Revoke(context.Background(), authconnector.RevokeRequest{Subject: "user-42", ProviderToken: refreshed.ProviderToken}); err != nil {
 		t.Fatal(err)
@@ -116,7 +116,7 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 
 	_, err = connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player@example.test", Secret: "wrong"})
 	if authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
-		t.Fatalf("expected invalid credentials, got %v", err)
+		t.Fatalf("ожидалась ошибка неверных учётных данных, получено: %v", err)
 	}
 }
 
@@ -129,7 +129,7 @@ func TestHTTPConfigMigrationActivatesTheSameProvider(t *testing.T) {
 	modern := `{"schemaVersion":2,"providers":` + old + `}`
 	migrated, err := LoadConfigs(modern, "")
 	if err != nil || len(migrated) != 1 || migrated[0].ID != configs[0].ID || migrated[0].HMAC.SecretEnv != configs[0].HMAC.SecretEnv {
-		t.Fatalf("versioned config drifted: %+v %v", migrated, err)
+		t.Fatalf("конфигурация заданной версии изменилась: %+v %v", migrated, err)
 	}
 }
 
@@ -159,11 +159,11 @@ func TestHTTPConnectorRejectsBadSignatureAndSubjectChange(t *testing.T) {
 	defer connector.Close()
 	_, err := connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "x", Secret: "x"})
 	if authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("bad signature should fail unavailable, got %v", err)
+		t.Fatalf("неверная подпись должна приводить к отказу в доступности, получено: %v", err)
 	}
 	_, err = connector.ResolveIdentity(context.Background(), authconnector.ResolveRequest{Subject: "user-42"})
 	if authconnector.CodeOf(err) != authconnector.ErrMisconfigured {
-		t.Fatalf("subject change must fail closed, got %v", err)
+		t.Fatalf("изменение субъекта должно приводить к отказу, получено: %v", err)
 	}
 }
 
@@ -171,15 +171,15 @@ func TestSSRFSafeDialerRejectsPrivateByDefault(t *testing.T) {
 	cfg := RuntimeConfig{Config: Config{HostAllowlist: []string{"127.0.0.1"}}}
 	d := ssrfSafeDialer{cfg: cfg}
 	if err := d.validateIP(net.ParseIP("127.0.0.1")); err == nil {
-		t.Fatal("loopback accepted without explicit CIDR")
+		t.Fatal("локальный адрес принят без явного разрешения CIDR")
 	}
 	_, cidr, _ := net.ParseCIDR("127.0.0.1/32")
 	d.cfg.ParsedAllowedCIDRs = []*net.IPNet{cidr}
 	if err := d.validateIP(net.ParseIP("127.0.0.1")); err != nil {
-		t.Fatalf("explicit allow CIDR rejected: %v", err)
+		t.Fatalf("явно разрешённый CIDR отклонён: %v", err)
 	}
 	if err := d.validateIP(net.ParseIP("169.254.169.254")); err == nil {
-		t.Fatal("metadata/link-local address accepted")
+		t.Fatal("принят адрес метаданных или локального сегмента")
 	}
 }
 
@@ -192,7 +192,7 @@ func TestNormalizeRequiresHTTPSHMACAndSafeEndpoints(t *testing.T) {
 	bad := base
 	bad.BaseURL = "http://auth.example.com"
 	if _, err := Normalize(bad); err == nil {
-		t.Fatal("plaintext HTTP accepted")
+		t.Fatal("принят незашифрованный HTTP")
 	}
 	bad = base
 	bad.HMAC = HMACConfig{}
@@ -202,12 +202,12 @@ func TestNormalizeRequiresHTTPSHMACAndSafeEndpoints(t *testing.T) {
 	bad = base
 	bad.Endpoints.Authenticate = "https://evil.example/authenticate"
 	if _, err := Normalize(bad); err == nil {
-		t.Fatal("absolute endpoint URL accepted")
+		t.Fatal("принят абсолютный URL конечной точки")
 	}
 	bad = base
 	bad.HostAllowlist = []string{"other.example.com"}
 	if _, err := Normalize(bad); err == nil {
-		t.Fatal("base host outside allowlist accepted")
+		t.Fatal("принят базовый хост вне списка разрешённых")
 	}
 }
 
@@ -219,7 +219,7 @@ func newFixtureConnector(t *testing.T, server *httptest.Server) *Connector {
 	}
 	cert := server.Certificate()
 	if cert == nil {
-		t.Fatal("fixture TLS certificate missing")
+		t.Fatal("отсутствует тестовый сертификат TLS")
 	}
 	caPath := t.TempDir() + "/ca.pem"
 	if err := os.WriteFile(caPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}), 0o600); err != nil {
@@ -286,7 +286,7 @@ func TestResponseReplayAndTimestampWindowAreRejected(t *testing.T) {
 		t.Fatalf("Первый подписанный ответ ошибочно отклонён: %v", err)
 	}
 	if err := client.verifyResponse(response, nonce, body); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("replayed response accepted: %v", err)
+		t.Fatalf("принят повторно воспроизведённый ответ: %v", err)
 	}
 
 	oldNonce := "fedcba9876543210"
@@ -297,6 +297,6 @@ func TestResponseReplayAndTimestampWindowAreRejected(t *testing.T) {
 	old.Header.Set(headerNonce, oldNonce)
 	old.Header.Set(headerSignature, "v1="+hex.EncodeToString(sign([]byte(fixtureSecret), responseCanonical(http.StatusOK, oldStamp, oldNonce, body))))
 	if err := client.verifyResponse(old, oldNonce, body); authconnector.CodeOf(err) != authconnector.ErrUnavailable {
-		t.Fatalf("stale response accepted: %v", err)
+		t.Fatalf("принят устаревший ответ: %v", err)
 	}
 }

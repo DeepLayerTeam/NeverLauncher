@@ -65,7 +65,7 @@ func TestCLIComponentsValidSignedManifestAndDeterminism0249(t *testing.T) {
 		t.Fatalf("real Go-signed fixture: %v", e)
 	}
 	if _, e = loadComponents0249(src, "", false); e == nil {
-		t.Fatal("missing trust root accepted")
+		t.Fatal("допущено отсутствие корня доверия")
 	}
 	if _, e = loadComponents0249(src, key, true); e != nil {
 		t.Fatalf("explicit local override: %v", e)
@@ -76,17 +76,17 @@ func TestCLIComponentsValidSignedManifestAndDeterminism0249(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !reflect.DeepEqual(plan.Components, []string{"core", "performance.sodium", "shaders"}) || plan.DownloadBytes != 9 {
-		t.Fatalf("bad resolved plan %+v", plan)
+		t.Fatalf("некорректный план после разрешения зависимостей: %+v", plan)
 	}
 	if plan.Reasons[1].Reason != "dependency" || plan.Reasons[1].Via != "shaders" || len(plan.Actions) != 4 {
 		t.Fatalf("Отсутствуют пояснения или рекомендуемые действия: %+v", plan)
 	}
 	other, e := resolveComponents0249(entry, "quality", env)
 	if e != nil || plan.PlanSHA256 != other.PlanSHA256 {
-		t.Fatal("nondeterministic resolver")
+		t.Fatal("разрешение зависимостей даёт недетерминированный результат")
 	}
 	if _, e = resolveComponents0249(entry, "quality", cm.ComponentEnvironment0244{OS: "windows", Arch: "x86_64"}); e == nil || !strings.Contains(e.Error(), "condition_unsatisfied") {
-		t.Fatalf("invalid environment accepted: %v", e)
+		t.Fatalf("допущено недопустимое окружение: %v", e)
 	}
 	output := filepath.Join(t.TempDir(), "report.json")
 	args := []string{"components", "resolve", "--manifest", src, "--public-key", key, "--preset", "quality", "--os", "linux", "--arch", "x86_64", "--java-major", "21", "--minecraft", "1.21.1", "--loader", "fabric", "--loader-version", "0.16.1", "--output", output}
@@ -102,7 +102,7 @@ func TestCLIComponentsValidSignedManifestAndDeterminism0249(t *testing.T) {
 	}
 	second, _ := os.ReadFile(output)
 	if !bytes.Equal(first, second) {
-		t.Fatal("non-deterministic JSON")
+		t.Fatal("недетерминированное представление JSON")
 	}
 	if e = run([]string{"components", "validate", "--manifest", src, "--public-key", key, "--output", output}); e != nil {
 		t.Fatal(e)
@@ -165,17 +165,17 @@ func TestCLIComponentsRejectTamperingAndDiff0249(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !diff.Verified || !reflect.DeepEqual(diff.ChangedComponents, []string{"shaders"}) || len(diff.AddedFiles) != 3 {
-		t.Fatalf("invalid component diff: %s", contents)
+		t.Fatalf("некорректное сравнение компонентов: %s", contents)
 	}
 	// Изменённая подписанная полезная нагрузка должна отклоняться, даже когда дайджест её каталога корректен.
 	wire.ComponentCatalog = json.RawMessage(strings.Replace(string(nextCatalog), "Enhanced shader preset", "Tampered", 1))
 	tampered := writeWire0249(t, wire)
 	if _, e = loadComponents0249(tampered, key, false); e == nil {
-		t.Fatal("signature bypass")
+		t.Fatal("обход проверки подписи")
 	}
 	// Явный режим черновика не отменяет проверку дайджеста каталога.
 	if _, e = loadComponents0249(tampered, "", true); e == nil {
-		t.Fatal("digest bypass")
+		t.Fatal("обход проверки хеша")
 	}
 	// Нельзя доверять злоумышленнику с самостоятельно объявленным ключом подписи.
 	randomKey := filepath.Join(t.TempDir(), "other.pub")
@@ -201,7 +201,7 @@ func TestCLIComponentsEngineParity0249(t *testing.T) {
 			t.Fatal(e)
 		}
 		if !bytes.Equal(formatted, cli) {
-			t.Fatalf("CLI engine drift from Backend: %s", name)
+			t.Fatalf("поведение движка CLI отличается от Backend: %s", name)
 		}
 	}
 }
@@ -231,6 +231,6 @@ func TestCLIComponentsRejectDuplicateKeysAndEmitJSONErrors0249(t *testing.T) {
 		t.Fatal(e)
 	}
 	if report.Status != "error" || report.Code != "unknown_preset" {
-		t.Fatalf("invalid structured error: %s", raw)
+		t.Fatalf("неверная структурированная ошибка: %s", raw)
 	}
 }

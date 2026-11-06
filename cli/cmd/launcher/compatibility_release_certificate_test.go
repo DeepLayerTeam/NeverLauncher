@@ -56,13 +56,13 @@ func TestLoaderCompatibilityReleaseCertificate01711Complete(t *testing.T) {
 	for _, family := range cert.LoaderFamilies {
 		want, ok := wantFamilies[family.Loader]
 		if !ok {
-			t.Fatalf("unexpected loader family %s", family.Loader)
+			t.Fatalf("неожиданное семейство загрузчиков %s", family.Loader)
 		}
 		if family.RequiredTargets != want || family.PassedTargets != want {
 			t.Fatalf("%s coverage=%d/%d want=%d/%d", family.Loader, family.PassedTargets, family.RequiredTargets, want, want)
 		}
 		if len(family.EvidenceRootSHA256) != 64 {
-			t.Fatalf("%s evidence root invalid: %s", family.Loader, family.EvidenceRootSHA256)
+			t.Fatalf("%s: недопустимый корневой каталог свидетельств: %s", family.Loader, family.EvidenceRootSHA256)
 		}
 	}
 	if len(cert.Platforms) != 6 {
@@ -165,7 +165,7 @@ func TestLoaderCompatibilityReleaseCertificate01711IsRequiredReleaseEntryAndChec
 		}
 	}
 	if !found {
-		t.Fatal("full RC is missing from releaseBundleEntries")
+		t.Fatal("полный кандидат в релиз отсутствует в releaseBundleEntries")
 	}
 	checksums, err := releaseChecksums(bundle)
 	if err != nil {
@@ -222,7 +222,7 @@ func TestLoaderCompatibilityGA0180CertificateBindsRuntimeSupport(t *testing.T) {
 		t.Fatalf("Несовпадение данных GA для старой версии Forge: %v", cert.LegacyForgeVersions)
 	}
 	if !cert.Invariants["gaRuntimeSupportEnforced"] || !cert.Invariants["legacyForgeGA"] {
-		t.Fatalf("GA invariants missing: %+v", cert.Invariants)
+		t.Fatalf("отсутствуют обязательные условия приёмки GA: %+v", cert.Invariants)
 	}
 	if cert.Policy != "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle" {
 		t.Fatalf("Неожиданная политика GA: %s", cert.Policy)

@@ -34,7 +34,7 @@ func TestSafeAdminEntrypoint0208RejectsSymlinkAndTraversal(t *testing.T) {
 		t.Fatalf("valid entrypoint rejected: %v", err)
 	}
 	if _, err := safeAdminEntrypoint0208(root, "../outside.html"); err == nil {
-		t.Fatal("traversal accepted")
+		t.Fatal("допущен выход за пределы разрешённого пути")
 	}
 	if err := os.Symlink(filepath.Join(root, "index.html"), filepath.Join(root, "link.html")); err == nil {
 		if _, err := safeAdminEntrypoint0208(root, "link.html"); err == nil {

@@ -101,7 +101,7 @@ func TestReleaseWorkspacePackageMetadataPersisted0218(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != 201 {
-		t.Fatalf("create: %d %s", res.Code, res.Body.String())
+		t.Fatalf("создание: %d %s", res.Code, res.Body.String())
 	}
 	var created struct {
 		Data struct {

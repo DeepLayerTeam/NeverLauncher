@@ -22,7 +22,7 @@ func TestPublishReadiness0385ExplainsBrokenPackageAndBlocksPreview(t *testing.T)
 	}
 	created := send("POST", "/api/v1/packages", `{"projectId":"demo-project","profileId":"vanilla","channel":"dev","version":"0385-broken"}`)
 	if created.Code != http.StatusCreated {
-		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+		t.Fatalf("создание: %d %s", created.Code, created.Body.String())
 	}
 	var payload struct {
 		Data struct {

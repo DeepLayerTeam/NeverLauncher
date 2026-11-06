@@ -38,7 +38,7 @@ func TestExtensionUpgradeSource0210(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(got), "v0.21.0") {
-		t.Fatalf("go.mod not upgraded: %s", got)
+		t.Fatalf("файл go.mod не обновлён: %s", got)
 	}
 }
 func TestExtensionUpgradeSourceRejectsSignedPackage0210(t *testing.T) {

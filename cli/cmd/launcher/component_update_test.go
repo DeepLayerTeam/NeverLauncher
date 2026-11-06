@@ -52,7 +52,7 @@ func TestComponentUpdateAdjacentCommit0157(t *testing.T) {
 		t.Fatal(err)
 	}
 	if report["status"] != "committed" {
-		t.Fatalf("unexpected status: %#v", report)
+		t.Fatalf("неожиданный статус: %#v", report)
 	}
 	for _, component := range manifest.Components {
 		if err := verifyUpdaterFile0156(filepath.Join(root, component.TargetPath), component.Size, component.SHA256); err != nil {

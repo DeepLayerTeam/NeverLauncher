@@ -18,7 +18,7 @@ func TestJavaManagerDiagnoseCLI0305(t *testing.T) {
 			return
 		}
 		if r.Header.Get("Authorization") != "Bearer manager-token" {
-			t.Error("missing manager authorization")
+			t.Error("отсутствует разрешение на управление")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"apiVersion":"1","data":{"javaDiagnostics":{"healthy":true,"javaTargets":[{"javaMinimum":17}]}}}`)
@@ -43,6 +43,6 @@ func TestJavaManagerDiagnoseCLI0305(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !response.Data.JavaDiagnostics.Healthy {
-		t.Fatal("diagnostic data omitted")
+		t.Fatal("диагностические данные пропущены")
 	}
 }

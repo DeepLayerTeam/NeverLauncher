@@ -52,16 +52,16 @@ func TestAuthRotateReplayAndRestart(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.ValidateAccess(ctx, t1.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("rotated access still valid: %v", e)
+		t.Fatalf("старый токен доступа остаётся действительным после ротации: %v", e)
 	}
 	if _, e = a.ValidateAccess(ctx, t2.AccessToken); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = a.RotateRefresh(ctx, t1.RefreshToken); !errors.Is(e, ErrRefreshReuse) {
-		t.Fatalf("replay not detected: %v", e)
+		t.Fatalf("повторное использование токена не обнаружено: %v", e)
 	}
 	if _, e = a.ValidateAccess(ctx, t2.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("compromised access accepted: %v", e)
+		t.Fatalf("допущен скомпрометированный токен доступа: %v", e)
 	}
 	if e = r.Close(); e != nil {
 		t.Fatal(e)
@@ -78,10 +78,10 @@ func TestAuthRotateReplayAndRestart(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.RotateRefresh(ctx, t2.RefreshToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("compromise lost after restart: %v", e)
+		t.Fatalf("признак компрометации потерян после перезапуска: %v", e)
 	}
 	if _, e = a.ValidateAccess(ctx, t2.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("revocation lost after restart: %v", e)
+		t.Fatalf("отзыв токена потерян после перезапуска: %v", e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -110,10 +110,10 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 		t.Fatalf("recovery %d", len(codes))
 	}
 	if _, e = a.ValidateAccess(ctx, before.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatal("pre-MFA session valid")
+		t.Fatal("сессия до прохождения MFA остаётся действительной")
 	}
 	if _, e = a.LoginLocal(ctx, "owner@test", pw, "", "device"); !errors.Is(e, ErrMFARequired) {
-		t.Fatalf("MFA bypass: %v", e)
+		t.Fatalf("обход многофакторной аутентификации: %v", e)
 	}
 	token, e := a.LoginLocal(ctx, "owner@test", pw, codes[0], "device")
 	if e != nil {
@@ -130,10 +130,10 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.ValidateAccess(ctx, token.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatal("session survived MFA removal")
+		t.Fatal("сессия сохранилась после отключения MFA")
 	}
 	if _, e = a.LoginLocal(ctx, "owner@test", pw, "", "device"); e != nil {
-		t.Fatalf("password login after disable: %v", e)
+		t.Fatalf("вход по паролю сработал после отключения: %v", e)
 	}
 }
 func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
@@ -167,7 +167,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.ValidateMinecraftSession(ctx, minecraft); !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("minecraft survives epoch update: %v", e)
+		t.Fatalf("токен Minecraft сохранился после смены эпохи: %v", e)
 	}
 	if e = r.Close(); e != nil {
 		t.Fatal(e)
@@ -186,7 +186,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 	}
 	out, e = a.MinecraftIdentity(ctx, "owner")
 	if e != nil || out.UUID != "123e4567-e89b-42d3-a456-426614174000" {
-		t.Fatalf("identity lost %v %+v", e, out)
+		t.Fatalf("идентичность потеряна: %v %+v", e, out)
 	}
 }
 func TestRefreshConcurrentReplayIsFailClosed(t *testing.T) {
@@ -216,10 +216,10 @@ func TestRefreshConcurrentReplayIsFailClosed(t *testing.T) {
 		}
 	}
 	if succeeded != 1 || replayed != 1 {
-		t.Fatalf("rotation CAS=%d replay=%d", succeeded, replayed)
+		t.Fatalf("ротация: CAS=%d, повторное использование=%d", succeeded, replayed)
 	}
 	if _, e = a.ValidateAccess(ctx, init.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatal("original access valid")
+		t.Fatal("исходный токен доступа остаётся действительным")
 	}
 }
 func TestTOTPReplayAndRFC6238(t *testing.T) {
@@ -230,10 +230,10 @@ func TestTOTPReplayAndRFC6238(t *testing.T) {
 		t.Fatalf("TOTP vector: %s", got)
 	}
 	if step, ok := checkTOTP(secret, "287082", time.Unix(59, 0), -1); !ok || step != 1 {
-		t.Fatal("totp rejected")
+		t.Fatal("код TOTP отклонён")
 	}
 	if _, ok := checkTOTP(secret, "287082", time.Unix(59, 0), 1); ok {
-		t.Fatal("replayed timestep")
+		t.Fatal("допущен повторно использованный временной интервал")
 	}
 }
 func TestSQLiteSchemaUpgrade322To323(t *testing.T) {
@@ -273,7 +273,7 @@ func TestSQLiteSchemaUpgrade322To323(t *testing.T) {
 	}
 	counts, e := r.Count(ctx)
 	if e != nil || counts["roles"] != 8 {
-		t.Fatalf("upgrade lost core: %v %+v", e, counts)
+		t.Fatalf("после обновления потеряно основное состояние: %v %+v", e, counts)
 	}
 }
 func TestNoSQLiteIntegrationOnOverlay(t *testing.T) {
@@ -328,7 +328,7 @@ func TestSQLiteWrongMFAKeyAndRecoveryPersistence(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = alt.LoginLocal(ctx, "owner@test", password, "123456", "desktop"); !errors.Is(e, ErrMFARequired) && !errors.Is(e, ErrAuthentication) {
-		t.Fatalf("wrong key accepted: %v", e)
+		t.Fatalf("принят неверный ключ: %v", e)
 	}
 	a, e = r.Auth(a.key[:])
 	if e != nil {
@@ -338,7 +338,7 @@ func TestSQLiteWrongMFAKeyAndRecoveryPersistence(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.LoginLocal(ctx, "owner@test", password, recovery[0], "desktop"); !errors.Is(e, ErrMFARequired) {
-		t.Fatal("recovery replay after restart")
+		t.Fatal("после перезапуска допущено повторное использование кода восстановления")
 	}
 }
 func TestMinecraftCascadeRevokeUserAndStaleSession(t *testing.T) {
@@ -360,7 +360,7 @@ func TestMinecraftCascadeRevokeUserAndStaleSession(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = a.ValidateMinecraftSession(ctx, token); !errors.Is(e, ErrAuthentication) {
-		t.Fatal("MC logout ignored")
+		t.Fatal("выход из учётной записи Minecraft проигнорирован")
 	}
 	_, token, e = a.IssueMinecraftSession(ctx, login.AccessToken, time.Hour)
 	if e != nil {
@@ -371,10 +371,10 @@ func TestMinecraftCascadeRevokeUserAndStaleSession(t *testing.T) {
 		t.Fatalf("revocations %d: %v", n, e)
 	}
 	if _, e = a.ValidateMinecraftSession(ctx, token); !errors.Is(e, ErrAuthentication) {
-		t.Fatal("MC token survived parent logout")
+		t.Fatal("токен Minecraft остался действительным после выхода из основной учётной записи")
 	}
 	if _, e = a.ValidateAccess(ctx, login.AccessToken); !errors.Is(e, ErrAuthentication) {
-		t.Fatal("access token survived logout")
+		t.Fatal("токен доступа остался действительным после выхода из учётной записи")
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)

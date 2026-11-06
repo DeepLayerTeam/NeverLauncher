@@ -138,7 +138,7 @@ func TestManagedJREDistributionRequired0155(t *testing.T) {
 	}
 	for _, ver := range []string{"0.15.5", "0.16.0", "1.0.0"} {
 		if !managedJREDistributionRequired0155(ver) {
-			t.Fatalf("%s must require Managed JRE Distribution", ver)
+			t.Fatalf("%s должен требовать управляемое распространение JRE", ver)
 		}
 	}
 }

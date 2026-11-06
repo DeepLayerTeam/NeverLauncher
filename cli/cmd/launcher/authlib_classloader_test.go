@@ -100,7 +100,7 @@ func TestAuthlibClassloader0279ApplyLegacyRuntimeAndTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(jvm) != 1 || !strings.Contains(jvm[0], "-javaagent:") || len(cp) != 1 {
-		t.Fatalf("no executable classloader arguments: %v %v", jvm, cp)
+		t.Fatalf("отсутствуют исполняемые аргументы загрузчика классов: %v %v", jvm, cp)
 	}
 	if runtime.GOOS != "windows" {
 		java := filepath.Join(t.TempDir(), "java8")
@@ -123,7 +123,7 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 		}
 		for _, needle := range []string{"-javaagent:", "agent.jar=https://auth.example.test", "extra.jar", "net.minecraft.client.main.Main", "fixture-token"} {
 			if !strings.Contains(string(args), needle) {
-				t.Fatalf("missing %s in argv:\n%s", needle, args)
+				t.Fatalf("в аргументах запуска отсутствует %s:\n%s", needle, args)
 			}
 		}
 		t.Setenv("LAUNCHER_MINECRAFT_ACCESS_TOKEN", "")
@@ -149,7 +149,7 @@ func TestAuthlibClassloader0279ModulepathAndUnsupportedRules(t *testing.T) {
 	}
 	base.Modulepath = []compatArtifact0279{{Path: ".launcher/compat/modules/module.jar", SHA256: sha}}
 	if err := compatValidateLock0279(&base); err == nil {
-		t.Fatal("Java 8 modulepath accepted")
+		t.Fatal("недопустимый путь модулей для Java 8 был принят")
 	}
 	base.JavaMajor = 17
 	base.AddOpens = []string{"java.base/java.lang=ALL-UNNAMED"}
@@ -168,14 +168,14 @@ func TestAuthlibClassloader0279ModulepathAndUnsupportedRules(t *testing.T) {
 	}
 	base.JavaAgents = []compatAgent0279{{Path: ".launcher/compat/agents/ygg.jar", SHA256: sha, Options: "${TOKEN}"}}
 	if err := compatValidateLock0279(&base); err == nil {
-		t.Fatal("secret placeholder accepted")
+		t.Fatal("допущена заглушка вместо секрета")
 	}
 	base.JavaAgents[0].Options = "https://auth.example.test"
 	if err := compatValidateLock0279(&base); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := compatReadRequest0279(filepath.Join(t.TempDir(), "missing.json")); err == nil {
-		t.Fatal("missing config accepted")
+		t.Fatal("допущено отсутствие конфигурации")
 	}
 }
 func TestAuthlibClassloader0279AuthlibProvenanceAndRollback(t *testing.T) {
@@ -218,20 +218,20 @@ func TestAuthlibClassloader0279AuthlibProvenanceAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = os.Stat(filepath.Join(root, ".launcher/compat/patches", sha256HexBytes(overlay)+".jar")); err != nil {
-		t.Fatal("overlay not retained", err)
+		t.Fatal("наложение не было сохранено", err)
 	}
 	raw, err := os.ReadFile(filepath.Join(root, authlibProvenancePath0279))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), sha256HexBytes(base)) || !strings.Contains(string(raw), sha256HexBytes(expected)) {
-		t.Fatal("provenance missing transformation hashes")
+		t.Fatal("в данных происхождения отсутствуют хеши преобразований")
 	}
 	if err = os.WriteFile(filepath.Join(root, authlibProvenancePath0279), []byte("{}"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err = verifyFactoryPlan0271(root, updated); err == nil {
-		t.Fatal("tampered transformation history accepted")
+		t.Fatal("допущена подменённая история преобразований")
 	}
 }
 
@@ -252,7 +252,7 @@ func TestAuthlibClassloader0279RejectInvalidAgentAndCustomModeRequiresOptIn(t *t
 		return compatApply0279(context.Background(), stage, p, req, false)
 	})
 	if err == nil || !strings.Contains(err.Error(), "--allow-auth-agent") {
-		t.Fatalf("missing auth agent opt-in accepted: %v", err)
+		t.Fatalf("допущено отсутствие согласия на агент авторизации: %v", err)
 	}
 	_, err = mirrorTransactional0274(context.Background(), root, func(stage string) ([]mirrorAction0274, error) {
 		p, e := readFactoryPlan0271(stage)
@@ -262,11 +262,11 @@ func TestAuthlibClassloader0279RejectInvalidAgentAndCustomModeRequiresOptIn(t *t
 		return compatApply0279(context.Background(), stage, p, req, true)
 	})
 	if err == nil || !strings.Contains(err.Error(), "Premain-Class") {
-		t.Fatalf("invalid Java agent accepted: %v", err)
+		t.Fatalf("допущен недопустимый Java-агент: %v", err)
 	}
 	after, _ := readFactoryPlan0271(root)
 	if previous.ReproducibilitySHA256 != after.ReproducibilitySHA256 {
-		t.Fatal("invalid compatibility request changed live build")
+		t.Fatal("недопустимый запрос совместимости изменил рабочую сборку")
 	}
 }
 
@@ -281,10 +281,10 @@ func TestAuthlibClassloader0279RejectSignedAuthlib(t *testing.T) {
 	target := "libraries/com/mojang/authlib/1.0/authlib-1.0.jar"
 	putLegacyTestFile0278(t, stage, target, signed)
 	if _, err := mirrorPatchAuthlib0274(stage, target, source, sha256HexBytes(signed), sha256HexBytes(overlay), strings.Repeat("0", 64)); err == nil || !strings.Contains(err.Error(), "signed") {
-		t.Fatalf("signed authlib accepted: %v", err)
+		t.Fatalf("допущена неподходящая подписанная библиотека авторизации: %v", err)
 	}
 	if _, err := mirrorCheckedHash0274(filepath.Join(stage, filepath.FromSlash(target)), sha256HexBytes(signed)); err != nil {
-		t.Fatal("signed source was mutated", err)
+		t.Fatal("подписанный исходный файл был изменён", err)
 	}
 }
 
@@ -313,12 +313,12 @@ func TestAuthlibClassloader0279ModuleArgumentsAndVerifiedHashes(t *testing.T) {
 		t.Fatalf("Неверные флаги JVM: %v %v", flags, classpath)
 	}
 	if !strings.Contains(flags[1], "example.jar") {
-		t.Fatalf("modulepath missing: %v", flags)
+		t.Fatalf("отсутствует путь к модулям: %v", flags)
 	}
 	if err = os.WriteFile(filepath.Join(root, filepath.FromSlash(path)), []byte("corrupted"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err = compatJVMArgs0279(root, p); err == nil {
-		t.Fatal("corrupted module JAR accepted")
+		t.Fatal("допущен повреждённый JAR-файл модуля")
 	}
 }

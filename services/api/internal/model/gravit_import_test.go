@@ -23,27 +23,27 @@ func TestGravitImportReadyWorkspaceSettings02210(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !r.Ready {
-		t.Fatalf("unexpected blocked/manual fields: %+v", r.Fields)
+		t.Fatalf("неожиданные поля блокировки или ручной обработки: %+v", r.Fields)
 	}
 	if r.Profile.Name != "Vanilla 1.20.4" || r.Profile.SchemaVersion != ProfileSchemaV2 || r.Settings.Runtime.Java.MajorVersion != 17 || r.Settings.Runtime.Java.MaximumMajorVersion != 0 || r.Settings.Runtime.Memory.RecommendedMb != 4096 {
-		t.Fatalf("incorrect conversion: %+v", r)
+		t.Fatalf("некорректное преобразование: %+v", r)
 	}
 	if len(r.Settings.Runtime.Launch.ClasspathEntries) != 1 || r.Settings.Runtime.Launch.ClasspathEntries[0] != "minecraft.jar" {
-		t.Fatal("classpath lost")
+		t.Fatal("потерян путь к классам")
 	}
 	if !hasGravitStatus02210(r, "maxJavaVersion", "transformed") || !hasGravitStatus02210(r, "classLoaderConfig", "transformed") {
-		t.Fatal("missing semantic transformations")
+		t.Fatal("отсутствуют семантические преобразования")
 	}
 	if len(r.Settings.FileRules) != 5 {
-		t.Fatalf("file rules lost or duplicated: %+v", r.Settings.FileRules)
+		t.Fatalf("правила файлов потеряны либо продублированы: %+v", r.Settings.FileRules)
 	}
 	if r.Settings.FileRules[0].Action == "include" {
-		t.Fatal("import must not authorize deleting unknown user files")
+		t.Fatal("импорт не должен разрешать удаление неизвестных пользовательских файлов")
 	}
 	b, _ := json.Marshal(r)
 	var parsed GravitImportResult02210
 	if err := json.Unmarshal(b, &parsed); err != nil || parsed.SourceSHA256 != r.SourceSHA256 {
-		t.Fatalf("report not serializable: %v", err)
+		t.Fatalf("отчёт невозможно сериализовать: %v", err)
 	}
 }
 func TestGravitImportFailClosed02210(t *testing.T) {
@@ -81,7 +81,7 @@ func TestGravitImportFailClosed02210(t *testing.T) {
 				t.Fatal(e)
 			}
 			if r.Ready || r.Summary["blocked"] == 0 {
-				t.Fatalf("unsafe input accepted: %+v", r.Fields)
+				t.Fatalf("приняты небезопасные входные данные: %+v", r.Fields)
 			}
 		})
 	}
@@ -90,18 +90,18 @@ func TestGravitImportReportsManualAndRejectsDuplicate02210(t *testing.T) {
 	source := strings.Replace(sampleGravit02210(), `"limited":false`, `"limited":false,"servers":[{"name":"S1","serverAddress":"localhost","serverPort":25565,"isDefault":true}]`, 1)
 	r, e := ConvertGravitProfile02210([]byte(source), "demo", "imported", "", "vanilla")
 	if e != nil || r.Ready || !hasGravitStatus02210(r, "servers[0]", "manual") || len(r.Servers) != 1 {
-		t.Fatalf("server not reported for manual registration: %v %+v", e, r)
+		t.Fatalf("сервер не указан для ручной регистрации: %v %+v", e, r)
 	}
 	for _, bad := range []string{`{"title":"A","title":"B"}`, `{"title":"A"} {"title":"B"}`, `[]`, `{"title":null}`} {
 		_, e := ConvertGravitProfile02210([]byte(bad), "demo", "imported", "", "vanilla")
 		if bad == `{"title":null}` {
 			if e != nil {
-				t.Fatalf("expected field-level error: %v", e)
+				t.Fatalf("ожидалась ошибка конкретного поля: %v", e)
 			}
 			continue
 		}
 		if e == nil {
-			t.Fatalf("bad JSON accepted: %s", bad)
+			t.Fatalf("принят недопустимый JSON: %s", bad)
 		}
 	}
 }
@@ -115,6 +115,6 @@ func TestGravitImportDeterministicAndNoSourceSecrets02210(t *testing.T) {
 	x, _ := json.Marshal(a)
 	y, _ := json.Marshal(b)
 	if string(x) != string(y) {
-		t.Fatal("non-deterministic conversion")
+		t.Fatal("недетерминированное преобразование")
 	}
 }

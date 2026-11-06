@@ -210,10 +210,10 @@ func TestWindowsSigningEvidenceCandidateAndPublishGate0152(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, false); err != nil {
-		t.Fatalf("unsigned CI candidate should verify structurally: %v", err)
+		t.Fatalf("неподписанный кандидат CI должен проходить структурную проверку: %v", err)
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, true); err == nil {
-		t.Fatal("publish gate must reject unsigned Windows x64+ARM64 evidence")
+		t.Fatal("проверка публикации должна отклонять неподписанные свидетельства Windows x64 и ARM64")
 	}
 }
 
@@ -235,17 +235,17 @@ func TestWindowsSigningEvidenceTamperFailsClosed0152(t *testing.T) {
 	_, _ = f.Write([]byte("tamper"))
 	_ = f.Close()
 	if err := verifyWindowsSigningEvidence0152(dir, ver, false); err == nil {
-		t.Fatal("tampered Windows artifact must fail evidence verification")
+		t.Fatal("подменённый артефакт Windows не должен проходить проверку свидетельств")
 	}
 }
 
 func TestWindowsSigningRequiredFrom0152(t *testing.T) {
 	if windowsSigningRequired0152("0.15.1") {
-		t.Fatal("0.15.1 must not require Windows dual-arch signing evidence")
+		t.Fatal("версия 0.15.1 не должна требовать свидетельства подписи для обеих архитектур Windows")
 	}
 	for _, ver := range []string{"0.15.2", "0.15.3", "0.16.0", "1.0.0"} {
 		if !windowsSigningRequired0152(ver) {
-			t.Fatalf("%s must require Windows dual-arch signing evidence", ver)
+			t.Fatalf("%s должен требовать свидетельства подписи для обеих архитектур Windows", ver)
 		}
 	}
 }

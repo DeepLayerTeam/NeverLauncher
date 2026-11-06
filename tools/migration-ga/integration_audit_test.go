@@ -37,23 +37,23 @@ func TestIntegrationAudit0491StrictCrossStoreComparison(t *testing.T) {
 			p, h := livePG0491(), host
 			mutate(&p, &h)
 			if err := matchIntegrationSnapshot0491(opts, run, p, h); err == nil {
-				t.Fatal("accepted inconsistent integration")
+				t.Fatal("принята несогласованная интеграция")
 			}
 		})
 	}
 	for _, bad := range []string{"", "a';DROP TABLE projects;--", "../../../etc/passwd"} {
 		if auditIdentifier0491.MatchString(bad) {
-			t.Fatalf("accepted dangerous identifier %q", bad)
+			t.Fatalf("принят опасный идентификатор %q", bad)
 		}
 	}
 	if validAuditScope0491("project", "project-2", "project-1") {
-		t.Fatal("accepted cross-project extension")
+		t.Fatal("принято расширение из другого проекта")
 	}
 }
 
 func TestIntegrationAudit0491LiveReadbackAndFailClosed(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("fixture uses POSIX executable script; production psql runs on Windows")
+		t.Skip("в тесте используется исполняемый POSIX-скрипт, а промышленный psql запускается в Windows")
 	}
 	root := t.TempDir()
 	psql := filepath.Join(root, "psql")
@@ -114,41 +114,41 @@ printf '%s\n' '{"readOnly":"on","project":"project-1","migration":{"id":"migrati
 	}
 	var data LiveIntegrationAudit0491
 	if err = json.Unmarshal(raw, &data); err != nil || data.Result != "passed" || data.MigrationRevision != 7 || data.JavaInstanceID != "jvm-1" || !data.PostgreSQLReadOnly {
-		t.Fatalf("bad evidence: %+v err=%v", data, err)
+		t.Fatalf("неверные свидетельства: %+v, ошибка=%v", data, err)
 	}
 	if strings.Contains(string(raw), opts.DSN) || strings.Contains(string(raw), opts.Token) {
-		t.Fatal("secrets in evidence")
+		t.Fatal("секреты включены в свидетельства")
 	}
 	if info, err := os.Stat(opts.Output); err != nil || info.Mode().Perm() != 0600 {
-		t.Fatal("evidence not private")
+		t.Fatal("свидетельства доступны посторонним")
 	}
 	opts.Output = filepath.Join(root, "reject-stale.json")
 	mutate.Store(true)
 	if err := executeIntegrationAudit0491(context.Background(), opts); err == nil {
-		t.Fatal("accepted concurrent migration revision")
+		t.Fatal("принята конфликтующая ревизия параллельной миграции")
 	}
 	if _, err := os.Stat(opts.Output); !os.IsNotExist(err) {
-		t.Fatal("failure wrote PASS evidence")
+		t.Fatal("при отказе записаны свидетельства со статусом PASS")
 	}
 	mutate.Store(false)
 	calls.Store(0)
 	badHost.Store(true)
 	opts.Output = filepath.Join(root, "reject-jvm.json")
 	if err := executeIntegrationAudit0491(context.Background(), opts); err == nil {
-		t.Fatal("accepted unhealthy Java JVM")
+		t.Fatal("принята неисправная JVM Java")
 	}
 	if _, err := os.Stat(opts.Output); !os.IsNotExist(err) {
-		t.Fatal("bad JVM wrote PASS evidence")
+		t.Fatal("для неисправной JVM записаны свидетельства PASS")
 	}
 	// Поддельные учётные данные и недоверенный источник не должны порождать свидетельства.
 	opts.Token = "wrong-token"
 	opts.Output = filepath.Join(root, "reject-token.json")
 	if err := executeIntegrationAudit0491(context.Background(), opts); err == nil {
-		t.Fatal("accepted bad token")
+		t.Fatal("принят неверный токен")
 	}
 	opts.Backend = "http://www.example.com"
 	if err := executeIntegrationAudit0491(context.Background(), opts); err == nil {
-		t.Fatal("accepted unencrypted public backend")
+		t.Fatal("принят публичный Backend без шифрования")
 	}
 }
 func jsonNumber0491(v int) string {
@@ -163,6 +163,6 @@ func TestIntegrationAudit0491DoesNotForwardAuthSecretsToPSQL(t *testing.T) {
 	opts := liveIntegrationOptions0491{DSN: "postgres://secret", Token: "top-secret"}
 	got := withoutPostgresEnvironment0491(env, opts)
 	if len(got) != 2 || got[0] != "PATH=/usr/bin" || got[1] != "LANG=C" {
-		t.Fatalf("leaked sensitive process environment: %v", got)
+		t.Fatalf("раскрыты конфиденциальные переменные окружения процесса: %v", got)
 	}
 }

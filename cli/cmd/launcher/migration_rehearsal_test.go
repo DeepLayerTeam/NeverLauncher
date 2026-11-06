@@ -55,7 +55,7 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sent = true
 		if r.Header.Get("X-Migration-Rehearsal-Confirm") != run || r.URL.Path != "/api/v1/admin/migration-runs/"+run+"/rehearsal" {
-			t.Error("route or confirmation mismatch")
+			t.Error("маршрут или подтверждение не совпадают")
 		}
 		var x rehearsalReport03310
 		if e := json.NewDecoder(r.Body).Decode(&x); e != nil || len(x.Probes) != 7 || x.LiveSession == nil || x.Ready || x.CutoverAllowed {
@@ -70,24 +70,24 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 		t.Fatal(e)
 	}
 	if !sent {
-		t.Fatal("report was not posted")
+		t.Fatal("отчёт не был отправлен")
 	}
 	_ = os.Remove(filepath.Join(dir, "client-started"))
 	must("probes/join", []byte("#!/bin/sh\nexit 1\n"), 0700)
 	if _, e = migrationRehearsalRun03310(context.Background(), dir, run, h); e == nil {
-		t.Fatal("failed actual join command accepted")
+		t.Fatal("допущена неудачная команда реального подключения")
 	}
 	_ = os.Remove(filepath.Join(dir, "client-started"))
 	must("probes/join", []byte("#!/bin/sh\nprintf '{\"passed\":true,\"uuid\":\""+player.UUID+"\",\"evidenceFile\":\"evidence/join\"}'\n"), 0700)
 	must("probes/skins", []byte("#!/bin/sh\nrm -f \"$HOME/client-started\"\nprintf '{\"passed\":true,\"uuid\":\""+player.UUID+"\",\"evidenceFile\":\"evidence/skins\"}'\n"), 0700)
 	if _, e = migrationRehearsalRun03310(context.Background(), dir, run, h); e == nil {
-		t.Fatal("player disconnected before verification was accepted")
+		t.Fatal("допущено отключение игрока до проверки")
 	}
 }
 func TestRehearsalPathTraversal03310(t *testing.T) {
 	dir := t.TempDir()
 	if _, e := rehearsalPath03310(dir, "../outside"); e == nil {
-		t.Fatal("path escape accepted")
+		t.Fatal("допущен выход за пределы пути")
 	}
 	outside := t.TempDir()
 	if e := os.Symlink(outside, filepath.Join(dir, "escape")); e != nil {
@@ -162,12 +162,12 @@ func TestRehearsalLiveNoSyntheticSession0447(t *testing.T) {
 	write("live-session.json", string(cfg), 0600)
 	src := rehearsalSnapshot03310{Players: []rehearsalPlayer03310{{UUID: uuid}}}
 	if _, _, _, err := rehearsalLaunchLive0447(context.Background(), dir, src); err == nil {
-		t.Fatal("client exit without actual join passed")
+		t.Fatal("успешной признана работа клиента без реального подключения")
 	}
 	write("bin/client", "#!/bin/sh\ntouch \"$HOME/client-started\"\nexec sleep 30\n", 0700)
 	write("client-started", "", 0600)
 	if _, _, _, err := rehearsalLaunchLive0447(context.Background(), dir, src); err == nil {
-		t.Fatal("player already online before launch accepted")
+		t.Fatal("допущен игрок, подключённый ещё до запуска")
 	}
 	cfgBytes, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: "bin/client", PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: "example.com:25575", RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
 	write("live-session.json", string(cfgBytes), 0600)

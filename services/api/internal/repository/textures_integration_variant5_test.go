@@ -58,7 +58,7 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 			t.Fatal(e)
 		}
 		if _, e = db.ExecContext(ctx, string(data)); e != nil {
-			t.Fatalf("migration %s: %v", filename, e)
+			t.Fatalf("миграция %s: %v", filename, e)
 		}
 	}
 	r := &SQLRepository{db: db, publicURL: "https://launcher.example"}
@@ -76,65 +76,65 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	}
 	library, err := r.ListSavedTextures0255(ctx, alice, "skin")
 	if err != nil || len(library) != 1 || library[0].Digest != digest {
-		t.Fatalf("saved item: %+v %v", library, err)
+		t.Fatalf("сохранённый элемент: %+v %v", library, err)
 	}
 	notOwned, err := r.ListSavedTextures0255(ctx, bob, "skin")
 	if err != nil || len(notOwned) != 0 {
-		t.Fatalf("cross-user library leak: %+v %v", notOwned, err)
+		t.Fatalf("данные библиотеки раскрыты другому пользователю: %+v %v", notOwned, err)
 	}
 	foreign := alice
 	foreign.UserID = "bob"
 	if _, err = r.SelectSavedTexture0255(ctx, foreign, "skin", digest, 1, "classic", "public"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("UUID spoofing: %v", err)
+		t.Fatalf("подмена UUID: %v", err)
 	}
 	if _, err = r.SelectSavedTexture0255(ctx, bob, "skin", digest, 0, "classic", "public"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("foreign digest reuse: %v", err)
+		t.Fatalf("повторное использование чужого хеша: %v", err)
 	}
 	if _, found, err := r.ReadSavedTextureBlob0255(ctx, bob, "skin", digest); err != nil || found {
-		t.Fatalf("foreign saved preview: %v %v", found, err)
+		t.Fatalf("предпросмотр чужого сохранённого элемента: %v %v", found, err)
 	}
 	if _, found, err := r.ReadSavedTextureBlob0255(ctx, alice, "skin", digest); err != nil || !found {
-		t.Fatalf("owned saved preview: %v %v", found, err)
+		t.Fatalf("предпросмотр собственного сохранённого элемента: %v %v", found, err)
 	}
 	if err = r.DeleteSavedTexture0255(ctx, alice, "skin", digest); !errors.Is(err, ErrTextureInUse0255) {
-		t.Fatalf("active item deletion: %v", err)
+		t.Fatalf("удаление активного элемента: %v", err)
 	}
 	if _, err = r.SelectSavedTexture0255(ctx, alice, "skin", digest, 0, "slim", "public"); !errors.Is(err, ErrTextureRevisionConflict0251) {
 		t.Fatalf("Отсутствует механизм CAS: %v", err)
 	}
 	selected, err := r.SelectSavedTexture0255(ctx, alice, "skin", digest, 1, "slim", "private")
 	if err != nil || selected.Revision != 2 || selected.Model != "slim" {
-		t.Fatalf("select: %+v %v", selected, err)
+		t.Fatalf("выбор: %+v %v", selected, err)
 	}
 	if _, err = r.ClearTexture0255(ctx, alice, "skin", 1, false); !errors.Is(err, ErrTextureRevisionConflict0251) {
-		t.Fatalf("stale reset: %v", err)
+		t.Fatalf("сброс с устаревшей ревизией: %v", err)
 	}
 	cleared, err := r.ClearTexture0255(ctx, alice, "skin", 2, false)
 	if err != nil || cleared.Revision != 3 || cleared.Active || cleared.BlobDigest != "" || cleared.Visibility != "private" {
-		t.Fatalf("reset: %+v %v", cleared, err)
+		t.Fatalf("сброс: %+v %v", cleared, err)
 	}
 	public, found, err := r.ReadTextureProfile0251(ctx, alice.UUID)
 	if err != nil || !found || public.SkinURL != "" {
-		t.Fatalf("reset still publicly visible: %+v %v %v", public, found, err)
+		t.Fatalf("сброшенный элемент всё ещё виден публично: %+v %v %v", public, found, err)
 	}
 	if _, err = r.UpdateTextureSelection0251(ctx, alice, "skin", 3, "slim", "public", true); !errors.Is(err, ErrTextureNotSelected0255) {
-		t.Fatalf("reactivated tombstone: %v", err)
+		t.Fatalf("повторно активирована запись, помеченная как удалённая: %v", err)
 	}
 	// Возврат к сохранённой текстуре не требует повторной загрузки, но требует нового
 	// CAS.
 	again, err := r.SelectSavedTexture0255(ctx, alice, "skin", digest, 3, "classic", "public")
 	if err != nil || again.Revision != 4 {
-		t.Fatalf("reselect: %+v %v", again, err)
+		t.Fatalf("повторный выбор: %+v %v", again, err)
 	}
 	if _, err = r.ClearTexture0255(ctx, alice, "skin", 4, true); err != nil {
-		t.Fatalf("delete current: %v", err)
+		t.Fatalf("удаление текущего элемента: %v", err)
 	}
 	library, err = r.ListSavedTextures0255(ctx, alice, "skin")
 	if err != nil || len(library) != 0 {
-		t.Fatalf("deleted item retained: %+v %v", library, err)
+		t.Fatalf("удалённый элемент сохранился: %+v %v", library, err)
 	}
 	if _, err = r.SelectSavedTexture0255(ctx, alice, "skin", digest, 5, "classic", "public"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("deleted digest reselect: %v", err)
+		t.Fatalf("повторный выбор удалённого хеша: %v", err)
 	}
 	history, err := r.ListTextureRevisions0251(ctx, alice, "skin")
 	if err != nil || len(history) != 5 {
@@ -145,7 +145,7 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	}
 	var owners int
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blob_owners WHERE user_id='alice'`).Scan(&owners); err != nil || owners != 0 {
-		t.Fatalf("quota not released %d %v", owners, err)
+		t.Fatalf("квота не освобождена: %d %v", owners, err)
 	}
 	// Ранее очищенные ресурсы остаются в библиотеках других пользователей и не должны
 	// удаляться GC.
@@ -164,7 +164,7 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	}
 	garbage, err := r.ClaimTextureGarbage0253(ctx, "local", 100)
 	if err != nil || len(garbage) != 0 {
-		t.Fatalf("saved-but-inactive asset claimed by GC: %+v %v", garbage, err)
+		t.Fatalf("сборщик мусора захватил сохранённый, но неактивный ресурс: %+v %v", garbage, err)
 	}
 	// Плащ из сохранённой библиотеки не может обходить персональную политику
 	// пользователя.
@@ -172,26 +172,26 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = r.SelectSavedTexture0255(ctx, bob, "cape", digest, 0, "classic", "public"); !errors.Is(err, ErrTextureCapeDenied0251) {
-		t.Fatalf("cape grant bypass: %v", err)
+		t.Fatalf("обход разрешения на плащ: %v", err)
 	}
 	if _, err = db.ExecContext(ctx, `INSERT INTO texture_cape_grants(project_id,user_id,granted,actor_user_id) VALUES('', 'bob',true,'alice')`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = r.SelectSavedTexture0255(ctx, bob, "cape", digest, 0, "classic", "public"); err != nil {
-		t.Fatalf("granted cape: %v", err)
+		t.Fatalf("плащ с разрешённым доступом: %v", err)
 	}
 }
 
 func TestTextureServiceValidation0255(t *testing.T) {
 	for _, s := range []string{"", "A" + "012345678901234567890123456789012345678901234567890123456789012", "../" + "0000000000000000000000000000000000000000000000000000000000000000"} {
 		if validTextureDigest0255(s) {
-			t.Errorf("accepted invalid digest %q", s)
+			t.Errorf("принят недопустимый хеш %q", s)
 		}
 	}
 	if !validTextureDigest0255("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef") {
 		t.Fatal("Корректный SHA-256 ошибочно отклонён")
 	}
 	if validTextureKind0255("official") || validTextureKind0255("SKIN") {
-		t.Fatal("invalid texture kind accepted")
+		t.Fatal("принят недопустимый тип текстуры")
 	}
 }

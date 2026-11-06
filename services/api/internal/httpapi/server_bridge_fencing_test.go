@@ -24,32 +24,32 @@ func TestGameControlLostACKIsIndeterminateAndNeverRedispatched0285(t *testing.T)
 	}
 	lease, err := store.leaseControl0195("survival", 3, runtimeID, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "first_lease_1234567890123456", 0, now, 10*time.Second)
 	if err != nil || lease.Status != "leased" {
-		t.Fatalf("lease=%+v err=%v", lease, err)
+		t.Fatalf("аренда=%+v, ошибка=%v", lease, err)
 	}
 	// Повторное подключение того же канала до истечения срока возобновляет ТУ ЖЕ
 	// доставку и не выделяет вторую идентичность аренды или ограждения.
 	resume, err := store.leaseControl0195("survival", 3, runtimeID, lease.LeaseOwner, "other_lease_1234567890123456", 0, now.Add(2*time.Second), 10*time.Second)
 	if err != nil || resume.LeaseToken != lease.LeaseToken || resume.Attempt != 1 {
-		t.Fatalf("resume=%+v err=%v", resume, err)
+		t.Fatalf("возобновление=%+v, ошибка=%v", resume, err)
 	}
 	// Исходный игровой процесс мог выполнить сохранение, хотя ACK пропал. Другой
 	// канал НЕ ДОЛЖЕН получить второе выполнение.
 	_, err = store.leaseControl0195("survival", 3, runtimeID, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "second_lease_1234567890123456", 0, now.Add(11*time.Second), 10*time.Second)
 	if !errors.Is(err, repository.ErrNotFound) {
-		t.Fatalf("expired delivery was redelivered: %v", err)
+		t.Fatalf("доставка с истёкшим сроком была выполнена повторно: %v", err)
 	}
 	original := store.controlCommands[cmd.ID]
 	if original.Status != "indeterminate" || original.LeaseOwner != lease.LeaseOwner || original.LeaseToken != lease.LeaseToken || original.Attempt != 1 || original.CompletedAt.IsZero() {
-		t.Fatalf("lost ACK not reconciled safely: %+v", original)
+		t.Fatalf("потерянное подтверждение получения обработано небезопасно: %+v", original)
 	}
 	if _, err = store.completeControl0195("survival", 3, runtimeID, lease.ID, lease.LeaseOwner, lease.LeaseToken, lease.DeliverySequence, "succeeded", map[string]string{}, "", now.Add(12*time.Second)); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("stale ACK overwrote uncertainty: %v", err)
+		t.Fatalf("устаревшее подтверждение получения перезаписало состояние неопределённости: %v", err)
 	}
 	repeat := cmd
 	repeat.ID = "ctl_replay_different_id"
 	stored, reused, err := store.createControl0195(repeat, now.Add(15*time.Second))
 	if err != nil || !reused || stored.ID != cmd.ID || stored.Status != "indeterminate" {
-		t.Fatalf("idem replay=%+v reused=%v err=%v", stored, reused, err)
+		t.Fatalf("повтор идемпотентной операции=%+v, повторное использование=%v, ошибка=%v", stored, reused, err)
 	}
 }
 
@@ -59,10 +59,10 @@ func TestGameControlPendingExpiresWithoutExecution0285(t *testing.T) {
 	store := &serverBridgeStore{controlCommands: map[string]model.ServerBridgeControlCommand{}}
 	store.controlCommands["pending"] = model.ServerBridgeControlCommand{ID: "pending", ServerID: "survival", RuntimeID: runtimeID, RuntimeEpoch: 1, Status: "pending", ExpiresAt: now.Add(-time.Second)}
 	if _, err := store.leaseControl0195("survival", 1, runtimeID, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "new_token_1234567890123456", 0, now, 30*time.Second); !errors.Is(err, repository.ErrNotFound) {
-		t.Fatalf("expired pending command delivered: %v", err)
+		t.Fatalf("доставлена ожидавшая команда с истёкшим сроком: %v", err)
 	}
 	if got := store.controlCommands["pending"]; got.Status != "expired" || got.Attempt != 0 {
-		t.Fatalf("wrong pre-dispatch expiry: %+v", got)
+		t.Fatalf("неверный срок истечения до отправки: %+v", got)
 	}
 }
 
@@ -70,15 +70,15 @@ func TestServerBridgeSignedDeliveryExpiresWithLease0285(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	command := model.ServerBridgeControlCommand{ExpiresAt: now.Add(5 * time.Minute), LeaseUntil: now.Add(15 * time.Second)}
 	if expiry := controlWireExpiry0285(command); expiry != now.Add(15*time.Second).UnixMilli() {
-		t.Fatalf("signed token outlives lease: %d", expiry)
+		t.Fatalf("срок действия подписанного токена превышает срок аренды: %d", expiry)
 	}
 	command.ExpiresAt = now.Add(3 * time.Second)
 	if expiry := controlWireExpiry0285(command); expiry != now.Add(3*time.Second).UnixMilli() {
-		t.Fatalf("signed token outlives command: %d", expiry)
+		t.Fatalf("срок действия подписанного токена превышает срок действия команды: %d", expiry)
 	}
 	command.LeaseUntil = time.Time{}
 	if expiry := controlWireExpiry0285(command); expiry != 0 {
-		t.Fatalf("missing lease permitted: %d", expiry)
+		t.Fatalf("допущено отсутствие аренды: %d", expiry)
 	}
 }
 
@@ -89,9 +89,9 @@ func TestGameControlOldRuntimeCannotRetainLease0285(t *testing.T) {
 	store := &serverBridgeStore{controlCommands: map[string]model.ServerBridgeControlCommand{}}
 	store.controlCommands["old"] = model.ServerBridgeControlCommand{ID: "old", ServerID: "survival", RuntimeID: oldID, RuntimeEpoch: 3, DeliverySequence: 1, Status: "leased", LeaseOwner: "old-channel-012345678901", LeaseToken: "old-lease-01234567890123456", LeaseUntil: now.Add(time.Minute), ExpiresAt: now.Add(time.Minute)}
 	if _, err := store.leaseControl0195("survival", 4, newID, "new-channel-012345678901", "new-lease-01234567890123456", 0, now, 30*time.Second); !errors.Is(err, repository.ErrNotFound) {
-		t.Fatalf("old runtime delivered into new epoch: %v", err)
+		t.Fatalf("прежний Runtime отправил команду в новую эпоху: %v", err)
 	}
 	if c := store.controlCommands["old"]; c.Status != "indeterminate" || c.LeaseToken != "old-lease-01234567890123456" {
-		t.Fatalf("old runtime not fenced: %+v", c)
+		t.Fatalf("прежний Runtime не заблокирован после смены эпохи: %+v", c)
 	}
 }

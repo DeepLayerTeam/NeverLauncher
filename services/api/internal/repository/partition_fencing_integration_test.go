@@ -28,23 +28,23 @@ func TestPostgresPartitionFencing0514(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d := first.ExpiresAt.Sub(dbNow); d < 55*time.Second || d > 65*time.Second {
-		t.Fatalf("scope lease expiry is not based on PostgreSQL time: %s", d)
+		t.Fatalf("срок действия аренды области не основан на времени PostgreSQL: %s", d)
 	}
 	if _, err := b.AcquireDurableScopeLease(ctx, scope, "node-b", time.Minute); !errors.Is(err, ErrLeaseBusy) {
-		t.Fatalf("dual owner on live PostgreSQL lease: %v", err)
+		t.Fatalf("действующая аренда PostgreSQL имеет двух владельцев: %v", err)
 	}
 	if _, err := a.db.ExecContext(ctx, `UPDATE durable_scope_leases SET expires_at=clock_timestamp()-interval '1 second' WHERE scope_key=$1`, scope); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.RenewDurableScopeLease(ctx, scope, first.LeaseToken, time.Minute); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("stale renewal accepted: %v", err)
+		t.Fatalf("принято продление устаревшей аренды: %v", err)
 	}
 	second, err := b.AcquireDurableScopeLease(ctx, scope, "node-b", time.Minute)
 	if err != nil || second.FencingToken <= first.FencingToken {
-		t.Fatalf("stale takeover did not advance fence: %+v %v", second, err)
+		t.Fatalf("захват после истечения аренды не увеличил эпоху защиты: %+v %v", second, err)
 	}
 	if err := a.ReleaseDurableScopeLease(ctx, scope, first.LeaseToken); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("old owner released new lease: %v", err)
+		t.Fatalf("прежний владелец освободил новую аренду: %v", err)
 	}
 
 	job, _, err := a.EnqueueDurableJob(ctx, model.DurableJob{
@@ -63,20 +63,20 @@ func TestPostgresPartitionFencing0514(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := a.FailDurableJob(ctx, job.ID, leased.LeaseToken, "stale", 0); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired worker failed job: %v", err)
+		t.Fatalf("обработчик с истёкшей арендой пометил задание ошибочным: %v", err)
 	}
 	if _, err := a.TerminateDurableJob(ctx, job.ID, leased.LeaseToken, model.DurableJobStatusFailed, "stale"); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired worker terminated job: %v", err)
+		t.Fatalf("обработчик с истёкшей арендой завершил задание: %v", err)
 	}
 	newJob, err := b.LeaseDurableJob(ctx, job.ID, "worker-b", time.Minute)
 	if err != nil || newJob.LeaseFence <= leased.LeaseFence {
-		t.Fatalf("worker-b did not replace expired owner: %+v %v", newJob, err)
+		t.Fatalf("второй обработчик не заменил владельца с истёкшей арендой: %+v %v", newJob, err)
 	}
 	if _, err := a.FailDurableJob(ctx, job.ID, leased.LeaseToken, "late", 0); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("stale worker mutated successor job: %v", err)
+		t.Fatalf("устаревший обработчик изменил задание преемника: %v", err)
 	}
 	if _, err := b.FailDurableJob(ctx, job.ID, newJob.LeaseToken, "retry", 0); err != nil {
-		t.Fatalf("current owner could not fail/requeue its job: %v", err)
+		t.Fatalf("текущий владелец не смог завершить задание с ошибкой либо поставить его в очередь повторно: %v", err)
 	}
 
 	outID := "out_partition_0514_" + suffix
@@ -96,13 +96,13 @@ func TestPostgresPartitionFencing0514(t *testing.T) {
 		}
 	}
 	if firstToken == "" {
-		t.Fatal("new outbox event not claimed")
+		t.Fatal("новое событие исходящей очереди не захвачено")
 	}
 	if _, err = a.db.ExecContext(ctx, `UPDATE event_outbox SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1`, outID); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.CompleteOutboxEvent(ctx, outID, firstToken); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired owner completed outbox event: %v", err)
+		t.Fatalf("владелец с истёкшей арендой завершил событие исходящей очереди: %v", err)
 	}
 	secondOut, err := b.ClaimOutboxEvents(ctx, "worker-b", 100, time.Minute)
 	if err != nil {
@@ -112,19 +112,19 @@ func TestPostgresPartitionFencing0514(t *testing.T) {
 	for _, event := range secondOut {
 		if event.ID == outID {
 			if event.LeaseFence <= firstFence || event.LeaseToken == firstToken {
-				t.Fatalf("outbox claim did not advance fence: %+v", event)
+				t.Fatalf("захват исходящего события не увеличил эпоху защиты: %+v", event)
 			}
 			successor = event.LeaseToken
 		}
 	}
 	if successor == "" {
-		t.Fatal("second worker did not reclaim outbox event")
+		t.Fatal("второй обработчик не перехватил событие исходящей очереди")
 	}
 	if err := a.FailOutboxEvent(ctx, outID, firstToken, "late", 0); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("old worker changed successor outbox event: %v", err)
+		t.Fatalf("прежний обработчик изменил событие исходящей очереди преемника: %v", err)
 	}
 	if err := b.CompleteOutboxEvent(ctx, outID, successor); err != nil {
-		t.Fatalf("current worker could not complete outbox event: %v", err)
+		t.Fatalf("текущий обработчик не смог завершить событие исходящей очереди: %v", err)
 	}
 }
 
@@ -139,6 +139,6 @@ func TestPostgresExpiredLeaseFailClosed0514(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := a.ReleaseDurableScopeLease(context.Background(), scope, lease.LeaseToken); !errors.Is(err, ErrLeaseLost) {
-		t.Fatalf("expired scope release must fail: %v", err)
+		t.Fatalf("освобождение области с истёкшей арендой должно завершаться ошибкой: %v", err)
 	}
 }

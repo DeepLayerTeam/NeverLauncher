@@ -60,7 +60,7 @@ func TestCompatibilityGETRetriesUnexpectedNotModifiedWithoutTrustingCache(t *tes
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil || string(data) != "verified-asset-payload" || calls.Load() != 2 {
-		t.Fatalf("invalid revalidation result: %q, %d requests, %v", data, calls.Load(), err)
+		t.Fatalf("неверный результат повторной проверки: %q, запросов=%d, %v", data, calls.Load(), err)
 	}
 }
 
@@ -68,24 +68,24 @@ func TestMaterializationLockIsExclusive(t *testing.T) {
 	dir := t.TempDir()
 	first, err := acquireCompatibilityMaterializationLock(dir)
 	if err != nil {
-		t.Fatalf("first lock: %v", err)
+		t.Fatalf("первая блокировка: %v", err)
 	}
 	defer first.Close()
 
 	lockPath := filepath.Join(dir, ".launcher", "materialize.lock")
 	if _, err := os.Stat(lockPath); err != nil {
-		t.Fatalf("lock file: %v", err)
+		t.Fatalf("файл блокировки: %v", err)
 	}
 
 	// Не ожидайте производственного тайм-аута в модульном тесте: проверяйте семантику O_EXCL напрямую.
 	if _, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600); err == nil {
-		t.Fatal("second materialization lock unexpectedly succeeded")
+		t.Fatal("вторую блокировку материализации неожиданно удалось получить")
 	}
 
 	first.Close()
 	second, err := acquireCompatibilityMaterializationLock(dir)
 	if err != nil {
-		t.Fatalf("lock after release: %v", err)
+		t.Fatalf("блокировка после освобождения: %v", err)
 	}
 	second.Close()
 }
@@ -97,7 +97,7 @@ func TestSecureClientDestinationRejectsSymlinkComponent(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(root, "libraries")); err != nil {
-		t.Fatalf("symlink: %v", err)
+		t.Fatalf("символьная ссылка: %v", err)
 	}
 	if _, err := secureClientDestination(root, "libraries/example.jar"); err == nil {
 		t.Fatal("Компонент через символьную ссылку ошибочно принят")
@@ -128,14 +128,14 @@ func TestReplaceFileAtomicPortableReplacesExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := replaceFileAtomicPortable(tmp, dst); err != nil {
-		t.Fatalf("replace: %v", err)
+		t.Fatalf("замена: %v", err)
 	}
 	data, err := os.ReadFile(dst)
 	if err != nil || string(data) != "new" {
 		t.Fatalf("Несоответствие при замене: %q / %v", data, err)
 	}
 	if _, err := os.Stat(tmp); !os.IsNotExist(err) {
-		t.Fatalf("temporary file still exists: %v", err)
+		t.Fatalf("временный файл всё ещё существует: %v", err)
 	}
 }
 
@@ -152,7 +152,7 @@ func TestClientPackageRejectsSymlinkArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := buildClientPackage(root, "p", "vanilla", "stable", "1", ""); err == nil {
-		t.Fatal("client package accepted symlink artifact")
+		t.Fatal("пакет клиента принял артефакт с символьной ссылкой")
 	}
 }
 
@@ -160,7 +160,7 @@ func TestCompatibilityRetryDelayIsBounded(t *testing.T) {
 	response := &http.Response{Header: make(http.Header)}
 	response.Header.Set("Retry-After", "999")
 	if got := compatibilityRetryDelay(response, 0); got != 10*time.Second {
-		t.Fatalf("Retry-After bound: %v", got)
+		t.Fatalf("ограничение заголовка Retry-After: %v", got)
 	}
 }
 
@@ -174,18 +174,18 @@ func TestValidateRemoteURLRejectsCredentialsAndPrivateLiteral(t *testing.T) {
 		"http://example.com/file.jar",
 	} {
 		if err := validateRemoteURL(raw); err == nil {
-			t.Fatalf("unsafe upstream URL accepted: %s", raw)
+			t.Fatalf("принят небезопасный URL внешнего источника: %s", raw)
 		}
 	}
 	if err := validateRemoteURL("https://example.com/file.jar"); err != nil {
 		t.Fatalf("Публичный HTTPS-адрес ошибочно отклонён: %v", err)
 	}
 	if err := validateRemoteURL("http://127.0.0.1:8080/file.jar"); err != nil {
-		t.Fatalf("loopback HTTP test upstream rejected: %v", err)
+		t.Fatalf("локальный тестовый HTTP-источник отклонён: %v", err)
 	}
 	t.Setenv("LAUNCHER_ALLOW_PRIVATE_UPSTREAM", "1")
 	if err := validateRemoteURL("https://10.0.0.1/file.jar"); err != nil {
-		t.Fatalf("explicit private upstream opt-in rejected: %v", err)
+		t.Fatalf("отклонён явно разрешённый приватный внешний источник: %v", err)
 	}
 }
 
@@ -209,9 +209,9 @@ func TestReplaceDirectoryAtomicPortablePreservesNewTree(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dst, "old.bin")); !os.IsNotExist(err) {
-		t.Fatalf("old tree survived atomic publish: %v", err)
+		t.Fatalf("старое дерево осталось после атомарной публикации: %v", err)
 	}
 	if raw, err := os.ReadFile(filepath.Join(dst, "new.bin")); err != nil || string(raw) != "new" {
-		t.Fatalf("new tree not published: %q / %v", raw, err)
+		t.Fatalf("новое дерево не опубликовано: %q / %v", raw, err)
 	}
 }

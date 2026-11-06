@@ -36,10 +36,10 @@ func TestScopedBrokerCapabilities03110(t *testing.T) {
 	data := base64.StdEncoding.EncodeToString([]byte("scoped-content"))
 	req := capabilityRequest{Name: "reports", Path: "my-file", BodyBase64: data}
 	if r := s.executeCapability(ctx, st, "fs.write", req); r.err != nil || r.status != 200 {
-		t.Fatalf("write denied: %+v", r)
+		t.Fatalf("запись отклонена: %+v", r)
 	}
 	if r := s.executeCapability(ctx, st, "fs.read", req); r.err != nil {
-		t.Fatalf("read denied: %+v", r)
+		t.Fatalf("чтение отклонено: %+v", r)
 	} else {
 		obj, ok := r.value.(map[string]any)
 		if !ok || obj["contentBase64"] != data {
@@ -47,10 +47,10 @@ func TestScopedBrokerCapabilities03110(t *testing.T) {
 		}
 	}
 	if r := s.executeCapability(ctx, st, "fs.read", capabilityRequest{Name: "private", Path: "secret"}); r.status != 403 {
-		t.Fatalf("ungranted root exposed %+v", r)
+		t.Fatalf("открыт доступ к корневому каталогу без выданного разрешения: %+v", r)
 	}
 	if r := s.executeCapability(ctx, st, "fs.write", capabilityRequest{Name: "reports", Path: "../secrets", BodyBase64: data}); r.status != 403 {
-		t.Fatalf("traversal allowed %+v", r)
+		t.Fatalf("разрешён выход за пределы каталога: %+v", r)
 	}
 	outside := filepath.Join(t.TempDir(), "outside")
 	if err := os.WriteFile(outside, []byte("no"), 0600); err != nil {
@@ -60,35 +60,35 @@ func TestScopedBrokerCapabilities03110(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r := s.executeCapability(ctx, st, "fs.read", capabilityRequest{Name: "reports", Path: "alias"}); r.status != 403 {
-		t.Fatalf("symlink allowed %+v", r)
+		t.Fatalf("разрешена небезопасная символьная ссылка: %+v", r)
 	}
 	if r := s.executeCapability(ctx, st, "secret.get", capabilityRequest{Name: "api_token"}); r.status != 403 {
-		t.Fatalf("raw secret disclosure %+v", r)
+		t.Fatalf("раскрытие секрета в открытом виде: %+v", r)
 	}
 	if r := s.executeCapability(ctx, st, "http.fetch", capabilityRequest{URL: "https://api.example.com.evil.net"}); r.status != 403 {
-		t.Fatalf("network bypass %+v", r)
+		t.Fatalf("обход сетевых ограничений: %+v", r)
 	}
 	if r := s.executeCapability(ctx, st, "http.fetch", capabilityRequest{URL: "https://api.example.com", SecretName: "unapproved"}); r.status != 403 {
-		t.Fatalf("secret allowlist bypass %+v", r)
+		t.Fatalf("обход списка разрешённых секретов: %+v", r)
 	}
 	if r := s.executeCapability(ctx, st, "http.fetch", capabilityRequest{URL: "https://api.example.com", SecretName: "api_token", Headers: map[string]string{"authorization": "clash"}}); r.status != 400 {
-		t.Fatalf("ambiguous authorization allowed %+v", r)
+		t.Fatalf("допущена неоднозначная авторизация: %+v", r)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, m.ID, "global", "", "storage:read"); err != nil {
 		t.Fatal(err)
 	}
 	if r := s.executeCapability(ctx, st, "fs.read", req); r.status != 403 {
-		t.Fatalf("revoked permission still effective %+v", r)
+		t.Fatalf("отозванное разрешение остаётся действительным: %+v", r)
 	}
 	st.sandboxReady = false
 	if r := s.executeCapability(ctx, st, "fs.write", req); r.status != 403 {
-		t.Fatalf("unready sandbox gained broker %+v", r)
+		t.Fatalf("неподготовленная песочница получила доступ к брокеру: %+v", r)
 	}
 }
 func TestSharedRootsAbsentIsFailClosed03110(t *testing.T) {
 	s := New(Config{}, repository.NewMemoryRepository("http://example.invalid"), nil)
 	p := &model.ExtensionSandboxPolicy{Mode: "isolated", FilesystemRead: []string{"shared:missing"}}
 	if err := s.validateSharedRoots03110(p); err == nil {
-		t.Fatal("missing shared root accepted")
+		t.Fatal("допущено отсутствие общего корневого каталога")
 	}
 }

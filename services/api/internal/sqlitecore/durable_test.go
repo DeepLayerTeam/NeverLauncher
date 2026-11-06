@@ -25,11 +25,11 @@ func TestDurableJobIdempotencyConcurrentLeaseAndCrash(t *testing.T) {
 	ctx := context.Background()
 	j, created, e := r.EnqueueDurableJob(ctx, newDurableJob("request-123"), 0)
 	if e != nil || !created {
-		t.Fatalf("enqueue: %v %v", created, e)
+		t.Fatalf("ошибка постановки в очередь: %v %v", created, e)
 	}
 	duplicate, created, e := r.EnqueueDurableJob(ctx, newDurableJob("request-123"), 0)
 	if e != nil || created || j.ID != duplicate.ID {
-		t.Fatalf("dedup %v %v", created, e)
+		t.Fatalf("ошибка устранения дубликатов: %v %v", created, e)
 	}
 	other := newDurableJob("request-123")
 	other.Payload = []byte(`{"hello":"different"}`)
@@ -51,13 +51,13 @@ func TestDurableJobIdempotencyConcurrentLeaseAndCrash(t *testing.T) {
 				leased = c
 				mu.Unlock()
 			} else if !errors.Is(e, ErrDurableLeaseBusy) {
-				t.Errorf("claim: %v", e)
+				t.Errorf("ошибка захвата задания: %v", e)
 			}
 		}(k)
 	}
 	wg.Wait()
 	if winners.Load() != 1 || leased.LeaseFence != 1 || leased.AttemptCount != 1 {
-		t.Fatalf("winners=%d claim=%+v", winners.Load(), leased)
+		t.Fatalf("победителей=%d, захват=%+v", winners.Load(), leased)
 	}
 	if e = r.Close(); e != nil {
 		t.Fatal(e)
@@ -69,25 +69,25 @@ func TestDurableJobIdempotencyConcurrentLeaseAndCrash(t *testing.T) {
 	defer r.Close()
 	state, e := r.GetDurableJob(ctx, j.ID)
 	if e != nil || state.Status != "running" || state.LeaseToken != leased.LeaseToken {
-		t.Fatalf("lost lease after restart: %+v %v", state, e)
+		t.Fatalf("аренда потеряна после перезапуска: %+v %v", state, e)
 	}
 	// После истечения аренды воркер становится устаревшим и не должен завершать
 	// работу, даже если оставался живым во время реального сбоя процесса.
 	time.Sleep(1100 * time.Millisecond)
 	next, e := r.LeaseDurableJob(ctx, j.ID, "worker-recover", time.Second)
 	if e != nil || next.LeaseFence != 2 || next.AttemptCount != 2 {
-		t.Fatalf("recovery lease: %+v %v", next, e)
+		t.Fatalf("аренда при восстановлении: %+v %v", next, e)
 	}
 	if _, e = r.CompleteOperationJob(ctx, j.ID, leased.LeaseToken, nil); !errors.Is(e, ErrDurableLeaseLost) {
-		t.Fatalf("stale worker committed: %v", e)
+		t.Fatalf("устаревший обработчик зафиксировал изменения: %v", e)
 	}
 	done, e := r.CompleteOperationJob(ctx, j.ID, next.LeaseToken, []byte(`{"ok":true}`))
 	if e != nil || done.Status != "succeeded" {
-		t.Fatalf("complete: %+v %v", done, e)
+		t.Fatalf("завершение: %+v %v", done, e)
 	}
 	attempts, e := r.ListOperationAttempts(ctx, j.ID)
 	if e != nil || len(attempts) != 2 || attempts[0].Status != "expired" || attempts[1].Status != "succeeded" {
-		t.Fatalf("attempts: %+v %v", attempts, e)
+		t.Fatalf("попытки: %+v %v", attempts, e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -108,18 +108,18 @@ func TestDurableRetryDeadLetter(t *testing.T) {
 	}
 	state, e := r.FailDurableJob(ctx, j.ID, a.LeaseToken, "temporary", 0)
 	if e != nil || state.Status != "pending" {
-		t.Fatalf("retry %v %+v", e, state)
+		t.Fatalf("повторная попытка: %v %+v", e, state)
 	}
 	b, e := r.LeaseDurableJob(ctx, j.ID, "w", time.Second)
 	if e != nil || b.LeaseFence != 2 {
-		t.Fatalf("second claim %v %+v", e, b)
+		t.Fatalf("повторный захват: %v %+v", e, b)
 	}
 	state, e = r.FailDurableJob(ctx, j.ID, b.LeaseToken, "fatal", 0)
 	if e != nil || state.Status != "dead" {
-		t.Fatalf("dead letter %v %+v", e, state)
+		t.Fatalf("очередь необработанных сообщений: %v %+v", e, state)
 	}
 	if _, e = r.LeaseDurableJob(ctx, j.ID, "other", time.Second); !errors.Is(e, ErrDurableLeaseBusy) {
-		t.Fatalf("dead claimed: %v", e)
+		t.Fatalf("захвачено окончательно отклонённое задание: %v", e)
 	}
 }
 func TestScopeFencingAndAtomicOutbox(t *testing.T) {
@@ -138,7 +138,7 @@ func TestScopeFencingAndAtomicOutbox(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = r.AcquireDurableScopeLease(ctx, "release:r1", "intruder", time.Second); !errors.Is(e, ErrDurableLeaseBusy) {
-		t.Fatalf("lease stolen: %v", e)
+		t.Fatalf("аренда захвачена другим владельцем: %v", e)
 	}
 	// Некорректное событие должно откатывать всю бизнес-операцию и обновление
 	// задачи.
@@ -149,7 +149,7 @@ func TestScopeFencingAndAtomicOutbox(t *testing.T) {
 		return er
 	}, []model.DurableOutboxEvent{eBad})
 	if e == nil {
-		t.Fatal("invalid event committed")
+		t.Fatal("зафиксировано недопустимое событие")
 	}
 	markerExists := false
 	_ = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
@@ -159,7 +159,7 @@ func TestScopeFencingAndAtomicOutbox(t *testing.T) {
 		return er
 	})
 	if markerExists {
-		t.Fatal("partially applied mutation")
+		t.Fatal("изменение применено частично")
 	}
 	event := newDurableEvent("evt-1")
 	done, e := r.CommitFencedJob(ctx, j.ID, worker.LeaseToken, lease.ScopeKey, lease.LeaseToken, lease.FencingToken, []byte(`{"applied":true}`), func(q sqlitedurable.Executor) error {
@@ -171,27 +171,27 @@ func TestScopeFencingAndAtomicOutbox(t *testing.T) {
 		return er
 	}, []model.DurableOutboxEvent{event})
 	if e != nil || done.Status != "succeeded" {
-		t.Fatalf("commit: %v %+v", e, done)
+		t.Fatalf("фиксация изменений: %v %+v", e, done)
 	}
 	queued, e := r.ClaimOutboxEvents(ctx, "sender", 1, time.Second)
 	if e != nil || len(queued) != 1 || queued[0].IdempotencyKey != "evt-1" {
-		t.Fatalf("outbox %v %+v", e, queued)
+		t.Fatalf("исходящая очередь: %v %+v", e, queued)
 	}
 	if e = r.CompleteOutboxEvent(ctx, queued[0].ID, queued[0].LeaseToken); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = r.CommitFencedJob(ctx, j.ID, worker.LeaseToken, lease.ScopeKey, lease.LeaseToken, lease.FencingToken, nil, func(sqlitedurable.Executor) error { return nil }, nil); !errors.Is(e, ErrDurableLeaseLost) {
-		t.Fatalf("double completion: %v", e)
+		t.Fatalf("повторное завершение: %v", e)
 	}
 	if e = r.ReleaseDurableScopeLease(ctx, lease.ScopeKey, lease.LeaseToken); e != nil {
 		t.Fatal(e)
 	}
 	successor, e := r.AcquireDurableScopeLease(ctx, lease.ScopeKey, "replacement", time.Second)
 	if e != nil || successor.FencingToken != lease.FencingToken+1 {
-		t.Fatalf("fence failed %+v %v", successor, e)
+		t.Fatalf("защита от устаревшего владельца не сработала: %+v %v", successor, e)
 	}
 	if _, e = r.RenewDurableScopeLease(ctx, lease.ScopeKey, lease.LeaseToken, time.Second); !errors.Is(e, ErrDurableLeaseLost) {
-		t.Fatalf("old fence renewed: %v", e)
+		t.Fatalf("старая блокировка была продлена: %v", e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -223,7 +223,7 @@ func TestOutboxAtLeastOnceRestartAndIdempotentDelivery(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond)
 	next, e := r.ClaimOutboxEvents(ctx, "sender-2", 1, time.Second)
 	if e != nil || len(next) != 1 || next[0].LeaseFence != 2 {
-		t.Fatalf("redelivery %+v %v", next, e)
+		t.Fatalf("повторная доставка: %+v %v", next, e)
 	}
 	if e = r.CompleteOutboxEvent(ctx, ev.ID, batch[0].LeaseToken); !errors.Is(e, ErrDurableLeaseLost) {
 		t.Fatalf("Устаревший пакет доставки ошибочно принят: %v", e)
@@ -233,7 +233,7 @@ func TestOutboxAtLeastOnceRestartAndIdempotentDelivery(t *testing.T) {
 	}
 	state, e := r.GetOutboxEvent(ctx, ev.ID)
 	if e != nil || state.Status != "delivered" {
-		t.Fatalf("event %+v %v", state, e)
+		t.Fatalf("событие: %+v %v", state, e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -269,10 +269,10 @@ func TestSQLiteUpgrade324To325WithoutLosingPriorCore(t *testing.T) {
 	defer r.Close()
 	counts, e := r.Count(ctx)
 	if e != nil || counts["projects"] != 1 || counts["profiles"] != 1 || counts["durable_jobs"] != 0 {
-		t.Fatalf("migration counts %v %v", counts, e)
+		t.Fatalf("количество записей после миграции: %v %v", counts, e)
 	}
 	if _, created, e := r.EnqueueDurableJob(ctx, newDurableJob("post-migration"), 0); e != nil || !created {
-		t.Fatalf("migrated DB cannot enqueue %v %v", created, e)
+		t.Fatalf("в мигрированную БД не удаётся добавить задание: %v %v", created, e)
 	}
 	if e = r.Check(ctx); e != nil {
 		t.Fatal(e)
@@ -306,16 +306,16 @@ func TestFencedCommitStaleEpochAfterReacquisition(t *testing.T) {
 		return er
 	}, nil)
 	if !errors.Is(e, ErrDurableLeaseLost) {
-		t.Fatalf("stale scope committed: %v", e)
+		t.Fatalf("зафиксированы изменения из устаревшей области доступа: %v", e)
 	}
 	if next.FencingToken != old.FencingToken+1 {
-		t.Fatal("fencing epoch did not advance")
+		t.Fatal("эпоха защиты от устаревших владельцев не увеличилась")
 	}
 	var n int
 	e = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		return q.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE name='forbidden_side_effect'`).Scan(&n)
 	})
 	if e != nil || n != 0 {
-		t.Fatalf("stale side effect executed: n=%d %v", n, e)
+		t.Fatalf("выполнено побочное действие устаревшего задания: число=%d %v", n, e)
 	}
 }

@@ -58,7 +58,7 @@ func TestTrustedAttestationSignatures0345(t *testing.T) {
 	}
 	signed.Evidence.JavaSHA256 = strings.Repeat("4", 64)
 	if e := verifyValidation0345(signed, pub); e == nil {
-		t.Fatal("tampered runner identity accepted")
+		t.Fatal("принята подменённая идентичность исполнителя")
 	}
 	signFixture0345(t, &signed, priv)
 	if e := verifyValidation0345(signed, pub); e != nil {
@@ -66,20 +66,20 @@ func TestTrustedAttestationSignatures0345(t *testing.T) {
 	}
 	_, _, wrong := validValidationFixture0345(t)
 	if e := verifyValidation0345(signed, wrong); e == nil {
-		t.Fatal("arbitrarily CI-signed JSON accepted")
+		t.Fatal("принят произвольный JSON, подписанный ключом CI")
 	}
 	if e := verifyValidation0345(signed, ""); e == nil {
-		t.Fatal("missing operator trust key accepted")
+		t.Fatal("допущено отсутствие доверенного ключа оператора")
 	}
 	signed.Evidence.Stages["gameplay-smoke"] = "failed"
 	signFixture0345(t, &signed, priv)
 	if e := verifyValidation0345(signed, pub); e == nil {
-		t.Fatal("failed gameplay accepted with valid signature")
+		t.Fatal("приняты свидетельства неудачного игрового процесса с действительной подписью")
 	}
 	delete(signed.Evidence.Stages, "gameplay-smoke")
 	signFixture0345(t, &signed, priv)
 	if e := verifyValidation0345(signed, pub); e == nil {
-		t.Fatal("missing gameplay accepted with valid signature")
+		t.Fatal("допущено отсутствие игрового процесса при действительной подписи")
 	}
 }
 func TestV09UpdateRecoveryCannotBeOmittedOrFaked0349(t *testing.T) {
@@ -90,18 +90,18 @@ func TestV09UpdateRecoveryCannotBeOmittedOrFaked0349(t *testing.T) {
 	delete(signed.Evidence.Stages, "update-recovery")
 	signFixture0345(t, &signed, priv)
 	if err := verifyValidation0345(signed, pub); err == nil {
-		t.Fatal("missing lifecycle evidence accepted")
+		t.Fatal("допущено отсутствие свидетельств жизненного цикла")
 	}
 	signed.Evidence.Stages["update-recovery"] = "failed"
 	signFixture0345(t, &signed, priv)
 	if err := verifyValidation0345(signed, pub); err == nil {
-		t.Fatal("failed real updater accepted")
+		t.Fatal("принят неработающий настоящий механизм обновления")
 	}
 	signed.Evidence.Stages["update-recovery"] = "passed"
 	delete(signed.Evidence.ArtifactHashes, "update-recovery.json")
 	signFixture0345(t, &signed, priv)
 	if err := verifyValidation0345(signed, pub); err == nil {
-		t.Fatal("missing updater artifact accepted")
+		t.Fatal("допущено отсутствие артефакта обновления")
 	}
 }
 
@@ -136,7 +136,7 @@ func TestTrustedAttestationMatchesPersistedRun0345(t *testing.T) {
 	stageRecord["gameplay-smoke"] = stagedStep0342{Status: "passed", EvidenceSHA256: strings.Repeat("9", 64)}
 	run.Stages, _ = json.Marshal(stageRecord)
 	if e := matchObservation0345(signed.Evidence, run); e == nil {
-		t.Fatal("forged gameplay artifact digest accepted")
+		t.Fatal("принят поддельный хеш артефакта игрового процесса")
 	}
 }
 func TestAttestationRepositoryImmutable0345(t *testing.T) {
@@ -148,11 +148,11 @@ func TestAttestationRepositoryImmutable0345(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e := r.SaveValidationAttestation0345(context.Background(), v); e == nil {
-		t.Fatal("attestation replay overwritten")
+		t.Fatal("повторная аттестация перезаписала прежнюю")
 	}
 	rows, e := r.ListValidationAttestations0345(context.Background(), "pkg")
 	if e != nil || len(rows) != 1 {
-		t.Fatalf("attestation not stored: %v %v", rows, e)
+		t.Fatalf("аттестация не сохранена: %v %v", rows, e)
 	}
 }
 
@@ -161,7 +161,7 @@ func TestV14SignedAttestationRejectsMissingAdversarialGame03414(t *testing.T) {
 	signed.Evidence.PackageVersion = "0.43.14"
 	signFixture0345(t, &signed, private)
 	if err := verifyValidation0345(signed, pub); err == nil {
-		t.Fatal("0.43.14 must not certify positive gameplay without adversarial game observations")
+		t.Fatal("версия 0.43.14 не должна подтверждать успешный игровой процесс без испытаний на противодействие обходам")
 	}
 	signed.Evidence.ArtifactHashes["adversarial-gameplay-04314.json"] = strings.Repeat("a", 64)
 	signFixture0345(t, &signed, private)
@@ -175,6 +175,6 @@ func TestV14SignedAttestationRejectsMissingAdversarialGame03414(t *testing.T) {
 	signed.Evidence.PackageVersion = "0.44.0"
 	signFixture0345(t, &signed, private)
 	if err := verifyValidation0345(signed, pub); err == nil {
-		t.Fatal("future versions must not bypass required adversarial game evidence")
+		t.Fatal("будущие версии не должны обходить обязательные свидетельства испытаний на противодействие обходам")
 	}
 }

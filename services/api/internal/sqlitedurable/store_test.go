@@ -32,7 +32,7 @@ func testOptions(t *testing.T) Options {
 	opt := Options{Path: filepath.Join(base, "sqlite.db")}
 	if err := verifyLocalPath(opt.Path); err != nil {
 		if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") == "1" {
-			t.Fatalf("SQLite FS certification failed: %v", err)
+			t.Fatalf("проверка файловой системы для SQLite не пройдена: %v", err)
 		}
 		t.Skipf("SQLite integration requires verified ext4/xfs/btrfs mount: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestCommittedAndRollback(t *testing.T) {
 		return sentinel
 	})
 	if !errors.Is(err, sentinel) {
-		t.Fatalf("expected rollback error: %v", err)
+		t.Fatalf("ожидалась ошибка отката: %v", err)
 	}
 	if err = store.Close(); err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestCommittedAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	if status.Busy != 0 {
-		t.Fatalf("checkpoint busy: %+v", status)
+		t.Fatalf("контрольная точка занята: %+v", status)
 	}
 }
 
@@ -167,7 +167,7 @@ func TestExclusiveOwner(t *testing.T) {
 	child := exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
 	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=expect-deny")
 	if out, e := child.CombinedOutput(); e != nil {
-		t.Fatalf("second owner accepted or helper failed: %v\n%s", e, out)
+		t.Fatalf("второй владелец допущен либо вспомогательный процесс завершился с ошибкой: %v\n%s", e, out)
 	}
 	if err = s.Close(); err != nil {
 		t.Fatal(err)
@@ -175,7 +175,7 @@ func TestExclusiveOwner(t *testing.T) {
 	child = exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
 	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=expect-allow")
 	if out, e := child.CombinedOutput(); e != nil {
-		t.Fatalf("owner lock not released: %v\n%s", e, out)
+		t.Fatalf("блокировка владельца не освобождена: %v\n%s", e, out)
 	}
 }
 
@@ -189,14 +189,14 @@ func TestOwnerChild(t *testing.T) {
 	case "expect-deny":
 		if err == nil {
 			_ = s.Close()
-			t.Fatal("second writer acquired exclusive store")
+			t.Fatal("второй процесс записи получил исключительный доступ к хранилищу")
 		}
 		if !strings.Contains(err.Error(), "owned by another") {
-			t.Fatalf("unexpected cause: %v", err)
+			t.Fatalf("неожиданная причина: %v", err)
 		}
 	case "expect-allow":
 		if err != nil {
-			t.Fatalf("reopening after owner exit: %v", err)
+			t.Fatalf("повторное открытие после завершения владельца: %v", err)
 		}
 		_ = s.Close()
 	case "crash":
@@ -245,10 +245,10 @@ func TestAbruptExitRecovery(t *testing.T) {
 	child := exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
 	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=crash")
 	if err = child.Run(); err == nil {
-		t.Fatal("child must die before COMMIT")
+		t.Fatal("дочерний процесс должен завершиться до COMMIT")
 	}
 	if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 77 {
-		t.Fatalf("unexpected exit code: %v", err)
+		t.Fatalf("неожиданный код завершения: %v", err)
 	}
 	s, err = Open(ctx, opt)
 	if err != nil {
@@ -295,7 +295,7 @@ func TestCanceledTxnRollback(t *testing.T) {
 		return c.Err()
 	})
 	if err == nil {
-		t.Fatal("canceled transaction returned success")
+		t.Fatal("отменённая транзакция вернула успешный результат")
 	}
 	// database/sql может отбросить отменённое подключение вместо повторного использования.
 	checkCtx, stop := context.WithTimeout(ctx, 3*time.Second)
@@ -318,13 +318,13 @@ func TestRejectMemoryURIsAndBadPermissions(t *testing.T) {
 	for _, path := range []string{":memory:", "file:/tmp/s.db", "file::memory:", "", "state.db?cache=shared"} {
 		if s, e := Open(context.Background(), Options{Path: path}); e == nil {
 			_ = s.Close()
-			t.Fatalf("accepted path %q", path)
+			t.Fatalf("допущен недопустимый путь %q", path)
 		}
 	}
 	root := t.TempDir()
 	_ = os.Chmod(root, 0777)
 	if e := verifyLocalPath(filepath.Join(root, "data.db")); e == nil {
-		t.Fatal("unsafe directory permission accepted")
+		t.Fatal("допущены небезопасные права доступа к каталогу")
 	}
 	_ = os.Chmod(root, 0700)
 	if err := os.Symlink("/tmp", filepath.Join(root, "link")); err != nil {
@@ -354,7 +354,7 @@ func TestLockPrimitive(t *testing.T) {
 	second, err := exclusiveLock(name)
 	if err == nil {
 		_ = second.Close()
-		t.Fatal("flock allowed a second independent owner")
+		t.Fatal("flock допустил второго независимого владельца")
 	}
 	if err = releaseLock(first); err != nil {
 		t.Fatal(err)
@@ -381,6 +381,6 @@ func TestRejectTmpfs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = verifyLocalPath(filepath.Join(root, "state.db")); err == nil {
-		t.Fatal("tmpfs accepted for durable SQLite")
+		t.Fatal("tmpfs допущена для долговременного хранилища SQLite")
 	}
 }

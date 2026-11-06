@@ -21,7 +21,7 @@ func TestRuntimeStoragePersistenceIsolationAndLimits0303(t *testing.T) {
 	project := runtimeDir0303(root, Key{ExtensionID: "test.example", Scope: "project", ScopeID: "p1"})
 	other := runtimeDir0303(root, Key{ExtensionID: "other.example", Scope: "global"})
 	if global == project || global == other || project == other {
-		t.Fatal("scope collision")
+		t.Fatal("конфликт областей доступа")
 	}
 	path, err := runtimeFile0303(global, "config", "settings")
 	if err != nil {
@@ -33,29 +33,29 @@ func TestRuntimeStoragePersistenceIsolationAndLimits0303(t *testing.T) {
 	}
 	read, found, err := runtimeRead0303(global, path)
 	if err != nil || !found || string(read) != string(body) {
-		t.Fatalf("state read %s %v %v", read, found, err)
+		t.Fatalf("чтение состояния %s: %v %v", read, found, err)
 	}
 	if _, found, err := runtimeRead0303(project, filepath.Join(project, filepath.Base(path))); err != nil || found {
-		t.Fatalf("cross-scope read: %v %v", found, err)
+		t.Fatalf("чтение из другой области доступа: %v %v", found, err)
 	}
 	if err := runtimeWrite0303(context.Background(), global, path, json.RawMessage(`{"rate":4}`)); err != nil {
 		t.Fatal(err)
 	}
 	read, found, err = runtimeRead0303(global, path)
 	if err != nil || !found || string(read) != `{"rate":4}` {
-		t.Fatal("atomic overwrite failed")
+		t.Fatal("атомарная перезапись не удалась")
 	}
 	if _, err := runtimeFile0303(global, "config", "../../escape"); err == nil {
-		t.Fatal("traversal accepted")
+		t.Fatal("допущен выход за пределы разрешённого пути")
 	}
 	if err := runtimeWrite0303(context.Background(), global, path, json.RawMessage(`{"incomplete":`)); err == nil {
 		t.Fatal("Принят недопустимый JSON")
 	}
 	if err := runtimeWrite0303(context.Background(), global, path, json.RawMessage(`"`+strings.Repeat("a", runtimeValueLimit0303)+`"`)); err == nil {
-		t.Fatal("oversized state accepted")
+		t.Fatal("допущено состояние, превышающее лимит размера")
 	}
 	if st, err := os.Stat(path); err != nil || st.Mode().Perm()&0077 != 0 {
-		t.Fatalf("state file permissions: %v %v", st, err)
+		t.Fatalf("права доступа к файлу состояния: %v %v", st, err)
 	}
 }
 
@@ -71,7 +71,7 @@ func TestRuntimeStorageSymlinksRejected0303(t *testing.T) {
 		t.Fatal("Принята символьная ссылка")
 	}
 	if _, err := os.Stat(filepath.Join(outside, filepath.Base(dir))); !os.IsNotExist(err) {
-		t.Fatal("storage escaped root")
+		t.Fatal("хранилище вышло за пределы корневого каталога")
 	}
 }
 
@@ -85,12 +85,12 @@ func TestRuntimeStoreQuotas0303(t *testing.T) {
 		err := runtimeWrite0303(context.Background(), dir, path, value)
 		if i >= 69 {
 			if err == nil {
-				t.Fatal("expected total quota failure")
+				t.Fatal("ожидалось превышение общего лимита объёма")
 			}
 			break
 		}
 		if err != nil {
-			t.Fatalf("write %d: %v", i, err)
+			t.Fatalf("запись %d: %v", i, err)
 		}
 	}
 }
@@ -138,33 +138,33 @@ func TestRuntimeHTTPPermissions0303(t *testing.T) {
 		return response.StatusCode
 	}
 	if code := request("runtime.storage.put", `{"key":"state","value":{"count":1}}`); code != 403 {
-		t.Fatalf("write granted without permission: %d", code)
+		t.Fatalf("запись разрешена без необходимых прав: %d", code)
 	}
 	if _, err := repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: manifest.ID, Scope: "global", Permission: "storage:write", GrantedBy: "test"}); err != nil {
 		t.Fatal(err)
 	}
 	if code := request("runtime.storage.put", `{"key":"state","value":{"count":1}}`); code != 200 {
-		t.Fatalf("write denied: %d", code)
+		t.Fatalf("запись отклонена: %d", code)
 	}
 	if code := request("runtime.storage.get", `{"key":"state"}`); code != 200 {
-		t.Fatalf("read denied: %d", code)
+		t.Fatalf("чтение отклонено: %d", code)
 	}
 	if err := repo.RevokeExtensionPermission(ctx, manifest.ID, "global", "", "storage:read"); err != nil {
 		t.Fatal(err)
 	}
 	if code := request("runtime.storage.get", `{"key":"state"}`); code != 403 {
-		t.Fatalf("revoked read allowed: %d", code)
+		t.Fatalf("чтение разрешено после отзыва прав: %d", code)
 	}
 	if code := request("runtime.storage.put", `{"key":"../../escape","value":true}`); code != 400 {
-		t.Fatalf("traversal accepted: %d", code)
+		t.Fatalf("допущен выход за пределы каталога: %d", code)
 	}
 	if code := request("runtime.storage.put", `{"key":"state","value":{"count":2}}`); code != 200 {
-		t.Fatalf("state overwrite failed: %d", code)
+		t.Fatalf("перезапись состояния не удалась: %d", code)
 	}
 	if code := request("runtime.storage.delete", `{"key":"state"}`); code != 200 {
-		t.Fatalf("state deletion failed: %d", code)
+		t.Fatalf("удаление состояния не удалось: %d", code)
 	}
 	if code := request("runtime.storage.put", `{"key":"state","value":{"count":3}}`); code != 200 {
-		t.Fatalf("state restart failed: %d", code)
+		t.Fatalf("повторный запуск состояния не удался: %d", code)
 	}
 }

@@ -60,7 +60,7 @@ func TestIdentityMappingIsStrict02510(t *testing.T) {
 		}
 	}
 	if _, e := LoadMappings([]byte(`[{"source_uuid":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","target_uuid":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},{"source_uuid":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","target_uuid":"cccccccc-cccc-cccc-cccc-cccccccccccc"}]`)); e == nil {
-		t.Fatal("ambiguous identity mapping accepted")
+		t.Fatal("допущено неоднозначное сопоставление идентичностей")
 	}
 }
 func TestObjectKeyValidation02510(t *testing.T) {
@@ -75,7 +75,7 @@ func TestObjectKeyValidation02510(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e := RenderKey("%foo%", "skin", strings.Repeat("a", 64)); e == nil {
-		t.Fatal("unrecognized substitution accepted")
+		t.Fatal("допущена нераспознанная подстановка")
 	}
 }
 func TestSourceHashAndCorruption02510(t *testing.T) {
@@ -85,7 +85,7 @@ func TestSourceHashAndCorruption02510(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := VerifySourceHash(hex.EncodeToString(s[:]), append(b, '!')); err == nil {
-		t.Fatal("digest mismatch accepted")
+		t.Fatal("допущено несовпадение хеша")
 	}
 	if err := VerifySourceHash("garbage", b); err == nil {
 		t.Fatal("Значение, не являющееся хешем, ошибочно принято")
@@ -129,7 +129,7 @@ func TestEndToEndImportAndIdempotency02510(t *testing.T) {
 		t.Fatal(e)
 	}
 	if second.Counts["already-imported"] != 1 || db.upload != 1 {
-		t.Fatalf("not idempotent: %+v", second)
+		t.Fatalf("операция не идемпотентна: %+v", second)
 	}
 }
 func TestDryRunAndFailureIsolation02510(t *testing.T) {
@@ -156,12 +156,12 @@ func TestLocalSourceRejectsSymlinkEscape02510(t *testing.T) {
 	}
 	if f, e := (LocalSource{Root: root}).Open(context.Background(), "bad.png"); e == nil {
 		f.Close()
-		t.Fatal("symlink traversal accepted")
+		t.Fatal("допущен переход по символьной ссылке за пределы каталога")
 	}
 }
 func TestExportRows02510(t *testing.T) {
 	if _, e := LoadJSON([]byte(`{"not":"array"}`)); e == nil {
-		t.Fatal("accepted object")
+		t.Fatal("недопустимый объект был принят")
 	}
 	if _, e := LoadJSON([]byte(`[{}]`)); e != nil {
 		t.Fatal(e)
@@ -175,19 +175,19 @@ func TestGravitTextureMappingCollisionPreventsWrites0445(t *testing.T) {
 	b := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 	c := "cccccccc-cccc-cccc-cccc-cccccccccccc"
 	if _, err := LoadMappings([]byte(`[{"source_uuid":"` + a + `","target_uuid":"` + c + `"},{"source_uuid":"` + b + `","target_uuid":"` + c + `"}]`)); err == nil {
-		t.Fatal("two source players mapped to one target UUID")
+		t.Fatal("два исходных игрока сопоставлены одному целевому UUID")
 	}
 	if _, err := LoadMappings([]byte(`null`)); err == nil {
-		t.Fatal("null identity map accepted")
+		t.Fatal("допущено пустое сопоставление идентичностей")
 	}
 	r, rows, db := createFixture02510(t)
 	r.Mapping = map[string]string{a: b}
 	rows = append(rows, SourceRow{ID: "other-player", UserUUID: b, TextureType: "cape", FileHash: rows[0].FileHash})
 	if _, err := r.Run(context.Background(), rows); err == nil {
-		t.Fatal("implicit identity collision accepted")
+		t.Fatal("допущен неявный конфликт идентичностей")
 	}
 	if db.stage != 0 || db.upload != 0 {
-		t.Fatal("collision detected only after modifying player textures")
+		t.Fatal("конфликт выявлен только после изменения текстур игрока")
 	}
 }
 
@@ -196,17 +196,17 @@ func TestGravitTextureSelectionCollisionPreventsWrites0445(t *testing.T) {
 	duplicate := rows[0]
 	duplicate.ID = "other-row"
 	if _, err := r.Run(context.Background(), append(rows, duplicate)); err == nil {
-		t.Fatal("two skins targeting same profile were silently overwritten")
+		t.Fatal("две текстуры скина одного профиля были перезаписаны без предупреждения")
 	}
 	if db.stage != 0 || db.upload != 0 {
-		t.Fatal("texture selection collision performed side effects")
+		t.Fatal("конфликт выбора текстуры привёл к побочным действиям")
 	}
 	r, rows, db = createFixture02510(t)
 	if _, err := r.Run(context.Background(), append(rows, rows[0])); err == nil {
-		t.Fatal("duplicate legacy row ID accepted")
+		t.Fatal("принят повторяющийся идентификатор старой записи")
 	}
 	if db.stage != 0 || db.upload != 0 {
-		t.Fatal("duplicate row ID performed side effects")
+		t.Fatal("повторяющийся идентификатор записи привёл к побочным действиям")
 	}
 }
 
@@ -216,10 +216,10 @@ func TestGravitTextureDistinctSkinCapeAllowed0445(t *testing.T) {
 	cape.ID = "cape-row"
 	cape.TextureType = "CAPE"
 	if err := validateIdentityTargets(append(rows, cape), nil); err != nil {
-		t.Fatalf("valid skin/cape pair refused: %v", err)
+		t.Fatalf("допустимая пара скина и плаща отклонена: %v", err)
 	}
 	if _, err := LoadJSON([]byte(`null`)); err == nil {
-		t.Fatal("null TextureProvider export accepted")
+		t.Fatal("допущен экспорт с пустым TextureProvider")
 	}
 }
 
@@ -228,36 +228,36 @@ func TestGravitTextureApprovedPlanFingerprint0445(t *testing.T) {
 	r.DryRun = true
 	preview, err := r.Run(context.Background(), rows)
 	if err != nil || preview.Counts["validated-dry-run"] != 1 || len(preview.PlanSHA256) != 64 {
-		t.Fatalf("missing usable dry-run: %v %+v", err, preview)
+		t.Fatalf("отсутствует пригодный результат пробного запуска: %v %+v", err, preview)
 	}
 	if db.stage != 0 || db.upload != 0 {
-		t.Fatal("dry-run mutated storage or identity")
+		t.Fatal("пробный запуск изменил хранилище или идентичность")
 	}
 	again, err := r.Run(context.Background(), rows)
 	if err != nil || preview.PlanSHA256 != again.PlanSHA256 {
-		t.Fatal("identical source plans got different fingerprints")
+		t.Fatal("одинаковые исходные планы получили разные отпечатки")
 	}
 	modified := append([]SourceRow(nil), rows...)
 	modified[0].ObjectKey = "other/texture.png"
 	fingerprint, err := r.PlanSHA256(modified)
 	if err != nil || fingerprint == preview.PlanSHA256 {
-		t.Fatal("changed source object key reused approved plan")
+		t.Fatal("после смены ключа исходного объекта повторно использован утверждённый план")
 	}
 	modified = append([]SourceRow(nil), rows...)
 	modified[0].FileURL = "http://invalid.invalid/not-used.png"
 	fingerprint, err = r.PlanSHA256(modified)
 	if err != nil || fingerprint != preview.PlanSHA256 {
-		t.Fatal("ignored untrusted upstream URL changed plan")
+		t.Fatal("проигнорированный недоверенный URL источника изменил план")
 	}
 	r.Replace = true
 	fingerprint, err = r.PlanSHA256(rows)
 	if err != nil || fingerprint == preview.PlanSHA256 {
-		t.Fatal("elevated replacement option reused approved plan")
+		t.Fatal("повышение уровня замены позволило повторно использовать утверждённый план")
 	}
 	r.Replace = false
 	r.SourceID = "different-project"
 	fingerprint, err = r.PlanSHA256(rows)
 	if err != nil || fingerprint == preview.PlanSHA256 {
-		t.Fatal("different source ID reused approved plan")
+		t.Fatal("для другого идентификатора источника повторно использован утверждённый план")
 	}
 }

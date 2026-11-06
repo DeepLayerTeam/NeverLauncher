@@ -49,7 +49,7 @@ func TestTextureURLImportProvenance0254(t *testing.T) {
 			t.Fatal(e)
 		}
 		if _, e = db.ExecContext(ctx, string(contents)); e != nil {
-			t.Fatalf("migration %s: %v", name, e)
+			t.Fatalf("миграция %s: %v", name, e)
 		}
 	}
 	repo := &SQLRepository{db: db}

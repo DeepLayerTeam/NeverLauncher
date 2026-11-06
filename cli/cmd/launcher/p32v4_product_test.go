@@ -48,7 +48,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 		t.Fatalf("install=%v", installed)
 	}
 	if info, err := os.Stat(filepath.Join(client, "natives", "launch.sh")); err != nil || (runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0) {
-		t.Fatalf("executable bit not preserved: mode=%v err=%v", func() os.FileMode {
+		t.Fatalf("бит выполнения не сохранён: режим=%v ошибка=%v", func() os.FileMode {
 			if info != nil {
 				return info.Mode()
 			}
@@ -63,7 +63,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	mustWrite(filepath.Join(client, "mods", "core.jar"), "corrupt")
 	verify, err = verifyClientInstallation(pkg1Path, client)
 	if err != nil || verify.Valid || len(verify.Corrupted) != 1 {
-		t.Fatalf("corruption not detected: %+v err=%v", verify, err)
+		t.Fatalf("повреждение не обнаружено: %+v ошибка=%v", verify, err)
 	}
 	if _, err := repairClientInstallation(pkg1Path, storage, client, false); err != nil {
 		t.Fatal(err)
@@ -76,17 +76,17 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	mustWrite(filepath.Join(client, "mods", "orphan.jar"), "orphan")
 	verify, _ = verifyClientInstallation(pkg1Path, client)
 	if len(verify.Orphans) != 1 {
-		t.Fatalf("orphan not detected: %+v", verify)
+		t.Fatalf("бесхозный файл не обнаружен: %+v", verify)
 	}
 	clean, err := cleanupClientInstallation(pkg1Path, client)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if clean["status"] != "preserved" {
-		t.Fatalf("cleanup must preserve untracked user-owned mod: %v", clean)
+		t.Fatalf("очистка должна сохранять пользовательский мод вне учёта: %v", clean)
 	}
 	if bytes, err := os.ReadFile(filepath.Join(client, "mods", "orphan.jar")); err != nil || string(bytes) != "orphan" {
-		t.Fatalf("untracked mod was deleted: %v %q", err, bytes)
+		t.Fatalf("пользовательский мод вне учёта был удалён: %v %q", err, bytes)
 	}
 
 	mustWrite(filepath.Join(source, "mods", "core.jar"), "v2-core")
@@ -107,7 +107,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	beforeRollback, _, _ := hashFile(filepath.Join(client, "mods", "core.jar"))
 	v1, _, _ := hashFile(filepath.Join(storage, "clients", "demo-project", "vanilla", "stable", "1.0.0", "mods", "core.jar"))
 	if beforeRollback == v1 {
-		t.Fatal("update did not change client")
+		t.Fatal("обновление не изменило клиент")
 	}
 	if _, err := rollbackClientInstallation(client, "previous"); err != nil {
 		t.Fatal(err)
@@ -120,7 +120,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 		t.Fatalf("rollback checksum=%s want=%s", afterRollback, v1)
 	}
 	if bytes, err := os.ReadFile(filepath.Join(client, "mods", "orphan.jar")); err != nil || string(bytes) != "orphan" {
-		t.Fatalf("rollback removed user-owned mod: %v %q", err, bytes)
+		t.Fatalf("откат удалил пользовательский мод: %v %q", err, bytes)
 	}
 	verify, err = verifyClientInstallation(pkg1Path, client)
 	if err != nil || !verify.Valid {
@@ -145,7 +145,7 @@ func TestDesktopPackageRequiresRealArtifactAndDetectsTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyDesktopPackage(out); err == nil {
-		t.Fatal("tampered desktop package accepted")
+		t.Fatal("допущен подменённый пакет Desktop")
 	}
 }
 
@@ -165,10 +165,10 @@ func TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext(t *testing.T) {
 	}
 	text := string(raw)
 	if strings.Contains(text, "context: ../..") || strings.Contains(text, "dockerfile: services/api") || strings.Contains(text, "dockerfile: apps/admin") {
-		t.Fatalf("standalone compose contains source build context:\n%s", text)
+		t.Fatalf("автономный Compose содержит контекст сборки из исходников:\n%s", text)
 	}
 	if !strings.Contains(text, "image: registry.example/api@sha256:"+digest) || !strings.Contains(text, "image: registry.example/admin@sha256:"+digest) {
-		t.Fatalf("pinned images missing:\n%s", text)
+		t.Fatalf("отсутствуют закреплённые образы:\n%s", text)
 	}
 }
 
@@ -180,7 +180,7 @@ func TestStandaloneComposeHandlesWindowsCRLF(t *testing.T) {
 	}
 	result := string(doc)
 	if strings.Contains(result, "build:") || strings.Contains(result, "context:") || strings.Contains(result, "dockerfile:") || !strings.Contains(result, "image: registry.example/api@sha256:abc") || !strings.Contains(result, "image: registry.example/admin@sha256:def") {
-		t.Fatalf("CRLF standalone compose still requires source trees: %s", result)
+		t.Fatalf("автономный Compose с CRLF по-прежнему требует исходные каталоги: %s", result)
 	}
 }
 
@@ -222,7 +222,7 @@ func TestDependencySBOMAndProvenanceUseRealInputs(t *testing.T) {
 	}
 	packages, ok := sbom["packages"].([]sbomPackage)
 	if !ok || len(packages) < 20 {
-		t.Fatalf("dependency SBOM too small: %T %d", sbom["packages"], len(packages))
+		t.Fatalf("перечень зависимостей SBOM слишком мал: %T %d", sbom["packages"], len(packages))
 	}
 	artifacts := t.TempDir()
 	if err := os.WriteFile(filepath.Join(artifacts, "artifact.bin"), []byte("artifact"), 0o644); err != nil {

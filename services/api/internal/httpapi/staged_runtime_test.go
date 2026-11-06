@@ -38,11 +38,11 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 	// допуска.
 	pub := call("GET", "/api/v1/files/demo-project/"+id+"/mods/honest-validation.jar", "", nil)
 	if pub.Code != 404 {
-		t.Fatalf("staged file is public: %d %s", pub.Code, pub.Body.String())
+		t.Fatalf("подготовленный файл доступен всем: %d %s", pub.Code, pub.Body.String())
 	}
 	grantResp := call("POST", "/api/v1/packages/"+id+"/staged-runs", admin, []byte(`{}`))
 	if grantResp.Code != 201 {
-		t.Fatalf("issue grant: %d %s", grantResp.Code, grantResp.Body.String())
+		t.Fatalf("выдача разрешения: %d %s", grantResp.Code, grantResp.Body.String())
 	}
 	var issued struct {
 		Data struct {
@@ -56,22 +56,22 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 		t.Fatal(e)
 	}
 	if issued.Data.Token == "" || issued.Data.RunID == "" {
-		t.Fatal("empty staging grant")
+		t.Fatal("пустое разрешение на доступ к подготовленным файлам")
 	}
 	snapshot := call("GET", "/api/v1/staged-runs/"+id+"/snapshot", issued.Data.Token, nil)
 	if snapshot.Code != 200 || !strings.Contains(snapshot.Body.String(), "signedManifest") {
-		t.Fatalf("snapshot: %d %s", snapshot.Code, snapshot.Body.String())
+		t.Fatalf("снимок: %d %s", snapshot.Code, snapshot.Body.String())
 	}
 	path := "/api/v1/staged-runs/" + id + "/files/mods/honest-validation.jar"
 	if rr := call("GET", path, "", nil); rr.Code != 401 {
-		t.Fatalf("unguarded file: %d", rr.Code)
+		t.Fatalf("файл доступен без проверки защиты: %d", rr.Code)
 	}
 	if rr := call("GET", path, issued.Data.Token+"x", nil); rr.Code != 401 {
-		t.Fatalf("forged grant: %d", rr.Code)
+		t.Fatalf("поддельное разрешение: %d", rr.Code)
 	}
 	rr := call("GET", path, issued.Data.Token, nil)
 	if rr.Code != 200 || rr.Body.String() != "launcher-0.21.2-runtime-validation" {
-		t.Fatalf("real downloaded bytes incorrect: %d %q", rr.Code, rr.Body.String())
+		t.Fatalf("фактически скачанные данные неверны: %d %q", rr.Code, rr.Body.String())
 	}
 	g, err := (&Server{Config: cfg}).parseGrant0342(issued.Data.Token)
 	if err != nil {
@@ -80,14 +80,14 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 	g.PackageID = "different-package"
 	forged, _ := (&Server{Config: cfg}).issueGrant0342(g)
 	if rr := call("GET", path, forged, nil); rr.Code != 401 {
-		t.Fatalf("cross-package grant: %d", rr.Code)
+		t.Fatalf("разрешён доступ к другому пакету: %d", rr.Code)
 	}
 	// Добавляйте проверенный отчёт уровня манифеста. Это НЕ открывает stable.
 	now := time.Now().UTC()
 	report := stagedRunReport0342{Schema: stagedRunSchema0342, RunID: issued.Data.RunID, PackageID: id, ManifestSHA256: issued.Data.ManifestSHA256, ArtifactSHA256: issued.Data.ArtifactSHA256, StartedAt: now.Add(-time.Second), FinishedAt: now, Stages: map[string]stagedStep0342{"manifest-files": {Status: "passed", Detail: "observed download"}, "materialization": {Status: "failed", Detail: "missing runtime lock"}}}
 	body, _ := json.Marshal(report)
 	if rr := call("POST", "/api/v1/staged-runs/"+id+"/results", issued.Data.Token, body); rr.Code != 201 {
-		t.Fatalf("report: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("отчёт: %d %s", rr.Code, rr.Body.String())
 	}
 	if rr := call("POST", "/api/v1/staged-runs/"+id+"/results", issued.Data.Token, body); rr.Code != 409 {
 		t.Fatalf("Повторное воспроизведение отчёта ошибочно принято: %d", rr.Code)
@@ -102,7 +102,7 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 		t.Fatal(e)
 	}
 	if rr := call("GET", path, issued.Data.Token, nil); rr.Code != 409 {
-		t.Fatalf("corrupt stored object served as certified: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("повреждённый объект хранилища выдан как сертифицированный: %d %s", rr.Code, rr.Body.String())
 	}
 }
 
@@ -123,7 +123,7 @@ func TestStagedGrantRejectsStaleAndCrossSnapshot0342(t *testing.T) {
 	}
 	other := Server{Config: config.Config{AuthTokenSecret: "other-0342-test-secret-with-enough-entropy"}}
 	if _, err = other.parseGrant0342(token); err == nil {
-		t.Fatal("other server secret accepted")
+		t.Fatal("принят секрет другого сервера")
 	}
 }
 
@@ -148,15 +148,15 @@ func TestMatchingStagedReportObservations0344(t *testing.T) {
 			"gameplay-smoke":   {Status: "failed", Detail: "game ticks advanced but player did not move"},
 		}}
 	if err := validateStagedRunReport0342(grant, report); err != nil {
-		t.Fatalf("legitimate observed stages rejected: %v", err)
+		t.Fatalf("отклонены допустимые наблюдаемые этапы: %v", err)
 	}
 	report.Stages["gameplay-smoke"] = stagedStep0342{Status: "passed", EvidenceSHA256: "forged"}
 	if err := validateStagedRunReport0342(grant, report); err == nil {
-		t.Fatal("unhashed gameplay evidence accepted")
+		t.Fatal("приняты свидетельства игрового процесса без хеша")
 	}
 	delete(report.Stages, "gameplay-smoke")
 	report.Stages["certified"] = stagedStep0342{Status: "passed"}
 	if err := validateStagedRunReport0342(grant, report); err == nil {
-		t.Fatal("arbitrary certification status accepted")
+		t.Fatal("принят произвольный статус сертификации")
 	}
 }

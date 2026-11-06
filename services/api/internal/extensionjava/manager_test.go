@@ -49,28 +49,28 @@ func TestJavaJarInspection0305(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.MinimumJava != 17 || result.ClassFiles != 2 || result.EntrypointClass != "example.Plugin" {
-		t.Fatalf("unexpected inspection %+v", result)
+		t.Fatalf("неожиданный результат проверки: %+v", result)
 	}
 	if err := os.WriteFile(file, []byte("not a jar"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Inspect(file); err == nil {
-		t.Fatal("corrupt JAR accepted")
+		t.Fatal("принят повреждённый JAR")
 	}
 }
 func TestJavaJarMainClassAndRuntimeMinimum0305(t *testing.T) {
 	if _, err := Inspect(fixture0305(t, 61, "example.WrongMain")); err == nil {
-		t.Fatal("invalid Main-Class accepted")
+		t.Fatal("принят неверный Main-Class")
 	}
 	info, err := Inspect(fixture0305(t, 65, HostMain))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info.MinimumJava != 21 {
-		t.Fatalf("expected Java 21: %+v", info)
+		t.Fatalf("ожидалась Java 21: %+v", info)
 	}
 	if _, err := Inspect(fixture0305(t, 110, HostMain)); err == nil {
-		t.Fatal("unknown bytecode version accepted")
+		t.Fatal("принята неизвестная версия байт-кода")
 	}
 }
 func TestJavaJarSymlinkRejected0305(t *testing.T) {
@@ -85,7 +85,7 @@ func TestJavaJarSymlinkRejected0305(t *testing.T) {
 }
 func TestJavaRuntimeProbe0305(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("shell runtime fixture")
+		t.Skip("тестовый Runtime оболочки")
 	}
 	java := filepath.Join(t.TempDir(), "java")
 	write := func(version string) {
@@ -104,24 +104,24 @@ func TestJavaRuntimeProbe0305(t *testing.T) {
 		t.Fatalf("version=%d", got.Feature)
 	}
 	if _, err := ProbeRuntime(context.Background(), java, 22); err == nil {
-		t.Fatal("higher required runtime incorrectly accepted")
+		t.Fatal("ошибочно принята завышенная требуемая версия Runtime")
 	}
 	write("11.0.20")
 	if _, err := ProbeRuntime(context.Background(), java, 17); err == nil {
 		t.Fatal("Неподдерживаемая Java 11 ошибочно принята")
 	}
 	if _, err := ProbeRuntime(context.Background(), "relative-java", 17); err == nil {
-		t.Fatal("relative binary path accepted")
+		t.Fatal("принят относительный путь к исполняемому файлу")
 	}
 	write("21.0.1")
 	if err := os.WriteFile(java, []byte("#!/bin/sh\necho unsupported\n"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ProbeRuntime(context.Background(), java, 17); err == nil {
-		t.Fatal("unrecognised JVM accepted")
+		t.Fatal("принята нераспознанная JVM")
 	}
 	if _, err := ProbeRuntime(context.Background(), strings.Repeat("/", 10000)+"java", 17); err == nil {
-		t.Fatal("missing JVM accepted")
+		t.Fatal("допущено отсутствие JVM")
 	}
 }
 
@@ -130,18 +130,18 @@ func TestJavaRuntimeProbe0305(t *testing.T) {
 func TestRealJavaHostArtifact0305(t *testing.T) {
 	source := os.Getenv("LAUNCHER_TEST_JAVA_HOST_JAR")
 	if source == "" {
-		t.Skip("JAR fixture not provided")
+		t.Skip("не предоставлен тестовый JAR")
 	}
 	info, err := Inspect(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info.ClassFiles < 10 {
-		t.Fatalf("missing compiled SDK classes: %+v", info)
+		t.Fatalf("отсутствуют скомпилированные классы SDK: %+v", info)
 	}
 	runtime, err := ProbeRuntime(context.Background(), "", info.MinimumJava)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Java host class %s on JVM %d", info.EntrypointClass, runtime.Feature)
+	t.Logf("класс Java-хоста %s на JVM %d", info.EntrypointClass, runtime.Feature)
 }

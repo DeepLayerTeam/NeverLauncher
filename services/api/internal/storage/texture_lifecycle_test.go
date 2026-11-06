@@ -24,7 +24,7 @@ func TestVerifyTextureLifecycleLocal02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := VerifyTexture02511(ctx, store, obj); got.Result != "ok" {
-		t.Fatalf("healthy texture: %+v", got)
+		t.Fatalf("корректная текстура: %+v", got)
 	}
 	rel, _ := texturePath0252(obj.Digest)
 	path, _, _ := store.objectPath(textureProject0252, textureVersion0252, rel)
@@ -32,21 +32,21 @@ func TestVerifyTextureLifecycleLocal02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := VerifyTexture02511(ctx, store, obj); got.Result != "corrupt" {
-		t.Fatalf("corruption undetected: %+v", got)
+		t.Fatalf("повреждение не обнаружено: %+v", got)
 	}
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
 	if got := VerifyTexture02511(ctx, store, obj); got.Result != "unavailable" {
-		t.Fatalf("missing object undetected: %+v", got)
+		t.Fatalf("отсутствие объекта не обнаружено: %+v", got)
 	}
 	if got := VerifyTexture02511(ctx, store, TextureBackupObject0253{Digest: "invalid"}); got.Result != "corrupt" {
-		t.Fatalf("bad digest accepted: %+v", got)
+		t.Fatalf("принят неверный хеш: %+v", got)
 	}
 	cancelCtx, cancel := context.WithCancel(ctx)
 	cancel()
 	if got := VerifyTexture02511(cancelCtx, store, obj); got.Result != "cancelled" {
-		t.Fatalf("cancellation ignored: %+v", got)
+		t.Fatalf("отмена проигнорирована: %+v", got)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestTextureS3GCConditionalDelete02511(t *testing.T) {
 			t.Errorf("Недопустимый URL: %s", r.URL.Path)
 		}
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 ") {
-			t.Error("unsigned S3 request")
+			t.Error("неподписанный запрос S3")
 		}
 		etag := func(p []byte) string { h := sha256.Sum256(p); return `"` + hex.EncodeToString(h[:]) + `"` }
 		switch r.Method {
@@ -80,7 +80,7 @@ func TestTextureS3GCConditionalDelete02511(t *testing.T) {
 		case http.MethodDelete:
 			deletes++
 			if r.Header.Get("If-Match") == "" {
-				t.Error("missing signed conditional delete header")
+				t.Error("отсутствует подписанный заголовок условного удаления")
 			}
 			if mutateDuringDelete {
 				object = []byte("concurrent overwrite")
@@ -102,11 +102,11 @@ func TestTextureS3GCConditionalDelete02511(t *testing.T) {
 	}
 	mutateDuringDelete = true
 	if err := DeleteTextureSafely02511(ctx, s, digest); err == nil {
-		t.Fatal("lost S3 ETag race was accepted")
+		t.Fatal("допущен конфликт ETag в S3, который должен был привести к отказу")
 	}
 	mu.Lock()
 	if !bytes.Equal(object, []byte("concurrent overwrite")) {
-		t.Error("modified object deleted")
+		t.Error("изменённый объект был удалён")
 	}
 	object = append([]byte(nil), data...)
 	mutateDuringDelete = false
@@ -115,20 +115,20 @@ func TestTextureS3GCConditionalDelete02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := DeleteTextureSafely02511(ctx, s, digest); err != nil {
-		t.Fatal("missing objects should be idempotent", err)
+		t.Fatal("обработка отсутствующих объектов должна быть идемпотентной", err)
 	}
 	mu.Lock()
 	if deletes != 2 {
-		t.Errorf("unexpected delete count %d", deletes)
+		t.Errorf("неожиданное число удалений: %d", deletes)
 	}
 	object = []byte("tampered")
 	mu.Unlock()
 	if err := DeleteTextureSafely02511(ctx, s, digest); err == nil {
-		t.Fatal("deleted corrupted S3 bytes")
+		t.Fatal("удалены повреждённые данные S3")
 	}
 	mu.Lock()
 	if deletes != 2 {
-		t.Error("sent DELETE for corrupted S3")
+		t.Error("отправлен запрос DELETE для повреждённого объекта S3")
 	}
 	mu.Unlock()
 }
@@ -157,14 +157,14 @@ func TestAtomicRepairLeavesNoWindowWithoutObject02511(t *testing.T) {
 	}
 	got, err := os.ReadFile(path)
 	if err != nil || !bytes.Equal(got, payload) {
-		t.Fatalf("replacement not published: %v", err)
+		t.Fatalf("заменяющий объект не опубликован: %v", err)
 	}
 	old, err := io.ReadAll(openHandle)
 	if err != nil || !bytes.Equal(old, []byte("old corrupted image")) {
-		t.Fatal("open readers were disrupted")
+		t.Fatal("работа открытых читателей нарушена")
 	}
 	matches, err := filepath.Glob(filepath.Join(filepath.Dir(path), ".texture-repair-*"))
 	if err != nil || len(matches) != 0 {
-		t.Fatalf("temporary files left over: %v %v", matches, err)
+		t.Fatalf("остались временные файлы: %v %v", matches, err)
 	}
 }

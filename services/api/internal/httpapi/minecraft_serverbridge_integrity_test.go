@@ -53,7 +53,7 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 	identity := newTestBridgeNodeIdentity0142(t)
 	rr := registerTestBridgeNode0142(t, h, admin, "paper-0135", "Paper 0135", "paper", "demo-project", "vanilla", identity)
 	if rr.Code != http.StatusCreated {
-		t.Fatalf("register=%d %s", rr.Code, rr.Body.String())
+		t.Fatalf("регистрация: %d %s", rr.Code, rr.Body.String())
 	}
 
 	heartbeat := func(hash string) *httptest.ResponseRecorder {
@@ -66,10 +66,10 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 		return out
 	}
 	if bad := heartbeat(strings.Repeat("f", 64)); bad.Code != http.StatusPreconditionFailed || !strings.Contains(bad.Body.String(), "bridge_integrity_hash_rejected") {
-		t.Fatalf("wrong jar hash accepted: %d %s", bad.Code, bad.Body.String())
+		t.Fatalf("принят неверный хеш JAR: %d %s", bad.Code, bad.Body.String())
 	}
 	if ok := heartbeat(bridgePaperHash0135); ok.Code != http.StatusOK || !strings.Contains(ok.Body.String(), "bridge_integrity_verified") {
-		t.Fatalf("allowlisted jar hash rejected: %d %s", ok.Code, ok.Body.String())
+		t.Fatalf("отклонён JAR с хешем из списка разрешённых: %d %s", ok.Code, ok.Body.String())
 	}
 
 	access, _ := deviceTrustLogin0121(t, h, "bridge-integrity-0135")
@@ -81,7 +81,7 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 	jv := httptest.NewRecorder()
 	h.ServeHTTP(jv, join)
 	if jv.Code != http.StatusOK {
-		t.Fatalf("join=%d %s", jv.Code, jv.Body.String())
+		t.Fatalf("подключение: %d %s", jv.Code, jv.Body.String())
 	}
 
 	validate := func(includeMeasurement bool) *httptest.ResponseRecorder {
@@ -98,7 +98,7 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 		return out
 	}
 	if missing := validate(false); missing.Code != http.StatusPreconditionFailed || !strings.Contains(missing.Body.String(), "bridge_integrity_request_measurement_mismatch") {
-		t.Fatalf("validate-join without current artifact measurement accepted: %d %s", missing.Code, missing.Body.String())
+		t.Fatalf("допущена проверка подключения без актуального измерения артефакта: %d %s", missing.Code, missing.Body.String())
 	}
 	if valid := validate(true); valid.Code != http.StatusOK || !strings.Contains(valid.Body.String(), `"allowed":true`) {
 		t.Fatalf("Запрос подключения с подтверждённой целостностью ошибочно отклонён: %d %s", valid.Code, valid.Body.String())
@@ -115,14 +115,14 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 	rv := httptest.NewRecorder()
 	h.ServeHTTP(rv, rotate)
 	if rv.Code != http.StatusOK {
-		t.Fatalf("rotate=%d %s", rv.Code, rv.Body.String())
+		t.Fatalf("ротация: %d %s", rv.Code, rv.Body.String())
 	}
 	hasJoined := httptest.NewRequest(http.MethodGet, "/api/v1/session/has-joined?username=HashPlayer&serverId=paper-0135", nil)
 	signBridgeNodeRequest0142(t, hasJoined, "paper-0135", rotatedIdentity)
 	hv := httptest.NewRecorder()
 	h.ServeHTTP(hv, hasJoined)
 	if hv.Code != http.StatusPreconditionFailed || !strings.Contains(hv.Body.String(), "bridge_integrity_heartbeat_required") {
-		t.Fatalf("identity rotation failed to invalidate bridge measurement: %d %s", hv.Code, hv.Body.String())
+		t.Fatalf("ротация идентичности не аннулировала измерение моста: %d %s", hv.Code, hv.Body.String())
 	}
 }
 
@@ -156,17 +156,17 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 	}
 	join := bridgeJoinRecord{UserID: session.UserID, SessionID: session.NeverSessionID, TrustedDeviceID: session.TrustedDeviceID, BindingEpoch: session.BindingEpoch, MinecraftSessionID: session.ID}
 	if _, decision := s.evaluateServerBridgeJoinIntegrity0135(join); !decision.Allowed {
-		t.Fatalf("ServerBridge rejected integrity-bound Minecraft session: %+v", decision)
+		t.Fatalf("ServerBridge отклонил сессию Minecraft с привязкой к проверке целостности: %+v", decision)
 	}
 
 	// Удаление доставленных хешей немедленно отзывает доверие: ранее выданные
 	// данные Minecraft и созданный вход ServerBridge должны перестать работать.
 	s.Config.GuardReleaseAllowlistJSON = `{"0.13.5":{"guardSha256":["ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],"launcherSha256":["` + launcherHash0135 + `"],"requireAuthenticode":false}}`
 	if decision := s.evaluateMinecraftIntegrity0135(session); decision.Allowed || decision.Reason != "integrity_release_revoked" {
-		t.Fatalf("revoked Guard release remained valid: %+v", decision)
+		t.Fatalf("отозванный релиз Guard остался действительным: %+v", decision)
 	}
 	if _, decision := s.evaluateServerBridgeJoinIntegrity0135(join); decision.Allowed || decision.Reason != "integrity_release_revoked" {
-		t.Fatalf("ServerBridge failed live Guard release revocation: %+v", decision)
+		t.Fatalf("ServerBridge не обработал отзыв активного релиза Guard: %+v", decision)
 	}
 }
 
@@ -185,7 +185,7 @@ func TestGuardIntegrityRequirementIncludesMacOS01310(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !required {
-		t.Fatal("macOS trusted device must require persisted Guard integrity for Minecraft/ServerBridge")
+		t.Fatal("доверенное устройство macOS должно требовать сохранённое подтверждение целостности Guard для Minecraft/ServerBridge")
 	}
 }
 
@@ -222,10 +222,10 @@ func TestMinecraftIntegrityV2RejectsCrossProductArtifactPair0140(t *testing.T) {
 		CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(time.Hour),
 	}
 	if decision := s.evaluateMinecraftIntegrity0135(session); !decision.Allowed {
-		t.Fatalf("exact v2 artifact pair rejected: %+v", decision)
+		t.Fatalf("отклонена точная пара артефактов версии 2: %+v", decision)
 	}
 	session.LauncherSHA256 = launcherB
 	if decision := s.evaluateMinecraftIntegrity0135(session); decision.Allowed || decision.Reason != "integrity_release_revoked" {
-		t.Fatalf("cross-product v2 artifact pair remained valid: %+v", decision)
+		t.Fatalf("пара артефактов версии 2 от разных продуктов осталась действительной: %+v", decision)
 	}
 }

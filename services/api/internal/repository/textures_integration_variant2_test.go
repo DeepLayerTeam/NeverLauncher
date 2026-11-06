@@ -17,7 +17,7 @@ import (
 func TestSecureTextureUploadPostgres0252(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0252")
 	if dsn == "" {
-		t.Skip("TEST_PG_DSN_0252 required for integration test")
+		t.Skip("для интеграционного теста требуется TEST_PG_DSN_0252")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestSecureTextureUploadPostgres0252(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err = db.ExecContext(ctx, string(payload)); err != nil {
-			t.Fatalf("migration %s: %v", name, err)
+			t.Fatalf("миграция %s: %v", name, err)
 		}
 	}
 	r := &SQLRepository{db: db, publicURL: "https://launcher.example"}
@@ -64,60 +64,60 @@ func TestSecureTextureUploadPostgres0252(t *testing.T) {
 	foreign := p
 	foreign.UserID = "other"
 	if _, err = r.UploadTexture0252(ctx, foreign, input); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("foreign update: %v", err)
+		t.Fatalf("обновление чужого объекта: %v", err)
 	}
 	selected, err := r.UploadTexture0252(ctx, p, input)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if selected.Revision != 1 || selected.Source != "managed-upload" || selected.BlobDigest != digest {
-		t.Fatalf("invalid assignment: %+v", selected)
+		t.Fatalf("недопустимое назначение: %+v", selected)
 	}
 	if _, err = r.UploadTexture0252(ctx, p, input); !errors.Is(err, ErrTextureRevisionConflict0251) {
-		t.Fatalf("create replay: %v", err)
+		t.Fatalf("повторное создание: %v", err)
 	}
 	got, exists, err := r.ReadTextureProfile0251(ctx, p.UUID)
 	if err != nil || !exists || got.SkinURL != "https://launcher.example/api/v1/textures/blob/"+digest || got.Model != "slim" {
-		t.Fatalf("public texture: %+v %v", got, err)
+		t.Fatalf("публичная текстура: %+v %v", got, err)
 	}
 	if _, found, err := r.ReadTextureBlob0252(ctx, digest, model.MinecraftProfile{}, false); err != nil || !found {
-		t.Fatalf("public access: %v, %v", found, err)
+		t.Fatalf("публичный доступ: %v, %v", found, err)
 	}
 	input.ExpectedRevision = 1
 	input.Visibility = "private"
 	input.Model = "classic"
 	changed, err := r.UploadTexture0252(ctx, p, input)
 	if err != nil || changed.Revision != 2 {
-		t.Fatalf("replacing assignment: %+v %v", changed, err)
+		t.Fatalf("замена назначения: %+v %v", changed, err)
 	}
 	got, _, err = r.ReadTextureProfile0251(ctx, p.UUID)
 	if err != nil || got.SkinURL != "" {
-		t.Fatalf("private leak: %+v %v", got, err)
+		t.Fatalf("раскрытие приватных данных: %+v %v", got, err)
 	}
 	if _, found, err := r.ReadTextureBlob0252(ctx, digest, model.MinecraftProfile{}, false); err != nil || found {
-		t.Fatalf("public read of private object: %v %v", found, err)
+		t.Fatalf("публичное чтение приватного объекта: %v %v", found, err)
 	}
 	if _, found, err := r.ReadTextureBlob0252(ctx, digest, p, true); err != nil || !found {
-		t.Fatalf("owner read: %v %v", found, err)
+		t.Fatalf("чтение владельцем: %v %v", found, err)
 	}
 	if _, found, err := r.ReadTextureBlob0252(ctx, digest, foreign, true); err != nil || found {
-		t.Fatalf("foreign read: %v %v", found, err)
+		t.Fatalf("чтение чужого объекта: %v %v", found, err)
 	}
 	input.Kind = "cape"
 	input.ExpectedRevision = 0
 	input.Model = "classic"
 	if _, err = r.UploadTexture0252(ctx, p, input); !errors.Is(err, ErrTextureUploadDenied0252) {
-		t.Fatalf("unauthorized cape: %v", err)
+		t.Fatalf("плащ без разрешения: %v", err)
 	}
 	_, err = db.ExecContext(ctx, `INSERT INTO texture_cape_grants(project_id,user_id,granted,actor_user_id) VALUES('','owner',true,'other')`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err = r.UploadTexture0252(ctx, p, input); err != nil {
-		t.Fatalf("cape after grant: %v", err)
+		t.Fatalf("плащ после выдачи разрешения: %v", err)
 	}
 	revisions, err := r.ListTextureRevisions0251(ctx, p, "skin")
 	if err != nil || len(revisions) != 2 || revisions[0].Event != "upload" {
-		t.Fatalf("upload revision audit: %+v %v", revisions, err)
+		t.Fatalf("аудит ревизии загрузки: %+v %v", revisions, err)
 	}
 }

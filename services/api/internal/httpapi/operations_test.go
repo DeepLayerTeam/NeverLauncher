@@ -29,7 +29,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != 201 {
-		t.Fatalf("create: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("создание: %d %s", rr.Code, rr.Body.String())
 	}
 	var created struct {
 		Data struct {
@@ -171,7 +171,7 @@ func TestPublishPreviewRejectsWrongChannel0386(t *testing.T) {
 	}
 	created := request("/api/v1/packages", `{"projectId":"demo-project","profileId":"vanilla","channel":"dev","version":"0.38.6-preview"}`)
 	if created.Code != http.StatusCreated {
-		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+		t.Fatalf("создание: %d %s", created.Code, created.Body.String())
 	}
 	var pkg struct {
 		Data struct {

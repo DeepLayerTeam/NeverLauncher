@@ -63,21 +63,21 @@ func TestProviderRuntimeParity0296AdminPasswordCredentialAndMFA(t *testing.T) {
 		return out
 	}
 	if rr := request(); rr.Code != http.StatusUnauthorized {
-		t.Fatalf("upstream MFA bypassed local policy: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("внешняя MFA обошла локальную политику: %d %s", rr.Code, rr.Body.String())
 	}
 	identity, err := repo.GetAuthIdentityByIssuer("parity-password", "https://issuer.example.test", "subject-pwd")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err = repo.GetProviderCredentialByIdentity("admin", identity.ID); err == nil {
-		t.Fatal("provider token stored without Never MFA")
+		t.Fatal("токен провайдера сохранён без прохождения MFA NeverLauncher")
 	}
 	if err := api.State.Passkeys.setPolicy("admin", mfaOptional117); err != nil {
 		t.Fatal(err)
 	}
 	ok := request()
 	if ok.Code != http.StatusOK || strings.Contains(ok.Body.String(), "external-secret") {
-		t.Fatalf("admin login or credential separation failed: %d %s", ok.Code, ok.Body.String())
+		t.Fatalf("вход администратора или разделение учётных данных завершились ошибкой: %d %s", ok.Code, ok.Body.String())
 	}
 	var body struct {
 		RefreshToken string `json:"refreshToken"`
@@ -87,7 +87,7 @@ func TestProviderRuntimeParity0296AdminPasswordCredentialAndMFA(t *testing.T) {
 		t.Fatal(err)
 	}
 	if body.RefreshToken == "" || body.SessionID == "" {
-		t.Fatalf("missing Never session: %s", ok.Body.String())
+		t.Fatalf("отсутствует сессия NeverLauncher: %s", ok.Body.String())
 	}
 	record, err := repo.GetProviderCredentialByIdentity("admin", identity.ID)
 	if err != nil {
@@ -95,7 +95,7 @@ func TestProviderRuntimeParity0296AdminPasswordCredentialAndMFA(t *testing.T) {
 	}
 	plain, err := api.decryptProviderCredential116(record)
 	if err != nil || plain != "external-secret" {
-		t.Fatalf("provider credential not persisted correctly: err=%v", err)
+		t.Fatalf("учётные данные провайдера сохранены неверно: ошибка=%v", err)
 	}
 	if rec, found := api.State.AuthSessions.get(body.SessionID, "admin"); !found || rec.AuthStrength != "single-factor" {
 		t.Fatalf("Некорректный уровень доверия к сессии: %+v %v", rec, found)
@@ -119,7 +119,7 @@ func TestProviderRuntimeParity0296BrowserMFAHasNoPreApprovalCredential(t *testin
 	begin := httptest.NewRecorder()
 	api.Handler().ServeHTTP(begin, httptest.NewRequest(http.MethodPost, "/api/v1/auth/oidc/parity-browser/begin", strings.NewReader(`{"redirectUri":"https://launcher.example.test/api/v1/auth/oidc/parity-browser/callback"}`)))
 	if begin.Code != http.StatusOK {
-		t.Fatalf("browser begin failed: %d %s", begin.Code, begin.Body.String())
+		t.Fatalf("начало входа через браузер завершилось ошибкой: %d %s", begin.Code, begin.Body.String())
 	}
 	var initial struct {
 		Data struct {
@@ -137,33 +137,33 @@ func TestProviderRuntimeParity0296BrowserMFAHasNoPreApprovalCredential(t *testin
 		return rr
 	}
 	if rr := complete(); rr.Code != http.StatusUnauthorized {
-		t.Fatalf("browser upstream MFA bypassed local policy: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("внешняя MFA через браузер обошла локальную политику: %d %s", rr.Code, rr.Body.String())
 	}
 	identity, err := repo.GetAuthIdentityByIssuer("parity-browser", "https://idp.example.test", "subject-browser")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := repo.GetProviderCredentialByIdentity("admin", identity.ID); err == nil {
-		t.Fatal("refresh token was saved before MFA")
+		t.Fatal("токен обновления сохранён до прохождения MFA")
 	}
 	if len(api.State.AuthSessions.listByUser("admin")) != 0 {
-		t.Fatal("browser login created Never session before MFA")
+		t.Fatal("вход через браузер создал сессию NeverLauncher до MFA")
 	}
 	if err := api.State.Passkeys.setPolicy("admin", mfaOptional117); err != nil {
 		t.Fatal(err)
 	}
 	ok := complete()
 	if ok.Code != http.StatusOK || strings.Contains(ok.Body.String(), "browser-refresh-secret") {
-		t.Fatalf("browser login failed: %d %s", ok.Code, ok.Body.String())
+		t.Fatalf("вход через браузер завершился ошибкой: %d %s", ok.Code, ok.Body.String())
 	}
 	record, err := repo.GetProviderCredentialByIdentity("admin", identity.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if token, err := api.decryptProviderCredential116(record); err != nil || token != "browser-refresh-secret" {
-		t.Fatalf("bad encrypted provider token err=%v", err)
+		t.Fatalf("неверный зашифрованный токен провайдера: ошибка=%v", err)
 	}
 	if !strings.Contains(ok.Body.String(), `"issuer":"https://idp.example.test"`) {
-		t.Fatalf("browser login did not expose canonical issuer: %s", ok.Body.String())
+		t.Fatalf("вход через браузер не вернул канонического издателя токена: %s", ok.Body.String())
 	}
 }

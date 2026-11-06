@@ -89,7 +89,7 @@ func TestServerBridgeNodeIdentity0142RejectsSignatureReplayAndStaleTimestamp(t *
 	admin := loginAdmin(t, h)
 	identity := newTestBridgeNodeIdentity0142(t)
 	if rv := registerTestBridgeNode0142(t, h, admin, "crypto-0142", "Crypto 0142", "paper", "demo-project", "vanilla", identity); rv.Code != http.StatusCreated {
-		t.Fatalf("register=%d %s", rv.Code, rv.Body.String())
+		t.Fatalf("регистрация: %d %s", rv.Code, rv.Body.String())
 	}
 
 	body := `{"protocolVersion":2,"serverType":"paper","pluginVersion":"0.14.2","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`
@@ -139,7 +139,7 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	admin, _ = registerTestPasskey117(t, h, admin)
 	firstIdentity := newTestBridgeNodeIdentity0142(t)
 	if rv := registerTestBridgeNode0142(t, h, admin, "crypto-rotate-0142", "Crypto Rotate 0142", "paper", "demo-project", "vanilla", firstIdentity); rv.Code != http.StatusCreated {
-		t.Fatalf("register=%d %s", rv.Code, rv.Body.String())
+		t.Fatalf("регистрация: %d %s", rv.Code, rv.Body.String())
 	}
 
 	originalBody := `{"protocolVersion":2,"serverType":"paper","pluginVersion":"0.14.2","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`

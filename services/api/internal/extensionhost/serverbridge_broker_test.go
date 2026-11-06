@@ -125,54 +125,54 @@ func TestJavaBridgeAuthenticatedBroker0488(t *testing.T) {
 		return res.StatusCode, response
 	}
 	if status, _ := call("bridge.server", map[string]any{"projectId": "p2", "serverId": "server1"}); status != 403 {
-		t.Fatalf("cross project %d", status)
+		t.Fatalf("доступ к чужому проекту: %d", status)
 	}
 	status, result := call("bridge.server", map[string]any{"projectId": "p1", "serverId": "server1"})
 	if status != 200 {
-		t.Fatalf("live status=%d", status)
+		t.Fatalf("статус действующей системы=%d", status)
 	}
 	server := result["server"].(map[string]any)
 	if server["projectId"] != "p1" || server["runtimeActive"] != true {
-		t.Fatalf("bad live status: %v", server)
+		t.Fatalf("неверный статус действующей системы: %v", server)
 	}
 	for _, secret := range []string{"tokenHash", "keyFingerprint", "publicKey", "pluginSha256"} {
 		if _, ok := server[secret]; ok {
-			t.Fatalf("secret leaked %s", secret)
+			t.Fatalf("раскрыт секрет: %s", secret)
 		}
 	}
 	status, _ = call("bridge.servers", map[string]any{"projectId": "p1", "offset": 0, "limit": 1})
 	if status != 200 {
-		t.Fatalf("server list=%d", status)
+		t.Fatalf("список серверов: %d", status)
 	}
 	status, _ = call("bridge.access.ticket", map[string]any{"projectId": "p1", "serverId": "server1", "username": "Player1"})
 	if status != 200 {
-		t.Fatalf("ticket check=%d", status)
+		t.Fatalf("проверка билета: %d", status)
 	}
 	request := map[string]any{"projectId": "p1", "serverId": "server1", "commandType": "message.broadcast", "payload": map[string]string{"message": "Test broadcast"}, "idempotencyKey": "java-0488-repeat", "expiresInSeconds": 120}
 	status, out := call("bridge.command.create", request)
 	if status != 200 {
-		t.Fatalf("command create=%d", status)
+		t.Fatalf("создание команды: %d", status)
 	}
 	command := out["command"].(map[string]any)
 	if command["status"] != "pending" {
-		t.Fatalf("command not queued: %v", command)
+		t.Fatalf("команда не поставлена в очередь: %v", command)
 	}
 	status, replay := call("bridge.command.create", request)
 	if status != 200 || replay["idempotentReplay"] != true {
-		t.Fatalf("idempotent replay failed: %d %v", status, replay)
+		t.Fatalf("повторное идемпотентное выполнение не удалось: %d %v", status, replay)
 	}
 	request["payload"] = map[string]string{"message": "Different"}
 	if status, _ = call("bridge.command.create", request); status != 409 {
-		t.Fatalf("idempotency conflict not rejected: %d", status)
+		t.Fatalf("конфликт идемпотентности не отклонён: %d", status)
 	}
 	request["commandType"] = "server.console"
 	request["payload"] = map[string]string{"command": "op"}
 	if status, _ = call("bridge.command.create", request); status == 200 {
-		t.Fatal("console bypass admitted")
+		t.Fatal("допущен обход ограничений консоли")
 	}
 	status, _ = call("bridge.command.get", map[string]any{"projectId": "p1", "serverId": "server1", "commandId": command["id"]})
 	if status != 200 {
-		t.Fatalf("command read %d", status)
+		t.Fatalf("чтение команды: %d", status)
 	}
 	if err := base.RevokeExtensionPermission(ctx, ext, "project", "p1", "gameserver:broadcast"); err != nil {
 		t.Fatal(err)
@@ -180,15 +180,15 @@ func TestJavaBridgeAuthenticatedBroker0488(t *testing.T) {
 	request["commandType"] = "message.broadcast"
 	request["payload"] = map[string]string{"message": "Not allowed"}
 	if status, _ = call("bridge.command.create", request); status != 403 {
-		t.Fatalf("revoked command still allowed %d", status)
+		t.Fatalf("команда разрешена после отзыва прав: %d", status)
 	}
 	if status, _ = call("bridge.command.get", map[string]any{"projectId": "p1", "serverId": "server1", "commandId": command["id"]}); status != 403 {
-		t.Fatalf("revoked command read %d", status)
+		t.Fatalf("чтение команды разрешено после отзыва прав: %d", status)
 	}
 	if err := base.RevokeExtensionPermission(ctx, ext, "project", "p1", "serverbridge:read"); err != nil {
 		t.Fatal(err)
 	}
 	if status, _ = call("bridge.server", map[string]any{"projectId": "p1", "serverId": "server1"}); status != 403 {
-		t.Fatalf("revoked read still allowed %d", status)
+		t.Fatalf("чтение разрешено после отзыва прав: %d", status)
 	}
 }

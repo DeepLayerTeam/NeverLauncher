@@ -24,7 +24,7 @@ func TestHostSystemdUnit02811(t *testing.T) {
 		"Type=notify", "NotifyAccess=main", "WatchdogSec=30s", "KillMode=mixed", "TimeoutStopSec=40s", "User=minecraft", "NoNewPrivileges=yes", "ProtectSystem=strict", "CapabilityBoundingSet=", "ReadWritePaths=\"/srv/minecraft world\"", "ExecStart=\"/usr/local/bin/nl\" server-bridge host run --server-root \"/srv/minecraft world\"",
 	} {
 		if !strings.Contains(unit, expected) {
-			t.Errorf("missing %q in %s", expected, unit)
+			t.Errorf("отсутствует %q в %s", expected, unit)
 		}
 	}
 	spec.Scope = "user"
@@ -34,7 +34,7 @@ func TestHostSystemdUnit02811(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(unit, "User=") || !strings.Contains(unit, "WantedBy=default.target") {
-		t.Fatal("user-service privilege escalation or wrong target", unit)
+		t.Fatal("повышение привилегий пользовательской службы либо неверная цель", unit)
 	}
 	spec.Component = "remote"
 	spec.TLSCert = "/certs/cert.pem"
@@ -46,7 +46,7 @@ func TestHostSystemdUnit02811(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(unit, "WatchdogSec=30s") || !strings.Contains(unit, "Type=notify") || !strings.Contains(unit, "NotifyAccess=main") || !strings.Contains(unit, "remote serve") || !strings.Contains(unit, "KillMode=process") || !strings.Contains(unit, "--allow-source \"127.0.0.0/8\"") {
-		t.Fatal("remote unit wrong", unit)
+		t.Fatal("неверная удалённая служба", unit)
 	}
 }
 func TestHostSystemdUnitRejectsInjection02811(t *testing.T) {
@@ -66,10 +66,10 @@ func TestHostSystemdUnitRejectsInjection02811(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(s, "%%") || !strings.Contains(s, `\"`) {
-		t.Fatal("bad unit escaping", s)
+		t.Fatal("некорректное экранирование конфигурации службы", s)
 	}
 	if _, err := hostServiceUnit02811(hostServiceSpec02811{Name: "host", Root: "/srv/a", Binary: "/bin/nl", Component: "host", Scope: "system", User: "root", StopSeconds: 5}); err == nil {
-		t.Fatal("root service not rejected")
+		t.Fatal("служба с правами root не отклонена")
 	}
 }
 func TestHostSystemdNotifySocketAndWatchdog02811(t *testing.T) {
@@ -94,26 +94,26 @@ func TestHostSystemdNotifySocketAndWatchdog02811(t *testing.T) {
 	hostServiceStopping02811()
 	n, _, err = listener.ReadFromUnix(buf)
 	if err != nil || !strings.Contains(string(buf[:n]), "STOPPING=1") {
-		t.Fatalf("stopping=%q %v", buf[:n], err)
+		t.Fatalf("остановка=%q, %v", buf[:n], err)
 	}
 	t.Setenv("WATCHDOG_PID", strconv.Itoa(os.Getpid()+1))
 	t.Setenv("WATCHDOG_USEC", "30000000")
 	if hostWatchdogInterval02811() != 0 {
-		t.Fatal("unrelated watchdog PID accepted")
+		t.Fatal("принят PID постороннего сторожевого процесса")
 	}
 	t.Setenv("WATCHDOG_PID", strconv.Itoa(os.Getpid()))
 	if hostWatchdogInterval02811() != 5*time.Second {
-		t.Fatal("unexpected watchdog period")
+		t.Fatal("неожиданный интервал сторожевого процесса")
 	}
 	t.Setenv("WATCHDOG_USEC", "bad")
 	if hostWatchdogInterval02811() != 0 {
-		t.Fatal("bad WATCHDOG_USEC accepted")
+		t.Fatal("принято неверное значение WATCHDOG_USEC")
 	}
 }
 
 func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 	if os.Geteuid() == 0 {
-		t.Skip("user service installers must be tested as an unprivileged user")
+		t.Skip("установщики пользовательских служб должны проверяться без привилегий администратора")
 	}
 	root := t.TempDir()
 	jar := filepath.Join(root, "paper.jar")
@@ -144,22 +144,22 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(content), hostServiceMarker02811) || !strings.Contains(string(content), "Type=notify") {
-		t.Fatal("wrong unit content", string(content))
+		t.Fatal("неверное содержимое файла службы", string(content))
 	}
 	if strings.Join(calls, "|") != "--user daemon-reload|--user enable --now launcher-host-world.service" {
-		t.Fatal("systemctl sequence", calls)
+		t.Fatal("последовательность команд systemctl", calls)
 	}
 	if err := hostServiceHandle02811(args); err == nil {
-		t.Fatal("reinstalled over existing unit")
+		t.Fatal("переустановка поверх существующей службы")
 	}
 	if err := hostServiceHandle02811([]string{"uninstall", "--scope", "user", "--name", "host-world"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
-		t.Fatalf("unit not removed: %v", err)
+		t.Fatalf("файл службы не удалён: %v", err)
 	}
 	if strings.Join(calls[2:], "|") != "--user disable --now launcher-host-world.service|--user daemon-reload" {
-		t.Fatal("uninstall sequence", calls)
+		t.Fatal("последовательность удаления", calls)
 	}
 	// Неудачное включение службы не должно оставлять частично установленный сервис.
 	hostSystemctl02811 = func(args ...string) error {
@@ -169,7 +169,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 		return nil
 	}
 	if err := hostServiceHandle02811(args); err == nil {
-		t.Fatal("enabled after failure")
+		t.Fatal("служба включена после ошибки")
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
 		t.Fatal("После ошибки установки не выполнен откат")
@@ -178,7 +178,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 
 func TestHostSystemdUnitParser02811(t *testing.T) {
 	if _, err := exec.LookPath("systemd-analyze"); err != nil {
-		t.Skip("systemd-analyze unavailable")
+		t.Skip("systemd-analyze недоступен")
 	}
 	binary, err := os.Executable()
 	if err != nil {
@@ -198,9 +198,9 @@ func TestHostSystemdUnitParser02811(t *testing.T) {
 	}
 	out, err := exec.Command("systemd-analyze", "verify", unit).CombinedOutput()
 	if err != nil {
-		t.Fatalf("systemd-analyze verify: %v: %s", err, out)
+		t.Fatalf("проверка systemd-analyze: %v: %s", err, out)
 	}
 	if strings.Contains(string(out), "Unknown key name") {
-		t.Fatalf("unsupported unit directive: %s", out)
+		t.Fatalf("неподдерживаемая директива службы: %s", out)
 	}
 }

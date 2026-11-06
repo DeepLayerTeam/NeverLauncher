@@ -87,7 +87,7 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 	}
 	history, e := r.ListProfileRevisions(ctx, "project", "vanilla")
 	if e != nil || len(history) != 2 {
-		t.Fatalf("history %d %v", len(history), e)
+		t.Fatalf("история: %d %v", len(history), e)
 	}
 	if history[0].Spec.Name != "Vanilla" || history[1].Spec.Name != "Vanilla next" {
 		t.Fatal("История неожиданно изменилась")
@@ -96,11 +96,11 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = r.SetUserDisabled(ctx, "owner", true, "operator"); e == nil {
-		t.Fatal("disabled last owner")
+		t.Fatal("отключён последний владелец")
 	}
 	u, e := r.GetUser(ctx, "owner")
 	if e != nil || u.Status != "active" {
-		t.Fatalf("last owner mutated %v %+v", e, u)
+		t.Fatalf("изменена учётная запись последнего владельца: %v %+v", e, u)
 	}
 	if _, e = r.SaveUser(ctx, model.User{ID: "user", Email: "mixed@example.test", RoleID: "viewer", ProjectRoles: map[string]string{"project": "viewer"}}, "owner"); e != nil {
 		t.Fatal(e)
@@ -119,13 +119,13 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 	}
 	after, e := r.AuthEpoch(ctx, "user")
 	if e != nil || after != before+1 {
-		t.Fatalf("auth epoch %d -> %d: %v", before, after, e)
+		t.Fatalf("эпоха авторизации %d -> %d: %v", before, after, e)
 	}
 	if e = r.RecordAudit(ctx, model.AuditEvent{ID: "known", Actor: "owner", Action: "security:test", Target: "user"}); e != nil {
 		t.Fatal(e)
 	}
 	if e = r.RecordAudit(ctx, model.AuditEvent{ID: "known", Actor: "owner", Action: "security:test", Target: "user"}); !errors.Is(e, ErrConflict) {
-		t.Fatalf("duplicate audit not refused: %v", e)
+		t.Fatalf("повторяющаяся запись аудита не отклонена: %v", e)
 	}
 	n, e := r.Count(ctx)
 	if e != nil || n["audit_events"] < 4 {
@@ -141,11 +141,11 @@ func TestCoreRestartHistoryAndAudit(t *testing.T) {
 	defer r.Close()
 	h, e := r.ListProfileRevisions(ctx, "project", "vanilla")
 	if e != nil || len(h) != 2 {
-		t.Fatalf("history not durable: %v %d", e, len(h))
+		t.Fatalf("история не сохраняется надёжно: %v %d", e, len(h))
 	}
 	u, e = r.GetUser(ctx, "user")
 	if e != nil || u.ProjectRoles["project"] != "release-manager" {
-		t.Fatalf("role not durable: %v %+v", e, u)
+		t.Fatalf("роль не сохраняется надёжно: %v %+v", e, u)
 	}
 	if err := r.Check(ctx); err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestConcurrentCASAndPublish(t *testing.T) {
 		}
 	}
 	if success != 1 || conflicts != 1 {
-		t.Fatalf("CAS success=%d conflicts=%d", success, conflicts)
+		t.Fatalf("CAS: успешных=%d, конфликтов=%d", success, conflicts)
 	}
 	d, e := r.CreateDraft(ctx, "project", "vanilla", "stable", "1.0.0", "owner")
 	if e != nil {
@@ -205,28 +205,28 @@ func TestConcurrentCASAndPublish(t *testing.T) {
 		t.Fatal(e)
 	}
 	if _, e = r.PublishDraft(ctx, "project", d.ID, 0, []ed25519.PublicKey{attacker.Public().(ed25519.PublicKey)}, "owner"); e == nil {
-		t.Fatal("untrusted signed release published")
+		t.Fatal("опубликован подписанный, но недоверенный релиз")
 	}
 	pub, e := r.PublishDraft(ctx, "project", d.ID, 0, []ed25519.PublicKey{key.Public().(ed25519.PublicKey)}, "owner")
 	if e != nil {
 		t.Fatal(e)
 	}
 	if pub.Status != "published" {
-		t.Fatal("publish didn't persist")
+		t.Fatal("публикация не была сохранена")
 	}
 	if _, e = r.PublishDraft(ctx, "project", d.ID, 0, []ed25519.PublicKey{key.Public().(ed25519.PublicKey)}, "owner"); !errors.Is(e, ErrImmutable) {
-		t.Fatalf("republish result %v", e)
+		t.Fatalf("результат повторной публикации: %v", e)
 	}
 	if _, e = r.UpdateDraftManifest(ctx, "project", d.ID, manifest, "owner"); !errors.Is(e, ErrImmutable) {
-		t.Fatalf("published mutable: %v", e)
+		t.Fatalf("опубликованные данные можно изменять: %v", e)
 	}
 	published, e := r.Published(ctx, "project", "vanilla", "stable", []ed25519.PublicKey{key.Public().(ed25519.PublicKey)})
 	if e != nil || published.ID != d.ID {
-		t.Fatalf("head %v %+v", e, published)
+		t.Fatalf("головная ревизия: %v %+v", e, published)
 	}
 	head, e := r.GetChannelHead(ctx, "project", "vanilla", "stable")
 	if e != nil || head.Revision != 1 {
-		t.Fatalf("head %+v %v", head, e)
+		t.Fatalf("головная ревизия: %+v %v", head, e)
 	}
 }
 func TestInvalidRoleRollsBackUserAndAudit(t *testing.T) {
@@ -242,13 +242,13 @@ func TestInvalidRoleRollsBackUserAndAudit(t *testing.T) {
 	}
 	_, e = r.SaveUser(ctx, model.User{ID: "new", Email: "new@example.test", RoleID: "invalid"}, "owner")
 	if e == nil {
-		t.Fatal("invalid user role accepted")
+		t.Fatal("принята недопустимая роль пользователя")
 	}
 	if _, e = r.GetUser(ctx, "new"); !errors.Is(e, ErrNotFound) {
-		t.Fatalf("partial user committed: %v", e)
+		t.Fatalf("частичная запись пользователя зафиксирована: %v", e)
 	}
 	after, e := r.Count(ctx)
 	if e != nil || after["audit_events"] != before["audit_events"] {
-		t.Fatalf("partial audit: %v %v", after, e)
+		t.Fatalf("неполный аудит: %v %v", after, e)
 	}
 }

@@ -21,23 +21,23 @@ func TestJavaScratch04811(t *testing.T) {
 	defer os.RemoveAll(scratch)
 	info, err := os.Stat(scratch)
 	if err != nil || info.Mode().Perm() != 0700 {
-		t.Fatalf("scratch mode: %v, %v", info, err)
+		t.Fatalf("режим временного каталога: %v, %v", info, err)
 	}
 	if cmd.Args[len(cmd.Args)-2] != "module.jar" || cmd.Args[len(cmd.Args)-1] != "status" {
-		t.Fatalf("jar arguments changed: %v", cmd.Args)
+		t.Fatalf("аргументы JAR были изменены: %v", cmd.Args)
 	}
 	joined := strings.Join(cmd.Args, " ")
 	if !strings.Contains(joined, "-Duser.home="+filepath.Join(scratch, "home")) ||
 		!strings.Contains(joined, "-Djava.io.tmpdir="+filepath.Join(scratch, "tmp")) {
-		t.Fatalf("missing private Java runtime directories: %s", joined)
+		t.Fatalf("отсутствуют приватные каталоги Runtime Java: %s", joined)
 	}
 	for _, entry := range cmd.Env {
 		if strings.HasPrefix(entry, "HOME=/sensitive") || strings.HasPrefix(entry, "TMPDIR=/sensitive") {
-			t.Fatalf("inherited private directory: %s", entry)
+			t.Fatalf("унаследован приватный каталог: %s", entry)
 		}
 	}
 	if _, err := prepareJavaScratch04811(exec.Command("java", "-version")); err == nil {
-		t.Fatal("accepted command without JAR")
+		t.Fatal("принята команда без JAR")
 	}
 }
 
@@ -55,7 +55,7 @@ func TestJavaResourceLimits04811(t *testing.T) {
 	}
 	s.cfg.MaxMemoryBytes = 64 << 20
 	if _, err := s.javaCommand0304("module.jar", nil); err == nil {
-		t.Fatal("accepted JVM memory below safe minimum")
+		t.Fatal("принят объём памяти JVM ниже безопасного минимума")
 	}
 }
 
@@ -64,7 +64,7 @@ func TestJavaRawSecretDenied04811(t *testing.T) {
 	st := &processState{javaHost: true}
 	result := s.executeCapability(context.Background(), st, "secret.get", capabilityRequest{Name: "db_password"})
 	if result.status != http.StatusForbidden {
-		t.Fatalf("Java raw secret allowed: %d", result.status)
+		t.Fatalf("допущена передача открытого секрета Java: %d", result.status)
 	}
 }
 
@@ -77,16 +77,16 @@ func TestJavaTokenRedaction04811(t *testing.T) {
 		map[string]any{"accessToken": token, "metadata": map[string]any{"Authorization": callback, "note": token}})
 	lines := st.logs.list(10)
 	if len(lines) != 1 {
-		t.Fatalf("expected redacted log: %+v", lines)
+		t.Fatalf("ожидался журнал с замаскированными секретами: %+v", lines)
 	}
 	if strings.Contains(lines[0].Message, token) || strings.Contains(lines[0].Message, callback) {
-		t.Fatal("token leaked in retained log")
+		t.Fatal("токен раскрыт в сохранённом журнале")
 	}
 	if strings.Contains(lines[0].Fields["metadata"].(map[string]any)["note"].(string), token) {
-		t.Fatal("nested token leaked")
+		t.Fatal("вложенный токен раскрыт")
 	}
 	if got := redactHostCredentials04811("unchanged", ""); got != "unchanged" {
-		t.Fatalf("empty token changed log: %s", got)
+		t.Fatalf("пустой токен изменил журнал: %s", got)
 	}
 }
 
@@ -106,6 +106,6 @@ func TestJavaHostIPCQuota04811(t *testing.T) {
 		}
 	}
 	if calls != defaultRequestsPerSecond03113 {
-		t.Fatalf("requests reached host after cap: %d", calls)
+		t.Fatalf("запросы достигли хоста после превышения лимита: %d", calls)
 	}
 }

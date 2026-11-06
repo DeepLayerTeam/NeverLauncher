@@ -62,7 +62,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 			t.Fatal(e)
 		}
 		if _, e = db.ExecContext(ctx, string(content)); e != nil {
-			t.Fatalf("apply %s: %v", filename, e)
+			t.Fatalf("применение %s: %v", filename, e)
 		}
 	}
 	digest := func(v string) string { b := sha256.Sum256([]byte(v)); return hex.EncodeToString(b[:]) }
@@ -77,17 +77,17 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	r := &SQLRepository{db: db}
 	pin, rows, err := r.BeginTextureSnapshot02511(ctx, "local")
 	if err != nil || len(rows) != 2 {
-		t.Fatalf("snapshot: rows=%d err=%v", len(rows), err)
+		t.Fatalf("снимок: строк=%d, ошибка=%v", len(rows), err)
 	}
 	if claims, err := r.ClaimTextureGarbage02511(ctx, "local", 50); err != nil || len(claims) != 0 {
-		t.Fatalf("GC violated backup pin: %+v %v", claims, err)
+		t.Fatalf("сборщик мусора нарушил закрепление резервной копии: %+v %v", claims, err)
 	}
 	if err := r.EndTextureSnapshot02511(ctx, pin); err != nil {
 		t.Fatal(err)
 	}
 	claims, err := r.ClaimTextureGarbage02511(ctx, "local", 50)
 	if err != nil || len(claims) != 2 {
-		t.Fatalf("GC claim %d %v", len(claims), err)
+		t.Fatalf("захват сборщика мусора %d: %v", len(claims), err)
 	}
 	first := claims[0]
 	if err := r.CheckTextureGCLease02511(ctx, first); err != nil {
@@ -97,7 +97,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := r.FinishTextureGC02511(ctx, first); err == nil {
-		t.Fatal("replayed GC finish accepted")
+		t.Fatal("допущено повторное завершение сборки мусора")
 	}
 	second := claims[1]
 	if _, err := db.ExecContext(ctx, `UPDATE texture_blobs SET gc_claimed_at=now()-interval '46 minutes' WHERE digest=$1`, second.Digest); err != nil {
@@ -105,29 +105,29 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	}
 	recovered, err := r.ClaimTextureGarbage02511(ctx, "local", 1)
 	if err != nil || len(recovered) != 1 {
-		t.Fatalf("failed to reclaim stale GC: %+v %v", recovered, err)
+		t.Fatalf("не удалось освободить устаревший захват сборщика мусора: %+v %v", recovered, err)
 	}
 	if recovered[0].Token == second.Token {
-		t.Fatal("reused GC token")
+		t.Fatal("повторно использован токен сборщика мусора")
 	}
 	if err := r.CheckTextureGCLease02511(ctx, second); err == nil {
-		t.Fatal("stale GC worker validated")
+		t.Fatal("устаревший обработчик сборки мусора прошёл проверку")
 	}
 	if err := r.FinishTextureGC02511(ctx, second); err == nil {
-		t.Fatal("stale GC worker deleted replacement lease")
+		t.Fatal("устаревший обработчик сборки мусора удалил новую аренду")
 	}
 	if err := r.ReleaseTextureGC02511(ctx, second); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.CheckTextureGCLease02511(ctx, recovered[0]); err != nil {
-		t.Fatal("stale release affected new worker", err)
+		t.Fatal("устаревшее освобождение затронуло нового обработчика", err)
 	}
 	if err := r.ReleaseTextureGC02511(ctx, recovered[0]); err != nil {
 		t.Fatal(err)
 	}
 	newClaims, err := r.ClaimTextureGarbage02511(ctx, "local", 1)
 	if err != nil || len(newClaims) != 1 {
-		t.Fatalf("released row not reclaimed: %+v %v", newClaims, err)
+		t.Fatalf("освобождённая запись не удалена сборщиком мусора: %+v %v", newClaims, err)
 	}
 	if err := r.FinishTextureGC02511(ctx, newClaims[0]); err != nil {
 		t.Fatal(err)
@@ -157,11 +157,11 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	gc := candidateRows[0]
 	called := 0
 	if err := r.DeleteTextureWithLease02512(ctx, gc, func(context.Context, string) error { called++; return fmt.Errorf("storage unavailable") }); err == nil || called != 1 {
-		t.Fatalf("storage failure lost: %v, called=%d", err, called)
+		t.Fatalf("ошибка хранилища потеряна: %v, вызовов=%d", err, called)
 	}
 	var status string
 	if err := db.QueryRowContext(ctx, `SELECT status FROM texture_blobs WHERE digest=$1`, third).Scan(&status); err != nil || status != "quarantined" {
-		t.Fatalf("GC state lost on failed physical delete: %s %v", status, err)
+		t.Fatalf("состояние сборщика мусора потеряно при неудачном физическом удалении: %s %v", status, err)
 	}
 	bad := gc
 	bad.Token = "a" + gc.Token[1:]
@@ -169,7 +169,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		bad.Token = "b" + gc.Token[1:]
 	}
 	if err := r.DeleteTextureWithLease02512(ctx, bad, func(context.Context, string) error { called++; return nil }); err == nil || called != 1 {
-		t.Fatal("stale lease executed physical deletion")
+		t.Fatal("физическое удаление выполнено по устаревшей аренде")
 	}
 	if err := r.DeleteTextureWithLease02512(ctx, gc, func(_ context.Context, digest string) error {
 		called++
@@ -194,11 +194,11 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	if called != 2 {
-		t.Fatal("physical delete callback not called exactly once on successful lease")
+		t.Fatal("при успешной аренде обработчик физического удаления вызван не ровно один раз")
 	}
 	var exists bool
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_blobs WHERE digest=$1)`, third).Scan(&exists); err != nil || exists {
-		t.Fatalf("successful GC left blob row: %v %v", exists, err)
+		t.Fatalf("успешная сборка мусора оставила запись двоичного объекта: %v %v", exists, err)
 	}
 	if err := r.DeleteTextureWithLease02512(ctx, gc, func(context.Context, string) error { called++; return nil }); err == nil || called != 2 {
 		t.Fatal("Повторное воспроизведение ошибочно разрешено")

@@ -71,7 +71,7 @@ func TestWorldBackupCreateVerifyRestore02810(t *testing.T) {
 			t.Fatal(err)
 		}
 		if string(from) != string(to) {
-			t.Fatalf("restore mismatch for %s", name)
+			t.Fatalf("результат восстановления %s не совпадает с исходным", name)
 		}
 	}
 	if err := worldBackupRestore02810(root, store, m, source, dest); err == nil {
@@ -81,16 +81,16 @@ func TestWorldBackupCreateVerifyRestore02810(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := worldBackupVerify02810(source); err == nil {
-		t.Fatal("corrupt snapshot verified")
+		t.Fatal("повреждённый снимок прошёл проверку")
 	}
 	if err := worldBackupRestore02810(root, store, m, source, filepath.Join(t.TempDir(), "should-not-restore")); err == nil {
-		t.Fatal("corrupt snapshot restored")
+		t.Fatal("повреждённый снимок был восстановлен")
 	}
 }
 func TestWorldBackupSymlinksAndTraversal02810(t *testing.T) {
 	root := writeWorldFixture02810(t)
 	if worldBackupValidRelative02810("../escape") || worldBackupValidRelative02810("/absolute") || worldBackupValidRelative02810("a/../../b") || worldBackupValidRelative02810("a\\evil") {
-		t.Fatal("path traversal permitted")
+		t.Fatal("допущен выход за пределы разрешённого каталога")
 	}
 	if _, err := worldBackupLocation02810(root, filepath.Join(root, "nested")); err == nil {
 		t.Fatal("Разрешено вложенное хранилище резервных копий")
@@ -125,13 +125,13 @@ func TestWorldBackupRequiresStoppedHost02810(t *testing.T) {
 		t.Fatal("Активный сервер не был отклонён")
 	}
 	if err := worldBackupQuiesce02810(root, "stop"); err == nil {
-		t.Fatal("unverified supervisor accepted")
+		t.Fatal("допущен непроверенный управляющий процесс")
 	}
 }
 func TestWorldBackupRejectsForgedManifest02810(t *testing.T) {
 	m := worldBackupManifest02810{Schema: worldBackupSchema02810, ID: strings.Repeat("a", 32), Consistency: "confirmed-stopped", Worlds: []string{"world"}, Entries: []worldBackupEntry02810{{Path: "world", Type: "dir"}, {Path: "world/../../outside", Type: "file", SHA256: strings.Repeat("a", 64)}}}
 	if worldBackupManifestValid02810(m) == nil {
-		t.Fatal("malicious manifest accepted")
+		t.Fatal("допущен вредоносный манифест")
 	}
 	m.Entries[1].Path = "world/playerdata.dat"
 	m.Entries[1].Size = 10

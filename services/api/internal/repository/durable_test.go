@@ -21,10 +21,10 @@ func TestDurableScopeLeaseFencing0213(t *testing.T) {
 	}
 	renewed, err := r.RenewDurableScopeLease(ctx, first.ScopeKey, first.LeaseToken, 2*time.Minute)
 	if err != nil || renewed.FencingToken != first.FencingToken || !renewed.ExpiresAt.After(first.ExpiresAt) {
-		t.Fatalf("lease renewal changed fence or failed: first=%+v renewed=%+v err=%v", first, renewed, err)
+		t.Fatalf("продление аренды изменило эпоху защиты или завершилось ошибкой: первая=%+v, продлённая=%+v, ошибка=%v", first, renewed, err)
 	}
 	if _, err := r.AcquireDurableScopeLease(ctx, "package:p1", "worker-b", time.Minute); !errors.Is(err, ErrLeaseBusy) {
-		t.Fatalf("expected lease busy, got %v", err)
+		t.Fatalf("ожидалась занятая аренда, получено: %v", err)
 	}
 	if err := r.ReleaseDurableScopeLease(ctx, first.ScopeKey, first.LeaseToken); err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestDurableScopeLeaseFencing0213(t *testing.T) {
 		t.Fatal(err)
 	}
 	if second.FencingToken <= first.FencingToken {
-		t.Fatalf("fencing token did not increase: first=%d second=%d", first.FencingToken, second.FencingToken)
+		t.Fatalf("токен эпохи защиты не увеличился: первый=%d, второй=%d", first.FencingToken, second.FencingToken)
 	}
 }
 
@@ -46,11 +46,11 @@ func TestDurableJobIdempotencyRejectsDifferentPayload0213(t *testing.T) {
 	base := model.DurableJob{Kind: durableTestKind0213, ActorType: "user", ActorID: "admin", Action: "release:publish", ProjectID: "demo-project", ResourceType: "package", ResourceID: "pkg", IdempotencyKey: "same-key", Payload: one}
 	first, created, err := r.EnqueueDurableJob(ctx, base, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("first enqueue: created=%v err=%v", created, err)
+		t.Fatalf("первое добавление в очередь: создано=%v, ошибка=%v", created, err)
 	}
 	second, created, err := r.EnqueueDurableJob(ctx, base, time.Hour)
 	if err != nil || created || second.ID != first.ID {
-		t.Fatalf("idempotent enqueue mismatch: created=%v err=%v ids=%s/%s", created, err, first.ID, second.ID)
+		t.Fatalf("идемпотентное добавление в очередь не совпало: создано=%v, ошибка=%v, идентификаторы=%s/%s", created, err, first.ID, second.ID)
 	}
 	base.Payload = two
 	if _, _, err := r.EnqueueDurableJob(ctx, base, time.Hour); !errors.Is(err, ErrConflict) {
@@ -65,15 +65,15 @@ func TestDurableJobIdempotencyIsActorScoped0213(t *testing.T) {
 	base := model.DurableJob{Kind: durableTestKind0213, ActorType: "user", ActorID: "alice", Action: "release:publish", ProjectID: "demo-project", ResourceType: "package", ResourceID: "pkg", IdempotencyKey: "shared-client-key", Payload: payload}
 	a, created, err := r.EnqueueDurableJob(ctx, base, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("alice enqueue: created=%v err=%v", created, err)
+		t.Fatalf("добавление задания Alice: создано=%v, ошибка=%v", created, err)
 	}
 	base.ActorID = "bob"
 	b, created, err := r.EnqueueDurableJob(ctx, base, time.Hour)
 	if err != nil || !created {
-		t.Fatalf("bob enqueue with same client key must be isolated: created=%v err=%v", created, err)
+		t.Fatalf("задание Bob с тем же клиентским ключом должно быть изолировано: создано=%v, ошибка=%v", created, err)
 	}
 	if a.ID == b.ID {
-		t.Fatal("different actors received the same durable job")
+		t.Fatal("разные исполнители получили одно и то же долговременное задание")
 	}
 }
 
@@ -127,14 +127,14 @@ func TestDurablePublishCommitAndOutbox0213(t *testing.T) {
 	}
 	stored, err := r.GetDurableJob(ctx, job.ID)
 	if err != nil || stored.Status != model.DurableJobStatusSucceeded {
-		t.Fatalf("job not completed: %#v err=%v", stored, err)
+		t.Fatalf("задание не завершено: %#v, ошибка=%v", stored, err)
 	}
 	outbox, err := r.ClaimOutboxEvents(ctx, "outbox-worker", 10, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(outbox) != 2 {
-		t.Fatalf("expected 2 transactional outbox events, got %d", len(outbox))
+		t.Fatalf("ожидались 2 события транзакционной исходящей очереди, получено %d", len(outbox))
 	}
 	for _, item := range outbox {
 		if err := r.CompleteOutboxEvent(ctx, item.ID, item.LeaseToken); err != nil {
@@ -155,7 +155,7 @@ func TestRuntimeValidationRunIDIsDurableNonce0213(t *testing.T) {
 	base.PackageID = "pkg-b"
 	base.TargetID = "windows-x64"
 	if _, err := r.SaveRuntimeValidation(context.Background(), base); !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected global run nonce conflict, got %v", err)
+		t.Fatalf("ожидался конфликт глобального одноразового номера запуска, получено: %v", err)
 	}
 }
 
@@ -192,6 +192,6 @@ func TestDurablePublishCASRejectsStatusChange0213(t *testing.T) {
 	}
 	_, err = r.CommitDurablePublish(ctx, model.DurablePublishCommit{JobID: job.ID, JobLeaseToken: job.LeaseToken, ScopeKey: lease.ScopeKey, ScopeLeaseToken: lease.LeaseToken, ScopeFencingToken: lease.FencingToken, ExpectedManifestDigest: manifestDigest, ExpectedArtifactDigest: artifactDigest, ExpectedStatus: release.Status, ActorID: "admin"})
 	if !errors.Is(err, ErrConflict) {
-		t.Fatalf("expected status CAS conflict, got %v", err)
+		t.Fatalf("ожидался конфликт статуса CAS, получено: %v", err)
 	}
 }

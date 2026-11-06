@@ -21,7 +21,7 @@ func TestValidateProductionRejectsUnsafeDefaults(t *testing.T) {
 		CORSAllowedOrigins:       []string{"*"},
 	}
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("unsafe production configuration must be rejected")
+		t.Fatal("небезопасная промышленная конфигурация должна быть отклонена")
 	}
 }
 
@@ -71,16 +71,16 @@ func TestValidateE2EProductionAllowsOnlyLoopbackHTTP(t *testing.T) {
 		BridgeReleaseAllowlistJSON: testBridgeAllowlist0135,
 	}
 	if err := ValidateProduction(cfg); err != nil {
-		t.Fatalf("loopback HTTP must be accepted only for e2e-production: %v", err)
+		t.Fatalf("локальный HTTP должен разрешаться только для e2e-production: %v", err)
 	}
 	cfg.PublicURL = "http://example.test:18080"
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("non-loopback HTTP must be rejected for e2e-production")
+		t.Fatal("HTTP не на локальном интерфейсе должен отклоняться для e2e-production")
 	}
 	cfg.Environment = "production"
 	cfg.PublicURL = "http://127.0.0.1:18080"
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("loopback HTTP must still be rejected for regular production")
+		t.Fatal("локальный HTTP также должен отклоняться для обычной промышленной конфигурации")
 	}
 }
 
@@ -105,11 +105,11 @@ func TestValidateProductionRequiresCompleteBukkitFamilyAllowlist0144(t *testing.
 		BridgeReleaseAllowlistJSON: `{"0.14.4":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}`,
 	}
 	if err := ValidateProduction(base); err == nil {
-		t.Fatal("0.14.4 production policy without Bukkit/Spigot/Folia hashes must be rejected")
+		t.Fatal("промышленная политика 0.14.4 без хешей Bukkit/Spigot/Folia должна быть отклонена")
 	}
 	base.BridgeReleaseAllowlistJSON = `{"0.14.4":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"]}}`
 	if err := ValidateProduction(base); err != nil {
-		t.Fatalf("complete 0.14.4 Bukkit-family release policy rejected: %v", err)
+		t.Fatalf("полная политика релиза 0.14.4 семейства Bukkit отклонена: %v", err)
 	}
 }
 
@@ -134,11 +134,11 @@ func TestValidateProductionRequiresCompleteProxyFamilyAllowlist0145(t *testing.T
 		BridgeReleaseAllowlistJSON: `{"0.14.5":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"]}}`,
 	}
 	if err := ValidateProduction(base); err == nil {
-		t.Fatal("0.14.5 production policy without BungeeCord/Waterfall hashes must be rejected")
+		t.Fatal("промышленная политика 0.14.5 без хешей BungeeCord/Waterfall должна быть отклонена")
 	}
 	base.BridgeReleaseAllowlistJSON = `{"0.14.5":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bungeeCordSha256":["7777777777777777777777777777777777777777777777777777777777777777"],"waterfallSha256":["8888888888888888888888888888888888888888888888888888888888888888"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"]}}`
 	if err := ValidateProduction(base); err != nil {
-		t.Fatalf("complete 0.14.5 proxy-family release policy rejected: %v", err)
+		t.Fatalf("полная политика релиза 0.14.5 семейства прокси отклонена: %v", err)
 	}
 }
 
@@ -156,11 +156,11 @@ func TestValidateProductionRequiresFabricHash0146(t *testing.T) {
 		BridgeReleaseAllowlistJSON: `{"0.14.6":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bungeeCordSha256":["7777777777777777777777777777777777777777777777777777777777777777"],"waterfallSha256":["8888888888888888888888888888888888888888888888888888888888888888"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"]}}`,
 	}
 	if err := ValidateProduction(base); err == nil {
-		t.Fatal("0.14.6 production policy without Fabric hash must be rejected")
+		t.Fatal("промышленная политика 0.14.6 без хеша Fabric должна быть отклонена")
 	}
 	base.BridgeReleaseAllowlistJSON = `{"0.14.6":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bungeeCordSha256":["7777777777777777777777777777777777777777777777777777777777777777"],"waterfallSha256":["8888888888888888888888888888888888888888888888888888888888888888"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"],"fabricSha256":["9999999999999999999999999999999999999999999999999999999999999999"]}}`
 	if err := ValidateProduction(base); err != nil {
-		t.Fatalf("complete 0.14.6 Fabric release policy rejected: %v", err)
+		t.Fatalf("полная политика релиза 0.14.6 Fabric отклонена: %v", err)
 	}
 }
 
@@ -178,11 +178,11 @@ func TestValidateProductionRequiresForgeNeoForgeHashes0147(t *testing.T) {
 		BridgeReleaseAllowlistJSON: `{"0.14.7":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bungeeCordSha256":["7777777777777777777777777777777777777777777777777777777777777777"],"waterfallSha256":["8888888888888888888888888888888888888888888888888888888888888888"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"],"fabricSha256":["9999999999999999999999999999999999999999999999999999999999999999"]}}`,
 	}
 	if err := ValidateProduction(base); err == nil {
-		t.Fatal("0.14.7 production policy without Forge/NeoForge hashes must be rejected")
+		t.Fatal("промышленная политика 0.14.7 без хешей Forge/NeoForge должна быть отклонена")
 	}
 	base.BridgeReleaseAllowlistJSON = `{"0.14.7":{"velocitySha256":["1111111111111111111111111111111111111111111111111111111111111111"],"bungeeCordSha256":["7777777777777777777777777777777777777777777777777777777777777777"],"waterfallSha256":["8888888888888888888888888888888888888888888888888888888888888888"],"bukkitSha256":["2222222222222222222222222222222222222222222222222222222222222222"],"spigotSha256":["3333333333333333333333333333333333333333333333333333333333333333"],"paperSha256":["4444444444444444444444444444444444444444444444444444444444444444"],"purpurSha256":["5555555555555555555555555555555555555555555555555555555555555555"],"foliaSha256":["6666666666666666666666666666666666666666666666666666666666666666"],"fabricSha256":["9999999999999999999999999999999999999999999999999999999999999999"],"forgeSha256":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"neoforgeSha256":["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]}}`
 	if err := ValidateProduction(base); err != nil {
-		t.Fatalf("complete 0.14.7 Forge/NeoForge release policy rejected: %v", err)
+		t.Fatalf("полная политика релиза 0.14.7 Forge/NeoForge отклонена: %v", err)
 	}
 }
 
@@ -203,11 +203,11 @@ func TestValidateProductionServerBridgeHA01911RequiresRedisAndFailClosedPolicy(t
 	}
 	cfg.RedisURL = ""
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("HA production without Redis must be rejected")
+		t.Fatal("промышленная конфигурация высокой доступности без Redis должна быть отклонена")
 	}
 	cfg.RedisURL = "redis://redis:6379/0"
 	cfg.ServerBridgeHARequired = false
 	if err := ValidateProduction(cfg); err == nil {
-		t.Fatal("replica identity without required HA policy must be rejected")
+		t.Fatal("идентичность реплики без обязательной политики высокой доступности должна быть отклонена")
 	}
 }

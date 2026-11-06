@@ -58,7 +58,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 			t.Fatal(e)
 		}
 		if _, e = db.ExecContext(ctx, string(b)); e != nil {
-			t.Fatalf("apply %s: %v", filename, e)
+			t.Fatalf("применение %s: %v", filename, e)
 		}
 	}
 	r := &SQLRepository{db: db}

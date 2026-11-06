@@ -76,7 +76,7 @@ func TestRateLimitAtomicAndRestart(t *testing.T) {
 	}
 	wg.Wait()
 	if allowed != 7 {
-		t.Fatalf("concurrent allowance %d, want 7", allowed)
+		t.Fatalf("лимит параллельных запросов %d, ожидалось 7", allowed)
 	}
 	if e := c.Close(); e != nil {
 		t.Fatal(e)
@@ -84,11 +84,11 @@ func TestRateLimitAtomicAndRestart(t *testing.T) {
 	c2 := openTestCoordinator(t, path)
 	res, e := c2.Allow(ctx, "auth|10.0.0.1", 7, time.Minute)
 	if e != nil || res.Allowed || res.Remaining != 0 {
-		t.Fatalf("rate limit reset after restart: %+v, %v", res, e)
+		t.Fatalf("ограничение частоты сбросилось после перезапуска: %+v, %v", res, e)
 	}
 	res, e = c2.Allow(ctx, "auth|10.0.0.2", 7, time.Minute)
 	if e != nil || !res.Allowed || res.Remaining != 6 {
-		t.Fatalf("key isolation: %+v, %v", res, e)
+		t.Fatalf("изоляция ключей: %+v, %v", res, e)
 	}
 }
 func TestLeaseFencingAndRestart(t *testing.T) {
@@ -97,15 +97,15 @@ func TestLeaseFencingAndRestart(t *testing.T) {
 	ctx := context.Background()
 	ok, e := c.AcquireCommandLease(ctx, "server", "command", "worker-a", "token-a", 5*time.Second)
 	if e != nil || !ok {
-		t.Fatalf("lease acquire: %t %v", ok, e)
+		t.Fatalf("захват аренды: %t %v", ok, e)
 	}
 	ok, e = c.AcquireCommandLease(ctx, "server", "command", "worker-b", "token-b", 5*time.Second)
 	if e != nil || ok {
-		t.Fatalf("must not steal unexpired lease %t %v", ok, e)
+		t.Fatalf("нельзя захватывать ещё действующую аренду: %t %v", ok, e)
 	}
 	valid, e := c.VerifyCommandLease(ctx, "server", "command", "worker-a", "token-a")
 	if e != nil || !valid {
-		t.Fatalf("lease disappeared %v", e)
+		t.Fatalf("аренда исчезла: %v", e)
 	}
 	if e = c.Close(); e != nil {
 		t.Fatal(e)
@@ -113,29 +113,29 @@ func TestLeaseFencingAndRestart(t *testing.T) {
 	c2 := openTestCoordinator(t, path)
 	valid, e = c2.VerifyCommandLease(ctx, "server", "command", "worker-a", "token-a")
 	if e != nil || !valid {
-		t.Fatalf("lease lost over restart %v", e)
+		t.Fatalf("аренда потеряна при перезапуске: %v", e)
 	}
 	if e = c2.ReleaseCommandLease(ctx, "server", "command", "worker-b", "token-b"); e != nil {
 		t.Fatal(e)
 	}
 	valid, _ = c2.VerifyCommandLease(ctx, "server", "command", "worker-a", "token-a")
 	if !valid {
-		t.Fatal("wrong owner released lease")
+		t.Fatal("аренду освободил посторонний владелец")
 	}
 	if e = c2.ReleaseCommandLease(ctx, "server", "command", "worker-a", "token-a"); e != nil {
 		t.Fatal(e)
 	}
 	ok, e = c2.AcquireCommandLease(ctx, "server", "command", "worker-a", "token-a", 5*time.Second)
 	if e != nil || ok {
-		t.Fatalf("ABA replayed lease token %t %v", ok, e)
+		t.Fatalf("повторное использование токена аренды по схеме ABA: %t %v", ok, e)
 	}
 	ok, e = c2.AcquireCommandLease(ctx, "server", "command", "worker-b", "token-b", 5*time.Second)
 	if e != nil || !ok {
-		t.Fatalf("fresh ownership %t %v", ok, e)
+		t.Fatalf("новое владение: %t %v", ok, e)
 	}
 	valid, _ = c2.VerifyCommandLease(ctx, "server", "command", "worker-a", "token-a")
 	if valid {
-		t.Fatal("stale token validates after fencing")
+		t.Fatal("устаревший токен проходит проверку после смены эпохи")
 	}
 }
 func TestSingleOwnerAndChannel(t *testing.T) {
@@ -152,11 +152,11 @@ func TestSingleOwnerAndChannel(t *testing.T) {
 	}
 	p.ResumeAfter = 16
 	if e := c.TouchChannel(ctx, p, 10*time.Second); e == nil {
-		t.Fatal("stale cursor accepted")
+		t.Fatal("принят устаревший курсор")
 	}
 	old, found, e := c.Channel(ctx, p.ServerID, p.RuntimeID, p.ChannelID)
 	if e != nil || !found || old.ResumeAfter != 17 {
-		t.Fatalf("cursor rolled back %+v found=%v err=%v", old, found, e)
+		t.Fatalf("курсор откатился назад: %+v найден=%v ошибка=%v", old, found, e)
 	}
 }
 func TestFailClosedParameters(t *testing.T) {
@@ -167,13 +167,13 @@ func TestFailClosedParameters(t *testing.T) {
 		t.Fatalf("Недопустимое ограничение: %v", e)
 	}
 	if _, e := c.AcquireCommandLease(ctx, "a", "b", "c", "", time.Second); !errors.Is(e, ErrInvalid) {
-		t.Fatalf("empty token: %v", e)
+		t.Fatalf("пустой токен: %v", e)
 	}
 	if e := c.Close(); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := c.Allow(ctx, "a", 2, time.Minute); e == nil {
-		t.Fatal("fail-open after close")
+		t.Fatal("после закрытия система ошибочно разрешает доступ")
 	}
 }
 
@@ -183,7 +183,7 @@ func TestLeaseExpiryFencingAndPrune(t *testing.T) {
 	ctx := context.Background()
 	granted, e := c.AcquireCommandLease(ctx, "srv", "cmd", "one", "first", time.Minute)
 	if e != nil || !granted {
-		t.Fatalf("first acquisition: %v", e)
+		t.Fatalf("первый захват аренды: %v", e)
 	}
 	e = c.db.Write(ctx, func(q sqlitedurable.Executor) error {
 		_, e := q.ExecContext(ctx, "UPDATE coord_leases SET expires_at=1 WHERE server_id='srv' AND command_id='cmd'")
@@ -194,18 +194,18 @@ func TestLeaseExpiryFencingAndPrune(t *testing.T) {
 	}
 	granted, e = c.AcquireCommandLease(ctx, "srv", "cmd", "two", "second", time.Minute)
 	if e != nil || !granted {
-		t.Fatalf("expired lease not reclaimed: %v", e)
+		t.Fatalf("истёкшая аренда не освобождена: %v", e)
 	}
 	valid, e := c.VerifyCommandLease(ctx, "srv", "cmd", "one", "first")
 	if e != nil || valid {
-		t.Fatalf("fenced old lease remains valid: %v", e)
+		t.Fatalf("устаревшая аренда остаётся действительной после смены эпохи: %v", e)
 	}
 	var fence int64
 	e = c.db.Read(ctx, func(q sqlitedurable.Executor) error {
 		return q.QueryRowContext(ctx, "SELECT fence FROM coord_leases WHERE server_id='srv' AND command_id='cmd'").Scan(&fence)
 	})
 	if e != nil || fence != 2 {
-		t.Fatalf("fence high-water: %d %v", fence, e)
+		t.Fatalf("максимальная эпоха защиты: %d %v", fence, e)
 	}
 	e = c.db.Write(ctx, func(q sqlitedurable.Executor) error {
 		if _, e := q.ExecContext(ctx, "INSERT INTO coord_limits(key_hash,count,resets_at,last_updated) VALUES('expired',1,1,1)"); e != nil {
@@ -225,6 +225,6 @@ func TestLeaseExpiryFencingAndPrune(t *testing.T) {
 		return q.QueryRowContext(ctx, "SELECT fence FROM coord_leases WHERE server_id='srv' AND command_id='cmd'").Scan(&fence)
 	})
 	if e != nil || fence != 2 {
-		t.Fatalf("prune erased tombstone/high-water mark: %v", e)
+		t.Fatalf("очистка удалила отметку об удалении или максимальную эпоху: %v", e)
 	}
 }

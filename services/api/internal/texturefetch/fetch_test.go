@@ -37,21 +37,21 @@ func TestURLRejections(t *testing.T) {
 		"https://textures.example.org/\r\nHost:evil", "https://textures.example.org:000443/x",
 	} {
 		if _, err := f.validateURL(raw); !errors.Is(err, ErrUnsafe) {
-			t.Errorf("accepted unsafe URL %q: %v", raw, err)
+			t.Errorf("принят небезопасный URL %q: %v", raw, err)
 		}
 	}
 	if _, err := f.validateURL("https://textures.example.org/img.png"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New("textures.example.org,*.example.org"); err == nil {
-		t.Fatal("wildcard allowed")
+		t.Fatal("разрешён подстановочный символ")
 	}
 	g, err := New("textures.example.org,cdn.example.net")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := g.validateURL("https://sub.textures.example.org/foo"); !errors.Is(err, ErrUnsafe) {
-		t.Fatal("allowlist suffix match bypass")
+		t.Fatal("обход сопоставления суффикса со списком разрешённых")
 	}
 }
 
@@ -61,12 +61,12 @@ func TestAddressBlockAndDNSRebinding(t *testing.T) {
 		"::1", "fc00::1", "fe80::1", "2001:db8::1", "2002:7f00:1::1", "64:ff9b::7f00:1", "::ffff:127.0.0.1",
 	} {
 		if safeAddress(netip.MustParseAddr(raw)) {
-			t.Errorf("allowed blocked IP %s", raw)
+			t.Errorf("разрешён заблокированный IP %s", raw)
 		}
 	}
 	for _, raw := range []string{"8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"} {
 		if !safeAddress(netip.MustParseAddr(raw)) {
-			t.Errorf("blocked public IP %s", raw)
+			t.Errorf("заблокирован публичный IP %s", raw)
 		}
 	}
 	f, _ := New("")
@@ -79,7 +79,7 @@ func TestAddressBlockAndDNSRebinding(t *testing.T) {
 		return nil, errors.New("should not dial")
 	}
 	if _, err := f.dialValidated(context.Background(), "tcp", "textures.example.org:443"); !errors.Is(err, ErrUnsafe) || called {
-		t.Fatalf("rebind not blocked: %v dialed=%t", err, called)
+		t.Fatalf("повторная привязка DNS не заблокирована: %v, соединение=%t", err, called)
 	}
 }
 
@@ -91,7 +91,7 @@ func TestHTTPSVerifiedFetchAndResourceLimits(t *testing.T) {
 	body := payload
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.Header.Get("Accept-Encoding") != "identity" || r.Header.Get("Cookie") != "" {
-			t.Errorf("untrusted headers forwarded: %+v", r.Header)
+			t.Errorf("переданы недоверенные заголовки: %+v", r.Header)
 		}
 		w.Header().Set("Content-Type", mime)
 		if encoding != "" {
@@ -120,7 +120,7 @@ func TestHTTPSVerifiedFetchAndResourceLimits(t *testing.T) {
 	// и 127.0.0.1. Произвольное DNS-имя не проходит проверку имени хоста в сертификате.
 	_, err := f.Fetch(context.Background(), "https://textures.example.org/image.png", "skin", "classic")
 	if err == nil || !strings.Contains(err.Error(), "certificate") {
-		t.Fatalf("must verify hostname: %v", err)
+		t.Fatalf("необходимо проверять имя хоста: %v", err)
 	}
 	f2, _ := New("example.com")
 	f2.roots = pool
@@ -131,29 +131,29 @@ func TestHTTPSVerifiedFetchAndResourceLimits(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Width != 64 || result.Height != 64 || result.Digest == "" || dialAddress != "8.8.8.8:443" {
-		t.Fatalf("invalid result %+v dial %s", result, dialAddress)
+		t.Fatalf("неверный результат: %+v, соединение=%s", result, dialAddress)
 	}
 	responseCode = http.StatusFound
 	if _, err = f2.Fetch(context.Background(), "https://example.com/redirect", "skin", "classic"); !errors.Is(err, ErrRedirect) {
-		t.Fatalf("redirect: %v", err)
+		t.Fatalf("перенаправление: %v", err)
 	}
 	responseCode = http.StatusOK
 	mime = "text/html"
 	if _, err = f2.Fetch(context.Background(), "https://example.com/html", "skin", "classic"); !errors.Is(err, ErrUnsafe) {
-		t.Fatalf("MIME: %v", err)
+		t.Fatalf("тип MIME: %v", err)
 	}
 	mime = "image/png"
 	encoding = "gzip"
 	if _, err = f2.Fetch(context.Background(), "https://example.com/gzip", "skin", "classic"); !errors.Is(err, ErrUnsafe) {
-		t.Fatalf("encoded response: %v", err)
+		t.Fatalf("закодированный ответ: %v", err)
 	}
 	encoding = ""
 	body = bytes.Repeat([]byte("x"), 4<<20+1)
 	if _, err = f2.Fetch(context.Background(), "https://example.com/oversize", "skin", "classic"); !errors.Is(err, ErrTooLarge) {
-		t.Fatalf("large stream: %v", err)
+		t.Fatalf("слишком большой поток: %v", err)
 	}
 	body = []byte("not PNG")
 	if _, err = f2.Fetch(context.Background(), "https://example.com/invalid", "skin", "classic"); err == nil {
-		t.Fatal("accepted invalid PNG")
+		t.Fatal("принят некорректный PNG")
 	}
 }
