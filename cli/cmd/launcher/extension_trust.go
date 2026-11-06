@@ -13,11 +13,11 @@ import (
 func extensionTrustBackend02012(args []string) (string, string, error) {
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return "", "", errors.New("extension trust/recovery требует --backend <url>")
+		return "", "", errors.New("Для проверки доверия и восстановления расширений требуется --backend <url>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return "", "", errors.New("extension trust/recovery требует --token или LAUNCHER_TOKEN")
+		return "", "", errors.New("Для проверки доверия и восстановления расширений требуется --token или LAUNCHER_TOKEN")
 	}
 	return backend, token, nil
 }
@@ -149,7 +149,7 @@ func handleExtensionEmergency02012(args []string) error {
 		return writeOrPrintJSON(out, p)
 	case "clear":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("emergency clear требует extension id")
+			return errors.New("Для аварийного сброса требуется идентификатор расширения")
 		}
 		q := url.Values{}
 		q.Set("scope", scope)

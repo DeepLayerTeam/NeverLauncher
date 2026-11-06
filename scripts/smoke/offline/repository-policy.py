@@ -447,7 +447,7 @@ if (
     "hardware-bound-identity.py" not in preflight
     or "scripts/smoke/offline/hardware-bound-identity.py" not in ci
 ):
-    fail("Проверка «аппаратная привязка идентичности 0.12.3» не подключена к preflight/CI")
+    fail("Проверка «аппаратная привязка идентичности 0.12.3» не подключена к предварительным проверкам и CI")
 if "libtss2-dev" not in ci:
     fail("0.12.3: в CI отсутствует зависимость сборки Linux TPM libtss2-dev")
 if "Hardware-bound identity gate OK" not in hardware_gate:
@@ -489,7 +489,7 @@ if (
     "challenge-response-attestation.py" not in preflight
     or "scripts/smoke/offline/challenge-response-attestation.py" not in ci
 ):
-    fail("Проверка «0.12.4: аттестация по схеме запрос–ответ» не подключена к preflight/CI")
+    fail("Проверка «0.12.4: аттестация по схеме запрос–ответ» не подключена к предварительным проверкам и CI")
 if "Challenge-response attestation gate OK" not in attestation_gate:
     fail("Не завершена реализация «0.12.4: аттестация по схеме запрос–ответ»")
 for forbidden in [
@@ -546,7 +546,7 @@ if (
     "device-management-revocation.py" not in preflight
     or "scripts/smoke/offline/device-management-revocation.py" not in ci
 ):
-    fail("Проверка «0.12.5: управление устройствами» не подключена к preflight/CI")
+    fail("Проверка «0.12.5: управление устройствами» не подключена к предварительным проверкам и CI")
 if "Device Management + Revocation gate OK" not in device_management_gate:
     fail("Не завершена реализация «0.12.5: управление устройствами»")
 
@@ -598,7 +598,7 @@ if (
     "session-device-risk-0126.py" not in preflight
     or "scripts/smoke/offline/session-device-risk-0126.py" not in ci
 ):
-    fail("Проверка «0.12.6: риски сеанса и устройства» не подключена к preflight/CI")
+    fail("Проверка «0.12.6: риски сеанса и устройства» не подключена к предварительным проверкам и CI")
 if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
     fail("Не завершена реализация «0.12.6: риски сеанса и устройства»")
 
@@ -658,7 +658,7 @@ if (
     "minecraft-serverbridge-trust-0127.py" not in preflight
     or "scripts/smoke/offline/minecraft-serverbridge-trust-0127.py" not in ci
 ):
-    fail("Проверка «доверие Minecraft/ServerBridge 0.12.7» не подключена к preflight/CI")
+    fail("Проверка «доверие Minecraft/ServerBridge 0.12.7» не подключена к предварительным проверкам и CI")
 if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate:
     fail("Не завершена реализация «проверка доверия Minecraft/ServerBridge 0.12.7»")
 
@@ -748,7 +748,7 @@ for required in [
 ]:
     if required not in release_signing:
         fail(f"release signing не реализует настоящий Ed25519 primitive: {required}")
-if "bundled key не считается trust anchor" not in release_signing:
+if "ключ из комплекта поставки не считается корневым ключом доверия" not in release_signing:
     fail("release verification должен требовать внешний trusted public key")
 for forbidden in [
     '[]byte(hex.EncodeToString(sum[:])+"  SHA256SUMS\\n")',
@@ -1608,7 +1608,7 @@ if (
     "cross-platform-key-recovery-0128.py" not in preflight
     or "scripts/smoke/offline/cross-platform-key-recovery-0128.py" not in ci
 ):
-    fail("Проверка «0.12.8: восстановление ключа» не подключена к preflight/CI")
+    fail("Проверка «0.12.8: восстановление ключа» не подключена к предварительным проверкам и CI")
 
 
 # В 0.12.9: E2E доверенных устройств и публичная матрица доверия. PASS допустим только по
@@ -1732,7 +1732,7 @@ if (
     "device-trust-e2e-matrix-0129.py" not in preflight
     or "scripts/smoke/offline/device-trust-e2e-matrix-0129.py" not in ci
 ):
-    fail("Проверка «матрица доверия к устройствам 0.12.9» не подключена к preflight/CI")
+    fail("Проверка «матрица доверия к устройствам 0.12.9» не подключена к предварительным проверкам и CI")
 if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
     fail("0.12.9 Связка строгих производственных E2E-проверок настроена не полностью")
 if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_gate:
@@ -1806,7 +1806,7 @@ if (
     "device-trust-migration-stabilization-01210.py" not in preflight
     or "scripts/smoke/offline/device-trust-migration-stabilization-01210.py" not in ci
 ):
-    fail("Проверка «стабилизация 0.12.10» не подключена к preflight/CI")
+    fail("Проверка «стабилизация 0.12.10» не подключена к предварительным проверкам и CI")
 if (
     "run-device-trust-migration-e2e.sh" not in preflight
     or "run-device-trust-migration-e2e.sh" not in ci
@@ -1933,7 +1933,7 @@ if (
     "guard-attestation-v2-01810.py" not in preflight
     or "guard-attestation-v2-01810.py" not in ci
 ):
-    fail("Проверка «0.18.10 Guard Attestation v2 mandatory gate» не подключена к preflight/CI")
+    fail("Проверка «0.18.10 Guard Attestation v2 mandatory gate» не подключена к предварительным проверкам и CI")
 
 # В 0.13.2: свидетельства целостности Guard Windows v1 собирает отдельный
 # Guard-процесс и аутентифицирует через существующий локальный IPC-сеанс.
@@ -1969,7 +1969,7 @@ if (
     "guard-integrity-evidence-0132.py" not in preflight
     or "guard-integrity-evidence-0132.py" not in ci
 ):
-    fail("Проверка «0.13.2 integrity evidence gate» не подключена к preflight/CI")
+    fail("Проверка «0.13.2 integrity evidence gate» не подключена к предварительным проверкам и CI")
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
     fail("Не завершена реализация «0.13.2 mandatory integrity evidence gate»")
 
@@ -2019,7 +2019,7 @@ if (
     "guard-process-policy-0133.py" not in preflight
     or "guard-process-policy-0133.py" not in ci
 ):
-    fail("Проверка «0.13.3 process policy gate» не подключена к preflight/CI")
+    fail("Проверка «0.13.3 process policy gate» не подключена к предварительным проверкам и CI")
 if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
     fail("Не завершена реализация «0.13.3 mandatory process policy release gate»")
 
@@ -2097,7 +2097,7 @@ if (
     "guard-ci-release-certification-0139.py" not in preflight
     or "guard-ci-release-certification-0139.py" not in ci
 ):
-    fail("Проверка «0.13.9 Guard release certification gate» не подключена к preflight/CI")
+    fail("Проверка «0.13.9 Guard release certification gate» не подключена к предварительным проверкам и CI")
 if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
     fail("Не завершена реализация «0.13.9 mandatory Guard release gate»")
 if not (ROOT / "cli/cmd/launcher/guard_ci_release_test.go").is_file():
@@ -2167,7 +2167,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         "serverbridge-crypto-node-identities-0142.py" not in preflight
         or "serverbridge-crypto-node-identities-0142.py" not in ci
     ):
-        fail("Проверка «0.14.2: криптографическая идентичность узла» не подключена к preflight/CI")
+        fail("Проверка «0.14.2: криптографическая идентичность узла» не подключена к предварительным проверкам и CI")
     if (
         "run-serverbridge-crypto-identity-migration-e2e.sh" not in preflight
         or "run-serverbridge-crypto-identity-migration-e2e.sh" not in ci
@@ -2239,7 +2239,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         "serverbridge-one-time-join-tickets-0143.py" not in preflight
         or "serverbridge-one-time-join-tickets-0143.py" not in ci
     ):
-        fail("Проверка «0.14.3: одноразовый билет подключения» не подключена к preflight/CI")
+        fail("Проверка «0.14.3: одноразовый билет подключения» не подключена к предварительным проверкам и CI")
     if (
         "run-one-time-join-ticket-migration-e2e.sh" not in preflight
         or "run-one-time-join-ticket-migration-e2e.sh" not in ci
@@ -2302,7 +2302,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "delivery-manifest-platform-architecture-0151.py" not in preflight
         or "delivery-manifest-platform-architecture-0151.py" not in ci
     ):
-        fail("Проверка «0.15.1 delivery gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.1 delivery gate» не подключена к предварительным проверкам и CI")
     if "Delivery Manifest + platform/architecture gate: OK" not in delivery_gate_0151:
         fail("Не завершена реализация «0.15.1 mandatory delivery gate»")
     if not (ROOT / "cli/cmd/launcher/delivery_manifest_test.go").is_file():
@@ -2383,7 +2383,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "linux-x64-arm64-production-packages-0153.py" not in preflight
         or "linux-x64-arm64-production-packages-0153.py" not in ci
     ):
-        fail("Проверка «0.15.3 Linux dual-arch package gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.3 Linux dual-arch package gate» не подключена к предварительным проверкам и CI")
     if "Linux x64 + ARM64 production packages gate: OK" not in linux_gate_0153:
         fail("Не завершена реализация «0.15.3 mandatory Linux production package gate»")
     if not (ROOT / "cli/cmd/launcher/linux_delivery_test.go").is_file():
@@ -2468,7 +2468,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "notarized-macos-x64-arm64-0154.py" not in preflight
         or "notarized-macos-x64-arm64-0154.py" not in ci
     ):
-        fail("Проверка «0.15.4 macOS notarization gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.4 macOS notarization gate» не подключена к предварительным проверкам и CI")
     if "notarized macOS x64 + ARM64 gate: OK" not in macos_gate_0154:
         fail("Не завершена реализация «0.15.4 mandatory macOS notarization gate»")
     if not (ROOT / "cli/cmd/launcher/macos_delivery_test.go").is_file():
@@ -2571,7 +2571,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "managed-jre-distribution-0155.py" not in preflight
         or "managed-jre-distribution-0155.py" not in ci
     ):
-        fail("Проверка «0.15.5 Managed JRE gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.5 Managed JRE gate» не подключена к предварительным проверкам и CI")
     if "Managed JRE Distribution gate: OK" not in jre_gate_0155:
         fail("Не завершена реализация «0.15.5 mandatory Managed JRE Distribution gate»")
     if not (ROOT / "cli/cmd/launcher/managed_jre_delivery_test.go").is_file():
@@ -2624,7 +2624,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "managed-java-II-0165.py" not in preflight
         or "managed-java-II-0165.py" not in ci
     ):
-        fail("Проверка «0.16.5 Managed Java II gate» не подключена к preflight/CI")
+        fail("Проверка «0.16.5 Managed Java II gate» не подключена к предварительным проверкам и CI")
     if "managed-java-II-8-16-17-21-25" not in release_commands_0165:
         fail("0.16.5: сертификация выпуска не требует Managed Java II")
     if "MANAGED_JAVA_II_EVIDENCE.json" not in release_builder_0165:
@@ -3072,7 +3072,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "unified-transactional-updater-core-0156.py" not in preflight
         or "unified-transactional-updater-core-0156.py" not in ci
     ):
-        fail("Проверка «0.15.6 updater gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.6 updater gate» не подключена к предварительным проверкам и CI")
     if ci.count("update self-test") < 4:
         fail("0.15.6: в CI отсутствуют нативные самопроверки Runtime обновляющего компонента")
 
@@ -3175,7 +3175,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "desktop-guard-runtime-transactional-update-0157.py" not in preflight
         or "desktop-guard-runtime-transactional-update-0157.py" not in ci
     ):
-        fail("Проверка «0.15.7 component updater gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.7 component updater gate» не подключена к предварительным проверкам и CI")
     if ci.count("update component-self-test") < 4:
         fail("0.15.7: в CI отсутствуют самопроверки нативного обновления компонентов")
 
@@ -3237,7 +3237,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "release-verification-v2-trust-lifecycle-0158.py" not in preflight
         or "release-verification-v2-trust-lifecycle-0158.py" not in ci
     ):
-        fail("Проверка «0.15.8 verification gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.8 verification gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.15.9: публичная матрица производственной поставки показывает полный перечень
@@ -3312,7 +3312,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "public-production-delivery-matrix-e2e-0159.py" not in preflight
         or "public-production-delivery-matrix-e2e-0159.py" not in ci
     ):
-        fail("Проверка «0.15.9 public delivery gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.9 public delivery gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.13.0: сертификация выпуска Device Trust и контракт выполнения.
@@ -3339,7 +3339,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         "device-trust-release-0130.py" not in preflight
         or "device-trust-release-0130.py" not in ci
     ):
-        fail("Проверка «0.13.0 Device Trust Release gate» не подключена к preflight/CI")
+        fail("Проверка «0.13.0 Device Trust Release gate» не подключена к предварительным проверкам и CI")
 
 # Миграция и стабилизация 0.15.10: проверьте перенос состояния, блокировки и
 # восстановление.
@@ -3408,7 +3408,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "migration-stabilization-01510.py" not in preflight
         or "migration-stabilization-01510.py" not in ci
     ):
-        fail("Проверка «0.15.10 stabilization gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.10 stabilization gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.15.11: кандидат производственного выпуска фиксирует весь набор до подписи
@@ -3492,7 +3492,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "production-release-candidate-01511.py" not in preflight
         or "production-release-candidate-01511.py" not in ci
     ):
-        fail("Проверка «0.15.11 Production Release Candidate gate» не подключена к preflight/CI")
+        fail("Проверка «0.15.11 Production Release Candidate gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.16.0: выпуск производственной поставки переводит кандидата точного коммита в стабильную
@@ -3575,7 +3575,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "production-delivery-release-0160.py" not in preflight
         or "production-delivery-release-0160.py" not in ci
     ):
-        fail("Проверка «0.16.0 Production Delivery Release gate» не подключена к preflight/CI")
+        fail("Проверка «0.16.0 Production Delivery Release gate» не подключена к предварительным проверкам и CI")
 
 # В 0.17.0: Minecraft Compatibility II GA связывает каждый PASS с
 # конкретным бинарником JRE. Исправления сохраняют всю старую матрицу
@@ -3700,7 +3700,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "minecraft-compatibility-II-ga-0170.py" not in preflight
         or "minecraft-compatibility-II-ga-0170.py" not in ci
     ):
-        fail("Проверка «0.17.0 Minecraft Compatibility II GA gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.0 Minecraft Compatibility II GA gate» не подключена к предварительным проверкам и CI")
 
 # В 0.17.1: Fabric Compatibility II требует для всей стабильной линии 1.14+
 # настоящую материализацию и свидетельства запуска, а не только объявления целей.
@@ -3790,7 +3790,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fabric-compatibility-II-0171.py" not in preflight
         or "fabric-compatibility-II-0171.py" not in ci
     ):
-        fail("Проверка «0.17.1 Fabric Compatibility II gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.1 Fabric Compatibility II gate» не подключена к предварительным проверкам и CI")
 
 # В 0.17.2: Quilt Compatibility II расширяет настоящую сертификацию клиентов на
 # стабильную линейку Quilt и требует выбора конкретного стабильного Quilt Loader.
@@ -3886,7 +3886,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "quilt-compatibility-II-0172.py" not in preflight
         or "quilt-compatibility-II-0172.py" not in ci
     ):
-        fail("Проверка «0.17.2 Quilt Compatibility II gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.2 Quilt Compatibility II gate» не подключена к предварительным проверкам и CI")
 
 # В 0.17.3: Forge Modern делает линейку 1.13.2+ с процессорными установщиками
 # реально запускаемой: процессоры должны выполниться, создать проверенный профиль,
@@ -4000,7 +4000,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Forge Modern 0.17.3 gate: OK" not in forge_gate_0173:
         fail("Не завершена реализация «0.17.3 mandatory Forge Modern gate»")
     if "forge-modern-0173.py" not in preflight or "forge-modern-0173.py" not in ci:
-        fail("Проверка «0.17.3 Forge Modern gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.3 Forge Modern gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.4: Forge Legacy привязывает настоящий универсальный V1-установщик
@@ -4102,7 +4102,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "forge-legacy-1122-0174.py" not in preflight
         or "forge-legacy-1122-0174.py" not in ci
     ):
-        fail("Проверка «0.17.4 Forge Legacy gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.4 Forge Legacy gate» не подключена к предварительным проверкам и CI")
 
 # В 0.17.5: Forge Legacy 1.7.10 включает настоящий путь V1 universal и
 # LaunchWrapper/cpw FML, отдельно от 1.12.2 и современных процессоров.
@@ -4205,7 +4205,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "forge-legacy-1710-0175.py" not in preflight
         or "forge-legacy-1710-0175.py" not in ci
     ):
-        fail("Проверка «0.17.5 Forge Legacy gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.5 Forge Legacy gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.6: NeoForge Compatibility II связывает реальные процессорные установщики,
@@ -4346,7 +4346,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "neoforge-compatibility-II-0176.py" not in preflight
         or "neoforge-compatibility-II-0176.py" not in ci
     ):
-        fail("Проверка «0.17.6 NeoForge gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.6 NeoForge gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.7: разрешение и закрепление загрузчиков обеспечивает воспроизводимость каждого
@@ -4443,7 +4443,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-resolution-pinning-0177.py" not in preflight
         or "loader-resolution-pinning-0177.py" not in ci
     ):
-        fail("Проверка «0.17.7 loader resolution pinning gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.7 loader resolution pinning gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.8: E2E загрузчиков доказывает, что настоящий подготовленный клиент
@@ -4537,7 +4537,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-native-e2e-0178.py" not in preflight
         or "loader-native-e2e-0178.py" not in ci
     ):
-        fail("Проверка «0.17.8 loader-native E2E gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.8 loader-native E2E gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.9: кроссплатформенные загрузчики сертифицируют настоящих клиентов и нативные
@@ -4630,7 +4630,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "cross-platform-loaders-0179.py" not in preflight
         or "cross-platform-loaders-0179.py" not in ci
     ):
-        fail("Проверка «0.17.9 cross-platform loader gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.9 cross-platform loader gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.10: усиление загрузчиков доказывает восстановление по неизменяемому lock-файлу
@@ -4717,7 +4717,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-hardening-01710.py" not in preflight
         or "loader-hardening-01710.py" not in ci
     ):
-        fail("Проверка «0.17.10 Loader Hardening gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.10 Loader Hardening gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.11: кандидат Loader Compatibility RC создаёт один полный
@@ -4841,7 +4841,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-compatibility-rc-01711.py" not in preflight
         or "loader-compatibility-rc-01711.py" not in ci
     ):
-        fail("Проверка «0.17.11 Loader Compatibility RC gate» не подключена к preflight/CI")
+        fail("Проверка «0.17.11 Loader Compatibility RC gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.18.0: Loader Compatibility GA превращает данные RC в реальную среду поддержки
@@ -4991,7 +4991,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "windows-protection-core-II-0181.py" not in preflight
         or "windows-protection-core-II-0181.py" not in ci
     ):
-        fail("Проверка «0.18.1 Windows Protection Core II gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.1 Windows Protection Core II gate» не подключена к предварительным проверкам и CI")
     if "--test guard_windows" not in ci or "-D warnings" not in ci:
         fail(
             "0.18.1 Для Windows Protection Core II отсутствуют компиляция, интеграционные проверки или clippy в CI Windows"
@@ -5094,7 +5094,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Guard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
         fail("Не завершена реализация «0.18.2 mandatory Guard Sensor gate»")
     if "guard-sensor-0182.py" not in preflight or "guard-sensor-0182.py" not in ci:
-        fail("Проверка «0.18.2 Guard Sensor gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.2 Guard Sensor gate» не подключена к предварительным проверкам и CI")
     for required in [
         "cargo build --manifest-path runtime/guard-sensor/Cargo.toml",
         "--test guard_sensor_windows",
@@ -5182,7 +5182,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-module-guard-0183.py" not in preflight
         or "guard-module-guard-0183.py" not in ci
     ):
-        fail("Проверка «0.18.3 Module Guard gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.3 Module Guard gate» не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.3: для Module Guard отсутствуют реальные интеграционные проверки Windows и clippy в CI")
 
@@ -5271,7 +5271,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-aggressive-hook-engine-0184.py" not in preflight
         or "guard-aggressive-hook-engine-0184.py" not in ci
     ):
-        fail("Проверка «0.18.4 Hook Engine gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.4 Hook Engine gate» не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.4: для Hook Engine отсутствуют интеграционные проверки Windows и clippy в CI")
 
@@ -5369,7 +5369,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-memory-integrity-0185.py" not in preflight
         or "guard-memory-integrity-0185.py" not in ci
     ):
-        fail("Проверка «0.18.5 Memory Integrity gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.5 Memory Integrity gate» не подключена к предварительным проверкам и CI")
     if (
         "runtime/guard-memory-probe/Cargo.toml" not in ci
         or "GUARD_MEMORY_PROBE_DLL" not in ci
@@ -5486,7 +5486,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-thread-process-integrity-0186.py" not in preflight
         or "guard-thread-process-integrity-0186.py" not in ci
     ):
-        fail("Проверка «0.18.6 Thread & Process Integrity gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.6 Thread & Process Integrity gate» не подключена к предварительным проверкам и CI")
     if (
         "runtime/guard-thread-probe/Cargo.toml" not in ci
         or "GUARD_THREAD_PROBE_DLL" not in ci
@@ -5599,7 +5599,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-debug-instrumentation-0187.py" not in preflight
         or "guard-debug-instrumentation-0187.py" not in ci
     ):
-        fail("Проверка «0.18.7 Debug Guard gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.7 Debug Guard gate» не подключена к предварительным проверкам и CI")
     if (
         "runtime/guard-debug-probe/Cargo.toml" not in ci
         or "GUARD_DEBUG_PROBE_EXE" not in ci
@@ -5692,7 +5692,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-jvm-aware-protection-0188.py" not in preflight
         or "guard-jvm-aware-protection-0188.py" not in ci
     ):
-        fail("Проверка «0.18.8 JVM-Aware Protection gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.8 JVM-Aware Protection gate» не подключена к предварительным проверкам и CI")
     for required in [
         "java: [8, 16, 17, 21, 25]",
         "runtime/guard-jvm-probe/Cargo.toml",
@@ -5777,7 +5777,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-continuous-guard-0189.py" not in preflight
         or "guard-continuous-guard-0189.py" not in ci
     ):
-        fail("Проверка «0.18.9 Continuous Guard gate» не подключена к preflight/CI")
+        fail("Проверка «0.18.9 Continuous Guard gate» не подключена к предварительным проверкам и CI")
     if "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat" not in ci:
         fail("0.18.9: для Continuous Guard в CI отсутствует реальная проверка heartbeat-интеграции на Windows")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:

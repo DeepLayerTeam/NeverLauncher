@@ -274,7 +274,7 @@ mod imp {
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
         if pgid < 0 { return Err(os_err("Ошибка: «macOS getpgid»")); }
         let own_process_group = pgid as u32 == pid;
-        if !own_process_group { return Err("Ошибка: «macOS runtime process group policy verification»".to_string()); }
+        if !own_process_group { return Err("Ошибка: «проверка политики группы процессов среды выполнения macOS»".to_string()); }
         Ok(MacOSRuntimeProcessPolicyReport {
             schema: "runtime/macos-process-policy/v1".to_string(),
             policy_version: 1,

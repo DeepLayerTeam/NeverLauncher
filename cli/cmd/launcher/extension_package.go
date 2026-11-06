@@ -615,7 +615,7 @@ func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0
 	}
 	pkgID := "SPDXRef-Package-Extension"
 	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://launcher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
-		return errors.New("SBOM.spdx.json metadata не соответствует manifest")
+		return errors.New("SBOM.spdx.json метаданные не соответствуют манифесту")
 	}
 	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Инструмент: Launcher CLI ") {
 		return errors.New("SBOM.spdx.json creationInfo некорректен")
@@ -625,7 +625,7 @@ func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0
 	}
 	pkg := doc.Packages[0]
 	if pkg.SPDXID != pkgID || pkg.Name != manifest.Name || pkg.VersionInfo != manifest.Version || pkg.DownloadLocation != "NOASSERTION" || !pkg.FilesAnalyzed || pkg.LicenseConcluded != "NOASSERTION" || pkg.LicenseDeclared != "NOASSERTION" {
-		return errors.New("SBOM.spdx.json package metadata не соответствует manifest")
+		return errors.New("SBOM.spdx.json package метаданные не соответствуют манифесту")
 	}
 	if len(doc.Files) != len(payload.Files) || len(doc.Relationships) != len(payload.Files)+1 {
 		return errors.New("SBOM.spdx.json file/relationship count не соответствует payload")
@@ -638,7 +638,7 @@ func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0
 		fileID := "SPDXRef-File-" + hex.EncodeToString(pathDigest[:8])
 		actual := doc.Files[i]
 		if actual.SPDXID != fileID || actual.FileName != "./"+extensionPackagePayloadPrefix0202+file.Path || len(actual.Checksums) != 1 || actual.Checksums[0].Algorithm != "SHA256" || actual.Checksums[0].ChecksumValue != file.SHA256 {
-			return fmt.Errorf("SBOM.spdx.json file entry %d не соответствует payload", i)
+			return fmt.Errorf("SBOM.spdx.json запись файла %d не соответствует содержимому", i)
 		}
 		expectedRel := extensionSPDXRelationship0202{SPDXElementID: pkgID, RelationshipType: "CONTAINS", RelatedSPDXElement: fileID}
 		if doc.Relationships[i+1] != expectedRel {
@@ -687,10 +687,10 @@ func buildExtensionPackageDescriptor0202(manifest CanonicalExtensionManifest0201
 
 func validateExtensionArchivePath0202(name string) error {
 	if name == "" || len(name) > 1024 {
-		return errors.New("archive path пуст или слишком длинный")
+		return errors.New("Путь к архиву пуст или слишком длинный")
 	}
 	if strings.ContainsRune(name, '\x00') || strings.Contains(name, "\\") || strings.HasPrefix(name, "/") || path.IsAbs(name) {
-		return errors.New("archive path должен быть относительным POSIX path")
+		return errors.New("Путь к архиву должен быть относительным путём POSIX")
 	}
 	if path.Clean(name) != name || name == "." || name == ".." || strings.HasPrefix(name, "../") || strings.Contains(name, "/../") || strings.HasSuffix(name, "/") {
 		return errors.New("archive path содержит traversal/неcanonical компоненты")
@@ -857,7 +857,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	buildTime := time.Unix(descriptor.BuildEpoch, 0).UTC()
 	for _, entry := range reader.File {
 		if !sameZipTimestamp0202(entry.Modified.UTC(), buildTime) {
-			return nil, fmt.Errorf("неканонический ZIP timestamp для %s", entry.Name)
+			return nil, fmt.Errorf("Неканоническая временная метка ZIP для %s", entry.Name)
 		}
 	}
 

@@ -79,7 +79,7 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 func normalizeSourceCommit01511(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if !sourceCommitRE01511.MatchString(value) {
-		return "", fmt.Errorf("Для промышленный релиз-кандидат требуется хеш исходного коммита из 40 или 64 шестнадцатеричных знаков; получено %q", value)
+		return "", fmt.Errorf("Для промышленного релиз-кандидата требуется хеш исходного коммита из 40 или 64 шестнадцатеричных знаков; получено %q", value)
 	}
 	return value, nil
 }
@@ -169,7 +169,7 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	for _, file := range []string{compatibilityCertificationReleaseFile, deviceTrustCertificationReleaseFile, guardCICertificationReleaseFile} {
 		certCommit, err := readCertificationCommit01511(filepath.Join(dir, file))
 		if err != nil {
-			return fmt.Errorf("Для промышленный релиз-кандидат требуется %s с точным идентификатором исходного коммита: %w", file, err)
+			return fmt.Errorf("Для промышленного релиз-кандидата требуется %s с точным идентификатором исходного коммита: %w", file, err)
 		}
 		if !strings.EqualFold(certCommit, commit) {
 			return fmt.Errorf("Коммит исходников %s не совпадает: кандидат=%s, сертификация=%s", file, commit, certCommit)

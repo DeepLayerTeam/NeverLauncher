@@ -83,7 +83,7 @@ require(
         ".manage(GuardSupervisor::new())",
         "guard.ensure_started().await?",
         "guard.ping().await?",
-        "launch заблокирован: Guard Windows boundary",
+        "launch заблокирован: граница защиты Guard для Windows",
         "guard_status",
     ],
     "Запуск Desktop с блокировкой при ошибке Guard",

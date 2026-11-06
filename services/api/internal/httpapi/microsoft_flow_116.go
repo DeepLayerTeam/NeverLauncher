@@ -129,7 +129,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := s.saveProviderCredential116(user, identity, proof.ProviderToken, false); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить Microsoft provider credential")
+		writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить учётные данные провайдера Microsoft")
 		return
 	}
 	now := time.Now().UTC()

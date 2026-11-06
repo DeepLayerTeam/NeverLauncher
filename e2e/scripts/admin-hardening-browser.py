@@ -51,7 +51,7 @@ async def main():
             status = await request.get(api + "/api/v1/status", timeout=15000)
             if status.status != 200 or (await status.json()).get("version") != version:
                 raise AssertionError(
-                    f"Версия подготовленного Backend не совпадает: ожидалось {version}, status={status.status}"
+                    f"Версия подготовленного Backend не совпадает: ожидалось {version}, статус={status.status}"
                 )
             if (
                 expected_commit

@@ -281,13 +281,13 @@ public final class LauncherApiClient {
                 "&features=" + URLEncoder.encode(features, StandardCharsets.UTF_8);
             HttpResponse<String> response = sendUnsignedGetWithFailover(config.capabilitiesPath() + "?" + query);
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IOException("Согласование возможностей ServerBridge Protocol v3 завершилось ошибкой HTTP " + response.statusCode());
+                throw new IOException("Согласование возможностей протокола ServerBridge v3 завершилось ошибкой HTTP " + response.statusCode());
             }
             String raw = response.body() == null ? "" : response.body();
             int selected = extractJsonInt(raw, "negotiatedProtocolVersion");
             List<String> enabled = extractJsonStringArray(raw, "features");
             if (selected != BridgeDefaults.PROTOCOL_VERSION) {
-                throw new IOException("Обнаружено понижение версии ServerBridge Protocol v3: Backend выбрал " + selected);
+                throw new IOException("Обнаружено понижение версии протокола ServerBridge v3: Backend выбрал " + selected);
             }
             for (String required : BridgeProtocolSecurity.REQUIRED_FEATURES) {
                 if (!enabled.contains(required)) throw new IOException("Обнаружено снижение требований безопасности ServerBridge: отсутствует " + required);

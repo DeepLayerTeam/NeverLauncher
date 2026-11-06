@@ -31,7 +31,7 @@ def validate(folder, source_commit, version, run_id, run_attempt):
     present.discard("extension-acceptance-certificate")
     if present != set(TARGETS):
         raise ValueError(
-            f"platform evidence: отсутствует or unexpected: {sorted(set(TARGETS) - present)} / {sorted(present - set(TARGETS))}"
+            f"Отсутствующие и неожиданные платформы в свидетельствах: {sorted(set(TARGETS) - present)} / {sorted(present - set(TARGETS))}"
         )
     result = {}
     for name in TARGETS:

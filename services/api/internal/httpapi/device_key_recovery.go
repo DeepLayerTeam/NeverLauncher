@@ -122,7 +122,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 		oldDeviceID = strings.TrimSpace(session.TrustedDeviceID)
 	}
 	if oldDeviceID == "" {
-		writeError(w, http.StatusBadRequest, "oldDeviceId обязателен для recovery")
+		writeError(w, http.StatusBadRequest, "Для восстановления требуется oldDeviceId")
 		return
 	}
 	oldDevice, err := s.Repo.GetTrustedDevice(claims.Sub, oldDeviceID)
@@ -170,12 +170,12 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 	}
 	challengeID, err := randomToken("dkr")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	challenge, err := randomToken("dkc")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	now := time.Now().UTC()
@@ -231,7 +231,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		return
 	}
 	if metadataString0121(ch.Metadata, "sessionId") != claims.SessionID {
-		writeError(w, http.StatusUnauthorized, "replacement challenge создан для другой сессии")
+		writeError(w, http.StatusUnauthorized, "Запрос на замену создан для другой сессии")
 		return
 	}
 	issuedAt, err1 := time.Parse(time.RFC3339Nano, metadataString0121(ch.Metadata, "issuedAt"))
@@ -281,7 +281,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	if mode == "rotate" {
 		oldPub, err := decodeDevicePublicKey0123(oldDevice.PublicKey, oldDevice.KeyAlgorithm)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "исходный device public key повреждён")
+			writeError(w, http.StatusInternalServerError, "Исходный публичный ключ устройства повреждён")
 			return
 		}
 		if err := verifyDeviceSignature0123(oldPub, payload, req.OldSignature); err != nil {

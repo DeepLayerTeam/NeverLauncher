@@ -245,7 +245,7 @@ func (s Server) authPasskeyStepUpBegin117(w http.ResponseWriter, r *http.Request
 	}
 	challenge, err := newChallengeBytes117()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	token, err := s.State.Passkeys.createChallenge(claims.Sub, "passkey-step-up", challenge, map[string]any{"sessionId": claims.SessionID})

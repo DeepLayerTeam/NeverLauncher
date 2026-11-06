@@ -43,7 +43,7 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
     main = frontend / "index.html"
     js = list((frontend / "assets").glob("*.js"))
     if not main.is_file() or not js:
-        raise ValueError("Отсутствует production-сборка HTML и JavaScript")
+        raise ValueError("Отсутствует промышленная сборка HTML и JavaScript")
     # Используйте настоящие сгенерированные артефакты, а не свидетельство только
     # по исходникам или package.json.
     files = sorted([main, *js])

@@ -512,7 +512,7 @@ class Operator:
         src = Path(self.a.storage_source)
         dst = Path(self.a.storage_target)
         if not src.is_absolute() or not dst.is_absolute():
-            raise CutoverError("source and target storage roots: требуется «абсолютный путь»")
+            raise CutoverError("корневые каталоги исходного и целевого хранилищ: требуется «абсолютный путь»")
         src_path, dst_path = src.resolve(), dst.resolve()
         if (src_path == dst_path or src_path.is_relative_to(dst_path)
                 or dst_path.is_relative_to(src_path)):

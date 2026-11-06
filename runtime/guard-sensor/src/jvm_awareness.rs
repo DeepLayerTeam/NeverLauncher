@@ -394,7 +394,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     // Диспетчеры OpenGL законно выделяют исполняемую память MEM_PRIVATE. В CI используется проверенная по SHA-256 Mesa opengl32.dll рядом с java.exe, а НЕ системная opengl32.dll Windows. Разрешайте только каталог bin уже сертифицированной JVM (либо запасной System32). Предварительная загрузка до установки перехватов не позволяет LoadLibrary внести неизвестный диспетчер посреди работы JIT.
     let jvm_module = unsafe { GetModuleHandleW(wide_null("jvm.dll").as_ptr()) };
     if jvm_module.is_null() {
-        return Err("защита Guard с учётом JVM: запрещено «locate jvm.dll for OpenGL provenance»".to_string());
+        return Err("защита Guard с учётом JVM: запрещено «поиск jvm.dll для проверки происхождения OpenGL»".to_string());
     }
     let jvm_path = module_path(jvm_module)?;
     let jvm_dir = std::path::Path::new(&jvm_path).parent()

@@ -913,7 +913,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		writeError(w, http.StatusInternalServerError, "device public key повреждён")
+		writeError(w, http.StatusInternalServerError, "Публичный ключ устройства повреждён")
 		return
 	}
 	if err := validateGuardAttestation0134(req.Attestation, req.ChallengeID, req.Challenge, policy, device.Platform, time.Now().UTC(), time.Now().UTC().Add(-guardAttestationChallengeTTL0134)); err != nil {

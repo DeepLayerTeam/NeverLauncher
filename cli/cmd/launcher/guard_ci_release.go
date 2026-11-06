@@ -253,7 +253,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {
 			if strings.TrimSpace(check) == "" || checks[check] {
-				return releaseGuardCICertification{}, fmt.Errorf("target %s содержит пустой/duplicate required check", id)
+				return releaseGuardCICertification{}, fmt.Errorf("Цель %s содержит пустую или повторяющуюся обязательную проверку", id)
 			}
 			checks[check] = true
 		}

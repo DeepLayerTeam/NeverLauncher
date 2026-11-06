@@ -174,7 +174,7 @@ impl ProcessSupervisor {
         let log_path = logs_dir.join(format!("runtime-launch-{started_at}.log"));
 
         let mut log_file = OpenOptions::new().create(true).append(true).open(&log_path)
-            .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
+            .map_err(|err| format!("не удалось открыть журнал среды выполнения {}: {err}", log_path.display()))?;
         writeln!(log_file, "Runtime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
         writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
         writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
@@ -413,7 +413,7 @@ impl ProcessSupervisor {
         let map = self.processes.lock().await;
         map.get(id)
             .map(process_status_snapshot)
-            .ok_or_else(|| format!("runtime process {id} не найден"))
+            .ok_or_else(|| format!("Процесс среды выполнения {id} не найден"))
     }
 
     pub async fn list(&self) -> Vec<ProcessStatus> {
@@ -432,7 +432,7 @@ impl ProcessSupervisor {
         let reason = reason.chars().take(300).collect::<String>();
         let child = {
             let mut processes = self.processes.lock().await;
-            let managed = processes.get_mut(id).ok_or_else(|| format!("runtime process {id} не найден"))?;
+            let managed = processes.get_mut(id).ok_or_else(|| format!("Процесс среды выполнения {id} не найден"))?;
             if managed.status.state != "running" {
                 return Ok(process_status_snapshot(managed));
             }
@@ -468,7 +468,7 @@ impl ProcessSupervisor {
     pub async fn stop(&self, id: &str) -> Result<ProcessStatus, String> {
         let child = {
             let map = self.processes.lock().await;
-            map.get(id).map(|p| p.child.clone()).ok_or_else(|| format!("runtime process {id} не найден"))?
+            map.get(id).map(|p| p.child.clone()).ok_or_else(|| format!("Процесс среды выполнения {id} не найден"))?
         };
         {
             let mut guard = child.lock().await;
@@ -487,7 +487,7 @@ impl ProcessSupervisor {
             process.start_kill().map_err(|err| format!("не удалось остановить runtime process {id}: {err}"))?;
         }
         let mut map = self.processes.lock().await;
-        let process = map.get_mut(id).ok_or_else(|| format!("runtime process {id} не найден"))?;
+        let process = map.get_mut(id).ok_or_else(|| format!("Процесс среды выполнения {id} не найден"))?;
         process.status.state = "stopping".to_string();
         process.status.message = "Отправлен сигнал остановки runtime".to_string();
         Ok(process.status.clone())

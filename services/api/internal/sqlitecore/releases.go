@@ -69,7 +69,7 @@ func (r *Repository) ListReleases(ctx context.Context, projectID string) (out []
 // параллельное изменение профиля не может изменить подписанную идентичность.
 func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, channel, version, actor string) (out model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return out, errors.New("draft mutation: требуется автор аудита")
+		return out, errors.New("Для изменения черновика требуется указать автора аудита")
 	}
 	projectID = strings.TrimSpace(projectID)
 	profileID = strings.TrimSpace(profileID)

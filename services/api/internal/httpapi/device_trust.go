@@ -264,12 +264,12 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 	}
 	challengeID, err := randomToken("dtc")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	challenge, err := randomToken("dch")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	now := time.Now().UTC()
@@ -347,7 +347,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		writeError(w, http.StatusUnauthorized, "сессия отозвана политикой оценки риска")
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
@@ -382,12 +382,12 @@ func (s Server) authDeviceVerifyBegin0121(w http.ResponseWriter, r *http.Request
 	}
 	challengeID, err := randomToken("dtc")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	challenge, err := randomToken("dch")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось создать запрос проверки")
 		return
 	}
 	now := time.Now().UTC()
@@ -454,7 +454,7 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		writeError(w, http.StatusUnauthorized, "сессия отозвана политикой оценки риска")
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)

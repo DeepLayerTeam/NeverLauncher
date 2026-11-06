@@ -40,7 +40,7 @@ func handleExtensionHost0205(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "status", "logs", "start", "stop", "restart":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return fmt.Errorf("extension host %s требует extension id", command)
+			return fmt.Errorf("Для хоста расширений %s требуется идентификатор расширения", command)
 		}
 		id := url.PathEscape(strings.TrimSpace(args[0]))
 		endpoint := backend + "/api/v1/admin/extension-hosts/" + id

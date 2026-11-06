@@ -70,7 +70,7 @@ func readLoaderResolutionLock(path, loader, minecraft, selector string) (*loader
 	}
 	var lock loaderResolutionLock
 	if err := json.Unmarshal(raw, &lock); err != nil {
-		return nil, fmt.Errorf("loader resolution lock JSON повреждён: %w", err)
+		return nil, fmt.Errorf("JSON-файл фиксации разрешения загрузчика повреждён: %w", err)
 	}
 	if err := validateLoaderResolutionLock(&lock, loader, minecraft, selector, true); err != nil {
 		return nil, err
@@ -102,14 +102,14 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 		return errors.New("loader resolution lock не содержит immutable resolvedVersion")
 	}
 	if lock.ResolutionSourceURL == "" || !compatibilitySHA256RE.MatchString(strings.ToLower(lock.ResolutionSourceSHA256)) {
-		return errors.New("loader resolution lock не содержит resolution source identity")
+		return errors.New("В файле фиксации разрешения загрузчика отсутствует идентификатор источника разрешения")
 	}
 	if complete {
 		if lock.PayloadURL == "" || !compatibilitySHA256RE.MatchString(strings.ToLower(lock.PayloadSHA256)) {
-			return errors.New("loader resolution lock не содержит pinned payload SHA-256")
+			return errors.New("В файле фиксации разрешения загрузчика отсутствует закреплённый SHA-256 содержимого")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(lock.RuntimeProfileSHA256)) {
-			return errors.New("loader resolution lock не содержит runtime profile SHA-256")
+			return errors.New("В файле фиксации разрешения загрузчика отсутствует SHA-256 профиля среды выполнения")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(lock.MaterializationSHA256)) {
 			return errors.New("loader resolution lock не содержит materialization SHA-256")

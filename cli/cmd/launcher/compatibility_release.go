@@ -1092,7 +1092,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			runtimeVersion := strings.TrimSpace(result.JRERuntimeVersion)
 			jreSHA := strings.ToLower(strings.TrimSpace(result.JREExecutableSHA256))
 			if vendor == "" || runtimeVersion == "" || !compatibilitySHA256RE.MatchString(jreSHA) {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит полную certified JRE identity", id)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Для целевой платформы %s отсутствуют полные данные о проверенной среде JRE", id)
 			}
 			key := fmt.Sprintf("%d\x00%s\x00%s\x00%s\x00%s\x00%s", target.JavaMajor, target.OS, target.Arch, vendor, runtimeVersion, jreSHA)
 			if row, ok := jreBuildSet[key]; ok {

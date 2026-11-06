@@ -461,7 +461,7 @@ def finalize(args: argparse.Namespace) -> None:
     for name, path in binaries.items():
         require(
             path is not None and path.is_file() and path.stat().st_size > 0,
-            f"actual {name} Отсутствует исполняемый файл",
+            f"Исполняемый файл {name} отсутствует",
         )
     write(
         work / "game-cycle-0364-result.json",

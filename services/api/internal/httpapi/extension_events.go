@@ -48,7 +48,7 @@ func (s Server) eventDeadLetters0206(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) logEventError0206(kind string, err error) {
 	if err != nil {
-		log.Printf("Ошибка: «Extensions event» %s: %v", kind, err)
+		log.Printf("Ошибка события расширения %s: %v", kind, err)
 	}
 }
 

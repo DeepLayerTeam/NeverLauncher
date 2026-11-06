@@ -145,7 +145,7 @@ pub fn wait_for_guard_ack(
     let mut packet = [0u8; CONTINUOUS_GUARD_ACK_PACKET_LEN];
     stream
         .read_exact(&mut packet)
-        .map_err(|err| format!("Ошибка: «Continuous Guard Guard-ACK read»: {err}"))?;
+        .map_err(|err| format!("Ошибка чтения подтверждения Continuous Guard: {err}"))?;
     let result = verify_guard_ack_packet(
         &packet,
         secret,

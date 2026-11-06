@@ -72,7 +72,7 @@ def load_matrix(path: Path, expected_commit: str) -> dict[str, Any]:
         fail("В матрице Guard CI отсутствуют repository, commit или runId")
     if expected_commit and commit != expected_commit:
         fail(
-            f"Guard CI matrix commit: несоответствие — expected {expected_commit}, got {commit}"
+            f"Несоответствие коммита матрицы Guard CI: ожидалось {expected_commit}, получено {commit}"
         )
     rows = matrix.get("targets")
     if not isinstance(rows, list) or len(rows) != len(EXPECTED_TARGETS):

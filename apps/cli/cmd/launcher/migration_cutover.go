@@ -44,7 +44,7 @@ func handleMigrationCutover03311(args []string) error {
 		return cutoverRequest03311("GET", endpoint, token, run, nil, false, flagValue(args, "--output", ""))
 	}
 	if flagValue(args, "--confirm", "") != run {
-		return errors.New("cutover mutation: требуется «--confirm with the exact migration run ID»")
+		return errors.New("Для изменения при переключении требуется --confirm с точным идентификатором запуска миграции")
 	}
 	profile := flagValue(args, "--profile-id", "")
 	channel := flagValue(args, "--channel", "")

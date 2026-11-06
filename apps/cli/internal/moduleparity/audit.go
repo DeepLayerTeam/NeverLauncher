@@ -152,7 +152,7 @@ func validateJavaContract(root string) error {
 		return err
 	}
 	if spec.SchemaVersion != "1.0" || spec.Phase != "design-not-a-shipping-sdk" || spec.MinimumJava != 17 || len(spec.Rules) < 3 {
-		return errors.New("Небезопасная структура Java API или отсутствие версии")
+		return errors.New("Небезопасная структура API Java или отсутствие версии")
 	}
 	var host struct {
 		SchemaVersion       string                       `json:"schemaVersion"`

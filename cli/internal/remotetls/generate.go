@@ -125,7 +125,7 @@ func Generate(directory string, hosts []string, days int) (result Result, err er
 		return result, err
 	}
 	if directory == "" || !filepath.IsAbs(directory) {
-		return result, errors.New("Путь --output-dir должен быть абсолютным")
+		return result, errors.New("Для --output-dir требуется абсолютный путь")
 	}
 	directory = filepath.Clean(directory)
 	if directory == string(filepath.Separator) {

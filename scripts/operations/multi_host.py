@@ -257,7 +257,7 @@ def local_compat_observe_0516(directory, project):
         except ValueError as exc:
             raise DeploymentError("Некорректное значение: «ответ совместимости HTTP API»") from exc
         if not isinstance(data, dict):
-            raise DeploymentError("HTTP API compatibility response: требуется объект JSON")
+            raise DeploymentError("Ответ проверки совместимости HTTP API должен быть объектом JSON")
         return data
     v = running["api"]["readiness"]["version"]
     status = get("/api/v1/status")

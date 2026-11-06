@@ -161,7 +161,7 @@ pub fn validate_continuous_evidence_v2(
         || evidence.process_id.trim().is_empty()
         || evidence.runtime_pid == 0
     {
-        return Err("Несовпадение: «Guard Attestation v2 continuous evidence schema/identity»".to_string());
+        return Err("Несовпадение: «схемы или идентификатора непрерывных свидетельств аттестации Guard v2»".to_string());
     }
     if evidence.sensor_protocol_version != crate::GUARD_SENSOR_PROTOCOL_VERSION
         || evidence.module_guard_version != crate::GUARD_MODULE_GUARD_VERSION
@@ -231,7 +231,7 @@ pub fn validate_continuous_evidence_v2(
     }
     let expected = recompute_continuous_evidence_sha256(evidence);
     if !expected.eq_ignore_ascii_case(&evidence.evidence_sha256) {
-        return Err("Несовпадение: «Guard Attestation v2 continuous evidence digest»".to_string());
+        return Err("Несовпадение: «дайджест непрерывных свидетельств аттестации Guard v2»".to_string());
     }
     Ok(())
 }

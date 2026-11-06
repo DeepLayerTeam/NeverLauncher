@@ -321,7 +321,7 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 		metadata.ID = selectedID
 	}
 	if metadata.ID != selectedID {
-		return vanillaServerInstallResult{}, fmt.Errorf("version.json id mismatch: ожидался %s, получен %s", selectedID, metadata.ID)
+		return vanillaServerInstallResult{}, fmt.Errorf("Несовпадение идентификатора version.json: ожидался %s, получен %s", selectedID, metadata.ID)
 	}
 	javaMajor, err := javaMajorFromVersion(selectedID, metadata.MojangVersionFile)
 	if err != nil {
@@ -406,7 +406,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		metadata.ID = selectedID
 	}
 	if metadata.ID != selectedID {
-		return vanillaInstallResult{}, fmt.Errorf("version.json id mismatch: ожидался %s, получен %s", selectedID, metadata.ID)
+		return vanillaInstallResult{}, fmt.Errorf("Несовпадение идентификатора version.json: ожидался %s, получен %s", selectedID, metadata.ID)
 	}
 	if metadata.MainClass == "" {
 		return vanillaInstallResult{}, errors.New("version.json не содержит mainClass")
@@ -423,7 +423,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	}
 	clientDownload, ok := metadata.Downloads["client"]
 	if !ok || clientDownload.URL == "" || clientDownload.SHA1 == "" || clientDownload.Size <= 0 {
-		return vanillaInstallResult{}, errors.New("version.json не содержит проверяемый downloads.client")
+		return vanillaInstallResult{}, errors.New("В version.json отсутствуют проверяемые сведения downloads.client")
 	}
 
 	versionRel := filepath.ToSlash(filepath.Join("versions", selectedID, selectedID+".json"))
@@ -498,7 +498,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		// создаёт несуществующий у издателя файл и ломает 1.7.x/1.8.x.
 		if !hasArtifact && len(lib.Downloads.Classifiers) == 0 {
 			if opts.StrictUpstream {
-				return vanillaInstallResult{}, fmt.Errorf("library %s: Mojang metadata не содержит проверяемый artifact", lib.Name)
+				return vanillaInstallResult{}, fmt.Errorf("Библиотека %s: в метаданных Mojang нет артефакта, поддающегося проверке", lib.Name)
 			}
 			artifact.Path = strings.TrimPrefix(localMavenPath(lib.Name), "/")
 			hasArtifact = true

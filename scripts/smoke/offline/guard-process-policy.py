@@ -145,7 +145,7 @@ if "guard-process-policy-0133.py" not in ci:
     raise SystemExit("Guard 0.13.3: проверка политики процессов не подключена к CI")
 if "guard-process-policy-0133.py" not in preflight:
     raise SystemExit(
-        "Guard 0.13.3 process policy gate: не подключено к release preflight"
+        "Guard 0.13.3 process policy gate: не подключено к предварительной проверке релиза"
     )
 require(
     ci,

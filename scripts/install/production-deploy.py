@@ -184,7 +184,7 @@ def preflight(values, mode, *, docker, tls_required=True):
     ):
         fail("Промышленное значение PUBLIC_URL должно быть базовым HTTPS-адресом")
     if docker and url.port not in (None, 443):
-        fail("Для прямого промышленного развёртывания Compose требуется публичный HTTPS на порту 443")
+        fail("Для промышленного развёртывания через Compose требуется публичный HTTPS на порту 443")
     if values["LAUNCHER_WEBAUTHN_ORIGINS"] != public or public not in values[
         "LAUNCHER_CORS_ALLOWED_ORIGINS"
     ].split(","):

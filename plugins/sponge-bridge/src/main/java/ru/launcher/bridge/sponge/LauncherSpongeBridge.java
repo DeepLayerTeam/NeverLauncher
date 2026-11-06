@@ -64,7 +64,7 @@ public final class LauncherSpongeBridge {
             api.publishEvent("server.startup", Map.of("platform","sponge"));
             api.publishEvent("server.ready", Map.of("platform","sponge"));
             workers.scheduleWithFixedDelay(this::sampleAndHeartbeat, 0, Math.max(5, Math.min(config.heartbeatIntervalSeconds, config.telemetrySampleIntervalSeconds)), TimeUnit.SECONDS);
-            logger.info("Launcher Sponge ServerBridge {} ready; serverId={}; runtimeId={}", BridgeDefaults.VERSION, config.serverId, api.runtimeId());
+            logger.info("Launcher Sponge ServerBridge {} готов; serverId={}; runtimeId={}", BridgeDefaults.VERSION, config.serverId, api.runtimeId());
         } catch (Exception e) {
             throw new IllegalStateException("Ошибка инициализации Launcher Sponge ServerBridge", e);
         }

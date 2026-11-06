@@ -411,7 +411,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		writeError(w, http.StatusInternalServerError, "device public key повреждён")
+		writeError(w, http.StatusInternalServerError, "Публичный ключ устройства повреждён")
 		return
 	}
 	now := canonicalGuardAttestationTime0134(time.Now())

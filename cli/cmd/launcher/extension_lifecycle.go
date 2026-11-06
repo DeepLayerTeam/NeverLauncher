@@ -41,7 +41,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "status", "diagnose":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return errors.New("extension status требует extension id")
+			return errors.New("Для просмотра состояния расширения требуется его идентификатор")
 		}
 		values := url.Values{}
 		values.Set("scope", scope)

@@ -98,7 +98,7 @@ func deviceTrustCertificationRequired(ver string) bool {
 
 func embedDeviceTrustCertification(out, matrixPath, targetsPath, ver, expectedCommit string) error {
 	if strings.TrimSpace(matrixPath) == "" {
-		return errors.New("device trust matrix path пуст")
+		return errors.New("Не указан путь к матрице доверия устройств")
 	}
 	if strings.TrimSpace(targetsPath) == "" {
 		return errors.New("device trust targets path пуст")
@@ -134,13 +134,13 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		return releaseDeviceTrustCertification{}, fmt.Errorf("Некорректное значение: DEVICE_TRUST_MATRIX: %w", err)
 	}
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
-		return releaseDeviceTrustCertification{}, errors.New("Device Trust evidence требует schemaVersion=1.0")
+		return releaseDeviceTrustCertification{}, errors.New("Для свидетельства доверия устройства требуется schemaVersion=1.0")
 	}
 	if strings.TrimSpace(ver) == "" || targets.ProductVersion != ver || matrix.ProductVersion != ver {
 		return releaseDeviceTrustCertification{}, fmt.Errorf("Несоответствие productVersion в доверии устройств: релиз=%s, цели=%s, матрица=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {
-		return releaseDeviceTrustCertification{}, errors.New("Device Trust matrix не имеет fail-closed status=passed")
+		return releaseDeviceTrustCertification{}, errors.New("Матрица доверия устройств не содержит подтверждённого статуса status=passed с блокировкой по умолчанию")
 	}
 	if strings.TrimSpace(matrix.Repository) == "" || strings.TrimSpace(matrix.Commit) == "" || strings.TrimSpace(matrix.RunID) == "" {
 		return releaseDeviceTrustCertification{}, errors.New("Device Trust matrix не содержит repository/commit/runId")
@@ -184,7 +184,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {
 			if strings.TrimSpace(check) == "" || checks[check] {
-				return releaseDeviceTrustCertification{}, fmt.Errorf("target %s содержит пустой/duplicate required check", id)
+				return releaseDeviceTrustCertification{}, fmt.Errorf("Цель %s содержит пустую или повторяющуюся обязательную проверку", id)
 			}
 			checks[check] = true
 		}

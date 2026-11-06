@@ -49,7 +49,7 @@ func clientInstallOrUpdate(packagePath, storageDir, clientDir, mode string) (map
 	}
 	snapshotID, err := createClientSnapshot(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось создать rollback snapshot: %w", err)
+		return nil, fmt.Errorf("не удалось создать снимок для отката: %w", err)
 	}
 	apply, err := clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID)
 	if err != nil {

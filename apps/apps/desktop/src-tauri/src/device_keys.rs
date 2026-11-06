@@ -146,13 +146,13 @@ fn storage_backend_name() -> &'static str {
 fn keyring_entry(backend_url: &str, user_id: &str) -> Result<keyring::v1::Entry, String> {
     let username = device_key_username(backend_url, user_id)?;
     keyring::v1::Entry::new(DEVICE_KEY_SERVICE, &username)
-        .map_err(|e| format!("OS secure storage для device key недоступен: {e}"))
+        .map_err(|e| format!("Защищённое хранилище ОС для ключа устройства недоступно: {e}"))
 }
 
 fn staged_keyring_entry(backend_url: &str, user_id: &str) -> Result<keyring::v1::Entry, String> {
     let username = staged_device_key_username(backend_url, user_id)?;
     keyring::v1::Entry::new(DEVICE_KEY_SERVICE, &username)
-        .map_err(|e| format!("OS secure storage для staged device key недоступен: {e}"))
+        .map_err(|e| format!("Защищённое хранилище ОС для временного ключа устройства недоступно: {e}"))
 }
 
 fn record_to_info(record: &SecureDeviceKeyRecord) -> DeviceKeyInfo {
@@ -190,7 +190,7 @@ fn validate_software_record(record: &mut SecureDeviceKeyRecord) -> Result<Signin
     let public_b64 = URL_SAFE_NO_PAD.encode(public);
     let fingerprint = hex::encode(Sha256::digest(public));
     if record.public_key != public_b64 || record.fingerprint != fingerprint {
-        return Err("device key record в OS secure storage не проходит self-check".into());
+        return Err("Запись ключа устройства в защищённом хранилище ОС не прошла самопроверку".into());
     }
     Ok(signing)
 }
@@ -285,7 +285,7 @@ fn save_record(backend_url: &str, user_id: &str, record: &SecureDeviceKeyRecord)
         .map_err(|e| format!("не удалось сериализовать device key record: {e}"))?;
     let result = entry
         .set_password(&secret)
-        .map_err(|e| format!("не удалось сохранить device key metadata в OS secure storage: {e}"));
+        .map_err(|e| format!("не удалось сохранить метаданные ключа устройства в защищённом хранилище ОС: {e}"));
     secret.zeroize();
     result
 }
@@ -295,7 +295,7 @@ fn load_staged_record(backend_url: &str, user_id: &str) -> Result<Option<SecureD
     match entry.get_password() {
         Ok(mut secret) => {
             let parsed = serde_json::from_str::<SecureDeviceKeyRecord>(&secret)
-                .map_err(|e| format!("staged device key record повреждён: {e}"));
+                .map_err(|e| format!("Запись временного ключа устройства повреждена: {e}"));
             secret.zeroize();
             parsed.map(Some)
         }
@@ -398,7 +398,7 @@ pub fn device_key_status(backend_url: &str, user_id: &str) -> Result<Option<Devi
 
 fn validate_device_signing_payload(payload: &str, user_id: &str) -> Result<(), String> {
     if payload.is_empty() || payload.len() > 16 * 1024 {
-        return Err("device signing payload имеет недопустимый размер".into());
+        return Err("Неверный размер данных для подписи устройством".into());
     }
     let lines = payload.split_terminator('\n').collect::<Vec<_>>();
     if lines.len() != 6 || lines[0] != "Launcher Device Trust v1" {
@@ -418,7 +418,7 @@ fn validate_device_signing_payload(payload: &str, user_id: &str) -> Result<(), S
 
 fn validate_device_attestation_payload(payload: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
     if payload.is_empty() || payload.len() > 16 * 1024 {
-        return Err("device attestation payload имеет недопустимый размер".into());
+        return Err("Неверный размер данных аттестации устройства".into());
     }
     if record.key_binding != "hardware" || record.key_algorithm != "p256" {
         return Err("device attestation требует hardware-bound P-256 key".into());
@@ -535,7 +535,7 @@ fn guard_attestation_device_payload(
 pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(&request.user_id)?;
     let mut record = load_record(&request.backend_url, &user)?
-        .ok_or_else(|| "device key отсутствует".to_string())?;
+        .ok_or_else(|| "Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     let payload = guard_attestation_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
@@ -630,7 +630,7 @@ fn guard_attestation_v2_device_payload(
 pub fn sign_guard_attestation_v2(request: GuardAttestationV2SignRequest) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(&request.user_id)?;
     let mut record = load_record(&request.backend_url, &user)?
-        .ok_or_else(|| "device key отсутствует".to_string())?;
+        .ok_or_else(|| "Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     let payload = guard_attestation_v2_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
@@ -660,7 +660,7 @@ pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> R
     let user = normalize_user_id(user_id)?;
     validate_device_signing_payload(payload, &user)?;
     let mut record = load_record(backend_url, &user)?
-        .ok_or_else(|| "device key отсутствует".to_string())?;
+        .ok_or_else(|| "Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     let signature = if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(&record)?;
@@ -711,7 +711,7 @@ pub fn sign_session_refresh(
 ) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(user_id)?;
     let mut record = load_record(backend_url, &user)?
-        .ok_or_else(|| "device key отсутствует".to_string())?;
+        .ok_or_else(|| "Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     let registered_device = record.device_id.as_deref().unwrap_or("").trim();
     if registered_device.is_empty() || registered_device != device_id.trim() {
@@ -741,7 +741,7 @@ pub fn sign_session_refresh(
 pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(user_id)?;
     let mut record = load_record(backend_url, &user)?
-        .ok_or_else(|| "device key отсутствует".to_string())?;
+        .ok_or_else(|| "Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     validate_device_attestation_payload(payload, &user, &record)?;
 
@@ -849,7 +849,7 @@ pub fn sign_current_device_replacement(backend_url: &str, user_id: &str, payload
     let user = normalize_user_id(user_id)?;
     let lines = validate_device_replacement_payload(payload, &user)?;
     if lines[1] != "purpose=rotate" { return Err("current device key используется только для rotate proof".into()); }
-    let mut record = load_record(backend_url, &user)?.ok_or_else(|| "current device key отсутствует".to_string())?;
+    let mut record = load_record(backend_url, &user)?.ok_or_else(|| "current Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     let device_id = record.device_id.as_deref().unwrap_or("");
     if device_id.is_empty() || lines[5] != format!("old-device={}", device_id) || lines[6] != format!("old-fingerprint={}", record.fingerprint) {
@@ -891,7 +891,7 @@ pub fn abort_staged_device_key(backend_url: &str, user_id: &str) -> Result<(), S
         record.private_seed_hex.zeroize();
     }
     let entry = staged_keyring_entry(backend_url, &user)?;
-    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()), Err(e) => Err(format!("не удалось удалить staged device key metadata: {e}")) }
+    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()), Err(e) => Err(format!("не удалось удалить метаданные временного ключа устройства: {e}")) }
 }
 
 pub fn bind_device_key(backend_url: &str, user_id: &str, device_id: &str) -> Result<DeviceKeyInfo, String> {
@@ -901,7 +901,7 @@ pub fn bind_device_key(backend_url: &str, user_id: &str, device_id: &str) -> Res
         return Err("deviceId обязателен".into());
     }
     let mut record = load_record(backend_url, &user)?
-        .ok_or_else(|| "device key отсутствует".to_string())?;
+        .ok_or_else(|| "Ключ устройства отсутствует".to_string())?;
     validate_record(&mut record)?;
     record.device_id = Some(device_id.to_string());
     save_record(backend_url, &user, &record)?;

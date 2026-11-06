@@ -46,7 +46,7 @@ class DurablePostgresStartupTests(unittest.TestCase):
                       exec) echo 'accepting connections' ;;
                       ps) echo 'name=mock status=exited' ;;
                       logs) echo 'mock PostgreSQL diagnostics' ;;
-                      *) echo "неожиданная команда Docker: $*" >&2; exit 2 ;;
+                      *) echo "Неожиданная команда Docker: $*" >&2; exit 2 ;;
                     esac
                     """
                 ),

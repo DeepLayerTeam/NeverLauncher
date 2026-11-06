@@ -498,7 +498,7 @@ export function DesktopExtensions0209({
               <iframe
                 key={identity0356(current)}
                 ref={iframeRef}
-                title={`${current?.name ?? "Extension"}:${pageId}`}
+                title={`${current?.name ?? "Расширение"}:${pageId}`}
                 sandbox="allow-scripts"
                 srcDoc={html}
                 onLoad={notifyContext}

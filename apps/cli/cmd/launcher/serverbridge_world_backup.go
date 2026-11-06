@@ -774,7 +774,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 			}
 		} else {
 			if !fi.Mode().IsRegular() || fi.Size() != e.Size {
-				return fmt.Errorf("Некорректное значение: файл size/type %s", rel)
+				return fmt.Errorf("Некорректный размер или тип файла %s", rel)
 			}
 			f, err := os.Open(path)
 			if err != nil {

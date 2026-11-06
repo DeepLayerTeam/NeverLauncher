@@ -78,7 +78,7 @@ def main() -> int:
     ]
     if normalized_targets != [expected_target]:
         fail(
-            f"materializer target: несоответствие — got={normalized_targets!r} expected={[expected_target]!r}"
+            f"Несоответствие целевой платформы: получено={normalized_targets!r}, ожидалось={[expected_target]!r}"
         )
 
     files = vanilla.get("files")

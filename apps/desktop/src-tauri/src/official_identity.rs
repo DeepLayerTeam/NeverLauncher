@@ -159,7 +159,7 @@ fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result
     let actual = config.get("SessionId").and_then(Value::as_str).unwrap_or("");
     let user = config.get("UserId").and_then(Value::as_str).unwrap_or("");
     if actual.is_empty() || actual != expected_session || user.is_empty() || user.len() > 256 {
-        return Err("Never session identity mismatch: доступ к OS vault запрещён".into());
+        return Err("Never session identity mismatch: доступ к защищённому хранилищу ОС запрещён".into());
     }
     Ok(())
 }
@@ -174,7 +174,7 @@ const MAX_CHUNKS: usize = 64;
 struct VaultPointer { version: u32, generation: String, count: usize, digest: String }
 
 fn entry(id: &str) -> Result<keyring::v1::Entry, String> {
-    keyring::v1::Entry::new(SERVICE, id).map_err(|_| "OS credential storage недоступно".into())
+    keyring::v1::Entry::new(SERVICE, id).map_err(|_| "Защищённое хранилище учётных данных ОС недоступно".into())
 }
 fn fragment_id(id: &str, generation: &str, index: usize) -> String {
     format!("{id}.{generation}.{index}")
@@ -493,7 +493,7 @@ impl IdentityManager {
     fn profile(data: &Value) -> Result<OfficialProfile, String> {
         let value = data.get("profile").unwrap_or(data);
         let profile: OfficialProfile = serde_json::from_value(value.clone()).map_err(|_| "Неверный официальный профиль".to_string())?;
-        if !uuid_valid(&profile.id) || profile.name.is_empty() || profile.name.len() > 16 || !profile.name.is_ascii() { return Err("Minecraft Services вернул неверный профиль".into()); }
+        if !uuid_valid(&profile.id) || profile.name.is_empty() || profile.name.len() > 16 || !profile.name.is_ascii() { return Err("Сервис Minecraft вернул некорректный профиль".into()); }
         Ok(profile)
     }
     fn pending_remove(&self, id: &str) -> Result<(), String> {
@@ -688,7 +688,7 @@ impl IdentityManager {
         }
         let (response, record) = self.associated(&base, &id, access, "/profile", Method::GET, None, None).await?;
         let profile = Self::profile(&response.data)?;
-        if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Смена официальной Minecraft identity запрещена".into()); }
+        if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Смена официальной учётной записи Minecraft запрещена".into()); }
         Ok(Some(profile))
     }
     pub async fn modify(&self, backend: &str, access: &str, session: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>, String)>) -> Result<OfficialProfile, String> {

@@ -203,7 +203,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		return errors.New("GA 0.36.1+ BLOCKED: release: требуется «stable SemVer»")
 	}
 	if !gaCommit0361.MatchString(commit) {
-		return errors.New("Для GA требуется «exact source SHA in release manifest»")
+		return errors.New("Для GA требуется точный SHA исходников в манифесте релиза")
 	}
 	evidence := strings.TrimSpace(os.Getenv("LAUNCHER_GA_EVIDENCE_DIR"))
 	keyFile := strings.TrimSpace(os.Getenv("LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE"))

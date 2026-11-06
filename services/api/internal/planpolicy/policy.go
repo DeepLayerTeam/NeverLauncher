@@ -87,7 +87,7 @@ func Load(now time.Time) (Policy, error) {
 		return out, e
 	}
 	if env.SchemaVersion != "1.0" {
-		return out, errors.New("Не поддерживается: «plan policy envelope»")
+		return out, errors.New("Не поддерживается: «конверт политики плана»")
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) == 0 || len(payload) > 192*1024 {

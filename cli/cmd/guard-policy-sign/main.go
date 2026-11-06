@@ -67,7 +67,7 @@ func writeExclusive(path string, raw []byte) error {
 }
 func keygen(privatePath, publicPath string) error {
 	if privatePath == "" || publicPath == "" || privatePath == publicPath {
-		return errors.New("Необходимо отдельно указать --private-key и --public-key")
+		return errors.New("Необходимо указать оба параметра: --private-key и --public-key")
 	}
 	// Вызывающая сторона должна выбрать внешний каталог секретов, управляемый оператором.
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)

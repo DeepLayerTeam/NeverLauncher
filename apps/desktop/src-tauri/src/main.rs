@@ -220,7 +220,7 @@ fn auth_keyring_username(backend_url: &str) -> Result<String, String> {
 #[tauri::command]
 async fn store_auth_session(backend_url: String, session: SecureAuthSession) -> Result<(), String> {
     let username = auth_keyring_username(&backend_url)?;
-    let secret = serde_json::to_string(&session).map_err(|e| format!("не удалось сериализовать auth session: {e}"))?;
+    let secret = serde_json::to_string(&session).map_err(|e| format!("не удалось сериализовать сеанс авторизации: {e}"))?;
     tokio::task::spawn_blocking(move || {
         let mut secret = secret;
         let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
@@ -357,7 +357,7 @@ async fn sign_staged_device_replacement(backend_url: String, user_id: String, pa
 #[tauri::command]
 async fn sign_current_device_replacement(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_current_device_replacement(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("current device rotation signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Задача подписи при смене ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
@@ -1475,7 +1475,7 @@ async fn launch_minecraft_inner_0392(
     {
         let status = guard.ensure_started().await?;
         if !status.authenticated || status.state != "ready" {
-            return Err("launch заблокирован: Guard Windows boundary не authenticated/ready".to_string());
+            return Err("Запуск заблокирован: защитная граница Guard для Windows не аутентифицирована или не готова".to_string());
         }
         if !status.process_policy_enforced
             || status.process_policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
@@ -1488,7 +1488,7 @@ async fn launch_minecraft_inner_0392(
             || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
-            return Err("launch заблокирован: Guard Windows production hardening verification failed".to_string());
+            return Err("Запуск заблокирован: проверка усиленной защиты Guard для промышленной сборки Windows не пройдена".to_string());
         }
         guard.ping().await?;
         let process_policy = guard
@@ -1832,7 +1832,7 @@ async fn install_launcher_update(
     };
     let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("transactional updater helper отсутствует {}: {e}", helper.display()))?;
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() || helper_meta.len() == 0 {
-        return Err(format!("transactional updater helper небезопасен: {}", helper.display()));
+        return Err(format!("Вспомогательный процесс транзакционного обновления небезопасен: {}", helper.display()));
     }
 
     let staged_helper = create_staged_updater_helper02310(&helper, bin_dir)?;

@@ -332,7 +332,7 @@ impl GuardSupervisor {
         validate_guard_path(&executable)?;
         if !executable.is_file() {
             return Err(format!(
-                "Guard executable отсутствует рядом с Desktop: {}",
+                "Исполняемый файл Guard отсутствует рядом с Desktop: {}",
                 executable.display()
             ));
         }
@@ -377,7 +377,7 @@ impl GuardSupervisor {
         let mut stdin = child
             .stdin
             .take()
-            .ok_or_else(|| "Guard bootstrap stdin недоступен".to_string())?;
+            .ok_or_else(|| "Стандартный ввод начальной загрузки Guard недоступен".to_string())?;
         if let Err(err) = stdin.write_all(&bootstrap_secret).await {
             bootstrap_secret.zeroize();
             let _ = child.kill().await;
@@ -386,7 +386,7 @@ impl GuardSupervisor {
         if let Err(err) = stdin.shutdown().await {
             bootstrap_secret.zeroize();
             let _ = child.kill().await;
-            return Err(format!("не удалось закрыть Guard bootstrap channel: {err}"));
+            return Err(format!("не удалось закрыть канал начальной загрузки Guard: {err}"));
         }
 
         let pipe = match connect_client_pipe(&endpoint).await {
@@ -490,7 +490,7 @@ impl GuardSupervisor {
             .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         let payload = send_command(handle, "integrity-evidence").await?;
         let evidence: GuardIntegrityEvidence = serde_json::from_value(payload)
-            .map_err(|err| format!("Guard integrity evidence payload повреждён: {err}"))?;
+            .map_err(|err| format!("Данные свидетельства целостности Guard повреждены: {err}"))?;
         validate_integrity_evidence(handle, &evidence)?;
         Ok(evidence)
     }
@@ -594,7 +594,7 @@ impl GuardSupervisor {
 #[cfg(windows)]
 fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String> {
     let current_exe = std::env::current_exe()
-        .map_err(|err| format!("не удалось определить Desktop executable для package verification: {err}"))?;
+        .map_err(|err| format!("не удалось найти исполняемый файл Desktop для проверки пакета: {err}"))?;
     let current_dir = current_exe
         .parent()
         .ok_or_else(|| "Desktop executable не имеет parent directory".to_string())?;
@@ -611,7 +611,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     let sensor_path = current_dir.join(GUARD_SENSOR_FILE_NAME);
     for path in [&current_exe, guard_executable, &sensor_path] {
         let metadata = std::fs::symlink_metadata(path)
-            .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
+            .map_err(|err| format!("не удалось получить сведения о файле пакета {}: {err}", path.display()))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() {
             return Err(format!(
                 "Guard: проверка пакета отклонила нестандартный файл или символическую ссылку: {}",
@@ -640,7 +640,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         return Err("Некорректное значение: «размер манифеста пакета Windows»".to_string());
     }
     let raw = std::fs::read(&manifest_path)
-        .map_err(|err| format!("не удалось прочитать Windows package manifest: {err}"))?;
+        .map_err(|err| format!("не удалось прочитать манифест пакета Windows: {err}"))?;
     let manifest: WindowsPackageManifest = serde_json::from_slice(&raw)
         .map_err(|err| format!("Windows package manifest повреждён: {err}"))?;
     let canonical_arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
@@ -682,7 +682,7 @@ fn verify_package_artifact(manifest: &WindowsPackageManifest, path: &Path) -> Re
         .find(|artifact| artifact.name.eq_ignore_ascii_case(name))
         .ok_or_else(|| format!("Манифест пакета Windows не содержит артефакт {name}"))?;
     let metadata = std::fs::metadata(path)
-        .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
+        .map_err(|err| format!("не удалось получить сведения о файле пакета {}: {err}", path.display()))?;
     if metadata.len() != artifact.size {
         return Err(format!("Несовпадение: «размер артефакта пакета Windows»: {name}"));
     }
@@ -1029,7 +1029,7 @@ fn validate_integrity_evidence(
     let expected_proof = integrity_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&evidence.session_proof, "integritySessionProof")?;
     if !constant_time_eq(&expected_proof, &actual_proof) {
-        return Err("Ошибка: «Guard integrity evidence session proof verification»".to_string());
+        return Err("Ошибка: «проверка доказательства сеанса контроля целостности Guard»".to_string());
     }
     Ok(())
 }
@@ -1052,7 +1052,7 @@ fn validate_remote_attestation(
     let expected_digest = recompute_attestation_sha256(attestation)?;
     let actual_digest = decode_hex_32(&attestation.attestation_sha256, "attestationSha256")?;
     if !constant_time_eq(&expected_digest, &actual_digest) {
-        return Err("Ошибка: «Guard remote attestation digest verification»".to_string());
+        return Err("Ошибка: «проверка дайджеста удалённой аттестации Guard»".to_string());
     }
     let expected_proof = attestation_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&attestation.session_proof, "attestationSessionProof")?;
@@ -1072,7 +1072,7 @@ fn validate_guard_process_policy(
         .id()
         .ok_or_else(|| "Во время проверки политики не удалось определить PID дочернего процесса Guard".to_string())?;
     if policy.pid != guard_pid {
-        return Err("Несовпадение: «Guard Windows process policy PID binding»".to_string());
+        return Err("Несовпадение: «привязка PID политики процессов Guard для Windows»".to_string());
     }
     validate_windows_guard_policy_report(policy, handle.protection_profile)
 }

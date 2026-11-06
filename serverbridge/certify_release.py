@@ -252,7 +252,7 @@ def main() -> int:
         filename = row.get("file")
         expected_filename = f"launcher-{target}-bridge-{VERSION}.jar"
         if filename != expected_filename:
-            die(f"{target}: ожидалось имя файла {expected_filename}, got {filename!r}")
+            die(f"{target}: ожидалось имя файла {expected_filename}, получено {filename!r}")
         jar = artifacts / filename
         if not jar.is_file() or jar.stat().st_size == 0:
             die(f"{target}: отсутствует JAR или он пуст {jar}")
@@ -380,7 +380,7 @@ def main() -> int:
         result.returncode != 0
         or "CAPABILITY_POLICY_OK total=14 runtime_certified=false" not in result.stdout
     ):
-        die(f"adapter policy execution: ошибка — {result.stderr[-2048:]}")
+        die(f"Ошибка выполнения политики адаптера — {result.stderr[-2048:]}")
 
     report = {
         "schemaVersion": "1.1",

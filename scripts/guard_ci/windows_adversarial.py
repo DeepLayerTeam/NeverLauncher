@@ -143,7 +143,7 @@ def command_output(argv: list[str], env: dict[str, str] | None = None) -> str:
 def required_file(path: Path, label: str) -> dict[str, Any]:
     path = path.resolve()
     if not path.is_file() or path.stat().st_size <= 0:
-        die(f"{label} is: отсутствует or empty: {path}")
+        die(f"{label}: отсутствует или пусто: {path}")
     return {"name": path.name, "size": path.stat().st_size, "sha256": sha256_file(path)}
 
 

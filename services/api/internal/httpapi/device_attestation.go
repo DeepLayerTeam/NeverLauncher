@@ -203,7 +203,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 		metadataString0121(ch.Metadata, "keyAlgorithm") != device.KeyAlgorithm ||
 		metadataString0121(ch.Metadata, "keyBinding") != device.KeyBinding ||
 		metadataString0121(ch.Metadata, "hardwareProvider") != device.HardwareProvider {
-		writeError(w, http.StatusUnauthorized, "attestation challenge больше не соответствует device identity")
+		writeError(w, http.StatusUnauthorized, "Запрос аттестации больше не соответствует идентификатору устройства")
 		return
 	}
 	validUntil, err := time.Parse(time.RFC3339Nano, metadataString0121(ch.Metadata, "attestationValidUntil"))
@@ -213,7 +213,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		writeError(w, http.StatusInternalServerError, "device public key повреждён")
+		writeError(w, http.StatusInternalServerError, "Публичный ключ устройства повреждён")
 		return
 	}
 	payload := deviceAttestationPayload0124(req.Challenge, ch, device, claims.SessionID, validUntil)
@@ -243,7 +243,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		writeError(w, http.StatusUnauthorized, "сессия отозвана политикой оценки риска")
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)

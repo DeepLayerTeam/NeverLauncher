@@ -35,7 +35,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 		privateKeyPath = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE"))
 	}
 	if privateKeyPath == "" {
-		return errors.New("release signing требует --private-key или LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE")
+		return errors.New("Для подписания релиза требуется --private-key или LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, privateKeyPath); err != nil {
 		return err
@@ -154,7 +154,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 		publicKeyPath = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if publicKeyPath == "" {
-		return errors.New("release verification требует --public-key или LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE; bundled key не считается trust anchor")
+		return errors.New("Для проверки релиза требуется --public-key или LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE; ключ из комплекта поставки не считается корневым ключом доверия")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, publicKeyPath); err != nil {
 		return err
@@ -169,7 +169,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 	}
 	sigRaw, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS.sig"))
 	if err != nil {
-		return errors.New("SHA256SUMS.sig отсутствует: release bundle должен быть подписан Ed25519")
+		return errors.New("SHA256SUMS.sig отсутствует: Пакет релиза должен быть подписан Ed25519")
 	}
 	var envelope releaseSignatureEnvelope
 	if err := json.Unmarshal(sigRaw, &envelope); err != nil {
@@ -185,11 +185,11 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 	pubDigest := sha256.Sum256(publicKey)
 	fingerprint := "sha256:" + hex.EncodeToString(pubDigest[:])
 	if !strings.EqualFold(envelope.KeyFingerprint, fingerprint) {
-		return fmt.Errorf("release signature создана другим ключом: got=%s trusted=%s", envelope.KeyFingerprint, fingerprint)
+		return fmt.Errorf("Подпись релиза создана другим ключом: got=%s trusted=%s", envelope.KeyFingerprint, fingerprint)
 	}
 	signature, err := base64.StdEncoding.DecodeString(envelope.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return errors.New("некорректная Ed25519 signature encoding")
+		return errors.New("Некорректный формат подписи Ed25519")
 	}
 	if !ed25519.Verify(publicKey, data, signature) {
 		return errors.New("Ed25519 verification failed для SHA256SUMS")

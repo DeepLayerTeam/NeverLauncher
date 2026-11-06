@@ -504,7 +504,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         target = required_vanilla.get(minecraft)
         if target is None:
             die(
-                f"Vanilla Compatibility Baseline II: отсутствует required Minecraft {minecraft}"
+                f"Для базовой проверки совместимости Vanilla II отсутствует обязательная версия Minecraft {minecraft}"
             )
         if target["javaMajor"] != java_major:
             die(f"Vanilla {minecraft}: для Baseline II требуется Java {java_major}")
@@ -520,7 +520,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in LEGACY_VANILLA_JAVA8_0163:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Legacy Vanilla 0.16.3: отсутствует required Minecraft {minecraft}")
+                die(f"Для Legacy Vanilla 0.16.3 отсутствует обязательная версия Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(f"Legacy Vanilla {minecraft}: для 0.16.3 требуется Java 8 с scope=client")
     if legacy_vanilla_pre17_required():
@@ -772,7 +772,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Forge Modern 0.17.3 release grid: несоответствие — missing={missing} extra={extra}"
+                f"Forge Сетка релизов Modern 0.17.3 не совпадает: отсутствуют={missing}, лишние={extra}"
             )
         if len(required_forge_rows) != len(FORGE_MODERN_0173):
             die(

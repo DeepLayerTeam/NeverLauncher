@@ -14,7 +14,7 @@ public final class JavaExtensionHost {
         ru.launcher.sdk.core.SentryDiagnostics.installFromEnvironment(System.getenv());
         URI location=JavaExtensionHost.class.getProtectionDomain().getCodeSource().getLocation().toURI();
         Path jar=Path.of(location).toRealPath();
-        if(!jar.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar"))throw new IllegalArgumentException("Хост Java Extension необходимо запускать из JAR");
+        if(!jar.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar"))throw new IllegalArgumentException("Хост Java-расширений необходимо запускать из JAR");
         String className;
         try(JarFile file=new JarFile(jar.toFile())){
             if(file.getManifest()==null)throw new IllegalArgumentException("Манифест JAR отсутствует");

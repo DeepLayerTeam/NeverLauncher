@@ -319,7 +319,7 @@ func loadTrustState0158(path string) (releaseTrustState0158, error) {
 
 func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVersion, releaseManifestSHA256 string) error {
 	if strings.TrimSpace(path) == "" {
-		return errors.New("Release Verification v2 требует persistent --trust-state или LAUNCHER_RELEASE_TRUST_STATE_FILE")
+		return errors.New("Для проверки релиза v2 необходимо постоянное состояние --trust-state или LAUNCHER_RELEASE_TRUST_STATE_FILE")
 	}
 	s, err := loadTrustState0158(path)
 	if err != nil {
@@ -401,7 +401,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, fmt.Errorf("Ошибка корневого доверенного ключа: %w", err)
 	}
 	if strings.TrimSpace(trustStatePath) == "" {
-		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует persistent --trust-state или LAUNCHER_RELEASE_TRUST_STATE_FILE")
+		return releaseVerificationV2Context{}, errors.New("Для проверки релиза v2 необходимо постоянное состояние --trust-state или LAUNCHER_RELEASE_TRUST_STATE_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, trustStatePath); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Ошибка состояния доверия: %w", err)

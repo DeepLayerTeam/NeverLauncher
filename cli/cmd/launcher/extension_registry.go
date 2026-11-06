@@ -20,7 +20,7 @@ import (
 
 func handleExtensionRegistry0203(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension registry-подкоманды: publishers, publisher-add, key-add, keys, search, list, show, publish, yank, channel-set, pull, install")
+		return errors.New("доступные подкоманды реестра расширений: publishers, publisher-add, key-add, keys, search, list, show, publish, yank, channel-set, pull, install")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {

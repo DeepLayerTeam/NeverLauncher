@@ -85,10 +85,10 @@ mod imp {
 
     fn resolve_sensor_path() -> Result<PathBuf, String> {
         let current = std::env::current_exe()
-            .map_err(|err| format!("не удалось определить executable для Guard Sensor: {err}"))?;
+            .map_err(|err| format!("не удалось найти исполняемый файл датчика Guard: {err}"))?;
         let parent = current
             .parent()
-            .ok_or_else(|| "Guard Sensor: executable не имеет parent directory".to_string())?;
+            .ok_or_else(|| "Датчик Guard: невозможно определить родительский каталог исполняемого файла".to_string())?;
         let path = parent.join(GUARD_SENSOR_FILE_NAME);
         let metadata = std::fs::symlink_metadata(&path).map_err(|err| {
             format!("Guard Sensor отсутствует рядом с launcher/runtime {}: {err}", path.display())
@@ -332,7 +332,7 @@ mod imp {
             None => {
                 let _ = child.start_kill();
                 let _ = timeout(Duration::from_secs(3), child.wait()).await;
-                return Err("runtime PID недоступен для Guard Sensor".to_string());
+                return Err("PID среды выполнения недоступен датчику Guard".to_string());
             }
         };
         match bootstrap.authenticate(pid).await {

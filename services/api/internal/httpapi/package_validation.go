@@ -417,7 +417,7 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 		return errors.New("publish требует integrity-check текущего package")
 	}
 	if integrity.Result != "passed" || integrity.ManifestDigest != manifestDigest || integrity.ArtifactDigest != artifactDigest {
-		return errors.New("publish требует актуальный integrity PASS для текущих manifest/files")
+		return errors.New("Для публикации требуется успешная проверка целостности текущего манифеста и файлов")
 	}
 	policy, err := s.Repo.GetProjectValidationPolicy(ctx, lookup.Release.ProjectID)
 	if err != nil {

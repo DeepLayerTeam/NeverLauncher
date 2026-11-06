@@ -66,7 +66,7 @@ def sha256_file(path: Path) -> str:
 
 def artifact_record(path: Path) -> dict[str, Any]:
     if not path.is_file():
-        die(f"artifact is: отсутствует {path}")
+        die(f"Отсутствует артефакт: {path}")
     size = path.stat().st_size
     if size <= 0:
         die(f"Артефакт пуст: {path}")
@@ -196,7 +196,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
         manifest.get("schemaVersion") != "1.0"
         or manifest.get("productVersion") != PRODUCT_VERSION
     ):
-        die("package manifest version/schema: обнаружено несоответствие")
+        die("Обнаружено несоответствие версии или схемы манифеста пакета")
     if manifest.get("platform") != expected_platform:
         die(
             f"Платформа манифеста пакета не совпадает; ожидалась {expected_platform!r}, got {manifest.get('platform')!r}"

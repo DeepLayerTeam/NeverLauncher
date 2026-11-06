@@ -130,7 +130,7 @@ pub async fn ensure_managed_java(
     runtime_root_override: Option<&Path>,
 ) -> Result<ManagedJavaResult, String> {
     if required_major == 0 {
-        return Err("Managed Java требует majorVersion > 0".to_string());
+        return Err("Для Managed Java требуется majorVersion > 0".to_string());
     }
     validate_managed_java_major(required_major)?;
     let distribution = normalize_distribution(distribution)?;
@@ -180,7 +180,7 @@ pub async fn ensure_managed_java(
     let checksum = normalize_sha256(&asset.binary.package.checksum)?;
     validate_https_url(&asset.binary.package.link)?;
     if asset.binary.package.size == 0 || asset.binary.package.size > MAX_RUNTIME_ARCHIVE_SIZE {
-        return Err(format!("некорректный размер Java runtime archive: {}", asset.binary.package.size));
+        return Err(format!("некорректный размер архива среды выполнения Java: {}", asset.binary.package.size));
     }
 
     install_managed_java_archive(
@@ -252,7 +252,7 @@ pub async fn ensure_managed_java_from_distribution(
         .filter(|target| target.platform == platform && target.architecture == arch);
     let target = matching_targets
         .next()
-        .ok_or_else(|| format!("Managed JRE manifest не содержит target {platform}/{arch}"))?;
+        .ok_or_else(|| format!("В манифесте Managed JRE отсутствует целевая платформа {platform}/{arch}"))?;
     if matching_targets.next().is_some() {
         return Err(format!("Managed JRE manifest содержит duplicate target {platform}/{arch}"));
     }
@@ -488,7 +488,7 @@ async fn install_managed_java_archive(
     } = request;
     let checksum = normalize_sha256(checksum)?;
     if archive_size == 0 || archive_size > MAX_RUNTIME_ARCHIVE_SIZE {
-        return Err(format!("некорректный размер Java runtime archive: {archive_size}"));
+        return Err(format!("некорректный размер архива среды выполнения Java: {archive_size}"));
     }
     let platform_dir = runtime_root
         .join(distribution)
@@ -1626,7 +1626,7 @@ fn archive_extension(name: &str, os: &str) -> Result<&'static str, String> {
     if os != "windows" && (lower.ends_with(".tar.gz") || lower.ends_with(".tgz")) {
         return Ok(".tar.gz");
     }
-    Err(format!("неподдерживаемый формат Java runtime archive: {name}"))
+    Err(format!("неподдерживаемый формат архива среды выполнения Java: {name}"))
 }
 
 fn safe_release_component(value: &str) -> String {
@@ -1738,7 +1738,7 @@ mod tests {
             assert!(validate_managed_java_major(major).is_ok(), "Java {major} должна быть управляемой");
         }
         for major in [7, 11, 22, 26] {
-            assert!(validate_managed_java_major(major).is_err(), "Для Java {major} требуется: «rejected»");
+            assert!(validate_managed_java_major(major).is_err(), "Для Java {major} ожидалось отклонение");
         }
     }
 

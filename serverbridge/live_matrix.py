@@ -107,7 +107,7 @@ def verify_runtime(
             "Нет данных наблюдения за платформой после реального входа в сеть или отзыва доступа"
         )
     if service == "paper" and observations.get("actualClientJoin") is not True:
-        raise ValueError("Не подтверждено реальное подключение JVM-клиента Mojang к Paper")
+        raise ValueError("Не подтверждено реальное подключение клиента Mojang на JVM к серверу Paper")
     log_ref = proof.get("log") or {}
     log_file = log_ref.get("path")
     if log_file != f"live-{service}-04113.log":

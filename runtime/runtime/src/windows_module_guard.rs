@@ -606,7 +606,7 @@ mod imp {
         let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
         if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
             return Err(format!(
-                "Guard Continuous Guard: шестым событием ожидалось CONTINUOUS_READY, получено {}",
+                "Непрерывная защита Guard: шестым событием ожидалось CONTINUOUS_READY, получено {}",
                 continuous_ready_event.reason
             ));
         }
@@ -999,7 +999,7 @@ mod imp {
                         Err("Несовпадение: «Guard Continuous Guard heartbeat metadata»".to_string())
                     } else if event.base_address != guard_sequence {
                         Err(format!(
-                            "Guard Continuous Guard: нарушение последовательности Guard; ожидалось {guard_sequence}, получено {}",
+                            "Непрерывная защита Guard: нарушение последовательности Guard; ожидалось {guard_sequence}, получено {}",
                             event.base_address
                         ))
                     } else {

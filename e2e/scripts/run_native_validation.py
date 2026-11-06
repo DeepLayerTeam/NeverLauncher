@@ -100,7 +100,7 @@ def verify_game_observations_04314(destination, expected_os, expected_arch):
         return data
     host=read('host-capabilities.json')
     if host.get('os') != expected_os or host.get('arch') != expected_arch or host.get('status') != 'ready':
-        raise ValueError('native host identity or capability: обнаружено несоответствие')
+        raise ValueError('Обнаружено несоответствие идентификатора или возможностей нативного хоста')
     staged=read('staged-execution.json')
     stages=staged.get('stages')
     mandatory=('manifest-files', 'materialization', 'startup', 'loader-readiness',

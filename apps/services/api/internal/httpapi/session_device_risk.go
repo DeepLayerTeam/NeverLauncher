@@ -218,7 +218,7 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 func (s Server) writeRiskRequirement0126(w http.ResponseWriter, claims authClaims) bool {
 	switch claims.RiskAction {
 	case "revoke":
-		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		writeError(w, http.StatusUnauthorized, "сессия отозвана политикой оценки риска")
 		return true
 	case "reattest":
 		writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{

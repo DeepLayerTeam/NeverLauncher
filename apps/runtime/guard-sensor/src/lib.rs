@@ -959,7 +959,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 sequence,
                 event_chain,
             ) {
-                eprintln!("Guard Continuous Guard: нарушение подтверждения ACK: {}", err.chars().take(240).collect::<String>());
+                eprintln!("Непрерывная защита Guard: нарушение подтверждения ACK: {}", err.chars().take(240).collect::<String>());
                 let tamper = continuous_guard::tamper_event(
                     MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
                     &err,

@@ -927,7 +927,7 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 	}
 	if config.WorkingDirectory != "" {
 		if dir, err := hostResolveDirectory0282(root, config.WorkingDirectory); err != nil || dir != config.WorkingDirectory {
-			return errors.New("Некорректное значение: «or escaping working directory»")
+			return errors.New("Некорректное экранирование рабочего каталога")
 		}
 	}
 	if config.LogMaxBytes < 0 || config.LogBackups < 0 || config.LogBackups > 32 || config.CrashWindowSeconds < 0 || config.StableRunSeconds < 0 {

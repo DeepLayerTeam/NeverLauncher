@@ -748,7 +748,7 @@ for required in [
 ]:
     if required not in release_signing:
         fail(f"release signing не реализует настоящий Ed25519 primitive: {required}")
-if "bundled key не считается trust anchor" not in release_signing:
+if "ключ из комплекта поставки не считается корневым ключом доверия" not in release_signing:
     fail("release verification должен требовать внешний trusted public key")
 for forbidden in [
     '[]byte(hex.EncodeToString(sum[:])+"  SHA256SUMS\\n")',

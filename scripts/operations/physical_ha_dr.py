@@ -537,7 +537,7 @@ def game_restore(args):
     return output(args, result)
 
 def dependency_drill(args):
-    """Выполнить настоящий отказ HAProxy/Patroni/Redis/S3 и повторно его проверить."""
+    """Имитировать реальный отказ HAProxy, Patroni, Redis и S3, затем проверить восстановление."""
     require(args.allow_disruption == 'I-ACCEPT-PHYSICAL-OUTAGE',
             'Для реального переключения зависимости при отказе требуется явное разрешение на сбой')
     require(args.service in ('patroni', 'redis-server', 'minio') and args.backend_server and

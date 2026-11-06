@@ -87,7 +87,7 @@ func certResolveExecutable02712(name string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() {
-		return "", errors.New("executable: требуется «a regular file (no symlink)»")
+		return "", errors.New("Исполняемый файл должен быть обычным файлом (символические ссылки запрещены)")
 	}
 	return full, nil
 }

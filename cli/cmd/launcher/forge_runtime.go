@@ -755,7 +755,7 @@ func installForgeLegacy(
 	universalCoord := strings.TrimSpace(bundle.Profile.Path)
 	if bundle.LegacyMode == "legacy-v1-universal" {
 		if bundle.LegacyInstall.Minecraft != vanilla.MinecraftVersion {
-			return forgeMaterializeResult{}, fmt.Errorf("legacy Forge installer предназначен для Minecraft %s, выбран %s", bundle.LegacyInstall.Minecraft, vanilla.MinecraftVersion)
+			return forgeMaterializeResult{}, fmt.Errorf("Установщик устаревшей версии Forge предназначен для Minecraft %s, выбран %s", bundle.LegacyInstall.Minecraft, vanilla.MinecraftVersion)
 		}
 		universalCoord = strings.TrimSpace(bundle.LegacyInstall.Path)
 	}
@@ -1654,7 +1654,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 				return nil, fmt.Errorf("Несовпадение: SHA-1 локальной библиотеки %s", lib.Name)
 			}
 			if artifact.SHA1 == "" && hasLegacySHA1Checksums(lib.Checksums) && !legacySHA1Matches(lib.Checksums, sha1sum) {
-				return nil, fmt.Errorf("local legacy library %s SHA-1 не совпадает ни с одним checksums", lib.Name)
+				return nil, fmt.Errorf("SHA-1 устаревшей локальной библиотеки %s не совпадает ни с одной контрольной суммой", lib.Name)
 			}
 			if artifact.Size > 0 && artifact.Size != size {
 				return nil, fmt.Errorf("Несовпадение: размер локальной библиотеки %s", lib.Name)
@@ -2270,7 +2270,7 @@ func javaMajorVersion(javaPath string) (int, error) {
 	}
 	end := strings.Index(text[start+1:], `"`)
 	if end < 0 {
-		return 0, fmt.Errorf("java -version имеет некорректный output")
+		return 0, fmt.Errorf("Команда java -version вернула некорректный вывод")
 	}
 	ver := text[start+1 : start+1+end]
 	parts := strings.Split(ver, ".")

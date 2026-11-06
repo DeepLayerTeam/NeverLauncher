@@ -861,10 +861,10 @@ pub async fn certify_vanilla_compatibility(
     matching_server_port: Option<u16>,
 ) -> Result<VanillaCompatibilityProbeResult, String> {
     if required_java_major == 0 {
-        return Err("Vanilla certification требует required Java major".to_string());
+        return Err("Для сертификации Vanilla требуется обязательная основная версия Java".to_string());
     }
     if max_runtime_seconds < 5 {
-        return Err("Vanilla certification требует max-runtime-seconds >= 5".to_string());
+        return Err("Для сертификации Vanilla требуется max-runtime-seconds >= 5".to_string());
     }
     fs::create_dir_all(root).await.map_err(|err| format!("не удалось открыть client root: {err}"))?;
     guard_compatibility_0502::refuse_unscoped_launch(root)?;
@@ -910,9 +910,9 @@ pub async fn certify_vanilla_compatibility(
     let normalized_matching_server = matching_server.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
     if let Some(host) = normalized_matching_server.as_ref() {
         if host.chars().any(|ch| ch.is_whitespace()) {
-            return Err("Vanilla certification matching server host содержит пробелы".to_string());
+            return Err("Имя сервера для проверки соответствия Vanilla содержит пробелы".to_string());
         }
-        let port = matching_server_port.ok_or_else(|| "Vanilla certification matching server требует --server-port".to_string())?;
+        let port = matching_server_port.ok_or_else(|| "Для проверки соответствия сервера Vanilla требуется --server-port".to_string())?;
         if port == 0 {
             return Err("Vanilla certification matching server port должен быть > 0".to_string());
         }
@@ -1004,7 +1004,7 @@ pub async fn certify_vanilla_compatibility(
         .await
         .map_err(|err| format!("Сертификация Vanilla заблокирована Guard Sensor: {err}"))?;
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
-        Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться Vanilla runtime: {err}"))?), false),
+        Ok(result) => (Some(result.map_err(|err| format!("превышено время ожидания среды выполнения Vanilla: {err}"))?), false),
         Err(_) => {
             child.kill().await.map_err(|err| format!("Vanilla runtime не удалось остановить после timeout: {err}"))?;
             let _ = child.wait().await;
@@ -1144,7 +1144,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     let started_at = now_unix()?;
     let log_path = logs_dir.join(format!("runtime-launch-{started_at}.log"));
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
-        .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
+        .map_err(|err| format!("не удалось открыть журнал среды выполнения {}: {err}", log_path.display()))?;
     use std::io::Write as _;
     writeln!(log_file, "Runtime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
@@ -1382,7 +1382,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     }
 
     if required_java == 0 {
-        return Err("launch заблокирован: manifest/runtime metadata не задают требуемую major-версию Java".to_string());
+        return Err("Запуск заблокирован: в манифесте и метаданных среды выполнения нет требуемой основной версии Java".to_string());
     }
     let (java_executable, _managed) = select_java_executable(
         java_path,
@@ -1797,10 +1797,10 @@ fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &Com
 }
 
 async fn read_log_tail(path: &Path, max_bytes: u64) -> Result<String, String> {
-    let mut file = fs::File::open(path).await.map_err(|err| format!("не удалось открыть runtime log: {err}"))?;
+    let mut file = fs::File::open(path).await.map_err(|err| format!("не удалось открыть журнал среды выполнения: {err}"))?;
     let len = file.metadata().await.map_err(|err| format!("не удалось получить размер runtime log: {err}"))?.len();
     if len > max_bytes {
-        file.seek(SeekFrom::Start(len - max_bytes)).await.map_err(|err| format!("не удалось выполнить seek runtime log: {err}"))?;
+        file.seek(SeekFrom::Start(len - max_bytes)).await.map_err(|err| format!("не удалось изменить позицию чтения журнала среды выполнения: {err}"))?;
     }
     let mut data = Vec::with_capacity(len.min(max_bytes) as usize);
     file.read_to_end(&mut data).await.map_err(|err| format!("не удалось прочитать runtime log: {err}"))?;
@@ -1938,7 +1938,7 @@ mod tests {
         m.runtime.launch.environment_allowlist = vec!["LANG".into()];
         assert!(validate_runtime_constraints_0223(&m).is_ok());
         m.runtime.jvm_args.push("-Xmx2048M".into());
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "Обнаружен дубликат: «heap override»");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Обнаружен дубликат: «изменение выделения памяти кучи»");
         m.runtime.jvm_args.clear();
         m.runtime.jvm_args.push("-Xmx1024M".into());
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Размер кучи превышает максимум");

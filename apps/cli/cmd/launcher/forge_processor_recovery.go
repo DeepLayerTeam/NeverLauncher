@@ -165,7 +165,7 @@ func quarantineProcessorOutputs(pc forgeProcessorContext, processor forgeProcess
 		}
 		rel, err := filepath.Rel(root, abs)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return fmt.Errorf("processor output вышел за client root: %s", outputPath)
+			return fmt.Errorf("Результат работы обработчика расположен вне корневого каталога клиента: %s", outputPath)
 		}
 		if _, err := os.Lstat(abs); errors.Is(err, os.ErrNotExist) {
 			continue

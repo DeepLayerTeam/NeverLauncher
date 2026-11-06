@@ -239,7 +239,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		writeError(w, http.StatusUnauthorized, "сессия отозвана политикой оценки риска")
 		return
 	}
 	user, err := s.Repo.GetUser(session.UserID)

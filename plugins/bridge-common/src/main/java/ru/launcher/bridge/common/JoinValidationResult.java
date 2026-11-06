@@ -21,9 +21,9 @@ public final class JoinValidationResult {
     public String userMessage() {
         return switch (reason) {
             case "backend_unavailable", "backend_interrupted" -> "Сервис авторизации Launcher временно недоступен.";
-            case "serverbridge_protocol_unsupported", "serverbridge_v3_required_features_missing", "serverbridge_v3_feature_unsupported" -> "Версия ServerBridge несовместима с Backend Launcher. Обновите server bridge/backend до совместимого релиза.";
-            case "node_identity_missing", "node_identity_signing_failed", "serverbridge_node_signature_required", "serverbridge_node_identity_invalid", "serverbridge_node_fingerprint_mismatch" -> "Криптографическая identity ServerBridge не зарегистрирована или недействительна.";
-            case "serverbridge_node_timestamp_invalid", "serverbridge_node_timestamp_out_of_window" -> "Время ServerBridge node не синхронизировано с Backend.";
+            case "serverbridge_protocol_unsupported", "serverbridge_v3_required_features_missing", "serverbridge_v3_feature_unsupported" -> "Версия ServerBridge несовместима с Backend Launcher. Обновите серверный мост и Backend до совместимых версий.";
+            case "node_identity_missing", "node_identity_signing_failed", "serverbridge_node_signature_required", "serverbridge_node_identity_invalid", "serverbridge_node_fingerprint_mismatch" -> "Криптографический идентификатор ServerBridge не зарегистрирован или недействителен.";
+            case "serverbridge_node_timestamp_invalid", "serverbridge_node_timestamp_out_of_window" -> "Время узла ServerBridge не синхронизировано с Backend.";
             case "serverbridge_node_nonce_invalid", "serverbridge_node_nonce_replayed" -> "Backend отклонил повторный или некорректный ServerBridge-запрос.";
             case "serverbridge_node_nonce_store_unavailable" -> "Хранилище replay-защиты ServerBridge временно недоступно.";
             case "trusted_device_required", "trusted_device_unverified", "trusted_device_missing", "trusted_device_revoked" -> "Для входа требуется активное доверенное устройство Launcher.";
@@ -33,7 +33,7 @@ public final class JoinValidationResult {
             case "session_risk_revoked", "parent_session_inactive" -> "Сессия Launcher отозвана. Выполните вход заново.";
             case "serverbridge_player_uuid_mismatch", "serverbridge_player_uuid_invalid", "serverbridge_authorized_uuid_invalid", "join_player_uuid_mismatch", "join_authorized_uuid_invalid", "join_response_identity_mismatch", "join_authorization_missing", "proxy_authenticated_uuid_mismatch" -> "UUID игрока не совпадает с авторизованной игровой сессией. Проверьте конфигурацию online-mode/authlib/forwarding.";
             case "project_mismatch", "profile_mismatch" -> "Эта сессия Launcher не предназначена для данного сервера.";
-            case "channel_mismatch" -> "Канал launcher session не совпадает с каналом сервера.";
+            case "channel_mismatch" -> "Канал сессии лаунчера не совпадает с каналом сервера.";
             case "bridge_integrity_unavailable", "bridge_integrity_measurement_missing", "bridge_integrity_heartbeat_required", "bridge_integrity_policy_unavailable", "bridge_integrity_release_revoked", "bridge_integrity_hash_rejected", "bridge_integrity_server_type_mismatch", "bridge_integrity_request_measurement_mismatch" -> "Целостность ServerBridge не подтверждена. Обновите или перезапустите серверный bridge.";
             case "minecraft_integrity_session_required", "minecraft_integrity_binding_mismatch", "minecraft_integrity_repository_unavailable", "minecraft_integrity_session_inactive", "integrity_snapshot_missing", "integrity_release_revoked", "integrity_release_policy_unavailable", "integrity_attestation_not_fresh_at_issue", "integrity_attestation_hash_invalid", "integrity_evidence_hash_invalid", "integrity_guard_hash_invalid", "integrity_launcher_hash_invalid" -> "Целостность игровой сессии не подтверждена. Перезапустите Minecraft из Launcher.";
             default -> "Вход разрешён только через действительную доверенную сессию Launcher.";
