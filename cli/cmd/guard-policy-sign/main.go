@@ -28,8 +28,8 @@ func main() {
 	revokeDigest := flag.String("revoke-digest", "", "Хеши SHA-256 через запятую")
 	revokeTransform := flag.String("revoke-transform", "", "Идентификаторы преобразований через запятую")
 	policy := flag.String("policy", "", "Исходный JSON-файл политики")
-	key := flag.String("private-key", "", "Внешний файл приватного ключа Ed25519 в hex")
-	public := flag.String("public-key", "", "Внешний файл для сохранения публичного ключа Ed25519 в hex (keygen)")
+	key := flag.String("private-key", "", "Внешний файл приватного ключа Ed25519 в шестнадцатеричном формате")
+	public := flag.String("public-key", "", "Внешний файл для сохранения публичного ключа Ed25519 в шестнадцатеричном формате (keygen)")
 	out := flag.String("out", "", "Выходной подписанный контейнер")
 	flag.Parse()
 	var err error

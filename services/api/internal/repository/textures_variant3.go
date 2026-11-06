@@ -22,7 +22,7 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
 		return nil, err
 	}
 	if driver != "local" && driver != "s3" {
-		return nil, errors.New("Некорректное значение: «texture driver»")
+		return nil, errors.New("Некорректное значение: «драйвер текстур»")
 	}
 	if limit < 1 || limit > 100 {
 		return nil, errors.New("Пакет удаления неиспользуемых текстур: требуется от 1 до 100")

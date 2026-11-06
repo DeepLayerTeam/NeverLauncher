@@ -132,7 +132,7 @@ func (r *SQLRepository) SelectSavedTexture0255(ctx context.Context, p model.Mine
 		return zero, err
 	}
 	if !validTextureDigest0255(digest) || !validTextureKind0255(kind) || expected < 0 {
-		return zero, fmt.Errorf("Некорректное значение: «texture selection»")
+		return zero, fmt.Errorf("Некорректное значение: «выбор текстуры»")
 	}
 	if err := validateTextureSelection0251(kind, skinModel, visibility); err != nil {
 		return zero, err

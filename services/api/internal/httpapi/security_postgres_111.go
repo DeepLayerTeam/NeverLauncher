@@ -134,7 +134,7 @@ func (p *securityPostgres111) verifySecondFactor(userID, totp, recovery string) 
 
 func (p *securityPostgres111) generateRecoveryCodes(userID string, count int) ([]string, error) {
 	if count <= 0 {
-		return nil, errors.New("recovery code count должен быть > 0")
+		return nil, errors.New("количество кодов восстановления должно быть больше нуля")
 	}
 	rec, err := p.loadMFA(userID)
 	if err != nil {
@@ -267,7 +267,7 @@ func (p *securityPostgres111) ensurePasskeyMethod117(userID string, enabled bool
 
 func (p *securityPostgres111) generateRecoveryCodesForMethod117(userID string, count int, methodID string) ([]string, error) {
 	if count <= 0 {
-		return nil, errors.New("recovery code count должен быть > 0")
+		return nil, errors.New("количество кодов восстановления должно быть больше нуля")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

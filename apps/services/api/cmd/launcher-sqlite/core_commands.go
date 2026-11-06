@@ -78,7 +78,7 @@ func runCoreAction(args []string) int {
 	channel := flags.String("channel", "", "ID канала")
 	version := flags.String("version", "", "Версия выпуска")
 	expected := flags.Int64("expected-revision", 0, "Ожидаемая ревизия текущей версии канала")
-	rootHex := flags.String("trusted-root", "", "Настроенный оператором доверенный публичный ключ Ed25519 в hex")
+	rootHex := flags.String("trusted-root", "", "Настроенный оператором доверенный публичный ключ Ed25519 в шестнадцатеричном формате")
 	timeout := flags.Duration("timeout", 20*time.Second, "Предельное время выполнения операции")
 	if err := flags.Parse(args[1:]); err != nil {
 		return 2

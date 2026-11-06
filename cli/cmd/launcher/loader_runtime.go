@@ -477,7 +477,7 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	}
 	var entries []loaderMetaEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata повреждены: %w", loader, err)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("%s метаданные версии загрузчика повреждены: %w", loader, err)
 	}
 	if len(entries) == 0 {
 		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
@@ -574,7 +574,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 	for index := range profile.Libraries {
 		lib := &profile.Libraries[index]
 		if strings.TrimSpace(lib.Name) == "" {
-			return nil, fmt.Errorf("loader profile library[%d] не содержит name", index)
+			return nil, fmt.Errorf("в профиле загрузчика у библиотеки [%d] отсутствует поле name", index)
 		}
 		if lib.ClientReq != nil && !*lib.ClientReq {
 			continue
@@ -685,7 +685,7 @@ func strictMavenPath(name string) (string, error) {
 	}
 	parts := strings.Split(coordinate, ":")
 	if len(parts) < 3 || len(parts) > 4 {
-		return "", fmt.Errorf("Maven coordinate %q должен иметь group:artifact:version[:classifier]", name)
+		return "", fmt.Errorf("координата Maven %q должна иметь group:artifact:version[:classifier]", name)
 	}
 	for _, part := range parts {
 		if strings.TrimSpace(part) != part || part == "" || part == "." || part == ".." || strings.ContainsAny(part, `/\:@`) {
@@ -694,7 +694,7 @@ func strictMavenPath(name string) (string, error) {
 	}
 	for _, group := range strings.Split(parts[0], ".") {
 		if group == "" {
-			return "", fmt.Errorf("Maven coordinate %q содержит пустую часть group", name)
+			return "", fmt.Errorf("координата Maven %q содержит пустую часть group", name)
 		}
 	}
 	group := strings.ReplaceAll(parts[0], ".", "/")

@@ -34,7 +34,7 @@ type ManagedProviderStore02910 interface {
 }
 
 var ErrManagedProviderConflict02910 = errors.New("Конфликт ревизий управляемого провайдера авторизации")
-var ErrManagedProviderMissing02910 = errors.New("Не найдено: «managed auth provider revision»")
+var ErrManagedProviderMissing02910 = errors.New("Не найдено: «ревизия управляемого провайдера аутентификации»")
 
 // SQL-методы работают в транзакциях и сериализуют активации блокировкой строки head.
 func (r *SQLRepository) ListManagedProviders02910(ctx context.Context) ([]ManagedProviderHead02910, error) {

@@ -167,7 +167,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		store, ok := any(s.Repo).(interface{ CompleteMinimalInstallation0375(context.Context) error })
 		if !ok {
-			return errors.New("Отсутствует: «SQLite installation writer»")
+			return errors.New("Отсутствует: «механизм записи состояния установки SQLite»")
 		}
 		return store.CompleteMinimalInstallation0375(ctx)
 	}
@@ -215,7 +215,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, errors.New("Требуется: «email and password are»")
 	}
 	if len(password) < 12 {
-		return model.User{}, errors.New("bootstrap admin password: требуется «at least 12 characters»")
+		return model.User{}, errors.New("bootstrap admin password: требуется «не менее 12 символов»")
 	}
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()

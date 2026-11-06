@@ -88,7 +88,7 @@ type transactionalUpdater0156 struct {
 
 func newTransactionalUpdater0156(root string) (*transactionalUpdater0156, error) {
 	if strings.TrimSpace(root) == "" {
-		return nil, errors.New("updater root пуст")
+		return nil, errors.New("корневой каталог средства обновления пуст")
 	}
 	abs, err := filepath.Abs(root)
 	if err != nil {
@@ -96,7 +96,7 @@ func newTransactionalUpdater0156(root string) (*transactionalUpdater0156, error)
 	}
 	abs = filepath.Clean(abs)
 	if err := os.MkdirAll(abs, 0o755); err != nil {
-		return nil, fmt.Errorf("создание updater root: %w", err)
+		return nil, fmt.Errorf("создание корневого каталога средства обновления: %w", err)
 	}
 	realRoot, err := filepath.EvalSymlinks(abs)
 	if err != nil {
@@ -224,7 +224,7 @@ func (u *transactionalUpdater0156) acquireLock(force bool) error {
 			return errors.New("updater lock повреждён; используйте update recover --force")
 		}
 		if err := os.Remove(u.lockPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("удаление stale updater lock: %w", err)
+			return fmt.Errorf("удаление устаревшей блокировки средства обновления: %w", err)
 		}
 	}
 	return errors.New("не удалось получить updater lock")
@@ -436,7 +436,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return fmt.Errorf("updater remove target должен быть regular file: %s", rel)
+			return fmt.Errorf("удаляемый объект средства обновления должен быть обычным файлом: %s", rel)
 		}
 		if err := os.Remove(dst); err != nil {
 			return fmt.Errorf("Не удалось удалить устаревший файл %s: %w", rel, err)
@@ -863,7 +863,7 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 		}
 		key := pathKey(rel)
 		if previous, ok := seen[key]; ok {
-			return nil, nil, fmt.Errorf("Обнаружен дубликат: «updater path %s (%s)»", rel, previous)
+			return nil, nil, fmt.Errorf("Обнаружен дубликат: «путь средства обновления %s (%s)»", rel, previous)
 		}
 		if file.Size < 0 || len(strings.TrimSpace(file.SHA256)) != 64 {
 			return nil, nil, fmt.Errorf("Некорректное значение: «updater metadata for» %s", rel)
@@ -887,7 +887,7 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 		}
 		key := pathKey(rel)
 		if previous, ok := seen[key]; ok {
-			return nil, nil, fmt.Errorf("updater path %s одновременно %s и remove", rel, previous)
+			return nil, nil, fmt.Errorf("путь средства обновления %s одновременно указан как %s и как удаляемый объект", rel, previous)
 		}
 		seen[key] = "remove"
 		normalizedRemove = append(normalizedRemove, rel)
@@ -899,25 +899,25 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 
 func validateUpdaterPath0156(rel string) error {
 	if rel == "" || strings.ContainsRune(rel, '\x00') || strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "\\") {
-		return fmt.Errorf("небезопасный updater path: %q", rel)
+		return fmt.Errorf("небезопасный путь средства обновления: %q", rel)
 	}
 	if strings.Contains(rel, "\\") {
-		return fmt.Errorf("updater path должен использовать '/': %q", rel)
+		return fmt.Errorf("путь средства обновления должен использовать '/': %q", rel)
 	}
 	first := rel
 	if i := strings.IndexByte(first, '/'); i >= 0 {
 		first = first[:i]
 	}
 	if strings.Contains(first, ":") || filepath.VolumeName(filepath.FromSlash(rel)) != "" {
-		return fmt.Errorf("updater path не может содержать volume/drive prefix: %q", rel)
+		return fmt.Errorf("путь средства обновления не может содержать префикс тома или диска: %q", rel)
 	}
 	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
 	if clean != rel || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return fmt.Errorf("небезопасный updater path: %q", rel)
+		return fmt.Errorf("небезопасный путь средства обновления: %q", rel)
 	}
 	lower := strings.ToLower(rel)
 	if lower == updaterCoreDir0156 || strings.HasPrefix(lower, updaterCoreDir0156+"/") {
-		return fmt.Errorf("updater payload не может изменять control directory: %s", rel)
+		return fmt.Errorf("пакет обновления не может изменять управляющий каталог: %s", rel)
 	}
 	return nil
 }

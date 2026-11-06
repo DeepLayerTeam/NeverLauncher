@@ -448,9 +448,9 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 		}
 	}
 	if policy.RequireServerJoin {
-		return errors.New("publish policy требует подписанный runtime PASS текущего manifest с actual client и server join")
+		return errors.New("политика публикации требует подписанный runtime PASS текущего manifest с actual client и server join")
 	}
-	return errors.New("publish policy требует подписанный runtime PASS текущего manifest с actual client")
+	return errors.New("политика публикации требует подписанный runtime PASS текущего manifest с actual client")
 }
 
 func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) bool {

@@ -97,7 +97,7 @@ func exactMinecraftVersionForRecovery(requested string) (string, bool) {
 
 func vanillaMetadataCachePaths(root, resolvedVersion string) (string, string, error) {
 	if strings.TrimSpace(root) == "" || strings.TrimSpace(resolvedVersion) == "" {
-		return "", "", errors.New("metadata cache требует root/version")
+		return "", "", errors.New("для кеша метаданных требуется root/version")
 	}
 	stateDir, err := secureClientDestination(root, ".launcher/upstream-cache")
 	if err != nil {
@@ -152,7 +152,7 @@ func saveVanillaMetadataCache(root, manifestURL, requested string, manifestBytes
 func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaResolvedMetadata, error) {
 	resolved, exact := exactMinecraftVersionForRecovery(requested)
 	if !exact {
-		return vanillaResolvedMetadata{}, errors.New("latest/snapshot metadata recovery запрещён: требуется свежий authoritative manifest")
+		return vanillaResolvedMetadata{}, errors.New("восстановление из метаданных latest/snapshot запрещено: требуется новый авторитетный манифест")
 	}
 	recordPath, payloadPath, err := vanillaMetadataCachePaths(root, resolved)
 	if err != nil {

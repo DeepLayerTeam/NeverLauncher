@@ -245,7 +245,7 @@ func verifyRestartedComponentSet02310(root, desktopPath string) error {
 		return err
 	}
 	if !present {
-		return errors.New("«recovery»: запрещено «prove installed component state; refusing automatic restart»")
+		return errors.New("Восстановление: состояние установленных компонентов не подтверждено; автоматический перезапуск запрещён")
 	}
 	if err := reconcileInstalledComponentGeneration02311(root); err != nil {
 		return err

@@ -39,7 +39,7 @@ func sharedArtifactsContext0277(ctx context.Context, cacheDir, clientDir string)
 		return ctx, err
 	}
 	if pathContained0277(root, client) || pathContained0277(client, root) {
-		return ctx, errors.New("общий кеш и каталог клиента: запрещено «overlap»")
+		return ctx, errors.New("общий кеш и каталог клиента: запрещено «пересечение»")
 	}
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return ctx, err

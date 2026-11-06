@@ -206,7 +206,7 @@ func serverBridgeSigningKeyFromPrivate01912(privateKey ed25519.PrivateKey) serve
 func serverBridgeSigningKeyFromSeed01912(seedHex string) (serverBridgeSigningKey01912, error) {
 	seed, err := hex.DecodeString(strings.TrimSpace(seedHex))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return serverBridgeSigningKey01912{}, fmt.Errorf("ServerBridge previous control signing key: требуется 32-байтное исходное значение Ed25519 в hex")
+		return serverBridgeSigningKey01912{}, fmt.Errorf("предыдущий ключ подписи управляющих сообщений ServerBridge: требуется 32-байтное исходное значение Ed25519 в шестнадцатеричном формате")
 	}
 	return serverBridgeSigningKeyFromPrivate01912(ed25519.NewKeyFromSeed(seed)), nil
 }

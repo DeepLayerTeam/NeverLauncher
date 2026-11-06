@@ -17,7 +17,7 @@ const guardSessionBatchSize0507 = 32
 
 func (s Server) guardBoundStore0507() (repository.GuardBoundSessionStore0507, error) {
 	if s.State == nil || s.State.ServerBridge == nil {
-		return nil, errors.New("Недоступно: «Guard Session backend»")
+		return nil, errors.New("Недоступно: «серверный компонент сеансов Guard»")
 	}
 	store, ok := s.State.ServerBridge.backendV2().(repository.GuardBoundSessionStore0507)
 	if !ok {
@@ -105,14 +105,14 @@ func (s Server) requireGuardBoundJoin0507(r *http.Request, join bridgeJoinRecord
 	}
 	b, err := store.GetGuardBoundSession0507(r.Context(), join.SessionCorrelationID)
 	if err != nil {
-		return errors.New("Не найдено: «Guard Session signed binding»")
+		return errors.New("Не найдено: «подписанная привязка сеанса Guard»")
 	}
 	if b.UserID != join.UserID || b.SessionID != join.SessionID || b.MinecraftSessionID != join.MinecraftSessionID ||
 		b.TrustedDeviceID != join.TrustedDeviceID || b.BindingEpoch != join.BindingEpoch || b.ProjectID != join.ProjectID ||
 		b.ProfileID != join.ProfileID || b.Channel != join.Channel || b.PlayerUUID != join.UUID ||
 		!strings.EqualFold(b.Username, join.Username) || b.IdentityRealm != join.IdentityRealm ||
 		(!handoff && (b.JoinID != join.ID || b.ServerID != join.ServerID)) {
-		return errors.New("Несовпадение: «Guard Session account/server/build binding»")
+		return errors.New("Несовпадение: «привязка сеанса Guard к учётной записи, серверу и сборке»")
 	}
 	// Передача через прокси меняет целевой сервер, но не должна расширять
 	// разрешённое множество серверов подписанной сборки. Требуйте явного допуска

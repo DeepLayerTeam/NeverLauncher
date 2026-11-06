@@ -61,7 +61,7 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 		return model.ExtensionEvent{}, errors.New("Метаданные события расширения превышают установленные ограничения")
 	}
 	if in.SchemaVersion < 1 {
-		return model.ExtensionEvent{}, errors.New("extension event schemaVersion: требуется «положительное значение»")
+		return model.ExtensionEvent{}, errors.New("версия схемы события расширения: требуется «положительное значение»")
 	}
 	var payload any
 	if len(in.Payload) == 0 {
@@ -109,16 +109,16 @@ func normalizeSubscription0206(in model.ExtensionEventSubscription) (model.Exten
 		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: ID расширения %q", in.ExtensionID)
 	}
 	if in.Scope != "global" && in.Scope != "project" {
-		return model.ExtensionEventSubscription{}, errors.New("subscription scope: требуется глобальная область или область проекта")
+		return model.ExtensionEventSubscription{}, errors.New("область подписки: требуется глобальная область или область проекта")
 	}
 	if in.Scope == "project" && in.ScopeID == "" {
-		return model.ExtensionEventSubscription{}, errors.New("project subscription: требуется «scopeId»")
+		return model.ExtensionEventSubscription{}, errors.New("подписка проекта: требуется «scopeId»")
 	}
 	if !extensionPermission0201.MatchString(in.EventType) {
 		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: тип события %q", in.EventType)
 	}
 	if in.Mode != model.ExtensionEventModeAsync && in.Mode != model.ExtensionEventModeSync {
-		return model.ExtensionEventSubscription{}, errors.New("subscription mode: требуется «асинхронный или синхронный»")
+		return model.ExtensionEventSubscription{}, errors.New("режим подписки: требуется «асинхронный или синхронный»")
 	}
 	return in, nil
 }

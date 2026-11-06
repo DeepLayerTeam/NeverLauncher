@@ -47,7 +47,7 @@ func operationsGARead0460(dir, name string, max int64) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > max {
-		return nil, fmt.Errorf("Небезопасное значение: «operations GA file»: %s", name)
+		return nil, fmt.Errorf("Небезопасное значение: «файл приёмки операторских функций»: %s", name)
 	}
 	return os.ReadFile(p)
 }
@@ -83,7 +83,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
 	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(pub, append([]byte(operationsGADomain0460), raw...), sig) {
-		return errors.New("Ошибка: «independent operations GA signature»")
+		return errors.New("Ошибка: «независимая подпись приёмки операторских функций»")
 	}
 	var a operationsGAApproval0460
 	if err := json.Unmarshal(raw, &a); err != nil {

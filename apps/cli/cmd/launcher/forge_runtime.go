@@ -259,7 +259,7 @@ func handleRuntimeForgeLikePackage(loader string, args []string) error {
 func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializeOptions, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "forge" && loader != "neoforge" {
-		return forgeMaterializeOptions{}, fmt.Errorf("installer loader %s не поддерживается", loader)
+		return forgeMaterializeOptions{}, fmt.Errorf("загрузчик установщика %s не поддерживается", loader)
 	}
 	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
 	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
@@ -373,7 +373,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		metadataURL = pinned.ResolutionSourceURL
 		resolutionSourceSHA256 = pinned.ResolutionSourceSHA256
 		if artifactVersion == "" {
-			return forgeMaterializeResult{}, errors.New("loader resolution lock не содержит Forge/NeoForge artifactVersion")
+			return forgeMaterializeResult{}, errors.New("файл фиксации выбора загрузчика не содержит Forge/NeoForge artifactVersion")
 		}
 	} else {
 		loaderVersion, artifactVersion, metadataURL, resolutionSourceSHA256, err = resolveForgeLikeVersionWithEvidence(ctx, opts.HTTPClient, loader, vanilla.MinecraftVersion, opts.LoaderVersion, opts.MavenMetadataURL)
@@ -514,7 +514,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	// spec. Реальный критерий производственной обработки — наличие version.json и
 	// метаданных процессоров, а не произвольный минимальный номер spec.
 	if bundle.Profile.JSON == "" && bundle.Profile.Version == "" {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer profile не содержит version/json metadata; legacy pre-1.13 installer format в текущем compatibility release не поддерживается", loader)
+		return forgeMaterializeResult{}, fmt.Errorf("%s профиль установщика не содержит метаданных версии/JSON; устаревший формат установщика до Minecraft 1.13 не поддерживается текущим выпуском совместимости", loader)
 	}
 	if bundle.Profile.Minecraft == "" {
 		bundle.Profile.Minecraft = vanilla.MinecraftVersion
@@ -529,7 +529,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, fmt.Errorf("%s version profile inheritsFrom=%s, ожидался %s", loader, bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if bundle.Version.ID == "" || bundle.Version.MainClass == "" {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer version.json не содержит id/mainClass", loader)
+		return forgeMaterializeResult{}, fmt.Errorf("%s файл version.json установщика не содержит id/mainClass", loader)
 	}
 	if err := validateLoaderProfileID(bundle.Version.ID); err != nil {
 		return forgeMaterializeResult{}, err
@@ -722,13 +722,13 @@ func installForgeLegacy(
 		allowedModes["legacy-v1-universal"] = true
 		allowedModes["legacy-v2-empty-processors"] = true
 	default:
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy compatibility поддерживает Minecraft 1.7.10 и 1.12.2, получен %s", vanilla.MinecraftVersion)
+		return forgeMaterializeResult{}, fmt.Errorf("совместимость устаревшего Forge поддерживает Minecraft 1.7.10 и 1.12.2, получен %s", vanilla.MinecraftVersion)
 	}
 	if vanilla.JavaMajorVersion != 8 {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy %s требует Java 8, materializer получил Java %d", vanilla.MinecraftVersion, vanilla.JavaMajorVersion)
+		return forgeMaterializeResult{}, fmt.Errorf("устаревший Forge %s требует Java 8, средство подготовки получило Java %d", vanilla.MinecraftVersion, vanilla.JavaMajorVersion)
 	}
 	if !allowedModes[bundle.LegacyMode] {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy %s не поддерживает install mode %q", vanilla.MinecraftVersion, bundle.LegacyMode)
+		return forgeMaterializeResult{}, fmt.Errorf("устаревший Forge %s не поддерживает режим установки %q", vanilla.MinecraftVersion, bundle.LegacyMode)
 	}
 	profileNormalized := false
 	if bundle.Version.InheritsFrom == "" {
@@ -736,7 +736,7 @@ func installForgeLegacy(
 		profileNormalized = true
 	}
 	if bundle.Version.InheritsFrom != vanilla.MinecraftVersion {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy profile inheritsFrom=%s, ожидался %s", bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
+		return forgeMaterializeResult{}, fmt.Errorf("профиль устаревшего Forge inheritsFrom=%s, ожидался %s", bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if bundle.Version.ID == "" || bundle.Version.MainClass == "" {
 		return forgeMaterializeResult{}, errors.New("Forge legacy runtime profile не содержит id/mainClass")
@@ -760,7 +760,7 @@ func installForgeLegacy(
 		universalCoord = strings.TrimSpace(bundle.LegacyInstall.Path)
 	}
 	if universalCoord == "" {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge %s legacy installer не содержит Maven coordinate universal JAR", vanilla.MinecraftVersion)
+		return forgeMaterializeResult{}, fmt.Errorf("в устаревшем установщике Forge %s отсутствуют координаты Maven универсального JAR", vanilla.MinecraftVersion)
 	}
 	universalRel, err := mavenCoordinatePath(universalCoord)
 	if err != nil {
@@ -775,7 +775,7 @@ func installForgeLegacy(
 	if bundle.LegacyMode == "legacy-v1-universal" {
 		entry := strings.TrimPrefix(strings.ReplaceAll(strings.TrimSpace(bundle.LegacyInstall.FilePath), "\\", "/"), "/")
 		if entry == "" {
-			return forgeMaterializeResult{}, errors.New("legacy Forge install.filePath пуст")
+			return forgeMaterializeResult{}, errors.New("поле install.filePath устаревшего Forge пуст")
 		}
 		if _, err := safeArchiveRelative(entry); err != nil {
 			return forgeMaterializeResult{}, fmt.Errorf("Ошибка записи универсального пакета старой версии Forge: %w", err)
@@ -933,7 +933,7 @@ func normalizeForgeLegacyRuntimeProfile(raw []byte, profile loaderVersionProfile
 	}
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(trimmed, &object); err != nil {
-		return nil, false, fmt.Errorf("Forge legacy versionInfo JSON повреждён: %w", err)
+		return nil, false, fmt.Errorf("JSON данных versionInfo устаревшего Forge повреждён: %w", err)
 	}
 	normalized := false
 	var inherited string
@@ -945,7 +945,7 @@ func normalizeForgeLegacyRuntimeProfile(raw []byte, profile loaderVersionProfile
 		object["inheritsFrom"] = encoded
 		normalized = true
 	} else if inherited != parent {
-		return nil, false, fmt.Errorf("Forge legacy versionInfo inheritsFrom=%s, ожидался %s", inherited, parent)
+		return nil, false, fmt.Errorf("данные versionInfo устаревшего Forge inheritsFrom=%s, ожидался %s", inherited, parent)
 	} else {
 		// Профиль, уже наследующий правильную версию Vanilla, тоже
 		// нормализуется. Флаг описывает итоговый инвариант, а не
@@ -993,11 +993,11 @@ func extractInstallerEntry(installerPath, entryName, destination string) error {
 			continue
 		}
 		if strings.HasSuffix(name, "/") || entry.UncompressedSize64 > 1<<30 {
-			return fmt.Errorf("installer entry %s недопустим", wanted)
+			return fmt.Errorf("элемент установщика %s недопустим", wanted)
 		}
 		return copyZipEntryAtomic(entry, destination)
 	}
-	return fmt.Errorf("installer entry %s отсутствует", wanted)
+	return fmt.Errorf("элемент установщика %s отсутствует", wanted)
 }
 
 func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordinate, rel, actualSHA1 string, bundle installerBundle, strict, authenticatedEmbeddedInstaller bool) error {
@@ -1050,7 +1050,7 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 	expected := parseSHA1Sidecar(string(shaBytes))
 	if !validSHA1Hex(expected) {
 		if strict {
-			return errors.New("Forge legacy universal SHA-1 sidecar некорректен")
+			return errors.New("дополнительный файл SHA-1 универсального пакета устаревшего Forge некорректен")
 		}
 		return nil
 	}
@@ -1128,11 +1128,11 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 		sourceSHA := sha256HexBytes(data)
 		var metadata mavenMetadataXML
 		if err := xml.Unmarshal(data, &metadata); err != nil {
-			return "", "", metadataURL, "", fmt.Errorf("%s Maven metadata XML повреждён: %w", loader, err)
+			return "", "", metadataURL, "", fmt.Errorf("%s XML метаданных Maven повреждён: %w", loader, err)
 		}
 		versions := metadata.Versioning.Versions.Version
 		if len(versions) == 0 {
-			lastSelectionErr = fmt.Errorf("%s Maven metadata не содержит versions", loader)
+			lastSelectionErr = fmt.Errorf("%s в метаданных Maven отсутствуют версии", loader)
 		} else {
 			// Метаданные Maven не гарантируют числовой порядок. Ранее выбор последней
 			// подходящей строки закреплял старые Forge 38.0.0/36.0.0, чьи загрузчики
@@ -1325,7 +1325,7 @@ func isPrereleaseVersion(value string) bool {
 func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 	zr, err := zip.OpenReader(installerPath)
 	if err != nil {
-		return installerBundle{}, fmt.Errorf("installer JAR повреждён: %w", err)
+		return installerBundle{}, fmt.Errorf("JAR установщика повреждён: %w", err)
 	}
 	defer zr.Close()
 	profileBytes, err := readZipFileLimited(&zr.Reader, "install_profile.json", 8<<20)
@@ -1351,7 +1351,7 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 		}
 		var versionProfile loaderVersionProfile
 		if err := json.Unmarshal(legacy.VersionInfo, &versionProfile); err != nil {
-			return installerBundle{}, fmt.Errorf("legacy Forge versionInfo повреждён: %w", err)
+			return installerBundle{}, fmt.Errorf("данные versionInfo устаревшего Forge повреждены: %w", err)
 		}
 		return installerBundle{
 			Version:       versionProfile,
@@ -1376,7 +1376,7 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 	}
 	var versionProfile loaderVersionProfile
 	if err := json.Unmarshal(versionBytes, &versionProfile); err != nil {
-		return installerBundle{}, fmt.Errorf("installer version.json повреждён: %w", err)
+		return installerBundle{}, fmt.Errorf("файл version.json установщика повреждён: %w", err)
 	}
 	bundle := installerBundle{
 		Profile:    profile,
@@ -1429,7 +1429,7 @@ func readZipFileLimited(zr *zip.Reader, wanted string, limit int64) ([]byte, err
 
 func extractInstallerData(installerPath, targetDir string, profile *forgeInstallerProfile) error {
 	if profile == nil {
-		return errors.New("installer profile отсутствует")
+		return errors.New("профиль установщика отсутствует")
 	}
 	required := map[string]bool{}
 	for key, data := range profile.Data {
@@ -1457,14 +1457,14 @@ func extractInstallerData(installerPath, targetDir string, profile *forgeInstall
 			continue
 		}
 		if strings.HasSuffix(name, "/") {
-			return fmt.Errorf("installer data %s является каталогом", name)
+			return fmt.Errorf("элемент данных установщика %s является каталогом", name)
 		}
 		clean, err := safeArchiveRelative(name)
 		if err != nil {
 			return fmt.Errorf("Ошибка данных установщика: %w", err)
 		}
 		if entry.UncompressedSize64 > 512<<20 {
-			return fmt.Errorf("installer data %s превышает 512 MiB", name)
+			return fmt.Errorf("элемент данных установщика %s превышает 512 МиБ", name)
 		}
 		dst := filepath.Join(targetDir, filepath.FromSlash(clean))
 		if err := copyZipEntryAtomic(entry, dst); err != nil {
@@ -1480,7 +1480,7 @@ func extractInstallerData(installerPath, targetDir string, profile *forgeInstall
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
-		return fmt.Errorf("installer не содержит client data files: %s", strings.Join(missing, ", "))
+		return fmt.Errorf("в установщике отсутствуют файлы клиентских данных: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
@@ -1510,7 +1510,7 @@ func extractEmbeddedMaven(installerPath, clientDir string) ([]vanillaDownloadedF
 			continue
 		}
 		if entry.UncompressedSize64 > 1<<30 {
-			return nil, fmt.Errorf("embedded Maven artifact %s превышает 1 GiB", rel)
+			return nil, fmt.Errorf("встроенный артефакт Maven %s превышает 1 GiB", rel)
 		}
 		dstRel := filepath.ToSlash(filepath.Join("libraries", rel))
 		dst, err := secureClientDestination(clientDir, dstRel)
@@ -1540,7 +1540,7 @@ func safeArchiveRelative(value string) (string, error) {
 
 func copyZipEntryAtomic(entry *zip.File, dst string) error {
 	if entry.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("installer содержит symlink: %s", entry.Name)
+		return fmt.Errorf("установщик содержит символическую ссылку: %s", entry.Name)
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
@@ -1598,7 +1598,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 	for i := range *libraries {
 		lib := &(*libraries)[i]
 		if strings.TrimSpace(lib.Name) == "" {
-			return nil, fmt.Errorf("library[%d] не содержит name", i)
+			return nil, fmt.Errorf("у библиотеки [%d] отсутствует поле name", i)
 		}
 		if lib.ClientReq != nil && !*lib.ClientReq {
 			continue
@@ -1812,16 +1812,16 @@ func mavenCoordinatePath(coordinate string) (string, error) {
 		ext = coordinate[at+1:]
 		coordinate = coordinate[:at]
 		if ext == "" || strings.ContainsAny(ext, `/\\:`) {
-			return "", fmt.Errorf("некорректное Maven extension")
+			return "", fmt.Errorf("некорректное расширение координат Maven")
 		}
 	}
 	parts := strings.Split(coordinate, ":")
 	if len(parts) < 3 || len(parts) > 4 {
-		return "", fmt.Errorf("Maven coordinate %q должен иметь group:artifact:version[:classifier][@ext]", coordinate)
+		return "", fmt.Errorf("координата Maven %q должна иметь group:artifact:version[:classifier][@ext]", coordinate)
 	}
 	for _, part := range parts {
 		if strings.TrimSpace(part) == "" || strings.ContainsAny(part, `/\\`) {
-			return "", fmt.Errorf("Maven coordinate %q содержит недопустимую часть", coordinate)
+			return "", fmt.Errorf("координата Maven %q содержит недопустимую часть", coordinate)
 		}
 	}
 	group := strings.ReplaceAll(parts[0], ".", "/")
@@ -1866,7 +1866,7 @@ func fingerprintForgeProcessor0273(pc forgeProcessorContext, p forgeProcessor) (
 
 func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processorStats, error) {
 	if pc.Profile == nil {
-		return processorStats{}, errors.New("processor profile отсутствует")
+		return processorStats{}, errors.New("профиль обработчика отсутствует")
 	}
 	journal, rebuilt, err := loadForgeProcessorJournal(pc)
 	if err != nil {
@@ -1878,7 +1878,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			continue
 		}
 		if strings.TrimSpace(processor.Jar) == "" {
-			return stats, fmt.Errorf("processor[%d] не содержит jar", index)
+			return stats, fmt.Errorf("у обработчика [%d] отсутствует поле jar", index)
 		}
 		identity := forgeProcessorIdentity(pc, index, processor)
 		inputSHA, err := fingerprintForgeProcessor0273(pc, processor)
@@ -1955,7 +1955,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		}
 		if len(processor.Outputs) > 0 && !allReady {
 			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, "Ожидаемые выходные файлы не созданы")
-			return stats, fmt.Errorf("processor[%d] не создал ожидаемые outputs", index)
+			return stats, fmt.Errorf("обработчик [%d] не создал ожидаемые выходные файлы", index)
 		}
 		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "completed", logPath, interrupted, "")
 		if err != nil {
@@ -2098,7 +2098,7 @@ func resolveProcessorNamedToken(pc forgeProcessorContext, key string) (string, e
 	default:
 		value, ok := pc.Profile.Data[key]
 		if !ok {
-			return "", fmt.Errorf("неизвестный installer data token {%s}", key)
+			return "", fmt.Errorf("неизвестный токен данных установщика {%s}", key)
 		}
 		return resolveInstallerDataValue(pc, value.Client)
 	}
@@ -2107,7 +2107,7 @@ func resolveProcessorNamedToken(pc forgeProcessorContext, key string) (string, e
 func resolveInstallerDataValue(pc forgeProcessorContext, value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return "", errors.New("installer data client value пуст")
+		return "", errors.New("клиентское значение данных установщика пусто")
 	}
 	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
 		return processorArtifactPath(pc.ClientDir, value[1:len(value)-1], false)
@@ -2122,7 +2122,7 @@ func resolveInstallerDataValue(pc forgeProcessorContext, value string) (string, 
 	full := filepath.Join(pc.InstallerDataDir, filepath.FromSlash(rel))
 	info, err := os.Stat(full)
 	if err != nil || info.IsDir() {
-		return "", fmt.Errorf("installer data %s не извлечён: %w", value, err)
+		return "", fmt.Errorf("не удалось извлечь данные установщика %s: %w", value, err)
 	}
 	return filepath.Abs(full)
 }
@@ -2159,7 +2159,7 @@ func readJarMainClass(jarPath string) (string, error) {
 	fields := parseManifestFields(manifest)
 	mainClass := strings.TrimSpace(fields["Main-Class"])
 	if mainClass == "" {
-		return "", errors.New("processor JAR manifest не содержит Main-Class")
+		return "", errors.New("манифест JAR обработчика не содержит Main-Class")
 	}
 	if strings.ContainsAny(mainClass, "\r\n\t ") {
 		return "", errors.New("processor Main-Class некорректен")
@@ -2216,7 +2216,7 @@ func fileMatchesExpectedDigest(filePath, expected string) (bool, error) {
 		}
 		return strings.EqualFold(hex.EncodeToString(h.Sum(nil)), expected), nil
 	}
-	return false, fmt.Errorf("неподдерживаемый output digest %q", expected)
+	return false, fmt.Errorf("неподдерживаемая контрольная сумма результата %q", expected)
 }
 
 func selectInstallerJava(explicit string, minimumMajor int) (string, error) {

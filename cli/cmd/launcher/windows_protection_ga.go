@@ -158,7 +158,7 @@ func buildWindowsProtectionGADocument0190(dir, ver string) (windowsProtectionGAC
 		return windowsProtectionGACertificate0190{}, err
 	}
 	if rc.Status != windowsProtectionReleaseStatus01812 || rc.ProtectionProfile != "aggressive" || rc.ScenarioExecutions != 55 {
-		return windowsProtectionGACertificate0190{}, errors.New("Для выпуска защиты Windows уровня GA требуется «a complete aggressive RC certificate»")
+		return windowsProtectionGACertificate0190{}, errors.New("Для выпуска защиты Windows уровня GA требуется «полный сертификат расширенной проверки кандидата в релиз»")
 	}
 	if err := verifyWindowsUserModeOnlyPackages0190(dir, ver); err != nil {
 		return windowsProtectionGACertificate0190{}, err
@@ -245,19 +245,19 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 		return err
 	}
 	if cert.SchemaVersion != expected.SchemaVersion || cert.Product != expected.Product || cert.Version != expected.Version || cert.Status != windowsProtectionGAStatus0190 || cert.ReleaseStage != windowsProtectionGAStage0190 || cert.ProtectionModel != windowsProtectionGAModel0190 || cert.ProtectionProfile != "aggressive" || cert.EnforcementMode != windowsProtectionGAEnforcement0190 {
-		return errors.New("Несовпадение: «Windows Protection GA metadata»")
+		return errors.New("Несовпадение: «метаданные приёмки защиты Windows»")
 	}
 	if !strings.EqualFold(cert.SourceCommit, expected.SourceCommit) || !strings.EqualFold(cert.Repository, expected.Repository) || !strings.EqualFold(cert.RCCertificateSHA256, expected.RCCertificateSHA256) || !strings.EqualFold(cert.RCBoundarySHA256, expected.RCBoundarySHA256) || cert.RCCertificateID != expected.RCCertificateID {
 		return errors.New("Несовпадение: «Windows Protection GA RC/source binding»")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, cert.CreatedAt); err != nil {
-		return fmt.Errorf("Некорректное значение: «Windows Protection GA createdAt»: %w", err)
+		return fmt.Errorf("Некорректное значение: «дата создания данных приёмки защиты Windows»: %w", err)
 	}
 	if !strings.EqualFold(cert.AdversarialCertificateSHA256, expected.AdversarialCertificateSHA256) || !strings.EqualFold(cert.AdversarialEvidenceRootSHA256, expected.AdversarialEvidenceRootSHA256) || cert.ScenarioExecutions != 55 {
-		return errors.New("Несовпадение: «Windows Protection GA adversarial evidence»")
+		return errors.New("Несовпадение: «свидетельства испытаний защиты Windows на обходы»")
 	}
 	if len(cert.JavaMajors) != len(expected.JavaMajors) || len(cert.RequiredCapabilities) != len(expected.RequiredCapabilities) || len(cert.Artifacts) != len(expected.Artifacts) {
-		return errors.New("Несовпадение: «Windows Protection GA cohort size»")
+		return errors.New("Несовпадение: «размер выборки приёмочных испытаний защиты Windows»")
 	}
 	for i := range expected.JavaMajors {
 		if cert.JavaMajors[i] != expected.JavaMajors[i] {
@@ -272,7 +272,7 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	for i := range expected.Artifacts {
 		a, b := cert.Artifacts[i], expected.Artifacts[i]
 		if a.Name != b.Name || a.Size != b.Size || !strings.EqualFold(a.SHA256, b.SHA256) {
-			return fmt.Errorf("Несовпадение: «Windows Protection GA artifact»: %s", b.Name)
+			return fmt.Errorf("Несовпадение: «артефакт приёмки защиты Windows»: %s", b.Name)
 		}
 	}
 	for key := range expected.Invariants {

@@ -56,7 +56,7 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 		return empty, err
 	}
 	if len(raw) > gr.MaxReportBytes {
-		return empty, errors.New("Превышен допустимый размер: «rehearsal evidence»")
+		return empty, errors.New("Превышен допустимый размер: «свидетельства пробного запуска»")
 	}
 	digest := sha256.Sum256(raw)
 	checksum := hex.EncodeToString(digest[:])

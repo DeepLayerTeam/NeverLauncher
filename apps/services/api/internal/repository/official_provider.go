@@ -46,7 +46,7 @@ func (v OfficialProviderSettings02611) Validate() error {
 		return errors.New("Для включённого провайдера требуется clientId")
 	}
 	if v.Enabled && !v.BrowserEnabled && !v.DeviceEnabled {
-		return errors.New("at least one authentication flow: требуется «enabled»")
+		return errors.New("хотя бы один способ аутентификации: требуется «enabled»")
 	}
 	return nil
 }

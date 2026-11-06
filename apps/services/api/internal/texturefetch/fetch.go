@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	ErrUnsafe   = errors.New("Небезопасное значение: «texture URL or address»")
+	ErrUnsafe   = errors.New("Небезопасное значение: «URL или адрес текстуры»")
 	ErrRemote   = errors.New("Ошибка: «запрос удалённой текстуры»")
 	ErrRedirect = errors.New("Запрещено: «перенаправления при загрузке текстур»")
 	ErrTooLarge = errors.New("Превышен допустимый размер: «удалённая текстура»")

@@ -122,7 +122,7 @@ func VerifyEnvelopeWithPolicy(data []byte, pinnedKeyHex string, policy *TrustPol
 	pinnedKeyHex = strings.TrimSpace(pinnedKeyHex)
 	key, err := hex.DecodeString(pinnedKeyHex)
 	if err != nil || len(key) != ed25519.PublicKeySize {
-		return cfg, "", errors.New("Доверенный ключ должен быть предварительно установленным 32-байтовым ключом Ed25519 в hex")
+		return cfg, "", errors.New("Доверенный ключ должен быть предварительно установленным 32-байтовым ключом Ed25519 в шестнадцатеричном формате")
 	}
 	var envelope Envelope
 	if err := decodeStrict(data, &envelope); err != nil {

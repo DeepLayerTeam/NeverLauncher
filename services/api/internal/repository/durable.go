@@ -72,14 +72,14 @@ func normalizeDurableJob0213(job model.DurableJob) (model.DurableJob, error) {
 	job.ResourceID = strings.TrimSpace(job.ResourceID)
 	job.IdempotencyKey = strings.TrimSpace(job.IdempotencyKey)
 	if job.Kind == "" || job.ActorType == "" || job.ActorID == "" || job.Action == "" || job.ResourceType == "" || job.ResourceID == "" || job.IdempotencyKey == "" {
-		return model.DurableJob{}, errors.New("Требуется: «durable job identity/action/resource/idempotency fields are»")
+		return model.DurableJob{}, errors.New("Требуется: поля идентификатора, действия, ресурса и идемпотентности устойчивого задания")
 	}
 	if len(job.Payload) == 0 {
 		job.Payload = json.RawMessage(`{}`)
 	}
 	var canonical any
 	if err := json.Unmarshal(job.Payload, &canonical); err != nil {
-		return model.DurableJob{}, fmt.Errorf("Некорректное значение: «durable job payload»: %w", err)
+		return model.DurableJob{}, fmt.Errorf("Некорректное значение: «данные устойчивого задания»: %w", err)
 	}
 	payload, err := json.Marshal(canonical)
 	if err != nil {
@@ -495,7 +495,7 @@ func (r *SQLRepository) AcquireDurableScopeLease(ctx context.Context, scopeKey, 
 	}
 	scopeKey, owner = strings.TrimSpace(scopeKey), strings.TrimSpace(owner)
 	if scopeKey == "" || owner == "" {
-		return model.DurableScopeLease{}, errors.New("Требуется: «scope key and owner»")
+		return model.DurableScopeLease{}, errors.New("Требуется: ключ области и владелец")
 	}
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
@@ -861,7 +861,7 @@ func (r *SQLRepository) ConsumeDurableNonce(ctx context.Context, namespace, nonc
 	namespace = strings.TrimSpace(namespace)
 	nonceHash = strings.ToLower(strings.TrimSpace(nonceHash))
 	if namespace == "" || len(nonceHash) != 64 {
-		return errors.New("Некорректное значение: «durable nonce»")
+		return errors.New("Некорректное значение: «одноразовый идентификатор устойчивой операции»")
 	}
 	if expiresAt.IsZero() || !expiresAt.After(time.Now().UTC()) {
 		expiresAt = time.Now().UTC().Add(24 * time.Hour)

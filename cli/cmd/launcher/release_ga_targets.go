@@ -226,7 +226,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		return err
 	}
 	if ed25519.PublicKey(keyBytes).Equal(releaseSigner) {
-		return errors.New("«release signing key»: запрещено «be independent GA operator key»")
+		return errors.New("ключ подписи выпуска не должен использоваться как независимый ключ оператора для приёмки GA")
 	}
 	approvalRaw, err := gaRead0361(filepath.Join(evidence, "approval.json"), 1<<20)
 	if err != nil {

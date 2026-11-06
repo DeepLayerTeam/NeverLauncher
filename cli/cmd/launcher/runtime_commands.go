@@ -50,7 +50,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в текущей версии запрещён")
+			return errors.New("для определения среды выполнения требуется --version-json; резервный план запуска в текущей версии запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".launcher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -174,7 +174,7 @@ func handleRuntime(args []string) error {
 		return handleRuntimeVerifyLaunchPlan850(args[1:])
 	case "verify":
 		if len(args) < 2 {
-			return errors.New("runtime verify требует путь к launch-plan.json")
+			return errors.New("для проверки среды выполнения требуется путь к launch-plan.json")
 		}
 		data, err := os.ReadFile(args[1])
 		if err != nil {

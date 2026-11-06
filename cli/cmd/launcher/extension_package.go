@@ -765,7 +765,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 			return nil, fmt.Errorf("подозрительный compression ratio для %s", entry.Name)
 		}
 		if entry.CompressedSize64 > 0 && entry.UncompressedSize64/entry.CompressedSize64 > extensionPackageMaxCompressionRatio {
-			return nil, fmt.Errorf("compression ratio limit exceeded для %s", entry.Name)
+			return nil, fmt.Errorf("превышен допустимый коэффициент сжатия для %s", entry.Name)
 		}
 		analysis.Entries[entry.Name] = entry
 	}

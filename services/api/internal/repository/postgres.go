@@ -72,7 +72,7 @@ func (r *SQLRepository) Health(ctx context.Context) error {
 		return err
 	}
 	if err := r.db.PingContext(ctx); err != nil {
-		return fmt.Errorf("postgres repository недоступен через driver %q: %w", r.driverName, err)
+		return fmt.Errorf("postgres репозиторий недоступен через driver %q: %w", r.driverName, err)
 	}
 	return nil
 }

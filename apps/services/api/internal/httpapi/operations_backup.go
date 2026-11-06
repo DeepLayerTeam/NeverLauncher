@@ -395,7 +395,7 @@ func (s Server) restoreStorageObjectsSequential880(root string) (int, error) {
 		}
 		parts := strings.Split(filepath.ToSlash(rel), "/")
 		if len(parts) < 3 {
-			return fmt.Errorf("некорректный storage path в backup: %s", rel)
+			return fmt.Errorf("некорректный путь хранилища в резервной копии: %s", rel)
 		}
 		projectID, versionID := parts[0], parts[1]
 		relativePath := strings.Join(parts[2:], "/")
@@ -476,7 +476,7 @@ func restoreLocalStorageAtomic880(sourceRoot, liveRoot string) (int, error) {
 	if _, err := os.Stat(absLive); err == nil {
 		liveExists = true
 		if err := os.Rename(absLive, rollbackRoot); err != nil {
-			return 0, fmt.Errorf("не удалось подготовить atomic storage switch: %w", err)
+			return 0, fmt.Errorf("не удалось подготовить атомарное переключение хранилища: %w", err)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return 0, err
@@ -485,12 +485,12 @@ func restoreLocalStorageAtomic880(sourceRoot, liveRoot string) (int, error) {
 		if liveExists {
 			_ = os.Rename(rollbackRoot, absLive)
 		}
-		return 0, fmt.Errorf("atomic storage switch не выполнен: %w", err)
+		return 0, fmt.Errorf("атомарное переключение хранилища не выполнено: %w", err)
 	}
 	cleanupStage = false
 	if liveExists {
 		if err := os.RemoveAll(rollbackRoot); err != nil {
-			return count, fmt.Errorf("storage восстановлен, но не удалось удалить rollback directory %s: %w", rollbackRoot, err)
+			return count, fmt.Errorf("хранилище восстановлено, но не удалось удалить каталог отката %s: %w", rollbackRoot, err)
 		}
 	}
 	return count, nil
@@ -992,7 +992,7 @@ func safeBackupJoin880(root, rel string) (string, error) {
 		return "", err
 	}
 	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+string(os.PathSeparator)) {
-		return "", fmt.Errorf("backup path выходит за пределы staging root: %q", rel)
+		return "", fmt.Errorf("путь резервной копии выходит за пределы корневого каталога временного размещения: %q", rel)
 	}
 	return fullAbs, nil
 }

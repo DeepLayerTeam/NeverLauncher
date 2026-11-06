@@ -222,7 +222,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 	}
 	key, ok := pub.(*rsa.PublicKey)
 	if !ok || key.N.BitLen() < 2048 {
-		return report, errors.New("authlib-injector signing key: требуется «ключ RSA длиной не менее 2048 бит»")
+		return report, errors.New("authlib-injector ключ подписи: требуется «ключ RSA длиной не менее 2048 бит»")
 	}
 	raw, err := fetch02512(ctx, client, origin.String()+"/sessionserver/session/minecraft/profile/"+uid+"?unsigned=false")
 	if err != nil {

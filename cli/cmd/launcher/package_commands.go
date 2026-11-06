@@ -109,16 +109,16 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	}
 	if backend == "" && args[0] != "runtime-sign" {
-		return errors.New("pipeline operation требует --backend")
+		return errors.New("операция конвейера требует --backend")
 	}
 	if token == "" && args[0] != "channels" && args[0] != "runtime-sign" {
-		return errors.New("pipeline operation требует --token или LAUNCHER_TOKEN")
+		return errors.New("операция конвейера требует --token или LAUNCHER_TOKEN")
 	}
 
 	switch args[0] {
 	case "channels":
 		if project == "" {
-			return errors.New("pipeline channels требует --project")
+			return errors.New("для просмотра каналов конвейера требуется --project")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/projects/"+url.PathEscape(project)+"/channels", nil, token)
 		if err != nil {
@@ -127,7 +127,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "status":
 		if packageID == "" {
-			return errors.New("pipeline status требует --package-id")
+			return errors.New("состояние конвейера требует --package-id")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/packages/"+url.PathEscape(packageID), nil, token)
 		if err != nil {
@@ -153,7 +153,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "validate": validate, "sign": sign, "stage": staged})
 	case "integrity-check":
 		if packageID == "" {
-			return errors.New("pipeline integrity-check требует --package-id")
+			return errors.New("команда pipeline integrity-check требует --package-id")
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/integrity-check", map[string]any{}, token)
 		if err != nil {
@@ -171,7 +171,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, map[string]any{"legacyCommand": "smoke-test", "validationKind": "integrity", "runtimeExecuted": false, "warning": "Проверка старого формата подтверждает только целостность; Minecraft Runtime не запускался", "response": payload})
 	case "validations":
 		if packageID == "" {
-			return errors.New("pipeline validations требует --package-id")
+			return errors.New("для выполнения проверок конвейера требуется --package-id")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/validations", nil, token)
 		if err != nil {
@@ -183,7 +183,7 @@ func handlePipeline(args []string) error {
 		keyPath := flagValue(args, "--private-key", "")
 		keyID := flagValue(args, "--key-id", "")
 		if inputPath == "" || keyPath == "" || keyID == "" {
-			return errors.New("pipeline runtime-sign требует --input <evidence.json> --private-key <file> --key-id <id>")
+			return errors.New("команда pipeline runtime-sign требует --input <evidence.json> --private-key <file> --key-id <id>")
 		}
 		raw, err := os.ReadFile(inputPath)
 		if err != nil {
@@ -208,11 +208,11 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, signed)
 	case "runtime-submit":
 		if packageID == "" {
-			return errors.New("pipeline runtime-submit требует --package-id")
+			return errors.New("команда pipeline runtime-submit требует --package-id")
 		}
 		evidencePath := flagValue(args, "--evidence", "")
 		if evidencePath == "" {
-			return errors.New("pipeline runtime-submit требует --evidence <signed-json>")
+			return errors.New("команда pipeline runtime-submit требует --evidence <signed-json>")
 		}
 		raw, err := os.ReadFile(evidencePath)
 		if err != nil {
@@ -252,7 +252,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "publish":
 		if packageID == "" {
-			return errors.New("pipeline publish требует --package-id")
+			return errors.New("для публикации через конвейер требуется --package-id")
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/publish", map[string]any{}, token)
 		if err != nil {
@@ -261,11 +261,11 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "rollback":
 		if project == "" {
-			return errors.New("pipeline rollback требует --project")
+			return errors.New("для отката через конвейер требуется --project")
 		}
 		toVersion := flagValue(args, "--to", "")
 		if toVersion == "" || toVersion == "previous" {
-			return errors.New("pipeline rollback требует явный --to <version>; неявный previous запрещён")
+			return errors.New("для отката через конвейер требуется явный --to <version>; неявный previous запрещён")
 		}
 		body := map[string]any{"projectId": project, "profileId": profile, "toVersion": toVersion}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/channels/"+url.PathEscape(channel)+"/rollback", body, token)
@@ -641,7 +641,7 @@ func readClientPackageManifest(path string) (ClientPackageManifest, error) {
 		return ClientPackageManifest{}, err
 	}
 	if manifest.PackageID == "" {
-		return ClientPackageManifest{}, errors.New("client package manifest не содержит packageId")
+		return ClientPackageManifest{}, errors.New("манифест клиентского пакета не содержит packageId")
 	}
 	return manifest, nil
 }

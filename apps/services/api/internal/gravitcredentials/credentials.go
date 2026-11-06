@@ -81,7 +81,7 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 			continue
 		}
 		if f.UncompressedSize64 > gi.MaxIdentityFile {
-			return nil, fmt.Errorf("Превышен допустимый размер: «credential source» %q", f.Name)
+			return nil, fmt.Errorf("Превышен допустимый размер: «источник учётных данных» %q", f.Name)
 		}
 		rc, e := f.Open()
 		if e != nil {
@@ -144,7 +144,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 	dec := json.NewDecoder(bytes.NewReader(data))
 	start, err := dec.Token()
 	if err != nil || start != json.Delim('{') {
-		return nil, errors.New("Файл Database.json системы FileAuth: требуется «a UUID-keyed object»")
+		return nil, errors.New("Файл Database.json системы FileAuth: требуется «объект с ключами в формате UUID»")
 	}
 	out := []Credential{}
 	seen := make(map[string]bool)
@@ -159,7 +159,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		}
 		uuid, err := gi.UUID(rawUUID)
 		if err != nil || seen[uuid] {
-			return nil, errors.New("Некорректное значение: «or duplicate FileAuth UUID»")
+			return nil, errors.New("Некорректное значение: «или повторяющийся UUID FileAuth»")
 		}
 		seen[uuid] = true
 		account, ok := expected["fileauth\x00"+path+"\x00"+uuid]
@@ -248,7 +248,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 			if fileauth.SupportedFormat(c.Algorithm) && hash != "" {
 				c.PasswordHash, e = fileauth.EncodeCredential(c.Algorithm, hash)
 				if e != nil {
-					return nil, fmt.Errorf("Некорректное значение: «verifier in SQL row» %d: %w", line, e)
+					return nil, fmt.Errorf("Некорректное значение: «проверяющее значение в строке SQL» %d: %w", line, e)
 				}
 				c.State = "importable"
 				c.Reason = ""

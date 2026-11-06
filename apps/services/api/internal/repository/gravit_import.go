@@ -24,14 +24,14 @@ func prepareGravitImport02210(p model.Profile, w BuildWorkspace) (model.Profile,
 	p.IsDefault = false
 	var err error
 	if p.Revision != 0 {
-		return p, w, errors.New("«new Gravit import»: запрещено «carry source revision»")
+		return p, w, errors.New("При новом импорте Gravit запрещено переносить ревизию источника")
 	}
 	p, err = model.NormalizeProfileV2(p)
 	if err != nil {
 		return p, w, err
 	}
 	if w.ProjectID != p.ProjectID || w.ProfileID != p.ID {
-		return p, w, errors.New("«workspace scope» не совпадает с профиль")
+		return p, w, errors.New("область рабочей среды не совпадает с профилем")
 	}
 	w.ProfileRevision = 1
 	w.ProfileDigest = p.Digest
@@ -39,7 +39,7 @@ func prepareGravitImport02210(p model.Profile, w BuildWorkspace) (model.Profile,
 		return p, w, err
 	}
 	if w.Settings.Minecraft.Loader != p.Loader || w.Settings.Minecraft.Version == "" {
-		return p, w, errors.New("Некорректное значение: «workspace Minecraft loader/version»")
+		return p, w, errors.New("Некорректное значение: «загрузчик и версия Minecraft в рабочей среде»")
 	}
 	return p, w, nil
 }

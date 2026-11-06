@@ -170,7 +170,7 @@ func (r *SQLRepository) ListTextureAssignments0251(ctx context.Context, profile 
 
 func validateTextureSelection0251(kind, skinModel, visibility string) error {
 	if kind != "skin" && kind != "cape" {
-		return fmt.Errorf("Не поддерживается: «texture kind»")
+		return fmt.Errorf("Не поддерживается: «тип текстуры»")
 	}
 	if skinModel != "classic" && skinModel != "slim" {
 		return fmt.Errorf("Не поддерживается: модель скина")

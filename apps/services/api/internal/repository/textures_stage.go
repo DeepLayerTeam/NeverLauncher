@@ -24,10 +24,10 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 		return err
 	}
 	if input.ExpectedRevision < 0 || input.Size < 1 || input.Size > 4<<20 || input.Width < 64 || input.Height < 32 || input.Width > 1024 || input.Height > 1024 {
-		return errors.New("Некорректное значение: «texture staging dimensions»")
+		return errors.New("Некорректное значение: «размеры подготавливаемой текстуры»")
 	}
 	if input.Driver != "local" && input.Driver != "s3" {
-		return errors.New("Некорректное значение: «texture staging driver»")
+		return errors.New("Некорректное значение: «драйвер подготовки текстуры»")
 	}
 	if len(input.Digest) != 64 {
 		return errors.New("Некорректное значение: хеш")

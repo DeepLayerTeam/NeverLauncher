@@ -923,7 +923,7 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 		return errors.New("Некорректное значение: «restart policy»")
 	}
 	if config.MaxRestarts < 0 || config.RestartBackoffMillis < 0 || config.StopTimeoutSeconds <= 0 {
-		return errors.New("Некорректное значение: «host supervision limits»")
+		return errors.New("Некорректное значение: «ограничения контроля процессов сервера»")
 	}
 	if config.WorkingDirectory != "" {
 		if dir, err := hostResolveDirectory0282(root, config.WorkingDirectory); err != nil || dir != config.WorkingDirectory {

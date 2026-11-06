@@ -10,7 +10,7 @@ import (
 )
 
 var ErrTexturePolicyConflict0259 = errors.New("Конфликт ревизии политики текстур")
-var ErrTexturePolicyInvalid0259 = errors.New("Некорректное значение: «texture policy»")
+var ErrTexturePolicyInvalid0259 = errors.New("Некорректное значение: «политика текстур»")
 
 type TexturePolicy0259 struct {
 	ProjectID          string    `json:"projectId"`

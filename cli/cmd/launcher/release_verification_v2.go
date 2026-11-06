@@ -175,7 +175,7 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 		return p, errors.New("Некорректное значение: политика доверия schema/domain/epoch")
 	}
 	if len(p.Keys) == 0 {
-		return p, errors.New("trust policy не содержит release keys")
+		return p, errors.New("в политике доверия отсутствуют ключи выпуска")
 	}
 	seenID, seenFP := map[string]bool{}, map[string]bool{}
 	active := 0
@@ -192,7 +192,7 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 			return p, fmt.Errorf("Несовпадение: отпечаток доверенного ключа %s", k.ID)
 		}
 		if seenID[k.ID] || seenFP[strings.ToLower(fp)] {
-			return p, errors.New("trust policy содержит duplicate key id/fingerprint")
+			return p, errors.New("в политике доверия повторяется идентификатор или отпечаток ключа")
 		}
 		seenID[k.ID], seenFP[strings.ToLower(fp)] = true, true
 		switch k.Status {
@@ -204,7 +204,7 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 		}
 	}
 	if active == 0 {
-		return p, errors.New("trust policy не содержит active release key")
+		return p, errors.New("в политике доверия отсутствует активный ключ выпуска")
 	}
 	return p, nil
 }
@@ -226,7 +226,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 	}
 	fp := fingerprintEd255190158(root)
 	if policy.RootSignature == nil || !strings.EqualFold(policy.RootSignature.Algorithm, "Ed25519") || !strings.EqualFold(policy.RootSignature.RootFingerprint, fp) {
-		return "", errors.New("trust policy root signature не соответствует внешнему root trust anchor")
+		return "", errors.New("корневая подпись политики доверия не соответствует внешнему корневому якорю доверия")
 	}
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(policy.RootSignature.Signature))
 	if err != nil || len(sig) != ed25519.SignatureSize {
@@ -240,7 +240,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 		return "", errors.New("Проверка корневой подписи политики доверия завершилась ошибкой")
 	}
 	if t, err := time.Parse(time.RFC3339Nano, policy.IssuedAt); err != nil || t.After(now.Add(5*time.Minute)) {
-		return "", errors.New("trust policy issuedAt invalid или находится в будущем")
+		return "", errors.New("дата выдачи политики доверия некорректна или находится в будущем")
 	}
 	if strings.TrimSpace(policy.ExpiresAt) != "" {
 		t, err := time.Parse(time.RFC3339Nano, policy.ExpiresAt)
@@ -263,7 +263,7 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 			return nil, fmt.Errorf("Ключ подписи релиза отозван: %s", id)
 		}
 		if k.Status != "active" && k.Status != "verify-only" {
-			return nil, fmt.Errorf("release key status не разрешает verification: %s", k.Status)
+			return nil, fmt.Errorf("статус ключа выпуска не допускает проверку: %s", k.Status)
 		}
 		if strings.TrimSpace(k.NotBefore) != "" {
 			t, err := time.Parse(time.RFC3339Nano, k.NotBefore)
@@ -293,7 +293,7 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 		raw, _ := hex.DecodeString(k.PublicKey)
 		return ed25519.PublicKey(raw), nil
 	}
-	return nil, fmt.Errorf("release key отсутствует в trusted policy: id=%s fingerprint=%s", id, fp)
+	return nil, fmt.Errorf("ключ выпуска отсутствует в доверенной политике: id=%s fingerprint=%s", id, fp)
 }
 
 func loadTrustState0158(path string) (releaseTrustState0158, error) {
@@ -411,7 +411,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		currentPolicyPath = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_POLICY_FILE"))
 	}
 	if currentPolicyPath == "" {
-		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует внешний current trust policy через --trust-policy или LAUNCHER_RELEASE_TRUST_POLICY_FILE")
+		return releaseVerificationV2Context{}, errors.New("для проверки выпуска v2 требуется внешняя текущая политика доверия, заданная через --trust-policy или LAUNCHER_RELEASE_TRUST_POLICY_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, currentPolicyPath); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Текущая политика доверия: %w", err)
@@ -538,7 +538,7 @@ func trustedReleaseKeyRecord0158(policy releaseTrustPolicy0158, id, fp string) (
 			return k, nil
 		}
 	}
-	return releaseTrustKey0158{}, fmt.Errorf("release key отсутствует в trust policy: id=%s fingerprint=%s", id, fp)
+	return releaseTrustKey0158{}, fmt.Errorf("ключ выпуска отсутствует в политике доверия: id=%s fingerprint=%s", id, fp)
 }
 
 func signReleaseBundleV20158(dir string, privateKey ed25519.PrivateKey) error {
@@ -558,7 +558,7 @@ func signReleaseBundleV20158(dir string, privateKey ed25519.PrivateKey) error {
 		}
 	}
 	if !found || key.Status != "active" {
-		return errors.New("signing key не является active release key текущего trust policy")
+		return errors.New("ключ подписи не является активным ключом выпуска в текущей политике доверия")
 	}
 	sums, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {

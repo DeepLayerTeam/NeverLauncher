@@ -91,7 +91,7 @@ func Load(now time.Time) (Policy, error) {
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) == 0 || len(payload) > 192*1024 {
-		return out, errors.New("Некорректное значение: «plan policy payload»")
+		return out, errors.New("Некорректное значение: «данные политики плана»")
 	}
 	sig, e := hex.DecodeString(env.Signature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(key, append([]byte(Domain), payload...), sig) {
@@ -101,7 +101,7 @@ func Load(now time.Time) (Policy, error) {
 		return out, e
 	}
 	if out.SchemaVersion != "1.0" || out.Epoch == 0 || !out.RequireContinuousGuard || len(out.AllowedPlans) == 0 || len(out.AllowedPlans) > 2048 {
-		return out, errors.New("Некорректное значение: «or unsafe plan policy»")
+		return out, errors.New("некорректная или небезопасная политика плана")
 	}
 	from, e := time.Parse(time.RFC3339, out.IssuedAt)
 	if e != nil {

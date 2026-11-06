@@ -38,7 +38,7 @@ func (r *SQLRepository) SaveMigrationCompatibility0332(ctx context.Context, runI
 		return gd.Report{}, err
 	}
 	if report.Format != "launcher.gravit-compatibility.v1" || len(report.SourceSHA256) != 64 || report.CutoverAllowed {
-		return gd.Report{}, errors.New("Некорректное значение: «or unsafe compatibility assessment»")
+		return gd.Report{}, errors.New("некорректная или небезопасная оценка совместимости")
 	}
 	data, err := json.Marshal(report)
 	if err != nil {

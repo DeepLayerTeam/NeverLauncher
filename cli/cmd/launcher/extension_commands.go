@@ -584,7 +584,7 @@ func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionM
 		publisher = strings.TrimSpace(legacy.Metadata["publisher"])
 	}
 	if publisher == "" {
-		return CanonicalExtensionManifest0201{}, path, errors.New("legacy manifest не содержит publisher; укажите --publisher")
+		return CanonicalExtensionManifest0201{}, path, errors.New("устаревший манифест не содержит publisher; укажите --publisher")
 	}
 	manifest := CanonicalExtensionManifest0201{
 		SchemaVersion: "2.0",

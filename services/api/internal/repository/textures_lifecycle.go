@@ -26,7 +26,7 @@ func textureLeaseToken02511() (string, error) {
 
 func textureStorageDriver02511(driver string) error {
 	if driver != "local" && driver != "s3" {
-		return errors.New("Некорректное значение: «texture storage driver»")
+		return errors.New("Некорректное значение: «драйвер хранилища текстур»")
 	}
 	return nil
 }

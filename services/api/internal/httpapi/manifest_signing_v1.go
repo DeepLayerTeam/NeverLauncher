@@ -25,7 +25,7 @@ func (s Server) manifestSigningPrivateKey() (ed25519.PrivateKey, error) {
 	}
 	seed, err := hex.DecodeString(seedHex)
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return nil, errors.New("manifest signing key должен быть 32-byte Ed25519 seed в hex")
+		return nil, errors.New("ключ подписи манифеста должен быть 32-байтным исходным значением Ed25519 в шестнадцатеричном формате")
 	}
 	return ed25519.NewKeyFromSeed(seed), nil
 }

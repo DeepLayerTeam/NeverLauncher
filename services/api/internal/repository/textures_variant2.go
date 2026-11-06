@@ -58,7 +58,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		source = "managed-upload"
 	}
 	if source != "managed-upload" && source != "managed-url-import" && source != "managed-gravit-import" {
-		return zero, fmt.Errorf("Некорректное значение: «texture source»")
+		return zero, fmt.Errorf("Некорректное значение: «источник текстуры»")
 	}
 	if source == "managed-gravit-import" {
 		if len(input.GravitSourceID) < 1 || len(input.GravitSourceID) > 100 || len(input.GravitRowID) < 1 || len(input.GravitRowID) > 150 || len(input.GravitExternalUUID) < 1 || len(input.GravitOriginalHash) < 1 {
@@ -71,7 +71,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		return zero, err
 	}
 	if input.ExpectedRevision < 0 || input.Size < 1 || input.Size > 4<<20 || input.Width < 64 || input.Height < 32 || input.Width > 1024 || input.Height > 1024 || len(input.Digest) != 64 {
-		return zero, fmt.Errorf("Некорректное значение: «verified PNG»")
+		return zero, fmt.Errorf("Некорректное значение: «проверенный PNG-файл»")
 	}
 	if input.Driver != "local" && input.Driver != "s3" {
 		return zero, fmt.Errorf("Некорректное значение: драйвер хранилища")
@@ -168,7 +168,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		return zero, err
 	}
 	if existing.ByteSize != input.Size || existing.StorageDriver != input.Driver || existing.ObjectKey != input.ObjectKey {
-		return zero, fmt.Errorf("Несовпадение: «blob storage metadata»")
+		return zero, fmt.Errorf("Несовпадение: «метаданные хранилища бинарных объектов»")
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_blob_owners(user_id,digest) VALUES($1,$2) ON CONFLICT DO NOTHING`, profile.UserID, input.Digest); err != nil {
 		return zero, err

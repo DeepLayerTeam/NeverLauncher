@@ -89,7 +89,7 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 // элементов до разбора конфигураций и никогда не выполняет переданные JAR.
 func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, claimedVersion string) (Report, error) {
 	if len(claimedVersion) > 40 || strings.ContainsAny(claimedVersion, "\n\r\t") {
-		return Report{}, errors.New("Некорректное значение: «claimed Gravit version»")
+		return Report{}, errors.New("Некорректное значение: «заявленная версия Gravit»")
 	}
 	snapshot, err := inv.ValidateSource(ctx, src, size, digest)
 	if err != nil {
@@ -612,7 +612,7 @@ func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 func rejectDuplicateJSON0332(d *json.Decoder) error {
 	token, err := d.Token()
 	if err != nil {
-		return errors.New("Некорректное значение: «JSON syntax»")
+		return errors.New("Некорректное значение: «синтаксис JSON»")
 	}
 	open, ok := token.(json.Delim)
 	if !ok {

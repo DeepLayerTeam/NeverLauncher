@@ -19,7 +19,7 @@ var fallbackPackageMutation sync.Mutex
 func (s Server) lockPackageMutation(ctx context.Context, scope string) (func(), error) {
 	scope = strings.TrimSpace(scope)
 	if scope == "" {
-		return nil, errors.New("Требуется: «package mutation scope»")
+		return nil, errors.New("Требуется: «область изменения пакета»")
 	}
 	if cp, ok := s.Repo.(repository.DurableControlPlane); ok {
 		owner := randomWorkerID0213("mutation")

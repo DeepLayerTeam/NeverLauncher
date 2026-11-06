@@ -11,7 +11,7 @@ import (
 
 func main() {
 	payload := flag.String("payload", "", "Неподписанные данные JSON")
-	keyPath := flag.String("private-key-file", "", "Файл Ed25519 seed в hex с ограниченными правами доступа")
+	keyPath := flag.String("private-key-file", "", "Файл Ed25519 seed в шестнадцатеричном формате с ограниченными правами доступа")
 	out := flag.String("out", "", "Выходной подписанный JSON")
 	policyPath := flag.String("trust-policy", "", "Файл делегированной политики доверия, подписанной корневым ключом")
 	rootKey := flag.String("root-public-key", "", "Предварительно установленный публичный корневой ключ Ed25519 (64 hex)")
@@ -34,7 +34,7 @@ func main() {
 	}
 	seed, err := hex.DecodeString(string(trimSpace(raw)))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		panic("Ожидается 32-байтовое начальное значение Ed25519 в hex-формате")
+		panic("Ожидается 32-байтовое начальное значение Ed25519 в шестнадцатеричном формате-формате")
 	}
 	data, err := os.ReadFile(*payload)
 	if err != nil {

@@ -43,7 +43,7 @@ func (r *SQLRepository) IssueStableRuntimePermit03411(ctx context.Context, p Sta
 		}
 	}
 	if len(p.ManifestSHA256) != 64 || len(p.ArtifactSHA256) != 64 || len(p.MatrixSHA256) != 64 {
-		return "", errors.New("Некорректное значение: «stable snapshot digest»")
+		return "", errors.New("Некорректное значение: «контрольная сумма стабильного снимка»")
 	}
 	runs, e := json.Marshal(p.Runs)
 	if e != nil {

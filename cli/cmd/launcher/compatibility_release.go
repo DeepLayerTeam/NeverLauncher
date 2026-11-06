@@ -468,10 +468,10 @@ func compatibilityCertificationRequired(ver string) bool {
 
 func embedCompatibilityCertification(out, matrixPath, targetsPath, ver, expectedCommit string) error {
 	if strings.TrimSpace(matrixPath) == "" {
-		return errors.New("compatibility matrix path пуст")
+		return errors.New("путь к матрице совместимости пуст")
 	}
 	if strings.TrimSpace(targetsPath) == "" {
-		return errors.New("compatibility targets path пуст")
+		return errors.New("путь к целевым конфигурациям совместимости пуст")
 	}
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {

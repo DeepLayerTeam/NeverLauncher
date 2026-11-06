@@ -74,7 +74,7 @@ func ValidateManifestSchema(m Manifest) error {
 			return errors.New("Недопустимое подписанное значение rollbackSource или gameReleaseGeneration")
 		}
 		if decoded, err := hex.DecodeString(source.ManifestSHA256); err != nil || len(decoded) != sha256.Size {
-			return errors.New("В rollbackSource поле manifestSha256 должно быть SHA-256 в hex")
+			return errors.New("В rollbackSource поле manifestSha256 должно быть SHA-256 в шестнадцатеричном формате")
 		}
 	}
 	switch m.SchemaVersion {

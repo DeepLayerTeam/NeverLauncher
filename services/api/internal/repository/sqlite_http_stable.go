@@ -459,7 +459,7 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 	})
 	if err != nil {
 		if mutated {
-			r.failed = fmt.Errorf("sqlite stable publish outcome: требуется «reconciled after WAL failure:» %w", err)
+			r.failed = fmt.Errorf("результат стабильной публикации SQLite: требуется «согласовано после сбоя WAL:» %w", err)
 		}
 		return model.ReleaseVersion{}, err
 	}

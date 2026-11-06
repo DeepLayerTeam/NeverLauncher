@@ -19,7 +19,7 @@ func normalizeTrustPolicy02012(p model.ExtensionTrustPolicy) (model.ExtensionTru
 		p.Mode = model.ExtensionTrustModeStrict
 	}
 	if p.Mode != model.ExtensionTrustModeStrict && p.Mode != model.ExtensionTrustModeAudit {
-		return model.ExtensionTrustPolicy{}, errors.New("extension trust policy mode: требуется «строгий или аудиторский»")
+		return model.ExtensionTrustPolicy{}, errors.New("режим политики доверия расширений: требуется «строгий или аудиторский»")
 	}
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(p.AllowedPublishers))

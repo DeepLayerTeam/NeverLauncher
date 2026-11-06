@@ -116,7 +116,7 @@ func snapshotCheck(ctx context.Context, path string) (int, error) {
 		return 0, err
 	}
 	if hasForeignKeyError {
-		return 0, errors.New("Ошибка: «snapshot foreign_key_check»")
+		return 0, errors.New("Ошибка: «проверка внешних ключей снимка»")
 	}
 	var version int
 	if err = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {

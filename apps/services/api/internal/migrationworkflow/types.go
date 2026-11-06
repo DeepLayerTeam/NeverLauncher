@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("Не найдено: «migration run»")
+	ErrNotFound = errors.New("Не найдено: «запуск миграции»")
 	ErrBusy     = errors.New("Запуск миграции заблокирован арендой, приостановлен или не может выполняться")
 	ErrConflict = errors.New("Запуск миграции одновременно изменён другим процессом")
 )

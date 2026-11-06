@@ -126,7 +126,7 @@ func (r *SQLRepository) SaveMigrationIdentities0334(ctx context.Context, id stri
 	var invSource, invManifest string
 	e = tx.QueryRowContext(ctx, `SELECT source_sha256,manifest_sha256 FROM migration_source_inventory_0333 WHERE run_id=$1`, id).Scan(&invSource, &invManifest)
 	if errors.Is(e, sql.ErrNoRows) {
-		return gi.Report{}, errors.New("source inventory: требуется «сохранено до сопоставления идентичностей»")
+		return gi.Report{}, errors.New("инвентаризация источника: требуется «сохранено до сопоставления идентичностей»")
 	}
 	if e != nil {
 		return gi.Report{}, e

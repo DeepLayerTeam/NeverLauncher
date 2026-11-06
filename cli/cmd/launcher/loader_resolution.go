@@ -84,7 +84,7 @@ func readLoaderResolutionLock(path, loader, minecraft, selector string) (*loader
 
 func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft, selector string, complete bool) error {
 	if lock == nil {
-		return errors.New("loader resolution lock отсутствует")
+		return errors.New("файл фиксации выбора загрузчика отсутствует")
 	}
 	if lock.SchemaVersion != loaderResolutionLockSchema {
 		return fmt.Errorf("Неверная версия схемы файла фиксации загрузчика schemaVersion=%q, ожидалась %s", lock.SchemaVersion, loaderResolutionLockSchema)
@@ -99,7 +99,7 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 		return fmt.Errorf("Несоответствие идентификатора блокировки загрузчика: получено %s/%s selector=%s resolved=%s, ожидалось %s/%s selector=%s", lock.Loader, lock.MinecraftVersion, lock.Selector, lock.ResolvedVersion, expectedLoader, strings.TrimSpace(minecraft), expectedSelector)
 	}
 	if lock.ResolvedVersion == "" || isMutableLoaderSelector(lock.ResolvedVersion) {
-		return errors.New("loader resolution lock не содержит immutable resolvedVersion")
+		return errors.New("файл фиксации выбора загрузчика не содержит immutable resolvedVersion")
 	}
 	if lock.ResolutionSourceURL == "" || !compatibilitySHA256RE.MatchString(strings.ToLower(lock.ResolutionSourceSHA256)) {
 		return errors.New("В файле фиксации разрешения загрузчика отсутствует идентификатор источника разрешения")
@@ -112,10 +112,10 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 			return errors.New("В файле фиксации разрешения загрузчика отсутствует SHA-256 профиля среды выполнения")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(lock.MaterializationSHA256)) {
-			return errors.New("loader resolution lock не содержит materialization SHA-256")
+			return errors.New("файл фиксации выбора загрузчика не содержит materialization SHA-256")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(lock.ReproducibilitySHA256)) {
-			return errors.New("loader resolution lock не содержит reproducibility SHA-256")
+			return errors.New("файл фиксации выбора загрузчика не содержит reproducibility SHA-256")
 		}
 	}
 	return nil

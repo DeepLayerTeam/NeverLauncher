@@ -695,7 +695,7 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Несовпадение: «server project binding»")
 	}
 	if profileID != "" && profileID != j.ProfileID {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Несовпадение: «server profile binding»")
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Несовпадение: «привязка профиля сервера»")
 	}
 	if nodeProtocolVersion != 2 && nodeProtocolVersion != 3 {
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Узел ServerBridge использует неподдерживаемую версию протокола %d", nodeProtocolVersion)
@@ -1110,7 +1110,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	// продолжают передачу по схеме до 0.19.7, не создавая фиктивную идентичность процесса.
 	lifecycleTransfer := sourceJoin.ProtocolVersion >= 3 && targetProtocolVersion >= 3 && routingV3 && len(h.SourceRuntimeID) == 64 && h.SourceRuntimeEpoch > 0 && len(h.TargetRuntimeID) == 64 && h.TargetRuntimeEpoch > 0
 	if sourceJoin.ProtocolVersion >= 3 && !lifecycleTransfer {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: v3 handoff: требуется «runtime-bound player session»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: v3 handoff: требуется «сеанс игрока, привязанный к среде выполнения»", ErrConflict)
 	}
 	if expectedCorrelation != "" && !lifecycleTransfer {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: player session transfer: требуется «v3 runtime-bound source and target»", ErrConflict)

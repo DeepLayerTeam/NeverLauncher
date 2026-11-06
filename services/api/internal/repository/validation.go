@@ -25,7 +25,7 @@ func normalizeIntegrityResult0212(in model.IntegrityCheckResult) (model.Integrit
 		return model.IntegrityCheckResult{}, errors.New("В результате проверки целостности отсутствуют данные об идентификаторе или хешах")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.IntegrityCheckResult{}, errors.New("integrity result: требуется пройдено или не пройдено")
+		return model.IntegrityCheckResult{}, errors.New("результат проверки целостности: требуется пройдено или не пройдено")
 	}
 	if in.CheckedAt.IsZero() {
 		in.CheckedAt = time.Now().UTC()
@@ -48,10 +48,10 @@ func normalizeRuntimeValidation0212(in model.RuntimeValidationResult) (model.Run
 		return model.RuntimeValidationResult{}, errors.New("В проверке Runtime отсутствуют данные идентификатора или контрольных сумм")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation result: требуется пройдено или не пройдено")
+		return model.RuntimeValidationResult{}, errors.New("результат проверки среды выполнения: требуется пройдено или не пройдено")
 	}
 	if in.Result == "passed" && (!in.ActualClient || in.ExitCode != 0) {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation pass: требуется «фактические доказательства запуска клиента с кодом выхода 0»")
+		return model.RuntimeValidationResult{}, errors.New("успешная проверка среды выполнения: требуется «фактические доказательства запуска клиента с кодом выхода 0»")
 	}
 	if in.FinishedAt.IsZero() || in.StartedAt.IsZero() || in.FinishedAt.Before(in.StartedAt) {
 		return model.RuntimeValidationResult{}, errors.New("Некорректное значение: «временные метки проверки среды выполнения»")
@@ -250,13 +250,13 @@ func normalizeProjectValidationPolicy0212(in model.ProjectValidationPolicy) (mod
 	in.ProjectID = strings.TrimSpace(in.ProjectID)
 	in.RequiredLevel = strings.ToLower(strings.TrimSpace(in.RequiredLevel))
 	if in.ProjectID == "" {
-		return model.ProjectValidationPolicy{}, errors.New("project validation policy: требуется «projectId»")
+		return model.ProjectValidationPolicy{}, errors.New("политика проверок проекта: требуется «projectId»")
 	}
 	if in.RequiredLevel == "" {
 		in.RequiredLevel = "integrity"
 	}
 	if in.RequiredLevel != "integrity" && in.RequiredLevel != "runtime" {
-		return model.ProjectValidationPolicy{}, errors.New("required validation level: требуется «целостность или среда выполнения»")
+		return model.ProjectValidationPolicy{}, errors.New("обязательный уровень проверки: требуется «целостность или среда выполнения»")
 	}
 	if in.UpdatedAt.IsZero() {
 		in.UpdatedAt = time.Now().UTC()

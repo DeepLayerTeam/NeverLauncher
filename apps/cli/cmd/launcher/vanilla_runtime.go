@@ -1216,7 +1216,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 	}
 	defer reader.Close()
 	if len(reader.File) > maxCompatibilityNativeEntries {
-		return nil, fmt.Errorf("native archive содержит слишком много entries: %d", len(reader.File))
+		return nil, fmt.Errorf("в нативном архиве слишком много элементов: %d", len(reader.File))
 	}
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return nil, err

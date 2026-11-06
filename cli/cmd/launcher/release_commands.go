@@ -1261,7 +1261,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	releasePub, err := loadEd25519PublicKey(publicKeyPath)
 	if operationsGARequired0460(manifest.Version) && err != nil {
-		return fmt.Errorf("Не удалось проверить «independent operations key against release key:» %w", err)
+		return fmt.Errorf("Не удалось проверить независимый ключ оператора относительно ключа выпуска: %w", err)
 	}
 	if err := verifyOperationsGA0460(dir, manifest.Version, releasePub); err != nil {
 		return fmt.Errorf("Ошибка независимой промышленной проверки операций: %w", err)
@@ -1602,7 +1602,7 @@ func readManifest(path string) (Manifest, error) {
 		return Manifest{}, errors.New("Manifest v3 component catalog: требуется «native Runtime 0.24.1; legacy CLI updater cannot safely apply this release»")
 	}
 	if manifest.ProjectID == "" || manifest.ProfileID == "" || manifest.Version == "" {
-		return Manifest{}, errors.New("manifest не содержит обязательные поля projectId, profileId или version")
+		return Manifest{}, errors.New("манифест не содержит обязательные поля projectId, profileId или version")
 	}
 	return manifest, nil
 }

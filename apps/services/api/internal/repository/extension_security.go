@@ -22,12 +22,12 @@ func normalizeSecurityScope0207(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("extension security scope: требуется глобальная область или область проекта")
+		return "", "", errors.New("область безопасности расширения: требуется глобальная область или область проекта")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("project security scope: требуется «scopeId»")
+		return "", "", errors.New("область безопасности проекта: требуется «scopeId»")
 	}
 	return scope, scopeID, nil
 }
@@ -76,7 +76,7 @@ func normalizeSecret0207(in model.ExtensionSecret) (model.ExtensionSecret, error
 		return model.ExtensionSecret{}, fmt.Errorf("Некорректное значение: «имя секрета расширения» %q", s.Name)
 	}
 	if len(s.Nonce) != 12 {
-		return model.ExtensionSecret{}, errors.New("extension secret nonce: требуется «12 байт»")
+		return model.ExtensionSecret{}, errors.New("значение nonce секрета расширения: требуется «12 байт»")
 	}
 	if len(s.Ciphertext) < 16 || len(s.Ciphertext) > (1<<20)+16 {
 		return model.ExtensionSecret{}, errors.New("Некорректное значение: «размер зашифрованного секрета расширения»")

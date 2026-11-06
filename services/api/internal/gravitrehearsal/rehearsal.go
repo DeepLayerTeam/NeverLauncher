@@ -93,7 +93,7 @@ func SnapshotDigest(v Snapshot) (string, error) {
 // переданных доказательствах, а не принимать Ready или Blockers от клиента.
 func Evaluate(v Report) (Report, error) {
 	if v.Format != Format || len(v.RunID) < 8 || len(v.RunID) > 128 || len(v.StageID) < 16 || len(v.StageID) > 128 || !digest.MatchString(v.SourceInventorySHA256) {
-		return Report{}, errors.New("Некорректное значение: «run/stage/inventory binding»")
+		return Report{}, errors.New("Некорректное значение: «привязка запуска, этапа и инвентаризации»")
 	}
 	src, e := SnapshotDigest(v.Source)
 	if e != nil {
@@ -118,12 +118,12 @@ func Evaluate(v Report) (Report, error) {
 		add("Набор необязательных компонентов отличается")
 	}
 	if len(v.Source.Players) == 0 || len(v.Source.Players) > 20000 || len(v.Target.Players) > 20000 {
-		return Report{}, errors.New("Не поддерживается: «rehearsal population»")
+		return Report{}, errors.New("Не поддерживается: «набор участников пробного запуска»")
 	}
 	indexed := map[string]Player{}
 	for _, p := range v.Source.Players {
 		if p.SourceID == "" || !validUUID.MatchString(p.UUID) || !digest.MatchString(p.InventorySHA256) || !digest.MatchString(p.PermissionsSHA256) || !digest.MatchString(p.SkinSHA256) || !economyAmount.MatchString(p.Economy) {
-			return Report{}, errors.New("Некорректное значение: «source player»")
+			return Report{}, errors.New("Некорректное значение: «исходный игрок»")
 		}
 		if _, ok := indexed[p.SourceID]; ok {
 			return Report{}, errors.New("Повторяющаяся учётная запись в источнике")
@@ -173,7 +173,7 @@ func Evaluate(v Report) (Report, error) {
 	results := map[string]bool{}
 	for _, p := range v.Probes {
 		if p.RunID != v.RunID || p.StageID != v.StageID || p.Detail != "" || !digest.MatchString(p.EvidenceSHA256) {
-			return Report{}, errors.New("Некорректное значение: «probe evidence binding»")
+			return Report{}, errors.New("Некорректное значение: «привязка свидетельств проверки»")
 		}
 		if _, ok := results[p.Name]; ok {
 			return Report{}, errors.New("Обнаружен дубликат: проверочный запуск")
@@ -203,7 +203,7 @@ func Evaluate(v Report) (Report, error) {
 		if !digest.MatchString(live.ClientSHA256) || !digest.MatchString(live.BeforeSHA256) || !digest.MatchString(live.JoinedSHA256) ||
 			!validUUID.MatchString(live.PlayerUUID) || len(live.PlayerName) < 3 || len(live.PlayerName) > 16 ||
 			strings.Trim(live.PlayerName, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") != "" {
-			return Report{}, errors.New("Некорректный формат: «live Minecraft witness»")
+			return Report{}, errors.New("Некорректный формат: «свидетельство фактического запуска Minecraft»")
 		}
 		matched := false
 		for _, p := range v.Target.Players {
@@ -230,7 +230,7 @@ func Evaluate(v Report) (Report, error) {
 		start, e1 := time.Parse(time.RFC3339Nano, live.StartedAt)
 		join, e2 := time.Parse(time.RFC3339Nano, live.JoinedAt)
 		if e1 != nil || e2 != nil || !join.After(start) || join.Sub(start) > 10*time.Minute || join.Sub(start) < 2*time.Second {
-			return Report{}, errors.New("Некорректное значение: «live join timeline»")
+			return Report{}, errors.New("Некорректное значение: «временная последовательность реального подключения»")
 		}
 	}
 	sort.Strings(blocks)

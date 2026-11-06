@@ -65,7 +65,7 @@ func (r *MemoryRepository) SetExtensionUpdatePin(ctx context.Context, p model.Ex
 		return model.ExtensionUpdatePin{}, errors.New("Некорректное значение: закреплённая версия обновления расширения")
 	}
 	if _, err := r.GetExtensionRegistryVersion(context.Background(), p.ExtensionID, p.Version); err != nil {
-		return model.ExtensionUpdatePin{}, fmt.Errorf("pin target: требуется «a published registry version:» %w", err)
+		return model.ExtensionUpdatePin{}, fmt.Errorf("целевая версия закрепления: требуется опубликованная версия из реестра %w", err)
 	}
 	now := time.Now().UTC()
 	r.extensionMu.Lock()
@@ -221,7 +221,7 @@ func (r *SQLRepository) SetExtensionUpdatePin(ctx context.Context, p model.Exten
 	}
 	err = r.db.QueryRowContext(ctx, `INSERT INTO extension_update_pins(extension_id,scope,scope_id,version) SELECT $1,$2,$3,$4 WHERE EXISTS(SELECT 1 FROM extension_registry_versions WHERE extension_id=$1 AND version=$4 AND yanked_at IS NULL) ON CONFLICT(extension_id,scope,scope_id) DO UPDATE SET version=EXCLUDED.version,updated_at=now() RETURNING created_at,updated_at`, p.ExtensionID, p.Scope, p.ScopeID, p.Version).Scan(&p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return p, fmt.Errorf("Недоступно: «%w: pin target registry version»", ErrNotFound)
+		return p, fmt.Errorf("Недоступно: «%w: закреплённая версия из реестра»", ErrNotFound)
 	}
 	return p, err
 }

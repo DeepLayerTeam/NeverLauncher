@@ -194,7 +194,7 @@ func (s Server) evaluateServerBridgeJoinIntegrity0135(join bridgeJoinRecord) (mo
 func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessionID, trustedDeviceID string, bindingEpoch int64, minecraftAccessToken string) (model.MinecraftSession, error) {
 	required, err := guardAttestationRequiredForDevice0135(s, userID, trustedDeviceID)
 	if err != nil {
-		return model.MinecraftSession{}, errors.New("не удалось определить Minecraft integrity policy")
+		return model.MinecraftSession{}, errors.New("не удалось определить политику целостности Minecraft")
 	}
 	minecraftAccessToken = strings.TrimSpace(minecraftAccessToken)
 	if minecraftAccessToken == "" {

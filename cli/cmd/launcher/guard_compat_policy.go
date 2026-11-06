@@ -126,7 +126,7 @@ func guardCompatPublicKey0502(root, keyFile string) (ed25519.PublicKey, string, 
 	if b, err = hex.DecodeString(text); err != nil || len(b) != ed25519.PublicKeySize {
 		b, err = base64.StdEncoding.DecodeString(text)
 		if err != nil {
-			return nil, "", errors.New("Ключ совместимости Guard: требуется 32-байтное значение в hex или base64")
+			return nil, "", errors.New("Ключ совместимости Guard: требуется 32-байтное значение в шестнадцатеричном формате или base64")
 		}
 	}
 	if len(b) != ed25519.PublicKeySize {

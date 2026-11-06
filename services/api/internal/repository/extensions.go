@@ -82,7 +82,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		}
 		for _, part := range strings.Split(target.Entrypoint, "/") {
 			if part == "" || part == "." || part == ".." {
-				return model.ExtensionManifest{}, "", fmt.Errorf("target %s entrypoint: требуется «a clean relative path»", target.Kind)
+				return model.ExtensionManifest{}, "", fmt.Errorf("target %s entrypoint: требуется «корректный относительный путь без обхода каталогов»", target.Kind)
 			}
 		}
 		if _, duplicate := seenTargets[target.Kind]; duplicate {
@@ -260,12 +260,12 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 		item.Scope = "global"
 	}
 	if item.Scope != "global" && item.Scope != "project" {
-		return model.ExtensionInstall{}, fmt.Errorf("extension install scope: требуется глобальная область или область проекта")
+		return model.ExtensionInstall{}, fmt.Errorf("область установки расширения: требуется глобальная область или область проекта")
 	}
 	if item.Scope == "global" {
 		item.ScopeID = ""
 	} else if item.ScopeID == "" {
-		return model.ExtensionInstall{}, fmt.Errorf("project extension install: требуется «scopeId»")
+		return model.ExtensionInstall{}, fmt.Errorf("установка расширения проекта: требуется «scopeId»")
 	}
 	if item.Source == "" {
 		item.Source = "local"

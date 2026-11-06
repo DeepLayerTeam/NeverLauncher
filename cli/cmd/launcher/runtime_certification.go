@@ -246,7 +246,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if !ed25519.Verify(pub, digest, signature) {
-		return cert, errors.New("Некорректное значение: «runtime certification signature»")
+		return cert, errors.New("Некорректное значение: «подпись сертификации среды выполнения»")
 	}
 	if err = certFiles02712(filepath.Dir(certificateFile), cert); err != nil {
 		return cert, err
@@ -297,7 +297,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if cert.RuntimeSeconds != probe.RuntimeSeconds {
-		return cert, errors.New("Обнаружено изменение: «runtime duration»")
+		return cert, errors.New("Обнаружено изменение: «продолжительность работы среды выполнения»")
 	}
 	return cert, nil
 }
@@ -313,7 +313,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if err := rejectFactoryOutputPath0271(clientDir, privateKeyPath); err != nil {
-		return cert, fmt.Errorf("Ключ подписи: требуется «outside client:» %w", err)
+		return cert, fmt.Errorf("Ключ подписи должен храниться вне клиентского окружения: %w", err)
 	}
 	plan, err := readFactoryPlan0271(clientDir)
 	if err != nil {
@@ -326,7 +326,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if len(plan.Targets) != 1 {
-		return cert, errors.New("Для сертификация требуется «a single OS/arch target; certify each target separately»")
+		return cert, errors.New("Для сертификации требуется «одна целевая комбинация ОС и архитектуры; сертифицируйте каждую комбинацию отдельно»")
 	}
 	target := plan.Targets[0]
 	if err = certHostTarget02712(target); err != nil {
@@ -408,14 +408,14 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	// Запрещайте символьные ссылки на родительские каталоги, созданные проверяемой JVM. Синтаксически
 	// внутренний путь недостаточен, если logs/ указывает за пределы одноразового дерева.
 	if _, err := secureClientDestination(copyRoot, filepath.ToSlash(rel)); err != nil {
-		return cert, fmt.Errorf("Небезопасное значение: «runtime log path»: %w", err)
+		return cert, fmt.Errorf("Небезопасное значение: «путь к журналу среды выполнения»: %w", err)
 	}
 	st, err := os.Lstat(absLog)
 	if err != nil {
 		return cert, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 32<<20 {
-		return cert, errors.New("Превышен допустимый размер: «runtime log is not regular or»")
+		return cert, errors.New("Журнал среды выполнения должен быть обычным файлом допустимого размера")
 	}
 	log, err := os.ReadFile(absLog)
 	if err != nil {
@@ -442,7 +442,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	}
 	prefix := strings.TrimSuffix(filepath.Base(absOut), filepath.Ext(absOut))
 	if prefix == "" || prefix == "." {
-		return cert, errors.New("Некорректное значение: «certificate name»")
+		return cert, errors.New("Некорректное значение: «имя сертификата»")
 	}
 	probeFile := prefix + ".probe.json"
 	logFile := prefix + ".runtime.log"
@@ -497,7 +497,7 @@ func (b *boundedWriter02712) Write(p []byte) (int, error) {
 }
 func handleRuntimeCertification02712(args []string) error {
 	if len(args) == 0 {
-		return errors.New("Для сертификация требуется «certify-keygen|certify-run|certify-verify»")
+		return errors.New("Для сертификации требуется «certify-keygen|certify-run|certify-verify»")
 	}
 	tail := args[1:]
 	switch args[0] {
@@ -553,7 +553,7 @@ func handleRuntimeCertification02712(args []string) error {
 		}
 		return writeOrPrintJSON(flagValue(tail, "--output", "-"), cert)
 	default:
-		return fmt.Errorf("Неизвестное значение: «certification command» %q", args[0])
+		return fmt.Errorf("Неизвестное значение: «команда сертификации» %q", args[0])
 	}
 }
 

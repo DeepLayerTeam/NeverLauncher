@@ -33,7 +33,7 @@ const (
 
 var (
 	ErrClosed        = errors.New("Хранилище SQLite закрыто")
-	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome: требуется «reconciled before replay»")
+	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome: требуется «согласовано до повторного воспроизведения»")
 	ErrPoisoned      = errors.New("Состояние транзакции SQLite неопределённо; закройте хранилище и проверьте его через новое подключение до обработки запросов")
 )
 
@@ -66,7 +66,7 @@ type WALStatus struct {
 
 func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	if strings.TrimSpace(opt.Path) == "" || strings.ContainsAny(opt.Path, "\x00?\n") || strings.HasPrefix(strings.ToLower(opt.Path), "file:") || strings.HasPrefix(opt.Path, ":") {
-		return nil, fmt.Errorf("sqlite: требуется «a local filesystem path (no URI/in-memory DB)»")
+		return nil, fmt.Errorf("sqlite: требуется «путь в локальной файловой системе (не URI и не база данных в памяти)»")
 	}
 	path, err := filepath.Abs(opt.Path)
 	if err != nil {
