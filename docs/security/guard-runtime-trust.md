@@ -18,13 +18,13 @@
         "windows": {
           "signingMode": "authenticode",
           "artifacts": [{
-            "guardSha256": "<SHA-256 OF APPROVED GUARD BINARY>",
-            "launcherSha256": "<SHA-256 OF APPROVED LAUNCHER BINARY>",
+            "guardSha256": "<SHA-256 УТВЕРЖДЁННОГО ИСПОЛНЯЕМОГО ФАЙЛА GUARD>",
+            "launcherSha256": "<SHA-256 УТВЕРЖДЁННОГО ИСПОЛНЯЕМОГО ФАЙЛА ЛАУНЧЕРА>",
             "requireAuthenticode": true
           }],
           "runtimeProfiles": [{
             "javaMajor": 21,
-            "moduleSetSha256": "<SHA-256 OF REVIEWED RUNTIME MODULE SET>"
+            "moduleSetSha256": "<SHA-256 ПРОВЕРЕННОГО НАБОРА МОДУЛЕЙ СРЕДЫ ВЫПОЛНЕНИЯ>"
           }]
         }
       }

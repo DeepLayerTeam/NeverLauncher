@@ -48,7 +48,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/nl-03211"
           chmod 0700 "$RUNNER_TEMP/nl-03211"
           fstype=$(stat -f -c '%T' "$RUNNER_TEMP/nl-03211")
-          case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem $fstype"; exit 1;; esac
+          case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Неподдерживаемая файловая система $fstype"; exit 1;; esac
           echo "TMPDIR=$RUNNER_TEMP/nl-03211" >> "$GITHUB_ENV"
       - name: статический проверки и полные нативные зависимости
         shell: bash

@@ -139,4 +139,4 @@ jobs:
         run: |
           echo 'Automated preflight only: live own-app Microsoft/Xbox/Minecraft proof,'
           echo 'real vanilla and modded game joins, OS vault behavior and provider'
-          echo 'approval MUST be verified separately before 0.27.0 GA.'
+          echo 'до выпуска 0.27.0 GA одобрение НЕОБХОДИМО проверить отдельно.'

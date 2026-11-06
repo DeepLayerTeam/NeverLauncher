@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/main" || { echo "production release candidate must be dispatched from refs/heads/main" >&2; exit 2; }
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "кандидат в производственный релиз можно запускать только из refs/heads/main" >&2; exit 2; }
 
   base-ci:
     name: Exact-commit main certification and full E2E
@@ -1202,7 +1202,7 @@ jobs:
           [[ "$GUARD_EVIDENCE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует независимый запуск сбора доказательств'; exit 2; }
           [[ "$GUARD_NATIVE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует нативный запуск игры'; exit 2; }
           [[ "$GUARD_REVIEWER_PUBLIC_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует закреплённый ключ независимого проверяющего'; exit 2; }
-          [[ "$GUARD_SHADOW_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: HMAC shadow key unavailable'; exit 2; }
+          [[ "$GUARD_SHADOW_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: ключ HMAC для теневого режима недоступен'; exit 2; }
           test -n "$GUARD_RELEASE_OPERATOR"
           umask 077
           printf '%s' "$GUARD_REVIEWER_PUBLIC_KEY" | xxd -r -p > "$RUNNER_TEMP/guard-reviewer.key"

@@ -38,8 +38,8 @@ API принимает **настоящие подтверждения TPM2 `Cer
   "challengeId": "htc_...",
   "challenge": "htn_...",
   "evidence": {
-    "tpm2bPublic": "<base64url unpadded bytes including outer size>",
-    "tpm2bAttest": "<base64url unpadded bytes including outer size>",
+    "tpm2bPublic": "<байты в base64url без заполнения, включая внешний размер>",
+    "tpm2bAttest": "<байты в base64url без заполнения, включая внешний размер>",
     "tpmtSignature": "<base64url unpadded TPMT_SIGNATURE bytes>",
     "akCertificatePem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
     "intermediatesPem": []

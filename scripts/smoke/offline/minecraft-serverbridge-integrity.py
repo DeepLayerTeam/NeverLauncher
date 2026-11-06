@@ -13,7 +13,7 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label}: отсутствуют {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:

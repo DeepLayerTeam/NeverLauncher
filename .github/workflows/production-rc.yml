@@ -89,7 +89,7 @@ jobs:
           install -d -m 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
           case "$(stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT")" in
             ext2/ext3|ext4|xfs|btrfs) ;;
-            *) echo 'RC BLOCKED: only a supported native ext4/xfs/btrfs volume is allowed' >&2; exit 2;;
+            *) echo 'RC BLOCKED: разрешён только поддерживаемый нативный том ext4/xfs/btrfs' >&2; exit 2;;
           esac
       - name: Запустить реальные изолированные MinIO S3 служба
         run: |

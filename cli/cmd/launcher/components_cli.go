@@ -505,11 +505,11 @@ func executeComponents0249(args []string) error {
 		}
 		a, e := loadComponents0249(*old, okOld, *allowUnsigned)
 		if e != nil {
-			return fmt.Errorf("old: %w", e)
+			return fmt.Errorf("Исходный объект: %w", e)
 		}
 		b, e := loadComponents0249(*newPath, okNew, *allowUnsigned)
 		if e != nil {
-			return fmt.Errorf("new: %w", e)
+			return fmt.Errorf("Новый объект: %w", e)
 		}
 		before, e := resolveComponents0249(a, *oldPreset, env)
 		if e != nil {

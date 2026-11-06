@@ -14,7 +14,7 @@
 {
   "survival": {
     "url": "https://10.10.0.21:9443",
-    "nodeId": "<RemoteControl nodeId from remote init>",
+    "nodeId": "<nodeId RemoteControl, полученный при удалённой инициализации>",
     "caFile": "/etc/launcher/remote-ca.pem",
     "tokenFile": "/etc/launcher/host-survival.token",
     "clientCert": "/etc/launcher/backend.crt",

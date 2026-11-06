@@ -20,7 +20,7 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [item for item in needles if item not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label}: отсутствуют {', '.join(missing)}")
 
 
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()

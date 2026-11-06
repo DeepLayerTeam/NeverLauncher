@@ -9,7 +9,7 @@
 1. Явный UUID **собственного** зарегистрированного публичного приложения Microsoft Entra.
 2. Интерактивный вход личного Microsoft-аккаунта: **системный браузер + authorization code + PKCE S256** по локальному loopback, либо `--flow=device` с корректным минимальным интервалом опроса, `slow_down`, сроком и отменой.
 3. Обновление Microsoft `offline_access` с **реальным** обменом refresh-токена.
-4. Авторизация пользователя Xbox Live (`RpsTicket: d=<Microsoft access token>`).
+4. Авторизация пользователя Xbox Live (`RpsTicket: d=<токен доступа Microsoft>`).
 5. XSTS для sandbox `RETAIL` и `rp://api.minecraftservices.com/` с проверкой совпадения хешей пользователей.
 6. Minecraft Services `/authentication/login_with_xbox` по данным XSTS.
 7. Minecraft `/entitlements/mcstore` с **Minecraft** access-токеном.

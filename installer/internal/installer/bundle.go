@@ -116,7 +116,7 @@ func Verify(archive, trustKey string) (*Verified, error) {
 	read := func(name string) ([]byte, error) {
 		f := entries[name]
 		if f == nil {
-			return nil, fmt.Errorf("missing %s", name)
+			return nil, fmt.Errorf("Отсутствует %s", name)
 		}
 		r, err := f.Open()
 		if err != nil {

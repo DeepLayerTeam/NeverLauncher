@@ -132,7 +132,7 @@ jobs:
           RESULT=$?
           set -e
           if [[ "$RESULT" -eq 3 ]]; then
-            echo 'V10 target BLOCKED / INCONCLUSIVE, not a Minecraft compatibility failure' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Цель V10: BLOCKED / INCONCLUSIVE; это не ошибка совместимости с Minecraft' >> "$GITHUB_STEP_SUMMARY"
             exit 3
           elif [[ "$RESULT" -eq 0 ]]; then
             echo 'Наблюдательное выполнение V10 завершено; это НЕ доверенная сертификация' >> "$GITHUB_STEP_SUMMARY"

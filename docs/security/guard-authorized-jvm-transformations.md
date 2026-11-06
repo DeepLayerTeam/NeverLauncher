@@ -10,7 +10,7 @@
 
 ```json
 "loaderClassBytes": [
-  {"class":"net.minecraft.client.Minecraft","sha256":"<SHA-256 of class-definition bytecode observed on the selected build>"}
+  {"class":"net.minecraft.client.Minecraft","sha256":"<SHA-256 байткода определения класса, полученного для выбранной сборки>"}
 ]
 ```
 
@@ -24,7 +24,7 @@
 2. Добавьте каждую библиотеку в существующий массив `artifacts` полезной нагрузки политики с сохранением подписанного проекта, версии Minecraft и загрузчика:
 
    ```json
-   {"kind":"loader-library","path":"libraries/net/fabricmc/fabric-loader/0.16.0/fabric-loader-0.16.0.jar","sha256":"<actual lowercase 64-character SHA-256>"}
+   {"kind":"loader-library","path":"libraries/net/fabricmc/fabric-loader/0.16.0/fabric-loader-0.16.0.jar","sha256":"<фактический SHA-256 из 64 символов в нижнем регистре>"}
    ```
 
    Этот путь приведён только для примера. Используйте фактические относительные пути, редакции и SHA-256 установленных файлов. При необходимости добавьте библиотеки ModLauncher/Mixin. Шаблоны со звёздочкой и универсальные исключения для хешей не предусмотрены. Профили Vanilla не должны содержать записей `loader-library`.

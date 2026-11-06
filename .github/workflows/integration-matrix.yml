@@ -278,5 +278,5 @@ jobs:
           set -euo pipefail
           for suite in SQLITE POSTGRES BACKEND LEGACY GAME MATCHING OWNER; do
             status="${!suite}"
-            [[ "$status" == success ]] || { echo "$suite is $status, production acceptance DENIED" >&2; exit 1; }
+            [[ "$status" == success ]] || { echo "$suite is $status, производственная приёмка ОТКЛОНЕНА" >&2; exit 1; }
           done

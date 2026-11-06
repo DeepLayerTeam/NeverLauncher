@@ -40,5 +40,5 @@ jobs:
           "$bin" diagnose device-trust > device.json
           "$bin" diagnose extension-sandbox > extension.json
           python -c 'import json; d=json.load(open("device.json")); x=json.load(open("extension.json")); assert d["remoteProvenanceVerifier"]["state"] == "unsupported"; assert d["measuredBootVerifier"]["state"] == "unsupported"; assert x["enforced"] is False; assert x["isolationStatus"] == "unsupported"'
-          if "$bin" diagnose device-trust --require-strict >/dev/null; then echo 'strict falsely passed' >&2; exit 1; fi
-          if "$bin" diagnose extension-sandbox --require-isolation >/dev/null; then echo 'isolation falsely passed' >&2; exit 1; fi
+          if "$bin" diagnose device-trust --require-strict >/dev/null; then echo 'строгая проверка ошибочно завершилась успешно' >&2; exit 1; fi
+          if "$bin" diagnose extension-sandbox --require-isolation >/dev/null; then echo 'проверка изоляции ошибочно завершилась успешно' >&2; exit 1; fi

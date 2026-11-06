@@ -48,7 +48,7 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.live-native-game.result }}
         run: |
-          test "$MATRIX_RESULT" = success || { echo 'BLOCKED: incomplete native game matrix'; exit 1; }
+          test "$MATRIX_RESULT" = success || { echo 'BLOCKED: не выполнена полная матрица проверок нативных игровых клиентов'; exit 1; }
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

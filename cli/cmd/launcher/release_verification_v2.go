@@ -625,7 +625,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		}
 		pub, err := loadEd25519PublicKey(rec.PublicKeyFile)
 		if err != nil {
-			return nil, fmt.Errorf("key %s: %w", rec.ID, err)
+			return nil, fmt.Errorf("Ключ %s: %w", rec.ID, err)
 		}
 		policy.Keys = append(policy.Keys, releaseTrustKey0158{ID: rec.ID, Purpose: rec.Purpose, Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Fingerprint: rec.Fingerprint, Status: rec.Status, NotBefore: rec.CreatedAt, RetiredAt: rec.RetiredAt, RevokedAt: rec.RevokedAt, ReplacedBy: rec.ReplacedBy})
 	}

@@ -666,7 +666,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	}
 	for _, n := range requiredForClass(b.ReferenceClass) {
 		if !seen[n] {
-			return fmt.Errorf("missing %s", n)
+			return fmt.Errorf("Отсутствует %s", n)
 		}
 	}
 	t, e := time.Parse(time.RFC3339Nano, b.CompletedAt)

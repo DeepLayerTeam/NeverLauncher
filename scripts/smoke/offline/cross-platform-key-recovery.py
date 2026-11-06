@@ -16,7 +16,7 @@ def read(path):
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label}: отсутствуют {', '.join(missing)}")
 
 
 version = (ROOT / "VERSION").read_text().strip()

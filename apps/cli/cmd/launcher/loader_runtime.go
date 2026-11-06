@@ -298,7 +298,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), url.PathEscape(vanilla.MinecraftVersion), url.PathEscape(selectedLoader))
 	profileBytes, payloadCacheHit, upstreamRecoveryUsed, err := fetchLoaderProfileWithCache(ctx, opts.HTTPClient, opts.ClientDir, loader, vanilla.MinecraftVersion, profileURL, pinned, opts.LoaderCacheOnly, 16<<20)
 	if err != nil {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile: %w", loader, err)
+		return loaderMaterializeResult{}, fmt.Errorf("Профиль %s: %w", loader, err)
 	}
 	if err := assertPinnedPayload(pinned, profileURL, profileBytes); err != nil {
 		return loaderMaterializeResult{}, err

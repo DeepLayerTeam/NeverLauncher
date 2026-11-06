@@ -109,7 +109,7 @@ func setupMounts(c childConfig) error {
 			}
 		} else if info.IsDir() {
 			if e := bindRO(host, dst, true); e != nil {
-				return fmt.Errorf("runtime %s: %w", host, e)
+				return fmt.Errorf("Среда выполнения %s: %w", host, e)
 			}
 		}
 	}
@@ -151,7 +151,7 @@ func setupMounts(c childConfig) error {
 		}
 		_ = f.Close()
 		if e := syscall.Mount("/dev/"+name, dst, "", syscall.MS_BIND, ""); e != nil {
-			return fmt.Errorf("device %s: %w", name, e)
+			return fmt.Errorf("Устройство %s: %w", name, e)
 		}
 	}
 	if e := syscall.Mount("proc", filepath.Join(root, "proc"), "proc", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC|syscall.MS_RDONLY, ""); e != nil {

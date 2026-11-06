@@ -13,7 +13,7 @@ def read(p):
 def req(text, needles, label):
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label}: отсутствуют {', '.join(missing)}")
 
 
 version = read("VERSION").strip()

@@ -245,7 +245,7 @@ func (m *Manager) DiagnoseJava0305(ctx context.Context, id string, scope Scope) 
 		return result, nil
 	}
 	if err := m.VerifyLockfile(ctx, id, scope); err != nil {
-		add(fmt.Errorf("lockfile: %w", err))
+		add(fmt.Errorf("Файл фиксации зависимостей: %w", err))
 	}
 	if strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") {
 		pub, e := m.Repo.GetExtensionRegistryVersion(ctx, id, install.CurrentVersion)
@@ -261,7 +261,7 @@ func (m *Manager) DiagnoseJava0305(ctx context.Context, id string, scope Scope) 
 		}
 	}
 	if err := m.checkGraph0305(ctx, ver.Manifest, scope, install.CurrentState == model.ExtensionInstallStateEnabled); err != nil {
-		add(fmt.Errorf("dependencies: %w", err))
+		add(fmt.Errorf("Зависимости: %w", err))
 	}
 	checks, err := m.inspectPayload0305(ctx, currentDir0204(m.Root, scope, id), ver.Manifest)
 	if err != nil {

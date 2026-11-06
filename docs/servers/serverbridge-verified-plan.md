@@ -27,9 +27,9 @@ LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY=<64-char-hex-offline-policy-public-
       "projectId": "demo-project",
       "profileId": "survival",
       "channel": "stable",
-      "releaseSignature": "<128 lowercase hex characters from owner-signed Manifest v3>",
-      "catalogDigest": "<64 lowercase hex characters from signed catalog v5>",
-      "planSha256": "<64 lowercase hex characters from native resolved-download-plan.v1>"
+      "releaseSignature": "<128 шестнадцатеричных символов в нижнем регистре из Manifest v3, подписанного владельцем>",
+      "catalogDigest": "<64 шестнадцатеричных символа в нижнем регистре из подписанного каталога v5>",
+      "planSha256": "<64 шестнадцатеричных символа в нижнем регистре из нативного resolved-download-plan.v1>"
     }
   ]
 }

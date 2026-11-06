@@ -260,11 +260,11 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 func (c *Connector) mapIdentity(row rowIdentity) (authconnector.Identity, error) {
 	groups, err := parseStringList(row.groupsRaw)
 	if err != nil {
-		return authconnector.Identity{}, fmt.Errorf("groups: %w", err)
+		return authconnector.Identity{}, fmt.Errorf("Группы: %w", err)
 	}
 	roles, err := parseStringList(row.rolesRaw)
 	if err != nil {
-		return authconnector.Identity{}, fmt.Errorf("roles: %w", err)
+		return authconnector.Identity{}, fmt.Errorf("Роли: %w", err)
 	}
 	claims := map[string]any{"sqlDriver": c.cfg.Driver}
 	if row.minecraftUUID != "" {

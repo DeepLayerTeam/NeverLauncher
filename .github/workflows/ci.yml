@@ -1327,7 +1327,7 @@ jobs:
           chmod 0700 "$RUNNER_TEMP/storage-parity-0371"
           case "$(stat -f -c '%T' "$RUNNER_TEMP/storage-parity-0371")" in
             ext2/ext3|ext4|xfs|btrfs) ;;
-            *) echo 'Storage parity requires ext4/xfs/btrfs; BLOCKED' >&2; exit 1 ;;
+            *) echo 'Для проверки согласованности хранилищ требуется ext4/xfs/btrfs; BLOCKED' >&2; exit 1 ;;
           esac
       - name: Выполнить одинаковые контракты на реальных базах обоих типов
         working-directory: services/api
@@ -1447,7 +1447,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/nl-live-0378" "$RUNNER_TEMP/nl-0378-policies"
           case "$(stat -f -c '%T' "$RUNNER_TEMP/nl-live-0378")" in
             ext2/ext3|ext4|xfs|btrfs) ;;
-            *) echo 'BLOCKED: unsupported SQLite filesystem' >&2; exit 1 ;;
+            *) echo 'BLOCKED: файловая система для SQLite не поддерживается' >&2; exit 1 ;;
           esac
           cd services/api
           go mod verify

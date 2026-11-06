@@ -20,7 +20,7 @@
   "runId": "run_12345678",
   "profileId": "main",
   "channel": "stable",
-  "cutoverConfigSha256": "<64 lowercase hex digits of exact original config bytes>",
+  "cutoverConfigSha256": "<64 шестнадцатеричных символа в нижнем регистре для точных исходных байтов конфигурации>",
   "units": {
     "source": ["gravit-launchserver.service", "gravit-minecraft.service"],
     "target": ["never-launcher.service", "never-minecraft.service"]

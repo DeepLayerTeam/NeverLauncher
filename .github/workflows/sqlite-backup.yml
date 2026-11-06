@@ -39,7 +39,7 @@ jobs:
           mkdir -p "$LAUNCHER_SQLITE_TEST_ROOT"
           chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
           fstype="$(stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT")"
-          case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem: $fstype"; exit 1 ;; esac
+          case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Неподдерживаемая файловая система: $fstype"; exit 1 ;; esac
           echo "LAUNCHER_SQLITE_TEST_ROOT=$LAUNCHER_SQLITE_TEST_ROOT" >> "$GITHUB_ENV"
           echo 'LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1' >> "$GITHUB_ENV"
       - name: "Интеграция, конкурентность и статический анализ исходников"

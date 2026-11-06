@@ -515,7 +515,7 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 		return nil, fmt.Errorf("Базовая библиотека authlib: %w", err)
 	}
 	if _, err = mirrorCheckedHash0274(patch, patchSHA); err != nil {
-		return nil, fmt.Errorf("patch: %w", err)
+		return nil, fmt.Errorf("Патч: %w", err)
 	}
 	if !isSHA256Hex0271(expectedSHA) {
 		return nil, errors.New("Требуется --expected-sha256 изменённого JAR")

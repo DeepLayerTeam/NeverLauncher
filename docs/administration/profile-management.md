@@ -12,7 +12,7 @@
 
 - `POST /api/v1/admin/projects/demo-project/profiles/vanilla/clone` с JSON `{"id":"vanilla-copy","name":"Vanilla copy","sourceRevision":1}`. Если `sourceRevision` не указана, клонируется текущая неизменяемая ревизия профиля.
 - `GET /api/v1/admin/projects/demo-project/profiles/vanilla/export?revision=1` загружает JSON с `{"format":"launcher.profile.v1", "snapshot":{...}}`.
-- `POST /api/v1/admin/projects/demo-project/profiles/import` с JSON `{"id":"imported","name":"Imported","bundle":<exported JSON object>}`.
+- `POST /api/v1/admin/projects/demo-project/profiles/import` с JSON `{"id":"imported","name":"Imported","bundle":<экспортированный объект JSON>}`.
 - `GET /api/v1/admin/projects/demo-project/profiles/vanilla/diff?fromRevision=1&toRevision=2` возвращает сравнение отдельных полей. Без параметров запроса сравниваются предпоследняя и последняя ревизии; другой профиль выбирается через `againstProfileId`.
 - `GET /api/v1/admin/profile-presets` возвращает список метаданных поддерживаемых шаблонов.
 - `POST /api/v1/admin/projects/demo-project/profiles/from-preset` с JSON `{"id":"forge-new","presetId":"forge"}`. Необязательное поле `name` переопределяет отображаемое имя шаблона.

@@ -65,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           for name in MACOS_DEVELOPER_ID_P12_BASE64 MACOS_DEVELOPER_ID_P12_PASSWORD MACOS_DEVELOPER_ID_APPLICATION MACOS_TEAM_ID APPLE_NOTARY_KEY_ID APPLE_NOTARY_ISSUER_ID APPLE_NOTARY_PRIVATE_KEY_BASE64; do
-            test -n "${!name:-}" || { echo "missing required secret: ${name}" >&2; exit 2; }
+            test -n "${!name:-}" || { echo "отсутствует обязательный секрет: ${name}" >&2; exit 2; }
           done
 
       - name: Импортировать разработчик ID сертификат и настроить notarytool
@@ -125,7 +125,7 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           for ARCH in x64 arm64; do
             ZIP="dist/release-${VERSION}/launcher-desktop-${VERSION}-macos-${ARCH}.zip"
-            test -s "$ZIP" || { echo "missing final $ARCH package" >&2; exit 2; }
+            test -s "$ZIP" || { echo "отсутствует итоговый пакет для архитектуры $ARCH" >&2; exit 2; }
             EXTRACT="$(mktemp -d)"
             unzip -q "$ZIP" -d "$EXTRACT"
             APP="$EXTRACT/Launcher.app"

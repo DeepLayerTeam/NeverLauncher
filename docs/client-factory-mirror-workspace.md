@@ -44,9 +44,9 @@ nl runtime client-factory verify --client-dir ./output/client-1
   {
     "target": "libraries/com/mojang/authlib/4.0/authlib-4.0.jar",
     "patch": "files/authlib-overlay.jar",
-    "baseSha256": "<actual original JAR SHA-256>",
-    "patchSha256": "<actual overlay JAR SHA-256>",
-    "expectedSha256": "<actual result JAR SHA-256>"
+    "baseSha256": "<фактический SHA-256 исходного JAR>",
+    "patchSha256": "<фактический SHA-256 JAR с наложенными изменениями>",
+    "expectedSha256": "<фактический SHA-256 итогового JAR>"
   }
 ]
 ```

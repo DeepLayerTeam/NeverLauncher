@@ -40,7 +40,7 @@ go -C tools/migration-ga run . audit-state \
 Перед переключением сформируйте перечень ручных действий из *текущего* проверенного отчёта Backend:
 
 ```bash
-export LAUNCHER_MIGRATION_GA_TOKEN='<short-lived admin credential>'
+export LAUNCHER_MIGRATION_GA_TOKEN='<краткосрочные учётные данные администратора>'
 go -C tools/migration-ga run . manual-actions \
   --plan /srv/private/ga/fileauth-single.plan.json \
   --output /srv/private/ga/fileauth-single-worklist.md

@@ -165,4 +165,4 @@ jobs:
           PY
       - name: состояние приёмка граница accurately
         run: |
-          echo 'Live hardware receipt observed. Independent signed 0.53.0 GA remains separately blocked.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Получено свидетельство проверки на реальном оборудовании. Независимая приёмка подписанной версии 0.53.0 GA по-прежнему заблокирована отдельно.' >> "$GITHUB_STEP_SUMMARY"

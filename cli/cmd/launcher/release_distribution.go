@@ -192,7 +192,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		} `json:"predicate"`
 	}
 	if err := read("PROVENANCE.json", &provenance); err != nil {
-		return fmt.Errorf("provenance: %w", err)
+		return fmt.Errorf("Сведения о происхождении: %w", err)
 	}
 	var manifest struct {
 		Version      string `json:"version"`

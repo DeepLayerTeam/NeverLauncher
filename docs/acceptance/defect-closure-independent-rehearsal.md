@@ -29,7 +29,7 @@
 {
   "schema": "neverlauncher.defect-closure-export/0.52.12",
   "version": "0.52.12",
-  "commit": "<40-character approved git SHA>",
+  "commit": "<40-символьный SHA утверждённого коммита Git>",
   "scope": "all-open-release-defects",
   "issues": [
     {
